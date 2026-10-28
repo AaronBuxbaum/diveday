@@ -14,9 +14,10 @@ export const READY_WORKER_SCOPE = "/ready/";
 export const READY_CACHE_NAME = "diveday-ready-page-v1";
 
 /**
- * Where the worker notes when a readiness link's copy was forgotten (issue
- * #2979), by a hash of its path: a save whose fetch began earlier stores
- * nothing. Apart from the copy's cache so that one holds the copy alone.
+ * Where the worker notes each readiness link's forget epoch (issue #2979), by
+ * a hash of its path: an earlier fetch cannot restore a cancelled copy, even
+ * after a device-clock change or worker restart. Apart from the copy's cache
+ * so that one holds the copy alone.
  */
 export const READY_FORGOTTEN_CACHE_NAME = "diveday-ready-forgotten-v1";
 

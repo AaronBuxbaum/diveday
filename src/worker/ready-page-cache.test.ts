@@ -1,6 +1,6 @@
 // The default `node` environment, as the worker's own test: this module runs
 // in a service worker, never in a DOM context.
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   READY_CACHE_NAME,
   READY_COPY_GENERATED_AT_ATTR,
@@ -14,6 +14,7 @@ import {
   READY_OFFLINE_NOTE_ATTR,
 } from "@/lib/ready-offline";
 import {
+  beginReadyPageRequest,
   forgetReadyPage,
   isReadyScope,
   READY_COPY_KEY,
@@ -122,10 +123,10 @@ describe("saveReadyPage and readyPageFallback", () => {
       `<meta name="${READY_COPY_GENERATED_AT_META}" content="${NOW}"/>`,
       `<p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">Saved ${READY_OFFLINE_GENERATED_AT_PLACEHOLDER}</p>`,
     ].join("");
-    const requestStarted = NOW - 60_000;
-    expect(
-      await saveReadyPage(store.storage, `/ready/${TOKEN}`, page(body), NOW, requestStarted),
-    ).toBe(true);
+    const request = await beginReadyPageRequest(store.storage, `/ready/${TOKEN}`);
+    expect(await saveReadyPage(store.storage, `/ready/${TOKEN}`, page(body), NOW, request)).toBe(
+      true,
+    );
 
     const served = await readyPageFallback(store.storage, `/ready/${TOKEN}`, NOW + DAY_MS);
     const text = await served?.text();
@@ -594,18 +595,60 @@ describe("saveReadyPage and readyPageFallback", () => {
    */
   it("stores nothing from a fetch that began before the path was forgotten", async () => {
     const path = `/ready/${TOKEN}`;
+    const staleRequest = await beginReadyPageRequest(store.storage, path);
     await forgetReadyPage(store.storage, path, NOW + 10);
-    expect(await saveReadyPage(store.storage, path, page("stale"), NOW + 20, NOW + 5)).toBe(false);
+    expect(await saveReadyPage(store.storage, path, page("stale"), NOW + 20, staleRequest)).toBe(
+      false,
+    );
     expect(store.caches.get(READY_CACHE_NAME)?.size ?? 0).toBe(0);
     // A load asked for after the forget is kept as ever, and another path is untouched.
-    expect(await saveReadyPage(store.storage, path, page("fresh"), NOW + 20, NOW + 15)).toBe(true);
+    const freshRequest = await beginReadyPageRequest(store.storage, path);
+    expect(await saveReadyPage(store.storage, path, page("fresh"), NOW + 20, freshRequest)).toBe(
+      true,
+    );
+    const otherRequest = await beginReadyPageRequest(store.storage, `/ready/${OTHER}`);
     expect(
-      await saveReadyPage(store.storage, `/ready/${OTHER}`, page("other"), NOW + 20, NOW + 5),
+      await saveReadyPage(store.storage, `/ready/${OTHER}`, page("other"), NOW + 20, otherRequest),
     ).toBe(true);
+  });
+
+  it("keeps the cancellation epoch across worker restart when the device clock moves backward", async () => {
+    const path = `/ready/${TOKEN}`;
+    const request = await beginReadyPageRequest(store.storage, path);
+    const cancellationObserved = NOW - 10;
+    await forgetReadyPage(store.storage, path, cancellationObserved);
+    vi.resetModules();
+    const restarted = await import("./ready-page-cache");
+
+    expect(
+      await restarted.saveReadyPage(
+        store.storage,
+        path,
+        page("pre-cancel page"),
+        NOW + 20,
+        request,
+      ),
+    ).toBe(false);
+    expect(await restarted.readyPageFallback(store.storage, path, NOW + 20)).toBeUndefined();
+  });
+
+  it("lets only the newest overlapping request publish, even after a worker restart", async () => {
+    const path = `/ready/${TOKEN}`;
+    const older = await beginReadyPageRequest(store.storage, path);
+    const newer = await beginReadyPageRequest(store.storage, path);
+
+    expect(await saveReadyPage(store.storage, path, page("newer response"), NOW, newer)).toBe(true);
+    expect(await saveReadyPage(store.storage, path, page("older response"), NOW, older)).toBe(
+      false,
+    );
+    expect(await (await readyPageFallback(store.storage, path, NOW))?.text()).toContain(
+      "newer response",
+    );
   });
 
   it("drops the copy a save put down when the forget lands while it was storing", async () => {
     const path = `/ready/${TOKEN}`;
+    const request = await beginReadyPageRequest(store.storage, path);
     const open = store.storage.open.bind(store.storage);
     let forgot = false;
     const racing = {
@@ -624,7 +667,45 @@ describe("saveReadyPage and readyPageFallback", () => {
         };
       },
     } as unknown as CacheStorage;
-    expect(await saveReadyPage(racing, path, page("stale"), NOW + 20, NOW + 5)).toBe(false);
+    expect(await saveReadyPage(racing, path, page("stale"), NOW + 20, request)).toBe(false);
+    expect(store.caches.get(READY_CACHE_NAME)?.size ?? 0).toBe(0);
+  });
+
+  it("removes a stale copy when cancellation lands after validation but before the write completes", async () => {
+    const path = `/ready/${TOKEN}`;
+    const request = await beginReadyPageRequest(store.storage, path);
+    const open = store.storage.open.bind(store.storage);
+    let enteredPut: (() => void) | undefined;
+    let releasePut: (() => void) | undefined;
+    const putEntered = new Promise<void>((resolve) => {
+      enteredPut = resolve;
+    });
+    const putGate = new Promise<void>((resolve) => {
+      releasePut = resolve;
+    });
+    const racing = {
+      delete: store.storage.delete.bind(store.storage),
+      open: async (name: string) => {
+        const cache = await open(name);
+        return {
+          ...cache,
+          put: async (key: RequestInfo | URL, response: Response) => {
+            if (name === READY_CACHE_NAME) {
+              enteredPut?.();
+              await putGate;
+            }
+            await cache.put(key as string, response);
+          },
+        };
+      },
+    } as unknown as CacheStorage;
+    const saving = saveReadyPage(racing, path, page("pre-cancel page"), NOW, request);
+
+    await putEntered;
+    await forgetReadyPage(store.storage, path, NOW - 10);
+    releasePut?.();
+
+    expect(await saving).toBe(false);
     expect(store.caches.get(READY_CACHE_NAME)?.size ?? 0).toBe(0);
   });
 

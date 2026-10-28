@@ -86,8 +86,16 @@ export const READY_COPY_KEY = "/ready/kept-copy";
 
 const PATH_HASH_HEADER = "x-diveday-path-sha256";
 const FORGOTTEN_AT_HEADER = "x-diveday-forgotten-at";
+const FORGOTTEN_VERSION_HEADER = "x-diveday-forgotten-version";
+const COPY_FORGOTTEN_VERSION_HEADER = "x-diveday-copy-forgotten-version";
+const COPY_REQUEST_ID_HEADER = "x-diveday-copy-request-id";
+const REQUEST_ID_HEADER = "x-diveday-ready-request-id";
+const REQUEST_PATH_HASH_HEADER = "x-diveday-ready-request-path-hash";
+const REQUEST_FORGOTTEN_VERSION_HEADER = "x-diveday-ready-request-forgotten-version";
 /** A forget marker's key: a fixed prefix and the path's hash, never the token. */
 const FORGOTTEN_KEY_PREFIX = "/ready/forgotten/";
+/** This cache holds one page, so one durable request record orders all saves. */
+const LATEST_REQUEST_KEY = "/ready/latest-request";
 const KEEP_UNTIL_HEADER = "x-diveday-keep-until";
 
 /** Stands in for the bearer token in the stored body; not a legal token (wrong length). */
@@ -300,19 +308,79 @@ function storable(response: Response): boolean {
   return (response.headers.get("content-type") ?? "").includes("text/html");
 }
 
-/**
- * Whether `path` was forgotten at or after `requestedAt`: a page fetched
- * before a cancel is the pre-cancel page, however late it answers (#2979).
- */
-async function forgottenSince(
+export type ReadyPageRequest = {
+  pathHash: string;
+  forgottenVersion: string;
+  requestId: string;
+};
+
+function forgottenKey(hash: string): string {
+  return `${FORGOTTEN_KEY_PREFIX}${hash}`;
+}
+
+async function forgottenVersion(storage: CacheStorage, hash: string): Promise<string> {
+  const markers = await storage.open(READY_FORGOTTEN_CACHE_NAME);
+  const marker = await markers.match(forgottenKey(hash));
+  return marker?.headers.get(FORGOTTEN_VERSION_HEADER) ?? "";
+}
+
+/** Serialize request starts within this worker; the stored token survives its restart. */
+let readyRequestStart: Promise<void> = Promise.resolve();
+export function beginReadyPageRequest(
+  storage: CacheStorage,
+  path: string,
+): Promise<ReadyPageRequest> {
+  const next = readyRequestStart.then(async () => {
+    const hash = await pathHash(path);
+    const markers = await storage.open(READY_FORGOTTEN_CACHE_NAME);
+    const marker = await markers.match(forgottenKey(hash));
+    const request: ReadyPageRequest = {
+      pathHash: hash,
+      forgottenVersion: marker?.headers.get(FORGOTTEN_VERSION_HEADER) ?? "",
+      requestId: crypto.randomUUID(),
+    };
+    await markers.put(
+      LATEST_REQUEST_KEY,
+      new Response(null, {
+        headers: {
+          [REQUEST_ID_HEADER]: request.requestId,
+          [REQUEST_PATH_HASH_HEADER]: request.pathHash,
+          [REQUEST_FORGOTTEN_VERSION_HEADER]: request.forgottenVersion,
+        },
+      }),
+    );
+    return request;
+  });
+  readyRequestStart = next.then(
+    () => undefined,
+    () => undefined,
+  );
+  return next;
+}
+
+async function forgottenVersionIsCurrent(
   storage: CacheStorage,
   hash: string,
-  requestedAt: number,
+  request: ReadyPageRequest,
 ): Promise<boolean> {
+  if (request.pathHash !== hash) return false;
+  return (await forgottenVersion(storage, hash)) === request.forgottenVersion;
+}
+
+async function requestIsCurrent(
+  storage: CacheStorage,
+  hash: string,
+  request: ReadyPageRequest,
+): Promise<boolean> {
+  if (!(await forgottenVersionIsCurrent(storage, hash, request))) return false;
   const markers = await storage.open(READY_FORGOTTEN_CACHE_NAME);
-  const marker = await markers.match(`${FORGOTTEN_KEY_PREFIX}${hash}`);
-  const at = Number(marker?.headers.get(FORGOTTEN_AT_HEADER));
-  return Number.isFinite(at) && marker !== undefined && at >= requestedAt;
+  const latest = await markers.match(LATEST_REQUEST_KEY);
+  if (!latest) return false;
+  return (
+    latest.headers.get(REQUEST_ID_HEADER) === request.requestId &&
+    latest.headers.get(REQUEST_PATH_HASH_HEADER) === request.pathHash &&
+    latest.headers.get(REQUEST_FORGOTTEN_VERSION_HEADER) === request.forgottenVersion
+  );
 }
 
 // Only publication is serialized; a slow asset fetch never blocks a newer save.
@@ -328,20 +396,23 @@ function publishReadyCopy(write: () => Promise<boolean>): Promise<boolean> {
  * Reads the body (pass a clone). Returns whether it was kept; a page that
  * names no keep-until, or one already past, clears the copy.
  *
- * `requestedAt` is when the fetch that produced `response` began; a forget
- * of this path at or after it (a cancel landing first) means nothing is kept.
+ * `request` was durably captured before the fetch began. A later forget or
+ * newer request invalidates it across clock changes and worker restarts.
  */
 export async function saveReadyPage(
   storage: CacheStorage,
   path: string,
   response: Response,
   now: number,
-  requestedAt: number = now,
+  request?: ReadyPageRequest,
   prepareAssets?: (html: string) => Promise<void>,
   mayPublish: () => boolean = () => true,
   observationTime: () => number = () => now,
 ): Promise<boolean> {
   if (!storable(response)) return false;
+  const hash = await pathHash(path);
+  const order = request ?? (await beginReadyPageRequest(storage, path));
+  if (order.pathHash !== hash) return false;
   // A body of its own, so the copy is complete before anything is replaced.
   const html = new TextDecoder().decode(await response.arrayBuffer());
   const named = Number(html.match(KEEP_UNTIL_PATTERN)?.[1] ?? Number.NaN);
@@ -381,9 +452,10 @@ export async function saveReadyPage(
   const timestampedHtml = safeHtml.replace(banner.element, timestampedBanner);
   const headers = new Headers(response.headers);
   headers.set(KEEP_UNTIL_HEADER, String(Math.min(named, now + READY_COPY_MAX_AGE_MS)));
-  const hash = await pathHash(path);
-  if (await forgottenSince(storage, hash, requestedAt)) return false;
+  if (!(await requestIsCurrent(storage, hash, order))) return false;
   headers.set(PATH_HASH_HEADER, hash);
+  headers.set(COPY_FORGOTTEN_VERSION_HEADER, order.forgottenVersion);
+  headers.set(COPY_REQUEST_ID_HEADER, order.requestId);
   // The page's links carry the token; a same-origin script reading the stored
   // body must not recover it (residual D1), so it is put back on the way out.
   // Every other capability on the page is dropped for good: the Flight
@@ -407,15 +479,19 @@ export async function saveReadyPage(
   // Failure leaves the previous complete copy available, never a partial new one.
   await prepareAssets?.(html);
   return publishReadyCopy(async () => {
-    if (await forgottenSince(storage, hash, requestedAt)) return false;
+    if (!(await requestIsCurrent(storage, hash, order))) return false;
     if (!mayPublish()) return false;
     await cache.put(READY_COPY_KEY, copy);
-    // Forgetting invalidates the copy even during its write. A newer request
-    // alone leaves this complete copy until its prepared replacement publishes.
-    // The queue keeps this cleanup ahead of any newer publication.
-    if (await forgottenSince(storage, hash, requestedAt)) {
+    // A forget or newer request can land between the pre-write check and
+    // Cache.put. Recheck after the write and remove only this request's copy.
+    if (!(await forgottenVersionIsCurrent(storage, hash, order))) {
       const kept = await cache.match(READY_COPY_KEY);
-      if (kept?.headers.get(PATH_HASH_HEADER) === hash) await cache.delete(READY_COPY_KEY);
+      if (
+        kept?.headers.get(PATH_HASH_HEADER) === hash &&
+        kept.headers.get(COPY_REQUEST_ID_HEADER) === order.requestId
+      ) {
+        await cache.delete(READY_COPY_KEY);
+      }
       return false;
     }
     await clearCopies(cache, READY_COPY_KEY);
@@ -479,9 +555,9 @@ export async function readyPageFallback(
 
 /**
  * Drop the kept copy if it is `path`'s: the seat it was for has just been
- * cancelled. Notes the moment first, so a save whose fetch began before it
- * stores nothing (#2979), and a forget that cannot finish deletes every copy
- * on the phone rather than leave this one: never throws.
+ * cancelled. Writes a durable epoch first, so saves begun before it store
+ * nothing (#2979), and a forget that cannot finish deletes every copy on the
+ * phone rather than leave this one: never throws.
  */
 export async function forgetReadyPage(
   storage: CacheStorage,
@@ -491,19 +567,27 @@ export async function forgetReadyPage(
   try {
     const hash = await pathHash(path);
     const markers = await storage.open(READY_FORGOTTEN_CACHE_NAME);
+    // Older active workers still compare this header with device time. Keep
+    // them from accepting a pre-forget response while this worker is updating.
+    const legacyWorkerBarrier = Math.max(now, Number.MAX_SAFE_INTEGER);
     await markers.put(
-      `${FORGOTTEN_KEY_PREFIX}${hash}`,
-      new Response(null, { headers: { [FORGOTTEN_AT_HEADER]: String(now) } }),
+      forgottenKey(hash),
+      new Response(null, {
+        headers: {
+          [FORGOTTEN_AT_HEADER]: String(legacyWorkerBarrier),
+          [FORGOTTEN_VERSION_HEADER]: crypto.randomUUID(),
+        },
+      }),
     );
-    // Old markers go: no fetch outlives the longest copy.
-    for (const request of await markers.keys()) {
-      const marker = await markers.match(request);
-      const at = Number(marker?.headers.get(FORGOTTEN_AT_HEADER));
-      if (!Number.isFinite(at) || at < now - READY_COPY_MAX_AGE_MS) await markers.delete(request);
-    }
+    // Keep hashed tombstones: clearing one by device time could let a pending
+    // fetch from before cancellation look current after the clock moves back.
     const cache = await storage.open(READY_CACHE_NAME);
     const cached = await cache.match(READY_COPY_KEY);
-    if (cached && cached.headers.get(PATH_HASH_HEADER) === hash) {
+    const currentVersion = await forgottenVersion(storage, hash);
+    if (
+      cached?.headers.get(PATH_HASH_HEADER) === hash &&
+      cached.headers.get(COPY_FORGOTTEN_VERSION_HEADER) !== currentVersion
+    ) {
       await cache.delete(READY_COPY_KEY);
     }
   } catch {

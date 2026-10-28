@@ -706,12 +706,43 @@ describe("the /ready/ registration's fetch", () => {
         }),
     );
     const keep = message("KEEP_READY_PAGE", `https://dive.day${PATH}`);
+    await vi.waitFor(() => expect(answer).toBeDefined());
     const forget = message("FORGET_READY_PAGE", `https://dive.day${PATH}?cancelled=1`);
     await forget.settle();
     answer?.(html("before the cancel"));
     await keep.settle();
     expect(kept.size).toBe(0);
     expect(keep.replies).toEqual([{ ok: false }]);
+  });
+
+  it("rejects a pre-cancel response when the device clock moves backward", async () => {
+    let answer: ((response: Response) => void) | undefined;
+    fetchMock.mockImplementationOnce(
+      () =>
+        new Promise<Response>((resolve) => {
+          answer = resolve;
+        }),
+    );
+    const staleResponse = html("before the cancel");
+    const startedAt = Date.now() + 60_000;
+    const deviceClock = vi.spyOn(Date, "now").mockReturnValue(startedAt);
+    const keep = message("KEEP_READY_PAGE", `https://dive.day${PATH}`);
+    try {
+      await vi.waitFor(() => expect(answer).toBeDefined());
+      deviceClock.mockReturnValue(startedAt - 60_000);
+      const forget = message("FORGET_READY_PAGE", `https://dive.day${PATH}?cancelled=1`);
+      await forget.settle();
+      deviceClock.mockRestore();
+
+      answer?.(staleResponse);
+      await keep.settle();
+      expect(kept.size).toBe(0);
+      expect(keep.replies).toEqual([{ ok: false }]);
+    } finally {
+      deviceClock.mockRestore();
+      answer?.(staleResponse);
+      await keep.settle();
+    }
   });
 
   it("does not keep a load that carries a one-time notice", async () => {

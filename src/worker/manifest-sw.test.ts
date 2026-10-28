@@ -601,6 +601,7 @@ describe("a navigation on a network that never answers", () => {
   });
 
   it("serves a readiness network response that arrives just before the four-second deadline", async () => {
+    const digest = vi.spyOn(crypto.subtle, "digest").mockResolvedValue(new Uint8Array(32).buffer);
     let answer: ((response: Response) => void) | undefined;
     fetchMock.mockImplementationOnce(
       () =>
@@ -609,15 +610,20 @@ describe("a navigation on a network that never answers", () => {
         }),
     );
     const navigation = navigateReady(`https://dive.day${READY_PATH}`);
-    expect(await settledAfter(navigation.response, 3_999)).toBe("still waiting");
-    answer?.(
-      new Response("live readiness page", {
-        headers: { "content-type": "text/html" },
-      }),
-    );
-    const live = await settledAfter(navigation.response, 0);
-    if (live === "still waiting") throw new Error("the live readiness page never arrived");
-    expect(await live.text()).toBe("live readiness page");
+    try {
+      expect(await settledAfter(navigation.response, 3_999)).toBe("still waiting");
+      answer?.(
+        new Response("live readiness page", {
+          headers: { "content-type": "text/html" },
+        }),
+      );
+      const live = await settledAfter(navigation.response, 0);
+      if (live === "still waiting") throw new Error("the live readiness page never arrived");
+      expect(await live.text()).toBe("live readiness page");
+      await Promise.allSettled(navigation.waits);
+    } finally {
+      digest.mockRestore();
+    }
   });
 
   it("uses only the readiness copy for the exact path when the network is slow", async () => {

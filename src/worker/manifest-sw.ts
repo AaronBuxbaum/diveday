@@ -19,8 +19,10 @@ import {
   pendingOfflineEventCount,
 } from "@/lib/offline-manifests";
 import {
+  beginReadyPageRequest,
   forgetReadyPage,
   isReadyScope,
+  type ReadyPageRequest,
   readyPageFallback,
   readyPagePath,
   readyPageStylesheets,
@@ -292,13 +294,18 @@ async function keepReadyAssets(html: string): Promise<void> {
 }
 
 let readyRequestGeneration = 0;
-function keepReadyPage(path: string, response: Response, requestedAt: number, generation: number) {
+function keepReadyPage(
+  path: string,
+  response: Response,
+  request: ReadyPageRequest,
+  generation: number,
+) {
   return saveReadyPage(
     caches,
     path,
     response,
     nowMs(),
-    requestedAt,
+    request,
     keepReadyAssets,
     () => generation === readyRequestGeneration,
     nowMs,
@@ -347,13 +354,14 @@ self.addEventListener("message", (event) => {
       port?.postMessage({ ok: false });
       return;
     }
-    const requestedAt = nowMs();
     const generation = ++readyRequestGeneration;
     event.waitUntil(
-      fetch(path, { credentials: "same-origin", cache: "no-store" })
-        .then(async (response) => {
-          return keepReadyPage(path, response, requestedAt, generation);
-        })
+      beginReadyPageRequest(caches, path)
+        .then((request) =>
+          fetch(path, { credentials: "same-origin", cache: "no-store" }).then((response) =>
+            keepReadyPage(path, response, request, generation),
+          ),
+        )
         .then(
           (ok) => port?.postMessage({ ok }),
           () => port?.postMessage({ ok: false }),
@@ -754,17 +762,17 @@ self.addEventListener("fetch", (event) => {
       // clean load is kept (a `?saved=` notice is a moment, not the page).
       networkFirst(
         (signal) => {
-          // A cancel landing that forgets this path after now outranks it (#2979).
-          const requestedAt = nowMs();
           const generation = ++readyRequestGeneration;
-          return fetch(event.request, { signal }).then((response) => {
-            if (!signal.aborted && url.search === "") {
-              event.waitUntil(
-                keepReadyPage(path, response.clone(), requestedAt, generation).catch(() => false),
-              );
-            }
-            return response;
-          });
+          return beginReadyPageRequest(caches, path).then((request) =>
+            fetch(event.request, { signal }).then((response) => {
+              if (!signal.aborted && url.search === "") {
+                event.waitUntil(
+                  keepReadyPage(path, response.clone(), request, generation).catch(() => false),
+                );
+              }
+              return response;
+            }),
+          );
         },
         () => readyPageFallback(caches, path, nowMs()),
         { noSavedCopyOnSlow: "error" },
