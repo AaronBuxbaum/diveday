@@ -234,15 +234,15 @@ export async function consumeBookingHandoff(
     );
 }
 
-export type HandoffOfferOutcome = "sent" | "skipped";
+export type HandoffOfferOutcome = "sent" | "queued" | "failed" | "skipped";
 
 /**
  * **One link, to an address typed cold** (H-68 b). When the lead email on a
  * booking form matches a live diver with a booking at this shop, that diver
  * gets one email carrying a handoff onto the same departure. The page never
- * learns the answer — this returns the same shape whether it sent or not, and
- * the action above it returns nothing at all — and the delivery row keeps it
- * to one an hour, so a form that blurs the field ten times sends once.
+ * learns the answer — the public action discards this internal result — and the
+ * delivery row keeps it to one an hour, so a form that blurs the field ten
+ * times sends once.
  *
  * Only while a booking form is mid-fill with that address: the caller is the
  * form's own blur, never a page load.
@@ -353,14 +353,17 @@ export async function offerBookingHandoffByEmail(
         },
         { provider: options.provider, signal: notificationProviderSignal() },
       );
-      if (delivery.status !== "sent") {
+      const queued =
+        delivery.status === "failed" && "retryQueued" in delivery && delivery.retryQueued === true;
+      if (delivery.status !== "sent" && !queued) {
         await revokeIssuedCapabilities(tx, {
           shopId: input.shopId,
           tokens: [issued.token],
           now,
         });
       }
-      return "sent" as const;
+      if (delivery.status === "sent") return "sent" as const;
+      return queued ? ("queued" as const) : ("failed" as const);
     },
   );
   return result ?? "skipped";

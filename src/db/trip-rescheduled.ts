@@ -10,6 +10,7 @@ import {
 } from "@/lib/held-sends";
 import { meetingPointForMessage, meetingPointOfRows } from "@/lib/meeting-point";
 import {
+  type NotificationDelivery,
   type NotificationProvider,
   notificationProviderSignal,
   publicAppUrl,
@@ -489,11 +490,13 @@ async function tellSeatWithinFence(
       : null;
   // The link was minted ahead of the send; when the send did not go nobody
   // holds it, so it is taken back (#2451).
-  const settle = async (told: "told" | "failed"): Promise<"told" | "failed"> => {
-    if (told === "failed" && capability) {
+  const settle = async (delivery: NotificationDelivery): Promise<"told" | "failed"> => {
+    const queued =
+      delivery.status === "failed" && "retryQueued" in delivery && delivery.retryQueued === true;
+    if (delivery.status !== "sent" && !queued && capability) {
       await revokeIssuedCapabilities(db, { shopId: shop.id, tokens: [capability.token], now });
     }
-    return told;
+    return delivery.status === "sent" ? "told" : "failed";
   };
   const readinessUrl = capability
     ? new URL(readinessLinkPath(capability.token), `${channels.origin}/`).toString()
@@ -562,26 +565,34 @@ async function tellSeatWithinFence(
     // The courtesy text rides a delivered email, as the reminders' does; its
     // own result is not recorded over the email's.
     if (delivery.status === "sent" && courtesy) {
-      await sendCourtesyMessage(courtesy, {
+      await sendCourtesyMessage(
+        courtesy,
+        {
+          sms: channels.smsProvider,
+          whatsapp: channels.whatsApp,
+        },
+        { signal: notificationProviderSignal() },
+      );
+    }
+    return settle(delivery);
+  } else if (courtesy) {
+    const { delivery } = await sendCourtesyMessage(
+      courtesy,
+      {
         sms: channels.smsProvider,
         whatsapp: channels.whatsApp,
-      });
-    }
-    return settle(delivery.status === "sent" ? "told" : "failed");
-  } else if (courtesy) {
-    const { delivery } = await sendCourtesyMessage(courtesy, {
-      sms: channels.smsProvider,
-      whatsapp: channels.whatsApp,
-    });
+      },
+      { signal: notificationProviderSignal() },
+    );
     await recordNotificationDelivery(db, {
       shopId: shop.id,
       bookingId: booking.id,
       kind: "trip_rescheduled",
       delivery,
     });
-    return settle(delivery.status === "sent" ? "told" : "failed");
+    return settle(delivery);
   }
-  return settle("failed");
+  return settle({ status: "failed", retryable: false });
 }
 
 /**
