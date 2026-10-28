@@ -7,6 +7,10 @@ import { createTrip } from "@/db/trips-create";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 
+const capabilityIssueHook = vi.hoisted(() => ({
+  beforeIssue: null as ((input: { bookingId: string; purpose: string }) => Promise<void>) | null,
+}));
+
 /**
  * **The public booking form asks nothing about anybody's diving, and this
  * action reads nothing about it either.**
@@ -49,6 +53,16 @@ vi.mock("@/db/client", async (importOriginal) => {
 vi.mock("@/db/bookings", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/bookings")>();
   return { ...actual, createBookingParty: vi.fn(actual.createBookingParty) };
+});
+vi.mock("@/db/booking-capabilities", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/db/booking-capabilities")>();
+  return {
+    ...actual,
+    issueBookingCapability: vi.fn(async (db, input) => {
+      await capabilityIssueHook.beforeIssue?.(input);
+      return actual.issueBookingCapability(db, input);
+    }),
+  };
 });
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 // The locale is read off the request's cookies, which do not exist here. The
@@ -111,9 +125,9 @@ function submission(
 }
 
 /** Run the action; a successful booking ends in a redirect, which the mock throws. */
-async function post(shopSlug: string, tripId: string, form: FormData) {
+async function post(shopSlug: string, tripId: string, form: FormData, embed = false) {
   try {
-    return await bookSpot({ shopSlug, tripId, embed: false }, {}, form);
+    return await bookSpot({ shopSlug, tripId, embed }, {}, form);
   } catch (error) {
     if (error instanceof Error && error.message.startsWith("REDIRECT:")) return null;
     throw error;
@@ -140,7 +154,10 @@ function bookingRateLimitCalls(): number {
     .length;
 }
 
-afterEach(() => vi.clearAllMocks());
+afterEach(() => {
+  capabilityIssueHook.beforeIssue = null;
+  vi.clearAllMocks();
+});
 
 describe("the booking form's certification fields", () => {
   it("carries no declaration into the booking, however many a post claims", async () => {
@@ -328,6 +345,90 @@ describe("the readiness link after booking", () => {
         ),
       );
     expect(links.map((link) => link.delivered).sort()).toEqual([false, true]);
+  });
+
+  it("lands a normal embed booking on its confirmed booking capability", async () => {
+    const { db, shop } = ctx;
+    const tripId = await freeDeparture(db, shop.id);
+
+    await post(shop.slug, tripId, submission([{ email: "embed@example.com" }]), true);
+
+    const landing = vi
+      .mocked(redirect)
+      .mock.calls.map(([path]) => String(path))
+      .find((path) => path.includes("?booking=") && path.includes("&embed=1"));
+    const token = landing?.split("?booking=")[1]?.split("&")[0];
+    if (!token) throw new Error("the embed booking did not land on its confirmation");
+    expect(await verifyBookingCapability(db, { token, purpose: "confirm" })).toMatchObject({
+      delivered: false,
+    });
+  });
+
+  it("does not mint a redirect link if the booking is repointed after confirmation read", async () => {
+    const { db, shop } = ctx;
+    const tripId = await freeDeparture(db, shop.id);
+    let repointed = false;
+    // The booking is repointed after its confirmed subject has been read.
+    let targetBookingId = "";
+    capabilityIssueHook.beforeIssue = async ({ bookingId, purpose }) => {
+      if (repointed || purpose !== "readiness") return;
+      targetBookingId = bookingId;
+      const [replacement] = await db
+        .insert(people)
+        .values({
+          shopId: shop.id,
+          fullName: "Replacement Diver",
+          email: "replacement@example.com",
+        })
+        .returning({ id: people.id });
+      if (!replacement) throw new Error("replacement person was not created");
+      await db.update(bookings).set({ personId: replacement.id }).where(eq(bookings.id, bookingId));
+      repointed = true;
+    };
+
+    await post(shop.slug, tripId, submission([{ email: "lead@example.com" }]));
+
+    const links = await db
+      .select({ id: bookingCapabilities.id, purpose: bookingCapabilities.purpose })
+      .from(bookingCapabilities)
+      .where(
+        and(
+          eq(bookingCapabilities.bookingId, targetBookingId),
+          eq(bookingCapabilities.purpose, "readiness"),
+        ),
+      );
+    expect(links).toEqual([]);
+    expect(
+      vi.mocked(redirect).mock.calls.some(([path]) => String(path).startsWith("/ready/")),
+    ).toBe(false);
+  });
+
+  it("keeps the embed confirmation capability bound to the original trip and person", async () => {
+    const { db, shop } = ctx;
+    const tripId = await freeDeparture(db, shop.id);
+    let repointed = false;
+    capabilityIssueHook.beforeIssue = async ({ bookingId, purpose }) => {
+      if (repointed || purpose !== "confirm") return;
+      const [replacement] = await db
+        .insert(people)
+        .values({
+          shopId: shop.id,
+          fullName: "Replacement Diver",
+          email: "replacement@example.com",
+        })
+        .returning({ id: people.id });
+      if (!replacement) throw new Error("replacement person was not created");
+      await db.update(bookings).set({ personId: replacement.id }).where(eq(bookings.id, bookingId));
+      repointed = true;
+    };
+
+    await post(shop.slug, tripId, submission([{ email: "embed-lead@example.com" }]), true);
+
+    const redirected = vi.mocked(redirect).mock.calls.map(([path]) => String(path));
+    expect(redirected.some((path) => path.includes("?booking=") && path.includes("&embed=1"))).toBe(
+      false,
+    );
+    expect(redirected.some((path) => path.startsWith("/ready/"))).toBe(false);
   });
 });
 

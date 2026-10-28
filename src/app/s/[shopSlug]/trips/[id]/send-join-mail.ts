@@ -63,10 +63,8 @@ export async function sendJoinMail(
           expectedEmail: lead.person.email,
         },
         async (tx) => {
-          const [freshLead, freshTrip] = await Promise.all([
-            getBookingForTrip(tx, shop.id, trip.id, primaryBookingId),
-            getTripWithBooked(tx, shop.id, trip.id),
-          ]);
+          const freshLead = await getBookingForTrip(tx, shop.id, trip.id, primaryBookingId);
+          const freshTrip = await getTripWithBooked(tx, shop.id, trip.id);
           if (!freshLead?.person.email || !freshTrip) return null;
           const readiness = await issueBookingCapability(tx, {
             shopId: shop.id,

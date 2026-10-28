@@ -81,6 +81,34 @@ export type TripRef = {
 function embedParam(embed: boolean | undefined, delimiter: "&" | "?"): string {
   return embed ? `${delimiter}embed=1` : "";
 }
+
+async function issueConfirmedBookingCapability(
+  db: AppDb,
+  input: {
+    shopId: string;
+    bookingId: string;
+    tripId: string;
+    expectedPersonId: string | undefined;
+    confirmedBooking: Awaited<ReturnType<typeof getBookingForTrip>>;
+    purpose: "readiness" | "confirm";
+  },
+) {
+  if (
+    !input.expectedPersonId ||
+    !input.confirmedBooking ||
+    input.confirmedBooking.booking.personId !== input.expectedPersonId ||
+    input.confirmedBooking.booking.tripId !== input.tripId
+  )
+    return null;
+  return issueBookingCapability(db, {
+    shopId: input.shopId,
+    bookingId: input.bookingId,
+    purpose: input.purpose,
+    expectedPersonId: input.expectedPersonId,
+    expectedTripId: input.tripId,
+  });
+}
+
 /**
  * What a failed booking submit hands back to the form. A validation failure
  * returns per-field messages so the client re-renders in place with everything
@@ -462,11 +490,17 @@ export async function bookSpot(
     getBookingForTrip(dbi, shopNow.id, tripId, primaryBookingId),
     getTripWithBooked(dbi, shopNow.id, tripId),
   ]);
+  const expectedPersonId = outcome.bookings.find(
+    ({ bookingId }) => bookingId === primaryBookingId,
+  )?.personId;
   // Where this booking now lands, and what the confirmation email links to:
   // the diver's own `/ready` page (ADR 20260820-one-page-after-booking).
-  const redirectCapability = await issueBookingCapability(dbi, {
+  const redirectCapability = await issueConfirmedBookingCapability(dbi, {
     shopId: shopNow.id,
     bookingId: primaryBookingId,
+    tripId,
+    expectedPersonId,
+    confirmedBooking,
     purpose: "readiness",
   });
   await consumeHandoffFromForm(dbi, shopNow.id, fields.handoff);
@@ -517,9 +551,12 @@ export async function bookSpot(
   // guessed booking UUID must still not be enough to see someone else's
   // booking (CR-003), which is why the embed's landing bears a token at all.
   const confirmCapability = embed
-    ? await issueBookingCapability(dbi, {
+    ? await issueConfirmedBookingCapability(dbi, {
         shopId: shopNow.id,
         bookingId: primaryBookingId,
+        tripId,
+        expectedPersonId,
+        confirmedBooking,
         purpose: "confirm",
       })
     : null;
