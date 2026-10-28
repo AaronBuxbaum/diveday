@@ -48,6 +48,9 @@ for (const scheme of ["light", "dark"] as const) {
 
     test.describe("staff", () => {
       signedInAsOwner();
+      test.beforeAll(async ({ staffStorageState }) => {
+        await staffStorageState("captain");
+      });
 
       /**
        * **Crew get a dock time of their own** (ux-delight sheet 2026-10-22,
@@ -72,8 +75,15 @@ for (const scheme of ["light", "dark"] as const) {
         browser,
         page,
         workerBaseURL,
+        staffStorageState,
       }) => {
-        const { reader, readerContext } = await todayCatchUpScenario(browser, page, workerBaseURL);
+        const readerStorageState = await staffStorageState("captain");
+        const { reader, readerContext } = await todayCatchUpScenario(
+          browser,
+          page,
+          workerBaseURL,
+          readerStorageState,
+        );
         try {
           await expect(reader.getByRole("region", { name: /Since / })).toContainText(
             "Today Catchup Diver took a seat.",
