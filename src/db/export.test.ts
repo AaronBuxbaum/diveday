@@ -209,13 +209,12 @@ const FOLDED_TABLES = [
  * clear that record's rule: a table stays out only when carrying it would be a
  * credential, a pointer into infrastructure the destination cannot reach, or
  * DiveDay's own bookkeeping about its own machinery. "Not in this first slice"
- * is not a reason — that is exactly what `internal_notes` sat on for a fortnight
- * before DATA-A10 forced the question. Adding a schema table without deciding
- * its export fate fails the coverage test below.
+ * is not a reason — DATA-A10 made the choice explicit for `internal_notes`.
+ * Adding a schema table without deciding its export fate fails the test below.
  */
 const EXCLUDED_TABLES = [
-  "retention_prune_state", // global scheduler cursor, no tenant or personal data
-  "platform_backup_progress", // one shop-scoped scheduler checkpoint, not portable shop data
+  "retention_prune_state",
+  "platform_backup_progress", // mutable operational checkpoints, not portable shop data
   // record, mirrored here only so an owner sees an open one on Today and on
   // the order; every field is Stripe's, kept current from Stripe's events, and
   // the shop's Stripe dashboard is where a dispute is answered and exported.

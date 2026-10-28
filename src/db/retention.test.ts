@@ -994,8 +994,7 @@ describe("every retention window deletes", () => {
  * for every table added to the schema, which is the price of the guard below.
  *
  * Retention's subject is the operational trail: rows DiveDay writes about its
- * own working, whose count follows the calendar and the traffic rather than
- * anything a shop would recognise as its own records. Everything named here is
+ * own working, whose count follows traffic rather than shop records. Everything named here is
  * outside that subject. A name here is **not** a claim that the table is
  * small; it is a claim that a clock is the wrong instrument for it, because
  * what removes a row is a delete, an erasure request, or the work the row
@@ -1009,8 +1008,8 @@ describe("every retention window deletes", () => {
  */
 const OUTSIDE_RETENTION: readonly string[] = [
   "today_read_mark_events", // junction rows cascade with the 30-day mark or event; no independent clock
-  "retention_prune_state", // one mutable scheduler cursor, never an age-pruned trail
-  "platform_backup_progress", // one mutable per-shop checkpoint, replaced on attempts and deleted with its shop
+  "retention_prune_state",
+  "platform_backup_progress", // mutable scheduler checkpoints, not age-pruned trails
   "claude_call_content_erasures", // one per-shop erasure stamp, overwritten, never a trail
   // Shop configuration stays until the shop edits or deletes it.
   "shops",
