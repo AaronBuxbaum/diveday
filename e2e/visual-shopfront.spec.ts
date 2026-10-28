@@ -490,7 +490,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/s/blue-mantis/courses/open-water-diver");
         await page.getByRole("heading", { name: "Upcoming dates" }).waitFor();
         const inquiry = page.locator("#get-in-touch");
-        await inquiry.locator(":scope > summary").click();
+        await page.locator("#get-in-touch > summary").click();
         await expect(inquiry).toHaveAttribute("open", "");
         await expect(inquiry.getByLabel(diverCopy("inquiry.yourEmail"))).toBeVisible();
         await capture(page, "course-alternate-date-enquiry-open", scheme);
