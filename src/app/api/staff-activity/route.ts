@@ -3,10 +3,11 @@ import { getDb } from "@/db/client";
 import { touchStaffSession } from "@/db/session-activity";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
+import { withE2EApiTiming } from "@/lib/observability/query-timing";
 import { isCrossSiteHeaders } from "@/lib/same-origin";
 
 /** Check the server's deadline without treating a background read as activity. */
-export async function GET(request: Request) {
+async function getStaffActivity(request: Request) {
   const session = await auth();
   if (
     !session?.user ||
@@ -29,8 +30,12 @@ export async function GET(request: Request) {
   );
 }
 
+export function GET(request: Request) {
+  return withE2EApiTiming("/api/staff-activity GET", () => getStaffActivity(request));
+}
+
 /** Record an input for this session, never a passive refresh or another device. */
-export async function POST(request: Request) {
+async function postStaffActivity(request: Request) {
   if (isCrossSiteHeaders(request.headers))
     return Response.json({ error: "cross_site" }, { status: 403 });
   const session = await auth();
@@ -54,4 +59,8 @@ export async function POST(request: Request) {
   return touched
     ? new Response(null, { status: 204, headers: { "Cache-Control": "no-store" } })
     : Response.json({ error: "authentication_required" }, { status: 401 });
+}
+
+export function POST(request: Request) {
+  return withE2EApiTiming("/api/staff-activity POST", () => postStaffActivity(request));
 }

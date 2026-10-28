@@ -64,10 +64,20 @@ export type QueryStats = {
   route: string | null;
   /** Whether a report has been scheduled for this scope — it is scheduled once. */
   armed: boolean;
+  /** Present only for test-only request diagnostics. */
+  inFlightStatements?: Map<number, number>;
+  /** Present only for test-only request diagnostics. */
+  statementSequence?: number;
 };
 
 function freshStats(): QueryStats {
-  return { queries: 0, dbMs: 0, startedAt: performance.now(), route: null, armed: false };
+  return {
+    queries: 0,
+    dbMs: 0,
+    startedAt: performance.now(),
+    route: null,
+    armed: false,
+  };
 }
 
 const explicitScope = new AsyncLocalStorage<QueryStats>();
@@ -99,9 +109,23 @@ export const queryTimingLogger = {
 export function timeStatement<T>(send: () => Promise<T>): Promise<T> {
   const stats = currentQueryStats();
   const sentAt = performance.now();
-  return send().finally(() => {
+  const inFlightStatements = stats.inFlightStatements;
+  let statementId: number | null = null;
+  if (inFlightStatements) {
+    stats.statementSequence = (stats.statementSequence ?? 0) + 1;
+    statementId = stats.statementSequence;
+    inFlightStatements.set(statementId, sentAt);
+  }
+  const finish = () => {
+    if (statementId !== null) inFlightStatements?.delete(statementId);
     stats.dbMs += performance.now() - sentAt;
-  });
+  };
+  try {
+    return send().finally(finish);
+  } catch (error) {
+    finish();
+    throw error;
+  }
 }
 
 /**
@@ -152,6 +176,70 @@ export async function withQueryStats<T>(
   const stats = freshStats();
   const result = await explicitScope.run(stats, work);
   return { result, stats };
+}
+
+/**
+ * Add bounded server-side timing evidence to an API handler in E2E only.
+ * The event-loop probe and query scope do not observe request data; the log
+ * contains only a fixed route label and numeric timings/counts.
+ */
+export async function withE2EApiTiming<T>(route: string, work: () => Promise<T>): Promise<T> {
+  if (process.env.DIVEDAY_E2E !== "1") return work();
+
+  const stats = freshStats();
+  stats.inFlightStatements = new Map();
+  stats.statementSequence = 0;
+  let previousTick = performance.now();
+  let maxEventLoopLagMs = 0;
+  const probe = setInterval(() => {
+    const now = performance.now();
+    maxEventLoopLagMs = Math.max(maxEventLoopLagMs, now - previousTick - 20);
+    previousTick = now;
+  }, 20);
+  probe.unref?.();
+  const startedAt = performance.now();
+  let snapshots = 0;
+  const report = () => {
+    let oldestStartedAt = Number.POSITIVE_INFINITY;
+    const inFlightStatements = stats.inFlightStatements;
+    for (const sentAt of inFlightStatements?.values() ?? []) {
+      oldestStartedAt = Math.min(oldestStartedAt, sentAt);
+    }
+    try {
+      log("test.api_request_timing", "info", {
+        route,
+        ms: Math.round(performance.now() - startedAt),
+        db_ms: Math.round(stats.dbMs),
+        queries: stats.queries,
+        in_flight_statements: inFlightStatements?.size ?? 0,
+        oldest_statement_age_ms: inFlightStatements?.size
+          ? Math.round(performance.now() - oldestStartedAt)
+          : 0,
+        event_loop_lag_ms: Math.max(0, Math.round(maxEventLoopLagMs)),
+        snapshot: snapshots,
+      });
+    } catch {
+      // Test diagnostics must never alter a route's response or rejection.
+    }
+  };
+  const watchdog = setInterval(() => {
+    snapshots += 1;
+    if (snapshots >= 5) clearInterval(probe);
+    report();
+    if (snapshots >= 5) clearInterval(watchdog);
+  }, 5_000);
+  watchdog.unref?.();
+
+  try {
+    return await explicitScope.run(stats, work);
+  } finally {
+    clearInterval(probe);
+    clearInterval(watchdog);
+    if (performance.now() - startedAt >= 500) {
+      snapshots += 1;
+      report();
+    }
+  }
 }
 
 /** What a render reports, once its response has gone. */
