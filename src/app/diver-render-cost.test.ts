@@ -294,7 +294,10 @@ describe("how many round trips a diver's page waits for, one after another", () 
 // seat like that reads two statements more on each page than a one-off
 // diver's, which stays under both. Measured, not designed: worth a look if
 // either page is tightened again.
-const READY_AFTER_CEILING = 63;
+// 63 → 64: minting the after-state's handoff now locks the diver before the
+// booking so it cannot race erasure. Those locks stay separate to preserve
+// erasure's person-then-booking order; the extra statement is one round trip.
+const READY_AFTER_CEILING = 64;
 const READY_AFTER_PHASE_CEILING = 12;
 // `/recap/[token]`, replayed from item 32: the recap's 3 and the after-state's
 // next-dive read, with no handoff. Before item 32 the same reads were 7 + 2.
