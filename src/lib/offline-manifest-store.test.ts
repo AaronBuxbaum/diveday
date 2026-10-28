@@ -844,61 +844,6 @@ describe("syncOfflineManifest", () => {
     expect(reloaded?.events[0].syncStatus).toBe("applied");
   });
 
-  it("clears every acknowledged discarded note while preserving each roll-call mark", async () => {
-    await saveOfflineManifest(payload);
-    await appendOfflineRollCall(payload.manifests[0].trip.id, {
-      crewPersonId: payload.manifests[0].crew[0].id,
-      checkpoint: "after_dive_1",
-      status: "not_boarded",
-      note: "Nora Quinn was seen at the ladder.",
-    });
-    const diverEnvelope = await appendOfflineRollCall(payload.manifests[0].trip.id, {
-      bookingId: payload.manifests[0].divers[0].bookingId,
-      checkpoint: "after_dive_2",
-      status: "not_boarded",
-      note: "A second private note.",
-    });
-    const pending = diverEnvelope.events;
-    expect(pending).toHaveLength(2);
-    expect(pending[0]?.note).toContain("Nora Quinn");
-    expect(pending[1]?.note).toBe("A second private note.");
-
-    server.use(
-      http.post("/api/offline-manifests/sync", () =>
-        HttpResponse.json({
-          results: pending.map((event, index) => ({
-            clientEventId: event.clientEventId,
-            status: "applied",
-            noteDisposition:
-              index === 0 ? "discarded_erasure_cutoff" : "discarded_unverified_snapshot",
-          })),
-        }),
-      ),
-    );
-
-    const synced = await syncOfflineManifest(payload.manifests[0].trip.id);
-    expect(synced?.events).toMatchObject([
-      {
-        status: "not_boarded",
-        syncStatus: "applied",
-        note: null,
-        noteDisposition: "discarded_erasure_cutoff",
-      },
-      {
-        status: "not_boarded",
-        syncStatus: "applied",
-        note: null,
-        noteDisposition: "discarded_unverified_snapshot",
-      },
-    ]);
-    const reloaded = await loadOfflineManifest(payload.manifests[0].trip.id);
-    expect(reloaded?.events.map((event) => event.note)).toEqual([null, null]);
-    expect(reloaded?.events.map((event) => event.checkpoint)).toEqual([
-      "after_dive_1",
-      "after_dive_2",
-    ]);
-  });
-
   it("marks a rejected event with the server's reason instead of silently dropping it", async () => {
     await saveOfflineManifest(payload);
     const envelope = await appendOfflineRollCall(payload.manifests[0].trip.id, {

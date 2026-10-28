@@ -123,6 +123,19 @@ export async function getShopById(db: AppDb, id: string) {
   return shop ?? null;
 }
 
+/** The authenticated epoch used to reject pre-erasure offline roll-call notes. */
+export async function getShopOfflineErasureEpoch(
+  db: DbExecutor,
+  shopId: string,
+): Promise<number | null> {
+  const [row] = await db
+    .select({ epoch: shops.offlineErasureEpoch })
+    .from(shops)
+    .where(eq(shops.id, shopId))
+    .limit(1);
+  return row?.epoch ?? null;
+}
+
 /**
  * {@link getShopById}, once per render per executor: for the staff gate
  * (`requireShopSurface`) and the shop home, which resolve the session's shop

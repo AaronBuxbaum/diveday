@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { eq } from "drizzle-orm";
 import { canPersonReadMedicalAlertOnTrip, loadActiveStaffRoles } from "@/db/authz";
 import { lockBoardingCertificationEvidence } from "@/db/boarding-certification-snapshot";
 import { departureBoatSafetyFor } from "@/db/boat-safety";
@@ -8,8 +7,7 @@ import type { AppDb } from "@/db/client";
 import { getDb } from "@/db/client";
 import { getTripManifests } from "@/db/manifests";
 import { latestPreDepartureChecksForTrip, listChecklistItems } from "@/db/pre-departure-check";
-import { shops } from "@/db/schema";
-import { getShopById } from "@/db/shops";
+import { getShopById, getShopOfflineErasureEpoch } from "@/db/shops";
 import { listTripIdsInOfflineManifestWindow } from "@/db/trips";
 import { boatSafetySection } from "@/i18n/boat-safety-labels";
 import { crewBlockerText } from "@/i18n/identity-check-labels";
@@ -122,12 +120,8 @@ async function getUpcomingManifests() {
           // under one shared fence. Erasure either follows and sweeps everything
           // read here, or precedes it and the token carries the new epoch.
           await lockBoardingCertificationEvidence(tx, shop.id, "boarding");
-          const [shopState] = await tx
-            .select({ epoch: shops.offlineErasureEpoch })
-            .from(shops)
-            .where(eq(shops.id, shop.id))
-            .limit(1);
-          if (!shopState) return null;
+          const epoch = await getShopOfflineErasureEpoch(tx, shop.id);
+          if (epoch === null) return null;
           const snapshotId = randomUUID();
           // PGlite's database type includes its client handle while the
           // transaction executor intentionally does not. The manifest readers
@@ -184,7 +178,7 @@ async function getUpcomingManifests() {
               shopId: shop.id,
               tripId,
               snapshotId,
-              epoch: shopState.epoch,
+              epoch,
             }),
           };
         }),
