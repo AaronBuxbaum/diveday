@@ -51,9 +51,11 @@ const listed = [
   },
 ] as unknown as UpcomingTrips;
 
-function rows(overrides: { isEmbed?: boolean; above?: string[] } = {}) {
+function rows(
+  overrides: { isEmbed?: boolean; above?: string[]; listedTrips?: UpcomingTrips } = {},
+) {
   return weekLedgerRows({
-    listedTrips: listed,
+    listedTrips: overrides.listedTrips ?? listed,
     lenses: [{ id: "l1", name: "Reef day", slug: "reef" }] as never,
     diveSitesByTrip: new Map([
       ["t1", { sites: [{ name: "Molasses" }, { name: "French" }], undecidedDives: 1 }],
@@ -84,6 +86,20 @@ function rows(overrides: { isEmbed?: boolean; above?: string[] } = {}) {
 }
 
 describe("weekLedgerRows", () => {
+  it("gives every printed departure its own date and daylight-saving zone", () => {
+    const trips = ["2026-10-31T12:00:00Z", "2026-11-01T13:00:00Z"].map((start, index) => ({
+      ...listed[0],
+      id: `dst-${index}`,
+      startsAt: new Date(start),
+      endsAt: new Date(new Date(start).getTime() + 3600000),
+    })) as UpcomingTrips;
+    const result = rows({ listedTrips: trips });
+    expect(result[0]?.printDate).toMatch(/Oct\s31/);
+    expect(result[0]?.printTimeRange).toContain("EDT");
+    expect(result[1]?.printDate).toMatch(/Nov\s1/);
+    expect(result[1]?.printTimeRange).toContain("EST");
+  });
+
   it("links each row to its trip page, the frame's links staying in the frame", () => {
     expect(rows()[0]?.href).toBe("/s/blue-mantis/trips/t1");
     expect(rows({ isEmbed: true })[0]?.href).toBe("/s/blue-mantis/trips/t1?embed=1");

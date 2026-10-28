@@ -444,18 +444,6 @@
     "//": "Code lines (blank and comment lines left out) of the top-level functions under src/app, src/components, src/features, src/db, src/lib still over 300, keyed <file>#<name>. Written by `node scripts/check-page-length.mjs --write`. Each number may only go down — see scripts/check-page-length.mjs.",
     "//absorbed": [
       {
-        "why": "safety stack merge onto ready-for-agent: the trip page passes the removed seat (bid, roster) to tripPageNotices",
-        "files": {
-          "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": "356 -> 358"
-        }
-      },
-      {
-        "why": "fourth review layer 3 merged layer 2: both sides grew these files",
-        "files": {
-          "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": "366 -> 367"
-        }
-      },
-      {
         "why": "merge of batches 1-5 (#2058 #2129 #2145 #2225 #2226 #2265) into the safety stack top: the batch 2 seat, ratio and youth-form work grew these on that side; the three test files that grew most moved their new tests to siblings",
         "files": {
           "src/app/shop/[shopSlug]/trips/[id]/_components/roster-seat.ts#rosterSeat": "0 -> 308"
@@ -468,12 +456,12 @@
         }
       }
     ],
-    "src/app/s/[shopSlug]/page.tsx#SchedulePage": 367,
+    "src/app/s/[shopSlug]/page.tsx#SchedulePage": 363,
     "src/app/shop/[shopSlug]/orders/page.tsx#OrdersIndexPage": 410,
     "src/app/shop/[shopSlug]/promos/page.tsx#PromosPage": 351,
-    "src/app/shop/[shopSlug]/trips/[id]/_arrivals/arrival-desk.tsx#buildArrivalDesk": 309,
+    "src/app/shop/[shopSlug]/trips/[id]/_arrivals/arrival-desk.tsx#buildArrivalDesk": 307,
     "src/app/shop/[shopSlug]/trips/[id]/_components/roster-seat.ts#rosterSeat": 315,
-    "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 367,
+    "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 353,
     "src/db/checkouts.ts#startBookingCheckout": 303,
     "src/db/export.ts#loadShopExportContext": 312,
     "src/db/reminders.ts#sendDueReminders": 303,
@@ -527,8 +515,8 @@
     "//": "Line counts of the page.tsx files still over 400 lines. Written by `node scripts/check-page-length.mjs --write`. Each number may only go down — see scripts/check-page-length.mjs.",
     "src/app/page.tsx": 440,
     "src/app/ready/[token]/page.tsx": 633,
-    "src/app/s/[shopSlug]/page.tsx": 743,
-    "src/app/s/[shopSlug]/trips/[id]/page.tsx": 491,
+    "src/app/s/[shopSlug]/page.tsx": 739,
+    "src/app/s/[shopSlug]/trips/[id]/page.tsx": 466,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 577,
     "src/app/shop/[shopSlug]/orders/page.tsx": 727,
     "src/app/shop/[shopSlug]/page.tsx": 620,
@@ -538,7 +526,7 @@
     "src/app/shop/[shopSlug]/settings/team/page.tsx": 602,
     "src/app/shop/[shopSlug]/staffing/page.tsx": 591,
     "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 474,
-    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 508
+    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 493
   },
   "tokens": {
     "//": "Non-token color values still in components, per file. Written by `node scripts/check-tokens.mjs --write`. This number may only go down — see scripts/check-tokens.mjs. The embed-snippet generator is here by design: its hex is pasted into third-party sites where our tokens do not exist."

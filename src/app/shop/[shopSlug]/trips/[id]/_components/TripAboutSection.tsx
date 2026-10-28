@@ -44,7 +44,7 @@ function AboutRow({ row, editLabel }: { row: TripAboutRow; editLabel: string }) 
   );
   if (!row.editor) {
     return (
-      <div id={row.id} className={`${ROW_GRID} scroll-mt-24`}>
+      <div id={row.id} data-trip-detail-row className={`${ROW_GRID} scroll-mt-24`}>
         {beat}
       </div>
     );
@@ -66,9 +66,9 @@ function AboutRow({ row, editLabel }: { row: TripAboutRow; editLabel: string }) 
           ring was kept here while the label and caret sat on the summary's
           edges, where an inset ring landed on them.) */}
       <summary className="flex cursor-pointer list-none transition-colors [&::-webkit-details-marker]:hidden hover:bg-surface-sunken focus-visible:focus-ring-inset">
-        <span className={ROW_GRID}>
+        <span data-trip-detail-row className={ROW_GRID}>
           {beat}
-          <span className="inline-flex min-h-11 w-fit items-center gap-1 text-sm font-semibold text-primary sm:justify-self-end">
+          <span className="inline-flex min-h-11 w-fit items-center gap-1 text-sm font-semibold text-primary sm:justify-self-end print:hidden">
             {editLabel}
             <DisclosureCaret direction="down" className="size-4 group-open/row:rotate-180" />
           </span>
@@ -77,7 +77,7 @@ function AboutRow({ row, editLabel }: { row: TripAboutRow; editLabel: string }) 
       {/* The editor sits on the text column the value above it sits on, and
           the space below it is what keeps the next row's label off the last
           field of this one. */}
-      <div className="px-2 pb-5">{row.editor}</div>
+      <div className="px-2 pb-5 print:hidden">{row.editor}</div>
     </AboutRowDetails>
   );
 }
@@ -146,10 +146,13 @@ export function TripAboutSection({
   return (
     <section
       id="about"
+      data-trip-details-paper
       className={sectionCardClass({ padding: "none", className: "scroll-mt-24 overflow-hidden" })}
     >
       <div className="px-4 pb-4 sm:px-5 sm:pb-5">
-        {actions ? <div className="flex flex-wrap gap-x-8 gap-y-2 py-3">{actions}</div> : null}
+        {actions ? (
+          <div className="flex flex-wrap gap-x-8 gap-y-2 py-3 print:hidden">{actions}</div>
+        ) : null}
         <div className={ROWS_CLASS}>
           {rows.map((row) => (
             <AboutRow key={row.id} row={row} editLabel={editLabel} />

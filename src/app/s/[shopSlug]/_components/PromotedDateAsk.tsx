@@ -103,7 +103,7 @@ export function PromotedDateAsk({
         submitRequest={submitInquiryAction.bind(null, shopSlug, null)}
         askInterest
         sectionId="request-a-date"
-        className={className}
+        className={`${className ?? ""} print:hidden`}
         headingClassName={`font-brand-display ${SECTION_TITLE_CLASS}`}
         contactEmail={null}
         contactPhone={null}

@@ -61,7 +61,7 @@ export function ShopReviews({
         {/* A 44px door on the words' 20px line: the target bleeds above and
             below, and the baseline row stays the heading's height. Spelled
             as the storefront's other text doors are, so all draw one ring. */}
-        <span className={tapTargetLineClass}>
+        <span className={`${tapTargetLineClass} print:hidden`}>
           <Link
             href={publicReviewsPath(shopSlug)}
             className={buttonClass({ variant: "link", size: "sm", flush: true })}

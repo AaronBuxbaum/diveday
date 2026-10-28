@@ -256,7 +256,11 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
             href={`${shopPath(shopSlug, "schedule", "board")}?add=1&date=${toDateInputValue(
               utcToWallTime(trip.startsAt, timezone),
             )}`}
-            className={buttonClass({ variant: "secondary", size: "sm", className: "mt-3" })}
+            className={buttonClass({
+              variant: "secondary",
+              size: "sm",
+              className: "mt-3 print:hidden",
+            })}
           >
             {t("trips.guests.scheduleAnotherDeparture")}
           </Link>
@@ -591,7 +595,7 @@ function CarryWaitlistForm({
   t: StaffTranslator;
 }) {
   return (
-    <form action={action} className="mt-4 flex flex-col gap-3">
+    <form action={action} className="mt-4 flex flex-col gap-3 print:hidden">
       <FieldGrid columns={1}>
         <Field label={t("trips.guests.carryWaitlistTo")} htmlFor="carry-waitlist-to">
           <select id="carry-waitlist-to" name="toTripId" required className={controlClass}>

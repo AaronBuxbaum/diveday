@@ -40,7 +40,7 @@ export async function TripIncidentReports({
   return (
     <SectionCard
       id="incidents"
-      className="scroll-mt-24"
+      className={`scroll-mt-24 ${reports.length === 0 ? "print:hidden" : ""}`}
       title={t("incidents.trip.title")}
       description={t("incidents.trip.description")}
       actions={

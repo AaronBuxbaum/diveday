@@ -48,32 +48,30 @@ function renderDetails(
   flySafeTold?: number,
 ) {
   return render(
-    <>
-      {(["plan", "meeting", "timing", "booking", "boat", "departure"] as const).map((section) => (
-        <DetailsSection
-          key={section}
-          section={section}
-          context={{
-            action: () => {},
-            trip: shown,
-            diveSiteList: [],
-            tripDiveList: [],
-            startWall: wall,
-            endWall: { ...wall, hour: 12 },
-            ...days,
-            locale: "en-US",
-            currency: "USD",
-            boats: [],
-            lenses: [],
-            hasBoatDiving: true,
-            hasShoreDiving: false,
-            hasPoolDiving: false,
-            rentalItems: [],
-            ...(flySafeTold === undefined ? {} : { flySafeTold }),
-          }}
-        />
-      ))}
-    </>,
+    (["plan", "meeting", "timing", "booking", "boat", "departure"] as const).map((section) => (
+      <DetailsSection
+        key={section}
+        section={section}
+        context={{
+          action: () => {},
+          trip: shown,
+          diveSiteList: [],
+          tripDiveList: [],
+          startWall: wall,
+          endWall: { ...wall, hour: 12 },
+          ...days,
+          locale: "en-US",
+          currency: "USD",
+          boats: [],
+          lenses: [],
+          hasBoatDiving: true,
+          hasShoreDiving: false,
+          hasPoolDiving: false,
+          rentalItems: [],
+          ...(flySafeTold === undefined ? {} : { flySafeTold }),
+        }}
+      />
+    )),
   );
 }
 

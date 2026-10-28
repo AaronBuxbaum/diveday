@@ -146,7 +146,7 @@ export function RosterSection({
       className="scroll-mt-24"
     >
       {arrival?.instrument ? (
-        <div className="mb-10">{arrival.instrument(groups.deskWorkOpen)}</div>
+        <div className="mb-10 print:mb-4">{arrival.instrument(groups.deskWorkOpen)}</div>
       ) : null}
       {/* The departure page's H1 heads this tab. The moment the last blocker
           clears, nothing renders until an action on this page moves the count to

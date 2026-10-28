@@ -22,7 +22,7 @@ import {
   formatScheduleDayTime,
   resolveImageAlt,
 } from "@/lib/courses";
-import { formatShortDate, formatTime, formatTimeRangeTz } from "@/lib/format";
+import { formatShortDate, formatTimeRangeTz, formatTimeTz } from "@/lib/format";
 import { cachedFormatter, cachedListFormat } from "@/lib/intl-cache";
 import { minorToMajor, type ShopCurrency } from "@/lib/money";
 import { publicSchedulePath, publicTripPath } from "@/lib/public-routes";
@@ -88,9 +88,17 @@ export function CourseHero({
   return (
     // Facts lead the reading order; the retained photo supports them at a
     // width its source can supply (public visual audit P1, issue #3140).
-    <SectionCard as="div" padding="none" className="overflow-hidden">
-      <div className={course.heroImageUrl ? "md:grid md:grid-cols-2 md:items-start" : undefined}>
-        <div className="min-w-0 p-6 sm:p-8">
+    <SectionCard
+      as="div"
+      padding="none"
+      className="overflow-hidden print:overflow-visible print:rounded-none print:border-0"
+    >
+      <div
+        className={
+          course.heroImageUrl ? "md:grid md:grid-cols-2 md:items-start print:block" : undefined
+        }
+      >
+        <div className="min-w-0 p-6 sm:p-8 print:p-0">
           <ShopPageHeader
             eyebrow={t("course.agencyCourse", {
               // The bare code, deliberately: this eyebrow spent a while expanding
@@ -148,14 +156,14 @@ export function CourseHero({
               course.heroImageAlt,
               t("course.photoAltFallback", { course: course.title, n: 1 }),
             )}
-            className="h-44 w-full sm:h-56 md:h-80"
+            className="h-44 w-full sm:h-56 md:h-80 print:hidden"
             sizes="(min-width: 1152px) 552px, (min-width: 768px) 48vw, 100vw"
             priority
           />
         ) : null}
       </div>
       {admission || nextDate ? (
-        <div className="px-6 pb-6 sm:px-8 sm:pb-8">
+        <div className="px-6 pb-6 sm:px-8 sm:pb-8 print:px-0 print:pb-0">
           {admission}
           {nextDate ? (
             <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3">
@@ -200,7 +208,7 @@ export function CourseAdmission({
   t: DiverTranslator;
 }) {
   return (
-    <section aria-labelledby="who-can-enroll" className="mt-8 max-w-2xl">
+    <section aria-labelledby="who-can-enroll" className="mt-8 max-w-2xl print:mt-4">
       <h2 id="who-can-enroll" className={groupLabelClass()}>
         {t("course.whoCanEnroll")}
       </h2>
@@ -233,7 +241,11 @@ export function CourseAdmission({
 export function CourseOverview({ overview, t }: { overview: string | null; t: DiverTranslator }) {
   if (!overview?.trim()) return null;
   return (
-    <section id="about" aria-labelledby="about-heading" className="mt-12 max-w-2xl scroll-mt-8">
+    <section
+      id="about"
+      aria-labelledby="about-heading"
+      className="mt-12 max-w-2xl scroll-mt-8 print:mt-5"
+    >
       <h2 id="about-heading" className={LEAD_TITLE_CLASS}>
         {t("course.aboutHeading")}
       </h2>
@@ -276,7 +288,7 @@ export function CourseSchedule({
 }) {
   if (days.length === 0 && !groupSize) return null;
   return (
-    <section id="how-it-runs" className="mt-14 scroll-mt-8">
+    <section id="how-it-runs" className="mt-14 scroll-mt-8 print:mt-5">
       <h2 className={LEAD_TITLE_CLASS}>{t("course.howItRunsHeading")}</h2>
       {groupSize ? (
         <dl className="mt-4">
@@ -302,7 +314,7 @@ export function CourseSchedule({
                     At `top-1.5` it rode 2px high (K-562). */}
                   <span
                     aria-hidden="true"
-                    className="absolute top-2 left-0 size-[11px] rounded-full border-2 border-primary bg-surface"
+                    className="absolute top-2 left-0 size-[11px] rounded-full border-2 border-primary bg-surface print:border-foreground"
                   />
                   <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                     <h3 className={ITEM_TITLE_CLASS}>{day.title}</h3>
@@ -336,7 +348,7 @@ export function CourseIncludes({
 }) {
   if (includes.length === 0 && excludes.length === 0) return null;
   return (
-    <section id="included" className="mt-14 scroll-mt-8">
+    <section id="included" className="mt-14 scroll-mt-8 print:mt-5 print:break-inside-avoid">
       <h2 className={LEAD_TITLE_CLASS}>{t("course.feeCovers")}</h2>
       {/* Two quiet columns, no boxes — the ✓ and – glyphs carry the split, and
           the muted ink on the right keeps "not included" from competing with
@@ -385,7 +397,7 @@ export function CourseGallery({
 }) {
   if (photos.length === 0) return null;
   return (
-    <section className="mt-12">
+    <section className="mt-12 print:hidden">
       <h2 className="sr-only">{t("course.galleryHeading", { course: title })}</h2>
       {/* One scroll-snap row (visual review 2026-10-24, B34): on a phone the
           tiles run past the edge and the row's own padding lets the last one
@@ -467,7 +479,7 @@ function sessionFacts(
       ? `${formatShortDate(session.startsAt, locale, timezone)} – ${formatShortDate(session.endsAt, locale, timezone)}`
       : formatShortDate(session.startsAt, locale, timezone),
     time: multiDay
-      ? t("course.startsAt", { time: formatTime(session.startsAt, locale, timezone) })
+      ? t("course.startsAt", { time: formatTimeTz(session.startsAt, locale, timezone) })
       : formatTimeRangeTz(session.startsAt, session.endsAt, locale, timezone),
     capacity:
       capacityLabelValue.kind === "full"
@@ -545,10 +557,10 @@ export function CourseSessions({
   const later = sessions.filter((session) => session !== next);
   const nextIsSoonest = next === sessions[0];
   return (
-    <section id="dates" className="mt-14 scroll-mt-8">
+    <section id="dates" className="mt-14 scroll-mt-8 print:mt-5">
       {/* The panel rung, like the hero panel above it: this was `rounded-3xl`,
           24px, a corner the ladder does not have (K-378). */}
-      <div className="rounded-panel border border-primary/15 bg-primary/5 p-6 sm:p-8">
+      <div className="rounded-panel border border-primary/15 bg-primary/5 p-6 sm:p-8 print:rounded-none print:border-x-0 print:border-b-0 print:border-border print:px-0 print:py-3">
         <h2 className={LEAD_TITLE_CLASS}>{t("course.datesHeading")}</h2>
         {!next ? (
           <p className="mt-4 max-w-2xl text-muted">
@@ -655,7 +667,7 @@ export function CourseSessions({
 export function CourseFaqs({ faqs, t }: { faqs: CourseFaq[]; t: DiverTranslator }) {
   if (faqs.length === 0) return null;
   return (
-    <section id="faqs" className="mt-14 max-w-3xl scroll-mt-8">
+    <section id="faqs" className="mt-14 max-w-3xl scroll-mt-8 print:mt-5">
       <h2 className={LEAD_TITLE_CLASS}>{t("course.faqsHeading")}</h2>
       {/* Quiet disclosures on hairlines — a question list is a list, not a
           stack of cards; the borders that survive are the ones that separate.
@@ -680,7 +692,7 @@ export function CourseFaqs({ faqs, t }: { faqs: CourseFaq[]; t: DiverTranslator 
           complete answers while the screen keeps its disclosure interaction. */}
       <div className="mt-4 hidden divide-y divide-border border-y border-border print:block">
         {faqs.map((faq) => (
-          <div key={faq.question} className="break-inside-avoid py-3" data-print-faq>
+          <div key={faq.question} className="py-3 print:break-inside-avoid" data-print-faq>
             <h3 className="font-medium">{faq.question}</h3>
             <p className="mt-2 leading-relaxed text-muted">{faq.answer}</p>
           </div>
