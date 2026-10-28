@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { and, eq } from "drizzle-orm";
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 import type { NotificationProvider } from "@/lib/notifications";
 import { describePostgres, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
 import { offerBookingHandoffByEmail } from "./booking-handoff";
@@ -8,6 +8,7 @@ import {
   bookingCapabilities,
   bookings,
   notificationDeliveries,
+  notificationSendQueue,
   people,
   shops,
   trips,
@@ -88,7 +89,161 @@ function sendOptions(provider: NotificationProvider, now: Date) {
   };
 }
 
-describePostgres("reschedule notice erasure and reassignment fences", () => {
+describePostgres("reschedule and handoff notice fences", () => {
+  it("keeps a readiness link alive only when the reschedule retry is durably queued", async () => {
+    const { pg, shop, booking, now, payload } = await fixture();
+    const provider: NotificationProvider = {
+      async send() {
+        return { status: "failed", retryable: true, errorCode: "temporary_failure" };
+      },
+    };
+    await expect(
+      sendRescheduleNotices(pg.db, shop.id, payload, sendOptions(provider, now)),
+    ).resolves.toMatchObject({ told: 0, failed: 1 });
+    const [queued] = await pg.db
+      .select()
+      .from(notificationSendQueue)
+      .where(eq(notificationSendQueue.bookingId, booking.id));
+    const [capability] = await pg.db
+      .select({ revokedAt: bookingCapabilities.revokedAt })
+      .from(bookingCapabilities)
+      .where(
+        and(
+          eq(bookingCapabilities.bookingId, booking.id),
+          eq(bookingCapabilities.purpose, "readiness"),
+        ),
+      );
+    expect(queued).toMatchObject({ status: "queued" });
+    expect(queued?.payloadSealed).toMatch(/^v1\./);
+    expect(capability?.revokedAt).toBeNull();
+  });
+
+  it.each([
+    ["permanent provider failure", false],
+    ["retryable failure when queue sealing is unavailable", true],
+  ])("revokes the readiness link on %s", async (_label, queueUnavailable) => {
+    const { pg, shop, booking, now, payload } = await fixture();
+    const provider: NotificationProvider = {
+      async send() {
+        return queueUnavailable
+          ? { status: "failed", retryable: true, errorCode: "temporary_failure" }
+          : { status: "failed", retryable: false, errorCode: "permanent_failure" };
+      },
+    };
+    if (queueUnavailable) vi.stubEnv("SECRET_ENCRYPTION_KEY", "");
+    try {
+      await expect(
+        sendRescheduleNotices(pg.db, shop.id, payload, sendOptions(provider, now)),
+      ).resolves.toMatchObject({ told: 0, failed: 1 });
+      expect(
+        await pg.db
+          .select()
+          .from(notificationSendQueue)
+          .where(eq(notificationSendQueue.bookingId, booking.id)),
+      ).toEqual([]);
+      const [capability] = await pg.db
+        .select({ revokedAt: bookingCapabilities.revokedAt })
+        .from(bookingCapabilities)
+        .where(
+          and(
+            eq(bookingCapabilities.bookingId, booking.id),
+            eq(bookingCapabilities.purpose, "readiness"),
+          ),
+        );
+      expect(capability?.revokedAt).not.toBeNull();
+    } finally {
+      if (queueUnavailable) vi.unstubAllEnvs();
+    }
+  });
+
+  it("reports and preserves a handoff link when its retry is durably queued", async () => {
+    const { pg, shop, handoffTrip, booking, person, now } = await fixture();
+    const provider: NotificationProvider = {
+      async send() {
+        return { status: "failed", retryable: true, errorCode: "temporary_failure" };
+      },
+    };
+    await expect(
+      offerBookingHandoffByEmail(
+        pg.db,
+        {
+          shopId: shop.id,
+          tripId: handoffTrip.id,
+          email: person.email as string,
+          origin: "https://diveday.example",
+          requestLocale: "en-US",
+          now,
+        },
+        { provider },
+      ),
+    ).resolves.toBe("queued");
+    const [queued] = await pg.db
+      .select()
+      .from(notificationSendQueue)
+      .where(eq(notificationSendQueue.bookingId, booking.id));
+    const [capability] = await pg.db
+      .select({ revokedAt: bookingCapabilities.revokedAt })
+      .from(bookingCapabilities)
+      .where(
+        and(
+          eq(bookingCapabilities.bookingId, booking.id),
+          eq(bookingCapabilities.purpose, "handoff"),
+        ),
+      );
+    expect(queued?.status).toBe("queued");
+    expect(queued?.payloadSealed).toMatch(/^v1\./);
+    expect(capability?.revokedAt).toBeNull();
+  });
+
+  it.each([
+    ["permanent provider failure", false],
+    ["retryable failure when queue sealing is unavailable", true],
+  ])("reports handoff %s and revokes its undeliverable link", async (_label, queueUnavailable) => {
+    const { pg, shop, handoffTrip, booking, person, now } = await fixture();
+    const provider: NotificationProvider = {
+      async send() {
+        return queueUnavailable
+          ? { status: "failed", retryable: true, errorCode: "temporary_failure" }
+          : { status: "failed", retryable: false, errorCode: "permanent_failure" };
+      },
+    };
+    if (queueUnavailable) vi.stubEnv("SECRET_ENCRYPTION_KEY", "");
+    try {
+      await expect(
+        offerBookingHandoffByEmail(
+          pg.db,
+          {
+            shopId: shop.id,
+            tripId: handoffTrip.id,
+            email: person.email as string,
+            origin: "https://diveday.example",
+            requestLocale: "en-US",
+            now,
+          },
+          { provider },
+        ),
+      ).resolves.toBe("failed");
+      expect(
+        await pg.db
+          .select()
+          .from(notificationSendQueue)
+          .where(eq(notificationSendQueue.bookingId, booking.id)),
+      ).toEqual([]);
+      const [capability] = await pg.db
+        .select({ revokedAt: bookingCapabilities.revokedAt })
+        .from(bookingCapabilities)
+        .where(
+          and(
+            eq(bookingCapabilities.bookingId, booking.id),
+            eq(bookingCapabilities.purpose, "handoff"),
+          ),
+        );
+      expect(capability?.revokedAt).not.toBeNull();
+    } finally {
+      if (queueUnavailable) vi.unstubAllEnvs();
+    }
+  });
+
   it("finishes a normal provider call and tracking before erasure can commit", async () => {
     const { pg, shop, person, booking, now, payload } = await fixture();
     const started = barrier();
