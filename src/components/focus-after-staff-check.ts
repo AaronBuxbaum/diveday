@@ -1,7 +1,8 @@
 /** Preserve an initial focus request made while staff content is covered. */
 export function focusAfterStaffCheck(element: HTMLElement | null): () => void {
   if (!element) return () => {};
-  if (!element.closest("[inert]")) {
+  const sessionCheckPending = document.querySelector('[data-staff-session-check="pending"]');
+  if (!element.closest("[inert]") && !sessionCheckPending) {
     element.focus({ preventScroll: true });
     return () => {};
   }
