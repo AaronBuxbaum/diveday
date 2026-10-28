@@ -1,8 +1,8 @@
+"use client";
+
 import type { WeekSpan } from "./week-span";
 
 export type { WeekSpan } from "./week-span";
-
-("use client");
 
 import Link from "next/link";
 import { type ReactNode, useRef } from "react";
