@@ -854,8 +854,9 @@ function madeByTheList(db: AppDb): SQL {
  * it needs and the ratio its crew allows. An interest asks for a diver's seat, so the
  * divers-only limit binds. Every offer already out to someone who has not taken a
  * seat holds as many of those seats as their party asked for, so they are taken
- * off. A person-less date-request offer stops counting after 48 hours (#2914);
- * this is advice for the next offer, not a reservation or booking gate.
+ * off. A person-less date-request offer stops counting after 48 hours (#2914),
+ * or when its specific linked booking is live; this is advice for the next
+ * offer, not a reservation or booking gate.
  * **A row a deal made off the last-minute list does not count** (ADR
  * 20261017-one-interest-with-a-scope, R2): one blast to forty people must not push a
  * three-seat departure to "0 invitable" and stop the roll inviting real
@@ -896,6 +897,14 @@ export async function invitableSeats(db: AppDb, trip: typeof trips.$inferSelect)
                 eq(bookings.personId, interests.personId),
                 ne(bookings.status, "cancelled"),
               ),
+            ),
+        ),
+        notExists(
+          db
+            .select({ id: bookings.id })
+            .from(bookings)
+            .where(
+              and(eq(bookings.id, interests.bookedBookingId), ne(bookings.status, "cancelled")),
             ),
         ),
       ),

@@ -13,7 +13,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
-import { tripLastMinutePromos } from "./bookings";
+import { bookings, tripLastMinutePromos } from "./bookings";
 import { appNowTimestamp } from "./columns";
 import { people, shops } from "./core";
 import { courses } from "./courses";
@@ -130,6 +130,10 @@ export const interests = pgTable(
     emailedAt: timestamp("emailed_at", { withTimezone: true }),
     /** The deal this offer carried. */
     promoId: uuid("promo_id").references(() => tripLastMinutePromos.id),
+    /** The confirmed booking that answered this specific date-request offer. */
+    bookedBookingId: uuid("booked_booking_id").references(() => bookings.id, {
+      onDelete: "set null",
+    }),
 
     // the end
     closedAt: timestamp("closed_at", { withTimezone: true }),
@@ -184,6 +188,10 @@ export const interests = pgTable(
       sql`${table.emailedAt} is null or ${table.offeredAt} is not null`,
     ),
     check(
+      "interests_booked_booking_is_date_offer",
+      sql`${table.bookedBookingId} is null or (${table.scope} = 'departure' and ${table.parentInterestId} is not null and ${table.offeredAt} is not null)`,
+    ),
+    check(
       "interests_closed_together",
       sql`(${table.closedAt} is null) = (${table.closedAs} is null)`,
     ),
@@ -224,6 +232,7 @@ export const interests = pgTable(
     index("interests_parent_idx").on(table.parentInterestId),
     index("interests_course_idx").on(table.courseId),
     index("interests_promo_idx").on(table.promoId),
+    uniqueIndex("interests_booked_booking_unique").on(table.bookedBookingId),
     // The weekly digest and new-interest alerts.
     index("interests_shop_asked_idx").on(table.shopId, table.askedAt),
   ],

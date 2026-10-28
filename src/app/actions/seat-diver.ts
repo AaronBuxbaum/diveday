@@ -4,7 +4,7 @@ import { z } from "zod";
 import { getDb } from "@/db/client";
 import { findSimilarDivers } from "@/db/divers";
 import { discardFormDraft } from "@/db/form-drafts";
-import { setDateInterestOutcome } from "@/db/interests";
+import { associateDateRequestOfferBooking, setDateInterestOutcome } from "@/db/interests";
 import { busyOnLockWait } from "@/db/lock-bounds";
 import {
   type SeatDiverPerson,
@@ -235,6 +235,12 @@ async function seat(
   // leaves its day on the Requests page and stops counting there. A request
   // already closed keeps the answer it had.
   if (requestId) {
+    await associateDateRequestOfferBooking(db, {
+      shopId: actor.shopId,
+      tripId: landing.tripId,
+      requestId,
+      bookingId: result.bookingId,
+    });
     await setDateInterestOutcome(db, {
       shopId: actor.shopId,
       interestId: requestId,

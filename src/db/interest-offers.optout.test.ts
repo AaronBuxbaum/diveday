@@ -32,7 +32,8 @@ vi.mock("@/lib/notifications", async (importOriginal) => {
 
 const { sendNotification } = await import("./notifications");
 const { invitableSeats, offerSeats } = await import("./interest-offers");
-const { askAnytime, unsubscribeAnytimeInterestByToken } = await import("./interests");
+const { associateDateRequestOfferBooking, askAnytime, unsubscribeAnytimeInterestByToken } =
+  await import("./interests");
 const { optOutPersonFromCourtesyEmailByToken, resolveCourtesyEmailUnsubscribeToken } = await import(
   "./courtesy-email"
 );
@@ -181,6 +182,119 @@ describe("an unsubscribe from the last-minute list", () => {
 });
 
 describe("invitableSeats and the deal", () => {
+  it("stops counting only the anonymous date offer linked to its booked departure", async () => {
+    const { db, shop, trip } = await context();
+    const departure = await tripRow(db, trip.id);
+    const baseline = await invitableSeats(db, departure);
+    const requestId = await addInterest(db, shop.id, {
+      interest: "reef dive",
+      name: "Anonymous request",
+      email: "request-3102@example.com",
+    });
+    const unrelatedRequestId = await addInterest(db, shop.id, {
+      interest: "another reef dive",
+      name: "Another anonymous request",
+      email: "other-request-3102@example.com",
+    });
+    const offeredAt = nowDate();
+    const [bookedOffer] = await db
+      .insert(interests)
+      .values({
+        shopId: shop.id,
+        scope: "departure",
+        askedBy: "diver",
+        tripId: trip.id,
+        parentInterestId: requestId,
+        partySize: 1,
+        offeredAt,
+      })
+      .returning({ id: interests.id });
+    const [unrelatedOffer] = await db
+      .insert(interests)
+      .values({
+        shopId: shop.id,
+        scope: "departure",
+        askedBy: "diver",
+        tripId: trip.id,
+        parentInterestId: unrelatedRequestId,
+        partySize: 1,
+        offeredAt,
+        closedAt: offeredAt,
+        closedAs: "done",
+      })
+      .returning({ id: interests.id });
+    if (!bookedOffer || !unrelatedOffer) throw new Error("setup: date offers missing");
+    expect(await invitableSeats(db, departure)).toBe(baseline - 2);
+
+    const bookingEmail = "booked-3102@example.com";
+    await askAnytime(db, {
+      shopId: shop.id,
+      fullName: "A diver booking separately",
+      email: bookingEmail,
+      declaration: openWater,
+    });
+    const [bookedPerson] = await db.select().from(people).where(eq(people.email, bookingEmail));
+    if (!bookedPerson) throw new Error("setup: booking person missing");
+    const [booking] = await db
+      .insert(bookings)
+      .values({
+        bookedAs: "diver",
+        shopId: shop.id,
+        tripId: trip.id,
+        personId: bookedPerson.id,
+        status: "booked",
+      })
+      .returning({ id: bookings.id });
+    if (!booking) throw new Error("setup: booking missing");
+    const otherDeparture = (await upcomingTripsWithCounts(db, shop.id)).find(
+      (candidate) => candidate.id !== trip.id,
+    );
+    if (!otherDeparture) throw new Error("setup: second departure missing");
+    const [foreignBooking] = await db
+      .insert(bookings)
+      .values({
+        bookedAs: "diver",
+        shopId: shop.id,
+        tripId: otherDeparture.id,
+        personId: bookedPerson.id,
+        status: "booked",
+      })
+      .returning({ id: bookings.id });
+    if (!foreignBooking) throw new Error("setup: second departure booking missing");
+
+    expect(
+      await associateDateRequestOfferBooking(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        requestId,
+        bookingId: foreignBooking.id,
+      }),
+    ).toBe(false);
+    expect(
+      await associateDateRequestOfferBooking(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        requestId,
+        bookingId: booking.id,
+      }),
+    ).toBe(true);
+    expect(
+      await associateDateRequestOfferBooking(db, {
+        shopId: "00000000-0000-4000-8000-000000000000",
+        tripId: trip.id,
+        requestId: unrelatedRequestId,
+        bookingId: booking.id,
+      }),
+    ).toBe(false);
+    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 2);
+
+    const [stored] = await db
+      .select({ bookedBookingId: interests.bookedBookingId })
+      .from(interests)
+      .where(eq(interests.id, unrelatedOffer.id));
+    expect(stored?.bookedBookingId).toBeNull();
+  });
+
   it("releases an anonymous date-request party at 48 hours and counts a fresh re-offer", async () => {
     const { db, shop, trip } = await context();
     const departure = await tripRow(db, trip.id);

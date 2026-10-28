@@ -553,6 +553,7 @@ export const INTERESTS_CSV = sharedFile<ShopRow<"interestRows">>({
     { header: "scope", in: "both", value: (row) => row.scope },
     { header: "asked_by", in: "both", value: (row) => row.askedBy },
     { header: "parent_interest_id", in: "shop", value: (row) => row.parentInterestId },
+    { header: "booked_booking_id", in: "shop", value: (row) => row.bookedBookingId },
     { header: "trip_id", in: "shop", value: (row) => row.tripId },
     {
       header: "trip_title",

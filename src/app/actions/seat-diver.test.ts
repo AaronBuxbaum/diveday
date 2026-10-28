@@ -9,6 +9,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/db/client", () => ({ getDb: vi.fn(async () => ({ db: "handle" })) }));
 vi.mock("@/db/divers", () => ({ findSimilarDivers: vi.fn(async () => []) }));
+vi.mock("@/db/interests", () => ({
+  associateDateRequestOfferBooking: vi.fn(),
+  setDateInterestOutcome: vi.fn(),
+}));
 vi.mock("@/db/seat-diver", () => ({ seatDiver: vi.fn() }));
 vi.mock("@/db/trips", () => ({ getTripWithBooked: vi.fn() }));
 vi.mock("@/lib/navigation", () => ({
@@ -19,6 +23,7 @@ vi.mock("@/lib/navigation", () => ({
 vi.mock("@/lib/session", () => ({ requireShopSurface: vi.fn() }));
 
 const { seatDiver } = await import("@/db/seat-diver");
+const { associateDateRequestOfferBooking } = await import("@/db/interests");
 const { getTripWithBooked } = await import("@/db/trips");
 const { HOUR_MS, nowMs } = await import("@/lib/clock");
 const { verifyTripAdmissionGate } = await import("@/lib/trip-admission-gate");
@@ -237,6 +242,28 @@ describe("a walk-in is refused on a boat the counter cannot seat", () => {
       expect.anything(),
       expect.objectContaining({ entry: "walk_in", refusals: "specific" }),
     );
+  });
+
+  it("associates only the request that opened the successful seating", async () => {
+    const bookingId = "55555555-5555-4555-8555-555555555555";
+    const requestId = "66666666-6666-4666-8666-666666666666";
+    vi.mocked(seatDiver).mockResolvedValue({
+      ok: true,
+      personId: DIVER_ID,
+      bookingId,
+      identityUnconfirmed: false,
+      waiver: "not_needed",
+      confirmation: "skipped",
+    } as never);
+    await expect(landing(form({ request: requestId }))).resolves.toBe(
+      `/shop/blue-mantis/trips/${TRIP_ID}?notice=diver-added&bid=${bookingId}`,
+    );
+    expect(associateDateRequestOfferBooking).toHaveBeenCalledWith(expect.anything(), {
+      shopId: SHOP_ID,
+      tripId: TRIP_ID,
+      requestId,
+      bookingId,
+    });
   });
 
   it("still asks a roster hand entry for an email when it is not a walk-in", async () => {

@@ -1,4 +1,5 @@
-import { and, asc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
+import { and, asc, eq, exists, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { createBearerToken, hashBearerToken } from "@/lib/bearer-tokens";
 import { courseRatioRefusal } from "@/lib/booking-gates";
 import type { CalendarDate } from "@/lib/calendar-date";
@@ -657,6 +658,59 @@ export async function setDateInterestOutcome(
         : { closedAt: null, closedAs: null },
     )
     .where(input.outcome === "booked" ? and(scope, isNull(interests.closedAt)) : scope)
+    .returning({ id: interests.id });
+  return rows.length > 0;
+}
+
+/**
+ * Link a successfully seated booking to only the departure offer made from
+ * the date request that opened this booking. The single UPDATE checks the
+ * request, shop, trip, offered child and live booking together, so a forged
+ * request id cannot attach a booking across tenants or departures.
+ */
+export async function associateDateRequestOfferBooking(
+  db: DbExecutor,
+  input: { shopId: string; tripId: string; requestId: string; bookingId: string },
+): Promise<boolean> {
+  const source = alias(interests, "date_request");
+  const rows = await db
+    .update(interests)
+    .set({ bookedBookingId: input.bookingId })
+    .where(
+      and(
+        eq(interests.shopId, input.shopId),
+        eq(interests.scope, "departure"),
+        eq(interests.tripId, input.tripId),
+        eq(interests.parentInterestId, input.requestId),
+        isNotNull(interests.offeredAt),
+        or(isNull(interests.bookedBookingId), eq(interests.bookedBookingId, input.bookingId)),
+        exists(
+          db
+            .select({ id: source.id })
+            .from(source)
+            .where(
+              and(
+                eq(source.id, interests.parentInterestId),
+                eq(source.shopId, input.shopId),
+                eq(source.scope, "date"),
+              ),
+            ),
+        ),
+        exists(
+          db
+            .select({ id: bookings.id })
+            .from(bookings)
+            .where(
+              and(
+                eq(bookings.id, input.bookingId),
+                eq(bookings.shopId, input.shopId),
+                eq(bookings.tripId, input.tripId),
+                ne(bookings.status, "cancelled"),
+              ),
+            ),
+        ),
+      ),
+    )
     .returning({ id: interests.id });
   return rows.length > 0;
 }
