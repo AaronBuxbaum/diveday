@@ -125,6 +125,7 @@ test("the saved /ready copy shows with no signal, and a cancel landing forgets i
     if (!saved) throw new Error("No readiness copy is available to rewrite for the legacy check");
     const html = (await saved.text())
       .replace(/<meta name="diveday-ready-copy-(?:version|locale|time-zone)"[^>]*>/g, "")
+      .replace(/\sdata-ready-copy-saved-at="\d+"/g, "")
       .replace(/(<p [^>]*data-ready-offline-note=""[^>]*>)[\s\S]*?(<\/p>)/, `$1${legacyNote}$2`);
     await cache.put(key, new Response(html, { status: saved.status, headers: saved.headers }));
   }, LEGACY_OFFLINE_NOTE);

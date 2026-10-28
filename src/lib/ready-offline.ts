@@ -44,6 +44,8 @@ export const READY_COPY_TIME_ZONE_META = "diveday-ready-copy-time-zone";
 /** Distinguishes copies with the saved-time banner from older cached markup. */
 export const READY_COPY_VERSION_META = "diveday-ready-copy-version";
 export const READY_COPY_VERSION = "saved-time-v1";
+/** The save instant attached to the timestamped offline banner by the worker. */
+export const READY_COPY_SAVED_AT_ATTR = "data-ready-copy-saved-at";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 

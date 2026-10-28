@@ -6,6 +6,7 @@ import {
   forgetReadyPageCopy,
   keepReadyPageOnDevice,
   READY_COPY_LOCALE_META,
+  READY_COPY_SAVED_AT_ATTR,
   READY_COPY_TIME_ZONE_META,
   READY_COPY_VERSION,
   READY_COPY_VERSION_META,
@@ -190,6 +191,7 @@ describe("ReadyOfflineCopy", () => {
     expect(served).toContain(`name="${READY_COPY_LOCALE_META}" content="${LOCALE}"`);
     expect(served).toContain(`name="${READY_COPY_TIME_ZONE_META}" content="${TIME_ZONE}"`);
     expect(served).toContain(`name="${READY_COPY_VERSION_META}" content="${READY_COPY_VERSION}"`);
+    expect(served).toContain(`${READY_COPY_SAVED_AT_ATTR}="${now}"`);
     expect(served).not.toMatch(/<p [^>]*hidden=""[^>]*>No signal/);
   });
 });

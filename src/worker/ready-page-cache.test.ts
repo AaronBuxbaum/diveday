@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
   READY_CACHE_NAME,
   READY_COPY_LOCALE_META,
+  READY_COPY_SAVED_AT_ATTR,
   READY_COPY_TIME_ZONE_META,
   READY_COPY_VERSION,
   READY_COPY_VERSION_META,
@@ -51,8 +52,8 @@ function fakeStorage() {
   return { storage: storage as unknown as CacheStorage, caches };
 }
 
-/** The live page as the server renders it: kept until `keepUntil` (default: well past NOW). */
-function page(body = "<p>Ready</p>", init: ResponseInit = {}, keepUntil = NOW + 30 * DAY_MS) {
+/** A current-format response with no automatic banner, for malformed-page tests. */
+function renderedPage(body: string, init: ResponseInit = {}, keepUntil = NOW + 30 * DAY_MS) {
   return new Response(
     `<meta name="${READY_KEEP_UNTIL_META}" content="${keepUntil}"/><meta name="${READY_COPY_VERSION_META}" content="${READY_COPY_VERSION}"/>${body}`,
     {
@@ -61,6 +62,14 @@ function page(body = "<p>Ready</p>", init: ResponseInit = {}, keepUntil = NOW + 
       ...init,
     },
   );
+}
+
+/** The live page as the server renders it: kept until `keepUntil` (default: well past NOW). */
+function page(body = "<p>Ready</p>", init: ResponseInit = {}, keepUntil = NOW + 30 * DAY_MS) {
+  const withBanner = body.includes(`${READY_OFFLINE_NOTE_ATTR}=""`)
+    ? body
+    : `<meta name="${READY_COPY_LOCALE_META}" content="en-US"/><meta name="${READY_COPY_TIME_ZONE_META}" content="America/New_York"/>${body}<p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">No signal: ${READY_OFFLINE_SAVED_AT_PLACEHOLDER}</p>`;
+  return renderedPage(withBanner, init, keepUntil);
 }
 
 describe("readyPagePath", () => {
@@ -125,6 +134,9 @@ describe("saveReadyPage and readyPageFallback", () => {
     }).format(new Date(NOW));
     expect(text?.replaceAll("\u00a0", " ")).toContain(`Saved ${expected}`);
     expect(text).not.toContain(READY_OFFLINE_SAVED_AT_PLACEHOLDER);
+    expect(text).toMatch(
+      new RegExp(`${READY_OFFLINE_NOTE_ATTR}=""[^>]*${READY_COPY_SAVED_AT_ATTR}="${NOW}"`),
+    );
   });
 
   it.each([
@@ -161,6 +173,7 @@ describe("saveReadyPage and readyPageFallback", () => {
       const text = await served?.text();
       expect(text).toContain(warning);
       expect(text).not.toContain("__diveday_ready_saved_at__");
+      expect(text).not.toContain(READY_COPY_SAVED_AT_ATTR);
       expect(text).toContain(`/ready/${TOKEN}`);
       expect(text).not.toContain("__diveday_kept_token__");
       expect(store.caches.get(READY_CACHE_NAME)?.size).toBe(1);
@@ -208,6 +221,84 @@ describe("saveReadyPage and readyPageFallback", () => {
     expect(await saveReadyPage(store.storage, `/ready/${TOKEN}`, page(body), NOW)).toBe(false);
     expect(store.caches.get(READY_CACHE_NAME)?.size ?? 0).toBe(0);
   });
+
+  it.each([
+    ["missing", `<p>Unmarked page content</p>`],
+    [
+      "duplicate",
+      `<p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">${READY_OFFLINE_SAVED_AT_PLACEHOLDER}</p><p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">${READY_OFFLINE_SAVED_AT_PLACEHOLDER}</p>`,
+    ],
+    [
+      "malformed duplicate",
+      `<p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">${READY_OFFLINE_SAVED_AT_PLACEHOLDER}</p><p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">unfinished`,
+    ],
+    [
+      "malformed",
+      `<p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">${READY_OFFLINE_SAVED_AT_PLACEHOLDER}<strong>nested markup</strong></p>`,
+    ],
+  ])("does not save a current-format response with a %s offline banner", async (_case, banner) => {
+    const body = [
+      `<meta name="${READY_COPY_LOCALE_META}" content="en-US"/>`,
+      `<meta name="${READY_COPY_TIME_ZONE_META}" content="America/New_York"/>`,
+      banner,
+    ].join("");
+    expect(await saveReadyPage(store.storage, `/ready/${TOKEN}`, renderedPage(body), NOW)).toBe(
+      false,
+    );
+    expect(store.caches.get(READY_CACHE_NAME)?.size ?? 0).toBe(0);
+  });
+
+  it.each([
+    ["missing", (html: string, banner: string) => html.replace(banner, "")],
+    ["duplicate", (html: string, banner: string) => html.replace(banner, `${banner}${banner}`)],
+    [
+      "malformed duplicate",
+      (html: string, banner: string) =>
+        html.replace(banner, `${banner}<p ${READY_OFFLINE_NOTE_ATTR}="">unfinished`),
+    ],
+    [
+      "malformed",
+      (html: string, banner: string) =>
+        html.replace(banner, banner.replace("<p", "<div").replace("</p>", "</div>")),
+    ],
+    [
+      "wrong save time",
+      (html: string) =>
+        html.replace(
+          new RegExp(`${READY_COPY_SAVED_AT_ATTR}="\\d+"`),
+          `${READY_COPY_SAVED_AT_ATTR}="${NOW - DAY_MS}"`,
+        ),
+    ],
+    [
+      "missing time zone",
+      (html: string) => html.replace(/<meta name="diveday-ready-copy-time-zone"[^>]*>/, ""),
+    ],
+  ])(
+    "deletes a matching-path current copy with a %s banner, never on wrong-path lookup",
+    async (_case, alter) => {
+      await saveReadyPage(store.storage, `/ready/${TOKEN}`, page("current"), NOW);
+      const cache = await store.storage.open(READY_CACHE_NAME);
+      const previous = await cache.match(READY_COPY_KEY);
+      expect(previous).toBeDefined();
+      const html = await previous?.text();
+      const banner = html?.match(/<p\b[^>]*data-ready-offline-note=""[^>]*>[^<>]*<\/p>/)?.[0];
+      expect(html).toBeDefined();
+      expect(banner).toBeDefined();
+      await cache.put(
+        READY_COPY_KEY,
+        new Response(alter(html ?? "", banner ?? ""), { headers: previous?.headers }),
+      );
+
+      expect(
+        await readyPageFallback(store.storage, `/ready/${OTHER}`, NOW + 1_000),
+      ).toBeUndefined();
+      expect(store.caches.get(READY_CACHE_NAME)?.size).toBe(1);
+      expect(
+        await readyPageFallback(store.storage, `/ready/${TOKEN}`, NOW + 1_000),
+      ).toBeUndefined();
+      expect(store.caches.get(READY_CACHE_NAME)?.size ?? 0).toBe(0);
+    },
+  );
 
   it("formats Spanish saved times in the shop zone", async () => {
     const locale = "es-ES";

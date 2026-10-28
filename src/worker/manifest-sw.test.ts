@@ -21,9 +21,13 @@ import {
 } from "@/lib/offline-manifests";
 import {
   READY_CACHE_NAME,
+  READY_COPY_LOCALE_META,
+  READY_COPY_TIME_ZONE_META,
   READY_COPY_VERSION,
   READY_COPY_VERSION_META,
   READY_KEEP_UNTIL_META,
+  READY_OFFLINE_NOTE_ATTR,
+  READY_OFFLINE_SAVED_AT_PLACEHOLDER,
 } from "@/lib/ready-offline";
 import { saveReadyPage } from "./ready-page-cache";
 
@@ -468,7 +472,7 @@ describe("a navigation on a network that never answers", () => {
   async function cacheReadyCopy(path: string, body: string) {
     const keepUntil = Date.now() + 24 * 60 * 60 * 1000;
     const response = new Response(
-      `<meta name="${READY_KEEP_UNTIL_META}" content="${keepUntil}"/><meta name="${READY_COPY_VERSION_META}" content="${READY_COPY_VERSION}"/>${body}`,
+      `<meta name="${READY_KEEP_UNTIL_META}" content="${keepUntil}"/><meta name="${READY_COPY_VERSION_META}" content="${READY_COPY_VERSION}"/><meta name="${READY_COPY_LOCALE_META}" content="en-US"/><meta name="${READY_COPY_TIME_ZONE_META}" content="America/New_York"/>${body}<p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">No signal: ${READY_OFFLINE_SAVED_AT_PLACEHOLDER}</p>`,
       { headers: { "content-type": "text/html" } },
     );
     await saveReadyPage(cacheStorage as unknown as CacheStorage, path, response, Date.now());

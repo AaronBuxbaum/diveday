@@ -61,6 +61,7 @@ import { keepUnitsWhole } from "@/lib/date-parts";
 import {
   READY_CACHE_NAME,
   READY_COPY_LOCALE_META,
+  READY_COPY_SAVED_AT_ATTR,
   READY_COPY_TIME_ZONE_META,
   READY_COPY_VERSION,
   READY_COPY_VERSION_META,
@@ -164,6 +165,46 @@ const OFFLINE_NOTE_SHOWN = `${READY_OFFLINE_NOTE_ATTR}=""`;
 
 const KEEP_UNTIL_PATTERN = new RegExp(`<meta name="${READY_KEEP_UNTIL_META}" content="(\\d+)"`);
 
+type ReadyBanner = { element: string; opening: string; text: string; closing: string };
+
+function readyBanners(html: string): ReadyBanner[] {
+  const pattern = new RegExp(
+    `(<p\\b[^>]*\\b${READY_OFFLINE_NOTE_ATTR}=""[^>]*>)([^<>]*)(<\\/p>)`,
+    "gi",
+  );
+  return [...html.matchAll(pattern)].map((match) => ({
+    element: match[0],
+    opening: match[1] ?? "",
+    text: match[2] ?? "",
+    closing: match[3] ?? "",
+  }));
+}
+
+function hasAttribute(opening: string, name: string): boolean {
+  return new RegExp(`\\b${name}="[^"]*"`).test(opening);
+}
+
+function singleTextBanner(html: string): ReadyBanner | undefined {
+  const banners = readyBanners(html);
+  const banner = banners[0];
+  const allNoteMarkers = html.match(new RegExp(`\\b${READY_OFFLINE_NOTE_ATTR}=""`, "g"));
+  const noteMarkers = banner?.opening.match(new RegExp(`\\b${READY_OFFLINE_NOTE_ATTR}=""`, "g"));
+  if (
+    banners.length !== 1 ||
+    allNoteMarkers?.length !== 1 ||
+    !banner ||
+    noteMarkers?.length !== 1
+  ) {
+    return undefined;
+  }
+  return banner;
+}
+
+function visibleTextBanner(html: string): ReadyBanner | undefined {
+  const banner = singleTextBanner(html);
+  return banner && !/\shidden(?:\s|=|>)/i.test(banner.opening) ? banner : undefined;
+}
+
 function metaContent(html: string, name: string): string | undefined {
   return html.match(
     new RegExp(`<meta\\b[^>]*\\bname="${name}"[^>]*\\bcontent="([^"]*)"[^>]*>`, "i"),
@@ -172,16 +213,11 @@ function metaContent(html: string, name: string): string | undefined {
 
 /** Recognize and warn on the two exact historical, localized offline banners. */
 function transformLegacyReadyCopy(html: string): string | undefined {
-  const banners = [
-    ...html.matchAll(
-      new RegExp(`(<p\\b[^>]*\\b${READY_OFFLINE_NOTE_ATTR}=""[^>]*>)([\\s\\S]*?)(<\\/p>)`, "gi"),
-    ),
-  ];
-  if (banners.length !== 1) return undefined;
-  const banner = banners[0];
-  const knownWarning = LEGACY_READY_BANNER_COPY.get(banner[2] ?? "");
+  const banner = visibleTextBanner(html);
+  if (!banner || hasAttribute(banner.opening, READY_COPY_SAVED_AT_ATTR)) return undefined;
+  const knownWarning = LEGACY_READY_BANNER_COPY.get(banner.text);
   if (!knownWarning) return undefined;
-  return html.replace(banner[0], `${banner[1]}${knownWarning}${banner[3]}`);
+  return html.replace(banner.element, `${banner.opening}${knownWarning}${banner.closing}`);
 }
 
 /** Format the response save instant with the locale and shop zone rendered by the page. */
@@ -305,9 +341,26 @@ export async function saveReadyPage(
   // their banner has no reliable locale/zone or age context.
   if (metaContent(html, READY_COPY_VERSION_META) !== READY_COPY_VERSION) return false;
   const savedAtLabel = readySavedAtLabel(html, now);
-  // A new page with the placeholder must have the locale and shop zone needed
-  // to replace it. Leave any previous complete copy untouched if it does not.
-  if (html.includes(READY_OFFLINE_SAVED_AT_PLACEHOLDER) && savedAtLabel === undefined) return false;
+  const safeHtml = withoutClientRuntime(html);
+  const banner = singleTextBanner(safeHtml);
+  const placeholderCount = safeHtml.split(READY_OFFLINE_SAVED_AT_PLACEHOLDER).length - 1;
+  // A current-format page must have one text-only banner (hidden online), one
+  // placeholder and usable locale/zone context. Keep the previous complete
+  // copy if a new response is malformed.
+  if (!banner) return false;
+  if (
+    !banner.opening.includes(OFFLINE_NOTE_HIDDEN) ||
+    hasAttribute(banner.opening, READY_COPY_SAVED_AT_ATTR) ||
+    placeholderCount !== 1 ||
+    !banner.text.includes(READY_OFFLINE_SAVED_AT_PLACEHOLDER) ||
+    !Number.isSafeInteger(now) ||
+    savedAtLabel === undefined
+  ) {
+    return false;
+  }
+  const savedAt = String(now);
+  const timestampedBanner = `${banner.opening.replace(/>$/, ` ${READY_COPY_SAVED_AT_ATTR}="${savedAt}">`)}${banner.text.replace(READY_OFFLINE_SAVED_AT_PLACEHOLDER, savedAtLabel)}${banner.closing}`;
+  const timestampedHtml = safeHtml.replace(banner.element, timestampedBanner);
   const headers = new Headers(response.headers);
   headers.set(KEEP_UNTIL_HEADER, String(Math.min(named, now + READY_COPY_MAX_AGE_MS)));
   const hash = await pathHash(path);
@@ -319,9 +372,8 @@ export async function saveReadyPage(
   // payload whole (#3003), then a claim link, a checkout link, a bound
   // action's fields and a recap token in the markup (#2693).
   const copy = new Response(
-    withoutClientRuntime(html)
+    timestampedHtml
       .replaceAll(OFFLINE_NOTE_HIDDEN, OFFLINE_NOTE_SHOWN)
-      .replaceAll(READY_OFFLINE_SAVED_AT_PLACEHOLDER, savedAtLabel ?? "")
       .replaceAll(tokenOf(path), TOKEN_PLACEHOLDER)
       .replace(CLAIM_TOKEN_PATTERN, CLAIM_REMOVED)
       .replace(CHECKOUT_LINK_PATTERN, CHECKOUT_REMOVED)
@@ -371,7 +423,22 @@ export async function readyPageFallback(
   const storedHtml = await cached.text();
   let copyHtml = storedHtml;
   if (metaContent(storedHtml, READY_COPY_VERSION_META) === READY_COPY_VERSION) {
-    if (storedHtml.includes(READY_OFFLINE_SAVED_AT_PLACEHOLDER)) {
+    const banner = visibleTextBanner(storedHtml);
+    const savedAtValues = banner?.opening.match(
+      new RegExp(`\\b${READY_COPY_SAVED_AT_ATTR}="(\\d+)"`, "g"),
+    );
+    const savedAt = Number(
+      banner?.opening.match(new RegExp(`\\b${READY_COPY_SAVED_AT_ATTR}="(\\d+)"`))?.[1],
+    );
+    const expectedLabel = readySavedAtLabel(storedHtml, savedAt);
+    if (
+      !banner ||
+      savedAtValues?.length !== 1 ||
+      !Number.isSafeInteger(savedAt) ||
+      !expectedLabel ||
+      banner.text.split(expectedLabel).length !== 2 ||
+      storedHtml.includes(READY_OFFLINE_SAVED_AT_PLACEHOLDER)
+    ) {
       await cache.delete(READY_COPY_KEY);
       return undefined;
     }

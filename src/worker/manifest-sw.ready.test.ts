@@ -2,9 +2,13 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   READY_CACHE_NAME,
+  READY_COPY_LOCALE_META,
+  READY_COPY_TIME_ZONE_META,
   READY_COPY_VERSION,
   READY_COPY_VERSION_META,
   READY_KEEP_UNTIL_META,
+  READY_OFFLINE_NOTE_ATTR,
+  READY_OFFLINE_SAVED_AT_PLACEHOLDER,
 } from "@/lib/ready-offline";
 import { advanceClock } from "@/test/clock";
 
@@ -81,7 +85,7 @@ describe("the /ready/ registration's fetch", () => {
   /** The live page, naming the day its copy may be kept until (well past the frozen clock). */
   const html = (body: string) =>
     new Response(
-      `<meta name="${READY_KEEP_UNTIL_META}" content="${Number.MAX_SAFE_INTEGER}"/><meta name="${READY_COPY_VERSION_META}" content="${READY_COPY_VERSION}"/>${body}`,
+      `<meta name="${READY_KEEP_UNTIL_META}" content="${Number.MAX_SAFE_INTEGER}"/><meta name="${READY_COPY_VERSION_META}" content="${READY_COPY_VERSION}"/><meta name="${READY_COPY_LOCALE_META}" content="en-US"/><meta name="${READY_COPY_TIME_ZONE_META}" content="America/New_York"/>${body}<p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">No signal: ${READY_OFFLINE_SAVED_AT_PLACEHOLDER}</p>`,
       {
         status: 200,
         headers: { "content-type": "text/html" },
