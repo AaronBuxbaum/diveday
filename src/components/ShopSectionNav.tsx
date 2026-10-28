@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { DiveDayIcon, StaffDestinationIcon } from "@/components/StaffDestinationIcon";
 import { Badge } from "@/components/ui/badge";
 import { MENU_PANEL } from "@/components/ui/menu";
@@ -159,12 +159,14 @@ export function ShopSidebar({ root, gates, items, blocked, copy }: NavProps) {
 }
 
 const tabClass =
-  "flex h-full min-w-0 flex-1 flex-col items-center justify-center gap-0.5 text-xs transition-colors focus-visible:focus-ring-inset";
+  "flex h-full min-w-11 flex-1 flex-col items-center justify-center gap-0.5 px-3 text-xs transition-colors focus-visible:focus-ring-inset";
 
 /**
  * The phone's tab bar, below `lg`: Today, Schedule, Divers and Inbox, then
  * More for the rest. Fixed to the foot, and `--tabbar-h` tells everything else
  * that sits there (a toast, a sticky Save bar) how far to stand off it.
+ * Long labels keep their names and scroll in their own rail at enlarged text;
+ * More stays outside that rail so its menu can extend above the bar.
  *
  * `data-staff-chrome` lets the live manifest hide it with the bar, because a
  * roll call owns the whole phone.
@@ -172,6 +174,8 @@ const tabClass =
 export function ShopTabBar({ root, gates, items, blocked, copy }: NavProps) {
   const hydratedKey = useHydratedKey();
   const pathname = usePathname() ?? "";
+  const tabScrollRef = useRef<HTMLDivElement>(null);
+  const [scrollCue, setScrollCue] = useState<"none" | "left" | "right" | "both">("none");
   const current = currentStaffSection(pathname, root, gates);
   const tabs = items.filter((item) =>
     (STAFF_PHONE_TABS as readonly StaffSection[]).includes(item.section),
@@ -180,6 +184,47 @@ export function ShopTabBar({ root, gates, items, blocked, copy }: NavProps) {
     (item) => !(STAFF_PHONE_TABS as readonly StaffSection[]).includes(item.section),
   );
   const moreActive = rest.some((item) => item.section === current);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: hydration replaces the keyed rail.
+  useLayoutEffect(() => {
+    const rail = tabScrollRef.current;
+    if (!rail) return;
+
+    const update = () => {
+      const maxScroll = rail.scrollWidth - rail.clientWidth;
+      const atStart = rail.scrollLeft <= 1;
+      const atEnd = rail.scrollLeft >= maxScroll - 1;
+      setScrollCue(maxScroll <= 1 ? "none" : atStart ? "right" : atEnd ? "left" : "both");
+    };
+    let frame = 0;
+    const scheduleUpdate = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(update);
+    };
+    update();
+    rail.addEventListener("scroll", scheduleUpdate, { passive: true });
+    window.addEventListener("resize", scheduleUpdate);
+    const resizeObserver =
+      typeof ResizeObserver === "undefined" ? null : new ResizeObserver(scheduleUpdate);
+    resizeObserver?.observe(rail);
+    for (const item of rail.querySelectorAll<HTMLElement>("a, a > span")) {
+      resizeObserver?.observe(item);
+    }
+    const fontObserver =
+      typeof MutationObserver === "undefined" ? null : new MutationObserver(scheduleUpdate);
+    fontObserver?.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["style", "class"],
+    });
+    document.fonts?.addEventListener("loadingdone", scheduleUpdate);
+    return () => {
+      cancelAnimationFrame(frame);
+      rail.removeEventListener("scroll", scheduleUpdate);
+      window.removeEventListener("resize", scheduleUpdate);
+      resizeObserver?.disconnect();
+      fontObserver?.disconnect();
+      document.fonts?.removeEventListener("loadingdone", scheduleUpdate);
+    };
+  }, [hydratedKey]);
   return (
     <nav
       key={hydratedKey}
@@ -187,54 +232,78 @@ export function ShopTabBar({ root, gates, items, blocked, copy }: NavProps) {
       data-staff-nav=""
       data-hydrated={hydratedKey === "client" ? "true" : undefined}
       data-staff-tabbar=""
+      data-staff-tab-scroll-state={scrollCue}
       data-staff-chrome="true"
-      className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden print:hidden"
+      className="fixed inset-x-0 bottom-0 z-30 overflow-x-clip border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden print:hidden"
     >
-      <ul className="mx-auto flex h-(--tabbar-h) max-w-xl items-stretch">
-        {tabs.map((item) => {
-          const active = item.section === current;
-          return (
-            <li key={item.section} className="flex min-w-0 flex-1">
-              <Link
-                href={staffDestinationHref(root, item.destination)}
-                aria-current={rowAriaCurrent(active, pathname, root, item)}
-                className={`${tabClass} ${
-                  active ? "font-semibold text-primary" : "font-medium text-muted"
-                }`}
-              >
-                <span className="relative">
-                  <StaffDestinationIcon id={item.destination.id} className="size-6" />
-                  {item.destination.badge && blocked ? (
-                    // A dot over the icon's corner: the digit would crowd a
-                    // 64px tab. The sentence follows the name, for a screen
-                    // reader.
-                    <span
-                      aria-hidden="true"
-                      className="absolute -top-0.5 -end-1 size-2.5 rounded-full border-2 border-surface bg-danger"
-                    />
-                  ) : null}
-                </span>
-                <span className="max-w-full truncate">{copy.sections[item.section]}</span>
-                {item.destination.badge && blocked ? (
-                  <span className="sr-only"> {copy.blockedLabel}</span>
-                ) : null}
-              </Link>
-            </li>
-          );
-        })}
-        {rest.length > 0 ? (
-          <li className="flex min-w-0 flex-1">
-            <MoreMenu
-              root={root}
-              items={rest}
-              current={current}
-              active={moreActive}
-              pathname={pathname}
-              copy={copy}
-            />
-          </li>
+      <div className="mx-auto flex h-(--tabbar-h) w-full max-w-xl items-stretch">
+        <div
+          ref={tabScrollRef}
+          data-staff-tab-scroll=""
+          className="min-w-0 flex-1 overflow-x-auto overscroll-x-contain"
+        >
+          <ul className="flex h-full w-max min-w-full items-stretch">
+            {tabs.map((item) => {
+              const active = item.section === current;
+              return (
+                <li key={item.section} className="flex flex-auto">
+                  <Link
+                    href={staffDestinationHref(root, item.destination)}
+                    onFocus={(event) =>
+                      event.currentTarget.scrollIntoView({ block: "nearest", inline: "center" })
+                    }
+                    aria-current={rowAriaCurrent(active, pathname, root, item)}
+                    className={`${tabClass} ${
+                      active ? "font-semibold text-primary" : "font-medium text-muted"
+                    }`}
+                  >
+                    <span className="relative">
+                      <StaffDestinationIcon id={item.destination.id} className="size-6" />
+                      {item.destination.badge && blocked ? (
+                        // A dot over the icon's corner: the digit would crowd a
+                        // 64px tab. The sentence follows the name, for a screen
+                        // reader.
+                        <span
+                          aria-hidden="true"
+                          className="absolute -top-0.5 -end-1 size-2.5 rounded-full border-2 border-surface bg-danger"
+                        />
+                      ) : null}
+                    </span>
+                    <span className="whitespace-nowrap">{copy.sections[item.section]}</span>
+                    {item.destination.badge && blocked ? (
+                      <span className="sr-only"> {copy.blockedLabel}</span>
+                    ) : null}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+        {scrollCue !== "none" ? (
+          <span
+            aria-hidden="true"
+            data-staff-tab-scroll-cue={scrollCue}
+            className="flex w-6 flex-none items-center justify-center gap-px border-s border-e border-border text-muted"
+          >
+            {scrollCue === "left" || scrollCue === "both" ? (
+              <DiveDayIcon name="chevron-left" className="size-2.5" />
+            ) : null}
+            {scrollCue === "right" || scrollCue === "both" ? (
+              <DiveDayIcon name="chevron-right" className="size-2.5" />
+            ) : null}
+          </span>
         ) : null}
-      </ul>
+        {rest.length > 0 ? (
+          <MoreMenu
+            root={root}
+            items={rest}
+            current={current}
+            active={moreActive}
+            pathname={pathname}
+            copy={copy}
+          />
+        ) : null}
+      </div>
     </nav>
   );
 }
@@ -262,7 +331,7 @@ function MoreMenu({
   // Matches .animate-scale-out in globals.css — the two must move together.
   const { mounted, closing } = useExitAnimation(open, motionMs("base"));
   return (
-    <div ref={rootRef} className="relative flex flex-1">
+    <div ref={rootRef} className="relative flex flex-none">
       <button
         type="button"
         ref={triggerRef}

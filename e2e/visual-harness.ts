@@ -224,7 +224,7 @@ export async function waitForSiteLibrary(page: Page) {
 const TABLET_VIEWPORT = { width: 820, height: 1180 } as const;
 
 /**
- * The capture names that get `TABLET_VIEWPORT` as a third width — **six, not
+ * The capture names that get `TABLET_VIEWPORT` as a third width — **seven, not
  * every surface in this file.**
  *
  * A third width applied everywhere is another 506 screenshots and the baseline
@@ -243,6 +243,8 @@ const TABLET_VIEWPORT = { width: 820, height: 1180 } as const;
  * - `prep` — the same, the day before.
  * - `departure-log` — written up at the end of the day, on the device that
  *   was already out.
+ * - `staff-navigation-spanish-es-ES` — verifies the four phone destinations use the
+ *   available rail width on a tablet while keeping More beside it.
  *
  * Adding a name here costs two screenshots per run (one per scheme). Adding
  * one that no `capture()` call uses costs nothing and silently photographs
@@ -255,6 +257,7 @@ const TABLET_SURFACES: ReadonlySet<string> = new Set([
   "prep",
   "departure-log",
   "departure-log-every-checkpoint",
+  "staff-navigation-spanish-es-ES",
 ]);
 
 /**
@@ -268,7 +271,8 @@ const VISUAL_SPEC_TEXT = visualSpecs()
   .map((file) => readFileSync(file, "utf8"))
   .join("\n");
 for (const name of TABLET_SURFACES) {
-  if (!VISUAL_SPEC_TEXT.includes(`capture(page, "${name}"`)) {
+  const captureName = name.endsWith("-es-ES") ? name.slice(0, -6) : name;
+  if (!VISUAL_SPEC_TEXT.includes(`capture(page, "${captureName}"`)) {
     throw new Error(
       `TABLET_SURFACES names "${name}", which no capture() call uses — it would ` +
         "silently photograph nothing. Fix the name or drop it from the set.",
