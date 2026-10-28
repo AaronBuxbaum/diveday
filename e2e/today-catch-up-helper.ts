@@ -4,10 +4,15 @@ import { expect, makeActivitySafe } from "./fixtures";
 import { signInAs, walkInFormPath } from "./helpers";
 
 /** One staffer reads Today, another seats a walk-in, then the reader returns. */
-export async function todayCatchUpScenario(browser: Browser, owner: Page, workerBaseURL: string) {
+export async function todayCatchUpScenario(
+  browser: Browser,
+  owner: Page,
+  workerBaseURL: string,
+  captainStorageState?: string,
+) {
   const readerContext = await browser.newContext({
     baseURL: workerBaseURL,
-    storageState: { cookies: [], origins: [] },
+    storageState: captainStorageState ?? { cookies: [], origins: [] },
   });
   const reader = makeActivitySafe(await readerContext.newPage());
   try {
@@ -17,8 +22,9 @@ export async function todayCatchUpScenario(browser: Browser, owner: Page, worker
         response.request().headers()["next-action"] !== undefined &&
         new URL(response.url()).pathname === "/shop/blue-mantis",
     );
-    await signInAs(reader, DEV_STAFF_LOGINS.captain);
-    await initialized;
+    if (captainStorageState) await reader.goto("/shop/blue-mantis");
+    else await signInAs(reader, DEV_STAFF_LOGINS.captain);
+    expect((await initialized).status()).toBe(200);
     const href = await reader
       .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
       .getAttribute("href");
