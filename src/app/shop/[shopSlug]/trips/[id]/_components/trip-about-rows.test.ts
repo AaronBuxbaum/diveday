@@ -2,10 +2,11 @@ import { eq } from "drizzle-orm";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { listBoats } from "@/db/boats";
-import { diveSites, trips } from "@/db/schema";
+import { courses, diveSites, trips } from "@/db/schema";
 import { listTripLenses } from "@/db/trip-lenses";
 import { getTripOverview, listStaff, upcomingTripsWithCounts } from "@/db/trips";
 import { staffTranslator } from "@/i18n/staff-messages";
+import type { CoursePricing } from "@/lib/courses";
 import { fileScopedShopContext } from "@/test/db";
 import { tripAboutRows } from "./trip-about-rows";
 import { tripCrewNotes } from "./trip-crew-notes";
@@ -17,6 +18,7 @@ async function rowsFor(
   tripNotice?: Parameters<typeof tripAboutRows>[0]["tripNotice"],
   canConfigure?: boolean,
   held?: Parameters<typeof tripAboutRows>[0]["held"],
+  pricing?: { priceCents: number | null; course: CoursePricing | null },
 ) {
   const { db, shop } = ctx;
   const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
@@ -26,6 +28,15 @@ async function rowsFor(
   if (!staff) throw new Error("demo staff missing");
   const overview = await getTripOverview(db, shop, reef.id, staff.person.id);
   if (!overview) throw new Error("overview missing");
+  if (pricing) {
+    const [course] = await db.select().from(courses).limit(1);
+    if (!course) throw new Error("demo course missing");
+    overview.trip = {
+      ...overview.trip,
+      priceCents: pricing.priceCents,
+      course: pricing.course ? { ...course, ...pricing.course } : null,
+    };
+  }
   return tripAboutRows({
     overview: { ...overview, canConfigure: canConfigure ?? overview.canConfigure },
     crewNotes: tripCrewNotes({ crew: overview.crew, diversPerDivemaster: 8, locale: "en-US", t }),
@@ -71,6 +82,58 @@ describe("tripAboutRows (in-memory PGlite)", () => {
       const other = section === "timing" ? "meeting" : "timing";
       expect(rows.find((row) => row.id === other)?.editor).toMatchObject({
         props: { held: undefined, section: other },
+      });
+    },
+  );
+
+  it.each([
+    { label: "ordinary fare", priceCents: 9500, course: null, quote: "$95.00" },
+    { label: "ordinary unpriced", priceCents: null, course: null, quote: null },
+    {
+      label: "priced course overrides departure",
+      priceCents: 42500,
+      course: { title: "Course", priceCents: 50000, eLearningPriceCents: 11500 },
+      quote: "$615.00",
+    },
+    {
+      label: "priced course with unpriced departure",
+      priceCents: null,
+      course: { title: "Course", priceCents: 50000, eLearningPriceCents: 11500 },
+      quote: "$615.00",
+    },
+    {
+      label: "course uses departure fallback plus eLearning",
+      priceCents: 42500,
+      course: { title: "Course", priceCents: null, eLearningPriceCents: 11500 },
+      quote: "$540.00",
+    },
+    {
+      label: "unpriced course and departure",
+      priceCents: null,
+      course: { title: "Course", priceCents: null, eLearningPriceCents: null },
+      quote: null,
+    },
+    {
+      label: "eLearning alone",
+      priceCents: null,
+      course: { title: "Course", priceCents: null, eLearningPriceCents: 11500 },
+      quote: "$115.00",
+    },
+    {
+      label: "explicit free course",
+      priceCents: 42500,
+      course: { title: "Course", priceCents: 0, eLearningPriceCents: null },
+      quote: "$0.00",
+    },
+  ])(
+    "quotes $label in Booking and payment without changing its stored editor price",
+    async ({ quote, ...pricing }) => {
+      const rows = await rowsFor(undefined, true, undefined, pricing);
+      const booking = rows.find((row) => row.id === "details");
+      if (quote === null) expect(booking?.value).toBe(t("trips.details.summaryNoPrice"));
+      else expect(String(booking?.value).startsWith(`${quote} · `)).toBe(true);
+      expect(booking?.editor).toMatchObject({
+        props: { context: { trip: { priceCents: pricing.priceCents } } },
       });
     },
   );

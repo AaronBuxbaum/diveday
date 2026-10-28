@@ -14,6 +14,7 @@ import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-label
 // 20260804-instant-navigation.
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
+import { perDiverBookingPriceCents } from "@/lib/courses";
 import { type DepthUnit, depthInUnit } from "@/lib/depth-units";
 import { formatMoneyCents, formatShortDate, formatWeekdayTime, weekdayNames } from "@/lib/format";
 import { meetingPointLine, meetingPointOfRows } from "@/lib/meeting-point";
@@ -204,6 +205,7 @@ export function tripAboutRows(context: TripAboutRowsContext) {
     diveSites,
     crew,
   } = overview;
+  const bookingPriceCents = perDiverBookingPriceCents(trip, trip.course);
   const { crewIds, tripRoleByPerson, crewGap, onShiftIds, clashes } = crew;
   const { ratingLapsedNote, languageGapNote, underTargetNote, overRatioWarning } = crewNotes;
   const detailsStatus = noticeForForm(tripNotice, "details");
@@ -316,12 +318,12 @@ export function tripAboutRows(context: TripAboutRowsContext) {
       id: "details",
       label: t("trips.about.bookingAndPayment"),
       value:
-        trip.priceCents === null && !cancelled
+        bookingPriceCents === null && !cancelled
           ? t("trips.details.summaryNoPrice")
           : [
-              trip.priceCents === null
+              bookingPriceCents === null
                 ? null
-                : formatMoneyCents(trip.priceCents, shop.currency, locale),
+                : formatMoneyCents(bookingPriceCents, shop.currency, locale),
               t("schedule.week.seats", { booked: trip.booked, capacity: trip.capacity }),
             ]
               .filter(Boolean)
