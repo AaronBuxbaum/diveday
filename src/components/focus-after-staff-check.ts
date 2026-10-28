@@ -1,11 +1,6 @@
 /** Preserve an initial focus request made while staff content is covered. */
 export function focusAfterStaffCheck(element: HTMLElement | null): () => void {
   if (!element) return () => {};
-  if (!element.closest("[inert]")) {
-    element.focus({ preventScroll: true });
-    return () => {};
-  }
-
   let frame: number | undefined;
   const unlocked = () => {
     frame = requestAnimationFrame(() => {
@@ -19,6 +14,7 @@ export function focusAfterStaffCheck(element: HTMLElement | null): () => void {
     });
   };
   document.addEventListener("staff-session-unlocked", unlocked, { once: true });
+  if (!element.closest("[inert]")) element.focus({ preventScroll: true });
   return () => {
     document.removeEventListener("staff-session-unlocked", unlocked);
     if (frame !== undefined) cancelAnimationFrame(frame);

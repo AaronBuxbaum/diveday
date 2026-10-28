@@ -58,6 +58,35 @@ it("waits for a covered field and does not steal a later focus", () => {
   cancel();
 });
 
+it("retries an initial focus request when the session locks after it", () => {
+  const frames: FrameRequestCallback[] = [];
+  vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+    frames.push(callback);
+    return frames.length;
+  });
+  vi.stubGlobal("cancelAnimationFrame", vi.fn());
+
+  const content = document.createElement("div");
+  const field = document.createElement("input");
+  const lock = document.createElement("div");
+  lock.tabIndex = -1;
+  lock.setAttribute("data-staff-session-lock", "");
+  content.append(field);
+  document.body.append(content, lock);
+
+  const cancel = focusAfterStaffCheck(field);
+  expect(document.activeElement).toBe(field);
+
+  content.setAttribute("inert", "");
+  lock.focus();
+  content.removeAttribute("inert");
+  document.dispatchEvent(new Event("staff-session-unlocked"));
+  frames[0]?.(0);
+
+  expect(document.activeElement).toBe(field);
+  cancel();
+});
+
 it("does not focus a field that unmounted before verification", () => {
   const field = document.createElement("input");
   const content = document.createElement("div");
