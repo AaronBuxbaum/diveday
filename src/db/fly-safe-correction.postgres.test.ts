@@ -3,7 +3,7 @@ import { expect, it } from "vitest";
 import { HOUR_MS } from "@/lib/clock";
 import type { NotificationProvider } from "@/lib/notifications";
 import { fakeEmail } from "@/test/fakes";
-import { describePostgres, postgresTestDb } from "@/test/postgres";
+import { describePostgres, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
 import { createBookingParty } from "./bookings";
 import {
   rearmFailedFlySafeCorrection,
@@ -181,17 +181,19 @@ describePostgres("fly-safe correction leases across connections", () => {
         .where(eq(bookings.id, bookingId));
     });
     await enteredErasure;
+    const concurrentRecord = recordFlySafeTold(pg.connect(), {
+      shopId: shop.id,
+      bookingId,
+      hours: 24,
+      recipientEmail: "late@example.com",
+    });
     try {
-      await recordFlySafeTold(pg.connect(), {
-        shopId: shop.id,
-        bookingId,
-        hours: 24,
-        recipientEmail: "late@example.com",
-      });
+      await waitForLockWaiters(pg.db, 1);
     } finally {
       unlock();
       await erase;
     }
+    await expect(concurrentRecord).resolves.toBe(false);
     const [erased] = await pg.db.select().from(bookings).where(eq(bookings.id, bookingId));
     expect(erased?.flySafeRecipientSealed).toBeNull();
     await recordFlySafeTold(pg.connect(), {

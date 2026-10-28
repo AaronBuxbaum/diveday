@@ -536,6 +536,19 @@ async function sendPreparedReminderBatch(
           result.delivery,
           options,
         );
+      else if (
+        result.notification.kind === "trip_reminder_24h" &&
+        deliveryCarriesFigure(result.delivery)
+      ) {
+        // The provider ran, but the booking no longer has this reminder's
+        // identity/trip. Clear the old exposure rather than associating the
+        // departed itinerary with its new subject.
+        await rememberFlySafeTold(db, {
+          ...entry,
+          notification: result.notification,
+          delivery: result.delivery,
+        });
+      }
     }
     results.push(result);
   }
@@ -592,7 +605,7 @@ async function deliverReminderChannels(
           expectedEmail: work.email,
           expectedPhone: phone,
         },
-        async () =>
+        async (tx) =>
           sendCourtesyMessage(
             {
               to: phone,
@@ -601,7 +614,10 @@ async function deliverReminderChannels(
               whatsAppBody: work.whatsAppBody,
               shopName: work.shopName,
             },
-            { sms: input.smsProvider, whatsapp: input.whatsAppProviders.get(work.shopId) ?? null },
+            {
+              sms: stopListedSmsProvider(tx, input.smsProvider),
+              whatsapp: input.whatsAppProviders.get(work.shopId) ?? null,
+            },
             { signal: notificationProviderSignal() },
           ),
       );
@@ -620,7 +636,7 @@ async function deliverReminderChannels(
         expectedEmail: work.email,
         expectedPhone: work.phone,
       },
-      async () => {
+      async (tx) => {
         const result = await sendCourtesyMessage(
           {
             to: work.phone,
@@ -629,7 +645,10 @@ async function deliverReminderChannels(
             whatsAppBody: work.whatsAppBody,
             shopName: work.shopName,
           },
-          { sms: input.smsProvider, whatsapp: input.whatsAppProviders.get(work.shopId) ?? null },
+          {
+            sms: stopListedSmsProvider(tx, input.smsProvider),
+            whatsapp: input.whatsAppProviders.get(work.shopId) ?? null,
+          },
           { signal: notificationProviderSignal() },
         );
         return result.delivery;
@@ -691,10 +710,7 @@ export async function sendDueReminders(
   options: SendDueRemindersOptions = {},
 ): Promise<ReminderRunSummary> {
   const { now, emailProvider } = await reminderClockAndCorrections(db, options);
-  const smsProvider = stopListedSmsProvider(
-    db,
-    options.smsProvider ?? smsProviderFromEnvironment(),
-  );
+  const smsProvider = options.smsProvider ?? smsProviderFromEnvironment();
   const origin = options.appOrigin === undefined ? publicAppUrl() : options.appOrigin;
   // Whether a diver replying to this mail reaches DiveDay at all. The
   // `Reply-To` is a routable per-shop address only when a receiving domain is

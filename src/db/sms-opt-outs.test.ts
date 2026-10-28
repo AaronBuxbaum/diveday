@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { sendCourtesyMessage } from "@/lib/notifications/courtesy";
 import { unseededTestDb } from "@/test/db";
 import { isSmsOptedOut, recordSmsKeyword, stopListedSmsProvider } from "./sms-opt-outs";
 
@@ -57,5 +58,44 @@ describe("the SMS stop list", () => {
         providerMessageId: "m",
       });
     }
+  });
+
+  it("forwards the bounded abort signal through the stop-list wrapper", async () => {
+    const db = await unseededTestDb();
+    const controller = new AbortController();
+    const inner = { send: vi.fn().mockResolvedValue({ status: "sent", providerMessageId: "m" }) };
+    const provider = stopListedSmsProvider(db, inner);
+
+    await provider.send({ to: PHONE, body: "hi" }, { signal: controller.signal });
+
+    expect(inner.send).toHaveBeenCalledWith(
+      { to: PHONE, body: "hi" },
+      { signal: controller.signal },
+    );
+  });
+
+  it("uses healthy SMS after an aborted WhatsApp attempt through the stop-list wrapper", async () => {
+    const db = await unseededTestDb();
+    const smsSend = vi.fn(async (_message: unknown, options?: { signal?: AbortSignal }) => {
+      expect(options?.signal?.aborted).toBe(false);
+      return { status: "sent" as const, providerMessageId: "sms-fallback" };
+    });
+    const sms = stopListedSmsProvider(db, {
+      send: smsSend,
+    });
+    const whatsapp = {
+      send: vi.fn(async (_message, options?: { signal?: AbortSignal }) => {
+        options?.signal?.throwIfAborted();
+        return { status: "failed" as const, retryable: true, errorCode: "timeout" };
+      }),
+    };
+    const result = await sendCourtesyMessage(
+      { to: PHONE, body: "hi", smsStopLine: "Reply STOP to opt out.", shopName: "DiveDay" },
+      { sms, whatsapp },
+    );
+
+    expect(result).toMatchObject({ channel: "sms", delivery: { status: "sent" } });
+    expect(whatsapp.send).toHaveBeenCalledOnce();
+    expect(smsSend).toHaveBeenCalledOnce();
   });
 });

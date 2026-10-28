@@ -9,6 +9,7 @@ import { createBookingParty } from "./bookings";
 import { countSpendableDives, createDivePackage, grantPackageEntitlements } from "./dive-packages";
 import { peopleWhoDivedBefore } from "./executed-dives";
 import { loadShopExportBundleInput, loadShopExportCounts } from "./export";
+import { sendNotification } from "./notifications";
 import { clearFinishedRehearsals, notificationHeldForRehearsal } from "./rehearsals";
 import { getMonthlyReport } from "./reporting";
 import {
@@ -256,6 +257,8 @@ const SENDERS: Record<string, string> = {
   "src/db/roll-call-alerts.ts": "the candidate scan carries `notRehearsal()`, so no email or push",
   "src/db/manifest-events.ts": "calls `pushManifestChanged`, which reads with `notRehearsal()`",
   "src/db/reminders.ts": "the candidate scan carries `notRehearsal()`, so no email or text",
+  "src/db/fly-safe-correction.ts":
+    "correction email passes through sendNotification and notificationHeldForRehearsal",
   "src/db/recap.ts": "the candidate scan carries `notRehearsal()`, so no email or text",
   "src/db/waiver-issue.ts": "a rehearsal's link is hand-over only, never texted or emailed",
   "src/db/crew-notices.ts": "a rehearsal's crew news is never recorded",
@@ -277,6 +280,7 @@ const SENDERS: Record<string, string> = {
     "refuses a rehearsal's report itself, before any email or push; the email is also held at the chokepoint",
   "src/app/s/[shopSlug]/trips/[id]/actions.ts":
     "the public trip page, which a rehearsal never reaches",
+  "src/app/s/[shopSlug]/trips/[id]/send-join-mail.ts": HELD_AT_CHOKEPOINT,
   "src/app/shop/[shopSlug]/trips/[id]/conditions-actions.ts": HELD_AT_CHOKEPOINT,
   "src/db/departure-notes.ts": "its departure read carries `notRehearsal()`, so no note goes",
   "src/db/move-ask-alerts.ts":
@@ -436,6 +440,41 @@ describe("rehearsal coverage: a real rehearsal", () => {
       ({ kind: "trip_conditions_hold", shopId: shop.id, ...handle }) as never;
     expect(await notificationHeldForRehearsal(db, about({ tripId: trip.id }))).toBe(true);
     expect(await notificationHeldForRehearsal(db, about({ bookingId }))).toBe(true);
+    expect(
+      await notificationHeldForRehearsal(db, {
+        kind: "fly_safe_correction",
+        seatId: bookingId,
+        shopId: shop.id,
+        to: "walk-up@example.com",
+        locale: "en-US",
+        shopName: shop.name,
+        tripTitle: trip.title,
+        startsAt: trip.startsAt,
+        timezone: shop.timezone,
+      } as never),
+    ).toBe(true);
+    let providerCalled = false;
+    await sendNotification(
+      db,
+      {
+        kind: "fly_safe_correction",
+        seatId: bookingId,
+        shopId: shop.id,
+        to: "walk-up@example.com",
+        locale: "en-US",
+        shopName: shop.name,
+        tripTitle: trip.title,
+        startsAt: trip.startsAt,
+        timezone: shop.timezone,
+      },
+      {
+        async send() {
+          providerCalled = true;
+          return { status: "sent", providerMessageId: "should-not-send" };
+        },
+      },
+    );
+    expect(providerCalled).toBe(false);
     // Another shop's id for the same row reaches nothing.
     expect(
       await notificationHeldForRehearsal(db, {

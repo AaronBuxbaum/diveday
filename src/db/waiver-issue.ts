@@ -14,14 +14,14 @@ import { smsProviderFromEnvironment, smsRecipient } from "@/lib/notifications/sm
 import { issueCourseFormsCapability } from "./booking-capabilities";
 import type { AppDb, DbExecutor } from "./client";
 import { getCourseFormsForBooking } from "./course-forms";
-import { withErasureCoordinatedBookingSend } from "./erasure-coordinated-send";
 import {
-  retryBookingConfirmation,
-  sendAndRecordNotification,
-  sendNotification,
-} from "./notifications";
+  withErasureCoordinatedBookingSend,
+  withErasureCoordinatedPersonSend,
+} from "./erasure-coordinated-send";
+import { retryBookingConfirmation, sendAndRecordNotification } from "./notifications";
+import { isTransactionExecutor } from "./query-helpers";
 import { getBookingReadiness } from "./readiness";
-import { bookings, people, shops, trips } from "./schema";
+import { bookings, people, shops, trips, waiverRecords } from "./schema";
 import { stopListedSmsProvider } from "./sms-opt-outs";
 import {
   hasLivePersonWaiverRequest,
@@ -217,6 +217,9 @@ export type WaiverDeliveryOptions = {
    * against a different one. Defaults to the clock, which is every other caller.
    */
   now?: Date;
+  /** Identity read before a booking-bound send; stale assignments are refused. */
+  expectedPersonId?: string;
+  expectedTripId?: string;
 };
 
 /**
@@ -328,7 +331,7 @@ async function deliverCourseFormsLink(
  * anything went out.
  */
 export async function issueAndDeliverWaiver(
-  db: AppDb,
+  db: DbExecutor,
   shopId: string,
   bookingId: string,
   options: WaiverDeliveryOptions = {},
@@ -357,7 +360,7 @@ export async function issueAndDeliverWaiver(
       shopId,
       bookingId,
       expectedPersonId: observed.person.id,
-      expectedTripId: observed.trip.id,
+      expectedTripId: options.expectedTripId ?? observed.trip.id,
       expectedEmail: observed.person.email,
       expectedPhone: observed.person.phone,
     },
@@ -384,8 +387,8 @@ export async function issueAndDeliverWaiver(
       const outcome = await issueWaiverRequest(tx, {
         shopId,
         bookingId,
-        expectedPersonId: observed.person.id,
-        expectedTripId: observed.trip.id,
+        expectedPersonId: options.expectedPersonId ?? observed.person.id,
+        expectedTripId: options.expectedTripId ?? observed.trip.id,
         now: options.now,
       });
       if (!outcome.ok && outcome.reason === "already_completed") {
@@ -499,87 +502,117 @@ export async function issueAndDeliverPersonWaiver(
   personId: string,
   options: WaiverDeliveryOptions = {},
 ): Promise<PersonWaiverResult> {
-  const [ctx] = await db
+  const [observed] = await db
     .select({ person: people, shop: shops })
     .from(people)
     .innerJoin(shops, eq(shops.id, people.shopId))
     .where(and(eq(people.id, personId), eq(people.shopId, shopId), isNull(people.deletedAt)))
     .limit(1);
-  const outcome = await issueWaiverRequest(db, { shopId, personId, now: options.now });
-  if (!outcome.ok) {
-    return {
-      ok: false,
-      bookingId: null,
-      diverName: ctx?.person.fullName ?? null,
-      reason: outcome.reason === "already_completed" ? "already_completed" : "error",
-    };
-  }
-  const origin = publicAppUrl();
-  const channel = options.channel ?? "email";
-  const completionUrl = origin
-    ? new URL(`/waivers/${outcome.token}`, `${origin}/`).toString()
-    : null;
-  let delivery: WaiverDelivery = "no_app_origin";
-  let providerMessageId: string | undefined;
-  if (!completionUrl) {
-    delivery = "no_app_origin";
-  } else if (!ctx) {
-    // `issueWaiverRequest` already validated the person, so this is only
-    // reachable if the row went away mid-issue. Nothing was attempted, and
-    // there is a token to hand over either way.
-    delivery = "failed";
-  } else if (channel === "link") {
-    delivery = "link_only";
-  } else if (channel === "text") {
-    const result = await textWaiverLink(db, {
+  if (!observed) return { ok: false, bookingId: null, diverName: null, reason: "error" };
+  const fenced = await withErasureCoordinatedPersonSend(
+    db,
+    {
       shopId,
-      phone: ctx.person.phone,
-      shopName: ctx.shop.name,
-      locale: recipientLocale(ctx.person.locale, ctx.shop.defaultLocale),
-      completionUrl,
-      providers: options.textProviders,
-    });
-    delivery = result.delivery;
-    providerMessageId = result.providerMessageId;
-  } else if (!ctx.person.email) {
-    delivery = "no_email";
-  } else {
-    const result = await sendNotification(db, {
-      kind: "waiver_request",
-      waiverRecordId: outcome.recordId,
-      shopId,
-      to: ctx.person.email,
-      locale: recipientLocale(ctx.person.locale, ctx.shop.defaultLocale),
-      diverName: ctx.person.fullName,
-      shopName: ctx.shop.name,
-      completionUrl,
-      expiresAt: outcome.expiresAt,
-      timezone: ctx.shop.timezone,
-    });
-    providerMessageId = result.status === "sent" ? result.providerMessageId : undefined;
-    delivery =
-      result.status === "sent"
-        ? "sent"
-        : result.status === "not_configured"
-          ? "unconfigured"
-          : result.errorCode === "invalid_test_recipient"
-            ? "test_recipient"
-            : "failed";
-  }
-  await recordWaiverDelivery(db, {
-    shopId,
-    waiverRecordId: outcome.recordId,
-    channel,
-    delivery: { status: recordedDeliveryStatus(delivery), providerMessageId },
-    now: options.now,
-  });
-  return {
-    ok: true,
-    bookingId: null,
-    diverName: ctx?.person.fullName ?? "",
-    token: outcome.token,
-    delivery,
-  };
+      personId,
+      expectedEmail: observed.person.email,
+      expectedPhone: observed.person.phone,
+    },
+    async (tx) => {
+      const [ctx] = await tx
+        .select({ person: people, shop: shops })
+        .from(people)
+        .innerJoin(shops, eq(shops.id, people.shopId))
+        .where(and(eq(people.id, personId), eq(people.shopId, shopId), isNull(people.deletedAt)))
+        .limit(1);
+      if (!ctx) return null;
+      const outcome = await issueWaiverRequest(tx, {
+        shopId,
+        personId,
+        expectedPersonId: personId,
+        now: options.now,
+      });
+      if (!outcome.ok) {
+        return {
+          ok: false as const,
+          bookingId: null,
+          diverName: ctx.person.fullName,
+          reason:
+            outcome.reason === "already_completed"
+              ? ("already_completed" as const)
+              : ("error" as const),
+        };
+      }
+      const origin = publicAppUrl();
+      const channel = options.channel ?? "email";
+      const completionUrl = origin
+        ? new URL(`/waivers/${outcome.token}`, `${origin}/`).toString()
+        : null;
+      let delivery: WaiverDelivery = "no_app_origin";
+      let providerMessageId: string | undefined;
+      if (!completionUrl) {
+        delivery = "no_app_origin";
+      } else if (channel === "link") {
+        delivery = "link_only";
+      } else if (channel === "text") {
+        const result = await textWaiverLink(tx, {
+          shopId,
+          phone: ctx.person.phone,
+          shopName: ctx.shop.name,
+          locale: recipientLocale(ctx.person.locale, ctx.shop.defaultLocale),
+          completionUrl,
+          providers: options.textProviders,
+          signal: notificationProviderSignal(),
+        });
+        delivery = result.delivery;
+        providerMessageId = result.providerMessageId;
+      } else if (!ctx.person.email) {
+        delivery = "no_email";
+      } else {
+        const result = await sendAndRecordNotification(
+          tx,
+          {
+            kind: "waiver_request",
+            waiverRecordId: outcome.recordId,
+            shopId,
+            to: ctx.person.email,
+            locale: recipientLocale(ctx.person.locale, ctx.shop.defaultLocale),
+            diverName: ctx.person.fullName,
+            shopName: ctx.shop.name,
+            completionUrl,
+            expiresAt: outcome.expiresAt,
+            timezone: ctx.shop.timezone,
+          },
+          { provider: options.provider, signal: notificationProviderSignal() },
+        );
+        providerMessageId = result.status === "sent" ? result.providerMessageId : undefined;
+        delivery =
+          result.status === "sent"
+            ? "sent"
+            : result.status === "not_configured"
+              ? "unconfigured"
+              : result.errorCode === "invalid_test_recipient"
+                ? "test_recipient"
+                : "failed";
+      }
+      await recordWaiverDelivery(tx, {
+        shopId,
+        waiverRecordId: outcome.recordId,
+        channel,
+        delivery: { status: recordedDeliveryStatus(delivery), providerMessageId },
+        now: options.now,
+      });
+      return {
+        ok: true as const,
+        bookingId: null,
+        diverName: ctx.person.fullName,
+        token: outcome.token,
+        delivery,
+      };
+    },
+  );
+  return (
+    fenced ?? { ok: false, bookingId: null, diverName: observed.person.fullName, reason: "error" }
+  );
 }
 
 /**
@@ -598,9 +631,10 @@ export async function issueWaiverOnJoin(
   db: AppDb,
   shopId: string,
   bookingId: string,
+  identity: { expectedPersonId?: string; expectedTripId?: string } = {},
 ): Promise<IssueAndDeliverWaiverResult | null> {
   if (!(await joinWaiverOwed(db, shopId, bookingId))) return null;
-  return issueAndDeliverWaiver(db, shopId, bookingId);
+  return issueAndDeliverWaiver(db, shopId, bookingId, identity);
 }
 
 /**
@@ -608,7 +642,7 @@ export async function issueWaiverOnJoin(
  * receives the link: on its own (`issueWaiverOnJoin`) or inside the booking
  * confirmation (`issueJoinWaiverLink`).
  */
-async function joinWaiverOwed(db: AppDb, shopId: string, bookingId: string): Promise<boolean> {
+async function joinWaiverOwed(db: DbExecutor, shopId: string, bookingId: string): Promise<boolean> {
   const readiness = await getBookingReadiness(db, shopId, bookingId);
   // A lapsed release is owed a link exactly as an unsent one is: nothing on
   // file stands, and no link is out.
@@ -631,7 +665,13 @@ async function joinWaiverOwed(db: AppDb, shopId: string, bookingId: string): Pro
 }
 
 /** A waiver link issued for the booking confirmation to carry. */
-export type JoinWaiverLink = { url: string; expiresAt: Date; waiverRecordId: string };
+export type JoinWaiverLink = {
+  url: string;
+  expiresAt: Date;
+  waiverRecordId: string;
+  personId: string;
+  tripId: string;
+};
 
 /**
  * **One booking, one email** (UX review 2026-10-11, item 7). The lead
@@ -643,21 +683,56 @@ export type JoinWaiverLink = { url: string; expiresAt: Date; waiverRecordId: str
  * falls back to `issueWaiverOnJoin`, which says why on the record.
  */
 export async function issueJoinWaiverLink(
-  db: AppDb,
+  db: DbExecutor,
   shopId: string,
   bookingId: string,
   now: Date = nowDate(),
 ): Promise<JoinWaiverLink | null> {
   const origin = publicAppUrl();
   if (!origin) return null;
-  if (!(await joinWaiverOwed(db, shopId, bookingId))) return null;
-  const outcome = await issueWaiverRequest(db, { shopId, bookingId, now });
-  if (!outcome.ok) return null;
-  return {
-    url: new URL(`/waivers/${outcome.token}`, `${origin}/`).toString(),
-    expiresAt: outcome.expiresAt,
-    waiverRecordId: outcome.recordId,
+  const [observed] = await db
+    .select({ personId: bookings.personId, tripId: bookings.tripId, email: people.email })
+    .from(bookings)
+    .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, bookings.shopId)))
+    .where(
+      and(
+        eq(bookings.id, bookingId),
+        eq(bookings.shopId, shopId),
+        ne(bookings.status, "cancelled"),
+      ),
+    )
+    .limit(1);
+  if (!observed) return null;
+  const issue = async (tx: DbExecutor) => {
+    if (!(await joinWaiverOwed(tx, shopId, bookingId))) return null;
+    const outcome = await issueWaiverRequest(tx, {
+      shopId,
+      bookingId,
+      expectedPersonId: observed.personId,
+      expectedTripId: observed.tripId,
+      now,
+    });
+    if (!outcome.ok) return null;
+    return {
+      url: new URL(`/waivers/${outcome.token}`, `${origin}/`).toString(),
+      expiresAt: outcome.expiresAt,
+      waiverRecordId: outcome.recordId,
+      personId: observed.personId,
+      tripId: observed.tripId,
+    };
   };
+  if (isTransactionExecutor(db)) return issue(db);
+  return withErasureCoordinatedBookingSend(
+    db,
+    {
+      shopId,
+      bookingId,
+      expectedPersonId: observed.personId,
+      expectedTripId: observed.tripId,
+      expectedEmail: observed.email,
+    },
+    issue,
+  );
 }
 
 /**
@@ -670,7 +745,7 @@ export async function issueJoinWaiverLink(
  * reached anyone; null when the confirmation carried it.
  */
 export async function settleJoinWaiverDelivery(
-  db: AppDb,
+  db: DbExecutor,
   input: {
     shopId: string;
     bookingId: string;
@@ -687,15 +762,44 @@ export async function settleJoinWaiverDelivery(
   },
 ): Promise<IssueAndDeliverWaiverResult | null> {
   if (!input.confirmationSent) {
-    return issueAndDeliverWaiver(db, input.shopId, input.bookingId, { now: input.now });
+    return issueAndDeliverWaiver(db, input.shopId, input.bookingId, {
+      now: input.now,
+      expectedPersonId: input.link.personId,
+      expectedTripId: input.link.tripId,
+    });
   }
-  await recordWaiverDelivery(db, {
-    shopId: input.shopId,
-    waiverRecordId: input.link.waiverRecordId,
-    channel: "email",
-    delivery: { status: "sent", providerMessageId: input.confirmationProviderMessageId },
-    now: input.now,
-  });
+  const recordDelivery = async (tx: DbExecutor) => {
+    const [record] = await tx
+      .select({ id: waiverRecords.id })
+      .from(waiverRecords)
+      .where(
+        and(
+          eq(waiverRecords.id, input.link.waiverRecordId),
+          eq(waiverRecords.shopId, input.shopId),
+          eq(waiverRecords.bookingId, input.bookingId),
+          eq(waiverRecords.personId, input.link.personId),
+        ),
+      )
+      .limit(1);
+    if (!record) return;
+    await recordWaiverDelivery(tx, {
+      shopId: input.shopId,
+      waiverRecordId: input.link.waiverRecordId,
+      channel: "email",
+      delivery: { status: "sent", providerMessageId: input.confirmationProviderMessageId },
+      now: input.now,
+    });
+  };
+  await withErasureCoordinatedBookingSend(
+    db,
+    {
+      shopId: input.shopId,
+      bookingId: input.bookingId,
+      expectedPersonId: input.link.personId,
+      expectedTripId: input.link.tripId,
+    },
+    recordDelivery,
+  );
   return null;
 }
 
@@ -724,17 +828,30 @@ async function liveWaiverLinkForResend(
   );
   if (!owed) return null;
   const [seat] = await db
-    .select({ identityUnconfirmedAt: bookings.identityUnconfirmedAt })
+    .select({
+      identityUnconfirmedAt: bookings.identityUnconfirmedAt,
+      personId: bookings.personId,
+      tripId: bookings.tripId,
+      email: people.email,
+    })
     .from(bookings)
+    .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, bookings.shopId)))
     .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
     .limit(1);
   if (!seat || seat.identityUnconfirmedAt) return null;
-  const outcome = await issueWaiverRequest(db, { shopId, bookingId });
+  const outcome = await issueWaiverRequest(db, {
+    shopId,
+    bookingId,
+    expectedPersonId: seat.personId,
+    expectedTripId: seat.tripId,
+  });
   if (!outcome.ok) return null;
   return {
     url: new URL(`/waivers/${outcome.token}`, `${origin}/`).toString(),
     expiresAt: outcome.expiresAt,
     waiverRecordId: outcome.recordId,
+    personId: seat.personId,
+    tripId: seat.tripId,
   };
 }
 

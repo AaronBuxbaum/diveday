@@ -1658,7 +1658,7 @@ export async function getShopBookingTripId(
  * whatever handed it the ids.
  */
 export async function getBookingForTrip(
-  db: AppDb,
+  db: DbExecutor,
   shopId: string,
   tripId: string,
   bookingId: string,
@@ -1666,7 +1666,7 @@ export async function getBookingForTrip(
   const [row] = await db
     .select({ booking: bookings, person: people })
     .from(bookings)
-    .innerJoin(people, eq(people.id, bookings.personId))
+    .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, bookings.shopId)))
     .where(
       and(
         eq(bookings.id, bookingId),

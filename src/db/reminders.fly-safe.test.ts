@@ -222,8 +222,9 @@ describe("sendDueReminders and the fly-safe hours", () => {
       .where(eq(notificationSendQueue.shopId, shop.id));
     const retried = fakeEmail();
     await drainNotificationRetries(db, { provider: retried.provider });
-    expect(retried.sent[0]).toMatchObject({ flySafeAskCrew: true });
-    expect(retried.sent[0]).not.toHaveProperty("flySafeHours");
+    // The sealed payload also contains the old itinerary title/date. The
+    // booking-bound retry is parked rather than sending stale trip content.
+    expect(retried.sent).toHaveLength(0);
   });
 
   it("records the potential numeric exposure before the provider can accept it", async () => {
