@@ -38,6 +38,17 @@ import {
 describe("the shop home's pinned sentences", () => {
   const t = staffTranslator("en-US");
 
+  it("states the demo reset outcome plainly in both locales", () => {
+    expect(t("shopHome.demoReset")).toBe("The demo is back to its starting state.");
+    expect(t("shopHome.demoResetRefused")).toBe("The demo reset didn’t run. Contact support.");
+
+    const es = staffTranslator("es-ES");
+    expect(es("shopHome.demoReset")).toBe("La demostración volvió a su estado inicial.");
+    expect(es("shopHome.demoResetRefused")).toBe(
+      "El reinicio de demostración no se realizó. Contacta con soporte.",
+    );
+  });
+
   it("names the boats, the open things, the next departure and the dock", () => {
     expect(daySpineSummaryText(t, { boats: 3, jobs: 2, nextDepartureTime: "7:00 AM" })).toBe(
       "3 boats today. 2 things need you before the 7:00 AM leaves the dock.",

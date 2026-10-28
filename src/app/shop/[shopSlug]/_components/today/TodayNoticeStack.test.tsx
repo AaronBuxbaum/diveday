@@ -19,18 +19,14 @@ describe("TodayNoticeStack demo reset notice", () => {
   it("shows the success copy only for a completed reset", () => {
     renderResetNotice("1");
 
-    expect(screen.getByText("Demo data reset to a fresh boat and a clean slate.")).toBeTruthy();
-    expect(
-      screen.queryByText("Demo reset was skipped because its identities could not be verified."),
-    ).toBeNull();
+    expect(screen.getByText(t("shopHome.demoReset"))).toBeTruthy();
+    expect(screen.queryByText(t("shopHome.demoResetRefused"))).toBeNull();
   });
 
   it("shows an accessible refusal instead of the success copy when reset is blocked", () => {
     renderResetNotice("refused");
 
-    expect(screen.getByRole("status").textContent).toBe(
-      "Demo reset was skipped because its identities could not be verified.",
-    );
-    expect(screen.queryByText("Demo data reset to a fresh boat and a clean slate.")).toBeNull();
+    expect(screen.getByRole("status").textContent).toBe(t("shopHome.demoResetRefused"));
+    expect(screen.queryByText(t("shopHome.demoReset"))).toBeNull();
   });
 });

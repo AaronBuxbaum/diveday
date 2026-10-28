@@ -10,8 +10,8 @@
     "linkLabel": "Your booking link",
     "viewAsDiver": "See it the way your divers will"
   },
-  "demoReset": "Demo data reset to a fresh boat and a clean slate.",
-  "demoResetRefused": "Demo reset was skipped because its identities could not be verified.",
+  "demoReset": "The demo is back to its starting state.",
+  "demoResetRefused": "The demo reset didn’t run. Contact support.",
   "emailResent": "Confirmation email resent",
   "emailFailed": "That email still couldn’t be sent. Check the address and email configuration.",
   "offlineLabel": "Offline — this board may be out of date",

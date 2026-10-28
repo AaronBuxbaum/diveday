@@ -10,8 +10,8 @@
     "linkLabel": "Tu enlace de reservas",
     "viewAsDiver": "Míralo como lo verán tus buceadores"
   },
-  "demoReset": "Datos de demostración reiniciados, con barco nuevo y pizarra limpia.",
-  "demoResetRefused": "Se omitió el reinicio porque no se pudieron verificar las identidades de demostración.",
+  "demoReset": "La demostración volvió a su estado inicial.",
+  "demoResetRefused": "El reinicio de demostración no se realizó. Contacta con soporte.",
   "emailResent": "Correo de confirmación reenviado",
   "emailFailed": "Ese correo no se pudo enviar. Revisa la dirección y la configuración de correo.",
   "offlineLabel": "Sin conexión: este tablón puede estar desactualizado",
