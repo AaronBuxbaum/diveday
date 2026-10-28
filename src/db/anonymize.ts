@@ -380,8 +380,10 @@ function buddyMemberNameMatch(
 
 /**
  * Whole-word handles for retained crew prose: every recorded identity's full
- * and family forms, plus its given name. The shared name matcher enforces the
- * minimum useful length and escapes each value before joining the patterns.
+ * and family forms, plus its given name. Erasure prioritizes hiding the diver's
+ * name, so a matching word can redact unrelated prose and a same-shop
+ * namesake's mention. The ADR records this accepted tradeoff. The shared name
+ * matcher enforces the minimum useful length and escapes each value.
  */
 function crewNoteNameMatch(names: string[]): string | undefined {
   const patterns = new Set<string>();
@@ -758,7 +760,6 @@ async function scrubPersonRecord(
     ctx.fullName,
     ...mergedShellNames.map((row) => row.fullName),
   ]);
-  const personChain = [personId, ...mergedShellIds];
   for (const shellId of mergedShellIds) {
     await tx
       .update(people)
@@ -786,7 +787,11 @@ async function scrubPersonRecord(
   // an erased record as an active one of any kind.
   await tx.delete(personRoles).where(eq(personRoles.personId, personId));
 
-  // Versions retain personal credential dates even after the current row was deleted.
+  // Former staff may later hold only a diver role and become eligible for
+  // erasure. Their own credential versions still contain personal dates even
+  // when the current credential was deleted during offboarding. The merge
+  // guard prevents staff history from being present on a merged-away shell, so
+  // this intentionally follows only the directly erased person.
   await tx.delete(staffCredentialHistory).where(
     and(
       eq(staffCredentialHistory.shopId, shopId),
@@ -795,17 +800,11 @@ async function scrubPersonRecord(
         tx
           .select({ id: staffCredentials.id })
           .from(staffCredentials)
-          .where(
-            and(
-              eq(staffCredentials.shopId, shopId),
-              inArray(staffCredentials.personId, personChain),
-            ),
-          ),
+          .where(and(eq(staffCredentials.shopId, shopId), eq(staffCredentials.personId, personId))),
       ),
     ),
   );
 
-  // Crew observations and prose can exist without this person holding a booking.
   await tx
     .update(rollCallCrewEvents)
     .set({
@@ -817,7 +816,7 @@ async function scrubPersonRecord(
     .where(
       and(
         eq(rollCallCrewEvents.shopId, shopId),
-        inArray(rollCallCrewEvents.personId, personChain),
+        eq(rollCallCrewEvents.personId, personId),
         or(isNotNull(rollCallCrewEvents.note), isNotNull(rollCallCrewEvents.credentialSnapshot)),
       ),
     );
@@ -843,10 +842,6 @@ async function scrubPersonRecord(
     logFuzzyMatch(ctx, "roll_call_crew_note_name", notesNamingDiver.length);
   }
 
-  // Credentials belong to the staff member's operational record, but their
-  // names and identifiers are still personal data when the target was later
-  // entered as a diver. Retire those rows without leaving a credential tied
-  // to an erased identity.
   await tx
     .update(staffCredentials)
     .set({
@@ -860,9 +855,8 @@ async function scrubPersonRecord(
       deletedByPersonId: ctx.actorPersonId,
       updatedAt: now,
     })
-    .where(
-      and(eq(staffCredentials.shopId, shopId), inArray(staffCredentials.personId, personChain)),
-    );
+    .where(and(eq(staffCredentials.shopId, shopId), eq(staffCredentials.personId, personId)));
+
   return [];
 }
 

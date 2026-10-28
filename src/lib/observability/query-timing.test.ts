@@ -11,6 +11,8 @@ import {
   QUERY_TIMING_EVENT,
   queryTimingLogger,
   reportRenderQueries,
+  timeStatement,
+  withE2EApiTiming,
   withQueryStats,
   withStatementTiming,
 } from "./query-timing";
@@ -28,6 +30,116 @@ async function timedShopContext() {
 afterEach(() => {
   setLogSink(null);
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
+  vi.useRealTimers();
+});
+
+describe("E2E API timing diagnostics", () => {
+  it("reports bounded route, DB, and event-loop timings without request data", async () => {
+    vi.stubEnv("DIVEDAY_E2E", "1");
+    const lines: string[] = [];
+    setLogSink((line) => lines.push(line));
+    vi.spyOn(console, "log").mockImplementation(() => undefined);
+
+    await withE2EApiTiming("/api/example GET", async () => {
+      queryTimingLogger.logQuery();
+      await timeStatement(() => new Promise((resolve) => setTimeout(resolve, 25)));
+      await new Promise((resolve) => setTimeout(resolve, 510));
+    });
+
+    expect(lines).toHaveLength(1);
+    const report = JSON.parse(lines[0] ?? "{}");
+    expect(report).toMatchObject({
+      event: "test.api_request_timing",
+      route: "/api/example GET",
+      queries: 1,
+      in_flight_statements: 0,
+      oldest_statement_age_ms: 0,
+      snapshot: 1,
+    });
+    expect(report.ms).toBeGreaterThanOrEqual(500);
+    expect(report.db_ms).toBeGreaterThan(0);
+    expect(report.event_loop_lag_ms).toEqual(expect.any(Number));
+    expect(Object.keys(report)).toEqual([
+      "time",
+      "level",
+      "event",
+      "route",
+      "ms",
+      "db_ms",
+      "queries",
+      "in_flight_statements",
+      "oldest_statement_age_ms",
+      "event_loop_lag_ms",
+      "snapshot",
+    ]);
+  });
+
+  it("reports an unresolved statement and stops all probes after five snapshots", async () => {
+    vi.useFakeTimers();
+    vi.stubEnv("DIVEDAY_E2E", "1");
+    const lines: string[] = [];
+    setLogSink((line) => lines.push(line));
+    vi.spyOn(console, "log").mockImplementation(() => undefined);
+
+    let finishStatement!: () => void;
+    const pendingStatement = new Promise<void>((resolve) => {
+      finishStatement = resolve;
+    });
+    const request = withE2EApiTiming("/api/example GET", async () => {
+      queryTimingLogger.logQuery();
+      await timeStatement(() => pendingStatement);
+    });
+
+    await vi.advanceTimersByTimeAsync(25_000);
+    expect(lines).toHaveLength(5);
+    const lastSnapshot = JSON.parse(lines[4] ?? "{}");
+    expect(lastSnapshot).toMatchObject({
+      event: "test.api_request_timing",
+      route: "/api/example GET",
+      db_ms: 0,
+      queries: 1,
+      in_flight_statements: 1,
+      snapshot: 5,
+    });
+    expect(lastSnapshot.oldest_statement_age_ms).toBeGreaterThanOrEqual(25_000);
+    expect(vi.getTimerCount()).toBe(0);
+
+    finishStatement();
+    await request;
+  });
+
+  it("keeps the handler result when diagnostic logging throws", async () => {
+    vi.useFakeTimers();
+    vi.stubEnv("DIVEDAY_E2E", "1");
+    vi.spyOn(console, "log").mockImplementation(() => {
+      throw new Error("diagnostic sink unavailable");
+    });
+
+    const request = withE2EApiTiming(
+      "/api/example GET",
+      () => new Promise<string>((resolve) => setTimeout(() => resolve("route result"), 510)),
+    );
+    await vi.advanceTimersByTimeAsync(510);
+    await expect(request).resolves.toBe("route result");
+  });
+
+  it("is a passthrough outside E2E", async () => {
+    vi.stubEnv("DIVEDAY_E2E", "");
+    const work = vi.fn(async () => {
+      queryTimingLogger.logQuery();
+      return timeStatement(async () => "done");
+    });
+    const { result, stats } = await withQueryStats(() =>
+      withE2EApiTiming("/api/example GET", work),
+    );
+    expect(result).toBe("done");
+    expect(work).toHaveBeenCalledOnce();
+    expect(stats.queries).toBe(1);
+    expect(stats.dbMs).toBeGreaterThanOrEqual(0);
+    expect(stats).not.toHaveProperty("inFlightStatements");
+    expect(stats).not.toHaveProperty("statementSequence");
+  });
 });
 
 describe("counting a request's statements", () => {

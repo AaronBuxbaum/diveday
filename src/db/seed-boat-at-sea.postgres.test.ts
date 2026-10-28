@@ -3,7 +3,16 @@ import { and, eq, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
-import { executedDives, people, rollCallCrewEvents, shops, tripAssignments, trips } from "./schema";
+import {
+  executedDives,
+  people,
+  personRoles,
+  rollCallCrewEvents,
+  shops,
+  tripAssignments,
+  trips,
+  userAccounts,
+} from "./schema";
 import { AT_SEA_DAY_TITLE, bringDemoBoatsAtSeaHome } from "./seed-boat-at-sea";
 
 /**
@@ -48,6 +57,12 @@ describePostgres("the demo boat at sea under a doubled pass", () => {
       ])
       .returning();
     if (!captain || !guide) throw new Error("crew missing");
+    await pg.db.insert(personRoles).values({ personId: captain.id, role: "captain" });
+    await pg.db.insert(userAccounts).values({
+      personId: captain.id,
+      email: `captain@${shop.slug}.demo.invalid`,
+      hashedPassword: "unused",
+    });
     await pg.db.insert(tripAssignments).values([
       { tripId: trip.id, personId: captain.id, tripRole: "captain" },
       { tripId: trip.id, personId: guide.id },

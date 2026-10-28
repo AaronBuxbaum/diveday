@@ -2,7 +2,8 @@ import { and, asc, eq, gt, gte, isNull, lt, sql } from "drizzle-orm";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { shopDayBounds } from "@/lib/zoned";
 import { rebindDepartureBoatSafetyTime } from "./boat-safety";
-import type { AppDb } from "./client";
+import type { AppDb, DbExecutor } from "./client";
+import { isDemoShopWithDemoOwnerOrCaptainAccount } from "./demo-account-guard";
 import { DEMO_SHOP_SLUG } from "./demo-shop";
 import { shops, trips } from "./schema";
 import { bringDemoBoatsAtSeaHome } from "./seed-boat-at-sea";
@@ -122,16 +123,46 @@ export async function refreshCanonicalDemoSchedule(
   opts: { now?: Date; minRunwayDays?: number } = {},
 ): Promise<DemoScheduleRefresh> {
   const now = opts.now ?? nowDate();
+  // Each boat-return write takes its own identity-then-trip lock. Run it before
+  // the canonical schedule transaction takes the shop lock, so the passes do
+  // not nest their own per-boat transaction under the canonical lock.
+  await bringDemoBoatsAtSeaHome(db, now);
+  return db.transaction((tx) => refreshCanonicalDemoScheduleInTransaction(tx, { ...opts, now }));
+}
+
+async function refreshCanonicalDemoScheduleInTransaction(
+  db: DbExecutor,
+  opts: { now?: Date; minRunwayDays?: number },
+): Promise<DemoScheduleRefresh> {
+  const now = opts.now ?? nowDate();
   const minRunwayDays = opts.minRunwayDays ?? DEMO_SCHEDULE_MIN_RUNWAY_DAYS;
 
-  // Every demo shop, the visitors' own included: theirs keep the seed's open
-  // count for as long as they live.
-  await bringDemoBoatsAtSeaHome(db, now);
+  const [demoShop] = await db
+    .select({ id: shops.id })
+    .from(shops)
+    .where(eq(shops.slug, DEMO_SHOP_SLUG))
+    .limit(1);
+  if (!demoShop) {
+    return {
+      found: false,
+      runwayDays: null,
+      refreshed: false,
+      today: null,
+    };
+  }
+  if (!(await isDemoShopWithDemoOwnerOrCaptainAccount(db, demoShop.id))) {
+    const [current] = await db
+      .select({ isDemo: shops.isDemo })
+      .from(shops)
+      .where(eq(shops.id, demoShop.id))
+      .limit(1);
+    return { found: current?.isDemo ?? false, runwayDays: null, refreshed: false, today: null };
+  }
 
   const [shop] = await db
     .select({ id: shops.id, timezone: shops.timezone })
     .from(shops)
-    .where(and(eq(shops.slug, DEMO_SHOP_SLUG), eq(shops.isDemo, true)))
+    .where(and(eq(shops.id, demoShop.id), eq(shops.slug, DEMO_SHOP_SLUG), eq(shops.isDemo, true)))
     .limit(1);
   if (!shop) return { found: false, runwayDays: null, refreshed: false, today: null };
 
@@ -160,7 +191,7 @@ export async function refreshCanonicalDemoSchedule(
     return { found: true, runwayDays, refreshed: true, today: "restored" };
   }
 
-  const today = await ensureDemoSailsToday(db, shop.id, shop.timezone, now);
+  const today = await ensureDemoSailsTodayInTransaction(db, shop.id, shop.timezone, now);
   // The third pass, and the same gap in a different column: a diver looks at
   // what is coming up, staff look at today, and an *owner* looks at the month
   // just gone. Every tip and every review the demo owns is dated relative to the
@@ -208,6 +239,16 @@ export async function ensureDemoSailsToday(
   timeZone: string,
   now: Date = nowDate(),
 ): Promise<DemoTodayOutcome> {
+  return db.transaction((tx) => ensureDemoSailsTodayInTransaction(tx, shopId, timeZone, now));
+}
+
+async function ensureDemoSailsTodayInTransaction(
+  db: DbExecutor,
+  shopId: string,
+  timeZone: string,
+  now: Date,
+): Promise<DemoTodayOutcome> {
+  if (!(await isDemoShopWithDemoOwnerOrCaptainAccount(db, shopId))) return "no_candidate";
   const { from, to } = shopDayBounds(now, timeZone);
   const [sailingToday] = await db
     .select({ id: trips.id })
