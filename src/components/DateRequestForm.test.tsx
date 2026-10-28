@@ -21,7 +21,7 @@ const copy: DateRequestCopy = {
   yourPhone: "Your phone",
   phonePlaceholder: "+1 305 555 0134",
   howManyDivers: "How many divers",
-  contactHint: "One of the two, so we can reach you.",
+  contactHint: "Add an email or phone number so we can reach you.",
   whenSuits: "Flexible timing",
   whenSuitsPlaceholder: "Any weekend in August",
   moreDetails: "More details",
@@ -199,6 +199,14 @@ describe("DateRequestForm — server-recorded submission", () => {
 });
 
 describe("DateRequestForm — a request the shop can answer", () => {
+  it("names email and phone as the contact options", () => {
+    renderInquiry(vi.fn());
+
+    expect(
+      screen.getByText("Add an email or phone number so we can reach you."),
+    ).toBeInTheDocument();
+  });
+
   // A question with no email and no phone is an interest nobody can reply to, so
   // the composer refuses to send it at all.
   it("refuses the server send when neither an email nor a phone is given", () => {
