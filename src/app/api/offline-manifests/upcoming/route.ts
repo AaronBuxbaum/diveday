@@ -124,6 +124,7 @@ async function getUpcomingManifests() {
           const epoch = await getShopOfflineErasureEpoch(tx, shop.id);
           if (epoch === null) return null;
           const snapshotRevision = await nextOfflineManifestSnapshotRevision(tx, shop.id, tripId);
+          if (snapshotRevision === null) return null;
           const snapshotId = randomUUID();
           // PGlite's database type includes its client handle while the
           // transaction executor intentionally does not. The manifest readers

@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { verifyOfflineErasureEpoch } from "@/lib/offline-erasure-epoch";
@@ -8,7 +7,10 @@ import {
   nextOfflineManifestSnapshotRevision,
 } from "./offline-manifest-snapshots";
 import { offlineManifestSnapshotRevisions } from "./schema";
+import { createDemoShop } from "./seed";
+import { getShopBySlug } from "./shops";
 import { upcomingTripsWithCounts } from "./trips";
+import { createTrip } from "./trips-create";
 
 const context = fileScopedShopContext();
 
@@ -38,11 +40,32 @@ describe("offline manifest snapshot ordering", () => {
     expect(counter?.revision).toBe(2);
   });
 
-  it("rejects a counter row for a shop that does not own a valid tenant key", async () => {
-    const { db } = context;
-    const [trip] = await upcomingTripsWithCounts(db, context.shop.id, new Date(0));
-    if (!trip) throw new Error("offline manifest trip missing");
+  it("refuses a valid other-shop trip before writing a counter or returning a snapshot", async () => {
+    const { db, shop } = context;
+    const { slug } = await createDemoShop(db, { history: false });
+    const otherShop = await getShopBySlug(db, slug);
+    if (!otherShop) throw new Error("second test shop missing");
+    const otherTrip = await createTrip(db, {
+      shopId: otherShop.id,
+      title: "Other shop's real trip",
+      startsAt: new Date("2026-11-01T09:00:00.000Z"),
+      endsAt: new Date("2026-11-01T13:00:00.000Z"),
+      capacity: 6,
+      plannedDives: 1,
+    });
+    if (!otherTrip) throw new Error("other-shop trip could not be created");
 
-    await expect(nextOfflineManifestSnapshotRevision(db, randomUUID(), trip.id)).rejects.toThrow();
+    expect(await nextOfflineManifestSnapshotRevision(db, shop.id, otherTrip.id)).toBeNull();
+    expect(await issueOfflineManifestSnapshot(db, shop.id, otherTrip.id)).toBeNull();
+    const crossTenantCounter = await db
+      .select()
+      .from(offlineManifestSnapshotRevisions)
+      .where(eq(offlineManifestSnapshotRevisions.tripId, otherTrip.id));
+    expect(crossTenantCounter).toEqual([]);
+    await expect(
+      db
+        .insert(offlineManifestSnapshotRevisions)
+        .values({ shopId: shop.id, tripId: otherTrip.id, revision: 1 }),
+    ).rejects.toThrow();
   });
 });

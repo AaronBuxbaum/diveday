@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { check, integer, pgTable, primaryKey, uuid } from "drizzle-orm/pg-core";
+import { check, foreignKey, integer, pgTable, primaryKey, uuid } from "drizzle-orm/pg-core";
 import { shops } from "./core";
 import { trips } from "./trips";
 
@@ -24,6 +24,11 @@ export const offlineManifestSnapshotRevisions = pgTable(
       name: "offline_manifest_snapshot_revisions_pk",
       columns: [table.shopId, table.tripId],
     }),
+    foreignKey({
+      name: "offline_manifest_snapshot_revisions_trip_shop_fk",
+      columns: [table.shopId, table.tripId],
+      foreignColumns: [trips.shopId, trips.id],
+    }).onDelete("cascade"),
     check("offline_manifest_snapshot_revisions_positive", sql`${table.revision} > 0`),
   ],
 );

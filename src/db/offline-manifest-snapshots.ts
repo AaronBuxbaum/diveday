@@ -1,17 +1,29 @@
 import { randomUUID } from "node:crypto";
-import { sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { signOfflineErasureEpoch } from "@/lib/offline-erasure-epoch";
 import { lockBoardingCertificationEvidence } from "./boarding-certification-snapshot";
 import type { AppDb, DbExecutor } from "./client";
 import { getTripManifests } from "./manifests";
-import { offlineManifestSnapshotRevisions } from "./schema";
+import { offlineManifestSnapshotRevisions, trips } from "./schema";
 import { getShopOfflineErasureEpoch } from "./shops";
+import { liveTrip } from "./trips-live";
 
 export async function nextOfflineManifestSnapshotRevision(
   db: DbExecutor,
   shopId: string,
   tripId: string,
-): Promise<number> {
+): Promise<number | null> {
+  // Validate and lock the tenant-owned trip before touching its snapshot
+  // counter. The composite FK below is the database backstop; this scoped read
+  // keeps a foreign shop's identifier from causing even a counter write.
+  const [ownedTrip] = await db
+    .select({ id: trips.id })
+    .from(trips)
+    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
+    .for("key share")
+    .limit(1);
+  if (!ownedTrip) return null;
+
   const revisions = offlineManifestSnapshotRevisions;
   const [row] = await db
     .insert(revisions)
@@ -36,6 +48,7 @@ export async function issueOfflineManifestSnapshot(db: AppDb, shopId: string, tr
     const epoch = await getShopOfflineErasureEpoch(tx, shopId);
     if (epoch === null) return null;
     const snapshotRevision = await nextOfflineManifestSnapshotRevision(tx, shopId, tripId);
+    if (snapshotRevision === null) return null;
     const manifests = await getTripManifests(tx as unknown as AppDb, shopId, tripId);
     if (!manifests) return null;
     const snapshotId = randomUUID();
