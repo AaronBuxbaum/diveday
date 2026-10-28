@@ -7,6 +7,7 @@ import { sendLimitWords } from "@/i18n/shared-sentences";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { type FormNotice, noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import { verifyTripAdmissionGate } from "@/lib/trip-admission-gate";
+import { DETAILS_FORMS, ROSTER_FORMS } from "./trip-notice-tabs";
 
 /**
  * One entry per notice code, carrying its own tone, message key(s), and the
@@ -737,19 +738,11 @@ const NOTICE_KEYS: Record<
 
 /** Every form name `NOTICE_KEYS` (or an action's `?form=`) may point at. */
 const TRIP_FORMS = new Set([
+  ...DETAILS_FORMS,
+  ...ROSTER_FORMS,
   "page",
-  "details",
-  "conditions",
   "recap-note",
   "recap-photos",
-  "requirements",
-  "participant-terms",
-  "crew",
-  "series",
-  "lifecycle",
-  "add-diver",
-  "roster",
-  "last-minute-deal",
 ]);
 
 /**

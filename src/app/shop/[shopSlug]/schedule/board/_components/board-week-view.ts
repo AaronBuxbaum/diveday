@@ -286,6 +286,7 @@ export function boardWeekView({
         // moves from where it really starts.
         seats: { booked: span.booked, capacity: span.capacity },
         runsLabel: st("schedule.week.runsDays", { days: span.dayCount }),
+        time: formatTime(span.startsAt, locale, tz),
         dateIso: span.firstDay,
         startTime: toTimeInputValue(utcToWallTime(span.startsAt, tz)),
         dayCount: span.dayCount,

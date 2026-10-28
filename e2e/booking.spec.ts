@@ -234,7 +234,7 @@ test.describe("staff", () => {
     await expect(page.getByRole("button", { name: "Book my seat" })).toHaveCount(0);
     // The details form waits behind its Edit disclosure (summary-first Overview).
     await openTripAbout(page);
-    await openTripAboutRow(page, "The plan");
+    await openTripAboutRow(page, "Departure details");
     await page.getByLabel("Title").fill(renamed);
     await page.getByRole("button", { name: "Save changes" }).click();
     await expect(page.getByRole("status")).toContainText("Changes saved");

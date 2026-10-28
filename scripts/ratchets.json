@@ -515,7 +515,6 @@
       {
         "why": "merge of origin/main (168ee02bd) into the fifth-loop branch: both sides grew these functions and files, each under the limit on its own",
         "files": {
-          "src/app/shop/[shopSlug]/trips/[id]/_arrivals/arrival-desk.tsx#buildArrivalDesk": "0 -> 310",
           "src/app/shop/[shopSlug]/trips/[id]/_components/roster-seat.ts#rosterSeat": "308 -> 315"
         }
       }
@@ -523,7 +522,7 @@
     "src/app/s/[shopSlug]/page.tsx#SchedulePage": 368,
     "src/app/shop/[shopSlug]/orders/page.tsx#OrdersIndexPage": 410,
     "src/app/shop/[shopSlug]/promos/page.tsx#PromosPage": 351,
-    "src/app/shop/[shopSlug]/trips/[id]/_arrivals/arrival-desk.tsx#buildArrivalDesk": 310,
+    "src/app/shop/[shopSlug]/trips/[id]/_arrivals/arrival-desk.tsx#buildArrivalDesk": 309,
     "src/app/shop/[shopSlug]/trips/[id]/_components/roster-seat.ts#rosterSeat": 315,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 367,
     "src/db/checkouts.ts#startBookingCheckout": 303,

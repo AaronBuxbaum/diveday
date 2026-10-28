@@ -31,6 +31,7 @@ import type { FormNotice } from "@/lib/staff-notices";
 import { MAX_IMAGE_MB } from "@/lib/storage/limits";
 import { MAX_TRIP_DAYS, MIN_TRIP_DAYS } from "@/lib/trip-days";
 import { toDateInputValue, toTimeInputValue, type WallTime } from "@/lib/zoned";
+import type { DepartureDetailsSection } from "../departure-detail-sections";
 import { BoatCapacityWarning } from "./BoatCapacityWarning";
 import type { DiveSiteList, Trip, TripDiveList } from "./types";
 
@@ -43,6 +44,8 @@ import type { DiveSiteList, Trip, TripDiveList } from "./types";
 const GROUP_INSET = "rounded-inset bg-surface-sunken p-4 sm:p-5";
 
 /** Everything `DetailsSection` draws, assembled once by its caller and handed over as one object. */
+export type { DepartureDetailsSection } from "../departure-detail-sections";
+
 export type DetailsSectionContext = {
   action: (formData: FormData) => void;
   /** This form's own outcome, rendered beside its Save button rather than at the top of the page. */
@@ -113,46 +116,9 @@ function TitleAndDescription({
   );
 }
 
-export function DetailsSection({ context }: { context: DetailsSectionContext }) {
-  const {
-    action,
-    status,
-    trip,
-    diveSiteList,
-    tripDiveList,
-    startWall,
-    endWall,
-    dayCount,
-    laterDates,
-    locale,
-    currency,
-    boats,
-    lenses,
-    hasBoatDiving,
-    flySafeTold = 0,
-  } = context;
-  const t = staffTranslator(locale);
-  // Both price boxes follow the shop's currency: whole-number entry and a
-  // symbol-only placeholder for a zero-decimal currency, where "$0.00" was
-  // wrong twice over.
-  const digits = currencyFractionDigits(currency);
-  const modeOptions = departureModes(context);
-  const priceStep = digits === 0 ? "1" : `0.${"0".repeat(digits - 1)}1`;
-  const pricePlaceholder = formatMoneyCents(0, currency, locale);
+function MeetingPointFields({ trip, t }: { trip: Trip; t: StaffTranslator }) {
   return (
-    /* The About row's "Edit details" is this form's disclosure control, so it
-       needs none of its own — and no heading, no card and no summary of the
-       values it is about to show, which is what the row above it states
-       (`TripAboutSection`, design review 2026-09-17). */
-    <form action={action} encType="multipart/form-data" className="flex flex-col gap-5 pt-1">
-      <TitleAndDescription trip={trip} assist={context.descriptionAssist} t={t} />
-      {/* Where this departure meets, when it isn't the shop's own front
-              door — a marina three miles out, a shore dive's beach car park, a
-              second dock (issue #704 slice 2). Both blank, the default and
-              every trip until this shipped, means "the shop" everywhere this
-              renders. Free text, not the shop's own address-search box: a
-              meeting point is casual by nature, and geocoding one would guess
-              wrong coordinates for exactly the kind of place this names. */}
+    <>
       <FieldGrid columns={2}>
         <Field
           label={t("trips.details.meetingPointLabelLabel")}
@@ -179,10 +145,10 @@ export function DetailsSection({ context }: { context: DetailsSectionContext }) 
           />
         </Field>
       </FieldGrid>
-      <fieldset className={GROUP_INSET}>
-        <legend className={`${legendClass} text-sm font-medium`}>
+      <details className="group/arrival">
+        <summary className="cursor-pointer text-sm font-medium text-primary">
           {t("trips.details.arrivalGuidanceLegend")}
-        </legend>
+        </summary>
         <p className="text-sm text-muted">{t("trips.details.arrivalGuidanceDescription")}</p>
         <FieldGrid columns={2} className="mt-4">
           <Field
@@ -280,166 +246,251 @@ export function DetailsSection({ context }: { context: DetailsSectionContext }) 
             </div>
           </Field>
         </FieldGrid>
-      </fieldset>
-      <TripDiveFields
-        id="dives"
-        frameClassName={GROUP_INSET}
-        diveSites={diveSiteList.map((site) => ({ id: site.id, name: site.name }))}
-        initialCount={trip.plannedDives}
-        initialDives={tripDiveList.map(({ dive }) => ({
-          title: dive.title,
-          diveSiteId: dive.diveSiteId,
-          description: dive.description,
-          travelMinutes: dive.travelMinutes,
-        }))}
-        copy={{
-          heading: t("shared.tripDiveFields.heading"),
-          description: t.raw("shared.tripDiveFields.description"),
-          twoTankTrip: t("shared.tripDiveFields.twoTankTrip"),
-          diveCountTripOne: t.raw("shared.tripDiveFields.diveCountTripOne"),
-          diveCountTripOther: t.raw("shared.tripDiveFields.diveCountTripOther"),
-          numberOfDivesLabel: t("shared.tripDiveFields.numberOfDivesLabel"),
-          diveOptionOne: t.raw("shared.tripDiveFields.diveOptionOne"),
-          diveOptionOther: t.raw("shared.tripDiveFields.diveOptionOther"),
-          diveLegend: t.raw("shared.tripDiveFields.diveLegend"),
-          nameLabel: t("shared.tripDiveFields.nameLabel"),
-          optionalHint: t("shared.tripDiveFields.optionalHint"),
-          namePlaceholderFirst: t("shared.tripDiveFields.namePlaceholderFirst"),
-          namePlaceholderOther: t("shared.tripDiveFields.namePlaceholderOther"),
-          diveSiteLabel: t("shared.tripDiveFields.diveSiteLabel"),
-          noSiteChosen: t("shared.tripDiveFields.noSiteChosen"),
-          travelLabelFirst: t("shared.tripDiveFields.travelLabelFirst"),
-          travelLabelOther: t("shared.tripDiveFields.travelLabelOther"),
-          travelHint: t("shared.tripDiveFields.travelHint"),
-          diverFacingDetailsLabel: t("shared.tripDiveFields.diverFacingDetailsLabel"),
-          footerNote: t("shared.tripDiveFields.footerNote"),
-        }}
-      />
-      <WetsuitThicknessField rentalItems={context.rentalItems} t={t} mm={trip.wetsuitThicknessMm} />
-      {/* Two rows of three, not one row of six. Six equal columns gave
-              every box the same ~120px whatever it held — a date picker and a
-              seat count side by side at the same width, with "Price per diver
-              (optional)" wrapping to two lines while its neighbours sat on one
-              and the whole caption row went ragged. Three columns is also the
-              shape the schedule builder's own add panel uses, so the two places
-              a departure's when-and-how-many is typed now look alike. */}
-      <FieldGrid columns={3}>
-        <Field label={t("trips.details.dateLabel")}>
-          <DateField name="date" required defaultValue={toDateInputValue(startWall)} />
-        </Field>
-        <Field label={t("trips.details.departsLabel")}>
-          <DateField
-            name="startTime"
-            type="time"
-            required
-            defaultValue={toTimeInputValue(startWall)}
+      </details>
+    </>
+  );
+}
+
+export function DetailsSection({
+  context,
+  section,
+}: {
+  context: DetailsSectionContext;
+  section: DepartureDetailsSection;
+}) {
+  const {
+    action,
+    status,
+    trip,
+    diveSiteList,
+    tripDiveList,
+    startWall,
+    endWall,
+    dayCount,
+    laterDates,
+    locale,
+    currency,
+    boats,
+    lenses,
+    hasBoatDiving,
+    flySafeTold = 0,
+  } = context;
+  const t = staffTranslator(locale);
+  // Both price boxes follow the shop's currency: whole-number entry and a
+  // symbol-only placeholder for a zero-decimal currency, where "$0.00" was
+  // wrong twice over.
+  const digits = currencyFractionDigits(currency);
+  const modeOptions = departureModes(context);
+  const priceStep = digits === 0 ? "1" : `0.${"0".repeat(digits - 1)}1`;
+  const pricePlaceholder = formatMoneyCents(0, currency, locale);
+  return (
+    <form action={action} encType="multipart/form-data" className="flex flex-col gap-5 pt-1">
+      {section === "departure" ? (
+        <>
+          <TitleAndDescription trip={trip} assist={context.descriptionAssist} t={t} />
+          <FieldGrid columns={2}>
+            {/* The shop's own word for this kind of day (ADR
+                20260904-reef-all-the-way-down, decision 2). Renders nothing
+                when the shop has written no vocabulary, exactly as the boat
+                select renders nothing with no hulls. */}
+            {lenses.length > 0 ? (
+              <Field label={t("lenses.tripFieldLabel")} hint={t("trips.details.optionalHint")}>
+                <select name="lensId" defaultValue={trip.lensId ?? ""} className={controlClass}>
+                  <option value="">{t("lenses.tripFieldNone")}</option>
+                  {lenses.map((lens) => (
+                    <option key={lens.id} value={lens.id}>
+                      {lens.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            ) : null}
+          </FieldGrid>
+        </>
+      ) : null}
+      {section === "meeting" ? <MeetingPointFields trip={trip} t={t} /> : null}
+      {section === "plan" ? (
+        <>
+          <TripDiveFields
+            id="dives"
+            frameClassName=""
+            advancedLabel={t("trips.details.diveDetails")}
+            diveSites={diveSiteList.map((site) => ({ id: site.id, name: site.name }))}
+            initialCount={trip.plannedDives}
+            initialDives={tripDiveList.map(({ dive }) => ({
+              title: dive.title,
+              diveSiteId: dive.diveSiteId,
+              description: dive.description,
+              travelMinutes: dive.travelMinutes,
+            }))}
+            copy={{
+              heading: t("shared.tripDiveFields.heading"),
+              description: t.raw("shared.tripDiveFields.description"),
+              twoTankTrip: t("shared.tripDiveFields.twoTankTrip"),
+              diveCountTripOne: t.raw("shared.tripDiveFields.diveCountTripOne"),
+              diveCountTripOther: t.raw("shared.tripDiveFields.diveCountTripOther"),
+              numberOfDivesLabel: t("shared.tripDiveFields.numberOfDivesLabel"),
+              diveOptionOne: t.raw("shared.tripDiveFields.diveOptionOne"),
+              diveOptionOther: t.raw("shared.tripDiveFields.diveOptionOther"),
+              diveLegend: t.raw("shared.tripDiveFields.diveLegend"),
+              nameLabel: t("shared.tripDiveFields.nameLabel"),
+              optionalHint: t("shared.tripDiveFields.optionalHint"),
+              namePlaceholderFirst: t("shared.tripDiveFields.namePlaceholderFirst"),
+              namePlaceholderOther: t("shared.tripDiveFields.namePlaceholderOther"),
+              diveSiteLabel: t("shared.tripDiveFields.diveSiteLabel"),
+              noSiteChosen: t("shared.tripDiveFields.noSiteChosen"),
+              travelLabelFirst: t("shared.tripDiveFields.travelLabelFirst"),
+              travelLabelOther: t("shared.tripDiveFields.travelLabelOther"),
+              travelHint: t("shared.tripDiveFields.travelHint"),
+              diverFacingDetailsLabel: t("shared.tripDiveFields.diverFacingDetailsLabel"),
+              footerNote: t("shared.tripDiveFields.footerNote"),
+            }}
           />
-        </Field>
-        <Field label={t("trips.details.returnsLabel")}>
-          <DateField name="endTime" type="time" required defaultValue={toTimeInputValue(endWall)} />
-        </Field>
-      </FieldGrid>
-      {/* The date/departs/returns boxes describe day one; this says how
+          <WetsuitThicknessField
+            rentalItems={context.rentalItems}
+            t={t}
+            mm={trip.wetsuitThicknessMm}
+          />
+          <AboardFields t={t} trip={trip} flySafeTold={flySafeTold} />
+        </>
+      ) : null}
+      {section === "timing" ? (
+        <>
+          <FieldGrid columns={3}>
+            <Field label={t("trips.details.dateLabel")}>
+              <DateField name="date" required defaultValue={toDateInputValue(startWall)} />
+            </Field>
+            <Field label={t("trips.details.departsLabel")}>
+              <DateField
+                name="startTime"
+                type="time"
+                required
+                defaultValue={toTimeInputValue(startWall)}
+              />
+            </Field>
+            <Field label={t("trips.details.returnsLabel")}>
+              <DateField
+                name="endTime"
+                type="time"
+                required
+                defaultValue={toTimeInputValue(endWall)}
+              />
+            </Field>
+          </FieldGrid>
+          {/* The date/departs/returns boxes describe day one; this says how
             many days repeat it, and on which dates once gaps are allowed
             (third UX review, item 10; `MAX_MEETING_DAY_GAP_DAYS`). Saving rebuilds the whole
             meeting-day list, so a departure can grow or shrink here rather
             than being deleted and rebuilt as separate trips. */}
-      <MeetingDaysField
-        copy={{
-          daysLabel: t("trips.details.dayCountLabel"),
-          dayLabel: t.raw("schedule.builder.meetingDayLabel"),
-        }}
-        minDays={MIN_TRIP_DAYS}
-        maxDays={MAX_TRIP_DAYS}
-        defaultCount={dayCount}
-        defaultLaterDates={laterDates}
-      />
-      <FieldGrid columns={3}>
-        <Field
-          label={t("trips.details.capacityLabel")}
-          description={
-            <BoatCapacityWarning
-              boats={boats}
-              initialMode={trip.diveMode ?? "boat"}
-              copy={t.raw("schedule.builder.boatCapacityWarning")}
-            />
-          }
-        >
-          <input
-            name="capacity"
-            type="number"
-            required
-            min={1}
-            max={60}
-            defaultValue={trip.capacity}
-            className={`${controlClass} tabular-nums`}
+          <MeetingDaysField
+            copy={{
+              daysLabel: t("trips.details.dayCountLabel"),
+              dayLabel: t.raw("schedule.builder.meetingDayLabel"),
+            }}
+            minDays={MIN_TRIP_DAYS}
+            maxDays={MAX_TRIP_DAYS}
+            defaultCount={dayCount}
+            defaultLaterDates={laterDates}
           />
-        </Field>
-        <PriceField {...{ trip, currency, locale, priceStep, pricePlaceholder, t }} />
-      </FieldGrid>
-      {/* **The departure's own three**, editable since issue #681. They
-              used to be settable only when the departure was created, so the
-              commonest real edit — the boat that was going to run this is in
-              for service — meant delete and recreate, which `deleteTrip`
-              refuses once anyone has booked.
-
-              Course is deliberately absent: a departure's curriculum is what
-              its divers bought. */}
-      <FieldGrid columns={3}>
-        {modeOptions.length > 1 ? (
-          // The same words the board's add panel uses, from the same keys:
-          // the two forms describe one departure and must not call its
-          // modes different things.
-          <Field label={t("boats.diveModeLabel")}>
-            <select name="diveMode" defaultValue={trip.diveMode ?? "boat"} className={controlClass}>
-              {modeOptions.map((mode) => (
-                <option key={mode} value={mode}>
-                  {t(MODE_KEYS[mode])}
-                </option>
-              ))}
-            </select>
+        </>
+      ) : null}
+      {section === "booking" ? (
+        <>
+          <FieldGrid columns={3}>
+            <Field
+              label={t("trips.details.capacityLabel")}
+              description={
+                <BoatCapacityWarning
+                  boats={boats}
+                  initialMode={trip.diveMode ?? "boat"}
+                  assignedBoatId={trip.boatId}
+                  currentCapacity={trip.capacity}
+                  copy={t.raw("schedule.builder.boatCapacityWarning")}
+                />
+              }
+            >
+              <input
+                name="capacity"
+                type="number"
+                required
+                min={1}
+                max={60}
+                defaultValue={trip.capacity}
+                className={`${controlClass} tabular-nums`}
+              />
+            </Field>
+            <PriceField {...{ trip, currency, locale, priceStep, pricePlaceholder, t }} />
+          </FieldGrid>
+          <Field label={t("schedule.builder.isPrivateLabel")} htmlFor="trip-details-is-private">
+            <ChoiceRow
+              type="checkbox"
+              id="trip-details-is-private"
+              name="isPrivate"
+              defaultChecked={trip.isPrivate}
+              className="text-sm"
+            >
+              {t("schedule.builder.isPrivateHint")}
+            </ChoiceRow>
           </Field>
-        ) : null}
-        {hasBoatDiving && boats.length > 0 ? (
-          <Field label={t("boats.boatSelectLabel")} hint={t("trips.details.optionalHint")}>
-            <select name="boatId" defaultValue={trip.boatId ?? ""} className={controlClass}>
-              <option value="">{t("boats.unassignedBoat")}</option>
-              {boats.map((boat) => (
-                <option key={boat.id} value={boat.id}>
-                  {boat.name}
-                </option>
-              ))}
-            </select>
-          </Field>
-        ) : null}
-        {/* The shop's own word for this kind of day (ADR
-                20260904-reef-all-the-way-down, decision 2). Renders nothing
-                when the shop has written no vocabulary, exactly as the boat
-                select renders nothing with no hulls. */}
-        {lenses.length > 0 ? (
-          <Field label={t("lenses.tripFieldLabel")} hint={t("trips.details.optionalHint")}>
-            <select name="lensId" defaultValue={trip.lensId ?? ""} className={controlClass}>
-              <option value="">{t("lenses.tripFieldNone")}</option>
-              {lenses.map((lens) => (
-                <option key={lens.id} value={lens.id}>
-                  {lens.name}
-                </option>
-              ))}
-            </select>
-          </Field>
-        ) : null}
-      </FieldGrid>
-      <DepartureSwitches t={t} trip={trip} flySafeTold={flySafeTold} />
-      <PayAtBookingFields
-        t={t}
-        trip={trip}
-        currency={currency}
-        priceStep={priceStep}
-        pricePlaceholder={pricePlaceholder}
-      />
+          <PayAtBookingFields
+            t={t}
+            trip={trip}
+            currency={currency}
+            priceStep={priceStep}
+            pricePlaceholder={pricePlaceholder}
+          />
+        </>
+      ) : null}
+      {section === "boat" ? (
+        <>
+          <FieldGrid columns={3}>
+            {modeOptions.length > 1 ? (
+              // The same words the board's add panel uses, from the same keys:
+              // the two forms describe one departure and must not call its
+              // modes different things.
+              <Field label={t("boats.diveModeLabel")}>
+                <select
+                  name="diveMode"
+                  defaultValue={trip.diveMode ?? "boat"}
+                  className={controlClass}
+                >
+                  {modeOptions.map((mode) => (
+                    <option key={mode} value={mode}>
+                      {t(MODE_KEYS[mode])}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            ) : null}
+            {hasBoatDiving && boats.length > 0 ? (
+              <Field
+                label={t("boats.boatSelectLabel")}
+                hint={t("trips.details.optionalHint")}
+                description={
+                  <BoatCapacityWarning
+                    boats={boats}
+                    initialMode={trip.diveMode ?? "boat"}
+                    assignedBoatId={trip.boatId}
+                    currentCapacity={trip.capacity}
+                    copy={t.raw("schedule.builder.boatCapacityWarning")}
+                  />
+                }
+              >
+                <select name="boatId" defaultValue={trip.boatId ?? ""} className={controlClass}>
+                  <option value="">{t("boats.unassignedBoat")}</option>
+                  {boats.map((boat) => (
+                    <option key={boat.id} value={boat.id}>
+                      {boat.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            ) : null}
+          </FieldGrid>
+          {trip.courseId ? null : <SelfGuidedField t={t} checked={trip.selfGuided} />}
+        </>
+      ) : null}
       <div className="flex flex-wrap items-center gap-3">
-        {/* One open form at a time, one weight for its Save — the default
-                primary, shared by all four Overview sections. */}
         <SubmitButton pendingLabel={t("trips.details.saving")} className={buttonClass()}>
           {t("trips.details.saveChanges")}
         </SubmitButton>
@@ -615,54 +666,6 @@ function PayAtBookingFields({
  * one never sits alone under three selects in a narrow column (visual
  * triage, round 5).
  */
-function DepartureSwitches({
-  t,
-  trip,
-  flySafeTold,
-}: {
-  t: StaffTranslator;
-  trip: Trip;
-  flySafeTold: number;
-}) {
-  return (
-    <FieldGrid columns={2}>
-      {/* `htmlFor`, so the caption is a label beside the row's own rather
-            than a label wrapped around it: `Field` wraps a child that is not
-            one control in a `<label>`, and a label in a label is invalid HTML
-            with two targets for one click (K-13). */}
-      <Field label={t("schedule.builder.isPrivateLabel")} htmlFor="trip-details-is-private">
-        <ChoiceRow
-          type="checkbox"
-          id="trip-details-is-private"
-          name="isPrivate"
-          defaultChecked={trip.isPrivate}
-          className="text-sm"
-        >
-          {t("schedule.builder.isPrivateHint")}
-        </ChoiceRow>
-      </Field>
-      {/* Silences the shop's own divemaster target for this departure and
-                nothing else — an agency training ratio is a safety cap with its
-                own module and a box cannot switch one off (issue #973).
-
-                **Not offered at all on a course session** (issue #1342): a
-                departure running a course has an instructor of record, so the
-                shop's own target is exactly the signal that should keep
-                applying to it. `updateTrip` refuses the mark whatever this form
-                posts; the box is absent rather than present-and-ignored. The
-                condition is the trip's own course, since this form has no
-                course picker — a departure's course is fixed when it is
-                created.
-
-                A course session that already carries the mark (a row predating
-                the rule) clears itself the first time this form is saved: the
-                action parses an absent checkbox as `false` rather than
-                `undefined`, so `updateTrip` writes the correction. */}
-      {trip.courseId ? null : <SelfGuidedField t={t} checked={trip.selfGuided} />}
-      <AboardFields t={t} trip={trip} flySafeTold={flySafeTold} />
-    </FieldGrid>
-  );
-}
 
 /**
  * H-84 (issue #1555): DAN gives no preflight figure for a dive that took

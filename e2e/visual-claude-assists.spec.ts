@@ -234,7 +234,7 @@ test.describe("light mode — Claude's assists, lit", () => {
       await page.goto(`/shop/${privateShop.slug}/schedule/board`);
       await openTripFromBoard(page, REEF_TRIP);
       await openTripAbout(page);
-      await openTripAboutRow(page, "The plan");
+      await openTripAboutRow(page, "Departure details");
       await page.getByRole("button", { name: "Draft it", exact: true }).click();
       await expect(page.locator('textarea[name="description"]')).toHaveValue(
         /a crew who know the reef well/,

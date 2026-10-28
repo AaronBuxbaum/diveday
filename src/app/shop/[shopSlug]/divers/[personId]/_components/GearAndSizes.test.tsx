@@ -13,7 +13,7 @@ afterEach(cleanup);
 
 const t = staffTranslator("en-US");
 
-function makeRentalFit(overrides: Partial<RentalFit> = {}): RentalFit {
+function makeRentalFit(overrides: Partial<RentalFit & { note: string | null }> = {}): RentalFit {
   return {
     rentsBcd: false,
     rentsRegulator: false,
@@ -306,5 +306,41 @@ describe("GearAndSizes", () => {
       screen.getByRole("button", { name: "Fit resolved — pack their sizes again" }),
     ).toBeInTheDocument();
     expect(screen.queryByText("Can’t fill a size?")).toBeNull();
+  });
+});
+
+describe("fitting notes are said once where staff resolve the fit", () => {
+  it("shows an identical flag and rental note only beside the resolution action", () => {
+    const note = "No XL fins; fit from the spares";
+    renderGear(
+      makeRentalFit({
+        rentsFins: true,
+        note,
+        needsStaffFitNote: note,
+        needsStaffFitAt: new Date("2026-08-21T10:00:00Z"),
+      }),
+      ["fins"],
+    );
+    expect(screen.getAllByText(note)).toHaveLength(1);
+    expect(screen.getByText(note).closest("form")).toContainElement(
+      screen.getByRole("button", { name: t("divers.rentalFit.fitResolved") }),
+    );
+    expect(
+      screen.getByTestId("diver-file-group-gear").querySelector("summary"),
+    ).not.toHaveTextContent(note);
+  });
+
+  it("retains different rental instructions and fitting notes", () => {
+    renderGear(
+      makeRentalFit({
+        rentsFins: true,
+        note: "Bring prescription mask",
+        needsStaffFitNote: "Fit fins from spares",
+        needsStaffFitAt: new Date("2026-08-21T10:00:00Z"),
+      }),
+      ["fins"],
+    );
+    expect(screen.getAllByText("Bring prescription mask")).toHaveLength(1);
+    expect(screen.getAllByText("Fit fins from spares")).toHaveLength(1);
   });
 });

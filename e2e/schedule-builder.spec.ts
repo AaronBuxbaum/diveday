@@ -338,7 +338,7 @@ test.describe("schedule builder", () => {
     await row.getByRole("link", { name: title }).click();
     await expect(page.getByText("$129 per diver")).toBeVisible();
     await openTripAbout(page);
-    await openTripAboutRow(page, "The plan");
+    await openTripAboutRow(page, "Booking and payment");
     await expect(page.getByLabel(/Price per diver/)).toHaveValue("129");
   });
 
@@ -702,7 +702,7 @@ test.describe("schedule builder", () => {
     await week.getByRole("link", { name: new RegExp(`^Set a price for ${title},`) }).click();
     await expect(page).toHaveURL(/\/trips\/[0-9a-f-]+\?view=details#details$/);
     await openTripAbout(page);
-    await openTripAboutRow(page, "The plan");
+    await openTripAboutRow(page, "Booking and payment");
     await page.getByLabel(/Price per diver/).fill("110");
     await page.getByRole("button", { name: "Save changes" }).click();
     // The save redirects through `noticeUrl`, so its own notice is the signal

@@ -7,6 +7,12 @@ import type { FormNotice } from "@/lib/staff-notices";
  */
 export const DETAILS_FORMS: ReadonlySet<string> = new Set([
   "details",
+  "plan",
+  "meeting",
+  "timing",
+  "booking",
+  "boat",
+  "departure",
   "requirements",
   "conditions",
   "crew",

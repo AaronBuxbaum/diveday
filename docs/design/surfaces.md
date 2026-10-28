@@ -130,8 +130,10 @@ was deleted on 2026-10-03 (pre-pilot, no bookmarks to keep); the wait list is th
   other home yet.
 - **Composition:** one grouped ledger under a masthead, not a card stack — a roster is a list of
   people in states, and the state belongs to the group rather than repeated down every row; arrival
-  guidance is authored with the departure details, while invite and add actions are its terminal
+  guidance is authored beside Where we meet, while invite and add actions are its terminal
   bands, not detached forms.
+
+**Amended 2026-10-27 (S7, S3; #3141):** each Details row owns one subject and one explicit save. The plan edits dives and their operational kit/decompression/lunch facts; Where we meet edits the meeting point with optional arrival guidance disclosed; Timing owns dates, times and meeting days; Booking and payment owns seats, price, deposits and cancellation/minimum policy; Departure details owns title, description and trip tag. Boat/mode/self-guided controls stay with Boat & crew behind Edit boat, independently of the existing crew assignment controls. Per-dive site choices stay visible while secondary name, ride and descriptive fields disclose on request. Each save submits its own fields, and omitted facts are preserved from the locked current departure rather than a stale browser snapshot. The roster keeps its neutral Ready group, because boarding and counter check-in are independent; routine Not here confirmation sits inside the person's existing details, while blockers, late arrivals, turned-away facts and released-seat remedies stay in the open. Phone/desktop rendered-state review is required before this amendment is called visually verified.
 
 **Amended 2026-09-17** (design review, "as rendered"). The About panel said every fact twice: five
 label/value rows stating the plan, the conditions, who can book, the boat and crew and the repeat,

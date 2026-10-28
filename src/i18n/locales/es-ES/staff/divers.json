@@ -635,7 +635,8 @@
     "editSizes": "Editar",
     "neededFor": "Hace falta para el {when}.",
     "cantBoard": "No puede embarcar el {when}.",
-    "notCertified": "Sin la certificación para esta salida."
+    "notCertified": "Sin la certificación para esta salida.",
+    "rentalNotes": "Notas del alquiler"
   },
   "waiver": {
     "earlierRefusal": "Un médico no autorizó a esta persona el {date} (exención anterior).",

@@ -687,3 +687,13 @@ describe("a snorkeler held on a medical", () => {
     expect(screen.queryByText(hint)).toBeNull();
   });
 });
+
+it("keeps readiness neutral for a booked diver already boarded without counter check-in", () => {
+  renderRoster({
+    ...fixtures,
+    roster: [ready],
+    arrival: { controls: new Map(), below: new Map(), boarded: new Set([ready.booking.id]) },
+  });
+  expect(screen.getByRole("heading", { name: "Ready · 1" })).toBeVisible();
+  expect(screen.queryByRole("heading", { name: /To arrive/ })).toBeNull();
+});
