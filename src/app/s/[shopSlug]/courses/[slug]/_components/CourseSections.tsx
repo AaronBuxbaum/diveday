@@ -88,88 +88,90 @@ export function CourseHero({
   return (
     // Facts lead the reading order; the retained photo supports them at a
     // width its source can supply (public visual audit P1, issue #3140).
-    <SectionCard
-      as="div"
-      padding="none"
-      className={`overflow-hidden ${course.heroImageUrl ? "md:grid md:grid-cols-2 md:items-center" : ""}`}
-    >
-      <div className="min-w-0 p-6 sm:p-8">
-        <ShopPageHeader
-          eyebrow={t("course.agencyCourse", {
-            // The bare code, deliberately: this eyebrow spent a while expanding
-            // the acronym ("PADI (Professional Association of Diving
-            // Instructors) course", task 5), and a forty-character legal name
-            // in tracking-wide caps was the loudest line on the card while
-            // changing no reader's decision — a newcomer learns what PADI is
-            // from the shop, not from a certification body's full name
-            // (2026-08-28 diver-views design review). `courses.agency` is free
-            // text a shop types, so uppercase is a rendering, never a gate.
-            agency: course.agency.toUpperCase(),
-          })}
-          title={course.title}
-          titleFace="brand"
-          description={course.summary ?? undefined}
-        />
-        <div className="mt-4 flex flex-wrap items-center gap-4">
-          {totalCents === null ? null : (
-            <p className={FIGURE_CLASS}>
-              {money.format(minorToMajor(totalCents, currency))}
-              <span className="ml-2 text-sm font-normal text-muted">{t("common.perDiver")}</span>
-            </p>
-          )}
-          {privateAvailable ? (
-            <p className="text-sm text-muted">
-              {course.isIntroCourse
-                ? t("course.privateSessionAvailable")
-                : t("course.privateAvailable")}
-              {inquiryHref ? (
-                <>
-                  {" · "}
-                  <a href={inquiryHref} className="font-medium text-primary hover:underline">
-                    {t("course.privateAsk")}
-                  </a>
-                </>
-              ) : null}
-            </p>
+    <SectionCard as="div" padding="none" className="overflow-hidden">
+      <div className={course.heroImageUrl ? "md:grid md:grid-cols-2 md:items-start" : undefined}>
+        <div className="min-w-0 p-6 sm:p-8">
+          <ShopPageHeader
+            eyebrow={t("course.agencyCourse", {
+              // The bare code, deliberately: this eyebrow spent a while expanding
+              // the acronym ("PADI (Professional Association of Diving
+              // Instructors) course", task 5), and a forty-character legal name
+              // in tracking-wide caps was the loudest line on the card while
+              // changing no reader's decision — a newcomer learns what PADI is
+              // from the shop, not from a certification body's full name
+              // (2026-08-28 diver-views design review). `courses.agency` is free
+              // text a shop types, so uppercase is a rendering, never a gate.
+              agency: course.agency.toUpperCase(),
+            })}
+            title={course.title}
+            titleFace="brand"
+            description={course.summary ?? undefined}
+          />
+          <div className="mt-4 flex flex-wrap items-center gap-4">
+            {totalCents === null ? null : (
+              <p className={FIGURE_CLASS}>
+                {money.format(minorToMajor(totalCents, currency))}
+                <span className="ml-2 text-sm font-normal text-muted">{t("common.perDiver")}</span>
+              </p>
+            )}
+            {privateAvailable ? (
+              <p className="text-sm text-muted">
+                {course.isIntroCourse
+                  ? t("course.privateSessionAvailable")
+                  : t("course.privateAvailable")}
+                {inquiryHref ? (
+                  <>
+                    {" · "}
+                    <a href={inquiryHref} className="font-medium text-primary hover:underline">
+                      {t("course.privateAsk")}
+                    </a>
+                  </>
+                ) : null}
+              </p>
+            ) : null}
+          </div>
+          {facts.length > 0 ? (
+            <dl aria-label={t("course.atAGlance")} className="mt-5 flex flex-wrap gap-x-10 gap-y-3">
+              {facts.map((fact) => (
+                <div key={fact.label} className="min-w-0">
+                  <dt className={groupLabelClass()}>{fact.label}</dt>
+                  <dd className="mt-0.5 text-sm font-medium">{fact.value}</dd>
+                </div>
+              ))}
+            </dl>
           ) : null}
         </div>
-        {facts.length > 0 ? (
-          <dl aria-label={t("course.atAGlance")} className="mt-5 flex flex-wrap gap-x-10 gap-y-3">
-            {facts.map((fact) => (
-              <div key={fact.label} className="min-w-0">
-                <dt className={groupLabelClass()}>{fact.label}</dt>
-                <dd className="mt-0.5 text-sm font-medium">{fact.value}</dd>
-              </div>
-            ))}
-          </dl>
-        ) : null}
-        {admission}
-        {nextDate ? (
-          <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3">
-            <div>
-              <p className={groupLabelClass()}>{nextDate.label}</p>
-              <p className="mt-1 font-medium">{nextDate.dates}</p>
-            </div>
-            <Link
-              href={nextDate.href}
-              className={buttonClass({ variant: nextDate.full ? "secondary" : "primary" })}
-            >
-              {nextDate.action}
-            </Link>
-          </div>
+        {course.heroImageUrl ? (
+          <StoredPhoto
+            src={course.heroImageUrl}
+            alt={resolveImageAlt(
+              course.heroImageAlt,
+              t("course.photoAltFallback", { course: course.title, n: 1 }),
+            )}
+            className="h-44 w-full sm:h-56 md:h-80"
+            sizes="(min-width: 1152px) 552px, (min-width: 768px) 48vw, 100vw"
+            priority
+          />
         ) : null}
       </div>
-      {course.heroImageUrl ? (
-        <StoredPhoto
-          src={course.heroImageUrl}
-          alt={resolveImageAlt(
-            course.heroImageAlt,
-            t("course.photoAltFallback", { course: course.title, n: 1 }),
-          )}
-          className="h-44 w-full sm:h-56 md:h-80"
-          sizes="(min-width: 1152px) 552px, (min-width: 768px) 48vw, 100vw"
-          priority
-        />
+      {admission || nextDate ? (
+        <div className="px-6 pb-6 sm:px-8 sm:pb-8">
+          {admission}
+          {nextDate ? (
+            <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3">
+              <div>
+                <p className={groupLabelClass()}>{nextDate.label}</p>
+                <p className="mt-1 font-medium">{nextDate.dates}</p>
+              </div>
+              <Link
+                href={nextDate.href}
+                className={buttonClass({ variant: nextDate.full ? "secondary" : "primary" })}
+              >
+                {nextDate.action}
+              </Link>
+            </div>
+          ) : null}
+        </div>
       ) : null}
     </SectionCard>
   );

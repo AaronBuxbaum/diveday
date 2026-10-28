@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { Course } from "@/db/schema";
 import { diverTranslator } from "@/i18n/messages";
 import {
+  CourseAdmission,
   CourseFaqs,
   CourseGallery,
   CourseHero,
@@ -93,6 +94,46 @@ describe("CourseHero photo", () => {
       screen.getByText("$709"),
     ]) {
       expect(fact.compareDocumentPosition(photo) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
+  });
+
+  it("introduces the photo before enrollment prose and keeps enrollment before booking", () => {
+    render(
+      <CourseHero
+        course={course({ heroImageUrl: "/marine-life/reef.jpg", heroImageAlt: "A reef" })}
+        totalCents={70900}
+        currency="usd"
+        locale="en-US"
+        t={t}
+        admission={
+          <CourseAdmission
+            certificationRequired="Verified Open Water certification"
+            minimumAge={12}
+            shopNote="All operator-authored enrollment details remain here."
+            t={t}
+          />
+        }
+        nextDate={{
+          label: "Next date",
+          dates: "November 12",
+          href: "/book",
+          action: "Book",
+          full: false,
+        }}
+      />,
+    );
+    const photo = screen.getByRole("img", { name: "A reef" });
+    const booking = screen.getByRole("link", { name: "Book" });
+    for (const enrollment of [
+      screen.getByText(/Verified Open Water certification/),
+      screen.getByText("All operator-authored enrollment details remain here."),
+    ]) {
+      expect(
+        photo.compareDocumentPosition(enrollment) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(
+        enrollment.compareDocumentPosition(booking) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
     }
   });
 });
