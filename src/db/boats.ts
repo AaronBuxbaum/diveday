@@ -9,6 +9,7 @@ import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import type { VesselIdentity } from "@/lib/emergency-reference";
 import type { AppDb, DbExecutor } from "./client";
+import { queueMediaDeletion, retryMediaDeletion } from "./media-deletions";
 import { boats, trips } from "./schema";
 import { recordShopActivityWithin } from "./shop-activity";
 import { liveTrip } from "./trips-live";
@@ -120,6 +121,38 @@ export async function getBoatById(db: AppDb, shopId: string, boatId: string): Pr
     .where(and(eq(boats.shopId, shopId), eq(boats.id, boatId), isNull(boats.deletedAt)))
     .limit(1);
   return boat ?? null;
+}
+
+/** Replace only the photo read before upload; queue the retired object in the same transaction. */
+export async function replaceBoatPhoto(
+  db: AppDb,
+  shopId: string,
+  boatId: string,
+  expectedUrl: string | null,
+  photoUrl: string | null,
+): Promise<boolean> {
+  const result = await db.transaction(async (tx) => {
+    const [boat] = await tx
+      .update(boats)
+      .set({ photoUrl })
+      .where(
+        and(
+          eq(boats.shopId, shopId),
+          eq(boats.id, boatId),
+          isNull(boats.deletedAt),
+          expectedUrl === null ? isNull(boats.photoUrl) : eq(boats.photoUrl, expectedUrl),
+        ),
+      )
+      .returning({ id: boats.id });
+    if (!boat) return { saved: false, attemptId: null };
+    const attempt =
+      expectedUrl && expectedUrl !== photoUrl
+        ? await queueMediaDeletion(tx, { shopId, kind: "boat_photo", url: expectedUrl })
+        : null;
+    return { saved: true, attemptId: attempt?.id ?? null };
+  });
+  if (result.attemptId) await retryMediaDeletion(db, shopId, result.attemptId);
+  return result.saved;
 }
 
 /**

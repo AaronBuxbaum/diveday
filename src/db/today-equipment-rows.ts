@@ -5,11 +5,11 @@ import {
   gearDueBackSubjectText,
   gearNeverPickedUpDetailText,
   gearOverdueDetailText,
+  gearOverdueGroupText,
   gearServiceDueDetailText,
   openBoatCheckActionText,
   openBoatsActionText,
   openDiverActionText,
-  openGearRegisterActionText,
   openGearUnitActionText,
   openRentalsActionText,
   openStaffingActionText,
@@ -60,11 +60,24 @@ export function pushEquipmentRows(actions: TodayAction[], ctx: TodayRowsContext)
       timeZone,
     );
   };
-  // One row per diver, not per unit (Aaron, 2026-10-06): a BCD, a regulator
-  // and a wetsuit that never came home are one phone call to one person, and
-  // three rows under one name read as three people to chase. The units still
-  // all show — in the detail, grouped by chase and by day.
-  for (const rows of groupByPerson(overdueGear)) {
+  // Several people share one count leading to Rentals; for one person the
+  // detail still names each unit and distinguishes the two kinds of chase.
+  const overduePeople = groupByPerson(overdueGear);
+  if (overduePeople.length > 1 && overdueGear[0]) {
+    const words = gearOverdueGroupText(t, overdueGear.length, overduePeople.length);
+    actions.push({
+      id: "gear-overdue",
+      kind: "gear_overdue",
+      urgency: "now",
+      subject: words.subject,
+      context: null,
+      detail: words.detail,
+      actionLabel: openRentalsActionText(t),
+      href: `/shop/${shopSlug}/gear?view=rentals`,
+      dueAt: localMidnight(overdueGear[0].reservedUntil, 1),
+    });
+  }
+  for (const rows of overduePeople.length === 1 ? overduePeople : []) {
     const first = rows[0];
     if (!first) continue;
     // Two different chases wearing one kind: a checked-out unit is out with a
@@ -96,8 +109,8 @@ export function pushEquipmentRows(actions: TodayAction[], ctx: TodayRowsContext)
           }),
         )
         .join(" "),
-      actionLabel: openGearRegisterActionText(t),
-      href: `/shop/${shopSlug}/gear`,
+      actionLabel: openRentalsActionText(t),
+      href: `/shop/${shopSlug}/gear?view=rentals`,
       // The earliest closed window's end, in the past — the longest-out diver
       // leads. The reader orders by `reservedUntil`, so the first row is it.
       dueAt: localMidnight(first.reservedUntil, 1),
@@ -106,7 +119,7 @@ export function pushEquipmentRows(actions: TodayAction[], ctx: TodayRowsContext)
   // **One row for every return due today** (Aaron, 2026-10-09): a return is
   // not a chase, so the people bringing gear back share a line, and the unit
   // tags stay on the Rentals list the row opens. Overdue gear keeps a row per
-  // person above, because each of those is its own phone call.
+  // person above when there is only one person to chase.
   const dueBackPeople = groupByPerson(dueBackGear).flatMap((rows) => rows.slice(0, 1));
   const [firstDueBack] = dueBackPeople;
   if (firstDueBack) {

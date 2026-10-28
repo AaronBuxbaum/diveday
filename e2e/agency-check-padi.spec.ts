@@ -31,7 +31,7 @@ const PADI_CHECKS_OFF =
 async function installFakeExtension(page: Page, mode: Mode) {
   await page.addInitScript((answer) => {
     const announce = () => {
-      document.documentElement.setAttribute("data-diveday-cert-check", "1.5.0");
+      document.documentElement.setAttribute("data-diveday-cert-check", "1.6.0");
       window.dispatchEvent(new Event("diveday-cert-check-ready"));
     };
     if (document.readyState === "loading") {
@@ -91,10 +91,14 @@ function padiLookups(page: Page): Promise<number> {
  */
 async function diverWithPendingPadiCard(
   page: Page,
-  { shop = SHOP, checks = true }: { shop?: string; checks?: boolean } = {},
+  {
+    shop = SHOP,
+    checks = true,
+    prefix = "Padi",
+  }: { shop?: string; checks?: boolean; prefix?: string } = {},
 ) {
   const stamp = Date.now();
-  const name = `Padi ${stamp} Checker`;
+  const name = `${prefix} ${prefix.startsWith("Zeta") ? "Arkwright" : "Manson"}${stamp}`;
   await page.goto(`/shop/${shop}/divers`);
   await page.getByRole("searchbox", { name: "Search divers" }).fill(name);
   await page.getByRole("button", { name: "Add diver", exact: true }).click();
@@ -110,7 +114,7 @@ async function diverWithPendingPadiCard(
     .filter({ visible: true });
   await form.locator('select[name="agency"]').selectOption("padi");
   await form.locator('select[name="card"]').selectOption("level:open_water");
-  const cardNumber = `1506AB${String(stamp).slice(-4)}`;
+  const cardNumber = `1506AB${String(stamp).slice(-4)}${prefix.startsWith("Zeta") ? "2" : ""}`;
   await form.getByLabel("Certification number").fill(cardNumber);
   await page.evaluate(
     (number) => window.sessionStorage.setItem("padiCardNumber", number),
@@ -190,7 +194,8 @@ test.describe("at the seeded demo, which runs the PADI checks", () => {
   }) => {
     test.setTimeout(90_000);
     await installFakeExtension(page, "signed_out");
-    const { name } = await diverWithPendingPadiCard(page);
+    const { name } = await diverWithPendingPadiCard(page, { prefix: "Alpha Padi" });
+    const { name: other } = await diverWithPendingPadiCard(page, { prefix: "Zeta Padi" });
     const trip = await findTripOnBoard(page, SHOP, DEPARTURE);
     await trip.click();
     await openTripTab(page, "Trip");
@@ -200,6 +205,12 @@ test.describe("at the seeded demo, which runs the PADI checks", () => {
     await addDiver.getByRole("button", { name: `Add ${name} to the trip` }).click();
     await expect(
       rosterRow(page, name).getByRole("button", { name: "Check with PADI" }),
+    ).toBeVisible();
+    await addDiver.getByLabel("Find a returning diver").filter({ visible: true }).fill(other);
+    await addDiver.getByLabel("Find a returning diver").filter({ visible: true }).press("Enter");
+    await addDiver.getByRole("button", { name: `Add ${other} to the trip` }).click();
+    await expect(
+      rosterRow(page, other).getByRole("button", { name: "Check with PADI" }),
     ).toBeVisible();
     await expect(rosterRow(page, SEEDED_DIVER)).toBeVisible();
 
@@ -265,8 +276,7 @@ test("a shop that has not turned PADI checks on keeps the link and offers no che
   await expect(rosterRow(page, name).getByRole("button", { name: "Check with PADI" })).toHaveCount(
     0,
   );
-  // Check all counts the SSI card alone: one card, so no "Check all" (with
-  // PADI's switch on, the seeded demo's test above presses "Check all 2").
+  // SSI is manual-only and PADI is switched off, so there is no batch check.
   await expect(
     page.getByRole("button", { name: /^Check all \d+ cards with their agencies$/ }),
   ).toHaveCount(0);

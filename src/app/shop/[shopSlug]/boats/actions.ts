@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { canPersonManageBoats } from "@/db/authz";
@@ -7,9 +8,11 @@ import {
   type BoatPapersInput,
   createBoat,
   deleteBoat,
+  replaceBoatPhoto,
   updateBoatWithinCertificate,
 } from "@/db/boats";
 import { getDb } from "@/db/client";
+import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import { getShopById } from "@/db/shops";
 import { type BoatSeatsRefusal, boatSeatsRefusal } from "@/lib/boat-safety";
 import { isValidCalendarDate } from "@/lib/calendar-date";
@@ -22,6 +25,7 @@ import { formValue, readForm, trimmedText } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
+import { MAX_SHOP_HERO_BYTES, storeShopHeroImage } from "@/lib/storage";
 import { uuidParam } from "@/lib/uuid";
 import { registerBlock } from "../register-block";
 import { boatRowId } from "./certificate-error";
@@ -242,6 +246,42 @@ export async function updateBoatAction(formData: FormData) {
     actorPersonId: session.user.personId,
   });
   if (!saved.ok && saved.reason === "certificate") certificateRefusal(page, boatId, saved.refusal);
+  if (!saved.ok) validationRefusal(page, boatId, "boat-invalid");
+
+  const file = formData.get("boatPhoto");
+  const picked = file instanceof File && file.size > 0 ? file : null;
+  const remove = formData.get("removeBoatPhoto") === "true";
+  if (picked || remove) {
+    const refusePhoto = () =>
+      redirect(noticeUrl(`${page}#${boatRowId(boatId)}`, "boat-photo-invalid", { boat: boatId }));
+    if (picked && picked.size > MAX_SHOP_HERO_BYTES) refusePhoto();
+    const result = picked
+      ? await storeShopHeroImage({
+          filename: picked.name,
+          contentType: picked.type,
+          bytes: await picked.arrayBuffer(),
+        })
+      : null;
+    if (result && result.status !== "stored") refusePhoto();
+    const photoUrl = result?.status === "stored" ? result.url : null;
+    const replaced = await replaceBoatPhoto(
+      db,
+      session.user.shopId,
+      boatId,
+      saved.boat.photoUrl,
+      photoUrl,
+    );
+    if (!replaced) {
+      if (photoUrl)
+        await queueAndAttemptMediaDeletion(db, {
+          shopId: session.user.shopId,
+          kind: "boat_photo",
+          url: photoUrl,
+        });
+      refusePhoto();
+    }
+    revalidatePath(`/s/${session.user.shopSlug}`);
+  }
 
   revalidateAndRedirect(page, noticeUrl(page, "boat-updated"));
 }

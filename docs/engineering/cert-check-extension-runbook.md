@@ -47,8 +47,9 @@ To run the real-extension e2e locally: `pnpm e2e:build`, then
   the date format a Pro outside the US sees, where a signed-out tab lands, and the Pros' Site terms.
 - **Every agency:** the no-result wording (only NAUI's, "No record was found.", has been seen),
   the result's layout, whether a captcha appears, and whether a real match reads as one.
-- **SSI:** everything. Its lookup refuses automated readers, so nothing of it has been seen from
-  here.
+- **SSI:** verify the manual handoff in Chrome: the foreground page has the known name and birth
+  date, its authorization checkbox remains untouched, no search is submitted, and the tab remains
+  open. The staffer completes the lookup. The extension does not read the result.
 
 ## Session 0: the public agencies, by anyone with Chrome
 

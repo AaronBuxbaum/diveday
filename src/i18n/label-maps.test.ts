@@ -337,7 +337,6 @@ const TEMPERATURE_UNITS = everyCodeOf<TemperatureUnit>({ celsius: true, fahrenhe
  * somebody already wrote. Both had a closed source of truth already — the
  * `payment_operation_kind` and `media_deletion_kind` pg enums — so the answer
  * was to key the maps on those rather than to assert the weaker thing here.
- * `media_deletion_kind` carries nine members against the map's seven, and both
  * missing kinds were reachable, which is what the weaker assertion would have
  * missed.
  */
@@ -355,6 +354,7 @@ const MEDIA_DELETION_KINDS = everyCodeOf<MediaDeletionKind>({
   dive_site_photo: true,
   shop_logo: true,
   shop_hero: true,
+  boat_photo: true,
   arrival_photo: true,
   payment_receipt: true,
 });

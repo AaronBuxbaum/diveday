@@ -281,6 +281,7 @@
       "diveSitePhoto": "Foto del sitio de buceo",
       "shopLogo": "Logotipo del centro",
       "shopHero": "Foto de portada del centro",
+      "boatPhoto": "Foto de la embarcación",
       "paymentReceipt": "Recibo importado"
     },
     "stuckDetail": "{kind} empezó el {when} y nunca terminó. Revísalo en Stripe.",
@@ -327,6 +328,8 @@
   },
   "gear": {
     "overdueDetail": "{units} {count, plural, one {debía devolverse} other {debían devolverse}} el {dueOn} y {count, plural, one {sigue fuera} other {siguen fuera}}.",
+    "overdueItems": "{count, plural, one {# artículo atrasado} other {# artículos atrasados}}",
+    "overduePeople": "{count, plural, one {# persona tiene} other {# personas tienen}} alquileres vencidos.",
     "dueBackDetail": "Equipo para devolver hoy.",
     "dueBackPeople": "{count, plural, one {# persona} other {# personas}}",
     "serviceDueDetail": "{clockLabel} vence el {dueOn}.",

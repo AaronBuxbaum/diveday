@@ -147,23 +147,24 @@ export function agencyCheckQuery(input: {
 }): AgencyCheckQuery | null {
   if (!isCheckableAgency(input.agency)) return null;
   const words = input.fullName.trim().split(/\s+/).filter(Boolean);
-  if (words.length < 2) return null;
+  if (words.length === 0 || (words.length < 2 && input.agency !== "ssi")) return null;
   const cardNumber = input.identifier?.trim() || null;
   const birthDate =
     input.dateOfBirth && /^\d{4}-\d{2}-\d{2}$/.test(input.dateOfBirth) ? input.dateOfBirth : null;
   const needs = AGENCY_CHECKS[input.agency].needs;
-  if (needs === "card_number" && !cardNumber) return null;
+  if (needs === "card_number" && !cardNumber && input.agency !== "ssi") return null;
   if (needs === "birth_date" && !birthDate) return null;
   if (needs === "card_number_or_birth_date" && !cardNumber && !birthDate) return null;
   // The query crosses to the extension and is typed into a third party's page,
-  // so it carries only what this agency's form asks for: a birth date never
-  // goes to a lookup by number, nor a number to a lookup by birth date. The
+  // so it carries only what this agency's form asks for. SSI's manual form
+  // takes the known birth date, while its automatic verdict still needs the
+  // card number. Other number lookups do not receive a birth date. The
   // server re-derives the query to judge the page, so nothing is lost there.
   return {
     agency: input.agency,
     firstName: words[0] as string,
-    lastName: words.at(-1) as string,
-    birthDate: needs === "card_number" ? null : birthDate,
+    lastName: words.length > 1 ? (words.at(-1) as string) : "",
+    birthDate: needs === "card_number" && input.agency !== "ssi" ? null : birthDate,
     cardNumber: needs === "birth_date" ? null : cardNumber,
   };
 }

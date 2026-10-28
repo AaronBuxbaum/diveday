@@ -374,7 +374,7 @@
     },
     "certCheck": {
       "heading": "Verificación de tarjetas",
-      "description": "Con la extensión de DiveDay para el navegador, “Verificar con SSI” en la ficha de un buceador lo busca en la página de la agencia y, cuando la agencia muestra la certificación, la marca como certificada a nombre de ese miembro del equipo, como lo haría “Marcar certificado”. Verifica SSI, NAUI, SDI, GUE y CMAS, y PADI cuando actives “Verificación con PADI (beta)” en Funciones, en Chrome o Edge en una computadora.",
+      "description": "La extensión de DiveDay verifica tarjetas de NAUI, SDI, GUE y CMAS, y de PADI cuando activas “Verificación con PADI (beta)”. Para SSI, abre un formulario con los datos disponibles para que completes la verificación. Usa Chrome o Edge en una computadora.",
       "added": "Agregada a este navegador ({version})",
       "notAdded": "Sin agregar",
       "outdated": "Actualiza la extensión: este navegador tiene la versión {version} y DiveDay necesita la {minimum}.",
@@ -577,6 +577,7 @@
         "dive_site_photo": "Foto del sitio de buceo",
         "shop_logo": "Logotipo del centro",
         "shop_hero": "Foto de portada del centro",
+        "boat_photo": "Foto de la embarcación",
         "payment_receipt": "Recibo importado"
       },
       "mediaDeletions": {

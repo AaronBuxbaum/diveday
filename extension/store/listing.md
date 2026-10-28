@@ -23,7 +23,7 @@ Checks a diver's certification on their agency's own lookup page, from DiveDay, 
 
 **Description:**
 
-For dive shops that run on DiveDay. When a staff member presses a card's check button in DiveDay ("Check with SSI", "Check with NAUI", "Check with SDI", "Check with GUE", "Search the CMAS portal" or "Check with PADI (member sign-in)"), this extension opens that agency's own certification lookup page in a background tab, fills in what that agency's form asks for (SSI: the name and card number; NAUI, SDI and PADI: the name and birth date; GUE: the card number only, no name; CMAS: the CMAS code, or the name and birth date), reads the answer and hands it back to DiveDay, which decides whether the card is certified. The staff member sees the answer beside the card, with an Undo.
+For dive shops that run on DiveDay. When a staff member checks an SSI card, the extension opens SSI's page in the foreground and fills the known name and birth date. The staff member reviews SSI's terms and completes the search; the extension does not submit or read the answer. For NAUI, SDI, GUE, CMAS and PADI, the extension fills the agency's lookup in a background tab and returns the answer to DiveDay, which decides whether the card is certified. The staff member sees the answer beside the card, with an Undo.
 
 When a check cannot read the agency's answer (its form is not where it was, the answer never comes, or a captcha on the form asks for a person), the extension may send DiveDay the page's structure (its labels, button words and headings, never anything typed into it or anyone's details) so DiveDay can fix the reader.
 
@@ -48,7 +48,7 @@ Looks up a diver's dive certification on the certifying agency's own public or m
 | Permission | Justification (paste as written) |
 | --- | --- |
 | `scripting` | Fills in the agency's certification lookup form in the tab the extension opened, and reads the agency's answer from it, when a DiveDay staff member asks for a check. |
-| `https://my.divessi.com/*` | Fills in SSI's public Online Diver Check form when a DiveDay staff member asks, and reads the answer. |
+| `https://my.divessi.com/*` | Fills SSI's public Online Diver Check form when a DiveDay staff member asks. The staff member submits and reads it. |
 | `https://www.naui.org/*` | Fills in NAUI's public certification lookup form when a DiveDay staff member asks, and reads the answer. |
 | `https://www.tdisdi.com/*` | Fills in SDI's public certification search form when a DiveDay staff member asks, and reads the answer. |
 | `https://www.gue.com/*` | Fills in GUE's public card verification form when a DiveDay staff member asks, and reads the answer. |
@@ -63,8 +63,8 @@ Looks up a diver's dive certification on the certifying agency's own public or m
 
 | Category | Collected? | What and why |
 | --- | --- | --- |
-| Personally identifiable information | Yes | What the agency's form asks for, sent only to the agency the staff member chose, to look the card up: SSI the diver's name and card number; NAUI, SDI and PADI DiveChek the name and birth date; GUE the card number only; CMAS the CMAS code, or the name and birth date; PADI eLearning the course student's email only. |
-| Website content | Yes | The text of the agency's answer page, returned to the staff member's DiveDay shop to decide the check. On the PADI Pros' Site only the lines about that diver, and for eLearning only the student's own lines. When a check fails, the page's structure (labels, button words, headings; never anything typed or any person's details), so DiveDay can fix the reader. |
+| Personally identifiable information | Yes | What the agency's form asks for, sent only to the agency the staff member chose, to look the card up: SSI the diver's name and birth date if known; NAUI, SDI and PADI DiveChek the name and birth date; GUE the card number only; CMAS the CMAS code, or the name and birth date; PADI eLearning the course student's email only. |
+| Website content | Yes | The text of automatic agency checks other than SSI is returned to the staff member's DiveDay shop to decide the check. On the PADI Pros' Site only the lines about that diver, and for eLearning only the student's own lines. When an automatic check fails, the page's structure (labels, button words, headings; never anything typed or any person's details), so DiveDay can fix the reader. |
 | Health information | No | |
 | Financial and payment information | No | |
 | Authentication information | No | It never reads or stores a password or a sign-in. |

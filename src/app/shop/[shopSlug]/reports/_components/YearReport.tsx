@@ -1,5 +1,4 @@
 import { EmptyState } from "@/components/EmptyState";
-import { tapTargetLinkClass } from "@/components/ui/button";
 import { GroupLabel } from "@/components/ui/group-label";
 import { LedgerRow } from "@/components/ui/ledger";
 import { ProgressBar } from "@/components/ui/ProgressBar";
@@ -39,7 +38,6 @@ const SITES_SHOWN = 5;
 export type YearMoney = {
   report: Pick<MonthlyReport, "revenueCents" | "taxCents" | "tipsCents" | "tipCount">;
   currency: string;
-  csvHref: string;
   /** Counter money in the year with no tax split out (issue #2674); the line shows when above 0. */
   counterTaxIncludedCents?: number;
 };
@@ -218,14 +216,6 @@ export function YearReport({
             {(money.counterTaxIncludedCents ?? 0) > 0 ? (
               <p className="mt-1 text-end text-sm text-muted">{t("reports.counterTaxIncluded")}</p>
             ) : null}
-            <p className="mt-3 text-end text-sm">
-              <a
-                href={money.csvHref}
-                className={`${tapTargetLinkClass} font-medium text-primary hover:underline`}
-              >
-                {t("reports.year.money.downloadYear")}
-              </a>
-            </p>
           </div>
         ) : null}
 

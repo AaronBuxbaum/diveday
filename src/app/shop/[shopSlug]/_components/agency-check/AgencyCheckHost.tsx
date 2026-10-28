@@ -121,6 +121,7 @@ export function agencyCheckCardsToRun(
   states: Record<string, AgencyCheckCardState>,
 ): AgencyCheckableCard[] {
   return cards.filter((card) => {
+    if (card.agency === "ssi") return false;
     const state = states[card.certificationId];
     return !(state?.phase === "settled" && state.failure === null && state.result !== null);
   });

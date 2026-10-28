@@ -145,6 +145,7 @@
     "boatSeats": "{count, plural, one {# diver} other {# divers}}"
   },
   "trip": {
+    "boatLabel": "Boat",
     "courseSession": "Course session",
     "privateCharter": "Private charter",
     "depositLine": "{deposit} deposit at booking · {balance} balance at the dock",

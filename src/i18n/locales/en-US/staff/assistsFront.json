@@ -10,10 +10,11 @@
     },
     "urgent": "Urgent",
     "translation": "In {language}: {text}",
-    "makeRequest": "Make a request",
-    "makeRequestFor": "Make a request from {name}’s message",
+    "makeRequest": "Draft a booking request",
+    "makeRequestFor": "Draft a booking request from {name}’s message",
     "makingRequest": "Reading…",
-    "requestNothing": "Nothing in that message reads as a booking."
+    "requestNothing": "Nothing in that message reads as a booking.",
+    "requestDraftExists": "Finish or clear your unfinished Log a call form under New booking before drafting another request."
   },
   "conversation": {
     "translatedFrom": "Translated from {language}",

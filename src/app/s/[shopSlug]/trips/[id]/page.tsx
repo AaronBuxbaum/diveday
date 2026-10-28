@@ -42,7 +42,7 @@ import { knownDiverPanelFor } from "./_components/known-diver-lines";
 import { fullTripAlternatives, worthALookList } from "./_components/other-boats";
 import { TripAlternatives } from "./_components/TripAlternatives";
 import { dayCoverPhoto, dayProfileFacts, TripDayPlan } from "./_components/TripDayPlan";
-import { TripHero } from "./_components/TripHero";
+import { TripBoatPhoto, TripHero } from "./_components/TripHero";
 import { TripPaperFacts, TripPaperIdentity } from "./_components/TripPaperDocument";
 import { pitchOpensOnDoor, TripPitch } from "./_components/TripPitch";
 import { ERROR_MESSAGE_KEYS, isErrorCode } from "./_components/types";
@@ -411,15 +411,20 @@ export default async function TripDetailPage({
                 covers. Facts the shop already publishes (issue #1479); the beat
                 stays time-neutral, since durations promise no clock. */}
             {/* Its run closes itself, unless a pitch opens on its rule (pixel-craft class 6). */}
-            <TripDayPlan
-              briefings={diveBriefings}
-              nextOpensOnRule={pitchOpensOnDoor(diveBriefings, publicCrew, !!logEntry)}
-              sightings={briefing.seen}
-              siteReviews={briefing.siteReviews}
-              shop={shop}
-              locale={locale}
-              profile={dayProfileFacts(shop, trip, meetingDays.length, readerUnits.depth)}
-            />
+            <div className="space-y-4">
+              <TripDayPlan
+                briefings={diveBriefings}
+                nextOpensOnRule={pitchOpensOnDoor(diveBriefings, publicCrew, !!logEntry)}
+                sightings={briefing.seen}
+                siteReviews={briefing.siteReviews}
+                shop={shop}
+                locale={locale}
+                profile={dayProfileFacts(shop, trip, meetingDays.length, readerUnits.depth)}
+              />
+              {!isEmbed ? (
+                <TripBoatPhoto db={db} shopId={shop.id} boatId={trip.boatId} t={t} />
+              ) : null}
+            </div>
             {/* **The bound** (ADR 20260904-reef-all-the-way-down, decision 1). The
                 route, the rest of the field guide, the shop's
                 site prose and the crew used to run down the page as five more

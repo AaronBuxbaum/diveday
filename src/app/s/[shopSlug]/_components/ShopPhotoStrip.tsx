@@ -1,4 +1,8 @@
 import { StoredPhoto } from "@/components/StoredPhoto";
+import { sectionCardClass } from "@/components/ui/card";
+import { ITEM_TITLE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
+import type { Boat } from "@/db/boats";
+import type { DiverTranslator } from "@/i18n/messages";
 
 /**
  * **The shop's own photos, under its cover** (`shops.shopfront_photo_urls`,
@@ -34,5 +38,55 @@ export function ShopPhotoStrip({ urls, label }: { urls: readonly string[]; label
         </li>
       ))}
     </ul>
+  );
+}
+
+export function BoatsShelf({
+  boats,
+  t,
+  className,
+}: {
+  boats: Boat[];
+  t: DiverTranslator;
+  className: string;
+}) {
+  if (boats.length === 0) return null;
+  return (
+    <section aria-labelledby="boats-heading" className={className}>
+      <h2 id="boats-heading" className={`font-brand-display ${SECTION_TITLE_CLASS}`}>
+        {t("schedule.boatsHeading")}
+      </h2>
+      <ul className="mt-4 grid grid-cols-1 items-start gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {boats.map((boat) => (
+          <li
+            key={boat.id}
+            className={sectionCardClass({
+              className:
+                "flex min-h-14 flex-col gap-1 print:rounded-none print:border-x-0 print:border-b-0 print:px-0 print:py-2",
+            })}
+          >
+            {boat.photoUrl ? (
+              <StoredPhoto
+                src={boat.photoUrl}
+                alt={boat.name}
+                className="mb-3 aspect-video w-full rounded-md print:hidden"
+                sizes="(min-width: 1152px) 315px, (min-width: 1024px) calc(33.333vw - 66px), (min-width: 640px) calc(50vw - 72px), calc(100vw - 64px)"
+              />
+            ) : null}
+            <div className="flex items-baseline justify-between gap-3">
+              <span className={`font-brand-display ${ITEM_TITLE_CLASS} tracking-tight`}>
+                {boat.name}
+              </span>
+              <span className="shrink-0 text-sm text-muted tabular-nums">
+                {t("schedule.boatSeats", { count: boat.capacity })}
+              </span>
+            </div>
+            {boat.description ? (
+              <p className="text-sm text-muted text-pretty">{boat.description}</p>
+            ) : null}
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

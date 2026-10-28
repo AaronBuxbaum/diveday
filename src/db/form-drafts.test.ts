@@ -1,7 +1,13 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
-import { discardFormDraft, listFreshFormDrafts, readFormDraft, saveFormDraft } from "./form-drafts";
+import {
+  discardFormDraft,
+  listFreshFormDrafts,
+  readFormDraft,
+  saveFormDraft,
+  saveFormDraftIfVacant,
+} from "./form-drafts";
 import { people, personRoles } from "./schema";
 
 const ctx = fileScopedShopContext();
@@ -22,6 +28,35 @@ const now = new Date("2026-08-27T10:02:00Z");
 
 /** ADR 20260906-before-you-ask, decision 3: nothing you typed is lost, for a day. */
 describe("form drafts", () => {
+  it("atomically keeps a fresh draft when two requests try to create one", async () => {
+    const { db, shop, personId } = await fixture();
+    const input = { shopId: shop.id, personId, form: "took_a_call" as const, now };
+    const outcomes = await Promise.all([
+      saveFormDraftIfVacant(db, { ...input, fields: [["fullName", "First Diver"]] }),
+      saveFormDraftIfVacant(db, { ...input, fields: [["fullName", "Second Diver"]] }),
+    ]);
+    expect(outcomes.sort()).toEqual(["exists", "saved"]);
+    expect(["First Diver", "Second Diver"]).toContain(
+      (await readFormDraft(db, shop.id, personId, "took_a_call", now))?.fields.fullName,
+    );
+  });
+
+  it("replaces an expired draft", async () => {
+    const { db, shop, personId } = await fixture();
+    const input = { shopId: shop.id, personId, form: "took_a_call" as const, now };
+    await saveFormDraft(db, { ...input, fields: [["fullName", "Earlier caller"]] });
+    const later = new Date(now.getTime() + 25 * 60 * 60 * 1000);
+    expect(
+      await saveFormDraftIfVacant(db, {
+        ...input,
+        now: later,
+        fields: [["fullName", "New caller"]],
+      }),
+    ).toBe("saved");
+    expect(
+      (await readFormDraft(db, shop.id, personId, "took_a_call", later))?.fields.fullName,
+    ).toBe("New caller");
+  });
   it("keeps what was typed, one row per person and form, and reads it back fresh", async () => {
     const { db, shop, personId } = await fixture();
     await saveFormDraft(db, {

@@ -549,8 +549,18 @@ describe("the extension's sample lookup", () => {
     return sent[0]?.result;
   }
 
-  it("fills every public agency's sample, and presses its search", async () => {
-    for (const agency of ["ssi", "naui", "sdi", "gue"]) {
+  it("fills the SSI sample without accepting terms or submitting", async () => {
+    expect(await sampleRun("ssi")).toMatchObject({
+      filled: true,
+      typed: true,
+      submitted: false,
+      manual: true,
+      missing: [],
+    });
+  });
+
+  it("fills each automatic agency's sample and presses its search", async () => {
+    for (const agency of ["naui", "sdi", "gue"]) {
       expect(await sampleRun(agency), agency).toMatchObject({
         filled: true,
         typed: true,

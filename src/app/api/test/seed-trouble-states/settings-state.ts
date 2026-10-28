@@ -1,14 +1,41 @@
+import { and, asc, eq, isNull } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import type { AppDb } from "@/db/client";
 import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
-import { shopBackupDeliveries, shopBackupDestinations } from "@/db/schema";
+import { boats, shopBackupDeliveries, shopBackupDestinations, trips } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
+import { liveTrip } from "@/db/trips-live";
 import { DAY_MS, HOUR_MS, nowDate } from "@/lib/clock";
 
 /** Called only behind the existing trouble route's harness/secret/database gate. */
 export async function settingsStateResponse(request: Request, db: AppDb) {
   const query = new URL(request.url).searchParams;
   if (!query.has("settingsState")) return null;
+  if (query.get("settingsState") === "boat-photo") {
+    const slug = query.get("shop");
+    if (!slug || slug === DEMO_SHOP_SLUG)
+      return NextResponse.json({ error: "not_available" }, { status: 404 });
+    const shop = await getShopBySlug(db, slug);
+    if (!shop?.isDemo) return NextResponse.json({ error: "not_available" }, { status: 404 });
+    const [boat] = await db
+      .select({ id: boats.id, name: boats.name })
+      .from(boats)
+      .where(and(eq(boats.shopId, shop.id), eq(boats.name, "Mantis I"), isNull(boats.deletedAt)))
+      .limit(1);
+    if (!boat) return NextResponse.json({ error: "not_available" }, { status: 404 });
+    const [trip] = await db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(and(eq(trips.shopId, shop.id), eq(trips.boatId, boat.id), liveTrip()))
+      .orderBy(asc(trips.startsAt))
+      .limit(1);
+    if (!trip) return NextResponse.json({ error: "not_available" }, { status: 404 });
+    await db
+      .update(boats)
+      .set({ photoUrl: "/dive-sites/Crash Boat 01.jpg" })
+      .where(and(eq(boats.shopId, shop.id), eq(boats.id, boat.id)));
+    return NextResponse.json({ ok: true, boat, trip });
+  }
   if (query.get("settingsState") !== "backup-failed")
     return NextResponse.json({ error: "invalid_state" }, { status: 400 });
   const shop = await getShopBySlug(db, query.get("shop") ?? DEMO_SHOP_SLUG);
