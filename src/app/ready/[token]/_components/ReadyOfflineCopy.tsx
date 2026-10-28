@@ -7,6 +7,8 @@ import {
   keepReadyPageOnDevice,
   READY_COPY_LOCALE_META,
   READY_COPY_TIME_ZONE_META,
+  READY_COPY_VERSION,
+  READY_COPY_VERSION_META,
   READY_KEEP_UNTIL_META,
   READY_OFFLINE_NOTE_ATTR,
 } from "@/lib/ready-offline";
@@ -70,6 +72,7 @@ export function ReadyOfflineCopy({
       <meta name={READY_KEEP_UNTIL_META} content={String(keepUntil)} />
       <meta name={READY_COPY_LOCALE_META} content={locale} />
       <meta name={READY_COPY_TIME_ZONE_META} content={timeZone} />
+      <meta name={READY_COPY_VERSION_META} content={READY_COPY_VERSION} />
       {/* Drawn by the server too, hidden: the kept copy runs no script, and
         the worker shows this line in it (issue #3003). The marker comes first
         and `hidden` straight after it, the order the worker reads. */}

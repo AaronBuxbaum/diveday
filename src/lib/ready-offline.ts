@@ -41,6 +41,9 @@ export const READY_OFFLINE_SAVED_AT_PLACEHOLDER = "__diveday_ready_saved_at__";
 /** The locale and shop time zone the worker uses to format the saved instant. */
 export const READY_COPY_LOCALE_META = "diveday-ready-copy-locale";
 export const READY_COPY_TIME_ZONE_META = "diveday-ready-copy-time-zone";
+/** Distinguishes copies with the saved-time banner from older cached markup. */
+export const READY_COPY_VERSION_META = "diveday-ready-copy-version";
+export const READY_COPY_VERSION = "saved-time-v1";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 

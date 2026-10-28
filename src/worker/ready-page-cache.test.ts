@@ -5,6 +5,8 @@ import {
   READY_CACHE_NAME,
   READY_COPY_LOCALE_META,
   READY_COPY_TIME_ZONE_META,
+  READY_COPY_VERSION,
+  READY_COPY_VERSION_META,
   READY_KEEP_UNTIL_META,
   READY_OFFLINE_NOTE_ATTR,
   READY_OFFLINE_SAVED_AT_PLACEHOLDER,
@@ -12,6 +14,7 @@ import {
 import {
   forgetReadyPage,
   isReadyScope,
+  READY_COPY_KEY,
   READY_COPY_MAX_AGE_MS,
   readyPageFallback,
   readyPagePath,
@@ -50,11 +53,14 @@ function fakeStorage() {
 
 /** The live page as the server renders it: kept until `keepUntil` (default: well past NOW). */
 function page(body = "<p>Ready</p>", init: ResponseInit = {}, keepUntil = NOW + 30 * DAY_MS) {
-  return new Response(`<meta name="${READY_KEEP_UNTIL_META}" content="${keepUntil}"/>${body}`, {
-    status: 200,
-    headers: { "content-type": "text/html; charset=utf-8" },
-    ...init,
-  });
+  return new Response(
+    `<meta name="${READY_KEEP_UNTIL_META}" content="${keepUntil}"/><meta name="${READY_COPY_VERSION_META}" content="${READY_COPY_VERSION}"/>${body}`,
+    {
+      status: 200,
+      headers: { "content-type": "text/html; charset=utf-8" },
+      ...init,
+    },
+  );
 }
 
 describe("readyPagePath", () => {
@@ -121,15 +127,56 @@ describe("saveReadyPage and readyPageFallback", () => {
     expect(text).not.toContain(READY_OFFLINE_SAVED_AT_PLACEHOLDER);
   });
 
-  it("does not invent a save time for a copy written before the timestamp markup existed", async () => {
-    const body = `<p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">No signal: older saved copy</p>`;
-    await saveReadyPage(store.storage, `/ready/${TOKEN}`, page(body), NOW);
+  it("invalidates older saved markup rather than serving a banner with unknown age", async () => {
+    await saveReadyPage(store.storage, `/ready/${TOKEN}`, page("current copy"), NOW);
+    const cache = await store.storage.open(READY_CACHE_NAME);
+    const previous = await cache.match(READY_COPY_KEY);
+    expect(previous).toBeDefined();
+    await cache.put(
+      READY_COPY_KEY,
+      new Response(
+        `<meta name="${READY_KEEP_UNTIL_META}" content="${NOW + 30 * DAY_MS}"/><p ${READY_OFFLINE_NOTE_ATTR}="">No signal: older saved copy</p>`,
+        { headers: previous?.headers },
+      ),
+    );
 
+    expect(await readyPageFallback(store.storage, `/ready/${OTHER}`, NOW + 1_000)).toBeUndefined();
+    expect(store.caches.get(READY_CACHE_NAME)?.size).toBe(1);
     const served = await readyPageFallback(store.storage, `/ready/${TOKEN}`, NOW + 1_000);
-    const text = await served?.text();
-    expect(text).toContain("No signal: older saved copy");
-    expect(text).not.toContain(READY_OFFLINE_SAVED_AT_PLACEHOLDER);
-    expect(text).not.toContain("Saved ");
+    expect(served).toBeUndefined();
+    expect(store.caches.get(READY_CACHE_NAME)?.size ?? 0).toBe(0);
+  });
+
+  it.each([
+    ["locale", `name="${READY_COPY_TIME_ZONE_META}" content="America/New_York"`],
+    ["shop time zone", `name="${READY_COPY_LOCALE_META}" content="es-ES"`],
+    ["valid locale", `name="${READY_COPY_LOCALE_META}" content="not-a-locale"`],
+    ["valid shop time zone", `name="${READY_COPY_TIME_ZONE_META}" content="Not/AZone"`],
+  ])("does not save a timestamped copy without a usable %s", async (_label, metadata) => {
+    const body = `${metadata}<p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">${READY_OFFLINE_SAVED_AT_PLACEHOLDER}</p>`;
+    expect(await saveReadyPage(store.storage, `/ready/${TOKEN}`, page(body), NOW)).toBe(false);
+    expect(store.caches.get(READY_CACHE_NAME)?.size ?? 0).toBe(0);
+  });
+
+  it("formats Spanish saved times in the shop zone", async () => {
+    const locale = "es-ES";
+    const timeZone = "Pacific/Auckland";
+    const body = [
+      `<meta name="${READY_COPY_LOCALE_META}" content="${locale}"/>`,
+      `<meta name="${READY_COPY_TIME_ZONE_META}" content="${timeZone}"/>`,
+      `<p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">Sin cobertura: ${READY_OFFLINE_SAVED_AT_PLACEHOLDER}</p>`,
+    ].join("");
+    expect(await saveReadyPage(store.storage, `/ready/${TOKEN}`, page(body), NOW)).toBe(true);
+    const text = await (await readyPageFallback(store.storage, `/ready/${TOKEN}`, NOW))?.text();
+    const expected = new Intl.DateTimeFormat(locale, {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      timeZoneName: "short",
+      timeZone,
+    }).format(new Date(NOW));
+    expect(text?.replaceAll("\u00a0", " ")).toContain(`Sin cobertura: ${expected}`);
   });
 
   /**

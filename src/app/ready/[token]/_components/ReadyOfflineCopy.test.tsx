@@ -7,6 +7,8 @@ import {
   keepReadyPageOnDevice,
   READY_COPY_LOCALE_META,
   READY_COPY_TIME_ZONE_META,
+  READY_COPY_VERSION,
+  READY_COPY_VERSION_META,
   READY_OFFLINE_SAVED_AT_PLACEHOLDER,
 } from "@/lib/ready-offline";
 import { readyPageFallback, saveReadyPage } from "@/worker/ready-page-cache";
@@ -187,6 +189,7 @@ describe("ReadyOfflineCopy", () => {
     expect(served).not.toContain(READY_OFFLINE_SAVED_AT_PLACEHOLDER);
     expect(served).toContain(`name="${READY_COPY_LOCALE_META}" content="${LOCALE}"`);
     expect(served).toContain(`name="${READY_COPY_TIME_ZONE_META}" content="${TIME_ZONE}"`);
+    expect(served).toContain(`name="${READY_COPY_VERSION_META}" content="${READY_COPY_VERSION}"`);
     expect(served).not.toMatch(/<p [^>]*hidden=""[^>]*>No signal/);
   });
 });

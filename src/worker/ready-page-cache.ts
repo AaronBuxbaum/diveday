@@ -61,6 +61,8 @@ import {
   READY_CACHE_NAME,
   READY_COPY_LOCALE_META,
   READY_COPY_TIME_ZONE_META,
+  READY_COPY_VERSION,
+  READY_COPY_VERSION_META,
   READY_FORGOTTEN_CACHE_NAME,
   READY_KEEP_UNTIL_META,
   READY_OFFLINE_NOTE_ATTR,
@@ -273,10 +275,6 @@ export async function saveReadyPage(
   if (!storable(response)) return false;
   // A body of its own, so the copy is complete before anything is replaced.
   const html = new TextDecoder().decode(await response.arrayBuffer());
-  const savedAtLabel = readySavedAtLabel(html, now);
-  // A new page with the placeholder must have the locale and shop zone needed
-  // to replace it. Leave any previous complete copy untouched if it does not.
-  if (html.includes(READY_OFFLINE_SAVED_AT_PLACEHOLDER) && savedAtLabel === undefined) return false;
   const named = Number(html.match(KEEP_UNTIL_PATTERN)?.[1] ?? Number.NaN);
   const cache = await storage.open(READY_CACHE_NAME);
   if (!Number.isFinite(named) || named <= now) {
@@ -288,6 +286,13 @@ export async function saveReadyPage(
       return false;
     });
   }
+  // Pages rendered before the saved-time format cannot be transformed safely:
+  // their banner has no reliable locale/zone or age context.
+  if (metaContent(html, READY_COPY_VERSION_META) !== READY_COPY_VERSION) return false;
+  const savedAtLabel = readySavedAtLabel(html, now);
+  // A new page with the placeholder must have the locale and shop zone needed
+  // to replace it. Leave any previous complete copy untouched if it does not.
+  if (html.includes(READY_OFFLINE_SAVED_AT_PLACEHOLDER) && savedAtLabel === undefined) return false;
   const headers = new Headers(response.headers);
   headers.set(KEEP_UNTIL_HEADER, String(Math.min(named, now + READY_COPY_MAX_AGE_MS)));
   const hash = await pathHash(path);
@@ -348,7 +353,17 @@ export async function readyPageFallback(
     return undefined;
   }
   if (cached.headers.get(PATH_HASH_HEADER) !== (await pathHash(path))) return undefined;
-  const html = (await cached.text()).replaceAll(TOKEN_PLACEHOLDER, tokenOf(path));
+  const storedHtml = await cached.text();
+  if (
+    metaContent(storedHtml, READY_COPY_VERSION_META) !== READY_COPY_VERSION ||
+    storedHtml.includes(READY_OFFLINE_SAVED_AT_PLACEHOLDER)
+  ) {
+    // This exact-path copy predates the saved-time banner (or was incomplete).
+    // Remove it instead of showing an unknown-age page as current.
+    await cache.delete(READY_COPY_KEY);
+    return undefined;
+  }
+  const html = storedHtml.replaceAll(TOKEN_PLACEHOLDER, tokenOf(path));
   return new Response(html, {
     status: cached.status,
     statusText: cached.statusText,
