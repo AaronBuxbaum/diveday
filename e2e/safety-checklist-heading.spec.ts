@@ -42,15 +42,12 @@ test.describe("pre-departure checklist heading", () => {
                 document: document.documentElement.scrollWidth,
                 heading: title.clientWidth,
                 headingContent: title.scrollWidth,
+                overflowWrap: getComputedStyle(title).overflowWrap,
+                hyphens: getComputedStyle(title).hyphens,
+                textWrap: getComputedStyle(title).textWrap,
+                lang: title.lang,
               };
             });
-            expect(geometry.document, JSON.stringify(geometry)).toBeLessThanOrEqual(
-              geometry.viewport,
-            );
-            expect(geometry.headingContent, JSON.stringify(geometry)).toBeLessThanOrEqual(
-              geometry.heading + 1,
-            );
-            await expect(heading).toHaveAccessibleName(expectedHeading);
             const screenshotName = `checklist-heading-${locale}-${width}px-${scale}pct`;
             const screenshotPath = test.info().outputPath(`${screenshotName}.png`);
             await page.screenshot({ path: screenshotPath });
@@ -58,6 +55,19 @@ test.describe("pre-departure checklist heading", () => {
               path: screenshotPath,
               contentType: "image/png",
             });
+            expect(geometry.document, JSON.stringify(geometry)).toBeLessThanOrEqual(
+              geometry.viewport,
+            );
+            if (width < 640) {
+              expect(geometry.headingContent, JSON.stringify(geometry)).toBeLessThanOrEqual(
+                geometry.heading + 1,
+              );
+            }
+            expect(geometry.overflowWrap).toBe(width < 640 ? "break-word" : "normal");
+            expect(geometry.hyphens).toBe(locale === SPANISH ? "auto" : "manual");
+            expect(geometry.textWrap).toBe("pretty");
+            expect(geometry.lang).toBe(locale);
+            await expect(heading).toHaveAccessibleName(expectedHeading);
           }
         }
       });

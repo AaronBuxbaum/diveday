@@ -56,8 +56,6 @@
  * face's own size and weight (ADR 20260901-diveday-reimagined, decision 1).
  * `leading-[1.1]` gives a 44px line box, which `ShopPageHeaderSkeleton`'s
  * `h-11` matches.
- * `break-words` lets a long localized word wrap inside a phone column at
- * enlarged text sizes instead of widening the page.
  *
  * Landed in `ShopPageHeader.tsx` with #1286 and moved here on the merge: this
  * module exists so a rung has one name in one place (#1229), and the header
@@ -65,7 +63,7 @@
  * `EYEBROW_CLASS` stays over there on purpose; an eyebrow is not a title.
  */
 export const PAGE_TITLE_CLASS =
-  "text-[2.5rem] leading-[1.1] font-bold tracking-[-0.02em] text-balance break-words";
+  "text-[2.5rem] leading-[1.1] font-bold tracking-[-0.02em] text-balance";
 
 /**
  * One step up from the title, for the one page whose title is a greeting rather
