@@ -7,6 +7,7 @@ import {
 import { nowDate } from "@/lib/clock";
 import { openSecret, type SecretKey, sealSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
 import type { DbExecutor } from "./client";
+import { isTransactionExecutor } from "./query-helpers";
 import { bookingCapabilities, bookings, people, trips } from "./schema";
 
 export type CapabilityPurpose = "readiness" | "confirm" | "claim" | "handoff" | "course_forms";
@@ -101,7 +102,7 @@ export async function issueBookingCapability(
   },
 ): Promise<IssuedCapability | null> {
   const now = input.now ?? nowDate();
-  return db.transaction(async (tx) => {
+  const issue = async (tx: DbExecutor) => {
     const [subject] = await tx
       .select({ personId: people.id, anonymizedAt: people.anonymizedAt })
       .from(bookings)
@@ -156,7 +157,8 @@ export async function issueBookingCapability(
       expiresAt,
     });
     return { token, expiresAt };
-  });
+  };
+  return isTransactionExecutor(db) ? issue(db) : db.transaction(issue);
 }
 
 /**
@@ -237,7 +239,7 @@ export async function mintBookingCapabilities(
     delivered?: boolean;
   },
 ): Promise<Map<string, IssuedCapability>> {
-  return db.transaction(async (tx) => {
+  const issue = async (tx: DbExecutor) => {
     const issued = new Map<string, IssuedCapability>();
     const requested = [...new Map(input.seats.map((seat) => [seat.bookingId, seat])).values()];
     if (requested.length === 0) return issued;
@@ -329,7 +331,8 @@ export async function mintBookingCapabilities(
     });
     await tx.insert(bookingCapabilities).values(rows);
     return issued;
-  });
+  };
+  return isTransactionExecutor(db) ? issue(db) : db.transaction(issue);
 }
 
 /**

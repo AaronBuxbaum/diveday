@@ -1,7 +1,9 @@
 import { and, eq } from "drizzle-orm";
+import { notificationProviderSignal } from "@/lib/notifications";
 import { recipientLocale } from "@/lib/notifications/kinds";
 import type { NotificationProvider } from "@/lib/notifications/provider";
 import type { AppDb } from "./client";
+import { withErasureCoordinatedPersonSend } from "./erasure-coordinated-send";
 import { sendAndRecordNotification } from "./notifications";
 import { people, shops, waiverRecords } from "./schema";
 
@@ -44,61 +46,82 @@ export async function sendGuardianReleaseCopy(
   input: { shopId: string; recordId: string },
   options: { provider?: NotificationProvider } = {},
 ): Promise<GuardianReleaseCopyOutcome> {
-  const [row] = await db
-    .select({
-      guardianName: waiverRecords.guardianName,
-      guardianEmail: waiverRecords.guardianEmail,
-      guardianSignedAt: waiverRecords.guardianSignedAt,
-      status: waiverRecords.status,
-      templateTitle: waiverRecords.templateTitle,
-      templateVersion: waiverRecords.templateVersion,
-      signedAt: waiverRecords.signedAt,
-      diverName: people.fullName,
-      shopName: shops.name,
-      timezone: shops.timezone,
-      shopDefaultLocale: shops.defaultLocale,
-    })
+  const [observed] = await db
+    .select({ personId: waiverRecords.personId })
     .from(waiverRecords)
-    .innerJoin(people, eq(people.id, waiverRecords.personId))
-    .innerJoin(shops, eq(shops.id, waiverRecords.shopId))
-    // Shop-scoped as well as id-scoped: this is reached from a bearer-token
-    // route, and a record id alone is not a tenant.
     .where(and(eq(waiverRecords.id, input.recordId), eq(waiverRecords.shopId, input.shopId)))
     .limit(1);
-  if (!row) return { sent: false, reason: "not_found" };
-  // Nothing is sent about a release nobody co-signed — an adult's, or a
-  // half-written row. The signature's own timestamp is the fact, not the name,
-  // which erasure takes.
-  if (!row.guardianSignedAt || !row.signedAt) return { sent: false, reason: "not_co_signed" };
-  if (!row.guardianEmail || !row.guardianName) return { sent: false, reason: "no_guardian_email" };
+  if (!observed) return { sent: false, reason: "not_found" };
+  return (
+    (await withErasureCoordinatedPersonSend(
+      db,
+      { shopId: input.shopId, personId: observed.personId },
+      async (tx) => {
+        const [row] = await tx
+          .select({
+            guardianName: waiverRecords.guardianName,
+            guardianEmail: waiverRecords.guardianEmail,
+            guardianSignedAt: waiverRecords.guardianSignedAt,
+            status: waiverRecords.status,
+            templateTitle: waiverRecords.templateTitle,
+            templateVersion: waiverRecords.templateVersion,
+            signedAt: waiverRecords.signedAt,
+            diverName: people.fullName,
+            shopName: shops.name,
+            timezone: shops.timezone,
+            shopDefaultLocale: shops.defaultLocale,
+          })
+          .from(waiverRecords)
+          .innerJoin(people, eq(people.id, waiverRecords.personId))
+          .innerJoin(shops, eq(shops.id, waiverRecords.shopId))
+          // Shop-scoped as well as id-scoped: this is reached from a bearer-token
+          // route, and a record id alone is not a tenant.
+          .where(
+            and(
+              eq(waiverRecords.id, input.recordId),
+              eq(waiverRecords.shopId, input.shopId),
+              eq(waiverRecords.personId, observed.personId),
+            ),
+          )
+          .limit(1);
+        if (!row) return { sent: false, reason: "not_found" };
+        // Nothing is sent about a release nobody co-signed — an adult's, or a
+        // half-written row. The signature's own timestamp is the fact, not the name,
+        // which erasure takes.
+        if (!row.guardianSignedAt || !row.signedAt) return { sent: false, reason: "not_co_signed" };
+        if (!row.guardianEmail || !row.guardianName)
+          return { sent: false, reason: "no_guardian_email" };
 
-  await sendAndRecordNotification(
-    db,
-    {
-      kind: "guardian_release_copy",
-      waiverRecordId: input.recordId,
-      shopId: input.shopId,
-      to: row.guardianEmail,
-      // **The shop's own language, always.** A guardian has no `people` row by
-      // design (ADR 20260907-guardian-co-signature, decision 2), so there is no
-      // first-hand locale signal to prefer — `recipientLocale` falls straight
-      // back to the shop's default, which is the rule stated in `kinds.ts`.
-      locale: recipientLocale(null, row.shopDefaultLocale),
-      guardianName: row.guardianName,
-      diverName: row.diverName,
-      shopName: row.shopName,
-      releaseTitle: row.templateTitle,
-      releaseVersion: row.templateVersion,
-      signedAt: row.signedAt,
-      timezone: row.timezone,
-      // **The one case where there IS something to do.** A release whose health
-      // answers need a physician parks in `medical_review`, and the adult who
-      // has to get the child to that physician is this recipient. The note said
-      // "there is nothing to do" to exactly them until a `dive-domain-expert`
-      // pass walked a 13-year-old's asthma answer through it.
-      medicalReviewPending: row.status === "medical_review",
-    },
-    options,
+        await sendAndRecordNotification(
+          tx,
+          {
+            kind: "guardian_release_copy",
+            waiverRecordId: input.recordId,
+            shopId: input.shopId,
+            to: row.guardianEmail,
+            // **The shop's own language, always.** A guardian has no `people` row by
+            // design (ADR 20260907-guardian-co-signature, decision 2), so there is no
+            // first-hand locale signal to prefer — `recipientLocale` falls straight
+            // back to the shop's default, which is the rule stated in `kinds.ts`.
+            locale: recipientLocale(null, row.shopDefaultLocale),
+            guardianName: row.guardianName,
+            diverName: row.diverName,
+            shopName: row.shopName,
+            releaseTitle: row.templateTitle,
+            releaseVersion: row.templateVersion,
+            signedAt: row.signedAt,
+            timezone: row.timezone,
+            // **The one case where there IS something to do.** A release whose health
+            // answers need a physician parks in `medical_review`, and the adult who
+            // has to get the child to that physician is this recipient. The note said
+            // "there is nothing to do" to exactly them until a `dive-domain-expert`
+            // pass walked a 13-year-old's asthma answer through it.
+            medicalReviewPending: row.status === "medical_review",
+          },
+          { ...options, signal: notificationProviderSignal() },
+        );
+        return { sent: true };
+      },
+    )) ?? { sent: false, reason: "not_found" }
   );
-  return { sent: true };
 }

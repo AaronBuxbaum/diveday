@@ -52,7 +52,10 @@ import { issueBookingCapability } from "./booking-capabilities";
 import { settledPartyPayment } from "./checkouts";
 import type { AppDb, DbExecutor } from "./client";
 import { findCourtesyEmailRecipientByAddress } from "./courtesy-email";
-import { withErasureCoordinatedBookingSend } from "./erasure-coordinated-send";
+import {
+  withErasureCoordinatedBookingSend,
+  withErasureCoordinatedPersonSend,
+} from "./erasure-coordinated-send";
 import {
   correctFlySafeForBooking,
   discardRefusedFlySafeExposure,
@@ -62,6 +65,7 @@ import {
   rememberFlySafeTold,
 } from "./fly-safe-correction";
 import { readReminderFlySafeHours } from "./fly-safe-plan";
+import { isTransactionExecutor } from "./query-helpers";
 import { notificationHeldForRehearsal, REHEARSAL_HELD_DELIVERY } from "./rehearsals";
 import {
   bookingPayments,
@@ -81,6 +85,8 @@ import { shopHasFeatureOn } from "./shops";
 import { livePerson, liveTrip } from "./trips-live";
 
 const RETRY_QUEUE_LIMIT = 100;
+
+type NotificationRetryPolicy = "queue" | "disabled";
 
 /** How long a claimed row is held before another pass may take it back. */
 const LOCK_MS = 10 * 60 * 1_000;
@@ -400,10 +406,53 @@ async function queueRetry(
         (await queuedFlySafeCorrectionState(tx, input)) !== "valid"
       )
         return "stale_recipient";
+    } else if (
+      (input.kind === "waiver_request" && !input.bookingId) ||
+      input.kind === "guardian_release_copy"
+    ) {
+      // Independent waivers have no booking to identify their subject. Bind
+      // the retry to the immutable person on its waiver record while holding
+      // the same evidence→person fence used by erasure.
+      await lockBoardingCertificationEvidence(tx, input.shopId, "boarding");
+      const [waiver] = await tx
+        .select({ personId: waiverRecords.personId, guardianEmail: waiverRecords.guardianEmail })
+        .from(waiverRecords)
+        .where(
+          and(
+            eq(waiverRecords.id, input.waiverRecordId),
+            eq(waiverRecords.shopId, input.shopId),
+            ...(input.kind === "waiver_request" ? [isNull(waiverRecords.bookingId)] : []),
+          ),
+        )
+        .limit(1);
+      if (!waiver) return "stale_recipient";
+      const [subject] = await tx
+        .select({
+          id: people.id,
+          email: people.email,
+          deletedAt: people.deletedAt,
+          anonymizedAt: people.anonymizedAt,
+          mergedIntoPersonId: people.mergedIntoPersonId,
+        })
+        .from(people)
+        .where(and(eq(people.id, waiver.personId), eq(people.shopId, input.shopId), livePerson()))
+        .for("no key update")
+        .limit(1);
+      if (
+        !subject ||
+        subject.deletedAt ||
+        subject.anonymizedAt ||
+        subject.mergedIntoPersonId ||
+        (input.kind === "waiver_request"
+          ? subject.email !== input.to
+          : waiver.guardianEmail !== input.to)
+      )
+        return "stale_recipient";
+      recipientPersonId = subject.id;
     }
     return persistQueuedRetry(tx, input, delivery, key, { recipientPersonId, recipientTripId });
   };
-  return "$client" in db ? db.transaction(persist) : persist(db);
+  return isTransactionExecutor(db) ? persist(db) : db.transaction(persist);
 }
 
 async function persistQueuedRetry(
@@ -443,7 +492,23 @@ async function persistQueuedRetry(
     })
     .onConflictDoNothing({ target: notificationSendQueue.idempotencyKey })
     .returning({ id: notificationSendQueue.id });
-  if (input.kind === "fly_safe_correction" && !inserted) return "queue_conflict";
+  if (!inserted) {
+    if (input.kind === "fly_safe_correction") return "queue_conflict";
+    // An idempotency conflict is not itself proof of a retry: a prior row may
+    // already be terminal, with its sealed payload cleared. Report durable
+    // queueing only while this key still names a row the drain can offer.
+    const [drainable] = await db
+      .select({ id: notificationSendQueue.id })
+      .from(notificationSendQueue)
+      .where(
+        and(
+          eq(notificationSendQueue.idempotencyKey, notificationIdempotencyKey(input)),
+          drainableStatus(),
+        ),
+      )
+      .limit(1);
+    if (!drainable) return "queue_conflict";
+  }
   return "queued";
 }
 
@@ -576,7 +641,7 @@ export async function sendNotification(
   db: DbExecutor,
   notification: Notification,
   provider?: NotificationProvider,
-  options?: { signal?: AbortSignal },
+  options?: { signal?: AbortSignal; retryPolicy?: NotificationRetryPolicy },
 ): Promise<NotificationDelivery> {
   const input = withSentBy(notification, await currentSendActor());
   // Checked here rather than left to `notify`'s own hard `parse` below. A
@@ -624,8 +689,9 @@ export async function sendNotification(
     };
   }
   if (delivery.status === "failed" && delivery.retryable) {
+    if (options?.retryPolicy === "disabled") return { ...delivery, retryQueued: false };
     const queued = await queueRetryOrLog(db, input, delivery);
-    if (input.kind === "fly_safe_correction") return { ...delivery, retryQueued: queued };
+    return { ...delivery, retryQueued: queued };
   }
   return delivery;
 }
@@ -721,9 +787,11 @@ export async function sendNotificationBatch(
 
     for (let index = 0; index < batch.length; index += 1) {
       const delivery = results[index] ?? { status: "failed" as const, retryable: true };
-      deliveries.push(delivery);
       if (delivery.status === "failed" && delivery.retryable) {
-        await queueRetryOrLog(db, batch[index], delivery);
+        const queued = await queueRetryOrLog(db, batch[index], delivery);
+        deliveries.push({ ...delivery, retryQueued: queued });
+      } else {
+        deliveries.push(delivery);
       }
     }
   }
@@ -1040,9 +1108,11 @@ async function dispatchQueuedRetry(
   delivery: NotificationDelivery;
   suppressed: boolean;
   trackingSuppressed: boolean;
+  trackingRecorded: boolean;
 }> {
   let delivery: NotificationDelivery;
   let suppressed = false;
+  let trackingRecorded = false;
   try {
     if (await notificationHeldForRehearsal(db, notification)) {
       delivery = REHEARSAL_HELD_DELIVERY;
@@ -1060,6 +1130,23 @@ async function dispatchQueuedRetry(
               : undefined,
         },
         async (tx) => {
+          if (notification.kind === "trip_rescheduled") {
+            const tripId = claimed.recipientTripId;
+            const [currentTrip] = tripId
+              ? await tx
+                  .select({ revision: trips.revision })
+                  .from(trips)
+                  .where(and(eq(trips.id, tripId), eq(trips.shopId, claimed.shopId), liveTrip()))
+                  .limit(1)
+              : [];
+            if (!currentTrip || currentTrip.revision !== notification.revision) {
+              return {
+                status: "failed",
+                retryable: false,
+                errorCode: "stale_reschedule",
+              };
+            }
+          }
           if (notification.kind === "fly_safe_correction") {
             const correctionState = await queuedFlySafeCorrectionState(tx, notification);
             if (correctionState === "stale") {
@@ -1080,6 +1167,66 @@ async function dispatchQueuedRetry(
       );
       suppressed = fenced === null;
       delivery = fenced ?? { status: "failed", retryable: false, errorCode: "stale_recipient" };
+    } else if (
+      (notification.kind === "waiver_request" && !notification.bookingId) ||
+      notification.kind === "guardian_release_copy"
+    ) {
+      const expectedPersonId = claimed.recipientPersonId;
+      const fenced = expectedPersonId
+        ? await withErasureCoordinatedPersonSend(
+            db,
+            {
+              shopId: claimed.shopId,
+              personId: expectedPersonId,
+              ...(notification.kind === "waiver_request" ? { expectedEmail: notification.to } : {}),
+            },
+            async (tx) => {
+              const [record] = await tx
+                .select({
+                  personId: waiverRecords.personId,
+                  guardianEmail: waiverRecords.guardianEmail,
+                  guardianSignedAt: waiverRecords.guardianSignedAt,
+                  signedAt: waiverRecords.signedAt,
+                })
+                .from(waiverRecords)
+                .where(
+                  and(
+                    eq(waiverRecords.id, notification.waiverRecordId),
+                    eq(waiverRecords.shopId, claimed.shopId),
+                    ...(notification.kind === "waiver_request"
+                      ? [isNull(waiverRecords.bookingId)]
+                      : []),
+                    eq(waiverRecords.personId, expectedPersonId),
+                  ),
+                )
+                .limit(1);
+              if (
+                !record ||
+                (notification.kind === "guardian_release_copy" &&
+                  (record.guardianEmail !== notification.to ||
+                    !record.guardianSignedAt ||
+                    !record.signedAt))
+              )
+                return {
+                  status: "failed" as const,
+                  retryable: false,
+                  errorCode: "stale_recipient",
+                };
+              const result = await notify(
+                await withShopSender(tx, notification, senders),
+                provider,
+                { signal: notificationProviderSignal() },
+              );
+              if (notification.kind === "waiver_request") {
+                await recordIndependentWaiverDelivery(tx, notification, result, expectedPersonId);
+                trackingRecorded = true;
+              }
+              return result;
+            },
+          )
+        : null;
+      suppressed = fenced === null;
+      delivery = fenced ?? { status: "failed", retryable: false, errorCode: "stale_recipient" };
     } else {
       delivery = await notify(await withShopSender(db, notification, senders), provider);
     }
@@ -1091,10 +1238,10 @@ async function dispatchQueuedRetry(
       detail: thrownErrorDetail(error),
     };
   }
-  if (suppressed) return { delivery, suppressed, trackingSuppressed: false };
+  if (suppressed) return { delivery, suppressed, trackingSuppressed: false, trackingRecorded };
 
   const tracked = "bookingId" in notification ? (notification as TrackedNotification) : null;
-  if (!tracked) return { delivery, suppressed, trackingSuppressed: false };
+  if (!tracked) return { delivery, suppressed, trackingSuppressed: false, trackingRecorded };
   try {
     const recorded = await withErasureCoordinatedBookingSend(
       db,
@@ -1117,14 +1264,140 @@ async function dispatchQueuedRetry(
           isRetry: true,
         }),
     );
-    return { delivery, suppressed, trackingSuppressed: recorded === null };
+    return { delivery, suppressed, trackingSuppressed: recorded === null, trackingRecorded };
   } catch (error) {
     log("notification.retry_status_record_failed", "error", {
       bookingId: tracked.bookingId,
       kind: tracked.kind,
       errorCode: error instanceof Error ? error.name : "unknown_error",
     });
-    return { delivery, suppressed, trackingSuppressed: false };
+    return { delivery, suppressed, trackingSuppressed: false, trackingRecorded };
+  }
+}
+
+/** Record an independent waiver retry only while its durable subject is live. */
+async function settleIndependentWaiverRetry(
+  db: AppDb,
+  claimed: typeof notificationSendQueue.$inferSelect,
+  notification: Extract<Notification, { kind: "waiver_request" }>,
+  delivery: NotificationDelivery,
+  trackingRecorded: boolean,
+): Promise<"sent" | "queued" | "failed" | null> {
+  const personId = claimed.recipientPersonId;
+  if (!personId) return null;
+  return withErasureCoordinatedPersonSend(
+    db,
+    { shopId: claimed.shopId, personId, expectedEmail: notification.to },
+    async (tx) => {
+      if (!trackingRecorded) {
+        await recordIndependentWaiverDelivery(tx, notification, delivery, personId);
+      }
+      if (delivery.status === "sent") {
+        await tx
+          .update(notificationSendQueue)
+          .set({
+            status: "sent",
+            payloadSealed: null,
+            recipientEmail: null,
+            subjectEmail: null,
+            subjectPhone: null,
+            bookingId: null,
+            recipientPersonId: null,
+            recipientTripId: null,
+            lockedUntil: null,
+            providerMessageId: delivery.providerMessageId,
+            httpStatus: null,
+            errorCode: null,
+            lastError: null,
+            updatedAt: nowDate(),
+          })
+          .where(eq(notificationSendQueue.id, claimed.id));
+        return "sent";
+      }
+      if (
+        delivery.status === "failed" &&
+        delivery.retryable &&
+        sendAttemptsOf(claimed) < RETRY_QUEUE_MAX_ATTEMPTS
+      ) {
+        await tx
+          .update(notificationSendQueue)
+          .set({
+            status: "queued",
+            lockedUntil: null,
+            nextAttemptAt: retryDueAt(delivery),
+            httpStatus: delivery.httpStatus ?? null,
+            errorCode: delivery.errorCode ?? null,
+            lastError: delivery.detail ?? null,
+            updatedAt: nowDate(),
+          })
+          .where(eq(notificationSendQueue.id, claimed.id));
+        return "queued";
+      }
+      await tx
+        .update(notificationSendQueue)
+        .set({
+          status: "failed",
+          payloadSealed: null,
+          recipientEmail: null,
+          subjectEmail: null,
+          subjectPhone: null,
+          bookingId: null,
+          recipientPersonId: null,
+          recipientTripId: null,
+          lockedUntil: null,
+          httpStatus: delivery.status === "failed" ? (delivery.httpStatus ?? null) : null,
+          errorCode: delivery.status === "failed" ? (delivery.errorCode ?? null) : null,
+          lastError: delivery.status === "failed" ? (delivery.detail ?? null) : null,
+          updatedAt: nowDate(),
+        })
+        .where(eq(notificationSendQueue.id, claimed.id));
+      return "failed";
+    },
+  );
+}
+
+async function parkUnreadableQueuedPayload(
+  db: AppDb,
+  claimed: typeof notificationSendQueue.$inferSelect,
+): Promise<void> {
+  const recoveryAttempts = claimed.recoveryAttempts + 1;
+  const parkIsFinal = recoveryAttempts >= UNREADABLE_RETRY_MAX_ATTEMPTS;
+  if (parkIsFinal) await rearmLostFlySafePayload(db, claimed.shopId, claimed.idempotencyKey);
+  await db
+    .update(notificationSendQueue)
+    .set({
+      status: "failed",
+      lockedUntil: null,
+      nextAttemptAt: nextDailyTickAtOrAfter(nowDate()),
+      errorCode: "sealed_payload_unreadable",
+      lastError: null,
+      recoveryAttempts,
+      ...(parkIsFinal
+        ? {
+            payloadSealed: null,
+            recipientEmail: null,
+            subjectEmail: null,
+            subjectPhone: null,
+            bookingId: null,
+            recipientPersonId: null,
+            recipientTripId: null,
+          }
+        : {}),
+      updatedAt: nowDate(),
+    })
+    .where(eq(notificationSendQueue.id, claimed.id));
+  if (parkIsFinal) {
+    logSendAbandoned({
+      reason: "payload_unreadable",
+      shopId: claimed.shopId,
+      attempts: claimed.attempts,
+    });
+  } else {
+    log("notification.queue_payload_unreadable", "error", {
+      shopId: claimed.shopId,
+      recoveryAttempts,
+      recoveryAttemptsLeft: UNREADABLE_RETRY_MAX_ATTEMPTS - recoveryAttempts,
+    });
   }
 }
 
@@ -1270,58 +1543,7 @@ export async function drainNotificationRetries(
     // above counts in wall-clock days.
     const opened = openQueuedPayload(candidate.payloadSealed, key);
     if (!opened) {
-      // This pass is now known to be a recovery pass that got nowhere, so it is
-      // counted here and nowhere else. `attempts` moved at the claim, and the
-      // two increments cancel in `sendAttemptsOf()` — which is the whole of
-      // what issue #1719 asked for: a fortnight of these costs the transient
-      // budget nothing.
-      const recoveryAttempts = claimed.recoveryAttempts + 1;
-      const parkIsFinal = recoveryAttempts >= UNREADABLE_RETRY_MAX_ATTEMPTS;
-      if (parkIsFinal) await rearmLostFlySafePayload(db, claimed.shopId, claimed.idempotencyKey);
-      await db
-        .update(notificationSendQueue)
-        .set({
-          status: "failed",
-          lockedUntil: null,
-          nextAttemptAt: nextDailyTickAtOrAfter(nowDate()),
-          errorCode: "sealed_payload_unreadable",
-          lastError: null,
-          recoveryAttempts,
-          ...(parkIsFinal
-            ? {
-                payloadSealed: null,
-                recipientEmail: null,
-                subjectEmail: null,
-                subjectPhone: null,
-                bookingId: null,
-                recipientPersonId: null,
-                recipientTripId: null,
-              }
-            : {}),
-          updatedAt: nowDate(),
-        })
-        .where(eq(notificationSendQueue.id, claimed.id));
-      // **Loud on every park, not only the last** (issue #1826). No key at all
-      // logs `queue_seal_unavailable` before the pass claims anything; the
-      // *wrong* key gets past that check, because a key is set, and until this
-      // line nothing anywhere said so — the fortnight above ran out in silence
-      // and the rows were written off. The window exists so somebody can
-      // notice and put the key back, so the first park is when they have to
-      // hear about it. The last park is a loss rather than a warning, and says
-      // so under the code every other loss uses.
-      if (parkIsFinal) {
-        logSendAbandoned({
-          reason: "payload_unreadable",
-          shopId: claimed.shopId,
-          attempts: claimed.attempts,
-        });
-      } else {
-        log("notification.queue_payload_unreadable", "error", {
-          shopId: claimed.shopId,
-          recoveryAttempts,
-          recoveryAttemptsLeft: UNREADABLE_RETRY_MAX_ATTEMPTS - recoveryAttempts,
-        });
-      }
+      await parkUnreadableQueuedPayload(db, claimed);
       summary.failed += 1;
       continue;
     }
@@ -1338,7 +1560,10 @@ export async function drainNotificationRetries(
         (claimed.bookingId !== payloadBookingId ||
           !claimed.recipientPersonId ||
           !claimed.recipientTripId)) ||
-      (claimed.bookingId && !payloadBookingId)
+      (claimed.bookingId && !payloadBookingId) ||
+      (((notification.kind === "waiver_request" && !notification.bookingId) ||
+        notification.kind === "guardian_release_copy") &&
+        !claimed.recipientPersonId)
     ) {
       // Old queue rows have no durable binding to the person/trip that owned
       // their sealed content. Do not infer that identity from today's booking
@@ -1429,14 +1654,53 @@ export async function drainNotificationRetries(
     }
     const delivery = dispatch.delivery;
     await settleRetriedFlySafe(db, notification, delivery, now, provider);
-    try {
-      await recordIndependentWaiverDelivery(db, notification, delivery);
-    } catch (error) {
-      log("notification.waiver_delivery_record_failed", "error", {
-        waiverRecordId:
-          notification.kind === "waiver_request" ? notification.waiverRecordId : undefined,
-        errorCode: error instanceof Error ? error.name : "unknown_error",
-      });
+    const independentPersonWaiver =
+      notification.kind === "waiver_request" && !notification.bookingId;
+    if (!independentPersonWaiver) {
+      try {
+        if (!dispatch.trackingRecorded)
+          await recordIndependentWaiverDelivery(db, notification, delivery);
+      } catch (error) {
+        log("notification.waiver_delivery_record_failed", "error", {
+          waiverRecordId:
+            notification.kind === "waiver_request" ? notification.waiverRecordId : undefined,
+          errorCode: error instanceof Error ? error.name : "unknown_error",
+        });
+      }
+    }
+
+    // Independent person waivers have no booking fence. Their provider and
+    // delivery record are protected in dispatchQueuedRetry; settle the claimed
+    // queue row under the same durable person binding so erasure cannot win
+    // between delivery and this terminal write.
+    if (independentPersonWaiver && notification.kind === "waiver_request") {
+      const outcome = await settleIndependentWaiverRetry(
+        db,
+        claimed,
+        notification,
+        delivery,
+        dispatch.trackingRecorded,
+      );
+      if (outcome === null) {
+        summary.failed += 1;
+        continue;
+      }
+      summary[outcome] += 1;
+      if (outcome === "failed") {
+        logSendAbandoned({
+          reason:
+            delivery.status !== "failed"
+              ? "not_configured"
+              : delivery.retryable
+                ? "retries_exhausted"
+                : "rejected",
+          shopId: claimed.shopId,
+          kind: notification.kind,
+          errorCode: delivery.status === "failed" ? (delivery.errorCode ?? null) : null,
+          attempts: claimed.attempts,
+        });
+      }
+      continue;
     }
 
     if (delivery.status === "sent") {
@@ -1549,9 +1813,10 @@ type RecordNotificationDeliveryInput = {
 };
 
 async function recordIndependentWaiverDelivery(
-  db: AppDb,
+  db: DbExecutor,
   notification: Notification,
   delivery: NotificationDelivery,
+  expectedPersonId?: string,
 ) {
   if (notification.kind !== "waiver_request" || notification.bookingId) return;
   await db
@@ -1568,7 +1833,13 @@ async function recordIndependentWaiverDelivery(
       deliveryProviderStatusAt: null,
       deliveryError: delivery.status === "failed" ? (delivery.detail ?? null) : null,
     })
-    .where(eq(waiverRecords.id, notification.waiverRecordId));
+    .where(
+      and(
+        eq(waiverRecords.id, notification.waiverRecordId),
+        eq(waiverRecords.shopId, notification.shopId),
+        ...(expectedPersonId ? [eq(waiverRecords.personId, expectedPersonId)] : []),
+      ),
+    );
 }
 
 /**
@@ -1643,11 +1914,19 @@ export async function recordNotificationDelivery(
 export async function sendAndRecordNotification(
   db: DbExecutor,
   input: Notification,
-  options: { isRetry?: boolean; provider?: NotificationProvider; signal?: AbortSignal } = {},
+  options: {
+    isRetry?: boolean;
+    provider?: NotificationProvider;
+    signal?: AbortSignal;
+    retryPolicy?: NotificationRetryPolicy;
+  } = {},
 ) {
   let delivery: NotificationDelivery;
   try {
-    delivery = await sendNotification(db, input, options.provider, { signal: options.signal });
+    delivery = await sendNotification(db, input, options.provider, {
+      signal: options.signal,
+      retryPolicy: options.retryPolicy,
+    });
   } catch {
     delivery = { status: "failed" };
   }
@@ -1684,7 +1963,7 @@ export async function retryBookingConfirmation(
   bookingId: string,
   provider?: NotificationProvider,
   /** The live waiver link to carry as the confirmation's first step (`resendConfirmationWithWaiver`). */
-  waiver?: { url: string; expiresAt: Date },
+  waiver?: { url: string; expiresAt: Date; personId: string; tripId: string },
 ) {
   return sendStoredBookingConfirmation(db, shopId, bookingId, { isRetry: true, provider, waiver });
 }
@@ -1739,7 +2018,10 @@ export async function sendStaffSeatingConfirmation(
   db: AppDb,
   shopId: string,
   bookingId: string,
-  options: { waiver: { url: string; expiresAt: Date } | null; provider?: NotificationProvider },
+  options: {
+    waiver: { url: string; expiresAt: Date; personId: string; tripId: string } | null;
+    provider?: NotificationProvider;
+  },
 ) {
   return sendStoredBookingConfirmation(db, shopId, bookingId, {
     isRetry: false,
@@ -1757,7 +2039,7 @@ async function sendStoredBookingConfirmation(
     provider?: NotificationProvider;
     onlyWithMaterials?: boolean;
     /** The diver's waiver link, when it rides in this confirmation. */
-    waiver?: { url: string; expiresAt: Date } | null;
+    waiver?: { url: string; expiresAt: Date; personId?: string; tripId?: string } | null;
   },
 ) {
   const loadRows = (executor: DbExecutor) =>
@@ -1812,6 +2094,10 @@ async function sendStoredBookingConfirmation(
       const learningMaterials = readLearningMaterials(row.course?.learningMaterials);
       if (options.onlyWithMaterials && learningMaterials.length === 0) return null;
       const origin = publicAppUrl();
+      const waiver =
+        options.waiver?.personId === row.person.id && options.waiver.tripId === row.trip.id
+          ? options.waiver
+          : null;
       const readinessCapability = origin
         ? await issueBookingCapability(tx, {
             shopId,
@@ -1843,9 +2129,7 @@ async function sendStoredBookingConfirmation(
           ? new URL(readinessLinkPath(readinessCapability.token), `${origin}/`).toString()
           : undefined,
         ...(learningMaterials.length > 0 ? { learningMaterials } : {}),
-        ...(options.waiver
-          ? { waiverUrl: options.waiver.url, waiverExpiresAt: options.waiver.expiresAt }
-          : {}),
+        ...(waiver ? { waiverUrl: waiver.url, waiverExpiresAt: waiver.expiresAt } : {}),
         // The same where, calendar, money and window the booking-time send
         // carried (ux review 2026-10-11, items 4 and 5). Online when a card
         // checkout took this seat's money; otherwise it is owed at the shop.

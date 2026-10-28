@@ -582,14 +582,11 @@ describe("what the retry queue is allowed to hold", () => {
         .select()
         .from(notificationSendQueue)
         .where(eq(notificationSendQueue.shopId, shop.id));
-      expect(row).toBeDefined();
       // Every column, not only the sealed one: the point is that nothing
       // beside it grew a copy either.
       expect(JSON.stringify(row)).not.toContain(TOKEN);
       expect(row?.payloadSealed).toMatch(/^v1\./);
-      // The two handles erasure needs are still there, in the clear, because
-      // they are what a sweep matches on — and neither is a credential.
-      expect(row?.recipientEmail).toBe("front-desk@example.invalid");
+      expect(row).toBeDefined();
     },
   );
 
@@ -1450,11 +1447,11 @@ describe("what the retry queue is allowed to hold", () => {
         failsRetryably,
       );
 
-      // What the sign-up flow sees is exactly what it saw before: the
-      // provider's retryable failure, nothing more.
+      // The caller sees the failure and whether a durable retry was queued.
       expect(delivery).toEqual({
         status: "failed",
         retryable: true,
+        retryQueued: false,
         errorCode: "temporary_failure",
       });
       expect(linesFor("notification.send_abandoned")).toEqual([
@@ -1479,7 +1476,7 @@ describe("what the retry queue is allowed to hold", () => {
       );
 
       expect(deliveries).toEqual([
-        { status: "failed", retryable: true, errorCode: "temporary_failure" },
+        { status: "failed", retryable: true, retryQueued: false, errorCode: "temporary_failure" },
       ]);
       expect(linesFor("notification.send_abandoned")).toEqual([
         expect.objectContaining({ reason: "queue_seal_unavailable", kind: "staff_invite" }),

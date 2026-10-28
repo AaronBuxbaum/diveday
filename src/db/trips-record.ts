@@ -142,7 +142,7 @@ export async function tripExistsForShop(
  * certificate (H-107, #2321), which every seats-left reads. `capacity` stays
  * the stated number the details form edits.
  */
-export async function getTripWithBooked(db: AppDb, shopId: string, tripId: string) {
+export async function getTripWithBooked(db: DbExecutor, shopId: string, tripId: string) {
   const rows = await db
     .select({
       trip: trips,

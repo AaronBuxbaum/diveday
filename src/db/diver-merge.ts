@@ -7,6 +7,7 @@ import {
   activityEvents,
   bookingCapabilities,
   bookings,
+  notificationSendQueue,
   people,
   personRoles,
   rentalFitProfiles,
@@ -402,6 +403,12 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
   "departure_notes.sent_by_person_id": "who sent the note to the departure",
   "course_form_records.anonymized_by_person_id": "who erased the signer's names from the form",
   "course_form_versions.created_by_person_id": "who wrote that version of the form",
+};
+
+/** Subject-bound sealed retries are discarded rather than readdressed. */
+export const PERSON_COLUMNS_DELETED_ON_MERGE: Readonly<Record<string, string>> = {
+  "notification_send_queue.recipient_person_id":
+    "sealed retries retain the source subject and cannot transfer authority",
 };
 
 /**
@@ -1430,6 +1437,14 @@ export async function mergeDiverRecords(input: {
             ),
           );
       }
+      await tx
+        .delete(notificationSendQueue)
+        .where(
+          and(
+            eq(notificationSendQueue.shopId, input.shopId),
+            eq(notificationSendQueue.recipientPersonId, source.id),
+          ),
+        );
       for (const tableName of DIVER_HISTORY_TABLES) {
         if (tableName === "waiver_records" || tableName === "course_form_records") continue;
         // A seat that is already over, on a departure the kept record also

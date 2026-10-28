@@ -19,7 +19,7 @@ import {
 } from "./fly-safe-exposures";
 import { readReminderFlySafeHours } from "./fly-safe-plan";
 import { notificationProviderForDb, sendNotification } from "./notifications";
-import { queryAll } from "./query-helpers";
+import { isTransactionExecutor, queryAll } from "./query-helpers";
 import { bookings, notificationSendQueue, people, shops, trips } from "./schema";
 import { livePerson, liveTrip, notRehearsal } from "./trips-live";
 
@@ -69,7 +69,10 @@ async function lockLiveFlySafeBooking(tx: DbExecutor, shopId: string, bookingId:
     .from(bookings)
     .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
     .for("update");
-  return seat?.personId === person.id ? seat : null;
+  // The evidence fence serializes merge/reassignment and erasure before this
+  // read. Return the current subject's seat even when it differs from the
+  // reminder's snapshot so recordFlySafeTold can clear a stale exposure.
+  return seat ?? null;
 }
 
 /** Preserve input order while keeping database-backed work to a small fixed fan-out. */
@@ -109,6 +112,7 @@ export async function recordFlySafeTold(
     hours: number;
     recipientEmail?: string;
     recipientPersonId?: string;
+    expectedTripId?: string;
     exposureId?: string;
     accepted?: boolean;
   },
@@ -116,8 +120,10 @@ export async function recordFlySafeTold(
   return db.transaction(async (tx) => {
     const locked = await lockLiveFlySafeBooking(tx, input.shopId, input.bookingId);
     if (!locked) return false;
-    const reassigned = !!input.recipientPersonId && input.recipientPersonId !== locked.personId;
-    if (reassigned) {
+    const changedSubject =
+      (!!input.recipientPersonId && input.recipientPersonId !== locked.personId) ||
+      (!!input.expectedTripId && input.expectedTripId !== locked.tripId);
+    if (changedSubject) {
       await tx
         .update(bookings)
         .set({
@@ -219,6 +225,7 @@ export async function rememberFlySafeTold(
     hours: notification.flySafeHours,
     recipientEmail: notification.personId ? notification.to : undefined,
     recipientPersonId: notification.personId,
+    expectedTripId: notification.tripId,
     exposureId: notification.flySafeExposureId,
     accepted: input.delivery.status === "sent",
   });
@@ -242,6 +249,7 @@ export async function prepareFlySafeExposure(
         hours: notification.flySafeHours,
         recipientEmail: candidate.to,
         recipientPersonId: candidate.personId,
+        expectedTripId: candidate.tripId,
         exposureId: id,
         accepted: false,
       }))
@@ -763,7 +771,7 @@ async function mutateFlySafeExposure(
     return true;
   };
   const executor = input.executor ?? db;
-  return "$client" in executor ? executor.transaction(update) : update(executor);
+  return isTransactionExecutor(executor) ? update(executor) : executor.transaction(update);
 }
 
 async function sendFlySafeCorrectionUnderFence(
@@ -889,6 +897,13 @@ export async function sendFlySafeCorrections(
         inArray(bookings.status, [...LIVE_SEAT_STATUSES]),
         isNotNull(bookings.flySafeHoursTold),
         isNull(bookings.flySafeCorrectedAt),
+        // An active lease is a cheap nonlocking exclusion for workers that
+        // arrive after another provider call began. The atomic UPDATE below
+        // still arbitrates simultaneous claimers and rechecks the same bound.
+        or(
+          isNull(bookings.flySafeCorrectionLeaseUntil),
+          lte(bookings.flySafeCorrectionLeaseUntil, now),
+        ),
         livePerson(),
       ),
     );

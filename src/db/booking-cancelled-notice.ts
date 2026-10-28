@@ -1,11 +1,16 @@
 import { and, eq } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
-import { type NotificationProvider, publicAppUrl } from "@/lib/notifications";
+import {
+  type NotificationProvider,
+  notificationProviderSignal,
+  publicAppUrl,
+} from "@/lib/notifications";
 import { type Notification, recipientLocale } from "@/lib/notifications/kinds";
 import { isCapturedPaymentStatus, type PaymentStatusValue } from "@/lib/payment-source";
 import { publicSchedulePath } from "@/lib/public-routes";
 import type { AppDb } from "./client";
+import { withErasureCoordinatedBookingSend } from "./erasure-coordinated-send";
 import { recordNotificationDelivery, sendAndRecordNotification } from "./notifications";
 import { getBookingPayment } from "./payments";
 import type { CancellationRefundOutcome } from "./refunds";
@@ -119,7 +124,8 @@ async function sendNotice(
   input: BookingCancelledNoticeInput,
   options: BookingCancelledNoticeOptions,
 ): Promise<"sent" | "not_sent" | "no_address"> {
-  const [row] = await db
+  if (input.from !== "booked") return "not_sent";
+  const [observed] = await db
     .select({ booking: bookings, person: people, trip: trips, shop: shops })
     .from(bookings)
     .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, bookings.shopId)))
@@ -127,45 +133,67 @@ async function sendNotice(
     .innerJoin(shops, eq(shops.id, bookings.shopId))
     .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)))
     .limit(1);
-  // Only a booking that is canceled now: a call that raced a reinstatement
-  // must not tell the diver their seat is gone.
-  if (input.from !== "booked") return "not_sent";
-  if (!row) return "not_sent";
-  if (row.booking.status !== "cancelled") return "not_sent";
-  if (!row.person.email) return "no_address";
+  if (!observed) return "not_sent";
+  if (!observed.person.email) return "no_address";
 
-  const origin = options.origin === undefined ? publicAppUrl() : options.origin;
-  if (!origin) {
-    await recordNotificationDelivery(db, {
-      shopId: input.shopId,
-      bookingId: input.bookingId,
-      kind: "booking_cancelled",
-      delivery: { status: "not_configured" },
-    });
-    return "not_sent";
-  }
-
-  const payment = await getBookingPayment(db, input.shopId, input.bookingId);
-  const delivery = await sendAndRecordNotification(
+  const fenced = await withErasureCoordinatedBookingSend(
     db,
     {
-      kind: "booking_cancelled",
-      bookingId: input.bookingId,
       shopId: input.shopId,
-      to: row.person.email,
-      locale: recipientLocale(row.person.locale, row.shop.defaultLocale),
-      diverName: row.person.fullName,
-      shopName: row.shop.name,
-      tripTitle: row.trip.title,
-      startsAt: row.trip.startsAt,
-      timezone: row.shop.timezone,
-      cancelledBy: input.cancelledBy,
-      cancelledAt: options.now ?? nowDate(),
-      money: cancellationMoney(input.refund, payment ?? null),
-      ...(input.party ? { party: input.party } : {}),
-      scheduleUrl: new URL(publicSchedulePath(row.shop.slug), `${origin}/`).toString(),
+      bookingId: input.bookingId,
+      expectedPersonId: observed.person.id,
+      expectedTripId: observed.trip.id,
+      expectedEmail: observed.person.email,
+      allowCancelled: true,
     },
-    { provider: options.provider },
+    async (tx) => {
+      const [row] = await tx
+        .select({ booking: bookings, person: people, trip: trips, shop: shops })
+        .from(bookings)
+        .innerJoin(
+          people,
+          and(eq(people.id, bookings.personId), eq(people.shopId, bookings.shopId)),
+        )
+        .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, bookings.shopId)))
+        .innerJoin(shops, eq(shops.id, bookings.shopId))
+        .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)))
+        .limit(1);
+      if (row?.booking.status !== "cancelled") return "not_sent" as const;
+      if (!row.person.email) return "no_address" as const;
+      const origin = options.origin === undefined ? publicAppUrl() : options.origin;
+      if (!origin) {
+        await recordNotificationDelivery(tx, {
+          shopId: input.shopId,
+          bookingId: input.bookingId,
+          kind: "booking_cancelled",
+          delivery: { status: "not_configured" },
+        });
+        return "not_sent" as const;
+      }
+      const payment = await getBookingPayment(tx, input.shopId, input.bookingId);
+      const delivery = await sendAndRecordNotification(
+        tx,
+        {
+          kind: "booking_cancelled",
+          bookingId: input.bookingId,
+          shopId: input.shopId,
+          to: row.person.email,
+          locale: recipientLocale(row.person.locale, row.shop.defaultLocale),
+          diverName: row.person.fullName,
+          shopName: row.shop.name,
+          tripTitle: row.trip.title,
+          startsAt: row.trip.startsAt,
+          timezone: row.shop.timezone,
+          cancelledBy: input.cancelledBy,
+          cancelledAt: options.now ?? nowDate(),
+          money: cancellationMoney(input.refund, payment ?? null),
+          ...(input.party ? { party: input.party } : {}),
+          scheduleUrl: new URL(publicSchedulePath(row.shop.slug), `${origin}/`).toString(),
+        },
+        { provider: options.provider, signal: notificationProviderSignal() },
+      );
+      return delivery.status === "sent" ? "sent" : "not_sent";
+    },
   );
-  return delivery.status === "sent" ? "sent" : "not_sent";
+  return fenced ?? "not_sent";
 }
