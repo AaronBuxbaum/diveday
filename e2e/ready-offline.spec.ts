@@ -39,14 +39,18 @@ function keptCopies(page: Page): Promise<number> {
  * Books a seat as a new diver and opens their readiness link with a full load,
  * then waits for the phone to hold the page. Returns the link's path.
  */
-async function openKeptReadyPage(page: Page, context: BrowserContext, who: string) {
-  // The harness freezes the page's clock and the server's, never a service
-  // worker's, which would read the real date and find the seeded trip's copy
-  // long out of date. The worker script is served with the same frozen clock
-  // in front of it, so the copy's date is read against the harness's "now".
+async function openKeptReadyPage(
+  page: Page,
+  context: BrowserContext,
+  who: string,
+  phoneClockOffsetMs = 0,
+) {
+  // The server's page-generation clock is frozen by the harness. Give the
+  // service worker an independently controlled device clock so this spec can
+  // prove the banner does not use the phone's clock as freshness provenance.
   await context.route("**/manifest-sw.js", async (route) => {
     const response = await route.fetch();
-    const frozen = `const __fixed = new Date(${JSON.stringify(E2E_FROZEN_CLOCK)}).getTime();
+    const frozen = `const __fixed = new Date(${JSON.stringify(E2E_FROZEN_CLOCK)}).getTime() + ${phoneClockOffsetMs};
 const __RealDate = Date;
 globalThis.Date = new Proxy(__RealDate, {
   construct: (target, args) => Reflect.construct(target, args.length === 0 ? [__fixed] : args),
@@ -81,34 +85,49 @@ test("the saved /ready copy shows with no signal, and a cancel landing forgets i
   page,
   context,
 }) => {
-  const readyPath = await openKeptReadyPage(page, context, "Olive Offline");
+  const readyPath = await openKeptReadyPage(page, context, "Olive Offline", 40 * 60_000);
   await expect(page.getByRole("button", { name: "Running late" })).toBeVisible();
-  const savedAtLabel = await page.evaluate((frozenClock) => {
-    const locale = document
-      .querySelector('meta[name="diveday-ready-copy-locale"]')
-      ?.getAttribute("content");
-    const timeZone = document
-      .querySelector('meta[name="diveday-ready-copy-time-zone"]')
-      ?.getAttribute("content");
-    if (!locale || !timeZone) throw new Error("Ready page is missing its locale or shop time zone");
-    return new Intl.DateTimeFormat(locale, {
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-      timeZoneName: "short",
-      timeZone,
-    }).format(new Date(frozenClock));
-  }, E2E_FROZEN_CLOCK);
+  const generatedAtLabel = await page.evaluate(
+    ({ deviceClockOffset, serverClock }) => {
+      const locale = document
+        .querySelector('meta[name="diveday-ready-copy-locale"]')
+        ?.getAttribute("content");
+      const timeZone = document
+        .querySelector('meta[name="diveday-ready-copy-time-zone"]')
+        ?.getAttribute("content");
+      const generatedAt = document
+        .querySelector('meta[name="diveday-ready-copy-generated-at"]')
+        ?.getAttribute("content");
+      if (!locale || !timeZone || !generatedAt) {
+        throw new Error(
+          "Ready page is missing its locale, shop time zone, or server generation time",
+        );
+      }
+      const format = (at: number) =>
+        new Intl.DateTimeFormat(locale, {
+          month: "short",
+          day: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+          timeZoneName: "short",
+          timeZone,
+        }).format(new Date(at));
+      const generated = Number(generatedAt);
+      const device = new Date(serverClock).getTime() + deviceClockOffset;
+      return { label: format(generated), deviceLabel: format(device) };
+    },
+    { deviceClockOffset: 40 * 60_000, serverClock: E2E_FROZEN_CLOCK },
+  );
+  expect(generatedAtLabel.label).not.toBe(generatedAtLabel.deviceLabel);
 
   // No signal: the reload is answered from the saved copy, and says so.
   await context.setOffline(true);
   await page.reload();
   await expect(page.getByRole("button", { name: "Running late" })).toBeVisible();
   await expect(
-    page
-      .getByRole("status")
-      .filter({ hasText: `No signal: this is the copy your phone saved ${savedAtLabel}.` }),
+    page.getByRole("status").filter({
+      hasText: `No signal: this is a copy of the page generated ${generatedAtLabel.label} that your phone saved.`,
+    }),
   ).toBeVisible();
   // It is the diver's only copy at the dock: nothing on it deletes it (domain review 2).
   await expect(page.getByRole("button", { name: diver("ready.offlineRemove") })).toHaveCount(0);
@@ -124,8 +143,11 @@ test("the saved /ready copy shows with no signal, and a cancel landing forgets i
     const saved = await cache.match(key);
     if (!saved) throw new Error("No readiness copy is available to rewrite for the legacy check");
     const html = (await saved.text())
-      .replace(/<meta name="diveday-ready-copy-(?:version|locale|time-zone)"[^>]*>/g, "")
-      .replace(/\sdata-ready-copy-saved-at="\d+"/g, "")
+      .replace(
+        /<meta name="diveday-ready-copy-(?:version|locale|time-zone|generated-at)"[^>]*>/g,
+        "",
+      )
+      .replace(/\sdata-ready-copy-generated-at="\d+"/g, "")
       .replace(/(<p [^>]*data-ready-offline-note=""[^>]*>)[\s\S]*?(<\/p>)/, `$1${legacyNote}$2`);
     await cache.put(key, new Response(html, { status: saved.status, headers: saved.headers }));
   }, LEGACY_OFFLINE_NOTE);

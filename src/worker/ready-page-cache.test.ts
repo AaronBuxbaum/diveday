@@ -3,14 +3,15 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   READY_CACHE_NAME,
+  READY_COPY_GENERATED_AT_ATTR,
+  READY_COPY_GENERATED_AT_META,
   READY_COPY_LOCALE_META,
-  READY_COPY_SAVED_AT_ATTR,
   READY_COPY_TIME_ZONE_META,
   READY_COPY_VERSION,
   READY_COPY_VERSION_META,
   READY_KEEP_UNTIL_META,
+  READY_OFFLINE_GENERATED_AT_PLACEHOLDER,
   READY_OFFLINE_NOTE_ATTR,
-  READY_OFFLINE_SAVED_AT_PLACEHOLDER,
 } from "@/lib/ready-offline";
 import {
   forgetReadyPage,
@@ -66,9 +67,12 @@ function renderedPage(body: string, init: ResponseInit = {}, keepUntil = NOW + 3
 
 /** The live page as the server renders it: kept until `keepUntil` (default: well past NOW). */
 function page(body = "<p>Ready</p>", init: ResponseInit = {}, keepUntil = NOW + 30 * DAY_MS) {
+  const generatedAt = body.includes(`name="${READY_COPY_GENERATED_AT_META}"`)
+    ? ""
+    : `<meta name="${READY_COPY_GENERATED_AT_META}" content="${NOW}"/>`;
   const withBanner = body.includes(`${READY_OFFLINE_NOTE_ATTR}=""`)
-    ? body
-    : `<meta name="${READY_COPY_LOCALE_META}" content="en-US"/><meta name="${READY_COPY_TIME_ZONE_META}" content="America/New_York"/>${body}<p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">No signal: ${READY_OFFLINE_SAVED_AT_PLACEHOLDER}</p>`;
+    ? `${generatedAt}${body}`
+    : `<meta name="${READY_COPY_LOCALE_META}" content="en-US"/><meta name="${READY_COPY_TIME_ZONE_META}" content="America/New_York"/>${generatedAt}${body}<p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">No signal: ${READY_OFFLINE_GENERATED_AT_PLACEHOLDER}</p>`;
   return renderedPage(withBanner, init, keepUntil);
 }
 
@@ -109,13 +113,14 @@ describe("saveReadyPage and readyPageFallback", () => {
     expect(await readyPageFallback(store.storage, `/ready/${OTHER}`, NOW)).toBeUndefined();
   });
 
-  it("shows the response save time in the page locale and shop zone, not the later fallback time", async () => {
+  it("shows the server page-generation time in the page locale and shop zone, not device save or fallback time", async () => {
     const locale = "en-US";
     const timeZone = "America/New_York";
     const body = [
       `<meta name="${READY_COPY_LOCALE_META}" content="${locale}"/>`,
       `<meta name="${READY_COPY_TIME_ZONE_META}" content="${timeZone}"/>`,
-      `<p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">Saved ${READY_OFFLINE_SAVED_AT_PLACEHOLDER}</p>`,
+      `<meta name="${READY_COPY_GENERATED_AT_META}" content="${NOW}"/>`,
+      `<p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">Saved ${READY_OFFLINE_GENERATED_AT_PLACEHOLDER}</p>`,
     ].join("");
     const requestStarted = NOW - 60_000;
     expect(
@@ -133,10 +138,52 @@ describe("saveReadyPage and readyPageFallback", () => {
       timeZone,
     }).format(new Date(NOW));
     expect(text?.replaceAll("\u00a0", " ")).toContain(`Saved ${expected}`);
-    expect(text).not.toContain(READY_OFFLINE_SAVED_AT_PLACEHOLDER);
+    expect(text).not.toContain(READY_OFFLINE_GENERATED_AT_PLACEHOLDER);
     expect(text).toMatch(
-      new RegExp(`${READY_OFFLINE_NOTE_ATTR}=""[^>]*${READY_COPY_SAVED_AT_ATTR}="${NOW}"`),
+      new RegExp(`${READY_OFFLINE_NOTE_ATTR}=""[^>]*${READY_COPY_GENERATED_AT_ATTR}="${NOW}"`),
     );
+  });
+
+  it("does not make a replayed server page look newer using the device clock", async () => {
+    const deviceSaveAt = NOW + 40 * 60_000;
+    expect(
+      await saveReadyPage(store.storage, `/ready/${TOKEN}`, page("replayed page"), deviceSaveAt),
+    ).toBe(true);
+    const text = await (
+      await readyPageFallback(store.storage, `/ready/${TOKEN}`, deviceSaveAt)
+    )?.text();
+    const serverLabel = new Intl.DateTimeFormat("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      timeZoneName: "short",
+      timeZone: "America/New_York",
+    }).format(new Date(NOW));
+    expect(text?.replaceAll("\u00a0", " ")).toContain(`No signal: ${serverLabel}`);
+    expect(text).toContain(`${READY_COPY_GENERATED_AT_ATTR}="${NOW}"`);
+    expect(text).not.toContain(`${READY_COPY_GENERATED_AT_ATTR}="${deviceSaveAt}"`);
+  });
+
+  it.each([
+    ["missing generation metadata", ""],
+    [
+      "duplicate generation metadata",
+      `<meta name="${READY_COPY_GENERATED_AT_META}" content="${NOW}"/>`,
+    ],
+  ])("does not save a response with %s", async (_label, extraMetadata) => {
+    const generationMeta = `<meta name="${READY_COPY_GENERATED_AT_META}" content="${NOW}"/>`;
+    const body = [
+      `<meta name="${READY_COPY_LOCALE_META}" content="en-US"/>`,
+      `<meta name="${READY_COPY_TIME_ZONE_META}" content="America/New_York"/>`,
+      extraMetadata === "" ? "" : generationMeta,
+      extraMetadata,
+      `<p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">${READY_OFFLINE_GENERATED_AT_PLACEHOLDER}</p>`,
+    ].join("");
+    expect(await saveReadyPage(store.storage, `/ready/${TOKEN}`, renderedPage(body), NOW)).toBe(
+      false,
+    );
+    expect(store.caches.get(READY_CACHE_NAME)?.size ?? 0).toBe(0);
   });
 
   it.each([
@@ -173,7 +220,7 @@ describe("saveReadyPage and readyPageFallback", () => {
       const text = await served?.text();
       expect(text).toContain(warning);
       expect(text).not.toContain("__diveday_ready_saved_at__");
-      expect(text).not.toContain(READY_COPY_SAVED_AT_ATTR);
+      expect(text).not.toContain(READY_COPY_GENERATED_AT_ATTR);
       expect(text).toContain(`/ready/${TOKEN}`);
       expect(text).not.toContain("__diveday_kept_token__");
       expect(store.caches.get(READY_CACHE_NAME)?.size).toBe(1);
@@ -217,7 +264,7 @@ describe("saveReadyPage and readyPageFallback", () => {
     ["valid locale", `name="${READY_COPY_LOCALE_META}" content="not-a-locale"`],
     ["valid shop time zone", `name="${READY_COPY_TIME_ZONE_META}" content="Not/AZone"`],
   ])("does not save a timestamped copy without a usable %s", async (_label, metadata) => {
-    const body = `${metadata}<p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">${READY_OFFLINE_SAVED_AT_PLACEHOLDER}</p>`;
+    const body = `${metadata}<p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">${READY_OFFLINE_GENERATED_AT_PLACEHOLDER}</p>`;
     expect(await saveReadyPage(store.storage, `/ready/${TOKEN}`, page(body), NOW)).toBe(false);
     expect(store.caches.get(READY_CACHE_NAME)?.size ?? 0).toBe(0);
   });
@@ -226,20 +273,21 @@ describe("saveReadyPage and readyPageFallback", () => {
     ["missing", `<p>Unmarked page content</p>`],
     [
       "duplicate",
-      `<p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">${READY_OFFLINE_SAVED_AT_PLACEHOLDER}</p><p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">${READY_OFFLINE_SAVED_AT_PLACEHOLDER}</p>`,
+      `<p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">${READY_OFFLINE_GENERATED_AT_PLACEHOLDER}</p><p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">${READY_OFFLINE_GENERATED_AT_PLACEHOLDER}</p>`,
     ],
     [
       "malformed duplicate",
-      `<p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">${READY_OFFLINE_SAVED_AT_PLACEHOLDER}</p><p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">unfinished`,
+      `<p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">${READY_OFFLINE_GENERATED_AT_PLACEHOLDER}</p><p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">unfinished`,
     ],
     [
       "malformed",
-      `<p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">${READY_OFFLINE_SAVED_AT_PLACEHOLDER}<strong>nested markup</strong></p>`,
+      `<p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">${READY_OFFLINE_GENERATED_AT_PLACEHOLDER}<strong>nested markup</strong></p>`,
     ],
   ])("does not save a current-format response with a %s offline banner", async (_case, banner) => {
     const body = [
       `<meta name="${READY_COPY_LOCALE_META}" content="en-US"/>`,
       `<meta name="${READY_COPY_TIME_ZONE_META}" content="America/New_York"/>`,
+      `<meta name="${READY_COPY_GENERATED_AT_META}" content="${NOW}"/>`,
       banner,
     ].join("");
     expect(await saveReadyPage(store.storage, `/ready/${TOKEN}`, renderedPage(body), NOW)).toBe(
@@ -265,13 +313,22 @@ describe("saveReadyPage and readyPageFallback", () => {
       "wrong save time",
       (html: string) =>
         html.replace(
-          new RegExp(`${READY_COPY_SAVED_AT_ATTR}="\\d+"`),
-          `${READY_COPY_SAVED_AT_ATTR}="${NOW - DAY_MS}"`,
+          new RegExp(`${READY_COPY_GENERATED_AT_ATTR}="\\d+"`),
+          `${READY_COPY_GENERATED_AT_ATTR}="${NOW - DAY_MS}"`,
         ),
     ],
     [
       "missing time zone",
       (html: string) => html.replace(/<meta name="diveday-ready-copy-time-zone"[^>]*>/, ""),
+    ],
+    [
+      "missing generation time",
+      (html: string) => html.replace(/<meta name="diveday-ready-copy-generated-at"[^>]*>/, ""),
+    ],
+    [
+      "duplicate generation time",
+      (html: string) =>
+        html.replace(/(<meta name="diveday-ready-copy-generated-at"[^>]*>)/, "$1$1"),
     ],
   ])(
     "deletes a matching-path current copy with a %s banner, never on wrong-path lookup",
@@ -300,13 +357,14 @@ describe("saveReadyPage and readyPageFallback", () => {
     },
   );
 
-  it("formats Spanish saved times in the shop zone", async () => {
+  it("formats Spanish server generation times in the shop zone", async () => {
     const locale = "es-ES";
     const timeZone = "Pacific/Auckland";
     const body = [
       `<meta name="${READY_COPY_LOCALE_META}" content="${locale}"/>`,
       `<meta name="${READY_COPY_TIME_ZONE_META}" content="${timeZone}"/>`,
-      `<p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">Sin cobertura: ${READY_OFFLINE_SAVED_AT_PLACEHOLDER}</p>`,
+      `<meta name="${READY_COPY_GENERATED_AT_META}" content="${NOW}"/>`,
+      `<p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">Sin cobertura: ${READY_OFFLINE_GENERATED_AT_PLACEHOLDER}</p>`,
     ].join("");
     expect(await saveReadyPage(store.storage, `/ready/${TOKEN}`, page(body), NOW)).toBe(true);
     const text = await (await readyPageFallback(store.storage, `/ready/${TOKEN}`, NOW))?.text();

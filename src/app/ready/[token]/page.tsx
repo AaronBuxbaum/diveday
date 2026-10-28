@@ -52,6 +52,7 @@ import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { checklistDetailText } from "@/i18n/readiness-summary-labels";
 import { requestLocale } from "@/i18n/request";
 import { threadNextKey } from "@/i18n/thread-labels";
+import { nowMs } from "@/lib/clock";
 import { formatMoneyCents } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { connectionForRoute } from "@/lib/observability/render-connection";
@@ -615,6 +616,7 @@ async function DiverReadinessPage({
         keepUntil={readyCopyKeepUntil(detail.trip)}
         locale={locale}
         timeZone={detail.shop.timezone}
+        generatedAt={nowMs()}
       />
       {/* The spine, the arrival card, the packing list and the cancel door
           read seven more things between them, and arrive behind a body-shaped

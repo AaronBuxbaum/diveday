@@ -5,6 +5,7 @@ import { buttonClass } from "@/components/ui/button";
 import {
   forgetReadyPageCopy,
   keepReadyPageOnDevice,
+  READY_COPY_GENERATED_AT_META,
   READY_COPY_LOCALE_META,
   READY_COPY_TIME_ZONE_META,
   READY_COPY_VERSION,
@@ -16,7 +17,7 @@ import {
 /**
  * Keeps this page on the diver's phone for the marina with no signal, and
  * says so when that is what they are reading: offline, the page is the copy
- * the phone saved, and anything they change needs signal.
+ * the phone saved from a server-generated page, and changes need signal.
  *
  * It also dates the copy: `keepUntil` (`readyCopyKeepUntil`, the day after
  * the boat is due back) rides in a `<meta>` the worker reads when it saves the
@@ -35,11 +36,13 @@ export function ReadyOfflineCopy({
   keepUntil,
   locale,
   timeZone,
+  generatedAt,
 }: {
   copy: { offlineNote: string; savedNote: string; remove: string; removed: string };
   keepUntil: number;
   locale: string;
   timeZone: string;
+  generatedAt: number;
 }) {
   const [offline, setOffline] = useState(false);
   const [saved, setSaved] = useState<"no" | "kept" | "removed">("no");
@@ -72,6 +75,7 @@ export function ReadyOfflineCopy({
       <meta name={READY_KEEP_UNTIL_META} content={String(keepUntil)} />
       <meta name={READY_COPY_LOCALE_META} content={locale} />
       <meta name={READY_COPY_TIME_ZONE_META} content={timeZone} />
+      <meta name={READY_COPY_GENERATED_AT_META} content={String(generatedAt)} />
       <meta name={READY_COPY_VERSION_META} content={READY_COPY_VERSION} />
       {/* Drawn by the server too, hidden: the kept copy runs no script, and
         the worker shows this line in it (issue #3003). The marker comes first

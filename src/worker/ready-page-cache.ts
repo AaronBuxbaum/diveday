@@ -60,15 +60,16 @@ import { LEGACY_READY_BANNER_COPY } from "@/i18n/ready-offline-legacy";
 import { keepUnitsWhole } from "@/lib/date-parts";
 import {
   READY_CACHE_NAME,
+  READY_COPY_GENERATED_AT_ATTR,
+  READY_COPY_GENERATED_AT_META,
   READY_COPY_LOCALE_META,
-  READY_COPY_SAVED_AT_ATTR,
   READY_COPY_TIME_ZONE_META,
   READY_COPY_VERSION,
   READY_COPY_VERSION_META,
   READY_FORGOTTEN_CACHE_NAME,
   READY_KEEP_UNTIL_META,
+  READY_OFFLINE_GENERATED_AT_PLACEHOLDER,
   READY_OFFLINE_NOTE_ATTR,
-  READY_OFFLINE_SAVED_AT_PLACEHOLDER,
 } from "@/lib/ready-offline";
 
 /**
@@ -211,20 +212,37 @@ function metaContent(html: string, name: string): string | undefined {
   )?.[1];
 }
 
+function singleMetaContent(html: string, name: string): string | undefined {
+  const matches = [
+    ...html.matchAll(
+      new RegExp(`<meta\\b[^>]*\\bname="${name}"[^>]*\\bcontent="([^"]*)"[^>]*>`, "gi"),
+    ),
+  ];
+  return matches.length === 1 ? matches[0]?.[1] : undefined;
+}
+
 /** Recognize and warn on the two exact historical, localized offline banners. */
 function transformLegacyReadyCopy(html: string): string | undefined {
   const banner = visibleTextBanner(html);
-  if (!banner || hasAttribute(banner.opening, READY_COPY_SAVED_AT_ATTR)) return undefined;
+  if (!banner || hasAttribute(banner.opening, READY_COPY_GENERATED_AT_ATTR)) return undefined;
   const knownWarning = LEGACY_READY_BANNER_COPY.get(banner.text);
   if (!knownWarning) return undefined;
   return html.replace(banner.element, `${banner.opening}${knownWarning}${banner.closing}`);
 }
 
-/** Format the response save instant with the locale and shop zone rendered by the page. */
-function readySavedAtLabel(html: string, savedAt: number): string | undefined {
+/** Format the server-rendered page generation instant in the locale and shop zone. */
+function readyGeneratedAtLabel(html: string, generatedAt: number): string | undefined {
   const locale = metaContent(html, READY_COPY_LOCALE_META);
   const timeZone = metaContent(html, READY_COPY_TIME_ZONE_META);
-  if (!locale || !timeZone || !Number.isFinite(savedAt)) return undefined;
+  const declaredGeneratedAt = Number(singleMetaContent(html, READY_COPY_GENERATED_AT_META));
+  if (
+    !locale ||
+    !timeZone ||
+    !Number.isSafeInteger(generatedAt) ||
+    declaredGeneratedAt !== generatedAt
+  ) {
+    return undefined;
+  }
   try {
     return keepUnitsWhole(
       new Intl.DateTimeFormat(locale, {
@@ -234,7 +252,7 @@ function readySavedAtLabel(html: string, savedAt: number): string | undefined {
         minute: "2-digit",
         timeZoneName: "short",
         timeZone,
-      }).formatToParts(new Date(savedAt)),
+      }).formatToParts(new Date(generatedAt)),
     );
   } catch {
     return undefined;
@@ -340,26 +358,26 @@ export async function saveReadyPage(
   // Pages rendered before the saved-time format cannot be transformed safely:
   // their banner has no reliable locale/zone or age context.
   if (metaContent(html, READY_COPY_VERSION_META) !== READY_COPY_VERSION) return false;
-  const savedAtLabel = readySavedAtLabel(html, now);
+  const generatedAt = Number(singleMetaContent(html, READY_COPY_GENERATED_AT_META));
+  const generatedAtLabel = readyGeneratedAtLabel(html, generatedAt);
   const safeHtml = withoutClientRuntime(html);
   const banner = singleTextBanner(safeHtml);
-  const placeholderCount = safeHtml.split(READY_OFFLINE_SAVED_AT_PLACEHOLDER).length - 1;
+  const placeholderCount = safeHtml.split(READY_OFFLINE_GENERATED_AT_PLACEHOLDER).length - 1;
   // A current-format page must have one text-only banner (hidden online), one
   // placeholder and usable locale/zone context. Keep the previous complete
   // copy if a new response is malformed.
   if (!banner) return false;
   if (
     !banner.opening.includes(OFFLINE_NOTE_HIDDEN) ||
-    hasAttribute(banner.opening, READY_COPY_SAVED_AT_ATTR) ||
+    hasAttribute(banner.opening, READY_COPY_GENERATED_AT_ATTR) ||
     placeholderCount !== 1 ||
-    !banner.text.includes(READY_OFFLINE_SAVED_AT_PLACEHOLDER) ||
+    !banner.text.includes(READY_OFFLINE_GENERATED_AT_PLACEHOLDER) ||
     !Number.isSafeInteger(now) ||
-    savedAtLabel === undefined
+    generatedAtLabel === undefined
   ) {
     return false;
   }
-  const savedAt = String(now);
-  const timestampedBanner = `${banner.opening.replace(/>$/, ` ${READY_COPY_SAVED_AT_ATTR}="${savedAt}">`)}${banner.text.replace(READY_OFFLINE_SAVED_AT_PLACEHOLDER, savedAtLabel)}${banner.closing}`;
+  const timestampedBanner = `${banner.opening.replace(/>$/, ` ${READY_COPY_GENERATED_AT_ATTR}="${generatedAt}">`)}${banner.text.replace(READY_OFFLINE_GENERATED_AT_PLACEHOLDER, generatedAtLabel)}${banner.closing}`;
   const timestampedHtml = safeHtml.replace(banner.element, timestampedBanner);
   const headers = new Headers(response.headers);
   headers.set(KEEP_UNTIL_HEADER, String(Math.min(named, now + READY_COPY_MAX_AGE_MS)));
@@ -424,20 +442,20 @@ export async function readyPageFallback(
   let copyHtml = storedHtml;
   if (metaContent(storedHtml, READY_COPY_VERSION_META) === READY_COPY_VERSION) {
     const banner = visibleTextBanner(storedHtml);
-    const savedAtValues = banner?.opening.match(
-      new RegExp(`\\b${READY_COPY_SAVED_AT_ATTR}="(\\d+)"`, "g"),
+    const generatedAtValues = banner?.opening.match(
+      new RegExp(`\\b${READY_COPY_GENERATED_AT_ATTR}="(\\d+)"`, "g"),
     );
-    const savedAt = Number(
-      banner?.opening.match(new RegExp(`\\b${READY_COPY_SAVED_AT_ATTR}="(\\d+)"`))?.[1],
+    const generatedAt = Number(
+      banner?.opening.match(new RegExp(`\\b${READY_COPY_GENERATED_AT_ATTR}="(\\d+)"`))?.[1],
     );
-    const expectedLabel = readySavedAtLabel(storedHtml, savedAt);
+    const expectedLabel = readyGeneratedAtLabel(storedHtml, generatedAt);
     if (
       !banner ||
-      savedAtValues?.length !== 1 ||
-      !Number.isSafeInteger(savedAt) ||
+      generatedAtValues?.length !== 1 ||
+      !Number.isSafeInteger(generatedAt) ||
       !expectedLabel ||
       banner.text.split(expectedLabel).length !== 2 ||
-      storedHtml.includes(READY_OFFLINE_SAVED_AT_PLACEHOLDER)
+      storedHtml.includes(READY_OFFLINE_GENERATED_AT_PLACEHOLDER)
     ) {
       await cache.delete(READY_COPY_KEY);
       return undefined;

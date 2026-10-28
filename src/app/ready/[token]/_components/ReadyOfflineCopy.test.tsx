@@ -5,12 +5,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   forgetReadyPageCopy,
   keepReadyPageOnDevice,
+  READY_COPY_GENERATED_AT_ATTR,
   READY_COPY_LOCALE_META,
-  READY_COPY_SAVED_AT_ATTR,
   READY_COPY_TIME_ZONE_META,
   READY_COPY_VERSION,
   READY_COPY_VERSION_META,
-  READY_OFFLINE_SAVED_AT_PLACEHOLDER,
+  READY_OFFLINE_GENERATED_AT_PLACEHOLDER,
 } from "@/lib/ready-offline";
 import { readyPageFallback, saveReadyPage } from "@/worker/ready-page-cache";
 import { ReadyOfflineCopy } from "./ReadyOfflineCopy";
@@ -28,7 +28,7 @@ afterEach(() => {
   vi.mocked(forgetReadyPageCopy).mockClear();
 });
 
-const NOTE = `No signal: this is the copy your phone saved ${READY_OFFLINE_SAVED_AT_PLACEHOLDER}.`;
+const NOTE = `No signal: this is a copy of the page generated ${READY_OFFLINE_GENERATED_AT_PLACEHOLDER}.`;
 const COPY = {
   offlineNote: NOTE,
   savedNote: "Saved on this device for when there’s no signal.",
@@ -43,7 +43,13 @@ describe("ReadyOfflineCopy", () => {
   it("online, says nothing and keeps the page on the phone", () => {
     vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
     render(
-      <ReadyOfflineCopy copy={COPY} keepUntil={KEEP_UNTIL} locale={LOCALE} timeZone={TIME_ZONE} />,
+      <ReadyOfflineCopy
+        copy={COPY}
+        keepUntil={KEEP_UNTIL}
+        locale={LOCALE}
+        timeZone={TIME_ZONE}
+        generatedAt={KEEP_UNTIL}
+      />,
     );
     // Drawn, for the kept copy to show (issue #3003), but hidden online.
     expect(screen.queryByRole("status")).toBeNull();
@@ -54,7 +60,13 @@ describe("ReadyOfflineCopy", () => {
   it("offline, says it is the saved copy and asks the worker for nothing", () => {
     vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
     render(
-      <ReadyOfflineCopy copy={COPY} keepUntil={KEEP_UNTIL} locale={LOCALE} timeZone={TIME_ZONE} />,
+      <ReadyOfflineCopy
+        copy={COPY}
+        keepUntil={KEEP_UNTIL}
+        locale={LOCALE}
+        timeZone={TIME_ZONE}
+        generatedAt={KEEP_UNTIL}
+      />,
     );
     expect(screen.getByRole("status")).toHaveTextContent(NOTE);
     expect(keepReadyPageOnDevice).not.toHaveBeenCalled();
@@ -63,7 +75,13 @@ describe("ReadyOfflineCopy", () => {
   it("follows the connection as it drops", () => {
     const online = vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
     render(
-      <ReadyOfflineCopy copy={COPY} keepUntil={KEEP_UNTIL} locale={LOCALE} timeZone={TIME_ZONE} />,
+      <ReadyOfflineCopy
+        copy={COPY}
+        keepUntil={KEEP_UNTIL}
+        locale={LOCALE}
+        timeZone={TIME_ZONE}
+        generatedAt={KEEP_UNTIL}
+      />,
     );
     online.mockReturnValue(false);
     act(() => {
@@ -76,7 +94,13 @@ describe("ReadyOfflineCopy", () => {
   it("dates the copy for the worker that keeps it", () => {
     vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
     render(
-      <ReadyOfflineCopy copy={COPY} keepUntil={KEEP_UNTIL} locale={LOCALE} timeZone={TIME_ZONE} />,
+      <ReadyOfflineCopy
+        copy={COPY}
+        keepUntil={KEEP_UNTIL}
+        locale={LOCALE}
+        timeZone={TIME_ZONE}
+        generatedAt={KEEP_UNTIL}
+      />,
     );
     expect(document.querySelector('meta[name="diveday-ready-keep-until"]')).toHaveAttribute(
       "content",
@@ -92,7 +116,13 @@ describe("ReadyOfflineCopy", () => {
   it("offers to remove the copy once one is kept, and says when it is gone", async () => {
     vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
     render(
-      <ReadyOfflineCopy copy={COPY} keepUntil={KEEP_UNTIL} locale={LOCALE} timeZone={TIME_ZONE} />,
+      <ReadyOfflineCopy
+        copy={COPY}
+        keepUntil={KEEP_UNTIL}
+        locale={LOCALE}
+        timeZone={TIME_ZONE}
+        generatedAt={KEEP_UNTIL}
+      />,
     );
     const remove = await screen.findByRole("button", { name: COPY.remove });
     expect(screen.getByText(COPY.savedNote)).toBeTruthy();
@@ -109,7 +139,13 @@ describe("ReadyOfflineCopy", () => {
     vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
     vi.mocked(keepReadyPageOnDevice).mockResolvedValueOnce(false);
     render(
-      <ReadyOfflineCopy copy={COPY} keepUntil={KEEP_UNTIL} locale={LOCALE} timeZone={TIME_ZONE} />,
+      <ReadyOfflineCopy
+        copy={COPY}
+        keepUntil={KEEP_UNTIL}
+        locale={LOCALE}
+        timeZone={TIME_ZONE}
+        generatedAt={KEEP_UNTIL}
+      />,
     );
     await act(async () => {});
     expect(screen.queryByRole("button", { name: COPY.remove })).toBeNull();
@@ -123,7 +159,13 @@ describe("ReadyOfflineCopy", () => {
   it("offline, offers no way to remove the copy on screen", () => {
     vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
     render(
-      <ReadyOfflineCopy copy={COPY} keepUntil={KEEP_UNTIL} locale={LOCALE} timeZone={TIME_ZONE} />,
+      <ReadyOfflineCopy
+        copy={COPY}
+        keepUntil={KEEP_UNTIL}
+        locale={LOCALE}
+        timeZone={TIME_ZONE}
+        generatedAt={KEEP_UNTIL}
+      />,
     );
     expect(screen.queryByRole("button", { name: COPY.remove })).toBeNull();
     // Said once: the offline note already says this is the saved copy.
@@ -133,7 +175,13 @@ describe("ReadyOfflineCopy", () => {
   it("takes the remove control away when the signal drops, and gives it back with signal", async () => {
     const online = vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
     render(
-      <ReadyOfflineCopy copy={COPY} keepUntil={KEEP_UNTIL} locale={LOCALE} timeZone={TIME_ZONE} />,
+      <ReadyOfflineCopy
+        copy={COPY}
+        keepUntil={KEEP_UNTIL}
+        locale={LOCALE}
+        timeZone={TIME_ZONE}
+        generatedAt={KEEP_UNTIL}
+      />,
     );
     await screen.findByRole("button", { name: COPY.remove });
     online.mockReturnValue(false);
@@ -158,7 +206,13 @@ describe("ReadyOfflineCopy", () => {
     const token = "A".repeat(43);
     const now = KEEP_UNTIL - 1_000_000;
     const markup = renderToStaticMarkup(
-      <ReadyOfflineCopy copy={COPY} keepUntil={KEEP_UNTIL} locale={LOCALE} timeZone={TIME_ZONE} />,
+      <ReadyOfflineCopy
+        copy={COPY}
+        keepUntil={KEEP_UNTIL}
+        locale={LOCALE}
+        timeZone={TIME_ZONE}
+        generatedAt={KEEP_UNTIL}
+      />,
     );
     expect(markup).toMatch(/<p [^>]*hidden=""[^>]*>No signal/);
 
@@ -183,15 +237,15 @@ describe("ReadyOfflineCopy", () => {
       minute: "2-digit",
       timeZoneName: "short",
       timeZone: TIME_ZONE,
-    }).format(new Date(now));
+    }).format(new Date(KEEP_UNTIL));
     expect(served.replaceAll("\u00a0", " ")).toContain(
-      `No signal: this is the copy your phone saved ${expected}.`,
+      `No signal: this is a copy of the page generated ${expected}.`,
     );
-    expect(served).not.toContain(READY_OFFLINE_SAVED_AT_PLACEHOLDER);
+    expect(served).not.toContain(READY_OFFLINE_GENERATED_AT_PLACEHOLDER);
     expect(served).toContain(`name="${READY_COPY_LOCALE_META}" content="${LOCALE}"`);
     expect(served).toContain(`name="${READY_COPY_TIME_ZONE_META}" content="${TIME_ZONE}"`);
     expect(served).toContain(`name="${READY_COPY_VERSION_META}" content="${READY_COPY_VERSION}"`);
-    expect(served).toContain(`${READY_COPY_SAVED_AT_ATTR}="${now}"`);
+    expect(served).toContain(`${READY_COPY_GENERATED_AT_ATTR}="${KEEP_UNTIL}"`);
     expect(served).not.toMatch(/<p [^>]*hidden=""[^>]*>No signal/);
   });
 });

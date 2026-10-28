@@ -1007,7 +1007,7 @@
     "certOptional": "Opcional",
     "keepThisPage": "Esta página es tuya: guárdala en favoritos y seguirá al día hasta que zarpes.",
     "logEntryWaiting": "Después de bucear, tu página de bitácora te espera aquí.",
-    "offlineCopy": "Sin cobertura: esta es la copia que guardó tu teléfono el {when}. No se muestran los cambios posteriores. Para cambiar algo aquí necesitas cobertura.",
+    "offlineCopy": "Sin cobertura: esta es la copia de la página generada el {when} que guardó tu teléfono. No se muestran los cambios posteriores. Para cambiar algo aquí necesitas cobertura.",
     "offlineSaved": "Guardada en este dispositivo para cuando no haya cobertura.",
     "offlineRemove": "Quitar la copia guardada",
     "offlineRemoved": "Quitada de este dispositivo hasta que vuelvas a abrir este enlace.",
