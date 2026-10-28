@@ -286,6 +286,11 @@ for (const scheme of ["light", "dark"] as const) {
         validUntil?: string,
       ) => {
         await page.goto(`/shop/${privateShop.slug}/promos/packages`);
+        // A visible summary can still sit inside the locked staff shell. Fill
+        // does not wait for an inert ancestor, so wait for the live session
+        // before interacting with this form (as the package-page capture does).
+        await expect(page.locator("#main-content")).not.toHaveAttribute("inert");
+        await expect(page.locator("[data-staff-session-lock]")).toHaveCount(0);
         const create = page.locator("#package-new");
         await expect(create.locator("summary")).toBeVisible();
         if ((await create.getAttribute("open")) === null) await create.locator("summary").click();
