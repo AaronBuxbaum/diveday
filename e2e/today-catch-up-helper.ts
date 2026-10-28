@@ -1,21 +1,24 @@
 import type { Browser, Page } from "@playwright/test";
+import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
 import { expect, makeActivitySafe } from "./fixtures";
-import { walkInFormPath } from "./helpers";
+import { signInAs, walkInFormPath } from "./helpers";
 
 /** One staffer reads Today, another seats a walk-in, then the reader returns. */
-export async function todayCatchUpScenario(
-  browser: Browser,
-  owner: Page,
-  workerBaseURL: string,
-  readerStorageState: string,
-) {
+export async function todayCatchUpScenario(browser: Browser, owner: Page, workerBaseURL: string) {
   const readerContext = await browser.newContext({
     baseURL: workerBaseURL,
-    storageState: readerStorageState,
+    storageState: { cookies: [], origins: [] },
   });
   const reader = makeActivitySafe(await readerContext.newPage());
   try {
-    await reader.goto("/shop/blue-mantis");
+    const initialized = reader.waitForResponse(
+      (response) =>
+        response.request().method() === "POST" &&
+        response.request().headers()["next-action"] !== undefined &&
+        new URL(response.url()).pathname === "/shop/blue-mantis",
+    );
+    await signInAs(reader, DEV_STAFF_LOGINS.captain);
+    await initialized;
     const href = await reader
       .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
       .getAttribute("href");
