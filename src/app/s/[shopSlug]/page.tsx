@@ -19,7 +19,6 @@ import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import type { DiverTranslator } from "@/i18n/messages";
 import { requestTranslator } from "@/i18n/request";
 import { timeZoneLabel } from "@/i18n/timezone-labels";
-import { parseBrandBadges } from "@/lib/brand";
 import { monthLabel, parseMonthKey } from "@/lib/calendar";
 import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
@@ -48,10 +47,11 @@ import { NextBoatCard } from "./_components/NextBoatCard";
 import { OffSeasonPanel } from "./_components/OffSeasonPanel";
 import { OurYearSection } from "./_components/OurYear";
 import { PromotedDateAsk, seriesHorizonLines, viewsBoardsEnd } from "./_components/PromotedDateAsk";
+import { PublicDocumentMain } from "./_components/PublicDocumentMain";
 import { ScheduleFilters } from "./_components/ScheduleFilters";
 import { SchedulePagerRow } from "./_components/SchedulePagerRow";
-import { ShopfrontHero } from "./_components/ShopfrontHero";
-import { ShopPhotoStrip } from "./_components/ShopPhotoStrip";
+import { ShopfrontStory } from "./_components/ShopfrontStory";
+
 import { readSchedulePage } from "./_components/schedule-reads";
 import { seatPriceLabel, shelfCourseCards, weekLedgerRows } from "./_components/schedule-rows";
 import {
@@ -86,7 +86,7 @@ export const instant = true;
  * Spelled once, and the route's `loading.tsx` opens its week at the same
  * 48px.
  */
-const SECTION_GAP = "mt-12";
+const SECTION_GAP = "mt-12 print:mt-5";
 
 /**
  * Per-shop title, description, and canonical URL. The embed surface points its
@@ -360,7 +360,12 @@ export default async function SchedulePage({
   });
 
   return (
-    <main className={isEmbed ? "w-full flex-1 px-3 py-4" : SHOP_MAIN_CLASS}>
+    <PublicDocumentMain
+      kind="schedule"
+      shopName={shop.name}
+      title={t("schedule.title")}
+      className={`${isEmbed ? "w-full flex-1 px-3 py-4" : SHOP_MAIN_CLASS} print:[&_.text-primary]:text-foreground`}
+    >
       {isEmbed ? null : (
         <header>
           <h1 className={`font-brand-display ${PAGE_TITLE_CLASS}`}>{shop.name}</h1>
@@ -414,7 +419,7 @@ export default async function SchedulePage({
                 const anchor = upcoming[0]?.startsAt ?? range.first;
                 if (!anchor) return null;
                 return (
-                  <p className="mt-1 text-sm text-muted">
+                  <p className="mt-1 text-sm text-muted print:hidden">
                     {t("schedule.timesInZone", {
                       shop: shop.name,
                       zone: timeZoneLabel(anchor, locale, tz),
@@ -561,29 +566,13 @@ export default async function SchedulePage({
         />
       )}
       {isEmbed ? null : (
-        <section className={SECTION_GAP} aria-label={shop.name}>
-          <ShopfrontHero
-            headingLevel="h2"
-            name={shop.name}
-            tagline={shop.tagline}
-            description={shop.description}
-            aggregate={reviewAggregate}
-            heroImage={
-              shop.brandHeroImageUrl
-                ? { url: shop.brandHeroImageUrl, alt: shop.brandHeroImageAlt ?? "" }
-                : null
-            }
-            badges={parseBrandBadges(shop.brandBadges)}
-            establishedYear={shop.establishedYear}
-            locale={locale}
-            t={t}
-          />
-          {shop.shopfrontPhotoUrls.length > 0 ? (
-            <div className="mt-8">
-              <ShopPhotoStrip urls={shop.shopfrontPhotoUrls} label={t("schedule.shopPhotos")} />
-            </div>
-          ) : null}
-        </section>
+        <ShopfrontStory
+          shop={shop}
+          aggregate={reviewAggregate}
+          locale={locale}
+          t={t}
+          className={SECTION_GAP}
+        />
       )}
       {/* The boats, by name and seats (Harbor — ADR 20260901-diveday-reimagined:
           the storefront is the shop's website, and a shop's site always names
@@ -602,7 +591,8 @@ export default async function SchedulePage({
               <li
                 key={boat.id}
                 className={sectionCardClass({
-                  className: "flex min-h-14 flex-col justify-center gap-1",
+                  className:
+                    "flex min-h-14 flex-col justify-center gap-1 print:rounded-none print:border-x-0 print:border-b-0 print:px-0 print:py-2",
                 })}
               >
                 <div className="flex items-baseline justify-between gap-3">
@@ -631,18 +621,20 @@ export default async function SchedulePage({
           come from the same fetch. The aggregate is already in hand — it belongs to the hero now,
           and is handed down here rather than read a second time. */}
       {showReviews ? (
-        <Suspense fallback={<ShopReviewsSkeleton className={SECTION_GAP} />}>
-          <ScheduleReviewsSection
-            db={db}
-            shop={shop}
-            aggregate={reviewAggregate}
-            upcoming={upcoming}
-            origin={publicAppUrl()}
-            locale={locale}
-            tz={tz}
-            t={t}
-          />
-        </Suspense>
+        <div className="print:hidden">
+          <Suspense fallback={<ShopReviewsSkeleton className={SECTION_GAP} />}>
+            <ScheduleReviewsSection
+              db={db}
+              shop={shop}
+              aggregate={reviewAggregate}
+              upcoming={upcoming}
+              origin={publicAppUrl()}
+              locale={locale}
+              tz={tz}
+              t={t}
+            />
+          </Suspense>
+        </div>
       ) : null}
       {/* **The three asks under the board, as one object.**
 
@@ -668,7 +660,7 @@ export default async function SchedulePage({
           find-my-link door, and on a quiet board the date request has moved
           above — which between them can empty the list under the heading. */}
       {!isEmbed && (everHadDeparture || (!quiet.quiet && shop.dateRequestsEnabled)) ? (
-        <section aria-labelledby="more-ways-heading" className={SECTION_GAP}>
+        <section aria-labelledby="more-ways-heading" className={`${SECTION_GAP} print:hidden`}>
           <h2 id="more-ways-heading" className={`font-brand-display ${SECTION_TITLE_CLASS}`}>
             {t("schedule.moreWaysHeading")}
           </h2>
@@ -694,7 +686,12 @@ export default async function SchedulePage({
       {/* "Our year": the shop's own year in counts, last, and only with its yes. */}
       {!isEmbed && shop.publicYearEnabled ? (
         <Suspense fallback={null}>
-          <OurYearSection shop={shop} locale={locale} t={t} className={SECTION_GAP} />
+          <OurYearSection
+            shop={shop}
+            locale={locale}
+            t={t}
+            className={`${SECTION_GAP} print:hidden`}
+          />
         </Suspense>
       ) : null}
       {/* Human-discovery footer, embed mode only. */}
@@ -705,7 +702,7 @@ export default async function SchedulePage({
         zoneNote={zoneNote}
         t={t}
       />
-    </main>
+    </PublicDocumentMain>
   );
 }
 

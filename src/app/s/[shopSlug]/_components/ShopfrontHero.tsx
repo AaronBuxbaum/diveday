@@ -84,7 +84,7 @@ export function ShopfrontHero({
           20260901-diveday-reimagined, decision 2); every fact beneath stays in
           Plex and ink, so the face can never label a rating, a count or a claim. */}
       {heroImage ? (
-        <div className="mb-6 overflow-hidden rounded-panel border border-border bg-surface-sunken shadow-bed">
+        <div className="mb-6 overflow-hidden rounded-panel border border-border bg-surface-sunken shadow-bed print:overflow-visible print:rounded-none print:border-0">
           <StoredPhoto
             src={heroImage.url}
             alt={heroImage.alt}
@@ -92,7 +92,7 @@ export function ShopfrontHero({
             // the band; 16:7 from `sm` up, and 2:1 from `lg` when it shares
             // the row with the next boat and a narrower column would make
             // 16:7 a letterbox.
-            className={`aspect-video w-full sm:aspect-[16/7] ${beside ? "lg:aspect-[2/1]" : ""}`}
+            className={`aspect-video w-full print:hidden sm:aspect-[16/7] ${beside ? "lg:aspect-[2/1]" : ""}`}
             sizes={
               beside
                 ? "(min-width: 1152px) 760px, (min-width: 1024px) 62vw, 100vw"
@@ -106,7 +106,7 @@ export function ShopfrontHero({
               (ADR 20261001-logbook: no gradients), so the name reads at the
               ink's own contrast and a two-line name on a phone does not bury
               the picture it sat on. */}
-          <div className="bg-device-frame px-5 py-4 text-device-frame-foreground sm:px-8 sm:py-5">
+          <div className="bg-device-frame px-5 py-4 text-device-frame-foreground sm:px-8 sm:py-5 print:p-0 print:text-foreground">
             <Heading className={`font-brand-display ${PAGE_TITLE_CLASS} text-balance sm:text-5xl`}>
               {name}
             </Heading>

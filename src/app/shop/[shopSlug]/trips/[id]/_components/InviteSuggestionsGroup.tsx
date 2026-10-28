@@ -31,11 +31,12 @@ export function InviteSuggestionsGroup({
     <>
       <RosterGroupBand
         id="invite-suggestions"
+        className="print:hidden"
         label={t("trips.inviteSuggestions.heading", { site: suggestions.siteName })}
       >
         <p className="text-xs text-muted">{t("trips.inviteSuggestions.description")}</p>
       </RosterGroupBand>
-      <ul className="divide-y divide-border" data-testid="invite-suggestions">
+      <ul className="divide-y divide-border print:hidden" data-testid="invite-suggestions">
         {suggestions.shown.map((person) => (
           <li
             key={person.personId}
@@ -61,7 +62,7 @@ export function InviteSuggestionsGroup({
         ))}
       </ul>
       {more > 0 ? (
-        <p className="px-4 pb-2 text-sm text-muted sm:px-5">
+        <p className="px-4 pb-2 text-sm text-muted sm:px-5 print:hidden">
           {t("trips.inviteSuggestions.more", { count: more })}
         </p>
       ) : null}

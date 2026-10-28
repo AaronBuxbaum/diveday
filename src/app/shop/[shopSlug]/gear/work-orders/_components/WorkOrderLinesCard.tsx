@@ -111,7 +111,7 @@ export function WorkOrderLinesCard({
               {t("workOrders.detail.lineTotal")}
             </Th>
             {readOnly ? null : (
-              <Th className="w-16">
+              <Th className="w-16 print:hidden">
                 <span className="sr-only">{t("workOrders.detail.lineActions")}</span>
               </Th>
             )}
@@ -138,7 +138,7 @@ export function WorkOrderLinesCard({
                 </Td>
                 <Td numeric>{money(workOrderLineTotalCents(line))}</Td>
                 {readOnly ? null : (
-                  <Td clip={false} align="middle" className="py-1">
+                  <Td clip={false} align="middle" className="py-1 print:hidden">
                     <div className="flex justify-end">
                       <WorkOrderLineMenu
                         workOrderId={workOrderId}
@@ -173,72 +173,74 @@ export function WorkOrderLinesCard({
       )}
 
       {readOnly ? null : (
-        <WorkOrderAddLine
-          key={workOrderId}
-          scope={scope}
-          notice={notice}
-          label={t("workOrders.detail.addPartOrLabor")}
-        >
-          <input type="hidden" name="workOrderId" value={workOrderId} />
-          <Field label={t("workOrders.form.kind")} htmlFor="new-line-kind">
-            <select id="new-line-kind" name="kind" className={controlClass}>
-              <option value="part">{workOrderLineKindLabel(t, "part")}</option>
-              <option value="labor">{workOrderLineKindLabel(t, "labor")}</option>
-            </select>
-          </Field>
-          <Field
-            label={t("workOrders.form.description")}
-            htmlFor="new-line-description"
-            required
-            error={notice === "empty-description" ? t(LINE_ADD_REFUSAL_KEYS[notice]) : undefined}
+        <div className="print:hidden">
+          <WorkOrderAddLine
+            key={workOrderId}
+            scope={scope}
+            notice={notice}
+            label={t("workOrders.detail.addPartOrLabor")}
           >
-            <input
-              id="new-line-description"
-              name="description"
+            <input type="hidden" name="workOrderId" value={workOrderId} />
+            <Field label={t("workOrders.form.kind")} htmlFor="new-line-kind">
+              <select id="new-line-kind" name="kind" className={controlClass}>
+                <option value="part">{workOrderLineKindLabel(t, "part")}</option>
+                <option value="labor">{workOrderLineKindLabel(t, "labor")}</option>
+              </select>
+            </Field>
+            <Field
+              label={t("workOrders.form.description")}
+              htmlFor="new-line-description"
               required
-              maxLength={WORK_ORDER_TEXT_LIMITS.lineDescription}
-              placeholder={t("workOrders.form.descriptionPlaceholder")}
-              className={controlClass}
-            />
-          </Field>
-          <Field
-            label={t("workOrders.form.quantity")}
-            htmlFor="new-line-quantity"
-            required
-            error={notice === "invalid-quantity" ? t(LINE_ADD_REFUSAL_KEYS[notice]) : undefined}
-          >
-            <input
-              id="new-line-quantity"
-              name="quantity"
-              required
-              inputMode="decimal"
-              defaultValue="1"
-              className={`${controlClass} tabular-nums`}
-            />
-          </Field>
-          <Field
-            label={t("workOrders.form.unitAmount")}
-            htmlFor="new-line-amount"
-            required
-            error={notice === "invalid-amount" ? t(LINE_ADD_REFUSAL_KEYS[notice]) : undefined}
-          >
-            <input
-              id="new-line-amount"
-              name="unitAmount"
-              required
-              inputMode="decimal"
-              className={`${controlClass} tabular-nums`}
-            />
-          </Field>
-          <FieldActions>
-            <SubmitButton
-              pendingLabel={t("workOrders.detail.adding")}
-              className={buttonClass({ variant: "secondary" })}
+              error={notice === "empty-description" ? t(LINE_ADD_REFUSAL_KEYS[notice]) : undefined}
             >
-              {t("workOrders.detail.addLine")}
-            </SubmitButton>
-          </FieldActions>
-        </WorkOrderAddLine>
+              <input
+                id="new-line-description"
+                name="description"
+                required
+                maxLength={WORK_ORDER_TEXT_LIMITS.lineDescription}
+                placeholder={t("workOrders.form.descriptionPlaceholder")}
+                className={controlClass}
+              />
+            </Field>
+            <Field
+              label={t("workOrders.form.quantity")}
+              htmlFor="new-line-quantity"
+              required
+              error={notice === "invalid-quantity" ? t(LINE_ADD_REFUSAL_KEYS[notice]) : undefined}
+            >
+              <input
+                id="new-line-quantity"
+                name="quantity"
+                required
+                inputMode="decimal"
+                defaultValue="1"
+                className={`${controlClass} tabular-nums`}
+              />
+            </Field>
+            <Field
+              label={t("workOrders.form.unitAmount")}
+              htmlFor="new-line-amount"
+              required
+              error={notice === "invalid-amount" ? t(LINE_ADD_REFUSAL_KEYS[notice]) : undefined}
+            >
+              <input
+                id="new-line-amount"
+                name="unitAmount"
+                required
+                inputMode="decimal"
+                className={`${controlClass} tabular-nums`}
+              />
+            </Field>
+            <FieldActions>
+              <SubmitButton
+                pendingLabel={t("workOrders.detail.adding")}
+                className={buttonClass({ variant: "secondary" })}
+              >
+                {t("workOrders.detail.addLine")}
+              </SubmitButton>
+            </FieldActions>
+          </WorkOrderAddLine>
+        </div>
       )}
     </SectionCard>
   );

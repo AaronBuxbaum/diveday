@@ -153,115 +153,143 @@ export async function BillAndPickupCard({
   const showBill = lineCount > 0 || bill !== null;
 
   return (
-    <SectionCard title={t("benchFollowUp.card.title")} padding="lg">
-      <div className="space-y-8">
-        {ready || workOrder.status !== "picked_up" ? (
-          <section aria-labelledby="ready-message-heading">
-            <h3 id="ready-message-heading" className="font-semibold">
-              {t("benchFollowUp.ready.heading")}
-            </h3>
-            <p
-              className={`mt-1 text-sm ${ready?.tone === "warning" ? "text-warning-strong" : "text-muted"}`}
-            >
-              {ready
-                ? ready.text
-                : isReady
-                  ? t("benchFollowUp.ready.notSent")
-                  : t("benchFollowUp.ready.pending")}
+    <>
+      {ready || bill ? (
+        <section className="hidden print:block">
+          <h2 className="font-semibold">{t("benchFollowUp.card.title")}</h2>
+          {ready ? <p className="mt-2 text-sm">{ready.text}</p> : null}
+          {bill ? (
+            <p className="mt-2 text-sm">
+              {t(ORDER_STATUS_KEYS[bill.status])} ·{" "}
+              {bill.collection === "stripe_invoice"
+                ? t("benchFollowUp.bill.sent", {
+                    date: formatShortDate(bill.sentAt, locale, shop.timezone),
+                  })
+                : paidAtCounterLine(t, {
+                    collection: bill.collection,
+                    date: formatShortDate(bill.sentAt, locale, shop.timezone),
+                  })}
             </p>
-            {isReady ? (
-              <form action={resendReadyNoticeAction} className="mt-3">
-                <input type="hidden" name="workOrderId" value={workOrder.id} />
-                <SubmitButton
-                  pendingLabel={t("benchFollowUp.ready.sending")}
-                  className={buttonClass({ variant: "secondary", size: "sm" })}
+          ) : null}
+        </section>
+      ) : null}
+      <div className="print:hidden">
+        <SectionCard title={t("benchFollowUp.card.title")} padding="lg">
+          <div className="space-y-8">
+            {ready || workOrder.status !== "picked_up" ? (
+              <section aria-labelledby="ready-message-heading">
+                <h3 id="ready-message-heading" className="font-semibold">
+                  {t("benchFollowUp.ready.heading")}
+                </h3>
+                <p
+                  className={`mt-1 text-sm ${ready?.tone === "warning" ? "text-warning-strong" : "text-muted"}`}
                 >
-                  {readyNotice ? t("benchFollowUp.ready.resend") : t("benchFollowUp.ready.send")}
-                </SubmitButton>
-              </form>
-            ) : null}
-            {say("ready")}
-          </section>
-        ) : (
-          say("ready")
-        )}
+                  {ready
+                    ? ready.text
+                    : isReady
+                      ? t("benchFollowUp.ready.notSent")
+                      : t("benchFollowUp.ready.pending")}
+                </p>
+                {isReady ? (
+                  <form action={resendReadyNoticeAction} className="mt-3">
+                    <input type="hidden" name="workOrderId" value={workOrder.id} />
+                    <SubmitButton
+                      pendingLabel={t("benchFollowUp.ready.sending")}
+                      className={buttonClass({ variant: "secondary", size: "sm" })}
+                    >
+                      {readyNotice
+                        ? t("benchFollowUp.ready.resend")
+                        : t("benchFollowUp.ready.send")}
+                    </SubmitButton>
+                  </form>
+                ) : null}
+                {say("ready")}
+              </section>
+            ) : (
+              say("ready")
+            )}
 
-        {showBill ? (
-          <section aria-labelledby="bill-heading">
-            <h3 id="bill-heading" className="font-semibold">
-              {t("benchFollowUp.bill.heading")}
-            </h3>
-            <p className="mt-1 tabular-nums">{t("benchFollowUp.bill.total", { amount: total })}</p>
-            {bill ? (
-              <p className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted">
-                <Badge tone={ORDER_STATUS_TONES[bill.status]}>
-                  {t(ORDER_STATUS_KEYS[bill.status])}
-                </Badge>
-                <span>
-                  {bill.collection === "stripe_invoice"
-                    ? t("benchFollowUp.bill.sent", {
-                        date: formatShortDate(bill.sentAt, locale, shop.timezone),
-                      })
-                    : paidAtCounterLine(t, {
-                        collection: bill.collection,
-                        date: formatShortDate(bill.sentAt, locale, shop.timezone),
-                      })}
-                </span>
-                <Link
-                  href={shopPath(shop.slug, "orders", bill.orderId)}
-                  className="font-medium text-primary underline-offset-4 hover:underline"
-                >
-                  {t("benchFollowUp.bill.openOrder")}
-                </Link>
-              </p>
-            ) : null}
-            {/* **Paid at pickup** (fourth UX review, item 19): cash or the
+            {showBill ? (
+              <section aria-labelledby="bill-heading">
+                <h3 id="bill-heading" className="font-semibold">
+                  {t("benchFollowUp.bill.heading")}
+                </h3>
+                <p className="mt-1 tabular-nums">
+                  {t("benchFollowUp.bill.total", { amount: total })}
+                </p>
+                {bill ? (
+                  <p className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted">
+                    <Badge tone={ORDER_STATUS_TONES[bill.status]}>
+                      {t(ORDER_STATUS_KEYS[bill.status])}
+                    </Badge>
+                    <span>
+                      {bill.collection === "stripe_invoice"
+                        ? t("benchFollowUp.bill.sent", {
+                            date: formatShortDate(bill.sentAt, locale, shop.timezone),
+                          })
+                        : paidAtCounterLine(t, {
+                            collection: bill.collection,
+                            date: formatShortDate(bill.sentAt, locale, shop.timezone),
+                          })}
+                    </span>
+                    <Link
+                      href={shopPath(shop.slug, "orders", bill.orderId)}
+                      className="font-medium text-primary underline-offset-4 hover:underline"
+                    >
+                      {t("benchFollowUp.bill.openOrder")}
+                    </Link>
+                  </p>
+                ) : null}
+                {/* **Paid at pickup** (fourth UX review, item 19): cash or the
                 shop's card machine, recorded as the ticket's bill so it reads
                 Paid here and reaches Reports' Gear bench line. Any staff, with
                 or without Stripe; the line that stood here said "Collected at
                 the counter." on an unpaid ticket, which read as paid. */}
-            {!mayBillAgain || lineCount === 0 ? null : workOrder.status === "picked_up" ? (
-              <details className="group mt-3" open={outcome?.form === "bill" || undefined}>
-                <summary
-                  className={buttonClass({
-                    variant: "link",
-                    size: "sm",
-                    flush: true,
-                    className: "w-fit cursor-pointer list-none [&::-webkit-details-marker]:hidden",
-                  })}
-                >
-                  {t("workOrders.detail.recordPayment")}
-                  <DisclosureCaret direction="down" className="group-open:rotate-180" />
-                </summary>
-                <div className="mt-2">
-                  <CounterPaymentControls workOrderId={workOrder.id} t={t} />
-                </div>
-              </details>
-            ) : (
-              <div className="mt-3">
-                <CounterPaymentControls workOrderId={workOrder.id} t={t} />
-              </div>
-            )}
-            {!mayBillAgain || lineCount === 0 || !connected ? null : !canBill ? (
-              <p className="mt-2 text-sm text-muted">{t("benchFollowUp.bill.ownerOnly")}</p>
-            ) : !customerHasEmail ? (
-              <p className="mt-2 text-sm text-muted">{t("benchFollowUp.bill.needsEmail")}</p>
-            ) : (
-              <form action={sendWorkOrderBillAction} className="mt-3">
-                <input type="hidden" name="workOrderId" value={workOrder.id} />
-                <SubmitButton
-                  pendingLabel={t("benchFollowUp.bill.sending")}
-                  className={buttonClass({ size: "sm" })}
-                >
-                  {bill ? t("benchFollowUp.bill.sendAgain") : t("benchFollowUp.bill.send")}
-                </SubmitButton>
-              </form>
-            )}
-            {say("bill")}
-          </section>
-        ) : null}
+                {!mayBillAgain || lineCount === 0 ? null : workOrder.status === "picked_up" ? (
+                  <details className="group mt-3" open={outcome?.form === "bill" || undefined}>
+                    <summary
+                      className={buttonClass({
+                        variant: "link",
+                        size: "sm",
+                        flush: true,
+                        className:
+                          "w-fit cursor-pointer list-none [&::-webkit-details-marker]:hidden",
+                      })}
+                    >
+                      {t("workOrders.detail.recordPayment")}
+                      <DisclosureCaret direction="down" className="group-open:rotate-180" />
+                    </summary>
+                    <div className="mt-2">
+                      <CounterPaymentControls workOrderId={workOrder.id} t={t} />
+                    </div>
+                  </details>
+                ) : (
+                  <div className="mt-3">
+                    <CounterPaymentControls workOrderId={workOrder.id} t={t} />
+                  </div>
+                )}
+                {!mayBillAgain || lineCount === 0 || !connected ? null : !canBill ? (
+                  <p className="mt-2 text-sm text-muted">{t("benchFollowUp.bill.ownerOnly")}</p>
+                ) : !customerHasEmail ? (
+                  <p className="mt-2 text-sm text-muted">{t("benchFollowUp.bill.needsEmail")}</p>
+                ) : (
+                  <form action={sendWorkOrderBillAction} className="mt-3">
+                    <input type="hidden" name="workOrderId" value={workOrder.id} />
+                    <SubmitButton
+                      pendingLabel={t("benchFollowUp.bill.sending")}
+                      className={buttonClass({ size: "sm" })}
+                    >
+                      {bill ? t("benchFollowUp.bill.sendAgain") : t("benchFollowUp.bill.send")}
+                    </SubmitButton>
+                  </form>
+                )}
+                {say("bill")}
+              </section>
+            ) : null}
+          </div>
+        </SectionCard>
       </div>
-    </SectionCard>
+    </>
   );
 }
 

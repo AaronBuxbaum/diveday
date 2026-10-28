@@ -255,6 +255,10 @@ test.describe("print", () => {
     await page.getByRole("heading", { level: 1, name: "Discover Scuba Diving" }).waitFor();
     await expect(page.locator("#faqs details").first()).not.toHaveAttribute("open");
     await page.emulateMedia({ media: "print" });
+    await expect(page.locator("[data-public-print-identity]")).toHaveText("Blue Mantis Divers");
+    await expect(page.locator("main img").filter({ visible: true })).toHaveCount(0);
+    await expect(page.locator("#get-in-touch")).toBeHidden();
+    await expect(page.locator("footer")).toContainText("100 Ocean Drive");
     const answers = page.locator("[data-print-faq] p");
     await expect(answers).not.toHaveCount(0);
     for (const answer of await answers.all()) {

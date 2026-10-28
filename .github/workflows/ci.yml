@@ -472,10 +472,10 @@ jobs:
           if printf '%s\n' "${spec_files[@]}" | grep -qx 'e2e/agency-check-extension.spec.ts'; then
             pnpm exec playwright install chromium
           fi
-          # Saved-record print assertions inspect actual PDF text. Only the
-          # shard assigned that spec needs Poppler; the visual and fast-lane
-          # jobs install it separately when their selections require it.
-          if printf '%s\n' "${spec_files[@]}" | grep -qx 'e2e/staff-saved-print.spec.ts'; then
+          # These print specs inspect actual PDF text. Only a shard assigned
+          # one of them needs Poppler; visual and fast-lane jobs install it
+          # separately when their selections require it.
+          if printf '%s\n' "${spec_files[@]}" | grep -Eq '^e2e/(staff-saved-print|trip-document-print|public-document-identity)[.]spec[.]ts$'; then
             if ! command -v pdftotext >/dev/null; then
               sudo apt-get update -qq
               sudo apt-get install -y --no-install-recommends poppler-utils
@@ -676,13 +676,13 @@ jobs:
         run: pnpm build:sw
       - if: steps.plan.outputs.run == 'true'
         uses: ./.github/actions/playwright-shell
-      # Crew captures and saved-record specs inspect actual PDF pages.
+      # Crew captures and print-document specs inspect actual PDF pages.
       - name: Install PDF rendering tools
         if: ${{ !cancelled() && (steps.plan.outputs.captures == 'true' || steps.plan.outputs.specs == 'true') }}
         timeout-minutes: 5
         run: |
           if [ "${{ steps.plan.outputs.captures }}" = 'true' ] ||
-             { [ -f fast-lane/specs.txt ] && grep -Eq '^e2e/staff-saved-print[.]spec[.]ts(:[0-9]+)?$' fast-lane/specs.txt; }; then
+             { [ -f fast-lane/specs.txt ] && grep -Eq '^e2e/(staff-saved-print|trip-document-print|public-document-identity)[.]spec[.]ts(:[0-9]+)?$' fast-lane/specs.txt; }; then
             if ! command -v pdftoppm >/dev/null || ! command -v pdftotext >/dev/null; then
               sudo apt-get update -qq
               sudo apt-get install -y --no-install-recommends poppler-utils

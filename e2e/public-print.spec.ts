@@ -60,6 +60,15 @@ test("the public schedule prints dates without duplicate jump and paging control
   const monthNext = page.getByRole("link", { name: /next month/i });
   await expect(monthNext).toBeVisible();
   await page.emulateMedia({ media: "print" });
+  await expect(page.locator("main img").filter({ visible: true })).toHaveCount(0);
+  const contexts = page.locator("[data-print-departure-context]");
+  await expect(contexts.first()).toBeVisible();
+  for (const context of await contexts.all()) {
+    await expect(context).toHaveText(/\S.*(?:EDT|EST)/);
+  }
+  await expect(page.getByRole("heading", { name: "Our year", exact: true })).toBeHidden();
+  await expect(page.locator("#more-ways-heading")).toBeHidden();
+  await expect(page.locator("footer")).toContainText("100 Ocean Drive");
   await expect(jump).not.toBeVisible();
   await expect(monthNext).not.toBeVisible();
   await expect(page.getByRole("heading", { name: "Schedule", exact: true })).toBeVisible();

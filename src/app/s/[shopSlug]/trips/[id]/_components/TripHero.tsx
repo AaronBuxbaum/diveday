@@ -75,7 +75,7 @@ export function TripHero({
         <StoredPhoto
           src={coverPhoto}
           alt=""
-          className="mt-6 aspect-[3/2] w-full rounded-panel"
+          className="mt-6 aspect-[3/2] w-full rounded-panel print:hidden"
           sizes="(min-width: 640px) 33rem, 92vw"
           priority
         />

@@ -39,3 +39,19 @@ export type TripPageSearchParams = {
   held?: string;
   tell?: string;
 };
+
+/** Transient outcomes cleared after this route has shown them once. */
+export const TRIP_FLASH_PARAMS = [
+  "notice",
+  "count",
+  "form",
+  "bid",
+  "diverq",
+  "inviteq",
+  "rf",
+  "noteBookingId",
+  "noteBody",
+  "confirmName",
+  "confirmEmail",
+  "confirmPhone",
+] satisfies (keyof TripPageSearchParams)[];
