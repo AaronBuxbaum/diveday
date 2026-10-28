@@ -548,9 +548,9 @@
   date-request offer stops counting after 48 hours; a resend starts that interval again (#2914).
   Each live booking explicitly linked to that departure offer answers one seat of its party; any
   unbooked seats still count. A canceled or no-show booking, or one moved off that departure, no
-  longer answers a seat. If staff move that booking onto another offered departure, it answers
-  that offer only when they explicitly associate it with that request. Separate offers for separate
-  departures keep separate counts. This is
+  longer answers a seat. The staff move action does not link the moved booking to another offer;
+  the explicit seat-from-request flow is the path that records this association. Separate offers
+  for separate departures keep separate counts. This is
   advice about further offers, not a reservation: booking still checks capacity. A couple is never
   split across dates. Staff read "Party of 2" on the row; the demand count adds parties, not rows
   (ADR 20260719-trip-waitlist, amended 2026-10-15).
