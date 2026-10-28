@@ -286,9 +286,7 @@ describe("listShopsForPlatformBackup", () => {
       .select()
       .from(platformBackupProgress)
       .where(eq(platformBackupProgress.shopId, thirdShopId));
-    expect(slowSuccessProgress?.lastSuccessAt).toEqual(
-      new Date(thirdWeek.getTime() + 5 * 60_000),
-    );
+    expect(slowSuccessProgress?.lastSuccessAt).toEqual(new Date(thirdWeek.getTime() + 5 * 60_000));
   });
 
   it("reclaims an expired lease and fences off the old checkpoint writer", async () => {

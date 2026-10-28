@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { expect, it } from "vitest";
-import { describePostgres, postgresTestDb } from "@/test/postgres";
 import { platformBackupProgress, shops } from "@/db/schema";
+import { describePostgres, postgresTestDb } from "@/test/postgres";
 import { claimPlatformBackupShop, finishPlatformBackupShop } from "./platform-backup";
 
 describePostgres("platform backup progress under real concurrency", () => {
@@ -10,7 +10,11 @@ describePostgres("platform backup progress under real concurrency", () => {
     const pg = await postgresTestDb();
     const [shop] = await pg.db
       .insert(shops)
-      .values({ name: "Platform backup lease", slug: `platform-backup-${randomUUID()}`, timezone: "UTC" })
+      .values({
+        name: "Platform backup lease",
+        slug: `platform-backup-${randomUUID()}`,
+        timezone: "UTC",
+      })
       .returning();
     if (!shop) throw new Error("shop insert failed");
 
