@@ -88,6 +88,30 @@ test.describe("light mode — Claude's assists, lit", () => {
     }).toPass({ timeout: 20_000 });
   }
 
+  test("the diver finder leads with lookup and discloses its question form", async ({
+    page,
+    request,
+    privateShop,
+  }) => {
+    test.setTimeout(FLOW_TIMEOUT_MS);
+    await lit(request, privateShop.slug, async () => {
+      await page.goto(`/shop/${privateShop.slug}/divers`);
+      const lookup = page.getByRole("searchbox", { name: staff("divers.list.searchDiversLabel") });
+      const question = page.getByLabel(staff("deskAssists.search.label"), { exact: true });
+      const disclose = page.getByText(staff("deskAssists.search.disclose"), { exact: true });
+      await expect(lookup).toBeVisible();
+      await expect(disclose).toBeVisible();
+      await expect(question).toBeHidden();
+      await capture(page, "assist-diver-search", "light");
+      await disclose.click();
+      await expect(question).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: staff("deskAssists.search.submit"), exact: true }),
+      ).toBeVisible();
+      await capture(page, "assist-diver-question", "light");
+    });
+  });
+
   test("the inbox row and the reply draft", async ({ page, request, privateShop }) => {
     test.setTimeout(FLOW_TIMEOUT_MS);
     await lit(request, privateShop.slug, async () => {
