@@ -1007,7 +1007,7 @@
     "certOptional": "Optional",
     "keepThisPage": "This page is yours to keep. Bookmark it, and it stays up to date until you sail.",
     "logEntryWaiting": "After you dive, your log entry is waiting here.",
-    "offlineCopy": "No signal: this is the copy your phone saved. Anything you change here needs signal.",
+    "offlineCopy": "No signal: this is the copy your phone saved {when}. Changes since then aren’t shown. Anything you change here needs signal.",
     "offlineSaved": "Saved on this device for when there’s no signal.",
     "offlineRemove": "Remove saved copy",
     "offlineRemoved": "Removed from this device until you next open this link.",

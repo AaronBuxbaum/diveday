@@ -56,11 +56,15 @@
  * the two ends: the copy shows offline, and a `?cancelled=` landing clears it.
  */
 
+import { keepUnitsWhole } from "@/lib/date-parts";
 import {
   READY_CACHE_NAME,
+  READY_COPY_LOCALE_META,
+  READY_COPY_TIME_ZONE_META,
   READY_FORGOTTEN_CACHE_NAME,
   READY_KEEP_UNTIL_META,
   READY_OFFLINE_NOTE_ATTR,
+  READY_OFFLINE_SAVED_AT_PLACEHOLDER,
 } from "@/lib/ready-offline";
 
 /**
@@ -157,6 +161,33 @@ const OFFLINE_NOTE_SHOWN = `${READY_OFFLINE_NOTE_ATTR}=""`;
 
 const KEEP_UNTIL_PATTERN = new RegExp(`<meta name="${READY_KEEP_UNTIL_META}" content="(\\d+)"`);
 
+function metaContent(html: string, name: string): string | undefined {
+  return html.match(
+    new RegExp(`<meta\\b[^>]*\\bname="${name}"[^>]*\\bcontent="([^"]*)"[^>]*>`, "i"),
+  )?.[1];
+}
+
+/** Format the response save instant with the locale and shop zone rendered by the page. */
+function readySavedAtLabel(html: string, savedAt: number): string | undefined {
+  const locale = metaContent(html, READY_COPY_LOCALE_META);
+  const timeZone = metaContent(html, READY_COPY_TIME_ZONE_META);
+  if (!locale || !timeZone || !Number.isFinite(savedAt)) return undefined;
+  try {
+    return keepUnitsWhole(
+      new Intl.DateTimeFormat(locale, {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        timeZoneName: "short",
+        timeZone,
+      }).formatToParts(new Date(savedAt)),
+    );
+  } catch {
+    return undefined;
+  }
+}
+
 /** The token in a readiness path (`/ready/<token>`). */
 function tokenOf(path: string): string {
   return path.slice("/ready/".length);
@@ -242,6 +273,10 @@ export async function saveReadyPage(
   if (!storable(response)) return false;
   // A body of its own, so the copy is complete before anything is replaced.
   const html = new TextDecoder().decode(await response.arrayBuffer());
+  const savedAtLabel = readySavedAtLabel(html, now);
+  // A new page with the placeholder must have the locale and shop zone needed
+  // to replace it. Leave any previous complete copy untouched if it does not.
+  if (html.includes(READY_OFFLINE_SAVED_AT_PLACEHOLDER) && savedAtLabel === undefined) return false;
   const named = Number(html.match(KEEP_UNTIL_PATTERN)?.[1] ?? Number.NaN);
   const cache = await storage.open(READY_CACHE_NAME);
   if (!Number.isFinite(named) || named <= now) {
@@ -266,6 +301,7 @@ export async function saveReadyPage(
   const copy = new Response(
     withoutClientRuntime(html)
       .replaceAll(OFFLINE_NOTE_HIDDEN, OFFLINE_NOTE_SHOWN)
+      .replaceAll(READY_OFFLINE_SAVED_AT_PLACEHOLDER, savedAtLabel ?? "")
       .replaceAll(tokenOf(path), TOKEN_PLACEHOLDER)
       .replace(CLAIM_TOKEN_PATTERN, CLAIM_REMOVED)
       .replace(CHECKOUT_LINK_PATTERN, CHECKOUT_REMOVED)

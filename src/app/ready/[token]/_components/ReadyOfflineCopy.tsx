@@ -5,6 +5,8 @@ import { buttonClass } from "@/components/ui/button";
 import {
   forgetReadyPageCopy,
   keepReadyPageOnDevice,
+  READY_COPY_LOCALE_META,
+  READY_COPY_TIME_ZONE_META,
   READY_KEEP_UNTIL_META,
   READY_OFFLINE_NOTE_ATTR,
 } from "@/lib/ready-offline";
@@ -29,9 +31,13 @@ import {
 export function ReadyOfflineCopy({
   copy,
   keepUntil,
+  locale,
+  timeZone,
 }: {
   copy: { offlineNote: string; savedNote: string; remove: string; removed: string };
   keepUntil: number;
+  locale: string;
+  timeZone: string;
 }) {
   const [offline, setOffline] = useState(false);
   const [saved, setSaved] = useState<"no" | "kept" | "removed">("no");
@@ -62,6 +68,8 @@ export function ReadyOfflineCopy({
   return (
     <>
       <meta name={READY_KEEP_UNTIL_META} content={String(keepUntil)} />
+      <meta name={READY_COPY_LOCALE_META} content={locale} />
+      <meta name={READY_COPY_TIME_ZONE_META} content={timeZone} />
       {/* Drawn by the server too, hidden: the kept copy runs no script, and
         the worker shows this line in it (issue #3003). The marker comes first
         and `hidden` straight after it, the order the worker reads. */}

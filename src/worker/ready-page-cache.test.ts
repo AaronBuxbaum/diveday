@@ -1,7 +1,14 @@
 // The default `node` environment, as the worker's own test: this module runs
 // in a service worker, never in a DOM context.
 import { beforeEach, describe, expect, it } from "vitest";
-import { READY_CACHE_NAME, READY_KEEP_UNTIL_META } from "@/lib/ready-offline";
+import {
+  READY_CACHE_NAME,
+  READY_COPY_LOCALE_META,
+  READY_COPY_TIME_ZONE_META,
+  READY_KEEP_UNTIL_META,
+  READY_OFFLINE_NOTE_ATTR,
+  READY_OFFLINE_SAVED_AT_PLACEHOLDER,
+} from "@/lib/ready-offline";
 import {
   forgetReadyPage,
   isReadyScope,
@@ -85,6 +92,44 @@ describe("saveReadyPage and readyPageFallback", () => {
     const served = await readyPageFallback(store.storage, `/ready/${TOKEN}`, NOW + 1000);
     expect(await served?.text()).toContain("newer");
     expect(await readyPageFallback(store.storage, `/ready/${OTHER}`, NOW)).toBeUndefined();
+  });
+
+  it("shows the response save time in the page locale and shop zone, not the later fallback time", async () => {
+    const locale = "en-US";
+    const timeZone = "America/New_York";
+    const body = [
+      `<meta name="${READY_COPY_LOCALE_META}" content="${locale}"/>`,
+      `<meta name="${READY_COPY_TIME_ZONE_META}" content="${timeZone}"/>`,
+      `<p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">Saved ${READY_OFFLINE_SAVED_AT_PLACEHOLDER}</p>`,
+    ].join("");
+    const requestStarted = NOW - 60_000;
+    expect(
+      await saveReadyPage(store.storage, `/ready/${TOKEN}`, page(body), NOW, requestStarted),
+    ).toBe(true);
+
+    const served = await readyPageFallback(store.storage, `/ready/${TOKEN}`, NOW + DAY_MS);
+    const text = await served?.text();
+    const expected = new Intl.DateTimeFormat(locale, {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      timeZoneName: "short",
+      timeZone,
+    }).format(new Date(NOW));
+    expect(text?.replaceAll("\u00a0", " ")).toContain(`Saved ${expected}`);
+    expect(text).not.toContain(READY_OFFLINE_SAVED_AT_PLACEHOLDER);
+  });
+
+  it("does not invent a save time for a copy written before the timestamp markup existed", async () => {
+    const body = `<p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">No signal: older saved copy</p>`;
+    await saveReadyPage(store.storage, `/ready/${TOKEN}`, page(body), NOW);
+
+    const served = await readyPageFallback(store.storage, `/ready/${TOKEN}`, NOW + 1_000);
+    const text = await served?.text();
+    expect(text).toContain("No signal: older saved copy");
+    expect(text).not.toContain(READY_OFFLINE_SAVED_AT_PLACEHOLDER);
+    expect(text).not.toContain("Saved ");
   });
 
   /**

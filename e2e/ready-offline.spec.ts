@@ -79,12 +79,33 @@ test("the saved /ready copy shows with no signal, and a cancel landing forgets i
 }) => {
   const readyPath = await openKeptReadyPage(page, context, "Olive Offline");
   await expect(page.getByRole("button", { name: "Running late" })).toBeVisible();
+  const savedAtLabel = await page.evaluate((frozenClock) => {
+    const locale = document
+      .querySelector('meta[name="diveday-ready-copy-locale"]')
+      ?.getAttribute("content");
+    const timeZone = document
+      .querySelector('meta[name="diveday-ready-copy-time-zone"]')
+      ?.getAttribute("content");
+    if (!locale || !timeZone) throw new Error("Ready page is missing its locale or shop time zone");
+    return new Intl.DateTimeFormat(locale, {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      timeZoneName: "short",
+      timeZone,
+    }).format(new Date(frozenClock));
+  }, E2E_FROZEN_CLOCK);
 
   // No signal: the reload is answered from the saved copy, and says so.
   await context.setOffline(true);
   await page.reload();
   await expect(page.getByRole("button", { name: "Running late" })).toBeVisible();
-  await expect(page.getByRole("status").filter({ hasText: "No signal" })).toBeVisible();
+  await expect(
+    page
+      .getByRole("status")
+      .filter({ hasText: `No signal: this is the copy your phone saved ${savedAtLabel}.` }),
+  ).toBeVisible();
   // It is the diver's only copy at the dock: nothing on it deletes it (domain review 2).
   await expect(page.getByRole("button", { name: diver("ready.offlineRemove") })).toHaveCount(0);
 
