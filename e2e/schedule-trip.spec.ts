@@ -331,19 +331,19 @@ test("departure editors save independently and preserve the other subjects", asy
   await meeting.locator('[name="meetingPointLabel"]').fill("North jetty");
   await meeting.locator('[name="meetingPointAddress"]').fill("12 Dock Road");
   await saveSection(meeting, "meeting");
-  await expect(meeting.locator("summary")).toContainText("North jetty · 12 Dock Road");
+  await expect(meeting.locator(":scope > summary")).toContainText("North jetty · 12 Dock Road");
 
   const timing = await openTripAboutRow(page, "Timing");
   await timing.getByLabel("Departs").fill("09:30");
   await saveSection(timing, "timing");
-  await expect(timing.locator("summary")).toContainText("9:30 AM");
+  await expect(timing.locator(":scope > summary")).toContainText("9:30 AM");
 
   const booking = await openTripAboutRow(page, "Booking and payment");
   await booking.locator('[name="capacity"]').fill("9");
   await booking.locator('[name="priceDollars"]').fill("155");
   await saveSection(booking, "booking");
-  await expect(booking.locator("summary")).toContainText("$155.00");
-  await expect(booking.locator("summary")).toContainText("0 of 9");
+  await expect(booking.locator(":scope > summary")).toContainText("$155.00");
+  await expect(booking.locator(":scope > summary")).toContainText("0 of 9");
 
   const plan = await openTripAboutRow(page, "The plan");
   await expect(plan.locator('[name="capacity"]')).toHaveCount(0);

@@ -165,6 +165,20 @@ for (const scheme of ["light", "dark"] as const) {
           .first()
           .waitFor();
         await capture(page, "today-arrival-lookup", scheme);
+        if (scheme === "light") {
+          // The two-column seam squeezed this label to 12px while its count
+          // stayed fixed-width. Keep a real geometry regression and pixels.
+          await page.setViewportSize({ width: 640, height: 900 });
+          const horizon = page.getByRole("heading", { name: "This week", exact: true });
+          await expect(horizon).toBeVisible();
+          expect(
+            await horizon.evaluate((element) => element.scrollWidth <= element.clientWidth),
+          ).toBe(true);
+          await page.screenshot({
+            path: "e2e/screenshots/today-arrival-lookup-light-vw-640.png",
+            fullPage: true,
+          });
+        }
       });
 
       // **"Running late, said 9:18"** (J3): the lookup row of a diver who told
