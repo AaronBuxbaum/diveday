@@ -48,9 +48,23 @@ it("rebinds known-unsailed safety provenance atomically when the demo moves a fu
   const { db } = ctx;
   const [shop] = await db
     .insert(shops)
-    .values({ name: "Provenance Demo", slug: "provenance-demo", timezone: "UTC" })
+    .values({ name: "Provenance Demo", slug: "provenance-demo", timezone: "UTC", isDemo: true })
     .returning();
   if (!shop) throw new Error("shop missing");
+  const [owner] = await db
+    .insert(people)
+    .values({
+      shopId: shop.id,
+      fullName: "Demo Owner",
+      email: "owner@provenance-demo.demo.invalid",
+    })
+    .returning({ id: people.id });
+  if (!owner) throw new Error("owner missing");
+  await db.insert(personRoles).values({ personId: owner.id, role: "owner" });
+  await db.insert(userAccounts).values({
+    personId: owner.id,
+    email: "owner@provenance-demo.demo.invalid",
+  });
   const boat = await createBoat(db, shop.id, "Demo Provenance Hull", 12);
   const startsAt = new Date(nowDate().getTime() + 24 * 3_600_000);
   const [trip] = await db
@@ -553,8 +567,15 @@ describe("refreshCanonicalDemoSchedule", () => {
         .select({ id: trips.id })
         .from(trips)
         .where(and(eq(trips.shopId, shop.id), eq(trips.title, AT_SEA_DAY_TITLE)));
+      const [startsBefore] = await db
+        .select({ startsAt: trips.startsAt })
+        .from(trips)
+        .where(eq(trips.id, boat.id));
 
       await seedBoatAtSea(db, shop.id);
+      await expect(ensureDemoSailsToday(db, shop.id, DEMO_SHOP_TIMEZONE)).resolves.toBe(
+        "no_candidate",
+      );
       expect(await bringDemoBoatsAtSeaHome(db, new Date(boat.endsAt.getTime() + 60 * 60_000))).toBe(
         0,
       );
@@ -573,6 +594,11 @@ describe("refreshCanonicalDemoSchedule", () => {
         .from(trips)
         .where(and(eq(trips.shopId, shop.id), eq(trips.title, AT_SEA_DAY_TITLE)));
       expect(boatsAfter).toEqual(boatsBefore);
+      const [startsAfter] = await db
+        .select({ startsAt: trips.startsAt })
+        .from(trips)
+        .where(eq(trips.id, boat.id));
+      expect(startsAfter).toEqual(startsBefore);
     });
 
     it("fails closed when a demo-flagged shop has no owner or captain account", async () => {
@@ -592,6 +618,9 @@ describe("refreshCanonicalDemoSchedule", () => {
       );
 
       const beforeMarks = await marks(db, boat.id);
+      await expect(ensureDemoSailsToday(db, shop.id, DEMO_SHOP_TIMEZONE)).resolves.toBe(
+        "no_candidate",
+      );
       expect(await bringDemoBoatsAtSeaHome(db, new Date(boat.endsAt.getTime() + 60 * 60_000))).toBe(
         0,
       );
