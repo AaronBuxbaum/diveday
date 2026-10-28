@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
@@ -23,6 +24,7 @@ const extension = (
         spec: unknown,
         signInPath?: string,
       ) => { ok: true } | { ok: false; missing: string[] };
+      fillSsiManualForm: (query: unknown, sample?: boolean) => boolean;
       pageAsksToSignIn: (signInPath?: string) => boolean;
       AGENCIES: Record<string, unknown>;
       ELEARNING: Record<string, unknown>;
@@ -60,6 +62,118 @@ beforeEach(() => {
 });
 
 describe("fillAgencyForm", () => {
+  it("waits for the staffer to accept SSI's terms before filling the revealed form", async () => {
+    document.body.innerHTML = `<form><input id="terms" type="checkbox">
+      <div id="details" style="display:none"><label for="first">First Name</label><input id="first">
+      <label for="last">Last Name</label><input id="last"><label for="dob">Birthday</label><input id="dob" type="date">
+      <button type="submit">Submit Search</button></div></form>`;
+    const onSubmit = submitted();
+    const terms = document.querySelector("#terms") as HTMLInputElement;
+    const details = document.querySelector("#details") as HTMLElement;
+    terms.addEventListener("change", () => {
+      details.style.display = terms.checked ? "block" : "none";
+    });
+    expect(extension.fillSsiManualForm(lena, true)).toBe(true);
+    expect(terms.checked).toBe(false);
+    expect(value("#first")).toBe("");
+    terms.click();
+    await waitFor(() => expect(value("#dob")).toBe("1990-04-12"));
+    expect(value("#first")).toBe("Lena");
+    expect(value("#last")).toBe("Ortiz");
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("does not fill any field when a visible existing name conflicts", async () => {
+    document.body.innerHTML = `<form><div id="details" style="display:none">
+      <label>First Name<input id="first"></label><label>Last Name<input id="last"></label>
+      <label>Birthday<input id="dob" type="date"></label></div></form>`;
+    expect(extension.fillSsiManualForm(lena, true)).toBe(true);
+    (document.querySelector("#first") as HTMLInputElement).value = "Elena";
+    (document.querySelector("#details") as HTMLElement).style.display = "block";
+    await Promise.resolve();
+    expect(value("#first")).toBe("Elena");
+    expect(value("#last")).toBe("");
+    expect(value("#dob")).toBe("");
+  });
+
+  it("stops waiting when staff edit a field before the rest appear", async () => {
+    document.body.innerHTML = `<form>
+      <label>First Name<input id="first"></label><label>Last Name<input id="last"></label>
+      <div id="date" style="display:none"><label>Birthday<input id="dob" type="date"></label></div></form>`;
+    expect(extension.fillSsiManualForm(lena, true)).toBe(true);
+    expect(value("#first")).toBe("");
+    const first = document.querySelector("#first") as HTMLInputElement;
+    first.value = "Elena";
+    first.dispatchEvent(new Event("input", { bubbles: true }));
+    (document.querySelector("#date") as HTMLElement).style.display = "block";
+    await Promise.resolve();
+    expect(value("#first")).toBe("Elena");
+    expect(value("#last")).toBe("");
+    expect(value("#dob")).toBe("");
+  });
+
+  it("does not mix names with an SSI Master ID already in the form", () => {
+    document.body.innerHTML = `<form><label>First Name<input id="first"></label><label>Last Name<input id="last"></label>
+      <input id="verify-mid" type="number" value="123456"><label>Birthday<input id="dob" type="date"></label></form>`;
+    expect(extension.fillSsiManualForm(lena, true)).toBe(true);
+    expect(value("#first")).toBe("");
+    expect(value("#last")).toBe("");
+    expect(value("#dob")).toBe("");
+  });
+
+  it("stops waiting after two minutes without filling later changes", async () => {
+    vi.useFakeTimers();
+    try {
+      document.body.innerHTML = `<form><div id="details" style="display:none">
+        <label>First Name<input id="first"></label><label>Last Name<input id="last"></label></div></form>`;
+      expect(extension.fillSsiManualForm(lena, true)).toBe(true);
+      vi.advanceTimersByTime(120_000);
+      (document.querySelector("#details") as HTMLElement).style.display = "block";
+      await Promise.resolve();
+      expect(value("#first")).toBe("");
+      expect(value("#last")).toBe("");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+  it("fills SSI's name and known birthday without accepting terms or submitting", () => {
+    document.body.innerHTML = `
+      <form><input type="checkbox" id="terms">
+        <label for="first">First Name</label><input id="first">
+        <label for="last">Last Name</label><input id="last">
+        <label for="birthday">Birthday</label><input id="birthday" type="date">
+        <button type="submit">Submit Search</button></form>`;
+    const onSubmit = submitted();
+    expect(extension.fillSsiManualForm(lena, true)).toBe(true);
+    expect(value("#first")).toBe("Lena");
+    expect(value("#last")).toBe("Ortiz");
+    expect(value("#birthday")).toBe("1990-04-12");
+    expect((document.querySelector("#terms") as HTMLInputElement).checked).toBe(false);
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("leaves SSI untouched when an expected field is ambiguous", () => {
+    document.body.innerHTML = `<form><label>First Name<input></label><label>First Name<input></label>
+      <label>Last Name<input></label><label>Birthday<input type="date"></label><button>Search</button></form>`;
+    expect(extension.fillSsiManualForm(lena, true)).toBe(true);
+    expect(Array.from(document.querySelectorAll("input")).every((box) => box.value === "")).toBe(
+      true,
+    );
+  });
+
+  it("never fills a page outside SSI's lookup, even if its form looks right", () => {
+    document.body.innerHTML = `<form><label>First Name<input id="first"></label><label>Last Name<input id="last"></label><button>Search</button></form>`;
+    expect(extension.fillSsiManualForm(lena)).toBe(false);
+    expect(value("#first")).toBe("");
+    expect(value("#last")).toBe("");
+  });
+
+  it("fills names when no birthday is known", () => {
+    document.body.innerHTML = `<form><label>First Name<input id="first"></label><label>Last Name<input id="last"></label><button>Search</button></form>`;
+    expect(extension.fillSsiManualForm({ ...lena, birthDate: null }, true)).toBe(true);
+    expect(value("#first")).toBe("Lena");
+    expect(value("#last")).toBe("Ortiz");
+  });
   it("fills first name, last name and a typed birth date in the agency's format, then submits", () => {
     document.body.innerHTML = `
       <form>

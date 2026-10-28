@@ -12,6 +12,7 @@ import type { StaffTranslator } from "./staff-messages";
  */
 const KEYS = {
   arrival: "manifest.catchUp.arrival",
+  running_late: "manifest.catchUp.runningLate",
   seat_taken: "manifest.catchUp.seatTaken",
   seat_released: "manifest.catchUp.seatReleased",
   seat_turned_away: "manifest.catchUp.seatTurnedAway",

@@ -45,7 +45,7 @@ import { StaffSectionTabs } from "../_components/StaffSectionTabs";
 import { DepartureLedger, departureLedgerRows } from "./_components/DepartureLedger";
 import { DepartureMoney } from "./_components/DepartureMoney";
 import { EmptySeats } from "./_components/EmptySeats";
-import { MonthDays } from "./_components/MonthDays";
+import { MonthDays, readMonthDays } from "./_components/MonthDays";
 import { MonthFigures } from "./_components/MonthFigures";
 import {
   BuddyReferrerLines,
@@ -57,7 +57,7 @@ import {
 } from "./_components/MonthMoneyDetail";
 import { LeadTimes, readMonthOwner, WeatherLine } from "./_components/MonthOwnerLines";
 import { monthFigureBasis, monthFigureList } from "./_components/month-figure-list";
-import { ReportExportMenu } from "./_components/ReportExportMenu";
+import { MonthReportActions } from "./_components/ReportExportMenu";
 import { ReportRangeTabs } from "./_components/ReportRangeTabs";
 import { YearView } from "./_components/YearView";
 
@@ -232,32 +232,30 @@ export default async function ReportsPage({
     : null;
   // Both months ride one Promise.all; the month under way also reads its sailed half (item 22).
   const shopMoney = { currency, timeZone: tz };
-  const [input, tripPage, baselineInput, moneyDetail, emptySeats, sailedInput, owner] =
-    await Promise.all([
-      getMonthlyReport(db, shop.id, monthStart, monthEnd, shopMoney),
-      // A non-numeric or missing `?page=` reads as page 1; the query clamps it
-      // into range, so switching to a shorter month never strands the reader on
-      // a page that month does not have.
-      pagedMonthlyReportTrips(db, shop.id, monthStart, monthEnd, {
-        page: Number.parseInt(page ?? "", 10),
-      }),
-      baselineWindow
-        ? getMonthlyReport(db, shop.id, baselineWindow.start, baselineWindow.end, shopMoney)
-        : Promise.resolve(null),
-      // The money by line, the package dives still owed, and the returning
-      // divers (owner decision 2026-10-09) — `src/lib/report-lines.ts`.
-      getMonthMoneyDetail(db, shop.id, monthStart, monthEnd, now, shopMoney, current),
-      // The departures that left with empty seats (issue #2424), on the debrief's own rule.
-      getMonthDeparturesWithEmptySeats(
-        db,
-        shop.id,
-        { startUtc: monthStart, endUtc: monthEnd },
-        now,
-      ),
-      underWay ? getMonthlyReport(db, shop.id, monthStart, now, shopMoney) : null,
-      // The weather's month (fifth loop, item 27).
-      readMonthOwner(db, shop, { startUtc: monthStart, endUtc: monthEnd }),
-    ]);
+  const [
+    input,
+    tripPage,
+    baselineInput,
+    moneyDetail,
+    emptySeats,
+    sailedInput,
+    owner,
+    monthSummary,
+  ] = await Promise.all([
+    getMonthlyReport(db, shop.id, monthStart, monthEnd, shopMoney),
+    pagedMonthlyReportTrips(db, shop.id, monthStart, monthEnd, {
+      page: Number.parseInt(page ?? "", 10),
+    }),
+    baselineWindow
+      ? getMonthlyReport(db, shop.id, baselineWindow.start, baselineWindow.end, shopMoney)
+      : Promise.resolve(null),
+    getMonthMoneyDetail(db, shop.id, monthStart, monthEnd, now, shopMoney, current),
+    // The departures that left with empty seats (issue #2424), on the debrief's own rule.
+    getMonthDeparturesWithEmptySeats(db, shop.id, { startUtc: monthStart, endUtc: monthEnd }, now),
+    underWay ? getMonthlyReport(db, shop.id, monthStart, now, shopMoney) : null,
+    readMonthOwner(db, shop, { startUtc: monthStart, endUtc: monthEnd }),
+    readMonthDays(db, shop.id, tz, current, now),
+  ]);
   const report = summarizeMonth(input);
   const money = (cents: number) => formatReportMoney(cents, currency, locale);
   const sailedReport = sailedInput ? summarizeMonth(sailedInput) : null;
@@ -339,11 +337,13 @@ export default async function ReportsPage({
     <StaffPage width="full">
       <ShopPageHeader
         title={t("shared.shopSections.money")}
-        // The month's three files, one menu (visual review A06).
         actions={
-          hasMonthlyActivity ? (
-            <ReportExportMenu t={t} shopSlug={shopSlug} month={currentMonthKey} />
-          ) : undefined
+          <MonthReportActions
+            t={t}
+            shopSlug={shopSlug}
+            month={currentMonthKey}
+            hasActivity={monthSummary.hasActivity}
+          />
         }
       />
       <StaffSectionTabs
@@ -418,7 +418,7 @@ export default async function ReportsPage({
         />
       ) : (
         <>
-          <MonthDays {...{ db, now, locale, t }} shopId={shop.id} timeZone={tz} month={current} />
+          <MonthDays summary={monthSummary} locale={locale} t={t} month={current} />
           <MonthFigures label={t("reports.numbersLabel")} figures={figures} caption={figureBasis} />
 
           <MonthFootnotes

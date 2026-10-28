@@ -203,12 +203,30 @@ describe("the overdue rows", () => {
         }),
       ],
     });
-    expect(
-      screen.getByText("Never picked up · Grace Mensah · was due Aug 18, 2026"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Grace Mensah · was due Aug 18, 2026")).toBeInTheDocument();
+    expect(screen.getByText("Never picked up")).toBeInTheDocument();
     expect(container.querySelector(".text-warning-strong")).toBeNull();
     expect(screen.getByRole("button", { name: "Release — BCD-07" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Mark returned/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Check out/ })).toBeNull();
+    expect(screen.getByRole("link", { name: "BCD-07" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/gear/unit-BCD-07",
+    );
+  });
+
+  it("says the shared never-picked-up condition once for several uncollected units", () => {
+    renderLedger({
+      overdue: [
+        unit("BCD-07", { reservation: reservation({ checkedOutAt: null }) }),
+        unit("BCD-08", {
+          reservation: reservation({ reservationId: "res-2", checkedOutAt: null }),
+        }),
+      ],
+    });
+    expect(screen.getAllByText("Never picked up")).toHaveLength(1);
+    expect(screen.getAllByText("Grace Mensah · was due Aug 25, 2026")).toHaveLength(2);
+    expect(screen.getAllByRole("button", { name: /^Release/ })).toHaveLength(2);
   });
 });
 

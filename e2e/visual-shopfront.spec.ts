@@ -4,14 +4,17 @@
  * One of the per-feature `e2e/visual-*.spec.ts` files; the capture mechanics are
  * `e2e/visual-harness.ts`, and the procedure is the e2e-and-visual skill.
  */
+import { diverTranslator } from "../src/i18n/messages";
 import { expect, test } from "./fixtures";
 import { bookASeatAndOpenThread } from "./helpers";
 import {
   ADVANCED_CHARTER,
   capture,
+  diverCopy,
   FLOW_TIMEOUT_MS,
   installVisualBuildGuard,
   MINIMUM_SEATS_TRIP,
+  PHONE_VIEWPORT,
   publicReefCard,
   REEF_TRIP,
   SURFACE_TIMEOUT_MS,
@@ -261,6 +264,46 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "booking-confirmed-embed", scheme);
       });
 
+      test(`the embedded trip keeps booking before the full day plan (${scheme})`, async ({
+        page,
+      }) => {
+        await page.setViewportSize(PHONE_VIEWPORT);
+        await page.goto("/s/blue-mantis");
+        await publicReefCard(page).getByRole("link", { name: REEF_TRIP }).click();
+        await page
+          .getByRole("heading", { name: diverTranslator("en-US")("trip.theDay") })
+          .waitFor();
+        await expect(page.getByTestId("trip-site-reviews")).toHaveCount(1);
+        await expect(page.getByTestId("trip-site-reviews").locator("li")).toHaveCount(2);
+        const embeddedTrip = new URL(page.url());
+        embeddedTrip.searchParams.set("embed", "1");
+        await page.goto(embeddedTrip.href);
+        await expect(page).toHaveURL(embeddedTrip.href);
+        await expect(page.getByLabel("People", { exact: true })).toHaveAttribute(
+          "data-hydrated",
+          "true",
+        );
+        const t = diverTranslator("en-US");
+        const day = page.getByRole("heading", { name: t("trip.theDay"), exact: true });
+        await expect(day).toHaveCount(1);
+        await expect(day).toBeVisible();
+        await expect(page.locator("#book form")).toBeVisible();
+        expect(
+          await day.evaluate((heading) => {
+            const booking = document.querySelector("#book form");
+            return Boolean(
+              booking &&
+                booking.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING,
+            );
+          }),
+        ).toBe(true);
+        // Molasses and French retain one sightings beat each. The existing
+        // page reader excludes reviews in embeds, including these two quotes.
+        await expect(page.getByText(t("trip.seen.heading"), { exact: true })).toHaveCount(2);
+        await expect(page.getByTestId("trip-site-reviews")).toHaveCount(0);
+        await capture(page, "booking-trip-embed", scheme);
+      });
+
       // The seeded reef trip's public page: hero, "The day", the pitch — a fact
       // chip, three field-guide tiles and one closed door — the conditions
       // line, two alternates, the one-line requirement, and the form last (ADR
@@ -481,6 +524,18 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/s/blue-mantis/courses/open-water-diver");
         await page.getByRole("heading", { name: "Upcoming dates" }).waitFor();
         await capture(page, "course-page", scheme);
+      });
+
+      test(`the course alternate-date enquiry opens beneath its dates (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/s/blue-mantis/courses/open-water-diver");
+        await page.getByRole("heading", { name: "Upcoming dates" }).waitFor();
+        const inquiry = page.locator("#get-in-touch");
+        await page.locator("#get-in-touch > summary").click();
+        await expect(inquiry).toHaveAttribute("open", "");
+        await expect(inquiry.getByLabel(diverCopy("inquiry.yourEmail"))).toBeVisible();
+        await capture(page, "course-alternate-date-enquiry-open", scheme);
       });
 
       /**

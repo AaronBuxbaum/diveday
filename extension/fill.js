@@ -7,27 +7,136 @@
 // a field the lookup needs cannot be found, nothing is submitted and the app
 // falls back to the plain link.
 
+/** Fill visible SSI fields after the staffer reveals them; never submit or accept terms. */
+function fillSsiManualForm(query, sample = false) {
+  if (
+    !sample &&
+    (location.origin !== "https://my.divessi.com" ||
+      location.pathname.replace(/\/+$/, "") !== "/online_diver_check")
+  )
+    return false;
+  function words(box) {
+    return [
+      box.name,
+      box.id,
+      box.placeholder,
+      box.getAttribute("aria-label"),
+      ...Array.from(box.labels || [], (label) => label.textContent),
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .replace(/([a-z])([A-Z])/g, "$1 $2")
+      .replace(/[_-]+/g, " ");
+  }
+  const root = sample
+    ? document.querySelector("form")
+    : document.querySelector("#show_diver_check");
+  if (!root) return false;
+  let observer;
+  let timer;
+  let writing = false;
+  function stop() {
+    observer?.disconnect();
+    if (timer) clearTimeout(timer);
+    window.removeEventListener("pagehide", stop);
+    document.removeEventListener("change", onChange, true);
+    document.removeEventListener("input", onEdit, true);
+    query = null;
+  }
+  function onEdit(event) {
+    const target = event.target;
+    if (
+      !writing &&
+      target instanceof HTMLInputElement &&
+      root.contains(target) &&
+      ["text", "date", "number"].includes(target.type)
+    )
+      stop();
+  }
+  function onChange(event) {
+    onEdit(event);
+    if (query && !writing) attempt();
+  }
+  function visible(box) {
+    if (
+      typeof box.checkVisibility === "function" &&
+      !box.checkVisibility({ visibilityProperty: true })
+    )
+      return false;
+    for (let at = box; at; at = at.parentElement) {
+      const style = window.getComputedStyle(at);
+      if (style.display === "none" || style.visibility === "hidden") return false;
+    }
+    return true;
+  }
+  function attempt() {
+    if (
+      !root.isConnected ||
+      (!sample &&
+        (location.origin !== "https://my.divessi.com" ||
+          location.pathname.replace(/\/+$/, "") !== "/online_diver_check"))
+    )
+      return stop();
+    const boxes = Array.from(root.querySelectorAll('input:not([type="hidden"])')).filter(
+      (box) => !box.disabled && !box.readOnly && ["text", "date"].includes(box.type),
+    );
+    function unique(pattern) {
+      const matches = boxes.filter((box) => pattern.test(words(box)));
+      return matches.length === 1 ? matches[0] : null;
+    }
+    const first = unique(/\b(first|given)\s*name\b/i);
+    const last = unique(/\b(last|family)\s*name\b/i);
+    if (
+      !first ||
+      !last ||
+      !first.form ||
+      first.form !== last.form ||
+      !visible(first) ||
+      !visible(last)
+    )
+      return;
+    const birthday = unique(/\b(birthday|birth\s*date|date\s*of\s*birth)\b/i);
+    if (query.birthDate && (!birthday || birthday.form !== first.form || !visible(birthday)))
+      return;
+    const fields = [
+      [first, query.firstName],
+      [last, query.lastName],
+      [birthday?.form === first.form ? birthday : null, query.birthDate],
+    ];
+    // Do not combine the diver's information with a different person already
+    // in the form, even if the conflicting box is currently hidden.
+    const masterId = root.querySelector("#verify-mid");
+    if (
+      masterId?.value ||
+      fields.some(
+        ([box, value]) =>
+          box?.value && (!value || box.value.trim().toLowerCase() !== value.trim().toLowerCase()),
+      )
+    )
+      return stop();
+    writing = true;
+    for (const [box, value] of fields) {
+      if (!box || !value || box.value) continue;
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set.call(box, value);
+      box.dispatchEvent(new Event("input", { bubbles: true }));
+      box.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+    writing = false;
+    stop();
+  }
+  observer = new MutationObserver(attempt);
+  observer.observe(root, { childList: true, subtree: true, attributes: true });
+  timer = setTimeout(stop, 120_000);
+  window.addEventListener("pagehide", stop, { once: true });
+  document.addEventListener("change", onChange, true);
+  document.addEventListener("input", onEdit, true);
+  attempt();
+  return true;
+}
+
 /**
- * Fill the agency's form with one diver and submit it.
- *
- * Nothing is typed until every box the lookup needs, and the button that
- * sends it, has been found: a lookup that cannot be finished leaves the page
- * exactly as it was.
- *
- * A page behind the shop's own sign-in (`spec.signIn`, PADI's Pros' Site) is
- * held tighter than a public lookup: nothing is typed on a sign-in, sign-up or
- * account address (`signInPath`, from protocol.js) or a page asking for a
- * password or, outside any search, an email; nothing is typed anywhere but the
- * page the lookup opened, when its address names one (DiveChek's
- * `/divechek`); every box filled must search, in a form with no other box;
- * a student's email goes only into a box that says it searches or is the
- * student's; and the only button pressed is that search's own.
- *
- * Two answers say the page is not ready rather than changed: `form`, a page
- * with no box to type into at all yet (a form still drawing, a challenge in
- * front of it), and `captcha`, a lookup whose own form asks whether the
- * staffer is human (a captcha box drawn in it, as shape.js reads one). A
- * captcha elsewhere on the page, on a newsletter's form, stops nothing.
+ * Fill and submit an automatic agency lookup. Missing fields and captchas stop
+ * the search; signed-in pages are restricted to their own search controls.
  * @param {{firstName: string, lastName: string, birthDate?: string|null, cardNumber?: string|null, email?: string}} query
  * @param {{fields: string[], dateFormat: string, either?: boolean, signIn?: boolean}} spec
  * @param {string} [signInPath] the source of `SIGN_IN_PATH` (protocol.js)
@@ -843,6 +952,7 @@ function excerptAroundName(text, firstName, lastName) {
 }
 
 globalThis.DiveDayCertCheck = Object.assign(globalThis.DiveDayCertCheck || {}, {
+  fillSsiManualForm,
   fillAgencyForm,
   readAgencyPage,
   pageAsksToSignIn,

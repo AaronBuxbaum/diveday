@@ -8,6 +8,7 @@ import { saveShopIntegration } from "@/db/integrations";
 import { integrationDeliveries, orders, shopIntegrations } from "@/db/schema";
 import { nowDate, nowMs } from "@/lib/clock";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
+import { responseJsonWithinDeadline, untilAborted } from "./delivery-deadline";
 import { dispatchDueIntegrationDeliveries, INTEGRATIONS_CRON_CRONTAB } from "./dispatcher";
 
 // One seeded database for the file and a rolled-back transaction per test
@@ -64,6 +65,140 @@ async function queueOrderPaid(db: AppDb, shopId: string, key: string, dueAtMs?: 
  * ceiling and the healthy/errored flip were all uncovered.
  */
 describe("dispatchDueIntegrationDeliveries", () => {
+  it("does not start a fetch when its delivery signal is already aborted", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const fetchImpl = vi.fn(async () => jsonResponse(200));
+
+    await expect(untilAborted(() => fetchImpl(), controller.signal)).rejects.toThrow(
+      "Integration delivery deadline exceeded",
+    );
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it("observes a late rejection after abort has settled a pending provider operation", async () => {
+    const controller = new AbortController();
+    let rejectLate: ((error: Error) => void) | undefined;
+    const operation = untilAborted(
+      () =>
+        new Promise<unknown>((_resolve, reject) => {
+          rejectLate = reject;
+        }),
+      controller.signal,
+    );
+
+    controller.abort();
+    await expect(operation).rejects.toThrow("Integration delivery deadline exceeded");
+    rejectLate?.(new Error("late fake fetch failure"));
+    await Promise.resolve();
+  });
+
+  it("bounds a response body that ignores abort and observes its late rejection", async () => {
+    const controller = new AbortController();
+    let rejectBody: ((error: Error) => void) | undefined;
+    const response = {
+      json: () =>
+        new Promise<unknown>((_resolve, reject) => {
+          rejectBody = reject;
+        }),
+    } as Response;
+
+    const reading = responseJsonWithinDeadline(response, controller.signal);
+    controller.abort();
+    await expect(reading).rejects.toThrow("Integration delivery deadline exceeded");
+    rejectBody?.(new Error("late fake body failure"));
+    await Promise.resolve();
+  });
+
+  it("admits work at the exact minimum-slice plus settlement boundary", async () => {
+    const { db, shop } = historyCtx;
+    await connectZapier(db, shop.id);
+    await queueOrderPaid(db, shop.id, "order:paid:budget-boundary");
+    const fetchImpl = vi.fn(async () => jsonResponse(200));
+
+    const summary = await dispatchDueIntegrationDeliveries(db, {
+      fetchImpl,
+      timeBudgetMs: 2_000,
+      settlementReserveMs: 1_000,
+      monotonicNow: () => 0,
+    });
+
+    expect(summary).toMatchObject({ delivered: 1, budgetExhausted: false, skippedByBudget: 0 });
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it("admits no delivery when the deadline is already exhausted", async () => {
+    const { db, shop } = historyCtx;
+    await connectZapier(db, shop.id);
+    const { delivery } = await queueOrderPaid(db, shop.id, "order:paid:budget-zero");
+    const fetchImpl = vi.fn(async () => jsonResponse(200));
+
+    const summary = await dispatchDueIntegrationDeliveries(db, {
+      fetchImpl,
+      timeBudgetMs: 0,
+      settlementReserveMs: 1_000,
+      monotonicNow: () => 0,
+    });
+
+    expect(summary).toMatchObject({
+      scanned: 1,
+      delivered: 0,
+      budgetExhausted: true,
+      skippedByBudget: 1,
+    });
+    expect(fetchImpl).not.toHaveBeenCalled();
+    const [after] = await db
+      .select()
+      .from(integrationDeliveries)
+      .where(eq(integrationDeliveries.id, delivery.id));
+    expect(after?.status).toBe("pending");
+  });
+
+  it("stops a slow batch before claiming rows it cannot finish", async () => {
+    const { db, shop } = historyCtx;
+    await connectZapier(db, shop.id);
+    const queued: Awaited<ReturnType<typeof queueOrderPaid>>[] = [];
+    for (let index = 0; index < 6; index += 1) {
+      queued.push(
+        await queueOrderPaid(
+          db,
+          shop.id,
+          `order:paid:budget-batch-${index}`,
+          nowMs() - (6 - index) * 1_000,
+        ),
+      );
+    }
+    let elapsed = 0;
+    const fetchImpl = vi.fn(async () => {
+      elapsed += 15_000;
+      return jsonResponse(200);
+    });
+
+    const summary = await dispatchDueIntegrationDeliveries(db, {
+      fetchImpl,
+      timeBudgetMs: 60_000,
+      monotonicNow: () => elapsed,
+    });
+
+    expect(summary).toMatchObject({
+      delivered: 3,
+      retried: 1,
+      budgetExhausted: true,
+      skippedByBudget: 2,
+    });
+    expect(fetchImpl).toHaveBeenCalledTimes(4);
+    const rows = await db.select().from(integrationDeliveries);
+    const byId = new Map(rows.map((row) => [row.id, row]));
+    expect(queued.map(({ delivery }) => byId.get(delivery.id))).toEqual([
+      expect.objectContaining({ status: "delivered" }),
+      expect.objectContaining({ status: "delivered" }),
+      expect.objectContaining({ status: "delivered" }),
+      expect.objectContaining({ status: "pending", lastError: "integration_delivery_timeout" }),
+      expect.objectContaining({ status: "pending" }),
+      expect.objectContaining({ status: "pending" }),
+    ]);
+  });
+
   it("delivers a due event and marks the integration healthy", async () => {
     const { db, shop } = historyCtx;
     const integration = await connectZapier(db, shop.id);

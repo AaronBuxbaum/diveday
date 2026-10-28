@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest";
 describe("next.config redirects", () => {
   it("sends the retired walk-in page to the departure door in walk-in mode", async () => {
     const mod = await import("../next.config");
-    const config = mod.default as { redirects?: () => Promise<unknown[]> };
+    const config = mod.default("phase-production-build") as {
+      redirects?: () => Promise<unknown[]>;
+    };
     const rules = (await config.redirects?.()) as {
       source: string;
       destination: string;

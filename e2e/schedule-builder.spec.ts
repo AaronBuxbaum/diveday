@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { diverTranslator } from "../src/i18n/messages";
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 import { daysFromNow, e2eNow, openTripAbout, openTripAboutRow } from "./helpers";
 
@@ -338,7 +339,7 @@ test.describe("schedule builder", () => {
     await row.getByRole("link", { name: title }).click();
     await expect(page.getByText("$129 per diver")).toBeVisible();
     await openTripAbout(page);
-    await openTripAboutRow(page, "The plan");
+    await openTripAboutRow(page, "Booking and payment");
     await expect(page.getByLabel(/Price per diver/)).toHaveValue("129");
   });
 
@@ -421,8 +422,9 @@ test.describe("schedule builder", () => {
     // still knows which day the rows under their thumb belong to. They pin
     // directly under the one chrome bar both shells wear (ADR
     // 20260827-clearwater-surface-language, decision 10), which they now read
-    // rather than measure: `top-(--chrome-h)` is the same declaration the bar
-    // sets its own height from. Before that token the board carried a
+    // through `top-(--chrome-h)`: the staff bar has a fixed height, while the
+    // public bar publishes its measured natural border-box height. Before
+    // that token the board carried a
     // hand-measured `top-[68px]` and only this test stood between it and the
     // bar's next change, while the public schedule pinned at `top-0` and spent
     // every scroll hidden underneath its own header — which is the failure
@@ -503,6 +505,9 @@ test.describe("schedule builder", () => {
         return {
           dayCount: tops.length,
           barHeight: bar ? bar.getBoundingClientRect().height : 0,
+          chromeHeight: getComputedStyle(document.documentElement)
+            .getPropertyValue("--chrome-h")
+            .trim(),
           pinnedCount: pinned.length,
           // How far the worst-placed pinned header clears the bar. Negative
           // means it is hiding underneath it.
@@ -519,9 +524,12 @@ test.describe("schedule builder", () => {
     // which this question has no answer.
     for (const [surface, url, ready, widths] of [
       ["the schedule board", BOARD, "Schedule", [390, 768, 1280]],
-      // The shopfront's h1 is the shop's own name now, not the word
-      // "Schedule" over a DiveDay-branded bar (slice 7a's hero).
-      ["the public schedule", `/s/${SHOP}`, "Blue Mantis Divers", [390, 768, 1280]],
+      [
+        "the public schedule",
+        `/s/${SHOP}`,
+        diverTranslator("en-US")("schedule.title"),
+        [390, 768, 1280],
+      ],
     ] as const) {
       await page.goto(url);
       // The destination's own h1 — what makes the measurement below wait on
@@ -543,14 +551,35 @@ test.describe("schedule builder", () => {
         // It cannot hide a regression. A bar that genuinely never renders
         // still fails here, and says so in as many words instead of arriving
         // as an arithmetic complaint about zero.
-        await expect(page.locator("header.sticky")).toBeVisible();
+        const bar = page.locator("header.sticky");
+        await expect(bar).toBeVisible();
+        if (surface === "the public schedule") {
+          await expect(bar).toHaveAttribute("data-chrome-measured", "true");
+          // A resize can leave the prior width's measurement until the
+          // observer runs. Wait for the published token and the independently
+          // observed border box to agree at the same precision as below.
+          await expect
+            .poll(() =>
+              bar.evaluate((element) => {
+                const token = getComputedStyle(document.documentElement)
+                  .getPropertyValue("--chrome-h")
+                  .trim();
+                return token.endsWith("px")
+                  ? Math.abs(element.getBoundingClientRect().height - Number.parseFloat(token))
+                  : Infinity;
+              }),
+            )
+            .toBeLessThan(0.5);
+        }
         const measured = await measure();
 
-        // The height `--chrome-h` names. Preflight makes the bar `border-box`,
-        // so the token is its whole outside edge with the hairline inside it:
-        // 56px for one row, and 88px (5.5rem) for the shopfront's two rows
-        // below `sm` (#2303, the shop's name above its tabs).
-        const barHeight = surface === "the public schedule" && width < 640 ? 88 : 56;
+        // Staff keeps its fixed 56px contract. Public chrome includes natural
+        // wrapping and the hairline, so check its observed height against the
+        // published pixel token instead of the old two-row 88px assumption.
+        if (surface === "the public schedule")
+          expect(measured.chromeHeight).toMatch(/^\d+(?:\.\d+)?px$/);
+        const barHeight =
+          surface === "the public schedule" ? Number.parseFloat(measured.chromeHeight) : 56;
         expect(
           measured.barHeight,
           `the chrome bar on ${surface} is ${measured.barHeight}px tall at ${width}px, not the ${barHeight}px --chrome-h names`,
@@ -591,7 +620,7 @@ test.describe("schedule builder", () => {
     // does not — that is what `truncate` is for, and a shop can always pick a
     // longer name than any width can hold.
     await page.goto(`/s/${SHOP}`);
-    await expect(page.getByRole("heading", { name: "Blue Mantis Divers", level: 1 })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Schedule", level: 1 })).toBeVisible();
 
     for (const width of [390, 430]) {
       await page.setViewportSize({ width, height: 800 });
@@ -677,7 +706,7 @@ test.describe("schedule builder", () => {
     await week.getByRole("link", { name: new RegExp(`^Set a price for ${title},`) }).click();
     await expect(page).toHaveURL(/\/trips\/[0-9a-f-]+\?view=details#details$/);
     await openTripAbout(page);
-    await openTripAboutRow(page, "The plan");
+    await openTripAboutRow(page, "Booking and payment");
     await page.getByLabel(/Price per diver/).fill("110");
     await page.getByRole("button", { name: "Save changes" }).click();
     // The save redirects through `noticeUrl`, so its own notice is the signal

@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import type { AppDb } from "@/db/client";
 import { createCounterRental } from "@/db/gear-counter-rentals";
 import { gearItems, gearReservations, people, shops } from "@/db/schema";
@@ -33,11 +33,59 @@ export async function gearSliceStates(request: Request, db: AppDb, shopId: strin
     ? await lendAMaskToSomeoneWithNoWaiver(db, shopId, now, timezone)
     : null;
   const rentalLookup = asked("rentalLookup") ? await seedRentalLookupFleet(db, shopId, now) : null;
+  const gearUncollected = asked("gearUncollected")
+    ? await leaveTwoUnitsUncollected(db, shopId, now, timezone)
+    : null;
   return {
     ...(gearConcern ? { gearConcern } : {}),
     ...(rentalWaiverWarning ? { rentalWaiverWarning } : {}),
     ...(rentalLookup ? { rentalLookup } : {}),
+    ...(gearUncollected ? { gearUncollected } : {}),
   };
+}
+
+/** Two stale holds still on the wall, independent of the checked-out trouble kit. */
+async function leaveTwoUnitsUncollected(db: AppDb, shopId: string, now: Date, timezone: string) {
+  const labels = ["BCD #3", "BCD #4"];
+  const units = await db
+    .select({ id: gearItems.id })
+    .from(gearItems)
+    .where(
+      and(
+        eq(gearItems.shopId, shopId),
+        inArray(gearItems.label, labels),
+        isNull(gearItems.deletedAt),
+      ),
+    );
+  const [holder] = await db
+    .select({ id: people.id })
+    .from(people)
+    .where(and(eq(people.shopId, shopId), eq(people.fullName, "Priya Sharma"), livePerson()))
+    .limit(1);
+  if (units.length !== labels.length || !holder) return null;
+  for (const unit of units) {
+    const [existing] = await db
+      .select({ id: gearReservations.id })
+      .from(gearReservations)
+      .where(
+        and(
+          eq(gearReservations.shopId, shopId),
+          eq(gearReservations.gearItemId, unit.id),
+          isNull(gearReservations.returnedAt),
+          isNull(gearReservations.releasedAt),
+        ),
+      )
+      .limit(1);
+    if (!existing)
+      await db.insert(gearReservations).values({
+        shopId,
+        gearItemId: unit.id,
+        personId: holder.id,
+        reservedFrom: calendarDateInTimezone(new Date(now.getTime() - 4 * 24 * HOUR_MS), timezone),
+        reservedUntil: calendarDateInTimezone(new Date(now.getTime() - 2 * 24 * HOUR_MS), timezone),
+      });
+  }
+  return { labels };
 }
 
 const CONCERN_HOLDER = "Dana Reyes";

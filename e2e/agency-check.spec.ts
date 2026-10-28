@@ -7,7 +7,7 @@ signedInAsOwner();
 const SHOP = "blue-mantis";
 
 /**
- * **"Check with SSI", done by the DiveDay browser extension** (H-105).
+ * The app's automatic GUE check and manual SSI handoff (H-105).
  *
  * The installed extension is `agency-check-extension.spec.ts`'s; this covers
  * the app's side of each answer, and the agencies' pages are not ours to
@@ -16,7 +16,7 @@ const SHOP = "blue-mantis";
  * (`src/lib/cert-check-extension.ts`). The reply is the text an agency's page
  * might show; the verdict, the write and the Undo are the real ones.
  */
-async function installFakeExtension(page: Page, answer: "match" | "captcha", version = "1.5.0") {
+async function installFakeExtension(page: Page, answer: "match" | "captcha", version = "1.6.0") {
   await page.addInitScript(
     ([mode, announced]) => {
       const announce = () => {
@@ -30,7 +30,21 @@ async function installFakeExtension(page: Page, answer: "match" | "captcha", ver
       }
       window.addEventListener("message", (event) => {
         const data = event.data;
-        if (data?.source !== "diveday-page" || data.type !== "agency-check") return;
+        if (data?.source !== "diveday-page") return;
+        if (data.type === "ssi-manual-fill") {
+          window.postMessage(
+            {
+              source: "diveday-cert-check",
+              type: "agency-check-result",
+              requestId: data.requestId,
+              ok: false,
+              reason: "manual_opened",
+            },
+            window.location.origin,
+          );
+          return;
+        }
+        if (data.type !== "agency-check") return;
         const name = `${data.query.firstName} ${data.query.lastName}`;
         window.postMessage(
           {
@@ -40,7 +54,7 @@ async function installFakeExtension(page: Page, answer: "match" | "captcha", ver
             ok: true,
             pageText:
               mode === "match"
-                ? `Online Diver Check\n${name}\nCard ${data.query.cardNumber}\nOpen Water Diver`
+                ? `Verify card\n${name}\nCard ${data.query.cardNumber}\nRecreational Diver 1`
                 : "Please confirm you are human",
           },
           window.location.origin,
@@ -51,7 +65,7 @@ async function installFakeExtension(page: Page, answer: "match" | "captcha", ver
   );
 }
 
-async function diverWithPendingSsiCard(page: Page, offersCheck = true) {
+async function diverWithPendingCard(page: Page, agency: "gue" | "ssi" = "gue", offersCheck = true) {
   const stamp = Date.now();
   await page.goto(`/shop/${SHOP}/divers/new`);
   await page.getByLabel("Full name").fill(`Agency ${stamp} Checker`);
@@ -63,34 +77,36 @@ async function diverWithPendingSsiCard(page: Page, offersCheck = true) {
   const form = page
     .locator("form", { has: page.getByRole("button", { name: "Capture for review", exact: true }) })
     .filter({ visible: true });
-  await form.locator('select[name="agency"]').selectOption("ssi");
+  await form.locator('select[name="agency"]').selectOption(agency);
   await form.locator('select[name="card"]').selectOption("level:open_water");
-  await form.getByLabel("Certification number").fill(`SSI-${stamp}`);
+  await form.getByLabel("Certification number").fill(`${agency.toUpperCase()}-${stamp}`);
   await form.getByRole("button", { name: "Capture for review", exact: true }).click();
   const cards = await openDiverFileGroup(page, "Certification records");
   await expect(cards.getByRole("button", { name: "Mark certified" })).toBeVisible();
   if (offersCheck)
-    await expect(cards.getByRole("button", { name: "Check with SSI" })).toBeVisible();
+    await expect(
+      cards.getByRole("button", { name: `Check with ${agency.toUpperCase()}` }),
+    ).toBeVisible();
   return cards;
 }
 
 test("a match on the agency's page certifies the card, and Undo puts it back", async ({ page }) => {
   test.setTimeout(45_000);
   await installFakeExtension(page, "match");
-  const group = await diverWithPendingSsiCard(page);
+  const group = await diverWithPendingCard(page);
 
-  await group.getByRole("button", { name: "Check with SSI" }).click();
+  await group.getByRole("button", { name: "Check with GUE" }).click();
 
   const toast = page
     .getByRole("status")
-    .filter({ hasText: "SSI shows this certification. Marked certified." });
+    .filter({ hasText: "GUE shows this certification. Marked certified." });
   await expect(toast).toBeVisible();
-  await expect(group.getByText(/^Checked with SSI by /)).toBeVisible();
-  await expect(group.getByText(/Open Water Diver$/)).toBeVisible();
+  await expect(group.getByText(/^Checked with GUE by /)).toBeVisible();
+  await expect(group.getByText(/Card GUE-.*Recreational Diver 1$/)).toBeVisible();
 
   await toast.getByRole("button", { name: "Undo" }).click();
-  await expect(group.getByRole("button", { name: "Check with SSI" })).toBeVisible();
-  await expect(group.getByText(/^Checked with SSI by /)).toHaveCount(0);
+  await expect(group.getByRole("button", { name: "Check with GUE" })).toBeVisible();
+  await expect(group.getByText(/^Checked with GUE by /)).toHaveCount(0);
 });
 
 test("a page that does not read as a result writes nothing and offers the link", async ({
@@ -98,16 +114,16 @@ test("a page that does not read as a result writes nothing and offers the link",
 }) => {
   test.setTimeout(45_000);
   await installFakeExtension(page, "captcha");
-  const group = await diverWithPendingSsiCard(page);
+  const group = await diverWithPendingCard(page);
 
-  await group.getByRole("button", { name: "Check with SSI" }).click();
+  await group.getByRole("button", { name: "Check with GUE" }).click();
 
   await expect(
-    group.getByText(/^Couldn’t find .+ on SSI’s page\. Open it and look\.$/),
+    group.getByText(/^Couldn’t find .+ on GUE’s page\. Open it and look\.$/),
   ).toBeVisible();
-  await expect(group.getByRole("link", { name: "Check with SSI" })).toHaveAttribute(
+  await expect(group.getByRole("link", { name: "Check with GUE" })).toHaveAttribute(
     "href",
-    "https://my.divessi.com/online_diver_check",
+    "https://www.gue.com/verifycard",
   );
   await expect(group.getByRole("button", { name: "Mark certified" })).toBeVisible();
 });
@@ -126,10 +142,20 @@ test("a copy of the extension older than DiveDay needs is told to update, and ch
     row.getByText("Update the extension: this browser has 1.4.0, DiveDay needs 1.5.0."),
   ).toBeVisible();
 
-  const group = await diverWithPendingSsiCard(page, false);
+  const group = await diverWithPendingCard(page, "ssi", false);
   await expect(group.getByRole("link", { name: "Check with SSI" })).toHaveAttribute(
     "href",
     "https://my.divessi.com/online_diver_check",
   );
   await expect(group.getByRole("button", { name: "Check with SSI" })).toHaveCount(0);
+});
+
+test("SSI opens a manual lookup and leaves the certification pending", async ({ page }) => {
+  test.setTimeout(45_000);
+  await installFakeExtension(page, "match");
+  const group = await diverWithPendingCard(page, "ssi");
+  await group.getByRole("button", { name: "Check with SSI" }).click();
+  await expect(group.getByText(/Review SSI’s terms and complete the check/)).toBeVisible();
+  await expect(group.getByRole("button", { name: "Mark certified" })).toBeVisible();
+  await expect(group.getByText(/^Checked with SSI by /)).toHaveCount(0);
 });

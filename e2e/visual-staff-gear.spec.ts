@@ -232,6 +232,22 @@ for (const scheme of ["light", "dark"] as const) {
         await captureStickyFoot(page, "counter-rental-form-foot", scheme);
       });
 
+      test(`a counter tank offers air when nitrox is unconfirmed (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/gear/rentals/new?q=Lena");
+        await page.getByRole("link", { name: "Rent to Lena Fischer" }).click();
+        await page
+          .getByRole("group", { name: "Kind of gear" })
+          .getByRole("button", { name: /^Tank\b/ })
+          .click();
+        const tank = page
+          .getByRole("button", { name: /^AL(?:80|63)-/ })
+          .and(page.locator(":enabled"))
+          .first();
+        await tank.click();
+        await expect(page.getByText(staffCopy("counterRentals.new.fillUnavailable"))).toBeVisible();
+        await capture(page, "counter-rental-unconfirmed-nitrox", scheme);
+      });
+
       // The ticket the person walks off with: who, the tags, the back-by
       // date, and on screen the acts. Rented here rather than seeded so the
       // capture is the ticket a counter lands on, notice and all. Priya has
@@ -332,7 +348,10 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        await request.post("/api/test/seed-trouble-states?gearOut=1");
+        const seeded = await request.post(
+          "/api/test/seed-trouble-states?gearOut=1&gearUncollected=1",
+        );
+        expect(seeded.ok()).toBe(true);
         await page.goto("/shop/blue-mantis/gear");
         await page.getByRole("heading", { level: 1, name: "Gear" }).waitFor();
         // Both group headings, so the capture can never land on a half-built
@@ -341,6 +360,17 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { level: 2, name: /^Out/ }).waitFor();
         await page.getByRole("heading", { level: 2, name: /^Overdue/ }).waitFor();
         await page.getByRole("link", { name: "AL63-02" }).waitFor();
+        await expect(
+          page.getByText(staffCopy("gear.phase.neverPickedUp"), { exact: true }),
+        ).toHaveCount(1);
+        for (const label of ["BCD #3", "BCD #4"]) {
+          await expect(
+            page.getByRole("button", {
+              name: staffCopy("gear.fleet.acts.releaseUnit", { label }),
+              exact: true,
+            }),
+          ).toBeVisible();
+        }
         await capture(page, "gear-register-trouble", scheme);
       });
 

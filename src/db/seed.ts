@@ -74,6 +74,7 @@ import {
   people,
   personCourtesyEmailUnsubscribeTokens,
   personRoles,
+  platformBackupProgress,
   preDepartureCheckEvents,
   priorGearAssignments,
   priorVisits,
@@ -96,6 +97,7 @@ import {
   stripePayouts,
   stripeRefundFailures,
   tips,
+  todayReadMarks,
   tripAssignments,
   tripBlowoutDivers,
   tripBlowouts,
@@ -1388,6 +1390,9 @@ export async function clearDemoSchedule(
   db: DbExecutor,
   shopId: string,
 ): Promise<ClearedDemoSchedule> {
+  // The demo shop is excluded from platform backup, but clear its scheduler
+  // checkpoint with the rest of its resettable state if a local run wrote one.
+  await db.delete(platformBackupProgress).where(eq(platformBackupProgress.shopId, shopId));
   const shopTrips = await db.select({ id: trips.id }).from(trips).where(eq(trips.shopId, shopId));
   const tripIds = shopTrips.map((t) => t.id);
 
@@ -1401,6 +1406,9 @@ export async function clearDemoSchedule(
   // per-departure operational history keyed on bookings that are about to go,
   // and a spec that checked somebody in would otherwise leave that arrival
   // standing for the next one (ADR 20260907-the-counter-survives-offline).
+  // Today read marks are schedule history, not stable staff configuration. Their
+  // acknowledgement links cascade before the departures they reference go away.
+  await db.delete(todayReadMarks).where(eq(todayReadMarks.shopId, shopId));
   await db.delete(bookingArrivalEvents).where(eq(bookingArrivalEvents.shopId, shopId));
   await deleteDemoSafetyTrail(db, shopId);
   await db.delete(executedDives).where(eq(executedDives.shopId, shopId));

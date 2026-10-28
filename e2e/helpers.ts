@@ -482,7 +482,7 @@ export async function createTrip(
   // across ~30 specs, and the disclosed form is the superset — a spec that later
   // wants a deposit or a cancellation window must not have to know which depth
   // the helper happened to open.
-  await page.goto(`/shop/${options.shopSlug ?? "blue-mantis"}/schedule/board?add=full`);
+  await page.goto(`/shop/${options.shopSlug ?? "blue-mantis"}/schedule/board/new?add=full`);
   if (options.course !== undefined) {
     // By name, not label: board rows carry aria-labels naming their departure,
     // which a label match would sweep up alongside the panel's own select.

@@ -45,6 +45,7 @@ const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
   // The notes for Claude's reply drafts, at the foot of the page.
   // "Make a request" read nothing a request could hold (the `request` assist).
   "request-nothing": { tone: "warning", key: "assistsFront.inbox.requestNothing" },
+  "request-draft-exists": { tone: "warning", key: "assistsFront.inbox.requestDraftExists" },
 };
 
 // `instant = true` asserts that navigating *into* this page paints

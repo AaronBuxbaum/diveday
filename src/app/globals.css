@@ -268,15 +268,17 @@
    * 20260827-clearwater-surface-language, decision 10). 3.5rem is 56px.
    *
    * It lives here rather than in a component because it is read in two
-   * directions: `ChromeBar` sets its own height from it, and every surface
+   * directions: fixed chrome sets its own height from it, and every surface
    * that pins something *under* the bar — the schedule board's day headers,
    * the public schedule's — offsets by it with `top-(--chrome-h)`. The staff
    * bar's height used to be content-driven, so the only way to pin beneath it
    * was to measure it and write the number down (`sticky top-[68px]`, three
    * directories away, with an e2e test standing guard over the constant).
-   * A token cannot drift from itself.
+   * Public chrome may grow above the baseline; its observer publishes the
+   * actual clearance through the same token, without changing the minimum.
    */
-  --chrome-h: 3.5rem;
+  --chrome-base-h: 3.5rem;
+  --chrome-h: var(--chrome-base-h);
   /*
    * The staff nav's two forms (ADR 20261001-logbook, decision 1): the sidebar's
    * width from `lg` up, and the phone tab bar's height below it. The tab bar's
@@ -430,8 +432,16 @@ html:has([data-chrome-bar]) {
  */
 @media (max-width: 39.99rem) {
   html:has([data-chrome-stacked]) {
-    --chrome-h: 5.5rem;
+    --chrome-base-h: 5.5rem;
   }
+}
+
+/* The public header wraps when its existing controls need more room. Its
+   minimum uses the fixed baseline, never the observer's output: otherwise a
+   taller measurement would prevent it shrinking again. Staff keep the fixed
+   token above. The observer removes its property when the public layout leaves. */
+html:has([data-chrome-natural]) {
+  --chrome-h: var(--public-chrome-h, var(--chrome-base-h));
 }
 
 /*
@@ -1151,6 +1161,17 @@ select:not([multiple]):not([size]):dir(rtl) {
 }
 
 @media print {
+  @layer base {
+    /* A session lock protects the page on paper as well as on screen. */
+    body:has([data-staff-session-lock]) {
+      /* Suppress departure-specific page-margin identity while locked too. */
+      page: auto !important;
+    }
+    body:has([data-staff-session-lock]) > [inert] {
+      display: none !important;
+    }
+  }
+
   .staffing-print-rota {
     page: crew-rota;
   }

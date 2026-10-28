@@ -352,6 +352,8 @@ export type RosterArrival = {
   instrument?: (deskWorkOpen: boolean) => ReactNode;
   controls: ReadonlyMap<string, ReactNode>;
   below: ReadonlyMap<string, ReactNode>;
+  /** Routine exception actions behind the existing person disclosure. */
+  details?: ReadonlyMap<string, ReactNode>;
   boarded: ReadonlySet<string>;
 };
 

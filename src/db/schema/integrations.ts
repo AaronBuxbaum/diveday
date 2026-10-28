@@ -101,6 +101,28 @@ export const shopBackupDeliveries = pgTable(
   ],
 );
 
+/**
+ * The platform's scheduler checkpoint for each shop, kept separate from the
+ * shop-visible history for destinations the shop owns. One row per shop makes
+ * scheduling fair across weeks without retaining an unbounded attempt history.
+ */
+export const platformBackupProgress = pgTable(
+  "platform_backup_progress",
+  {
+    shopId: uuid("shop_id")
+      .primaryKey()
+      .references(() => shops.id, { onDelete: "cascade" }),
+    lastAttemptAt: timestamp("last_attempt_at", { withTimezone: true }),
+    lastSuccessAt: timestamp("last_success_at", { withTimezone: true }),
+    leaseToken: uuid("lease_token"),
+    leaseUntil: timestamp("lease_until", { withTimezone: true }),
+  },
+  (table) => [
+    index("platform_backup_progress_attempted_idx").on(table.lastAttemptAt),
+    index("platform_backup_progress_lease_idx").on(table.leaseUntil),
+  ],
+);
+
 /** Provider ids are deliberately closed here; adding a provider requires a registry entry. */
 export const integrationProvider = pgEnum("integration_provider", [
   "shopify",

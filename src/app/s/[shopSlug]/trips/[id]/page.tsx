@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import { FlashParams } from "@/components/FlashParams";
 import { JsonLd } from "@/components/JsonLd";
 import { PhoneFootBar } from "@/components/PhoneFootBar";
-import { ShopContactLinks } from "@/components/ShopContactLinks";
 import { TripChangeLedger } from "@/components/TripChangeLedger";
 import { getDb } from "@/db/client";
 import { shopBySlugCached } from "@/db/shops-cached";
@@ -44,9 +43,11 @@ import { EmbedBookedNotice } from "./_components/EmbedBookedNotice";
 import { knownDiverPanelFor } from "./_components/known-diver-lines";
 import { fullTripAlternatives, worthALookList } from "./_components/other-boats";
 import { TripAlternatives } from "./_components/TripAlternatives";
-import { dayCoverPhoto, dayProfileFacts, TripDayPlan } from "./_components/TripDayPlan";
-import { TripHero } from "./_components/TripHero";
-import { pitchOpensOnDoor, TripPitch } from "./_components/TripPitch";
+import { TripContactLine } from "./_components/TripContactLine";
+import { dayCoverPhoto, dayProfileFacts } from "./_components/TripDayPlan";
+import { TripItinerary, TripSupportingDetails } from "./_components/TripDaySections";
+import { TripBoatPhoto, TripHero } from "./_components/TripHero";
+import { pitchOpensOnDoor } from "./_components/TripPitch";
 import { ERROR_MESSAGE_KEYS, isErrorCode } from "./_components/types";
 import { dayBriefings } from "./_lib/day-briefings";
 import { departureJsonLd } from "./_lib/departure-json-ld";
@@ -310,6 +311,21 @@ export default async function TripDetailPage({
     />
   );
 
+  const dayPlan = (
+    <TripItinerary
+      embed={isEmbed}
+      briefings={diveBriefings}
+      nextOpensOnRule={isEmbed && pitchOpensOnDoor(diveBriefings, publicCrew, !!logEntry)}
+      sightings={briefing.seen}
+      siteReviews={briefing.siteReviews}
+      shop={shop}
+      locale={locale}
+      profile={dayProfileFacts(shop, trip, meetingDays.length, readerUnits.depth)}
+    >
+      {!isEmbed ? <TripBoatPhoto db={db} shopId={shop.id} boatId={trip.boatId} t={t} /> : null}
+    </TripItinerary>
+  );
+
   return (
     <DiverIntlProvider locale={locale} timeZone={shop.timezone} namespaces={TRIP_PAGE_NAMESPACES}>
       <main
@@ -329,8 +345,8 @@ export default async function TripDetailPage({
             tiles, their `sizes`) changes width. The section stack below joins
             this grid as `contents`; its last row is `1fr`, so a form taller
             than the reading stretches that row rather than the gaps between
-            sections. A phone keeps one column with its booking action before the briefing (ADR 20260827-the-divers-thread, decision 2
-            and its 2026-10-03 amendment). */}
+            sections. A phone reads the compact itinerary before the booking fields;
+            supporting wildlife and site prose stay below (public audit P2, #3140). */}
         <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_25rem] lg:grid-rows-[auto_repeat(4,auto)_1fr] lg:gap-x-12 lg:gap-y-10">
           <TripHero
             shop={shop}
@@ -344,7 +360,8 @@ export default async function TripDetailPage({
             run={run}
             t={t}
           />
-          {/* The selected departure’s next action, before the supporting briefing. */}
+          {!isEmbed ? dayPlan : null}
+          {/* The selected departure’s next action, after the compact day plan. */}
           <div
             id={confirmed || waitlistConfirmation ? undefined : "book"}
             className="mt-10 scroll-mt-4 space-y-10 lg:mt-0 lg:col-start-2 lg:row-span-6 lg:row-start-1"
@@ -414,37 +431,10 @@ export default async function TripDetailPage({
                 }}
               />
             )}
-            {/* The last line on the page: how to reach a human. Renders nothing at
-                  all when the shop has published neither a phone nor an address. */}
-            {shop.contactPhone || shop.contactEmail ? (
-              <p className="flex flex-wrap items-baseline gap-x-2 text-sm text-muted">
-                {t("trip.questionsContact")}
-                <ShopContactLinks phone={shop.contactPhone} email={shop.contactEmail} />
-              </p>
-            ) : null}
+            <TripContactLine shop={shop} t={t} />
           </div>
-          {/* **One rhythm below the hero** (pixel-craft class 4, K-162;
-              forms-and-controls.md's section rhythm): every section from the
-              day's run to the shop's contact line stands 40px from the next, on
-              this `space-y-10`, and none carries a margin of its own. Each used
-              to spell its own — `mt-6`, `mt-8`, `mt-10` — and the page's
-              sections stood 24, 32 and 40px apart. */}
           <div className="mt-10 space-y-10 lg:contents lg:space-y-0">
-            {/* The shape of the day as well as its sites: how long each dive runs,
-                how long the boat sits between two of them, and — once a reader
-                names a card — which of the day's sites go deeper than that card
-                covers. Facts the shop already publishes (issue #1479); the beat
-                stays time-neutral, since durations promise no clock. */}
-            {/* Its run closes itself, unless a pitch opens on its rule (pixel-craft class 6). */}
-            <TripDayPlan
-              briefings={diveBriefings}
-              nextOpensOnRule={pitchOpensOnDoor(diveBriefings, publicCrew, !!logEntry)}
-              sightings={briefing.seen}
-              siteReviews={briefing.siteReviews}
-              shop={shop}
-              locale={locale}
-              profile={dayProfileFacts(shop, trip, meetingDays.length, readerUnits.depth)}
-            />
+            {isEmbed ? dayPlan : null}
             {/* **The bound** (ADR 20260904-reef-all-the-way-down, decision 1). The
                 route, the rest of the field guide, the shop's
                 site prose and the crew used to run down the page as five more
@@ -457,16 +447,17 @@ export default async function TripDetailPage({
                 close rather than a second rule a gap below it; with no door the
                 two stand a section apart. An empty block takes no room: its
                 margins collapse through it. */}
-            <div>
-              <TripPitch
-                briefings={diveBriefings}
-                crew={publicCrew}
-                locale={locale}
-                timeZone={shop.timezone}
-                logEntry={logEntry}
-                embed={isEmbed}
-              />
-            </div>
+            <TripSupportingDetails
+              briefings={diveBriefings}
+              crew={publicCrew}
+              locale={locale}
+              timeZone={shop.timezone}
+              logEntry={logEntry}
+              embed={isEmbed}
+              shop={shop}
+              sightings={briefing.seen}
+              siteReviews={briefing.siteReviews}
+            />
             {confirmed ? conditionsLine : null}
             <TripChangeLedger
               events={changeEvents}

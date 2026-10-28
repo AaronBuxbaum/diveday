@@ -83,6 +83,7 @@ async function expectInvalidBody(response: Response) {
 }
 
 const routes: SeedRoute[] = [
+  { slug: "age-staff-session", expectPastTheGuard: expectInvalidBody },
   {
     // Not a `seed-*` name, and gated by exactly the same guard: it delivers an
     // inbound message on a shop's behalf, which on a misconfigured deployment

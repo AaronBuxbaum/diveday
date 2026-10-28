@@ -24,6 +24,7 @@ export const PAGE_MESSAGE_SOURCE = "diveday-page";
 export const EXTENSION_MESSAGE_SOURCE = "diveday-cert-check";
 /** Look this diver's card up with this agency. */
 export const CHECK_REQUEST_TYPE = "agency-check";
+export const SSI_MANUAL_REQUEST_TYPE = "ssi-manual-fill";
 /** Look a course student up on the agency's eLearning page (H-106). */
 export const ELEARNING_REQUEST_TYPE = "elearning-check";
 /** Which copy is here: its version and the agencies it checks. Answered with `CHECK_RESULT_TYPE`. */
@@ -98,6 +99,7 @@ export const EXTENSION_FAILURE_REASONS = [
   "signed_out",
   "captcha",
   "page_changed",
+  "manual_opened",
 ] as const;
 export type ExtensionFailureReason = (typeof EXTENSION_FAILURE_REASONS)[number];
 
@@ -157,6 +159,7 @@ export type ExtensionDryRun =
       filled: boolean;
       typed: boolean;
       submitted: boolean;
+      manual?: boolean;
       hostAccess: boolean;
       missing: string[];
       pageShape?: PageShape;
@@ -174,6 +177,7 @@ export function parseExtensionDryRun(data: Record<string, unknown>): ExtensionDr
     filled: data.filled === true,
     typed: data.typed === true,
     submitted: data.submitted === true,
+    ...(data.manual === true ? { manual: true } : {}),
     hostAccess: data.hostAccess === true,
     missing: missing.slice(0, 10),
     ...(pageShape ? { pageShape } : {}),
@@ -185,7 +189,13 @@ export function parseExtensionDryRun(data: Record<string, unknown>): ExtensionDr
  * wants, and sent, in a browser that lets the extension on the agency's site.
  */
 export function dryRunPassed(run: ExtensionDryRun | null): boolean {
-  return run?.ok === true && run.filled && run.typed && run.submitted && run.hostAccess;
+  return (
+    run?.ok === true &&
+    run.filled &&
+    run.typed &&
+    (run.manual ? !run.submitted : run.submitted) &&
+    run.hostAccess
+  );
 }
 
 /**

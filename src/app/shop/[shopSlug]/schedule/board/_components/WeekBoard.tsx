@@ -1,5 +1,9 @@
 "use client";
 
+import type { WeekSpan } from "./week-span";
+
+export type { WeekSpan } from "./week-span";
+
 import Link from "next/link";
 import { type ReactNode, useRef } from "react";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
@@ -101,25 +105,6 @@ export type WeekEntry = WeekDeparture & {
    * the row prints no crew line at all, rather than "nobody yet" on every boat.
    */
   crew: string[] | null;
-};
-
-/** A multi-day course session as one bar across the columns it owns. */
-export type WeekSpan = WeekDeparture & {
-  /** "$595 · Marcus Webb". */
-  meta: string;
-  seats: WeekSeats;
-  /** "4 of 5", printed beside the bar. */
-  seatsLabel: string;
-  /**
-   * "3 days" — how long the course runs, where a boat says when it leaves.
-   * Formatted on the server rather than filled from a template here: it needs
-   * an ICU plural, and `fill` (`src/i18n/fill.ts`) replaces placeholders
-   * without one. A Client Component may format neither a date nor a count.
-   */
-  runsLabel: string;
-  /** 1-based column the bar starts in, and how many columns it covers. */
-  startColumn: number;
-  columnSpan: number;
 };
 
 export type WeekDay = {
@@ -533,7 +518,7 @@ function WeekBoat({
   seats: WeekSeats;
   seatsLabel: string;
   meta: string;
-  /** Preformatted; a course bar has none of its own, so its slot stays empty. */
+  /** The departure or first course session, preformatted in the shop timezone. */
   time: string | null;
   /** "3 days", on a course that owns more than the day it starts. */
   runs: string | null;
@@ -949,7 +934,7 @@ export function WeekBoard({
                           seats: span.seats,
                           seatsLabel: span.seatsLabel,
                           meta: span.meta,
-                          time: null,
+                          time: span.time,
                           runs: span.runsLabel,
                           crewLine: null,
                         }),

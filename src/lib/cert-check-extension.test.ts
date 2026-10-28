@@ -159,6 +159,7 @@ describe("the extension's copy of the protocol", () => {
    */
   async function workerCheck(options: {
     agency: string;
+    manual?: boolean;
     /** The tab's address before the form is filled, and after. */
     before: string;
     after: string;
@@ -184,18 +185,26 @@ describe("the extension's copy of the protocol", () => {
     // deadline takes no time here.
     let clock = 1_000_000;
     const ran: string[] = [];
+    let removed = false;
+    let active: boolean | undefined;
     const worker: Record<string, unknown> = {
       chrome: {
         runtime: { id: "test", onMessage: { addListener: () => {} } },
         tabs: {
-          create: async () => ({ id: 1, status: "loading" }),
+          create: async (input: { active: boolean }) => {
+            active = input.active;
+            return { id: 1, status: "loading" };
+          },
           get: async () => ({ url: filled ? options.after : options.before, status: "complete" }),
-          remove: async () => {},
+          remove: async () => {
+            removed = true;
+          },
           onUpdated: { addListener: () => {}, removeListener: () => {} },
         },
         scripting: {
           executeScript: async ({ func }: { func: { name: string } }) => {
             ran.push(func.name);
+            if (func.name === "fillSsiManualForm") return [{ result: true }];
             if (func.name === "fillAgencyForm") {
               const answer =
                 typeof options.fill === "function"
@@ -251,25 +260,41 @@ describe("the extension's copy of the protocol", () => {
       query: unknown,
       pages: unknown,
     ) => Promise<{ ok: boolean; reason?: string; pageText?: string }>;
-    const reply = await check(
-      {
-        agency: options.agency,
-        firstName: "Lena",
-        lastName: "Ortiz",
-        birthDate: "1990-04-12",
-        cardNumber: "123",
-      },
-      pages,
-    );
+    const query = {
+      agency: options.agency,
+      firstName: "Lena",
+      lastName: "Ortiz",
+      birthDate: "1990-04-12",
+      cardNumber: "123",
+    };
+    const openSsiManual = worker.openSsiManual as (
+      query: unknown,
+    ) => Promise<{ ok: boolean; reason?: string }>;
+    const reply = options.manual ? await openSsiManual(query) : await check(query, pages);
     return {
       reply,
       ran,
+      removed: () => removed,
+      active: () => active,
       fills: () => fills,
       elapsed: () => clock - 1_000_000,
       phases: () => worker.DiveDayCheckPhases as [number, string][],
       record: worker.phase as (name: string) => void,
     };
   }
+
+  it("opens SSI in the foreground, fills it, and leaves it to the staffer without reading it", async () => {
+    const result = await workerCheck({
+      agency: "ssi",
+      manual: true,
+      before: "https://my.divessi.com/online_diver_check",
+      after: "https://my.divessi.com/online_diver_check",
+    });
+    expect(result.reply).toEqual({ ok: false, reason: "manual_opened" });
+    expect(result.active()).toBe(true);
+    expect(result.removed()).toBe(false);
+    expect(result.ran).toEqual(["fillSsiManualForm"]);
+  });
 
   /** #2878: where a stalled lookup stopped, by fixed phase names and times, and nothing of the diver. */
   it("records each lookup's phases by name and time only, and keeps a bounded number", async () => {

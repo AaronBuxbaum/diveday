@@ -5,6 +5,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ThreadEntry } from "@/db/inbound-messages";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { HOUR_MS } from "@/lib/clock";
+import { type DiverNotice, resolveDiverNotice } from "@/lib/diver-notices";
+import { noticeForForm } from "@/lib/staff-notices";
 import { ConversationSection } from "./ConversationSection";
 
 vi.mock("../details-actions", () => ({
@@ -66,7 +68,7 @@ function outbound(status: "sent" | "failed" = "sent"): ThreadEntry {
   } as ThreadEntry;
 }
 
-function renderSection(entries: ThreadEntry[], removed = false) {
+function renderSection(entries: ThreadEntry[], removed = false, status?: DiverNotice) {
   return render(
     <ConversationSection
       entries={entries}
@@ -78,6 +80,7 @@ function renderSection(entries: ThreadEntry[], removed = false) {
       now={NOW}
       removed={removed}
       t={t}
+      status={status}
     />,
   );
 }
@@ -90,6 +93,15 @@ describe("a diver who never wrote", () => {
 });
 
 describe("a conversation", () => {
+  it("shows a request extraction refusal beside the conversation", () => {
+    const notice = resolveDiverNotice({
+      notice: "request-nothing",
+      personId: "af000000-1111-4222-8333-444444444444",
+      locale: "en-US",
+    });
+    renderSection([inbound()], false, noticeForForm(notice, "reply"));
+    expect(screen.getByText("Nothing in that message reads as a booking.")).toBeVisible();
+  });
   it("shows both directions and who wrote each", () => {
     renderSection([inbound(), outbound()]);
     expect(screen.getByText("Could I switch to the afternoon boat?")).toBeInTheDocument();
@@ -250,7 +262,7 @@ describe("Meta's 24-hour window", () => {
     expect(screen.queryByLabelText(/^Reply on WhatsApp/)).toBeNull();
     expect(
       screen.getByText(
-        "Priya Sharma last wrote on WhatsApp more than 24 hours ago. After that, WhatsApp stops a business typing freely, so nobody gets messages they never asked for.",
+        "After 24 hours, WhatsApp requires an approved message; you can reply when Priya Sharma responds.",
       ),
     ).toBeInTheDocument();
     const asks = screen.getAllByRole("button");

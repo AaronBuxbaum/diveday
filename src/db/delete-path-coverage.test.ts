@@ -265,6 +265,7 @@ const RESET_KEEPS: Record<string, string> = {
   crew_away_acknowledgements: "ON DELETE CASCADE from trips clears it",
   trip_desk_events: "ON DELETE CASCADE from trips clears it",
   trip_read_marks: "ON DELETE CASCADE from trips clears it",
+  today_read_mark_events: "ON DELETE CASCADE from marks or desk events clears it",
   trip_schedule_days: "ON DELETE CASCADE from trips clears it",
   // What the bench said to customers and the orders it raised (ADR
   // 20261008-work-order-follow-up). All three hang off a ticket or a customer's
@@ -305,6 +306,7 @@ const RESET_PERSON_SCOPED: Record<string, string> = {
  * survivor here is a bug unless it is genuinely shared.
  */
 const CASCADE_KEEPS: Record<string, string> = {
+  platform_backup_progress: "ON DELETE CASCADE from shops clears its scheduler checkpoint",
   booking_payment_events: "ON DELETE CASCADE from bookings clears it",
   push_subscriptions: "ON DELETE CASCADE from trips clears it",
   integration_sync_records: "ON DELETE CASCADE from shops clears it",
@@ -319,6 +321,8 @@ const CASCADE_KEEPS: Record<string, string> = {
   crew_away_acknowledgements: "ON DELETE CASCADE from shops, people and trips clears it",
   trip_desk_events: "ON DELETE CASCADE from trips clears it",
   trip_read_marks: "ON DELETE CASCADE from trips clears it",
+  today_read_marks: "ON DELETE CASCADE from shops or staff clears it",
+  today_read_mark_events: "ON DELETE CASCADE from marks or desk events clears it",
   trip_schedule_days: "ON DELETE CASCADE from trips clears it",
   incident_report_people: "ON DELETE CASCADE from incident_reports clears it",
   shop_milestones: "ON DELETE CASCADE from shops clears it",

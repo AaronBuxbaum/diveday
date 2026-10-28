@@ -25,6 +25,8 @@ import {
   parseExtensionDryRun,
   parseExtensionHello,
   parsePadiSession,
+  SSI_MANUAL_REQUEST_TYPE,
+  versionAtLeast,
 } from "@/lib/cert-check-extension";
 import type { ElearningQuery } from "@/lib/elearning-check";
 
@@ -62,6 +64,13 @@ let nextRequest = 0;
 
 /** Ask the extension to look one diver's card up, and wait for the page it read. */
 export function requestAgencyPage(query: AgencyCheckQuery): Promise<ExtensionCheckReply> {
+  if (query.agency === "ssi") {
+    const version = extensionVersion();
+    if (!version || !versionAtLeast(version, "1.6.0")) {
+      return Promise.resolve({ ok: false, reason: "unsupported" });
+    }
+    return requestPage(SSI_MANUAL_REQUEST_TYPE, { ...query, cardNumber: null });
+  }
   return requestPage(CHECK_REQUEST_TYPE, query);
 }
 

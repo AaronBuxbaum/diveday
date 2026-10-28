@@ -100,7 +100,7 @@
       "requestHeading": "¿Planeas para más adelante? Pídenos un día"
     },
     "filters": {
-      "disclosure": "Más filtros",
+      "disclosure": "Filtrar salidas",
       "tripType": "Tipo de salida",
       "allTrips": "Todas las salidas",
       "funDive": "Inmersión recreativa",
@@ -145,6 +145,7 @@
     "boatSeats": "{count, plural, one {# buceador} other {# buceadores}}"
   },
   "trip": {
+    "boatLabel": "Embarcación",
     "courseSession": "Sesión de curso",
     "privateCharter": "Chárter privado",
     "depositLine": "{deposit} de señal al reservar · {balance} restante en el muelle",
@@ -592,6 +593,7 @@
     "seeFullSchedule": "Ver el calendario completo",
     "orAskUs": "pídenos que programemos una",
     "requestDifferentDateLead": "¿Buscas otra fecha?",
+    "askAnotherDate": "Pedir otra fecha",
     "requestDateLink": "Solicitar una fecha",
     "orGetInTouch": "o escríbenos y programamos una.",
     "startsAt": "Empieza a las {time}",
@@ -831,7 +833,8 @@
     "invalid": "Algo del formulario no llegó bien. Revísalo e inténtalo de nuevo.",
     "contactRequired": "Deja un correo o un teléfono para poder contactarte.",
     "unavailable": "Ese centro no acepta registros en este momento.",
-    "switchedOff": "Pídele al personal del mostrador que te registre."
+    "switchedOff": "Pídele al personal del mostrador que te registre.",
+    "uncertified": "Sin certificación registrada"
   },
   "packages": {
     "title": "Paquetes de inmersiones",

@@ -100,7 +100,7 @@
       "requestHeading": "Planning further out? Ask us for a day"
     },
     "filters": {
-      "disclosure": "More filters",
+      "disclosure": "Filter trips",
       "tripType": "Trip type",
       "allTrips": "All trips",
       "funDive": "Fun dive",
@@ -145,6 +145,7 @@
     "boatSeats": "{count, plural, one {# diver} other {# divers}}"
   },
   "trip": {
+    "boatLabel": "Boat",
     "courseSession": "Course session",
     "privateCharter": "Private charter",
     "depositLine": "{deposit} deposit at booking · {balance} balance at the dock",
@@ -592,6 +593,7 @@
     "seeFullSchedule": "See the full schedule",
     "orAskUs": "ask us to set one",
     "requestDifferentDateLead": "Looking for a different date?",
+    "askAnotherDate": "Ask for another date",
     "requestDateLink": "Request a date",
     "orGetInTouch": "or get in touch and we will set one.",
     "startsAt": "Starts {time}",
@@ -831,7 +833,8 @@
     "invalid": "Something in the form didn’t come through. Check it over and try again.",
     "contactRequired": "Leave an email or a phone number so we can reach you.",
     "unavailable": "That shop isn’t taking registrations right now.",
-    "switchedOff": "Ask the crew at the counter to sign you in."
+    "switchedOff": "Ask the crew at the counter to sign you in.",
+    "uncertified": "No certification recorded"
   },
   "packages": {
     "title": "Dive packages",

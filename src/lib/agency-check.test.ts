@@ -54,7 +54,7 @@ describe("agencyCheckQuery", () => {
       agency: "ssi",
       firstName: "Lena",
       lastName: "Ortiz",
-      birthDate: null,
+      birthDate: "1990-04-12",
       cardNumber: "N-12345",
     });
   });
@@ -65,7 +65,7 @@ describe("agencyCheckQuery", () => {
    * a card number to one that looks up by birth date. CMAS takes either.
    */
   it("hands the extension nothing the agency's form does not ask for", () => {
-    for (const agency of ["ssi", "gue"] as const) {
+    for (const agency of ["gue"] as const) {
       expect(agencyCheckQuery({ ...base, agency })?.birthDate).toBeNull();
     }
     for (const agency of ["naui", "sdi", "padi"] as const) {
@@ -90,7 +90,7 @@ describe("agencyCheckQuery", () => {
   });
 
   it("needs a card number where the form asks for one", () => {
-    for (const agency of ["ssi", "gue"] as const) {
+    for (const agency of ["gue"] as const) {
       expect(agencyCheckQuery({ ...base, agency, identifier: null })).toBeNull();
       expect(agencyCheckQuery({ ...base, agency, identifier: "  " })).toBeNull();
     }

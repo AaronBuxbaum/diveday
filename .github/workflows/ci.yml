@@ -1612,8 +1612,8 @@ jobs:
   # The one check main's ruleset requires. A required check names a job, and
   # most jobs here are skipped on a docs-only change or split into shards whose
   # names move with the shard count, so none of them can be the required one.
-  # This job needs all of them and fails if any failed or was cancelled; a
-  # skipped job is a passed one, because `changes` decided it had nothing to do.
+  # This job needs all of them and fails on a missing, failed, cancelled, or
+  # unexpectedly skipped lane, using the change detector to identify required work.
   ci-result:
     name: CI result
     if: always() && github.event_name != 'schedule'
@@ -1656,12 +1656,7 @@ jobs:
       - name: Evidence artifact
         if: always()
         run: echo 'Download ci-result-${{ github.run_attempt }} for job failures, annotations, reproduction commands and artifact links.' >> "$GITHUB_STEP_SUMMARY"
-      - name: Every job passed or was skipped
+      - name: Every required job passed
         env:
-          RESULTS: ${{ toJSON(needs.*.result) }}
-        run: |
-          echo "$RESULTS"
-          if echo "$RESULTS" | grep -qE '"(failure|cancelled)"'; then
-            echo "::error::A CI job failed or was cancelled."
-            exit 1
-          fi
+          CI_NEEDS: ${{ toJSON(needs) }}
+        run: node scripts/ci-merge-verdict.mjs

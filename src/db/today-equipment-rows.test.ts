@@ -43,6 +43,43 @@ describe("pushEquipmentRows", () => {
     expect(rows({})).toEqual([]);
   });
 
+  it("groups late gear across people and opens the rentals list", () => {
+    const overdueGear = [
+      {
+        personId: "p1",
+        personName: "Rosa Diaz",
+        label: "BCD 1",
+        reservedUntil: "2026-07-01",
+        checkedOutAt: nowDate(),
+        tripTitle: null,
+      },
+      {
+        personId: "p1",
+        personName: "Rosa Diaz",
+        label: "Tank 1",
+        reservedUntil: "2026-07-01",
+        checkedOutAt: nowDate(),
+        tripTitle: null,
+      },
+      {
+        personId: "p2",
+        personName: "Sam Lee",
+        label: "BCD 2",
+        reservedUntil: "2026-07-02",
+        checkedOutAt: null,
+        tripTitle: null,
+      },
+    ];
+    const actions = rows({ overdueGear });
+    expect(actions).toHaveLength(1);
+    expect(actions[0]).toMatchObject({
+      kind: "gear_overdue",
+      subject: "3 late items",
+      href: "/shop/blue-mantis/gear?view=rentals",
+    });
+    expect(actions[0]?.detail).toContain("2 people");
+  });
+
   it("folds one staffer's lapsing credentials into one row, the earliest date leading", () => {
     const person = { id: "p1", fullName: "Rosa Diaz" };
     const actions = rows({
@@ -188,7 +225,7 @@ describe("gear register rows (ADR 20260815-minimal-gear-register)", () => {
     expect(row).toMatchObject({
       kind: "gear_overdue",
       urgency: "now",
-      href: `/shop/${shop.slug}/gear`,
+      href: `/shop/${shop.slug}/gear?view=rentals`,
     });
     expect(row?.detail).toContain("BCD #90");
     expect(row?.dueAt?.getTime()).toBeLessThanOrEqual(nowMs());

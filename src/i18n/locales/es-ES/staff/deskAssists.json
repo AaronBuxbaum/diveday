@@ -11,7 +11,8 @@
     "placeholder": "Quién no ha vuelto en un año",
     "submit": "Buscar",
     "pending": "Buscando…",
-    "noAnswer": "Eso no coincide con ninguna vista de la lista. Prueba con el buscador."
+    "noAnswer": "Eso no coincide con ninguna vista de la lista. Prueba con el buscador.",
+    "disclose": "Hacer una pregunta"
   },
   "dupes": {
     "ask": "Preguntar a la IA si es una sola persona",

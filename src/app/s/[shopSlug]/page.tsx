@@ -4,13 +4,8 @@ import { Suspense } from "react";
 import { EmptyState } from "@/components/EmptyState";
 import { JsonLd } from "@/components/JsonLd";
 import { ShopReviews, ShopReviewsSkeleton } from "@/components/ShopReviews";
-import { sectionCardClass } from "@/components/ui/card";
 import { FilterChips } from "@/components/ui/FilterChips";
-import {
-  ITEM_TITLE_CLASS,
-  PAGE_TITLE_CLASS,
-  SECTION_TITLE_CLASS,
-} from "@/components/ui/typography";
+import { PAGE_TITLE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { type AppDb, getDb } from "@/db/client";
 import { listPublishedShopReviews } from "@/db/reviews";
 import { shopBySlugCached } from "@/db/shops-cached";
@@ -51,7 +46,7 @@ import { PromotedDateAsk, seriesHorizonLines, viewsBoardsEnd } from "./_componen
 import { ScheduleFilters } from "./_components/ScheduleFilters";
 import { SchedulePagerRow } from "./_components/SchedulePagerRow";
 import { ShopfrontHero } from "./_components/ShopfrontHero";
-import { ShopPhotoStrip } from "./_components/ShopPhotoStrip";
+import { BoatsShelf, ShopPhotoStrip } from "./_components/ShopPhotoStrip";
 import { readSchedulePage } from "./_components/schedule-reads";
 import { seatPriceLabel, shelfCourseCards, weekLedgerRows } from "./_components/schedule-rows";
 import {
@@ -359,82 +354,81 @@ export default async function SchedulePage({
     t,
   });
 
+  const scheduleAnchor = upcoming[0]?.startsAt ?? range.first;
+  const calendarRail =
+    prevMonthKey || nextMonthKey || explicitMonth ? (
+      <MonthRail
+        aria-label={t("schedule.monthNav")}
+        month={monthLabel(currentMonth, locale)}
+        className=""
+        {...monthRailSides(shopSlug, prevMonthKey, nextMonthKey, filterSuffix, t)}
+      />
+    ) : null;
+
   return (
     <main className={isEmbed ? "w-full flex-1 px-3 py-4" : SHOP_MAIN_CLASS}>
       {isEmbed ? null : (
         <header>
-          <h1 className={`font-brand-display ${PAGE_TITLE_CLASS}`}>{shop.name}</h1>
-          <div className="mt-4 max-w-xl space-y-4">
-            {quiet.quiet ? (
-              <OffSeasonPanel heading={t("schedule.offSeason.heading")} line={quietLine} />
-            ) : null}
-            {nextBoat ? (
-              <NextBoatCard
-                href={`${publicTripPath(shopSlug, nextBoat.id)}#book`}
-                when={whenWord(nextBoat.startsAt)}
-                time={formatTime(nextBoat.startsAt, locale, shop.timezone)}
-                title={nextBoat.title}
-                description={nextBoat.description}
-                spots={scheduleSeatState(t, nextBoat).text}
-                price={seatPriceLabel(nextBoat, currency, locale)}
-                skipped={skippedBoats}
-                firstSkippedTime={
-                  firstSkippedBoat
-                    ? formatTime(firstSkippedBoat.startsAt, locale, shop.timezone)
-                    : undefined
-                }
-                filtered={filteredView}
-                flat={nextBoatFlat}
-                t={t}
-              />
-            ) : null}
-          </div>
+          <h1 className={`font-brand-display ${PAGE_TITLE_CLASS}`}>{t("schedule.title")}</h1>
+          {hasUpcoming && scheduleAnchor ? (
+            <p className="mt-2 max-w-xl text-sm text-muted">
+              {t("schedule.timesInZone", {
+                shop: shop.name,
+                zone: timeZoneLabel(scheduleAnchor, locale, tz),
+              })}
+            </p>
+          ) : null}
+
+          {quiet.quiet || nextBoat ? (
+            <div className="mt-4 max-w-xl space-y-4">
+              {quiet.quiet ? (
+                <OffSeasonPanel heading={t("schedule.offSeason.heading")} line={quietLine} />
+              ) : null}
+              {nextBoat ? (
+                <NextBoatCard
+                  href={`${publicTripPath(shopSlug, nextBoat.id)}#book`}
+                  when={whenWord(nextBoat.startsAt)}
+                  time={formatTime(nextBoat.startsAt, locale, shop.timezone)}
+                  title={nextBoat.title}
+                  description={nextBoat.description}
+                  spots={scheduleSeatState(t, nextBoat).text}
+                  price={seatPriceLabel(nextBoat, currency, locale)}
+                  skipped={skippedBoats}
+                  firstSkippedTime={
+                    firstSkippedBoat
+                      ? formatTime(firstSkippedBoat.startsAt, locale, shop.timezone)
+                      : undefined
+                  }
+                  filtered={filteredView}
+                  flat={nextBoatFlat}
+                  t={t}
+                />
+              ) : null}
+            </div>
+          ) : null}
         </header>
       )}
 
       {/* **The board itself, and nothing where there is no board** (N-45).
-          A shop with nothing public on the books renders no "Schedule"
-          heading, no timezone line and no dashed box: the off-season card
+          A shop with nothing public on the books renders no calendar,
+          timezone line or dashed box: the off-season card
           above has already said what there is to say, and a section heading
           over nothing is the page apologising. The frame keeps its own
           terminal state (see the empty state inside). */}
       {hasUpcoming || isEmbed ? (
-        <div id="schedule" className={isEmbed ? undefined : SECTION_GAP}>
-          {isEmbed ? null : (
-            <div className="mb-4">
-              <h2 className={`font-brand-display ${SECTION_TITLE_CLASS}`}>{t("schedule.title")}</h2>
-              {/* Whose morning is "7:30 AM"? A diver comparing boats from another
-                  timezone reads these times against their own clock unless
-                  something says otherwise (review finding I18N-L2) — so it is
-                  said once, with the times it qualifies rather than in a masthead
-                  two sections above them. Anchored to a real departure, because a
-                  zone's *name* moves with daylight saving and a schedule read in
-                  March may be listing July boats. */}
-              {(() => {
-                const anchor = upcoming[0]?.startsAt ?? range.first;
-                if (!anchor) return null;
-                return (
-                  <p className="mt-1 text-sm text-muted">
-                    {t("schedule.timesInZone", {
-                      shop: shop.name,
-                      zone: timeZoneLabel(anchor, locale, tz),
-                    })}
-                  </p>
-                );
-              })()}
+        <div id="schedule" className={isEmbed ? undefined : "mt-6"}>
+          {!isEmbed ? (
+            <div className="mb-2">
+              {calendarRail}
+              {showsWeekLedger ? (
+                <DayJumpStrip rows={weekRows} label={t("schedule.jumpToDay")} />
+              ) : null}
             </div>
-          )}
-
-          {/* The week's days, one tap from each (UX audit #18), over the same
-              days the list below runs (B18). */}
-          {showsWeekLedger && !isEmbed ? (
-            <DayJumpStrip rows={weekRows} label={t("schedule.jumpToDay")} />
           ) : null}
 
-          {/* **One filter row** (visual review 2026-10-24, B18): the lens
-              chips (ADR 20260904-reef-all-the-way-down, decision 2), the "More
-              filters" disclosure, and the month link at the row's end, all
-              inside the filter form, which must stay directly before the list:
+          {/* The filter form stays directly before the list; the calendar
+              above it is one group. On phones the disclosure holds the lens
+              chips as well as the advanced controls (public audit P3, #3140), which must stay directly before the list:
               `e2e/schedule-filters.spec.ts` and `e2e/trip-admission.spec.ts`
               address the departures as `form + ul`. None of it renders in the
               frame (issue #805): `FilterChips` is a `<nav>` landmark and
@@ -473,16 +467,7 @@ export default async function SchedulePage({
                   />
                 ) : null
               }
-              monthRail={
-                prevMonthKey || nextMonthKey || explicitMonth ? (
-                  <MonthRail
-                    aria-label={t("schedule.monthNav")}
-                    month={monthLabel(currentMonth, locale)}
-                    className=""
-                    {...monthRailSides(shopSlug, prevMonthKey, nextMonthKey, filterSuffix, t)}
-                  />
-                ) : null
-              }
+              activeLensLabel={activeLens?.name ?? null}
             />
           ) : null}
 
@@ -585,43 +570,7 @@ export default async function SchedulePage({
           ) : null}
         </section>
       )}
-      {/* The boats, by name and seats (Harbor — ADR 20260901-diveday-reimagined:
-          the storefront is the shop's website, and a shop's site always names
-          its hulls). Only when the shop has any: an empty fleet is not a section. */}
-      {isEmbed || boats.length === 0 ? null : (
-        <section aria-labelledby="boats-heading" className={SECTION_GAP}>
-          <h2 id="boats-heading" className={`font-brand-display ${SECTION_TITLE_CLASS}`}>
-            {t("schedule.boatsHeading")}
-          </h2>
-          {/* The course shelf's columns and gutter, so the boat cards stand
-              under the course cards' edges (K-227). */}
-          <ul className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {boats.map((boat) => (
-              // The card itself, not a hand-rolled copy at `px-5 py-4`: its
-              // words started 4px in from every other card's on a phone.
-              <li
-                key={boat.id}
-                className={sectionCardClass({
-                  className: "flex min-h-14 flex-col justify-center gap-1",
-                })}
-              >
-                <div className="flex items-baseline justify-between gap-3">
-                  <span className={`font-brand-display ${ITEM_TITLE_CLASS} tracking-tight`}>
-                    {boat.name}
-                  </span>
-                  <span className="shrink-0 text-sm text-muted tabular-nums">
-                    {t("schedule.boatSeats", { count: boat.capacity })}
-                  </span>
-                </div>
-                {/* The shop's own sentence, or nothing: never DiveDay filler. */}
-                {boat.description ? (
-                  <p className="text-sm text-muted text-pretty">{boat.description}</p>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      {isEmbed ? null : <BoatsShelf boats={boats} t={t} className={SECTION_GAP} />}
       {isEmbed ? null : <MonthSightingsSection shop={shop} tz={tz} locale={locale} t={t} />}
       {/* Reviews are a full-page, diver-facing signal: the embed stays a compact booking widget
           (docs ADR 20260726-schedule-embed), and staff moderate from /shop/[shopSlug]/reviews

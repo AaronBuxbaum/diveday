@@ -62,6 +62,53 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "trip-manage", scheme);
       });
 
+      test(`the plan editor stays with the dive plan (${scheme})`, async ({ page }) => {
+        await openReefTrip(page);
+        const plan = await openTripAboutRow(page, "The plan");
+        await expect(plan.getByLabel("Number of dives")).toBeVisible();
+        await capture(page, "departure-plan-editor", scheme);
+      });
+
+      test(`meeting point keeps optional arrival guidance disclosed (${scheme})`, async ({
+        page,
+      }) => {
+        await openReefTrip(page);
+        const meeting = await openTripAboutRow(page, "Where we meet");
+        await expect(meeting.locator('[name="meetingPointLabel"]')).toBeVisible();
+        await capture(page, "departure-meeting-editor", scheme);
+      });
+
+      test(`timing has its own explicit save (${scheme})`, async ({ page }) => {
+        await openReefTrip(page);
+        const timing = await openTripAboutRow(page, "Timing");
+        await expect(timing.getByLabel("Departs")).toBeVisible();
+        await capture(page, "departure-timing-editor", scheme);
+      });
+
+      test(`booking and payment has its own explicit save (${scheme})`, async ({ page }) => {
+        await openReefTrip(page);
+        const booking = await openTripAboutRow(page, "Booking and payment");
+        await expect(booking.locator('[name="capacity"]')).toBeVisible();
+        await capture(page, "departure-booking-editor", scheme);
+      });
+
+      test(`departure details keeps title description and tag together (${scheme})`, async ({
+        page,
+      }) => {
+        await openReefTrip(page);
+        const details = await openTripAboutRow(page, "Departure details");
+        await expect(details.getByLabel("Title", { exact: true })).toBeVisible();
+        await capture(page, "departure-details-editor", scheme);
+      });
+
+      test(`boat assignment edits beside its crew (${scheme})`, async ({ page }) => {
+        await openReefTrip(page);
+        const crew = await openTripAboutRow(page, "Boat & crew");
+        await crew.getByText("Edit boat", { exact: true }).click();
+        await expect(crew.locator('[name="boatId"]')).toBeVisible();
+        await capture(page, "departure-boat-editor", scheme);
+      });
+
       /**
        * **The Crew panel with a clash on one of its rows** (issue #1695) — a
        * warning line inside a roster row, which is the one place on this
@@ -576,7 +623,9 @@ for (const scheme of ["light", "dark"] as const) {
         }
 
         const odile = counterRow("Odile Marchand");
+        await openRosterDetails(odile);
         await odile.getByText("Not here", { exact: true }).click();
+        await expect(odile.getByText(staffCopy("checkIn.noShow.consequence"))).toBeVisible();
         await odile.getByRole("button", { name: "Mark Odile Marchand as not here" }).click();
         await expect(page.getByRole("heading", { name: "Not here · 1" })).toBeVisible();
 

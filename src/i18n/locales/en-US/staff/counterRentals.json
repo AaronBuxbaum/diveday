@@ -31,6 +31,8 @@
     "fillAria": "Fill for {label}",
     "fillChoose": "Choose the gas",
     "fillHint": "Every tank says its gas. Above air needs a verified nitrox card.",
+    "fillUnavailable": "No confirmed nitrox card on file. Check the tank before choosing air.",
+    "fillRetained": "Previous selection:",
     "o2CleanLapsed": "{label}’s O2 cleaning has lapsed. Fill it with air, or get it cleaned first.",
     "o2CleanNever": "{label} has no O2 cleaning on record. Fill it with air unless you know it’s clean.",
     "pay": {

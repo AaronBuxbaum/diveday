@@ -172,6 +172,13 @@ export function MoneyBlock({
     taxLine !== "checkout" &&
     deposit === null;
   const showDiverLine = (partySize > 0 || seats.length === 0) && !onlyAddend;
+  const hasAddends =
+    courseLines ||
+    showDiverLine ||
+    seats.length > 0 ||
+    gearCents > 0 ||
+    Boolean(passThroughFeeLine) ||
+    taxLine === "checkout";
 
   return (
     <dl className={`flex flex-col gap-2 ${className}`.trim()}>
@@ -218,7 +225,9 @@ export function MoneyBlock({
           and 16px under it, the air the caller's own rule leaves above the
           first line (`border-t pt-4`), so the last line sits midway between
           the two hairlines rather than 4px low. */}
-      <div className="mt-2 flex items-baseline justify-between gap-4 border-t border-border pt-4">
+      <div
+        className={`flex items-baseline justify-between gap-4 ${hasAddends ? "mt-2 border-t border-border pt-4" : ""}`}
+      >
         <dt className="text-sm font-medium">
           {dueNow === "checkout" ? t("money.dueNow") : t("money.dueAtShop")}
         </dt>

@@ -158,7 +158,7 @@ test("a departure's own legs are the day the diver reads", async ({ page, privat
 
   // The one place a trip is created (ADR 20260806-one-trip-create-form), at the
   // depth where the per-dive plan is disclosed.
-  await page.goto(`/shop/${SHOP}/schedule/board?add=full`);
+  await page.goto(`/shop/${SHOP}/schedule/board/new?add=full`);
   await page.getByLabel("What is it").fill(TITLE);
   await page.getByLabel("Date").fill(daysFromNow(9));
   await page.getByLabel("Departs").fill("08:00");

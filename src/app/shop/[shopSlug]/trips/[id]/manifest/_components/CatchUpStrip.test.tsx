@@ -97,6 +97,13 @@ describe("CatchUpStrip", () => {
     expect(button.className).not.toMatch(/(^|\s)(px-4|min-h-12)(\s|$)/);
   });
 
+  it("offers a body-sized dismiss control on Today", () => {
+    render(<CatchUpStrip {...props} dismissSize="md" />);
+    const button = screen.getByRole("button", { name: "Got it" });
+    expect(button).toHaveClass("text-base", "min-h-12");
+    expect(rendersFlush(button, "link", "md", "padded")).toBe(true);
+  });
+
   it("reads its critical text at 16px, like every other line on the manifest", () => {
     const { container } = render(<CatchUpStrip {...props} />);
     expect(container.querySelector("p")?.className).toContain("text-base");

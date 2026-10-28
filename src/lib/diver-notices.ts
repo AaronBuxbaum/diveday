@@ -443,6 +443,12 @@ const NOTICE_KEYS: DiverNoticeMap = {
   // it was sent would be a caption on a photograph of itself. A send that
   // **failed** is not silent: the row is there either way, and only the notice
   // says the diver never got it.
+  "request-nothing": { form: "reply", tone: "warning", key: "assistsFront.inbox.requestNothing" },
+  "request-draft-exists": {
+    form: "reply",
+    tone: "warning",
+    key: "assistsFront.inbox.requestDraftExists",
+  },
   "reply-sent": { form: "reply", tone: "success", silent: true },
   "reply-send-failed": { form: "reply", tone: "danger", key: "inbox.notices.failed" },
   "reply-not-configured": { form: "reply", tone: "warning", key: "inbox.notices.notConfigured" },

@@ -92,6 +92,7 @@
       "unreadable": "No se pudo leer la página de {agency}.",
       "captcha": "{agency} pide confirmar que eres una persona. Verifica en su página.",
       "pageChanged": "La página de {agency} cambió. Verifica en su página.",
+      "manualOpened": "Revisa los términos de SSI y completa la verificación; luego vuelve para marcar la tarjeta correcta como certificada.",
       "unsupported": "Esta copia de la extensión no verifica con {agency}. Actualízala.",
       "notFoundOnPage": "No se encontró a {name} en la página de {agency}. Ábrela y revísala.",
       "noAnswer": "DiveDay no respondió. Recarga para ver cómo quedó esta certificación.",
@@ -634,7 +635,8 @@
     "editSizes": "Editar",
     "neededFor": "Hace falta para el {when}.",
     "cantBoard": "No puede embarcar el {when}.",
-    "notCertified": "Sin la certificación para esta salida."
+    "notCertified": "Sin la certificación para esta salida.",
+    "rentalNotes": "Notas del alquiler"
   },
   "waiver": {
     "earlierRefusal": "Un médico no autorizó a esta persona el {date} (exención anterior).",

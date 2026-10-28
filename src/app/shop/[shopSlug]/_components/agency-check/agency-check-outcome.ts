@@ -29,6 +29,7 @@ export type AgencyCheckFailure =
   | "page"
   | "captcha"
   | "page_changed"
+  | "manual_opened"
   | "unsupported"
   | "signed_out"
   | "transport"
@@ -40,6 +41,7 @@ export function agencyCheckFailure(reason: ExtensionFailureReason): AgencyCheckF
     reason === "signed_out" ||
     reason === "captcha" ||
     reason === "page_changed" ||
+    reason === "manual_opened" ||
     reason === "unsupported"
   ) {
     return reason;
@@ -59,6 +61,7 @@ export function agencyCheckSendsToAgency(
   return (
     failure === "captcha" ||
     failure === "page_changed" ||
+    failure === "manual_opened" ||
     failure === "unsupported" ||
     agencyCheckAnswered(result)
   );
@@ -107,6 +110,7 @@ export function agencyCheckOutcomeText(
   if (failure === "signed_out") return copy.signedOut;
   if (failure === "captcha") return copy.captcha;
   if (failure === "page_changed") return copy.pageChanged;
+  if (failure === "manual_opened") return copy.manualOpened;
   if (failure === "unsupported") return copy.unsupported;
   if (failure === "transport") return copy.noAnswer;
   if (failure) return copy.unreadable;

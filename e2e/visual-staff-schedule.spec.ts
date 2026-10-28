@@ -118,7 +118,7 @@ for (const scheme of ["light", "dark"] as const) {
         test.setTimeout(FLOW_TIMEOUT_MS);
         await openReefTrip(page);
         await openTripAbout(page);
-        await openTripAboutRow(page, "The plan");
+        await openTripAboutRow(page, "Timing");
         await page.getByLabel("Departs").fill("13:45");
         await page.getByLabel("Returns").fill("17:15");
         await page.getByRole("button", { name: "Save changes" }).click();
@@ -367,6 +367,19 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: "Schedule", level: 1 }).waitFor();
         await boardListSettled(page);
         await capture(page, "schedule-builder", scheme);
+      });
+
+      test(`the multi-day course shows its first-session time (${scheme})`, async ({ page }) => {
+        const week = weekStartOf(daysFromNow(9));
+        await page.goto(`/shop/blue-mantis/schedule/board?week=${week}`);
+        await boardListSettled(page);
+        const course = page
+          .locator("[data-week-board]")
+          .getByRole("link", { name: "Open Water Diver — three-day course", exact: true })
+          .locator("..");
+        await expect(course.getByText("8:00 AM", { exact: true })).toBeVisible();
+        await expect(course.getByText("3 days", { exact: true })).toBeVisible();
+        await capture(page, "schedule-multi-day-course-time", scheme);
       });
 
       /**
@@ -705,7 +718,7 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the expanded add-a-departure panel renders true to the design (${scheme})`, async ({
         page,
       }) => {
-        await page.goto("/shop/blue-mantis/schedule/board?add=full");
+        await page.goto("/shop/blue-mantis/schedule/board/new?add=full");
         await page.getByRole("heading", { name: "Add a departure", level: 1 }).waitFor();
         await page.getByRole("button", { name: "Fewer options" }).waitFor();
         await addPanelSettled(page);
@@ -720,7 +733,7 @@ for (const scheme of ["light", "dark"] as const) {
       // generates stable.
       test(`the repeating-trip panel renders true to the design (${scheme})`, async ({ page }) => {
         const title = "Standing Saturday charter";
-        await page.goto("/shop/blue-mantis/schedule/board?add=full");
+        await page.goto("/shop/blue-mantis/schedule/board/new?add=full");
         await page.getByLabel("What is it").fill(title);
         await page.getByLabel("Date").fill(daysFromNow(4));
         await page.getByLabel("Departs").fill("08:00");
@@ -794,7 +807,18 @@ for (const scheme of ["light", "dark"] as const) {
         await page.waitForURL(/pick=all/);
         await page.getByRole("button", { name: "Review the call" }).click();
         await page.getByRole("heading", { level: 1, name: "Cancel these departures?" }).waitFor();
-        await capture(page, "blowout-day-review", scheme);
+        await capture(page, "blowout-day-review", scheme, {
+          beforeScreenshot: async () => {
+            // The preceding capture can return from its initial-paint tab and
+            // start a live staff-session recheck. Photograph the review only
+            // after the server confirms it, not the temporary session cover.
+            await expect(page.locator('[data-staff-session-check="settled"]')).toHaveCount(1);
+            await expect(page.locator("[data-staff-session-lock]")).toHaveCount(0);
+            await expect(
+              page.getByRole("heading", { level: 1, name: "Cancel these departures?" }),
+            ).toBeVisible();
+          },
+        });
       });
 
       // The cascade record — the surface a blow-out morning is worked from.

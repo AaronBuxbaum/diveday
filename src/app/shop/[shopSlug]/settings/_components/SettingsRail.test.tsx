@@ -102,6 +102,32 @@ describe("the map covers the whole hub", () => {
 });
 
 describe("the selection model", () => {
+  it.each(["/dive-sites/new", "/dive-sites/site-123", "/dive-sites/site-123/edit"])(
+    "keeps a nested dive-site page under its existing rail row: %s",
+    (path) => {
+      expect(
+        currentSettingsRailRowId(SETTINGS_RAIL_ROWS, {
+          pathname: `${BASE}${path}`,
+          basePath: BASE,
+          sectionId: "timezone",
+        }),
+      ).toBe("diveSites");
+    },
+  );
+
+  it.each(["/settings/calendar", "/settings/email", "/dive-sites-archive", "/orders"])(
+    "does not borrow a hub section for an unmatched page: %s",
+    (path) => {
+      expect(
+        currentSettingsRailRowId(SETTINGS_RAIL_ROWS, {
+          pathname: `${BASE}${path}`,
+          basePath: BASE,
+          sectionId: "timezone",
+        }),
+      ).toBeNull();
+    },
+  );
+
   it("selects a sub-route row by pathname, whatever the scroll-spy says", () => {
     expect(
       currentSettingsRailRowId(SETTINGS_RAIL_ROWS, {
@@ -155,6 +181,35 @@ describe("the selection model", () => {
 });
 
 describe("the rail as it renders", () => {
+  it.each([
+    ["/dive-sites/new", "diveSites"],
+    ["/dive-sites/site-123", "diveSites"],
+    ["/dive-sites/site-123/edit", "diveSites"],
+    ["/settings/calendar", "Settings sections"],
+    ["/settings/email", "Settings sections"],
+  ])("labels the mobile picker for %s without borrowing Timezone", (path, label) => {
+    pathname = `${BASE}${path}`;
+    renderRail();
+    const toggle = screen.getByRole("button", { name: "Settings sections" });
+    expect(toggle).toHaveTextContent(label);
+    expect(toggle).not.toHaveTextContent("timezone");
+  });
+
+  it("names the current section and dismisses the mobile picker with Escape or an outside tap", () => {
+    pathname = `${BASE}/settings/import`;
+    renderRail();
+    const toggle = screen.getByRole("button", { name: "Settings sections" });
+    expect(toggle).toHaveTextContent("yourData");
+    fireEvent.click(toggle);
+    expect(screen.getByRole("link", { name: "yourData" })).toHaveFocus();
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(toggle).toHaveFocus();
+    fireEvent.click(toggle);
+    fireEvent.pointerDown(document.body);
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+  });
+
   it("opens and closes the same navigation on a narrow screen", () => {
     const { container } = renderRail();
     const toggle = screen.getByRole("button", { name: "Settings sections" });

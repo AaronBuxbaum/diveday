@@ -21,6 +21,7 @@ import {
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
+import { TRIP_CONFIG_ACTIONS } from "./action-gate-test-fixtures";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).
@@ -527,19 +528,7 @@ describe("removing a paid diver from the manifest", () => {
  */
 describe("who may run each action on the trip page", () => {
   /** The dive itself and who it admits — never the crew's to change. */
-  const TRIP_CONFIG = [
-    "saveDetails",
-    "saveRequirementsAction",
-    "reinstateTripAction",
-    "applySeriesDetailsAction",
-    "cancelSeriesAction",
-    "setSeriesRepeatAction",
-    "updateSeriesCadenceAction",
-    "cancelOffCadenceSeriesAction",
-    // A snorkeler's and a rider's price and the divers-only limit are trip
-    // definition, beside the diver's own price in `saveDetails`.
-    "saveParticipantTermsAction",
-  ];
+  const TRIP_CONFIG = TRIP_CONFIG_ACTIONS;
 
   /** Money: what a dive costs, and writing off what it earned. */
   const MONEY = ["markPaymentAction"];
