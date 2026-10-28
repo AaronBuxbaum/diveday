@@ -475,7 +475,7 @@ function railRoutePaths(row: SettingsRailRow): readonly string[] {
 
 /**
  * **The selection model, decided in one place.** A route row wins whenever the
- * reader is standing on its path — that is a fact the browser already has, and
+ * reader is standing on its path or a nested page — that is a fact the browser already has, and
  * it beats any guess about scroll. Only on the hub itself, where no route row
  * matches, does the scroll-spy's section id decide.
  *
@@ -496,7 +496,12 @@ export function currentSettingsRailRowId(
     onRoute.find((row) => row.target.kind === "route" && !row.target.path.includes("#")) ??
     onRoute[0];
   if (standing) return standing.id;
-  if (!where.sectionId) return null;
+  const ancestor = rows
+    .flatMap((row) => railRoutePaths(row).map((path) => ({ row, path })))
+    .filter(({ path }) => where.pathname.startsWith(`${where.basePath}${path}/`))
+    .sort((a, b) => b.path.length - a.path.length)[0];
+  if (ancestor) return ancestor.row.id;
+  if (where.pathname !== `${where.basePath}/settings` || !where.sectionId) return null;
   const section = rows.find(
     (row) => row.target.kind === "section" && row.target.id === where.sectionId,
   );
