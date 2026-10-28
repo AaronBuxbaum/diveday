@@ -72,7 +72,7 @@ export function AssistAskForm({
       >
         {pending ? pendingLabel : submitLabel}
       </button>
-      <p aria-live="polite" className="text-sm text-muted sm:basis-full">
+      <p aria-live="polite" className="text-sm text-muted empty:hidden sm:basis-full">
         {missed ? noAnswer : null}
       </p>
     </form>
