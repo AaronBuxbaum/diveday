@@ -70,6 +70,8 @@ export async function GET(
     shopId: capability.shopId,
     bookingId: capability.bookingId,
     purpose: "readiness",
+    expectedPersonId: capability.personId,
+    expectedTripId: capability.tripId,
   });
   if (!readiness) return away();
 

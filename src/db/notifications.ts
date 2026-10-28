@@ -86,6 +86,8 @@ import { livePerson, liveTrip } from "./trips-live";
 
 const RETRY_QUEUE_LIMIT = 100;
 
+type NotificationRetryPolicy = "queue" | "disabled";
+
 /** How long a claimed row is held before another pass may take it back. */
 const LOCK_MS = 10 * 60 * 1_000;
 
@@ -490,7 +492,23 @@ async function persistQueuedRetry(
     })
     .onConflictDoNothing({ target: notificationSendQueue.idempotencyKey })
     .returning({ id: notificationSendQueue.id });
-  if (input.kind === "fly_safe_correction" && !inserted) return "queue_conflict";
+  if (!inserted) {
+    if (input.kind === "fly_safe_correction") return "queue_conflict";
+    // An idempotency conflict is not itself proof of a retry: a prior row may
+    // already be terminal, with its sealed payload cleared. Report durable
+    // queueing only while this key still names a row the drain can offer.
+    const [drainable] = await db
+      .select({ id: notificationSendQueue.id })
+      .from(notificationSendQueue)
+      .where(
+        and(
+          eq(notificationSendQueue.idempotencyKey, notificationIdempotencyKey(input)),
+          drainableStatus(),
+        ),
+      )
+      .limit(1);
+    if (!drainable) return "queue_conflict";
+  }
   return "queued";
 }
 
@@ -623,7 +641,7 @@ export async function sendNotification(
   db: DbExecutor,
   notification: Notification,
   provider?: NotificationProvider,
-  options?: { signal?: AbortSignal },
+  options?: { signal?: AbortSignal; retryPolicy?: NotificationRetryPolicy },
 ): Promise<NotificationDelivery> {
   const input = withSentBy(notification, await currentSendActor());
   // Checked here rather than left to `notify`'s own hard `parse` below. A
@@ -671,6 +689,7 @@ export async function sendNotification(
     };
   }
   if (delivery.status === "failed" && delivery.retryable) {
+    if (options?.retryPolicy === "disabled") return { ...delivery, retryQueued: false };
     const queued = await queueRetryOrLog(db, input, delivery);
     return { ...delivery, retryQueued: queued };
   }
@@ -1111,6 +1130,23 @@ async function dispatchQueuedRetry(
               : undefined,
         },
         async (tx) => {
+          if (notification.kind === "trip_rescheduled") {
+            const tripId = claimed.recipientTripId;
+            const [currentTrip] = tripId
+              ? await tx
+                  .select({ revision: trips.revision })
+                  .from(trips)
+                  .where(and(eq(trips.id, tripId), eq(trips.shopId, claimed.shopId), liveTrip()))
+                  .limit(1)
+              : [];
+            if (!currentTrip || currentTrip.revision !== notification.revision) {
+              return {
+                status: "failed",
+                retryable: false,
+                errorCode: "stale_reschedule",
+              };
+            }
+          }
           if (notification.kind === "fly_safe_correction") {
             const correctionState = await queuedFlySafeCorrectionState(tx, notification);
             if (correctionState === "stale") {
@@ -1878,11 +1914,19 @@ export async function recordNotificationDelivery(
 export async function sendAndRecordNotification(
   db: DbExecutor,
   input: Notification,
-  options: { isRetry?: boolean; provider?: NotificationProvider; signal?: AbortSignal } = {},
+  options: {
+    isRetry?: boolean;
+    provider?: NotificationProvider;
+    signal?: AbortSignal;
+    retryPolicy?: NotificationRetryPolicy;
+  } = {},
 ) {
   let delivery: NotificationDelivery;
   try {
-    delivery = await sendNotification(db, input, options.provider, { signal: options.signal });
+    delivery = await sendNotification(db, input, options.provider, {
+      signal: options.signal,
+      retryPolicy: options.retryPolicy,
+    });
   } catch {
     delivery = { status: "failed" };
   }

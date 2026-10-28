@@ -3,7 +3,11 @@ import { eq } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Notification, NotificationProvider } from "@/lib/notifications";
 import { fileScopedShopContext } from "@/test/db";
-import { sendNotification, sendNotificationBatch } from "./notifications";
+import {
+  sendAndRecordNotification,
+  sendNotification,
+  sendNotificationBatch,
+} from "./notifications";
 import { notificationSendQueue } from "./schema";
 
 const ctx = fileScopedShopContext();
@@ -103,5 +107,45 @@ describe("retry queue persistence results", () => {
 
     expect(single).toMatchObject({ status: "failed", retryable: true, retryQueued: false });
     expect(batch).toMatchObject({ status: "failed", retryable: true, retryQueued: false });
+  });
+
+  it("does not report a retry as queued when the same key is already terminal", async () => {
+    const { db, shop } = ctx;
+    vi.stubEnv("SECRET_ENCRYPTION_KEY", randomBytes(32).toString("base64"));
+    const notification = systemNotification(shop.id, "address_confirmation");
+
+    const first = await sendNotification(db, notification, failingProvider());
+    expect(first).toMatchObject({ status: "failed", retryable: true, retryQueued: true });
+    const whileQueued = await sendNotification(db, notification, failingProvider());
+    expect(whileQueued).toMatchObject({ status: "failed", retryable: true, retryQueued: true });
+    await db
+      .update(notificationSendQueue)
+      .set({ status: "failed", payloadSealed: null, errorCode: "retry_exhausted" })
+      .where(eq(notificationSendQueue.shopId, shop.id));
+
+    const repeated = await sendNotification(db, notification, failingProvider());
+
+    expect(repeated).toMatchObject({ status: "failed", retryable: true, retryQueued: false });
+  });
+
+  it("can leave a retryable failure unqueued when the caller owns its recovery", async () => {
+    const { db, shop } = ctx;
+    vi.stubEnv("SECRET_ENCRYPTION_KEY", randomBytes(32).toString("base64"));
+
+    const single = await sendNotification(
+      db,
+      systemNotification(shop.id, "address_confirmation"),
+      failingProvider(),
+      { retryPolicy: "disabled" },
+    );
+    const recorded = await sendAndRecordNotification(
+      db,
+      systemNotification(shop.id, "password_reset_request"),
+      { provider: failingProvider(), retryPolicy: "disabled" },
+    );
+
+    expect(single).toMatchObject({ status: "failed", retryable: true, retryQueued: false });
+    expect(recorded).toMatchObject({ status: "failed", retryable: true, retryQueued: false });
+    expect(await db.select().from(notificationSendQueue)).toEqual([]);
   });
 });
