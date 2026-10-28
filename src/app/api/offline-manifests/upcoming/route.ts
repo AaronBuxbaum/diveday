@@ -15,6 +15,7 @@ import { isStaff } from "@/lib/authz";
 import { departureCrewCount } from "@/lib/boat-safety";
 import { nowDate } from "@/lib/clock";
 import { emergencyReferenceForDeparture } from "@/lib/emergency-reference";
+import { withE2EApiTiming } from "@/lib/observability/query-timing";
 import type {
   OfflineManifestPayload,
   OfflineManifestUpcomingResponse,
@@ -55,7 +56,7 @@ const NO_STORE = { "Cache-Control": "private, no-store" } as const;
  * asks `GET /api/offline-manifests/identity` instead, which answers with one
  * string and none of this.
  */
-export async function GET() {
+async function getUpcomingManifests() {
   const session = await auth();
   // A pre-filter, not the gate. Deliberately ahead of any database work so a
   // caller with no session — or a token that never claimed a staff role — is
@@ -193,4 +194,8 @@ export async function GET() {
     mayHoldMedicalAlertWords,
   };
   return Response.json(body, { headers: NO_STORE });
+}
+
+export function GET() {
+  return withE2EApiTiming("/api/offline-manifests/upcoming GET", getUpcomingManifests);
 }
