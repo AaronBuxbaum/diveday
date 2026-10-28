@@ -1099,6 +1099,27 @@ async function dueNotificationRetries(db: AppDb, now: Date, limit: number) {
     .limit(limit);
 }
 
+async function terminalizeStaleRetry(db: AppDb, queueId: string): Promise<void> {
+  await db
+    .update(notificationSendQueue)
+    .set({
+      status: "failed",
+      payloadSealed: null,
+      recipientEmail: null,
+      subjectEmail: null,
+      subjectPhone: null,
+      bookingId: null,
+      recipientPersonId: null,
+      recipientTripId: null,
+      lockedUntil: null,
+      httpStatus: null,
+      errorCode: "stale_recipient",
+      lastError: null,
+      updatedAt: nowDate(),
+    })
+    .where(eq(notificationSendQueue.id, queueId));
+}
+
 async function dispatchQueuedRetry(
   db: AppDb,
   claimed: typeof notificationSendQueue.$inferSelect,
@@ -1633,30 +1654,12 @@ export async function drainNotificationRetries(
     }
     const dispatch = await dispatchQueuedRetry(db, claimed, notification, provider, senders);
     if (dispatch.suppressed) {
-      await db
-        .update(notificationSendQueue)
-        .set({
-          status: "failed",
-          lockedUntil: null,
-          errorCode: "stale_recipient",
-          lastError: null,
-          updatedAt: nowDate(),
-        })
-        .where(eq(notificationSendQueue.id, claimed.id));
+      await terminalizeStaleRetry(db, claimed.id);
       summary.failed += 1;
       continue;
     }
     if (dispatch.trackingSuppressed) {
-      await db
-        .update(notificationSendQueue)
-        .set({
-          status: "failed",
-          lockedUntil: null,
-          errorCode: "stale_recipient",
-          lastError: null,
-          updatedAt: nowDate(),
-        })
-        .where(eq(notificationSendQueue.id, claimed.id));
+      await terminalizeStaleRetry(db, claimed.id);
       summary.failed += 1;
       continue;
     }
