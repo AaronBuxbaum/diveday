@@ -37,7 +37,8 @@ export function InitializeTodayCatchUp({ action }: { action: () => Promise<void>
           setStatus({ action: currentRun.action, state: "ready" });
         }
       },
-      () => {
+      (error: unknown) => {
+        console.error("Failed to initialize Today catch-up baseline", error);
         if (mounted && actionRun.current === currentRun) {
           setStatus({ action: currentRun.action, state: "failed" });
         }
