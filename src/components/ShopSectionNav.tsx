@@ -159,12 +159,14 @@ export function ShopSidebar({ root, gates, items, blocked, copy }: NavProps) {
 }
 
 const tabClass =
-  "flex h-full min-w-0 flex-1 flex-col items-center justify-center gap-0.5 text-xs transition-colors focus-visible:focus-ring-inset";
+  "flex h-full w-max min-w-11 flex-none flex-col items-center justify-center gap-0.5 px-3 text-xs transition-colors focus-visible:focus-ring-inset";
 
 /**
  * The phone's tab bar, below `lg`: Today, Schedule, Divers and Inbox, then
  * More for the rest. Fixed to the foot, and `--tabbar-h` tells everything else
  * that sits there (a toast, a sticky Save bar) how far to stand off it.
+ * Long labels keep their names and scroll in their own rail at enlarged text;
+ * More stays outside that rail so its menu can extend above the bar.
  *
  * `data-staff-chrome` lets the live manifest hide it with the bar, because a
  * roll call owns the whole phone.
@@ -188,53 +190,61 @@ export function ShopTabBar({ root, gates, items, blocked, copy }: NavProps) {
       data-hydrated={hydratedKey === "client" ? "true" : undefined}
       data-staff-tabbar=""
       data-staff-chrome="true"
-      className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden print:hidden"
+      className="fixed inset-x-0 bottom-0 z-30 overflow-x-clip border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden print:hidden"
     >
-      <ul className="mx-auto flex h-(--tabbar-h) max-w-xl items-stretch">
-        {tabs.map((item) => {
-          const active = item.section === current;
-          return (
-            <li key={item.section} className="flex min-w-0 flex-1">
-              <Link
-                href={staffDestinationHref(root, item.destination)}
-                aria-current={rowAriaCurrent(active, pathname, root, item)}
-                className={`${tabClass} ${
-                  active ? "font-semibold text-primary" : "font-medium text-muted"
-                }`}
-              >
-                <span className="relative">
-                  <StaffDestinationIcon id={item.destination.id} className="size-6" />
-                  {item.destination.badge && blocked ? (
-                    // A dot over the icon's corner: the digit would crowd a
-                    // 64px tab. The sentence follows the name, for a screen
-                    // reader.
-                    <span
-                      aria-hidden="true"
-                      className="absolute -top-0.5 -end-1 size-2.5 rounded-full border-2 border-surface bg-danger"
-                    />
-                  ) : null}
-                </span>
-                <span className="max-w-full truncate">{copy.sections[item.section]}</span>
-                {item.destination.badge && blocked ? (
-                  <span className="sr-only"> {copy.blockedLabel}</span>
-                ) : null}
-              </Link>
-            </li>
-          );
-        })}
+      <div className="mx-auto flex h-(--tabbar-h) w-full max-w-xl items-stretch">
+        <div
+          data-staff-tab-scroll=""
+          className="min-w-0 flex-1 overflow-x-auto overscroll-x-contain"
+        >
+          <ul className="flex h-full w-max min-w-full items-stretch">
+            {tabs.map((item) => {
+              const active = item.section === current;
+              return (
+                <li key={item.section} className="flex flex-none">
+                  <Link
+                    href={staffDestinationHref(root, item.destination)}
+                    onFocus={(event) =>
+                      event.currentTarget.scrollIntoView({ block: "nearest", inline: "center" })
+                    }
+                    aria-current={rowAriaCurrent(active, pathname, root, item)}
+                    className={`${tabClass} ${
+                      active ? "font-semibold text-primary" : "font-medium text-muted"
+                    }`}
+                  >
+                    <span className="relative">
+                      <StaffDestinationIcon id={item.destination.id} className="size-6" />
+                      {item.destination.badge && blocked ? (
+                        // A dot over the icon's corner: the digit would crowd a
+                        // 64px tab. The sentence follows the name, for a screen
+                        // reader.
+                        <span
+                          aria-hidden="true"
+                          className="absolute -top-0.5 -end-1 size-2.5 rounded-full border-2 border-surface bg-danger"
+                        />
+                      ) : null}
+                    </span>
+                    <span className="whitespace-nowrap">{copy.sections[item.section]}</span>
+                    {item.destination.badge && blocked ? (
+                      <span className="sr-only"> {copy.blockedLabel}</span>
+                    ) : null}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
         {rest.length > 0 ? (
-          <li className="flex min-w-0 flex-1">
-            <MoreMenu
-              root={root}
-              items={rest}
-              current={current}
-              active={moreActive}
-              pathname={pathname}
-              copy={copy}
-            />
-          </li>
+          <MoreMenu
+            root={root}
+            items={rest}
+            current={current}
+            active={moreActive}
+            pathname={pathname}
+            copy={copy}
+          />
         ) : null}
-      </ul>
+      </div>
     </nav>
   );
 }
@@ -262,7 +272,7 @@ function MoreMenu({
   // Matches .animate-scale-out in globals.css — the two must move together.
   const { mounted, closing } = useExitAnimation(open, motionMs("base"));
   return (
-    <div ref={rootRef} className="relative flex flex-1">
+    <div ref={rootRef} className="relative flex flex-none">
       <button
         type="button"
         ref={triggerRef}
