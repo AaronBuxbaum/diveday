@@ -541,7 +541,7 @@
     "mergeInvalid": "Elige uno de los posibles registros duplicados e inténtalo de nuevo.",
     "mergeRecordConflict": "Sin fusionar: estos registros tienen un historial en conflicto que no se puede combinar con seguridad.",
     "mergeStaffRecord": "Los registros de personal o tripulación no se pueden fusionar con un registro de buceador.",
-    "merged": "Registros de buceador fusionados. El registro elegido ahora es el superviviente.",
+    "merged": "Registros de buceador fusionados. El registro elegido ahora es el superviviente. Si un enlace de reserva o de formularios del curso deja de funcionar, vuelve a enviarlo desde la reserva.",
     "mergedRecordMoved": "Ese registro se fusionó con este. No se guardó nada, así que haz el cambio aquí.",
     "noCertificationCleared": "Corregido. La ficha de este buceador ya no dice nada sobre una certificación, y corregirla nunca agrega ninguna.",
     "noCertificationNothingToClear": "No hay nada que corregir. La ficha de este buceador ya no dice que no tenga certificación.",

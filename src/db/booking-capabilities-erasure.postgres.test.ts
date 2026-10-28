@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { expect, it, vi } from "vitest";
 import { nowDate } from "@/lib/clock";
+import type { NotificationProvider } from "@/lib/notifications";
 import { describePostgres, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
 import { lockBoardingCertificationEvidence } from "./boarding-certification-snapshot";
 import { issueBookingCapability, verifyBookingCapability } from "./booking-capabilities";
@@ -9,17 +10,75 @@ import { withErasureCoordinatedBookingSend } from "./erasure-coordinated-send";
 import {
   drainNotificationRetries,
   sendAndRecordNotification,
+  sendClaimedSeatConfirmation,
   sendNotification,
 } from "./notifications";
 import {
   bookingCapabilities,
   bookings,
   notificationDeliveries,
+  notificationDeliveryAttempts,
   notificationSendQueue,
   people,
   shops,
   trips,
+  waiverDeliveries,
+  waiverRecords,
+  waiverTemplates,
 } from "./schema";
+import { issueAndDeliverWaiver } from "./waiver-issue";
+
+async function waitForStage<T>(promise: Promise<T>, stage: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`Timed out waiting for ${stage}`)), 8_000);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+async function confirmationFixture(pg: Awaited<ReturnType<typeof postgresTestDb>>, suffix: string) {
+  const [shop] = await pg.db
+    .insert(shops)
+    .values({
+      name: `Confirmation race ${suffix}`,
+      slug: `confirmation-race-${suffix}`,
+      timezone: "UTC",
+    })
+    .returning();
+  if (!shop) throw new Error("shop insert returned no row");
+  const now = nowDate();
+  const [trip] = await pg.db
+    .insert(trips)
+    .values({
+      shopId: shop.id,
+      title: "Confirmation test",
+      startsAt: new Date(now.getTime() + 48 * 60 * 60 * 1000),
+      endsAt: new Date(now.getTime() + 52 * 60 * 60 * 1000),
+      capacity: 2,
+    })
+    .returning();
+  if (!trip) throw new Error("trip insert returned no row");
+  const [person] = await pg.db
+    .insert(people)
+    .values({
+      shopId: shop.id,
+      fullName: "Confirmation Diver",
+      email: `confirm-${suffix}@example.org`,
+    })
+    .returning();
+  if (!person) throw new Error("person insert returned no row");
+  const [booking] = await pg.db
+    .insert(bookings)
+    .values({ shopId: shop.id, tripId: trip.id, personId: person.id, bookedAs: "diver" })
+    .returning();
+  if (!booking) throw new Error("booking insert returned no row");
+  return { shop, trip, person, booking, now };
+}
 
 describePostgres("capability issuance and erasure serialization", () => {
   it("does not mint after an erasure already holds the subject lock", async () => {
@@ -183,13 +242,13 @@ describePostgres("capability issuance and erasure serialization", () => {
         .where(and(eq(people.id, person.id), eq(people.shopId, shop.id)));
     });
     try {
-      await providerStarted;
+      await waitForStage(providerStarted, "provider callback start");
       const erase = erasure;
-      await erasureStarted;
-      await waitForLockWaiters(pg.db, 1);
+      await waitForStage(erasureStarted, "erasure transaction start");
+      await waitForStage(waitForLockWaiters(pg.db, 1), "erasure waiting on send fence");
       releaseProvider();
-      await send;
-      await erase;
+      await waitForStage(send, "provider result and normal tracking commit");
+      await waitForStage(erase, "erasure commit");
       const [delivery] = await pg.db
         .select()
         .from(notificationDeliveries)
@@ -572,5 +631,245 @@ describePostgres("capability issuance and erasure serialization", () => {
       recipientPersonId: oldPerson.id,
     });
     expect(parked?.payloadSealed).toBe(queued?.payloadSealed);
+  });
+
+  it("sends and tracks a normal stored booking confirmation inside the subject fence", async () => {
+    const pg = await postgresTestDb();
+    const suffix = randomBytes(4).toString("hex");
+    const { shop, person, booking } = await confirmationFixture(pg, suffix);
+    const provider = vi.fn<NotificationProvider["send"]>(async () => ({
+      status: "sent",
+      providerMessageId: `confirmation-${suffix}`,
+    }));
+
+    const delivery = await sendClaimedSeatConfirmation(pg.db, shop.id, booking.id, {
+      send: provider,
+    });
+
+    expect(delivery).toEqual({ status: "sent", providerMessageId: `confirmation-${suffix}` });
+    expect(provider).toHaveBeenCalledTimes(1);
+    expect(provider.mock.calls[0]?.[0]).toMatchObject({
+      kind: "booking_confirmation",
+      to: person.email,
+      readinessUrl: expect.stringContaining("/ready/"),
+    });
+    expect(
+      await pg.db
+        .select()
+        .from(bookingCapabilities)
+        .where(
+          and(
+            eq(bookingCapabilities.bookingId, booking.id),
+            eq(bookingCapabilities.delivered, true),
+          ),
+        ),
+    ).toHaveLength(1);
+    expect(
+      await pg.db
+        .select()
+        .from(notificationDeliveries)
+        .where(eq(notificationDeliveries.bookingId, booking.id)),
+    ).toHaveLength(1);
+    expect(
+      await pg.db
+        .select()
+        .from(notificationDeliveryAttempts)
+        .where(eq(notificationDeliveryAttempts.bookingId, booking.id)),
+    ).toHaveLength(1);
+  });
+
+  it("suppresses a stored confirmation when a repoint wins after its initial snapshot", async () => {
+    const pg = await postgresTestDb();
+    const suffix = randomBytes(4).toString("hex");
+    const { shop, person, booking } = await confirmationFixture(pg, suffix);
+    const [replacement] = await pg.db
+      .insert(people)
+      .values({
+        shopId: shop.id,
+        fullName: "Replacement Diver",
+        email: `replacement-${suffix}@example.org`,
+      })
+      .returning();
+    if (!replacement) throw new Error("replacement insert returned no row");
+
+    let releaseRepoint!: () => void;
+    let signalRepoint!: () => void;
+    const repointGate = new Promise<void>((resolve) => (releaseRepoint = resolve));
+    const repointStarted = new Promise<void>((resolve) => (signalRepoint = resolve));
+    const repointDb = pg.connect();
+    const repoint = repointDb.transaction(async (tx) => {
+      await tx
+        .update(bookings)
+        .set({ personId: replacement.id })
+        .where(eq(bookings.id, booking.id));
+      signalRepoint();
+      await repointGate;
+    });
+    const provider = vi.fn(async () => ({
+      status: "sent" as const,
+      providerMessageId: "unexpected",
+    }));
+    let send: ReturnType<typeof sendClaimedSeatConfirmation> | undefined;
+    try {
+      await repointStarted;
+      send = sendClaimedSeatConfirmation(pg.db, shop.id, booking.id, { send: provider });
+      await waitForLockWaiters(pg.db, 1);
+      releaseRepoint();
+      await repoint;
+      await expect(send).resolves.toBeNull();
+      expect(provider).not.toHaveBeenCalled();
+      expect(
+        await pg.db
+          .select()
+          .from(bookingCapabilities)
+          .where(eq(bookingCapabilities.bookingId, booking.id)),
+      ).toHaveLength(0);
+      expect(
+        await pg.db
+          .select()
+          .from(notificationDeliveries)
+          .where(eq(notificationDeliveries.bookingId, booking.id)),
+      ).toHaveLength(0);
+      expect(person.email).not.toBe(replacement.email);
+    } finally {
+      releaseRepoint();
+      await repoint.catch(() => undefined);
+      await send?.catch(() => undefined);
+    }
+  });
+
+  it("suppresses a stored confirmation when erasure wins before the send fence", async () => {
+    const pg = await postgresTestDb();
+    const suffix = randomBytes(4).toString("hex");
+    const { shop, person, booking, now } = await confirmationFixture(pg, suffix);
+    let releaseErasure!: () => void;
+    let signalErasure!: () => void;
+    const erasureGate = new Promise<void>((resolve) => (releaseErasure = resolve));
+    const erasureStarted = new Promise<void>((resolve) => (signalErasure = resolve));
+    const erasureDb = pg.connect();
+    const erasure = erasureDb.transaction(async (tx) => {
+      await lockBoardingCertificationEvidence(tx, shop.id, "rewrite");
+      signalErasure();
+      await erasureGate;
+      const erasedAt = new Date(now.getTime() + 1);
+      await tx
+        .update(people)
+        .set({ anonymizedAt: erasedAt, deletedAt: erasedAt })
+        .where(eq(people.id, person.id));
+    });
+    const provider = vi.fn(async () => ({
+      status: "sent" as const,
+      providerMessageId: "unexpected",
+    }));
+    let send: ReturnType<typeof sendClaimedSeatConfirmation> | undefined;
+    try {
+      await erasureStarted;
+      send = sendClaimedSeatConfirmation(pg.db, shop.id, booking.id, { send: provider });
+      await waitForLockWaiters(pg.db, 1);
+      releaseErasure();
+      await erasure;
+      await expect(send).resolves.toBeNull();
+      expect(provider).not.toHaveBeenCalled();
+      expect(
+        await pg.db
+          .select()
+          .from(bookingCapabilities)
+          .where(eq(bookingCapabilities.bookingId, booking.id)),
+      ).toHaveLength(0);
+      expect(
+        await pg.db
+          .select()
+          .from(notificationDeliveries)
+          .where(eq(notificationDeliveries.bookingId, booking.id)),
+      ).toHaveLength(0);
+    } finally {
+      releaseErasure();
+      await erasure.catch(() => undefined);
+      await send?.catch(() => undefined);
+    }
+  });
+
+  it("sends a booking waiver and records its delivery inside the subject fence", async () => {
+    const pg = await postgresTestDb();
+    const suffix = randomBytes(4).toString("hex");
+    const { shop, person, booking } = await confirmationFixture(pg, suffix);
+    const [template] = await pg.db
+      .insert(waiverTemplates)
+      .values({ shopId: shop.id, title: "Release", version: 1, body: "Release terms." })
+      .returning();
+    if (!template) throw new Error("waiver template insert returned no row");
+    const provider = vi.fn<NotificationProvider["send"]>(async () => ({
+      status: "sent",
+      providerMessageId: `waiver-${suffix}`,
+    }));
+
+    const result = await issueAndDeliverWaiver(pg.db, shop.id, booking.id, {
+      provider: { send: provider },
+    });
+
+    expect(result).toMatchObject({ ok: true, bookingId: booking.id, delivery: "sent" });
+    expect(provider).toHaveBeenCalledTimes(1);
+    expect(provider.mock.calls[0]?.[0]).toMatchObject({
+      kind: "waiver_request",
+      to: person.email,
+      completionUrl: expect.stringContaining("/waivers/"),
+    });
+    expect(
+      await pg.db
+        .select()
+        .from(waiverRecords)
+        .where(and(eq(waiverRecords.bookingId, booking.id), eq(waiverRecords.personId, person.id))),
+    ).toHaveLength(1);
+    expect(
+      await pg.db.select().from(waiverDeliveries).where(eq(waiverDeliveries.shopId, shop.id)),
+    ).toHaveLength(1);
+  });
+
+  it("does not issue or send a booking waiver when erasure wins the fence", async () => {
+    const pg = await postgresTestDb();
+    const suffix = randomBytes(4).toString("hex");
+    const { shop, person, booking, now } = await confirmationFixture(pg, suffix);
+    const [template] = await pg.db
+      .insert(waiverTemplates)
+      .values({ shopId: shop.id, title: "Release", version: 1, body: "Release terms." })
+      .returning();
+    if (!template) throw new Error("waiver template insert returned no row");
+    let releaseErasure!: () => void;
+    let signalErasure!: () => void;
+    const erasureGate = new Promise<void>((resolve) => (releaseErasure = resolve));
+    const erasureStarted = new Promise<void>((resolve) => (signalErasure = resolve));
+    const erasureDb = pg.connect();
+    const erasure = erasureDb.transaction(async (tx) => {
+      await lockBoardingCertificationEvidence(tx, shop.id, "rewrite");
+      signalErasure();
+      await erasureGate;
+      const erasedAt = new Date(now.getTime() + 1);
+      await tx
+        .update(people)
+        .set({ anonymizedAt: erasedAt, deletedAt: erasedAt })
+        .where(eq(people.id, person.id));
+    });
+    const provider = vi.fn<NotificationProvider["send"]>(async () => ({
+      status: "sent",
+      providerMessageId: "unexpected",
+    }));
+    let issue: ReturnType<typeof issueAndDeliverWaiver> | undefined;
+    try {
+      await erasureStarted;
+      issue = issueAndDeliverWaiver(pg.db, shop.id, booking.id, {
+        provider: { send: provider },
+      });
+      await waitForLockWaiters(pg.db, 1);
+      releaseErasure();
+      await erasure;
+      await expect(issue).resolves.toMatchObject({ ok: false, reason: "error" });
+      expect(provider).not.toHaveBeenCalled();
+      expect(await pg.db.select().from(waiverRecords)).toHaveLength(0);
+      expect(await pg.db.select().from(waiverDeliveries)).toHaveLength(0);
+    } finally {
+      releaseErasure();
+      await erasure.catch(() => undefined);
+      await issue?.catch(() => undefined);
+    }
   });
 });

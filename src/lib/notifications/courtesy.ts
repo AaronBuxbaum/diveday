@@ -1,4 +1,12 @@
 import { log } from "@/lib/log";
+import { NOTIFICATION_PROVIDER_TIMEOUT_MS } from "./provider";
+
+const COURTESY_CHANNEL_TIMEOUT_MS = NOTIFICATION_PROVIDER_TIMEOUT_MS / 2;
+
+function channelSignal(overallSignal?: AbortSignal): AbortSignal {
+  const channelTimeout = AbortSignal.timeout(COURTESY_CHANNEL_TIMEOUT_MS);
+  return overallSignal ? AbortSignal.any([overallSignal, channelTimeout]) : channelTimeout;
+}
 
 /**
  * The courtesy text channel: the short message that rides alongside a trip
@@ -125,12 +133,11 @@ export async function sendCourtesyMessage(
   providers: CourtesyProviders,
   options?: { signal?: AbortSignal },
 ): Promise<CourtesyResult> {
-  const providerOptions = options?.signal ? { signal: options.signal } : undefined;
   const { smsStopLine, ...courtesy } = message;
   const whatsAppDelivery = providers.whatsapp
     ? await providers.whatsapp.send(
         courtesy.whatsAppBody ? { ...courtesy, body: courtesy.whatsAppBody } : courtesy,
-        providerOptions,
+        { signal: channelSignal(options?.signal) },
       )
     : { status: "not_configured" as const };
   if (whatsAppDelivery.status === "sent") {
@@ -149,7 +156,7 @@ export async function sendCourtesyMessage(
       to: message.to,
       body: `${message.body} ${smsStopLine}`,
     },
-    providerOptions,
+    { signal: channelSignal(options?.signal) },
   );
   if (smsDelivery.status === "not_configured" && whatsAppDelivery.status === "failed") {
     return { channel: "whatsapp", delivery: whatsAppDelivery };

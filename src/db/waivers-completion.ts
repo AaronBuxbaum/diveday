@@ -517,19 +517,9 @@ async function lockWaiverForWriting(
 ): Promise<"unavailable" | "identity_unconfirmed" | null> {
   // Erasure and person merge take the matching exclusive lock before rows.
   await lockBoardingCertificationEvidence(tx, initial.shopId, "boarding");
-  if (initial.bookingId) {
-    const [seat] = await tx
-      .select({
-        personId: bookings.personId,
-        identityUnconfirmedAt: bookings.identityUnconfirmedAt,
-      })
-      .from(bookings)
-      .where(and(eq(bookings.id, initial.bookingId), eq(bookings.shopId, initial.shopId)))
-      .for("update")
-      .limit(1);
-    if (!seat || seat.personId !== initial.personId) return "unavailable";
-    if (seat.identityUnconfirmedAt) return "identity_unconfirmed";
-  }
+  // Writers that issue a link and provider sends share person-before-booking
+  // ordering, so completing a link must take the same route before locking its
+  // waiver record.
   const [person] = await tx
     .select({
       id: people.id,
@@ -543,6 +533,19 @@ async function lockWaiverForWriting(
     .for("update")
     .limit(1);
   if (!person || person.anonymizedAt || person.mergedIntoPersonId) return "unavailable";
+  if (initial.bookingId) {
+    const [seat] = await tx
+      .select({
+        personId: bookings.personId,
+        identityUnconfirmedAt: bookings.identityUnconfirmedAt,
+      })
+      .from(bookings)
+      .where(and(eq(bookings.id, initial.bookingId), eq(bookings.shopId, initial.shopId)))
+      .for("update")
+      .limit(1);
+    if (!seat || seat.personId !== initial.personId) return "unavailable";
+    if (seat.identityUnconfirmedAt) return "identity_unconfirmed";
+  }
   const [record] = await tx
     .select()
     .from(waiverRecords)

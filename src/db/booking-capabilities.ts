@@ -347,14 +347,20 @@ export async function mintBookingCapabilities(
  */
 export async function issueCourseFormsCapability(
   db: DbExecutor,
-  input: { shopId: string; bookingId: string; now?: Date; expectedPersonId?: string },
+  input: {
+    shopId: string;
+    bookingId: string;
+    now?: Date;
+    expectedPersonId?: string;
+    expectedTripId?: string;
+  },
 ): Promise<(IssuedCapability & { reused: boolean }) | null> {
   const now = input.now ?? nowDate();
   const keyResult = secretKeyFromEnvironment();
   const sealingKey = keyResult.status === "ok" ? keyResult.key : null;
   return db.transaction(async (tx) => {
     const [booking] = await tx
-      .select({ id: bookings.id })
+      .select({ id: bookings.id, tripId: bookings.tripId })
       .from(bookings)
       .innerJoin(people, eq(people.id, bookings.personId))
       .where(
@@ -367,7 +373,7 @@ export async function issueCourseFormsCapability(
         ),
       )
       .for("update", { of: people });
-    if (!booking) return null;
+    if (!booking || (input.expectedTripId && booking.tripId !== input.expectedTripId)) return null;
     if (sealingKey) {
       const [live] = await tx
         .select({
@@ -396,6 +402,7 @@ export async function issueCourseFormsCapability(
       bookingId: booking.id,
       purpose: "course_forms",
       expectedPersonId: input.expectedPersonId,
+      expectedTripId: input.expectedTripId,
       now,
       sealingKey,
     });
