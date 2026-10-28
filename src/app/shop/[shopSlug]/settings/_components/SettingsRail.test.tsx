@@ -155,6 +155,21 @@ describe("the selection model", () => {
 });
 
 describe("the rail as it renders", () => {
+  it("names the current section and dismisses the mobile picker with Escape or an outside tap", () => {
+    pathname = `${BASE}/settings/import`;
+    renderRail();
+    const toggle = screen.getByRole("button", { name: "Settings sections" });
+    expect(toggle).toHaveTextContent("yourData");
+    fireEvent.click(toggle);
+    expect(screen.getByRole("link", { name: "yourData" })).toHaveFocus();
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(toggle).toHaveFocus();
+    fireEvent.click(toggle);
+    fireEvent.pointerDown(document.body);
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+  });
+
   it("opens and closes the same navigation on a narrow screen", () => {
     const { container } = renderRail();
     const toggle = screen.getByRole("button", { name: "Settings sections" });

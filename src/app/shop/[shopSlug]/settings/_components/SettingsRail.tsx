@@ -2,12 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { GroupLabel } from "@/components/ui/group-label";
 import { DoorChevron } from "@/components/ui/ledger";
+import { MENU_PANEL } from "@/components/ui/menu";
 import { RAIL_ROW_CLASS, RAIL_ROW_CURRENT, RAIL_ROW_IDLE } from "@/components/ui/rail";
+import { useMenuDismissal } from "@/components/useMenuDismissal";
 import {
   currentSettingsRailRowId,
   type SettingsRailRow,
@@ -82,7 +85,11 @@ export function SettingsRail({
   const hubPath = `${shopBasePath}/settings`;
   const onHub = pathname === hubPath;
   const scrollerRef = useRef<HTMLDivElement>(null);
+  const rootRef = useRef<HTMLElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const close = useCallback(() => setMobileOpen(false), []);
+  useMenuDismissal({ open: mobileOpen, close, inside: [rootRef], returnFocus: triggerRef });
 
   // The rail scrolls in a box of its own, and the layout keeps that box across
   // a click inside the rail. Every other way in (a direct link, ⌘K's "Go to",
@@ -101,22 +108,34 @@ export function SettingsRail({
     setSettledFor(currentId);
   }, [currentId]);
   useEffect(() => {
-    if (mobileOpen && currentId && scrollerRef.current) revealCurrentRow(scrollerRef.current);
+    if (!mobileOpen || !scrollerRef.current) return;
+    if (currentId) revealCurrentRow(scrollerRef.current);
+    const first =
+      scrollerRef.current.querySelector<HTMLElement>('[aria-current="true"]') ??
+      scrollerRef.current.querySelector<HTMLElement>("a");
+    first?.focus({ preventScroll: true });
   }, [mobileOpen, currentId]);
   const moreBelow = useMoreBelow(scrollerRef);
 
   return (
-    <nav aria-label={ariaLabel} className={SETTINGS_RAIL_COLUMN_CLASS}>
+    <nav ref={rootRef} aria-label={ariaLabel} className={`relative ${SETTINGS_RAIL_COLUMN_CLASS}`}>
       <button
+        ref={triggerRef}
         type="button"
-        className={`${buttonClass({ variant: "secondary" })} mx-4 mt-4 lg:hidden`}
+        className={`${buttonClass({ variant: "secondary" })} mx-4 mt-4 max-w-[calc(100%-2rem)] gap-2 lg:hidden`}
+        aria-label={ariaLabel}
+        aria-description={(currentId && labels[currentId]) || undefined}
         aria-expanded={mobileOpen}
         aria-controls="settings-rail-content"
         onClick={() => setMobileOpen((open) => !open)}
       >
-        {ariaLabel}
+        <span className="min-w-0 truncate">{(currentId && labels[currentId]) || ariaLabel}</span>
+        <DisclosureCaret direction="down" className={mobileOpen ? "rotate-180" : ""} />
       </button>
-      {/* Sticky, and scrollable in its own right: the map is longer than a
+      <div
+        className={`absolute inset-x-4 top-full z-20 mt-1 ${MENU_PANEL} ${mobileOpen ? "block" : "hidden"} lg:contents`}
+      >
+        {/* Sticky, and scrollable in its own right: the map is longer than a
           laptop viewport, and a rail that scrolled the page away with it would
           be a map you have to leave to read. It pins at the bar's own height
           token, never a number: `top-20` was a guess 24px below the 3.5rem bar,
@@ -125,30 +144,30 @@ export function SettingsRail({
           20260827-clearwater-surface-language, decision 10). Its frame is
           shared with the skeleton that stands in for it while it loads
           (`settings-rail-geometry.ts`). */}
-      <div
-        ref={scrollerRef}
-        id="settings-rail-content"
-        data-settings-rail-scroller
-        data-rail-settled={settledFor === currentId ? "" : undefined}
-        // The box is longer than a laptop viewport and its clipped foot read
-        // as the end of the map: the last thing on screen was a group label
-        // with no rows under it (UX audit 2026-10-07, item 12). While there
-        // is more below, globals.css fades the box's bottom edge.
-        data-more-below={moreBelow ? "" : undefined}
-        className={`${SETTINGS_RAIL_FRAME_CLASS} overflow-y-auto ${mobileOpen ? "block" : "hidden"} lg:block`}
-      >
-        {/* The inset is on what the box scrolls, never on the box: a sticky
+        <div
+          ref={scrollerRef}
+          id="settings-rail-content"
+          data-settings-rail-scroller
+          data-rail-settled={settledFor === currentId ? "" : undefined}
+          // The box is longer than a laptop viewport and its clipped foot read
+          // as the end of the map: the last thing on screen was a group label
+          // with no rows under it (UX audit 2026-10-07, item 12). While there
+          // is more below, globals.css fades the box's bottom edge.
+          data-more-below={moreBelow ? "" : undefined}
+          className={`${SETTINGS_RAIL_FRAME_CLASS} overflow-y-auto ${mobileOpen ? "block" : "hidden"} lg:block`}
+        >
+          {/* The inset is on what the box scrolls, never on the box: a sticky
             `top-0` sticks at its scroller's padding edge, so with `py-6` on
             the box a stuck label stood 24px under its top, and the rows
             scrolled past it showed through that strip — a sliver of "Trip
             packing checklist" over "YOUR SHOP" whenever the rail opened on a
             row further down (K-221). */}
-        <div className={SETTINGS_RAIL_CONTENT_CLASS}>
-          {groups.map((group) => {
-            const isCurrentGroup = group.rows.some((row) => row.id === currentId);
-            return (
-              <div key={group.id}>
-                {/* Prefixed rather than reusing the group's own id: the pane
+          <div className={SETTINGS_RAIL_CONTENT_CLASS}>
+            {groups.map((group) => {
+              const isCurrentGroup = group.rows.some((row) => row.id === currentId);
+              return (
+                <div key={group.id}>
+                  {/* Prefixed rather than reusing the group's own id: the pane
                   already renders that id on its `<h2>`, and two of them would
                   make the fragment ambiguous.
 
@@ -157,61 +176,62 @@ export function SettingsRail({
                   than past it. `settings-rail-label` (globals.css) paints the
                   words' box from a scroll-state query, which is why they sit
                   in a span of their own: a container cannot style itself. */}
-                <GroupLabel
-                  id={`settings-rail-${group.id}`}
-                  tone={isCurrentGroup ? "primary" : "muted"}
-                  className={`settings-rail-label sticky top-0 z-10 ${SETTINGS_RAIL_LABEL_CLASS}`}
-                >
-                  <span className={SETTINGS_RAIL_LABEL_WORDS_CLASS}>{group.label}</span>
-                </GroupLabel>
-                <ul aria-labelledby={`settings-rail-${group.id}`}>
-                  {group.rows.map((row) => {
-                    const selected = row.id === currentId;
-                    const badge = badges?.[row.id];
-                    const isDoor = row.target.kind === "route";
-                    return (
-                      <li key={row.id}>
-                        <RailLink
-                          href={
-                            row.target.kind === "route"
-                              ? `${shopBasePath}${row.target.path}`
-                              : `${onHub ? "" : hubPath}#${settingsSectionFragment(row.target.id)}`
-                          }
-                          sameDocument={row.target.kind === "section" && onHub}
-                          selected={selected}
-                          onClick={() => setMobileOpen(false)}
-                        >
-                          {/* Wrapped, never cut: the rail is 264px by its
+                  <GroupLabel
+                    id={`settings-rail-${group.id}`}
+                    tone={isCurrentGroup ? "primary" : "muted"}
+                    className={`settings-rail-label sticky top-0 z-10 ${SETTINGS_RAIL_LABEL_CLASS}`}
+                  >
+                    <span className={SETTINGS_RAIL_LABEL_WORDS_CLASS}>{group.label}</span>
+                  </GroupLabel>
+                  <ul aria-labelledby={`settings-rail-${group.id}`}>
+                    {group.rows.map((row) => {
+                      const selected = row.id === currentId;
+                      const badge = badges?.[row.id];
+                      const isDoor = row.target.kind === "route";
+                      return (
+                        <li key={row.id}>
+                          <RailLink
+                            href={
+                              row.target.kind === "route"
+                                ? `${shopBasePath}${row.target.path}`
+                                : `${onHub ? "" : hubPath}#${settingsSectionFragment(row.target.id)}`
+                            }
+                            sameDocument={row.target.kind === "section" && onHub}
+                            selected={selected}
+                            onClick={() => setMobileOpen(false)}
+                          >
+                            {/* Wrapped, never cut: the rail is 264px by its
                             design, and its rows inset their words 12px a
                             side, which left a label of three provider names
                             208px for 216px of words. The row's 44px
                             is a floor, so a second line just grows it. */}
-                          <span className="min-w-0 text-pretty">{labels[row.id]}</span>
-                          {/* At most one badge per row, and only for a warning —
+                            <span className="min-w-0 text-pretty">{labels[row.id]}</span>
+                            {/* At most one badge per row, and only for a warning —
                             the settled states of these rows are quiet text on
                             the pane, not a pill on the map. A row that opens
                             a page of its own ends in the door's chevron, the
                             glyph every other door in the app wears; a row
                             that scrolls to a form on this page carries none,
                             so the two read apart (Aaron, 2026-10-03). */}
-                          {badge || isDoor ? (
-                            <span className="flex shrink-0 items-center gap-2">
-                              {badge ? (
-                                <Badge tone="warning" size="sm" toneMark={false}>
-                                  {badge}
-                                </Badge>
-                              ) : null}
-                              {isDoor ? <DoorChevron /> : null}
-                            </span>
-                          ) : null}
-                        </RailLink>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            );
-          })}
+                            {badge || isDoor ? (
+                              <span className="flex shrink-0 items-center gap-2">
+                                {badge ? (
+                                  <Badge tone="warning" size="sm" toneMark={false}>
+                                    {badge}
+                                  </Badge>
+                                ) : null}
+                                {isDoor ? <DoorChevron /> : null}
+                              </span>
+                            ) : null}
+                          </RailLink>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </nav>
