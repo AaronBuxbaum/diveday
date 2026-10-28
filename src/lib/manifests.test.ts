@@ -297,16 +297,17 @@ describe("buildTripManifest", () => {
     // checkpoint, and they pick their scroll floor from a two-branch map over
     // that count (`rollCallTableMinWidth`, trips/[id]/log/_components/
     // roll-call-columns.ts, issue #1052), and their printed checkpoint width
-    // from another (`rollCallCheckpointPrintClass`, beside it). Two to five
-    // checkpoints is five to eight columns, so neither map has a missing case. Widening this clamp without widening that map would put
+    // from another (`rollCallCheckpointPrintClass`, beside it). Two to six
+    // checkpoints is five to nine columns, so neither map has a missing case. Widening this clamp without widening that map would put
     // a ninth column back at a floor sized for eight — which renders, and looks
     // exactly like the crush issue #1035 fixed.
     expect(rollCallCheckpoints(1)).toHaveLength(2);
     expect(rollCallCheckpoints(4)).toHaveLength(5);
+    expect(rollCallCheckpoints(5)).toHaveLength(6);
     // Clamped, not trusted: the DB check constraint `trips_planned_dives_range`
-    // says 1..4 too, so neither end is reachable through the product.
+    // says 1..5 too, so neither end is reachable through the product.
     expect(rollCallCheckpoints(0)).toHaveLength(2);
-    expect(rollCallCheckpoints(9)).toHaveLength(5);
+    expect(rollCallCheckpoints(9)).toHaveLength(6);
     // A checkpoint's word ("Before departure" / "After dive N") is resolved
     // against a message bundle by the caller — see
     // src/i18n/manifest-labels.test.ts's `rollCallCheckpointText` coverage —

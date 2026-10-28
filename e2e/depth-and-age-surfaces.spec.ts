@@ -1,9 +1,11 @@
 import type { Page } from "@playwright/test";
 import { DEMO_SHOP_SLUG } from "../src/db/demo-shop";
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { openSettingsRow, openTripAbout, openTripAboutRow, tripPathByTitle } from "./helpers";
 
 const SHOP = DEMO_SHOP_SLUG;
+const staff = staffTranslator("en-US");
 
 const REEF_TRIP = "Two-Tank Reef — Molasses & French";
 
@@ -39,6 +41,8 @@ async function setSiteDepth(page: Page, siteName: string, depth: string, unitLab
   await page.getByLabel(unitLabel).fill(depth);
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByText("Dive site saved")).toBeVisible();
+  await page.goto(href);
+  await expect(page.getByLabel(unitLabel)).toHaveValue(depth);
   return href;
 }
 
@@ -106,25 +110,31 @@ test.describe("staff", () => {
     const tripPath = await tripPathByTitle(page, SHOP, REEF_TRIP);
     await page.goto(`${tripPath}`);
 
-    // The warning names both numbers and says plainly that it is not a block.
-    // Eight Open Water divers resolve to the identical sentence, so it is
-    // stated once in the shared strip above the roster with its diver count
-    // (principle 9); each of their cards wears the two-word chip instead, and
-    // the sentence appears nowhere on the card itself.
+    // With junior/full status unconfirmed on the seeded cards, the shared
+    // warning names the recorded site depth and asks the crew to verify the
+    // applicable card limit before planning; it remains an advisory, not a
+    // boarding blocker. The repeated sentence is grouped above the roster.
     const warning = page
-      .getByText(/divers: Reaches .* deeper than the .* their certification qualifies them for/)
+      .getByText(staff("trips.roster.depthWarningUnconfirmed", { site: "105", unit: "ft" }), {
+        exact: false,
+      })
       .first();
     await expect(warning).toBeVisible();
-    await expect(warning).toContainText("This is not a block");
+    await expect(warning).toContainText(staff("trips.roster.depthVerificationCard"));
     const juneCard = page.locator("#roster li").filter({ hasText: "June Park" }).first();
     await expect(juneCard.getByText("Depth advisory")).toBeVisible();
     await expect(juneCard.getByText(/deeper than the/)).toHaveCount(0);
-    // Lena is 13, so her ceiling comes from her age, not her card — a
-    // different sentence that is hers alone, and it keeps its full text on
-    // her card: grouping must never flatten a diver whose limit differs into
-    // the boat-wide line.
+    // Lena is 13, so her age-based band differs from the adults'. Her row
+    // carries the same explicit card-status check, plus the age/limit check,
+    // rather than flattening her evidence into the boat-wide line.
     const lenaCard = page.locator("#roster li").filter({ hasText: "Lena Fischer" }).first();
-    await expect(lenaCard.getByText(/deeper than the .* allowed at their age/)).toBeVisible();
+    const lenaWarning = lenaCard.getByText(
+      staff("trips.roster.depthWarningUnconfirmed", { site: "105", unit: "ft" }),
+      { exact: false },
+    );
+    await expect(lenaWarning).toBeVisible();
+    await expect(lenaWarning).toContainText(staff("trips.roster.depthVerificationCard"));
+    await expect(lenaWarning).toContainText(staff("trips.roster.depthVerificationLimits"));
 
     // And no diver on this boat is *refused*: an advisory warns, a blocker
     // blocks, and the ledger keeps the two vocabularies apart. June's shared

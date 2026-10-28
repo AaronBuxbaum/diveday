@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { SubmitButton } from "@/components/SubmitButton";
-import { buttonClass } from "@/components/ui/button";
+import { buttonClass, proseLinkClass } from "@/components/ui/button";
 import { TONE_PANEL_CLASS } from "@/components/ui/card";
 import type { AppDb } from "@/db/client";
 import { listShopFlySafeFollowUps } from "@/db/fly-safe-correction";
@@ -45,7 +45,7 @@ export async function FlySafeFollowUps({
             {item.tripId !== tripId ? (
               <>
                 {" — "}
-                <Link className="underline" href={shopPath(shopSlug, "trips", item.tripId)}>
+                <Link className={proseLinkClass} href={shopPath(shopSlug, "trips", item.tripId)}>
                   {item.tripTitle}
                 </Link>
               </>

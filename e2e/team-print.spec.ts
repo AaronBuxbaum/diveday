@@ -37,7 +37,7 @@ test.describe("Team on paper", () => {
     await expect(invite).toBeVisible();
     await expect(addCredential).toBeVisible();
     const ledger = page.locator('details[id^="credentials-"]').first();
-    await ledger.locator("summary").click();
+    await ledger.locator(":scope > summary").click();
     const credential = ledger.locator("li").first();
     await expect(credential).toBeVisible();
     const credentialName = await credential.locator("span.font-medium").first().innerText();
