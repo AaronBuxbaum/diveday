@@ -402,6 +402,13 @@
           "src/lib/staffing-week.test.ts": "979 -> 1115",
           "src/lib/waivers.test.ts": "1188 -> 1205"
         }
+      },
+      {
+        "why": "merge current main into PR #3132",
+        "files": {
+          "src/db/erasure-coverage.test.ts": "1075 -> 1078",
+          "src/lib/manifests.test.ts": "1053 -> 1054"
+        }
       }
     ],
     "src/app/api/offline-manifests/sync/route.test.ts": 955,
@@ -512,6 +519,12 @@
         "why": "Reconcile the extracted main trip writer with revision fencing and reschedule safety",
         "files": {
           "src/db/trips-record.ts#updateTripRecord": "311 -> 321"
+        }
+      },
+      {
+        "why": "merge current main into PR #3132",
+        "files": {
+          "src/db/trips-record.ts#updateTripRecord": "0 -> 315"
         }
       }
     ],
