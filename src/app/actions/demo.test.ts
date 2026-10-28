@@ -1,3 +1,4 @@
+import { and, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DEMO_BYPASS_PASSWORD } from "@/lib/credentials";
 import { fileScopedShopContext } from "@/test/db";
@@ -21,6 +22,9 @@ const ctx = fileScopedShopContext();
 const hoisted = vi.hoisted(() => ({
   signInDiveDayCredentials: vi.fn(async () => ({})),
   signOut: vi.fn(async () => ({})),
+  requireStaffSession: vi.fn(async () => ({
+    user: { shopId: "", shopSlug: "blue-mantis" },
+  })),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -38,6 +42,10 @@ vi.mock("@/lib/auth", () => ({
     },
   })),
 }));
+vi.mock("@/lib/session", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/session")>();
+  return { ...actual, requireStaffSession: hoisted.requireStaffSession };
+});
 vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
@@ -47,7 +55,8 @@ const { getDb } = await import("@/db/client");
 const { auth } = await import("@/lib/auth");
 const { cookies } = await import("next/headers");
 const { DEMO_SEAT_COOKIE, signDemoSeat } = await import("@/lib/demo-seat");
-const { switchDemoRoleAction } = await import("./demo");
+const { resetDemoAction, switchDemoRoleAction } = await import("./demo");
+const { people, personRoles, trips, userAccounts } = await import("@/db/schema");
 
 /** Where the action sent the caller, or the error it failed with instead. */
 async function landing(role: string): Promise<string> {
@@ -72,6 +81,9 @@ beforeEach(async () => {
   const { db, shop } = ctx;
   shopId = shop.id;
   vi.mocked(getDb).mockResolvedValue(db);
+  hoisted.requireStaffSession.mockReset().mockResolvedValue({
+    user: { shopId, shopSlug: "blue-mantis" },
+  });
   hoisted.signInDiveDayCredentials.mockReset().mockResolvedValue({});
   hoisted.signOut.mockReset().mockResolvedValue({});
   // The staff switches below are made by somebody already in blue-mantis, as
@@ -140,5 +152,39 @@ describe("switchDemoRoleAction", () => {
     vi.mocked(auth).mockResolvedValue(null as never);
     expect(await landing("owner")).toBe("/shop/blue-mantis");
     expect(hoisted.signInDiveDayCredentials).toHaveBeenCalled();
+  });
+});
+
+describe("resetDemoAction", () => {
+  it("redirects with the success notice only after a guarded reset completes", async () => {
+    await expect(resetDemoAction()).rejects.toThrow("REDIRECT:/shop/blue-mantis?reset=1");
+  });
+
+  it("uses a refusal notice and leaves the schedule untouched when a staff identity is real", async () => {
+    const { db } = ctx;
+    const [owner] = await db
+      .select({ accountId: userAccounts.id })
+      .from(userAccounts)
+      .innerJoin(people, eq(people.id, userAccounts.personId))
+      .innerJoin(personRoles, eq(personRoles.personId, people.id))
+      .where(and(eq(people.shopId, shopId), eq(personRoles.role, "owner")))
+      .limit(1);
+    if (!owner) throw new Error("expected a demo owner account");
+    await db
+      .update(userAccounts)
+      .set({ email: "owner@real-shop.example" })
+      .where(eq(userAccounts.id, owner.accountId));
+    const tripsBefore = await db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(eq(trips.shopId, shopId));
+
+    await expect(resetDemoAction()).rejects.toThrow("REDIRECT:/shop/blue-mantis?reset=refused");
+
+    const tripsAfter = await db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(eq(trips.shopId, shopId));
+    expect(tripsAfter).toEqual(tripsBefore);
   });
 });

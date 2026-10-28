@@ -823,7 +823,7 @@ export async function upcomingScheduleStats(
  * bound its pager without loading a single trip row.
  */
 export async function upcomingScheduleRange(
-  db: AppDb,
+  db: DbExecutor,
   shopId: string,
   now: Date = nowDate(),
   options: { publicOnly?: boolean } = {},

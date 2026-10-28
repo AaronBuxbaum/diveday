@@ -3,6 +3,7 @@ import { nowDate } from "@/lib/clock";
 import { depthToMeters } from "@/lib/depth-units";
 import { shopDayBounds } from "@/lib/zoned";
 import type { DbExecutor } from "./client";
+import { isDemoShopWithDemoOwnerOrCaptainAccount } from "./demo-account-guard";
 import { listTripReadiness } from "./readiness";
 import {
   bookingPayments,
@@ -110,6 +111,11 @@ const FIRST_GUIDE_TEAMS = 3;
  * applies the way `recordRollCall` does.
  */
 export async function seedBoatAtSea(db: DbExecutor, shopId: string): Promise<void> {
+  await db.transaction((tx) => seedBoatAtSeaWithinTransaction(tx, shopId));
+}
+
+async function seedBoatAtSeaWithinTransaction(db: DbExecutor, shopId: string): Promise<void> {
+  if (!(await isDemoShopWithDemoOwnerOrCaptainAccount(db, shopId))) return;
   const now = nowDate();
   const plan = demoAtSeaDeparture(now, DEMO_SHOP_TIMEZONE);
   if (!plan) return;
@@ -634,6 +640,10 @@ async function bringBoatHome(
   },
   now: Date,
 ): Promise<boolean> {
+  // Take the shop identity lock before the trip lock. Reset/refresh already
+  // hold the shop lock while deleting or reseeding trips; the same order here
+  // avoids a trip→shop / shop→trip deadlock with an overlapping hourly pass.
+  if (!(await isDemoShopWithDemoOwnerOrCaptainAccount(db, trip.shopId))) return false;
   const [locked] = await db
     .select({ id: trips.id })
     .from(trips)
