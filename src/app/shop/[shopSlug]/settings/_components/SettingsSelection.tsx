@@ -43,7 +43,35 @@ export function SettingsSelection({
 
   useEffect(() => {
     let pendingFrame: number | null = null;
+    let pendingSelection: string | null = null;
+    let listeningForRelease = false;
+    const cancelPendingFrame = () => {
+      if (pendingFrame === null) return;
+      window.cancelAnimationFrame(pendingFrame);
+      pendingFrame = null;
+    };
+    const removeReleaseListeners = () => {
+      if (!listeningForRelease) return;
+      document.removeEventListener("pointerup", applyAfterRelease, true);
+      document.removeEventListener("pointercancel", applyAfterRelease, true);
+      listeningForRelease = false;
+    };
+    const applyAfterRelease = () => {
+      cancelPendingFrame();
+      pendingFrame = window.requestAnimationFrame(() => {
+        pendingFrame = null;
+        // A second pointer may still be holding a control. Wait for its release
+        // event instead of spinning animation frames while the press is active.
+        if (document.querySelector("[data-settings-group] :active")) return;
+        const selection = pendingSelection;
+        pendingSelection = null;
+        removeReleaseListeners();
+        setSelectionPending(false);
+        if (selection !== null) setSelected(selection);
+      });
+    };
     const sync = () => {
+      cancelPendingFrame();
       const fragment = window.location.hash.slice(1);
       const nextSelection = fragments.includes(fragment)
         ? fragment
@@ -53,6 +81,8 @@ export function SettingsSelection({
       const pressedControl = document.querySelector<HTMLElement>("[data-settings-group] :active");
 
       if (!pressedControl) {
+        pendingSelection = null;
+        removeReleaseListeners();
         setSelectionPending(false);
         setSelected(nextSelection);
         return;
@@ -62,25 +92,20 @@ export function SettingsSelection({
       // the server-rendered all-groups view. Applying the selection immediately
       // can move that active target before pointerup, canceling its click.
       // Keep the server view until the press ends, then reconcile the hash.
+      pendingSelection = nextSelection;
       setSelectionPending(true);
-      if (pendingFrame !== null) window.cancelAnimationFrame(pendingFrame);
-      const applyWhenReleased = () => {
-        if (pressedControl.matches(":active")) {
-          pendingFrame = window.requestAnimationFrame(applyWhenReleased);
-          return;
-        }
-        pendingFrame = null;
-        setSelectionPending(false);
-        setSelected(nextSelection);
-      };
-      pendingFrame = window.requestAnimationFrame(applyWhenReleased);
+      if (listeningForRelease) return;
+      document.addEventListener("pointerup", applyAfterRelease, true);
+      document.addEventListener("pointercancel", applyAfterRelease, true);
+      listeningForRelease = true;
     };
     setHydrated(true);
     sync();
     window.addEventListener("hashchange", sync);
     return () => {
       window.removeEventListener("hashchange", sync);
-      if (pendingFrame !== null) window.cancelAnimationFrame(pendingFrame);
+      cancelPendingFrame();
+      removeReleaseListeners();
     };
   }, [initialSection]);
 
