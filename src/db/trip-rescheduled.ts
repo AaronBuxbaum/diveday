@@ -2,7 +2,7 @@ import { and, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import { diverTranslator } from "@/i18n/messages";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
-import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/format";
+import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import {
   heldSendPayloadSchema,
   heldSendRunAt,
@@ -662,7 +662,6 @@ async function tellSeatWithinFence(
           tripTitle: trip.title,
           date,
           time,
-          previous: formatDateTimeTz(previousStartsAt, locale, shop.timezone),
         })
       : t("notifications.sms.meetingPointMoved", {
           shopName: shop.name,
@@ -748,8 +747,9 @@ async function tellSeatWithinFence(
 
 /**
  * **One seat moved to another departure** (ADR 20261013-staff-move-a-seat):
- * the same reschedule notice, to that seat alone, with the old departure's
- * start as "It was". Sent at once rather than held, because the staffer who
+ * the current schedule notice, to that seat alone. It does not state the old
+ * departure's start because delivery history does not prove that was the
+ * diver's known time. Sent at once rather than held, because the staffer who
  * moved the seat is the person the diver asked; nothing is sent when the time
  * did not change, the departure is a rehearsal, or the seat's identity is held.
  */

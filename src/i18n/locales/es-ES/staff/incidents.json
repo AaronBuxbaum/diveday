@@ -208,6 +208,7 @@
     "certOverridesLink": "La actividad de seguridad del mes",
     "crew": "Acreditaciones vencidas al registrar el embarque en vivo",
     "currentCrewCredentials": "Credenciales actuales en Equipo",
+    "crewHistoryUnavailableValue": "No disponible",
     "crewObservation": "Estado observado durante el registro de embarque en vivo; puede diferir del estado al zarpar. No se registró la adecuación a la función.",
     "crewHistoryUnavailable": "Historial de acreditación no disponible para {count, plural, one {# salida de tripulante} other {# salidas de tripulantes}}",
     "crewValue": "{lapsed} de {sailings}",
