@@ -366,30 +366,6 @@
           "src/db/waiver-issue.test.ts": "1178 -> 1179",
           "src/lib/staffing-week.test.ts": "1115 -> 1125"
         }
-      },
-      {
-        "why": "list entries that cannot live in a sibling: the crew_away_acknowledgements table's classification in the erasure, export and retention schema guards (#2678)",
-        "files": {
-          "src/db/erasure-coverage.test.ts": "1165 -> 1167"
-        }
-      },
-      {
-        "why": "claude_usage table (ADR 20261018-claude-assists): its row in each schema guard's classification list (retention fixture, export exclusion, erasure closure); none can live in a sibling",
-        "files": {
-          "src/db/erasure-coverage.test.ts": "1165 -> 1167"
-        }
-      },
-      {
-        "why": "claude_call_content table (ADR 20261023-claude-call-content): its row in each schema guard's classification list (retention fixture, export exclusion, erasure closure); none can live in a sibling",
-        "files": {
-          "src/db/erasure-coverage.test.ts": "1173 -> 1175"
-        }
-      },
-      {
-        "why": "claude_call_content_erasures table (ADR 20261023-claude-call-content, security review): its row in each schema guard's classification list (retention, export exclusion, erasure closure and helper writes); none can live in a sibling",
-        "files": {
-          "src/db/erasure-coverage.test.ts": "1175 -> 1181"
-        }
       }
     ],
     "src/app/api/offline-manifests/sync/route.test.ts": 955,
@@ -420,7 +396,7 @@
     "src/db/dive-sites.test.ts": 1156,
     "src/db/diver-merge.test.ts": 1277,
     "src/db/divers.test.ts": 3056,
-    "src/db/erasure-coverage.test.ts": 1181,
+    "src/db/erasure-coverage.test.ts": 1075,
     "src/db/executed-dives.test.ts": 1085,
     "src/db/export.test.ts": 1356,
     "src/db/import.test.ts": 1074,
