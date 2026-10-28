@@ -25,10 +25,12 @@ const copy: OfflineManifestManagerCopy = {
   reconcileNoteEntry: "{subject} · {checkpoint} · {result}",
   reconcileNoteDiverReference: "Diver record {reference}",
   reconcileNoteCrewReference: "Crew record {reference}",
+  reconcileNoteChecklistReference: "Checklist item {reference}",
   reconcileNoteMarkKept: "mark kept",
   reconcileNoteMarkNeedsReview: "mark needs review",
   reconcileCheckpointDeparture: "Before departure",
   reconcileCheckpointAfterDive: "After dive {n}",
+  reconcileChecklistLocation: "Pre-departure checklist",
   reconcileErrorFallback:
     "Couldn’t reach DiveDay just now. Your offline changes are still saved here and will try to send again on reconnect.",
   savingMessage: "Saving the latest manifest to this device…",
@@ -124,7 +126,10 @@ const payload: OfflineManifestPayload = {
   ],
 };
 
-function envelope(events: OfflineManifestEnvelope["events"] = []): OfflineManifestEnvelope {
+function envelope(
+  events: OfflineManifestEnvelope["events"] = [],
+  checklistEvents: OfflineManifestEnvelope["checklistEvents"] = [],
+): OfflineManifestEnvelope {
   return {
     snapshot: {
       ...payload,
@@ -134,7 +139,7 @@ function envelope(events: OfflineManifestEnvelope["events"] = []): OfflineManife
       expiresAt: new Date(Date.now() + 1_000_000).toISOString(),
     },
     events,
-    checklistEvents: [],
+    checklistEvents,
   };
 }
 
@@ -235,36 +240,52 @@ describe("OfflineManifestManager", () => {
     expect(alert.closest("section")).toBeNull();
   });
 
-  it("reports each discarded note by current subject and checkpoint without showing its text", async () => {
+  it("reports every discarded note by stable subject reference without showing its text", async () => {
     setOnline(true);
-    const withDiscardedNote = envelope([
-      {
-        clientEventId: "event-diver",
-        snapshotId: "snapshot-1",
-        snapshotSavedAt: new Date().toISOString(),
-        tripId: TRIP_ID,
-        bookingId: "22222222-2222-2222-2222-222222222222",
-        checkpoint: "after_dive_1",
-        status: "not_boarded",
-        note: "ERASED NOTE TEXT MUST NOT APPEAR",
-        occurredAt: new Date().toISOString(),
-        syncStatus: "applied",
-        noteDisposition: "discarded_erasure_cutoff",
-      },
-      {
-        clientEventId: "event-crew",
-        snapshotId: "snapshot-1",
-        snapshotSavedAt: new Date().toISOString(),
-        tripId: TRIP_ID,
-        crewPersonId: "33333333-3333-3333-3333-333333333333",
-        checkpoint: "after_dive_2",
-        status: "boarded",
-        note: null,
-        occurredAt: new Date().toISOString(),
-        syncStatus: "applied",
-        noteDisposition: "discarded_unverified_snapshot",
-      },
-    ]);
+    const withDiscardedNote = envelope(
+      [
+        {
+          clientEventId: "event-diver",
+          snapshotId: "snapshot-1",
+          snapshotSavedAt: new Date().toISOString(),
+          tripId: TRIP_ID,
+          bookingId: "22222222-2222-2222-2222-222222222222",
+          checkpoint: "after_dive_1",
+          status: "not_boarded",
+          note: "ERASED NOTE TEXT MUST NOT APPEAR",
+          occurredAt: new Date().toISOString(),
+          syncStatus: "applied",
+          noteDisposition: "discarded_erasure_cutoff",
+        },
+        {
+          clientEventId: "event-crew",
+          snapshotId: "snapshot-1",
+          snapshotSavedAt: new Date().toISOString(),
+          tripId: TRIP_ID,
+          crewPersonId: "33333333-3333-3333-3333-333333333333",
+          checkpoint: "after_dive_2",
+          status: "boarded",
+          note: null,
+          occurredAt: new Date().toISOString(),
+          syncStatus: "applied",
+          noteDisposition: "discarded_unverified_snapshot",
+        },
+      ],
+      [
+        {
+          clientEventId: "event-checklist",
+          snapshotId: "snapshot-1",
+          snapshotSavedAt: new Date().toISOString(),
+          tripId: TRIP_ID,
+          checklistItemId: "55555555-5555-4555-8555-555555555555",
+          status: "checked",
+          note: "ERASED CHECKLIST NOTE MUST NOT APPEAR",
+          occurredAt: new Date().toISOString(),
+          syncStatus: "applied",
+          noteDisposition: "discarded_erasure_cutoff",
+        },
+      ],
+    );
     vi.mocked(loadOfflineManifest).mockResolvedValue(withDiscardedNote);
     vi.mocked(primeOfflineManifestShell).mockResolvedValue(undefined);
     vi.mocked(saveOfflineManifest).mockResolvedValue(withDiscardedNote);
@@ -272,12 +293,20 @@ describe("OfflineManifestManager", () => {
 
     render(<OfflineManifestManager payload={payload} locale="en-US" copy={copy} />);
 
-    expect(await screen.findByText("Nora Quinn · After dive 1 · mark kept")).toBeInTheDocument();
-    expect(await screen.findByText("Sal Moretti · After dive 2 · mark kept")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Diver record 22222222 · After dive 1 · mark kept"),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByText("Crew record 33333333 · After dive 2 · mark kept"),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByText("Checklist item 55555555 · Pre-departure checklist · mark kept"),
+    ).toBeInTheDocument();
     expect(screen.queryByText("ERASED NOTE TEXT MUST NOT APPEAR")).not.toBeInTheDocument();
+    expect(screen.queryByText("ERASED CHECKLIST NOTE MUST NOT APPEAR")).not.toBeInTheDocument();
   });
 
-  it("uses the current anonymized label instead of a stale diver name", async () => {
+  it("never uses names from a live payload in a discarded-note notice", async () => {
     setOnline(true);
     const anonymizedPayload = {
       ...payload,
@@ -307,7 +336,9 @@ describe("OfflineManifestManager", () => {
 
     render(<OfflineManifestManager payload={anonymizedPayload} locale="en-US" copy={copy} />);
 
-    expect(await screen.findByText("[anonymized] · After dive 1 · mark kept")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Diver record 22222222 · After dive 1 · mark kept"),
+    ).toBeInTheDocument();
     expect(screen.queryByText("Nora Quinn · After dive 1 · mark kept")).not.toBeInTheDocument();
   });
 

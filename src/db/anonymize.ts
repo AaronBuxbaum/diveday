@@ -127,6 +127,7 @@ import {
   people,
   personCourtesyEmailUnsubscribeTokens,
   personRoles,
+  preDepartureCheckEvents,
   priorGearAssignments,
   priorVisits,
   recapPhotos,
@@ -850,6 +851,21 @@ async function scrubPersonRecord(
       )
       .returning({ id: rollCallCrewEvents.id });
     logFuzzyMatch(ctx, "roll_call_crew_note_name", notesNamingDiver.length);
+
+    const checklistNotesNamingDiver = await tx
+      .update(preDepartureCheckEvents)
+      .set({
+        note: sql`regexp_replace(${preDepartureCheckEvents.note}, ${crewNoteNamePattern}, ${REDACTED_TEXT}, 'gi')`,
+      })
+      .where(
+        and(
+          eq(preDepartureCheckEvents.shopId, shopId),
+          isNotNull(preDepartureCheckEvents.note),
+          sql`${preDepartureCheckEvents.note} ~* ${crewNoteNamePattern}`,
+        ),
+      )
+      .returning({ id: preDepartureCheckEvents.id });
+    logFuzzyMatch(ctx, "pre_departure_check_note_name", checklistNotesNamingDiver.length);
   }
 
   await tx

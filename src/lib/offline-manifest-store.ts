@@ -844,6 +844,7 @@ export async function appendOfflineChecklistCheck(
       clientEventId: crypto.randomUUID(),
       snapshotId: envelope.snapshot.snapshotId,
       snapshotSavedAt: envelope.snapshot.savedAt,
+      erasureEpochToken: envelope.snapshot.erasureEpochToken,
       tripId,
       occurredAt: nowDate().toISOString(),
       syncStatus: "pending",

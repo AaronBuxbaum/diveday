@@ -6,10 +6,13 @@ import { signOfflineErasureEpoch } from "@/lib/offline-erasure-epoch";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
 import { anonymizeDiver } from "./anonymize";
 import { recordCrewRollCall, recordRollCall } from "./manifests";
+import { recordPreDepartureCheck } from "./pre-departure-check";
 import {
   bookings,
   people,
   personRoles,
+  preDepartureCheckEvents,
+  preDepartureChecklistItems,
   rollCallCrewEvents,
   rollCallEvents,
   shops,
@@ -60,6 +63,11 @@ async function fixture() {
     })
     .returning();
   if (!trip) throw new Error("trip insert returned no row");
+  const [checklistItem] = await pg.db
+    .insert(preDepartureChecklistItems)
+    .values({ shopId: shop.id, label: "Oxygen aboard" })
+    .returning();
+  if (!checklistItem) throw new Error("checklist item insert returned no row");
   await pg.db.insert(tripAssignments).values({ tripId: trip.id, personId: owner.id });
   const [booking] = await pg.db
     .insert(bookings)
@@ -132,6 +140,29 @@ async function fixture() {
       note,
     });
   };
+  const writeChecklistNote = (note: string, epoch: number) => {
+    const snapshotId = randomUUID();
+    const occurredAt = nowDate();
+    return recordPreDepartureCheck(pg.connect(), {
+      shopId: shop.id,
+      tripId: trip.id,
+      checklistItemId: checklistItem.id,
+      recordedByPersonId: owner.id,
+      status: "checked",
+      source: "offline",
+      clientEventId: randomUUID(),
+      offlineSnapshotSavedAt: new Date(occurredAt.getTime() - 1_000),
+      offlineSnapshotId: snapshotId,
+      offlineErasureEpochToken: signOfflineErasureEpoch({
+        shopId: shop.id,
+        tripId: trip.id,
+        snapshotId,
+        epoch,
+      }),
+      occurredAt,
+      note,
+    });
+  };
   const erase = () =>
     anonymizeDiver(pg.connect(), {
       shopId: shop.id,
@@ -154,6 +185,16 @@ async function fixture() {
       })
       .from(rollCallEvents)
       .where(and(eq(rollCallEvents.shopId, shop.id), eq(rollCallEvents.bookingId, booking.id)));
+  const checklistNotes = async () =>
+    pg.db
+      .select({ note: preDepartureCheckEvents.note, status: preDepartureCheckEvents.status })
+      .from(preDepartureCheckEvents)
+      .where(
+        and(
+          eq(preDepartureCheckEvents.shopId, shop.id),
+          eq(preDepartureCheckEvents.checklistItemId, checklistItem.id),
+        ),
+      );
   return {
     pg,
     shop,
@@ -162,9 +203,11 @@ async function fixture() {
     writeNote,
     writeOfflineNote,
     writeOfflineDiverNote,
+    writeChecklistNote,
     erase,
     notes,
     diverNotes,
+    checklistNotes,
   };
 }
 
@@ -313,5 +356,33 @@ describePostgres("crew note writes ordered with erasure", () => {
     expect(await noteWrite).toMatchObject({ ok: true });
     expect(await erasure).toMatchObject({ ok: true });
     expect(await f.diverNotes()).toMatchObject([{ note: null, status: "not_boarded" }]);
+  });
+
+  it("orders a checklist note writer before erasure and scrubs its text", async () => {
+    const f = await fixture();
+    await f.pg.db.execute(
+      sql`create function test_hold_checklist_note_insert() returns trigger language plpgsql as $$ begin perform pg_advisory_xact_lock(281037); return new; end $$`,
+    );
+    await f.pg.db.execute(
+      sql`create trigger test_hold_checklist_note_insert before insert on pre_departure_check_events for each row execute function test_hold_checklist_note_insert()`,
+    );
+    const gate = await holdRowLock(f.pg, sql`select pg_advisory_xact_lock(281037)`);
+    const noteWrite = f.writeChecklistNote(
+      "Maya Rivera checked the oxygen bottle.",
+      f.shop.offlineErasureEpoch,
+    );
+    let erasure: ReturnType<typeof f.erase> | undefined;
+    try {
+      await waitForLockWaiters(f.pg.db, 1);
+      erasure = f.erase();
+      await waitForLockWaiters(f.pg.db, 2);
+    } finally {
+      await gate.release();
+    }
+    expect(await noteWrite).toMatchObject({ ok: true });
+    expect(await erasure).toMatchObject({ ok: true });
+    expect(await f.checklistNotes()).toEqual([
+      { note: "[redacted] checked the oxygen bottle.", status: "checked" },
+    ]);
   });
 });

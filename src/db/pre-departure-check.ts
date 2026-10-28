@@ -2,12 +2,14 @@ import { and, asc, eq, exists, gt, isNull, lte, or, sql } from "drizzle-orm";
 import { isStaff } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
+import { verifyOfflineErasureEpoch } from "@/lib/offline-erasure-epoch";
 import { offlineEventOutOfBounds } from "@/lib/offline-events";
 import {
   PRE_DEPARTURE_CHECK_RETRACTION_SUPERSEDED,
   type PreDepartureCheckStatus,
 } from "@/lib/pre-departure-check";
 import { canPersonManageSafetyChecklist, loadActiveStaffRoles } from "./authz";
+import { lockBoardingCertificationEvidence } from "./boarding-certification-snapshot";
 import type { AppDb, DbExecutor } from "./client";
 import { boundLockWaits } from "./lock-bounds";
 import { publishManifestEvent } from "./manifest-events";
@@ -19,6 +21,7 @@ import {
 } from "./offline-replay";
 import { violatesUniqueIndex } from "./query-helpers";
 import { people, preDepartureCheckEvents, preDepartureChecklistItems, trips } from "./schema";
+import { getShopOfflineErasureEpoch } from "./shops";
 import { liveTrip } from "./trips-live";
 
 async function activeStaffRecorderId(
@@ -304,9 +307,15 @@ async function storedCheckEvent(
 }
 
 export type RecordPreDepartureCheckOutcome =
-  | { ok: true; eventId: string; duplicate?: boolean }
+  | {
+      ok: true;
+      eventId: string;
+      duplicate?: boolean;
+      noteDisposition?: "discarded_erasure_cutoff" | "discarded_unverified_snapshot";
+    }
   | {
       ok: false;
+      noteDisposition?: "discarded_erasure_cutoff" | "discarded_unverified_snapshot";
       reason:
         | "trip_unavailable"
         | "item_unavailable"
@@ -338,6 +347,8 @@ export async function recordPreDepartureCheck(
     clientEventId?: string;
     retractsClientEventId?: string;
     offlineSnapshotSavedAt?: Date;
+    offlineSnapshotId?: string;
+    offlineErasureEpochToken?: string;
     note?: string;
     occurredAt?: Date;
   },
@@ -350,13 +361,53 @@ export async function recordPreDepartureCheck(
         const staffId = await activeStaffRecorderId(tx, input.shopId, input.recordedByPersonId);
         if (!staffId) return { ok: false, reason: "staff_not_found" };
 
+        const mayWriteNote = Boolean(input.note?.trim());
+        if (mayWriteNote) {
+          // A checklist narrative is retained shop evidence just like a roll-call
+          // note. Serialize it against the same erasure rewrite fence.
+          await lockBoardingCertificationEvidence(tx, input.shopId, "boarding");
+        }
+        const verifiedEpoch =
+          source === "offline" && mayWriteNote
+            ? verifyOfflineErasureEpoch({
+                token: input.offlineErasureEpochToken,
+                shopId: input.shopId,
+                tripId: input.tripId,
+                snapshotId: input.offlineSnapshotId,
+              })
+            : undefined;
+        let acceptedNote: string | null | undefined = input.note;
+        let noteDisposition:
+          | "discarded_erasure_cutoff"
+          | "discarded_unverified_snapshot"
+          | undefined;
+        if (source === "offline" && mayWriteNote) {
+          if (verifiedEpoch === null) {
+            acceptedNote = null;
+            noteDisposition = "discarded_unverified_snapshot";
+          } else {
+            const currentEpoch = await getShopOfflineErasureEpoch(tx, input.shopId);
+            if (currentEpoch === null || currentEpoch !== verifiedEpoch) {
+              acceptedNote = null;
+              noteDisposition = "discarded_erasure_cutoff";
+            }
+          }
+        }
+        const refuse = (
+          reason: Extract<RecordPreDepartureCheckOutcome, { ok: false }>["reason"],
+        ) => ({
+          ok: false as const,
+          reason,
+          ...(noteDisposition ? { noteDisposition } : {}),
+        });
+
         if (source === "offline" && input.clientEventId) {
           const replayed = replayVerdict(
             await storedCheckEvent(tx, input.shopId, input.clientEventId),
             `${input.tripId}/${input.checklistItemId}`,
             "pre_departure_check_events",
           );
-          if (replayed) return replayed;
+          if (replayed) return noteDisposition ? { ...replayed, noteDisposition } : replayed;
         }
 
         // The trip's lock, so two requests carrying the same offline event take
@@ -381,9 +432,9 @@ export async function recordPreDepartureCheck(
             `${input.tripId}/${input.checklistItemId}`,
             "pre_departure_check_events",
           );
-          if (replayed) return replayed;
+          if (replayed) return noteDisposition ? { ...replayed, noteDisposition } : replayed;
         }
-        if (!trip) return { ok: false, reason: "trip_unavailable" };
+        if (!trip) return refuse("trip_unavailable");
 
         const [item] = await tx
           .select({ id: preDepartureChecklistItems.id })
@@ -396,7 +447,7 @@ export async function recordPreDepartureCheck(
             ),
           )
           .limit(1);
-        if (!item) return { ok: false, reason: "item_unavailable" };
+        if (!item) return refuse("item_unavailable");
 
         if (source === "offline") {
           if (
@@ -407,7 +458,7 @@ export async function recordPreDepartureCheck(
               now: nowDate(),
             })
           ) {
-            return { ok: false, reason: "snapshot_invalid" };
+            return refuse("snapshot_invalid");
           }
           const [newest] = await tx
             .select({
@@ -429,14 +480,14 @@ export async function recordPreDepartureCheck(
             )
             .limit(1);
           if (newest && newest.occurredAt > occurredAt) {
-            return { ok: false, reason: "newer_event_exists" };
+            return refuse("newer_event_exists");
           }
           if (
             input.status === "cleared" &&
             input.retractsClientEventId &&
             newest?.clientEventId?.toLowerCase() !== input.retractsClientEventId.toLowerCase()
           ) {
-            return { ok: false, reason: PRE_DEPARTURE_CHECK_RETRACTION_SUPERSEDED };
+            return refuse(PRE_DEPARTURE_CHECK_RETRACTION_SUPERSEDED);
           }
         }
 
@@ -450,12 +501,12 @@ export async function recordPreDepartureCheck(
             status: input.status,
             source,
             clientEventId: source === "offline" ? input.clientEventId : null,
-            note: input.note?.trim() || null,
+            note: acceptedNote?.trim() || null,
             occurredAt,
           })
           .returning({ id: preDepartureCheckEvents.id });
         if (!event) throw new Error("recordPreDepartureCheck: insert returned no row");
-        return { ok: true, eventId: event.id };
+        return { ok: true, eventId: event.id, ...(noteDisposition ? { noteDisposition } : {}) };
       }),
     {
       indexName: "pre_departure_check_events_shop_client_event_unique",

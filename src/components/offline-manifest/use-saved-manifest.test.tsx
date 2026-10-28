@@ -156,6 +156,18 @@ describe("useSavedManifest on a trip", () => {
         },
       ],
     });
+    saved.checklistEvents.push({
+      clientEventId: "checklist-third",
+      snapshotId: "snap-trip-1",
+      snapshotSavedAt: new Date(0).toISOString(),
+      tripId: "trip-1",
+      checklistItemId: "22222222-3333-4444-5555-fedcba112233",
+      status: "checked",
+      note: "CHECKLIST NOTE TEXT MUST NOT APPEAR",
+      occurredAt: new Date(0).toISOString(),
+      syncStatus: "applied",
+      noteDisposition: "discarded_erasure_cutoff",
+    });
     load.mockResolvedValue(saved);
 
     const first = at("trip=trip-1");
@@ -165,7 +177,11 @@ describe("useSavedManifest on a trip", () => {
     expect(firstMessage).toContain("afterDive");
     expect(firstMessage).toContain("ba987654");
     expect(firstMessage).toContain("departure");
+    expect(firstMessage).toContain("noteChecklistReference");
+    expect(firstMessage).toContain("ba112233");
+    expect(firstMessage).toContain("checklistLocation");
     expect(firstMessage).not.toContain("ERASED NAME MUST NOT APPEAR");
+    expect(firstMessage).not.toContain("CHECKLIST NOTE TEXT MUST NOT APPEAR");
     expect(firstMessage).not.toContain("Nora Quinn");
 
     first.unmount();

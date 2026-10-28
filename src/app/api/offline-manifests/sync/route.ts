@@ -111,6 +111,7 @@ const checklistEventSchema = z.object({
   clientEventId: z.string().uuid(),
   snapshotId: z.string().uuid(),
   snapshotSavedAt: z.iso.datetime(),
+  erasureEpochToken: z.string().max(128).optional(),
   tripId: z.string().uuid(),
   checklistItemId: z.string().uuid(),
   status: z.enum(["checked", "cleared"]),
@@ -290,6 +291,8 @@ export async function POST(request: Request) {
       clientEventId: event.clientEventId,
       retractsClientEventId: event.retractsClientEventId,
       offlineSnapshotSavedAt: new Date(event.snapshotSavedAt),
+      offlineSnapshotId: event.snapshotId,
+      offlineErasureEpochToken: event.erasureEpochToken,
       occurredAt: new Date(event.occurredAt),
       note: event.note ?? undefined,
     });
@@ -297,6 +300,9 @@ export async function POST(request: Request) {
       clientEventId: event.clientEventId,
       status: outcome.ok ? (outcome.duplicate ? "duplicate" : "applied") : "rejected",
       ...(!outcome.ok ? { reason: outcome.reason } : {}),
+      ...("noteDisposition" in outcome && outcome.noteDisposition
+        ? { noteDisposition: outcome.noteDisposition }
+        : {}),
     });
   }
   // The counter's own array, applied last and by the same ordering discipline:

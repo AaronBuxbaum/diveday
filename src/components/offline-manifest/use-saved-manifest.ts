@@ -10,7 +10,7 @@ import {
   readDiscardedOfflineRecords,
   syncOfflineManifest,
 } from "@/lib/offline-manifest-store";
-import type { OfflineRollCallEvent } from "@/lib/offline-manifests";
+import type { OfflineChecklistEvent, OfflineRollCallEvent } from "@/lib/offline-manifests";
 import {
   type OfflineManifestEnvelope,
   offlineFallbackReason,
@@ -23,28 +23,37 @@ import { useCrossShopPurge } from "./use-cross-shop-purge";
 import { useOfflineTenant } from "./use-offline-tenant";
 
 function discardedNoteMessage(
-  events: readonly OfflineRollCallEvent[],
+  events: readonly (OfflineRollCallEvent | OfflineChecklistEvent)[],
   t: OfflineManifestTranslator,
 ) {
   const cutoff = events.filter((event) => event.noteDisposition === "discarded_erasure_cutoff");
   const unverified = events.filter(
     (event) => event.noteDisposition === "discarded_unverified_snapshot",
   );
-  const describe = (event: OfflineRollCallEvent) => {
-    const subjectId = event.bookingId ?? event.crewPersonId ?? "unknown";
-    const subject = event.bookingId
-      ? t("shared.offlineManifest.reconcile.noteDiverReference", {
+  const describe = (event: OfflineRollCallEvent | OfflineChecklistEvent) => {
+    const isChecklist = "checklistItemId" in event;
+    const subjectId = isChecklist
+      ? event.checklistItemId
+      : (event.bookingId ?? event.crewPersonId ?? "unknown");
+    const subject = isChecklist
+      ? t("shared.offlineManifest.reconcile.noteChecklistReference", {
           reference: subjectId.slice(-8),
         })
-      : t("shared.offlineManifest.reconcile.noteCrewReference", {
-          reference: subjectId.slice(-8),
-        });
-    const checkpoint =
-      event.checkpoint === "departure"
-        ? t("shared.rollCallCheckpoint.departure")
-        : t("shared.rollCallCheckpoint.afterDive", {
-            n: Number(event.checkpoint.slice("after_dive_".length)),
+      : event.bookingId
+        ? t("shared.offlineManifest.reconcile.noteDiverReference", {
+            reference: subjectId.slice(-8),
+          })
+        : t("shared.offlineManifest.reconcile.noteCrewReference", {
+            reference: subjectId.slice(-8),
           });
+    const checkpoint =
+      "checkpoint" in event
+        ? event.checkpoint === "departure"
+          ? t("shared.rollCallCheckpoint.departure")
+          : t("shared.rollCallCheckpoint.afterDive", {
+              n: Number(event.checkpoint.slice("after_dive_".length)),
+            })
+        : t("shared.offlineManifest.reconcile.checklistLocation");
     const result = t(
       event.syncStatus === "rejected"
         ? "shared.offlineManifest.reconcile.noteMarkNeedsReview"
@@ -195,7 +204,7 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
       // cannot see it tells a captain they are caught up when they are not.
       const rejected = rejectedOfflineEventCount(next);
       const pending = pendingOfflineEventCount(next);
-      const noteMessage = discardedNoteMessage(next.events, t);
+      const noteMessage = discardedNoteMessage([...next.events, ...next.checklistEvents], t);
       const messages = [
         ...(rejected > 0
           ? [t("shared.offlineManifest.reconcile.pendingRejectedSingle", { count: rejected })]
@@ -377,7 +386,9 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
             isRollCallCheckpoint(current, plannedDives) ? current : "departure",
           );
         }
-        const noteMessage = saved ? discardedNoteMessage(saved.events, t) : "";
+        const noteMessage = saved
+          ? discardedNoteMessage([...saved.events, ...saved.checklistEvents], t)
+          : "";
         setMessage(
           noteMessage ||
             (saved

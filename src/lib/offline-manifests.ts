@@ -748,6 +748,8 @@ export type OfflineChecklistEvent = {
   clientEventId: string;
   snapshotId: string;
   snapshotSavedAt: string;
+  /** Bound to this snapshot id and shop; absent tokens cannot authorize note text. */
+  erasureEpochToken?: string;
   tripId: string;
   checklistItemId: string;
   status: PreDepartureCheckStatus;
@@ -757,6 +759,7 @@ export type OfflineChecklistEvent = {
   occurredAt: string;
   syncStatus: "pending" | "applied" | "rejected";
   rejectionReason?: string;
+  noteDisposition?: "discarded_erasure_cutoff" | "discarded_unverified_snapshot";
 };
 
 /**

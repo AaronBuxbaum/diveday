@@ -1,14 +1,17 @@
+import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createBoat } from "@/db/boats";
 import { getIncidentExport } from "@/db/incident-export";
 import {
   preDepartureCheckEvents,
   preDepartureChecklistItems,
+  shops,
   tripAssignments,
   trips,
 } from "@/db/schema";
 import type { DiveDaySession } from "@/lib/auth";
 import { nowDate } from "@/lib/clock";
+import { signOfflineErasureEpoch } from "@/lib/offline-erasure-epoch";
 import { fileScopedShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 
@@ -171,5 +174,82 @@ describe("POST /api/offline-manifests/sync — the checklist answer on the depar
     );
     expect(late.status).toBe(200);
     expect((await ours()).unchecked).toEqual(["2725 flares in date", "2725 radio checked"]);
+  });
+
+  it("omits an old checklist note but applies its mark and reports the disposition", async () => {
+    const { db, shop, staffPersonId } = await seededContext();
+    vi.mocked(getDb).mockResolvedValue(db);
+    vi.mocked(auth).mockResolvedValue(staffSession(shop.id, staffPersonId));
+    const now = nowDate();
+    const boat = await createBoat(db, shop.id, "Erasure checklist hull", 12, null);
+    const [trip] = await db
+      .insert(trips)
+      .values({
+        shopId: shop.id,
+        boatId: boat.id,
+        title: "Erasure checklist sync",
+        startsAt: new Date(now.getTime() - 30 * 60_000),
+        endsAt: new Date(now.getTime() + 3 * 3_600_000),
+        capacity: 10,
+      })
+      .returning();
+    if (!trip) throw new Error("trip insert failed");
+    await db.insert(tripAssignments).values({ tripId: trip.id, personId: staffPersonId });
+    const [item] = await db
+      .insert(preDepartureChecklistItems)
+      .values({ shopId: shop.id, label: "Erasure checklist oxygen" })
+      .returning();
+    if (!item) throw new Error("checklist item insert failed");
+
+    const issuedEpoch = shop.offlineErasureEpoch;
+    const snapshotId = "11111111-1111-4111-8111-111111111111";
+    await db
+      .update(shops)
+      .set({ offlineErasureEpoch: issuedEpoch + 1 })
+      .where(eq(shops.id, shop.id));
+    const occurredAt = nowDate();
+    const response = await POST(
+      postRequest({
+        events: [],
+        checklistEvents: [
+          {
+            clientEventId: "22222222-2222-4222-8222-222222222222",
+            snapshotId,
+            snapshotSavedAt: new Date(occurredAt.getTime() - 1_000).toISOString(),
+            erasureEpochToken: signOfflineErasureEpoch({
+              shopId: shop.id,
+              tripId: trip.id,
+              snapshotId,
+              epoch: issuedEpoch,
+            }),
+            tripId: trip.id,
+            checklistItemId: item.id,
+            status: "checked",
+            note: "Maya Rivera was named in the old checklist note.",
+            occurredAt: occurredAt.toISOString(),
+          },
+        ],
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      results: [
+        {
+          clientEventId: "22222222-2222-4222-8222-222222222222",
+          status: "applied",
+          noteDisposition: "discarded_erasure_cutoff",
+        },
+      ],
+    });
+    const [event] = await db
+      .select({
+        note: preDepartureCheckEvents.note,
+        status: preDepartureCheckEvents.status,
+        occurredAt: preDepartureCheckEvents.occurredAt,
+      })
+      .from(preDepartureCheckEvents)
+      .where(eq(preDepartureCheckEvents.clientEventId, "22222222-2222-4222-8222-222222222222"));
+    expect(event).toEqual({ note: null, status: "checked", occurredAt });
   });
 });

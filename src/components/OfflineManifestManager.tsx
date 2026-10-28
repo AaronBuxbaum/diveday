@@ -10,7 +10,12 @@ import { GroupLabel } from "@/components/ui/group-label";
 import { fill, pluralForm } from "@/i18n/fill";
 import { scopedId } from "@/lib/element-id";
 import { formatDateTimeTz } from "@/lib/format";
-import { type OfflineManifestPayload, offlineManifestFreshness } from "@/lib/offline-manifests";
+import {
+  type OfflineChecklistEvent,
+  type OfflineManifestPayload,
+  type OfflineRollCallEvent,
+  offlineManifestFreshness,
+} from "@/lib/offline-manifests";
 import { type OfflineManifestSyncCopy, useOfflineManifestSync } from "./use-offline-manifest-sync";
 
 /** Every word `OfflineManifestManager` renders, resolved server-side. */
@@ -20,10 +25,12 @@ export interface OfflineManifestManagerCopy extends OfflineManifestSyncCopy {
   reconcileNoteEntry: string;
   reconcileNoteDiverReference: string;
   reconcileNoteCrewReference: string;
+  reconcileNoteChecklistReference: string;
   reconcileNoteMarkKept: string;
   reconcileNoteMarkNeedsReview: string;
   reconcileCheckpointDeparture: string;
   reconcileCheckpointAfterDive: string;
+  reconcileChecklistLocation: string;
   reconcileRejectedOne: string;
   /** `{count}` placeholder. */
   reconcileRejectedOther: string;
@@ -87,33 +94,31 @@ export function OfflineManifestManager({
 
   const pending = saved?.events.filter((event) => event.syncStatus === "pending").length ?? 0;
   const rejected = saved?.events.filter((event) => event.syncStatus === "rejected").length ?? 0;
-  const cutoffNoteEvents =
-    saved?.events.filter((event) => event.noteDisposition === "discarded_erasure_cutoff") ?? [];
-  const unverifiedNoteEvents =
-    saved?.events.filter((event) => event.noteDisposition === "discarded_unverified_snapshot") ??
-    [];
-  const currentSubjectNames = new Map<string, string>();
-  for (const manifest of payload.manifests) {
-    for (const diver of manifest.divers) {
-      currentSubjectNames.set(`booking:${diver.bookingId}`, diver.fullName);
-    }
-    for (const crew of manifest.crew) {
-      if (crew.id) currentSubjectNames.set(`crew:${crew.id}`, crew.fullName);
-    }
-  }
-  const noteEntry = (event: (typeof cutoffNoteEvents)[number]) => {
-    const subjectId = event.bookingId ?? event.crewPersonId ?? "";
-    const subject = event.bookingId
-      ? (currentSubjectNames.get(`booking:${event.bookingId}`) ??
-        fill(copy.reconcileNoteDiverReference, { reference: subjectId.slice(-8) }))
-      : (currentSubjectNames.get(`crew:${subjectId}`) ??
-        fill(copy.reconcileNoteCrewReference, { reference: subjectId.slice(-8) }));
+  const noteEvents = saved ? [...saved.events, ...saved.checklistEvents] : [];
+  const cutoffNoteEvents = noteEvents.filter(
+    (event) => event.noteDisposition === "discarded_erasure_cutoff",
+  );
+  const unverifiedNoteEvents = noteEvents.filter(
+    (event) => event.noteDisposition === "discarded_unverified_snapshot",
+  );
+  const noteEntry = (event: OfflineRollCallEvent | OfflineChecklistEvent) => {
+    const isChecklist = "checklistItemId" in event;
+    const subjectId = isChecklist
+      ? event.checklistItemId
+      : (event.bookingId ?? event.crewPersonId ?? "");
+    const subject = isChecklist
+      ? fill(copy.reconcileNoteChecklistReference, { reference: subjectId.slice(-8) })
+      : event.bookingId
+        ? fill(copy.reconcileNoteDiverReference, { reference: subjectId.slice(-8) })
+        : fill(copy.reconcileNoteCrewReference, { reference: subjectId.slice(-8) });
     const checkpoint =
-      event.checkpoint === "departure"
-        ? copy.reconcileCheckpointDeparture
-        : fill(copy.reconcileCheckpointAfterDive, {
-            n: event.checkpoint.slice("after_dive_".length),
-          });
+      "checkpoint" in event
+        ? event.checkpoint === "departure"
+          ? copy.reconcileCheckpointDeparture
+          : fill(copy.reconcileCheckpointAfterDive, {
+              n: event.checkpoint.slice("after_dive_".length),
+            })
+        : copy.reconcileChecklistLocation;
     const result =
       event.syncStatus === "rejected"
         ? copy.reconcileNoteMarkNeedsReview

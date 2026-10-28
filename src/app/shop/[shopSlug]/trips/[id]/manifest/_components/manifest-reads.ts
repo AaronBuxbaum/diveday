@@ -10,6 +10,7 @@ import { listDiveSites, listSiteFieldGuides } from "@/db/dive-sites";
 import { listExecutedDives } from "@/db/executed-dives";
 import { mayStartTripIncidentReport, openMissingAlerts } from "@/db/incident-reports";
 import { getTripManifests, rollCallOpenOnTrip } from "@/db/manifests";
+import { issueOfflineManifestSnapshot } from "@/db/offline-manifest-snapshots";
 import { listBookingNotes, listDiverNotesForTrip } from "@/db/operations";
 import { latestPreDepartureChecksForTrip, listChecklistItems } from "@/db/pre-departure-check";
 import { lastAtSites } from "@/db/site-history";
@@ -38,6 +39,7 @@ export async function readManifestPage(
   // depend on one another — resolve them together instead of serially.
   const [
     completeManifests,
+    offlineSnapshot,
     buddyTeamsList,
     bookingNotes,
     diverNotes,
@@ -61,6 +63,7 @@ export async function readManifestPage(
     emergencyStanding,
   ] = await Promise.all([
     getTripManifests(db, shopId, tripId),
+    issueOfflineManifestSnapshot(db, shopId, tripId),
     // Raw membership rows, cancelled members included: the teams panel must show
     // a team whose seat was cancelled (it still blocks re-teaming the survivors
     // until dissolved), while the manifest derivation already dropped that
@@ -152,11 +155,12 @@ export async function readManifestPage(
     : undefined;
   return {
     completeManifests,
+    offlineSnapshot,
     buddyTeamsList,
     bookingNotes,
     diverNotes,
     // The boat check, and what earlier crews on this boat said is wrong with it.
-    boatCheck: { checklistItems, checklistChecks, snags },
+    boatCheck: { checklistItems, checklistChecks, snags, offlineSnapshot },
     plannedDives,
     executedDives,
     liveDiveSites,

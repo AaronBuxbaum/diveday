@@ -6,10 +6,14 @@ import { offlineManifestPayload } from "./offline-payload";
 describe("offlineManifestPayload", () => {
   it("carries every checkpoint, the shop's emergency reference and the boat check", () => {
     const payload = offlineManifestPayload({
-      completeManifests: [
-        tripManifest({ checkpoint: "departure", divers: [diver()] }),
-        tripManifest({ checkpoint: "after_dive_1", divers: [diver()] }),
-      ],
+      snapshot: {
+        manifests: [
+          tripManifest({ checkpoint: "departure", divers: [diver()] }),
+          tripManifest({ checkpoint: "after_dive_1", divers: [diver()] }),
+        ],
+        snapshotId: "11111111-1111-4111-8111-111111111111",
+        erasureEpochToken: "authenticated-epoch",
+      },
       shop: {
         slug: "blue-mantis",
         name: "Blue Mantis",
@@ -25,6 +29,8 @@ describe("offlineManifestPayload", () => {
     });
     expect(payload.snags).toBeUndefined();
     expect(payload.shop.slug).toBe("blue-mantis");
+    expect(payload.snapshotId).toBe("11111111-1111-4111-8111-111111111111");
+    expect(payload.erasureEpochToken).toBe("authenticated-epoch");
     expect(payload.manifests.map((entry) => entry.checkpoint)).toEqual([
       "departure",
       "after_dive_1",
@@ -33,7 +39,11 @@ describe("offlineManifestPayload", () => {
 
   it("carries the boat's open snags, carried and its own, worded for the crew", () => {
     const payload = offlineManifestPayload({
-      completeManifests: [tripManifest({ checkpoint: "departure", divers: [diver()] })],
+      snapshot: {
+        manifests: [tripManifest({ checkpoint: "departure", divers: [diver()] })],
+        snapshotId: "22222222-2222-4222-8222-222222222222",
+        erasureEpochToken: "authenticated-epoch",
+      },
       shop: {
         slug: "blue-mantis",
         name: "Blue Mantis",
