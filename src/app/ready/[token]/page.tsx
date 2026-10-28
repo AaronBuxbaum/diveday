@@ -332,7 +332,7 @@ async function DiverReadinessPage({
       getShopBySlug(db, shop.slug),
       getTripWithBookedOnce(db, shop.id, data.trip.id),
       listTripDives(db, shop.id, data.trip.id),
-      listTripChangeEvents(db, shop.id, data.trip.id),
+      listTripChangeEvents(db, shop.id, data.trip.id, data.bookingCreatedAt),
       // The crew who agreed to be named (issue #1181, D21), the same filter as
       // the public page, each marked away on this departure's days (item 12).
       diverCrewWithAway(db, shop.id, detail.trip, detail.shop.timezone),
