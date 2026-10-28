@@ -82,7 +82,6 @@ function renderList({
   // Null by default so no existing test's markup shifts; the pager arrives as
   // a rendered element in production too (it is a Server Component).
   pager = null as ReactNode,
-  advancedSearch = null as ReactNode,
 } = {}) {
   return render(
     <DiverList
@@ -97,29 +96,11 @@ function renderList({
       quickAddAction={quickAddAction}
       copy={{ ...copy, ...copyOverrides }}
       pager={pager}
-      advancedSearch={advancedSearch}
     />,
   );
 }
 
 describe("DiverList search", () => {
-  it("puts ordinary lookup first and keeps the question form disclosed", () => {
-    renderList({
-      advancedSearch: (
-        <details>
-          <summary>Ask a question</summary>
-          <input aria-label="Ask in plain words" />
-        </details>
-      ),
-    });
-    const ordinary = screen.getByRole("searchbox");
-    const advanced = screen.getByLabelText("Ask in plain words");
-    expect(
-      ordinary.compareDocumentPosition(advanced) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
-    expect(advanced.closest("details")).not.toHaveAttribute("open");
-  });
-
   it("opens with the search box focused, so a staffer can just start typing", () => {
     // Check-in has done this since it shipped and the roster had not, which is
     // the one difference between two pages a staffer uses for the same reason:

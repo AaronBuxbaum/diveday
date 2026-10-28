@@ -31,6 +31,7 @@ test.describe("account security settings", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Account security" })).toBeVisible();
     await expect(page.getByText("Not enabled")).toBeVisible();
 
+    await page.getByText("Set up two-factor", { exact: true }).click();
     await page.getByRole("button", { name: "Start setup" }).click();
     await expect(
       page.getByText("Enrollment started. Save the secret before enabling two-factor."),
@@ -76,7 +77,7 @@ test.describe("account security settings", () => {
     await expect(page.getByText("Recovery codes")).toBeVisible();
     await expect(page.locator("code")).toHaveCount(10);
     await expect(
-      page.getByText("These codes disappear after setup or in ten minutes."),
+      page.getByText("These codes disappear after ten minutes."),
     ).toBeVisible();
 
     // Enrolment is durable, not a rendering of the form that just submitted.
@@ -99,6 +100,7 @@ test.describe("account security settings", () => {
 
   test("refuses a code that is not the current one", async ({ page, privateShop }) => {
     await page.goto(`/shop/${privateShop.slug}/settings/security`);
+    await page.getByText("Set up two-factor", { exact: true }).click();
     await page.getByRole("button", { name: "Start setup" }).click();
     await expect(
       page.getByText("Enrollment started. Save the secret before enabling two-factor."),

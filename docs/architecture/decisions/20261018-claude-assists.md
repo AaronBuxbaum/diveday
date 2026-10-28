@@ -28,7 +28,7 @@ Detail: [ai-ml.md](../../product/features/ai-ml.md#claude-assists-in-detail).
   root; DiveDay's servers never fetch it.
 - **Screen**: controls in `src/components/assists/`, rendered only when `assistsAvailable`, each
   leaving the page's own save, send or merge as the way through: `AssistDraftButton`,
-  `AssistFillButton`, `AssistPhotoButton`, `AssistReadButton`, `AssistAskForm`, `CallNoteAssist`,
+  `AssistFillButton`, `AssistPhotoButton`, `AssistReadButton`, `CallNoteAssist`,
   `PdfDraftButton`, `TranslateReplyButton` and `TranslationEditor`.
 
 ## Alternatives considered

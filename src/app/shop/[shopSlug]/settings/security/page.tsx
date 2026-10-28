@@ -31,6 +31,7 @@ import {
   beginTotpEnrollmentAction,
   disableTotpAction,
   enableTotpAction,
+  refreshRecoveryCodesAction,
   revokeAllSessionsAction,
   revokeSessionAction,
   verifyStepUpAction,
@@ -138,6 +139,24 @@ export default async function SecurityPage({
       ipAddress: item.ipAddress,
     };
   });
+  const recoveryCodesPanel =
+    recoveryCodes.length > 0 ? (
+      <div className="mt-5 rounded-lg border border-border bg-surface-sunken p-4 text-sm">
+        <p className="font-medium">{t("settings.security.recoveryHeading")}</p>
+        <p className="mt-1 text-muted">{t("settings.security.recoveryDescription")}</p>
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
+          {recoveryCodes.map((code) => (
+            <code
+              key={code}
+              className="rounded bg-background px-2 py-1 text-center font-mono"
+            >
+              {code}
+            </code>
+          ))}
+        </div>
+        <p className="mt-3 text-muted">{t("settings.security.recoveryWarning")}</p>
+      </div>
+    ) : null;
   return (
     <main className={settingsPaneClass()}>
       <FlashParams params={["notice"]} />
@@ -212,23 +231,64 @@ export default async function SecurityPage({
               {isEnabled ? t("settings.security.enabled") : t("settings.security.notEnabled")}
             </Badge>
             {!isEnabled ? (
-              <form action={beginTotpEnrollmentAction.bind(null, shopSlug)}>
-                <SubmitButton
-                  pendingLabel={t("settings.security.starting")}
-                  className={buttonClass({ variant: "secondary" })}
+              <details open={Boolean(secret)} className="basis-full sm:basis-auto">
+                <summary
+                  className={buttonClass({
+                    variant: "secondary",
+                    className: "cursor-pointer list-none [&::-webkit-details-marker]:hidden",
+                  })}
                 >
-                  {t("settings.security.start")}
-                </SubmitButton>
-              </form>
+                  {t("settings.security.setupDisclosure")}
+                </summary>
+                {!secret ? (
+                  <form
+                    action={beginTotpEnrollmentAction.bind(null, shopSlug)}
+                    className="mt-3"
+                  >
+                    <SubmitButton
+                      pendingLabel={t("settings.security.starting")}
+                      className={buttonClass({ variant: "secondary" })}
+                    >
+                      {t("settings.security.start")}
+                    </SubmitButton>
+                  </form>
+                ) : (
+                  <div className="mt-3 rounded-lg bg-surface-sunken p-4 text-sm">
+                    <p>{t("settings.security.secretLabel")}</p>
+                    <code className="mt-1 block break-all font-mono">{secret}</code>
+                    <form
+                      action={enableTotpAction.bind(null, shopSlug)}
+                      className="mt-4 flex flex-wrap items-end gap-3"
+                    >
+                      <Field label={t("settings.security.codeLabel")}>
+                        <input
+                          name="code"
+                          inputMode="numeric"
+                          pattern="[0-9]{6}"
+                          maxLength={6}
+                          required
+                          className={controlClass}
+                        />
+                      </Field>
+                      <SubmitButton
+                        pendingLabel={t("settings.security.enabling")}
+                        className={buttonClass()}
+                      >
+                        {t("settings.security.enable")}
+                      </SubmitButton>
+                    </form>
+                    {recoveryCodesPanel}
+                  </div>
+                )}
+              </details>
             ) : (
               <form
                 action={disableTotpAction.bind(null, shopSlug)}
-                className="flex flex-wrap items-end gap-3"
+                className="flex basis-full flex-wrap items-end gap-3"
               >
-                <Field label={t("settings.security.codeLabel")}>
+                <Field label={t("settings.security.verifiedCodeLabel")}>
                   <input
                     name="code"
-                    inputMode="numeric"
                     autoComplete="one-time-code"
                     pattern="[0-9A-Za-z-]{6,32}"
                     maxLength={32}
@@ -236,6 +296,13 @@ export default async function SecurityPage({
                     className={controlClass}
                   />
                 </Field>
+                <SubmitButton
+                  formAction={refreshRecoveryCodesAction.bind(null, shopSlug)}
+                  pendingLabel={t("settings.security.refreshingRecoveryCodes")}
+                  className={buttonClass()}
+                >
+                  {t("settings.security.refreshRecoveryCodes")}
+                </SubmitButton>
                 <SubmitButton
                   pendingLabel={t("settings.security.disabling")}
                   className={buttonClass({ variant: "secondary" })}
@@ -245,52 +312,7 @@ export default async function SecurityPage({
               </form>
             )}
           </div>
-          {secret && !isEnabled ? (
-            // Not an inset note: a step a person works inside (the secret, a
-            // code field and Enable), so it takes a group's 16px inset.
-            <div className="mt-4 rounded-lg bg-surface-sunken p-4 text-sm">
-              <p>{t("settings.security.secretLabel")}</p>
-              <code className="mt-1 block break-all font-mono">{secret}</code>
-              <form
-                action={enableTotpAction.bind(null, shopSlug)}
-                className="mt-4 flex flex-wrap items-end gap-3"
-              >
-                <Field label={t("settings.security.codeLabel")}>
-                  <input
-                    name="code"
-                    inputMode="numeric"
-                    pattern="[0-9]{6}"
-                    maxLength={6}
-                    required
-                    className={controlClass}
-                  />
-                </Field>
-                <SubmitButton
-                  pendingLabel={t("settings.security.enabling")}
-                  className={buttonClass()}
-                >
-                  {t("settings.security.enable")}
-                </SubmitButton>
-              </form>
-            </div>
-          ) : null}
-          {recoveryCodes.length > 0 ? (
-            <div className="mt-5 rounded-lg border border-border bg-surface-sunken p-4 text-sm">
-              <p className="font-medium">{t("settings.security.recoveryHeading")}</p>
-              <p className="mt-1 text-muted">{t("settings.security.recoveryDescription")}</p>
-              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
-                {recoveryCodes.map((code) => (
-                  <code
-                    key={code}
-                    className="rounded bg-background px-2 py-1 text-center font-mono"
-                  >
-                    {code}
-                  </code>
-                ))}
-              </div>
-              <p className="mt-3 text-muted">{t("settings.security.recoveryWarning")}</p>
-            </div>
-          ) : null}
+          {isEnabled ? recoveryCodesPanel : null}
         </SectionCard>
         <SectionCard
           title={t("settings.security.sessionsHeading")}

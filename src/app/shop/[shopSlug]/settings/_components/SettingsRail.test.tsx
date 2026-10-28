@@ -187,40 +187,33 @@ describe("the rail as it renders", () => {
     ["/dive-sites/site-123/edit", "diveSites"],
     ["/settings/calendar", "Settings sections"],
     ["/settings/email", "Settings sections"],
-  ])("labels the mobile picker for %s without borrowing Timezone", (path, label) => {
+  ])("selects the current rail row for %s without borrowing Timezone", (path, label) => {
     pathname = `${BASE}${path}`;
     renderRail();
-    const toggle = screen.getByRole("button", { name: "Settings sections" });
-    expect(toggle).toHaveTextContent(label);
-    expect(toggle).not.toHaveTextContent("timezone");
+    const nav = screen.getByRole("navigation", { name: "Settings sections" });
+    expect(screen.queryByRole("button", { name: "Settings sections" })).toBeNull();
+    if (label === "Settings sections") {
+      expect(nav.querySelector('[aria-current="true"]')).toBeNull();
+    } else {
+      expect(screen.getByRole("link", { name: label })).toHaveAttribute("aria-current", "true");
+    }
   });
 
-  it("names the current section and dismisses the mobile picker with Escape or an outside tap", () => {
+  it("keeps the current section selected in the rail", () => {
     pathname = `${BASE}/settings/import`;
     renderRail();
-    const toggle = screen.getByRole("button", { name: "Settings sections" });
-    expect(toggle).toHaveTextContent("yourData");
-    fireEvent.click(toggle);
-    expect(screen.getByRole("link", { name: "yourData" })).toHaveFocus();
-    fireEvent.keyDown(document, { key: "Escape" });
-    expect(toggle).toHaveAttribute("aria-expanded", "false");
-    expect(toggle).toHaveFocus();
-    fireEvent.click(toggle);
-    fireEvent.pointerDown(document.body);
-    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByRole("link", { name: "yourData" })).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
   });
 
-  it("opens and closes the same navigation on a narrow screen", () => {
+  it("shows every section link in the horizontal rail", () => {
     const { container } = renderRail();
-    const toggle = screen.getByRole("button", { name: "Settings sections" });
     const scroller = container.querySelector("[data-settings-rail-scroller]");
-    expect(toggle).toHaveAttribute("aria-expanded", "false");
-    expect(scroller).toHaveClass("hidden");
-    fireEvent.click(toggle);
-    expect(toggle).toHaveAttribute("aria-expanded", "true");
-    expect(scroller).not.toHaveClass("hidden");
-    fireEvent.click(screen.getByRole("link", { name: "stripe" }));
-    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(scroller).toHaveClass("overflow-x-auto");
+    expect(screen.getByRole("link", { name: "stripe" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Settings sections" })).toBeNull();
   });
 
   /**

@@ -15,7 +15,7 @@ import {
   matchTotpStep,
   recoveryCodeHashes,
 } from "@/lib/totp";
-import type { DbExecutor } from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import {
   accountSecurity,
   accountSessions,
@@ -62,6 +62,75 @@ export async function beginTotpEnrollment(db: DbExecutor, userAccountId: string)
       },
     });
   return { secret, recoveryCodes };
+}
+
+type RecoveryCodeRefreshResult =
+  | { ok: true; codes: string[] }
+  | { ok: false; reason: "invalid" | "unavailable" };
+
+/**
+ * Replace the recovery codes for an enabled account after a fresh second
+ * factor. The account row lock serializes rotation with disable; the
+ * recovery-hash compare-and-swap also prevents two concurrent refreshes from
+ * returning different valid code sets to the same account.
+ */
+export async function refreshAccountRecoveryCodes(
+  db: AppDb,
+  userAccountId: string,
+  code: string,
+): Promise<RecoveryCodeRefreshResult> {
+  const key = secretKeyFromEnvironment();
+  if (key.status !== "ok") return { ok: false, reason: "unavailable" };
+
+  return db.transaction(async (tx): Promise<RecoveryCodeRefreshResult> => {
+    await tx
+      .select({ id: userAccounts.id })
+      .from(userAccounts)
+      .where(eq(userAccounts.id, userAccountId))
+      .for("update");
+
+    const current = await getAccountSecurity(tx, userAccountId);
+    if (!current?.totpEnabledAt || !current.totpSecretSealed) {
+      return { ok: false, reason: "invalid" };
+    }
+    if (!(await verifyAccountSecondFactor(tx, userAccountId, code, { consumeTotpStep: false }))) {
+      return { ok: false, reason: "invalid" };
+    }
+
+    // Recovery-code verification spends one code in this transaction.
+    // Snapshot the resulting hash list, then replace only if that exact state
+    // is still current.
+    const verified = await getAccountSecurity(tx, userAccountId);
+    if (
+      !verified?.totpEnabledAt ||
+      !verified.totpSecretSealed ||
+      verified.totpEnabledAt.getTime() !== current.totpEnabledAt.getTime() ||
+      verified.totpSecretSealed !== current.totpSecretSealed
+    ) {
+      return { ok: false, reason: "unavailable" };
+    }
+
+    const codes = generateRecoveryCodes();
+    const keyId = secretKeyFingerprint(sealingKey(key.key));
+    const [row] = await tx
+      .update(accountSecurity)
+      .set({
+        recoveryCodeHashes: recoveryCodeHashes(codes, sealingKey(key.key), userAccountId),
+        recoveryCodesKeyId: keyId,
+        updatedAt: nowDate(),
+      })
+      .where(
+        and(
+          eq(accountSecurity.userAccountId, userAccountId),
+          eq(accountSecurity.totpEnabledAt, verified.totpEnabledAt),
+          eq(accountSecurity.totpSecretSealed, verified.totpSecretSealed),
+          sql`${accountSecurity.recoveryCodeHashes} = ${JSON.stringify(verified.recoveryCodeHashes)}::jsonb`,
+        ),
+      )
+      .returning({ userAccountId: accountSecurity.userAccountId });
+
+    return row ? { ok: true, codes } : { ok: false, reason: "unavailable" };
+  });
 }
 
 /**

@@ -38,10 +38,10 @@ const classes = (element: Element | null | undefined) => [...(element?.classList
  * either is a change to both.
  */
 describe("the settings rail's loading skeleton", () => {
-  it("stands in the rail's column, from lg only", () => {
+  it("stands in the full-width phone bar and desktop rail", () => {
     const column = render(<SettingsRailSkeleton />).container.firstElementChild;
     const nav = renderRail();
-    for (const name of ["lg:block", "lg:w-[264px]", "lg:shrink-0"]) {
+    for (const name of ["w-full", "lg:block", "lg:w-[264px]", "lg:shrink-0"]) {
       expect(nav).toHaveClass(name);
       expect(column).toHaveClass(name);
     }
@@ -54,14 +54,23 @@ describe("the settings rail's loading skeleton", () => {
     // Everything that pins the rail; the skeleton does not scroll, so it clips
     // instead.
     const geometry = classes(scroller).filter(
-      (name) => !["overflow-y-auto", "hidden", "lg:block"].includes(name),
+      (name) =>
+        ![
+          "overflow-x-auto",
+          "overscroll-x-contain",
+          "overflow-y-hidden",
+          "lg:overflow-x-hidden",
+          "lg:overflow-y-auto",
+          "hidden",
+          "lg:block",
+        ].includes(name),
     );
     expect(geometry).toEqual(expect.arrayContaining(["lg:sticky", "lg:pe-2"]));
     expect(frame).toHaveClass(...geometry);
     // What places the first label and spaces the groups sits inside the box,
     // on what it scrolls, so a stuck label meets the box's top (K-221).
     const content = classes(scroller?.firstElementChild);
-    expect(content).toEqual(expect.arrayContaining(["py-6", "space-y-5"]));
+    expect(content).toEqual(expect.arrayContaining(["flex", "py-2", "lg:py-6", "lg:space-y-5"]));
     expect(scroller).not.toHaveClass("py-6");
     expect(frame?.firstElementChild).toHaveClass(...content);
     expect(frame?.firstElementChild).not.toHaveClass("py-10");

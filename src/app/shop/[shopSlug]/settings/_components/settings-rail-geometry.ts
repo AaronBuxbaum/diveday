@@ -21,19 +21,21 @@ export const SETTINGS_RAIL_COLUMN_CLASS = "w-full lg:block lg:w-[264px] lg:shrin
 
 /**
  * The column's sticky box: pinned under the bar at the bar's own height
- * token, no taller than the viewport beside it. The rail scrolls in it
- * (`overflow-y-auto`); the skeleton clips.
+ * token, no taller than the viewport beside it. On phones it is a one-line
+ * horizontal bar; at desktop width it scrolls vertically. The skeleton clips.
  */
 export const SETTINGS_RAIL_FRAME_CLASS =
-  "max-h-[60svh] rounded-sm bg-background px-4 lg:sticky lg:top-(--chrome-h) lg:max-h-[calc(100svh-var(--chrome-h))] lg:rounded-none lg:px-0 lg:pe-2";
+  "max-h-[60svh] overflow-x-auto overscroll-x-contain border-b border-border bg-background px-4 lg:sticky lg:top-(--chrome-h) lg:max-h-[calc(100svh-var(--chrome-h))] lg:overflow-x-hidden lg:rounded-none lg:border-b-0 lg:px-0 lg:pe-2";
 
 /**
- * What the box holds: the groups `space-y-5` apart inside `py-6`. On the
- * content, never on the box: a sticky `top-0` label sticks at its scroller's
- * padding edge, so with `py-6` on the box a stuck label stood 24px under its
- * top and the rows scrolled past it showed through that strip (K-221).
+ * What the box holds: a one-line horizontal list on phones, and the groups
+ * `space-y-5` apart inside `py-6` at desktop width. On the content, never on
+ * the box: a sticky `top-0` label sticks at its scroller's padding edge, so
+ * with `py-6` on the box a stuck label stood 24px under its top and the rows
+ * scrolled past it showed through that strip (K-221).
  */
-export const SETTINGS_RAIL_CONTENT_CLASS = "space-y-5 py-6";
+export const SETTINGS_RAIL_CONTENT_CLASS =
+  "flex w-max items-center gap-1 py-2 lg:block lg:w-auto lg:space-y-5 lg:py-6";
 
 /** A group label's gap to its first row. */
 export const SETTINGS_RAIL_LABEL_CLASS = "mb-2";
