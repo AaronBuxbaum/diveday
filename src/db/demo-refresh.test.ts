@@ -575,6 +575,37 @@ describe("refreshCanonicalDemoSchedule", () => {
       expect(boatsAfter).toEqual(boatsBefore);
     });
 
+    it("fails closed when a demo-flagged shop has no owner or captain account", async () => {
+      const { db, shop } = historyCtx;
+      const boat = await boatAtSea(db, shop.id);
+      const accountOwners = await db
+        .select({ personId: people.id })
+        .from(people)
+        .innerJoin(personRoles, eq(personRoles.personId, people.id))
+        .where(and(eq(people.shopId, shop.id), inArray(personRoles.role, ["owner", "captain"])));
+      if (accountOwners.length === 0) throw new Error("expected owner or captain roles");
+      await db.delete(userAccounts).where(
+        inArray(
+          userAccounts.personId,
+          accountOwners.map((account) => account.personId),
+        ),
+      );
+
+      const beforeMarks = await marks(db, boat.id);
+      expect(await bringDemoBoatsAtSeaHome(db, new Date(boat.endsAt.getTime() + 60 * 60_000))).toBe(
+        0,
+      );
+      await expect(
+        refreshCanonicalDemoSchedule(db, { now: new Date(boat.endsAt.getTime() + 1) }),
+      ).resolves.toMatchObject({ found: true, refreshed: false });
+      expect(await marks(db, boat.id)).toEqual(beforeMarks);
+      const logged = await db
+        .select({ id: executedDives.id })
+        .from(executedDives)
+        .where(and(eq(executedDives.tripId, boat.id), eq(executedDives.diveNumber, 2)));
+      expect(logged).toHaveLength(0);
+    });
+
     // Issue 2917: the hourly trip-reminder pass runs this alone, so an hour
     // past her return is enough, with no daily restore behind it.
     it("closes her count on the hourly pass an hour past her return, and a second pass writes nothing", async () => {
