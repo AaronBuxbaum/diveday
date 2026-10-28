@@ -1,4 +1,3 @@
-import type { Page } from "@playwright/test";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import {
   acceptAgeAttestation,
@@ -6,17 +5,9 @@ import {
   openDiverFileGroup,
   openThreadStep,
   openTripTab,
+  tripPathByTitle,
 } from "./helpers";
 import { mintOnboardFormPath } from "./setup-link";
-
-async function openWreckTrip(page: Page) {
-  await page.goto("/shop/blue-mantis/schedule/board");
-  await page
-    .locator("li")
-    .filter({ hasText: "Wreck Trip — Spiegel Grove" })
-    .getByRole("link", { name: "Wreck Trip — Spiegel Grove", exact: true })
-    .click();
-}
 
 test.describe("staff", () => {
   signedInAsOwner();
@@ -24,6 +15,11 @@ test.describe("staff", () => {
   test("a verified nitrox card turns a diver's tanks to Nitrox on the prep list", async ({
     page,
   }) => {
+    // Find the departure before editing the card. Opening its prep page directly
+    // avoids a redundant visit to the trip overview; that navigation is covered
+    // by the trip-tab tests, while this test exercises the card-to-prep result.
+    const tripPath = await tripPathByTitle(page, "blue-mantis", "Wreck Trip — Spiegel Grove");
+
     // A unique card number keeps the flow self-contained and re-run safe.
     const cardNo = `EANX-T${e2eNow().getTime()}`;
 
@@ -54,8 +50,7 @@ test.describe("staff", () => {
     await card.getByRole("button", { name: "Mark certified" }).click();
     await expect(page.getByRole("status").filter({ hasText: "Marked certified" })).toBeVisible();
 
-    await openWreckTrip(page);
-    await openTripTab(page, "Prep");
+    await page.goto(`${tripPath}/prep`);
     await expect(page.getByRole("heading", { name: /Wreck Trip/ })).toBeVisible();
 
     // The prep list is derived from rental fit, so it always lists tanks and
