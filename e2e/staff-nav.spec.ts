@@ -30,6 +30,9 @@ test.describe("owner", () => {
       const divers = nav.getByRole("link", { name: "Buceadores", exact: true });
       const inbox = nav.getByRole("link", { name: "Mensajes", exact: true });
       const cue = nav.locator("[data-staff-tab-scroll-cue]");
+      await expect(nav).not.toHaveAttribute("data-staff-tab-scroll-state", "none", {
+        timeout: 1_000,
+      });
       await expect(cue).toBeVisible();
       await expect(schedule).toBeVisible();
       await expect(divers).toBeVisible();

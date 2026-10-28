@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { DiveDayIcon, StaffDestinationIcon } from "@/components/StaffDestinationIcon";
 import { Badge } from "@/components/ui/badge";
 import { MENU_PANEL } from "@/components/ui/menu";
@@ -174,6 +174,8 @@ const tabClass =
 export function ShopTabBar({ root, gates, items, blocked, copy }: NavProps) {
   const hydratedKey = useHydratedKey();
   const pathname = usePathname() ?? "";
+  const tabScrollRef = useRef<HTMLDivElement>(null);
+  const [scrollCue, setScrollCue] = useState<"none" | "left" | "right" | "both">("none");
   const current = currentStaffSection(pathname, root, gates);
   const tabs = items.filter((item) =>
     (STAFF_PHONE_TABS as readonly StaffSection[]).includes(item.section),
@@ -182,6 +184,47 @@ export function ShopTabBar({ root, gates, items, blocked, copy }: NavProps) {
     (item) => !(STAFF_PHONE_TABS as readonly StaffSection[]).includes(item.section),
   );
   const moreActive = rest.some((item) => item.section === current);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: hydration replaces the keyed rail.
+  useLayoutEffect(() => {
+    const rail = tabScrollRef.current;
+    if (!rail) return;
+
+    const update = () => {
+      const maxScroll = rail.scrollWidth - rail.clientWidth;
+      const atStart = rail.scrollLeft <= 1;
+      const atEnd = rail.scrollLeft >= maxScroll - 1;
+      setScrollCue(maxScroll <= 1 ? "none" : atStart ? "right" : atEnd ? "left" : "both");
+    };
+    let frame = 0;
+    const scheduleUpdate = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(update);
+    };
+    update();
+    rail.addEventListener("scroll", scheduleUpdate, { passive: true });
+    window.addEventListener("resize", scheduleUpdate);
+    const resizeObserver =
+      typeof ResizeObserver === "undefined" ? null : new ResizeObserver(scheduleUpdate);
+    resizeObserver?.observe(rail);
+    for (const item of rail.querySelectorAll<HTMLElement>("a, a > span")) {
+      resizeObserver?.observe(item);
+    }
+    const fontObserver =
+      typeof MutationObserver === "undefined" ? null : new MutationObserver(scheduleUpdate);
+    fontObserver?.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["style", "class"],
+    });
+    document.fonts?.addEventListener("loadingdone", scheduleUpdate);
+    return () => {
+      cancelAnimationFrame(frame);
+      rail.removeEventListener("scroll", scheduleUpdate);
+      window.removeEventListener("resize", scheduleUpdate);
+      resizeObserver?.disconnect();
+      fontObserver?.disconnect();
+      document.fonts?.removeEventListener("loadingdone", scheduleUpdate);
+    };
+  }, [hydratedKey]);
   return (
     <nav
       key={hydratedKey}
@@ -189,11 +232,13 @@ export function ShopTabBar({ root, gates, items, blocked, copy }: NavProps) {
       data-staff-nav=""
       data-hydrated={hydratedKey === "client" ? "true" : undefined}
       data-staff-tabbar=""
+      data-staff-tab-scroll-state={scrollCue}
       data-staff-chrome="true"
       className="fixed inset-x-0 bottom-0 z-30 overflow-x-clip border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden print:hidden"
     >
       <div className="mx-auto flex h-(--tabbar-h) w-full max-w-xl items-stretch">
         <div
+          ref={tabScrollRef}
           data-staff-tab-scroll=""
           className="min-w-0 flex-1 overflow-x-auto overscroll-x-contain"
         >
@@ -234,14 +279,20 @@ export function ShopTabBar({ root, gates, items, blocked, copy }: NavProps) {
             })}
           </ul>
         </div>
-        <span
-          aria-hidden="true"
-          data-staff-tab-scroll-cue=""
-          className="flex w-6 flex-none items-center justify-center gap-px border-s border-e border-border text-muted"
-        >
-          <DiveDayIcon name="chevron-left" className="size-2.5" />
-          <DiveDayIcon name="chevron-right" className="size-2.5" />
-        </span>
+        {scrollCue !== "none" ? (
+          <span
+            aria-hidden="true"
+            data-staff-tab-scroll-cue={scrollCue}
+            className="flex w-6 flex-none items-center justify-center gap-px border-s border-e border-border text-muted"
+          >
+            {scrollCue === "left" || scrollCue === "both" ? (
+              <DiveDayIcon name="chevron-left" className="size-2.5" />
+            ) : null}
+            {scrollCue === "right" || scrollCue === "both" ? (
+              <DiveDayIcon name="chevron-right" className="size-2.5" />
+            ) : null}
+          </span>
+        ) : null}
         {rest.length > 0 ? (
           <MoreMenu
             root={root}
