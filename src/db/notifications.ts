@@ -1149,6 +1149,7 @@ async function dispatchQueuedRetry(
           expectedPersonId: claimed.recipientPersonId as string,
           expectedTripId: claimed.recipientTripId as string,
           tripRevisionFence: notification.kind === "trip_rescheduled",
+          shopMaterialFence: notification.kind === "trip_rescheduled",
           expectedEmail:
             "to" in notification && notification.kind !== "fly_safe_correction"
               ? notification.to

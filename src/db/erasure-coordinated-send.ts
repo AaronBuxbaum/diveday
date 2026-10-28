@@ -3,14 +3,17 @@ import { currentSendActor, scopedSendActor, withSendActor } from "@/lib/notifica
 import { lockBoardingCertificationEvidence } from "./boarding-certification-snapshot";
 import type { DbExecutor } from "./client";
 import { isTransactionExecutor } from "./query-helpers";
-import { bookings, people } from "./schema";
+import { bookings, people, shops } from "./schema";
 import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";
 import { livePerson } from "./trips-live";
 
 /**
  * Keep erasure and a provider invocation in one order. Erasure takes the
  * exclusive boarding/evidence lock before it locks a person; sends take the
- * shared form first, then the person, then the booking. The provider callback
+ * shared form first, then the person, then the booking. Reschedule retries can
+ * also take the shop row first, before every other fence, to freeze inherited
+ * message details while settings edits use their ordinary shop-row update.
+ * The provider callback
  * runs while those locks remain held, so an erasure either wins first and
  * suppresses the send, or commits after the provider invocation has finished.
  */
@@ -25,6 +28,7 @@ export async function withErasureCoordinatedBookingSend<T>(
     expectedPhone?: string | null;
     allowCancelled?: boolean;
     tripRevisionFence?: boolean;
+    shopMaterialFence?: boolean;
   },
   send: (tx: DbExecutor) => Promise<T>,
 ): Promise<T | null> {
@@ -36,6 +40,17 @@ export async function withErasureCoordinatedBookingSend<T>(
         ? null
         : await currentSendActor();
   const coordinate = async (tx: DbExecutor) => {
+    if (input.shopMaterialFence) {
+      // Shop setters update this row only. Lock it before trip/evidence/person/
+      // booking locks so the live message-material check stays true to dispatch.
+      const [shop] = await tx
+        .select({ id: shops.id })
+        .from(shops)
+        .where(eq(shops.id, input.shopId))
+        .for("share")
+        .limit(1);
+      if (!shop) return null;
+    }
     if (input.tripRevisionFence && input.expectedTripId) {
       await lockTripRevisionNotificationFence(tx, input.shopId, input.expectedTripId, "dispatch");
     }
