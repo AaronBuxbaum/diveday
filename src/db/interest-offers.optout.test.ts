@@ -389,6 +389,27 @@ describe("invitableSeats and the deal", () => {
       }),
     ).toBe(true);
     expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 4);
+    // A no-show releases the boat seat, but the linked anonymous offer regains
+    // that one seat of advisory hold. Rebooking or checking the diver in puts
+    // the booking back in SEAT_HELD_STATUSES and consumes that hold again, so
+    // combined offerable capacity stays level across each transition.
+    await db.update(bookings).set({ status: "no_show" }).where(eq(bookings.id, booking.id));
+    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 4);
+    expect(
+      await associateDateRequestOfferBooking(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        requestId,
+        bookingId: booking.id,
+      }),
+    ).toBe(false);
+
+    await db.update(bookings).set({ status: "booked" }).where(eq(bookings.id, booking.id));
+    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 4);
+    await db.update(bookings).set({ status: "checked_in" }).where(eq(bookings.id, booking.id));
+    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 4);
+    await db.update(bookings).set({ status: "booked" }).where(eq(bookings.id, booking.id));
+
     expect(
       await associateDateRequestOfferBooking(db, {
         shopId: shop.id,
