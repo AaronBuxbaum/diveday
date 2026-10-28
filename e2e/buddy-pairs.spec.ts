@@ -176,7 +176,7 @@ test("a team grows, a member leaves, and dissolving is the explicit act", async 
   });
   const tomLena = teamPanel
     .locator("li")
-    .filter({ has: page.locator('li[data-buddy-member]', { hasText: "Lena Fischer" }) })
+    .filter({ has: page.locator("li[data-buddy-member]", { hasText: "Lena Fischer" }) })
     .first();
 
   // A team of two offers no per-member remove: at two the act is a dissolve,
@@ -191,13 +191,13 @@ test("a team grows, a member leaves, and dissolving is the explicit act", async 
   await tomLena.getByRole("button", { name: "Add", exact: true }).click();
   const grown = teamPanel
     .locator("li")
-    .filter({ has: page.locator('li[data-buddy-member]', { hasText: "Lena Fischer" }) })
+    .filter({ has: page.locator("li[data-buddy-member]", { hasText: "Lena Fischer" }) })
     .first();
   await expect(grown.getByRole("button", { name: "Remove Omar Haddad" })).toBeVisible();
   await grown.getByRole("button", { name: "Remove Omar Haddad" }).click();
   const shrunk = teamPanel
     .locator("li")
-    .filter({ has: page.locator('li[data-buddy-member]', { hasText: "Lena Fischer" }) })
+    .filter({ has: page.locator("li[data-buddy-member]", { hasText: "Lena Fischer" }) })
     .first();
   await expect(shrunk.getByRole("button", { name: "Remove Omar Haddad" })).toHaveCount(0);
   // Back to two, so the per-member control is gone again.
@@ -216,11 +216,7 @@ test("a team grows, a member leaves, and dissolving is the explicit act", async 
   // surviving team's "Add to this team" picker lists her as an <option> the
   // moment she is free, and a substring filter would match that instead.
   await expect(teamPanel.getByRole("button", { name: "Dissolve team" })).toHaveCount(2);
-  await teamPanel
-    .locator("li", { hasText: "Lena Fischer" })
-    .first()
-    .getByRole("button", { name: "Dissolve team" })
-    .click();
+  await shrunk.getByRole("button", { name: "Dissolve team" }).click();
   await expect(teamPanel.getByRole("button", { name: "Dissolve team" })).toHaveCount(1);
   await expect(teamPanel.getByRole("listitem").filter({ hasText: /^Lena Fischer$/ })).toHaveCount(
     0,
