@@ -145,7 +145,10 @@ test("an instructor certifies a diver from the course roster, and they can book 
     returnsAt: "17:00",
   });
 
-  await (await findTripOnBoard(page, "blue-mantis", new RegExp(`^${sessionTitle}$`))).click();
+  const trip = await findTripOnBoard(page, "blue-mantis", new RegExp(`^${sessionTitle}$`), {
+    daysOut: 24,
+  });
+  await trip.click();
   await openTripAbout(page);
   await expect(page.getByLabel("Assign crew")).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Assign crew").selectOption({ label: "Marcus Webb" });
