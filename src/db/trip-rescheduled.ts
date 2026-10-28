@@ -557,6 +557,7 @@ async function tellSeatWithinFence(
         ...(trip.courseId ? {} : { dockCallMinutes: shop.dockCallMinutes }),
         ...(seatMovedAt ? { seatMovedAt } : {}),
         revision: trip.revision,
+        meetingPointSnapshot: meetingPointForMessage(meetingPointOfRows(shop, trip)),
         ...(meetingPoint ? { meetingPoint } : {}),
         ...(readinessUrl ? { readinessUrl } : {}),
       },

@@ -25,6 +25,7 @@ import {
 } from "@/lib/cron-schedule";
 import { errorClassToken } from "@/lib/error-token";
 import { log } from "@/lib/log";
+import { meetingPointForMessage, meetingPointOfRows } from "@/lib/meeting-point";
 import {
   type Notification,
   type NotificationDelivery,
@@ -44,6 +45,7 @@ import {
 } from "@/lib/notifications";
 import { confirmationExtras } from "@/lib/notifications/confirmation-extras";
 import { ACTIONABLE_PROVIDER_STATUSES, type ProviderEmailStatus } from "@/lib/notifications/events";
+import { notificationTripTitle } from "@/lib/notifications/kinds";
 import { currentSendActor, type SendActor, sentByFor } from "@/lib/notifications/send-actor";
 import { shopVoiceOf } from "@/lib/notifications/shop-voice";
 import { openSecret, type SecretKey, sealSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
@@ -1161,14 +1163,35 @@ async function dispatchQueuedRetry(
           }
           if (notification.kind === "trip_rescheduled") {
             const tripId = claimed.recipientTripId;
-            const [currentTrip] = tripId
+            const [current] = tripId
               ? await tx
-                  .select({ revision: trips.revision })
+                  .select({
+                    trip: trips,
+                    shop: shops,
+                  })
                   .from(trips)
+                  .innerJoin(shops, eq(shops.id, trips.shopId))
                   .where(and(eq(trips.id, tripId), eq(trips.shopId, claimed.shopId), liveTrip()))
                   .limit(1)
               : [];
-            if (!currentTrip || currentTrip.revision !== notification.revision) {
+            const currentMeetingPoint = current
+              ? meetingPointForMessage(meetingPointOfRows(current.shop, current.trip))
+              : null;
+            if (
+              !current ||
+              current.trip.revision !== notification.revision ||
+              current.trip.startsAt.getTime() !== notification.startsAt.getTime() ||
+              current.trip.endsAt.getTime() !== notification.endsAt.getTime() ||
+              notificationTripTitle(current.trip.title) !== notification.tripTitle ||
+              current.shop.name !== notification.shopName ||
+              current.shop.timezone !== notification.timezone ||
+              (current.trip.courseId
+                ? notification.dockCallMinutes !== undefined
+                : current.shop.dockCallMinutes !== notification.dockCallMinutes) ||
+              !notification.meetingPointSnapshot ||
+              JSON.stringify(currentMeetingPoint) !==
+                JSON.stringify(notification.meetingPointSnapshot)
+            ) {
               return {
                 status: "failed",
                 retryable: false,

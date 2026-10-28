@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { afterEach, expect, it, vi } from "vitest";
 import { HOUR_MS, nowDate } from "@/lib/clock";
+import { meetingPointForMessage, meetingPointOfRows } from "@/lib/meeting-point";
 import type { Notification, NotificationProvider } from "@/lib/notifications";
 import { advanceClock } from "@/test/clock";
 import { describePostgres, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
@@ -41,6 +42,16 @@ async function fixture() {
     plannedDives: 2,
   });
   if (!trip) throw new Error("trip missing");
+  const rescheduled = await updateTrip(pg.connect(), shop.id, trip.id, {
+    title: trip.title,
+    startsAt: new Date(trip.startsAt.getTime() + HOUR_MS),
+    endsAt: new Date(trip.endsAt.getTime() + HOUR_MS),
+    capacity: trip.capacity,
+    plannedDives: trip.plannedDives,
+  });
+  if (!rescheduled.ok) throw new Error("fixture reschedule failed");
+  const [liveTrip] = await pg.db.select().from(trips).where(eq(trips.id, trip.id));
+  if (!liveTrip) throw new Error("live trip missing");
   const booking = await createBooking(pg.db, {
     actor: "staff",
     shopId: shop.id,
@@ -59,10 +70,12 @@ async function fixture() {
     shopName: shop.name,
     tripTitle: trip.title,
     previousStartsAt: trip.startsAt,
-    startsAt: new Date(trip.startsAt.getTime() + HOUR_MS),
-    endsAt: new Date(trip.endsAt.getTime() + HOUR_MS),
+    startsAt: liveTrip.startsAt,
+    endsAt: liveTrip.endsAt,
     timezone: shop.timezone,
-    revision: trip.revision,
+    dockCallMinutes: shop.dockCallMinutes,
+    revision: liveTrip.revision,
+    meetingPointSnapshot: meetingPointForMessage(meetingPointOfRows(shop, liveTrip)),
   };
   await sendNotification(pg.db, notification, {
     async send() {
@@ -72,7 +85,7 @@ async function fixture() {
   const [queued] = await pg.db.select({ id: notificationSendQueue.id }).from(notificationSendQueue);
   if (!queued) throw new Error("retry not queued");
   await pg.db.update(notificationSendQueue).set({ nextAttemptAt: new Date(0) });
-  return { pg, shop, trip, notification };
+  return { pg, shop, trip: liveTrip, notification };
 }
 
 const updateStart = (date: Date, offset: number) => new Date(date.getTime() + offset * HOUR_MS);
@@ -159,6 +172,44 @@ describePostgres("queued reschedule revision fence", () => {
     ]);
     const [current] = await pg.db.select().from(trips).where(eq(trips.id, trip.id));
     expect(current?.revision).toBe(trip.revision + 1);
+  });
+
+  it.each([
+    ["end time", { endsAt: new Date("2035-03-12T18:00:00Z") }],
+    ["meeting point", { meetingPointLabel: "South Pier" }],
+  ])("suppresses a queued notice after a same-revision %s edit", async (_change, patch) => {
+    const { pg, shop, trip } = await fixture();
+    const edit = patch as { endsAt?: Date; meetingPointLabel?: string };
+    await expect(
+      updateTrip(pg.connect(), shop.id, trip.id, {
+        title: trip.title,
+        startsAt: trip.startsAt,
+        endsAt: edit.endsAt ?? trip.endsAt,
+        capacity: trip.capacity,
+        plannedDives: trip.plannedDives,
+        meetingPointLabel: edit.meetingPointLabel ?? trip.meetingPointLabel,
+      }),
+    ).resolves.toMatchObject({ ok: true });
+    const send = vi.fn(async () => ({
+      status: "sent" as const,
+      providerMessageId: "must-not-send-stale-content",
+    }));
+
+    await expect(
+      drainNotificationRetries(pg.connect(), { provider: { send } }),
+    ).resolves.toMatchObject({ sent: 0, failed: 1 });
+    expect(send).not.toHaveBeenCalled();
+    const [current] = await pg.db.select().from(trips).where(eq(trips.id, trip.id));
+    expect(current?.revision).toBe(trip.revision);
+    await expect(
+      pg.db
+        .select({
+          status: notificationSendQueue.status,
+          errorCode: notificationSendQueue.errorCode,
+        })
+        .from(notificationSendQueue)
+        .where(eq(notificationSendQueue.shopId, shop.id)),
+    ).resolves.toMatchObject([{ status: "failed", errorCode: "stale_reschedule" }]);
   });
 
   it("parks an already-queued booking handoff after its link expires", async () => {

@@ -1,7 +1,22 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { isStaff } from "@/lib/authz";
 
 /** The signed-in staff member and the shop their session belongs to. */
 export type SendActor = { personId: string; shopId: string };
+
+// A coordinator resolves the request actor before it opens a transaction, then
+// carries even an explicit `null` through nested send helpers. This avoids
+// auth() re-entering the outer DB connection while a PGlite transaction owns
+// its single connection.
+const sendActorContext = new AsyncLocalStorage<SendActor | null>();
+
+export function scopedSendActor(): SendActor | null | undefined {
+  return sendActorContext.getStore();
+}
+
+export function withSendActor<T>(actor: SendActor | null, run: () => T): T {
+  return sendActorContext.run(actor, run);
+}
 
 /**
  * The staff member whose request is sending mail right now, or null when no
@@ -18,6 +33,8 @@ export type SendActor = { personId: string; shopId: string };
  * signal here to pass through; a server action or route is where sends run.
  */
 export async function currentSendActor(): Promise<SendActor | null> {
+  const scoped = scopedSendActor();
+  if (scoped !== undefined) return scoped;
   try {
     // A send with no request cannot have a staff session. Check this before
     // loading the auth graph, which is expensive for workers and tests.
