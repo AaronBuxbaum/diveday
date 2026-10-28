@@ -4,6 +4,13 @@ import { test as base, expect, makeActivitySafe } from "./fixtures";
 import { todayCatchUpScenario } from "./today-catch-up-helper";
 
 type CatchUpActorStates = { owner: string; captain: string };
+type InterceptedShopRequest = {
+  method: string;
+  path: string;
+  resourceType: string;
+  isNavigationRequest: boolean;
+  isPrefetch: boolean;
+};
 
 const test = base.extend<Record<never, never>, { catchUpActorStates: CatchUpActorStates }>({
   // Worker fixtures are ready before the test-scoped demoReset fixture. Sign in
@@ -18,31 +25,37 @@ const test = base.extend<Record<never, never>, { catchUpActorStates: CatchUpActo
           storageState: { cookies: [], origins: [] },
         });
         const page = makeActivitySafe(await context.newPage());
-        const interceptedShopRequests: { method: string; path: string }[] = [];
-        const initializedActionResponses: string[] = [];
-        let resolveShopNavigation!: (request: { method: string; path: string }) => void;
-        const shopNavigation = new Promise<{ method: string; path: string }>((resolve) => {
-          resolveShopNavigation = resolve;
+        const interceptedShopRequests: InterceptedShopRequest[] = [];
+        const todayInitializationRequests: string[] = [];
+        let redirectPath: string | undefined;
+        let resolveRedirectRequest!: (request: InterceptedShopRequest) => void;
+        const redirectRequest = new Promise<InterceptedShopRequest>((resolve) => {
+          resolveRedirectRequest = resolve;
         });
-        page.on("response", (response) => {
-          const request = response.request();
-          const url = new URL(response.url());
-          if (
-            request.method() === "POST" &&
-            request.headers()["next-action"] !== undefined &&
-            url.pathname === "/shop/blue-mantis"
-          ) {
-            initializedActionResponses.push(url.pathname);
+        page.on("request", (request) => {
+          const url = new URL(request.url());
+          if (request.method() === "POST" && url.pathname === "/shop/blue-mantis") {
+            todayInitializationRequests.push(`${request.method()} ${url.pathname}`);
           }
         });
         await page.route("**/shop/**", async (route) => {
-          const intercepted = {
-            method: route.request().method(),
-            path: new URL(route.request().url()).pathname,
+          const request = route.request();
+          const headers = request.headers();
+          const intercepted: InterceptedShopRequest = {
+            method: request.method(),
+            path: new URL(request.url()).pathname,
+            resourceType: request.resourceType(),
+            isNavigationRequest: request.isNavigationRequest(),
+            isPrefetch:
+              headers["next-router-prefetch"] === "1" ||
+              headers.purpose === "prefetch" ||
+              headers["sec-purpose"]?.includes("prefetch") === true,
           };
-          interceptedShopRequests.push(intercepted);
-          resolveShopNavigation(intercepted);
           await route.abort();
+          interceptedShopRequests.push(intercepted);
+          if (redirectPath === intercepted.path && !intercepted.isPrefetch) {
+            resolveRedirectRequest(intercepted);
+          }
         });
         try {
           await page.goto("/sign-in");
@@ -57,10 +70,16 @@ const test = base.extend<Record<never, never>, { catchUpActorStates: CatchUpActo
           await page.getByRole("button", { name: "Sign in" }).click();
           const signInResponse = await signedIn;
           expect([200, 303]).toContain(signInResponse.status());
-          const postAuthNavigation = await shopNavigation;
-          expect(postAuthNavigation).toEqual({ method: "GET", path: "/shop/blue-mantis" });
-          expect(interceptedShopRequests).toEqual([postAuthNavigation]);
-          expect(initializedActionResponses).toEqual([]);
+          const actionRedirect = signInResponse.headers()["x-action-redirect"];
+          expect(actionRedirect).toBeTruthy();
+          redirectPath = new URL(actionRedirect?.split(";")[0], workerBaseURL).pathname;
+          const alreadyIntercepted = interceptedShopRequests.find(
+            (request) => request.path === redirectPath && !request.isPrefetch,
+          );
+          const blockedRedirect = alreadyIntercepted ?? (await redirectRequest);
+          expect(blockedRedirect.path).toBe(redirectPath);
+          expect(blockedRedirect.isPrefetch).toBe(false);
+          expect(todayInitializationRequests).toEqual([]);
           const sessionCookies = (await context.cookies()).filter((cookie) =>
             cookie.name.includes("session_token"),
           );
