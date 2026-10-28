@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { MoreMenu } from "@/components/MoreMenu";
 import { buttonClass } from "@/components/ui/button";
+import { menuRowClass } from "@/components/ui/menu";
 import type { DiverFilter, DiverSort } from "@/db/divers";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 
@@ -68,12 +70,14 @@ export function RosterOrderLine({
         {order("last_dived", t("divers.list.sortLastDived"))}
       </nav>
       {canDownload ? (
-        <a
-          href={rosterHref(`${roster}/download`, { query, filter, sort })}
-          className={`${link} print:hidden`}
-        >
-          {t("divers.list.downloadList")}
-        </a>
+        <MoreMenu label={t("shared.shopSections.more")} size="sm">
+          <a
+            href={rosterHref(`${roster}/download`, { query, filter, sort })}
+            className={menuRowClass("quiet", { gutter: false })}
+          >
+            {t("divers.list.downloadList")}
+          </a>
+        </MoreMenu>
       ) : null}
     </div>
   );

@@ -5,7 +5,7 @@
  * `e2e/visual-harness.ts`, and the procedure is the e2e-and-visual skill.
  */
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { openSettingsRow, openTripTab } from "./helpers";
+import { openSettingsRail, openSettingsRow, openTripTab } from "./helpers";
 import { E2E_FROZEN_CLOCK } from "./servers";
 import {
   capture,
@@ -37,6 +37,19 @@ for (const scheme of ["light", "dark"] as const) {
         // Capture the selected packing setting with its form open.
         await openSettingsRow(page, "Trip packing checklist");
         await capture(page, "settings-packing-checklist", scheme);
+      });
+
+      test(`the settings section picker overlays its pane (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/settings");
+        await expect(
+          page.getByRole("heading", { level: 1, name: "Settings", exact: true }),
+        ).toBeVisible();
+        await capture(page, "settings-sections-menu", scheme, {
+          beforeShot: async () => {
+            const rail = await openSettingsRail(page);
+            await expect(rail.locator("[data-settings-rail-scroller]")).toBeVisible();
+          },
+        });
       });
 
       /**

@@ -122,6 +122,7 @@ export async function waitPastTheSkeleton(page, target) {
         "page really is that sparse, it needs an exemption here rather than a silent pass.",
     );
   }
+  await waitForStaffSession(page, target);
   // A route with no skeleton satisfies the wait above instantly, so hold for one
   // real paint: fonts resolved, then two frames. A barrier the browser answers,
   // not a guess at how long the page needs.
@@ -159,6 +160,28 @@ export async function waitPastTheSkeleton(page, target) {
       new Promise((resolve) => setTimeout(resolve, 10_000)),
     ]);
   });
+  await waitForStaffSession(page, target);
+}
+
+/** A paused or unchecked staff session is not evidence of the destination. */
+export async function waitForStaffSession(page, target) {
+  if (!new URL(target, "http://localhost").pathname.startsWith("/shop/")) return;
+  try {
+    await page.locator('[data-staff-session-check="settled"]').waitFor({
+      state: "attached",
+      timeout: SKELETON_TIMEOUT_MS,
+    });
+  } catch (cause) {
+    throw new Error(
+      `screenshot: ${target} staff session check did not settle, so nothing was captured. Check the session and dev server before retrying.`,
+      { cause },
+    );
+  }
+  if ((await page.locator("[data-staff-session-lock]:visible").count()) > 0) {
+    throw new Error(
+      `screenshot: ${target} staff session remains locked, so nothing was captured. Sign in again before retrying.`,
+    );
+  }
 }
 
 /** How long the one sign-in gets before a stalled form is called a hang. */

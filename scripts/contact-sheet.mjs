@@ -173,7 +173,9 @@ function parseArgs(argv) {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
-  const { launch, signInOnce, waitPastTheSkeleton } = await import("./capture-session.mjs");
+  const { launch, signInOnce, waitPastTheSkeleton, waitForStaffSession } = await import(
+    "./capture-session.mjs"
+  );
   const { default: sharp } = await import("sharp");
   const { OFFLINE_SETTLED_SELECTOR } = await import("./screenshot-guards.mjs");
   const routes = ledgerRoutes(await loadCoverage(process.cwd()));
@@ -241,6 +243,7 @@ async function main() {
       // server's chrome, not the page's.
       await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
       const file = path.join(shotsDir, `${String(captured.length).padStart(3, "0")}.png`);
+      await waitForStaffSession(page, next.pathname);
       await page.screenshot({ path: file, caret: "initial" });
       captured.push({ ...next, title: await page.title(), file });
     }

@@ -7,6 +7,8 @@ import { FlashParams } from "@/components/FlashParams";
 import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { UndoToast } from "@/components/UndoToast";
+import { cardSummaryClass } from "@/components/ui/card";
+import { SummaryCaret } from "@/components/ui/disclosure";
 import { assistsAvailable } from "@/db/assists";
 import { loadActiveStaffRoles } from "@/db/authz";
 import { listDiverMergeDuplicateIds } from "@/db/diver-merge";
@@ -265,21 +267,32 @@ export default async function DiversPage({
         </ShopNotice>
       ) : null}
 
-      {canAssist ? (
-        <div className="mt-6">
-          <AssistAskForm
-            ask={askRosterAction.bind(null, shopSlug)}
-            label={t("deskAssists.search.label")}
-            placeholder={t("deskAssists.search.placeholder")}
-            submitLabel={t("deskAssists.search.submit")}
-            pendingLabel={t("deskAssists.search.pending")}
-            noAnswer={t("deskAssists.search.noAnswer")}
-            maxLength={DIVER_SEARCH_MAX_ASK}
-          />
-        </div>
-      ) : null}
-
       <DiverList
+        advancedSearch={
+          canAssist ? (
+            <details className="group/ask mt-2 print:hidden">
+              <summary
+                className={cardSummaryClass({
+                  className: "min-h-11 gap-2 text-sm font-medium text-muted",
+                })}
+              >
+                <SummaryCaret direction="right" className="group-open/ask:rotate-90" />
+                {t("deskAssists.search.disclose")}
+              </summary>
+              <div className="pt-2">
+                <AssistAskForm
+                  ask={askRosterAction.bind(null, shopSlug)}
+                  label={t("deskAssists.search.label")}
+                  placeholder={t("deskAssists.search.placeholder")}
+                  submitLabel={t("deskAssists.search.submit")}
+                  pendingLabel={t("deskAssists.search.pending")}
+                  noAnswer={t("deskAssists.search.noAnswer")}
+                  maxLength={DIVER_SEARCH_MAX_ASK}
+                />
+              </div>
+            </details>
+          ) : null
+        }
         rows={rows}
         total={diverPage.total}
         shopSlug={shopSlug}
