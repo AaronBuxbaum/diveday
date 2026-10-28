@@ -1,11 +1,13 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { afterEach, expect, it, vi } from "vitest";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { meetingPointForMessage, meetingPointOfRows } from "@/lib/meeting-point";
 import type { Notification, NotificationProvider } from "@/lib/notifications";
 import { advanceClock } from "@/test/clock";
-import { describePostgres, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
+import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
 import { createBooking } from "./bookings";
+import { withErasureCoordinatedBookingSend } from "./erasure-coordinated-send";
+import { isLockWaitRefusal } from "./lock-bounds";
 import { drainNotificationRetries, sendNotification } from "./notifications";
 import { notificationSendQueue, shops, trips } from "./schema";
 import { setShopAddress } from "./shops";
@@ -86,12 +88,42 @@ async function fixture() {
   const [queued] = await pg.db.select({ id: notificationSendQueue.id }).from(notificationSendQueue);
   if (!queued) throw new Error("retry not queued");
   await pg.db.update(notificationSendQueue).set({ nextAttemptAt: new Date(0) });
-  return { pg, shop, trip: liveTrip, notification };
+  return {
+    pg,
+    shop,
+    trip: liveTrip,
+    bookingId: booking.bookingId,
+    personId: booking.personId,
+    notification,
+  };
 }
 
 const updateStart = (date: Date, offset: number) => new Date(date.getTime() + offset * HOUR_MS);
 
 describePostgres("queued reschedule revision fence", () => {
+  it("bounds the initial shop-material row-lock wait", async () => {
+    const { pg, shop, trip, bookingId, personId } = await fixture();
+    const held = await holdRowLock(pg, sql`select id from shops where id = ${shop.id} for update`);
+
+    try {
+      const send = withErasureCoordinatedBookingSend(
+        pg.connect(),
+        {
+          shopId: shop.id,
+          bookingId,
+          expectedPersonId: personId,
+          expectedTripId: trip.id,
+          shopMaterialFence: true,
+        },
+        async () => "provider must not run",
+      );
+      await waitForLockWaiters(pg.db, 1);
+      await expect(send).rejects.toSatisfy(isLockWaitRefusal);
+    } finally {
+      await held.release();
+    }
+  });
+
   it("keeps a checked revision current until the provider invocation finishes", async () => {
     const { pg, shop, trip } = await fixture();
     const entered = barrier();

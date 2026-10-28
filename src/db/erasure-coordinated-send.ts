@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { currentSendActor, scopedSendActor, withSendActor } from "@/lib/notifications/send-actor";
 import { lockBoardingCertificationEvidence } from "./boarding-certification-snapshot";
 import type { DbExecutor } from "./client";
+import { boundLockWaits } from "./lock-bounds";
 import { isTransactionExecutor } from "./query-helpers";
 import { bookings, people, shops } from "./schema";
 import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";
@@ -41,6 +42,9 @@ export async function withErasureCoordinatedBookingSend<T>(
         : await currentSendActor();
   const coordinate = async (tx: DbExecutor) => {
     if (input.shopMaterialFence) {
+      // Bound this first row-lock wait too; the trip fence applies the same
+      // timeout later, but cannot protect a transaction blocked here.
+      await boundLockWaits(tx);
       // Shop setters update this row only. Lock it before trip/evidence/person/
       // booking locks so the live message-material check stays true to dispatch.
       const [shop] = await tx
