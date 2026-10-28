@@ -19,6 +19,8 @@ import {
   type OfflineManifestPayload,
   type OfflineRollCallEvent,
 } from "@/lib/offline-manifests";
+import { READY_CACHE_NAME, READY_KEEP_UNTIL_META } from "@/lib/ready-offline";
+import { saveReadyPage } from "./ready-page-cache";
 
 vi.mock("@/lib/offline-manifest-store", () => ({
   listOfflineManifests: vi.fn(),
@@ -396,7 +398,30 @@ describe("refreshSavedManifests (the push event)", () => {
 describe("a navigation on a network that never answers", () => {
   const SHELL = new Response("offline shell", { status: 200 });
   const TRIP = "0b6c3a52-6f1e-4c55-9d0a-2f1d8f2b9c11";
+  const READY_PATH = `/ready/${"R".repeat(43)}`;
+  const OTHER_READY_PATH = `/ready/${"S".repeat(43)}`;
   let shellSaved = true;
+  const cacheEntries = new Map<string, Map<string, Response>>();
+
+  const cachePath = (key: string | Request) =>
+    new URL(typeof key === "string" ? key : key.url, "https://dive.day").pathname;
+  const cacheStorage = {
+    open: async (name: string) => {
+      const entries = cacheEntries.get(name) ?? new Map<string, Response>();
+      cacheEntries.set(name, entries);
+      return {
+        keys: async () => [...entries.keys()].map((path) => new Request(`https://dive.day${path}`)),
+        match: async (key: string | Request) => entries.get(cachePath(key))?.clone(),
+        put: async (key: string | Request, response: Response) => {
+          entries.set(cachePath(key), response.clone());
+        },
+        delete: async (key: string | Request) => entries.delete(cachePath(key)),
+      };
+    },
+    match: async (key: string | Request) =>
+      shellSaved && key === "/offline-manifest" ? SHELL.clone() : undefined,
+    delete: async (name: string) => cacheEntries.delete(name),
+  };
 
   function navigate(url: string) {
     const handler = listeners.get("fetch");
@@ -411,6 +436,37 @@ describe("a navigation on a network that never answers", () => {
     });
     if (!responded) throw new Error(`the worker left ${url} to the browser`);
     return responded;
+  }
+
+  function navigateReady(url: string) {
+    const handler = listeners.get("fetch");
+    if (!handler) throw new Error("no fetch listener");
+    let responded: Promise<Response> | undefined;
+    const waits: Promise<unknown>[] = [];
+    const previousScope = scope.registration.scope;
+    scope.registration.scope = "https://dive.day/ready/";
+    try {
+      handler({
+        request: { url, method: "GET", mode: "navigate" },
+        respondWith: (promise: Promise<Response>) => {
+          responded = promise;
+        },
+        waitUntil: (promise: Promise<unknown>) => waits.push(promise),
+      });
+    } finally {
+      scope.registration.scope = previousScope;
+    }
+    if (!responded) throw new Error(`the worker left ${url} to the browser`);
+    return { response: responded, waits };
+  }
+
+  async function cacheReadyCopy(path: string, body: string) {
+    const keepUntil = Date.now() + 24 * 60 * 60 * 1000;
+    const response = new Response(
+      `<meta name="${READY_KEEP_UNTIL_META}" content="${keepUntil}"/>${body}`,
+      { headers: { "content-type": "text/html" } },
+    );
+    await saveReadyPage(cacheStorage as unknown as CacheStorage, path, response, Date.now());
   }
 
   /** Settles `promise` or reports that it is still waiting after `ms` of fake time. */
@@ -429,11 +485,8 @@ describe("a navigation on a network that never answers", () => {
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     shellSaved = true;
-    vi.stubGlobal("caches", {
-      match: async (key: string) =>
-        shellSaved && key === "/offline-manifest" ? SHELL.clone() : undefined,
-      open: async () => ({ put: async () => {}, match: async () => undefined }),
-    });
+    cacheEntries.clear();
+    vi.stubGlobal("caches", cacheStorage);
     fetchMock.mockImplementation(hung);
   });
 
@@ -535,6 +588,74 @@ describe("a navigation on a network that never answers", () => {
     const landed = await settledAfter(response, 0);
     if (landed === "still waiting") throw new Error("the late page never arrived");
     expect(await landed.text()).toBe("live manifest");
+  });
+
+  it("serves a readiness network response that arrives just before the four-second deadline", async () => {
+    let answer: ((response: Response) => void) | undefined;
+    fetchMock.mockImplementationOnce(
+      () =>
+        new Promise<Response>((resolve) => {
+          answer = resolve;
+        }),
+    );
+    const navigation = navigateReady(`https://dive.day${READY_PATH}`);
+    expect(await settledAfter(navigation.response, 3_999)).toBe("still waiting");
+    answer?.(
+      new Response("live readiness page", {
+        headers: { "content-type": "text/html" },
+      }),
+    );
+    const live = await settledAfter(navigation.response, 0);
+    if (live === "still waiting") throw new Error("the live readiness page never arrived");
+    expect(await live.text()).toBe("live readiness page");
+  });
+
+  it("uses only the readiness copy for the exact path when the network is slow", async () => {
+    await cacheReadyCopy(READY_PATH, "saved readiness page");
+
+    const matching = navigateReady(`https://dive.day${READY_PATH}`);
+    const saved = await settledAfter(matching.response, 4_000);
+    if (saved === "still waiting") throw new Error("the saved readiness page never arrived");
+    expect(await saved.text()).toContain("saved readiness page");
+
+    const other = navigateReady(`https://dive.day${OTHER_READY_PATH}`);
+    const missing = await settledAfter(other.response, 4_000);
+    if (missing === "still waiting") throw new Error("a path without a saved page kept waiting");
+    expect(missing.type).toBe("error");
+  });
+
+  it("returns the browser error and aborts an uncached readiness request at four seconds", async () => {
+    const navigation = navigateReady(`https://dive.day${READY_PATH}`);
+    expect(await settledAfter(navigation.response, 3_999)).toBe("still waiting");
+    const result = await settledAfter(navigation.response, 1);
+    if (result === "still waiting") throw new Error("an uncached readiness page kept waiting");
+    expect(result.type).toBe("error");
+    const init = fetchMock.mock.calls[0]?.[1] as { signal?: AbortSignal } | undefined;
+    expect(init?.signal?.aborted).toBe(true);
+  });
+
+  it("ignores a readiness response that arrives after the uncached deadline", async () => {
+    let answer: ((response: Response) => void) | undefined;
+    fetchMock.mockImplementationOnce(
+      () =>
+        new Promise<Response>((resolve) => {
+          answer = resolve;
+        }),
+    );
+    const navigation = navigateReady(`https://dive.day${READY_PATH}`);
+    const failed = await settledAfter(navigation.response, 4_000);
+    if (failed === "still waiting") throw new Error("the uncached readiness page kept waiting");
+    expect(failed.type).toBe("error");
+
+    answer?.(
+      new Response("late readiness page", {
+        headers: { "content-type": "text/html" },
+      }),
+    );
+    await Promise.resolve();
+    await Promise.allSettled(navigation.waits);
+    expect(navigation.waits).toHaveLength(0);
+    expect(cacheEntries.get(READY_CACHE_NAME)?.size ?? 0).toBe(0);
   });
 
   it("still serves the live page when it answers inside four seconds", async () => {

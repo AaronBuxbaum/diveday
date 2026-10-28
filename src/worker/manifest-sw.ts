@@ -105,14 +105,16 @@ const PUSH_REFRESH_TIMEOUT_MS = 4_000;
  * `NAVIGATION_TIMEOUT_MS` passes without an answer. `saved` is told which of
  * the two it was, so the copy can say why it is on screen.
  *
- * With nothing saved to show, it keeps waiting for the network rather than
- * trading a slow page for an error page. `live` receives the abort signal,
- * so a request given up on is stopped, and any work chained inside `live`
- * (keeping a copy of the page) never runs for a response nobody shows.
+ * By default, with nothing saved to show, it keeps waiting for the network
+ * rather than trading a slow page for an error page. The readiness route opts
+ * into a browser error at the deadline because it has no safe substitute.
+ * `live` receives the abort signal, so a request given up on is stopped, and
+ * work chained inside `live` never runs for a response nobody shows.
  */
 async function networkFirst(
   live: (signal: AbortSignal) => Promise<Response>,
   saved: (why: OfflineFallbackReason) => Promise<Response | null | undefined>,
+  options: { noSavedCopyOnSlow: "wait" | "error" } = { noSavedCopyOnSlow: "wait" },
 ): Promise<Response> {
   const controller = new AbortController();
   const network = live(controller.signal);
@@ -131,7 +133,19 @@ async function networkFirst(
     clearTimeout(timer);
   }
   const copy = await saved("slow");
-  if (!copy) return network.catch(() => Response.error());
+  if (!copy) {
+    if (options.noSavedCopyOnSlow === "error") {
+      // The readiness page has no safe substitute when its saved copy is
+      // absent. Give the network the same four-second grace period, then
+      // finish this navigation instead of leaving it pending indefinitely.
+      controller.abort();
+      network.catch(() => undefined);
+      return Response.error();
+    }
+    // Staff pages may still be loading over a slow connection; preserve that
+    // behavior when the device has no offline shell to show.
+    return network.catch(() => Response.error());
+  }
   controller.abort();
   network.catch(() => undefined);
   return copy;
@@ -744,7 +758,7 @@ self.addEventListener("fetch", (event) => {
           const requestedAt = nowMs();
           const generation = ++readyRequestGeneration;
           return fetch(event.request, { signal }).then((response) => {
-            if (url.search === "") {
+            if (!signal.aborted && url.search === "") {
               event.waitUntil(
                 keepReadyPage(path, response.clone(), requestedAt, generation).catch(() => false),
               );
@@ -753,6 +767,7 @@ self.addEventListener("fetch", (event) => {
           });
         },
         () => readyPageFallback(caches, path, nowMs()),
+        { noSavedCopyOnSlow: "error" },
       ),
     );
     return;
