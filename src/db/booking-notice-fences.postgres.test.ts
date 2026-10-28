@@ -1,0 +1,255 @@
+import { randomBytes } from "node:crypto";
+import { and, eq } from "drizzle-orm";
+import { expect, it } from "vitest";
+import type { NotificationProvider } from "@/lib/notifications";
+import { describePostgres, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
+import { offerBookingHandoffByEmail } from "./booking-handoff";
+import {
+  bookingCapabilities,
+  bookings,
+  notificationDeliveries,
+  people,
+  shops,
+  trips,
+} from "./schema";
+import { sendRescheduleNotices } from "./trip-rescheduled";
+
+function barrier() {
+  let resolve!: () => void;
+  const promise = new Promise<void>((done) => (resolve = done));
+  return { promise, resolve };
+}
+
+async function fixture() {
+  const pg = await postgresTestDb();
+  const suffix = randomBytes(4).toString("hex");
+  const [shop] = await pg.db
+    .insert(shops)
+    .values({
+      name: `Reschedule race ${suffix}`,
+      slug: `reschedule-race-${suffix}`,
+      timezone: "UTC",
+    })
+    .returning();
+  if (!shop) throw new Error("shop insert returned no row");
+  const startsAt = new Date("2035-03-12T12:00:00Z");
+  const [trip] = await pg.db
+    .insert(trips)
+    .values({
+      shopId: shop.id,
+      title: "Race trip",
+      startsAt: new Date(startsAt.getTime() + 60_000),
+      endsAt: new Date(startsAt.getTime() + 4 * 60 * 60_000),
+      capacity: 2,
+    })
+    .returning();
+  if (!trip) throw new Error("trip insert returned no row");
+  const [handoffTrip] = await pg.db
+    .insert(trips)
+    .values({
+      shopId: shop.id,
+      title: "Public booking trip",
+      startsAt: new Date(startsAt.getTime() + 7 * 24 * 60 * 60_000),
+      endsAt: new Date(startsAt.getTime() + 7 * 24 * 60 * 60_000 + 4 * 60 * 60_000),
+      capacity: 2,
+      isPrivate: false,
+    })
+    .returning();
+  if (!handoffTrip) throw new Error("handoff trip insert returned no row");
+  const [person, replacement] = await pg.db
+    .insert(people)
+    .values([
+      { shopId: shop.id, fullName: "Old Diver", email: `old-${suffix}@example.com` },
+      { shopId: shop.id, fullName: "New Diver", email: `new-${suffix}@example.com` },
+    ])
+    .returning();
+  if (!person || !replacement) throw new Error("people insert returned no rows");
+  const [booking] = await pg.db
+    .insert(bookings)
+    .values({ shopId: shop.id, tripId: trip.id, personId: person.id, bookedAs: "diver" })
+    .returning();
+  if (!booking) throw new Error("booking insert returned no row");
+  const now = new Date(startsAt.getTime() - 24 * 60 * 60_000);
+  const payload = {
+    kind: "trip_rescheduled" as const,
+    tripId: trip.id,
+    previousStartsAt: startsAt.toISOString(),
+    meetingPointMoved: false,
+  };
+  return { pg, shop, trip, handoffTrip, person, replacement, booking, now, payload };
+}
+
+function sendOptions(provider: NotificationProvider, now: Date) {
+  return {
+    now,
+    emailProvider: provider,
+    appOrigin: "https://diveday.example",
+    whatsAppProviders: new Map(),
+  };
+}
+
+describePostgres("reschedule notice erasure and reassignment fences", () => {
+  it("finishes a normal provider call and tracking before erasure can commit", async () => {
+    const { pg, shop, person, booking, now, payload } = await fixture();
+    const started = barrier();
+    const release = barrier();
+    const provider: NotificationProvider = {
+      async send(notification) {
+        if (notification.to !== person.email)
+          throw new Error("reschedule addressed a different person");
+        started.resolve();
+        await release.promise;
+        return { status: "sent", providerMessageId: "reschedule-race-message" };
+      },
+    };
+    const send = sendRescheduleNotices(pg.db, shop.id, payload, sendOptions(provider, now));
+    let erase!: Promise<unknown>;
+    try {
+      await started.promise;
+      erase = pg.connect().transaction((tx) =>
+        tx
+          .update(people)
+          .set({
+            anonymizedAt: new Date(now.getTime() + 1),
+            deletedAt: new Date(now.getTime() + 1),
+          })
+          .where(and(eq(people.id, person.id), eq(people.shopId, shop.id))),
+      );
+      await waitForLockWaiters(pg.db, 1);
+      release.resolve();
+      await expect(send).resolves.toMatchObject({ told: 1, failed: 0 });
+      await erase;
+      const [delivery] = await pg.db
+        .select()
+        .from(notificationDeliveries)
+        .where(
+          and(
+            eq(notificationDeliveries.bookingId, booking.id),
+            eq(notificationDeliveries.kind, "trip_rescheduled"),
+          ),
+        );
+      expect(delivery).toMatchObject({
+        status: "sent",
+        providerMessageId: "reschedule-race-message",
+      });
+    } finally {
+      release.resolve();
+      await send.catch(() => undefined);
+      await erase?.catch(() => undefined);
+    }
+  });
+
+  it("drops a scanned recipient when reassignment commits before the send fence", async () => {
+    const { pg, shop, replacement, booking, now, payload } = await fixture();
+    let providerCalls = 0;
+    const provider = {
+      send: async () => {
+        providerCalls += 1;
+        return { status: "sent" as const, providerMessageId: "must-not-send" };
+      },
+    };
+    const updateDb = pg.connect();
+    const release = barrier();
+    let updated!: () => void;
+    const updateStarted = new Promise<void>((resolve) => (updated = resolve));
+    const repoint = updateDb.transaction(async (tx) => {
+      await tx
+        .update(bookings)
+        .set({ personId: replacement.id })
+        .where(and(eq(bookings.id, booking.id), eq(bookings.shopId, shop.id)));
+      updated();
+      await release.promise;
+    });
+    let send: ReturnType<typeof sendRescheduleNotices> | undefined;
+    try {
+      await updateStarted;
+      send = sendRescheduleNotices(pg.db, shop.id, payload, sendOptions(provider, now));
+      await waitForLockWaiters(pg.db, 1);
+      release.resolve();
+      await repoint;
+      await expect(send).resolves.toMatchObject({ told: 0, failed: 0 });
+      expect(providerCalls).toBe(0);
+      expect(
+        await pg.db
+          .select()
+          .from(bookingCapabilities)
+          .where(eq(bookingCapabilities.bookingId, booking.id)),
+      ).toEqual([]);
+      expect(
+        await pg.db
+          .select()
+          .from(notificationDeliveries)
+          .where(eq(notificationDeliveries.bookingId, booking.id)),
+      ).toEqual([]);
+    } finally {
+      release.resolve();
+      await repoint.catch(() => undefined);
+      await send?.catch(() => undefined);
+    }
+  });
+
+  it("drops a scanned handoff recipient when the source booking is reassigned before its send fence", async () => {
+    const { pg, shop, handoffTrip, replacement, booking, person, now } = await fixture();
+    let providerCalls = 0;
+    const provider: NotificationProvider = {
+      async send() {
+        providerCalls += 1;
+        return { status: "sent", providerMessageId: "must-not-send" };
+      },
+    };
+    const updateDb = pg.connect();
+    const release = barrier();
+    let updated!: () => void;
+    const updateStarted = new Promise<void>((resolve) => (updated = resolve));
+    const repoint = updateDb.transaction(async (tx) => {
+      await tx
+        .update(bookings)
+        .set({ personId: replacement.id })
+        .where(and(eq(bookings.id, booking.id), eq(bookings.shopId, shop.id)));
+      updated();
+      await release.promise;
+    });
+    let offer: ReturnType<typeof offerBookingHandoffByEmail> | undefined;
+    try {
+      await updateStarted;
+      offer = offerBookingHandoffByEmail(
+        pg.db,
+        {
+          shopId: shop.id,
+          tripId: handoffTrip.id,
+          email: person.email as string,
+          origin: "https://diveday.example",
+          requestLocale: "en-US",
+          now,
+        },
+        { provider },
+      );
+      await waitForLockWaiters(pg.db, 1);
+      release.resolve();
+      await repoint;
+      await expect(offer).resolves.toBe("skipped");
+      expect(providerCalls).toBe(0);
+      expect(
+        await pg.db
+          .select()
+          .from(bookingCapabilities)
+          .where(eq(bookingCapabilities.bookingId, booking.id)),
+      ).toEqual([]);
+      expect(
+        await pg.db
+          .select()
+          .from(notificationDeliveries)
+          .where(
+            and(
+              eq(notificationDeliveries.bookingId, booking.id),
+              eq(notificationDeliveries.kind, "booking_handoff"),
+            ),
+          ),
+      ).toEqual([]);
+    } finally {
+      release.resolve();
+      await repoint.catch(() => undefined);
+      await offer?.catch(() => undefined);
+    }
+  });
+});
