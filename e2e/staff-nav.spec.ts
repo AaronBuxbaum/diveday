@@ -220,23 +220,23 @@ test.describe("owner", () => {
     expect(clearance ?? -1).toBeGreaterThanOrEqual(0);
   });
 
-  test("a page under a section lights that section", async ({ page }) => {
-    const nav = page.getByRole("navigation", { name: "Main", exact: true });
-    for (const [suffix, section] of [
-      ["/dive-sites", "Settings"],
-      ["/settings/team", "Settings"],
-      ["/requests", "Inbox"],
-      ["/reviews", "Inbox"],
-      ["/reports", "Money"],
-    ] as const) {
+  for (const [suffix, section] of [
+    ["/dive-sites", "Settings"],
+    ["/settings/team", "Settings"],
+    ["/requests", "Inbox"],
+    ["/reviews", "Inbox"],
+    ["/reports", "Money"],
+  ] as const) {
+    test(`${suffix} lights ${section}`, async ({ page }) => {
+      const nav = page.getByRole("navigation", { name: "Main", exact: true });
       await page.goto(`/shop/blue-mantis${suffix}`);
       await expect(nav.getByRole("link", { name: section }), suffix).toHaveAttribute(
         "aria-current",
         "true",
       );
       await expect(nav.locator("[aria-current]"), suffix).toHaveCount(1);
-    }
-  });
+    });
+  }
 
   test("the search is a shortcut to the same places", async ({ page }) => {
     await page.goto("/shop/blue-mantis");
