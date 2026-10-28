@@ -5,6 +5,7 @@ import { RemovablePhoto } from "@/components/RemovablePhoto";
 import { SubmitButton } from "@/components/SubmitButton";
 import { TripDiveFields } from "@/components/TripDiveFields";
 import { buttonClass } from "@/components/ui/button";
+import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import {
   ChoiceRow,
   controlClass,
@@ -32,7 +33,7 @@ import { MAX_IMAGE_MB } from "@/lib/storage/limits";
 import { MAX_TRIP_DAYS, MIN_TRIP_DAYS } from "@/lib/trip-days";
 import { toDateInputValue, toTimeInputValue, type WallTime } from "@/lib/zoned";
 import type { DepartureDetailsSection } from "../departure-detail-sections";
-import { BoatCapacityWarning } from "./BoatCapacityWarning";
+import { BoatCapacityField } from "./BoatCapacityField";
 import type { DiveSiteList, Trip, TripDiveList } from "./types";
 
 /**
@@ -146,8 +147,9 @@ function MeetingPointFields({ trip, t }: { trip: Trip; t: StaffTranslator }) {
         </Field>
       </FieldGrid>
       <details className="group/arrival">
-        <summary className="cursor-pointer text-sm font-medium text-primary">
+        <summary className={buttonClass({ variant: "link", size: "sm", flush: true })}>
           {t("trips.details.arrivalGuidanceLegend")}
+          <DisclosureCaret direction="down" className="group-open/arrival:rotate-180" />
         </summary>
         <p className="text-sm text-muted">{t("trips.details.arrivalGuidanceDescription")}</p>
         <FieldGrid columns={2} className="mt-4">
@@ -397,17 +399,13 @@ export function DetailsSection({
       {section === "booking" ? (
         <>
           <FieldGrid columns={3}>
-            <Field
+            <BoatCapacityField
               label={t("trips.details.capacityLabel")}
-              description={
-                <BoatCapacityWarning
-                  boats={boats}
-                  initialMode={trip.diveMode ?? "boat"}
-                  assignedBoatId={trip.boatId}
-                  currentCapacity={trip.capacity}
-                  copy={t.raw("schedule.builder.boatCapacityWarning")}
-                />
-              }
+              boats={boats}
+              initialMode={trip.diveMode ?? "boat"}
+              assignedBoatId={trip.boatId}
+              currentCapacity={trip.capacity}
+              copy={t.raw("schedule.builder.boatCapacityWarning")}
             >
               <input
                 name="capacity"
@@ -418,7 +416,7 @@ export function DetailsSection({
                 defaultValue={trip.capacity}
                 className={`${controlClass} tabular-nums`}
               />
-            </Field>
+            </BoatCapacityField>
             <PriceField {...{ trip, currency, locale, priceStep, pricePlaceholder, t }} />
           </FieldGrid>
           <Field label={t("schedule.builder.isPrivateLabel")} htmlFor="trip-details-is-private">
@@ -463,18 +461,14 @@ export function DetailsSection({
               </Field>
             ) : null}
             {hasBoatDiving && boats.length > 0 ? (
-              <Field
+              <BoatCapacityField
                 label={t("boats.boatSelectLabel")}
                 hint={t("trips.details.optionalHint")}
-                description={
-                  <BoatCapacityWarning
-                    boats={boats}
-                    initialMode={trip.diveMode ?? "boat"}
-                    assignedBoatId={trip.boatId}
-                    currentCapacity={trip.capacity}
-                    copy={t.raw("schedule.builder.boatCapacityWarning")}
-                  />
-                }
+                boats={boats}
+                initialMode={trip.diveMode ?? "boat"}
+                assignedBoatId={trip.boatId}
+                currentCapacity={trip.capacity}
+                copy={t.raw("schedule.builder.boatCapacityWarning")}
               >
                 <select name="boatId" defaultValue={trip.boatId ?? ""} className={controlClass}>
                   <option value="">{t("boats.unassignedBoat")}</option>
@@ -484,7 +478,7 @@ export function DetailsSection({
                     </option>
                   ))}
                 </select>
-              </Field>
+              </BoatCapacityField>
             ) : null}
           </FieldGrid>
           {trip.courseId ? null : <SelfGuidedField t={t} checked={trip.selfGuided} />}

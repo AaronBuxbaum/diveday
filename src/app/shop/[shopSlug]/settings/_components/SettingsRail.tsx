@@ -155,7 +155,7 @@ export function SettingsRail({
           // with no rows under it (UX audit 2026-10-07, item 12). While there
           // is more below, globals.css fades the box's bottom edge.
           data-more-below={moreBelow ? "" : undefined}
-          className={`${SETTINGS_RAIL_FRAME_CLASS} overflow-y-auto ${mobileOpen ? "block" : "hidden"} lg:block`}
+          className={`${SETTINGS_RAIL_FRAME_CLASS} rounded-sm overflow-y-auto lg:rounded-none ${mobileOpen ? "block" : "hidden"} lg:block`}
         >
           {/* The inset is on what the box scrolls, never on the box: a sticky
             `top-0` sticks at its scroller's padding edge, so with `py-6` on

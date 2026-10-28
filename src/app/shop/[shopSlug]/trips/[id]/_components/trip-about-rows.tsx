@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { buttonClass } from "@/components/ui/button";
+import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import type { listBoats } from "@/db/boats";
 import type { listTripLenses } from "@/db/trip-lenses";
 import type { getTripOverview } from "@/db/trips";
@@ -430,11 +432,12 @@ export function tripAboutRows(context: TripAboutRowsContext) {
         <>
           {canConfigure ? (
             <details
-              className="mb-6"
+              className="group/boat-edit mb-6"
               open={Boolean(noticeForForm(tripNotice, "boat")) || undefined}
             >
-              <summary className="cursor-pointer text-sm font-medium text-primary">
+              <summary className={buttonClass({ variant: "link", size: "sm", flush: true })}>
                 {t("trips.details.editBoat")}
+                <DisclosureCaret direction="down" className="group-open/boat-edit:rotate-180" />
               </summary>
               <div className="mt-3">{editorFor("boat")}</div>
             </details>

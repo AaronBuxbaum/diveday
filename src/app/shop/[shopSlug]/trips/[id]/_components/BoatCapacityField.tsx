@@ -1,16 +1,23 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
+import { Field } from "@/components/ui/form";
 import { fill } from "@/i18n/fill";
 
 /** Follow both form fields, including a change of boat, without blocking a save. */
-export function BoatCapacityWarning({
+export function BoatCapacityField({
+  label,
+  hint,
+  children,
   boats,
   initialMode,
   assignedBoatId,
   currentCapacity,
   copy,
 }: {
+  label: string;
+  hint?: string;
+  children: ReactNode;
   boats: { id: string; capacity: number }[];
   initialMode: string;
   /** The persisted assignment when this editor does not submit a boat. */
@@ -19,7 +26,7 @@ export function BoatCapacityWarning({
   currentCapacity?: number;
   copy: string;
 }) {
-  const anchor = useRef<HTMLSpanElement>(null);
+  const anchor = useRef<HTMLDivElement>(null);
   const [limit, setLimit] = useState<number | null>(null);
   useEffect(() => {
     const form = anchor.current?.closest("form");
@@ -45,8 +52,20 @@ export function BoatCapacityWarning({
     };
   }, [boats, initialMode, assignedBoatId, currentCapacity]);
   return (
-    <span ref={anchor} aria-live="polite" className="text-warning">
-      {limit === null ? null : fill(copy, { count: limit })}
-    </span>
+    <div ref={anchor} className="contents">
+      <Field
+        label={label}
+        hint={hint}
+        description={
+          limit === null ? undefined : (
+            <span aria-live="polite" className="text-warning">
+              {fill(copy, { count: limit })}
+            </span>
+          )
+        }
+      >
+        {children}
+      </Field>
+    </div>
   );
 }

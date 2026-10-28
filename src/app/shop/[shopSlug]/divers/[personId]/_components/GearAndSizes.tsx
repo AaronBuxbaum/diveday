@@ -291,7 +291,8 @@ export function GearAndSizes({
                 variant: "link",
                 size: "sm",
                 flush: true,
-                className: "w-fit cursor-pointer list-none [&::-webkit-details-marker]:hidden",
+                className:
+                  "w-fit min-w-11 cursor-pointer list-none [&::-webkit-details-marker]:hidden",
               })}
             >
               {t("divers.file.editSizes")}
@@ -394,7 +395,8 @@ export function GearAndSizes({
                   variant: "link",
                   size: "sm",
                   flush: true,
-                  className: "w-fit cursor-pointer list-none [&::-webkit-details-marker]:hidden",
+                  className:
+                    "w-fit min-w-11 cursor-pointer list-none [&::-webkit-details-marker]:hidden",
                 })}
               >
                 {t("divers.rentalFit.cantFillHeading")}

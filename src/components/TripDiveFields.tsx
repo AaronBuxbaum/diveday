@@ -1,6 +1,8 @@
 "use client";
 
 import { type ReactNode, useState } from "react";
+import { buttonClass } from "@/components/ui/button";
+import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import {
   controlClass,
   Field,
@@ -241,9 +243,13 @@ export function TripDiveFields({
                   <FieldGrid columns={1} className="mt-1">
                     {siteField}
                   </FieldGrid>
-                  <details className="mt-3">
-                    <summary className="cursor-pointer text-sm font-medium text-primary">
+                  <details className="group/dive-options mt-3">
+                    <summary className={buttonClass({ variant: "link", size: "sm", flush: true })}>
                       {advancedLabel}
+                      <DisclosureCaret
+                        direction="down"
+                        className="group-open/dive-options:rotate-180"
+                      />
                     </summary>
                     <FieldGrid columns={2} className="mt-3">
                       {nameField}
