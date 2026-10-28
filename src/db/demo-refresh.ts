@@ -3,6 +3,7 @@ import { DAY_MS, nowDate } from "@/lib/clock";
 import { shopDayBounds } from "@/lib/zoned";
 import { rebindDepartureBoatSafetyTime } from "./boat-safety";
 import type { AppDb } from "./client";
+import { isDemoShopWithDemoOwnerOrCaptainAccount } from "./demo-account-guard";
 import { DEMO_SHOP_SLUG } from "./demo-shop";
 import { shops, trips } from "./schema";
 import { bringDemoBoatsAtSeaHome } from "./seed-boat-at-sea";
@@ -123,6 +124,20 @@ export async function refreshCanonicalDemoSchedule(
 ): Promise<DemoScheduleRefresh> {
   const now = opts.now ?? nowDate();
   const minRunwayDays = opts.minRunwayDays ?? DEMO_SCHEDULE_MIN_RUNWAY_DAYS;
+
+  const [demoShop] = await db
+    .select({ id: shops.id })
+    .from(shops)
+    .where(and(eq(shops.slug, DEMO_SHOP_SLUG), eq(shops.isDemo, true)))
+    .limit(1);
+  if (!demoShop || !(await isDemoShopWithDemoOwnerOrCaptainAccount(db, demoShop.id))) {
+    return {
+      found: Boolean(demoShop),
+      runwayDays: null,
+      refreshed: false,
+      today: null,
+    };
+  }
 
   // Every demo shop, the visitors' own included: theirs keep the seed's open
   // count for as long as they live.

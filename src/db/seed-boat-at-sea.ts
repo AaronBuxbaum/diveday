@@ -3,6 +3,7 @@ import { nowDate } from "@/lib/clock";
 import { depthToMeters } from "@/lib/depth-units";
 import { shopDayBounds } from "@/lib/zoned";
 import type { DbExecutor } from "./client";
+import { isDemoShopWithDemoOwnerOrCaptainAccount } from "./demo-account-guard";
 import { listTripReadiness } from "./readiness";
 import {
   bookingPayments,
@@ -110,6 +111,7 @@ const FIRST_GUIDE_TEAMS = 3;
  * applies the way `recordRollCall` does.
  */
 export async function seedBoatAtSea(db: DbExecutor, shopId: string): Promise<void> {
+  if (!(await isDemoShopWithDemoOwnerOrCaptainAccount(db, shopId))) return;
   const now = nowDate();
   const plan = demoAtSeaDeparture(now, DEMO_SHOP_TIMEZONE);
   if (!plan) return;
@@ -618,7 +620,14 @@ export async function bringDemoBoatsAtSeaHome(
   for (const trip of due) {
     // One boat at a time, under her row lock, asked again inside it: a doubled
     // cron delivery waits here, then finds dive 2 logged and writes nothing.
-    if (await db.transaction((tx) => bringBoatHome(tx, trip, now))) home++;
+    if (
+      await db.transaction(async (tx) => {
+        if (!(await isDemoShopWithDemoOwnerOrCaptainAccount(tx, trip.shopId))) return false;
+        return bringBoatHome(tx, trip, now);
+      })
+    ) {
+      home++;
+    }
   }
   return home;
 }
