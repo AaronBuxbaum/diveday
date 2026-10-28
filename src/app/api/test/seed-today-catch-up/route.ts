@@ -6,6 +6,7 @@ import { recordDeskEvent } from "@/db/desk-events";
 import { bookings, people, personRoles, trips } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { initializeTodayCatchUp } from "@/db/today-catch-up";
+import { liveTrip } from "@/db/trips-live";
 import { nowDate } from "@/lib/clock";
 import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
 import { shopDayBounds } from "@/lib/zoned";
@@ -65,7 +66,7 @@ export async function POST(request: Request) {
         eq(bookings.shopId, shop.id),
         eq(people.shopId, shop.id),
         eq(trips.status, "scheduled"),
-        isNull(trips.deletedAt),
+        liveTrip(),
         isNull(people.deletedAt),
         ne(bookings.status, "cancelled"),
         gte(trips.startsAt, day.from),
