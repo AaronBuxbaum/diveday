@@ -27,11 +27,14 @@ type ImageConfig = {
   typescript?: { ignoreBuildErrors?: boolean };
 };
 
-async function loadConfig(env: Record<string, string>): Promise<ImageConfig> {
+async function loadConfig(
+  env: Record<string, string | undefined>,
+  phase = "phase-production-build",
+): Promise<ImageConfig> {
   vi.resetModules();
   for (const [key, value] of Object.entries(env)) vi.stubEnv(key, value);
   const module = await import(CONFIG);
-  return module.default as ImageConfig;
+  return (await module.default(phase)) as ImageConfig;
 }
 
 async function loadPreviewFlag(env: Record<string, string>): Promise<boolean> {
@@ -51,6 +54,23 @@ const CONFIGURED = {
   MEDIA_BUCKET_NAME: "diveday-media",
   MEDIA_AWS_REGION: "us-east-1",
 };
+
+describe("next.config.ts development origin", () => {
+  it("defaults to the bound port only for the development server", async () => {
+    await loadConfig({ APP_HOST: undefined, PORT: "4321" });
+    expect(process.env.APP_HOST).toBeUndefined();
+    await loadConfig({ APP_HOST: undefined, PORT: "4321" }, "phase-development-server");
+    expect(process.env.APP_HOST).toBe("http://localhost:4321");
+  });
+
+  it("preserves an explicitly configured development origin", async () => {
+    await loadConfig(
+      { APP_HOST: "https://preview.example", PORT: "4321" },
+      "phase-development-server",
+    );
+    expect(process.env.APP_HOST).toBe("https://preview.example");
+  });
+});
 
 describe("next.config.ts images", () => {
   /**
