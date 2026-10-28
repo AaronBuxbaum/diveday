@@ -616,7 +616,7 @@ test.describe("schedule builder", () => {
     // does not — that is what `truncate` is for, and a shop can always pick a
     // longer name than any width can hold.
     await page.goto(`/s/${SHOP}`);
-    await expect(page.getByRole("heading", { name: "Blue Mantis Divers", level: 1 })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Schedule", level: 1 })).toBeVisible();
 
     for (const width of [390, 430]) {
       await page.setViewportSize({ width, height: 800 });

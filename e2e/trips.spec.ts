@@ -19,11 +19,9 @@ test("the public schedule lists seeded trips with capacity states, a month rail,
   page,
 }) => {
   await page.goto("/s/blue-mantis");
-  // The shopfront leads with the shop (ADR
-  // 20260827-clearwater-surface-language, decision 8); "Schedule" is the week's
-  // own section heading beneath it.
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Blue Mantis Divers");
-  await expect(page.getByRole("heading", { level: 2, name: "Schedule" })).toBeVisible();
+  // Schedule leads with date choices; the shop's authored identity follows the board.
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Schedule");
+  await expect(page.getByRole("heading", { level: 2, name: "Blue Mantis Divers" })).toBeVisible();
   // Scoped to the departure's own row heading: the reviews shelf below the list
   // quotes trip titles too, so a bare text match finds two things.
   await expect(

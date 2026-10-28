@@ -10,6 +10,7 @@ import {
   CourseSchedule,
   CourseSessions,
   courseFootBar,
+  courseHeroDate,
 } from "./CourseSections";
 
 /**
@@ -74,21 +75,25 @@ describe("the public h1 joins the display scale", () => {
  * either side of a narrow photo read as a broken page.
  */
 describe("CourseHero photo", () => {
-  it("fills a 16:9 frame, cropped to cover, with no letterbox", () => {
+  it("keeps the photograph after the title and course facts in reading order", () => {
     render(
       <CourseHero
         course={course({ heroImageUrl: "/marine-life/reef.jpg", heroImageAlt: "A reef" })}
-        totalCents={null}
+        facts={[{ label: "Duration", value: "Three days" }]}
+        totalCents={70900}
         currency="usd"
         locale="en-US"
         t={t}
       />,
     );
     const photo = screen.getByRole("img", { name: "A reef" });
-    expect(photo).toHaveClass("object-cover");
-    const frame = photo.parentElement;
-    expect(frame).toHaveClass("aspect-video", "w-full");
-    expect(document.querySelector(".bg-surface-sunken img")).toBeNull();
+    for (const fact of [
+      screen.getByRole("heading", { level: 1, name: "Open Water Diver" }),
+      screen.getByText("Three days"),
+      screen.getByText("$709"),
+    ]) {
+      expect(fact.compareDocumentPosition(photo) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
   });
 });
 
@@ -501,5 +506,44 @@ describe("CourseFaqs", () => {
     const summary = document.querySelector("summary");
     expect(summary?.textContent).toBe("How deep can I dive?");
     expect(summary?.querySelector("svg")).toHaveClass("group-open:rotate-180");
+  });
+});
+
+describe("the course opening's next date", () => {
+  const full = {
+    id: "full",
+    title: "Open Water Diver",
+    startsAt: new Date("2026-10-29T12:00:00Z"),
+    endsAt: new Date("2026-10-29T20:00:00Z"),
+    capacity: 4,
+    booked: 4,
+  };
+  const open = {
+    ...full,
+    id: "open",
+    startsAt: new Date("2026-11-01T12:00:00Z"),
+    endsAt: new Date("2026-11-03T20:00:00Z"),
+    booked: 1,
+  };
+
+  it("links to the next bookable session and labels an earlier full session truthfully", () => {
+    const next = courseHeroDate([full, open], "reef", "America/New_York", "en-US", t);
+    expect(next).toMatchObject({
+      href: "/s/reef/trips/open",
+      action: "Book this date",
+      full: false,
+      label: t("course.nextOpenDate"),
+    });
+    expect(next?.dates).toContain("Nov");
+    expect(next?.dates).toContain("3");
+  });
+
+  it("offers the full date without a wait list when the shop disabled it", () => {
+    expect(courseHeroDate([full], "reef", "America/New_York", "en-US", t, false)).toMatchObject({
+      href: "/s/reef/trips/full",
+      action: t("course.seeFullDate"),
+      full: true,
+    });
+    expect(courseHeroDate([], "reef", "America/New_York", "en-US", t)).toBeNull();
   });
 });

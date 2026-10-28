@@ -310,6 +310,23 @@ export default async function TripDetailPage({
     />
   );
 
+  const dayPlan = (
+    <div
+      className={isEmbed ? "space-y-4" : "mt-10 space-y-4 lg:mt-0 lg:col-start-1 lg:row-start-2"}
+    >
+      <TripDayPlan
+        briefings={diveBriefings}
+        nextOpensOnRule={pitchOpensOnDoor(diveBriefings, publicCrew, !!logEntry)}
+        sightings={briefing.seen}
+        siteReviews={briefing.siteReviews}
+        shop={shop}
+        locale={locale}
+        profile={dayProfileFacts(shop, trip, meetingDays.length, readerUnits.depth)}
+      />
+      {!isEmbed ? <TripBoatPhoto db={db} shopId={shop.id} boatId={trip.boatId} t={t} /> : null}
+    </div>
+  );
+
   return (
     <DiverIntlProvider locale={locale} timeZone={shop.timezone} namespaces={TRIP_PAGE_NAMESPACES}>
       <main
@@ -329,8 +346,8 @@ export default async function TripDetailPage({
             tiles, their `sizes`) changes width. The section stack below joins
             this grid as `contents`; its last row is `1fr`, so a form taller
             than the reading stretches that row rather than the gaps between
-            sections. A phone keeps one column with its booking action before the briefing (ADR 20260827-the-divers-thread, decision 2
-            and its 2026-10-03 amendment). */}
+            sections. A phone reads the compact itinerary before the booking fields;
+            supporting wildlife and site prose stay below (public audit P2, #3140). */}
         <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_25rem] lg:grid-rows-[auto_repeat(4,auto)_1fr] lg:gap-x-12 lg:gap-y-10">
           <TripHero
             shop={shop}
@@ -344,7 +361,8 @@ export default async function TripDetailPage({
             run={run}
             t={t}
           />
-          {/* The selected departure’s next action, before the supporting briefing. */}
+          {!isEmbed ? dayPlan : null}
+          {/* The selected departure’s next action, after the compact day plan. */}
           <div
             id={confirmed || waitlistConfirmation ? undefined : "book"}
             className="mt-10 scroll-mt-4 space-y-10 lg:mt-0 lg:col-start-2 lg:row-span-6 lg:row-start-1"
@@ -424,22 +442,7 @@ export default async function TripDetailPage({
             ) : null}
           </div>
           <div className="mt-10 space-y-10 lg:contents lg:space-y-0">
-            {/* The day's sites and durations stay time-neutral (issue #1479). */}
-            {/* Its run closes itself, unless a pitch opens on its rule (pixel-craft class 6). */}
-            <div className="space-y-4">
-              <TripDayPlan
-                briefings={diveBriefings}
-                nextOpensOnRule={pitchOpensOnDoor(diveBriefings, publicCrew, !!logEntry)}
-                sightings={briefing.seen}
-                siteReviews={briefing.siteReviews}
-                shop={shop}
-                locale={locale}
-                profile={dayProfileFacts(shop, trip, meetingDays.length, readerUnits.depth)}
-              />
-              {!isEmbed ? (
-                <TripBoatPhoto db={db} shopId={shop.id} boatId={trip.boatId} t={t} />
-              ) : null}
-            </div>
+            {isEmbed ? dayPlan : null}
             {/* **The bound** (ADR 20260904-reef-all-the-way-down, decision 1). The
                 route, the rest of the field guide, the shop's
                 site prose and the crew used to run down the page as five more

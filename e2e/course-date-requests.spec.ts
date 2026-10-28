@@ -2,6 +2,7 @@ import { diverTranslator } from "../src/i18n/messages";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { publicCoursePath } from "../src/lib/public-routes";
 import { expect, makeActivitySafe, test } from "./fixtures";
+import { openIfClosed } from "./helpers";
 
 const diver = diverTranslator("en-US");
 const staff = staffTranslator("en-US");
@@ -48,11 +49,12 @@ for (const scenario of cases) {
     try {
       const publicPage = makeActivitySafe(await context.newPage());
       await publicPage.goto(publicCoursePath(privateShop.slug, scenario.slug));
-      const inquiry = publicPage.getByRole("region", { name: diver("inquiry.askAboutCourse") });
-      await expect(inquiry).toBeVisible();
+      const inquiry = publicPage.locator("#get-in-touch");
+      await expect(inquiry.locator("summary")).toHaveText(diver("course.askAnotherDate"));
+      await openIfClosed(inquiry);
       await expect(
         publicPage.getByRole("link", { name: diver("course.bookThisDate") }),
-      ).toHaveCount(scenario.scheduled ? 1 : 0);
+      ).toHaveCount(scenario.scheduled ? 2 : 0);
       if (!scenario.scheduled) {
         await expect(
           publicPage.getByRole("link", { name: diver("course.orAskUs") }),

@@ -617,7 +617,7 @@ test.describe("the shopfront on a phone", () => {
   test("leads with the shop, then the next boat, then the booking form", async ({ page }) => {
     await page.goto("/s/blue-mantis");
 
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Blue Mantis Divers");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Schedule");
     await expect(
       page.getByText("Small-boat reef and wreck diving out of Key Largo."),
     ).toBeVisible();
@@ -636,6 +636,19 @@ test.describe("the shopfront on a phone", () => {
       "data-hydrated",
       "true",
     );
+    const itinerary = page.getByRole("heading", {
+      name: diverTranslator("en-US")("trip.theDay"),
+      exact: true,
+    });
+    await expect(itinerary).toBeVisible();
+    expect(
+      await itinerary.evaluate((heading) => {
+        const booking = document.getElementById("book");
+        return Boolean(
+          booking && heading.compareDocumentPosition(booking) & Node.DOCUMENT_POSITION_FOLLOWING,
+        );
+      }),
+    ).toBe(true);
   });
 });
 
