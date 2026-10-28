@@ -171,7 +171,12 @@ describe("BookingPartyFields — the group captions", () => {
       const clearButton = screen.getByRole("button", { name: "Not you?" });
       const line = clearButton.closest("p");
       expect(line).toHaveTextContent("Booking as Marco Rossi");
-      expect(clearButton).toHaveClass("relative", "before:absolute", "before:min-h-11");
+      expect(clearButton).toHaveClass(
+        "relative",
+        "text-base",
+        "before:absolute",
+        "before:min-h-11",
+      );
       expect(clearButton).not.toHaveClass("min-h-11");
       expect(screen.getByText("Your details").nextElementSibling).toHaveClass("mt-2");
       expect(line?.parentElement).toBe(screen.getByText("Your details").nextElementSibling);
