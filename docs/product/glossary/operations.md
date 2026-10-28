@@ -1493,16 +1493,19 @@
   (Open Water) asks no card for a site level it
   certifies; never past it, never for an intro session or a course that certifies none (issue
   #2731). It needs the course's own instructor aboard, rostered by somebody else and not counted
-  off at the dock, and the seat within the course's ratio: marked seats are counted per instructor
-  across every session on the departure, a certified assistant raising the cap as on the session.
-  Today that lowers exactly one case: a PADI Open Water student on a one-dive charter whose site
+  off at the dock, and the seat within its conservative modeled base ratio: marked seats are counted
+  per instructor across every session, with the tightest base ratio applied to that modeled load.
+  The boarding check gives no assistant bonus because the departure and saved plan do not identify
+  actual underwater groups or which instructor an assistant supervises. The plan advisory remains
+  a plan; staff confirm the actual groups before diving. Today that lowers exactly one case: a PADI
+  Open Water student on a one-dive charter whose site
   asks Open Water, because continuing-education courses have no ratio rule yet and so never lower a level.
-  An instructor's load is also held to the tightest ratio of every seat already on them: an
-  Open Water seat marked after a Discover Scuba seat cannot take the instructor past the intro
-  ratio.
-  A course with no known ratio never lowers a level, so the departure's level stands and the row
-  warns. The sale, which cannot see a mark not yet made, sells on the same course seat under the
-  same rule.
+  An instructor's modeled load is also held to the tightest base ratio among seats assigned to them:
+  an Open Water mark after a Discover Scuba mark cannot raise that modeled cap above the intro ratio.
+  A course with no known ratio blocks ratio-backed coverage for all training marks on that
+  departure, so the departure's level stands and the row warns. The booking-time course-ratio cap
+  remains separate: it does not read the training mark or establish the actual underwater groups
+  for boarding.
   A counter advisory can name overlapping intro and entry-level sessions with a possible shared
   instructor. It does not establish a group or clearance: different session windows can still
   have training marks on the same separate departure, so an absent advisory does not establish
