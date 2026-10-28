@@ -112,7 +112,7 @@ export type SafetyMonth = {
   certOverrides: number;
   /** One crew member on one departure. */
   crewSailings: number;
-  /** Observations with a credential lapsed on the observed local day. */
+  /** Live boarding observations with a credential lapsed on the departure's local sailing day. */
   lapsedSailings: {
     tripId: string;
     title: string;
@@ -381,9 +381,13 @@ export function summarizeSafetyMonth(input: SafetyMonthInput): SafetyMonth {
           calendarDateInTimezone(completed, input.timeZone)
           ? calendarDateInTimezone(started, input.timeZone)
           : null;
+      const sailingDay = calendarDateInTimezone(departure.startsAt, input.timeZone);
       let onFile: readonly SafetyCredential[];
-      let checkedDay = divesOn;
-      const hasObservedState = validSnapshot && observationDay && snapshot;
+      let checkedDay = sailingDay;
+      // A board mark only establishes this sailing's date-level credential state
+      // when its complete observation interval falls on the scheduled local
+      // sailing day. An adjacent-day mark cannot stand in for the card at sail.
+      const hasObservedState = validSnapshot && observationDay === sailingDay && snapshot;
       if (hasObservedState) {
         checkedDay = observationDay;
         // A future-issued legacy card may have replaced an older one, so it

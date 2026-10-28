@@ -215,10 +215,12 @@
   boarding caveat says what the dock count proves: the rail records nobody as boarded while
   readiness blocks them, and a seat whose readiness changed after boarding is not separated
   (review F4). Live crew boarding marks can capture credential kind and dates in a single database
-  statement, with its observation interval. The lapse figure says it reads the live mark, not actual
-  departure; offline, unmarked and older records remain unavailable. An interval crossing midnight
-  in the shop's zone cannot establish the observation day and is also unavailable. Current credentials
-  remain on Team. The observed role is not captured, so the report identifies an empty credential
-  file but does not judge whether cards answered the role at the mark. Erasure removes version history
-  and boarding observations.
+  statement, with its observation interval. The lapse figure uses that observed credential state only
+  when the entire interval and the scheduled departure fall on the same shop-local calendar day; it
+  judges date-based renewal on that day and does not establish the actual departure time. Offline,
+  unmarked, mismatched-day and older records without an observation remain unavailable. An interval
+  crossing midnight in the shop's zone cannot establish one observation day and is also unavailable.
+  Current credentials remain on Team. The observed role is not captured, so the report identifies an
+  empty credential file but does not judge whether cards answered the role at the mark. Erasure removes
+  version history and boarding observations.
   Crew assignments and other facts still read as the shop's records stand today.
