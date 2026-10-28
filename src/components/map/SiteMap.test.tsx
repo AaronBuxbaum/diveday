@@ -9,6 +9,7 @@ beforeAll(async () => {
 });
 afterEach(() => {
   cleanup();
+  vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
 
