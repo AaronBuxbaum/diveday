@@ -1,3 +1,4 @@
+import type { Locator } from "@playwright/test";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import {
   bookASeatAndOpenThread,
@@ -296,7 +297,7 @@ test("a departure's own meeting point reaches the diver once they hold a seat", 
 });
 
 test("departure editors save independently and preserve the other subjects", async ({ page }) => {
-  // Six explicit saves and a fresh read exercise the boundary between independent editors.
+  // Four explicit saves and a fresh read exercise the boundary between independent editors.
   test.slow();
   const title = `Scoped departure ${e2eNow().getTime()}`;
   await createTrip(page, {
@@ -310,28 +311,44 @@ test("departure editors save independently and preserve the other subjects", asy
   await page.goto(await tripPathByTitle(page, "blue-mantis", title));
   const tripPath = new URL(page.url()).pathname;
 
+  async function saveSection(row: Locator, section: string) {
+    // FlashParams consumes the notice/form URL immediately; capture this action's
+    // redirect before submitting, then wait until its pending state commits.
+    const saved = page.waitForResponse(
+      (response) =>
+        response.request().method() === "POST" &&
+        new URL(response.url()).pathname === tripPath &&
+        "next-action" in response.request().headers(),
+    );
+    await row.getByRole("button", { name: "Save changes" }).click();
+    const redirect = (await saved).headers()["x-action-redirect"];
+    expect(redirect).toContain("notice=saved");
+    expect(redirect).toContain(`form=${section}`);
+    await expect(row.locator('button[aria-busy="true"]')).toHaveCount(0);
+  }
+
   const meeting = await openTripAboutRow(page, "Where we meet");
   await meeting.locator('[name="meetingPointLabel"]').fill("North jetty");
   await meeting.locator('[name="meetingPointAddress"]').fill("12 Dock Road");
-  await meeting.getByRole("button", { name: "Save changes" }).click();
-  await expect(page).toHaveURL(/notice=saved.*form=meeting/);
+  await saveSection(meeting, "meeting");
+  await expect(meeting.locator("summary")).toContainText("North jetty · 12 Dock Road");
 
   const timing = await openTripAboutRow(page, "Timing");
   await timing.getByLabel("Departs").fill("09:30");
-  await timing.getByRole("button", { name: "Save changes" }).click();
-  await expect(page).toHaveURL(/notice=saved.*form=timing/);
+  await saveSection(timing, "timing");
+  await expect(timing.locator("summary")).toContainText("9:30 AM");
 
   const booking = await openTripAboutRow(page, "Booking and payment");
   await booking.locator('[name="capacity"]').fill("9");
   await booking.locator('[name="priceDollars"]').fill("155");
-  await booking.getByRole("button", { name: "Save changes" }).click();
-  await expect(page).toHaveURL(/notice=saved.*form=booking/);
+  await saveSection(booking, "booking");
+  await expect(booking.locator("summary")).toContainText("$155.00");
+  await expect(booking.locator("summary")).toContainText("0 of 9");
 
   const plan = await openTripAboutRow(page, "The plan");
   await expect(plan.locator('[name="capacity"]')).toHaveCount(0);
   await plan.getByLabel("Number of dives").selectOption("3");
-  await plan.getByRole("button", { name: "Save changes" }).click();
-  await expect(page).toHaveURL(/notice=saved.*form=plan/);
+  await saveSection(plan, "plan");
 
   await page.goto(tripPath);
   const savedMeeting = await openTripAboutRow(page, "Where we meet");
