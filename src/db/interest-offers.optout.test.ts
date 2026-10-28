@@ -5,6 +5,7 @@ import { HOUR_MS, nowDate } from "@/lib/clock";
 import type { Notification } from "@/lib/notifications/kinds";
 import { fileScopedShopContext } from "@/test/db";
 import { fakePromotions } from "@/test/fakes";
+import { moveBooking } from "./bookings";
 import { addInterest } from "./interest-dates-fixtures";
 
 const ctx = fileScopedShopContext();
@@ -389,6 +390,23 @@ describe("invitableSeats and the deal", () => {
       }),
     ).toBe(true);
     expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 4);
+    // A canceled seat does not pin the party forever. Once this is the only
+    // linked seat and it is released, another explicitly offered departure can
+    // take the active party.
+    await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, booking.id));
+    expect(
+      await associateDateRequestOfferBooking(db, {
+        shopId: shop.id,
+        tripId: otherDeparture.id,
+        requestId,
+        bookingId: foreignBooking.id,
+      }),
+    ).toBe(true);
+    await db
+      .update(bookings)
+      .set({ status: "cancelled" })
+      .where(eq(bookings.id, foreignBooking.id));
+    await db.update(bookings).set({ status: "booked" }).where(eq(bookings.id, booking.id));
     // A no-show releases the boat seat, but the linked anonymous offer regains
     // that one seat of advisory hold. Rebooking or checking the diver in puts
     // the booking back in SEAT_HELD_STATUSES and consumes that hold again, so
@@ -434,7 +452,7 @@ describe("invitableSeats and the deal", () => {
         requestId,
         bookingId: foreignBooking.id,
       }),
-    ).toBe(true);
+    ).toBe(false);
     expect(await invitableSeats(db, await tripRow(db, otherDeparture.id))).toBe(otherBaseline - 2);
 
     const thirdBookingEmail = "third-3102@example.com";
@@ -467,13 +485,18 @@ describe("invitableSeats and the deal", () => {
     ).toBe(false);
     expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 4);
 
-    await db.update(bookings).set({ tripId: otherDeparture.id }).where(eq(bookings.id, booking.id));
+    expect(
+      await moveBooking(db, {
+        shopId: shop.id,
+        fromTripId: trip.id,
+        toTripId: otherDeparture.id,
+        bookingId: booking.id,
+      }),
+    ).toEqual({ ok: false, reason: "date_request_departure_conflict" });
     expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 4);
-    expect(await invitableSeats(db, await tripRow(db, otherDeparture.id))).toBe(otherBaseline - 3);
+    expect(await invitableSeats(db, await tripRow(db, otherDeparture.id))).toBe(otherBaseline - 2);
 
-    // The staff action names the destination request explicitly. Reassign this
-    // booking from the old offer to the offer for its new departure; the old
-    // offer regains its unfilled seat while the new offer no longer double-holds it.
+    // An association cannot move an already-linked booking to another offer.
     expect(
       await associateDateRequestOfferBooking(db, {
         shopId: shop.id,
@@ -481,7 +504,7 @@ describe("invitableSeats and the deal", () => {
         requestId,
         bookingId: booking.id,
       }),
-    ).toBe(true);
+    ).toBe(false);
     expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 4);
     expect(await invitableSeats(db, await tripRow(db, otherDeparture.id))).toBe(otherBaseline - 2);
 
@@ -489,11 +512,8 @@ describe("invitableSeats and the deal", () => {
     expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 4);
     expect(await invitableSeats(db, await tripRow(db, otherDeparture.id))).toBe(otherBaseline - 2);
 
-    await db.update(bookings).set({ tripId: trip.id }).where(eq(bookings.id, booking.id));
-    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 4);
-
     await db.update(bookings).set({ status: "booked" }).where(eq(bookings.id, booking.id));
-    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 5);
+    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 4);
     expect(
       await associateDateRequestOfferBooking(db, {
         shopId: shop.id,

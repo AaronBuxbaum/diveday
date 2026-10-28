@@ -97,6 +97,8 @@ export type SeatDiverPerson =
 export type SeatDiverInput = {
   shopId: string;
   tripId: string;
+  /** Explicit date request answered by this seat, never inferred by identity. */
+  dateRequestInterestId?: string;
   /** The staff member doing it — attributed on the activity trail. */
   actorPersonId: string;
   diver: SeatDiverPerson;
@@ -224,7 +226,11 @@ function collapse(reason: BookingRefusalReason, detail: SeatDiverRefusalDetail):
   if (detail === "specific") return reason;
   return reason === "trip_full" || reason === "divers_full" || reason === "already_booked"
     ? reason
-    : "unavailable";
+    : reason === "date_request_offer_unavailable" ||
+        reason === "date_request_departure_conflict" ||
+        reason === "date_request_party_full"
+      ? reason
+      : "unavailable";
 }
 
 /**
@@ -259,6 +265,7 @@ export async function seatDiver(db: AppDb, input: SeatDiverInput): Promise<SeatD
     actor: "staff",
     shopId: input.shopId,
     tripId: input.tripId,
+    dateRequestInterestId: input.dateRequestInterestId,
     participantType: input.participantType ?? "diver",
     ...input.diver,
   });

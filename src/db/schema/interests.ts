@@ -235,8 +235,10 @@ export type Interest = typeof interests.$inferSelect;
 
 /**
  * One successfully seated booking answering one seat of a specific anonymous
- * date-request offer. A party can be seated in several bookings; keeping one
- * row per booking preserves the unseated part of its offer.
+ * date-request offer. All bookings linked to the same request stay on the
+ * departure selected by its first linked booking; cancellation frees its seat
+ * but preserves that departure choice. A party can be seated in several
+ * bookings; keeping one row per booking preserves the unseated part of its offer.
  */
 export const dateRequestOfferBookings = pgTable(
   "date_request_offer_bookings",

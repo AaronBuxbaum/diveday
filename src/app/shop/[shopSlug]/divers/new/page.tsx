@@ -50,6 +50,18 @@ const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
   "diver-course-min-age": { tone: "danger", key: "trips.notices.diverCourseMinAge" },
   "diver-trip-prerequisite": { tone: "danger", key: "trips.notices.diverTripPrerequisite" },
   "diver-unavailable": { tone: "danger", key: "trips.notices.diverUnavailable" },
+  "diver-date-request-conflict": {
+    tone: "danger",
+    key: "trips.notices.diverDateRequestConflict",
+  },
+  "diver-date-request-unavailable": {
+    tone: "danger",
+    key: "trips.notices.diverDateRequestUnavailable",
+  },
+  "diver-date-request-full": {
+    tone: "danger",
+    key: "trips.notices.diverDateRequestFull",
+  },
   "diver-invalid": { tone: "danger", key: "divers.page.noticeInvalid" },
   "seat-busy": { tone: "danger", key: "seatDiver.busy" },
   // A walk-in party with names that read like somebody on file (fifth loop,

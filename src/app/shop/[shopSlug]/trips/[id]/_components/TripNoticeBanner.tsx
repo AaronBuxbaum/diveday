@@ -141,6 +141,21 @@ const NOTICE_KEYS: Record<
     tone: "danger",
     key: "trips.notices.seatMoveUnavailable",
   },
+  "seat-move-date-request-conflict": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.seatMoveDateRequestConflict",
+  },
+  "seat-move-date-request-unavailable": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.seatMoveDateRequestUnavailable",
+  },
+  "seat-move-date-request-full": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.seatMoveDateRequestFull",
+  },
   "seat-move-course": { form: "roster", tone: "danger", key: "trips.notices.seatMoveCourse" },
   "seat-move-already": { form: "roster", tone: "danger", key: "trips.notices.seatMoveAlready" },
   "seat-move-earlier": { form: "roster", tone: "danger", key: "trips.notices.seatMoveEarlier" },
@@ -188,6 +203,21 @@ const NOTICE_KEYS: Record<
     form: "roster",
     tone: "danger",
     key: "trips.notices.bookingRestoreCancelled",
+  },
+  "booking-restore-date-request-conflict": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.bookingRestoreDateRequestConflict",
+  },
+  "booking-restore-date-request-unavailable": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.bookingRestoreDateRequestUnavailable",
+  },
+  "booking-restore-date-request-full": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.bookingRestoreDateRequestFull",
   },
   "diver-added": { form: "add-diver", tone: "success", key: "trips.notices.diverAdded" },
   // Seated for a later day and told so: the confirmation an online booking
@@ -529,6 +559,21 @@ const NOTICE_KEYS: Record<
     key: "trips.notices.diverTripPrerequisite",
   },
   "diver-unavailable": { form: "add-diver", tone: "danger", key: "trips.notices.diverUnavailable" },
+  "diver-date-request-conflict": {
+    form: "add-diver",
+    tone: "danger",
+    key: "trips.notices.diverDateRequestConflict",
+  },
+  "diver-date-request-unavailable": {
+    form: "add-diver",
+    tone: "danger",
+    key: "trips.notices.diverDateRequestUnavailable",
+  },
+  "diver-date-request-full": {
+    form: "add-diver",
+    tone: "danger",
+    key: "trips.notices.diverDateRequestFull",
+  },
   "waiver-complete": { form: "roster", tone: "success", key: "trips.notices.waiverComplete" },
   // No `waiver-in-person` entry: recording a paper signature no longer
   // navigates, so there is no notice to carry. The card says it instead — the

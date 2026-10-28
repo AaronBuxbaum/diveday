@@ -4,7 +4,7 @@ import { z } from "zod";
 import { getDb } from "@/db/client";
 import { findSimilarDivers } from "@/db/divers";
 import { discardFormDraft } from "@/db/form-drafts";
-import { associateDateRequestOfferBooking, setDateInterestOutcome } from "@/db/interests";
+import { setDateInterestOutcome } from "@/db/interests";
 import { busyOnLockWait } from "@/db/lock-bounds";
 import {
   type SeatDiverPerson,
@@ -227,6 +227,7 @@ async function seat(
     entry: door.entry,
     refusals: door.refusals,
     participantType,
+    dateRequestInterestId: requestId ?? undefined,
   }).catch(busyOnLockWait);
   if (outcome === "busy") refuse(surface, landing, SEAT_BUSY_NOTICE);
   const result = outcome;
@@ -235,12 +236,6 @@ async function seat(
   // leaves its day on the Requests page and stops counting there. A request
   // already closed keeps the answer it had.
   if (requestId) {
-    await associateDateRequestOfferBooking(db, {
-      shopId: actor.shopId,
-      tripId: landing.tripId,
-      requestId,
-      bookingId: result.bookingId,
-    });
     await setDateInterestOutcome(db, {
       shopId: actor.shopId,
       interestId: requestId,
@@ -423,6 +418,9 @@ const PARTY_REFUSAL_NOTICE: Record<SeatDiverRefusal, string> = {
   course_min_age: "diver-course-min-age",
   trip_prerequisite: "diver-trip-prerequisite",
   trip_unavailable: "diver-unavailable",
+  date_request_offer_unavailable: "diver-date-request-unavailable",
+  date_request_departure_conflict: "diver-date-request-conflict",
+  date_request_party_full: "diver-date-request-full",
   person_not_found: "diver-unavailable",
   unavailable: "diver-unavailable",
 };

@@ -1,5 +1,4 @@
-import { and, asc, count, eq, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm";
-import { alias } from "drizzle-orm/pg-core";
+import { and, asc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import { createBearerToken, hashBearerToken } from "@/lib/bearer-tokens";
 import { courseRatioRefusal } from "@/lib/booking-gates";
 import type { CalendarDate } from "@/lib/calendar-date";
@@ -24,12 +23,12 @@ import { MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { courseStudentSeatCap } from "./bookings";
 import type { AppDb, DbExecutor } from "./client";
+import { lockDateRequestOffer, recordDateRequestOfferBooking } from "./date-request-offer-bookings";
 import { findOrCreatePerson } from "./people";
 import { getTripRequirements, getTripSiteRequirement } from "./readiness";
 import {
   bookings,
   type DiveSpecialty,
-  dateRequestOfferBookings,
   type Interest,
   interests,
   interestUnsubscribeTokens,
@@ -666,17 +665,25 @@ export async function setDateInterestOutcome(
 /**
  * Link one successfully seated booking to one offered departure child. A date
  * request can ask for several seats, so each booking gets its own row and only
- * one active linked seat is subtracted from the offer. An explicit later
- * request can reassign a moved booking to another offered departure; no diver
- * identity is inferred. The booking lock serializes reassignment of one seat,
- * and the offer lock serializes bookings against that offer's party size.
+ * one active linked seat is subtracted from the offer. The request row is the
+ * serialization point across all its offered departures: every active booking
+ * linked to the request stays on one departure. Once every linked seat is
+ * released, another offer may take the party; historical associations remain
+ * for safe reactivation. No diver identity is inferred.
  */
 export async function associateDateRequestOfferBooking(
   db: AppDb,
   input: { shopId: string; tripId: string; requestId: string; bookingId: string },
 ): Promise<boolean> {
-  const source = alias(interests, "date_request");
   return db.transaction(async (tx) => {
+    const offer = await lockDateRequestOffer(tx, {
+      shopId: input.shopId,
+      tripId: input.tripId,
+      requestId: input.requestId,
+      excludeBookingId: input.bookingId,
+    });
+    if (typeof offer === "string") return false;
+
     const [booking] = await tx
       .select({ id: bookings.id })
       .from(bookings)
@@ -691,85 +698,12 @@ export async function associateDateRequestOfferBooking(
       .limit(1)
       .for("update");
     if (!booking) return false;
-
-    const [offer] = await tx
-      .select({ id: interests.id, partySize: interests.partySize })
-      .from(interests)
-      .innerJoin(
-        source,
-        and(
-          eq(source.id, interests.parentInterestId),
-          eq(source.shopId, input.shopId),
-          eq(source.scope, "date"),
-        ),
-      )
-      .where(
-        and(
-          eq(interests.shopId, input.shopId),
-          eq(interests.scope, "departure"),
-          eq(interests.tripId, input.tripId),
-          eq(interests.parentInterestId, input.requestId),
-          isNotNull(interests.offeredAt),
-        ),
-      )
-      .limit(1)
-      // The date request parent is updated before this child by diver erasure.
-      // Lock only the offered child here so the read-only join does not take a
-      // parent lock in the opposite order.
-      .for("update", { of: interests });
-    if (!offer) return false;
-
-    const [existing] = await tx
-      .select({ interestId: dateRequestOfferBookings.interestId })
-      .from(dateRequestOfferBookings)
-      .where(eq(dateRequestOfferBookings.bookingId, input.bookingId))
-      .limit(1);
-    if (existing?.interestId === offer.id) return true;
-
-    const [linked] = await tx
-      .select({ seats: count(bookings.id) })
-      .from(dateRequestOfferBookings)
-      .innerJoin(
-        bookings,
-        and(
-          eq(bookings.id, dateRequestOfferBookings.bookingId),
-          eq(bookings.shopId, input.shopId),
-          eq(bookings.tripId, input.tripId),
-          inArray(bookings.status, [...SEAT_HELD_STATUSES]),
-        ),
-      )
-      .where(
-        and(
-          eq(dateRequestOfferBookings.shopId, input.shopId),
-          eq(dateRequestOfferBookings.interestId, offer.id),
-        ),
-      );
-    if ((linked?.seats ?? 0) >= (offer.partySize ?? 1)) return false;
-
-    if (existing) {
-      const [updated] = await tx
-        .update(dateRequestOfferBookings)
-        .set({ interestId: offer.id })
-        .where(
-          and(
-            eq(dateRequestOfferBookings.shopId, input.shopId),
-            eq(dateRequestOfferBookings.bookingId, input.bookingId),
-          ),
-        )
-        .returning({ bookingId: dateRequestOfferBookings.bookingId });
-      return updated !== undefined;
-    }
-
-    const [inserted] = await tx
-      .insert(dateRequestOfferBookings)
-      .values({
-        shopId: input.shopId,
-        interestId: offer.id,
-        bookingId: input.bookingId,
-      })
-      .onConflictDoNothing()
-      .returning({ bookingId: dateRequestOfferBookings.bookingId });
-    return inserted !== undefined;
+    return recordDateRequestOfferBooking(tx, {
+      shopId: input.shopId,
+      offerId: offer.offerId,
+      bookingId: input.bookingId,
+      partySize: offer.partySize,
+    });
   });
 }
 
