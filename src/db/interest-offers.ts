@@ -904,7 +904,12 @@ export async function invitableSeats(db: AppDb, trip: typeof trips.$inferSelect)
             .select({ id: bookings.id })
             .from(bookings)
             .where(
-              and(eq(bookings.id, interests.bookedBookingId), ne(bookings.status, "cancelled")),
+              and(
+                eq(bookings.id, interests.bookedBookingId),
+                eq(bookings.shopId, interests.shopId),
+                eq(bookings.tripId, interests.tripId),
+                ne(bookings.status, "cancelled"),
+              ),
             ),
         ),
       ),

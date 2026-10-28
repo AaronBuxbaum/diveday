@@ -205,7 +205,7 @@ describe("invitableSeats and the deal", () => {
         askedBy: "diver",
         tripId: trip.id,
         parentInterestId: requestId,
-        partySize: 1,
+        partySize: 2,
         offeredAt,
       })
       .returning({ id: interests.id });
@@ -224,7 +224,7 @@ describe("invitableSeats and the deal", () => {
       })
       .returning({ id: interests.id });
     if (!bookedOffer || !unrelatedOffer) throw new Error("setup: date offers missing");
-    expect(await invitableSeats(db, departure)).toBe(baseline - 2);
+    expect(await invitableSeats(db, departure)).toBe(baseline - 3);
 
     const bookingEmail = "booked-3102@example.com";
     await askAnytime(db, {
@@ -250,13 +250,25 @@ describe("invitableSeats and the deal", () => {
       (candidate) => candidate.id !== trip.id,
     );
     if (!otherDeparture) throw new Error("setup: second departure missing");
+    const foreignBookingEmail = "foreign-3102@example.com";
+    await askAnytime(db, {
+      shopId: shop.id,
+      fullName: "A diver on another departure",
+      email: foreignBookingEmail,
+      declaration: openWater,
+    });
+    const [foreignPerson] = await db
+      .select()
+      .from(people)
+      .where(eq(people.email, foreignBookingEmail));
+    if (!foreignPerson) throw new Error("setup: second booking person missing");
     const [foreignBooking] = await db
       .insert(bookings)
       .values({
         bookedAs: "diver",
         shopId: shop.id,
         tripId: otherDeparture.id,
-        personId: bookedPerson.id,
+        personId: foreignPerson.id,
         status: "booked",
       })
       .returning({ id: bookings.id });
@@ -287,6 +299,21 @@ describe("invitableSeats and the deal", () => {
       }),
     ).toBe(false);
     expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 2);
+
+    await db.update(bookings).set({ tripId: otherDeparture.id }).where(eq(bookings.id, booking.id));
+    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 3);
+
+    await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, booking.id));
+    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 3);
+
+    await db.update(bookings).set({ tripId: trip.id }).where(eq(bookings.id, booking.id));
+    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 3);
+
+    await db.update(bookings).set({ status: "booked" }).where(eq(bookings.id, booking.id));
+    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 2);
+
+    await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, booking.id));
+    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 3);
 
     const [stored] = await db
       .select({ bookedBookingId: interests.bookedBookingId })
