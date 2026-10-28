@@ -55,7 +55,13 @@ describe("template effective preservation", () => {
         .set({ currentVersion: next })
         .where(eq(globalDiveSites.id, entry.template.id));
       const preview = await getDiveSiteTemplateUpdate(db, shop.id, site.id);
-      expect(preview?.diff.some((change) => change.field === "conservationNote")).toBe(false);
+      expect(preview?.diff).toContainEqual(
+        expect.objectContaining({
+          field: "conservationNote",
+          current: conservationNote,
+          latest: "Incoming conservation note",
+        }),
+      );
       expect((await pullDiveSiteTemplateUpdates(db, shop.id, site.id, mode)).status).toBe(
         "updated",
       );

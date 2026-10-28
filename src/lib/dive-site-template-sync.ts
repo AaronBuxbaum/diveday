@@ -4,7 +4,7 @@ import { type DiveSiteDifficulty, parseDiveSiteDifficulty } from "./dive-site-di
 import { type DiveSiteLandmark, parseDiveSiteLandmarks } from "./dive-site-landmarks";
 import type { CertificationLevel } from "./readiness";
 
-/** Fields a template snapshot can compare or refresh. Conservation guidance and media stay local. */
+/** Fields a template snapshot can compare. Conservation guidance is compared but stays local. */
 export const DIVE_SITE_TEMPLATE_SYNC_FIELDS = [
   "description",
   "locationName",
@@ -187,8 +187,6 @@ export function diveSiteTemplateDiff(
   latest: DiveSiteTemplateSnapshot,
 ): DiveSiteTemplateDiff[] {
   return DIVE_SITE_TEMPLATE_SYNC_FIELDS.flatMap((field) => {
-    // A catalog revision cannot change the shop's site-specific guidance.
-    if (field === "conservationNote") return [];
     const currentValue = current[field];
     const latestValue = latest[field];
     if (sameValue(currentValue, latestValue)) return [];

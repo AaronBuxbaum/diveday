@@ -72,12 +72,19 @@ describe("dive-site template sync", () => {
     expect(merged.conservationNote).toBe("Use mooring buoys.");
   });
 
-  it("preserves an empty local conservation note for either update mode", () => {
+  it("shows a changed template note while preserving the empty local note in either mode", () => {
     const baseline = diveSiteTemplateSnapshot(source);
     const current = diveSiteTemplateSnapshotFromSite({ ...baseline, conservationNote: "" });
     const latest = diveSiteTemplateSnapshot({ ...source, conservationNote: "New template note." });
 
-    expect(diveSiteTemplateDiff(current, baseline, latest)).toEqual([]);
+    expect(diveSiteTemplateDiff(current, baseline, latest)).toEqual([
+      {
+        field: "conservationNote",
+        shopChanged: true,
+        current: "",
+        latest: "New template note.",
+      },
+    ]);
     expect(
       mergedDiveSiteTemplateSnapshot(current, baseline, latest, "preserve-shop-edits")
         .conservationNote,
