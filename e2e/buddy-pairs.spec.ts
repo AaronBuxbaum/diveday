@@ -174,7 +174,10 @@ test("a team grows, a member leaves, and dissolving is the explicit act", async 
   const teamPanel = page.locator("section", {
     has: page.getByRole("heading", { name: "Buddy teams" }),
   });
-  const tomLena = teamPanel.locator("li", { hasText: "Lena Fischer" }).first();
+  const tomLena = teamPanel
+    .locator("li")
+    .filter({ has: page.locator('li[data-buddy-member]', { hasText: "Lena Fischer" }) })
+    .first();
 
   // A team of two offers no per-member remove: at two the act is a dissolve,
   // which has its own button and its own entry on the trail.
@@ -186,10 +189,16 @@ test("a team grows, a member leaves, and dissolving is the explicit act", async 
   // `not.toContainText("Omar Haddad")` would be asserting against an <option>.
   await tomLena.getByLabel("Add to this team").selectOption({ label: "Omar Haddad" });
   await tomLena.getByRole("button", { name: "Add", exact: true }).click();
-  const grown = teamPanel.locator("li", { hasText: "Lena Fischer" }).first();
+  const grown = teamPanel
+    .locator("li")
+    .filter({ has: page.locator('li[data-buddy-member]', { hasText: "Lena Fischer" }) })
+    .first();
   await expect(grown.getByRole("button", { name: "Remove Omar Haddad" })).toBeVisible();
   await grown.getByRole("button", { name: "Remove Omar Haddad" }).click();
-  const shrunk = teamPanel.locator("li", { hasText: "Lena Fischer" }).first();
+  const shrunk = teamPanel
+    .locator("li")
+    .filter({ has: page.locator('li[data-buddy-member]', { hasText: "Lena Fischer" }) })
+    .first();
   await expect(shrunk.getByRole("button", { name: "Remove Omar Haddad" })).toHaveCount(0);
   // Back to two, so the per-member control is gone again.
   await expect(shrunk.getByRole("button", { name: /^Remove / })).toHaveCount(0);
