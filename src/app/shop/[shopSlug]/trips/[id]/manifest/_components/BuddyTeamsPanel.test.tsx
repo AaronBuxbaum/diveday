@@ -8,8 +8,12 @@ import { BuddyTeamsPanel } from "./BuddyTeamsPanel";
 afterEach(cleanup);
 
 /** Keys back, with the one name the remove button's label carries. */
-const t = ((key: string, values?: { name?: string }) =>
-  values?.name ? `${key}:${values.name}` : key) as unknown as StaffTranslator;
+const t = ((key: string, values?: { name?: string; number?: number }) =>
+  values?.name
+    ? `${key}:${values.name}`
+    : values?.number
+      ? `${key}:${values.number}`
+      : key) as unknown as StaffTranslator;
 
 const noop = async () => {};
 
@@ -37,17 +41,22 @@ function renderPanel(
     confirmAdults: { key: string; label: string }[];
   } | null = null,
   teamWarnings: Record<string, string[]> = {},
+  options: {
+    defaultOpen?: boolean;
+    buddyErrorText?: string | null;
+    buddyErrorForm?: "builder" | "panel" | null;
+  } = {},
 ) {
   render(
     <BuddyTeamsPanel
-      defaultOpen
+      defaultOpen={options.defaultOpen ?? true}
       intentLine={null}
       buddyTeamsList={teams}
       diverOptions={[]}
       crewOptions={[]}
       unteamedDivers={[]}
-      buddyErrorText={null}
-      buddyErrorForm={null}
+      buddyErrorText={options.buddyErrorText ?? null}
+      buddyErrorForm={options.buddyErrorForm ?? null}
       partyLines={partyLines}
       teamWarnings={teamWarnings}
       teamUpPartiesAction={noop}
@@ -101,17 +110,39 @@ describe("a buddy team's member chips", () => {
 });
 
 describe("a buddy team's row", () => {
-  it("keeps an informational caution beside its team and leaves dissolve available", () => {
+  it("keeps an informational caution with its team names and leaves dissolve available in the editor", () => {
     renderPanel([team(["Ana Ruiz", "Ben Okafor"])], null, {
       "team-2": ["Check pairing: a diver under 12.", "Teamed with a diver not cleared to board"],
     });
     const caution = screen.getByText("Check pairing: a diver under 12.");
-    expect(caution.closest("li")).toContainElement(
-      screen.getByRole("button", { name: "manifest.buddyDissolve" }),
-    );
+    expect(caution.closest("li")).toHaveTextContent("Ana Ruiz, Ben Okafor");
     expect(screen.getByText("Teamed with a diver not cleared to board")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "manifest.buddyDissolve" })).toBeEnabled();
   });
+
+  it("marks canceled divers and crew in the at-rest caution context", () => {
+    renderPanel(
+      [
+        {
+          ...team(["Ana Ruiz", "Ben Okafor"]),
+          teamId: "mixed-team",
+          members: [
+            { kind: "diver", bookingId: "cancelled", fullName: "Ana Ruiz", cancelled: true },
+            { kind: "diver", bookingId: "active", fullName: "Ben Okafor", cancelled: false },
+            { kind: "crew", personId: "crew-1", fullName: "Riley Chen" },
+          ],
+        },
+      ],
+      null,
+      { "mixed-team": ["Check pairing: a diver under 12."] },
+      { defaultOpen: false },
+    );
+    const caution = screen.getByText("Check pairing: a diver under 12.");
+    expect(caution.closest("li")).toHaveTextContent("manifest.buddyCancelledName:Ana Ruiz");
+    expect(caution.closest("li")).toHaveTextContent("Ben Okafor");
+    expect(caution.closest("li")).toHaveTextContent("manifest.buddyCrewName:Riley Chen");
+  });
+
   /**
    * **One chip, whether or not it can lose a member** (pixel-craft class 12,
    * K-359). A team of three's chips hold a 44px remove target, and stood 50px
@@ -166,6 +197,39 @@ describe("the panel's disclosure line", () => {
     const caret = summary?.querySelector("svg");
     expect(caret).not.toBeNull();
     expect(caret).toHaveClass("size-4");
+    expect(document.querySelector("details")?.open).toBe(true);
+  });
+
+  it("keeps specific safety cautions visible with their team context while the editor stays closed", () => {
+    renderPanel(
+      [team(["Ana Ruiz", "Ben Okafor"])],
+      null,
+      {
+        "team-2": ["Check pairing: a diver under 12.", "Teamed with a diver not cleared to board"],
+      },
+      { defaultOpen: false },
+    );
+    const details = document.querySelector("details");
+    expect(details?.open).toBe(false);
+    const caution = screen.getByText("Check pairing: a diver under 12.");
+    expect(caution.closest("li")).toHaveTextContent("manifest.buddyTeamLabel:1");
+    expect(caution.closest("li")).toHaveTextContent("Ana Ruiz, Ben Okafor");
+    expect(screen.getByText("Teamed with a diver not cleared to board")).toBeInTheDocument();
+  });
+
+  it("still opens for a refusal even when the panel was not requested open", () => {
+    renderPanel(
+      [],
+      null,
+      {},
+      {
+        defaultOpen: false,
+        buddyErrorText: "This team cannot be formed",
+        buddyErrorForm: "panel",
+      },
+    );
+    expect(document.querySelector("details")).toHaveAttribute("open");
+    expect(screen.getByText("This team cannot be formed")).toBeInTheDocument();
   });
 });
 

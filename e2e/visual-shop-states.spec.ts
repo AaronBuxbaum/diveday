@@ -523,6 +523,9 @@ for (const scheme of ["light", "dark"] as const) {
       ).toBeVisible();
       await expect(page.getByText(staffCopy("manifest.buddyTeamNotCleared"))).toBeVisible();
       await expect(
+        page.getByRole("region", { name: staffCopy("manifest.buddyHeading") }).locator("details"),
+      ).not.toHaveAttribute("open");
+      await expect(
         manifestRow(page, "Bea Quill").getByText(
           staffCopy("shared.buddyTeam.ashoreNamed", { name: "Ari" }),
           { exact: true },
@@ -551,6 +554,9 @@ for (const scheme of ["light", "dark"] as const) {
           }),
         ),
       ).toBeVisible();
+      await expect(
+        page.getByRole("region", { name: staffCopy("manifest.buddyHeading") }).locator("details"),
+      ).not.toHaveAttribute("open");
       await offlineCopySaved(page);
       await capture(page, "manifest-buddy-intro-warning", scheme);
     });
