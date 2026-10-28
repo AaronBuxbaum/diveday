@@ -680,7 +680,7 @@ export function CourseFaqs({ faqs, t }: { faqs: CourseFaq[]; t: DiverTranslator 
           complete answers while the screen keeps its disclosure interaction. */}
       <div className="mt-4 hidden divide-y divide-border border-y border-border print:block">
         {faqs.map((faq) => (
-          <div key={faq.question} className="py-3" data-print-faq>
+          <div key={faq.question} className="break-inside-avoid py-3" data-print-faq>
             <h3 className="font-medium">{faq.question}</h3>
             <p className="mt-2 leading-relaxed text-muted">{faq.answer}</p>
           </div>

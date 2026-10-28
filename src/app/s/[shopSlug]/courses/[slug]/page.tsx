@@ -261,7 +261,7 @@ export default async function CoursePage({
         inquiryHref={inquiryHref}
         t={t}
       />
-      <div className="mt-4">
+      <div className="mt-4 print:hidden">
         {/* The composer's client-side refusals need the diver's translator. */}
         <DiverIntlProvider locale={locale} timeZone={shop.timezone} namespaces={["inquiry"]}>
           <DateRequestForm

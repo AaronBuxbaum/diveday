@@ -44,9 +44,10 @@ import { knownDiverPanelFor } from "./_components/known-diver-lines";
 import { fullTripAlternatives, worthALookList } from "./_components/other-boats";
 import { TripAlternatives } from "./_components/TripAlternatives";
 import { TripContactLine } from "./_components/TripContactLine";
-import { dayCoverPhoto, dayProfileFacts, TripDayPlan } from "./_components/TripDayPlan";
+import { dayCoverPhoto, dayProfileFacts } from "./_components/TripDayPlan";
+import { TripItinerary, TripSupportingDetails } from "./_components/TripDaySections";
 import { TripBoatPhoto, TripHero } from "./_components/TripHero";
-import { pitchOpensOnDoor, TripPitch } from "./_components/TripPitch";
+import { pitchOpensOnDoor } from "./_components/TripPitch";
 import { ERROR_MESSAGE_KEYS, isErrorCode } from "./_components/types";
 import { dayBriefings } from "./_lib/day-briefings";
 import { departureJsonLd } from "./_lib/departure-json-ld";
@@ -311,20 +312,18 @@ export default async function TripDetailPage({
   );
 
   const dayPlan = (
-    <div
-      className={isEmbed ? "space-y-4" : "mt-10 space-y-4 lg:mt-0 lg:col-start-1 lg:row-start-2"}
+    <TripItinerary
+      embed={isEmbed}
+      briefings={diveBriefings}
+      nextOpensOnRule={isEmbed && pitchOpensOnDoor(diveBriefings, publicCrew, !!logEntry)}
+      sightings={briefing.seen}
+      siteReviews={briefing.siteReviews}
+      shop={shop}
+      locale={locale}
+      profile={dayProfileFacts(shop, trip, meetingDays.length, readerUnits.depth)}
     >
-      <TripDayPlan
-        briefings={diveBriefings}
-        nextOpensOnRule={pitchOpensOnDoor(diveBriefings, publicCrew, !!logEntry)}
-        sightings={briefing.seen}
-        siteReviews={briefing.siteReviews}
-        shop={shop}
-        locale={locale}
-        profile={dayProfileFacts(shop, trip, meetingDays.length, readerUnits.depth)}
-      />
       {!isEmbed ? <TripBoatPhoto db={db} shopId={shop.id} boatId={trip.boatId} t={t} /> : null}
-    </div>
+    </TripItinerary>
   );
 
   return (
@@ -448,16 +447,17 @@ export default async function TripDetailPage({
                 close rather than a second rule a gap below it; with no door the
                 two stand a section apart. An empty block takes no room: its
                 margins collapse through it. */}
-            <div>
-              <TripPitch
-                briefings={diveBriefings}
-                crew={publicCrew}
-                locale={locale}
-                timeZone={shop.timezone}
-                logEntry={logEntry}
-                embed={isEmbed}
-              />
-            </div>
+            <TripSupportingDetails
+              briefings={diveBriefings}
+              crew={publicCrew}
+              locale={locale}
+              timeZone={shop.timezone}
+              logEntry={logEntry}
+              embed={isEmbed}
+              shop={shop}
+              sightings={briefing.seen}
+              siteReviews={briefing.siteReviews}
+            />
             {confirmed ? conditionsLine : null}
             <TripChangeLedger
               events={changeEvents}

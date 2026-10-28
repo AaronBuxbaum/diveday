@@ -7,6 +7,7 @@
 
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed-identifiers";
 import { DEMO_MEDICAL_ALERT, DEMO_MEDICAL_ALERT_TRIP } from "../src/db/seed-medical-alert";
+import { diverTranslator } from "../src/i18n/messages";
 import { ARRIVAL_MAP_PROBES } from "../src/lib/maps";
 import { assertCrewPdfPixels } from "./crew-pdf-pixels";
 import { expect, signedInAsOwner, test } from "./fixtures";
@@ -254,7 +255,12 @@ test.describe("print", () => {
     await page.goto("/s/blue-mantis/courses/discover-scuba-diving");
     await page.getByRole("heading", { level: 1, name: "Discover Scuba Diving" }).waitFor();
     await expect(page.locator("#faqs details").first()).not.toHaveAttribute("open");
+    const dateRequest = page.getByText(diverTranslator("en-US")("course.askAnotherDate"), {
+      exact: true,
+    });
+    await expect(dateRequest).toBeVisible();
     await page.emulateMedia({ media: "print" });
+    await expect(dateRequest).not.toBeVisible();
     const answers = page.locator("[data-print-faq] p");
     await expect(answers).not.toHaveCount(0);
     for (const answer of await answers.all()) {

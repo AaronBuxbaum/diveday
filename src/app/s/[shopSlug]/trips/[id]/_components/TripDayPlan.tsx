@@ -291,6 +291,7 @@ export function TripDayPlan({
   sightings,
   nextOpensOnRule = false,
   siteReviews,
+  content = "full",
 }: {
   briefings: DiveBriefing[];
   /**
@@ -322,6 +323,8 @@ export function TripDayPlan({
    * at most two. Absent or empty renders nothing.
    */
   siteReviews?: readonly SiteReview[];
+  /** Keep the public itinerary compact; its site reports follow booking. Embeds retain the full plan. */
+  content?: "full" | "itinerary" | "reports";
 }) {
   const t = diverTranslator(locale);
   const course = profile
@@ -383,6 +386,7 @@ export function TripDayPlan({
   // diver-views review, finding 10). The count survives — it is the one fact
   // those rows carried.
   if (briefings.every(({ dive, diveSite }) => !dive.title && !diveSite)) {
+    if (content === "reports") return null;
     return (
       <section>
         <GroupLabel as="h2">{t("trip.theDay")}</GroupLabel>
@@ -404,7 +408,47 @@ export function TripDayPlan({
   // open left the last dive unclosed above body text. Every line, hand-set or
   // not, takes one box.
   const reviews = siteReviews ?? [];
-  const runCloses = !nextOpensOnRule || reviews.length > 0;
+  const reviewBlock =
+    content === "itinerary" ? null : reviews.length > 0 ? (
+      <div data-testid="trip-site-reviews" className="mt-6">
+        <p className="text-sm font-medium">{t("trip.siteReviews.heading")}</p>
+        <ul className="mt-2 space-y-3">
+          {reviews.map((review) => (
+            <li key={review.id}>
+              <figure>
+                <blockquote className="line-clamp-4 text-sm leading-relaxed text-pretty">
+                  {t("trip.siteReviews.quote", { words: review.comment })}
+                </blockquote>
+                <figcaption className="mt-1 text-sm text-muted">
+                  {t("trip.siteReviews.byline", {
+                    name: review.reviewer,
+                    date: formatShortDate(review.divedAt, locale, shop.timezone),
+                  })}
+                </figcaption>
+              </figure>
+            </li>
+          ))}
+        </ul>
+      </div>
+    ) : null;
+  if (content === "reports") {
+    if (seenByDive.size === 0 && !reviewBlock) return null;
+    return (
+      <div className="space-y-6">
+        {briefings.map(({ dive, diveSite }) => {
+          const seen = seenByDive.get(dive.id);
+          return seen ? (
+            <div key={dive.id}>
+              <p className="mb-2 text-sm font-medium">{diveSite?.name}</p>
+              <SiteSeen seen={seen} t={t} locale={locale} timeZone={shop.timezone} />
+            </div>
+          ) : null;
+        })}
+        {reviewBlock}
+      </div>
+    );
+  }
+  const runCloses = !nextOpensOnRule || reviewBlock !== null;
   const handSetBox = runCloses ? ledgerRowBoxClass : ledgerRowOpenBoxClass;
   return (
     <section>
@@ -418,7 +462,7 @@ export function TripDayPlan({
           // The recorded range in the shop's unit ("18–40 m"), or just the site's
           // maximum; the shop's own note stands in only where no depth is recorded.
           // The crew's month for this site, once — decided above, in plan order.
-          const seen = seenByDive.get(dive.id) ?? null;
+          const seen = content === "itinerary" ? null : (seenByDive.get(dive.id) ?? null);
           const depth = diveSite
             ? diveSiteDepthText(t, diveSite, shop.depthUnit, profile?.readerDepthUnit ?? null)
             : null;
@@ -504,28 +548,7 @@ export function TripDayPlan({
           are about (fifth-loop ideas, item 20). Their words, quoted, with a
           name and the day they went; no stars, which the shop's own reviews
           page already carries. */}
-      {reviews.length > 0 ? (
-        <div data-testid="trip-site-reviews" className="mt-6">
-          <p className="text-sm font-medium">{t("trip.siteReviews.heading")}</p>
-          <ul className="mt-2 space-y-3">
-            {reviews.map((review) => (
-              <li key={review.id}>
-                <figure>
-                  <blockquote className="line-clamp-4 text-sm leading-relaxed text-pretty">
-                    {t("trip.siteReviews.quote", { words: review.comment })}
-                  </blockquote>
-                  <figcaption className="mt-1 text-sm text-muted">
-                    {t("trip.siteReviews.byline", {
-                      name: review.reviewer,
-                      date: formatShortDate(review.divedAt, locale, shop.timezone),
-                    })}
-                  </figcaption>
-                </figure>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
+      {reviewBlock}
     </section>
   );
 }
