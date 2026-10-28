@@ -713,7 +713,10 @@ export async function associateDateRequestOfferBooking(
         ),
       )
       .limit(1)
-      .for("update");
+      // The date request parent is updated before this child by diver erasure.
+      // Lock only the offered child here so the read-only join does not take a
+      // parent lock in the opposite order.
+      .for("update", { of: interests });
     if (!offer) return false;
 
     const [existing] = await tx
