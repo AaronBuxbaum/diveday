@@ -70,6 +70,9 @@ function RentalNoteFact({
   ) : null;
 }
 
+const FIT_SUMMARY_CLASS =
+  "w-fit min-w-11 cursor-pointer list-none [&::-webkit-details-marker]:hidden";
+
 export function GearAndSizes({
   diver,
   shopSlug,
@@ -291,8 +294,7 @@ export function GearAndSizes({
                 variant: "link",
                 size: "sm",
                 flush: true,
-                className:
-                  "w-fit min-w-11 cursor-pointer list-none [&::-webkit-details-marker]:hidden",
+                className: FIT_SUMMARY_CLASS,
               })}
             >
               {t("divers.file.editSizes")}
@@ -395,8 +397,7 @@ export function GearAndSizes({
                   variant: "link",
                   size: "sm",
                   flush: true,
-                  className:
-                    "w-fit min-w-11 cursor-pointer list-none [&::-webkit-details-marker]:hidden",
+                  className: FIT_SUMMARY_CLASS,
                 })}
               >
                 {t("divers.rentalFit.cantFillHeading")}

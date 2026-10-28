@@ -7,7 +7,7 @@ import { FlashParams } from "@/components/FlashParams";
 import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { UndoToast } from "@/components/UndoToast";
-import { cardSummaryClass } from "@/components/ui/card";
+import { buttonClass } from "@/components/ui/button";
 import { SummaryCaret } from "@/components/ui/disclosure";
 import { assistsAvailable } from "@/db/assists";
 import { loadActiveStaffRoles } from "@/db/authz";
@@ -272,8 +272,11 @@ export default async function DiversPage({
           canAssist ? (
             <details className="group/ask mt-2 print:hidden">
               <summary
-                className={cardSummaryClass({
-                  className: "min-h-11 gap-2 text-sm font-medium text-muted",
+                className={buttonClass({
+                  variant: "ghost",
+                  size: "sm",
+                  flush: true,
+                  className: "cursor-pointer list-none gap-2 [&::-webkit-details-marker]:hidden",
                 })}
               >
                 <SummaryCaret direction="right" className="group-open/ask:rotate-90" />
