@@ -34,6 +34,52 @@ function briefing(overrides: Partial<DiveBriefing> = {}): DiveBriefing {
 }
 
 describe("TripDayPlan", () => {
+  it("keeps site reports separate from the compact itinerary without losing them", () => {
+    const props = {
+      briefings: [
+        briefing(),
+        briefing({ dive: { id: "dive-2", diveNumber: 2 } } as Partial<DiveBriefing>),
+      ],
+      shop: SHOP,
+      locale: DEFAULT_DIVER_LOCALE,
+      sightings: new Map([
+        [
+          "site-1",
+          {
+            diveSiteId: "site-1",
+            dives: 6,
+            species: [
+              {
+                speciesSlug: "green-sea-turtle",
+                dives: 4,
+                total: 5,
+                lastSeenAt: new Date("2026-07-18T14:00:00Z"),
+              },
+            ],
+          },
+        ],
+      ]),
+      siteReviews: [
+        {
+          id: "r1",
+          comment: "Calm briefing",
+          reviewer: "Lars P.",
+          divedAt: new Date("2026-10-10T12:00:00Z"),
+        },
+      ],
+    };
+    const { rerender } = render(<TripDayPlan {...props} content="itinerary" />);
+    expect(screen.getByText("The day")).toBeInTheDocument();
+    expect(screen.getByText("Dive 2")).toBeInTheDocument();
+    expect(screen.queryByText("Seen here this month")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("trip-site-reviews")).not.toBeInTheDocument();
+    rerender(<TripDayPlan {...props} content="reports" />);
+    expect(screen.getAllByText("Seen here this month")).toHaveLength(1);
+    expect(screen.getByTestId("trip-site-reviews")).toHaveTextContent("Calm briefing");
+    expect(screen.queryByText("The day")).not.toBeInTheDocument();
+    expect(screen.queryByText("Dive 1")).not.toBeInTheDocument();
+  });
+
   it("writes each dive's depth in the shop's unit, and the shop's note only where none is recorded", () => {
     render(
       <TripDayPlan
