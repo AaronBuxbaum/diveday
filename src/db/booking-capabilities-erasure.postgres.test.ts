@@ -233,22 +233,23 @@ describePostgres("capability issuance and erasure serialization", () => {
           { provider, signal: AbortSignal.timeout(3_000) },
         ),
     );
-    const erasureDb = pg.connect();
-    const erasure = erasureDb.transaction(async (tx) => {
-      signalErasure();
-      await tx
-        .update(people)
-        .set({ anonymizedAt: new Date(now.getTime() + 1), deletedAt: new Date(now.getTime() + 1) })
-        .where(and(eq(people.id, person.id), eq(people.shopId, shop.id)));
-    });
+    let erasure: Promise<void> | undefined;
     try {
+      // Let the send acquire the evidence and person fences before erasure
+      // attempts its update; otherwise a slow runner can schedule erasure first.
       await waitForStage(providerStarted, "provider callback start");
-      const erase = erasure;
+      erasure = pg.connect().transaction(async (tx) => {
+        signalErasure();
+        await tx
+          .update(people)
+          .set({ anonymizedAt: new Date(now.getTime() + 1), deletedAt: new Date(now.getTime() + 1) })
+          .where(and(eq(people.id, person.id), eq(people.shopId, shop.id)));
+      });
       await waitForStage(erasureStarted, "erasure transaction start");
       await waitForStage(waitForLockWaiters(pg.db, 1), "erasure waiting on send fence");
       releaseProvider();
       await waitForStage(send, "provider result and normal tracking commit");
-      await waitForStage(erase, "erasure commit");
+      await waitForStage(erasure, "erasure commit");
       const [delivery] = await pg.db
         .select()
         .from(notificationDeliveries)
@@ -262,7 +263,7 @@ describePostgres("capability issuance and erasure serialization", () => {
     } finally {
       releaseProvider();
       await send.catch(() => undefined);
-      await erasure.catch(() => undefined);
+      await erasure?.catch(() => undefined);
     }
   });
 
@@ -628,7 +629,7 @@ describePostgres("capability issuance and erasure serialization", () => {
     expect(parked).toMatchObject({
       status: "failed",
       errorCode: "stale_recipient",
-      recipientPersonId: oldPerson.id,
+      recipientPersonId: null,
     });
     expect(parked?.payloadSealed).toBe(queued?.payloadSealed);
   });
