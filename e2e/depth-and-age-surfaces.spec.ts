@@ -236,16 +236,28 @@ test.describe("staff", () => {
 
     // And a whole Celsius degree typed in round-trips exactly.
     await page.getByLabel("Water temp °C").fill("24");
+    const conditionsRedirect = page.waitForEvent("framenavigated", (frame) => {
+      if (frame !== page.mainFrame()) return false;
+      const url = new URL(frame.url());
+      return (
+        url.pathname === tripPath &&
+        url.searchParams.get("notice") === "conditions" &&
+        url.searchParams.get("form") === "conditions"
+      );
+    });
     await page.getByRole("button", { name: "Publish crew prediction" }).click();
+    const redirectedFrame = await conditionsRedirect;
+    const redirectedUrl = new URL(redirectedFrame.url());
+    expect(redirectedUrl.pathname).toBe(tripPath);
+    expect(redirectedUrl.searchParams.get("notice")).toBe("conditions");
+    expect(redirectedUrl.searchParams.get("form")).toBe("conditions");
     await expect(page.getByRole("status")).toContainText("Crew prediction published");
 
     // The action revalidates this trip and redirects with the conditions
     // notice, which returns to a fresh Details render with this row open.
-    // Wait for that exact destination before reading the stored Celsius back.
-    const publishedTrip = new URL(tripPath, page.url());
-    publishedTrip.searchParams.set("notice", "conditions");
-    publishedTrip.searchParams.set("form", "conditions");
-    await expect(page).toHaveURL(publishedTrip.toString());
+    // Capture the URL as the redirect happens: the page consumes and removes
+    // its notice after rendering, so a later URL assertion would miss it.
+    // Then read the stored Celsius back from that server-rendered form.
     await expect(page.getByLabel("Water temp °C")).toHaveValue("24");
     await expect(page.getByLabel("Visibility ft")).toBeVisible();
   });
