@@ -1,6 +1,8 @@
 "use client";
 
 import { type ReactNode, useEffect, useState } from "react";
+import { buttonClass } from "@/components/ui/button";
+import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import {
   controlClass,
   Field,
@@ -55,6 +57,7 @@ export function TripDiveFields({
   onFirstDiveSiteChange,
   firstDiveSiteDescription,
   frameClassName,
+  advancedLabel,
   id,
 }: {
   diveSites: DiveOption[];
@@ -93,6 +96,8 @@ export function TripDiveFields({
    * inside the builder's 12px add panel (pixel-craft K-95).
    */
   frameClassName: string;
+  /** Keep the chosen site visible while secondary dive fields are disclosed on request. */
+  advancedLabel?: string;
   /** An anchor for a link straight to the dive count (the manifest's "Change the plan"). */
   id?: string;
 }) {
@@ -157,6 +162,85 @@ export function TripDiveFields({
         {Array.from({ length: Math.max(count, mostShown) }, (_, index) => {
           const initial = initialDives[index];
           const number = index + 1;
+          const nameField = (
+            <>
+              <Field label={copy.nameLabel} hint={copy.optionalHint}>
+                <input
+                  name={`dive-${number}-title`}
+                  type="text"
+                  maxLength={120}
+                  defaultValue={initial?.title ?? ""}
+                  placeholder={number === 1 ? copy.namePlaceholderFirst : copy.namePlaceholderOther}
+                  className={controlClass}
+                />
+              </Field>
+            </>
+          );
+          const siteField = (
+            <>
+              <Field
+                label={copy.diveSiteLabel}
+                hint={copy.optionalHint}
+                description={number === 1 ? firstDiveSiteDescription : undefined}
+              >
+                <select
+                  name={`dive-${number}-siteId`}
+                  defaultValue={initial?.diveSiteId ?? ""}
+                  onChange={
+                    number === 1
+                      ? (event) => onFirstDiveSiteChange?.(event.target.value)
+                      : undefined
+                  }
+                  className={controlClass}
+                >
+                  <option value="">{copy.noSiteChosen}</option>
+                  {diveSites.map((site) => (
+                    <option key={site.id} value={site.id}>
+                      {site.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </>
+          );
+          const extraFields = (
+            <>
+              {/* Per leg, not per trip: a departure is dock -> A -> B -> dock
+                    and the legs are order-dependent, so one number on the trip
+                    could never say "10 minutes out to the house reef, 25 across
+                    to the wall" (ADR 20260815-per-leg-travel-minutes). Left
+                    blank it stays on the shop's own ride-out figure, which is
+                    what every departure read before this box existed. */}
+              <Field
+                label={number === 1 ? copy.travelLabelFirst : copy.travelLabelOther}
+                hint={copy.travelHint}
+              >
+                <input
+                  name={`dive-${number}-travelMinutes`}
+                  type="number"
+                  inputMode="numeric"
+                  min={DOCK_DAY_LIMITS.boatRideMinutes.min}
+                  max={DOCK_DAY_LIMITS.boatRideMinutes.max}
+                  step={5}
+                  defaultValue={initial?.travelMinutes ?? ""}
+                  className={`${controlClass} tabular-nums`}
+                />
+              </Field>
+              <Field
+                label={copy.diverFacingDetailsLabel}
+                hint={copy.optionalHint}
+                className="sm:col-span-2"
+              >
+                <textarea
+                  name={`dive-${number}-description`}
+                  rows={2}
+                  maxLength={500}
+                  defaultValue={initial?.description ?? ""}
+                  className={textareaClassFor(2)}
+                />
+              </Field>
+            </>
+          );
           return (
             <fieldset
               key={number}
@@ -167,77 +251,32 @@ export function TripDiveFields({
               <legend className={`${legendClass} text-sm font-semibold text-primary`}>
                 {fill(copy.diveLegend, { number })}
               </legend>
-              <FieldGrid columns={2} className="mt-1">
-                <Field label={copy.nameLabel} hint={copy.optionalHint}>
-                  <input
-                    name={`dive-${number}-title`}
-                    type="text"
-                    maxLength={120}
-                    defaultValue={initial?.title ?? ""}
-                    placeholder={
-                      number === 1 ? copy.namePlaceholderFirst : copy.namePlaceholderOther
-                    }
-                    className={controlClass}
-                  />
-                </Field>
-                <Field
-                  label={copy.diveSiteLabel}
-                  hint={copy.optionalHint}
-                  description={number === 1 ? firstDiveSiteDescription : undefined}
-                >
-                  <select
-                    name={`dive-${number}-siteId`}
-                    defaultValue={initial?.diveSiteId ?? ""}
-                    onChange={
-                      number === 1
-                        ? (event) => onFirstDiveSiteChange?.(event.target.value)
-                        : undefined
-                    }
-                    className={controlClass}
-                  >
-                    <option value="">{copy.noSiteChosen}</option>
-                    {diveSites.map((site) => (
-                      <option key={site.id} value={site.id}>
-                        {site.name}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-                {/* Per leg, not per trip: a departure is dock -> A -> B -> dock
-                    and the legs are order-dependent, so one number on the trip
-                    could never say "10 minutes out to the house reef, 25 across
-                    to the wall" (ADR 20260815-per-leg-travel-minutes). Left
-                    blank it stays on the shop's own ride-out figure, which is
-                    what every departure read before this box existed. */}
-                <Field
-                  label={number === 1 ? copy.travelLabelFirst : copy.travelLabelOther}
-                  hint={copy.travelHint}
-                >
-                  <input
-                    name={`dive-${number}-travelMinutes`}
-                    type="number"
-                    inputMode="numeric"
-                    min={DOCK_DAY_LIMITS.boatRideMinutes.min}
-                    max={DOCK_DAY_LIMITS.boatRideMinutes.max}
-                    step={5}
-                    defaultValue={initial?.travelMinutes ?? ""}
-                    className={`${controlClass} tabular-nums`}
-                  />
-                </Field>
-                <Field
-                  label={copy.diverFacingDetailsLabel}
-                  hint={copy.optionalHint}
-                  className="sm:col-span-2"
-                >
-                  <textarea
-                    name={`dive-${number}-description`}
-                    rows={2}
-                    maxLength={500}
-                    defaultValue={initial?.description ?? ""}
-                    className={textareaClassFor(2)}
-                  />
-                </Field>
-              </FieldGrid>
+              {advancedLabel ? (
+                <>
+                  <FieldGrid columns={1} className="mt-1">
+                    {siteField}
+                  </FieldGrid>
+                  <details className="group/dive-options mt-3">
+                    <summary className={buttonClass({ variant: "link", size: "sm", flush: true })}>
+                      {advancedLabel}
+                      <DisclosureCaret
+                        direction="down"
+                        className="group-open/dive-options:rotate-180"
+                      />
+                    </summary>
+                    <FieldGrid columns={2} className="mt-3">
+                      {nameField}
+                      {extraFields}
+                    </FieldGrid>
+                  </details>
+                </>
+              ) : (
+                <FieldGrid columns={2} className="mt-1">
+                  {nameField}
+                  {siteField}
+                  {extraFields}
+                </FieldGrid>
+              )}
             </fieldset>
           );
         })}

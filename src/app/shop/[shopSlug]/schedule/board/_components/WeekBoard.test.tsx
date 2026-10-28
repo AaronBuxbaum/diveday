@@ -350,6 +350,7 @@ describe("a departure row is one door (K-325, K-530)", () => {
     seats: { booked: 4, capacity: 5 },
     seatsLabel: "4 of 5",
     runsLabel: "3 days",
+    time: "8:00 AM",
     startColumn: 5,
     columnSpan: 3,
   };
@@ -434,6 +435,12 @@ describe("a departure row is one door (K-325, K-530)", () => {
       ["Two-Tank Reef", "/shop/blue-mantis/trips/t1"],
       ["Night Dive", "/shop/blue-mantis/trips/t2"],
     ]);
+  });
+
+  it("shows the first course session time alongside its duration", () => {
+    board(week({ spans: [course] }));
+    expect(screen.getByText("8:00 AM")).toBeInTheDocument();
+    expect(screen.getByText("3 days")).toBeInTheDocument();
   });
 
   it("sets a course's length in its title's own run, so it follows the last word", () => {

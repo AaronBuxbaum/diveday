@@ -100,11 +100,17 @@ test("an unsailed boat change refreshes the log while a historical hull mismatch
   });
   await expect(section.getByText("TRUST1", { exact: true })).toBeVisible();
   await page.goto(`${trip}?view=details`);
-  const plan = await openTripAboutRow(page, copy("trips.about.plan"));
-  await plan
+  const boatAndCrew = await openTripAboutRow(page, copy("trips.about.boatAndCrew"));
+  const boatEditor = boatAndCrew.locator("details").filter({
+    has: page.getByText(copy("trips.details.editBoat"), { exact: true }),
+  });
+  await openIfClosed(boatEditor);
+  await boatEditor
     .getByLabel(copy("boats.boatSelectLabel"), { exact: false })
     .selectOption(state.replacementBoatId);
-  await plan.getByRole("button", { name: copy("trips.details.saveChanges"), exact: true }).click();
+  await boatEditor
+    .getByRole("button", { name: copy("trips.details.saveChanges"), exact: true })
+    .click();
   await expect(
     page.getByRole("status").filter({ hasText: copy("trips.notices.saved") }),
   ).toBeVisible();

@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { diverTranslator } from "../src/i18n/messages";
 import { expect, READ_ONLY, test } from "./fixtures";
 
 /**
@@ -316,4 +317,29 @@ test("the stated level never reaches the booking form", { tag: READ_ONLY }, asyn
   const booking = page.getByRole("region", { name: "Grab a seat" });
   await expect(booking.getByRole("button", { name: "Book this seat" })).toBeVisible();
   await expect(booking.getByLabel(/Certification level/)).toHaveCount(0);
+});
+
+test("phone schedule filters reveal the trip tags and summarize a closed selection", {
+  tag: READ_ONLY,
+}, async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/s/blue-mantis");
+  const copy = diverTranslator("en-US");
+  await expect(page.getByRole("heading", { level: 1, name: copy("schedule.title") })).toBeVisible();
+  const tags = page.getByRole("navigation", { name: copy("schedule.lenses.railLabel") });
+  await expect(tags).toHaveCount(0);
+  await openFilters(page);
+  await expect(tags).toBeVisible();
+  await page.getByLabel(copy("schedule.filters.tripType")).selectOption("course");
+  await expect(page).toHaveURL(/tripType=course/);
+  const toggle = page.locator('form:has(select[name="tripType"]) button[aria-expanded]');
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await expect(
+    page
+      .locator('form:has(select[name="tripType"])')
+      .getByText(copy("schedule.filters.course"), { exact: true }),
+  ).toBeVisible();
+  await openFilters(page);
+  await expect(page.getByLabel(copy("schedule.filters.tripType"))).toHaveValue("course");
 });

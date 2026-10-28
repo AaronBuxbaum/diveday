@@ -67,6 +67,7 @@ import {
   recordTripChangeEvent,
   tripSiteRunSnapshot,
 } from "./trip-change-events";
+import { rememberUnnotifiedTripStart } from "./trip-reschedule-marker";
 import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";
 import {
   normalizedDiveCount,
@@ -470,7 +471,7 @@ export async function getTripDiveSitesPeek(
 
 export type TripPatch = {
   title: string;
-  description?: string;
+  description?: string | null;
   /** Where this departure meets, when it isn't the shop's own front door (issue #704 slice 2). */
   meetingPointLabel?: string | null;
   meetingPointAddress?: string | null;
@@ -555,6 +556,7 @@ export type UpdateTripOutcome =
   | { ok: false; reason: "invalid" | "not_found" }
   | { ok: false; reason: "capacity_below_booked"; detail: { bookedCount: number } }
   | { ok: false; reason: "boat_not_found" }
+  | { ok: false; reason: "capacity_above_certificate"; detail: { limit: number } }
   | { ok: false; reason: "planned_dives_below_history"; detail: { recordedDiveCount: number } };
 
 /**
@@ -576,22 +578,105 @@ export async function updateTrip(
   shopId: string,
   tripId: string,
   patch: TripPatch,
+  options: { captureRescheduleStart?: boolean } = {},
+): Promise<UpdateTripOutcome> {
+  return updateTripRecord(
+    db,
+    shopId,
+    tripId,
+    patch,
+    false,
+    options.captureRescheduleStart === true,
+  );
+}
+
+/** A section save preserves omitted facts from the current locked row, never a client snapshot. */
+export async function updateTripSection(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  patch: Partial<TripPatch>,
+  options: { captureRescheduleStart?: boolean } = {},
+): Promise<UpdateTripOutcome> {
+  return updateTripRecord(db, shopId, tripId, patch, true, options.captureRescheduleStart === true);
+}
+
+function patchAtTripLock(
+  existing: Pick<
+    Trip,
+    | "title"
+    | "startsAt"
+    | "endsAt"
+    | "capacity"
+    | "plannedDives"
+    | "description"
+    | "meetingPointLabel"
+    | "meetingPointAddress"
+    | "priceCents"
+    | "depositCents"
+    | "cancellationWindowHours"
+    | "minimumBookings"
+    | "minimumDecisionHours"
+  >,
+  requested: Partial<TripPatch>,
+  scoped: boolean,
+): TripPatch {
+  return {
+    title: existing.title,
+    startsAt: existing.startsAt,
+    endsAt: existing.endsAt,
+    capacity: existing.capacity,
+    plannedDives: existing.plannedDives,
+    ...(scoped
+      ? {
+          description: existing.description,
+          meetingPointLabel: existing.meetingPointLabel,
+          meetingPointAddress: existing.meetingPointAddress,
+          priceCents: existing.priceCents,
+          depositCents: existing.depositCents,
+          cancellationWindowHours: existing.cancellationWindowHours,
+          minimumBookings: existing.minimumBookings,
+          minimumDecisionHours: existing.minimumDecisionHours,
+        }
+      : {}),
+    ...requested,
+  };
+}
+
+async function updateTripRecord(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  requested: Partial<TripPatch>,
+  scoped: boolean,
+  captureRescheduleStart: boolean,
 ): Promise<UpdateTripOutcome> {
   let timeMoved = false;
   let timesChanged = false;
   const outcome = await db.transaction(async (tx): Promise<UpdateTripOutcome> => {
+    // Match the send path's lock order: a reschedule dispatch owns the shared
+    // fence while it uses the trip row. Take the exclusive fence before the
+    // row lock so a writer waiting for an in-flight send never blocks that
+    // send while holding the row it still needs.
     await lockTripRevisionNotificationFence(tx, shopId, tripId, "revision-write");
-    const plannedDives = normalizedDiveCount(patch.plannedDives, true);
-    if (!plannedDives) return { ok: false, reason: "invalid" };
-
     const [existing] = await tx
       .select({
         id: trips.id,
+        title: trips.title,
+        description: trips.description,
+        capacity: trips.capacity,
+        plannedDives: trips.plannedDives,
+        priceCents: trips.priceCents,
+        depositCents: trips.depositCents,
+        cancellationWindowHours: trips.cancellationWindowHours,
+        minimumBookings: trips.minimumBookings,
+        minimumDecisionHours: trips.minimumDecisionHours,
         // Read so `selfGuided` can be refused against it below. A trip's course
         // is fixed at creation and `UpdateTripPatch` carries no `courseId`, so
         // the row's own value is the only place to learn it.
         courseId: trips.courseId,
         boatId: trips.boatId,
+        diveMode: trips.diveMode,
         // Both read for the revision rule below (issue #1165): the two facts a
         // calendar client re-alerts on are when the boat leaves and where it
         // goes, so both have to be compared against what the patch asks for.
@@ -616,9 +701,9 @@ export async function updateTrip(
       .limit(1)
       .for("update");
     if (!existing) return { ok: false, reason: "not_found" };
-    if (!normalizedDiveCount(plannedDives, existing.courseId !== null)) {
-      return { ok: false, reason: "invalid" };
-    }
+    const patch = patchAtTripLock(existing, requested, scoped);
+    const plannedDives = normalizedDiveCount(patch.plannedDives, existing.courseId !== null);
+    if (!plannedDives) return { ok: false, reason: "invalid" };
 
     // `seatHeld`, the same predicate `getTripWithBooked` above shows the
     // staffer and `createBookingRecord` enforces capacity with. Counting every
@@ -675,6 +760,32 @@ export async function updateTrip(
         .limit(1);
       if (!hull) return { ok: false, reason: "boat_not_found" };
       replacementBoatName = hull.name;
+    }
+    // Independent boat and booking saves must validate their combined result
+    // under the same lock, even when the other editor changed after its page loaded.
+    if (
+      scoped &&
+      (requested.capacity !== undefined ||
+        requested.boatId !== undefined ||
+        requested.diveMode !== undefined)
+    ) {
+      const nextMode = patch.diveMode ?? existing.diveMode;
+      const nextBoatId = patch.boatId === undefined ? existing.boatId : patch.boatId;
+      if (nextMode === "boat" && nextBoatId) {
+        const [hull] = await tx
+          .select({ certifiedPassengers: boats.certifiedPassengers })
+          .from(boats)
+          .where(and(eq(boats.shopId, shopId), eq(boats.id, nextBoatId), isNull(boats.deletedAt)))
+          .limit(1);
+        if (!hull) return { ok: false, reason: "boat_not_found" };
+        if (hull.certifiedPassengers !== null && patch.capacity > hull.certifiedPassengers) {
+          return {
+            ok: false,
+            reason: "capacity_above_certificate",
+            detail: { limit: hull.certifiedPassengers },
+          };
+        }
+      }
     }
     const changedAt = nowDate();
     const beforeArrival = tripArrivalSnapshot(existing);
@@ -857,6 +968,14 @@ export async function updateTrip(
       await tx
         .insert(tripScheduleDays)
         .values(patch.scheduleDays.map((day, index) => ({ tripId, ...day, dayNumber: index + 1 })));
+    }
+    if (captureRescheduleStart && startMoved) {
+      await rememberUnnotifiedTripStart(tx, {
+        shopId,
+        tripId,
+        previousStartsAt: existing.startsAt,
+        now: changedAt,
+      });
     }
     const afterArrival = tripArrivalSnapshot(trip);
     if (!tripChangeSnapshotsEqual(beforeArrival, afterArrival)) {
@@ -1101,8 +1220,9 @@ export function rollCallStartedOn(tripId: SQLWrapper | string): SQL<boolean> {
 }
 
 export async function setTripStatus(
-  // Also callable inside a transaction: the blow-out cascade flips the status
-  // through this same seam while holding the trip row lock (src/db/blowouts.ts).
+  // Also callable inside a transaction: callers that already take the trip row
+  // lock must first hold the revision fence (the blow-out and one-trip cancel
+  // do so), preserving dispatch's fence-before-row ordering.
   db: DbExecutor,
   shopId: string,
   tripId: string,
@@ -1110,44 +1230,50 @@ export async function setTripStatus(
   now: Date = nowDate(),
   options: { actorPersonId?: string | null } = {},
 ) {
-  // Only a real call-off is news to the crew: a departure already cancelled
-  // being cancelled again tells nobody twice.
-  const [before] =
-    status === "cancelled"
-      ? await db
-          .select({ status: trips.status })
-          .from(trips)
-          .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
-          .limit(1)
-      : [];
-  const [trip] = await db
-    .update(trips)
-    // Stamped on the way into `cancelled` and **cleared** on the way back to
-    // `scheduled`: an un-cancelled departure that kept a stale cancellation date
-    // would tell the owed-refund queue it had been owed since the day the shop
-    // changed its mind, and would put a date on a trip that is sailing.
-    .set({ status, cancelledAt: status === "cancelled" ? now : null })
-    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
-    .returning();
-  // A cancelled departure keeps its bookings, so the booking cascade never
-  // frees the gear reserved against it — release the un-collected units here,
-  // on the same executor (and so inside the blow-out's transaction when there
-  // is one). Reinstating does not resurrect them: the units went back on the
-  // wall, and prep re-assigns from what is actually free.
-  if (trip && status === "cancelled") {
-    await releaseUnclaimedGearReservationsForTrips(db, { shopId, tripIds: [tripId] });
-    // The crew hear it was called off (ADR 20261009-crew-hear-about-their-boats);
-    // the caller tells them once this commits (`flushUrgentCrewNotices`).
-    if (before?.status === "scheduled") {
-      await recordCrewCalledOff(db, {
-        shopId,
-        tripIds: [tripId],
-        actorPersonId: options.actorPersonId ?? null,
-        now,
-      });
+  return db.transaction(async (tx) => {
+    // This seam is also used directly with AppDb, so make the fence and status
+    // update one transaction. Existing transactional callers acquire it before
+    // their trip row lock; this nested transaction reuses that xact lock.
+    await lockTripRevisionNotificationFence(tx, shopId, tripId, "revision-write");
+    // Only a real call-off is news to the crew: a departure already cancelled
+    // being cancelled again tells nobody twice.
+    const [before] =
+      status === "cancelled"
+        ? await tx
+            .select({ status: trips.status })
+            .from(trips)
+            .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
+            .limit(1)
+        : [];
+    const [trip] = await tx
+      .update(trips)
+      // Stamped on the way into `cancelled` and **cleared** on the way back to
+      // `scheduled`: an un-cancelled departure that kept a stale cancellation date
+      // would tell the owed-refund queue it had been owed since the day the shop
+      // changed its mind, and would put a date on a trip that is sailing.
+      .set({ status, cancelledAt: status === "cancelled" ? now : null })
+      .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
+      .returning();
+    // A cancelled departure keeps its bookings, so the booking cascade never
+    // frees the gear reserved against it — release the un-collected units here,
+    // on the same executor (and so inside the blow-out's transaction when there
+    // is one). Reinstating does not resurrect them: the units went back on the
+    // wall, and prep re-assigns from what is actually free.
+    if (trip && status === "cancelled") {
+      await releaseUnclaimedGearReservationsForTrips(tx, { shopId, tripIds: [tripId] });
+      // The crew hear it was called off (ADR 20261009-crew-hear-about-their-boats);
+      // the caller tells them once this commits (`flushUrgentCrewNotices`).
+      if (before?.status === "scheduled") {
+        await recordCrewCalledOff(tx, {
+          shopId,
+          tripIds: [tripId],
+          actorPersonId: options.actorPersonId ?? null,
+          now,
+        });
+      }
     }
-  }
-  return trip ?? null;
+    return trip ?? null;
+  });
 }
 
 export async function listTripScheduleDays(db: DbExecutor, shopId: string, tripId: string) {

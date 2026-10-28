@@ -31,6 +31,7 @@ import {
   trips,
 } from "./schema";
 import { forgetTranslationsOf } from "./shop-text-translations";
+import { rememberUnnotifiedTripStart } from "./trip-reschedule-marker";
 import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";
 import { insertTripInstance, resolveCourse, validateBoat } from "./trips-create";
 import { liveTrip } from "./trips-live";
@@ -172,7 +173,7 @@ export async function moveTrip(
   shopId: string,
   tripId: string,
   startsAt: Date,
-  options: { actorPersonId?: string | null; now?: Date } = {},
+  options: { actorPersonId?: string | null; now?: Date; captureRescheduleStart?: boolean } = {},
 ): Promise<MoveTripOutcome> {
   if (Number.isNaN(startsAt.getTime())) return { ok: false, reason: "invalid" };
   const now = options.now ?? nowDate();
@@ -229,6 +230,14 @@ export async function moveTrip(
         .update(tripScheduleDays)
         .set({ startsAt: shift(day.startsAt), endsAt: shift(day.endsAt) })
         .where(eq(tripScheduleDays.id, day.id));
+    }
+    if (options.captureRescheduleStart) {
+      await rememberUnnotifiedTripStart(tx, {
+        shopId,
+        tripId,
+        previousStartsAt: existing.startsAt,
+        now,
+      });
     }
 
     // The gear goes with the departure. A reservation's window is derived from

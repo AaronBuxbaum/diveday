@@ -282,7 +282,6 @@
           "src/db/no-show.test.ts": "1100 -> 1165",
           "src/db/orders.test.ts": "3097 -> 3163",
           "src/db/recap.test.ts": "2114 -> 2138",
-          "src/db/retention.test.ts": "1250 -> 1262",
           "src/db/self-declared-cards.test.ts": "1836 -> 1864",
           "src/lib/staffing-week.test.ts": "979 -> 1115",
           "src/lib/waivers.test.ts": "1188 -> 1205"
@@ -344,18 +343,6 @@
         }
       },
       {
-        "why": "boat_snags (fifth-loop ideas, item 1) is a new table, and the export, erasure and retention coverage lists each name every table by design: one entry apiece, which no sibling file can hold",
-        "files": {
-          "src/db/retention.test.ts": "1262 -> 1265"
-        }
-      },
-      {
-        "why": "A new departure table (departure_boat_safety_snapshots, issue 2300) is registered in the export, erasure and retention coverage lists, and the manifest and log routes gain one component and its props each (issues 2285, 2300)",
-        "files": {
-          "src/db/retention.test.ts": "1262 -> 1264"
-        }
-      },
-      {
         "why": "merge of the ready-for-human batch's worker branches (#2611 tests from two sides)",
         "files": {
           "src/lib/trip-admission.test.ts": "984 -> 992"
@@ -375,41 +362,27 @@
         }
       },
       {
-        "why": "list entries that cannot live in a sibling: the crew_away_acknowledgements table's classification in the erasure, export and retention schema guards (#2678)",
+        "why": "Merge of main (#2547, #2575 to #2580) into the test-split layer: the widened guard (test files, code-line limit) meets files that grew on main after this layer forked",
         "files": {
-          "src/db/erasure-coverage.test.ts": "1165 -> 1167",
-          "src/db/retention.test.ts": "1248 -> 1251"
+          "src/app/api/offline-manifests/sync/route.test.ts": "953 -> 955",
+          "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": "961 -> 971",
+          "src/db/bookings.test.ts": "3384 -> 3418",
+          "src/db/checkouts.test.ts": "2839 -> 2912",
+          "src/db/closeout.test.ts": "0 -> 903",
+          "src/db/courses.test.ts": "1659 -> 1719",
+          "src/db/executed-dives.test.ts": "1082 -> 1085",
+          "src/db/no-show.test.ts": "1100 -> 1165",
+          "src/db/orders.test.ts": "3097 -> 3163",
+          "src/db/recap.test.ts": "2114 -> 2138",
+          "src/db/self-declared-cards.test.ts": "1836 -> 1864",
+          "src/lib/staffing-week.test.ts": "979 -> 1115",
+          "src/lib/waivers.test.ts": "1188 -> 1205"
         }
       },
       {
-        "why": "claude_usage table (ADR 20261018-claude-assists): its row in each schema guard's classification list (retention fixture, export exclusion, erasure closure); none can live in a sibling",
+        "why": "Merge CI coverage updates with the independently shortened safety test baselines",
         "files": {
-          "src/db/erasure-coverage.test.ts": "1165 -> 1167",
-          "src/db/retention.test.ts": "1250 -> 1263"
-        }
-      },
-      {
-        "why": "website_setup_drafts table and inbound_messages.assist_intent (ADR 20261018-claude-assists, front-of-house assists): their rows in the schema guards' classification lists (retention fixture, export exclusion, erasure closure and outside-handle census); none can live in a sibling",
-        "files": {
-          "src/db/retention.test.ts": "1263 -> 1271"
-        }
-      },
-      {
-        "why": "email_bounces joins the census tests that classify every table (erasure, export, retention fixtures); each needs its one entry",
-        "files": {
-          "src/db/retention.test.ts": "1277 -> 1291"
-        }
-      },
-      {
-        "why": "claude_call_content table (ADR 20261023-claude-call-content): its row in each schema guard's classification list (retention fixture, export exclusion, erasure closure); none can live in a sibling",
-        "files": {
-          "src/db/erasure-coverage.test.ts": "1173 -> 1175"
-        }
-      },
-      {
-        "why": "claude_call_content_erasures table (ADR 20261023-claude-call-content, security review): its row in each schema guard's classification list (retention, export exclusion, erasure closure and helper writes); none can live in a sibling",
-        "files": {
-          "src/db/erasure-coverage.test.ts": "1175 -> 1181"
+          "src/lib/manifests.test.ts": "1053 -> 1054"
         }
       },
       {
@@ -425,17 +398,9 @@
           "src/db/no-show.test.ts": "1100 -> 1165",
           "src/db/orders.test.ts": "3097 -> 3163",
           "src/db/recap.test.ts": "2114 -> 2138",
-          "src/db/retention.test.ts": "1250 -> 1262",
           "src/db/self-declared-cards.test.ts": "1836 -> 1864",
           "src/lib/staffing-week.test.ts": "979 -> 1115",
           "src/lib/waivers.test.ts": "1188 -> 1205"
-        }
-      },
-      {
-        "why": "Merge CI coverage updates with the independently shortened safety test baselines",
-        "files": {
-          "src/db/erasure-coverage.test.ts": "1181 -> 1184",
-          "src/lib/manifests.test.ts": "1053 -> 1054"
         }
       }
     ],
@@ -447,9 +412,9 @@
     "src/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm.test.tsx": 934,
     "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx": 1075,
     "src/app/shop/[shopSlug]/orders/page.test.tsx": 926,
-    "src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx": 1056,
+    "src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx": 1041,
     "src/app/shop/[shopSlug]/schedule/board/actions.ts": 916,
-    "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": 1176,
+    "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": 1165,
     "src/components/MarketingFeatureScreens.tsx": 1064,
     "src/components/search/CommandPalette.tsx": 923,
     "src/components/ui/button.test.ts": 971,
@@ -466,9 +431,9 @@
     "src/db/dive-sites.test.ts": 1156,
     "src/db/diver-merge.test.ts": 1239,
     "src/db/divers.test.ts": 3056,
-    "src/db/erasure-coverage.test.ts": 1184,
+    "src/db/erasure-coverage.test.ts": 1078,
     "src/db/executed-dives.test.ts": 1085,
-    "src/db/export.test.ts": 1363,
+    "src/db/export.test.ts": 1186,
     "src/db/import.test.ts": 1074,
     "src/db/incident-reports.test.ts": 1011,
     "src/db/manifests.test.ts": 3692,
@@ -482,7 +447,7 @@
     "src/db/reminders.test.ts": 981,
     "src/db/rental-fit.test.ts": 1227,
     "src/db/reporting.test.ts": 1379,
-    "src/db/retention.test.ts": 1305,
+    "src/db/retention.test.ts": 1097,
     "src/db/reviews.test.ts": 1034,
     "src/db/seat-claims.test.ts": 1525,
     "src/db/self-declared-cards.test.ts": 1865,
@@ -534,15 +499,26 @@
       {
         "why": "merge of origin/main (168ee02bd) into the fifth-loop branch: both sides grew these functions and files, each under the limit on its own",
         "files": {
-          "src/app/shop/[shopSlug]/trips/[id]/_arrivals/arrival-desk.tsx#buildArrivalDesk": "0 -> 310",
           "src/app/shop/[shopSlug]/trips/[id]/_components/roster-seat.ts#rosterSeat": "308 -> 315"
+        }
+      },
+      {
+        "why": "Merge current main trip-record extraction with the existing reschedule coordination and course limits",
+        "files": {
+          "src/db/trips-record.ts#updateTripRecord": "0 -> 311"
+        }
+      },
+      {
+        "why": "Reconcile the extracted main trip writer with revision fencing and reschedule safety",
+        "files": {
+          "src/db/trips-record.ts#updateTripRecord": "311 -> 321"
         }
       }
     ],
-    "src/app/s/[shopSlug]/page.tsx#SchedulePage": 368,
+    "src/app/s/[shopSlug]/page.tsx#SchedulePage": 367,
     "src/app/shop/[shopSlug]/orders/page.tsx#OrdersIndexPage": 410,
     "src/app/shop/[shopSlug]/promos/page.tsx#PromosPage": 351,
-    "src/app/shop/[shopSlug]/trips/[id]/_arrivals/arrival-desk.tsx#buildArrivalDesk": 310,
+    "src/app/shop/[shopSlug]/trips/[id]/_arrivals/arrival-desk.tsx#buildArrivalDesk": 309,
     "src/app/shop/[shopSlug]/trips/[id]/_components/roster-seat.ts#rosterSeat": 315,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 367,
     "src/db/checkouts.ts#startBookingCheckout": 303,
@@ -552,6 +528,7 @@
     "src/db/seed-history.ts#seedHistory": 680,
     "src/db/seed-more-trips.ts#seedMoreTrips": 627,
     "src/db/seed-trips.ts#seedTrips": 381,
+    "src/db/trips-record.ts#updateTripRecord": 321,
     "src/lib/import.ts#prepareContactImport": 455
   },
   "live-people": {
@@ -597,8 +574,8 @@
     "//": "Line counts of the page.tsx files still over 400 lines. Written by `node scripts/check-page-length.mjs --write`. Each number may only go down — see scripts/check-page-length.mjs.",
     "src/app/page.tsx": 440,
     "src/app/ready/[token]/page.tsx": 633,
-    "src/app/s/[shopSlug]/page.tsx": 753,
-    "src/app/s/[shopSlug]/trips/[id]/page.tsx": 495,
+    "src/app/s/[shopSlug]/page.tsx": 743,
+    "src/app/s/[shopSlug]/trips/[id]/page.tsx": 491,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 577,
     "src/app/shop/[shopSlug]/orders/page.tsx": 727,
     "src/app/shop/[shopSlug]/page.tsx": 620,

@@ -9,6 +9,7 @@ import {
   SignInRefused,
   SKELETON_TIMEOUT_MS,
   signInOnce,
+  waitForStaffSession,
   waitPastTheSkeleton,
 } from "./capture-session.mjs";
 import {
@@ -404,6 +405,7 @@ try {
         // an editable element, so there is no caret to hide; if a surface ever
         // autofocuses one, a hairline in a look-at-it capture is the cheaper
         // half of this trade — review-grade pixels come from the visual specs.
+        await waitForStaffSession(page, target);
         await page.screenshot({ path: file, fullPage: true, caret: "initial" });
         written.push(file);
         // Light only: geometry does not change with the scheme.

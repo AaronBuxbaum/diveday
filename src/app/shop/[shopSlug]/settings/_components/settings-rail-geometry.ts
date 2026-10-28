@@ -25,7 +25,7 @@ export const SETTINGS_RAIL_COLUMN_CLASS = "w-full lg:block lg:w-[264px] lg:shrin
  * (`overflow-y-auto`); the skeleton clips.
  */
 export const SETTINGS_RAIL_FRAME_CLASS =
-  "max-h-[60svh] bg-background px-4 lg:sticky lg:top-(--chrome-h) lg:max-h-[calc(100svh-var(--chrome-h))] lg:px-0 lg:pe-2";
+  "max-h-[60svh] rounded-sm bg-background px-4 lg:sticky lg:top-(--chrome-h) lg:max-h-[calc(100svh-var(--chrome-h))] lg:rounded-none lg:px-0 lg:pe-2";
 
 /**
  * What the box holds: the groups `space-y-5` apart inside `py-6`. On the

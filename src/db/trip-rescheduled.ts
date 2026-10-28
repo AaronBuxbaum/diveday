@@ -5,6 +5,7 @@ import { nowDate } from "@/lib/clock";
 import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import {
   heldSendPayloadSchema,
+  heldSendRunAt,
   mergeRescheduleHolds,
   type TripRescheduledPayload,
 } from "@/lib/held-sends";
@@ -17,6 +18,7 @@ import {
   recipientLocale,
 } from "@/lib/notifications";
 import { type CourtesyProvider, sendCourtesyMessage } from "@/lib/notifications/courtesy";
+import { notificationTripTitle } from "@/lib/notifications/kinds";
 import {
   type SmsProvider,
   smsProviderFromEnvironment,
@@ -26,7 +28,6 @@ import { issueBookingCapability, revokeIssuedCapabilities } from "./booking-capa
 import type { AppDb, DbExecutor } from "./client";
 import { lastDayStartsAt } from "./departure-notes";
 import { withErasureCoordinatedBookingSend } from "./erasure-coordinated-send";
-import { holdSend } from "./held-sends";
 import {
   notificationProviderForDb,
   recordNotificationDelivery,
@@ -34,7 +35,8 @@ import {
 } from "./notifications";
 import { bookings, heldSends, people, shops, trips } from "./schema";
 import { isSmsOptedOut, stopListedSmsProvider } from "./sms-opt-outs";
-import { liveTrip, notRehearsal } from "./trips-live";
+import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";
+import { livePerson, liveTrip, notRehearsal } from "./trips-live";
 import { whatsAppProvidersForShops } from "./whatsapp-accounts";
 
 /**
@@ -72,7 +74,7 @@ export type RescheduleNoticeOutcome = {
 
 /** How many seats a notice for this departure would address right now. */
 export async function rescheduleAudienceCount(
-  db: AppDb,
+  db: DbExecutor,
   shopId: string,
   tripId: string,
 ): Promise<number> {
@@ -120,7 +122,7 @@ export async function heldRescheduleIsPlaceOnly(
  * do, H-110).
  */
 async function stillAhead(
-  db: AppDb,
+  db: DbExecutor,
   trip: { id: string; startsAt: Date },
   now: Date,
 ): Promise<boolean> {
@@ -130,11 +132,22 @@ async function stillAhead(
 }
 
 /** The divers know the current time again: nothing is owed them. */
-async function clearDiversTold(db: AppDb, shopId: string, tripId: string) {
+async function clearDiversTold(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+  expectedRevision?: number,
+) {
   await db
     .update(trips)
     .set({ diversToldStartsAt: null, diversToldMeetingPoint: false })
-    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)));
+    .where(
+      and(
+        eq(trips.id, tripId),
+        eq(trips.shopId, shopId),
+        ...(expectedRevision === undefined ? [] : [eq(trips.revision, expectedRevision)]),
+      ),
+    );
 }
 
 /**
@@ -169,94 +182,156 @@ export async function holdRescheduleNotice(
     now?: Date;
   },
 ): Promise<HeldRescheduleNotice | null> {
-  const [trip] = await db
-    .select({
-      id: trips.id,
-      startsAt: trips.startsAt,
-      status: trips.status,
-      diversToldStartsAt: trips.diversToldStartsAt,
-      diversToldMeetingPoint: trips.diversToldMeetingPoint,
-    })
-    .from(trips)
-    // A rehearsal tells nobody anything (ADR 20261012-rehearsal-departures):
-    // its moves hold no notice, so "Tell them" has nothing to send.
-    .where(
-      and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip(), notRehearsal()),
-    )
-    .limit(1);
-  if (trip?.status !== "scheduled") return null;
-  // A departure that has sailed hears nothing, so the staffer is told nothing
-  // is on its way rather than "Telling 11 divers".
-  if (!(await stillAhead(db, trip, input.now ?? nowDate()))) return null;
-  const toldStartsAt = trip.diversToldStartsAt ?? input.movedFrom ?? null;
-  // The place has moved if an earlier move said so or this one does.
-  const placeMoved = trip.diversToldMeetingPoint || (input.meetingPointMoved ?? false);
-
-  const pendingRows = await db
-    .select({ id: heldSends.id, payload: heldSends.payload })
-    .from(heldSends)
-    .where(and(eq(heldSends.shopId, input.shopId), eq(heldSends.kind, "trip_rescheduled")));
-  const pending: { id: string; payload: TripRescheduledPayload }[] = [];
-  for (const row of pendingRows) {
-    const parsed = heldSendPayloadSchema.safeParse(row.payload);
-    if (parsed.success && parsed.data.kind === "trip_rescheduled") {
-      if (parsed.data.tripId === input.tripId) pending.push({ id: row.id, payload: parsed.data });
-    }
-  }
-  const merged = toldStartsAt
-    ? mergeRescheduleHolds(
-        pending.map((held) => held.payload),
-        {
-          kind: "trip_rescheduled",
-          tripId: input.tripId,
-          previousStartsAt: toldStartsAt.toISOString(),
-          meetingPointMoved: placeMoved,
-        },
-        trip.startsAt,
+  const now = input.now ?? nowDate();
+  return db.transaction(async (tx) => {
+    // Serialize every hold merge/replacement before reading trip state. This
+    // shares the revision writer's lock order and prevents staff edits and a
+    // stale-dispatch recovery from each inserting a hold based on the other's
+    // pre-commit snapshot.
+    await lockTripRevisionNotificationFence(tx, input.shopId, input.tripId, "revision-write");
+    const [trip] = await tx
+      .select({
+        id: trips.id,
+        startsAt: trips.startsAt,
+        status: trips.status,
+        diversToldStartsAt: trips.diversToldStartsAt,
+        diversToldMeetingPoint: trips.diversToldMeetingPoint,
+      })
+      .from(trips)
+      // A rehearsal tells nobody anything (ADR 20261012-rehearsal-departures):
+      // its moves hold no notice, so "Tell them" has nothing to send.
+      .where(
+        and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip(), notRehearsal()),
       )
-    : null;
-  // The earlier holds are folded into this one, or there is nothing left to
-  // say; either way they must not leave on their own.
-  if (pending.length > 0) {
-    await db.delete(heldSends).where(
-      and(
-        eq(heldSends.shopId, input.shopId),
-        inArray(
-          heldSends.id,
-          pending.map((held) => held.id),
-        ),
-      ),
-    );
-  }
-  // Back where the divers were told (or never moved): they know the time.
-  const hasRecord = Boolean(trip.diversToldStartsAt) || trip.diversToldMeetingPoint;
-  if (!merged) {
-    if (hasRecord) await clearDiversTold(db, input.shopId, input.tripId);
-    return null;
-  }
+      .limit(1)
+      .for("update");
+    if (trip?.status !== "scheduled") return null;
+    // A departure that has sailed hears nothing, so the staffer is told nothing
+    // is on its way rather than "Telling 11 divers".
+    if (!(await stillAhead(tx, trip, now))) return null;
+    const toldStartsAt = trip.diversToldStartsAt ?? input.movedFrom ?? null;
+    // The place has moved if an earlier move said so or this one does.
+    const placeMoved = trip.diversToldMeetingPoint || (input.meetingPointMoved ?? false);
 
-  const told = await rescheduleAudienceCount(db, input.shopId, input.tripId);
-  // Nobody on the boat holds the old time; whoever books next sees the new one.
-  if (told === 0) {
-    if (hasRecord) await clearDiversTold(db, input.shopId, input.tripId);
-    return null;
-  }
-  if (
-    trip.diversToldStartsAt?.getTime() !== toldStartsAt?.getTime() ||
-    trip.diversToldMeetingPoint !== merged.meetingPointMoved
-  ) {
-    await db
-      .update(trips)
-      .set({ diversToldStartsAt: toldStartsAt, diversToldMeetingPoint: merged.meetingPointMoved })
-      .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId)));
-  }
-  const held = await holdSend(db, {
-    shopId: input.shopId,
-    payload: merged,
-    actorPersonId: input.actorPersonId,
-    now: input.now,
+    const pendingRows = await tx
+      .select({ id: heldSends.id, payload: heldSends.payload })
+      .from(heldSends)
+      .where(and(eq(heldSends.shopId, input.shopId), eq(heldSends.kind, "trip_rescheduled")));
+    const pending: { id: string; payload: TripRescheduledPayload }[] = [];
+    for (const row of pendingRows) {
+      const parsed = heldSendPayloadSchema.safeParse(row.payload);
+      if (parsed.success && parsed.data.kind === "trip_rescheduled") {
+        if (parsed.data.tripId === input.tripId) pending.push({ id: row.id, payload: parsed.data });
+      }
+    }
+    const merged = toldStartsAt
+      ? mergeRescheduleHolds(
+          pending.map((held) => held.payload),
+          {
+            kind: "trip_rescheduled",
+            tripId: input.tripId,
+            previousStartsAt: toldStartsAt.toISOString(),
+            meetingPointMoved: placeMoved,
+          },
+          trip.startsAt,
+        )
+      : null;
+    // The earlier holds are folded into this one, or there is nothing left to
+    // say; either way they must not leave on their own.
+    if (pending.length > 0) {
+      await tx.delete(heldSends).where(
+        and(
+          eq(heldSends.shopId, input.shopId),
+          inArray(
+            heldSends.id,
+            pending.map((held) => held.id),
+          ),
+        ),
+      );
+    }
+    // Back where the divers were told (or never moved): they know the time.
+    const hasRecord = Boolean(trip.diversToldStartsAt) || trip.diversToldMeetingPoint;
+    if (!merged) {
+      if (hasRecord) await clearDiversTold(tx, input.shopId, input.tripId);
+      return null;
+    }
+
+    // Identity-held seats are not in the send audience, but they still owe
+    // this move once staff settle who the diver is. Record that obligation
+    // under the same revision fence, while holding the trip row before any
+    // booking rows. This keeps move/cancel writers on the established
+    // trip-before-booking order and stores no contact data.
+    if (toldStartsAt) {
+      const heldSeats = await tx
+        .select({ id: bookings.id })
+        .from(bookings)
+        .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, input.shopId)))
+        .where(
+          and(
+            eq(bookings.shopId, input.shopId),
+            eq(bookings.tripId, input.tripId),
+            inArray(bookings.status, [...TOLD_STATUSES]),
+            isNotNull(bookings.identityUnconfirmedAt),
+            isNull(people.deletedAt),
+          ),
+        )
+        .for("update", { of: bookings });
+      if (heldSeats.length > 0) {
+        await tx
+          .update(bookings)
+          .set({
+            rescheduleMissedFrom: sql`coalesce(${bookings.rescheduleMissedFrom}, ${toldStartsAt.toISOString()}::timestamptz)`,
+            rescheduleMissedPlace: merged.meetingPointMoved
+              ? true
+              : sql`${bookings.rescheduleMissedPlace}`,
+          })
+          .where(
+            and(
+              eq(bookings.shopId, input.shopId),
+              eq(bookings.tripId, input.tripId),
+              inArray(
+                bookings.id,
+                heldSeats.map((seat) => seat.id),
+              ),
+              inArray(bookings.status, [...TOLD_STATUSES]),
+              isNotNull(bookings.identityUnconfirmedAt),
+            ),
+          );
+      }
+    }
+
+    const told = await rescheduleAudienceCount(tx, input.shopId, input.tripId);
+    // Nobody on the boat holds the old time; whoever books next sees the new one.
+    if (told === 0) {
+      if (hasRecord) await clearDiversTold(tx, input.shopId, input.tripId);
+      return null;
+    }
+    if (
+      trip.diversToldStartsAt?.getTime() !== toldStartsAt?.getTime() ||
+      trip.diversToldMeetingPoint !== merged.meetingPointMoved
+    ) {
+      await tx
+        .update(trips)
+        .set({ diversToldStartsAt: toldStartsAt, diversToldMeetingPoint: merged.meetingPointMoved })
+        .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId)));
+    }
+    // Equivalent to holdSend, performed on this transaction executor so the
+    // pending-row replacement and new hold commit atomically under the fence.
+    const payload = heldSendPayloadSchema.parse(merged);
+    const runAt = heldSendRunAt(payload, now);
+    const [held] = await tx
+      .insert(heldSends)
+      .values({
+        shopId: input.shopId,
+        kind: payload.kind,
+        payload,
+        actorPersonId: input.actorPersonId,
+        runAt,
+      })
+      .returning({ id: heldSends.id });
+    if (!held) throw new Error("held send was not written");
+    return { id: held.id, runAt, told };
   });
-  return { ...held, told };
 }
 
 export type SendRescheduleNoticesOptions = {
@@ -276,6 +351,7 @@ export async function sendRescheduleNotices(
   options: SendRescheduleNoticesOptions = {},
 ): Promise<RescheduleNoticeOutcome> {
   const outcome: RescheduleNoticeOutcome = { told: 0, failed: 0, identityHeld: 0 };
+  let staleSnapshot = false;
   const now = options.now ?? nowDate();
   const [row] = await db
     .select({ trip: trips, shop: shops })
@@ -318,22 +394,6 @@ export async function sendRescheduleNotices(
   const channels = await seatChannels(db, shop.id, options);
   // Each seat's current STOP state is re-read inside its erasure send fence.
   for (const { booking, person } of seats) {
-    if (booking.identityUnconfirmedAt) {
-      outcome.identityHeld += 1;
-      // Nothing re-sends this when staff confirm who the diver is unless the
-      // skip is remembered (#2445): the earliest start the seat last knew, and
-      // whether the place moved.
-      await db
-        .update(bookings)
-        .set({
-          rescheduleMissedFrom: sql`coalesce(${bookings.rescheduleMissedFrom}, ${previousStartsAt.toISOString()}::timestamptz)`,
-          rescheduleMissedPlace: payload.meetingPointMoved
-            ? true
-            : sql`${bookings.rescheduleMissedPlace}`,
-        })
-        .where(and(eq(bookings.id, booking.id), eq(bookings.shopId, shopId)));
-      continue;
-    }
     const told = await tellSeat(db, {
       shop,
       trip,
@@ -344,11 +404,29 @@ export async function sendRescheduleNotices(
       channels,
       now,
     });
+    if (told === "stale") staleSnapshot = true;
     if (told === "identity-held") outcome.identityHeld += 1;
-    else if (told !== "skipped") outcome[told] += 1;
+    else if (told !== "skipped" && told !== "stale") outcome[told] += 1;
+  }
+  // Claiming a held row deletes it. If a trip or inherited shop edit won the
+  // fence before this dispatch, restore a fresh hold from the authoritative
+  // trip state so the obsolete snapshot is suppressed without losing the
+  // notice entirely. The original payload is server-created and contains the
+  // last start the divers knew.
+  if (staleSnapshot) {
+    await holdRescheduleNotice(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      movedFrom: previousStartsAt,
+      meetingPointMoved: payload.meetingPointMoved,
+      actorPersonId: null,
+      now,
+    });
   }
   // The divers have the new time now; a later move starts from this one.
-  if (outcome.told > 0) await clearDiversTold(db, shop.id, trip.id);
+  if (outcome.told > 0 && !staleSnapshot) {
+    await clearDiversTold(db, shop.id, trip.id, trip.revision);
+  }
   return outcome;
 }
 
@@ -395,7 +473,7 @@ async function tellSeat(
     now: Date;
     seatMovedAt?: Date;
   },
-): Promise<"told" | "failed" | "identity-held" | "skipped"> {
+): Promise<"told" | "failed" | "identity-held" | "skipped" | "stale"> {
   const { shop, trip, booking, person } = input;
   const result = await withErasureCoordinatedBookingSend(
     db,
@@ -406,8 +484,38 @@ async function tellSeat(
       expectedTripId: trip.id,
       expectedEmail: person.email,
       expectedPhone: person.phone,
+      // Match retry dispatch lock order: shop material, trip revision, then
+      // erasure/person/booking locks. The snapshot above is pre-fence.
+      tripRevisionFence: true,
+      shopMaterialFence: true,
     },
     async (tx) => {
+      const [currentSnapshot] = await tx
+        .select({ trip: trips, shop: shops })
+        .from(trips)
+        .innerJoin(shops, eq(shops.id, trips.shopId))
+        .where(and(eq(trips.id, trip.id), eq(trips.shopId, shop.id), liveTrip()))
+        .limit(1);
+      const currentMeetingPoint = currentSnapshot
+        ? meetingPointForMessage(meetingPointOfRows(currentSnapshot.shop, currentSnapshot.trip))
+        : null;
+      const snapshotMeetingPoint = meetingPointForMessage(meetingPointOfRows(shop, trip));
+      if (
+        currentSnapshot?.trip.status !== "scheduled" ||
+        currentSnapshot.trip.isRehearsal ||
+        currentSnapshot.trip.revision !== trip.revision ||
+        currentSnapshot.trip.startsAt.getTime() !== trip.startsAt.getTime() ||
+        currentSnapshot.trip.endsAt.getTime() !== trip.endsAt.getTime() ||
+        notificationTripTitle(currentSnapshot.trip.title) !== notificationTripTitle(trip.title) ||
+        currentSnapshot.trip.courseId !== trip.courseId ||
+        currentSnapshot.shop.name !== shop.name ||
+        currentSnapshot.shop.timezone !== shop.timezone ||
+        currentSnapshot.shop.defaultLocale !== shop.defaultLocale ||
+        (!trip.courseId && currentSnapshot.shop.dockCallMinutes !== shop.dockCallMinutes) ||
+        JSON.stringify(currentMeetingPoint) !== JSON.stringify(snapshotMeetingPoint)
+      ) {
+        return "stale" as const;
+      }
       const [current] = await tx
         .select({ identityUnconfirmedAt: bookings.identityUnconfirmedAt, status: bookings.status })
         .from(bookings)
@@ -430,7 +538,49 @@ async function tellSeat(
       return tellSeatWithinFence(tx, input);
     },
   );
-  return result ?? "skipped";
+  if (result !== null) return result;
+  // The erasure fence also refuses a contact that changed after the initial
+  // seat scan. Re-hold only when the same live person still owns the same
+  // active seat; erasure, reassignment, cancellation and trip changes remain
+  // suppressed. This read authorizes no send: the next dispatch rechecks under
+  // the full fence using the new contact snapshot.
+  return (await activeSeatContactChanged(db, { shop, trip, booking, person }))
+    ? "stale"
+    : "skipped";
+}
+
+async function activeSeatContactChanged(
+  db: AppDb,
+  input: {
+    shop: typeof shops.$inferSelect;
+    trip: typeof trips.$inferSelect;
+    booking: typeof bookings.$inferSelect;
+    person: typeof people.$inferSelect;
+  },
+): Promise<boolean> {
+  const [current] = await db
+    .select({
+      personId: people.id,
+      email: people.email,
+      phone: people.phone,
+      anonymizedAt: people.anonymizedAt,
+      mergedIntoPersonId: people.mergedIntoPersonId,
+      tripId: bookings.tripId,
+      status: bookings.status,
+    })
+    .from(bookings)
+    .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, input.shop.id)))
+    .where(and(eq(bookings.id, input.booking.id), eq(bookings.shopId, input.shop.id), livePerson()))
+    .limit(1);
+  return Boolean(
+    current &&
+      current.personId === input.person.id &&
+      current.tripId === input.trip.id &&
+      TOLD_STATUSES.includes(current.status as (typeof TOLD_STATUSES)[number]) &&
+      !current.anonymizedAt &&
+      !current.mergedIntoPersonId &&
+      (current.email !== input.person.email || current.phone !== input.person.phone),
+  );
 }
 
 async function tellSeatWithinFence(
@@ -652,7 +802,7 @@ export async function sendSeatMoveNotice(
     now,
     seatMovedAt: input.movedAt,
   });
-  return result === "identity-held" ? "skipped" : result;
+  return result === "identity-held" || result === "stale" ? "skipped" : result;
 }
 
 /**
@@ -734,7 +884,7 @@ export async function sendMissedRescheduleNotice(
       .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)));
   let told: "told" | "failed" | "identity-held" | "skipped";
   try {
-    told = await tellSeat(db, {
+    const result = await tellSeat(db, {
       ...row,
       previousStartsAt: owed.from,
       meetingPoint: owed.place
@@ -743,6 +893,7 @@ export async function sendMissedRescheduleNotice(
       channels: await seatChannels(db, input.shopId, options),
       now,
     });
+    told = result === "stale" ? "skipped" : result;
   } catch (error) {
     await putBack();
     throw error;

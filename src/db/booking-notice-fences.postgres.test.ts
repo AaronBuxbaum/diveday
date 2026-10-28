@@ -2,7 +2,12 @@ import { randomBytes } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { expect, it, vi } from "vitest";
 import type { NotificationProvider } from "@/lib/notifications";
-import { describePostgres, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
+import {
+  describePostgres,
+  type PostgresTestDatabase,
+  postgresTestDb,
+  waitForLockWaiters,
+} from "@/test/postgres";
 import { offerBookingHandoffByEmail } from "./booking-handoff";
 import { drainNotificationRetries } from "./notifications";
 import {
@@ -15,6 +20,8 @@ import {
   trips,
 } from "./schema";
 import { sendRescheduleNotices } from "./trip-rescheduled";
+import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";
+import { updateTrip, updateTripSection } from "./trips-record";
 
 function barrier() {
   let resolve!: () => void;
@@ -22,8 +29,8 @@ function barrier() {
   return { promise, resolve };
 }
 
-async function fixture() {
-  const pg = await postgresTestDb();
+async function fixture(existingPg?: PostgresTestDatabase) {
+  const pg = existingPg ?? (await postgresTestDb());
   const suffix = randomBytes(4).toString("hex");
   const [shop] = await pg.db
     .insert(shops)
@@ -91,6 +98,49 @@ function sendOptions(provider: NotificationProvider, now: Date) {
 }
 
 describePostgres("reschedule and handoff notice fences", () => {
+  it("makes full and section trip edits wait on the notice fence before locking the trip", async () => {
+    const pg = await postgresTestDb();
+
+    for (const scope of ["full", "section"] as const) {
+      const { shop, trip } = await fixture(pg);
+      const fenceHeld = barrier();
+      const releaseFence = barrier();
+      const holdDispatchFence = pg.connect().transaction(async (tx) => {
+        await lockTripRevisionNotificationFence(tx, shop.id, trip.id, "dispatch");
+        fenceHeld.resolve();
+        await releaseFence.promise;
+      });
+      let write: ReturnType<typeof updateTrip> | ReturnType<typeof updateTripSection> | undefined;
+      try {
+        await Promise.race([fenceHeld.promise, holdDispatchFence]);
+        write =
+          scope === "full"
+            ? updateTrip(pg.connect(), shop.id, trip.id, {
+                title: trip.title,
+                startsAt: trip.startsAt,
+                endsAt: trip.endsAt,
+                capacity: trip.capacity,
+                plannedDives: trip.plannedDives,
+              })
+            : updateTripSection(pg.connect(), shop.id, trip.id, { title: "Section edit" });
+        await waitForLockWaiters(pg.db, 1);
+
+        // The write must be parked on the advisory fence, before it owns the
+        // trip row. If it took the row first, this NOWAIT probe would fail and
+        // an in-flight notice could be stranded behind the waiting writer.
+        await expect(
+          pg.connect().execute(sql`select id from trips where id = ${trip.id} for update nowait`),
+        ).resolves.toBeDefined();
+      } finally {
+        releaseFence.resolve();
+        await holdDispatchFence;
+        await write?.catch(() => undefined);
+      }
+      if (!write) throw new Error("trip write did not start");
+      await expect(write).resolves.toMatchObject({ ok: true });
+    }
+  });
+
   it("keeps a readiness link alive only when the reschedule retry is durably queued", async () => {
     const { pg, shop, booking, now, payload } = await fixture();
     const provider: NotificationProvider = {

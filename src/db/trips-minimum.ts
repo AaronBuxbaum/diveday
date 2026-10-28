@@ -7,6 +7,7 @@ import { releaseUnclaimedGearReservationsForTrips } from "./gear";
 import { publishManifestEvent } from "./manifest-events";
 import { recordSystemTripActivity } from "./operations";
 import { bookings, people, shops, trips } from "./schema";
+import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";
 import { liveTrip } from "./trips-live";
 
 /**
@@ -182,6 +183,15 @@ export async function cancelDeparturesBelowMinimum(
     // One transaction per departure: the stamp and the gear release land
     // together, and the conditional `where` keeps its concurrency guarantee.
     const row = await db.transaction(async (tx) => {
+      // Serialize this status write with reschedule dispatch before its UPDATE
+      // takes the trip row lock. Each trip has its own transaction, so the
+      // sweep never holds multiple trip fences or acquires them out of order.
+      await lockTripRevisionNotificationFence(
+        tx,
+        departure.shopId,
+        departure.tripId,
+        "revision-write",
+      );
       const [updated] = await tx
         .update(trips)
         // Stamped inline rather than routed through `setTripStatus`: the guard in
@@ -279,10 +289,13 @@ export async function listMinimumNotMetRecipients(db: AppDb, shopId: string, tri
  * that was cancelled again.
  */
 export async function reinstateTripClearingMinimum(db: AppDb, shopId: string, tripId: string) {
-  const [trip] = await db
-    .update(trips)
-    .set({ status: "scheduled", minimumBookings: null, minimumDecisionHours: null })
-    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
-    .returning();
-  return trip ?? null;
+  return db.transaction(async (tx) => {
+    await lockTripRevisionNotificationFence(tx, shopId, tripId, "revision-write");
+    const [trip] = await tx
+      .update(trips)
+      .set({ status: "scheduled", minimumBookings: null, minimumDecisionHours: null })
+      .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
+      .returning();
+    return trip ?? null;
+  });
 }

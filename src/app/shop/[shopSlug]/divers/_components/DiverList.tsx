@@ -115,6 +115,7 @@ export function DiverList({
   filter,
   sort = "name",
   orderLine,
+  advancedSearch,
   importHref,
   canRestore,
   quickAddAction,
@@ -131,6 +132,8 @@ export function DiverList({
   sort?: DiverSort;
   /** Sort by name or last dive, and the list's CSV: links the page builds (item 27). */
   orderLine?: React.ReactNode;
+  /** The optional question form, already disclosed and translated by the server. */
+  advancedSearch?: React.ReactNode;
   /** Where a bulk import lives, or null when this staffer may not run one. */
   importHref: string | null;
   /**
@@ -389,6 +392,7 @@ export function DiverList({
           </p>
         ) : null}
       </div>
+      {advancedSearch}
       {/* Hidden over a day-one empty roster (see `showViews` above); kept
           whenever a search or chip narrowed the list, so the way back out
           stays on screen. */}

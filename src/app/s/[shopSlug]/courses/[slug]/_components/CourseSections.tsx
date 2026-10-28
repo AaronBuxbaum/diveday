@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { StoredPhoto } from "@/components/StoredPhoto";
@@ -34,7 +35,7 @@ import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
  * to a row of empty headings.
  *
  * The composition is shaped like the course, not like a card pile (design
- * principle 11): the hero is the poster and carries the logistics strip, the
+ * principle 11): the hero brings course facts beside its photograph, the
  * day-by-day plan is a timeline, includes read as two quiet columns, and the
  * one tinted panel on the page is the booking moment — which also holds the
  * page's one primary action (principle 8). Everything else is type, space,
@@ -49,6 +50,8 @@ export function CourseHero({
   t,
   facts = [],
   inquiryHref = null,
+  admission,
+  nextDate,
 }: {
   course: Course;
   totalCents: number | null;
@@ -58,11 +61,8 @@ export function CourseHero({
   locale: string;
   t: DiverTranslator;
   /**
-   * Logistics only (duration, group size), rendered as a quiet strip on the
-   * hero's lower edge — the answers to "how long?" and "how many of us?"
-   * arrive with the poster instead of a tile grid below it. Admission facts
-   * (the cert gate, the minimum age) stay in CourseAdmission, which is the
-   * one place a diver reads them.
+   * Logistics beside the price. Admission facts remain in CourseAdmission,
+   * passed as the admission slot so each is still stated in one place.
    */
   facts?: Array<{ label: string; value: string }>;
   /**
@@ -70,6 +70,8 @@ export function CourseHero({
    * page's own inquiry form. Null when the shop has no inbox to ask.
    */
   inquiryHref?: string | null;
+  admission?: ReactNode;
+  nextDate?: { label: string; dates: string; href: string; action: string; full: boolean } | null;
 }) {
   // A private session has its own price on the row (`private_price_cents`),
   // but it is never stated here: whether it is per diver or per group is the
@@ -84,78 +86,92 @@ export function CourseHero({
     maximumFractionDigits: 0,
   });
   return (
-    // The poster, as a shell: the photo bleeds to the card's edge and the body
-    // below it pads itself, so the card contributes only its chrome. Its radius
-    // is the app-wide one now — this was one of four `rounded-3xl` panels left
-    // outside the shared vocabulary.
+    // Facts lead the reading order; the retained photo supports them at a
+    // width its source can supply (public visual audit P1, issue #3140).
     <SectionCard as="div" padding="none" className="overflow-hidden">
-      {course.heroImageUrl ? (
-        // A landscape frame the photo fills, never a narrow photo on a gray
-        // letterbox (visual review 2026-10-24, B34).
-        <StoredPhoto
-          src={course.heroImageUrl}
-          alt={resolveImageAlt(
-            course.heroImageAlt,
-            t("course.photoAltFallback", { course: course.title, n: 1 }),
-          )}
-          className="aspect-video w-full"
-          sizes="(min-width: 1152px) 1104px, 100vw"
-          priority
-        />
-      ) : null}
-      <div className="p-6 sm:p-8">
-        <ShopPageHeader
-          eyebrow={t("course.agencyCourse", {
-            // The bare code, deliberately: this eyebrow spent a while expanding
-            // the acronym ("PADI (Professional Association of Diving
-            // Instructors) course", task 5), and a forty-character legal name
-            // in tracking-wide caps was the loudest line on the card while
-            // changing no reader's decision — a newcomer learns what PADI is
-            // from the shop, not from a certification body's full name
-            // (2026-08-28 diver-views design review). `courses.agency` is free
-            // text a shop types, so uppercase is a rendering, never a gate.
-            agency: course.agency.toUpperCase(),
-          })}
-          title={course.title}
-          titleFace="brand"
-          description={course.summary ?? undefined}
-        />
-        <div className="mt-4 flex flex-wrap items-center gap-4">
-          {totalCents === null ? null : (
-            <p className={FIGURE_CLASS}>
-              {money.format(minorToMajor(totalCents, currency))}
-              <span className="ml-2 text-sm font-normal text-muted">{t("common.perDiver")}</span>
-            </p>
-          )}
-          {privateAvailable ? (
-            <p className="text-sm text-muted">
-              {course.isIntroCourse
-                ? t("course.privateSessionAvailable")
-                : t("course.privateAvailable")}
-              {inquiryHref ? (
-                <>
-                  {" · "}
-                  <a href={inquiryHref} className="font-medium text-primary hover:underline">
-                    {t("course.privateAsk")}
-                  </a>
-                </>
-              ) : null}
-            </p>
+      <div className={course.heroImageUrl ? "md:grid md:grid-cols-2 md:items-start" : undefined}>
+        <div className="min-w-0 p-6 sm:p-8">
+          <ShopPageHeader
+            eyebrow={t("course.agencyCourse", {
+              // The bare code, deliberately: this eyebrow spent a while expanding
+              // the acronym ("PADI (Professional Association of Diving
+              // Instructors) course", task 5), and a forty-character legal name
+              // in tracking-wide caps was the loudest line on the card while
+              // changing no reader's decision — a newcomer learns what PADI is
+              // from the shop, not from a certification body's full name
+              // (2026-08-28 diver-views design review). `courses.agency` is free
+              // text a shop types, so uppercase is a rendering, never a gate.
+              agency: course.agency.toUpperCase(),
+            })}
+            title={course.title}
+            titleFace="brand"
+            description={course.summary ?? undefined}
+          />
+          <div className="mt-4 flex flex-wrap items-center gap-4">
+            {totalCents === null ? null : (
+              <p className={FIGURE_CLASS}>
+                {money.format(minorToMajor(totalCents, currency))}
+                <span className="ml-2 text-sm font-normal text-muted">{t("common.perDiver")}</span>
+              </p>
+            )}
+            {privateAvailable ? (
+              <p className="text-sm text-muted">
+                {course.isIntroCourse
+                  ? t("course.privateSessionAvailable")
+                  : t("course.privateAvailable")}
+                {inquiryHref ? (
+                  <>
+                    {" · "}
+                    <a href={inquiryHref} className="font-medium text-primary hover:underline">
+                      {t("course.privateAsk")}
+                    </a>
+                  </>
+                ) : null}
+              </p>
+            ) : null}
+          </div>
+          {facts.length > 0 ? (
+            <dl aria-label={t("course.atAGlance")} className="mt-5 flex flex-wrap gap-x-10 gap-y-3">
+              {facts.map((fact) => (
+                <div key={fact.label} className="min-w-0">
+                  <dt className={groupLabelClass()}>{fact.label}</dt>
+                  <dd className="mt-0.5 text-sm font-medium">{fact.value}</dd>
+                </div>
+              ))}
+            </dl>
           ) : null}
         </div>
+        {course.heroImageUrl ? (
+          <StoredPhoto
+            src={course.heroImageUrl}
+            alt={resolveImageAlt(
+              course.heroImageAlt,
+              t("course.photoAltFallback", { course: course.title, n: 1 }),
+            )}
+            className="h-44 w-full sm:h-56 md:h-80"
+            sizes="(min-width: 1152px) 552px, (min-width: 768px) 48vw, 100vw"
+            priority
+          />
+        ) : null}
       </div>
-      {facts.length > 0 ? (
-        <dl
-          aria-label={t("course.atAGlance")}
-          className="flex flex-wrap gap-x-10 gap-y-3 border-t border-border bg-surface-sunken/60 px-6 py-4 sm:px-8"
-        >
-          {facts.map((fact) => (
-            <div key={fact.label} className="min-w-0">
-              <dt className={groupLabelClass()}>{fact.label}</dt>
-              <dd className="mt-0.5 text-sm font-medium">{fact.value}</dd>
+      {admission || nextDate ? (
+        <div className="px-6 pb-6 sm:px-8 sm:pb-8">
+          {admission}
+          {nextDate ? (
+            <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3">
+              <div>
+                <p className={groupLabelClass()}>{nextDate.label}</p>
+                <p className="mt-1 font-medium">{nextDate.dates}</p>
+              </div>
+              <Link
+                href={nextDate.href}
+                className={buttonClass({ variant: nextDate.full ? "secondary" : "primary" })}
+              >
+                {nextDate.action}
+              </Link>
             </div>
-          ))}
-        </dl>
+          ) : null}
+        </div>
       ) : null}
     </SectionCard>
   );
@@ -460,6 +476,31 @@ function sessionFacts(
   };
 }
 
+/** The same next bookable date as the dates panel, brought into the opening. */
+export function courseHeroDate(
+  sessions: readonly CourseSession[],
+  shopSlug: string,
+  timezone: string,
+  locale: string,
+  t: DiverTranslator,
+  waitlistOn = true,
+) {
+  const next = sessions.find((session) => !isFull(session)) ?? sessions[0];
+  if (!next) return null;
+  const full = isFull(next);
+  return {
+    label: next === sessions[0] ? t("course.nextDate") : t("course.nextOpenDate"),
+    dates: sessionFacts(next, timezone, locale, t).dates,
+    href: publicTripPath(shopSlug, next.id),
+    action: full
+      ? waitlistOn
+        ? t("course.joinWaitList")
+        : t("course.seeFullDate")
+      : t("course.bookThisDate"),
+    full,
+  };
+}
+
 /**
  * The booking moment — the one tinted panel on the page, so the eye lands
  * here from anywhere in the scroll. It leads with the *next* date (the answer
@@ -639,7 +680,7 @@ export function CourseFaqs({ faqs, t }: { faqs: CourseFaq[]; t: DiverTranslator 
           complete answers while the screen keeps its disclosure interaction. */}
       <div className="mt-4 hidden divide-y divide-border border-y border-border print:block">
         {faqs.map((faq) => (
-          <div key={faq.question} className="py-3" data-print-faq>
+          <div key={faq.question} className="break-inside-avoid py-3" data-print-faq>
             <h3 className="font-medium">{faq.question}</h3>
             <p className="mt-2 leading-relaxed text-muted">{faq.answer}</p>
           </div>

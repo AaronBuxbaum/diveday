@@ -289,6 +289,7 @@ for (const scheme of ["light", "dark"] as const) {
         // A successful save already returns to Promos; reuse it for the next save.
         if (new URL(page.url()).pathname !== promosPath) {
           await page.goto(`${promosPath}#dive-packages`);
+          await expect(page).toHaveURL(`${promosPath}#dive-packages`);
         }
         // Fill does not wait for an inert ancestor, so wait for the live session.
         await expect(page.locator("#main-content")).not.toHaveAttribute("inert");

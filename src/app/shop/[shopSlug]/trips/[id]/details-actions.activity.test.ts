@@ -1,8 +1,8 @@
-import { and, eq, gt, isNull, notExists } from "drizzle-orm";
+import { and, eq, gt, isNotNull, isNull, notExists } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { createBoat } from "@/db/boats";
 import type { AppDb } from "@/db/client";
-import { activityEvents, boats, bookings, trips } from "@/db/schema";
+import { activityEvents, boats, bookings, diveSites, tripDives, trips } from "@/db/schema";
 import { nowDate } from "@/lib/clock";
 import { utcToWallTime } from "@/lib/zoned";
 import { fileScopedShopContext } from "@/test/db";
@@ -37,7 +37,7 @@ vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
 const { requireShopSurface } = await import("@/lib/session");
-const { cancelTripAction, saveDetails } = await import("./details-actions");
+const { cancelTripAction, saveDetails, saveDetailsSection } = await import("./details-actions");
 
 const pad = (value: number) => String(value).padStart(2, "0");
 
@@ -133,6 +133,52 @@ describe("the details form in the activity log", () => {
       .from(trips)
       .where(eq(trips.id, trip.id));
     expect(unchanged?.plannedDives).toBe(trip.plannedDives);
+  });
+
+  it("also refuses five dives from an ordinary departure's Plan editor", async () => {
+    const { db, shop, trip } = await context();
+    const form = new FormData();
+    form.set("plannedDives", "5");
+    form.set("dive-5-title", "Not a course dive");
+    expect(
+      await redirectedTo(() => saveDetailsSection(shop.slug, trip.id, "plan", form)),
+    ).toContain("notice=invalid");
+    const [unchanged] = await db
+      .select({ plannedDives: trips.plannedDives })
+      .from(trips)
+      .where(eq(trips.id, trip.id));
+    expect(unchanged?.plannedDives).toBe(trip.plannedDives);
+  });
+
+  it("saves all fifth-dive fields from a course's Plan editor", async () => {
+    const { db, shop } = await context();
+    const [courseTrip] = await db
+      .select()
+      .from(trips)
+      .where(and(eq(trips.shopId, shop.id), isNotNull(trips.courseId), isNull(trips.deletedAt)))
+      .limit(1);
+    const [site] = await db.select().from(diveSites).where(eq(diveSites.shopId, shop.id)).limit(1);
+    if (!courseTrip || !site) throw new Error("seeded course trip and dive site are required");
+
+    const form = new FormData();
+    form.set("plannedDives", "5");
+    form.set("dive-5-title", "Deep training");
+    form.set("dive-5-siteId", site.id);
+    form.set("dive-5-travelMinutes", "12");
+    form.set("dive-5-description", "Practice the planned skills");
+    expect(
+      await redirectedTo(() => saveDetailsSection(shop.slug, courseTrip.id, "plan", form)),
+    ).toContain("notice=saved");
+    const [fifth] = await db
+      .select()
+      .from(tripDives)
+      .where(and(eq(tripDives.tripId, courseTrip.id), eq(tripDives.diveNumber, 5)));
+    expect(fifth).toMatchObject({
+      title: "Deep training",
+      diveSiteId: site.id,
+      travelMinutes: 12,
+      description: "Practice the planned skills",
+    });
   });
 
   it("names the staffer who changed the departure time", async () => {
@@ -298,4 +344,84 @@ describe("Cancel trip on a boat that may be on the water", () => {
       .where(eq(trips.id, trip.id));
     expect(row?.status).toBe("cancelled");
   });
+});
+
+describe("scoped departure saves (issue 3141)", () => {
+  it("changes the meeting point without rewriting the plan, money or schedule", async () => {
+    const { db, shop, trip } = await context();
+    const form = new FormData();
+    form.set("meetingPointLabel", "North jetty");
+    form.set("meetingPointAddress", "12 Dock Road");
+    form.set("title", "Forged title");
+    form.set("priceDollars", "1");
+    form.set("plannedDives", "4");
+    const location = await redirectedTo(() =>
+      saveDetailsSection(shop.slug, trip.id, "meeting", form),
+    );
+    const url = new URL(location, "https://dive.day");
+    expect(url.searchParams.get("notice")).toBe("saved");
+    expect(url.searchParams.get("form")).toBe("meeting");
+    const [after] = await db.select().from(trips).where(eq(trips.id, trip.id));
+    expect(after).toMatchObject({
+      title: trip.title,
+      description: trip.description,
+      priceCents: trip.priceCents,
+      depositCents: trip.depositCents,
+      capacity: trip.capacity,
+      plannedDives: trip.plannedDives,
+      startsAt: trip.startsAt,
+      endsAt: trip.endsAt,
+      diveSiteId: trip.diveSiteId,
+      meetingPointLabel: "North jetty",
+      meetingPointAddress: "12 Dock Road",
+    });
+    expect(await movedLines(db, trip.id)).toEqual([]);
+  });
+
+  it("retimes through Timing, retains commercial and arrival facts, and records the move", async () => {
+    const { db, shop, trip } = await context();
+    const form = detailsForm(trip, shop.timezone, 60);
+    form.set("priceDollars", "1");
+    const location = await redirectedTo(() =>
+      saveDetailsSection(shop.slug, trip.id, "timing", form),
+    );
+    expect(new URL(location, "https://dive.day").searchParams.get("form")).toBe("timing");
+    const [after] = await db.select().from(trips).where(eq(trips.id, trip.id));
+    expect(after.startsAt.getTime()).toBe(trip.startsAt.getTime() + 60 * 60_000);
+    expect(after).toMatchObject({
+      title: trip.title,
+      priceCents: trip.priceCents,
+      depositCents: trip.depositCents,
+      meetingPointLabel: trip.meetingPointLabel,
+      meetingPointAddress: trip.meetingPointAddress,
+      plannedDives: trip.plannedDives,
+    });
+    expect(await movedLines(db, trip.id)).toHaveLength(1);
+  });
+
+  it("keeps a Timing refusal beside Timing and writes nothing", async () => {
+    const { db, shop, trip } = await context();
+    const form = detailsForm(trip, shop.timezone, 0);
+    form.set("endTime", form.get("startTime") ?? "");
+    const location = await redirectedTo(() =>
+      saveDetailsSection(shop.slug, trip.id, "timing", form),
+    );
+    const url = new URL(location, "https://dive.day");
+    expect(url.searchParams.get("notice")).toBe("end-before-start");
+    expect(url.searchParams.get("form")).toBe("timing");
+    const [after] = await db.select().from(trips).where(eq(trips.id, trip.id));
+    expect(after).toEqual(trip);
+  });
+});
+
+it("an authenticated forged section name cannot write departure facts", async () => {
+  const { db, shop, trip } = await context();
+  const form = detailsForm(trip, shop.timezone, 60);
+  form.set("title", "Forged replacement");
+  const location = await redirectedTo(() =>
+    saveDetailsSection(shop.slug, trip.id, "__proto__" as never, form),
+  );
+  expect(new URL(location, "https://dive.day").searchParams.get("notice")).toBe("invalid");
+  const [after] = await db.select().from(trips).where(eq(trips.id, trip.id));
+  expect(after).toEqual(trip);
 });

@@ -95,13 +95,28 @@ test.describe("as owner", () => {
   test("the phone opens the same rail and returns to its selected setting", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(`/shop/${SHOP}/settings`);
+    const heading = page.getByRole("heading", { level: 1, name: "Settings", exact: true });
+    await expect(heading).toBeVisible();
+    const headingTop = (await heading.boundingBox())?.y;
     const rail = await openSettingsRail(page);
     const toggle = rail.getByRole("button", { name: "Settings sections" });
     await expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect((await heading.boundingBox())?.y).toBe(headingTop);
+    await page.keyboard.press("Escape");
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await expect(toggle).toBeFocused();
+    await openSettingsRail(page);
     await rail.getByRole("link", { name: "Units", exact: true }).click();
     await expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await expect(toggle).toHaveText("Units");
     await expect(page.getByLabel("Show depths in", { exact: true })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Timezone", exact: true })).toHaveCount(0);
+    await openSettingsRail(page);
+    await rail.getByRole("link", { name: "Team", exact: true }).click();
+    await expect(page).toHaveURL(`/shop/${SHOP}/settings/team`);
+    await expect(page.getByRole("heading", { level: 1, name: "Team", exact: true })).toBeVisible();
+    await expect(toggle).toHaveText("Team");
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
   });
 
   test("back and forward restore the selected setting", async ({ page }) => {

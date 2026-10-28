@@ -2,11 +2,6 @@
 export function focusAfterStaffCheck(element: HTMLElement | null): () => void {
   if (!element) return () => {};
   const sessionCheckPending = document.querySelector('[data-staff-session-check="pending"]');
-  if (!element.closest("[inert]") && !sessionCheckPending) {
-    element.focus({ preventScroll: true });
-    return () => {};
-  }
-
   let frame: number | undefined;
   const unlocked = () => {
     frame = requestAnimationFrame(() => {
@@ -20,6 +15,7 @@ export function focusAfterStaffCheck(element: HTMLElement | null): () => void {
     });
   };
   document.addEventListener("staff-session-unlocked", unlocked, { once: true });
+  if (!element.closest("[inert]") && !sessionCheckPending) element.focus({ preventScroll: true });
   return () => {
     document.removeEventListener("staff-session-unlocked", unlocked);
     if (frame !== undefined) cancelAnimationFrame(frame);

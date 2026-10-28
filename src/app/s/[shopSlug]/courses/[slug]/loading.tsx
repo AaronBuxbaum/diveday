@@ -4,30 +4,38 @@ import { sectionCardClass } from "@/components/ui/card";
 
 /**
  * Body-shaped skeleton for a public course page (design principle 1): the
- * hero card with its photo, title block, and fact strip; the eligibility
- * line; the anchor row; and the first prose bars of the overview.
+ * hero with title and facts beside a retained supporting photo, then admission;
+ * the anchor row; and the first prose bars of the overview.
  */
 export default function CoursePageLoading() {
   return (
     <main className={SHOP_MAIN_CLASS}>
       <div className="animate-pulse">
         {/* The hero's own shell, from the same place `CourseHero` takes it. */}
-        <div className={sectionCardClass({ padding: "none", className: "overflow-hidden" })}>
-          <div className="h-56 w-full bg-surface-sunken sm:h-80" />
-          <div className="p-6 sm:p-8">
-            <ShopPageHeaderSkeleton
-              titleWidth="w-80 max-w-full"
-              description
-              descriptionWidth="w-64 max-w-full"
-            />
-            <div className="h-8 w-44 max-w-full rounded bg-surface-sunken" />
+        <div
+          className={sectionCardClass({
+            padding: "none",
+            className: "overflow-hidden",
+          })}
+        >
+          <div className="md:grid md:grid-cols-2 md:items-start">
+            <div className="p-6 sm:p-8">
+              <ShopPageHeaderSkeleton
+                titleWidth="w-80 max-w-full"
+                description
+                descriptionWidth="w-64 max-w-full"
+              />
+              <div className="h-8 w-44 max-w-full rounded bg-surface-sunken" />
+              <div className="mt-5 h-9 w-32 rounded bg-surface-sunken" />
+            </div>
+            <div className="h-44 w-full bg-surface-sunken sm:h-56 md:h-80" />
           </div>
-          <div className="border-t border-border px-6 py-4 sm:px-8">
-            <div className="h-9 w-72 max-w-full rounded bg-surface-sunken" />
+          <div className="px-6 pb-6 sm:px-8 sm:pb-8">
+            <div className="mt-8 h-3 w-28 rounded bg-surface-sunken" />
+            <div className="mt-2 h-6 w-64 max-w-full rounded bg-surface-sunken" />
+            <div className="mt-6 h-11 w-36 rounded bg-surface-sunken" />
           </div>
         </div>
-        <div className="mt-8 h-3 w-28 rounded bg-surface-sunken" />
-        <div className="mt-2 h-6 w-64 max-w-full rounded bg-surface-sunken" />
         <div className="mt-10 border-b border-border pb-4">
           <div className="h-5 w-80 max-w-full rounded bg-surface-sunken" />
         </div>

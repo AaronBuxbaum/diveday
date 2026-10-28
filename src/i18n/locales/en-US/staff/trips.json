@@ -45,7 +45,10 @@
     "perDiver": "per diver",
     "cancel": "Cancel this departure",
     "more": "More for this departure",
-    "meetingDaysSummary": "{count, plural, other {# days}} · {first} – {last}"
+    "meetingDaysSummary": "{count, plural, other {# days}} · {first} – {last}",
+    "timing": "Timing",
+    "bookingAndPayment": "Booking and payment",
+    "departureDetails": "Departure details"
   },
   "openSeats": {
     "label": "Unsold seats",
@@ -310,7 +313,9 @@
     "diversSuffix": "divers",
     "hoursBeforeSuffix": "hours before",
     "coursePrice": "{amount} per diver, the course’s price",
-    "coursePriceHint": "Set on the course, with its eLearning fee"
+    "coursePriceHint": "Set on the course, with its eLearning fee",
+    "diveDetails": "Name, ride and details",
+    "editBoat": "Edit boat"
   },
   "conditions": {
     "description": "Replaces the automated marine outlook for divers.",

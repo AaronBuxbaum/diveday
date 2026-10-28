@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import {
   backupRunDate,
+  claimPlatformBackupShop,
+  finishPlatformBackupShop,
   listShopsForPlatformBackup,
   platformBackupConfigFromEnvironment,
   runPlatformBackup,
@@ -29,11 +31,8 @@ export const maxDuration = 300;
  * good one -- so the margin has to cover one whole shop's build and upload, not
  * just the request teardown. 240s of a 300s ceiling leaves that minute.
  *
- * A pass that stops early is not a failure and does not alarm: the shops it
- * reached have this week's bundle, the ordering is stable so it reaches the same
- * ones next week, and the freshness watchdog in infra/ is what notices if the
- * *whole* run stops landing. What would be a failure is silence about it, which
- * is why `skipped` rides in the log line and the response.
+ * A pass that stops early reports its skips. The durable attempt order puts
+ * shops it did not reach ahead of shops it already attempted next time.
  */
 const SOFT_DEADLINE_MS = 240_000;
 
@@ -70,7 +69,8 @@ const CRON_MONITOR_CONFIG = {
  *    error is a code in the outcome list, never a throw.
  *  - **It is idempotent.** Object keys are deterministic per run date and the
  *    bucket is versioned, so a retried or double-fired pass overwrites its own
- *    objects additively.
+ *    objects additively. Every invocation attempts all shops it can admit; the
+ *    database checkpoint only rotates admission order.
  *  - **It never reports success it cannot see.** The uploader credential has no
  *    `ListBucket`, so this route knows only that each PUT was accepted. Whether
  *    the week's bundles are actually *there* is answered by the watchdog in
@@ -106,7 +106,7 @@ export async function GET(request: Request) {
     const db = await getDb();
     const now = nowDate();
     const runDate = backupRunDate(now);
-    const startedAt = Date.now();
+    const startedAt = performance.now();
     // Event links inside trips.ics come from server configuration, never a
     // request header (src/lib/notifications/app-url.ts).
     const origin = publicAppUrl() ?? new URL(request.url).origin;
@@ -118,22 +118,62 @@ export async function GET(request: Request) {
     let skipped = 0;
 
     for (const shop of shops) {
-      if (Date.now() - startedAt > SOFT_DEADLINE_MS) {
+      if (performance.now() - startedAt >= SOFT_DEADLINE_MS) {
         skipped += 1;
+        outcomes.push({ shop: shop.slug, status: "skipped" });
+        continue;
+      }
+      const claimToken = crypto.randomUUID();
+      const claimed = await claimPlatformBackupShop(db, {
+        shopId: shop.id,
+        token: claimToken,
+        now: nowDate(),
+      });
+      if (!claimed) {
+        skipped += 1;
+        outcomes.push({ shop: shop.slug, status: "skipped" });
+        continue;
+      }
+      if (performance.now() - startedAt >= SOFT_DEADLINE_MS) {
+        await finishPlatformBackupShop(db, {
+          shopId: shop.id,
+          token: claimToken,
+          succeeded: false,
+          now: nowDate(),
+        });
+        skipped += 1;
+        outcomes.push({ shop: shop.slug, status: "skipped" });
         continue;
       }
       const t = staffTranslator(toDiverLocale(shop.locale));
-      const result = await runPlatformBackup(db, {
+      let result: Awaited<ReturnType<typeof runPlatformBackup>>;
+      try {
+        result = await runPlatformBackup(db, {
+          shopId: shop.id,
+          config,
+          origin,
+          now,
+          icsLabels: {
+            calendarName: t("feed.shopTripsName", { shop: shop.slug }),
+            crew: t("feed.crew"),
+            course: t("feed.course"),
+            day: (dayNumber) => t("feed.day", { number: dayNumber }),
+          },
+        });
+      } catch (error) {
+        await finishPlatformBackupShop(db, {
+          shopId: shop.id,
+          token: claimToken,
+          succeeded: false,
+          now: nowDate(),
+        });
+        throw error;
+      }
+      await finishPlatformBackupShop(db, {
         shopId: shop.id,
-        config,
-        origin,
-        now,
-        icsLabels: {
-          calendarName: t("feed.shopTripsName", { shop: shop.slug }),
-          crew: t("feed.crew"),
-          course: t("feed.course"),
-          day: (dayNumber) => t("feed.day", { number: dayNumber }),
-        },
+        token: claimToken,
+        succeeded: result.status === "stored",
+        now: nowDate(),
       });
       if (result.status === "stored") stored += 1;
       if (result.status === "failed") {
@@ -149,10 +189,9 @@ export async function GET(request: Request) {
     }
 
     // The run's census, filed beside its bundles so the AWS-side watchdog can
-    // tell a complete pass from a truncated one. Until this existed, a pass that
-    // ran out of slot and backed up the oldest N shops every week looked
-    // identical from the bucket to one that backed up all of them
-    // (FU-20260812-backup-watchdog-cannot-see-a-short-run).
+    // tell a complete invocation from a truncated one. The progress checkpoint
+    // changes future admission order; it does not turn a partial invocation
+    // into a complete census or promise all shops finish within one period.
     //
     // Never allowed to fail the pass: every bundle above is already stored, and
     // reporting a good backup as broken because its receipt was refused is the
@@ -181,15 +220,16 @@ export async function GET(request: Request) {
     await sentry.captureCheckIn({
       checkInId,
       monitorSlug: CRON_MONITOR_SLUG,
-      status: failed > 0 ? "error" : "ok",
+      status: failed > 0 || skipped > 0 ? "error" : "ok",
     });
 
     // A partial pass answers 500 so the scheduler's log agrees with Sentry that
     // this run was not clean. Every arm is idempotent, so a retry is safe.
-    // A soft-deadline stop is *not* a failure and answers 200 with a count.
+    // A skipped shop leaves this invocation incomplete, even though its
+    // checkpoint ensures it gets admission priority on the next invocation.
     return NextResponse.json(
       { runDate, shops: shops.length, stored, failed, skipped, outcomes },
-      { status: failed > 0 ? 500 : 200 },
+      { status: failed > 0 || skipped > 0 ? 500 : 200 },
     );
   } catch (error) {
     // Only reachable before the loop or between shops -- `getDb()` failing, or

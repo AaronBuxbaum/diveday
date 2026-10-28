@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { RosterOrderLine, rosterHref } from "./RosterOrderLine";
@@ -26,6 +26,8 @@ describe("the roster's order line", () => {
       `${roster}?q=reyes&filter=not_back&sort=last_dived`,
     );
     expect(screen.getByText("Name")).toHaveAttribute("aria-current", "true");
+    expect(screen.queryByRole("link", { name: "Download this list (CSV)" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "More" }));
     expect(screen.getByRole("link", { name: "Download this list (CSV)" })).toHaveAttribute(
       "href",
       `${roster}/download?q=reyes&filter=not_back`,
@@ -44,6 +46,7 @@ describe("the roster's order line", () => {
       />,
     );
     expect(screen.queryByRole("link", { name: "Download this list (CSV)" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "More" })).toBeNull();
   });
 
   it("pages without dropping the order", () => {

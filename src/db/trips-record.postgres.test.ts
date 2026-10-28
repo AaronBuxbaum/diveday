@@ -6,7 +6,8 @@ import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } fro
 import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { bookings, shops, trips } from "./schema";
-import { updateTrip } from "./trips-record";
+import { liveTrip } from "./trips-live";
+import { updateTrip, updateTripSection } from "./trips-record";
 
 /**
  * Staff shrinking a departure while a diver books it (A§4 item 7).
@@ -98,5 +99,27 @@ describePostgres("updateTrip against createBooking under real concurrency", () =
     else expect(shrunk).toMatchObject({ ok: false, reason: "capacity_below_booked" });
     const after = await seatsAndCapacity(pg.db, trip.id);
     expect(after.seats).toBeLessThanOrEqual(after.capacity);
+  });
+});
+
+describePostgres("independent departure section saves (#3141)", () => {
+  it("retains both subjects when two section saves wait on the same row", async () => {
+    const pg = await postgresTestDb();
+    const { shopId, trip } = await tripWithTwoOfThreeTaken(pg.db);
+    const gate = await holdRowLock(pg, tripRowLock(trip.id));
+    const rename = updateTripSection(pg.connect(), shopId, trip.id, { title: "Renamed departure" });
+    const price = updateTripSection(pg.connect(), shopId, trip.id, { priceCents: 16500 });
+    await waitForLockWaiters(pg.db, 2);
+    await gate.release();
+    expect((await Promise.all([rename, price])).every((result) => result.ok)).toBe(true);
+    const [saved] = await pg.db
+      .select({ title: trips.title, priceCents: trips.priceCents, startsAt: trips.startsAt })
+      .from(trips)
+      .where(and(eq(trips.id, trip.id), eq(trips.shopId, shopId), liveTrip()));
+    expect(saved).toEqual({
+      title: "Renamed departure",
+      priceCents: 16500,
+      startsAt: trip.startsAt,
+    });
   });
 });

@@ -704,7 +704,8 @@
   the site — and read by nothing but that one sentence.
 - **Course session** — a scheduled class (pool or open water) tied to a course, an instructor,
   and enrolled students. Instructor-to-student **ratios** are agency-mandated and vary by
-  course and environment.
+  course and environment. A course session can plan up to five dives; an ordinary departure
+  can plan up to four. The count is a plan, not a record of underwater groups or completed dives.
 - **Course catalog copy** — a shop's configurable copy of the PADI/SSI course list. The agency owns
   course identity, the prerequisite card (certification and minimum age), and the fact that every
   course session needs an instructor and a signed waiver; the shop controls its two prices, its

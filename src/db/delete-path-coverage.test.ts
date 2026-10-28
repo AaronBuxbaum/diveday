@@ -318,6 +318,7 @@ const RESET_PERSON_SCOPED: Record<string, string> = {
 const CASCADE_KEEPS: Record<string, string> = {
   certification_junior_reviews: "ON DELETE CASCADE from certifications clears it",
   staff_credential_history: "ON DELETE CASCADE from staff credentials clears it",
+  platform_backup_progress: "ON DELETE CASCADE from shops clears its scheduler checkpoint",
   booking_payment_events: "ON DELETE CASCADE from bookings clears it",
   push_subscriptions: "ON DELETE CASCADE from trips clears it",
   integration_sync_records: "ON DELETE CASCADE from shops clears it",
