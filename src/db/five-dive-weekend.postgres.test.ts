@@ -143,4 +143,54 @@ describePostgres("five-dive course constraint", () => {
       expect(applied).toEqual({ updated: 1, skipped: 0 });
     }
   });
+
+  it("takes series revision fences before sibling trip rows", async () => {
+    const pg = await postgresTestDb();
+    const shop = await raceShop(pg.db);
+    const series = await createTripSeries(pg.db, {
+      shopId: shop.id,
+      title: "Fence order series",
+      capacity: 6,
+      plannedDives: 2,
+      frequency: "weekly",
+      intervalWeeks: 1,
+      weekdays: weekdaySetFrom([1]),
+      anchorDate: "2030-10-07",
+      endsOn: "2030-10-14",
+      timeZone: "UTC",
+      template: {
+        startsAt: new Date("2030-10-07T11:00:00Z"),
+        endsAt: new Date("2030-10-07T15:00:00Z"),
+      },
+    });
+    const [source, sibling] = series?.trips ?? [];
+    if (!series || !source || !sibling) throw new Error("series missing");
+    const fenceGate = await holdRowLock(
+      pg,
+      sql`select pg_advisory_xact_lock(hashtext('trip_revision_notification'), hashtext(${`${shop.id}:${sibling.id}`}))`,
+    );
+    const edit = updateTrip(pg.connect(), shop.id, sibling.id, {
+      title: "Concurrent edit",
+      startsAt: sibling.startsAt,
+      endsAt: sibling.endsAt,
+      capacity: sibling.capacity,
+      plannedDives: sibling.plannedDives,
+    });
+    let apply: ReturnType<typeof applyDetailsToFutureSeries> | undefined;
+    try {
+      await waitForLockWaiters(pg.db, 1);
+      apply = applyDetailsToFutureSeries(
+        pg.connect(),
+        shop.id,
+        series.series.id,
+        source.id,
+        new Date("2030-10-14T10:00:00Z"),
+      );
+      await waitForLockWaiters(pg.db, 2);
+    } finally {
+      await fenceGate.release();
+    }
+    await expect(edit).resolves.toMatchObject({ ok: true });
+    await expect(apply).resolves.toMatchObject({ updated: 1, skipped: 0 });
+  });
 });

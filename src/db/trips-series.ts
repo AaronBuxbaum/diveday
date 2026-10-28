@@ -1402,16 +1402,27 @@ export async function applyDetailsToFutureSeries(
       gte(trips.startsAt, now),
       ne(trips.id, sourceTripId),
     );
-    // **Hold every sibling before counting its seats** (dive-domain review of
-    // #2322): the seat check below and the write after it must see the same
-    // bookings, so the dates are locked the way every seat writer locks a trip
-    // (`for no key update`, the #2324 order), in id order so two applies to
-    // one series cannot take them crosswise. A separate read because Postgres
-    // will not lock the rows of a grouped query.
-    await tx
+    // Take non-locking candidate ids first, then the revision fences in sorted
+    // order. The order matters: a reschedule retry takes its shared fence
+    // before the trip row, so this writer must never hold a sibling row while
+    // waiting for that fence.
+    const candidateIds = await tx
       .select({ id: trips.id })
       .from(trips)
       .where(and(liveTrip(), siblingScope))
+      .orderBy(asc(trips.id));
+    const candidateTripIds = candidateIds.map((candidate) => candidate.id);
+    await lockTripRevisionNotificationFences(tx, shopId, candidateTripIds);
+
+    // **Hold every sibling before counting its seats** (dive-domain review of
+    // #2322): the seat check below and the write after it must see the same
+    // bookings, so the dates are locked the way every seat writer locks a trip
+    // (`for no key update`, the #2324 order). This fresh predicate rechecks
+    // eligibility after any wait on a fence and row lock.
+    await tx
+      .select({ id: trips.id })
+      .from(trips)
+      .where(and(liveTrip(), siblingScope, inArray(trips.id, candidateTripIds)))
       .orderBy(asc(trips.id))
       .for("no key update");
     const siblings = await tx
@@ -1427,7 +1438,7 @@ export async function applyDetailsToFutureSeries(
       // The seats somebody is holding, as everywhere else: a no-show has
       // released theirs (`seatHeld`).
       .leftJoin(bookings, liveBookingJoin)
-      .where(and(liveTrip(), siblingScope))
+      .where(and(liveTrip(), siblingScope, inArray(trips.id, candidateTripIds)))
       .groupBy(trips.id, boats.id)
       .orderBy(asc(trips.id));
 
@@ -1435,7 +1446,6 @@ export async function applyDetailsToFutureSeries(
     // trip (CR-006) — a bulk apply must not silently orphan a sibling's
     // roll-call checkpoints either.
     const siblingIds = siblings.map((sibling) => sibling.id);
-    await lockTripRevisionNotificationFences(tx, shopId, siblingIds);
     // Divers and crew alike, as the single edit reads them (`recordedRollCallRows`).
     const siblingCheckpoints = await recordedRollCallRows(tx, shopId, siblingIds);
     const checkpointsByTrip = new Map<string, typeof siblingCheckpoints>();
