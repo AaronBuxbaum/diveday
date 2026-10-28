@@ -196,6 +196,11 @@ test("an intro team's caution informs and a recorded nonreturn outranks a carrie
       }),
     ),
   ).toBeVisible();
+  const buddyPanel = page
+    .locator("details")
+    .filter({ has: page.getByRole("heading", { name: copy("manifest.buddyHeading") }) })
+    .first();
+  await openIfClosed(buddyPanel);
   await expect(
     page.getByRole("button", { name: copy("manifest.buddyDissolve"), exact: true }),
   ).toBeEnabled();
