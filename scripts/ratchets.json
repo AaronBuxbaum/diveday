@@ -431,6 +431,13 @@
           "src/lib/staffing-week.test.ts": "979 -> 1115",
           "src/lib/waivers.test.ts": "1188 -> 1205"
         }
+      },
+      {
+        "why": "Merge CI coverage updates with the independently shortened safety test baselines",
+        "files": {
+          "src/db/erasure-coverage.test.ts": "1181 -> 1184",
+          "src/lib/manifests.test.ts": "1053 -> 1054"
+        }
       }
     ],
     "src/app/api/offline-manifests/sync/route.test.ts": 955,
@@ -461,7 +468,7 @@
     "src/db/dive-sites.test.ts": 1156,
     "src/db/diver-merge.test.ts": 1270,
     "src/db/divers.test.ts": 3056,
-    "src/db/erasure-coverage.test.ts": 1181,
+    "src/db/erasure-coverage.test.ts": 1184,
     "src/db/executed-dives.test.ts": 1085,
     "src/db/export.test.ts": 1363,
     "src/db/import.test.ts": 1074,
@@ -494,7 +501,7 @@
     "src/lib/dive-prep.test.ts": 1978,
     "src/lib/import.test.ts": 1423,
     "src/lib/incident-export.test.ts": 1067,
-    "src/lib/manifests.test.ts": 1053,
+    "src/lib/manifests.test.ts": 1054,
     "src/lib/notifications/email.test.ts": 1096,
     "src/lib/offline-manifest-store.test.ts": 1018,
     "src/lib/offline-manifests.test.ts": 2179,
