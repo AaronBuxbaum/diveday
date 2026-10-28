@@ -278,6 +278,7 @@ for (const scheme of ["light", "dark"] as const) {
       page,
       privateShop,
     }) => {
+      const promosPath = `/shop/${privateShop.slug}/promos`;
       const addPackage = async (
         name: string,
         dives: number,
@@ -285,10 +286,11 @@ for (const scheme of ["light", "dark"] as const) {
         scope: "all" | "fun_dives",
         validUntil?: string,
       ) => {
-        await page.goto(`/shop/${privateShop.slug}/promos/packages`);
-        // A visible summary can still sit inside the locked staff shell. Fill
-        // does not wait for an inert ancestor, so wait for the live session
-        // before interacting with this form (as the package-page capture does).
+        // A successful save already returns to Promos; reuse it for the next save.
+        if (new URL(page.url()).pathname !== promosPath) {
+          await page.goto(`${promosPath}#dive-packages`);
+        }
+        // Fill does not wait for an inert ancestor, so wait for the live session.
         await expect(page.locator("#main-content")).not.toHaveAttribute("inert");
         await expect(page.locator("[data-staff-session-lock]")).toHaveCount(0);
         const create = page.locator("#package-new");
