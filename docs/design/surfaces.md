@@ -337,13 +337,19 @@ the instrument line's figures roll as a check-in lands, the sinking row's neighb
 
 ### The public schedule — `/s/[shopSlug]`
 
-**Composition, 2026-10-26 (#3069).** One idea: choose a date before reading the shop’s story.
-The compact shop name, conditional next departure and schedule/date choices lead; courses remain
-available for course-only shops. The authored introduction, photograph, badges and gallery follow
-those choices. Empty and off-season states retain their own next action. Find my booking is a
-quiet shared-header utility door into the existing recovery flow. The former identity-band layout
-below is historical.
+**Composition, 2026-10-27 (#3140) — rendered review pending**
 
+- **One idea:** choose a departure before reading the shop’s story.
+- **The arriving question:** “Which departure fits my day?” is answered by the zoned times,
+  grouped month and day choices, and bookable departure rows under the Schedule heading.
+- **Controls that dissolved:** the phone’s trip tags and advanced choices share Filter trips,
+  with an active selection summarized when closed and the useful chip row retained on desktop.
+- **Remove first:** the repeated large shop-name heading and separate calendar row leave the
+  opening, while the authored identity stays below the board and Find my booking stays in chrome.
+- **Composition:** date choices lead into departures, then courses and the shop’s story, with
+  empty and off-season states retaining their own next action and courses available without boats.
+
+The identity-band compositions below are historical.
 
 **Extended 2026-10-12** (UX review 2026-10-11, items 11 and 12). The board's last month no longer reads as the shop's last month: under it, each open-ended public run says it keeps going in its own cadence words ("Saturday Two-Tank runs every Saturday. Later dates open as the season goes.") and the date request stands open there, its collapsed row under "More ways" standing down. On an empty board, the off-season card can now name a date the shop typed in Settings ("Back on the water", beside Season start); a scheduled departure always outranks it, and it says nothing once the date has passed (`src/lib/off-season.ts`).
 
@@ -380,14 +386,20 @@ routes took the display-scale h1 only.
 
 ### The public trip page — `/s/[shopSlug]/trips/[id]`
 
-**Composition, 2026-10-26 (#3069).** One idea: act on the selected departure after its essential
-facts. On a phone the single booking form or unavailable state now precedes the supporting
-briefing and alternatives; desktop keeps the form beside the facts. Requirements, prices and
-terms remain with the decision. Embedded success leads with the booked seat, trip identity and
-zoned date, then the payment/readiness door before the briefing. Full-page success still opens
-Ready. One server-authorized staff preview strip chooses Manage this trip on a trip and the board
-elsewhere. The former terminal-form source order below is historical.
+**Composition, 2026-10-27 (#3140) — rendered review pending**
 
+- **One idea:** understand the selected day and book in one place.
+- **The arriving question:** “What does this day involve, and can I join?” is answered by the
+  title, date, price, photo and compact itinerary before the phone’s booking fields.
+- **Controls that dissolved:** Book still jumps directly to the form, where published conditions,
+  generated eligibility, prices and terms stay beside the decision and all gates remain unchanged.
+- **Remove first:** optional wildlife and site prose stay after the form behind their existing
+  door, and the total draws a second divider only when itemized amounts precede it.
+- **Composition:** desktop keeps the form beside the facts, ordinary phones read the itinerary
+  first, embedded success retains its booked-seat and payment/readiness lead, and full-page success
+  opens Ready while operator-written descriptions remain separate from generated eligibility.
+
+The earlier terminal-form compositions below are historical.
 
 **Two columns from `lg`, 2026-10-03.** At 1280 the page was a 576px column and the booking form stood about 1,500px down. From `lg` the column widens to `max-w-5xl`: the reading (the day, the pitch, the conditions line, the other boats and the requirement) runs down the left, and the form with the contact line under it takes a 25rem column on the right, level with the title, so the whole form is on the first screen at 1280×900. The left column keeps the 528px it always had, so nothing in it changes width. The source order, a phone and a screen reader still meet the form last (ADR 20260827-the-divers-thread, decision 2). The cancelled landing keeps `max-w-xl`.
 
@@ -417,6 +429,21 @@ drawn in [its canvas](canvases/20260827-the-divers-thread/README.md). Conversion
 - **Composition:** sell then close — the form is the page's terminal word, so the primary is where
   a decided diver already is; the arrival card follows the hero and the change ledger follows the
   conditions reading so practical wayfinding never competes with the pitch.
+
+### The public course page — `/s/[shopSlug]/courses/[slug]`
+
+**Composition, 2026-10-27 (#3140) — rendered review pending**
+
+- **One idea:** decide whether this course and its next date fit the diver.
+- **The arriving question:** “What will I learn, who can enroll, what does it cost, and when can I
+  start?” is answered together by the title, summary, price, duration, admission and next date.
+- **Controls that dissolved:** the alternate-date enquiry is a closed Ask for another date row
+  beside Upcoming dates, with its existing fields, validation, contact links and fragment retained.
+- **Remove first:** the enlarged photograph no longer precedes every fact, but remains beside the
+  opening on desktop and as a shallow image after those facts on phones.
+- **Composition:** the opening leads into the existing course plan, inclusions, upcoming dates and
+  FAQs, choosing a genuinely bookable next date when one exists and retaining full-date and
+  wait-list-disabled outcomes without letting operator prerequisite prose replace admission facts.
 
 ### The product page — `/product`
 

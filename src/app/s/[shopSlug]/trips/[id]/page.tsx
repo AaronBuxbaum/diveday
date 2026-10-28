@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import { FlashParams } from "@/components/FlashParams";
 import { JsonLd } from "@/components/JsonLd";
 import { PhoneFootBar } from "@/components/PhoneFootBar";
-import { ShopContactLinks } from "@/components/ShopContactLinks";
 import { TripChangeLedger } from "@/components/TripChangeLedger";
 import { getDb } from "@/db/client";
 import { shopBySlugCached } from "@/db/shops-cached";
@@ -44,6 +43,7 @@ import { EmbedBookedNotice } from "./_components/EmbedBookedNotice";
 import { knownDiverPanelFor } from "./_components/known-diver-lines";
 import { fullTripAlternatives, worthALookList } from "./_components/other-boats";
 import { TripAlternatives } from "./_components/TripAlternatives";
+import { TripContactLine } from "./_components/TripContactLine";
 import { dayCoverPhoto, dayProfileFacts, TripDayPlan } from "./_components/TripDayPlan";
 import { TripBoatPhoto, TripHero } from "./_components/TripHero";
 import { pitchOpensOnDoor, TripPitch } from "./_components/TripPitch";
@@ -432,14 +432,7 @@ export default async function TripDetailPage({
                 }}
               />
             )}
-            {/* The last line on the page: how to reach a human. Renders nothing at
-                  all when the shop has published neither a phone nor an address. */}
-            {shop.contactPhone || shop.contactEmail ? (
-              <p className="flex flex-wrap items-baseline gap-x-2 text-sm text-muted">
-                {t("trip.questionsContact")}
-                <ShopContactLinks phone={shop.contactPhone} email={shop.contactEmail} />
-              </p>
-            ) : null}
+            <TripContactLine shop={shop} t={t} />
           </div>
           <div className="mt-10 space-y-10 lg:contents lg:space-y-0">
             {isEmbed ? dayPlan : null}
