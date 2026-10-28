@@ -82,7 +82,10 @@ export function useFocusTrap(active: boolean, containerRef: React.RefObject<HTML
     document.addEventListener("keydown", onKeyDown);
     return () => {
       document.removeEventListener("keydown", onKeyDown);
-      previouslyFocused?.focus();
+      const focused = document.activeElement;
+      if (focused === document.body || container.contains(focused)) {
+        previouslyFocused?.focus();
+      }
     };
   }, [active]);
 }

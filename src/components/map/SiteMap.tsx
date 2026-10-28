@@ -102,7 +102,9 @@ export default function SiteMap({
           : [center.latitude, center.longitude],
         zoom: savedView?.zoom ?? zoom,
         zoomControl: true,
-        holdsCenter: () => !showsOverview(map, lastFitRef.current),
+        holdsCenter: () =>
+          !Array.from(markersRef.current.values()).some((marker) => marker.isPopupOpen()) &&
+          !showsOverview(map, lastFitRef.current),
       });
 
       // The shop sits over the sites' pins and under every card: a site's

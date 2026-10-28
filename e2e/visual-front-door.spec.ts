@@ -849,12 +849,13 @@ for (const scheme of ["light", "dark"] as const) {
         // on the page a shop is told to paste on its own website.
         await page.getByRole("heading", { name: "Nothing on the water for a while" }).waitFor();
         // **Day zero is a shape, not a failure state** (ADR
-        // 20260827-clearwater-surface-language, decision 8). The hero is the
-        // shop's name and nothing else — no tagline it has not written, no
-        // rating nobody has left, no DiveDay sentence standing in for either —
-        // and with no boat to book, the page's one primary becomes the
-        // date-request composer's own submit.
-        await expect(page.getByRole("heading", { level: 1 })).toHaveText("Fresh Shop E2E");
+        // 20260827-clearwater-surface-language, decision 8). The
+        // schedule heading stays concise without a fabricated tagline or
+        // rating. With no boat to book, the date-request composer supplies
+        // the page's primary action.
+        await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+          diverCopy("schedule.title"),
+        );
         await expect(page.getByRole("region", { name: "Next boat with space" })).toHaveCount(0);
         await expect(page.getByRole("link", { name: "Book this boat" })).toHaveCount(0);
         await capture(page, "public-schedule-new-shop", scheme);

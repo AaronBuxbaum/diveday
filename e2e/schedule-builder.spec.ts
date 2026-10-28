@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { diverTranslator } from "../src/i18n/messages";
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 import { daysFromNow, e2eNow, openTripAbout, openTripAboutRow } from "./helpers";
 
@@ -523,9 +524,12 @@ test.describe("schedule builder", () => {
     // which this question has no answer.
     for (const [surface, url, ready, widths] of [
       ["the schedule board", BOARD, "Schedule", [390, 768, 1280]],
-      // The shopfront's h1 is the shop's own name now, not the word
-      // "Schedule" over a DiveDay-branded bar (slice 7a's hero).
-      ["the public schedule", `/s/${SHOP}`, "Blue Mantis Divers", [390, 768, 1280]],
+      [
+        "the public schedule",
+        `/s/${SHOP}`,
+        diverTranslator("en-US")("schedule.title"),
+        [390, 768, 1280],
+      ],
     ] as const) {
       await page.goto(url);
       // The destination's own h1 — what makes the measurement below wait on

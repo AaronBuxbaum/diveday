@@ -76,10 +76,11 @@ test("a departure beyond the quiet window is named as the day the shop is back",
   // The board is not hidden — that departure is still bookable, and its row is
   // still there under the schedule heading.
   await expect(page.getByRole("heading", { level: 1, name: "Schedule" })).toBeVisible();
-  await expect(
-    page.getByRole("region", { name: diverTranslator("en-US")("schedule.monthNav") }),
-  ).toBeVisible();
-  await expect(page.getByRole("link", { name: /Season Opener Two-Tank/ }).first()).toBeVisible();
+  const departures = page.getByRole("list", {
+    name: diverTranslator("en-US")("schedule.tripListLabel"),
+  });
+  await expect(departures).toBeVisible();
+  await expect(departures.getByRole("link", { name: /Season Opener Two-Tank/ })).toBeVisible();
 });
 
 test("a board with departures this week says nothing about the off-season", async ({ page }) => {
