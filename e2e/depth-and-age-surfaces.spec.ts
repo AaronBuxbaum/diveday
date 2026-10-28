@@ -1,8 +1,14 @@
 import type { Page } from "@playwright/test";
 import { DEMO_SHOP_SLUG } from "../src/db/demo-shop";
 import { staffTranslator } from "../src/i18n/staff-messages";
-import { expect, signedInAsOwner, test } from "./fixtures";
-import { openSettingsRow, openTripAbout, openTripAboutRow, tripPathByTitle } from "./helpers";
+import { expect, settleStaffHydration, signedInAsOwner, test } from "./fixtures";
+import {
+  openSettingsRow,
+  openTripAbout,
+  openTripAboutRow,
+  openTripFromBoard,
+  tripPathByTitle,
+} from "./helpers";
 
 const SHOP = DEMO_SHOP_SLUG;
 const staff = staffTranslator("en-US");
@@ -193,7 +199,10 @@ test.describe("staff", () => {
   });
 
   test("water temperature is entered and read back in the shop's own unit", async ({ page }) => {
-    const tripPath = await tripPathByTitle(page, SHOP, REEF_TRIP);
+    await page.goto(`/shop/${SHOP}/schedule/board`);
+    await openTripFromBoard(page, REEF_TRIP);
+    await settleStaffHydration(page);
+    const tripPath = new URL(page.url()).pathname;
 
     // Fahrenheit by default (a Key Largo shop), and the unit is part of the
     // field's label rather than a hint beside it — a bare "Water temp" is how
