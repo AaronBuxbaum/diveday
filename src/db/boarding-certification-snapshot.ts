@@ -10,10 +10,13 @@ import {
 } from "./schema";
 
 /**
- * A per-shop transaction lock serializes person merge/erasure with a live
- * boarding capture before any person or booking locks. Shared boardings do
- * not block one another. The namespace is distinct from other advisory locks;
- * hash collisions only serialize unrelated shops, never weaken isolation.
+ * A per-shop transaction lock serializes person merge/erasure with shared
+ * writers of name-bearing evidence, including boarding captures and retained
+ * crew notes, before their person or booking locks. Shared writers do not block
+ * one another. A note ordered after an erasure's exclusive lock may introduce
+ * a name again; the erasure sweep covers notes persisted before it completes.
+ * The namespace is distinct from other advisory locks; hash collisions only
+ * serialize unrelated shops, never weaken isolation.
  */
 export async function lockBoardingCertificationEvidence(
   tx: DbExecutor,

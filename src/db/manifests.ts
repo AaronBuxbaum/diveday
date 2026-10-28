@@ -2271,12 +2271,23 @@ export async function recordCrewRollCall(
         if (!staffId) return { ok: false, reason: "staff_not_found" };
         const captureCredentials =
           source === "live" && checkpoint === "departure" && input.status === "boarded";
-        // An accepted absence invalidates plans while holding the same shop
-        // lock as planning, before either writer takes the trip row.
-        if (checkpoint === "departure" && input.status === "not_boarded")
-          await lockBoardingCertificationEvidence(tx, input.shopId, "rewrite");
-        else if (captureCredentials)
-          await lockBoardingCertificationEvidence(tx, input.shopId, "boarding");
+        // Acquire the shop fence before trip or seat locks: a note can name a
+        // different person, and erasure takes this fence before its person and
+        // booking sweeps. Conservatively fence non-empty text even when the
+        // checkpoint rule later drops it.
+        const mayWriteNote = Boolean(input.note?.trim());
+        const evidenceLockMode =
+          checkpoint === "departure" && input.status === "not_boarded"
+            ? "rewrite"
+            : captureCredentials || mayWriteNote
+              ? "boarding"
+              : null;
+        // A departure absence invalidates plans under the exclusive shop lock;
+        // captures and non-empty notes share it. All acquire it before the trip
+        // row, preserving the erasure-before-person/booking lock order.
+        if (evidenceLockMode) {
+          await lockBoardingCertificationEvidence(tx, input.shopId, evidenceLockMode);
+        }
 
         // Idempotency first, exactly as the diver path does it: a sync the device
         // retried (the response never arrived, the tab was closed mid-flight) must
@@ -2488,6 +2499,10 @@ export async function recordCrewRollCall(
             checkpoint,
           }),
         );
+        // Any retained note already holds the shared merge/erasure fence from
+        // before trip/seat locks. Erasure either waits and sweeps this committed
+        // note, or wins first and orders this note after its point-in-time sweep.
+        // Later notes remain allowed by policy and can name the diver again.
         const captureAssignedCredentials = captureCredentials && assigned.anonymizedAt === null;
         const credentialSnapshotStartedAt = captureAssignedCredentials ? nowDate() : null;
         const [event] = await tx
