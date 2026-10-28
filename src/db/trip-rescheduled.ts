@@ -9,21 +9,22 @@ import {
   type TripRescheduledPayload,
 } from "@/lib/held-sends";
 import { meetingPointForMessage, meetingPointOfRows } from "@/lib/meeting-point";
-import { type NotificationProvider, publicAppUrl, recipientLocale } from "@/lib/notifications";
+import {
+  type NotificationProvider,
+  notificationProviderSignal,
+  publicAppUrl,
+  recipientLocale,
+} from "@/lib/notifications";
 import { type CourtesyProvider, sendCourtesyMessage } from "@/lib/notifications/courtesy";
 import {
   type SmsProvider,
   smsProviderFromEnvironment,
   smsRecipient,
 } from "@/lib/notifications/sms";
-import {
-  type IssuedCapability,
-  issueBookingCapabilities,
-  issueBookingCapability,
-  revokeIssuedCapabilities,
-} from "./booking-capabilities";
-import type { AppDb } from "./client";
+import { issueBookingCapability, revokeIssuedCapabilities } from "./booking-capabilities";
+import type { AppDb, DbExecutor } from "./client";
 import { lastDayStartsAt } from "./departure-notes";
+import { withErasureCoordinatedBookingSend } from "./erasure-coordinated-send";
 import { holdSend } from "./held-sends";
 import {
   notificationProviderForDb,
@@ -31,7 +32,7 @@ import {
   sendAndRecordNotification,
 } from "./notifications";
 import { bookings, heldSends, people, shops, trips } from "./schema";
-import { isSmsOptedOut, optedOutPhones, stopListedSmsProvider } from "./sms-opt-outs";
+import { isSmsOptedOut, stopListedSmsProvider } from "./sms-opt-outs";
 import { liveTrip, notRehearsal } from "./trips-live";
 import { whatsAppProvidersForShops } from "./whatsapp-accounts";
 
@@ -314,77 +315,36 @@ export async function sendRescheduleNotices(
     ? meetingPointForMessage(meetingPointOfRows(shop, trip))
     : undefined;
   const channels = await seatChannels(db, shop.id, options);
-  // **Every reachable seat's link in one insert, before the sends** (code
-  // review 2026-10-13b, item 36): this loop minted one per seat, three
-  // statements each, the shape `sendDepartureNote` left (item 35). The same
-  // seats as before: not a held one, not one with nowhere to send it.
-  // A phone-only seat on the STOP list, at a shop with no WhatsApp of its own,
-  // gets a refused text: no link is minted for it (#2451).
-  const stopped = await optedOutPhones(
-    db,
-    seats.flatMap(({ person }) => {
-      const phone = person.email ? null : smsRecipient(person.phone);
-      return phone ? [phone] : [];
-    }),
-  );
-  const links = channels.origin
-    ? await issueBookingCapabilities(db, {
-        shopId: shop.id,
-        bookingIds: seats
-          .filter(({ booking, person }) => {
-            if (booking.identityUnconfirmedAt) return false;
-            if (person.email) return true;
-            const phone = smsRecipient(person.phone);
-            return Boolean(phone) && !(stopped.has(phone as string) && !channels.whatsApp);
-          })
-          .map(({ booking }) => booking.id),
-        purpose: "readiness",
-        now,
-        delivered: true,
-      })
-    : new Map<string, IssuedCapability>();
-  const toldBookingIds = new Set<string>();
-  try {
-    for (const { booking, person } of seats) {
-      if (booking.identityUnconfirmedAt) {
-        outcome.identityHeld += 1;
-        // Nothing re-sends this when staff confirm who the diver is unless the
-        // skip is remembered (#2445): the earliest start the seat last knew, and
-        // whether the place moved.
-        await db
-          .update(bookings)
-          .set({
-            rescheduleMissedFrom: sql`coalesce(${bookings.rescheduleMissedFrom}, ${previousStartsAt.toISOString()}::timestamptz)`,
-            rescheduleMissedPlace: payload.meetingPointMoved
-              ? true
-              : sql`${bookings.rescheduleMissedPlace}`,
-          })
-          .where(and(eq(bookings.id, booking.id), eq(bookings.shopId, shopId)));
-        continue;
-      }
-      const told = await tellSeat(db, {
-        shop,
-        trip,
-        booking,
-        person,
-        previousStartsAt,
-        meetingPoint,
-        channels,
-        now,
-        capability: links.get(booking.id) ?? null,
-      });
-      outcome[told] += 1;
-      if (told === "told") toldBookingIds.add(booking.id);
+  // Each seat's current STOP state is re-read inside its erasure send fence.
+  for (const { booking, person } of seats) {
+    if (booking.identityUnconfirmedAt) {
+      outcome.identityHeld += 1;
+      // Nothing re-sends this when staff confirm who the diver is unless the
+      // skip is remembered (#2445): the earliest start the seat last knew, and
+      // whether the place moved.
+      await db
+        .update(bookings)
+        .set({
+          rescheduleMissedFrom: sql`coalesce(${bookings.rescheduleMissedFrom}, ${previousStartsAt.toISOString()}::timestamptz)`,
+          rescheduleMissedPlace: payload.meetingPointMoved
+            ? true
+            : sql`${bookings.rescheduleMissedPlace}`,
+        })
+        .where(and(eq(bookings.id, booking.id), eq(bookings.shopId, shopId)));
+      continue;
     }
-  } finally {
-    // A pass that throws part-way leaves no live link behind for a notice that
-    // did not go, those it never reached included (#2451).
-    const unsent = [...links]
-      .filter(([bookingId]) => !toldBookingIds.has(bookingId))
-      .map(([, link]) => link.token);
-    if (unsent.length > 0) {
-      await revokeIssuedCapabilities(db, { shopId: shop.id, tokens: unsent, now });
-    }
+    const told = await tellSeat(db, {
+      shop,
+      trip,
+      booking,
+      person,
+      previousStartsAt,
+      meetingPoint,
+      channels,
+      now,
+    });
+    if (told === "identity-held") outcome.identityHeld += 1;
+    else if (told !== "skipped") outcome[told] += 1;
   }
   // The divers have the new time now; a later move starts from this one.
   if (outcome.told > 0) await clearDiversTold(db, shop.id, trip.id);
@@ -433,7 +393,57 @@ async function tellSeat(
     channels: SeatChannels;
     now: Date;
     seatMovedAt?: Date;
-    capability?: IssuedCapability | null;
+  },
+): Promise<"told" | "failed" | "identity-held" | "skipped"> {
+  const { shop, trip, booking, person } = input;
+  const result = await withErasureCoordinatedBookingSend(
+    db,
+    {
+      shopId: shop.id,
+      bookingId: booking.id,
+      expectedPersonId: person.id,
+      expectedTripId: trip.id,
+      expectedEmail: person.email,
+      expectedPhone: person.phone,
+    },
+    async (tx) => {
+      const [current] = await tx
+        .select({ identityUnconfirmedAt: bookings.identityUnconfirmedAt, status: bookings.status })
+        .from(bookings)
+        .where(and(eq(bookings.id, booking.id), eq(bookings.shopId, shop.id)))
+        .limit(1);
+      if (!current || !TOLD_STATUSES.includes(current.status as (typeof TOLD_STATUSES)[number]))
+        return "skipped" as const;
+      if (current.identityUnconfirmedAt) {
+        await tx
+          .update(bookings)
+          .set({
+            rescheduleMissedFrom: sql`coalesce(${bookings.rescheduleMissedFrom}, ${input.previousStartsAt.toISOString()}::timestamptz)`,
+            rescheduleMissedPlace: input.meetingPoint
+              ? true
+              : sql`${bookings.rescheduleMissedPlace}`,
+          })
+          .where(and(eq(bookings.id, booking.id), eq(bookings.shopId, shop.id)));
+        return "identity-held" as const;
+      }
+      return tellSeatWithinFence(tx, input);
+    },
+  );
+  return result ?? "skipped";
+}
+
+async function tellSeatWithinFence(
+  db: DbExecutor,
+  input: {
+    shop: typeof shops.$inferSelect;
+    trip: typeof trips.$inferSelect;
+    booking: typeof bookings.$inferSelect;
+    person: typeof people.$inferSelect;
+    previousStartsAt: Date;
+    meetingPoint: ReturnType<typeof meetingPointForMessage> | undefined;
+    channels: SeatChannels;
+    now: Date;
+    seatMovedAt?: Date;
   },
 ): Promise<"told" | "failed"> {
   const {
@@ -466,17 +476,17 @@ async function tellSeat(
   const refusedText =
     !person.email && Boolean(phone) && !channels.whatsApp && (await isSmsOptedOut(db, phone ?? ""));
   const capability =
-    input.capability !== undefined
-      ? input.capability
-      : channels.origin && !refusedText
-        ? await issueBookingCapability(db, {
-            shopId: shop.id,
-            bookingId: booking.id,
-            purpose: "readiness",
-            now,
-            delivered: true,
-          })
-        : null;
+    channels.origin && !refusedText
+      ? await issueBookingCapability(db, {
+          shopId: shop.id,
+          bookingId: booking.id,
+          purpose: "readiness",
+          expectedPersonId: person.id,
+          expectedTripId: trip.id,
+          now,
+          delivered: true,
+        })
+      : null;
   // The link was minted ahead of the send; when the send did not go nobody
   // holds it, so it is taken back (#2451).
   const settle = async (told: "told" | "failed"): Promise<"told" | "failed"> => {
@@ -547,7 +557,7 @@ async function tellSeat(
         ...(meetingPoint ? { meetingPoint } : {}),
         ...(readinessUrl ? { readinessUrl } : {}),
       },
-      { provider: channels.emailProvider },
+      { provider: channels.emailProvider, signal: notificationProviderSignal() },
     );
     // The courtesy text rides a delivered email, as the reminders' does; its
     // own result is not recorded over the email's.
@@ -621,7 +631,7 @@ export async function sendSeatMoveNotice(
   const meetingPointMoved =
     JSON.stringify(meetingPoint) !==
     JSON.stringify(meetingPointForMessage(meetingPointOfRows(row.shop, from)));
-  return tellSeat(db, {
+  const result = await tellSeat(db, {
     ...row,
     previousStartsAt: from.startsAt,
     // Only when it differs: the email says "We meet somewhere new, too."
@@ -630,6 +640,7 @@ export async function sendSeatMoveNotice(
     now,
     seatMovedAt: input.movedAt,
   });
+  return result === "identity-held" ? "skipped" : result;
 }
 
 /**
@@ -709,7 +720,7 @@ export async function sendMissedRescheduleNotice(
         rescheduleMissedPlace: owed.place ? true : sql`${bookings.rescheduleMissedPlace}`,
       })
       .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)));
-  let told: "told" | "failed";
+  let told: "told" | "failed" | "identity-held" | "skipped";
   try {
     told = await tellSeat(db, {
       ...row,
@@ -724,6 +735,6 @@ export async function sendMissedRescheduleNotice(
     await putBack();
     throw error;
   }
-  if (told === "failed") await putBack();
-  return told;
+  if (told !== "told") await putBack();
+  return told === "told" ? "told" : "failed";
 }
