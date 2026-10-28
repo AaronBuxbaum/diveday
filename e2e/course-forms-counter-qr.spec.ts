@@ -36,7 +36,9 @@ test("a student scans and signs on their phone after the counter closes the code
     await phone.getByLabel("Type your full name").fill(student);
     await phone.getByRole("checkbox", { name: /I have read this form/ }).check();
     await phone.getByRole("button", { name: "Sign form" }).click();
-    await expect(phone.getByText("Course forms signed")).toBeVisible();
+    await expect(
+      phone.getByRole("heading", { level: 1, name: "Course forms signed" }),
+    ).toBeVisible();
     await page.clock.fastForward(61_000);
     await expect(row.locator("[data-course-forms-owed]")).toHaveCount(0);
     await expect(row.getByText(/waiver not signed/i)).toBeVisible();
