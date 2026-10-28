@@ -14,10 +14,9 @@ import { atShopMoneyLine, payStepLines } from "@/app/ready/[token]/_components/p
 import { resolvePaymentReceipt } from "@/app/ready/[token]/_components/payment-receipt";
 import { ReadyFitForm } from "@/app/ready/[token]/_components/ReadyFitForm";
 import { ReadyBookedPage, ReadyThreadPage } from "@/app/ready/[token]/_components/ReadyMasthead";
-import { ReadyOfflineCopy } from "@/app/ready/[token]/_components/ReadyOfflineCopy";
+import { ReadyOfflineCopyForTrip } from "@/app/ready/[token]/_components/ReadyOfflineCopyForTrip";
 import { ReadyThreadBodySkeleton } from "@/app/ready/[token]/_components/ReadyThreadBodySkeleton";
 import { READY_NOTICES } from "@/app/ready/[token]/_components/ready-notices";
-import { readyOfflineWords } from "@/app/ready/[token]/_components/ready-offline-words";
 import { SignStepActions } from "@/app/ready/[token]/_components/SignStepActions";
 import { ThreadSections } from "@/app/ready/[token]/_components/ThreadSections";
 import {
@@ -52,12 +51,10 @@ import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { checklistDetailText } from "@/i18n/readiness-summary-labels";
 import { requestLocale } from "@/i18n/request";
 import { threadNextKey } from "@/i18n/thread-labels";
-import { nowMs } from "@/lib/clock";
 import { formatMoneyCents } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { connectionForRoute } from "@/lib/observability/render-connection";
 import { seatRentalItems } from "@/lib/participant-types";
-import { readyCopyKeepUntil } from "@/lib/ready-offline";
 import { nitroxAvailableOn } from "@/lib/rentals";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import {
@@ -611,13 +608,7 @@ async function DiverReadinessPage({
       {/* Keep this page on the phone for the marina with no signal, on both
           openings (the booked card and the ordinary masthead), and date the
           copy by the live page itself (security review of layer 8, D2). */}
-      <ReadyOfflineCopy
-        copy={readyOfflineWords(t)}
-        keepUntil={readyCopyKeepUntil(detail.trip)}
-        locale={locale}
-        timeZone={detail.shop.timezone}
-        generatedAt={nowMs()}
-      />
+      <ReadyOfflineCopyForTrip detail={detail} locale={locale} t={t} />
       {/* The spine, the arrival card, the packing list and the cancel door
           read seven more things between them, and arrive behind a body-shaped
           fallback rather than holding the opening above them (UX audit #5). */}
