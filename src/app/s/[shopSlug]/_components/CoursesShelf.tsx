@@ -68,7 +68,7 @@ export function CoursesShelf({
         {/* A 44px door on the words' 20px line: the target bleeds above and
             below, and the baseline row stays the heading's height. Spelled
             as the storefront's other text doors are, so all draw one ring. */}
-        <span className={tapTargetLineClass}>
+        <span className={`${tapTargetLineClass} print:hidden`}>
           <Link
             href={allCoursesHref}
             className={buttonClass({ variant: "link", size: "sm", flush: true })}
@@ -85,7 +85,12 @@ export function CoursesShelf({
           // and paints over the link's own outline. Clipped at the card's
           // radius, the link rounds the photo exactly as the card did, and an
           // element's overflow never clips its own outline.
-          <SectionCard as="li" key={course.id} padding="none">
+          <SectionCard
+            as="li"
+            key={course.id}
+            padding="none"
+            className="print:rounded-none print:border-x-0 print:border-b-0"
+          >
             <Link
               href={course.href}
               className="group flex h-full flex-col overflow-hidden rounded-[inherit]"
@@ -94,15 +99,15 @@ export function CoursesShelf({
                 <StoredPhoto
                   src={course.heroImageUrl}
                   alt={course.heroImageAlt}
-                  className="h-32 w-full"
+                  className="h-32 w-full print:hidden"
                   sizes="(min-width: 1024px) 22rem, (min-width: 640px) 50vw, 100vw"
                 />
               ) : (
-                <div aria-hidden="true" className="h-32 w-full bg-surface-sunken" />
+                <div aria-hidden="true" className="h-32 w-full bg-surface-sunken print:hidden" />
               )}
               {/* A card's inset, `SectionCard`'s `p-4 sm:p-5`: at `p-4` alone
                   the title started 4px left of the cards beside it at 1280. */}
-              <div className="flex flex-1 flex-col gap-1 p-4 sm:p-5">
+              <div className="flex flex-1 flex-col gap-1 p-4 sm:p-5 print:px-0 print:py-2">
                 <h3 className="text-base font-semibold group-hover:text-primary">{course.title}</h3>
                 {course.summary ? (
                   <p className="line-clamp-2 text-sm text-muted">{course.summary}</p>

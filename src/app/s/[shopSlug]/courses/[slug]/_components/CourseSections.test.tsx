@@ -404,6 +404,7 @@ describe("CourseSessions featured date", () => {
     );
 
     expect(screen.getByText("Next date")).toBeInTheDocument();
+    expect(screen.getAllByText(/Starts.*EDT/)).toHaveLength(2);
     const [featured] = screen.getAllByRole("link", { name: "Book this date" });
     expect(featured).toHaveAttribute("href", "/s/blue-mantis/trips/trip-1");
   });

@@ -3,6 +3,8 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { DbExecutor } from "@/db/client";
 import type { WorkOrder } from "@/db/schema";
+import { billAndPickupFacts } from "@/db/work-order-follow-up";
+import { ORDER_STATUS_KEYS } from "@/i18n/order-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { BillAndPickupCard } from "./BillAndPickupCard";
 
@@ -46,4 +48,27 @@ describe("a concurrent pickup while the ready-message form was open", () => {
     expect(screen.queryByText(t("benchFollowUp.ready.pending"))).toBeNull();
     expect(screen.queryByRole("button", { name: t("benchFollowUp.ready.send") })).toBeNull();
   });
+});
+
+it("keeps the recorded bill status on the paper copy", async () => {
+  vi.mocked(billAndPickupFacts).mockResolvedValueOnce({
+    readyNotice: null,
+    bill: {
+      orderId: "order-1",
+      status: "paid",
+      totalCents: 5400,
+      amountPaidCents: 5400,
+      currency: "USD",
+      hostedInvoiceUrl: null,
+      collection: "cash",
+      sentAt: new Date("2026-10-27T12:00:00Z"),
+    },
+    connected: false,
+    canBill: true,
+    customerHasEmail: true,
+  });
+  const { container } = render(await BillAndPickupCard(props));
+  const paper = container.querySelector("section.hidden.print\\:block");
+  expect(paper).toHaveTextContent(t(ORDER_STATUS_KEYS.paid));
+  expect(paper).not.toHaveTextContent(t("benchFollowUp.bill.openOrder"));
 });

@@ -32,15 +32,17 @@ export function RosterGroupBand({
   id,
   label,
   children,
+  className = "",
 }: {
   /** Fragment target for the deep links that used to land on a section. */
   id?: string;
   label: ReactNode;
   /** Right-aligned quiet facts, when the group has one. */
   children?: ReactNode;
+  className?: string;
 }) {
   return (
-    <div id={id} className={`${BAND} scroll-mt-24 ${GROUP_RULE}`}>
+    <div id={id} className={`${BAND} scroll-mt-24 ${GROUP_RULE} ${className}`}>
       <GroupLabel as="h2">{label}</GroupLabel>
       {children}
     </div>

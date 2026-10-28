@@ -174,6 +174,7 @@ export function rowOutstanding(seat: RowOutstandingInput) {
               record it so the waiver gate isn't held up by a signature the
               app never sees. */}
       <PaperWaiverControl
+        className="mt-2 print:hidden"
         action={markRosterWaiverInPersonAction}
         bookingId={booking.id}
         copy={paperWaiverCopy(t, "roster")}

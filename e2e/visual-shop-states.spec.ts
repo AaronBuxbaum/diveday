@@ -334,13 +334,21 @@ for (const scheme of ["light", "dark"] as const) {
       page,
       privateShop,
     }) => {
-      await page.goto(`/shop/${privateShop.slug}/promos/packages`);
+      await page.goto(`/shop/${privateShop.slug}/promos#dive-packages`);
+      // Fill does not wait for an inert ancestor: the live session must unlock first.
+      await expect(page.locator("#main-content")).not.toHaveAttribute("inert");
+      await expect(page.locator("[data-staff-session-lock]")).toHaveCount(0);
       await page.locator("#package-new summary").click();
       await page.getByLabel("What you call it").fill("Ten-dive card");
       await page.getByLabel("Dives included").fill("10");
       await page.getByLabel("Price").fill("450");
       await page.getByRole("button", { name: "Add package" }).click();
-      await page.getByText("Package added").waitFor();
+      await expect(
+        page.getByRole("list", { name: "Dive packages", exact: true }).getByRole("button", {
+          name: "More for Ten-dive card",
+          exact: true,
+        }),
+      ).toBeVisible();
       await page.goto(`/s/${privateShop.slug}/packages`);
       await page.getByRole("heading", { level: 1, name: "Dive packages" }).waitFor();
       await page.getByRole("button", { name: "Buy for $450" }).waitFor();

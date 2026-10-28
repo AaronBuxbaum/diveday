@@ -18,11 +18,10 @@ import { baseLayerRules, readGlobalsCss, unlayeredRules } from "@/test/styleshee
  * reason. The reason is the point: an entry without one would make the list
  * the new unlayered block.
  *
- * "Element rule" means every selector in the list ends on a type selector (or
- * `*`) and names no class or id anywhere — the rules whose only intent is
- * "every element of this kind". A rule scoped by a class (`.paper-sheet`,
- * `.boat-mode`) or one whose subject is an attribute (`[data-skip-link]`) is
- * not about an element and is not this check's business.
+ * An element rule targets a type selector (or `*`) without a class, id or
+ * data-marked ancestor scoping it to a surface. A data attribute on the
+ * subject still names an element default. A mixed list remains checked when
+ * any selector is global; a surface-scoped sibling cannot exempt it.
  */
 const ALLOWED: Record<string, string> = {
   "select:not([multiple]):not([size])":
@@ -45,6 +44,8 @@ const ALLOWED: Record<string, string> = {
   "html:has([data-foot-bar])": "Scroll padding for a page with a foot bar, as above.",
   "body:has([data-foot-bar])":
     "Room under the last line for the foot bar, which nothing on <body> sets.",
+  "body:has([data-public-trip-paper])":
+    "Print: the departure's named page owns its repeated identity across the document, including public chrome outside the main content.",
   'button[type="submit"]':
     "Print: a submit button has nothing to say on paper, and the print sheet must beat any display utility on it.",
   html: "Print: the sheet's 13px root size, which every rem on the page reads; no utility sets it.",
@@ -98,9 +99,14 @@ function namesClassOrId(selector: string): boolean {
 }
 
 function isElementRule(prelude: string): boolean {
-  return selectorList(prelude).every(
-    (selector) => /^(\*|[a-z][a-z0-9-]*)/.test(subject(selector)) && !namesClassOrId(selector),
-  );
+  return selectorList(prelude).some((selector) => {
+    const target = subject(selector);
+    const ancestors = selector.slice(0, selector.length - target.length);
+    // A data-marked surface scopes its descendants just as a named class does.
+    // Attributes on the subject (including body:has(...)) remain element rules.
+    const surfaceAncestor = /\[data-[\w-]+(?:[\s=\]])/.test(ancestors);
+    return /^(\*|[a-z][a-z0-9-]*)/.test(target) && !namesClassOrId(selector) && !surfaceAncestor;
+  });
 }
 
 const CSS = readGlobalsCss();
@@ -110,13 +116,21 @@ const unlayeredElementRules = unlayeredRules(CSS)
   .filter(isElementRule);
 
 describe("unlayered element rules", () => {
-  it("recognizes an element rule and leaves a class-scoped one alone", () => {
+  it("recognizes global elements and distinguishes explicit surface ancestry", () => {
     expect(isElementRule("input, select, textarea")).toBe(true);
     expect(isElementRule("input::placeholder")).toBe(true);
     expect(isElementRule('html:has([data-foot-bar="x"])')).toBe(true);
     expect(isElementRule(".boat-mode input")).toBe(false);
     expect(isElementRule('body:has([data-x]) [data-skip-link="root"]')).toBe(false);
     expect(isElementRule("html:has(#shop-main-content > main)")).toBe(false);
+    expect(isElementRule("[data-trip-details-paper] > div")).toBe(false);
+    expect(isElementRule("[data-public-trip-layout] > * + *")).toBe(false);
+    expect(isElementRule("[data-public-trip-reading] details::details-content")).toBe(false);
+    expect(isElementRule("body:has([data-public-trip-paper])")).toBe(true);
+    expect(isElementRule("details[open]::details-content")).toBe(true);
+    expect(isElementRule("[disabled] input")).toBe(true);
+    expect(isElementRule("[aria-hidden] input")).toBe(true);
+    expect(isElementRule("[data-trip] input, textarea")).toBe(true);
   });
 
   it("stands outside a layer only from the list, and each entry says why", () => {

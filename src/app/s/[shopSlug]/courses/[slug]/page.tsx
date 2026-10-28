@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { submitInquiryAction } from "@/app/actions/inquiry";
+import { PublicDocumentMain } from "@/app/s/[shopSlug]/_components/PublicDocumentMain";
 import { SHOP_MAIN_CLASS } from "@/app/s/[shopSlug]/_components/shop-main";
 import { DateRequestForm } from "@/components/DateRequestForm";
 import { JsonLd } from "@/components/JsonLd";
@@ -199,7 +200,12 @@ export default async function CoursePage({
     : null;
 
   return (
-    <main className={SHOP_MAIN_CLASS}>
+    <PublicDocumentMain
+      kind="course"
+      shopName={shop.name}
+      title={course.title}
+      className={`${SHOP_MAIN_CLASS} print:[&_.text-primary]:text-foreground print:[&_h1]:text-foreground`}
+    >
       {structuredData ? <JsonLd data={structuredData} /> : null}
       {course.isActive ? null : (
         <p
@@ -274,7 +280,8 @@ export default async function CoursePage({
         </DiverIntlProvider>
       </div>
       <CourseFaqs faqs={course.faqs} t={t} />
+
       {footBar ? <PhoneFootBar href={footBar.href}>{footBar.label}</PhoneFootBar> : null}
-    </main>
+    </PublicDocumentMain>
   );
 }

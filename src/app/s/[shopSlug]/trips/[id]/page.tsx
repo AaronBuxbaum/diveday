@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { FlashParams } from "@/components/FlashParams";
 import { JsonLd } from "@/components/JsonLd";
@@ -15,14 +14,12 @@ import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import { checkoutSeatTerms } from "@/lib/deposits";
 import { conditionsChangedSinceBooking } from "@/lib/diver-planning";
-import { formatShortDate } from "@/lib/format";
 import { minimumSeatsState } from "@/lib/minimum-seats";
 import { toShopCurrency } from "@/lib/money";
 import { connectionForRoute } from "@/lib/observability/render-connection";
 import { parsePassThroughFee } from "@/lib/pass-through-fee";
 import { publicTripPath } from "@/lib/public-routes";
 import { unionRequirements } from "@/lib/requirement";
-import { openGraphSite, shopSearchListingRobots } from "@/lib/site-metadata";
 import { hasSailed, isFull, spotsRemaining } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
 import { BookingFinePrint } from "./_components/BookingFinePrint";
@@ -47,12 +44,13 @@ import { TripContactLine } from "./_components/TripContactLine";
 import { dayCoverPhoto, dayProfileFacts } from "./_components/TripDayPlan";
 import { TripItinerary, TripSupportingDetails } from "./_components/TripDaySections";
 import { TripBoatPhoto, TripHero } from "./_components/TripHero";
+import { TripPaperFacts, TripPaperIdentity } from "./_components/TripPaperDocument";
 import { pitchOpensOnDoor } from "./_components/TripPitch";
 import { ERROR_MESSAGE_KEYS, isErrorCode } from "./_components/types";
 import { dayBriefings } from "./_lib/day-briefings";
 import { departureJsonLd } from "./_lib/departure-json-ld";
 import { fullFootLabel } from "./_lib/foot-bar-label";
-import { bookingFormTrip, publicTripRecord, readTripPage } from "./_lib/page-reads";
+import { bookingFormTrip, readTripPage } from "./_lib/page-reads";
 import { publicForecast } from "./_lib/public-forecast";
 import { readinessDoorPath } from "./_lib/readiness-door";
 import { requirementSentenceFor } from "./_lib/requirement-sentence";
@@ -65,47 +63,7 @@ import { offerHandoff } from "./actions";
 // See ADR 20260804-instant-navigation.
 export const instant = true;
 
-/**
- * The departure's own title, description, and canonical URL. Embed mode points
- * its canonical at this standalone page (docs ADR
- * 20260729-booking-page-structured-data).
- */
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ shopSlug: string; id: string }>;
-}): Promise<Metadata> {
-  const { shopSlug, id } = await params;
-  // Metadata runs its own read, so it needs its own guard — and it must not
-  // throw either: a junk id here would 500 the page before the body's
-  // notFound() could render it.
-  if (!uuidParam(id)) return { title: "Trip — DiveDay" };
-  const shop = await shopBySlugCached(shopSlug);
-  if (!shop) return { title: "Trip — DiveDay" };
-  const trip = await publicTripRecord(shop.id, id);
-  if (!trip || trip.isRehearsal) return { title: "Trip — DiveDay" };
-  const locale = await requestLocale(shop.defaultLocale);
-  const when = formatShortDate(trip.startsAt, locale, shop.timezone);
-  const title = `${trip.title} — ${when} · ${shop.name}`;
-  const description =
-    trip.description ??
-    shop.description ??
-    shop.tagline ??
-    `Book ${trip.title} with ${shop.name} on ${when}.`;
-  const canonical = publicTripPath(shop.slug, trip.id);
-  return {
-    title,
-    description,
-    alternates: { canonical },
-    robots: shopSearchListingRobots(shop),
-    openGraph: {
-      ...openGraphSite,
-      title,
-      description,
-      url: canonical,
-    },
-  };
-}
+export { publicTripMetadata as generateMetadata } from "./_lib/page-metadata";
 
 // The booking form and its sibling notices are Client Components, so the
 // shop's locale and messages have to cross the boundary explicitly — see
@@ -329,12 +287,14 @@ export default async function TripDetailPage({
   return (
     <DiverIntlProvider locale={locale} timeZone={shop.timezone} namespaces={TRIP_PAGE_NAMESPACES}>
       <main
+        data-public-trip-paper
         className={
           isEmbed
             ? "w-full flex-1 px-3 py-4"
             : "mx-auto w-full max-w-xl flex-1 px-4 py-8 sm:px-6 sm:py-10 lg:max-w-5xl"
         }
       >
+        <TripPaperIdentity shop={shop} trip={trip} locale={locale} now={now} />
         {structuredData ? <JsonLd data={structuredData} /> : null}
         <FlashParams params={["error", "pay"]} />
         {/* **Two columns from `lg` up.** At 1280 the column was 528px wide and
@@ -347,7 +307,10 @@ export default async function TripDetailPage({
             than the reading stretches that row rather than the gaps between
             sections. A phone reads the compact itinerary before the booking fields;
             supporting wildlife and site prose stay below (public audit P2, #3140). */}
-        <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_25rem] lg:grid-rows-[auto_repeat(4,auto)_1fr] lg:gap-x-12 lg:gap-y-10">
+        <div
+          data-public-trip-layout
+          className="lg:grid lg:grid-cols-[minmax(0,1fr)_25rem] lg:grid-rows-[auto_repeat(4,auto)_1fr] lg:gap-x-12 lg:gap-y-10"
+        >
           <TripHero
             shop={shop}
             trip={trip}
@@ -364,7 +327,7 @@ export default async function TripDetailPage({
           {/* The selected departure’s next action, after the compact day plan. */}
           <div
             id={confirmed || waitlistConfirmation ? undefined : "book"}
-            className="mt-10 scroll-mt-4 space-y-10 lg:mt-0 lg:col-start-2 lg:row-span-6 lg:row-start-1"
+            className={`mt-10 scroll-mt-4 space-y-10 lg:mt-0 lg:col-start-2 lg:row-span-6 lg:row-start-1 ${confirmed || waitlistConfirmation ? "" : "print:hidden"}`}
           >
             {confirmed ? null : conditionsLine}
             {confirmed && bookingToken ? (
@@ -433,7 +396,19 @@ export default async function TripDetailPage({
             )}
             <TripContactLine shop={shop} t={t} />
           </div>
-          <div className="mt-10 space-y-10 lg:contents lg:space-y-0">
+          {!confirmed && !waitlistConfirmation ? (
+            <TripPaperFacts
+              shop={shop}
+              trip={trip}
+              locale={locale}
+              t={t}
+              inPast={inPast}
+              full={full}
+              conditionsLine={conditionsLine}
+              requirementSentence={requirementSentence}
+            />
+          ) : null}
+          <div data-public-trip-reading className="mt-10 space-y-10 lg:contents lg:space-y-0">
             {isEmbed ? dayPlan : null}
             {/* **The bound** (ADR 20260904-reef-all-the-way-down, decision 1). The
                 route, the rest of the field guide, the shop's
