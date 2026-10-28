@@ -46,7 +46,7 @@ import { tripHeaderDaySpan, tripHeaderPrice } from "./_components/trip-header-pr
 import { DETAILS_FORMS } from "./_components/trip-notice-tabs";
 import { paymentAsks, tripPageNotices } from "./_components/trip-page-asks";
 import { tripPulseFactsOf } from "./_components/trip-pulse-facts";
-import { TRIP_FLASH_PARAMS, type TripPageSearchParams } from "./_components/trip-search-params";
+import { type TripPageSearchParams, tripFlashParams } from "./_components/trip-search-params";
 import { tripTabsCopy } from "./_components/trip-tabs-copy";
 import { readStaffGates } from "./_lib/staff-gates";
 import { reinstateTripAction } from "./details-actions";
@@ -247,7 +247,7 @@ export default async function ManageTripPage({
 
   return (
     <>
-      <FlashParams params={TRIP_FLASH_PARAMS} />
+      <FlashParams params={tripFlashParams({ held, form })} />
       {/* **One gap between every section, masthead included** (K-262). Each
           block used to hang its own margin — the masthead `mb-5`, the bands
           `mt-6`, the pulse links `mt-4`, the roster `mt-5`, the packing list
@@ -372,7 +372,7 @@ export default async function ManageTripPage({
                   shopLenses,
                   automatedForecast,
                   tideLines,
-                  held,
+                  held: held ? { id: held, section: form } : undefined,
                   tell,
                   refundsHeld: !mayWriteOffPayment,
                 }),

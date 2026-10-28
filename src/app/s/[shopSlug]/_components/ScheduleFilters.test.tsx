@@ -97,3 +97,31 @@ describe("the More filters toggle", () => {
     );
   });
 });
+
+describe("the collapsed filter selection", () => {
+  it("keeps the active lens and field selections available while the controls are closed", () => {
+    render(
+      <ScheduleFilters
+        embed={false}
+        month={null}
+        lens="wrecks"
+        activeLensLabel="Wrecks"
+        tripTypeFilter="fun_dive"
+        hasSpaceFilter
+        canDiveFilter={null}
+        hideAboveFilter={false}
+        copy={copy}
+      />,
+    );
+    const toggle = screen.getByRole("button", { name: "More filters" });
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByText("Wrecks · Fun dive · Has space")).toBeInTheDocument();
+    const form = toggle.closest("form");
+    expect(form).not.toBeNull();
+    expect(new FormData(form ?? undefined).get("lens")).toBe("wrecks");
+    expect(new FormData(form ?? undefined).get("tripType")).toBe("fun_dive");
+    fireEvent.click(toggle);
+    expect(screen.getByRole("checkbox", { name: "Has space" })).toBeChecked();
+  });
+});

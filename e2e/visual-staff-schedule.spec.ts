@@ -118,7 +118,7 @@ for (const scheme of ["light", "dark"] as const) {
         test.setTimeout(FLOW_TIMEOUT_MS);
         await openReefTrip(page);
         await openTripAbout(page);
-        await openTripAboutRow(page, "The plan");
+        await openTripAboutRow(page, "Timing");
         await page.getByLabel("Departs").fill("13:45");
         await page.getByLabel("Returns").fill("17:15");
         await page.getByRole("button", { name: "Save changes" }).click();
@@ -367,6 +367,19 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: "Schedule", level: 1 }).waitFor();
         await boardListSettled(page);
         await capture(page, "schedule-builder", scheme);
+      });
+
+      test(`the multi-day course shows its first-session time (${scheme})`, async ({ page }) => {
+        const week = weekStartOf(daysFromNow(9));
+        await page.goto(`/shop/blue-mantis/schedule/board?week=${week}`);
+        await boardListSettled(page);
+        const course = page
+          .locator("[data-week-board]")
+          .getByRole("link", { name: "Open Water Diver — three-day course", exact: true })
+          .locator("..");
+        await expect(course.getByText("8:00 AM", { exact: true })).toBeVisible();
+        await expect(course.getByText("3 days", { exact: true })).toBeVisible();
+        await capture(page, "schedule-multi-day-course-time", scheme);
       });
 
       /**

@@ -1,9 +1,11 @@
 import { eq } from "drizzle-orm";
 import { unzipSync } from "fflate";
 import { describe, expect, it, vi } from "vitest";
-import { shops } from "@/db/schema";
+import { platformBackupProgress, shops } from "@/db/schema";
 import { fileScopedShopContext } from "@/test/db";
 import {
+  claimPlatformBackupShop,
+  finishPlatformBackupShop,
   listShopsForPlatformBackup,
   platformBackupConfigFromEnvironment,
   runPlatformBackup,
@@ -173,6 +175,173 @@ describe("listShopsForPlatformBackup", () => {
       expect(entry.locale).toBeTruthy();
       expect(entry.id).toBeTruthy();
     }
+  });
+
+  it("rotates a failed early shop behind untouched shops across later weekly invocations", async () => {
+    const { db, shop } = ctx;
+    const suffix = crypto.randomUUID().slice(0, 8);
+    const [later, latest] = await db
+      .insert(shops)
+      .values([
+        {
+          name: "Fairness later",
+          slug: `fairness-later-${suffix}`,
+          timezone: "UTC",
+          isDemo: false,
+          createdAt: new Date("2027-01-02T00:00:00Z"),
+        },
+        {
+          name: "Fairness latest",
+          slug: `fairness-latest-${suffix}`,
+          timezone: "UTC",
+          isDemo: false,
+          createdAt: new Date("2028-01-03T00:00:00Z"),
+        },
+      ])
+      .returning();
+    if (!later || !latest) throw new Error("fairness shops were not created");
+    await db
+      .update(shops)
+      .set({ isDemo: false, createdAt: new Date("2026-01-01T00:00:00Z") })
+      .where(eq(shops.id, shop.id));
+
+    const testShopIds = new Set([shop.id, later.id, latest.id]);
+    const initialOrder = (await listShopsForPlatformBackup(db))
+      .map(({ id }) => id)
+      .filter((id) => testShopIds.has(id));
+    const [firstShopId, secondShopId, thirdShopId] = initialOrder;
+    if (!firstShopId || !secondShopId || !thirdShopId) {
+      throw new Error("fairness shops did not appear in the backup list");
+    }
+
+    const firstWeek = new Date("2026-10-05T05:00:00Z");
+    const failedToken = crypto.randomUUID();
+    expect(
+      await claimPlatformBackupShop(db, {
+        shopId: firstShopId,
+        token: failedToken,
+        now: firstWeek,
+      }),
+    ).toBe(true);
+    await finishPlatformBackupShop(db, {
+      shopId: firstShopId,
+      token: failedToken,
+      succeeded: false,
+      now: new Date(firstWeek.getTime() + 1_000),
+    });
+
+    // On a later weekly invocation, never-attempted shops go first. A failed
+    // attempt remains retryable and is not marked as a successful backup.
+    expect(
+      (await listShopsForPlatformBackup(db))
+        .map(({ id }) => id)
+        .filter((id) => testShopIds.has(id)),
+    ).toEqual([secondShopId, thirdShopId, firstShopId]);
+    const secondWeek = new Date("2026-10-12T05:00:00Z");
+    const successfulToken = crypto.randomUUID();
+    expect(
+      await claimPlatformBackupShop(db, {
+        shopId: secondShopId,
+        token: successfulToken,
+        now: secondWeek,
+      }),
+    ).toBe(true);
+    await finishPlatformBackupShop(db, {
+      shopId: secondShopId,
+      token: successfulToken,
+      succeeded: true,
+      now: new Date(secondWeek.getTime() + 1_000),
+    });
+
+    expect(
+      (await listShopsForPlatformBackup(db))
+        .map(({ id }) => id)
+        .filter((id) => testShopIds.has(id)),
+    ).toEqual([thirdShopId, firstShopId, secondShopId]);
+
+    // A long successful bundle still advances progress at admission time. By
+    // the third forced-deadline week, the final untouched shop is admitted.
+    const thirdWeek = new Date("2026-10-19T05:00:00Z");
+    const thirdToken = crypto.randomUUID();
+    expect(
+      await claimPlatformBackupShop(db, {
+        shopId: thirdShopId,
+        token: thirdToken,
+        now: thirdWeek,
+      }),
+    ).toBe(true);
+    await finishPlatformBackupShop(db, {
+      shopId: thirdShopId,
+      token: thirdToken,
+      succeeded: true,
+      now: new Date(thirdWeek.getTime() + 5 * 60_000),
+    });
+
+    const [failedProgress] = await db
+      .select()
+      .from(platformBackupProgress)
+      .where(eq(platformBackupProgress.shopId, firstShopId));
+    expect(failedProgress?.lastSuccessAt).toBeNull();
+    const [slowSuccessProgress] = await db
+      .select()
+      .from(platformBackupProgress)
+      .where(eq(platformBackupProgress.shopId, thirdShopId));
+    expect(slowSuccessProgress?.lastSuccessAt).toEqual(new Date(thirdWeek.getTime() + 5 * 60_000));
+  });
+
+  it("reclaims an expired lease and fences off the old checkpoint writer", async () => {
+    const { db, shop } = ctx;
+    const firstClaim = new Date("2026-10-05T05:00:00Z");
+    const firstToken = crypto.randomUUID();
+    const overlappingToken = crypto.randomUUID();
+    const reclaimedToken = crypto.randomUUID();
+    expect(
+      await claimPlatformBackupShop(db, {
+        shopId: shop.id,
+        token: firstToken,
+        now: firstClaim,
+      }),
+    ).toBe(true);
+    expect(
+      await claimPlatformBackupShop(db, {
+        shopId: shop.id,
+        token: overlappingToken,
+        now: new Date(firstClaim.getTime() + 1_000),
+      }),
+    ).toBe(false);
+
+    const reclaimedAt = new Date(firstClaim.getTime() + 11 * 60_000);
+    expect(
+      await claimPlatformBackupShop(db, {
+        shopId: shop.id,
+        token: reclaimedToken,
+        now: reclaimedAt,
+      }),
+    ).toBe(true);
+    expect(
+      await finishPlatformBackupShop(db, {
+        shopId: shop.id,
+        token: firstToken,
+        succeeded: true,
+        now: reclaimedAt,
+      }),
+    ).toBe(false);
+    expect(
+      await finishPlatformBackupShop(db, {
+        shopId: shop.id,
+        token: reclaimedToken,
+        succeeded: true,
+        now: new Date(reclaimedAt.getTime() + 1_000),
+      }),
+    ).toBe(true);
+
+    const [progress] = await db
+      .select()
+      .from(platformBackupProgress)
+      .where(eq(platformBackupProgress.shopId, shop.id));
+    expect(progress?.lastSuccessAt).toEqual(new Date(reclaimedAt.getTime() + 1_000));
+    expect(progress?.leaseToken).toBeNull();
+    expect(progress?.leaseUntil).toBeNull();
   });
 });
 

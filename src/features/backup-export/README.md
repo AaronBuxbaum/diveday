@@ -72,15 +72,22 @@ Never `@/app/**`.
   code before a row is ever written.
 - **Idempotent per shop per ISO week.** A re-invoked cron skips shops with a succeeded scheduled
   delivery for the period; the object key is deterministic for the period, so a retry overwrites
-  its own bundle rather than accumulating copies. The platform runner has no ledger to skip
-  against — it cannot read its own bucket — so it relies on the deterministic key alone: a re-run
-  redoes the work and overwrites, which on a versioned bucket is additive, not destructive.
+  its own bundle rather than accumulating copies. The platform runner cannot read its bucket and
+  always attempts a fresh bundle, relying on the deterministic date key to overwrite additively.
 - **The platform uploader is write-only, and nothing here pretends otherwise.** No function in
   this module lists, reads, or deletes from `DatabaseBackupBucket`. Whether a bundle actually
   landed is answered by a different principal entirely (the watchdog in `infra/`), which is what
   keeps a leaked uploader key from being able to read a shop's exported waivers back out.
-- **Failures are rows, not retries.** A failed delivery records its code and waits for the next
-  weekly tick (or a manual run); nothing loops against a misconfigured bucket.
+- **The platform scheduler keeps one progress checkpoint per shop.** Attempt time advances before
+  upload, successful-upload time only after S3 accepts the PUT, and a lease prevents concurrent
+  invocations from starting the same shop. Expired leases can be reclaimed after a crashed run.
+  Least-recently-attempted shops go first so a deadline or repeated shop failure does not keep later
+  shops behind it. This is scheduling fairness, not a promise every shop finishes in one period;
+  each cron response and census still reports only that invocation's outcomes. The lease fences the
+  database checkpoint only; deterministic S3 keys keep a late upload additive and recoverable.
+- **Shop-owned failures are rows, not retries.** A failed delivery records its code and waits for
+  the next weekly tick (or a manual run); nothing loops against a misconfigured bucket. A platform
+  failure releases its scheduler lease so the next scheduled invocation can try again.
 - **One shop's failure never blocks another's backup** — the cron isolates per-shop errors.
 - **No divers in `trips.ics`** — it is `calendar-sync`'s shop-trips document, which never touches
   bookings; that module's own test asserts it.

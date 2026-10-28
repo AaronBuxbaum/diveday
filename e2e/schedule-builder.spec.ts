@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { diverTranslator } from "../src/i18n/messages";
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 import { daysFromNow, e2eNow, openTripAbout, openTripAboutRow } from "./helpers";
 
@@ -338,7 +339,7 @@ test.describe("schedule builder", () => {
     await row.getByRole("link", { name: title }).click();
     await expect(page.getByText("$129 per diver")).toBeVisible();
     await openTripAbout(page);
-    await openTripAboutRow(page, "The plan");
+    await openTripAboutRow(page, "Booking and payment");
     await expect(page.getByLabel(/Price per diver/)).toHaveValue("129");
   });
 
@@ -523,9 +524,12 @@ test.describe("schedule builder", () => {
     // which this question has no answer.
     for (const [surface, url, ready, widths] of [
       ["the schedule board", BOARD, "Schedule", [390, 768, 1280]],
-      // The shopfront's h1 is the shop's own name now, not the word
-      // "Schedule" over a DiveDay-branded bar (slice 7a's hero).
-      ["the public schedule", `/s/${SHOP}`, "Blue Mantis Divers", [390, 768, 1280]],
+      [
+        "the public schedule",
+        `/s/${SHOP}`,
+        diverTranslator("en-US")("schedule.title"),
+        [390, 768, 1280],
+      ],
     ] as const) {
       await page.goto(url);
       // The destination's own h1 — what makes the measurement below wait on
@@ -616,7 +620,7 @@ test.describe("schedule builder", () => {
     // does not — that is what `truncate` is for, and a shop can always pick a
     // longer name than any width can hold.
     await page.goto(`/s/${SHOP}`);
-    await expect(page.getByRole("heading", { name: "Blue Mantis Divers", level: 1 })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Schedule", level: 1 })).toBeVisible();
 
     for (const width of [390, 430]) {
       await page.setViewportSize({ width, height: 800 });
@@ -702,7 +706,7 @@ test.describe("schedule builder", () => {
     await week.getByRole("link", { name: new RegExp(`^Set a price for ${title},`) }).click();
     await expect(page).toHaveURL(/\/trips\/[0-9a-f-]+\?view=details#details$/);
     await openTripAbout(page);
-    await openTripAboutRow(page, "The plan");
+    await openTripAboutRow(page, "Booking and payment");
     await page.getByLabel(/Price per diver/).fill("110");
     await page.getByRole("button", { name: "Save changes" }).click();
     // The save redirects through `noticeUrl`, so its own notice is the signal

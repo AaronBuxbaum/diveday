@@ -126,7 +126,15 @@ describe.each(["en-US", "es-ES"] as const)("public course requests in %s", (loca
       }),
     );
 
-    const inquiry = within(screen.getByRole("region", { name: t("inquiry.askAboutCourse") }));
+    const inquiryElement = container.querySelector<HTMLDetailsElement>("#get-in-touch");
+    expect(inquiryElement?.tagName).toBe("DETAILS");
+    expect(inquiryElement).not.toHaveAttribute("open");
+    expect(inquiryElement?.querySelector("summary")).toHaveTextContent(t("course.askAnotherDate"));
+    if (!inquiryElement) throw new Error("Missing alternate-date disclosure");
+    const summary = inquiryElement.querySelector("summary");
+    if (!summary) throw new Error("Missing alternate-date summary");
+    fireEvent.click(summary);
+    const inquiry = within(inquiryElement);
     const jump = within(screen.getByRole("navigation", { name: t("course.onThisPage") }));
     expect(jump.getByRole("link", { name: t("course.jumpContact") })).toHaveAttribute(
       "href",
@@ -137,10 +145,9 @@ describe.each(["en-US", "es-ES"] as const)("public course requests in %s", (loca
       hasSession ? "#dates" : "#get-in-touch",
     );
     if (hasSession) {
-      expect(screen.getByRole("link", { name: t("course.bookThisDate") })).toHaveAttribute(
-        "href",
-        "/s/blue-mantis/trips/trip-1",
-      );
+      for (const book of screen.getAllByRole("link", { name: t("course.bookThisDate") })) {
+        expect(book).toHaveAttribute("href", "/s/blue-mantis/trips/trip-1");
+      }
     } else {
       expect(screen.getByRole("link", { name: t("course.orAskUs") })).toHaveAttribute(
         "href",
@@ -161,7 +168,7 @@ describe.each(["en-US", "es-ES"] as const)("public course requests in %s", (loca
       "blue-mantis",
       "open-water-diver",
     ]);
-    await waitFor(() => expect(inquiry.getByText(t("inquiry.sentHeading"))).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(t("inquiry.sentHeading"))).toBeInTheDocument());
   });
 
   it("keeps hidden courses unavailable to a signed-out diver", async () => {

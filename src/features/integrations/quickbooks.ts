@@ -11,6 +11,12 @@ import type { IntegrationCredentials, IntegrationEvent, ShopIntegration } from "
 import { nowMs } from "@/lib/clock";
 import { minorToMajor } from "@/lib/money";
 import {
+  combineDeliverySignals,
+  IntegrationDeliveryDeadlineError,
+  responseJsonWithinDeadline,
+  untilAborted,
+} from "./delivery-deadline";
+import {
   refundLineDescription,
   refundReference,
   type SaleSource,
@@ -31,6 +37,8 @@ export const QUICKBOOKS_TOKEN_URL = "https://oauth.platform.intuit.com/oauth2/v1
  */
 const REQUEST_TIMEOUT_MS = 15_000;
 export const QUICKBOOKS_SCOPE = "com.intuit.quickbooks.accounting";
+
+class QuickBooksRefreshTimeoutError extends Error {}
 
 export type QuickBooksEnvironment = "sandbox" | "production";
 
@@ -202,23 +210,44 @@ async function refreshQuickBooksCredentials(
   config: QuickBooksConfig,
   credentials: QuickBooksCredentials,
   fetchImpl: typeof fetch,
+  deliverySignal?: AbortSignal,
 ): Promise<QuickBooksCredentials | null> {
   const basic = Buffer.from(`${config.clientId}:${config.clientSecret}`).toString("base64");
-  const response = await fetchImpl(QUICKBOOKS_TOKEN_URL, {
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-    method: "POST",
-    headers: {
-      authorization: `Basic ${basic}`,
-      "content-type": "application/x-www-form-urlencoded",
-      accept: "application/json",
-    },
-    body: new URLSearchParams({
-      grant_type: "refresh_token",
-      refresh_token: credentials.refreshToken,
-    }),
-  }).catch(() => null);
+  const signal = combineDeliverySignals(deliverySignal, AbortSignal.timeout(REQUEST_TIMEOUT_MS));
+  const response = await untilAborted(
+    () =>
+      fetchImpl(QUICKBOOKS_TOKEN_URL, {
+        signal,
+        method: "POST",
+        headers: {
+          authorization: `Basic ${basic}`,
+          "content-type": "application/x-www-form-urlencoded",
+          accept: "application/json",
+        },
+        body: new URLSearchParams({
+          grant_type: "refresh_token",
+          refresh_token: credentials.refreshToken,
+        }),
+      }),
+    signal,
+  ).catch((error: unknown) => {
+    if (error instanceof IntegrationDeliveryDeadlineError) {
+      if (deliverySignal?.aborted) throw error;
+      throw new QuickBooksRefreshTimeoutError();
+    }
+    return null;
+  });
   if (!response?.ok) return null;
-  const payload = (await response.json().catch(() => null)) as Record<string, unknown> | null;
+  const payload = (await responseJsonWithinDeadline<Record<string, unknown>>(
+    response,
+    signal,
+  ).catch((error: unknown) => {
+    if (error instanceof IntegrationDeliveryDeadlineError) {
+      if (deliverySignal?.aborted) throw error;
+      throw new QuickBooksRefreshTimeoutError();
+    }
+    return null;
+  })) as Record<string, unknown> | null;
   const accessToken = typeof payload?.access_token === "string" ? payload.access_token : null;
   const refreshToken =
     typeof payload?.refresh_token === "string" ? payload.refresh_token : credentials.refreshToken;
@@ -255,6 +284,7 @@ async function quickBooksRequest(
     body?: Record<string, unknown>;
   },
   fetchImpl: typeof fetch,
+  deliverySignal?: AbortSignal,
 ): Promise<
   | { status: "ok"; data: Record<string, unknown> }
   | { status: "failed"; code: string; retryable: boolean }
@@ -268,47 +298,86 @@ async function quickBooksRequest(
   if (!credentials)
     return { status: "failed", code: "quickbooks_invalid_credentials", retryable: false };
   if (credentials.expiresAt <= nowMs() + 60_000) {
-    credentials = await refreshQuickBooksCredentials(
-      db,
-      integration,
-      config,
-      credentials,
-      fetchImpl,
-    );
+    try {
+      credentials = await refreshQuickBooksCredentials(
+        db,
+        integration,
+        config,
+        credentials,
+        fetchImpl,
+        deliverySignal,
+      );
+    } catch (error) {
+      if (error instanceof QuickBooksRefreshTimeoutError) {
+        return { status: "failed", code: "quickbooks_refresh_timeout", retryable: true };
+      }
+      throw error;
+    }
     if (!credentials)
       return { status: "failed", code: "quickbooks_refresh_failed", retryable: false };
   }
 
-  const request = async (token: string) =>
-    fetchImpl(
-      `${quickBooksApiOrigin(config.environment)}/v3/company/${encodeURIComponent(integration.externalAccountId as string)}/${input.resource}?${input.query ? `${input.query}&` : ""}minorversion=75&requestid=${encodeURIComponent(input.requestId)}`,
-      {
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-        method: input.method,
-        headers: {
-          authorization: `Bearer ${token}`,
-          accept: "application/json",
-          "content-type": "application/json",
-        },
-        body: input.body ? JSON.stringify(input.body) : undefined,
-      },
-    ).catch(() => null);
+  let responseSignal: AbortSignal | undefined;
+  const request = async (token: string) => {
+    const signal = combineDeliverySignals(deliverySignal, AbortSignal.timeout(REQUEST_TIMEOUT_MS));
+    responseSignal = signal;
+    return untilAborted(
+      () =>
+        fetchImpl(
+          `${quickBooksApiOrigin(config.environment)}/v3/company/${encodeURIComponent(integration.externalAccountId as string)}/${input.resource}?${input.query ? `${input.query}&` : ""}minorversion=75&requestid=${encodeURIComponent(input.requestId)}`,
+          {
+            signal,
+            method: input.method,
+            headers: {
+              authorization: `Bearer ${token}`,
+              accept: "application/json",
+              "content-type": "application/json",
+            },
+            body: input.body ? JSON.stringify(input.body) : undefined,
+          },
+        ),
+      signal,
+    ).catch((error: unknown) => {
+      if (error instanceof IntegrationDeliveryDeadlineError && deliverySignal?.aborted) throw error;
+      return null;
+    });
+  };
 
   let response = await request(credentials.accessToken);
   if (response?.status === 401) {
-    credentials = await refreshQuickBooksCredentials(
-      db,
-      integration,
-      config,
-      credentials,
-      fetchImpl,
-    );
+    try {
+      credentials = await refreshQuickBooksCredentials(
+        db,
+        integration,
+        config,
+        credentials,
+        fetchImpl,
+        deliverySignal,
+      );
+    } catch (error) {
+      if (error instanceof QuickBooksRefreshTimeoutError) {
+        return { status: "failed", code: "quickbooks_refresh_timeout", retryable: true };
+      }
+      throw error;
+    }
     if (!credentials)
       return { status: "failed", code: "quickbooks_refresh_failed", retryable: false };
     response = await request(credentials.accessToken);
   }
   if (!response) return { status: "failed", code: "quickbooks_api_unavailable", retryable: true };
-  const data = (await response.json().catch(() => null)) as Record<string, unknown> | null;
+  let data: Record<string, unknown> | null;
+  try {
+    data = await responseJsonWithinDeadline<Record<string, unknown>>(
+      response,
+      responseSignal as AbortSignal,
+    );
+  } catch (error) {
+    if (error instanceof IntegrationDeliveryDeadlineError) {
+      if (deliverySignal?.aborted) throw error;
+      return { status: "failed", code: "quickbooks_api_unavailable", retryable: true };
+    }
+    data = null;
+  }
   if (!response.ok || !data) {
     return {
       status: "failed",
@@ -333,6 +402,7 @@ async function ensureQuickBooksCustomer(
   payload: QuickBooksOrderPayload,
   eventId: string,
   fetchImpl: typeof fetch,
+  deliverySignal?: AbortSignal,
 ): Promise<{ status: "ok"; id: string } | { status: "failed"; code: string; retryable: boolean }> {
   const existing = await getIntegrationSyncRecord(db, {
     shopId: integration.shopId,
@@ -352,6 +422,7 @@ async function ensureQuickBooksCustomer(
     config,
     { method: "POST", resource: "customer", requestId: `${eventId}-customer`, body },
     fetchImpl,
+    deliverySignal,
   );
   if (result.status !== "ok") return result;
   const id = responseId(result.data, "Customer");
@@ -374,6 +445,7 @@ async function ensureQuickBooksItem(
   incomeAccountId: string,
   eventId: string,
   fetchImpl: typeof fetch,
+  deliverySignal?: AbortSignal,
 ): Promise<{ status: "ok"; id: string } | { status: "failed"; code: string; retryable: boolean }> {
   const existing = await getIntegrationSyncRecord(db, {
     shopId: integration.shopId,
@@ -398,6 +470,7 @@ async function ensureQuickBooksItem(
       },
     },
     fetchImpl,
+    deliverySignal,
   );
   if (result.status !== "ok") return result;
   const id = responseId(result.data, "Item");
@@ -419,9 +492,10 @@ export async function deliverQuickBooksEvent(
   event: IntegrationEvent,
   config: QuickBooksConfig,
   fetchImpl: typeof fetch = fetch,
+  deliverySignal?: AbortSignal,
 ): Promise<{ status: "delivered" } | { status: "failed"; code: string; retryable: boolean }> {
   if (event.eventType === "order.voided") {
-    return voidQuickBooksSalesReceipt(db, integration, event, config, fetchImpl);
+    return voidQuickBooksSalesReceipt(db, integration, event, config, fetchImpl, deliverySignal);
   }
   if (event.eventType !== "order.paid" && event.eventType !== "order.refunded") {
     return { status: "delivered" };
@@ -448,6 +522,7 @@ export async function deliverQuickBooksEvent(
     payload,
     event.id,
     fetchImpl,
+    deliverySignal,
   );
   if (customer.status !== "ok") return customer;
   const item = await ensureQuickBooksItem(
@@ -457,6 +532,7 @@ export async function deliverQuickBooksEvent(
     incomeAccountId,
     event.id,
     fetchImpl,
+    deliverySignal,
   );
   if (item.status !== "ok") return item;
   const operation = event.eventType === "order.paid" ? "sales_receipt" : "refund_receipt";
@@ -494,6 +570,7 @@ export async function deliverQuickBooksEvent(
       body,
     },
     fetchImpl,
+    deliverySignal,
   );
   if (result.status !== "ok") return result;
   const entity = event.eventType === "order.paid" ? "SalesReceipt" : "RefundReceipt";
@@ -527,6 +604,7 @@ async function voidQuickBooksSalesReceipt(
   event: IntegrationEvent,
   config: QuickBooksConfig,
   fetchImpl: typeof fetch,
+  deliverySignal?: AbortSignal,
 ): Promise<{ status: "delivered" } | { status: "failed"; code: string; retryable: boolean }> {
   const lookup = {
     shopId: integration.shopId,
@@ -549,6 +627,7 @@ async function voidQuickBooksSalesReceipt(
       requestId: `${event.id}:read`,
     },
     fetchImpl,
+    deliverySignal,
   );
   if (read.status !== "ok") return read;
   const receipt = read.data.SalesReceipt as { SyncToken?: unknown } | undefined;
@@ -566,6 +645,7 @@ async function voidQuickBooksSalesReceipt(
       body: { Id: booked.externalId, SyncToken: receipt.SyncToken, sparse: true },
     },
     fetchImpl,
+    deliverySignal,
   );
   if (voided.status !== "ok") return voided;
   await upsertIntegrationSyncRecord(db, {

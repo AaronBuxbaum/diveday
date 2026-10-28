@@ -154,7 +154,7 @@ describe("MoneyBlock — the lines that do not render", () => {
  */
 describe("MoneyBlock — the total's rule", () => {
   it("stands 16px under the last line and 16px over the total", () => {
-    renderDiver(<MoneyBlock context={props()} />);
+    renderDiver(<MoneyBlock context={props({ partySize: 2 })} />);
     const total = screen.getByText("Due now").parentElement;
     expect(total?.parentElement).toHaveClass("gap-2");
     expect(total).toHaveClass("mt-2", "border-t", "border-border", "pt-4");

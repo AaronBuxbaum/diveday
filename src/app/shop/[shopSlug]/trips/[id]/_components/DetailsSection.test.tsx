@@ -48,26 +48,30 @@ function renderDetails(
   flySafeTold?: number,
 ) {
   return render(
-    <DetailsSection
-      context={{
-        action: () => {},
-        trip: shown,
-        diveSiteList: [],
-        tripDiveList: [],
-        startWall: wall,
-        endWall: { ...wall, hour: 12 },
-        ...days,
-        locale: "en-US",
-        currency: "USD",
-        boats: [],
-        lenses: [],
-        hasBoatDiving: true,
-        hasShoreDiving: false,
-        hasPoolDiving: false,
-        rentalItems: [],
-        ...(flySafeTold === undefined ? {} : { flySafeTold }),
-      }}
-    />,
+    (["plan", "meeting", "timing", "booking", "boat", "departure"] as const).map((section) => (
+      <DetailsSection
+        key={section}
+        section={section}
+        context={{
+          action: () => {},
+          trip: shown,
+          diveSiteList: [],
+          tripDiveList: [],
+          startWall: wall,
+          endWall: { ...wall, hour: 12 },
+          ...days,
+          locale: "en-US",
+          currency: "USD",
+          boats: [],
+          lenses: [],
+          hasBoatDiving: true,
+          hasShoreDiving: false,
+          hasPoolDiving: false,
+          rentalItems: [],
+          ...(flySafeTold === undefined ? {} : { flySafeTold }),
+        }}
+      />
+    )),
   );
 }
 
@@ -161,5 +165,29 @@ describe("DetailsSection — the decompression box and the divers told when to f
     cleanup();
     renderDetails(undefined, trip, 0);
     expect(screen.queryByText(/emailed a time they could fly/)).toBeNull();
+  });
+});
+
+describe("each departure editor saves one object", () => {
+  it("gives every section its own Save and keeps fields on that form", () => {
+    const { container } = renderDetails();
+    const formFor = (name: string) => container.querySelector(`[name="${name}"]`)?.closest("form");
+    const plan = formFor("plannedDives");
+    expect(plan).not.toBeNull();
+    expect(plan?.querySelector('[name="date"]')).toBeNull();
+    expect(formFor("date")).not.toBe(plan);
+    expect(formFor("capacity")).not.toBe(plan);
+    expect(formFor("meetingPointLabel")).not.toBe(plan);
+    expect(formFor("title")).not.toBe(plan);
+    expect(formFor("boatId")).not.toBe(plan);
+    expect(container.querySelectorAll("form")).toHaveLength(6);
+    for (const form of container.querySelectorAll("form"))
+      expect(form.querySelectorAll('button[type="submit"]')).toHaveLength(1);
+    // The selected site stays visible, while fields remain submittable in a closed disclosure.
+    const site = plan?.querySelector('[name="dive-1-siteId"]');
+    const description = plan?.querySelector('[name="dive-1-description"]');
+    expect(site?.closest("details")).toBeNull();
+    expect(description?.closest("details")).not.toHaveAttribute("open");
+    expect(description).not.toBeDisabled();
   });
 });

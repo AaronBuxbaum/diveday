@@ -123,8 +123,8 @@ const INSET_RING = "focus-visible:focus-ring-inset";
  * box and top rule, ringed inside itself as a door is.
  */
 const HORIZON_SUMMARY_CLASS = `${FILL_ROOM} flex min-h-14 cursor-pointer list-none items-center gap-3 border-t border-border py-1 transition-colors select-none [&::-webkit-details-marker]:hidden hover:bg-surface-sunken ${INSET_RING}`;
-const HORIZON_LABEL_CLASS = "min-w-0 flex-1 text-base font-semibold tracking-tight";
-const HORIZON_META_CLASS = "shrink-0 text-sm font-medium text-muted tabular-nums";
+const HORIZON_LABEL_CLASS = "min-w-min flex-1 text-base font-semibold tracking-tight";
+const HORIZON_META_CLASS = "min-w-0 text-end text-sm font-medium text-muted tabular-nums";
 
 /**
  * **The door's glyph**, at the end of a ledger row that opens and of a

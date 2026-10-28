@@ -55,3 +55,10 @@ export const TRIP_FLASH_PARAMS = [
   "confirmEmail",
   "confirmPhone",
 ] satisfies (keyof TripPageSearchParams)[];
+
+/** Keep the selected form in the URL while a timing or meeting edit is held. */
+export function tripFlashParams({ held, form }: Pick<TripPageSearchParams, "held" | "form">) {
+  return held && (form === "timing" || form === "meeting")
+    ? TRIP_FLASH_PARAMS.filter((param) => param !== "form")
+    : TRIP_FLASH_PARAMS;
+}

@@ -136,13 +136,13 @@
       "1920": 275
     }
   },
-  "src/app/s/[shopSlug]/courses/[slug]/_components/CourseSections.tsx :: (min-width: 1152px) 1104px, 100vw": {
-    "measured": "2026-10-24, /s/blue-mantis/courses/open-water-diver. The course hero, a 16:9 frame the width of the shop's one max-w-6xl column (visual review B34, B36).",
+  "src/app/s/[shopSlug]/courses/[slug]/_components/CourseSections.tsx :: (min-width: 1152px) 552px, (min-width: 768px) 48vw, 100vw": {
+    "measured": "2026-10-28, plain pnpm dev with optimizer enabled, /s/blue-mantis/courses/open-water-diver. The retained hero photo follows the course facts on phone and fills the right half of the max-w-6xl grid from md. DOM sizes and srcset present; /tmp/live-polish-course-dev-{390,768,1280,1920}.png. Heights are 176px on phone and 320px from md.",
     "rendered": {
       "390": 356,
-      "768": 718,
-      "1280": 1102,
-      "1920": 1102
+      "768": 359,
+      "1280": 551,
+      "1920": 551
     }
   },
   "src/app/s/[shopSlug]/courses/[slug]/_components/CourseSections.tsx :: (min-width: 1152px) 360px, (min-width: 640px) 31vw, 16rem": {

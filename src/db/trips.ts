@@ -139,6 +139,7 @@ export {
   type UpdateTripOutcome,
   updateTrip,
   updateTripConditions,
+  updateTripSection,
 } from "./trips-record";
 export { getTripRoster, listTripDiverContacts } from "./trips-roster";
 export {

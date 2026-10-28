@@ -152,6 +152,7 @@ export async function buildArrivalDesk({
 
   const controls = new Map<string, ReactNode>();
   const below = new Map<string, ReactNode>();
+  const details = new Map<string, ReactNode>();
   for (const row of rows) {
     const ready = row.readiness.status === "ready";
     if (row.bookingStatus === "no_show") {
@@ -272,7 +273,6 @@ export async function buildArrivalDesk({
     // The door beside the Blocked pill, its confirm at the row's foot (A08).
     const turnAway = ready ? null : turnAwayFor(row);
     placeTurnAway(turnAway, row.bookingId, { controls, below });
-    const turnAwayDoor = turnAway?.panel ?? null;
     const claim = noShowClaimFor(row);
     if (claim) {
       // **"Not here" on a blocked row too** (dive-domain review 2026-10-05):
@@ -283,31 +283,28 @@ export async function buildArrivalDesk({
       // **Two scripts, because the tap is two different claims**: while the
       // boat is still there it is about a seat; once it has gone, the same tap
       // says this person did not dive.
-      below.set(
+      details.set(
         row.bookingId,
-        <>
-          {turnAwayDoor}
-          <NoShowScript
-            key="no-show"
-            action={markNoShow}
-            bookingId={row.bookingId}
-            // One door and one confirm either side of the departure ("Not
-            // here"): "did not dive" also describes a diver who sat a dive out
-            // aboard, whom this tap refuses (dive-domain review 2026-10-06).
-            // What differs is the sentence saying what the tap records.
-            copy={{
-              door: t("checkIn.noShow.door"),
-              consequence:
-                claim === "did_not_dive"
-                  ? t("checkIn.noShow.sailedConsequence")
-                  : t("checkIn.noShow.consequence"),
-              confirm: t("checkIn.noShow.confirm"),
-              confirming: t("checkIn.noShow.confirming"),
-              confirmAriaLabel: t("checkIn.noShow.confirmAriaLabel", { name: row.personName }),
-              sendFailed: t("checkIn.sendFailedButton"),
-            }}
-          />
-        </>,
+        <NoShowScript
+          key="no-show"
+          action={markNoShow}
+          bookingId={row.bookingId}
+          // One door and one confirm either side of the departure ("Not
+          // here"): "did not dive" also describes a diver who sat a dive out
+          // aboard, whom this tap refuses (dive-domain review 2026-10-06).
+          // What differs is the sentence saying what the tap records.
+          copy={{
+            door: t("checkIn.noShow.door"),
+            consequence:
+              claim === "did_not_dive"
+                ? t("checkIn.noShow.sailedConsequence")
+                : t("checkIn.noShow.consequence"),
+            confirm: t("checkIn.noShow.confirm"),
+            confirming: t("checkIn.noShow.confirming"),
+            confirmAriaLabel: t("checkIn.noShow.confirmAriaLabel", { name: row.personName }),
+            sendFailed: t("checkIn.sendFailedButton"),
+          }}
+        />,
       );
     }
   }
@@ -473,7 +470,7 @@ export async function buildArrivalDesk({
   // is out of the counter's reach) is not offered the door.
   const walkInOpen = walkInDoorOpen(trip.startsAt, now);
 
-  return { arrival: { instrument, controls, below, boarded }, walkInOpen };
+  return { arrival: { instrument, controls, below, details, boarded }, walkInOpen };
 }
 
 /**

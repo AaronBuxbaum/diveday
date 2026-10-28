@@ -635,7 +635,8 @@
     "editSizes": "Edit",
     "neededFor": "Needed for {when}",
     "cantBoard": "Can’t board {when}.",
-    "notCertified": "Not certified for this trip."
+    "notCertified": "Not certified for this trip.",
+    "rentalNotes": "Rental notes"
   },
   "waiver": {
     "earlierRefusal": "A physician did not clear this person on {date} (earlier waiver).",
