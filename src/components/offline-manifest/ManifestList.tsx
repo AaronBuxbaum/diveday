@@ -221,6 +221,10 @@ export function OfflineManifestList({
                 timeStyle: "short",
                 timeZone: saved.snapshot.shop.timezone,
               });
+              const timeZoneName = cachedFormatter("dt-zone", Intl.DateTimeFormat, deviceLocale(), {
+                timeZone: saved.snapshot.shop.timezone,
+                timeZoneName: "short",
+              });
               // The row fills the card, whose `overflow-hidden` cut the
               // outset ring on three sides: the ring goes inside, and the
               // first and last rows take the card's corners so the clip
@@ -238,7 +242,13 @@ export function OfflineManifestList({
                       <p className={ITEM_TITLE_CLASS}>{tripManifest.trip.title}</p>
                       <p className="mt-0.5 text-sm text-muted">
                         {oneShopName ? null : `${saved.snapshot.shop.name} · `}
-                        {dateTime.format(new Date(tripManifest.trip.startsAt))} ·{" "}
+                        {dateTime.format(new Date(tripManifest.trip.startsAt))}{" "}
+                        {
+                          timeZoneName
+                            .formatToParts(new Date(tripManifest.trip.startsAt))
+                            .find((part) => part.type === "timeZoneName")?.value
+                        }{" "}
+                        ·{" "}
                         {t("shared.offlineManifest.list.diverCount", {
                           count: tripManifest.summary.totalDivers,
                         })}
