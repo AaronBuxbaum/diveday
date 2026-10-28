@@ -68,7 +68,7 @@ function discardedNoteMessage(
     ...(unverified.length
       ? [t("shared.offlineManifest.reconcile.noteUnverified"), ...unverified.map(describe)]
       : []),
-  ].join(" ");
+  ].join("\n");
 }
 
 /**

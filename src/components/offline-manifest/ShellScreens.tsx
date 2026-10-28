@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import type { OfflineManifestTranslator } from "@/i18n/offline-manifest-messages";
+import { StatusMessage } from "./StatusMessage";
 
 /**
  * The page's shape with no words in it: the eyebrow and title the view opens
@@ -48,7 +49,7 @@ export function OfflineOpeningScreen({
         title={t("shared.offlineManifest.openingHeading")}
         meta={
           <p className="text-muted" role="status" aria-live="polite">
-            {message}
+            <StatusMessage message={message} />
           </p>
         }
       />
@@ -103,11 +104,13 @@ export function OfflineNoSavedTrip({
         }
         meta={
           <p className="text-muted" role="status">
-            {removedForOtherShop === null || unreadable
-              ? message
-              : removedForOtherShop
-                ? t("shared.offlineManifest.single.removedOtherShopMessage")
-                : t("shared.offlineManifest.reconcile.noneForTrip")}
+            {removedForOtherShop === null || unreadable ? (
+              <StatusMessage message={message} />
+            ) : removedForOtherShop ? (
+              t("shared.offlineManifest.single.removedOtherShopMessage")
+            ) : (
+              t("shared.offlineManifest.reconcile.noneForTrip")
+            )}
           </p>
         }
       />

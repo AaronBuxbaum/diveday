@@ -16,6 +16,7 @@ import {
   offlineManifestFreshness,
   offlineTripHref,
 } from "@/lib/offline-manifests";
+import { StatusMessage } from "./StatusMessage";
 import { deviceLocale, relativeAge } from "./shared";
 import { useOnline } from "./use-online";
 
@@ -127,7 +128,7 @@ export function OfflineManifestList({
             </a>
             {/* The store's own word, for a reader who needs it announced. */}
             <p className="sr-only" role="status" aria-live="polite">
-              {message}
+              <StatusMessage message={message} />
             </p>
           </section>
         </div>
@@ -158,7 +159,7 @@ export function OfflineManifestList({
               </p>
             ) : null}
             <p className="text-muted" role="status" aria-live="polite">
-              {message}
+              <StatusMessage message={message} />
             </p>
             {/* Principle 2 wants a freshness state visible on a boat surface;
                 principle 9 refuses to spend a badge on the state every row is

@@ -5,6 +5,7 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import type { OfflineTripControls } from "./controls";
 import { offlineHeaderChip } from "./header-chip";
+import { StatusMessage } from "./StatusMessage";
 import type { OfflineTripView } from "./trip-view";
 import { useOnline } from "./use-online";
 
@@ -84,7 +85,7 @@ export function OfflineTripHeader({
         </div>
       ) : null}
       <p className="mt-3 text-sm font-medium" role="status" aria-live="polite">
-        {message}
+        <StatusMessage message={message} />
       </p>
       <p className="mt-1 text-sm text-muted">
         {t("shared.offlineManifest.single.pendingRejectedCounts", { pending, rejected })}

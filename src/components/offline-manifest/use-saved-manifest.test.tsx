@@ -173,6 +173,8 @@ describe("useSavedManifest on a trip", () => {
     const first = at("trip=trip-1");
     await waitFor(() => expect(first.result.current.storeRead).toBe(true));
     const firstMessage = first.result.current.message;
+    expect(firstMessage.split("\n")).toHaveLength(5);
+    expect(firstMessage.split("\n").every((line) => line.length > 0)).toBe(true);
     expect(firstMessage).toContain("ef123456");
     expect(firstMessage).toContain("afterDive");
     expect(firstMessage).toContain("ba987654");
