@@ -44,6 +44,7 @@ import {
   trips,
 } from "./schema";
 import { recordSiteRunChange, tripSiteRunSnapshot } from "./trip-change-events";
+import { lockTripRevisionNotificationFences } from "./trip-revision-notification-fence";
 import {
   insertTripInstance,
   insertTripInstances,
@@ -1434,6 +1435,7 @@ export async function applyDetailsToFutureSeries(
     // trip (CR-006) — a bulk apply must not silently orphan a sibling's
     // roll-call checkpoints either.
     const siblingIds = siblings.map((sibling) => sibling.id);
+    await lockTripRevisionNotificationFences(tx, shopId, siblingIds);
     // Divers and crew alike, as the single edit reads them (`recordedRollCallRows`).
     const siblingCheckpoints = await recordedRollCallRows(tx, shopId, siblingIds);
     const checkpointsByTrip = new Map<string, typeof siblingCheckpoints>();

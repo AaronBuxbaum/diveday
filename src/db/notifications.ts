@@ -803,6 +803,7 @@ function reviveQueuedNotification(payload: Notification): Notification {
   for (const field of [
     "startsAt",
     "endsAt",
+    "previousStartsAt",
     "expiresAt",
     "invitedAt",
     "offeredAt",
@@ -1124,12 +1125,19 @@ async function dispatchQueuedRetry(
           bookingId: claimed.bookingId,
           expectedPersonId: claimed.recipientPersonId as string,
           expectedTripId: claimed.recipientTripId as string,
+          tripRevisionFence: notification.kind === "trip_rescheduled",
           expectedEmail:
             "to" in notification && notification.kind !== "fly_safe_correction"
               ? notification.to
               : undefined,
         },
         async (tx) => {
+          if (
+            notification.kind === "booking_handoff" &&
+            notification.expiresAt.getTime() <= nowDate().getTime()
+          ) {
+            return { status: "failed", retryable: false, errorCode: "expired_handoff" };
+          }
           if (notification.kind === "trip_rescheduled") {
             const tripId = claimed.recipientTripId;
             const [currentTrip] = tripId

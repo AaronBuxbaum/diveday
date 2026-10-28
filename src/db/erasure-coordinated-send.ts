@@ -3,6 +3,7 @@ import { lockBoardingCertificationEvidence } from "./boarding-certification-snap
 import type { DbExecutor } from "./client";
 import { isTransactionExecutor } from "./query-helpers";
 import { bookings, people } from "./schema";
+import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";
 import { livePerson } from "./trips-live";
 
 /**
@@ -22,10 +23,14 @@ export async function withErasureCoordinatedBookingSend<T>(
     expectedEmail?: string | null;
     expectedPhone?: string | null;
     allowCancelled?: boolean;
+    tripRevisionFence?: boolean;
   },
   send: (tx: DbExecutor) => Promise<T>,
 ): Promise<T | null> {
   const coordinate = async (tx: DbExecutor) => {
+    if (input.tripRevisionFence && input.expectedTripId) {
+      await lockTripRevisionNotificationFence(tx, input.shopId, input.expectedTripId, "dispatch");
+    }
     await lockBoardingCertificationEvidence(tx, input.shopId, "boarding");
     const [recipient] = await tx
       .select({

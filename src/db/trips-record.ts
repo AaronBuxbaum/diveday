@@ -67,6 +67,7 @@ import {
   recordTripChangeEvent,
   tripSiteRunSnapshot,
 } from "./trip-change-events";
+import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";
 import {
   normalizedDiveCount,
   normalizedDiveDrafts,
@@ -579,6 +580,7 @@ export async function updateTrip(
   let timeMoved = false;
   let timesChanged = false;
   const outcome = await db.transaction(async (tx): Promise<UpdateTripOutcome> => {
+    await lockTripRevisionNotificationFence(tx, shopId, tripId, "revision-write");
     const plannedDives = normalizedDiveCount(patch.plannedDives, true);
     if (!plannedDives) return { ok: false, reason: "invalid" };
 
