@@ -1104,9 +1104,20 @@ export async function openIfClosed(details: Locator): Promise<void> {
 export async function disclosureSettled(details: Locator): Promise<void> {
   await expect
     .poll(() =>
-      details.evaluate((el) => getComputedStyle(el, "::details-content").opacity).catch(() => "1"),
+      details.evaluate((el) => {
+        const transitioning = el.getAnimations().some((animation) => {
+          const effect = animation.effect;
+          return (
+            effect instanceof KeyframeEffect &&
+            effect.pseudoElement === "::details-content" &&
+            animation.playState !== "finished" &&
+            animation.playState !== "idle"
+          );
+        });
+        return getComputedStyle(el, "::details-content").opacity === "1" && !transitioning;
+      }),
     )
-    .toBe("1");
+    .toBe(true);
 }
 
 /**
