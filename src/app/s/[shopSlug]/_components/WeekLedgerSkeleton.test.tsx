@@ -29,17 +29,23 @@ function row(overrides: Partial<WeekLedgerRow> = {}): WeekLedgerRow {
 
 /**
  * The classes that place a box — margins, padding, flex direction, gaps and
- * alignment, at every breakpoint — and none that paint it. A hover fill, a
+ * alignment, at every screen breakpoint — and none that paint it. A hover fill, a
  * sticky offset or a focus ring moves nothing, so a skeleton need not wear it.
  */
 function boxClasses(element: Element | null | undefined): string {
-  return (element?.getAttribute("class") ?? "")
-    .split(/\s+/)
-    .filter((token) =>
-      /^(?:[a-z]+:)*(?:-?m[trblxy]?-|p[trblxy]?-|flex$|flex-(?:col|row)$|gap-|items-)/.test(token),
-    )
-    .sort()
-    .join(" ");
+  return (
+    (element?.getAttribute("class") ?? "")
+      .split(/\s+/)
+      // The loading skeleton prevents screen shifts; paper has its own compact layout.
+      .filter((token) => !token.split(":").includes("print"))
+      .filter((token) =>
+        /^(?:[a-z]+:)*(?:-?m[trblxy]?-|p[trblxy]?-|flex$|flex-(?:col|row)$|gap-|items-)/.test(
+          token,
+        ),
+      )
+      .sort()
+      .join(" ")
+  );
 }
 
 /** The loaded ledger's two boxes: a day rule and the row under it. */

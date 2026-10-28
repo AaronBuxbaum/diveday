@@ -134,8 +134,12 @@ const GATES: { file: string; holds: string; times?: number; why: string }[] = [
   {
     file: "src/app/s/[shopSlug]/trips/[id]/page.tsx",
     holds: "trip.isRehearsal",
-    times: 2,
-    why: "the public trip page and its metadata answer not-found",
+    why: "the public trip page answers not-found",
+  },
+  {
+    file: "src/app/s/[shopSlug]/trips/[id]/_lib/page-metadata.ts",
+    holds: "trip.isRehearsal",
+    why: "public trip metadata never identifies a rehearsal",
   },
   {
     file: "src/app/s/[shopSlug]/trips/[id]/opengraph-image.tsx",
