@@ -580,6 +580,8 @@ const tripRescheduledSchema = z.object({
   dockCallMinutes: z.number().int().min(5).max(180).optional(),
   revision: z.number().int().min(0),
   meetingPoint: meetingPointSchema.optional(),
+  /** Full rendered-location basis, including the shop-address fallback. */
+  meetingPointSnapshot: meetingPointSchema.optional(),
   readinessUrl: z.url().max(2_000).optional(),
   /**
    * Set when the seat moved to another departure rather than the departure

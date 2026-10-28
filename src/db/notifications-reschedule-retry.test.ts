@@ -1,5 +1,6 @@
 import { eq, sql } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { meetingPointForMessage, meetingPointOfRows } from "@/lib/meeting-point";
 import type { Notification, NotificationProvider } from "@/lib/notifications";
 import { fileScopedShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
@@ -42,6 +43,7 @@ describe("queued reschedule revisions", () => {
       endsAt: new Date(trip.endsAt.getTime() + 60 * 60 * 1000),
       timezone: shop.timezone,
       revision: trip.revision,
+      meetingPointSnapshot: meetingPointForMessage(meetingPointOfRows(shop, trip)),
     };
     const initiallyFailed: NotificationProvider = {
       async send() {

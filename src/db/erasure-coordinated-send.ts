@@ -1,4 +1,5 @@
 import { and, eq } from "drizzle-orm";
+import { currentSendActor, scopedSendActor, withSendActor } from "@/lib/notifications/send-actor";
 import { lockBoardingCertificationEvidence } from "./boarding-certification-snapshot";
 import type { DbExecutor } from "./client";
 import { isTransactionExecutor } from "./query-helpers";
@@ -27,6 +28,13 @@ export async function withErasureCoordinatedBookingSend<T>(
   },
   send: (tx: DbExecutor) => Promise<T>,
 ): Promise<T | null> {
+  const scopedActor = scopedSendActor();
+  const actor =
+    scopedActor !== undefined
+      ? scopedActor
+      : isTransactionExecutor(db)
+        ? null
+        : await currentSendActor();
   const coordinate = async (tx: DbExecutor) => {
     if (input.tripRevisionFence && input.expectedTripId) {
       await lockTripRevisionNotificationFence(tx, input.shopId, input.expectedTripId, "dispatch");
@@ -74,7 +82,7 @@ export async function withErasureCoordinatedBookingSend<T>(
     )
       return null;
 
-    return send(tx);
+    return withSendActor(actor, () => send(tx));
   };
   return isTransactionExecutor(db) ? coordinate(db) : db.transaction(coordinate);
 }
@@ -94,6 +102,13 @@ export async function withErasureCoordinatedPersonSend<T>(
   },
   send: (tx: DbExecutor) => Promise<T>,
 ): Promise<T | null> {
+  const scopedActor = scopedSendActor();
+  const actor =
+    scopedActor !== undefined
+      ? scopedActor
+      : isTransactionExecutor(db)
+        ? null
+        : await currentSendActor();
   const coordinate = async (tx: DbExecutor) => {
     await lockBoardingCertificationEvidence(tx, input.shopId, "boarding");
     const [person] = await tx
@@ -118,7 +133,7 @@ export async function withErasureCoordinatedPersonSend<T>(
       (input.expectedPhone !== undefined && person.phone !== input.expectedPhone)
     )
       return null;
-    return send(tx);
+    return withSendActor(actor, () => send(tx));
   };
   return isTransactionExecutor(db) ? coordinate(db) : db.transaction(coordinate);
 }
