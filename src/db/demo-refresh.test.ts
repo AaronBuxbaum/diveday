@@ -28,7 +28,12 @@ import {
   trips,
   userAccounts,
 } from "./schema";
-import { AT_SEA_DAY_TITLE, AT_SEA_DUSK_TITLE, bringDemoBoatsAtSeaHome } from "./seed-boat-at-sea";
+import {
+  AT_SEA_DAY_TITLE,
+  AT_SEA_DUSK_TITLE,
+  bringDemoBoatsAtSeaHome,
+  seedBoatAtSea,
+} from "./seed-boat-at-sea";
 import { LEAD_INSTRUCTOR_NAME, RELIEF_INSTRUCTOR_NAME, staffDefs } from "./seed-cast";
 import { DEMO_SHOP_TIMEZONE } from "./seed-clock";
 import { DEMO_COMPLETED_TRIP_TITLE } from "./seed-more-trips";
@@ -521,6 +526,53 @@ describe("refreshCanonicalDemoSchedule", () => {
       expect(await marks(db, boat.id)).toEqual(before);
       const afterDiveTwo = await getTripManifest(db, shop.id, boat.id, "after_dive_2");
       expect(afterDiveTwo?.summary.awaiting).toBe(2);
+    });
+
+    it("does not fabricate boat-at-sea records for a demo-flagged shop with a real owner account", async () => {
+      const { db, shop } = historyCtx;
+      const boat = await boatAtSea(db, shop.id);
+      const [ownerAccount] = await db
+        .select({ id: userAccounts.id })
+        .from(userAccounts)
+        .innerJoin(people, eq(people.id, userAccounts.personId))
+        .innerJoin(personRoles, eq(personRoles.personId, people.id))
+        .where(and(eq(people.shopId, shop.id), eq(personRoles.role, "owner")))
+        .limit(1);
+      if (!ownerAccount) throw new Error("expected the demo owner account");
+
+      await db
+        .update(userAccounts)
+        .set({ email: "owner@real-shop.example" })
+        .where(eq(userAccounts.id, ownerAccount.id));
+      const beforeMarks = await marks(db, boat.id);
+      const [beforeDive] = await db
+        .select({ id: executedDives.id })
+        .from(executedDives)
+        .where(and(eq(executedDives.tripId, boat.id), eq(executedDives.diveNumber, 2)));
+      const boatsBefore = await db
+        .select({ id: trips.id })
+        .from(trips)
+        .where(and(eq(trips.shopId, shop.id), eq(trips.title, AT_SEA_DAY_TITLE)));
+
+      await seedBoatAtSea(db, shop.id);
+      expect(await bringDemoBoatsAtSeaHome(db, new Date(boat.endsAt.getTime() + 60 * 60_000))).toBe(
+        0,
+      );
+      await expect(
+        refreshCanonicalDemoSchedule(db, { now: new Date(boat.endsAt.getTime() + 1) }),
+      ).resolves.toMatchObject({ found: true, refreshed: false });
+
+      expect(await marks(db, boat.id)).toEqual(beforeMarks);
+      const [afterDive] = await db
+        .select({ id: executedDives.id })
+        .from(executedDives)
+        .where(and(eq(executedDives.tripId, boat.id), eq(executedDives.diveNumber, 2)));
+      expect(afterDive).toEqual(beforeDive);
+      const boatsAfter = await db
+        .select({ id: trips.id })
+        .from(trips)
+        .where(and(eq(trips.shopId, shop.id), eq(trips.title, AT_SEA_DAY_TITLE)));
+      expect(boatsAfter).toEqual(boatsBefore);
     });
 
     // Issue 2917: the hourly trip-reminder pass runs this alone, so an hour
