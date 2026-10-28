@@ -22,45 +22,61 @@ import { savedCopyReducer } from "./saved-copy";
 import { useCrossShopPurge } from "./use-cross-shop-purge";
 import { useOfflineTenant } from "./use-offline-tenant";
 
+function describeDiscardedNoteEvent(
+  event: OfflineRollCallEvent | OfflineChecklistEvent,
+  t: OfflineManifestTranslator,
+  includeTripReference = false,
+) {
+  const isChecklist = "checklistItemId" in event;
+  const subjectId = isChecklist
+    ? event.checklistItemId
+    : (event.bookingId ?? event.crewPersonId ?? "unknown");
+  const subject = isChecklist
+    ? t("shared.offlineManifest.reconcile.noteChecklistReference", {
+        reference: subjectId.slice(-8),
+      })
+    : event.bookingId
+      ? t("shared.offlineManifest.reconcile.noteDiverReference", {
+          reference: subjectId.slice(-8),
+        })
+      : t("shared.offlineManifest.reconcile.noteCrewReference", {
+          reference: subjectId.slice(-8),
+        });
+  const checkpoint =
+    "checkpoint" in event
+      ? event.checkpoint === "departure"
+        ? t("shared.rollCallCheckpoint.departure")
+        : t("shared.rollCallCheckpoint.afterDive", {
+            n: Number(event.checkpoint.slice("after_dive_".length)),
+          })
+      : t("shared.offlineManifest.reconcile.checklistLocation");
+  const result = t(
+    event.syncStatus === "rejected"
+      ? "shared.offlineManifest.reconcile.noteMarkNeedsReview"
+      : "shared.offlineManifest.reconcile.noteMarkKept",
+  );
+  const entry = t("shared.offlineManifest.reconcile.noteEntry", { subject, checkpoint, result });
+  return includeTripReference
+    ? t("shared.offlineManifest.reconcile.noteEntryWithTrip", {
+        trip: t("shared.offlineManifest.reconcile.noteTripReference", {
+          reference: event.tripId.slice(-8),
+        }),
+        entry,
+      })
+    : entry;
+}
+
 function discardedNoteMessage(
   events: readonly (OfflineRollCallEvent | OfflineChecklistEvent)[],
   t: OfflineManifestTranslator,
+  includeTripReference = false,
 ) {
   const cutoff = events.filter((event) => event.noteDisposition === "discarded_erasure_cutoff");
   const unverified = events.filter(
     (event) => event.noteDisposition === "discarded_unverified_snapshot",
   );
-  const describe = (event: OfflineRollCallEvent | OfflineChecklistEvent) => {
-    const isChecklist = "checklistItemId" in event;
-    const subjectId = isChecklist
-      ? event.checklistItemId
-      : (event.bookingId ?? event.crewPersonId ?? "unknown");
-    const subject = isChecklist
-      ? t("shared.offlineManifest.reconcile.noteChecklistReference", {
-          reference: subjectId.slice(-8),
-        })
-      : event.bookingId
-        ? t("shared.offlineManifest.reconcile.noteDiverReference", {
-            reference: subjectId.slice(-8),
-          })
-        : t("shared.offlineManifest.reconcile.noteCrewReference", {
-            reference: subjectId.slice(-8),
-          });
-    const checkpoint =
-      "checkpoint" in event
-        ? event.checkpoint === "departure"
-          ? t("shared.rollCallCheckpoint.departure")
-          : t("shared.rollCallCheckpoint.afterDive", {
-              n: Number(event.checkpoint.slice("after_dive_".length)),
-            })
-        : t("shared.offlineManifest.reconcile.checklistLocation");
-    const result = t(
-      event.syncStatus === "rejected"
-        ? "shared.offlineManifest.reconcile.noteMarkNeedsReview"
-        : "shared.offlineManifest.reconcile.noteMarkKept",
-    );
-    return t("shared.offlineManifest.reconcile.noteEntry", { subject, checkpoint, result });
-  };
+  const describe = (event: OfflineRollCallEvent | OfflineChecklistEvent) =>
+    describeDiscardedNoteEvent(event, t, includeTripReference);
   return [
     ...(cutoff.length
       ? [t("shared.offlineManifest.reconcile.noteDiscarded"), ...cutoff.map(describe)]
@@ -69,6 +85,42 @@ function discardedNoteMessage(
       ? [t("shared.offlineManifest.reconcile.noteUnverified"), ...unverified.map(describe)]
       : []),
   ].join("\n");
+}
+
+function listNoteLossMessage(
+  envelopes: readonly OfflineManifestEnvelope[],
+  t: OfflineManifestTranslator,
+) {
+  const events = envelopes.flatMap((saved) => [...saved.events, ...saved.checklistEvents]);
+  if (events.length === 0) return "";
+  const cutoff = events.filter((event) => event.noteDisposition === "discarded_erasure_cutoff");
+  const unverified = events.filter(
+    (event) => event.noteDisposition === "discarded_unverified_snapshot",
+  );
+  const describe = (event: OfflineRollCallEvent | OfflineChecklistEvent) =>
+    describeDiscardedNoteEvent(event, t, true);
+  return [
+    ...(cutoff.length
+      ? [t("shared.offlineManifest.reconcile.noteDiscardedList"), ...cutoff.map(describe)]
+      : []),
+    ...(unverified.length
+      ? [t("shared.offlineManifest.reconcile.noteUnverifiedList"), ...unverified.map(describe)]
+      : []),
+  ].join("\n");
+}
+
+function initialListMessage(
+  envelopes: readonly OfflineManifestEnvelope[],
+  t: OfflineManifestTranslator,
+) {
+  return [
+    ...(envelopes.length > 0
+      ? [t("shared.offlineManifest.reconcile.savedCount", { count: envelopes.length })]
+      : []),
+    listNoteLossMessage(envelopes, t),
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 /**
@@ -306,11 +358,16 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
         0,
       );
       const pending = merged.reduce((sum, envelope) => sum + pendingOfflineEventCount(envelope), 0);
-      if (rejected > 0) {
-        setMessage(t("shared.offlineManifest.reconcile.listPendingRejected", { count: rejected }));
-      } else if (pending === 0) {
-        setMessage(t("shared.offlineManifest.reconcile.listAllCaughtUp"));
-      }
+      const noteLoss = listNoteLossMessage(merged, t);
+      const syncMessage =
+        rejected > 0
+          ? t("shared.offlineManifest.reconcile.listPendingRejected", { count: rejected })
+          : pending > 0
+            ? t("shared.offlineManifest.reconcile.pendingWaiting", { count: pending })
+            : noteLoss
+              ? ""
+              : t("shared.offlineManifest.reconcile.listAllCaughtUp");
+      setMessage([syncMessage, noteLoss].filter(Boolean).join("\n"));
     },
     [t],
   );
@@ -334,11 +391,7 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
         // Nothing saved says nothing here: the empty page's heading already
         // says it, and the status line under it repeated it word for word
         // (UX review 2026-10-10, item 33).
-        setMessage(
-          saved.length > 0
-            ? t("shared.offlineManifest.reconcile.savedCount", { count: saved.length })
-            : "",
-        );
+        setMessage(initialListMessage(saved, t));
       };
 
       const refreshList = () =>

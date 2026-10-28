@@ -10,7 +10,11 @@ import {
   readDiscardedOfflineRecords,
   syncOfflineManifest,
 } from "@/lib/offline-manifest-store";
-import type { OfflineManifestEnvelope } from "@/lib/offline-manifests";
+import type {
+  OfflineChecklistEvent,
+  OfflineManifestEnvelope,
+  OfflineRollCallEvent,
+} from "@/lib/offline-manifests";
 import { useSavedManifest } from "./use-saved-manifest";
 import { envelope, setOnline } from "./view-fixtures";
 
@@ -55,6 +59,37 @@ function withEvents(
     ...Array.from({ length: counts.rejected ?? 0 }, () => ({ syncStatus: "rejected" })),
   ] as unknown as OfflineManifestEnvelope["events"];
   return envelope(tripId, `Trip ${tripId}`, { events, shopSlug });
+}
+
+function withDiscardedNotes(tripId: string, suffix: string): OfflineManifestEnvelope {
+  const saved = envelope(tripId, `Trip ${tripId}`);
+  const common = {
+    snapshotId: saved.snapshot.snapshotId,
+    snapshotSavedAt: saved.snapshot.savedAt,
+    tripId,
+    occurredAt: "2026-08-01T14:30:00.000Z",
+    syncStatus: "applied" as const,
+    note: null,
+    noteDisposition: "discarded_erasure_cutoff" as const,
+  };
+  saved.events = [
+    {
+      ...common,
+      clientEventId: `roll-call-${suffix}`,
+      bookingId: `11111111-2222-3333-4444-${suffix}`,
+      checkpoint: "after_dive_1",
+      status: "boarded",
+    },
+  ] satisfies OfflineRollCallEvent[];
+  saved.checklistEvents = [
+    {
+      ...common,
+      clientEventId: `checklist-${suffix}`,
+      checklistItemId: "22222222-3333-4444-5555-fedcba98",
+      status: "checked",
+    },
+  ] satisfies OfflineChecklistEvent[];
+  return saved;
 }
 
 function at(query: string) {
@@ -453,8 +488,69 @@ describe("useSavedManifest on the list", () => {
     expect(sync).toHaveBeenCalledTimes(1);
     expect(sync).toHaveBeenCalledWith("trip-1");
     expect(result.current.list).toEqual([synced, theirs, quiet]);
-    // The foreign copy's event is still pending, so this is not "all caught up".
-    expect(result.current.message).toBe(`${line("savedCount")} {"count":3}`);
+    // The foreign copy's event is still pending, so neither the initial
+    // saved-count status nor an all-caught-up status describes the final state.
+    expect(result.current.message).toBe(`${line("pendingWaiting")} {"count":1}`);
+  });
+
+  it("shows persisted roll-call and checklist note loss per saved trip after reload", async () => {
+    const saved = [
+      withDiscardedNotes("trip-12345678", "abcdef01"),
+      withDiscardedNotes("trip-87654321", "9876abcd"),
+    ];
+    list.mockResolvedValue(saved);
+
+    const first = at("");
+    await waitFor(() => expect(first.result.current.storeRead).toBe(true));
+    const firstMessage = first.result.current.message;
+    expect(firstMessage).toContain(line("noteDiscardedList"));
+    expect(firstMessage).toContain(line("noteTripReference"));
+    expect(firstMessage).toContain("12345678");
+    expect(firstMessage).toContain("87654321");
+    expect(firstMessage).toContain("abcdef01");
+    expect(firstMessage).toContain("9876abcd");
+    expect(firstMessage).toContain("fedcba98");
+    expect(firstMessage).toContain("checklistLocation");
+    expect(firstMessage.split("\n")).toHaveLength(6);
+    expect(firstMessage).not.toContain("Everything’s sent");
+    expect(firstMessage).not.toContain("Nora Quinn");
+    expect(firstMessage).not.toContain("note text");
+    first.unmount();
+
+    const afterReload = at("");
+    await waitFor(() => expect(afterReload.result.current.storeRead).toBe(true));
+    expect(afterReload.result.current.message).toBe(firstMessage);
+  });
+
+  it("keeps loss visible when one trip sync applies dispositions and another sync fails", async () => {
+    setOnline(true);
+    const unsynced = withEvents("trip-12345678", { pending: 1 });
+    const failedTrip = withEvents("trip-87654321", { pending: 1 });
+    const syncedWithLoss = withDiscardedNotes("trip-12345678", "abcdef01");
+    list.mockResolvedValue([unsynced, failedTrip]);
+    sync.mockResolvedValueOnce(syncedWithLoss).mockRejectedValueOnce(new Error("offline"));
+
+    const { result } = at("");
+    await waitFor(() => expect(result.current.list?.[0]).toBe(syncedWithLoss));
+    await waitFor(() => expect(result.current.message).toContain(line("noteDiscardedList")));
+    expect(result.current.message).toContain("12345678");
+    expect(result.current.message).toContain("abcdef01");
+    expect(result.current.message).toContain("fedcba98");
+    expect(result.current.message).toContain("checklistLocation");
+    expect(result.current.message).toContain(line("pendingWaiting"));
+    expect(result.current.message).not.toContain(line("listAllCaughtUp"));
+    expect(result.current.list?.[0]?.events[0]).toMatchObject({
+      status: "boarded",
+      occurredAt: "2026-08-01T14:30:00.000Z",
+      note: null,
+      noteDisposition: "discarded_erasure_cutoff",
+    });
+    expect(result.current.list?.[0]?.checklistEvents[0]).toMatchObject({
+      status: "checked",
+      occurredAt: "2026-08-01T14:30:00.000Z",
+      note: null,
+      noteDisposition: "discarded_erasure_cutoff",
+    });
   });
 
   it("says all caught up once nothing on the device is pending", async () => {
