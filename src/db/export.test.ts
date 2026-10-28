@@ -78,6 +78,9 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // bundle says nothing about either, and an import joins a reviewed shop.
     "name_flagged_at",
     "name_cleared_at",
+    // Server-only cutoff for queued offline text after a person erasure; it is
+    // concurrency/privacy machinery, not a shop setting to carry into exports.
+    "offline_erasure_epoch",
   ], // DiveDay-side config, not shop records
   people: [
     "shop_id",
