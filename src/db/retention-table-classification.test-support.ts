@@ -21,6 +21,9 @@ export const OUTSIDE_RETENTION: readonly string[] = [
   "retention_prune_state", // one mutable scheduler cursor, never an age-pruned trail
   "platform_backup_progress", // one mutable per-shop checkpoint, replaced on attempts and deleted with its shop
   "claude_call_content_erasures", // one per-shop erasure stamp, overwritten, never a trail
+  // Monotone per-trip device-snapshot ordering; no person data, and resetting
+  // while stale device copies exist could let an older response win.
+  "offline_manifest_snapshot_revisions",
   // Shop configuration stays until the shop edits or deletes it.
   "shops",
   "boats",

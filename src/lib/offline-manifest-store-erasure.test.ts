@@ -156,12 +156,16 @@ describe("discarded offline roll-call notes", () => {
   });
 
   it("clears applied notes when a newer erasure epoch replaces the saved snapshot", async () => {
-    const epochPayload = (epoch: number, snapshotId: string): OfflineManifestPayload => ({
+    const epochPayload = (
+      epoch: number,
+      revision: number,
+      snapshotId: string,
+    ): OfflineManifestPayload => ({
       ...payload,
       snapshotId,
-      erasureEpochToken: `${epoch}.${"A".repeat(43)}`,
+      erasureEpochToken: `${epoch}.${revision}.${"A".repeat(43)}`,
     });
-    await saveOfflineManifest(epochPayload(12, "55555555-5555-4555-8555-555555555555"));
+    await saveOfflineManifest(epochPayload(12, 1, "55555555-5555-4555-8555-555555555555"));
     await appendOfflineRollCall(tripId, {
       bookingId,
       checkpoint: "after_dive_1",
@@ -198,7 +202,7 @@ describe("discarded offline roll-call notes", () => {
     expect(applied?.checklistEvents[0]?.syncStatus).toBe("applied");
 
     const sameEpoch = await saveOfflineManifest(
-      epochPayload(12, "66666666-6666-4666-8666-666666666666"),
+      epochPayload(12, 2, "66666666-6666-4666-8666-666666666666"),
     );
     expect(sameEpoch.events.map((event) => event.note)).toEqual([
       "Applied diver note naming Nora Quinn.",
@@ -207,7 +211,7 @@ describe("discarded offline roll-call notes", () => {
     expect(sameEpoch.checklistEvents[0]?.note).toBe("Applied checklist note naming Nora Quinn.");
 
     const refreshed = await saveOfflineManifest(
-      epochPayload(13, "77777777-7777-4777-8777-777777777777"),
+      epochPayload(13, 3, "77777777-7777-4777-8777-777777777777"),
     );
     expect(refreshed.events).toMatchObject([
       {
@@ -242,7 +246,7 @@ describe("discarded offline roll-call notes", () => {
     ]).toEqual(tapTimes);
 
     const stalePayload = {
-      ...epochPayload(12, "88888888-8888-4888-8888-888888888888"),
+      ...epochPayload(12, 1, "88888888-8888-4888-8888-888888888888"),
       manifests: payload.manifests.map((manifest) => ({
         ...manifest,
         trip: { ...manifest.trip, title: "Pre-erasure copy with Nora Quinn" },
@@ -255,5 +259,26 @@ describe("discarded offline roll-call notes", () => {
       "Two-Tank Reef — Molasses & French",
     );
     expect(afterOutOfOrderRefresh.events.map((event) => event.note)).toEqual([null, null]);
+  });
+
+  it("does not replace a newer same-epoch snapshot when an older tab saves late", async () => {
+    const issuedPayload = (revision: number, title: string): OfflineManifestPayload => ({
+      ...payload,
+      snapshotId: `${String(revision).padStart(8, "0")}-1111-4111-8111-111111111111`,
+      erasureEpochToken: `4.${revision}.${"A".repeat(43)}`,
+      manifests: payload.manifests.map((manifest) => ({
+        ...manifest,
+        trip: { ...manifest.trip, title },
+      })),
+    });
+
+    await saveOfflineManifest(issuedPayload(1, "Older board facts"));
+    const newest = await saveOfflineManifest(issuedPayload(2, "Newer board facts"));
+    const lateOlder = await saveOfflineManifest(issuedPayload(1, "Older board facts"));
+
+    expect(newest.snapshot.manifests[0]?.trip.title).toBe("Newer board facts");
+    expect(lateOlder.snapshot.snapshotId).toBe(newest.snapshot.snapshotId);
+    expect(lateOlder.snapshot.manifests[0]?.trip.title).toBe("Newer board facts");
+    expect(lateOlder.snapshot.savedAt).toBe(newest.snapshot.savedAt);
   });
 });

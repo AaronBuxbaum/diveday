@@ -221,6 +221,7 @@ describe("POST /api/offline-manifests/sync — the checklist answer on the depar
               tripId: trip.id,
               snapshotId,
               epoch: issuedEpoch,
+              snapshotRevision: 1,
             }),
             tripId: trip.id,
             checklistItemId: item.id,

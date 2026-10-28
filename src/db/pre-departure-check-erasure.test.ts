@@ -49,6 +49,7 @@ describe("pre-departure checklist notes and diver erasure", () => {
         tripId: trip.id,
         snapshotId,
         epoch: issuedEpoch,
+        snapshotRevision: 1,
       }),
       occurredAt,
       note: `${booking.person.fullName} was named in an old checklist note.`,

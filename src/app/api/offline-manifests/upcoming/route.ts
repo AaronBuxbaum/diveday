@@ -6,6 +6,7 @@ import { departureVessels } from "@/db/boats";
 import type { AppDb } from "@/db/client";
 import { getDb } from "@/db/client";
 import { getTripManifests } from "@/db/manifests";
+import { nextOfflineManifestSnapshotRevision } from "@/db/offline-manifest-snapshots";
 import { latestPreDepartureChecksForTrip, listChecklistItems } from "@/db/pre-departure-check";
 import { getShopById, getShopOfflineErasureEpoch } from "@/db/shops";
 import { listTripIdsInOfflineManifestWindow } from "@/db/trips";
@@ -122,6 +123,7 @@ async function getUpcomingManifests() {
           await lockBoardingCertificationEvidence(tx, shop.id, "boarding");
           const epoch = await getShopOfflineErasureEpoch(tx, shop.id);
           if (epoch === null) return null;
+          const snapshotRevision = await nextOfflineManifestSnapshotRevision(tx, shop.id, tripId);
           const snapshotId = randomUUID();
           // PGlite's database type includes its client handle while the
           // transaction executor intentionally does not. The manifest readers
@@ -179,6 +181,7 @@ async function getUpcomingManifests() {
               tripId,
               snapshotId,
               epoch,
+              snapshotRevision,
             }),
           };
         }),

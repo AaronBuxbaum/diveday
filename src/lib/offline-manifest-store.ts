@@ -180,23 +180,36 @@ async function openDatabase(): Promise<IDBDatabase> {
   return requestResult(request);
 }
 
-function serverSnapshotEpoch(token: string | undefined): number | null {
+function serverSnapshotClaims(
+  token: string | undefined,
+): { epoch: number; revision: number } | null {
   if (!token) return null;
-  const match = /^(\d{1,16})\.[A-Za-z0-9_-]{43}$/.exec(token);
+  const match = /^(\d{1,16})\.(\d{1,16})\.[A-Za-z0-9_-]{43}$/.exec(token);
   if (!match) return null;
   const epoch = Number(match[1]);
-  return Number.isSafeInteger(epoch) ? epoch : null;
+  const revision = Number(match[2]);
+  if (
+    !Number.isSafeInteger(epoch) ||
+    epoch < 0 ||
+    String(epoch) !== match[1] ||
+    !Number.isSafeInteger(revision) ||
+    revision < 1 ||
+    String(revision) !== match[2]
+  ) {
+    return null;
+  }
+  return { epoch, revision };
 }
 
 function dispositionForSnapshotRefresh(
   previousToken: string | undefined,
   currentToken: string | undefined,
 ): OfflineSyncResult["noteDisposition"] {
-  const currentEpoch = serverSnapshotEpoch(currentToken);
-  if (currentEpoch === null) return undefined;
-  const previousEpoch = serverSnapshotEpoch(previousToken);
-  if (previousEpoch === null) return "discarded_unverified_snapshot";
-  return currentEpoch > previousEpoch ? "discarded_erasure_cutoff" : undefined;
+  const current = serverSnapshotClaims(currentToken);
+  if (!current) return undefined;
+  const previous = serverSnapshotClaims(previousToken);
+  if (!previous) return "discarded_unverified_snapshot";
+  return current.epoch > previous.epoch ? "discarded_erasure_cutoff" : undefined;
 }
 
 function clearSavedNotes<T extends OfflineRollCallEvent | OfflineChecklistEvent>(
@@ -647,16 +660,19 @@ export async function saveOfflineManifest(
     // verifies the token MAC and compares the epoch server-side before accepting
     // note text. A changed snapshot id at the same epoch is an ordinary refresh
     // and must not erase notes staff added after the last deletion.
-    const previousEpoch = serverSnapshotEpoch(existing?.snapshot.erasureEpochToken);
-    const currentEpoch = serverSnapshotEpoch(payload.erasureEpochToken);
+    const previousClaims = serverSnapshotClaims(existing?.snapshot.erasureEpochToken);
+    const currentClaims = serverSnapshotClaims(payload.erasureEpochToken);
     if (
       existing &&
-      previousEpoch !== null &&
-      (currentEpoch === null || currentEpoch < previousEpoch)
+      previousClaims &&
+      (!currentClaims ||
+        currentClaims.epoch < previousClaims.epoch ||
+        (currentClaims.epoch === previousClaims.epoch &&
+          currentClaims.revision <= previousClaims.revision))
     ) {
       // An older in-flight render must not replace a post-erasure copy and put
-      // erased names back on this device. A revoked medical-alert grant still
-      // takes effect even when the roster payload itself is stale.
+      // erased names back on this device, or mark old facts fresh. A revoked
+      // medical-alert grant still takes effect when the roster payload is stale.
       if (keepMedicalAlertWords) return existing;
       const { medicalAlertsSavedBy: _previous, ...withoutSavedBy } = existing;
       const revoked: OfflineManifestEnvelope = {

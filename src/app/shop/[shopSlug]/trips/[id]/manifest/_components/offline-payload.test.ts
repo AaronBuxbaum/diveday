@@ -13,6 +13,7 @@ describe("offlineManifestPayload", () => {
         ],
         snapshotId: "11111111-1111-4111-8111-111111111111",
         erasureEpochToken: "authenticated-epoch",
+        snapshotRevision: 1,
       },
       shop: {
         slug: "blue-mantis",
@@ -43,6 +44,7 @@ describe("offlineManifestPayload", () => {
         manifests: [tripManifest({ checkpoint: "departure", divers: [diver()] })],
         snapshotId: "22222222-2222-4222-8222-222222222222",
         erasureEpochToken: "authenticated-epoch",
+        snapshotRevision: 1,
       },
       shop: {
         slug: "blue-mantis",
