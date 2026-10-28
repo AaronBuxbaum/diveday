@@ -848,7 +848,7 @@ test("a diver with no workable date reaches the shop, and is offered flexible ti
   await page.goto("/s/blue-mantis/courses/open-water-diver");
 
   const inquiry = page.locator("#get-in-touch");
-  await expect(inquiry.locator("summary")).toHaveText(
+  await expect(inquiry.locator("> summary")).toHaveText(
     diverTranslator("en-US")("course.askAnotherDate"),
   );
   await openIfClosed(inquiry);
@@ -890,7 +890,7 @@ test("a blank inquiry is rejected, not defaulted — a way to reply is required"
 }) => {
   await page.goto("/s/blue-mantis/courses/open-water-diver");
   const inquiry = page.locator("#get-in-touch");
-  await expect(inquiry.locator("summary")).toHaveText(
+  await expect(inquiry.locator("> summary")).toHaveText(
     diverTranslator("en-US")("course.askAnotherDate"),
   );
   await openIfClosed(inquiry);
@@ -925,7 +925,7 @@ test("a diver's inquiry is recorded server-side and the shop's details stay reac
 }) => {
   await page.goto("/s/blue-mantis/courses/open-water-diver");
   const inquiry = page.locator("#get-in-touch");
-  await expect(inquiry.locator("summary")).toHaveText(
+  await expect(inquiry.locator("> summary")).toHaveText(
     diverTranslator("en-US")("course.askAnotherDate"),
   );
   await openIfClosed(inquiry);
