@@ -777,9 +777,11 @@ async function levelsInTrainingBefore(
 
 /**
  * The courses a staff training mark could make this departure answer to,
- * with room for the seat under an instructor of the course aboard
- * (`markableTrainingDives`, issue #2731). Admission sells on them; readiness
- * waits for the mark.
+ * with room for the candidate under the shared modeled training room
+ * (`markableTrainingDives`, issue #2731). Admission may consider this
+ * candidate-room data at sale time; readiness resolves a saved mark again at
+ * boarding. Neither the plan nor this estimate proves actual underwater
+ * groups or assistant supervision.
  */
 async function trainingDivesOn(
   tx: DbExecutor,

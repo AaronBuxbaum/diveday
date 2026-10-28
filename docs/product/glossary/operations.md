@@ -1503,9 +1503,11 @@
   An instructor's modeled load is also held to the tightest base ratio among seats assigned to them:
   an Open Water mark after a Discover Scuba mark cannot raise that modeled cap above the intro ratio.
   A course with no known ratio blocks ratio-backed coverage for all training marks on that
-  departure, so the departure's level stands and the row warns. The booking-time course-ratio cap
-  remains separate: it does not read the training mark or establish the actual underwater groups
-  for boarding.
+  departure, so the departure's level stands and the row warns. Booking admission can consult
+  whether the diver's course seat has room in this same modeled calculation; that is a sale-time
+  candidate only, and the boarding check resolves the saved mark again. The separate course-session
+  booking-ratio cap remains its own gate. Neither a plan nor this modeled room establishes actual
+  underwater groups or which instructor an assistant supervises.
   A counter advisory can name overlapping intro and entry-level sessions with a possible shared
   instructor. It does not establish a group or clearance: different session windows can still
   have training marks on the same separate departure, so an absent advisory does not establish
