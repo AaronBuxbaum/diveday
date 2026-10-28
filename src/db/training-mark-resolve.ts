@@ -233,11 +233,13 @@ export type TrainingRoom = {
  * **How many of the courses' students this departure can carry as training
  * dives** (issue #2731; review 2026-10-17), keyed by `aboardKey`. The room is
  * the departure's, not the session's: the course's instructors aboard
- * (`courseInstructorIdsAboard`), a certified assistant raising the cap, and
- * every marked seat of every session on the departure drawing on the same
- * instructors, oldest mark first (`trainingRoom`). A course with no known
- * ratio (`trainingCourseRatioRule`) has no room at all: its seats keep the
- * departure's level.
+ * (`courseInstructorIdsAboard`), and every marked seat of every session on
+ * the departure drawing on the same instructors. Tighter course ratios are
+ * allocated first, with oldest marks breaking ties (`trainingRoom`), so a
+ * later restrictive mark cannot leave earlier looser marks over its cap. No
+ * assistant bonus is counted because actual underwater groups are unknown.
+ * A course with no known ratio (`trainingCourseRatioRule`) has no room at all:
+ * its seats keep the departure's level.
  */
 export async function trainingDiveRoom(
   db: DbExecutor,

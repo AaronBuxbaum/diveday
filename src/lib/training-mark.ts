@@ -1,6 +1,6 @@
 import type { CertificationLevel } from "./certification-levels";
 import { type CourseRatioRule, courseRatioCapacity } from "./course-ratios";
-import { countInWaterCrew, inWaterCrewRole, type TripCrewAssignment } from "./crew-roles";
+import { inWaterCrewRole, type TripCrewAssignment } from "./crew-roles";
 import type { ParticipantType } from "./participant-types";
 import { isDiver } from "./participant-types";
 import { type Requirement, requirementDemandsNothing } from "./requirement";
@@ -165,16 +165,19 @@ export type TrainingRoomSeat = {
 };
 
 /**
- * **Who a departure's instructors can supervise as training dives** (review
- * 2026-10-17). The marked seats of every course session on one departure share
- * the same instructors, so each instructor's load is counted across sessions,
- * never per session. Seats are taken oldest mark first; each goes to an
- * instructor aboard for its session who still has room under its course's
- * ratio, and an instructor's new load must also fit the tightest ratio of every seat already on them (a DSD seat caps later Open Water seats at the DSD ratio). A certified assistant aboard the departure raises the cap, as it does
- * on the session itself (`countInWaterCrew`), shared out evenly and rounded
- * down: it may seat fewer than the session would, never more. A seat whose
- * course has no known ratio is never seated. Nor can another seat be covered
- * on that departure: the actual in-water groups and instructor loads are unknown.
+ * **Whether a departure's marked seats fit the instructors' modeled training
+ * loads** (review 2026-10-17). Seats are considered by tightest base ratio
+ * first, then oldest mark, so a later restrictive course cannot be hidden by
+ * earlier looser marks. Each goes to an instructor aboard for its session who
+ * still has room under that course's base ratio. An instructor's new load must
+ * also fit the tightest base ratio
+ * of every seat already assigned to them (a DSD seat can cap later Open Water
+ * seats in this conservative model). The trip and its training plan do not
+ * establish actual underwater groups or which instructor an assistant
+ * supports, so this boarding-time resolver gives no assistant bonus. A marked
+ * seat whose course has no known ratio blocks ratio-backed coverage
+ * for every marked seat on that departure.
+ * This is a conservative estimate, not evidence of the actual groups.
  */
 function seatTrainingRoom(
   seats: readonly TrainingRoomSeat[],
@@ -189,32 +192,33 @@ function seatTrainingRoom(
   const aboardFor = (sessionTripId: string) =>
     courseInstructorIdsAboard(sessionCrew.get(sessionTripId) ?? [], departureCrew);
   const instructors = new Set(seats.flatMap((seat) => aboardFor(seat.sessionTripId)));
-  const { assistantCount } = countInWaterCrew(departureCrew);
   const load = new Map<string, number>();
   // The tightest cap among the seats already on each instructor: a taker's new load must fit it too.
   //
   // **Deliberate, not an accident of the arithmetic** (issue #2830, Aaron
   // 2026-10-22). A DSD seat caps the same instructor's Open Water seats at the
   // DSD ratio, although the DSD seat lowers no level and the published DSD
-  // figure is written for DSD participants. Seats assigned to one instructor
-  // may form one group in the water at once, and a DSD participant
-  // may never have breathed from a regulator in open water: the instructor has to
-  // stay within reach of them for the whole dive, so the Open Water students
-  // beside them get the attention a DSD group leaves over, not the attention a
-  // dedicated Open Water ratio assumes. No standard we hold (HD-6) says a mixed
-  // group may be counted as two ratios, and counting it that way is the
-  // over-ratio direction. The cost is seats on mixed days; the shop's answer is
-  // a second instructor for one group. An assistant does not lift it, because
-  // the DSD ratio credits none (`INTRO_COURSE_RATIO`). Pinned in
-  // `training-mark.test.ts` ("caps later Open Water seats at the DSD ratio").
+  // figure is written for DSD participants. A DSD participant may never have
+  // breathed from a regulator in open water. When the roster resolves DSD and
+  // Open Water seats to one instructor, this conservative model applies the
+  // tighter base ratio across those seats. The roster does not prove they form
+  // one actual group, and the training plan is advisory. No assistant bonus is
+  // counted here because actual group assignments and assistant supervision
+  // are not recorded. Pinned in `training-mark.test.ts` ("keeps the DSD base
+  // cap across an instructor's mixed marked seats").
   const tightest = new Map<string, number>();
   const seated = new Set<string>();
   const overRatio = new Set<string>();
-  for (const seat of seats) {
+  const orderedSeats = seats
+    .map((seat, index) => ({ seat, index }))
+    .sort((left, right) => {
+      const leftCap = left.seat.rule ? courseRatioCapacity(left.seat.rule, 1, 0) : Infinity;
+      const rightCap = right.seat.rule ? courseRatioCapacity(right.seat.rule, 1, 0) : Infinity;
+      return leftCap - rightCap || left.index - right.index;
+    });
+  for (const { seat } of orderedSeats) {
     if (!seat.rule || instructors.size === 0) continue;
-    const cap = Math.floor(
-      courseRatioCapacity(seat.rule, instructors.size, assistantCount) / instructors.size,
-    );
+    const cap = Math.floor(courseRatioCapacity(seat.rule, instructors.size, 0) / instructors.size);
     const taker = aboardFor(seat.sessionTripId).find((personId) => {
       const newLoad = (load.get(personId) ?? 0) + 1;
       return newLoad <= Math.min(cap, tightest.get(personId) ?? cap);
