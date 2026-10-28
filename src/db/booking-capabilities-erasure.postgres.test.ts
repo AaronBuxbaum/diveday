@@ -550,7 +550,7 @@ describePostgres("capability issuance and erasure serialization", () => {
     }
   });
 
-  it("parks a claimed retry when its booking was repointed and keeps the sealed payload", async () => {
+  it("parks a claimed retry when its booking was repointed and clears the sealed payload", async () => {
     const pg = await postgresTestDb();
     const suffix = randomBytes(4).toString("hex");
     const [shop] = await pg.db
@@ -630,8 +630,8 @@ describePostgres("capability issuance and erasure serialization", () => {
       status: "failed",
       errorCode: "stale_recipient",
       recipientPersonId: null,
+      payloadSealed: null,
     });
-    expect(parked?.payloadSealed).toBe(queued?.payloadSealed);
   });
 
   it("sends and tracks a normal stored booking confirmation inside the subject fence", async () => {
