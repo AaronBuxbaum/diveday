@@ -8,6 +8,7 @@ import { describePostgres, postgresTestDb, waitForLockWaiters } from "@/test/pos
 import { createBooking } from "./bookings";
 import { drainNotificationRetries, sendNotification } from "./notifications";
 import { notificationSendQueue, shops, trips } from "./schema";
+import { setShopAddress } from "./shops";
 import { createTrip } from "./trips";
 import { updateTrip } from "./trips-record";
 
@@ -140,6 +141,77 @@ describePostgres("queued reschedule revision fence", () => {
     await expect(drain).resolves.toMatchObject({ sent: 1, failed: 0 });
     await expect(move).resolves.toMatchObject({ ok: true });
     expect(moveFinished).toBe(true);
+  });
+
+  it("holds inherited shop location stable through provider invocation", async () => {
+    const { pg, shop } = await fixture();
+    const entered = barrier();
+    const release = barrier();
+    const provider: NotificationProvider = {
+      async send() {
+        entered.resolve();
+        await release.promise;
+        return { status: "sent", providerMessageId: "shop-material-fence" };
+      },
+    };
+    const drain = drainNotificationRetries(pg.connect(), { provider });
+    let addressUpdateFinished = false;
+    let addressUpdate: Promise<unknown> | undefined;
+    let waitError: unknown;
+    try {
+      await entered.promise;
+      addressUpdate = setShopAddress(pg.connect(), shop.id, {
+        addressStreet: "99 South Pier Road",
+        addressLocality: "Key Largo",
+        addressRegion: "FL",
+        addressPostalCode: "33037",
+        addressCountry: "US",
+      }).then((result) => {
+        addressUpdateFinished = true;
+        return result;
+      });
+      try {
+        await waitForLockWaiters(pg.db, 1);
+      } catch (error) {
+        waitError = error;
+      }
+      expect(addressUpdateFinished).toBe(false);
+    } finally {
+      release.resolve();
+    }
+    await expect(drain).resolves.toMatchObject({ sent: 1, failed: 0 });
+    await expect(addressUpdate).resolves.toBeDefined();
+    expect(addressUpdateFinished).toBe(true);
+    expect(waitError).toBeUndefined();
+  });
+
+  it("suppresses when a shop location edit commits before the retry checks its content", async () => {
+    const { pg, shop } = await fixture();
+    await setShopAddress(pg.db, shop.id, {
+      addressStreet: "99 South Pier Road",
+      addressLocality: "Key Largo",
+      addressRegion: "FL",
+      addressPostalCode: "33037",
+      addressCountry: "US",
+    });
+    const send = vi.fn(async () => ({
+      status: "sent" as const,
+      providerMessageId: "must-not-send-old-shop-location",
+    }));
+
+    await expect(
+      drainNotificationRetries(pg.connect(), { provider: { send } }),
+    ).resolves.toMatchObject({ sent: 0, failed: 1 });
+    expect(send).not.toHaveBeenCalled();
+    await expect(
+      pg.db
+        .select({
+          status: notificationSendQueue.status,
+          errorCode: notificationSendQueue.errorCode,
+        })
+        .from(notificationSendQueue)
+        .where(eq(notificationSendQueue.shopId, shop.id)),
+    ).resolves.toMatchObject([{ status: "failed", errorCode: "stale_reschedule" }]);
   });
 
   it("suppresses the retry when the newer trip revision commits first", async () => {
