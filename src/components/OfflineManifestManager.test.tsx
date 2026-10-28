@@ -19,9 +19,16 @@ const copy: OfflineManifestManagerCopy = {
   reconcilePendingOther: "{count} changes are still sending.",
   reconcileCaughtUp: "Everything’s sent.",
   reconcileNoteDiscarded:
-    "An old offline note was removed after an erasure; the roll-call mark was kept.",
+    "Older offline note text was removed after a data erasure. Check each entry in the live manifest when you have signal.",
   reconcileNoteUnverified:
-    "An offline note was removed because this saved copy could not be verified; the roll-call mark was kept.",
+    "Unverified offline note text was removed. Check each entry in the live manifest when you have signal.",
+  reconcileNoteEntry: "{subject} · {checkpoint} · {result}",
+  reconcileNoteDiverReference: "Diver record {reference}",
+  reconcileNoteCrewReference: "Crew record {reference}",
+  reconcileNoteMarkKept: "mark kept",
+  reconcileNoteMarkNeedsReview: "mark needs review",
+  reconcileCheckpointDeparture: "Before departure",
+  reconcileCheckpointAfterDive: "After dive {n}",
   reconcileErrorFallback:
     "Couldn’t reach DiveDay just now. Your offline changes are still saved here and will try to send again on reconnect.",
   savingMessage: "Saving the latest manifest to this device…",
@@ -81,7 +88,13 @@ const payload: OfflineManifestPayload = {
         plannedDives: 2,
       },
       checkpoint: "departure",
-      crew: [{ fullName: "Sal Moretti", roles: ["captain"] }],
+      crew: [
+        {
+          id: "33333333-3333-3333-3333-333333333333",
+          fullName: "Sal Moretti",
+          roles: ["captain"],
+        },
+      ],
       divers: [
         {
           bookingId: "22222222-2222-2222-2222-222222222222",
@@ -222,21 +235,34 @@ describe("OfflineManifestManager", () => {
     expect(alert.closest("section")).toBeNull();
   });
 
-  it("reports a discarded offline note while keeping its acknowledged roll-call mark", async () => {
+  it("reports each discarded note by current subject and checkpoint without showing its text", async () => {
     setOnline(true);
     const withDiscardedNote = envelope([
       {
-        clientEventId: "event-1",
+        clientEventId: "event-diver",
+        snapshotId: "snapshot-1",
+        snapshotSavedAt: new Date().toISOString(),
+        tripId: TRIP_ID,
+        bookingId: "22222222-2222-2222-2222-222222222222",
+        checkpoint: "after_dive_1",
+        status: "not_boarded",
+        note: "ERASED NOTE TEXT MUST NOT APPEAR",
+        occurredAt: new Date().toISOString(),
+        syncStatus: "applied",
+        noteDisposition: "discarded_erasure_cutoff",
+      },
+      {
+        clientEventId: "event-crew",
         snapshotId: "snapshot-1",
         snapshotSavedAt: new Date().toISOString(),
         tripId: TRIP_ID,
         crewPersonId: "33333333-3333-3333-3333-333333333333",
-        checkpoint: "after_dive_1",
-        status: "not_boarded",
+        checkpoint: "after_dive_2",
+        status: "boarded",
         note: null,
         occurredAt: new Date().toISOString(),
         syncStatus: "applied",
-        noteDisposition: "discarded_erasure_cutoff",
+        noteDisposition: "discarded_unverified_snapshot",
       },
     ]);
     vi.mocked(loadOfflineManifest).mockResolvedValue(withDiscardedNote);
@@ -246,7 +272,43 @@ describe("OfflineManifestManager", () => {
 
     render(<OfflineManifestManager payload={payload} locale="en-US" copy={copy} />);
 
-    expect(await screen.findByText(copy.reconcileNoteDiscarded)).toHaveAttribute("role", "status");
+    expect(await screen.findByText("Nora Quinn · After dive 1 · mark kept")).toBeInTheDocument();
+    expect(await screen.findByText("Sal Moretti · After dive 2 · mark kept")).toBeInTheDocument();
+    expect(screen.queryByText("ERASED NOTE TEXT MUST NOT APPEAR")).not.toBeInTheDocument();
+  });
+
+  it("uses the current anonymized label instead of a stale diver name", async () => {
+    setOnline(true);
+    const anonymizedPayload = {
+      ...payload,
+      manifests: payload.manifests.map((manifest) => ({
+        ...manifest,
+        divers: manifest.divers.map((diver) => ({ ...diver, fullName: "[anonymized]" })),
+      })),
+    };
+    const event = {
+      clientEventId: "event-erased-diver",
+      snapshotId: "snapshot-1",
+      snapshotSavedAt: new Date().toISOString(),
+      tripId: TRIP_ID,
+      bookingId: "22222222-2222-2222-2222-222222222222",
+      checkpoint: "after_dive_1" as const,
+      status: "not_boarded" as const,
+      note: null,
+      occurredAt: new Date().toISOString(),
+      syncStatus: "applied" as const,
+      noteDisposition: "discarded_erasure_cutoff" as const,
+    };
+    const saved = envelope([event]);
+    vi.mocked(loadOfflineManifest).mockResolvedValue(saved);
+    vi.mocked(primeOfflineManifestShell).mockResolvedValue(undefined);
+    vi.mocked(saveOfflineManifest).mockResolvedValue(saved);
+    vi.mocked(syncOfflineManifest).mockResolvedValue(saved);
+
+    render(<OfflineManifestManager payload={anonymizedPayload} locale="en-US" copy={copy} />);
+
+    expect(await screen.findByText("[anonymized] · After dive 1 · mark kept")).toBeInTheDocument();
+    expect(screen.queryByText("Nora Quinn · After dive 1 · mark kept")).not.toBeInTheDocument();
   });
 
   // Task 76: the "Saved …" timestamp used to call the bare `toLocaleString()`

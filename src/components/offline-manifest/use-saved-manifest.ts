@@ -10,6 +10,7 @@ import {
   readDiscardedOfflineRecords,
   syncOfflineManifest,
 } from "@/lib/offline-manifest-store";
+import type { OfflineRollCallEvent } from "@/lib/offline-manifests";
 import {
   type OfflineManifestEnvelope,
   offlineFallbackReason,
@@ -20,6 +21,46 @@ import type { CopyCaveat } from "./controls";
 import { savedCopyReducer } from "./saved-copy";
 import { useCrossShopPurge } from "./use-cross-shop-purge";
 import { useOfflineTenant } from "./use-offline-tenant";
+
+function discardedNoteMessage(
+  events: readonly OfflineRollCallEvent[],
+  t: OfflineManifestTranslator,
+) {
+  const cutoff = events.filter((event) => event.noteDisposition === "discarded_erasure_cutoff");
+  const unverified = events.filter(
+    (event) => event.noteDisposition === "discarded_unverified_snapshot",
+  );
+  const describe = (event: OfflineRollCallEvent) => {
+    const subjectId = event.bookingId ?? event.crewPersonId ?? "unknown";
+    const subject = event.bookingId
+      ? t("shared.offlineManifest.reconcile.noteDiverReference", {
+          reference: subjectId.slice(-8),
+        })
+      : t("shared.offlineManifest.reconcile.noteCrewReference", {
+          reference: subjectId.slice(-8),
+        });
+    const checkpoint =
+      event.checkpoint === "departure"
+        ? t("shared.rollCallCheckpoint.departure")
+        : t("shared.rollCallCheckpoint.afterDive", {
+            n: Number(event.checkpoint.slice("after_dive_".length)),
+          });
+    const result = t(
+      event.syncStatus === "rejected"
+        ? "shared.offlineManifest.reconcile.noteMarkNeedsReview"
+        : "shared.offlineManifest.reconcile.noteMarkKept",
+    );
+    return t("shared.offlineManifest.reconcile.noteEntry", { subject, checkpoint, result });
+  };
+  return [
+    ...(cutoff.length
+      ? [t("shared.offlineManifest.reconcile.noteDiscarded"), ...cutoff.map(describe)]
+      : []),
+    ...(unverified.length
+      ? [t("shared.offlineManifest.reconcile.noteUnverified"), ...unverified.map(describe)]
+      : []),
+  ].join(" ");
+}
 
 /**
  * **The copy this device holds, and keeping it honest**: the saved record (or
@@ -154,19 +195,13 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
       // cannot see it tells a captain they are caught up when they are not.
       const rejected = rejectedOfflineEventCount(next);
       const pending = pendingOfflineEventCount(next);
-      const noteCutoffDiscarded = next.events.some(
-        (event) => event.noteDisposition === "discarded_erasure_cutoff",
-      );
-      const noteUnverifiedDiscarded = next.events.some(
-        (event) => event.noteDisposition === "discarded_unverified_snapshot",
-      );
+      const noteMessage = discardedNoteMessage(next.events, t);
       const messages = [
         ...(rejected > 0
           ? [t("shared.offlineManifest.reconcile.pendingRejectedSingle", { count: rejected })]
           : []),
-        ...(noteCutoffDiscarded ? [t("shared.offlineManifest.reconcile.noteDiscarded")] : []),
-        ...(noteUnverifiedDiscarded ? [t("shared.offlineManifest.reconcile.noteUnverified")] : []),
-        ...(rejected === 0 && !noteCutoffDiscarded && !noteUnverifiedDiscarded
+        ...(noteMessage ? [noteMessage] : []),
+        ...(rejected === 0 && !noteMessage
           ? [
               pending > 0
                 ? t("shared.offlineManifest.reconcile.pendingWaiting", { count: pending })
@@ -342,10 +377,12 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
             isRollCallCheckpoint(current, plannedDives) ? current : "departure",
           );
         }
+        const noteMessage = saved ? discardedNoteMessage(saved.events, t) : "";
         setMessage(
-          saved
-            ? t("shared.offlineManifest.reconcile.ready")
-            : t("shared.offlineManifest.reconcile.noneForTrip"),
+          noteMessage ||
+            (saved
+              ? t("shared.offlineManifest.reconcile.ready")
+              : t("shared.offlineManifest.reconcile.noneForTrip")),
         );
         if (saved && navigator.onLine) void reconcile();
       })

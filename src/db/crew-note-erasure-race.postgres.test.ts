@@ -5,11 +5,13 @@ import { nowDate } from "@/lib/clock";
 import { signOfflineErasureEpoch } from "@/lib/offline-erasure-epoch";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
 import { anonymizeDiver } from "./anonymize";
-import { recordCrewRollCall } from "./manifests";
+import { recordCrewRollCall, recordRollCall } from "./manifests";
 import {
+  bookings,
   people,
   personRoles,
   rollCallCrewEvents,
+  rollCallEvents,
   shops,
   tripAssignments,
   trips,
@@ -59,6 +61,18 @@ async function fixture() {
     .returning();
   if (!trip) throw new Error("trip insert returned no row");
   await pg.db.insert(tripAssignments).values({ tripId: trip.id, personId: owner.id });
+  const [booking] = await pg.db
+    .insert(bookings)
+    .values({
+      shopId: shop.id,
+      tripId: trip.id,
+      personId: diver.id,
+      status: "booked",
+      bookedAs: "diver",
+      participantType: "diver",
+    })
+    .returning();
+  if (!booking) throw new Error("booking insert returned no row");
 
   const writeNote = (note: string) =>
     recordCrewRollCall(pg.connect(), {
@@ -94,6 +108,30 @@ async function fixture() {
       note,
     });
   };
+  const writeOfflineDiverNote = (note: string, epoch: number) => {
+    const snapshotId = randomUUID();
+    const occurredAt = nowDate();
+    return recordRollCall(pg.connect(), {
+      shopId: shop.id,
+      tripId: trip.id,
+      bookingId: booking.id,
+      recordedByPersonId: owner.id,
+      status: "not_boarded",
+      checkpoint: "after_dive_1",
+      source: "offline",
+      clientEventId: randomUUID(),
+      offlineSnapshotSavedAt: new Date(occurredAt.getTime() - 1_000),
+      offlineSnapshotId: snapshotId,
+      offlineErasureEpochToken: signOfflineErasureEpoch({
+        shopId: shop.id,
+        tripId: trip.id,
+        snapshotId,
+        epoch,
+      }),
+      occurredAt,
+      note,
+    });
+  };
   const erase = () =>
     anonymizeDiver(pg.connect(), {
       shopId: shop.id,
@@ -107,7 +145,27 @@ async function fixture() {
       .where(
         and(eq(rollCallCrewEvents.shopId, shop.id), eq(rollCallCrewEvents.personId, owner.id)),
       );
-  return { pg, shop, diver, writeNote, writeOfflineNote, erase, notes };
+  const diverNotes = async () =>
+    pg.db
+      .select({
+        note: rollCallEvents.note,
+        status: rollCallEvents.status,
+        occurredAt: rollCallEvents.occurredAt,
+      })
+      .from(rollCallEvents)
+      .where(and(eq(rollCallEvents.shopId, shop.id), eq(rollCallEvents.bookingId, booking.id)));
+  return {
+    pg,
+    shop,
+    diver,
+    booking,
+    writeNote,
+    writeOfflineNote,
+    writeOfflineDiverNote,
+    erase,
+    notes,
+    diverNotes,
+  };
 }
 
 describePostgres("crew note writes ordered with erasure", () => {
@@ -216,5 +274,44 @@ describePostgres("crew note writes ordered with erasure", () => {
     expect((await f.notes()).map((row) => row.note).sort()).toEqual(
       [null, "A fresh post-erasure note is allowed."].sort(),
     );
+  });
+
+  it("does not reintroduce a pre-erasure note on an erased diver's retained booking", async () => {
+    const f = await fixture();
+    const staleEpoch = f.shop.offlineErasureEpoch;
+    const atTap = nowDate();
+    await f.erase();
+    const write = await f.writeOfflineDiverNote("Maya Rivera was seen at the ladder.", staleEpoch);
+    expect(write).toMatchObject({ ok: true, noteDisposition: "discarded_erasure_cutoff" });
+    expect(await f.diverNotes()).toEqual([
+      { note: null, status: "not_boarded", occurredAt: expect.any(Date) },
+    ]);
+    expect((await f.diverNotes())[0]?.occurredAt.getTime()).toBeGreaterThanOrEqual(atTap.getTime());
+  });
+
+  it("orders a diver note writer already in flight before erasure and scrubs its text", async () => {
+    const f = await fixture();
+    await f.pg.db.execute(
+      sql`create function test_hold_diver_note_insert() returns trigger language plpgsql as $$ begin perform pg_advisory_xact_lock(281036); return new; end $$`,
+    );
+    await f.pg.db.execute(
+      sql`create trigger test_hold_diver_note_insert before insert on roll_call_events for each row execute function test_hold_diver_note_insert()`,
+    );
+    const gate = await holdRowLock(f.pg, sql`select pg_advisory_xact_lock(281036)`);
+    const noteWrite = f.writeOfflineDiverNote(
+      "Maya Rivera was seen at the ladder.",
+      f.shop.offlineErasureEpoch,
+    );
+    let erasure: ReturnType<typeof f.erase> | undefined;
+    try {
+      await waitForLockWaiters(f.pg.db, 1);
+      erasure = f.erase();
+      await waitForLockWaiters(f.pg.db, 2);
+    } finally {
+      await gate.release();
+    }
+    expect(await noteWrite).toMatchObject({ ok: true });
+    expect(await erasure).toMatchObject({ ok: true });
+    expect(await f.diverNotes()).toMatchObject([{ note: null, status: "not_boarded" }]);
   });
 });

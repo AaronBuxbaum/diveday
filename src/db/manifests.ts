@@ -1529,9 +1529,15 @@ function logOfflineRetractionSignals(
 }
 
 export type RecordRollCallOutcome =
-  | { ok: true; eventId: string; duplicate?: boolean }
+  | {
+      ok: true;
+      eventId: string;
+      duplicate?: boolean;
+      noteDisposition?: "discarded_erasure_cutoff" | "discarded_unverified_snapshot";
+    }
   | {
       ok: false;
+      noteDisposition?: "discarded_erasure_cutoff" | "discarded_unverified_snapshot";
       reason:
         | "booking_unavailable"
         | "staff_not_found"
@@ -1633,6 +1639,47 @@ async function acceptedRollCallNote(
   // Raising the alarm needs no read; only a retraction depends on what stands.
   const current = status === "not_boarded" ? undefined : await standing();
   return rollCallNoteAllowed(checkpoint, status, current) ? typed : null;
+}
+
+/**
+ * Free text queued before a completed person erasure is never inserted, even
+ * when the booking remains as the roll-call subject. The epoch is authenticated
+ * to the server-issued snapshot and compared while the caller holds the shared
+ * shop erasure fence; timestamps from the device are not authority.
+ */
+async function gateOfflineRollCallNote(
+  tx: DbExecutor,
+  input: {
+    source: "live" | "offline";
+    note: string | null | undefined;
+    shopId: string;
+    tripId: string;
+    snapshotId: string | null | undefined;
+    token: string | null | undefined;
+    mayWriteNote: boolean;
+  },
+): Promise<{
+  note: string | null | undefined;
+  noteDisposition?: "discarded_erasure_cutoff" | "discarded_unverified_snapshot";
+}> {
+  if (input.source !== "offline" || !input.mayWriteNote) return { note: input.note };
+  const issuedEpoch = verifyOfflineErasureEpoch({
+    token: input.token,
+    shopId: input.shopId,
+    tripId: input.tripId,
+    snapshotId: input.snapshotId,
+  });
+  if (issuedEpoch === null) {
+    return { note: null, noteDisposition: "discarded_unverified_snapshot" };
+  }
+  const [shop] = await tx
+    .select({ epoch: shops.offlineErasureEpoch })
+    .from(shops)
+    .where(eq(shops.id, input.shopId))
+    .limit(1);
+  return shop?.epoch === issuedEpoch
+    ? { note: input.note }
+    : { note: null, noteDisposition: "discarded_erasure_cutoff" };
 }
 
 /**
@@ -1889,6 +1936,8 @@ export async function recordRollCall(
     /** The `clientEventId` a `cleared` undoes — see {@link offlineRetractionSuperseded}. */
     retractsClientEventId?: string;
     offlineSnapshotSavedAt?: Date;
+    offlineSnapshotId?: string;
+    offlineErasureEpochToken?: string;
     /**
      * What the crew observed about a person who is unaccounted for. Kept only
      * at an after-dive checkpoint (`rollCallNoteAllowed`) — a note posted at
@@ -1937,9 +1986,29 @@ async function writeRollCall(
   const source = input.source ?? "live";
   const staffId = await activeStaffRecorderId(tx, input.shopId, input.recordedByPersonId);
   if (!staffId) return { ok: false, reason: "staff_not_found" };
-  if (source === "live" && checkpoint === "departure" && input.status === "boarded") {
+  const captureCards =
+    source === "live" && checkpoint === "departure" && input.status === "boarded";
+  const mayWriteNote = Boolean(input.note?.trim());
+  if (captureCards || mayWriteNote) {
     await lockBoardingCertificationEvidence(tx, input.shopId, "boarding");
   }
+
+  const noteGate = await gateOfflineRollCallNote(tx, {
+    source,
+    note: input.note,
+    shopId: input.shopId,
+    tripId: input.tripId,
+    snapshotId: input.offlineSnapshotId,
+    token: input.offlineErasureEpochToken,
+    mayWriteNote,
+  });
+  const noteInput = noteGate.note;
+  const noteDisposition = noteGate.noteDisposition;
+  const refuse = (reason: Extract<RecordRollCallOutcome, { ok: false }>["reason"]) => ({
+    ok: false as const,
+    reason,
+    ...(noteDisposition ? { noteDisposition } : {}),
+  });
 
   if (source === "offline" && input.clientEventId) {
     const replayed = replayVerdict(
@@ -1947,7 +2016,7 @@ async function writeRollCall(
       `${input.tripId}/${input.bookingId}`,
       "roll_call_events",
     );
-    if (replayed) return replayed;
+    if (replayed) return noteDisposition ? { ...replayed, noteDisposition } : replayed;
   }
 
   // The departure, then the seat — the one order every seat writer takes
@@ -1974,9 +2043,9 @@ async function writeRollCall(
       `${input.tripId}/${input.bookingId}`,
       "roll_call_events",
     );
-    if (replayed) return replayed;
+    if (replayed) return noteDisposition ? { ...replayed, noteDisposition } : replayed;
   }
-  if (lockedTripId !== input.tripId) return { ok: false, reason: "booking_unavailable" };
+  if (lockedTripId !== input.tripId) return refuse("booking_unavailable");
   const [booking] = await tx
     .select({
       id: bookings.id,
@@ -2004,9 +2073,9 @@ async function writeRollCall(
     )
     .limit(1)
     .for("update", { of: bookings });
-  if (!booking) return { ok: false, reason: "booking_unavailable" };
+  if (!booking) return refuse("booking_unavailable");
   if (!isRollCallCheckpoint(checkpoint, booking.plannedDives)) {
-    return { ok: false, reason: "invalid_checkpoint" };
+    return refuse("invalid_checkpoint");
   }
 
   if (source === "offline") {
@@ -2018,7 +2087,7 @@ async function writeRollCall(
         now: nowDate(),
       })
     ) {
-      return { ok: false, reason: "snapshot_invalid" };
+      return refuse("snapshot_invalid");
     }
     const [newest] = await tx
       .select({
@@ -2041,7 +2110,7 @@ async function writeRollCall(
       )
       .limit(1);
     if (newest && newest.occurredAt > occurredAt) {
-      return { ok: false, reason: "newer_event_exists" };
+      return refuse("newer_event_exists");
     }
     // Second, and narrower: a retraction must still be about the statement
     // that is standing. Refusing leaves that statement in place, which is the
@@ -2056,7 +2125,7 @@ async function writeRollCall(
         newest,
       })
     ) {
-      return { ok: false, reason: RETRACTION_SUPERSEDED };
+      return refuse(RETRACTION_SUPERSEDED);
     }
   }
 
@@ -2073,7 +2142,7 @@ async function writeRollCall(
   if (input.status === "boarded") {
     if (checkpoint === "departure") {
       const readiness = await getBookingReadiness(tx, input.shopId, booking.id);
-      if (readiness?.status !== "ready") return { ok: false, reason: "not_ready" };
+      if (readiness?.status !== "ready") return refuse("not_ready");
       readinessSnapshot = readinessSnapshotOf(readiness);
       // A seat the desk turned away and then sold is not the crew's to take
       // back at the gangway: "Boat full. See the desk." (dde-3 #6). Counted
@@ -2084,7 +2153,7 @@ async function writeRollCall(
         const held = await heldSeatCounts(tx, input.shopId, input.tripId);
         const capacity = await sellableCapacity(tx, booking);
         if (seatRefusal(booking.participantType, { ...booking, capacity }, held)) {
-          return { ok: false, reason: "boat_full" };
+          return refuse("boat_full");
         }
       }
     } else {
@@ -2106,12 +2175,8 @@ async function writeRollCall(
     }
   }
 
-  const captureCards =
-    source === "live" &&
-    checkpoint === "departure" &&
-    input.status === "boarded" &&
-    booking.identityUnconfirmedAt === null;
-  const capturedAt = captureCards ? nowDate() : null;
+  const capturesCard = captureCards && booking.identityUnconfirmedAt === null;
+  const capturedAt = capturesCard ? nowDate() : null;
   const [event] = await tx
     .insert(rollCallEvents)
     .values({
@@ -2124,7 +2189,7 @@ async function writeRollCall(
       source,
       clientEventId: source === "offline" ? input.clientEventId : null,
       offlineSnapshotSavedAt: source === "offline" ? input.offlineSnapshotSavedAt : null,
-      note: await acceptedRollCallNote(input.note, checkpoint, input.status, () =>
+      note: await acceptedRollCallNote(noteInput, checkpoint, input.status, () =>
         standingDiverRollCall(tx, {
           shopId: input.shopId,
           tripId: input.tripId,
@@ -2135,7 +2200,7 @@ async function writeRollCall(
       readinessStatus: readinessSnapshot?.status ?? null,
       readinessBlockers: readinessSnapshot?.blockers ?? null,
       // Offline sync observes today, not the cards the device saw at the tap.
-      certificationSnapshot: captureCards
+      certificationSnapshot: capturesCard
         ? boardingCertificationSnapshot(input.shopId, booking.personId)
         : null,
       certificationSnapshotStartedAt: capturedAt,
@@ -2144,7 +2209,7 @@ async function writeRollCall(
     })
     .returning({ id: rollCallEvents.id });
   if (!event) throw new Error("recordRollCall: insert returned no row");
-  if (captureCards && capturedAt) {
+  if (capturesCard && capturedAt) {
     // The statement can wait before it completes. A clock adjustment must not
     // make completion precede the start or reject an otherwise valid count.
     const finishedAt = nowDate();
@@ -2185,7 +2250,7 @@ async function writeRollCall(
       missingAfterDive: input.status === "not_boarded",
     });
   }
-  return { ok: true, eventId: event.id };
+  return { ok: true, eventId: event.id, ...(noteDisposition ? { noteDisposition } : {}) };
 }
 
 export type RecordCrewRollCallOutcome =
@@ -2197,6 +2262,7 @@ export type RecordCrewRollCallOutcome =
     }
   | {
       ok: false;
+      noteDisposition?: "discarded_erasure_cutoff" | "discarded_unverified_snapshot";
       reason:
         | "trip_unavailable"
         | "staff_not_found"
@@ -2326,6 +2392,11 @@ export async function recordCrewRollCall(
             noteDisposition = "discarded_erasure_cutoff";
           }
         }
+        const refuse = (reason: Extract<RecordCrewRollCallOutcome, { ok: false }>["reason"]) => ({
+          ok: false as const,
+          reason,
+          ...(noteDisposition ? { noteDisposition } : {}),
+        });
 
         // Idempotency first, exactly as the diver path does it: a sync the device
         // retried (the response never arrived, the tab was closed mid-flight) must
@@ -2339,7 +2410,7 @@ export async function recordCrewRollCall(
             "roll_call_crew_events",
           );
           if (replayed) {
-            return replayed.ok && noteDisposition ? { ...replayed, noteDisposition } : replayed;
+            return noteDisposition ? { ...replayed, noteDisposition } : replayed;
           }
         }
 
@@ -2377,12 +2448,12 @@ export async function recordCrewRollCall(
             "roll_call_crew_events",
           );
           if (replayed) {
-            return replayed.ok && noteDisposition ? { ...replayed, noteDisposition } : replayed;
+            return noteDisposition ? { ...replayed, noteDisposition } : replayed;
           }
         }
-        if (!trip) return { ok: false, reason: "trip_unavailable" };
+        if (!trip) return refuse("trip_unavailable");
         if (!isRollCallCheckpoint(checkpoint, trip.plannedDives)) {
-          return { ok: false, reason: "invalid_checkpoint" };
+          return refuse("invalid_checkpoint");
         }
 
         // `isOnTripCrew` — the identical condition `listTripCrew` reads the crew
@@ -2415,7 +2486,7 @@ export async function recordCrewRollCall(
             ),
           )
           .limit(1);
-        if (!assigned) return { ok: false, reason: "crew_not_assigned" };
+        if (!assigned) return refuse("crew_not_assigned");
 
         if (source === "offline") {
           if (
@@ -2426,7 +2497,7 @@ export async function recordCrewRollCall(
               now: nowDate(),
             })
           ) {
-            return { ok: false, reason: "snapshot_invalid" };
+            return refuse("snapshot_invalid");
           }
           const [newest] = await tx
             .select({
@@ -2449,7 +2520,7 @@ export async function recordCrewRollCall(
             )
             .limit(1);
           if (newest && newest.occurredAt > occurredAt) {
-            return { ok: false, reason: "newer_event_exists" };
+            return refuse("newer_event_exists");
           }
           // The same compare-and-set the diver path applies, through the same
           // predicate — a crew-specific reading of when a retraction is still about
@@ -2462,7 +2533,7 @@ export async function recordCrewRollCall(
               newest,
             })
           ) {
-            return { ok: false, reason: RETRACTION_SUPERSEDED };
+            return refuse(RETRACTION_SUPERSEDED);
           }
         }
 

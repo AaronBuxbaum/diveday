@@ -25,8 +25,6 @@ export interface OfflineManifestSyncCopy {
   /** `{count}` placeholder. */
   reconcilePendingOther: string;
   reconcileCaughtUp: string;
-  reconcileNoteDiscarded: string;
-  reconcileNoteUnverified: string;
   reconcileErrorFallback: string;
   savingMessage: string;
   saveErrorFallback: string;
@@ -131,21 +129,17 @@ export function useOfflineManifestSync(
           // of the page. This region keeps the states that belong to the card
           // — still sending, and caught up.
           setMessage(
-            unverifiedNotes > unverifiedNotesBefore
-              ? copy.reconcileNoteUnverified
-              : cutoffNotes > cutoffNotesBefore
-                ? copy.reconcileNoteDiscarded
-                : pending > 0
-                  ? fill(
-                      pluralForm(pending, {
-                        one: copy.reconcilePendingOne,
-                        other: copy.reconcilePendingOther,
-                      }),
-                      { count: pending },
-                    )
-                  : rejected > 0
-                    ? ""
-                    : copy.reconcileCaughtUp,
+            pending > 0
+              ? fill(
+                  pluralForm(pending, {
+                    one: copy.reconcilePendingOne,
+                    other: copy.reconcilePendingOther,
+                  }),
+                  { count: pending },
+                )
+              : rejected > 0
+                ? ""
+                : copy.reconcileCaughtUp,
           );
           router.refresh();
         }

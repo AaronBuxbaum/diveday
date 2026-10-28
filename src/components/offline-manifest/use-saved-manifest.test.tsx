@@ -125,6 +125,55 @@ describe("useSavedManifest on a trip", () => {
     expect(result.current.checkpoint).toBe("after_dive_1");
   });
 
+  it("repeats per-subject checkpoint notices after reload without reading stale names or note text", async () => {
+    const saved = envelope("trip-1", "Morning Two-Tank", {
+      events: [
+        {
+          clientEventId: "cutoff-one",
+          snapshotId: "saved-snapshot",
+          snapshotSavedAt: new Date(0).toISOString(),
+          tripId: "trip-1",
+          bookingId: "11111111-2222-3333-4444-abcdef123456",
+          checkpoint: "after_dive_1",
+          status: "not_boarded",
+          note: "ERASED NAME MUST NOT APPEAR",
+          occurredAt: new Date(0).toISOString(),
+          syncStatus: "applied",
+          noteDisposition: "discarded_erasure_cutoff",
+        },
+        {
+          clientEventId: "unverified-two",
+          snapshotId: "saved-snapshot",
+          snapshotSavedAt: new Date(0).toISOString(),
+          tripId: "trip-1",
+          crewPersonId: "22222222-3333-4444-5555-fedcba987654",
+          checkpoint: "departure",
+          status: "boarded",
+          note: null,
+          occurredAt: new Date(0).toISOString(),
+          syncStatus: "applied",
+          noteDisposition: "discarded_unverified_snapshot",
+        },
+      ],
+    });
+    load.mockResolvedValue(saved);
+
+    const first = at("trip=trip-1");
+    await waitFor(() => expect(first.result.current.storeRead).toBe(true));
+    const firstMessage = first.result.current.message;
+    expect(firstMessage).toContain("ef123456");
+    expect(firstMessage).toContain("afterDive");
+    expect(firstMessage).toContain("ba987654");
+    expect(firstMessage).toContain("departure");
+    expect(firstMessage).not.toContain("ERASED NAME MUST NOT APPEAR");
+    expect(firstMessage).not.toContain("Nora Quinn");
+
+    first.unmount();
+    const second = at("trip=trip-1");
+    await waitFor(() => expect(second.result.current.storeRead).toBe(true));
+    expect(second.result.current.message).toBe(firstMessage);
+  });
+
   it("falls back to departure for a checkpoint the saved trip does not have", async () => {
     // The fixture trip plans one dive, so there is no second after-dive count.
     load.mockResolvedValue(envelope("trip-1", "Morning Two-Tank"));

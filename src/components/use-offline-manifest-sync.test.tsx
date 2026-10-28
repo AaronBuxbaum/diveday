@@ -31,8 +31,6 @@ const copy: OfflineManifestSyncCopy = {
   reconcilePendingOne: "one pending",
   reconcilePendingOther: "{count} pending",
   reconcileCaughtUp: "caught up",
-  reconcileNoteDiscarded: "old note discarded; roll-call mark kept",
-  reconcileNoteUnverified: "unverified note discarded; roll-call mark kept",
   reconcileErrorFallback: "could not reach",
   savingMessage: "saving",
   saveErrorFallback: "save failed",
