@@ -1,9 +1,10 @@
 import { randomBytes } from "node:crypto";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { expect, it, vi } from "vitest";
 import type { NotificationProvider } from "@/lib/notifications";
 import { describePostgres, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
 import { offerBookingHandoffByEmail } from "./booking-handoff";
+import { drainNotificationRetries } from "./notifications";
 import {
   bookingCapabilities,
   bookings,
@@ -156,11 +157,67 @@ describePostgres("reschedule and handoff notice fences", () => {
     }
   });
 
-  it("reports and preserves a handoff link when its retry is durably queued", async () => {
+  it("does not queue a ten-minute handoff link for a next-day retry", async () => {
+    const { pg, shop, handoffTrip, booking, person, now } = await fixture();
+    let providerCalls = 0;
+    const transientFailure: NotificationProvider = {
+      async send() {
+        providerCalls += 1;
+        return { status: "failed", retryable: true, errorCode: "temporary_failure" };
+      },
+    };
+    await expect(
+      offerBookingHandoffByEmail(
+        pg.db,
+        {
+          shopId: shop.id,
+          tripId: handoffTrip.id,
+          email: person.email as string,
+          origin: "https://diveday.example",
+          requestLocale: "en-US",
+          now,
+        },
+        { provider: transientFailure },
+      ),
+    ).resolves.toBe("failed");
+
+    const [capability] = await pg.db
+      .select({ revokedAt: bookingCapabilities.revokedAt })
+      .from(bookingCapabilities)
+      .where(
+        and(
+          eq(bookingCapabilities.bookingId, booking.id),
+          eq(bookingCapabilities.purpose, "handoff"),
+        ),
+      );
+    expect(capability?.revokedAt).not.toBeNull();
+    expect(
+      await pg.db
+        .select()
+        .from(notificationSendQueue)
+        .where(eq(notificationSendQueue.bookingId, booking.id)),
+    ).toEqual([]);
+
+    const nextDayProvider: NotificationProvider = {
+      async send() {
+        providerCalls += 1;
+        return { status: "sent", providerMessageId: "must-not-send-dead-handoff" };
+      },
+    };
+    await expect(
+      drainNotificationRetries(pg.db, {
+        now: new Date(now.getTime() + 24 * 60 * 60_000),
+        provider: nextDayProvider,
+      }),
+    ).resolves.toMatchObject({ scanned: 0, sent: 0 });
+    expect(providerCalls).toBe(1);
+  });
+
+  it("reports permanent handoff failure and revokes its undeliverable link", async () => {
     const { pg, shop, handoffTrip, booking, person, now } = await fixture();
     const provider: NotificationProvider = {
       async send() {
-        return { status: "failed", retryable: true, errorCode: "temporary_failure" };
+        return { status: "failed", retryable: false, errorCode: "permanent_failure" };
       },
     };
     await expect(
@@ -176,11 +233,13 @@ describePostgres("reschedule and handoff notice fences", () => {
         },
         { provider },
       ),
-    ).resolves.toBe("queued");
-    const [queued] = await pg.db
-      .select()
-      .from(notificationSendQueue)
-      .where(eq(notificationSendQueue.bookingId, booking.id));
+    ).resolves.toBe("failed");
+    expect(
+      await pg.db
+        .select()
+        .from(notificationSendQueue)
+        .where(eq(notificationSendQueue.bookingId, booking.id)),
+    ).toEqual([]);
     const [capability] = await pg.db
       .select({ revokedAt: bookingCapabilities.revokedAt })
       .from(bookingCapabilities)
@@ -190,58 +249,73 @@ describePostgres("reschedule and handoff notice fences", () => {
           eq(bookingCapabilities.purpose, "handoff"),
         ),
       );
-    expect(queued?.status).toBe("queued");
-    expect(queued?.payloadSealed).toMatch(/^v1\./);
-    expect(capability?.revokedAt).toBeNull();
+    expect(capability?.revokedAt).not.toBeNull();
   });
 
-  it.each([
-    ["permanent provider failure", false],
-    ["retryable failure when queue sealing is unavailable", true],
-  ])("reports handoff %s and revokes its undeliverable link", async (_label, queueUnavailable) => {
-    const { pg, shop, handoffTrip, booking, person, now } = await fixture();
-    const provider: NotificationProvider = {
+  it("drops a queued notice after two later trip moves", async () => {
+    const { pg, shop, trip, booking, now, payload } = await fixture();
+    const transientFailure: NotificationProvider = {
       async send() {
-        return queueUnavailable
-          ? { status: "failed", retryable: true, errorCode: "temporary_failure" }
-          : { status: "failed", retryable: false, errorCode: "permanent_failure" };
+        return { status: "failed", retryable: true, errorCode: "temporary_failure" };
       },
     };
-    if (queueUnavailable) vi.stubEnv("SECRET_ENCRYPTION_KEY", "");
-    try {
-      await expect(
-        offerBookingHandoffByEmail(
-          pg.db,
-          {
-            shopId: shop.id,
-            tripId: handoffTrip.id,
-            email: person.email as string,
-            origin: "https://diveday.example",
-            requestLocale: "en-US",
-            now,
-          },
-          { provider },
-        ),
-      ).resolves.toBe("failed");
-      expect(
-        await pg.db
-          .select()
-          .from(notificationSendQueue)
-          .where(eq(notificationSendQueue.bookingId, booking.id)),
-      ).toEqual([]);
-      const [capability] = await pg.db
-        .select({ revokedAt: bookingCapabilities.revokedAt })
-        .from(bookingCapabilities)
-        .where(
-          and(
-            eq(bookingCapabilities.bookingId, booking.id),
-            eq(bookingCapabilities.purpose, "handoff"),
-          ),
-        );
-      expect(capability?.revokedAt).not.toBeNull();
-    } finally {
-      if (queueUnavailable) vi.unstubAllEnvs();
+    await expect(
+      sendRescheduleNotices(pg.db, shop.id, payload, sendOptions(transientFailure, now)),
+    ).resolves.toMatchObject({ told: 0, failed: 1 });
+    const [queued] = await pg.db
+      .select()
+      .from(notificationSendQueue)
+      .where(eq(notificationSendQueue.bookingId, booking.id));
+    expect(queued?.status).toBe("queued");
+    if (!queued) throw new Error("retry queue insert returned no row");
+
+    // The queued notice names the original move. Two later staff moves bump
+    // the trip revision twice before the delayed retry is drained.
+    for (const offset of [2, 3]) {
+      await pg.db
+        .update(trips)
+        .set({
+          startsAt: new Date(trip.startsAt.getTime() + offset * 60 * 60_000),
+          endsAt: new Date(trip.endsAt.getTime() + offset * 60 * 60_000),
+          revision: sql`${trips.revision} + 1`,
+        })
+        .where(and(eq(trips.id, trip.id), eq(trips.shopId, shop.id)));
     }
+
+    let retryProviderCalls = 0;
+    const retryProvider: NotificationProvider = {
+      async send() {
+        retryProviderCalls += 1;
+        return { status: "sent", providerMessageId: "must-not-send-obsolete-reschedule" };
+      },
+    };
+    await expect(
+      drainNotificationRetries(pg.db, {
+        now: new Date(now.getTime() + 24 * 60 * 60_000),
+        provider: retryProvider,
+      }),
+    ).resolves.toMatchObject({ scanned: 1, failed: 1, sent: 0 });
+    expect(retryProviderCalls).toBe(0);
+    const [finished] = await pg.db
+      .select()
+      .from(notificationSendQueue)
+      .where(eq(notificationSendQueue.id, queued.id));
+    expect(finished).toMatchObject({
+      status: "failed",
+      errorCode: "stale_reschedule",
+      payloadSealed: null,
+      bookingId: null,
+    });
+    const [delivery] = await pg.db
+      .select()
+      .from(notificationDeliveries)
+      .where(
+        and(
+          eq(notificationDeliveries.bookingId, booking.id),
+          eq(notificationDeliveries.kind, "trip_rescheduled"),
+        ),
+      );
+    expect(delivery).toMatchObject({ status: "failed", sendErrorCode: "stale_reschedule" });
   });
 
   it("finishes a normal provider call and tracking before erasure can commit", async () => {

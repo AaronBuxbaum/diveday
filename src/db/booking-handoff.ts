@@ -351,7 +351,13 @@ export async function offerBookingHandoffByEmail(
           expiresAt: issued.expiresAt,
           timezone: match.timezone,
         },
-        { provider: options.provider, signal: notificationProviderSignal() },
+        {
+          provider: options.provider,
+          signal: notificationProviderSignal(),
+          // Handoff links expire in ten minutes, while notification retries
+          // can sit until tomorrow. A queued payload would carry a dead link.
+          retryPolicy: "disabled",
+        },
       );
       const queued =
         delivery.status === "failed" && "retryQueued" in delivery && delivery.retryQueued === true;
