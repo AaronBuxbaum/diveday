@@ -306,6 +306,7 @@ const RESET_PERSON_SCOPED: Record<string, string> = {
  * survivor here is a bug unless it is genuinely shared.
  */
 const CASCADE_KEEPS: Record<string, string> = {
+  platform_backup_progress: "ON DELETE CASCADE from shops clears its scheduler checkpoint",
   booking_payment_events: "ON DELETE CASCADE from bookings clears it",
   push_subscriptions: "ON DELETE CASCADE from trips clears it",
   integration_sync_records: "ON DELETE CASCADE from shops clears it",

@@ -414,6 +414,10 @@ the work is itself about colour (then `screenshot.mjs --both`); that is the owne
 dark pixel that moved still shows up as a diff — but it tells you a pixel *moved*, never that the
 new one is better. See the **design-review** and **visual-triage** skills.
 
+The local capture tools wait for a staff page's live session check as well as its loading
+skeleton. A session that remains paused or never finishes checking fails the capture with an
+explicit error; the tool does not hide the lock screen or save it as evidence of the destination.
+
 ## What a focused `pnpm e2e` run does and does not reset
 
 Each invocation derives a deterministic per-worktree base port for its worker-server block; set

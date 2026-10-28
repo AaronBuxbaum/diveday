@@ -55,6 +55,24 @@ function FactRow({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
+function RentalNoteFact({
+  profile,
+  flagged,
+  t,
+}: {
+  profile: DiverProfile["rentalFit"];
+  flagged: boolean;
+  t: StaffTranslator;
+}) {
+  return profile?.note?.trim() &&
+    (!flagged || profile.note.trim() !== profile.needsStaffFitNote?.trim()) ? (
+    <FactRow label={t("divers.file.rentalNotes")}>{profile.note}</FactRow>
+  ) : null;
+}
+
+const FIT_SUMMARY_CLASS =
+  "w-fit min-w-11 cursor-pointer list-none [&::-webkit-details-marker]:hidden";
+
 export function GearAndSizes({
   diver,
   shopSlug,
@@ -93,6 +111,10 @@ export function GearAndSizes({
   // of this group must not read a piece the shop dropped as one to hand over
   // while the form under it offers no size for it (issue #1804).
   const line = rentalFitLine(profile ?? null, rentalItems);
+  const statusText =
+    line.state === "needs_staff_fit"
+      ? t("shared.rentalFit.needsStaffFit")
+      : rentalFitLineText(t, locale, line);
   const list = cachedListFormat(locale, { style: "long", type: "unit" });
   // Only sizes the shop can actually hand over. `requires` is the second half
   // of that question — which ticks make this size worth asking for — and it is
@@ -192,8 +214,7 @@ export function GearAndSizes({
   // Keep the door a status, not a packing list. The domain line still carries
   // every item and size for the expanded facts below; the short state is enough
   // to tell a staffer whether there is anything to inspect or act on.
-  const gearSummary =
-    line.state === "rents" ? t("divers.file.rentalFitOnFile") : rentalFitLineText(t, locale, line);
+  const gearSummary = line.state === "rents" ? t("divers.file.rentalFitOnFile") : statusText;
   const flagged = Boolean(profile?.needsStaffFitAt);
   // **Only an outcome this form produced.** All four fit notices carry
   // `form: "fit"` — the two flag controls below the disclosure share it with
@@ -239,11 +260,13 @@ export function GearAndSizes({
             </ul>
           </FactRow>
         ) : null}
-        <FactRow label={t("divers.file.rentsFromUs")}>
-          {line.state === "rents"
-            ? list.format(line.items.map((item) => rentalItemLabel(t, item.kind)))
-            : rentalFitLineText(t, locale, line)}
-        </FactRow>
+        {line.state === "needs_staff_fit" ? null : (
+          <FactRow label={t("divers.file.rentsFromUs")}>
+            {line.state === "rents"
+              ? list.format(line.items.map((item) => rentalItemLabel(t, item.kind)))
+              : statusText}
+          </FactRow>
+        )}
         {line.state === "rents" ? (
           <FactRow label={t("divers.file.sizes")}>
             {sized.length > 0
@@ -251,6 +274,7 @@ export function GearAndSizes({
               : t("divers.file.noSizes")}
           </FactRow>
         ) : null}
+        <RentalNoteFact profile={profile} flagged={flagged} t={t} />
         {mayEdit ? (
           <details
             className="group px-5 py-3 sm:px-6"
@@ -270,7 +294,7 @@ export function GearAndSizes({
                 variant: "link",
                 size: "sm",
                 flush: true,
-                className: "w-fit cursor-pointer list-none [&::-webkit-details-marker]:hidden",
+                className: FIT_SUMMARY_CLASS,
               })}
             >
               {t("divers.file.editSizes")}
@@ -373,7 +397,7 @@ export function GearAndSizes({
                   variant: "link",
                   size: "sm",
                   flush: true,
-                  className: "w-fit cursor-pointer list-none [&::-webkit-details-marker]:hidden",
+                  className: FIT_SUMMARY_CLASS,
                 })}
               >
                 {t("divers.rentalFit.cantFillHeading")}

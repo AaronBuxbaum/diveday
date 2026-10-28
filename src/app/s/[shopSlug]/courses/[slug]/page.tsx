@@ -39,6 +39,7 @@ import {
   CourseSchedule,
   CourseSessions,
   courseFootBar,
+  courseHeroDate,
 } from "./_components/CourseSections";
 
 // `instant = true`: this route has a real static shell. Every request-scoped
@@ -222,12 +223,22 @@ export default async function CoursePage({
         t={t}
         facts={facts}
         inquiryHref={inquiryHref}
-      />
-      <CourseAdmission
-        certificationRequired={certificationRequired}
-        minimumAge={course.minimumAge}
-        shopNote={course.prerequisiteNote}
-        t={t}
+        nextDate={courseHeroDate(
+          sessions,
+          shopSlug,
+          shop.timezone,
+          locale,
+          t,
+          shop.waitlistEnabled,
+        )}
+        admission={
+          <CourseAdmission
+            certificationRequired={certificationRequired}
+            minimumAge={course.minimumAge}
+            shopNote={course.prerequisiteNote}
+            t={t}
+          />
+        }
       />
       {jumpItems.length > 1 ? (
         <JumpNav ariaLabel={t("course.onThisPage")} items={jumpItems} className="mt-10" />
@@ -250,17 +261,19 @@ export default async function CoursePage({
         inquiryHref={inquiryHref}
         t={t}
       />
+      <div className="mt-4 print:hidden">
+        {/* The composer's client-side refusals need the diver's translator. */}
+        <DiverIntlProvider locale={locale} timeZone={shop.timezone} namespaces={["inquiry"]}>
+          <DateRequestForm
+            submitRequest={submitInquiryAction.bind(null, shopSlug, slug)}
+            collapsible
+            contactEmail={shop.contactEmail}
+            contactPhone={shop.contactPhone}
+            copy={{ ...dateRequestCopy(t, "course"), heading: t("course.askAnotherDate") }}
+          />
+        </DiverIntlProvider>
+      </div>
       <CourseFaqs faqs={course.faqs} t={t} />
-      {/* The composer's client-side refusals need the diver's translator. */}
-      <DiverIntlProvider locale={locale} timeZone={shop.timezone} namespaces={["inquiry"]}>
-        <DateRequestForm
-          submitRequest={submitInquiryAction.bind(null, shopSlug, slug)}
-          className="mt-14"
-          contactEmail={shop.contactEmail}
-          contactPhone={shop.contactPhone}
-          copy={dateRequestCopy(t, "course")}
-        />
-      </DiverIntlProvider>
       {footBar ? <PhoneFootBar href={footBar.href}>{footBar.label}</PhoneFootBar> : null}
     </main>
   );

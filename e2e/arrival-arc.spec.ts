@@ -50,9 +50,10 @@ test.describe("the dive arrival arc", () => {
     await expect(page.getByLabel("Assign crew")).toHaveAttribute("data-hydrated", "true");
     await page.getByLabel("Assign crew").selectOption({ label: helperName });
     await expect(page.getByRole("button", { name: `Unassign ${helperName}` })).toBeVisible();
-    await openTripAboutRow(page, "The plan");
+    await openTripAboutRow(page, "Where we meet");
     await page.locator('input[name="meetingPointLabel"]').fill("North Jetty Marina");
     await page.locator('input[name="meetingPointAddress"]').fill("12 Dock Rd");
+    await page.getByText("Arrival guidance", { exact: true }).click();
     // By form name: "Landmark" is a substring of the photo control's own label
     // ("Landmark photo"), so a label match resolves to two elements.
     await page

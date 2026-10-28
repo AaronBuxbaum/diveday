@@ -165,6 +165,20 @@ for (const scheme of ["light", "dark"] as const) {
           .first()
           .waitFor();
         await capture(page, "today-arrival-lookup", scheme);
+        if (scheme === "light") {
+          // The two-column seam squeezed this label to 12px while its count
+          // stayed fixed-width. Keep a real geometry regression and pixels.
+          await page.setViewportSize({ width: 640, height: 900 });
+          const horizon = page.getByRole("heading", { name: "This week", exact: true });
+          await expect(horizon).toBeVisible();
+          expect(
+            await horizon.evaluate((element) => element.scrollWidth <= element.clientWidth),
+          ).toBe(true);
+          await page.screenshot({
+            path: "e2e/screenshots/today-arrival-lookup-light-vw-640.png",
+            fullPage: true,
+          });
+        }
       });
 
       // **"Running late, said 9:18"** (J3): the lookup row of a diver who told
@@ -699,9 +713,8 @@ for (const scheme of ["light", "dark"] as const) {
         // offered under a ready row's check-in tap and nowhere else.
         await expect(row.getByRole("button", { name: "Check in Odile Marchand" })).toBeVisible();
 
-        const door = row
-          .locator("details")
-          .filter({ has: page.getByText("Not here", { exact: true }) });
+        await openRosterDetails(row);
+        const door = row.getByText("Not here", { exact: true }).locator("..");
         await door.locator("> summary").click();
         // The body animates in, so `open` flipping is not the frame it is laid
         // out in — waited on the arrival's end state, never a duration.
@@ -716,9 +729,8 @@ for (const scheme of ["light", "dark"] as const) {
         await depart(90);
         await page.goto(counterPath("blue-mantis", tripId));
         const sailedRow = deskRow();
-        const sailedDoor = sailedRow
-          .locator("details")
-          .filter({ has: page.getByText("Not here", { exact: true }) });
+        await openRosterDetails(sailedRow);
+        const sailedDoor = sailedRow.getByText("Not here", { exact: true }).locator("..");
         // Hydrated before the tap, not after: this frame opens the door
         // straight off a page load, and a summary tapped while the page is
         // still the server's markup did not stay open on CI or locally. The

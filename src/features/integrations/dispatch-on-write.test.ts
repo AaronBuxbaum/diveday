@@ -7,19 +7,32 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("./dispatcher", () => ({ dispatchDueIntegrationDeliveries: vi.fn() }));
+vi.mock("./dispatcher", () => ({
+  dispatchDueIntegrationDeliveries: vi.fn(),
+  INTEGRATION_DELIVERY_SETTLEMENT_RESERVE_MS: 1_000,
+}));
 vi.mock("@/lib/log", () => ({ log: vi.fn() }));
 
 const { after } = await import("next/server");
 const { getDb } = await import("@/db/client");
 const { dispatchDueIntegrationDeliveries } = await import("./dispatcher");
 const { log } = await import("@/lib/log");
-const { dispatchIntegrationsAfterResponse, WRITE_PATH_DISPATCH_LIMIT } = await import(
-  "./dispatch-on-write"
-);
+const {
+  dispatchIntegrationsAfterResponse,
+  WRITE_PATH_DISPATCH_LIMIT,
+  WRITE_PATH_DISPATCH_BUDGET_MS,
+} = await import("./dispatch-on-write");
 
 const FAKE_DB = { fake: "db" };
-const NOTHING_DUE = { scanned: 0, delivered: 0, retried: 0, failed: 0 };
+const NOTHING_DUE = {
+  scanned: 0,
+  delivered: 0,
+  retried: 0,
+  failed: 0,
+  elapsedMs: 0,
+  budgetExhausted: false,
+  skippedByBudget: 0,
+};
 
 /** Run whatever the helper handed to `after`, the way the platform would. */
 async function runScheduledWork() {
@@ -64,10 +77,14 @@ describe("dispatchIntegrationsAfterResponse", () => {
 
     expect(dispatchDueIntegrationDeliveries).toHaveBeenCalledWith(FAKE_DB, {
       limit: WRITE_PATH_DISPATCH_LIMIT,
+      timeBudgetMs: WRITE_PATH_DISPATCH_BUDGET_MS,
+      settlementReserveMs: 1_000,
+      startedAtMs: expect.any(Number),
       order: "newest-first",
     });
     // A request drains what it just wrote, not somebody else's backlog.
     expect(WRITE_PATH_DISPATCH_LIMIT).toBeLessThan(50);
+    expect(WRITE_PATH_DISPATCH_BUDGET_MS).toBe(15_000);
   });
 
   it("stays silent when nothing was due", async () => {
@@ -80,7 +97,15 @@ describe("dispatchIntegrationsAfterResponse", () => {
   });
 
   it("logs a summary when it actually delivered something", async () => {
-    const summary = { scanned: 2, delivered: 2, retried: 0, failed: 0 };
+    const summary = {
+      scanned: 2,
+      delivered: 2,
+      retried: 0,
+      failed: 0,
+      elapsedMs: 12_000,
+      budgetExhausted: false,
+      skippedByBudget: 0,
+    };
     vi.mocked(dispatchDueIntegrationDeliveries).mockResolvedValue(summary);
 
     dispatchIntegrationsAfterResponse();

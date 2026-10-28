@@ -76,6 +76,10 @@ test.describe("owner", () => {
     // nav that woke up after the address moved kept the board's
     // `aria-current="page"` for as long as the departure stayed open.
     await page.goto("/shop/blue-mantis/schedule/board", { waitUntil: "commit" });
+    // The session check can briefly lock the page. Wait for that security
+    // boundary without requiring the sidebar itself to have hydrated.
+    await expect(page.locator('[data-staff-session-check="settled"]')).toHaveCount(1);
+    await expect(page.locator("[data-staff-session-lock]")).toHaveCount(0);
     const nav = page.getByRole("navigation", { name: "Main", exact: true });
     const door = page.locator("[data-week-board] a[data-departure-door]").first();
     const title = (await door.getAttribute("aria-label")) ?? "";

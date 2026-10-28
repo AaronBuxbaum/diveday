@@ -285,7 +285,10 @@ for (const scheme of ["light", "dark"] as const) {
         scope: "all" | "fun_dives",
         validUntil?: string,
       ) => {
-        await page.goto(`/shop/${privateShop.slug}/promos/packages`);
+        // Settle the form's own document, not the redirect-only packages shell:
+        // its session check can finish before the destination starts hydrating.
+        await page.goto(`/shop/${privateShop.slug}/promos#dive-packages`);
+        await expect(page).toHaveURL(`/shop/${privateShop.slug}/promos#dive-packages`);
         const create = page.locator("#package-new");
         await expect(create.locator("summary")).toBeVisible();
         if ((await create.getAttribute("open")) === null) await create.locator("summary").click();

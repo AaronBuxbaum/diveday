@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { buttonClass } from "@/components/ui/button";
+import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import type { listBoats } from "@/db/boats";
 import type { listTripLenses } from "@/db/trip-lenses";
 import type { getTripOverview } from "@/db/trips";
@@ -12,8 +14,9 @@ import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-label
 // 20260804-instant-navigation.
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
+import { perDiverBookingPriceCents } from "@/lib/courses";
 import { type DepthUnit, depthInUnit } from "@/lib/depth-units";
-import { formatShortDate, weekdayNames } from "@/lib/format";
+import { formatMoneyCents, formatShortDate, formatWeekdayTime, weekdayNames } from "@/lib/format";
 import { meetingPointLine, meetingPointOfRows } from "@/lib/meeting-point";
 import { toShopCurrency } from "@/lib/money";
 import type { requireShopSurface } from "@/lib/session";
@@ -26,7 +29,8 @@ import {
 import { laterMeetingDates } from "@/lib/trip-days";
 import { clearConditionsAction, saveConditionsAction } from "../conditions-actions";
 import { updateTripCrewAction } from "../crew-actions";
-import { saveDetails } from "../details-actions";
+import type { DepartureDetailsSection } from "../departure-detail-sections";
+import { saveDetailsSection } from "../details-actions";
 import {
   cancelOffCadenceSeriesAction as cancelOffCadence,
   updateSeriesCadenceAction,
@@ -62,8 +66,8 @@ export type TripAboutRowsContext = {
   shopLenses: Awaited<ReturnType<typeof listTripLenses>>;
   automatedForecast: ReturnType<typeof departureConditionReads>["automatedForecast"];
   tideLines: ReturnType<typeof departureConditionReads>["tideLines"];
-  /** A retime's held reschedule notice, on the save that set it going. */
-  held?: string;
+  /** The held notice keeps its editor identity after the one-shot save notice is cleared. */
+  held?: { id: string; section: string | undefined };
   tell?: string;
   refundsHeld?: boolean;
 };
@@ -120,6 +124,59 @@ function crewConditionFacts(
  * refusal from its own form, a missing requirements row, crew to sort —
  * renders open.
  */
+function departureEditor(context: TripAboutRowsContext, section: DepartureDetailsSection) {
+  const {
+    overview,
+    shop,
+    shopSlug,
+    tripId,
+    locale,
+    tripNotice,
+    shopBoats,
+    shopLenses,
+    held,
+    tell,
+  } = context;
+  const { trip, diveSiteList, tripDiveList, startWall, endWall, scheduleDays, canConfigure } =
+    overview;
+  return canConfigure ? (
+    <DetailsEditor
+      shop={shop}
+      section={section}
+      held={held?.section === section ? held.id : undefined}
+      tell={tell}
+      context={{
+        action: saveDetailsSection.bind(null, shopSlug, tripId, section),
+        status: noticeForForm(tripNotice, section),
+        trip,
+        diveSiteList,
+        tripDiveList,
+        startWall,
+        endWall,
+        dayCount: Math.max(1, scheduleDays.length),
+        // The later days' own dates when the run has gaps (third UX
+        // review, item 10), so a save keeps a course's weekends apart.
+        laterDates: laterMeetingDates(
+          scheduleDays.map((day) => calendarDateInTimezone(day.startsAt, shop.timezone)),
+        ),
+        locale,
+        currency: toShopCurrency(shop.currency),
+        boats: shopBoats.map((boat) => ({
+          id: boat.id,
+          name: boat.name,
+          capacity: boat.capacity,
+        })),
+        lenses: shopLenses.map((lens) => ({ id: lens.id, name: lens.name })),
+        hasBoatDiving: shop.hasBoatDiving,
+        hasShoreDiving: shop.hasShoreDiving,
+        hasPoolDiving: shop.hasPoolDiving,
+        rentalItems: shop.rentalItems,
+        flySafeTold: overview.flySafeTold,
+      }}
+    />
+  ) : undefined;
+}
+
 export function tripAboutRows(context: TripAboutRowsContext) {
   const {
     overview,
@@ -132,29 +189,23 @@ export function tripAboutRows(context: TripAboutRowsContext) {
     t,
     tripNotice,
     shopBoats,
-    shopLenses,
     automatedForecast,
     tideLines,
-    held,
-    tell,
   } = context;
   const {
     trip,
     cancelled,
     staff,
     requirement,
-    diveSiteList,
-    tripDiveList,
     siteRequirement,
     series,
     scheduleDays,
     canConfigure,
     offCadence,
     diveSites,
-    startWall,
-    endWall,
     crew,
   } = overview;
+  const bookingPriceCents = perDiverBookingPriceCents(trip, trip.course);
   const { crewIds, tripRoleByPerson, crewGap, onShiftIds, clashes } = crew;
   const { ratingLapsedNote, languageGapNote, underTargetNote, overRatioWarning } = crewNotes;
   const detailsStatus = noticeForForm(tripNotice, "details");
@@ -233,70 +284,59 @@ export function tripAboutRows(context: TripAboutRowsContext) {
         languageGapNote !== null ||
         ratingLapsedNote !== null));
 
+  const editorFor = (section: DepartureDetailsSection) => departureEditor(context, section);
+
   return [
     {
-      id: "details",
+      id: "plan",
       label: t("trips.about.plan"),
-      // The missing price rides on the row rather than inside the editor
-      // it is about: it is the one thing about the plan that is a
-      // problem, and the board's "Set a price for …" link lands here
-      // (task 150, UX persona lens 17).
-      value:
-        trip.priceCents === null && !cancelled ? (
-          <>
-            {planSummary}
-            <span className="mt-0.5 block font-medium text-warning-strong">
-              {t("trips.details.summaryNoPrice")}
-            </span>
-          </>
-        ) : (
-          planSummary
-        ),
-      editorOpen: Boolean(detailsStatus),
-      editor: canConfigure ? (
-        <DetailsEditor
-          shop={shop}
-          held={held}
-          tell={tell}
-          context={{
-            action: saveDetails.bind(null, shopSlug, tripId),
-            status: detailsStatus,
-            trip,
-            diveSiteList,
-            tripDiveList,
-            startWall,
-            endWall,
-            dayCount: Math.max(1, scheduleDays.length),
-            // The later days' own dates when the run has gaps (third UX
-            // review, item 10), so a save keeps a course's weekends apart.
-            laterDates: laterMeetingDates(
-              scheduleDays.map((day) => calendarDateInTimezone(day.startsAt, shop.timezone)),
-            ),
-            locale,
-            currency: toShopCurrency(shop.currency),
-            boats: shopBoats.map((boat) => ({
-              id: boat.id,
-              name: boat.name,
-              capacity: boat.capacity,
-            })),
-            lenses: shopLenses.map((lens) => ({ id: lens.id, name: lens.name })),
-            hasBoatDiving: shop.hasBoatDiving,
-            hasShoreDiving: shop.hasShoreDiving,
-            hasPoolDiving: shop.hasPoolDiving,
-            rentalItems: shop.rentalItems,
-            flySafeTold: overview.flySafeTold,
-          }}
-        />
-      ) : undefined,
+      value: planSummary,
+      editorOpen: Boolean(noticeForForm(tripNotice, "plan")),
+      editor: editorFor("plan"),
     },
-    // **Where the boat meets** (UX review 2026-10-13, item 18): the diver's
-    // `/ready` and every message say it, and until this no staff page did —
-    // it lived only as two fields inside the plan's editor, which is still
-    // where it changes. The shop's own door when the departure names none.
     {
       id: "meeting",
       label: t("trips.about.meetingPoint"),
       value: meetingPointLine(meetingPointOfRows(shop, trip)),
+      editorOpen: Boolean(noticeForForm(tripNotice, "meeting")),
+      editor: editorFor("meeting"),
+    },
+    {
+      id: "timing",
+      label: t("trips.about.timing"),
+      value: [
+        formatWeekdayTime(trip.startsAt, locale, shop.timezone),
+        scheduleDays.length > 1 ? t("schedule.week.runsDays", { days: scheduleDays.length }) : null,
+      ]
+        .filter(Boolean)
+        .join(" · "),
+      editorOpen: Boolean(noticeForForm(tripNotice, "timing")),
+      editor: editorFor("timing"),
+    },
+    {
+      // Existing Set a price links land on this object.
+      id: "details",
+      label: t("trips.about.bookingAndPayment"),
+      value:
+        bookingPriceCents === null && !cancelled
+          ? t("trips.details.summaryNoPrice")
+          : [
+              bookingPriceCents === null
+                ? null
+                : formatMoneyCents(bookingPriceCents, shop.currency, locale),
+              t("schedule.week.seats", { booked: trip.booked, capacity: trip.capacity }),
+            ]
+              .filter(Boolean)
+              .join(" · "),
+      editorOpen: Boolean(noticeForForm(tripNotice, "booking")) || Boolean(detailsStatus),
+      editor: editorFor("booking"),
+    },
+    {
+      id: "departure-details",
+      label: t("trips.about.departureDetails"),
+      value: trip.title,
+      editorOpen: Boolean(noticeForForm(tripNotice, "departure")),
+      editor: editorFor("departure"),
     },
     {
       id: "conditions",
@@ -384,7 +424,7 @@ export function tripAboutRows(context: TripAboutRowsContext) {
       // safety-adjacent ones are also linked from the pulse above,
       // which is what makes `#crew` land on something rather than on a
       // closed row.
-      editorOpen: crewRowOpen,
+      editorOpen: crewRowOpen || Boolean(noticeForForm(tripNotice, "boat")),
       /* Who's aboard is manifest accuracy (glossary) — open to all
    staff. Per-person assign/unassign (updateTripCrewAction), the
    same mutation the schedule board uses — not a whole-set replace
@@ -392,6 +432,18 @@ export function tripAboutRows(context: TripAboutRowsContext) {
    other (Lens 17 task 139). */
       editor: (
         <>
+          {canConfigure ? (
+            <details
+              className="group/boat-edit mb-6"
+              open={Boolean(noticeForForm(tripNotice, "boat")) || undefined}
+            >
+              <summary className={buttonClass({ variant: "link", size: "sm", flush: true })}>
+                {t("trips.details.editBoat")}
+                <DisclosureCaret direction="down" className="group-open/boat-edit:rotate-180" />
+              </summary>
+              <div className="mt-3">{editorFor("boat")}</div>
+            </details>
+          ) : null}
           <CrewSection
             shopSlug={shopSlug}
             tripId={tripId}

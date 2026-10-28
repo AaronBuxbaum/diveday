@@ -52,5 +52,7 @@ provider app credentials only for the providers a deployment offers:
 - Zapier: no app client secret is needed; a shop pastes its HTTPS Catch Hook
   URL in Settings. `APP_HOST` is still used for the OAuth redirect URLs above.
 
-The ten-minute integration dispatcher is scheduled at
-`/api/cron/integrations` and uses the deployment's normal `CRON_SECRET`.
+The hourly integration dispatcher is scheduled at
+`/api/cron/integrations` and uses the deployment's normal `CRON_SECRET`. A cron pass admits work
+for at most four minutes, with a one-minute ceiling per delivery; writes also dispatch after the
+response with a fifteen-second budget. Timed-out provider work follows the normal retry path.
