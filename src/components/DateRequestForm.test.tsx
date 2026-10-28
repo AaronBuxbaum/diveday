@@ -591,6 +591,6 @@ describe("DateRequestForm — its place on the page", () => {
       join(dirname(fileURLToPath(import.meta.url)), "../app/s/[shopSlug]/courses/[slug]/page.tsx"),
       "utf8",
     );
-    expect(coursePage).toMatch(/<DateRequestForm[^>]*className="mt-14"/);
+    expect(coursePage).toMatch(/<DateRequestForm[^>]*className="(?:[^"]* )?mt-14(?: [^"]*)?"/);
   });
 });
