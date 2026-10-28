@@ -1,3 +1,4 @@
+import { diverTranslator } from "../src/i18n/messages";
 import { expect, test } from "./fixtures";
 
 /**
@@ -32,8 +33,11 @@ test("an empty board says when the shop is next doing something, and opens the c
   // The sentence this state exists to remove. It read as a shop that had
   // stopped, on the page that decides whether a stranger books anywhere.
   await expect(page.getByText("No trips on the books yet")).toHaveCount(0);
-  // And no section heading standing over nothing.
-  await expect(page.getByRole("heading", { level: 2, name: "Schedule" })).toHaveCount(0);
+  // The page keeps its title while an empty board has no calendar to navigate.
+  await expect(page.getByRole("heading", { level: 1, name: "Schedule" })).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: diverTranslator("en-US")("schedule.monthNav") }),
+  ).toHaveCount(0);
 
   // The composer is the page's one primary and it is already open — no
   // disclosure to find, no chevron to guess at. The row's own summary, by the
@@ -71,7 +75,10 @@ test("a departure beyond the quiet window is named as the day the shop is back",
 
   // The board is not hidden — that departure is still bookable, and its row is
   // still there under the schedule heading.
-  await expect(page.getByRole("heading", { level: 2, name: "Schedule" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Schedule" })).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: diverTranslator("en-US")("schedule.monthNav") }),
+  ).toBeVisible();
   await expect(page.getByRole("link", { name: /Season Opener Two-Tank/ }).first()).toBeVisible();
 });
 

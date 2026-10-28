@@ -31,7 +31,8 @@ export type ScheduleFiltersCopy = {
  * or two checkboxes and a sentence — on a conversion surface whose one job is
  * to get somebody onto a boat (principle 8: collapse the rare path; principle
  * 10: remove until it breaks). The chips are the shop's trip tags and
- * stay out; these four are the advanced ask.
+ * stay out on desktop; on a phone the same disclosure holds the whole row.
+ * A closed row summarizes the active selection (public audit P3, issue #3140).
  *
  * **Open when the reader is already filtering.** A URL carrying any of the
  * four parameters — a shared link, a reload, a step back — opens the
@@ -80,6 +81,7 @@ export function ScheduleFilters({
   copy,
   chips = null,
   monthRail = null,
+  activeLensLabel = null,
 }: {
   embed: boolean;
   month: string | null;
@@ -105,6 +107,8 @@ export function ScheduleFilters({
   chips?: ReactNode;
   /** The month link, at the row's end. */
   monthRail?: ReactNode;
+  /** The operator-authored active lens, summarized while the phone row is closed. */
+  activeLensLabel?: string | null;
 }) {
   const panelId = useId();
   const formRef = useRef<HTMLFormElement>(null);
@@ -120,6 +124,15 @@ export function ScheduleFilters({
     Boolean(tripTypeFilter || hasSpaceFilter || canDiveFilter || hideAboveFilter),
   );
   const submit = () => formRef.current?.requestSubmit();
+  const activeSummary = [
+    activeLensLabel,
+    tripTypeFilter === "course" ? copy.course : tripTypeFilter === "fun_dive" ? copy.funDive : null,
+    hasSpaceFilter ? copy.hasSpace : null,
+    copy.canDiveLevels.find((level) => level.value === canDiveFilter)?.label,
+    hideAboveFilter ? copy.hideAboveLevel : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <QueryForm ref={formRef} className="mb-6">
@@ -134,11 +147,18 @@ export function ScheduleFilters({
           row's full width beneath the chips; it wears the diver pages' one
           disclosure face, the chevron that turns open (B35). */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        {chips ? <div className="min-w-0 max-w-full">{chips}</div> : null}
+        {chips ? (
+          <div
+            id={`${panelId}-chips`}
+            className={`min-w-0 max-w-full max-sm:order-3 max-sm:w-full ${open ? "" : "max-sm:hidden"}`}
+          >
+            {chips}
+          </div>
+        ) : null}
         <button
           type="button"
           aria-expanded={open}
-          aria-controls={panelId}
+          aria-controls={chips ? `${panelId} ${panelId}-chips` : panelId}
           onClick={() => setOpen((was) => !was)}
           className="group/filters inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg px-2 text-sm font-medium text-muted transition-brand hover:text-primary focus-visible:focus-ring print:hidden"
         >
@@ -148,6 +168,9 @@ export function ScheduleFilters({
             className="size-4 group-aria-expanded/filters:rotate-180"
           />
         </button>
+        {!open && activeSummary ? (
+          <span className="min-w-0 text-sm text-muted sm:hidden">{activeSummary}</span>
+        ) : null}
         {monthRail ? <div className="ms-auto">{monthRail}</div> : null}
       </div>
       <div id={panelId} hidden={!open} className="mt-3">

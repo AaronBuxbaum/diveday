@@ -2,6 +2,7 @@ import { Pager, staffPagerWords } from "@/components/Pager";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { GroupLabel } from "@/components/ui/group-label";
 import { LedgerGroup, LedgerRow } from "@/components/ui/ledger";
 import type { GearRegisterGroups, GearRegisterRow, GearRowReservation } from "@/db/gear";
 import { gearServiceStateText, gearStatusLabel } from "@/i18n/gear-labels";
@@ -215,13 +216,37 @@ function GearGroup({
 } & Omit<GearUnitRowProps, "row" | "group" | "t">) {
   if (rows.length === 0) return null;
   const headingId = `gear-group-${name}`;
+  const uncollected =
+    name === "overdue" ? rows.filter((row) => !row.reservation?.checkedOutAt) : [];
+  const remaining = uncollected.length ? rows.filter((row) => row.reservation?.checkedOutAt) : rows;
   return (
     <LedgerGroup as="h2" id={headingId} label={t(GROUP_LABEL_KEYS[name], { count })}>
-      <ul aria-labelledby={headingId}>
-        {rows.map((row) => (
-          <GearUnitRow key={row.item.id} row={row} group={name} t={t} {...rowProps} />
-        ))}
-      </ul>
+      {remaining.length ? (
+        <ul aria-labelledby={headingId}>
+          {remaining.map((row) => (
+            <GearUnitRow key={row.item.id} row={row} group={name} t={t} {...rowProps} />
+          ))}
+        </ul>
+      ) : null}
+      {uncollected.length ? (
+        <div className={remaining.length ? "mt-4" : ""}>
+          <GroupLabel id={`${headingId}-uncollected`} className="mb-2">
+            {t("gear.phase.neverPickedUp")}
+          </GroupLabel>
+          <ul aria-labelledby={`${headingId}-uncollected`}>
+            {uncollected.map((row) => (
+              <GearUnitRow
+                key={row.item.id}
+                row={row}
+                group={name}
+                groupedUncollected
+                t={t}
+                {...rowProps}
+              />
+            ))}
+          </ul>
+        </div>
+      ) : null}
     </LedgerGroup>
   );
 }
@@ -241,6 +266,7 @@ type GearUnitRowProps = {
   timeZone: string;
   todayLocal: CalendarDate;
   acts: GearActs;
+  groupedUncollected?: boolean;
 };
 
 /** One unit: its tag, what it is, where it stands, and the act that moves it. */
@@ -253,6 +279,7 @@ function GearUnitRow({
   timeZone,
   todayLocal,
   acts,
+  groupedUncollected = false,
 }: GearUnitRowProps) {
   const { item, reservation } = row;
   // Brand and size, the two things a hand reaching for a unit checks. The
@@ -272,7 +299,7 @@ function GearUnitRow({
         ? t("gear.fleet.sizeNotSet")
         : t("gear.fleet.noSize");
   const where = reservation
-    ? whereFact({ reservation, group, t, locale, timeZone, todayLocal })
+    ? whereFact({ reservation, group, groupedUncollected, t, locale, timeZone, todayLocal })
     : null;
   const service = serviceFact({ row, t, locale });
 
@@ -282,11 +309,18 @@ function GearUnitRow({
       // The tag, and nothing appended: the e2e suite, the visual captures and
       // a staffer with wet hands all address a unit by exactly this.
       linkLabel={item.label}
+      stacked={group !== "onWall"}
       // A unit on the wall has no act to ride its row; the door's own chevron
       // is the whole trailing edge.
       trailing={
         group === "onWall" ? null : (
-          <GearRowActs reservation={reservation} label={item.label} t={t} acts={acts} />
+          <GearRowActs
+            reservation={reservation}
+            label={item.label}
+            overdue={group === "overdue"}
+            t={t}
+            acts={acts}
+          />
         )
       }
     >
@@ -302,10 +336,10 @@ function GearUnitRow({
           <span
             className={
               where.tone === "warning"
-                ? "inline-flex items-baseline gap-1.5 text-sm font-medium text-warning-strong"
+                ? "inline-flex basis-full items-baseline gap-1.5 text-sm font-medium text-warning-strong"
                 : where.tone === "plain"
-                  ? "text-sm"
-                  : "text-sm text-muted"
+                  ? "basis-full text-sm"
+                  : "basis-full text-sm text-muted"
             }
           >
             {/* **The fact takes its baseline from its words** (pixel-craft
@@ -355,6 +389,7 @@ function whereFact({
   locale,
   timeZone,
   todayLocal,
+  groupedUncollected = false,
 }: {
   reservation: GearRowReservation;
   group: GearRegisterGroupName;
@@ -362,13 +397,20 @@ function whereFact({
   locale: string;
   timeZone: string;
   todayLocal: CalendarDate;
+  groupedUncollected?: boolean;
 }): RowFact | null {
   const name = reservation.personName;
   const dueOn = formatCalendarDate(reservation.reservedUntil, locale);
   if (group === "overdue") {
     return reservation.checkedOutAt
       ? { text: t("gear.fleet.overdueWith", { name, dueOn }), tone: "warning" }
-      : { text: t("gear.fleet.neverPickedUp", { name, dueOn }), tone: "muted" };
+      : {
+          text: t(groupedUncollected ? "gear.fleet.uncollectedDue" : "gear.fleet.neverPickedUp", {
+            name,
+            dueOn,
+          }),
+          tone: "muted",
+        };
   }
   if (group === "onWall") {
     return {
@@ -441,11 +483,13 @@ function GearRowActs({
   label,
   t,
   acts,
+  overdue,
 }: {
   reservation: GearRowReservation | null;
   label: string;
   t: StaffTranslator;
   acts: GearActs;
+  overdue: boolean;
 }) {
   if (!reservation) return null;
   if (reservation.checkedOutAt) {
@@ -464,16 +508,18 @@ function GearRowActs({
   }
   return (
     <div className="flex gap-2">
-      <form action={acts.checkOutAction}>
-        <input type="hidden" name="reservationId" value={reservation.reservationId} />
-        <SubmitButton
-          ariaLabel={t("gear.fleet.acts.checkOutUnit", { label })}
-          pendingLabel={t("gear.returns.checkingOut")}
-          className={buttonClass({ variant: "ghost", size: "sm" })}
-        >
-          {t("gear.returns.checkOut")}
-        </SubmitButton>
-      </form>
+      {!overdue ? (
+        <form action={acts.checkOutAction}>
+          <input type="hidden" name="reservationId" value={reservation.reservationId} />
+          <SubmitButton
+            ariaLabel={t("gear.fleet.acts.checkOutUnit", { label })}
+            pendingLabel={t("gear.returns.checkingOut")}
+            className={buttonClass({ variant: "ghost", size: "sm" })}
+          >
+            {t("gear.returns.checkOut")}
+          </SubmitButton>
+        </form>
+      ) : null}
       <form action={acts.releaseAction}>
         <input type="hidden" name="reservationId" value={reservation.reservationId} />
         <SubmitButton
