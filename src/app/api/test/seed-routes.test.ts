@@ -38,6 +38,8 @@ type SeedRoute = {
    * the slug, so the guard would have agreed (`security-reviewer`, 2026-09-13).
    */
   slug: string;
+  /** Optional query for routes whose post-guard path requires a named fixture. */
+  query?: string;
   /**
    * The verb this row is about — one row per handler, because a handler is
    * guarded one at a time. Only `email-previews` is a `GET`; it is in this
@@ -181,6 +183,16 @@ const routes: SeedRoute[] = [
     // proves the guard let it through. This one rewrites the departure times
     // of a whole shop day, so a route that answered on a misconfigured
     // deployment would be moving a real shop's boats.
+    expectPastTheGuard: async () => {
+      expect(getDb).toHaveBeenCalled();
+    },
+  },
+  {
+    slug: "seed-today-catch-up",
+    query: "?shop=private-fixture",
+    // Reaches the database only after the E2E bearer guard. Past that it writes
+    // a desk event and a Today read mark, so a misconfigured deployment must
+    // never let a caller add fabricated crew activity to any shop.
     expectPastTheGuard: async () => {
       expect(getDb).toHaveBeenCalled();
     },
@@ -384,14 +396,14 @@ afterEach(() => {
 describe.each(routes)(
   "/api/test/$slug — auth gate (specialist-optimization-audit-20260731.md §5)",
   (route) => {
-    const { slug, method, expectPastTheGuard } = route;
+    const { slug, method, query, expectPastTheGuard } = route;
     const handler = (request: Request) => handlerFor(route).then((fn) => fn(request));
     function seedRequest(authorization?: string) {
       const headers: Record<string, string> = {};
       if (authorization !== undefined) headers.authorization = authorization;
       // Deliberately no body: every refusal must land before the route ever
       // reads one, so the same request shape exercises all of them.
-      return new Request(`http://localhost/api/test/${slug}`, {
+      return new Request(`http://localhost/api/test/${slug}${query ?? ""}`, {
         method: method ?? "POST",
         headers,
       });
