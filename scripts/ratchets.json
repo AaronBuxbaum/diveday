@@ -508,7 +508,7 @@
         }
       }
     ],
-    "src/app/s/[shopSlug]/page.tsx#SchedulePage": 393,
+    "src/app/s/[shopSlug]/page.tsx#SchedulePage": 364,
     "src/app/shop/[shopSlug]/orders/page.tsx#OrdersIndexPage": 410,
     "src/app/shop/[shopSlug]/promos/page.tsx#PromosPage": 351,
     "src/app/shop/[shopSlug]/trips/[id]/_arrivals/arrival-desk.tsx#buildArrivalDesk": 310,
@@ -567,8 +567,8 @@
     "//": "Line counts of the page.tsx files still over 400 lines. Written by `node scripts/check-page-length.mjs --write`. Each number may only go down — see scripts/check-page-length.mjs.",
     "src/app/page.tsx": 440,
     "src/app/ready/[token]/page.tsx": 633,
-    "src/app/s/[shopSlug]/page.tsx": 791,
-    "src/app/s/[shopSlug]/trips/[id]/page.tsx": 495,
+    "src/app/s/[shopSlug]/page.tsx": 749,
+    "src/app/s/[shopSlug]/trips/[id]/page.tsx": 480,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 577,
     "src/app/shop/[shopSlug]/orders/page.tsx": 727,
     "src/app/shop/[shopSlug]/page.tsx": 620,
