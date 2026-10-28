@@ -242,7 +242,10 @@ describePostgres("capability issuance and erasure serialization", () => {
         signalErasure();
         await tx
           .update(people)
-          .set({ anonymizedAt: new Date(now.getTime() + 1), deletedAt: new Date(now.getTime() + 1) })
+          .set({
+            anonymizedAt: new Date(now.getTime() + 1),
+            deletedAt: new Date(now.getTime() + 1),
+          })
           .where(and(eq(people.id, person.id), eq(people.shopId, shop.id)));
       });
       await waitForStage(erasureStarted, "erasure transaction start");
