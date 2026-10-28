@@ -88,7 +88,8 @@ test("a repeating trip is scheduled on two weekdays, stopped, and canceled as on
 
   // Narrowing it back is never a silent bulk cancellation: the dates that no
   // longer fit are listed, with head counts, and left on the board until asked.
-  await page.goto(tripUrl);
+  // Saving the cadence revalidates and redirects to this trip; openTripAbout
+  // moves to Details if needed without reloading the departure first.
   await openTripAbout(page);
   await openIfClosed(series);
   await series.getByText(thirdDay, { exact: true }).click();

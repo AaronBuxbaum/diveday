@@ -45,9 +45,10 @@ test.describe("refunds", () => {
       cancellationWindowHours: options.cancellationWindowHours,
     });
 
-    // Open the trip and turn on "requires payment" so the roster shows a
-    // payment control at all (off by default — most trips never charge).
-    await page.goto("/shop/blue-mantis/schedule/board");
+    // createTrip's action returns this demo shop to the board with the new
+    // departure, so use that rendered result instead of reloading the board.
+    // Turn on "requires payment" so the roster shows a payment control at all
+    // (off by default — most trips never charge).
     await page.locator("li").filter({ hasText: options.title }).getByRole("link").click();
     await expect(page.getByRole("heading", { name: options.title })).toBeVisible();
     // The requirements form waits behind its Edit disclosure (summary-first
