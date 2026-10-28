@@ -1,6 +1,6 @@
 import type { Browser, Page } from "@playwright/test";
 import { expect, makeActivitySafe } from "./fixtures";
-import { waitForTodayCatchUpSettled, walkInFormPath } from "./helpers";
+import { walkInFormPath } from "./helpers";
 
 /** One staffer reads Today, another seats a walk-in, then the reader returns. */
 export async function todayCatchUpScenario(
@@ -25,7 +25,6 @@ export async function todayCatchUpScenario(
     );
     await reader.goto("/shop/blue-mantis");
     expect((await initialized).status()).toBe(200);
-    await waitForTodayCatchUpSettled(reader);
     const href = await reader
       .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
       .getAttribute("href");

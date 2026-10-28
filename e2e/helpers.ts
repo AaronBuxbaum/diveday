@@ -311,14 +311,6 @@ export async function signInAs(page: Page, login: { email: string; password: str
   await expect(page).toHaveURL(/\/shop/);
 }
 
-/** Wait until the current Today view's initial catch-up action has settled. */
-export async function waitForTodayCatchUpSettled(page: Page): Promise<void> {
-  await expect(
-    page.locator('[data-today-catch-up-state]'),
-    "Today catch-up must be marked or its first-view action must finish",
-  ).toHaveAttribute("data-today-catch-up-state", "ready");
-}
-
 /**
  * Open a departure from the staff schedule board, which the page must already
  * be on.

@@ -4,11 +4,7 @@ import { test as base, expect } from "@playwright/test";
 import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
 import { BASEMAP_TILE_HOSTS } from "../src/lib/basemap";
 import { ARRIVAL_MAP_PROBES, MAP_REACHABILITY_PROBES } from "../src/lib/maps";
-import {
-  currentStaffStorageStateGeneration,
-  signInAs,
-  waitForTodayCatchUpSettled,
-} from "./helpers";
+import { currentStaffStorageStateGeneration, signInAs } from "./helpers";
 import { E2E_FROZEN_CLOCK, e2eBaseURL } from "./servers";
 
 type StaffRole = keyof typeof DEV_STAFF_LOGINS;
@@ -267,11 +263,7 @@ export const test = base.extend<
     privateShopSlug: string | null;
     privateShopBrand: boolean;
   },
-  {
-    workerBaseURL: string;
-    staffStorageState: (role: StaffRole) => Promise<string>;
-    todayCaptainStorageState: string;
-  }
+  { workerBaseURL: string; staffStorageState: (role: StaffRole) => Promise<string> }
 >({
   // Reset this worker's demo shop to the seeded fixture before every test so
   // each starts from the same baseline regardless of order. This is an `auto`
@@ -858,33 +850,6 @@ export const test = base.extend<
     },
     { scope: "worker" },
   ],
-
-  // Today's catch-up initializer is a server action on first visit. The
-  // ordinary cached-session fixture closes immediately after URL redirect;
-  // these two Today specs need the Captain's initialization action to settle
-  // before their per-test demo reset can begin.
-  todayCaptainStorageState: [
-    async ({ browser, workerBaseURL }, use, workerInfo) => {
-      const statePath = path.join(
-        workerInfo.project.outputDir,
-        `.today-captain-session-${workerInfo.parallelIndex}.json`,
-      );
-      const context = await browser.newContext({
-        baseURL: workerBaseURL,
-        storageState: { cookies: [], origins: [] },
-      });
-      try {
-        const page = await context.newPage();
-        await signInAs(page, DEV_STAFF_LOGINS.captain);
-        await waitForTodayCatchUpSettled(page);
-        await context.storageState({ path: statePath });
-      } finally {
-        await context.close();
-      }
-      await use(statePath);
-    },
-    { scope: "worker" },
-  ],
 });
 
 /**
@@ -904,15 +869,6 @@ export function signedInAs(role: StaffRole) {
 
 export function signedInAsOwner() {
   signedInAs("owner");
-}
-
-/** Use only for Today tests that need the captain's first-view action settled. */
-export function signedInAsTodayCaptain() {
-  test.use({
-    storageState: async ({ todayCaptainStorageState }, use) => {
-      await use(todayCaptainStorageState);
-    },
-  });
 }
 
 export { expect };
