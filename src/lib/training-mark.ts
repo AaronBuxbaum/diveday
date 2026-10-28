@@ -166,9 +166,11 @@ export type TrainingRoomSeat = {
 
 /**
  * **Whether a departure's marked seats fit the instructors' modeled training
- * loads** (review 2026-10-17). Seats are taken oldest mark first; each goes to
- * an instructor aboard for its session who still has room under that course's
- * base ratio. An instructor's new load must also fit the tightest base ratio
+ * loads** (review 2026-10-17). Seats are considered by tightest base ratio
+ * first, then oldest mark, so a later restrictive course cannot be hidden by
+ * earlier looser marks. Each goes to an instructor aboard for its session who
+ * still has room under that course's base ratio. An instructor's new load must
+ * also fit the tightest base ratio
  * of every seat already assigned to them (a DSD seat can cap later Open Water
  * seats in this conservative model). The trip and its training plan do not
  * establish actual underwater groups or which instructor an assistant
@@ -207,7 +209,14 @@ function seatTrainingRoom(
   const tightest = new Map<string, number>();
   const seated = new Set<string>();
   const overRatio = new Set<string>();
-  for (const seat of seats) {
+  const orderedSeats = seats
+    .map((seat, index) => ({ seat, index }))
+    .sort((left, right) => {
+      const leftCap = left.seat.rule ? courseRatioCapacity(left.seat.rule, 1, 0) : Infinity;
+      const rightCap = right.seat.rule ? courseRatioCapacity(right.seat.rule, 1, 0) : Infinity;
+      return leftCap - rightCap || left.index - right.index;
+    });
+  for (const { seat } of orderedSeats) {
     if (!seat.rule || instructors.size === 0) continue;
     const cap = Math.floor(courseRatioCapacity(seat.rule, instructors.size, 0) / instructors.size);
     const taker = aboardFor(seat.sessionTripId).find((personId) => {

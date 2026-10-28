@@ -521,14 +521,71 @@ describe("trainingRoom — conservative instructor capacity across sessions (rev
     expect(room.seated.has("A")).toBe(true);
     expect(ow.filter((seat) => room.seated.has(seat.id))).toHaveLength(1);
     expect(room.seated.size).toBe(2);
-    // Order does not rescue it: Open Water seats marked first still leave the DSD seat bound by its own cap.
+    // A later, tighter DSD mark is considered before looser Open Water marks.
     const reversed = trainingRoom({
       marked: [...ow, dsdSeat],
       sessionCrew: crews,
       departureCrew: [teacher],
     });
-    expect(reversed.seated.has("A")).toBe(false);
-    expect(reversed.seated.size).toBe(7);
+    expect([...reversed.seated].sort()).toEqual([...room.seated].sort());
+    expect(reversed.seated.has("A")).toBe(true);
+    expect(reversed.seated.size).toBe(2);
+  });
+
+  it("applies a later DSD mark's tighter cap before deciding which Open Water marks clear", () => {
+    const dsd = {
+      baseStudentsPerInstructor: 2,
+      assistantBonusPerInstructor: 0,
+      maxStudentsPerInstructor: 2,
+    };
+    const dsdSeat = { id: "dsd", sessionTripId: "s1", rule: dsd };
+    const owSeats = seats("s2", 7);
+    const room = trainingRoom({
+      marked: [...owSeats, dsdSeat],
+      sessionCrew: crews,
+      departureCrew: [teacher],
+    });
+    const owCourse: TrainingDiveCourse = {
+      minimumLevel: null,
+      certifiesLevel: "open_water",
+      intro: false,
+    };
+    const stateFor = (id: string): TrainingMarkState => ({
+      valid: true,
+      enrollmentBookingId: id,
+      enrollmentTripId: "s2",
+      enrollmentMinorDeclared: false,
+      enrollmentCourseTitle: "Open Water Diver",
+      enrollmentCourse: owCourse,
+      courseInstructorAboard: room.seated.has(id),
+    });
+    const readinessFor = (id: string) =>
+      calculateReadiness({
+        requirement: {
+          requiresWaiver: false,
+          minimumCertificationLevel: null,
+          requiredSpecialties: [],
+          requiresNitrox: false,
+        } as unknown as TripRequirement,
+        siteRequirement: {
+          minimumCertificationLevel: "open_water",
+          requiredSpecialties: [],
+          requiresNitrox: false,
+        },
+        waiver: null,
+        certifications: [],
+        participantType: "diver",
+        trainingDive: trainingDiveLevel(stateFor(id)),
+        now: new Date("2026-10-18T12:00:00.000Z"),
+        timezone: "UTC",
+      });
+
+    // The tighter-marked DSD seat must take precedence over seven older OW
+    // marks; only one OW seat can share that instructor's conservative cap.
+    expect(room.seated.has("dsd")).toBe(true);
+    expect(room.seated.size).toBe(2);
+    expect(readinessFor("s2-0").status).toBe("ready");
+    expect(readinessFor("s2-1").status).toBe("blocked");
   });
 
   it("keeps the DSD base cap across an instructor's mixed marked seats (#2830)", () => {
