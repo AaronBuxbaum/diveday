@@ -40,9 +40,7 @@ describe("the shop home's pinned sentences", () => {
 
   it("states the demo reset outcome plainly in both locales", () => {
     expect(t("shopHome.demoReset")).toBe("The demo is back to its starting state.");
-    expect(t("shopHome.demoResetRefused")).toBe(
-      "The demo reset didn’t run. Contact support.",
-    );
+    expect(t("shopHome.demoResetRefused")).toBe("The demo reset didn’t run. Contact support.");
 
     const es = staffTranslator("es-ES");
     expect(es("shopHome.demoReset")).toBe("La demostración volvió a su estado inicial.");
