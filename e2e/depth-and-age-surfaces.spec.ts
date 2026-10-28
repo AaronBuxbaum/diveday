@@ -238,9 +238,15 @@ test.describe("staff", () => {
     await page.getByLabel("Water temp °C").fill("24");
     await page.getByRole("button", { name: "Publish crew prediction" }).click();
     await expect(page.getByRole("status")).toContainText("Crew prediction published");
-    await page.goto(tripPath);
-    await openTripAbout(page);
-    await openTripAboutRow(page, "Conditions");
+
+    // The action revalidates this trip and redirects with the conditions
+    // notice, which returns to a fresh Details render with this row open.
+    // Wait for that exact destination before reading the stored Celsius back.
+    const publishedTrip = new URL(tripPath, page.url());
+    publishedTrip.searchParams.set("notice", "conditions");
+    publishedTrip.searchParams.set("form", "conditions");
+    await expect(page).toHaveURL(publishedTrip.toString());
     await expect(page.getByLabel("Water temp °C")).toHaveValue("24");
+    await expect(page.getByLabel("Visibility ft")).toBeVisible();
   });
 });
