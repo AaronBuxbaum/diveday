@@ -250,7 +250,7 @@ export default async function ManageTripPage({
         params={[
           "notice",
           "count",
-          "form",
+          ...(held && (form === "timing" || form === "meeting") ? [] : ["form"]),
           "bid",
           "diverq",
           "inviteq",
@@ -387,7 +387,7 @@ export default async function ManageTripPage({
                   shopLenses,
                   automatedForecast,
                   tideLines,
-                  held,
+                  held: held ? { id: held, section: form } : undefined,
                   tell,
                   refundsHeld: !mayWriteOffPayment,
                 }),

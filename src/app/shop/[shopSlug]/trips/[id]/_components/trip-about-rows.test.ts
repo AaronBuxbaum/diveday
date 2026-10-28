@@ -16,6 +16,7 @@ const t = staffTranslator("en-US");
 async function rowsFor(
   tripNotice?: Parameters<typeof tripAboutRows>[0]["tripNotice"],
   canConfigure?: boolean,
+  held?: Parameters<typeof tripAboutRows>[0]["held"],
 ) {
   const { db, shop } = ctx;
   const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
@@ -35,6 +36,7 @@ async function rowsFor(
     locale: "en-US",
     t,
     tripNotice,
+    held,
     shopBoats: await listBoats(db, shop.id),
     shopLenses: await listTripLenses(db, shop.id),
     automatedForecast: Promise.resolve(null),
@@ -57,6 +59,21 @@ describe("tripAboutRows (in-memory PGlite)", () => {
     ]);
     expect(ids.slice(-2)).toEqual(["about-crew", "series"]);
   });
+
+  it.each(["timing", "meeting"])(
+    "keeps a %s hold on its editor after the flash notice is cleared",
+    async (section) => {
+      const held = { id: "b0707cc2-aa54-4c28-b352-d29444f9478a", section };
+      const rows = await rowsFor(undefined, true, held);
+      expect(rows.find((row) => row.id === section)?.editor).toMatchObject({
+        props: { held: held.id, section },
+      });
+      const other = section === "timing" ? "meeting" : "timing";
+      expect(rows.find((row) => row.id === other)?.editor).toMatchObject({
+        props: { held: undefined, section: other },
+      });
+    },
+  );
 
   it("reads the crew's conditions with the water temperature and a round visibility", async () => {
     // Fourth review, item 54: the seeded 27 °C never showed on the line, the

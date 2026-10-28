@@ -65,8 +65,8 @@ export type TripAboutRowsContext = {
   shopLenses: Awaited<ReturnType<typeof listTripLenses>>;
   automatedForecast: ReturnType<typeof departureConditionReads>["automatedForecast"];
   tideLines: ReturnType<typeof departureConditionReads>["tideLines"];
-  /** A retime's held reschedule notice, on the save that set it going. */
-  held?: string;
+  /** The held notice keeps its editor identity after the one-shot save notice is cleared. */
+  held?: { id: string; section: string | undefined };
   tell?: string;
   refundsHeld?: boolean;
 };
@@ -142,7 +142,7 @@ function departureEditor(context: TripAboutRowsContext, section: DepartureDetail
     <DetailsEditor
       shop={shop}
       section={section}
-      held={tripNotice?.form === section ? held : undefined}
+      held={held?.section === section ? held.id : undefined}
       tell={tell}
       context={{
         action: saveDetailsSection.bind(null, shopSlug, tripId, section),
