@@ -179,6 +179,7 @@ test.describe("contact import — specialty cards", () => {
     await page.goto("/shop/blue-mantis/schedule/board");
     await openTripFromBoard(page, title);
     await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
+    const tripUrl = page.url();
     // The requirements form waits behind its Edit disclosure (summary-first
     // Overview).
     await openTripAbout(page);
@@ -229,8 +230,7 @@ test.describe("contact import — specialty cards", () => {
     // exists anywhere would pass without proving anything.
     await expect(page.getByText("certified · confirm to clear")).toHaveCount(0);
 
-    await page.goto("/shop/blue-mantis/schedule/board");
-    await openTripFromBoard(page, title);
+    await page.goto(tripUrl);
     await expect(page.getByText(/came across in an import/)).toHaveCount(0);
   });
 });
