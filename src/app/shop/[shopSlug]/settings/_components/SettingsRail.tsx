@@ -111,6 +111,7 @@ export function SettingsRail({
     if (!mobileOpen || !scrollerRef.current) return;
     if (currentId) revealCurrentRow(scrollerRef.current);
     const first =
+      // i18n-exempt: DOM selector for the current destination, never displayed as copy.
       scrollerRef.current.querySelector<HTMLElement>('[aria-current="true"]') ??
       scrollerRef.current.querySelector<HTMLElement>("a");
     first?.focus({ preventScroll: true });
