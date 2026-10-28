@@ -369,6 +369,19 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "schedule-builder", scheme);
       });
 
+      test(`the multi-day course shows its first-session time (${scheme})`, async ({ page }) => {
+        const week = weekStartOf(daysFromNow(9));
+        await page.goto(`/shop/blue-mantis/schedule/board?week=${week}`);
+        await boardListSettled(page);
+        const course = page
+          .locator("[data-week-board]")
+          .getByRole("link", { name: "Open Water Diver — three-day course", exact: true })
+          .locator("..");
+        await expect(course.getByText("8:00 AM", { exact: true })).toBeVisible();
+        await expect(course.getByText("3 days", { exact: true })).toBeVisible();
+        await capture(page, "schedule-multi-day-course-time", scheme);
+      });
+
       /**
        * **Rostered and away, on the board** (fourth review, item 12). The demo
        * marks Marcus Webb away three and four days out; a departure of the

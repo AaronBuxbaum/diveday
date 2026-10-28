@@ -9,6 +9,7 @@ import { bookASeatAndOpenThread } from "./helpers";
 import {
   ADVANCED_CHARTER,
   capture,
+  diverCopy,
   FLOW_TIMEOUT_MS,
   installVisualBuildGuard,
   MINIMUM_SEATS_TRIP,
@@ -481,6 +482,18 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/s/blue-mantis/courses/open-water-diver");
         await page.getByRole("heading", { name: "Upcoming dates" }).waitFor();
         await capture(page, "course-page", scheme);
+      });
+
+      test(`the course alternate-date enquiry opens beneath its dates (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/s/blue-mantis/courses/open-water-diver");
+        await page.getByRole("heading", { name: "Upcoming dates" }).waitFor();
+        const inquiry = page.locator("#get-in-touch");
+        await inquiry.locator(":scope > summary").click();
+        await expect(inquiry).toHaveAttribute("open", "");
+        await expect(inquiry.getByLabel(diverCopy("inquiry.yourEmail"))).toBeVisible();
+        await capture(page, "course-alternate-date-enquiry-open", scheme);
       });
 
       /**
