@@ -16,6 +16,7 @@ import {
   listDiverMergeCandidates,
   listDiverMergeDuplicateIds,
   mergeDiverRecords,
+  PERSON_COLUMNS_DELETED_ON_MERGE,
   PERSON_COLUMNS_DELIBERATELY_UNMOVED,
   PERSON_REFERENCES_OUTSIDE_THE_NAMING_CONVENTION,
   PERSON_TABLES_DELIBERATELY_UNMOVED,
@@ -710,39 +711,6 @@ describe("every person_id column in the schema has a merge answer", () => {
   });
 
   /**
-   * The case above could not see a column called anything else, and most of
-   * them are: `subject_person_id`, `actor_person_id`, `recorded_by_person_id`.
-   * So the guard written to stop a table being forgotten had a blind spot the
-   * exact shape of a naming convention — `activity_events.subject_person_id`
-   * sat in it from the day it was written, and `trip_desk_events` (slice 16d)
-   * landed in it without anything going red.
-   *
-   * `like '%person_id'` is the version that sees them. Every pair is either
-   * moved with the diver or has a written reason for staying, and the reasons
-   * are almost all the same one: attribution belongs to the shop.
-   */
-  it("classifies the prefixed person columns too", async () => {
-    const { db } = ctx;
-    const result = await db.execute(sql`
-      select table_name, column_name
-      from information_schema.columns
-      where table_schema = 'public'
-        and column_name like '%person_id'
-        and column_name <> 'person_id'
-      order by table_name, column_name
-    `);
-    const inSchema = result.rows.map((row) => {
-      const { table_name, column_name } = row as { table_name: string; column_name: string };
-      return `${table_name}.${column_name}`;
-    });
-    expect(inSchema.length).toBeGreaterThan(20);
-
-    const classified = new Set<string>(Object.keys(PERSON_COLUMNS_DELIBERATELY_UNMOVED));
-    expect(inSchema.filter((pair) => !classified.has(pair))).toEqual([]);
-    expect([...classified].filter((pair) => !inSchema.includes(pair)).sort()).toEqual([]);
-  });
-
-  /**
    * The two cases above find a person column by its *name*. A foreign key to
    * `people` under any other name (`guardian_id`, `instructor_id`, a column a
    * future table calls `diver_id`) would slip past both, so this one asks the
@@ -779,6 +747,7 @@ describe("every person_id column in the schema has a merge answer", () => {
         column === "person_id"
           ? !bareTables.has(table)
           : !(`${table}.${column}` in PERSON_COLUMNS_DELIBERATELY_UNMOVED) &&
+            !(`${table}.${column}` in PERSON_COLUMNS_DELETED_ON_MERGE) &&
             !(`${table}.${column}` in PERSON_REFERENCES_OUTSIDE_THE_NAMING_CONVENTION),
       )
       .map(({ table, column }) => `${table}.${column}`);

@@ -13,9 +13,9 @@ vi.mock("./notifications", async (importActual) => {
   const actual = await importActual<typeof import("./notifications")>();
   return {
     ...actual,
-    sendNotificationBatch: (...args: Parameters<typeof actual.sendNotificationBatch>) => {
+    sendNotification: (...args: Parameters<typeof actual.sendNotification>) => {
       if (state.fail) throw new Error("the send fell over");
-      return actual.sendNotificationBatch(...args);
+      return actual.sendNotification(...args);
     },
   };
 });

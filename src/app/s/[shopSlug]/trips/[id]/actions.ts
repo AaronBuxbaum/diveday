@@ -5,7 +5,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { z } from "zod";
-import { issueBookedReadinessLinks, issueBookingCapability } from "@/db/booking-capabilities";
+import { issueBookingCapability } from "@/db/booking-capabilities";
 import { consumeBookingHandoff, offerBookingHandoffByEmail } from "@/db/booking-handoff";
 import { createBookingParty, getBookingForTrip } from "@/db/bookings";
 import { recordBuddyReferral, resolveBuddyReferral } from "@/db/buddy-referrals";
@@ -14,7 +14,6 @@ import { type AppDb, getDb } from "@/db/client";
 import { recordShopMilestone } from "@/db/founder-metrics";
 import { askForDeparture } from "@/db/interests";
 import { busyOnLockWait } from "@/db/lock-bounds";
-import { sendAndRecordNotification } from "@/db/notifications";
 import { recordDiverOwnLocaleForBooking } from "@/db/people";
 import { getTripRequirements, getTripSiteRequirement } from "@/db/readiness";
 import { getRedeemableShopPromo } from "@/db/shop-promos";
@@ -22,33 +21,25 @@ import { getShopBySlug } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { getActiveTripPromoByCode } from "@/db/trip-promos";
 import { getTripWithBooked } from "@/db/trips";
-import {
-  issueJoinWaiverLink,
-  issueWaiverOnJoin,
-  settleJoinWaiverDelivery,
-} from "@/db/waiver-issue";
 import { diverTranslator } from "@/i18n/messages";
 import { describeCheckoutLine } from "@/i18n/participant-labels";
 import { tripRequirementList } from "@/i18n/readiness-labels";
 import { requestFirstHandLocale, requestLocale } from "@/i18n/request";
-import type { DiverLocale } from "@/i18n/settings";
 import { trackEvent } from "@/lib/analytics";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { BUDDY_COOKIE, buddyReferralFromCookie } from "@/lib/buddy-links";
-import { perDiverBookingPriceCents, readLearningMaterials } from "@/lib/courses";
+import { perDiverBookingPriceCents } from "@/lib/courses";
 import {
   declarationWithinPersonBudget,
   diveDeclarationInput,
   diveDeclarationSchema,
   toDiveDeclaration,
 } from "@/lib/dive-declaration";
-import { packsLogbook } from "@/lib/diver-planning";
 import { formValue, parseForm, readForm, trimmedText } from "@/lib/form-parse";
 import { log } from "@/lib/log";
 import { revalidateAndRedirect } from "@/lib/navigation";
-import { type Notification, publicAppUrl, recipientLocale } from "@/lib/notifications";
-import { confirmationExtras } from "@/lib/notifications/confirmation-extras";
-import { isDiver, type ParticipantType, parsePartyTypes, rentsKind } from "@/lib/participant-types";
+import { publicAppUrl } from "@/lib/notifications";
+import { isDiver, parsePartyTypes, rentsKind } from "@/lib/participant-types";
 import { parsePassThroughFee } from "@/lib/pass-through-fee";
 import {
   DIVER_NAME_MAX,
@@ -73,20 +64,7 @@ import { MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
 import { ERROR_MESSAGE_KEYS, type ErrorCode } from "./_components/types";
 import { answerAlreadyHeld } from "./_lib/already-held";
 import { checkoutGearLines, persistCheckoutGear } from "./_lib/checkout-gear";
-
-/**
- * Absolute readiness link, for the confirmation email — and for the redirect a
- * booked diver actually follows. One capability serves both: it is where a
- * booking lands now, so minting a second for the email would burn two of the
- * booking's `MAX_LIVE_CAPABILITIES_PER_PURPOSE` slots to say the same thing.
- * Undefined when no canonical origin is configured; the relative path is what
- * the redirect uses, so a missing origin costs the email its link, never the
- * landing.
- */
-function readinessEmailUrl(token: string): string | undefined {
-  const origin = publicAppUrl();
-  return origin ? new URL(readinessLinkPath(token), `${origin}/`).toString() : undefined;
-}
+import { sendJoinMail } from "./send-join-mail";
 
 /** Bound to each action so the public page can stay a pure renderer. */
 export type TripRef = {
@@ -486,9 +464,10 @@ export async function bookSpot(
   ]);
   // Where this booking now lands, and what the confirmation email links to:
   // the diver's own `/ready` page (ADR 20260820-one-page-after-booking).
-  const links = await issueBookedReadinessLinks(dbi, {
+  const redirectCapability = await issueBookingCapability(dbi, {
     shopId: shopNow.id,
     bookingId: primaryBookingId,
+    purpose: "readiness",
   });
   await consumeHandoffFromForm(dbi, shopNow.id, fields.handoff);
   // This form is the diver's own — the public schedule page, submitted from
@@ -515,7 +494,6 @@ export async function bookSpot(
     primaryBookingId,
     bookings: outcome.bookings,
     ownLocale,
-    readinessToken: links.mailed?.token,
     money: { chargesOnline: payAtBookingForGear, partyTypes },
   });
 
@@ -568,8 +546,8 @@ export async function bookSpot(
     ? confirmCapability
       ? `${base}?booking=${confirmCapability.token}&embed=1`
       : `${base}?embed=1`
-    : links.redirect
-      ? `${readinessLinkPath(links.redirect.token)}?booked=1`
+    : redirectCapability
+      ? `${readinessLinkPath(redirectCapability.token)}?booked=1`
       : base;
   // `tripPromo`/`shopPromo` were already resolved above, before the party was
   // booked (task 20) — an invalid/expired/wrong-scope code now fails the
@@ -677,104 +655,6 @@ async function consumeHandoffFromForm(dbi: AppDb, shopId: string, value: unknown
  * runs, so every failure in here is logged and dropped — it must never turn a
  * capacity-safe booking into an error page.
  */
-async function sendJoinMail(
-  dbi: AppDb,
-  {
-    shop,
-    trip,
-    lead,
-    primaryBookingId,
-    bookings,
-    ownLocale,
-    readinessToken,
-    money: { chargesOnline, partyTypes },
-  }: {
-    shop: NonNullable<Awaited<ReturnType<typeof getShopBySlug>>>;
-    trip: Awaited<ReturnType<typeof getTripWithBooked>>;
-    lead: Awaited<ReturnType<typeof getBookingForTrip>>;
-    primaryBookingId: string;
-    bookings: readonly { bookingId: string }[];
-    ownLocale: Awaited<ReturnType<typeof requestFirstHandLocale>>;
-    /** The lead's `/ready` capability, when one was minted. */
-    readinessToken: string | undefined;
-    money: {
-      /** Whether this booking went to a checkout, the rule the form used. */
-      chargesOnline: boolean;
-      /** What each seat of the party is, the lead's first: the money line sums them. */
-      partyTypes: readonly ParticipantType[];
-    };
-  },
-): Promise<void> {
-  // One booking, one email (UX review 2026-10-11, item 7): the lead's waiver,
-  // when one is owed, rides in the confirmation as its first step instead of
-  // following it seconds later in a mail of its own. Issued before the send
-  // so the confirmation can carry it; settled after, by how the send went.
-  const leadWaiver = await issueJoinWaiverLink(dbi, shop.id, primaryBookingId).catch(
-    (error: unknown) => {
-      log("booking.waiver_link_failed", "error", {
-        bookingId: primaryBookingId,
-        errorCode: error instanceof Error ? error.name : "unknown_error",
-      });
-      return null;
-    },
-  );
-  let confirmationSent = false;
-  let confirmationMessageId: string | undefined;
-  if (lead?.person.email && trip) {
-    try {
-      const delivery = await sendAndRecordNotification(
-        dbi,
-        bookSpotConfirmation({
-          shop,
-          trip,
-          confirmed: lead,
-          to: lead.person.email,
-          locale: recipientLocale(ownLocale ?? lead.person.locale, shop.defaultLocale),
-          readinessUrl: readinessToken ? readinessEmailUrl(readinessToken) : undefined,
-          waiver: leadWaiver,
-          chargesOnline,
-          otherSeatTypes: partyTypes.slice(1),
-        }),
-      );
-      confirmationSent = delivery.status === "sent";
-      if (delivery.status === "sent") confirmationMessageId = delivery.providerMessageId;
-      if (delivery.status === "failed") {
-        log("booking.confirmation_send_failed", "error", { bookingId: primaryBookingId });
-      }
-    } catch (error) {
-      // Email must never turn a completed, capacity-safe booking into an error page.
-      log("booking.confirmation_prepare_failed", "error", {
-        bookingId: primaryBookingId,
-        errorCode: error instanceof Error ? error.name : "unknown_error",
-      });
-    }
-  }
-  // Send each diver their waiver on joining, when the trip needs one and they
-  // aren't covered (issueWaiverOnJoin). The lead's rode in the confirmation;
-  // settling records that, or mails it alone. A failure is logged, never thrown.
-  await Promise.all(
-    bookings.map(async ({ bookingId }) => {
-      try {
-        if (bookingId === primaryBookingId && leadWaiver) {
-          await settleJoinWaiverDelivery(dbi, {
-            shopId: shop.id,
-            bookingId,
-            link: leadWaiver,
-            confirmationSent,
-            confirmationProviderMessageId: confirmationMessageId,
-          });
-          return;
-        }
-        await issueWaiverOnJoin(dbi, shop.id, bookingId);
-      } catch (error) {
-        log("booking.waiver_on_join_failed", "error", {
-          bookingId,
-          errorCode: error instanceof Error ? error.name : "unknown_error",
-        });
-      }
-    }),
-  );
-}
 
 async function creditBuddyReferral(
   dbi: Awaited<ReturnType<typeof getDb>>,
@@ -976,68 +856,4 @@ export async function offerHandoff({ shopSlug, tripId }: TripRef, email: string)
       // A link that fails to send is the cold form the diver already has.
     }
   });
-}
-
-/**
- * The confirmation `bookSpot` sends the lead booker, composed out of the
- * action so the action stays readable: the time, the dock call, the diver's
- * trip prep, a course's materials, and (ux review 2026-10-11, items 4 and 5)
- * where to go, the calendar, this seat's money and the free-cancellation
- * window. Online money exactly when this booking went to a checkout, the rule
- * the form used.
- */
-function bookSpotConfirmation(input: {
-  shop: NonNullable<Awaited<ReturnType<typeof getShopBySlug>>>;
-  trip: NonNullable<Awaited<ReturnType<typeof getTripWithBooked>>>;
-  confirmed: NonNullable<Awaited<ReturnType<typeof getBookingForTrip>>>;
-  /** The lead's own address, already checked present. */
-  to: string;
-  locale: DiverLocale;
-  readinessUrl: string | undefined;
-  /** The lead's waiver, riding in the confirmation as its first step when one is owed. */
-  waiver: { url: string; expiresAt: Date } | null;
-  chargesOnline: boolean;
-  /** The party's other seats, all still the lead's at booking (fourth UX review, item 5). */
-  otherSeatTypes: readonly ParticipantType[];
-}): Notification {
-  const { shop, trip, confirmed } = input;
-  return {
-    kind: "booking_confirmation",
-    bookingId: confirmed.booking.id,
-    shopId: shop.id,
-    to: input.to,
-    locale: input.locale,
-    diverName: confirmed.person.fullName,
-    shopName: shop.name,
-    tripTitle: trip.title,
-    startsAt: trip.startsAt,
-    endsAt: trip.endsAt,
-    timezone: shop.timezone,
-    dockCallMinutes: shop.dockCallMinutes,
-    readinessUrl: input.readinessUrl,
-    waiverUrl: input.waiver?.url,
-    waiverExpiresAt: input.waiver?.expiresAt,
-    packingList: shop.packingList,
-    // The diver's cards are not read here: a try-dive's email leaves the
-    // logbook off, and the thread adds it back for a certified diver.
-    packingLogbook: packsLogbook({
-      shopSuggests: shop.packingLogbook,
-      introCourseSession: trip.course?.isIntroCourse === true,
-      holdsCertification: false,
-    }),
-    // A course session's learning materials, delivered with the seat
-    // (ADR 20261008-course-learning-materials).
-    learningMaterials: trip.course
-      ? readLearningMaterials(trip.course.learningMaterials)
-      : undefined,
-    ...confirmationExtras({
-      shop,
-      trip,
-      course: trip.course ?? null,
-      participantType: confirmed.booking.participantType,
-      partyTypes: input.otherSeatTypes,
-      chargesOnline: input.chargesOnline,
-      origin: publicAppUrl(),
-    }),
-  };
 }

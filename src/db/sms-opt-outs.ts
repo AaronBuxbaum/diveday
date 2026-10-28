@@ -60,11 +60,11 @@ export async function optedOutPhones(db: AppDb, phones: readonly string[]): Prom
  */
 export function stopListedSmsProvider(db: DbExecutor, inner: PlainTextProvider): PlainTextProvider {
   return {
-    async send(message) {
+    async send(message, options) {
       if (await isSmsOptedOut(db, message.to)) {
         return { status: "failed", retryable: false, errorCode: "opted_out" };
       }
-      return inner.send(message);
+      return inner.send(message, options);
     },
   };
 }

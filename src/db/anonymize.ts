@@ -737,7 +737,8 @@ async function scrubPersonRecord(
   // (ADR 20260820-every-delete-is-soft). What goes is the identity, not the row,
   // so the merge audit trail (`merged_into_person_id`, `merged_at`,
   // `merged_by_person_id`) is deliberately left in place.
-  for (const shellId of await mergedIntoChain(tx, shopId, personId)) {
+  const mergedShellIds = await mergedIntoChain(tx, shopId, personId);
+  for (const shellId of mergedShellIds) {
     await tx
       .update(people)
       .set({
@@ -747,6 +748,18 @@ async function scrubPersonRecord(
       })
       .where(eq(people.id, shellId));
   }
+
+  // Retry rows now carry a durable subject handle even for person-only
+  // notifications with no booking or contact address. Sweep that binding
+  // before commit so a claimed payload cannot be requeued after this erase.
+  await tx
+    .delete(notificationSendQueue)
+    .where(
+      and(
+        eq(notificationSendQueue.shopId, shopId),
+        inArray(notificationSendQueue.recipientPersonId, [personId, ...mergedShellIds]),
+      ),
+    );
 
   // The person is no longer a diver of this shop; nothing downstream may treat
   // an erased record as an active one of any kind.

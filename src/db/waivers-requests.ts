@@ -17,6 +17,7 @@ import {
 } from "@/lib/waivers";
 import { lockBoardingCertificationEvidence } from "./boarding-certification-snapshot";
 import type { DbExecutor } from "./client";
+import { isTransactionExecutor } from "./query-helpers";
 import { bookings, people, trips, waiverRecords } from "./schema";
 import { getCurrentWaiverTemplate, shopTimezone } from "./waivers-templates";
 
@@ -94,7 +95,7 @@ export async function issueWaiverRequest(
   const keyResult = secretKeyFromEnvironment();
   const sealingKey = keyResult.status === "ok" ? keyResult.key : null;
 
-  return db.transaction(async (tx): Promise<IssueWaiverOutcome> => {
+  const issue = async (tx: DbExecutor): Promise<IssueWaiverOutcome> => {
     await lockBoardingCertificationEvidence(tx, input.shopId, "boarding");
     const candidate = input.bookingId
       ? await tx
@@ -321,7 +322,8 @@ export async function issueWaiverRequest(
       .returning();
     if (!record) throw new Error("issueWaiverRequest: insert returned no row");
     return { ok: true, token, expiresAt, recordId: record.id, reused: false };
-  });
+  };
+  return isTransactionExecutor(db) ? issue(db) : db.transaction(issue);
 }
 
 /**
