@@ -286,11 +286,10 @@ for (const scheme of ["light", "dark"] as const) {
         scope: "all" | "fun_dives",
         validUntil?: string,
       ) => {
-        // A successful save already returns to Promos; reuse it for the next save.
-        if (new URL(page.url()).pathname !== promosPath) {
-          await page.goto(`${promosPath}#dive-packages`);
-        }
-        // Fill does not wait for an inert ancestor, so wait for the live session.
+        // Settle the form's own document, not the redirect-only packages shell:
+        // its session check can finish before the destination starts hydrating.
+        await page.goto(`${promosPath}#dive-packages`);
+        await expect(page).toHaveURL(`/shop/${privateShop.slug}/promos#dive-packages`);
         await expect(page.locator("#main-content")).not.toHaveAttribute("inert");
         await expect(page.locator("[data-staff-session-lock]")).toHaveCount(0);
         const create = page.locator("#package-new");

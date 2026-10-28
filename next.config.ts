@@ -1,5 +1,6 @@
 import { withSentryConfig } from "@sentry/nextjs/config";
 import type { NextConfig } from "next";
+import { applyDevOrigin } from "./scripts/dev-origin.mjs";
 import { LEGACY_PUBLIC_SHOP_REDIRECTS } from "./src/lib/public-routes";
 import { securityHeaderRules } from "./src/lib/security-headers";
 import { managedImageRemotePatterns } from "./src/lib/storage/blob-host";
@@ -338,7 +339,7 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withSentryConfig(nextConfig, {
+const sentryConfig = withSentryConfig(nextConfig, {
   org: "diveday",
   project: "diveday",
 
@@ -465,3 +466,8 @@ export default withSentryConfig(nextConfig, {
   // src/app/api/cron/reminders/route.ts. That has the further advantage of
   // being visible in the handler a reader is already looking at.
 });
+
+export default function config(phase: string) {
+  applyDevOrigin(phase);
+  return sentryConfig;
+}

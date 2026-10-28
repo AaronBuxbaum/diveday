@@ -1,7 +1,10 @@
 import { after } from "next/server";
 import { getDb } from "@/db/client";
 import { log } from "@/lib/log";
-import { dispatchDueIntegrationDeliveries } from "./dispatcher";
+import {
+  dispatchDueIntegrationDeliveries,
+  INTEGRATION_DELIVERY_SETTLEMENT_RESERVE_MS,
+} from "./dispatcher";
 
 /**
  * How many deliveries one write-path drain will take.
@@ -15,6 +18,7 @@ import { dispatchDueIntegrationDeliveries } from "./dispatcher";
  * else's arrears.
  */
 export const WRITE_PATH_DISPATCH_LIMIT = 10;
+export const WRITE_PATH_DISPATCH_BUDGET_MS = 15_000;
 
 /**
  * Drain the integration outbox after this response is sent.
@@ -30,8 +34,9 @@ export const WRITE_PATH_DISPATCH_LIMIT = 10;
  * internet to a third party. Awaiting it inside the action would put a
  * staffer's "take payment" button behind Zapier's response time, and a slow or
  * wedged provider would read to them as DiveDay being broken. `after` runs the
- * drain once the response has already gone out, inside the same invocation and
- * inside the route's own `maxDuration`.
+ * drain once the response has already gone out, inside the same invocation.
+ * This path has a 15-second elapsed budget so the queued callback cannot turn
+ * a completed write into a long-lived function.
  *
  * **Why it is safe to run alongside the cron.** `claimIntegrationDelivery` is a
  * conditional `UPDATE ... RETURNING`: two workers may select the same row and
@@ -57,9 +62,13 @@ export const WRITE_PATH_DISPATCH_LIMIT = 10;
 export function dispatchIntegrationsAfterResponse(): void {
   try {
     after(async () => {
+      const startedAtMs = performance.now();
       try {
         const summary = await dispatchDueIntegrationDeliveries(await getDb(), {
           limit: WRITE_PATH_DISPATCH_LIMIT,
+          timeBudgetMs: WRITE_PATH_DISPATCH_BUDGET_MS,
+          settlementReserveMs: INTEGRATION_DELIVERY_SETTLEMENT_RESERVE_MS,
+          startedAtMs,
           // The delivery this request just wrote is the newest due row by
           // construction, so this is what guarantees it is in the batch. With
           // the default `oldest-first`, a shop already holding

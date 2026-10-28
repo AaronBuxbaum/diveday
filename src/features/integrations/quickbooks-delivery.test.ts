@@ -1,7 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { enqueueIntegrationEvent } from "@/db/integration-events";
 import { saveShopIntegration, upsertIntegrationSyncRecord } from "@/db/integrations";
 import { fileScopedShopContext, type seededShopContext } from "@/test/db";
+import { IntegrationDeliveryDeadlineError } from "./delivery-deadline";
 import { deliverQuickBooksEvent } from "./quickbooks";
 
 const ctx = fileScopedShopContext();
@@ -166,6 +167,76 @@ describe("deliverQuickBooksEvent — refund receipts", () => {
     await deliverQuickBooksEvent(db, integration, event, CONFIG, fetchImpl);
 
     expect(calls).toBe(1);
+  });
+
+  it("stops before the next QuickBooks request when a response body ignores the deadline", async () => {
+    const { db, shop } = ctx;
+    const integration = await connectedIntegration(db, shop.id);
+    const event = await enqueueIntegrationEvent(db, {
+      shopId: shop.id,
+      eventType: "order.refunded",
+      entityType: "order",
+      entityId: "order-1",
+      idempotencyKey: "order:order-1:refund:deadline",
+      payload: orderPayload(1_000, 1_000),
+    });
+    if (!event) throw new Error("event fixture failed");
+
+    const controller = new AbortController();
+    const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) => {
+      setTimeout(() => controller.abort(), 5);
+      return {
+        ok: true,
+        status: 200,
+        json: () => new Promise(() => {}),
+      } as Response;
+    });
+    const fetchImpl = fetchMock as unknown as typeof fetch;
+
+    await expect(
+      deliverQuickBooksEvent(db, integration, event, CONFIG, fetchImpl, controller.signal),
+    ).rejects.toThrow("Integration delivery deadline exceeded");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns a retryable failure when token refresh hits its request timeout", async () => {
+    const { db, shop } = ctx;
+    const connected = await connectedIntegration(db, shop.id);
+    const expired = await saveShopIntegration(db, {
+      shopId: shop.id,
+      provider: "quickbooks",
+      credentials: { accessToken: "expired", refreshToken: "refresh", expiresAt: 0 },
+      externalAccountId: connected.externalAccountId,
+      externalLabel: connected.externalLabel,
+      settings: connected.settings,
+    });
+    const event = await enqueueIntegrationEvent(db, {
+      shopId: shop.id,
+      eventType: "order.refunded",
+      entityType: "order",
+      entityId: "order-1",
+      idempotencyKey: "order:order-1:refund:refresh-timeout",
+      payload: orderPayload(1_000, 1_000),
+    });
+    if (!event) throw new Error("event fixture failed");
+
+    const fetchMock = vi.fn(async () => {
+      throw new IntegrationDeliveryDeadlineError();
+    });
+    const result = await deliverQuickBooksEvent(
+      db,
+      expired,
+      event,
+      CONFIG,
+      fetchMock as unknown as typeof fetch,
+    );
+
+    expect(result).toEqual({
+      status: "failed",
+      code: "quickbooks_refresh_timeout",
+      retryable: true,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
 

@@ -259,6 +259,7 @@ export function RosterRow({
             </div>
           ) : null}
           {reference}
+          {arrival?.details?.get(booking.id)}
         </div>
       </AutoOpenDetails>
     </li>

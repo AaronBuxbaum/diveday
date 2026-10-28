@@ -1,6 +1,11 @@
 import { readIntegrationCredentials } from "@/db/integrations";
 import type { IntegrationEvent, ShopIntegration } from "@/db/schema";
 import { nowDate } from "@/lib/clock";
+import {
+  combineDeliverySignals,
+  IntegrationDeliveryDeadlineError,
+  untilAborted,
+} from "./delivery-deadline";
 import type { IntegrationEventType } from "./registry";
 
 export const ZAPIER_HOOK_HOST = "hooks.zapier.com";
@@ -62,29 +67,38 @@ export async function deliverZapierEvent(
   integration: ShopIntegration,
   event: IntegrationEvent,
   fetchImpl: typeof fetch = fetch,
+  deliverySignal?: AbortSignal,
 ): Promise<{ status: "delivered" } | { status: "failed"; code: string; retryable: boolean }> {
   const stored = await readIntegrationCredentials(integration);
   if (stored.status !== "ok")
     return { status: "failed", code: `zapier_${stored.status}`, retryable: false };
   const credentials = zapierCredentials(stored.credentials);
   if (!credentials) return { status: "failed", code: "zapier_invalid_webhook", retryable: false };
-  const response = await fetchImpl(credentials.webhookUrl, {
-    method: "POST",
-    signal: AbortSignal.timeout(DELIVERY_TIMEOUT_MS),
-    headers: {
-      "content-type": "application/json",
-      "x-diveday-event": event.eventType,
-      "x-diveday-delivery-id": event.id,
-    },
-    body: JSON.stringify({
-      eventId: event.id,
-      eventType: event.eventType,
-      entityType: event.entityType,
-      entityId: event.entityId,
-      occurredAt: event.createdAt.toISOString(),
-      data: event.payload,
-    }),
-  }).catch(() => null);
+  const signal = combineDeliverySignals(deliverySignal, AbortSignal.timeout(DELIVERY_TIMEOUT_MS));
+  const response = await untilAborted(
+    () =>
+      fetchImpl(credentials.webhookUrl, {
+        method: "POST",
+        signal,
+        headers: {
+          "content-type": "application/json",
+          "x-diveday-event": event.eventType,
+          "x-diveday-delivery-id": event.id,
+        },
+        body: JSON.stringify({
+          eventId: event.id,
+          eventType: event.eventType,
+          entityType: event.entityType,
+          entityId: event.entityId,
+          occurredAt: event.createdAt.toISOString(),
+          data: event.payload,
+        }),
+      }),
+    signal,
+  ).catch((error: unknown) => {
+    if (error instanceof IntegrationDeliveryDeadlineError && deliverySignal?.aborted) throw error;
+    return null;
+  });
   if (!response) return { status: "failed", code: "zapier_unavailable", retryable: true };
   if (response.ok) return { status: "delivered" };
   return {

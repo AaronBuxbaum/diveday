@@ -90,6 +90,9 @@ export function inMemoryRateLimitStore(): RateLimitStore {
 }
 
 type Fetch = typeof fetch;
+
+/** Keep the full Upstash request, including response-body parsing, bounded. */
+const UPSTASH_REQUEST_TIMEOUT_MS = 2_000;
 type RateLimitEnvironment = Readonly<Record<string, string | undefined>>;
 
 const upstashConfigSchema = z.object({
@@ -157,33 +160,53 @@ export function upstashRateLimitStore(
 ): RateLimitStore {
   return {
     async take(key, rateLimitConfig, now) {
-      const response = await fetchImpl(config.url, {
-        method: "POST",
-        headers: {
-          authorization: `Bearer ${config.token}`,
-          "content-type": "application/json",
-        },
-        body: JSON.stringify([
-          "EVAL",
-          TOKEN_BUCKET_SCRIPT,
-          1,
-          key,
-          String(rateLimitConfig.capacity),
-          String(rateLimitConfig.refillPerMs),
-          String(now),
-        ]),
+      const controller = new AbortController();
+      let timeoutId: ReturnType<typeof setTimeout> | undefined;
+      const timeout = new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          controller.abort();
+          reject(new Error("Upstash Redis request timed out"));
+        }, UPSTASH_REQUEST_TIMEOUT_MS);
       });
-      if (!response.ok) throw new Error(`Upstash Redis responded ${response.status}`);
-      const parsed = upstashEvalResponseSchema.parse(await response.json());
-      const [allowed, tokensAfterRaw] = parsed.result;
-      if (allowed === 1) return { allowed: true, retryAfterMs: 0 };
-      const tokensAfter = Number(tokensAfterRaw);
-      const deficit = 1 - tokensAfter;
-      const retryAfterMs =
-        rateLimitConfig.refillPerMs > 0
-          ? Math.ceil(deficit / rateLimitConfig.refillPerMs)
-          : Number.POSITIVE_INFINITY;
-      return { allowed: false, retryAfterMs };
+      const request = (async () => {
+        const response = await fetchImpl(config.url, {
+          method: "POST",
+          headers: {
+            authorization: `Bearer ${config.token}`,
+            "content-type": "application/json",
+          },
+          body: JSON.stringify([
+            "EVAL",
+            TOKEN_BUCKET_SCRIPT,
+            1,
+            key,
+            String(rateLimitConfig.capacity),
+            String(rateLimitConfig.refillPerMs),
+            String(now),
+          ]),
+          signal: controller.signal,
+        });
+        if (!response.ok) throw new Error(`Upstash Redis responded ${response.status}`);
+        const parsed = upstashEvalResponseSchema.parse(await response.json());
+        const [allowed, tokensAfterRaw] = parsed.result;
+        if (allowed === 1) return { allowed: true, retryAfterMs: 0 };
+        const tokensAfter = Number(tokensAfterRaw);
+        const deficit = 1 - tokensAfter;
+        const retryAfterMs =
+          rateLimitConfig.refillPerMs > 0
+            ? Math.ceil(deficit / rateLimitConfig.refillPerMs)
+            : Number.POSITIVE_INFINITY;
+        return { allowed: false, retryAfterMs };
+      })();
+
+      // Promise.race observes rejection from either branch, including a fetch
+      // that rejects after the timeout has already returned to its caller.
+      void request.catch(() => {});
+      try {
+        return await Promise.race([request, timeout]);
+      } finally {
+        if (timeoutId !== undefined) clearTimeout(timeoutId);
+      }
     },
   };
 }

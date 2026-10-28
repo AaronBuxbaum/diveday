@@ -88,7 +88,8 @@
       "markReturnedUnit": "Marcar devuelto — {label}",
       "checkOutUnit": "Entregar — {label}",
       "releaseUnit": "Liberar — {label}"
-    }
+    },
+    "uncollectedDue": "{name} · venció el {dueOn}"
   },
   "deleted": {
     "filter": "Eliminadas ({count})",

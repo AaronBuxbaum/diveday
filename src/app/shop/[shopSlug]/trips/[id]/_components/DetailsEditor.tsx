@@ -5,7 +5,11 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { RescheduleNotice } from "../../../_components/RescheduleNotice";
 import { loadTranslationBox, ShopTextTranslation } from "../../../_components/ShopTextTranslation";
 import { draftTripDescriptionAction } from "../../../content-assist-actions";
-import { DetailsSection, type DetailsSectionContext } from "./DetailsSection";
+import {
+  type DepartureDetailsSection,
+  DetailsSection,
+  type DetailsSectionContext,
+} from "./DetailsSection";
 
 /**
  * The details form, and under its Save row whatever the save set going: a
@@ -18,13 +22,32 @@ export async function DetailsEditor({
   context,
   held,
   tell,
+  section,
 }: {
   shop: { id: string; slug: string; defaultLocale: string };
   context: DetailsSectionContext;
+  section: DepartureDetailsSection;
   held?: string;
   tell?: string;
 }) {
   const t = staffTranslator(context.locale);
+  if (section !== "departure")
+    return (
+      <>
+        <DetailsSection context={context} section={section} />
+        {held && (section === "timing" || section === "meeting") ? (
+          <div className="mt-3">
+            <RescheduleNotice
+              shopId={context.trip.shopId}
+              heldId={held}
+              tell={tell}
+              tripId={context.trip.id}
+              t={t}
+            />
+          </div>
+        ) : null}
+      </>
+    );
   // Claude's "Draft it" on the description, and the description's Spanish
   // beside the form (the `copywriter` and `shop-translate` assists).
   const db = await getDb();
@@ -38,6 +61,7 @@ export async function DetailsEditor({
   return (
     <>
       <DetailsSection
+        section={section}
         context={{
           ...context,
           descriptionAssist: canAssist ? (
@@ -50,17 +74,6 @@ export async function DetailsEditor({
           ) : undefined,
         }}
       />
-      {held ? (
-        <div className="mt-3">
-          <RescheduleNotice
-            shopId={context.trip.shopId}
-            heldId={held}
-            tell={tell}
-            tripId={context.trip.id}
-            t={t}
-          />
-        </div>
-      ) : null}
       <div className="mt-5 max-w-2xl">
         <ShopTextTranslation
           shopSlug={shop.slug}

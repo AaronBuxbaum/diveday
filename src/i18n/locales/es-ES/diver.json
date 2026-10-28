@@ -100,7 +100,7 @@
       "requestHeading": "¿Planeas para más adelante? Pídenos un día"
     },
     "filters": {
-      "disclosure": "Más filtros",
+      "disclosure": "Filtrar salidas",
       "tripType": "Tipo de salida",
       "allTrips": "Todas las salidas",
       "funDive": "Inmersión recreativa",
@@ -593,6 +593,7 @@
     "seeFullSchedule": "Ver el calendario completo",
     "orAskUs": "pídenos que programemos una",
     "requestDifferentDateLead": "¿Buscas otra fecha?",
+    "askAnotherDate": "Pedir otra fecha",
     "requestDateLink": "Solicitar una fecha",
     "orGetInTouch": "o escríbenos y programamos una.",
     "startsAt": "Empieza a las {time}",

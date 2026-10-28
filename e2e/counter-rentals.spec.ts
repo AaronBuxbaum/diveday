@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, signedInAsOwner, test } from "./fixtures";
+import { expect, settleStaffHydration, signedInAsOwner, test } from "./fixtures";
 
 /**
  * Counter rentals (ADR 20260815-minimal-gear-register, amended 2026-10-08):
@@ -27,6 +27,9 @@ async function startRentalForCustomer(page: Page, { fromRegister = false } = {})
     await expect(page.getByRole("heading", { level: 1, name: "Rent out" })).toBeVisible();
     await page.getByLabel("Search by name, email, or phone").fill("Priya");
     await page.getByRole("button", { name: "Find a returning diver" }).click();
+    await expect(page).toHaveURL((url) => url.searchParams.get("q") === "Priya");
+    // The native GET loads a new document; wait for React before choosing a result.
+    await settleStaffHydration(page);
   } else {
     await page.goto("/shop/blue-mantis/gear/rentals/new?q=Priya");
   }

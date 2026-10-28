@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
-import { signInAsOwner } from "./helpers";
+import { openIfClosed, signInAsOwner } from "./helpers";
 
 /**
  * **The three rarely-answered asks sit behind "More details"** (2026-09-17):
@@ -144,6 +144,7 @@ test("a request with no date at all sits in its own group at the foot", async ({
 
 test("a course page's request names the course, and reaches the same list", async ({ page }) => {
   await page.goto("/s/blue-mantis/courses/open-water-diver");
+  await openIfClosed(page.locator("#get-in-touch"));
   await openMoreDetails(page);
   await page.getByLabel("Your email").fill("course.date.e2e@example.com");
   await page.getByLabel("Your diving experience").selectOption("never");

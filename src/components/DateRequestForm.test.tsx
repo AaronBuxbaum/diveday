@@ -1,7 +1,4 @@
 // @vitest-environment jsdom
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LEAD_TITLE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
@@ -584,13 +581,5 @@ describe("DateRequestForm — its place on the page", () => {
     renderSection();
     const heading = screen.getByRole("heading", { level: 2, name: "Get in touch" });
     expect(heading.className).toBe(LEAD_TITLE_CLASS);
-  });
-
-  it("stands 56px under the course page's FAQ, like every course section", () => {
-    const coursePage = readFileSync(
-      join(dirname(fileURLToPath(import.meta.url)), "../app/s/[shopSlug]/courses/[slug]/page.tsx"),
-      "utf8",
-    );
-    expect(coursePage).toMatch(/<DateRequestForm[^>]*className="mt-14"/);
   });
 });

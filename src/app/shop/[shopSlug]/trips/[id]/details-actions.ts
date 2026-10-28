@@ -22,15 +22,19 @@ import { getTripLens } from "@/db/trip-lenses";
 import { holdRescheduleNotice } from "@/db/trip-rescheduled";
 import {
   getTripWithBooked,
+  listTripScheduleDays,
   reinstateTripClearingMinimum,
+  type TripPatch,
   type UpdateTripOutcome,
   updateTrip,
+  updateTripSection,
 } from "@/db/trips";
 import { nowDate } from "@/lib/clock";
 import { checkbox, formValue, readForm } from "@/lib/form-parse";
 import { parseWetsuitThicknessMm } from "@/lib/gear";
 import { meetingPointMoved, meetingPointOfRows } from "@/lib/meeting-point";
 import { MAX_DECISION_HOURS, MAX_MINIMUM_BOOKINGS, MIN_DECISION_HOURS } from "@/lib/minimum-seats";
+import { minorToMajor } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireShopSurface } from "@/lib/session";
 import { noticeUrl } from "@/lib/staff-notices";
@@ -39,6 +43,14 @@ import { MAX_TRIP_DAYS, MIN_TRIP_DAYS } from "@/lib/trip-days";
 import { firstOfferedDiveMode, shopOffersDiveMode, tripDetailsPatch } from "@/lib/trip-details";
 import { MAX_COURSE_DIVES } from "@/lib/trip-dive-limits";
 import { tripDiveDraftsFromForm } from "@/lib/trip-dives";
+import { toDateInputValue, toTimeInputValue, utcToWallTime } from "@/lib/zoned";
+import {
+  DEPARTURE_SECTION_FIELDS,
+  type DepartureDetailsSection,
+  departureSectionForm,
+  departureSectionPatch,
+  isDepartureDetailsSection,
+} from "./departure-detail-sections";
 import { tripPath } from "./roster-booking";
 import { requireTripConfig } from "./trip-config";
 
@@ -138,14 +150,107 @@ const UPDATE_TRIP_NOTICE: Record<Extract<UpdateTripOutcome, { ok: false }>["reas
   not_found: "invalid",
   capacity_below_booked: "capacity-below-booked",
   boat_not_found: "boat-not-found",
+  capacity_above_certificate: "capacity-above-certificate",
   planned_dives_below_history: "planned-dives-below-history",
 };
 
-export async function saveDetails(shopSlug: string, tripId: string, formData: FormData) {
-  const back = tripPath(shopSlug, tripId);
+export async function saveDetailsSection(
+  shopSlug: string,
+  tripId: string,
+  section: DepartureDetailsSection,
+  submitted: FormData,
+) {
   const s = await requireTripConfig(shopSlug, tripId);
-  const parsed = detailsSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect(noticeUrl(back, "invalid", { form: "details" }));
+  if (!isDepartureDetailsSection(section))
+    redirect(noticeUrl(tripPath(shopSlug, tripId), "invalid", { form: "details" }));
+  return saveDepartureDetails(
+    shopSlug,
+    tripId,
+    departureSectionForm(section, submitted),
+    s,
+    section,
+  );
+}
+
+export async function saveDetails(shopSlug: string, tripId: string, formData: FormData) {
+  const s = await requireTripConfig(shopSlug, tripId);
+  return saveDepartureDetails(shopSlug, tripId, formData, s);
+}
+
+async function saveDepartureDetails(
+  shopSlug: string,
+  tripId: string,
+  formData: FormData,
+  s: Awaited<ReturnType<typeof requireTripConfig>>,
+  section?: DepartureDetailsSection,
+) {
+  const back = tripPath(shopSlug, tripId);
+  const dbi = await getDb();
+  const shopNow = await getShopById(dbi, s.user.shopId);
+  const tripNow = await getTripWithBooked(dbi, s.user.shopId, tripId);
+  if (!shopNow || !tripNow) redirect(noticeUrl(back, "invalid", { form: section ?? "details" }));
+  const sectionSchemas = {
+    departure: detailsSchema.pick({ title: true, description: true, lensId: true }),
+    plan: detailsSchema.pick({
+      plannedDives: true,
+      wetsuitThicknessMm: true,
+      exceedsNoDecoLimits: true,
+      lunchAboard: true,
+    }),
+    meeting: detailsSchema.pick({
+      meetingPointLabel: true,
+      meetingPointAddress: true,
+      arrivalLandmark: true,
+      arrivalParkingNote: true,
+      arrivalTransitNote: true,
+      arrivalLookFor: true,
+      arrivalFirstInteraction: true,
+    }),
+    timing: detailsSchema.pick({ date: true, startTime: true, endTime: true, dayCount: true }),
+    booking: detailsSchema.pick({
+      capacity: true,
+      priceDollars: true,
+      depositDollars: true,
+      cancellationWindowHours: true,
+      minimumBookings: true,
+      minimumDecisionHours: true,
+      isPrivate: true,
+    }),
+    boat: detailsSchema.pick({ diveMode: true, boatId: true, selfGuided: true }),
+  };
+  if (section && !sectionSchemas[section].safeParse(Object.fromEntries(formData)).success)
+    redirect(noticeUrl(back, "invalid", { form: section }));
+  const days = section ? await listTripScheduleDays(dbi, s.user.shopId, tripId) : [];
+  const start = utcToWallTime(tripNow.startsAt, shopNow.timezone);
+  const end = utcToWallTime(days[0]?.endsAt ?? tripNow.endsAt, shopNow.timezone);
+  const money = (value: number | null) =>
+    value === null ? "" : String(minorToMajor(value, shopNow.currency));
+  const defaults = section
+    ? {
+        title: tripNow.title,
+        description: tripNow.description ?? "",
+        meetingPointLabel: tripNow.meetingPointLabel ?? "",
+        meetingPointAddress: tripNow.meetingPointAddress ?? "",
+        date: toDateInputValue(start),
+        startTime: toTimeInputValue(start),
+        endTime: toTimeInputValue(end),
+        dayCount: days.length || 1,
+        capacity: tripNow.capacity,
+        plannedDives: tripNow.plannedDives,
+        priceDollars: money(tripNow.priceCents),
+        depositDollars: money(tripNow.depositCents),
+        cancellationWindowHours: tripNow.cancellationWindowHours ?? "",
+        minimumBookings: tripNow.minimumBookings ?? "",
+        minimumDecisionHours: tripNow.minimumDecisionHours ?? "",
+        ...Object.fromEntries(
+          (["isPrivate", "selfGuided", "exceedsNoDecoLimits", "lunchAboard"] as const)
+            .filter((key) => !new Set<string>(DEPARTURE_SECTION_FIELDS[section]).has(key))
+            .map((key) => [key, tripNow[key] ? "on" : ""]),
+        ),
+      }
+    : {};
+  const parsed = detailsSchema.safeParse({ ...defaults, ...Object.fromEntries(formData) });
+  if (!parsed.success) redirect(noticeUrl(back, "invalid", { form: section ?? "details" }));
   const {
     title,
     description,
@@ -176,9 +281,6 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
     lunchAboard,
     wetsuitThicknessMm,
   } = parsed.data;
-  const dbi = await getDb();
-  const shopNow = await getShopById(dbi, s.user.shopId);
-  if (!shopNow) redirect(noticeUrl(back, "invalid", { form: "details" }));
   // **The hull this departure will sail on after the edit** — the one just
   // submitted, or the one already stored when the form did not carry the
   // field. Checking the destination rather than the origin is what makes a
@@ -187,7 +289,6 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
   //
   // A departure with no boat, or a shore or pool dive, yields no capacity and
   // is not checked.
-  const tripNow = await getTripWithBooked(dbi, s.user.shopId, tripId);
   // A blank submitted selector clears the hull; an absent selector preserves it.
   // In a single-mode shop the form omits diveMode, but its boat selector can
   // still change the hull, so carry the current mode through the shared patch.
@@ -205,7 +306,7 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
   // has to be one of *this* shop's live words, or the select becomes a
   // cross-tenant door.
   if (lensId && !(await getTripLens(dbi, s.user.shopId, lensId))) {
-    redirect(noticeUrl(back, "invalid", { form: "details" }));
+    redirect(noticeUrl(back, "invalid", { form: section ?? "details" }));
   }
   // Read for one rule only: clearing the price off a departure that demands
   // payment leaves a gate nobody can clear (issue #692). This form has no
@@ -220,7 +321,7 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
   // The later days' dates when they are not consecutive (third UX review,
   // item 10); empty is the consecutive run.
   const laterDates = z.array(z.string()).safeParse(formData.getAll("meetingDate"));
-  if (!laterDates.success) redirect(noticeUrl(back, "invalid", { form: "details" }));
+  if (!laterDates.success) redirect(noticeUrl(back, "invalid", { form: section ?? "details" }));
   const details = tripDetailsPatch(
     {
       date,
@@ -246,13 +347,13 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
     },
     shopNow,
   );
-  if (!details.ok) redirectDetailsRefusal(back, details);
+  if (!details.ok) redirectDetailsRefusal(back, details, section);
   const dives = tripDiveDraftsFromForm(formData, plannedDives);
-  const photo = await arrivalPhotoChange(formData, back);
+  const photo = await arrivalPhotoChange(formData, back, section);
   const previousArrivalPhotoUrl = tripNow?.arrivalPhotoUrl ?? null;
   const nextArrivalPhotoUrl = photo.nextUrl;
 
-  const outcome = await updateTrip(dbi, s.user.shopId, tripId, {
+  const patch: TripPatch = {
     title,
     description: description || undefined,
     meetingPointLabel: meetingPointLabel || null,
@@ -290,10 +391,14 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
     minimumDecisionHours: details.patch.minimumDecisionHours,
     diveSiteId: dives[0]?.diveSiteId ?? null,
     dives,
-  });
+  };
+  if (section && !formData.has("lensId")) delete patch.lensId;
+  const outcome = section
+    ? await updateTripSection(dbi, s.user.shopId, tripId, departureSectionPatch(section, patch))
+    : await updateTrip(dbi, s.user.shopId, tripId, patch);
   if (!outcome.ok) {
     await photo.discardUpload();
-    redirectUpdateRefusal(back, outcome);
+    redirectUpdateRefusal(back, outcome, section);
   }
   if (
     nextArrivalPhotoUrl !== undefined &&
@@ -312,6 +417,7 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
   // holds the same notice, about the place alone (#2443): otherwise the
   // divers turn up at the old dock.
   const placeMoved =
+    (!section || section === "meeting") &&
     !!tripNow &&
     meetingPointMoved(
       meetingPointOfRows(shopNow, tripNow),
@@ -322,9 +428,10 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
         arrivalParkingNote: null,
       }),
     );
-  const timeMoved = tripNow
-    ? tripNow.startsAt.getTime() !== details.patch.startsAt.getTime()
-    : false;
+  const timeMoved =
+    (!section || section === "timing") && tripNow
+      ? tripNow.startsAt.getTime() !== details.patch.startsAt.getTime()
+      : false;
   const notice =
     tripNow && (timeMoved || placeMoved)
       ? await holdRescheduleNotice(dbi, {
@@ -348,6 +455,7 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
     back,
     noticeUrl(back, savedNotice, {
       view: "details",
+      ...(section ? { form: section } : {}),
       ...(notice ? { held: notice.id, tell: notice.told } : {}),
       ...(savedNotice === "saved-fly-safe-unreached" && flySafe && flySafe !== "failed"
         ? { count: flySafe.unreached.length }
@@ -360,20 +468,25 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
 function redirectDetailsRefusal(
   back: string,
   details: Extract<ReturnType<typeof tripDetailsPatch>, { ok: false }>,
+  section?: DepartureDetailsSection,
 ): never {
-  if (details.reason === "end_before_start") redirect(noticeUrl(back, "end-before-start"));
+  if (details.reason === "end_before_start")
+    redirect(noticeUrl(back, "end-before-start", { form: section ?? "details" }));
   if (details.reason === "days_out_of_order") {
-    redirect(noticeUrl(back, "days-out-of-order", { form: "details" }));
+    redirect(noticeUrl(back, "days-out-of-order", { form: section ?? "details" }));
   }
   if (details.reason === "price_required_by_gate") {
-    redirect(noticeUrl(back, "price-required-by-gate", { form: "details" }));
+    redirect(noticeUrl(back, "price-required-by-gate", { form: section ?? "details" }));
   }
   if (details.reason === "capacity_above_certificate") {
     redirect(
-      noticeUrl(back, "capacity-above-certificate", { count: details.limit, form: "details" }),
+      noticeUrl(back, "capacity-above-certificate", {
+        count: details.limit,
+        form: section ?? "details",
+      }),
     );
   }
-  redirect(noticeUrl(back, "invalid", { form: "details" }));
+  redirect(noticeUrl(back, "invalid", { form: section ?? "details" }));
 }
 
 /**
@@ -383,7 +496,11 @@ function redirectDetailsRefusal(
  */
 const arrivalPhotoForm = z.object({ arrivalPhoto: formValue(), removeArrivalPhoto: checkbox() });
 
-async function arrivalPhotoChange(formData: FormData, back: string) {
+async function arrivalPhotoChange(
+  formData: FormData,
+  back: string,
+  section?: DepartureDetailsSection,
+) {
   let uploadedUrl: string | undefined;
   const { arrivalPhoto, removeArrivalPhoto: remove } = readForm(arrivalPhotoForm, formData);
   if (arrivalPhoto instanceof File && arrivalPhoto.size > 0) {
@@ -393,7 +510,7 @@ async function arrivalPhotoChange(formData: FormData, back: string) {
       bytes: await arrivalPhoto.arrayBuffer(),
     });
     if (stored.status !== "stored") {
-      redirect(noticeUrl(back, "arrival-photo-failed", { form: "details" }));
+      redirect(noticeUrl(back, "arrival-photo-failed", { form: section ?? "details" }));
     }
     uploadedUrl = stored.url;
   }
@@ -409,14 +526,24 @@ async function arrivalPhotoChange(formData: FormData, back: string) {
 function redirectUpdateRefusal(
   back: string,
   outcome: Extract<UpdateTripOutcome, { ok: false }>,
+  section?: DepartureDetailsSection,
 ): never {
   // Two of the three refusals carry a number into the banner ("4 divers are
   // already booked"), which is why this is a ladder over a plain table lookup
   // — but the code itself comes from one.
+  if (outcome.reason === "capacity_above_certificate") {
+    redirect(
+      noticeUrl(back, "capacity-above-certificate", {
+        count: outcome.detail.limit,
+        form: section ?? "details",
+      }),
+    );
+  }
   if (outcome.reason === "capacity_below_booked") {
     redirect(
       noticeUrl(back, UPDATE_TRIP_NOTICE[outcome.reason], {
         count: outcome.detail.bookedCount,
+        form: section ?? "details",
       }),
     );
   }
@@ -424,10 +551,11 @@ function redirectUpdateRefusal(
     redirect(
       noticeUrl(back, UPDATE_TRIP_NOTICE[outcome.reason], {
         count: outcome.detail.recordedDiveCount,
+        form: section ?? "details",
       }),
     );
   }
-  redirect(noticeUrl(back, "invalid", { form: "details" }));
+  redirect(noticeUrl(back, "invalid", { form: section ?? "details" }));
 }
 
 export async function cancelTripAction(shopSlug: string, tripId: string) {

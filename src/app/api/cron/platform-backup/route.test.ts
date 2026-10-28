@@ -8,6 +8,8 @@ vi.mock("@/features/backup-export", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/features/backup-export")>();
   return {
     ...actual,
+    claimPlatformBackupShop: vi.fn(),
+    finishPlatformBackupShop: vi.fn(),
     listShopsForPlatformBackup: vi.fn(),
     runPlatformBackup: vi.fn(),
     storePlatformBackupCensus: vi.fn(),
@@ -22,9 +24,13 @@ vi.mock("@sentry/nextjs", () => ({
 }));
 
 const { getDb } = await import("@/db/client");
-const { listShopsForPlatformBackup, runPlatformBackup, storePlatformBackupCensus } = await import(
-  "@/features/backup-export"
-);
+const {
+  claimPlatformBackupShop,
+  finishPlatformBackupShop,
+  listShopsForPlatformBackup,
+  runPlatformBackup,
+  storePlatformBackupCensus,
+} = await import("@/features/backup-export");
 const Sentry = await import("@sentry/nextjs");
 const { GET } = await import("./route");
 
@@ -72,6 +78,8 @@ beforeEach(() => {
   vi.mocked(listShopsForPlatformBackup)
     .mockReset()
     .mockResolvedValue([] as never);
+  vi.mocked(claimPlatformBackupShop).mockReset().mockResolvedValue(true);
+  vi.mocked(finishPlatformBackupShop).mockReset().mockResolvedValue(true);
   vi.mocked(runPlatformBackup)
     .mockReset()
     .mockResolvedValue({ status: "stored", objectKey: "k.zip", byteCount: 1 } as never);
@@ -237,6 +245,104 @@ describe("GET /api/cron/platform-backup — the weekly pass", () => {
     );
   });
 
+  it("counts a live lease as skipped and continues with the next shop", async () => {
+    vi.mocked(listShopsForPlatformBackup).mockResolvedValue([
+      shop("blue-mantis"),
+      shop("coral-reef"),
+    ] as never);
+    vi.mocked(claimPlatformBackupShop).mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+
+    const response = await GET(cronRequest(`Bearer ${secret}`));
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toMatchObject({
+      shops: 2,
+      stored: 1,
+      failed: 0,
+      skipped: 1,
+      outcomes: [
+        { shop: "blue-mantis", status: "skipped" },
+        { shop: "coral-reef", status: "stored" },
+      ],
+    });
+    expect(runPlatformBackup).toHaveBeenCalledTimes(1);
+    expect(runPlatformBackup).toHaveBeenCalledWith(
+      FAKE_DB,
+      expect.objectContaining({ shopId: "shop-coral-reef" }),
+    );
+    expect(Sentry.captureCheckIn).toHaveBeenLastCalledWith(
+      expect.objectContaining({ status: "error" }),
+    );
+  });
+
+  it("rechecks the monotonic deadline after claiming and releases an unstarted shop", async () => {
+    vi.mocked(listShopsForPlatformBackup).mockResolvedValue([
+      shop("blue-mantis"),
+      shop("coral-reef"),
+    ] as never);
+    const times = [0, 0, 0, 0, 240_000];
+    const now = vi.spyOn(performance, "now").mockImplementation(() => times.shift() ?? 240_000);
+
+    try {
+      const response = await GET(cronRequest(`Bearer ${secret}`));
+
+      expect(response.status).toBe(500);
+      await expect(response.json()).resolves.toMatchObject({
+        shops: 2,
+        stored: 1,
+        failed: 0,
+        skipped: 1,
+      });
+      expect(runPlatformBackup).toHaveBeenCalledTimes(1);
+      expect(finishPlatformBackupShop).toHaveBeenCalledTimes(2);
+      expect(finishPlatformBackupShop).toHaveBeenLastCalledWith(
+        FAKE_DB,
+        expect.objectContaining({ shopId: "shop-coral-reef", succeeded: false }),
+      );
+    } finally {
+      now.mockRestore();
+    }
+  });
+
+  it("counts a slow successful bundle and leaves later shops visibly skipped", async () => {
+    vi.mocked(listShopsForPlatformBackup).mockResolvedValue([
+      shop("blue-mantis"),
+      shop("coral-reef"),
+    ] as never);
+    let elapsed = 0;
+    const now = vi.spyOn(performance, "now").mockImplementation(() => elapsed);
+    vi.mocked(runPlatformBackup).mockImplementationOnce(async () => {
+      elapsed = 240_000;
+      return { status: "stored", objectKey: "slow-shop.zip", byteCount: 1 } as never;
+    });
+
+    try {
+      const response = await GET(cronRequest(`Bearer ${secret}`));
+
+      expect(response.status).toBe(500);
+      await expect(response.json()).resolves.toMatchObject({
+        shops: 2,
+        stored: 1,
+        failed: 0,
+        skipped: 1,
+        outcomes: [
+          { shop: "blue-mantis", status: "stored" },
+          { shop: "coral-reef", status: "skipped" },
+        ],
+      });
+      expect(finishPlatformBackupShop).toHaveBeenCalledTimes(1);
+      expect(finishPlatformBackupShop).toHaveBeenCalledWith(
+        FAKE_DB,
+        expect.objectContaining({ shopId: "shop-blue-mantis", succeeded: true }),
+      );
+      expect(vi.mocked(storePlatformBackupCensus).mock.calls[0]?.[0]).toMatchObject({
+        census: { shops: 2, stored: 1, failed: 0, skipped: 1 },
+      });
+    } finally {
+      now.mockRestore();
+    }
+  });
+
   it("names the failed shops and their codes without leaking anything else", async () => {
     vi.mocked(listShopsForPlatformBackup).mockResolvedValue([shop("coral-reef")] as never);
     vi.mocked(runPlatformBackup).mockResolvedValue({
@@ -332,6 +438,16 @@ describe("GET /api/cron/platform-backup — the run census", () => {
     await GET(cronRequest(`Bearer ${secret}`));
     expect(vi.mocked(storePlatformBackupCensus).mock.calls[0]?.[0]).toMatchObject({
       census: { shops: 2, stored: 1, failed: 1, skipped: 0 },
+    });
+  });
+
+  it("keeps lease-skipped shops in the partial census", async () => {
+    vi.mocked(claimPlatformBackupShop).mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+
+    await GET(cronRequest(`Bearer ${secret}`));
+
+    expect(vi.mocked(storePlatformBackupCensus).mock.calls[0]?.[0]).toMatchObject({
+      census: { shops: 2, stored: 1, failed: 0, skipped: 1 },
     });
   });
 

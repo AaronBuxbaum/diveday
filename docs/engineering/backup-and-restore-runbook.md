@@ -192,9 +192,9 @@ that module's `bundle.ts`, shared byte for byte with the shop-owned pass in §2b
 | Property | Reality |
 | --- | --- |
 | Cadence | Weekly, Mondays 05:00 UTC — an hour after the shop-owned pass, so the two never contend for the same function slot |
-| Idempotency | By object key only. There is no ledger table: the key is deterministic per run date, and the bucket is versioned, so a re-run overwrites additively. A retried pass redoes work rather than skipping it |
+| Idempotency | The deterministic date key and versioned bucket make a repeated PUT additive. A database checkpoint records each shop's last attempt and last successful PUT; every invocation still tries all shops it can admit |
 | Scope | Non-demo shops. The seeded `blue-mantis` fixture is flagged `isDemo`, so **a local or e2e run of this pass stores nothing** — that is correct, and it means the pass cannot be smoke-tested against the seed |
-| Bound | A soft deadline at 240s of the 300s ceiling stops the pass *starting* new shops; one already in flight finishes. A stopped pass reports `skipped` in its log line and response, answers 200, and is not an incident — shop order is stable, so the next run reaches the same shops first |
+| Bound | A soft deadline at 240s of the 300s ceiling stops the pass *starting* new shops; one already in flight finishes. A stopped pass reports `skipped` in its log line, response, and census, and answers 500. The next invocation orders least-recently-attempted shops first, so untouched shops are admitted ahead of shops already attempted |
 | Failure handling | Per shop, coded, never thrown: one shop's failure never costs another its backup. A pass with any failure answers 500 and checks in to Sentry as `error` |
 | Unconfigured | Without the four `PLATFORM_BACKUP_*` values the route answers **501** and stores nothing — and deliberately does *not* check in to Sentry, so a deployment that was never given the credential cannot read as a healthy weekly backup forever |
 | Monitors | Sentry cron monitor `diveday-platform-backup`; the `cron_platform_backup.pass_failed` log code feeds the existing `CronPassFailures` CloudWatch alarm |
@@ -216,16 +216,15 @@ the route knows only that each PUT was accepted. That question is answered by th
 | Census reports `skipped > 0`, or fewer `.zip`s than it claims it stored | `incomplete` | **Shops are silently losing their backup** — see below |
 
 The last two arrived on 2026-08-14. Before them the check could see that *a* run landed but not how
-big it should have been, which hid the failure that gets worse as the product succeeds: the pass
-stops starting new shops once 240 seconds of its 300-second slot are gone, and the shop order is
-stable **by design** (so a truncated pass is repeatable rather than random). Once the estate
-outgrows the slot, that means the same newest-joined shops are skipped every single week, forever,
-while the prefix exists, holds bundles, and is one day old. Nobody would have found out until a
-restore.
+big it should have been, which hid the failure that gets worse as the product succeeds. The pass
+stops starting new shops once 240 seconds of its 300-second slot are gone. Its durable attempt order
+now rotates admission across invocations, while the watchdog still reports any invocation that
+does not cover the full estate.
 
-`incomplete` is therefore not a "busy week" to ride out. It is the signal that the pass needs to be
-paged across several invocations rather than fitted into one — a cursor in the census is the shape
-the follow-up suggested. It alarms on **any** skip rather than a threshold for that reason.
+`incomplete` is therefore not a "busy week" to ride out. It alarms on **any** skip. The durable
+per-shop checkpoint rotates admission order across invocations and weeks, but does not claim that
+all shops finish within one weekly period. Each census remains the truthful outcome of its own
+invocation, so a partial pass stays visible to the watchdog.
 
 ### How the census reaches the watchdog
 

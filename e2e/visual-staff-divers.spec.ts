@@ -76,6 +76,21 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "divers", scheme);
       });
 
+      test(`the diver roster opens its CSV download menu (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/divers");
+        await page.getByRole("heading", { level: 1, name: "Divers" }).waitFor();
+        await page.locator("main ul li").first().waitFor();
+        const more = page
+          .getByRole("main")
+          .getByRole("button", { name: staffCopy("shared.shopSections.more"), exact: true });
+        await more.click();
+        await expect(more).toHaveAttribute("aria-expanded", "true");
+        await expect(
+          page.getByRole("link", { name: staffCopy("divers.list.downloadList"), exact: true }),
+        ).toBeVisible();
+        await capture(page, "divers-csv-more-open", scheme);
+      });
+
       // The roster in the order a "who hasn't been back" call needs (fourth
       // UX review, item 27): one group, most recent dive first, with the
       // order line saying so and offering the alphabet back.
@@ -182,6 +197,23 @@ for (const scheme of ["light", "dark"] as const) {
         // record.
         await page.getByRole("region", { name: "The story" }).waitFor();
         await capture(page, "diver-profile", scheme);
+      });
+
+      test(`Bram's fitting note appears once beside its resolution (${scheme})`, async ({
+        page,
+      }) => {
+        await openDiverProfile(page, "Bram", "Bram de Vries");
+        const gear = await openDiverFileGroup(page, staffCopy("divers.file.gearHeading"));
+        const note = gear.getByText(/^No XL fins on the shelf/);
+        await expect(note).toHaveCount(1);
+        await expect(note).toBeVisible();
+        await expect(
+          gear.getByRole("button", {
+            name: staffCopy("divers.rentalFit.fitResolved"),
+            exact: true,
+          }),
+        ).toBeVisible();
+        await capture(page, "diver-bram-fitting-note", scheme);
       });
 
       test(`later departures stay open on the diver record (${scheme})`, async ({ page }) => {

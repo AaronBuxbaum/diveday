@@ -267,19 +267,16 @@ test.describe("staff", () => {
     await expect(trigger).toBeFocused();
   });
 
-  test("an add refusal stays visible when another desk deletes the ticket", async ({
-    page,
-    context,
-  }) => {
-    await assertValidationRefusalSurvivesDelete(page, context, "add");
-  });
-
-  test("an edit refusal stays visible when another desk deletes the ticket", async ({
-    page,
-    context,
-  }) => {
-    await assertValidationRefusalSurvivesDelete(page, context, "edit");
-  });
+  // Each editor is an independent race. Keeping both flows in one test left
+  // the second Restore less than a second of the shared budget on CI.
+  for (const kind of ["add", "edit"] as const) {
+    test(`a ${kind} validation refusal stays visible when another desk deletes the ticket`, async ({
+      page,
+      context,
+    }) => {
+      await assertValidationRefusalSurvivesDelete(page, context, kind);
+    });
+  }
 
   test("records the work done, then hands the gear back", async ({ page }) => {
     await page.goto("/shop/blue-mantis/gear/work-orders");

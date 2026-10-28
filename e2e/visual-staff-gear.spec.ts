@@ -348,7 +348,10 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        await request.post("/api/test/seed-trouble-states?gearOut=1");
+        const seeded = await request.post(
+          "/api/test/seed-trouble-states?gearOut=1&gearUncollected=1",
+        );
+        expect(seeded.ok()).toBe(true);
         await page.goto("/shop/blue-mantis/gear");
         await page.getByRole("heading", { level: 1, name: "Gear" }).waitFor();
         // Both group headings, so the capture can never land on a half-built
@@ -357,6 +360,17 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { level: 2, name: /^Out/ }).waitFor();
         await page.getByRole("heading", { level: 2, name: /^Overdue/ }).waitFor();
         await page.getByRole("link", { name: "AL63-02" }).waitFor();
+        await expect(
+          page.getByText(staffCopy("gear.phase.neverPickedUp"), { exact: true }),
+        ).toHaveCount(1);
+        for (const label of ["BCD #3", "BCD #4"]) {
+          await expect(
+            page.getByRole("button", {
+              name: staffCopy("gear.fleet.acts.releaseUnit", { label }),
+              exact: true,
+            }),
+          ).toBeVisible();
+        }
         await capture(page, "gear-register-trouble", scheme);
       });
 

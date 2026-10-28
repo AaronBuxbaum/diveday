@@ -294,6 +294,7 @@ export function diverExportFileName(
 const NOT_INCLUDED = [
   "Offline manifest snapshots (device-side copies of the live records exported here).",
   "Notification retry queues, per-attempt logs, and provider rate-limit state — plumbing behind notification_deliveries.csv, which carries the outcome that actually happened.",
+  "DiveDay's per-shop platform-backup scheduling checkpoint — it stores attempt and success times for the cron, not portable shop data.",
   "Stripe account linkage — the Stripe account itself already belongs to the shop, and an account id means nothing anywhere else.",
   "The buddy-team pairing trail — an in-product record of how teams were formed; the teams that stood are in buddy_pairs.csv.",
   "Weather-cancellation cascade state (who had been messaged, who had been rebooked) — the cancellation itself is on the trip in trips.csv.",

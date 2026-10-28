@@ -74,6 +74,7 @@ describe("ScheduleBuilder week board", () => {
       seats: { booked: 4, capacity: 5 },
       seatsLabel: "4 of 5",
       runsLabel: "3 days",
+      time: "8:00 AM",
       dateIso: "2026-08-28",
       startTime: "08:00",
       dayCount: 3,

@@ -100,7 +100,7 @@
       "requestHeading": "Planning further out? Ask us for a day"
     },
     "filters": {
-      "disclosure": "More filters",
+      "disclosure": "Filter trips",
       "tripType": "Trip type",
       "allTrips": "All trips",
       "funDive": "Fun dive",
@@ -593,6 +593,7 @@
     "seeFullSchedule": "See the full schedule",
     "orAskUs": "ask us to set one",
     "requestDifferentDateLead": "Looking for a different date?",
+    "askAnotherDate": "Ask for another date",
     "requestDateLink": "Request a date",
     "orGetInTouch": "or get in touch and we will set one.",
     "startsAt": "Starts {time}",
