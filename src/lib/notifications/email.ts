@@ -1075,9 +1075,10 @@ type TripRescheduledEmailInput = {
 };
 
 /**
- * **"Your departure moved"** (ux review 2026-10-11, item 1): the new date and
- * time first, the old one under it so nobody wonders which is which, the
- * meeting point only when it moved too, and the diver's own trip prep.
+ * **"Your departure moved"**: the new date and time, the meeting point only
+ * when it moved too, and the diver's own trip prep. Delivery history is not
+ * tracked per seat, so a prior schedule is never presented as one the diver
+ * received.
  */
 export function tripRescheduledEmail(input: TripRescheduledEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
@@ -1089,8 +1090,6 @@ export function tripRescheduledEmail(input: TripRescheduledEmailInput): Notifica
   // A seat moved to another departure is never a place-only notice.
   const placeOnly =
     !input.seatMovedAt && input.previousStartsAt.getTime() === input.startsAt.getTime();
-  const previous = formatDateTimeTz(input.previousStartsAt, input.locale, input.timezone);
-  const was = placeOnly ? null : t("notifications.tripRescheduled.was", { when: previous });
   const bodyKey = input.seatMovedAt
     ? "notifications.tripRescheduled.seatBody"
     : placeOnly
@@ -1118,8 +1117,8 @@ export function tripRescheduledEmail(input: TripRescheduledEmailInput): Notifica
         : "notifications.tripRescheduled.subject",
       { tripTitle: input.tripTitle },
     ),
-    text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n\n${when.text}${was ? `\n${was}` : ""}${dockNote ? `\n\n${dockNote}` : ""}${movedToo ? `\n\n${movedToo}` : ""}${where.text}${cantMakeIt ? `\n\n${cantMakeIt}` : ""}${readyText}`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p>${when.html}${was ? `<p style="opacity: 0.8;">${escapeHtml(was)}</p>` : ""}${dockNote ? `<p>${escapeHtml(dockNote)}</p>` : ""}${movedToo ? `<p>${escapeHtml(movedToo)}</p>` : ""}${where.html}${cantMakeIt ? `<p>${escapeHtml(cantMakeIt)}</p>` : ""}${readyHtml}`,
+    text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n\n${when.text}${dockNote ? `\n\n${dockNote}` : ""}${movedToo ? `\n\n${movedToo}` : ""}${where.text}${cantMakeIt ? `\n\n${cantMakeIt}` : ""}${readyText}`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p>${when.html}${dockNote ? `<p>${escapeHtml(dockNote)}</p>` : ""}${movedToo ? `<p>${escapeHtml(movedToo)}</p>` : ""}${where.html}${cantMakeIt ? `<p>${escapeHtml(cantMakeIt)}</p>` : ""}${readyHtml}`,
   };
 }
 

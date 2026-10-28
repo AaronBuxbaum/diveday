@@ -5667,8 +5667,8 @@
       "courseForms": "{shopName}: please sign your course forms for {tripTitle} — {url}",
       "readyLink": "Your trip prep: {url}",
       "meetingPointMoved": "{shopName}: we moved where we meet for {tripTitle}, {date}, {time}.",
-      "rescheduled": "{shopName}: we moved {tripTitle} to {date}, {time}. It was {previous}.",
-      "rescheduledSeat": "{shopName}: we moved your seat to {tripTitle}, {date}, {time}. It was {previous}."
+      "rescheduled": "{shopName}: we moved {tripTitle} to {date}, {time}.",
+      "rescheduledSeat": "{shopName}: we moved your seat to {tripTitle}, {date}, {time}."
     },
     "whatsappTemplate": {
       "body": "Hi! An update from '{{1}}': '{{2}}'",
@@ -5828,9 +5828,8 @@
       "subject": "New time for {tripTitle}",
       "placeSubject": "New meeting point for {tripTitle}",
       "body": "We moved {tripTitle}. Here is the new time.",
-      "placeBody": "We moved where we meet for {tripTitle}. The time is the same.",
+      "placeBody": "We moved where we meet for {tripTitle}. Here is the current schedule.",
       "seatBody": "We moved your seat to {tripTitle}. Here is when it leaves.",
-      "was": "It was {when}.",
       "meetingPointMoved": "We meet somewhere new, too.",
       "cantMakeIt": "Can’t make the new time? Get in touch and we’ll sort it out."
     },

@@ -5667,8 +5667,8 @@
       "courseForms": "{shopName}: firma los formularios del curso {tripTitle} — {url}",
       "readyLink": "Tu preparación: {url}",
       "meetingPointMoved": "{shopName}: cambiamos el punto de encuentro de {tripTitle}, {date}, {time}.",
-      "rescheduled": "{shopName}: cambiamos {tripTitle} al {date}, {time}. Antes era el {previous}.",
-      "rescheduledSeat": "{shopName}: pasamos tu plaza a {tripTitle}, el {date}, {time}. Antes era el {previous}."
+      "rescheduled": "{shopName}: cambiamos {tripTitle} al {date}, {time}.",
+      "rescheduledSeat": "{shopName}: pasamos tu plaza a {tripTitle}, el {date}, {time}."
     },
     "whatsappTemplate": {
       "body": "¡Hola! Un aviso de '{{1}}': '{{2}}'",
@@ -5828,9 +5828,8 @@
       "subject": "Nuevo horario para {tripTitle}",
       "placeSubject": "Nuevo punto de encuentro para {tripTitle}",
       "body": "Cambiamos el horario de {tripTitle}. Este es el nuevo.",
-      "placeBody": "Cambiamos el punto de encuentro de {tripTitle}. La hora no cambia.",
+      "placeBody": "Cambiamos el punto de encuentro de {tripTitle}. Aquí está el horario actual.",
       "seatBody": "Pasamos tu plaza a {tripTitle}. Este es el horario.",
-      "was": "Antes era el {when}.",
       "meetingPointMoved": "También cambia el punto de encuentro.",
       "cantMakeIt": "¿No puedes a la nueva hora? Escríbenos y lo resolvemos."
     },

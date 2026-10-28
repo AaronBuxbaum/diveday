@@ -555,10 +555,12 @@ const tripReminder24hSchema = z.object({
  * sent by the diver's usual channel after the same eight-second hold every
  * other staff send takes (`held_sends`, kind `trip_rescheduled`).
  *
- * The old time and the new, the meeting point **only when it moved**, and the
- * diver's own trip-prep link. `previousStartsAt` equal to `startsAt` is a
- * notice that only the meeting point moved (#2443): no "It was", and the
- * subject names the place. Addressed to the address on the
+ * The new time, the meeting point **only when it moved**, and the diver's own
+ * trip-prep link. Delivery history is not tracked per seat, so the previous
+ * schedule is retained internally for hold coalescing but never stated as one
+ * the recipient received. `previousStartsAt` equal to `startsAt` is a notice
+ * that only the meeting point moved (#2443): the subject names the place.
+ * Addressed to the address on the
  * booking's own person record and nobody else (`src/db/trip-rescheduled.ts`).
  *
  * `revision` is the trip's `revision` after the move, and keys the send: a
