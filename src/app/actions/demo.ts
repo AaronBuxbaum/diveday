@@ -5,6 +5,7 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { getDb } from "@/db/client";
+import { isDemoShopWithDemoOwnerOrCaptainAccount } from "@/db/demo-account-guard";
 import { demoRoleEmail } from "@/db/people";
 import { createDemoShop, resetDemoSchedule } from "@/db/seed";
 import { getShopById, getShopBySlug } from "@/db/shops";
@@ -210,7 +211,11 @@ export async function resetDemoAction() {
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   if (shop?.isDemo) {
-    await resetDemoSchedule(db, shop.id, { history: true });
+    await db.transaction(async (tx) => {
+      if (await isDemoShopWithDemoOwnerOrCaptainAccount(tx, shop.id)) {
+        await resetDemoSchedule(tx, shop.id, { history: true });
+      }
+    });
   }
   redirect(`/shop/${session.user.shopSlug}?reset=1`);
 }

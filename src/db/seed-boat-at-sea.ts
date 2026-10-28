@@ -111,6 +111,10 @@ const FIRST_GUIDE_TEAMS = 3;
  * applies the way `recordRollCall` does.
  */
 export async function seedBoatAtSea(db: DbExecutor, shopId: string): Promise<void> {
+  await db.transaction((tx) => seedBoatAtSeaWithinTransaction(tx, shopId));
+}
+
+async function seedBoatAtSeaWithinTransaction(db: DbExecutor, shopId: string): Promise<void> {
   if (!(await isDemoShopWithDemoOwnerOrCaptainAccount(db, shopId))) return;
   const now = nowDate();
   const plan = demoAtSeaDeparture(now, DEMO_SHOP_TIMEZONE);
@@ -620,14 +624,7 @@ export async function bringDemoBoatsAtSeaHome(
   for (const trip of due) {
     // One boat at a time, under her row lock, asked again inside it: a doubled
     // cron delivery waits here, then finds dive 2 logged and writes nothing.
-    if (
-      await db.transaction(async (tx) => {
-        if (!(await isDemoShopWithDemoOwnerOrCaptainAccount(tx, trip.shopId))) return false;
-        return bringBoatHome(tx, trip, now);
-      })
-    ) {
-      home++;
-    }
+    if (await db.transaction((tx) => bringBoatHome(tx, trip, now))) home++;
   }
   return home;
 }
@@ -643,6 +640,10 @@ async function bringBoatHome(
   },
   now: Date,
 ): Promise<boolean> {
+  // Take the shop identity lock before the trip lock. Reset/refresh already
+  // hold the shop lock while deleting or reseeding trips; the same order here
+  // avoids a trip→shop / shop→trip deadlock with an overlapping hourly pass.
+  if (!(await isDemoShopWithDemoOwnerOrCaptainAccount(db, trip.shopId))) return false;
   const [locked] = await db
     .select({ id: trips.id })
     .from(trips)
