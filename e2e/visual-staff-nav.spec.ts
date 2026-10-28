@@ -71,6 +71,30 @@ async function expectScrollCueMatchesRail(page: Parameters<typeof capture>[0]) {
   }
 }
 
+async function expectTabletTabsFillRail(page: Parameters<typeof capture>[0]) {
+  const geometry = await page.evaluate(() => {
+    if (innerWidth !== 820) return null;
+    const nav = document.querySelector<HTMLElement>("[data-staff-tabbar]");
+    const rail = nav?.querySelector<HTMLElement>("[data-staff-tab-scroll]");
+    if (!nav || !rail || getComputedStyle(nav).display === "none") return null;
+    const boxes = [...rail.querySelectorAll<HTMLAnchorElement>("a")].map((link) =>
+      link.getBoundingClientRect(),
+    );
+    return {
+      clientWidth: rail.clientWidth,
+      scrollWidth: rail.scrollWidth,
+      railRight: rail.getBoundingClientRect().right,
+      lastTabRight: boxes.at(-1)?.right ?? 0,
+      targetsMeet44px:
+        boxes.length === 4 && boxes.every((box) => box.width >= 44 && box.height >= 44),
+    };
+  });
+  if (!geometry) return;
+  expect(geometry.scrollWidth).toBeLessThanOrEqual(geometry.clientWidth + 1);
+  expect(geometry.lastTabRight).toBeGreaterThanOrEqual(geometry.railRight - 1);
+  expect(geometry.targetsMeet44px).toBe(true);
+}
+
 installVisualBuildGuard();
 test.describe.configure({ timeout: SURFACE_TIMEOUT_MS });
 test.use({ colorScheme: "light", viewport: { width: 1280, height: 800 }, ...VISUAL_STEP_BOUNDS });
@@ -104,6 +128,7 @@ test.describe("staff navigation", () => {
         beforeShot: async () => {
           await expectNavigationDoesNotExpandPage(page);
           await expectScrollCueMatchesRail(page);
+          await expectTabletTabsFillRail(page);
         },
       });
     });
