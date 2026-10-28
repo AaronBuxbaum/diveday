@@ -4,6 +4,7 @@ import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import {
   daysFromNow,
   e2eNow,
+  findTripOnBoard,
   openIfClosed,
   openTripAbout,
   openTripAboutRow,
@@ -117,7 +118,6 @@ test.describe("staff", () => {
       .getByRole("link", { name: tripTitle, exact: true })
       .click();
     await expect(page).toHaveURL(/\/shop\/blue-mantis\/trips\/[0-9a-f-]+$/);
-    const manageTripUrl = page.url();
 
     // The conditions form waits behind its disclosure (summary-first Overview).
     await openTripAbout(page);
@@ -130,11 +130,8 @@ test.describe("staff", () => {
     await page.getByRole("button", { name: "Publish crew prediction" }).click();
     await expect(page.getByRole("status")).toContainText("Crew prediction published");
 
-    // Staff are routed to the trip editor, so the public diver briefing is read
-    // from a signed-out context of its own. Clearing this page's cookies and
-    // signing back in through the form cost the test seconds of its budget
-    // for a sign-in nothing here asserts on (issue #2366).
-    const staffPage = page;
+    // Staff are routed to the trip editor, so read the public diver briefing
+    // from a fresh signed-out context.
     const visitorContext = await browser.newContext({ baseURL: workerBaseURL });
     page = makeActivitySafe(await visitorContext.newPage());
     await page.goto("/s/blue-mantis");
@@ -194,26 +191,30 @@ test.describe("staff", () => {
     expect(noteText).not.toMatch(/\d{1,2}:\d{2}:\d{2}/);
 
     await visitorContext.close();
-    page = staffPage;
-    // Straight to the Details tab: `openTripAbout` from the trip root is a
-    // second navigation of its own.
-    await page.goto(`${manageTripUrl}?view=details`);
-    // Published, so the disclosure reads "Edit"; the clear control sits inside.
+  });
+
+  test("staff can return a crew prediction to the automated outlook", async ({ page }) => {
+    await (await findTripOnBoard(page, "blue-mantis", /Two-Tank Reef/)).click();
     await openTripAbout(page);
     await openTripAboutRow(page, "Conditions");
+    await page
+      .getByLabel("Conditions overview")
+      .fill("Warm water and an easy morning are expected.");
+    await page.getByLabel("Water temp °F").fill("81");
+    await page.getByLabel("Visibility ft").fill("60");
+    await page.getByRole("button", { name: "Publish crew prediction" }).click();
+    await expect(page.getByRole("status")).toContainText("Crew prediction published");
+
     await page.getByRole("button", { name: "Return to automated outlook" }).click();
     await expect(page.getByRole("status")).toContainText("Crew prediction cleared");
     // The clear's own notice forces the disclosure open on the redirected
     // render — no click needed (and one would close it again).
     await expect(page.getByLabel("Water temp °F")).toHaveValue("");
     await expect(page.getByLabel("Visibility ft")).toHaveValue("");
+  });
 
-    // Cancel the trip — this leg exercises the cancel/reinstate controls
-    // themselves; test isolation is already handled by the per-test demo
-    // reset in fixtures.ts.
-    // Cancelling is one of the rare acts in the About panel's "More for this
-    // departure" list, behind a blocking confirm: it takes the departure off
-    // the public schedule and messages everybody booked on it.
+  test("staff can cancel and reinstate a departure", async ({ page }) => {
+    await (await findTripOnBoard(page, "blue-mantis", /Two-Tank Reef/)).click();
     const more = await openTripMore(page);
     await more.getByRole("button", { name: /Cancel (trip|this departure)/ }).click();
     await more.getByRole("button", { name: "Yes, cancel this departure" }).click();

@@ -954,7 +954,13 @@ export async function getDiverProfile(
           isNull(certifications.deletedAt),
         ),
       )
-      .orderBy(desc(certifications.createdAt)),
+      .orderBy(
+        desc(certifications.createdAt),
+        asc(certifications.agency),
+        asc(certifications.level),
+        asc(certifications.identifier),
+        asc(certifications.id),
+      ),
     db
       .select({ card: specialtyCertifications, reviewedByName: specialtyReviewer.fullName })
       .from(specialtyCertifications)
@@ -969,7 +975,13 @@ export async function getDiverProfile(
           isNull(specialtyCertifications.deletedAt),
         ),
       )
-      .orderBy(desc(specialtyCertifications.createdAt)),
+      .orderBy(
+        desc(specialtyCertifications.createdAt),
+        asc(specialtyCertifications.agency),
+        asc(specialtyCertifications.specialty),
+        asc(specialtyCertifications.identifier),
+        asc(specialtyCertifications.id),
+      ),
     db
       .select({ card: nitroxCertifications, reviewedByName: nitroxReviewer.fullName })
       .from(nitroxCertifications)
@@ -981,7 +993,12 @@ export async function getDiverProfile(
           isNull(nitroxCertifications.deletedAt),
         ),
       )
-      .orderBy(desc(nitroxCertifications.createdAt)),
+      .orderBy(
+        desc(nitroxCertifications.createdAt),
+        asc(nitroxCertifications.agency),
+        asc(nitroxCertifications.identifier),
+        asc(nitroxCertifications.id),
+      ),
     db
       .select()
       .from(rentalFitProfiles)
