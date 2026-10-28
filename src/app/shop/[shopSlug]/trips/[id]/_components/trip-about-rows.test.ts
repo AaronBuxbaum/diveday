@@ -13,7 +13,10 @@ import { tripCrewNotes } from "./trip-crew-notes";
 const ctx = fileScopedShopContext();
 const t = staffTranslator("en-US");
 
-async function rowsFor(tripNotice?: Parameters<typeof tripAboutRows>[0]["tripNotice"]) {
+async function rowsFor(
+  tripNotice?: Parameters<typeof tripAboutRows>[0]["tripNotice"],
+  canConfigure?: boolean,
+) {
   const { db, shop } = ctx;
   const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
   const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
@@ -23,7 +26,7 @@ async function rowsFor(tripNotice?: Parameters<typeof tripAboutRows>[0]["tripNot
   const overview = await getTripOverview(db, shop, reef.id, staff.person.id);
   if (!overview) throw new Error("overview missing");
   return tripAboutRows({
-    overview,
+    overview: { ...overview, canConfigure: canConfigure ?? overview.canConfigure },
     crewNotes: tripCrewNotes({ crew: overview.crew, diversPerDivemaster: 8, locale: "en-US", t }),
     liveBoatClashes: [],
     shop: shop as never,
@@ -43,7 +46,15 @@ describe("tripAboutRows (in-memory PGlite)", () => {
   it("lays the departure flat in its rows' order", async () => {
     const rows = await rowsFor();
     const ids = rows.map((row) => row.id);
-    expect(ids.slice(0, 4)).toEqual(["details", "meeting", "conditions", "requirements"]);
+    expect(ids.slice(0, 7)).toEqual([
+      "plan",
+      "meeting",
+      "timing",
+      "details",
+      "departure-details",
+      "conditions",
+      "requirements",
+    ]);
     expect(ids.slice(-2)).toEqual(["about-crew", "series"]);
   });
 
@@ -59,11 +70,12 @@ describe("tripAboutRows (in-memory PGlite)", () => {
 
   it("summarises the plan by its sites and says who can book", async () => {
     const rows = await rowsFor();
-    const plan = rows.find((row) => row.id === "details");
+    const plan = rows.find((row) => row.id === "plan");
     expect(String(plan?.value)).toContain("Molasses");
     const who = rows.find((row) => row.id === "requirements");
     expect(typeof who?.value).toBe("string");
     expect(who?.value).not.toBe("");
+    expect(String(who?.value)).toContain("Open Water");
   });
 
   it("says where the boat meets, the shop's own door when the departure names none", async () => {
@@ -73,7 +85,36 @@ describe("tripAboutRows (in-memory PGlite)", () => {
     const meeting = rows.find((row) => row.id === "meeting");
     expect(meeting?.label).toBe("Where we meet");
     expect(String(meeting?.value)).toContain(ctx.shop.name);
-    expect(meeting?.editor).toBeUndefined();
+    expect(meeting?.editor).toMatchObject({ props: { section: "meeting" } });
+  });
+
+  it("scopes each configuration editor to its saved subject and respects configuration permission", async () => {
+    const subjects = [
+      ["plan", "plan"],
+      ["meeting", "meeting"],
+      ["timing", "timing"],
+      ["details", "booking"],
+      ["departure-details", "departure"],
+    ];
+    const configured = await rowsFor();
+    for (const [id, section] of subjects) {
+      expect(configured.find((row) => row.id === id)?.editor).toMatchObject({
+        props: { section },
+      });
+    }
+
+    const readOnly = await rowsFor(undefined, false);
+    for (const [id] of subjects) {
+      expect(readOnly.find((row) => row.id === id)?.editor).toBeUndefined();
+      expect(readOnly.find((row) => row.id === id)?.value).toEqual(
+        configured.find((row) => row.id === id)?.value,
+      );
+    }
+    expect(readOnly.find((row) => row.id === "requirements")?.editor).toBeUndefined();
+    expect(readOnly.find((row) => row.id === "requirements")?.value).toEqual(
+      configured.find((row) => row.id === "requirements")?.value,
+    );
+    expect(readOnly.find((row) => row.id === "conditions")?.editor).toBeDefined();
   });
 
   it("opens the row its own form reported back to", async () => {

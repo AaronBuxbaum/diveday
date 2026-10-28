@@ -623,7 +623,9 @@ for (const scheme of ["light", "dark"] as const) {
         }
 
         const odile = counterRow("Odile Marchand");
+        await openRosterDetails(odile);
         await odile.getByText("Not here", { exact: true }).click();
+        await expect(odile.getByText(staffCopy("checkIn.noShow.consequence"))).toBeVisible();
         await odile.getByRole("button", { name: "Mark Odile Marchand as not here" }).click();
         await expect(page.getByRole("heading", { name: "Not here · 1" })).toBeVisible();
 
