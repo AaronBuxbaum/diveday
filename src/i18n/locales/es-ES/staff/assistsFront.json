@@ -10,10 +10,11 @@
     },
     "urgent": "Urgente",
     "translation": "En {language}: {text}",
-    "makeRequest": "Crear una solicitud",
-    "makeRequestFor": "Crear una solicitud con el mensaje de {name}",
+    "makeRequest": "Preparar una solicitud de reserva",
+    "makeRequestFor": "Preparar una solicitud de reserva con el mensaje de {name}",
     "makingRequest": "Leyendo…",
-    "requestNothing": "Nada en ese mensaje se lee como una reserva."
+    "requestNothing": "Nada en ese mensaje se lee como una reserva.",
+    "requestDraftExists": "Completa o borra tu formulario de llamada sin terminar en Nueva reserva antes de preparar otra solicitud."
   },
   "conversation": {
     "translatedFrom": "Traducido del {language}",

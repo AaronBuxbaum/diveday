@@ -107,7 +107,7 @@ describe("listAgencyCheckableCards with the other card tables", () => {
       agency: "ssi",
       firstName: "Lena",
       lastName: "Ortiz",
-      birthDate: null,
+      birthDate: "1990-04-12",
       cardNumber: "N-4471",
     });
   });

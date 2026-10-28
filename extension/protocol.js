@@ -2,7 +2,8 @@
 // is src/lib/cert-check-extension.ts; src/lib/cert-check-extension.test.ts
 // fails if the two drift.
 globalThis.DiveDayCertCheck = Object.assign(globalThis.DiveDayCertCheck || {}, {
-  VERSION: "1.5.0",
+  VERSION: "1.6.0",
+  SSI_MANUAL_REQUEST_TYPE: "ssi-manual-fill",
   MARKER_ATTRIBUTE: "data-diveday-cert-check",
   READY_EVENT: "diveday-cert-check-ready",
   PAGE_SOURCE: "diveday-page",

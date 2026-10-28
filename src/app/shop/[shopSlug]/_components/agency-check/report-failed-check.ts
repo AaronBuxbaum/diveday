@@ -13,7 +13,7 @@ export function reportFailedCheck(
   agency: string,
   reply: Extract<ExtensionCheckReply, { ok: false }>,
 ): void {
-  if (reply.reason === "signed_out") return;
+  if (reply.reason === "signed_out" || reply.reason === "manual_opened") return;
   const formData = new FormData();
   formData.set("agency", agency);
   formData.set("reason", reply.reason);

@@ -79,7 +79,6 @@
       "label": "The year’s money",
       "taxLabel": "Tax collected",
       "revenueDetail": "For departures that have sailed",
-      "downloadYear": "Download the year (CSV)",
       "tipsDetail": "{count, plural, =0 {No tips yet this year} one {# tip, for the crew} other {# tips, for the crew}}"
     },
     "chooseYear": "Choose a year",

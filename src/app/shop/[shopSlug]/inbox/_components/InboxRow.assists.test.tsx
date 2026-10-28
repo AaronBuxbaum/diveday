@@ -74,7 +74,7 @@ describe("a message Claude has read, while the shop's assists are on", () => {
       screen.getByRole("button", { name: "More for the message from Lena Vogel" }),
     );
     const request = screen.getByRole("button", {
-      name: "Make a request from Lena Vogel’s message",
+      name: "Draft a booking request from Lena Vogel’s message",
     });
     expect(request.closest("form")?.querySelector('input[name="messageId"]')).toHaveValue(
       MESSAGE.id,
@@ -91,6 +91,6 @@ describe("the same message while the assists are dark", () => {
     expect(screen.queryByText("Urgent")).toBeNull();
     expect(screen.queryByText(/Wants to cancel/)).toBeNull();
     expect(screen.queryByText(/In German/)).toBeNull();
-    expect(screen.queryByRole("button", { name: /Make a request/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Draft a booking request/ })).toBeNull();
   });
 });

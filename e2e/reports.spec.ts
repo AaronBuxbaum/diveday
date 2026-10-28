@@ -192,6 +192,35 @@ test.describe("owner", () => {
     expect(body).toContain('"Money in, by line",');
   });
 
+  test("the month and year actions follow the selected report", { tag: READ_ONLY }, async ({
+    page,
+    request,
+  }) => {
+    await page.goto("/shop/blue-mantis/reports?month=2026-03");
+    const monthCard = page.getByRole("link", { name: "Print the card" });
+    await expect(monthCard).toHaveAttribute("href", "/shop/blue-mantis/reports/card?month=2026-03");
+    expect(
+      (await request.get("/shop/blue-mantis/reports/card?month=2026-03")).headers()["content-type"],
+    ).toMatch(/^image\/png/);
+    await page.getByRole("button", { name: "Export", exact: true }).click();
+    await expect(page.getByRole("link", { name: "Download CSV" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/reports/download?month=2026-03",
+    );
+
+    await page.goto("/shop/blue-mantis/reports?range=year&year=2026");
+    await expect(page.getByRole("link", { name: "Print the card" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/reports/card?year=2026",
+    );
+    await page.getByRole("button", { name: "Export", exact: true }).click();
+    await expect(page.getByRole("link", { name: "Download CSV" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/reports/download?year=2026",
+    );
+    await expect(page.getByRole("link", { name: "Download the year (CSV)" })).toHaveCount(0);
+  });
+
   test("the month and its numbers lead the page, above the departures ledger", {
     tag: READ_ONLY,
   }, async ({ page }) => {

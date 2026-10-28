@@ -1,10 +1,28 @@
-import type { DbExecutor } from "@/db/client";
+import type { AppDb } from "@/db/client";
 import { getShopYear } from "@/db/reporting";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { isoDate, type MonthRef } from "@/lib/calendar";
-import { summarizeShopYear } from "@/lib/shop-year";
+import { type ShopYearSummary, summarizeShopYear } from "@/lib/shop-year";
 import { stripCopy } from "./YearReport";
 import { YearStrip } from "./YearStrip";
+
+export async function readMonthDays(
+  db: AppDb,
+  shopId: string,
+  timeZone: string,
+  month: MonthRef,
+  now: Date,
+) {
+  const days = new Date(Date.UTC(month.year, month.month, 0)).getUTCDate();
+  return summarizeShopYear(
+    await getShopYear(db, shopId, {
+      timeZone,
+      startsOn: isoDate(month.year, month.month, 1),
+      endsOn: isoDate(month.year, month.month, days),
+      now,
+    }),
+  );
+}
 
 /**
  * **The month as a strip of days, above its figures** (issue #2664): the
@@ -16,32 +34,18 @@ import { YearStrip } from "./YearStrip";
  * Nothing while no boat of the month has sailed, as the year says nothing
  * before its first departure.
  */
-export async function MonthDays({
-  db,
-  shopId,
-  timeZone,
+export function MonthDays({
+  summary,
   month,
-  now,
   locale,
   t,
 }: {
-  db: DbExecutor;
-  shopId: string;
-  timeZone: string;
+  summary: ShopYearSummary;
   month: MonthRef;
-  now: Date;
   locale: string;
   t: StaffTranslator;
 }) {
   const days = new Date(Date.UTC(month.year, month.month, 0)).getUTCDate();
-  const summary = summarizeShopYear(
-    await getShopYear(db, shopId, {
-      timeZone,
-      startsOn: isoDate(month.year, month.month, 1),
-      endsOn: isoDate(month.year, month.month, days),
-      now,
-    }),
-  );
   if (!summary.hasActivity) return null;
   return (
     <section aria-label={t("reports.monthStripLabel")} className="mb-8">

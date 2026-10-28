@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { FlashParams } from "@/components/FlashParams";
 import { keptTypedScope } from "@/components/kept-typed-scope";
+import { RemovablePhoto, removablePhotoGridClass } from "@/components/RemovablePhoto";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -174,6 +175,25 @@ export default async function BoatsSettingsPage({
                     />
                   </Field>
                 </FieldGrid>
+                <div className="space-y-3">
+                  {boat.photoUrl ? (
+                    <div className={removablePhotoGridClass}>
+                      <RemovablePhoto
+                        url={boat.photoUrl}
+                        name="removeBoatPhoto"
+                        label={t("boats.removePhoto")}
+                      />
+                    </div>
+                  ) : null}
+                  <Field label={t("boats.photoLabel")}>
+                    <input
+                      type="file"
+                      name="boatPhoto"
+                      accept="image/jpeg,image/png,image/webp"
+                      className={controlClass}
+                    />
+                  </Field>
+                </div>
                 <BoatPaperFields
                   boat={boat}
                   t={t}

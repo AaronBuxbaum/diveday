@@ -56,6 +56,7 @@ export type AgencyCheckCopy = {
   captcha: string;
   /** The agency's lookup page is not the shape the extension knows. */
   pageChanged: string;
+  manualOpened: string;
   /** This copy of the extension does not check the agency: update it. */
   unsupported: string;
   /** A template: `{name}`. The page came back, but did not show this diver cleanly. */
@@ -169,6 +170,7 @@ export function agencyCheckCopy(
     checkKind,
     link,
     checking: t("divers.certifications.agencyCheck.checking", { agency: name }),
+    manualOpened: t("divers.certifications.agencyCheck.manualOpened"),
     matched: t("divers.certifications.agencyCheck.matched", { agency: name }),
     matchedConfirmed: t("divers.certifications.agencyCheck.matchedConfirmed", { agency: name }),
     levelUnconfirmed: t("divers.certifications.agencyCheck.levelUnconfirmed", { agency: name }),

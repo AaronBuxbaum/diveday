@@ -9,7 +9,7 @@ import type {
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { AgencyCheckableCard } from "@/lib/agency-check-queue";
 import { AgencyCheckAll } from "./AgencyCheckAll";
-import { AgencyCheckHost, AgencyListedOffersSlot } from "./AgencyCheckHost";
+import { AgencyCheckHost, AgencyListedOffersSlot, agencyCheckCardsToRun } from "./AgencyCheckHost";
 import { AgencyCheckRow } from "./AgencyCheckRow";
 import { agencyCheckAllCopy, agencyCheckCopies } from "./agency-check-copy";
 
@@ -36,7 +36,7 @@ const MATCH = { ok: true, verdict: "match", effect: "certified" } as const;
 const t = staffTranslator("en-US");
 const copies = agencyCheckCopies(t);
 
-function card(n: number, agency: "ssi" | "naui" | "padi" = "ssi"): AgencyCheckableCard {
+function card(n: number, agency: "ssi" | "naui" | "padi" = "naui"): AgencyCheckableCard {
   const [firstName, lastName] = ["Diver", `Number${n}`];
   return {
     certificationId: `card-${n}`,
@@ -50,6 +50,10 @@ function card(n: number, agency: "ssi" | "naui" | "padi" = "ssi"): AgencyCheckab
         : { agency, firstName, lastName, birthDate: "1990-04-12", cardNumber: null },
   };
 }
+
+it("leaves SSI's manual lookups out of Check all", () => {
+  expect(agencyCheckCardsToRun([card(1, "ssi"), card(2, "naui")], {})).toEqual([card(2, "naui")]);
+});
 
 afterEach(() => {
   cleanup();
@@ -116,7 +120,7 @@ describe("AgencyCheckRow and AgencyCheckAll", () => {
   it("offer each row's own check, and Check all for two or more", () => {
     withExtension();
     renderDeparture([card(1), card(2)], () => MATCH);
-    expect(row("person-1").getByRole("button", { name: "Check with SSI" })).toBeInTheDocument();
+    expect(row("person-1").getByRole("button", { name: "Check with NAUI" })).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Check all 2 cards with their agencies" }),
     ).toBeVisible();
@@ -159,13 +163,15 @@ describe("AgencyCheckRow and AgencyCheckAll", () => {
       "person-3",
     ]);
     // Short of a match, the row keeps the page's words and the agency's link.
-    expect(row("person-2").getByText("SSI found this diver, but not at this level.")).toBeVisible();
+    expect(
+      row("person-2").getByText("NAUI found this diver, but not at this level."),
+    ).toBeVisible();
     expect(row("person-2").getByText("Diver Number2 — Scuba Diver")).toBeVisible();
-    expect(row("person-2").getByRole("link", { name: "Check with SSI" })).toHaveAttribute(
+    expect(row("person-2").getByRole("link", { name: "Check with NAUI" })).toHaveAttribute(
       "href",
-      "https://my.divessi.com/online_diver_check",
+      "https://www.naui.org/services/verify-diver-certification/",
     );
-    expect(row("person-2").queryByRole("button", { name: "Check with SSI" })).toBeNull();
+    expect(row("person-2").queryByRole("button", { name: "Check with NAUI" })).toBeNull();
     // Each match keeps its own Undo; there is none for the departure.
     expect(row("person-1").getByRole("button", { name: "Undo" })).toBeVisible();
     expect(row("person-3").getByRole("button", { name: "Undo" })).toBeVisible();
@@ -203,7 +209,7 @@ describe("AgencyCheckRow and AgencyCheckAll", () => {
 
     expect(
       await screen.findByText(
-        "Stopped at Diver Number5: couldn’t read SSI’s page. The rest are left for you.",
+        "Stopped at Diver Number5: couldn’t read NAUI’s page. The rest are left for you.",
       ),
     ).toBeInTheDocument();
     expect(action.mock.calls.map(([personId]) => personId)).toEqual([
@@ -214,10 +220,10 @@ describe("AgencyCheckRow and AgencyCheckAll", () => {
       "person-5",
     ]);
     expect(
-      row("person-2").getByText("Couldn’t find Diver Number2 on SSI’s page. Open it and look."),
+      row("person-2").getByText("Couldn’t find Diver Number2 on NAUI’s page. Open it and look."),
     ).toBeVisible();
-    expect(row("person-2").getByRole("link", { name: "Check with SSI" })).toBeVisible();
-    expect(row("person-6").getByRole("button", { name: "Check with SSI" })).toBeEnabled();
+    expect(row("person-2").getByRole("link", { name: "Check with NAUI" })).toBeVisible();
+    expect(row("person-6").getByRole("button", { name: "Check with NAUI" })).toBeEnabled();
   });
 
   /** A re-run never stops at the same diver for the same reason: what this page settled stays settled. */
@@ -261,10 +267,10 @@ describe("AgencyCheckRow and AgencyCheckAll", () => {
 
     expect(
       await screen.findByText(
-        "Stopped at Diver Number2: couldn’t read SSI’s page. The rest are left for you.",
+        "Stopped at Diver Number2: couldn’t read NAUI’s page. The rest are left for you.",
       ),
     ).toBeInTheDocument();
-    expect(row("person-1").getByText("Couldn’t read SSI’s page.")).toBeVisible();
+    expect(row("person-1").getByText("Couldn’t read NAUI’s page.")).toBeVisible();
     expect(action).not.toHaveBeenCalled();
     expect(vi.mocked(requestAgencyPage)).toHaveBeenCalledTimes(2);
   });
@@ -296,7 +302,7 @@ describe("AgencyCheckRow and AgencyCheckAll", () => {
         "DiveDay didn’t answer. Reload to see where this certification stands.",
       ),
     ).toBeVisible();
-    expect(row("person-1").queryByText("Couldn’t read SSI’s page.")).toBeNull();
+    expect(row("person-1").queryByText("Couldn’t read NAUI’s page.")).toBeNull();
   });
 
   it("stops when the staffer says so, after the card in flight, and says what it came to", async () => {
@@ -323,7 +329,7 @@ describe("AgencyCheckRow and AgencyCheckAll", () => {
 
     expect(await screen.findByText("Stopped. Checked 1. Certified: 1.")).toBeInTheDocument();
     expect(action.mock.calls.map(([personId]) => personId)).toEqual(["person-1"]);
-    expect(row("person-2").getByRole("button", { name: "Check with SSI" })).toBeEnabled();
+    expect(row("person-2").getByRole("button", { name: "Check with NAUI" })).toBeEnabled();
   });
 
   /** The page repaints once, when a run that wrote something ends, not after each card. */
@@ -361,7 +367,7 @@ describe("AgencyCheckRow and AgencyCheckAll", () => {
     });
 
     expect(await screen.findByText("Checked 2. Certified: 1. Confirmed: 1.")).toBeInTheDocument();
-    expect(row("person-2").getByText("SSI shows this certification. Confirmed.")).toBeVisible();
+    expect(row("person-2").getByText("NAUI shows this certification. Confirmed.")).toBeVisible();
   });
 
   it("keeps the page's words and evidence off a printed roster", async () => {
@@ -374,14 +380,14 @@ describe("AgencyCheckRow and AgencyCheckAll", () => {
     }));
 
     await act(async () => {
-      fireEvent.click(row("person-1").getByRole("button", { name: "Check with SSI" }));
+      fireEvent.click(row("person-1").getByRole("button", { name: "Check with NAUI" }));
     });
 
     const evidence = await row("person-1").findByText("Diver Number1 · Scuba Diver");
     expect(evidence.closest(".print\\:hidden")).not.toBeNull();
     expect(
       row("person-1")
-        .getByText("SSI found this diver, but not at this level.")
+        .getByText("NAUI found this diver, but not at this level.")
         .closest(".print\\:hidden"),
     ).not.toBeNull();
   });
@@ -449,13 +455,13 @@ describe("AgencyCheckRow and AgencyCheckAll", () => {
     expect(row("person-3").getByRole("button", { name: "Check with PADI" })).toBeEnabled();
   });
 
-  /** Domain review R7: a captcha is SSI's state, so SSI's other cards are left; NAUI's go on. */
+  /** Domain review R7: a captcha is NAUI's state, so NAUI's other cards are left; NAUI's go on. */
   it("leaves an agency's other cards once its page asks whether the staffer is human", async () => {
     withExtension();
     vi.mocked(requestAgencyPage).mockImplementation(async (query) =>
-      query.agency === "ssi" ? { ok: false, reason: "captcha" } : { ok: true, pageText: "page" },
+      query.agency === "naui" ? { ok: false, reason: "captcha" } : { ok: true, pageText: "page" },
     );
-    const action = renderDeparture([card(1), card(2), card(3, "naui")], () => MATCH);
+    const action = renderDeparture([card(1), card(2), card(3, "padi")], () => MATCH);
 
     await act(async () => {
       fireEvent.click(
@@ -465,20 +471,20 @@ describe("AgencyCheckRow and AgencyCheckAll", () => {
 
     expect(
       await screen.findByText(
-        "Checked 2. Certified: 1. Left SSI’s other certifications for you: check them on its page.",
+        "Checked 2. Certified: 1. Left NAUI’s other certifications for you: check them on its page.",
       ),
     ).toBeInTheDocument();
     expect(vi.mocked(requestAgencyPage).mock.calls.map(([query]) => query.agency)).toEqual([
-      "ssi",
       "naui",
+      "padi",
     ]);
     expect(action.mock.calls.map(([personId]) => personId)).toEqual(["person-3"]);
     expect(
-      row("person-1").getByText("SSI is asking if you’re human. Check on its page."),
+      row("person-1").getByText("NAUI is asking if you’re human. Check on its page."),
     ).toBeVisible();
-    expect(row("person-1").getByRole("link", { name: "Check with SSI" })).toBeVisible();
-    expect(row("person-1").queryByRole("button", { name: "Check with SSI" })).toBeNull();
-    expect(row("person-2").getByRole("button", { name: "Check with SSI" })).toBeEnabled();
+    expect(row("person-1").getByRole("link", { name: "Check with NAUI" })).toBeVisible();
+    expect(row("person-1").queryByRole("button", { name: "Check with NAUI" })).toBeNull();
+    expect(row("person-2").getByRole("button", { name: "Check with NAUI" })).toBeEnabled();
   });
 
   it("answers a single row's match with the diver record's toast and its Undo", async () => {
@@ -487,10 +493,10 @@ describe("AgencyCheckRow and AgencyCheckAll", () => {
     const action = renderDeparture([card(1), card(2)], () => MATCH);
 
     await act(async () => {
-      fireEvent.click(row("person-1").getByRole("button", { name: "Check with SSI" }));
+      fireEvent.click(row("person-1").getByRole("button", { name: "Check with NAUI" }));
     });
 
-    const message = await screen.findByText("SSI shows this certification. Marked certified.");
+    const message = await screen.findByText("NAUI shows this certification. Marked certified.");
     const toast = message.closest('[role="status"]');
     if (!(toast instanceof HTMLElement)) throw new Error("the match did not land as a toast");
     expect(within(toast).getByRole("button", { name: "Undo" })).toBeVisible();
@@ -507,11 +513,11 @@ describe("AgencyCheckRow and AgencyCheckAll", () => {
     renderDeparture([card(1), card(2)], () => ({ ...MATCH, effect: "confirmed" }));
 
     await act(async () => {
-      fireEvent.click(row("person-1").getByRole("button", { name: "Check with SSI" }));
+      fireEvent.click(row("person-1").getByRole("button", { name: "Check with NAUI" }));
     });
 
-    expect(await screen.findByText("SSI shows this certification. Confirmed.")).toBeVisible();
-    expect(screen.queryByText("SSI shows this certification. Marked certified.")).toBeNull();
+    expect(await screen.findByText("NAUI shows this certification. Confirmed.")).toBeVisible();
+    expect(screen.queryByText("NAUI shows this certification. Marked certified.")).toBeNull();
   });
 });
 
@@ -567,7 +573,7 @@ describe("the other cards a match's page lists", () => {
     const offer = row("person-1");
     expect(
       offer.getByText(
-        "SSI also shows these certifications. Add them? Each waits for Mark certified.",
+        "NAUI also shows these certifications. Add them? Each waits for Mark certified.",
       ),
     ).toBeVisible();
     expect(row("person-2").queryByText(/also shows/)).toBeNull();
@@ -593,7 +599,7 @@ describe("the other cards a match's page lists", () => {
     vi.mocked(requestAgencyPage).mockResolvedValue({ ok: true, pageText: "page" });
     renderDeparture([card(1)], () => OFFERED);
     await act(async () => {
-      fireEvent.click(row("person-1").getByRole("button", { name: "Check with SSI" }));
+      fireEvent.click(row("person-1").getByRole("button", { name: "Check with NAUI" }));
     });
     expect(screen.queryByText(/also shows/)).toBeNull();
   });
@@ -604,11 +610,11 @@ describe("the other cards a match's page lists", () => {
     const addListed = vi.fn(async (): Promise<AgencyListedAddResult> => ({ ok: false }));
     renderDeparture([card(1)], () => OFFERED, { addListed, offersAt: "slot" });
     await act(async () => {
-      fireEvent.click(row("person-1").getByRole("button", { name: "Check with SSI" }));
+      fireEvent.click(row("person-1").getByRole("button", { name: "Check with NAUI" }));
     });
     expect(row("person-1").queryByText(/also shows/)).toBeNull();
     const offer = screen.getByRole("group", {
-      name: "SSI also shows these certifications for Diver Number1. Add them? Each waits for Mark certified.",
+      name: "NAUI also shows these certifications for Diver Number1. Add them? Each waits for Mark certified.",
     });
     // Below the list, never above it.
     const list = screen.getByRole("list");
@@ -631,7 +637,7 @@ describe("the other cards a match's page lists", () => {
     const addListed = vi.fn(async (): Promise<AgencyListedAddResult> => ({ ok: true, added: [] }));
     renderDeparture([card(1)], () => OFFERED, { addListed });
     await act(async () => {
-      fireEvent.click(row("person-1").getByRole("button", { name: "Check with SSI" }));
+      fireEvent.click(row("person-1").getByRole("button", { name: "Check with NAUI" }));
     });
     expect(screen.getAllByRole("group")).toHaveLength(1);
     expect(row("person-1").getByRole("group")).toBeVisible();
@@ -668,10 +674,10 @@ describe("AgencyCheckRow with a nitrox card beside a level card", () => {
         <AgencyCheckRow personId="person-1" cards={[level, nitrox]} />
       </AgencyCheckHost>,
     );
-    expect(screen.getByRole("button", { name: "Check with SSI" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Check with NAUI" })).toBeInTheDocument();
 
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Check Nitrox with SSI" }));
+      fireEvent.click(screen.getByRole("button", { name: "Check Nitrox with NAUI" }));
     });
     const [, , posted] = action.mock.calls[0] as unknown as [string, unknown, FormData];
     expect(posted.get("certificationId")).toBe("card-nitrox");
@@ -679,7 +685,7 @@ describe("AgencyCheckRow with a nitrox card beside a level card", () => {
 
     // The level card's check posts no table at all.
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Check with SSI" }));
+      fireEvent.click(screen.getByRole("button", { name: "Check with NAUI" }));
     });
     const [, , levelPosted] = action.mock.calls[1] as unknown as [string, unknown, FormData];
     expect(levelPosted.has("cardType")).toBe(false);

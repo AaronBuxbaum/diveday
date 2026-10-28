@@ -1,0 +1,79 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "8a6713cb-4d60-44a4-9065-be85300ad3bf",
+  "prevIds": [
+    "61a7bb5c-0700-4077-b194-b91b8c217375"
+  ],
+  "footprints": [
+    {
+      "statementType": "alter_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "media_deletion_kind"
+      ],
+      "writes": [
+        "s|enum|public.media_deletion_kind"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "boats",
+        "photo_url"
+      ],
+      "writes": [
+        "s|col|public.boats.photo_url",
+        "n|col|public.boats.photo_url",
+        "e|col|public.boats.photo_url"
+      ],
+      "reads": [
+        "n|tbl|public.boats",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "boats",
+        "name": "photo_url",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "enums\u0000[\"public\",\"media_deletion_kind\"]",
+      "set": {
+        "values": [
+          "course_photo",
+          "recap_photo",
+          "certification_card",
+          "waiver_document",
+          "dive_site_photo",
+          "shop_logo",
+          "arrival_photo",
+          "shop_hero",
+          "boat_photo",
+          "payment_receipt"
+        ]
+      }
+    }
+  ]
+}

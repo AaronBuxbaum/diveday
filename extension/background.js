@@ -11,6 +11,7 @@ const {
   ELEARNING,
   PAGE_TEXT_MAX_LENGTH,
   REQUEST_TYPE,
+  SSI_MANUAL_REQUEST_TYPE,
   ELEARNING_REQUEST_TYPE,
   HELLO_REQUEST_TYPE,
   DRY_RUN_REQUEST_TYPE,
@@ -324,6 +325,30 @@ async function check(query, pages) {
   }
 }
 
+/** Open SSI for the staffer. Do not accept terms, submit, or read its result. */
+async function openSsiManual(query) {
+  const spec = AGENCIES.ssi;
+  let tab;
+  try {
+    tab = await chrome.tabs.create({ url: spec.url, active: true });
+    if (!(await tabLoaded(tab.id, Date.now() + CHECK_DEADLINE_MS))) {
+      return { ok: false, reason: "timeout" };
+    }
+    const loaded = await chrome.tabs.get(tab.id);
+    const url = new URL(loaded.url);
+    if (
+      url.origin !== "https://my.divessi.com" ||
+      url.pathname.replace(/\/+$/, "") !== "/online_diver_check"
+    ) {
+      return { ok: false, reason: "page_changed" };
+    }
+    const filled = await run(tab.id, fillSsiManualForm, [query]);
+    return filled ? { ok: false, reason: "manual_opened" } : { ok: false, reason: "page_changed" };
+  } catch {
+    return { ok: false, reason: "fill_failed" };
+  }
+}
+
 /**
  * **"Try the checks"**: fill one agency's sample page, which this extension
  * carries (`sample.html`), with a made-up diver, and say whether every box
@@ -404,6 +429,7 @@ function dryRunResult(result) {
     filled: result.filled === true,
     typed: result.typed === true,
     submitted: result.submitted === true,
+    ...(result.manual === true ? { manual: true } : {}),
     missing: missing.slice(0, 10),
     ...(result.pageShape && typeof result.pageShape === "object"
       ? { pageShape: result.pageShape }
@@ -465,6 +491,17 @@ function validQuery(query) {
     text(query.lastName, 100) &&
     (query.birthDate === null || /^\d{4}-\d{2}-\d{2}$/.test(query.birthDate)) &&
     optional(query.cardNumber, 64)
+  );
+}
+
+function validSsiManualQuery(query) {
+  if (!query || query.agency !== "ssi") return false;
+  const name = (value) => typeof value === "string" && value.length <= 100;
+  return (
+    name(query.firstName) &&
+    name(query.lastName) &&
+    (query.firstName.trim() || query.lastName.trim()) &&
+    (query.birthDate === null || /^\d{4}-\d{2}-\d{2}$/.test(query.birthDate))
   );
 }
 
@@ -531,6 +568,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       .then(sendResponse);
     return true;
   }
+  if (message?.type === SSI_MANUAL_REQUEST_TYPE && validSsiManualQuery(message.query)) {
+    openSsiManual(message.query).then(sendResponse);
+    return true;
+  }
   if (!message || message.type !== REQUEST_TYPE || !validQuery(message.query)) {
     sendResponse({ ok: false, reason: "unsupported" });
     return false;
@@ -543,6 +584,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     cardNumber: message.query.cardNumber,
   };
   const spec = Object.hasOwn(AGENCIES, query.agency) ? AGENCIES[query.agency] : null;
+  // Older app copies may still request an automatic SSI check. It now always
+  // requires the staffer to review the terms and submit on SSI's own page.
+  if (query.agency === "ssi") {
+    openSsiManual(query).then(sendResponse);
+    return true;
+  }
   phase("message:check");
   check(query, AGENCIES)
     .then((reply) => {

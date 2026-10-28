@@ -1,5 +1,7 @@
 import { StoredPhoto } from "@/components/StoredPhoto";
 import { TONE_PANEL_CLASS } from "@/components/ui/card";
+import { getBoatById } from "@/db/boats";
+import type { AppDb } from "@/db/client";
 import type { PublicRun } from "@/db/series-next";
 import type { DiverTranslator } from "@/i18n/messages";
 import { formatDateTimeTz, formatShortDate } from "@/lib/format";
@@ -114,5 +116,34 @@ export function TripHero({
         </p>
       ) : null}
     </div>
+  );
+}
+
+export async function TripBoatPhoto({
+  db,
+  shopId,
+  boatId,
+  t,
+}: {
+  db: AppDb;
+  shopId: string;
+  boatId: string | null;
+  t: DiverTranslator;
+}) {
+  const boat = boatId ? await getBoatById(db, shopId, boatId) : null;
+  if (!boat?.photoUrl) return null;
+  return (
+    <figure className="flex items-center gap-4">
+      <StoredPhoto
+        src={boat.photoUrl}
+        alt={boat.name}
+        className="size-24 shrink-0 rounded-lg"
+        sizes="96px"
+      />
+      <figcaption>
+        <p className="text-sm text-muted">{t("trip.boatLabel")}</p>
+        <p className="font-medium">{boat.name}</p>
+      </figcaption>
+    </figure>
   );
 }

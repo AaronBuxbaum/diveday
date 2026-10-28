@@ -285,9 +285,6 @@ export function ConversationSection({
             <p className="text-sm text-muted">{t("inbox.reply.diverRemoved")}</p>
           ) : closedWhatsApp && latest ? (
             <div className="grid gap-3">
-              <p className="text-sm text-muted">
-                {t("inbox.reply.windowClosed", { name: diverName })}
-              </p>
               {reopenSentAt ? (
                 <p className="text-sm">
                   {t("inbox.reply.reopenSent", {
@@ -301,7 +298,9 @@ export function ConversationSection({
                   className="grid gap-2"
                 >
                   <input type="hidden" name="messageId" value={latest.message.id} />
-                  <p className="text-sm">{t("inbox.reply.reopenLead", { name: diverName })}</p>
+                  <p className="text-sm text-muted">
+                    {t("inbox.reply.windowClosed", { name: diverName })}
+                  </p>
                   {WHATSAPP_REOPEN_MESSAGES.map((message) => (
                     <SubmitButton
                       key={message}
@@ -326,6 +325,7 @@ export function ConversationSection({
           {assist && latest && !removed ? (
             <form action={assist.requestAction} className="mt-3">
               <input type="hidden" name="messageId" value={latest.message.id} />
+              <input type="hidden" name="returnPersonId" value={personId} />
               <SubmitButton
                 pendingLabel={t("assistsFront.inbox.makingRequest")}
                 className={buttonClass({ variant: "ghost", size: "sm" })}

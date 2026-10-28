@@ -95,7 +95,10 @@ describe("the conversation with the shop's assists on", () => {
   it("offers no translation for a diver who writes in the shop's language", () => {
     renderSection(assist({ translate: null, diverLanguage: null }));
     expect(screen.queryByRole("button", { name: /Translate/ })).toBeNull();
-    expect(screen.getByRole("button", { name: "Make a request" })).toBeInTheDocument();
+    const request = screen.getByRole("button", { name: "Draft a booking request" });
+    expect(request.closest("form")?.querySelector('input[name="returnPersonId"]')).toHaveValue(
+      "af000000-1111-4222-8333-444444444444",
+    );
   });
 });
 
@@ -105,6 +108,6 @@ describe("the conversation with the assists dark", () => {
     expect(screen.queryByText("Translated from German")).toBeNull();
     expect(screen.queryByText("Is there room on Saturday?")).toBeNull();
     expect(screen.queryByRole("button", { name: "Draft a reply" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Make a request" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Draft a booking request" })).toBeNull();
   });
 });
