@@ -11,6 +11,7 @@
     "viewAsDiver": "See it the way your divers will"
   },
   "demoReset": "Demo data reset to a fresh boat and a clean slate.",
+  "demoResetRefused": "Demo reset was skipped because its identities could not be verified.",
   "emailResent": "Confirmation email resent",
   "emailFailed": "That email still couldn’t be sent. Check the address and email configuration.",
   "offlineLabel": "Offline — this board may be out of date",

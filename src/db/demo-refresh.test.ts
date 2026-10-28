@@ -601,6 +601,64 @@ describe("refreshCanonicalDemoSchedule", () => {
       expect(startsAfter).toEqual(startsBefore);
     });
 
+    it("fails closed when the owner is demo-scoped but a captain account is real", async () => {
+      const { db, shop } = historyCtx;
+      const boat = await boatAtSea(db, shop.id);
+      const identities = await db
+        .select({ role: personRoles.role, accountId: userAccounts.id, email: userAccounts.email })
+        .from(userAccounts)
+        .innerJoin(people, eq(people.id, userAccounts.personId))
+        .innerJoin(personRoles, eq(personRoles.personId, people.id))
+        .where(and(eq(people.shopId, shop.id), inArray(personRoles.role, ["owner", "captain"])));
+      const owner = identities.find((identity) => identity.role === "owner");
+      const captain = identities.find((identity) => identity.role === "captain");
+      if (!owner || !captain) throw new Error("expected owner and captain accounts");
+      expect(owner.email).toMatch(/@demo\.invalid$/);
+
+      await db
+        .update(userAccounts)
+        .set({ email: "captain@real-shop.example" })
+        .where(eq(userAccounts.id, captain.accountId));
+
+      const beforeMarks = await marks(db, boat.id);
+      const boatsBefore = await db
+        .select({ id: trips.id })
+        .from(trips)
+        .where(and(eq(trips.shopId, shop.id), eq(trips.title, AT_SEA_DAY_TITLE)));
+      const [startsBefore] = await db
+        .select({ startsAt: trips.startsAt })
+        .from(trips)
+        .where(eq(trips.id, boat.id));
+
+      await seedBoatAtSea(db, shop.id);
+      await expect(ensureDemoSailsToday(db, shop.id, DEMO_SHOP_TIMEZONE)).resolves.toBe(
+        "no_candidate",
+      );
+      expect(await bringDemoBoatsAtSeaHome(db, new Date(boat.endsAt.getTime() + 60 * 60_000))).toBe(
+        0,
+      );
+      await expect(
+        refreshCanonicalDemoSchedule(db, { now: new Date(boat.endsAt.getTime() + 1) }),
+      ).resolves.toMatchObject({ found: true, refreshed: false });
+
+      expect(await marks(db, boat.id)).toEqual(beforeMarks);
+      const diveTwo = await db
+        .select({ id: executedDives.id })
+        .from(executedDives)
+        .where(and(eq(executedDives.tripId, boat.id), eq(executedDives.diveNumber, 2)));
+      expect(diveTwo).toHaveLength(0);
+      const boatsAfter = await db
+        .select({ id: trips.id })
+        .from(trips)
+        .where(and(eq(trips.shopId, shop.id), eq(trips.title, AT_SEA_DAY_TITLE)));
+      expect(boatsAfter).toEqual(boatsBefore);
+      const [startsAfter] = await db
+        .select({ startsAt: trips.startsAt })
+        .from(trips)
+        .where(eq(trips.id, boat.id));
+      expect(startsAfter).toEqual(startsBefore);
+    });
+
     it("fails closed when a demo-flagged shop has no owner or captain account", async () => {
       const { db, shop } = historyCtx;
       const boat = await boatAtSea(db, shop.id);
