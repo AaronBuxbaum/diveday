@@ -208,6 +208,7 @@
     "certOverridesLink": "The month’s safety activity",
     "crew": "Lapsed credentials at live boarding marks",
     "currentCrewCredentials": "Current credentials on Team",
+    "crewHistoryUnavailableValue": "Unavailable",
     "crewObservation": "State observed during the live boarding mark; it may differ from departure. Role fit was not recorded.",
     "crewHistoryUnavailable": "Credential history unavailable for {count, plural, one {# crew sailing} other {# crew sailings}}",
     "crewValue": "{lapsed} of {sailings}",

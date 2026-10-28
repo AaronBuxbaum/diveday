@@ -31,6 +31,7 @@ function crewTile(safety: SafetyMonth, staffingHref: string | null = "/shop/blue
     drafts: 0,
     activityHref: "/shop/blue-mantis/settings/activity",
     staffingHref,
+    teamHref: "/shop/blue-mantis/settings/team",
   }).find((figure) => figure.key === "crew");
   if (!tile) throw new Error("no crew tile");
   return tile;
@@ -59,12 +60,36 @@ describe("the month's crew tile", () => {
     expect(crewTile(month({ noCrewOnRecord: true }), null).link).toBeUndefined();
   });
 
-  it("does not repeat unavailable history in the value and detail", () => {
+  it("keeps unavailable history compact and explains its sailing count in the detail", () => {
     const tile = crewTile(
       month({ crewSailings: 4, checkedSailings: 0, unknownCredentialSailings: 4 }),
     );
-    expect(tile.value).toBe(t("incidents.safety.crewHistoryUnavailable", { count: 4 }));
-    expect(tile.detail).toBe("");
+    expect(tile.value).toBe(t("incidents.safety.crewHistoryUnavailableValue"));
+    expect(tile.detail).toBe(t("incidents.safety.crewHistoryUnavailable", { count: 4 }));
+    expect(tile.link).toEqual({
+      href: "/shop/blue-mantis/settings/team",
+      label: t("incidents.safety.currentCrewCredentials"),
+    });
+  });
+
+  it("keeps the unavailable history count beside mixed live-state details", () => {
+    const tile = crewTile(
+      month({
+        crewSailings: 2,
+        checkedSailings: 0,
+        unknownCredentialSailings: 1,
+        unrecordedSailings: 1,
+      }),
+    );
+    expect(tile.value).toBe(t("incidents.safety.crewHistoryUnavailableValue"));
+    expect(tile.detail).toContain(t("incidents.safety.crewHistoryUnavailable", { count: 1 }));
+    expect(tile.detail).toContain(t("incidents.safety.crewObservation"));
+    expect(tile.detail).toContain(
+      t("incidents.safety.crewDetailUnrecorded", {
+        unrecorded: 1,
+        sailings: 1,
+      }),
+    );
   });
 
   it("counts only live observations in the empty-file denominator", () => {
