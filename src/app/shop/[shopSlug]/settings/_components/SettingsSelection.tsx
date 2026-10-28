@@ -38,17 +38,50 @@ export function SettingsSelection({
   children: ReactNode;
 }) {
   const [selected, setSelected] = useState<string | null>(null);
+  const [hydrated, setHydrated] = useState(false);
+  const [selectionPending, setSelectionPending] = useState(false);
 
   useEffect(() => {
+    let pendingFrame: number | null = null;
     const sync = () => {
       const fragment = window.location.hash.slice(1);
-      if (fragments.includes(fragment)) setSelected(fragment);
-      else if (groupIds.includes(fragment)) setSelected(`group:${fragment}`);
-      else setSelected(settingsSectionFragment(initialSection ?? "timezone"));
+      const nextSelection = fragments.includes(fragment)
+        ? fragment
+        : groupIds.includes(fragment)
+          ? `group:${fragment}`
+          : settingsSectionFragment(initialSection ?? "timezone");
+      const pressedControl = document.querySelector<HTMLElement>("[data-settings-group] :active");
+
+      if (!pressedControl) {
+        setSelectionPending(false);
+        setSelected(nextSelection);
+        return;
+      }
+
+      // A fragment can arrive while the reader is pressing a door or row in
+      // the server-rendered all-groups view. Applying the selection immediately
+      // can move that active target before pointerup, canceling its click.
+      // Keep the server view until the press ends, then reconcile the hash.
+      setSelectionPending(true);
+      if (pendingFrame !== null) window.cancelAnimationFrame(pendingFrame);
+      const applyWhenReleased = () => {
+        if (pressedControl.matches(":active")) {
+          pendingFrame = window.requestAnimationFrame(applyWhenReleased);
+          return;
+        }
+        pendingFrame = null;
+        setSelectionPending(false);
+        setSelected(nextSelection);
+      };
+      pendingFrame = window.requestAnimationFrame(applyWhenReleased);
     };
+    setHydrated(true);
     sync();
     window.addEventListener("hashchange", sync);
-    return () => window.removeEventListener("hashchange", sync);
+    return () => {
+      window.removeEventListener("hashchange", sync);
+      if (pendingFrame !== null) window.cancelAnimationFrame(pendingFrame);
+    };
   }, [initialSection]);
 
   useEffect(() => {
@@ -61,7 +94,13 @@ export function SettingsSelection({
   }, [selected]);
 
   return (
-    <div data-settings-selection={selected ?? undefined} className="space-y-10">
+    <div
+      data-hydrated={hydrated ? "true" : undefined}
+      data-selection-pending={selectionPending ? "true" : undefined}
+      data-settings-selection-root
+      data-settings-selection={selected ?? undefined}
+      className="space-y-10"
+    >
       <style>{styles}</style>
       {children}
     </div>
