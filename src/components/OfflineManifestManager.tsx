@@ -171,6 +171,30 @@ export function OfflineManifestManager({
           </div>
         </div>
       ) : null}
+      {cutoffNoteEvents.length || unverifiedNoteEvents.length ? (
+        <div className="mx-auto my-3 max-w-4xl px-4 print:hidden" role="status">
+          {cutoffNoteEvents.length ? (
+            <div className="text-sm text-muted">
+              <p>{copy.reconcileNoteDiscarded}</p>
+              <ul className="mt-1 list-disc ps-5">
+                {cutoffNoteEvents.map((event) => (
+                  <li key={event.clientEventId}>{noteEntry(event)}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {unverifiedNoteEvents.length ? (
+            <div className="text-sm text-muted">
+              <p>{copy.reconcileNoteUnverified}</p>
+              <ul className="mt-1 list-disc ps-5">
+                {unverifiedNoteEvents.map((event) => (
+                  <li key={event.clientEventId}>{noteEntry(event)}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
       {/* **The whole "On this phone" group, as one line at rest** (ADR
           20260827-the-departure-is-two-working-surfaces, decision 2: device settings and offline
           detail are "ashore, not here"). Everything this *device* does — hold an offline copy, wake
@@ -241,26 +265,6 @@ export function OfflineManifestManager({
                 <p className={message ? "mt-2 text-sm font-medium" : ""} aria-live="polite">
                   {message}
                 </p>
-                {cutoffNoteEvents.length ? (
-                  <div className="mt-2 text-sm text-muted" role="status">
-                    <p>{copy.reconcileNoteDiscarded}</p>
-                    <ul className="mt-1 list-disc ps-5">
-                      {cutoffNoteEvents.map((event) => (
-                        <li key={event.clientEventId}>{noteEntry(event)}</li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : null}
-                {unverifiedNoteEvents.length ? (
-                  <div className="mt-2 text-sm text-muted" role="status">
-                    <p>{copy.reconcileNoteUnverified}</p>
-                    <ul className="mt-1 list-disc ps-5">
-                      {unverifiedNoteEvents.map((event) => (
-                        <li key={event.clientEventId}>{noteEntry(event)}</li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : null}
                 {saved ? (
                   <p className="mt-1 text-xs text-muted">
                     {fill(copy.savedSummary, {

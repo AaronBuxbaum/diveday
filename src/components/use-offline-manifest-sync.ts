@@ -18,6 +18,17 @@ import type { OfflineManifestEnvelope, OfflineManifestPayload } from "@/lib/offl
 // or a boat's signal drops, which push alone can never cover.
 const AUTO_REFRESH_MS = 5 * 60 * 1000;
 
+function noteDispositionCount(
+  envelope: OfflineManifestEnvelope | null | undefined,
+  disposition: "discarded_erasure_cutoff" | "discarded_unverified_snapshot",
+) {
+  return envelope
+    ? [...envelope.events, ...envelope.checklistEvents].filter(
+        (event) => event.noteDisposition === disposition,
+      ).length
+    : 0;
+}
+
 /** The words the save, sync and reconcile narration uses, resolved server-side. */
 export interface OfflineManifestSyncCopy {
   checkingDevice: string;
@@ -107,12 +118,8 @@ export function useOfflineManifestSync(
         setSaved(envelope);
         const rejected = envelope.events.filter((event) => event.syncStatus === "rejected").length;
         const pending = envelope.events.filter((event) => event.syncStatus === "pending").length;
-        const cutoffNotes = envelope.events.filter(
-          (event) => event.noteDisposition === "discarded_erasure_cutoff",
-        ).length;
-        const unverifiedNotes = envelope.events.filter(
-          (event) => event.noteDisposition === "discarded_unverified_snapshot",
-        ).length;
+        const cutoffNotes = noteDispositionCount(envelope, "discarded_erasure_cutoff");
+        const unverifiedNotes = noteDispositionCount(envelope, "discarded_unverified_snapshot");
         const noteWasDiscarded =
           cutoffNotes > cutoffNotesBefore || unverifiedNotes > unverifiedNotesBefore;
         lastPendingCount.current = pending;
@@ -218,12 +225,11 @@ export function useOfflineManifestSync(
         lastRejectedCount.current = envelope.events.filter(
           (event) => event.syncStatus === "rejected",
         ).length;
-        lastCutoffNoteCount.current = envelope.events.filter(
-          (event) => event.noteDisposition === "discarded_erasure_cutoff",
-        ).length;
-        lastUnverifiedNoteCount.current = envelope.events.filter(
-          (event) => event.noteDisposition === "discarded_unverified_snapshot",
-        ).length;
+        lastCutoffNoteCount.current = noteDispositionCount(envelope, "discarded_erasure_cutoff");
+        lastUnverifiedNoteCount.current = noteDispositionCount(
+          envelope,
+          "discarded_unverified_snapshot",
+        );
         // Settled: clear the narration rather than restating the outcome. Once
         // the save lands, the pills say "Online / Fresh copy" and the line
         // under them says when it was saved and what is still owed — a fourth
@@ -300,13 +306,11 @@ export function useOfflineManifestSync(
         envelope?.events.filter((event) => event.syncStatus === "pending").length ?? 0;
       lastRejectedCount.current =
         envelope?.events.filter((event) => event.syncStatus === "rejected").length ?? 0;
-      lastCutoffNoteCount.current =
-        envelope?.events.filter((event) => event.noteDisposition === "discarded_erasure_cutoff")
-          .length ?? 0;
-      lastUnverifiedNoteCount.current =
-        envelope?.events.filter(
-          (event) => event.noteDisposition === "discarded_unverified_snapshot",
-        ).length ?? 0;
+      lastCutoffNoteCount.current = noteDispositionCount(envelope, "discarded_erasure_cutoff");
+      lastUnverifiedNoteCount.current = noteDispositionCount(
+        envelope,
+        "discarded_unverified_snapshot",
+      );
       if (navigator.onLine) {
         const manual = manualRefreshPending.current;
         manualRefreshPending.current = false;

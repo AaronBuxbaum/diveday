@@ -123,6 +123,29 @@ afterEach(() => {
 });
 
 describe("useOfflineManifestSync on a network that stops answering", () => {
+  it("refreshes the live page when sync discards only a checklist note", async () => {
+    const checklistDiscarded = envelope();
+    checklistDiscarded.checklistEvents = [
+      {
+        clientEventId: "33333333-3333-4333-8333-333333333333",
+        snapshotId: "snapshot-1",
+        snapshotSavedAt: "2026-08-01T09:00:00.000Z",
+        tripId: TRIP_ID,
+        checklistItemId: "44444444-4444-4444-8444-444444444444",
+        status: "checked",
+        note: null,
+        occurredAt: "2026-08-01T09:10:00.000Z",
+        syncStatus: "applied",
+        noteDisposition: "discarded_erasure_cutoff",
+      },
+    ];
+    vi.mocked(syncOfflineManifest).mockResolvedValue(checklistDiscarded);
+
+    renderHook(() => useOfflineManifestSync(payload, copy));
+
+    await waitFor(() => expect(mockRouter.refresh).toHaveBeenCalled());
+  });
+
   it("releases the queue when a sync gives up, and runs the pass queued behind it", async () => {
     // The mount's own reconcile settles; from then on the first sync hangs
     // until the store's deadline gives up on it.

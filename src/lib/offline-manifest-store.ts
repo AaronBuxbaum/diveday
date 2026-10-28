@@ -180,6 +180,34 @@ async function openDatabase(): Promise<IDBDatabase> {
   return requestResult(request);
 }
 
+function serverSnapshotEpoch(token: string | undefined): number | null {
+  if (!token) return null;
+  const match = /^(\d{1,16})\.[A-Za-z0-9_-]{43}$/.exec(token);
+  if (!match) return null;
+  const epoch = Number(match[1]);
+  return Number.isSafeInteger(epoch) ? epoch : null;
+}
+
+function dispositionForSnapshotRefresh(
+  previousToken: string | undefined,
+  currentToken: string | undefined,
+): OfflineSyncResult["noteDisposition"] {
+  const currentEpoch = serverSnapshotEpoch(currentToken);
+  if (currentEpoch === null) return undefined;
+  const previousEpoch = serverSnapshotEpoch(previousToken);
+  if (previousEpoch === null) return "discarded_unverified_snapshot";
+  return currentEpoch > previousEpoch ? "discarded_erasure_cutoff" : undefined;
+}
+
+function clearSavedNotes<T extends OfflineRollCallEvent | OfflineChecklistEvent>(
+  events: T[],
+  disposition: NonNullable<OfflineSyncResult["noteDisposition"]>,
+): T[] {
+  return events.map((event) =>
+    event.note?.trim() ? { ...event, note: null, noteDisposition: disposition } : event,
+  );
+}
+
 /**
  * Guards the whole read-or-generate-and-write sequence below against two
  * concurrent first-ever callers (e.g. OfflineManifestAutoSave saving several
@@ -614,6 +642,44 @@ export async function saveOfflineManifest(
     // for good instead of just losing that record's own queued events.
     const existing = await loadOfflineManifest(trip.id).catch(() => null);
     const savedAt = nowDate();
+    // Snapshot tokens carry a server-authenticated epoch. This local comparison
+    // only removes retained text from this device; every sync writer still
+    // verifies the token MAC and compares the epoch server-side before accepting
+    // note text. A changed snapshot id at the same epoch is an ordinary refresh
+    // and must not erase notes staff added after the last deletion.
+    const previousEpoch = serverSnapshotEpoch(existing?.snapshot.erasureEpochToken);
+    const currentEpoch = serverSnapshotEpoch(payload.erasureEpochToken);
+    if (
+      existing &&
+      previousEpoch !== null &&
+      (currentEpoch === null || currentEpoch < previousEpoch)
+    ) {
+      // An older in-flight render must not replace a post-erasure copy and put
+      // erased names back on this device. A revoked medical-alert grant still
+      // takes effect even when the roster payload itself is stale.
+      if (keepMedicalAlertWords) return existing;
+      const { medicalAlertsSavedBy: _previous, ...withoutSavedBy } = existing;
+      const revoked: OfflineManifestEnvelope = {
+        ...withoutSavedBy,
+        snapshot: {
+          ...existing.snapshot,
+          manifests: withMedicalAlertWords(existing.snapshot.manifests, {}),
+        },
+      };
+      const db = await openDatabase();
+      try {
+        await persistEnvelope(db, revoked);
+      } finally {
+        db.close();
+      }
+      return revoked;
+    }
+    const noteDisposition = existing
+      ? dispositionForSnapshotRefresh(
+          existing.snapshot.erasureEpochToken,
+          payload.erasureEpochToken,
+        )
+      : undefined;
     // **The medical alerts' words** (H-153 amendment). A payload from the
     // server never carries them, and any it did carry are dropped here. Words
     // an explicit save already put on this copy stay through the background
@@ -637,8 +703,14 @@ export async function saveOfflineManifest(
         savedAt: savedAt.toISOString(),
         expiresAt: offlineManifestExpiresAt(savedAt, new Date(trip.endsAt)).toISOString(),
       },
-      events: existing?.events ?? [],
-      checklistEvents: existing?.checklistEvents ?? [],
+      events:
+        existing?.events && noteDisposition
+          ? clearSavedNotes(existing.events, noteDisposition)
+          : (existing?.events ?? []),
+      checklistEvents:
+        existing?.checklistEvents && noteDisposition
+          ? clearSavedNotes(existing.checklistEvents, noteDisposition)
+          : (existing?.checklistEvents ?? []),
       arrivalEvents: existing?.arrivalEvents ?? [],
       ...(carriesWords && existing?.medicalAlertsSavedBy
         ? { medicalAlertsSavedBy: existing.medicalAlertsSavedBy }

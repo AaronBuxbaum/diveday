@@ -304,6 +304,41 @@ describe("OfflineManifestManager", () => {
     ).toBeInTheDocument();
     expect(screen.queryByText("ERASED NOTE TEXT MUST NOT APPEAR")).not.toBeInTheDocument();
     expect(screen.queryByText("ERASED CHECKLIST NOTE MUST NOT APPEAR")).not.toBeInTheDocument();
+    expect(screen.getByText(copy.reconcileNoteDiscarded).closest("details")).toBeNull();
+  });
+
+  it("keeps a checklist-only note loss notice visible outside the collapsed disclosure", async () => {
+    setOnline(true);
+    const saved = envelope(
+      [],
+      [
+        {
+          clientEventId: "event-checklist-only",
+          snapshotId: "snapshot-1",
+          snapshotSavedAt: new Date().toISOString(),
+          tripId: TRIP_ID,
+          checklistItemId: "55555555-5555-4555-8555-555555555555",
+          status: "checked",
+          note: null,
+          occurredAt: new Date().toISOString(),
+          syncStatus: "applied",
+          noteDisposition: "discarded_erasure_cutoff",
+        },
+      ],
+    );
+    vi.mocked(loadOfflineManifest).mockResolvedValue(saved);
+    vi.mocked(primeOfflineManifestShell).mockResolvedValue(undefined);
+    vi.mocked(saveOfflineManifest).mockResolvedValue(saved);
+    vi.mocked(syncOfflineManifest).mockResolvedValue(saved);
+
+    render(<OfflineManifestManager payload={payload} locale="en-US" copy={copy} />);
+
+    const notice = await screen.findByText(copy.reconcileNoteDiscarded);
+    expect(notice).toBeVisible();
+    expect(notice.closest("details")).toBeNull();
+    expect(
+      screen.getByText("Checklist item 55555555 · Pre-departure checklist · mark kept"),
+    ).toBeVisible();
   });
 
   it("never uses names from a live payload in a discarded-note notice", async () => {
