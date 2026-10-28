@@ -5,7 +5,7 @@ import { HOUR_MS, nowDate } from "@/lib/clock";
 import type { Notification } from "@/lib/notifications/kinds";
 import { fileScopedShopContext } from "@/test/db";
 import { fakePromotions } from "@/test/fakes";
-import { moveBooking } from "./bookings";
+import { cancelBooking, createBooking, moveBooking } from "./bookings";
 import { addInterest } from "./interest-dates-fixtures";
 
 const ctx = fileScopedShopContext();
@@ -192,6 +192,92 @@ describe("an unsubscribe from the last-minute list", () => {
 });
 
 describe("invitableSeats and the deal", () => {
+  it("keeps the unbooked seats of a person-linked date-request party held", async () => {
+    const { db, shop, trip } = await context();
+    const baseline = await invitableSeats(db, await tripRow(db, trip.id));
+    const [person] = await db
+      .insert(people)
+      .values({
+        shopId: shop.id,
+        fullName: "Known date requester",
+        email: "known-requester@example.com",
+      })
+      .returning({ id: people.id });
+    if (!person) throw new Error("setup: date requester missing");
+    const [request] = await db
+      .insert(interests)
+      .values({
+        shopId: shop.id,
+        scope: "date",
+        askedBy: "diver",
+        personId: person.id,
+        interest: "reef dive",
+        partySize: 2,
+      })
+      .returning({ id: interests.id });
+    if (!request) throw new Error("setup: date request missing");
+    await db.insert(interests).values({
+      shopId: shop.id,
+      scope: "departure",
+      askedBy: "diver",
+      tripId: trip.id,
+      personId: person.id,
+      parentInterestId: request.id,
+      partySize: 2,
+      offeredAt: nowDate(),
+    });
+    // Before anyone books, the date offer holds both requested seats.
+    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 2);
+
+    const first = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: trip.id,
+      personId: person.id,
+      dateRequestInterestId: request.id,
+    });
+    if (!first.ok) throw new Error(`setup: first party seat failed: ${first.reason}`);
+    // One seat is occupied and the second remains held for the linked party.
+    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 2);
+
+    const second = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: trip.id,
+      fullName: "Second party member",
+      email: "second-party-member@example.com",
+      dateRequestInterestId: request.id,
+    });
+    if (!second.ok) throw new Error(`setup: second party seat failed: ${second.reason}`);
+    // Both requested seats are booked, so none of this offer's hold remains.
+    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 2);
+
+    // Ordinary departure-interest rows retain their existing behavior: a
+    // person who already has a seat does not add another advisory hold.
+    const [ordinaryInterest] = await db
+      .insert(interests)
+      .values({
+        shopId: shop.id,
+        scope: "departure",
+        askedBy: "diver",
+        tripId: trip.id,
+        personId: second.personId,
+        partySize: 1,
+        offeredAt: nowDate(),
+      })
+      .returning({ id: interests.id });
+    if (!ordinaryInterest) throw new Error("setup: ordinary departure interest missing");
+    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 2);
+    await db.delete(interests).where(eq(interests.id, ordinaryInterest.id));
+
+    expect((await cancelBooking(db, shop.id, second.bookingId)).ok).toBe(true);
+    // Releasing one seat restores that seat to the request's remaining hold.
+    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 2);
+    expect((await cancelBooking(db, shop.id, first.bookingId)).ok).toBe(true);
+    // With both seats released, the full two-seat offer is held again.
+    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 2);
+  });
+
   it("counts one seat per linked booking and follows its departure and status", async () => {
     const { db, shop, trip } = await context();
     const departure = await tripRow(db, trip.id);

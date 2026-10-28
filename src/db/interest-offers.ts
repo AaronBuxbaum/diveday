@@ -85,6 +85,7 @@ export type SeatOfferDelivery = "sent" | "fallback" | "opted_out" | "already_sen
 const OFFER_RESEND_WINDOW_MS = 24 * HOUR_MS;
 
 const parentInterest = alias(interests, "parent_interest");
+const dateRequestParent = alias(interests, "date_request_parent");
 
 /**
  * The deal an offer carries into the email: the code, the figure, the shop's
@@ -909,17 +910,34 @@ export async function invitableSeats(db: AppDb, trip: typeof trips.$inferSelect)
         isNotNull(interests.offeredAt),
         or(isNotNull(interests.personId), gt(interests.offeredAt, anonymousOfferCutoff)),
         or(isNull(interests.promoId), not(madeByTheList(db))),
-        notExists(
-          db
-            .select({ id: bookings.id })
-            .from(bookings)
-            .where(
-              and(
-                eq(bookings.tripId, trip.id),
-                eq(bookings.personId, interests.personId),
-                inArray(bookings.status, [...SEAT_HELD_STATUSES]),
+        or(
+          // A date request can represent a party. Its explicit booking links
+          // subtract only the seats already taken; a booking by its known
+          // requester must not discard the rest of the party's hold.
+          exists(
+            db
+              .select({ id: dateRequestParent.id })
+              .from(dateRequestParent)
+              .where(
+                and(
+                  eq(dateRequestParent.id, interests.parentInterestId),
+                  eq(dateRequestParent.shopId, interests.shopId),
+                  eq(dateRequestParent.scope, "date"),
+                ),
               ),
-            ),
+          ),
+          notExists(
+            db
+              .select({ id: bookings.id })
+              .from(bookings)
+              .where(
+                and(
+                  eq(bookings.tripId, trip.id),
+                  eq(bookings.personId, interests.personId),
+                  inArray(bookings.status, [...SEAT_HELD_STATUSES]),
+                ),
+              ),
+          ),
         ),
       ),
     );
