@@ -42,6 +42,16 @@ test("spec and unit-test edits leave a valid production build reusable", (t) => 
   writeFileSync(path.join(root, "src/page.test.tsx"), "new test");
   assert.equal(requireFreshBuild(root).buildId, "build-1");
 });
+test("TypeScript build-info writes leave the production build reusable", (t) => {
+  const root = fixture(t);
+  const worker = path.join(root, "src/worker");
+  mkdirSync(worker);
+  writeFileSync(path.join(worker, "tsconfig.tsbuildinfo"), "before typecheck");
+  const before = buildFingerprint(root);
+  writeFileSync(path.join(worker, "tsconfig.tsbuildinfo"), "after typecheck");
+  assert.equal(buildFingerprint(root), before);
+  assert.equal(requireFreshBuild(root).buildId, "build-1");
+});
 for (const file of [
   "next.config.ts",
   "next-custom.config.ts",
