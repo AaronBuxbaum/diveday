@@ -210,17 +210,19 @@ test.describe("staff", () => {
     await expect(trigger).toBeFocused();
   });
 
-  test("a validation refusal stays visible when another desk deletes the ticket", async ({
-    page,
-    context,
-  }) => {
-    await page.goto("/shop/blue-mantis/gear/work-orders");
-    const path = await page
-      .getByRole("link", { name: /Breathes wet at depth/ })
-      .first()
-      .getAttribute("href");
-    if (!path) throw new Error("Seeded work order is missing");
-    for (const kind of ["add", "edit"]) {
+  // Each editor is an independent race. Keeping both flows in one test left
+  // the second Restore less than a second of the shared budget on CI.
+  for (const kind of ["add", "edit"] as const) {
+    test(`a ${kind} validation refusal stays visible when another desk deletes the ticket`, async ({
+      page,
+      context,
+    }) => {
+      await page.goto("/shop/blue-mantis/gear/work-orders");
+      const path = await page
+        .getByRole("link", { name: /Breathes wet at depth/ })
+        .first()
+        .getAttribute("href");
+      if (!path) throw new Error("Seeded work order is missing");
       await page.goto(path);
       if (kind === "add") {
         await page
@@ -263,8 +265,8 @@ test.describe("staff", () => {
       await expect(
         page.getByText(staffCopy("workOrders.notice.restored"), { exact: true }),
       ).toBeVisible();
-    }
-  });
+    });
+  }
 
   test("records the work done, then hands the gear back", async ({ page }) => {
     await page.goto("/shop/blue-mantis/gear/work-orders");
