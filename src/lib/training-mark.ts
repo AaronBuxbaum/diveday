@@ -172,8 +172,8 @@ export type TrainingRoomSeat = {
  * of every seat already assigned to them (a DSD seat can cap later Open Water
  * seats in this conservative model). The trip and its training plan do not
  * establish actual underwater groups or which instructor an assistant
- * supports, so this boarding-time resolver gives no assistant bonus. A seat
- * A marked seat whose course has no known ratio blocks ratio-backed coverage
+ * supports, so this boarding-time resolver gives no assistant bonus. A marked
+ * seat whose course has no known ratio blocks ratio-backed coverage
  * for every marked seat on that departure.
  * This is a conservative estimate, not evidence of the actual groups.
  */
