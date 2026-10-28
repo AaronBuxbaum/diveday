@@ -8,7 +8,7 @@ export function crewSafetyValue(safety: SafetyMonth, t: StaffTranslator) {
   const value =
     safety.crewSailings > 0 && safety.checkedSailings === 0
       ? unknown > 0
-        ? t("incidents.safety.crewHistoryUnavailable", { count: unknown })
+        ? t("incidents.safety.crewHistoryUnavailableValue")
         : t("staffing.credentials.noneOnFile")
       : t("incidents.safety.crewValue", {
           lapsed: safety.lapsedSailings.length,
@@ -18,9 +18,7 @@ export function crewSafetyValue(safety: SafetyMonth, t: StaffTranslator) {
     safety.crewSailings > safety.unknownCredentialSailings
       ? t("incidents.safety.crewObservation")
       : null,
-    unknown > 0 && !allUnavailable
-      ? t("incidents.safety.crewHistoryUnavailable", { count: unknown })
-      : null,
+    unknown > 0 ? t("incidents.safety.crewHistoryUnavailable", { count: unknown }) : null,
     safety.unrecordedSailings > 0
       ? t("incidents.safety.crewDetailUnrecorded", {
           unrecorded: safety.unrecordedSailings,
@@ -34,7 +32,9 @@ export function crewSafetyValue(safety: SafetyMonth, t: StaffTranslator) {
     value,
     detail:
       detail ||
-      (allUnavailable ? "" : t("incidents.safety.crewDetail", { sailings: safety.crewSailings })),
+      (allUnavailable
+        ? t("incidents.safety.crewHistoryUnavailable", { count: unknown })
+        : t("incidents.safety.crewDetail", { sailings: safety.crewSailings })),
     attention: Boolean(unknown || safety.unrecordedSailings || safety.lapsedSailings.length),
   };
 }
