@@ -1,0 +1,18 @@
+@media print {
+  .document section {
+    border: 0;
+    border-top: 1px solid currentColor;
+    border-radius: 0;
+    padding: 12px 0 0;
+    box-shadow: none;
+  }
+
+  .document section h2 {
+    font-size: 14px;
+    line-height: 1.4;
+  }
+
+  .document section > header {
+    margin-bottom: 8px;
+  }
+}

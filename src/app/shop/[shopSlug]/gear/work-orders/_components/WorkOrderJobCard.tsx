@@ -190,9 +190,11 @@ export function WorkOrderJobCard({
   );
   return (
     <SectionCard title={t("workOrders.detail.jobHeading")} padding="lg">
-      {workOrder.status === "picked_up" ? (
-        <>
-          {facts}
+      <div className={workOrder.status === "picked_up" ? undefined : "hidden print:block"}>
+        {facts}
+      </div>
+      <div className="print:hidden">
+        {workOrder.status === "picked_up" ? (
           <details className="group mt-4" open={formOpen || undefined}>
             <summary
               className={buttonClass({
@@ -206,10 +208,10 @@ export function WorkOrderJobCard({
             </summary>
             <div className="mt-3">{form}</div>
           </details>
-        </>
-      ) : (
-        form
-      )}
+        ) : (
+          form
+        )}
+      </div>
     </SectionCard>
   );
 }

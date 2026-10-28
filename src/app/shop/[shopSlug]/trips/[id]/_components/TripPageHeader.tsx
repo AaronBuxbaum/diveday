@@ -101,6 +101,7 @@ export function TripPageHeader({
   price,
   daySpan,
   className,
+  paperIdentity,
 }: {
   trip: { title: string; startsAt: Date; endsAt: Date };
   /** This shop's schedule board — the parent every trip surface belongs to. */
@@ -141,6 +142,8 @@ export function TripPageHeader({
   daySpan?: string;
   /** Allows a surface to tighten the space after its masthead when needed. */
   className?: string;
+  /** Shop and full calendar context for a detached paper record. */
+  paperIdentity?: string;
 }) {
   // A surface-only door owns one slot. Keeping a second wrapper around a
   // responsive action reserves a title-row gap after the action is hidden.
@@ -157,6 +160,7 @@ export function TripPageHeader({
     // the sheet it shares with the dive plan, whose header already said it
     // (`globals.css`, fourth review item 17).
     <header data-trip-page-header="" className={className ?? "mb-8"}>
+      {paperIdentity ? <p className="hidden text-sm print:block">{paperIdentity}</p> : null}
       {/* **The way back up.** These are the deepest pages in the staff app and
           were once the only ones at depth 2-3 with no link to their parent at
           all: the first link in the header was a tab strip, which moved you

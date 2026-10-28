@@ -17,6 +17,7 @@ import { getTripGuests, getTripOverview, loadTripSharedReads } from "@/db/trips"
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
+import { formatDateWithYear } from "@/lib/format";
 import { reportRenderQueries } from "@/lib/observability/query-timing";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
@@ -46,7 +47,7 @@ import { tripHeaderDaySpan, tripHeaderPrice } from "./_components/trip-header-pr
 import { DETAILS_FORMS } from "./_components/trip-notice-tabs";
 import { paymentAsks, tripPageNotices } from "./_components/trip-page-asks";
 import { tripPulseFactsOf } from "./_components/trip-pulse-facts";
-import type { TripPageSearchParams } from "./_components/trip-search-params";
+import { type TripPageSearchParams, tripFlashParams } from "./_components/trip-search-params";
 import { tripTabsCopy } from "./_components/trip-tabs-copy";
 import { readStaffGates } from "./_lib/staff-gates";
 import { reinstateTripAction } from "./details-actions";
@@ -245,22 +246,7 @@ export default async function ManageTripPage({
 
   return (
     <>
-      <FlashParams
-        params={[
-          "notice",
-          "count",
-          ...(held && (form === "timing" || form === "meeting") ? [] : ["form"]),
-          "bid",
-          "diverq",
-          "inviteq",
-          "rf",
-          "noteBookingId",
-          "noteBody",
-          "confirmName",
-          "confirmEmail",
-          "confirmPhone",
-        ]}
-      />
+      <FlashParams params={tripFlashParams({ held, form })} />
       {/* **One gap between every section, masthead included** (K-262). Each
           block used to hang its own margin — the masthead `mb-5`, the bands
           `mt-6`, the pulse links `mt-4`, the roster `mt-5`, the packing list
@@ -275,6 +261,7 @@ export default async function ManageTripPage({
             name, the crew and boat in a line under it — so every tab change
             redrew the top of the page. */}
         <TripPageHeader
+          paperIdentity={`${shop.name} · ${formatDateWithYear(trip.startsAt, locale, shop.timezone)} · ${shop.timezone}`}
           className=""
           boardHref={shopPath(shopSlug, "schedule", "board")}
           backLabel={t(STAFF_DESTINATION_LABEL_KEYS.board)}
@@ -292,7 +279,6 @@ export default async function ManageTripPage({
               />
             </>
           }
-          // The price is here because nothing else on Divers says it.
           // **Say it before the tap, not after.** The desk is live-only — the
           // boat has an encrypted device copy and this does not — so a dropped
           // signal means the list is stale and the next tap will not send
@@ -313,8 +299,7 @@ export default async function ManageTripPage({
           }
           price={tripHeaderPrice(trip, shop.currency, locale, t)}
           daySpan={tripHeaderDaySpan(scheduleDays, locale, shop.timezone, t)}
-          // Only while the boat can take a seat (owner, 2026-10-06); a full
-          // boat's wait list stays in the roster's own Add band.
+          // A full boat's wait list stays in the roster's Add band.
           actions={
             !acceptsDivers || isFull(seatsOnSale(trip)) ? undefined : (
               <TripAddBookingLink

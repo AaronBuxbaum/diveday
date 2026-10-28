@@ -44,6 +44,8 @@ export type WeekLedgerRow = {
   /** The stretched link's accessible name — date, title and seat state, spoken in full. */
   linkLabel: string;
   timeRange: string;
+  printDate?: string;
+  printTimeRange?: string;
   title: string;
   /**
    * The shop's own word for this kind of day, leading the meta line (ADR
@@ -137,7 +139,11 @@ export function WeekLedger({
     // section's margin, it put "Courses" 78px under the last meta line at
     // 1280 against the page's 56px section gap. A row that belongs under the
     // list takes it back in (`WEEK_LEDGER_FOLLOWER_CLASS`).
-    <ul className="-mb-4 flex flex-col sm:-mb-5" aria-label={listLabel} style={style}>
+    <ul
+      className="-mb-4 flex flex-col sm:-mb-5 print:mb-0 print:block"
+      aria-label={listLabel}
+      style={style}
+    >
       {rows.map((row) => {
         const newDay = row.dayKey !== lastDayKey;
         lastDayKey = row.dayKey;
@@ -171,7 +177,7 @@ export function WeekLedger({
  * below itself.
  */
 export const WEEK_ROW_BOX_CLASS =
-  "-mx-3 flex flex-col gap-2 px-3 py-4 sm:mx-0 sm:flex-row sm:gap-4 sm:px-4 sm:py-5";
+  "-mx-3 flex flex-col gap-2 px-3 py-4 sm:mx-0 sm:flex-row sm:gap-4 sm:px-4 sm:py-5 print:py-2";
 /** The row's time rail, wide enough for an eight-digit range. */
 export const WEEK_TIME_RAIL_CLASS = "shrink-0 sm:w-44";
 /** The day rule's numeral: two tabular digits wide whatever the day. */
@@ -201,7 +207,7 @@ function DayRule({ parts, stickyTop }: { parts: WeekLedgerRow["dayParts"]; stick
     <li
       role="presentation"
       aria-hidden="true"
-      className={`sticky ${stickyTop} z-20 mt-8 flex items-center gap-3 bg-background pt-2 pb-3 first:mt-0`}
+      className={`sticky ${stickyTop} z-20 mt-8 flex items-center gap-3 bg-background pt-2 pb-3 first:mt-0 print:static print:mt-4 print:break-after-avoid print:py-1`}
     >
       <span className={DAY_NUMERAL_CLASS}>{parts.day}</span>
       <span className={DAY_LABEL_COLUMN_CLASS}>
@@ -326,8 +332,18 @@ function Row({
             166px); the seed's seven-digit ones sized it at 160, which an
             eight-digit range overran by 7px toward the title. */}
         <div className={WEEK_TIME_RAIL_CLASS}>
+          {row.printDate ? (
+            <p
+              data-print-departure-context
+              className="hidden text-sm font-semibold tabular-nums print:block"
+            >
+              {row.printDate}
+              <br />
+              {row.printTimeRange}
+            </p>
+          ) : null}
           <p
-            className={`text-base font-semibold tabular-nums whitespace-nowrap${quiet ? " text-muted" : ""}`}
+            className={`text-base font-semibold tabular-nums whitespace-nowrap ${row.printDate ? "print:hidden" : ""}${quiet ? " text-muted" : ""}`}
           >
             {row.timeRange}
           </p>

@@ -1221,6 +1221,68 @@ select:not([multiple]):not([size]):dir(rtl) {
     text-overflow: clip;
     white-space: normal;
   }
+
+  /* The saved departure details are a paper ledger, not a set of tap targets. */
+  [data-trip-details-paper] {
+    overflow: visible;
+    border-radius: 0;
+  }
+
+  [data-trip-details-paper] > div {
+    padding: 0;
+  }
+
+  [data-trip-details-paper] > div > div {
+    margin-inline: 0;
+  }
+
+  [data-trip-details-paper] [data-trip-detail-row] {
+    display: grid;
+    grid-template-columns: 9rem minmax(0, 1fr);
+    gap: 1rem;
+    padding: 0.5rem 0;
+    break-inside: avoid;
+  }
+
+  /* A diver's departure briefing reads in one column on paper. */
+  body:has([data-public-trip-paper]) {
+    page: departure-public-trip;
+  }
+
+  body:has([data-public-trip-paper]) [data-public-print-identity] {
+    display: none;
+  }
+
+  [data-public-trip-paper] {
+    page: departure-public-trip;
+    max-width: none;
+    padding: 0;
+  }
+
+  [data-public-trip-layout] {
+    display: block;
+  }
+
+  [data-public-trip-layout] > * + * {
+    margin-top: 1rem;
+  }
+
+  [data-public-trip-terms] a {
+    color: var(--foreground);
+  }
+
+  /* A closed screen disclosure still belongs in the printed briefing. */
+  [data-public-trip-reading] details::details-content {
+    content-visibility: visible !important;
+    display: block;
+    height: auto;
+    opacity: 1;
+    overflow: visible;
+  }
+
+  [data-public-trip-reading] details summary svg {
+    display: none;
+  }
   /**
    * **Nothing interactive reaches the trip packet's paper, by construction.**
    *

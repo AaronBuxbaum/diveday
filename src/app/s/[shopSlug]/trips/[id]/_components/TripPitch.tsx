@@ -117,7 +117,7 @@ export function TripPitch({
           once. The full card, with the shop's field note and how to spot it,
           is behind the door. */}
       {tiles.length > 0 ? (
-        <ul aria-label={t("trip.lookFor")} className="mt-3 grid grid-cols-3 gap-2">
+        <ul aria-label={t("trip.lookFor")} className="mt-3 grid grid-cols-3 gap-2 print:hidden">
           {tiles.map((card) => (
             <li key={card.slug ?? card.name} data-pitch-tile className="min-w-0">
               <StoredPhoto
@@ -132,7 +132,7 @@ export function TripPitch({
                 // #1405, #1623).
                 src={capturePhoto(card.imageUrl, embed ? EMBED_TILE_PX : PAGE_TILE_PX)}
                 alt=""
-                className="aspect-[4/3] w-full rounded-inset"
+                className="aspect-[4/3] w-full rounded-inset print:hidden"
                 // Three cells across the measure. On the ordinary page that is
                 // a third of `max-w-xl` (36rem) less the gaps, and a third of a
                 // 390px phone below `sm`. An embed frame has no `max-w-xl`, so
@@ -179,7 +179,7 @@ export function TripPitch({
             <TripSiteNotes briefings={briefings} locale={locale} />
             <TripCrewLine crew={crew} locale={locale} className="mt-6" />
             {logEntry ? (
-              <div className={pitchHasDoor(briefings, crew) ? "mt-6" : undefined}>
+              <div className={`${pitchHasDoor(briefings, crew) ? "mt-6" : ""} print:hidden`}>
                 <LogEntryPreview
                   line={t("trip.logEntryWaiting")}
                   date={formatShortDate(logEntry.startsAt, locale, timeZone)}

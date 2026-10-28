@@ -73,66 +73,74 @@ export function PublicShopHeader({
        This header used to be its own shorter bar at `z-40`, which is why the
        schedule's sticky day headers, pinned at `top-0`, spent every scroll
        hidden underneath it. */
-    <ChromeBar
-      stackedOnPhone
-      naturalHeight
-      leading={
-        /* The flexible identity yields to recovery's natural width. Fixed
+    <>
+      <p
+        data-public-print-identity
+        className="hidden border-b border-border px-4 py-2 text-sm font-semibold print:block"
+      >
+        {shop.name}
+      </p>
+      <ChromeBar
+        stackedOnPhone
+        naturalHeight
+        leading={
+          /* The flexible identity yields to recovery's natural width. Fixed
            8px gaps preserve room for a first grapheme plus the full ellipsis
            when text grows; enlarged gutters must not consume that budget. */
-        <div className="flex min-w-0 items-center justify-between gap-[8px]">
-          <Link
-            href={publicSchedulePath(shop.slug)}
-            // diveday:allow-type-ramp: the shop name is a wordmark, not a heading
-            className={`font-brand-display flex min-h-11 flex-1 ${shop.logoUrl ? "min-w-[calc(2rem_+_8px_+_2em)]" : "min-w-11"} items-center gap-[8px] text-lg font-semibold tracking-tight`}
-          >
-            {/* The shop's logo is the nav's mark beside its name (visual review
-              2026-10-24, B16); it stood as an orphan tile beside the hero. */}
-            {shop.logoUrl ? (
-              // biome-ignore lint/performance/noImgElement: dynamic user-uploaded logo
-              <img
-                src={shop.logoUrl}
-                alt=""
-                className="size-8 shrink-0 rounded-inset border border-border bg-surface object-cover"
-              />
-            ) : null}
-            <span className="min-w-[2em] truncate">{shop.name}</span>
-          </Link>
-          {recoveryLabel ? (
-            <a
-              href={recoveryHref}
-              className="inline-flex min-h-11 min-w-0 items-center text-base text-muted underline-offset-4 hover:underline"
+          <div className="flex min-w-0 items-center justify-between gap-[8px]">
+            <Link
+              href={publicSchedulePath(shop.slug)}
+              // diveday:allow-type-ramp: the shop name is a wordmark, not a heading
+              className={`font-brand-display flex min-h-11 flex-1 ${shop.logoUrl ? "min-w-[calc(2rem_+_8px_+_2em)]" : "min-w-11"} items-center gap-[8px] text-lg font-semibold tracking-tight`}
             >
-              {recoveryLabel}
-            </a>
-          ) : null}
-        </div>
-      }
-      trailing={
-        /* The nav rides in the trailing cluster rather than the bar's centre
+              {/* The shop's logo is the nav's mark beside its name (visual review
+              2026-10-24, B16); it stood as an orphan tile beside the hero. */}
+              {shop.logoUrl ? (
+                // biome-ignore lint/performance/noImgElement: dynamic user-uploaded logo
+                <img
+                  src={shop.logoUrl}
+                  alt=""
+                  className="size-8 shrink-0 rounded-inset border border-border bg-surface object-cover"
+                />
+              ) : null}
+              <span className="min-w-[2em] truncate">{shop.name}</span>
+            </Link>
+            {recoveryLabel ? (
+              <a
+                href={recoveryHref}
+                className="inline-flex min-h-11 min-w-0 items-center text-base text-muted underline-offset-4 hover:underline"
+              >
+                {recoveryLabel}
+              </a>
+            ) : null}
+          </div>
+        }
+        trailing={
+          /* The nav rides in the trailing cluster rather than the bar's centre
            slot: on a diver's page the destinations and language control are one
            group — which page, in which words — and both belong at the edge the
            shop's name is not at. The centre slot would have put them between
            the name and the picker, which on a phone is the arrangement that
            squeezes the name from both sides. */
-        <>
-          <PublicShopNav
-            ariaLabel={navAriaLabel}
-            items={navItems}
-            action={
-              <LanguagePicker
-                current={locale}
-                currentLabel={localeLabel}
-                choices={languages}
-                setLocale={setLocale}
-                copy={languagePickerCopy}
-              />
-            }
-          />
-          <PublicShopHeaderHeight />
-        </>
-      }
-    />
+          <>
+            <PublicShopNav
+              ariaLabel={navAriaLabel}
+              items={navItems}
+              action={
+                <LanguagePicker
+                  current={locale}
+                  currentLabel={localeLabel}
+                  choices={languages}
+                  setLocale={setLocale}
+                  copy={languagePickerCopy}
+                />
+              }
+            />
+            <PublicShopHeaderHeight />
+          </>
+        }
+      />
+    </>
   );
 }
 
@@ -224,14 +232,17 @@ export function PublicShopFooter({
   // beside it does not sit 12px lower.
   return (
     <footer className="border-t border-border bg-surface print:break-inside-avoid">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-2 px-4 py-6 text-sm text-muted sm:flex-row sm:items-start sm:justify-between sm:px-6">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-2 px-4 py-6 text-sm text-muted sm:flex-row sm:items-start sm:justify-between sm:px-6 print:py-2 print:[&_a]:min-h-0 print:[&_p]:min-h-0 print:[&_span]:min-h-0">
         <div>
           <p className="sm:flex sm:min-h-11 sm:items-center">
             {t("shopChrome.footerLine", { shop: shop.name })}
           </p>
           {/* The credit line — the only DiveDay-coloured pixels on a shop's
               storefront (Harbor, ADR 20260901-diveday-reimagined). */}
-          <Link href="/" className={`${tapTargetLinkClass} gap-1.5 hover:text-foreground`}>
+          <Link
+            href="/"
+            className={`${tapTargetLinkClass} gap-1.5 hover:text-foreground print:hidden`}
+          >
             <LogoMark className="size-4" />
             <span>{t("shopChrome.credit")}</span>
           </Link>

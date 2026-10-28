@@ -285,28 +285,26 @@ export async function buildArrivalDesk({
       // says this person did not dive.
       details.set(
         row.bookingId,
-        <>
-          <NoShowScript
-            key="no-show"
-            action={markNoShow}
-            bookingId={row.bookingId}
-            // One door and one confirm either side of the departure ("Not
-            // here"): "did not dive" also describes a diver who sat a dive out
-            // aboard, whom this tap refuses (dive-domain review 2026-10-06).
-            // What differs is the sentence saying what the tap records.
-            copy={{
-              door: t("checkIn.noShow.door"),
-              consequence:
-                claim === "did_not_dive"
-                  ? t("checkIn.noShow.sailedConsequence")
-                  : t("checkIn.noShow.consequence"),
-              confirm: t("checkIn.noShow.confirm"),
-              confirming: t("checkIn.noShow.confirming"),
-              confirmAriaLabel: t("checkIn.noShow.confirmAriaLabel", { name: row.personName }),
-              sendFailed: t("checkIn.sendFailedButton"),
-            }}
-          />
-        </>,
+        <NoShowScript
+          key="no-show"
+          action={markNoShow}
+          bookingId={row.bookingId}
+          // One door and one confirm either side of the departure ("Not
+          // here"): "did not dive" also describes a diver who sat a dive out
+          // aboard, whom this tap refuses (dive-domain review 2026-10-06).
+          // What differs is the sentence saying what the tap records.
+          copy={{
+            door: t("checkIn.noShow.door"),
+            consequence:
+              claim === "did_not_dive"
+                ? t("checkIn.noShow.sailedConsequence")
+                : t("checkIn.noShow.consequence"),
+            confirm: t("checkIn.noShow.confirm"),
+            confirming: t("checkIn.noShow.confirming"),
+            confirmAriaLabel: t("checkIn.noShow.confirmAriaLabel", { name: row.personName }),
+            sendFailed: t("checkIn.sendFailedButton"),
+          }}
+        />,
       );
     }
   }

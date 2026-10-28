@@ -156,7 +156,7 @@ export function rowOutstanding(seat: RowOutstandingInput) {
     );
   const waiverRemedy =
     waiverControl.action || (partyLeadId && !record) ? (
-      <div className="mt-3">
+      <div className="mt-3 print:hidden">
         {partyLeadId && !record ? (
           <Link
             href={shopPath(shopSlug, "trips", tripId, "party", partyLeadId, "waivers")}

@@ -261,6 +261,10 @@ test.describe("print", () => {
     await expect(dateRequest).toBeVisible();
     await page.emulateMedia({ media: "print" });
     await expect(dateRequest).not.toBeVisible();
+    await expect(page.locator("[data-public-print-identity]")).toHaveText("Blue Mantis Divers");
+    await expect(page.locator("main img").filter({ visible: true })).toHaveCount(0);
+    await expect(page.locator("#get-in-touch")).toBeHidden();
+    await expect(page.locator("footer")).toContainText("100 Ocean Drive");
     const answers = page.locator("[data-print-faq] p");
     await expect(answers).not.toHaveCount(0);
     for (const answer of await answers.all()) {
