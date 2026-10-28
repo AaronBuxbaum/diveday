@@ -20,7 +20,8 @@ const CSS = readFileSync(path.join(import.meta.dirname, "globals.css"), "utf8");
 const PRINT_BLOCK = /^@media print \{[\s\S]*?^\}/gm;
 
 const rule = (selector: string) => {
-  const start = CSS.indexOf(`${selector} {`);
+  // Match the top-level selector, not a suffix of a scoped print override.
+  const start = CSS.indexOf(`\n${selector} {`);
   expect(start, `${selector} is in globals.css`).toBeGreaterThan(-1);
   return CSS.slice(start, CSS.indexOf("}", start));
 };
