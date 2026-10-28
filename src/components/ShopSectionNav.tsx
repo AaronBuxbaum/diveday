@@ -159,7 +159,7 @@ export function ShopSidebar({ root, gates, items, blocked, copy }: NavProps) {
 }
 
 const tabClass =
-  "flex h-full w-max min-w-11 flex-none flex-col items-center justify-center gap-0.5 px-3 text-xs transition-colors focus-visible:focus-ring-inset";
+  "flex h-full min-w-11 flex-1 flex-col items-center justify-center gap-0.5 px-3 text-xs transition-colors focus-visible:focus-ring-inset";
 
 /**
  * The phone's tab bar, below `lg`: Today, Schedule, Divers and Inbox, then
@@ -246,7 +246,7 @@ export function ShopTabBar({ root, gates, items, blocked, copy }: NavProps) {
             {tabs.map((item) => {
               const active = item.section === current;
               return (
-                <li key={item.section} className="flex flex-none">
+                <li key={item.section} className="flex flex-auto">
                   <Link
                     href={staffDestinationHref(root, item.destination)}
                     onFocus={(event) =>
