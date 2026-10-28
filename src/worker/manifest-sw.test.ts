@@ -19,7 +19,12 @@ import {
   type OfflineManifestPayload,
   type OfflineRollCallEvent,
 } from "@/lib/offline-manifests";
-import { READY_CACHE_NAME, READY_KEEP_UNTIL_META } from "@/lib/ready-offline";
+import {
+  READY_CACHE_NAME,
+  READY_COPY_VERSION,
+  READY_COPY_VERSION_META,
+  READY_KEEP_UNTIL_META,
+} from "@/lib/ready-offline";
 import { saveReadyPage } from "./ready-page-cache";
 
 vi.mock("@/lib/offline-manifest-store", () => ({
@@ -463,7 +468,7 @@ describe("a navigation on a network that never answers", () => {
   async function cacheReadyCopy(path: string, body: string) {
     const keepUntil = Date.now() + 24 * 60 * 60 * 1000;
     const response = new Response(
-      `<meta name="${READY_KEEP_UNTIL_META}" content="${keepUntil}"/>${body}`,
+      `<meta name="${READY_KEEP_UNTIL_META}" content="${keepUntil}"/><meta name="${READY_COPY_VERSION_META}" content="${READY_COPY_VERSION}"/>${body}`,
       { headers: { "content-type": "text/html" } },
     );
     await saveReadyPage(cacheStorage as unknown as CacheStorage, path, response, Date.now());

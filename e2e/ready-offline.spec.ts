@@ -21,6 +21,10 @@ import { E2E_FROZEN_CLOCK } from "./servers";
 const OPEN_BOAT = "Two-Tank Reef — Molasses & French";
 const COPY_CACHE = "diveday-ready-page-v1";
 const diver = diverTranslator("en-US");
+const LEGACY_OFFLINE_NOTE =
+  "No signal: this is the copy your phone saved. Anything you change here needs signal.";
+const LEGACY_OFFLINE_WARNING =
+  "No signal: this is the copy your phone saved. Save time unavailable; later changes may be missing. Anything you change here needs signal.";
 
 test.describe.configure({ timeout: 90_000 });
 
@@ -108,6 +112,25 @@ test("the saved /ready copy shows with no signal, and a cancel landing forgets i
   ).toBeVisible();
   // It is the diver's only copy at the dock: nothing on it deletes it (domain review 2).
   await expect(page.getByRole("button", { name: diver("ready.offlineRemove") })).toHaveCount(0);
+
+  // A copy from before the saved-time format has no timestamp or locale meta.
+  // The worker recognizes this exact historical English banner and warns that
+  // its age is unknown without changing the path-bound token placeholder.
+  await context.setOffline(false);
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.evaluate(async (legacyNote) => {
+    const cache = await caches.open("diveday-ready-page-v1");
+    const key = new URL("/ready/kept-copy", location.origin).toString();
+    const saved = await cache.match(key);
+    if (!saved) throw new Error("No readiness copy is available to rewrite for the legacy check");
+    const html = (await saved.text())
+      .replace(/<meta name="diveday-ready-copy-(?:version|locale|time-zone)"[^>]*>/g, "")
+      .replace(/(<p [^>]*data-ready-offline-note=""[^>]*>)[\s\S]*?(<\/p>)/, `$1${legacyNote}$2`);
+    await cache.put(key, new Response(html, { status: saved.status, headers: saved.headers }));
+  }, LEGACY_OFFLINE_NOTE);
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.getByRole("status").filter({ hasText: LEGACY_OFFLINE_WARNING })).toBeVisible();
 
   // Back online, the diver cancels with the page's own button. Its redirect
   // reaches the hydrated page without a navigation the worker sees, so the

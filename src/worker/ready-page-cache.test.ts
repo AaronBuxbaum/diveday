@@ -127,25 +127,76 @@ describe("saveReadyPage and readyPageFallback", () => {
     expect(text).not.toContain(READY_OFFLINE_SAVED_AT_PLACEHOLDER);
   });
 
-  it("invalidates older saved markup rather than serving a banner with unknown age", async () => {
-    await saveReadyPage(store.storage, `/ready/${TOKEN}`, page("current copy"), NOW);
-    const cache = await store.storage.open(READY_CACHE_NAME);
-    const previous = await cache.match(READY_COPY_KEY);
-    expect(previous).toBeDefined();
-    await cache.put(
-      READY_COPY_KEY,
-      new Response(
-        `<meta name="${READY_KEEP_UNTIL_META}" content="${NOW + 30 * DAY_MS}"/><p ${READY_OFFLINE_NOTE_ATTR}="">No signal: older saved copy</p>`,
-        { headers: previous?.headers },
-      ),
-    );
+  it.each([
+    [
+      "English",
+      "No signal: this is the copy your phone saved. Anything you change here needs signal.",
+      "No signal: this is the copy your phone saved. Save time unavailable; later changes may be missing. Anything you change here needs signal.",
+    ],
+    [
+      "Spanish",
+      "Sin cobertura: esta es la copia que guardó tu teléfono. Para cambiar algo aquí necesitas cobertura.",
+      "Sin cobertura: esta es la copia que guardó tu teléfono. No se conoce la hora de guardado; puede que falten cambios posteriores. Para cambiar algo aquí necesitas cobertura.",
+    ],
+  ])(
+    "transforms the exact historical %s banner without inventing a time",
+    async (_locale, oldNote, warning) => {
+      await saveReadyPage(store.storage, `/ready/${TOKEN}`, page("current copy"), NOW);
+      const cache = await store.storage.open(READY_CACHE_NAME);
+      const previous = await cache.match(READY_COPY_KEY);
+      expect(previous).toBeDefined();
+      await cache.put(
+        READY_COPY_KEY,
+        new Response(
+          `<meta name="${READY_KEEP_UNTIL_META}" content="${NOW + 30 * DAY_MS}"/><p ${READY_OFFLINE_NOTE_ATTR}="">${oldNote}</p><a href="/ready/__diveday_kept_token__">Return</a>`,
+          { headers: previous?.headers },
+        ),
+      );
 
-    expect(await readyPageFallback(store.storage, `/ready/${OTHER}`, NOW + 1_000)).toBeUndefined();
-    expect(store.caches.get(READY_CACHE_NAME)?.size).toBe(1);
-    const served = await readyPageFallback(store.storage, `/ready/${TOKEN}`, NOW + 1_000);
-    expect(served).toBeUndefined();
-    expect(store.caches.get(READY_CACHE_NAME)?.size ?? 0).toBe(0);
-  });
+      expect(
+        await readyPageFallback(store.storage, `/ready/${OTHER}`, NOW + 1_000),
+      ).toBeUndefined();
+      expect(store.caches.get(READY_CACHE_NAME)?.size).toBe(1);
+      const served = await readyPageFallback(store.storage, `/ready/${TOKEN}`, NOW + 1_000);
+      const text = await served?.text();
+      expect(text).toContain(warning);
+      expect(text).not.toContain("__diveday_ready_saved_at__");
+      expect(text).toContain(`/ready/${TOKEN}`);
+      expect(text).not.toContain("__diveday_kept_token__");
+      expect(store.caches.get(READY_CACHE_NAME)?.size).toBe(1);
+    },
+  );
+
+  it.each([
+    ["unknown text", `<p ${READY_OFFLINE_NOTE_ATTR}="">Unrecognized older banner</p>`],
+    [
+      "malformed markup",
+      `<p ${READY_OFFLINE_NOTE_ATTR}="">No signal: this is the copy your phone saved. Anything you change here needs signal.`,
+    ],
+    [
+      "duplicate banners",
+      `<p ${READY_OFFLINE_NOTE_ATTR}="">No signal: this is the copy your phone saved. Anything you change here needs signal.</p><p ${READY_OFFLINE_NOTE_ATTR}="">No signal: this is the copy your phone saved. Anything you change here needs signal.</p>`,
+    ],
+    ["missing banner", "<p>Old saved page without a recognized banner</p>"],
+  ])(
+    "fails closed for a matching path with %s, without deleting on a wrong-path probe",
+    async (_case, body) => {
+      await saveReadyPage(store.storage, `/ready/${TOKEN}`, page("current copy"), NOW);
+      const cache = await store.storage.open(READY_CACHE_NAME);
+      const previous = await cache.match(READY_COPY_KEY);
+      expect(previous).toBeDefined();
+      await cache.put(READY_COPY_KEY, new Response(body, { headers: previous?.headers }));
+
+      expect(
+        await readyPageFallback(store.storage, `/ready/${OTHER}`, NOW + 1_000),
+      ).toBeUndefined();
+      expect(store.caches.get(READY_CACHE_NAME)?.size).toBe(1);
+      expect(
+        await readyPageFallback(store.storage, `/ready/${TOKEN}`, NOW + 1_000),
+      ).toBeUndefined();
+      expect(store.caches.get(READY_CACHE_NAME)?.size ?? 0).toBe(0);
+    },
+  );
 
   it.each([
     ["locale", `name="${READY_COPY_TIME_ZONE_META}" content="America/New_York"`],

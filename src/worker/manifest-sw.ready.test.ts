@@ -1,6 +1,11 @@
 // The real worker event surface in a node environment, isolated to diver readiness copies.
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { READY_CACHE_NAME, READY_KEEP_UNTIL_META } from "@/lib/ready-offline";
+import {
+  READY_CACHE_NAME,
+  READY_COPY_VERSION,
+  READY_COPY_VERSION_META,
+  READY_KEEP_UNTIL_META,
+} from "@/lib/ready-offline";
 import { advanceClock } from "@/test/clock";
 
 vi.mock("@/lib/offline-manifest-store", () => ({
@@ -76,7 +81,7 @@ describe("the /ready/ registration's fetch", () => {
   /** The live page, naming the day its copy may be kept until (well past the frozen clock). */
   const html = (body: string) =>
     new Response(
-      `<meta name="${READY_KEEP_UNTIL_META}" content="${Number.MAX_SAFE_INTEGER}"/>${body}`,
+      `<meta name="${READY_KEEP_UNTIL_META}" content="${Number.MAX_SAFE_INTEGER}"/><meta name="${READY_COPY_VERSION_META}" content="${READY_COPY_VERSION}"/>${body}`,
       {
         status: 200,
         headers: { "content-type": "text/html" },

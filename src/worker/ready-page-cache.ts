@@ -56,6 +56,7 @@
  * the two ends: the copy shows offline, and a `?cancelled=` landing clears it.
  */
 
+import { LEGACY_READY_BANNER_COPY } from "@/i18n/ready-offline-legacy";
 import { keepUnitsWhole } from "@/lib/date-parts";
 import {
   READY_CACHE_NAME,
@@ -167,6 +168,20 @@ function metaContent(html: string, name: string): string | undefined {
   return html.match(
     new RegExp(`<meta\\b[^>]*\\bname="${name}"[^>]*\\bcontent="([^"]*)"[^>]*>`, "i"),
   )?.[1];
+}
+
+/** Recognize and warn on the two exact historical, localized offline banners. */
+function transformLegacyReadyCopy(html: string): string | undefined {
+  const banners = [
+    ...html.matchAll(
+      new RegExp(`(<p\\b[^>]*\\b${READY_OFFLINE_NOTE_ATTR}=""[^>]*>)([\\s\\S]*?)(<\\/p>)`, "gi"),
+    ),
+  ];
+  if (banners.length !== 1) return undefined;
+  const banner = banners[0];
+  const knownWarning = LEGACY_READY_BANNER_COPY.get(banner[2] ?? "");
+  if (!knownWarning) return undefined;
+  return html.replace(banner[0], `${banner[1]}${knownWarning}${banner[3]}`);
 }
 
 /** Format the response save instant with the locale and shop zone rendered by the page. */
@@ -354,16 +369,22 @@ export async function readyPageFallback(
   }
   if (cached.headers.get(PATH_HASH_HEADER) !== (await pathHash(path))) return undefined;
   const storedHtml = await cached.text();
-  if (
-    metaContent(storedHtml, READY_COPY_VERSION_META) !== READY_COPY_VERSION ||
-    storedHtml.includes(READY_OFFLINE_SAVED_AT_PLACEHOLDER)
-  ) {
-    // This exact-path copy predates the saved-time banner (or was incomplete).
-    // Remove it instead of showing an unknown-age page as current.
-    await cache.delete(READY_COPY_KEY);
-    return undefined;
+  let copyHtml = storedHtml;
+  if (metaContent(storedHtml, READY_COPY_VERSION_META) === READY_COPY_VERSION) {
+    if (storedHtml.includes(READY_OFFLINE_SAVED_AT_PLACEHOLDER)) {
+      await cache.delete(READY_COPY_KEY);
+      return undefined;
+    }
+  } else {
+    const legacyCopy = transformLegacyReadyCopy(storedHtml);
+    if (!legacyCopy) {
+      // Unknown or malformed legacy copy: fail closed for this verified path.
+      await cache.delete(READY_COPY_KEY);
+      return undefined;
+    }
+    copyHtml = legacyCopy;
   }
-  const html = storedHtml.replaceAll(TOKEN_PLACEHOLDER, tokenOf(path));
+  const html = copyHtml.replaceAll(TOKEN_PLACEHOLDER, tokenOf(path));
   return new Response(html, {
     status: cached.status,
     statusText: cached.statusText,
