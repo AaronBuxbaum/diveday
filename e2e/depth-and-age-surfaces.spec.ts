@@ -207,7 +207,7 @@ test.describe("staff", () => {
     // Fahrenheit by default (a Key Largo shop), and the unit is part of the
     // field's label rather than a hint beside it — a bare "Water temp" is how
     // a 27 meant as °C reaches every diver as a 27°F day.
-    await page.goto(tripPath);
+    // The board link has already opened this trip.
     // The conditions form waits behind its disclosure (summary-first
     // Overview) — Publish or Edit, depending on whether the seed already
     // published a prediction for this trip.
