@@ -14,7 +14,7 @@ test("trip details print saved facts independently of an open editor", async ({ 
   await page.goto(`/shop/blue-mantis/trips/${id}?view=details`);
   const title = await page.getByRole("heading", { level: 1 }).innerText();
   const labels = await page.locator("[data-trip-detail-row] > :first-child").allTextContents();
-  const row = page.locator("#details");
+  const row = page.locator("#departure-details");
   await row.locator("summary").click();
   await row.locator('input[name="title"]').fill("UNSAVED PAPER TITLE");
   await page.emulateMedia({ media: "print" });
