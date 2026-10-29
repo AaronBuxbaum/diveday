@@ -284,7 +284,11 @@ export async function insertTripInstances(tx: AppTransaction, list: TripInstance
           startsAt: params.startsAt,
           endsAt: params.endsAt,
           capacity: params.capacity,
-          priceCents: rehearsal ? null : params.priceCents,
+          // A catalog-priced course owns the diver's price. Keep the separate
+          // trip fee only for ordinary departures and unpriced courses, whose
+          // trip fee is the established fallback.
+          priceCents:
+            rehearsal || params.course?.priceCents != null ? null : (params.priceCents ?? null),
           depositCents: rehearsal ? null : params.depositCents,
           snorkelerPriceCents: rehearsal ? null : (params.snorkelerPriceCents ?? null),
           riderPriceCents: rehearsal ? null : (params.riderPriceCents ?? null),

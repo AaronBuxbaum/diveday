@@ -25,7 +25,7 @@ vi.mock("@/db/seat-claims", async (original) => ({
 vi.mock("@/i18n/request", () => ({ requestLocale: vi.fn(async () => "en-US") }));
 const { getBookedCard, getReadyPageData } = await import("@/db/ready");
 const { issuePartySeatClaims } = await import("@/db/seat-claims");
-const { ReadyBookedPage } = await import("./_components/ReadyMasthead");
+const { ReadyBookedShell } = await import("./_components/ReadyBookedShell");
 const { default: ReadyTokenPage } = await import("./page");
 const trip = {
   id: "trip",
@@ -60,7 +60,7 @@ describe("the booked opening with optional date actions", () => {
         params: Promise.resolve({ token: "synthetic" }),
         searchParams: Promise.resolve({ booked: "1" }),
       })) as ReactElement<{ dateActions: ReactElement<{ fallback: unknown }> }>;
-      expect(result.type).toBe(ReadyBookedPage);
+      expect(result.type).toBe(ReadyBookedShell);
       expect(result.props.dateActions.props.fallback).toBeNull();
       expect(getReadyPageData).toHaveBeenCalledTimes(1);
       expect(issuePartySeatClaims).not.toHaveBeenCalled();

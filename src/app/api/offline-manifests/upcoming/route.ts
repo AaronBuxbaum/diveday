@@ -1,10 +1,14 @@
+import { randomUUID } from "node:crypto";
 import { canPersonReadMedicalAlertOnTrip, loadActiveStaffRoles } from "@/db/authz";
+import { lockBoardingCertificationEvidence } from "@/db/boarding-certification-snapshot";
 import { departureBoatSafetyFor } from "@/db/boat-safety";
 import { departureVessels } from "@/db/boats";
+import type { AppDb } from "@/db/client";
 import { getDb } from "@/db/client";
 import { getTripManifests } from "@/db/manifests";
+import { nextOfflineManifestSnapshotRevision } from "@/db/offline-manifest-snapshots";
 import { latestPreDepartureChecksForTrip, listChecklistItems } from "@/db/pre-departure-check";
-import { getShopById } from "@/db/shops";
+import { getShopById, getShopOfflineErasureEpoch } from "@/db/shops";
 import { listTripIdsInOfflineManifestWindow } from "@/db/trips";
 import { boatSafetySection } from "@/i18n/boat-safety-labels";
 import { crewBlockerText } from "@/i18n/identity-check-labels";
@@ -16,6 +20,7 @@ import { departureCrewCount } from "@/lib/boat-safety";
 import { nowDate } from "@/lib/clock";
 import { emergencyReferenceForDeparture } from "@/lib/emergency-reference";
 import { withE2EApiTiming } from "@/lib/observability/query-timing";
+import { signOfflineErasureEpoch } from "@/lib/offline-erasure-epoch";
 import type {
   OfflineManifestPayload,
   OfflineManifestUpcomingResponse,
@@ -108,57 +113,80 @@ async function getUpcomingManifests() {
     // the device when the signal goes (issue #688).
     emergencyReference: shop.emergencyReference,
   };
-  // Shop-wide, fetched once — every trip in the window shares the same list.
-  const checklistItems = await listChecklistItems(db, shop.id);
-  // Each departure's own boat for its card (fourth review, item 11), one read for the window.
-  const vessels = await departureVessels(db, shop.id, tripIds);
   const payloads = await Promise.all(
-    tripIds.map(async (tripId): Promise<OfflineManifestPayload | null> => {
-      const manifests = await getTripManifests(db, shop.id, tripId);
-      if (!manifests) return null;
-      const checks = checklistItems.length
-        ? await latestPreDepartureChecksForTrip(db, shop.id, tripId)
-        : new Map();
-      // The boat's papers and kit, worded as the Boat tab words them, so a
-      // copy primed here says what the one saved from the page says.
-      const departure = manifests[0];
-      const boatSafety = departure
-        ? boatSafetySection(
-            t,
-            locale,
-            await departureBoatSafetyFor(db, shop.id, {
+    tripIds.map(
+      async (tripId): Promise<OfflineManifestPayload | null> =>
+        db.transaction(async (tx) => {
+          // The snapshot id, shop epoch, roster, and free-text evidence are read
+          // under one shared fence. Erasure either follows and sweeps everything
+          // read here, or precedes it and the token carries the new epoch.
+          await lockBoardingCertificationEvidence(tx, shop.id, "boarding");
+          const epoch = await getShopOfflineErasureEpoch(tx, shop.id);
+          if (epoch === null) return null;
+          const snapshotRevision = await nextOfflineManifestSnapshotRevision(tx, shop.id, tripId);
+          if (snapshotRevision === null) return null;
+          const snapshotId = randomUUID();
+          // PGlite's database type includes its client handle while the
+          // transaction executor intentionally does not. The manifest readers
+          // use only Drizzle query methods, which both objects implement.
+          const manifests = await getTripManifests(tx as unknown as AppDb, shop.id, tripId);
+          if (!manifests) return null;
+          const checklistItems = await listChecklistItems(tx, shop.id);
+          const checks = checklistItems.length
+            ? await latestPreDepartureChecksForTrip(tx, shop.id, tripId)
+            : new Map();
+          const vessels = await departureVessels(tx, shop.id, [tripId]);
+          // The boat's papers and kit, worded as the Boat tab words them.
+          const departure = manifests[0];
+          const boatSafety = departure
+            ? boatSafetySection(
+                t,
+                locale,
+                await departureBoatSafetyFor(tx, shop.id, {
+                  tripId,
+                  startsAt: departure.trip.startsAt,
+                  timeZone: shop.timezone,
+                  now,
+                  passengers: {
+                    booked: departure.summary.totalDivers,
+                    boarded: departure.summary.boarded,
+                  },
+                  crew: departureCrewCount(departure.crew),
+                }),
+              )
+            : null;
+          const payload = serializeManifests(
+            manifests,
+            {
+              ...shopIdentity,
+              emergencyReference: emergencyReferenceForDeparture(
+                shop.emergencyReference,
+                vessels.get(tripId) ?? null,
+              ),
+            },
+            (blocker, diver) => crewBlockerText(t, diver, blocker),
+            checklistItems.map((item) => ({
+              id: item.id,
+              label: item.label,
+              check: checks.get(item.id),
+            })),
+            boatSafety,
+            undefined,
+            () => t("shared.offlineManifest.juniorCheckRequired"),
+          );
+          return {
+            ...payload,
+            snapshotId,
+            erasureEpochToken: signOfflineErasureEpoch({
+              shopId: shop.id,
               tripId,
-              startsAt: departure.trip.startsAt,
-              timeZone: shop.timezone,
-              now,
-              passengers: {
-                booked: departure.summary.totalDivers,
-                boarded: departure.summary.boarded,
-              },
-              crew: departureCrewCount(departure.crew),
+              snapshotId,
+              epoch,
+              snapshotRevision,
             }),
-          )
-        : null;
-      return serializeManifests(
-        manifests,
-        {
-          ...shopIdentity,
-          emergencyReference: emergencyReferenceForDeparture(
-            shop.emergencyReference,
-            vessels.get(tripId) ?? null,
-          ),
-        },
-        (blocker, diver) => crewBlockerText(t, diver, blocker),
-        checklistItems.map((item) => ({
-          id: item.id,
-          label: item.label,
-          check: checks.get(item.id),
-        })),
-        boatSafety,
-        undefined,
-        () => t("shared.offlineManifest.juniorCheckRequired"),
-      );
-    }),
+          };
+        }),
+    ),
   );
 
   const served = payloads.filter((payload): payload is OfflineManifestPayload => payload !== null);

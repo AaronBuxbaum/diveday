@@ -3,13 +3,7 @@ import { AFTER_STATE_TEST_IDS } from "../src/app/ready/[token]/_components/after
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed-identifiers";
 import { signRecapToken } from "../src/lib/recap-links";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
-import {
-  openBookingActions,
-  openRecapDoor,
-  openRosterDetails,
-  openSettingsRow,
-  signOut,
-} from "./helpers";
+import { openBookingActions, openRecapDoor, openSettingsRow, signOut } from "./helpers";
 
 // The recap page (`/recap/[token]`) is a public, signed-token diver surface, the
 // same shape as the readiness page: it must fail closed on a bad or forged
@@ -199,22 +193,30 @@ test("a booking canceled after the recap page loaded gets an honest notice, not 
   await staffPage.getByRole("searchbox", { name: "Search divers" }).fill("Priya Sharma");
   await staffPage.getByRole("link", { name: "Priya Sharma", exact: true }).click();
   // "The story" is the diver record's one chronological ledger now (slice 8a):
-  // the seats ahead lead it, so the first link in it is still the departure
-  // this test needs.
-  await staffPage.getByRole("region", { name: "The story" }).getByRole("link").first().click();
-  await staffPage.waitForURL(/\/trips\//);
-  const tripId = staffPage.url().match(/\/trips\/([^/?]+)/)?.[1];
-  if (!tripId) throw new Error("could not resolve the reef trip id from the URL");
-  // The roster lives on the trip page itself.
+  // the seats ahead lead it, so its first link identifies this booking's trip
+  // without an extra manifest navigation before opening the roster.
+  const tripHref = await staffPage
+    .getByRole("region", { name: "The story" })
+    .getByRole("link")
+    .first()
+    .getAttribute("href");
+  const tripId = tripHref?.match(/\/trips\/([^/?]+)/)?.[1];
+  if (!tripId) throw new Error("could not resolve the reef trip id from the diver story link");
+  // The diver record links to the trip manifest; the roster lives on the trip
+  // page itself, so go straight to that canonical route once we have its id.
   await staffPage.goto(`/shop/blue-mantis/trips/${tripId}`);
   const diverRow = staffPage.locator("li").filter({ hasText: "Priya Sharma" });
   // Removing a seat is administrative rather than the work of the day, so it
   // sits behind the card's own "Details" disclosure.
-  await openRosterDetails(diverRow);
   // Two-tap InlineConfirm, not a native dialog: the first tap only arms it.
   await openBookingActions(diverRow);
   await diverRow.getByRole("button", { name: "Remove booking" }).click();
   await diverRow.getByRole("button", { name: "Yes, remove booking" }).click();
+  await expect(staffPage).toHaveURL(
+    (url) =>
+      url.pathname === `/shop/blue-mantis/trips/${tripId}` &&
+      url.searchParams.get("notice") === "booking-removed",
+  );
   await expect(staffPage.getByRole("status")).toContainText("Booking canceled");
   await staffContext.close();
 

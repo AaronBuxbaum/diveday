@@ -118,6 +118,35 @@ afterEach(() => {
 });
 
 describe("seatDiver (the one consequence path behind every staff door)", () => {
+  it("refuses an unavailable date-request offer before creating the seat", async () => {
+    const { db, shop, open, actorPersonId } = await context();
+    const diver = await bookableDiver(db, shop.id, open.id);
+
+    const result = await seatDiver(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      actorPersonId,
+      diver: { personId: diver.id },
+      entry: "roster",
+      refusals: "specific",
+      dateRequestInterestId: "00000000-0000-4000-8000-000000000000",
+    });
+
+    expect(result).toEqual({ ok: false, reason: "date_request_offer_unavailable" });
+    expect(
+      await db
+        .select({ id: bookings.id })
+        .from(bookings)
+        .where(
+          and(
+            eq(bookings.shopId, shop.id),
+            eq(bookings.tripId, open.id),
+            eq(bookings.personId, diver.id),
+          ),
+        ),
+    ).toEqual([]);
+  });
+
   /**
    * The bug this extraction exists for. Booking a diver from their own record
    * called `createBooking` and stopped there — no waiver, ever — so a diver

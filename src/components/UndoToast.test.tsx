@@ -66,6 +66,16 @@ describe("the Undo button", () => {
 });
 
 describe("UndoToast keeps its reversal available", () => {
+  it("can stay with the record whose action it reverses", () => {
+    render(<UndoToast {...PROPS} placement="inline" />);
+    const toast = screen.getByRole("status");
+
+    expect(toast).toHaveClass("grid", "w-full", "min-w-0");
+    expect(toast.parentElement).not.toHaveClass("fixed");
+    expect(toast).toContainElement(screen.getByRole("button", { name: "Undo" }));
+    expect(toast).toContainElement(screen.getByRole("button", { name: "Dismiss" }));
+  });
+
   it("stays visible after the transient confirmation interval", () => {
     vi.useFakeTimers();
     render(<UndoToast {...PROPS} />);

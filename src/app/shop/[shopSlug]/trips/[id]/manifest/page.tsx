@@ -131,7 +131,7 @@ export default async function TripManifestPage({
   } = await readManifestPage(db, shop.id, tripId, session.user.personId);
   const { catalogSpecies, speciesBySite } = manifestSpecies(locale, fieldGuides);
   const departureManifest = completeManifests?.[0];
-  if (!departureManifest || !completeManifests) notFound();
+  if (!departureManifest || !completeManifests || !boatCheck.offlineSnapshot) notFound();
   const boatSafety = await departureBoatSafetySection(db, shop, departureManifest, t, locale);
 
   const opened = openCheckpoint(completeManifests, departureManifest, requestedCheckpoint);
@@ -435,7 +435,7 @@ export default async function TripManifestPage({
             idPrefix={idPrefix}
             locale={locale}
             payload={offlineManifestPayload({
-              completeManifests,
+              snapshot: boatCheck.offlineSnapshot,
               shop: { ...shop, emergencyReference },
               ...boatCheck,
               boatSafety,

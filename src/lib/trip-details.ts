@@ -53,6 +53,12 @@ export type TripDetailsFields = {
   laterDates?: readonly string[];
   priceDollars?: number;
   /**
+   * The effective amount paid for this departure when it differs from the
+   * stored trip fee. A priced course owns its total; clearing the separate
+   * trip fee must still pass a payment-gate check against that course total.
+   */
+  paymentGatePriceCents?: number | null;
+  /**
    * Whether the departure's requirement row demands payment. Absent on the
    * create form, which has no requirements section — a trip being created has
    * no gate yet, so the refusal below cannot fire there.
@@ -209,10 +215,12 @@ export function tripDetailsPatch(
   }
 
   // **The other door onto the same trap.** The requirements form refuses to put
-  // a payment gate on an unpriced departure; this refuses to take the price off
-  // a gated one. Both produce a departure that asks nobody for money and blocks
-  // every diver who books it, forever (issue #692).
-  if (paymentGateIsUnclearable(fields.requiresPayment ?? false, priceCents)) {
+  // a payment gate on an unpriced departure; this refuses to leave a gated
+  // departure without an effective price. A priced course can supply that
+  // amount while its separate trip fee is cleared (issue #692, H-125).
+  const paymentGatePriceCents =
+    fields.paymentGatePriceCents === undefined ? priceCents : fields.paymentGatePriceCents;
+  if (paymentGateIsUnclearable(fields.requiresPayment ?? false, paymentGatePriceCents)) {
     return { ok: false, reason: "price_required_by_gate" };
   }
 

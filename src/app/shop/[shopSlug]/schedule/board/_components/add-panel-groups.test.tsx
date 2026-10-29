@@ -9,6 +9,7 @@ import {
   PatternCrew,
   PatternNote,
   PayAtBookingGroup,
+  PriceInputGroup,
   RequestPlanBrief,
 } from "./add-panel-groups";
 import type { BuilderCopy, BuilderOptions } from "./builder-types";
@@ -22,8 +23,13 @@ const COPY = new Proxy({} as BuilderCopy, {
 const PRICE = { step: "0.01", max: 100_000, placeholder: "$0.00" };
 const OPTIONS: BuilderOptions = {
   courses: [
-    { id: "c1", title: "Open Water", agency: "PADI" },
-    { id: "c2", title: "Rescue", agency: "" },
+    {
+      id: "c1",
+      title: "Open Water",
+      agency: "PADI",
+      priceLabel: "$250.00 per diver, the course’s price",
+    },
+    { id: "c2", title: "Rescue", agency: "", priceLabel: null },
   ],
   diveSites: [],
   boats: [{ id: "b1", name: "Mantis II", capacity: 14 }],
@@ -48,6 +54,22 @@ describe("PayAtBookingGroup", () => {
       expect(container.querySelector(`input[name="${name}"]`), name).not.toBeNull();
     }
     expect(container.querySelector("fieldset")?.disabled).toBe(false);
+  });
+});
+
+describe("PriceInputGroup", () => {
+  it("shows the catalog course price without submitting a separate trip price", () => {
+    const { container } = render(
+      <PriceInputGroup
+        copy={COPY}
+        price={PRICE}
+        coursePriceLabel="$250.00 per diver, the course’s price"
+      />,
+    );
+    expect(screen.getByText("$250.00 per diver, the course’s price")).toBeTruthy();
+    const input = container.querySelector<HTMLInputElement>('input[name="priceDollars"]');
+    expect(input?.hidden).toBe(true);
+    expect(input?.disabled).toBe(true);
   });
 });
 
