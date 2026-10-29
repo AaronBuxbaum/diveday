@@ -311,6 +311,20 @@ export function pgRestoreErrorSummary(stderr) {
   );
 }
 
+/**
+ * The docker client's and daemon's own lines (a failed image pull, an unusable mount), which exist
+ * before pg_restore starts and name only an image or a path. pg_restore's lines never begin with
+ * these prefixes, so nothing that can quote a row is let through.
+ */
+export function dockerDiagnostics(stderr) {
+  const own =
+    /^(docker: |Unable to find image '|Error response from daemon|[0-9a-z._-]+: Pulling from |Digest: |Status: )/;
+  return String(stderr ?? "")
+    .split(/\r?\n/)
+    .filter((line) => own.test(line))
+    .map((line) => line.slice(0, 300));
+}
+
 /** The lines a script printed under its own prefix, and a count of the rest. */
 export function ownLines(stderr, prefix) {
   const lines = [];
@@ -561,7 +575,11 @@ async function main() {
         },
       ),
     );
-    for (const line of pgRestoreErrorSummary(readFileSync(restoreStderr, "utf8"))) {
+    const restoreStderrText = readFileSync(restoreStderr, "utf8");
+    for (const line of pgRestoreErrorSummary(restoreStderrText)) {
+      console.error(`restore-drill: ${line}`);
+    }
+    for (const line of dockerDiagnostics(restoreStderrText)) {
       console.error(`restore-drill: ${line}`);
     }
     if (restore.status !== 0) throw new Error("pg_restore did not complete.");

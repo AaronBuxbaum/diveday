@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   BRANCH_PREFIX,
   BRANCH_TTL_MS,
+  dockerDiagnostics,
   drillBranchName,
   logRow,
   newestDump,
@@ -321,5 +322,24 @@ describe("subprocessEnv", () => {
 describe("POSTGRES_IMAGE", () => {
   it("is pinned by digest, not only by a tag someone can move", () => {
     expect(POSTGRES_IMAGE).toMatch(/:17-alpine@sha256:[0-9a-f]{64}$/);
+  });
+});
+
+describe("dockerDiagnostics", () => {
+  it("keeps docker's own pull and daemon lines and nothing pg_restore can print", () => {
+    const stderr = [
+      "Unable to find image 'public.ecr.aws/docker/library/postgres:17-alpine' locally",
+      "docker: Error response from daemon: manifest unknown.",
+      "pg_restore: error: could not execute query: ERROR:  duplicate key value violates unique constraint",
+      "DETAIL:  Key (email)=(diver@example.com) already exists.",
+      "Error: docker: pretend row value",
+      `docker: ${"x".repeat(500)}`,
+    ].join("\n");
+    const lines = dockerDiagnostics(stderr);
+    expect(lines).toHaveLength(3);
+    expect(lines.join("\n")).not.toContain("diver@example.com");
+    expect(lines.join("\n")).not.toContain("duplicate key");
+    expect(lines.every((line) => line.length <= 300)).toBe(true);
+    expect(dockerDiagnostics(undefined)).toEqual([]);
   });
 });
