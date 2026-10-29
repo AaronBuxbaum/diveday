@@ -26,15 +26,14 @@ async function chooseRowAction(page: Page, verb: string, title: string) {
 }
 
 test.describe("schedule builder", () => {
-  test("consumes gear result query values so refresh cannot replay the warning", async ({
-    page,
-  }) => {
+  test("does not trust fabricated gear result query values", async ({ page }) => {
     const staff = staffTranslator("en-US");
     const message = staff("schedule.notices.movedGearReleased", { count: 2 });
     await page.goto(`${BOARD}?week=2026-10-26&builder=moved&gear=2&result=fabricated-result`);
-    // A hand-copied URL may briefly paint the warning; the board consumes the
-    // result values while retaining the selected week.
-    await expect(page.getByText(message, { exact: true })).toBeVisible();
+    // An invented token and count cannot authorize the warning; result params
+    // are still consumed while the selected week remains in place.
+    await expect(page.getByText(message, { exact: true })).toHaveCount(0);
+    await expect(page.getByText("Moved", { exact: true })).toBeVisible();
     await expect
       .poll(() => {
         const url = new URL(page.url());

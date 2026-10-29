@@ -44,6 +44,7 @@ import {
   type WeekdaySet,
   weekdaySetFrom,
 } from "@/lib/recurrence";
+import { signScheduleMoveResult } from "@/lib/schedule-move-result";
 import { requireShopSurface, requireStaffSession } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 import { MAX_TRIP_DAYS, MIN_TRIP_DAYS } from "@/lib/trip-days";
@@ -843,10 +844,9 @@ export async function moveDepartureAction(shopSlug: string, formData: FormData) 
     meetingPointMoved: false,
     actorPersonId: session.user.personId,
   });
-  // A move that had to let go of gear says so on the way back. Silence here is
-  // a unit somebody still thinks is packed for this departure.
-  const params = new URLSearchParams({ builder: "moved", result: crypto.randomUUID() });
-  if (outcome.gearReleased > 0) params.set("gear", String(outcome.gearReleased));
+  // The shop-bound proof keeps a copied or invented gear count from becoming a warning.
+  const params = new URLSearchParams({ builder: "moved" });
+  params.set("result", signScheduleMoveResult(shop.id, crypto.randomUUID(), outcome.gearReleased));
   if (notice) {
     params.set("held", notice.id);
     params.set("tell", String(notice.told));

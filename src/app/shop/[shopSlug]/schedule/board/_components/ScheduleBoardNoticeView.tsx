@@ -24,10 +24,7 @@ export function ScheduleBoardNoticeView({
   gearMessage: string | undefined;
   resultId: string | undefined;
 }) {
-  const firstGearNotice =
-    gearMessage && notice?.tone === "warning"
-      ? { id: resultId ?? "initial", message: gearMessage }
-      : null;
+  const firstGearNotice = gearMessage && resultId ? { id: resultId, message: gearMessage } : null;
   const [gearNotices, setGearNotices] = useState<GearNotice[]>(() =>
     firstGearNotice ? [firstGearNotice] : [],
   );

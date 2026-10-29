@@ -12,9 +12,9 @@ export type BoardSearchParams = {
   count?: string; // the number a builder notice names (`builderNoticeMessage`)
   /** The departure just created, named so the notice can say which. */
   created?: string;
-  /** Gear assignments a move had to release — see `moveTrip`. */
+  /** Legacy unsigned gear count; retained only so old/fabricated URLs are scrubbed. */
   gear?: string;
-  /** Unique marker for one real move result, removed after the notice is read. */
+  /** Short-lived signed marker for a real move result, removed after the notice is read. */
   result?: string;
   /** The reschedule notice a move held, and how many seats it tells. */
   held?: string;

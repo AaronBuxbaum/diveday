@@ -49,7 +49,7 @@ import {
   moveDepartureAction,
   removeDepartureAction,
 } from "./actions";
-import { builderNoticeFor, gearReleasedCount } from "./builder-notices";
+import { builderNoticeFor, verifiedGearMoveNotice } from "./builder-notices";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -85,21 +85,8 @@ export default async function ScheduleBoardPage({
   await connection(); // schedule is live data — render per request, not at build
   const { shopSlug } = await params;
   const query = await searchParams;
-  const {
-    builder,
-    count,
-    created,
-    gear,
-    held,
-    tell,
-    series,
-    add,
-    date,
-    course,
-    requests,
-    site,
-    week,
-  } = query;
+  const { builder, count, created, held, tell, series, add, date, course, requests, site, week } =
+    query;
   const createPage = query._createPage === "1";
   const legacyHref = legacyAddHref(shopSlug, query);
   if (legacyHref) redirect(legacyHref);
@@ -209,13 +196,12 @@ export default async function ScheduleBoardPage({
   const hasUpcoming = range.first !== null;
   const requestPlan = builderRequestPlan({ requestRows, shop, shopBoats, st });
 
-  const builderNotice = builderNoticeFor({ builder, count, created, gear, series, st });
+  const builderNotice = builderNoticeFor({ builder, count, created, series, st });
   const rescheduleNotice =
     builder === "moved" || (held !== undefined && tell !== undefined)
       ? await resolveRescheduleNoticeSnapshot({ shopId: shop.id, heldId: held, tell, t: st })
       : null;
-  const gearReleased = gearReleasedCount(gear);
-  const gearMessage = gearReleased !== undefined ? builderNotice?.message : undefined;
+  const gearNotice = builder === "moved" ? verifiedGearMoveNotice(query.result, shop.id, st) : null;
   const builderCopy = scheduleBuilderCopy(st, shop.timezone);
 
   const builderMore = scheduleBuilderMore(st, locale);
@@ -313,8 +299,8 @@ export default async function ScheduleBoardPage({
       <ScheduleBoardNoticeView
         notice={builderNotice}
         initialNotice={rescheduleNotice}
-        gearMessage={gearMessage}
-        resultId={query.result}
+        gearMessage={gearNotice?.message}
+        resultId={gearNotice?.id}
       />
 
       {!createPage && !hasUpcoming ? (
