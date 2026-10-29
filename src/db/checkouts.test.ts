@@ -22,6 +22,7 @@ import { askAnytime } from "./interests";
 import { retryBookingConfirmation } from "./notifications";
 import { getBookingPayment, setBookingPayment } from "./payments";
 import {
+  boats,
   bookingCheckoutBookings,
   bookingCheckouts,
   bookings,
@@ -2805,14 +2806,16 @@ describe("a capped discount on the pass-through path", () => {
   });
 
   it("holds a trip deal to the cap Stripe was given, even after the boat shrinks", async () => {
-    // Layer-7 re-review: the estimate read today's capacity, so lowering it
-    // after the deal went out tightened the cap below Stripe's.
+    // Give this demo departure room for the offer, then shrink the hull after
+    // the deal is sent; its already-booked seats stay valid at checkout.
     const { db, shop, reef, bookingIds } = await checkoutContext();
     await setShopPassThroughFee(db, shop.id, { name: "Park fee", amountCents: 1_500 });
     const counted = (await upcomingTripsWithCounts(db, shop.id, new Date(0))).find(
       (t) => t.id === reef.id,
     );
     if (!counted) throw new Error("reef missing");
+    if (!reef.boatId) throw new Error("reef boat missing");
+    await db.update(boats).set({ capacity: 18 }).where(eq(boats.id, reef.boatId));
     await db
       .update(trips)
       .set({ capacity: counted.booked + 2 })
@@ -2820,10 +2823,7 @@ describe("a capped discount on the pass-through path", () => {
     const deal = await sentTripDeal(db, shop.id, reef.id, 25);
     expect(deal.maxRedemptions).toBe(2);
     const later = await party(db, shop.id, reef.id, "Deal Second");
-    await db
-      .update(trips)
-      .set({ capacity: counted.booked + 1 })
-      .where(eq(trips.id, reef.id));
+    await db.update(boats).set({ capacity: 17 }).where(eq(boats.id, reef.boatId));
     const withDeal = (ids: string[]) => ({
       ...startInput(shop.id, reef.id, ids),
       promotionCode: deal.stripePromotionCodeId ?? undefined,

@@ -507,8 +507,9 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
     {
       shopId: shop.id,
       name: "Mantis I",
-      capacity: 14,
-      description: "The small boat — fourteen aboard, a shaded deck, ten minutes to the reef.",
+      capacity: 17,
+      description:
+        "The small boat — fourteen passenger places, plus room aboard for its three-person crew.",
       // Each hull's radio identity, printed on its departures' emergency card
       // (fourth review, item 11). Fictional, in the US MMSI range.
       callSign: "WDM2201",
@@ -775,8 +776,9 @@ export async function createDemoShop(
     {
       shopId: shop.id,
       name: "Mantis I",
-      capacity: 14,
-      description: "The small boat — fourteen aboard, a shaded deck, ten minutes to the reef.",
+      capacity: 17,
+      description:
+        "The small boat — fourteen passenger places, plus room aboard for its three-person crew.",
       // Each hull's radio identity, printed on its departures' emergency card
       // (fourth review, item 11). Fictional, in the US MMSI range.
       callSign: "WDM2201",
