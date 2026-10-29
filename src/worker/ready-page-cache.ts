@@ -308,12 +308,14 @@ export type ReadyPageRequest = {
   pathHash: string;
   forgottenVersion: string;
   requestId: string;
-  localForgetVersion: number;
   /** Network requests remain useful when storage is unavailable; they just cannot publish. */
   durable: boolean;
 };
 
-let localForgetVersion = 0;
+// One request ID is enough because the durable marker has one latest-request
+// slot. This closes same-worker races when a forget marker write fails.
+let locallyInvalidatedRequestId: string | null = null;
+let localLatestRequest: { path: string; pathHash: string; requestId: string } | null = null;
 
 // Order request starts and forget markers separately from cache publication,
 // so a new fetch can start while an older response is being written.
@@ -346,14 +348,12 @@ export function beginReadyPageRequest(
   storage: CacheStorage,
   path: string,
 ): Promise<ReadyPageRequest> {
-  const begunAtLocalForgetVersion = localForgetVersion;
   return serializeReadyOrder(async () => {
     const hash = await pathHash(path);
     const request: ReadyPageRequest = {
       pathHash: hash,
       forgottenVersion: "",
       requestId: crypto.randomUUID(),
-      localForgetVersion: begunAtLocalForgetVersion,
       durable: false,
     };
     try {
@@ -370,6 +370,8 @@ export function beginReadyPageRequest(
           },
         }),
       );
+      locallyInvalidatedRequestId = null;
+      localLatestRequest = { path, pathHash: hash, requestId: request.requestId };
       request.durable = true;
     } catch {
       // Storage failure must not block the live page. The response carries an
@@ -387,7 +389,7 @@ async function forgottenVersionIsCurrent(
 ): Promise<boolean> {
   if (request.pathHash !== hash) return false;
   return (
-    request.localForgetVersion === localForgetVersion &&
+    request.requestId !== locallyInvalidatedRequestId &&
     (await forgottenVersion(storage)) === request.forgottenVersion
   );
 }
@@ -594,6 +596,7 @@ async function writeForgetMarker(
         },
       }),
     );
+    localLatestRequest = null;
     // Drop tombstones from earlier versions. A single global marker is enough
     // for the one-copy cache and keeps storage use constant over time.
     for (const request of await markers.keys()) {
@@ -621,6 +624,9 @@ async function forgetTerminalReadyPath(
   path: string,
   hash: string,
 ): Promise<boolean> {
+  if (localLatestRequest?.pathHash === hash) {
+    locallyInvalidatedRequestId = localLatestRequest.requestId;
+  }
   const invalidated = serializeReadyOrder(async () => {
     try {
       const markers = await storage.open(READY_FORGOTTEN_CACHE_NAME);
@@ -629,11 +635,12 @@ async function forgetTerminalReadyPath(
       // invalidate that token's request or remove its saved page.
       if (latest && latest.headers.get(REQUEST_PATH_HASH_HEADER) !== hash) return false;
       const durable = await writeForgetMarker(storage, crypto.randomUUID());
-      // A durable marker invalidates prior request IDs without touching the
-      // local generation, so requests queued after this terminal observation
-      // can start cleanly. If persistence failed, fail closed for requests
-      // already captured in this worker.
-      if (!durable) localForgetVersion += 1;
+      // If persistence failed, block the current same-path request ID in this
+      // worker. The marker write is serialized with starts, so the next request
+      // can replace this single local invalidation record.
+      if (!durable && latest) {
+        locallyInvalidatedRequestId = latest.headers.get(REQUEST_ID_HEADER);
+      }
       return durable;
     } catch {
       // A marker read failure cannot establish which token owns the slot. Do
@@ -659,16 +666,36 @@ export function forgetReadyPage(
   path: string,
   _now: number,
 ): Promise<boolean> {
-  // Advance synchronously before queuing behind a publication, closing the
-  // validation-to-put window for requests already running in this worker.
-  localForgetVersion += 1;
-  const epoch = crypto.randomUUID();
-  const invalidated = serializeReadyOrder(() => writeForgetMarker(storage, epoch));
+  // Close the same-worker validation/write window immediately, scoped to the
+  // request that currently owns this path. A different token is untouched.
+  if (localLatestRequest?.path === path) {
+    locallyInvalidatedRequestId = localLatestRequest.requestId;
+  }
+  const invalidated = pathHash(path).then((hash) =>
+    serializeReadyOrder(async () => {
+      try {
+        const markers = await storage.open(READY_FORGOTTEN_CACHE_NAME);
+        const latest = await markers.match(LATEST_REQUEST_KEY);
+        // A different token owns the one-copy slot. Its request stays current;
+        // an older response for this path is already rejected by request ID.
+        if (latest && latest.headers.get(REQUEST_PATH_HASH_HEADER) !== hash) return true;
+        if (!latest) return writeForgetMarker(storage, crypto.randomUUID());
+        locallyInvalidatedRequestId = latest.headers.get(REQUEST_ID_HEADER);
+        return writeForgetMarker(storage, crypto.randomUUID());
+      } catch {
+        return false;
+      }
+    }),
+  );
   return serializeReadyPublication(async () => {
     if (!(await invalidated)) {
-      // Cache Storage cannot promise cross-restart invalidation if it rejects
-      // this durable marker. Delete best effort and surface the failure.
-      await storage.delete(READY_CACHE_NAME).catch(() => false);
+      // The marker write failed, so report the limit and delete only this
+      // path's copy. A different token may already own the shared slot.
+      try {
+        await deleteForgottenCopy(storage, path);
+      } catch {
+        await storage.delete(READY_CACHE_NAME).catch(() => false);
+      }
       return false;
     }
     try {
