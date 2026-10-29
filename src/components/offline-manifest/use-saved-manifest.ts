@@ -397,7 +397,7 @@ function beginTripSyncAttempt(
 }
 
 function useOnTenantVerified({
-  envelope,
+  envelopeRef,
   t,
   tripId,
   tripNoticeForEnvelope,
@@ -408,7 +408,7 @@ function useOnTenantVerified({
   listRef,
   setVerifiedTenantRevision,
 }: {
-  envelope: OfflineManifestEnvelope | null;
+  envelopeRef: MutableRefObject<OfflineManifestEnvelope | null>;
   t: OfflineManifestTranslator;
   tripId: string;
   tripNoticeForEnvelope: (saved: OfflineManifestEnvelope | null) => string | null;
@@ -424,6 +424,7 @@ function useOnTenantVerified({
       setTenantChangePending(false);
       verifiedTenantSlugRef.current = currentShopSlug;
       if (tripId) {
+        const envelope = envelopeRef.current;
         const visibleEnvelope = envelope?.snapshot.shop.slug === currentShopSlug ? envelope : null;
         const noteMessage = tripNoticeForEnvelope(visibleEnvelope);
         setMessage(
@@ -439,7 +440,7 @@ function useOnTenantVerified({
       setVerifiedTenantRevision((revision) => revision + 1);
     },
     [
-      envelope,
+      envelopeRef,
       t,
       tripId,
       tripNoticeForEnvelope,
@@ -752,7 +753,7 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
   });
   const onTripStorageReadStarted = useCallback(() => dispatchSaved({ type: "suppress-notes" }), []);
   const onTenantVerified = useOnTenantVerified({
-    envelope,
+    envelopeRef,
     t,
     tripId,
     tripNoticeForEnvelope,

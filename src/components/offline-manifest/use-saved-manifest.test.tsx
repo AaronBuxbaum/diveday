@@ -143,6 +143,19 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("useSavedManifest on a trip", () => {
+  it("keeps tenant-verification callback stable as the selected saved copy loads", async () => {
+    const saved = envelope("trip-1", "Morning Two-Tank");
+    load.mockResolvedValue(saved);
+    const { result } = at("trip=trip-1");
+    const onTenantVerified = purgeState.latest?.onTenantVerified;
+
+    await waitFor(() => expect(result.current.envelope).toBe(saved));
+    expect(purgeState.latest?.onTenantVerified).toBe(onTenantVerified);
+
+    act(() => purgeState.latest?.onTenantVerified("blue-mantis"));
+    expect(result.current.message).toBe(line("ready"));
+  });
+
   it("reloads a selected trip when another tab commits an erasure disposition", async () => {
     const stale = envelope("trip-1", "Morning Two-Tank");
     stale.events = [
