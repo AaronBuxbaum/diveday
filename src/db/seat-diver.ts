@@ -161,6 +161,8 @@ export type SeatDiverResult =
       personName: string;
       waiver: SeatDiverWaiver;
       confirmation: SeatDiverConfirmation;
+      /** Whether all active seats in the date-request offer are linked. */
+      dateRequestPartyComplete?: boolean;
       /**
        * The release link to hand over when `waiver` is `not_delivered` — the
        * bearer path the crew can open on their own phone for the person in
@@ -386,6 +388,7 @@ type SeatedBooking = {
   personId: string;
   personName: string;
   identityUnconfirmed: boolean;
+  dateRequestPartyComplete?: boolean;
 };
 
 /**
@@ -522,6 +525,7 @@ async function seatConsequences(
     waiverPath,
     confirmation,
     identityUnconfirmed: outcome.identityUnconfirmed,
+    dateRequestPartyComplete: outcome.dateRequestPartyComplete,
   };
 }
 

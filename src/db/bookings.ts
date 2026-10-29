@@ -56,6 +56,7 @@ import { readCertificationEvidence } from "./certification-evidence";
 import { listCourseSeatsInTraining } from "./certifications-in-training";
 import type { AppDb, DbExecutor } from "./client";
 import {
+  completeDateRequestOfferParty,
   dateRequestOfferBookingFor,
   lockDateRequestOffer,
   moveDateRequestOfferBooking,
@@ -399,6 +400,8 @@ export type BookingSuccess = {
    * confirm control (`dive-domain-expert`, 2026-09-11).
    */
   identityUnconfirmed: boolean;
+  /** Whether every seat in the linked date-request offer is actively booked. */
+  dateRequestPartyComplete?: boolean;
   admissionAdvisory?: BookingAdmissionAdvisory;
 };
 
@@ -1158,6 +1161,7 @@ async function createBookingRecord(
     admissionAdvisory,
     pending,
   });
+  let dateRequestPartyComplete: boolean | undefined;
   if (outcome.ok && dateOffer) {
     const linked = await recordDateRequestOfferBooking(tx, {
       shopId: req.shopId,
@@ -1166,6 +1170,13 @@ async function createBookingRecord(
       partySize: dateOffer.partySize,
     });
     if (!linked) throw new Error("locked date request offer could not accept its booking");
+    dateRequestPartyComplete = await completeDateRequestOfferParty(tx, {
+      shopId: req.shopId,
+      requestId: dateOffer.requestId,
+      offerId: dateOffer.offerId,
+      partySize: dateOffer.partySize,
+      now: nowDate(),
+    });
   }
   if (madeByThisSeat && outcome.ok) {
     await tx
@@ -1179,7 +1190,7 @@ async function createBookingRecord(
         ),
       );
   }
-  return outcome;
+  return outcome.ok ? { ...outcome, dateRequestPartyComplete } : outcome;
 }
 
 /**

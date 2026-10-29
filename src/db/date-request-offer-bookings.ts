@@ -1,4 +1,4 @@
-import { and, count, eq, inArray, isNotNull, ne } from "drizzle-orm";
+import { and, count, eq, inArray, isNotNull, isNull, ne } from "drizzle-orm";
 import { SEAT_HELD_STATUSES } from "@/lib/no-show";
 import type { DbExecutor } from "./client";
 import { bookings, dateRequestOfferBookings, interests } from "./schema";
@@ -47,7 +47,7 @@ export async function dateRequestOfferBookingFor(
 export async function lockDateRequestOffer(
   tx: DbExecutor,
   input: { shopId: string; tripId: string; requestId: string; excludeBookingId?: string },
-): Promise<{ offerId: string; partySize: number } | DateRequestBookingRefusal> {
+): Promise<{ offerId: string; requestId: string; partySize: number } | DateRequestBookingRefusal> {
   const [request] = await tx
     .select({ id: interests.id })
     .from(interests)
@@ -129,7 +129,47 @@ export async function lockDateRequestOffer(
       ),
     );
   if ((linked?.seats ?? 0) >= (offer.partySize ?? 1)) return "date_request_party_full";
-  return { offerId: offer.id, partySize: offer.partySize ?? 1 };
+  return { offerId: offer.id, requestId: request.id, partySize: offer.partySize ?? 1 };
+}
+
+/** Close a requested party only after all offered seats have active bookings. */
+export async function completeDateRequestOfferParty(
+  tx: DbExecutor,
+  input: { shopId: string; requestId: string; offerId: string; partySize: number; now: Date },
+): Promise<boolean> {
+  const [linked] = await tx
+    .select({ seats: count(bookings.id) })
+    .from(dateRequestOfferBookings)
+    .innerJoin(
+      bookings,
+      and(
+        eq(bookings.id, dateRequestOfferBookings.bookingId),
+        eq(bookings.shopId, input.shopId),
+        inArray(bookings.status, [...SEAT_HELD_STATUSES]),
+      ),
+    )
+    .where(
+      and(
+        eq(dateRequestOfferBookings.shopId, input.shopId),
+        eq(dateRequestOfferBookings.interestId, input.offerId),
+      ),
+    );
+  if ((linked?.seats ?? 0) < input.partySize) return false;
+
+  // The request lock is already held by lockDateRequestOffer. Preserve a
+  // staff-entered close reason; booking only supplies the first answer.
+  await tx
+    .update(interests)
+    .set({ closedAt: input.now, closedAs: "booked" })
+    .where(
+      and(
+        eq(interests.id, input.requestId),
+        eq(interests.shopId, input.shopId),
+        eq(interests.scope, "date"),
+        isNull(interests.closedAt),
+      ),
+    );
+  return true;
 }
 
 /** Record the booking under the already-held request and offer locks. */

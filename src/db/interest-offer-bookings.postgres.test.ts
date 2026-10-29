@@ -350,6 +350,104 @@ describePostgres("date-request offer booking association under real concurrency"
     expect(new Set(linked.map((row) => row.tripId)).size).toBe(1);
   });
 
+  it("keeps a party request open until every offered seat is actively booked", async () => {
+    const pg = await postgresTestDb();
+    const suffix = randomBytes(4).toString("hex");
+    const [shop] = await pg.db
+      .insert(shops)
+      .values({
+        name: `Offer party completion ${suffix}`,
+        slug: `offer-party-${suffix}`,
+        timezone: "UTC",
+      })
+      .returning();
+    if (!shop) throw new Error("setup: shop missing");
+    const startsAt = new Date(nowDate().getTime() + 24 * 60 * 60_000);
+    const [trip] = await pg.db
+      .insert(trips)
+      .values({
+        shopId: shop.id,
+        title: "Offered party departure",
+        startsAt,
+        endsAt: new Date(startsAt.getTime() + 4 * 60 * 60_000),
+        capacity: 4,
+      })
+      .returning();
+    if (!trip) throw new Error("setup: trip missing");
+    const [request] = await pg.db
+      .insert(interests)
+      .values({
+        shopId: shop.id,
+        scope: "date",
+        askedBy: "diver",
+        interest: "reef dive",
+        partySize: 2,
+        name: "Two divers",
+        email: `party-${suffix}@example.com`,
+      })
+      .returning();
+    if (!request) throw new Error("setup: request missing");
+    await pg.db.insert(interests).values({
+      shopId: shop.id,
+      scope: "departure",
+      askedBy: "diver",
+      tripId: trip.id,
+      parentInterestId: request.id,
+      partySize: 2,
+      offeredAt: nowDate(),
+    });
+
+    const first = await createBooking(pg.db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: trip.id,
+      fullName: "First party member",
+      email: `first-${suffix}@example.com`,
+      dateRequestInterestId: request.id,
+    });
+    expect(first.ok).toBe(true);
+    if (!first.ok) throw new Error(`first party seat refused: ${first.reason}`);
+    expect(first.dateRequestPartyComplete).toBe(false);
+    const [openRequest] = await pg.db
+      .select({ closedAt: interests.closedAt, closedAs: interests.closedAs })
+      .from(interests)
+      .where(eq(interests.id, request.id));
+    expect(openRequest).toEqual({ closedAt: null, closedAs: null });
+
+    const second = await createBooking(pg.db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: trip.id,
+      fullName: "Second party member",
+      email: `second-${suffix}@example.com`,
+      dateRequestInterestId: request.id,
+    });
+    expect(second.ok).toBe(true);
+    if (!second.ok) throw new Error(`second party seat refused: ${second.reason}`);
+    expect(second.dateRequestPartyComplete).toBe(true);
+    const [closedRequest] = await pg.db
+      .select({ closedAt: interests.closedAt, closedAs: interests.closedAs })
+      .from(interests)
+      .where(eq(interests.id, request.id));
+    expect(closedRequest?.closedAt).toBeInstanceOf(Date);
+    expect(closedRequest?.closedAs).toBe("booked");
+
+    const overflow = await createBooking(pg.db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: trip.id,
+      fullName: "Third party member",
+      email: `third-${suffix}@example.com`,
+      dateRequestInterestId: request.id,
+    });
+    expect(overflow).toEqual({ ok: false, reason: "date_request_party_full" });
+    const links = await pg.db
+      .select({ bookingId: dateRequestOfferBookings.bookingId })
+      .from(dateRequestOfferBookings)
+      .where(eq(dateRequestOfferBookings.shopId, shop.id));
+    expect(links).toHaveLength(2);
+  });
+
   it("allows a released party to book elsewhere and checks reactivation against the active party", async () => {
     const pg = await postgresTestDb();
     const suffix = randomBytes(4).toString("hex");
