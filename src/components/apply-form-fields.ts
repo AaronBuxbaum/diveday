@@ -1,4 +1,4 @@
-import { isDraftableField } from "@/lib/form-drafts";
+import { type DraftFieldPolicy, isDraftableField } from "@/lib/form-drafts";
 
 /**
  * Put values into a form's own controls the way a keystroke would.
@@ -12,10 +12,14 @@ import { isDraftableField } from "@/lib/form-drafts";
  *
  * Returns true when at least one control took a value.
  */
-export function applyFormFields(form: HTMLFormElement, fields: Record<string, string>): boolean {
+export function applyFormFields(
+  form: HTMLFormElement,
+  fields: Record<string, string>,
+  policy?: DraftFieldPolicy,
+): boolean {
   let applied = false;
   for (const [name, value] of Object.entries(fields)) {
-    if (!isDraftableField(name)) continue;
+    if (!isDraftableField(name, policy)) continue;
     const selector = name.replace(/["\\]/g, "\\$&");
     const controls = [
       ...form.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(

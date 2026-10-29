@@ -59,11 +59,21 @@ export const FORM_DRAFT_FIELDS_MAX = 80;
 const NEVER_DRAFTED =
   /card|cvc|cvv|expir|iban|routing|account[_-]?number|medical|questionnaire|password|token|secret|otp/i;
 
+/** The only sensitive-looking fields that may be kept, for the boat editor only. */
+export type DraftFieldPolicy = "boat-paper-dates";
+const BOAT_PAPER_DATE_FIELDS = new Set([
+  "coiExpiresOn",
+  "registrationExpiresOn",
+  "insuranceExpiresOn",
+]);
+
 /** The names a form uses for its own machinery rather than its content. */
 const MACHINERY = /^(holdKind|surface|csrf|_)/;
 
-export function isDraftableField(name: string): boolean {
-  return name.length > 0 && !NEVER_DRAFTED.test(name) && !MACHINERY.test(name);
+export function isDraftableField(name: string, policy?: DraftFieldPolicy): boolean {
+  if (name.length === 0 || MACHINERY.test(name)) return false;
+  if (!NEVER_DRAFTED.test(name)) return true;
+  return policy === "boat-paper-dates" && BOAT_PAPER_DATE_FIELDS.has(name);
 }
 
 export type DraftFields = Record<string, string>;
@@ -74,11 +84,14 @@ export type DraftFields = Record<string, string>;
  * value under one name, space-joined — the shape `applyFormFields` splits on
  * the way back in, which is why a group's values are ids and never prose.
  */
-export function draftableFields(entries: Iterable<[string, string]>): DraftFields {
+export function draftableFields(
+  entries: Iterable<[string, string]>,
+  policy?: DraftFieldPolicy,
+): DraftFields {
   const out: DraftFields = {};
   let count = 0;
   for (const [name, value] of entries) {
-    if (!isDraftableField(name)) continue;
+    if (!isDraftableField(name, policy)) continue;
     if (value.length > FORM_DRAFT_FIELD_MAX) continue;
     if (name in out) {
       out[name] = `${out[name]} ${value}`;

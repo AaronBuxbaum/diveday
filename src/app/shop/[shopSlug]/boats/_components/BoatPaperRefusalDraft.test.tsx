@@ -1,11 +1,10 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { keptTypedKey } from "@/components/kept-typed-scope";
+import { KeepTypedOnRefusal, keptTypedKey } from "@/components/KeepTypedOnRefusal";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { MINUTE_MS, nowMs } from "@/lib/clock";
 import { BoatPaperFields } from "./BoatPaperFields";
-import { KeepBoatTypedOnRefusal } from "./KeepBoatTypedOnRefusal";
 
 const SCOPE = "blue-mantis.p-desk";
 const STORAGE_KEY = keptTypedKey("boats-add", SCOPE);
@@ -42,7 +41,12 @@ function BoatForm({ restore, scope = SCOPE }: { restore: boolean; scope?: string
       <input name="cardExpiresOn" />
       <input name="medicalAnswers" />
       <input name="secretToken" />
-      <KeepBoatTypedOnRefusal scope={scope} restore={restore} />
+      <KeepTypedOnRefusal
+        form="boats-add"
+        scope={scope}
+        restore={restore}
+        policy="boat-paper-dates"
+      />
     </form>
   );
 }
@@ -72,7 +76,25 @@ function expectValues(container: HTMLElement, values: Record<string, string>) {
   }
 }
 
-describe("KeepBoatTypedOnRefusal", () => {
+describe("boat paper date refusal drafts", () => {
+  it("does not apply the boat policy under another form key", () => {
+    const { container } = render(
+      <form>
+        <input name="coiExpiresOn" defaultValue="2027-01-01" />
+        <KeepTypedOnRefusal
+          form="unrelated-form"
+          scope={SCOPE}
+          restore={false}
+          policy="boat-paper-dates"
+        />
+      </form>,
+    );
+    submitAndReset(container);
+    const stored = window.sessionStorage.getItem(keptTypedKey("unrelated-form", SCOPE));
+    expect(stored).not.toContain("coiExpiresOn");
+    expect(stored).not.toContain("2027-01-01");
+  });
+
   it("restores all three paper expiry dates with the inspection and boat facts", () => {
     const { container, rerender } = render(<BoatForm restore={false} />);
     fill(container, DRAFT);
@@ -112,7 +134,7 @@ describe("KeepBoatTypedOnRefusal", () => {
     expectValues(container, corrected);
   });
 
-  it("still excludes payment details, medical answers and secrets from storage and restore", () => {
+  it("keeps the exact boat dates while excluding payment details, medical answers and secrets", () => {
     const { container, rerender } = render(<BoatForm restore={false} />);
     fill(container, DRAFT);
     const sensitive = {
@@ -129,9 +151,8 @@ describe("KeepBoatTypedOnRefusal", () => {
       expect(stored).not.toContain(name);
       expect(stored).not.toContain(value);
     }
-    for (const name of ["coiExpiresOn", "registrationExpiresOn", "insuranceExpiresOn"]) {
-      expect(stored).not.toContain(`"${name}"`);
-    }
+    for (const name of ["coiExpiresOn", "registrationExpiresOn", "insuranceExpiresOn"])
+      expect(stored).toContain(`"${name}"`);
     rerender(<BoatForm restore />);
     expectValues(container, DRAFT);
     for (const name of Object.keys(sensitive)) expect(field(container, name).value).toBe("");
@@ -161,7 +182,7 @@ describe("KeepBoatTypedOnRefusal", () => {
     expect(field(expired.container, "insuranceExpiresOn").value).toBe("");
   });
 
-  it("forgets the date aliases with the other boat fields after a refusal is resolved", () => {
+  it("forgets the boat dates with the other fields after a refusal is resolved", () => {
     const { container, rerender } = render(<BoatForm restore={false} />);
     fill(container, DRAFT);
     submitAndReset(container);

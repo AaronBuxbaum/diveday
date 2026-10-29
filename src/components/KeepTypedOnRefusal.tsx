@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { MINUTE_MS, nowMs } from "@/lib/clock";
-import { draftableFields } from "@/lib/form-drafts";
+import { type DraftFieldPolicy, draftableFields } from "@/lib/form-drafts";
 import { applyFormFields } from "./apply-form-fields";
 import { KEPT_PREFIX, keptTypedKey } from "./kept-typed-scope";
 
@@ -82,14 +82,18 @@ export function KeepTypedOnRefusal({
   form,
   scope,
   restore,
+  policy,
 }: {
   form: string;
   /** {@link keptTypedScope}: the shop and the staffer. */
   scope: string;
   restore: boolean;
+  /** A fixed, narrowly scoped exception to the shared sensitive-name filter. */
+  policy?: DraftFieldPolicy;
 }) {
   const anchor = useRef<HTMLSpanElement>(null);
   const restoreRef = useRef(restore);
+  const effectivePolicy = form === "boats-add" ? policy : undefined;
   restoreRef.current = restore;
 
   useEffect(() => {
@@ -100,8 +104,8 @@ export function KeepTypedOnRefusal({
       return;
     }
     const kept = readKept(form, scope);
-    if (kept) applyFormFields(element, kept);
-  }, [form, scope, restore]);
+    if (kept) applyFormFields(element, kept, effectivePolicy);
+  }, [form, scope, restore, effectivePolicy]);
 
   useEffect(() => {
     const element = anchor.current?.closest("form");
@@ -111,6 +115,7 @@ export function KeepTypedOnRefusal({
         [...new FormData(element).entries()].filter(
           (entry): entry is [string, string] => typeof entry[1] === "string",
         ),
+        effectivePolicy,
       );
       try {
         window.sessionStorage.setItem(
@@ -127,7 +132,7 @@ export function KeepTypedOnRefusal({
       frame = requestAnimationFrame(() => {
         if (!restoreRef.current) return;
         const kept = readKept(form, scope);
-        if (kept) applyFormFields(element, kept);
+        if (kept) applyFormFields(element, kept, effectivePolicy);
       });
     };
     element.addEventListener("submit", onSubmit);
@@ -137,7 +142,7 @@ export function KeepTypedOnRefusal({
       element.removeEventListener("submit", onSubmit);
       element.removeEventListener("reset", onReset);
     };
-  }, [form, scope]);
+  }, [form, scope, effectivePolicy]);
 
   return <span ref={anchor} hidden />;
 }
