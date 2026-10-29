@@ -33,6 +33,7 @@ export function useSelectedTripEnvelopeHandler({
   reconcile: () => Promise<void>;
 }) {
   const observedTripShopRef = useRef<ObservedTripShop>(null);
+  const statusInitializedForTripRef = useRef<string | null>(null);
   return useCallback(
     (saved: OfflineManifestEnvelope | null) => {
       observeTripShopChange(
@@ -51,7 +52,14 @@ export function useSelectedTripEnvelopeHandler({
       }
       const noteMessage = tripNoticeForEnvelope(saved);
       if (!tripPurgedRef.current) {
-        setMessage(initialTripStatusMessage(noteMessage, Boolean(saved), t));
+        // A cold read may find nothing, then a cross-tab invalidation may find
+        // a saved copy. Establish its starting status when that copy first
+        // appears. Later invalidations can be caused by this tab's own recorder;
+        // replacing the explicit save confirmation would hide a successful tap.
+        if (statusInitializedForTripRef.current !== tripId) {
+          setMessage(initialTripStatusMessage(noteMessage, Boolean(saved), t));
+          if (saved) statusInitializedForTripRef.current = tripId;
+        }
       }
       if (saved && navigator.onLine && !tripPurgedRef.current) void reconcile();
     },
