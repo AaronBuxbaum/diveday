@@ -2052,6 +2052,67 @@ async function courseGateRefusal(
   return null;
 }
 
+async function moveAdmissionRefusal(
+  tx: DbExecutor,
+  shopId: string,
+  target: typeof trips.$inferSelect,
+  booking: typeof bookings.$inferSelect,
+): Promise<Extract<MoveBookingOutcome, { ok: false }> | null> {
+  // Capacity, participant type, course ratio, and admission are checked under
+  // the target lock, matching the staff-seat path.
+  // Both limits and the course ratio, read under the target's lock, exactly
+  // as `createBookingRecord` reads them for a new seat.
+  const held = await heldSeatCounts(tx, target.shopId, target.id);
+  const full = seatRefusal(
+    booking.participantType,
+    { ...target, capacity: await sellableCapacity(tx, target) },
+    held,
+  );
+  if (full) return { ok: false, reason: full };
+  // A snorkeler or a rider moves only to a session that prices their seat,
+  // and is asked none of the course's student gates (issue #2226).
+  const typeRefusal = participantTypeRefusal({
+    actor: "staff",
+    participantType: booking.participantType,
+    trip: target,
+  });
+  if (typeRefusal) return { ok: false, reason: "target_unavailable" };
+  if (target.courseId && isDiver(booking.participantType)) {
+    const [course] = await tx
+      .select()
+      .from(courses)
+      .where(and(eq(courses.id, target.courseId), eq(courses.shopId, shopId)))
+      .limit(1);
+    const { instructorCount, assistantCount } = await tripCourseCrewCounts(tx, target.id);
+    if (instructorCount === 0) return { ok: false, reason: "course_unstaffed" };
+    const seatCap = courseSeatCapacity(course ?? null, instructorCount, assistantCount);
+    if (seatCap !== null && held.divers >= seatCap) {
+      return { ok: false, reason: "course_ratio_full" };
+    }
+    // The course's own two gates, read again rather than trusted from the
+    // sale: a card can be revoked since, and age is measured on the day the
+    // session runs, so an earlier session of the same course can be one the
+    // student is still too young for (H-08).
+    const gate = await courseGateRefusal(tx, shopId, booking.personId, course, target.startsAt);
+    if (gate) return { ok: false, reason: gate };
+  }
+  const identityUnconfirmed = booking.identityUnconfirmedAt !== null;
+  const admission = await tripAdmissionFor(
+    tx,
+    shopId,
+    target.id,
+    { id: booking.personId },
+    identityUnconfirmed,
+    Boolean(target.courseId),
+    undefined,
+    booking.participantType,
+  );
+  if (!admission.admitted) {
+    return { ok: false, reason: "trip_prerequisite", refusal: admission.refusal };
+  }
+  return null;
+}
+
 export async function moveBooking(
   db: AppDb,
   input: {
@@ -2192,56 +2253,9 @@ export async function moveBooking(
       .limit(1);
     if (rolled) return { ok: false, reason: "roll_call_started" };
 
-    // Both limits and the course ratio, read under the target's lock, exactly
-    // as `createBookingRecord` reads them for a new seat.
-    const held = await heldSeatCounts(tx, target.shopId, target.id);
-    const full = seatRefusal(
-      booking.participantType,
-      { ...target, capacity: await sellableCapacity(tx, target) },
-      held,
-    );
-    if (full) return { ok: false, reason: full };
-    // A snorkeler or a rider moves only to a session that prices their seat,
-    // and is asked none of the course's student gates (issue #2226).
-    const typeRefusal = participantTypeRefusal({
-      actor: "staff",
-      participantType: booking.participantType,
-      trip: target,
-    });
-    if (typeRefusal) return { ok: false, reason: "target_unavailable" };
-    if (target.courseId && isDiver(booking.participantType)) {
-      const [course] = await tx
-        .select()
-        .from(courses)
-        .where(and(eq(courses.id, target.courseId), eq(courses.shopId, shopId)))
-        .limit(1);
-      const { instructorCount, assistantCount } = await tripCourseCrewCounts(tx, target.id);
-      if (instructorCount === 0) return { ok: false, reason: "course_unstaffed" };
-      const seatCap = courseSeatCapacity(course ?? null, instructorCount, assistantCount);
-      if (seatCap !== null && held.divers >= seatCap) {
-        return { ok: false, reason: "course_ratio_full" };
-      }
-      // The course's own two gates, read again rather than trusted from the
-      // sale: a card can be revoked since, and age is measured on the day the
-      // session runs, so an earlier session of the same course can be one the
-      // student is still too young for (H-08).
-      const gate = await courseGateRefusal(tx, shopId, booking.personId, course, target.startsAt);
-      if (gate) return { ok: false, reason: gate };
-    }
     const identityUnconfirmed = booking.identityUnconfirmedAt !== null;
-    const admission = await tripAdmissionFor(
-      tx,
-      shopId,
-      target.id,
-      { id: booking.personId },
-      identityUnconfirmed,
-      Boolean(target.courseId),
-      undefined,
-      booking.participantType,
-    );
-    if (!admission.admitted) {
-      return { ok: false, reason: "trip_prerequisite", refusal: admission.refusal };
-    }
+    const admissionRefusal = await moveAdmissionRefusal(tx, shopId, target, booking);
+    if (admissionRefusal) return admissionRefusal;
 
     // The units held for the old day's window are not the new day's. Units
     // already handed over stay with the diver, as on a cancel.

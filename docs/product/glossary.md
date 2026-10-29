@@ -193,6 +193,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Crew schedule
 - Crew warning
 - DAN
+- Date-request party bookings
 - Days at sea
 - Days away
 - Decompression card reminder

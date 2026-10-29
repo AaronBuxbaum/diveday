@@ -170,7 +170,7 @@
     "diverCourseMinAge": "Ese buceador está por debajo de la edad mínima de este curso el día que se imparte, según la fecha de nacimiento de su perfil. Corrige la fecha si es incorrecta.",
     "diverTripPrerequisite": "Las titulaciones registradas de ese buceador no alcanzan lo que exigen esta salida y sus sitios de buceo. Compara los requisitos de abajo con su ficha.",
     "diverUnavailable": "Esta salida no puede aceptar nuevos buceadores ahora mismo.",
-    "diverDateRequestConflict": "Esta solicitud de fecha ya tiene reservas en otra salida. Añade al resto del grupo a esa salida.",
+    "diverDateRequestConflict": "Esta solicitud de fecha ya tiene reservas en otra salida. Agrega al resto del grupo a esa salida.",
     "diverDateRequestUnavailable": "Esta solicitud de fecha no tiene una oferta para esta salida.",
     "diverDateRequestFull": "Todas las plazas solicitadas para esta fecha ya están reservadas en esta salida.",
     "bookingRestoreDateRequestConflict": "No se puede restaurar esta reserva mientras el grupo activo esté en otra salida.",

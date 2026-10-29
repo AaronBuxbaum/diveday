@@ -20,54 +20,23 @@ import { findSimilarDivers } from "@/db/divers";
 import { readFormDraft } from "@/db/form-drafts";
 import { staffParticipantTypeLabel } from "@/i18n/participant-labels";
 import { requestLocale } from "@/i18n/request";
-import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { maxPlausibleBirthDate } from "@/lib/age";
 import { noDiveDayNeedsSaying } from "@/lib/name-match-evidence";
 import { PARTICIPANT_TYPES } from "@/lib/participant-types";
 import { diverSearchPrefill } from "@/lib/person-fields";
 import { requireShopSurface } from "@/lib/session";
-import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
+import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { WALK_IN_FIRST_ROW, WALK_IN_PARTY_FORM, WALK_IN_PARTY_MAX } from "@/lib/walk-in-party";
 import { PartyOnFileChoices, type PartyOnFileRow } from "./_components/PartyOnFileChoices";
 import { WalkInPartyRows } from "./_components/WalkInPartyRows";
 import { type WalkInExtrasCopy, WalkInPersonExtras } from "./_components/WalkInPersonExtras";
 import { createDiverFormAction } from "./actions";
+import { NOTICES } from "./notice-keys";
 
 export const instant = true;
 
 export const metadata: Metadata = { title: "Add diver — DiveDay" };
-
-const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
-  duplicate: { tone: "danger", key: "divers.page.noticeDuplicate" },
-  invalid: { tone: "danger", key: "divers.page.noticeInvalid" },
-  "diver-full": { tone: "danger", key: "trips.notices.diverFull" },
-  "diver-divers-full": { tone: "danger", key: "participants.notices.diversFull" },
-  "diver-type-unavailable": { tone: "danger", key: "participants.notices.typeUnavailable" },
-  "diver-already": { tone: "danger", key: "trips.notices.diverAlready" },
-  "diver-course-unstaffed": { tone: "danger", key: "trips.notices.diverCourseUnstaffed" },
-  "diver-course-prerequisite": { tone: "danger", key: "trips.notices.diverCoursePrerequisite" },
-  "diver-course-ratio-full": { tone: "danger", key: "trips.notices.diverCourseRatioFull" },
-  "diver-course-min-age": { tone: "danger", key: "trips.notices.diverCourseMinAge" },
-  "diver-trip-prerequisite": { tone: "danger", key: "trips.notices.diverTripPrerequisite" },
-  "diver-unavailable": { tone: "danger", key: "trips.notices.diverUnavailable" },
-  "diver-date-request-conflict": {
-    tone: "danger",
-    key: "trips.notices.diverDateRequestConflict",
-  },
-  "diver-date-request-unavailable": {
-    tone: "danger",
-    key: "trips.notices.diverDateRequestUnavailable",
-  },
-  "diver-date-request-full": {
-    tone: "danger",
-    key: "trips.notices.diverDateRequestFull",
-  },
-  "diver-invalid": { tone: "danger", key: "divers.page.noticeInvalid" },
-  "seat-busy": { tone: "danger", key: "seatDiver.busy" },
-  // A walk-in party with names that read like somebody on file (fifth loop,
-  // item 9): each such row is settled on its own, below.
-  "party-on-file": { tone: "danger", key: "divers.page.partyOnFile" },
-};
 
 export default async function NewDiverPage({
   params,
