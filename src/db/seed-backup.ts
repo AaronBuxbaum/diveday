@@ -1,4 +1,5 @@
 import { DAY_MS, nowMs } from "@/lib/clock";
+import { isoWeekKeyUTC } from "@/lib/iso-week";
 import type { DbExecutor } from "./client";
 import { shopBackupDeliveries, shopBackupDestinations } from "./schema";
 import { at } from "./seed-clock";
@@ -31,18 +32,6 @@ export async function seedBackup(db: DbExecutor, shopId: string): Promise<void> 
     updatedAt: at(-45, 9),
   });
 
-  /** The ISO week key for an instant, matching src/features/backup-export/period.ts. */
-  const periodKey = (instant: Date): string => {
-    const date = new Date(
-      Date.UTC(instant.getUTCFullYear(), instant.getUTCMonth(), instant.getUTCDate()),
-    );
-    const isoDay = date.getUTCDay() || 7;
-    date.setUTCDate(date.getUTCDate() + 4 - isoDay);
-    const isoYear = date.getUTCFullYear();
-    const week = Math.ceil(((date.getTime() - Date.UTC(isoYear, 0, 1)) / DAY_MS + 1) / 7);
-    return `${isoYear}-W${String(week).padStart(2, "0")}`;
-  };
-
   // Six weekly runs, newest one yesterday. Week -3 failed — the bucket
   // refused the key that week — and the next run went back to green, which is
   // exactly the retry story the settings page documents.
@@ -53,10 +42,12 @@ export async function seedBackup(db: DbExecutor, shopId: string): Promise<void> 
     const failed = index === 2;
     return {
       shopId,
-      periodKey: periodKey(startedAt),
+      periodKey: isoWeekKeyUTC(startedAt),
       trigger: "scheduled",
       status: failed ? "failed" : "succeeded",
-      objectKey: failed ? null : `diveday/diveday-backup-blue-mantis-${periodKey(startedAt)}.zip`,
+      objectKey: failed
+        ? null
+        : `diveday/diveday-backup-blue-mantis-${isoWeekKeyUTC(startedAt)}.zip`,
       byteCount: failed ? null : bundleBytes[index],
       errorCode: failed ? "upload_unauthorized" : null,
       startedAt,
@@ -68,10 +59,10 @@ export async function seedBackup(db: DbExecutor, shopId: string): Promise<void> 
   const firstTest = new Date(nowMs() - 45 * DAY_MS + 30 * 60 * 1000);
   rows.unshift({
     shopId,
-    periodKey: periodKey(firstTest),
+    periodKey: isoWeekKeyUTC(firstTest),
     trigger: "manual",
     status: "succeeded",
-    objectKey: `diveday/diveday-backup-blue-mantis-${periodKey(firstTest)}.zip`,
+    objectKey: `diveday/diveday-backup-blue-mantis-${isoWeekKeyUTC(firstTest)}.zip`,
     byteCount: 44_902_113,
     errorCode: null,
     startedAt: firstTest,

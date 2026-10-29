@@ -1,4 +1,5 @@
 import { calendarDateInTimezone } from "@/lib/calendar-date";
+import { isoWeekKeyUTC } from "@/lib/iso-week";
 
 /**
  * The backup cadence's unit of idempotency: one ISO-8601 week, in UTC.
@@ -13,15 +14,7 @@ import { calendarDateInTimezone } from "@/lib/calendar-date";
 
 /** "2026-W32" for any instant inside that ISO week (UTC). */
 export function backupPeriodKey(now: Date): string {
-  const date = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-  // ISO weeks belong to the year of their Thursday: shift to this week's
-  // Thursday, then count weeks from that year's January 1st.
-  const isoDay = date.getUTCDay() || 7;
-  date.setUTCDate(date.getUTCDate() + 4 - isoDay);
-  const isoYear = date.getUTCFullYear();
-  const yearStart = Date.UTC(isoYear, 0, 1);
-  const week = Math.ceil(((date.getTime() - yearStart) / 86_400_000 + 1) / 7);
-  return `${isoYear}-W${String(week).padStart(2, "0")}`;
+  return isoWeekKeyUTC(now);
 }
 
 /** "2026-08-12" — the UTC calendar date, which is what a platform run is filed under. */
