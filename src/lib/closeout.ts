@@ -391,6 +391,11 @@ export type DayCloseoutState = {
   /** Today's departures, loudest first. */
   departures: CloseoutDeparture[];
   /**
+   * The demo's last completed dusk boat outside booth hours. Kept separate
+   * from `departures` so yesterday's counts never affect today's totals.
+   */
+  carryover?: StationClose;
+  /**
    * Tomorrow's tanks and rental pieces (`dayLoadOut`), read only once every
    * departure today has settled; absent or null otherwise (fifth-loop ideas,
    * item 2).
@@ -743,6 +748,8 @@ export type StationClose = {
 export type EveningClose = {
   /** Every departure of the shop day, clock order — settled or still out. */
   stations: StationClose[];
+  /** The demo's last finished dusk roll call, shown separately from this day's totals. */
+  carryover?: StationClose;
   /**
    * Whether the day has ended: at least one departure, and every one of them
    * settled. **The pin.** While one boat is out there are no takings and
@@ -829,6 +836,7 @@ export function assembleEveningClose(
   now: Date = nowDate(),
   /** `DayCloseoutState.tomorrow`; said once `loadOutDue`. */
   tomorrow: DayLoadOut | null = null,
+  carryover?: StationClose,
 ): EveningClose {
   const stations: StationClose[] = departures
     .map((departure) => {
@@ -901,6 +909,7 @@ export function assembleEveningClose(
     crew,
     allHome,
     tomorrow: loadOutDue(departures, now) ? tomorrow : null,
+    ...(carryover ? { carryover } : {}),
   };
 }
 

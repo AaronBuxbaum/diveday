@@ -546,9 +546,22 @@
   "go and book" only when that many diver seats are free, an invitation is sent only when that many
   seats are free, and an invitation out counts that many seats against the next. A person-less
   date-request offer stops counting after 48 hours; a resend starts that interval again (#2914).
-  This is advice about further offers, not a reservation: booking still checks capacity. A couple is never
+  Each live booking explicitly linked to that departure offer answers one seat of its party; any
+  unbooked seats still count. A canceled or no-show booking, or one moved off that departure, no
+  longer answers a seat. The staff move action does not link the moved booking to another offer;
+  the explicit seat-from-request flow is the path that records this association. Separate offers
+  for separate departures keep separate counts. This is
+  advice about further offers, not a reservation: booking still checks capacity. A couple is never
   split across dates. Staff read "Party of 2" on the row; the demand count adds parties, not rows
   (ADR 20260719-trip-waitlist, amended 2026-10-15).
+- **Date-request party bookings** — when staff seat someone from an offered date request, that
+  active booking pins the request to the offered departure. Every other active booking linked to
+  that request must use the same departure, even when other offers exist. Once every linked seat is
+  released, staff may explicitly book the request on another offer; historical associations stay
+  so restoring an old seat checks against the party's current departure. A solo seat can move when
+  that preserves the active party together; a one-seat move is refused while other active members
+  would remain behind. The booking form carries the request explicitly and never guesses group
+  membership from a diver's name or email (issue #3102).
 - **Wait-list roll** — the wait list following the divers rather than staying on a day that is gone or full. Nightly, beside the series roll, a series date that sailed hands every interest nobody invited to the next public date of the run that takes a seat (a date on a conditions hold or made private is passed over). The existing wait-list invite then goes out to that date's whole queue in the order people asked, while it has seats nobody has been invited to, measured as a sale would measure them (sellable seats, the divers-only limit, a course's instructor and ratio); a **wait-list party** is invited only when its whole party fits, and a smaller interest behind it may still be. The rolled invite says so in its own sentence ("Sat, Oct 17 has sailed. Sat, Oct 24 has room": a date can sail with a seat free), never as though the diver had asked for the new date. An interest staff already invited stays where they left it. From a full departure's demand banner, or under the wait list of a full departure with even one interest, "Carry the wait list" hands every interest to a departure staff choose (each offered with the seats it has left), with no message until staff invite. Entries are copied, keep the time the diver first asked and their party, skip anyone already seated there, and never rank anybody. `src/db/interest-roll.ts`.
 - **Last-minute list** — the diver-facing name of an `anytime` **interest**: a shop-wide (not per-trip) opt-in of divers who want to hear about
   last-minute deals, each with an optional date range they said they're around. Distinct from the
@@ -2110,6 +2123,16 @@
   an address. Never on a held seat; a held seat is never one of its rows and never counted in
   their numbers. Read in `src/db/your-days.ts`; see
   [20261016-fresh-link-per-booking-row](../../architecture/decisions/20261016-fresh-link-per-booking-row.md).
+- **Returning-diver device memory** — an optional, browser-local copy of the lead booker's name
+  and email used to prefill a later booking form at the same shop. It is off by default, scoped to
+  one shop on that device, clearable with "Not you?", and expires for use after 30 days. Each
+  memory read or write opportunistically removes expired entries for other shops, when storage is
+  available. If the browser is closed at expiry, those bytes may remain until a later memory read
+  or write; exact-time physical deletion is not guaranteed. Only the explicit
+  opt-in on a successful, identity-confirmed, non-embedded booking can authorize the write; the
+  server uses a one-use receipt bound to the browser redirect, not the emailed readiness link or
+  the editable `?booked=1` flag. It is best-effort after hydration and is not guaranteed if the
+  browser leaves first. See [20261028-returning-diver-device-memory](../../architecture/decisions/20261028-returning-diver-device-memory.md).
 - **Your week** — a crew member's next three departures, on their Today below the day: the boat
   and departure, when, their job on it (`trip_assignments.trip_role`, "On the crew" when the
   roster did not say), and the one crew gap the staffing week would draw on it, from the same pass
@@ -2147,7 +2170,7 @@
 - **Decompression card reminder** — one line per departure, on the staff roster, the roll call at the dock checkpoint, the printed packet and the offline copy, telling crew to check each diver's and guide's decompression card because DiveDay records no technical card ([H-144](../human-decisions/H-144-decompression-departure-reminds-crew-to-check-cards.md)). Shown when the departure is marked `exceeds_no_deco_limits` and someone aboard dives; never on a finished departure's record. It informs and never gates: `needsDecompressionCardReminder` in `src/lib/decompression-reminder.ts`, read by none of readiness, trip admission or the roll-call readiness.
 - **Seat** — the one word for what a diver buys and what a boat holds, said by staff and divers alike ([H-122](../human-decisions/H-122-seat-is-the-word.md)): "3 seats left", "Book 2 seats", "Cancel my seat". Never "spot" for capacity. `scripts/check-seat-word.mjs` reads the staff bundles and `diver.json` both; its allowlist keeps words that are not the thing bought (a marine-life "spot", "on the spot").
 - **Ask to move** — a diver's request, from their own `/ready`, that the shop move their seat to another date ([H-126](../human-decisions/H-126-ask-to-move.md)). Offered on a paid seat the diver may still release where cancelling would return nothing right away: past the free-cancellation window, or on a trip with none. It is a request, not a move: it files one Inbox row per booking and departure on the `page` channel, naming the booking (`inbound_messages.booking_id`, `recordMoveAsk` in `src/db/inbound-messages.ts`), and the page then says it was asked while that row stands. Staff decide, and a move is a **seat move**, which answers the ask; one staff answered or deleted no longer stands, and asking again files it anew.
-- **Reply notes** — what AI should know when it drafts a reply to a diver, in the shop's own words: where to park, which wetsuits it rents, what to bring. One box under the AI switch in Settings → Features ("Notes for AI"), drawn only while the shop's AI suggestions are lit, and an owner or manager changes it with the page’s one Save (Aaron, 2026-10-23; it began at the foot of the Inbox); and the `inbox-draft` assist reads it beside the schedule, prices and desk hours, so a time or price written there is one a draft may quote. Never a diver's details. Replaced saved answers and their `{name}`/`{trip}` markers (Aaron, 2026-10-22); the retired `inbox_saved_answers` table is dropped in a later release. Column `shops.reply_notes`, read by `replyFacts` (`src/db/inbox-assists.ts`).
+- **Reply notes** — what AI should know when it drafts a reply to a diver, in the shop's own words: where to park, which wetsuits it rents, what to bring. One box under the AI switch in Settings → Features ("Notes for AI"), drawn only while the shop's AI suggestions are lit, and an owner or manager changes it with the page’s one Save (Aaron, 2026-10-23; it began at the foot of the Inbox); and the `inbox-draft` assist reads it beside the schedule, prices and desk hours, so a time or price written there is one a draft may quote. Never a diver's details. Column `shops.reply_notes`, read by `replyFacts` (`src/db/inbox-assists.ts`).
 - **Weather day** — on Reports, a shop-local day with at least one departure the weather called
   off and that stayed called off (`weatherCallsInWindow`, `src/db/blowouts.ts`; fifth loop, item
   27). A departure reinstated after the call and sailed is not counted (dive-domain review F2). One

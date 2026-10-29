@@ -428,8 +428,10 @@ test("a full boat lets a diver join the wait list without taking a seat", async 
 
   // The waitlist form is controlled, so wait for hydration before typing.
   await expect(page.getByLabel("People", { exact: true })).toHaveAttribute("data-hydrated", "true");
-  await page.getByLabel("Name").fill("Nora Quinn");
-  await page.getByLabel("Email").fill(`waitlist-${e2eNow().getTime()}@example.com`);
+  await page.getByRole("textbox", { name: "Name" }).fill("Nora Quinn");
+  await page
+    .getByRole("textbox", { name: "Email" })
+    .fill(`waitlist-${e2eNow().getTime()}@example.com`);
   await page.getByRole("button", { name: "Join the wait list" }).click();
   await expect(page.getByRole("heading", { name: /You’re on the wait list, Nora/ })).toBeVisible();
   // A wait list is a set of leads the shop works, not a queue a diver holds a
@@ -579,8 +581,10 @@ test("a tampered readiness token reveals nothing, and ?booking= no longer opens 
     .click();
   // The booking form is controlled, so wait for hydration before typing.
   await expect(page.getByLabel("People", { exact: true })).toHaveAttribute("data-hydrated", "true");
-  await page.getByLabel("Name").fill("Casey Ford");
-  await page.getByLabel("Email").fill(`casey-${e2eNow().getTime()}@example.com`);
+  await page.getByRole("textbox", { name: "Name" }).fill("Casey Ford");
+  await page
+    .getByRole("textbox", { name: "Email" })
+    .fill(`casey-${e2eNow().getTime()}@example.com`);
   const tripUrl = page.url();
   await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
   await expect(page).toHaveURL(/\/ready\//);

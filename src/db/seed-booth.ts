@@ -690,7 +690,7 @@ async function seedShopCertified(
       ...window,
       capacity: 4,
       plannedDives: SHOP_CERTIFIED_DIVES.length,
-      priceCents: course.priceCents,
+      priceCents: null,
       boatId: hull.id,
       ...(await siteAndLens(db, shopId, SHOP_CERTIFIED_DIVES[0]?.site ?? "", "Learning")),
       createdAt: at(-back - 40, 10, 0),

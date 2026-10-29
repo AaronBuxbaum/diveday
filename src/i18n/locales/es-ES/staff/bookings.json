@@ -19,6 +19,7 @@
     "addPersonAriaLabel": "Agregar a {name} a esta salida",
     "handEntryDescription": "El correo es opcional. Con el nombre basta para guardar la plaza y el resto puede llegar después.",
     "fromRequest": "Reserva desde una petición",
+    "partySeatAdded": "Una plaza solicitada ya está reservada. Agrega al resto del grupo a esta salida.",
     "viewRequests": "Ver todas las peticiones",
     "relevantRequests": "Peticiones relevantes",
     "bookFromRequest": "Reservar desde esta petición",

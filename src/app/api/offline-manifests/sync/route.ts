@@ -4,6 +4,7 @@ import { checkInBooking, undoCheckInBooking } from "@/db/check-in";
 import { getDb } from "@/db/client";
 import { recordCrewRollCall, recordRollCall } from "@/db/manifests";
 import { recordPreDepartureCheck } from "@/db/pre-departure-check";
+import { offlineSyncTripsBelongToShop } from "@/db/trips";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
 import { ROLL_CALL_NOTE_MAX, type RollCallCheckpoint } from "@/lib/manifests";
@@ -29,6 +30,7 @@ const eventSchema = z
     clientEventId: z.string().uuid(),
     snapshotId: z.string().uuid(),
     snapshotSavedAt: z.iso.datetime(),
+    erasureEpochToken: z.string().max(128).optional(),
     bookingId: z.string().uuid().optional(),
     crewPersonId: z.string().uuid().optional(),
     tripId: z.string().uuid(),
@@ -110,6 +112,7 @@ const checklistEventSchema = z.object({
   clientEventId: z.string().uuid(),
   snapshotId: z.string().uuid(),
   snapshotSavedAt: z.iso.datetime(),
+  erasureEpochToken: z.string().max(128).optional(),
   tripId: z.string().uuid(),
   checklistItemId: z.string().uuid(),
   status: z.enum(["checked", "cleared"]),
@@ -143,6 +146,8 @@ const arrivalEventSchema = z.object({
 
 const bodySchema = z
   .object({
+    /** Optimistic tenant fence; session/shop ownership checks below remain authoritative. */
+    expectedShopSlug: z.string().min(1).max(64).optional(),
     events: z.array(eventSchema).max(200),
     checklistEvents: z.array(checklistEventSchema).max(200).optional(),
     arrivalEvents: z.array(arrivalEventSchema).max(200).optional(),
@@ -218,6 +223,28 @@ export async function POST(request: Request) {
   const parsed = bodySchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return Response.json({ error: "invalid_events" }, { status: 400 });
 
+  // A tab or service worker can start syncing while shop A is verified, then
+  // complete its request after the browser signs into shop B. Refuse the
+  // entire batch before any writer runs: per-event `rejected` results settle
+  // device events and can make the next cross-shop purge delete A's only local
+  // evidence. The slug is only a change detector; the authenticated session
+  // and trip ownership query below are the authority.
+  if (parsed.data.expectedShopSlug && parsed.data.expectedShopSlug !== session.user.shopSlug) {
+    return Response.json({ error: "shop_changed" }, { status: 409 });
+  }
+  const tripIds = [
+    ...new Set([
+      ...parsed.data.events.map((event) => event.tripId),
+      ...(parsed.data.checklistEvents ?? []).map((event) => event.tripId),
+      ...(parsed.data.arrivalEvents ?? []).map((event) => event.tripId),
+    ]),
+  ];
+  if (!(await offlineSyncTripsBelongToShop(db, session.user.shopId, tripIds))) {
+    // Unknown and foreign trip ids receive the same response; neither reveals
+    // whether another shop owns the id, and neither settles queued evidence.
+    return Response.json({ error: "events_unavailable" }, { status: 404 });
+  }
+
   // Oldest first, and `sort` is stable — so two events sharing one `occurredAt`
   // keep the order the device queued them in and the later tap is applied last,
   // taking the later `created_at` that `desc(occurredAt), desc(createdAt)` reads
@@ -244,6 +271,8 @@ export async function POST(request: Request) {
       checkpoint: event.checkpoint as RollCallCheckpoint,
       source: "offline" as const,
       clientEventId: event.clientEventId,
+      offlineSnapshotId: event.snapshotId,
+      offlineErasureEpochToken: event.erasureEpochToken,
       retractsClientEventId: event.retractsClientEventId,
       note: event.note,
       offlineSnapshotSavedAt: new Date(event.snapshotSavedAt),
@@ -264,6 +293,9 @@ export async function POST(request: Request) {
       clientEventId: event.clientEventId,
       status: outcome.ok ? (outcome.duplicate ? "duplicate" : "applied") : "rejected",
       ...(!outcome.ok ? { reason: outcome.reason } : {}),
+      ...("noteDisposition" in outcome && outcome.noteDisposition
+        ? { noteDisposition: outcome.noteDisposition }
+        : {}),
     });
   }
 
@@ -284,6 +316,8 @@ export async function POST(request: Request) {
       clientEventId: event.clientEventId,
       retractsClientEventId: event.retractsClientEventId,
       offlineSnapshotSavedAt: new Date(event.snapshotSavedAt),
+      offlineSnapshotId: event.snapshotId,
+      offlineErasureEpochToken: event.erasureEpochToken,
       occurredAt: new Date(event.occurredAt),
       note: event.note ?? undefined,
     });
@@ -291,6 +325,9 @@ export async function POST(request: Request) {
       clientEventId: event.clientEventId,
       status: outcome.ok ? (outcome.duplicate ? "duplicate" : "applied") : "rejected",
       ...(!outcome.ok ? { reason: outcome.reason } : {}),
+      ...("noteDisposition" in outcome && outcome.noteDisposition
+        ? { noteDisposition: outcome.noteDisposition }
+        : {}),
     });
   }
   // The counter's own array, applied last and by the same ordering discipline:

@@ -1616,12 +1616,18 @@ export async function waitForHashLanding(page: Page) {
  */
 export async function withTransitionsOff<T>(page: Page, shoot: () => Promise<T>): Promise<T> {
   const style = await page.addStyleTag({ content: CAPTURE_TRANSITIONS_OFF });
+  let captureCompleted = false;
   try {
-    return await shoot();
+    const result = await shoot();
+    captureCompleted = true;
+    return result;
   } finally {
-    // The page may already be navigating or closed if `shoot` threw; losing the
-    // cleanup then is harmless, and must not mask the original failure.
-    await style.evaluate((node) => node.parentNode?.removeChild(node)).catch(() => undefined);
+    // A failed capture ends its test, and its page is about to be torn down.
+    // Calling back into that page can hang when the renderer is the failure;
+    // in that case the test timeout would hide the useful capture error.
+    if (captureCompleted) {
+      await style.evaluate((node) => node.parentNode?.removeChild(node)).catch(() => undefined);
+    }
   }
 }
 

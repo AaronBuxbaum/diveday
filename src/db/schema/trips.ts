@@ -659,6 +659,9 @@ export const trips = pgTable(
     createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
+    // Composite tenant key for rows that must prove both trip identity and
+    // shop ownership in the database (offline manifest revision counters).
+    uniqueIndex("trips_shop_id_id_unique").on(table.shopId, table.id),
     index("trips_shop_starts_idx").on(table.shopId, table.startsAt),
     // A rehearsal is private as well as flagged, so every public listing that
     // already leaves private departures out leaves it out too, by construction.

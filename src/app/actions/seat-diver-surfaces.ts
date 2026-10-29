@@ -180,6 +180,9 @@ const TRIP_REFUSAL_NOTICE: Record<SeatDiverRefusal, string> = {
   // sites demand, and the staffer's next move is a different one (DOM-M6).
   trip_prerequisite: "diver-trip-prerequisite",
   trip_unavailable: "diver-unavailable",
+  date_request_offer_unavailable: "diver-date-request-unavailable",
+  date_request_departure_conflict: "diver-date-request-conflict",
+  date_request_party_full: "diver-date-request-full",
   person_not_found: "diver-unavailable",
   unavailable: "diver-unavailable",
 };
@@ -251,6 +254,9 @@ export const SEAT_SURFACES: Record<SeatSurfaceId, SeatSurface> = {
       course_min_age: "course-min-age",
       trip_prerequisite: "trip-prerequisite",
       trip_unavailable: "trip-unavailable",
+      date_request_offer_unavailable: "trip-unavailable",
+      date_request_departure_conflict: "trip-unavailable",
+      date_request_party_full: "trip-unavailable",
       person_not_found: "booking-invalid",
       unavailable: "trip-unavailable",
     },

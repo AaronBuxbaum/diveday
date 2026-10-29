@@ -105,6 +105,34 @@ export async function recentlyInvitedPeople(
   return new Set(rows.flatMap((row) => (row.personId ? [row.personId] : [])));
 }
 
+/** Latest recent shop invitation for each person shown in the manual picker. */
+export async function recentInviteDates(
+  db: DbExecutor,
+  shopId: string,
+  personIds: readonly string[],
+  now: Date,
+): Promise<Map<string, Date>> {
+  if (personIds.length === 0) return new Map();
+  const latest =
+    sql<Date>`max(greatest(${interests.askedAt}, ${interests.offeredAt}, ${interests.emailedAt}))`.mapWith(
+      interests.askedAt,
+    );
+  const rows = await db
+    .select({ personId: interests.personId, invitedAt: latest })
+    .from(interests)
+    .where(
+      and(
+        eq(interests.shopId, shopId),
+        inArray(interests.personId, [...personIds]),
+        invitedSince(inviteCooldownStart(now)),
+      ),
+    )
+    .groupBy(interests.personId);
+  return new Map(
+    rows.flatMap((row) => (row.personId ? [[row.personId, row.invitedAt] as const] : [])),
+  );
+}
+
 /** Whether `personId` was contacted with an invite since the cooldown began. */
 export async function invitedWithinCooldown(
   db: DbExecutor,

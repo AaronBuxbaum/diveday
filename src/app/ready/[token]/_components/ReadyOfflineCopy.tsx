@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { buttonClass } from "@/components/ui/button";
+import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
 import {
   forgetReadyPageCopy,
   keepReadyPageOnDevice,
@@ -44,6 +45,10 @@ export function ReadyOfflineCopy({
     remove: string;
     removed: string;
     removeFailed: string;
+    clockRollbackHeading: string;
+    clockRollbackSaved: string;
+    clockRollbackUnknown: string;
+    clockUnverified: string;
   };
   keepUntil: number;
   locale: string;
@@ -93,6 +98,20 @@ export function ReadyOfflineCopy({
       >
         {copy.offlineNote}
       </p>
+      <section data-ready-clock-rollback="" hidden className="mx-auto max-w-xl px-6 py-12">
+        <h1 className={SHELL_TITLE_CLASS}>{copy.clockRollbackHeading}</h1>
+        <p data-ready-clock-rollback-saved="" hidden className="mt-3 text-base text-muted">
+          {copy.clockRollbackSaved}
+        </p>
+        <p data-ready-clock-rollback-unknown="" hidden className="mt-3 text-base text-muted">
+          {copy.clockRollbackUnknown}
+        </p>
+      </section>
+      <section data-ready-clock-unverified="" hidden className="mx-auto max-w-xl px-6 py-12">
+        <p data-ready-clock-unverified-copy="" hidden className="text-base text-muted">
+          {copy.clockUnverified}
+        </p>
+      </section>
       {/* Offline, the note above already says this is the saved copy. */}
       {saved === "kept" && !offline ? (
         <p className="mt-2 text-sm text-muted">

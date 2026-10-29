@@ -97,6 +97,8 @@ export type SeatDiverPerson =
 export type SeatDiverInput = {
   shopId: string;
   tripId: string;
+  /** Explicit date request answered by this seat, never inferred by identity. */
+  dateRequestInterestId?: string;
   /** The staff member doing it — attributed on the activity trail. */
   actorPersonId: string;
   diver: SeatDiverPerson;
@@ -159,6 +161,8 @@ export type SeatDiverResult =
       personName: string;
       waiver: SeatDiverWaiver;
       confirmation: SeatDiverConfirmation;
+      /** Whether all active seats in the date-request offer are linked. */
+      dateRequestPartyComplete?: boolean;
       /**
        * The release link to hand over when `waiver` is `not_delivered` — the
        * bearer path the crew can open on their own phone for the person in
@@ -224,7 +228,11 @@ function collapse(reason: BookingRefusalReason, detail: SeatDiverRefusalDetail):
   if (detail === "specific") return reason;
   return reason === "trip_full" || reason === "divers_full" || reason === "already_booked"
     ? reason
-    : "unavailable";
+    : reason === "date_request_offer_unavailable" ||
+        reason === "date_request_departure_conflict" ||
+        reason === "date_request_party_full"
+      ? reason
+      : "unavailable";
 }
 
 /**
@@ -259,6 +267,7 @@ export async function seatDiver(db: AppDb, input: SeatDiverInput): Promise<SeatD
     actor: "staff",
     shopId: input.shopId,
     tripId: input.tripId,
+    dateRequestInterestId: input.dateRequestInterestId,
     participantType: input.participantType ?? "diver",
     ...input.diver,
   });
@@ -379,6 +388,7 @@ type SeatedBooking = {
   personId: string;
   personName: string;
   identityUnconfirmed: boolean;
+  dateRequestPartyComplete?: boolean;
 };
 
 /**
@@ -515,6 +525,7 @@ async function seatConsequences(
     waiverPath,
     confirmation,
     identityUnconfirmed: outcome.identityUnconfirmed,
+    dateRequestPartyComplete: outcome.dateRequestPartyComplete,
   };
 }
 
