@@ -31,6 +31,21 @@ const KEY_ID = "manifest-aes-gcm-v1";
 const TENANT_ROUND_KEY = "tenant-verification-round-v1";
 const MANIFEST_CHANGE_EVENT = "diveday-offline-manifest-change";
 const MANIFEST_CHANGE_CHANNEL = "diveday-offline-manifest-changes-v1";
+const MANIFEST_SOURCE_ID =
+  globalThis.crypto?.randomUUID?.() ?? `manifest-${Math.random().toString(36).slice(2)}`;
+
+export type OfflineManifestChangeReason =
+  | "snapshot"
+  | "record"
+  | "sync"
+  | "medical-alerts"
+  | "delete"
+  | "unknown";
+
+export type OfflineManifestChangeSource = {
+  origin: "same-document" | "same-context-broadcast" | "other-context-broadcast";
+  reason: OfflineManifestChangeReason;
+};
 
 type ManifestBrowserWindow = {
   dispatchEvent: (event: Event) => boolean;
@@ -44,8 +59,29 @@ function manifestBrowserWindow(): ManifestBrowserWindow | undefined {
 
 export type OfflineManifestChangeListener = (
   tripId: string,
-  source: "same-document" | "broadcast",
+  source: OfflineManifestChangeSource,
 ) => void;
+
+function manifestChangeReason(value: unknown): OfflineManifestChangeReason {
+  if (typeof value !== "object" || value === null || !("reason" in value)) return "unknown";
+  const reason = (value as { reason?: unknown }).reason;
+  return reason === "snapshot" ||
+    reason === "record" ||
+    reason === "sync" ||
+    reason === "medical-alerts" ||
+    reason === "delete"
+    ? reason
+    : "unknown";
+}
+
+function manifestChangeOrigin(value: unknown): OfflineManifestChangeSource["origin"] {
+  if (typeof value !== "object" || value === null || !("sourceId" in value)) {
+    return "other-context-broadcast";
+  }
+  return (value as { sourceId?: unknown }).sourceId === MANIFEST_SOURCE_ID
+    ? "same-context-broadcast"
+    : "other-context-broadcast";
+}
 
 function validTripChange(value: unknown): value is { tripId: string } {
   return (
@@ -57,19 +93,20 @@ function validTripChange(value: unknown): value is { tripId: string } {
   );
 }
 
-function announceManifestChange(tripId: string): void {
+function announceManifestChange(tripId: string, reason: OfflineManifestChangeReason): void {
+  const change = { tripId, sourceId: MANIFEST_SOURCE_ID, reason };
   const browserWindow = manifestBrowserWindow();
   if (browserWindow) {
-    browserWindow.dispatchEvent(new CustomEvent(MANIFEST_CHANGE_EVENT, { detail: { tripId } }));
+    browserWindow.dispatchEvent(new CustomEvent(MANIFEST_CHANGE_EVENT, { detail: change }));
   }
   // Service workers have no `window`, but they share this origin's
-  // BroadcastChannel namespace with open pages. The only payload is the
-  // non-sensitive trip key; receivers reload the encrypted record from IDB.
+  // BroadcastChannel namespace with open pages. The trip key and source/reason
+  // metadata are non-sensitive; receivers reload the encrypted record from IDB.
   if (typeof BroadcastChannel !== "undefined") {
     let channel: BroadcastChannel | null = null;
     try {
       channel = new BroadcastChannel(MANIFEST_CHANGE_CHANNEL);
-      channel.postMessage({ tripId });
+      channel.postMessage(change);
     } catch {
       // IndexedDB remains authoritative; the next focus/visibility reload
       // picks up the mutation when cross-context messaging is unavailable.
@@ -80,16 +117,18 @@ function announceManifestChange(tripId: string): void {
 }
 
 /**
- * Subscribe to committed changes in another tab or in this document. The
- * message contains only the trip key; readers must reload the encrypted record
- * from IndexedDB rather than trusting cross-context payload data.
+ * Subscribe to committed changes in another tab or in this document. Readers
+ * reload the encrypted record from IndexedDB rather than trusting the
+ * cross-context trip key and source/reason metadata.
  */
 export function subscribeOfflineManifestChanges(listener: OfflineManifestChangeListener) {
   const browserWindow = manifestBrowserWindow();
   if (!browserWindow) return () => {};
   const onLocalChange = (event: Event) => {
     const detail = (event as CustomEvent<unknown>).detail;
-    if (validTripChange(detail)) listener(detail.tripId, "same-document");
+    if (validTripChange(detail)) {
+      listener(detail.tripId, { origin: "same-document", reason: manifestChangeReason(detail) });
+    }
   };
   browserWindow.addEventListener(MANIFEST_CHANGE_EVENT, onLocalChange);
 
@@ -98,7 +137,12 @@ export function subscribeOfflineManifestChanges(listener: OfflineManifestChangeL
     try {
       channel = new BroadcastChannel(MANIFEST_CHANGE_CHANNEL);
       channel.onmessage = (event: MessageEvent<unknown>) => {
-        if (validTripChange(event.data)) listener(event.data.tripId, "broadcast");
+        if (validTripChange(event.data)) {
+          listener(event.data.tripId, {
+            origin: manifestChangeOrigin(event.data),
+            reason: manifestChangeReason(event.data),
+          });
+        }
       };
     } catch {
       // Same-document notifications and visibility reload remain available.
@@ -366,6 +410,7 @@ async function persistEnvelope(
   db: IDBDatabase,
   envelope: OfflineManifestEnvelope,
   tenantRound?: number,
+  changeReason: OfflineManifestChangeReason = "unknown",
 ): Promise<boolean> {
   const tripId = envelope.snapshot.manifests[0]?.trip.id;
   if (!tripId) throw new Error("Manifest snapshot has no trip");
@@ -399,7 +444,7 @@ async function persistEnvelope(
     };
   }
   await done;
-  if (persisted) announceManifestChange(tripId);
+  if (persisted) announceManifestChange(tripId, changeReason);
   return persisted;
 }
 
@@ -877,7 +922,7 @@ async function deletePurgeCandidate(
       maybeDelete();
     };
     await done;
-    if (deleted) announceManifestChange(tripId);
+    if (deleted) announceManifestChange(tripId, "delete");
     return deleted;
   } finally {
     db.close();
@@ -937,7 +982,7 @@ export async function saveOfflineManifest(
       };
       const db = await openDatabase();
       try {
-        const persisted = await persistEnvelope(db, revoked, options.tenantRound);
+        const persisted = await persistEnvelope(db, revoked, options.tenantRound, "snapshot");
         if (!persisted && options.tenantRound !== undefined)
           throw new OfflineManifestError("shop_changed");
       } finally {
@@ -989,7 +1034,7 @@ export async function saveOfflineManifest(
     };
     const db = await openDatabase();
     try {
-      const persisted = await persistEnvelope(db, envelope, options.tenantRound);
+      const persisted = await persistEnvelope(db, envelope, options.tenantRound, "snapshot");
       if (!persisted && options.tenantRound !== undefined)
         throw new OfflineManifestError("shop_changed");
     } finally {
@@ -1025,7 +1070,7 @@ export async function saveOfflineMedicalAlerts(
     };
     const db = await openDatabase();
     try {
-      const persisted = await persistEnvelope(db, envelope, tenantRound);
+      const persisted = await persistEnvelope(db, envelope, tenantRound, "medical-alerts");
       if (!persisted && tenantRound !== undefined) throw new OfflineManifestError("shop_changed");
     } finally {
       db.close();
@@ -1074,6 +1119,7 @@ export async function wipeOfflineMedicalAlerts(
                 },
               },
               tenantRound,
+              "medical-alerts",
             );
           } finally {
             db.close();
@@ -1098,7 +1144,7 @@ export async function deleteOfflineManifest(
     const transaction = db.transaction(MANIFEST_STORE, "readwrite");
     transaction.objectStore(MANIFEST_STORE).delete(tripId);
     await transactionDone(transaction);
-    announceManifestChange(tripId);
+    announceManifestChange(tripId, "delete");
     return true;
   } finally {
     if (ownsDb) db.close();
@@ -1171,7 +1217,7 @@ export async function appendOfflineRollCall(
     });
     const db = await openDatabase();
     try {
-      await persistEnvelope(db, envelope);
+      await persistEnvelope(db, envelope, undefined, "record");
     } finally {
       db.close();
     }
@@ -1213,7 +1259,7 @@ export async function appendOfflineChecklistCheck(
     });
     const db = await openDatabase();
     try {
-      await persistEnvelope(db, envelope);
+      await persistEnvelope(db, envelope, undefined, "record");
     } finally {
       db.close();
     }
@@ -1260,7 +1306,7 @@ export async function appendOfflineArrival(
     });
     const db = await openDatabase();
     try {
-      await persistEnvelope(db, envelope);
+      await persistEnvelope(db, envelope, undefined, "record");
     } finally {
       db.close();
     }
@@ -1385,7 +1431,7 @@ export async function syncOfflineManifest(
     current.arrivalEvents = offlineArrivalEvents(current).map(applyResult);
     const db = await openDatabase();
     try {
-      const persisted = await persistEnvelope(db, current, tenantRound);
+      const persisted = await persistEnvelope(db, current, tenantRound, "sync");
       if (!persisted) throw new OfflineManifestError("shop_changed");
     } finally {
       db.close();

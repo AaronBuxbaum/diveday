@@ -2,22 +2,7 @@ import type { Dispatch, SetStateAction } from "react";
 import { useCallback, useEffect, useRef } from "react";
 import type { OfflineManifestTranslator } from "@/i18n/offline-manifest-messages";
 import { loadOfflineManifest, subscribeOfflineManifestChanges } from "@/lib/offline-manifest-store";
-import type { OfflineManifestEnvelope } from "@/lib/offline-manifests";
-
-function pendingEventIds(envelope: OfflineManifestEnvelope | null): Set<string> {
-  if (!envelope) return new Set();
-  return new Set([
-    ...envelope.events
-      .filter((event) => event.syncStatus === "pending")
-      .map((event) => `roll-call:${event.clientEventId}`),
-    ...envelope.checklistEvents
-      .filter((event) => event.syncStatus === "pending")
-      .map((event) => `checklist:${event.clientEventId}`),
-    ...(envelope.arrivalEvents ?? [])
-      .filter((event) => event.syncStatus === "pending")
-      .map((event) => `arrival:${event.clientEventId}`),
-  ]);
-}
+import { type OfflineManifestEnvelope, pendingOfflineEventCount } from "@/lib/offline-manifests";
 
 export type SelectedTripStorageState = {
   changeRevision: number;
@@ -72,28 +57,10 @@ export function useSelectedTripStorage({
   setStoreReadFailed: (failed: boolean) => void;
   refreshDiscarded: () => void;
 }) {
-  const observedPendingEventsRef = useRef<{ tripId: string | null; ids: Set<string> }>({
-    tripId: null,
-    ids: new Set(),
-  });
-  const observePendingEvents = useCallback(
-    (saved: OfflineManifestEnvelope | null) => {
-      const nextIds = pendingEventIds(saved);
-      const observed = observedPendingEventsRef.current;
-      const hasNewPendingEvent =
-        observed.tripId !== tripId
-          ? nextIds.size > 0
-          : [...nextIds].some((id) => !observed.ids.has(id));
-      observedPendingEventsRef.current = { tripId, ids: nextIds };
-      return hasNewPendingEvent;
-    },
-    [tripId],
-  );
-
   useEffect(() => {
     if (!tripId) return;
     let active = true;
-    const reload = (syncNewPending = false) => {
+    const reload = (syncPendingWork = false) => {
       const state = storageStateRef.current;
       const request = ++state.readRequest;
       const changeRevision = state.changeRevision;
@@ -116,11 +83,10 @@ export function useSelectedTripStorage({
             setStoreReadFailed(false);
             return;
           }
-          const hasNewPendingEvent = observePendingEvents(saved);
           onEnvelope(saved);
           setStoreRead(true);
           setStoreReadFailed(false);
-          if (syncNewPending && hasNewPendingEvent && navigator.onLine) {
+          if (syncPendingWork && saved && pendingOfflineEventCount(saved) > 0 && navigator.onLine) {
             queueMicrotask(onOnline);
           }
         })
@@ -150,7 +116,10 @@ export function useSelectedTripStorage({
     const unsubscribe = subscribeOfflineManifestChanges((changedTripId, source) => {
       if (changedTripId !== tripId) return;
       storageStateRef.current.changeRevision += 1;
-      reload(source === "broadcast");
+      const shouldRetryPending =
+        source.origin === "other-context-broadcast" &&
+        (source.reason === "record" || source.reason === "snapshot");
+      reload(shouldRetryPending);
     });
     const onVisible = () => {
       if (document.visibilityState === "visible") {
@@ -183,7 +152,6 @@ export function useSelectedTripStorage({
     storageStateRef,
     onEnvelope,
     onReadStarted,
-    observePendingEvents,
     onOnline,
     setMessage,
     t,
@@ -215,7 +183,6 @@ export function useSelectedTripStorage({
           current.reload();
           return;
         }
-        observePendingEvents(saved);
         onEnvelope(saved);
         setStoreReadFailed(false);
         if (saved && navigator.onLine && !tripPurgedRef.current) queueMicrotask(onOnline);
@@ -249,7 +216,6 @@ export function useSelectedTripStorage({
     storageStateRef,
     onEnvelope,
     onReadStarted,
-    observePendingEvents,
     onOnline,
     refreshDiscarded,
     setStoreRead,

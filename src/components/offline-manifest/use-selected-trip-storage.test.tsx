@@ -64,7 +64,7 @@ afterEach(
 );
 
 describe("selected-trip storage invalidation", () => {
-  it("syncs newly pending cross-tab work once without looping on the same pending event", async () => {
+  it("syncs remote records and autosaves without syncing its own or a remote sync-result broadcast", async () => {
     vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
     vi.stubGlobal("BroadcastChannel", TestBroadcastChannel);
     await saveOfflineManifest(tripPayload(1));
@@ -114,22 +114,50 @@ describe("selected-trip storage invalidation", () => {
     await waitFor(() => expect(reconcile).toHaveBeenCalled());
     const initialSyncRequests = reconcile.mock.calls.length;
 
-    const restoreSameDocumentEvent = suppressSameDocumentManifestEvent();
-    try {
+    const broadcastFromOtherContext = async (reason: string) => {
+      const peer = new TestBroadcastChannel("diveday-offline-manifest-changes-v1");
       await act(async () => {
-        // The receiving tab learns about this new pending ID over the same
-        // broadcast channel used by a service worker or another tab.
-        await appendOfflineRollCall(tripId, {
-          bookingId,
-          checkpoint: "after_dive_1",
-          status: "not_boarded",
-          note: "Nora is still below.",
-        });
+        peer.postMessage({ tripId, sourceId: "another-tab", reason });
       });
-    } finally {
-      restoreSameDocumentEvent();
-    }
+      peer.close();
+    };
+
+    await broadcastFromOtherContext("snapshot");
+    expect(reconcile).toHaveBeenCalledTimes(initialSyncRequests);
+
+    const ownBroadcasts: unknown[] = [];
+    const monitor = new TestBroadcastChannel("diveday-offline-manifest-changes-v1");
+    monitor.onmessage = (event) => ownBroadcasts.push(event.data);
+    const envelopesBeforeLocalRecord = envelopes.length;
+    await act(async () => {
+      await appendOfflineRollCall(tripId, {
+        bookingId,
+        checkpoint: "after_dive_1",
+        status: "not_boarded",
+        note: "Nora is still below.",
+      });
+    });
+    await waitFor(() => expect(envelopes.length).toBeGreaterThan(envelopesBeforeLocalRecord));
+    await waitFor(() => expect(ownBroadcasts).toHaveLength(1));
+    expect(reconcile).toHaveBeenCalledTimes(initialSyncRequests);
+    expect(ownBroadcasts[0]).toMatchObject({ tripId, reason: "record" });
+    monitor.close();
+
+    await broadcastFromOtherContext("record");
     await waitFor(() => expect(reconcile).toHaveBeenCalledTimes(initialSyncRequests + 1));
+
+    // A failed remote sync can leave the same event pending. Its sync-result
+    // write must not cause each other tab to retry it in a feedback loop.
+    await broadcastFromOtherContext("sync");
+    expect(reconcile).toHaveBeenCalledTimes(initialSyncRequests + 1);
+
+    // A later external snapshot refresh is a bounded retry opportunity even
+    // though the event ID is unchanged and still pending.
+    await broadcastFromOtherContext("snapshot");
+    await waitFor(() => expect(reconcile).toHaveBeenCalledTimes(initialSyncRequests + 2));
+
+    await broadcastFromOtherContext("sync");
+    expect(reconcile).toHaveBeenCalledTimes(initialSyncRequests + 2);
 
     await act(async () => {
       window.dispatchEvent(
@@ -138,12 +166,10 @@ describe("selected-trip storage invalidation", () => {
     });
     await waitFor(() => expect(envelopes.length).toBeGreaterThan(1));
 
-    expect(reconcile).toHaveBeenCalledTimes(initialSyncRequests + 1);
-
     await act(async () => {
       window.dispatchEvent(new Event("focus"));
     });
-    await waitFor(() => expect(reconcile).toHaveBeenCalledTimes(initialSyncRequests + 2));
+    await waitFor(() => expect(reconcile).toHaveBeenCalledTimes(initialSyncRequests + 3));
   });
 
   it("reloads the committed erasure disposition in an open trip view", async () => {
@@ -203,7 +229,7 @@ describe("selected-trip storage invalidation", () => {
     });
   });
 
-  it("sends only a trip-key invalidation over the worker-to-page channel", async () => {
+  it("sends only the trip key and non-sensitive write metadata over the worker-to-page channel", async () => {
     const received: unknown[] = [];
     vi.stubGlobal("BroadcastChannel", TestBroadcastChannel);
     const peer = new TestBroadcastChannel("diveday-offline-manifest-changes-v1");
@@ -214,7 +240,9 @@ describe("selected-trip storage invalidation", () => {
     } finally {
       restoreLocalEvent();
     }
-    expect(received).toEqual([{ tripId }]);
+    expect(received).toHaveLength(1);
+    expect(received[0]).toMatchObject({ tripId, reason: "snapshot" });
+    expect((received[0] as { sourceId?: unknown }).sourceId).toEqual(expect.any(String));
     expect(TestBroadcastChannel.channels).toHaveLength(1);
     peer.close();
   });
