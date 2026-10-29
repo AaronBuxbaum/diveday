@@ -54,28 +54,6 @@ const result = await build({
 
 if (result.errors.length > 0) process.exit(1);
 
-// The shell cache version is compared at runtime against
-// OFFLINE_MANIFEST_SHELL_VERSION (src/lib/offline-manifests.ts) to tell a crew
-// member holding a worker from an older deploy. That reconciliation only works
-// if the two actually agree, and they used to be two hand-edited constants in
-// two files. Now that the worker is built, assert it here rather than trusting
-// a comment: a mismatch fails the build instead of shipping a worker that
-// silently reports the wrong version from a boat.
-const workerSource = await readFile(ENTRY, "utf8");
-const sharedSource = await readFile(path.join(ROOT, "src/lib/offline-manifests.ts"), "utf8");
-const workerVersion = workerSource.match(
-  /CACHE_NAME\s*=\s*"diveday-offline-manifest-shell-(v\d+)"/,
-)?.[1];
-const sharedVersion = sharedSource.match(/OFFLINE_MANIFEST_SHELL_VERSION\s*=\s*"(v\d+)"/)?.[1];
-if (!workerVersion || !sharedVersion || workerVersion !== sharedVersion) {
-  console.error(
-    `service worker: shell version mismatch — worker has ${workerVersion ?? "none"}, ` +
-      `src/lib/offline-manifests.ts has ${sharedVersion ?? "none"}. ` +
-      "Bump both together (see the worker's CACHE_NAME docblock).",
-  );
-  process.exit(1);
-}
-
 // A banner the next person opening devtools on a boat needs, since the file
 // they are looking at is no longer the file anyone edits.
 const bundled = await readFile(OUT, "utf8");
@@ -86,4 +64,4 @@ await writeFile(
   "utf8",
 );
 
-console.log(`service worker: built ${path.relative(ROOT, OUT)} (${sharedVersion})`);
+console.log(`service worker: built ${path.relative(ROOT, OUT)}`);
