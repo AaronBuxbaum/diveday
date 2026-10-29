@@ -23,6 +23,7 @@ export function UndoToast({
   pendingLabel,
   undoLabel,
   dismissLabel,
+  placement = "fixed",
 }: {
   message: string;
   action: (formData: FormData) => void;
@@ -30,6 +31,7 @@ export function UndoToast({
   pendingLabel: string;
   undoLabel: string;
   dismissLabel: string;
+  placement?: "fixed" | "inline";
 }) {
   const fieldsIdentity = JSON.stringify(fields);
   const [dismissedTarget, setDismissedTarget] = useState<{
@@ -41,42 +43,52 @@ export function UndoToast({
   if (dismissed) return null;
 
   return (
-    <ToastShell autoDismissMs={null} className="flex items-center gap-2 py-3 ps-4 pe-1">
-      <span className="text-sm font-medium">{message}</span>
-      <form action={action}>
-        {Object.entries(fields).map(([name, value]) => (
-          <input key={name} type="hidden" name={name} value={value} />
-        ))}
-        {/* The shared link button at `sm`: a 44px target with the press and
-            the pointer every button has. It was hand-rolled at 52×36, under
-            the floor (pixel-craft K-347). `busy`: a SubmitButton disables
-            itself while its own undo is in flight. Its ring is drawn inside
-            its box: the toast's `pe-1` leaves 4px of room at the end, and the
-            outset ring's 5px ran over the toast's border (K-102). */}
-        <SubmitButton
-          pendingLabel={pendingLabel}
+    <ToastShell
+      autoDismissMs={null}
+      placement={placement}
+      className={
+        placement === "inline"
+          ? "grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 px-3 py-2"
+          : "flex items-center gap-2 py-3 ps-4 pe-1"
+      }
+    >
+      <span className="min-w-0 text-sm font-medium">{message}</span>
+      <div className="flex shrink-0 items-center">
+        <form action={action}>
+          {Object.entries(fields).map(([name, value]) => (
+            <input key={name} type="hidden" name={name} value={value} />
+          ))}
+          {/* The shared link button at `sm`: a 44px target with the press and
+              the pointer every button has. It was hand-rolled at 52×36, under
+              the floor (pixel-craft K-347). `busy`: a SubmitButton disables
+              itself while its own undo is in flight. Its ring is drawn inside
+              its box: the toast's `pe-1` leaves 4px of room at the end, and the
+              outset ring's 5px ran over the toast's border (K-102). */}
+          <SubmitButton
+            pendingLabel={pendingLabel}
+            className={buttonClass({
+              variant: "link",
+              size: "sm",
+              busy: true,
+              className: "focus-visible:focus-ring-inset",
+            })}
+          >
+            {undoLabel}
+          </SubmitButton>
+        </form>
+        <button
+          type="button"
+          aria-label={dismissLabel}
+          onClick={() => setDismissedTarget({ fieldsIdentity, message })}
           className={buttonClass({
-            variant: "link",
-            size: "sm",
-            busy: true,
+            variant: "ghost",
+            size: "icon",
             className: "focus-visible:focus-ring-inset",
           })}
         >
-          {undoLabel}
-        </SubmitButton>
-      </form>
-      <button
-        type="button"
-        aria-label={dismissLabel}
-        onClick={() => setDismissedTarget({ fieldsIdentity, message })}
-        className={buttonClass({
-          variant: "ghost",
-          size: "icon",
-          className: "focus-visible:focus-ring-inset",
-        })}
-      >
-        <DiveDayIcon name="close" />
-      </button>
+          <DiveDayIcon name="close" />
+        </button>
+      </div>
     </ToastShell>
   );
 }

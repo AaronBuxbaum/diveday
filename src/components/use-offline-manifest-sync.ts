@@ -5,18 +5,34 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { fill, pluralForm } from "@/i18n/fill";
 import { requestBackgroundFlush } from "@/lib/background-flush";
 import {
+  beginOfflineTenantVerificationRound,
   loadOfflineManifest,
   primeOfflineManifestShell,
   saveOfflineManifest,
   syncOfflineManifest,
 } from "@/lib/offline-manifest-store";
-import type { OfflineManifestEnvelope, OfflineManifestPayload } from "@/lib/offline-manifests";
+import {
+  fetchOfflineManifestShopSlug,
+  type OfflineManifestEnvelope,
+  type OfflineManifestPayload,
+} from "@/lib/offline-manifests";
 
 // Fallback only — see ADR 20260726-manifest-push-refresh. The SSE
 // subscription below is the primary trigger; this interval (plus
 // reconnect/visibility triggers) is what still runs when SSE never connects
 // or a boat's signal drops, which push alone can never cover.
 const AUTO_REFRESH_MS = 5 * 60 * 1000;
+
+function noteDispositionCount(
+  envelope: OfflineManifestEnvelope | null | undefined,
+  disposition: "discarded_erasure_cutoff" | "discarded_unverified_snapshot",
+) {
+  return envelope
+    ? [...envelope.events, ...envelope.checklistEvents].filter(
+        (event) => event.noteDisposition === disposition,
+      ).length
+    : 0;
+}
 
 /** The words the save, sync and reconcile narration uses, resolved server-side. */
 export interface OfflineManifestSyncCopy {
@@ -73,6 +89,8 @@ export function useOfflineManifestSync(
   // genuine transition (something newly resolved, or newly rejected).
   const lastPendingCount = useRef(0);
   const lastRejectedCount = useRef(0);
+  const lastCutoffNoteCount = useRef(0);
+  const lastUnverifiedNoteCount = useRef(0);
   // Set right before a manual "Refresh now" (or router.refresh() call below)
   // whose resulting save should show the loud confirmation instead of
   // passing silently, since the save itself only happens once the refreshed
@@ -97,18 +115,33 @@ export function useOfflineManifestSync(
     }
     const pendingBefore = lastPendingCount.current;
     const rejectedBefore = lastRejectedCount.current;
+    const cutoffNotesBefore = lastCutoffNoteCount.current;
+    const unverifiedNotesBefore = lastUnverifiedNoteCount.current;
     try {
-      const envelope = await syncOfflineManifest(tripId);
+      const tenantRound = await beginOfflineTenantVerificationRound();
+      const expectedShopSlug = payloadRef.current.shop.slug;
+      const verifiedShopSlug = await fetchOfflineManifestShopSlug();
+      if (verifiedShopSlug !== expectedShopSlug) {
+        setMessage(copy.reconcileErrorFallback);
+        return;
+      }
+      const envelope = await syncOfflineManifest(tripId, expectedShopSlug, tenantRound);
       if (envelope) {
         setSaved(envelope);
         const rejected = envelope.events.filter((event) => event.syncStatus === "rejected").length;
         const pending = envelope.events.filter((event) => event.syncStatus === "pending").length;
+        const cutoffNotes = noteDispositionCount(envelope, "discarded_erasure_cutoff");
+        const unverifiedNotes = noteDispositionCount(envelope, "discarded_unverified_snapshot");
+        const noteWasDiscarded =
+          cutoffNotes > cutoffNotesBefore || unverifiedNotes > unverifiedNotesBefore;
         lastPendingCount.current = pending;
         lastRejectedCount.current = rejected;
+        lastCutoffNoteCount.current = cutoffNotes;
+        lastUnverifiedNoteCount.current = unverifiedNotes;
         // Only narrate/refresh the live page on a genuine transition this
         // round (something was pending before, or a new rejection landed) —
         // a snapshot with only long-resolved events stays silent forever.
-        if (pendingBefore > 0 || rejected > rejectedBefore) {
+        if (pendingBefore > 0 || rejected > rejectedBefore || noteWasDiscarded) {
           // Rejections are deliberately *not* narrated here any more: they get
           // the pinned danger notice below instead, because a tap that never
           // entered the safety trail must not be a line in a card at the foot
@@ -196,7 +229,23 @@ export function useOfflineManifestSync(
       }
       try {
         await primeOfflineManifestShell();
-        const envelope = await saveOfflineManifest(payloadRef.current);
+        const currentPayload = payloadRef.current;
+        let tenantRound: number | undefined;
+        if (navigator.onLine) {
+          tenantRound = await beginOfflineTenantVerificationRound();
+          const verifiedShop = await fetchOfflineManifestShopSlug();
+          if (verifiedShop !== currentPayload.shop.slug) {
+            throw new Error(copy.saveErrorFallback);
+          }
+        } else {
+          const existing = await loadOfflineManifest(tripId);
+          if (!existing || existing.snapshot.shop.slug !== currentPayload.shop.slug) {
+            throw new Error(copy.saveErrorFallback);
+          }
+          setSaved(existing);
+          return;
+        }
+        const envelope = await saveOfflineManifest(currentPayload, { tenantRound });
         setSaved(envelope);
         lastPendingCount.current = envelope.events.filter(
           (event) => event.syncStatus === "pending",
@@ -204,6 +253,11 @@ export function useOfflineManifestSync(
         lastRejectedCount.current = envelope.events.filter(
           (event) => event.syncStatus === "rejected",
         ).length;
+        lastCutoffNoteCount.current = noteDispositionCount(envelope, "discarded_erasure_cutoff");
+        lastUnverifiedNoteCount.current = noteDispositionCount(
+          envelope,
+          "discarded_unverified_snapshot",
+        );
         // Settled: clear the narration rather than restating the outcome. Once
         // the save lands, the pills say "Online / Fresh copy" and the line
         // under them says when it was saved and what is still owed — a fourth
@@ -218,7 +272,7 @@ export function useOfflineManifestSync(
         if (!opts.silent) setBusy(false);
       }
     },
-    [copy],
+    [copy, tripId],
   );
 
   const save = useCallback(
@@ -280,6 +334,11 @@ export function useOfflineManifestSync(
         envelope?.events.filter((event) => event.syncStatus === "pending").length ?? 0;
       lastRejectedCount.current =
         envelope?.events.filter((event) => event.syncStatus === "rejected").length ?? 0;
+      lastCutoffNoteCount.current = noteDispositionCount(envelope, "discarded_erasure_cutoff");
+      lastUnverifiedNoteCount.current = noteDispositionCount(
+        envelope,
+        "discarded_unverified_snapshot",
+      );
       if (navigator.onLine) {
         const manual = manualRefreshPending.current;
         manualRefreshPending.current = false;

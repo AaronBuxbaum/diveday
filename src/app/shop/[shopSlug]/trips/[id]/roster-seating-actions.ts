@@ -395,6 +395,9 @@ const MOVE_SEAT_NOTICE: Record<Exclude<MoveSeatRefusal, "not_found">, string> = 
   course_prerequisite: "seat-move-prerequisite",
   course_min_age: "seat-move-min-age",
   trip_prerequisite: "seat-move-prerequisite",
+  date_request_departure_conflict: "seat-move-date-request-conflict",
+  date_request_offer_unavailable: "seat-move-date-request-unavailable",
+  date_request_party_full: "seat-move-date-request-full",
 };
 
 export async function moveSeatAction(shopSlug: string, tripId: string, formData: FormData) {
@@ -501,7 +504,13 @@ export async function undoRemoveBookingAction(
           ? "booking-restore-ratio"
           : outcome === "trip_cancelled"
             ? "booking-restore-cancelled"
-            : "booking-restored";
+            : outcome === "date_request_departure_conflict"
+              ? "booking-restore-date-request-conflict"
+              : outcome === "date_request_offer_unavailable"
+                ? "booking-restore-date-request-unavailable"
+                : outcome === "date_request_party_full"
+                  ? "booking-restore-date-request-full"
+                  : "booking-restored";
   revalidateAndRedirect(back, noticeUrl(back, restoreNotice));
 }
 

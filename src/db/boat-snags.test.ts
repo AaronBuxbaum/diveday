@@ -11,7 +11,7 @@ import {
   snagsOpenWhenSailed,
 } from "./boat-snags";
 import { listChecklistItems } from "./pre-departure-check";
-import { boatSnags, boats, trips } from "./schema";
+import { boatSnags, boats, preDepartureChecklistItems, shops, trips } from "./schema";
 import { listStaff } from "./trips";
 
 // One seeded database for the file and a rolled-back transaction per test
@@ -198,7 +198,39 @@ describe("boat snags (in-memory PGlite)", () => {
     expect(await openSnagsForTrip(db, shop.id, first.id)).toHaveLength(1);
   });
 
-  it("refuses an empty or overlong note, a boatless departure and another shop's item", async () => {
+  it("uses the shop's checklist on both boats and refuses another shop's item", async () => {
+    const { db, shop, first, third, item, captain } = await snagContext();
+    const [otherShop] = await db
+      .insert(shops)
+      .values({ name: "Another shop", slug: "another-snag-shop", timezone: "UTC" })
+      .returning({ id: shops.id });
+    if (!otherShop) throw new Error("other shop missing");
+    const [foreignItem] = await db
+      .insert(preDepartureChecklistItems)
+      .values({ shopId: otherShop.id, label: "Other shop's radio" })
+      .returning({ id: preDepartureChecklistItems.id });
+    if (!foreignItem) throw new Error("other shop's checklist item missing");
+
+    const input = {
+      shopId: shop.id,
+      tripId: first.id,
+      personId: captain.id,
+      note: "Radio needs attention",
+    };
+    expect(await noteSnag(db, { ...input, checklistItemId: foreignItem.id })).toEqual({
+      ok: false,
+      reason: "item_unavailable",
+    });
+    expect(await db.select().from(boatSnags).where(eq(boatSnags.shopId, shop.id))).toEqual([]);
+
+    expect((await noteSnag(db, { ...input, checklistItemId: item.id })).ok).toBe(true);
+    expect((await noteSnag(db, { ...input, tripId: third.id, checklistItemId: item.id })).ok).toBe(
+      true,
+    );
+    expect(await db.select().from(boatSnags).where(eq(boatSnags.shopId, shop.id))).toHaveLength(2);
+  });
+
+  it("refuses an empty or overlong note and a boatless departure", async () => {
     const { db, shop, first, item, captain } = await snagContext();
     const base = {
       shopId: shop.id,
@@ -216,11 +248,6 @@ describe("boat snags (in-memory PGlite)", () => {
     });
     await db.update(trips).set({ boatId: null }).where(eq(trips.id, first.id));
     expect(await noteSnag(db, { ...base, note: "VHF" })).toEqual({ ok: false, reason: "no_boat" });
-
-    // Another shop's id reaches neither this crew nor this departure.
-    expect(
-      await noteSnag(db, { ...base, shopId: "00000000-0000-4000-8000-000000000000", note: "VHF" }),
-    ).toMatchObject({ ok: false });
   });
 
   it("gives the owner one row per open snag, with the boat's next departure", async () => {

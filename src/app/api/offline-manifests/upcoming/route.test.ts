@@ -16,6 +16,7 @@ import { createTrip } from "@/db/trips";
 import type { DiveDaySession } from "@/lib/auth";
 import type { Role } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
+import { verifyOfflineErasureEpoch } from "@/lib/offline-erasure-epoch";
 import {
   offlineManifestMayHoldMedicalAlertWords,
   offlineManifestViewerPersonId,
@@ -159,9 +160,23 @@ describe("GET /api/offline-manifests/upcoming", () => {
     const response = await GET();
     expect(response.status).toBe(200);
     const body = (await response.json()) as {
-      payloads: Array<{ manifests: Array<{ trip: { title: string } }> }>;
+      payloads: Array<{
+        snapshotId: string;
+        erasureEpochToken: string;
+        manifests: Array<{ trip: { id: string; title: string } }>;
+      }>;
     };
     const titles = body.payloads.map((payload) => payload.manifests[0]?.trip.title);
+    const issued = body.payloads.find((payload) => payload.manifests.length > 0);
+    expect(issued?.snapshotId).toMatch(/^[0-9a-f-]{36}$/i);
+    expect(
+      verifyOfflineErasureEpoch({
+        token: issued?.erasureEpochToken,
+        shopId: shop.id,
+        tripId: issued?.manifests[0]?.trip.id ?? "",
+        snapshotId: issued?.snapshotId,
+      }),
+    ).toBe(shop.offlineErasureEpoch);
 
     // Sails today (within the frozen clock's 5-hour lookahead) — well inside 48h.
     expect(titles).toContain("Two-Tank Reef — Molasses & French");

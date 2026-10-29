@@ -1,11 +1,11 @@
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import { recordCrewRollCall } from "./manifests";
 import { people, personRoles, rollCallCrewEvents, tripAssignments } from "./schema";
-import { createStaffCredential } from "./staff-credentials";
+import { changeStaffCredential, createStaffCredential } from "./staff-credentials";
 import { listStaff, upcomingTripsWithCounts } from "./trips";
 
 const ctx = fileScopedShopContext();
@@ -64,6 +64,69 @@ describe("crew credential evidence on live boarding marks", () => {
     );
     expect(observed.credentialSnapshotStartedAt).toBeInstanceOf(Date);
     expect(observed.credentialSnapshotCapturedAt).toBeInstanceOf(Date);
+  });
+  it("keeps the boarding evidence unchanged after the live credential is renewed", async () => {
+    const { db, shop } = ctx;
+    const [staff] = await listStaff(db, shop.id);
+    const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
+    const trip = trips.find((row) => row.title.startsWith("Two-Tank Reef"));
+    if (!staff || !trip) throw new Error("seed crew or departure missing");
+    await db
+      .insert(tripAssignments)
+      .values({ tripId: trip.id, personId: staff.person.id })
+      .onConflictDoNothing();
+    const card = await createStaffCredential(db, {
+      shopId: shop.id,
+      personId: staff.person.id,
+      kind: "other",
+      name: "Test status",
+      identifier: "TEST-CREW-LATE-RENEWAL",
+      issuedAt: "2024-01-01",
+      renewsAt: "2026-07-20",
+    });
+    if (!card) throw new Error("test credential missing");
+    expect(
+      await recordCrewRollCall(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        personId: staff.person.id,
+        recordedByPersonId: staff.person.id,
+        checkpoint: "departure",
+        status: "boarded",
+        source: "live",
+      }),
+    ).toMatchObject({ ok: true });
+    const renewed = await changeStaffCredential(db, {
+      shopId: shop.id,
+      credentialId: card.id,
+      expectedRevision: card.revision,
+      personId: staff.person.id,
+      kind: card.kind,
+      name: card.name,
+      issuingBody: card.issuingBody,
+      identifier: card.identifier,
+      issuedAt: card.issuedAt,
+      renewsAt: "2027-07-20",
+      change: "renewed",
+    });
+    expect(renewed?.renewsAt).toBe("2027-07-20");
+    const [event] = await db
+      .select()
+      .from(rollCallCrewEvents)
+      .where(
+        and(
+          eq(rollCallCrewEvents.shopId, shop.id),
+          eq(rollCallCrewEvents.tripId, trip.id),
+          eq(rollCallCrewEvents.personId, staff.person.id),
+        ),
+      )
+      .orderBy(desc(rollCallCrewEvents.seq))
+      .limit(1);
+    expect(event?.credentialSnapshot).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ kind: "other", issuedAt: "2024-01-01", renewsAt: "2026-07-20" }),
+      ]),
+    );
   });
   it("never attaches current server evidence to an offline mark", async () => {
     const { db, shop } = ctx;

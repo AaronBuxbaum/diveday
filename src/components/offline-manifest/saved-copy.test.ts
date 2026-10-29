@@ -25,6 +25,33 @@ describe("savedCopyReducer", () => {
     expect(state.removedForOtherShop).toBeNull();
   });
 
+  it("masks note text during a reread while preserving marks and times", () => {
+    const copy = copyOf("blue-mantis");
+    copy.events = [
+      { status: "boarded", occurredAt: "2026-08-01T14:30:00.000Z", note: "roll-call text" },
+    ] as unknown as OfflineManifestEnvelope["events"];
+    copy.checklistEvents = [
+      { status: "checked", occurredAt: "2026-08-01T14:31:00.000Z", note: "checklist text" },
+    ] as unknown as OfflineManifestEnvelope["checklistEvents"];
+
+    const suppressed = savedCopyReducer(
+      savedCopyReducer(EMPTY, { type: "loaded", envelope: copy }),
+      { type: "suppress-notes" },
+    );
+    expect(savedCopyReducer(suppressed, { type: "suppress-notes" })).toBe(suppressed);
+
+    expect(suppressed.envelope?.events[0]).toMatchObject({
+      status: "boarded",
+      occurredAt: "2026-08-01T14:30:00.000Z",
+      note: null,
+    });
+    expect(suppressed.envelope?.checklistEvents[0]).toMatchObject({
+      status: "checked",
+      occurredAt: "2026-08-01T14:31:00.000Z",
+      note: null,
+    });
+  });
+
   it("clears the copy on screen when the store says it is gone, naming whose it was", () => {
     const shown = savedCopyReducer(EMPTY, { type: "loaded", envelope: copyOf("other-shop") });
     const gone = savedCopyReducer(shown, { type: "gone", tenant: "blue-mantis" });

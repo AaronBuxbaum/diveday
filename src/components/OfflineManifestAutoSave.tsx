@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef } from "react";
 import {
+  beginOfflineTenantVerificationRound,
   primeOfflineManifestShell,
   purgeOfflineManifestsExceptShop,
   saveOfflineManifest,
@@ -53,6 +54,7 @@ export function OfflineManifestAutoSave() {
       // if a concurrent trigger's own round is also priming.
       void primeOfflineManifestShell().catch(() => {});
       try {
+        const tenantRound = await beginOfflineTenantVerificationRound();
         const response = await fetch("/api/offline-manifests/upcoming", {
           credentials: "same-origin",
         });
@@ -88,11 +90,14 @@ export function OfflineManifestAutoSave() {
         // side in the device-wide list — fail the whole round (the outer catch
         // below) and let the next trigger retry the purge first, rather than
         // fail open on a cross-tenant boundary.
-        await purgeOfflineManifestsExceptShop(shopSlug);
+        await purgeOfflineManifestsExceptShop(shopSlug, tenantRound);
         // Medical alert words another person saved on this device go before
         // anything is saved for this one (H-153 amendment). A body that names
         // nobody wipes them all: fail closed.
-        await wipeOfflineMedicalAlerts(offlineManifestViewerPersonId(body) ?? undefined);
+        await wipeOfflineMedicalAlerts(
+          offlineManifestViewerPersonId(body) ?? undefined,
+          tenantRound,
+        );
         await Promise.all(
           offlineManifestPayloads(body).map((payload) =>
             saveOfflineManifest(payload, {
@@ -101,6 +106,7 @@ export function OfflineManifestAutoSave() {
                 body,
                 payload.manifests[0]?.trip.id,
               ),
+              tenantRound,
             }).catch(() => {}),
           ),
         );

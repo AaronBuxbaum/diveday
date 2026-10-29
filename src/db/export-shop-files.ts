@@ -1213,6 +1213,13 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
   },
   shopFile(INTERESTS_CSV),
   {
+    file: "date_request_offer_bookings.csv",
+    header: ["interest_id", "booking_id"],
+    rows: ({ dateRequestOfferBookingRows }) =>
+      dateRequestOfferBookingRows.map((row) => [row.interestId, row.bookingId]),
+    note: EXPORT_FILE_NOTES["date_request_offer_bookings.csv"],
+  },
+  {
     file: "trip_last_minute_promos.csv",
     header: [
       "id",

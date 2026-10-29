@@ -239,6 +239,77 @@ describe("a walk-in is refused on a boat the counter cannot seat", () => {
     );
   });
 
+  it("keeps an incomplete party on the request context after seating one member", async () => {
+    const bookingId = "55555555-5555-4555-8555-555555555555";
+    const requestId = "66666666-6666-4666-8666-666666666666";
+    vi.mocked(seatDiver).mockResolvedValue({
+      ok: true,
+      personId: DIVER_ID,
+      bookingId,
+      identityUnconfirmed: false,
+      dateRequestPartyComplete: false,
+      waiver: "not_needed",
+      confirmation: "skipped",
+    } as never);
+    await expect(landing(form({ request: requestId }))).resolves.toBe(
+      `/shop/blue-mantis/bookings/new/${TRIP_ID}?notice=party-seat-added&request=${requestId}`,
+    );
+    expect(seatDiver).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ dateRequestInterestId: requestId }),
+    );
+  });
+
+  it("returns to the trip after the last requested party member is seated", async () => {
+    const bookingId = "55555555-5555-4555-8555-555555555555";
+    const requestId = "66666666-6666-4666-8666-666666666666";
+    vi.mocked(seatDiver).mockResolvedValue({
+      ok: true,
+      personId: DIVER_ID,
+      bookingId,
+      identityUnconfirmed: false,
+      dateRequestPartyComplete: true,
+      waiver: "not_needed",
+      confirmation: "skipped",
+    } as never);
+    await expect(landing(form({ request: requestId }))).resolves.toBe(
+      `/shop/blue-mantis/trips/${TRIP_ID}?notice=diver-added&bid=${bookingId}`,
+    );
+  });
+
+  it("does not close the explicit request when seating is refused", async () => {
+    const requestId = "66666666-6666-4666-8666-666666666666";
+    vi.mocked(seatDiver).mockResolvedValue({ ok: false, reason: "trip_full" } as never);
+
+    await expect(landing(form({ request: requestId }))).resolves.toBe(
+      `/shop/blue-mantis/trips/${TRIP_ID}?notice=diver-full`,
+    );
+    expect(seatDiver).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ dateRequestInterestId: requestId }),
+    );
+  });
+
+  it("ignores a malformed request id rather than associating or closing it", async () => {
+    const bookingId = "55555555-5555-4555-8555-555555555555";
+    vi.mocked(seatDiver).mockResolvedValue({
+      ok: true,
+      personId: DIVER_ID,
+      bookingId,
+      identityUnconfirmed: false,
+      waiver: "not_needed",
+      confirmation: "skipped",
+    } as never);
+
+    await expect(landing(form({ request: "not-a-request-id" }))).resolves.toBe(
+      `/shop/blue-mantis/trips/${TRIP_ID}?notice=diver-added&bid=${bookingId}`,
+    );
+    expect(seatDiver).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ dateRequestInterestId: undefined }),
+    );
+  });
+
   it("still asks a roster hand entry for an email when it is not a walk-in", async () => {
     const data = new FormData();
     data.set("tripId", TRIP_ID);

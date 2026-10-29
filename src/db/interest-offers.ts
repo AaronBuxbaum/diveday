@@ -20,6 +20,7 @@ import { courseSeatCapacity } from "@/lib/course-ratios";
 import { offerMailClass } from "@/lib/interests";
 import { generateLastMinutePromoCode, lastMinuteDealDiscount } from "@/lib/last-minute-list";
 import { minorToMajor } from "@/lib/money";
+import { SEAT_HELD_STATUSES } from "@/lib/no-show";
 import {
   type NotificationDelivery,
   type NotificationProvider,
@@ -48,6 +49,7 @@ import {
   bookings,
   certifications,
   courses,
+  dateRequestOfferBookings,
   type Interest,
   interests,
   people,
@@ -83,6 +85,7 @@ export type SeatOfferDelivery = "sent" | "fallback" | "opted_out" | "already_sen
 const OFFER_RESEND_WINDOW_MS = 24 * HOUR_MS;
 
 const parentInterest = alias(interests, "parent_interest");
+const dateRequestParent = alias(interests, "date_request_parent");
 
 /**
  * The deal an offer carries into the email: the code, the figure, the shop's
@@ -854,8 +857,9 @@ function madeByTheList(db: AppDb): SQL {
  * it needs and the ratio its crew allows. An interest asks for a diver's seat, so the
  * divers-only limit binds. Every offer already out to someone who has not taken a
  * seat holds as many of those seats as their party asked for, so they are taken
- * off. A person-less date-request offer stops counting after 48 hours (#2914);
- * this is advice for the next offer, not a reservation or booking gate.
+ * off. A person-less date-request offer stops counting after 48 hours (#2914),
+ * or by one seat for each live booking linked to that specific offer; this is
+ * advice for the next offer, not a reservation or booking gate.
  * **A row a deal made off the last-minute list does not count** (ADR
  * 20261017-one-interest-with-a-scope, R2): one blast to forty people must not push a
  * three-seat departure to "0 invitable" and stop the roll inviting real
@@ -868,6 +872,24 @@ function madeByTheList(db: AppDb): SQL {
  */
 export async function invitableSeats(db: AppDb, trip: typeof trips.$inferSelect): Promise<number> {
   const anonymousOfferCutoff = new Date(nowDate().getTime() - 48 * HOUR_MS);
+  const linkedSeats = db
+    .select({ seats: sql<number>`count(*)::int` })
+    .from(dateRequestOfferBookings)
+    .innerJoin(
+      bookings,
+      and(
+        eq(bookings.id, dateRequestOfferBookings.bookingId),
+        eq(bookings.shopId, dateRequestOfferBookings.shopId),
+        eq(bookings.tripId, interests.tripId),
+        inArray(bookings.status, [...SEAT_HELD_STATUSES]),
+      ),
+    )
+    .where(
+      and(
+        eq(dateRequestOfferBookings.shopId, interests.shopId),
+        eq(dateRequestOfferBookings.interestId, interests.id),
+      ),
+    );
   const held = await heldSeatCounts(db, trip.shopId, trip.id);
   let room = (await sellableCapacity(db, trip)) - held.aboard;
   const diverLimit = diverSeatLimit(trip);
@@ -876,7 +898,9 @@ export async function invitableSeats(db: AppDb, trip: typeof trips.$inferSelect)
   const ratioCap = await courseStudentSeatCap(db, trip);
   if (ratioCap !== null) room = Math.min(room, ratioCap - held.divers);
   const [outstanding] = await db
-    .select({ offered: sql<number>`coalesce(sum(${interests.partySize}), 0)::int` })
+    .select({
+      offered: sql<number>`coalesce(sum(greatest(coalesce(${interests.partySize}, 0) - (${linkedSeats}), 0)), 0)::int`,
+    })
     .from(interests)
     .where(
       and(
@@ -886,17 +910,34 @@ export async function invitableSeats(db: AppDb, trip: typeof trips.$inferSelect)
         isNotNull(interests.offeredAt),
         or(isNotNull(interests.personId), gt(interests.offeredAt, anonymousOfferCutoff)),
         or(isNull(interests.promoId), not(madeByTheList(db))),
-        notExists(
-          db
-            .select({ id: bookings.id })
-            .from(bookings)
-            .where(
-              and(
-                eq(bookings.tripId, trip.id),
-                eq(bookings.personId, interests.personId),
-                ne(bookings.status, "cancelled"),
+        or(
+          // A date request can represent a party. Its explicit booking links
+          // subtract only the seats already taken; a booking by its known
+          // requester must not discard the rest of the party's hold.
+          exists(
+            db
+              .select({ id: dateRequestParent.id })
+              .from(dateRequestParent)
+              .where(
+                and(
+                  eq(dateRequestParent.id, interests.parentInterestId),
+                  eq(dateRequestParent.shopId, interests.shopId),
+                  eq(dateRequestParent.scope, "date"),
+                ),
               ),
-            ),
+          ),
+          notExists(
+            db
+              .select({ id: bookings.id })
+              .from(bookings)
+              .where(
+                and(
+                  eq(bookings.tripId, trip.id),
+                  eq(bookings.personId, interests.personId),
+                  inArray(bookings.status, [...SEAT_HELD_STATUSES]),
+                ),
+              ),
+          ),
         ),
       ),
     );

@@ -275,7 +275,9 @@ const RESET_KEEPS: Record<string, string> = {
   crew_away_acknowledgements: "ON DELETE CASCADE from trips clears it",
   trip_desk_events: "ON DELETE CASCADE from trips clears it",
   trip_read_marks: "ON DELETE CASCADE from trips clears it",
+  offline_manifest_snapshot_revisions: "ON DELETE CASCADE from trips clears it",
   today_read_mark_events: "ON DELETE CASCADE from marks or desk events clears it",
+  date_request_offer_bookings: "ON DELETE CASCADE from its interest or booking clears it",
   trip_schedule_days: "ON DELETE CASCADE from trips clears it",
   // What the bench said to customers and the orders it raised (ADR
   // 20261008-work-order-follow-up). All three hang off a ticket or a customer's
@@ -326,6 +328,7 @@ const CASCADE_KEEPS: Record<string, string> = {
   claude_usage: "ON DELETE CASCADE from shops clears it",
   claude_call_content: "ON DELETE CASCADE from shops and claude_usage clears it",
   claude_call_content_erasures: "ON DELETE CASCADE from shops clears it",
+  date_request_offer_bookings: "ON DELETE CASCADE from its interest or booking clears it",
   email_bounces: "ON DELETE CASCADE from shops clears it",
   assist_results: "ON DELETE CASCADE from shops clears it",
   website_setup_drafts: "ON DELETE CASCADE from shops clears it",
@@ -333,6 +336,7 @@ const CASCADE_KEEPS: Record<string, string> = {
   crew_away_acknowledgements: "ON DELETE CASCADE from shops, people and trips clears it",
   trip_desk_events: "ON DELETE CASCADE from trips clears it",
   trip_read_marks: "ON DELETE CASCADE from trips clears it",
+  offline_manifest_snapshot_revisions: "ON DELETE CASCADE from trips clears it",
   today_read_marks: "ON DELETE CASCADE from shops or staff clears it",
   today_read_mark_events: "ON DELETE CASCADE from marks or desk events clears it",
   trip_schedule_days: "ON DELETE CASCADE from trips clears it",

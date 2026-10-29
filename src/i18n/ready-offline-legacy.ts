@@ -5,10 +5,20 @@ import es from "./locales/es-ES/ready-offline-legacy.json";
 export const LEGACY_READY_BANNER_COPY = new Map([
   [
     "No signal: this is the copy your phone saved. Anything you change here needs signal.",
-    en.savedCopyWarning,
+    {
+      savedCopyWarning: en.savedCopyWarning,
+      clockRollbackHeading: en.clockRollbackHeading,
+      clockRollbackUnknown: en.clockRollbackUnknown,
+      clockUnverified: en.clockUnverified,
+    },
   ],
   [
     "Sin cobertura: esta es la copia que guardó tu teléfono. Para cambiar algo aquí necesitas cobertura.",
-    es.savedCopyWarning,
+    {
+      savedCopyWarning: es.savedCopyWarning,
+      clockRollbackHeading: es.clockRollbackHeading,
+      clockRollbackUnknown: es.clockRollbackUnknown,
+      clockUnverified: es.clockUnverified,
+    },
   ],
 ]);
