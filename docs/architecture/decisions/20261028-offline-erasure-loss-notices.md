@@ -19,3 +19,15 @@ Keep offline loss notices actionable with short trip and record references, chec
 ## Consequences
 
 Offline roll call remains usable and each discarded note can be tied to its mark without restoring the erased identity. A shared device can disclose short trip/record references until an online tenant check completes; this is an accepted privacy tradeoff, not tenant confidentiality. Revisit if shops require strict offline tenant confidentiality; doing so requires suppressing references or designing authenticated, expiring offline tenant proof.
+
+## Amendment, 2026-10-29: full saved roster during true offline use
+
+The owner explicitly accepts showing a device's full encrypted saved roster during a true network
+outage, even when the current shop cannot be verified. On shared devices this can disclose another
+shop's roster, including emergency contacts and the medical/safety details already permitted in the
+offline snapshot, to a person holding the unlocked device. This preserves offline roll call's core
+use when the boat has no connectivity; encryption protects copied browser storage, not an unlocked
+device. Do not infer that the same disclosure is accepted while the device is online: while an
+identity request is pending, fails, or returns no shop, keep full roster and shop/trip titles hidden
+until the current shop is verified. This amendment accepts the true-offline disclosure tradeoff; it
+does not weaken tenant-scoped sync, purge, or notice rules.
