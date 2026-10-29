@@ -86,6 +86,38 @@ test.describe("as owner", () => {
     await expect(page.getByRole("heading", { name: "Timezone", exact: true })).toBeVisible();
   });
 
+  test("the selected settings destination stays visible when the viewport changes", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await page.goto(`/shop/${SHOP}/settings/import`);
+    const rail = page.getByRole("navigation", { name: "Settings sections" });
+    const selected = rail.locator('[aria-current="true"]');
+    await expect(selected).toBeVisible();
+
+    const visibleInRail = () =>
+      selected.evaluate((row) => {
+        const scroller = row.closest<HTMLElement>("[data-settings-rail-scroller]");
+        if (!scroller) return false;
+        const box = scroller.getBoundingClientRect();
+        const rect = row.getBoundingClientRect();
+        const fade = scroller.hasAttribute("data-more-below")
+          ? 3 * Number.parseFloat(getComputedStyle(document.documentElement).fontSize)
+          : 0;
+        return (
+          rect.left >= box.left &&
+          rect.right <= box.right &&
+          rect.top >= box.top &&
+          rect.bottom <= Math.min(box.bottom - fade, window.innerHeight)
+        );
+      });
+    await expect.poll(visibleInRail).toBe(true);
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect.poll(visibleInRail).toBe(true);
+    await expect(selected).toHaveCSS("font-size", "16px");
+  });
+
   test("the phone uses the horizontal rail and returns to its selected setting", async ({
     page,
   }) => {

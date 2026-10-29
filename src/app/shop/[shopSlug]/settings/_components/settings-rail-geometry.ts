@@ -35,7 +35,7 @@ export const SETTINGS_RAIL_FRAME_CLASS =
  * scrolled past it showed through that strip (K-221).
  */
 export const SETTINGS_RAIL_CONTENT_CLASS =
-  "flex w-max items-center gap-1 py-2 lg:block lg:w-auto lg:space-y-5 lg:py-6";
+  "flex w-max items-center gap-1 py-2 lg:block lg:w-auto lg:space-y-5 lg:py-6 lg:pb-28";
 
 /** A group label's gap to its first row. */
 export const SETTINGS_RAIL_LABEL_CLASS = "mb-2";

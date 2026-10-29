@@ -92,8 +92,13 @@ export function SettingsRail({
   // on the next, and now waits for this mark instead.
   const [settledFor, setSettledFor] = useState<string | null | undefined>(undefined);
   useEffect(() => {
-    if (currentId && scrollerRef.current) revealCurrentRow(scrollerRef.current);
+    const reveal = () => {
+      if (currentId && scrollerRef.current) revealCurrentRow(scrollerRef.current);
+    };
+    reveal();
     setSettledFor(currentId);
+    window.addEventListener("resize", reveal);
+    return () => window.removeEventListener("resize", reveal);
   }, [currentId]);
   const moreBelow = useMoreBelow(scrollerRef);
 
@@ -215,14 +220,22 @@ function useMoreBelow(scrollerRef: React.RefObject<HTMLDivElement | null>): bool
 function revealCurrentRow(scroller: HTMLElement) {
   const row = scroller.querySelector<HTMLElement>('[aria-current="true"]');
   if (!row) return;
-  const box = scroller.getBoundingClientRect();
+  // Re-measure after a resize or route change; a banner above the rail can
+  // make its CSS maximum taller than the space actually left on screen.
+  scroller.style.maxHeight = "";
+  let box = scroller.getBoundingClientRect();
   if (box.height === 0) return;
-  const rect = row.getBoundingClientRect();
   if (scroller.scrollWidth > scroller.clientWidth + 1) {
+    const rect = row.getBoundingClientRect();
     if (rect.left >= box.left && rect.right <= box.right) return;
     scroller.scrollLeft += rect.left + rect.width / 2 - (box.left + box.width / 2);
     return;
   }
+  if (box.bottom > window.innerHeight) {
+    scroller.style.maxHeight = `${Math.max(0, window.innerHeight - box.top - 4)}px`;
+    box = scroller.getBoundingClientRect();
+  }
+  const rect = row.getBoundingClientRect();
   const label = row.closest("ul")?.previousElementSibling;
   const cover = label instanceof HTMLElement ? label.getBoundingClientRect().height : 0;
   // While rows sit below the fold the box's foot fades out (`data-more-below`
@@ -232,9 +245,16 @@ function revealCurrentRow(scroller: HTMLElement) {
     scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight > 1
       ? 3 * (Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16)
       : 0;
-  if (rect.top >= box.top + cover && rect.bottom <= box.bottom - fade) return;
-  scroller.scrollTop += rect.top + rect.height / 2 - (box.top + box.height / 2);
+  // A demo banner or other chrome can put the bottom of the rail below the
+  // viewport even when the row fits inside the rail's own scroll box.
+  const visibleBottom = Math.min(box.bottom, window.innerHeight);
+  if (rect.top >= box.top + cover && rect.bottom <= visibleBottom - fade) return;
+  scroller.scrollTop += rect.top + rect.height / 2 - (box.top + visibleBottom) / 2;
   settleOnRowEdge(scroller, box);
+  if (scroller.style.maxHeight) {
+    const overflow = row.getBoundingClientRect().bottom - visibleBottom;
+    if (overflow > 0) scroller.scrollTop += overflow;
+  }
 }
 
 /**
@@ -274,7 +294,7 @@ function RailLink({
 }) {
   // The page rail's one row, ringed inside itself (`ui/rail.ts` says why);
   // `justify-between` keeps a warning badge on the row's far edge.
-  const className = `${RAIL_ROW_CLASS} w-max justify-between gap-2 whitespace-nowrap lg:w-full lg:whitespace-normal ${
+  const className = `${RAIL_ROW_CLASS} w-max justify-between gap-2 whitespace-nowrap text-base! lg:w-full lg:whitespace-normal lg:text-sm! ${
     selected ? RAIL_ROW_CURRENT : RAIL_ROW_IDLE
   }`;
   const current = selected ? ("true" as const) : undefined;

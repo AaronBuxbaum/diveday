@@ -372,11 +372,51 @@ describe("the rail keeps the current row in view", () => {
 
   const scrollIntoView = vi.fn();
   beforeEach(() => {
+    vi.stubGlobal("innerHeight", 900);
     Element.prototype.scrollIntoView = scrollIntoView;
     scrollIntoView.mockClear();
   });
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it("brings the selected row into the visible viewport when the rail extends below it", () => {
+    pathname = `${BASE}/settings/team`;
+    vi.stubGlobal("innerHeight", 720);
+    stubBoxes({
+      scroller: { top: 125, height: 664 },
+      row: { top: 709, height: 56 },
+      label: { top: 125, height: 24 },
+    });
+    renderRail();
+
+    expect(railScroller().scrollTop).toBeGreaterThan(0);
+  });
+
+  it("reveals the selected destination again after the viewport changes axis", () => {
+    pathname = `${BASE}/settings/team`;
+    let phone = false;
+    vi.spyOn(HTMLElement.prototype, "scrollWidth", "get").mockImplementation(() =>
+      phone ? 2000 : 264,
+    );
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(() =>
+      phone ? 390 : 264,
+    );
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      const isRow = this.getAttribute("aria-current") === "true";
+      const left = phone && isRow ? 1200 : 0;
+      const width = phone && !isRow ? 390 : 200;
+      return { left, right: left + width, top: 100, bottom: 144, width, height: 44 } as DOMRect;
+    });
+    renderRail();
+    const scroller = railScroller();
+    phone = true;
+    fireEvent(window, new Event("resize"));
+
+    expect(scroller.scrollLeft).toBeGreaterThan(0);
   });
 
   it("scrolls its own box, never the page, to a current row below the fold", () => {
