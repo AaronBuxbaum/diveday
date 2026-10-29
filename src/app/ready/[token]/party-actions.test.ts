@@ -76,7 +76,12 @@ describe("signMinorWaiverAction", () => {
     expect(jar.set).toHaveBeenCalledWith(
       "diveday_party_return",
       TOKEN,
-      expect.objectContaining({ path: "/waivers/waiver-token", httpOnly: true, sameSite: "lax" }),
+      expect.objectContaining({
+        path: "/waivers/waiver-token",
+        httpOnly: true,
+        sameSite: "lax",
+        secure: false,
+      }),
     );
   });
 

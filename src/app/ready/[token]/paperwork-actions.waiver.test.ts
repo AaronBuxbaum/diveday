@@ -61,6 +61,7 @@ describe("opening a waiver from readiness", () => {
         httpOnly: true,
         sameSite: "lax",
         maxAge: 3_600,
+        secure: false,
       }),
     );
   });
