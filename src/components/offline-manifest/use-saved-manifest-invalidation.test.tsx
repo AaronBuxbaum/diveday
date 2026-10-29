@@ -19,7 +19,11 @@ const tenant = vi.hoisted(() => ({
   setVerified: (_slug: string | null) => {},
 }));
 const purgeState = vi.hoisted(() => ({
-  latest: null as null | { onTenantVerified: (slug: string) => void },
+  latest: null as null | {
+    onTenantVerified: (slug: string) => void;
+    onTripPurged: () => void;
+    dispatchSaved: (action: { type: "gone"; tenant: string }) => void;
+  },
 }));
 
 vi.mock("next/navigation", () => ({ useSearchParams: () => search.params }));
@@ -258,5 +262,55 @@ describe("selected-trip invalidation", () => {
     expect(result.current.storeRead).toBe(true);
     expect(result.current.storeReadFailed).toBe(true);
     expect(result.current.envelope).toBeNull();
+  });
+
+  it("settles a cold load when a purge completes before its invalidation reload fails", async () => {
+    setOnline(true);
+    const foreign = envelope("trip-1", "Private trip", { shopSlug: "shop-a" });
+    let resolveInitial: (saved: OfflineManifestEnvelope) => void = () => {};
+    let rejectReload: (error: Error) => void = () => {};
+    load.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveInitial = resolve;
+        }),
+    );
+    load.mockImplementationOnce(
+      () =>
+        new Promise((_, reject) => {
+          rejectReload = reject;
+        }),
+    );
+    const { result } = at("trip=trip-1");
+    expect(result.current.storeRead).toBe(false);
+
+    // The authenticated purge confirms that the foreign copy is gone.
+    act(() => {
+      purgeState.latest?.dispatchSaved({ type: "gone", tenant: "blue-mantis" });
+      purgeState.latest?.onTripPurged();
+    });
+    expect(result.current.storeRead).toBe(true);
+    expect(result.current.storeReadFailed).toBe(false);
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent("diveday-offline-manifest-change", { detail: { tripId: "trip-1" } }),
+      );
+    });
+    await act(async () => rejectReload(new Error("indexeddb unavailable")));
+
+    await waitFor(() => expect(result.current.storeRead).toBe(true));
+    expect(result.current.storeReadFailed).toBe(false);
+    expect(result.current.envelope).toBeNull();
+    expect(result.current.removedForOtherShop).toBeNull();
+
+    // The superseded pre-purge read may classify the recovery state by shop,
+    // but the reducer latch keeps the foreign envelope and controls hidden.
+    await act(async () => resolveInitial(foreign));
+    expect(result.current.storeRead).toBe(true);
+    expect(result.current.storeReadFailed).toBe(false);
+    expect(result.current.envelope).toBeNull();
+    expect(result.current.removedForOtherShop).toBe(true);
+    expect(result.current.message).not.toContain("Private trip");
+    expect(vi.mocked(syncOfflineManifest)).not.toHaveBeenCalled();
   });
 });

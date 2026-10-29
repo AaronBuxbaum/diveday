@@ -426,7 +426,7 @@ function handleSelectedTripEnvelopeLoaded({
   if (!tripPurgedRef.current) {
     setMessage(initialTripStatusMessage(noteMessage, Boolean(saved), t));
   }
-  if (saved && navigator.onLine) void reconcile();
+  if (saved && navigator.onLine && !tripPurgedRef.current) void reconcile();
 }
 
 export function useSavedManifest(t: OfflineManifestTranslator) {
@@ -504,7 +504,11 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
   // A saved-trip load can finish after an online cross-shop purge confirms the
   // copy is gone. Its reducer action is fenced, and so must its note-loss
   // message be.
-  const { tripPurgedRef, onTripPurged } = useSelectedTripPurgeState(setMessage);
+  const { tripPurgedRef, onTripPurged } = useSelectedTripPurgeState(
+    setMessage,
+    setStoreRead,
+    setStoreReadFailed,
+  );
   // The service worker sent the captain here because DiveDay did not answer
   // (`OFFLINE_FALLBACK_PARAM`), not because they opened the saved copy. While
   // the device reads "online" that is the misleading case: a copy minutes old

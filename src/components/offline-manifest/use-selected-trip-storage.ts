@@ -14,12 +14,18 @@ export function createSelectedTripStorageState(): SelectedTripStorageState {
   return { changeRevision: 0, readRequest: 0, reload: () => {} };
 }
 
-export function useSelectedTripPurgeState(setMessage: Dispatch<SetStateAction<string>>) {
+export function useSelectedTripPurgeState(
+  setMessage: Dispatch<SetStateAction<string>>,
+  setStoreRead: (read: boolean) => void,
+  setStoreReadFailed: (failed: boolean) => void,
+) {
   const tripPurgedRef = useRef(false);
   const onTripPurged = useCallback(() => {
     tripPurgedRef.current = true;
+    setStoreRead(true);
+    setStoreReadFailed(false);
     setMessage("");
-  }, [setMessage]);
+  }, [setMessage, setStoreRead, setStoreReadFailed]);
   return { tripPurgedRef, onTripPurged };
 }
 
@@ -65,9 +71,16 @@ export function useSelectedTripStorage({
           if (
             !active ||
             request !== current.readRequest ||
-            changeRevision !== current.changeRevision ||
-            tripPurgedRef.current
+            changeRevision !== current.changeRevision
           ) {
+            return;
+          }
+          if (tripPurgedRef.current) {
+            // The purge round has already painted the removed-copy recovery
+            // state. Do not let this read repaint the envelope, but do settle
+            // a cold opening that this reload superseded.
+            setStoreRead(true);
+            setStoreReadFailed(false);
             return;
           }
           onEnvelope(saved);
@@ -79,9 +92,13 @@ export function useSelectedTripStorage({
           if (
             !active ||
             request !== current.readRequest ||
-            changeRevision !== current.changeRevision ||
-            tripPurgedRef.current
+            changeRevision !== current.changeRevision
           ) {
+            return;
+          }
+          if (tripPurgedRef.current) {
+            setStoreRead(true);
+            setStoreReadFailed(false);
             return;
           }
           // This may be the first read to settle if an invalidation replaced
@@ -141,7 +158,14 @@ export function useSelectedTripStorage({
     void loadOfflineManifest(tripId)
       .then((saved) => {
         const current = storageStateRef.current;
-        if (!active || request !== current.readRequest) return;
+        if (!active) return;
+        if (request !== current.readRequest) {
+          // The purge reducer's gone latch keeps this envelope off screen and
+          // uses only its shop slug to classify the removed-copy recovery.
+          // That is the one safe outcome needed from a superseded cold read.
+          if (tripPurgedRef.current) onEnvelope(saved);
+          return;
+        }
         if (changeRevision !== current.changeRevision) {
           current.reload();
           return;
@@ -151,8 +175,12 @@ export function useSelectedTripStorage({
       })
       .catch(() => {
         if (active && request === storageStateRef.current.readRequest) {
-          setStoreReadFailed(true);
-          setMessage(t("shared.offlineManifest.reconcile.singleLoadError"));
+          if (tripPurgedRef.current) {
+            setStoreReadFailed(false);
+          } else {
+            setStoreReadFailed(true);
+            setMessage(t("shared.offlineManifest.reconcile.singleLoadError"));
+          }
         }
       })
       .finally(() => {
