@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ciMergeVerdict } from "./ci-merge-verdict.mjs";
+import { ciCandidateProblems, ciMergeVerdict } from "./ci-merge-verdict.mjs";
 
 const jobs = [
   "repo-safeguards",
@@ -82,5 +82,81 @@ describe("CI merge verdict", () => {
     expect(ciMergeVerdict(green(), { code: "true", db: "", event: "pull_request" })).not.toEqual(
       [],
     );
+  });
+});
+
+describe("exact CI candidate identity", () => {
+  const runSha = "a".repeat(40);
+  const headSha = "b".repeat(40);
+  const baseSha = "c".repeat(40);
+  const currentPullRequest = {
+    head: { sha: headSha },
+    base: { sha: baseSha },
+    merge_commit_sha: runSha,
+  };
+  const context = {
+    event: "pull_request",
+    ref: "refs/pull/42/merge",
+    sha: runSha,
+    prNumber: "42",
+    headSha,
+    baseSha,
+    currentPullRequest,
+  };
+
+  it("accepts a run for the current PR head, base, and generated merge candidate", () => {
+    expect(ciCandidateProblems(context)).toEqual([]);
+  });
+
+  it("rejects a rerun when the PR head or base moved after this run was created", () => {
+    expect(
+      ciCandidateProblems({
+        ...context,
+        currentPullRequest: {
+          ...currentPullRequest,
+          head: { sha: "d".repeat(40) },
+        },
+      }),
+    ).toContain("PR head changed after this CI run started");
+    expect(
+      ciCandidateProblems({
+        ...context,
+        currentPullRequest: {
+          ...currentPullRequest,
+          base: { sha: "e".repeat(40) },
+        },
+      }),
+    ).toContain("PR base changed after this CI run started");
+  });
+
+  it("rejects a run whose merge candidate is stale or attached to another PR ref", () => {
+    expect(
+      ciCandidateProblems({
+        ...context,
+        currentPullRequest: { ...currentPullRequest, merge_commit_sha: "f".repeat(40) },
+      }),
+    ).toContain("PR merge candidate changed after this CI run started");
+    expect(ciCandidateProblems({ ...context, ref: "refs/pull/43/merge" })).toContain(
+      "CI ref does not identify PR #42's merge candidate",
+    );
+  });
+
+  it("fails closed when PR identity or current API evidence is unavailable", () => {
+    expect(ciCandidateProblems({ ...context, prNumber: "" })).toContain(
+      "pull request number is missing or invalid",
+    );
+    expect(ciCandidateProblems({ ...context, currentPullRequest: null })).toContain(
+      "current pull request evidence is unavailable",
+    );
+  });
+
+  it("requires a main-branch SHA for main push and dispatch runs", () => {
+    expect(ciCandidateProblems({ event: "push", ref: "refs/heads/main", sha: runSha })).toEqual([]);
+    expect(ciCandidateProblems({ event: "push", ref: "refs/heads/other", sha: runSha })).toContain(
+      "main CI run is not on refs/heads/main",
+    );
+    expect(
+      ciCandidateProblems({ event: "workflow_dispatch", ref: "refs/heads/main", sha: "bad" }),
+    ).toContain("CI candidate SHA is missing or invalid");
   });
 });

@@ -39,7 +39,6 @@ export const OUTSIDE_RETENTION: readonly string[] = [
   "gear_items",
   "trip_series",
   "trip_series_crew",
-  "inbox_saved_answers", // kept until a staffer deletes one, like waiver templates
   "shop_text_translations", // the shop's own words in Spanish, kept while the original is
   "trip_series_skips",
   "trip_schedule_days",

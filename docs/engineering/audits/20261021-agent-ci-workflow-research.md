@@ -70,6 +70,23 @@ queue needs race prevention, cancellation handling and recovery; it should not b
 shell loop. Transferring repository ownership to obtain native queue eligibility is a separate
 human decision with broader consequences.
 
+### Implementation status — 2026-10-29
+
+The CI `CI result` job now compares the run's merge SHA and the event's head/base SHAs with the
+current pull request from GitHub's API. It fails closed when the candidate moved or the live pull
+request cannot be read. The job still validates all applicable full-CI lanes, as required by ADR
+20261003. Read-only API inspection on 2026-10-29 found that ruleset 19471629 still contains only
+`deletion` and `non_fast_forward`; classic branch protection still returns 404. The check therefore
+does not block merges until a repository administrator updates the ruleset.
+
+The remaining owner action is to edit **Settings → Rules → Rulesets → No push to main** (ruleset
+19471629), require pull requests for the default branch, and require the successful **CI result**
+check from **GitHub Actions** with the branch required to be up to date before merging. Save the
+ruleset, then confirm through `GET /repos/AaronBuxbaum/diveday/rulesets/19471629` that the active
+rules include the pull-request and required-status-check rules, the status context is `CI result`,
+and no bypass actor can skip it. Do not change repository ownership or configure a merge queue as
+part of this action.
+
 ## Proposed progressive gates
 
 These are design alternatives for evaluation. No command or stamp below has been added.

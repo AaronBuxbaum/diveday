@@ -6,20 +6,18 @@ const DATA_DOOR = "Export, import, backups and integrations";
 test.describe("Settings fragment hydration", () => {
   signedInAs("owner");
 
-  test(
-    "keeps the Your data door navigable after ordinary hydration",
-    { tag: READ_ONLY },
-    async ({ page }) => {
-      await page.goto("/shop/blue-mantis/settings#data");
-      const selection = page.locator("[data-settings-selection-root]");
-      await expect(selection).toHaveAttribute("data-hydrated", "true");
-      await expect(selection).toHaveAttribute("data-settings-selection", "group:data");
-      const link = page.getByRole("main").getByRole("link", { name: DATA_DOOR });
-      await expect(link).toBeVisible();
-      await link.click();
-      await expect(page).toHaveURL(/\/settings\/(export|import|integrations)(?:\?|$)/);
-    },
-  );
+  test("keeps the Your data door navigable after ordinary hydration", { tag: READ_ONLY }, async ({
+    page,
+  }) => {
+    await page.goto("/shop/blue-mantis/settings#data");
+    const selection = page.locator("[data-settings-selection-root]");
+    await expect(selection).toHaveAttribute("data-hydrated", "true");
+    await expect(selection).toHaveAttribute("data-settings-selection", "group:data");
+    const link = page.getByRole("main").getByRole("link", { name: DATA_DOOR });
+    await expect(link).toBeVisible();
+    await link.click();
+    await expect(page).toHaveURL(/\/settings\/(export|import|integrations)(?:\?|$)/);
+  });
 
   test(
     "keeps the Your data click when slow hydration selects the fragment",

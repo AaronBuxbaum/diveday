@@ -22,9 +22,9 @@ function resultNeeds(text) {
 }
 
 /**
- * Main's ruleset requires the one "CI result" check (2026-10-13 review, row
- * 35). A job left out of its `needs:` could fail and the pull request would
- * still merge green, so every other job must be listed.
+ * `CI result` is the stable check to require in main's ruleset. The current
+ * visible ruleset does not require it yet. A job left out of its `needs:` could
+ * fail while the aggregate went green, so every other job must be listed.
  */
 describe("the CI result job", () => {
   it("needs every other job in ci.yml", () => {
@@ -34,10 +34,19 @@ describe("the CI result job", () => {
     expect([...CI_JOBS].sort()).toEqual(others.sort());
   });
 
-  it("runs even when a job it needs failed, and keeps the name the ruleset requires", () => {
+  it("runs even when a job it needs failed and keeps a stable aggregate name", () => {
     const job = CI.slice(CI.indexOf("\n  ci-result:\n"));
     expect(job).toMatch(/^ {4}name: CI result$/mu);
     expect(job).toMatch(/^ {4}if: always\(\) && github\.event_name != 'schedule'$/mu);
+  });
+
+  it("checks current PR candidate identity with read-only pull request access", () => {
+    const job = CI.slice(CI.indexOf("\n  ci-result:\n"));
+    expect(job).toContain("      pull-requests: read");
+    expect(job).toContain("          GITHUB_SHA: ${{ github.sha }}");
+    expect(job).toContain("          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}");
+    expect(job).toContain("          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}");
+    expect(job).toContain("          GH_TOKEN: ${{ github.token }}");
   });
 
   it("keeps the complete unit and Playwright shard fleets", () => {

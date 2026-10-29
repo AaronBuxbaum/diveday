@@ -745,9 +745,9 @@ export function rentalFitCompleteness(
  */
 export function sizeForRentalItem(
   fit: RentalFitSizes | null | undefined,
-  kind: SizedRentalKind | "mask_fins",
+  kind: SizedRentalKind,
 ): string | null {
-  if (!fit || kind === "mask_fins") return null;
+  if (!fit) return null;
   const value = {
     bcd: fit.bcdSize,
     wetsuit: fit.wetsuitSize,
