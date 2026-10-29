@@ -84,6 +84,10 @@ export function useSelectedTripStorage({
           ) {
             return;
           }
+          // This may be the first read to settle if an invalidation replaced
+          // the cold-load request. Render the unreadable-copy recovery state
+          // instead of leaving the page in its indefinite "Opening" shell.
+          setStoreRead(true);
           setStoreReadFailed(true);
           setMessage(t("shared.offlineManifest.reconcile.singleLoadError"));
         });
