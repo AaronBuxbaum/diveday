@@ -627,7 +627,7 @@ it("keeps the actionable note-loss notice beside retry feedback when identity lo
 
   expect(await screen.findByText(/Couldn’t reach DiveDay just now/)).toBeInTheDocument();
   expect(
-    await screen.findByText(/Older offline note text was removed after a data erasure/),
+    await screen.findByText(/Each line is a separate mark whose older offline note was removed/),
   ).toBeInTheDocument();
   expect(await screen.findByText(/Diver record 12345678.*mark kept/)).toBeInTheDocument();
   expect(screen.queryByText("Everything’s sent.")).not.toBeInTheDocument();

@@ -23,12 +23,14 @@ vi.mock("@/lib/offline-manifest-store", async () => ({
       "@/lib/offline-manifest-store",
     )
   ).OfflineManifestError,
+  beginOfflineTenantVerificationRound: vi.fn().mockResolvedValue(1),
   // The counter's queue is a *different* writer from roll call's, and this
   // mock keeps them apart so a test can prove which one a tap reached
   // (ADR 20260907-the-counter-survives-offline).
   appendOfflineArrival: vi.fn(),
   appendOfflineRollCall: vi.fn(),
-  listOfflineManifests: vi.fn(),
+  listOfflineManifests: vi.fn().mockResolvedValue([]),
+  subscribeOfflineManifestChanges: vi.fn(() => () => {}),
   loadOfflineManifest: vi.fn(),
   purgeOfflineManifestsExceptShop: vi.fn().mockResolvedValue([]),
   syncOfflineManifest: vi.fn(),

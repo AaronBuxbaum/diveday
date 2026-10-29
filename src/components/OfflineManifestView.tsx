@@ -9,6 +9,7 @@ import {
   OfflineManifestSkeleton,
   OfflineNoSavedTrip,
   OfflineOpeningScreen,
+  OfflineTenantUnverifiedScreen,
   OfflineTenantVerificationScreen,
 } from "./offline-manifest/ShellScreens";
 import { DiscardedRecordsNotice, translatorForThisDevice } from "./offline-manifest/shared";
@@ -61,6 +62,7 @@ function OfflineManifestScreen() {
     verifiedTenantSlug,
     foreignPendingChanges,
     tripNoteLossMessage,
+    offlineReferenceMessage,
     tenantChangePending,
     removedForOtherShop,
     dispatchSaved,
@@ -75,6 +77,7 @@ function OfflineManifestScreen() {
     acknowledgeDiscarded,
     reconcile,
     fallback,
+    deviceOnline,
     servedWithoutAnswer,
     copyCaveat,
   } = useSavedManifest(t);
@@ -108,9 +111,18 @@ function OfflineManifestScreen() {
    * either.
    */
   const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
+  // During an online identity lookup, discard records' shop and trip titles
+  // stay hidden while short references remain available. Truly offline use
+  // keeps its existing behavior until the product owner settles that tradeoff.
   const visibleDiscarded = verifiedTenantSlug
     ? discarded.filter((record) => record.shopSlug === verifiedTenantSlug)
-    : discarded;
+    : deviceOnline
+      ? []
+      : discarded;
+  const unverifiedMessage =
+    offlineReferenceMessage && message.includes(offlineReferenceMessage)
+      ? message.replace(offlineReferenceMessage, "").trim()
+      : message;
   const discardNotice = (
     <DiscardedRecordsNotice t={t} records={visibleDiscarded} onAcknowledge={acknowledgeDiscarded} />
   );
@@ -118,7 +130,10 @@ function OfflineManifestScreen() {
   // and offer it once it answers in time. Never a swap: the captain chooses
   // when to leave a count (re-review R1).
   const liveHref =
-    servedWithoutAnswer && envelope && tripId
+    servedWithoutAnswer &&
+    verifiedTenantSlug !== null &&
+    envelope?.snapshot.shop.slug === verifiedTenantSlug &&
+    tripId
       ? liveManifestHref(envelope, tripId, checkpoint)
       : null;
   const liveAnswering = useLiveAnswering(liveHref);
@@ -138,6 +153,17 @@ function OfflineManifestScreen() {
       <OfflineTenantVerificationScreen
         t={t}
         message={t("shared.offlineManifest.reconcile.tenantChanged")}
+      />
+    );
+  }
+
+  if (deviceOnline && verifiedTenantSlug === null) {
+    return (
+      <OfflineTenantUnverifiedScreen
+        t={t}
+        message={unverifiedMessage}
+        referenceMessage={offlineReferenceMessage}
+        readFailed={storeReadFailed}
       />
     );
   }

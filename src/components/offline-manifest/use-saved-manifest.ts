@@ -796,6 +796,12 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
 
   const verifiedTenantSlug = verifiedTenantRevision > 0 ? verifiedTenantSlugRef.current : null;
   const tripNoteLossMessage = selectedTripNoteLossMessage(envelope, verifiedTenantSlug, t);
+  // Identity may be unavailable on a shared device. Keep only the short
+  // references explicitly allowed by the erasure decision visible in that
+  // state; the view withholds every saved roster until a server answer scopes it.
+  const offlineReferenceMessage = tripId
+    ? tripNoteLossMessage
+    : listNoteLossMessage(list ?? [], t, verifiedTenantSlug);
 
   return {
     tripId,
@@ -803,6 +809,7 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
     verifiedTenantSlug,
     foreignPendingChanges: foreignPendingTrip(list ?? [], envelope, verifiedTenantSlug),
     tripNoteLossMessage,
+    offlineReferenceMessage,
     tenantChangePending,
     removedForOtherShop,
     dispatchSaved,
@@ -817,6 +824,7 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
     acknowledgeDiscarded,
     reconcile,
     fallback,
+    deviceOnline,
     servedWithoutAnswer,
     copyCaveat,
   };

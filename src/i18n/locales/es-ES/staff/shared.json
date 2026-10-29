@@ -371,6 +371,7 @@
     "openingHeading": "Abriendo la copia guardada en este dispositivo",
     "reconcile": {
       "tenantChanged": "Ha cambiado el centro con sesión iniciada. El manifiesto guardado y sus controles están ocultos mientras este dispositivo verifica el centro actual. Los cambios pendientes siguen guardados aquí; vuelve a conectarte o recarga para intentarlo de nuevo.",
+      "tenantUnverified": "Este dispositivo todavía no verificó qué centro tiene la sesión iniciada. Solo se muestran referencias breves de la salida y del registro hasta confirmar el centro. Los detalles del manifiesto quedan ocultos mientras se verifica. Los cambios pendientes siguen guardados en este dispositivo.",
       "reachError": "No se pudo contactar con DiveDay en este momento. Tus cambios siguen guardados en este teléfono e intentarán enviarse de nuevo en el próximo cambio o al reconectar.",
       "pendingRejectedSingle": "{count, plural, one {# cambio necesita revisión. Abre el manifiesto en vivo para resolverlo.} other {# cambios necesitan revisión. Abre el manifiesto en vivo para resolverlo.}}",
       "pendingWaiting": "{count, plural, one {# cambio todavía se está enviando.} other {# cambios todavía se están enviando.}}",
@@ -414,6 +415,7 @@
     "single": {
       "eyebrow": "Manifiesto sin conexión",
       "tenantChangedHeading": "Verificando el centro de este dispositivo",
+      "identityUnverifiedHeading": "Manifiesto guardado oculto",
       "emptyHeading": "Todavía no hay nada guardado en este teléfono",
       "emptyHint": "Mientras aún tengas señal, abre el manifiesto en vivo de la salida: mantiene al día la copia de este dispositivo.",
       "readFailedHeading": "No se pudo abrir la copia guardada en este teléfono",

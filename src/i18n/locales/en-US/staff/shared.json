@@ -371,6 +371,7 @@
     "openingHeading": "Opening this device’s saved copy",
     "reconcile": {
       "tenantChanged": "The signed-in shop changed. This saved roster and its controls are hidden while this device checks the current shop. Pending changes remain saved here; reconnect or reload to try again.",
+      "tenantUnverified": "This device hasn’t verified which shop is signed in. Only short trip and record references are shown until the shop is confirmed. Roster details stay hidden while it checks. Queued changes remain saved on this device.",
       "reachError": "Couldn’t reach DiveDay just now. Your changes are still saved on this phone and will try to send again on the next change or reconnect.",
       "pendingRejectedSingle": "{count, plural, one {# change needs a look. Open the live manifest to sort it out.} other {# changes need a look. Open the live manifest to sort it out.}}",
       "pendingWaiting": "{count, plural, one {# change is still sending.} other {# changes are still sending.}}",
@@ -414,6 +415,7 @@
     "single": {
       "eyebrow": "Offline manifest",
       "tenantChangedHeading": "Checking this device’s shop",
+      "identityUnverifiedHeading": "Saved roster hidden",
       "emptyHeading": "Nothing saved on this phone yet",
       "emptyHint": "While you still have signal, open the trip’s live manifest. It keeps this device’s copy current on its own.",
       "readFailedHeading": "Couldn’t open this phone’s saved copy",

@@ -22,6 +22,7 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => searchParams,
 }));
 vi.mock("@/lib/offline-manifest-store", async () => ({
+  beginOfflineTenantVerificationRound: vi.fn().mockResolvedValue(1),
   // The real class, not a stand-in: the view branches on
   // `error instanceof OfflineManifestError` and then on `error.code`, so a
   // duplicate declared here would make every refusal fall through to the
@@ -36,7 +37,8 @@ vi.mock("@/lib/offline-manifest-store", async () => ({
   // (ADR 20260907-the-counter-survives-offline).
   appendOfflineArrival: vi.fn(),
   appendOfflineRollCall: vi.fn(),
-  listOfflineManifests: vi.fn(),
+  listOfflineManifests: vi.fn().mockResolvedValue([]),
+  subscribeOfflineManifestChanges: vi.fn(() => () => {}),
   loadOfflineManifest: vi.fn(),
   purgeOfflineManifestsExceptShop: vi.fn().mockResolvedValue([]),
   syncOfflineManifest: vi.fn(),
@@ -77,6 +79,7 @@ afterEach(() => {
 // these confirm the ported UI honors them rather than adding its own gate.
 describe("OfflineManifestView — ported boat affordances (task 72)", () => {
   beforeEach(() => {
+    setOnline(false);
     vi.stubGlobal("vibrate", undefined);
     Object.defineProperty(navigator, "vibrate", {
       value: vi.fn(),
