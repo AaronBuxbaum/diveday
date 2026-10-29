@@ -115,6 +115,23 @@ describePostgres("drizzle migrations against a real Postgres server", () => {
     // one thing PGlite satisfies out-of-band and a bare Postgres container does
     // not (see the header).
     expect(await appTableCount(pg.db)).toBeGreaterThan(30);
+    const returningReceiptConstraint = await pg.db.execute(sql`
+      select pg_get_constraintdef(oid) as definition
+        from pg_constraint
+       where conname = 'booking_capabilities_returning_diver_source'
+    `);
+    const receiptConstraints = (
+      Array.isArray(returningReceiptConstraint)
+        ? returningReceiptConstraint
+        : ((returningReceiptConstraint as { rows?: unknown }).rows ?? [])
+    ) as { definition: string }[];
+    expect(receiptConstraints).toHaveLength(1);
+    // The enum value is introduced by this migration. Its constraint must
+    // compare the textual representation so PostgreSQL can apply the whole
+    // migration transaction without using the uncommitted enum value.
+    expect(receiptConstraints[0]?.definition).toMatch(/purpose\).*text/i);
+    expect(receiptConstraints[0]?.definition).toContain("returning_diver_receipt");
+
     const extensions = await pg.db.execute(sql`select extname from pg_extension`);
     const names = (
       Array.isArray(extensions) ? extensions : ((extensions as { rows?: unknown }).rows ?? [])

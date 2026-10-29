@@ -6,7 +6,9 @@
 // the only surface it actually exposes: its own events.
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { MANIFEST_SYNC_TAG } from "@/lib/background-flush";
+import { nowMs } from "@/lib/clock";
 import {
+  beginOfflineTenantVerificationRound,
   listOfflineManifests,
   purgeOfflineManifestsExceptShop,
   saveOfflineManifest,
@@ -33,6 +35,7 @@ import {
 import { saveReadyPage } from "./ready-page-cache";
 
 vi.mock("@/lib/offline-manifest-store", () => ({
+  beginOfflineTenantVerificationRound: vi.fn().mockResolvedValue(1),
   listOfflineManifests: vi.fn(),
   purgeOfflineManifestsExceptShop: vi.fn(),
   saveOfflineManifest: vi.fn(),
@@ -194,8 +197,9 @@ beforeAll(async () => {
 beforeEach(() => {
   vi.resetAllMocks();
   installGlobals();
+  vi.mocked(beginOfflineTenantVerificationRound).mockResolvedValue(1);
   vi.mocked(listOfflineManifests).mockResolvedValue([]);
-  vi.mocked(purgeOfflineManifestsExceptShop).mockResolvedValue(undefined);
+  vi.mocked(purgeOfflineManifestsExceptShop).mockResolvedValue([]);
   vi.mocked(saveOfflineManifest).mockResolvedValue(envelope("saved", "blue-mantis"));
   vi.mocked(syncOfflineManifest).mockResolvedValue(null);
   // No visible client, which is the only case where the worker does the work
@@ -223,7 +227,7 @@ describe("flushPendingRollCall (the sync event)", () => {
     await fireSync();
 
     expect(syncOfflineManifest).toHaveBeenCalledTimes(1);
-    expect(syncOfflineManifest).toHaveBeenCalledWith("trip-mine");
+    expect(syncOfflineManifest).toHaveBeenCalledWith("trip-mine", "blue-mantis", 1);
   });
 
   it.each([
@@ -305,14 +309,18 @@ describe("refreshSavedManifests (the push event)", () => {
 
     await firePush();
 
-    expect(purgeOfflineManifestsExceptShop).toHaveBeenCalledWith("blue-mantis");
+    expect(beginOfflineTenantVerificationRound).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(beginOfflineTenantVerificationRound).mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(fetch).mock.invocationCallOrder[0],
+    );
+    expect(purgeOfflineManifestsExceptShop).toHaveBeenCalledWith("blue-mantis", 1);
     expect(saveOfflineManifest).toHaveBeenCalledTimes(1);
     expect(vi.mocked(purgeOfflineManifestsExceptShop).mock.invocationCallOrder[0]).toBeLessThan(
       vi.mocked(saveOfflineManifest).mock.invocationCallOrder[0],
     );
     // Medical alert words go before the board is written (H-153): this body
     // names nobody, so all of them.
-    expect(wipeOfflineMedicalAlerts).toHaveBeenCalledWith(undefined);
+    expect(wipeOfflineMedicalAlerts).toHaveBeenCalledWith(undefined, 1);
     expect(vi.mocked(wipeOfflineMedicalAlerts).mock.invocationCallOrder[0]).toBeLessThan(
       vi.mocked(saveOfflineManifest).mock.invocationCallOrder[0],
     );
@@ -328,6 +336,7 @@ describe("refreshSavedManifests (the push event)", () => {
     // This body carries no `mayHoldMedicalAlertWords`: fail closed.
     expect(saveOfflineManifest).toHaveBeenCalledWith(expect.anything(), {
       keepMedicalAlertWords: false,
+      tenantRound: 1,
     });
   });
 
@@ -471,12 +480,13 @@ describe("a navigation on a network that never answers", () => {
   }
 
   async function cacheReadyCopy(path: string, body: string) {
-    const keepUntil = Date.now() + 24 * 60 * 60 * 1000;
+    const now = nowMs();
+    const keepUntil = now + 24 * 60 * 60 * 1000;
     const response = new Response(
-      `<meta name="${READY_KEEP_UNTIL_META}" content="${keepUntil}"/><meta name="${READY_COPY_VERSION_META}" content="${READY_COPY_VERSION}"/><meta name="${READY_COPY_LOCALE_META}" content="en-US"/><meta name="${READY_COPY_TIME_ZONE_META}" content="America/New_York"/><meta name="${READY_COPY_GENERATED_AT_META}" content="${Date.now()}"/>${body}<p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">No signal: ${READY_OFFLINE_GENERATED_AT_PLACEHOLDER}</p>`,
+      `<meta name="${READY_KEEP_UNTIL_META}" content="${keepUntil}"/><meta name="${READY_COPY_VERSION_META}" content="${READY_COPY_VERSION}"/><meta name="${READY_COPY_LOCALE_META}" content="en-US"/><meta name="${READY_COPY_TIME_ZONE_META}" content="America/New_York"/><meta name="${READY_COPY_GENERATED_AT_META}" content="${now}"/>${body}<p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">No signal: ${READY_OFFLINE_GENERATED_AT_PLACEHOLDER}</p>`,
       { headers: { "content-type": "text/html" } },
     );
-    await saveReadyPage(cacheStorage as unknown as CacheStorage, path, response, Date.now());
+    await saveReadyPage(cacheStorage as unknown as CacheStorage, path, response, now);
   }
 
   /** Settles `promise` or reports that it is still waiting after `ms` of fake time. */
@@ -491,6 +501,18 @@ describe("a navigation on a network that never answers", () => {
   }
 
   const hung = () => new Promise<Response>(() => {});
+
+  function hangingFetchStarted(): Promise<void> {
+    let resolveStarted!: () => void;
+    const started = new Promise<void>((resolve) => {
+      resolveStarted = resolve;
+    });
+    fetchMock.mockImplementationOnce(() => {
+      resolveStarted();
+      return hung();
+    });
+    return started;
+  }
 
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
@@ -602,15 +624,21 @@ describe("a navigation on a network that never answers", () => {
 
   it("serves a readiness network response that arrives just before the four-second deadline", async () => {
     const digest = vi.spyOn(crypto.subtle, "digest").mockResolvedValue(new Uint8Array(32).buffer);
+    let resolveFetchStarted!: () => void;
+    const fetchStarted = new Promise<void>((resolve) => {
+      resolveFetchStarted = resolve;
+    });
     let answer: ((response: Response) => void) | undefined;
     fetchMock.mockImplementationOnce(
       () =>
         new Promise<Response>((resolve) => {
+          resolveFetchStarted();
           answer = resolve;
         }),
     );
     const navigation = navigateReady(`https://dive.day${READY_PATH}`);
     try {
+      await fetchStarted;
       expect(await settledAfter(navigation.response, 3_999)).toBe("still waiting");
       answer?.(
         new Response("live readiness page", {
@@ -649,12 +677,16 @@ describe("a navigation on a network that never answers", () => {
     try {
       await cacheReadyCopy(READY_PATH, "saved readiness page");
 
+      const matchingFetchStarted = hangingFetchStarted();
       const matching = navigateReady(`https://dive.day${READY_PATH}`);
+      await matchingFetchStarted;
       const saved = await settledAfter(matching.response, 4_000);
       if (saved === "still waiting") throw new Error("the saved readiness page never arrived");
       expect(await saved.text()).toContain("saved readiness page");
 
+      const otherFetchStarted = hangingFetchStarted();
       const other = navigateReady(`https://dive.day${OTHER_READY_PATH}`);
+      await otherFetchStarted;
       const missing = await settledAfter(other.response, 4_000);
       if (missing === "still waiting") throw new Error("a path without a saved page kept waiting");
       expect(missing.type).toBe("error");
@@ -664,37 +696,55 @@ describe("a navigation on a network that never answers", () => {
   });
 
   it("returns the browser error and aborts an uncached readiness request at four seconds", async () => {
+    const digest = vi.spyOn(crypto.subtle, "digest").mockResolvedValue(new Uint8Array(32).buffer);
+    const fetchStarted = hangingFetchStarted();
     const navigation = navigateReady(`https://dive.day${READY_PATH}`);
-    expect(await settledAfter(navigation.response, 3_999)).toBe("still waiting");
-    const result = await settledAfter(navigation.response, 1);
-    if (result === "still waiting") throw new Error("an uncached readiness page kept waiting");
-    expect(result.type).toBe("error");
-    const init = fetchMock.mock.calls[0]?.[1] as { signal?: AbortSignal } | undefined;
-    expect(init?.signal?.aborted).toBe(true);
+    try {
+      await fetchStarted;
+      expect(await settledAfter(navigation.response, 3_999)).toBe("still waiting");
+      const result = await settledAfter(navigation.response, 1);
+      if (result === "still waiting") throw new Error("an uncached readiness page kept waiting");
+      expect(result.type).toBe("error");
+      const init = fetchMock.mock.calls[0]?.[1] as { signal?: AbortSignal } | undefined;
+      expect(init?.signal?.aborted).toBe(true);
+    } finally {
+      digest.mockRestore();
+    }
   });
 
   it("ignores a readiness response that arrives after the uncached deadline", async () => {
+    const digest = vi.spyOn(crypto.subtle, "digest").mockResolvedValue(new Uint8Array(32).buffer);
+    let resolveFetchStarted!: () => void;
+    const fetchStarted = new Promise<void>((resolve) => {
+      resolveFetchStarted = resolve;
+    });
     let answer: ((response: Response) => void) | undefined;
     fetchMock.mockImplementationOnce(
       () =>
         new Promise<Response>((resolve) => {
+          resolveFetchStarted();
           answer = resolve;
         }),
     );
     const navigation = navigateReady(`https://dive.day${READY_PATH}`);
-    const failed = await settledAfter(navigation.response, 4_000);
-    if (failed === "still waiting") throw new Error("the uncached readiness page kept waiting");
-    expect(failed.type).toBe("error");
+    try {
+      await fetchStarted;
+      const failed = await settledAfter(navigation.response, 4_000);
+      if (failed === "still waiting") throw new Error("the uncached readiness page kept waiting");
+      expect(failed.type).toBe("error");
 
-    answer?.(
-      new Response("late readiness page", {
-        headers: { "content-type": "text/html" },
-      }),
-    );
-    await Promise.resolve();
-    await Promise.allSettled(navigation.waits);
-    expect(navigation.waits).toHaveLength(0);
-    expect(cacheEntries.get(READY_CACHE_NAME)?.size ?? 0).toBe(0);
+      answer?.(
+        new Response("late readiness page", {
+          headers: { "content-type": "text/html" },
+        }),
+      );
+      await Promise.resolve();
+      await Promise.allSettled(navigation.waits);
+      expect(navigation.waits).toHaveLength(0);
+      expect(cacheEntries.get(READY_CACHE_NAME)?.size ?? 0).toBe(0);
+    } finally {
+      digest.mockRestore();
+    }
   });
 
   it("still serves the live page when it answers inside four seconds", async () => {

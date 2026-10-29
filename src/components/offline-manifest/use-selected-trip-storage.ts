@@ -1,0 +1,272 @@
+import type { Dispatch, SetStateAction } from "react";
+import { useCallback, useEffect, useRef } from "react";
+import type { OfflineManifestTranslator } from "@/i18n/offline-manifest-messages";
+import {
+  loadOfflineManifest,
+  type OfflineManifestChangeSource,
+  subscribeOfflineManifestChanges,
+} from "@/lib/offline-manifest-store";
+import { type OfflineManifestEnvelope, pendingOfflineEventCount } from "@/lib/offline-manifests";
+
+function pendingEventIds(envelope: OfflineManifestEnvelope | null): Set<string> {
+  if (!envelope) return new Set();
+  return new Set([
+    ...envelope.events
+      .filter((event) => event.syncStatus === "pending")
+      .map((event) => `roll-call:${event.clientEventId}`),
+    ...envelope.checklistEvents
+      .filter((event) => event.syncStatus === "pending")
+      .map((event) => `checklist:${event.clientEventId}`),
+    ...(envelope.arrivalEvents ?? [])
+      .filter((event) => event.syncStatus === "pending")
+      .map((event) => `arrival:${event.clientEventId}`),
+  ]);
+}
+
+export type SelectedTripStorageState = {
+  changeRevision: number;
+  readRequest: number;
+  reload: () => void;
+};
+
+export function createSelectedTripStorageState(): SelectedTripStorageState {
+  return { changeRevision: 0, readRequest: 0, reload: () => {} };
+}
+
+export function useSelectedTripPurgeState(
+  setMessage: Dispatch<SetStateAction<string>>,
+  setStoreRead: (read: boolean) => void,
+  setStoreReadFailed: (failed: boolean) => void,
+) {
+  const tripPurgedRef = useRef(false);
+  const onTripPurged = useCallback(() => {
+    tripPurgedRef.current = true;
+    setStoreRead(true);
+    setStoreReadFailed(false);
+    setMessage("");
+  }, [setMessage, setStoreRead, setStoreReadFailed]);
+  return { tripPurgedRef, onTripPurged };
+}
+
+/** Re-read the selected encrypted copy after another tab commits a trip write. */
+export function useSelectedTripStorage({
+  tripId,
+  verifiedTenantRevision,
+  tripPurgedRef,
+  storageStateRef,
+  onEnvelope,
+  onReadStarted,
+  onOnline,
+  setMessage,
+  t,
+  setStoreRead,
+  setStoreReadFailed,
+  refreshDiscarded,
+}: {
+  tripId: string;
+  verifiedTenantRevision: number;
+  tripPurgedRef: { current: boolean };
+  storageStateRef: { current: SelectedTripStorageState };
+  onEnvelope: (saved: OfflineManifestEnvelope | null) => void;
+  onReadStarted: () => void;
+  onOnline: () => void;
+  setMessage: Dispatch<SetStateAction<string>>;
+  t: OfflineManifestTranslator;
+  setStoreRead: (read: boolean) => void;
+  setStoreReadFailed: (failed: boolean) => void;
+  refreshDiscarded: () => void;
+}) {
+  const observedPendingEventsRef = useRef<{ tripId: string | null; ids: Set<string> }>({
+    tripId: null,
+    ids: new Set(),
+  });
+  const observePendingEvents = useCallback(
+    (saved: OfflineManifestEnvelope | null) => {
+      const nextIds = pendingEventIds(saved);
+      const observed = observedPendingEventsRef.current;
+      const previousIds = observed.tripId === tripId ? observed.ids : new Set<string>();
+      const added = [...nextIds].filter((id) => !previousIds.has(id)).length;
+      const removed = [...previousIds].filter((id) => !nextIds.has(id)).length;
+      observedPendingEventsRef.current = { tripId, ids: nextIds };
+      return { added, removed };
+    },
+    [tripId],
+  );
+
+  useEffect(() => {
+    if (!tripId) return;
+    let active = true;
+    const reload = (source?: OfflineManifestChangeSource) => {
+      const state = storageStateRef.current;
+      const request = ++state.readRequest;
+      const changeRevision = state.changeRevision;
+      onReadStarted();
+      void loadOfflineManifest(tripId)
+        .then((saved) => {
+          const current = storageStateRef.current;
+          if (
+            !active ||
+            request !== current.readRequest ||
+            changeRevision !== current.changeRevision
+          ) {
+            return;
+          }
+          if (tripPurgedRef.current) {
+            // The purge round has already painted the removed-copy recovery
+            // state. Do not let this read repaint the envelope, but do settle
+            // a cold opening that this reload superseded.
+            setStoreRead(true);
+            setStoreReadFailed(false);
+            return;
+          }
+          const pendingTransition = observePendingEvents(saved);
+          onEnvelope(saved);
+          setStoreRead(true);
+          setStoreReadFailed(false);
+          const hasPendingWork = saved !== null && pendingOfflineEventCount(saved) > 0;
+          const shouldRetryPending =
+            source?.origin === "other-context-broadcast" &&
+            hasPendingWork &&
+            (source.reason === "snapshot" ||
+              source.reason === "record" ||
+              (source.reason === "sync" &&
+                (pendingTransition.added > 0 || pendingTransition.removed > 0)) ||
+              (source.reason === "unknown" && pendingTransition.added > 0));
+          if (shouldRetryPending && navigator.onLine) {
+            queueMicrotask(onOnline);
+          }
+        })
+        .catch(() => {
+          const current = storageStateRef.current;
+          if (
+            !active ||
+            request !== current.readRequest ||
+            changeRevision !== current.changeRevision
+          ) {
+            return;
+          }
+          if (tripPurgedRef.current) {
+            setStoreRead(true);
+            setStoreReadFailed(false);
+            return;
+          }
+          // This may be the first read to settle if an invalidation replaced
+          // the cold-load request. Render the unreadable-copy recovery state
+          // instead of leaving the page in its indefinite "Opening" shell.
+          setStoreRead(true);
+          setStoreReadFailed(true);
+          setMessage(t("shared.offlineManifest.reconcile.singleLoadError"));
+        });
+    };
+    storageStateRef.current.reload = reload;
+    const unsubscribe = subscribeOfflineManifestChanges((changedTripId, source) => {
+      if (changedTripId !== tripId) return;
+      storageStateRef.current.changeRevision += 1;
+      reload(source);
+    });
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        reload();
+        if (navigator.onLine) queueMicrotask(onOnline);
+      }
+    };
+    const onNetworkOnline = () => queueMicrotask(onOnline);
+    const onFocus = () => {
+      reload();
+      if (navigator.onLine) queueMicrotask(onOnline);
+    };
+    window.addEventListener("focus", onFocus);
+    window.addEventListener("online", onNetworkOnline);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      active = false;
+      storageStateRef.current.readRequest += 1;
+      if (storageStateRef.current.reload === reload) {
+        storageStateRef.current.reload = () => {};
+      }
+      unsubscribe();
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("online", onNetworkOnline);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [
+    tripId,
+    tripPurgedRef,
+    storageStateRef,
+    onEnvelope,
+    onReadStarted,
+    observePendingEvents,
+    onOnline,
+    setMessage,
+    t,
+    setStoreRead,
+    setStoreReadFailed,
+  ]);
+
+  useEffect(() => {
+    if (!tripId) return;
+    let active = true;
+    if (verifiedTenantRevision > 0) setStoreReadFailed(false);
+    tripPurgedRef.current = false;
+    onReadStarted();
+    const state = storageStateRef.current;
+    const request = ++state.readRequest;
+    const changeRevision = state.changeRevision;
+    void loadOfflineManifest(tripId)
+      .then((saved) => {
+        const current = storageStateRef.current;
+        if (!active) return;
+        if (request !== current.readRequest) {
+          // The purge reducer's gone latch keeps this envelope off screen and
+          // uses only its shop slug to classify the removed-copy recovery.
+          // That is the one safe outcome needed from a superseded cold read.
+          if (tripPurgedRef.current) onEnvelope(saved);
+          return;
+        }
+        if (changeRevision !== current.changeRevision) {
+          current.reload();
+          return;
+        }
+        observePendingEvents(saved);
+        onEnvelope(saved);
+        setStoreReadFailed(false);
+        if (saved && navigator.onLine && !tripPurgedRef.current) queueMicrotask(onOnline);
+      })
+      .catch(() => {
+        if (active && request === storageStateRef.current.readRequest) {
+          if (tripPurgedRef.current) {
+            setStoreReadFailed(false);
+          } else {
+            setStoreReadFailed(true);
+            setMessage(t("shared.offlineManifest.reconcile.singleLoadError"));
+          }
+        }
+      })
+      .finally(() => {
+        if (active && request === storageStateRef.current.readRequest) {
+          setStoreRead(true);
+          refreshDiscarded();
+        }
+      });
+    return () => {
+      active = false;
+      if (storageStateRef.current.readRequest === request) {
+        storageStateRef.current.readRequest += 1;
+      }
+    };
+  }, [
+    tripId,
+    verifiedTenantRevision,
+    tripPurgedRef,
+    storageStateRef,
+    onEnvelope,
+    onReadStarted,
+    observePendingEvents,
+    onOnline,
+    refreshDiscarded,
+    setStoreRead,
+    setStoreReadFailed,
+    setMessage,
+    t,
+  ]);
+}

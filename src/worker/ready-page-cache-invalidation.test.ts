@@ -339,7 +339,36 @@ describe("ready page invalidation ordering", () => {
     );
 
     const served = await readyPageFallback(store.storage, path, NOW + READY_COPY_MAX_AGE_MS - 1);
-    expect(await served?.text()).toContain(legacyBanner[1]);
+    expect(await served?.text()).toContain(legacyBanner[1].savedCopyWarning);
+  });
+
+  it("keeps a recognized legacy copy with both unknown-time and unverified-clock warnings", async () => {
+    const path = `/ready/${TOKEN}`;
+    await saveReadyPage(store.storage, path, page("legacy source"), NOW);
+    const cache = await store.storage.open(READY_CACHE_NAME);
+    const saved = await cache.match(READY_COPY_KEY);
+    if (!saved) throw new Error("expected saved copy");
+    const legacyBanner = [...LEGACY_READY_BANNER_COPY.entries()][0];
+    if (!legacyBanner) throw new Error("expected recognized legacy banner");
+    await cache.put(
+      READY_COPY_KEY,
+      new Response(`<p ${READY_OFFLINE_NOTE_ATTR}="">${legacyBanner[0]}</p>`, {
+        headers: saved.headers,
+      }),
+    );
+    const clockCache = await store.storage.open("diveday-ready-clock-v1");
+    await clockCache.put(
+      "/ready/clock-observation",
+      new Response(null, { headers: { "x-diveday-clock-watermark": "corrupt" } }),
+    );
+
+    const served = await readyPageFallback(store.storage, path, NOW + 1000);
+    const text = await served?.text();
+
+    expect(text).toContain(legacyBanner[1].savedCopyWarning);
+    expect(text).toContain(legacyBanner[1].clockUnverified);
+    expect(served?.headers.get("x-diveday-ready-copy-time-state")).toBe("unverified");
+    expect(store.caches.get(READY_CACHE_NAME)?.size).toBe(1);
   });
 
   it("serializes an old-path forget against a different-token request acquiring the marker", async () => {

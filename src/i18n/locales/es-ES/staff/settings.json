@@ -852,6 +852,7 @@
       "bookings": "Reservas",
       "trip_help_requests": "Solicitudes de ayuda al personal",
       "interests": "Interés",
+      "date_request_offer_bookings": "Reservas vinculadas a ofertas de fecha",
       "trip_last_minute_promos": "Ofertas de última hora",
       "booking_payment_events": "Eventos de pago de reservas",
       "booking_checkouts": "Pagos de reservas",
