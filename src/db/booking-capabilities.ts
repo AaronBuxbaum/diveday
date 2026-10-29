@@ -8,7 +8,7 @@ import { DAY_MS, HOUR_MS, nowDate } from "@/lib/clock";
 import { openSecret, type SecretKey, sealSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
 import type { DbExecutor } from "./client";
 import { isTransactionExecutor } from "./query-helpers";
-import { bookingCapabilities, bookings, people, trips } from "./schema";
+import { bookingCapabilities, bookings, people, shops, trips } from "./schema";
 
 export type CapabilityPurpose = "readiness" | "confirm" | "claim" | "handoff" | "course_forms";
 
@@ -396,6 +396,159 @@ export async function consumeReturningDiverReceipt(
     };
   };
   return isTransactionExecutor(db) ? redeem(db) : db.transaction(redeem);
+}
+
+/** Resolve an unacknowledged receipt without consuming it, for retry after navigation or a lost response. */
+export async function readReturningDiverReceipt(
+  db: DbExecutor,
+  input: { receiptToken: string; now?: Date },
+): Promise<{
+  receiptId: string;
+  shopSlug: string;
+  diver: { fullName: string; email: string };
+  memoryExpiresAt: number;
+} | null> {
+  const now = input.now ?? nowDate();
+  const resolve = async (tx: DbExecutor) => {
+    const receiptHash = hashCapabilityToken(input.receiptToken);
+    const [row] = await tx
+      .select({
+        receiptId: bookingCapabilities.id,
+        bookingId: bookingCapabilities.bookingId,
+        shopId: bookingCapabilities.shopId,
+        sourceId: bookingCapabilities.sourceCapabilityId,
+        issuedAt: bookingCapabilities.issuedAt,
+        fullName: people.fullName,
+        email: people.email,
+        personId: people.id,
+        shopSlug: shops.slug,
+      })
+      .from(bookingCapabilities)
+      .innerJoin(
+        bookings,
+        and(
+          eq(bookings.id, bookingCapabilities.bookingId),
+          eq(bookings.shopId, bookingCapabilities.shopId),
+        ),
+      )
+      .innerJoin(people, eq(people.id, bookings.personId))
+      .innerJoin(shops, eq(shops.id, bookingCapabilities.shopId))
+      .innerJoin(trips, eq(trips.id, bookings.tripId))
+      .where(
+        and(
+          eq(bookingCapabilities.tokenHash, receiptHash),
+          eq(bookingCapabilities.purpose, "returning_diver_receipt"),
+          isNull(bookingCapabilities.revokedAt),
+          gt(bookingCapabilities.expiresAt, now),
+          ne(bookings.status, "cancelled"),
+          isNull(bookings.identityUnconfirmedAt),
+          isNull(people.anonymizedAt),
+          isNull(people.deletedAt),
+          isNotNull(people.email),
+          ne(people.email, ""),
+          ne(trips.status, "cancelled"),
+          isNull(trips.deletedAt),
+        ),
+      )
+      .limit(1)
+      .for("update", { of: people });
+    if (!row?.sourceId || !row.email) return null;
+
+    // Match the cancellation and erasure lock order, then recheck mutable
+    // booking/trip state before releasing the lead identity to the browser.
+    const [booking] = await tx
+      .select({ status: bookings.status, tripStatus: trips.status, tripDeletedAt: trips.deletedAt })
+      .from(bookings)
+      .innerJoin(trips, eq(trips.id, bookings.tripId))
+      .where(and(eq(bookings.id, row.bookingId), eq(bookings.shopId, row.shopId)))
+      .limit(1)
+      .for("update", { of: bookings });
+    if (
+      !booking ||
+      booking.status === "cancelled" ||
+      booking.tripStatus === "cancelled" ||
+      booking.tripDeletedAt
+    )
+      return null;
+
+    const [source] = await tx
+      .select({ id: bookingCapabilities.id })
+      .from(bookingCapabilities)
+      .where(
+        and(
+          eq(bookingCapabilities.id, row.sourceId),
+          eq(bookingCapabilities.bookingId, row.bookingId),
+          eq(bookingCapabilities.shopId, row.shopId),
+          eq(bookingCapabilities.purpose, "readiness"),
+          eq(bookingCapabilities.delivered, false),
+          isNull(bookingCapabilities.revokedAt),
+          gt(bookingCapabilities.expiresAt, now),
+        ),
+      )
+      .limit(1)
+      .for("update");
+    const [receipt] = await tx
+      .select({ id: bookingCapabilities.id, issuedAt: bookingCapabilities.issuedAt })
+      .from(bookingCapabilities)
+      .where(
+        and(
+          eq(bookingCapabilities.id, row.receiptId),
+          eq(bookingCapabilities.tokenHash, receiptHash),
+          eq(bookingCapabilities.bookingId, row.bookingId),
+          eq(bookingCapabilities.shopId, row.shopId),
+          eq(bookingCapabilities.purpose, "returning_diver_receipt"),
+          eq(bookingCapabilities.sourceCapabilityId, row.sourceId),
+          isNull(bookingCapabilities.revokedAt),
+          gt(bookingCapabilities.expiresAt, now),
+        ),
+      )
+      .limit(1)
+      .for("update");
+    if (!source || !receipt) return null;
+    return {
+      receiptId: receipt.id,
+      shopSlug: row.shopSlug,
+      diver: { fullName: row.fullName, email: row.email },
+      memoryExpiresAt: receipt.issuedAt.getTime() + RETURNING_DIVER_MEMORY_MS,
+    };
+  };
+  return isTransactionExecutor(db) ? resolve(db) : db.transaction(resolve);
+}
+
+/** Acknowledge storage only after the browser confirms localStorage succeeded. */
+export async function acknowledgeReturningDiverReceipt(
+  db: DbExecutor,
+  input: { receiptToken: string; expectedReceiptId: string; now?: Date },
+): Promise<boolean> {
+  const now = input.now ?? nowDate();
+  const receiptHash = hashCapabilityToken(input.receiptToken);
+  const [receipt] = await db
+    .select({ id: bookingCapabilities.id, revokedAt: bookingCapabilities.revokedAt })
+    .from(bookingCapabilities)
+    .where(
+      and(
+        eq(bookingCapabilities.tokenHash, receiptHash),
+        eq(bookingCapabilities.id, input.expectedReceiptId),
+        eq(bookingCapabilities.purpose, "returning_diver_receipt"),
+        gt(bookingCapabilities.expiresAt, now),
+      ),
+    )
+    .limit(1);
+  if (!receipt) return false;
+  if (receipt.revokedAt) return true; // idempotent after a lost acknowledgement response
+  if (!(await readReturningDiverReceipt(db, { receiptToken: input.receiptToken, now })))
+    return false;
+  await db
+    .update(bookingCapabilities)
+    .set({ revokedAt: now })
+    .where(
+      and(
+        eq(bookingCapabilities.id, receipt.id),
+        isNull(bookingCapabilities.revokedAt),
+        gt(bookingCapabilities.expiresAt, now),
+      ),
+    );
+  return true;
 }
 
 /**

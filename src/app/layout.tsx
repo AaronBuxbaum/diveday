@@ -16,6 +16,7 @@ import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
 // one type, and nothing else.
 import { publicAppUrl } from "@/lib/notifications/app-url";
 import { openGraphSite, sharedLinkCardImage } from "@/lib/site-metadata";
+import { RetryReturningDiverMemory } from "./_components/RetryReturningDiverMemory";
 import { fontVariables } from "./_fonts/fonts";
 import { Observability } from "./observability-client";
 
@@ -138,6 +139,9 @@ export default function RootLayout({
          * root layout's static shell nothing.
          */}
         <PreserveFormScroll />
+        <Suspense fallback={null}>
+          <RetryReturningDiverMemory />
+        </Suspense>
         <Observability />
       </body>
     </html>

@@ -114,7 +114,7 @@ describe("opted-in returning-diver memory", () => {
       throw new Error("storage blocked");
     });
 
-    expect(() => saveReturningDiver("blue-mantis", diver, NOW.getTime() + 1000, NOW)).not.toThrow();
+    expect(saveReturningDiver("blue-mantis", diver, NOW.getTime() + 1000, NOW)).toBe(false);
     expect(() => loadReturningDiver("blue-mantis", NOW)).not.toThrow();
     expect(() => forgetReturningDiver("blue-mantis")).not.toThrow();
   });

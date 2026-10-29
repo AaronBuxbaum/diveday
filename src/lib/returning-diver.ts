@@ -71,18 +71,21 @@ export function saveReturningDiver(
   diver: ReturningDiver,
   expiresAt: number,
   now: Date = nowDate(),
-): void {
+): boolean {
   clearLegacyStorage();
   clearExpiredShopMemories(now);
   const key = storageKey(shopSlug);
-  if (!key || !diver.fullName.trim() || !diver.email.trim() || expiresAt <= now.getTime()) return;
+  if (!key || !diver.fullName.trim() || !diver.email.trim() || expiresAt <= now.getTime())
+    return false;
   try {
     localStorage.setItem(
       key,
       JSON.stringify({ ...diver, expiresAt } satisfies StoredReturningDiver),
     );
+    return true;
   } catch {
     // Private browsing, quota exceeded, storage disabled — silently skip.
+    return false;
   }
 }
 

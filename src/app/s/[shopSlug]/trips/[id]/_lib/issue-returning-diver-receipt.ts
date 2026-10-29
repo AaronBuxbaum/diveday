@@ -72,11 +72,15 @@ export async function issueReturningDiverReceiptForBooking(
     if (!receipt) return;
 
     const cookieStore = await cookies();
+    // There is one pending receipt slot on the device. If two opted-in
+    // bookings finish concurrently, the last Set-Cookie response wins. Each
+    // receipt stays bound to its own booking and shop, so the winner can never
+    // combine or overwrite identity fields from another receipt.
     cookieStore.set(RETURNING_DIVER_RECEIPT_COOKIE, receipt.token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      path: "/ready",
+      path: "/",
       maxAge: Math.ceil(RETURNING_DIVER_RECEIPT_TTL_MS / 1000),
     });
   } catch (error) {

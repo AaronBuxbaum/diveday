@@ -40,6 +40,12 @@ afterEach(() => {
 });
 
 describe("best-effort returning-diver receipt issuance", () => {
+  it("does nothing when the diver did not opt in", async () => {
+    await issueReturningDiverReceiptForBooking({} as never, { ...issueInput(), optedIn: false });
+    expect(issueReceipt).not.toHaveBeenCalled();
+    expect(setCookie).not.toHaveBeenCalled();
+  });
+
   it("returns within budget and never writes a late receipt cookie", async () => {
     vi.useFakeTimers();
     let completeLateIssue!: (receipt: {
@@ -77,7 +83,7 @@ describe("best-effort returning-diver receipt issuance", () => {
     expect(setCookie).toHaveBeenCalledWith(
       "diveday-returning-diver-receipt",
       "ready-secret",
-      expect.objectContaining({ httpOnly: true, path: "/ready", sameSite: "lax" }),
+      expect.objectContaining({ httpOnly: true, path: "/", sameSite: "lax" }),
     );
   });
 });

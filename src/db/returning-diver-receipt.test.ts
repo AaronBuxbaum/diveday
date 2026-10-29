@@ -5,13 +5,15 @@ import { describe, expect, it } from "vitest";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import {
+  acknowledgeReturningDiverReceipt,
   consumeReturningDiverReceipt,
   issueBookingCapability,
   issueReturningDiverReceipt,
   RETURNING_DIVER_MEMORY_MS,
+  readReturningDiverReceipt,
 } from "./booking-capabilities";
 import { createBooking, createBookingParty } from "./bookings";
-import { bookingCapabilities, bookings } from "./schema";
+import { bookingCapabilities, bookings, people } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 
 const ctx = fileScopedShopContext();
@@ -54,6 +56,134 @@ async function readyBooking() {
 }
 
 describe("returning-diver receipt", () => {
+  it("survives leaving before hydration and retries idempotently until storage is acknowledged", async () => {
+    const { db, shop, trip, booking, redirect } = await readyBooking();
+    const now = nowDate();
+    const receipt = await issueReturningDiverReceipt(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      expectedPersonId: booking.personId,
+      expectedTripId: trip.id,
+      redirectReadinessToken: redirect.token,
+      now,
+    });
+    if (!receipt) throw new Error("expected receipt to be issued");
+
+    // The first page is left before hydration, so no request consumes it.
+    const firstVisit = await readReturningDiverReceipt(db, { receiptToken: receipt.token, now });
+    if (!firstVisit) throw new Error("expected a retryable receipt");
+    expect(firstVisit?.shopSlug).toBe(shop.slug);
+    // A later same-origin page can safely retry after a response was lost.
+    expect(await readReturningDiverReceipt(db, { receiptToken: receipt.token, now })).toEqual(
+      firstVisit,
+    );
+    expect(
+      await acknowledgeReturningDiverReceipt(db, {
+        receiptToken: receipt.token,
+        expectedReceiptId: "00000000-0000-0000-0000-000000000000",
+        now,
+      }),
+    ).toBe(false);
+    expect(
+      await acknowledgeReturningDiverReceipt(db, {
+        receiptToken: receipt.token,
+        expectedReceiptId: firstVisit.receiptId,
+        now,
+      }),
+    ).toBe(true);
+    // If the acknowledgement response was lost, the server recognizes it
+    // without returning identity again, and repeated acknowledgements are safe.
+    expect(await readReturningDiverReceipt(db, { receiptToken: receipt.token, now })).toBeNull();
+    expect(
+      await acknowledgeReturningDiverReceipt(db, {
+        receiptToken: receipt.token,
+        expectedReceiptId: firstVisit.receiptId,
+        now,
+      }),
+    ).toBe(true);
+  });
+
+  it("does not resolve a receipt for a wrong, canceled, or expired subject", async () => {
+    const { db, shop, trip, booking, redirect } = await readyBooking();
+    const now = nowDate();
+    const receipt = await issueReturningDiverReceipt(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      expectedPersonId: booking.personId,
+      expectedTripId: trip.id,
+      redirectReadinessToken: redirect.token,
+      now,
+    });
+    if (!receipt) throw new Error("expected receipt to be issued");
+    expect(await readReturningDiverReceipt(db, { receiptToken: "a".repeat(32), now })).toBeNull();
+    expect(
+      await readReturningDiverReceipt(db, {
+        receiptToken: receipt.token,
+        now: new Date(receipt.expiresAt),
+      }),
+    ).toBeNull();
+
+    await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, booking.id));
+    expect(await readReturningDiverReceipt(db, { receiptToken: receipt.token, now })).toBeNull();
+  });
+
+  it("does not resolve a receipt after erasure", async () => {
+    const { db, shop, trip, booking, redirect } = await readyBooking();
+    const now = nowDate();
+    const receipt = await issueReturningDiverReceipt(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      expectedPersonId: booking.personId,
+      expectedTripId: trip.id,
+      redirectReadinessToken: redirect.token,
+      now,
+    });
+    if (!receipt) throw new Error("expected receipt to be issued");
+    await db
+      .update(people)
+      .set({
+        fullName: "Deleted diver",
+        email: null,
+        deletedAt: now,
+        anonymizedAt: now,
+      })
+      .where(eq(people.id, booking.personId));
+    expect(await readReturningDiverReceipt(db, { receiptToken: receipt.token, now })).toBeNull();
+  });
+
+  it("allows duplicate tabs to retry the same receipt and acknowledge safely", async () => {
+    const { db, shop, trip, booking, redirect } = await readyBooking();
+    const now = nowDate();
+    const receipt = await issueReturningDiverReceipt(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      expectedPersonId: booking.personId,
+      expectedTripId: trip.id,
+      redirectReadinessToken: redirect.token,
+      now,
+    });
+    if (!receipt) throw new Error("expected receipt to be issued");
+    const [tabA, tabB] = await Promise.all([
+      readReturningDiverReceipt(db, { receiptToken: receipt.token, now }),
+      readReturningDiverReceipt(db, { receiptToken: receipt.token, now }),
+    ]);
+    expect(tabA).toEqual(tabB);
+    if (!tabA || !tabB) throw new Error("expected both tabs to resolve the receipt");
+    const acks = await Promise.all([
+      acknowledgeReturningDiverReceipt(db, {
+        receiptToken: receipt.token,
+        expectedReceiptId: tabA.receiptId,
+        now,
+      }),
+      acknowledgeReturningDiverReceipt(db, {
+        receiptToken: receipt.token,
+        expectedReceiptId: tabB.receiptId,
+        now,
+      }),
+    ]);
+    expect(acks).toEqual([true, true]);
+  });
+
   it("redeems only against the exact browser redirect token, once", async () => {
     const { db, shop, trip, booking, redirect, mailed } = await readyBooking();
     const now = nowDate();

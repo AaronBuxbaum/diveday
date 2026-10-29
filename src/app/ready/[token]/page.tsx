@@ -169,9 +169,6 @@ export default async function ReadyTokenPage({
       card={card}
       locale={await requestLocale(card.shop.defaultLocale)}
       dateActions={readyDateActions(dataPromise, partyClaimsPromise)}
-      delivered={delivered}
-      justBooked={justBooked}
-      token={token}
     >
       {thread}
     </ReadyBookedShell>
