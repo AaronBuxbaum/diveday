@@ -191,75 +191,124 @@ export function sweepProblem(branch, { now, runId }) {
   return null;
 }
 
-/** SQLSTATEs for the server errors a restore meets, read from the message's opening words. */
-const SQLSTATE_BY_MESSAGE = [
-  [/^duplicate key value violates unique constraint/, "23505"],
-  [/^could not create unique index/, "23505"],
-  [/^null value in column/, "23502"],
-  [/violates foreign key constraint/, "23503"],
-  [/violates check constraint/, "23514"],
-  [/^invalid input syntax for type/, "22P02"],
-  [/^malformed array literal/, "22P02"],
-  [/^value too long for type/, "22001"],
-  [/^(extra data after last expected column|missing data for column)/, "22P04"],
-  [/^relation .* already exists/, "42P07"],
-  [/^relation .* does not exist/, "42P01"],
-  [/^(type|function|schema|extension|role) .* does not exist/, "42704"],
-  [/^(permission denied|must be owner)/, "42501"],
-];
+/**
+ * Fixed diagnostic labels only: never return text, identifiers, SQLSTATEs or captured substrings.
+ */
+function restoreDiagnosticCategory(line) {
+  const error = line.match(/^pg_restore: error:\s*(.*)$/i);
+  const message = (error?.[1] ?? line).toLowerCase();
+  const serverError = message.includes("error:");
 
-/** An object name as pg_restore prints it, with anything that is not an identifier dropped. */
-function identifier(text) {
-  const cleaned = String(text)
-    .replace(/[^\w .$"-]/g, "")
-    .trim()
-    .slice(0, 120);
-  return cleaned || null;
+  if (
+    [
+      "connection to server",
+      "could not connect",
+      "connection refused",
+      "server closed the connection",
+      "ssl syscall",
+      "timeout expired",
+      "could not translate host name",
+      "no route to host",
+      "network is unreachable",
+    ].some((phrase) => message.includes(phrase))
+  )
+    return "connection";
+
+  if (
+    message.includes("unsupported version") ||
+    /version .* not supported|dump was made by|server version .* older|newer version of .* required/.test(
+      message,
+    )
+  )
+    return "version_compatibility";
+
+  if (
+    [
+      "input file appears to be a text format",
+      "input file does not appear to be a valid archive",
+      "did not find magic string",
+      "not a valid archive",
+      "unsupported format",
+    ].some((phrase) => message.includes(phrase))
+  )
+    return "archive_format";
+
+  if (
+    [
+      "unexpected end",
+      "end of file",
+      "truncated",
+      "could not read from input file",
+      "unexpected eof",
+      "not in gzip format",
+    ].some((phrase) => message.includes(phrase))
+  )
+    return "archive_incomplete_or_corrupt";
+
+  if (serverError) {
+    const sqlState = message.match(/error:\s*([0-9a-z]{5}):/i)?.[1]?.toUpperCase();
+    if (sqlState?.startsWith("08")) return "connection";
+    if (sqlState?.startsWith("22")) return "sql_data";
+    if (sqlState?.startsWith("23")) return "sql_integrity";
+    if (sqlState?.startsWith("28") || sqlState === "42501") return "sql_permission";
+    if (sqlState?.startsWith("42")) return "sql_object_or_syntax";
+    if (sqlState?.startsWith("40")) return "sql_transaction";
+    if (sqlState?.startsWith("53")) return "sql_resource";
+    if (
+      [
+        "duplicate key",
+        "unique constraint",
+        "could not create unique index",
+        "null value in column",
+        "foreign key constraint",
+        "check constraint",
+      ].some((phrase) => message.includes(phrase))
+    )
+      return "sql_integrity";
+    if (
+      [
+        "invalid input syntax",
+        "malformed array",
+        "value too long",
+        "extra data after",
+        "missing data for",
+      ].some((phrase) => message.includes(phrase))
+    )
+      return "sql_data";
+    if (/permission denied|must be owner|authentication failed/.test(message))
+      return "sql_permission";
+    if (
+      /relation .* already exists|(?:relation|type|function|schema|extension|role) .* does not exist/.test(
+        message,
+      )
+    )
+      return "sql_object_or_syntax";
+    return "sql_other";
+  }
+
+  if (/^pg_restore: error:/.test(line)) return "pg_restore_other";
+  if (/^(detail|context|command was):/i.test(line)) return "redacted_detail";
+  if (/^gunzip:/.test(line)) return "archive_incomplete_or_corrupt";
+  if (/^docker:/.test(line)) return "container_runtime";
+  return "unclassified_stderr";
 }
 
 /**
- * What of pg_restore's stderr is safe for a CI log: per error, its SQLSTATE and the object it hit,
- * and a count of the lines withheld. A Postgres error's DETAIL, CONTEXT and "Failing row" lines,
- * and even its message (`invalid input syntax for type uuid: "..."`), can quote a row.
+ * Summarize stderr with fixed labels and counts. Postgres errors, DETAIL/CONTEXT, TOC entries and
+ * even pg_restore's own messages may contain customer data, so no diagnostic text is returned.
  */
 export function pgRestoreErrorSummary(stderr) {
-  const lines = [];
-  let withheld = 0;
-  let toc = null;
+  const counts = new Map();
   for (const line of String(stderr ?? "").split(/\r?\n/)) {
-    if (line.trim() === "") continue;
-    const tocEntry = line.match(/^pg_restore: from TOC entry \d+; \d+ \d+ (.+)$/);
-    if (tocEntry) {
-      // "<desc> <tag> <owner>": keep the kind and name, drop the owner.
-      toc = identifier(tocEntry[1].replace(/\s+\S+$/, ""));
+    if (line.trim() === "" || /^pg_restore: (while PROCESSING TOC:|from TOC entry )/i.test(line))
       continue;
-    }
-    const error = line.match(/^pg_restore: error: (.*)$/);
-    if (!error) {
-      withheld += 1;
-      continue;
-    }
-    const at = error[1].indexOf("ERROR:");
-    if (at === -1) {
-      // pg_restore's own words (a truncated archive, a lost connection), never a server's.
-      lines.push(`pg_restore error: ${error[1].slice(0, 200)}`);
-      toc = null;
-      continue;
-    }
-    const own = error[1].slice(0, at);
-    const server = error[1].slice(at + "ERROR:".length).trim();
-    const code =
-      server.match(/^([0-9A-Z]{5}):/)?.[1] ??
-      SQLSTATE_BY_MESSAGE.find(([pattern]) => pattern.test(server))?.[1] ??
-      "unknown";
-    const object = toc ?? identifier(own.match(/"([^"]{1,63})"/)?.[1] ?? "") ?? "an unnamed object";
-    lines.push(`pg_restore error: SQLSTATE ${code} on ${object}`);
-    toc = null;
+    const category = restoreDiagnosticCategory(line);
+    counts.set(category, (counts.get(category) ?? 0) + 1);
   }
-  if (withheld > 0) {
-    lines.push(`${withheld} other stderr line(s) withheld: they can quote rows.`);
-  }
-  return lines;
+  return [...counts].map(
+    ([category, count]) =>
+      `pg_restore diagnostic: ${category} (${count} line${count === 1 ? "" : "s"})`,
+  );
 }
 
 /** The lines a script printed under its own prefix, and a count of the rest. */
