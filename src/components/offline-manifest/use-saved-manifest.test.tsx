@@ -236,7 +236,7 @@ describe("useSavedManifest on a trip", () => {
 
     const first = at("trip=trip-1");
     await waitFor(() => expect(first.result.current.storeRead).toBe(true));
-    const firstMessage = first.result.current.message;
+    const firstMessage = first.result.current.tripNoteLossMessage;
     expect(firstMessage.split("\n")).toHaveLength(5);
     expect(firstMessage.split("\n").every((line) => line.length > 0)).toBe(true);
     expect(firstMessage).toContain("ef123456");
@@ -253,7 +253,7 @@ describe("useSavedManifest on a trip", () => {
     first.unmount();
     const second = at("trip=trip-1");
     await waitFor(() => expect(second.result.current.storeRead).toBe(true));
-    expect(second.result.current.message).toBe(firstMessage);
+    expect(second.result.current.tripNoteLossMessage).toBe(firstMessage);
   });
 
   it("falls back to departure for a checkpoint the saved trip does not have", async () => {

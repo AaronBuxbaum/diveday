@@ -102,6 +102,29 @@ function discardedNoteMessage(
   ].join("\n");
 }
 
+function selectedTripNoteLossMessage(
+  envelope: OfflineManifestEnvelope | null,
+  currentShopSlug: string | null,
+  t: OfflineManifestTranslator,
+) {
+  return envelope && (!currentShopSlug || envelope.snapshot.shop.slug === currentShopSlug)
+    ? discardedNoteMessage([...envelope.events, ...envelope.checklistEvents], t)
+    : "";
+}
+
+function initialTripStatusMessage(
+  noteLossMessage: string | null,
+  hasSavedTrip: boolean,
+  t: OfflineManifestTranslator,
+) {
+  if (noteLossMessage === null || noteLossMessage.length > 0) return "";
+  return t(
+    hasSavedTrip
+      ? "shared.offlineManifest.reconcile.ready"
+      : "shared.offlineManifest.reconcile.noneForTrip",
+  );
+}
+
 function listNoteLossMessage(
   envelopes: readonly OfflineManifestEnvelope[],
   t: OfflineManifestTranslator,
@@ -192,17 +215,11 @@ function reconciledTripMessage(
   return [
     ...(rejected > 0
       ? [t("shared.offlineManifest.reconcile.pendingRejectedSingle", { count: rejected })]
-      : []),
-    ...(noteMessage ? [noteMessage] : []),
-    ...(rejected === 0 && !noteMessage
-      ? [
-          pending > 0
-            ? t("shared.offlineManifest.reconcile.pendingWaiting", { count: pending })
-            : foreignPending
-              ? ""
-              : t("shared.offlineManifest.reconcile.allCaughtUp"),
-        ]
-      : []),
+      : pending > 0
+        ? [t("shared.offlineManifest.reconcile.pendingWaiting", { count: pending })]
+        : foreignPending || noteMessage
+          ? []
+          : [t("shared.offlineManifest.reconcile.allCaughtUp")]),
   ]
     .filter(Boolean)
     .join(" ");
@@ -312,9 +329,11 @@ function useOnTenantVerified({
         const visibleEnvelope = envelope?.snapshot.shop.slug === currentShopSlug ? envelope : null;
         const noteMessage = tripNoticeForEnvelope(visibleEnvelope);
         setMessage(
-          noteMessage === null
+          noteMessage === null || noteMessage.length > 0
             ? ""
-            : noteMessage || (visibleEnvelope ? t("shared.offlineManifest.reconcile.ready") : ""),
+            : visibleEnvelope
+              ? t("shared.offlineManifest.reconcile.ready")
+              : "",
         );
       } else {
         setMessage(initialMessageForList(listRef.current ?? []));
@@ -506,9 +525,7 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
     const lastSync = lastTripSyncRef.current;
     if (lastSync?.tripId === tripId && lastSync.shopSlug === verifiedTenantSlugRef.current) return;
     const noteMessage = tripNoticeForEnvelope(envelope);
-    setMessage(
-      noteMessage === null ? "" : noteMessage || t("shared.offlineManifest.reconcile.ready"),
-    );
+    setMessage(initialTripStatusMessage(noteMessage, true, t));
   }, [tripId, envelope, verifiedTenantRevision, tripNoticeForEnvelope, t]);
 
   const refreshDiscarded = useCallback(() => {
@@ -723,14 +740,7 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
         }
         const noteMessage = tripNoticeForEnvelope(saved);
         if (!tripPurgedRef.current) {
-          setMessage(
-            noteMessage === null
-              ? ""
-              : noteMessage ||
-                  (saved
-                    ? t("shared.offlineManifest.reconcile.ready")
-                    : t("shared.offlineManifest.reconcile.noneForTrip")),
-          );
+          setMessage(initialTripStatusMessage(noteMessage, Boolean(saved), t));
         }
         if (saved && navigator.onLine) void reconcile();
       })
@@ -766,12 +776,14 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
 
   const verifiedTenantSlug = verifiedTenantRevision > 0 ? verifiedTenantSlugRef.current : null;
   const foreignPendingChanges = hasForeignPendingManifestChanges(list ?? [], verifiedTenantSlug);
+  const tripNoteLossMessage = selectedTripNoteLossMessage(envelope, verifiedTenantSlug, t);
 
   return {
     tripId,
     envelope,
     verifiedTenantSlug,
     foreignPendingChanges,
+    tripNoteLossMessage,
     tenantChangePending,
     removedForOtherShop,
     dispatchSaved,

@@ -47,6 +47,26 @@ beforeEach(() => {
   vi.stubGlobal("fetch", vi.fn());
 });
 
+function savedWithDiscardedNote(tripId: string) {
+  const saved = richEnvelope(tripId);
+  saved.events = [
+    {
+      clientEventId: `discarded-note-${tripId}`,
+      snapshotId: saved.snapshot.snapshotId,
+      snapshotSavedAt: saved.snapshot.savedAt,
+      tripId,
+      bookingId: "booking-12345678",
+      checkpoint: "departure",
+      status: "boarded",
+      occurredAt: new Date(FROZEN_MS).toISOString(),
+      note: null,
+      syncStatus: "applied",
+      noteDisposition: "discarded_erasure_cutoff",
+    },
+  ];
+  return saved;
+}
+
 it("quarantines the root list as soon as one trip detects a shop switch", async () => {
   searchParams = new URLSearchParams();
   const first = richEnvelope("trip-1");
@@ -584,6 +604,61 @@ it("keeps the sync disposition when a pre-sync inventory read resolves late", as
   expect(screen.getByText(/Diver record 12345678.*mark kept/)).toBeInTheDocument();
   expect(screen.queryByText("Everything’s sent.")).not.toBeInTheDocument();
   expect(screen.queryByText("Sensitive note text")).not.toBeInTheDocument();
+});
+
+it("keeps the actionable note-loss notice beside retry feedback when identity lookup fails", async () => {
+  searchParams = new URLSearchParams({ trip: "trip-loss-identity-52" });
+  const saved = savedWithDiscardedNote("trip-loss-identity-52");
+  vi.mocked(loadOfflineManifest).mockResolvedValue(saved);
+  vi.mocked(fetch).mockImplementation(async (input) => {
+    if (String(input) === "/api/offline-manifests/identity") {
+      throw new Error("identity lookup unavailable");
+    }
+    return new Response(null, { status: 200 });
+  });
+
+  render(<OfflineManifestView />);
+
+  expect(await screen.findByText(/Couldn’t reach DiveDay just now/)).toBeInTheDocument();
+  expect(
+    await screen.findByText(/Older offline note text was removed after a data erasure/),
+  ).toBeInTheDocument();
+  expect(await screen.findByText(/Diver record 12345678.*mark kept/)).toBeInTheDocument();
+  expect(screen.queryByText("Everything’s sent.")).not.toBeInTheDocument();
+  expect(screen.queryByText(/Sensitive note text/)).not.toBeInTheDocument();
+  expect(saved.events[0]).toMatchObject({
+    syncStatus: "applied",
+    note: null,
+    noteDisposition: "discarded_erasure_cutoff",
+  });
+  expect(syncOfflineManifest).not.toHaveBeenCalled();
+});
+
+it("keeps the actionable note-loss notice beside retry feedback when sync fails", async () => {
+  searchParams = new URLSearchParams({ trip: "trip-loss-sync-53" });
+  const saved = savedWithDiscardedNote("trip-loss-sync-53");
+  vi.mocked(loadOfflineManifest).mockResolvedValue(saved);
+  vi.mocked(syncOfflineManifest).mockRejectedValue(new Error("temporary sync failure"));
+  vi.mocked(fetch).mockImplementation(async (input) =>
+    String(input) === "/api/offline-manifests/identity"
+      ? identityResponse("blue-mantis")
+      : new Response(null, { status: 200 }),
+  );
+
+  render(<OfflineManifestView />);
+
+  expect(await screen.findByText(/Couldn’t reach DiveDay just now/)).toBeInTheDocument();
+  expect(
+    await screen.findByText(/Older offline note text was removed after a data erasure/),
+  ).toBeInTheDocument();
+  expect(await screen.findByText(/Diver record 12345678.*mark kept/)).toBeInTheDocument();
+  expect(screen.queryByText("Everything’s sent.")).not.toBeInTheDocument();
+  expect(screen.queryByText(/Sensitive note text/)).not.toBeInTheDocument();
+  expect(saved.events[0]).toMatchObject({
+    syncStatus: "applied",
+    note: null,
+    noteDisposition: "discarded_erasure_cutoff",
+  });
 });
 
 it("keeps a newer sync failure authoritative over inventory captured before it", async () => {

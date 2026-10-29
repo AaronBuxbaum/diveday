@@ -49,6 +49,7 @@ vi.mock("@/lib/offline-manifest-store", async () => ({
 beforeEach(() => {
   searchParams = new URLSearchParams();
   setOnline(true);
+  vi.mocked(listOfflineManifests).mockResolvedValue([]);
   // reconcileList learns "the currently authenticated shop" from this same
   // endpoint before syncing any pending event — default to matching the
   // fixtures' own shop ("blue-mantis") so existing reconcile tests keep

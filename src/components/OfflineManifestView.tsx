@@ -60,6 +60,7 @@ function OfflineManifestScreen() {
     envelope,
     verifiedTenantSlug,
     foreignPendingChanges,
+    tripNoteLossMessage,
     tenantChangePending,
     removedForOtherShop,
     dispatchSaved,
@@ -227,6 +228,7 @@ function OfflineManifestScreen() {
       controls={controls}
       tripId={tripId}
       foreignPendingChanges={foreignPendingChanges}
+      noteLossMessage={tripNoteLossMessage}
       shellVersionCopy={shellVersionCopy}
       discardNotice={discardNotice}
       reconcile={reconcile}

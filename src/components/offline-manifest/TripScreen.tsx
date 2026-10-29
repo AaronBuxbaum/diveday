@@ -13,6 +13,7 @@ import { OfflineCheckpointNav } from "./CheckpointNav";
 import { OfflineCounter } from "./Counter";
 import type { OfflineTripControls } from "./controls";
 import { OfflineRollCallSection } from "./RollCallSection";
+import { StatusMessage } from "./StatusMessage";
 import { OfflineTripFoot } from "./TripFoot";
 import { OfflineTripHeader } from "./TripHeader";
 import type { OfflineTripView } from "./trip-view";
@@ -23,6 +24,7 @@ export function OfflineTripScreen({
   controls,
   tripId,
   foreignPendingChanges,
+  noteLossMessage,
   shellVersionCopy,
   discardNotice,
   reconcile,
@@ -31,6 +33,7 @@ export function OfflineTripScreen({
   controls: OfflineTripControls;
   tripId: string;
   foreignPendingChanges: boolean;
+  noteLossMessage: string;
   shellVersionCopy: ComponentProps<typeof OfflineShellVersionBanner>["copy"];
   discardNotice: ReactNode;
   reconcile: () => Promise<void>;
@@ -62,6 +65,15 @@ export function OfflineTripScreen({
             level="page"
           />
           <OfflineTripHeader view={view} controls={controls} />
+          {noteLossMessage ? (
+            <p
+              className={`${OFFLINE_NOTICE_CLASS} mt-3 border-warning/40 bg-warning/10 text-pretty`}
+              role="status"
+              aria-live="polite"
+            >
+              <StatusMessage message={noteLossMessage} />
+            </p>
+          ) : null}
           {!view.envelope.snapshot.juniorAdvisoriesChecked ? (
             <p className="mt-3 text-base text-warning-strong">
               {t("shared.offlineManifest.juniorChecksUnavailable")}
