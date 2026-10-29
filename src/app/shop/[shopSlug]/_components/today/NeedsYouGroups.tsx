@@ -161,7 +161,7 @@ export function NeedsYouQueue({
       <LedgerGroup
         as="h2"
         label={t("shopHome.spine.needsYouLabel")}
-        meta={needsYouMeta(t, reading, locale, timeZone)}
+        meta={reading.count > 0 ? needsYouMeta(t, reading, locale, timeZone) : undefined}
       >
         <NeedsYouGroups
           rows={lead}

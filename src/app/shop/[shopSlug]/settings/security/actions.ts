@@ -9,6 +9,7 @@ import {
   enableTotp,
   getAccountSecurity,
   grantStepUp,
+  refreshAccountRecoveryCodes,
   revokeAccountSession,
   revokeAllAccountSessions,
   verifyAccountSecondFactor,
@@ -129,6 +130,45 @@ export async function disableTotpAction(shopSlug: string, formData: FormData) {
     shopPath(shopSlug, "settings", "security"),
     noticeUrl(shopPath(shopSlug, "settings", "security"), "two-factor-disabled"),
   );
+}
+
+export async function refreshRecoveryCodesAction(shopSlug: string, formData: FormData) {
+  const { db, accountId } = await securityContext(shopSlug);
+  if (!(await secondFactorAttemptAllowed(accountId))) {
+    redirect(noticeUrl(shopPath(shopSlug, "settings", "security"), "too-many-attempts"));
+  }
+  const key = secretKeyFromEnvironment();
+  if (key.status !== "ok") {
+    redirect(noticeUrl(shopPath(shopSlug, "settings", "security"), "security-unavailable"));
+  }
+  const code = secondFactorCode(formData);
+  if (!code.success) {
+    redirect(noticeUrl(shopPath(shopSlug, "settings", "security"), "code-invalid"));
+  }
+
+  const result = await refreshAccountRecoveryCodes(db, accountId, code.data);
+  if (!result.ok) {
+    redirect(
+      noticeUrl(
+        shopPath(shopSlug, "settings", "security"),
+        result.reason === "invalid" ? "code-invalid" : "security-unavailable",
+      ),
+    );
+  }
+
+  const cookieStore = await cookies();
+  cookieStore.set(
+    RECOVERY_CODES_COOKIE,
+    sealSecret(JSON.stringify({ accountId, codes: result.codes }), key.key),
+    {
+      httpOnly: true,
+      maxAge: 10 * 60,
+      path: "/",
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+    },
+  );
+  revalidateAndRedirect(shopPath(shopSlug, "settings", "security"));
 }
 
 export async function revokeSessionAction(shopSlug: string, formData: FormData) {

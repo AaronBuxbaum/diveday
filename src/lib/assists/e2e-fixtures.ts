@@ -2,7 +2,6 @@ import type { ClaudeMessage, ClaudeProvider, ClaudeRequest } from "@/lib/claude/
 import { BENCH_NOTE_SYSTEM, benchNoteFixture } from "./bench-note";
 import { CERT_SCAN_SYSTEM, certScanFixture } from "./cert-scan";
 import { DESCRIPTION_DRAFT_SYSTEM, descriptionDraftFixture } from "./description-draft";
-import { DIVER_SEARCH_SYSTEM, diverSearchFixture } from "./diver-search";
 import { FRONT_FIXTURES } from "./front-fixtures";
 import { MONDAY_READ_SYSTEM, mondayReadFixture } from "./monday-read";
 import { RECAP_LINE_SYSTEM, recapLineFixture } from "./recap-line";
@@ -33,7 +32,6 @@ const FIXTURES: ReadonlyMap<string, (request: ClaudeRequest) => unknown> = new M
   (request: ClaudeRequest) => unknown
 >([
   [CERT_SCAN_SYSTEM, certScanFixture],
-  [DIVER_SEARCH_SYSTEM, diverSearchFixture],
   [RENTAL_NOTE_SYSTEM, rentalNoteFixture],
   [SAME_PERSON_SYSTEM, samePersonFixture],
   [REVIEW_FLAGS_SYSTEM, reviewFlagsFixture],

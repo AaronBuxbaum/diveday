@@ -187,40 +187,30 @@ describe("the rail as it renders", () => {
     ["/dive-sites/site-123/edit", "diveSites"],
     ["/settings/calendar", "Settings sections"],
     ["/settings/email", "Settings sections"],
-  ])("labels the mobile picker for %s without borrowing Timezone", (path, label) => {
+  ])("selects the current rail row for %s without borrowing Timezone", (path, label) => {
     pathname = `${BASE}${path}`;
     renderRail();
-    const toggle = screen.getByRole("button", { name: "Settings sections" });
-    expect(toggle).toHaveTextContent(label);
-    expect(toggle).not.toHaveTextContent("timezone");
+    const nav = screen.getByRole("navigation", { name: "Settings sections" });
+    expect(screen.queryByRole("button", { name: "Settings sections" })).toBeNull();
+    if (label === "Settings sections") {
+      expect(nav.querySelector('[aria-current="true"]')).toBeNull();
+    } else {
+      expect(screen.getByRole("link", { name: label })).toHaveAttribute("aria-current", "true");
+    }
   });
 
-  it("names the current section and dismisses the mobile picker with Escape or an outside tap", () => {
+  it("keeps the current section selected in the rail", () => {
     pathname = `${BASE}/settings/import`;
     renderRail();
-    const toggle = screen.getByRole("button", { name: "Settings sections" });
-    expect(toggle).toHaveTextContent("yourData");
-    fireEvent.click(toggle);
-    expect(screen.getByRole("link", { name: "yourData" })).toHaveFocus();
-    fireEvent.keyDown(document, { key: "Escape" });
-    expect(toggle).toHaveAttribute("aria-expanded", "false");
-    expect(toggle).toHaveFocus();
-    fireEvent.click(toggle);
-    fireEvent.pointerDown(document.body);
-    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByRole("link", { name: "yourData" })).toHaveAttribute("aria-current", "true");
   });
 
-  it("opens and closes the same navigation on a narrow screen", () => {
+  it("shows every section link in the horizontal rail", () => {
     const { container } = renderRail();
-    const toggle = screen.getByRole("button", { name: "Settings sections" });
     const scroller = container.querySelector("[data-settings-rail-scroller]");
-    expect(toggle).toHaveAttribute("aria-expanded", "false");
-    expect(scroller).toHaveClass("hidden");
-    fireEvent.click(toggle);
-    expect(toggle).toHaveAttribute("aria-expanded", "true");
-    expect(scroller).not.toHaveClass("hidden");
-    fireEvent.click(screen.getByRole("link", { name: "stripe" }));
-    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(scroller).toHaveClass("overflow-x-auto");
+    expect(screen.getByRole("link", { name: "stripe" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Settings sections" })).toBeNull();
   });
 
   /**
@@ -367,7 +357,7 @@ describe("the rail keeps the current row in view", () => {
       this: HTMLElement,
     ) {
       if (this.getAttribute("aria-current") === "true") return rect(boxes.row);
-      if (this.classList.contains("overflow-y-auto")) return rect(boxes.scroller);
+      if (this.hasAttribute("data-settings-rail-scroller")) return rect(boxes.scroller);
       if (this.classList.contains("settings-rail-label")) return rect(boxes.label);
       return rect({ top: 0, height: 0 });
     });
@@ -375,18 +365,58 @@ describe("the rail keeps the current row in view", () => {
 
   function railScroller() {
     const nav = screen.getByRole("navigation", { name: "Settings sections" });
-    const scroller = nav.querySelector<HTMLElement>(".overflow-y-auto");
+    const scroller = nav.querySelector<HTMLElement>("[data-settings-rail-scroller]");
     if (!scroller) throw new Error("the rail has no scroll box");
     return scroller;
   }
 
   const scrollIntoView = vi.fn();
   beforeEach(() => {
+    vi.stubGlobal("innerHeight", 900);
     Element.prototype.scrollIntoView = scrollIntoView;
     scrollIntoView.mockClear();
   });
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it("brings the selected row into the visible viewport when the rail extends below it", () => {
+    pathname = `${BASE}/settings/team`;
+    vi.stubGlobal("innerHeight", 720);
+    stubBoxes({
+      scroller: { top: 125, height: 664 },
+      row: { top: 709, height: 56 },
+      label: { top: 125, height: 24 },
+    });
+    renderRail();
+
+    expect(railScroller().scrollTop).toBeGreaterThan(0);
+  });
+
+  it("reveals the selected destination again after the viewport changes axis", () => {
+    pathname = `${BASE}/settings/team`;
+    let phone = false;
+    vi.spyOn(HTMLElement.prototype, "scrollWidth", "get").mockImplementation(() =>
+      phone ? 2000 : 264,
+    );
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(() =>
+      phone ? 390 : 264,
+    );
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      const isRow = this.getAttribute("aria-current") === "true";
+      const left = phone && isRow ? 1200 : 0;
+      const width = phone && !isRow ? 390 : 200;
+      return { left, right: left + width, top: 100, bottom: 144, width, height: 44 } as DOMRect;
+    });
+    renderRail();
+    const scroller = railScroller();
+    phone = true;
+    fireEvent(window, new Event("resize"));
+
+    expect(scroller.scrollLeft).toBeGreaterThan(0);
   });
 
   it("scrolls its own box, never the page, to a current row below the fold", () => {

@@ -17,11 +17,8 @@ import { openSettingsRail, openSettingsRow } from "./helpers";
  * exist for whoever may walk through them, and are absent — not disabled, not
  * explained — for whoever may not (ADR 20260724-role-gated-surfaces-hide-not-explain).
  *
- * The anchors moved. They used to be their own `JumpNav` row ("Jump to a
- * section") sitting four lines under the settings sub-nav card and repeating
- * its three group names; the words appear once now, on the sub-nav itself,
- * where each group name *is* the anchor to its section. Same anchors, same
- * assertion, one control.
+ * The same responsive rail carries the settings destinations: a grouped
+ * vertical map on desktop and a horizontal section bar on phones.
  */
 const SHOP = DEMO_SHOP_SLUG;
 
@@ -57,12 +54,9 @@ test.describe("as owner", () => {
   });
 
   test("a settings sub-page keeps the map beside it, and its own way back", async ({ page }) => {
-    // The six sub-pages used to open under a grouped pill *card* listing every
-    // settings destination — the hub's directory repeated above each page's
-    // <h1>, on a phone the whole first viewport. What replaced it is not that
-    // card returning: the rail is a desktop column beside the pane, and the
-    // phone still gets nothing above the content (ADR
-    // 20260827-clearwater-surface-language, decision 6).
+    // The same rail stays beside the pane at desktop width and becomes a
+    // horizontal section bar on a phone (ADR 20260827-clearwater-surface-language,
+    // decision 6).
     await page.goto(`/shop/${SHOP}/settings/team`);
     const rail = page.getByRole("navigation", { name: "Settings sections" });
     await expect(rail).toBeVisible();
@@ -92,31 +86,60 @@ test.describe("as owner", () => {
     await expect(page.getByRole("heading", { name: "Timezone", exact: true })).toBeVisible();
   });
 
-  test("the phone opens the same rail and returns to its selected setting", async ({ page }) => {
+  test("the selected settings destination stays visible when the viewport changes", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await page.goto(`/shop/${SHOP}/settings/import`);
+    const rail = page.getByRole("navigation", { name: "Settings sections" });
+    const selected = rail.locator('[aria-current="true"]');
+    await expect(selected).toBeVisible();
+
+    const visibleInRail = () =>
+      selected.evaluate((row) => {
+        const scroller = row.closest<HTMLElement>("[data-settings-rail-scroller]");
+        if (!scroller) return false;
+        const box = scroller.getBoundingClientRect();
+        const rect = row.getBoundingClientRect();
+        const fade = scroller.hasAttribute("data-more-below")
+          ? 3 * Number.parseFloat(getComputedStyle(document.documentElement).fontSize)
+          : 0;
+        return (
+          rect.left >= box.left &&
+          rect.right <= box.right &&
+          rect.top >= box.top &&
+          rect.bottom <= Math.min(box.bottom - fade, window.innerHeight)
+        );
+      });
+    await expect.poll(visibleInRail).toBe(true);
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect.poll(visibleInRail).toBe(true);
+    await expect(selected).toHaveCSS("font-size", "16px");
+  });
+
+  test("the phone uses the horizontal rail and returns to its selected setting", async ({
+    page,
+  }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(`/shop/${SHOP}/settings`);
-    const heading = page.getByRole("heading", { level: 1, name: "Settings", exact: true });
-    await expect(heading).toBeVisible();
-    const headingTop = (await heading.boundingBox())?.y;
     const rail = await openSettingsRail(page);
-    const toggle = rail.getByRole("button", { name: "Settings sections" });
-    await expect(toggle).toHaveAttribute("aria-expanded", "true");
-    expect((await heading.boundingBox())?.y).toBe(headingTop);
-    await page.keyboard.press("Escape");
-    await expect(toggle).toHaveAttribute("aria-expanded", "false");
-    await expect(toggle).toBeFocused();
-    await openSettingsRail(page);
+    await expect(rail.locator("[data-settings-rail-scroller]")).toBeVisible();
+    await expect(rail.getByRole("button", { name: "Settings sections" })).toHaveCount(0);
     await rail.getByRole("link", { name: "Units", exact: true }).click();
-    await expect(toggle).toHaveAttribute("aria-expanded", "false");
-    await expect(toggle).toHaveText("Units");
     await expect(page.getByLabel("Show depths in", { exact: true })).toBeVisible();
+    await expect(rail.getByRole("link", { name: "Units", exact: true })).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
     await expect(page.getByRole("heading", { name: "Timezone", exact: true })).toHaveCount(0);
-    await openSettingsRail(page);
     await rail.getByRole("link", { name: "Team", exact: true }).click();
     await expect(page).toHaveURL(`/shop/${SHOP}/settings/team`);
     await expect(page.getByRole("heading", { level: 1, name: "Team", exact: true })).toBeVisible();
-    await expect(toggle).toHaveText("Team");
-    await expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await expect(rail.getByRole("link", { name: "Team", exact: true })).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
   });
 
   test("back and forward restore the selected setting", async ({ page }) => {

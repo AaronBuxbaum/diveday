@@ -6,14 +6,6 @@
   "cardPhotoPending": "Reading the card…",
   "gearNote": "Fill sizes from their note",
   "gearNotePending": "Reading the note…",
-  "search": {
-    "label": "Ask in plain words",
-    "placeholder": "Who hasn’t been back in a year",
-    "submit": "Find",
-    "pending": "Finding…",
-    "noAnswer": "That doesn’t match any of the list’s views. Try the search box.",
-    "disclose": "Ask a question"
-  },
   "dupes": {
     "ask": "Ask AI whether this is one person",
     "pending": "Reading both records…",
