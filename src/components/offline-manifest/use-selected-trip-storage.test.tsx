@@ -64,7 +64,7 @@ afterEach(
 );
 
 describe("selected-trip storage invalidation", () => {
-  it("does not start another sync when a sync write invalidates the selected-trip envelope", async () => {
+  it("syncs newly pending cross-tab work once without looping on the same pending event", async () => {
     vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
     vi.stubGlobal("BroadcastChannel", TestBroadcastChannel);
     await saveOfflineManifest(tripPayload(1));
@@ -112,7 +112,24 @@ describe("selected-trip storage invalidation", () => {
     await waitFor(() => expect(mounted.result.current.read).toBe(true));
     await waitFor(() => expect(envelopes.length).toBeGreaterThan(0));
     await waitFor(() => expect(reconcile).toHaveBeenCalled());
-    const syncRequestsBeforeInvalidation = reconcile.mock.calls.length;
+    const initialSyncRequests = reconcile.mock.calls.length;
+
+    const restoreSameDocumentEvent = suppressSameDocumentManifestEvent();
+    try {
+      await act(async () => {
+        // The receiving tab learns about this new pending ID over the same
+        // broadcast channel used by a service worker or another tab.
+        await appendOfflineRollCall(tripId, {
+          bookingId,
+          checkpoint: "after_dive_1",
+          status: "not_boarded",
+          note: "Nora is still below.",
+        });
+      });
+    } finally {
+      restoreSameDocumentEvent();
+    }
+    await waitFor(() => expect(reconcile).toHaveBeenCalledTimes(initialSyncRequests + 1));
 
     await act(async () => {
       window.dispatchEvent(
@@ -121,14 +138,12 @@ describe("selected-trip storage invalidation", () => {
     });
     await waitFor(() => expect(envelopes.length).toBeGreaterThan(1));
 
-    expect(reconcile).toHaveBeenCalledTimes(syncRequestsBeforeInvalidation);
+    expect(reconcile).toHaveBeenCalledTimes(initialSyncRequests + 1);
 
     await act(async () => {
       window.dispatchEvent(new Event("focus"));
     });
-    await waitFor(() =>
-      expect(reconcile).toHaveBeenCalledTimes(syncRequestsBeforeInvalidation + 1),
-    );
+    await waitFor(() => expect(reconcile).toHaveBeenCalledTimes(initialSyncRequests + 2));
   });
 
   it("reloads the committed erasure disposition in an open trip view", async () => {

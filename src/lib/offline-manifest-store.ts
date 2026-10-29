@@ -42,7 +42,10 @@ function manifestBrowserWindow(): ManifestBrowserWindow | undefined {
   return (globalThis as typeof globalThis & { window?: ManifestBrowserWindow }).window;
 }
 
-export type OfflineManifestChangeListener = (tripId: string) => void;
+export type OfflineManifestChangeListener = (
+  tripId: string,
+  source: "same-document" | "broadcast",
+) => void;
 
 function validTripChange(value: unknown): value is { tripId: string } {
   return (
@@ -86,7 +89,7 @@ export function subscribeOfflineManifestChanges(listener: OfflineManifestChangeL
   if (!browserWindow) return () => {};
   const onLocalChange = (event: Event) => {
     const detail = (event as CustomEvent<unknown>).detail;
-    if (validTripChange(detail)) listener(detail.tripId);
+    if (validTripChange(detail)) listener(detail.tripId, "same-document");
   };
   browserWindow.addEventListener(MANIFEST_CHANGE_EVENT, onLocalChange);
 
@@ -95,7 +98,7 @@ export function subscribeOfflineManifestChanges(listener: OfflineManifestChangeL
     try {
       channel = new BroadcastChannel(MANIFEST_CHANGE_CHANNEL);
       channel.onmessage = (event: MessageEvent<unknown>) => {
-        if (validTripChange(event.data)) listener(event.data.tripId);
+        if (validTripChange(event.data)) listener(event.data.tripId, "broadcast");
       };
     } catch {
       // Same-document notifications and visibility reload remain available.
