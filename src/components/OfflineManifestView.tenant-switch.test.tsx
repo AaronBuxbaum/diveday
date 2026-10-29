@@ -480,6 +480,61 @@ it("keeps the sync disposition when a pre-sync inventory read resolves late", as
   expect(screen.queryByText("Sensitive note text")).not.toBeInTheDocument();
 });
 
+it("keeps a newer sync failure authoritative over inventory captured before it", async () => {
+  searchParams = new URLSearchParams({ trip: "trip-retry-49" });
+  const saved = richEnvelope("trip-retry-49");
+  saved.events.push({
+    clientEventId: "retry-event-49",
+    snapshotId: saved.snapshot.snapshotId,
+    snapshotSavedAt: saved.snapshot.savedAt,
+    tripId: "trip-retry-49",
+    bookingId: "booking-12345678",
+    checkpoint: "departure",
+    status: "boarded",
+    occurredAt: new Date(FROZEN_MS).toISOString(),
+    note: null,
+    syncStatus: "pending",
+  });
+  const event = saved.events[0];
+  if (!event) throw new Error("Expected a pending roll-call event");
+  const firstSuccess = { ...saved, events: [{ ...event, syncStatus: "applied" as const }] };
+  vi.mocked(loadOfflineManifest).mockResolvedValue(saved);
+  const inventoryReads: Array<(saved: OfflineManifestEnvelope[]) => void> = [];
+  vi.mocked(listOfflineManifests).mockReturnValue(
+    new Promise((resolve) => {
+      inventoryReads.push(resolve);
+    }),
+  );
+  vi.mocked(syncOfflineManifest)
+    .mockResolvedValueOnce(firstSuccess)
+    .mockRejectedValue(new Error("temporary network failure"));
+  vi.mocked(fetch).mockImplementation(async (input) =>
+    String(input) === "/api/offline-manifests/identity"
+      ? identityResponse("blue-mantis")
+      : new Response(null, { status: 200 }),
+  );
+
+  render(<OfflineManifestView />);
+  await waitFor(() => expect(syncOfflineManifest).toHaveBeenCalledTimes(1));
+  await waitFor(() => expect(inventoryReads.length).toBeGreaterThan(0));
+  await waitFor(() =>
+    expect(syncOfflineManifest).toHaveBeenNthCalledWith(1, "trip-retry-49", "blue-mantis"),
+  );
+
+  await act(async () => window.dispatchEvent(new Event("online")));
+  await waitFor(() => expect(vi.mocked(syncOfflineManifest).mock.calls.length).toBeGreaterThan(1));
+  expect(await screen.findByText(/Couldn’t reach DiveDay just now/)).toBeInTheDocument();
+
+  // This inventory was captured before either sync and still says pending.
+  // It is evidence for foreign pending work, not the selected trip's outcome.
+  await act(async () => inventoryReads[0]?.([saved]));
+
+  expect(screen.getByText(/Couldn’t reach DiveDay just now/)).toBeInTheDocument();
+  expect(screen.queryByText("All up to date.")).not.toBeInTheDocument();
+  expect(screen.queryByText("Everything’s sent.")).not.toBeInTheDocument();
+  expect(saved.events[0]?.syncStatus).toBe("pending");
+});
+
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();

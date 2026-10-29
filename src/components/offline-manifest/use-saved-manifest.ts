@@ -266,6 +266,14 @@ function selectedTripInventoryIsReady(inventoryReadyRef: { current: boolean }) {
   return inventoryReadyRef.current;
 }
 
+async function beginTripSyncAttempt(
+  ref: MutableRefObject<TripSyncResult | null>,
+  resolveTenant: () => Promise<string | null>,
+) {
+  ref.current = null;
+  return resolveTenant();
+}
+
 function useOnTenantVerified({
   envelope,
   t,
@@ -514,7 +522,7 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
     // next purge could delete the only local evidence. The route now fences a
     // tenant change at batch level, and this check keeps us from submitting at
     // all when the tenant cannot be established.
-    const slug = await resolveTenant();
+    const slug = await beginTripSyncAttempt(lastTripSyncRef, resolveTenant);
     if (!slug) return;
     const held = await loadOfflineManifest(tripId).catch(() => null);
     if (!held) return;
