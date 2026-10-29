@@ -308,11 +308,10 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
     // here at least as much (security review, 2026-08-06): a foreign shop's
     // record is *deliberately preserved* by the purge while it still holds a
     // pending event, and it is listed and tappable. Submitting that event under
-    // whatever shop is currently signed in gets it rejected for a tenant
-    // mismatch rather than a real domain refusal — and a rejected event is no
-    // longer "pending", so the very next purge pass deletes the record outright.
-    // That destroys the only copy of a boarding record. If the tenant cannot be
-    // established, reconcile nothing rather than guess.
+    // another shop used to settle it as a per-event refusal, after which the
+    // next purge could delete the only local evidence. The route now fences a
+    // tenant change at batch level, and this check keeps us from submitting at
+    // all when the tenant cannot be established.
     const slug = await resolveTenant();
     if (!slug) return;
     const held = await loadOfflineManifest(tripId).catch(() => null);
@@ -325,8 +324,12 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
       return;
     }
     try {
-      const next = await syncOfflineManifest(tripId);
+      const next = await syncOfflineManifest(tripId, slug);
       if (!next) return;
+      // The request may have been answered under the previous session just as
+      // the device verified a different tenant. Never paint that response on
+      // the now-authorized surface.
+      if (tenantSlugRef.current !== slug) return;
       dispatchSaved({ type: "loaded", envelope: next });
       // All three queues, not roll call alone: a checklist tap or an arrival
       // waiting to sync is evidence this device is holding, and a count that
@@ -349,9 +352,10 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
       ];
       setMessage(messages.join(" "));
     } catch {
+      if (tenantSlugRef.current !== slug) return;
       setMessage(t("shared.offlineManifest.reconcile.reachError"));
     }
-  }, [tripId, t, resolveTenant]);
+  }, [tripId, t, resolveTenant, tenantSlugRef]);
 
   // **One sync at a time, and at most one waiting** (captain review S2). Every
   // tap asks for a pass, and a pass on a link that carries nothing takes the
@@ -426,7 +430,9 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
       const results = await Promise.all(
         reconcilable.map((envelope) => {
           const id = envelope.snapshot.manifests[0]?.trip.id;
-          return id ? syncOfflineManifest(id).catch(() => null) : Promise.resolve(null);
+          return id
+            ? syncOfflineManifest(id, currentShopSlug).catch(() => null)
+            : Promise.resolve(null);
         }),
       );
       const byId = new Map(

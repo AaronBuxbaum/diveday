@@ -644,17 +644,10 @@ async function flushPendingRollCall(): Promise<void> {
   // belongs here at least as much, because here there is nobody to tell when
   // it goes wrong (security review, 2026-08-06).
   //
-  // Traced end to end, the version of this loop that flushed every envelope on
-  // the device destroyed evidence: `purgeOfflineManifestsExceptShop` keeps a
-  // *foreign* shop's record alive precisely while it still holds a `pending`
-  // event; submitting that event under whatever shop is currently signed in
-  // gets it scoped to `session.user.shopId` by the sync route and returned
-  // `rejected` for a tenant mismatch rather than a real domain refusal;
-  // `syncOfflineManifest` writes `syncStatus: "rejected"`; and a rejected event
-  // is no longer pending, so the very next purge deletes the record outright.
-  // Shop A's captain records roll call offshore, the tablet is handed to shop
-  // B, a push arrives with no page open, and the only record of who came back
-  // aboard is gone — silently, because a service worker has no screen.
+  // A shop can still change between this identity read and the sync request.
+  // Pass the verified slug as a comparison fence; the route checks it against
+  // its authenticated session and refuses a changed tenant as one failed batch,
+  // leaving every event pending for the original shop to retry.
   const shopSlug = await fetchOfflineManifestShopSlug();
   if (!shopSlug) {
     // Offline, signed out, a 404, a body of the wrong shape: reconcile
@@ -676,7 +669,7 @@ async function flushPendingRollCall(): Promise<void> {
     if (!tripId) continue;
     // One at a time, for the same IndexedDB-lock reason as the save loop.
     try {
-      await syncOfflineManifest(tripId);
+      await syncOfflineManifest(tripId, shopSlug);
     } catch {
       failed = true;
     }

@@ -113,7 +113,7 @@ export function useOfflineManifestSync(
     const cutoffNotesBefore = lastCutoffNoteCount.current;
     const unverifiedNotesBefore = lastUnverifiedNoteCount.current;
     try {
-      const envelope = await syncOfflineManifest(tripId);
+      const envelope = await syncOfflineManifest(tripId, payloadRef.current.shop.slug);
       if (envelope) {
         setSaved(envelope);
         const rejected = envelope.events.filter((event) => event.syncStatus === "rejected").length;

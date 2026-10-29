@@ -19,7 +19,10 @@ import { useSavedManifest } from "./use-saved-manifest";
 import { envelope, setOnline } from "./view-fixtures";
 
 const search = vi.hoisted(() => ({ params: new URLSearchParams() }));
-const tenant = vi.hoisted(() => ({ slug: "blue-mantis" as string | null }));
+const tenant = vi.hoisted(() => ({
+  slug: "blue-mantis" as string | null,
+  setVerified: (_slug: string | null) => {},
+}));
 
 vi.mock("next/navigation", () => ({ useSearchParams: () => search.params }));
 vi.mock("@/lib/offline-manifest-store", () => ({
@@ -33,6 +36,9 @@ vi.mock("@/lib/offline-manifest-store", () => ({
 vi.mock("./use-cross-shop-purge", () => ({ useCrossShopPurge: () => {} }));
 vi.mock("./use-offline-tenant", () => {
   const tenantSlugRef: { current: string | null } = { current: null };
+  tenant.setVerified = (slug) => {
+    tenantSlugRef.current = slug;
+  };
   const resolveTenant = async () => {
     tenantSlugRef.current = tenant.slug;
     return tenant.slug;
@@ -105,6 +111,7 @@ beforeEach(() => {
   acknowledge.mockResolvedValue(undefined);
   readDiscarded.mockResolvedValue([]);
   tenant.slug = "blue-mantis";
+  tenant.setVerified(null);
   setOnline(false);
 });
 
@@ -252,7 +259,7 @@ describe("useSavedManifest on a trip", () => {
     sync.mockResolvedValue(synced);
     const { result } = at("trip=trip-1");
     await waitFor(() => expect(result.current.message).toBe(line("allCaughtUp")));
-    expect(sync).toHaveBeenCalledWith("trip-1");
+    expect(sync).toHaveBeenCalledWith("trip-1", "blue-mantis");
     expect(result.current.envelope).toBe(synced);
   });
 
@@ -274,6 +281,29 @@ describe("useSavedManifest on a trip", () => {
     await waitFor(() =>
       expect(result.current.message).toBe(`${line("pendingRejectedSingle")} {"count":1}`),
     );
+  });
+
+  it("does not paint a stale tenant response after another shop is verified", async () => {
+    setOnline(true);
+    const saved = withEvents("trip-1", { pending: 1 });
+    load.mockResolvedValue(saved);
+    let release: (value: OfflineManifestEnvelope) => void = () => {};
+    sync.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          release = resolve;
+        }),
+    );
+    const { result } = at("trip=trip-1");
+    await waitFor(() => expect(sync).toHaveBeenCalledWith("trip-1", "blue-mantis"));
+
+    tenant.setVerified("reef-runners");
+    await act(async () => {
+      release(withEvents("trip-1", { rejected: 1 }));
+    });
+
+    expect(result.current.envelope?.events[0]?.syncStatus).toBe("pending");
+    expect(result.current.message).toBe(line("ready"));
   });
 
   it("says the server could not be reached when the sync throws", async () => {
@@ -489,7 +519,7 @@ describe("useSavedManifest on the list", () => {
     const { result } = at("");
     await waitFor(() => expect(result.current.list?.[0]).toBe(synced));
     expect(sync).toHaveBeenCalledTimes(1);
-    expect(sync).toHaveBeenCalledWith("trip-1");
+    expect(sync).toHaveBeenCalledWith("trip-1", "blue-mantis");
     expect(result.current.list).toEqual([synced, theirs, quiet]);
     // The foreign copy's event remains pending and is never submitted or
     // surfaced as an aggregate status under this tenant's session.

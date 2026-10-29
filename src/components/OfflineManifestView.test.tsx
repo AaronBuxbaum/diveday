@@ -193,7 +193,7 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
 
     render(<OfflineManifestView />);
 
-    await waitFor(() => expect(syncOfflineManifest).toHaveBeenCalledWith("trip-1"));
+    await waitFor(() => expect(syncOfflineManifest).toHaveBeenCalledWith("trip-1", "blue-mantis"));
     expect(await screen.findByText("Everything’s sent across these trips.")).toBeInTheDocument();
   });
 
@@ -382,7 +382,7 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
     await waitFor(() =>
       expect(purgeOfflineManifestsExceptShop).toHaveBeenCalledWith("blue-mantis"),
     );
-    await waitFor(() => expect(syncOfflineManifest).toHaveBeenCalledWith("trip-1"));
+    await waitFor(() => expect(syncOfflineManifest).toHaveBeenCalledWith("trip-1", "blue-mantis"));
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 

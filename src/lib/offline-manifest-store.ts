@@ -1022,6 +1022,8 @@ export const SYNC_TIMEOUT_MS = 10_000;
  * instead of a second row, a 500, or a refusal (`roll-call.postgres.test.ts`).
  */
 async function postPendingEvents(batch: {
+  /** Client's server-verified tenant at sync start; comparison only, never authority. */
+  expectedShopSlug?: string;
   events: OfflineRollCallEvent[];
   checklistEvents: OfflineChecklistEvent[];
   arrivalEvents: OfflineArrivalEvent[];
@@ -1056,7 +1058,10 @@ async function postPendingEvents(batch: {
   }
 }
 
-export async function syncOfflineManifest(tripId: string): Promise<OfflineManifestEnvelope | null> {
+export async function syncOfflineManifest(
+  tripId: string,
+  expectedShopSlug?: string,
+): Promise<OfflineManifestEnvelope | null> {
   const envelope = await loadOfflineManifest(tripId);
   if (!envelope) return null;
   const pending = envelope.events.filter((event) => event.syncStatus === "pending");
@@ -1068,6 +1073,7 @@ export async function syncOfflineManifest(tripId: string): Promise<OfflineManife
   );
   if (pendingOfflineEventCount(envelope) === 0 || !navigator.onLine) return envelope;
   const body = await postPendingEvents({
+    ...(expectedShopSlug ? { expectedShopSlug } : {}),
     events: pending,
     checklistEvents: pendingChecklist,
     arrivalEvents: pendingArrivals,

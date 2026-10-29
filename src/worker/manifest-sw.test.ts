@@ -211,7 +211,7 @@ describe("flushPendingRollCall (the sync event)", () => {
     await fireSync();
 
     expect(syncOfflineManifest).toHaveBeenCalledTimes(1);
-    expect(syncOfflineManifest).toHaveBeenCalledWith("trip-mine");
+    expect(syncOfflineManifest).toHaveBeenCalledWith("trip-mine", "blue-mantis");
   });
 
   it.each([

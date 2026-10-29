@@ -139,6 +139,25 @@ export async function tripExistsForShop(
 }
 
 /**
+ * True only when every trip named by one offline-sync batch belongs to this
+ * authenticated shop. Refuse the whole batch on a missing or foreign trip so
+ * the event writer cannot turn a tenant mismatch into a settled per-event
+ * rejection that the device would later purge.
+ */
+export async function offlineSyncTripsBelongToShop(
+  db: AppDb,
+  shopId: string,
+  tripIds: readonly string[],
+): Promise<boolean> {
+  if (tripIds.length === 0) return false;
+  const rows = await db
+    .select({ id: trips.id })
+    .from(trips)
+    .where(and(liveTrip(), eq(trips.shopId, shopId), inArray(trips.id, [...new Set(tripIds)])));
+  return rows.length === new Set(tripIds).size;
+}
+
+/**
  * Trip scoped to a shop (staff pages must never cross tenants), with booked
  * count and `sellableCapacity` — its seats on sale under the boat's
  * certificate (H-107, #2321), which every seats-left reads. `capacity` stays
