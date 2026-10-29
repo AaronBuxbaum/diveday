@@ -94,6 +94,8 @@ const REQUEST_CANCELLED_PATH_HASH_HEADER = "x-diveday-ready-cancelled-path-hash"
 const REQUEST_CANCELLED_VERSION_HEADER = "x-diveday-ready-cancelled-version";
 /** One durable slot orders requests and forgets; this cache keeps only one page. */
 const LATEST_REQUEST_KEY = "/ready/latest-request";
+const LEGACY_FORGOTTEN_KEY_PREFIX = "/ready/forgotten/";
+const LEGACY_FORGOTTEN_VERSION_HEADER = "x-diveday-forgotten-version";
 const KEEP_UNTIL_HEADER = "x-diveday-keep-until";
 
 /** Stands in for the bearer token in the stored body; not a legal token (wrong length). */
@@ -346,6 +348,36 @@ async function forgottenVersion(storage: CacheStorage): Promise<string> {
   return latest?.headers.get(REQUEST_FORGOTTEN_VERSION_HEADER) ?? "";
 }
 
+function legacyForgottenKey(hash: string): string {
+  return `${LEGACY_FORGOTTEN_KEY_PREFIX}${hash}`;
+}
+
+async function clearLegacyForgetMarkers(markers: Cache): Promise<void> {
+  for (const request of await markers.keys()) {
+    if (new URL(request.url).pathname.startsWith(LEGACY_FORGOTTEN_KEY_PREFIX)) {
+      await markers.delete(request);
+    }
+  }
+}
+
+async function isCopyInvalidated(
+  storage: CacheStorage,
+  hash: string,
+  cached: Response,
+): Promise<boolean> {
+  const markers = await storage.open(READY_FORGOTTEN_CACHE_NAME);
+  const latest = await markers.match(LATEST_REQUEST_KEY);
+  if (latest?.headers.get(REQUEST_CANCELLED_PATH_HASH_HEADER) === hash) {
+    return (
+      cached.headers.get(COPY_FORGOTTEN_VERSION_HEADER) !==
+      latest.headers.get(REQUEST_CANCELLED_VERSION_HEADER)
+    );
+  }
+  const legacy = await markers.match(legacyForgottenKey(hash));
+  const legacyVersion = legacy?.headers.get(LEGACY_FORGOTTEN_VERSION_HEADER);
+  return Boolean(legacy && cached.headers.get(COPY_FORGOTTEN_VERSION_HEADER) !== legacyVersion);
+}
+
 export function beginReadyPageRequest(
   storage: CacheStorage,
   path: string,
@@ -361,12 +393,35 @@ export function beginReadyPageRequest(
     try {
       const markers = await storage.open(READY_FORGOTTEN_CACHE_NAME);
       const marker = await markers.match(LATEST_REQUEST_KEY);
+      const oldPathMarker = await markers.match(legacyForgottenKey(hash));
+      const oldPathVersion = oldPathMarker?.headers.get(LEGACY_FORGOTTEN_VERSION_HEADER) ?? "";
       const cancelledPathHash = marker?.headers.get(REQUEST_CANCELLED_PATH_HASH_HEADER) ?? "";
       const cancelledVersion = marker?.headers.get(REQUEST_CANCELLED_VERSION_HEADER) ?? "";
+      const readyCache = await storage.open(READY_CACHE_NAME);
+      const cached = await readyCache.match(READY_COPY_KEY);
+      const cachedHash = cached?.headers.get(PATH_HASH_HEADER) ?? "";
+      const cachedVersion = cached?.headers.get(COPY_FORGOTTEN_VERSION_HEADER) ?? "";
+      let migratedPathHash = cancelledPathHash;
+      let migratedVersion = cancelledVersion;
+      if (cancelledPathHash !== cachedHash && cachedHash) {
+        const oldCachedMarker = await markers.match(legacyForgottenKey(cachedHash));
+        const oldCachedVersion =
+          oldCachedMarker?.headers.get(LEGACY_FORGOTTEN_VERSION_HEADER) ?? "";
+        if (oldCachedVersion && cachedVersion !== oldCachedVersion) {
+          migratedPathHash = cachedHash;
+          migratedVersion = oldCachedVersion;
+        } else if (oldPathVersion) {
+          migratedPathHash = hash;
+          migratedVersion = oldPathVersion;
+        }
+      } else if (oldPathVersion && !cancelledPathHash) {
+        migratedPathHash = hash;
+        migratedVersion = oldPathVersion;
+      }
       request.forgottenVersion =
         cancelledPathHash === hash
           ? cancelledVersion
-          : (marker?.headers.get(REQUEST_FORGOTTEN_VERSION_HEADER) ?? "");
+          : oldPathVersion || (marker?.headers.get(REQUEST_FORGOTTEN_VERSION_HEADER) ?? "");
       await markers.put(
         LATEST_REQUEST_KEY,
         new Response(null, {
@@ -374,14 +429,15 @@ export function beginReadyPageRequest(
             [REQUEST_ID_HEADER]: request.requestId,
             [REQUEST_PATH_HASH_HEADER]: request.pathHash,
             [REQUEST_FORGOTTEN_VERSION_HEADER]: request.forgottenVersion,
-            [REQUEST_CANCELLED_PATH_HASH_HEADER]: cancelledPathHash,
-            [REQUEST_CANCELLED_VERSION_HEADER]: cancelledVersion,
+            [REQUEST_CANCELLED_PATH_HASH_HEADER]: migratedPathHash,
+            [REQUEST_CANCELLED_VERSION_HEADER]: migratedVersion,
           },
         }),
       );
       locallyInvalidatedRequestId = null;
       localLatestRequest = { path, pathHash: hash, requestId: request.requestId };
       request.durable = true;
+      await clearLegacyForgetMarkers(markers);
     } catch {
       // Storage failure must not block the live page. The response carries an
       // unpublishable request so it cannot overwrite or fall back to stale data.
@@ -543,13 +599,7 @@ export async function readyPageFallback(
   const hash = await pathHash(path);
   if (cached.headers.get(PATH_HASH_HEADER) !== hash) return undefined;
   try {
-    const markers = await storage.open(READY_FORGOTTEN_CACHE_NAME);
-    const latest = await markers.match(LATEST_REQUEST_KEY);
-    if (
-      latest?.headers.get(REQUEST_CANCELLED_PATH_HASH_HEADER) === hash &&
-      cached.headers.get(COPY_FORGOTTEN_VERSION_HEADER) !==
-        latest.headers.get(REQUEST_CANCELLED_VERSION_HEADER)
-    ) {
+    if (await isCopyInvalidated(storage, hash, cached)) {
       await cache.delete(READY_COPY_KEY).catch(() => false);
       return undefined;
     }
@@ -593,13 +643,7 @@ export async function readyPageFallback(
   // Recheck after asynchronous body parsing: cancellation may persist its
   // marker while this fallback was preparing the response.
   try {
-    const markers = await storage.open(READY_FORGOTTEN_CACHE_NAME);
-    const latest = await markers.match(LATEST_REQUEST_KEY);
-    if (
-      latest?.headers.get(REQUEST_CANCELLED_PATH_HASH_HEADER) === hash &&
-      cached.headers.get(COPY_FORGOTTEN_VERSION_HEADER) !==
-        latest.headers.get(REQUEST_CANCELLED_VERSION_HEADER)
-    ) {
+    if (await isCopyInvalidated(storage, hash, cached)) {
       await cache.delete(READY_COPY_KEY).catch(() => false);
       return undefined;
     }
@@ -632,15 +676,30 @@ async function writeForgetMarker(
     const cached = await readyCache.match(READY_COPY_KEY);
     const previousCancelledPathHash = latest?.headers.get(REQUEST_CANCELLED_PATH_HASH_HEADER) ?? "";
     const previousCancelledVersion = latest?.headers.get(REQUEST_CANCELLED_VERSION_HEADER) ?? "";
+    const cachedHash = cached?.headers.get(PATH_HASH_HEADER) ?? "";
+    const oldCachedMarker = cachedHash
+      ? await markers.match(legacyForgottenKey(cachedHash))
+      : undefined;
+    const oldCachedVersion = oldCachedMarker?.headers.get(LEGACY_FORGOTTEN_VERSION_HEADER) ?? "";
     const preservePreviousCancellation =
-      previousCancelledPathHash !== "" &&
-      cached?.headers.get(PATH_HASH_HEADER) === previousCancelledPathHash &&
-      cached.headers.get(COPY_FORGOTTEN_VERSION_HEADER) !== previousCancelledVersion;
-    const effectiveCancelledPathHash = preservePreviousCancellation
-      ? previousCancelledPathHash
+      previousCancelledPathHash !== "" && cachedHash === previousCancelledPathHash;
+    const preserveLegacyCancellation =
+      !preservePreviousCancellation &&
+      cachedHash !== "" &&
+      oldCachedVersion !== "" &&
+      cached?.headers.get(COPY_FORGOTTEN_VERSION_HEADER) !== oldCachedVersion;
+    const preserveCachedCancellation =
+      cachedHash !== cancelledPathHash &&
+      (preservePreviousCancellation || preserveLegacyCancellation);
+    const effectiveCancelledPathHash = preserveCachedCancellation
+      ? preservePreviousCancellation
+        ? previousCancelledPathHash
+        : cachedHash
       : cancelledPathHash;
-    const effectiveCancelledVersion = preservePreviousCancellation
-      ? previousCancelledVersion
+    const effectiveCancelledVersion = preserveCachedCancellation
+      ? preservePreviousCancellation
+        ? previousCancelledVersion
+        : oldCachedVersion
       : cancellationEpoch;
     const preserveRequest =
       latest &&
@@ -667,14 +726,9 @@ async function writeForgetMarker(
       }),
     );
     if (!preserveRequest) localLatestRequest = null;
-    // Drop tombstones from earlier versions. A single global marker is enough
-    // for the one-copy cache and keeps storage use constant over time.
-    for (const request of await markers.keys()) {
-      const key = new URL(request.url).pathname;
-      if (key.startsWith("/ready/forgotten/")) {
-        await markers.delete(request);
-      }
-    }
+    // The current record now preserves any old marker needed by the one kept
+    // copy, so the historical per-path tombstones can be removed.
+    await clearLegacyForgetMarkers(markers);
     return true;
   } catch {
     return false;

@@ -55,6 +55,30 @@ function page(body: string) {
   );
 }
 
+async function pathHash(path: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(path));
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+async function seedLegacyCopy(
+  storage: CacheStorage,
+  path: string,
+  forgottenVersion = "before-cancel",
+) {
+  await saveReadyPage(storage, path, page("legacy source"), NOW);
+  const cache = await storage.open(READY_CACHE_NAME);
+  const saved = await cache.match(READY_COPY_KEY);
+  if (!saved) throw new Error("expected saved copy");
+  const headers = new Headers(saved.headers);
+  headers.set("x-diveday-copy-forgotten-version", forgottenVersion);
+  const legacyBanner = [...LEGACY_READY_BANNER_COPY.keys()][0];
+  if (!legacyBanner) throw new Error("expected recognized legacy banner");
+  await cache.put(
+    READY_COPY_KEY,
+    new Response(`<p ${READY_OFFLINE_NOTE_ATTR}="">${legacyBanner}</p>`, { headers }),
+  );
+}
+
 describe("ready page invalidation ordering", () => {
   let store: ReturnType<typeof fakeStorage>;
 
@@ -149,6 +173,44 @@ describe("ready page invalidation ordering", () => {
     vi.resetModules();
     const restarted = await import("./ready-page-cache");
     expect(await restarted.readyPageFallback(store.storage, path, NOW)).toBeUndefined();
+  });
+
+  it("honors an old hashed cancellation marker when no new marker exists after restart", async () => {
+    const path = `/ready/${TOKEN}`;
+    await seedLegacyCopy(store.storage, path);
+    const markers = await store.storage.open(READY_FORGOTTEN_CACHE_NAME);
+    await markers.put(
+      `/ready/forgotten/${await pathHash(path)}`,
+      new Response(null, { headers: { "x-diveday-forgotten-version": "after-cancel" } }),
+    );
+    vi.resetModules();
+    const restarted = await import("./ready-page-cache");
+
+    expect(await restarted.readyPageFallback(store.storage, path, NOW)).toBeUndefined();
+  });
+
+  it("migrates an old hashed cancellation marker into the bounded record before pruning it", async () => {
+    const path = `/ready/${TOKEN}`;
+    await seedLegacyCopy(store.storage, path);
+    const markers = await store.storage.open(READY_FORGOTTEN_CACHE_NAME);
+    await markers.put(
+      `/ready/forgotten/${await pathHash(path)}`,
+      new Response(null, { headers: { "x-diveday-forgotten-version": "after-cancel" } }),
+    );
+    vi.resetModules();
+    const restarted = await import("./ready-page-cache");
+
+    const request = await restarted.beginReadyPageRequest(store.storage, path);
+    expect(request.forgottenVersion).toBe("after-cancel");
+    expect(await (await store.storage.open(READY_FORGOTTEN_CACHE_NAME)).keys()).toHaveLength(1);
+    expect(await restarted.readyPageFallback(store.storage, path, NOW)).toBeUndefined();
+
+    expect(
+      await restarted.saveReadyPage(store.storage, path, page("fresh server copy"), NOW, request),
+    ).toBe(true);
+    expect(await (await restarted.readyPageFallback(store.storage, path, NOW))?.text()).toContain(
+      "fresh server copy",
+    );
   });
 
   it("fails closed when durable cancellation state cannot be read", async () => {
