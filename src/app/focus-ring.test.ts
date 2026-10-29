@@ -458,6 +458,7 @@ const CUT_RINGS: readonly (readonly [file: string, anchor: string, needs: readon
     "px-4 py-3 text-base hover:bg-surface-sunken",
     ["focus-visible:focus-ring-inset", "rounded-[inherit]"],
   ],
+  ["components/boat-segments.ts", "focus-visible:focus-ring-inset", []],
   ["app/shop/[shopSlug]/dive-sites/_components/UpcomingSiteTrips.tsx", "last:rounded-b-panel", []],
   // Rows that bleed `-mx-3` into a 16px gutter sit 4px from a 390px
   // screen's edge: the viewport cut 1px off each side.

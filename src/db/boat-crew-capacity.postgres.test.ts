@@ -5,7 +5,7 @@ import { nowDate } from "@/lib/clock";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
 import { createBoat } from "./boats";
 import { createBooking } from "./bookings";
-import { people, personRoles, shops, tripAssignments, bookings, trips } from "./schema";
+import { bookings, people, personRoles, shops, tripAssignments } from "./schema";
 import { createTrip } from "./trips-create";
 import { setTripCrew } from "./trips-crew";
 
@@ -75,7 +75,13 @@ describePostgres("assigned crew reserves boat capacity against concurrent bookin
     const [held] = await pg.db
       .select({ total: count(bookings.id) })
       .from(bookings)
-      .where(and(eq(bookings.shopId, shop.id), eq(bookings.tripId, trip.id), ne(bookings.status, "cancelled")));
+      .where(
+        and(
+          eq(bookings.shopId, shop.id),
+          eq(bookings.tripId, trip.id),
+          ne(bookings.status, "cancelled"),
+        ),
+      );
     const [assigned] = await pg.db
       .select({ total: count(tripAssignments.personId) })
       .from(tripAssignments)

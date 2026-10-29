@@ -14,6 +14,11 @@ describe("the boat's segmented control", () => {
     expect(boatSegmentClass(false)).not.toContain("bg-primary");
   });
 
+  it("keeps the full keyboard focus ring inside the scrolling track", () => {
+    expect(boatSegmentClass(false)).toContain("focus-visible:focus-ring-inset");
+    expect(boatSegmentClass(true)).toContain("focus-visible:focus-ring-inset");
+  });
+
   it("gives every segment the rail's 56px target", () => {
     expect(boatSegmentClass(false)).toContain("min-h-14");
     expect(boatSegmentClass(true)).toContain("min-h-14");

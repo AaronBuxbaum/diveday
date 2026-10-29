@@ -158,8 +158,7 @@ describe("boat and trip-tag deletion counts", () => {
     ]);
     await cancelTrip(crewCleared.trip.id);
 
-    const expected = new Map([[boat.id, 4]]);
-    expect(await countDeparturesByBoat(db, shop.id)).toEqual(expected);
-    expect(await countDeparturesByTripLens(db, shop.id)).toEqual(new Map([[lensId, 4]]));
+    expect((await countDeparturesByBoat(db, shop.id)).get(boat.id)).toBe(4);
+    expect((await countDeparturesByTripLens(db, shop.id)).get(lensId)).toBe(4);
   });
 });

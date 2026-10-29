@@ -355,6 +355,55 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "manifest-buddy-divergence", scheme);
       });
 
+      test(`the manifest stage controls keep keyboard focus visible at both track edges (${scheme})`, async ({
+        page,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        await page.goto("/shop/blue-mantis");
+        await page.getByRole("link", { name: AT_SEA_DAY_TITLE, exact: true }).first().click();
+        await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
+        await openTripTab(page, "Manifest");
+        await offlineCopySaved(page);
+        const boarding = page.getByRole("button", { name: "Boarding", exact: true });
+        const home = page.getByRole("button", { name: "Home", exact: true });
+        await expect(boarding).toBeVisible();
+        await expect(home).toBeVisible();
+
+        const focusByTab = async (label: "Boarding" | "Home") => {
+          const target = page.getByRole("button", { name: label, exact: true });
+          await target.evaluate((button) => {
+            if (!(button instanceof HTMLElement)) {
+              throw new Error(`The ${label} stage control is not an HTML element`);
+            }
+            const focusable = Array.from(
+              document.querySelectorAll<HTMLElement>(
+                'a[href], button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])',
+              ),
+            ).filter((element) => element.tabIndex >= 0 && element.getClientRects().length > 0);
+            const index = focusable.indexOf(button);
+            const previous = focusable[index - 1];
+            if (!previous) throw new Error(`No preceding keyboard stop before the ${label} stage`);
+            previous.focus();
+          });
+          await page.keyboard.press("Tab");
+          await expect(target).toBeFocused();
+          await expect(target).toHaveCSS("outline-offset", "-3px");
+        };
+
+        await capture(page, "manifest-stage-boarding-focus", scheme, {
+          beforeShot: async () => {
+            await focusByTab("Boarding");
+            await expect(boarding).toBeFocused();
+          },
+        });
+        await capture(page, "manifest-stage-home-focus", scheme, {
+          beforeShot: async () => {
+            await focusByTab("Home");
+            await expect(home).toBeFocused();
+          },
+        });
+      });
+
       if (scheme === "light") {
         test("the manifest keeps both capacity warnings distinct", async ({ page, request }) => {
           const seeded = await request.post("/api/test/seed-trouble-states?manifestOverCapacity=1");
