@@ -322,7 +322,12 @@ export async function issueReturningDiverReceipt(
 /** Resolve an unacknowledged receipt without consuming it, for retry after navigation or a lost response. */
 export async function readReturningDiverReceipt(
   db: DbExecutor,
-  input: { deviceToken: string; deviceGeneration: string | null; now?: Date },
+  input: {
+    deviceToken: string;
+    deviceGeneration: string | null;
+    expectedShopId: string;
+    now?: Date;
+  },
 ): Promise<{
   receiptId: string;
   receiptOrder: string;
@@ -362,6 +367,7 @@ export async function readReturningDiverReceipt(
       .where(
         and(
           eq(bookingCapabilities.returningDeviceHash, deviceHash),
+          eq(bookingCapabilities.shopId, input.expectedShopId),
           eq(bookingCapabilities.purpose, "returning_diver_receipt"),
           input.deviceGeneration === null
             ? isNull(bookingCapabilities.returningDeviceGeneration)
@@ -461,6 +467,7 @@ export async function acknowledgeReturningDiverReceipt(
     deviceToken: string;
     expectedReceiptId: string;
     deviceGeneration: string | null;
+    expectedShopId: string;
     now?: Date;
   },
 ): Promise<boolean> {
@@ -478,6 +485,7 @@ export async function acknowledgeReturningDiverReceipt(
       and(
         eq(bookingCapabilities.returningDeviceHash, deviceHash),
         eq(bookingCapabilities.id, input.expectedReceiptId),
+        eq(bookingCapabilities.shopId, input.expectedShopId),
         eq(bookingCapabilities.purpose, "returning_diver_receipt"),
         input.deviceGeneration === null
           ? isNull(bookingCapabilities.returningDeviceGeneration)
@@ -491,6 +499,7 @@ export async function acknowledgeReturningDiverReceipt(
   const latest = await readReturningDiverReceipt(db, {
     deviceToken: input.deviceToken,
     deviceGeneration: input.deviceGeneration,
+    expectedShopId: input.expectedShopId,
     now,
   });
   if (latest?.receiptId !== receipt.id) return false;
@@ -515,6 +524,8 @@ export async function revokeReturningDiverReceipt(
   db: DbExecutor,
   input: {
     deviceToken: string;
+    expectedShopId: string;
+    previousDeviceGeneration: string | null;
     nextDeviceGeneration: string;
     now?: Date;
   },
@@ -530,15 +541,15 @@ export async function revokeReturningDiverReceipt(
   const deviceHash = hashCapabilityToken(input.deviceToken);
   const revoked = await db
     .update(bookingCapabilities)
-    .set({ revokedAt: now })
+    .set({ revokedAt: now, returningDeviceGeneration: input.nextDeviceGeneration })
     .where(
       and(
         eq(bookingCapabilities.returningDeviceHash, deviceHash),
+        eq(bookingCapabilities.shopId, input.expectedShopId),
         eq(bookingCapabilities.purpose, "returning_diver_receipt"),
-        or(
-          isNull(bookingCapabilities.returningDeviceGeneration),
-          ne(bookingCapabilities.returningDeviceGeneration, input.nextDeviceGeneration),
-        ),
+        input.previousDeviceGeneration === null
+          ? isNull(bookingCapabilities.returningDeviceGeneration)
+          : eq(bookingCapabilities.returningDeviceGeneration, input.previousDeviceGeneration),
         isNull(bookingCapabilities.revokedAt),
       ),
     )

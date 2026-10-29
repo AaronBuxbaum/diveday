@@ -20,6 +20,11 @@ export const MAX_RETURNING_DIVER_MEMORIES = 32;
 export const RETURNING_DIVER_DEVICE_TOKEN_PATTERN = /^[A-Za-z0-9_-]{40,128}$/;
 
 export type ReturningDiver = { fullName: string; email: string };
+export type ReturningDiverMemoryRecord = ReturningDiver & {
+  receiptId: string | null;
+  receiptOrder: string;
+  clearGeneration: string | null;
+};
 
 type StoredReturningDiver = ReturningDiver & {
   expiresAt: number;
@@ -28,7 +33,12 @@ type StoredReturningDiver = ReturningDiver & {
   clearGeneration?: string | null;
 };
 
-type ClearState = { generation: string; blockedReceiptId?: string; expiresAt: number };
+type ClearState = {
+  generation: string;
+  previousGeneration?: string | null;
+  blockedReceiptId?: string;
+  expiresAt: number;
+};
 const volatileClearGenerations = new Map<string, ClearState>();
 
 function isReturningDiver(value: unknown): value is ReturningDiver {
@@ -131,7 +141,7 @@ export function getOrCreateReturningDiverDeviceToken(
 }
 
 /** Read only slots created by explicit opt-in in this tab. */
-export function getReturningDiverDeviceSlots(): Array<{
+export function getReturningDiverDeviceSlots(shopScope?: string): Array<{
   token: string;
   generation: string | null;
 }> {
@@ -142,6 +152,7 @@ export function getReturningDiverDeviceSlots(): Array<{
       if (!key?.startsWith(DEVICE_SLOT_PREFIX)) continue;
       const shopSlug = key.slice(DEVICE_SLOT_PREFIX.length);
       if (!storageKey(shopSlug)) continue;
+      if (shopScope && shopSlug !== shopScope) continue;
       const raw = sessionStorage.getItem(key);
       if (!raw) continue;
       const parsed: unknown = JSON.parse(raw);
@@ -246,6 +257,7 @@ export function subscribeToReturningDiverClears(
   onClear: (input: {
     shopSlug: string;
     generation: string;
+    previousGeneration: string | null;
     receiptId?: string;
     deviceToken?: string;
   }) => void,
@@ -257,6 +269,7 @@ export function subscribeToReturningDiverClears(
       shopSlug?: unknown;
       generation?: unknown;
       expiresAt?: unknown;
+      previousGeneration?: unknown;
       receiptId?: unknown;
       deviceToken?: unknown;
     };
@@ -265,6 +278,12 @@ export function subscribeToReturningDiverClears(
       !storageKey(message.shopSlug) ||
       typeof message.generation !== "string" ||
       typeof message.expiresAt !== "number" ||
+      (message.previousGeneration !== undefined &&
+        message.previousGeneration !== null &&
+        (typeof message.previousGeneration !== "string" ||
+          !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+            message.previousGeneration,
+          ))) ||
       message.expiresAt <= nowDate().getTime()
     ) {
       return;
@@ -276,13 +295,18 @@ export function subscribeToReturningDiverClears(
       // A volatile fence still orders clear events when localStorage is blocked.
     }
     const volatileClear = volatileClearGenerations.get(message.shopSlug);
-    if (volatileClear && (!currentClear || volatileClear.expiresAt > currentClear.expiresAt))
-      currentClear = volatileClear;
-    // Clear events are ordered by their same-device 24-hour expiry marker.
-    // Never let a delayed older tab event remove a slot created after a later clear.
-    if (currentClear && currentClear.generation !== message.generation) {
-      if (message.expiresAt <= currentClear.expiresAt) return;
-    }
+    if (!currentClear && volatileClear) currentClear = volatileClear;
+    const previousGeneration =
+      typeof message.previousGeneration === "string" ? message.previousGeneration : null;
+    // Clear generations form a predecessor chain. A delayed event from an
+    // earlier clear cannot replace a later generation, without comparing
+    // device timestamps to server-issued expiry values.
+    if (
+      currentClear &&
+      currentClear.generation !== message.generation &&
+      previousGeneration !== currentClear.generation
+    )
+      return;
     const receiptId = typeof message.receiptId === "string" ? message.receiptId : undefined;
     const deviceToken =
       typeof message.deviceToken === "string" &&
@@ -314,6 +338,7 @@ export function subscribeToReturningDiverClears(
     }
     volatileClearGenerations.set(message.shopSlug, {
       generation: message.generation,
+      previousGeneration,
       expiresAt: message.expiresAt,
       ...(receiptId ? { blockedReceiptId: receiptId } : {}),
     });
@@ -321,12 +346,25 @@ export function subscribeToReturningDiverClears(
     onClear({
       shopSlug: message.shopSlug,
       generation: message.generation,
+      previousGeneration,
       ...(receiptId ? { receiptId } : {}),
       ...(deviceToken ? { deviceToken } : {}),
     });
   };
   const onWindowEvent = (event: Event) => receive((event as CustomEvent<unknown>).detail);
+  const onStorage = (event: StorageEvent) => {
+    if (!event.key?.startsWith(CLEAR_PREFIX) || !event.newValue) return;
+    const shopSlug = event.key.slice(CLEAR_PREFIX.length);
+    if (!storageKey(shopSlug)) return;
+    try {
+      const detail: unknown = JSON.parse(event.newValue);
+      if (typeof detail === "object" && detail !== null) receive({ ...detail, shopSlug });
+    } catch {
+      // A malformed cross-tab clear marker cannot authorize deleting form data.
+    }
+  };
   window.addEventListener(CLEAR_EVENT, onWindowEvent);
+  window.addEventListener("storage", onStorage);
   let channel: BroadcastChannel | null = null;
   try {
     channel = typeof BroadcastChannel === "undefined" ? null : new BroadcastChannel(CLEAR_CHANNEL);
@@ -336,6 +374,7 @@ export function subscribeToReturningDiverClears(
   if (channel) channel.onmessage = (event: MessageEvent<unknown>) => receive(event.data);
   return () => {
     window.removeEventListener(CLEAR_EVENT, onWindowEvent);
+    window.removeEventListener("storage", onStorage);
     channel?.close();
   };
 }
@@ -543,6 +582,25 @@ export function saveReturningDiver(
 }
 
 export function loadReturningDiver(shopSlug: string, now: Date = nowDate()): ReturningDiver | null {
+  const record = loadReturningDiverRecord(shopSlug, now);
+  return record ? { fullName: record.fullName, email: record.email } : null;
+}
+
+/** Check for a stored candidate without judging its expiry on the device clock. */
+export function hasStoredReturningDiver(shopSlug: string): boolean {
+  clearLegacyStorage();
+  try {
+    return memoryKeys(shopSlug).some((key) => localStorage.getItem(key) !== null);
+  } catch {
+    return false;
+  }
+}
+
+/** Read a candidate against a caller-supplied trusted time and retain receipt provenance. */
+export function loadReturningDiverRecord(
+  shopSlug: string,
+  now: Date = nowDate(),
+): ReturningDiverMemoryRecord | null {
   clearLegacyStorage();
   clearExpiredShopMemories(now);
   try {
@@ -597,7 +655,15 @@ export function loadReturningDiver(shopSlug: string, now: Date = nowDate()): Ret
         latest.receiptOrder,
         receiptStorageKey(shopSlug, latest.receiptId) ?? "",
       );
-    return latest ? { fullName: latest.fullName, email: latest.email } : null;
+    return latest
+      ? {
+          fullName: latest.fullName,
+          email: latest.email,
+          receiptId: latest.receiptId ?? null,
+          receiptOrder: latest.receiptOrder ?? "0",
+          clearGeneration: latest.clearGeneration ?? null,
+        }
+      : null;
   } catch {
     return null;
   }
@@ -611,6 +677,13 @@ export function forgetReturningDiver(shopSlug: string): "cleared" | "partial" | 
   if (!prefix || !tombstone || !slotKey) return "unavailable";
   let blockedReceiptId: string | undefined;
   let deviceToken: string | undefined;
+  let previousGeneration: string | null = null;
+  try {
+    previousGeneration = effectiveClearState(shopSlug)?.generation ?? null;
+  } catch {
+    // A failed marker read still permits local deletion, but old receipts may
+    // not be safely revoked without knowing the generation they belong to.
+  }
   try {
     const rows = memoryKeys(shopSlug).flatMap((key) => {
       const raw = localStorage.getItem(key);
@@ -656,6 +729,7 @@ export function forgetReturningDiver(shopSlug: string): "cleared" | "partial" | 
   const expiresAt = nowDate().getTime() + RETURNING_DIVER_DEVICE_SLOT_MS;
   const clearState: ClearState = {
     generation,
+    previousGeneration,
     expiresAt,
     ...(blockedReceiptId ? { blockedReceiptId } : {}),
   };
@@ -713,6 +787,7 @@ export function forgetReturningDiver(shopSlug: string): "cleared" | "partial" | 
     const detail = {
       shopSlug,
       generation,
+      previousGeneration,
       expiresAt,
       ...(blockedReceiptId ? { receiptId: blockedReceiptId } : {}),
       ...(deviceToken ? { deviceToken } : {}),

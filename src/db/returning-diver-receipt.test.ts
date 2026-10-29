@@ -87,12 +87,21 @@ describe("returning-diver receipt slots", () => {
     const firstVisit = await readReturningDiverReceipt(booking.db, {
       deviceToken: receipt.deviceToken,
       deviceGeneration: receipt.deviceGeneration,
+      expectedShopId: booking.shop.id,
     });
     expect(firstVisit?.shopSlug).toBe(booking.shop.slug);
     expect(
       await readReturningDiverReceipt(booking.db, {
         deviceToken: receipt.deviceToken,
         deviceGeneration: receipt.deviceGeneration,
+        expectedShopId: crypto.randomUUID(),
+      }),
+    ).toBeNull();
+    expect(
+      await readReturningDiverReceipt(booking.db, {
+        deviceToken: receipt.deviceToken,
+        deviceGeneration: receipt.deviceGeneration,
+        expectedShopId: booking.shop.id,
       }),
     ).toEqual(firstVisit);
     expect(
@@ -100,6 +109,7 @@ describe("returning-diver receipt slots", () => {
         deviceToken: receipt.deviceToken,
         expectedReceiptId: "00000000-0000-0000-0000-000000000000",
         deviceGeneration: receipt.deviceGeneration,
+        expectedShopId: booking.shop.id,
       }),
     ).toBe(false);
     expect(
@@ -107,12 +117,14 @@ describe("returning-diver receipt slots", () => {
         deviceToken: receipt.deviceToken,
         expectedReceiptId: receipt.receiptId,
         deviceGeneration: receipt.deviceGeneration,
+        expectedShopId: booking.shop.id,
       }),
     ).toBe(true);
     expect(
       await readReturningDiverReceipt(booking.db, {
         deviceToken: receipt.deviceToken,
         deviceGeneration: receipt.deviceGeneration,
+        expectedShopId: booking.shop.id,
       }),
     ).toBeNull();
     expect(
@@ -120,6 +132,7 @@ describe("returning-diver receipt slots", () => {
         deviceToken: receipt.deviceToken,
         expectedReceiptId: receipt.receiptId,
         deviceGeneration: receipt.deviceGeneration,
+        expectedShopId: booking.shop.id,
       }),
     ).toBe(true);
   });
@@ -139,6 +152,7 @@ describe("returning-diver receipt slots", () => {
       await readReturningDiverReceipt(second.db, {
         deviceToken: token,
         deviceGeneration: null,
+        expectedShopId: second.shop.id,
         now: sameInstant,
       }),
     ).toMatchObject({
@@ -149,6 +163,7 @@ describe("returning-diver receipt slots", () => {
       await readReturningDiverReceipt(second.db, {
         deviceToken: token,
         deviceGeneration: null,
+        expectedShopId: second.shop.id,
         now: sameInstant,
       }),
     ).not.toMatchObject({ receiptId: older.receiptId });
@@ -167,12 +182,14 @@ describe("returning-diver receipt slots", () => {
       await readReturningDiverReceipt(second.db, {
         deviceToken: token,
         deviceGeneration: generationA,
+        expectedShopId: second.shop.id,
       }),
     ).toBeNull();
     expect(
       await readReturningDiverReceipt(second.db, {
         deviceToken: token,
         deviceGeneration: generationB,
+        expectedShopId: second.shop.id,
       }),
     ).toMatchObject({ receiptId: current.receiptId });
   });
@@ -184,12 +201,16 @@ describe("returning-diver receipt slots", () => {
     expect(
       await revokeReturningDiverReceipt(booking.db, {
         deviceToken: "b".repeat(64),
+        expectedShopId: booking.shop.id,
+        previousDeviceGeneration: null,
         nextDeviceGeneration: generationB,
       }),
     ).toBe(false);
     expect(
       await revokeReturningDiverReceipt(booking.db, {
         deviceToken: receipt.deviceToken,
+        expectedShopId: booking.shop.id,
+        previousDeviceGeneration: null,
         nextDeviceGeneration: generationB,
       }),
     ).toBe(true);
@@ -197,8 +218,43 @@ describe("returning-diver receipt slots", () => {
       await readReturningDiverReceipt(booking.db, {
         deviceToken: receipt.deviceToken,
         deviceGeneration: receipt.deviceGeneration,
+        expectedShopId: booking.shop.id,
       }),
     ).toBeNull();
+  });
+
+  it("does not let a delayed clear revoke a later opt-in generation", async () => {
+    const first = await readyBooking();
+    const token = deviceToken();
+    const cleared = await issueFor(first, { token, generation: null });
+    if (!cleared) throw new Error("expected initial receipt");
+    expect(
+      await revokeReturningDiverReceipt(first.db, {
+        deviceToken: token,
+        expectedShopId: first.shop.id,
+        previousDeviceGeneration: null,
+        nextDeviceGeneration: generationA,
+      }),
+    ).toBe(true);
+
+    const second = await readyBooking();
+    const laterOptIn = await issueFor(second, { token, generation: generationA });
+    if (!laterOptIn) throw new Error("expected later-generation receipt");
+    expect(
+      await revokeReturningDiverReceipt(second.db, {
+        deviceToken: token,
+        expectedShopId: second.shop.id,
+        previousDeviceGeneration: null,
+        nextDeviceGeneration: generationA,
+      }),
+    ).toBe(false);
+    expect(
+      await readReturningDiverReceipt(second.db, {
+        deviceToken: token,
+        deviceGeneration: generationA,
+        expectedShopId: second.shop.id,
+      }),
+    ).toMatchObject({ receiptId: laterOptIn.receiptId });
   });
 
   it("refuses canceled, erased, expired, wrong-slot, and unrelated capabilities", async () => {
@@ -209,12 +265,14 @@ describe("returning-diver receipt slots", () => {
       await readReturningDiverReceipt(booking.db, {
         deviceToken: "c".repeat(64),
         deviceGeneration: null,
+        expectedShopId: booking.shop.id,
       }),
     ).toBeNull();
     expect(
       await readReturningDiverReceipt(booking.db, {
         deviceToken: receipt.deviceToken,
         deviceGeneration: null,
+        expectedShopId: booking.shop.id,
         now: new Date(booking.redirect.expiresAt.getTime() + 1),
       }),
     ).toBeNull();
@@ -227,6 +285,7 @@ describe("returning-diver receipt slots", () => {
       await readReturningDiverReceipt(booking.db, {
         deviceToken: receipt.deviceToken,
         deviceGeneration: null,
+        expectedShopId: booking.shop.id,
       }),
     ).toBeNull();
 
@@ -261,6 +320,7 @@ describe("returning-diver receipt slots", () => {
       await readReturningDiverReceipt(booking.db, {
         deviceToken: receipt.deviceToken,
         deviceGeneration: null,
+        expectedShopId: booking.shop.id,
       }),
     ).toBeNull();
     const [row] = await booking.db

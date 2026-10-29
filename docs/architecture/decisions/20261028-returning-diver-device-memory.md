@@ -5,49 +5,47 @@
 
 ## Context
 
-The public form handles names and email on shared devices. Its editable `?booked=1` flag and
-shareable readiness links cannot prove that this browser opted in. Memory must be scoped and must
-not change the successful booking confirmation.
+Public booking forms handle names and email on shared devices. An editable `?booked=1` flag or a
+shareable readiness link cannot prove that a browser opted in. Memory must stay shop-scoped and
+must not affect confirmed booking success.
 
 ## Decision
 
-1. Offer an unchecked opt-in on non-embedded public bookings. Only after the booking transaction
-   succeeds, the lead identity is confirmed, and the booking is not refused, issue a random
-   one-use receipt. It is bound to the exact shop, booking, person, trip, and the undelivered
-   readiness capability issued to the redirecting browser. The distinct emailed readiness
-   capability cannot redeem it.
-2. Store only a hash of that receipt in `booking_capabilities`; store its opaque value in a short
-   lived HttpOnly, SameSite=Lax cookie scoped to `/ready`. No name or email enters the receipt,
-   cookie, or URL. An explicit post-hydration Server Action atomically redeems it; page rendering
-   and RSC prefetch never consume it. Failed redemption cannot change a successful booking.
-   Receipt issuance has a 500ms booking-response budget, plus transaction-local 250ms lock and
-   400ms statement limits. If the response budget wins before a delayed database operation
-   finishes, its receipt result is discarded and no cookie is set. A late database commit can
-   leave an opaque, PII-free receipt row with no browser-held token; it expires within 24 hours
-   and follows the existing capability-row cleanup schedule.
-3. After redemption, the browser may write name/email to local storage under a per-shop key for
-   30 days. The checkbox is off by default, embeds never offer it, and the existing "Not you?"
-   control clears this shop's memory. Old global memory is removed without migration.
-4. The confirmation remains server-rendered and immediate. Device memory is best-effort: leaving
-   before hydration or receipt redemption can miss the convenience. We do not delay or hide the
-   confirmation to close that race.
+1. Offer an unchecked opt-in on non-embedded public bookings. Only after the booking succeeds,
+   issue a PII-free receipt bound to the shop, booking, person, trip and undelivered readiness
+   capability for the redirecting browser. The emailed readiness capability cannot authorize it.
+2. Create a random opaque per-shop tab slot only after opt-in; hold it in `sessionStorage` for at
+   most 24 hours and store only its hash in `booking_capabilities`. The row also carries a clear
+   generation and strictly increasing receipt order. Receipt issuance is bounded to a 500ms
+   response budget, with transaction-local 250ms lock and 400ms statement limits. Rows contain no
+   identity and expire after 24 hours.
+3. After hydration, public navigation may retry an unacknowledged receipt. For `/s/{shopSlug}`,
+   the server resolves the slug and scopes the database read to that shop id. For `/ready/{token}`,
+   it validates the readiness capability and derives the shop scope from that row. The database
+   applies the scope before returning identity. Per-receipt local keys and server-issued ordering
+   keep delayed responses from replacing a newer booking; acknowledge only after local storage
+   succeeds.
+4. Store name and email per shop for 30 days. Before prefill, the form checks expiry against
+   server time; without an online time check, it leaves the fields blank. "Not you?" clears this
+   shop's memory and fences or revokes the tab slot. Open forms hear same-tab and cross-tab clears,
+   remove only untouched remembered values, preserve manual edits and retain a later opt-in.
+5. Keep confirmation independent of prefill and local storage. Device-memory delivery is best
+   effort: leaving before hydration or closing the browser can lose the convenience. JavaScript
+   is required. Old global memory is removed without migration.
 
 ## Alternatives considered
 
-- **Trust `?booked=1` or the emailed readiness capability** — both are replayable/shareable and do
-  not prove an opted-in booking from this browser.
-- **Persist identity in a server session or cookie** — adds a PII persistence surface and changes
-  the existing boundary.
-- **Wait to show success until storage completes** — hides accurate confirmation when JavaScript,
-  storage, or the network fails.
+- **Trust `?booked=1` or the emailed readiness capability** — neither proves this browser opted
+  in.
+- **Persist identity in a server session or cookie** — adds a PII persistence surface.
+- **Wait for local storage before confirming** — hides an already successful booking on browser,
+  storage or network failure.
 
 ## Consequences
 
-Receipt rows contain no PII, expire in 24 hours, and are pruned 90 days later; delayed issuance may
-leave an unusable row until then. Device memory is local to a browser profile and shop,
-expires for use after 30 days, and remains clearable. Each memory read or write also removes expired
-entries for other shops when browser storage is available. Because the browser cannot run cleanup
-while it is closed, expired bytes may remain on the device until a later memory read or write; the
-30-day deadline does not guarantee physical deletion at that exact moment. If product later
-requires guaranteed memory across pre-hydration navigation, it needs a separately reviewed browser
-proof design.
+The tab slot is opaque and short lived; duplicated tabs may initially share `sessionStorage`, so
+clear generations and cross-tab notifications fence stale work. A closed browser cannot run
+cleanup, and expired bytes may remain until a later storage read or write; 30 days limits reuse,
+not exact physical deletion. If the browser cannot persist a clear marker or deliver a cross-tab
+event, clearing another open form is best effort and the UI reports partial completion. Booking
+confirmation does not depend on local storage or receipt redemption.

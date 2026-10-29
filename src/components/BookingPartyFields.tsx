@@ -61,6 +61,7 @@ export function BookingPartyFields({
   leadPhone = false,
   fieldErrors,
   rememberForShop,
+  getTrustedServerTime,
   onSizeChange,
   lead,
   onLeadEmailSettled,
@@ -74,6 +75,8 @@ export function BookingPartyFields({
   fieldErrors?: BookingFieldErrors;
   /** Prefill from this shop's unexpired, explicitly opted-in device memory. */
   rememberForShop?: string | null;
+  /** A server-clock read used to check the 30-day expiry before prefill. */
+  getTrustedServerTime?: () => Promise<number>;
   /** Told every time the diver-selected party size changes (including on
    * mount), so a caller can show its own party-size-dependent content (task
    * 18's running total). Pass a stable reference (`useState`'s setter, not
@@ -113,7 +116,7 @@ export function BookingPartyFields({
   const [size, setSize] = useState(1);
   const [hydrated, setHydrated] = useState(false);
   const { party, updateMember, rememberedDiver, forgetRememberedDiver, forgetCouldNotConfirm } =
-    usePartyMembers(lead, rememberForShop);
+    usePartyMembers(lead, rememberForShop, getTrustedServerTime);
   const [phone, setPhone] = useState(lead?.phone ?? "");
   const [blurred, setBlurred] = useState<Record<number, boolean>>({});
   // Per-member (index > 0 only): "use the main contact's email instead of

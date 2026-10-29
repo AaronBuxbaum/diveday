@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useActionState, useCallback, useState } from "react";
+import { getReturningDiverServerTime } from "@/app/actions/returning-diver-memory";
 import { BookingPartyFields } from "@/components/BookingPartyFields";
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -617,6 +618,7 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
           leadPhone
           fieldErrors={state.fieldErrors}
           rememberForShop={!tripRef.embed ? tripRef.shopSlug : null}
+          getTrustedServerTime={getReturningDiverServerTime}
           onSizeChange={setPartySize}
           lead={knownDiver?.lead ?? null}
           onLeadEmailSettled={knownDiver || tripRef.embed ? undefined : offerHandoff}

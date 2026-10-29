@@ -9,7 +9,8 @@ import {
 } from "@/lib/returning-diver";
 import { RetryReturningDiverMemory } from "./RetryReturningDiverMemory";
 
-let pathname = "/ready/original";
+const readinessToken = "r".repeat(48);
+let pathname = `/ready/${readinessToken}`;
 const prepare = vi.fn();
 const acknowledge = vi.fn();
 const revoke = vi.fn();
@@ -48,7 +49,7 @@ afterEach(() => {
   sessionStorage.clear();
   vi.clearAllMocks();
   vi.restoreAllMocks();
-  pathname = "/ready/original";
+  pathname = `/ready/${readinessToken}`;
 });
 
 describe("RetryReturningDiverMemory", () => {
@@ -65,12 +66,26 @@ describe("RetryReturningDiverMemory", () => {
       }),
     );
     await waitFor(() => expect(acknowledge).toHaveBeenCalledTimes(1));
-    expect(prepare).toHaveBeenCalledWith([{ token, generation: null }]);
+    expect(prepare).toHaveBeenCalledWith({ kind: "readiness", readinessToken }, [
+      { token, generation: null },
+    ]);
 
-    pathname = "/s/red-reef/trips/next";
+    pathname = "/s/blue-mantis/trips/next";
     view.rerender(<RetryReturningDiverMemory />);
     await waitFor(() => expect(prepare).toHaveBeenCalledTimes(2));
     await waitFor(() => expect(acknowledge).toHaveBeenCalledTimes(2));
+    expect(loadReturningDiver("red-reef")).toBeNull();
+  });
+
+  it("does not deliver one shop's receipt to a different shop route", async () => {
+    pathname = "/s/red-reef/trips/next";
+    addSlot();
+    prepare.mockResolvedValue([memory(receiptA)]);
+    render(<RetryReturningDiverMemory />);
+
+    await waitFor(() => expect(prepare).not.toHaveBeenCalled());
+    expect(acknowledge).not.toHaveBeenCalled();
+    expect(loadReturningDiver("blue-mantis")).toBeNull();
     expect(loadReturningDiver("red-reef")).toBeNull();
   });
 
@@ -103,7 +118,9 @@ describe("RetryReturningDiverMemory", () => {
     expect(loadReturningDiver("blue-mantis")).toBeNull();
     await act(async () => resolvePrepare([memory(receiptCleared)]));
 
-    await waitFor(() => expect(revoke).toHaveBeenCalledWith(token, expect.any(String)));
+    await waitFor(() =>
+      expect(revoke).toHaveBeenCalledWith("blue-mantis", token, null, expect.any(String)),
+    );
     expect(acknowledge).not.toHaveBeenCalled();
     expect(loadReturningDiver("blue-mantis")).toBeNull();
   });

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, screen } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -16,6 +16,8 @@ import {
 import { MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
 import { renderDiver } from "@/test/intl";
 import { BookingPartyFields } from "./BookingPartyFields";
+
+const getTrustedServerTime = vi.fn(async () => nowDate().getTime());
 
 afterEach(() => {
   cleanup();
@@ -166,14 +168,21 @@ describe("BookingPartyFields — the group captions", () => {
    * The line kept a `-mt-1` from before the caption had a gap, which then
    * cancelled half of it: 8 − 4 left 4px. The caption's gap is the one gap.
    */
-  it("keeps a remembered diver's line the caption's 8px under it, with no margin pulling it up", () => {
+  it("keeps a remembered diver's line the caption's 8px under it, with no margin pulling it up", async () => {
     saveReturningDiver(
       "blue-mantis",
       { fullName: "Marco Rossi", email: "marco@example.com" },
       nowDate().getTime() + RETURNING_DIVER_MEMORY_MS,
     );
     try {
-      renderDiver(<BookingPartyFields maxPartySize={4} rememberForShop="blue-mantis" />);
+      renderDiver(
+        <BookingPartyFields
+          maxPartySize={4}
+          rememberForShop="blue-mantis"
+          getTrustedServerTime={getTrustedServerTime}
+        />,
+      );
+      await waitFor(() => expect(screen.getByRole("button", { name: "Not you?" })).toBeVisible());
       const clearButton = screen.getByRole("button", { name: "Not you?" });
       const line = clearButton.closest("p");
       expect(line).toHaveTextContent("Booking as Marco Rossi");
@@ -192,7 +201,7 @@ describe("BookingPartyFields — the group captions", () => {
     }
   });
 
-  it("reports when the browser cannot persist its clear marker", () => {
+  it("reports when the browser cannot persist its clear marker", async () => {
     saveReturningDiver(
       "blue-mantis",
       { fullName: "Marco Rossi", email: "marco@example.com" },
@@ -209,7 +218,14 @@ describe("BookingPartyFields — the group captions", () => {
       }
       return originalSetItem.call(this, key, value);
     });
-    renderDiver(<BookingPartyFields maxPartySize={4} rememberForShop="blue-mantis" />);
+    renderDiver(
+      <BookingPartyFields
+        maxPartySize={4}
+        rememberForShop="blue-mantis"
+        getTrustedServerTime={getTrustedServerTime}
+      />,
+    );
+    await waitFor(() => expect(screen.getByRole("button", { name: "Not you?" })).toBeVisible());
 
     fireEvent.click(screen.getByRole("button", { name: "Not you?" }));
 
