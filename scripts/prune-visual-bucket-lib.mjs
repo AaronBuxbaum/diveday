@@ -5,87 +5,31 @@
 //   - `scripts/prune-visual-bucket.mjs` (CLI tool / local / CI)
 //   - Unit tests (`scripts/prune-visual-bucket-lib.test.mjs`)
 import { DeleteObjectsCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
+import {
+  CANDIDATE_PAGE_SIZE,
+  KEEP_MAIN_BASELINE_AGE_MS,
+  KEEP_MAIN_BASELINES,
+  MAX_CANDIDATE_PAGES,
+  MIN_PRUNE_AGE_MS,
+  mainBaselineProbeOrder,
+  mainFirstParentChain,
+  shouldFetchAnotherCandidatePage,
+  shouldStopMainBaselineProbes,
+} from "../infra/lib/visual-retention-core.mjs";
+
+export {
+  CANDIDATE_PAGE_SIZE,
+  KEEP_MAIN_BASELINE_AGE_MS,
+  KEEP_MAIN_BASELINES,
+  MAX_CANDIDATE_PAGES,
+  MIN_PRUNE_AGE_MS,
+  mainFirstParentChain,
+};
 
 export const DEFAULT_BUCKET = "diveday-vrt";
 export const DEFAULT_REPO = "AaronBuxbaum/diveday";
 export const DEFAULT_BRANCH = "main";
 export const COMMIT_SHA = /^[0-9a-f]{40}$/i;
-
-/**
- * The floor under how *many* main baselines survive, however quiet main gets.
- *
- * reg-suit's expected key is the *parent* on a push to main and the *fork
- * point* on a pull request (`scripts/reg-suit-keys.mjs`), so this is the number
- * that decides whether an open branch has anything to compare against at all.
- *
- * It counts commits on main's **first-parent chain** — main's own tips, which
- * are the only commits a fork point can be — and not, as it did until
- * 2026-09-12, whatever ancestors of main happened to be newest. That
- * distinction was the whole of issue #1662. The candidate list is every
- * ancestor of main newest-first, and because every pull request lands as a
- * merge commit that drags its head commits into main's ancestry, only 5 of the
- * newest 30 rows — and 11 of the newest 100 — are main tips. So ten slots
- * bought about two main tips, and the other eight went to head commits that
- * `MIN_PRUNE_AGE_MS` was already holding for as long as anyone was iterating on
- * them. Measured over every merged pull request in this repository's history,
- * 11 of 28 had a fork point outside the ten newest published ancestors, and 4
- * of 28 were deeper than the candidate list even reached.
- *
- * Ten is the right floor: over the same 28, a fork point sat at most **7** main
- * tips back (p50 2, p95 7). What a count cannot cover is the clock — see
- * `KEEP_MAIN_BASELINE_AGE_MS`.
- */
-export const KEEP_MAIN_BASELINES = 10;
-
-/**
- * And the floor under how much of main's *history* survives, however fast main
- * moves: every main tip whose commit is younger than this keeps its snapshot,
- * on top of the count above.
- *
- * A count on its own re-files the bug it fixes. At the measured 11.7 merges a
- * day ten main tips is about twenty hours, so a branch cut in the evening and
- * pushed the next afternoon is already past it — and the measured fork-point
- * age at the moment a branch's visual run published was p50 2.5h, p95 23.8h,
- * max 34.3h. Seventy-two hours is a little over twice that measured tail.
- *
- * Replayed over this repository's real history it keeps 29 tips covering 71.4
- * hours of main, where the ten-slot rule it replaces covered 5.4 — so the "nine
- * hours" this was filed as was itself generous. It costs almost nothing: 29
- * snapshots is ~6 GB at this bucket's ~213 MB a snapshot, ~$0.14/month against
- * a ~$12 bill that is request-shaped rather than storage-shaped (ADR
- * 20260826-prune-visual-bucket's second amendment). And
- * `scripts/wait-for-baseline.mjs` walks 40 first-parent ancestors behind it —
- * a walk that can only resolve anything *because* the kept baselines are now a
- * contiguous run along the very chain it walks. Before this, the keeps were the
- * newest prefixes by date, so every ancestor of a pruned fork point was pruned
- * too and the walk found nothing.
- */
-export const KEEP_MAIN_BASELINE_AGE_MS = 72 * 60 * 60 * 1000;
-
-/** GitHub's `per_page` maximum, and the ceiling on pages one run will read. */
-export const CANDIDATE_PAGE_SIZE = 100;
-
-/**
- * Four pages is ~44 main tips, or ~3.7 days at the measured merge rate: enough
- * to satisfy the age window with margin. A run stops paging the moment its
- * chain reaches past the window, so in steady state this is one or two calls.
- */
-export const MAX_CANDIDATE_PAGES = 4;
-
-/**
- * Nothing published inside this window is pruned, whatever branch it came from.
- * A stacked pull request's baseline is the layer below's head commit, which is
- * never on main and so can never be found by the walk above (ADR
- * 20260821-stacked-pull-requests). Age is the only thing that knows about it.
- *
- * One day, not seven: the floor exists to cover a baseline the walk cannot
- * name, and a stack's lower layer is re-pushed — and so re-published — far
- * inside a day of the layer above running. A week of every branch's captures
- * was paying for that safety many times over, so the count-based
- * `KEEP_MAIN_BASELINES` carries the main history and this carries only the
- * in-flight work.
- */
-export const MIN_PRUNE_AGE_MS = 24 * 60 * 60 * 1000;
 
 const GITHUB_API = process.env.GITHUB_API_URL || "https://api.github.com";
 
@@ -196,37 +140,6 @@ export function fetchGitBranchCommits({
 }
 
 /**
- * Main's own tips, newest first: the candidate list walked along first-parent
- * links, which drops every pull-request head commit the list is otherwise full
- * of. Stops where the links leave the fetched set.
- */
-export function mainFirstParentChain(candidates) {
-  const positionBySha = new Map(candidates.map((commit, index) => [commit.sha, index]));
-  const chain = [];
-  const seen = new Set();
-  let cursor = candidates[0];
-  while (cursor && !seen.has(cursor.sha)) {
-    seen.add(cursor.sha);
-    chain.push(cursor);
-    const next = cursor.parentSha ? positionBySha.get(cursor.parentSha) : undefined;
-    cursor = next === undefined ? undefined : candidates[next];
-  }
-  return chain;
-}
-
-/** Whether a main tip is beyond the age window and so held only by the count. */
-function outsideAgeWindow(commit, now) {
-  // An unknown commit date counts as inside it: erring towards keeping a
-  // baseline costs storage, erring the other way costs a branch its baseline.
-  return commit.committedAtMs !== null && now - commit.committedAtMs > KEEP_MAIN_BASELINE_AGE_MS;
-}
-
-/** Whether what has been fetched already reaches past both floors. */
-function chainCoversBothFloors(chain, now) {
-  return chain.length >= KEEP_MAIN_BASELINES && outsideAgeWindow(chain[chain.length - 1], now);
-}
-
-/**
  * Resolves the main baselines that should be preserved.
  *
  * Algorithm:
@@ -287,8 +200,7 @@ export async function resolveActiveBaseline({
     collect(rows);
     // The end of the branch's history, or a chain that already reaches past
     // both floors: either way there is nothing more worth asking for.
-    if (rows.length < CANDIDATE_PAGE_SIZE) break;
-    if (chainCoversBothFloors(mainFirstParentChain(candidates), now)) break;
+    if (!shouldFetchAnotherCandidatePage(page, rows.length, candidates, now)) break;
   }
 
   if (candidates.length === 0 && git) {
@@ -309,9 +221,9 @@ export async function resolveActiveBaseline({
     if (await snapshotExists(bucket, commit.sha, { s3Client })) keepShas.push(commit.sha);
   };
 
-  const chain = mainFirstParentChain(candidates);
+  const { chain, fallback } = mainBaselineProbeOrder(candidates);
   for (const commit of chain) {
-    if (keepShas.length >= KEEP_MAIN_BASELINES && outsideAgeWindow(commit, now)) break;
+    if (shouldStopMainBaselineProbes(keepShas.length, commit, now)) break;
     await probe(commit);
   }
 
@@ -319,8 +231,8 @@ export async function resolveActiveBaseline({
   // at all — a payload shape this did not expect, not a history one commit
   // long. Fall back to the flat newest-first walk this replaced, so a surprise
   // in the response can never make the pruner keep *less* than it used to.
-  if (chain.length <= 1 && candidates.length > 1) {
-    for (const commit of candidates) {
+  if (fallback.length > 0) {
+    for (const commit of fallback) {
       if (keepShas.length >= KEEP_MAIN_BASELINES) break;
       await probe(commit);
     }

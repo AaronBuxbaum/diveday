@@ -1,5 +1,3 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import type { S3Client } from "@aws-sdk/client-s3";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -7,12 +5,9 @@ import {
   fetchCommits,
   fetchMainCandidates,
   hasSnapshot,
-  KEEP_MAIN_BASELINE_AGE_MS,
   KEEP_MAIN_BASELINES,
   listObjects,
   listPrefixes,
-  MAX_CANDIDATE_PAGES,
-  MIN_PRUNE_AGE_MS,
   type PrunerCommit,
   pruneBucket,
   resolveKeepShas,
@@ -84,34 +79,6 @@ function probeClient(shasWithSnapshots: readonly string[]) {
 }
 
 describe("visual-bucket-pruner-handler", () => {
-  /**
-   * The four retention constants live in two copies by design -- this handler
-   * is bundled into a Lambda and cannot import from scripts/ -- and ADR
-   * 20260826-prune-visual-bucket says in prose that they must move together.
-   * Nothing enforced it, which is how a value could drift in one copy and be
-   * discovered only by a branch finding no baseline. This is the enforcement.
-   */
-  it("holds the same retention constants as the CLI copy in scripts/", () => {
-    const source = readFileSync(
-      path.join(process.cwd(), "scripts/prune-visual-bucket-lib.mjs"),
-      "utf8",
-    );
-    const cliConstant = (name: string) => {
-      const match = source.match(new RegExp(`export const ${name} = ([^;]+);`));
-      if (!match) throw new Error(`${name} is not exported from prune-visual-bucket-lib.mjs`);
-      // Arithmetic literals such as `72 * 60 * 60 * 1000`, and nothing else.
-      const expression = match[1].trim();
-      if (!/^[\d\s*+]+$/.test(expression)) throw new Error(`${name} is not a plain number`);
-      return Number(new Function(`return ${expression}`)());
-    };
-
-    expect(cliConstant("KEEP_MAIN_BASELINES")).toBe(KEEP_MAIN_BASELINES);
-    expect(cliConstant("KEEP_MAIN_BASELINE_AGE_MS")).toBe(KEEP_MAIN_BASELINE_AGE_MS);
-    expect(cliConstant("MIN_PRUNE_AGE_MS")).toBe(MIN_PRUNE_AGE_MS);
-    expect(cliConstant("CANDIDATE_PAGE_SIZE")).toBe(CANDIDATE_PAGE_SIZE);
-    expect(cliConstant("MAX_CANDIDATE_PAGES")).toBe(MAX_CANDIDATE_PAGES);
-  });
-
   describe("fetchCommits", () => {
     it("parses valid commit SHAs from GitHub API", async () => {
       const fetchImpl = vi.fn(async () => ({
