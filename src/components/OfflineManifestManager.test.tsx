@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cardSummaryClass, PANEL_INNER_RADIUS } from "@/components/ui/card";
 import {
   loadOfflineManifest,
@@ -10,6 +10,7 @@ import {
 } from "@/lib/offline-manifest-store";
 import type { OfflineManifestEnvelope, OfflineManifestPayload } from "@/lib/offline-manifests";
 import { OfflineManifestManager, type OfflineManifestManagerCopy } from "./OfflineManifestManager";
+import { identityResponse } from "./offline-manifest/view-fixtures";
 
 const copy: OfflineManifestManagerCopy = {
   checkingDevice: "Checking this device…",
@@ -65,6 +66,7 @@ const copy: OfflineManifestManagerCopy = {
 const mockRouter = { refresh: vi.fn() };
 vi.mock("next/navigation", () => ({ useRouter: () => mockRouter }));
 vi.mock("@/lib/offline-manifest-store", () => ({
+  beginOfflineTenantVerificationRound: vi.fn().mockResolvedValue(1),
   loadOfflineManifest: vi.fn(),
   primeOfflineManifestShell: vi.fn(),
   saveOfflineManifest: vi.fn(),
@@ -159,6 +161,14 @@ afterEach(() => {
   cleanup();
   vi.clearAllMocks();
   setOnline(true);
+  vi.unstubAllGlobals();
+});
+
+beforeEach(() => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockImplementation(async () => identityResponse("blue-mantis")),
+  );
 });
 
 describe("OfflineManifestManager", () => {
@@ -188,12 +198,10 @@ describe("OfflineManifestManager", () => {
     window.dispatchEvent(new Event("online"));
     window.dispatchEvent(new Event("online"));
 
-    await Promise.resolve();
-    await Promise.resolve();
     // Only one new call should have started; the other two triggers must
     // coalesce into a single queued follow-up, not each open their own
     // concurrent sync request against the same still-pending batch.
-    expect(syncOfflineManifest).toHaveBeenCalledTimes(2);
+    await waitFor(() => expect(syncOfflineManifest).toHaveBeenCalledTimes(2));
 
     const second = deferred<OfflineManifestEnvelope>();
     vi.mocked(syncOfflineManifest).mockReturnValueOnce(second.promise);
