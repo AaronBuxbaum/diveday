@@ -1,9 +1,11 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { nowDate } from "@/lib/clock";
 import {
   forgetReturningDiver,
   loadReturningDiver,
+  RETURNING_DIVER_DEVICE_SLOT_MS,
   RETURNING_DIVER_MEMORY_MS,
   saveReturningDiver,
   snapshotReturningDiverClearGenerations,
@@ -15,6 +17,7 @@ const diver = { fullName: "Marco Reyes", email: "marco@example.com" };
 afterEach(() => {
   vi.restoreAllMocks();
   localStorage.clear();
+  sessionStorage.clear();
 });
 
 describe("opted-in returning-diver memory", () => {
@@ -254,6 +257,26 @@ describe("opted-in returning-diver memory", () => {
 
     expect(forgetReturningDiver("blue-mantis")).toBe("partial");
     expect(localStorage.getItem("diveday:returning-diver:v2:blue-mantis")).toContain("Marco Reyes");
+  });
+
+  it("bounds persisted clear fences and reports partial completion at the cap", () => {
+    for (let index = 0; index < 32; index += 1) {
+      expect(forgetReturningDiver(`shop-${index}`)).toBe("cleared");
+    }
+    expect(forgetReturningDiver("shop-32")).toBe("partial");
+    const markerCount = Array.from({ length: localStorage.length }, (_, index) =>
+      localStorage.key(index),
+    ).filter((key) => key?.startsWith("diveday:returning-diver:clear:v2:")).length;
+    expect(markerCount).toBeLessThanOrEqual(32);
+  });
+
+  it("expires clear fences with the tab slot lifetime", () => {
+    const now = nowDate().getTime();
+    expect(forgetReturningDiver("blue-mantis")).toBe("cleared");
+    const state = JSON.parse(
+      localStorage.getItem("diveday:returning-diver:clear:v2:blue-mantis") ?? "{}",
+    ) as { expiresAt?: number };
+    expect(state.expiresAt).toBe(now + RETURNING_DIVER_DEVICE_SLOT_MS);
   });
 
   it("deletes the old unscoped v1 value without migrating it", () => {

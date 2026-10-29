@@ -28,8 +28,8 @@ type StoredReturningDiver = ReturningDiver & {
   clearGeneration?: string | null;
 };
 
-type ClearState = { generation: string; blockedReceiptId?: string };
-const volatileClearGenerations = new Map<string, string>();
+type ClearState = { generation: string; blockedReceiptId?: string; expiresAt: number };
+const volatileClearGenerations = new Map<string, ClearState>();
 
 function isReturningDiver(value: unknown): value is ReturningDiver {
   return (
@@ -147,12 +147,17 @@ function readClearState(shopSlug: string): ClearState | null {
     if (
       typeof parsed !== "object" ||
       parsed === null ||
-      typeof (parsed as { generation?: unknown }).generation !== "string"
+      typeof (parsed as { generation?: unknown }).generation !== "string" ||
+      typeof (parsed as { expiresAt?: unknown }).expiresAt !== "number"
     ) {
       localStorage.removeItem(key);
       return null;
     }
     const state = parsed as ClearState;
+    if (state.expiresAt <= nowDate().getTime()) {
+      localStorage.removeItem(key);
+      return null;
+    }
     return state;
   } catch {
     throw new Error("device storage is unavailable");
@@ -162,8 +167,12 @@ function readClearState(shopSlug: string): ClearState | null {
 function effectiveClearState(shopSlug: string): ClearState | null {
   const persistent = readClearState(shopSlug);
   const volatile = volatileClearGenerations.get(shopSlug);
-  if (!volatile || persistent?.generation === volatile) return persistent;
-  return { ...persistent, generation: volatile };
+  if (volatile && volatile.expiresAt <= nowDate().getTime()) {
+    volatileClearGenerations.delete(shopSlug);
+    return persistent;
+  }
+  if (!volatile || persistent?.generation === volatile.generation) return persistent;
+  return { ...persistent, ...volatile };
 }
 
 function nextClearGeneration(): string {
@@ -182,10 +191,10 @@ export function snapshotReturningDiverClearGenerations(): Record<string, string>
   try {
     const snapshot: Record<string, string> = {};
     const slugs = new Set(volatileClearGenerations.keys());
-    for (let index = 0; index < localStorage.length; index += 1) {
-      const key = localStorage.key(index);
-      if (key?.startsWith(CLEAR_PREFIX)) slugs.add(key.slice(CLEAR_PREFIX.length));
-    }
+    const markerKeys = Array.from({ length: localStorage.length }, (_, index) =>
+      localStorage.key(index),
+    ).filter((key): key is string => key?.startsWith(CLEAR_PREFIX) ?? false);
+    for (const key of markerKeys) slugs.add(key.slice(CLEAR_PREFIX.length));
     for (const slug of slugs) {
       const state = effectiveClearState(slug);
       if (state) snapshot[slug] = state.generation;
@@ -207,11 +216,18 @@ export function subscribeToReturningDiverClears(
   if (typeof window === "undefined") return () => {};
   const receive = (value: unknown) => {
     if (typeof value !== "object" || value === null) return;
-    const message = value as { shopSlug?: unknown; generation?: unknown; receiptId?: unknown };
+    const message = value as {
+      shopSlug?: unknown;
+      generation?: unknown;
+      expiresAt?: unknown;
+      receiptId?: unknown;
+    };
     if (
       typeof message.shopSlug !== "string" ||
       !storageKey(message.shopSlug) ||
-      typeof message.generation !== "string"
+      typeof message.generation !== "string" ||
+      typeof message.expiresAt !== "number" ||
+      message.expiresAt <= nowDate().getTime()
     ) {
       return;
     }
@@ -235,7 +251,11 @@ export function subscribeToReturningDiverClears(
     } catch {
       // The persistent clear generation still fences the local response.
     }
-    volatileClearGenerations.set(message.shopSlug, message.generation);
+    volatileClearGenerations.set(message.shopSlug, {
+      generation: message.generation,
+      expiresAt: message.expiresAt,
+      ...(receiptId ? { blockedReceiptId: receiptId } : {}),
+    });
     if (receiptId) clearOnlyThisReceipt(storageKey(message.shopSlug) ?? "", receiptId);
     onClear({
       shopSlug: message.shopSlug,
@@ -498,21 +518,37 @@ export function forgetReturningDiver(shopSlug: string): "cleared" | "partial" | 
     // The clear still attempts both writes independently below.
   }
   const generation = nextClearGeneration();
-  volatileClearGenerations.set(shopSlug, generation);
+  const expiresAt = nowDate().getTime() + RETURNING_DIVER_DEVICE_SLOT_MS;
+  const clearState: ClearState = {
+    generation,
+    expiresAt,
+    ...(blockedReceiptId ? { blockedReceiptId } : {}),
+  };
+  volatileClearGenerations.set(shopSlug, clearState);
   let markerWritten = false;
   let identityRemoved = false;
   let slotRemoved = false;
+  let markerCapacityAvailable = false;
   try {
-    localStorage.setItem(
-      tombstone,
-      JSON.stringify({
-        generation,
-        ...(blockedReceiptId ? { blockedReceiptId } : {}),
-      } satisfies ClearState),
-    );
-    markerWritten = true;
+    const existing = readClearState(shopSlug);
+    let markerCount = 0;
+    const markerKeys = Array.from({ length: localStorage.length }, (_, index) =>
+      localStorage.key(index),
+    ).filter((markerKey): markerKey is string => markerKey?.startsWith(CLEAR_PREFIX) ?? false);
+    for (const markerKey of markerKeys) {
+      if (readClearState(markerKey.slice(CLEAR_PREFIX.length))) markerCount += 1;
+    }
+    markerCapacityAvailable = Boolean(existing) || markerCount < MAX_RETURNING_DIVER_DEVICE_SLOTS;
   } catch {
     // Persistence may fail from quota; still make the same-tab fence volatile.
+  }
+  if (markerCapacityAvailable) {
+    try {
+      localStorage.setItem(tombstone, JSON.stringify(clearState));
+      markerWritten = true;
+    } catch {
+      // Persistence may fail from quota; still make the same-tab fence volatile.
+    }
   }
   try {
     localStorage.removeItem(key);
@@ -536,6 +572,7 @@ export function forgetReturningDiver(shopSlug: string): "cleared" | "partial" | 
     const detail = {
       shopSlug,
       generation,
+      expiresAt,
       ...(blockedReceiptId ? { receiptId: blockedReceiptId } : {}),
       ...(deviceToken ? { deviceToken } : {}),
     };
