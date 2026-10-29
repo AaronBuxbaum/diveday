@@ -223,14 +223,14 @@ describe("the synthesized stack", () => {
       (statement) =>
         statement.includes("secretsmanager:GetSecretValue") && !statement.includes('"Deny"'),
     );
-    // Exactly two reads exist in the whole stack, and each is scoped to one
-    // secret: GitHubActionsCdkDeployRole reads the credentials document for the
-    // post-deploy wizard, and the database-dump job reads its own connection
-    // string (S20). Nothing may read both, and nothing may read on "*".
+    // Exactly three reads exist in the whole stack, each scoped to one secret:
+    // GitHubActionsCdkDeployRole reads the credentials document and the dump
+    // connection for provisioning; the database-dump job reads only that dump
+    // connection (S20). Nothing may read both, and nothing may read on "*".
     expect(
       allows,
       "a new secretsmanager:GetSecretValue Allow appeared -- every read must be scoped to one named secret",
-    ).toHaveLength(2);
+    ).toHaveLength(3);
     for (const statement of allows) {
       expect(statement).not.toContain('"Resource":"*"');
     }
@@ -244,12 +244,13 @@ describe("the synthesized stack", () => {
       documentReads,
       "only GitHubActionsCdkDeployRole's post-deploy-wizard read may reach the credentials document",
     ).toHaveLength(1);
-    // The dump job reads the connection string and nothing else. If this ever
-    // also matched the credentials document, an unattended weekly job would hold
-    // every credential in the account.
+    // Only the deploy role and dump job read the connection string. Neither may
+    // also reach the credentials document the wizard needs.
     const dumpReads = allows.filter((statement) => statement.includes("DatabaseDumpConnection"));
-    expect(dumpReads).toHaveLength(1);
-    expect(dumpReads[0]).not.toContain("CredentialsEnvDocument");
+    expect(dumpReads).toHaveLength(2);
+    for (const statement of dumpReads) {
+      expect(statement).not.toContain("CredentialsEnvDocument");
+    }
   });
 
   it("scopes the deploy role's Vercel-sync checkpoint access to its own parameter path", () => {

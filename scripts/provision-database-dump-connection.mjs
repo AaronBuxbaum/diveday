@@ -49,7 +49,9 @@ async function fetchDirectConnectionUri(apiKey, projectId) {
     signal: AbortSignal.timeout(NEON_API_TIMEOUT_MS),
   });
   if (!response.ok) {
-    throw new Error(`Neon API returned HTTP ${response.status} while retrieving the dump connection.`);
+    throw new Error(
+      `Neon API returned HTTP ${response.status} while retrieving the dump connection.`,
+    );
   }
   let payload;
   try {
