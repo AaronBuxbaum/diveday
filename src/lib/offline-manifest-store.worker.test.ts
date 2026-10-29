@@ -38,7 +38,7 @@ afterEach(() => {
 });
 
 describe("service-worker manifest invalidation", () => {
-  it("broadcasts a trip-key-only invalidation after the IndexedDB write without window", async () => {
+  it("broadcasts a trip-keyed invalidation with source metadata after the IndexedDB write without window", async () => {
     expect(typeof window).toBe("undefined");
     vi.stubGlobal("BroadcastChannel", WorkerBroadcastChannel);
     const received: unknown[] = [];
@@ -47,7 +47,9 @@ describe("service-worker manifest invalidation", () => {
 
     await saveOfflineManifest(payload);
 
-    expect(received).toEqual([{ tripId }]);
+    expect(received).toHaveLength(1);
+    expect(received[0]).toMatchObject({ tripId, reason: "snapshot" });
+    expect(received[0]).toEqual(expect.objectContaining({ sourceId: expect.any(String) }));
     expect(WorkerBroadcastChannel.channels).toEqual([page]);
     page.close();
   });
