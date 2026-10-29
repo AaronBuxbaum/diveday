@@ -434,7 +434,9 @@ export async function getDayCloseout(
     demoDuskCarryover(db, shopId, timeZone, now),
   ]);
   const state = assembleDayCloseout({ trips: tripsToday, gaps, timeZone, now });
-  if (carryover) state.carryover = carryover;
+  if (carryover && !tripsToday.some((trip) => trip.tripId === carryover.tripId)) {
+    state.carryover = carryover;
+  }
   // Only once it is due (`loadOutDue`): a dozen prep reads for a day still sailing would
   // be spent on a block nobody is shown.
   if (!loadOutShop || !loadOutDue(state.departures, now)) return state;

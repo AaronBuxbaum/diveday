@@ -262,10 +262,20 @@ describe("the boat at sea", () => {
 
     await db.update(shops).set({ timezone: "Pacific/Honolulu" }).where(eq(shops.id, shop.id));
     const afterTimezoneEdit = await getDayCloseout(db, shop.id, "Pacific/Honolulu", now);
-    expect(afterTimezoneEdit.carryover?.tripId).toBe(state.carryover?.tripId);
-    expect(afterTimezoneEdit.carryover?.startsAt.getTime()).toBe(
-      state.carryover?.startsAt.getTime(),
-    );
+    expect(
+      afterTimezoneEdit.departures.filter(
+        (departure) => departure.tripId === state.carryover?.tripId,
+      ),
+    ).toHaveLength(1);
+    expect(
+      afterTimezoneEdit.departures.find(
+        (departure) => departure.tripId === state.carryover?.tripId,
+      ),
+    ).toMatchObject({
+      status: "all_home",
+      title: AT_SEA_DUSK_TITLE,
+    });
+    expect(afterTimezoneEdit.carryover).toBeUndefined();
 
     await db.update(shops).set({ isDemo: false }).where(eq(shops.id, shop.id));
     expect((await getDayCloseout(db, shop.id, "Pacific/Honolulu", now)).carryover).toBeUndefined();
