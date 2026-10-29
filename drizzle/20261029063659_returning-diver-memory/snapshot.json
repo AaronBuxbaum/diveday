@@ -2,11 +2,25 @@
   "type": "diff",
   "version": "9",
   "dialect": "postgres",
-  "id": "12890530-2730-4e3b-a945-17284022e63b",
+  "id": "38831028-7aea-4e3c-a339-707f6294a460",
   "prevIds": [
-    "87562588-f3d0-4a2b-83b1-bd88bd31f221"
+    "2c62a17b-e939-43cd-8b19-8ffae7d26544"
   ],
   "footprints": [
+    {
+      "statementType": "alter_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "booking_capability_purpose"
+      ],
+      "writes": [
+        "s|enum|public.booking_capability_purpose"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
     {
       "statementType": "add_column",
       "statementTarget": [
@@ -62,6 +76,24 @@
       ]
     },
     {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "booking_capabilities",
+        "source_capability_id"
+      ],
+      "writes": [
+        "s|col|public.booking_capabilities.source_capability_id",
+        "n|col|public.booking_capabilities.source_capability_id",
+        "e|col|public.booking_capabilities.source_capability_id"
+      ],
+      "reads": [
+        "n|tbl|public.booking_capabilities",
+        "n|sch|public"
+      ]
+    },
+    {
       "statementType": "create_index",
       "statementTarget": [
         "index",
@@ -81,6 +113,46 @@
         "n|col|public.booking_capabilities.returning_device_hash",
         "n|col|public.booking_capabilities.purpose",
         "n|col|public.booking_capabilities.returning_order"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "booking_capabilities",
+        "booking_capabilities_returning_receipt_source_unique"
+      ],
+      "writes": [
+        "s|idx|public.booking_capabilities_returning_receipt_source_unique",
+        "n|idx|public.booking_capabilities_returning_receipt_source_unique",
+        "e|idx|public.booking_capabilities_returning_receipt_source_unique",
+        "n|rel|public.booking_capabilities_returning_receipt_source_unique"
+      ],
+      "reads": [
+        "n|tbl|public.booking_capabilities",
+        "n|sch|public",
+        "n|col|public.booking_capabilities.source_capability_id"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "booking_capabilities"
+      ],
+      "writes": [
+        "s|ck|public.booking_capabilities.booking_capabilities_returning_diver_source",
+        "n|ck|public.booking_capabilities.booking_capabilities_returning_diver_source",
+        "e|ck|public.booking_capabilities.booking_capabilities_returning_diver_source",
+        "n|con|public.booking_capabilities.booking_capabilities_returning_diver_source"
+      ],
+      "reads": [
+        "n|tbl|public.booking_capabilities",
+        "n|sch|public",
+        "n|col|public.booking_capabilities.purpose",
+        "n|col|public.booking_capabilities.source_capability_id"
       ]
     }
   ],
@@ -138,6 +210,22 @@
       "row": {
         "schema": "public",
         "table": "booking_capabilities",
+        "name": "source_capability_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "booking_capabilities",
         "name": "booking_capabilities_returning_device_idx",
         "nameExplicit": true,
         "columns": [
@@ -169,6 +257,54 @@
         "method": "btree",
         "concurrently": false,
         "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "booking_capabilities",
+        "name": "booking_capabilities_returning_receipt_source_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "source_capability_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": "\"source_capability_id\" is not null",
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "booking_capabilities",
+        "name": "booking_capabilities_returning_diver_source",
+        "value": "(\"purpose\"::text = 'returning_diver_receipt') = (\"source_capability_id\" is not null)",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "enums\u0000[\"public\",\"booking_capability_purpose\"]",
+      "set": {
+        "values": [
+          "readiness",
+          "confirm",
+          "claim",
+          "handoff",
+          "course_forms",
+          "returning_diver_receipt"
+        ]
       }
     }
   ]

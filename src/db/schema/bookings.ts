@@ -869,7 +869,9 @@ export const bookingCapabilities = pgTable(
       .where(sql`${table.sourceCapabilityId} is not null`),
     check(
       "booking_capabilities_returning_diver_source",
-      sql`(${table.purpose} = 'returning_diver_receipt') = (${table.sourceCapabilityId} is not null)`,
+      // The enum label is added in this migration. Comparing its textual form
+      // avoids using a newly-added enum value before PostgreSQL commits it.
+      sql`(${table.purpose}::text = 'returning_diver_receipt') = (${table.sourceCapabilityId} is not null)`,
     ),
   ],
 );
