@@ -95,6 +95,48 @@ describe("opted-in returning-diver memory", () => {
     });
   });
 
+  it("keeps a cleared pending receipt from returning but accepts a later opt-in", () => {
+    const oldReceipt = { id: "receipt-old", issuedAt: NOW.getTime() - 1 };
+    const expiry = NOW.getTime() + RETURNING_DIVER_MEMORY_MS;
+    saveReturningDiver("blue-mantis", diver, expiry, NOW, oldReceipt);
+    forgetReturningDiver("blue-mantis", NOW);
+
+    expect(saveReturningDiver("blue-mantis", diver, expiry, NOW, oldReceipt)).toBe("cleared");
+    expect(loadReturningDiver("blue-mantis", NOW)).toBeNull();
+    expect(
+      saveReturningDiver("blue-mantis", { ...diver, fullName: "New opt-in" }, expiry, NOW, {
+        id: "receipt-new",
+        issuedAt: NOW.getTime() + 1,
+      }),
+    ).toBe("saved");
+    expect(loadReturningDiver("blue-mantis", NOW)).toEqual({ ...diver, fullName: "New opt-in" });
+  });
+
+  it("rechecks the clear marker after a concurrent write and removes only that receipt", () => {
+    const key = "diveday:returning-diver:v2:blue-mantis";
+    const originalSetItem = Storage.prototype.setItem;
+    let clearedDuringWrite = false;
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(function (
+      this: Storage,
+      name: string,
+      value: string,
+    ) {
+      if (name === key && !clearedDuringWrite) {
+        clearedDuringWrite = true;
+        forgetReturningDiver("blue-mantis", new Date(NOW.getTime() + 1));
+      }
+      return originalSetItem.call(this, name, value);
+    });
+
+    expect(
+      saveReturningDiver("blue-mantis", diver, NOW.getTime() + 1000, NOW, {
+        id: "receipt-in-flight",
+        issuedAt: NOW.getTime(),
+      }),
+    ).toBe("cleared");
+    expect(loadReturningDiver("blue-mantis", new Date(NOW.getTime() + 2))).toBeNull();
+  });
+
   it("deletes the old unscoped v1 value without migrating it", () => {
     localStorage.setItem("diveday:returning-diver:v1", JSON.stringify(diver));
 
@@ -114,7 +156,7 @@ describe("opted-in returning-diver memory", () => {
       throw new Error("storage blocked");
     });
 
-    expect(saveReturningDiver("blue-mantis", diver, NOW.getTime() + 1000, NOW)).toBe(false);
+    expect(saveReturningDiver("blue-mantis", diver, NOW.getTime() + 1000, NOW)).toBe("unavailable");
     expect(() => loadReturningDiver("blue-mantis", NOW)).not.toThrow();
     expect(() => forgetReturningDiver("blue-mantis")).not.toThrow();
   });

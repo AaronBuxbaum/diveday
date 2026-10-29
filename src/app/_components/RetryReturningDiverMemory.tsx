@@ -23,8 +23,20 @@ export function RetryReturningDiverMemory() {
     void prepareReturningDiverMemory()
       .then(async (result) => {
         if (!active || !result) return;
-        const stored = saveReturningDiver(result.shopSlug, result.diver, result.expiresAt);
-        if (stored && active) await acknowledgeReturningDiverMemory(result.receiptId);
+        const saved = saveReturningDiver(
+          result.shopSlug,
+          result.diver,
+          result.expiresAt,
+          undefined,
+          {
+            id: result.receiptId,
+            issuedAt: result.issuedAt,
+          },
+        );
+        // An explicit clear is itself final: acknowledge the receipt so it
+        // cannot keep retrying, while storage failures remain retryable.
+        if (saved !== "unavailable" && active)
+          await acknowledgeReturningDiverMemory(result.receiptId);
       })
       .catch(() => {
         // This optional memory retry never affects navigation or a booking.

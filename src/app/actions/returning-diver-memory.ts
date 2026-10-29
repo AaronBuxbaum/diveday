@@ -16,6 +16,7 @@ function validReceiptToken(value: string | undefined): value is string {
 export async function prepareReturningDiverMemory(): Promise<{
   kind: "ready";
   receiptId: string;
+  issuedAt: number;
   shopSlug: string;
   diver: { fullName: string; email: string };
   expiresAt: number;
@@ -25,7 +26,15 @@ export async function prepareReturningDiverMemory(): Promise<{
     const token = cookieStore.get(RETURNING_DIVER_RECEIPT_COOKIE)?.value;
     if (!validReceiptToken(token)) return null;
     const memory = await readReturningDiverReceipt(await getDb(), { receiptToken: token });
-    if (memory) return { kind: "ready", ...memory, expiresAt: memory.memoryExpiresAt };
+    if (memory)
+      return {
+        kind: "ready",
+        receiptId: memory.receiptId,
+        issuedAt: memory.issuedAt,
+        shopSlug: memory.shopSlug,
+        diver: memory.diver,
+        expiresAt: memory.memoryExpiresAt,
+      };
     // Expired, revoked, erased, canceled, or otherwise invalid receipts contain
     // no usable consent anymore. Clear the opaque cookie without returning data.
     cookieStore.delete(RETURNING_DIVER_RECEIPT_COOKIE);

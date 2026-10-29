@@ -404,6 +404,7 @@ export async function readReturningDiverReceipt(
   input: { receiptToken: string; now?: Date },
 ): Promise<{
   receiptId: string;
+  issuedAt: number;
   shopSlug: string;
   diver: { fullName: string; email: string };
   memoryExpiresAt: number;
@@ -507,6 +508,7 @@ export async function readReturningDiverReceipt(
     if (!source || !receipt) return null;
     return {
       receiptId: receipt.id,
+      issuedAt: receipt.issuedAt.getTime(),
       shopSlug: row.shopSlug,
       diver: { fullName: row.fullName, email: row.email },
       memoryExpiresAt: receipt.issuedAt.getTime() + RETURNING_DIVER_MEMORY_MS,
