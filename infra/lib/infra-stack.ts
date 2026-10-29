@@ -1551,6 +1551,32 @@ exports.handler = async (event) => {
     observabilityAlarms.addSubscription(new subscriptions.EmailSubscription(alertEmail));
     const alarmAction = new cloudwatchActions.SnsAction(observabilityAlarms);
 
+    // SMS spend, alarmed before the account spend limit is reached. Past the
+    // limit AWS silently stops sending for the rest of the month, and every
+    // reminder after that is dropped with nothing in the app to say so. AWS
+    // publishes `SMSMonthToDateSpentUSD` itself, so this only watches it. The
+    // limit is account state set by hand (manual action sns-sms-account-limits);
+    // keep this number in step with it when a Support case raises it.
+    const smsMonthlySpendLimitUsd = 50;
+    new cloudwatch.Alarm(this, "SmsMonthToDateSpendAlarm", {
+      alarmName: "diveday-sms-month-to-date-spend",
+      alarmDescription:
+        `SMS spend this month has passed 80% of the $${smsMonthlySpendLimitUsd} account limit. ` +
+        "At the limit AWS stops sending texts until the 1st. Check for a sending loop first, then raise the limit " +
+        "(docs/engineering/sms-delivery-receipts-runbook.md, 'Spend limit and country rules').",
+      metric: new cloudwatch.Metric({
+        namespace: "AWS/SNS",
+        metricName: "SMSMonthToDateSpentUSD",
+        statistic: "Maximum",
+        period: cdk.Duration.hours(1),
+      }),
+      threshold: smsMonthlySpendLimitUsd * 0.8,
+      evaluationPeriods: 1,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      // No texts sent means no datapoint, and no spend.
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+    }).addAlarmAction(alarmAction);
+
     // One registry row becomes a filter and a dashboard series, and optionally
     // an alarm. See
     // infra/lib/observability.ts for why the set is deliberately small.
@@ -2667,20 +2693,22 @@ exports.handler = async (event) => {
       {
         id: "sns-sms-account-limits",
         title:
-          "Leave the SMS sandbox, raise the spend limit, register a toll-free number and set its HELP/STOP replies",
+          "Leave the SMS sandbox, set the spend limit, block other countries, register a toll-free number and set its HELP/STOP replies",
         category: "AWS account",
         when: "once per region, before sending SMS to a diver -- start it early, the vetting is measured in weeks",
-        why: "All of it is account-and-region SMS state. The sandbox exit and any spend limit above $1 are Support cases; a US toll-free number is a vetted registration with the carriers that takes weeks, not days. Toll-free rather than 10DLC because one DiveDay number sends for every shop (ADR 20261007-sms-stop-and-help). The keyword replies and the two-way setting live on the number, which the stack does not own, so they are set here; the stack supplies the topic and the role they name. The SetSMSAttributes custom resource (infra-stack.ts S10) deliberately touches none of it. Moving the estate to another region means doing all of it again there (docs/engineering/region-migration.md).",
+        why: "All of it is account-and-region SMS state. The sandbox exit and any spend limit above $1 are Support cases; a US toll-free number is a vetted registration with the carriers that takes weeks, not days. Toll-free rather than 10DLC because one DiveDay number sends for every shop (ADR 20261007-sms-stop-and-help). The keyword replies and the two-way setting live on the number, which the stack does not own, so they are set here; the stack supplies the topic and the role they name. The SetSMSAttributes custom resource (infra-stack.ts S10) deliberately touches none of it. The account-default protect configuration (country rules) blocks texts to every country but the US, so a stolen sender key or a sending loop cannot run up international rates; it also covers SNS, which is how DiveDay sends. The stack alarms at 80% of the spend limit (diveday-sms-month-to-date-spend). Moving the estate to another region means doing all of it again there (docs/engineering/region-migration.md).",
         run: [
           "AWS End User Messaging SMS console -> Account settings -> Request production access (a Support case); ask for the spend limit in the same case.",
-          "SNS console -> Text messaging (SMS) -> Edit preferences: set the account spend limit to what the case granted.",
+          "When AWS grants the case (us-east-1: $50/month, granted October 2026): aws pinpoint-sms-voice-v2 set-text-message-spend-limit-override --monthly-limit 50 --region us-east-1 (or the End User Messaging SMS console -> Account settings -> Spend limits). Sending stays capped at $1 until this is set, whatever the case said.",
+          "AWS End User Messaging SMS console -> Protect configurations -> Create protect configuration: name diveday-us-only, set as account default, then Country rules -> SMS: Block every country, Allow United States only. Do the same for MMS and Voice; DiveDay sends neither.",
           "AWS End User Messaging SMS console -> Phone numbers -> Request originator: United States, Toll-free, SMS, Transactional; then submit its toll-free registration with the answers in docs/engineering/sms-delivery-receipts-runbook.md, 'Registering the number'.",
           `aws pinpoint-sms-voice-v2 put-keyword --origination-identity <phone-number-id> --keyword HELP --keyword-action AUTOMATIC_RESPONSE --keyword-message "DiveDay texts about your dive bookings. For help with a booking, contact the dive shop that sent it. Reply STOP to opt out. Msg & data rates may apply."`,
           `aws pinpoint-sms-voice-v2 put-keyword --origination-identity <phone-number-id> --keyword STOP --keyword-action OPT_OUT --keyword-message "You won't get more texts from DiveDay. Reply START to opt back in."`,
           "aws pinpoint-sms-voice-v2 update-phone-number --phone-number-id <phone-number-id> --two-way-enabled --two-way-channel-arn <SmsDeliveryReceiptsTopicArn> --two-way-channel-role <SmsTwoWayRoleArn> --no-self-managed-opt-outs-enabled",
         ],
         verify: [
-          "aws sns get-sms-attributes --attributes MonthlySpendLimit",
+          "aws pinpoint-sms-voice-v2 describe-spend-limits --region us-east-1 -- TEXT_MESSAGE_MONTHLY_SPEND_LIMIT shows EnforcedLimit 50.",
+          "aws pinpoint-sms-voice-v2 describe-protect-configurations --region us-east-1 -- one configuration with AccountDefault true.",
           "aws pinpoint-sms-voice-v2 describe-keywords --origination-identity <phone-number-id> -- HELP and STOP carry the messages above.",
           "Text STOP to the number from your own phone: the STOP reply arrives, and an sms_webhook.reply_applied line is logged.",
         ],

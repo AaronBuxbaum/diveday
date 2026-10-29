@@ -103,6 +103,24 @@ aws logs delete-log-group --log-group-name /aws/lambda/diveday-sms-receipt-forwa
 `infra/lib/sms-receipt-forwarder.test.ts` pins the declared name so a tidy-minded rename cannot bring
 the collision back.
 
+## Spend limit and country rules
+
+The us-east-1 account is out of the SMS sandbox with a $50 monthly spend quota (Support case
+answered in October 2026). The quota is a ceiling, not the limit in force: sending stays capped at
+$1 until the account spend limit is set to $50 by hand. Both that and the country rules are
+manual action `sns-sms-account-limits`, because they are account settings the stack does not own.
+
+- **Spend limit.** At the limit AWS stops sending for the rest of the month and every later
+  reminder is dropped. The alarm `diveday-sms-month-to-date-spend` (infra-stack.ts) emails the
+  alarms inbox at 80% of it, from AWS's own `SMSMonthToDateSpentUSD` metric. When a Support case
+  raises the limit, change `smsMonthlySpendLimitUsd` in the stack to match and redeploy.
+- **Country rules.** One protect configuration, set as the account default, allows only the US.
+  The account default is the one that also covers SNS, which is how DiveDay sends. A diver with a
+  non-US phone gets no text: AWS blocks it, and the send log or its delivery receipt says so.
+  Allow another country only once the carrier rules for it are read
+  ([supported countries](https://docs.aws.amazon.com/sms-voice/latest/userguide/phone-numbers-sms-by-country.html));
+  the US toll-free number cannot send outside the US, so that country also needs its own sender.
+
 ## STOP, HELP and START
 
 Replies to DiveDay's texting number come down the same topic and the same route as the receipts
