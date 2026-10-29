@@ -44,7 +44,6 @@ export const rentalFitItem = pgEnum("rental_fit_item", [
   "bcd",
   "wetsuit",
   "boots",
-  "mask_fins",
   "fins",
   "weights",
   "drysuit",
