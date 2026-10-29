@@ -241,7 +241,9 @@ test("a booking canceled after the recap page loaded gets an honest notice, not 
   // is signed rather than stored and has deliberately no self-serve rescue
   // (issue #850), and for a booking that was cancelled or not boarded there is
   // no recap for the shop to send either (issue #1334).
-  await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
+  await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`, {
+    waitUntil: "domcontentloaded",
+  });
   await expect(page.getByText("There’s no recap for this booking.")).toBeVisible();
   await expect(page.getByText(/fresh link/i)).toHaveCount(0);
   // What replaced the dead advice: the shop's own name and contact, which is
