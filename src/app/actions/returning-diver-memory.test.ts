@@ -54,12 +54,12 @@ describe("returning-diver memory server actions", () => {
     );
   });
 
-  it("returns no identity and clears a mismatched or invalid receipt", async () => {
+  it("returns no identity for an invalid receipt without mutating the shared cookie", async () => {
     mocks.read.mockResolvedValue(null);
 
     await expect(prepareReturningDiverMemory()).resolves.toBeNull();
 
-    expect(mocks.delete).toHaveBeenCalledWith("diveday-returning-diver-receipt");
+    expect(mocks.delete).not.toHaveBeenCalled();
   });
 
   it("acknowledges only the prepared receipt id bound to the current HttpOnly cookie", async () => {
@@ -74,7 +74,7 @@ describe("returning-diver memory server actions", () => {
         expectedReceiptId: "receipt-row-id",
       },
     );
-    expect(mocks.delete).toHaveBeenCalledWith("diveday-returning-diver-receipt");
+    expect(mocks.delete).not.toHaveBeenCalled();
   });
 
   it("revokes only the matching receipt and shop on clear", async () => {
@@ -91,6 +91,25 @@ describe("returning-diver memory server actions", () => {
         shopSlug: "blue-mantis",
       },
     );
-    expect(mocks.delete).toHaveBeenCalledWith("diveday-returning-diver-receipt");
+    expect(mocks.delete).not.toHaveBeenCalled();
+  });
+
+  it("does not let a delayed old-receipt response delete a newer booking cookie", async () => {
+    let finishAck!: (value: boolean) => void;
+    mocks.acknowledge.mockReturnValue(
+      new Promise<boolean>((resolve) => {
+        finishAck = resolve;
+      }),
+    );
+
+    const oldReceiptResponse = acknowledgeReturningDiverMemory("old-receipt-row");
+    // A newer booking can replace the browser's shared receipt cookie while
+    // the old action is waiting on the database. A Set-Cookie deletion from
+    // the old action would arrive late and erase the new receipt.
+    mocks.get.mockReturnValue({ value: "new-booking-receipt-token" });
+    finishAck(true);
+
+    await expect(oldReceiptResponse).resolves.toBe(true);
+    expect(mocks.delete).not.toHaveBeenCalled();
   });
 });

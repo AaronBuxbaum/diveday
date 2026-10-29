@@ -34,9 +34,10 @@ export async function prepareReturningDiverMemory(): Promise<{
         diver: memory.diver,
         expiresAt: memory.memoryExpiresAt,
       };
-    // Expired, revoked, erased, canceled, or otherwise invalid receipts contain
-    // no usable consent anymore. Clear the opaque cookie without returning data.
-    cookieStore.delete(RETURNING_DIVER_RECEIPT_COOKIE);
+    // Leave an invalid cookie in place until its short Max-Age expires. A
+    // response-time deletion can race a newer booking's Set-Cookie response
+    // and erase that newer receipt. Invalid receipts are harmless: the DB
+    // lookup returns no identity, and every receipt expires within 24 hours.
     return null;
   } catch {
     return null;
@@ -53,7 +54,9 @@ export async function acknowledgeReturningDiverMemory(expectedReceiptId: string)
       receiptToken: token,
       expectedReceiptId,
     });
-    if (acknowledged) cookieStore.delete(RETURNING_DIVER_RECEIPT_COOKIE);
+    // Do not delete the shared cookie here. This response may arrive after a
+    // newer booking has replaced it in the browser. The acknowledged DB row
+    // makes this token inert; Max-Age bounds how long it remains on-device.
     return acknowledged;
   } catch {
     return false;
@@ -77,7 +80,8 @@ export async function revokeClearedReturningDiverReceipt(
       expectedReceiptId,
       shopSlug,
     });
-    if (revoked) cookieStore.delete(RETURNING_DIVER_RECEIPT_COOKIE);
+    // Revocation is scoped to this receipt row. Avoid a response-time cookie
+    // deletion that could erase a newer booking's replacement receipt.
     return revoked;
   } catch {
     return false;
