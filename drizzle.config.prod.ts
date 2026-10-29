@@ -13,7 +13,7 @@ if (!url) {
 }
 
 export default defineConfig({
-  // Match the migration generator's staged physical schema.
+  // Match the schema barrel used by migration generation.
   schema: ["./src/db/migration-schema.ts"],
   out: "./drizzle",
   dialect: "postgresql",
