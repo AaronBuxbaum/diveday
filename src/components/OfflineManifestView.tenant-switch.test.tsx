@@ -418,6 +418,68 @@ it("ignores an older inventory refresh that resolves after the newer tenant-scop
   expect(foreign.events[0]?.syncStatus).toBe("pending");
 });
 
+it("keeps the sync disposition when a pre-sync inventory read resolves late", async () => {
+  searchParams = new URLSearchParams({ trip: "trip-loss-48" });
+  const savedBeforeSync = richEnvelope("trip-loss-48");
+  const oldNote = {
+    clientEventId: "loss-event-48",
+    snapshotId: savedBeforeSync.snapshot.snapshotId,
+    snapshotSavedAt: savedBeforeSync.snapshot.savedAt,
+    tripId: "trip-loss-48",
+    bookingId: "booking-12345678",
+    checkpoint: "departure" as const,
+    status: "boarded" as const,
+    note: "Sensitive note text",
+    occurredAt: new Date(FROZEN_MS).toISOString(),
+    syncStatus: "pending" as const,
+  };
+  savedBeforeSync.events = [oldNote];
+  const syncedWithLoss = {
+    ...savedBeforeSync,
+    events: [
+      {
+        ...oldNote,
+        note: null,
+        syncStatus: "applied" as const,
+        noteDisposition: "discarded_erasure_cutoff" as const,
+      },
+    ],
+  };
+  vi.mocked(loadOfflineManifest).mockResolvedValue(savedBeforeSync);
+  let resolveCapturedInventory: (saved: OfflineManifestEnvelope[]) => void = () => {};
+  vi.mocked(listOfflineManifests).mockReturnValue(
+    new Promise((resolve) => {
+      resolveCapturedInventory = resolve;
+    }),
+  );
+  vi.mocked(syncOfflineManifest).mockResolvedValue(syncedWithLoss);
+  vi.mocked(fetch).mockImplementation(async (input) =>
+    String(input) === "/api/offline-manifests/identity"
+      ? identityResponse("blue-mantis")
+      : new Response(null, { status: 200 }),
+  );
+
+  render(<OfflineManifestView />);
+
+  expect(
+    await screen.findByText(/Older offline note text was removed after a data erasure/),
+  ).toBeInTheDocument();
+  expect(await screen.findByText(/Diver record 12345678.*mark kept/)).toBeInTheDocument();
+  expect(screen.queryByText("Sensitive note text")).not.toBeInTheDocument();
+  expect(syncedWithLoss.events[0]?.note).toBeNull();
+  expect(syncedWithLoss.events[0]?.occurredAt).toBe(oldNote.occurredAt);
+  expect(syncedWithLoss.events[0]?.status).toBe("boarded");
+
+  await act(async () => resolveCapturedInventory([savedBeforeSync]));
+
+  expect(
+    screen.getByText(/Older offline note text was removed after a data erasure/),
+  ).toBeInTheDocument();
+  expect(screen.getByText(/Diver record 12345678.*mark kept/)).toBeInTheDocument();
+  expect(screen.queryByText("Everything’s sent.")).not.toBeInTheDocument();
+  expect(screen.queryByText("Sensitive note text")).not.toBeInTheDocument();
+});
+
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();

@@ -208,6 +208,12 @@ function reconciledTripMessage(
     .join(" ");
 }
 
+type TripSyncResult = {
+  tripId: string;
+  shopSlug: string;
+  envelope: OfflineManifestEnvelope;
+};
+
 function useSelectedTripInventoryStatus({
   tripId,
   tenantSlugRef,
@@ -222,7 +228,7 @@ function useSelectedTripInventoryStatus({
   tenantSlugRef: { current: string | null };
   verifiedTenantRevision: number;
   verifiedTenantSlugRef: { current: string | null };
-  lastTripSyncRef: { current: { tripId: string; shopSlug: string } | null };
+  lastTripSyncRef: MutableRefObject<TripSyncResult | null>;
   setList: (saved: OfflineManifestEnvelope[]) => void;
   setMessage: (message: string | ((message: string) => string)) => void;
   t: OfflineManifestTranslator;
@@ -235,12 +241,10 @@ function useSelectedTripInventoryStatus({
       if (!lastSync || lastSync.tripId !== tripId || lastSync.shopSlug !== shopSlug || !shopSlug) {
         return;
       }
-      const currentTrip = saved.find(
-        (candidate) => candidate.snapshot.manifests[0]?.trip.id === tripId,
-      );
-      if (!currentTrip || currentTrip.snapshot.shop.slug !== shopSlug) return;
+      const syncedTrip = lastSync.envelope;
+      if (syncedTrip.snapshot.shop.slug !== shopSlug) return;
       setMessage(
-        reconciledTripMessage(currentTrip, t, hasForeignPendingManifestChanges(saved, shopSlug)),
+        reconciledTripMessage(syncedTrip, t, hasForeignPendingManifestChanges(saved, shopSlug)),
       );
     },
     [lastTripSyncRef, tripId, verifiedTenantSlugRef, t, setMessage],
@@ -337,7 +341,7 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
   // is useful for display, never proof of the currently authenticated tenant.
   const verifiedTenantSlugRef = useRef<string | null>(null);
   const [verifiedTenantRevision, setVerifiedTenantRevision] = useState(0);
-  const lastTripSyncRef = useRef<{ tripId: string; shopSlug: string } | null>(null);
+  const lastTripSyncRef = useRef<TripSyncResult | null>(null);
   const [tenantChangePending, setTenantChangePending] = useState(false);
   const [tenantChangeRevision, setTenantChangeRevision] = useState(0);
   // A failed reload of the live manifest carries its checkpoint through the
@@ -529,7 +533,7 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
       // the now-authorized surface.
       if (tenantSlugRef.current !== slug) return;
       dispatchSaved({ type: "loaded", envelope: next });
-      lastTripSyncRef.current = { tripId, shopSlug: slug };
+      lastTripSyncRef.current = { tripId, shopSlug: slug, envelope: next };
       // All three queues, not roll call alone: a checklist tap or an arrival
       // waiting to sync is evidence this device is holding, and a count that
       // cannot see it tells a captain they are caught up when they are not.
