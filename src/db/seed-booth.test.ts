@@ -171,6 +171,7 @@ describe("the demo's booth stories", () => {
       .from(trips)
       .where(and(eq(trips.shopId, shop.id), eq(trips.title, SHOP_CERTIFIED_TITLE)));
     if (!session) throw new Error("expected the certified course session");
+    expect(session.priceCents).toBeNull();
     expect(session.boatId).not.toBeNull();
     const logged = await db
       .select({

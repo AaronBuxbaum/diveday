@@ -64,6 +64,31 @@ describe("AddPanel", () => {
     expect(screen.getByRole("option", { name: "Molasses Reef" })).toBeTruthy();
   });
 
+  it("shows a selected priced course total instead of a separate trip price field", () => {
+    const { container } = renderPanel({
+      startExpanded: true,
+      options: {
+        courses: [
+          {
+            id: "course-1",
+            title: "Open Water",
+            agency: "padi",
+            priceLabel: "$250.00 per diver, the course’s price",
+          },
+        ],
+        diveSites: [],
+      },
+      initialCourse: {
+        id: "course-1",
+        title: "Open Water",
+        requirement: "",
+        priceLabel: "$250.00 per diver, the course’s price",
+      },
+    });
+    expect(screen.getByText("$250.00 per diver, the course’s price")).toBeTruthy();
+    expect(container.querySelector('input[name="priceDollars"]')).toBeNull();
+  });
+
   it("warns when the seats exceed the selected boat and leaves the form enabled", () => {
     const copy = new Proxy({} as BuilderCopy, {
       get: (_, key) =>

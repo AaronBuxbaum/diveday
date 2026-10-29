@@ -426,6 +426,8 @@ test.describe("staff", () => {
       "placeholder",
       /Discover Scuba Diving — Session 1/,
     );
+    await expect(page.getByText(/per diver, the course’s price/)).toBeVisible();
+    await expect(page.locator('input[name="priceDollars"]')).toHaveCount(0);
   });
 
   /**

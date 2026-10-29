@@ -528,7 +528,7 @@
     "src/db/seed-dive-sites.ts#seedDiveSites": 440,
     "src/db/seed-history.ts#seedHistory": 680,
     "src/db/seed-more-trips.ts#seedMoreTrips": 627,
-    "src/db/seed-trips.ts#seedTrips": 381,
+    "src/db/seed-trips.ts#seedTrips": 369,
     "src/db/trips-record.ts#updateTripRecord": 321,
     "src/lib/import.ts#prepareContactImport": 455
   },
