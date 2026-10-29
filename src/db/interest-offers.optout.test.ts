@@ -192,6 +192,84 @@ describe("an unsubscribe from the last-minute list", () => {
 });
 
 describe("invitableSeats and the deal", () => {
+  it("keeps a reactivated offered seat with its request", async () => {
+    const { db, shop, trip } = await context();
+    const requestId = await addInterest(db, shop.id, {
+      interest: "reef dive",
+      name: "Original request",
+      email: "original-request@example.com",
+    });
+    const otherRequestId = await addInterest(db, shop.id, {
+      interest: "reef dive",
+      name: "Different request",
+      email: "different-request@example.com",
+    });
+    const offers = await db
+      .insert(interests)
+      .values(
+        [requestId, otherRequestId].map((parentInterestId) => ({
+          shopId: shop.id,
+          scope: "departure" as const,
+          askedBy: "diver" as const,
+          tripId: trip.id,
+          parentInterestId,
+          partySize: 2,
+          offeredAt: nowDate(),
+        })),
+      )
+      .returning({ id: interests.id, parentInterestId: interests.parentInterestId });
+    const originalOffer = offers.find((offer) => offer.parentInterestId === requestId);
+    if (!originalOffer) throw new Error("setup: original date offer missing");
+
+    const first = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: trip.id,
+      fullName: "Reactivated Diver",
+      email: "reactivated-diver@example.com",
+      dateRequestInterestId: requestId,
+    });
+    if (!first.ok) throw new Error(`setup: first party seat failed: ${first.reason}`);
+    expect((await cancelBooking(db, shop.id, first.bookingId)).ok).toBe(true);
+
+    const wrongRequest = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: trip.id,
+      personId: first.personId,
+      dateRequestInterestId: otherRequestId,
+    });
+    expect(wrongRequest).toEqual({ ok: false, reason: "date_request_departure_conflict" });
+
+    const sameRequest = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: trip.id,
+      personId: first.personId,
+      dateRequestInterestId: requestId,
+    });
+    expect(sameRequest).toMatchObject({ ok: true, bookingId: first.bookingId });
+    expect((await cancelBooking(db, shop.id, first.bookingId)).ok).toBe(true);
+
+    const reactivated = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: trip.id,
+      personId: first.personId,
+    });
+    expect(reactivated).toMatchObject({ ok: true, bookingId: first.bookingId });
+    expect((await cancelBooking(db, shop.id, first.bookingId)).ok).toBe(true);
+
+    await db.update(interests).set({ offeredAt: null }).where(eq(interests.id, originalOffer.id));
+    const withdrawnOffer = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: trip.id,
+      personId: first.personId,
+    });
+    expect(withdrawnOffer).toEqual({ ok: false, reason: "date_request_offer_unavailable" });
+  });
+
   it("keeps the unbooked seats of a person-linked date-request party held", async () => {
     const { db, shop, trip } = await context();
     const baseline = await invitableSeats(db, await tripRow(db, trip.id));
