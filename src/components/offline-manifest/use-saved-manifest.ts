@@ -400,6 +400,8 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
     goneUnderTenant: null,
     removedForOtherShop: null,
   });
+  const envelopeRef = useRef(envelope);
+  envelopeRef.current = envelope;
   const [list, setList] = useState<OfflineManifestEnvelope[] | null>(null);
   const listRef = useRef<OfflineManifestEnvelope[] | null>(null);
   listRef.current = list;
@@ -561,12 +563,17 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
   );
 
   useEffect(() => {
-    if (!tripId || !envelope || verifiedTenantRevision === 0 || tripPurgedRef.current) return;
+    const currentEnvelope = envelopeRef.current;
+    if (!tripId || !currentEnvelope || verifiedTenantRevision === 0 || tripPurgedRef.current)
+      return;
     const lastSync = lastTripSyncRef.current;
     if (lastSync?.tripId === tripId && lastSync.shopSlug === verifiedTenantSlugRef.current) return;
-    const noteMessage = tripNoticeForEnvelope(envelope);
+    const noteMessage = tripNoticeForEnvelope(currentEnvelope);
+    // This is the initial selected-copy status. A local append also replaces
+    // `envelope`, but its recorder immediately sets the more useful saved-on-
+    // device confirmation; do not let this initial-status effect erase it.
     setMessage(initialTripStatusMessage(noteMessage, true, t));
-  }, [tripId, envelope, verifiedTenantRevision, tripNoticeForEnvelope, t, tripPurgedRef]);
+  }, [tripId, verifiedTenantRevision, tripNoticeForEnvelope, t, tripPurgedRef]);
 
   const refreshDiscarded = useCallback(() => {
     readDiscardedOfflineRecords()

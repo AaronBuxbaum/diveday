@@ -358,6 +358,23 @@ describe("useSavedManifest on a trip", () => {
     expect(result.current.message).not.toBe(line("allCaughtUp"));
   });
 
+  it("keeps the local-save confirmation when an offline event updates the selected envelope", async () => {
+    const initial = envelope("trip-1", "Morning Two-Tank");
+    const newlyPending = withEvents("trip-1", { pending: 1 });
+    load.mockResolvedValue(initial);
+    const { result } = at("trip=trip-1");
+    await waitFor(() => expect(result.current.storeRead).toBe(true));
+    act(() => purgeState.latest?.onTenantVerified("blue-mantis"));
+    await waitFor(() => expect(result.current.verifiedTenantSlug).toBe("blue-mantis"));
+
+    act(() => {
+      result.current.dispatchSaved({ type: "loaded", envelope: newlyPending });
+      result.current.setMessage("Saved on this phone. It’ll send when you’re back in service.");
+    });
+
+    expect(result.current.message).toContain("Saved on this phone");
+  });
+
   it("replaces caught-up status when reconnect cannot verify the shop after a new mark", async () => {
     setOnline(true);
     tenant.slug = "blue-mantis";

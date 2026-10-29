@@ -64,7 +64,10 @@ test.describe("reply keywords", () => {
       "data-hydrated",
       "true",
     );
-    await page.getByLabel("Name").fill("Nora Quinn");
+    // The staff and public schedule routes can remain mounted in Next's
+    // retained Activity tree. Select the active booking card explicitly so a
+    // hidden sibling form cannot make this page-wide label ambiguous.
+    await page.locator("#book").getByLabel("Name").fill("Nora Quinn");
     await page.getByLabel("Email").fill(email);
     await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
     await expect(page.getByRole("heading", { name: /You’ve got a seat, Nora/ })).toBeVisible();
@@ -156,7 +159,7 @@ test.describe("reply keywords", () => {
       "data-hydrated",
       "true",
     );
-    await page.getByLabel("Name").fill("Ivan Petrov");
+    await page.locator("#book").getByLabel("Name").fill("Ivan Petrov");
     await page.getByLabel("Email").fill(email);
     await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
     await expect(page.getByRole("heading", { name: /You’ve got a seat, Ivan/ })).toBeVisible();
