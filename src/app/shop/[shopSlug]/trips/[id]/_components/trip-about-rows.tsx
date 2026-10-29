@@ -324,7 +324,7 @@ export function tripAboutRows(context: TripAboutRowsContext) {
               bookingPriceCents === null
                 ? null
                 : formatMoneyCents(bookingPriceCents, shop.currency, locale),
-              t("schedule.week.seats", { booked: trip.booked, capacity: trip.capacity }),
+              t("schedule.week.seats", { booked: trip.booked, capacity: trip.sellableCapacity }),
             ]
               .filter(Boolean)
               .join(" · "),

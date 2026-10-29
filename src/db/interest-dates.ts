@@ -15,7 +15,12 @@ import type { DbExecutor } from "./client";
 import { type OffsetPage, offsetPage, PAGE_SIZE } from "./paging";
 import { bookings, courses, interests, people, shops, trips } from "./schema";
 import { liveTrip, notRehearsal } from "./trips-live";
-import { liveBookingJoin, tripBoatCertifiedPassengers } from "./trips-queries";
+import {
+  liveBookingJoin,
+  tripAssignedCrewCount,
+  tripBoatCapacity,
+  tripBoatCertifiedPassengers,
+} from "./trips-queries";
 
 /**
  * **The date scope's reads** (ADR 20261017-one-interest-with-a-scope): `/requests`,
@@ -340,6 +345,8 @@ export async function listDeparturesOnDates(
       trip: trips,
       booked: count(bookings.id),
       certifiedPassengers: tripBoatCertifiedPassengers(),
+      boatCapacity: tripBoatCapacity(),
+      assignedCrewCount: tripAssignedCrewCount(),
     })
     .from(trips)
     .leftJoin(bookings, liveBookingJoin)
@@ -358,7 +365,12 @@ export async function listDeparturesOnDates(
   return rows.flatMap((row) => {
     const date = calendarDateInTimezone(row.trip.startsAt, timeZone);
     if (!wanted.has(date)) return [];
-    const seats = sellableSeats(row.trip.capacity, row.certifiedPassengers);
+    const seats = sellableSeats(
+      row.trip.capacity,
+      row.certifiedPassengers,
+      row.boatCapacity,
+      row.assignedCrewCount,
+    );
     return [
       {
         tripId: row.trip.id,

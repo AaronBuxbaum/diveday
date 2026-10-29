@@ -327,7 +327,7 @@ describe("updateBoatWithinCertificate", () => {
     ).toEqual({
       ok: false,
       reason: "certificate",
-      refusal: { code: "seats_above_total_persons", capacity: 20, limit: 12 },
+      refusal: { code: "capacity_above_total_persons", capacity: 20, limit: 12 },
     });
     expect(await getBoatById(db, shop.id, boat.id)).toMatchObject({
       capacity: 6,
@@ -363,12 +363,12 @@ describe("updateBoatWithinCertificate", () => {
     });
   });
 
-  it("refuses seats on sale above the certificate it is given", async () => {
+  it("allows total occupant capacity above the passenger certificate", async () => {
     const { db, shop } = ctx;
     const boat = await createBoat(db, shop.id, "Certified Hull", 6);
     expect(await save(db, shop.id, boat.id, 6, 4)).toMatchObject({
-      ok: false,
-      refusal: { code: "seats_above_certificate", capacity: 6, limit: 4 },
+      ok: true,
+      boat: { capacity: 6, certifiedPassengers: 4 },
     });
   });
 

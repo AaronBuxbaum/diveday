@@ -22,7 +22,12 @@ import { physicianReferrals, recentlyInvitedPeople } from "./invite-suggestions"
 import { queryAll } from "./query-helpers";
 import { bookings, certifications, courses, people, trips } from "./schema";
 import { livePerson, liveTrip, notRehearsal } from "./trips-live";
-import { liveBookingJoin, tripBoatCertifiedPassengers } from "./trips-queries";
+import {
+  liveBookingJoin,
+  tripAssignedCrewCount,
+  tripBoatCapacity,
+  tripBoatCertifiedPassengers,
+} from "./trips-queries";
 
 /** One person who finished a course here and has not booked its next step. */
 export type LadderPerson = {
@@ -300,6 +305,8 @@ async function nextSessionsFor(
       startsAt: trips.startsAt,
       capacity: trips.capacity,
       certifiedPassengers: tripBoatCertifiedPassengers(),
+      boatCapacity: tripBoatCapacity(),
+      assignedCrewCount: tripAssignedCrewCount(),
       booked: count(bookings.id),
     })
     .from(trips)
@@ -320,7 +327,12 @@ async function nextSessionsFor(
   const soonest = new Map<string, NonNullable<LadderStep["nextSession"]>>();
   for (const row of rows) {
     if (!row.courseId || soonest.has(row.courseId)) continue;
-    const capacity = sellableSeats(row.capacity, row.certifiedPassengers);
+    const capacity = sellableSeats(
+      row.capacity,
+      row.certifiedPassengers,
+      row.boatCapacity,
+      row.assignedCrewCount,
+    );
     if (row.booked >= capacity) continue;
     soonest.set(row.courseId, {
       tripId: row.tripId,

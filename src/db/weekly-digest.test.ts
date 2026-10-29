@@ -6,6 +6,7 @@ import { notificationSchema } from "@/lib/notifications/kinds";
 import { messageFor } from "@/lib/notifications/render";
 import { NO_EMERGENCY_READS } from "@/lib/weekly-digest";
 import { dbNow, fileScopedShopContext, type seededShopContext } from "@/test/db";
+import { createBoat } from "./boats";
 import { readOwed } from "./owed";
 import {
   activityEvents,
@@ -20,6 +21,7 @@ import {
   userAccounts,
   weeklyDigestSends,
 } from "./schema";
+import { createTrip, listStaff, setTripCrew } from "./trips";
 import {
   listWeeklyDigestRecipients,
   previewWeeklyDigest,
@@ -137,6 +139,36 @@ describe("who gets the Monday email", () => {
       .from(userAccounts)
       .where(eq(userAccounts.personId, owner.personId));
     expect(account?.choice).toBeNull();
+  });
+});
+
+describe("this week's passenger capacity", () => {
+  it("counts the boat's passenger places after assigned crew reserve seats", async () => {
+    const { db, shop, monday } = await context();
+    const before = await readWeeklyDigestFacts(db, shop, monday);
+    const boat = await createBoat(db, shop.id, "Four occupants", 4);
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Digest crew capacity",
+      startsAt: new Date(monday.getTime() + 60 * 60 * 1000),
+      endsAt: new Date(monday.getTime() + 5 * 60 * 60 * 1000),
+      capacity: 8,
+      boatId: boat.id,
+    });
+    if (!trip) throw new Error("capacity trip not created");
+    const staff = await listStaff(db, shop.id);
+    if (staff.length < 2) throw new Error("two seeded staff members are required");
+    expect(
+      await setTripCrew(
+        db,
+        shop.id,
+        trip.id,
+        staff.slice(0, 2).map(({ person }) => person.id),
+      ),
+    ).toBe(true);
+
+    const after = await readWeeklyDigestFacts(db, shop, monday);
+    expect(after.grades.reports.thisWeek.seats - before.grades.reports.thisWeek.seats).toBe(2);
   });
 });
 

@@ -13,24 +13,6 @@ const plain = (text: string | undefined) => text?.replace(/\u00a0/g, " ");
  * whole number says nothing rather than a garbled sentence.
  */
 describe("boatCertificateError", () => {
-  it("says the seats-over-certificate sentence on the row it names", () => {
-    expect(
-      boatCertificateError(
-        t,
-        {
-          notice: "boat-above-certificate",
-          boat: "b1",
-          capacity: "14",
-          limit: "12",
-        },
-        LOCALE,
-      ),
-    ).toEqual({
-      boat: "b1",
-      text: "The certificate allows 12 passengers, so this boat can’t sell 14. Lower the seats, or correct the certificate.",
-    });
-  });
-
   it("says more passengers than persons is a typo in one of the two boxes (issue 2302)", () => {
     expect(
       boatCertificateError(
@@ -51,16 +33,16 @@ describe("boatCertificateError", () => {
     ).toBeNull();
   });
 
-  it("says more seats than persons is a typo too (dive-domain review D2)", () => {
+  it("says total occupant capacity above persons is a mismatch", () => {
     expect(
       boatCertificateError(
         t,
-        { notice: "boat-seats-above-persons", boat: "b1", capacity: "20", limit: "12" },
+        { notice: "boat-capacity-above-persons", boat: "b1", capacity: "20", limit: "12" },
         LOCALE,
       ),
     ).toEqual({
       boat: "b1",
-      text: "The certificate allows 12 persons in all, crew included, so this boat can’t seat 20. Lower the seats, or correct the certificate.",
+      text: "The certificate allows 12 persons in all, so total boat capacity 20 is too high. Correct one of the two.",
     });
   });
 
@@ -143,7 +125,7 @@ describe("boatCertificateError", () => {
     expect(
       boatCertificateError(
         t,
-        { notice: "boat-above-certificate", capacity: "14", limit: "12" },
+        { notice: "boat-capacity-above-persons", capacity: "14", limit: "12" },
         LOCALE,
       ),
     ).toBeNull();
@@ -151,7 +133,7 @@ describe("boatCertificateError", () => {
       boatCertificateError(
         t,
         {
-          notice: "boat-above-certificate",
+          notice: "boat-capacity-above-persons",
           boat: "b1",
           capacity: "<b>14</b>",
           limit: "12",

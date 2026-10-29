@@ -133,6 +133,8 @@ export type BuilderCopy = {
   returns: string;
   seats: string;
   boatCapacityWarning: string;
+  boatCapacityOne: string;
+  boatCapacityOther: string;
   dives: string;
   price: string;
   priceDescription: string;

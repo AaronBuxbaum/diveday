@@ -425,5 +425,6 @@ script again.
 | 20261027-staff-credential-history | Recorded staff credential history |
 | 20261028-offline-erasure-loss-notices | Keep actionable erasure notices offline |
 | 20261028-returning-diver-device-memory | Remember a booker only by… |
+| 20261029-boat-capacity-total-occupants | Count assigned crew inside boat… |
 
 <!-- adr-index:end -->

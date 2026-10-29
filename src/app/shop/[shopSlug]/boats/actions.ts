@@ -128,9 +128,9 @@ function certificateRefusal(page: string, boat: string, refusal: BoatSeatsRefusa
   if (!refusal) return;
   // The fragment scrolls to the row the error is on (`boatRowId`).
   const row = `${page}#${boatRowId(boat)}`;
-  if (refusal.code === "seats_above_total_persons") {
+  if (refusal.code === "capacity_above_total_persons") {
     redirect(
-      noticeUrl(row, "boat-seats-above-persons", {
+      noticeUrl(row, "boat-capacity-above-persons", {
         boat,
         capacity: refusal.capacity,
         limit: refusal.limit,
@@ -147,18 +147,12 @@ function certificateRefusal(page: string, boat: string, refusal: BoatSeatsRefusa
     );
   }
   redirect(
-    refusal.code === "seats_above_certificate"
-      ? noticeUrl(row, "boat-above-certificate", {
-          boat,
-          capacity: refusal.capacity,
-          limit: refusal.limit,
-        })
-      : noticeUrl(row, "boat-departures-above-certificate", {
-          boat,
-          count: refusal.departures,
-          limit: refusal.limit,
-          dates: refusal.firstDates.join(","),
-        }),
+    noticeUrl(row, "boat-departures-above-certificate", {
+      boat,
+      count: refusal.departures,
+      limit: refusal.limit,
+      dates: refusal.firstDates.join(","),
+    }),
   );
 }
 

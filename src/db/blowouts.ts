@@ -61,6 +61,7 @@ import {
 } from "./schema";
 import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";
 import { liveTrip } from "./trips-live";
+import { tripSellableSeatsSql } from "./trips-queries";
 import { rollCallStartedOn, setTripStatus } from "./trips-record";
 
 /**
@@ -549,6 +550,7 @@ async function blowoutCandidates(
   const rows = await db
     .select({
       trip: trips,
+      sellableCapacity: tripSellableSeatsSql(),
       activeBookings: count(bookings.id),
       activeDivers:
         sql<number>`count(*) filter (where ${bookings.participantType} = 'diver')`.mapWith(Number),
@@ -577,7 +579,7 @@ async function blowoutCandidates(
         id: row.trip.id,
         startsAt: row.trip.startsAt,
         status: row.trip.status,
-        capacity: row.trip.capacity,
+        capacity: row.sellableCapacity,
         activeBookings: row.activeBookings,
         activeDivers: row.activeDivers,
         diverCapacity: row.trip.diverCapacity,

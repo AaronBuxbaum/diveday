@@ -159,6 +159,12 @@ export const boats = pgTable(
       .notNull()
       .references(() => shops.id),
     name: text("name").notNull(),
+    /**
+     * **Total people allowed aboard the boat**, including passengers and crew.
+     * The stored number is kept as entered and interpreted this way; at booking
+     * time one place is reserved for every assigned crew member. It is not a
+     * passenger-seat count. `trips.capacity` remains the passenger-place cap.
+     */
     capacity: integer("capacity").notNull(),
     /**
      * One line the shop says about the boat on its storefront (Harbor — ADR
@@ -172,17 +178,16 @@ export const boats = pgTable(
     /**
      * **The vessel's legal passenger ceiling**, as printed on its Coast Guard
      * Certificate of Inspection (or the shop's own flag state's equivalent).
-     * Not `capacity` above: that is how many seats the shop *sells*, a
-     * business number, where this is the number a boarding officer counts
+     * Not `capacity` above: that is the total people aboard including crew,
+     * while this is the passenger-only number a boarding officer counts
      * against. Optional, because a shop that has not typed it in has said
      * nothing, and nothing reads a missing limit as zero.
      *
-     * **A ceiling on what is sold** (H-107): a boat save is refused when
-     * `capacity` passes it, or when it is lowered under the seats an upcoming
-     * departure on this hull still sells, and a departure may not sell more
-     * seats than it (`boatSeatsRefusal`, `tripDetailsPatch`), and the booking
-     * transaction never sells past it (`sellableCapacity`). Both numbers
-     * count everyone aboard but the crew. A row saved over it before H-107
+     * **A ceiling on what is sold** (H-107): a boat save is refused when an
+     * upcoming departure still sells more seats than it, and a departure
+     * may not sell more seats than it (`boatSeatsRefusal`, `tripDetailsPatch`),
+     * and the booking transaction never sells past it (`sellableCapacity`).
+     * A row saved over it before H-107
      * keeps its row until its next save; the fleet row says so in danger ink,
      * and the manifest still says when the people booked aboard pass it
      * (`boatSafetyNotices`, `src/lib/boat-safety.ts`). Not a check constraint,
@@ -195,10 +200,12 @@ export const boats = pgTable(
      * one number. Optional and independent of `certifiedPassengers`: a shop
      * whose certificate carries only a passenger figure is never asked for it.
      *
-     * Checked at the manifest, never at the point of sale: the pre-departure
-     * check says when the people booked, or counted aboard, plus the crew pass
-     * it (`boatSafetyNotices`). The booking transaction counts seats exactly
-     * as before (Aaron, 2026-10-13).
+     * Compared with the boat's total-occupant capacity when the boat is saved;
+     * it does not reduce or refuse bookings. Checked again at the manifest:
+     * pre-departure check says when the people booked, or counted aboard, plus
+     * the crew pass it (`boatSafetyNotices`). It does not participate in the
+     * booking limit; only `capacity`, the passenger certificate, and crew
+     * reservations define sellable seats.
      */
     certifiedTotalPersons: integer("certified_total_persons"),
     /**
@@ -391,9 +398,10 @@ export const trips = pgTable(
     startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
     endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
     /**
-     * **The people this departure carries** — divers, snorkelers and riders
-     * alike (ADR 20261007-participant-types). A boat's legal limit is bodies,
-     * so every seat counts here whatever its holder does in the water.
+     * **Passenger places this departure offers** — divers, snorkelers and
+     * riders alike (ADR 20261007-participant-types), excluding the assigned
+     * crew. At booking time this is capped by the boat's total occupants minus
+     * crew, the boat's passenger certificate, and the course/diver limits.
      */
     capacity: integer("capacity").notNull(),
     /**

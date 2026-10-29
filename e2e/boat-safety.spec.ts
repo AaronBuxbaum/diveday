@@ -68,7 +68,7 @@ test("a distress-channel refusal reopens the new boat editor", async ({ page, pr
   await expect(page.getByRole("status").filter({ hasText: t("boats.boatCreated") })).toBeVisible();
   const created = boatRow(page, "Radio test");
   await expect(created).toHaveCount(1);
-  await expect(created.locator("summary")).toContainText(t("boats.seats", { count: 10 }));
+  await expect(created.locator("summary")).toContainText(t("boats.peopleAboard", { count: 10 }));
   await created.locator("summary").click();
   await expect(created.getByLabel(t("boats.workingChannelLabel"))).toHaveValue("68");
   for (const [label, day] of paperDates) await expect(created.getByLabel(label)).toHaveValue(day);

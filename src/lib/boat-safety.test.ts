@@ -733,16 +733,9 @@ describe("departureSafetyDate", () => {
 });
 
 describe("boatSeatsRefusal (H-107)", () => {
-  it("refuses seats on sale above the certificate, in either direction of edit", () => {
-    expect(boatSeatsRefusal({ capacity: 14, certifiedPassengers: 12 })).toEqual({
-      code: "seats_above_certificate",
-      capacity: 14,
-      limit: 12,
-    });
-    // Lowering the certificate under the seats is the same refusal.
-    expect(boatSeatsRefusal({ capacity: 12, certifiedPassengers: 11 })).toMatchObject({
-      code: "seats_above_certificate",
-    });
+  it("does not compare total boat occupants to the passenger certificate", () => {
+    expect(boatSeatsRefusal({ capacity: 14, certifiedPassengers: 12 })).toBeNull();
+    expect(boatSeatsRefusal({ capacity: 12, certifiedPassengers: 11 })).toBeNull();
   });
 
   it("lets seats up to the certificate through, and a boat with no certificate", () => {
@@ -783,14 +776,15 @@ describe("boatSeatsRefusal (H-107)", () => {
     ).toBeNull();
   });
 
-  it("names the hull's own seats first when both are over", () => {
+  it("checks each upcoming departure's passenger places against the certificate", () => {
     expect(
       boatSeatsRefusal({
         capacity: 14,
         certifiedPassengers: 10,
+        certifiedTotalPersons: 14,
         upcomingDepartures: [{ capacity: 14, on: "2026-10-10" }],
       }),
-    ).toMatchObject({ code: "seats_above_certificate" });
+    ).toMatchObject({ code: "departures_above_certificate" });
   });
 });
 
@@ -813,12 +807,16 @@ describe("boatSeatsRefusal and total persons (#2302)", () => {
     ).toBeNull();
   });
 
-  // Dive-domain review D2: more seats than persons is a typo at save, like
-  // passengers above persons. The sale itself is untouched (Aaron, 2026-10-13).
-  it("refuses saving more seats than persons, and still caps no sale at it", () => {
+  it("allows total boat capacity above the passenger certificate", () => {
+    expect(
+      boatSeatsRefusal({ capacity: 14, certifiedPassengers: 10, certifiedTotalPersons: 14 }),
+    ).toBeNull();
+  });
+
+  it("refuses saving total capacity above the total-person certificate", () => {
     expect(
       boatSeatsRefusal({ capacity: 20, certifiedPassengers: null, certifiedTotalPersons: 12 }),
-    ).toEqual({ code: "seats_above_total_persons", capacity: 20, limit: 12 });
+    ).toEqual({ code: "capacity_above_total_persons", capacity: 20, limit: 12 });
     expect(
       boatSeatsRefusal({ capacity: 12, certifiedPassengers: null, certifiedTotalPersons: 12 }),
     ).toBeNull();
@@ -827,12 +825,17 @@ describe("boatSeatsRefusal and total persons (#2302)", () => {
 });
 
 describe("sellableSeats / seatsWithinCertificate (H-107's point-of-sale ceiling)", () => {
-  it("caps a departure's seats at the certificate, and leaves them alone without one", () => {
+  it("uses the lowest passenger, certificate, and crew-reserved boat limit", () => {
     expect(sellableSeats(14, 10)).toBe(10);
     expect(sellableSeats(8, 10)).toBe(8);
     expect(sellableSeats(10, 10)).toBe(10);
     expect(sellableSeats(14, null)).toBe(14);
     expect(sellableSeats(14, undefined)).toBe(14);
+    expect(sellableSeats(14, 10, 12, 2)).toBe(10);
+    expect(sellableSeats(14, 12, 8, 2)).toBe(6);
+    expect(sellableSeats(8, null, 8, 2)).toBe(6);
+    expect(sellableSeats(8, null, 2, 3)).toBe(0);
+    expect(sellableSeats(8, null, null, 3)).toBe(8);
   });
 
   it("brings a divers-only limit down with the seats, never above them", () => {

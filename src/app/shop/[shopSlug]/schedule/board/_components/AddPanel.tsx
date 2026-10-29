@@ -281,6 +281,7 @@ export function AddPanel({
           copy={copy}
           capacity={capacity}
           boatCapacity={selectedBoat?.capacity}
+          assignedCrewCount={crew.length}
           setCapacity={setCapacity}
         />
         {/* Handed off, not duplicated: expanded, the count is the dive plan's

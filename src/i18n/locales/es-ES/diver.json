@@ -142,7 +142,7 @@
       "line": "Visto en {seen} de las {trips, plural, one {# salida de {month}} other {# salidas de {month}}} que registraron nuestras tripulaciones",
       "honest": "Lo que registraron nuestras tripulaciones en las salidas de {month}, en todas las temporadas registradas. Dice lo que se vio, no lo que verás."
     },
-    "boatSeats": "{count, plural, one {# buceador} other {# buceadores}}"
+    "boatCapacity": "{count, plural, one {# persona a bordo, incluida la tripulación} other {# personas a bordo, incluida la tripulación}}"
   },
   "trip": {
     "boatLabel": "Embarcación",

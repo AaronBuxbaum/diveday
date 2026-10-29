@@ -56,7 +56,12 @@ import {
 } from "./schema";
 import { forgetTranslationsOf } from "./shop-text-translations";
 import { liveTrip, notRehearsal } from "./trips-live";
-import { liveBookingJoin, tripBoatCertifiedPassengers } from "./trips-queries";
+import {
+  liveBookingJoin,
+  tripAssignedCrewCount,
+  tripBoatCapacity,
+  tripBoatCertifiedPassengers,
+} from "./trips-queries";
 
 export type DiveSiteInput = {
   shopId: string;
@@ -1518,6 +1523,8 @@ export async function listUpcomingDeparturesForSite(
       capacity: trips.capacity,
       booked: count(bookings.id),
       certifiedPassengers: tripBoatCertifiedPassengers(),
+      boatCapacity: tripBoatCapacity(),
+      assignedCrewCount: tripAssignedCrewCount(),
     })
     .from(trips)
     .leftJoin(bookings, liveBookingJoin)
@@ -1542,7 +1549,12 @@ export async function listUpcomingDeparturesForSite(
   // A diver-only read: `capacity` here is the seats on sale (#2321).
   return rows.map(({ certifiedPassengers, ...row }) => ({
     ...row,
-    capacity: sellableSeats(row.capacity, certifiedPassengers),
+    capacity: sellableSeats(
+      row.capacity,
+      certifiedPassengers,
+      row.boatCapacity,
+      row.assignedCrewCount,
+    ),
   }));
 }
 

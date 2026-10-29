@@ -25,11 +25,12 @@ vi.mock("@/lib/notifications", async (importOriginal) => {
 
 const { sendNotification } = await import("./notifications");
 const { offerSeats } = await import("./interest-offers");
+const { createBoat } = await import("./boats");
 const { askAnytime, resolveInterestUnsubscribeToken } = await import("./interests");
 const { interests, people, tripLastMinutePromos } = await import("./schema");
 const { setShopStripeAccountStatus, upsertShopStripeAccount } = await import("./stripe-accounts");
 const { trips } = await import("./schema");
-const { upcomingTripsWithCounts } = await import("./trips");
+const { listStaff, setTripCrew, upcomingTripsWithCounts } = await import("./trips");
 
 const nora = { fullName: "Nora Quinn", email: "nora@example.com" };
 const priya = { fullName: "Priya Shah", email: "priya@example.com" };
@@ -123,6 +124,44 @@ describe("offerSeats with a discount", () => {
     expect(await resolveInterestUnsubscribeToken(db, token)).toMatchObject({
       interestId: joined.interestId,
     });
+  });
+
+  it("caps promo redemptions at the boat's passenger places after assigned crew reserves seats", async () => {
+    const { db, shop, trip } = await context();
+    const boat = await createBoat(db, shop.id, "Eight aboard", 8);
+    await db.update(trips).set({ boatId: boat.id }).where(eq(trips.id, trip.id));
+    const staff = await listStaff(db, shop.id);
+    expect(staff.length).toBeGreaterThanOrEqual(2);
+    expect(
+      await setTripCrew(
+        db,
+        shop.id,
+        trip.id,
+        staff.slice(0, 2).map(({ person }) => person.id),
+      ),
+    ).toBe(true);
+    const joined = await askAnytime(db, { shopId: shop.id, ...nora, declaration: openWater });
+
+    const outcome = await offerSeats(
+      db,
+      {
+        shopId: shop.id,
+        shopSlug: shop.slug,
+        tripId: trip.id,
+        interestIds: [joined.interestId],
+        discount: { percent: 25 },
+      },
+      undefined,
+      fakePromotions(),
+    );
+
+    expect(outcome.deal).toMatchObject({ ok: true, recipientCount: 1 });
+    if (!outcome.deal?.ok) throw new Error("expected the deal to go");
+    const [promo] = await db
+      .select()
+      .from(tripLastMinutePromos)
+      .where(eq(tripLastMinutePromos.id, outcome.deal.promoId));
+    expect(promo?.maxRedemptions).toBe(Math.max(0, Math.min(trip.capacity, 8 - 2) - trip.booked));
   });
 
   it("skips a diver whose row already took the 24-hour window, and still sends the rest", async () => {

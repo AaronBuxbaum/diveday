@@ -11,7 +11,12 @@ import type { DbExecutor } from "./client";
 import { queryAll } from "./query-helpers";
 import { bookings, shops, trips } from "./schema";
 import { liveTrip, notRehearsal } from "./trips-live";
-import { liveBookingJoin, tripBoatCertifiedPassengers } from "./trips-queries";
+import {
+  liveBookingJoin,
+  tripAssignedCrewCount,
+  tripBoatCapacity,
+  tripBoatCertifiedPassengers,
+} from "./trips-queries";
 
 export type ThinBoat = {
   tripId: string;
@@ -68,6 +73,8 @@ export async function listThinBoats(
           diveSiteId: trips.diveSiteId,
           courseId: trips.courseId,
           certifiedPassengers: tripBoatCertifiedPassengers(),
+          boatCapacity: tripBoatCapacity(),
+          assignedCrewCount: tripAssignedCrewCount(),
           booked: count(bookings.id),
         })
         .from(trips)
@@ -88,7 +95,12 @@ export async function listThinBoats(
   ]);
 
   const thin = rows.flatMap((row) => {
-    const capacity = sellableSeats(row.capacity, row.certifiedPassengers);
+    const capacity = sellableSeats(
+      row.capacity,
+      row.certifiedPassengers,
+      row.boatCapacity,
+      row.assignedCrewCount,
+    );
     const need = thinBoatNeed({ ...row, capacity }, now);
     return need
       ? [

@@ -105,6 +105,8 @@ import {
   heldSeatCounts,
   liveBookingJoin,
   sellableCapacity,
+  tripAssignedCrewCount,
+  tripBoatCapacity,
   tripBoatCertifiedPassengers,
 } from "./trips-queries";
 import { CLEARED_DRAFT_COLUMNS } from "./waiver-record-columns";
@@ -1072,11 +1074,12 @@ async function createBookingRecord(
   // count against `diver_capacity`. Never a pre-check: the counts are read
   // here, inside the transaction that inserts.
   //
-  // **The boat's limit is the certificate's when that is lower** (H-107):
-  // `sellableCapacity` caps `trips.capacity` at the boat's certified passenger
-  // number, read here under the same lock. The forms refuse an over-limit
-  // capacity, but a copied, rolled, reinstated or pre-H-107 departure can
-  // still carry one, and this is the one gate all of them reach.
+  // **The boat's passenger places are the lower limit** (H-107, #1703):
+  // `sellableCapacity` caps `trips.capacity` at the passenger certificate and
+  // the hull's total-occupant capacity after reserving one place per assigned
+  // crew member. Read under the trip lock, so crew edits and new grants
+  // serialize; the boat row is shared-locked after it. A copied, rolled,
+  // reinstated or otherwise over-limit departure still reaches this gate.
   const held = await heldSeatCounts(tx, trip.shopId, trip.id);
   const seatFull = seatRefusal(
     participantType,
@@ -2425,6 +2428,8 @@ export async function listSeatMoveTargets(
       startsAt: trips.startsAt,
       capacity: trips.capacity,
       certifiedPassengers: tripBoatCertifiedPassengers(),
+      boatCapacity: tripBoatCapacity(),
+      assignedCrewCount: tripAssignedCrewCount(),
       held: sql<number>`count(${bookings.id})::int`,
     })
     .from(trips)
@@ -2444,12 +2449,27 @@ export async function listSeatMoveTargets(
     .groupBy(trips.id)
     .orderBy(asc(trips.startsAt))
     .limit(limit);
-  return rows.map(({ id, title, startsAt, capacity, certifiedPassengers, held }) => ({
-    id,
-    title,
-    startsAt,
-    seatsLeft: Math.max(0, sellableSeats(capacity, certifiedPassengers) - Number(held)),
-  }));
+  return rows.map(
+    ({
+      id,
+      title,
+      startsAt,
+      capacity,
+      certifiedPassengers,
+      boatCapacity,
+      assignedCrewCount,
+      held,
+    }) => ({
+      id,
+      title,
+      startsAt,
+      seatsLeft: Math.max(
+        0,
+        sellableSeats(capacity, certifiedPassengers, boatCapacity, assignedCrewCount) -
+          Number(held),
+      ),
+    }),
+  );
 }
 
 export type SetParticipantTypeOutcome =

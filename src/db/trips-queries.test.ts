@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
+import { createBoat } from "./boats";
 import { createDiveSite } from "./dive-sites";
 import { bookings, courses, shops, trips } from "./schema";
 import { createTripLens } from "./trip-lenses";
@@ -10,10 +11,12 @@ import {
   countShopTrips,
   createTrip,
   listShopDayDepartures,
+  listStaff,
   nextSessionStartByCourse,
   offsetUpcomingTripsWithCounts,
   pagedUpcomingTripsWithCounts,
   SCHEDULE_PAGE_SIZE,
+  setTripCrew,
   setTripStatus,
   tripDiveSiteSummaries,
   upcomingScheduleRange,
@@ -69,7 +72,7 @@ describe("demo seed + schedule queries (in-memory PGlite)", () => {
     const before = await upcomingTripsWithCounts(db, shop.id);
     const wreck = before.find((t) => t.title === "Wreck Trip — Spiegel Grove");
     if (!wreck) throw new Error("wreck trip missing");
-    expect(wreck.booked).toBe(wreck.capacity); // seeded sold out
+    expect(wreck.booked).toBe(wreck.sellableCapacity); // seeded sold out
 
     const [first] = await db.select().from(bookings).limit(1);
     if (!first) throw new Error("no bookings seeded");
@@ -82,6 +85,63 @@ describe("demo seed + schedule queries (in-memory PGlite)", () => {
 });
 
 describe("paged schedule queries", () => {
+  it("projects total boat capacity and limits seats by assigned crew", async () => {
+    const { db, shop } = ctx;
+    const boat = await createBoat(db, shop.id, "Eight aboard", 8);
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Crew-reserved capacity",
+      startsAt: new Date("2031-08-01T12:00:00Z"),
+      endsAt: new Date("2031-08-01T16:00:00Z"),
+      capacity: 10,
+      boatId: boat.id,
+    });
+    if (!trip) throw new Error("capacity trip not created");
+    const staff = await listStaff(db, shop.id);
+    if (staff.length < 2) throw new Error("two seeded staff members are required");
+    expect(
+      await setTripCrew(
+        db,
+        shop.id,
+        trip.id,
+        staff.slice(0, 2).map(({ person }) => person.id),
+      ),
+    ).toBe(true);
+
+    const row = (await upcomingTripsWithCounts(db, shop.id)).find(({ id }) => id === trip.id);
+    expect(row).toMatchObject({ boatCapacity: 8, assignedCrewCount: 2, sellableCapacity: 6 });
+  });
+
+  it("shows the crew-reserved passenger limit on the live week board", async () => {
+    const { db, shop } = ctx;
+    const boat = await createBoat(db, shop.id, "Week board boat", 8);
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Week board capacity",
+      startsAt: new Date("2031-08-02T12:00:00Z"),
+      endsAt: new Date("2031-08-02T16:00:00Z"),
+      capacity: 10,
+      boatId: boat.id,
+    });
+    if (!trip) throw new Error("capacity trip not created");
+    const staff = await listStaff(db, shop.id);
+    if (staff.length < 2) throw new Error("two seeded staff members are required");
+    expect(
+      await setTripCrew(
+        db,
+        shop.id,
+        trip.id,
+        staff.slice(0, 2).map(({ person }) => person.id),
+      ),
+    ).toBe(true);
+
+    const board = await weekBoard(db, shop.id, "2031-07-28", "UTC");
+    const entry = Object.values(board.days)
+      .flat()
+      .find(({ tripId }) => tripId === trip.id);
+    expect(entry?.capacity).toBe(6);
+  });
+
   it("pages the board with a keyset cursor, in departure order, without gaps", async () => {
     const { db, shop } = ctx;
     const all = await upcomingTripsWithCounts(db, shop.id);
@@ -200,8 +260,8 @@ describe("paged schedule queries", () => {
   it("filters to trips with an open seat on request", async () => {
     const { db, shop } = ctx;
     const all = await upcomingTripsWithCounts(db, shop.id);
-    expect(all.some((t) => t.booked >= t.capacity)).toBe(true); // the seed has a full trip
-    expect(all.some((t) => t.booked < t.capacity)).toBe(true);
+    expect(all.some((t) => t.booked >= t.sellableCapacity)).toBe(true); // the seed has a full trip
+    expect(all.some((t) => t.booked < t.sellableCapacity)).toBe(true);
 
     const withSpace = await pagedUpcomingTripsWithCounts(db, shop.id, {
       hasSpace: true,
@@ -209,7 +269,7 @@ describe("paged schedule queries", () => {
     });
     expect(withSpace.trips.length).toBeGreaterThan(0);
     expect(withSpace.trips.length).toBeLessThan(all.length);
-    expect(withSpace.trips.every((t) => t.booked < t.capacity)).toBe(true);
+    expect(withSpace.trips.every((t) => t.booked < t.sellableCapacity)).toBe(true);
   });
 
   /**
@@ -258,8 +318,8 @@ describe("paged schedule queries", () => {
     const lens = await createTripLens(db, shop.id, "Wrecks");
     if (!lens) throw new Error("lens insert failed");
     const all = await upcomingTripsWithCounts(db, shop.id);
-    const full = all.find((trip) => trip.booked >= trip.capacity);
-    const roomy = all.find((trip) => trip.booked < trip.capacity);
+    const full = all.find((trip) => trip.booked >= trip.sellableCapacity);
+    const roomy = all.find((trip) => trip.booked < trip.sellableCapacity);
     if (!full || !roomy) throw new Error("expected the seed to hold a full and a roomy departure");
     for (const trip of [full, roomy]) {
       await db.update(trips).set({ lensId: lens.id }).where(eq(trips.id, trip.id));
@@ -356,7 +416,7 @@ describe("paged schedule queries", () => {
   it("counts only the departures its filters actually list", async () => {
     const { db, shop } = ctx;
     const all = await upcomingTripsWithCounts(db, shop.id);
-    const withSpaceCount = all.filter((trip) => trip.booked < trip.capacity).length;
+    const withSpaceCount = all.filter((trip) => trip.booked < trip.sellableCapacity).length;
     expect(withSpaceCount).toBeLessThan(all.length); // the seed has a full trip
 
     const spaced = await offsetUpcomingTripsWithCounts(db, shop.id, { hasSpace: true, limit: 5 });
@@ -390,9 +450,9 @@ describe("paged schedule queries", () => {
     expect(stats.departures).toBe(all.length);
     expect(stats.booked).toBe(all.reduce((sum, t) => sum + t.booked, 0));
     expect(stats.openSeats).toBe(
-      all.reduce((sum, t) => sum + Math.max(0, t.capacity - t.booked), 0),
+      all.reduce((sum, t) => sum + Math.max(0, t.sellableCapacity - t.booked), 0),
     );
-    expect(stats.atCapacity).toBe(all.filter((t) => t.booked >= t.capacity).length);
+    expect(stats.atCapacity).toBe(all.filter((t) => t.booked >= t.sellableCapacity).length);
 
     const range = await upcomingScheduleRange(db, shop.id);
     expect(range.first?.getTime()).toBe(all[0]?.startsAt.getTime());
