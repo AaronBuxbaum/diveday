@@ -284,6 +284,32 @@ describe("useSavedManifest on a trip", () => {
     expect(result.current.envelope).toBe(synced);
   });
 
+  it("replaces caught-up status when reconnect cannot verify the shop after a new mark", async () => {
+    setOnline(true);
+    tenant.slug = "blue-mantis";
+    const initial = withEvents("trip-1", { pending: 1 });
+    const synced = withEvents("trip-1", {});
+    const newlyPending = withEvents("trip-1", { pending: 1 });
+    load.mockResolvedValue(initial);
+    list.mockResolvedValue([synced]);
+    sync.mockResolvedValue(synced);
+    const { result } = at("trip=trip-1");
+    act(() => purgeState.latest?.onTenantVerified("blue-mantis"));
+    await waitFor(() => expect(result.current.message).toBe(line("allCaughtUp")));
+
+    // A new dock mark is saved locally after the earlier successful sync.
+    act(() => result.current.dispatchSaved({ type: "loaded", envelope: newlyPending }));
+    load.mockResolvedValue(newlyPending);
+    tenant.slug = null;
+    const syncCallsBeforeReconnect = sync.mock.calls.length;
+    await act(async () => window.dispatchEvent(new Event("online")));
+
+    await waitFor(() => expect(result.current.message).toBe(line("reachError")));
+    expect(sync).toHaveBeenCalledTimes(syncCallsBeforeReconnect);
+    expect(result.current.envelope?.events[0]?.syncStatus).toBe("pending");
+    expect(result.current.message).not.toBe(line("allCaughtUp"));
+  });
+
   it("counts what is still waiting after a sync", async () => {
     setOnline(true);
     const pending = withEvents("trip-1", { pending: 2 });

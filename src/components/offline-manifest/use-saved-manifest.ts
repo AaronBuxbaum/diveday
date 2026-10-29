@@ -266,12 +266,17 @@ function selectedTripInventoryIsReady(inventoryReadyRef: { current: boolean }) {
   return inventoryReadyRef.current;
 }
 
-async function beginTripSyncAttempt(
+function beginTripSyncAttempt(
   ref: MutableRefObject<TripSyncResult | null>,
   resolveTenant: () => Promise<string | null>,
+  setMessage: Dispatch<SetStateAction<string>>,
+  t: OfflineManifestTranslator,
 ) {
   ref.current = null;
-  return resolveTenant();
+  return resolveTenant().then((slug) => {
+    if (!slug) setMessage(t("shared.offlineManifest.reconcile.reachError"));
+    return slug;
+  });
 }
 
 function useOnTenantVerified({
@@ -522,7 +527,7 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
     // next purge could delete the only local evidence. The route now fences a
     // tenant change at batch level, and this check keeps us from submitting at
     // all when the tenant cannot be established.
-    const slug = await beginTripSyncAttempt(lastTripSyncRef, resolveTenant);
+    const slug = await beginTripSyncAttempt(lastTripSyncRef, resolveTenant, setMessage, t);
     if (!slug) return;
     const held = await loadOfflineManifest(tripId).catch(() => null);
     if (!held) return;
