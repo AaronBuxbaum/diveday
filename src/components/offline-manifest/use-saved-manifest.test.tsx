@@ -137,6 +137,42 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("useSavedManifest on a trip", () => {
+  it("reloads a selected trip when another tab commits an erasure disposition", async () => {
+    const stale = envelope("trip-1", "Morning Two-Tank");
+    stale.events = [
+      {
+        clientEventId: "roll-call-abcdef12",
+        snapshotId: stale.snapshot.snapshotId,
+        snapshotSavedAt: stale.snapshot.savedAt,
+        tripId: "trip-1",
+        bookingId: "11111111-2222-3333-4444-abcdef12",
+        checkpoint: "after_dive_1",
+        status: "boarded",
+        occurredAt: "2026-08-01T14:30:00.000Z",
+        syncStatus: "applied",
+        note: "Nora Quinn checked in",
+      },
+    ];
+    const erased = withDiscardedNotes("trip-1", "abcdef12");
+    load.mockResolvedValueOnce(stale).mockResolvedValueOnce(erased);
+    const { result } = at("trip=trip-1");
+    await waitFor(() =>
+      expect(result.current.envelope?.events[0]?.note).toBe("Nora Quinn checked in"),
+    );
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent("diveday-offline-manifest-change", { detail: { tripId: "trip-1" } }),
+      );
+    });
+
+    await waitFor(() => expect(result.current.envelope?.events[0]?.note).toBeNull());
+    expect(result.current.envelope?.events[0]?.status).toBe("boarded");
+    expect(result.current.envelope?.events[0]?.occurredAt).toBe("2026-08-01T14:30:00.000Z");
+    expect(result.current.tripNoteLossMessage).toContain("abcdef12");
+    expect(result.current.tripNoteLossMessage).not.toContain("Nora Quinn");
+  });
+
   it("claims nothing before the store is read, then shows the saved copy", async () => {
     const saved = envelope("trip-1", "Morning Two-Tank");
     load.mockResolvedValue(saved);
@@ -282,6 +318,33 @@ describe("useSavedManifest on a trip", () => {
     await waitFor(() => expect(result.current.message).toBe(line("allCaughtUp")));
     expect(sync).toHaveBeenCalledWith("trip-1", "blue-mantis");
     expect(result.current.envelope).toBe(synced);
+  });
+
+  it("keeps the authoritative note-loss notice when late inventory finds a newer pending mark", async () => {
+    setOnline(true);
+    const initial = withEvents("trip-1", { pending: 1 });
+    const syncedWithLoss = withDiscardedNotes("trip-1", "abcdef12");
+    const newerPending = withEvents("trip-1", { pending: 1 });
+    let resolveInventory: (saved: OfflineManifestEnvelope[]) => void = () => {};
+    list.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveInventory = resolve;
+        }),
+    );
+    load.mockResolvedValue(initial);
+    sync.mockResolvedValue(syncedWithLoss);
+    const { result } = at("trip=trip-1");
+    await waitFor(() => expect(result.current.storeRead).toBe(true));
+    act(() => purgeState.latest?.onTenantVerified("blue-mantis"));
+    await act(async () => result.current.reconcile());
+    expect(result.current.tripNoteLossMessage).toContain("abcdef12");
+    expect(result.current.message).not.toBe(line("allCaughtUp"));
+
+    await act(async () => resolveInventory([newerPending]));
+    await waitFor(() => expect(result.current.message).toContain(line("pendingWaiting")));
+    expect(result.current.tripNoteLossMessage).toContain("abcdef12");
+    expect(result.current.message).not.toBe(line("allCaughtUp"));
   });
 
   it("replaces caught-up status when reconnect cannot verify the shop after a new mark", async () => {

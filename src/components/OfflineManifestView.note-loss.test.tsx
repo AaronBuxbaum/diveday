@@ -25,6 +25,7 @@ vi.mock("@/lib/offline-manifest-store", async () => ({
   loadOfflineManifest: vi.fn(),
   purgeOfflineManifestsExceptShop: vi.fn().mockResolvedValue(undefined),
   syncOfflineManifest: vi.fn(),
+  subscribeOfflineManifestChanges: vi.fn(() => () => {}),
   readDiscardedOfflineRecords: vi.fn().mockResolvedValue([]),
   acknowledgeDiscardedOfflineRecords: vi.fn().mockResolvedValue(undefined),
   getActiveOfflineShellVersion: vi.fn().mockResolvedValue(null),

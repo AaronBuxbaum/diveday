@@ -28,6 +28,87 @@ const DB_VERSION = 1;
 const KEY_STORE = "keys";
 const MANIFEST_STORE = "manifests";
 const KEY_ID = "manifest-aes-gcm-v1";
+const MANIFEST_CHANGE_EVENT = "diveday-offline-manifest-change";
+const MANIFEST_CHANGE_CHANNEL = "diveday-offline-manifest-changes-v1";
+
+type ManifestBrowserWindow = {
+  dispatchEvent: (event: Event) => boolean;
+  addEventListener: (type: string, listener: EventListener) => void;
+  removeEventListener: (type: string, listener: EventListener) => void;
+};
+
+function manifestBrowserWindow(): ManifestBrowserWindow | undefined {
+  return (globalThis as typeof globalThis & { window?: ManifestBrowserWindow }).window;
+}
+
+export type OfflineManifestChangeListener = (tripId: string) => void;
+
+function validTripChange(value: unknown): value is { tripId: string } {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "tripId" in value &&
+    typeof value.tripId === "string" &&
+    value.tripId.length > 0
+  );
+}
+
+let manifestChangeChannel: BroadcastChannel | null = null;
+
+function announceManifestChange(tripId: string): void {
+  const browserWindow = manifestBrowserWindow();
+  if (browserWindow) {
+    browserWindow.dispatchEvent(new CustomEvent(MANIFEST_CHANGE_EVENT, { detail: { tripId } }));
+    if (typeof BroadcastChannel !== "undefined") {
+      try {
+        manifestChangeChannel ??= new BroadcastChannel(MANIFEST_CHANGE_CHANNEL);
+        manifestChangeChannel.postMessage({ tripId });
+      } catch {
+        // IndexedDB remains authoritative; the next focus/visibility reload
+        // picks up the mutation when cross-context messaging is unavailable.
+      }
+    }
+  }
+}
+
+/**
+ * Subscribe to committed changes in another tab or in this document. The
+ * message contains only the trip key; readers must reload the encrypted record
+ * from IndexedDB rather than trusting cross-context payload data.
+ */
+export function subscribeOfflineManifestChanges(listener: OfflineManifestChangeListener) {
+  const browserWindow = manifestBrowserWindow();
+  if (!browserWindow) return () => {};
+  const onLocalChange = (event: Event) => {
+    const detail = (event as CustomEvent<unknown>).detail;
+    if (validTripChange(detail)) listener(detail.tripId);
+  };
+  browserWindow.addEventListener(MANIFEST_CHANGE_EVENT, onLocalChange);
+
+  let channel: BroadcastChannel | null = null;
+  if (typeof BroadcastChannel !== "undefined") {
+    try {
+      channel = new BroadcastChannel(MANIFEST_CHANGE_CHANNEL);
+      channel.onmessage = (event: MessageEvent<unknown>) => {
+        if (validTripChange(event.data)) listener(event.data.tripId);
+      };
+    } catch {
+      // Same-document notifications and visibility reload remain available.
+    }
+  }
+  return () => {
+    browserWindow.removeEventListener(MANIFEST_CHANGE_EVENT, onLocalChange);
+    channel?.close();
+  };
+}
+
+const browserWindow = manifestBrowserWindow();
+if (browserWindow) {
+  browserWindow.addEventListener("pagehide", () => {
+    manifestChangeChannel?.close();
+    manifestChangeChannel = null;
+  });
+}
 
 /**
  * The hard ceiling on the pending-event exception below: how long past a
@@ -281,6 +362,7 @@ async function persistEnvelope(db: IDBDatabase, envelope: OfflineManifestEnvelop
     ciphertext,
   } satisfies StoredRecord);
   await transactionDone(transaction);
+  announceManifestChange(tripId);
 }
 
 async function readStoredRecord(
@@ -830,6 +912,7 @@ export async function deleteOfflineManifest(
     const transaction = db.transaction(MANIFEST_STORE, "readwrite");
     transaction.objectStore(MANIFEST_STORE).delete(tripId);
     await transactionDone(transaction);
+    announceManifestChange(tripId);
   } finally {
     if (!existingDb) db.close();
   }
