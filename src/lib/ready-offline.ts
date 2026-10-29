@@ -14,9 +14,10 @@ export const READY_WORKER_SCOPE = "/ready/";
 export const READY_CACHE_NAME = "diveday-ready-page-v1";
 
 /**
- * Where the worker notes when a readiness link's copy was forgotten (issue
- * #2979), by a hash of its path: a save whose fetch began earlier stores
- * nothing. Apart from the copy's cache so that one holds the copy alone.
+ * Where the worker notes each readiness link's forget epoch (issue #2979), by
+ * a hash of its path: an earlier fetch cannot restore a cancelled copy, even
+ * after a device-clock change or worker restart. Apart from the copy's cache
+ * so that one holds the copy alone.
  */
 export const READY_FORGOTTEN_CACHE_NAME = "diveday-ready-forgotten-v1";
 
@@ -34,6 +35,20 @@ export const READY_KEEP_UNTIL_META = "diveday-ready-keep-until";
  * and it is only ever on screen when the network did not answer.
  */
 export const READY_OFFLINE_NOTE_ATTR = "data-ready-offline-note";
+
+/** The server-rendered timestamp placeholder the readiness worker fills when it saves the page. */
+export const READY_OFFLINE_GENERATED_AT_PLACEHOLDER = "__diveday_ready_generated_at__";
+
+/** The locale and shop time zone the worker uses to format the saved instant. */
+export const READY_COPY_LOCALE_META = "diveday-ready-copy-locale";
+export const READY_COPY_TIME_ZONE_META = "diveday-ready-copy-time-zone";
+/** Server clock instant when this live readiness page was rendered. */
+export const READY_COPY_GENERATED_AT_META = "diveday-ready-copy-generated-at";
+/** Distinguishes copies with the saved-time banner from older cached markup. */
+export const READY_COPY_VERSION_META = "diveday-ready-copy-version";
+export const READY_COPY_VERSION = "saved-time-v1";
+/** The save instant attached to the timestamped offline banner by the worker. */
+export const READY_COPY_GENERATED_AT_ATTR = "data-ready-copy-generated-at";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -142,16 +157,18 @@ export async function forgetThisReadyPage(): Promise<boolean> {
  */
 export async function forgetReadyPageCopy(): Promise<boolean> {
   const worker = typeof navigator === "undefined" ? undefined : navigator.serviceWorker;
+  let registrationsRemoved = true;
   if (worker) {
     try {
       const registrations = await worker.getRegistrations();
-      await Promise.all(
+      const removed = await Promise.all(
         registrations
           .filter((registration) => new URL(registration.scope).pathname === READY_WORKER_SCOPE)
           .map((registration) => registration.unregister().catch(() => false)),
       );
+      registrationsRemoved = removed.every(Boolean);
     } catch {
-      // No registrations to read: still delete the copy below.
+      registrationsRemoved = false;
     }
   }
   try {
@@ -161,7 +178,7 @@ export async function forgetReadyPageCopy(): Promise<boolean> {
     // after a forget, and with this registration gone none can, so a shared
     // device keeps no hash of the link's path either.
     await caches.delete(READY_FORGOTTEN_CACHE_NAME);
-    return true;
+    return registrationsRemoved;
   } catch {
     return false;
   }
