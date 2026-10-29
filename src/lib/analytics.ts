@@ -99,7 +99,10 @@ export type AnalyticsEvent =
         | "divers_full"
         | "participant_type_unavailable"
         | "course_ratio_full"
-        | "already_booked";
+        | "already_booked"
+        | "date_request_offer_unavailable"
+        | "date_request_departure_conflict"
+        | "date_request_party_full";
     }
   | {
       /** A diver joined a full trip's wait list instead of booking outright. */

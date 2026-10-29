@@ -119,7 +119,7 @@ describe("a departure that meets on several days", () => {
  * here set a number nobody is charged.
  */
 describe("a session of a priced course", () => {
-  it("states the course's price and offers no price box, keeping the stored value", () => {
+  it("states the course's price without submitting a separate session price", () => {
     const session = {
       ...trip,
       courseId: "course-1",
@@ -127,9 +127,7 @@ describe("a session of a priced course", () => {
     } as unknown as Trip;
     renderDetails(undefined, session);
     expect(screen.getByText(/^\$709(\.00)? per diver, the course’s price$/)).toBeTruthy();
-    const price = document.querySelector<HTMLInputElement>('input[name="priceDollars"]');
-    expect(price?.type).toBe("hidden");
-    expect(price?.value).toBe("120");
+    expect(document.querySelector('input[name="priceDollars"]')).toBeNull();
   });
 
   it("keeps the price box for a course with no price of its own", () => {

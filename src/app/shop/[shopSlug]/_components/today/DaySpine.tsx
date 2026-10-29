@@ -45,7 +45,7 @@ import {
   weekCrewAway,
 } from "@/lib/today";
 import { AllClearLine } from "./AllClearLine";
-import { ClosingStation } from "./ClosingStation";
+import { ClosingStation, LastRollCall } from "./ClosingStation";
 import { crewAwayRowControl } from "./CrewAwayWorkingControl";
 import { DayStation } from "./DayStation";
 import { HelpRequestSection, helpRequestControl } from "./help-request-row";
@@ -889,7 +889,7 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
       ) : null}
 
       {sessions}
-
+      <LastRollCall context={context} />
       {entries.length > 0 ? (
         <LedgerGroup as="h2" label={t("shopHome.spine.departuresLabel")}>
           <ol className="flex flex-col gap-5">

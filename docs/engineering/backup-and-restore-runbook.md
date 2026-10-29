@@ -471,17 +471,20 @@ provider failure does not lose track of an object. That is a consistency mechani
 
 ## 4. Restore tests
 
-A backup nobody has restored is a hypothesis. Three things prove one, in this order: the first run
-below (once, by hand), the monthly drill (automated), and the quarterly test (by hand, the parts a
-drill cannot do). Every run goes in the log at the end of this section.
+Restore evidence has three parts: the first full-dump restore (now logged below), the monthly drill
+(automated), and the quarterly test (by hand, for the parts a drill cannot do). The successful
+2026-10-29 run verifies the dump restore and selected record and manifest reads; it does not complete
+the password-sign-in or export-bundle checks. Every run goes in the log at the end of this section.
 
-### First run: Aaron, with an agent holding this runbook
+### First restore: Aaron, with an agent holding this runbook
 
-Aaron's call ([H-154](../product/human-decisions/README.md)): he runs the first restore himself, the
-week of 2026-10-23, with an agent reading this runbook beside him; the monthly drill follows. The
-agent reads each step out, runs the commands Aaron approves, and writes the results into this file
-in the same session. Budget an hour. The agent never pastes a connection string, a password or a row
-into the chat or the log.
+Aaron's call ([H-154](../product/human-decisions/README.md)) was for him to run the first restore
+with an agent holding this runbook, followed by the monthly drill. The first successful full-dump
+restore is recorded below: run 40818998626 on 2026-10-29 restored the dump to a scratch branch,
+checked account/person/shop/role records, read a future manifest, and deleted the branch. It did not
+test a real password sign-in or a per-shop export bundle. The Neon restore window and production
+secrets-backup location are still unrecorded. The agent never pastes a connection string, a password
+or a row into the chat or the log.
 
 1. **Record the Neon restore window.** Neon console → the DiveDay project → **Settings → Storage**
    (*History retention* / *Restore window*). The agent writes the days, the plan name and today's
@@ -496,9 +499,10 @@ into the chat or the log.
    without it fails at build (`pnpm check:env`, [deploy runbook](deploy-and-migrations-runbook.md)).
    `pnpm exec vercel env ls production` lists it by name; if it is missing, `pnpm infra:deploy`
    distributes it before the next merge to `main`.
-4. **Run the drill by hand, from Aaron's machine.** Docker running, the admin profile signed in, and
-   a Neon API key in the shell (Neon console → **Account settings → API keys**; delete it after the
-   session if the drill's own key is not made yet):
+4. **The first full-dump restore is complete.** Run 40818998626 restored the newest dump on a
+   scratch branch and deleted that branch. To repeat it by hand, use Aaron's machine with Docker
+   running, the admin profile signed in, and a Neon API key in the shell (Neon console → **Account
+   settings → API keys**; delete it after the session if the drill's own key is not made yet):
 
    ```bash
    AWS_PROFILE=diveday-admin NEON_PROJECT_ID=<project id> NEON_API_KEY=<key> node scripts/restore-drill.mjs
@@ -519,8 +523,8 @@ into the chat or the log.
    the environment and get its Neon key and its AWS role, and agents push branches all day. Then
    give it what the next section lists. Run the workflow once from its **Run workflow** button on
    `main`, approve it, and watch it go green.
-7. **Write the log row** below, replacing the `_never_` row, with anything that surprised you, and
-   mark [H-154](../product/human-decisions/README.md) Implemented.
+7. **Keep the log current** below. H-154 remains open until the owner records the Neon restore
+   window and secrets-backup location, and the remaining first-run checks are complete.
 
 ### Monthly restore drill (`.github/workflows/restore-drill.yml`)
 
@@ -624,16 +628,15 @@ It should take under an hour.
 
 ### Restore test log
 
-| Date run | Who | Neon window at the time | Branch-available time (RTO) | Bundle verified | Dump restored + sign-in | Findings |
-| --- | --- | --- | --- | --- | --- | --- |
-| _never_ | — | — | — | — | — | **Aaron, first run with an agent**, week of 2026-10-23 (H-154): no restore has ever been tested. The first run is also the first evidence any of this works; replace this row with it. |
+| Date run | Who / run | Neon window at the time | Branch-available time (RTO) | Bundle verified | Dump restored | Password sign-in | Findings |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-10-29 | GitHub Actions, [run 40818998626](https://github.com/AaronBuxbaum/diveday/actions/runs/40818998626) | Not recorded | Not recorded | No | Yes — latest full dump restored to a scratch branch | No | Account/person/shop/role records checked and a future manifest read; branch deleted. No real password sign-in or per-shop bundle verification. |
 
 ## What this runbook does not cover
 
-- **§2's scheduled export runs weekly since 2026-08-12, but nobody has restored from one.** The
-  restore-test log above still reads `never` until Aaron's first run (§4). A backup nobody has restored is a
-  hypothesis; what changed is that there is now evidence it is being *written* (the watchdog), not
-  evidence it can be *read*. Run the test in §4 before describing recovery as proven.
+- **No per-shop export bundle has been restored and verified.** The 2026-10-29 drill restored the
+  full-cluster dump and checked selected records plus a future manifest; it did not verify a bundle,
+  exercise the import path, or open a signed waiver. Those checks remain in the quarterly test above.
 - **The export's credential gap is now covered elsewhere, not fixed in the export.** §2c's
   full-cluster dump carries `user_accounts`, `account_tokens` and `calendar_feeds`; the bundles still
   do not and still should not. What that means practically: a restore from bundles *alone* still yields
@@ -641,8 +644,9 @@ It should take under an hour.
 - **The photo gap is unchanged, by either layer.** A photo that fails to fetch is still dropped
   silently from a bundle (§2), and the dump carries blob *URLs*, not bytes — so the bundles' `photos/`
   directories remain the only copy of an image.
-- **Nobody has restored a dump either.** The layer is written and watched; §4's first run, then the
-  monthly drill, are what will turn it from a hypothesis into evidence.
+- **A real password sign-in has not been tested on a restored branch.** The successful workflow run
+  checked restored account records and read a manifest, but did not authenticate with a staff
+  password. Complete that check under §4 before treating sign-in recovery as verified.
 - **No cross-region or cross-account copy.** Backups sit in the same AWS account as everything else
   in `infra/lib/infra-stack.ts`. Losing that account loses them. Versioning plus `RETAIN` plus a
   write-only uploader is the mitigation, and it is a partial one.

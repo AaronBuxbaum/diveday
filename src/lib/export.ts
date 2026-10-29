@@ -81,6 +81,8 @@ export const EXPORT_FILE_NOTES = {
     "One non-medical day-of help request per booking, with its visible hand-off status and timestamps. The request is retained with the trip history; resolved staff identity is included when available.",
   "interests.csv":
     "Everyone who wanted a seat, one row each, with a scope: departure (a wait-list entry or an offer for one trip, with party_size and offered_at), date (a day that was not on the board, with the contact the person left), anytime (the last-minute list, with the dates they are around). asked_by says whether the diver asked or the shop reached out; parent_interest_id names the row an offer was copied from. A lead never consumed a seat and never appears on a manifest. A date interest's person_id is filled in only where its address exactly matched a diver the shop already had at the time; otherwise it stays an unlinked name, email and phone, and was never back-filled.",
+  "date_request_offer_bookings.csv":
+    "Each explicitly linked booking seat and the exact anonymous date-request departure offer it answers. One row represents one seat; canceled, no-show and moved bookings remain in history, while only a live booking still on that offered departure reduces the offer's remaining party count.",
   "trip_last_minute_promos.csv":
     "Discount blasts sent on under-capacity trips: the discount percent, the code, when it expires, and how many divers it went to; who it went to is in interests.csv, the departure rows with that promo_id. Stripe coupon/promotion-code ids are excluded — provider linkage, useless outside this Stripe account.",
   "booking_payment_events.csv":

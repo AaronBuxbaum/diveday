@@ -1,0 +1,77 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "ccc7dd65-d532-4b36-8bf4-379ab087039d",
+  "prevIds": [
+    "93a63fae-3ed6-4c94-af6d-8bdb3a17d0e5",
+    "89017db3-4800-4ec9-b813-fdc29f7112e7"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "shops",
+        "offline_erasure_epoch"
+      ],
+      "writes": [
+        "s|col|public.shops.offline_erasure_epoch",
+        "n|col|public.shops.offline_erasure_epoch",
+        "e|col|public.shops.offline_erasure_epoch"
+      ],
+      "reads": [
+        "n|tbl|public.shops",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "shops"
+      ],
+      "writes": [
+        "s|ck|public.shops.shops_offline_erasure_epoch_nonnegative",
+        "n|ck|public.shops.shops_offline_erasure_epoch_nonnegative",
+        "e|ck|public.shops.shops_offline_erasure_epoch_nonnegative",
+        "n|con|public.shops.shops_offline_erasure_epoch_nonnegative"
+      ],
+      "reads": [
+        "n|tbl|public.shops",
+        "n|sch|public",
+        "n|col|public.shops.offline_erasure_epoch"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "shops",
+        "name": "offline_erasure_epoch",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "0",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "shops",
+        "name": "shops_offline_erasure_epoch_nonnegative",
+        "value": "\"offline_erasure_epoch\" >= 0",
+        "entityType": "checks"
+      }
+    }
+  ]
+}

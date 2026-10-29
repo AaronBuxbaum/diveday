@@ -117,8 +117,10 @@ test.describe("a shop that stops filling nitrox", () => {
     // the schedule it came from.
     const tripId = anon.url().match(/\/trips\/([^/?]+)/)?.[1];
     if (!tripId) throw new Error("trip page URL missing a trip id");
-    await anon.getByLabel("Name").fill("Priya Sharma");
-    await anon.getByLabel("Email").fill(`priya+${e2eNow().getTime()}@example.com`);
+    await anon.getByRole("textbox", { name: "Name" }).fill("Priya Sharma");
+    await anon
+      .getByRole("textbox", { name: "Email" })
+      .fill(`priya+${e2eNow().getTime()}@example.com`);
     await anon.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
     await expect(anon.getByRole("heading", { name: /You’ve got a seat, Priya/ })).toBeVisible();
 
@@ -283,12 +285,12 @@ test("the nitrox request is hidden until the diver files a nitrox card, then app
     .click();
   // The booking form is controlled, so wait for hydration before typing.
   await expect(page.getByLabel("People", { exact: true })).toHaveAttribute("data-hydrated", "true");
-  await page.getByLabel("Name").fill("Nora Quinn");
+  await page.getByRole("textbox", { name: "Name" }).fill("Nora Quinn");
   // Unique email for this spec's own diver; the e2eNow() suffix keeps every
   // test-side timestamp anchored to the frozen clock (helpers.ts). Isolation
   // from other specs — including the visual suite — comes from the per-test
   // demo reset in fixtures.ts.
-  await page.getByLabel("Email").fill(`nora+${e2eNow().getTime()}@example.com`);
+  await page.getByRole("textbox", { name: "Email" }).fill(`nora+${e2eNow().getTime()}@example.com`);
   await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
   await expect(page.getByRole("heading", { name: /You’ve got a seat, Nora/ })).toBeVisible();
 
@@ -353,8 +355,8 @@ test("a course taught on air offers no nitrox request, at the same shop that fil
   await page.getByRole("link", { name: "Book this date" }).first().click();
   await expect(page.getByText("Course session · Open Water Diver")).toBeVisible();
   await expect(page.getByLabel("People", { exact: true })).toHaveAttribute("data-hydrated", "true");
-  await page.getByLabel("Name").fill("Owen Reid");
-  await page.getByLabel("Email").fill(`owen+${e2eNow().getTime()}@example.com`);
+  await page.getByRole("textbox", { name: "Name" }).fill("Owen Reid");
+  await page.getByRole("textbox", { name: "Email" }).fill(`owen+${e2eNow().getTime()}@example.com`);
   // The course carries the agency's minimum age, so this booking form asks
   // for the attestation an ordinary charter's does not.
   await acceptAgeAttestation(page);

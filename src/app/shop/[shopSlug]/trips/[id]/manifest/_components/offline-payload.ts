@@ -1,9 +1,9 @@
 import type { OpenSnag } from "@/db/boat-snags";
+import type { issueOfflineManifestSnapshot } from "@/db/offline-manifest-snapshots";
 import type { latestPreDepartureChecksForTrip, listChecklistItems } from "@/db/pre-departure-check";
 import { crewBlockerText } from "@/i18n/identity-check-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { BoatSafetySection } from "@/lib/boat-safety";
-import type { TripManifest } from "@/lib/manifests";
 import { type OfflineManifestPayload, serializeManifests } from "@/lib/offline-manifests";
 import { snagSentences } from "./pre-departure-check-view";
 
@@ -15,7 +15,7 @@ import { snagSentences } from "./pre-departure-check-view";
  * so the copy at sea cannot disagree with the page at the dock.
  */
 export function offlineManifestPayload({
-  completeManifests,
+  snapshot,
   shop,
   checklistItems,
   checklistChecks,
@@ -24,7 +24,7 @@ export function offlineManifestPayload({
   locale,
   t,
 }: {
-  completeManifests: readonly TripManifest[];
+  snapshot: NonNullable<Awaited<ReturnType<typeof issueOfflineManifestSnapshot>>>;
   shop: OfflineManifestPayload["shop"];
   checklistItems: Awaited<ReturnType<typeof listChecklistItems>>;
   checklistChecks: Awaited<ReturnType<typeof latestPreDepartureChecksForTrip>>;
@@ -34,32 +34,36 @@ export function offlineManifestPayload({
   locale: string;
   t: StaffTranslator;
 }) {
-  return serializeManifests(
-    completeManifests,
-    {
-      slug: shop.slug,
-      name: shop.name,
-      timezone: shop.timezone,
-      emergencyReference: shop.emergencyReference,
-    },
-    (blocker, diver) => crewBlockerText(t, diver, blocker),
-    checklistItems.map((item) => ({
-      id: item.id,
-      label: item.label,
-      check: checklistChecks.get(item.id),
-    })),
-    boatSafety,
-    {
-      heading: t("trips.preDepartureCheck.snagsHeading"),
-      items: snags.map((snag) => {
-        const said = snagSentences({ snag, locale, timeZone: shop.timezone, t });
-        return {
-          line: said.line,
-          notedBy: said.notedBy,
-          ...(said.stillThere ? { stillThere: said.stillThere } : {}),
-        };
-      }),
-    },
-    () => t("shared.offlineManifest.juniorCheckRequired"),
-  );
+  return {
+    ...serializeManifests(
+      snapshot.manifests,
+      {
+        slug: shop.slug,
+        name: shop.name,
+        timezone: shop.timezone,
+        emergencyReference: shop.emergencyReference,
+      },
+      (blocker, diver) => crewBlockerText(t, diver, blocker),
+      checklistItems.map((item) => ({
+        id: item.id,
+        label: item.label,
+        check: checklistChecks.get(item.id),
+      })),
+      boatSafety,
+      {
+        heading: t("trips.preDepartureCheck.snagsHeading"),
+        items: snags.map((snag) => {
+          const said = snagSentences({ snag, locale, timeZone: shop.timezone, t });
+          return {
+            line: said.line,
+            notedBy: said.notedBy,
+            ...(said.stillThere ? { stillThere: said.stillThere } : {}),
+          };
+        }),
+      },
+      () => t("shared.offlineManifest.juniorCheckRequired"),
+    ),
+    snapshotId: snapshot.snapshotId,
+    erasureEpochToken: snapshot.erasureEpochToken,
+  };
 }

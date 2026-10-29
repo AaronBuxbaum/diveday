@@ -2,7 +2,11 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { offlineManifestTranslator } from "@/i18n/offline-manifest-messages";
-import { OfflineNoSavedTrip, OfflineOpeningScreen } from "./ShellScreens";
+import {
+  OfflineNoSavedTrip,
+  OfflineOpeningScreen,
+  OfflineTenantVerificationScreen,
+} from "./ShellScreens";
 
 afterEach(cleanup);
 
@@ -15,6 +19,24 @@ describe("OfflineOpeningScreen", () => {
       screen.getByRole("heading", { name: t("shared.offlineManifest.openingHeading") }),
     ).toBeTruthy();
     expect(screen.getByRole("status").textContent).toBe("Reading this phone");
+  });
+});
+
+describe("OfflineTenantVerificationScreen", () => {
+  it("shows the shop-switch status without rendering roster content", () => {
+    render(
+      <OfflineTenantVerificationScreen
+        t={t}
+        message={t("shared.offlineManifest.reconcile.tenantChanged")}
+      />,
+    );
+    expect(
+      screen.getByRole("heading", {
+        name: t("shared.offlineManifest.single.tenantChangedHeading"),
+      }),
+    ).toBeTruthy();
+    expect(screen.getByRole("status").textContent).toContain("Pending changes remain saved");
+    expect(screen.queryByRole("button")).toBeNull();
   });
 });
 

@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { RetryReturningDiverMemory } from "@/app/_components/RetryReturningDiverMemory";
 import { ErrorBoundaryIntlProvider } from "@/i18n/ErrorBoundaryIntlProvider";
 import { ERROR_BOUNDARY_MESSAGES_BY_LOCALE } from "@/i18n/error-boundary-messages";
 import { diverTranslator } from "@/i18n/messages";
@@ -51,6 +52,9 @@ export default function PublicShopLayout({
   const fallbackT = diverTranslator(DEFAULT_DIVER_LOCALE);
   return (
     <>
+      <Suspense fallback={null}>
+        <RetryReturningDiverMemory />
+      </Suspense>
       {/* The shop's brand as tokens, streamed like the chrome so no request read
           sits above {children} (ADR 20260804-instant-navigation). A `<style>`
           applies wherever it lands, so it needs no wrapper around the page. */}

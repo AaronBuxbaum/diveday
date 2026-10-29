@@ -2,6 +2,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { BookableDiver, SimilarDiver } from "@/db/divers";
+import { DAY_MS, nowDate } from "@/lib/clock";
 import { AddDiverSection } from "./AddDiverSection";
 
 vi.mock("next/navigation", () => ({
@@ -14,6 +15,37 @@ afterEach(cleanup);
 const action = (_formData: FormData) => {};
 
 describe("AddDiverSection", () => {
+  it.each([
+    ["en-US", "Invited 6 days ago"],
+    ["es-ES", "Invitación hace 6 días"],
+  ])("shows a recent manual-invite fact in %s without removing the offer", (locale, label) => {
+    const candidate = {
+      person: { id: "person-1", fullName: "Avery Diver", email: "avery@example.com" },
+      rentalFit: null,
+    } as unknown as BookableDiver;
+    render(
+      <AddDiverSection
+        context={{
+          shopSlug: "blue-mantis",
+          tripId: "trip-1",
+          full: false,
+          query: "Avery",
+          candidates: [candidate],
+          recentInviteDates: new Map([["person-1", new Date(nowDate().getTime() - 6 * DAY_MS)]]),
+          addBookingAction: action,
+          addToWaitlistAction: action,
+          addKnownToWaitlistAction: action,
+          addExistingDiverAction: action,
+          offerAction: action,
+          locale,
+          timeZone: "America/Cancun",
+        }}
+      />,
+    );
+    expect(screen.getByText(label)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Offer Avery|Ofrecer a Avery/ })).toBeInTheDocument();
+  });
+
   it("renders search form and add diver link when trip is not full", () => {
     render(
       <AddDiverSection

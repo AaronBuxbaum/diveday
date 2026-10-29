@@ -85,8 +85,10 @@ test.describe("refunds", () => {
       "data-hydrated",
       "true",
     );
-    await page.getByLabel("Name").fill("Nora Quinn");
-    await page.getByLabel("Email").fill(`nora-${emailTag}-${e2eNow().getTime()}@example.com`);
+    await page.getByRole("textbox", { name: "Name" }).fill("Nora Quinn");
+    await page
+      .getByRole("textbox", { name: "Email" })
+      .fill(`nora-${emailTag}-${e2eNow().getTime()}@example.com`);
     await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
     await expect(page.getByRole("heading", { name: /You’ve got a seat, Nora/ })).toBeVisible();
 

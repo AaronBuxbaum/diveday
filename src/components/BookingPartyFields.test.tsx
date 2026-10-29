@@ -1,19 +1,28 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, screen } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { SMS_CONSENT_ONCE_FILLED } from "@/components/SmsConsentNote";
 import { SEGMENT_CORNER, segmentedTrackClass } from "@/components/ui/segmented";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
-import { saveReturningDiver } from "@/lib/returning-diver";
+import { nowDate } from "@/lib/clock";
+import {
+  loadReturningDiver,
+  RETURNING_DIVER_MEMORY_MS,
+  saveReturningDiver,
+} from "@/lib/returning-diver";
 import { MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
 import { renderDiver } from "@/test/intl";
 import { BookingPartyFields } from "./BookingPartyFields";
 
+const getTrustedServerTime = vi.fn(async () => nowDate().getTime());
+
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
+  localStorage.clear();
 });
 
 describe("BookingPartyFields", () => {
@@ -159,18 +168,71 @@ describe("BookingPartyFields — the group captions", () => {
    * The line kept a `-mt-1` from before the caption had a gap, which then
    * cancelled half of it: 8 − 4 left 4px. The caption's gap is the one gap.
    */
-  it("keeps a remembered diver's line the caption's 8px under it, with no margin pulling it up", () => {
-    saveReturningDiver({ fullName: "Marco Rossi", email: "marco@example.com" });
+  it("keeps a remembered diver's line the caption's 8px under it, with no margin pulling it up", async () => {
+    saveReturningDiver(
+      "blue-mantis",
+      { fullName: "Marco Rossi", email: "marco@example.com" },
+      nowDate().getTime() + RETURNING_DIVER_MEMORY_MS,
+    );
     try {
-      renderDiver(<BookingPartyFields maxPartySize={4} remember />);
-      const line = screen.getByRole("button", { name: "Not you?" }).closest("p");
+      renderDiver(
+        <BookingPartyFields
+          maxPartySize={4}
+          rememberForShop="blue-mantis"
+          getTrustedServerTime={getTrustedServerTime}
+        />,
+      );
+      await waitFor(() => expect(screen.getByRole("button", { name: "Not you?" })).toBeVisible());
+      const clearButton = screen.getByRole("button", { name: "Not you?" });
+      const line = clearButton.closest("p");
       expect(line).toHaveTextContent("Booking as Marco Rossi");
+      expect(clearButton).toHaveClass(
+        "relative",
+        "text-base",
+        "before:absolute",
+        "before:min-h-11",
+      );
+      expect(clearButton).not.toHaveClass("min-h-11");
       expect(screen.getByText("Your details").nextElementSibling).toHaveClass("mt-2");
       expect(line?.parentElement).toBe(screen.getByText("Your details").nextElementSibling);
       expect(line?.className.split(" ").filter((name) => /^-?m[ty]-/.test(name))).toEqual([]);
     } finally {
       localStorage.clear();
     }
+  });
+
+  it("reports when the browser cannot persist its clear marker", async () => {
+    saveReturningDiver(
+      "blue-mantis",
+      { fullName: "Marco Rossi", email: "marco@example.com" },
+      nowDate().getTime() + RETURNING_DIVER_MEMORY_MS,
+    );
+    const originalSetItem = Storage.prototype.setItem;
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(function (
+      this: Storage,
+      key: string,
+      value: string,
+    ) {
+      if (key === "diveday:returning-diver:clear:v2:blue-mantis") {
+        throw new Error("quota exceeded");
+      }
+      return originalSetItem.call(this, key, value);
+    });
+    renderDiver(
+      <BookingPartyFields
+        maxPartySize={4}
+        rememberForShop="blue-mantis"
+        getTrustedServerTime={getTrustedServerTime}
+      />,
+    );
+    await waitFor(() => expect(screen.getByRole("button", { name: "Not you?" })).toBeVisible());
+
+    fireEvent.click(screen.getByRole("button", { name: "Not you?" }));
+
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "This browser could not confirm that the saved details were removed. They may remain on this device.",
+    );
+    expect(loadReturningDiver("blue-mantis")).toBeNull();
   });
 });
 

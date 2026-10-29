@@ -1,0 +1,112 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "2c62a17b-e939-43cd-8b19-8ffae7d26544",
+  "prevIds": [
+    "7783bc23-0af0-46f8-9a6e-e417c94f9e5a"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "trips",
+        "trips_shop_id_id_unique"
+      ],
+      "writes": [
+        "s|idx|public.trips_shop_id_id_unique",
+        "n|idx|public.trips_shop_id_id_unique",
+        "e|idx|public.trips_shop_id_id_unique",
+        "n|rel|public.trips_shop_id_id_unique"
+      ],
+      "reads": [
+        "n|tbl|public.trips",
+        "n|sch|public",
+        "n|col|public.trips.shop_id",
+        "n|col|public.trips.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "offline_manifest_snapshot_revisions"
+      ],
+      "writes": [
+        "s|fk|public.offline_manifest_snapshot_revisions.offline_manifest_snapshot_revisions_trip_shop_fk",
+        "n|fk|public.offline_manifest_snapshot_revisions.offline_manifest_snapshot_revisions_trip_shop_fk",
+        "e|fk|public.offline_manifest_snapshot_revisions.offline_manifest_snapshot_revisions_trip_shop_fk",
+        "n|con|public.offline_manifest_snapshot_revisions.offline_manifest_snapshot_revisions_trip_shop_fk"
+      ],
+      "reads": [
+        "n|tbl|public.offline_manifest_snapshot_revisions",
+        "n|sch|public",
+        "n|tbl|public.trips",
+        "n|sch|public",
+        "n|col|public.offline_manifest_snapshot_revisions.shop_id",
+        "n|col|public.offline_manifest_snapshot_revisions.trip_id",
+        "n|col|public.trips.shop_id",
+        "n|col|public.trips.id",
+        "e|uniqueness|public.trips.id.shop_id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "trips",
+        "name": "trips_shop_id_id_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "shop_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "offline_manifest_snapshot_revisions",
+        "name": "offline_manifest_snapshot_revisions_trip_shop_fk",
+        "nameExplicit": true,
+        "columns": [
+          "shop_id",
+          "trip_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "trips",
+        "columnsTo": [
+          "shop_id",
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    }
+  ]
+}
