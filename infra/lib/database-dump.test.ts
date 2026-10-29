@@ -104,7 +104,7 @@ function deployRoleStatements(): {
     }
   >;
   return Object.values(policies)
-    .filter((policy) => JSON.stringify(policy.Properties?.Roles).includes(roleId))
+    .filter((policy) => JSON.stringify(policy.Properties?.Roles ?? []).includes(roleId))
     .flatMap((policy) => policy.Properties?.PolicyDocument?.Statement ?? []);
 }
 
