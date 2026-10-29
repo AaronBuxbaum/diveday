@@ -596,6 +596,18 @@ export function hasStoredReturningDiver(shopSlug: string): boolean {
   }
 }
 
+/** Check whether this device has any shop-scoped memory that may need expiry cleanup. */
+export function hasAnyStoredReturningDiver(): boolean {
+  clearLegacyStorage();
+  try {
+    return Array.from({ length: localStorage.length }, (_, index) => localStorage.key(index)).some(
+      (key) => key?.startsWith(STORAGE_PREFIX) ?? false,
+    );
+  } catch {
+    return false;
+  }
+}
+
 /** Read a candidate against a caller-supplied trusted time and retain receipt provenance. */
 export function loadReturningDiverRecord(
   shopSlug: string,

@@ -134,6 +134,26 @@ describe("usePartyMembers", () => {
     expect(getTrustedServerTime).not.toHaveBeenCalled();
   });
 
+  it("checks trusted time only when stored memories need expiry cleanup", async () => {
+    const expiredKey = "diveday:returning-diver:v2:red-reef:00000000-0000-4000-8000-000000000013";
+    localStorage.setItem(
+      expiredKey,
+      JSON.stringify({
+        fullName: "Expired diver",
+        email: "expired@example.com",
+        expiresAt: SERVER_NOW.getTime() - 1,
+      }),
+    );
+    renderHook(() => usePartyMembers(null, "blue-mantis", getTrustedServerTime));
+    await waitFor(() => expect(localStorage.getItem(expiredKey)).toBeNull());
+    expect(getTrustedServerTime).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not make a trusted-time request when no shop memories are stored", () => {
+    renderHook(() => usePartyMembers(null, "blue-mantis", getTrustedServerTime));
+    expect(getTrustedServerTime).not.toHaveBeenCalled();
+  });
+
   it("updates one member and leaves the rest", () => {
     const { result } = renderHook(() => usePartyMembers(null, null));
     act(() => result.current.updateMember(2, { email: "kid@example.com" }));

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   forgetReturningDiver,
-  hasStoredReturningDiver,
+  hasAnyStoredReturningDiver,
   loadReturningDiverRecord,
   type ReturningDiver,
   snapshotReturningDiverClearGenerations,
@@ -94,13 +94,7 @@ export function usePartyMembers(
   }, [rememberForShop, getTrustedServerTime]);
 
   useEffect(() => {
-    if (
-      !rememberForShop ||
-      !getTrustedServerTime ||
-      lead ||
-      !hasStoredReturningDiver(rememberForShop)
-    )
-      return;
+    if (!rememberForShop || !getTrustedServerTime || lead || !hasAnyStoredReturningDiver()) return;
     let active = true;
     const generationAtStart = snapshotReturningDiverClearGenerations()?.[rememberForShop] ?? null;
     void getTrustedServerTime()

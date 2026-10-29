@@ -3,7 +3,20 @@ import { expect, test } from "./fixtures";
 import { acceptAgeAttestation, e2eNow, openTripInEmbed } from "./helpers";
 
 const diver = diverTranslator("en-US");
-const memoryKey = "diveday:returning-diver:v2:blue-mantis";
+const memoryPrefix = "diveday:returning-diver:v2:";
+
+async function storedMemory(page: import("@playwright/test").Page, shopSlug: string) {
+  return page.evaluate(
+    ({ prefix }) => {
+      const key = Array.from({ length: localStorage.length }, (_, index) =>
+        localStorage.key(index),
+      ).find((candidate) => candidate?.startsWith(prefix));
+      const raw = key ? localStorage.getItem(key) : null;
+      return raw ? JSON.parse(raw) : null;
+    },
+    { prefix: `${memoryPrefix}${shopSlug}:` },
+  );
+}
 
 test("a device that just booked prefills the next booking form, with a one-tap way out", async ({
   page,
@@ -28,11 +41,9 @@ test("a device that just booked prefills the next booking form, with a one-tap w
   const confirmationResponse = await page.request.get(confirmationUrl.toString());
   expect(confirmationResponse.ok()).toBe(true);
   expect(await confirmationResponse.text()).toContain("You’ve got a seat, Marco");
-  await expect
-    .poll(() => page.evaluate((key) => localStorage.getItem(key), memoryKey))
-    .toBeTruthy();
-  const stored = await page.evaluate((key) => localStorage.getItem(key), memoryKey);
-  expect(JSON.parse(stored ?? "null")).toEqual({
+  await expect.poll(() => storedMemory(page, "blue-mantis")).toBeTruthy();
+  const stored = await storedMemory(page, "blue-mantis");
+  expect(stored).toMatchObject({
     fullName: "Marco Reyes",
     email: "marco@example.com",
     expiresAt: e2eNow().getTime() + 30 * 24 * 60 * 60 * 1000,
@@ -63,14 +74,14 @@ test("the embed widget never prefills or remembers a booker", async ({ page }) =
   await acceptAgeAttestation(page);
   await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
   await expect(page.getByRole("heading", { name: /You’ve got a seat, Sal/ })).toBeVisible();
-  expect(await page.evaluate((key) => localStorage.getItem(key), memoryKey)).toBeNull();
+  expect(await storedMemory(page, "blue-mantis")).toBeNull();
   await expect(page.getByRole("checkbox", { name: diver("booking.rememberOnDevice") })).toHaveCount(
     0,
   );
 });
 
 test("opening a booking form purges expired memory entries for other shops", async ({ page }) => {
-  const expiredShopKey = "diveday:returning-diver:v2:red-reef";
+  const expiredShopKey = "diveday:returning-diver:v2:red-reef:00000000-0000-4000-8000-000000000001";
   await page.goto("/s/blue-mantis");
   await page.evaluate(
     ({ key, expiredAt }) =>
@@ -110,12 +121,12 @@ test("a successful booking without opt-in and a forged confirmation flag do not 
   await acceptAgeAttestation(page);
   await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
   await expect(page.getByRole("heading", { name: /You’ve got a seat, Marco/ })).toBeVisible();
-  await expect.poll(() => page.evaluate((key) => localStorage.getItem(key), memoryKey)).toBeNull();
+  await expect.poll(() => storedMemory(page, "blue-mantis")).toBeNull();
   const forged = new URL(page.url());
   forged.searchParams.set("booked", "1");
   await page.goto(forged.toString());
   await expect(page.getByRole("heading", { name: /You’ve got a seat, Marco/ })).toBeVisible();
-  await expect.poll(() => page.evaluate((key) => localStorage.getItem(key), memoryKey)).toBeNull();
+  await expect.poll(() => storedMemory(page, "blue-mantis")).toBeNull();
 });
 
 test("a refused repeat booking cannot create device memory", async ({ page }) => {
@@ -144,7 +155,7 @@ test("a refused repeat booking cannot create device memory", async ({ page }) =>
   await acceptAgeAttestation(page);
   await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
   await expect(page).toHaveURL(/\bsent=1\b/);
-  await expect.poll(() => page.evaluate((key) => localStorage.getItem(key), memoryKey)).toBeNull();
+  await expect.poll(() => storedMemory(page, "blue-mantis")).toBeNull();
 });
 
 test("the booked confirmation stays visible while the opt-in receipt is still redeeming", async ({
@@ -187,11 +198,9 @@ test("the booked confirmation stays visible while the opt-in receipt is still re
     await expect(page.getByRole("heading", { name: /You’ve got a seat, Marco/ })).toBeVisible();
     await paused;
     expect(isPaused).toBe(true);
-    expect(await page.evaluate((key) => localStorage.getItem(key), memoryKey)).toBeNull();
+    expect(await storedMemory(page, "blue-mantis")).toBeNull();
     releaseReceipt();
-    await expect
-      .poll(() => page.evaluate((key) => localStorage.getItem(key), memoryKey))
-      .toBeTruthy();
+    await expect.poll(() => storedMemory(page, "blue-mantis")).toBeTruthy();
   } finally {
     releaseReceipt();
     await page.unroute("**/ready/**");
