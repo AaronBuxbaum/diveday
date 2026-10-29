@@ -688,10 +688,10 @@ export async function acknowledgeFlySafeFollowUp(
   });
 }
 
-/** Show the same follow-up list on every trip, including the trip that triggered a change. */
+/** Show the same follow-up list on every trip, in departure, diver-name, and booking order. */
 export async function listShopFlySafeFollowUps(db: AppDb, input: { shopId: string; now?: Date }) {
   const candidates = await db
-    .selectDistinct({ id: trips.id, title: trips.title })
+    .selectDistinct({ id: trips.id, title: trips.title, startsAt: trips.startsAt })
     .from(trips)
     .innerJoin(bookings, and(eq(bookings.tripId, trips.id), eq(bookings.shopId, input.shopId)))
     .where(
@@ -713,7 +713,23 @@ export async function listShopFlySafeFollowUps(db: AppDb, input: { shopId: strin
         tripTitle: trip.title,
       })),
   );
-  return groups.flat();
+  return groups
+    .flatMap((group, index) => {
+      const trip = candidates[index];
+      return trip ? group.map((item) => ({ ...item, tripStartsAt: trip.startsAt })) : [];
+    })
+    .sort((a, b) => {
+      const byTripTime = a.tripStartsAt.getTime() - b.tripStartsAt.getTime();
+      if (byTripTime !== 0) return byTripTime;
+      const leftName = a.name.toLowerCase();
+      const rightName = b.name.toLowerCase();
+      if (leftName < rightName) return -1;
+      if (leftName > rightName) return 1;
+      if (a.bookingId < b.bookingId) return -1;
+      if (a.bookingId > b.bookingId) return 1;
+      return 0;
+    })
+    .map(({ tripStartsAt: _tripStartsAt, ...item }) => item);
 }
 
 async function mutateFlySafeExposure(
