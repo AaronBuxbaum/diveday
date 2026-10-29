@@ -55,7 +55,12 @@ vi.mock("./use-offline-tenant", () => {
     tenantSlugRef.current = tenant.slug;
     return tenant.slug;
   };
-  return { useOfflineTenant: () => ({ tenantSlugRef, resolveTenant }) };
+  const invalidateTenantLookup = () => {
+    tenantSlugRef.current = null;
+  };
+  return {
+    useOfflineTenant: () => ({ tenantSlugRef, resolveTenant, invalidateTenantLookup }),
+  };
 });
 
 const acknowledge = vi.mocked(acknowledgeDiscardedOfflineRecords);

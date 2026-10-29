@@ -46,18 +46,19 @@ export function useSavedManifestList({
           const id = envelope.snapshot.manifests[0]?.trip.id;
           return id
             ? syncOfflineManifest(id, currentShopSlug).catch((error) => {
-                if (isShopChanged(error)) {
+                if (isShopChanged(error) && !shopChanged) {
                   shopChanged = true;
+                  // Quarantine on the first explicit mismatch. Another
+                  // trip sync can remain pending indefinitely; waiting for
+                  // Promise.all would keep this tenant's roster actionable.
+                  handleTenantChanged();
                 }
                 return null;
               })
             : Promise.resolve(null);
         }),
       );
-      if (shopChanged) {
-        handleTenantChanged();
-        return;
-      }
+      if (shopChanged) return;
       if (tenantSlugRef.current !== currentShopSlug) return;
       const byId = new Map(
         results

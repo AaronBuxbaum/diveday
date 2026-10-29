@@ -277,21 +277,21 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
     return () => clearInterval(interval);
   }, []);
 
-  const { tenantSlugRef, resolveTenant } = useOfflineTenant();
+  const { tenantSlugRef, resolveTenant, invalidateTenantLookup } = useOfflineTenant();
 
   const handleTenantChanged = useCallback(() => {
     // A 409 is an explicit server assertion that the tenant verified when
     // this sync began is no longer current. Stop showing that tenant's roster
     // and controls immediately, retain its encrypted pending events, and make
     // the cross-shop purge perform a fresh identity lookup.
-    tenantSlugRef.current = null;
+    invalidateTenantLookup();
     verifiedTenantSlugRef.current = null;
     setTenantChangePending(true);
     setMessage(t("shared.offlineManifest.reconcile.tenantChanged"));
     dispatchSaved({ type: "tenant-changed" });
     setList(null);
     setTenantChangeRevision((revision) => revision + 1);
-  }, [t, tenantSlugRef]);
+  }, [t, invalidateTenantLookup]);
 
   const tripNoticeForEnvelope = useCallback(
     (saved: OfflineManifestEnvelope | null) => {
@@ -384,11 +384,11 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
       ];
       setMessage(messages.join(" "));
     } catch (error) {
-      if (tenantSlugRef.current !== slug) return;
       if (isShopChangedError(error)) {
         handleTenantChanged();
         return;
       }
+      if (tenantSlugRef.current !== slug) return;
       setMessage(t("shared.offlineManifest.reconcile.reachError"));
     }
   }, [tripId, t, resolveTenant, tenantSlugRef, handleTenantChanged]);

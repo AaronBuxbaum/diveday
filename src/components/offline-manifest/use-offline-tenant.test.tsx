@@ -32,4 +32,24 @@ describe("useOfflineTenant", () => {
     expect(result.current.tenantSlugRef.current).toBeNull();
     expect(lookup).toHaveBeenCalledTimes(2);
   });
+
+  it("does not let a pre-invalidation lookup restore a stale tenant", async () => {
+    let resolveOld: (slug: string | null) => void = () => {};
+    lookup.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveOld = resolve;
+        }),
+    );
+    lookup.mockResolvedValueOnce("reef-runners");
+    const { result } = renderHook(() => useOfflineTenant());
+    const oldLookup = result.current.resolveTenant();
+    result.current.invalidateTenantLookup();
+    resolveOld("blue-mantis");
+    const oldAnswer = await oldLookup;
+    expect(oldAnswer).toBeNull();
+    expect(result.current.tenantSlugRef.current).toBeNull();
+    expect(await result.current.resolveTenant()).toBe("reef-runners");
+    expect(lookup).toHaveBeenCalledTimes(2);
+  });
 });
