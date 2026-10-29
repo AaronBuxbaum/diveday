@@ -1077,6 +1077,81 @@ exports.handler = async (event) => {
     // The attributes name the role, so it has to exist first.
     smsDeliveryStatusAttributes.node.addDependency(smsDeliveryStatusRole);
 
+    // The account's SMS spend limit and country rules, set by the stack rather
+    // than by hand. See sms-account-guard-handler.ts for why this is a Lambda
+    // and not `AWS::SMSVOICE::ProtectConfiguration`.
+    //
+    // **The spend limit can only go as high as the AWS Support case granted**
+    // ($50 a month in us-east-1, October 2026). Raise the quota first, then this
+    // number; setting it higher fails the deploy with a plain AWS error.
+    //
+    // Texts go to the United States only: the toll-free number cannot send
+    // anywhere else (ADR 20261007-sms-stop-and-help), and a country DiveDay does
+    // not serve is a sending loop or a stolen key running up international rates.
+    // To serve another country, add its code here after reading that country's
+    // carrier rules. The configuration is the account default, which is the one
+    // that also governs SNS.
+    const bundleLambdaHandler = (entryPath: string): string => {
+      const result = esbuild.buildSync({
+        entryPoints: [entryPath],
+        write: false,
+        bundle: true,
+        target: "node24",
+        format: "cjs",
+        platform: "node",
+        external: ["@aws-sdk/*"],
+      });
+      return result.outputFiles[0].text;
+    };
+
+    const smsMonthlySpendLimitUsd = 50;
+    const smsAllowedCountries = ["US"];
+    const smsAccountGuard = new lambda.Function(this, "SmsAccountGuard", {
+      functionName: "diveday-sms-account-guard",
+      runtime: lambda.Runtime.NODEJS_24_X,
+      handler: "index.handler",
+      timeout: cdk.Duration.minutes(5),
+      logGroup: new logs.LogGroup(this, "SmsAccountGuardLogs", {
+        logGroupName: "/aws/lambda/diveday-sms-account-guard",
+        retention: logs.RetentionDays.ONE_MONTH,
+        removalPolicy: cdk.RemovalPolicy.DESTROY,
+      }),
+      code: lambda.Code.fromInline(
+        bundleLambdaHandler(path.join(__dirname, "sms-account-guard-handler.ts")),
+      ),
+    });
+    smsAccountGuard.addToRolePolicy(
+      new iam.PolicyStatement({
+        sid: "SetSmsSpendLimitAndCountryRules",
+        // Account-level settings and a protect configuration this function
+        // creates itself: none has an ARN to scope to before it exists.
+        actions: [
+          "sms-voice:SetTextMessageSpendLimitOverride",
+          "sms-voice:CreateProtectConfiguration",
+          "sms-voice:GetProtectConfigurationCountryRuleSet",
+          "sms-voice:UpdateProtectConfigurationCountryRuleSet",
+          "sms-voice:SetAccountDefaultProtectConfiguration",
+          "sms-voice:DeleteAccountDefaultProtectConfiguration",
+          "sms-voice:DeleteProtectConfiguration",
+        ],
+        resources: ["*"],
+      }),
+    );
+    new cdk.CustomResource(this, "SmsAccountGuardSettings", {
+      serviceToken: new cr.Provider(this, "SmsAccountGuardProvider", {
+        onEventHandler: smsAccountGuard,
+        logGroup: new logs.LogGroup(this, "SmsAccountGuardProviderLogs", {
+          logGroupName: "/aws/lambda/diveday-sms-account-guard-provider",
+          retention: logs.RetentionDays.ONE_MONTH,
+          removalPolicy: cdk.RemovalPolicy.DESTROY,
+        }),
+      }).serviceToken,
+      properties: {
+        MonthlySpendLimitUsd: String(smsMonthlySpendLimitUsd),
+        AllowedSmsCountries: smsAllowedCountries,
+      },
+    });
+
     // 11. Backup destinations: one bucket for the scheduled logical export's
     // per-shop bundles, and -- since 2026-08-15 -- a SECOND one for the
     // full-cluster dump S20 writes. See ADR 20260802-backup-and-restore-posture
@@ -1550,6 +1625,30 @@ exports.handler = async (event) => {
     });
     observabilityAlarms.addSubscription(new subscriptions.EmailSubscription(alertEmail));
     const alarmAction = new cloudwatchActions.SnsAction(observabilityAlarms);
+
+    // SMS spend, alarmed before the account spend limit is reached. Past the
+    // limit AWS silently stops sending for the rest of the month, and every
+    // reminder after that is dropped with nothing in the app to say so. AWS
+    // publishes `SMSMonthToDateSpentUSD` itself, so this only watches it. The
+    // limit is set by the account guard in S10, from the same constant.
+    new cloudwatch.Alarm(this, "SmsMonthToDateSpendAlarm", {
+      alarmName: "diveday-sms-month-to-date-spend",
+      alarmDescription:
+        `SMS spend this month has passed 80% of the $${smsMonthlySpendLimitUsd} account limit. ` +
+        "At the limit AWS stops sending texts until the 1st. Check for a sending loop first, then raise the limit " +
+        "(docs/engineering/sms-delivery-receipts-runbook.md, 'Spend limit and country rules').",
+      metric: new cloudwatch.Metric({
+        namespace: "AWS/SNS",
+        metricName: "SMSMonthToDateSpentUSD",
+        statistic: "Maximum",
+        period: cdk.Duration.hours(1),
+      }),
+      threshold: smsMonthlySpendLimitUsd * 0.8,
+      evaluationPeriods: 1,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      // No texts sent means no datapoint, and no spend.
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+    }).addAlarmAction(alarmAction);
 
     // One registry row becomes a filter and a dashboard series, and optionally
     // an alarm. See
@@ -2666,21 +2765,19 @@ exports.handler = async (event) => {
       },
       {
         id: "sns-sms-account-limits",
-        title:
-          "Leave the SMS sandbox, raise the spend limit, register a toll-free number and set its HELP/STOP replies",
+        title: "Leave the SMS sandbox, register a toll-free number and set its HELP/STOP replies",
         category: "AWS account",
         when: "once per region, before sending SMS to a diver -- start it early, the vetting is measured in weeks",
-        why: "All of it is account-and-region SMS state. The sandbox exit and any spend limit above $1 are Support cases; a US toll-free number is a vetted registration with the carriers that takes weeks, not days. Toll-free rather than 10DLC because one DiveDay number sends for every shop (ADR 20261007-sms-stop-and-help). The keyword replies and the two-way setting live on the number, which the stack does not own, so they are set here; the stack supplies the topic and the role they name. The SetSMSAttributes custom resource (infra-stack.ts S10) deliberately touches none of it. Moving the estate to another region means doing all of it again there (docs/engineering/region-migration.md).",
+        why: "All of it is account-and-region SMS state. The sandbox exit and any spend limit above $1 are Support cases; a US toll-free number is a vetted registration with the carriers that takes weeks, not days. Toll-free rather than 10DLC because one DiveDay number sends for every shop (ADR 20261007-sms-stop-and-help). The keyword replies and the two-way setting live on the number, which the stack does not own, so they are set here; the stack supplies the topic and the role they name. The SetSMSAttributes custom resource (infra-stack.ts S10) deliberately touches none of it. The spend limit and the US-only country rules are not here: the stack sets them (smsMonthlySpendLimitUsd and smsAllowedCountries in S10) and alarms at 80% of the limit, but it can only set a limit up to what the sandbox-exit case granted, so ask for the quota you need in that case. Moving the estate to another region means doing all of it again there (docs/engineering/region-migration.md).",
         run: [
           "AWS End User Messaging SMS console -> Account settings -> Request production access (a Support case); ask for the spend limit in the same case.",
-          "SNS console -> Text messaging (SMS) -> Edit preferences: set the account spend limit to what the case granted.",
           "AWS End User Messaging SMS console -> Phone numbers -> Request originator: United States, Toll-free, SMS, Transactional; then submit its toll-free registration with the answers in docs/engineering/sms-delivery-receipts-runbook.md, 'Registering the number'.",
           `aws pinpoint-sms-voice-v2 put-keyword --origination-identity <phone-number-id> --keyword HELP --keyword-action AUTOMATIC_RESPONSE --keyword-message "DiveDay texts about your dive bookings. For help with a booking, contact the dive shop that sent it. Reply STOP to opt out. Msg & data rates may apply."`,
           `aws pinpoint-sms-voice-v2 put-keyword --origination-identity <phone-number-id> --keyword STOP --keyword-action OPT_OUT --keyword-message "You won't get more texts from DiveDay. Reply START to opt back in."`,
           "aws pinpoint-sms-voice-v2 update-phone-number --phone-number-id <phone-number-id> --two-way-enabled --two-way-channel-arn <SmsDeliveryReceiptsTopicArn> --two-way-channel-role <SmsTwoWayRoleArn> --no-self-managed-opt-outs-enabled",
         ],
         verify: [
-          "aws sns get-sms-attributes --attributes MonthlySpendLimit",
+          "aws pinpoint-sms-voice-v2 describe-account-attributes --region us-east-1 -- the account is out of the sandbox; describe-spend-limits shows the text limit the stack set.",
           "aws pinpoint-sms-voice-v2 describe-keywords --origination-identity <phone-number-id> -- HELP and STOP carry the messages above.",
           "Text STOP to the number from your own phone: the STOP reply arrives, and an sms_webhook.reply_applied line is logged.",
         ],
@@ -3868,19 +3965,6 @@ exports.handler = async () => {
       retention: logs.RetentionDays.ONE_MONTH,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
-
-    const bundleLambdaHandler = (entryPath: string): string => {
-      const result = esbuild.buildSync({
-        entryPoints: [entryPath],
-        write: false,
-        bundle: true,
-        target: "node24",
-        format: "cjs",
-        platform: "node",
-        external: ["@aws-sdk/*"],
-      });
-      return result.outputFiles[0].text;
-    };
 
     const visualBucketPruner = new lambda.Function(this, "VisualBucketPruner", {
       functionName: "diveday-visual-bucket-pruner",

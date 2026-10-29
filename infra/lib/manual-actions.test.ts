@@ -276,12 +276,13 @@ describe("the synthesized stack", () => {
 
   it("runs the pruner only after every key exists, and not on rotation", () => {
     const { template } = synthesize();
-    const [pruner] = Object.values(
+    const pruner = Object.values(
       template.findResources("AWS::CloudFormation::CustomResource") as Record<
         string,
         { DependsOn?: string[]; Properties: Record<string, unknown> }
       >,
-    );
+    ).find((resource) => "UserNames" in resource.Properties);
+    if (!pruner) throw new Error("the access key pruner custom resource is gone");
     const accessKeys = Object.keys(template.findResources("AWS::IAM::AccessKey"));
 
     // "Keep the newest key" is only correct once CloudFormation's own key is the

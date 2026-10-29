@@ -103,6 +103,32 @@ aws logs delete-log-group --log-group-name /aws/lambda/diveday-sms-receipt-forwa
 `infra/lib/sms-receipt-forwarder.test.ts` pins the declared name so a tidy-minded rename cannot bring
 the collision back.
 
+## Spend limit and country rules
+
+The us-east-1 account is out of the SMS sandbox with a $50 monthly spend quota (Support case
+answered in October 2026). The stack sets both the limit and the country rules, through the
+`diveday-sms-account-guard` Lambda (`infra/lib/sms-account-guard-handler.ts`, infra-stack.ts S10).
+Nothing to run by hand.
+
+- **Spend limit.** `smsMonthlySpendLimitUsd` in the stack. AWS refuses a limit above the quota the
+  Support case granted, so raise the quota first and this number second. At the limit AWS stops
+  sending for the rest of the month and every later reminder is dropped. The alarm
+  `diveday-sms-month-to-date-spend` emails the alarms inbox at 80% of it, from AWS's own
+  `SMSMonthToDateSpentUSD` metric.
+- **Country rules.** `smsAllowedCountries` in the stack, `["US"]`. The Lambda makes one protect
+  configuration the account default (the one that also governs SNS, which is how DiveDay sends),
+  allows those countries for SMS and none for MMS or voice, and blocks every other country AWS
+  lists, including any it adds later. A diver with a non-US phone gets no text: AWS blocks it, and
+  the send log or its delivery receipt says so. Allow another country only after reading its
+  carrier rules
+  ([supported countries](https://docs.aws.amazon.com/sms-voice/latest/userguide/phone-numbers-sms-by-country.html));
+  the US toll-free number cannot send outside the US, so that country also needs its own sender.
+- **Why a Lambda.** `AWS::SMSVOICE::ProtectConfiguration` cannot be made the account default, and it
+  wants every country code listed, so a code AWS does not accept fails the deploy. Here AWS supplies
+  the list.
+- **Check.** `aws pinpoint-sms-voice-v2 describe-spend-limits --region us-east-1` shows the text limit,
+  and `describe-protect-configurations` shows one configuration with `AccountDefault` true.
+
 ## STOP, HELP and START
 
 Replies to DiveDay's texting number come down the same topic and the same route as the receipts
