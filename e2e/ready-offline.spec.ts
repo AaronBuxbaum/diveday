@@ -208,25 +208,30 @@ test("a detected clock rollback replaces the offline copy with a warning", async
   context,
 }) => {
   await openKeptReadyPage(page, context, "Casey Clock Rollback", 40 * 60_000);
+  const initialWatermark = await page.evaluate(async () => {
+    const marker = await (await caches.open("diveday-ready-clock-v1")).match(
+      "/ready/clock-observation",
+    );
+    return Number(marker?.headers.get("x-diveday-clock-watermark"));
+  });
+  expect(initialWatermark).toBe(new Date(E2E_FROZEN_CLOCK).getTime() + 40 * 60_000);
   const keepUntil = Number(
     await page.locator('meta[name="diveday-ready-keep-until"]').getAttribute("content"),
   );
-  // Record the forward jump while online; the worker sees the request and
-  // persists its clock observation before the next step simulates rollback.
-  await setWorkerClock(page, keepUntil + 1);
-  await page.evaluate(async () => {
-    await fetch(`${location.pathname}?clock-observation`, { cache: "no-store" }).catch(() => null);
-  });
-  await expect
-    .poll(() =>
-      page.evaluate(async () => {
-        const marker = await (await caches.open("diveday-ready-clock-v1")).match(
-          "/ready/clock-observation",
-        );
-        return Number(marker?.headers.get("x-diveday-clock-watermark"));
-      }),
-    )
-    .toBe(keepUntil + 1);
+  // A prior online clock reading is setup state for this rollback journey.
+  // Seed the durable watermark directly; observeReadyPageClock's persistence
+  // and monotonic behavior is covered by its focused worker unit test.
+  const watermark = keepUntil + 1;
+  const seededWatermark = await page.evaluate(async (observedAt) => {
+    const cache = await caches.open("diveday-ready-clock-v1");
+    await cache.put(
+      "/ready/clock-observation",
+      new Response(null, { headers: { "x-diveday-clock-watermark": String(observedAt) } }),
+    );
+    const marker = await cache.match("/ready/clock-observation");
+    return Number(marker?.headers.get("x-diveday-clock-watermark"));
+  }, watermark);
+  expect(seededWatermark).toBe(watermark);
   await context.setOffline(true);
   await setWorkerClock(page, new Date(E2E_FROZEN_CLOCK).getTime() + 40 * 60_000);
   await page.reload();
