@@ -52,6 +52,7 @@ import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { checklistDetailText } from "@/i18n/readiness-summary-labels";
 import { requestLocale } from "@/i18n/request";
 import { threadNextKey } from "@/i18n/thread-labels";
+import { nowMs } from "@/lib/clock";
 import { formatMoneyCents } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { connectionForRoute } from "@/lib/observability/render-connection";
@@ -610,7 +611,11 @@ async function DiverReadinessPage({
       {/* Keep this page on the phone for the marina with no signal, on both
           openings (the booked card and the ordinary masthead), and date the
           copy by the live page itself (security review of layer 8, D2). */}
-      <ReadyOfflineCopy copy={readyOfflineWords(t)} keepUntil={readyCopyKeepUntil(detail.trip)} />
+      <ReadyOfflineCopy
+        copy={readyOfflineWords(t)}
+        keepUntil={readyCopyKeepUntil(detail.trip)}
+        serverSavedAt={nowMs()}
+      />
       {/* The spine, the arrival card, the packing list and the cancel door
           read seven more things between them, and arrive behind a body-shaped
           fallback rather than holding the opening above them (UX audit #5). */}

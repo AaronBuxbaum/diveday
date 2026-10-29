@@ -7,6 +7,7 @@ import {
   keepReadyPageOnDevice,
   READY_KEEP_UNTIL_META,
   READY_OFFLINE_NOTE_ATTR,
+  READY_SERVER_SAVED_AT_META,
 } from "@/lib/ready-offline";
 
 /**
@@ -29,9 +30,21 @@ import {
 export function ReadyOfflineCopy({
   copy,
   keepUntil,
+  serverSavedAt = 0,
 }: {
-  copy: { offlineNote: string; savedNote: string; remove: string; removed: string };
+  copy: {
+    offlineNote: string;
+    savedNote: string;
+    remove: string;
+    removed: string;
+    clockSaved: string;
+    clockUnknown: string;
+    clockRollbackHeading: string;
+    clockRollbackSaved: string;
+    clockRollbackUnknown: string;
+  };
   keepUntil: number;
+  serverSavedAt?: number;
 }) {
   const [offline, setOffline] = useState(false);
   const [saved, setSaved] = useState<"no" | "kept" | "removed">("no");
@@ -62,6 +75,7 @@ export function ReadyOfflineCopy({
   return (
     <>
       <meta name={READY_KEEP_UNTIL_META} content={String(keepUntil)} />
+      <meta name={READY_SERVER_SAVED_AT_META} content={String(serverSavedAt)} />
       {/* Drawn by the server too, hidden: the kept copy runs no script, and
         the worker shows this line in it (issue #3003). The marker comes first
         and `hidden` straight after it, the order the worker reads. */}
@@ -73,6 +87,23 @@ export function ReadyOfflineCopy({
       >
         {copy.offlineNote}
       </p>
+      {/* The worker reveals one of these static notes in the script-free copy. */}
+      <p data-ready-clock-saved-note="" hidden className="mt-2 text-sm text-muted">
+        {copy.clockSaved}
+      </p>
+      <p data-ready-clock-unknown-note="" hidden className="mt-2 text-sm text-warning-strong">
+        {copy.clockUnknown}
+      </p>
+      {/* A detected rollback replaces the page with this script-free warning screen. */}
+      <section data-ready-clock-rollback="" hidden className="mx-auto max-w-xl px-6 py-12">
+        <h1 className="text-2xl font-semibold">{copy.clockRollbackHeading}</h1>
+        <p data-ready-clock-rollback-saved="" hidden className="mt-3 text-base text-muted">
+          {copy.clockRollbackSaved}
+        </p>
+        <p data-ready-clock-rollback-unknown="" hidden className="mt-3 text-base text-muted">
+          {copy.clockRollbackUnknown}
+        </p>
+      </section>
       {/* Offline, the note above already says this is the saved copy. */}
       {saved === "kept" && !offline ? (
         <p className="mt-2 text-sm text-muted">

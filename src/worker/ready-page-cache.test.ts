@@ -1,10 +1,16 @@
 // The default `node` environment, as the worker's own test: this module runs
 // in a service worker, never in a DOM context.
 import { beforeEach, describe, expect, it } from "vitest";
-import { READY_CACHE_NAME, READY_KEEP_UNTIL_META } from "@/lib/ready-offline";
+import {
+  READY_CACHE_NAME,
+  READY_KEEP_UNTIL_META,
+  READY_SERVER_SAVED_AT_META,
+} from "@/lib/ready-offline";
 import {
   forgetReadyPage,
   isReadyScope,
+  observeReadyPageClock,
+  READY_COPY_KEY,
   READY_COPY_MAX_AGE_MS,
   readyPageFallback,
   readyPagePath,
@@ -17,6 +23,7 @@ const TOKEN = "A".repeat(43);
 const OTHER = "B".repeat(43);
 const NOW = 1_800_000_000_000;
 const DAY_MS = 24 * 60 * 60 * 1000;
+const CLOCK_NOTICES = `<p data-ready-clock-saved-note="" hidden="">Saved at __DIVEDAY_SERVER_SAVED_AT__. Details may have changed.</p><p data-ready-clock-unknown-note="" hidden="">Saved time unknown. Details may have changed.</p><section data-ready-clock-rollback="" hidden=""><h1>Your phone’s clock looks wrong.</h1><p data-ready-clock-rollback-saved="" hidden="">Saved at __DIVEDAY_SERVER_SAVED_AT__. Reconnect before boarding.</p><p data-ready-clock-rollback-unknown="" hidden="">Server save time unknown. Reconnect before boarding.</p></section>`;
 
 /** A Cache Storage with just the surface the module uses, keyed by path. */
 function fakeStorage() {
@@ -43,11 +50,14 @@ function fakeStorage() {
 
 /** The live page as the server renders it: kept until `keepUntil` (default: well past NOW). */
 function page(body = "<p>Ready</p>", init: ResponseInit = {}, keepUntil = NOW + 30 * DAY_MS) {
-  return new Response(`<meta name="${READY_KEEP_UNTIL_META}" content="${keepUntil}"/>${body}`, {
-    status: 200,
-    headers: { "content-type": "text/html; charset=utf-8" },
-    ...init,
-  });
+  return new Response(
+    `<meta name="${READY_KEEP_UNTIL_META}" content="${keepUntil}"/><meta name="${READY_SERVER_SAVED_AT_META}" content="${NOW}"/>${body}${CLOCK_NOTICES}`,
+    {
+      status: 200,
+      headers: { "content-type": "text/html; charset=utf-8", date: new Date(NOW).toUTCString() },
+      ...init,
+    },
+  );
 }
 
 describe("readyPagePath", () => {
@@ -85,6 +95,73 @@ describe("saveReadyPage and readyPageFallback", () => {
     const served = await readyPageFallback(store.storage, `/ready/${TOKEN}`, NOW + 1000);
     expect(await served?.text()).toContain("newer");
     expect(await readyPageFallback(store.storage, `/ready/${OTHER}`, NOW)).toBeUndefined();
+  });
+
+  it("shows the server save time and warns the offline page may have changed", async () => {
+    const path = `/ready/${TOKEN}`;
+    await saveReadyPage(store.storage, path, page(), NOW);
+
+    const served = await readyPageFallback(store.storage, path, NOW + 1000);
+    const html = await served?.text();
+    expect(served?.headers.get("x-diveday-ready-copy-time-state")).toBe("known");
+    expect(html).toContain("Saved at 2027-01-15 08:00:00 UTC. Details may have changed.");
+    expect(html).not.toMatch(/data-ready-clock-saved-note="" hidden=/);
+    expect(html).toContain("<p>Ready</p>");
+  });
+
+  it("replaces readiness details with a warning after an observed clock rollback", async () => {
+    const path = `/ready/${TOKEN}`;
+    await saveReadyPage(store.storage, path, page(), NOW);
+    // CacheStorage persists this high-water mark when a service worker is restarted.
+    await observeReadyPageClock(store.storage, NOW + DAY_MS);
+
+    const served = await readyPageFallback(store.storage, path, NOW + DAY_MS - 1);
+    const html = await served?.text();
+    expect(served?.headers.get("x-diveday-ready-copy-time-state")).toBe("rollback");
+    expect(html).toContain("Your phone’s clock looks wrong.");
+    expect(html).toContain("Saved at 2027-01-15 08:00:00 UTC. Reconnect before boarding.");
+    expect(html).not.toContain("<p>Ready</p>");
+    expect(store.caches.get(READY_CACHE_NAME)?.size).toBe(1);
+  });
+
+  it("keeps legacy copies with an unknown-time warning", async () => {
+    const path = `/ready/${TOKEN}`;
+    await saveReadyPage(store.storage, path, page(), NOW);
+    const cache = await store.storage.open(READY_CACHE_NAME);
+    const copy = await cache.match(READY_COPY_KEY);
+    const headers = new Headers(copy?.headers);
+    headers.delete("x-diveday-server-saved-at");
+    headers.delete("x-diveday-device-saved-at");
+    await cache.put(READY_COPY_KEY, new Response(await copy?.text(), { headers }));
+    await store.storage.delete("diveday-ready-clock-v1");
+
+    const served = await readyPageFallback(store.storage, path, NOW + 1000);
+    const html = await served?.text();
+    expect(served?.headers.get("x-diveday-ready-copy-time-state")).toBe("unknown");
+    expect(html).toContain("Saved time unknown. Details may have changed.");
+    expect(html).toContain("<p>Ready</p>");
+    expect(store.caches.get(READY_CACHE_NAME)?.size).toBe(1);
+  });
+
+  it("does not lower or trust a corrupted clock watermark", async () => {
+    const path = `/ready/${TOKEN}`;
+    await saveReadyPage(store.storage, path, page(), NOW);
+    const clockCache = await store.storage.open("diveday-ready-clock-v1");
+    await clockCache.put(
+      "/ready/clock-observation",
+      new Response(null, { headers: { "x-diveday-clock-watermark": "broken" } }),
+    );
+
+    const served = await readyPageFallback(store.storage, path, NOW + 1000);
+    const html = await served?.text();
+    expect(served?.headers.get("x-diveday-ready-copy-time-state")).toBe("unknown");
+    expect(html).toContain("Saved time unknown. Details may have changed.");
+    expect(html).toContain("<p>Ready</p>");
+    expect(
+      (await clockCache.match("/ready/clock-observation"))?.headers.get(
+        "x-diveday-clock-watermark",
+      ),
+    ).toBe("broken");
   });
 
   /**

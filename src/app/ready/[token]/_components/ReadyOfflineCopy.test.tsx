@@ -25,6 +25,11 @@ const COPY = {
   savedNote: "Saved on this device for when there’s no signal.",
   remove: "Remove saved copy",
   removed: "Removed from this device until you next open this link.",
+  clockSaved: "Saved at __DIVEDAY_SERVER_SAVED_AT__. Details may have changed.",
+  clockUnknown: "Saved time unknown. Details may have changed.",
+  clockRollbackHeading: "Your phone’s clock looks wrong.",
+  clockRollbackSaved: "Saved at __DIVEDAY_SERVER_SAVED_AT__. Reconnect before boarding.",
+  clockRollbackUnknown: "Server save time unknown. Reconnect before boarding.",
 };
 const KEEP_UNTIL = 1_800_000_000_000;
 
@@ -143,11 +148,20 @@ describe("ReadyOfflineCopy", () => {
       match: async (key: string) => entries.get(key)?.clone(),
     };
     const storage = { open: async () => cache } as unknown as CacheStorage;
-    const page = new Response(markup, { headers: { "content-type": "text/html" } });
+    const page = new Response(markup, {
+      headers: { "content-type": "text/html", date: new Date(now).toUTCString() },
+    });
     expect(await saveReadyPage(storage, `/ready/${token}`, page, now)).toBe(true);
 
     const served = (await (await readyPageFallback(storage, `/ready/${token}`, now))?.text()) ?? "";
     expect(served).toContain(NOTE);
+    const serverTime = new Date(now)
+      .toISOString()
+      .replace("T", " ")
+      .replace(/\.000Z$/, " UTC")
+      .replace(/Z$/, " UTC");
+    expect(served).toContain(COPY.clockSaved.replace("__DIVEDAY_SERVER_SAVED_AT__", serverTime));
+    expect(served).not.toContain("__DIVEDAY_SERVER_SAVED_AT__");
     expect(served).not.toMatch(/<p [^>]*hidden=""[^>]*>No signal/);
   });
 });

@@ -28,6 +28,9 @@ export const READY_FORGOTTEN_CACHE_NAME = "diveday-ready-forgotten-v1";
  */
 export const READY_KEEP_UNTIL_META = "diveday-ready-keep-until";
 
+/** Server time for the saved-copy freshness label; device time is never substituted. */
+export const READY_SERVER_SAVED_AT_META = "diveday-ready-server-saved-at";
+
 /**
  * Marks the page's "No signal" line, which the server draws hidden. The
  * worker shows it in the kept copy (issue #3003): that copy runs no script,

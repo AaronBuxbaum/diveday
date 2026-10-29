@@ -21,6 +21,7 @@ import {
 import {
   forgetReadyPage,
   isReadyScope,
+  observeReadyPageClock,
   readyPageFallback,
   readyPagePath,
   readyPageStylesheets,
@@ -734,8 +735,14 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin || event.request.method !== "GET") return;
 
+  const readyPath = inReadyScope() ? readyPagePath(url, self.location.origin) : null;
+  const observeClock =
+    Boolean(readyPath) && !(event.request.mode === "navigate" && url.searchParams.has("cancelled"));
+  const clockObserved = observeClock ? observeReadyPageClock(caches, nowMs()) : Promise.resolve();
+  if (observeClock && event.request.mode !== "navigate") event.waitUntil(clockObserved);
+
   if (inReadyScope() && event.request.mode === "navigate") {
-    const path = readyPagePath(url, self.location.origin);
+    const path = readyPath;
     if (!path) return;
     if (url.searchParams.has("cancelled")) {
       // The diver just cancelled this seat (`cancelMyBookingAction`): the copy
@@ -766,7 +773,7 @@ self.addEventListener("fetch", (event) => {
             return response;
           });
         },
-        () => readyPageFallback(caches, path, nowMs()),
+        () => clockObserved.then(() => readyPageFallback(caches, path, nowMs())),
         { noSavedCopyOnSlow: "error" },
       ),
     );

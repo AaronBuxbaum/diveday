@@ -7,5 +7,12 @@ export function readyOfflineWords(t: DiverTranslator) {
     savedNote: t("ready.offlineSaved"),
     remove: t("ready.offlineRemove"),
     removed: t("ready.offlineRemoved"),
+    clockSaved: t("ready.offlineClockSaved", { when: "__DIVEDAY_SERVER_SAVED_AT__" }),
+    clockUnknown: t("ready.offlineClockUnknown"),
+    clockRollbackHeading: t("ready.offlineClockRollbackHeading"),
+    clockRollbackSaved: t("ready.offlineClockRollbackSaved", {
+      when: "__DIVEDAY_SERVER_SAVED_AT__",
+    }),
+    clockRollbackUnknown: t("ready.offlineClockRollbackUnknown"),
   };
 }

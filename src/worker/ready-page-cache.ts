@@ -37,6 +37,11 @@
  * - **Read-only, network-first**: a cached copy is served only when `fetch`
  *   fails. Its forms post to the server like any page and fail offline like
  *   any page; nothing is queued.
+ * - **The device clock never makes the copy current**: the offline note names
+ *   the server save time and says details may have changed; older copies with
+ *   no trusted time say so. A detected rollback replaces the page with a
+ *   warning. A worker cannot observe clock changes while it receives no
+ *   events, so even a timed copy remains a saved snapshot, not live readiness.
  * - **Bounded by the trip, not only by the clock** (D2): the live page names
  *   the instant its copy expires ({@link READY_KEEP_UNTIL_META}: a day after
  *   the boat is due back), capped at {@link READY_COPY_MAX_AGE_MS}. A page
@@ -61,6 +66,7 @@ import {
   READY_FORGOTTEN_CACHE_NAME,
   READY_KEEP_UNTIL_META,
   READY_OFFLINE_NOTE_ATTR,
+  READY_SERVER_SAVED_AT_META,
 } from "@/lib/ready-offline";
 
 /**
@@ -80,6 +86,13 @@ const FORGOTTEN_AT_HEADER = "x-diveday-forgotten-at";
 /** A forget marker's key: a fixed prefix and the path's hash, never the token. */
 const FORGOTTEN_KEY_PREFIX = "/ready/forgotten/";
 const KEEP_UNTIL_HEADER = "x-diveday-keep-until";
+const SERVER_SAVED_AT_HEADER = "x-diveday-server-saved-at";
+const DEVICE_SAVED_AT_HEADER = "x-diveday-device-saved-at";
+const CLOCK_WATERMARK_HEADER = "x-diveday-clock-watermark";
+const READY_CLOCK_CACHE_NAME = "diveday-ready-clock-v1";
+const READY_CLOCK_KEY = "/ready/clock-observation";
+const READY_CLOCK_STATE_HEADER = "x-diveday-ready-copy-time-state";
+const SERVER_TIME_PLACEHOLDER = "__DIVEDAY_SERVER_SAVED_AT__";
 
 /** Stands in for the bearer token in the stored body; not a legal token (wrong length). */
 const TOKEN_PLACEHOLDER = "__diveday_kept_token__";
@@ -156,10 +169,90 @@ const OFFLINE_NOTE_HIDDEN = `${READY_OFFLINE_NOTE_ATTR}="" hidden=""`;
 const OFFLINE_NOTE_SHOWN = `${READY_OFFLINE_NOTE_ATTR}=""`;
 
 const KEEP_UNTIL_PATTERN = new RegExp(`<meta name="${READY_KEEP_UNTIL_META}" content="(\\d+)"`);
+const SERVER_SAVED_AT_PATTERN = new RegExp(
+  `<meta name="${READY_SERVER_SAVED_AT_META}" content="(\\d+)"`,
+);
 
 /** The token in a readiness path (`/ready/<token>`). */
 function tokenOf(path: string): string {
   return path.slice("/ready/".length);
+}
+
+function numericHeader(response: Response, name: string): number | null {
+  const value = Number(response.headers.get(name));
+  return Number.isFinite(value) && value > 0 ? value : null;
+}
+
+function serverTimeFrom(response: Response, html: string): number | null {
+  const metaTime = Number(html.match(SERVER_SAVED_AT_PATTERN)?.[1] ?? Number.NaN);
+  if (Number.isFinite(metaTime) && metaTime > 0) return metaTime;
+  const value = response.headers.get("date");
+  if (!value) return null;
+  const time = Date.parse(value);
+  return Number.isFinite(time) && time > 0 ? time : null;
+}
+
+function formatServerTime(time: number): string {
+  return `${new Date(time)
+    .toISOString()
+    .replace("T", " ")
+    .replace(/\.000Z$/, " UTC")
+    .replace(/Z$/, " UTC")}`;
+}
+
+function servedCopyHeaders(
+  response: Response,
+  clockState: "known" | "unknown" | "rollback",
+): Headers {
+  const headers = new Headers(response.headers);
+  for (const name of [
+    "content-length",
+    "content-encoding",
+    "content-md5",
+    "content-range",
+    "content-digest",
+    "etag",
+    "last-modified",
+  ]) {
+    headers.delete(name);
+  }
+  headers.set(READY_CLOCK_STATE_HEADER, clockState);
+  return headers;
+}
+
+type ClockWatermark = { kind: "missing" | "corrupt" } | { kind: "valid"; at: number };
+
+async function readClockWatermark(storage: CacheStorage): Promise<ClockWatermark> {
+  try {
+    const cache = await storage.open(READY_CLOCK_CACHE_NAME);
+    const marker = await cache.match(READY_CLOCK_KEY);
+    if (!marker) return { kind: "missing" };
+    const at = numericHeader(marker, CLOCK_WATERMARK_HEADER);
+    return at === null ? { kind: "corrupt" } : { kind: "valid", at };
+  } catch {
+    return { kind: "corrupt" };
+  }
+}
+
+/** Persist the highest readiness-worker wall-clock reading, across worker restarts. */
+export async function observeReadyPageClock(storage: CacheStorage, now: number): Promise<void> {
+  if (!Number.isFinite(now) || now <= 0) return;
+  try {
+    const cache = await storage.open(READY_CLOCK_CACHE_NAME);
+    const marker = await cache.match(READY_CLOCK_KEY);
+    if (marker) {
+      const previous = numericHeader(marker, CLOCK_WATERMARK_HEADER);
+      // An unreadable marker may conceal a higher observation. Preserve it and
+      // let the page show its unknown-time warning instead of lowering it.
+      if (previous === null || now <= previous) return;
+    }
+    await cache.put(
+      READY_CLOCK_KEY,
+      new Response(null, { headers: { [CLOCK_WATERMARK_HEADER]: String(now) } }),
+    );
+  } catch {
+    // Storage loss is surfaced as unverified time on the next fallback.
+  }
 }
 
 async function pathHash(path: string): Promise<string> {
@@ -255,6 +348,10 @@ export async function saveReadyPage(
   }
   const headers = new Headers(response.headers);
   headers.set(KEEP_UNTIL_HEADER, String(Math.min(named, now + READY_COPY_MAX_AGE_MS)));
+  headers.set(DEVICE_SAVED_AT_HEADER, String(now));
+  const serverSavedAt = serverTimeFrom(response, html);
+  if (serverSavedAt !== null) headers.set(SERVER_SAVED_AT_HEADER, String(serverSavedAt));
+  await observeReadyPageClock(storage, now);
   const hash = await pathHash(path);
   if (await forgottenSince(storage, hash, requestedAt)) return false;
   headers.set(PATH_HASH_HEADER, hash);
@@ -297,7 +394,7 @@ export async function saveReadyPage(
   });
 }
 
-/** The kept copy for `path`, if there is one and it is still in date. */
+/** The kept copy for `path`, if there is one and the observed clock is usable. */
 export async function readyPageFallback(
   storage: CacheStorage,
   path: string,
@@ -306,18 +403,87 @@ export async function readyPageFallback(
   const cache = await storage.open(READY_CACHE_NAME);
   const cached = await cache.match(READY_COPY_KEY);
   if (!cached) return undefined;
+  if (cached.headers.get(PATH_HASH_HEADER) !== (await pathHash(path))) return undefined;
+
+  const serverSavedAt = numericHeader(cached, SERVER_SAVED_AT_HEADER);
+  const deviceSavedAt = numericHeader(cached, DEVICE_SAVED_AT_HEADER);
+  const watermark = await readClockWatermark(storage);
+  const rollback =
+    Number.isFinite(now) &&
+    [serverSavedAt, deviceSavedAt, watermark.kind === "valid" ? watermark.at : null].some(
+      (observedAt) => observedAt !== null && now < observedAt,
+    );
+  if (rollback) {
+    const warning = cached
+      .clone()
+      .text()
+      .then((html) => rollbackWarningDocument(html, serverSavedAt));
+    return new Response(await warning, {
+      status: cached.status,
+      statusText: cached.statusText,
+      headers: servedCopyHeaders(cached, "rollback"),
+    });
+  }
+
   const keepUntil = Number(cached.headers.get(KEEP_UNTIL_HEADER));
-  if (!Number.isFinite(keepUntil) || now > keepUntil) {
+  if (!Number.isFinite(keepUntil) || (Number.isFinite(now) && now > keepUntil)) {
     await cache.delete(READY_COPY_KEY);
     return undefined;
   }
-  if (cached.headers.get(PATH_HASH_HEADER) !== (await pathHash(path))) return undefined;
-  const html = (await cached.text()).replaceAll(TOKEN_PLACEHOLDER, tokenOf(path));
+  await observeReadyPageClock(storage, now);
+  const verifiedTime =
+    Number.isFinite(now) &&
+    serverSavedAt !== null &&
+    deviceSavedAt !== null &&
+    watermark.kind === "valid";
+  let html = (await cached.text()).replaceAll(TOKEN_PLACEHOLDER, tokenOf(path));
+  const headers = servedCopyHeaders(cached, verifiedTime ? "known" : "unknown");
+  if (verifiedTime) {
+    html = revealMarked(html, "data-ready-clock-saved-note").replaceAll(
+      SERVER_TIME_PLACEHOLDER,
+      formatServerTime(serverSavedAt),
+    );
+  } else {
+    html = revealMarked(html, "data-ready-clock-unknown-note");
+  }
   return new Response(html, {
     status: cached.status,
     statusText: cached.statusText,
-    headers: cached.headers,
+    headers,
   });
+}
+
+function revealMarked(html: string, attribute: string): string {
+  const openTag = new RegExp(
+    `(<(?:p|main|section)\\b(?=[^>]*\\b${attribute}="")[^>]*?)\\s+hidden(?:="")?`,
+    "i",
+  );
+  return html.replace(openTag, "$1");
+}
+
+function rollbackWarningDocument(html: string, serverSavedAt: number | null): string {
+  const marker = html.match(
+    /<section\b(?=[^>]*\bdata-ready-clock-rollback="")[^>]*>[\s\S]*?<\/section>/i,
+  )?.[0];
+  const body = html.match(/<body\b[^>]*>[\s\S]*?<\/body>/i)?.[0];
+  if (!marker) return html;
+
+  let warning = marker.replace(/\s+hidden(?:="")?/, "");
+  if (serverSavedAt !== null) {
+    warning = revealMarked(warning, "data-ready-clock-rollback-saved").replaceAll(
+      SERVER_TIME_PLACEHOLDER,
+      formatServerTime(serverSavedAt),
+    );
+  } else {
+    warning = revealMarked(warning, "data-ready-clock-rollback-unknown");
+  }
+  const visibleWarning = warning.replace(/\s+hidden(?:="")?/g, "");
+  if (!body) return `<main>${visibleWarning}</main>`;
+  const replacementBody = body.replace(
+    /(<body\b[^>]*>)[\s\S]*?(<\/body>)/i,
+    (_match, open: string, close: string) => `${open}<main>${visibleWarning}</main>${close}`,
+  );
+  return html.replace(body, replacementBody);
 }
 
 /**
