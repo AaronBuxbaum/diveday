@@ -126,6 +126,7 @@ function at(query: string) {
 beforeEach(() => {
   for (const mock of [acknowledge, list, load, readDiscarded, sync]) mock.mockReset();
   acknowledge.mockResolvedValue(undefined);
+  list.mockResolvedValue([]);
   readDiscarded.mockResolvedValue([]);
   tenant.slug = "blue-mantis";
   tenant.setVerified(null);

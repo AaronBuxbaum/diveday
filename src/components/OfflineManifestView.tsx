@@ -225,6 +225,7 @@ function OfflineManifestScreen() {
       view={view}
       controls={controls}
       tripId={tripId}
+      foreignPendingChanges={foreignPendingChanges}
       shellVersionCopy={shellVersionCopy}
       discardNotice={discardNotice}
       reconcile={reconcile}

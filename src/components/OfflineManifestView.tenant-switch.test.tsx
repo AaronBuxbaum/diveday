@@ -41,6 +41,7 @@ beforeEach(() => {
   setOnline(true);
   vi.mocked(loadOfflineManifest).mockReset();
   vi.mocked(listOfflineManifests).mockReset();
+  vi.mocked(listOfflineManifests).mockResolvedValue([]);
   vi.mocked(purgeOfflineManifestsExceptShop).mockClear();
   vi.mocked(syncOfflineManifest).mockReset();
   vi.stubGlobal("fetch", vi.fn());
@@ -204,6 +205,65 @@ it("keeps the recovery notice and suppresses caught-up copy after current-shop s
   expect(screen.queryByText("Blue Mantis Divers")).not.toBeInTheDocument();
   expect(screen.queryByText("sensitive-person")).not.toBeInTheDocument();
   expect(screen.queryByText("Private note text")).not.toBeInTheDocument();
+});
+
+it("shows the tenant-neutral recovery notice on a selected trip after shop verification", async () => {
+  searchParams = new URLSearchParams({ trip: "trip-b-44" });
+  const foreign = envelope("foreign-trip-44", "Private A departure", {
+    shopSlug: "blue-mantis",
+    shopName: "Blue Mantis Divers",
+  });
+  foreign.events.push({
+    clientEventId: "foreign-pending-event",
+    snapshotId: foreign.snapshot.snapshotId,
+    snapshotSavedAt: foreign.snapshot.savedAt,
+    tripId: "foreign-trip-44",
+    bookingId: "private-person-44",
+    checkpoint: "departure",
+    status: "boarded",
+    occurredAt: new Date(FROZEN_MS).toISOString(),
+    note: "Private note text",
+    syncStatus: "pending",
+  });
+  const selected = richEnvelope("trip-b-44");
+  selected.snapshot.shop = {
+    ...selected.snapshot.shop,
+    slug: "reef-runners",
+    name: "Reef Runners",
+  };
+  vi.mocked(loadOfflineManifest).mockResolvedValue(selected);
+  vi.mocked(listOfflineManifests).mockResolvedValue([foreign, selected]);
+  let resolveTripSync: (saved: OfflineManifestEnvelope | null) => void = () => {};
+  vi.mocked(syncOfflineManifest).mockReturnValue(
+    new Promise((resolve) => {
+      resolveTripSync = resolve;
+    }),
+  );
+  vi.mocked(fetch).mockImplementation(async (input) =>
+    String(input) === "/api/offline-manifests/identity"
+      ? identityResponse("reef-runners")
+      : new Response(null, { status: 200 }),
+  );
+
+  render(<OfflineManifestView />);
+
+  expect(await screen.findByRole("heading", { name: "Two-Tank Reef" })).toBeInTheDocument();
+  expect(
+    await screen.findByText(
+      "Pending changes for another shop remain on this device. Sign in to that shop to sync or review them.",
+    ),
+  ).toBeInTheDocument();
+  await waitFor(() =>
+    expect(syncOfflineManifest).toHaveBeenCalledWith("trip-b-44", "reef-runners"),
+  );
+  await act(async () => resolveTripSync({ ...selected, events: [] }));
+  expect(screen.queryByText("Everything’s sent.")).not.toBeInTheDocument();
+  expect(screen.queryByText("Private A departure")).not.toBeInTheDocument();
+  expect(screen.queryByText("Blue Mantis Divers")).not.toBeInTheDocument();
+  expect(screen.queryByText("foreign-trip-44")).not.toBeInTheDocument();
+  expect(screen.queryByText("private-person-44")).not.toBeInTheDocument();
+  expect(screen.queryByText("Private note text")).not.toBeInTheDocument();
+  expect(foreign.events[0]?.syncStatus).toBe("pending");
 });
 
 afterEach(() => {

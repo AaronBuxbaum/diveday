@@ -2,6 +2,7 @@ import type { ComponentProps, ReactNode } from "react";
 import { BoatSafetyNotices } from "@/components/BoatSafetyNotices";
 import { EmergencyReferenceCard } from "@/components/EmergencyReferenceCard";
 import { OfflineShellVersionBanner } from "@/components/OfflineShellVersionBanner";
+import { OFFLINE_NOTICE_CLASS } from "@/components/offline-notice";
 import { PullToRefresh } from "@/components/PullToRefresh";
 import { RollCallTouchCue } from "@/components/RollCallTouchCue";
 import { SkipLink } from "@/components/SkipLink";
@@ -21,6 +22,7 @@ export function OfflineTripScreen({
   view,
   controls,
   tripId,
+  foreignPendingChanges,
   shellVersionCopy,
   discardNotice,
   reconcile,
@@ -28,6 +30,7 @@ export function OfflineTripScreen({
   view: OfflineTripView;
   controls: OfflineTripControls;
   tripId: string;
+  foreignPendingChanges: boolean;
   shellVersionCopy: ComponentProps<typeof OfflineShellVersionBanner>["copy"];
   discardNotice: ReactNode;
   reconcile: () => Promise<void>;
@@ -44,6 +47,15 @@ export function OfflineTripScreen({
         <PullToRefresh onRefresh={reconcile}>
           <OfflineShellVersionBanner copy={shellVersionCopy} />
           {discardNotice}
+          {foreignPendingChanges ? (
+            <p
+              className={`${OFFLINE_NOTICE_CLASS} border-warning/40 bg-warning/10 text-pretty`}
+              role="status"
+              aria-live="polite"
+            >
+              {t("shared.offlineManifest.reconcile.foreignPending")}
+            </p>
+          ) : null}
           <SkipLink
             href="#offline-roll-call"
             label={t("shared.offlineManifest.single.skipLink")}

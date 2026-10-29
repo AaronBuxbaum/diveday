@@ -21,7 +21,11 @@ import type { CopyCaveat } from "./controls";
 import { savedCopyReducer } from "./saved-copy";
 import { useCrossShopPurge } from "./use-cross-shop-purge";
 import { useOfflineTenant } from "./use-offline-tenant";
-import { hasForeignPendingManifestChanges, useSavedManifestList } from "./use-saved-manifest-list";
+import {
+  hasForeignPendingManifestChanges,
+  useSavedManifestList,
+  useTripPendingManifestInventory,
+} from "./use-saved-manifest-list";
 
 function describeDiscardedNoteEvent(
   event: OfflineRollCallEvent | OfflineChecklistEvent,
@@ -167,6 +171,33 @@ function reconciledListMessage(
   return [syncMessage, noteLoss].filter(Boolean).join("\n");
 }
 
+function reconciledTripMessage(
+  envelope: OfflineManifestEnvelope,
+  t: OfflineManifestTranslator,
+  foreignPending: boolean,
+) {
+  const rejected = rejectedOfflineEventCount(envelope);
+  const pending = pendingOfflineEventCount(envelope);
+  const noteMessage = discardedNoteMessage([...envelope.events, ...envelope.checklistEvents], t);
+  return [
+    ...(rejected > 0
+      ? [t("shared.offlineManifest.reconcile.pendingRejectedSingle", { count: rejected })]
+      : []),
+    ...(noteMessage ? [noteMessage] : []),
+    ...(rejected === 0 && !noteMessage
+      ? [
+          pending > 0
+            ? t("shared.offlineManifest.reconcile.pendingWaiting", { count: pending })
+            : foreignPending
+              ? ""
+              : t("shared.offlineManifest.reconcile.allCaughtUp"),
+        ]
+      : []),
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
 /**
  * **The copy this device holds, and keeping it honest**: the saved record (or
  * the list of them), the checkpoint, the status line, what retention threw
@@ -280,6 +311,15 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
 
   const { tenantSlugRef, resolveTenant, invalidateTenantLookup } = useOfflineTenant();
 
+  useTripPendingManifestInventory({
+    tripId,
+    tenantSlugRef,
+    verifiedTenantRevision,
+    setList,
+    setMessage,
+    allCaughtUpMessage: t("shared.offlineManifest.reconcile.allCaughtUp"),
+  });
+
   const handleTenantChanged = useCallback(() => {
     // A 409 is an explicit server assertion that the tenant verified when
     // this sync began is no longer current. Stop showing that tenant's roster
@@ -367,23 +407,11 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
       // All three queues, not roll call alone: a checklist tap or an arrival
       // waiting to sync is evidence this device is holding, and a count that
       // cannot see it tells a captain they are caught up when they are not.
-      const rejected = rejectedOfflineEventCount(next);
-      const pending = pendingOfflineEventCount(next);
-      const noteMessage = discardedNoteMessage([...next.events, ...next.checklistEvents], t);
-      const messages = [
-        ...(rejected > 0
-          ? [t("shared.offlineManifest.reconcile.pendingRejectedSingle", { count: rejected })]
-          : []),
-        ...(noteMessage ? [noteMessage] : []),
-        ...(rejected === 0 && !noteMessage
-          ? [
-              pending > 0
-                ? t("shared.offlineManifest.reconcile.pendingWaiting", { count: pending })
-                : t("shared.offlineManifest.reconcile.allCaughtUp"),
-            ]
-          : []),
-      ];
-      setMessage(messages.join(" "));
+      const foreignPending = hasForeignPendingManifestChanges(
+        listRef.current ?? [],
+        verifiedTenantSlugRef.current,
+      );
+      setMessage(reconciledTripMessage(next, t, foreignPending));
     } catch (error) {
       if (isShopChangedError(error)) {
         handleTenantChanged();

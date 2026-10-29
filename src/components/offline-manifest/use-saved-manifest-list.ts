@@ -1,5 +1,5 @@
-import { useCallback } from "react";
-import { syncOfflineManifest } from "@/lib/offline-manifest-store";
+import { useCallback, useEffect } from "react";
+import { listOfflineManifests, syncOfflineManifest } from "@/lib/offline-manifest-store";
 import type { OfflineManifestEnvelope } from "@/lib/offline-manifests";
 import { pendingOfflineEventCount } from "@/lib/offline-manifests";
 
@@ -20,6 +20,48 @@ export function hasForeignPendingManifestChanges(
         envelope.snapshot.shop.slug !== currentShopSlug && pendingOfflineEventCount(envelope) > 0,
     )
   );
+}
+
+export function useTripPendingManifestInventory({
+  tripId,
+  tenantSlugRef,
+  verifiedTenantRevision,
+  setList,
+  setMessage,
+  allCaughtUpMessage,
+}: {
+  tripId: string;
+  tenantSlugRef: { current: string | null };
+  verifiedTenantRevision: number;
+  setList: (saved: OfflineManifestEnvelope[]) => void;
+  setMessage: (update: (message: string) => string) => void;
+  allCaughtUpMessage: string;
+}) {
+  useEffect(() => {
+    if (!tripId) return;
+    let active = true;
+    const refresh = () => {
+      void listOfflineManifests()
+        .then((saved) => {
+          if (!active) return;
+          setList(saved);
+          if (
+            verifiedTenantRevision > 0 &&
+            hasForeignPendingManifestChanges(saved, tenantSlugRef.current) &&
+            allCaughtUpMessage
+          ) {
+            setMessage((message) => (message === allCaughtUpMessage ? "" : message));
+          }
+        })
+        .catch(() => {});
+    };
+    refresh();
+    window.addEventListener("online", refresh);
+    return () => {
+      active = false;
+      window.removeEventListener("online", refresh);
+    };
+  }, [tripId, tenantSlugRef, verifiedTenantRevision, setList, setMessage, allCaughtUpMessage]);
 }
 
 export function useSavedManifestList({
