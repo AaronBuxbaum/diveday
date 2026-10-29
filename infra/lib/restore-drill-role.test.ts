@@ -60,12 +60,18 @@ describe("GitHubActionsRestoreDrillRole", () => {
     const statements = attachedStatements(template, logicalId);
     const allows = statements.filter((statement) => statement.Effect === "Allow");
     const actions = allows.flatMap((statement) => statement.Action as string | string[]);
-    expect([...actions].sort()).toEqual(["s3:GetObject", "s3:ListBucket"]);
-    const serialized = JSON.stringify(allows);
+    expect([...actions].sort()).toEqual([
+      "ecr-public:GetAuthorizationToken",
+      "s3:GetObject",
+      "s3:ListBucket",
+      "sts:GetServiceBearerToken",
+    ]);
+    const s3Allows = allows.filter((statement) => String(statement.Action).startsWith("s3:"));
+    const serialized = JSON.stringify(s3Allows);
     for (const write of ["Put", "Delete", "Acl", "Abort", "Replicate", "RestoreObject"]) {
       expect(JSON.stringify(actions)).not.toContain(write);
     }
-    for (const statement of allows) {
+    for (const statement of s3Allows) {
       const resources = ([] as unknown[]).concat(statement.Resource);
       expect(resources.length).toBeGreaterThan(0);
       expect(resources).not.toContain("*");
@@ -79,6 +85,22 @@ describe("GitHubActionsRestoreDrillRole", () => {
     expect(JSON.stringify(list?.Condition)).toContain("dumps/*");
     expect(serialized).not.toContain("BundleBucket");
     expect(serialized).not.toContain("Backup");
+  });
+
+  it("may sign in to ECR Public and mint a bearer token for that service alone", () => {
+    const template = synthesize();
+    const [logicalId] = drillRole(template);
+    const allows = attachedStatements(template, logicalId).filter(
+      (statement) => statement.Effect === "Allow",
+    );
+    const bearer = allows.find((statement) => statement.Action === "sts:GetServiceBearerToken");
+    expect(bearer?.Condition).toEqual({
+      StringEquals: { "sts:AWSServiceName": "ecr-public.amazonaws.com" },
+    });
+    expect(bearer?.Resource).toBe("*");
+    const signIn = allows.find((statement) => statement.Action === "ecr-public:GetAuthorizationToken");
+    expect(signIn?.Resource).toBe("*");
+    expect(signIn?.Condition).toBeUndefined();
   });
 
   it("can never read a secret, and publishes its ARN as an output", () => {
