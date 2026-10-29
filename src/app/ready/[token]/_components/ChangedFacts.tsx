@@ -39,7 +39,6 @@ const DIVER_SIZED_ITEM_KEYS: Record<RentalFitItem, DiverMessageKey> = {
   bcd: "rental.itemLabels.bcd",
   wetsuit: "rental.itemLabels.wetsuit",
   boots: "rental.itemLabels.boots",
-  mask_fins: "rental.itemLabels.fins",
   fins: "rental.itemLabels.fins",
   weights: "rental.itemLabels.weights",
   drysuit: "rental.itemLabels.drysuit",

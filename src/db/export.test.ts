@@ -210,8 +210,6 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
   ],
   rental_fit_profiles: [
     "shop_id",
-    // Storage-only compatibility for the previous serving release.
-    "rents_mask_fins",
     // A DiveDay-side discriminator, not a fact about the diver: it separates a
     // row that states a fit from one holding only their note (schema.ts,
     // `fit_stated_at`). The import rebuilds it correctly on its own — a row

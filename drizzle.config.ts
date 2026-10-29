@@ -1,7 +1,7 @@
 import { defineConfig } from "drizzle-kit";
 
 export default defineConfig({
-  // The migration barrel keeps staged physical storage until its drop release.
+  // The migration barrel mirrors the runtime schema used for generated SQL.
   schema: ["./src/db/migration-schema.ts"],
   out: "./drizzle",
   dialect: "postgresql",
