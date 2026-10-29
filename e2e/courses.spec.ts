@@ -427,7 +427,9 @@ test.describe("staff", () => {
       /Discover Scuba Diving — Session 1/,
     );
     await expect(page.getByText(/per diver, the course’s price/)).toBeVisible();
-    await expect(page.locator('input[name="priceDollars"]')).toHaveCount(0);
+    const tripFee = page.locator('input[name="priceDollars"]');
+    await expect(tripFee).toBeHidden();
+    await expect(tripFee).toBeDisabled();
   });
 
   /**
