@@ -429,6 +429,8 @@
     "noEmailOnFile": "sin correo registrado",
     "rentalFitOnFile": "Equipo de alquiler registrado · {fit}",
     "noRentalFitYet": "Todavía sin equipo de alquiler registrado",
+    "invitedToday": "Invitación hoy",
+    "invitedDaysAgo": "Invitación hace {days, plural, one {# día} other {# días}}",
     "addPersonAriaLabel": "Agregar a {name} a la salida",
     "addToTrip": "Agregar a la salida",
     "noMatches": "Ningún buceador habitual coincide con “{query}”.",
