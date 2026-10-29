@@ -170,6 +170,14 @@ export async function trustedCrewOfTrips(
             ne(tripAssignments.assignedByPersonId, tripAssignments.personId),
             liveTrip(),
           ),
+        )
+        // Stable input for crew grouping and its role list; the training-room
+        // allocator also makes its own person-id tie-break explicit.
+        .orderBy(
+          asc(tripAssignments.tripId),
+          asc(tripAssignments.personId),
+          asc(tripAssignments.tripRole),
+          asc(personRoles.role),
         ),
     () =>
       db

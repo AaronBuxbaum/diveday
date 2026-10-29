@@ -61,7 +61,7 @@ describe("deleteDemoShopCascade", () => {
     const { db } = ctx;
     const { slug } = await createDemoShop(db, { history: false });
     const shop = await requireShop(db, slug);
-    await db.execute(sql`drop table inbox_saved_answers`);
+    await db.execute(sql`drop table if exists inbox_saved_answers`);
 
     await deleteDemoShopCascade(db, shop.id);
     expect(await findShop(db, slug)).toBeUndefined();

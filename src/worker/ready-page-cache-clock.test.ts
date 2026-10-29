@@ -75,6 +75,35 @@ describe("ready-page clock rollback", () => {
     store = fakeStorage();
   });
 
+  it("persists an online clock watermark across restart and detects its rollback", async () => {
+    const path = `/ready/${TOKEN}`;
+    const body = `<meta name="${READY_COPY_LOCALE_META}" content="en-US"/><meta name="${READY_COPY_TIME_ZONE_META}" content="America/New_York"/><html><body><main><p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">No signal: ${READY_OFFLINE_GENERATED_AT_PLACEHOLDER}</p><p>offline trip copy</p><section data-ready-clock-rollback="" hidden><h1>Phone clock looks wrong</h1><p data-ready-clock-rollback-saved="" hidden>Generated ${READY_ROLLBACK_SAVED_AT_PLACEHOLDER}</p><p data-ready-clock-rollback-unknown="" hidden>Saved time unknown</p></section></main></body></html>`;
+    const higherClock = NOW + 2 * 60 * 60 * 1000;
+    expect(
+      await saveReadyPage(store.storage, path, page(body, {}, NOW + DAY_MS), higherClock),
+    ).toBe(true);
+    const clockCache = await store.storage.open("diveday-ready-clock-v1");
+    let marker = await clockCache.match("/ready/clock-observation");
+    expect(marker?.headers.get("x-diveday-clock-watermark")).toBe(String(higherClock));
+
+    await vi.resetModules();
+    const restartedWorker = await import("./ready-page-cache");
+    expect(
+      await restartedWorker.saveReadyPage(
+        store.storage,
+        path,
+        page(body, {}, NOW + DAY_MS),
+        higherClock - 1,
+      ),
+    ).toBe(true);
+    marker = await clockCache.match("/ready/clock-observation");
+    expect(marker?.headers.get("x-diveday-clock-watermark")).toBe(String(higherClock));
+
+    const rolledBack = await restartedWorker.readyPageFallback(store.storage, path, NOW);
+    expect(await rolledBack?.text()).toContain("Phone clock looks wrong");
+    expect(rolledBack?.headers.get("x-diveday-ready-copy-time-state")).toBe("rollback");
+  });
+
   it("keeps a server-current page through a restart when the device clock is past trip expiry", async () => {
     const keepUntil = NOW + DAY_MS;
     const deviceClockAheadAtSave = NOW + 3 * DAY_MS;
