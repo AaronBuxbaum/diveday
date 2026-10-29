@@ -180,7 +180,11 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/divers?filter=removed");
         await page.getByRole("heading", { level: 1, name: "Divers" }).waitFor();
         await page.getByRole("link", { name: "Deleted", exact: true }).waitFor();
-        await capture(page, "divers-removed", scheme);
+        const search = page.getByRole("searchbox", { name: "Search divers" });
+        await expect(search).toBeFocused();
+        await capture(page, "divers-removed", scheme, {
+          beforeShot: async () => expect(search).toBeFocused(),
+        });
       });
 
       /**

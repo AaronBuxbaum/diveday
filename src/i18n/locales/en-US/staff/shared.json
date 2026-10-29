@@ -631,11 +631,11 @@
     "undo": "Undo"
   },
   "rescheduleHold": {
-    "telling": "{count, plural, one {Telling # diver the new time…} other {Telling # divers the new time…}}",
+    "telling": "Telling divers the new time…",
     "told": "{count, plural, one {Told # diver the new time.} other {Told # divers the new time.}}",
     "someMissed": "{count, plural, one {# diver could not be reached by email or text.} other {# divers could not be reached by email or text.}}",
     "notTold": "Not told. The divers still have the old time.",
-    "tellingPlace": "{count, plural, one {Telling # diver the new meeting point…} other {Telling # divers the new meeting point…}}",
+    "tellingPlace": "Telling divers the new meeting point…",
     "toldPlace": "{count, plural, one {Told # diver the new meeting point.} other {Told # divers the new meeting point.}}",
     "notToldPlace": "Not told. The divers still have the old meeting point.",
     "tellThem": "Tell them"

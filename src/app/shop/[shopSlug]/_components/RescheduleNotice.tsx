@@ -14,41 +14,48 @@ import { rescheduleHoldCopy } from "./reschedule-hold-copy";
  * populates the initial client snapshot. A fresh absent/foreign hold renders
  * nothing; the same mounted identity survives Undo's row-absent refresh.
  */
-export async function RescheduleNotice({
-  shopId,
-  heldId,
-  tell,
-  tripId,
-  t,
-}: {
+export type RescheduleNoticeProps = {
   shopId: string;
   heldId: string | undefined;
   tell: string | undefined;
   /** On a trip page, the trip the hold must be for. */
   tripId?: string;
   t: StaffTranslator;
-}) {
+};
+
+/** Read the one pending row that can authorize a visible reschedule action. */
+export async function resolveRescheduleNoticeSnapshot({
+  shopId,
+  heldId,
+  tell,
+  tripId,
+  t,
+}: RescheduleNoticeProps): Promise<RescheduleNoticeSnapshot | null> {
   const id = z.uuid().safeParse(heldId);
   const count = z.coerce.number().int().min(1).max(500).safeParse(tell);
   if (!id.success || !count.success) return null;
   const db = await getDb();
   const row = await pendingHeldSend(db, shopId, id.data);
-  let initialNotice: RescheduleNoticeSnapshot | null = null;
   if (row?.payload.kind === "trip_rescheduled" && (!tripId || row.payload.tripId === tripId)) {
     const placeOnly = await heldRescheduleIsPlaceOnly(db, shopId, row.payload);
-    initialNotice = {
+    return {
       ticket: {
         id: row.id,
         runAt: row.runAt.getTime(),
         holdMs: Math.max(0, row.runAt.getTime() - nowMs()),
       },
       tripId: row.payload.tripId,
-      copy: rescheduleHoldCopy(t, count.data, placeOnly),
+      copy: rescheduleHoldCopy(t, placeOnly),
     };
   }
+  return null;
+}
+
+export async function RescheduleNotice(props: RescheduleNoticeProps) {
+  const initialNotice = await resolveRescheduleNoticeSnapshot(props);
   return (
     <RescheduleHold
-      key={JSON.stringify([shopId, id.data, tripId ?? null])}
+      key={JSON.stringify([props.shopId, props.heldId, props.tripId ?? null])}
       initialNotice={initialNotice}
     />
   );

@@ -1,5 +1,6 @@
 import type { Page } from "@playwright/test";
 import { diverTranslator } from "../src/i18n/messages";
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 import { daysFromNow, e2eNow, openTripAbout, openTripAboutRow } from "./helpers";
 
@@ -25,6 +26,27 @@ async function chooseRowAction(page: Page, verb: string, title: string) {
 }
 
 test.describe("schedule builder", () => {
+  test("consumes gear result query values so refresh cannot replay the warning", async ({
+    page,
+  }) => {
+    const staff = staffTranslator("en-US");
+    const message = staff("schedule.notices.movedGearReleased", { count: 2 });
+    await page.goto(`${BOARD}?week=2026-10-26&builder=moved&gear=2&result=fabricated-result`);
+    // A hand-copied URL may briefly paint the warning; the board consumes the
+    // result values while retaining the selected week.
+    await expect(page.getByText(message, { exact: true })).toBeVisible();
+    await expect
+      .poll(() => {
+        const url = new URL(page.url());
+        return !url.searchParams.has("builder") && !url.searchParams.has("gear");
+      })
+      .toBe(true);
+    expect(new URL(page.url()).searchParams.get("week")).toBe("2026-10-26");
+
+    await page.reload();
+    await expect(page.getByText(message, { exact: true })).toHaveCount(0);
+  });
+
   /**
    * **The move panel says what moving a departure will cost, and changes
    * nothing by saying it** (issue #1203, D43).
@@ -225,10 +247,26 @@ test.describe("schedule builder", () => {
     await page.getByRole("button", { name: "Move it" }).click();
 
     await expect(page.getByText("Moved")).toBeVisible();
-    await expect(page.getByText(/^Telling \d+ divers? the new time…$/)).toBeVisible();
-    await page.getByRole("button", { name: "Undo" }).click();
-    await expect(page.getByText("Not told. The divers still have the old time.")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Tell them" })).toBeVisible();
+    const staff = staffTranslator("en-US");
+    await expect(page.getByText(staff("shared.rescheduleHold.telling"))).toBeVisible();
+    await expect
+      .poll(() => {
+        const url = new URL(page.url());
+        return (
+          !url.searchParams.has("builder") &&
+          !url.searchParams.has("gear") &&
+          url.searchParams.has("held") &&
+          url.searchParams.has("tell")
+        );
+      })
+      .toBe(true);
+    await page.reload();
+    await expect(page.getByRole("button", { name: staff("shared.sendHold.undo") })).toBeVisible();
+    await page.getByRole("button", { name: staff("shared.sendHold.undo") }).click();
+    await expect(page.getByText(staff("shared.rescheduleHold.notTold"))).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: staff("shared.rescheduleHold.tellThem") }),
+    ).toBeVisible();
   });
 
   test("staff add, move, copy, and remove a departure without leaving the board", async ({

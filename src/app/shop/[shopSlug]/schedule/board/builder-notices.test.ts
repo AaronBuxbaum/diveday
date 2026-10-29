@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { builderNoticeFor, builderNoticeMessage } from "./builder-notices";
+import { builderNoticeFor, builderNoticeMessage, gearReleasedCount } from "./builder-notices";
 
 const st = staffTranslator("en-US");
 
@@ -59,4 +59,15 @@ describe("builderNoticeFor", () => {
     });
     expect(builderNoticeFor({ ...none, builder: "moved", gear: "0" })?.tone).toBe("success");
   });
+
+  it.each([undefined, "", "0", "01", "1.5", "-1", "2junk", "9007199254740992"])(
+    "does not turn malformed gear evidence %j into a warning",
+    (gear) => {
+      expect(gearReleasedCount(gear)).toBeUndefined();
+      expect(builderNoticeFor({ ...none, builder: "moved", gear })).toEqual({
+        tone: "success",
+        message: st("schedule.notices.moved"),
+      });
+    },
+  );
 });

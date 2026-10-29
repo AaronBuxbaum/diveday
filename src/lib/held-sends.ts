@@ -77,7 +77,7 @@ const seatOfferPayload = z.object({
 /**
  * **Telling the booked divers a departure moved** (ux review 2026-10-11, item
  * 1). Held by the move itself (the board's move and the trip page's retime),
- * not by a button: the staffer sees "Telling 6 divers the new time" with Undo
+ * not by a button: the staffer sees count-free progress with Undo
  * where the saved notice stands. `previousStartsAt` is the time the divers
  * were last told, written by the server from `trips.divers_told_starts_at`
  * and never read off a form; the executor reads everything else, the recipients

@@ -834,7 +834,7 @@ export async function moveDepartureAction(shopSlug: string, formData: FormData) 
   });
   // **Tell the divers** (ux review 2026-10-11, item 1): every booked seat
   // hears the new time after the same eight-second hold every staff send
-  // takes; the board shows "Telling 6 divers the new time" with Undo. Nothing
+  // takes; the board shows count-free progress with Undo. Nothing
   // is held for a departure with nobody on it.
   const notice = await holdRescheduleNotice(db, {
     shopId: shop.id,
@@ -845,7 +845,7 @@ export async function moveDepartureAction(shopSlug: string, formData: FormData) 
   });
   // A move that had to let go of gear says so on the way back. Silence here is
   // a unit somebody still thinks is packed for this departure.
-  const params = new URLSearchParams({ builder: "moved" });
+  const params = new URLSearchParams({ builder: "moved", result: crypto.randomUUID() });
   if (outcome.gearReleased > 0) params.set("gear", String(outcome.gearReleased));
   if (notice) {
     params.set("held", notice.id);

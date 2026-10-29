@@ -131,7 +131,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByLabel("Departs").fill("13:45");
         await page.getByLabel("Returns").fill("17:15");
         await page.getByRole("button", { name: "Save changes" }).click();
-        await page.getByText(/^Telling \d+ divers? the new time…$/).waitFor();
+        await page.getByText(staffTranslator("en-US")("shared.rescheduleHold.telling")).waitFor();
         await undoWithSessionRefresh(page);
         await page.getByText(staffTranslator("en-US")("shared.rescheduleHold.notTold")).waitFor();
         await capture(page, "trip-reschedule-hold", scheme);
@@ -182,7 +182,7 @@ for (const scheme of ["light", "dark"] as const) {
         next.setUTCDate(next.getUTCDate() + 1);
         await date.fill(next.toISOString().slice(0, 10));
         await page.getByRole("button", { name: "Move it" }).click();
-        await page.getByText(/^Telling \d+ divers? the new time…$/).waitFor();
+        await page.getByText(staffTranslator("en-US")("shared.rescheduleHold.telling")).waitFor();
         await undoWithSessionRefresh(page);
         await expectSettledRescheduleNotice(page);
         await capture(page, "schedule-builder-reschedule-hold", scheme);
