@@ -353,12 +353,14 @@ function legacyForgottenKey(hash: string): string {
   return `${LEGACY_FORGOTTEN_KEY_PREFIX}${hash}`;
 }
 
-function legacyForgottenVersion(marker: Response | undefined): string {
+function legacyForgottenVersion(marker: Response | undefined, hash: string): string {
   if (!marker) return "";
   const version = marker.headers.get(LEGACY_FORGOTTEN_VERSION_HEADER);
   if (version) return version;
   const at = marker.headers.get(LEGACY_FORGOTTEN_AT_HEADER);
-  return at && Number.isFinite(Number(at)) ? `legacy-at:${at}` : "";
+  return at?.trim() && Number.isSafeInteger(Number(at))
+    ? `legacy-at:${at}`
+    : `legacy-invalid:${hash}`;
 }
 
 async function clearLegacyForgetMarkers(markers: Cache): Promise<void> {
@@ -383,7 +385,7 @@ async function isCopyInvalidated(
     );
   }
   const legacy = await markers.match(legacyForgottenKey(hash));
-  const legacyVersion = legacyForgottenVersion(legacy);
+  const legacyVersion = legacyForgottenVersion(legacy, hash);
   return Boolean(legacy && cached.headers.get(COPY_FORGOTTEN_VERSION_HEADER) !== legacyVersion);
 }
 
@@ -403,7 +405,7 @@ export function beginReadyPageRequest(
       const markers = await storage.open(READY_FORGOTTEN_CACHE_NAME);
       const marker = await markers.match(LATEST_REQUEST_KEY);
       const oldPathMarker = await markers.match(legacyForgottenKey(hash));
-      const oldPathVersion = legacyForgottenVersion(oldPathMarker);
+      const oldPathVersion = legacyForgottenVersion(oldPathMarker, hash);
       const cancelledPathHash = marker?.headers.get(REQUEST_CANCELLED_PATH_HASH_HEADER) ?? "";
       const cancelledVersion = marker?.headers.get(REQUEST_CANCELLED_VERSION_HEADER) ?? "";
       const readyCache = await storage.open(READY_CACHE_NAME);
@@ -414,7 +416,7 @@ export function beginReadyPageRequest(
       let migratedVersion = cancelledVersion;
       if (cancelledPathHash !== cachedHash && cachedHash) {
         const oldCachedMarker = await markers.match(legacyForgottenKey(cachedHash));
-        const oldCachedVersion = legacyForgottenVersion(oldCachedMarker);
+        const oldCachedVersion = legacyForgottenVersion(oldCachedMarker, cachedHash);
         if (oldCachedVersion && cachedVersion !== oldCachedVersion) {
           migratedPathHash = cachedHash;
           migratedVersion = oldCachedVersion;
@@ -688,7 +690,7 @@ async function writeForgetMarker(
     const oldCachedMarker = cachedHash
       ? await markers.match(legacyForgottenKey(cachedHash))
       : undefined;
-    const oldCachedVersion = legacyForgottenVersion(oldCachedMarker);
+    const oldCachedVersion = legacyForgottenVersion(oldCachedMarker, cachedHash);
     const preservePreviousCancellation =
       previousCancelledPathHash !== "" && cachedHash === previousCancelledPathHash;
     const preserveLegacyCancellation =

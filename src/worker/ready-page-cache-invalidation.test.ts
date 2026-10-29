@@ -235,6 +235,55 @@ describe("ready page invalidation ordering", () => {
     expect(await (await store.storage.open(READY_FORGOTTEN_CACHE_NAME)).keys()).toHaveLength(1);
   });
 
+  it.each([undefined, "not-a-timestamp"])(
+    "fails closed and migrates an unrecognized legacy marker (%s)",
+    async (at) => {
+      const path = `/ready/${TOKEN}`;
+      await seedLegacyCopy(store.storage, path);
+      const cache = await store.storage.open(READY_CACHE_NAME);
+      const saved = await cache.match(READY_COPY_KEY);
+      if (!saved) throw new Error("expected legacy copy");
+      const headers = new Headers(saved.headers);
+      headers.delete("x-diveday-copy-forgotten-version");
+      await cache.put(READY_COPY_KEY, new Response(await saved.text(), { headers }));
+      const markers = await store.storage.open(READY_FORGOTTEN_CACHE_NAME);
+      const legacyHeaders = new Headers();
+      if (at !== undefined) legacyHeaders.set("x-diveday-forgotten-at", at);
+      await markers.put(
+        `/ready/forgotten/${await pathHash(path)}`,
+        new Response(null, { headers: legacyHeaders }),
+      );
+      vi.resetModules();
+      const restarted = await import("./ready-page-cache");
+
+      expect(await restarted.readyPageFallback(store.storage, path, NOW)).toBeUndefined();
+      const request = await restarted.beginReadyPageRequest(store.storage, path);
+      expect(request.durable).toBe(true);
+      expect(request.forgottenVersion).toBe(`legacy-invalid:${await pathHash(path)}`);
+      expect(await restarted.readyPageFallback(store.storage, path, NOW)).toBeUndefined();
+      expect(await (await store.storage.open(READY_FORGOTTEN_CACHE_NAME)).keys()).toHaveLength(1);
+    },
+  );
+
+  it("keeps an unrelated token save eligible while migrating a malformed marker", async () => {
+    const cancelledPath = `/ready/${TOKEN}`;
+    const currentPath = `/ready/${OTHER}`;
+    await seedLegacyCopy(store.storage, cancelledPath);
+    const markers = await store.storage.open(READY_FORGOTTEN_CACHE_NAME);
+    await markers.put(`/ready/forgotten/${await pathHash(cancelledPath)}`, new Response(null));
+    vi.resetModules();
+    const restarted = await import("./ready-page-cache");
+
+    const request = await restarted.beginReadyPageRequest(store.storage, currentPath);
+    expect(request.durable).toBe(true);
+    expect(
+      await restarted.saveReadyPage(store.storage, currentPath, page("other token"), NOW, request),
+    ).toBe(true);
+    expect(
+      await (await restarted.readyPageFallback(store.storage, currentPath, NOW))?.text(),
+    ).toContain("other token");
+  });
+
   it("migrates an old hashed cancellation marker into the bounded record before pruning it", async () => {
     const path = `/ready/${TOKEN}`;
     await seedLegacyCopy(store.storage, path);
