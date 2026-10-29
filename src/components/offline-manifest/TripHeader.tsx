@@ -23,6 +23,11 @@ export function OfflineTripHeader({
   const { manifest, expired, freshness, pending, rejected, savedAtHeader } = view;
   const { t, message, servedWithoutAnswer, liveOffer } = controls;
   const chip = offlineHeaderChip({ online: useOnline(), servedWithoutAnswer, freshness });
+  const noteLossVisible = [...view.envelope.events, ...view.envelope.checklistEvents].some(
+    (event) =>
+      event.noteDisposition === "discarded_erasure_cutoff" ||
+      event.noteDisposition === "discarded_unverified_snapshot",
+  );
   return (
     <div className="border-b border-border pb-6">
       <ShopPageHeader
@@ -54,7 +59,11 @@ export function OfflineTripHeader({
             <span role="status" aria-live="polite">
               <OfflineFreshnessPill freshness={chip.freshness}>
                 {chip.online
-                  ? t("shared.offlineManifest.freshnessPill.currentOnline")
+                  ? t(
+                      noteLossVisible
+                        ? "shared.offlineManifest.freshnessPill.currentOnlineWithNoteLoss"
+                        : "shared.offlineManifest.freshnessPill.currentOnline",
+                    )
                   : t(`shared.offlineManifest.freshnessPill.${chip.freshness}`)}
               </OfflineFreshnessPill>
             </span>
@@ -71,9 +80,12 @@ export function OfflineTripHeader({
         <p className={`mt-4 ${OFFLINE_NOTICE_CLASS} border-warning/40 bg-warning/10 text-pretty`}>
           {servedWithoutAnswer
             ? t("shared.offlineManifest.single.unansweredBanner")
-            : t("shared.offlineManifest.single.freshnessBanner", {
-                freshnessNote: t(`shared.offlineManifest.freshnessCopy.${freshness}`),
-              })}
+            : t(
+                noteLossVisible
+                  ? "shared.offlineManifest.single.freshnessBannerWithNoteLoss"
+                  : "shared.offlineManifest.single.freshnessBanner",
+                { freshnessNote: t(`shared.offlineManifest.freshnessCopy.${freshness}`) },
+              )}
         </p>
       )}
       {servedWithoutAnswer && liveOffer ? (
@@ -87,9 +99,11 @@ export function OfflineTripHeader({
       <p className="mt-3 text-sm font-medium" role="status" aria-live="polite">
         <StatusMessage message={message} />
       </p>
-      <p className="mt-1 text-sm text-muted">
-        {t("shared.offlineManifest.single.pendingRejectedCounts", { pending, rejected })}
-      </p>
+      {noteLossVisible && pending === 0 && rejected === 0 ? null : (
+        <p className="mt-1 text-sm text-muted">
+          {t("shared.offlineManifest.single.pendingRejectedCounts", { pending, rejected })}
+        </p>
+      )}
     </div>
   );
 }

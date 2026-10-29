@@ -26,8 +26,10 @@ import type { SavedCopyAction } from "./saved-copy";
  * which tenant this browser is signed in as, and on a marina connection that
  * can take as long as `fetchCurrentShopSlug`'s timeout allows — a captain
  * opening the roll call must never wait on it, which is the entire premise of
- * this surface. What SEC-D3 shortens is how *long* a foreign roster stays
- * decryptable, not the moment it stops being on screen.
+ * this surface. Before identity is verified, the offline-reference decision
+ * permits saved copies to render. Once it is verified, `OfflineManifestView`
+ * filters foreign rows and selected trips immediately; this hook then removes
+ * resolved foreign copies while retaining pending evidence for its own shop.
  */
 export function useCrossShopPurge({
   tripId,
@@ -99,9 +101,11 @@ export function useCrossShopPurge({
       // So it repaints — but never to a bare "nothing saved on this phone",
       // which is the one thing the captain already knows is wrong. The empty
       // state names the cause: a different shop is signed in on this tablet.
-      // Two things it will not do: blank on a *failed* read (only a store that
-      // positively answers "gone" repaints), and blank a record that survived
-      // the purge because it still holds unsynced evidence.
+      // A failed read leaves the encrypted record intact. A foreign record
+      // that survives because it still holds pending evidence also stays in
+      // IndexedDB; the view hides it while this different tenant is verified,
+      // and it becomes visible again when its own shop signs in. Neither case
+      // lets a foreign roster remain visible under the wrong verified tenant.
       //
       // All this round reports is what it found: gone, under this tenant. It
       // deliberately does not decide whether anything was *lost*, or what to

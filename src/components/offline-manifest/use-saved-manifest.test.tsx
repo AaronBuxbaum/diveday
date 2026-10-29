@@ -491,9 +491,9 @@ describe("useSavedManifest on the list", () => {
     expect(sync).toHaveBeenCalledTimes(1);
     expect(sync).toHaveBeenCalledWith("trip-1");
     expect(result.current.list).toEqual([synced, theirs, quiet]);
-    // The foreign copy's event remains pending and is never submitted under
-    // this tenant's session; its aggregate pending status stays visible.
-    expect(result.current.message).toBe(`${line("pendingWaiting")} {"count":1}`);
+    // The foreign copy's event remains pending and is never submitted or
+    // surfaced as an aggregate status under this tenant's session.
+    expect(result.current.message).toBe(line("listAllCaughtUp"));
   });
 
   it("shows persisted roll-call and checklist note loss per saved trip after reload", async () => {
@@ -581,6 +581,7 @@ describe("useSavedManifest and what retention threw away", () => {
     tripId: "trip-9",
     tripTitle: "Wreck Dive",
     shopName: "Blue Mantis Divers",
+    shopSlug: "blue-mantis",
     pendingEvents: 3,
     discardedAt: "2026-08-01T12:00:00.000Z",
   };

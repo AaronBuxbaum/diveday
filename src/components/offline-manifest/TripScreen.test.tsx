@@ -186,6 +186,7 @@ describe("OfflineManifestView — one column, one text edge", () => {
         tripId: "trip-9",
         tripTitle: "Morning Two-Tank",
         shopName: "Reef Runners",
+        shopSlug: "blue-mantis",
         pendingEvents: 2,
         discardedAt: new Date(FROZEN_MS).toISOString(),
       },

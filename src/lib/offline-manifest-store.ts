@@ -92,6 +92,8 @@ export type DiscardedOfflineRecord = {
   tripId: string;
   tripTitle: string;
   shopName: string;
+  /** Saved tenant identity lets verified devices hide another shop's notice. */
+  shopSlug: string;
   /** How many roll-call events on that record had never reached the server. */
   pendingEvents: number;
   discardedAt: string;
@@ -350,6 +352,7 @@ async function noteDiscardedRecord(
           tripId: trip?.id ?? "",
           tripTitle: trip?.title ?? "",
           shopName: envelope.snapshot.shop.name,
+          shopSlug: envelope.snapshot.shop.slug,
           pendingEvents,
           discardedAt: nowDate().toISOString(),
         } satisfies DiscardedOfflineRecord,

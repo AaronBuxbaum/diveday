@@ -64,7 +64,7 @@ function liveOffer(): HTMLElement | null {
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"], shouldAdvanceTime: true });
   // Online, and saved this very minute: the two facts that made the header
-  // read "Online · Fresh copy · This copy is current" on a list the worker
+  // read "Online · Fresh copy · The saved roster is current" on a list the worker
   // swapped in because the live one was slow.
   setOnline(true);
   vi.mocked(loadOfflineManifest).mockResolvedValue(envelope("trip-1", "Two-Tank Reef"));
@@ -99,7 +99,7 @@ describe("OfflineManifestView — a copy the worker served because DiveDay did n
     expect(
       screen.queryByText(t("shared.offlineManifest.freshnessPill.current")),
     ).not.toBeInTheDocument();
-    expect(screen.queryByText(/This copy is current/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/The saved roster is current/)).not.toBeInTheDocument();
   });
 
   it("keeps asking the live manifest without waiting for an online event", async () => {
@@ -148,7 +148,7 @@ describe("OfflineManifestView — a copy the worker served because DiveDay did n
 
     render(<OfflineManifestView />);
 
-    expect(await screen.findByText(/This copy is current/)).toBeInTheDocument();
+    expect(await screen.findByText(/The saved roster is current/)).toBeInTheDocument();
     // One chip says both (visual review 2026-10-24, B51): fresh, and online.
     expect(
       screen.getByText(t("shared.offlineManifest.freshnessPill.currentOnline")),
@@ -166,7 +166,7 @@ describe("OfflineManifestView — a copy the worker served because DiveDay did n
 
     expect(await screen.findByText(t("shared.connectivity.offlineWithCopy"))).toBeInTheDocument();
     // The age is still said, in the banner, once.
-    expect(screen.getByText(/This copy is current/)).toBeInTheDocument();
+    expect(screen.getByText(/The saved roster is current/)).toBeInTheDocument();
     expect(
       screen.queryByText(t("shared.offlineManifest.freshnessPill.current")),
     ).not.toBeInTheDocument();

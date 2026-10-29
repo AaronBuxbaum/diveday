@@ -78,6 +78,12 @@ export function OfflineManifestList({
   const needRefreshCount = savedRows.filter(
     (row) => row.expired || row.freshness !== "current",
   ).length;
+  // Roster freshness is separate from event delivery, but this line sits
+  // beside the durable note-loss notice and can read as if omitted notes sent.
+  const noteLossVisible = [
+    t("shared.offlineManifest.reconcile.noteDiscardedList"),
+    t("shared.offlineManifest.reconcile.noteUnverifiedList"),
+  ].some((notice) => message.includes(notice));
   // The shop belongs to the page, not to the row: this viewer is single-shop
   // by construction, because the shell purges the store when a different
   // shop signs in on the device. `null` is the window where that has not run
@@ -166,7 +172,9 @@ export function OfflineManifestList({
                 normally in. Said once here, for the group, it is both: the
                 reader is still told, and a pill below now only ever appears on
                 a copy that needs them. */}
-            {savedRows.length > 0 && (!unanswered || needRefreshCount > 0) ? (
+            {savedRows.length > 0 &&
+            (!unanswered || needRefreshCount > 0) &&
+            (needRefreshCount > 0 || !noteLossVisible) ? (
               <p className="mt-1 text-sm font-semibold">
                 {needRefreshCount > 0
                   ? t("shared.offlineManifest.list.freshnessNeedRefresh", {

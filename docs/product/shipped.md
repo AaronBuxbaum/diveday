@@ -2480,7 +2480,11 @@ the cast and now reads off the one definition.
 **Cross-tenant residency (SEC-D3).** The offline manifest store's cross-shop purge ran only from
 `OfflineManifestAutoSave`, which mounts in the staff shop layout — so a captain who lives on the
 offline shell, on a shared or reassigned boat tablet, never ran one. The shell runs it on load and
-on every reconnect now, against the same server-verified slug, and lists nothing until it has.
+on every reconnect now, against the same server-verified slug. After a shop is verified, the shell
+immediately filters foreign trip details and loss notices from the list and selected-trip view while
+the purge completes. Foreign pending events stay encrypted for recovery by their own shop and are not
+submitted under another shop's session. Before tenant verification, offline references remain
+available by explicit product choice; a shared device can expose those references until it reconnects.
 
 **Units (DOM-L2).** The automated marine forecast composed an English metric sentence in `src/lib`
 — "0.7 m waves from E · 7 s period" — on a page that had already converted the water temperature to

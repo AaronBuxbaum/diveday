@@ -435,3 +435,16 @@ design. That window now genuinely lapses for every record, including one holding
 synced: `OFFLINE_MANIFEST_PENDING_GRACE_MS` caps the reprieve at 28 days past expiry (see the ceiling
 amendment above), and the cost of that cap — a queued roll-call event thrown away — is reported on
 screen rather than taken quietly.
+
+**Amendment (2026-10-28): retain foreign pending evidence, but hide its details after tenant verification.**
+The earlier choice to show every saved shop label and full roster in every connectivity state did not
+adequately separate useful offline access from a verified cross-tenant session. A saved trip's own
+snapshot is not proof of the currently authenticated shop. The user's settled product choice accepts
+that an unverified shared device may show actionable, non-name/non-note-text loss references offline,
+because no online tenant evidence exists there. Once the server verifies a shop, the root list, selected
+trip and discarded-note notices are filtered to that shop immediately, before the asynchronous purge
+finishes. Foreign pending events remain encrypted in IndexedDB and are never submitted under the wrong
+tenant; they become visible again when their own shop is verified. This preserves recovery without
+showing another shop's trip title, shop name, roster, or loss references in a verified session. The
+tradeoff is explicit: offline pre-verification references can still expose cross-shop metadata on a
+shared device. No tenant-confidentiality guarantee applies while identity cannot be verified.

@@ -321,8 +321,7 @@ describe("loadOfflineManifest", () => {
   // Deleting unsynced evidence of who came back from a dive is its own harm,
   // so the loss is written down where a screen can report it — the delete
   // frequently happens with no page open at all (the service worker's push
-  // refresh, the staff layout's auto-save), which is why this is durable
-  // rather than a return value nobody would read.
+  // refresh, the staff layout's auto-save).
   it("writes down what it discarded, and nothing about the divers on it", async () => {
     const tripId = payload.manifests[0].trip.id;
     await saveOfflineManifest(payload);
@@ -340,6 +339,7 @@ describe("loadOfflineManifest", () => {
         tripId,
         tripTitle: payload.manifests[0].trip.title,
         shopName: payload.shop.name,
+        shopSlug: payload.shop.slug,
         pendingEvents: 1,
         discardedAt: new Date(FROZEN_MS).toISOString(),
       },

@@ -121,14 +121,42 @@ function initialListMessage(
   t: OfflineManifestTranslator,
   currentShopSlug: string | null = null,
 ) {
+  const visibleEnvelopes = currentShopSlug
+    ? envelopes.filter((saved) => saved.snapshot.shop.slug === currentShopSlug)
+    : envelopes;
   return [
-    ...(envelopes.length > 0
-      ? [t("shared.offlineManifest.reconcile.savedCount", { count: envelopes.length })]
+    ...(visibleEnvelopes.length > 0
+      ? [t("shared.offlineManifest.reconcile.savedCount", { count: visibleEnvelopes.length })]
       : []),
-    listNoteLossMessage(envelopes, t, currentShopSlug),
+    listNoteLossMessage(visibleEnvelopes, t, currentShopSlug),
   ]
     .filter(Boolean)
     .join("\n");
+}
+
+function reconciledListMessage(
+  envelopes: readonly OfflineManifestEnvelope[],
+  t: OfflineManifestTranslator,
+  currentShopSlug: string,
+) {
+  const authorized = envelopes.filter(
+    (envelope) => envelope.snapshot.shop.slug === currentShopSlug,
+  );
+  const rejected = authorized.reduce(
+    (sum, envelope) => sum + rejectedOfflineEventCount(envelope),
+    0,
+  );
+  const pending = authorized.reduce((sum, envelope) => sum + pendingOfflineEventCount(envelope), 0);
+  const noteLoss = listNoteLossMessage(authorized, t, currentShopSlug);
+  const syncMessage =
+    rejected > 0
+      ? t("shared.offlineManifest.reconcile.listPendingRejected", { count: rejected })
+      : pending > 0
+        ? t("shared.offlineManifest.reconcile.pendingWaiting", { count: pending })
+        : noteLoss
+          ? ""
+          : t("shared.offlineManifest.reconcile.listAllCaughtUp");
+  return [syncMessage, noteLoss].filter(Boolean).join("\n");
 }
 
 /**
@@ -144,6 +172,8 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
     removedForOtherShop: null,
   });
   const [list, setList] = useState<OfflineManifestEnvelope[] | null>(null);
+  const listRef = useRef<OfflineManifestEnvelope[] | null>(null);
+  listRef.current = list;
   // Null until the server has answered on this mount. A snapshot's shop slug
   // is useful for display, never proof of the currently authenticated tenant.
   const verifiedTenantSlugRef = useRef<string | null>(null);
@@ -413,21 +443,7 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
         return id && byId.has(id) ? (byId.get(id) as OfflineManifestEnvelope) : envelope;
       });
       setList(merged);
-      const rejected = merged.reduce(
-        (sum, envelope) => sum + rejectedOfflineEventCount(envelope),
-        0,
-      );
-      const pending = merged.reduce((sum, envelope) => sum + pendingOfflineEventCount(envelope), 0);
-      const noteLoss = listNoteLossMessage(merged, t, currentShopSlug);
-      const syncMessage =
-        rejected > 0
-          ? t("shared.offlineManifest.reconcile.listPendingRejected", { count: rejected })
-          : pending > 0
-            ? t("shared.offlineManifest.reconcile.pendingWaiting", { count: pending })
-            : noteLoss
-              ? ""
-              : t("shared.offlineManifest.reconcile.listAllCaughtUp");
-      setMessage([syncMessage, noteLoss].filter(Boolean).join("\n"));
+      setMessage(reconciledListMessage(merged, t, currentShopSlug));
     },
     [t, tenantSlugRef],
   );
@@ -449,10 +465,26 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
     setMessage("");
   }, []);
 
-  const onTenantVerified = useCallback((currentShopSlug: string) => {
-    verifiedTenantSlugRef.current = currentShopSlug;
-    setVerifiedTenantRevision((revision) => revision + 1);
-  }, []);
+  const onTenantVerified = useCallback(
+    (currentShopSlug: string) => {
+      verifiedTenantSlugRef.current = currentShopSlug;
+      // Re-scope before the purge's store read finishes. Foreign pending copies
+      // remain stored for their shop to reconcile but are no longer disclosed.
+      if (tripId) {
+        const visibleEnvelope = envelope?.snapshot.shop.slug === currentShopSlug ? envelope : null;
+        const noteMessage = tripNoticeForEnvelope(visibleEnvelope);
+        setMessage(
+          noteMessage === null
+            ? ""
+            : noteMessage || (visibleEnvelope ? t("shared.offlineManifest.reconcile.ready") : ""),
+        );
+      } else {
+        setMessage(initialListMessage(listRef.current ?? [], t, currentShopSlug));
+      }
+      setVerifiedTenantRevision((revision) => revision + 1);
+    },
+    [envelope, t, tripId, tripNoticeForEnvelope],
+  );
 
   useCrossShopPurge({
     tripId,
@@ -571,6 +603,7 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
   return {
     tripId,
     envelope,
+    verifiedTenantSlug: verifiedTenantRevision > 0 ? verifiedTenantSlugRef.current : null,
     removedForOtherShop,
     dispatchSaved,
     list,

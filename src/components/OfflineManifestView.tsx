@@ -57,6 +57,7 @@ function OfflineManifestScreen() {
   const {
     tripId,
     envelope,
+    verifiedTenantSlug,
     removedForOtherShop,
     dispatchSaved,
     list,
@@ -103,8 +104,15 @@ function OfflineManifestScreen() {
    * either.
    */
   const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
+  const visibleDiscarded = verifiedTenantSlug
+    ? discarded.filter((record) => record.shopSlug === verifiedTenantSlug)
+    : discarded;
   const discardNotice = (
-    <DiscardedRecordsNotice t={t} records={discarded} onAcknowledge={acknowledgeDiscarded} />
+    <DiscardedRecordsNotice
+      t={t}
+      records={visibleDiscarded}
+      onAcknowledge={acknowledgeDiscarded}
+    />
   );
   // Sent here because DiveDay did not answer: keep asking the live manifest,
   // and offer it once it answers in time. Never a swap: the captain chooses
@@ -124,11 +132,15 @@ function OfflineManifestScreen() {
   }
 
   if (!tripId) {
+    const visibleList =
+      list && verifiedTenantSlug
+        ? list.filter((saved) => saved.snapshot.shop.slug === verifiedTenantSlug)
+        : list;
     return (
       <OfflineManifestList
         t={t}
         shellVersionCopy={shellVersionCopy}
-        list={list}
+        list={visibleList}
         message={message}
         discardNotice={discardNotice}
         readFailed={storeReadFailed}
@@ -143,14 +155,18 @@ function OfflineManifestScreen() {
   // undone by a read that was already in flight (see the reducer), so there is
   // no ordering in which a roster reaches the screen after its record has been
   // deleted — including for a single commit.
-  if (!envelope) {
+  const foreignTrip =
+    verifiedTenantSlug !== null &&
+    envelope !== null &&
+    envelope.snapshot.shop.slug !== verifiedTenantSlug;
+  if (!envelope || foreignTrip) {
     return (
       <OfflineNoSavedTrip
         t={t}
         message={message}
-        removedForOtherShop={removedForOtherShop}
+        removedForOtherShop={foreignTrip || removedForOtherShop}
         readFailed={storeReadFailed}
-        discardNotice={discardNotice}
+        discardNotice={foreignTrip ? null : discardNotice}
       />
     );
   }

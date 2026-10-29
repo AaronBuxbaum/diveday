@@ -356,13 +356,14 @@
     "juniorCheckRequired": "Revisa con el equipo el plan y la supervisión de este buceador.",
     "juniorChecksUnavailable": "Esta copia se guardó antes de las verificaciones de titulaciones junior. Confirma con el equipo los límites de la titulación y de supervisión.",
     "freshnessCopy": {
-      "current": "Esta copia está al día",
-      "aging": "Esta copia es un poco antigua",
-      "stale": "Esta copia es antigua"
+      "current": "El manifiesto guardado está al día",
+      "aging": "Este manifiesto guardado es un poco antiguo",
+      "stale": "Este manifiesto guardado es antiguo"
     },
     "freshnessPill": {
       "current": "Copia reciente",
       "currentOnline": "Copia reciente · en línea",
+      "currentOnlineWithNoteLoss": "Manifiesto reciente · notas anteriores eliminadas",
       "aging": "Copia antigua",
       "stale": "Copia desactualizada"
     },
@@ -414,13 +415,14 @@
       "emptyHint": "Mientras aún tengas señal, abre el manifiesto en vivo de la salida: mantiene al día la copia de este dispositivo.",
       "readFailedHeading": "No se pudo abrir la copia guardada en este teléfono",
       "readFailedHint": "Recarga esta página una vez. Si sigue sin abrirse, usa el manifiesto impreso.",
-      "removedOtherShopHeading": "Esa copia guardada se eliminó",
+      "removedOtherShopHeading": "Esta salida no está disponible aquí",
       "removedOtherShopMessage": "En esta tablet hay otro centro con la sesión iniciada.",
-      "removedOtherShopHint": "Esta salida la guardó otro centro, así que su copia se eliminó de esta tablet cuando cambió el centro con la sesión iniciada aquí. Su pase de lista debe registrarse en el manifiesto en vivo de ese centro.",
+      "removedOtherShopHint": "Esta salida pertenece a otro centro. Inicia sesión en ese centro para abrir su manifiesto.",
       "skipLink": "Ir directo al pase de lista sin conexión",
       "savedAt": "Guardado {when}",
       "expiredBanner": "Esta copia guardada ha caducado y no se puede usar para embarcar buceadores. Cualquier cambio que siga esperando para enviarse abajo seguirá intentándolo, pero el nuevo pase de lista debe registrarse en el manifiesto en vivo.",
       "freshnessBanner": "{freshnessNote}. La disponibilidad refleja ese momento, y lo verificamos todo de nuevo en cuanto tengas señal.",
+      "freshnessBannerWithNoteLoss": "{freshnessNote}. Se eliminó texto de notas sin conexión anteriores tras borrar datos; consulta el aviso siguiente.",
       "unansweredBanner": "DiveDay no respondió, así que esta es la lista que guardó este teléfono, no la del manifiesto en vivo.",
       "liveAnswering": "DiveDay vuelve a responder.",
       "pendingRejectedCounts": "{pending} esperando para enviarse · {rejected} necesitan revisión",
