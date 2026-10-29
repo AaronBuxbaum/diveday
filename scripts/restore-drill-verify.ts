@@ -40,6 +40,28 @@ import { DEMO_BYPASS_PASSWORD, demoBypassEnabled } from "@/lib/demo-bypass";
 
 type Departure = { id: string; startsAt: Date };
 
+/**
+ * What the restore holds, by schema and table name only: counts and fixed table names, never a row.
+ * Printed before sign-in so that a "relation does not exist" failure says where the tables are (or
+ * that none came back) instead of leaving the next run to guess.
+ */
+async function logInventory(pool: Pool): Promise<void> {
+  const schemas = await pool.query<{ table_schema: string; tables: string }>(
+    `select table_schema, count(*) as tables from information_schema.tables
+     where table_schema not in ('pg_catalog', 'information_schema') group by 1 order by 1`,
+  );
+  console.log(
+    `restore-drill-verify: tables by schema: ${schemas.rows.map((row) => `${row.table_schema}=${row.tables}`).join(", ") || "none"}`,
+  );
+  const signIn = await pool.query<{ table_schema: string; table_name: string }>(
+    `select table_schema, table_name from information_schema.tables
+     where table_name in ('shops', 'people', 'user_accounts', 'person_roles') order by 1, 2`,
+  );
+  console.log(
+    `restore-drill-verify: sign-in tables found: ${signIn.rows.map((row) => `${row.table_schema}.${row.table_name}`).join(", ") || "none"}`,
+  );
+}
+
 /** Tomorrow's departures in the shop's own zone; when there are none, the next one after now. */
 async function departuresToRead(
   db: AppDb,
@@ -85,6 +107,7 @@ async function main(): Promise<number> {
       );
       return 2;
     }
+    await logInventory(pool);
     const user = await verifyCredentials(db, DEV_STAFF_LOGINS.owner.email, DEMO_BYPASS_PASSWORD);
     if (!user) {
       console.error(
@@ -135,9 +158,17 @@ async function main(): Promise<number> {
 /** The name and code only: a pg error message can quote a row. */
 function redacted(error: unknown): string {
   // drizzle wraps the driver's error, so its SQLSTATE is on the cause.
-  const failure = error as { code?: unknown; cause?: { code?: unknown } } | undefined;
+  const failure = error as
+    | { code?: unknown; cause?: { code?: unknown; message?: unknown } }
+    | undefined;
   const code = failure?.code ?? failure?.cause?.code;
-  return `${(error as Error | undefined)?.name ?? "an error"}${typeof code === "string" ? ` (${code})` : ""}`;
+  const name = `${(error as Error | undefined)?.name ?? "an error"}${typeof code === "string" ? ` (${code})` : ""}`;
+  // A missing relation's name is schema, not data: the one message fragment safe to print.
+  const missing =
+    code === "42P01"
+      ? String(failure?.cause?.message ?? "").match(/^relation "([\w.]+)" does not exist$/)?.[1]
+      : undefined;
+  return missing ? `${name}, relation ${missing} missing` : name;
 }
 
 function fail(error: unknown): never {
