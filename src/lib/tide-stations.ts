@@ -1,5 +1,6 @@
 import { HOUR_MS, nowMs } from "./clock";
 import type { DepthUnit } from "./depth-units";
+import { AsyncTtlCache } from "./ttl-lru";
 
 /**
  * **What a NOAA station id actually names, and whether it is anywhere near the
@@ -119,13 +120,12 @@ export function parseTideStation(payload: unknown, id: string): TideStation | nu
   };
 }
 
-type CachedStation = { expiresAt: number; value: Promise<TideStation | null> };
-const stationCaches = new WeakMap<Fetcher, Map<string, CachedStation>>();
+const stationCaches = new WeakMap<Fetcher, AsyncTtlCache<string, TideStation | null>>();
 
 function cacheFor(fetcher: Fetcher) {
   const existing = stationCaches.get(fetcher);
   if (existing) return existing;
-  const created = new Map<string, CachedStation>();
+  const created = new AsyncTtlCache<string, TideStation | null>(STATION_CACHE_MAX_ENTRIES, nowMs);
   stationCaches.set(fetcher, created);
   return created;
 }
@@ -172,37 +172,25 @@ export async function fetchTideStation(
   if (fixtureAllowed && process.env.DIVEDAY_DISABLE_EXTERNAL_HTTP === "1" && fetcher === fetch) {
     return fixtureTideStation(stationId);
   }
-  const cache = cacheFor(fetcher);
-  const cached = cache.get(stationId);
-  if (cached && cached.expiresAt > nowMs()) return cached.value;
-  cache.delete(stationId);
-
-  const value = (async () => {
-    try {
-      const response = await fetcher(stationUrl(stationId), {
-        cache: "no-store",
-        signal: AbortSignal.timeout(STATION_FETCH_TIMEOUT_MS),
-      });
-      if (!response.ok) return null;
-      return parseTideStation(await response.json(), stationId);
-    } catch {
-      return null;
-    }
-  })();
-  if (cache.size >= STATION_CACHE_MAX_ENTRIES) {
-    const oldestKey = cache.keys().next().value;
-    if (oldestKey) cache.delete(oldestKey);
-  }
-  cache.set(stationId, { expiresAt: nowMs() + STATION_CACHE_TTL_MS, value });
-  const resolved = await value;
-  // A failure is remembered briefly rather than for the day: a blip costs one
-  // render, an outage costs one request a minute per station. Guarded on
-  // identity so a newer entry, or an eviction while this was in flight, is
-  // left alone.
-  if (resolved === null && cache.get(stationId)?.value === value) {
-    cache.set(stationId, { expiresAt: nowMs() + STATION_FAILURE_TTL_MS, value });
-  }
-  return resolved;
+  return cacheFor(fetcher).getOrLoad(
+    stationId,
+    async () => {
+      try {
+        const response = await fetcher(stationUrl(stationId), {
+          cache: "no-store",
+          signal: AbortSignal.timeout(STATION_FETCH_TIMEOUT_MS),
+        });
+        if (!response.ok) return null;
+        return parseTideStation(await response.json(), stationId);
+      } catch {
+        return null;
+      }
+    },
+    {
+      ttlMs: STATION_CACHE_TTL_MS,
+      ttlForValue: (station) => (station === null ? STATION_FAILURE_TTL_MS : undefined),
+    },
+  );
 }
 
 /** Great-circle kilometres between two points, mean earth radius. */

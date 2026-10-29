@@ -2,6 +2,7 @@ import type { CalendarDate } from "./calendar-date";
 import { calendarDateToUtcMidnight, shiftCalendarDate } from "./calendar-date";
 import { HOUR_MS, nowMs } from "./clock";
 import type { TidePrediction } from "./tides";
+import { AsyncTtlCache } from "./ttl-lru";
 
 /**
  * **NOAA CO-OPS tide predictions, behind the same seam as the marine forecast**
@@ -36,13 +37,15 @@ const PREDICTION_CACHE_MAX_ENTRIES = 256;
 const PREDICTION_FAILURE_TTL_MS = 60_000;
 const PREDICTION_FETCH_TIMEOUT_MS = 4_000;
 
-type CachedPredictions = { expiresAt: number; value: Promise<TidePrediction[] | null> };
-const predictionCaches = new WeakMap<Fetcher, Map<string, CachedPredictions>>();
+const predictionCaches = new WeakMap<Fetcher, AsyncTtlCache<string, TidePrediction[] | null>>();
 
 function cacheFor(fetcher: Fetcher) {
   const existing = predictionCaches.get(fetcher);
   if (existing) return existing;
-  const created = new Map<string, CachedPredictions>();
+  const created = new AsyncTtlCache<string, TidePrediction[] | null>(
+    PREDICTION_CACHE_MAX_ENTRIES,
+    nowMs,
+  );
   predictionCaches.set(fetcher, created);
   return created;
 }
@@ -161,40 +164,24 @@ export async function fetchTidePredictions(
   ) {
     return fixtureTidePredictions(beginDate);
   }
-  const cache = cacheFor(fetcher);
   const key = `${stationId}:${beginDate}`;
-  const cached = cache.get(key);
-  if (cached && cached.expiresAt > nowMs()) return cached.value;
-  cache.delete(key);
-
-  const value = (async () => {
-    try {
-      const response = await fetcher(predictionsUrl(stationId, beginDate), {
-        cache: "no-store",
-        signal: AbortSignal.timeout(PREDICTION_FETCH_TIMEOUT_MS),
-      });
-      if (!response.ok) return null;
-      return parseTidePredictions(await response.json());
-    } catch {
-      return null;
-    }
-  })();
-  if (cache.size >= PREDICTION_CACHE_MAX_ENTRIES) {
-    const oldestKey = cache.keys().next().value;
-    if (oldestKey) cache.delete(oldestKey);
-  }
-  cache.set(key, { expiresAt: nowMs() + PREDICTION_CACHE_TTL_MS, value });
-  const resolved = await value;
-  // **A failure is remembered briefly rather than not at all.** Twelve hours
-  // would lose the sentence for the rest of the day over one blip, which is
-  // why this used to forget it outright — but forgetting it meant a provider
-  // that was down cost a fresh four-second timeout per station per render, on
-  // an unauthenticated page, for every visitor. A minute is short enough that
-  // a blip costs one render and long enough that an outage costs one request
-  // a minute per station. Guarded on identity so a newer entry for the same
-  // key, or an eviction while this was in flight, is left alone.
-  if (resolved === null && cache.get(key)?.value === value) {
-    cache.set(key, { expiresAt: nowMs() + PREDICTION_FAILURE_TTL_MS, value });
-  }
-  return resolved;
+  return cacheFor(fetcher).getOrLoad(
+    key,
+    async () => {
+      try {
+        const response = await fetcher(predictionsUrl(stationId, beginDate), {
+          cache: "no-store",
+          signal: AbortSignal.timeout(PREDICTION_FETCH_TIMEOUT_MS),
+        });
+        if (!response.ok) return null;
+        return parseTidePredictions(await response.json());
+      } catch {
+        return null;
+      }
+    },
+    {
+      ttlMs: PREDICTION_CACHE_TTL_MS,
+      ttlForValue: (predictions) => (predictions === null ? PREDICTION_FAILURE_TTL_MS : undefined),
+    },
+  );
 }
