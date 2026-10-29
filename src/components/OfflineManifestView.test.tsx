@@ -10,13 +10,7 @@ import {
 } from "@/lib/offline-manifest-store";
 import type { OfflineManifestEnvelope } from "@/lib/offline-manifests";
 import { OfflineManifestView } from "./OfflineManifestView";
-import {
-  envelope,
-  FROZEN_MS,
-  identityResponse,
-  richEnvelope,
-  setOnline,
-} from "./offline-manifest/view-fixtures";
+import { envelope, FROZEN_MS, identityResponse, setOnline } from "./offline-manifest/view-fixtures";
 
 let searchParams = new URLSearchParams();
 vi.mock("next/navigation", () => ({
@@ -131,7 +125,6 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
   });
 
   it("keeps the shop on each row, and out of the header, while two shops' records sit side by side", async () => {
-    setOnline(false);
     vi.mocked(listOfflineManifests).mockResolvedValue([
       envelope("trip-1", "Ours", { savedAt: new Date(FROZEN_MS).toISOString() }),
       envelope("trip-2", "Theirs", {
@@ -316,145 +309,6 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
     expect(syncOfflineManifest).not.toHaveBeenCalled();
   });
 
-  it("withholds a cached foreign roster while shop verification is pending but keeps its safe references and queued mark", async () => {
-    searchParams = new URLSearchParams({ trip: "trip-a" });
-    const foreign = richEnvelope(
-      "trip-a",
-      {},
-      {
-        events: [
-          {
-            clientEventId: "erased-note-reference",
-            snapshotId: "snap-trip-a",
-            snapshotSavedAt: new Date(FROZEN_MS).toISOString(),
-            tripId: "trip-a",
-            bookingId: "booking-abcdef12",
-            checkpoint: "departure",
-            status: "boarded",
-            occurredAt: new Date(FROZEN_MS).toISOString(),
-            syncStatus: "applied",
-            note: null,
-            noteDisposition: "discarded_erasure_cutoff",
-          },
-          {
-            clientEventId: "queued-shop-a-mark",
-            snapshotId: "snap-trip-a",
-            snapshotSavedAt: new Date(FROZEN_MS).toISOString(),
-            tripId: "trip-a",
-            bookingId: "booking-queued-1234",
-            checkpoint: "departure",
-            status: "boarded",
-            occurredAt: new Date(FROZEN_MS).toISOString(),
-            syncStatus: "pending",
-          },
-        ],
-      },
-    );
-    foreign.snapshot.shop.slug = "reef-runners";
-    foreign.snapshot.shop.name = "Private Shop A Name";
-    foreign.snapshot.manifests[0].trip.title = "Private Shop A Trip";
-    vi.mocked(listOfflineManifests).mockResolvedValue([]);
-    vi.mocked(loadOfflineManifest).mockResolvedValue(foreign);
-
-    let resolveIdentity!: (response: Response) => void;
-    vi.mocked(fetch).mockImplementation(
-      () => new Promise<Response>((resolve) => (resolveIdentity = resolve)),
-    );
-
-    render(<OfflineManifestView />);
-
-    // The store decrypts before the identity endpoint answers. That interval
-    // must reveal neither shop A's diver and emergency-contact roster nor its
-    // trip/shop names; only the decision-approved short references can render.
-    expect(await screen.findByRole("heading", { name: "Saved roster hidden" })).toBeInTheDocument();
-    expect(await screen.findByText(/Diver record abcdef12/)).toBeInTheDocument();
-    expect(screen.queryByText("Priya Shah")).not.toBeInTheDocument();
-    expect(screen.queryByText("Anil Shah")).not.toBeInTheDocument();
-    expect(screen.queryByText("Private Shop A Trip")).not.toBeInTheDocument();
-    expect(screen.queryByText("Private Shop A Name")).not.toBeInTheDocument();
-    expect(screen.getByText(/Diver record abcdef12/)).toBeInTheDocument();
-
-    await act(async () => resolveIdentity(identityResponse("blue-mantis")));
-    expect(
-      await screen.findByRole("heading", { name: "This trip isn’t available here" }),
-    ).toBeInTheDocument();
-    expect(screen.queryByText("Priya Shah")).not.toBeInTheDocument();
-    expect(foreign.events[1]?.syncStatus).toBe("pending");
-    expect(syncOfflineManifest).not.toHaveBeenCalled();
-  });
-
-  it("withholds root-list roster and discarded titles until shop verification", async () => {
-    const foreign = richEnvelope(
-      "trip-list-a",
-      {},
-      {
-        events: [
-          {
-            clientEventId: "erased-list-note-reference",
-            snapshotId: "snap-trip-list-a",
-            snapshotSavedAt: new Date(FROZEN_MS).toISOString(),
-            tripId: "trip-list-a",
-            bookingId: "booking-9876abcd",
-            checkpoint: "departure",
-            status: "boarded",
-            occurredAt: new Date(FROZEN_MS).toISOString(),
-            syncStatus: "applied",
-            note: null,
-            noteDisposition: "discarded_erasure_cutoff",
-          },
-          {
-            clientEventId: "queued-list-mark",
-            snapshotId: "snap-trip-list-a",
-            snapshotSavedAt: new Date(FROZEN_MS).toISOString(),
-            tripId: "trip-list-a",
-            bookingId: "booking-queued-4321",
-            checkpoint: "departure",
-            status: "boarded",
-            occurredAt: new Date(FROZEN_MS).toISOString(),
-            syncStatus: "pending",
-          },
-        ],
-      },
-    );
-    foreign.snapshot.shop.slug = "reef-runners";
-    foreign.snapshot.shop.name = "Private Shop A Name";
-    foreign.snapshot.manifests[0].trip.title = "Private Shop A Trip";
-    vi.mocked(listOfflineManifests).mockResolvedValue([foreign]);
-    vi.mocked(readDiscardedOfflineRecords).mockResolvedValue([
-      {
-        tripId: "trip-discarded-a",
-        tripTitle: "Private discarded trip title",
-        shopName: "Private discarded shop name",
-        shopSlug: "reef-runners",
-        pendingEvents: 1,
-        discardedAt: new Date(FROZEN_MS).toISOString(),
-      },
-    ]);
-
-    let resolveIdentity!: (response: Response) => void;
-    vi.mocked(fetch).mockImplementation(
-      () => new Promise<Response>((resolve) => (resolveIdentity = resolve)),
-    );
-    render(<OfflineManifestView />);
-
-    expect(await screen.findByRole("heading", { name: "Saved roster hidden" })).toBeInTheDocument();
-    expect(await screen.findByText(/Diver record 9876abcd/)).toBeInTheDocument();
-    expect(screen.queryByText("Priya Shah")).not.toBeInTheDocument();
-    expect(screen.queryByText("Anil Shah")).not.toBeInTheDocument();
-    expect(screen.queryByText("Private Shop A Trip")).not.toBeInTheDocument();
-    expect(screen.queryByText("Private Shop A Name")).not.toBeInTheDocument();
-    expect(screen.queryByText(/Private discarded/)).not.toBeInTheDocument();
-    expect(foreign.events[1]?.syncStatus).toBe("pending");
-    expect(syncOfflineManifest).not.toHaveBeenCalled();
-
-    await act(async () => resolveIdentity(identityResponse("blue-mantis")));
-    expect(await screen.findByText("No saved manifest on this phone")).toBeInTheDocument();
-    expect(screen.queryByText(/Diver record 9876abcd/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Private discarded/)).not.toBeInTheDocument();
-    expect(foreign.events[1]?.syncStatus).toBe("pending");
-    expect(syncOfflineManifest).not.toHaveBeenCalled();
-  });
-
   // SEC-D3 (review 20260802). The purge used to fire only from
   // OfflineManifestAutoSave, which mounts in the staff shop layout — so a
   // captain who only ever opens this shell on a shared or reassigned boat
@@ -586,15 +440,12 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
 
     render(<OfflineManifestView />);
 
-    // The store is read while the request is outstanding, but the saved trip
-    // stays hidden until its tenant is verified.
-    expect(await screen.findByRole("heading", { name: "Saved roster hidden" })).toBeInTheDocument();
-    expect(screen.queryByText("Two-Tank Reef")).not.toBeInTheDocument();
+    // Painted while the request is still outstanding.
+    expect(await screen.findByText("Two-Tank Reef")).toBeInTheDocument();
     expect(purgeOfflineManifestsExceptShop).not.toHaveBeenCalled();
 
     releaseFetch(identityResponse("blue-mantis"));
     await waitFor(() => expect(purgeOfflineManifestsExceptShop).toHaveBeenCalled());
-    expect(await screen.findByText("Two-Tank Reef")).toBeInTheDocument();
   });
 
   it("purges nothing when the current shop cannot be established", async () => {
@@ -623,9 +474,8 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
 
     render(<OfflineManifestView />);
 
+    await screen.findByText("Two-Tank Reef");
     await waitFor(() => expect(fetch).toHaveBeenCalled());
-    expect(screen.getByRole("heading", { name: "Saved roster hidden" })).toBeInTheDocument();
-    expect(screen.queryByText("Two-Tank Reef")).not.toBeInTheDocument();
     expect(purgeOfflineManifestsExceptShop).not.toHaveBeenCalled();
     expect(syncOfflineManifest).not.toHaveBeenCalled();
   });
@@ -640,9 +490,8 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
 
     render(<OfflineManifestView />);
 
+    await screen.findByText("Two-Tank Reef");
     await waitFor(() => expect(fetch).toHaveBeenCalled());
-    expect(screen.getByRole("heading", { name: "Saved roster hidden" })).toBeInTheDocument();
-    expect(screen.queryByText("Two-Tank Reef")).not.toBeInTheDocument();
     expect(purgeOfflineManifestsExceptShop).not.toHaveBeenCalled();
   });
 
@@ -860,7 +709,6 @@ describe("OfflineManifestView — when a purge deletes the record on screen", ()
     afterPurge: OfflineManifestEnvelope | null | Error;
   }) {
     searchParams = new URLSearchParams({ trip: "trip-1" });
-    setOnline(false);
     let verified = false;
     let held: OfflineManifestEnvelope | null | Error = shown;
     vi.mocked(loadOfflineManifest).mockImplementation(async () => {
@@ -887,7 +735,6 @@ describe("OfflineManifestView — when a purge deletes the record on screen", ()
     // is satisfied before the handover even happens.
     const roundsBefore = vi.mocked(readDiscardedOfflineRecords).mock.calls.length;
     await act(async () => {
-      setOnline(true);
       window.dispatchEvent(new Event("online"));
     });
     // Wait on the *end* of the purge round, not on its purge call. The round

@@ -19,7 +19,6 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => searchParams,
 }));
 vi.mock("@/lib/offline-manifest-store", async () => ({
-  beginOfflineTenantVerificationRound: vi.fn().mockResolvedValue(1),
   // The real class, not a stand-in: the view branches on
   // `error instanceof OfflineManifestError` and then on `error.code`, so a
   // duplicate declared here would make every refusal fall through to the

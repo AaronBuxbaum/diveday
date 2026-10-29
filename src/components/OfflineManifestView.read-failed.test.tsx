@@ -3,7 +3,6 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { loadOfflineManifest } from "@/lib/offline-manifest-store";
 import { OfflineManifestView } from "./OfflineManifestView";
-import { setOnline } from "./offline-manifest/view-fixtures";
 
 vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams({ trip: "trip-1" }),
@@ -40,7 +39,6 @@ afterEach(() => {
  */
 describe("OfflineManifestView — a saved copy that cannot be opened", () => {
   it("says the saved copy could not be opened, never that nothing was saved", async () => {
-    setOnline(false);
     vi.mocked(loadOfflineManifest).mockRejectedValue(new Error("decrypt failed"));
 
     render(<OfflineManifestView />);
@@ -59,7 +57,6 @@ describe("OfflineManifestView — a saved copy that cannot be opened", () => {
   });
 
   it("keeps the plain empty state when the read succeeds and finds nothing", async () => {
-    setOnline(false);
     vi.mocked(loadOfflineManifest).mockResolvedValue(null);
 
     render(<OfflineManifestView />);

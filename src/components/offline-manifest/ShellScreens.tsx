@@ -81,48 +81,6 @@ export function OfflineTenantVerificationScreen({
   );
 }
 
-/** A shared device has no safe shop identity while its lookup is unanswered. */
-export function OfflineTenantUnverifiedScreen({
-  t,
-  message,
-  referenceMessage,
-  readFailed,
-}: {
-  t: OfflineManifestTranslator;
-  message: string;
-  referenceMessage: string;
-  readFailed: boolean;
-}) {
-  return (
-    <main className="boat-mode mx-auto w-full max-w-3xl flex-1 px-6 py-16">
-      <ShopPageHeader
-        eyebrow={t("shared.offlineManifest.single.eyebrow")}
-        title={t("shared.offlineManifest.single.identityUnverifiedHeading")}
-        meta={
-          <p className="text-muted" role="status" aria-live="polite">
-            {t("shared.offlineManifest.reconcile.tenantUnverified")}
-          </p>
-        }
-      />
-      {readFailed ? (
-        <p className="mt-4 text-muted" role="status">
-          {t("shared.offlineManifest.reconcile.singleLoadError")}
-        </p>
-      ) : null}
-      {message ? (
-        <p className="mt-4 text-muted" role="status" aria-live="polite">
-          <StatusMessage message={message} />
-        </p>
-      ) : null}
-      {referenceMessage ? (
-        <p className="mt-4 rounded-inset border border-warning/40 bg-warning/10 px-4 py-3 text-pretty">
-          <StatusMessage message={referenceMessage} />
-        </p>
-      ) : null}
-    </main>
-  );
-}
-
 /**
  * A `?trip=` with no saved copy on screen: never saved here, taken away by the
  * cross-shop purge, or held but unreadable. The last two are named rather than
