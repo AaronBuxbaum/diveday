@@ -3099,6 +3099,25 @@ exports.handler = async (event) => {
         resources: [databaseDumpBucket.arnForObjects(`${DUMP_PREFIX}*`)],
       }),
     );
+    // Signing in to ECR Public lifts the anonymous pull limit that GitHub's shared runner addresses
+    // exhaust (`toomanyrequests: Data limit exceeded`, 2026-10-29), without which the drill cannot
+    // pull the Postgres image it restores with. Both actions only mint a pull token for a public
+    // registry: they read nothing in this account, and AWS accepts no resource narrower than "*".
+    restoreDrillRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: "SignInToEcrPublicForRestoreDrill",
+        actions: ["ecr-public:GetAuthorizationToken"],
+        resources: ["*"],
+      }),
+    );
+    restoreDrillRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: "BearerTokenForEcrPublicOnly",
+        actions: ["sts:GetServiceBearerToken"],
+        resources: ["*"],
+        conditions: { StringEquals: { "sts:AWSServiceName": "ecr-public.amazonaws.com" } },
+      }),
+    );
     restoreDrillRole.addToPolicy(denyReadingAnySecret());
     new cdk.CfnOutput(this, "GitHubActionsRestoreDrillRoleArn", {
       value: restoreDrillRole.roleArn,
