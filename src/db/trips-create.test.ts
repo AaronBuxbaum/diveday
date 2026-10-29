@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { createBoat } from "./boats";
-import { shops } from "./schema";
+import { courses, shops } from "./schema";
 import { createTripLens } from "./trip-lenses";
 import { createTrip } from "./trips-create";
 
@@ -81,6 +81,60 @@ describe("a departure's assigned hull", () => {
 
     expect(trip).not.toBeNull();
     expect(trip?.boatId).toBeNull();
+  });
+});
+
+describe("course-owned departure pricing", () => {
+  it("does not store a separate trip fee when the selected course has a catalog price", async () => {
+    const { db, shop } = ctx;
+    const [course] = await db
+      .insert(courses)
+      .values({ shopId: shop.id, title: "Priced course", slug: "priced-course", priceCents: 27500 })
+      .returning();
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      courseId: course.id,
+      title: "Priced course session",
+      startsAt: new Date("2030-09-01T12:00:00Z"),
+      endsAt: new Date("2030-09-01T16:00:00Z"),
+      capacity: 6,
+      plannedDives: 2,
+      priceCents: 15000,
+    });
+    expect(trip?.priceCents).toBeNull();
+  });
+
+  it("keeps a trip fee for an unpriced course and for an ordinary departure", async () => {
+    const { db, shop } = ctx;
+    const [course] = await db
+      .insert(courses)
+      .values({
+        shopId: shop.id,
+        title: "Unpriced course",
+        slug: "unpriced-course",
+        priceCents: null,
+      })
+      .returning();
+    const courseTrip = await createTrip(db, {
+      shopId: shop.id,
+      courseId: course.id,
+      title: "Unpriced course session",
+      startsAt: new Date("2030-09-02T12:00:00Z"),
+      endsAt: new Date("2030-09-02T16:00:00Z"),
+      capacity: 6,
+      plannedDives: 2,
+      priceCents: 15000,
+    });
+    const ordinaryTrip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Ordinary departure",
+      startsAt: new Date("2030-09-03T12:00:00Z"),
+      endsAt: new Date("2030-09-03T16:00:00Z"),
+      capacity: 6,
+      priceCents: 15000,
+    });
+    expect(courseTrip?.priceCents).toBe(15000);
+    expect(ordinaryTrip?.priceCents).toBe(15000);
   });
 });
 

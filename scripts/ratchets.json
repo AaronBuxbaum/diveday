@@ -406,7 +406,6 @@
       {
         "why": "merge current main into PR #3132",
         "files": {
-          "src/db/erasure-coverage.test.ts": "1075 -> 1078",
           "src/lib/manifests.test.ts": "1053 -> 1054"
         }
       }
@@ -438,7 +437,7 @@
     "src/db/dive-sites.test.ts": 1156,
     "src/db/diver-merge.test.ts": 1239,
     "src/db/divers.test.ts": 3056,
-    "src/db/erasure-coverage.test.ts": 1078,
+    "src/db/erasure-coverage.test.ts": 961,
     "src/db/executed-dives.test.ts": 1085,
     "src/db/export.test.ts": 1186,
     "src/db/import.test.ts": 1074,
@@ -528,7 +527,7 @@
     "src/db/seed-dive-sites.ts#seedDiveSites": 440,
     "src/db/seed-history.ts#seedHistory": 680,
     "src/db/seed-more-trips.ts#seedMoreTrips": 627,
-    "src/db/seed-trips.ts#seedTrips": 381,
+    "src/db/seed-trips.ts#seedTrips": 369,
     "src/db/trips-record.ts#updateTripRecord": 321,
     "src/lib/import.ts#prepareContactImport": 455
   },
@@ -574,12 +573,12 @@
   "page-length": {
     "//": "Line counts of the page.tsx files still over 400 lines. Written by `node scripts/check-page-length.mjs --write`. Each number may only go down — see scripts/check-page-length.mjs.",
     "src/app/page.tsx": 440,
-    "src/app/ready/[token]/page.tsx": 633,
+    "src/app/ready/[token]/page.tsx": 625,
     "src/app/s/[shopSlug]/page.tsx": 739,
     "src/app/s/[shopSlug]/trips/[id]/page.tsx": 466,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 577,
     "src/app/shop/[shopSlug]/orders/page.tsx": 727,
-    "src/app/shop/[shopSlug]/page.tsx": 620,
+    "src/app/shop/[shopSlug]/page.tsx": 617,
     "src/app/shop/[shopSlug]/promos/page.tsx": 564,
     "src/app/shop/[shopSlug]/reports/page.tsx": 492,
     "src/app/shop/[shopSlug]/reviews/page.tsx": 430,

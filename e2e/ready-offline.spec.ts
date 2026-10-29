@@ -21,6 +21,10 @@ import { E2E_FROZEN_CLOCK } from "./servers";
 const OPEN_BOAT = "Two-Tank Reef — Molasses & French";
 const COPY_CACHE = "diveday-ready-page-v1";
 const diver = diverTranslator("en-US");
+const LEGACY_OFFLINE_NOTE =
+  "No signal: this is the copy your phone saved. Anything you change here needs signal.";
+const LEGACY_OFFLINE_WARNING =
+  "No signal: this is the copy your phone saved. Save time unavailable; later changes may be missing. Anything you change here needs signal.";
 
 test.describe.configure({ timeout: 90_000 });
 
@@ -35,18 +39,27 @@ function keptCopies(page: Page): Promise<number> {
  * Books a seat as a new diver and opens their readiness link with a full load,
  * then waits for the phone to hold the page. Returns the link's path.
  */
-async function openKeptReadyPage(page: Page, context: BrowserContext, who: string) {
-  // The harness freezes the page's clock and the server's, never a service
-  // worker's, which would read the real date and find the seeded trip's copy
-  // long out of date. The worker script is served with the same frozen clock
-  // in front of it, so the copy's date is read against the harness's "now".
+async function openKeptReadyPage(
+  page: Page,
+  context: BrowserContext,
+  who: string,
+  phoneClockOffsetMs = 0,
+) {
+  // The server's page-generation clock is frozen by the harness. Give the
+  // service worker an independently controlled device clock so this spec can
+  // prove the banner does not use the phone's clock as freshness provenance.
   await context.route("**/manifest-sw.js", async (route) => {
     const response = await route.fetch();
-    const frozen = `const __fixed = new Date(${JSON.stringify(E2E_FROZEN_CLOCK)}).getTime();
+    const frozen = `globalThis.__diveDayTestClock = new Date(${JSON.stringify(E2E_FROZEN_CLOCK)}).getTime() + ${phoneClockOffsetMs};
 const __RealDate = Date;
 globalThis.Date = new Proxy(__RealDate, {
-  construct: (target, args) => Reflect.construct(target, args.length === 0 ? [__fixed] : args),
-  get: (target, prop, receiver) => (prop === "now" ? () => __fixed : Reflect.get(target, prop, receiver)),
+  construct: (target, args) => Reflect.construct(target, args.length === 0 ? [globalThis.__diveDayTestClock] : args),
+  get: (target, prop, receiver) => (prop === "now" ? () => globalThis.__diveDayTestClock : Reflect.get(target, prop, receiver)),
+});
+self.addEventListener("message", (event) => {
+  if (event.data?.type !== "e2e-set-clock") return;
+  globalThis.__diveDayTestClock = event.data.now;
+  event.ports[0]?.postMessage({ ok: true });
 });
 `;
     await route.fulfill({ response, body: frozen + (await response.text()) });
@@ -73,20 +86,100 @@ globalThis.Date = new Proxy(__RealDate, {
   return readyPath;
 }
 
+async function setWorkerClock(page: Page, now: number) {
+  await page.evaluate(async (value) => {
+    const registration = await navigator.serviceWorker.getRegistration("/ready/");
+    const worker = registration?.active;
+    if (!worker) throw new Error("The readiness worker is not active");
+    await new Promise<void>((resolve, reject) => {
+      const channel = new MessageChannel();
+      const timeout = window.setTimeout(
+        () => reject(new Error("The worker clock did not respond")),
+        5_000,
+      );
+      channel.port1.onmessage = () => {
+        window.clearTimeout(timeout);
+        channel.port1.close();
+        resolve();
+      };
+      worker.postMessage({ type: "e2e-set-clock", now: value }, [channel.port2]);
+    });
+  }, now);
+}
+
 test("the saved /ready copy shows with no signal, and a cancel landing forgets it", async ({
   page,
   context,
 }) => {
-  const readyPath = await openKeptReadyPage(page, context, "Olive Offline");
+  const readyPath = await openKeptReadyPage(page, context, "Olive Offline", 40 * 60_000);
   await expect(page.getByRole("button", { name: "Running late" })).toBeVisible();
+  const generatedAtLabel = await page.evaluate(
+    ({ deviceClockOffset, serverClock }) => {
+      const locale = document
+        .querySelector('meta[name="diveday-ready-copy-locale"]')
+        ?.getAttribute("content");
+      const timeZone = document
+        .querySelector('meta[name="diveday-ready-copy-time-zone"]')
+        ?.getAttribute("content");
+      const generatedAt = document
+        .querySelector('meta[name="diveday-ready-copy-generated-at"]')
+        ?.getAttribute("content");
+      if (!locale || !timeZone || !generatedAt) {
+        throw new Error(
+          "Ready page is missing its locale, shop time zone, or server generation time",
+        );
+      }
+      const format = (at: number) =>
+        new Intl.DateTimeFormat(locale, {
+          month: "short",
+          day: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+          timeZoneName: "short",
+          timeZone,
+        }).format(new Date(at));
+      const generated = Number(generatedAt);
+      const device = new Date(serverClock).getTime() + deviceClockOffset;
+      return { label: format(generated), deviceLabel: format(device) };
+    },
+    { deviceClockOffset: 40 * 60_000, serverClock: E2E_FROZEN_CLOCK },
+  );
+  expect(generatedAtLabel.label).not.toBe(generatedAtLabel.deviceLabel);
 
   // No signal: the reload is answered from the saved copy, and says so.
   await context.setOffline(true);
   await page.reload();
   await expect(page.getByRole("button", { name: "Running late" })).toBeVisible();
-  await expect(page.getByRole("status").filter({ hasText: "No signal" })).toBeVisible();
+  await expect(
+    page.getByRole("status").filter({
+      hasText: `No signal: this is a copy of the page generated ${generatedAtLabel.label} that your phone saved.`,
+    }),
+  ).toBeVisible();
   // It is the diver's only copy at the dock: nothing on it deletes it (domain review 2).
   await expect(page.getByRole("button", { name: diver("ready.offlineRemove") })).toHaveCount(0);
+
+  // A copy from before the saved-time format has no timestamp or locale meta.
+  // The worker recognizes this exact historical English banner and warns that
+  // its age is unknown without changing the path-bound token placeholder.
+  await context.setOffline(false);
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.evaluate(async (legacyNote) => {
+    const cache = await caches.open("diveday-ready-page-v1");
+    const key = new URL("/ready/kept-copy", location.origin).toString();
+    const saved = await cache.match(key);
+    if (!saved) throw new Error("No readiness copy is available to rewrite for the legacy check");
+    const html = (await saved.text())
+      .replace(
+        /<meta name="diveday-ready-copy-(?:version|locale|time-zone|generated-at)"[^>]*>/g,
+        "",
+      )
+      .replace(/\sdata-ready-copy-generated-at="\d+"/g, "")
+      .replace(/(<p [^>]*data-ready-offline-note=""[^>]*>)[\s\S]*?(<\/p>)/, `$1${legacyNote}$2`);
+    await cache.put(key, new Response(html, { status: saved.status, headers: saved.headers }));
+  }, LEGACY_OFFLINE_NOTE);
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.getByRole("status").filter({ hasText: LEGACY_OFFLINE_WARNING })).toBeVisible();
 
   // Back online, the diver cancels with the page's own button. Its redirect
   // reaches the hydrated page without a navigation the worker sees, so the
@@ -108,6 +201,40 @@ test("the saved /ready copy shows with no signal, and a cancel landing forgets i
   ).rejects.toThrow();
   // This test's context is disposed after the test. Restoring its network here
   // can wait indefinitely on the timed-out navigation still in Chromium.
+});
+
+test("a detected clock rollback replaces the offline copy with a warning", async ({
+  page,
+  context,
+}) => {
+  await openKeptReadyPage(page, context, "Casey Clock Rollback", 40 * 60_000);
+  const keepUntil = Number(
+    await page.locator('meta[name="diveday-ready-keep-until"]').getAttribute("content"),
+  );
+  // Record the forward jump while online; the worker sees the request and
+  // persists its clock observation before the next step simulates rollback.
+  await setWorkerClock(page, keepUntil + 1);
+  await page.evaluate(async () => {
+    await fetch(`${location.pathname}?clock-observation`, { cache: "no-store" }).catch(() => null);
+  });
+  await expect
+    .poll(() =>
+      page.evaluate(async () => {
+        const marker = await (await caches.open("diveday-ready-clock-v1")).match(
+          "/ready/clock-observation",
+        );
+        return Number(marker?.headers.get("x-diveday-clock-watermark"));
+      }),
+    )
+    .toBe(keepUntil + 1);
+  await context.setOffline(true);
+  await setWorkerClock(page, new Date(E2E_FROZEN_CLOCK).getTime() + 40 * 60_000);
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: diver("ready.offlineClockRollbackHeading") }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Running late" })).toHaveCount(0);
+  await expect.poll(() => keptCopies(page)).toBe(1);
 });
 
 /**

@@ -13,6 +13,10 @@
  * looked, and the drill would pass on a database it had just written. Here nothing writes, so a
  * missing account is a failed drill.
  *
+ * **Production has no seeded owner** (2026-10-29), so when that sign-in is refused the drill checks
+ * the restored records instead: an active account, its live person, their shop and a staff role,
+ * with no password check, and the log says which of the two it did.
+ *
  * **The seeded staffer signs in the way a visitor does on production**: the seed stores a random
  * hash for each demo login and admits the demo password through the demo bypass
  * (`src/lib/demo-bypass.ts`), which needs `NODE_ENV=production` (or development) and a shop still
@@ -23,22 +27,45 @@
  * Output is counts and ids, never a name, an email or a medical answer: the restored database holds
  * production's people, and this prints into a CI log.
  */
-import { and, asc, eq, gte } from "drizzle-orm";
+import { and, asc, eq, gte, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import type { AppDb } from "@/db/client";
 import { withExplicitSslMode } from "@/db/connection-string";
 import { DEV_STAFF_LOGINS } from "@/db/dev-credentials";
 import { getTripManifest } from "@/db/manifests";
-import { shops, trips } from "@/db/schema";
+import { people, personRoles, shops, trips, userAccounts } from "@/db/schema";
 import { liveTrip } from "@/db/trips-live";
 import { listShopDayDepartures } from "@/db/trips-queries";
+import { isStaff, type Role } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { tomorrowNoon } from "@/lib/closeout";
 import { verifyCredentials } from "@/lib/credentials";
 import { DEMO_BYPASS_PASSWORD, demoBypassEnabled } from "@/lib/demo-bypass";
 
 type Departure = { id: string; startsAt: Date };
+
+/**
+ * What the restore holds, by schema and table name only: counts and fixed table names, never a row.
+ * Printed before sign-in so that a "relation does not exist" failure says where the tables are (or
+ * that none came back) instead of leaving the next run to guess.
+ */
+async function logInventory(pool: Pool): Promise<void> {
+  const schemas = await pool.query<{ table_schema: string; tables: string }>(
+    `select table_schema, count(*) as tables from information_schema.tables
+     where table_schema not in ('pg_catalog', 'information_schema') group by 1 order by 1`,
+  );
+  console.log(
+    `restore-drill-verify: tables by schema: ${schemas.rows.map((row) => `${row.table_schema}=${row.tables}`).join(", ") || "none"}`,
+  );
+  const signIn = await pool.query<{ table_schema: string; table_name: string }>(
+    `select table_schema, table_name from information_schema.tables
+     where table_name in ('shops', 'people', 'user_accounts', 'person_roles') order by 1, 2`,
+  );
+  console.log(
+    `restore-drill-verify: sign-in tables found: ${signIn.rows.map((row) => `${row.table_schema}.${row.table_name}`).join(", ") || "none"}`,
+  );
+}
 
 /** Tomorrow's departures in the shop's own zone; when there are none, the next one after now. */
 async function departuresToRead(
@@ -65,6 +92,50 @@ async function departuresToRead(
   return { which: "next", departures: next };
 }
 
+type Staffer = { shopId: string; roles: readonly string[]; how: "sign-in" | "records" };
+
+/**
+ * Production holds no `DEV_STAFF_LOGINS` owner (2026-10-29: the seeded owner was refused on a
+ * restore of production), so when that sign-in fails the drill reads the restored records the way
+ * `verifyCredentials` does, minus the password: an active account, its live person, their shop and
+ * a staff role. At most one staffer per shop, so a shop with no departure does not hide the next.
+ */
+async function stafferRecords(db: AppDb): Promise<Staffer[]> {
+  const accounts = await db
+    .select({ personId: userAccounts.personId })
+    .from(userAccounts)
+    .where(eq(userAccounts.status, "active"))
+    .orderBy(asc(userAccounts.email))
+    .limit(200);
+  const seen = new Set<string>();
+  const found: Staffer[] = [];
+  for (const { personId } of accounts) {
+    if (found.length >= 20) break;
+    const [person] = await db
+      .select({ shopId: people.shopId })
+      .from(people)
+      .where(and(eq(people.id, personId), isNull(people.deletedAt)))
+      .limit(1);
+    if (!person || seen.has(person.shopId)) continue;
+    const [shop] = await db
+      .select({ id: shops.id })
+      .from(shops)
+      .where(eq(shops.id, person.shopId))
+      .limit(1);
+    if (!shop) continue;
+    const roles = (
+      await db
+        .select({ role: personRoles.role })
+        .from(personRoles)
+        .where(eq(personRoles.personId, personId))
+    ).map((row) => row.role as Role);
+    if (!isStaff(roles)) continue;
+    seen.add(person.shopId);
+    found.push({ shopId: person.shopId, roles, how: "records" });
+  }
+  return found;
+}
+
 async function main(): Promise<number> {
   const url = process.env.RESTORE_DATABASE_URL;
   if (!url) {
@@ -77,6 +148,22 @@ async function main(): Promise<number> {
   pool.on("error", (error) => {
     console.error(`restore-drill-verify: pool ${redacted(error)}.`);
   });
+  // The restored database answered "relation user_accounts does not exist" while public.user_accounts
+  // was there (2026-10-29): this connection's search_path did not include public. pg_restore sets an
+  // empty one on its own session, and nothing here knows what the scratch branch's role defaults to.
+  // Log what this connection starts with, then pin it, so the drill checks the restore and not the
+  // connection's defaults. Queued ahead of the first query, so the pool runs them in order.
+  pool.on("connect", (client) => {
+    client
+      .query("show search_path")
+      .then((result) => {
+        console.log(
+          `restore-drill-verify: connection search_path was "${result.rows[0]?.search_path}"`,
+        );
+      })
+      .catch(() => undefined);
+    client.query("set search_path to public").catch(() => undefined);
+  });
   const db = drizzle({ client: pool }) as unknown as AppDb;
   try {
     if (!demoBypassEnabled()) {
@@ -85,35 +172,44 @@ async function main(): Promise<number> {
       );
       return 2;
     }
-    const user = await verifyCredentials(db, DEV_STAFF_LOGINS.owner.email, DEMO_BYPASS_PASSWORD);
-    if (!user) {
+    await logInventory(pool);
+    const owner = await verifyCredentials(db, DEV_STAFF_LOGINS.owner.email, DEMO_BYPASS_PASSWORD);
+    const candidates: Staffer[] = owner
+      ? [{ shopId: owner.shopId, roles: owner.roles, how: "sign-in" }]
+      : await stafferRecords(db);
+    if (candidates.length === 0) {
       console.error(
-        "restore-drill-verify: FAILED sign-in. The seeded owner was refused on the restored database: the account, its person, its demo shop or its staff role did not come back together.",
-      );
-      return 1;
-    }
-    console.log(
-      `restore-drill-verify: sign-in ok (shop ${user.shopId}, roles ${user.roles.join(",")})`,
-    );
-
-    const [shop] = await db
-      .select({ timezone: shops.timezone })
-      .from(shops)
-      .where(eq(shops.id, user.shopId));
-    if (!shop) {
-      console.error(
-        "restore-drill-verify: FAILED. The staffer's shop is missing from the restore.",
+        "restore-drill-verify: FAILED. The restore holds no active account with a live person, a shop and a staff role.",
       );
       return 1;
     }
     const now = nowDate();
-    const { which, departures } = await departuresToRead(db, user.shopId, shop.timezone, now);
-    if (departures.length === 0) {
+    let chosen: (Staffer & { which: "tomorrow" | "next"; departures: Departure[] }) | undefined;
+    for (const candidate of candidates) {
+      const [shop] = await db
+        .select({ timezone: shops.timezone })
+        .from(shops)
+        .where(eq(shops.id, candidate.shopId));
+      if (!shop) continue;
+      const read = await departuresToRead(db, candidate.shopId, shop.timezone, now);
+      if (read.departures.length > 0) {
+        chosen = { ...candidate, ...read };
+        break;
+      }
+    }
+    if (!chosen) {
       console.error(
-        "restore-drill-verify: FAILED. The restored shop has no departure tomorrow and none after it, so no manifest was read.",
+        `restore-drill-verify: FAILED. None of ${candidates.length} restored shop(s) with a staffer has a departure tomorrow or after it, so no manifest was read.`,
       );
       return 1;
     }
+    console.log(
+      chosen.how === "sign-in"
+        ? `restore-drill-verify: sign-in ok (shop ${chosen.shopId}, roles ${chosen.roles.join(",")})`
+        : `restore-drill-verify: the seeded owner has no account here, as expected of production; records ok instead (shop ${chosen.shopId}, roles ${chosen.roles.join(",")}; account, person, shop and staff role found, no password check)`,
+    );
+    const { which, departures } = chosen;
+    const user = { shopId: chosen.shopId };
     for (const departure of departures) {
       const manifest = await getTripManifest(db, user.shopId, departure.id);
       if (!manifest) {
@@ -135,9 +231,17 @@ async function main(): Promise<number> {
 /** The name and code only: a pg error message can quote a row. */
 function redacted(error: unknown): string {
   // drizzle wraps the driver's error, so its SQLSTATE is on the cause.
-  const failure = error as { code?: unknown; cause?: { code?: unknown } } | undefined;
+  const failure = error as
+    | { code?: unknown; cause?: { code?: unknown; message?: unknown } }
+    | undefined;
   const code = failure?.code ?? failure?.cause?.code;
-  return `${(error as Error | undefined)?.name ?? "an error"}${typeof code === "string" ? ` (${code})` : ""}`;
+  const name = `${(error as Error | undefined)?.name ?? "an error"}${typeof code === "string" ? ` (${code})` : ""}`;
+  // A missing relation's name is schema, not data: the one message fragment safe to print.
+  const missing =
+    code === "42P01"
+      ? String(failure?.cause?.message ?? "").match(/^relation "([\w.]+)" does not exist$/)?.[1]
+      : undefined;
+  return missing ? `${name}, relation ${missing} missing` : name;
 }
 
 function fail(error: unknown): never {

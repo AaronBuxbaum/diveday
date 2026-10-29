@@ -10,11 +10,27 @@ import { GroupLabel } from "@/components/ui/group-label";
 import { fill, pluralForm } from "@/i18n/fill";
 import { scopedId } from "@/lib/element-id";
 import { formatDateTimeTz } from "@/lib/format";
-import { type OfflineManifestPayload, offlineManifestFreshness } from "@/lib/offline-manifests";
+import {
+  type OfflineChecklistEvent,
+  type OfflineManifestPayload,
+  type OfflineRollCallEvent,
+  offlineManifestFreshness,
+} from "@/lib/offline-manifests";
 import { type OfflineManifestSyncCopy, useOfflineManifestSync } from "./use-offline-manifest-sync";
 
 /** Every word `OfflineManifestManager` renders, resolved server-side. */
 export interface OfflineManifestManagerCopy extends OfflineManifestSyncCopy {
+  reconcileNoteDiscarded: string;
+  reconcileNoteUnverified: string;
+  reconcileNoteEntry: string;
+  reconcileNoteDiverReference: string;
+  reconcileNoteCrewReference: string;
+  reconcileNoteChecklistReference: string;
+  reconcileNoteMarkKept: string;
+  reconcileNoteMarkNeedsReview: string;
+  reconcileCheckpointDeparture: string;
+  reconcileCheckpointAfterDive: string;
+  reconcileChecklistLocation: string;
   reconcileRejectedOne: string;
   /** `{count}` placeholder. */
   reconcileRejectedOther: string;
@@ -78,6 +94,37 @@ export function OfflineManifestManager({
 
   const pending = saved?.events.filter((event) => event.syncStatus === "pending").length ?? 0;
   const rejected = saved?.events.filter((event) => event.syncStatus === "rejected").length ?? 0;
+  const noteEvents = saved ? [...saved.events, ...saved.checklistEvents] : [];
+  const cutoffNoteEvents = noteEvents.filter(
+    (event) => event.noteDisposition === "discarded_erasure_cutoff",
+  );
+  const unverifiedNoteEvents = noteEvents.filter(
+    (event) => event.noteDisposition === "discarded_unverified_snapshot",
+  );
+  const noteEntry = (event: OfflineRollCallEvent | OfflineChecklistEvent) => {
+    const isChecklist = "checklistItemId" in event;
+    const subjectId = isChecklist
+      ? event.checklistItemId
+      : (event.bookingId ?? event.crewPersonId ?? "");
+    const subject = isChecklist
+      ? fill(copy.reconcileNoteChecklistReference, { reference: subjectId.slice(-8) })
+      : event.bookingId
+        ? fill(copy.reconcileNoteDiverReference, { reference: subjectId.slice(-8) })
+        : fill(copy.reconcileNoteCrewReference, { reference: subjectId.slice(-8) });
+    const checkpoint =
+      "checkpoint" in event
+        ? event.checkpoint === "departure"
+          ? copy.reconcileCheckpointDeparture
+          : fill(copy.reconcileCheckpointAfterDive, {
+              n: event.checkpoint.slice("after_dive_".length),
+            })
+        : copy.reconcileChecklistLocation;
+    const result =
+      event.syncStatus === "rejected"
+        ? copy.reconcileNoteMarkNeedsReview
+        : copy.reconcileNoteMarkKept;
+    return fill(copy.reconcileNoteEntry, { subject, checkpoint, result });
+  };
   const freshness = saved ? offlineManifestFreshness(new Date(saved.snapshot.savedAt)) : null;
   const freshnessLabel =
     freshness === "current"
@@ -122,6 +169,30 @@ export function OfflineManifestManager({
           >
             {rejectedNotice}
           </div>
+        </div>
+      ) : null}
+      {cutoffNoteEvents.length || unverifiedNoteEvents.length ? (
+        <div className="mx-auto my-3 max-w-4xl px-4 print:hidden" role="status">
+          {cutoffNoteEvents.length ? (
+            <div className="text-sm text-muted">
+              <p>{copy.reconcileNoteDiscarded}</p>
+              <ul className="mt-1 list-disc ps-5">
+                {cutoffNoteEvents.map((event) => (
+                  <li key={event.clientEventId}>{noteEntry(event)}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {unverifiedNoteEvents.length ? (
+            <div className="text-sm text-muted">
+              <p>{copy.reconcileNoteUnverified}</p>
+              <ul className="mt-1 list-disc ps-5">
+                {unverifiedNoteEvents.map((event) => (
+                  <li key={event.clientEventId}>{noteEntry(event)}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
         </div>
       ) : null}
       {/* **The whole "On this phone" group, as one line at rest** (ADR

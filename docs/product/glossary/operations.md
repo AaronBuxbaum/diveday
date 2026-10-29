@@ -546,9 +546,22 @@
   "go and book" only when that many diver seats are free, an invitation is sent only when that many
   seats are free, and an invitation out counts that many seats against the next. A person-less
   date-request offer stops counting after 48 hours; a resend starts that interval again (#2914).
-  This is advice about further offers, not a reservation: booking still checks capacity. A couple is never
+  Each live booking explicitly linked to that departure offer answers one seat of its party; any
+  unbooked seats still count. A canceled or no-show booking, or one moved off that departure, no
+  longer answers a seat. The staff move action does not link the moved booking to another offer;
+  the explicit seat-from-request flow is the path that records this association. Separate offers
+  for separate departures keep separate counts. This is
+  advice about further offers, not a reservation: booking still checks capacity. A couple is never
   split across dates. Staff read "Party of 2" on the row; the demand count adds parties, not rows
   (ADR 20260719-trip-waitlist, amended 2026-10-15).
+- **Date-request party bookings** — when staff seat someone from an offered date request, that
+  active booking pins the request to the offered departure. Every other active booking linked to
+  that request must use the same departure, even when other offers exist. Once every linked seat is
+  released, staff may explicitly book the request on another offer; historical associations stay
+  so restoring an old seat checks against the party's current departure. A solo seat can move when
+  that preserves the active party together; a one-seat move is refused while other active members
+  would remain behind. The booking form carries the request explicitly and never guesses group
+  membership from a diver's name or email (issue #3102).
 - **Wait-list roll** — the wait list following the divers rather than staying on a day that is gone or full. Nightly, beside the series roll, a series date that sailed hands every interest nobody invited to the next public date of the run that takes a seat (a date on a conditions hold or made private is passed over). The existing wait-list invite then goes out to that date's whole queue in the order people asked, while it has seats nobody has been invited to, measured as a sale would measure them (sellable seats, the divers-only limit, a course's instructor and ratio); a **wait-list party** is invited only when its whole party fits, and a smaller interest behind it may still be. The rolled invite says so in its own sentence ("Sat, Oct 17 has sailed. Sat, Oct 24 has room": a date can sail with a seat free), never as though the diver had asked for the new date. An interest staff already invited stays where they left it. From a full departure's demand banner, or under the wait list of a full departure with even one interest, "Carry the wait list" hands every interest to a departure staff choose (each offered with the seats it has left), with no message until staff invite. Entries are copied, keep the time the diver first asked and their party, skip anyone already seated there, and never rank anybody. `src/db/interest-roll.ts`.
 - **Last-minute list** — the diver-facing name of an `anytime` **interest**: a shop-wide (not per-trip) opt-in of divers who want to hear about
   last-minute deals, each with an optional date range they said they're around. Distinct from the
@@ -1493,16 +1506,21 @@
   (Open Water) asks no card for a site level it
   certifies; never past it, never for an intro session or a course that certifies none (issue
   #2731). It needs the course's own instructor aboard, rostered by somebody else and not counted
-  off at the dock, and the seat within the course's ratio: marked seats are counted per instructor
-  across every session on the departure, a certified assistant raising the cap as on the session.
-  Today that lowers exactly one case: a PADI Open Water student on a one-dive charter whose site
+  off at the dock, and the seat within its conservative modeled base ratio: marked seats are counted
+  per instructor across every session, with the tightest base ratio applied to that modeled load.
+  The boarding check gives no assistant bonus because the departure and saved plan do not identify
+  actual underwater groups or which instructor an assistant supervises. The plan advisory remains
+  a plan; staff confirm the actual groups before diving. Today that lowers exactly one case: a PADI
+  Open Water student on a one-dive charter whose site
   asks Open Water, because continuing-education courses have no ratio rule yet and so never lower a level.
-  An instructor's load is also held to the tightest ratio of every seat already on them: an
-  Open Water seat marked after a Discover Scuba seat cannot take the instructor past the intro
-  ratio.
-  A course with no known ratio never lowers a level, so the departure's level stands and the row
-  warns. The sale, which cannot see a mark not yet made, sells on the same course seat under the
-  same rule.
+  An instructor's modeled load is also held to the tightest base ratio among seats assigned to them:
+  an Open Water mark after a Discover Scuba mark cannot raise that modeled cap above the intro ratio.
+  A course with no known ratio blocks ratio-backed coverage for all training marks on that
+  departure, so the departure's level stands and the row warns. Booking admission can consult
+  whether the diver's course seat has room in this same modeled calculation; that is a sale-time
+  candidate only, and the boarding check resolves the saved mark again. The separate course-session
+  booking-ratio cap remains its own gate. Neither a plan nor this modeled room establishes actual
+  underwater groups or which instructor an assistant supervises.
   A counter advisory can name overlapping intro and entry-level sessions with a possible shared
   instructor. It does not establish a group or clearance: different session windows can still
   have training marks on the same separate departure, so an absent advisory does not establish
@@ -2105,6 +2123,16 @@
   an address. Never on a held seat; a held seat is never one of its rows and never counted in
   their numbers. Read in `src/db/your-days.ts`; see
   [20261016-fresh-link-per-booking-row](../../architecture/decisions/20261016-fresh-link-per-booking-row.md).
+- **Returning-diver device memory** — an optional, browser-local copy of the lead booker's name
+  and email used to prefill a later booking form at the same shop. It is off by default, scoped to
+  one shop on that device, clearable with "Not you?", and expires for use after 30 days. Each
+  memory read or write opportunistically removes expired entries for other shops, when storage is
+  available. If the browser is closed at expiry, those bytes may remain until a later memory read
+  or write; exact-time physical deletion is not guaranteed. Only the explicit
+  opt-in on a successful, identity-confirmed, non-embedded booking can authorize the write; the
+  server uses a one-use receipt bound to the browser redirect, not the emailed readiness link or
+  the editable `?booked=1` flag. It is best-effort after hydration and is not guaranteed if the
+  browser leaves first. See [20261028-returning-diver-device-memory](../../architecture/decisions/20261028-returning-diver-device-memory.md).
 - **Your week** — a crew member's next three departures, on their Today below the day: the boat
   and departure, when, their job on it (`trip_assignments.trip_role`, "On the crew" when the
   roster did not say), and the one crew gap the staffing week would draw on it, from the same pass

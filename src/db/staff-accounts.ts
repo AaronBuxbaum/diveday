@@ -7,6 +7,7 @@ import { isDemoAccountEmail } from "@/lib/demo-identity";
 import { hashPassword } from "@/lib/password-hashing";
 import { isSpokenLanguageTag } from "@/lib/spoken-languages";
 import type { AppDb, DbExecutor } from "./client";
+import { lockDemoShopIdentityChanges } from "./demo-account-guard";
 import { releaseHelpRequestsOfPerson } from "./help-requests";
 import { boundLockWaits } from "./lock-bounds";
 import { selectActivePersonByEmail } from "./people";
@@ -346,6 +347,7 @@ export async function inviteStaffMember(
 
   try {
     const created = await db.transaction(async (tx) => {
+      await lockDemoShopIdentityChanges(tx, input.shopId);
       // A different shop's account already owns this email — user_accounts.email
       // is globally unique, so this must be refused before the insert throws a
       // raw constraint error.
@@ -470,6 +472,7 @@ export async function setStaffRoles(
   input: { shopId: string; personId: string; roles: Role[] },
 ): Promise<StaffMutationResult> {
   return db.transaction(async (tx) => {
+    await lockDemoShopIdentityChanges(tx, input.shopId);
     if (!(await personInShop(tx, input.shopId, input.personId))) {
       return { ok: false, reason: "not_found" };
     }
@@ -505,6 +508,7 @@ export async function setStaffAccountStatus(
   input: { shopId: string; personId: string; userAccountId: string; status: "active" | "disabled" },
 ): Promise<StaffMutationResult> {
   return db.transaction(async (tx) => {
+    await lockDemoShopIdentityChanges(tx, input.shopId);
     if (!(await staffAccountInShop(tx, input.shopId, input.personId, input.userAccountId))) {
       return { ok: false, reason: "not_found" };
     }
@@ -553,6 +557,7 @@ export async function removeStaffMember(
   input: { shopId: string; personId: string; userAccountId: string },
 ): Promise<StaffMutationResult> {
   return db.transaction(async (tx) => {
+    await lockDemoShopIdentityChanges(tx, input.shopId);
     if (!(await staffAccountInShop(tx, input.shopId, input.personId, input.userAccountId))) {
       return { ok: false, reason: "not_found" };
     }

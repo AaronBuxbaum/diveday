@@ -503,9 +503,9 @@ export async function seedMoreTrips(
         // a board of amber "No price set" pills read as a half-built demo. A
         // course session takes its course's catalog price.
         priceCents:
-          def.priceCents ??
-          (def.courseTitle ? courseByTitle.get(def.courseTitle)?.priceCents : undefined) ??
-          DEMO_TWO_TANK_PRICE_CENTS,
+          def.courseTitle && courseByTitle.get(def.courseTitle)?.priceCents != null
+            ? null
+            : (def.priceCents ?? DEMO_TWO_TANK_PRICE_CENTS),
       })),
     )
     .returning();

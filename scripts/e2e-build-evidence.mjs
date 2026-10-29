@@ -16,6 +16,7 @@ export function buildFingerprint(root = process.cwd()) {
     for (const entry of readdirSync(path.join(root, dir), { withFileTypes: true })) {
       const relative = path.posix.join(dir, entry.name);
       if (TEST_INPUT.test(relative)) continue;
+      if (relative.endsWith(".tsbuildinfo")) continue;
       if (entry.isDirectory()) walk(relative);
       else if (entry.isFile() || entry.isSymbolicLink()) files.push(relative);
     }

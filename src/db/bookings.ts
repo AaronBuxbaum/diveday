@@ -55,6 +55,13 @@ import { revokeBookingCapabilities } from "./booking-capabilities";
 import { readCertificationEvidence } from "./certification-evidence";
 import { listCourseSeatsInTraining } from "./certifications-in-training";
 import type { AppDb, DbExecutor } from "./client";
+import {
+  completeDateRequestOfferParty,
+  dateRequestOfferBookingFor,
+  lockDateRequestOffer,
+  moveDateRequestOfferBooking,
+  recordDateRequestOfferBooking,
+} from "./date-request-offer-bookings";
 import { recordDeskEvent } from "./desk-events";
 import { consumeEntitlementsForBooking, releaseEntitlementsForBooking } from "./dive-packages";
 import { releaseUnclaimedGearReservations } from "./gear";
@@ -186,6 +193,8 @@ export type BookingDeclaration = SelfDeclaration & { noCertification?: boolean }
 export type BookingRequest = {
   shopId: string;
   tripId: string;
+  /** Explicit request context; no person identity is inferred. */
+  dateRequestInterestId?: string;
   /**
    * Who is making this booking. `"public"` is the anonymous schedule form,
    * where the submitter supplies an email but never proves it is theirs — the
@@ -316,7 +325,10 @@ export type BookingRefusal =
         | "course_prerequisite"
         | "course_ratio_full"
         | "course_min_age"
-        | "person_not_found";
+        | "person_not_found"
+        | "date_request_offer_unavailable"
+        | "date_request_departure_conflict"
+        | "date_request_party_full";
     }
   | { ok: false; reason: "trip_prerequisite"; refusal: TripAdmissionRefusal };
 
@@ -388,6 +400,8 @@ export type BookingSuccess = {
    * confirm control (`dive-domain-expert`, 2026-09-11).
    */
   identityUnconfirmed: boolean;
+  /** Whether every seat in the linked date-request offer is actively booked. */
+  dateRequestPartyComplete?: boolean;
   admissionAdvisory?: BookingAdmissionAdvisory;
 };
 
@@ -777,9 +791,11 @@ async function levelsInTrainingBefore(
 
 /**
  * The courses a staff training mark could make this departure answer to,
- * with room for the seat under an instructor of the course aboard
- * (`markableTrainingDives`, issue #2731). Admission sells on them; readiness
- * waits for the mark.
+ * with room for the candidate under the shared modeled training room
+ * (`markableTrainingDives`, issue #2731). Admission may consider this
+ * candidate-room data at sale time; readiness resolves a saved mark again at
+ * boarding. Neither the plan nor this estimate proves actual underwater
+ * groups or assistant supervision.
  */
 async function trainingDivesOn(
   tx: DbExecutor,
@@ -996,6 +1012,14 @@ async function createBookingRecord(
     .limit(1)
     .for("no key update", { of: trips });
   if (!tripTakesSeatFrom(trip, req.actor)) return { ok: false, reason: "trip_unavailable" };
+  const dateOffer = req.dateRequestInterestId
+    ? await lockDateRequestOffer(tx, {
+        shopId: req.shopId,
+        tripId: req.tripId,
+        requestId: req.dateRequestInterestId,
+      })
+    : null;
+  if (typeof dateOffer === "string") return { ok: false, reason: dateOffer };
   const participantType: ParticipantType = req.participantType ?? "diver";
   // The public form sells only the types this departure prices, and a course
   // session takes a non-diver only at a price the shop named, read on the
@@ -1137,6 +1161,23 @@ async function createBookingRecord(
     admissionAdvisory,
     pending,
   });
+  let dateRequestPartyComplete: boolean | undefined;
+  if (outcome.ok && dateOffer) {
+    const linked = await recordDateRequestOfferBooking(tx, {
+      shopId: req.shopId,
+      offerId: dateOffer.offerId,
+      bookingId: outcome.bookingId,
+      partySize: dateOffer.partySize,
+    });
+    if (!linked) throw new Error("locked date request offer could not accept its booking");
+    dateRequestPartyComplete = await completeDateRequestOfferParty(tx, {
+      shopId: req.shopId,
+      requestId: dateOffer.requestId,
+      offerId: dateOffer.offerId,
+      partySize: dateOffer.partySize,
+      now: nowDate(),
+    });
+  }
   if (madeByThisSeat && outcome.ok) {
     await tx
       .update(people)
@@ -1149,7 +1190,7 @@ async function createBookingRecord(
         ),
       );
   }
-  return outcome;
+  return outcome.ok ? { ...outcome, dateRequestPartyComplete } : outcome;
 }
 
 /**
@@ -1180,6 +1221,29 @@ async function writeSeat(
     .from(bookings)
     .where(and(eq(bookings.tripId, trip.id), eq(bookings.personId, person.id)))
     .limit(1);
+  if (existing && rowCanBeReactivated(existing.status, trip.startsAt)) {
+    const link = await dateRequestOfferBookingFor(tx, {
+      shopId: req.shopId,
+      bookingId: existing.id,
+    });
+    if (link) {
+      if (
+        link.tripId !== req.tripId ||
+        (req.dateRequestInterestId && link.requestId !== req.dateRequestInterestId)
+      ) {
+        return { ok: false, reason: "date_request_departure_conflict" };
+      }
+      if (!req.dateRequestInterestId && link.requestId) {
+        const pinnedOffer = await lockDateRequestOffer(tx, {
+          shopId: req.shopId,
+          tripId: req.tripId,
+          requestId: link.requestId,
+          excludeBookingId: existing.id,
+        });
+        if (typeof pinnedOffer === "string") return { ok: false, reason: pinnedOffer };
+      }
+    }
+  }
   if (existing) {
     if (!rowCanBeReactivated(existing.status, trip.startsAt)) {
       return { ok: false, reason: "already_booked" };
@@ -1712,6 +1776,9 @@ export type RestoreBookingOutcome =
   | "already_active"
   | "trip_full"
   | "course_ratio_full"
+  | "date_request_departure_conflict"
+  | "date_request_offer_unavailable"
+  | "date_request_party_full"
   | "not_found";
 
 /**
@@ -1779,6 +1846,16 @@ export async function restoreBooking(
     // works. No hold check and no departure-time check here — see the doc
     // comment for why an undo is not a new booking.
     if (trip.status === "cancelled") return "trip_cancelled";
+    const dateRequestLink = await dateRequestOfferBookingFor(tx, { shopId, bookingId });
+    if (dateRequestLink?.scope === "departure" && dateRequestLink.requestId) {
+      const pinnedOffer = await lockDateRequestOffer(tx, {
+        shopId,
+        tripId: trip.id,
+        requestId: dateRequestLink.requestId,
+        excludeBookingId: bookingId,
+      });
+      if (typeof pinnedOffer === "string") return pinnedOffer;
+    }
     // Both limits, exactly as a new seat is measured: the boat against every
     // held seat, the divers-only limit against divers (ADR
     // 20261007-participant-types).
@@ -1868,7 +1945,10 @@ export type MoveBookingRefusal =
   | "course_prerequisite"
   /** Too young for the course on the day that session runs. */
   | "course_min_age"
-  | "trip_prerequisite";
+  | "trip_prerequisite"
+  | "date_request_departure_conflict"
+  | "date_request_offer_unavailable"
+  | "date_request_party_full";
 
 export type MoveBookingOutcome =
   | {
@@ -1954,6 +2034,67 @@ async function courseGateRefusal(
   return null;
 }
 
+async function moveAdmissionRefusal(
+  tx: DbExecutor,
+  shopId: string,
+  target: typeof trips.$inferSelect,
+  booking: typeof bookings.$inferSelect,
+): Promise<Extract<MoveBookingOutcome, { ok: false }> | null> {
+  // Capacity, participant type, course ratio, and admission are checked under
+  // the target lock, matching the staff-seat path.
+  // Both limits and the course ratio, read under the target's lock, exactly
+  // as `createBookingRecord` reads them for a new seat.
+  const held = await heldSeatCounts(tx, target.shopId, target.id);
+  const full = seatRefusal(
+    booking.participantType,
+    { ...target, capacity: await sellableCapacity(tx, target) },
+    held,
+  );
+  if (full) return { ok: false, reason: full };
+  // A snorkeler or a rider moves only to a session that prices their seat,
+  // and is asked none of the course's student gates (issue #2226).
+  const typeRefusal = participantTypeRefusal({
+    actor: "staff",
+    participantType: booking.participantType,
+    trip: target,
+  });
+  if (typeRefusal) return { ok: false, reason: "target_unavailable" };
+  if (target.courseId && isDiver(booking.participantType)) {
+    const [course] = await tx
+      .select()
+      .from(courses)
+      .where(and(eq(courses.id, target.courseId), eq(courses.shopId, shopId)))
+      .limit(1);
+    const { instructorCount, assistantCount } = await tripCourseCrewCounts(tx, target.id);
+    if (instructorCount === 0) return { ok: false, reason: "course_unstaffed" };
+    const seatCap = courseSeatCapacity(course ?? null, instructorCount, assistantCount);
+    if (seatCap !== null && held.divers >= seatCap) {
+      return { ok: false, reason: "course_ratio_full" };
+    }
+    // The course's own two gates, read again rather than trusted from the
+    // sale: a card can be revoked since, and age is measured on the day the
+    // session runs, so an earlier session of the same course can be one the
+    // student is still too young for (H-08).
+    const gate = await courseGateRefusal(tx, shopId, booking.personId, course, target.startsAt);
+    if (gate) return { ok: false, reason: gate };
+  }
+  const identityUnconfirmed = booking.identityUnconfirmedAt !== null;
+  const admission = await tripAdmissionFor(
+    tx,
+    shopId,
+    target.id,
+    { id: booking.personId },
+    identityUnconfirmed,
+    Boolean(target.courseId),
+    undefined,
+    booking.participantType,
+  );
+  if (!admission.admitted) {
+    return { ok: false, reason: "trip_prerequisite", refusal: admission.refusal };
+  }
+  return null;
+}
+
 export async function moveBooking(
   db: AppDb,
   input: {
@@ -1991,6 +2132,19 @@ export async function moveBooking(
       [target] = await lockTarget();
       [source] = await lockSource();
     }
+    if (!source) return { ok: false, reason: "not_found" };
+    if (!target) return { ok: false, reason: "target_unavailable" };
+    const dateRequestLink = await dateRequestOfferBookingFor(tx, { shopId, bookingId });
+    const dateRequestOffer =
+      dateRequestLink?.scope === "departure" && dateRequestLink.requestId
+        ? await lockDateRequestOffer(tx, {
+            shopId,
+            tripId: toTripId,
+            requestId: dateRequestLink.requestId,
+            excludeBookingId: bookingId,
+          })
+        : null;
+    if (typeof dateRequestOffer === "string") return { ok: false, reason: dateRequestOffer };
     const [booking] = await tx
       .select()
       .from(bookings)
@@ -2003,9 +2157,7 @@ export async function moveBooking(
       )
       .limit(1)
       .for("update");
-    if (!source || !booking || booking.status === "cancelled") {
-      return { ok: false, reason: "not_found" };
-    }
+    if (!booking || booking.status === "cancelled") return { ok: false, reason: "not_found" };
     // **A seat the desk turned away moves too** (layer 3 review, dde-2 #3):
     // the desk's money line sends staff here before the boat leaves. It lands booked on
     // the new departure; the turn-away was about the old one and stays on its
@@ -2069,56 +2221,9 @@ export async function moveBooking(
       .limit(1);
     if (rolled) return { ok: false, reason: "roll_call_started" };
 
-    // Both limits and the course ratio, read under the target's lock, exactly
-    // as `createBookingRecord` reads them for a new seat.
-    const held = await heldSeatCounts(tx, target.shopId, target.id);
-    const full = seatRefusal(
-      booking.participantType,
-      { ...target, capacity: await sellableCapacity(tx, target) },
-      held,
-    );
-    if (full) return { ok: false, reason: full };
-    // A snorkeler or a rider moves only to a session that prices their seat,
-    // and is asked none of the course's student gates (issue #2226).
-    const typeRefusal = participantTypeRefusal({
-      actor: "staff",
-      participantType: booking.participantType,
-      trip: target,
-    });
-    if (typeRefusal) return { ok: false, reason: "target_unavailable" };
-    if (target.courseId && isDiver(booking.participantType)) {
-      const [course] = await tx
-        .select()
-        .from(courses)
-        .where(and(eq(courses.id, target.courseId), eq(courses.shopId, shopId)))
-        .limit(1);
-      const { instructorCount, assistantCount } = await tripCourseCrewCounts(tx, target.id);
-      if (instructorCount === 0) return { ok: false, reason: "course_unstaffed" };
-      const seatCap = courseSeatCapacity(course ?? null, instructorCount, assistantCount);
-      if (seatCap !== null && held.divers >= seatCap) {
-        return { ok: false, reason: "course_ratio_full" };
-      }
-      // The course's own two gates, read again rather than trusted from the
-      // sale: a card can be revoked since, and age is measured on the day the
-      // session runs, so an earlier session of the same course can be one the
-      // student is still too young for (H-08).
-      const gate = await courseGateRefusal(tx, shopId, booking.personId, course, target.startsAt);
-      if (gate) return { ok: false, reason: gate };
-    }
     const identityUnconfirmed = booking.identityUnconfirmedAt !== null;
-    const admission = await tripAdmissionFor(
-      tx,
-      shopId,
-      target.id,
-      { id: booking.personId },
-      identityUnconfirmed,
-      Boolean(target.courseId),
-      undefined,
-      booking.participantType,
-    );
-    if (!admission.admitted) {
-      return { ok: false, reason: "trip_prerequisite", refusal: admission.refusal };
-    }
+    const admissionRefusal = await moveAdmissionRefusal(tx, shopId, target, booking);
+    if (admissionRefusal) return admissionRefusal;
 
     // The units held for the old day's window are not the new day's. Units
     // already handed over stay with the diver, as on a cancel.
@@ -2159,6 +2264,15 @@ export async function moveBooking(
           eq(bookings.status, booking.status),
         ),
       );
+    if (dateRequestLink && dateRequestOffer) {
+      const movedLink = await moveDateRequestOfferBooking(tx, {
+        shopId,
+        bookingId: booking.id,
+        fromOfferId: dateRequestLink.offerId,
+        toOfferId: dateRequestOffer.offerId,
+      });
+      if (!movedLink) throw new Error("locked date request booking link could not follow its move");
+    }
     // The diver's one open ask follows them: it is about their day, and the
     // new departure's crew is who answers it now. One the old crew already
     // handled is a record of that day, and stays with it.

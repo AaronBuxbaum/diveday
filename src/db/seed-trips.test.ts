@@ -2,7 +2,7 @@ import { and, eq, inArray, isNull, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { inWaterCrewRole } from "@/lib/crew-roles";
 import { seededShopContext } from "@/test/db";
-import { people, personRoles, tripAssignments, trips } from "./schema";
+import { courses, people, personRoles, tripAssignments, trips } from "./schema";
 import { LEAD_INSTRUCTOR_NAME, RELIEF_INSTRUCTOR_NAME } from "./seed-cast";
 import { crewClashes, setTripCrew } from "./trips-crew";
 import { listUpcomingSessionsForCourse } from "./trips-queries";
@@ -61,7 +61,7 @@ describe("seeded crew — every shop role × trip role combination", () => {
     // — the point of the second instructor is that assisting costs the class
     // nothing.
     const [session] = await db
-      .select({ courseId: trips.courseId })
+      .select({ courseId: trips.courseId, priceCents: trips.priceCents })
       .from(trips)
       .where(eq(trips.id, assignments[0].tripId));
     expect(session.courseId).not.toBeNull();
@@ -239,12 +239,18 @@ describe("seeded Open Water session — what its course-page row names", () => {
   it("has a site and a named instructor the public read returns", async () => {
     const { db, shop } = await seededShopContext();
     const [openWater] = await db
-      .select({ courseId: trips.courseId })
+      .select({ courseId: trips.courseId, priceCents: trips.priceCents })
       .from(trips)
       .where(
         and(eq(trips.shopId, shop.id), eq(trips.title, "Open Water Diver — three-day course")),
       );
     if (!openWater?.courseId) throw new Error("expected the seeded Open Water session");
+
+    const [course] = await db
+      .select({ priceCents: courses.priceCents })
+      .from(courses)
+      .where(eq(courses.id, openWater.courseId));
+    if (course?.priceCents != null) expect(openWater.priceCents).toBeNull();
 
     const [session] = await listUpcomingSessionsForCourse(db, shop.id, openWater.courseId);
     expect(session?.siteName).toBe("Pickles Reef");

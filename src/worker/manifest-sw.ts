@@ -2,6 +2,7 @@
 import { MANIFEST_SYNC_TAG } from "@/lib/background-flush";
 import { nowMs } from "@/lib/clock";
 import {
+  beginOfflineTenantVerificationRound,
   listOfflineManifests,
   purgeOfflineManifestsExceptShop,
   saveOfflineManifest,
@@ -19,8 +20,11 @@ import {
   pendingOfflineEventCount,
 } from "@/lib/offline-manifests";
 import {
+  beginReadyPageRequest,
   forgetReadyPage,
   isReadyScope,
+  observeReadyPageClock,
+  type ReadyPageRequest,
   readyPageFallback,
   readyPagePath,
   readyPageStylesheets,
@@ -53,7 +57,7 @@ import {
  */
 declare const self: ServiceWorkerGlobalScope;
 
-const CACHE_NAME = "diveday-offline-manifest-shell-v4";
+const CACHE_NAME = "diveday-offline-manifest-shell-v5";
 const SHELL_VERSION = CACHE_NAME.slice(CACHE_NAME.lastIndexOf("-v") + 1);
 const OFFLINE_SHELL = "/offline-manifest";
 
@@ -105,14 +109,16 @@ const PUSH_REFRESH_TIMEOUT_MS = 4_000;
  * `NAVIGATION_TIMEOUT_MS` passes without an answer. `saved` is told which of
  * the two it was, so the copy can say why it is on screen.
  *
- * With nothing saved to show, it keeps waiting for the network rather than
- * trading a slow page for an error page. `live` receives the abort signal,
- * so a request given up on is stopped, and any work chained inside `live`
- * (keeping a copy of the page) never runs for a response nobody shows.
+ * By default, with nothing saved to show, it keeps waiting for the network
+ * rather than trading a slow page for an error page. The readiness route opts
+ * into a browser error at the deadline because it has no safe substitute.
+ * `live` receives the abort signal, so a request given up on is stopped, and
+ * work chained inside `live` never runs for a response nobody shows.
  */
 async function networkFirst(
   live: (signal: AbortSignal) => Promise<Response>,
   saved: (why: OfflineFallbackReason) => Promise<Response | null | undefined>,
+  options: { noSavedCopyOnSlow: "wait" | "error" } = { noSavedCopyOnSlow: "wait" },
 ): Promise<Response> {
   const controller = new AbortController();
   const network = live(controller.signal);
@@ -131,7 +137,19 @@ async function networkFirst(
     clearTimeout(timer);
   }
   const copy = await saved("slow");
-  if (!copy) return network.catch(() => Response.error());
+  if (!copy) {
+    if (options.noSavedCopyOnSlow === "error") {
+      // The readiness page has no safe substitute when its saved copy is
+      // absent. Give the network the same four-second grace period, then
+      // finish this navigation instead of leaving it pending indefinitely.
+      controller.abort();
+      network.catch(() => undefined);
+      return Response.error();
+    }
+    // Staff pages may still be loading over a slow connection; preserve that
+    // behavior when the device has no offline shell to show.
+    return network.catch(() => Response.error());
+  }
   controller.abort();
   network.catch(() => undefined);
   return copy;
@@ -278,16 +296,20 @@ async function keepReadyAssets(html: string): Promise<void> {
 }
 
 let readyRequestGeneration = 0;
-function keepReadyPage(path: string, response: Response, requestedAt: number, generation: number) {
+function keepReadyPage(
+  path: string,
+  response: Response,
+  request: ReadyPageRequest,
+  generation: number,
+) {
   return saveReadyPage(
     caches,
     path,
     response,
     nowMs(),
-    requestedAt,
+    request,
     keepReadyAssets,
     () => generation === readyRequestGeneration,
-    nowMs,
   );
 }
 
@@ -333,13 +355,14 @@ self.addEventListener("message", (event) => {
       port?.postMessage({ ok: false });
       return;
     }
-    const requestedAt = nowMs();
     const generation = ++readyRequestGeneration;
     event.waitUntil(
-      fetch(path, { credentials: "same-origin", cache: "no-store" })
-        .then(async (response) => {
-          return keepReadyPage(path, response, requestedAt, generation);
-        })
+      beginReadyPageRequest(caches, path)
+        .then((request) =>
+          fetch(path, { credentials: "same-origin", cache: "no-store" }).then((response) =>
+            keepReadyPage(path, response, request, generation),
+          ),
+        )
         .then(
           (ok) => port?.postMessage({ ok }),
           () => port?.postMessage({ ok: false }),
@@ -363,9 +386,7 @@ self.addEventListener("message", (event) => {
       port?.postMessage({ ok: false });
       return;
     }
-    event.waitUntil(
-      forgetReadyPage(caches, path, nowMs()).then(() => port?.postMessage({ ok: true })),
-    );
+    event.waitUntil(forgetReadyPage(caches, path, nowMs()).then((ok) => port?.postMessage({ ok })));
     return;
   }
   if (event.data?.type === "GET_SHELL_VERSION") {
@@ -435,6 +456,7 @@ self.addEventListener("message", (event) => {
  */
 async function refreshSavedManifests(): Promise<void> {
   try {
+    const tenantRound = await beginOfflineTenantVerificationRound();
     const response = await fetch("/api/offline-manifests/upcoming", {
       // Explicit rather than relying on the same-origin default: this request
       // is worthless without the staff session, and a silent 401 here would
@@ -468,11 +490,11 @@ async function refreshSavedManifests(): Promise<void> {
     // catch below, which abandons the round before anything is written — the
     // same fail-closed order the page-side auto-save keeps, rather than
     // leaving both shops' rosters readable side by side.
-    await purgeOfflineManifestsExceptShop(shopSlug);
+    await purgeOfflineManifestsExceptShop(shopSlug, tenantRound);
     // Medical alert words another person saved on this device go before
     // anything is saved for this one (H-153 amendment). A body that names
     // nobody wipes them all: fail closed.
-    await wipeOfflineMedicalAlerts(offlineManifestViewerPersonId(body) ?? undefined);
+    await wipeOfflineMedicalAlerts(offlineManifestViewerPersonId(body) ?? undefined, tenantRound);
     for (const payload of offlineManifestPayloads(body)) {
       // Sequential, not Promise.all: these share one IndexedDB lock inside the
       // store, and a locked phone is not where to discover lock contention.
@@ -482,6 +504,7 @@ async function refreshSavedManifests(): Promise<void> {
           body,
           payload.manifests[0]?.trip.id,
         ),
+        tenantRound,
       }).catch(() => undefined);
     }
   } catch {
@@ -644,17 +667,11 @@ async function flushPendingRollCall(): Promise<void> {
   // belongs here at least as much, because here there is nobody to tell when
   // it goes wrong (security review, 2026-08-06).
   //
-  // Traced end to end, the version of this loop that flushed every envelope on
-  // the device destroyed evidence: `purgeOfflineManifestsExceptShop` keeps a
-  // *foreign* shop's record alive precisely while it still holds a `pending`
-  // event; submitting that event under whatever shop is currently signed in
-  // gets it scoped to `session.user.shopId` by the sync route and returned
-  // `rejected` for a tenant mismatch rather than a real domain refusal;
-  // `syncOfflineManifest` writes `syncStatus: "rejected"`; and a rejected event
-  // is no longer pending, so the very next purge deletes the record outright.
-  // Shop A's captain records roll call offshore, the tablet is handed to shop
-  // B, a push arrives with no page open, and the only record of who came back
-  // aboard is gone — silently, because a service worker has no screen.
+  // A shop can still change between this identity read and the sync request.
+  // Pass the verified slug as a comparison fence; the route checks it against
+  // its authenticated session and refuses a changed tenant as one failed batch,
+  // leaving every event pending for the original shop to retry.
+  const tenantRound = await beginOfflineTenantVerificationRound();
   const shopSlug = await fetchOfflineManifestShopSlug();
   if (!shopSlug) {
     // Offline, signed out, a 404, a body of the wrong shape: reconcile
@@ -676,7 +693,7 @@ async function flushPendingRollCall(): Promise<void> {
     if (!tripId) continue;
     // One at a time, for the same IndexedDB-lock reason as the save loop.
     try {
-      await syncOfflineManifest(tripId);
+      await syncOfflineManifest(tripId, shopSlug, tenantRound);
     } catch {
       failed = true;
     }
@@ -720,8 +737,13 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin || event.request.method !== "GET") return;
 
+  const readyPath = inReadyScope() ? readyPagePath(url, self.location.origin) : null;
+  const observeClock = Boolean(readyPath) && !url.searchParams.has("cancelled");
+  const clockObserved = observeClock ? observeReadyPageClock(caches, nowMs()) : Promise.resolve();
+  if (observeClock && event.request.mode !== "navigate") event.waitUntil(clockObserved);
+
   if (inReadyScope() && event.request.mode === "navigate") {
-    const path = readyPagePath(url, self.location.origin);
+    const path = readyPath;
     if (!path) return;
     if (url.searchParams.has("cancelled")) {
       // The diver just cancelled this seat (`cancelMyBookingAction`): the copy
@@ -732,7 +754,14 @@ self.addEventListener("fetch", (event) => {
       // lands on.
       const forgotten = forgetReadyPage(caches, path, nowMs());
       event.waitUntil(forgotten);
-      event.respondWith(forgotten.then(() => fetch(event.request)).catch(() => Response.error()));
+      event.respondWith(
+        forgotten
+          // Cancellation is already authoritative on the server. Keep showing
+          // its confirmation even if storage failed; the page's forget message
+          // reports that the saved copy may remain and gives a retry step.
+          .then(() => fetch(event.request))
+          .catch(() => Response.error()),
+      );
       return;
     }
     event.respondWith(
@@ -740,19 +769,20 @@ self.addEventListener("fetch", (event) => {
       // clean load is kept (a `?saved=` notice is a moment, not the page).
       networkFirst(
         (signal) => {
-          // A cancel landing that forgets this path after now outranks it (#2979).
-          const requestedAt = nowMs();
           const generation = ++readyRequestGeneration;
-          return fetch(event.request, { signal }).then((response) => {
-            if (url.search === "") {
-              event.waitUntil(
-                keepReadyPage(path, response.clone(), requestedAt, generation).catch(() => false),
-              );
-            }
-            return response;
-          });
+          return beginReadyPageRequest(caches, path).then((request) =>
+            fetch(event.request, { signal }).then((response) => {
+              if (!signal.aborted && url.search === "") {
+                event.waitUntil(
+                  keepReadyPage(path, response.clone(), request, generation).catch(() => false),
+                );
+              }
+              return response;
+            }),
+          );
         },
-        () => readyPageFallback(caches, path, nowMs()),
+        () => clockObserved.then(() => readyPageFallback(caches, path, nowMs())),
+        { noSavedCopyOnSlow: "error" },
       ),
     );
     return;

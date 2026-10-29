@@ -10,7 +10,8 @@
     "linkLabel": "Tu enlace de reservas",
     "viewAsDiver": "Míralo como lo verán tus buceadores"
   },
-  "demoReset": "Datos de demostración reiniciados, con barco nuevo y pizarra limpia.",
+  "demoReset": "La demostración volvió a su estado inicial.",
+  "demoResetRefused": "El reinicio de demostración no se realizó. Contacta con soporte.",
   "emailResent": "Correo de confirmación reenviado",
   "emailFailed": "Ese correo no se pudo enviar. Revisa la dirección y la configuración de correo.",
   "offlineLabel": "Sin conexión: este tablón puede estar desactualizado",
@@ -178,6 +179,7 @@
     "readyCount": "Listos: {ready} de {booked}",
     "blockedCount": "{count, plural, one {# bloqueado} other {# bloqueados}}",
     "departuresLabel": "Salidas",
+    "lastRollCall": "Último pase de lista · {day}",
     "needsYouCount": "{count, plural, one {# cosa} other {# cosas}}",
     "needsYouCountCrewAway": "{count, plural, one {# cosa} other {# cosas}}, {away, plural, one {# tripulante ausente} other {# tripulantes ausentes}}",
     "needsYouCountBeforeNext": "{count, plural, one {# cosa} other {# cosas}} · {before, plural, =0 {ninguna antes de la de las {time}} other {# antes de la de las {time}}}",

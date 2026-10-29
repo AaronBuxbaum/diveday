@@ -1,0 +1,484 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "95706554-b934-4c58-80e3-eeb2b1189b5c",
+  "prevIds": [
+    "4957f76f-c97e-43ef-b6d6-962c4f6ba614"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "date_request_offer_bookings"
+      ],
+      "writes": [
+        "s|tbl|public.date_request_offer_bookings",
+        "n|tbl|public.date_request_offer_bookings",
+        "e|tbl|public.date_request_offer_bookings",
+        "n|rel|public.date_request_offer_bookings",
+        "n|type|public.date_request_offer_bookings",
+        "n|rel|public.date_request_offer_bookings_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "drop_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "interests"
+      ],
+      "writes": [
+        "s|fk|public.interests.interests_booked_booking_id_bookings_id_fkey",
+        "n|fk|public.interests.interests_booked_booking_id_bookings_id_fkey",
+        "e|fk|public.interests.interests_booked_booking_id_bookings_id_fkey",
+        "n|con|public.interests.interests_booked_booking_id_bookings_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.interests",
+        "n|sch|public",
+        "e|col|public.interests.booked_booking_id"
+      ]
+    },
+    {
+      "statementType": "drop_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "interests"
+      ],
+      "writes": [
+        "s|ck|public.interests.interests_booked_booking_is_date_offer",
+        "n|ck|public.interests.interests_booked_booking_is_date_offer",
+        "e|ck|public.interests.interests_booked_booking_is_date_offer",
+        "n|con|public.interests.interests_booked_booking_is_date_offer"
+      ],
+      "reads": [
+        "n|tbl|public.interests",
+        "n|sch|public",
+        "e|col|public.interests.booked_booking_id",
+        "e|col|public.interests.scope",
+        "e|col|public.interests.parent_interest_id",
+        "e|col|public.interests.offered_at"
+      ]
+    },
+    {
+      "statementType": "drop_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "interests",
+        "interests_booked_booking_unique"
+      ],
+      "writes": [
+        "s|idx|public.interests_booked_booking_unique",
+        "n|idx|public.interests_booked_booking_unique",
+        "e|idx|public.interests_booked_booking_unique",
+        "n|rel|public.interests_booked_booking_unique"
+      ],
+      "reads": [
+        "n|tbl|public.interests",
+        "n|sch|public",
+        "e|col|public.interests.booked_booking_id"
+      ],
+      "sharedWrites": [
+        "e|uniqueness|public.interests.booked_booking_id"
+      ]
+    },
+    {
+      "statementType": "drop_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "interests",
+        "booked_booking_id"
+      ],
+      "writes": [
+        "s|col|public.interests.booked_booking_id",
+        "n|col|public.interests.booked_booking_id",
+        "e|col|public.interests.booked_booking_id"
+      ],
+      "reads": [
+        "n|tbl|public.interests",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "date_request_offer_bookings",
+        "date_request_offer_bookings_shop_interest_idx"
+      ],
+      "writes": [
+        "s|idx|public.date_request_offer_bookings_shop_interest_idx",
+        "n|idx|public.date_request_offer_bookings_shop_interest_idx",
+        "e|idx|public.date_request_offer_bookings_shop_interest_idx",
+        "n|rel|public.date_request_offer_bookings_shop_interest_idx"
+      ],
+      "reads": [
+        "n|tbl|public.date_request_offer_bookings",
+        "n|sch|public",
+        "n|col|public.date_request_offer_bookings.shop_id",
+        "n|col|public.date_request_offer_bookings.interest_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "interests",
+        "interests_shop_id_id_unique"
+      ],
+      "writes": [
+        "s|idx|public.interests_shop_id_id_unique",
+        "n|idx|public.interests_shop_id_id_unique",
+        "e|idx|public.interests_shop_id_id_unique",
+        "n|rel|public.interests_shop_id_id_unique"
+      ],
+      "reads": [
+        "n|tbl|public.interests",
+        "n|sch|public",
+        "n|col|public.interests.shop_id",
+        "n|col|public.interests.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "date_request_offer_bookings"
+      ],
+      "writes": [
+        "s|fk|public.date_request_offer_bookings.date_request_offer_bookings_shop_id_shops_id_fkey",
+        "n|fk|public.date_request_offer_bookings.date_request_offer_bookings_shop_id_shops_id_fkey",
+        "e|fk|public.date_request_offer_bookings.date_request_offer_bookings_shop_id_shops_id_fkey",
+        "n|con|public.date_request_offer_bookings.date_request_offer_bookings_shop_id_shops_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.date_request_offer_bookings",
+        "n|sch|public",
+        "n|tbl|public.shops",
+        "n|sch|public",
+        "n|col|public.date_request_offer_bookings.shop_id",
+        "n|col|public.shops.id",
+        "e|uniqueness|public.shops.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "date_request_offer_bookings"
+      ],
+      "writes": [
+        "s|fk|public.date_request_offer_bookings.date_request_offer_bookings_interest_id_interests_id_fkey",
+        "n|fk|public.date_request_offer_bookings.date_request_offer_bookings_interest_id_interests_id_fkey",
+        "e|fk|public.date_request_offer_bookings.date_request_offer_bookings_interest_id_interests_id_fkey",
+        "n|con|public.date_request_offer_bookings.date_request_offer_bookings_interest_id_interests_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.date_request_offer_bookings",
+        "n|sch|public",
+        "n|tbl|public.interests",
+        "n|sch|public",
+        "n|col|public.date_request_offer_bookings.interest_id",
+        "n|col|public.interests.id",
+        "e|uniqueness|public.interests.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "date_request_offer_bookings"
+      ],
+      "writes": [
+        "s|fk|public.date_request_offer_bookings.date_request_offer_bookings_shop_interest_fk",
+        "n|fk|public.date_request_offer_bookings.date_request_offer_bookings_shop_interest_fk",
+        "e|fk|public.date_request_offer_bookings.date_request_offer_bookings_shop_interest_fk",
+        "n|con|public.date_request_offer_bookings.date_request_offer_bookings_shop_interest_fk"
+      ],
+      "reads": [
+        "n|tbl|public.date_request_offer_bookings",
+        "n|sch|public",
+        "n|tbl|public.interests",
+        "n|sch|public",
+        "n|col|public.date_request_offer_bookings.shop_id",
+        "n|col|public.date_request_offer_bookings.interest_id",
+        "n|col|public.interests.shop_id",
+        "n|col|public.interests.id",
+        "e|uniqueness|public.interests.id.shop_id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "date_request_offer_bookings"
+      ],
+      "writes": [
+        "s|fk|public.date_request_offer_bookings.date_request_offer_bookings_shop_booking_fk",
+        "n|fk|public.date_request_offer_bookings.date_request_offer_bookings_shop_booking_fk",
+        "e|fk|public.date_request_offer_bookings.date_request_offer_bookings_shop_booking_fk",
+        "n|con|public.date_request_offer_bookings.date_request_offer_bookings_shop_booking_fk"
+      ],
+      "reads": [
+        "n|tbl|public.date_request_offer_bookings",
+        "n|sch|public",
+        "n|tbl|public.bookings",
+        "n|sch|public",
+        "n|col|public.date_request_offer_bookings.shop_id",
+        "n|col|public.date_request_offer_bookings.booking_id",
+        "n|col|public.bookings.shop_id",
+        "n|col|public.bookings.id",
+        "e|uniqueness|public.bookings.id.shop_id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "date_request_offer_bookings",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "date_request_offer_bookings",
+        "name": "shop_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "date_request_offer_bookings",
+        "name": "interest_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "date_request_offer_bookings",
+        "name": "booking_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "date_request_offer_bookings",
+        "name": "date_request_offer_bookings_shop_interest_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "shop_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "interest_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "interests",
+        "name": "interests_shop_id_id_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "shop_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "date_request_offer_bookings",
+        "name": "date_request_offer_bookings_shop_id_shops_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "shop_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "shops",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "date_request_offer_bookings",
+        "name": "date_request_offer_bookings_interest_id_interests_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "interest_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "interests",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "date_request_offer_bookings",
+        "name": "date_request_offer_bookings_shop_interest_fk",
+        "nameExplicit": true,
+        "columns": [
+          "shop_id",
+          "interest_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "interests",
+        "columnsTo": [
+          "shop_id",
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "date_request_offer_bookings",
+        "name": "date_request_offer_bookings_shop_booking_fk",
+        "nameExplicit": true,
+        "columns": [
+          "shop_id",
+          "booking_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "bookings",
+        "columnsTo": [
+          "shop_id",
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "date_request_offer_bookings",
+        "name": "date_request_offer_bookings_pkey",
+        "columns": [
+          "booking_id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"interests\",\"booked_booking_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"interests_booked_booking_unique\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"interests\",\"interests_booked_booking_id_bookings_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "checks\u0000[\"public\",\"interests\",\"interests_booked_booking_is_date_offer\"]"
+    }
+  ]
+}

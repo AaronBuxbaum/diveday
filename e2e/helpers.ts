@@ -836,14 +836,10 @@ export async function seededTripId(
  * opens the row first. A row that is already open — a save redirects back
  * with `?saved=<section>`, which re-renders it open — is left alone.
  */
-/** Open the same settings rail at any viewport width. */
+/** Get the same settings rail at any viewport width. */
 export async function openSettingsRail(page: Page): Promise<Locator> {
   const rail = page.getByRole("navigation", { name: "Settings sections" });
   await expect(rail).toBeVisible();
-  const toggle = rail.getByRole("button", { name: "Settings sections" });
-  if (await toggle.isVisible()) {
-    if ((await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
-  }
   return rail;
 }
 

@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, asc, eq, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { advanceClock } from "@/test/clock";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
@@ -150,8 +150,10 @@ describe("deleting a word", () => {
     const rows = await db
       .select({ id: trips.id })
       .from(trips)
-      .where(eq(trips.shopId, shop.id))
+      .where(and(eq(trips.shopId, shop.id), ne(trips.status, "cancelled")))
+      .orderBy(asc(trips.startsAt), asc(trips.id))
       .limit(2);
+    expect(rows).toHaveLength(2);
     for (const row of rows) {
       await db.update(trips).set({ lensId: lens.id }).where(eq(trips.id, row.id));
     }

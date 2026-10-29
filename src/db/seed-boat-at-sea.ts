@@ -3,6 +3,7 @@ import { nowDate } from "@/lib/clock";
 import { depthToMeters } from "@/lib/depth-units";
 import { shopDayBounds } from "@/lib/zoned";
 import type { DbExecutor } from "./client";
+import { isDemoShopWithDemoOwnerOrCaptainAccount } from "./demo-account-guard";
 import { listTripReadiness } from "./readiness";
 import {
   bookingPayments,
@@ -32,7 +33,9 @@ import { LEAD_INSTRUCTOR_NAME, OWNER_NAME, RELIEF_INSTRUCTOR_NAME } from "./seed
 import {
   DEMO_SHOP_TIMEZONE,
   type DemoAtSeaDeparture,
+  type DemoFinishedDuskDeparture,
   demoAtSeaDeparture,
+  demoFinishedDuskDeparture,
   withinDeskHours,
 } from "./seed-clock";
 import { freeHull } from "./seed-hulls";
@@ -88,19 +91,16 @@ const SURFACED_BEFORE_NOW_MIN = [12, 9, 6, 3] as const;
 const FIRST_GUIDE_TEAMS = 3;
 
 /**
- * **A boat at sea, halfway through her roll call** (market sheet 2026-10-22,
- * item 1). Whatever hour a visitor opens or resets the demo, one boat is
- * underway: her pre-departure check ticked at the dock, everyone counted
- * aboard as the lines came off, dive 1 in the log and counted, and dive 2's
- * count open with nine of eleven back aboard and one buddy pair still to
- * surface. The roll call a shop's home page leads with is seen while it is
- * happening, not only finished (the dawn boat) or not started (the readiness
- * departure).
+ * **A boat at sea during booth hours, a finished dusk roll call after hours**
+ * (market sheet 2026-10-22, item 1; issue #3177). In booth hours the record is
+ * underway with dive 1 counted and dive 2's count open. Outside those hours,
+ * it is the last completed dusk departure, with every diver and crew member
+ * counted back. A 5 AM demo therefore keeps last night's real date and finish
+ * time; it does not put a boat in the water overnight.
  *
- * Every time comes from `demoAtSeaDeparture`, relative to the instant of the
- * seed, so nothing is stamped ahead of the clock; outside the hours a boat is
- * plausibly mid-dive it seeds nothing. Her stage taps (boarding, underway) are
- * `seedTripStage`'s, which runs after this.
+ * Every time comes from the demo clock helpers, and completed roll-call events
+ * stay behind the seed instant. Her stage taps (boarding, underway, returned)
+ * are `seedTripStage`'s, which runs after this.
  *
  * The divers are regulars from the shop's history, picked from people with no
  * seat anywhere from today on: a release signed for this boat satisfies a
@@ -110,8 +110,15 @@ const FIRST_GUIDE_TEAMS = 3;
  * applies the way `recordRollCall` does.
  */
 export async function seedBoatAtSea(db: DbExecutor, shopId: string): Promise<void> {
+  await db.transaction((tx) => seedBoatAtSeaWithinTransaction(tx, shopId));
+}
+
+async function seedBoatAtSeaWithinTransaction(db: DbExecutor, shopId: string): Promise<void> {
+  if (!(await isDemoShopWithDemoOwnerOrCaptainAccount(db, shopId))) return;
   const now = nowDate();
-  const plan = demoAtSeaDeparture(now, DEMO_SHOP_TIMEZONE);
+  const plan =
+    demoAtSeaDeparture(now, DEMO_SHOP_TIMEZONE) ??
+    demoFinishedDuskDeparture(now, DEMO_SHOP_TIMEZONE);
   if (!plan) return;
 
   const crew = await atSeaCrew(db, shopId);
@@ -427,7 +434,7 @@ async function writeTheRecord(
   shopId: string,
   ctx: {
     trip: typeof trips.$inferSelect;
-    plan: DemoAtSeaDeparture;
+    plan: DemoAtSeaDeparture | DemoFinishedDuskDeparture;
     divers: Diver[];
     crew: { personId: string; tripRole: TripAssignmentRole }[];
     captainId: string;
@@ -499,11 +506,21 @@ async function writeTheRecord(
   // The skipper counts every head as it comes up the ladder: everyone at the
   // dock, everyone after dive 1, and dive 2's count as far as it has got.
   const surfacedAt = new Map<number, Date>();
-  TEAMS.forEach((seats, index) => {
-    const before = SURFACED_BEFORE_NOW_MIN[index];
-    if (before === undefined) return;
-    for (const seat of seats) surfacedAt.set(seat, new Date(now.getTime() - before * minute));
-  });
+  if ("finishedAt" in plan) {
+    TEAMS.forEach((seats, index) => {
+      const minutesBeforeClose = (TEAMS.length - 1 - index) * 5;
+      const teamCountAt = new Date(
+        plan.finishedAt.getTime() - minutesBeforeClose * minute - 10_000,
+      );
+      for (const seat of seats) surfacedAt.set(seat, teamCountAt);
+    });
+  } else {
+    TEAMS.forEach((seats, index) => {
+      const before = SURFACED_BEFORE_NOW_MIN[index];
+      if (before === undefined) return;
+      for (const seat of seats) surfacedAt.set(seat, new Date(now.getTime() - before * minute));
+    });
+  }
   const diverRows = divers.flatMap((diver, seat) => {
     const mark = (checkpoint: string, occurredAt: Date) => ({
       shopId,
@@ -528,18 +545,27 @@ async function writeTheRecord(
   // boat and the first guide came up with the last of her six; the second
   // guide is still down with the last pair, so a pair is never left in the
   // water unguided, and her own count stays open beside theirs.
-  const firstGuideBack = new Date(
-    now.getTime() - (SURFACED_BEFORE_NOW_MIN[FIRST_GUIDE_TEAMS - 1] ?? 6) * minute,
-  );
+  const firstGuideBack =
+    "finishedAt" in plan
+      ? new Date(plan.finishedAt.getTime() - 30_000)
+      : new Date(now.getTime() - (SURFACED_BEFORE_NOW_MIN[FIRST_GUIDE_TEAMS - 1] ?? 6) * minute);
   const lastGuideId = crew.filter((member) => member.tripRole === "divemaster").at(-1)?.personId;
   await db.insert(rollCallCrewEvents).values(
     crew.flatMap((member, index) =>
       [
         { checkpoint: "departure", occurredAt: plan.startsAt },
         { checkpoint: "after_dive_1", occurredAt: plan.diveOne.countedAt },
-        ...(member.personId === lastGuideId
+        ...(member.personId === lastGuideId && !("finishedAt" in plan)
           ? []
-          : [{ checkpoint: "after_dive_2", occurredAt: firstGuideBack }]),
+          : [
+              {
+                checkpoint: "after_dive_2",
+                occurredAt:
+                  "finishedAt" in plan && member.personId === lastGuideId
+                    ? new Date(plan.finishedAt.getTime() - 15_000)
+                    : firstGuideBack,
+              },
+            ]),
       ].map(({ checkpoint, occurredAt }) => ({
         shopId,
         tripId: trip.id,
@@ -553,18 +579,40 @@ async function writeTheRecord(
     ),
   );
 
-  // Dive 1 in the log; dive 2 is still in the water, so nobody has logged it.
+  // Dive 1 is logged in both versions. A finished dusk departure also has the
+  // second dive in its record; the active boat keeps it open until homecoming.
   const firstDive = ctx.dives[0];
-  await db.insert(executedDives).values({
-    shopId,
-    tripId: trip.id,
-    diveNumber: 1,
-    actualSiteId: trip.diveSiteId,
-    enteredAt: plan.diveOne.enteredAt,
-    exitedAt: plan.diveOne.exitedAt,
-    maxDepthMeters: firstDive ? ctx.depthOf(firstDive.maxDepth) : null,
-    recordedByPersonId: captainId,
-  });
+  const executed = [
+    {
+      shopId,
+      tripId: trip.id,
+      diveNumber: 1,
+      actualSiteId: trip.diveSiteId,
+      enteredAt: plan.diveOne.enteredAt,
+      exitedAt: plan.diveOne.exitedAt,
+      maxDepthMeters: firstDive ? ctx.depthOf(firstDive.maxDepth) : null,
+      recordedByPersonId: captainId,
+    },
+  ];
+  if ("finishedAt" in plan) {
+    const secondDive = ctx.dives[1];
+    const [plannedSecond] = await db
+      .select({ diveSiteId: tripDives.diveSiteId })
+      .from(tripDives)
+      .where(and(eq(tripDives.tripId, trip.id), eq(tripDives.diveNumber, 2)))
+      .limit(1);
+    executed.push({
+      shopId,
+      tripId: trip.id,
+      diveNumber: 2,
+      actualSiteId: plannedSecond?.diveSiteId ?? null,
+      enteredAt: plan.diveTwoEnteredAt,
+      exitedAt: new Date(plan.finishedAt.getTime() - LAST_PAIR_UP_AFTER_LAST_COUNT_MIN * minute),
+      maxDepthMeters: secondDive ? ctx.depthOf(secondDive.maxDepth) : null,
+      recordedByPersonId: captainId,
+    });
+  }
+  await db.insert(executedDives).values(executed);
 }
 
 /** How long after the last count the last pair and their guide come up the ladder. */
@@ -634,6 +682,10 @@ async function bringBoatHome(
   },
   now: Date,
 ): Promise<boolean> {
+  // Take the shop identity lock before the trip lock. Reset/refresh already
+  // hold the shop lock while deleting or reseeding trips; the same order here
+  // avoids a trip→shop / shop→trip deadlock with an overlapping hourly pass.
+  if (!(await isDemoShopWithDemoOwnerOrCaptainAccount(db, trip.shopId))) return false;
   const [locked] = await db
     .select({ id: trips.id })
     .from(trips)

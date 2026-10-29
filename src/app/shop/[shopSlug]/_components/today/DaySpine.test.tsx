@@ -77,6 +77,34 @@ describe("the evening reading", () => {
     expect(screen.getByText("Still out")).toBeInTheDocument();
   });
 
+  it("shows the demo's prior dusk roll call in its own finished group", () => {
+    const previousDusk = closed({
+      tripId: "demo-dusk",
+      title: "Dusk Reef",
+      startsAt: new Date("2026-08-26T22:30:00.000Z"),
+      endsAt: new Date("2026-08-27T02:00:00.000Z"),
+      booked: 11,
+      sailed: 11,
+    });
+    const previousDuskStation = evening([previousDusk]).close.stations[0];
+    if (!previousDuskStation) throw new Error("expected the finished dusk station");
+    const eveningReading = evening([]);
+    eveningReading.close.carryover = previousDuskStation;
+    eveningReading.headCountCloses = new Map([
+      ["demo-dusk", { closedAt: previousDuskStation.endsAt, closedBy: "Mara" }],
+    ]);
+    renderSpine({
+      departures: [],
+      evening: eveningReading,
+    });
+
+    const group = screen.getByRole("heading", { name: "Last roll call · yesterday" }).parentElement;
+    expect(group).not.toBeNull();
+    expect(within(group as HTMLElement).getByText("Dusk Reef")).toBeInTheDocument();
+    expect(within(group as HTMLElement).getByText("All home")).toBeInTheDocument();
+    expect(group?.querySelector("time")?.getAttribute("dateTime")).toBe("2026-08-26T22:30:00.000Z");
+  });
+
   it("keeps a desk action in Needs you once every departure has settled", () => {
     const units = action({
       id: "units:unconfirmed",

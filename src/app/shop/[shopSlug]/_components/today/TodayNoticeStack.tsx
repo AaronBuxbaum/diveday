@@ -29,7 +29,12 @@ export function TodayNoticeStack({
           when it does, they read as one stack of arrivals rather than four
           competing banners. `mb-10` is the spine's own `gap-10`: the stack is
           one more block in that column, not closer to it (K-316). */}
-      {(created && !firstBookableMoment) || reset || email || authNoticeKey || eveningNotice ? (
+      {(created && !firstBookableMoment) ||
+      reset === "1" ||
+      reset === "refused" ||
+      email ||
+      authNoticeKey ||
+      eveningNotice ? (
         <div className="mb-10 flex flex-col gap-2">
           {created && !firstBookableMoment ? (
             <ShopNotice>
@@ -38,7 +43,12 @@ export function TodayNoticeStack({
                 : t("shopHome.createdNotice.single", { title: created })}
             </ShopNotice>
           ) : null}
-          {reset ? <ShopNotice tone="neutral">{t("shopHome.demoReset")}</ShopNotice> : null}
+          {reset === "1" ? <ShopNotice tone="neutral">{t("shopHome.demoReset")}</ShopNotice> : null}
+          {reset === "refused" ? (
+            <ShopNotice tone="warning" role="status">
+              {t("shopHome.demoResetRefused")}
+            </ShopNotice>
+          ) : null}
           {email ? (
             // A failed send must announce itself (noticeRole: danger → alert);
             // without a role this read as ambient status to screen readers.

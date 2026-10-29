@@ -314,10 +314,19 @@ describe("the synthesized observability stack", () => {
     // absent: they are in the email and global stacks, and this count is what
     // would notice either silently reappearing here, where each would read a
     // metric this region does not publish and sit there saying nothing.
+    // Plus one: SMS month-to-date spend, which AWS publishes in this region.
     expect(alarms).toHaveLength(
       LOG_SIGNALS.filter((signal) => signal.alarm !== false).length +
-        WEB_VITAL_SIGNALS.filter((signal) => signal.alarm).length,
+        WEB_VITAL_SIGNALS.filter((signal) => signal.alarm).length +
+        1,
     );
+    const smsSpend = alarms.find(
+      (candidate) => candidate.Properties?.AlarmName === "diveday-sms-month-to-date-spend",
+    );
+    // 80% of the $50 account spend limit, so the inbox hears before AWS stops sending.
+    expect(smsSpend?.Properties?.Threshold).toBe(40);
+    expect(smsSpend?.Properties?.TreatMissingData).toBe("notBreaching");
+    expect(smsSpend?.Properties?.AlarmActions).toHaveLength(1);
 
     for (const signal of LOG_SIGNALS) {
       const filter = filters.find((candidate) =>

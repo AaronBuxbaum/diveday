@@ -1,4 +1,3 @@
-import type { Page } from "@playwright/test";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import {
   acceptAgeAttestation,
@@ -6,24 +5,19 @@ import {
   openDiverFileGroup,
   openThreadStep,
   openTripTab,
+  tripPathByTitle,
 } from "./helpers";
 import { mintOnboardFormPath } from "./setup-link";
-
-async function openWreckTrip(page: Page) {
-  await page.goto("/shop/blue-mantis/schedule/board");
-  await page
-    .locator("li")
-    .filter({ hasText: "Wreck Trip — Spiegel Grove" })
-    .getByRole("link", { name: "Wreck Trip — Spiegel Grove", exact: true })
-    .click();
-}
 
 test.describe("staff", () => {
   signedInAsOwner();
 
-  test("a verified nitrox card turns a diver's tanks to Nitrox on the prep list", async ({
-    page,
-  }) => {
+  test("staff can verify a nitrox card and view the prep tank list", async ({ page }) => {
+    // Find the departure before editing the card. Opening its prep page directly
+    // avoids a redundant visit to the trip overview; that navigation is covered
+    // by the trip-tab tests. This journey checks staff review and prep display.
+    const tripPath = await tripPathByTitle(page, "blue-mantis", "Wreck Trip — Spiegel Grove");
+
     // A unique card number keeps the flow self-contained and re-run safe.
     const cardNo = `EANX-T${e2eNow().getTime()}`;
 
@@ -54,12 +48,12 @@ test.describe("staff", () => {
     await card.getByRole("button", { name: "Mark certified" }).click();
     await expect(page.getByRole("status").filter({ hasText: "Marked certified" })).toBeVisible();
 
-    await openWreckTrip(page);
-    await openTripTab(page, "Prep");
+    await page.goto(`${tripPath}/prep`);
     await expect(page.getByRole("heading", { name: /Wreck Trip/ })).toBeVisible();
 
-    // The prep list is derived from rental fit, so it always lists tanks and
-    // rental kit even when nobody on the boat rents a single piece of kit.
+    // The seeded trip already has a Nitrox request; this is a display check.
+    // The request-to-certified-tank transition is tested against the database.
+    // Tanks and rental kit appear even when nobody rents gear.
     await expect(page.getByRole("heading", { name: "Rental kit" })).toBeVisible();
     // One tank per diver per dive, and the seeded nitrox request is on the split.
     await expect(page.getByText("one tank per diver per dive")).toBeVisible();
@@ -123,8 +117,10 @@ test.describe("a shop that stops filling nitrox", () => {
     // the schedule it came from.
     const tripId = anon.url().match(/\/trips\/([^/?]+)/)?.[1];
     if (!tripId) throw new Error("trip page URL missing a trip id");
-    await anon.getByLabel("Name").fill("Priya Sharma");
-    await anon.getByLabel("Email").fill(`priya+${e2eNow().getTime()}@example.com`);
+    await anon.getByRole("textbox", { name: "Name" }).fill("Priya Sharma");
+    await anon
+      .getByRole("textbox", { name: "Email" })
+      .fill(`priya+${e2eNow().getTime()}@example.com`);
     await anon.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
     await expect(anon.getByRole("heading", { name: /You’ve got a seat, Priya/ })).toBeVisible();
 
@@ -289,12 +285,12 @@ test("the nitrox request is hidden until the diver files a nitrox card, then app
     .click();
   // The booking form is controlled, so wait for hydration before typing.
   await expect(page.getByLabel("People", { exact: true })).toHaveAttribute("data-hydrated", "true");
-  await page.getByLabel("Name").fill("Nora Quinn");
+  await page.getByRole("textbox", { name: "Name" }).fill("Nora Quinn");
   // Unique email for this spec's own diver; the e2eNow() suffix keeps every
   // test-side timestamp anchored to the frozen clock (helpers.ts). Isolation
   // from other specs — including the visual suite — comes from the per-test
   // demo reset in fixtures.ts.
-  await page.getByLabel("Email").fill(`nora+${e2eNow().getTime()}@example.com`);
+  await page.getByRole("textbox", { name: "Email" }).fill(`nora+${e2eNow().getTime()}@example.com`);
   await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
   await expect(page.getByRole("heading", { name: /You’ve got a seat, Nora/ })).toBeVisible();
 
@@ -359,8 +355,8 @@ test("a course taught on air offers no nitrox request, at the same shop that fil
   await page.getByRole("link", { name: "Book this date" }).first().click();
   await expect(page.getByText("Course session · Open Water Diver")).toBeVisible();
   await expect(page.getByLabel("People", { exact: true })).toHaveAttribute("data-hydrated", "true");
-  await page.getByLabel("Name").fill("Owen Reid");
-  await page.getByLabel("Email").fill(`owen+${e2eNow().getTime()}@example.com`);
+  await page.getByRole("textbox", { name: "Name" }).fill("Owen Reid");
+  await page.getByRole("textbox", { name: "Email" }).fill(`owen+${e2eNow().getTime()}@example.com`);
   // The course carries the agency's minimum age, so this booking form asks
   // for the attestation an ordinary charter's does not.
   await acceptAgeAttestation(page);

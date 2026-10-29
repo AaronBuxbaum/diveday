@@ -372,7 +372,7 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
 
   const seriesRecordRows = await readSeriesRecordRows(tx, scope);
 
-  const interestRows = await readScoped(tx, "interests", scope);
+  const interestExportRows = await readInterestExportRows(tx, scope);
 
   const lastMinutePromoRows = await readScoped(tx, "tripLastMinutePromos", scope);
 
@@ -658,7 +658,7 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     courseRows,
     courseTitle,
     ...seriesRecordRows,
-    interestRows,
+    ...interestExportRows,
     lastMinutePromoRows,
     orderRows,
     orderLineRows,
@@ -732,6 +732,12 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     waiversByPerson,
     photoUrls,
   };
+}
+
+async function readInterestExportRows(tx: AppTransaction, scope: ShopExportScope) {
+  const interestRows = await readScoped(tx, "interests", scope);
+  const dateRequestOfferBookingRows = await readScoped(tx, "dateRequestOfferBookings", scope);
+  return { interestRows, dateRequestOfferBookingRows };
 }
 
 export type ShopExportContext = NonNullable<Awaited<ReturnType<typeof loadShopExportContext>>>;
@@ -1291,6 +1297,11 @@ export async function loadShopExportCounts(
     "notification_deliveries.csv": await countShopScoped(db, "notificationDeliveries", shopId),
     "shop_promo_redemptions.csv": await countShopScoped(db, "shopPromoRedemptions", shopId),
     "interests.csv": await countShopScoped(db, "interests", shopId),
+    "date_request_offer_bookings.csv": await countShopScoped(
+      db,
+      "dateRequestOfferBookings",
+      shopId,
+    ),
     "trip_last_minute_promos.csv": await countShopScoped(db, "tripLastMinutePromos", shopId),
     "booking_arrival_events.csv": await countShopScoped(db, "bookingArrivalEvents", shopId),
     "roll_call_events.csv": await countShopScoped(db, "rollCallEvents", shopId),

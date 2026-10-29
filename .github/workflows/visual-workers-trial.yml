@@ -2,19 +2,18 @@ name: Visual workers trial
 
 # **Do two browser workers per visual shard take the same pictures as one?**
 #
-# The `visual` job in ci.yml runs each capture shard at `E2E_WORKERS: "1"`,
-# and its comment says why: a second browser and a second `next start` beside
-# the first on one runner is oversubscription this suite of pixels should not
-# accept untested. This is the test. Every shard captures its whole list three
-# times from one build, twice at two workers and once at one, and
-# `scripts/compare-capture-sets.mjs` fails the shard if any PNG differs by one
-# byte or is missing from a set, naming each in the step summary.
+# The `visual` job in ci.yml runs each capture shard at `E2E_WORKERS: "2"`
+# under option B (#3056). The manual trial remains incomplete; it has not
+# established a green result, and unexplained visual differences remain
+# unapproved. Every shard captures its whole list three times from one build,
+# twice at two workers and once at one, and `scripts/compare-capture-sets.mjs`
+# fails the shard if any PNG differs by one byte or is missing from a set,
+# naming each one in the step summary.
 #
 # No baseline download and no reg-suit: the comparison is internal to the run,
 # so it says only whether the worker count changes the bytes, which is the one
-# question. Dispatched by hand, never on a pull request or a push; the
-# `visual` job's `E2E_WORKERS` changes only after a green trial, in a change
-# of its own.
+# question. Dispatched by hand, never on a pull request or a push; the trial
+# remains available for gathering evidence about the two-worker setting.
 on:
   workflow_dispatch:
 

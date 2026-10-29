@@ -15,7 +15,7 @@ name: Restore drill
 #
 # The dump holds every password hash and medical answer in the platform. It lives on the runner
 # only for the job, nothing here uploads an artifact, and the script prints counts and ids, never a
-# row or a connection string; pg_restore's stderr is reduced to SQLSTATEs and object names.
+# row or a connection string; pg_restore's stderr is reduced to fixed failure categories and counts.
 #
 # Its secrets are safe only while the `restore-drill` environment admits `main` alone, with a
 # required reviewer: `workflow_dispatch` runs this file as the chosen ref has it, so a branch could
@@ -81,6 +81,15 @@ jobs:
         with:
           aws-region: us-east-1
           role-to-assume: ${{ vars.RESTORE_DRILL_ROLE_ARN }}
+      - name: Sign in to ECR Public so the Postgres image pull is not rate-limited
+        # GitHub's runners share addresses, and anonymous pulls from public.ecr.aws hit
+        # `toomanyrequests: Data limit exceeded` (2026-10-29). The password goes through a pipe,
+        # never an argument or a log line.
+        timeout-minutes: 2
+        run: |
+          set -o pipefail
+          aws ecr-public get-login-password --region us-east-1 \
+            | docker login --username AWS --password-stdin public.ecr.aws
       - name: Restore, sign in, read tomorrow's manifest, delete the branch
         # Above the script's own worst case (`worstCaseMs`), so its `finally` deletes the branch.
         timeout-minutes: 55

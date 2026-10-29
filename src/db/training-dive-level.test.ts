@@ -9,6 +9,7 @@ import {
 } from "@/test/training-mark-context";
 import { cancelBooking, createBooking } from "./bookings";
 import { createDiver } from "./divers";
+import { getBookingReadiness } from "./readiness";
 import {
   bookings,
   certifications,
@@ -20,7 +21,7 @@ import {
   tripRequirements,
   trips,
 } from "./schema";
-import { seatWithinRoom, trainingDiveRoom } from "./training-mark-resolve";
+import { markableTrainingDives, seatWithinRoom, trainingDiveRoom } from "./training-mark-resolve";
 import { trainingMarksForRoster } from "./training-marks";
 
 /**
@@ -527,6 +528,185 @@ describe("a marked training dive's level (issue #2731, in-memory PGlite)", () =>
     expect(marks).toHaveLength(8);
     // The earlier eight take the room; the ninth (the fixture's seat) is out.
     expect(await rosterWarning(ctx)).toBe(false);
+  });
+
+  it("keeps mixed-course candidate room conservative and admits a diver whose card already clears", async () => {
+    const ctx = await advancedCharter();
+    await teachesAndAboard(ctx);
+    expect(await markSeat(ctx)).toMatchObject({ ok: true });
+    await ctx.db.update(trips).set({ capacity: 20 }).where(eq(trips.id, ctx.course.tripId));
+
+    // Six more OW marks make seven older, looser marks before the later DSD
+    // mark, reproducing the order-dependent over-credit case.
+    for (let i = 0; i < 6; i += 1) {
+      const diver = await createDiver(ctx.db, {
+        shopId: ctx.shop.id,
+        fullName: `Mixed OW Diver ${i}`,
+        email: `mixed-ow-${i}-3043@example.com`,
+      });
+      if (!diver) throw new Error("mixed OW diver missing");
+      const [enrollment] = await ctx.db
+        .insert(bookings)
+        .values({
+          bookedAs: "diver",
+          shopId: ctx.shop.id,
+          tripId: ctx.course.tripId,
+          personId: diver.id,
+        })
+        .returning({ id: bookings.id });
+      if (!enrollment) throw new Error("mixed OW enrollment missing");
+      await ctx.db.insert(bookings).values({
+        bookedAs: "diver",
+        shopId: ctx.shop.id,
+        tripId: ctx.charter.id,
+        personId: diver.id,
+        trainingEnrollmentBookingId: enrollment.id,
+        trainingMarkedAt: new Date(ctx.now.getTime() + (i + 1) * 1_000),
+        trainingMarkedByPersonId: ctx.owner,
+      });
+    }
+
+    const dsdDiver = await createDiver(ctx.db, {
+      shopId: ctx.shop.id,
+      fullName: "Mixed DSD Diver",
+      email: "mixed-dsd-3043@example.com",
+    });
+    const candidate = await createDiver(ctx.db, {
+      shopId: ctx.shop.id,
+      fullName: "Mixed OW Candidate",
+      email: "mixed-ow-3043@example.com",
+    });
+    if (!dsdDiver || !candidate) throw new Error("mixed-course divers missing");
+
+    const [dsdCourse] = await ctx.db
+      .insert(courses)
+      .values({
+        shopId: ctx.shop.id,
+        title: "Mixed DSD Course",
+        slug: "mixed-dsd-course-3043",
+        agency: "padi",
+        minimumCertificationLevel: null,
+        certifiesLevel: null,
+        isIntroCourse: true,
+      })
+      .returning({ id: courses.id });
+    if (!dsdCourse) throw new Error("DSD course missing");
+    const [dsdSession] = await ctx.db
+      .insert(trips)
+      .values({
+        shopId: ctx.shop.id,
+        title: "Mixed DSD Session",
+        courseId: dsdCourse.id,
+        startsAt: ctx.course.startsAt,
+        endsAt: ctx.course.endsAt,
+        capacity: 10,
+      })
+      .returning({ id: trips.id });
+    if (!dsdSession) throw new Error("DSD session missing");
+    await roster(ctx, dsdSession.id, ctx.instructor, "instructor");
+
+    const [dsdEnrollment] = await ctx.db
+      .insert(bookings)
+      .values({
+        bookedAs: "diver",
+        shopId: ctx.shop.id,
+        tripId: dsdSession.id,
+        personId: dsdDiver.id,
+      })
+      .returning({ id: bookings.id });
+    const [dsdSeat] = await ctx.db
+      .insert(bookings)
+      .values({
+        bookedAs: "diver",
+        shopId: ctx.shop.id,
+        tripId: ctx.charter.id,
+        personId: dsdDiver.id,
+        trainingEnrollmentBookingId: dsdEnrollment?.id,
+        trainingMarkedAt: new Date(ctx.now.getTime() + 60_000),
+        trainingMarkedByPersonId: ctx.owner,
+      })
+      .returning({ id: bookings.id });
+    if (!dsdEnrollment || !dsdSeat) throw new Error("DSD marks missing");
+
+    // A candidate's same PADI Open Water session is valid, but DSD + the
+    // existing OW mark already use this instructor's conservative 2:1 room.
+    const [candidateEnrollment] = await ctx.db
+      .insert(bookings)
+      .values({
+        bookedAs: "diver",
+        shopId: ctx.shop.id,
+        tripId: ctx.course.tripId,
+        personId: candidate.id,
+      })
+      .returning({ id: bookings.id });
+    if (!candidateEnrollment) throw new Error("candidate enrollment missing");
+    const departureMarks = await ctx.db
+      .select({ id: bookings.id, enrollmentId: bookings.trainingEnrollmentBookingId })
+      .from(bookings)
+      .where(eq(bookings.tripId, ctx.charter.id));
+    expect(departureMarks.filter((row) => row.enrollmentId !== null)).toHaveLength(8);
+    expect(await markableTrainingDives(ctx.db, ctx.shop.id, candidate.id, ctx.charter)).toEqual([]);
+    const owRoom = (
+      await trainingDiveRoom(ctx.db, ctx.shop.id, [
+        {
+          departureTripId: ctx.charter.id,
+          sessionTripId: ctx.course.tripId,
+          course: {
+            agency: "padi",
+            minimumLevel: null,
+            certifiesLevel: "open_water",
+            intro: false,
+          },
+        },
+      ])
+    ).get(`${ctx.charter.id}:${ctx.course.tripId}`);
+    expect(owRoom?.seated.has(ctx.seat.id)).toBe(true);
+    expect(owRoom?.seated.has(dsdSeat.id)).toBe(true);
+    expect(owRoom?.seated.size).toBe(2);
+    expect(owRoom?.overRatio.size).toBe(6);
+    expect(owRoom?.spare).toBe(false);
+
+    // Booking is not refused because the verified OW card already meets the
+    // OW site gate. This is the explicit card path (not a training-mark effect).
+    await ctx.db
+      .update(tripRequirements)
+      .set({ minimumCertificationLevel: null })
+      .where(eq(tripRequirements.tripId, ctx.charter.id));
+    await ctx.db.update(trips).set({ plannedDives: 1 }).where(eq(trips.id, ctx.charter.id));
+    const [site] = await ctx.db
+      .insert(diveSites)
+      .values({
+        shopId: ctx.shop.id,
+        name: "Mixed training site",
+        slug: "mixed-training-site-3043",
+        minimumCertificationLevel: "open_water",
+      })
+      .returning({ id: diveSites.id });
+    if (!site) throw new Error("mixed training site missing");
+    await ctx.db.insert(tripDives).values({
+      tripId: ctx.charter.id,
+      diveNumber: 1,
+      diveSiteId: site.id,
+    });
+    await ctx.db.insert(certifications).values({
+      shopId: ctx.shop.id,
+      personId: candidate.id,
+      agency: "padi",
+      level: "open_water",
+      identifier: "OW-MIXED-3043",
+      status: "verified",
+    });
+    const outcome = await createBooking(ctx.db, {
+      actor: "staff",
+      shopId: ctx.shop.id,
+      tripId: ctx.charter.id,
+      personId: candidate.id,
+    });
+    expect(outcome).toMatchObject({ ok: true, personId: candidate.id });
+    if (!outcome.ok) return;
+    const readiness = await getBookingReadiness(ctx.db, ctx.shop.id, outcome.bookingId);
+    expect(readiness?.status).toBe("ready");
+    expect(readiness?.blockers).toEqual([]);
   });
 
   it("changes nothing on a mark that no longer stands", async () => {

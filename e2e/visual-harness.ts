@@ -224,7 +224,7 @@ export async function waitForSiteLibrary(page: Page) {
 const TABLET_VIEWPORT = { width: 820, height: 1180 } as const;
 
 /**
- * The capture names that get `TABLET_VIEWPORT` as a third width — **six, not
+ * The capture names that get `TABLET_VIEWPORT` as a third width — **seven, not
  * every surface in this file.**
  *
  * A third width applied everywhere is another 506 screenshots and the baseline
@@ -243,6 +243,8 @@ const TABLET_VIEWPORT = { width: 820, height: 1180 } as const;
  * - `prep` — the same, the day before.
  * - `departure-log` — written up at the end of the day, on the device that
  *   was already out.
+ * - `staff-navigation-spanish-es-ES` — verifies the four phone destinations use the
+ *   available rail width on a tablet while keeping More beside it.
  *
  * Adding a name here costs two screenshots per run (one per scheme). Adding
  * one that no `capture()` call uses costs nothing and silently photographs
@@ -255,6 +257,7 @@ const TABLET_SURFACES: ReadonlySet<string> = new Set([
   "prep",
   "departure-log",
   "departure-log-every-checkpoint",
+  "staff-navigation-spanish-es-ES",
 ]);
 
 /**
@@ -268,7 +271,8 @@ const VISUAL_SPEC_TEXT = visualSpecs()
   .map((file) => readFileSync(file, "utf8"))
   .join("\n");
 for (const name of TABLET_SURFACES) {
-  if (!VISUAL_SPEC_TEXT.includes(`capture(page, "${name}"`)) {
+  const captureName = name.endsWith("-es-ES") ? name.slice(0, -6) : name;
+  if (!VISUAL_SPEC_TEXT.includes(`capture(page, "${captureName}"`)) {
     throw new Error(
       `TABLET_SURFACES names "${name}", which no capture() call uses — it would ` +
         "silently photograph nothing. Fix the name or drop it from the set.",
@@ -478,6 +482,8 @@ const ANIMATION_STALL_MS = ANIMATION_WAIT_MS + PROTOCOL_SLACK_MS;
 const TRIPWIRE_STALL_MS = PROTOCOL_SLACK_MS;
 /** How long the is-the-renderer-alive probe gets to answer after a stall. */
 const RENDERER_PROBE_MS = 5_000;
+/** Closing an unresponsive target is bounded by the existing probe allowance. */
+const WEDGED_PAGE_CLOSE_MS = RENDERER_PROBE_MS;
 /**
  * The screenshot's own bound. Playwright defaults it to 30s, which is not a
  * number this file chose and not one the ceiling below accounted for — the old
@@ -752,6 +758,32 @@ async function probeRenderer(page: Page): Promise<boolean> {
 }
 
 /**
+ * A page whose renderer missed the bounded probe cannot yield a capture or a
+ * useful Playwright teardown screenshot. Closing its target from the browser
+ * process releases the test context; the caller keeps the wedge diagnosis.
+ */
+async function closeWedgedPage(page: Page): Promise<void> {
+  if (page.isClosed()) return;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const closed = await Promise.race([
+    page.close({ runBeforeUnload: false }).then(
+      () => true,
+      () => false,
+    ),
+    new Promise<false>((resolve) => {
+      timer = setTimeout(() => resolve(false), WEDGED_PAGE_CLOSE_MS);
+    }),
+  ]);
+  clearTimeout(timer);
+  if (!closed) {
+    console.warn(
+      `visual: closing the unresponsive page did not return within ${WEDGED_PAGE_CLOSE_MS}ms; ` +
+        "preserving the original renderer failure.",
+    );
+  }
+}
+
+/**
  * Await a page-side pass, but never further than `budgetMs` — see the note on
  * `PAINT_STALL_MS`. A pass that overruns is reported and the caller carries on
  * with `degraded`; a pass that *throws* still throws, because an evaluate that
@@ -789,15 +821,19 @@ export async function withRendererBound<T>(
   // greps the capture log for it to decide whether a failed shard earned its
   // one-shot rerun of the failed captures. Reword it here (or in
   // `screenshotOrGiveUp`) and that gate silently stops firing.
-  console.warn(
+  const diagnostic =
     `visual: ${what} did not return within ${budgetMs}ms at ${page.url()} — the shot may contain ` +
-      "an unpainted band; check the diff for a blank stripe. The renderer " +
-      (responsive
-        ? `answered a trivial evaluate in ${Date.now() - probeStart}ms, so the page is alive and ` +
-          "the pass itself never settled"
-        : `did not answer a trivial evaluate within ${RENDERER_PROBE_MS}ms, so it is wedged, not slow`) +
-      ".",
-  );
+    "an unpainted band; check the diff for a blank stripe. The renderer " +
+    (responsive
+      ? `answered a trivial evaluate in ${Date.now() - probeStart}ms, so the page is alive and ` +
+        "the pass itself never settled"
+      : `did not answer a trivial evaluate within ${RENDERER_PROBE_MS}ms, so it is wedged, not slow`) +
+    ".";
+  console.warn(diagnostic);
+  if (!responsive) {
+    await closeWedgedPage(page);
+    throw new Error(diagnostic);
+  }
   return degraded;
 }
 
@@ -1192,6 +1228,11 @@ export async function settleCaptureFonts(
  */
 const visualBuild = captureBuildBoundary(requireFreshBuild);
 export function installVisualBuildGuard() {
+  // If a bounded capture and its responsiveness probe both fail, close the
+  // renderer target before test teardown. Responsive failures still get
+  // Playwright's `only-on-failure` screenshot; a confirmed wedge keeps its
+  // original error and the `retain-on-failure` trace without asking that
+  // renderer for another screenshot.
   test.beforeAll(() => visualBuild.begin());
   test.afterAll(() => visualBuild.end());
   test.beforeEach(({ context }) => tileShopPhotos(context));
@@ -1318,6 +1359,7 @@ async function screenshotOrGiveUp(page: Page, path: string) {
   }
 
   const responsive = await probeRenderer(page);
+  if (!responsive) await closeWedgedPage(page);
   throw new Error(
     `visual: page.screenshot did not return within ${SCREENSHOT_GIVE_UP_MS}ms at ${page.url()} ` +
       `(${path}). The renderer ` +
@@ -1574,12 +1616,18 @@ export async function waitForHashLanding(page: Page) {
  */
 export async function withTransitionsOff<T>(page: Page, shoot: () => Promise<T>): Promise<T> {
   const style = await page.addStyleTag({ content: CAPTURE_TRANSITIONS_OFF });
+  let captureCompleted = false;
   try {
-    return await shoot();
+    const result = await shoot();
+    captureCompleted = true;
+    return result;
   } finally {
-    // The page may already be navigating or closed if `shoot` threw; losing the
-    // cleanup then is harmless, and must not mask the original failure.
-    await style.evaluate((node) => node.parentNode?.removeChild(node)).catch(() => undefined);
+    // A failed capture ends its test, and its page is about to be torn down.
+    // Calling back into that page can hang when the renderer is the failure;
+    // in that case the test timeout would hide the useful capture error.
+    if (captureCompleted) {
+      await style.evaluate((node) => node.parentNode?.removeChild(node)).catch(() => undefined);
+    }
   }
 }
 

@@ -9,6 +9,7 @@ import {
   createInvitationUnderCooldown,
   invitedWithinCooldown,
   listInviteSuggestions,
+  recentInviteDates,
 } from "./invite-suggestions";
 import {
   bookings,
@@ -27,6 +28,62 @@ import {
 } from "./schema";
 
 const ctx = fileScopedShopContext();
+
+describe("recent invite dates for the manual picker", () => {
+  it("returns the latest shop invitation only for the requested people and shop", async () => {
+    const { db, shop, now, target, march, july, diver } = await fixture();
+    const person = await diver("Manual Invite");
+    const notRequested = await diver("Not Requested");
+    if (!person || !notRequested || !target || !march || !july) throw new Error("setup failed");
+    const latest = new Date(now.getTime() - 2 * DAY_MS);
+    await db.insert(interests).values([
+      {
+        shopId: shop.id,
+        tripId: target.id,
+        scope: "departure",
+        askedBy: "shop",
+        personId: person.id,
+        partySize: 1,
+        askedAt: new Date(now.getTime() - 9 * DAY_MS),
+        offeredAt: new Date(now.getTime() - 6 * DAY_MS),
+      },
+      {
+        shopId: shop.id,
+        tripId: march.id,
+        scope: "departure",
+        askedBy: "shop",
+        personId: person.id,
+        partySize: 1,
+        askedAt: latest,
+      },
+      {
+        shopId: shop.id,
+        tripId: july.id,
+        scope: "departure",
+        askedBy: "diver",
+        personId: person.id,
+        partySize: 1,
+        askedAt: now,
+      },
+      {
+        shopId: shop.id,
+        tripId: target.id,
+        scope: "departure",
+        askedBy: "shop",
+        personId: notRequested.id,
+        partySize: 1,
+        askedAt: now,
+      },
+    ]);
+    expect(await recentInviteDates(db, shop.id, [person.id], now)).toEqual(
+      new Map([[person.id, latest]]),
+    );
+    expect(
+      await recentInviteDates(db, "00000000-0000-4000-8000-000000000000", [person.id], now),
+    ).toEqual(new Map());
+    expect(await recentInviteDates(db, shop.id, [], now)).toEqual(new Map());
+  });
+});
 
 async function fixture() {
   const { db, shop } = ctx;

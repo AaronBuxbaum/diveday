@@ -856,6 +856,9 @@ for (const scheme of ["light", "dark"] as const) {
         await expect(page.getByRole("heading", { level: 1 })).toHaveText(
           diverCopy("schedule.title"),
         );
+        await expect(page.getByRole("link", { name: "Fresh Shop E2E" })).toBeVisible();
+        await expect(page.getByRole("region", { name: "Fresh Shop E2E" })).toHaveCount(0);
+        await expect(page.getByText(diverCopy("inquiry.contactHint"))).toBeVisible();
         await expect(page.getByRole("region", { name: "Next boat with space" })).toHaveCount(0);
         await expect(page.getByRole("link", { name: "Book this boat" })).toHaveCount(0);
         await capture(page, "public-schedule-new-shop", scheme);
