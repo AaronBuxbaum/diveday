@@ -132,7 +132,9 @@ export async function applySmsAccountGuard(event: GuardEvent, send: Send) {
 
 export async function handler(event: GuardEvent) {
   const sdk = await import(SDK_MODULE);
-  const client = new sdk.PinpointSMSVoiceV2Client({});
+  // The rule-set updates are many quick calls on a low-rate API. The SDK's three
+  // default attempts run out ("Rate Exceeded"), which fails the whole deploy.
+  const client = new sdk.PinpointSMSVoiceV2Client({ maxAttempts: 12, retryMode: "adaptive" });
   const send: Send = (command, input) => {
     console.log(command, JSON.stringify(input));
     return client.send(new sdk[`${command}Command`](input));
