@@ -99,6 +99,22 @@ async function main(): Promise<number> {
   pool.on("error", (error) => {
     console.error(`restore-drill-verify: pool ${redacted(error)}.`);
   });
+  // The restored database answered "relation user_accounts does not exist" while public.user_accounts
+  // was there (2026-10-29): this connection's search_path did not include public. pg_restore sets an
+  // empty one on its own session, and nothing here knows what the scratch branch's role defaults to.
+  // Log what this connection starts with, then pin it, so the drill checks the restore and not the
+  // connection's defaults. Queued ahead of the first query, so the pool runs them in order.
+  pool.on("connect", (client) => {
+    client
+      .query("show search_path")
+      .then((result) => {
+        console.log(
+          `restore-drill-verify: connection search_path was "${result.rows[0]?.search_path}"`,
+        );
+      })
+      .catch(() => undefined);
+    client.query("set search_path to public").catch(() => undefined);
+  });
   const db = drizzle({ client: pool }) as unknown as AppDb;
   try {
     if (!demoBypassEnabled()) {
