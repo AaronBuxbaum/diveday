@@ -16,6 +16,7 @@ import {
   offlineManifestFreshness,
   offlineTripHref,
 } from "@/lib/offline-manifests";
+import { StatusMessage } from "./StatusMessage";
 import { deviceLocale, relativeAge } from "./shared";
 import { useOnline } from "./use-online";
 
@@ -29,6 +30,7 @@ export function OfflineManifestList({
   shellVersionCopy,
   list,
   message,
+  foreignPendingChanges = false,
   discardNotice,
   fallback = null,
   readFailed = false,
@@ -38,6 +40,8 @@ export function OfflineManifestList({
   /** `null` until the store has been read. */
   list: OfflineManifestEnvelope[] | null;
   message: string;
+  /** Pending records from another tenant remain saved on this device. */
+  foreignPendingChanges?: boolean;
   discardNotice: ReactNode;
   /**
    * Why the worker opened this list, when it did: carried onto each trip's
@@ -77,6 +81,12 @@ export function OfflineManifestList({
   const needRefreshCount = savedRows.filter(
     (row) => row.expired || row.freshness !== "current",
   ).length;
+  // Roster freshness is separate from event delivery, but this line sits
+  // beside the durable note-loss notice and can read as if omitted notes sent.
+  const noteLossVisible = [
+    t("shared.offlineManifest.reconcile.noteDiscardedList"),
+    t("shared.offlineManifest.reconcile.noteUnverifiedList"),
+  ].some((notice) => message.includes(notice));
   // The shop belongs to the page, not to the row: this viewer is single-shop
   // by construction, because the shell purges the store when a different
   // shop signs in on the device. `null` is the window where that has not run
@@ -97,6 +107,15 @@ export function OfflineManifestList({
         <div className="w-full max-w-md">
           <OfflineShellVersionBanner copy={shellVersionCopy} />
           {discardNotice}
+          {foreignPendingChanges ? (
+            <p
+              className={`mb-4 ${OFFLINE_NOTICE_CLASS} border-warning/40 bg-warning/10 text-pretty`}
+              role="status"
+              aria-live="polite"
+            >
+              {t("shared.offlineManifest.reconcile.foreignPending")}
+            </p>
+          ) : null}
           <section
             className={sectionCardClass({ className: "flex flex-col items-center text-center" })}
           >
@@ -127,7 +146,7 @@ export function OfflineManifestList({
             </a>
             {/* The store's own word, for a reader who needs it announced. */}
             <p className="sr-only" role="status" aria-live="polite">
-              {message}
+              <StatusMessage message={message} />
             </p>
           </section>
         </div>
@@ -158,14 +177,25 @@ export function OfflineManifestList({
               </p>
             ) : null}
             <p className="text-muted" role="status" aria-live="polite">
-              {message}
+              <StatusMessage message={message} />
             </p>
+            {foreignPendingChanges ? (
+              <p
+                className={`mt-3 ${OFFLINE_NOTICE_CLASS} border-warning/40 bg-warning/10 text-pretty`}
+                role="status"
+                aria-live="polite"
+              >
+                {t("shared.offlineManifest.reconcile.foreignPending")}
+              </p>
+            ) : null}
             {/* Principle 2 wants a freshness state visible on a boat surface;
                 principle 9 refuses to spend a badge on the state every row is
                 normally in. Said once here, for the group, it is both: the
                 reader is still told, and a pill below now only ever appears on
                 a copy that needs them. */}
-            {savedRows.length > 0 && (!unanswered || needRefreshCount > 0) ? (
+            {savedRows.length > 0 &&
+            (!unanswered || needRefreshCount > 0) &&
+            (needRefreshCount > 0 || (!noteLossVisible && !foreignPendingChanges)) ? (
               <p className="mt-1 text-sm font-semibold">
                 {needRefreshCount > 0
                   ? t("shared.offlineManifest.list.freshnessNeedRefresh", {
@@ -191,6 +221,10 @@ export function OfflineManifestList({
                 timeStyle: "short",
                 timeZone: saved.snapshot.shop.timezone,
               });
+              const timeZoneName = cachedFormatter("dt-zone", Intl.DateTimeFormat, deviceLocale(), {
+                timeZone: saved.snapshot.shop.timezone,
+                timeZoneName: "short",
+              });
               // The row fills the card, whose `overflow-hidden` cut the
               // outset ring on three sides: the ring goes inside, and the
               // first and last rows take the card's corners so the clip
@@ -208,7 +242,13 @@ export function OfflineManifestList({
                       <p className={ITEM_TITLE_CLASS}>{tripManifest.trip.title}</p>
                       <p className="mt-0.5 text-sm text-muted">
                         {oneShopName ? null : `${saved.snapshot.shop.name} · `}
-                        {dateTime.format(new Date(tripManifest.trip.startsAt))} ·{" "}
+                        {dateTime.format(new Date(tripManifest.trip.startsAt))}{" "}
+                        {
+                          timeZoneName
+                            .formatToParts(new Date(tripManifest.trip.startsAt))
+                            .find((part) => part.type === "timeZoneName")?.value
+                        }{" "}
+                        ·{" "}
                         {t("shared.offlineManifest.list.diverCount", {
                           count: tripManifest.summary.totalDivers,
                         })}

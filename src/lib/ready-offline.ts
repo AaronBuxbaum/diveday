@@ -29,6 +29,9 @@ export const READY_FORGOTTEN_CACHE_NAME = "diveday-ready-forgotten-v1";
  */
 export const READY_KEEP_UNTIL_META = "diveday-ready-keep-until";
 
+/** Placeholder for the trusted server time inside a rollback warning. */
+export const READY_ROLLBACK_SAVED_AT_PLACEHOLDER = "__DIVEDAY_ROLLBACK_SAVED_AT__";
+
 /**
  * Marks the page's "No signal" line, which the server draws hidden. The
  * worker shows it in the kept copy (issue #3003): that copy runs no script,

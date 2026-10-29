@@ -151,6 +151,8 @@ export function ShopPageHeader({
   brand,
   display = false,
   titleFace = "app",
+  titleClassName = "",
+  titleLang,
   /** "end" bottom-aligns actions with the title block, right for a static
    * button/print row. Use "start" when actions can grow much taller than the
    * title — an expandable form — so opening it doesn't drag the title down. */
@@ -202,6 +204,10 @@ export function ShopPageHeader({
    * `BrandStyle` above, the utility resolves to Plex anyway.
    */
   titleFace?: "app" | "brand";
+  /** A page-specific title treatment, such as wrapping an unusually long word on phones. */
+  titleClassName?: string;
+  /** Language of the page title when it differs from the document language. */
+  titleLang?: string;
 }) {
   const hasBrand = Boolean(brand?.logoUrl || brand?.tagline || brand?.description);
   return (
@@ -267,7 +273,8 @@ export function ShopPageHeader({
             // shell; the CSS only acts where a bar has a filled title slot,
             // which is the staff shell alone.
             data-chrome-fold-title
-            className={`${titleFace === "brand" ? "font-brand-display " : ""}${display ? GREETING_TITLE_CLASS : PAGE_TITLE_CLASS}${eyebrow ? " mt-2" : ""}`}
+            lang={titleLang}
+            className={`${titleFace === "brand" ? "font-brand-display " : ""}${display ? GREETING_TITLE_CLASS : PAGE_TITLE_CLASS}${eyebrow ? " mt-2" : ""}${titleClassName ? ` ${titleClassName}` : ""}`}
           >
             {bindTitleDash(title)}
           </h1>

@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import { Suspense } from "react";
+import { RetryReturningDiverMemory } from "@/app/_components/RetryReturningDiverMemory";
 import { ErrorBoundaryIntlProvider } from "@/i18n/ErrorBoundaryIntlProvider";
 import { ERROR_BOUNDARY_MESSAGES_BY_LOCALE } from "@/i18n/error-boundary-messages";
 
@@ -28,8 +30,13 @@ import { ERROR_BOUNDARY_MESSAGES_BY_LOCALE } from "@/i18n/error-boundary-message
  */
 export default function ReadyTokenLayout({ children }: { children: ReactNode }) {
   return (
-    <ErrorBoundaryIntlProvider messagesByLocale={ERROR_BOUNDARY_MESSAGES_BY_LOCALE}>
-      {children}
-    </ErrorBoundaryIntlProvider>
+    <>
+      <Suspense fallback={null}>
+        <RetryReturningDiverMemory />
+      </Suspense>
+      <ErrorBoundaryIntlProvider messagesByLocale={ERROR_BOUNDARY_MESSAGES_BY_LOCALE}>
+        {children}
+      </ErrorBoundaryIntlProvider>
+    </>
   );
 }
