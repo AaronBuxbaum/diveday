@@ -98,7 +98,9 @@ describe("GitHubActionsRestoreDrillRole", () => {
       StringEquals: { "sts:AWSServiceName": "ecr-public.amazonaws.com" },
     });
     expect(bearer?.Resource).toBe("*");
-    const signIn = allows.find((statement) => statement.Action === "ecr-public:GetAuthorizationToken");
+    const signIn = allows.find(
+      (statement) => statement.Action === "ecr-public:GetAuthorizationToken",
+    );
     expect(signIn?.Resource).toBe("*");
     expect(signIn?.Condition).toBeUndefined();
   });
