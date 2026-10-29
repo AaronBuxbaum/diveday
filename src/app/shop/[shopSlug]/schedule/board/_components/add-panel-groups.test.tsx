@@ -67,7 +67,9 @@ describe("PriceInputGroup", () => {
       />,
     );
     expect(screen.getByText("$250.00 per diver, the course’s price")).toBeTruthy();
-    expect(container.querySelector('input[name="priceDollars"]')).toBeNull();
+    const input = container.querySelector<HTMLInputElement>('input[name="priceDollars"]');
+    expect(input?.hidden).toBe(true);
+    expect(input?.disabled).toBe(true);
   });
 });
 

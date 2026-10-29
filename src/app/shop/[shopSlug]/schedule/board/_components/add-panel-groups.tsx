@@ -736,18 +736,14 @@ export function PriceInputGroup({
   price: BuilderPriceInput;
   coursePriceLabel?: string | null;
 }) {
-  if (coursePriceLabel) {
-    return (
-      <FieldGrid columns={1}>
-        <Field label={copy.price}>
-          <p className="text-sm text-muted-foreground">{coursePriceLabel}</p>
-        </Field>
-      </FieldGrid>
-    );
-  }
+  const hasCoursePrice = Boolean(coursePriceLabel);
   return (
     <FieldGrid columns={1}>
-      <Field label={copy.price} hint={copy.optional} description={copy.priceDescription}>
+      <Field
+        label={copy.price}
+        hint={hasCoursePrice ? undefined : copy.optional}
+        description={coursePriceLabel ?? copy.priceDescription}
+      >
         <input
           name="priceDollars"
           type="number"
@@ -755,6 +751,8 @@ export function PriceInputGroup({
           min={0}
           max={price.max}
           placeholder={price.placeholder}
+          hidden={hasCoursePrice}
+          disabled={hasCoursePrice}
           className={`${controlClass} max-w-28 tabular-nums`}
         />
       </Field>

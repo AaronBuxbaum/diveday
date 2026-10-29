@@ -86,7 +86,42 @@ describe("AddPanel", () => {
       },
     });
     expect(screen.getByText("$250.00 per diver, the course’s price")).toBeTruthy();
-    expect(container.querySelector('input[name="priceDollars"]')).toBeNull();
+    const price = container.querySelector<HTMLInputElement>('input[name="priceDollars"]');
+    expect(price?.hidden).toBe(true);
+    expect(price?.disabled).toBe(true);
+  });
+
+  it("keeps the typed fallback fee when switching from an unpriced course to a priced one and back", () => {
+    const { container } = renderPanel({
+      startExpanded: true,
+      options: {
+        courses: [
+          { id: "unpriced", title: "Unpriced", agency: "padi", priceLabel: null },
+          {
+            id: "priced",
+            title: "Priced",
+            agency: "padi",
+            priceLabel: "$250.00 per diver, the course’s price",
+          },
+        ],
+        diveSites: [],
+      },
+    });
+    const price = container.querySelector<HTMLInputElement>('input[name="priceDollars"]');
+    const course = container.querySelector<HTMLSelectElement>('select[name="courseId"]');
+    if (!price || !course) throw new Error("expected the price and course controls");
+
+    fireEvent.change(price, { target: { value: "125" } });
+    fireEvent.change(course, { target: { value: "unpriced" } });
+    fireEvent.change(course, { target: { value: "priced" } });
+    expect(price.hidden).toBe(true);
+    expect(price.disabled).toBe(true);
+    expect(price.value).toBe("125");
+    fireEvent.change(course, { target: { value: "unpriced" } });
+    expect(container.querySelector('input[name="priceDollars"]')).toBe(price);
+    expect(price.hidden).toBe(false);
+    expect(price.disabled).toBe(false);
+    expect(price.value).toBe("125");
   });
 
   it("warns when the seats exceed the selected boat and leaves the form enabled", () => {

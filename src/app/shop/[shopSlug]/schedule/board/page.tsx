@@ -16,7 +16,6 @@ import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestTranslator } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
-import { formatMoneyCents } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { requireShopSurface } from "@/lib/session";
 import { noticeRole } from "@/lib/staff-notices";
@@ -34,6 +33,7 @@ import {
   scheduleBuilderCopy,
   scheduleBuilderMore,
 } from "./_components/builder-copy";
+import { builderCoursePriceLabel } from "./_components/builder-course-options";
 import { builderRequestPlan } from "./_components/builder-request-plan";
 import {
   type BuilderInitialCourse,
@@ -233,16 +233,7 @@ export default async function ScheduleBoardPage({
               level: st(CERTIFICATION_LEVEL_KEYS[requestedCourse.minimumCertificationLevel]),
             })
           : st("schedule.builder.courseNoCardRequired"),
-        priceLabel:
-          requestedCourse.priceCents === null
-            ? null
-            : st("trips.details.coursePrice", {
-                amount: formatMoneyCents(
-                  requestedCourse.priceCents,
-                  toShopCurrency(shop.currency),
-                  locale,
-                ),
-              }),
+        priceLabel: builderCoursePriceLabel(requestedCourse, shop, locale),
       }
     : null;
 
