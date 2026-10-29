@@ -43,6 +43,8 @@ function countOf(marker: string): number {
 }
 
 const MASTHEAD = component("ReadyMasthead.tsx");
+const READY_LAYOUT = component("layout.tsx");
+const BOOKED_SHELL = component("ReadyBookedShell.tsx");
 
 /**
  * The sections under the spine, composed by the page as one `<ThreadSections>`
@@ -294,17 +296,22 @@ describe("the sign step's actions", () => {
 
 /**
  * **A held seat is greeted as booked** (issue #2125). The matched person's
- * name would tell the booker whose record their email reached, and their name
- * and address must not be remembered on the booker's device.
+ * name would tell the booker whose record their email reached. Readiness may
+ * retry only the explicit shop-scoped opt-in receipt; it never creates global
+ * remembered identity from the greeting.
  */
 describe("a held seat's greeting", () => {
-  it("greets the booked-as name while held, and remembers nobody", () => {
+  it("greets the booked-as name without automatically saving identity", () => {
     // The booked card greets `getBookedCard`'s name, which applies the held
     // rule itself (src/db/ready.test.ts holds it to the full loader's).
     expect(MASTHEAD).toContain("greetingName={card.greetingName}");
     expect(MASTHEAD).toContain("firstNameOf(greetingName,");
-    expect(SOURCE).toContain("justBooked && person.email && !data.identityHeld ? (");
-    expect(countOf("detail.person.fullName")).toBe(1);
+    expect(SOURCE).not.toContain("RememberBooker");
+    expect(SOURCE).not.toContain("saveReturningDiver");
+    expect(BOOKED_SHELL).not.toContain("RememberBooker");
+    expect(BOOKED_SHELL).not.toContain("saveReturningDiver");
+    expect(READY_LAYOUT).toContain("<RetryReturningDiverMemory />");
+    expect(countOf("detail.person.fullName")).toBe(0);
   });
 });
 

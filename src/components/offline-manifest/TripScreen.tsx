@@ -2,6 +2,7 @@ import type { ComponentProps, ReactNode } from "react";
 import { BoatSafetyNotices } from "@/components/BoatSafetyNotices";
 import { EmergencyReferenceCard } from "@/components/EmergencyReferenceCard";
 import { OfflineShellVersionBanner } from "@/components/OfflineShellVersionBanner";
+import { OFFLINE_NOTICE_CLASS } from "@/components/offline-notice";
 import { PullToRefresh } from "@/components/PullToRefresh";
 import { RollCallTouchCue } from "@/components/RollCallTouchCue";
 import { SkipLink } from "@/components/SkipLink";
@@ -12,6 +13,7 @@ import { OfflineCheckpointNav } from "./CheckpointNav";
 import { OfflineCounter } from "./Counter";
 import type { OfflineTripControls } from "./controls";
 import { OfflineRollCallSection } from "./RollCallSection";
+import { StatusMessage } from "./StatusMessage";
 import { OfflineTripFoot } from "./TripFoot";
 import { OfflineTripHeader } from "./TripHeader";
 import type { OfflineTripView } from "./trip-view";
@@ -21,6 +23,8 @@ export function OfflineTripScreen({
   view,
   controls,
   tripId,
+  foreignPendingChanges,
+  noteLossMessage,
   shellVersionCopy,
   discardNotice,
   reconcile,
@@ -28,6 +32,8 @@ export function OfflineTripScreen({
   view: OfflineTripView;
   controls: OfflineTripControls;
   tripId: string;
+  foreignPendingChanges: boolean;
+  noteLossMessage: string;
   shellVersionCopy: ComponentProps<typeof OfflineShellVersionBanner>["copy"];
   discardNotice: ReactNode;
   reconcile: () => Promise<void>;
@@ -44,12 +50,30 @@ export function OfflineTripScreen({
         <PullToRefresh onRefresh={reconcile}>
           <OfflineShellVersionBanner copy={shellVersionCopy} />
           {discardNotice}
+          {foreignPendingChanges ? (
+            <p
+              className={`${OFFLINE_NOTICE_CLASS} border-warning/40 bg-warning/10 text-pretty`}
+              role="status"
+              aria-live="polite"
+            >
+              {t("shared.offlineManifest.reconcile.foreignPending")}
+            </p>
+          ) : null}
           <SkipLink
             href="#offline-roll-call"
             label={t("shared.offlineManifest.single.skipLink")}
             level="page"
           />
           <OfflineTripHeader view={view} controls={controls} />
+          {noteLossMessage ? (
+            <p
+              className={`${OFFLINE_NOTICE_CLASS} mt-3 border-warning/40 bg-warning/10 text-pretty`}
+              role="status"
+              aria-live="polite"
+            >
+              <StatusMessage message={noteLossMessage} />
+            </p>
+          ) : null}
           {!view.envelope.snapshot.juniorAdvisoriesChecked ? (
             <p className="mt-3 text-base text-warning-strong">
               {t("shared.offlineManifest.juniorChecksUnavailable")}

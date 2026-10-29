@@ -1,0 +1,2 @@
+CREATE UNIQUE INDEX "trips_shop_id_id_unique" ON "trips" ("shop_id","id");--> statement-breakpoint
+ALTER TABLE "offline_manifest_snapshot_revisions" ADD CONSTRAINT "offline_manifest_snapshot_revisions_trip_shop_fk" FOREIGN KEY ("shop_id","trip_id") REFERENCES "trips"("shop_id","id") ON DELETE CASCADE;

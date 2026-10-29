@@ -81,8 +81,8 @@ test("an uncertified visitor can enroll in an instructor-staffed Discover Scuba 
 
   // The booking form is controlled, so wait for hydration before typing.
   await expect(page.getByLabel("People", { exact: true })).toHaveAttribute("data-hydrated", "true");
-  await page.getByLabel("Name").fill("Nora Quinn");
-  await page.getByLabel("Email").fill("nora@example.com");
+  await page.getByRole("textbox", { name: "Name" }).fill("Nora Quinn");
+  await page.getByRole("textbox", { name: "Email" }).fill("nora@example.com");
   await acceptAgeAttestation(page);
   await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
   await expect(page.getByRole("heading", { name: /You’ve got a seat, Nora/ })).toBeVisible();
@@ -645,8 +645,10 @@ test.describe("staff", () => {
       "true",
     );
     const diver = `Ravi ${e2eNow().getTime()}`;
-    await page.getByLabel("Name").fill(diver);
-    await page.getByLabel("Email").fill(`ravi-${e2eNow().getTime()}@example.com`);
+    await page.getByRole("textbox", { name: "Name" }).fill(diver);
+    await page
+      .getByRole("textbox", { name: "Email" })
+      .fill(`ravi-${e2eNow().getTime()}@example.com`);
     await acceptAgeAttestation(page);
     await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
     await expect(page.getByRole("heading", { name: /You’ve got a seat, Ravi/ })).toBeVisible();
@@ -1373,8 +1375,10 @@ test("a course's learning materials reach the student's thread, and staff tick t
     "true",
   );
   const diver = `Mira ${e2eNow().getTime()}`;
-  await diverPage.getByLabel("Name").fill(diver);
-  await diverPage.getByLabel("Email").fill(`mira-${e2eNow().getTime()}@example.com`);
+  await diverPage.getByRole("textbox", { name: "Name" }).fill(diver);
+  await diverPage
+    .getByRole("textbox", { name: "Email" })
+    .fill(`mira-${e2eNow().getTime()}@example.com`);
   await acceptAgeAttestation(diverPage);
   await diverPage
     .getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ })
@@ -1438,8 +1442,10 @@ test("a course that includes its gear asks the student for sizes, not money", as
     "data-hydrated",
     "true",
   );
-  await diverPage.getByLabel("Name").fill(`Tove ${e2eNow().getTime()}`);
-  await diverPage.getByLabel("Email").fill(`tove-${e2eNow().getTime()}@example.com`);
+  await diverPage.getByRole("textbox", { name: "Name" }).fill(`Tove ${e2eNow().getTime()}`);
+  await diverPage
+    .getByRole("textbox", { name: "Email" })
+    .fill(`tove-${e2eNow().getTime()}@example.com`);
   await acceptAgeAttestation(diverPage);
   await diverPage
     .getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ })

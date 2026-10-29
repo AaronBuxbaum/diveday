@@ -104,7 +104,11 @@ function TitleAndDescription({
           className={controlClass}
         />
       </Field>
-      <Field label={t("trips.details.descriptionLabel")} hint={t("trips.details.optionalHint")}>
+      <Field
+        label={t("trips.details.descriptionLabel")}
+        hint={t("trips.details.optionalHint")}
+        description={t("trips.details.descriptionHint")}
+      >
         <textarea
           name="description"
           rows={2}
