@@ -260,8 +260,15 @@ describe("the boat at sea", () => {
     expect(dawn).toBeDefined();
     expect(state.carryover?.endsAt.getTime()).toBeLessThan(dawn?.startsAt.getTime() ?? 0);
 
+    await db.update(shops).set({ timezone: "Pacific/Honolulu" }).where(eq(shops.id, shop.id));
+    const afterTimezoneEdit = await getDayCloseout(db, shop.id, "Pacific/Honolulu", now);
+    expect(afterTimezoneEdit.carryover?.tripId).toBe(state.carryover?.tripId);
+    expect(afterTimezoneEdit.carryover?.startsAt.getTime()).toBe(
+      state.carryover?.startsAt.getTime(),
+    );
+
     await db.update(shops).set({ isDemo: false }).where(eq(shops.id, shop.id));
-    expect((await getDayCloseout(db, shop.id, shop.timezone, now)).carryover).toBeUndefined();
+    expect((await getDayCloseout(db, shop.id, "Pacific/Honolulu", now)).carryover).toBeUndefined();
   });
 });
 

@@ -31,7 +31,7 @@ import {
   tripDives,
   trips,
 } from "./schema";
-import { demoFinishedDuskDeparture } from "./seed-clock";
+import { DEMO_SHOP_TIMEZONE, demoFinishedDuskDeparture } from "./seed-clock";
 import { AT_SEA_DUSK_TITLE } from "./seed-identifiers";
 import { listRollCallGaps } from "./today";
 import { latestTripStagesByTrip } from "./trip-stages";
@@ -451,7 +451,11 @@ async function demoDuskCarryover(
   timeZone: string,
   now: Date,
 ): Promise<DayCloseoutState["carryover"]> {
-  const plan = demoFinishedDuskDeparture(now, timeZone);
+  // This fixture's timestamps are seeded against its fixed demo clock zone.
+  // Read/render them in the shop's current zone below, but match the seed plan
+  // in the same zone that created it so a staffer changing the shop timezone
+  // cannot make the finished demo departure disappear.
+  const plan = demoFinishedDuskDeparture(now, DEMO_SHOP_TIMEZONE);
   if (!plan || !(await isDemoShopWithDemoOwnerOrCaptainAccount(db, shopId))) return undefined;
 
   const [trip] = await db
