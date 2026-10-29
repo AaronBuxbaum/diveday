@@ -588,6 +588,11 @@
     "whoCanEnroll": "Quién puede matricularse",
     "fromTheShop": "Del centro",
     "feeCovers": "Qué cubre el precio",
+    "templateCopy": {
+      "openWaterCertificationFees": "Tarifas de certificación de PADI",
+      "openWaterElearningQuestion": "¿Puedo hacer la teoría antes de llegar?",
+      "openWaterElearningAnswer": "Sí, y la mayoría de los alumnos lo hace. PADI eLearning se cobra por separado, en una línea aparte, y terminarlo antes te deja los días libres para bucear."
+    },
     "galleryHeading": "Fotos del curso {course}",
     "photoAltFallback": "{course} — foto {n}",
     "datesHeading": "Próximas fechas",

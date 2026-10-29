@@ -588,6 +588,11 @@
     "whoCanEnroll": "Who can enroll",
     "fromTheShop": "From the shop",
     "feeCovers": "What the fee covers",
+    "templateCopy": {
+      "openWaterCertificationFees": "PADI certification fees",
+      "openWaterElearningQuestion": "Can I do the theory before I arrive?",
+      "openWaterElearningAnswer": "Yes, and most students do. PADI eLearning is a separate fee, billed as its own line, and finishing it beforehand frees your days for diving."
+    },
     "galleryHeading": "Photos from the {course} course",
     "photoAltFallback": "{course} — photo {n}",
     "datesHeading": "Upcoming dates",
