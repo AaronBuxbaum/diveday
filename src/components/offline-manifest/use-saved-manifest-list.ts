@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react";
+import { type MutableRefObject, useCallback, useEffect } from "react";
 import { listOfflineManifests, syncOfflineManifest } from "@/lib/offline-manifest-store";
 import type { OfflineManifestEnvelope } from "@/lib/offline-manifests";
 import { pendingOfflineEventCount } from "@/lib/offline-manifests";
@@ -26,25 +26,37 @@ export function useTripPendingManifestInventory({
   tripId,
   tenantSlugRef,
   verifiedTenantRevision,
+  inventoryReadyRef,
   setList,
   setMessage,
+  onInventoryReady,
   allCaughtUpMessage,
 }: {
   tripId: string;
   tenantSlugRef: { current: string | null };
   verifiedTenantRevision: number;
+  inventoryReadyRef: MutableRefObject<boolean>;
   setList: (saved: OfflineManifestEnvelope[]) => void;
   setMessage: (update: (message: string) => string) => void;
+  onInventoryReady: (saved: OfflineManifestEnvelope[]) => void;
   allCaughtUpMessage: string;
 }) {
   useEffect(() => {
     if (!tripId) return;
     let active = true;
+    let latestRequest = 0;
     const refresh = () => {
+      const request = ++latestRequest;
+      // A new read makes the previous inventory stale. Until this tenant's
+      // latest read settles, selected-trip sync must not claim everything was
+      // sent: the device-wide pending queue may contain another shop's work.
+      inventoryReadyRef.current = false;
       void listOfflineManifests()
         .then((saved) => {
-          if (!active) return;
+          if (!active || request !== latestRequest) return;
           setList(saved);
+          inventoryReadyRef.current = true;
+          onInventoryReady(saved);
           if (
             verifiedTenantRevision > 0 &&
             hasForeignPendingManifestChanges(saved, tenantSlugRef.current) &&
@@ -53,15 +65,29 @@ export function useTripPendingManifestInventory({
             setMessage((message) => (message === allCaughtUpMessage ? "" : message));
           }
         })
-        .catch(() => {});
+        .catch(() => {
+          // An unreadable or failed inventory is not evidence that there are
+          // no foreign pending events. Keep caught-up copy suppressed.
+        });
     };
     refresh();
     window.addEventListener("online", refresh);
     return () => {
       active = false;
+      latestRequest += 1;
+      inventoryReadyRef.current = false;
       window.removeEventListener("online", refresh);
     };
-  }, [tripId, tenantSlugRef, verifiedTenantRevision, setList, setMessage, allCaughtUpMessage]);
+  }, [
+    tripId,
+    tenantSlugRef,
+    verifiedTenantRevision,
+    inventoryReadyRef,
+    setList,
+    setMessage,
+    onInventoryReady,
+    allCaughtUpMessage,
+  ]);
 }
 
 export function useSavedManifestList({

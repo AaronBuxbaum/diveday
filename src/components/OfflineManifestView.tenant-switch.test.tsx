@@ -266,6 +266,158 @@ it("shows the tenant-neutral recovery notice on a selected trip after shop verif
   expect(foreign.events[0]?.syncStatus).toBe("pending");
 });
 
+it("withholds selected-trip caught-up copy until the tenant-scoped inventory settles", async () => {
+  searchParams = new URLSearchParams({ trip: "trip-b-45" });
+  const foreign = envelope("foreign-trip-45", "Private A departure", {
+    shopSlug: "blue-mantis",
+    shopName: "Blue Mantis Divers",
+  });
+  foreign.events.push({
+    clientEventId: "foreign-pending-event-45",
+    snapshotId: foreign.snapshot.snapshotId,
+    snapshotSavedAt: foreign.snapshot.savedAt,
+    tripId: "foreign-trip-45",
+    bookingId: "private-person-45",
+    checkpoint: "departure",
+    status: "boarded",
+    occurredAt: new Date(FROZEN_MS).toISOString(),
+    note: "Private note text",
+    syncStatus: "pending",
+  });
+  const selected = richEnvelope("trip-b-45");
+  selected.snapshot.shop = {
+    ...selected.snapshot.shop,
+    slug: "reef-runners",
+    name: "Reef Runners",
+  };
+  vi.mocked(loadOfflineManifest).mockResolvedValue(selected);
+  let resolveInventory: (saved: OfflineManifestEnvelope[]) => void = () => {};
+  vi.mocked(listOfflineManifests).mockReturnValue(
+    new Promise((resolve) => {
+      resolveInventory = resolve;
+    }),
+  );
+  vi.mocked(syncOfflineManifest).mockResolvedValue({ ...selected, events: [] });
+  vi.mocked(fetch).mockImplementation(async (input) =>
+    String(input) === "/api/offline-manifests/identity"
+      ? identityResponse("reef-runners")
+      : new Response(null, { status: 200 }),
+  );
+
+  render(<OfflineManifestView />);
+
+  await waitFor(() =>
+    expect(syncOfflineManifest).toHaveBeenCalledWith("trip-b-45", "reef-runners"),
+  );
+  await waitFor(() => expect(syncOfflineManifest).toHaveResolved());
+  expect(screen.queryByText("Everything’s sent.")).not.toBeInTheDocument();
+
+  await act(async () => resolveInventory([foreign, selected]));
+  expect(
+    await screen.findByText(
+      "Pending changes for another shop remain on this device. Sign in to that shop to sync or review them.",
+    ),
+  ).toBeInTheDocument();
+  expect(screen.queryByText("Everything’s sent.")).not.toBeInTheDocument();
+  expect(screen.queryByText("Private A departure")).not.toBeInTheDocument();
+  expect(screen.queryByText("Blue Mantis Divers")).not.toBeInTheDocument();
+  expect(screen.queryByText("foreign-trip-45")).not.toBeInTheDocument();
+  expect(screen.queryByText("private-person-45")).not.toBeInTheDocument();
+  expect(screen.queryByText("Private note text")).not.toBeInTheDocument();
+  expect(foreign.events[0]?.syncStatus).toBe("pending");
+});
+
+it("keeps caught-up copy suppressed when the selected-trip inventory read fails", async () => {
+  searchParams = new URLSearchParams({ trip: "trip-b-46" });
+  const selected = richEnvelope("trip-b-46");
+  selected.snapshot.shop = {
+    ...selected.snapshot.shop,
+    slug: "reef-runners",
+    name: "Reef Runners",
+  };
+  vi.mocked(loadOfflineManifest).mockResolvedValue(selected);
+  vi.mocked(listOfflineManifests).mockRejectedValue(new Error("storage unavailable"));
+  vi.mocked(syncOfflineManifest).mockResolvedValue({ ...selected, events: [] });
+  vi.mocked(fetch).mockImplementation(async (input) =>
+    String(input) === "/api/offline-manifests/identity"
+      ? identityResponse("reef-runners")
+      : new Response(null, { status: 200 }),
+  );
+
+  render(<OfflineManifestView />);
+
+  await waitFor(() =>
+    expect(syncOfflineManifest).toHaveBeenCalledWith("trip-b-46", "reef-runners"),
+  );
+  await waitFor(() => expect(syncOfflineManifest).toHaveResolved());
+  expect(screen.queryByText("Everything’s sent.")).not.toBeInTheDocument();
+});
+
+it("ignores an older inventory refresh that resolves after the newer tenant-scoped read", async () => {
+  searchParams = new URLSearchParams({ trip: "trip-b-47" });
+  const foreign = envelope("foreign-trip-47", "Private A departure", {
+    shopSlug: "blue-mantis",
+    shopName: "Blue Mantis Divers",
+  });
+  foreign.events.push({
+    clientEventId: "foreign-pending-event-47",
+    snapshotId: foreign.snapshot.snapshotId,
+    snapshotSavedAt: foreign.snapshot.savedAt,
+    tripId: "foreign-trip-47",
+    bookingId: "private-person-47",
+    checkpoint: "departure",
+    status: "boarded",
+    occurredAt: new Date(FROZEN_MS).toISOString(),
+    note: "Private note text",
+    syncStatus: "pending",
+  });
+  const selected = richEnvelope("trip-b-47");
+  selected.snapshot.shop = {
+    ...selected.snapshot.shop,
+    slug: "reef-runners",
+    name: "Reef Runners",
+  };
+  vi.mocked(loadOfflineManifest).mockResolvedValue(selected);
+  const inventoryReads: Array<(saved: OfflineManifestEnvelope[]) => void> = [];
+  vi.mocked(listOfflineManifests).mockImplementation(
+    () => new Promise((resolve) => inventoryReads.push(resolve)),
+  );
+  vi.mocked(syncOfflineManifest).mockResolvedValue({ ...selected, events: [] });
+  vi.mocked(fetch).mockImplementation(async (input) =>
+    String(input) === "/api/offline-manifests/identity"
+      ? identityResponse("reef-runners")
+      : new Response(null, { status: 200 }),
+  );
+
+  render(<OfflineManifestView />);
+  await waitFor(() => expect(inventoryReads).toHaveLength(1));
+  await act(async () => window.dispatchEvent(new Event("online")));
+  await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+  await waitFor(() => expect(inventoryReads.length).toBeGreaterThanOrEqual(2));
+
+  const newestRead = inventoryReads.at(-1);
+  await act(async () => newestRead?.([foreign, selected]));
+  expect(
+    await screen.findByText(
+      "Pending changes for another shop remain on this device. Sign in to that shop to sync or review them.",
+    ),
+  ).toBeInTheDocument();
+  await act(async () => inventoryReads[0]?.([selected]));
+
+  expect(
+    screen.getByText(
+      "Pending changes for another shop remain on this device. Sign in to that shop to sync or review them.",
+    ),
+  ).toBeInTheDocument();
+  expect(screen.queryByText("Everything’s sent.")).not.toBeInTheDocument();
+  expect(screen.queryByText("Private A departure")).not.toBeInTheDocument();
+  expect(screen.queryByText("Blue Mantis Divers")).not.toBeInTheDocument();
+  expect(screen.queryByText("foreign-trip-47")).not.toBeInTheDocument();
+  expect(screen.queryByText("private-person-47")).not.toBeInTheDocument();
+  expect(screen.queryByText("Private note text")).not.toBeInTheDocument();
+  expect(foreign.events[0]?.syncStatus).toBe("pending");
+});
+
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();

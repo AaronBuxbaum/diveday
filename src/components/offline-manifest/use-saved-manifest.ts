@@ -1,5 +1,15 @@
 import { useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import {
+  type Dispatch,
+  type MutableRefObject,
+  type SetStateAction,
+  useCallback,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+} from "react";
 import type { OfflineManifestTranslator } from "@/i18n/offline-manifest-messages";
 import { isRollCallCheckpoint, type RollCallCheckpoint } from "@/lib/manifests";
 import {
@@ -198,6 +208,115 @@ function reconciledTripMessage(
     .join(" ");
 }
 
+function useSelectedTripInventoryStatus({
+  tripId,
+  tenantSlugRef,
+  verifiedTenantRevision,
+  verifiedTenantSlugRef,
+  lastTripSyncRef,
+  setList,
+  setMessage,
+  t,
+}: {
+  tripId: string;
+  tenantSlugRef: { current: string | null };
+  verifiedTenantRevision: number;
+  verifiedTenantSlugRef: { current: string | null };
+  lastTripSyncRef: { current: { tripId: string; shopSlug: string } | null };
+  setList: (saved: OfflineManifestEnvelope[]) => void;
+  setMessage: (message: string | ((message: string) => string)) => void;
+  t: OfflineManifestTranslator;
+}) {
+  const inventoryReadyRef = useRef(false);
+  const onInventoryReady = useCallback(
+    (saved: OfflineManifestEnvelope[]) => {
+      const lastSync = lastTripSyncRef.current;
+      const shopSlug = verifiedTenantSlugRef.current;
+      if (!lastSync || lastSync.tripId !== tripId || lastSync.shopSlug !== shopSlug || !shopSlug) {
+        return;
+      }
+      const currentTrip = saved.find(
+        (candidate) => candidate.snapshot.manifests[0]?.trip.id === tripId,
+      );
+      if (!currentTrip || currentTrip.snapshot.shop.slug !== shopSlug) return;
+      setMessage(
+        reconciledTripMessage(currentTrip, t, hasForeignPendingManifestChanges(saved, shopSlug)),
+      );
+    },
+    [lastTripSyncRef, tripId, verifiedTenantSlugRef, t, setMessage],
+  );
+  useTripPendingManifestInventory({
+    tripId,
+    tenantSlugRef,
+    verifiedTenantRevision,
+    inventoryReadyRef,
+    setList,
+    setMessage,
+    onInventoryReady,
+    allCaughtUpMessage: t("shared.offlineManifest.reconcile.allCaughtUp"),
+  });
+  return inventoryReadyRef;
+}
+
+function selectedTripInventoryIsReady(inventoryReadyRef: { current: boolean }) {
+  return inventoryReadyRef.current;
+}
+
+function useOnTenantVerified({
+  envelope,
+  t,
+  tripId,
+  tripNoticeForEnvelope,
+  setTenantChangePending,
+  verifiedTenantSlugRef,
+  setMessage,
+  initialMessageForList,
+  listRef,
+  setVerifiedTenantRevision,
+}: {
+  envelope: OfflineManifestEnvelope | null;
+  t: OfflineManifestTranslator;
+  tripId: string;
+  tripNoticeForEnvelope: (saved: OfflineManifestEnvelope | null) => string | null;
+  setTenantChangePending: Dispatch<SetStateAction<boolean>>;
+  verifiedTenantSlugRef: MutableRefObject<string | null>;
+  setMessage: Dispatch<SetStateAction<string>>;
+  initialMessageForList: (saved: OfflineManifestEnvelope[]) => string;
+  listRef: MutableRefObject<OfflineManifestEnvelope[] | null>;
+  setVerifiedTenantRevision: Dispatch<SetStateAction<number>>;
+}) {
+  return useCallback(
+    (currentShopSlug: string) => {
+      setTenantChangePending(false);
+      verifiedTenantSlugRef.current = currentShopSlug;
+      if (tripId) {
+        const visibleEnvelope = envelope?.snapshot.shop.slug === currentShopSlug ? envelope : null;
+        const noteMessage = tripNoticeForEnvelope(visibleEnvelope);
+        setMessage(
+          noteMessage === null
+            ? ""
+            : noteMessage || (visibleEnvelope ? t("shared.offlineManifest.reconcile.ready") : ""),
+        );
+      } else {
+        setMessage(initialMessageForList(listRef.current ?? []));
+      }
+      setVerifiedTenantRevision((revision) => revision + 1);
+    },
+    [
+      envelope,
+      t,
+      tripId,
+      tripNoticeForEnvelope,
+      setTenantChangePending,
+      verifiedTenantSlugRef,
+      setMessage,
+      initialMessageForList,
+      listRef,
+      setVerifiedTenantRevision,
+    ],
+  );
+}
+
 /**
  * **The copy this device holds, and keeping it honest**: the saved record (or
  * the list of them), the checkpoint, the status line, what retention threw
@@ -205,6 +324,7 @@ function reconciledTripMessage(
  */
 export function useSavedManifest(t: OfflineManifestTranslator) {
   const searchParams = useSearchParams();
+  const tripId = useMemo(() => searchParams.get("trip") ?? "", [searchParams]);
   const [{ envelope, removedForOtherShop }, dispatchSaved] = useReducer(savedCopyReducer, {
     envelope: null,
     goneUnderTenant: null,
@@ -217,6 +337,7 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
   // is useful for display, never proof of the currently authenticated tenant.
   const verifiedTenantSlugRef = useRef<string | null>(null);
   const [verifiedTenantRevision, setVerifiedTenantRevision] = useState(0);
+  const lastTripSyncRef = useRef<{ tripId: string; shopSlug: string } | null>(null);
   const [tenantChangePending, setTenantChangePending] = useState(false);
   const [tenantChangeRevision, setTenantChangeRevision] = useState(0);
   // A failed reload of the live manifest carries its checkpoint through the
@@ -276,7 +397,6 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
   // copy is gone. Its reducer action is fenced, and so must its note-loss
   // message be.
   const tripPurgedRef = useRef(false);
-  const tripId = useMemo(() => searchParams.get("trip") ?? "", [searchParams]);
   // The service worker sent the captain here because DiveDay did not answer
   // (`OFFLINE_FALLBACK_PARAM`), not because they opened the saved copy. While
   // the device reads "online" that is the misleading case: a copy minutes old
@@ -310,14 +430,15 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
   }, []);
 
   const { tenantSlugRef, resolveTenant, invalidateTenantLookup } = useOfflineTenant();
-
-  useTripPendingManifestInventory({
+  const tripInventoryReadyRef = useSelectedTripInventoryStatus({
     tripId,
     tenantSlugRef,
     verifiedTenantRevision,
+    verifiedTenantSlugRef,
+    lastTripSyncRef,
     setList,
     setMessage,
-    allCaughtUpMessage: t("shared.offlineManifest.reconcile.allCaughtUp"),
+    t,
   });
 
   const handleTenantChanged = useCallback(() => {
@@ -326,13 +447,15 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
     // and controls immediately, retain its encrypted pending events, and make
     // the cross-shop purge perform a fresh identity lookup.
     invalidateTenantLookup();
+    tripInventoryReadyRef.current = false;
     verifiedTenantSlugRef.current = null;
+    lastTripSyncRef.current = null;
     setTenantChangePending(true);
     setMessage(t("shared.offlineManifest.reconcile.tenantChanged"));
     dispatchSaved({ type: "tenant-changed" });
     setList(null);
     setTenantChangeRevision((revision) => revision + 1);
-  }, [t, invalidateTenantLookup]);
+  }, [t, invalidateTenantLookup, tripInventoryReadyRef]);
 
   const tripNoticeForEnvelope = useCallback(
     (saved: OfflineManifestEnvelope | null) => {
@@ -361,6 +484,8 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
 
   useEffect(() => {
     if (!tripId || !envelope || verifiedTenantRevision === 0 || tripPurgedRef.current) return;
+    const lastSync = lastTripSyncRef.current;
+    if (lastSync?.tripId === tripId && lastSync.shopSlug === verifiedTenantSlugRef.current) return;
     const noteMessage = tripNoticeForEnvelope(envelope);
     setMessage(
       noteMessage === null ? "" : noteMessage || t("shared.offlineManifest.reconcile.ready"),
@@ -404,6 +529,7 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
       // the now-authorized surface.
       if (tenantSlugRef.current !== slug) return;
       dispatchSaved({ type: "loaded", envelope: next });
+      lastTripSyncRef.current = { tripId, shopSlug: slug };
       // All three queues, not roll call alone: a checklist tap or an arrival
       // waiting to sync is evidence this device is holding, and a count that
       // cannot see it tells a captain they are caught up when they are not.
@@ -411,7 +537,13 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
         listRef.current ?? [],
         verifiedTenantSlugRef.current,
       );
-      setMessage(reconciledTripMessage(next, t, foreignPending));
+      setMessage(
+        reconciledTripMessage(
+          next,
+          t,
+          foreignPending || !selectedTripInventoryIsReady(tripInventoryReadyRef),
+        ),
+      );
     } catch (error) {
       if (isShopChangedError(error)) {
         handleTenantChanged();
@@ -420,7 +552,7 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
       if (tenantSlugRef.current !== slug) return;
       setMessage(t("shared.offlineManifest.reconcile.reachError"));
     }
-  }, [tripId, t, resolveTenant, tenantSlugRef, handleTenantChanged]);
+  }, [tripId, t, resolveTenant, tenantSlugRef, handleTenantChanged, tripInventoryReadyRef]);
 
   // **One sync at a time, and at most one waiting** (captain review S2). Every
   // tap asks for a pass, and a pass on a link that carries nothing takes the
@@ -481,27 +613,18 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
     setMessage("");
   }, []);
 
-  const onTenantVerified = useCallback(
-    (currentShopSlug: string) => {
-      setTenantChangePending(false);
-      verifiedTenantSlugRef.current = currentShopSlug;
-      // Re-scope before the purge's store read finishes. Foreign pending copies
-      // remain stored for their shop to reconcile but are no longer disclosed.
-      if (tripId) {
-        const visibleEnvelope = envelope?.snapshot.shop.slug === currentShopSlug ? envelope : null;
-        const noteMessage = tripNoticeForEnvelope(visibleEnvelope);
-        setMessage(
-          noteMessage === null
-            ? ""
-            : noteMessage || (visibleEnvelope ? t("shared.offlineManifest.reconcile.ready") : ""),
-        );
-      } else {
-        setMessage(initialListMessage(listRef.current ?? [], t, currentShopSlug));
-      }
-      setVerifiedTenantRevision((revision) => revision + 1);
-    },
-    [envelope, t, tripId, tripNoticeForEnvelope],
-  );
+  const onTenantVerified = useOnTenantVerified({
+    envelope,
+    t,
+    tripId,
+    tripNoticeForEnvelope,
+    setTenantChangePending,
+    verifiedTenantSlugRef,
+    setMessage,
+    initialMessageForList,
+    listRef,
+    setVerifiedTenantRevision,
+  });
 
   useCrossShopPurge({
     tripId,

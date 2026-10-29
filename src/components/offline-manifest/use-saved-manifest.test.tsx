@@ -275,8 +275,10 @@ describe("useSavedManifest on a trip", () => {
     const saved = withEvents("trip-1", { pending: 1 });
     const synced = withEvents("trip-1", {});
     load.mockResolvedValue(saved);
+    list.mockResolvedValue([synced]);
     sync.mockResolvedValue(synced);
     const { result } = at("trip=trip-1");
+    act(() => purgeState.latest?.onTenantVerified("blue-mantis"));
     await waitFor(() => expect(result.current.message).toBe(line("allCaughtUp")));
     expect(sync).toHaveBeenCalledWith("trip-1", "blue-mantis");
     expect(result.current.envelope).toBe(synced);
@@ -284,9 +286,12 @@ describe("useSavedManifest on a trip", () => {
 
   it("counts what is still waiting after a sync", async () => {
     setOnline(true);
-    load.mockResolvedValue(withEvents("trip-1", { pending: 2 }));
-    sync.mockResolvedValue(withEvents("trip-1", { pending: 2 }));
+    const pending = withEvents("trip-1", { pending: 2 });
+    load.mockResolvedValue(pending);
+    list.mockResolvedValue([pending]);
+    sync.mockResolvedValue(pending);
     const { result } = at("trip=trip-1");
+    act(() => purgeState.latest?.onTenantVerified("blue-mantis"));
     await waitFor(() =>
       expect(result.current.message).toBe(`${line("pendingWaiting")} {"count":2}`),
     );
@@ -378,9 +383,13 @@ describe("useSavedManifest on a trip", () => {
   });
 
   it("syncs again when signal comes back", async () => {
-    load.mockResolvedValue(withEvents("trip-1", { pending: 1 }));
-    sync.mockResolvedValue(withEvents("trip-1", {}));
+    const saved = withEvents("trip-1", { pending: 1 });
+    const synced = withEvents("trip-1", {});
+    load.mockResolvedValue(saved);
+    list.mockResolvedValue([synced]);
+    sync.mockResolvedValue(synced);
     const { result } = at("trip=trip-1");
+    act(() => purgeState.latest?.onTenantVerified("blue-mantis"));
     await waitFor(() => expect(result.current.storeRead).toBe(true));
     expect(sync).not.toHaveBeenCalled();
     setOnline(true);
@@ -400,6 +409,7 @@ describe("useSavedManifest's syncs while one hangs", () => {
   it("runs one at a time, and folds every ask made meanwhile into one more pass", async () => {
     setOnline(true);
     load.mockResolvedValue(withEvents("trip-1", { pending: 3 }));
+    list.mockResolvedValue([withEvents("trip-1", {})]);
     let release: (envelope: OfflineManifestEnvelope) => void = () => {};
     sync.mockImplementationOnce(
       () =>
@@ -409,6 +419,7 @@ describe("useSavedManifest's syncs while one hangs", () => {
     );
     sync.mockResolvedValue(withEvents("trip-1", {}));
     const { result } = at("trip=trip-1");
+    act(() => purgeState.latest?.onTenantVerified("blue-mantis"));
     await waitFor(() => expect(sync).toHaveBeenCalledTimes(1));
 
     let asks: Promise<void>[] = [];
