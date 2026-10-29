@@ -4,7 +4,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { nowDate } from "@/lib/clock";
 import {
   forgetReturningDiver,
+  getOrCreateReturningDiverDeviceToken,
   loadReturningDiver,
+  MAX_RETURNING_DIVER_DEVICE_SLOTS,
   RETURNING_DIVER_DEVICE_SLOT_MS,
   RETURNING_DIVER_MEMORY_MS,
   saveReturningDiver,
@@ -277,6 +279,20 @@ describe("opted-in returning-diver memory", () => {
       localStorage.getItem("diveday:returning-diver:clear:v2:blue-mantis") ?? "{}",
     ) as { expiresAt?: number };
     expect(state.expiresAt).toBe(now + RETURNING_DIVER_DEVICE_SLOT_MS);
+  });
+
+  it("prunes expired tab slots before enforcing the active slot cap", () => {
+    for (let index = 0; index < MAX_RETURNING_DIVER_DEVICE_SLOTS; index += 1) {
+      sessionStorage.setItem(
+        `diveday:returning-diver:device:v1:shop-${index}`,
+        JSON.stringify({ token: "a".repeat(64), expiresAt: NOW.getTime() - 1 }),
+      );
+    }
+
+    const token = getOrCreateReturningDiverDeviceToken("shop-new", NOW);
+
+    expect(token).toMatch(/^[A-Za-z0-9_-]{40,128}$/);
+    expect(sessionStorage.length).toBe(1);
   });
 
   it("deletes the old unscoped v1 value without migrating it", () => {

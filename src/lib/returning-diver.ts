@@ -75,9 +75,33 @@ export function getOrCreateReturningDiverDeviceToken(
       }
       sessionStorage.removeItem(key);
     }
-    const slotCount = Array.from({ length: sessionStorage.length }, (_, index) =>
+    let slotCount = 0;
+    const slotKeys = Array.from({ length: sessionStorage.length }, (_, index) =>
       sessionStorage.key(index),
-    ).filter((storageKey) => storageKey?.startsWith(DEVICE_SLOT_PREFIX)).length;
+    ).filter(
+      (storageKey): storageKey is string => storageKey?.startsWith(DEVICE_SLOT_PREFIX) ?? false,
+    );
+    for (const slotKey of slotKeys) {
+      const stored = sessionStorage.getItem(slotKey);
+      if (!stored) continue;
+      try {
+        const slot: unknown = JSON.parse(stored);
+        if (
+          typeof slot === "object" &&
+          slot !== null &&
+          typeof (slot as { token?: unknown }).token === "string" &&
+          RETURNING_DIVER_DEVICE_TOKEN_PATTERN.test((slot as { token: string }).token) &&
+          typeof (slot as { expiresAt?: unknown }).expiresAt === "number" &&
+          (slot as { expiresAt: number }).expiresAt > now.getTime()
+        ) {
+          slotCount += 1;
+        } else {
+          sessionStorage.removeItem(slotKey);
+        }
+      } catch {
+        sessionStorage.removeItem(slotKey);
+      }
+    }
     if (slotCount >= MAX_RETURNING_DIVER_DEVICE_SLOTS) return null;
     const bytes = new Uint8Array(32);
     globalThis.crypto.getRandomValues(bytes);
