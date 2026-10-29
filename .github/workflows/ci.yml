@@ -1557,11 +1557,12 @@ jobs:
           # radius to the three files that ask for it by name (src/test/postgres.ts).
           DIVEDAY_TEST_POSTGRES_URL: postgres://postgres:postgres@localhost:5432/postgres
 
-  # The one check main's ruleset requires. A required check names a job, and
-  # most jobs here are skipped on a docs-only change or split into shards whose
-  # names move with the shard count, so none of them can be the required one.
-  # This job needs all of them and fails on a missing, failed, cancelled, or
-  # unexpectedly skipped lane, using the change detector to identify required work.
+  # The stable check to require in main's ruleset. The visible ruleset currently
+  # does not require checks; see docs/engineering/audits/20261021-agent-ci-workflow-research.md.
+  # Most jobs are skipped on docs-only changes or split into shards whose names
+  # move with the shard count, so none of them is a stable required check. This
+  # job validates every expected lane and also checks that a PR run still names
+  # the live head/base/merge candidate before returning success.
   ci-result:
     name: CI result
     if: always() && github.event_name != 'schedule'
@@ -1585,6 +1586,7 @@ jobs:
       contents: read
       actions: read
       checks: read
+      pull-requests: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Collect exact-attempt CI evidence
@@ -1607,4 +1609,12 @@ jobs:
       - name: Every required job passed
         env:
           CI_NEEDS: ${{ toJSON(needs) }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_REF: ${{ github.ref }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          GH_TOKEN: ${{ github.token }}
         run: node scripts/ci-merge-verdict.mjs
