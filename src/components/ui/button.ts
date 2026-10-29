@@ -347,8 +347,8 @@ const sizes = {
  * stylesheet order, not by the order they are written.
  */
 export const tapTargetOverhangClass = {
-  up: { line: "flex items-end", target: "inline-flex min-h-11 items-end" },
-  down: { line: "flex items-start", target: "inline-flex min-h-11 items-start" },
+  up: { line: "flex items-end", target: "inline-flex min-h-11 min-w-11 items-end" },
+  down: { line: "flex items-start", target: "inline-flex min-h-11 min-w-11 items-start" },
 } as const;
 
 /**
@@ -357,16 +357,17 @@ export const tapTargetOverhangClass = {
  *
  * Not a button variant — it stays a link, keeps its own ink, and carries no
  * chrome. What it borrows from the button vocabulary is the *floor*, because
- * that is the thing this file already owns: `min-h-11` is the same 44px
- * `sizes.icon` exists to guarantee, and for the same reason
- * (`docs/design/principles.md` §2, one hand in glare with wet fingers).
+ * that is the thing this file already owns: `min-h-11 min-w-11` makes the
+ * target at least 44px in both dimensions, the same floor `sizes.icon`
+ * guarantees, and for the same reason (`docs/design/principles.md` §2, one
+ * hand in glare with wet fingers).
  *
  * Three staff tables and the check-in queue were shipping this as an 18px word
  * — 34 of them on the gear register, tapped standing at the wall (issue #786).
  * `inline-flex items-center` is what lets the floor apply to an inline link at
  * all: `min-height` does nothing to a non-replaced inline box.
  */
-export const tapTargetLinkClass = "inline-flex min-h-11 items-center";
+export const tapTargetLinkClass = "inline-flex min-h-11 min-w-11 items-center";
 
 /**
  * **A link inside a sentence**: the words' own ink, underlined, and the link
