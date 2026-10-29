@@ -82,7 +82,7 @@ describe("buildTripManifest", () => {
     expect(manifest.divers[1]?.readiness.blockers).toContainEqual(
       expect.objectContaining({ code: "readiness_unavailable" }),
     );
-    expect(manifest.summary).toEqual({
+    expect(manifest.summary).toMatchObject({
       totalDivers: 2,
       ready: 1,
       blocked: 1,

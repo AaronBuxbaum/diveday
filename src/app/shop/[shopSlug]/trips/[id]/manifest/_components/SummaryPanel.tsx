@@ -368,18 +368,23 @@ export function SummaryPanel({
             ))}
           </ul>
         ) : null}
-        {/* **More bodies aboard than the boat has seats.** Nothing on the
+        {/* **More passengers aboard than this trip allows.** Nothing on the
             boarding path refuses — a crew member tapping Boarded on a diver
             the desk wrote off as not here takes that seat back rather than
             being told no (`reclaimReleasedSeat`, src/db/manifests.ts) — so
             this line is the whole of how the consequence reaches anybody. It
             is pinned with the other danger lines for the same reason they are:
             a captain scrolling the roster must not be able to push it off the
-            top of the screen. It counts divers the crew have recorded aboard,
-            never roster rows, so it can only ever be about the boat. */}
-        {summary.overCapacity > 0 && !overCertificate ? (
+            top of the screen. It counts passengers the crew have recorded
+            aboard, never roster rows. */}
+        {summary.overCapacity > 0 ? (
           <p className="mt-2 text-base font-bold text-danger" role="status">
             {t("manifest.overCapacityLine", { count: summary.overCapacity })}
+          </p>
+        ) : null}
+        {(summary.overBoatCapacity ?? 0) > 0 ? (
+          <p className="mt-2 text-base font-bold text-danger" role="status">
+            {t("manifest.overBoatCapacityLine", { count: summary.overBoatCapacity ?? 0 })}
           </p>
         ) : null}
         {/* Buddy teams that came back split — someone aboard, someone not

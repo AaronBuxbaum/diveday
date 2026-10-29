@@ -441,7 +441,7 @@
     "src/db/export.test.ts": 1184,
     "src/db/import.test.ts": 1074,
     "src/db/incident-reports.test.ts": 1011,
-    "src/db/manifests.test.ts": 3692,
+    "src/db/manifests.test.ts": 3592,
     "src/db/no-show.test.ts": 1165,
     "src/db/notifications.test.ts": 1868,
     "src/db/orders.test.ts": 3174,

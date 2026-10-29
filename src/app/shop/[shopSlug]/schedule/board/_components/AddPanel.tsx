@@ -76,6 +76,78 @@ export type AddPanelBuilder = {
   onAdd: (formData: FormData) => void | Promise<void>;
 };
 
+function AddPanelTimingFields({
+  copy,
+  dateIso,
+  expanded,
+  locale,
+  more,
+  onStartDateChange,
+}: {
+  copy: BuilderCopy;
+  dateIso: string;
+  expanded: boolean;
+  locale: string;
+  more: BuilderMoreOptions;
+  onStartDateChange: (value: string) => void;
+}) {
+  return (
+    <>
+      <FieldGrid columns={3} className="gap-y-4">
+        <Field label={copy.date}>
+          {/* Read here as well as submitted: the repeat fieldset below pre-checks
+              this date's own weekday, so it has to see the date change. */}
+          <DateField
+            name="date"
+            required
+            defaultValue={dateIso}
+            onChange={(event) => onStartDateChange(event.currentTarget.value)}
+          />
+        </Field>
+        {/* "7" is 7:00 AM and "1p" is 1:00 PM (ADR 20260906-before-you-ask,
+            decision 3): the box takes what the desk says and submits the HH:MM
+            a native time control would have. */}
+        <Field label={copy.departs}>
+          <ForgivingInput
+            kind="time"
+            name="startTime"
+            required
+            defaultValue="08:30"
+            locale={locale}
+            copy={{ typedAs: copy.typedAs }}
+          />
+        </Field>
+        <Field label={copy.returns}>
+          <ForgivingInput
+            kind="time"
+            name="endTime"
+            required
+            defaultValue="12:30"
+            locale={locale}
+            copy={{ typedAs: copy.typedAs }}
+          />
+        </Field>
+      </FieldGrid>
+      {/* Under the date row, where the rest of "when" already lives — not in
+          the Seats/Dives cell. Expanding must only ever *add* a field below;
+          a cell whose label changes out from under the cursor reads as the
+          form rewriting itself. */}
+      <MeetingDaysField
+        copy={{
+          daysLabel: copy.daysLabel,
+          daysDescription: copy.daysDescription,
+          dayLabel: copy.meetingDayLabel,
+        }}
+        minDays={more.minDays}
+        maxDays={more.maxDays}
+        defaultCount={more.minDays}
+        disabled={!expanded}
+        className={expanded ? undefined : "hidden"}
+      />
+    </>
+  );
+}
+
 /**
  * The one form that creates a departure, pre-dated to whichever day header it
  * was opened from. Two depths, one form, one action: "More options" discloses
@@ -213,56 +285,13 @@ export function AddPanel({
         />
       </Field>
       <DescriptionAndPrivacy copy={copy} expanded={expanded} />
-      <FieldGrid columns={3} className="gap-y-4">
-        <Field label={copy.date}>
-          {/* Read here as well as submitted: the repeat fieldset below pre-checks
-              this date's own weekday, so it has to see the date change. */}
-          <DateField
-            name="date"
-            required
-            defaultValue={dateIso}
-            onChange={(event) => setStartDate(event.currentTarget.value)}
-          />
-        </Field>
-        {/* "7" is 7:00 AM and "1p" is 1:00 PM (ADR 20260906-before-you-ask,
-            decision 3): the box takes what the desk says and submits the HH:MM
-            a native time control would have. */}
-        <Field label={copy.departs}>
-          <ForgivingInput
-            kind="time"
-            name="startTime"
-            required
-            defaultValue="08:30"
-            locale={locale}
-            copy={{ typedAs: copy.typedAs }}
-          />
-        </Field>
-        <Field label={copy.returns}>
-          <ForgivingInput
-            kind="time"
-            name="endTime"
-            required
-            defaultValue="12:30"
-            locale={locale}
-            copy={{ typedAs: copy.typedAs }}
-          />
-        </Field>
-      </FieldGrid>
-      {/* Under the date row, where the rest of "when" already lives — not in
-          the Seats/Dives cell. Expanding must only ever *add* a field below;
-          a cell whose label changes out from under the cursor reads as the
-          form rewriting itself. */}
-      <MeetingDaysField
-        copy={{
-          daysLabel: copy.daysLabel,
-          daysDescription: copy.daysDescription,
-          dayLabel: copy.meetingDayLabel,
-        }}
-        minDays={more.minDays}
-        maxDays={more.maxDays}
-        defaultCount={more.minDays}
-        disabled={!expanded}
-        className={expanded ? undefined : "hidden"}
+      <AddPanelTimingFields
+        copy={copy}
+        dateIso={dateIso}
+        expanded={expanded}
+        locale={locale}
+        more={more}
+        onStartDateChange={setStartDate}
       />
       <DayKindSelects
         copy={copy}

@@ -1,6 +1,7 @@
 import type { AppDb } from "@/db/client";
 import { people, personRoles } from "@/db/schema";
 import { boatSliceStates } from "./boat-states";
+import { manifestOverCapacityState } from "./manifest-overcapacity-state";
 
 /** Opt-in fixture, reached only after the trouble route's secret and demo-shop gates. */
 export async function mergeCandidatesState(
@@ -47,5 +48,6 @@ export async function boatAndMergeStates(request: Request, db: AppDb, shopId: st
   return {
     ...(await boatSliceStates(request, db, shopId, now)),
     ...(await mergeCandidatesState(request, db, shopId, now)),
+    ...(await manifestOverCapacityState(request, db, shopId, now)),
   };
 }

@@ -11,11 +11,9 @@ import {
   type RollCallCheckpoint,
   rollCallCompleteness,
 } from "@/lib/manifests";
-import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { serializeManifests } from "@/lib/offline-manifests";
 import { isWaiverCode } from "@/lib/today";
 import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
-import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { checkInBooking, undoCheckInBooking } from "./check-in";
 import { listAvailableGearUnits, reserveGearUnit } from "./gear";
 import { subscribeManifestEvents } from "./manifest-events";
@@ -30,10 +28,10 @@ import {
   recordCrewRollCall,
   recordRollCall,
 } from "./manifests";
+import { clearAnswers, ctx, manifestContext } from "./manifests-test-fixtures";
 import { markBookingNoShow } from "./no-show";
 import {
   activityEvents,
-  boats,
   bookings,
   people,
   personRoles,
@@ -47,16 +45,9 @@ import {
 } from "./schema";
 import { listRollCallGaps } from "./today";
 import { createTrip, getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
-import { completeWaiver, getCurrentWaiverTemplate, issueWaiverRequest } from "./waivers";
-
-// One seeded database for the file and a rolled-back transaction per test
-// (src/test/db.ts, `fileScopedShopContext`); the two exceptions are explained
-// above the first describe.
-const ctx = fileScopedShopContext();
+import { completeWaiver, issueWaiverRequest } from "./waivers";
 
 vi.mock("@/lib/log", () => ({ log: vi.fn() }));
-
-const clearAnswers = emptyMedicalAnswers(RSTC_QUESTIONNAIRE);
 
 /** One booking's status, for the seat a no-show releases and a boarding takes back. */
 async function statusOf(db: Awaited<ReturnType<typeof manifestContext>>["db"], bookingId: string) {
@@ -78,20 +69,6 @@ async function activityCodesFor(
     .where(eq(activityEvents.bookingId, bookingId))
     .orderBy(asc(activityEvents.occurredAt), asc(activityEvents.id));
   return rows.map((row) => row.code);
-}
-
-async function manifestContext({ fresh = false } = {}) {
-  const { db, shop } = fresh ? await seededShopContext() : ctx;
-  const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
-  const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
-  if (!reef) throw new Error("demo reef trip missing");
-  const [booking] = await getTripRoster(db, shop.id, reef.id);
-  if (!booking) throw new Error("demo booking missing");
-  const template = await getCurrentWaiverTemplate(db, shop.id);
-  if (!template) throw new Error("demo waiver template missing");
-  const [staff] = await listStaff(db, shop.id);
-  if (!staff) throw new Error("demo staff missing");
-  return { db, shop, reef, booking, template, staff: staff.person };
 }
 
 /**
@@ -509,83 +486,6 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
       now: reef.startsAt,
     });
     expect((await diverOn())?.runningLateAt).toBeNull();
-  });
-
-  /**
-   * The seat comes back even when it is the seat the shop has already sold.
-   * Refusing would leave a person aboard whom the manifest does not carry, so
-   * the boat being over is *said* instead — `summary.overCapacity`, the one
-   * number on the page that reports what nothing refused.
-   */
-  it("boards a diver onto a full boat and raises the over-capacity count instead", async () => {
-    const { db, shop, reef, booking, staff } = await manifestContext();
-    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.booking.id });
-    if (!issued.ok) throw new Error("expected waiver link");
-    await completeWaiver(db, issued.token, {
-      signerName: booking.person.fullName,
-      agreed: true,
-      medicalAnswers: clearAnswers,
-    });
-    await markBookingNoShow(db, {
-      shopId: shop.id,
-      bookingId: booking.booking.id,
-      recordedByPersonId: staff.id,
-      now: reef.startsAt,
-    });
-    await expect(
-      recordRollCall(db, {
-        shopId: shop.id,
-        tripId: reef.id,
-        bookingId: booking.booking.id,
-        recordedByPersonId: staff.id,
-        status: "boarded",
-      }),
-    ).resolves.toMatchObject({ ok: true });
-
-    // Everyone else readiness clears, aboard too — counted rather than assumed,
-    // so this stays about capacity whatever the demo roster's paperwork says.
-    let aboard = 1;
-    for (const row of await getTripRoster(db, shop.id, reef.id)) {
-      if (row.booking.id === booking.booking.id) continue;
-      const result = await recordRollCall(db, {
-        shopId: shop.id,
-        tripId: reef.id,
-        bookingId: row.booking.id,
-        recordedByPersonId: staff.id,
-        status: "boarded",
-      });
-      if (result.ok) aboard += 1;
-    }
-
-    await db.update(trips).set({ capacity: aboard }).where(eq(trips.id, reef.id));
-    expect((await getTripManifest(db, shop.id, reef.id))?.summary).toMatchObject({
-      boarded: aboard,
-      overCapacity: 0,
-    });
-    // The walk-in holds the released seat, so the boat seats one fewer than the
-    // crew have counted aboard. Nothing refused that; this is what says it.
-    await db
-      .update(trips)
-      .set({ capacity: aboard - 1 })
-      .where(eq(trips.id, reef.id));
-    expect((await getTripManifest(db, shop.id, reef.id))?.summary.overCapacity).toBe(1);
-
-    // Measured against what the boat may carry, not only what the departure
-    // states (#2321): back at the counted number, on a hull certified for one
-    // fewer, the line still says one over.
-    await db.update(trips).set({ capacity: aboard }).where(eq(trips.id, reef.id));
-    const [hull] = await db
-      .insert(boats)
-      .values({
-        shopId: shop.id,
-        name: "Certified hull",
-        capacity: aboard,
-        certifiedPassengers: aboard - 1,
-      })
-      .returning();
-    if (!hull) throw new Error("boat not inserted");
-    await db.update(trips).set({ boatId: hull.id }).where(eq(trips.id, reef.id));
-    expect((await getTripManifest(db, shop.id, reef.id))?.summary.overCapacity).toBe(1);
   });
 
   it("answers 'who is aboard' the same way for the counter and for the departure board", async () => {

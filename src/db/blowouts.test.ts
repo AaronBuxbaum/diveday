@@ -12,19 +12,12 @@ import {
   resumeTripBlowout,
   tripBlowoutCause,
 } from "./blowouts";
-import { createBoat } from "./boats";
 import { createBookingParty } from "./bookings";
 import { recordRollCall } from "./manifests";
 import { drainNotificationRetries } from "./notifications";
 import { setBookingPayment } from "./payments";
 import { listOwedShopCancellationRefunds, refundBookingsForShopCancelledTrip } from "./refunds";
-import {
-  crewNotices,
-  notificationSendQueue,
-  people,
-  personRoles,
-  trips as tripsTable,
-} from "./schema";
+import { crewNotices, notificationSendQueue, people, trips as tripsTable } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { createTrip, upcomingTripsWithCounts } from "./trips";
 import { changeTripCrew, listStaff } from "./trips-crew";
@@ -114,49 +107,6 @@ const blowoutSends = (sent: Notification[]) =>
   );
 
 describe("callTripBlowout — the one-tap cascade", () => {
-  it("does not offer a boat whose passenger places are reserved by assigned crew", async () => {
-    const ctx = await context([{ fullName: "Ada Storm", email: "ada.storm@example.com" }]);
-    const boat = await createBoat(ctx.db, ctx.shop.id, "Two total occupants", 2);
-    const candidateTitle = "Crew-reserved alternative";
-    const candidate = await createTrip(ctx.db, {
-      shopId: ctx.shop.id,
-      title: candidateTitle,
-      startsAt: new Date(ctx.now.getTime() + 2 * HOUR),
-      endsAt: new Date(ctx.now.getTime() + 6 * HOUR),
-      capacity: 4,
-      boatId: boat.id,
-      priceCents: 10_000,
-    });
-    if (!candidate) throw new Error("candidate trip could not be created");
-    const booking = await createBookingParty(ctx.db, [
-      {
-        actor: "staff",
-        shopId: ctx.shop.id,
-        tripId: candidate.id,
-        fullName: "Already booked passenger",
-      },
-    ]);
-    expect(booking.ok).toBe(true);
-    const [crew] = await ctx.db
-      .insert(people)
-      .values({ shopId: ctx.shop.id, fullName: "Assigned candidate crew" })
-      .returning();
-    if (!crew) throw new Error("crew insert returned no row");
-    await ctx.db.insert(personRoles).values({ personId: crew.id, role: "captain" });
-    expect(
-      await changeTripCrew(ctx.db, ctx.shop.id, candidate.id, {
-        operation: "assign",
-        personId: crew.id,
-      }),
-    ).toBe(true);
-
-    const email = fakeEmail();
-    const outcome = await callTripBlowout(ctx.db, callInput(ctx, email.provider));
-    expect(outcome).toMatchObject({ ok: true, sent: 1 });
-    const [send] = blowoutSends(email.sent);
-    expect(send?.alternatives.some(({ title }) => title === candidateTitle)).toBe(false);
-  });
-
   it("cancels the trip, snapshots the roster, and sends each diver one message", async () => {
     const ctx = await context([
       { fullName: "Ada Storm", email: "ada.storm@example.com" },

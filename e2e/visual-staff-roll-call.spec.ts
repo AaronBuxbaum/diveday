@@ -355,6 +355,28 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "manifest-buddy-divergence", scheme);
       });
 
+      if (scheme === "light") {
+        test("the manifest keeps both capacity warnings distinct", async ({ page, request }) => {
+          const seeded = await request.post("/api/test/seed-trouble-states?manifestOverCapacity=1");
+          expect(seeded.ok()).toBe(true);
+          const { manifestOverCapacity } = (await seeded.json()) as {
+            manifestOverCapacity?: { tripId: string };
+          };
+          if (!manifestOverCapacity) {
+            throw new Error("seed-trouble-states could not create both manifest capacity warnings");
+          }
+
+          await page.goto(`/shop/blue-mantis/trips/${manifestOverCapacity.tripId}/manifest`);
+          await expect(
+            page.getByText(/beyond the passenger capacity set for this trip/),
+          ).toBeVisible();
+          await expect(
+            page.getByText(/beyond the total capacity set for this boat, crew included/),
+          ).toBeVisible();
+          await capture(page, "manifest-over-capacity-warnings", scheme);
+        });
+      }
+
       /**
        * The buddy-teams panel itself — the team builder (ADR
        * 20260804-buddy-teams). Worth its own capture because it is where the

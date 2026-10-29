@@ -1007,8 +1007,9 @@ export type TripManifest = {
     endsAt: Date;
     plannedDives: number;
     /**
-     * The seats this departure sells — the only thing `summary.overCapacity`
-     * measures a head count against.
+     * The passenger capacity stored on this departure. `summary.overCapacity`
+     * compares it with the people the crew has counted aboard, independently
+     * of the boat certificate.
      *
      * **Optional, and its absence says nothing rather than "fine".** A caller
      * that does not know the number (an offline copy saved before this slice,
@@ -1017,6 +1018,11 @@ export type TripManifest = {
      * existed. It is not a licence to omit it from a real manifest.
      */
     capacity?: number;
+    /**
+     * The assigned boat's total-occupant capacity, independent of certificates.
+     * Optional for older saved offline manifests that did not carry this field.
+     */
+    boatCapacity?: number | null;
     /**
      * The boat's certificate passenger limit (`boats.certified_passengers`),
      * null for no boat or none recorded. The head count turns danger past it
@@ -1114,13 +1120,13 @@ export type TripManifest = {
      */
     unaccountedFor: number;
     /**
-     * **How many divers are aboard beyond the seats this boat has**, 0 when it
-     * is within them or when `trip.capacity` is unknown.
+     * **How many passengers are aboard beyond this trip's configured
+     * capacity**, 0 when within it or when `trip.capacity` is unknown.
      *
      * `boarded`, not the roster: a manifest lists every non-cancelled booking,
      * including a seat the counter released as a no-show, so counting rows
      * would raise an alarm about paper. Counting bodies the crew have recorded
-     * aboard raises it about the boat.
+     * aboard raises it about the departure.
      *
      * It exists because nothing on the boarding path refuses: a diver marked
      * not here has a released seat a walk-in can buy, and boarding them at the
@@ -1130,6 +1136,11 @@ export type TripManifest = {
      * Attention state only — it gates nothing, here or anywhere.
      */
     overCapacity: number;
+    /**
+     * Passengers and crew counted aboard beyond the assigned boat's capacity.
+     * Optional for older saved offline manifests that did not carry this count.
+     */
+    overBoatCapacity?: number;
     /**
      * **Divers the desk wrote off and nobody at the boat has spoken for** —
      * `notHere` rows with no roll-call result of any kind.
@@ -1287,7 +1298,9 @@ export function buildTripManifest(input: {
     isNotBackAboard(checkpoint, diver.rollCall),
   ).length;
   const boarded = counted.filter((diver) => diver.rollCall?.state === "boarded").length;
+  const boardedCrew = input.crew.filter((member) => member.rollCall?.state === "boarded").length;
   const capacity = input.trip.capacity;
+  const boatCapacity = input.trip.boatCapacity;
   const summary = {
     totalDivers: counted.length,
     byType: countParticipants(counted),
@@ -1302,6 +1315,12 @@ export function buildTripManifest(input: {
     // docblock says why, and a zero here reads on screen as "no line", not as
     // "the boat is fine".
     overCapacity: capacity === undefined ? 0 : Math.max(0, boarded - capacity),
+    // Every passenger type holds a seat. Crew are only counted when their
+    // standing result at this checkpoint says they are aboard.
+    overBoatCapacity:
+      boatCapacity === undefined || boatCapacity === null
+        ? 0
+        : Math.max(0, boarded + boardedCrew - boatCapacity),
     // `!rollCall` is what keeps this disjoint from every other entry: the
     // moment anybody at the boat states a result — boarded, which takes the
     // released seat back, or not boarded — that result is the row's answer and
