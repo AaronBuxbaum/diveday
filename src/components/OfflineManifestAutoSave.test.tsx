@@ -84,7 +84,7 @@ function deferred<T>() {
 
 beforeEach(() => {
   vi.stubGlobal("fetch", vi.fn());
-  vi.mocked(purgeOfflineManifestsExceptShop).mockResolvedValue(undefined);
+  vi.mocked(purgeOfflineManifestsExceptShop).mockResolvedValue([]);
   vi.mocked(wipeOfflineMedicalAlerts).mockResolvedValue(undefined);
 });
 

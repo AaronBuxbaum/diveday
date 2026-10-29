@@ -56,7 +56,7 @@ beforeEach(() => {
   list.mockReset();
   load.mockReset();
   purge.mockReset();
-  purge.mockResolvedValue(undefined as never);
+  purge.mockResolvedValue([]);
   list.mockResolvedValue([]);
   load.mockResolvedValue(null);
 });
@@ -119,6 +119,19 @@ describe("useCrossShopPurge", () => {
     expect(props.dispatchSaved).toHaveBeenCalledWith({ type: "gone", tenant: "blue-mantis" });
     expect(props.onTripPurged).toHaveBeenCalledTimes(1);
     expect(list).not.toHaveBeenCalled();
+  });
+
+  it("marks a selected copy as removed by another shop when this purge deleted it", async () => {
+    purge.mockResolvedValue(["trip-1"]);
+    load.mockResolvedValue(null);
+    const { props } = setup("trip-1", "blue-mantis");
+    await waitFor(() => expect(props.refreshDiscarded).toHaveBeenCalledTimes(1));
+    expect(props.dispatchSaved).toHaveBeenCalledWith({
+      type: "gone",
+      tenant: "blue-mantis",
+      removedForOtherShop: true,
+    });
+    expect(props.onTripPurged).toHaveBeenCalledTimes(1);
   });
 
   it("on a trip, says nothing when the copy survived the purge", async () => {

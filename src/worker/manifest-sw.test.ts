@@ -183,7 +183,7 @@ beforeEach(() => {
   vi.resetAllMocks();
   installGlobals();
   vi.mocked(listOfflineManifests).mockResolvedValue([]);
-  vi.mocked(purgeOfflineManifestsExceptShop).mockResolvedValue(undefined);
+  vi.mocked(purgeOfflineManifestsExceptShop).mockResolvedValue([]);
   vi.mocked(saveOfflineManifest).mockResolvedValue(envelope("saved", "blue-mantis"));
   vi.mocked(syncOfflineManifest).mockResolvedValue(null);
   // No visible client, which is the only case where the worker does the work

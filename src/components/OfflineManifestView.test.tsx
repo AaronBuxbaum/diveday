@@ -33,7 +33,7 @@ vi.mock("@/lib/offline-manifest-store", async () => ({
   appendOfflineRollCall: vi.fn(),
   listOfflineManifests: vi.fn(),
   loadOfflineManifest: vi.fn(),
-  purgeOfflineManifestsExceptShop: vi.fn().mockResolvedValue(undefined),
+  purgeOfflineManifestsExceptShop: vi.fn().mockResolvedValue([]),
   syncOfflineManifest: vi.fn(),
   // The retention ceiling's discard notice: nothing thrown away is the right
   // default for every test that isn't about one.
@@ -732,6 +732,7 @@ describe("OfflineManifestView — when a purge deletes the record on screen", ()
     verified = true;
     vi.mocked(purgeOfflineManifestsExceptShop).mockImplementation(async () => {
       held = afterPurge;
+      return afterPurge === null && shown.snapshot.shop.slug !== signedInAs ? ["trip-1"] : [];
     });
     // The round the mount already ran has to be excluded, or every wait below
     // is satisfied before the handover even happens.
@@ -842,6 +843,7 @@ describe("OfflineManifestView — when a purge deletes the record on screen", ()
     vi.mocked(fetch).mockImplementation(async () => identityResponse("blue-mantis"));
     vi.mocked(purgeOfflineManifestsExceptShop).mockImplementation(async () => {
       held = null;
+      return ["trip-1"];
     });
 
     render(<OfflineManifestView />);

@@ -676,7 +676,7 @@ export async function listOfflineManifests(): Promise<OfflineManifestEnvelope[]>
  * earlier. Every other mutator in this module already goes through the same
  * lock for exactly this read-then-write race; this one hadn't.
  */
-export async function purgeOfflineManifestsExceptShop(currentShopSlug: string): Promise<void> {
+export async function purgeOfflineManifestsExceptShop(currentShopSlug: string): Promise<string[]> {
   // **The guard is here, at the chokepoint, and not at the call sites.**
   //
   // This is the most destructive function in the feature: it deletes every
@@ -698,21 +698,25 @@ export async function purgeOfflineManifestsExceptShop(currentShopSlug: string): 
   // holding `undefined` is still a `pnpm typecheck` failure rather than a
   // silent no-op; this is the runtime half, for the values a cast lets past
   // the compiler.
-  if (typeof currentShopSlug !== "string" || currentShopSlug.length === 0) return;
+  if (typeof currentShopSlug !== "string" || currentShopSlug.length === 0) return [];
   const saved = await listOfflineManifests();
   const candidates = saved.filter((envelope) => envelope.snapshot.shop.slug !== currentShopSlug);
-  await Promise.all(
+  const deletedTripIds = await Promise.all(
     candidates.map((envelope) => {
       const tripId = envelope.snapshot.manifests[0]?.trip.id;
-      if (!tripId) return Promise.resolve();
+      if (!tripId) return Promise.resolve(null);
       return withManifestLock(tripId, async () => {
         const current = await loadOfflineManifest(tripId);
-        if (!current) return;
-        if (pendingOfflineEventCount(current) > 0) return;
+        if (!current) return null;
+        if (pendingOfflineEventCount(current) > 0) return null;
         await deleteOfflineManifest(tripId);
+        return tripId;
       });
     }),
   );
+  // Report only records this locked pass actually removed; selected-trip UI
+  // uses that proof to distinguish a purge from a bookmark never saved here.
+  return deletedTripIds.filter((tripId): tripId is string => tripId !== null);
 }
 
 export async function saveOfflineManifest(

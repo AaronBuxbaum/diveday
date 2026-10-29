@@ -22,7 +22,7 @@ const purgeState = vi.hoisted(() => ({
   latest: null as null | {
     onTenantVerified: (slug: string) => void;
     onTripPurged: () => void;
-    dispatchSaved: (action: { type: "gone"; tenant: string }) => void;
+    dispatchSaved: (action: { type: "gone"; tenant: string; removedForOtherShop?: true }) => void;
   },
 }));
 
@@ -312,5 +312,37 @@ describe("selected-trip invalidation", () => {
     expect(result.current.removedForOtherShop).toBe(true);
     expect(result.current.message).not.toContain("Private trip");
     expect(vi.mocked(syncOfflineManifest)).not.toHaveBeenCalled();
+  });
+
+  it("shows the neutral removed-shop recovery while the cold read remains unresolved", () => {
+    let resolveInitial: (saved: OfflineManifestEnvelope) => void = () => {};
+    load.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveInitial = resolve;
+        }),
+    );
+    const { result } = at("trip=trip-1");
+    expect(result.current.storeRead).toBe(false);
+
+    act(() => {
+      purgeState.latest?.dispatchSaved({
+        type: "gone",
+        tenant: "blue-mantis",
+        removedForOtherShop: true,
+      });
+      purgeState.latest?.onTripPurged();
+    });
+
+    expect(result.current.storeRead).toBe(true);
+    expect(result.current.storeReadFailed).toBe(false);
+    expect(result.current.removedForOtherShop).toBe(true);
+    expect(result.current.envelope).toBeNull();
+    expect(result.current.message).not.toContain("shop-a");
+
+    // A pre-purge read can still finish later, but its data remains hidden.
+    act(() => resolveInitial(envelope("trip-1", "Private trip", { shopSlug: "shop-a" })));
+    expect(result.current.removedForOtherShop).toBe(true);
+    expect(result.current.envelope).toBeNull();
   });
 });

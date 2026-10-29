@@ -497,7 +497,7 @@ describe("purgeOfflineManifestsExceptShop", () => {
     await saveOfflineManifest(payload);
     await saveOfflineManifest(otherShopPayload);
 
-    await purgeOfflineManifestsExceptShop(payload.shop.slug);
+    expect(await purgeOfflineManifestsExceptShop(payload.shop.slug)).toHaveLength(1);
 
     const remaining = await listOfflineManifests();
     expect(remaining.map((envelope) => envelope.snapshot.shop.slug)).toEqual([payload.shop.slug]);
@@ -509,7 +509,7 @@ describe("purgeOfflineManifestsExceptShop", () => {
     await saveOfflineManifest(payload);
     await saveOfflineManifest(earlierPayload);
 
-    await purgeOfflineManifestsExceptShop(payload.shop.slug);
+    expect(await purgeOfflineManifestsExceptShop(payload.shop.slug)).toEqual([]);
 
     const remaining = await listOfflineManifests();
     expect(remaining).toHaveLength(2);

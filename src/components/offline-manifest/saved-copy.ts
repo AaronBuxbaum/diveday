@@ -56,13 +56,20 @@ export type SavedCopyState = {
 export type SavedCopyAction =
   | { type: "loaded"; envelope: OfflineManifestEnvelope | null }
   | { type: "suppress-notes" }
-  | { type: "gone"; tenant: string }
+  | { type: "gone"; tenant: string; removedForOtherShop?: true }
   | { type: "tenant-changed" };
 
 export function savedCopyReducer(state: SavedCopyState, action: SavedCopyAction): SavedCopyState {
   switch (action.type) {
     case "suppress-notes":
       if (!state.envelope) return state;
+      if (
+        [...state.envelope.events, ...state.envelope.checklistEvents].every(
+          (event) => event.note === null || event.note === undefined,
+        )
+      ) {
+        return state;
+      }
       return {
         ...state,
         envelope: {
@@ -98,9 +105,10 @@ export function savedCopyReducer(state: SavedCopyState, action: SavedCopyAction)
         envelope: null,
         goneUnderTenant: action.tenant,
         removedForOtherShop:
-          state.envelope === null
+          action.removedForOtherShop ??
+          (state.envelope === null
             ? state.removedForOtherShop
-            : state.envelope.snapshot.shop.slug !== action.tenant,
+            : state.envelope.snapshot.shop.slug !== action.tenant),
       };
   }
 }

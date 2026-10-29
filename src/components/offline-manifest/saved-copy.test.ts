@@ -38,6 +38,7 @@ describe("savedCopyReducer", () => {
       savedCopyReducer(EMPTY, { type: "loaded", envelope: copy }),
       { type: "suppress-notes" },
     );
+    expect(savedCopyReducer(suppressed, { type: "suppress-notes" })).toBe(suppressed);
 
     expect(suppressed.envelope?.events[0]).toMatchObject({
       status: "boarded",

@@ -38,7 +38,7 @@ vi.mock("@/lib/offline-manifest-store", async () => ({
   appendOfflineRollCall: vi.fn(),
   listOfflineManifests: vi.fn(),
   loadOfflineManifest: vi.fn(),
-  purgeOfflineManifestsExceptShop: vi.fn().mockResolvedValue(undefined),
+  purgeOfflineManifestsExceptShop: vi.fn().mockResolvedValue([]),
   syncOfflineManifest: vi.fn(),
   // The retention ceiling's discard notice: nothing thrown away is the right
   // default for every test that isn't about one.

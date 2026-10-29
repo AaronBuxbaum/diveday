@@ -76,8 +76,9 @@ export function useCrossShopPurge({
         return;
       }
       onTenantVerified(slug);
+      let purgedTripIds: string[];
       try {
-        await purgeOfflineManifestsExceptShop(slug);
+        purgedTripIds = await purgeOfflineManifestsExceptShop(slug);
       } catch {
         // Best-effort, unlike the auto-save path, which fails its whole round
         // when the purge throws. There the alternative is writing a second
@@ -132,7 +133,11 @@ export function useCrossShopPurge({
       if (tripId) {
         const held = await loadOfflineManifest(tripId).catch(() => undefined);
         if (!cancelled && held === null) {
-          dispatchSaved({ type: "gone", tenant: slug });
+          dispatchSaved({
+            type: "gone",
+            tenant: slug,
+            ...(purgedTripIds.includes(tripId) ? { removedForOtherShop: true as const } : {}),
+          });
           onTripPurged();
         }
       } else {
