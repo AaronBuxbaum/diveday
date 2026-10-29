@@ -322,18 +322,23 @@ portability feature it was built as.
 | Key convention | `dumps/<YYYY-MM-DD>/diveday.dump.gz` in `DatabaseDumpBucket`, default name `diveday-database-dumps`, override with `--context dumpBucketName=...`. **Not** the bundles' bucket, since 2026-08-15 — and there is no second place to look, see the abandoned prefix below |
 | Retention | **35 days, then deleted** — a lifecycle rule over the whole bucket, deliberately the opposite of the bundles' "never expire". The file holds every password hash and every medical answer in the platform, and it answers a question asked within days of a loss, never months. `DUMP_RETENTION_DAYS` in `infra/lib/infra-stack.ts` is the one number to change if H-02 lands somewhere else |
 | Versioning | **Off, on purpose.** On a versioned bucket a lifecycle expiration writes a delete marker and keeps the bytes as a non-current version, so "35 days" would mean the file exists for up to 70. Unversioned, the number in the row above is the real one. The trade — no non-current copy to fall back on after a bad overwrite — costs nothing here: the only writer holds no `DeleteObject` and writes a date-stamped key, so the worst it can touch is *today's* dump |
-| Credential | `diveday/database-url-unpooled` — the **direct** connection string, not the pooled one (a transaction-mode pooler is unreliable for `pg_dump`, same reason migrations use the direct connection). Deploys holding the literal `unset`; a build refuses with a named message until a human fills it in |
+| Credential | `diveday/database-url-unpooled` — the **direct** connection string, not the pooled one (a transaction-mode pooler is unreliable for `pg_dump`, same reason migrations use the direct connection). After an infra deploy, GitHub Actions retrieves it from Neon's Management API with `pooled=false` and stores it here; a build refuses with a named message while the value is still `unset` |
 | Who can read a dump | Nobody reachable from the app. The job's own role is `PutObject`/`AbortMultipartUpload`/`GetObject` scoped to `dumps/*` **in this bucket only** — it has no grant of any kind on the bundles' bucket, and it cannot delete. The uploader credential that lives in Vercel has no grant here. Reading a dump back needs the admin profile |
 | Streaming | `pg_dump \| gzip \| aws s3 cp -` under `set -o pipefail`. No temp file. **`pipefail` is load-bearing**: without it the build's status is the upload's, so a `pg_dump` that died mid-stream would store a truncated dump and report success |
 | Monitors | The same weekly `diveday-backup-freshness-check`, still **one** function after the bucket split — it lists this bucket too (one extra `s3:ListBucket`, no second watchdog) and alarms when the newest dump is missing or over 8 days old, before it checks the bundles, so a week where both broke raises both alarms. Since 2026-08-15 it also alarms when the newest dump is **under 4 KiB**, which is far below any real dump (DiveDay's schema alone gzips to more than that with no rows in it): a date proves a run started, not that it left a restorable file. That catches a `pg_dump` truncated despite `pipefail`, an empty object, and an overwrite. One alarm per broken week — a dump stale enough to alarm on its age does not also alarm on its size |
 
-Set it up (once), and run one by hand:
+The infra deploy workflow provisions the direct URI after `cdk deploy`. GitHub environment values do
+not cross boundaries, so the existing Neon credentials on `restore-drill` also need to be available
+on the already reviewer-gated `infra-deploy` environment: `NEON_API_KEY` as an environment secret
+and `NEON_PROJECT_ID` as an environment variable. The workflow checks both before it starts any
+deployment. GitHub cannot reveal an already-saved secret; use its original source, or create a
+replacement key and update both environments. The URI itself is never a GitHub secret or a
+CloudFormation value. The workflow compares the returned URI with Secrets Manager and writes only
+when it changed; when a fresh stack still has `unset`, it also starts one initial dump build.
+
+To run another dump by hand:
 
 ```bash
-# The direct endpoint from Neon — not the -pooler one.
-AWS_PROFILE=diveday-admin aws secretsmanager put-secret-value \
-  --secret-id diveday/database-url-unpooled --secret-string '<DATABASE_URL_UNPOOLED>'
-
 AWS_PROFILE=diveday-admin aws codebuild start-build --project-name diveday-database-dump
 AWS_PROFILE=diveday-admin aws s3 ls s3://diveday-database-dumps/dumps/ --recursive
 ```
@@ -342,24 +347,24 @@ AWS_PROFILE=diveday-admin aws s3 ls s3://diveday-database-dumps/dumps/ --recursi
 
 The dump shared `diveday-backups` with the export bundles until 2026-08-15, when it moved to
 `diveday-database-dumps` so that nothing holding Vercel-resident credentials has a grant on it (the
-reasoning is the ADR amendment; this is the operational half). **One deploy-day step is not
-optional**, and after it there is exactly one bucket a restore looks in.
+reasoning is the ADR amendment; this is the operational half). After a first deployment, the
+infra-deploy workflow provisions the URI and starts one dump if the secret was still `unset`; after
+that there is exactly one bucket a restore looks in.
 
 1. **Deploy.** `pnpm infra:deploy` creates `diveday-database-dumps`, repoints the CodeBuild project's
    `BUCKET` at it, and gives the freshness check its second `ListBucket`. One CloudFormation update;
    nothing is copied and nothing is deleted.
-2. **Start one dump by hand, the same day.** It proves the new grant and the new destination in the
-   one command that also fills the new bucket:
+2. **Confirm the first dump landed.** The infra deploy workflow starts one CodeBuild run when it
+   fills an unset secret. Check the project and bucket after that run:
 
    ```bash
    AWS_PROFILE=diveday-admin aws codebuild start-build --project-name diveday-database-dump
    AWS_PROFILE=diveday-admin aws s3 ls s3://diveday-database-dumps/dumps/ --recursive
    ```
 
-   **Do not skip this.** The new bucket is empty until a dump runs into it, and the watchdog reads
-   only the new bucket. A deploy that lands between a Monday 05:30 dump and the Tuesday 06:00 check
-   otherwise raises `no database dump in ever` on a healthy system — a false alarm, and a false alarm
-   on this signal is the expensive kind.
+   If there is no build after the first deployment, check the infra-deploy workflow's
+   `Provision the direct Neon dump connection` and `Start the first database dump` steps before
+   invoking CodeBuild manually.
 3. **Confirm the watchdog agrees**, without waiting for Tuesday:
 
    ```bash
