@@ -1,5 +1,9 @@
 import { type MutableRefObject, useCallback, useEffect } from "react";
-import { listOfflineManifests, syncOfflineManifest } from "@/lib/offline-manifest-store";
+import {
+  listOfflineManifests,
+  subscribeOfflineManifestChanges,
+  syncOfflineManifest,
+} from "@/lib/offline-manifest-store";
 import type { OfflineManifestEnvelope } from "@/lib/offline-manifests";
 import { pendingOfflineEventCount } from "@/lib/offline-manifests";
 
@@ -20,6 +24,20 @@ export function hasForeignPendingManifestChanges(
         envelope.snapshot.shop.slug !== currentShopSlug && pendingOfflineEventCount(envelope) > 0,
     )
   );
+}
+
+/** Use the selected copy as the newest inventory row for its trip. */
+export function foreignPendingTrip(
+  inventory: readonly OfflineManifestEnvelope[],
+  selected: OfflineManifestEnvelope | null,
+  currentShopSlug: string | null,
+): boolean {
+  if (!selected) return hasForeignPendingManifestChanges(inventory, currentShopSlug);
+  const tripId = selected.snapshot.manifests[0]?.trip.id;
+  const latest = tripId
+    ? inventory.filter((envelope) => envelope.snapshot.manifests[0]?.trip.id !== tripId)
+    : inventory;
+  return hasForeignPendingManifestChanges([...latest, selected], currentShopSlug);
 }
 
 export function useTripPendingManifestInventory({
@@ -71,11 +89,13 @@ export function useTripPendingManifestInventory({
         });
     };
     refresh();
+    const unsubscribe = subscribeOfflineManifestChanges(() => refresh());
     window.addEventListener("online", refresh);
     return () => {
       active = false;
       latestRequest += 1;
       inventoryReadyRef.current = false;
+      unsubscribe();
       window.removeEventListener("online", refresh);
     };
   }, [

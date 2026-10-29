@@ -84,6 +84,7 @@ describe("selected-trip storage invalidation", () => {
         tripPurgedRef,
         storageStateRef: state as { current: SelectedTripStorageState },
         onEnvelope: setEnvelope,
+        onReadStarted: () => {},
         onOnline: () => {},
         setMessage,
         t,

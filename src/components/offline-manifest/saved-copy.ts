@@ -55,11 +55,25 @@ export type SavedCopyState = {
 
 export type SavedCopyAction =
   | { type: "loaded"; envelope: OfflineManifestEnvelope | null }
+  | { type: "suppress-notes" }
   | { type: "gone"; tenant: string }
   | { type: "tenant-changed" };
 
 export function savedCopyReducer(state: SavedCopyState, action: SavedCopyAction): SavedCopyState {
   switch (action.type) {
+    case "suppress-notes":
+      if (!state.envelope) return state;
+      return {
+        ...state,
+        envelope: {
+          ...state.envelope,
+          events: state.envelope.events.map((event) => ({ ...event, note: null })),
+          checklistEvents: state.envelope.checklistEvents.map((event) => ({
+            ...event,
+            note: null,
+          })),
+        },
+      };
     case "tenant-changed":
       // The server rejected a sync because this tablet's signed-in shop no
       // longer matches the saved roster. Keep the encrypted store untouched,

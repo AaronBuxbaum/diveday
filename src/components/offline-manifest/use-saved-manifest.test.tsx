@@ -166,7 +166,12 @@ describe("useSavedManifest on a trip", () => {
       );
     });
 
-    await waitFor(() => expect(result.current.envelope?.events[0]?.note).toBeNull());
+    await waitFor(() =>
+      expect(result.current.envelope?.events[0]).toMatchObject({
+        note: null,
+        noteDisposition: "discarded_erasure_cutoff",
+      }),
+    );
     expect(result.current.envelope?.events[0]?.status).toBe("boarded");
     expect(result.current.envelope?.events[0]?.occurredAt).toBe("2026-08-01T14:30:00.000Z");
     expect(result.current.tripNoteLossMessage).toContain("abcdef12");

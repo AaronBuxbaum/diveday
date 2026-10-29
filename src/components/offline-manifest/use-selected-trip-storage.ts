@@ -1,5 +1,5 @@
 import type { Dispatch, SetStateAction } from "react";
-import { useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import type { OfflineManifestTranslator } from "@/i18n/offline-manifest-messages";
 import { loadOfflineManifest, subscribeOfflineManifestChanges } from "@/lib/offline-manifest-store";
 import type { OfflineManifestEnvelope } from "@/lib/offline-manifests";
@@ -14,6 +14,15 @@ export function createSelectedTripStorageState(): SelectedTripStorageState {
   return { changeRevision: 0, readRequest: 0, reload: () => {} };
 }
 
+export function useSelectedTripPurgeState(setMessage: Dispatch<SetStateAction<string>>) {
+  const tripPurgedRef = useRef(false);
+  const onTripPurged = useCallback(() => {
+    tripPurgedRef.current = true;
+    setMessage("");
+  }, [setMessage]);
+  return { tripPurgedRef, onTripPurged };
+}
+
 /** Re-read the selected encrypted copy after another tab commits a trip write. */
 export function useSelectedTripStorage({
   tripId,
@@ -21,6 +30,7 @@ export function useSelectedTripStorage({
   tripPurgedRef,
   storageStateRef,
   onEnvelope,
+  onReadStarted,
   onOnline,
   setMessage,
   t,
@@ -33,6 +43,7 @@ export function useSelectedTripStorage({
   tripPurgedRef: { current: boolean };
   storageStateRef: { current: SelectedTripStorageState };
   onEnvelope: (saved: OfflineManifestEnvelope | null) => void;
+  onReadStarted: () => void;
   onOnline: () => void;
   setMessage: Dispatch<SetStateAction<string>>;
   t: OfflineManifestTranslator;
@@ -47,6 +58,7 @@ export function useSelectedTripStorage({
       const state = storageStateRef.current;
       const request = ++state.readRequest;
       const changeRevision = state.changeRevision;
+      onReadStarted();
       void loadOfflineManifest(tripId)
         .then((saved) => {
           const current = storageStateRef.current;
@@ -62,7 +74,19 @@ export function useSelectedTripStorage({
           setStoreRead(true);
           setStoreReadFailed(false);
         })
-        .catch(() => {});
+        .catch(() => {
+          const current = storageStateRef.current;
+          if (
+            !active ||
+            request !== current.readRequest ||
+            changeRevision !== current.changeRevision ||
+            tripPurgedRef.current
+          ) {
+            return;
+          }
+          setStoreReadFailed(true);
+          setMessage(t("shared.offlineManifest.reconcile.singleLoadError"));
+        });
     };
     storageStateRef.current.reload = reload;
     const unsubscribe = subscribeOfflineManifestChanges((changedTripId) => {
@@ -93,7 +117,10 @@ export function useSelectedTripStorage({
     tripPurgedRef,
     storageStateRef,
     onEnvelope,
+    onReadStarted,
     onOnline,
+    setMessage,
+    t,
     setStoreRead,
     setStoreReadFailed,
   ]);
@@ -103,6 +130,7 @@ export function useSelectedTripStorage({
     let active = true;
     if (verifiedTenantRevision > 0) setStoreReadFailed(false);
     tripPurgedRef.current = false;
+    onReadStarted();
     const state = storageStateRef.current;
     const request = ++state.readRequest;
     const changeRevision = state.changeRevision;
@@ -141,6 +169,7 @@ export function useSelectedTripStorage({
     tripPurgedRef,
     storageStateRef,
     onEnvelope,
+    onReadStarted,
     refreshDiscarded,
     setStoreRead,
     setStoreReadFailed,

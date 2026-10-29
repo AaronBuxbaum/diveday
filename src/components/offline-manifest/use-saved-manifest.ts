@@ -33,6 +33,7 @@ import { savedCopyReducer } from "./saved-copy";
 import { useCrossShopPurge } from "./use-cross-shop-purge";
 import { useOfflineTenant } from "./use-offline-tenant";
 import {
+  foreignPendingTrip,
   hasForeignPendingManifestChanges,
   useSavedManifestList,
   useTripPendingManifestInventory,
@@ -40,6 +41,7 @@ import {
 import {
   createSelectedTripStorageState,
   type SelectedTripStorageState,
+  useSelectedTripPurgeState,
   useSelectedTripStorage,
 } from "./use-selected-trip-storage";
 
@@ -502,7 +504,7 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
   // A saved-trip load can finish after an online cross-shop purge confirms the
   // copy is gone. Its reducer action is fenced, and so must its note-loss
   // message be.
-  const tripPurgedRef = useRef(false);
+  const { tripPurgedRef, onTripPurged } = useSelectedTripPurgeState(setMessage);
   // The service worker sent the captain here because DiveDay did not answer
   // (`OFFLINE_FALLBACK_PARAM`), not because they opened the saved copy. While
   // the device reads "online" that is the misleading case: a copy minutes old
@@ -596,7 +598,7 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
     if (lastSync?.tripId === tripId && lastSync.shopSlug === verifiedTenantSlugRef.current) return;
     const noteMessage = tripNoticeForEnvelope(envelope);
     setMessage(initialTripStatusMessage(noteMessage, true, t));
-  }, [tripId, envelope, verifiedTenantRevision, tripNoticeForEnvelope, t]);
+  }, [tripId, envelope, verifiedTenantRevision, tripNoticeForEnvelope, t, tripPurgedRef]);
 
   const refreshDiscarded = useCallback(() => {
     readDiscardedOfflineRecords()
@@ -644,7 +646,6 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
         return;
       }
       dispatchSaved({ type: "loaded", envelope: next });
-      lastTripSyncRef.current = { tripId, shopSlug: slug, envelope: next };
       // All three queues, not roll call alone: a checklist tap or an arrival
       // waiting to sync is evidence this device is holding, and a count that
       // cannot see it tells a captain they are caught up when they are not.
@@ -723,11 +724,6 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
     [t, tenantSlugRef],
   );
 
-  const onTripPurged = useCallback(() => {
-    tripPurgedRef.current = true;
-    setMessage("");
-  }, []);
-
   const onTripEnvelopeLoaded = useCallback(
     (saved: OfflineManifestEnvelope | null) =>
       handleSelectedTripEnvelopeLoaded({
@@ -740,8 +736,9 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
         t,
         reconcile,
       }),
-    [reconcile, t, tripNoticeForEnvelope],
+    [reconcile, t, tripNoticeForEnvelope, tripPurgedRef],
   );
+  const onTripStorageReadStarted = useCallback(() => dispatchSaved({ type: "suppress-notes" }), []);
   const onTenantVerified = useOnTenantVerified({
     envelope,
     t,
@@ -774,6 +771,7 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
     tripPurgedRef,
     storageStateRef: selectedTripStorageRef,
     onEnvelope: onTripEnvelopeLoaded,
+    onReadStarted: onTripStorageReadStarted,
     onOnline: reconcile,
     setMessage,
     t,
@@ -835,6 +833,7 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
     t,
     verifiedTenantRevision,
     initialMessageForList,
+    tripPurgedRef,
   ]);
 
   const acknowledgeDiscarded = () => {
@@ -846,14 +845,13 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
   };
 
   const verifiedTenantSlug = verifiedTenantRevision > 0 ? verifiedTenantSlugRef.current : null;
-  const foreignPendingChanges = hasForeignPendingManifestChanges(list ?? [], verifiedTenantSlug);
   const tripNoteLossMessage = selectedTripNoteLossMessage(envelope, verifiedTenantSlug, t);
 
   return {
     tripId,
     envelope,
     verifiedTenantSlug,
-    foreignPendingChanges,
+    foreignPendingChanges: foreignPendingTrip(list ?? [], envelope, verifiedTenantSlug),
     tripNoteLossMessage,
     tenantChangePending,
     removedForOtherShop,
