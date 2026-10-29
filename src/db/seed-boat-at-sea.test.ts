@@ -1,7 +1,9 @@
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
-import { fileScopedShopContext } from "@/test/db";
+import { utcToWallTime } from "@/lib/zoned";
+import { advanceClock } from "@/test/clock";
+import { fileScopedShopContext, unseededTestDb } from "@/test/db";
 import { getDayCloseout } from "./closeout";
 import { getTripManifest } from "./manifests";
 import { listTripReadiness } from "./readiness";
@@ -11,14 +13,23 @@ import {
   people,
   rollCallCrewEvents,
   rollCallEvents,
+  shops,
   tripAssignments,
   tripDives,
   tripLenses,
   tripStageEvents,
   trips,
 } from "./schema";
-import { AT_SEA_ABOARD, AT_SEA_DAY_TITLE, AT_SEA_STILL_DOWN } from "./seed-boat-at-sea";
+import { seedDemo } from "./seed";
+import {
+  AT_SEA_ABOARD,
+  AT_SEA_CREW,
+  AT_SEA_DAY_TITLE,
+  AT_SEA_DUSK_TITLE,
+  AT_SEA_STILL_DOWN,
+} from "./seed-boat-at-sea";
 import { OWNER_NAME } from "./seed-cast";
+import { getShopBySlug } from "./shops";
 import { crewClashes } from "./trips-crew";
 
 /**
@@ -218,6 +229,39 @@ describe("the boat at sea", () => {
       gapReason: "after_dive_uncounted",
       diveNumber: 2,
     });
+  });
+
+  it("shows the finished prior-evening dusk roll call before the dawn boat at 5 AM", async () => {
+    const fiveAmOffset = -4.5 * 60 * 60 * 1000; // Fixture clock is 9:30 AM shop time.
+    advanceClock(fiveAmOffset);
+    const db = await unseededTestDb();
+    await seedDemo(db, { history: true });
+    const shop = await getShopBySlug(db, "blue-mantis");
+    if (!shop) throw new Error('expected the seeded "blue-mantis" demo shop');
+    const now = new Date(nowDate().getTime());
+
+    const state = await getDayCloseout(db, shop.id, shop.timezone, now);
+    const dawn = state.departures.find((departure) => {
+      const wall = utcToWallTime(departure.startsAt, shop.timezone);
+      return wall.hour === 5 && wall.minute === 30;
+    });
+
+    expect(state.carryover).toMatchObject({
+      title: AT_SEA_DUSK_TITLE,
+      status: "all_home",
+      sailed: AT_SEA_ABOARD,
+      back: AT_SEA_ABOARD,
+      crewSailed: AT_SEA_CREW.length,
+      crewBack: AT_SEA_CREW.length,
+      uncounted: 0,
+    });
+    expect(state.carryover?.startsAt.getTime()).toBeLessThan(now.getTime());
+    expect(state.carryover?.endsAt.getTime()).toBeLessThan(now.getTime());
+    expect(dawn).toBeDefined();
+    expect(state.carryover?.endsAt.getTime()).toBeLessThan(dawn?.startsAt.getTime() ?? 0);
+
+    await db.update(shops).set({ isDemo: false }).where(eq(shops.id, shop.id));
+    expect((await getDayCloseout(db, shop.id, shop.timezone, now)).carryover).toBeUndefined();
   });
 });
 

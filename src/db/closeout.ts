@@ -1,8 +1,9 @@
 import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lt, max, ne } from "drizzle-orm";
-import type { CalendarDate } from "@/lib/calendar-date";
+import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import {
   assembleDayCloseout,
+  assembleEveningClose,
   type DayCloseoutState,
   type DayLoadOut,
   dayLoadOut,
@@ -15,6 +16,7 @@ import { carryForwardNotBoarded, rollCallCheckpoints } from "@/lib/roll-call";
 import { settleWithLimit } from "@/lib/settle-with-limit";
 import { shopDayBounds, shopDaysBounds } from "@/lib/zoned";
 import type { AppDb } from "./client";
+import { isDemoShopWithDemoOwnerOrCaptainAccount } from "./demo-account-guard";
 import { listAfterDiveRollCallByTrip, listDepartureRollCallByTrip } from "./manifests";
 import { listCrewRecapPhotosForTrips, listRecapPhotosForTrips } from "./recap";
 import {
@@ -29,6 +31,8 @@ import {
   tripDives,
   trips,
 } from "./schema";
+import { demoFinishedDuskDeparture } from "./seed-clock";
+import { AT_SEA_DUSK_TITLE } from "./seed-identifiers";
 import { listRollCallGaps } from "./today";
 import { latestTripStagesByTrip } from "./trip-stages";
 import { liveTrip, notRehearsal } from "./trips-live";
@@ -82,7 +86,7 @@ async function dayTrips(
   db: AppDb,
   shopId: string,
   bounds: { from: Date; to: Date },
-  options: { rehearsals?: boolean } = {},
+  options: { rehearsals?: boolean; tripId?: string } = {},
 ) {
   const rows = await db
     .select({
@@ -106,6 +110,7 @@ async function dayTrips(
         eq(trips.status, "scheduled"),
         // diveday:allow-rehearsal: Today keeps a rehearsal in the water on its spine; a past day does not.
         ...(options.rehearsals === false ? [notRehearsal()] : []),
+        ...(options.tripId ? [eq(trips.id, options.tripId)] : []),
         gte(trips.startsAt, bounds.from),
         lt(trips.startsAt, bounds.to),
       ),
@@ -423,11 +428,13 @@ export async function getDayCloseout(
   day?: CalendarDate,
 ): Promise<DayCloseoutState> {
   if (day !== undefined) return pastDayCloseout(db, shopId, timeZone, now, day);
-  const [tripsToday, gaps] = await Promise.all([
+  const [tripsToday, gaps, carryover] = await Promise.all([
     dayTrips(db, shopId, shopDayBounds(now, timeZone)),
     listRollCallGaps(db, shopId, now),
+    demoDuskCarryover(db, shopId, timeZone, now),
   ]);
   const state = assembleDayCloseout({ trips: tripsToday, gaps, timeZone, now });
+  if (carryover) state.carryover = carryover;
   // Only once it is due (`loadOutDue`): a dozen prep reads for a day still sailing would
   // be spent on a block nobody is shown.
   if (!loadOutShop || !loadOutDue(state.departures, now)) return state;
@@ -435,6 +442,50 @@ export async function getDayCloseout(
     ...state,
     tomorrow: await readDayLoadOut(db, loadOutShop, tomorrowNoon(now, timeZone), now),
   };
+}
+
+/** The prior or current day's finished dusk departure, on demo Today only. */
+async function demoDuskCarryover(
+  db: AppDb,
+  shopId: string,
+  timeZone: string,
+  now: Date,
+): Promise<DayCloseoutState["carryover"]> {
+  const plan = demoFinishedDuskDeparture(now, timeZone);
+  if (!plan || !(await isDemoShopWithDemoOwnerOrCaptainAccount(db, shopId))) return undefined;
+
+  const [trip] = await db
+    .select({ id: trips.id })
+    .from(trips)
+    .where(
+      and(
+        liveTrip(),
+        eq(trips.shopId, shopId),
+        eq(trips.status, "scheduled"),
+        eq(trips.title, AT_SEA_DUSK_TITLE),
+        eq(trips.startsAt, plan.startsAt),
+      ),
+    )
+    .limit(1);
+  if (!trip) return undefined;
+
+  const tripDay = calendarDateInTimezone(plan.startsAt, timeZone);
+  const [candidate] = await dayTrips(db, shopId, shopDayBounds(plan.startsAt, timeZone), {
+    tripId: trip.id,
+  });
+  if (!candidate) return undefined;
+
+  const gaps = await listRollCallGaps(db, shopId, now, [trip.id], { historical: true });
+  const [departure] = assembleDayCloseout({
+    trips: [candidate],
+    gaps,
+    timeZone,
+    now,
+    shopDay: tripDay,
+    historical: true,
+  }).departures;
+  if (departure?.status !== "all_home") return undefined;
+  return assembleEveningClose([departure], now).stations[0];
 }
 
 /**
