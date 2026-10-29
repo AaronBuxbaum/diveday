@@ -1,4 +1,10 @@
-import { type Dispatch, type MutableRefObject, type SetStateAction, useEffect } from "react";
+import {
+  type Dispatch,
+  type MutableRefObject,
+  type SetStateAction,
+  useEffect,
+  useRef,
+} from "react";
 import {
   listOfflineManifests,
   loadOfflineManifest,
@@ -41,6 +47,7 @@ export function useCrossShopPurge({
   onTenantVerified,
   onTripPurged,
   refreshDiscarded,
+  tenantChangeRevision = 0,
 }: {
   tripId: string;
   tenantSlugRef: MutableRefObject<string | null>;
@@ -51,16 +58,23 @@ export function useCrossShopPurge({
   onTenantVerified: (currentShopSlug: string) => void;
   onTripPurged: () => void;
   refreshDiscarded: () => void;
+  /** Rerun authenticated tenant verification after a sync explicitly detects a switch. */
+  tenantChangeRevision?: number;
 }) {
+  const latestTenantChangeRevision = useRef(tenantChangeRevision);
+  latestTenantChangeRevision.current = tenantChangeRevision;
   useEffect(() => {
     let cancelled = false;
+    const verificationRevision = tenantChangeRevision;
     const purge = async () => {
       // Re-verified each round rather than read from the cache: a reconnect is
       // exactly when the signed-in shop may have changed, which is the event
       // this whole mechanism exists for.
       tenantSlugRef.current = null;
       const slug = await resolveTenant();
-      if (cancelled || !slug) return;
+      if (cancelled || verificationRevision !== latestTenantChangeRevision.current || !slug) {
+        return;
+      }
       onTenantVerified(slug);
       try {
         await purgeOfflineManifestsExceptShop(slug);
@@ -72,7 +86,7 @@ export function useCrossShopPurge({
         // shortened when this succeeds and unchanged when it does not.
         return;
       }
-      if (cancelled) return;
+      if (cancelled || verificationRevision !== latestTenantChangeRevision.current) return;
       // Re-read so a record the purge removed stops being displayed in this
       // round rather than at the next visit.
       //
@@ -157,5 +171,6 @@ export function useCrossShopPurge({
     onListPurged,
     onTenantVerified,
     onTripPurged,
+    tenantChangeRevision,
   ]);
 }

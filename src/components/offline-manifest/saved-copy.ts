@@ -55,10 +55,17 @@ export type SavedCopyState = {
 
 export type SavedCopyAction =
   | { type: "loaded"; envelope: OfflineManifestEnvelope | null }
-  | { type: "gone"; tenant: string };
+  | { type: "gone"; tenant: string }
+  | { type: "tenant-changed" };
 
 export function savedCopyReducer(state: SavedCopyState, action: SavedCopyAction): SavedCopyState {
   switch (action.type) {
+    case "tenant-changed":
+      // The server rejected a sync because this tablet's signed-in shop no
+      // longer matches the saved roster. Keep the encrypted store untouched,
+      // but clear all displayed identity and controls until a fresh tenant
+      // lookup succeeds.
+      return { envelope: null, goneUnderTenant: null, removedForOtherShop: null };
     case "loaded":
       if (state.goneUnderTenant === null) return { ...state, envelope: action.envelope };
       // The store already answered "gone" for this trip, and this read was

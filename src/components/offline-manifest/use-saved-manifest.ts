@@ -21,6 +21,7 @@ import type { CopyCaveat } from "./controls";
 import { savedCopyReducer } from "./saved-copy";
 import { useCrossShopPurge } from "./use-cross-shop-purge";
 import { useOfflineTenant } from "./use-offline-tenant";
+import { useSavedManifestList } from "./use-saved-manifest-list";
 
 function describeDiscardedNoteEvent(
   event: OfflineRollCallEvent | OfflineChecklistEvent,
@@ -116,6 +117,12 @@ function listNoteLossMessage(
   ].join("\n");
 }
 
+function isShopChangedError(error: unknown): boolean {
+  return (
+    typeof error === "object" && error !== null && "code" in error && error.code === "shop_changed"
+  );
+}
+
 function initialListMessage(
   envelopes: readonly OfflineManifestEnvelope[],
   t: OfflineManifestTranslator,
@@ -178,6 +185,8 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
   // is useful for display, never proof of the currently authenticated tenant.
   const verifiedTenantSlugRef = useRef<string | null>(null);
   const [verifiedTenantRevision, setVerifiedTenantRevision] = useState(0);
+  const [tenantChangePending, setTenantChangePending] = useState(false);
+  const [tenantChangeRevision, setTenantChangeRevision] = useState(0);
   // A failed reload of the live manifest carries its checkpoint through the
   // redirect (see manifest-sw.js) so a captain mid "After dive 1" roll call
   // doesn't land back on "Before departure". This first pass only checks the
@@ -270,6 +279,20 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
 
   const { tenantSlugRef, resolveTenant } = useOfflineTenant();
 
+  const handleTenantChanged = useCallback(() => {
+    // A 409 is an explicit server assertion that the tenant verified when
+    // this sync began is no longer current. Stop showing that tenant's roster
+    // and controls immediately, retain its encrypted pending events, and make
+    // the cross-shop purge perform a fresh identity lookup.
+    tenantSlugRef.current = null;
+    verifiedTenantSlugRef.current = null;
+    setTenantChangePending(true);
+    setMessage(t("shared.offlineManifest.reconcile.tenantChanged"));
+    dispatchSaved({ type: "tenant-changed" });
+    setList(null);
+    setTenantChangeRevision((revision) => revision + 1);
+  }, [t, tenantSlugRef]);
+
   const tripNoticeForEnvelope = useCallback(
     (saved: OfflineManifestEnvelope | null) => {
       if (!saved) return "";
@@ -283,6 +306,15 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
   const initialMessageForList = useCallback(
     (saved: OfflineManifestEnvelope[]) =>
       initialListMessage(saved, t, verifiedTenantSlugRef.current),
+    [t],
+  );
+
+  const initialMessageForShop = useCallback(
+    (saved: OfflineManifestEnvelope[], slug: string) => initialListMessage(saved, t, slug),
+    [t],
+  );
+  const reconciledMessageForShop = useCallback(
+    (saved: OfflineManifestEnvelope[], slug: string) => reconciledListMessage(saved, t, slug),
     [t],
   );
 
@@ -351,11 +383,15 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
           : []),
       ];
       setMessage(messages.join(" "));
-    } catch {
+    } catch (error) {
       if (tenantSlugRef.current !== slug) return;
+      if (isShopChangedError(error)) {
+        handleTenantChanged();
+        return;
+      }
       setMessage(t("shared.offlineManifest.reconcile.reachError"));
     }
-  }, [tripId, t, resolveTenant, tenantSlugRef]);
+  }, [tripId, t, resolveTenant, tenantSlugRef, handleTenantChanged]);
 
   // **One sync at a time, and at most one waiting** (captain review S2). Every
   // tap asks for a pass, and a pass on a link that carries nothing takes the
@@ -390,69 +426,14 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
     await run;
   }, [reconcileOnce]);
 
-  // Reconciles every saved trip that still has a pending roll-call event, not
-  // just the one a captain happens to open next — otherwise a change recorded
-  // offline for a trip the captain never revisits individually would sit
-  // pending forever despite "every change is double-checked... once you're
-  // back in service" (see the P1 fix in ADR
-  // 20260726-shopwide-offline-manifest-priming's review follow-up).
-  const reconcileList = useCallback(
-    async (saved: OfflineManifestEnvelope[], currentShopSlug: string | null) => {
-      if (!currentShopSlug) return;
-      // Only ever sync a trip belonging to whichever shop this browser is
-      // actually authenticated as right now. This view has no session context
-      // of its own (it's designed to work fully offline/unauthenticated), so a
-      // preserved foreign-shop pending event — kept alive specifically because
-      // it can't be reconciled under the wrong tenant, see
-      // purgeOfflineManifestsExceptShop — would otherwise get submitted under
-      // whatever shop *is* currently signed in, rejected for a tenant mismatch
-      // rather than a genuine domain refusal, and then look "resolved" to the
-      // very next purge pass, which would delete it outright. The
-      // server-verified current shop is resolved once by the caller (it also
-      // drives the cross-tenant purge); if it can't be determined (offline,
-      // signed out, request failure), reconcile nothing rather than guess.
-      // Tenant verification authorizes which local records may contribute to
-      // this message. This also replaces the unscoped initial count/message
-      // after a reload, including when there is nothing to sync.
-      const authorized = saved.filter(
-        (envelope) => envelope.snapshot.shop.slug === currentShopSlug,
-      );
-      if (tenantSlugRef.current === currentShopSlug) {
-        setMessage(initialListMessage(authorized, t, currentShopSlug));
-      }
-      if (!navigator.onLine) return;
-      const withPending = saved.filter((envelope) => pendingOfflineEventCount(envelope) > 0);
-      if (withPending.length === 0) return;
-      const reconcilable = withPending.filter(
-        (envelope) => envelope.snapshot.shop.slug === currentShopSlug,
-      );
-      if (reconcilable.length === 0) return;
-      const results = await Promise.all(
-        reconcilable.map((envelope) => {
-          const id = envelope.snapshot.manifests[0]?.trip.id;
-          return id
-            ? syncOfflineManifest(id, currentShopSlug).catch(() => null)
-            : Promise.resolve(null);
-        }),
-      );
-      const byId = new Map(
-        results
-          .filter((envelope): envelope is OfflineManifestEnvelope => envelope !== null)
-          .map((envelope) => [envelope.snapshot.manifests[0]?.trip.id ?? "", envelope] as const),
-      );
-      // Another reconnect can re-verify a different shop while these syncs
-      // are in flight. An earlier tenant's result must not repaint the list or
-      // its note-loss metadata after that change.
-      if (tenantSlugRef.current !== currentShopSlug) return;
-      const merged = saved.map((envelope) => {
-        const id = envelope.snapshot.manifests[0]?.trip.id;
-        return id && byId.has(id) ? (byId.get(id) as OfflineManifestEnvelope) : envelope;
-      });
-      setList(merged);
-      setMessage(reconciledListMessage(merged, t, currentShopSlug));
-    },
-    [t, tenantSlugRef],
-  );
+  const reconcileList = useSavedManifestList({
+    tenantSlugRef,
+    initialListMessage: initialMessageForShop,
+    reconciledListMessage: reconciledMessageForShop,
+    setList,
+    setMessage,
+    handleTenantChanged,
+  });
 
   const onListPurged = useCallback(
     (saved: OfflineManifestEnvelope[], currentShopSlug: string) => {
@@ -473,6 +454,7 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
 
   const onTenantVerified = useCallback(
     (currentShopSlug: string) => {
+      setTenantChangePending(false);
       verifiedTenantSlugRef.current = currentShopSlug;
       // Re-scope before the purge's store read finishes. Foreign pending copies
       // remain stored for their shop to reconcile but are no longer disclosed.
@@ -502,9 +484,13 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
     onTenantVerified,
     onTripPurged,
     refreshDiscarded,
+    tenantChangeRevision,
   });
 
   useEffect(() => {
+    // A fresh authenticated identity is a fresh attempt to load the device
+    // copy, even if the URL and its trip id did not change.
+    if (verifiedTenantRevision > 0) setStoreReadFailed(false);
     if (!tripId) {
       tripPurgedRef.current = false;
       // No specific trip requested — this is the dive.day-root/shell landing
@@ -594,6 +580,7 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
     resolveTenant,
     tripId,
     t,
+    verifiedTenantRevision,
     initialMessageForList,
     tripNoticeForEnvelope,
   ]);
@@ -610,6 +597,7 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
     tripId,
     envelope,
     verifiedTenantSlug: verifiedTenantRevision > 0 ? verifiedTenantSlugRef.current : null,
+    tenantChangePending,
     removedForOtherShop,
     dispatchSaved,
     list,

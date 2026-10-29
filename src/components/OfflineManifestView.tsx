@@ -9,6 +9,7 @@ import {
   OfflineManifestSkeleton,
   OfflineNoSavedTrip,
   OfflineOpeningScreen,
+  OfflineTenantVerificationScreen,
 } from "./offline-manifest/ShellScreens";
 import { DiscardedRecordsNotice, translatorForThisDevice } from "./offline-manifest/shared";
 import { OfflineTripScreen } from "./offline-manifest/TripScreen";
@@ -58,6 +59,7 @@ function OfflineManifestScreen() {
     tripId,
     envelope,
     verifiedTenantSlug,
+    tenantChangePending,
     removedForOtherShop,
     dispatchSaved,
     list,
@@ -108,11 +110,7 @@ function OfflineManifestScreen() {
     ? discarded.filter((record) => record.shopSlug === verifiedTenantSlug)
     : discarded;
   const discardNotice = (
-    <DiscardedRecordsNotice
-      t={t}
-      records={visibleDiscarded}
-      onAcknowledge={acknowledgeDiscarded}
-    />
+    <DiscardedRecordsNotice t={t} records={visibleDiscarded} onAcknowledge={acknowledgeDiscarded} />
   );
   // Sent here because DiveDay did not answer: keep asking the live manifest,
   // and offer it once it answers in time. Never a swap: the captain chooses
@@ -129,6 +127,17 @@ function OfflineManifestScreen() {
   // the URL, because the cached shell is one document replayed for all of them.
   if (!storeRead) {
     return <OfflineOpeningScreen t={t} message={message} />;
+  }
+
+  if (tenantChangePending) {
+    // Other in-flight reads can settle with ordinary "ready" copy after the
+    // 409. The quarantine status must remain authoritative until verification.
+    return (
+      <OfflineTenantVerificationScreen
+        t={t}
+        message={t("shared.offlineManifest.reconcile.tenantChanged")}
+      />
+    );
   }
 
   if (!tripId) {

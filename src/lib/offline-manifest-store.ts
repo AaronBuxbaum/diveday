@@ -143,6 +143,7 @@ export type OfflineManifestErrorCode =
   | "unavailable"
   | "expired"
   | "not_allowed"
+  | "shop_changed"
   | "sync_unreachable";
 
 export class OfflineManifestError extends Error {
@@ -1043,14 +1044,21 @@ async function postPendingEvents(batch: {
       body: JSON.stringify(batch),
       signal: controller.signal,
     });
-    if (!response.ok) throw new OfflineManifestError("sync_unreachable");
+    if (!response.ok) {
+      if (response.status === 409) {
+        const body = (await response.json().catch(() => null)) as { error?: string } | null;
+        if (body?.error === "shop_changed") throw new OfflineManifestError("shop_changed");
+      }
+      throw new OfflineManifestError("sync_unreachable");
+    }
     return (await response.json()) as { results: OfflineSyncResult[] };
   })();
   try {
     // Raced as well as aborted: a fetch (or a body stream) that ignores its
     // signal still cannot hold this past the deadline.
     return await Promise.race([roundTrip, deadline]);
-  } catch {
+  } catch (error) {
+    if (error instanceof OfflineManifestError && error.code === "shop_changed") throw error;
     throw new OfflineManifestError("sync_unreachable");
   } finally {
     clearTimeout(timer);

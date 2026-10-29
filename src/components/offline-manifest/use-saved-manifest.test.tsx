@@ -7,6 +7,7 @@ import {
   type DiscardedOfflineRecord,
   listOfflineManifests,
   loadOfflineManifest,
+  OfflineManifestError,
   readDiscardedOfflineRecords,
   syncOfflineManifest,
 } from "@/lib/offline-manifest-store";
@@ -23,17 +24,28 @@ const tenant = vi.hoisted(() => ({
   slug: "blue-mantis" as string | null,
   setVerified: (_slug: string | null) => {},
 }));
+const purgeState = vi.hoisted(() => ({
+  latest: null as null | { tenantChangeRevision: number; onTenantVerified: (slug: string) => void },
+}));
 
 vi.mock("next/navigation", () => ({ useSearchParams: () => search.params }));
-vi.mock("@/lib/offline-manifest-store", () => ({
-  acknowledgeDiscardedOfflineRecords: vi.fn(),
-  listOfflineManifests: vi.fn(),
-  loadOfflineManifest: vi.fn(),
-  readDiscardedOfflineRecords: vi.fn(),
-  syncOfflineManifest: vi.fn(),
-}));
+vi.mock("@/lib/offline-manifest-store", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/offline-manifest-store")>();
+  return {
+    ...actual,
+    acknowledgeDiscardedOfflineRecords: vi.fn(),
+    listOfflineManifests: vi.fn(),
+    loadOfflineManifest: vi.fn(),
+    readDiscardedOfflineRecords: vi.fn(),
+    syncOfflineManifest: vi.fn(),
+  };
+});
 // The purge round has its own tests (`use-cross-shop-purge.test.tsx`).
-vi.mock("./use-cross-shop-purge", () => ({ useCrossShopPurge: () => {} }));
+vi.mock("./use-cross-shop-purge", () => ({
+  useCrossShopPurge: (options: typeof purgeState.latest) => {
+    if (options) purgeState.latest = options;
+  },
+}));
 vi.mock("./use-offline-tenant", () => {
   const tenantSlugRef: { current: string | null } = { current: null };
   tenant.setVerified = (slug) => {
@@ -112,6 +124,7 @@ beforeEach(() => {
   readDiscarded.mockResolvedValue([]);
   tenant.slug = "blue-mantis";
   tenant.setVerified(null);
+  purgeState.latest = null;
   setOnline(false);
 });
 
@@ -312,6 +325,30 @@ describe("useSavedManifest on a trip", () => {
     sync.mockRejectedValue(new Error("offline after all"));
     const { result } = at("trip=trip-1");
     await waitFor(() => expect(result.current.message).toBe(line("reachError")));
+  });
+
+  it("quarantines the saved roster on shop_changed and only restores it after fresh verification", async () => {
+    setOnline(true);
+    const saved = withEvents("trip-1", { pending: 1 });
+    load.mockResolvedValue(saved);
+    sync.mockRejectedValue(new OfflineManifestError("shop_changed"));
+    const { result } = at("trip=trip-1");
+
+    await waitFor(() => expect(result.current.tenantChangePending).toBe(true));
+    expect(result.current.envelope).toBeNull();
+    expect(result.current.message).toBe(line("tenantChanged"));
+    expect(saved.events[0]?.syncStatus).toBe("pending");
+    expect(purgeState.latest?.tenantChangeRevision).toBeGreaterThan(0);
+
+    // If identity re-verification fails, no callback arrives and the old
+    // roster remains quarantined. A successful B lookup is the only release.
+    expect(result.current.tenantChangePending).toBe(true);
+    tenant.slug = "reef-runners";
+    await act(async () => purgeState.latest?.onTenantVerified("reef-runners"));
+    await waitFor(() => expect(result.current.tenantChangePending).toBe(false));
+    expect(result.current.verifiedTenantSlug).toBe("reef-runners");
+    expect(result.current.message).toBe("");
+    expect(saved.events[0]?.syncStatus).toBe("pending");
   });
 
   it("never submits another shop's saved events under the signed-in shop", async () => {

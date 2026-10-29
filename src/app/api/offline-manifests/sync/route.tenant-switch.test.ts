@@ -187,7 +187,7 @@ describe("offline sync when the authenticated tenant changes in flight", () => {
     expect((await loadOfflineManifest(trip.id))?.events[0]?.syncStatus).toBe("pending");
     releaseRoute();
 
-    await expect(sync).rejects.toMatchObject({ code: "sync_unreachable" });
+    await expect(sync).rejects.toMatchObject({ code: "shop_changed" });
     expect((await loadOfflineManifest(trip.id))?.events[0]).toMatchObject({
       clientEventId: eventId,
       syncStatus: "pending",

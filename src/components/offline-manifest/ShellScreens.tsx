@@ -57,6 +57,29 @@ export function OfflineOpeningScreen({
   );
 }
 
+/** A server-detected shop switch: retain encrypted events, but never leave the old roster actionable. */
+export function OfflineTenantVerificationScreen({
+  t,
+  message,
+}: {
+  t: OfflineManifestTranslator;
+  message: string;
+}) {
+  return (
+    <main className="boat-mode mx-auto w-full max-w-3xl flex-1 px-6 py-16">
+      <ShopPageHeader
+        eyebrow={t("shared.offlineManifest.single.eyebrow")}
+        title={t("shared.offlineManifest.single.tenantChangedHeading")}
+        meta={
+          <p className="text-muted" role="status" aria-live="polite">
+            <StatusMessage message={message} />
+          </p>
+        }
+      />
+    </main>
+  );
+}
+
 /**
  * A `?trip=` with no saved copy on screen: never saved here, taken away by the
  * cross-shop purge, or held but unreadable. The last two are named rather than

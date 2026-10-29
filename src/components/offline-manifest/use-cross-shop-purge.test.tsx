@@ -35,6 +35,7 @@ function setup(tripId: string, tenant: string | null) {
     onTenantVerified: vi.fn(),
     onTripPurged: vi.fn(),
     refreshDiscarded: vi.fn(),
+    tenantChangeRevision: 0,
   };
   const hook = renderHook(() => useCrossShopPurge(props));
   return { props, ...hook };
@@ -68,6 +69,16 @@ describe("useCrossShopPurge", () => {
     expect(props.tenantSlugRef.current).toBeNull();
     await waitFor(() => expect(props.resolveTenant).toHaveBeenCalledTimes(1));
     expect(props.onTenantVerified).toHaveBeenCalledWith("blue-mantis");
+  });
+
+  it("re-verifies and purges again after a sync detects a shop switch", async () => {
+    const { props, rerender } = setup("", "reef-runners");
+    await waitFor(() => expect(props.resolveTenant).toHaveBeenCalledTimes(1));
+    props.tenantChangeRevision = 1;
+    rerender();
+    await waitFor(() => expect(props.resolveTenant).toHaveBeenCalledTimes(2));
+    expect(props.onTenantVerified).toHaveBeenLastCalledWith("reef-runners");
+    expect(purge).toHaveBeenLastCalledWith("reef-runners");
   });
 
   it("purges nothing and repaints nothing when no shop is signed in", async () => {
