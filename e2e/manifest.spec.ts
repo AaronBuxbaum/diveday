@@ -21,6 +21,7 @@ import {
   openTripAbout,
   openTripFromBoard,
   openTripTab,
+  tripPathByTitle,
   waiverLinkFromResult,
 } from "./helpers";
 
@@ -368,9 +369,12 @@ test("a new shell worker replaces the older cache without losing encrypted roll 
   await context.route("**/manifest-sw.js", workerRoute);
 
   try {
-    await page.goto("/shop/blue-mantis/schedule/board");
-    await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
-    await openTripTab(page, "Manifest");
+    const tripPath = await tripPathByTitle(
+      page,
+      "blue-mantis",
+      "Two-Tank Reef — Molasses & French",
+    );
+    await page.goto(`${tripPath}/manifest`);
     await page
       .getByRole("link", { name: "After dive 1" })
       .evaluate((link: HTMLElement) => link.click());
