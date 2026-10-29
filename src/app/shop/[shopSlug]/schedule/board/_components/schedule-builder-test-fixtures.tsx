@@ -335,7 +335,7 @@ export const PRICE: BuilderPriceInput = { step: "0.01", max: 100_000, placeholde
  * stub, and the one that cares asserts it is not called until then.
  */
 export const loadOptions = vi.fn(async () => ({
-  courses: [{ id: "course-1", title: "Open Water Diver", agency: "padi" }],
+  courses: [{ id: "course-1", title: "Open Water Diver", agency: "padi", priceLabel: null }],
   diveSites: [{ id: "site-1", title: "Molasses Reef" }],
 }));
 

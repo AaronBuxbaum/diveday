@@ -4,6 +4,7 @@ import {
   boolean,
   check,
   date,
+  foreignKey,
   index,
   integer,
   pgEnum,
@@ -13,7 +14,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
-import { tripLastMinutePromos } from "./bookings";
+import { bookings, tripLastMinutePromos } from "./bookings";
 import { appNowTimestamp } from "./columns";
 import { people, shops } from "./core";
 import { courses } from "./courses";
@@ -200,6 +201,7 @@ export const interests = pgTable(
     uniqueIndex("interests_departure_parent_unique")
       .on(table.tripId, table.parentInterestId)
       .where(sql`${table.scope} = 'departure' and ${table.parentInterestId} is not null`),
+    uniqueIndex("interests_shop_id_id_unique").on(table.shopId, table.id),
     uniqueIndex("interests_anytime_shop_person_unique")
       .on(table.shopId, table.personId)
       .where(sql`${table.scope} = 'anytime'`),
@@ -230,6 +232,40 @@ export const interests = pgTable(
 );
 
 export type Interest = typeof interests.$inferSelect;
+
+/**
+ * One successfully seated booking answering one seat of a specific anonymous
+ * date-request offer. All bookings linked to the same request stay on the
+ * departure selected by its first linked booking; cancellation frees its seat
+ * but preserves that departure choice. A party can be seated in several
+ * bookings; keeping one row per booking preserves the unseated part of its offer.
+ */
+export const dateRequestOfferBookings = pgTable(
+  "date_request_offer_bookings",
+  {
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    interestId: uuid("interest_id")
+      .notNull()
+      .references(() => interests.id, { onDelete: "cascade" }),
+    /** A booking answers at most one offered request. */
+    bookingId: uuid("booking_id").notNull().primaryKey(),
+  },
+  (table) => [
+    foreignKey({
+      name: "date_request_offer_bookings_shop_interest_fk",
+      columns: [table.shopId, table.interestId],
+      foreignColumns: [interests.shopId, interests.id],
+    }).onDelete("cascade"),
+    foreignKey({
+      name: "date_request_offer_bookings_shop_booking_fk",
+      columns: [table.shopId, table.bookingId],
+      foreignColumns: [bookings.shopId, bookings.id],
+    }).onDelete("cascade"),
+    index("date_request_offer_bookings_shop_interest_idx").on(table.shopId, table.interestId),
+  ],
+);
 
 /**
  * A diver-facing, self-serve bearer link to unsubscribe one **anytime** interest

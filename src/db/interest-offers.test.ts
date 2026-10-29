@@ -41,6 +41,128 @@ async function invitationContext({ fresh = false } = {}) {
 }
 
 describe("seat offers", () => {
+  it("leaves the offer open when the diver already has a booking on that departure", async () => {
+    const { db, shop, firstTrip } = await invitationContext();
+    const email = "already-booked-offer@example.com";
+    const existing = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: firstTrip.id,
+      fullName: "Already Booked Diver",
+      email,
+    });
+    expect(existing.ok).toBe(true);
+
+    const [request] = await db
+      .insert(interests)
+      .values({
+        shopId: shop.id,
+        scope: "date",
+        askedBy: "diver",
+        interest: "reef dive",
+        partySize: 2,
+        name: "Party with an existing booking",
+        email: "existing-booking-party@example.com",
+      })
+      .returning();
+    if (!request) throw new Error("date request insert failed");
+    await db.insert(interests).values({
+      shopId: shop.id,
+      scope: "departure",
+      askedBy: "diver",
+      tripId: firstTrip.id,
+      parentInterestId: request.id,
+      partySize: 2,
+      offeredAt: nowDate(),
+    });
+
+    const duplicate = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: firstTrip.id,
+      fullName: "Already Booked Diver",
+      email,
+      dateRequestInterestId: request.id,
+    });
+    expect(duplicate).toEqual({ ok: false, reason: "already_booked" });
+    const [stillOpen] = await db
+      .select({ closedAt: interests.closedAt, closedAs: interests.closedAs })
+      .from(interests)
+      .where(eq(interests.id, request.id));
+    expect(stillOpen).toEqual({ closedAt: null, closedAs: null });
+  });
+
+  it("closes a date request only when the offered party is fully seated", async () => {
+    const { db, shop, firstTrip } = await invitationContext();
+    const [request] = await db
+      .insert(interests)
+      .values({
+        shopId: shop.id,
+        scope: "date",
+        askedBy: "diver",
+        interest: "reef dive",
+        partySize: 2,
+        name: "Two divers",
+        email: "request-party@example.com",
+      })
+      .returning();
+    if (!request) throw new Error("date request insert failed");
+    await db.insert(interests).values({
+      shopId: shop.id,
+      scope: "departure",
+      askedBy: "diver",
+      tripId: firstTrip.id,
+      parentInterestId: request.id,
+      partySize: 2,
+      offeredAt: nowDate(),
+    });
+
+    const first = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: firstTrip.id,
+      fullName: "First party member",
+      email: "first-party-member@example.com",
+      dateRequestInterestId: request.id,
+    });
+    expect(first.ok).toBe(true);
+    if (!first.ok) throw new Error(`first party seat refused: ${first.reason}`);
+    expect(first.dateRequestPartyComplete).toBe(false);
+    const [stillOpen] = await db
+      .select({ closedAt: interests.closedAt, closedAs: interests.closedAs })
+      .from(interests)
+      .where(eq(interests.id, request.id));
+    expect(stillOpen).toEqual({ closedAt: null, closedAs: null });
+
+    const second = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: firstTrip.id,
+      fullName: "Second party member",
+      email: "second-party-member@example.com",
+      dateRequestInterestId: request.id,
+    });
+    expect(second.ok).toBe(true);
+    if (!second.ok) throw new Error(`second party seat refused: ${second.reason}`);
+    expect(second.dateRequestPartyComplete).toBe(true);
+    const [closed] = await db
+      .select({ closedAt: interests.closedAt, closedAs: interests.closedAs })
+      .from(interests)
+      .where(eq(interests.id, request.id));
+    expect(closed?.closedAt).toBeInstanceOf(Date);
+    expect(closed?.closedAs).toBe("booked");
+
+    const overflow = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: firstTrip.id,
+      fullName: "Third party member",
+      email: "third-party-member@example.com",
+      dateRequestInterestId: request.id,
+    });
+    expect(overflow).toEqual({ ok: false, reason: "date_request_party_full" });
+  });
+
   it("records a shop interest for an existing diver without seating them", async () => {
     const { db, shop, author, firstTrip } = await invitationContext();
     const [candidate] = await listBookableDivers(db, shop.id, firstTrip.id, {

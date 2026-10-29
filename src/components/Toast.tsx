@@ -21,11 +21,14 @@ const EXIT_DURATION_MS = motionMs("base");
 export function ToastShell({
   autoDismissMs,
   pausable = false,
+  placement = "fixed",
   className,
   children,
 }: {
   autoDismissMs: number | null;
   pausable?: boolean;
+  /** Action toasts attached to page content must not cover the controls they explain. */
+  placement?: "fixed" | "inline";
   /** The box's own layout and inset; the frame, fill and shadow are shared. */
   className: string;
   children: ReactNode;
@@ -76,20 +79,25 @@ export function ToastShell({
   }
 
   if (!visible) return null;
-  return (
+  const toast = (
+    <div
+      role="status"
+      onMouseEnter={pausable ? pause : undefined}
+      onMouseLeave={pausable ? resume : undefined}
+      onFocusCapture={pausable ? pause : undefined}
+      onBlurCapture={pausable ? resume : undefined}
+      className={`${className} rounded-inset border border-border bg-surface shadow-2xl ${
+        dismissing ? "toast-dismiss" : "rise-in"
+      }`}
+    >
+      {children}
+    </div>
+  );
+  return placement === "inline" ? (
+    <div className="my-2 min-w-0 print:hidden">{toast}</div>
+  ) : (
     <div className="fixed inset-x-0 bottom-[calc(1rem+var(--tabbar-h))] z-50 flex justify-center px-4 print:hidden">
-      <div
-        role="status"
-        onMouseEnter={pausable ? pause : undefined}
-        onMouseLeave={pausable ? resume : undefined}
-        onFocusCapture={pausable ? pause : undefined}
-        onBlurCapture={pausable ? resume : undefined}
-        className={`${className} rounded-inset border border-border bg-surface shadow-2xl ${
-          dismissing ? "toast-dismiss" : "rise-in"
-        }`}
-      >
-        {children}
-      </div>
+      {toast}
     </div>
   );
 }

@@ -30,6 +30,7 @@ import {
   updateTripSection,
 } from "@/db/trips";
 import { nowDate } from "@/lib/clock";
+import { perDiverBookingPriceCents } from "@/lib/courses";
 import { checkbox, formValue, readForm } from "@/lib/form-parse";
 import { parseWetsuitThicknessMm } from "@/lib/gear";
 import { meetingPointMoved, meetingPointOfRows } from "@/lib/meeting-point";
@@ -322,6 +323,7 @@ async function saveDepartureDetails(
   // item 10); empty is the consecutive run.
   const laterDates = z.array(z.string()).safeParse(formData.getAll("meetingDate"));
   if (!laterDates.success) redirect(noticeUrl(back, "invalid", { form: section ?? "details" }));
+  const courseOwnsPrice = tripNow.course !== null && tripNow.course.priceCents !== null;
   const details = tripDetailsPatch(
     {
       date,
@@ -329,7 +331,12 @@ async function saveDepartureDetails(
       endTime,
       dayCount,
       laterDates: laterDates.data,
-      priceDollars,
+      // A catalog-priced course owns its full enrollment amount. Ignore any
+      // stale or forged trip fee and clear it from this departure on save.
+      priceDollars: courseOwnsPrice ? undefined : priceDollars,
+      paymentGatePriceCents: courseOwnsPrice
+        ? perDiverBookingPriceCents(tripNow, tripNow.course)
+        : undefined,
       depositDollars,
       cancellationWindowHours,
       minimumBookings,

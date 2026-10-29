@@ -259,9 +259,9 @@ export async function seedCertGates(
         // Priced like the rest of the demo board (UX audit 2026-10-07, item 4):
         // the course session at its catalog price, a charter at a gated boat's.
         priceCents:
-          (def.courseId && advancedCourse?.id === def.courseId
-            ? advancedCourse.priceCents
-            : undefined) ?? 12500,
+          def.courseId && advancedCourse?.id === def.courseId && advancedCourse.priceCents != null
+            ? null
+            : 12500,
       })),
     )
     .returning();

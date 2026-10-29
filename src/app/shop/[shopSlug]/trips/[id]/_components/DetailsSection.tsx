@@ -104,7 +104,11 @@ function TitleAndDescription({
           className={controlClass}
         />
       </Field>
-      <Field label={t("trips.details.descriptionLabel")} hint={t("trips.details.optionalHint")}>
+      <Field
+        label={t("trips.details.descriptionLabel")}
+        hint={t("trips.details.optionalHint")}
+        description={t("trips.details.descriptionHint")}
+      >
         <textarea
           name="description"
           rows={2}
@@ -753,8 +757,8 @@ function SelfGuidedField({ t, checked }: { t: StaffTranslator; checked: boolean 
  * **A priced course holds the price, not its session** (fourth UX review,
  * item 26): checkout charges the course fee plus its eLearning fee and ignores
  * the departure's own figure, so an editable box here set a number nobody is
- * charged. The session states the course's total instead; the stored value
- * rides along unchanged, so a save never clears it.
+ * charged. The session states the course's total instead; its separate trip
+ * fee is cleared the next time staff save the departure.
  */
 function PriceField({
   trip,
@@ -781,7 +785,6 @@ function PriceField({
             amount: formatMoneyCents(coursePriceCents, currency, locale),
           })}
         </p>
-        <input type="hidden" name="priceDollars" value={stored} />
       </Field>
     );
   }

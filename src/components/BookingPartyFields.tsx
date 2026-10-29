@@ -60,7 +60,8 @@ export function BookingPartyFields({
   maxPartySize,
   leadPhone = false,
   fieldErrors,
-  remember = false,
+  rememberForShop,
+  getTrustedServerTime,
   onSizeChange,
   lead,
   onLeadEmailSettled,
@@ -72,9 +73,10 @@ export function BookingPartyFields({
   /** Show an optional phone field for the lead booker (diver 1). */
   leadPhone?: boolean;
   fieldErrors?: BookingFieldErrors;
-  /** Prefill the lead diver from a previous booking on this device (task 27
-   * — Marco). Never in the embed widget; the caller decides that. */
-  remember?: boolean;
+  /** Prefill from this shop's unexpired, explicitly opted-in device memory. */
+  rememberForShop?: string | null;
+  /** A server-clock read used to check the 30-day expiry before prefill. */
+  getTrustedServerTime?: () => Promise<number>;
   /** Told every time the diver-selected party size changes (including on
    * mount), so a caller can show its own party-size-dependent content (task
    * 18's running total). Pass a stable reference (`useState`'s setter, not
@@ -113,10 +115,8 @@ export function BookingPartyFields({
   const t = useTranslations();
   const [size, setSize] = useState(1);
   const [hydrated, setHydrated] = useState(false);
-  const { party, updateMember, rememberedDiver, forgetRememberedDiver } = usePartyMembers(
-    lead,
-    remember,
-  );
+  const { party, updateMember, rememberedDiver, forgetRememberedDiver, forgetCouldNotConfirm } =
+    usePartyMembers(lead, rememberForShop, getTrustedServerTime);
   const [phone, setPhone] = useState(lead?.phone ?? "");
   const [blurred, setBlurred] = useState<Record<number, boolean>>({});
   // Per-member (index > 0 only): "use the main contact's email instead of
@@ -277,12 +277,17 @@ export function BookingPartyFields({
                         <button
                           type="button"
                           onClick={forgetRememberedDiver}
-                          className="font-medium text-primary hover:underline"
+                          className="relative text-base font-medium text-primary before:absolute before:-inset-x-1 before:-inset-y-3 before:min-h-11 before:content-[''] hover:underline"
                         >
                           {chunks}
                         </button>
                       ),
                     })}
+                  </p>
+                ) : null}
+                {index === 0 && forgetCouldNotConfirm ? (
+                  <p role="status" className="mb-3 text-sm text-muted">
+                    {t("party.rememberClearUnconfirmed")}
                   </p>
                 ) : null}
                 {/* One box to a row. Name and Email stood side by side in a

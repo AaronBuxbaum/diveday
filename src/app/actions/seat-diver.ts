@@ -4,7 +4,6 @@ import { z } from "zod";
 import { getDb } from "@/db/client";
 import { findSimilarDivers } from "@/db/divers";
 import { discardFormDraft } from "@/db/form-drafts";
-import { setDateInterestOutcome } from "@/db/interests";
 import { busyOnLockWait } from "@/db/lock-bounds";
 import {
   type SeatDiverPerson,
@@ -227,20 +226,20 @@ async function seat(
     entry: door.entry,
     refusals: door.refusals,
     participantType,
+    dateRequestInterestId: requestId ?? undefined,
   }).catch(busyOnLockWait);
   if (outcome === "busy") refuse(surface, landing, SEAT_BUSY_NOTICE);
   const result = outcome;
   if (!result.ok) refuse(surface, landing, surface.refusalNotice[result.reason], result.refusal);
-  // **The request this seat answers closes** (third UX review, item 13): it
-  // leaves its day on the Requests page and stops counting there. A request
-  // already closed keeps the answer it had.
-  if (requestId) {
-    await setDateInterestOutcome(db, {
-      shopId: actor.shopId,
-      interestId: requestId,
-      outcome: "booked",
-      now: nowDate(),
-    });
+  // Keep the request context in front of the staffer until every requested
+  // seat has been linked to this offered departure. The booking transaction
+  // serializes the count and closes the parent on the final seat.
+  if (requestId && result.dateRequestPartyComplete === false) {
+    const requestPath = shopPath(landing.shopSlug, "bookings", "new", landing.tripId);
+    return revalidateAndRedirect(
+      requestPath,
+      noticeUrl(requestPath, "party-seat-added", { request: requestId }),
+    );
   }
   const settled: SeatLanding = { ...landing, personId: result.personId };
   const path = surface.seatedPath(settled);
@@ -417,6 +416,9 @@ const PARTY_REFUSAL_NOTICE: Record<SeatDiverRefusal, string> = {
   course_min_age: "diver-course-min-age",
   trip_prerequisite: "diver-trip-prerequisite",
   trip_unavailable: "diver-unavailable",
+  date_request_offer_unavailable: "diver-date-request-unavailable",
+  date_request_departure_conflict: "diver-date-request-conflict",
+  date_request_party_full: "diver-date-request-full",
   person_not_found: "diver-unavailable",
   unavailable: "diver-unavailable",
 };

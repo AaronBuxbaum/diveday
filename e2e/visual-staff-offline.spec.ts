@@ -327,7 +327,9 @@ for (const scheme of ["light", "dark"] as const) {
         // sentence a regression would move.
         await page
           .getByRole("alert")
-          .filter({ hasText: "Roll call that never sent has been removed" })
+          .filter({
+            hasText: staffTranslator("en-US")("shared.offlineManifest.discarded.heading"),
+          })
           .waitFor();
         await capture(page, "offline-manifest-discarded", scheme);
       });
@@ -377,7 +379,11 @@ for (const scheme of ["light", "dark"] as const) {
         // repaints saying why.
         await page.unroute(IDENTITY_ROUTE);
         await page.evaluate(() => window.dispatchEvent(new Event("online")));
-        await page.getByRole("heading", { name: "That saved copy has been removed" }).waitFor();
+        await page
+          .getByRole("heading", {
+            name: staffTranslator("en-US")("shared.offlineManifest.single.removedOtherShopHeading"),
+          })
+          .waitFor();
         await capture(page, "offline-manifest-removed-other-shop", scheme);
       });
     });

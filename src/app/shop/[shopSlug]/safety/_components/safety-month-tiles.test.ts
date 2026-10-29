@@ -4,6 +4,22 @@ import type { SafetyMonth } from "@/lib/safety-report";
 import { safetyMonthTiles } from "./safety-month-tiles";
 
 const t = staffTranslator("en-US");
+const safetyCopyByLocale = [
+  {
+    locale: "en-US" as const,
+    crewLabel: "Crew with credentials that lapsed before the departure’s final local day",
+    title: "Crew with credentials that lapsed before the departure’s final local day",
+    observation:
+      "Credential type and dates are recorded at the live boarding mark; DiveDay review status and issuer confirmation are not recorded. Actual departure time and role fit are not recorded.",
+  },
+  {
+    locale: "es-ES" as const,
+    crewLabel: "Tripulantes con credenciales vencidas antes del último día local de la salida",
+    title: "Tripulantes con credenciales vencidas antes del último día local de la salida",
+    observation:
+      "En el registro de embarque se guardan el tipo de credencial y sus fechas; no constan la revisión de DiveDay ni la confirmación del emisor. Tampoco constan la hora real de salida ni la función.",
+  },
+];
 
 /** A month back from the water, with the crew facts each case sets. */
 function month(crew: Partial<SafetyMonth>): SafetyMonth {
@@ -23,9 +39,13 @@ function month(crew: Partial<SafetyMonth>): SafetyMonth {
   } as unknown as SafetyMonth;
 }
 
-function crewTile(safety: SafetyMonth, staffingHref: string | null = "/shop/blue-mantis/staffing") {
+function crewTile(
+  safety: SafetyMonth,
+  staffingHref: string | null = "/shop/blue-mantis/staffing",
+  translator: typeof t = t,
+) {
   const tile = safetyMonthTiles({
-    t,
+    t: translator,
     safety,
     filed: 0,
     drafts: 0,
@@ -43,6 +63,28 @@ function crewTile(safety: SafetyMonth, staffingHref: string | null = "/shop/blue
  * crew schedule, never "0 of 0" over a list the page does not draw.
  */
 describe("the month's crew tile", () => {
+  it.each(safetyCopyByLocale)(
+    "uses the departure's final local day in $locale",
+    ({ locale, crewLabel, title }) => {
+      const translator = staffTranslator(locale as "en-US" | "es-ES");
+      expect(translator("incidents.safety.crew")).toBe(crewLabel);
+      expect(translator("incidents.safety.lapsedTitle")).toBe(title);
+    },
+  );
+
+  it.each(safetyCopyByLocale)(
+    "makes the limits of captured card data explicit in $locale",
+    ({ locale, observation }) => {
+      const translator = staffTranslator(locale);
+      const tile = crewTile(
+        month({ crewSailings: 1, checkedSailings: 1, unknownCredentialSailings: 0 }),
+        undefined,
+        translator,
+      );
+      expect(tile.detail).toContain(observation);
+    },
+  );
+
   it("says no crew was recorded and points at Staffing, with no figure and no dead anchor", () => {
     const tile = crewTile(month({ noCrewOnRecord: true }));
     expect(tile.value).toBe("—");

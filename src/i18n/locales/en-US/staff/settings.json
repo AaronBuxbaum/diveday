@@ -852,6 +852,7 @@
       "bookings": "Bookings",
       "trip_help_requests": "Crew help requests",
       "interests": "Interest",
+      "date_request_offer_bookings": "Bookings linked to date-request offers",
       "trip_last_minute_promos": "Last-minute offers",
       "booking_payment_events": "Booking payment events",
       "booking_checkouts": "Booking checkouts",

@@ -53,6 +53,7 @@ import { hasTripDiveContent, tripDiveDraftsFromForm } from "@/lib/trip-dives";
 import { uuidParam } from "@/lib/uuid";
 import type { PatternDeparture } from "@/lib/weekday-pattern";
 import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
+import { builderCourseOptions } from "./_components/builder-course-options";
 import type { BuilderPattern, BuilderTideWindowInput } from "./_components/ScheduleBuilder";
 import { attachRequestedInterests } from "./attach-interests";
 import { copyCrewIfAsked, duplicateSchema } from "./copy-departure";
@@ -182,10 +183,8 @@ export async function loadBuilderOptionsAction() {
       hasPoolDiving: false,
     };
   }
-  const [courses, diveSites, boats, lenses, shop] = await Promise.all([
-    listActiveCourses(db, shopId).then((rows) =>
-      rows.map((row) => ({ id: row.id, title: row.title, agency: row.agency })),
-    ),
+  const [courseRows, diveSites, boats, lenses, shop] = await Promise.all([
+    listActiveCourses(db, shopId),
     listDiveSites(db, shopId).then((rows) => rows.map((row) => ({ id: row.id, title: row.name }))),
     listBoats(db, shopId).then((rows) =>
       rows.map((row) => ({ id: row.id, name: row.name, capacity: row.capacity })),
@@ -194,6 +193,7 @@ export async function loadBuilderOptionsAction() {
     listTripLenses(db, shopId).then((rows) => rows.map((row) => ({ id: row.id, title: row.name }))),
     getShopById(db, shopId),
   ]);
+  const courses = builderCourseOptions(courseRows, shop, await requestLocale(shop?.defaultLocale));
   return {
     courses,
     diveSites,

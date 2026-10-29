@@ -14,6 +14,7 @@ import {
   openDiverProfile,
   SURFACE_TIMEOUT_MS,
   staffCopy,
+  VIEWPORTS,
   VISUAL_STEP_BOUNDS,
 } from "./visual-harness";
 
@@ -604,6 +605,45 @@ for (const scheme of ["light", "dark"] as const) {
         await page.clock.fastForward(13_000);
         await expect(toast.getByRole("button", { name: "Undo" })).toBeVisible();
         await expect(toast.getByRole("button", { name: "Dismiss" })).toBeVisible();
+        for (const viewport of VIEWPORTS) {
+          await page.setViewportSize(viewport);
+          const layout = await page.evaluate(() => {
+            const group = document.querySelector('[data-testid="diver-file-group-certifications"]');
+            const toast = [...(group?.querySelectorAll('[role="status"]') ?? [])].find((node) =>
+              node.textContent?.includes("GUE shows this certification."),
+            );
+            if (!group || !toast) return { missing: true, overlaps: [] };
+            const box = toast.getBoundingClientRect();
+            const targets = [...group.querySelectorAll(".font-medium, button, a[href]")].filter(
+              (node) => !toast.contains(node),
+            );
+            const overlaps = targets.flatMap((node) => {
+              const rect = node.getBoundingClientRect();
+              const overlap =
+                rect.width > 0 &&
+                rect.height > 0 &&
+                box.left < rect.right &&
+                box.right > rect.left &&
+                box.top < rect.bottom &&
+                box.bottom > rect.top;
+              return overlap ? [node.textContent?.trim() || node.tagName] : [];
+            });
+            return { missing: false, position: getComputedStyle(toast).position, overlaps };
+          });
+          expect(
+            layout.missing,
+            `toast should be in the certification group at ${viewport.width}px`,
+          ).toBe(false);
+          expect(layout.position, `toast should stay in page flow at ${viewport.width}px`).toBe(
+            "static",
+          );
+          expect(
+            layout.overlaps,
+            `toast should not cover names or actions at ${viewport.width}px`,
+          ).toEqual([]);
+          await expect(toast.getByRole("button", { name: "Undo" })).toBeVisible();
+          await expect(toast.getByRole("button", { name: "Dismiss" })).toBeVisible();
+        }
         await capture(page, "diver-profile-agency-listed", scheme);
       });
 
