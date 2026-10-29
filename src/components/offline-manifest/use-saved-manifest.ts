@@ -48,6 +48,12 @@ import {
   useSelectedTripStorage,
 } from "./use-selected-trip-storage";
 
+const EMPTY_SAVED_COPY = {
+  envelope: null,
+  goneUnderTenant: null,
+  removedForOtherShop: null,
+};
+
 function acknowledgeDiscardedNotices(
   visibleNotices: DiscardedOfflineRecord[],
   setDiscarded: Dispatch<SetStateAction<DiscardedOfflineRecord[]>>,
@@ -241,6 +247,61 @@ type TripSyncResult = {
   envelope: OfflineManifestEnvelope;
 };
 
+function isSelectedTripSynced(
+  result: TripSyncResult | null,
+  tripId: string,
+  shopSlug: string | null,
+) {
+  return result?.tripId === tripId && result.shopSlug === shopSlug;
+}
+
+function selectedTripInitialStatus(
+  tripId: string,
+  envelope: OfflineManifestEnvelope | null,
+  verifiedRevision: number,
+  tripPurged: boolean,
+  lastSync: TripSyncResult | null,
+  verifiedSlug: string | null,
+  tripNoticeForEnvelope: (saved: OfflineManifestEnvelope) => string | null,
+  t: OfflineManifestTranslator,
+): string | null {
+  if (!tripId || !envelope || verifiedRevision === 0 || tripPurged) return null;
+  if (isSelectedTripSynced(lastSync, tripId, verifiedSlug)) return null;
+  return initialTripStatusMessage(tripNoticeForEnvelope(envelope), true, t);
+}
+
+function useDiscardedRefresh(setDiscarded: Dispatch<SetStateAction<DiscardedOfflineRecord[]>>) {
+  return useCallback(() => {
+    readDiscardedOfflineRecords()
+      .then(setDiscarded)
+      // Best-effort by design: a device whose storage cannot be read has
+      // bigger problems, and both branches below already say so on their own.
+      .catch(() => {});
+  }, [setDiscarded]);
+}
+
+function useManifestStatusMessages(
+  t: OfflineManifestTranslator,
+  verifiedTenantSlugRef: MutableRefObject<string | null>,
+) {
+  // The ref is intentionally read at call time after tenant verification.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the slug is mutable tenant state, not a callback dependency.
+  const initialMessageForList = useCallback(
+    (saved: OfflineManifestEnvelope[]) =>
+      initialListMessage(saved, t, verifiedTenantSlugRef.current),
+    [t],
+  );
+  const initialMessageForShop = useCallback(
+    (saved: OfflineManifestEnvelope[], slug: string) => initialListMessage(saved, t, slug),
+    [t],
+  );
+  const reconciledMessageForShop = useCallback(
+    (saved: OfflineManifestEnvelope[], slug: string) => reconciledListMessage(saved, t, slug),
+    [t],
+  );
+  return { initialMessageForList, initialMessageForShop, reconciledMessageForShop };
+}
+
 function pendingEventsNotSettledIn(
   synced: OfflineManifestEnvelope,
   inventory: readonly OfflineManifestEnvelope[],
@@ -395,11 +456,10 @@ function useOnTenantVerified({
 export function useSavedManifest(t: OfflineManifestTranslator) {
   const searchParams = useSearchParams();
   const tripId = useMemo(() => searchParams.get("trip") ?? "", [searchParams]);
-  const [{ envelope, removedForOtherShop }, dispatchSaved] = useReducer(savedCopyReducer, {
-    envelope: null,
-    goneUnderTenant: null,
-    removedForOtherShop: null,
-  });
+  const [{ envelope, removedForOtherShop }, dispatchSaved] = useReducer(
+    savedCopyReducer,
+    EMPTY_SAVED_COPY,
+  );
   const envelopeRef = useRef(envelope);
   envelopeRef.current = envelope;
   const [list, setList] = useState<OfflineManifestEnvelope[] | null>(null);
@@ -547,41 +607,26 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
     [t],
   );
 
-  const initialMessageForList = useCallback(
-    (saved: OfflineManifestEnvelope[]) =>
-      initialListMessage(saved, t, verifiedTenantSlugRef.current),
-    [t],
-  );
-
-  const initialMessageForShop = useCallback(
-    (saved: OfflineManifestEnvelope[], slug: string) => initialListMessage(saved, t, slug),
-    [t],
-  );
-  const reconciledMessageForShop = useCallback(
-    (saved: OfflineManifestEnvelope[], slug: string) => reconciledListMessage(saved, t, slug),
-    [t],
-  );
+  const { initialMessageForList, initialMessageForShop, reconciledMessageForShop } =
+    useManifestStatusMessages(t, verifiedTenantSlugRef);
 
   useEffect(() => {
-    const currentEnvelope = envelopeRef.current;
-    if (!tripId || !currentEnvelope || verifiedTenantRevision === 0 || tripPurgedRef.current)
-      return;
-    const lastSync = lastTripSyncRef.current;
-    if (lastSync?.tripId === tripId && lastSync.shopSlug === verifiedTenantSlugRef.current) return;
-    const noteMessage = tripNoticeForEnvelope(currentEnvelope);
-    // This is the initial selected-copy status. A local append also replaces
-    // `envelope`, but its recorder immediately sets the more useful saved-on-
-    // device confirmation; do not let this initial-status effect erase it.
-    setMessage(initialTripStatusMessage(noteMessage, true, t));
+    const status = selectedTripInitialStatus(
+      tripId,
+      envelopeRef.current,
+      verifiedTenantRevision,
+      tripPurgedRef.current,
+      lastTripSyncRef.current,
+      verifiedTenantSlugRef.current,
+      tripNoticeForEnvelope,
+      t,
+    );
+    if (status === null) return;
+    // Local appends replace `envelope`; their saved confirmation takes priority.
+    setMessage(status);
   }, [tripId, verifiedTenantRevision, tripNoticeForEnvelope, t, tripPurgedRef]);
 
-  const refreshDiscarded = useCallback(() => {
-    readDiscardedOfflineRecords()
-      .then(setDiscarded)
-      // Best-effort by design: a device whose storage cannot be read has
-      // bigger problems, and both branches below already say so on their own.
-      .catch(() => {});
-  }, []);
+  const refreshDiscarded = useDiscardedRefresh(setDiscarded);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: getTenantRound is stable by contract.
   const reconcileOnce = useCallback(async () => {
