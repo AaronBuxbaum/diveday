@@ -406,7 +406,6 @@
       {
         "why": "merge current main into PR #3132",
         "files": {
-          "src/db/erasure-coverage.test.ts": "1075 -> 1078",
           "src/lib/manifests.test.ts": "1053 -> 1054"
         }
       }
@@ -438,7 +437,7 @@
     "src/db/dive-sites.test.ts": 1156,
     "src/db/diver-merge.test.ts": 1239,
     "src/db/divers.test.ts": 3056,
-    "src/db/erasure-coverage.test.ts": 1078,
+    "src/db/erasure-coverage.test.ts": 961,
     "src/db/executed-dives.test.ts": 1085,
     "src/db/export.test.ts": 1186,
     "src/db/import.test.ts": 1074,
