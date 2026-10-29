@@ -211,7 +211,8 @@ test("a detected clock rollback replaces the offline copy with a warning", async
   const keepUntil = Number(
     await page.locator('meta[name="diveday-ready-keep-until"]').getAttribute("content"),
   );
-  await context.setOffline(true);
+  // Record the forward jump while online; the worker sees the request and
+  // persists its clock observation before the next step simulates rollback.
   await setWorkerClock(page, keepUntil + 1);
   await page.evaluate(async () => {
     await fetch(`${location.pathname}?clock-observation`, { cache: "no-store" }).catch(() => null);
@@ -226,6 +227,7 @@ test("a detected clock rollback replaces the offline copy with a warning", async
       }),
     )
     .toBe(keepUntil + 1);
+  await context.setOffline(true);
   await setWorkerClock(page, new Date(E2E_FROZEN_CLOCK).getTime() + 40 * 60_000);
   await page.reload();
   await expect(
