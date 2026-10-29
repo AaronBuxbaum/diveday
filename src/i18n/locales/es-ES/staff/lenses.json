@@ -11,7 +11,7 @@
   "deleteConfirm": "Eliminar",
   "deleteCancel": "Mejor no",
   "deletePending": "Eliminando…",
-  "deleteDepartures": "{count, plural, one {El historial de viajes conserva esta etiqueta asociada a # salida, aunque la elimines.} other {El historial de viajes conserva esta etiqueta asociada a # salidas, aunque la elimines.}}",
+  "deleteDepartures": "{count, plural, one {La etiqueta sigue asociada a # salida del historial, aunque la elimines.} other {La etiqueta sigue asociada a # salidas del historial, aunque la elimines.}}",
   "noLenses": "Todavía no hay etiquetas de salida.",
   "created": "Etiqueta de salida agregada",
   "updated": "Etiqueta de salida guardada",
