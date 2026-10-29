@@ -507,6 +507,10 @@ for (const scheme of ["light", "dark"] as const) {
           await row.getByRole("radio", { name: "Cash" }).check();
           await row.getByRole("button", { name: "Update" }).click();
           await expect(row.getByText("Payment: Paid")).toBeVisible();
+          const paymentPath = `/shop/blue-mantis/trips/${tripId}`;
+          await staffPay.waitForURL(
+            (url) => url.pathname === paymentPath && url.searchParams.get("notice") === "payment",
+          );
         } finally {
           await staffPayContext.close();
         }
