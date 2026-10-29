@@ -8,6 +8,8 @@ const test = (message) => ({
 });
 const wedge =
   "visual: page.screenshot did not return within 2000ms at http://localhost/a (shot.png). The renderer did not answer a trivial evaluate, so it is wedged, not slow — the known, unattributed Chromium wedge.";
+const boundedWedge =
+  "visual: the font settle did not return within 10000ms at http://localhost/a — the shot may contain an unpainted band; check the diff for a blank stripe. The renderer did not answer a trivial evaluate within 5000ms, so it is wedged, not slow.";
 const report = (...tests) => ({ errors: [], suites: [{ specs: [{ tests }] }] });
 it("allows only exclusively proven wedge failures", () => {
   expect(canRetryWedges(report(test(wedge)))).toBe(true);
@@ -21,6 +23,19 @@ it("allows only exclusively proven wedge failures", () => {
       errors: [{ message: "worker crashed" }],
     }),
   ).toBe(false);
+});
+it("recognizes the harness's explicit bounded-wait wedge verdict", () => {
+  expect(canRetryWedges(report(test(boundedWedge)))).toBe(true);
+  expect(
+    canRetryWedges(
+      report(
+        test(
+          boundedWedge.replace("did not answer a trivial evaluate", "answered a trivial evaluate"),
+        ),
+      ),
+    ),
+  ).toBe(false);
+  expect(canRetryWedges(report(test(`An assertion quoted: ${boundedWedge}`)))).toBe(false);
 });
 it("recognizes only the same timed-out test probe attachment, rejecting missing proof", () => {
   const failure = test("Test timeout exceeded");

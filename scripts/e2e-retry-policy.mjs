@@ -5,7 +5,7 @@ import { stripVTControlCharacters } from "node:util";
 function directWedge(error) {
   return (
     typeof error?.message === "string" &&
-    /^(?:Error: )?visual: page\.screenshot did not return within \d+ms at [^\n]+ The renderer did not answer a trivial evaluate, so it is wedged, not slow/.test(
+    /^(?:Error: )?(?:visual: page\.screenshot did not return within \d+ms at [^\n]+ The renderer did not answer a trivial evaluate, so it is wedged, not slow|visual: [^\n]+ did not return within \d+ms at [^\n]+ — the shot may contain an unpainted band; check the diff for a blank stripe\. The renderer did not answer a trivial evaluate within \d+ms, so it is wedged, not slow\.)/.test(
       error.message,
     )
   );

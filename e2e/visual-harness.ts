@@ -482,6 +482,8 @@ const ANIMATION_STALL_MS = ANIMATION_WAIT_MS + PROTOCOL_SLACK_MS;
 const TRIPWIRE_STALL_MS = PROTOCOL_SLACK_MS;
 /** How long the is-the-renderer-alive probe gets to answer after a stall. */
 const RENDERER_PROBE_MS = 5_000;
+/** Closing an unresponsive target is bounded by the existing probe allowance. */
+const WEDGED_PAGE_CLOSE_MS = RENDERER_PROBE_MS;
 /**
  * The screenshot's own bound. Playwright defaults it to 30s, which is not a
  * number this file chose and not one the ceiling below accounted for — the old
@@ -756,6 +758,32 @@ async function probeRenderer(page: Page): Promise<boolean> {
 }
 
 /**
+ * A page whose renderer missed the bounded probe cannot yield a capture or a
+ * useful Playwright teardown screenshot. Closing its target from the browser
+ * process releases the test context; the caller keeps the wedge diagnosis.
+ */
+async function closeWedgedPage(page: Page): Promise<void> {
+  if (page.isClosed()) return;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const closed = await Promise.race([
+    page.close({ runBeforeUnload: false }).then(
+      () => true,
+      () => false,
+    ),
+    new Promise<false>((resolve) => {
+      timer = setTimeout(() => resolve(false), WEDGED_PAGE_CLOSE_MS);
+    }),
+  ]);
+  clearTimeout(timer);
+  if (!closed) {
+    console.warn(
+      `visual: closing the unresponsive page did not return within ${WEDGED_PAGE_CLOSE_MS}ms; ` +
+        "preserving the original renderer failure.",
+    );
+  }
+}
+
+/**
  * Await a page-side pass, but never further than `budgetMs` — see the note on
  * `PAINT_STALL_MS`. A pass that overruns is reported and the caller carries on
  * with `degraded`; a pass that *throws* still throws, because an evaluate that
@@ -793,15 +821,19 @@ export async function withRendererBound<T>(
   // greps the capture log for it to decide whether a failed shard earned its
   // one-shot rerun of the failed captures. Reword it here (or in
   // `screenshotOrGiveUp`) and that gate silently stops firing.
-  console.warn(
+  const diagnostic =
     `visual: ${what} did not return within ${budgetMs}ms at ${page.url()} — the shot may contain ` +
-      "an unpainted band; check the diff for a blank stripe. The renderer " +
-      (responsive
-        ? `answered a trivial evaluate in ${Date.now() - probeStart}ms, so the page is alive and ` +
-          "the pass itself never settled"
-        : `did not answer a trivial evaluate within ${RENDERER_PROBE_MS}ms, so it is wedged, not slow`) +
-      ".",
-  );
+    "an unpainted band; check the diff for a blank stripe. The renderer " +
+    (responsive
+      ? `answered a trivial evaluate in ${Date.now() - probeStart}ms, so the page is alive and ` +
+        "the pass itself never settled"
+      : `did not answer a trivial evaluate within ${RENDERER_PROBE_MS}ms, so it is wedged, not slow`) +
+    ".";
+  console.warn(diagnostic);
+  if (!responsive) {
+    await closeWedgedPage(page);
+    throw new Error(diagnostic);
+  }
   return degraded;
 }
 
@@ -1196,6 +1228,11 @@ export async function settleCaptureFonts(
  */
 const visualBuild = captureBuildBoundary(requireFreshBuild);
 export function installVisualBuildGuard() {
+  // If a bounded capture and its responsiveness probe both fail, close the
+  // renderer target before test teardown. Responsive failures still get
+  // Playwright's `only-on-failure` screenshot; a confirmed wedge keeps its
+  // original error and the `retain-on-failure` trace without asking that
+  // renderer for another screenshot.
   test.beforeAll(() => visualBuild.begin());
   test.afterAll(() => visualBuild.end());
   test.beforeEach(({ context }) => tileShopPhotos(context));
@@ -1322,6 +1359,7 @@ async function screenshotOrGiveUp(page: Page, path: string) {
   }
 
   const responsive = await probeRenderer(page);
+  if (!responsive) await closeWedgedPage(page);
   throw new Error(
     `visual: page.screenshot did not return within ${SCREENSHOT_GIVE_UP_MS}ms at ${page.url()} ` +
       `(${path}). The renderer ` +

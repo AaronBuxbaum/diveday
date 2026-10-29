@@ -39,6 +39,11 @@ test.use(VISUAL_STEP_BOUNDS);
  */
 
 test.describe("capture harness", () => {
+  test("runner keeps failure screenshots and traces for responsive pages", () => {
+    expect(test.info().project.use.screenshot).toBe("only-on-failure");
+    expect(test.info().project.use.trace).toBe("retain-on-failure");
+  });
+
   test.describe("lazy site maps", () => {
     signedInAsOwner();
     // The actual lazy-library request must reach Playwright's route handler.
@@ -206,6 +211,7 @@ test.describe("capture harness", () => {
       console.warn = realWarn;
     }
     expect(degraded).toBe(-1);
+    expect(page.isClosed()).toBe(false);
     const reported = warnings.join("\n");
     expect(reported).toContain("did not return within 1000ms");
     // This page is perfectly healthy — only the promise above never settled —
@@ -254,26 +260,34 @@ test.describe("capture harness", () => {
     await expect(settleCaptureFonts(page, 100)).rejects.toThrow("font readiness access failed");
   });
 
-  test("an unanswered renderer probe is reported as wedged", async ({ page }) => {
+  test("an unanswered renderer probe is reported as wedged and closes its page", async ({
+    page,
+  }) => {
     const warnings: string[] = [];
     const realWarn = console.warn;
     console.warn = (message: string) => {
       warnings.push(message);
     };
     try {
+      let closed = false;
       const unresponsivePage = {
         url: () => page.url(),
         evaluate: () => Promise.reject(new Error("renderer probe failed")),
+        isClosed: () => closed,
+        close: async () => {
+          closed = true;
+        },
       } as unknown as Page;
-      const degraded = await withRendererBound(
-        unresponsivePage,
-        "a stalled font readiness pass",
-        1,
-        new Promise<never>(() => {}),
-        "renderer-stalled",
-      );
-
-      expect(degraded).toBe("renderer-stalled");
+      await expect(
+        withRendererBound(
+          unresponsivePage,
+          "a stalled font readiness pass",
+          1,
+          new Promise<never>(() => {}),
+          "renderer-stalled",
+        ),
+      ).rejects.toThrow("wedged, not slow");
+      expect(closed).toBe(true);
       expect(warnings.join("\n")).toContain("wedged, not slow");
     } finally {
       console.warn = realWarn;
