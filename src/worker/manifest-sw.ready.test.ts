@@ -1,6 +1,16 @@
 // The real worker event surface in a node environment, isolated to diver readiness copies.
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { READY_CACHE_NAME, READY_KEEP_UNTIL_META } from "@/lib/ready-offline";
+import {
+  READY_CACHE_NAME,
+  READY_COPY_GENERATED_AT_META,
+  READY_COPY_LOCALE_META,
+  READY_COPY_TIME_ZONE_META,
+  READY_COPY_VERSION,
+  READY_COPY_VERSION_META,
+  READY_KEEP_UNTIL_META,
+  READY_OFFLINE_GENERATED_AT_PLACEHOLDER,
+  READY_OFFLINE_NOTE_ATTR,
+} from "@/lib/ready-offline";
 import { advanceClock } from "@/test/clock";
 
 vi.mock("@/lib/offline-manifest-store", () => ({
@@ -76,7 +86,7 @@ describe("the /ready/ registration's fetch", () => {
   /** The live page, naming the day its copy may be kept until (well past the frozen clock). */
   const html = (body: string) =>
     new Response(
-      `<meta name="${READY_KEEP_UNTIL_META}" content="${Number.MAX_SAFE_INTEGER}"/>${body}`,
+      `<meta name="${READY_KEEP_UNTIL_META}" content="${Number.MAX_SAFE_INTEGER}"/><meta name="${READY_COPY_VERSION_META}" content="${READY_COPY_VERSION}"/><meta name="${READY_COPY_LOCALE_META}" content="en-US"/><meta name="${READY_COPY_TIME_ZONE_META}" content="America/New_York"/><meta name="${READY_COPY_GENERATED_AT_META}" content="${Date.now()}"/>${body}<p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">No signal: ${READY_OFFLINE_GENERATED_AT_PLACEHOLDER}</p>`,
       {
         status: 200,
         headers: { "content-type": "text/html" },
@@ -85,11 +95,13 @@ describe("the /ready/ registration's fetch", () => {
 
   /** Every other cache the worker opens here (the forget markers), kept apart from the copy. */
   const others = new Map<string, Response>();
+  let failMarkerWrites = false;
   const otherStub = {
     keys: async () => [...others.keys()].map((path) => new Request(`https://dive.day${path}`)),
     delete: async (key: string | Request) =>
       others.delete(new URL(typeof key === "string" ? key : key.url, "https://dive.day").pathname),
     put: async (key: string | Request, response: Response) => {
+      if (failMarkerWrites) throw new Error("quota exceeded");
       others.set(
         new URL(typeof key === "string" ? key : key.url, "https://dive.day").pathname,
         response,
@@ -118,6 +130,7 @@ describe("the /ready/ registration's fetch", () => {
   beforeEach(() => {
     kept.clear();
     others.clear();
+    failMarkerWrites = false;
     vi.stubGlobal("caches", {
       open: async (name: string) => (name === READY_CACHE_NAME ? cacheStub : otherStub),
       match: async (key: string | Request) => (await cacheStub.match(key)) ?? otherStub.match(key),
@@ -464,9 +477,12 @@ describe("the /ready/ registration's fetch", () => {
     const keep = message("KEEP_READY_PAGE", `https://dive.day${PATH}`);
     try {
       await vi.waitFor(() => expect(finishPut).toBeDefined());
-      await message("FORGET_READY_PAGE", `https://dive.day${PATH}?cancelled=1`).settle();
+      const forget = message("FORGET_READY_PAGE", `https://dive.day${PATH}?cancelled=1`);
+      const forgetting = forget.settle();
       finishPut?.();
+      await forgetting;
       await keep.settle();
+      expect(forget.replies).toEqual([{ ok: true }]);
       expect(keep.replies).toEqual([{ ok: false }]);
       expect(kept.size).toBe(0);
     } finally {
@@ -565,6 +581,60 @@ describe("the /ready/ registration's fetch", () => {
     fetchMock.mockRejectedValueOnce(new TypeError("Failed to fetch"));
     const offline = navigate(`https://dive.day${PATH}`);
     expect(await (await offline.responded)?.text()).toContain("live");
+  });
+
+  it("serves the live page when request-marker storage fails and never saves that response", async () => {
+    failMarkerWrites = true;
+    fetchMock.mockResolvedValueOnce(html("live without marker"));
+
+    const online = navigate(`https://dive.day${PATH}`);
+    expect(await (await online.responded)?.text()).toContain("live without marker");
+    await online.settle();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(kept.size).toBe(0);
+  });
+
+  it("uses an existing saved copy on network failure when request-marker storage fails", async () => {
+    fetchMock.mockResolvedValueOnce(html("previous saved copy"));
+    const initial = navigate(`https://dive.day${PATH}`);
+    await initial.responded;
+    await initial.settle();
+    expect(kept.size).toBe(1);
+
+    failMarkerWrites = true;
+    fetchMock.mockRejectedValueOnce(new TypeError("offline"));
+    const offline = navigate(`https://dive.day${PATH}`);
+    expect(await (await offline.responded)?.text()).toContain("previous saved copy");
+    await offline.settle();
+  });
+
+  it("returns the network error rather than a copy when none exists and marker storage fails", async () => {
+    failMarkerWrites = true;
+    fetchMock.mockRejectedValueOnce(new TypeError("offline"));
+    const offline = navigate(`https://dive.day${PATH}`);
+    expect((await offline.responded)?.type).toBe("error");
+    await offline.settle();
+  });
+
+  it("clears a matching stale copy when a live terminal response arrives despite marker failure", async () => {
+    fetchMock.mockResolvedValueOnce(html("previous saved copy"));
+    const initial = navigate(`https://dive.day${PATH}`);
+    await initial.responded;
+    await initial.settle();
+    expect(kept.size).toBe(1);
+
+    failMarkerWrites = true;
+    fetchMock.mockResolvedValueOnce(
+      new Response("This booking is no longer active", {
+        headers: { "content-type": "text/html" },
+      }),
+    );
+    const terminal = navigate(`https://dive.day${PATH}`);
+    expect(await (await terminal.responded)?.text()).toContain("This booking is no longer active");
+    await terminal.settle();
+
+    expect(kept.size).toBe(0);
   });
 
   it("serves the kept copy within four seconds when the network never answers", async () => {
@@ -686,6 +756,20 @@ describe("the /ready/ registration's fetch", () => {
     expect(forget.replies).toEqual([{ ok: true }]);
   });
 
+  it("does not acknowledge a cancelled landing when its invalidation marker cannot be stored", async () => {
+    fetchMock.mockResolvedValueOnce(html("live"));
+    const online = navigate(`https://dive.day${PATH}`);
+    await online.responded;
+    await online.settle();
+    expect(kept.size).toBe(1);
+
+    failMarkerWrites = true;
+    const forget = message("FORGET_READY_PAGE", `https://dive.day${PATH}?cancelled=1`);
+    await forget.settle();
+    expect(kept.size).toBe(0);
+    expect(forget.replies).toEqual([{ ok: false }]);
+  });
+
   /** Finding 2: a keep request answered after the cancel brings back the pre-cancel page. */
   it("does not keep a page whose fetch began before the cancel", async () => {
     let answer: ((response: Response) => void) | undefined;
@@ -696,12 +780,43 @@ describe("the /ready/ registration's fetch", () => {
         }),
     );
     const keep = message("KEEP_READY_PAGE", `https://dive.day${PATH}`);
+    await vi.waitFor(() => expect(answer).toBeDefined());
     const forget = message("FORGET_READY_PAGE", `https://dive.day${PATH}?cancelled=1`);
     await forget.settle();
     answer?.(html("before the cancel"));
     await keep.settle();
     expect(kept.size).toBe(0);
     expect(keep.replies).toEqual([{ ok: false }]);
+  });
+
+  it("rejects a pre-cancel response when the device clock moves backward", async () => {
+    let answer: ((response: Response) => void) | undefined;
+    fetchMock.mockImplementationOnce(
+      () =>
+        new Promise<Response>((resolve) => {
+          answer = resolve;
+        }),
+    );
+    const staleResponse = html("before the cancel");
+    const startedAt = Date.now() + 60_000;
+    const deviceClock = vi.spyOn(Date, "now").mockReturnValue(startedAt);
+    const keep = message("KEEP_READY_PAGE", `https://dive.day${PATH}`);
+    try {
+      await vi.waitFor(() => expect(answer).toBeDefined());
+      deviceClock.mockReturnValue(startedAt - 60_000);
+      const forget = message("FORGET_READY_PAGE", `https://dive.day${PATH}?cancelled=1`);
+      await forget.settle();
+      deviceClock.mockRestore();
+
+      answer?.(staleResponse);
+      await keep.settle();
+      expect(kept.size).toBe(0);
+      expect(keep.replies).toEqual([{ ok: false }]);
+    } finally {
+      deviceClock.mockRestore();
+      answer?.(staleResponse);
+      await keep.settle();
+    }
   });
 
   it("does not keep a load that carries a one-time notice", async () => {

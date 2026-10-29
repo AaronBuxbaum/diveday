@@ -3099,6 +3099,28 @@ exports.handler = async (event) => {
         resources: [databaseDumpBucket.arnForObjects(`${DUMP_PREFIX}*`)],
       }),
     );
+    // Signing in to ECR Public lifts the anonymous pull limit that GitHub's shared runner addresses
+    // exhaust (`toomanyrequests: Data limit exceeded`, 2026-10-29), without which the drill cannot
+    // pull the Postgres image it restores with. Both actions only mint a pull token for a public
+    // registry: they read nothing in this account, and AWS accepts no resource narrower than "*".
+    // The bearer-token action carries no `sts:AWSServiceName` condition: the real call does not
+    // present that key (the first deploy with it still got AccessDenied, 2026-10-29), though
+    // `iam simulate-principal-policy` with the key supplied says allowed. The role holds nothing
+    // another service's bearer token could be spent on.
+    restoreDrillRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: "SignInToEcrPublicForRestoreDrill",
+        actions: ["ecr-public:GetAuthorizationToken"],
+        resources: ["*"],
+      }),
+    );
+    restoreDrillRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: "BearerTokenForEcrPublicSignIn",
+        actions: ["sts:GetServiceBearerToken"],
+        resources: ["*"],
+      }),
+    );
     restoreDrillRole.addToPolicy(denyReadingAnySecret());
     new cdk.CfnOutput(this, "GitHubActionsRestoreDrillRoleArn", {
       value: restoreDrillRole.roleArn,
