@@ -43,7 +43,6 @@ export const EXCLUDED_TABLES = [
   // not a column on an existing one.
   "inbound_messages",
   "staff_replies",
-  "inbox_saved_answers", // the inbox's saved replies, out with the inbox they serve
   // Which way each waiver link was handed over and what happened on that
   // channel. The outcome another system could act on is already on
   // waiver_records.csv (`delivery_status` and the provider columns beside it);

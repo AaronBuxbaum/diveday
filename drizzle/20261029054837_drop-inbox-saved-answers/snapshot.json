@@ -1,0 +1,84 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "2cdde3ba-db57-4fd3-bfcf-19a372ecce9b",
+  "prevIds": [
+    "93a63fae-3ed6-4c94-af6d-8bdb3a17d0e5",
+    "89017db3-4800-4ec9-b813-fdc29f7112e7"
+  ],
+  "footprints": [
+    {
+      "statementType": "drop_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "inbox_saved_answers"
+      ],
+      "writes": [
+        "s|tbl|public.inbox_saved_answers",
+        "n|tbl|public.inbox_saved_answers",
+        "e|tbl|public.inbox_saved_answers",
+        "n|rel|public.inbox_saved_answers",
+        "n|type|public.inbox_saved_answers"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "drop",
+      "key": "tables\u0000[\"public\",\"inbox_saved_answers\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"inbox_saved_answers\",\"id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"inbox_saved_answers\",\"shop_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"inbox_saved_answers\",\"source_person_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"inbox_saved_answers\",\"title\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"inbox_saved_answers\",\"body\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"inbox_saved_answers\",\"deleted_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"inbox_saved_answers\",\"created_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"inbox_saved_answers_shop_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"inbox_saved_answers_source_person_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"inbox_saved_answers\",\"inbox_saved_answers_shop_id_shops_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"inbox_saved_answers\",\"inbox_saved_answers_source_person_id_people_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "pks\u0000[\"public\",\"inbox_saved_answers\",\"inbox_saved_answers_pkey\"]"
+    }
+  ]
+}
