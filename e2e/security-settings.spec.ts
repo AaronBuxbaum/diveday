@@ -74,11 +74,9 @@ test.describe("account security settings", () => {
 
     // The reveal, which is the only moment ten usable codes exist anywhere: the
     // shop is told to save them because DiveDay keeps only their hashes.
-    await expect(page.getByText("Recovery codes")).toBeVisible();
+    await expect(page.getByText("Recovery codes", { exact: true })).toBeVisible();
     await expect(page.locator("code")).toHaveCount(10);
-    await expect(
-      page.getByText("These codes disappear after ten minutes."),
-    ).toBeVisible();
+    await expect(page.getByText("These codes disappear after ten minutes.")).toBeVisible();
 
     // Enrolment is durable, not a rendering of the form that just submitted.
     await page.reload();

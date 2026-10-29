@@ -202,10 +202,7 @@ describe("the rail as it renders", () => {
   it("keeps the current section selected in the rail", () => {
     pathname = `${BASE}/settings/import`;
     renderRail();
-    expect(screen.getByRole("link", { name: "yourData" })).toHaveAttribute(
-      "aria-current",
-      "true",
-    );
+    expect(screen.getByRole("link", { name: "yourData" })).toHaveAttribute("aria-current", "true");
   });
 
   it("shows every section link in the horizontal rail", () => {
@@ -360,7 +357,7 @@ describe("the rail keeps the current row in view", () => {
       this: HTMLElement,
     ) {
       if (this.getAttribute("aria-current") === "true") return rect(boxes.row);
-      if (this.classList.contains("overflow-y-auto")) return rect(boxes.scroller);
+      if (this.hasAttribute("data-settings-rail-scroller")) return rect(boxes.scroller);
       if (this.classList.contains("settings-rail-label")) return rect(boxes.label);
       return rect({ top: 0, height: 0 });
     });
@@ -368,7 +365,7 @@ describe("the rail keeps the current row in view", () => {
 
   function railScroller() {
     const nav = screen.getByRole("navigation", { name: "Settings sections" });
-    const scroller = nav.querySelector<HTMLElement>(".overflow-y-auto");
+    const scroller = nav.querySelector<HTMLElement>("[data-settings-rail-scroller]");
     if (!scroller) throw new Error("the rail has no scroll box");
     return scroller;
   }

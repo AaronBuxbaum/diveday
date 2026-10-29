@@ -146,10 +146,7 @@ export default async function SecurityPage({
         <p className="mt-1 text-muted">{t("settings.security.recoveryDescription")}</p>
         <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
           {recoveryCodes.map((code) => (
-            <code
-              key={code}
-              className="rounded bg-background px-2 py-1 text-center font-mono"
-            >
+            <code key={code} className="rounded bg-background px-2 py-1 text-center font-mono">
               {code}
             </code>
           ))}
@@ -241,10 +238,7 @@ export default async function SecurityPage({
                   {t("settings.security.setupDisclosure")}
                 </summary>
                 {!secret ? (
-                  <form
-                    action={beginTotpEnrollmentAction.bind(null, shopSlug)}
-                    className="mt-3"
-                  >
+                  <form action={beginTotpEnrollmentAction.bind(null, shopSlug)} className="mt-3">
                     <SubmitButton
                       pendingLabel={t("settings.security.starting")}
                       className={buttonClass({ variant: "secondary" })}
