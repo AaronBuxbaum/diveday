@@ -17,6 +17,7 @@ import { revalidateAndRedirect } from "@/lib/navigation";
 import {
   PARTY_RETURN_MAX_AGE_SECONDS,
   partyReturnCookiePath,
+  partyReturnCookieSecure,
   WAIVER_RETURN_COOKIE,
 } from "@/lib/party-return";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
@@ -41,7 +42,7 @@ export async function signWaiverFromReady(token: string) {
     maxAge: PARTY_RETURN_MAX_AGE_SECONDS,
     sameSite: "lax",
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: partyReturnCookieSecure(),
   });
   redirect(`/waivers/${issued.token}`);
 }
