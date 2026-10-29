@@ -28,6 +28,7 @@ function setup(tripId: string, tenant: string | null) {
   const props = {
     tripId,
     tenantSlugRef: { current: "stale-shop" as string | null },
+    getTenantRound: vi.fn(() => 1),
     resolveTenant: vi.fn(async () => tenant),
     dispatchSaved: vi.fn(),
     setList: vi.fn(),
@@ -80,6 +81,7 @@ describe("useCrossShopPurge", () => {
     expect(props.onTenantVerified).toHaveBeenLastCalledWith("reef-runners");
     expect(purge).toHaveBeenLastCalledWith(
       "reef-runners",
+      1,
       expect.objectContaining({ isCurrent: expect.any(Function) }),
     );
   });
@@ -101,6 +103,7 @@ describe("useCrossShopPurge", () => {
     await waitFor(() => expect(props.refreshDiscarded).toHaveBeenCalledTimes(1));
     expect(purge).toHaveBeenCalledWith(
       "blue-mantis",
+      1,
       expect.objectContaining({ isCurrent: expect.any(Function) }),
     );
     // A list already painted is replaced; one not yet read stays unread, so the
@@ -176,14 +179,14 @@ describe("useCrossShopPurge", () => {
       .mockResolvedValueOnce([]);
     const { props } = setup("trip-1", "reef-runners");
     await waitFor(() => expect(purge).toHaveBeenCalledTimes(1));
-    const oldGuard = purge.mock.calls[0][1]?.isCurrent;
+    const oldGuard = purge.mock.calls[0][2]?.isCurrent;
     expect(oldGuard?.()).toBe(true);
 
     await act(async () => {
       window.dispatchEvent(new Event("online"));
     });
     await waitFor(() => expect(purge).toHaveBeenCalledTimes(2));
-    const newGuard = purge.mock.calls[1][1]?.isCurrent;
+    const newGuard = purge.mock.calls[1][2]?.isCurrent;
 
     expect(oldGuard?.()).toBe(false);
     expect(newGuard?.()).toBe(true);

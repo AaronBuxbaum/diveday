@@ -2,6 +2,7 @@
 import { MANIFEST_SYNC_TAG } from "@/lib/background-flush";
 import { nowMs } from "@/lib/clock";
 import {
+  beginOfflineTenantVerificationRound,
   listOfflineManifests,
   purgeOfflineManifestsExceptShop,
   saveOfflineManifest,
@@ -53,7 +54,7 @@ import {
  */
 declare const self: ServiceWorkerGlobalScope;
 
-const CACHE_NAME = "diveday-offline-manifest-shell-v4";
+const CACHE_NAME = "diveday-offline-manifest-shell-v5";
 const SHELL_VERSION = CACHE_NAME.slice(CACHE_NAME.lastIndexOf("-v") + 1);
 const OFFLINE_SHELL = "/offline-manifest";
 
@@ -435,6 +436,7 @@ self.addEventListener("message", (event) => {
  */
 async function refreshSavedManifests(): Promise<void> {
   try {
+    const tenantRound = await beginOfflineTenantVerificationRound();
     const response = await fetch("/api/offline-manifests/upcoming", {
       // Explicit rather than relying on the same-origin default: this request
       // is worthless without the staff session, and a silent 401 here would
@@ -468,11 +470,11 @@ async function refreshSavedManifests(): Promise<void> {
     // catch below, which abandons the round before anything is written — the
     // same fail-closed order the page-side auto-save keeps, rather than
     // leaving both shops' rosters readable side by side.
-    await purgeOfflineManifestsExceptShop(shopSlug);
+    await purgeOfflineManifestsExceptShop(shopSlug, tenantRound);
     // Medical alert words another person saved on this device go before
     // anything is saved for this one (H-153 amendment). A body that names
     // nobody wipes them all: fail closed.
-    await wipeOfflineMedicalAlerts(offlineManifestViewerPersonId(body) ?? undefined);
+    await wipeOfflineMedicalAlerts(offlineManifestViewerPersonId(body) ?? undefined, tenantRound);
     for (const payload of offlineManifestPayloads(body)) {
       // Sequential, not Promise.all: these share one IndexedDB lock inside the
       // store, and a locked phone is not where to discover lock contention.
@@ -482,6 +484,7 @@ async function refreshSavedManifests(): Promise<void> {
           body,
           payload.manifests[0]?.trip.id,
         ),
+        tenantRound,
       }).catch(() => undefined);
     }
   } catch {
@@ -648,6 +651,7 @@ async function flushPendingRollCall(): Promise<void> {
   // Pass the verified slug as a comparison fence; the route checks it against
   // its authenticated session and refuses a changed tenant as one failed batch,
   // leaving every event pending for the original shop to retry.
+  const tenantRound = await beginOfflineTenantVerificationRound();
   const shopSlug = await fetchOfflineManifestShopSlug();
   if (!shopSlug) {
     // Offline, signed out, a 404, a body of the wrong shape: reconcile
@@ -669,7 +673,7 @@ async function flushPendingRollCall(): Promise<void> {
     if (!tripId) continue;
     // One at a time, for the same IndexedDB-lock reason as the save loop.
     try {
-      await syncOfflineManifest(tripId, shopSlug);
+      await syncOfflineManifest(tripId, shopSlug, tenantRound);
     } catch {
       failed = true;
     }

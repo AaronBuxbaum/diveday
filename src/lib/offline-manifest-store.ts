@@ -28,6 +28,7 @@ const DB_VERSION = 1;
 const KEY_STORE = "keys";
 const MANIFEST_STORE = "manifests";
 const KEY_ID = "manifest-aes-gcm-v1";
+const TENANT_ROUND_KEY = "tenant-verification-round-v1";
 const MANIFEST_CHANGE_EVENT = "diveday-offline-manifest-change";
 const MANIFEST_CHANGE_CHANNEL = "diveday-offline-manifest-changes-v1";
 
@@ -195,6 +196,9 @@ const DISCARD_NOTICE_LIMIT = 50;
 type StoredRecord = {
   tripId: string;
   expiresAt: string;
+  /** Non-name metadata used to recheck tenant/pending state in the delete transaction. */
+  shopSlug?: string;
+  pendingEvents?: number;
   iv: ArrayBuffer;
   ciphertext: ArrayBuffer;
 };
@@ -340,7 +344,24 @@ function additionalData(tripId: string): ArrayBuffer {
     .buffer as ArrayBuffer;
 }
 
-async function persistEnvelope(db: IDBDatabase, envelope: OfflineManifestEnvelope): Promise<void> {
+function nextTenantRound(previous: unknown): number | null {
+  if (previous === undefined) return 1;
+  if (
+    typeof previous !== "number" ||
+    !Number.isSafeInteger(previous) ||
+    previous < 0 ||
+    previous >= Number.MAX_SAFE_INTEGER
+  ) {
+    return null;
+  }
+  return previous + 1;
+}
+
+async function persistEnvelope(
+  db: IDBDatabase,
+  envelope: OfflineManifestEnvelope,
+  tenantRound?: number,
+): Promise<boolean> {
   const tripId = envelope.snapshot.manifests[0]?.trip.id;
   if (!tripId) throw new Error("Manifest snapshot has no trip");
   const key = await encryptionKey(db);
@@ -350,15 +371,62 @@ async function persistEnvelope(db: IDBDatabase, envelope: OfflineManifestEnvelop
     key,
     new TextEncoder().encode(JSON.stringify(envelope)).buffer as ArrayBuffer,
   );
-  const transaction = db.transaction(MANIFEST_STORE, "readwrite");
-  transaction.objectStore(MANIFEST_STORE).put({
-    tripId,
-    expiresAt: envelope.snapshot.expiresAt,
-    iv,
-    ciphertext,
-  } satisfies StoredRecord);
-  await transactionDone(transaction);
-  announceManifestChange(tripId);
+  const transaction = db.transaction([KEY_STORE, MANIFEST_STORE], "readwrite");
+  const done = transactionDone(transaction);
+  let persisted = false;
+  const manifestStore = transaction.objectStore(MANIFEST_STORE);
+  const write = () => {
+    manifestStore.put({
+      tripId,
+      expiresAt: envelope.snapshot.expiresAt,
+      shopSlug: envelope.snapshot.shop.slug,
+      pendingEvents: pendingOfflineEventCount(envelope),
+      iv,
+      ciphertext,
+    } satisfies StoredRecord);
+    persisted = true;
+  };
+  if (tenantRound === undefined) {
+    write();
+  } else {
+    transaction.objectStore(KEY_STORE).get(TENANT_ROUND_KEY).onsuccess = (event) => {
+      if ((event.target as IDBRequest<unknown>).result === tenantRound) write();
+    };
+  }
+  await done;
+  if (persisted) announceManifestChange(tripId);
+  return persisted;
+}
+
+/**
+ * Allocate a monotonic, device-local ordering token before starting an
+ * authenticated tenant lookup. It carries no tenant identity or authorization;
+ * it only prevents an older response (including one returned to another tab or
+ * the service worker) from acting after a newer request has begun.
+ */
+export async function beginOfflineTenantVerificationRound(): Promise<number> {
+  const db = await openDatabase();
+  try {
+    const transaction = db.transaction(KEY_STORE, "readwrite");
+    const done = transactionDone(transaction);
+    const store = transaction.objectStore(KEY_STORE);
+    let allocatedRound: number | null = null;
+    store.get(TENANT_ROUND_KEY).onsuccess = (event) => {
+      const previous = (event.target as IDBRequest<unknown>).result;
+      const nextRound = nextTenantRound(previous);
+      if (nextRound === null) {
+        transaction.abort();
+        return;
+      }
+      allocatedRound = nextRound;
+      store.put(nextRound, TENANT_ROUND_KEY);
+    };
+    await done;
+    if (allocatedRound === null) throw new Error("IndexedDB tenant round was not allocated");
+    return allocatedRound;
+  } finally {
+    db.close();
+  }
 }
 
 async function readStoredRecord(
@@ -678,6 +746,7 @@ export async function listOfflineManifests(): Promise<OfflineManifestEnvelope[]>
  */
 export async function purgeOfflineManifestsExceptShop(
   currentShopSlug: string,
+  tenantRound: number,
   options: { isCurrent?: () => boolean } = {},
 ): Promise<string[]> {
   // **The guard is here, at the chokepoint, and not at the call sites.**
@@ -701,11 +770,17 @@ export async function purgeOfflineManifestsExceptShop(
   // holding `undefined` is still a `pnpm typecheck` failure rather than a
   // silent no-op; this is the runtime half, for the values a cast lets past
   // the compiler.
-  if (typeof currentShopSlug !== "string" || currentShopSlug.length === 0) return [];
-  const isCurrent = options.isCurrent ?? (() => true);
-  if (!isCurrent()) return [];
+  if (
+    typeof currentShopSlug !== "string" ||
+    currentShopSlug.length === 0 ||
+    !Number.isSafeInteger(tenantRound) ||
+    tenantRound < 1
+  )
+    return [];
+  const isCurrent = options.isCurrent;
+  if (isCurrent && !isCurrent()) return [];
   const saved = await listOfflineManifests();
-  if (!isCurrent()) return [];
+  if (isCurrent && !isCurrent()) return [];
   const candidates = saved.filter((envelope) => envelope.snapshot.shop.slug !== currentShopSlug);
   const deletedTripIds = await Promise.all(
     candidates.map((envelope) => {
@@ -715,7 +790,7 @@ export async function purgeOfflineManifestsExceptShop(
         // A later verification round may have started while this candidate
         // waited for the trip lock. Do not let an older tenant answer delete
         // records after the browser has established a newer tenant.
-        if (!isCurrent()) return null;
+        if (isCurrent && !isCurrent()) return null;
         const current = await loadOfflineManifest(tripId);
         if (!current) return null;
         // Re-evaluate ownership from the locked record, not the pre-lock list.
@@ -724,8 +799,8 @@ export async function purgeOfflineManifestsExceptShop(
         // loadOfflineManifest can yield to IndexedDB; the verification round
         // may have changed while it was reading. Keep the final guard adjacent
         // to deletion, inside the same per-trip lock.
-        if (!isCurrent()) return null;
-        const deleted = await deleteOfflineManifest(tripId, undefined, isCurrent);
+        if (isCurrent && !isCurrent()) return null;
+        const deleted = await deletePurgeCandidate(tripId, currentShopSlug, tenantRound, isCurrent);
         if (!deleted) return null;
         return tripId;
       });
@@ -734,6 +809,65 @@ export async function purgeOfflineManifestsExceptShop(
   // Report only records this locked pass actually removed; selected-trip UI
   // uses that proof to distinguish a purge from a bookmark never saved here.
   return deletedTripIds.filter((tripId): tripId is string => tripId !== null);
+}
+
+/**
+ * Atomically compare the shared verification round and plaintext safety
+ * metadata with the delete. A different context can start a newer tenant
+ * request between any preceding await and this transaction; IDB serializes
+ * this read/write transaction against that round allocation. Missing metadata
+ * is treated as unknown and retained, never guessed to be safe to delete.
+ */
+async function deletePurgeCandidate(
+  tripId: string,
+  currentShopSlug: string,
+  tenantRound: number,
+  isCurrent?: () => boolean,
+): Promise<boolean> {
+  if (isCurrent && !isCurrent()) return false;
+  const db = await openDatabase();
+  try {
+    if (isCurrent && !isCurrent()) return false;
+    const transaction = db.transaction([KEY_STORE, MANIFEST_STORE], "readwrite");
+    const done = transactionDone(transaction);
+    const keyStore = transaction.objectStore(KEY_STORE);
+    const manifestStore = transaction.objectStore(MANIFEST_STORE);
+    let roundReady = false;
+    let recordReady = false;
+    let latestRound: unknown;
+    let record: StoredRecord | undefined;
+    let deleted = false;
+    const maybeDelete = () => {
+      if (!roundReady || !recordReady || (isCurrent && !isCurrent())) return;
+      if (latestRound !== tenantRound || !record) return;
+      if (typeof record.shopSlug !== "string" || record.shopSlug.length === 0) return;
+      if (record.shopSlug === currentShopSlug) return;
+      if (
+        typeof record.pendingEvents !== "number" ||
+        !Number.isSafeInteger(record.pendingEvents) ||
+        record.pendingEvents < 0 ||
+        record.pendingEvents > 0
+      )
+        return;
+      manifestStore.delete(tripId);
+      deleted = true;
+    };
+    keyStore.get(TENANT_ROUND_KEY).onsuccess = (event) => {
+      latestRound = (event.target as IDBRequest<unknown>).result;
+      roundReady = true;
+      maybeDelete();
+    };
+    manifestStore.get(tripId).onsuccess = (event) => {
+      record = (event.target as IDBRequest<StoredRecord | undefined>).result;
+      recordReady = true;
+      maybeDelete();
+    };
+    await done;
+    if (deleted) announceManifestChange(tripId);
+    return deleted;
+  } finally {
+    db.close();
+  }
 }
 
 export async function saveOfflineManifest(
@@ -746,6 +880,8 @@ export async function saveOfflineManifest(
      * page's own save, whose viewer the page just checked, leaves it true.
      */
     keepMedicalAlertWords?: boolean;
+    /** Shared tenant-verification round allocated before the payload request. */
+    tenantRound?: number;
   } = {},
 ): Promise<OfflineManifestEnvelope> {
   const keepMedicalAlertWords = options.keepMedicalAlertWords ?? true;
@@ -787,7 +923,9 @@ export async function saveOfflineManifest(
       };
       const db = await openDatabase();
       try {
-        await persistEnvelope(db, revoked);
+        const persisted = await persistEnvelope(db, revoked, options.tenantRound);
+        if (!persisted && options.tenantRound !== undefined)
+          throw new OfflineManifestError("shop_changed");
       } finally {
         db.close();
       }
@@ -837,7 +975,9 @@ export async function saveOfflineManifest(
     };
     const db = await openDatabase();
     try {
-      await persistEnvelope(db, envelope);
+      const persisted = await persistEnvelope(db, envelope, options.tenantRound);
+      if (!persisted && options.tenantRound !== undefined)
+        throw new OfflineManifestError("shop_changed");
     } finally {
       db.close();
     }
@@ -856,6 +996,7 @@ export async function saveOfflineMedicalAlerts(
   tripId: string,
   texts: Readonly<Record<string, string>>,
   savedBy: OfflineMedicalAlertsSavedBy,
+  tenantRound?: number,
 ): Promise<OfflineManifestEnvelope | null> {
   return withManifestLock(tripId, async () => {
     const existing = await loadOfflineManifest(tripId).catch(() => null);
@@ -870,7 +1011,8 @@ export async function saveOfflineMedicalAlerts(
     };
     const db = await openDatabase();
     try {
-      await persistEnvelope(db, envelope);
+      const persisted = await persistEnvelope(db, envelope, tenantRound);
+      if (!persisted && tenantRound !== undefined) throw new OfflineManifestError("shop_changed");
     } finally {
       db.close();
     }
@@ -886,7 +1028,10 @@ export async function saveOfflineMedicalAlerts(
  * (`/api/offline-manifests/upcoming`), so a shared tablet never shows one
  * person's saved words to the next.
  */
-export async function wipeOfflineMedicalAlerts(keepSavedBy?: string): Promise<void> {
+export async function wipeOfflineMedicalAlerts(
+  keepSavedBy?: string,
+  tenantRound?: number,
+): Promise<void> {
   const saved = await listOfflineManifests();
   await Promise.all(
     saved
@@ -905,13 +1050,17 @@ export async function wipeOfflineMedicalAlerts(keepSavedBy?: string): Promise<vo
           const { medicalAlertsSavedBy: _wiped, ...rest } = current;
           const db = await openDatabase();
           try {
-            await persistEnvelope(db, {
-              ...rest,
-              snapshot: {
-                ...current.snapshot,
-                manifests: withMedicalAlertWords(current.snapshot.manifests, {}),
+            await persistEnvelope(
+              db,
+              {
+                ...rest,
+                snapshot: {
+                  ...current.snapshot,
+                  manifests: withMedicalAlertWords(current.snapshot.manifests, {}),
+                },
               },
-            });
+              tenantRound,
+            );
           } finally {
             db.close();
           }
@@ -1176,6 +1325,7 @@ async function postPendingEvents(batch: {
 export async function syncOfflineManifest(
   tripId: string,
   expectedShopSlug?: string,
+  requestTenantRound?: number,
 ): Promise<OfflineManifestEnvelope | null> {
   const envelope = await loadOfflineManifest(tripId);
   if (!envelope) return null;
@@ -1187,6 +1337,7 @@ export async function syncOfflineManifest(
     (event) => event.syncStatus === "pending",
   );
   if (pendingOfflineEventCount(envelope) === 0 || !navigator.onLine) return envelope;
+  const tenantRound = requestTenantRound ?? (await beginOfflineTenantVerificationRound());
   const body = await postPendingEvents({
     ...(expectedShopSlug ? { expectedShopSlug } : {}),
     events: pending,
@@ -1220,7 +1371,8 @@ export async function syncOfflineManifest(
     current.arrivalEvents = offlineArrivalEvents(current).map(applyResult);
     const db = await openDatabase();
     try {
-      await persistEnvelope(db, current);
+      const persisted = await persistEnvelope(db, current, tenantRound);
+      if (!persisted) throw new OfflineManifestError("shop_changed");
     } finally {
       db.close();
     }

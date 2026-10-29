@@ -11,12 +11,12 @@ import type { DiveDaySession } from "@/lib/auth";
 import {
   appendOfflineRollCall,
   loadOfflineManifest,
-  purgeOfflineManifestsExceptShop,
   saveOfflineManifest,
   syncOfflineManifest,
 } from "@/lib/offline-manifest-store";
 import type { OfflineManifestPayload } from "@/lib/offline-manifests";
 import { fileScopedShopContext } from "@/test/db";
+import { purgeAsVerifiedShop } from "@/test/offline-manifest-purge";
 import { POST } from "./route";
 
 vi.mock("@/db/client", async (importOriginal) => {
@@ -26,6 +26,7 @@ vi.mock("@/db/client", async (importOriginal) => {
 vi.mock("@/lib/auth", () => ({ auth: vi.fn<() => Promise<DiveDaySession | null>>() }));
 
 const { getDb } = await import("@/db/client");
+
 const { auth } = (await import("@/lib/auth")) as unknown as {
   auth: ReturnType<typeof vi.fn<() => Promise<DiveDaySession | null>>>;
 };
@@ -183,7 +184,7 @@ describe("offline sync when the authenticated tenant changes in flight", () => {
 
     const sync = syncOfflineManifest(trip.id, shopA.slug);
     await started;
-    await purgeOfflineManifestsExceptShop(shopB.slug);
+    await purgeAsVerifiedShop(shopB.slug);
     expect((await loadOfflineManifest(trip.id))?.events[0]?.syncStatus).toBe("pending");
     releaseRoute();
 
@@ -213,7 +214,7 @@ describe("offline sync when the authenticated tenant changes in flight", () => {
     expect(unhinted.status).toBe(404);
 
     // A repeated purge under B must still retain A's only local evidence.
-    await purgeOfflineManifestsExceptShop(shopB.slug);
+    await purgeAsVerifiedShop(shopB.slug);
     expect((await loadOfflineManifest(trip.id))?.events[0]?.syncStatus).toBe("pending");
   });
 });

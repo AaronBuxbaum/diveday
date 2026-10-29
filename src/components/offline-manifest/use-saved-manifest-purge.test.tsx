@@ -26,6 +26,7 @@ const identity = vi.hoisted(() => ({
 vi.mock("next/navigation", () => ({ useSearchParams: () => search.params }));
 vi.mock("@/lib/offline-manifest-store", () => ({
   acknowledgeDiscardedOfflineRecords: vi.fn(),
+  beginOfflineTenantVerificationRound: vi.fn().mockResolvedValue(1),
   getActiveOfflineShellVersion: vi.fn().mockResolvedValue(null),
   listOfflineManifests: vi.fn(),
   loadOfflineManifest: vi.fn(),
@@ -142,7 +143,9 @@ describe("root-list note loss and cross-shop purge", () => {
 
     setOnline(true);
     await act(async () => identity.resolver?.("blue-mantis"));
-    await waitFor(() => expect(purgeStore).toHaveBeenCalledWith("blue-mantis"));
+    await waitFor(() =>
+      expect(purgeStore).toHaveBeenCalledWith("blue-mantis", 1, expect.anything()),
+    );
     await waitFor(() => expect(stored).toEqual([current]));
     await waitFor(() => expect(first.container.textContent).not.toContain("FOREIGN1"));
     expect(first.container.textContent).toContain("LOCAL001");
@@ -207,9 +210,10 @@ describe("root-list note loss and cross-shop purge", () => {
     });
 
     const mounted = mountRootList();
+    await waitFor(() => expect(identity.resolver).toBeTypeOf("function"));
     await act(async () => identity.resolver?.("blue-mantis"));
     await waitFor(() =>
-      expect(syncStore).toHaveBeenCalledWith("current-trip-12345678", "blue-mantis"),
+      expect(syncStore).toHaveBeenCalledWith("current-trip-12345678", "blue-mantis", 1),
     );
     await waitFor(() => expect(mounted.container.textContent).toContain("LOCAL001"));
     expect(mounted.container.textContent).not.toContain("FOREIGN1");
@@ -290,7 +294,7 @@ describe("root-list note loss and cross-shop purge", () => {
     await waitFor(() => expect(opened.result.current.tripNoteLossMessage).toBe(""));
     expect(opened.result.current.envelope).toBe(foreign);
     expect(stored).toEqual([foreign]);
-    expect(purgeStore).toHaveBeenCalledWith("blue-mantis");
+    expect(purgeStore).toHaveBeenCalledWith("blue-mantis", 1, expect.anything());
   });
 
   it("clears a selected foreign trip's notice when online purge wins a load race", async () => {
@@ -303,7 +307,9 @@ describe("root-list note loss and cross-shop purge", () => {
     const opened = renderHook(() => useSavedManifest(t));
     await waitFor(() => expect(identity.resolver).not.toBeNull());
     await act(async () => identity.resolver?.("blue-mantis"));
-    await waitFor(() => expect(purgeStore).toHaveBeenCalledWith("blue-mantis"));
+    await waitFor(() =>
+      expect(purgeStore).toHaveBeenCalledWith("blue-mantis", 1, expect.anything()),
+    );
     await waitFor(() => expect(stored).toEqual([]));
     await waitFor(() => expect(opened.result.current.removedForOtherShop).toBe(true));
 

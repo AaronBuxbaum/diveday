@@ -5,12 +5,17 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { fill, pluralForm } from "@/i18n/fill";
 import { requestBackgroundFlush } from "@/lib/background-flush";
 import {
+  beginOfflineTenantVerificationRound,
   loadOfflineManifest,
   primeOfflineManifestShell,
   saveOfflineManifest,
   syncOfflineManifest,
 } from "@/lib/offline-manifest-store";
-import type { OfflineManifestEnvelope, OfflineManifestPayload } from "@/lib/offline-manifests";
+import {
+  fetchOfflineManifestShopSlug,
+  type OfflineManifestEnvelope,
+  type OfflineManifestPayload,
+} from "@/lib/offline-manifests";
 
 // Fallback only — see ADR 20260726-manifest-push-refresh. The SSE
 // subscription below is the primary trigger; this interval (plus
@@ -113,7 +118,14 @@ export function useOfflineManifestSync(
     const cutoffNotesBefore = lastCutoffNoteCount.current;
     const unverifiedNotesBefore = lastUnverifiedNoteCount.current;
     try {
-      const envelope = await syncOfflineManifest(tripId, payloadRef.current.shop.slug);
+      const tenantRound = await beginOfflineTenantVerificationRound();
+      const expectedShopSlug = payloadRef.current.shop.slug;
+      const verifiedShopSlug = await fetchOfflineManifestShopSlug();
+      if (verifiedShopSlug !== expectedShopSlug) {
+        setMessage(copy.reconcileErrorFallback);
+        return;
+      }
+      const envelope = await syncOfflineManifest(tripId, expectedShopSlug, tenantRound);
       if (envelope) {
         setSaved(envelope);
         const rejected = envelope.events.filter((event) => event.syncStatus === "rejected").length;
@@ -217,7 +229,23 @@ export function useOfflineManifestSync(
       }
       try {
         await primeOfflineManifestShell();
-        const envelope = await saveOfflineManifest(payloadRef.current);
+        const currentPayload = payloadRef.current;
+        let tenantRound: number | undefined;
+        if (navigator.onLine) {
+          tenantRound = await beginOfflineTenantVerificationRound();
+          const verifiedShop = await fetchOfflineManifestShopSlug();
+          if (verifiedShop !== currentPayload.shop.slug) {
+            throw new Error(copy.saveErrorFallback);
+          }
+        } else {
+          const existing = await loadOfflineManifest(tripId);
+          if (!existing || existing.snapshot.shop.slug !== currentPayload.shop.slug) {
+            throw new Error(copy.saveErrorFallback);
+          }
+          setSaved(existing);
+          return;
+        }
+        const envelope = await saveOfflineManifest(currentPayload, { tenantRound });
         setSaved(envelope);
         lastPendingCount.current = envelope.events.filter(
           (event) => event.syncStatus === "pending",
@@ -244,7 +272,7 @@ export function useOfflineManifestSync(
         if (!opts.silent) setBusy(false);
       }
     },
-    [copy],
+    [copy, tripId],
   );
 
   const save = useCallback(

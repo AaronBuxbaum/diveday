@@ -7,6 +7,7 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { MANIFEST_SYNC_TAG } from "@/lib/background-flush";
 import {
+  beginOfflineTenantVerificationRound,
   listOfflineManifests,
   purgeOfflineManifestsExceptShop,
   saveOfflineManifest,
@@ -21,6 +22,7 @@ import {
 } from "@/lib/offline-manifests";
 
 vi.mock("@/lib/offline-manifest-store", () => ({
+  beginOfflineTenantVerificationRound: vi.fn().mockResolvedValue(1),
   listOfflineManifests: vi.fn(),
   purgeOfflineManifestsExceptShop: vi.fn(),
   saveOfflineManifest: vi.fn(),
@@ -182,6 +184,7 @@ beforeAll(async () => {
 beforeEach(() => {
   vi.resetAllMocks();
   installGlobals();
+  vi.mocked(beginOfflineTenantVerificationRound).mockResolvedValue(1);
   vi.mocked(listOfflineManifests).mockResolvedValue([]);
   vi.mocked(purgeOfflineManifestsExceptShop).mockResolvedValue([]);
   vi.mocked(saveOfflineManifest).mockResolvedValue(envelope("saved", "blue-mantis"));
@@ -211,7 +214,7 @@ describe("flushPendingRollCall (the sync event)", () => {
     await fireSync();
 
     expect(syncOfflineManifest).toHaveBeenCalledTimes(1);
-    expect(syncOfflineManifest).toHaveBeenCalledWith("trip-mine", "blue-mantis");
+    expect(syncOfflineManifest).toHaveBeenCalledWith("trip-mine", "blue-mantis", 1);
   });
 
   it.each([
@@ -293,14 +296,18 @@ describe("refreshSavedManifests (the push event)", () => {
 
     await firePush();
 
-    expect(purgeOfflineManifestsExceptShop).toHaveBeenCalledWith("blue-mantis");
+    expect(beginOfflineTenantVerificationRound).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(beginOfflineTenantVerificationRound).mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(fetch).mock.invocationCallOrder[0],
+    );
+    expect(purgeOfflineManifestsExceptShop).toHaveBeenCalledWith("blue-mantis", 1);
     expect(saveOfflineManifest).toHaveBeenCalledTimes(1);
     expect(vi.mocked(purgeOfflineManifestsExceptShop).mock.invocationCallOrder[0]).toBeLessThan(
       vi.mocked(saveOfflineManifest).mock.invocationCallOrder[0],
     );
     // Medical alert words go before the board is written (H-153): this body
     // names nobody, so all of them.
-    expect(wipeOfflineMedicalAlerts).toHaveBeenCalledWith(undefined);
+    expect(wipeOfflineMedicalAlerts).toHaveBeenCalledWith(undefined, 1);
     expect(vi.mocked(wipeOfflineMedicalAlerts).mock.invocationCallOrder[0]).toBeLessThan(
       vi.mocked(saveOfflineManifest).mock.invocationCallOrder[0],
     );
@@ -316,6 +323,7 @@ describe("refreshSavedManifests (the push event)", () => {
     // This body carries no `mayHoldMedicalAlertWords`: fail closed.
     expect(saveOfflineManifest).toHaveBeenCalledWith(expect.anything(), {
       keepMedicalAlertWords: false,
+      tenantRound: 1,
     });
   });
 

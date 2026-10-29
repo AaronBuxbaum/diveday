@@ -48,6 +48,7 @@ vi.mock("./use-cross-shop-purge", () => ({
 }));
 vi.mock("./use-offline-tenant", () => {
   const tenantSlugRef: { current: string | null } = { current: null };
+  const getTenantRound = () => 1;
   tenant.setVerified = (slug) => {
     tenantSlugRef.current = slug;
   };
@@ -59,7 +60,12 @@ vi.mock("./use-offline-tenant", () => {
     tenantSlugRef.current = null;
   };
   return {
-    useOfflineTenant: () => ({ tenantSlugRef, resolveTenant, invalidateTenantLookup }),
+    useOfflineTenant: () => ({
+      tenantSlugRef,
+      getTenantRound,
+      resolveTenant,
+      invalidateTenantLookup,
+    }),
   };
 });
 
@@ -321,7 +327,7 @@ describe("useSavedManifest on a trip", () => {
     const { result } = at("trip=trip-1");
     act(() => purgeState.latest?.onTenantVerified("blue-mantis"));
     await waitFor(() => expect(result.current.message).toBe(line("allCaughtUp")));
-    expect(sync).toHaveBeenCalledWith("trip-1", "blue-mantis");
+    expect(sync).toHaveBeenCalledWith("trip-1", "blue-mantis", 1);
     expect(result.current.envelope).toBe(synced);
   });
 
@@ -413,7 +419,7 @@ describe("useSavedManifest on a trip", () => {
         }),
     );
     const { result } = at("trip=trip-1");
-    await waitFor(() => expect(sync).toHaveBeenCalledWith("trip-1", "blue-mantis"));
+    await waitFor(() => expect(sync).toHaveBeenCalledWith("trip-1", "blue-mantis", 1));
 
     tenant.setVerified("reef-runners");
     await act(async () => {
@@ -667,7 +673,7 @@ describe("useSavedManifest on the list", () => {
     const { result } = at("");
     await waitFor(() => expect(result.current.list?.[0]).toBe(synced));
     expect(sync).toHaveBeenCalledTimes(1);
-    expect(sync).toHaveBeenCalledWith("trip-1", "blue-mantis");
+    expect(sync).toHaveBeenCalledWith("trip-1", "blue-mantis", 1);
     expect(result.current.list).toEqual([synced, theirs, quiet]);
     // The foreign copy's event remains pending and is never submitted. The
     // hook leaves aggregate status empty rather than saying all trips are sent;

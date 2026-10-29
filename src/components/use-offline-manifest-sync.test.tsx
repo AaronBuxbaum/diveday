@@ -2,13 +2,18 @@
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  beginOfflineTenantVerificationRound,
   loadOfflineManifest,
   OfflineManifestError,
   primeOfflineManifestShell,
   saveOfflineManifest,
   syncOfflineManifest,
 } from "@/lib/offline-manifest-store";
-import type { OfflineManifestEnvelope, OfflineManifestPayload } from "@/lib/offline-manifests";
+import {
+  fetchOfflineManifestShopSlug,
+  type OfflineManifestEnvelope,
+  type OfflineManifestPayload,
+} from "@/lib/offline-manifests";
 import { type OfflineManifestSyncCopy, useOfflineManifestSync } from "./use-offline-manifest-sync";
 
 const mockRouter = { refresh: vi.fn() };
@@ -17,11 +22,17 @@ vi.mock("@/lib/offline-manifest-store", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/offline-manifest-store")>();
   return {
     OfflineManifestError: actual.OfflineManifestError,
+    beginOfflineTenantVerificationRound: vi.fn().mockResolvedValue(1),
     loadOfflineManifest: vi.fn(),
     primeOfflineManifestShell: vi.fn(),
     saveOfflineManifest: vi.fn(),
     syncOfflineManifest: vi.fn(),
   };
+});
+
+vi.mock("@/lib/offline-manifests", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/offline-manifests")>();
+  return { ...actual, fetchOfflineManifestShopSlug: vi.fn().mockResolvedValue("blue-mantis") };
 });
 
 const TRIP_ID = "11111111-1111-1111-1111-111111111111";
@@ -113,6 +124,8 @@ beforeEach(() => {
     },
   });
   vi.mocked(loadOfflineManifest).mockResolvedValue(envelope());
+  vi.mocked(beginOfflineTenantVerificationRound).mockResolvedValue(1);
+  vi.mocked(fetchOfflineManifestShopSlug).mockResolvedValue("blue-mantis");
   vi.mocked(primeOfflineManifestShell).mockResolvedValue(undefined);
   vi.mocked(saveOfflineManifest).mockResolvedValue(envelope());
 });

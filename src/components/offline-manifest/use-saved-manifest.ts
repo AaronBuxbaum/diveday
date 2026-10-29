@@ -492,7 +492,8 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
     return () => clearInterval(interval);
   }, []);
 
-  const { tenantSlugRef, resolveTenant, invalidateTenantLookup } = useOfflineTenant();
+  const { tenantSlugRef, getTenantRound, resolveTenant, invalidateTenantLookup } =
+    useOfflineTenant();
   const tripInventoryReadyRef = useSelectedTripInventoryStatus({
     tripId,
     tenantSlugRef,
@@ -563,16 +564,11 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
       .catch(() => {});
   }, []);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: getTenantRound is stable by contract.
   const reconcileOnce = useCallback(async () => {
     if (!tripId || !navigator.onLine) return;
-    // Same rule `reconcileList` applies to the device-wide list, and it belongs
-    // here at least as much (security review, 2026-08-06): a foreign shop's
-    // record is *deliberately preserved* by the purge while it still holds a
-    // pending event, and it is listed and tappable. Submitting that event under
-    // another shop used to settle it as a per-event refusal, after which the
-    // next purge could delete the only local evidence. The route now fences a
-    // tenant change at batch level, and this check keeps us from submitting at
-    // all when the tenant cannot be established.
+    // A foreign pending copy stays on-device; never submit it under the
+    // currently verified shop's session.
     const slug = await beginTripSyncAttempt(lastTripSyncRef, resolveTenant, setMessage, t);
     if (!slug) return;
     const held = await loadOfflineManifest(tripId).catch(() => null);
@@ -585,8 +581,8 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
       return;
     }
     try {
-      const changeRevisionAtSync = selectedTripStorageRef.current.changeRevision;
-      const next = await syncOfflineManifest(tripId, slug);
+      const changeRevisionAtSync = selectedTripStorageRef.current.changeRevision,
+        next = await syncOfflineManifest(tripId, slug, getTenantRound() ?? undefined);
       if (!next) return;
       // The request may have been answered under the previous session just as
       // the device verified a different tenant. Never paint that response on
@@ -660,6 +656,7 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
 
   const reconcileList = useSavedManifestList({
     tenantSlugRef,
+    getTenantRound,
     initialListMessage: initialMessageForShop,
     reconciledListMessage: reconciledMessageForShop,
     setList,
@@ -707,6 +704,7 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
   useCrossShopPurge({
     tripId,
     tenantSlugRef,
+    getTenantRound,
     resolveTenant,
     dispatchSaved,
     setList,

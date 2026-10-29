@@ -6,6 +6,7 @@ import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { nowMs } from "@/lib/clock";
 import { TEST_FROZEN_CLOCK } from "@/test/frozen-clock";
+import { purgeAsVerifiedShop } from "@/test/offline-manifest-purge";
 import {
   acknowledgeDiscardedOfflineRecords,
   appendOfflineArrival,
@@ -13,7 +14,6 @@ import {
   listOfflineManifests,
   loadOfflineManifest,
   OFFLINE_MANIFEST_PENDING_GRACE_MS,
-  purgeOfflineManifestsExceptShop,
   readDiscardedOfflineRecords,
   saveOfflineManifest,
   syncOfflineManifest,
@@ -497,7 +497,7 @@ describe("purgeOfflineManifestsExceptShop", () => {
     await saveOfflineManifest(payload);
     await saveOfflineManifest(otherShopPayload);
 
-    expect(await purgeOfflineManifestsExceptShop(payload.shop.slug)).toHaveLength(1);
+    expect(await purgeAsVerifiedShop(payload.shop.slug)).toHaveLength(1);
 
     const remaining = await listOfflineManifests();
     expect(remaining.map((envelope) => envelope.snapshot.shop.slug)).toEqual([payload.shop.slug]);
@@ -509,7 +509,7 @@ describe("purgeOfflineManifestsExceptShop", () => {
     await saveOfflineManifest(payload);
     await saveOfflineManifest(earlierPayload);
 
-    expect(await purgeOfflineManifestsExceptShop(payload.shop.slug)).toEqual([]);
+    expect(await purgeAsVerifiedShop(payload.shop.slug)).toEqual([]);
 
     const remaining = await listOfflineManifests();
     expect(remaining).toHaveLength(2);
@@ -534,7 +534,7 @@ describe("purgeOfflineManifestsExceptShop", () => {
 
     // The cast is the whole point: this is exactly what a caller reading an
     // unvalidated body hands over, and `pnpm typecheck` cannot see it.
-    await purgeOfflineManifestsExceptShop(slug as unknown as string);
+    await purgeAsVerifiedShop(slug as unknown as string);
 
     const remaining = await listOfflineManifests();
     expect(remaining.map((envelope) => envelope.snapshot.shop.slug).sort()).toEqual(
@@ -556,7 +556,7 @@ describe("purgeOfflineManifestsExceptShop", () => {
       status: "boarded",
     });
 
-    await purgeOfflineManifestsExceptShop(payload.shop.slug);
+    await purgeAsVerifiedShop(payload.shop.slug);
 
     const preserved = await loadOfflineManifest(otherShopPayload.manifests[0].trip.id);
     expect(preserved).not.toBeNull();
@@ -580,7 +580,7 @@ describe("purgeOfflineManifestsExceptShop", () => {
     });
     await patchStoredExpiresAt(foreignTripId, EXPIRED_PAST_GRACE);
 
-    await purgeOfflineManifestsExceptShop(payload.shop.slug);
+    await purgeAsVerifiedShop(payload.shop.slug);
 
     expect(await rawStoredRecord(foreignTripId)).toBeUndefined();
     expect(await readDiscardedOfflineRecords()).toMatchObject([
@@ -1012,7 +1012,7 @@ describe("appendOfflineArrival", () => {
       bookingId: otherShopPayload.manifests[0].divers[0].bookingId,
       status: "arrived",
     });
-    await purgeOfflineManifestsExceptShop("blue-mantis");
+    await purgeAsVerifiedShop("blue-mantis");
     expect(await loadOfflineManifest(otherTripId)).not.toBeNull();
   });
 });

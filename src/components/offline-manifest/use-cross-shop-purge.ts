@@ -40,6 +40,7 @@ import type { SavedCopyAction } from "./saved-copy";
 export function useCrossShopPurge({
   tripId,
   tenantSlugRef,
+  getTenantRound,
   resolveTenant,
   dispatchSaved,
   setList,
@@ -51,6 +52,7 @@ export function useCrossShopPurge({
 }: {
   tripId: string;
   tenantSlugRef: MutableRefObject<string | null>;
+  getTenantRound: () => number | null;
   resolveTenant: () => Promise<string | null>;
   dispatchSaved: Dispatch<SavedCopyAction>;
   setList: Dispatch<SetStateAction<OfflineManifestEnvelope[] | null>>;
@@ -82,10 +84,12 @@ export function useCrossShopPurge({
       tenantSlugRef.current = null;
       const slug = await resolveTenant();
       if (!isCurrentRound() || !slug) return;
+      const tenantRound = getTenantRound();
+      if (!tenantRound) return;
       onTenantVerified(slug);
       let purgedTripIds: string[];
       try {
-        purgedTripIds = await purgeOfflineManifestsExceptShop(slug, {
+        purgedTripIds = await purgeOfflineManifestsExceptShop(slug, tenantRound, {
           isCurrent: isCurrentRound,
         });
       } catch {
@@ -178,6 +182,7 @@ export function useCrossShopPurge({
   }, [
     refreshDiscarded,
     resolveTenant,
+    getTenantRound,
     tripId,
     tenantSlugRef,
     dispatchSaved,

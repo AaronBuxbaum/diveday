@@ -31,6 +31,7 @@ vi.mock("@/lib/offline-manifest-store", async () => ({
   // (ADR 20260907-the-counter-survives-offline).
   appendOfflineArrival: vi.fn(),
   appendOfflineRollCall: vi.fn(),
+  beginOfflineTenantVerificationRound: vi.fn().mockResolvedValue(1),
   listOfflineManifests: vi.fn(),
   loadOfflineManifest: vi.fn(),
   purgeOfflineManifestsExceptShop: vi.fn().mockResolvedValue([]),
@@ -44,6 +45,12 @@ vi.mock("@/lib/offline-manifest-store", async () => ({
   getActiveOfflineShellVersion: vi.fn().mockResolvedValue(null),
   subscribeOfflineManifestChanges: vi.fn(() => () => {}),
 }));
+
+function purgedFor(slug: string) {
+  return vi
+    .mocked(purgeOfflineManifestsExceptShop)
+    .mock.calls.some(([calledSlug]) => calledSlug === slug);
+}
 
 beforeEach(() => {
   searchParams = new URLSearchParams();
@@ -194,7 +201,9 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
 
     render(<OfflineManifestView />);
 
-    await waitFor(() => expect(syncOfflineManifest).toHaveBeenCalledWith("trip-1", "blue-mantis"));
+    await waitFor(() =>
+      expect(syncOfflineManifest).toHaveBeenCalledWith("trip-1", "blue-mantis", 1),
+    );
     expect(await screen.findByText("Everything’s sent across these trips.")).toBeInTheDocument();
   });
 
@@ -227,9 +236,7 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
 
     render(<OfflineManifestView />);
 
-    await waitFor(() =>
-      expect(purgeOfflineManifestsExceptShop).toHaveBeenCalledWith("blue-mantis"),
-    );
+    await waitFor(() => expect(purgedFor("blue-mantis")).toBe(true));
     expect(
       await screen.findByRole("heading", {
         name: "No saved manifest on this phone",
@@ -316,9 +323,7 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
 
     await screen.findByText("Two-Tank Reef");
     // The server-verified slug, never one read off a snapshot this device holds.
-    await waitFor(() =>
-      expect(purgeOfflineManifestsExceptShop).toHaveBeenCalledWith("blue-mantis"),
-    );
+    await waitFor(() => expect(purgedFor("blue-mantis")).toBe(true));
     // And the list is re-read afterwards, so a record the purge removed stops
     // being displayed within the same round rather than until the next visit.
     await waitFor(() =>
@@ -337,9 +342,7 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
 
     render(<OfflineManifestView />);
 
-    await waitFor(() =>
-      expect(purgeOfflineManifestsExceptShop).toHaveBeenCalledWith("blue-mantis"),
-    );
+    await waitFor(() => expect(purgedFor("blue-mantis")).toBe(true));
     expect(fetch).toHaveBeenCalledWith(
       "/api/offline-manifests/identity",
       expect.objectContaining({ credentials: "same-origin" }),
@@ -380,10 +383,10 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
     render(<OfflineManifestView />);
 
     // Both consumers have run: the purge fired and the pending event synced.
+    await waitFor(() => expect(purgedFor("blue-mantis")).toBe(true));
     await waitFor(() =>
-      expect(purgeOfflineManifestsExceptShop).toHaveBeenCalledWith("blue-mantis"),
+      expect(syncOfflineManifest).toHaveBeenCalledWith("trip-1", "blue-mantis", 1),
     );
-    await waitFor(() => expect(syncOfflineManifest).toHaveBeenCalledWith("trip-1", "blue-mantis"));
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 
@@ -395,9 +398,7 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
     vi.mocked(fetch).mockImplementation(async () => identityResponse("blue-mantis"));
 
     render(<OfflineManifestView />);
-    await waitFor(() =>
-      expect(purgeOfflineManifestsExceptShop).toHaveBeenCalledWith("blue-mantis"),
-    );
+    await waitFor(() => expect(purgedFor("blue-mantis")).toBe(true));
 
     // A different shop's staff signs in on this tablet.
     vi.mocked(fetch).mockImplementation(async () => identityResponse("reef-runners"));
@@ -407,9 +408,7 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
 
     // The purge follows the *new* answer, so blue-mantis's rosters are the ones
     // that stop being decryptable on this device.
-    await waitFor(() =>
-      expect(purgeOfflineManifestsExceptShop).toHaveBeenCalledWith("reef-runners"),
-    );
+    await waitFor(() => expect(purgedFor("reef-runners")).toBe(true));
   });
 
   // Security review, 2026-08-06: `?trip=<id>` is the URL the list itself links
@@ -423,9 +422,7 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
 
     render(<OfflineManifestView />);
 
-    await waitFor(() =>
-      expect(purgeOfflineManifestsExceptShop).toHaveBeenCalledWith("blue-mantis"),
-    );
+    await waitFor(() => expect(purgedFor("blue-mantis")).toBe(true));
   });
 
   // The purge needs a server round trip to learn the tenant; the roll call does

@@ -448,3 +448,19 @@ tenant; they become visible again when their own shop is verified. This preserve
 showing another shop's trip title, shop name, roster, or loss references in a verified session. The
 tradeoff is explicit: offline pre-verification references can still expose cross-shop metadata on a
 shared device. No tenant-confidentiality guarantee applies while identity cannot be verified.
+
+**Amendment (2026-10-28): tenant purges are ordered across tabs and workers.** A hook-local generation
+cannot fence a delayed response handled by another tab or the service worker. Each authenticated
+tenant request now reserves a monotonically increasing IndexedDB round before sending the request.
+Network-derived writes (the autosave/worker snapshot, a live snapshot and sync reconciliation) must
+present the round reserved before their request. Their IndexedDB write checks that token in the same
+transaction as the envelope write, so an older response cannot become the newest round by arriving
+late. Local offline marks do not advance tenant ordering; their pending state is recorded with the
+encrypted envelope and checked atomically by purge. A purge's final decision and delete are one
+read/write transaction across the counter and manifest stores, and it proceeds only when its request
+is still newest, the row still names another shop, and it has no pending events. This closes the gap
+where an old Shop B response could delete a newer Shop A copy after a B-to-A switch, or write stale
+snapshot/sync data after a newer tenant verification. The row carries only the shop slug and
+pending-event count outside the encrypted envelope so the transaction can recheck those conditions
+without decrypting inside IndexedDB; neither field contains a person name or note. Missing metadata
+fails closed by retaining the row. The offline shell version advances with the service-worker change.

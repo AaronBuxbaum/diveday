@@ -93,7 +93,7 @@ export const OFFLINE_MANIFEST_RECORD_VERSION = 4 as const;
  * so unlike the snapshot version above, this bump is *worth* the purge: there
  * is no queued roll call inside an app shell to lose, only stale bundles.
  */
-export const OFFLINE_MANIFEST_SHELL_VERSION = "v4";
+export const OFFLINE_MANIFEST_SHELL_VERSION = "v5";
 
 /**
  * The query parameter the service worker puts on its own redirect to the

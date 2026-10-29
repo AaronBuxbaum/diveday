@@ -112,6 +112,7 @@ export function useTripPendingManifestInventory({
 
 export function useSavedManifestList({
   tenantSlugRef,
+  getTenantRound,
   initialListMessage,
   reconciledListMessage,
   setList,
@@ -119,6 +120,7 @@ export function useSavedManifestList({
   handleTenantChanged,
 }: {
   tenantSlugRef: { current: string | null };
+  getTenantRound: () => number | null;
   initialListMessage: (saved: OfflineManifestEnvelope[], shopSlug: string) => string;
   reconciledListMessage: (saved: OfflineManifestEnvelope[], shopSlug: string) => string;
   setList: (saved: OfflineManifestEnvelope[]) => void;
@@ -146,16 +148,18 @@ export function useSavedManifestList({
         reconcilable.map((envelope) => {
           const id = envelope.snapshot.manifests[0]?.trip.id;
           return id
-            ? syncOfflineManifest(id, currentShopSlug).catch((error) => {
-                if (isShopChanged(error) && !shopChanged) {
-                  shopChanged = true;
-                  // Quarantine on the first explicit mismatch. Another
-                  // trip sync can remain pending indefinitely; waiting for
-                  // Promise.all would keep this tenant's roster actionable.
-                  handleTenantChanged();
-                }
-                return null;
-              })
+            ? syncOfflineManifest(id, currentShopSlug, getTenantRound() ?? undefined).catch(
+                (error) => {
+                  if (isShopChanged(error) && !shopChanged) {
+                    shopChanged = true;
+                    // Quarantine on the first explicit mismatch. Another
+                    // trip sync can remain pending indefinitely; waiting for
+                    // Promise.all would keep this tenant's roster actionable.
+                    handleTenantChanged();
+                  }
+                  return null;
+                },
+              )
             : Promise.resolve(null);
         }),
       );
@@ -175,6 +179,7 @@ export function useSavedManifestList({
     },
     [
       tenantSlugRef,
+      getTenantRound,
       initialListMessage,
       reconciledListMessage,
       setList,

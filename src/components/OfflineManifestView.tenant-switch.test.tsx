@@ -28,6 +28,7 @@ vi.mock("@/lib/offline-manifest-store", async () => ({
     )
   ).OfflineManifestError,
   acknowledgeDiscardedOfflineRecords: vi.fn().mockResolvedValue(undefined),
+  beginOfflineTenantVerificationRound: vi.fn().mockResolvedValue(1),
   getActiveOfflineShellVersion: vi.fn().mockResolvedValue(null),
   loadOfflineManifest: vi.fn(),
   listOfflineManifests: vi.fn(),
@@ -218,7 +219,7 @@ it("keeps the recovery notice and suppresses caught-up copy after current-shop s
     ),
   ).toBeInTheDocument();
   await waitFor(() =>
-    expect(syncOfflineManifest).toHaveBeenCalledWith("current-trip-34", "reef-runners"),
+    expect(syncOfflineManifest).toHaveBeenCalledWith("current-trip-34", "reef-runners", 1),
   );
   expect(screen.queryByText("Everything’s sent across these trips.")).not.toBeInTheDocument();
   expect(screen.queryByText("All up to date.")).not.toBeInTheDocument();
@@ -275,7 +276,7 @@ it("shows the tenant-neutral recovery notice on a selected trip after shop verif
     ),
   ).toBeInTheDocument();
   await waitFor(() =>
-    expect(syncOfflineManifest).toHaveBeenCalledWith("trip-b-44", "reef-runners"),
+    expect(syncOfflineManifest).toHaveBeenCalledWith("trip-b-44", "reef-runners", 1),
   );
   await act(async () => resolveTripSync({ ...selected, events: [] }));
   expect(screen.queryByText("Everything’s sent.")).not.toBeInTheDocument();
@@ -389,7 +390,11 @@ it("clears caught-up copy while reconnect waits for fresh tenant verification", 
   await waitFor(() =>
     expect(vi.mocked(syncOfflineManifest).mock.calls.length).toBeGreaterThan(callsBeforeReconnect),
   );
-  expect(vi.mocked(syncOfflineManifest)).toHaveBeenCalledWith("trip-reconnect-51", "blue-mantis");
+  expect(vi.mocked(syncOfflineManifest)).toHaveBeenCalledWith(
+    "trip-reconnect-51",
+    "blue-mantis",
+    1,
+  );
   expect(pendingMark.syncStatus).toBe("pending");
 });
 
@@ -434,7 +439,7 @@ it("withholds selected-trip caught-up copy until the tenant-scoped inventory set
   render(<OfflineManifestView />);
 
   await waitFor(() =>
-    expect(syncOfflineManifest).toHaveBeenCalledWith("trip-b-45", "reef-runners"),
+    expect(syncOfflineManifest).toHaveBeenCalledWith("trip-b-45", "reef-runners", 1),
   );
   await waitFor(() => expect(syncOfflineManifest).toHaveResolved());
   expect(screen.queryByText("Everything’s sent.")).not.toBeInTheDocument();
@@ -474,7 +479,7 @@ it("keeps caught-up copy suppressed when the selected-trip inventory read fails"
   render(<OfflineManifestView />);
 
   await waitFor(() =>
-    expect(syncOfflineManifest).toHaveBeenCalledWith("trip-b-46", "reef-runners"),
+    expect(syncOfflineManifest).toHaveBeenCalledWith("trip-b-46", "reef-runners", 1),
   );
   await waitFor(() => expect(syncOfflineManifest).toHaveResolved());
   expect(screen.queryByText("Everything’s sent.")).not.toBeInTheDocument();
@@ -700,7 +705,7 @@ it("keeps a newer sync failure authoritative over inventory captured before it",
   await waitFor(() => expect(syncOfflineManifest).toHaveBeenCalledTimes(1));
   await waitFor(() => expect(inventoryReads.length).toBeGreaterThan(0));
   await waitFor(() =>
-    expect(syncOfflineManifest).toHaveBeenNthCalledWith(1, "trip-retry-49", "blue-mantis"),
+    expect(syncOfflineManifest).toHaveBeenNthCalledWith(1, "trip-retry-49", "blue-mantis", 1),
   );
 
   await act(async () => window.dispatchEvent(new Event("online")));
@@ -775,7 +780,7 @@ it("quarantines a selected roster through failed verification, then scopes it af
 
   render(<OfflineManifestView />);
   expect(await screen.findByText("Dana Divemaster")).toBeInTheDocument();
-  await waitFor(() => expect(syncOfflineManifest).toHaveBeenCalledWith("trip-1", "blue-mantis"));
+  await waitFor(() => expect(syncOfflineManifest).toHaveBeenCalledWith("trip-1", "blue-mantis", 1));
 
   const lookupsBeforeMismatch = identityLookups;
   mismatch = true;
@@ -798,7 +803,13 @@ it("quarantines a selected roster through failed verification, then scopes it af
   expect(screen.getByRole("heading", { name: "Checking this device’s shop" })).toBeInTheDocument();
   allowShopB = true;
   await act(async () => window.dispatchEvent(new Event("online")));
-  await waitFor(() => expect(purgeOfflineManifestsExceptShop).toHaveBeenCalledWith("reef-runners"));
+  await waitFor(() =>
+    expect(purgeOfflineManifestsExceptShop).toHaveBeenCalledWith(
+      "reef-runners",
+      1,
+      expect.objectContaining({ isCurrent: expect.any(Function) }),
+    ),
+  );
   expect(
     await screen.findByRole("heading", { name: "This trip isn’t available here" }),
   ).toBeInTheDocument();
