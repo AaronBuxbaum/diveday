@@ -1,6 +1,6 @@
 # H-125: Which price does a course session show?
 
-- **Status:** Chosen
+- **Status:** Implemented
 - **Human owner:** Product owner
 
 ## Decision or approval needed
@@ -15,10 +15,10 @@ The choice, and where it is said.
 
 **Decided 2026-10-14 (Product owner: Aaron Buxbaum, in the project thread, "Do recommended decisions for each", taking the recommendation):** For a course session the course total is the price; every row reads it, and the trip editor stops holding its own price on a course session.
 
-- Public rows built by layer r4-1 (fourth review item 2): the schedule rows, the "Next boat with space" card, the JSON-LD offer and the embed widgets price a course session by `perDiverBookingPriceCents`. The staff rows and the trip editor's price field are layer r4-3's; this row flips to Implemented when that lands.
+- Public schedule rows, the "Next boat with space" card, JSON-LD offers and embed widgets use `perDiverBookingPriceCents`; the staff week board, Today departures and open roll call use the same helper. The course-selected board builder shows the course total instead of a separate trip-price field. The trip editor does the same and clears any stored trip fee when staff next save its booking details. The shared trip writer enforces this for new one-off, series and copied departures. When the course has no instruction price, the builder and editor keep the trip fee available as the documented fallback; ordinary trip pricing is unchanged.
 
 ## Unblocks / follow-up
 
-Layer r4-3: staff rows and the trip editor.
+The trip schema keeps `trips.priceCents` for non-course departures and as the fallback fee for course entries without an instruction price. A course's own instruction price takes precedence, and the editor clears any separate fee when staff save booking details. Demo course-session seeds follow the same rule.
 
 Part of the [human decision log](README.md#decision-register).

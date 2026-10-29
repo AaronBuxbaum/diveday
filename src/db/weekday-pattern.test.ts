@@ -6,14 +6,14 @@ import { departuresOnWeekday, weekdayPatternFor } from "./weekday-pattern";
 const ctx = fileScopedShopContext();
 
 /** Six Saturdays before the frozen "now" below, in the seeded shop's own zone. */
-const NOW = new Date("2026-08-29T20:00:00Z");
+const NOW = new Date("2030-08-31T20:00:00Z");
 const SATURDAYS = [
-  "2026-07-18",
-  "2026-07-25",
-  "2026-08-01",
-  "2026-08-08",
-  "2026-08-15",
-  "2026-08-22",
+  "2030-07-20",
+  "2030-07-27",
+  "2030-08-03",
+  "2030-08-10",
+  "2030-08-17",
+  "2030-08-24",
 ];
 
 async function putUp(date: string, startHour: number, title: string, crew: string[]) {
@@ -27,7 +27,8 @@ async function putUp(date: string, startHour: number, title: string, crew: strin
     priceCents: 9500,
   });
   if (!trip) throw new Error("createTrip refused a plain departure");
-  if (crew.length > 0) await setTripCrew(ctx.db, ctx.shop.id, trip.id, crew);
+  if (crew.length > 0)
+    expect(await setTripCrew(ctx.db, ctx.shop.id, trip.id, crew), `crew for ${date}`).toBe(true);
   return trip;
 }
 
@@ -40,13 +41,13 @@ describe("departuresOnWeekday", () => {
     if (!keiko || !sal) throw new Error("seed has fewer than two staff");
     for (const date of SATURDAYS) await putUp(date, 7, "Two-Tank Reef", [keiko, sal]);
     // A Saturday seven weeks back is outside the window; a Sunday is not this weekday.
-    await putUp("2026-07-11", 7, "Two-Tank Reef", [keiko]);
-    await putUp("2026-08-23", 7, "Sunday Reef", [keiko]);
+    await putUp("2030-07-13", 7, "Two-Tank Reef", [keiko]);
+    await putUp("2030-08-25", 7, "Sunday Reef", [keiko]);
 
     const rows = await departuresOnWeekday(
       ctx.db,
       ctx.shop.id,
-      "2026-09-05",
+      "2030-09-07",
       ctx.shop.timezone,
       NOW,
     );
@@ -65,7 +66,7 @@ describe("departuresOnWeekday", () => {
     const pattern = await weekdayPatternFor(
       ctx.db,
       ctx.shop.id,
-      "2026-09-05",
+      "2030-09-07",
       ctx.shop.timezone,
       NOW,
     );

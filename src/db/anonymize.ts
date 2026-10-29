@@ -127,6 +127,7 @@ import {
   people,
   personCourtesyEmailUnsubscribeTokens,
   personRoles,
+  preDepartureCheckEvents,
   priorGearAssignments,
   priorVisits,
   recapPhotos,
@@ -379,6 +380,24 @@ function buddyMemberNameMatch(
 }
 
 /**
+ * Whole-word handles for retained crew prose: every recorded identity's full
+ * and family forms, plus its given name. Erasure prioritizes hiding the diver's
+ * name, so a matching word can redact unrelated prose and a same-shop
+ * namesake's mention. The ADR records this accepted tradeoff. The shared name
+ * matcher enforces the minimum useful length and escapes each value.
+ */
+function crewNoteNameMatch(names: string[]): string | undefined {
+  const patterns = new Set<string>();
+  for (const name of names) {
+    const fullAndFamily = buddyMemberNameMatch(name, { familyName: true });
+    if (fullAndFamily) patterns.add(fullAndFamily);
+    const givenName = wholeWordPattern(name.trim().split(/\s+/)[0] ?? "");
+    if (givenName) patterns.add(givenName);
+  }
+  return patterns.size > 0 ? [...patterns].join("|") : undefined;
+}
+
+/**
  * The digits of the number on a diver's record, for the sweeps that compare it
  * against free text somebody else typed.
  *
@@ -529,6 +548,16 @@ export async function anonymizeDiver(
       now,
     });
 
+    // Invalidate every offline snapshot issued before this committed erasure.
+    // Note sync compares its authenticated snapshot epoch while holding the
+    // same shop fence, so an old queued note cannot arrive after the sweep.
+    const [epoch] = await tx
+      .update(shops)
+      .set({ offlineErasureEpoch: sql`${shops.offlineErasureEpoch} + 1` })
+      .where(eq(shops.id, input.shopId))
+      .returning({ value: shops.offlineErasureEpoch });
+    if (!epoch) throw new Error("anonymizeDiver: shop erasure epoch update returned no row");
+
     return { ok: true, alreadyAnonymized: false, ...result } as const;
   });
 
@@ -592,15 +621,10 @@ type ScrubResult = {
  * Every `people` row whose `merged_into_person_id` chain resolves to this one.
  *
  * A merge into a record that was itself later merged makes this a chain rather
- * than a single hop, so it is walked breadth-first. The walk is **bounded** two
- * ways: a `seen` set, so a cycle cannot spin (the schema's
- * `people_merged_into_not_self` check rules out the one-hop case, and nothing
- * rules out a longer loop), and a hard step ceiling, so a pathological graph
- * cannot hold the erasure transaction open. Both are belt and braces on a chain
- * that is one hop deep in practice.
+ * than a single hop, so it is walked breadth-first. The `seen` set makes the
+ * walk terminate even if malformed pointers form a cycle; there is no depth
+ * cap that could silently leave identity data behind.
  */
-const MERGE_CHAIN_MAX_STEPS = 64;
-
 async function mergedIntoChain(
   tx: AppTransaction,
   shopId: string,
@@ -609,7 +633,7 @@ async function mergedIntoChain(
   const found: string[] = [];
   const seen = new Set<string>([personId]);
   let frontier = [personId];
-  for (let step = 0; step < MERGE_CHAIN_MAX_STEPS && frontier.length > 0; step += 1) {
+  while (frontier.length > 0) {
     const rows = await tx
       .select({ id: people.id })
       .from(people)
@@ -738,6 +762,15 @@ async function scrubPersonRecord(
   // so the merge audit trail (`merged_into_person_id`, `merged_at`,
   // `merged_by_person_id`) is deliberately left in place.
   const mergedShellIds = await mergedIntoChain(tx, shopId, personId);
+  const mergedShellNames = await tx
+    .select({ fullName: people.fullName })
+    .from(people)
+    // diveday:allow-deleted-people: erasure must collect names from soft-deleted merge shells.
+    .where(and(eq(people.shopId, shopId), inArray(people.id, mergedShellIds)));
+  const crewNoteNamePattern = crewNoteNameMatch([
+    ctx.fullName,
+    ...mergedShellNames.map((row) => row.fullName),
+  ]);
   for (const shellId of mergedShellIds) {
     await tx
       .update(people)
@@ -765,7 +798,11 @@ async function scrubPersonRecord(
   // an erased record as an active one of any kind.
   await tx.delete(personRoles).where(eq(personRoles.personId, personId));
 
-  // Versions retain personal credential dates even after the current row was deleted.
+  // Former staff may later hold only a diver role and become eligible for
+  // erasure. Their own credential versions still contain personal dates even
+  // when the current credential was deleted during offboarding. The merge
+  // guard prevents staff history from being present on a merged-away shell, so
+  // this intentionally follows only the directly erased person.
   await tx.delete(staffCredentialHistory).where(
     and(
       eq(staffCredentialHistory.shopId, shopId),
@@ -779,10 +816,10 @@ async function scrubPersonRecord(
     ),
   );
 
-  // Crew observations can exist without this person holding a booking.
   await tx
     .update(rollCallCrewEvents)
     .set({
+      note: null,
       credentialSnapshot: null,
       credentialSnapshotStartedAt: null,
       credentialSnapshotCapturedAt: null,
@@ -791,14 +828,46 @@ async function scrubPersonRecord(
       and(
         eq(rollCallCrewEvents.shopId, shopId),
         eq(rollCallCrewEvents.personId, personId),
-        isNotNull(rollCallCrewEvents.credentialSnapshot),
+        or(isNotNull(rollCallCrewEvents.note), isNotNull(rollCallCrewEvents.credentialSnapshot)),
       ),
     );
 
-  // Credentials belong to the staff member's operational record, but their
-  // names and identifiers are still personal data when the target was later
-  // entered as a diver. Retire those rows without leaving a credential tied
-  // to an erased identity.
+  // A crew note can name this diver while belonging to a different crew
+  // member. Preserve the boarding context and redact only the matching name,
+  // using the same bounded whole-word family-name match as other retained
+  // free-text trails. The shop predicate keeps another tenant's prose out.
+  if (crewNoteNamePattern) {
+    const notesNamingDiver = await tx
+      .update(rollCallCrewEvents)
+      .set({
+        note: sql`regexp_replace(${rollCallCrewEvents.note}, ${crewNoteNamePattern}, ${REDACTED_TEXT}, 'gi')`,
+      })
+      .where(
+        and(
+          eq(rollCallCrewEvents.shopId, shopId),
+          isNotNull(rollCallCrewEvents.note),
+          sql`${rollCallCrewEvents.note} ~* ${crewNoteNamePattern}`,
+        ),
+      )
+      .returning({ id: rollCallCrewEvents.id });
+    logFuzzyMatch(ctx, "roll_call_crew_note_name", notesNamingDiver.length);
+
+    const checklistNotesNamingDiver = await tx
+      .update(preDepartureCheckEvents)
+      .set({
+        note: sql`regexp_replace(${preDepartureCheckEvents.note}, ${crewNoteNamePattern}, ${REDACTED_TEXT}, 'gi')`,
+      })
+      .where(
+        and(
+          eq(preDepartureCheckEvents.shopId, shopId),
+          isNotNull(preDepartureCheckEvents.note),
+          sql`${preDepartureCheckEvents.note} ~* ${crewNoteNamePattern}`,
+        ),
+      )
+      .returning({ id: preDepartureCheckEvents.id });
+    logFuzzyMatch(ctx, "pre_departure_check_note_name", checklistNotesNamingDiver.length);
+  }
+
   await tx
     .update(staffCredentials)
     .set({
@@ -813,6 +882,7 @@ async function scrubPersonRecord(
       updatedAt: now,
     })
     .where(and(eq(staffCredentials.shopId, shopId), eq(staffCredentials.personId, personId)));
+
   return [];
 }
 
@@ -1403,17 +1473,6 @@ async function scrubBookingRows(
             isNotNull(rollCallEvents.readinessBlockers),
             isNotNull(rollCallEvents.certificationSnapshot),
           ),
-        ),
-      );
-
-    await tx
-      .update(rollCallCrewEvents)
-      .set({ note: null })
-      .where(
-        and(
-          eq(rollCallCrewEvents.shopId, shopId),
-          eq(rollCallCrewEvents.personId, personId),
-          isNotNull(rollCallCrewEvents.note),
         ),
       );
 

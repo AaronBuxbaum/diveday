@@ -2,6 +2,7 @@
 import { cleanup, render, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  beginOfflineTenantVerificationRound,
   primeOfflineManifestShell,
   purgeOfflineManifestsExceptShop,
   saveOfflineManifest,
@@ -11,6 +12,7 @@ import type { OfflineManifestPayload } from "@/lib/offline-manifests";
 import { OfflineManifestAutoSave } from "./OfflineManifestAutoSave";
 
 vi.mock("@/lib/offline-manifest-store", () => ({
+  beginOfflineTenantVerificationRound: vi.fn().mockResolvedValue(1),
   primeOfflineManifestShell: vi.fn(),
   purgeOfflineManifestsExceptShop: vi.fn(),
   saveOfflineManifest: vi.fn(),
@@ -84,7 +86,7 @@ function deferred<T>() {
 
 beforeEach(() => {
   vi.stubGlobal("fetch", vi.fn());
-  vi.mocked(purgeOfflineManifestsExceptShop).mockResolvedValue(undefined);
+  vi.mocked(purgeOfflineManifestsExceptShop).mockResolvedValue([]);
   vi.mocked(wipeOfflineMedicalAlerts).mockResolvedValue(undefined);
 });
 
@@ -130,7 +132,11 @@ describe("OfflineManifestAutoSave", () => {
     expect(fetch).toHaveBeenCalledTimes(1);
     // The server-verified shop identity drives the purge — never a
     // client-supplied value (see ADR 20260726-shopwide-offline-manifest-priming).
-    expect(purgeOfflineManifestsExceptShop).toHaveBeenCalledWith("blue-mantis");
+    expect(purgeOfflineManifestsExceptShop).toHaveBeenCalledWith("blue-mantis", 1);
+    expect(beginOfflineTenantVerificationRound).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(beginOfflineTenantVerificationRound).mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(fetch).mock.invocationCallOrder[0],
+    );
     expect(
       vi.mocked(saveOfflineManifest).mock.calls.map((call) => call[0].manifests[0].trip.id),
     ).toEqual(["trip-1", "trip-2"]);
@@ -144,7 +150,7 @@ describe("OfflineManifestAutoSave", () => {
     render(<OfflineManifestAutoSave />);
 
     await waitFor(() =>
-      expect(purgeOfflineManifestsExceptShop).toHaveBeenCalledWith("blue-mantis"),
+      expect(purgeOfflineManifestsExceptShop).toHaveBeenCalledWith("blue-mantis", 1),
     );
     expect(saveOfflineManifest).not.toHaveBeenCalled();
   });
@@ -214,7 +220,7 @@ describe("OfflineManifestAutoSave", () => {
     render(<OfflineManifestAutoSave />);
 
     await waitFor(() =>
-      expect(purgeOfflineManifestsExceptShop).toHaveBeenCalledWith("blue-mantis"),
+      expect(purgeOfflineManifestsExceptShop).toHaveBeenCalledWith("blue-mantis", 1),
     );
     expect(saveOfflineManifest).not.toHaveBeenCalled();
   });
@@ -266,7 +272,7 @@ describe("OfflineManifestAutoSave", () => {
     render(<OfflineManifestAutoSave />);
 
     await waitFor(() =>
-      expect(purgeOfflineManifestsExceptShop).toHaveBeenCalledWith("blue-mantis"),
+      expect(purgeOfflineManifestsExceptShop).toHaveBeenCalledWith("blue-mantis", 1),
     );
     expect(saveOfflineManifest).not.toHaveBeenCalled();
   });
@@ -299,7 +305,7 @@ describe("OfflineManifestAutoSave", () => {
     );
     const first = render(<OfflineManifestAutoSave />);
     await waitFor(() => expect(saveOfflineManifest).toHaveBeenCalledTimes(1));
-    expect(wipeOfflineMedicalAlerts).toHaveBeenCalledWith("person-now");
+    expect(wipeOfflineMedicalAlerts).toHaveBeenCalledWith("person-now", 1);
     expect(vi.mocked(wipeOfflineMedicalAlerts).mock.invocationCallOrder[0]).toBeLessThan(
       vi.mocked(saveOfflineManifest).mock.invocationCallOrder[0] ?? 0,
     );
@@ -308,7 +314,7 @@ describe("OfflineManifestAutoSave", () => {
     vi.mocked(fetch).mockResolvedValue(upcomingResponse([payloadFor("trip-1")]));
     render(<OfflineManifestAutoSave />);
     await waitFor(() => expect(saveOfflineManifest).toHaveBeenCalledTimes(2));
-    expect(wipeOfflineMedicalAlerts).toHaveBeenLastCalledWith(undefined);
+    expect(wipeOfflineMedicalAlerts).toHaveBeenLastCalledWith(undefined, 1);
   });
 
   it("tells each save whether this viewer may still hold that departure's words (security review 2, L3)", async () => {

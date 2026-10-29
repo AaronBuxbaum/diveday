@@ -1,7 +1,9 @@
 import type { ReactNode } from "react";
+import { OFFLINE_NOTICE_CLASS } from "@/components/offline-notice";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import type { OfflineManifestTranslator } from "@/i18n/offline-manifest-messages";
+import { StatusMessage } from "./StatusMessage";
 
 /**
  * The page's shape with no words in it: the eyebrow and title the view opens
@@ -48,7 +50,30 @@ export function OfflineOpeningScreen({
         title={t("shared.offlineManifest.openingHeading")}
         meta={
           <p className="text-muted" role="status" aria-live="polite">
-            {message}
+            <StatusMessage message={message} />
+          </p>
+        }
+      />
+    </main>
+  );
+}
+
+/** A server-detected shop switch: retain encrypted events, but never leave the old roster actionable. */
+export function OfflineTenantVerificationScreen({
+  t,
+  message,
+}: {
+  t: OfflineManifestTranslator;
+  message: string;
+}) {
+  return (
+    <main className="boat-mode mx-auto w-full max-w-3xl flex-1 px-6 py-16">
+      <ShopPageHeader
+        eyebrow={t("shared.offlineManifest.single.eyebrow")}
+        title={t("shared.offlineManifest.single.tenantChangedHeading")}
+        meta={
+          <p className="text-muted" role="status" aria-live="polite">
+            <StatusMessage message={message} />
           </p>
         }
       />
@@ -67,6 +92,7 @@ export function OfflineNoSavedTrip({
   removedForOtherShop,
   readFailed,
   discardNotice,
+  foreignPendingChanges = false,
 }: {
   t: OfflineManifestTranslator;
   message: string;
@@ -74,6 +100,8 @@ export function OfflineNoSavedTrip({
   /** The store read threw (#2637): a copy may be there and failed to open. */
   readFailed: boolean;
   discardNotice: ReactNode;
+  /** A tenant-neutral recovery path for pending copies retained from another shop. */
+  foreignPendingChanges?: boolean;
 }) {
   // "Nothing saved on this phone yet" is a claim about this device having
   // never held a copy. When the cross-shop purge has just taken one away
@@ -92,6 +120,15 @@ export function OfflineNoSavedTrip({
   return (
     <main className="boat-mode mx-auto w-full max-w-3xl flex-1 px-6 py-16">
       {discardNotice}
+      {foreignPendingChanges ? (
+        <p
+          className={`${OFFLINE_NOTICE_CLASS} mb-4 border-warning/40 bg-warning/10 text-pretty`}
+          role="status"
+          aria-live="polite"
+        >
+          {t("shared.offlineManifest.reconcile.foreignPending")}
+        </p>
+      ) : null}
       <ShopPageHeader
         eyebrow={t("shared.offlineManifest.single.eyebrow")}
         title={
@@ -103,11 +140,13 @@ export function OfflineNoSavedTrip({
         }
         meta={
           <p className="text-muted" role="status">
-            {removedForOtherShop === null || unreadable
-              ? message
-              : removedForOtherShop
-                ? t("shared.offlineManifest.single.removedOtherShopMessage")
-                : t("shared.offlineManifest.reconcile.noneForTrip")}
+            {removedForOtherShop === null || unreadable ? (
+              <StatusMessage message={message} />
+            ) : removedForOtherShop ? (
+              t("shared.offlineManifest.single.removedOtherShopMessage")
+            ) : (
+              t("shared.offlineManifest.reconcile.noneForTrip")
+            )}
           </p>
         }
       />

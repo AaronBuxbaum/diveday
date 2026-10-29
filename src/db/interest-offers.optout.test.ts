@@ -1,9 +1,11 @@
+import { randomBytes } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import type { Notification } from "@/lib/notifications/kinds";
 import { fileScopedShopContext } from "@/test/db";
 import { fakePromotions } from "@/test/fakes";
+import { cancelBooking, createBooking, moveBooking } from "./bookings";
 import { addInterest } from "./interest-dates-fixtures";
 
 const ctx = fileScopedShopContext();
@@ -32,11 +34,20 @@ vi.mock("@/lib/notifications", async (importOriginal) => {
 
 const { sendNotification } = await import("./notifications");
 const { invitableSeats, offerSeats } = await import("./interest-offers");
-const { askAnytime, unsubscribeAnytimeInterestByToken } = await import("./interests");
+const { associateDateRequestOfferBooking, askAnytime, unsubscribeAnytimeInterestByToken } =
+  await import("./interests");
 const { optOutPersonFromCourtesyEmailByToken, resolveCourtesyEmailUnsubscribeToken } = await import(
   "./courtesy-email"
 );
-const { bookings, interests, people, tripLastMinutePromos, trips } = await import("./schema");
+const {
+  bookings,
+  dateRequestOfferBookings,
+  interests,
+  people,
+  shops,
+  tripLastMinutePromos,
+  trips,
+} = await import("./schema");
 const { setShopStripeAccountStatus, upsertShopStripeAccount } = await import("./stripe-accounts");
 const { createTrip, upcomingTripsWithCounts } = await import("./trips");
 
@@ -181,6 +192,513 @@ describe("an unsubscribe from the last-minute list", () => {
 });
 
 describe("invitableSeats and the deal", () => {
+  it("keeps a reactivated offered seat with its request", async () => {
+    const { db, shop, trip } = await context();
+    const requestId = await addInterest(db, shop.id, {
+      interest: "reef dive",
+      name: "Original request",
+      email: "original-request@example.com",
+    });
+    const otherRequestId = await addInterest(db, shop.id, {
+      interest: "reef dive",
+      name: "Different request",
+      email: "different-request@example.com",
+    });
+    const offers = await db
+      .insert(interests)
+      .values(
+        [requestId, otherRequestId].map((parentInterestId) => ({
+          shopId: shop.id,
+          scope: "departure" as const,
+          askedBy: "diver" as const,
+          tripId: trip.id,
+          parentInterestId,
+          partySize: 2,
+          offeredAt: nowDate(),
+        })),
+      )
+      .returning({ id: interests.id, parentInterestId: interests.parentInterestId });
+    const originalOffer = offers.find((offer) => offer.parentInterestId === requestId);
+    if (!originalOffer) throw new Error("setup: original date offer missing");
+
+    const first = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: trip.id,
+      fullName: "Reactivated Diver",
+      email: "reactivated-diver@example.com",
+      dateRequestInterestId: requestId,
+    });
+    if (!first.ok) throw new Error(`setup: first party seat failed: ${first.reason}`);
+    expect((await cancelBooking(db, shop.id, first.bookingId)).ok).toBe(true);
+
+    const wrongRequest = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: trip.id,
+      personId: first.personId,
+      dateRequestInterestId: otherRequestId,
+    });
+    expect(wrongRequest).toEqual({ ok: false, reason: "date_request_departure_conflict" });
+
+    const sameRequest = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: trip.id,
+      personId: first.personId,
+      dateRequestInterestId: requestId,
+    });
+    expect(sameRequest).toMatchObject({ ok: true, bookingId: first.bookingId });
+    expect((await cancelBooking(db, shop.id, first.bookingId)).ok).toBe(true);
+
+    const reactivated = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: trip.id,
+      personId: first.personId,
+    });
+    expect(reactivated).toMatchObject({ ok: true, bookingId: first.bookingId });
+    expect((await cancelBooking(db, shop.id, first.bookingId)).ok).toBe(true);
+
+    await db.update(interests).set({ offeredAt: null }).where(eq(interests.id, originalOffer.id));
+    const withdrawnOffer = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: trip.id,
+      personId: first.personId,
+    });
+    expect(withdrawnOffer).toEqual({ ok: false, reason: "date_request_offer_unavailable" });
+  });
+
+  it("keeps the unbooked seats of a person-linked date-request party held", async () => {
+    const { db, shop, trip } = await context();
+    const baseline = await invitableSeats(db, await tripRow(db, trip.id));
+    const [person] = await db
+      .insert(people)
+      .values({
+        shopId: shop.id,
+        fullName: "Known date requester",
+        email: "known-requester@example.com",
+      })
+      .returning({ id: people.id });
+    if (!person) throw new Error("setup: date requester missing");
+    const [request] = await db
+      .insert(interests)
+      .values({
+        shopId: shop.id,
+        scope: "date",
+        askedBy: "diver",
+        personId: person.id,
+        interest: "reef dive",
+        partySize: 2,
+      })
+      .returning({ id: interests.id });
+    if (!request) throw new Error("setup: date request missing");
+    await db.insert(interests).values({
+      shopId: shop.id,
+      scope: "departure",
+      askedBy: "diver",
+      tripId: trip.id,
+      personId: person.id,
+      parentInterestId: request.id,
+      partySize: 2,
+      offeredAt: nowDate(),
+    });
+    // Before anyone books, the date offer holds both requested seats.
+    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 2);
+
+    const first = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: trip.id,
+      personId: person.id,
+      dateRequestInterestId: request.id,
+    });
+    if (!first.ok) throw new Error(`setup: first party seat failed: ${first.reason}`);
+    // One seat is occupied and the second remains held for the linked party.
+    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 2);
+
+    const second = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: trip.id,
+      fullName: "Second party member",
+      email: "second-party-member@example.com",
+      dateRequestInterestId: request.id,
+    });
+    if (!second.ok) throw new Error(`setup: second party seat failed: ${second.reason}`);
+    // Both requested seats are booked, so none of this offer's hold remains.
+    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 2);
+
+    // Ordinary departure-interest rows retain their existing behavior: a
+    // person who already has a seat does not add another advisory hold.
+    const [ordinaryInterest] = await db
+      .insert(interests)
+      .values({
+        shopId: shop.id,
+        scope: "departure",
+        askedBy: "diver",
+        tripId: trip.id,
+        personId: second.personId,
+        partySize: 1,
+        offeredAt: nowDate(),
+      })
+      .returning({ id: interests.id });
+    if (!ordinaryInterest) throw new Error("setup: ordinary departure interest missing");
+    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 2);
+    await db.delete(interests).where(eq(interests.id, ordinaryInterest.id));
+
+    expect((await cancelBooking(db, shop.id, second.bookingId)).ok).toBe(true);
+    // Releasing one seat restores that seat to the request's remaining hold.
+    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 2);
+    expect((await cancelBooking(db, shop.id, first.bookingId)).ok).toBe(true);
+    // With both seats released, the full two-seat offer is held again.
+    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 2);
+  });
+
+  it("counts one seat per linked booking and follows its departure and status", async () => {
+    const { db, shop, trip } = await context();
+    const departure = await tripRow(db, trip.id);
+    const baseline = await invitableSeats(db, departure);
+    const requestId = await addInterest(db, shop.id, {
+      interest: "reef dive",
+      name: "Anonymous request",
+      email: "request-3102@example.com",
+    });
+    const unrelatedRequestId = await addInterest(db, shop.id, {
+      interest: "another reef dive",
+      name: "Another anonymous request",
+      email: "other-request-3102@example.com",
+    });
+    const offeredAt = nowDate();
+    const [bookedOffer] = await db
+      .insert(interests)
+      .values({
+        shopId: shop.id,
+        scope: "departure",
+        askedBy: "diver",
+        tripId: trip.id,
+        parentInterestId: requestId,
+        partySize: 2,
+        offeredAt,
+      })
+      .returning({ id: interests.id });
+    const [unrelatedOffer] = await db
+      .insert(interests)
+      .values({
+        shopId: shop.id,
+        scope: "departure",
+        askedBy: "diver",
+        tripId: trip.id,
+        parentInterestId: unrelatedRequestId,
+        partySize: 1,
+        offeredAt,
+        closedAt: offeredAt,
+        closedAs: "done",
+      })
+      .returning({ id: interests.id });
+    if (!bookedOffer || !unrelatedOffer) throw new Error("setup: date offers missing");
+    expect(await invitableSeats(db, departure)).toBe(baseline - 3);
+
+    const bookingEmail = "booked-3102@example.com";
+    await askAnytime(db, {
+      shopId: shop.id,
+      fullName: "A diver booking separately",
+      email: bookingEmail,
+      declaration: openWater,
+    });
+    const [bookedPerson] = await db.select().from(people).where(eq(people.email, bookingEmail));
+    if (!bookedPerson) throw new Error("setup: booking person missing");
+    const [booking] = await db
+      .insert(bookings)
+      .values({
+        bookedAs: "diver",
+        shopId: shop.id,
+        tripId: trip.id,
+        personId: bookedPerson.id,
+        status: "booked",
+      })
+      .returning({ id: bookings.id });
+    if (!booking) throw new Error("setup: booking missing");
+    const otherDeparture = (await upcomingTripsWithCounts(db, shop.id)).find(
+      (candidate) => candidate.id !== trip.id,
+    );
+    if (!otherDeparture) throw new Error("setup: second departure missing");
+    const otherBaseline = await invitableSeats(db, await tripRow(db, otherDeparture.id));
+    const [otherOffer] = await db
+      .insert(interests)
+      .values({
+        shopId: shop.id,
+        scope: "departure",
+        askedBy: "diver",
+        tripId: otherDeparture.id,
+        parentInterestId: requestId,
+        partySize: 2,
+        offeredAt,
+      })
+      .returning({ id: interests.id });
+    if (!otherOffer) throw new Error("setup: second departure offer missing");
+    const secondBookingEmail = "second-3102@example.com";
+    await askAnytime(db, {
+      shopId: shop.id,
+      fullName: "The second diver in the party",
+      email: secondBookingEmail,
+      declaration: openWater,
+    });
+    const [secondPerson] = await db
+      .select()
+      .from(people)
+      .where(eq(people.email, secondBookingEmail));
+    if (!secondPerson) throw new Error("setup: second booking person missing");
+    const [secondBooking] = await db
+      .insert(bookings)
+      .values({
+        bookedAs: "diver",
+        shopId: shop.id,
+        tripId: trip.id,
+        personId: secondPerson.id,
+        status: "booked",
+      })
+      .returning({ id: bookings.id });
+    if (!secondBooking) throw new Error("setup: second booking missing");
+    const foreignBookingEmail = "foreign-3102@example.com";
+    await askAnytime(db, {
+      shopId: shop.id,
+      fullName: "A diver on another departure",
+      email: foreignBookingEmail,
+      declaration: openWater,
+    });
+    const [foreignPerson] = await db
+      .select()
+      .from(people)
+      .where(eq(people.email, foreignBookingEmail));
+    if (!foreignPerson) throw new Error("setup: second booking person missing");
+    const [foreignBooking] = await db
+      .insert(bookings)
+      .values({
+        bookedAs: "diver",
+        shopId: shop.id,
+        tripId: otherDeparture.id,
+        personId: foreignPerson.id,
+        status: "booked",
+      })
+      .returning({ id: bookings.id });
+    if (!foreignBooking) throw new Error("setup: second departure booking missing");
+
+    const foreignShopSuffix = randomBytes(4).toString("hex");
+    const [foreignShop] = await db
+      .insert(shops)
+      .values({
+        name: `Other shop ${foreignShopSuffix}`,
+        slug: `other-shop-${foreignShopSuffix}`,
+        timezone: "UTC",
+      })
+      .returning();
+    if (!foreignShop) throw new Error("setup: foreign shop missing");
+    const [foreignTrip] = await db
+      .insert(trips)
+      .values({
+        shopId: foreignShop.id,
+        title: "Foreign departure",
+        startsAt: trip.startsAt,
+        endsAt: trip.endsAt,
+        capacity: 2,
+      })
+      .returning();
+    if (!foreignTrip) throw new Error("setup: foreign trip missing");
+    const [foreignTenantPerson] = await db
+      .insert(people)
+      .values({
+        shopId: foreignShop.id,
+        fullName: "Foreign shop diver",
+        email: `foreign-tenant-${foreignShopSuffix}@example.com`,
+      })
+      .returning();
+    if (!foreignTenantPerson) throw new Error("setup: foreign tenant person missing");
+    const [foreignTenantBooking] = await db
+      .insert(bookings)
+      .values({
+        bookedAs: "diver",
+        shopId: foreignShop.id,
+        tripId: foreignTrip.id,
+        personId: foreignTenantPerson.id,
+        status: "booked",
+      })
+      .returning({ id: bookings.id });
+    if (!foreignTenantBooking) throw new Error("setup: foreign tenant booking missing");
+    expect(
+      await associateDateRequestOfferBooking(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        requestId,
+        bookingId: foreignTenantBooking.id,
+      }),
+    ).toBe(false);
+    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 5);
+    expect(await invitableSeats(db, await tripRow(db, otherDeparture.id))).toBe(otherBaseline - 3);
+
+    expect(
+      await associateDateRequestOfferBooking(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        requestId,
+        bookingId: foreignBooking.id,
+      }),
+    ).toBe(false);
+    expect(
+      await associateDateRequestOfferBooking(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        requestId,
+        bookingId: booking.id,
+      }),
+    ).toBe(true);
+    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 4);
+    // A canceled seat does not pin the party forever. Once this is the only
+    // linked seat and it is released, another explicitly offered departure can
+    // take the active party.
+    await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, booking.id));
+    expect(
+      await associateDateRequestOfferBooking(db, {
+        shopId: shop.id,
+        tripId: otherDeparture.id,
+        requestId,
+        bookingId: foreignBooking.id,
+      }),
+    ).toBe(true);
+    await db
+      .update(bookings)
+      .set({ status: "cancelled" })
+      .where(eq(bookings.id, foreignBooking.id));
+    await db.update(bookings).set({ status: "booked" }).where(eq(bookings.id, booking.id));
+    // A no-show releases the boat seat, but the linked anonymous offer regains
+    // that one seat of advisory hold. Rebooking or checking the diver in puts
+    // the booking back in SEAT_HELD_STATUSES and consumes that hold again, so
+    // combined offerable capacity stays level across each transition.
+    await db.update(bookings).set({ status: "no_show" }).where(eq(bookings.id, booking.id));
+    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 4);
+    expect(
+      await associateDateRequestOfferBooking(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        requestId,
+        bookingId: booking.id,
+      }),
+    ).toBe(false);
+
+    await db.update(bookings).set({ status: "booked" }).where(eq(bookings.id, booking.id));
+    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 4);
+    await db.update(bookings).set({ status: "checked_in" }).where(eq(bookings.id, booking.id));
+    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 4);
+    await db.update(bookings).set({ status: "booked" }).where(eq(bookings.id, booking.id));
+
+    expect(
+      await associateDateRequestOfferBooking(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        requestId,
+        bookingId: secondBooking.id,
+      }),
+    ).toBe(true);
+    expect(
+      await associateDateRequestOfferBooking(db, {
+        shopId: "00000000-0000-4000-8000-000000000000",
+        tripId: trip.id,
+        requestId: unrelatedRequestId,
+        bookingId: booking.id,
+      }),
+    ).toBe(false);
+    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 3);
+    expect(
+      await associateDateRequestOfferBooking(db, {
+        shopId: shop.id,
+        tripId: otherDeparture.id,
+        requestId,
+        bookingId: foreignBooking.id,
+      }),
+    ).toBe(false);
+    expect(await invitableSeats(db, await tripRow(db, otherDeparture.id))).toBe(otherBaseline - 2);
+
+    const thirdBookingEmail = "third-3102@example.com";
+    await askAnytime(db, {
+      shopId: shop.id,
+      fullName: "A third diver outside the requested party",
+      email: thirdBookingEmail,
+      declaration: openWater,
+    });
+    const [thirdPerson] = await db.select().from(people).where(eq(people.email, thirdBookingEmail));
+    if (!thirdPerson) throw new Error("setup: third booking person missing");
+    const [thirdBooking] = await db
+      .insert(bookings)
+      .values({
+        bookedAs: "diver",
+        shopId: shop.id,
+        tripId: trip.id,
+        personId: thirdPerson.id,
+        status: "booked",
+      })
+      .returning({ id: bookings.id });
+    if (!thirdBooking) throw new Error("setup: third booking missing");
+    expect(
+      await associateDateRequestOfferBooking(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        requestId,
+        bookingId: thirdBooking.id,
+      }),
+    ).toBe(false);
+    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 4);
+
+    expect(
+      await moveBooking(db, {
+        shopId: shop.id,
+        fromTripId: trip.id,
+        toTripId: otherDeparture.id,
+        bookingId: booking.id,
+      }),
+    ).toEqual({ ok: false, reason: "date_request_departure_conflict" });
+    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 4);
+    expect(await invitableSeats(db, await tripRow(db, otherDeparture.id))).toBe(otherBaseline - 2);
+
+    // An association cannot move an already-linked booking to another offer.
+    expect(
+      await associateDateRequestOfferBooking(db, {
+        shopId: shop.id,
+        tripId: otherDeparture.id,
+        requestId,
+        bookingId: booking.id,
+      }),
+    ).toBe(false);
+    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 4);
+    expect(await invitableSeats(db, await tripRow(db, otherDeparture.id))).toBe(otherBaseline - 2);
+
+    await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, booking.id));
+    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 4);
+    expect(await invitableSeats(db, await tripRow(db, otherDeparture.id))).toBe(otherBaseline - 2);
+
+    await db.update(bookings).set({ status: "booked" }).where(eq(bookings.id, booking.id));
+    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 4);
+    expect(
+      await associateDateRequestOfferBooking(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        requestId,
+        bookingId: booking.id,
+      }),
+    ).toBe(true);
+    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 4);
+    expect(await invitableSeats(db, await tripRow(db, otherDeparture.id))).toBe(otherBaseline - 2);
+
+    await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, booking.id));
+    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 4);
+
+    const [stored] = await db
+      .select({ bookingId: dateRequestOfferBookings.bookingId })
+      .from(dateRequestOfferBookings)
+      .where(eq(dateRequestOfferBookings.interestId, unrelatedOffer.id));
+    expect(stored).toBeUndefined();
+  });
+
   it("releases an anonymous date-request party at 48 hours and counts a fresh re-offer", async () => {
     const { db, shop, trip } = await context();
     const departure = await tripRow(db, trip.id);
@@ -367,165 +885,5 @@ describe("invitableSeats and the deal", () => {
     });
 
     expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(1);
-  });
-});
-
-describe("a held offer rechecks its departure when it fires", () => {
-  it.each([
-    ["cancelled", { status: "cancelled" as const }],
-    ["on a conditions hold", { conditionsHold: true }],
-    [
-      "already gone",
-      { startsAt: new Date("2020-01-01T08:00:00Z"), endsAt: new Date("2020-01-01T12:00:00Z") },
-    ],
-  ])("offers nobody on a departure %s, and stamps nothing", async (_label, change) => {
-    const { db, shop, trip } = await context();
-    await askAnytime(db, { shopId: shop.id, ...ana, declaration: openWater });
-    const [person] = await db.select().from(people).where(eq(people.email, ana.email));
-    if (!person) throw new Error("setup: person missing");
-    const [own] = await db
-      .insert(interests)
-      .values({
-        shopId: shop.id,
-        scope: "departure",
-        askedBy: "diver",
-        tripId: trip.id,
-        personId: person.id,
-        partySize: 1,
-      })
-      .returning();
-    if (!own) throw new Error("setup: wait-list row missing");
-    // diveday:allow-flat-revision: a test fixture moving a departure into the past.
-    await db.update(trips).set(change).where(eq(trips.id, trip.id));
-
-    const outcome = await offerSeats(db, {
-      shopId: shop.id,
-      shopSlug: shop.slug,
-      tripId: trip.id,
-      interestIds: [own.id],
-    });
-
-    expect(outcome.results).toEqual([{ interestId: own.id, delivery: "fallback" }]);
-    expect(offered()).toEqual([]);
-    const [after] = await db.select().from(interests).where(eq(interests.id, own.id));
-    expect(after?.offeredAt).toBeNull();
-  });
-});
-
-describe("a seat released as the boat loads", () => {
-  // The counter's no-show salvage (e2e check-in, "releases a no-show"): ten
-  // minutes past the scheduled time the seat is still the shop's to sell
-  // (`hasSailed`, the booking transaction's gate), so the wait list hears.
-  it("is offered to the wait list inside the departure's grace", async () => {
-    const { db, shop, trip } = await context();
-    await askAnytime(db, { shopId: shop.id, ...ana, declaration: openWater });
-    const [person] = await db.select().from(people).where(eq(people.email, ana.email));
-    if (!person) throw new Error("setup: person missing");
-    const [own] = await db
-      .insert(interests)
-      .values({
-        shopId: shop.id,
-        scope: "departure",
-        askedBy: "diver",
-        tripId: trip.id,
-        personId: person.id,
-        partySize: 1,
-      })
-      .returning();
-    if (!own) throw new Error("setup: wait-list row missing");
-    const startsAt = new Date(nowDate().getTime() - 10 * 60_000);
-    // diveday:allow-flat-revision: a test fixture moving a departure just past its time.
-    await db
-      .update(trips)
-      .set({ startsAt, endsAt: new Date(startsAt.getTime() + 3 * HOUR_MS) })
-      .where(eq(trips.id, trip.id));
-
-    await offerSeats(db, {
-      shopId: shop.id,
-      shopSlug: shop.slug,
-      tripId: trip.id,
-      interestIds: [own.id],
-    });
-
-    const [after] = await db.select().from(interests).where(eq(interests.id, own.id));
-    expect(after?.offeredAt).not.toBeNull();
-  });
-});
-
-describe("an offer to someone already aboard", () => {
-  // Coordinator's follow-up to the #2656 reviews: the panel hides a seated
-  // diver, but a hand-posted id is read on the server, so it is filtered there.
-  it("offers nobody who holds a seat on the departure, by their row or by the list", async () => {
-    const { db, shop, trip } = await context();
-    const joined = await askAnytime(db, { shopId: shop.id, ...ana, declaration: openWater });
-    const [person] = await db.select().from(people).where(eq(people.email, ana.email));
-    if (!person) throw new Error("setup: person missing");
-    const [own] = await db
-      .insert(interests)
-      .values({
-        shopId: shop.id,
-        scope: "departure",
-        askedBy: "diver",
-        tripId: trip.id,
-        personId: person.id,
-        partySize: 1,
-      })
-      .returning();
-    if (!own) throw new Error("setup: wait-list row missing");
-    await db.insert(bookings).values({
-      bookedAs: "diver",
-      shopId: shop.id,
-      tripId: trip.id,
-      personId: person.id,
-    });
-
-    const outcome = await offerSeats(db, {
-      shopId: shop.id,
-      shopSlug: shop.slug,
-      tripId: trip.id,
-      interestIds: [own.id, joined.interestId],
-    });
-
-    expect(outcome.results).toEqual([
-      { interestId: own.id, delivery: "fallback" },
-      { interestId: joined.interestId, delivery: "fallback" },
-    ]);
-    expect(offered()).toEqual([]);
-    const [after] = await db.select().from(interests).where(eq(interests.id, own.id));
-    expect(after?.offeredAt).toBeNull();
-  });
-
-  it("still offers someone whose seat on it was cancelled", async () => {
-    const { db, shop, trip } = await context();
-    await askAnytime(db, { shopId: shop.id, ...ana, declaration: openWater });
-    const [person] = await db.select().from(people).where(eq(people.email, ana.email));
-    if (!person) throw new Error("setup: person missing");
-    const [own] = await db
-      .insert(interests)
-      .values({
-        shopId: shop.id,
-        scope: "departure",
-        askedBy: "diver",
-        tripId: trip.id,
-        personId: person.id,
-        partySize: 1,
-      })
-      .returning();
-    if (!own) throw new Error("setup: wait-list row missing");
-    await db.insert(bookings).values({
-      bookedAs: "diver",
-      shopId: shop.id,
-      tripId: trip.id,
-      personId: person.id,
-      status: "cancelled",
-    });
-
-    const outcome = await offerSeats(db, {
-      shopId: shop.id,
-      shopSlug: shop.slug,
-      tripId: trip.id,
-      interestIds: [own.id],
-    });
-    expect(outcome.results).toEqual([{ interestId: own.id, delivery: "sent" }]);
   });
 });

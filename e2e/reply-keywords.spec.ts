@@ -64,8 +64,10 @@ test.describe("reply keywords", () => {
       "data-hydrated",
       "true",
     );
-    await page.getByLabel("Name").fill("Nora Quinn");
-    await page.getByLabel("Email").fill(email);
+    // The opt-in checkbox label also contains "Name" and "Email", so target
+    // the actual booking textboxes inside the active card.
+    await page.locator("#book").getByRole("textbox", { name: "Name" }).fill("Nora Quinn");
+    await page.locator("#book").getByRole("textbox", { name: "Email" }).fill(email);
     await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
     await expect(page.getByRole("heading", { name: /You’ve got a seat, Nora/ })).toBeVisible();
 
@@ -156,8 +158,8 @@ test.describe("reply keywords", () => {
       "data-hydrated",
       "true",
     );
-    await page.getByLabel("Name").fill("Ivan Petrov");
-    await page.getByLabel("Email").fill(email);
+    await page.locator("#book").getByRole("textbox", { name: "Name" }).fill("Ivan Petrov");
+    await page.locator("#book").getByRole("textbox", { name: "Email" }).fill(email);
     await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
     await expect(page.getByRole("heading", { name: /You’ve got a seat, Ivan/ })).toBeVisible();
 

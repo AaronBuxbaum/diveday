@@ -1,0 +1,4 @@
+ALTER TABLE "interests" ADD COLUMN "booked_booking_id" uuid;--> statement-breakpoint
+CREATE UNIQUE INDEX "interests_booked_booking_unique" ON "interests" ("booked_booking_id");--> statement-breakpoint
+ALTER TABLE "interests" ADD CONSTRAINT "interests_booked_booking_id_bookings_id_fkey" FOREIGN KEY ("booked_booking_id") REFERENCES "bookings"("id") ON DELETE SET NULL;--> statement-breakpoint
+ALTER TABLE "interests" ADD CONSTRAINT "interests_booked_booking_is_date_offer" CHECK ("booked_booking_id" is null or ("scope" = 'departure' and "parent_interest_id" is not null and "offered_at" is not null));

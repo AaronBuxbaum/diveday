@@ -1,3 +1,6 @@
 {
-  "savedCopyWarning": "Sin cobertura: esta es la copia que guardó tu teléfono. No se conoce la hora de guardado; puede que falten cambios posteriores. Para cambiar algo aquí necesitas cobertura."
+  "savedCopyWarning": "Sin cobertura: esta es la copia que guardó tu teléfono. No se conoce la hora de guardado; puede que falten cambios posteriores. Para cambiar algo aquí necesitas cobertura.",
+  "clockRollbackHeading": "El reloj del teléfono parece incorrecto",
+  "clockRollbackUnknown": "No se conoce la hora de guardado. Esta página podría estar desactualizada. Conéctate para revisar los detalles actuales de la salida.",
+  "clockUnverified": "No se pudo verificar el reloj del teléfono. Conéctate para revisar los detalles actuales de la salida."
 }

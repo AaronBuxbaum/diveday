@@ -1,4 +1,5 @@
 import { useCallback, useRef } from "react";
+import { beginOfflineTenantVerificationRound } from "@/lib/offline-manifest-store";
 import { fetchOfflineManifestShopSlug } from "@/lib/offline-manifests";
 
 /**
@@ -29,15 +30,34 @@ export function useOfflineTenant() {
    * not answer it differently (security review, 2026-08-06).
    */
   const tenantLookupRef = useRef<Promise<string | null> | null>(null);
+  const tenantLookupRevisionRef = useRef(0);
+  const tenantRoundRef = useRef<number | null>(null);
 
   const resolveTenant = useCallback(async (): Promise<string | null> => {
     if (tenantSlugRef.current) return tenantSlugRef.current;
-    tenantLookupRef.current ??= fetchOfflineManifestShopSlug().finally(() => {
-      tenantLookupRef.current = null;
+    const revision = tenantLookupRevisionRef.current;
+    tenantLookupRef.current ??= (async () => {
+      const round = await beginOfflineTenantVerificationRound();
+      if (revision !== tenantLookupRevisionRef.current) return null;
+      tenantRoundRef.current = round;
+      return fetchOfflineManifestShopSlug();
+    })().finally(() => {
+      if (revision === tenantLookupRevisionRef.current) tenantLookupRef.current = null;
     });
     const slug = await tenantLookupRef.current;
+    if (revision !== tenantLookupRevisionRef.current) return null;
     if (slug) tenantSlugRef.current = slug;
     return slug;
   }, []);
-  return { tenantSlugRef, resolveTenant };
+
+  const invalidateTenantLookup = useCallback(() => {
+    tenantLookupRevisionRef.current += 1;
+    tenantLookupRef.current = null;
+    tenantRoundRef.current = null;
+    tenantSlugRef.current = null;
+  }, []);
+
+  const getTenantRound = useCallback(() => tenantRoundRef.current, []);
+
+  return { tenantSlugRef, getTenantRound, resolveTenant, invalidateTenantLookup };
 }

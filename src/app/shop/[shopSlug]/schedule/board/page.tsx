@@ -33,6 +33,7 @@ import {
   scheduleBuilderCopy,
   scheduleBuilderMore,
 } from "./_components/builder-copy";
+import { builderCoursePriceLabel } from "./_components/builder-course-options";
 import { builderRequestPlan } from "./_components/builder-request-plan";
 import {
   type BuilderInitialCourse,
@@ -232,6 +233,7 @@ export default async function ScheduleBoardPage({
               level: st(CERTIFICATION_LEVEL_KEYS[requestedCourse.minimumCertificationLevel]),
             })
           : st("schedule.builder.courseNoCardRequired"),
+        priceLabel: builderCoursePriceLabel(requestedCourse, shop, locale),
       }
     : null;
 

@@ -15,10 +15,13 @@ test("a diver sees rental prices and an estimate on the booking confirmation", a
     .click();
   // The booking form is controlled, so wait for hydration before typing.
   await expect(page.getByLabel("People", { exact: true })).toHaveAttribute("data-hydrated", "true");
-  await page.getByLabel("Name").fill("Rin Tanaka");
+  const bookingForm = page.locator("#book");
+  await bookingForm.getByRole("textbox", { name: "Name", exact: true }).fill("Rin Tanaka");
   // Frozen-clock suffix (not Date.now()) so the shared demo People list the visual
   // suite screenshots stays pixel-stable across runs.
-  await page.getByLabel("Email").fill(`rin+${e2eNow().getTime()}@example.com`);
+  await bookingForm
+    .getByRole("textbox", { name: "Email", exact: true })
+    .fill(`rin+${e2eNow().getTime()}@example.com`);
   await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
   await expect(page.getByRole("heading", { name: /You’ve got a seat, Rin/ })).toBeVisible();
 

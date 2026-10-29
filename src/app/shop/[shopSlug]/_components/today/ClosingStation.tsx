@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { ledgerRowRoomClass } from "@/components/ui/ledger";
+import { LedgerGroup, ledgerRowRoomClass } from "@/components/ui/ledger";
 import { SettledCheck } from "@/components/ui/SettledCheck";
 import { FIGURE_CLASS, ITEM_TITLE_CLASS } from "@/components/ui/typography";
 import {
@@ -9,10 +9,11 @@ import {
   closeoutDepartureDetailText,
   planChangeText,
 } from "@/i18n/closeout-labels";
-import type { StaffTranslator } from "@/i18n/staff-messages";
+import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { openRollCallActionText } from "@/i18n/today-labels";
 import { CLOSEOUT_STATUS_TONES, type StationClose } from "@/lib/closeout";
-import { formatTime } from "@/lib/format";
+import { formatRelativeDay, formatTime } from "@/lib/format";
+import type { DaySpineContext } from "./DaySpine";
 
 /**
  * **A station that has settled** — the evening reading of the shop home's day
@@ -229,5 +230,33 @@ export function ClosingStation({
         <div className={`mt-3 border-t border-border pt-3 ${ledgerRowRoomClass}`}>{children}</div>
       ) : null}
     </SectionCard>
+  );
+}
+
+/** The demo's latest finished dusk boat, kept outside today's departures. */
+export function LastRollCall({ context }: { context: DaySpineContext }) {
+  const { evening, shopSlug, locale, timeZone, now } = context;
+  const close = evening?.close.carryover;
+  if (!close || !evening) return null;
+  const t = staffTranslator(locale);
+  return (
+    <LedgerGroup
+      as="h2"
+      label={t("shopHome.spine.lastRollCall", {
+        day: formatRelativeDay(close.startsAt, now, locale, timeZone),
+      })}
+    >
+      <ol className="flex flex-col gap-5">
+        <ClosingStation
+          close={close}
+          headCountClose={evening.headCountCloses.get(close.tripId) ?? null}
+          shopSlug={shopSlug}
+          locale={locale}
+          timeZone={timeZone}
+          canOpenLog={evening.canOpenLog}
+          t={t}
+        />
+      </ol>
+    </LedgerGroup>
   );
 }
