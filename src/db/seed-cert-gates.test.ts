@@ -141,6 +141,8 @@ describe("the seeded cert-gate departures", () => {
     const trip = await tripByTitle(db, shop.id, "Advanced Open Water Diver — two-day course");
     const student = await personByName(db, shop.id, "Kwame Asante");
 
+    expect(trip.priceCents).toBeNull();
+
     expect(await getTripSiteRequirement(db, shop.id, trip.id)).toMatchObject({
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],

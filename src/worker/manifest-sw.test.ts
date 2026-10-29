@@ -705,7 +705,17 @@ describe("a navigation on a network that never answers", () => {
       const result = await settledAfter(navigation.response, 1);
       if (result === "still waiting") throw new Error("an uncached readiness page kept waiting");
       expect(result.type).toBe("error");
-      const init = fetchMock.mock.calls[0]?.[1] as { signal?: AbortSignal } | undefined;
+      const readinessRequest = fetchMock.mock.calls.find(([input, init]) => {
+        const inputUrl =
+          typeof input === "object" && input !== null && "url" in input
+            ? String(input.url)
+            : String(input);
+        const url = new URL(inputUrl, "https://dive.day");
+        const requestInit = init as { signal?: AbortSignal } | undefined;
+        return url.pathname === READY_PATH && requestInit?.signal !== undefined;
+      });
+      expect(readinessRequest).toBeDefined();
+      const init = readinessRequest?.[1] as { signal?: AbortSignal } | undefined;
       expect(init?.signal?.aborted).toBe(true);
     } finally {
       digest.mockRestore();

@@ -24,6 +24,8 @@ import { TodayPrintDoor } from "@/app/shop/[shopSlug]/_components/today/TodayPri
 import { TodaySkeleton } from "@/app/shop/[shopSlug]/_components/today/TodaySkeleton";
 import { TodayUpdated } from "@/app/shop/[shopSlug]/_components/today/TodayUpdated";
 import {
+  assembleTodayEveningClose,
+  hasTodayWorkToShow,
   readTodayFirstWave,
   readTodaySecondWave,
 } from "@/app/shop/[shopSlug]/_components/today/today-reads";
@@ -43,7 +45,6 @@ import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { daySpineSummaryText } from "@/i18n/today-labels";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
-import { assembleEveningClose } from "@/lib/closeout";
 import { FORM_DRAFT_RESUME_SUFFIX } from "@/lib/form-drafts";
 import { formatMonthDay, formatTime, formatWeekday } from "@/lib/format";
 import { publicAppUrl } from "@/lib/notifications";
@@ -57,7 +58,6 @@ import {
   readNeedsYou,
   roleLensFor,
   spineIsQuiet,
-  spineJobCount,
 } from "@/lib/today";
 import { shopDayBounds, utcToWallTime } from "@/lib/zoned";
 import { AUTH_NOTICES } from "./_components/auth-notices";
@@ -275,7 +275,7 @@ async function TodayBody({
   // and badges the boat they crew; an instructor's leads with their sessions. It never re-orders
   // the spine — clock order wins.
   const lens = roleLensFor(session.user.roles);
-  const eveningClose = assembleEveningClose(closeout.departures, now, closeout.tomorrow);
+  const eveningClose = assembleTodayEveningClose(closeout, now);
   // **The shop's own calendar day**, as the two UTC instants that bracket it. Four readers below
   // want it — the first-boat-ever question, the day strip's window and ticks, and the day's takings
   // — and it is the host's day for none of them, so it is computed once here rather than per
@@ -417,7 +417,7 @@ async function TodayBody({
   const quietDay = spineIsQuiet(
     spine,
     showPaymentsRow,
-    eveningClose.stations.length,
+    eveningClose.stations.length + (eveningClose.carryover ? 1 : 0),
     showFirstRunChecklist,
   );
 
@@ -434,10 +434,7 @@ async function TodayBody({
   // instructional content sizes itself against whether any exists: a station,
   // a queue row, or — under the instructor lens — a session block means
   // orientation shrinks to a line rather than pushing that work below the fold.
-  const hasWorkToShow =
-    spineJobCount(spine) > 0 ||
-    spine.stations.length > 0 ||
-    (lens === "sessions" && crewedSessions.length > 0);
+  const hasWorkToShow = hasTodayWorkToShow(spine, eveningClose, lens, crewedSessions.length > 0);
 
   return (
     <>

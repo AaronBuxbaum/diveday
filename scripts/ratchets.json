@@ -527,7 +527,7 @@
     "src/db/seed-dive-sites.ts#seedDiveSites": 440,
     "src/db/seed-history.ts#seedHistory": 680,
     "src/db/seed-more-trips.ts#seedMoreTrips": 627,
-    "src/db/seed-trips.ts#seedTrips": 381,
+    "src/db/seed-trips.ts#seedTrips": 369,
     "src/db/trips-record.ts#updateTripRecord": 321,
     "src/lib/import.ts#prepareContactImport": 455
   },
@@ -578,7 +578,7 @@
     "src/app/s/[shopSlug]/trips/[id]/page.tsx": 466,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 577,
     "src/app/shop/[shopSlug]/orders/page.tsx": 727,
-    "src/app/shop/[shopSlug]/page.tsx": 620,
+    "src/app/shop/[shopSlug]/page.tsx": 617,
     "src/app/shop/[shopSlug]/promos/page.tsx": 564,
     "src/app/shop/[shopSlug]/reports/page.tsx": 492,
     "src/app/shop/[shopSlug]/reviews/page.tsx": 430,

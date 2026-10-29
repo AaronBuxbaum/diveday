@@ -1,6 +1,12 @@
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { DAY_MS, nowDate, nowMs } from "@/lib/clock";
-import { shopDayBounds, toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
+import {
+  addCalendarDays,
+  shopDayBounds,
+  toDateInputValue,
+  utcToWallTime,
+  wallTimeToUtc,
+} from "@/lib/zoned";
 
 /**
  * The seed's clock.
@@ -336,6 +342,12 @@ export type DemoAtSeaDeparture = {
   afterDark: boolean;
 };
 
+/** A plausibly finished dusk departure; `finishedAt` is the last diver count. */
+export type DemoFinishedDuskDeparture = Omit<DemoAtSeaDeparture, "afterDark"> & {
+  afterDark: true;
+  finishedAt: Date;
+};
+
 /**
  * **The boat at sea, halfway through her roll call** (market sheet
  * 2026-10-22, item 1). Whatever hour the demo is opened or reset, one boat is
@@ -360,13 +372,17 @@ export type DemoAtSeaDeparture = {
  * - the dusk boat's dive 1 goes in within twenty minutes of sunset, so "at
  *   dusk" is dusk and dive 2 is in the dark.
  *
- * **Null outside the hours a boat is plausibly mid-dive**: before a 6:30 AM
- * sailing, in the evening gap between the two windows, and late at night.
+ * **Null outside booth hours** (8 AM–6 PM), before a 6:30 AM sailing, and when
+ * the predicted boat would be in the evening gap. After booth hours, the demo
+ * uses `demoFinishedDuskDeparture` for a completed roll call instead.
  */
 export function demoAtSeaDeparture(
   now = nowDate(),
   timeZone: string = DEMO_SHOP_TIMEZONE,
 ): DemoAtSeaDeparture | null {
+  const localNow = utcToWallTime(now, timeZone);
+  if (localNow.hour < DESK_OPENS_HOUR || localNow.hour >= DESK_CLOSES_HOUR) return null;
+
   const minute = 60 * 1000;
   const step = 30 * minute;
   const startsAt = new Date(
@@ -398,6 +414,55 @@ export function demoAtSeaDeparture(
     diveTwoEnteredAt,
     afterDark: !dayBoat,
   };
+}
+
+/**
+ * **The last dusk boat's finished roll call, outside the booth window.** During
+ * booth hours Today shows the active boat instead. Before this day's dusk trip
+ * has had time to finish, Today carries the prior day's completed trip; once
+ * today's trip is back, it becomes the carryover. The dates and every mark stay
+ * behind `now`, so the 5 AM board can show last night's close without inventing
+ * an overnight dive.
+ */
+export function demoFinishedDuskDeparture(
+  now = nowDate(),
+  timeZone: string = DEMO_SHOP_TIMEZONE,
+): DemoFinishedDuskDeparture | null {
+  const localNow = utcToWallTime(now, timeZone);
+  if (localNow.hour >= DESK_OPENS_HOUR && localNow.hour < DESK_CLOSES_HOUR) return null;
+
+  const onDay = (day: typeof localNow): DemoFinishedDuskDeparture => {
+    const sunset = demoSunset(wallTimeToUtc({ ...day, hour: 12, minute: 0 }, timeZone), timeZone);
+    // The first dive goes in 25 minutes after sailing, so place the lines at
+    // the half-hour slot nearest 25 minutes before sunset.
+    const target = utcToWallTime(new Date(sunset.getTime() - 25 * 60_000), timeZone);
+    const roundedMinute = Math.round((target.hour * 60 + target.minute) / 30) * 30;
+    const startsAt = wallTimeToUtc(
+      {
+        ...target,
+        hour: Math.floor(roundedMinute / 60),
+        minute: roundedMinute % 60,
+      },
+      timeZone,
+    );
+    const after = (minutes: number) => new Date(startsAt.getTime() + minutes * 60_000);
+    const endsAt = after(DEMO_TODAY_DEPARTURE_MS / 60_000);
+    return {
+      startsAt,
+      endsAt,
+      diveOne: {
+        enteredAt: after(25),
+        exitedAt: after(70),
+        countedAt: after(75),
+      },
+      diveTwoEnteredAt: after(115),
+      afterDark: true,
+      finishedAt: after(DEMO_TODAY_DEPARTURE_MS / 60_000 - 5),
+    };
+  };
+
+  const today = onDay(localNow);
+  return now.getTime() >= today.finishedAt.getTime() ? today : onDay(addCalendarDays(localNow, -1));
 }
 
 /** The desk's day, shop-local: open at 8 AM, last signature by 6 PM. */

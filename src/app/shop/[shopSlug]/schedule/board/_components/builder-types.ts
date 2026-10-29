@@ -17,7 +17,7 @@ export type BuilderTideWindowInput = {
   startTime: string;
   diveMode: string;
 };
-export type BuilderCourseOption = BuilderOption & { agency: string };
+export type BuilderCourseOption = BuilderOption & { agency: string; priceLabel: string | null };
 export type BuilderBoatOption = { id: string; name: string; capacity: number };
 
 /**
@@ -274,6 +274,8 @@ export type BuilderInitialCourse = {
   title: string;
   /** The admission line the old full form showed under the select, pre-resolved. */
   requirement: string;
+  /** The catalog total, if the course owns pricing. */
+  priceLabel?: string | null;
 };
 
 export type BuilderInitialSite = {
