@@ -31,6 +31,9 @@ the shop-wide `trips.ics` from `calendar-sync` — never a second bundle format 
   pinned to AWS's published example signatures in tests. **No new runtime dependency** — the AWS
   SDK's ambient credential resolution (env vars, shared files, IMDS) must never run against a
   *shop's* credential, and the needed surface is one signed request.
+  The signing primitives are shared with media storage in `src/lib/storage/s3-signing.ts`; this is
+  code reuse only. Backup-export retains its own endpoint, addressing, credential and PUT policy,
+  and the media adapter retains its own origin, object-key, read and delete checks.
 - **Cadence and idempotency**: a weekly Vercel cron (`/api/cron/backup-export`, Mondays 04:00 UTC,
   `CRON_SECRET`-gated like retention) delivers to every shop with a destination, at most one
   succeeded scheduled delivery per shop per ISO week (`period_key`), object key deterministic per
