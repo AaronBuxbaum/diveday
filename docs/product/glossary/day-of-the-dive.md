@@ -76,9 +76,11 @@
   redirect, HTML), network-first (served only when `fetch` fails), and kept only until the day
   after the boat is due back (two weeks at most). A load that is not the live page (a cancelled
   seat, a departure called off, an expired link) clears it. Read-only: offline the page says it is
-  the saved copy, when the server saved it, and that details may have changed. A copy with no
-  trusted save time says so. If the phone clock is detected moving backward, the page is replaced
-  by a warning. Even when its time is known, an offline copy is a snapshot, not live readiness.
+  the saved copy, when the server generated it, and that details may have changed. A copy with no
+  trusted generation time says so. The server time calibrates a stable device-clock offset for
+  expiry. If the phone clock is detected moving backward, the page is replaced by a warning. An
+  unobserved forward clock jump can expire a copy early because it cannot be separated from elapsed
+  time offline. Even when its time is known, an offline copy is a snapshot, not live readiness.
   Rules in `src/worker/ready-page-cache.ts`.
 - **Dock rider** — a non-diving passenger a captain adds from the Boat tab while the boat is still
   at the dock (no stage recorded, or **boarding**): a name, an optional phone, an emergency

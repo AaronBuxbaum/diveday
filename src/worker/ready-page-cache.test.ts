@@ -168,6 +168,89 @@ describe("saveReadyPage and readyPageFallback", () => {
     expect(text).not.toContain(`${READY_COPY_GENERATED_AT_ATTR}="${deviceSaveAt}"`);
   });
 
+  it("keeps a server-current page through a restart when the device clock is past trip expiry", async () => {
+    const keepUntil = NOW + DAY_MS;
+    const deviceClockAheadAtSave = NOW + 3 * DAY_MS;
+    const body = `<meta name="${READY_COPY_LOCALE_META}" content="en-US"/><meta name="${READY_COPY_TIME_ZONE_META}" content="America/New_York"/><html><body><main><p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">No signal: ${READY_OFFLINE_GENERATED_AT_PLACEHOLDER}</p><p>offline trip copy</p><section data-ready-clock-rollback="" hidden=""><h1>Phone clock looks wrong</h1><p data-ready-clock-rollback-saved="" hidden="">Generated ${READY_ROLLBACK_SAVED_AT_PLACEHOLDER}</p><p data-ready-clock-rollback-unknown="" hidden="">Saved time unknown</p></section></main></body></html>`;
+    const kept = await saveReadyPage(
+      store.storage,
+      `/ready/${TOKEN}`,
+      page(body, {}, keepUntil),
+      deviceClockAheadAtSave,
+    );
+
+    expect(kept).toBe(true);
+    // Cache Storage survives a service-worker restart; module-local state does not.
+    await vi.resetModules();
+    const restartedWorker = await import("./ready-page-cache");
+    const served = await restartedWorker.readyPageFallback(
+      store.storage,
+      `/ready/${TOKEN}`,
+      deviceClockAheadAtSave,
+    );
+    expect(await served?.text()).toContain("offline trip copy");
+
+    // A later clock correction is still detected and fails closed, but it
+    // does not destroy the copy needed if the clock is restored or verified.
+    const correctedClock = await restartedWorker.readyPageFallback(
+      store.storage,
+      `/ready/${TOKEN}`,
+      NOW + 60 * 60 * 1000,
+    );
+    expect(await correctedClock?.text()).toContain("Phone clock looks wrong");
+    expect(store.caches.get(READY_CACHE_NAME)?.size).toBe(1);
+
+    // Once the calibrated server-time estimate reaches the actual expiry, the
+    // copy is removed even though the device's wall clock has a fixed offset.
+    expect(
+      await restartedWorker.readyPageFallback(
+        store.storage,
+        `/ready/${TOKEN}`,
+        deviceClockAheadAtSave + DAY_MS + 1,
+      ),
+    ).toBeUndefined();
+  });
+
+  it("does not mistake a consistently slow device clock for a rollback", async () => {
+    const deviceClockBehindAtSave = NOW - 60 * 60 * 1000;
+    expect(
+      await saveReadyPage(
+        store.storage,
+        `/ready/${TOKEN}`,
+        page("offline trip copy", {}, NOW + DAY_MS),
+        deviceClockBehindAtSave,
+      ),
+    ).toBe(true);
+
+    const served = await readyPageFallback(
+      store.storage,
+      `/ready/${TOKEN}`,
+      deviceClockBehindAtSave,
+    );
+    expect(await served?.text()).toContain("offline trip copy");
+    expect(served?.headers.get("x-diveday-ready-copy-time-state")).toBe("known");
+  });
+
+  it("cancellation still removes a calibrated copy while the device clock is skewed", async () => {
+    const path = `/ready/${TOKEN}`;
+    const keepUntil = NOW + DAY_MS;
+    const deviceClockAheadAtSave = NOW + 3 * DAY_MS;
+    expect(
+      await saveReadyPage(
+        store.storage,
+        path,
+        page("offline trip copy", {}, keepUntil),
+        deviceClockAheadAtSave,
+      ),
+    ).toBe(true);
+
+    expect(await forgetReadyPage(store.storage, path, deviceClockAheadAtSave + 1)).toBe(true);
+    expect(
+      await readyPageFallback(store.storage, path, deviceClockAheadAtSave + 2),
+    ).toBeUndefined();
+    expect(store.caches.get(READY_CACHE_NAME)?.size).toBe(0);
+  });
+
   it("replaces the readiness page with a timestamped warning after a detected rollback", async () => {
     const serverSavedAt = NOW;
     const html = `<meta name="${READY_COPY_LOCALE_META}" content="en-US"/><meta name="${READY_COPY_TIME_ZONE_META}" content="America/New_York"/><meta name="${READY_COPY_GENERATED_AT_META}" content="${serverSavedAt}"/><html><body><main><p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">No signal: ${READY_OFFLINE_GENERATED_AT_PLACEHOLDER}</p><button>Running late</button><section data-ready-clock-rollback="" hidden=""><h1>Phone clock looks wrong</h1><p data-ready-clock-rollback-saved="" hidden="">Generated ${READY_ROLLBACK_SAVED_AT_PLACEHOLDER}</p><p data-ready-clock-rollback-unknown="" hidden="">Saved time unknown</p></section></main></body></html>`;

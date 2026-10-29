@@ -251,7 +251,7 @@ describe("ReadyOfflineCopy", () => {
         keepUntil={KEEP_UNTIL}
         locale={LOCALE}
         timeZone={TIME_ZONE}
-        generatedAt={KEEP_UNTIL}
+        generatedAt={now}
       />,
     );
     expect(markup).toMatch(/<p [^>]*hidden=""[^>]*>No signal/);
@@ -277,7 +277,7 @@ describe("ReadyOfflineCopy", () => {
       minute: "2-digit",
       timeZoneName: "short",
       timeZone: TIME_ZONE,
-    }).format(new Date(KEEP_UNTIL));
+    }).format(new Date(now));
     expect(served.replaceAll("\u00a0", " ")).toContain(
       `No signal: this is a copy of the page generated ${expected}.`,
     );
@@ -285,7 +285,7 @@ describe("ReadyOfflineCopy", () => {
     expect(served).toContain(`name="${READY_COPY_LOCALE_META}" content="${LOCALE}"`);
     expect(served).toContain(`name="${READY_COPY_TIME_ZONE_META}" content="${TIME_ZONE}"`);
     expect(served).toContain(`name="${READY_COPY_VERSION_META}" content="${READY_COPY_VERSION}"`);
-    expect(served).toContain(`${READY_COPY_GENERATED_AT_ATTR}="${KEEP_UNTIL}"`);
+    expect(served).toContain(`${READY_COPY_GENERATED_AT_ATTR}="${now}"`);
     expect(served).not.toMatch(/<p [^>]*hidden=""[^>]*>No signal/);
   });
 });

@@ -37,6 +37,11 @@
  * - **Read-only, network-first**: a cached copy is served only when `fetch`
  *   fails. Its forms post to the server like any page and fail offline like
  *   any page; nothing is queued.
+ * - **Expiry follows a trusted server generation time**: when a copy is
+ *   saved, that timestamp calibrates the device clock offset used to estimate
+ *   its trip expiry. A fixed offset works offline; an unobserved forward clock
+ *   jump after saving is indistinguishable from elapsed time and can expire a
+ *   copy early. A copy remains a saved snapshot, never live readiness.
  * - **Bounded by the trip, not only by the clock** (D2): the live page names
  *   the instant its copy expires ({@link READY_KEEP_UNTIL_META}: a day after
  *   the boat is due back), capped at {@link READY_COPY_MAX_AGE_MS}. A page
@@ -100,7 +105,7 @@ const LEGACY_FORGOTTEN_VERSION_HEADER = "x-diveday-forgotten-version";
 const LEGACY_FORGOTTEN_AT_HEADER = "x-diveday-forgotten-at";
 const KEEP_UNTIL_HEADER = "x-diveday-keep-until";
 const DEVICE_SAVED_AT_HEADER = "x-diveday-device-saved-at";
-const SERVER_SAVED_AT_HEADER = "x-diveday-server-saved-at";
+const SERVER_GENERATED_AT_HEADER = "x-diveday-server-generated-at";
 const CLOCK_WATERMARK_HEADER = "x-diveday-clock-watermark";
 const READY_CLOCK_CACHE_NAME = "diveday-ready-clock-v1";
 const READY_CLOCK_KEY = "/ready/clock-observation";
@@ -635,8 +640,16 @@ export async function saveReadyPage(
   // A body of its own, so the copy is complete before anything is replaced.
   const html = new TextDecoder().decode(await response.arrayBuffer());
   const named = Number(html.match(KEEP_UNTIL_PATTERN)?.[1] ?? Number.NaN);
+  const currentFormat = metaContent(html, READY_COPY_VERSION_META) === READY_COPY_VERSION;
+  const generatedAt = Number(singleMetaContent(html, READY_COPY_GENERATED_AT_META));
+  const generatedAtLabel = currentFormat ? readyGeneratedAtLabel(html, generatedAt) : undefined;
+  const hasTrustedServerTime =
+    Number.isSafeInteger(generatedAt) && generatedAt > 0 && generatedAtLabel !== undefined;
   const cache = await storage.open(READY_CACHE_NAME);
-  if (!Number.isFinite(named) || named <= now) {
+  // A live, server-rendered page establishes that it was current when the
+  // server rendered it. Do not let an already-fast phone clock erase that
+  // complete copy before it can be used offline.
+  if (!Number.isFinite(named) || named <= (hasTrustedServerTime ? generatedAt : now)) {
     // Process terminal truth even without a durable request marker. Order the
     // path check and epoch write together with request starts, preventing a
     // different token from slipping between the check and global marker.
@@ -646,9 +659,7 @@ export async function saveReadyPage(
   if (!order.durable) return false;
   // Pages rendered before the saved-time format cannot be transformed safely:
   // their banner has no reliable locale/zone or age context.
-  if (metaContent(html, READY_COPY_VERSION_META) !== READY_COPY_VERSION) return false;
-  const generatedAt = Number(singleMetaContent(html, READY_COPY_GENERATED_AT_META));
-  const generatedAtLabel = readyGeneratedAtLabel(html, generatedAt);
+  if (!currentFormat) return false;
   const safeHtml = withoutClientRuntime(html);
   const banner = singleTextBanner(safeHtml);
   const placeholderCount = safeHtml.split(READY_OFFLINE_GENERATED_AT_PLACEHOLDER).length - 1;
@@ -669,11 +680,11 @@ export async function saveReadyPage(
   const timestampedBanner = `${banner.opening.replace(/>$/, ` ${READY_COPY_GENERATED_AT_ATTR}="${generatedAt}">`)}${banner.text.replace(READY_OFFLINE_GENERATED_AT_PLACEHOLDER, generatedAtLabel)}${banner.closing}`;
   const timestampedHtml = safeHtml.replace(banner.element, timestampedBanner);
   const headers = new Headers(response.headers);
-  headers.set(KEEP_UNTIL_HEADER, String(Math.min(named, now + READY_COPY_MAX_AGE_MS)));
+  const ageAnchor = hasTrustedServerTime ? generatedAt : now;
+  headers.set(KEEP_UNTIL_HEADER, String(Math.min(named, ageAnchor + READY_COPY_MAX_AGE_MS)));
   headers.set(DEVICE_SAVED_AT_HEADER, String(now));
-  const serverSavedAt = Number(singleMetaContent(html, READY_COPY_GENERATED_AT_META));
-  if (Number.isSafeInteger(serverSavedAt) && serverSavedAt > 0) {
-    headers.set(SERVER_SAVED_AT_HEADER, String(serverSavedAt));
+  if (hasTrustedServerTime) {
+    headers.set(SERVER_GENERATED_AT_HEADER, String(generatedAt));
   }
   await observeReadyPageClock(storage, now);
   if (!(await requestIsCurrent(storage, hash, order))) return false;
@@ -747,8 +758,8 @@ export async function readyPageFallback(
   }
   const storedHtml = await cached.text();
   const savedAtFromBody = Number(singleMetaContent(storedHtml, READY_COPY_GENERATED_AT_META));
-  const serverSavedAt =
-    numericHeader(cached, SERVER_SAVED_AT_HEADER) ??
+  const serverGeneratedAt =
+    numericHeader(cached, SERVER_GENERATED_AT_HEADER) ??
     (Number.isSafeInteger(savedAtFromBody) && savedAtFromBody > 0 ? savedAtFromBody : null);
   const deviceSavedAt = numericHeader(cached, DEVICE_SAVED_AT_HEADER);
   const watermark = await readClockWatermark(storage);
@@ -758,7 +769,7 @@ export async function readyPageFallback(
       (observedAt) => observedAt !== null && now < observedAt,
     );
   if (rollback) {
-    const warning = rollbackWarningDocument(storedHtml, serverSavedAt ?? 0);
+    const warning = rollbackWarningDocument(storedHtml, serverGeneratedAt ?? 0);
     if (!warning) {
       await cache.delete(READY_COPY_KEY);
       return undefined;
@@ -770,8 +781,13 @@ export async function readyPageFallback(
     });
   }
   await observeReadyPageClock(storage, now);
+  // Rebase wall-clock elapsed time onto the trusted server generation instant.
+  const estimatedServerNow =
+    serverGeneratedAt !== null && deviceSavedAt !== null
+      ? serverGeneratedAt + (now - deviceSavedAt)
+      : now;
   const keepUntil = Number(cached.headers.get(KEEP_UNTIL_HEADER));
-  if (!Number.isFinite(keepUntil) || now > keepUntil) {
+  if (!Number.isFinite(keepUntil) || estimatedServerNow > keepUntil) {
     await cache.delete(READY_COPY_KEY);
     return undefined;
   }
@@ -819,7 +835,7 @@ export async function readyPageFallback(
   return new Response(html, {
     status: cached.status,
     statusText: cached.statusText,
-    headers: fallbackHeaders(cached, serverSavedAt !== null ? "known" : "unknown"),
+    headers: fallbackHeaders(cached, serverGeneratedAt !== null ? "known" : "unknown"),
   });
 }
 
