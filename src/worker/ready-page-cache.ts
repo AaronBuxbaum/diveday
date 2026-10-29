@@ -309,6 +309,8 @@ export type ReadyPageRequest = {
   forgottenVersion: string;
   requestId: string;
   localForgetVersion: number;
+  /** Network requests remain useful when storage is unavailable; they just cannot publish. */
+  durable: boolean;
 };
 
 let localForgetVersion = 0;
@@ -347,24 +349,33 @@ export function beginReadyPageRequest(
   const begunAtLocalForgetVersion = localForgetVersion;
   return serializeReadyOrder(async () => {
     const hash = await pathHash(path);
-    const markers = await storage.open(READY_FORGOTTEN_CACHE_NAME);
-    const marker = await markers.match(LATEST_REQUEST_KEY);
     const request: ReadyPageRequest = {
       pathHash: hash,
-      forgottenVersion: marker?.headers.get(REQUEST_FORGOTTEN_VERSION_HEADER) ?? "",
+      forgottenVersion: "",
       requestId: crypto.randomUUID(),
       localForgetVersion: begunAtLocalForgetVersion,
+      durable: false,
     };
-    await markers.put(
-      LATEST_REQUEST_KEY,
-      new Response(null, {
-        headers: {
-          [REQUEST_ID_HEADER]: request.requestId,
-          [REQUEST_PATH_HASH_HEADER]: request.pathHash,
-          [REQUEST_FORGOTTEN_VERSION_HEADER]: request.forgottenVersion,
-        },
-      }),
-    );
+    try {
+      const markers = await storage.open(READY_FORGOTTEN_CACHE_NAME);
+      const marker = await markers.match(LATEST_REQUEST_KEY);
+      request.forgottenVersion = marker?.headers.get(REQUEST_FORGOTTEN_VERSION_HEADER) ?? "";
+      await markers.put(
+        LATEST_REQUEST_KEY,
+        new Response(null, {
+          headers: {
+            [REQUEST_ID_HEADER]: request.requestId,
+            [REQUEST_PATH_HASH_HEADER]: request.pathHash,
+            [REQUEST_FORGOTTEN_VERSION_HEADER]: request.forgottenVersion,
+          },
+        }),
+      );
+      request.durable = true;
+    } catch {
+      // Storage failure must not block the live page. The response carries an
+      // unpublishable request so it cannot overwrite or fall back to stale data.
+      request.durable = false;
+    }
     return request;
   });
 }
@@ -417,14 +428,18 @@ export async function saveReadyPage(
   if (!storable(response)) return false;
   const hash = await pathHash(path);
   const order = request ?? (await beginReadyPageRequest(storage, path));
-  if (order.pathHash !== hash) return false;
+  if (order.pathHash !== hash || !order.durable) return false;
   // A body of its own, so the copy is complete before anything is replaced.
   const html = new TextDecoder().decode(await response.arrayBuffer());
   const named = Number(html.match(KEEP_UNTIL_PATTERN)?.[1] ?? Number.NaN);
   const cache = await storage.open(READY_CACHE_NAME);
   if (!Number.isFinite(named) || named <= now) {
-    // Observed terminal truth invalidates every older response, regardless of
-    // which request first observed it.
+    // Terminal truth for this path invalidates saves for the same path even
+    // when observed by an older request, but must not erase a newer token's
+    // shared-slot copy when this response belongs to another path.
+    const markers = await storage.open(READY_FORGOTTEN_CACHE_NAME);
+    const latest = await markers.match(LATEST_REQUEST_KEY);
+    if (latest && latest.headers.get(REQUEST_PATH_HASH_HEADER) !== hash) return false;
     localForgetVersion += 1;
     const epoch = crypto.randomUUID();
     const invalidated = serializeReadyOrder(() => writeForgetMarker(storage, epoch));

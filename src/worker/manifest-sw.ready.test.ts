@@ -583,6 +583,40 @@ describe("the /ready/ registration's fetch", () => {
     expect(await (await offline.responded)?.text()).toContain("live");
   });
 
+  it("serves the live page when request-marker storage fails and never saves that response", async () => {
+    failMarkerWrites = true;
+    fetchMock.mockResolvedValueOnce(html("live without marker"));
+
+    const online = navigate(`https://dive.day${PATH}`);
+    expect(await (await online.responded)?.text()).toContain("live without marker");
+    await online.settle();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(kept.size).toBe(0);
+  });
+
+  it("uses an existing saved copy on network failure when request-marker storage fails", async () => {
+    fetchMock.mockResolvedValueOnce(html("previous saved copy"));
+    const initial = navigate(`https://dive.day${PATH}`);
+    await initial.responded;
+    await initial.settle();
+    expect(kept.size).toBe(1);
+
+    failMarkerWrites = true;
+    fetchMock.mockRejectedValueOnce(new TypeError("offline"));
+    const offline = navigate(`https://dive.day${PATH}`);
+    expect(await (await offline.responded)?.text()).toContain("previous saved copy");
+    await offline.settle();
+  });
+
+  it("returns the network error rather than a copy when none exists and marker storage fails", async () => {
+    failMarkerWrites = true;
+    fetchMock.mockRejectedValueOnce(new TypeError("offline"));
+    const offline = navigate(`https://dive.day${PATH}`);
+    expect((await offline.responded)?.type).toBe("error");
+    await offline.settle();
+  });
+
   it("serves the kept copy within four seconds when the network never answers", async () => {
     fetchMock.mockResolvedValueOnce(html("live"));
     const online = navigate(`https://dive.day${PATH}`);
