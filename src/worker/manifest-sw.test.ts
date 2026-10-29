@@ -674,22 +674,39 @@ describe("a navigation on a network that never answers", () => {
   });
 
   it("returns the browser error and aborts an uncached readiness request at four seconds", async () => {
-    const navigation = navigateReady(`https://dive.day${READY_PATH}`);
-    expect(await settledAfter(navigation.response, 3_999)).toBe("still waiting");
-    const result = await settledAfter(navigation.response, 1);
-    if (result === "still waiting") throw new Error("an uncached readiness page kept waiting");
-    expect(result.type).toBe("error");
-    const readinessRequest = fetchMock.mock.calls.find(([input, init]) => {
-      const inputUrl =
-        typeof input === "object" && input !== null && "url" in input
-          ? String(input.url)
-          : String(input);
-      const url = new URL(inputUrl, "https://dive.day");
-      const requestInit = init as { signal?: AbortSignal } | undefined;
-      return url.pathname === READY_PATH && requestInit?.signal !== undefined;
+    const digest = vi.spyOn(crypto.subtle, "digest").mockResolvedValue(new Uint8Array(32).buffer);
+    let resolveFetchStarted: (() => void) | undefined;
+    const fetchStarted = new Promise<void>((resolve) => {
+      resolveFetchStarted = resolve;
     });
-    const init = readinessRequest?.[1] as { signal?: AbortSignal } | undefined;
-    expect(init?.signal?.aborted).toBe(true);
+    fetchMock.mockImplementationOnce(() => {
+      resolveFetchStarted?.();
+      return hung();
+    });
+    const navigation = navigateReady(`https://dive.day${READY_PATH}`);
+    try {
+      // Reach the actual network request before starting the fake four-second
+      // deadline; native WebCrypto scheduling must not race the clock here.
+      await fetchStarted;
+      expect(await settledAfter(navigation.response, 3_999)).toBe("still waiting");
+      const result = await settledAfter(navigation.response, 1);
+      if (result === "still waiting") throw new Error("an uncached readiness page kept waiting");
+      expect(result.type).toBe("error");
+      const readinessRequest = fetchMock.mock.calls.find(([input, init]) => {
+        const inputUrl =
+          typeof input === "object" && input !== null && "url" in input
+            ? String(input.url)
+            : String(input);
+        const url = new URL(inputUrl, "https://dive.day");
+        const requestInit = init as { signal?: AbortSignal } | undefined;
+        return url.pathname === READY_PATH && requestInit?.signal !== undefined;
+      });
+      expect(readinessRequest).toBeDefined();
+      const init = readinessRequest?.[1] as { signal?: AbortSignal } | undefined;
+      expect(init?.signal?.aborted).toBe(true);
+    } finally {
+      digest.mockRestore();
+    }
   });
 
   it("ignores a readiness response that arrives after the uncached deadline", async () => {
