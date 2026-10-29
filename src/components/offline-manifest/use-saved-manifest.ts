@@ -749,7 +749,6 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
     tripPurgedRef,
     setMessage,
     t,
-    reconcile,
   });
   const onTripStorageReadStarted = useCallback(() => dispatchSaved({ type: "suppress-notes" }), []);
   const onTenantVerified = useOnTenantVerified({

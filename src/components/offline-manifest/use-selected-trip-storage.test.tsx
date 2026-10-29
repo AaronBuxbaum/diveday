@@ -4,8 +4,10 @@ import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import { useRef, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { OfflineManifestTranslator } from "@/i18n/offline-manifest-messages";
+import type { RollCallCheckpoint } from "@/lib/manifests";
 import { appendOfflineRollCall, saveOfflineManifest } from "@/lib/offline-manifest-store";
 import type { OfflineManifestEnvelope, OfflineManifestPayload } from "@/lib/offline-manifests";
+import { useSelectedTripEnvelopeHandler } from "./selected-trip-envelope";
 import { type SelectedTripStorageState, useSelectedTripStorage } from "./use-selected-trip-storage";
 import { richPayload } from "./view-fixtures";
 
@@ -48,6 +50,7 @@ afterEach(() => {
   cleanup();
   window.dispatchEvent(new Event("pagehide"));
   TestBroadcastChannel.channels = [];
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
 
@@ -61,6 +64,73 @@ afterEach(
 );
 
 describe("selected-trip storage invalidation", () => {
+  it("does not start another sync when a sync write invalidates the selected-trip envelope", async () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    vi.stubGlobal("BroadcastChannel", TestBroadcastChannel);
+    await saveOfflineManifest(tripPayload(1));
+    const reconcile = vi.fn(async () => {});
+    const envelopes: Array<OfflineManifestEnvelope | null> = [];
+    const state = { current: { changeRevision: 0, readRequest: 0, reload: () => {} } };
+
+    const mounted = renderHook(() => {
+      const [message, setMessage] = useState("");
+      const [read, setRead] = useState(false);
+      const [, setReadFailed] = useState(false);
+      const [checkpoint, setCheckpoint] = useState<RollCallCheckpoint>("departure");
+      const tripPurgedRef = useRef(false);
+      const verifiedTenantSlugRef = useRef<string | null>("blue-mantis");
+      const handleEnvelope = useSelectedTripEnvelopeHandler({
+        tripId,
+        verifiedTenantSlugRef,
+        dispatchSaved: () => {},
+        setCheckpoint,
+        tripNoticeForEnvelope: () => "",
+        tripPurgedRef,
+        setMessage,
+        t,
+      });
+      useSelectedTripStorage({
+        tripId,
+        verifiedTenantRevision: 0,
+        tripPurgedRef,
+        storageStateRef: state as { current: SelectedTripStorageState },
+        onEnvelope: (saved) => {
+          envelopes.push(saved);
+          handleEnvelope(saved);
+        },
+        onReadStarted: () => {},
+        onOnline: reconcile,
+        setMessage,
+        t,
+        setStoreRead: setRead,
+        setStoreReadFailed: setReadFailed,
+        refreshDiscarded: () => {},
+      });
+      return { checkpoint, message, read };
+    });
+
+    await waitFor(() => expect(mounted.result.current.read).toBe(true));
+    await waitFor(() => expect(envelopes.length).toBeGreaterThan(0));
+    await waitFor(() => expect(reconcile).toHaveBeenCalled());
+    const syncRequestsBeforeInvalidation = reconcile.mock.calls.length;
+
+    await act(async () => {
+      window.dispatchEvent(
+        new CustomEvent("diveday-offline-manifest-change", { detail: { tripId } }),
+      );
+    });
+    await waitFor(() => expect(envelopes.length).toBeGreaterThan(1));
+
+    expect(reconcile).toHaveBeenCalledTimes(syncRequestsBeforeInvalidation);
+
+    await act(async () => {
+      window.dispatchEvent(new Event("focus"));
+    });
+    await waitFor(() =>
+      expect(reconcile).toHaveBeenCalledTimes(syncRequestsBeforeInvalidation + 1),
+    );
+  });
+
   it("reloads the committed erasure disposition in an open trip view", async () => {
     vi.stubGlobal("BroadcastChannel", TestBroadcastChannel);
     await saveOfflineManifest(tripPayload(1));

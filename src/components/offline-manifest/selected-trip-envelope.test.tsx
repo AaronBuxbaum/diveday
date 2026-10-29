@@ -25,7 +25,6 @@ describe("selected trip envelope status", () => {
           tripPurgedRef: useRef(false),
           setMessage,
           t,
-          reconcile: vi.fn(async () => {}),
         });
         return { handler, message, setMessage };
       },

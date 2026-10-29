@@ -116,10 +116,17 @@ export function useSelectedTripStorage({
       reload();
     });
     const onVisible = () => {
-      if (document.visibilityState === "visible") reload();
+      if (document.visibilityState === "visible") {
+        reload();
+        if (navigator.onLine) queueMicrotask(onOnline);
+      }
     };
     const onNetworkOnline = () => queueMicrotask(onOnline);
-    window.addEventListener("focus", reload);
+    const onFocus = () => {
+      reload();
+      if (navigator.onLine) queueMicrotask(onOnline);
+    };
+    window.addEventListener("focus", onFocus);
     window.addEventListener("online", onNetworkOnline);
     document.addEventListener("visibilitychange", onVisible);
     return () => {
@@ -129,7 +136,7 @@ export function useSelectedTripStorage({
         storageStateRef.current.reload = () => {};
       }
       unsubscribe();
-      window.removeEventListener("focus", reload);
+      window.removeEventListener("focus", onFocus);
       window.removeEventListener("online", onNetworkOnline);
       document.removeEventListener("visibilitychange", onVisible);
     };
@@ -172,6 +179,7 @@ export function useSelectedTripStorage({
         }
         onEnvelope(saved);
         setStoreReadFailed(false);
+        if (saved && navigator.onLine && !tripPurgedRef.current) queueMicrotask(onOnline);
       })
       .catch(() => {
         if (active && request === storageStateRef.current.readRequest) {
@@ -202,6 +210,7 @@ export function useSelectedTripStorage({
     storageStateRef,
     onEnvelope,
     onReadStarted,
+    onOnline,
     refreshDiscarded,
     setStoreRead,
     setStoreReadFailed,

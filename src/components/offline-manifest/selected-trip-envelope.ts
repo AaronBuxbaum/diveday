@@ -20,7 +20,6 @@ export function useSelectedTripEnvelopeHandler({
   tripPurgedRef,
   setMessage,
   t,
-  reconcile,
 }: {
   tripId: string;
   verifiedTenantSlugRef: MutableRefObject<string | null>;
@@ -30,7 +29,6 @@ export function useSelectedTripEnvelopeHandler({
   tripPurgedRef: MutableRefObject<boolean>;
   setMessage: Dispatch<SetStateAction<string>>;
   t: OfflineManifestTranslator;
-  reconcile: () => Promise<void>;
 }) {
   const observedTripShopRef = useRef<ObservedTripShop>(null);
   const statusInitializedForTripRef = useRef<string | null>(null);
@@ -61,11 +59,9 @@ export function useSelectedTripEnvelopeHandler({
           if (saved) statusInitializedForTripRef.current = tripId;
         }
       }
-      if (saved && navigator.onLine && !tripPurgedRef.current) void reconcile();
     },
     [
       dispatchSaved,
-      reconcile,
       setCheckpoint,
       setMessage,
       t,
