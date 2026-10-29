@@ -61,7 +61,7 @@ export async function cancelledNotice(
   return (
     <>
       {/* The seat is gone, so is the phone's saved copy of its page (#2979). */}
-      <ForgetReadyCopy />
+      <ForgetReadyCopy failedText={t("ready.cancelledCopyForgetFailed")} />
       <EntryDone
         glyph="cancelled"
         title={t("ready.cancelledHeading")}

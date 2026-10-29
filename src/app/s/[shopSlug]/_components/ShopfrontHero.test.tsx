@@ -3,6 +3,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { diverTranslator } from "@/i18n/messages";
 import { ShopfrontHero } from "./ShopfrontHero";
+import { hasShopfrontStoryContent } from "./ShopfrontStory";
 
 /**
  * The hero's pins for ADR 20260827-clearwater-surface-language, decision 8.
@@ -116,6 +117,45 @@ describe("the hero renders only what the shop authored", () => {
     );
 
     expect(visibleText(screen.getByRole("paragraph"))).toContain("4,3");
+  });
+});
+
+describe("the public shop story earns its space", () => {
+  it("hides the name-only section when the shop has no authored content", () => {
+    expect(
+      hasShopfrontStoryContent({
+        tagline: null,
+        description: null,
+        heroImageUrl: null,
+        photoUrls: [],
+        reviewCount: 0,
+        badges: [],
+        establishedYear: null,
+      }),
+    ).toBe(false);
+  });
+
+  it.each([
+    { tagline: "Small boats", description: null },
+    { tagline: null, description: "A family-run center" },
+    { heroImageUrl: "/cover.jpg" },
+    { photoUrls: ["/reef.jpg"] },
+    { reviewCount: 1 },
+    { badges: ["padi_5_star"] },
+    { establishedYear: 1998 },
+  ])("keeps the section when it contains authored shop content: %o", (content) => {
+    expect(
+      hasShopfrontStoryContent({
+        tagline: null,
+        description: null,
+        heroImageUrl: null,
+        photoUrls: [],
+        reviewCount: 0,
+        badges: [],
+        establishedYear: null,
+        ...content,
+      }),
+    ).toBe(true);
   });
 });
 

@@ -6,6 +6,7 @@
 // the only surface it actually exposes: its own events.
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { MANIFEST_SYNC_TAG } from "@/lib/background-flush";
+import { nowMs } from "@/lib/clock";
 import {
   listOfflineManifests,
   purgeOfflineManifestsExceptShop,
@@ -19,7 +20,17 @@ import {
   type OfflineManifestPayload,
   type OfflineRollCallEvent,
 } from "@/lib/offline-manifests";
-import { READY_CACHE_NAME, READY_KEEP_UNTIL_META } from "@/lib/ready-offline";
+import {
+  READY_CACHE_NAME,
+  READY_COPY_GENERATED_AT_META,
+  READY_COPY_LOCALE_META,
+  READY_COPY_TIME_ZONE_META,
+  READY_COPY_VERSION,
+  READY_COPY_VERSION_META,
+  READY_KEEP_UNTIL_META,
+  READY_OFFLINE_GENERATED_AT_PLACEHOLDER,
+  READY_OFFLINE_NOTE_ATTR,
+} from "@/lib/ready-offline";
 import { saveReadyPage } from "./ready-page-cache";
 
 vi.mock("@/lib/offline-manifest-store", () => ({
@@ -461,12 +472,13 @@ describe("a navigation on a network that never answers", () => {
   }
 
   async function cacheReadyCopy(path: string, body: string) {
-    const keepUntil = Date.now() + 24 * 60 * 60 * 1000;
+    const now = nowMs();
+    const keepUntil = now + 24 * 60 * 60 * 1000;
     const response = new Response(
-      `<meta name="${READY_KEEP_UNTIL_META}" content="${keepUntil}"/>${body}`,
+      `<meta name="${READY_KEEP_UNTIL_META}" content="${keepUntil}"/><meta name="${READY_COPY_VERSION_META}" content="${READY_COPY_VERSION}"/><meta name="${READY_COPY_LOCALE_META}" content="en-US"/><meta name="${READY_COPY_TIME_ZONE_META}" content="America/New_York"/><meta name="${READY_COPY_GENERATED_AT_META}" content="${now}"/>${body}<p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">No signal: ${READY_OFFLINE_GENERATED_AT_PLACEHOLDER}</p>`,
       { headers: { "content-type": "text/html" } },
     );
-    await saveReadyPage(cacheStorage as unknown as CacheStorage, path, response, Date.now());
+    await saveReadyPage(cacheStorage as unknown as CacheStorage, path, response, now);
   }
 
   /** Settles `promise` or reports that it is still waiting after `ms` of fake time. */
@@ -591,6 +603,7 @@ describe("a navigation on a network that never answers", () => {
   });
 
   it("serves a readiness network response that arrives just before the four-second deadline", async () => {
+    const digest = vi.spyOn(crypto.subtle, "digest").mockResolvedValue(new Uint8Array(32).buffer);
     let answer: ((response: Response) => void) | undefined;
     fetchMock.mockImplementationOnce(
       () =>
@@ -599,15 +612,20 @@ describe("a navigation on a network that never answers", () => {
         }),
     );
     const navigation = navigateReady(`https://dive.day${READY_PATH}`);
-    expect(await settledAfter(navigation.response, 3_999)).toBe("still waiting");
-    answer?.(
-      new Response("live readiness page", {
-        headers: { "content-type": "text/html" },
-      }),
-    );
-    const live = await settledAfter(navigation.response, 0);
-    if (live === "still waiting") throw new Error("the live readiness page never arrived");
-    expect(await live.text()).toBe("live readiness page");
+    try {
+      expect(await settledAfter(navigation.response, 3_999)).toBe("still waiting");
+      answer?.(
+        new Response("live readiness page", {
+          headers: { "content-type": "text/html" },
+        }),
+      );
+      const live = await settledAfter(navigation.response, 0);
+      if (live === "still waiting") throw new Error("the live readiness page never arrived");
+      expect(await live.text()).toBe("live readiness page");
+      await Promise.allSettled(navigation.waits);
+    } finally {
+      digest.mockRestore();
+    }
   });
 
   it("uses only the readiness copy for the exact path when the network is slow", async () => {
