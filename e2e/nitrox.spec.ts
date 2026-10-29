@@ -1,4 +1,3 @@
-import type { Page } from "@playwright/test";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import {
   acceptAgeAttestation,
@@ -6,24 +5,19 @@ import {
   openDiverFileGroup,
   openThreadStep,
   openTripTab,
+  tripPathByTitle,
 } from "./helpers";
 import { mintOnboardFormPath } from "./setup-link";
-
-async function openWreckTrip(page: Page) {
-  await page.goto("/shop/blue-mantis/schedule/board");
-  await page
-    .locator("li")
-    .filter({ hasText: "Wreck Trip — Spiegel Grove" })
-    .getByRole("link", { name: "Wreck Trip — Spiegel Grove", exact: true })
-    .click();
-}
 
 test.describe("staff", () => {
   signedInAsOwner();
 
-  test("a verified nitrox card turns a diver's tanks to Nitrox on the prep list", async ({
-    page,
-  }) => {
+  test("staff can verify a nitrox card and view the prep tank list", async ({ page }) => {
+    // Find the departure before editing the card. Opening its prep page directly
+    // avoids a redundant visit to the trip overview; that navigation is covered
+    // by the trip-tab tests. This journey checks staff review and prep display.
+    const tripPath = await tripPathByTitle(page, "blue-mantis", "Wreck Trip — Spiegel Grove");
+
     // A unique card number keeps the flow self-contained and re-run safe.
     const cardNo = `EANX-T${e2eNow().getTime()}`;
 
@@ -54,12 +48,12 @@ test.describe("staff", () => {
     await card.getByRole("button", { name: "Mark certified" }).click();
     await expect(page.getByRole("status").filter({ hasText: "Marked certified" })).toBeVisible();
 
-    await openWreckTrip(page);
-    await openTripTab(page, "Prep");
+    await page.goto(`${tripPath}/prep`);
     await expect(page.getByRole("heading", { name: /Wreck Trip/ })).toBeVisible();
 
-    // The prep list is derived from rental fit, so it always lists tanks and
-    // rental kit even when nobody on the boat rents a single piece of kit.
+    // The seeded trip already has a Nitrox request; this is a display check.
+    // The request-to-certified-tank transition is tested against the database.
+    // Tanks and rental kit appear even when nobody rents gear.
     await expect(page.getByRole("heading", { name: "Rental kit" })).toBeVisible();
     // One tank per diver per dive, and the seeded nitrox request is on the split.
     await expect(page.getByText("one tank per diver per dive")).toBeVisible();

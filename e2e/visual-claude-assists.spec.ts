@@ -190,7 +190,11 @@ test.describe("light mode — Claude's assists, lit", () => {
         .fill("https://lit-lantern.example.com");
       await read.click();
       await page.waitForURL(/notice=setup-read/);
-      await page.getByText("Read. Accept the lines that are right.").waitFor();
+      const readNotice = page
+        .getByRole("status")
+        .filter({ hasText: staff("assistsFront.setup.notices.read") });
+      await expect(readNotice).toBeVisible();
+      await expect(readNotice).toBeHidden();
       await page.mouse.move(0, 0);
       await capture(page, "assist-website-setup", "light");
 

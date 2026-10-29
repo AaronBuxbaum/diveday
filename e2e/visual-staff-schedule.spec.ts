@@ -99,6 +99,15 @@ async function undoWithSessionRefresh(page: Page) {
   }
 }
 
+async function expectSettledRescheduleNotice(page: Page) {
+  const message = staffTranslator("en-US")("shared.rescheduleHold.notTold");
+  const notice = page.getByRole("status").filter({ hasText: message });
+  await expect(notice).toBeVisible();
+  // The notice is mounted with `rise-in`; visible copy alone can match while
+  // its opacity animation is still in flight. Capture only its settled state.
+  await expect(notice).toHaveCSS("opacity", "1");
+}
+
 for (const scheme of ["light", "dark"] as const) {
   test.describe(`${scheme} mode`, () => {
     // Base viewport for navigation and clicks; `capture` resizes to each entry
@@ -175,7 +184,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("button", { name: "Move it" }).click();
         await page.getByText(/^Telling \d+ divers? the new time…$/).waitFor();
         await undoWithSessionRefresh(page);
-        await page.getByText(staffTranslator("en-US")("shared.rescheduleHold.notTold")).waitFor();
+        await expectSettledRescheduleNotice(page);
         await capture(page, "schedule-builder-reschedule-hold", scheme);
       });
 

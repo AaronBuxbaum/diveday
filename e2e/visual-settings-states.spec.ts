@@ -54,14 +54,18 @@ for (const scheme of ["light", "dark"] as const) {
           .click();
         await scope.getByRole("heading", { name: staffCopy("calendar.newLink.heading") }).waitFor();
         // The real action/state is exercised; a random bearer URL is never photographed.
-        // Keep the origin and token length, substituting an inert example not stored by the server.
-        await scope.locator("p.font-mono").evaluateAll((nodes) => {
+        // Keep both schemes and token length, substituting an inert example not stored by the server.
+        const displayedUrls = scope.locator("p.font-mono");
+        await displayedUrls.evaluateAll((nodes) => {
           for (const node of nodes)
-            node.textContent = (node.textContent ?? "").replace(
-              /(\/calendar\/)[A-Za-z0-9_-]+(\.ics)/g,
-              `$1${"x".repeat(43)}$2`,
-            );
+            node.textContent = (node.textContent ?? "")
+              .replace(/(https?|webcal):\/\/127\.0\.0\.1:\d+/g, "$1://calendar.example")
+              .replace(/(\/calendar\/)[A-Za-z0-9_-]+(\.ics)/g, `$1${"x".repeat(43)}$2`);
         });
+        await expect(displayedUrls).toHaveText([
+          /^webcal:\/\/calendar\.example\/calendar\/x{43}\.ics$/,
+          /^http:\/\/calendar\.example\/calendar\/x{43}\.ics$/,
+        ]);
         await capture(page, "settings-calendar-issued-example", scheme);
       });
     });

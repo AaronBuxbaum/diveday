@@ -15,6 +15,95 @@ import { mintOnboardFormPath } from "./setup-link";
 test.describe("owner", () => {
   signedInAsOwner();
 
+  test.describe("phone navigation with enlarged text", () => {
+    test.use({ locale: "es-ES", viewport: { width: 390, height: 844 } });
+
+    test("keeps full labels keyboard-visible without widening the page", async ({ page }) => {
+      await page.goto("/shop/blue-mantis/safety-checklist");
+      const nav = page.getByRole("navigation", { name: "Principal", exact: true });
+      await expect(nav).toHaveAttribute("data-hydrated", "true");
+      await page.evaluate(() => {
+        document.documentElement.style.fontSize = "200%";
+      });
+
+      const schedule = nav.getByRole("link", { name: "Agenda", exact: true });
+      const divers = nav.getByRole("link", { name: "Buceadores", exact: true });
+      const inbox = nav.getByRole("link", { name: "Mensajes", exact: true });
+      const cue = nav.locator("[data-staff-tab-scroll-cue]");
+      await expect(nav).not.toHaveAttribute("data-staff-tab-scroll-state", "none", {
+        timeout: 1_000,
+      });
+      await expect(cue).toBeVisible();
+      await expect(schedule).toBeVisible();
+      await expect(divers).toBeVisible();
+      await expect(inbox).toBeVisible();
+      await expect(nav.getByRole("button", { name: "Más", exact: true })).toHaveClass(
+        /text-primary/,
+      );
+      await expect(schedule).toHaveAttribute("href", "/shop/blue-mantis/schedule/board");
+      await expect(divers).toHaveAttribute("href", "/shop/blue-mantis/divers");
+      await expect(inbox).toHaveAttribute("href", "/shop/blue-mantis/inbox");
+
+      await nav.getByRole("link", { name: /^Hoy/ }).focus();
+      await page.keyboard.press("Tab");
+      await expect(schedule).toBeFocused();
+      await page.keyboard.press("Tab");
+      await expect(divers).toBeFocused();
+      await page.keyboard.press("Tab");
+      await expect(inbox).toBeFocused();
+
+      const geometry = await page.evaluate(async () => {
+        const tabbar = document.querySelector<HTMLElement>("[data-staff-tab-scroll]");
+        const nav = document.querySelector<HTMLElement>("[data-staff-tabbar]");
+        const documentWidth = document.documentElement.scrollWidth;
+        const focused = document.activeElement?.getBoundingClientRect();
+        const bounds = tabbar?.getBoundingClientRect();
+        if (!nav) throw new Error("phone nav is missing");
+        nav.style.display = "none";
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+        const widthWithoutNav = document.documentElement.scrollWidth;
+        nav.style.removeProperty("display");
+        const targetBoxes = [
+          ...document.querySelectorAll<HTMLElement>(
+            "[data-staff-tab-scroll] a, [data-staff-tabbar] button",
+          ),
+        ].map((target) => target.getBoundingClientRect());
+        return {
+          navOverflowDelta: documentWidth - widthWithoutNav,
+          navScrolled: (tabbar?.scrollLeft ?? 0) > 0,
+          focusedInsideNav: Boolean(
+            focused &&
+              bounds &&
+              focused.left >= bounds.left - 1 &&
+              focused.right <= bounds.right + 1,
+          ),
+          minimumTargetHeight: document.activeElement?.getBoundingClientRect().height ?? 0,
+          targetsMeet44px:
+            targetBoxes.length > 0 &&
+            targetBoxes.every((box) => box.width >= 44 && box.height >= 44),
+        };
+      });
+      expect(geometry.navOverflowDelta).toBeLessThanOrEqual(0);
+      expect(geometry.navScrolled).toBe(true);
+      expect(geometry.focusedInsideNav).toBe(true);
+      expect(geometry.minimumTargetHeight).toBeGreaterThanOrEqual(44);
+      expect(geometry.targetsMeet44px).toBe(true);
+
+      const rail = nav.locator("[data-staff-tab-scroll]");
+      const cueBounds = await cue.boundingBox();
+      const moreBounds = await nav.getByRole("button", { name: "Más", exact: true }).boundingBox();
+      await rail.evaluate((element) => {
+        element.scrollLeft = element.scrollWidth;
+      });
+      const scrolledCueBounds = await cue.boundingBox();
+      expect(cueBounds).not.toBeNull();
+      expect(moreBounds).not.toBeNull();
+      expect(scrolledCueBounds).not.toBeNull();
+      expect(cueBounds?.x).toBe(scrolledCueBounds?.x);
+      expect((cueBounds?.x ?? 0) + (cueBounds?.width ?? 0)).toBeLessThanOrEqual(moreBounds?.x ?? 0);
+    });
+  });
+
   /**
    * How far down the board the scroll test below reads before clicking a row.
    *
