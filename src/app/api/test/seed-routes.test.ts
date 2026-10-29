@@ -42,10 +42,9 @@ type SeedRoute = {
   query?: string;
   /**
    * The verb this row is about — one row per handler, because a handler is
-   * guarded one at a time. Only `email-previews` is a `GET`; it is in this
-   * table for the same reason the rest are, since "it only reads" is not an
-   * exemption when the thing it reads is every notification template the
-   * product sends.
+   * guarded one at a time. `email-previews` and `demo-recap-trip` are `GET`s;
+   * both are in this table because reading data is not an exemption from the
+   * shared test-route guard.
    */
   method?: "GET" | "DELETE";
   /**
@@ -347,6 +346,15 @@ const routes: SeedRoute[] = [
     // No body at all, so reaching the database is the signal. Past that it
     // publishes a diver's photo to every other recap on their boat under their
     // first name, which only the diver's own tick may do (H-129).
+    expectPastTheGuard: async () => {
+      expect(getDb).toHaveBeenCalled();
+    },
+  },
+  {
+    slug: "demo-recap-trip",
+    method: "GET",
+    // Reads only the canonical demo booking's trip id, but still reaches the
+    // database only after the shared E2E bearer guard.
     expectPastTheGuard: async () => {
       expect(getDb).toHaveBeenCalled();
     },
