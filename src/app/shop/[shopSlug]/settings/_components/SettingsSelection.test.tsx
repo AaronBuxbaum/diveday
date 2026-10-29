@@ -1,13 +1,26 @@
 // @vitest-environment jsdom
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { SettingsSelection } from "./SettingsSelection";
 
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
   window.history.replaceState(null, "", "/");
 });
+
+function pressSettingsControl() {
+  let active = true;
+  const control = document.createElement("a");
+  const originalQuerySelector = document.querySelector.bind(document);
+  vi.spyOn(document, "querySelector").mockImplementation((selector) =>
+    selector === "[data-settings-group] :active" && active
+      ? control
+      : originalQuerySelector(selector),
+  );
+  return { release: () => (active = false) };
+}
 
 function renderSelection(initialSection: "units" | null = null) {
   return render(
@@ -104,5 +117,75 @@ describe("the selected settings pane", () => {
     const { container } = renderSelection("units");
     expect(container.firstElementChild).toHaveAttribute("data-settings-selection", "units");
     expect(screen.getByText("Units form").closest("details")).toHaveAttribute("open");
+  });
+
+  it("applies the latest fragment after a pressed control is released", () => {
+    window.history.replaceState(null, "", "/#units");
+    const pressedControl = pressSettingsControl();
+    const { container } = renderSelection();
+    const selection = container.firstElementChild;
+    expect(selection).toHaveAttribute("data-selection-pending", "true");
+
+    act(() => {
+      window.history.replaceState(null, "", "/#timezone");
+      window.dispatchEvent(new HashChangeEvent("hashchange"));
+    });
+    expect(selection).not.toHaveAttribute("data-settings-selection");
+
+    let applyFrame: FrameRequestCallback | undefined;
+    vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
+      applyFrame = callback;
+      return 1;
+    });
+    act(() => {
+      pressedControl.release();
+      document.dispatchEvent(new Event("pointerup"));
+      applyFrame?.(0);
+    });
+    expect(selection).toHaveAttribute("data-settings-selection", "timezone");
+    expect(selection).not.toHaveAttribute("data-selection-pending");
+  });
+
+  it("cancels a queued release update when a newer fragment arrives", () => {
+    window.history.replaceState(null, "", "/#units");
+    const pressedControl = pressSettingsControl();
+    const { container } = renderSelection();
+    const selection = container.firstElementChild;
+    let applyFrame: FrameRequestCallback | undefined;
+    vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
+      applyFrame = callback;
+      return 1;
+    });
+    const cancelFrame = vi.spyOn(window, "cancelAnimationFrame");
+
+    act(() => {
+      pressedControl.release();
+      document.dispatchEvent(new Event("pointerup"));
+    });
+    expect(applyFrame).toBeDefined();
+
+    act(() => {
+      window.history.replaceState(null, "", "/#timezone");
+      window.dispatchEvent(new HashChangeEvent("hashchange"));
+    });
+    expect(cancelFrame).toHaveBeenCalledWith(1);
+    expect(selection).toHaveAttribute("data-settings-selection", "timezone");
+
+    act(() => applyFrame?.(0));
+    expect(selection).toHaveAttribute("data-settings-selection", "timezone");
+  });
+
+  it("cancels release handling when unmounted during a press", () => {
+    window.history.replaceState(null, "", "/#units");
+    const pressedControl = pressSettingsControl();
+    const { unmount } = renderSelection();
+    const requestFrame = vi.spyOn(window, "requestAnimationFrame");
+    unmount();
+
+    act(() => {
+      pressedControl.release();
+      document.dispatchEvent(new Event("pointerup"));
+    });
+    expect(requestFrame).not.toHaveBeenCalled();
   });
 });
