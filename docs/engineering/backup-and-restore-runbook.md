@@ -528,8 +528,8 @@ On the 2nd of each month at 07:00 UTC, and on demand from the workflow's **Run w
    `restore_drill` on it;
 3. restores the dump into that database with `pg_restore --no-owner --no-privileges
    --exit-on-error`, in the dump job's own Postgres major (`postgres:17-alpine`, pinned by digest
-   in `POSTGRES_IMAGE`), printing only each error's SQLSTATE and object name, because a Postgres
-   `DETAIL` or `CONTEXT` line quotes row values;
+   in `POSTGRES_IMAGE`), printing only fixed failure categories and counts, because a Postgres
+   error, `DETAIL` or `CONTEXT` line can quote row values;
 4. runs `scripts/restore-drill-verify.ts` against it: the seeded owner signs in through
    `verifyCredentials`, the function sign-in calls, and every departure tomorrow in that shop's zone
    loads its manifest through `getTripManifest` (the next departure after now when tomorrow has

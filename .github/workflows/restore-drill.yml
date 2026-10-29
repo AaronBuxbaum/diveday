@@ -15,7 +15,7 @@ name: Restore drill
 #
 # The dump holds every password hash and medical answer in the platform. It lives on the runner
 # only for the job, nothing here uploads an artifact, and the script prints counts and ids, never a
-# row or a connection string; pg_restore's stderr is reduced to SQLSTATEs and object names.
+# row or a connection string; pg_restore's stderr is reduced to fixed failure categories and counts.
 #
 # Its secrets are safe only while the `restore-drill` environment admits `main` alone, with a
 # required reviewer: `workflow_dispatch` runs this file as the chosen ref has it, so a branch could
