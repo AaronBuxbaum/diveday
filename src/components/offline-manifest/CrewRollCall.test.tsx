@@ -25,12 +25,14 @@ vi.mock("@/lib/offline-manifest-store", async () => ({
       "@/lib/offline-manifest-store",
     )
   ).OfflineManifestError,
+  beginOfflineTenantVerificationRound: vi.fn().mockResolvedValue(1),
   // The counter's queue is a *different* writer from roll call's, and this
   // mock keeps them apart so a test can prove which one a tap reached
   // (ADR 20260907-the-counter-survives-offline).
   appendOfflineArrival: vi.fn(),
   appendOfflineRollCall: vi.fn(),
-  listOfflineManifests: vi.fn(),
+  listOfflineManifests: vi.fn().mockResolvedValue([]),
+  subscribeOfflineManifestChanges: vi.fn(() => () => {}),
   loadOfflineManifest: vi.fn(),
   purgeOfflineManifestsExceptShop: vi.fn().mockResolvedValue([]),
   syncOfflineManifest: vi.fn(),
@@ -86,6 +88,11 @@ afterEach(() => {
  * while the live page says the checkpoint is still open.
  */
 describe("OfflineManifestView — crew are part of the head count offline too", () => {
+  beforeEach(() => {
+    setOnline(false);
+    vi.mocked(fetch).mockRejectedValue(new Error("offline"));
+  });
+
   it("does not read complete when every diver has a result but the crew were never called", async () => {
     searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "after_dive_1" });
     // No `crewCalled` — a snapshot saved before anyone called the crew.

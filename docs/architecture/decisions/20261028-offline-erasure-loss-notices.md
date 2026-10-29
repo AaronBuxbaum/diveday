@@ -27,7 +27,9 @@ outage, even when the current shop cannot be verified. On shared devices this ca
 shop's roster, including emergency contacts and the medical/safety details already permitted in the
 offline snapshot, to a person holding the unlocked device. This preserves offline roll call's core
 use when the boat has no connectivity; encryption protects copied browser storage, not an unlocked
-device. Do not infer that the same disclosure is accepted while the device is online: while an
-identity request is pending, fails, or returns no shop, keep full roster and shop/trip titles hidden
-until the current shop is verified. This amendment accepts the true-offline disclosure tradeoff; it
-does not weaken tenant-scoped sync, purge, or notice rules.
+device. The owner also accepts the existing non-blocking behavior while an online identity request
+is pending or fails: render the saved roster immediately, then apply the cross-shop filtering and
+purge only after a shop is verified. A slow identity service must not hold a captain's offline
+roll-call surface behind a loading gate. This accepts a bounded shared-device cross-shop disclosure
+window during verification, as well as the full true-offline disclosure tradeoff. It does not weaken
+tenant-scoped sync, purge, or notice rules.
