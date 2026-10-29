@@ -112,7 +112,7 @@ export type SafetyMonth = {
   certOverrides: number;
   /** One crew member on one departure. */
   crewSailings: number;
-  /** Live boarding observations with a credential lapsed on the departure's local sailing day. */
+  /** Live boarding observations with a credential lapsed by the departure's final local day. */
   lapsedSailings: {
     tripId: string;
     title: string;
@@ -350,7 +350,7 @@ export function summarizeSafetyMonth(input: SafetyMonthInput): SafetyMonth {
       else if (result === undefined) unmarkedAtDock += 1;
     }
 
-    const divesOn = lastDayOfDeparture(departure.endsAt, input.timeZone);
+    const lastLocalDiveDay = lastDayOfDeparture(departure.endsAt, input.timeZone);
     const crewSailingsBefore = crewSailings;
     for (const { personId, tripRole, shopRoles } of departure.crew) {
       // A crew member recorded ashore at the dock did not sail.
@@ -383,16 +383,14 @@ export function summarizeSafetyMonth(input: SafetyMonthInput): SafetyMonth {
           : null;
       const sailingDay = calendarDateInTimezone(departure.startsAt, input.timeZone);
       let onFile: readonly SafetyCredential[];
-      let checkedDay = sailingDay;
       // A board mark only establishes this sailing's date-level credential state
       // when its complete observation interval falls on the scheduled local
       // sailing day. An adjacent-day mark cannot stand in for the card at sail.
       const hasObservedState = validSnapshot && observationDay === sailingDay && snapshot;
       if (hasObservedState) {
-        checkedDay = observationDay;
         // A future-issued legacy card may have replaced an older one, so it
-        // cannot establish either the prior lapse or an empty file.
-        if (snapshot.some((card) => card.issuedAt && card.issuedAt > checkedDay)) {
+        // cannot establish either the starting-day file or an empty file.
+        if (snapshot.some((card) => card.issuedAt && card.issuedAt > sailingDay)) {
           unknownCredentialSailings += 1;
           continue;
         }
@@ -406,7 +404,9 @@ export function summarizeSafetyMonth(input: SafetyMonthInput): SafetyMonth {
           unknownCredentialSailings += 1;
           continue;
         }
-        onFile = recorded.filter(({ issuedAt }) => !issuedAt || issuedAt <= divesOn);
+        // Qualification is judged through the final local dive day below, but
+        // a card issued after this sailing began cannot answer for it.
+        onFile = recorded.filter(({ issuedAt }) => !issuedAt || issuedAt <= sailingDay);
       }
       if (onFile.length === 0) nothingOnFileSailings += 1;
       // Only cards were captured, not the crew role at the mark. A later
@@ -422,7 +422,7 @@ export function summarizeSafetyMonth(input: SafetyMonthInput): SafetyMonth {
         unrecorded.set(personId, entry);
       }
       if (onFile.length === 0) continue;
-      const kinds = lapsedCredentialKinds(onFile, checkedDay);
+      const kinds = lapsedCredentialKinds(onFile, lastLocalDiveDay);
       if (kinds.length > 0) {
         lapsedSailings.push({
           tripId: departure.tripId,

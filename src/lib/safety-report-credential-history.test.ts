@@ -42,6 +42,65 @@ const version = (
 });
 
 describe("historical crew credentials", () => {
+  it("uses the start-day snapshot for provenance and the final local day for renewal", () => {
+    const trip = input([]);
+    const multiDayDeparture = {
+      ...trip.departures[0],
+      endsAt: new Date("2026-10-04T17:00:00Z"),
+    };
+    const mark = {
+      tripId: "trip",
+      subjectId: "crew",
+      checkpoint: "departure",
+      status: "boarded" as const,
+      credentialSnapshot: [
+        { kind: "captains_licence", issuedAt: "2024-01-01", renewsAt: "2026-10-03" },
+      ],
+      credentialSnapshotStartedAt: new Date("2026-10-03T14:00:00Z"),
+      credentialSnapshotCapturedAt: new Date("2026-10-03T14:00:01Z"),
+    };
+
+    const result = summarizeSafetyMonth({
+      ...trip,
+      departures: [multiDayDeparture],
+      crewEvents: [mark],
+    });
+
+    expect(result.lapsedSailings).toEqual([
+      expect.objectContaining({
+        personId: "crew",
+        kinds: ["captains_licence"],
+        observationStartedAt: mark.credentialSnapshotStartedAt,
+        observationCapturedAt: mark.credentialSnapshotCapturedAt,
+      }),
+    ]);
+    expect(result.unknownCredentialSailings).toBe(0);
+  });
+
+  it("does not use a credential issued after the trip's scheduled start day", () => {
+    const trip = input([
+      {
+        personId: "crew",
+        kind: "captains_licence",
+        issuedAt: "2026-10-04",
+        renewsAt: null,
+      },
+    ]);
+    const multiDayDeparture = {
+      ...trip.departures[0],
+      endsAt: new Date("2026-10-04T17:00:00Z"),
+    };
+
+    const result = summarizeSafetyMonth({
+      ...trip,
+      departures: [multiDayDeparture],
+      unavailableCredentialPeople: new Set(),
+    });
+
+    expect(result.unrecordedSailings).toBe(1);
+    expect(result.unrecordedCrew).toEqual([{ personId: "crew", name: "Crew", sailings: 1 }]);
+  });
+
   it("does not infer a past lapse from unconfirmed transaction timestamps", () => {
     const result = summarizeSafetyMonth(
       input([
