@@ -90,6 +90,8 @@ const COPY_REQUEST_ID_HEADER = "x-diveday-copy-request-id";
 const REQUEST_ID_HEADER = "x-diveday-ready-request-id";
 const REQUEST_PATH_HASH_HEADER = "x-diveday-ready-request-path-hash";
 const REQUEST_FORGOTTEN_VERSION_HEADER = "x-diveday-ready-request-forgotten-version";
+const REQUEST_CANCELLED_PATH_HASH_HEADER = "x-diveday-ready-cancelled-path-hash";
+const REQUEST_CANCELLED_VERSION_HEADER = "x-diveday-ready-cancelled-version";
 /** One durable slot orders requests and forgets; this cache keeps only one page. */
 const LATEST_REQUEST_KEY = "/ready/latest-request";
 const KEEP_UNTIL_HEADER = "x-diveday-keep-until";
@@ -359,7 +361,12 @@ export function beginReadyPageRequest(
     try {
       const markers = await storage.open(READY_FORGOTTEN_CACHE_NAME);
       const marker = await markers.match(LATEST_REQUEST_KEY);
-      request.forgottenVersion = marker?.headers.get(REQUEST_FORGOTTEN_VERSION_HEADER) ?? "";
+      const cancelledPathHash = marker?.headers.get(REQUEST_CANCELLED_PATH_HASH_HEADER) ?? "";
+      const cancelledVersion = marker?.headers.get(REQUEST_CANCELLED_VERSION_HEADER) ?? "";
+      request.forgottenVersion =
+        cancelledPathHash === hash
+          ? cancelledVersion
+          : (marker?.headers.get(REQUEST_FORGOTTEN_VERSION_HEADER) ?? "");
       await markers.put(
         LATEST_REQUEST_KEY,
         new Response(null, {
@@ -367,6 +374,8 @@ export function beginReadyPageRequest(
             [REQUEST_ID_HEADER]: request.requestId,
             [REQUEST_PATH_HASH_HEADER]: request.pathHash,
             [REQUEST_FORGOTTEN_VERSION_HEADER]: request.forgottenVersion,
+            [REQUEST_CANCELLED_PATH_HASH_HEADER]: cancelledPathHash,
+            [REQUEST_CANCELLED_VERSION_HEADER]: cancelledVersion,
           },
         }),
       );
@@ -531,7 +540,25 @@ export async function readyPageFallback(
     await cache.delete(READY_COPY_KEY);
     return undefined;
   }
-  if (cached.headers.get(PATH_HASH_HEADER) !== (await pathHash(path))) return undefined;
+  const hash = await pathHash(path);
+  if (cached.headers.get(PATH_HASH_HEADER) !== hash) return undefined;
+  try {
+    const markers = await storage.open(READY_FORGOTTEN_CACHE_NAME);
+    const latest = await markers.match(LATEST_REQUEST_KEY);
+    if (
+      latest?.headers.get(REQUEST_CANCELLED_PATH_HASH_HEADER) === hash &&
+      cached.headers.get(COPY_FORGOTTEN_VERSION_HEADER) !==
+        latest.headers.get(REQUEST_CANCELLED_VERSION_HEADER)
+    ) {
+      await cache.delete(READY_COPY_KEY).catch(() => false);
+      return undefined;
+    }
+  } catch {
+    // If durable invalidation state cannot be read, do not serve a possibly
+    // cancelled page offline. Legacy copies remain eligible when it is read
+    // successfully and no matching cancellation is recorded.
+    return undefined;
+  }
   const storedHtml = await cached.text();
   let copyHtml = storedHtml;
   if (metaContent(storedHtml, READY_COPY_VERSION_META) === READY_COPY_VERSION) {
@@ -563,6 +590,22 @@ export async function readyPageFallback(
     }
     copyHtml = legacyCopy;
   }
+  // Recheck after asynchronous body parsing: cancellation may persist its
+  // marker while this fallback was preparing the response.
+  try {
+    const markers = await storage.open(READY_FORGOTTEN_CACHE_NAME);
+    const latest = await markers.match(LATEST_REQUEST_KEY);
+    if (
+      latest?.headers.get(REQUEST_CANCELLED_PATH_HASH_HEADER) === hash &&
+      cached.headers.get(COPY_FORGOTTEN_VERSION_HEADER) !==
+        latest.headers.get(REQUEST_CANCELLED_VERSION_HEADER)
+    ) {
+      await cache.delete(READY_COPY_KEY).catch(() => false);
+      return undefined;
+    }
+  } catch {
+    return undefined;
+  }
   const html = copyHtml.replaceAll(TOKEN_PLACEHOLDER, tokenOf(path));
   return new Response(html, {
     status: cached.status,
@@ -580,23 +623,50 @@ export async function readyPageFallback(
 async function writeForgetMarker(
   storage: CacheStorage,
   cancellationEpoch: string,
+  cancelledPathHash: string,
+  latest: Response | undefined,
 ): Promise<boolean> {
   try {
     const markers = await storage.open(READY_FORGOTTEN_CACHE_NAME);
+    const readyCache = await storage.open(READY_CACHE_NAME);
+    const cached = await readyCache.match(READY_COPY_KEY);
+    const previousCancelledPathHash = latest?.headers.get(REQUEST_CANCELLED_PATH_HASH_HEADER) ?? "";
+    const previousCancelledVersion = latest?.headers.get(REQUEST_CANCELLED_VERSION_HEADER) ?? "";
+    const preservePreviousCancellation =
+      previousCancelledPathHash !== "" &&
+      cached?.headers.get(PATH_HASH_HEADER) === previousCancelledPathHash &&
+      cached.headers.get(COPY_FORGOTTEN_VERSION_HEADER) !== previousCancelledVersion;
+    const effectiveCancelledPathHash = preservePreviousCancellation
+      ? previousCancelledPathHash
+      : cancelledPathHash;
+    const effectiveCancelledVersion = preservePreviousCancellation
+      ? previousCancelledVersion
+      : cancellationEpoch;
+    const preserveRequest =
+      latest &&
+      latest.headers.get(REQUEST_PATH_HASH_HEADER) !== "" &&
+      latest.headers.get(REQUEST_PATH_HASH_HEADER) !== cancelledPathHash;
+    const requestId = preserveRequest ? latest.headers.get(REQUEST_ID_HEADER) : crypto.randomUUID();
+    const requestPathHash = preserveRequest ? latest.headers.get(REQUEST_PATH_HASH_HEADER) : "";
+    const requestForgottenVersion = preserveRequest
+      ? latest.headers.get(REQUEST_FORGOTTEN_VERSION_HEADER)
+      : cancellationEpoch;
     // Replace the request record atomically: this rejects every older response
-    // and stores the cancellation epoch in the same bounded slot. Its value
-    // never depends on the device clock and survives worker restarts.
+    // when the forgotten path owned it, while retaining an unrelated current
+    // token. Cancellation state remains path-scoped in this same bounded slot.
     await markers.put(
       LATEST_REQUEST_KEY,
       new Response(null, {
         headers: {
-          [REQUEST_ID_HEADER]: crypto.randomUUID(),
-          [REQUEST_PATH_HASH_HEADER]: "",
-          [REQUEST_FORGOTTEN_VERSION_HEADER]: cancellationEpoch,
+          [REQUEST_ID_HEADER]: requestId ?? crypto.randomUUID(),
+          [REQUEST_PATH_HASH_HEADER]: requestPathHash ?? "",
+          [REQUEST_FORGOTTEN_VERSION_HEADER]: requestForgottenVersion ?? cancellationEpoch,
+          [REQUEST_CANCELLED_PATH_HASH_HEADER]: effectiveCancelledPathHash,
+          [REQUEST_CANCELLED_VERSION_HEADER]: effectiveCancelledVersion,
         },
       }),
     );
-    localLatestRequest = null;
+    if (!preserveRequest) localLatestRequest = null;
     // Drop tombstones from earlier versions. A single global marker is enough
     // for the one-copy cache and keeps storage use constant over time.
     for (const request of await markers.keys()) {
@@ -631,10 +701,9 @@ async function forgetTerminalReadyPath(
     try {
       const markers = await storage.open(READY_FORGOTTEN_CACHE_NAME);
       const latest = await markers.match(LATEST_REQUEST_KEY);
-      // The slot now belongs to a different token; an old response must not
-      // invalidate that token's request or remove its saved page.
-      if (latest && latest.headers.get(REQUEST_PATH_HASH_HEADER) !== hash) return false;
-      const durable = await writeForgetMarker(storage, crypto.randomUUID());
+      // Preserve a different token's request fields while recording this
+      // terminal path for fallback's crash-window check.
+      const durable = await writeForgetMarker(storage, crypto.randomUUID(), hash, latest);
       // If persistence failed, block the current same-path request ID in this
       // worker. The marker write is serialized with starts, so the next request
       // can replace this single local invalidation record.
@@ -678,10 +747,11 @@ export function forgetReadyPage(
         const latest = await markers.match(LATEST_REQUEST_KEY);
         // A different token owns the one-copy slot. Its request stays current;
         // an older response for this path is already rejected by request ID.
-        if (latest && latest.headers.get(REQUEST_PATH_HASH_HEADER) !== hash) return true;
-        if (!latest) return writeForgetMarker(storage, crypto.randomUUID());
-        locallyInvalidatedRequestId = latest.headers.get(REQUEST_ID_HEADER);
-        return writeForgetMarker(storage, crypto.randomUUID());
+        if (!latest) return writeForgetMarker(storage, crypto.randomUUID(), hash, latest);
+        if (latest.headers.get(REQUEST_PATH_HASH_HEADER) === hash) {
+          locallyInvalidatedRequestId = latest.headers.get(REQUEST_ID_HEADER);
+        }
+        return writeForgetMarker(storage, crypto.randomUUID(), hash, latest);
       } catch {
         return false;
       }

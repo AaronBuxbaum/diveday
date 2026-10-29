@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { LEGACY_READY_BANNER_COPY } from "@/i18n/ready-offline-legacy";
 import {
+  READY_CACHE_NAME,
   READY_COPY_GENERATED_AT_META,
   READY_COPY_LOCALE_META,
   READY_COPY_TIME_ZONE_META,
@@ -13,6 +15,8 @@ import {
 import {
   beginReadyPageRequest,
   forgetReadyPage,
+  READY_COPY_KEY,
+  READY_COPY_MAX_AGE_MS,
   readyPageFallback,
   saveReadyPage,
 } from "./ready-page-cache";
@@ -108,6 +112,77 @@ describe("ready page invalidation ordering", () => {
 
     expect(await forgetReadyPage(broken, oldPath, NOW)).toBe(false);
     expect(await readyPageFallback(store.storage, currentPath, NOW)).toBeDefined();
+  });
+
+  it("preserves another token's offline copy when cancellation state is recorded for this path", async () => {
+    const forgottenPath = `/ready/${TOKEN}`;
+    const currentPath = `/ready/${OTHER}`;
+    await saveReadyPage(store.storage, currentPath, page("current token"), NOW);
+    await beginReadyPageRequest(store.storage, currentPath);
+
+    expect(await forgetReadyPage(store.storage, forgottenPath, NOW)).toBe(true);
+    expect(await (await readyPageFallback(store.storage, currentPath, NOW))?.text()).toContain(
+      "current token",
+    );
+  });
+
+  it("does not serve a matching copy after the marker persists but deletion is interrupted", async () => {
+    const path = `/ready/${TOKEN}`;
+    await saveReadyPage(store.storage, path, page("cancelled copy"), NOW);
+    const baseOpen = store.storage.open.bind(store.storage);
+    const interrupted = {
+      delete: async (name: string) =>
+        name === READY_CACHE_NAME ? false : store.storage.delete(name),
+      open: async (name: string) => {
+        const cache = await baseOpen(name);
+        if (name !== READY_CACHE_NAME) return cache;
+        return {
+          ...cache,
+          delete: async () => {
+            throw new Error("worker terminated");
+          },
+        };
+      },
+    } as unknown as CacheStorage;
+
+    expect(await forgetReadyPage(interrupted, path, NOW)).toBe(false);
+    vi.resetModules();
+    const restarted = await import("./ready-page-cache");
+    expect(await restarted.readyPageFallback(store.storage, path, NOW)).toBeUndefined();
+  });
+
+  it("fails closed when durable cancellation state cannot be read", async () => {
+    const path = `/ready/${TOKEN}`;
+    await saveReadyPage(store.storage, path, page("saved copy"), NOW);
+    const broken = {
+      delete: store.storage.delete.bind(store.storage),
+      open: async (name: string) => {
+        if (name === READY_FORGOTTEN_CACHE_NAME) throw new Error("storage unavailable");
+        return store.storage.open(name);
+      },
+    } as unknown as CacheStorage;
+
+    expect(await readyPageFallback(broken, path, NOW)).toBeUndefined();
+    expect(await readyPageFallback(store.storage, path, NOW)).toBeDefined();
+  });
+
+  it("keeps recognized legacy copies with the selected unknown-time warning", async () => {
+    const path = `/ready/${TOKEN}`;
+    await saveReadyPage(store.storage, path, page("legacy source"), NOW);
+    const cache = await store.storage.open(READY_CACHE_NAME);
+    const saved = await cache.match(READY_COPY_KEY);
+    if (!saved) throw new Error("expected saved copy");
+    const headers = new Headers(saved.headers);
+    headers.delete("x-diveday-copy-forgotten-version");
+    const legacyBanner = [...LEGACY_READY_BANNER_COPY.entries()][0];
+    if (!legacyBanner) throw new Error("expected recognized legacy banner");
+    await cache.put(
+      READY_COPY_KEY,
+      new Response(`<p ${READY_OFFLINE_NOTE_ATTR}="">${legacyBanner[0]}</p>`, { headers }),
+    );
+
+    const served = await readyPageFallback(store.storage, path, NOW + READY_COPY_MAX_AGE_MS - 1);
+    expect(await served?.text()).toContain(legacyBanner[1]);
   });
 
   it("serializes an old-path forget against a different-token request acquiring the marker", async () => {
