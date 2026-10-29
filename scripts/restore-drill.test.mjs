@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   BRANCH_PREFIX,
   BRANCH_TTL_MS,
+  dockerDiagnostics,
   drillBranchName,
   logRow,
   newestDump,
@@ -194,37 +195,79 @@ describe("pgRestoreErrorSummary", () => {
     "DETAIL:  Failing row contains (1, Ana Diver, ana@example.com, null).",
   ].join("\n");
 
-  it("names each error's SQLSTATE and object, and nothing a row could be in", () => {
+  it("classifies SQL failures without exposing row values, identifiers or SQL", () => {
     const lines = pgRestoreErrorSummary(stderr);
     expect(lines).toEqual([
-      "pg_restore error: SQLSTATE 22P02 on TABLE DATA medical_answers",
-      "pg_restore error: SQLSTATE 23505 on INDEX users_email_key",
-      "pg_restore error: SQLSTATE 23502 on waiver_records",
-      "5 other stderr line(s) withheld: they can quote rows.",
+      "pg_restore diagnostic: sql_data (1 line)",
+      "pg_restore diagnostic: redacted_detail (4 lines)",
+      "pg_restore diagnostic: sql_integrity (2 lines)",
     ]);
     const printed = lines.join("\n");
-    for (const secret of ["secret-value-1", "epilepsy", "diver@example.com", "Ana Diver", "ana@"]) {
+    for (const secret of [
+      "secret-value-1",
+      "epilepsy",
+      "medical_answers",
+      "users_email_key",
+      "waiver_records",
+      "neondb_owner",
+      "diver@example.com",
+      "Ana Diver",
+      "CREATE UNIQUE",
+    ]) {
       expect(printed).not.toContain(secret);
     }
   });
 
-  it("keeps a verbose SQLSTATE, pg_restore's own words, and an unknown code", () => {
+  it("classifies representative connection, archive, version and SQL errors", () => {
     expect(
       pgRestoreErrorSummary(
-        "pg_restore: error: could not execute query: ERROR:  40P01: deadlock detected\nDETAIL: Process 1 waits",
+        [
+          'pg_restore: error: connection to server at "ep-secret.neon.tech" failed: password authentication failed for user "owner-secret"',
+          "pg_restore: error: input file appears to be a text format dump. Please use psql.",
+          "pg_restore: error: input file does not appear to be a valid archive (too short?)",
+          "pg_restore: error: unsupported version (1.15) in file header",
+          "pg_restore: error: could not read from input file: end of file",
+          "pg_restore: error: could not execute query: ERROR:  40P01: deadlock detected",
+          "pg_restore: error: could not execute query: ERROR:  permission denied for schema secret_schema",
+        ].join("\n"),
       ),
     ).toEqual([
-      "pg_restore error: SQLSTATE 40P01 on an unnamed object",
-      "1 other stderr line(s) withheld: they can quote rows.",
+      "pg_restore diagnostic: connection (1 line)",
+      "pg_restore diagnostic: archive_format (2 lines)",
+      "pg_restore diagnostic: version_compatibility (1 line)",
+      "pg_restore diagnostic: archive_incomplete_or_corrupt (1 line)",
+      "pg_restore diagnostic: sql_transaction (1 line)",
+      "pg_restore diagnostic: sql_permission (1 line)",
     ]);
-    expect(
-      pgRestoreErrorSummary("pg_restore: error: could not read from input file: end of file"),
-    ).toEqual(["pg_restore error: could not read from input file: end of file"]);
-    expect(
-      pgRestoreErrorSummary(
-        'pg_restore: error: could not execute query: ERROR:  something new: "x@y.z"',
-      ),
-    ).toEqual(["pg_restore error: SQLSTATE unknown on an unnamed object"]);
+  });
+
+  it("never echoes unknown stderr or adversarial values and still reports its count", () => {
+    const summary = pgRestoreErrorSummary(
+      [
+        'pg_restore: error: unexpected detail "Bearer ghp_super_secret" for patient@example.com',
+        "private runner path /tmp/restore-drill/db-secret.dump",
+        'DETAIL: Failing row contains (patient@example.com, "diagnosis-secret").',
+        "CONTEXT: COPY medical_answers, line 3, column value",
+        "Command was: INSERT INTO private_table VALUES ('row-secret')",
+      ].join("\n"),
+    );
+    const printed = summary.join("\n");
+    for (const secret of [
+      "ghp_super_secret",
+      "patient@example.com",
+      "diagnosis-secret",
+      "db-secret",
+      "medical_answers",
+      "row-secret",
+      "private_table",
+    ]) {
+      expect(printed).not.toContain(secret);
+    }
+    expect(summary).toEqual([
+      "pg_restore diagnostic: pg_restore_other (1 line)",
+      "pg_restore diagnostic: unclassified_stderr (1 line)",
+      "pg_restore diagnostic: redacted_detail (3 lines)",
+    ]);
     expect(pgRestoreErrorSummary("")).toEqual([]);
   });
 });
@@ -279,5 +322,24 @@ describe("subprocessEnv", () => {
 describe("POSTGRES_IMAGE", () => {
   it("is pinned by digest, not only by a tag someone can move", () => {
     expect(POSTGRES_IMAGE).toMatch(/:17-alpine@sha256:[0-9a-f]{64}$/);
+  });
+});
+
+describe("dockerDiagnostics", () => {
+  it("keeps docker's own pull and daemon lines and nothing pg_restore can print", () => {
+    const stderr = [
+      "Unable to find image 'public.ecr.aws/docker/library/postgres:17-alpine' locally",
+      "docker: Error response from daemon: manifest unknown.",
+      "pg_restore: error: could not execute query: ERROR:  duplicate key value violates unique constraint",
+      "DETAIL:  Key (email)=(diver@example.com) already exists.",
+      "Error: docker: pretend row value",
+      `docker: ${"x".repeat(500)}`,
+    ].join("\n");
+    const lines = dockerDiagnostics(stderr);
+    expect(lines).toHaveLength(3);
+    expect(lines.join("\n")).not.toContain("diver@example.com");
+    expect(lines.join("\n")).not.toContain("duplicate key");
+    expect(lines.every((line) => line.length <= 300)).toBe(true);
+    expect(dockerDiagnostics(undefined)).toEqual([]);
   });
 });

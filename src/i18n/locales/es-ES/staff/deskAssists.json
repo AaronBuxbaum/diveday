@@ -6,14 +6,6 @@
   "cardPhotoPending": "Leyendo la tarjeta…",
   "gearNote": "Llenar tallas con su nota",
   "gearNotePending": "Leyendo la nota…",
-  "search": {
-    "label": "Pregunta con tus palabras",
-    "placeholder": "Quién no ha vuelto en un año",
-    "submit": "Buscar",
-    "pending": "Buscando…",
-    "noAnswer": "Eso no coincide con ninguna vista de la lista. Prueba con el buscador.",
-    "disclose": "Hacer una pregunta"
-  },
   "dupes": {
     "ask": "Preguntar a la IA si es una sola persona",
     "pending": "Leyendo los dos registros…",

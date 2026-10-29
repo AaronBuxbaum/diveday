@@ -34,8 +34,8 @@ the rest of the build plan) land in the layers above that ADR; each keeps the gu
   `website_setup_drafts`, and writes one only when the owner accepts it, its source sentence beside
   every price.
 
-**Content and desk assists (2026-10-22):** card-photo reading at the desk and at sign-up, a roster
-ask box, the gear-note fill, a same-person read on merge, review flags and monthly themes, the
+**Content and desk assists (2026-10-22):** card-photo reading at the desk and at sign-up, the
+gear-note fill, a same-person read on merge, review flags and monthly themes, the
 Monday read in the weekly digest, trip and course description drafts, Spanish drafts of shop text
 (`shop_text_translations`, shown on the shop's diver pages), dive-site briefs, the recap line
 (drafted, or filled before send when the shop allows it), sightings matched from what the crew
@@ -72,8 +72,7 @@ kept here so the ADR stays short.
   subdomain.
 - **On screen**: `AssistDraftButton` fills one field, `AssistFillButton` several boxes of one
   form, `AssistPhotoButton` a form from a card photo, `AssistReadButton` shows a read in place
-  (the merge check), `AssistAskForm` turns plain words into the divers list's own filters,
-  `CallNoteAssist` fills the Took-a-call form from a call note, `PdfDraftButton` drafts the release
+  (the merge check), `CallNoteAssist` fills the Took-a-call form from a call note, `PdfDraftButton` drafts the release
   editor from a PDF, `TranslateReplyButton` puts a reply in the diver's language before Send, and
   `TranslationEditor` holds the Spanish of a shop field, saved on its own form.
 - **A new assist** adds a prompt, a schema, a feature code and an action. Leaving Claude also

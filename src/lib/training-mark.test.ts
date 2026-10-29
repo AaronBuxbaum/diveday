@@ -352,7 +352,7 @@ describe("trainingDiveRequiredLevel — lowers only as far as the course certifi
   });
 });
 
-describe("trainingRoom — the instructors' ratio is shared across sessions (review 2026-10-17)", () => {
+describe("trainingRoom — conservative instructor capacity across sessions (review 2026-10-17)", () => {
   const teacher = {
     personId: "teacher",
     shopRoles: ["instructor"],
@@ -440,19 +440,34 @@ describe("trainingRoom — the instructors' ratio is shared across sessions (rev
     expect(split.seated.size).toBe(0);
   });
 
-  it("lets a certified assistant raise the cap, to the ceiling and no further", () => {
+  it("keeps the instructor base cap with one or several assistants aboard", () => {
     const withDm = trainingRoom({
       marked: seats("s1", 12),
       sessionCrew: crews,
       departureCrew: [teacher, dm],
     });
-    expect(withDm.seated.size).toBe(10);
+    expect(withDm.seated.size).toBe(8);
     const many = trainingRoom({
       marked: seats("s1", 14),
       sessionCrew: crews,
       departureCrew: [teacher, dm, { ...dm, personId: "dm2" }, { ...dm, personId: "dm3" }],
     });
-    expect(many.seated.size).toBe(12);
+    expect(many.seated.size).toBe(8);
+  });
+
+  it("does not spread one unassigned assistant across two instructors at 9 seats each", () => {
+    const twoCrews = new Map([
+      ["s1", [teacher]],
+      ["s2", [teacher2]],
+    ]);
+    const room = trainingRoom({
+      marked: [...seats("s1", 9), ...seats("s2", 9)],
+      sessionCrew: twoCrews,
+      departureCrew: [teacher, teacher2, dm],
+    });
+
+    expect(room.seated.size).toBe(16);
+    expect([...room.overRatio].sort()).toEqual(["s1-8", "s2-8"]);
   });
 
   it("says whether one more seat fits, and never by unseating a marked one", () => {
@@ -506,17 +521,74 @@ describe("trainingRoom — the instructors' ratio is shared across sessions (rev
     expect(room.seated.has("A")).toBe(true);
     expect(ow.filter((seat) => room.seated.has(seat.id))).toHaveLength(1);
     expect(room.seated.size).toBe(2);
-    // Order does not rescue it: Open Water seats marked first still leave the DSD seat bound by its own cap.
+    // A later, tighter DSD mark is considered before looser Open Water marks.
     const reversed = trainingRoom({
       marked: [...ow, dsdSeat],
       sessionCrew: crews,
       departureCrew: [teacher],
     });
-    expect(reversed.seated.has("A")).toBe(false);
-    expect(reversed.seated.size).toBe(7);
+    expect([...reversed.seated].sort()).toEqual([...room.seated].sort());
+    expect(reversed.seated.has("A")).toBe(true);
+    expect(reversed.seated.size).toBe(2);
   });
 
-  it("does not let an assistant lift the DSD cap off the same instructor's Open Water seats (#2830)", () => {
+  it("applies a later DSD mark's tighter cap before deciding which Open Water marks clear", () => {
+    const dsd = {
+      baseStudentsPerInstructor: 2,
+      assistantBonusPerInstructor: 0,
+      maxStudentsPerInstructor: 2,
+    };
+    const dsdSeat = { id: "dsd", sessionTripId: "s1", rule: dsd };
+    const owSeats = seats("s2", 7);
+    const room = trainingRoom({
+      marked: [...owSeats, dsdSeat],
+      sessionCrew: crews,
+      departureCrew: [teacher],
+    });
+    const owCourse: TrainingDiveCourse = {
+      minimumLevel: null,
+      certifiesLevel: "open_water",
+      intro: false,
+    };
+    const stateFor = (id: string): TrainingMarkState => ({
+      valid: true,
+      enrollmentBookingId: id,
+      enrollmentTripId: "s2",
+      enrollmentMinorDeclared: false,
+      enrollmentCourseTitle: "Open Water Diver",
+      enrollmentCourse: owCourse,
+      courseInstructorAboard: room.seated.has(id),
+    });
+    const readinessFor = (id: string) =>
+      calculateReadiness({
+        requirement: {
+          requiresWaiver: false,
+          minimumCertificationLevel: null,
+          requiredSpecialties: [],
+          requiresNitrox: false,
+        } as unknown as TripRequirement,
+        siteRequirement: {
+          minimumCertificationLevel: "open_water",
+          requiredSpecialties: [],
+          requiresNitrox: false,
+        },
+        waiver: null,
+        certifications: [],
+        participantType: "diver",
+        trainingDive: trainingDiveLevel(stateFor(id)),
+        now: new Date("2026-10-18T12:00:00.000Z"),
+        timezone: "UTC",
+      });
+
+    // The tighter-marked DSD seat must take precedence over seven older OW
+    // marks; only one OW seat can share that instructor's conservative cap.
+    expect(room.seated.has("dsd")).toBe(true);
+    expect(room.seated.size).toBe(2);
+    expect(readinessFor("s2-0").status).toBe("ready");
+    expect(readinessFor("s2-1").status).toBe("blocked");
+  });
+
+  it("keeps the DSD base cap across an instructor's mixed marked seats (#2830)", () => {
     const dsd = {
       baseStudentsPerInstructor: 2,
       assistantBonusPerInstructor: 0,
@@ -524,7 +596,7 @@ describe("trainingRoom — the instructors' ratio is shared across sessions (rev
     };
     const dsdSeat = { id: "A", sessionTripId: "s1", rule: dsd };
     const ow = seats("s2", 6);
-    // A divemaster aboard raises the Open Water cap to 10, but not the DSD seat's.
+    // Actual underwater groups are not recorded, so this resolver gives no assistant bonus.
     const withDm = trainingRoom({
       marked: [dsdSeat, ...ow],
       sessionCrew: crews,

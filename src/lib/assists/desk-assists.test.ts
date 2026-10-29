@@ -1,42 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { callStructured } from "@/lib/claude/structured";
 import { fakeClaude, fakeClaudeMessage } from "@/test/fakes";
-import { diverSearchCall, diverSearchFilters } from "./diver-search";
 import { RENTAL_NOTE_SYSTEM, rentalNoteCall, rentalNoteFields } from "./rental-note";
 import { samePersonCall, samePersonRead } from "./same-person";
 
 function answering(value: unknown) {
   return fakeClaude({ reply: () => fakeClaudeMessage({ text: JSON.stringify(value) }) });
 }
-
-describe("diver search", () => {
-  const views = ["all", "diving_today", "not_back"] as const;
-
-  it("maps an ask onto the list's own views", async () => {
-    const provider = answering({ query: null, view: "not_back", sort: "last_dived" });
-    const result = await callStructured(provider, diverSearchCall("who hasn't been back", views));
-    expect(diverSearchFilters(result.value, "who hasn't been back")).toEqual({
-      query: "",
-      view: "not_back",
-      sort: "last_dived",
-    });
-    expect(JSON.stringify(provider.requests[0]?.messages)).toContain(
-      "Views: all, diving_today, not_back",
-    );
-  });
-
-  it("refuses a view the list does not offer", async () => {
-    const provider = answering({ query: null, view: "removed", sort: "name" });
-    const result = await callStructured(provider, diverSearchCall("removed people", views));
-    expect(result.value).toBeNull();
-  });
-
-  it("keeps a query only when the staffer typed it", () => {
-    const value = { query: "Müller", view: "all" as const, sort: "name" as const };
-    expect(diverSearchFilters(value, "the Müller couple")?.query).toBe("Müller");
-    expect(diverSearchFilters(value, "the German couple")?.query).toBe("");
-  });
-});
 
 describe("gear note", () => {
   it("fills only the boxes the shop offers, sizes only", async () => {
