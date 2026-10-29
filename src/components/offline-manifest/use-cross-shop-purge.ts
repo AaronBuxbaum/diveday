@@ -1,4 +1,10 @@
-import { type Dispatch, type MutableRefObject, type SetStateAction, useEffect } from "react";
+import {
+  type Dispatch,
+  type MutableRefObject,
+  type SetStateAction,
+  useEffect,
+  useRef,
+} from "react";
 import {
   listOfflineManifests,
   loadOfflineManifest,
@@ -26,35 +32,66 @@ import type { SavedCopyAction } from "./saved-copy";
  * which tenant this browser is signed in as, and on a marina connection that
  * can take as long as `fetchCurrentShopSlug`'s timeout allows — a captain
  * opening the roll call must never wait on it, which is the entire premise of
- * this surface. What SEC-D3 shortens is how *long* a foreign roster stays
- * decryptable, not the moment it stops being on screen.
+ * this surface. Before identity is verified, the offline-reference decision
+ * permits saved copies to render. Once it is verified, `OfflineManifestView`
+ * filters foreign rows and selected trips immediately; this hook then removes
+ * resolved foreign copies while retaining pending evidence for its own shop.
  */
 export function useCrossShopPurge({
   tripId,
   tenantSlugRef,
+  getTenantRound,
   resolveTenant,
   dispatchSaved,
   setList,
+  onListPurged,
+  onTenantVerified,
+  onTripPurged,
   refreshDiscarded,
+  tenantChangeRevision = 0,
 }: {
   tripId: string;
   tenantSlugRef: MutableRefObject<string | null>;
+  getTenantRound: () => number | null;
   resolveTenant: () => Promise<string | null>;
   dispatchSaved: Dispatch<SavedCopyAction>;
   setList: Dispatch<SetStateAction<OfflineManifestEnvelope[] | null>>;
+  onListPurged: (saved: OfflineManifestEnvelope[], currentShopSlug: string) => void;
+  onTenantVerified: (currentShopSlug: string) => void;
+  onTripPurged: () => void;
   refreshDiscarded: () => void;
+  /** Rerun authenticated tenant verification after a sync explicitly detects a switch. */
+  tenantChangeRevision?: number;
 }) {
+  const latestTenantChangeRevision = useRef(tenantChangeRevision);
+  const latestPurgeRound = useRef(0);
+  latestTenantChangeRevision.current = tenantChangeRevision;
   useEffect(() => {
     let cancelled = false;
+    const verificationRevision = tenantChangeRevision;
     const purge = async () => {
+      // A reconnect can start a newer verification while this pass is waiting
+      // on a trip lock. Supersede this pass before resolving the new tenant;
+      // the store checks this predicate immediately before every deletion.
+      const purgeRound = ++latestPurgeRound.current;
+      const isCurrentRound = () =>
+        !cancelled &&
+        purgeRound === latestPurgeRound.current &&
+        verificationRevision === latestTenantChangeRevision.current;
       // Re-verified each round rather than read from the cache: a reconnect is
       // exactly when the signed-in shop may have changed, which is the event
       // this whole mechanism exists for.
       tenantSlugRef.current = null;
       const slug = await resolveTenant();
-      if (cancelled || !slug) return;
+      if (!isCurrentRound() || !slug) return;
+      const tenantRound = getTenantRound();
+      if (!tenantRound) return;
+      onTenantVerified(slug);
+      let purgedTripIds: string[];
       try {
-        await purgeOfflineManifestsExceptShop(slug);
+        purgedTripIds = await purgeOfflineManifestsExceptShop(slug, tenantRound, {
+          isCurrent: isCurrentRound,
+        });
       } catch {
         // Best-effort, unlike the auto-save path, which fails its whole round
         // when the purge throws. There the alternative is writing a second
@@ -63,7 +100,7 @@ export function useCrossShopPurge({
         // shortened when this succeeds and unchanged when it does not.
         return;
       }
-      if (cancelled) return;
+      if (!isCurrentRound()) return;
       // Re-read so a record the purge removed stops being displayed in this
       // round rather than at the next visit.
       //
@@ -92,9 +129,11 @@ export function useCrossShopPurge({
       // So it repaints — but never to a bare "nothing saved on this phone",
       // which is the one thing the captain already knows is wrong. The empty
       // state names the cause: a different shop is signed in on this tablet.
-      // Two things it will not do: blank on a *failed* read (only a store that
-      // positively answers "gone" repaints), and blank a record that survived
-      // the purge because it still holds unsynced evidence.
+      // A failed read leaves the encrypted record intact. A foreign record
+      // that survives because it still holds pending evidence also stays in
+      // IndexedDB; the view hides it while this different tenant is verified,
+      // and it becomes visible again when its own shop signs in. Neither case
+      // lets a foreign roster remain visible under the wrong verified tenant.
       //
       // All this round reports is what it found: gone, under this tenant. It
       // deliberately does not decide whether anything was *lost*, or what to
@@ -106,11 +145,21 @@ export function useCrossShopPurge({
       // before changing this line.
       if (tripId) {
         const held = await loadOfflineManifest(tripId).catch(() => undefined);
-        if (!cancelled && held === null) dispatchSaved({ type: "gone", tenant: slug });
+        if (isCurrentRound() && held === null) {
+          dispatchSaved({
+            type: "gone",
+            tenant: slug,
+            ...(purgedTripIds.includes(tripId) ? { removedForOtherShop: true as const } : {}),
+          });
+          onTripPurged();
+        }
       } else {
         await listOfflineManifests()
           .then((saved) => {
-            if (!cancelled) setList((current) => (current === null ? current : saved));
+            if (isCurrentRound()) {
+              setList((current) => (current === null ? current : saved));
+              onListPurged(saved, slug);
+            }
           })
           // A failed refresh keeps the list we already rendered — stale beats
           // blank on a dock tablet; the next purge round retries anyway.
@@ -119,7 +168,7 @@ export function useCrossShopPurge({
       // A purge round is also when the store is most likely to have hit the
       // retention ceiling and thrown unsynced roll call away, so ask what was
       // lost right after it rather than only at mount.
-      if (!cancelled) refreshDiscarded();
+      if (isCurrentRound()) refreshDiscarded();
     };
     void purge();
     window.addEventListener("online", purge);
@@ -130,5 +179,17 @@ export function useCrossShopPurge({
     // No `t` any more: this round reports a fact and picks no words, so a
     // translator identity can no longer cancel a repaint mid-flight by
     // re-running the effect underneath it.
-  }, [refreshDiscarded, resolveTenant, tripId, tenantSlugRef, dispatchSaved, setList]);
+  }, [
+    refreshDiscarded,
+    resolveTenant,
+    getTenantRound,
+    tripId,
+    tenantSlugRef,
+    dispatchSaved,
+    setList,
+    onListPurged,
+    onTenantVerified,
+    onTripPurged,
+    tenantChangeRevision,
+  ]);
 }

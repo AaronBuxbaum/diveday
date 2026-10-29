@@ -2,13 +2,18 @@
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  beginOfflineTenantVerificationRound,
   loadOfflineManifest,
   OfflineManifestError,
   primeOfflineManifestShell,
   saveOfflineManifest,
   syncOfflineManifest,
 } from "@/lib/offline-manifest-store";
-import type { OfflineManifestEnvelope, OfflineManifestPayload } from "@/lib/offline-manifests";
+import {
+  fetchOfflineManifestShopSlug,
+  type OfflineManifestEnvelope,
+  type OfflineManifestPayload,
+} from "@/lib/offline-manifests";
 import { type OfflineManifestSyncCopy, useOfflineManifestSync } from "./use-offline-manifest-sync";
 
 const mockRouter = { refresh: vi.fn() };
@@ -17,11 +22,17 @@ vi.mock("@/lib/offline-manifest-store", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/offline-manifest-store")>();
   return {
     OfflineManifestError: actual.OfflineManifestError,
+    beginOfflineTenantVerificationRound: vi.fn().mockResolvedValue(1),
     loadOfflineManifest: vi.fn(),
     primeOfflineManifestShell: vi.fn(),
     saveOfflineManifest: vi.fn(),
     syncOfflineManifest: vi.fn(),
   };
+});
+
+vi.mock("@/lib/offline-manifests", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/offline-manifests")>();
+  return { ...actual, fetchOfflineManifestShopSlug: vi.fn().mockResolvedValue("blue-mantis") };
 });
 
 const TRIP_ID = "11111111-1111-1111-1111-111111111111";
@@ -113,6 +124,8 @@ beforeEach(() => {
     },
   });
   vi.mocked(loadOfflineManifest).mockResolvedValue(envelope());
+  vi.mocked(beginOfflineTenantVerificationRound).mockResolvedValue(1);
+  vi.mocked(fetchOfflineManifestShopSlug).mockResolvedValue("blue-mantis");
   vi.mocked(primeOfflineManifestShell).mockResolvedValue(undefined);
   vi.mocked(saveOfflineManifest).mockResolvedValue(envelope());
 });
@@ -123,6 +136,29 @@ afterEach(() => {
 });
 
 describe("useOfflineManifestSync on a network that stops answering", () => {
+  it("refreshes the live page when sync discards only a checklist note", async () => {
+    const checklistDiscarded = envelope();
+    checklistDiscarded.checklistEvents = [
+      {
+        clientEventId: "33333333-3333-4333-8333-333333333333",
+        snapshotId: "snapshot-1",
+        snapshotSavedAt: "2026-08-01T09:00:00.000Z",
+        tripId: TRIP_ID,
+        checklistItemId: "44444444-4444-4444-8444-444444444444",
+        status: "checked",
+        note: null,
+        occurredAt: "2026-08-01T09:10:00.000Z",
+        syncStatus: "applied",
+        noteDisposition: "discarded_erasure_cutoff",
+      },
+    ];
+    vi.mocked(syncOfflineManifest).mockResolvedValue(checklistDiscarded);
+
+    renderHook(() => useOfflineManifestSync(payload, copy));
+
+    await waitFor(() => expect(mockRouter.refresh).toHaveBeenCalled());
+  });
+
   it("releases the queue when a sync gives up, and runs the pass queued behind it", async () => {
     // The mount's own reconcile settles; from then on the first sync hangs
     // until the store's deadline gives up on it.

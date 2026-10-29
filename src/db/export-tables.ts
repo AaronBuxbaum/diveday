@@ -22,6 +22,7 @@ import {
   crewAwayAcknowledgements,
   customerGearItems,
   customerGearReminderSettings,
+  dateRequestOfferBookings,
   departureBoatSafetySnapshots,
   divePackageEntitlements,
   divePackages,
@@ -191,6 +192,11 @@ export const EXPORT_TABLES = {
     table: interests,
     order: [asc(interests.askedAt), asc(interests.id)],
     scope: { shopColumn: interests.shopId, personColumn: interests.personId },
+  },
+  dateRequestOfferBookings: {
+    table: dateRequestOfferBookings,
+    order: [asc(dateRequestOfferBookings.interestId), asc(dateRequestOfferBookings.bookingId)],
+    scope: { shopColumn: dateRequestOfferBookings.shopId },
   },
   tripLastMinutePromos: {
     table: tripLastMinutePromos,

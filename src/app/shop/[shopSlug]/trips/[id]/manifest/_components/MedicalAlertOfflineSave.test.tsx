@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { OfflineManifestEnvelope } from "@/lib/offline-manifests";
 
 vi.mock("@/lib/offline-manifest-store", () => ({
+  beginOfflineTenantVerificationRound: vi.fn().mockResolvedValue(1),
   loadOfflineManifest: vi.fn(async () => null),
   saveOfflineMedicalAlerts: vi.fn(async () => null),
 }));
@@ -62,6 +63,7 @@ describe("MedicalAlertOfflineSave", () => {
       "trip-1",
       { "b-1": "Bee-sting allergy." },
       SAVED_BY,
+      1,
     );
     expect(
       await screen.findByText("This phone’s copy has the words, saved by Yusra Idrissi."),

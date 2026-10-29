@@ -133,11 +133,11 @@ export function CertificationCardRow({
           ) : null}
         </p>
         {detail || marker ? (
-          <p className="mt-1 break-words text-sm text-muted">
+          <div className="mt-1 break-words text-sm text-muted">
             {detail}
             {detail && marker ? " · " : null}
             {marker}
-          </p>
+          </div>
         ) : null}
       </div>
       {actions || actionsId ? (

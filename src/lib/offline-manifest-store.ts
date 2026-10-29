@@ -28,6 +28,131 @@ const DB_VERSION = 1;
 const KEY_STORE = "keys";
 const MANIFEST_STORE = "manifests";
 const KEY_ID = "manifest-aes-gcm-v1";
+const TENANT_ROUND_KEY = "tenant-verification-round-v1";
+const MANIFEST_CHANGE_EVENT = "diveday-offline-manifest-change";
+const MANIFEST_CHANGE_CHANNEL = "diveday-offline-manifest-changes-v1";
+const MANIFEST_SOURCE_ID =
+  globalThis.crypto?.randomUUID?.() ?? `manifest-${Math.random().toString(36).slice(2)}`;
+
+export type OfflineManifestChangeReason =
+  | "snapshot"
+  | "record"
+  | "sync"
+  | "medical-alerts"
+  | "delete"
+  | "unknown";
+
+export type OfflineManifestChangeSource = {
+  origin: "same-document" | "same-context-broadcast" | "other-context-broadcast";
+  reason: OfflineManifestChangeReason;
+};
+
+type ManifestBrowserWindow = {
+  dispatchEvent: (event: Event) => boolean;
+  addEventListener: (type: string, listener: EventListener) => void;
+  removeEventListener: (type: string, listener: EventListener) => void;
+};
+
+function manifestBrowserWindow(): ManifestBrowserWindow | undefined {
+  return (globalThis as typeof globalThis & { window?: ManifestBrowserWindow }).window;
+}
+
+export type OfflineManifestChangeListener = (
+  tripId: string,
+  source: OfflineManifestChangeSource,
+) => void;
+
+function manifestChangeReason(value: unknown): OfflineManifestChangeReason {
+  if (typeof value !== "object" || value === null || !("reason" in value)) return "unknown";
+  const reason = (value as { reason?: unknown }).reason;
+  return reason === "snapshot" ||
+    reason === "record" ||
+    reason === "sync" ||
+    reason === "medical-alerts" ||
+    reason === "delete"
+    ? reason
+    : "unknown";
+}
+
+function manifestChangeOrigin(value: unknown): OfflineManifestChangeSource["origin"] {
+  if (typeof value !== "object" || value === null || !("sourceId" in value)) {
+    return "other-context-broadcast";
+  }
+  return (value as { sourceId?: unknown }).sourceId === MANIFEST_SOURCE_ID
+    ? "same-context-broadcast"
+    : "other-context-broadcast";
+}
+
+function validTripChange(value: unknown): value is { tripId: string } {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "tripId" in value &&
+    typeof value.tripId === "string" &&
+    value.tripId.length > 0
+  );
+}
+
+function announceManifestChange(tripId: string, reason: OfflineManifestChangeReason): void {
+  const change = { tripId, sourceId: MANIFEST_SOURCE_ID, reason };
+  const browserWindow = manifestBrowserWindow();
+  if (browserWindow) {
+    browserWindow.dispatchEvent(new CustomEvent(MANIFEST_CHANGE_EVENT, { detail: change }));
+  }
+  // Service workers have no `window`, but they share this origin's
+  // BroadcastChannel namespace with open pages. The trip key and source/reason
+  // metadata are non-sensitive; receivers reload the encrypted record from IDB.
+  if (typeof BroadcastChannel !== "undefined") {
+    let channel: BroadcastChannel | null = null;
+    try {
+      channel = new BroadcastChannel(MANIFEST_CHANGE_CHANNEL);
+      channel.postMessage(change);
+    } catch {
+      // IndexedDB remains authoritative; the next focus/visibility reload
+      // picks up the mutation when cross-context messaging is unavailable.
+    } finally {
+      channel?.close();
+    }
+  }
+}
+
+/**
+ * Subscribe to committed changes in another tab or in this document. Readers
+ * reload the encrypted record from IndexedDB rather than trusting the
+ * cross-context trip key and source/reason metadata.
+ */
+export function subscribeOfflineManifestChanges(listener: OfflineManifestChangeListener) {
+  const browserWindow = manifestBrowserWindow();
+  if (!browserWindow) return () => {};
+  const onLocalChange = (event: Event) => {
+    const detail = (event as CustomEvent<unknown>).detail;
+    if (validTripChange(detail)) {
+      listener(detail.tripId, { origin: "same-document", reason: manifestChangeReason(detail) });
+    }
+  };
+  browserWindow.addEventListener(MANIFEST_CHANGE_EVENT, onLocalChange);
+
+  let channel: BroadcastChannel | null = null;
+  if (typeof BroadcastChannel !== "undefined") {
+    try {
+      channel = new BroadcastChannel(MANIFEST_CHANGE_CHANNEL);
+      channel.onmessage = (event: MessageEvent<unknown>) => {
+        if (validTripChange(event.data)) {
+          listener(event.data.tripId, {
+            origin: manifestChangeOrigin(event.data),
+            reason: manifestChangeReason(event.data),
+          });
+        }
+      };
+    } catch {
+      // Same-document notifications and visibility reload remain available.
+    }
+  }
+  return () => {
+    browserWindow.removeEventListener(MANIFEST_CHANGE_EVENT, onLocalChange);
+    channel?.close();
+  };
+}
 
 /**
  * The hard ceiling on the pending-event exception below: how long past a
@@ -89,9 +214,13 @@ export const OFFLINE_MANIFEST_PENDING_GRACE_MS = 2 * OFFLINE_MANIFEST_MAX_RETENT
  * describes a person.
  */
 export type DiscardedOfflineRecord = {
+  /** Stable identity keeps a later loss on the same trip from being acknowledged accidentally. */
+  noticeId: string;
   tripId: string;
   tripTitle: string;
   shopName: string;
+  /** Saved tenant identity lets verified devices hide another shop's notice. */
+  shopSlug: string;
   /** How many roll-call events on that record had never reached the server. */
   pendingEvents: number;
   discardedAt: string;
@@ -116,6 +245,9 @@ const DISCARD_NOTICE_LIMIT = 50;
 type StoredRecord = {
   tripId: string;
   expiresAt: string;
+  /** Non-name metadata used to recheck tenant/pending state in the delete transaction. */
+  shopSlug?: string;
+  pendingEvents?: number;
   iv: ArrayBuffer;
   ciphertext: ArrayBuffer;
 };
@@ -124,6 +256,7 @@ export type OfflineSyncResult = {
   clientEventId: string;
   status: "applied" | "duplicate" | "rejected";
   reason?: string;
+  noteDisposition?: "discarded_erasure_cutoff" | "discarded_unverified_snapshot";
 };
 
 /**
@@ -140,6 +273,7 @@ export type OfflineManifestErrorCode =
   | "unavailable"
   | "expired"
   | "not_allowed"
+  | "shop_changed"
   | "sync_unreachable";
 
 export class OfflineManifestError extends Error {
@@ -177,6 +311,47 @@ async function openDatabase(): Promise<IDBDatabase> {
       db.createObjectStore(MANIFEST_STORE, { keyPath: "tripId" });
   };
   return requestResult(request);
+}
+
+function serverSnapshotClaims(
+  token: string | undefined,
+): { epoch: number; revision: number } | null {
+  if (!token) return null;
+  const match = /^(\d{1,16})\.(\d{1,16})\.[A-Za-z0-9_-]{43}$/.exec(token);
+  if (!match) return null;
+  const epoch = Number(match[1]);
+  const revision = Number(match[2]);
+  if (
+    !Number.isSafeInteger(epoch) ||
+    epoch < 0 ||
+    String(epoch) !== match[1] ||
+    !Number.isSafeInteger(revision) ||
+    revision < 1 ||
+    String(revision) !== match[2]
+  ) {
+    return null;
+  }
+  return { epoch, revision };
+}
+
+function dispositionForSnapshotRefresh(
+  previousToken: string | undefined,
+  currentToken: string | undefined,
+): OfflineSyncResult["noteDisposition"] {
+  const current = serverSnapshotClaims(currentToken);
+  if (!current) return undefined;
+  const previous = serverSnapshotClaims(previousToken);
+  if (!previous) return "discarded_unverified_snapshot";
+  return current.epoch > previous.epoch ? "discarded_erasure_cutoff" : undefined;
+}
+
+function clearSavedNotes<T extends OfflineRollCallEvent | OfflineChecklistEvent>(
+  events: T[],
+  disposition: NonNullable<OfflineSyncResult["noteDisposition"]>,
+): T[] {
+  return events.map((event) =>
+    event.note?.trim() ? { ...event, note: null, noteDisposition: disposition } : event,
+  );
 }
 
 /**
@@ -218,7 +393,25 @@ function additionalData(tripId: string): ArrayBuffer {
     .buffer as ArrayBuffer;
 }
 
-async function persistEnvelope(db: IDBDatabase, envelope: OfflineManifestEnvelope): Promise<void> {
+function nextTenantRound(previous: unknown): number | null {
+  if (previous === undefined) return 1;
+  if (
+    typeof previous !== "number" ||
+    !Number.isSafeInteger(previous) ||
+    previous < 0 ||
+    previous >= Number.MAX_SAFE_INTEGER
+  ) {
+    return null;
+  }
+  return previous + 1;
+}
+
+async function persistEnvelope(
+  db: IDBDatabase,
+  envelope: OfflineManifestEnvelope,
+  tenantRound?: number,
+  changeReason: OfflineManifestChangeReason = "unknown",
+): Promise<boolean> {
   const tripId = envelope.snapshot.manifests[0]?.trip.id;
   if (!tripId) throw new Error("Manifest snapshot has no trip");
   const key = await encryptionKey(db);
@@ -228,14 +421,62 @@ async function persistEnvelope(db: IDBDatabase, envelope: OfflineManifestEnvelop
     key,
     new TextEncoder().encode(JSON.stringify(envelope)).buffer as ArrayBuffer,
   );
-  const transaction = db.transaction(MANIFEST_STORE, "readwrite");
-  transaction.objectStore(MANIFEST_STORE).put({
-    tripId,
-    expiresAt: envelope.snapshot.expiresAt,
-    iv,
-    ciphertext,
-  } satisfies StoredRecord);
-  await transactionDone(transaction);
+  const transaction = db.transaction([KEY_STORE, MANIFEST_STORE], "readwrite");
+  const done = transactionDone(transaction);
+  let persisted = false;
+  const manifestStore = transaction.objectStore(MANIFEST_STORE);
+  const write = () => {
+    manifestStore.put({
+      tripId,
+      expiresAt: envelope.snapshot.expiresAt,
+      shopSlug: envelope.snapshot.shop.slug,
+      pendingEvents: pendingOfflineEventCount(envelope),
+      iv,
+      ciphertext,
+    } satisfies StoredRecord);
+    persisted = true;
+  };
+  if (tenantRound === undefined) {
+    write();
+  } else {
+    transaction.objectStore(KEY_STORE).get(TENANT_ROUND_KEY).onsuccess = (event) => {
+      if ((event.target as IDBRequest<unknown>).result === tenantRound) write();
+    };
+  }
+  await done;
+  if (persisted) announceManifestChange(tripId, changeReason);
+  return persisted;
+}
+
+/**
+ * Allocate a monotonic, device-local ordering token before starting an
+ * authenticated tenant lookup. It carries no tenant identity or authorization;
+ * it only prevents an older response (including one returned to another tab or
+ * the service worker) from acting after a newer request has begun.
+ */
+export async function beginOfflineTenantVerificationRound(): Promise<number> {
+  const db = await openDatabase();
+  try {
+    const transaction = db.transaction(KEY_STORE, "readwrite");
+    const done = transactionDone(transaction);
+    const store = transaction.objectStore(KEY_STORE);
+    let allocatedRound: number | null = null;
+    store.get(TENANT_ROUND_KEY).onsuccess = (event) => {
+      const previous = (event.target as IDBRequest<unknown>).result;
+      const nextRound = nextTenantRound(previous);
+      if (nextRound === null) {
+        transaction.abort();
+        return;
+      }
+      allocatedRound = nextRound;
+      store.put(nextRound, TENANT_ROUND_KEY);
+    };
+    await done;
+    if (allocatedRound === null) throw new Error("IndexedDB tenant round was not allocated");
+    return allocatedRound;
+  } finally {
+    db.close();
+  }
 }
 
 async function readStoredRecord(
@@ -305,9 +546,11 @@ async function noteDiscardedRecord(
       const next = [
         ...existing,
         {
+          noticeId: crypto.randomUUID(),
           tripId: trip?.id ?? "",
           tripTitle: trip?.title ?? "",
           shopName: envelope.snapshot.shop.name,
+          shopSlug: envelope.snapshot.shop.slug,
           pendingEvents,
           discardedAt: nowDate().toISOString(),
         } satisfies DiscardedOfflineRecord,
@@ -352,12 +595,20 @@ export async function readDiscardedOfflineRecords(): Promise<DiscardedOfflineRec
 }
 
 /** Clears the notice above, once a human has actually seen it. */
-export async function acknowledgeDiscardedOfflineRecords(): Promise<void> {
+export async function acknowledgeDiscardedOfflineRecords(
+  acknowledged: Array<Pick<DiscardedOfflineRecord, "noticeId">>,
+): Promise<void> {
   const db = await openDatabase();
   try {
     await withNoticeLock(async () => {
+      const acknowledgedIds = new Set(acknowledged.map(({ noticeId }) => noticeId));
+      const remaining = (await readNotices(db)).filter(
+        (notice) => !acknowledgedIds.has(notice.noticeId),
+      );
       const transaction = db.transaction(KEY_STORE, "readwrite");
-      transaction.objectStore(KEY_STORE).delete(DISCARD_NOTICE_KEY);
+      const notices = transaction.objectStore(KEY_STORE);
+      if (remaining.length === 0) notices.delete(DISCARD_NOTICE_KEY);
+      else notices.put(remaining, DISCARD_NOTICE_KEY);
       await transactionDone(transaction);
     });
   } finally {
@@ -552,7 +803,11 @@ export async function listOfflineManifests(): Promise<OfflineManifestEnvelope[]>
  * earlier. Every other mutator in this module already goes through the same
  * lock for exactly this read-then-write race; this one hadn't.
  */
-export async function purgeOfflineManifestsExceptShop(currentShopSlug: string): Promise<void> {
+export async function purgeOfflineManifestsExceptShop(
+  currentShopSlug: string,
+  tenantRound: number,
+  options: { isCurrent?: () => boolean } = {},
+): Promise<string[]> {
   // **The guard is here, at the chokepoint, and not at the call sites.**
   //
   // This is the most destructive function in the feature: it deletes every
@@ -574,21 +829,104 @@ export async function purgeOfflineManifestsExceptShop(currentShopSlug: string): 
   // holding `undefined` is still a `pnpm typecheck` failure rather than a
   // silent no-op; this is the runtime half, for the values a cast lets past
   // the compiler.
-  if (typeof currentShopSlug !== "string" || currentShopSlug.length === 0) return;
+  if (
+    typeof currentShopSlug !== "string" ||
+    currentShopSlug.length === 0 ||
+    !Number.isSafeInteger(tenantRound) ||
+    tenantRound < 1
+  )
+    return [];
+  const isCurrent = options.isCurrent;
+  if (isCurrent && !isCurrent()) return [];
   const saved = await listOfflineManifests();
+  if (isCurrent && !isCurrent()) return [];
   const candidates = saved.filter((envelope) => envelope.snapshot.shop.slug !== currentShopSlug);
-  await Promise.all(
+  const deletedTripIds = await Promise.all(
     candidates.map((envelope) => {
       const tripId = envelope.snapshot.manifests[0]?.trip.id;
-      if (!tripId) return Promise.resolve();
+      if (!tripId) return Promise.resolve(null);
       return withManifestLock(tripId, async () => {
+        // A later verification round may have started while this candidate
+        // waited for the trip lock. Do not let an older tenant answer delete
+        // records after the browser has established a newer tenant.
+        if (isCurrent && !isCurrent()) return null;
         const current = await loadOfflineManifest(tripId);
-        if (!current) return;
-        if (pendingOfflineEventCount(current) > 0) return;
-        await deleteOfflineManifest(tripId);
+        if (!current) return null;
+        // Re-evaluate ownership from the locked record, not the pre-lock list.
+        if (current.snapshot.shop.slug === currentShopSlug) return null;
+        if (pendingOfflineEventCount(current) > 0) return null;
+        // loadOfflineManifest can yield to IndexedDB; the verification round
+        // may have changed while it was reading. Keep the final guard adjacent
+        // to deletion, inside the same per-trip lock.
+        if (isCurrent && !isCurrent()) return null;
+        const deleted = await deletePurgeCandidate(tripId, currentShopSlug, tenantRound, isCurrent);
+        if (!deleted) return null;
+        return tripId;
       });
     }),
   );
+  // Report only records this locked pass actually removed; selected-trip UI
+  // uses that proof to distinguish a purge from a bookmark never saved here.
+  return deletedTripIds.filter((tripId): tripId is string => tripId !== null);
+}
+
+/**
+ * Atomically compare the shared verification round and plaintext safety
+ * metadata with the delete. A different context can start a newer tenant
+ * request between any preceding await and this transaction; IDB serializes
+ * this read/write transaction against that round allocation. Missing metadata
+ * is treated as unknown and retained, never guessed to be safe to delete.
+ */
+async function deletePurgeCandidate(
+  tripId: string,
+  currentShopSlug: string,
+  tenantRound: number,
+  isCurrent?: () => boolean,
+): Promise<boolean> {
+  if (isCurrent && !isCurrent()) return false;
+  const db = await openDatabase();
+  try {
+    if (isCurrent && !isCurrent()) return false;
+    const transaction = db.transaction([KEY_STORE, MANIFEST_STORE], "readwrite");
+    const done = transactionDone(transaction);
+    const keyStore = transaction.objectStore(KEY_STORE);
+    const manifestStore = transaction.objectStore(MANIFEST_STORE);
+    let roundReady = false;
+    let recordReady = false;
+    let latestRound: unknown;
+    let record: StoredRecord | undefined;
+    let deleted = false;
+    const maybeDelete = () => {
+      if (!roundReady || !recordReady || (isCurrent && !isCurrent())) return;
+      if (latestRound !== tenantRound || !record) return;
+      if (typeof record.shopSlug !== "string" || record.shopSlug.length === 0) return;
+      if (record.shopSlug === currentShopSlug) return;
+      if (
+        typeof record.pendingEvents !== "number" ||
+        !Number.isSafeInteger(record.pendingEvents) ||
+        record.pendingEvents < 0 ||
+        record.pendingEvents > 0
+      )
+        return;
+      manifestStore.delete(tripId);
+      deleted = true;
+    };
+    keyStore.get(TENANT_ROUND_KEY).onsuccess = (event) => {
+      latestRound = (event.target as IDBRequest<unknown>).result;
+      roundReady = true;
+      maybeDelete();
+    };
+    manifestStore.get(tripId).onsuccess = (event) => {
+      record = (event.target as IDBRequest<StoredRecord | undefined>).result;
+      recordReady = true;
+      maybeDelete();
+    };
+    await done;
+    if (deleted) announceManifestChange(tripId, "delete");
+    return deleted;
+  } finally {
+    db.close();
+  }
 }
 
 export async function saveOfflineManifest(
@@ -601,6 +939,8 @@ export async function saveOfflineManifest(
      * page's own save, whose viewer the page just checked, leaves it true.
      */
     keepMedicalAlertWords?: boolean;
+    /** Shared tenant-verification round allocated before the payload request. */
+    tenantRound?: number;
   } = {},
 ): Promise<OfflineManifestEnvelope> {
   const keepMedicalAlertWords = options.keepMedicalAlertWords ?? true;
@@ -613,6 +953,49 @@ export async function saveOfflineManifest(
     // for good instead of just losing that record's own queued events.
     const existing = await loadOfflineManifest(trip.id).catch(() => null);
     const savedAt = nowDate();
+    // Snapshot tokens carry a server-authenticated epoch. This local comparison
+    // only removes retained text from this device; every sync writer still
+    // verifies the token MAC and compares the epoch server-side before accepting
+    // note text. A changed snapshot id at the same epoch is an ordinary refresh
+    // and must not erase notes staff added after the last deletion.
+    const previousClaims = serverSnapshotClaims(existing?.snapshot.erasureEpochToken);
+    const currentClaims = serverSnapshotClaims(payload.erasureEpochToken);
+    if (
+      existing &&
+      previousClaims &&
+      (!currentClaims ||
+        currentClaims.epoch < previousClaims.epoch ||
+        (currentClaims.epoch === previousClaims.epoch &&
+          currentClaims.revision <= previousClaims.revision))
+    ) {
+      // An older in-flight render must not replace a post-erasure copy and put
+      // erased names back on this device, or mark old facts fresh. A revoked
+      // medical-alert grant still takes effect when the roster payload is stale.
+      if (keepMedicalAlertWords) return existing;
+      const { medicalAlertsSavedBy: _previous, ...withoutSavedBy } = existing;
+      const revoked: OfflineManifestEnvelope = {
+        ...withoutSavedBy,
+        snapshot: {
+          ...existing.snapshot,
+          manifests: withMedicalAlertWords(existing.snapshot.manifests, {}),
+        },
+      };
+      const db = await openDatabase();
+      try {
+        const persisted = await persistEnvelope(db, revoked, options.tenantRound, "snapshot");
+        if (!persisted && options.tenantRound !== undefined)
+          throw new OfflineManifestError("shop_changed");
+      } finally {
+        db.close();
+      }
+      return revoked;
+    }
+    const noteDisposition = existing
+      ? dispositionForSnapshotRefresh(
+          existing.snapshot.erasureEpochToken,
+          payload.erasureEpochToken,
+        )
+      : undefined;
     // **The medical alerts' words** (H-153 amendment). A payload from the
     // server never carries them, and any it did carry are dropped here. Words
     // an explicit save already put on this copy stay through the background
@@ -632,12 +1015,18 @@ export async function saveOfflineManifest(
         ...payload,
         manifests,
         version: OFFLINE_MANIFEST_RECORD_VERSION,
-        snapshotId: crypto.randomUUID(),
+        snapshotId: payload.snapshotId ?? crypto.randomUUID(),
         savedAt: savedAt.toISOString(),
         expiresAt: offlineManifestExpiresAt(savedAt, new Date(trip.endsAt)).toISOString(),
       },
-      events: existing?.events ?? [],
-      checklistEvents: existing?.checklistEvents ?? [],
+      events:
+        existing?.events && noteDisposition
+          ? clearSavedNotes(existing.events, noteDisposition)
+          : (existing?.events ?? []),
+      checklistEvents:
+        existing?.checklistEvents && noteDisposition
+          ? clearSavedNotes(existing.checklistEvents, noteDisposition)
+          : (existing?.checklistEvents ?? []),
       arrivalEvents: existing?.arrivalEvents ?? [],
       ...(carriesWords && existing?.medicalAlertsSavedBy
         ? { medicalAlertsSavedBy: existing.medicalAlertsSavedBy }
@@ -645,7 +1034,9 @@ export async function saveOfflineManifest(
     };
     const db = await openDatabase();
     try {
-      await persistEnvelope(db, envelope);
+      const persisted = await persistEnvelope(db, envelope, options.tenantRound, "snapshot");
+      if (!persisted && options.tenantRound !== undefined)
+        throw new OfflineManifestError("shop_changed");
     } finally {
       db.close();
     }
@@ -664,6 +1055,7 @@ export async function saveOfflineMedicalAlerts(
   tripId: string,
   texts: Readonly<Record<string, string>>,
   savedBy: OfflineMedicalAlertsSavedBy,
+  tenantRound?: number,
 ): Promise<OfflineManifestEnvelope | null> {
   return withManifestLock(tripId, async () => {
     const existing = await loadOfflineManifest(tripId).catch(() => null);
@@ -678,7 +1070,8 @@ export async function saveOfflineMedicalAlerts(
     };
     const db = await openDatabase();
     try {
-      await persistEnvelope(db, envelope);
+      const persisted = await persistEnvelope(db, envelope, tenantRound, "medical-alerts");
+      if (!persisted && tenantRound !== undefined) throw new OfflineManifestError("shop_changed");
     } finally {
       db.close();
     }
@@ -694,7 +1087,10 @@ export async function saveOfflineMedicalAlerts(
  * (`/api/offline-manifests/upcoming`), so a shared tablet never shows one
  * person's saved words to the next.
  */
-export async function wipeOfflineMedicalAlerts(keepSavedBy?: string): Promise<void> {
+export async function wipeOfflineMedicalAlerts(
+  keepSavedBy?: string,
+  tenantRound?: number,
+): Promise<void> {
   const saved = await listOfflineManifests();
   await Promise.all(
     saved
@@ -713,13 +1109,18 @@ export async function wipeOfflineMedicalAlerts(keepSavedBy?: string): Promise<vo
           const { medicalAlertsSavedBy: _wiped, ...rest } = current;
           const db = await openDatabase();
           try {
-            await persistEnvelope(db, {
-              ...rest,
-              snapshot: {
-                ...current.snapshot,
-                manifests: withMedicalAlertWords(current.snapshot.manifests, {}),
+            await persistEnvelope(
+              db,
+              {
+                ...rest,
+                snapshot: {
+                  ...current.snapshot,
+                  manifests: withMedicalAlertWords(current.snapshot.manifests, {}),
+                },
               },
-            });
+              tenantRound,
+              "medical-alerts",
+            );
           } finally {
             db.close();
           }
@@ -731,14 +1132,22 @@ export async function wipeOfflineMedicalAlerts(keepSavedBy?: string): Promise<vo
 export async function deleteOfflineManifest(
   tripId: string,
   existingDb?: IDBDatabase,
-): Promise<void> {
+  isCurrent?: () => boolean,
+): Promise<boolean> {
+  const ownsDb = existingDb === undefined;
   const db = existingDb ?? (await openDatabase());
   try {
+    // The purge may have waited for openDatabase after its locked record
+    // reread. Recheck at the last synchronous point before queuing the delete
+    // request so a newer tenant round cannot be crossed by that await.
+    if (isCurrent && !isCurrent()) return false;
     const transaction = db.transaction(MANIFEST_STORE, "readwrite");
     transaction.objectStore(MANIFEST_STORE).delete(tripId);
     await transactionDone(transaction);
+    announceManifestChange(tripId, "delete");
+    return true;
   } finally {
-    if (!existingDb) db.close();
+    if (ownsDb) db.close();
   }
 }
 
@@ -801,13 +1210,14 @@ export async function appendOfflineRollCall(
       clientEventId: crypto.randomUUID(),
       snapshotId: envelope.snapshot.snapshotId,
       snapshotSavedAt: envelope.snapshot.savedAt,
+      erasureEpochToken: envelope.snapshot.erasureEpochToken,
       tripId,
       occurredAt: nowDate().toISOString(),
       syncStatus: "pending",
     });
     const db = await openDatabase();
     try {
-      await persistEnvelope(db, envelope);
+      await persistEnvelope(db, envelope, undefined, "record");
     } finally {
       db.close();
     }
@@ -842,13 +1252,14 @@ export async function appendOfflineChecklistCheck(
       clientEventId: crypto.randomUUID(),
       snapshotId: envelope.snapshot.snapshotId,
       snapshotSavedAt: envelope.snapshot.savedAt,
+      erasureEpochToken: envelope.snapshot.erasureEpochToken,
       tripId,
       occurredAt: nowDate().toISOString(),
       syncStatus: "pending",
     });
     const db = await openDatabase();
     try {
-      await persistEnvelope(db, envelope);
+      await persistEnvelope(db, envelope, undefined, "record");
     } finally {
       db.close();
     }
@@ -895,7 +1306,7 @@ export async function appendOfflineArrival(
     });
     const db = await openDatabase();
     try {
-      await persistEnvelope(db, envelope);
+      await persistEnvelope(db, envelope, undefined, "record");
     } finally {
       db.close();
     }
@@ -928,6 +1339,8 @@ export const SYNC_TIMEOUT_MS = 10_000;
  * instead of a second row, a 500, or a refusal (`roll-call.postgres.test.ts`).
  */
 async function postPendingEvents(batch: {
+  /** Client's server-verified tenant at sync start; comparison only, never authority. */
+  expectedShopSlug?: string;
   events: OfflineRollCallEvent[];
   checklistEvents: OfflineChecklistEvent[];
   arrivalEvents: OfflineArrivalEvent[];
@@ -947,14 +1360,21 @@ async function postPendingEvents(batch: {
       body: JSON.stringify(batch),
       signal: controller.signal,
     });
-    if (!response.ok) throw new OfflineManifestError("sync_unreachable");
+    if (!response.ok) {
+      if (response.status === 409) {
+        const body = (await response.json().catch(() => null)) as { error?: string } | null;
+        if (body?.error === "shop_changed") throw new OfflineManifestError("shop_changed");
+      }
+      throw new OfflineManifestError("sync_unreachable");
+    }
     return (await response.json()) as { results: OfflineSyncResult[] };
   })();
   try {
     // Raced as well as aborted: a fetch (or a body stream) that ignores its
     // signal still cannot hold this past the deadline.
     return await Promise.race([roundTrip, deadline]);
-  } catch {
+  } catch (error) {
+    if (error instanceof OfflineManifestError && error.code === "shop_changed") throw error;
     throw new OfflineManifestError("sync_unreachable");
   } finally {
     clearTimeout(timer);
@@ -962,7 +1382,11 @@ async function postPendingEvents(batch: {
   }
 }
 
-export async function syncOfflineManifest(tripId: string): Promise<OfflineManifestEnvelope | null> {
+export async function syncOfflineManifest(
+  tripId: string,
+  expectedShopSlug?: string,
+  requestTenantRound?: number,
+): Promise<OfflineManifestEnvelope | null> {
   const envelope = await loadOfflineManifest(tripId);
   if (!envelope) return null;
   const pending = envelope.events.filter((event) => event.syncStatus === "pending");
@@ -973,7 +1397,9 @@ export async function syncOfflineManifest(tripId: string): Promise<OfflineManife
     (event) => event.syncStatus === "pending",
   );
   if (pendingOfflineEventCount(envelope) === 0 || !navigator.onLine) return envelope;
+  const tenantRound = requestTenantRound ?? (await beginOfflineTenantVerificationRound());
   const body = await postPendingEvents({
+    ...(expectedShopSlug ? { expectedShopSlug } : {}),
     events: pending,
     checklistEvents: pendingChecklist,
     arrivalEvents: pendingArrivals,
@@ -994,8 +1420,10 @@ export async function syncOfflineManifest(tripId: string): Promise<OfflineManife
       if (!result) return event;
       return {
         ...event,
+        ...(result.noteDisposition ? { note: null } : {}),
         syncStatus: result.status === "rejected" ? "rejected" : "applied",
         rejectionReason: result.reason,
+        ...(result.noteDisposition ? { noteDisposition: result.noteDisposition } : {}),
       };
     };
     current.events = current.events.map(applyResult);
@@ -1003,7 +1431,8 @@ export async function syncOfflineManifest(tripId: string): Promise<OfflineManife
     current.arrivalEvents = offlineArrivalEvents(current).map(applyResult);
     const db = await openDatabase();
     try {
-      await persistEnvelope(db, current);
+      const persisted = await persistEnvelope(db, current, tenantRound, "sync");
+      if (!persisted) throw new OfflineManifestError("shop_changed");
     } finally {
       db.close();
     }

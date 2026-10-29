@@ -9,6 +9,7 @@ import {
   RelevantBookingRequests,
 } from "@/components/seat-diver/BookingRequestCards";
 import { SelectedTripCard } from "@/components/seat-diver/SelectedTripCard";
+import { FormStatus } from "@/components/ui/form";
 import { findSimilarDivers, getBookableDiver, listBookableDivers } from "@/db/divers";
 import {
   type DateInterestRow,
@@ -23,7 +24,7 @@ import { dateRequestMatchFor, FLEXIBLE_WINDOW_DAYS } from "@/lib/date-requests";
 import { formatShortDate, formatTimeRange } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
-import { shopPath } from "@/lib/staff-notices";
+import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { SeatDiverPanel } from "../../../_components/SeatDiverPanel";
 
@@ -67,6 +68,7 @@ export default async function NewBookingDiverPage({
     confirmName?: string;
     confirmEmail?: string;
     confirmPhone?: string;
+    notice?: string;
   }>;
 }) {
   await connection(); // live seat counts — render per request, never a build-time shell
@@ -75,11 +77,17 @@ export default async function NewBookingDiverPage({
   // helper: comparing junk against a `uuid` column raises in Postgres, so
   // without this the page 500s where its own notFound() belongs.
   if (!uuidParam(tripId)) notFound();
-  const { diverq, request, confirmName, confirmEmail, confirmPhone } = await searchParams;
+  const { diverq, request, confirmName, confirmEmail, confirmPhone, notice } = await searchParams;
   const { db, shop } = await requireShopSurface(shopSlug);
   const confirmMatches = confirmName ? await findSimilarDivers(db, shop.id, confirmName) : [];
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
+  const seatNotice = noticeFromParam(notice, {
+    "party-seat-added": {
+      tone: "success" as NoticeTone,
+      text: t("bookings.new.partySeatAdded"),
+    },
+  });
   const requestId = request ? uuidParam(request) : null;
 
   // Read by id, not from the picker's page of options: a departure sitting past
@@ -143,6 +151,12 @@ export default async function NewBookingDiverPage({
         eyebrowHref={shopPath(shopSlug, "schedule", "board")}
         title={t("bookings.new.title")}
       />
+
+      {seatNotice ? (
+        <FormStatus tone={seatNotice.tone} className="mt-6">
+          {seatNotice.text}
+        </FormStatus>
+      ) : null}
 
       {requestContext ? (
         <BookingRequestContext

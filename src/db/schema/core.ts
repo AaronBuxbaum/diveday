@@ -70,6 +70,8 @@ export const shops = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     name: text("name").notNull(),
+    /** Monotone shop-wide invalidation epoch for offline roll-call note text. */
+    offlineErasureEpoch: integer("offline_erasure_epoch").notNull().default(0),
     slug: text("slug").notNull().unique(),
     /** IANA timezone of the physical shop — all schedule display uses this. */
     timezone: text("timezone").notNull(),
@@ -741,6 +743,7 @@ export const shops = pgTable(
     uniqueIndex("shops_bookkeeper_confirm_token_hash_unique").on(table.bookkeeperConfirmTokenHash),
     uniqueIndex("shops_bookkeeper_stop_token_hash_unique").on(table.bookkeeperStopTokenHash),
     check("shops_dock_call_minutes_nonnegative", sql`${table.dockCallMinutes} >= 0`),
+    check("shops_offline_erasure_epoch_nonnegative", sql`${table.offlineErasureEpoch} >= 0`),
     // H-118: an address DiveDay sends to exists only with its recorded consent.
     check(
       "shops_shore_alert_consent",
