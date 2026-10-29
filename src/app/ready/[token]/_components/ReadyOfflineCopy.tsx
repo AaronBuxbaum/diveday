@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { buttonClass } from "@/components/ui/button";
+import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
 import {
   forgetReadyPageCopy,
   keepReadyPageOnDevice,
@@ -98,7 +99,7 @@ export function ReadyOfflineCopy({
         {copy.offlineNote}
       </p>
       <section data-ready-clock-rollback="" hidden className="mx-auto max-w-xl px-6 py-12">
-        <h1 className="text-2xl font-semibold">{copy.clockRollbackHeading}</h1>
+        <h1 className={SHELL_TITLE_CLASS}>{copy.clockRollbackHeading}</h1>
         <p data-ready-clock-rollback-saved="" hidden className="mt-3 text-base text-muted">
           {copy.clockRollbackSaved}
         </p>
