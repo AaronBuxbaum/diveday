@@ -224,6 +224,38 @@ describe("OfflineManifestView — reporting roll call the ceiling threw away", (
     ).not.toBeInTheDocument();
   });
 
+  it("acknowledges only the verified shop's visible notice", async () => {
+    const ownNotice = {
+      ...discarded[0],
+      tripId: "trip-own-loss",
+      tripTitle: "Own shop trip",
+      shopName: "Blue Mantis Divers",
+      shopSlug: "blue-mantis",
+    };
+    const unseenOtherShopNotice = {
+      ...discarded[0],
+      tripId: "trip-other-loss",
+      tripTitle: "Other shop trip",
+      shopName: "Reef Runners",
+      shopSlug: "reef-runners",
+    };
+    vi.mocked(listOfflineManifests).mockResolvedValue([]);
+    vi.mocked(readDiscardedOfflineRecords).mockResolvedValue([ownNotice, unseenOtherShopNotice]);
+
+    render(<OfflineManifestView />);
+
+    expect(
+      await screen.findByText("Blue Mantis Divers · Own shop trip · 2 changes lost"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Reef Runners · Other shop trip/)).not.toBeInTheDocument();
+
+    screen.getByRole("button", { name: "Got it" }).click();
+
+    await waitFor(() =>
+      expect(acknowledgeDiscardedOfflineRecords).toHaveBeenCalledWith([ownNotice]),
+    );
+  });
+
   it("says nothing when nothing has been thrown away", async () => {
     vi.mocked(listOfflineManifests).mockResolvedValue([envelope("trip-1", "Two-Tank Reef")]);
 

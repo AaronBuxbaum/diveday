@@ -783,8 +783,9 @@ describe("useSavedManifest and what retention threw away", () => {
     readDiscarded.mockResolvedValue([lost]);
     const { result } = at("");
     await waitFor(() => expect(result.current.discarded).toEqual([lost]));
-    act(() => result.current.acknowledgeDiscarded());
+    act(() => result.current.acknowledgeDiscarded([lost]));
     expect(result.current.discarded).toEqual([]);
     expect(acknowledge).toHaveBeenCalledTimes(1);
+    expect(acknowledge).toHaveBeenCalledWith([lost]);
   });
 });

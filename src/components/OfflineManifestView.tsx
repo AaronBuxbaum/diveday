@@ -112,7 +112,11 @@ function OfflineManifestScreen() {
     ? discarded.filter((record) => record.shopSlug === verifiedTenantSlug)
     : discarded;
   const discardNotice = (
-    <DiscardedRecordsNotice t={t} records={visibleDiscarded} onAcknowledge={acknowledgeDiscarded} />
+    <DiscardedRecordsNotice
+      t={t}
+      records={visibleDiscarded}
+      onAcknowledge={() => acknowledgeDiscarded(visibleDiscarded)}
+    />
   );
   // Sent here because DiveDay did not answer: keep asking the live manifest,
   // and offer it once it answers in time. Never a swap: the captain chooses

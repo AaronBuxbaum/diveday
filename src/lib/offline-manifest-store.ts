@@ -544,12 +544,22 @@ export async function readDiscardedOfflineRecords(): Promise<DiscardedOfflineRec
 }
 
 /** Clears the notice above, once a human has actually seen it. */
-export async function acknowledgeDiscardedOfflineRecords(): Promise<void> {
+export async function acknowledgeDiscardedOfflineRecords(
+  acknowledged: Array<Pick<DiscardedOfflineRecord, "tripId" | "shopSlug">>,
+): Promise<void> {
   const db = await openDatabase();
   try {
     await withNoticeLock(async () => {
+      const acknowledgedKeys = new Set(
+        acknowledged.map(({ shopSlug, tripId }) => `${shopSlug}\u0000${tripId}`),
+      );
+      const remaining = (await readNotices(db)).filter(
+        (notice) => !acknowledgedKeys.has(`${notice.shopSlug}\u0000${notice.tripId}`),
+      );
       const transaction = db.transaction(KEY_STORE, "readwrite");
-      transaction.objectStore(KEY_STORE).delete(DISCARD_NOTICE_KEY);
+      const notices = transaction.objectStore(KEY_STORE);
+      if (remaining.length === 0) notices.delete(DISCARD_NOTICE_KEY);
+      else notices.put(remaining, DISCARD_NOTICE_KEY);
       await transactionDone(transaction);
     });
   } finally {

@@ -786,12 +786,18 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
     tripPurgedRef,
   ]);
 
-  const acknowledgeDiscarded = () => {
+  const acknowledgeDiscarded = (visibleNotices: DiscardedOfflineRecord[]) => {
     // Cleared on screen first: the button must feel instant on a boat, and if
-    // the write behind it fails the notice simply comes back on the next open,
-    // which is the right direction for something that reports lost evidence.
-    setDiscarded([]);
-    void acknowledgeDiscardedOfflineRecords().catch(() => {});
+    // the write behind it fails the notice simply comes back on the next open.
+    // Only notices the captain could see are removed; another shop's filtered
+    // warning remains available for its crew on this shared device.
+    const keys = new Set(
+      visibleNotices.map(({ shopSlug, tripId }) => `${shopSlug}\u0000${tripId}`),
+    );
+    setDiscarded((current) =>
+      current.filter((notice) => !keys.has(`${notice.shopSlug}\u0000${notice.tripId}`)),
+    );
+    void acknowledgeDiscardedOfflineRecords(visibleNotices).catch(() => {});
   };
 
   const verifiedTenantSlug = verifiedTenantRevision > 0 ? verifiedTenantSlugRef.current : null;
