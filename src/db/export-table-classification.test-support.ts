@@ -43,7 +43,6 @@ export const EXCLUDED_TABLES = [
   // not a column on an existing one.
   "inbound_messages",
   "staff_replies",
-  "inbox_saved_answers", // the inbox's saved replies, out with the inbox they serve
   // Which way each waiver link was handed over and what happened on that
   // channel. The outcome another system could act on is already on
   // waiver_records.csv (`delivery_status` and the provider columns beside it);
@@ -160,6 +159,7 @@ export const EXCLUDED_TABLES = [
   // Per-staff read state has no meaning without the desk events.
   // It is not portable to another system.
   "trip_read_marks",
+  "offline_manifest_snapshot_revisions", // monotone device-snapshot ordering machinery, not a shop record
   "today_read_marks",
   "today_read_mark_events",
   // Held sends live eight seconds; exporting one would export a tap, not a record.

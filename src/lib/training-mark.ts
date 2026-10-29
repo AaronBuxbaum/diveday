@@ -168,12 +168,11 @@ export type TrainingRoomSeat = {
  * **Whether a departure's marked seats fit the instructors' modeled training
  * loads** (review 2026-10-17). Seats are considered by tightest base ratio
  * first, then oldest mark, so a later restrictive course cannot be hidden by
- * earlier looser marks. Each goes to an instructor aboard for its session who
- * still has room under that course's base ratio. An instructor's new load must
- * also fit the tightest base ratio
- * of every seat already assigned to them (a DSD seat can cap later Open Water
- * seats in this conservative model). The trip and its training plan do not
- * establish actual underwater groups or which instructor an assistant
+ * earlier looser marks. A bounded backtracking assignment finds a compatible
+ * instructor for each seat when the search completes. Each instructor's load
+ * must fit the tightest base ratio of every seat assigned to them (a DSD seat
+ * can cap later Open Water seats in this conservative model). The trip and its
+ * training plan do not establish actual underwater groups or which instructor an assistant
  * supports, so this boarding-time resolver gives no assistant bonus. A marked
  * seat whose course has no known ratio blocks ratio-backed coverage
  * for every marked seat on that departure.
@@ -189,10 +188,23 @@ function seatTrainingRoom(
   if (seats.some((seat) => seat.rule === null)) {
     return { seated: new Set(), overRatio: new Set() };
   }
-  const aboardFor = (sessionTripId: string) =>
+  const availableFor = (sessionTripId: string) =>
     courseInstructorIdsAboard(sessionCrew.get(sessionTripId) ?? [], departureCrew);
-  const instructors = new Set(seats.flatMap((seat) => aboardFor(seat.sessionTripId)));
-  const load = new Map<string, number>();
+  const instructors = new Set(seats.flatMap((seat) => availableFor(seat.sessionTripId)));
+  if (instructors.size === 0) return { seated: new Set(), overRatio: new Set() };
+  const sessionsByInstructor = new Map<string, Set<string>>();
+  for (const seat of seats) {
+    for (const personId of availableFor(seat.sessionTripId)) {
+      const sessions = sessionsByInstructor.get(personId) ?? new Set<string>();
+      sessions.add(seat.sessionTripId);
+      sessionsByInstructor.set(personId, sessions);
+    }
+  }
+  const instructorPreference = (left: string, right: string) =>
+    (sessionsByInstructor.get(left)?.size ?? 0) - (sessionsByInstructor.get(right)?.size ?? 0) ||
+    (left < right ? -1 : left > right ? 1 : 0);
+  const aboardFor = (sessionTripId: string) =>
+    availableFor(sessionTripId).sort(instructorPreference);
   // The tightest cap among the seats already on each instructor: a taker's new load must fit it too.
   //
   // **Deliberate, not an accident of the arithmetic** (issue #2830, Aaron
@@ -206,30 +218,99 @@ function seatTrainingRoom(
   // counted here because actual group assignments and assistant supervision
   // are not recorded. Pinned in `training-mark.test.ts` ("keeps the DSD base
   // cap across an instructor's mixed marked seats").
-  const tightest = new Map<string, number>();
   const seated = new Set<string>();
   const overRatio = new Set<string>();
   const orderedSeats = seats
-    .map((seat, index) => ({ seat, index }))
+    .map((seat, index) => ({ seat, index, eligible: aboardFor(seat.sessionTripId) }))
     .sort((left, right) => {
       const leftCap = left.seat.rule ? courseRatioCapacity(left.seat.rule, 1, 0) : Infinity;
       const rightCap = right.seat.rule ? courseRatioCapacity(right.seat.rule, 1, 0) : Infinity;
-      return leftCap - rightCap || left.index - right.index;
+      // Preserve the tighter course and smaller-pool priorities. Within a
+      // seat's eligible pool, prefer instructors with fewer marked sessions;
+      // person id breaks ties independently of unordered crew query rows.
+      return (
+        leftCap - rightCap ||
+        left.eligible.length - right.eligible.length ||
+        left.index - right.index
+      );
     });
-  for (const { seat } of orderedSeats) {
-    if (!seat.rule || instructors.size === 0) continue;
-    const cap = Math.floor(courseRatioCapacity(seat.rule, instructors.size, 0) / instructors.size);
-    const taker = aboardFor(seat.sessionTripId).find((personId) => {
-      const newLoad = (load.get(personId) ?? 0) + 1;
-      return newLoad <= Math.min(cap, tightest.get(personId) ?? cap);
-    });
-    if (taker === undefined) {
-      if (aboardFor(seat.sessionTripId).length > 0) overRatio.add(seat.id);
-      continue;
+  const ordered = orderedSeats.map(({ seat, eligible }) => ({
+    seat,
+    eligible,
+    cap: seat.rule
+      ? Math.floor(courseRatioCapacity(seat.rule, instructors.size, 0) / instructors.size)
+      : 0,
+  }));
+  const assignment = new Map<string, string>();
+  let best = new Map<string, string>();
+  let explored = 0;
+  // Search is exact up to this fixed work bound. If reached, only a complete
+  // assignment already found is trusted; otherwise the best completed partial
+  // assignment is returned, which may conservatively undercount seats.
+  const searchLimit = 50_000;
+
+  const decisions: boolean[] = [];
+  const search = (
+    index: number,
+    loads: ReadonlyMap<string, number>,
+    caps: ReadonlyMap<string, number>,
+  ): boolean => {
+    explored += 1;
+    if (index === ordered.length) {
+      let isBetter = false;
+      for (const { seat } of ordered) {
+        const current = assignment.has(seat.id);
+        const previous = best.has(seat.id);
+        if (current !== previous) {
+          isBetter = current;
+          break;
+        }
+      }
+      // A full assignment is optimal; otherwise keep the lexicographically
+      // preferred set of seats (the existing tighter/earlier seat priority).
+      if (assignment.size === ordered.length) {
+        best = new Map(assignment);
+        return true;
+      }
+      if (isBetter) best = new Map(assignment);
+      return false;
     }
-    load.set(taker, (load.get(taker) ?? 0) + 1);
-    tightest.set(taker, Math.min(cap, tightest.get(taker) ?? cap));
-    seated.add(seat.id);
+    if (explored >= searchLimit) return false;
+    for (let i = 0; i < index; i += 1) {
+      const previous = best.has(ordered[i].seat.id);
+      if (decisions[i] !== previous) {
+        if (!decisions[i] && previous) return false;
+        break;
+      }
+    }
+
+    const { seat, eligible, cap } = ordered[index];
+    for (const personId of eligible) {
+      const newLoad = (loads.get(personId) ?? 0) + 1;
+      const nextTightest = Math.min(cap, caps.get(personId) ?? cap);
+      if (newLoad > nextTightest) continue;
+      assignment.set(seat.id, personId);
+      decisions[index] = true;
+      const nextLoads = new Map(loads);
+      const nextCaps = new Map(caps);
+      nextLoads.set(personId, newLoad);
+      nextCaps.set(personId, nextTightest);
+      if (search(index + 1, nextLoads, nextCaps)) return true;
+      assignment.delete(seat.id);
+      decisions[index] = false;
+      if (explored >= searchLimit) break;
+    }
+    if (explored < searchLimit) {
+      decisions[index] = false;
+      if (search(index + 1, loads, caps)) return true;
+    }
+    return false;
+  };
+
+  search(0, new Map(), new Map());
+  for (const seatId of best.keys()) seated.add(seatId);
+  for (const { seat, eligible } of ordered) {
+    if (!seated.has(seat.id) && eligible.length > 0) overRatio.add(seat.id);
   }
   return { seated, overRatio };
 }

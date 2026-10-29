@@ -14,12 +14,35 @@ import { getShopDayDepartures, getTodayWork } from "@/db/today";
 import { countShopTrips } from "@/db/trips";
 import { isOrientationDismissed } from "@/db/user-accounts";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { type assembleEveningClose, tomorrowNoon } from "@/lib/closeout";
+import { assembleEveningClose, type DayCloseoutState, tomorrowNoon } from "@/lib/closeout";
 import { shopCrewTarget } from "@/lib/crew-schedule";
 import { seasonStartInstant } from "@/lib/season";
-import type { roleLensFor } from "@/lib/today";
+import { type DaySpine, type roleLensFor, spineJobCount } from "@/lib/today";
 import type { shopDayBounds } from "@/lib/zoned";
 import { readDayMoney } from "./day-money";
+
+/** The day's closeout plus the demo's separate previous dusk station. */
+export function assembleTodayEveningClose(
+  closeout: Pick<DayCloseoutState, "departures" | "tomorrow" | "carryover">,
+  now: Date,
+) {
+  return assembleEveningClose(closeout.departures, now, closeout.tomorrow, closeout.carryover);
+}
+
+/** Whether Today has a boat, task, previous demo close, or instructor session to show. */
+export function hasTodayWorkToShow(
+  spine: DaySpine,
+  eveningClose: ReturnType<typeof assembleEveningClose>,
+  lens: ReturnType<typeof roleLensFor>,
+  hasSessions: boolean,
+) {
+  return (
+    spineJobCount(spine) > 0 ||
+    spine.stations.length > 0 ||
+    eveningClose.carryover != null ||
+    (lens === "sessions" && hasSessions)
+  );
+}
 
 type Shop = NonNullable<Awaited<ReturnType<typeof shopByIdCached>>>;
 
@@ -150,6 +173,10 @@ export async function readTodaySecondWave({
   eveningClose: ReturnType<typeof assembleEveningClose>;
   dayBounds: ReturnType<typeof shopDayBounds>;
 }) {
+  const closingStations = [
+    ...eveningClose.stations,
+    ...(eveningClose.carryover ? [eveningClose.carryover] : []),
+  ];
   const [work, tomorrowDepartures, [headCountCloses, canOpenLog], sailedBefore, dayMoney] =
     await Promise.all([
       getTodayWork(
@@ -173,12 +200,12 @@ export async function readTodaySecondWave({
         personId,
       ),
       getShopDayDepartures(db, shop.id, shop.timezone, tomorrowNoon(now, shop.timezone), evidence),
-      eveningClose.stations.length > 0
+      closingStations.length > 0
         ? Promise.all([
             listHeadCountCloses(
               db,
               shop.id,
-              eveningClose.stations
+              closingStations
                 .filter((station) => station.status === "all_home")
                 .map(({ tripId, crewAccountedFor }) => ({ tripId, crewClosed: crewAccountedFor })),
             ),

@@ -10,13 +10,17 @@ import type { AppDb } from "./client";
 import { listDeskEventsSince, markTripCaughtUp } from "./desk-events";
 import { recordFlySafeTold } from "./fly-safe-correction";
 import { hasMoveAsk, recordMoveAsk } from "./inbound-messages";
+import { addInterest } from "./interest-dates-fixtures";
+import { associateDateRequestOfferBooking } from "./interests";
 import { listTripActivity } from "./operations";
 import {
   activityEvents,
   bookings,
   certifications,
   courses,
+  dateRequestOfferBookings,
   inboundMessages,
+  interests,
   people,
   tripDeskEvents,
   tripHelpRequests,
@@ -87,6 +91,43 @@ async function tripOf(db: AppDb, bookingId: string) {
 }
 
 describe("moveBooking", () => {
+  it("moves a linked solo booking and its request association together", async () => {
+    const { db, shop, from, to, seat } = await setup();
+    const requestId = await addInterest(db, shop.id, { interest: "reef dive" });
+    const offers = await db
+      .insert(interests)
+      .values(
+        [from.id, to.id].map((tripId) => ({
+          shopId: shop.id,
+          scope: "departure" as const,
+          askedBy: "diver" as const,
+          tripId,
+          parentInterestId: requestId,
+          partySize: 1,
+          offeredAt: nowDate(),
+        })),
+      )
+      .returning({ id: interests.id, tripId: interests.tripId });
+    const sourceOffer = offers.find((offer) => offer.tripId === from.id);
+    const targetOffer = offers.find((offer) => offer.tripId === to.id);
+    if (!sourceOffer || !targetOffer) throw new Error("setup: date request offers missing");
+    expect(
+      await associateDateRequestOfferBooking(db, {
+        shopId: shop.id,
+        tripId: from.id,
+        requestId,
+        bookingId: seat.bookingId,
+      }),
+    ).toBe(true);
+
+    expect(await move(db, shop.id, from.id, to.id, seat.bookingId)).toMatchObject({ ok: true });
+    const [link] = await db
+      .select({ interestId: dateRequestOfferBookings.interestId })
+      .from(dateRequestOfferBookings)
+      .where(eq(dateRequestOfferBookings.bookingId, seat.bookingId));
+    expect(link?.interestId).toBe(targetOffer.id);
+  });
+
   it("moves the same booking row, and both crews read it on the catch-up strip", async () => {
     const { db, shop, from, to, seat } = await setup();
     await db.insert(tripHelpRequests).values({

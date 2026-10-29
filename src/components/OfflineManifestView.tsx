@@ -9,6 +9,7 @@ import {
   OfflineManifestSkeleton,
   OfflineNoSavedTrip,
   OfflineOpeningScreen,
+  OfflineTenantVerificationScreen,
 } from "./offline-manifest/ShellScreens";
 import { DiscardedRecordsNotice, translatorForThisDevice } from "./offline-manifest/shared";
 import { OfflineTripScreen } from "./offline-manifest/TripScreen";
@@ -57,6 +58,10 @@ function OfflineManifestScreen() {
   const {
     tripId,
     envelope,
+    verifiedTenantSlug,
+    foreignPendingChanges,
+    tripNoteLossMessage,
+    tenantChangePending,
     removedForOtherShop,
     dispatchSaved,
     list,
@@ -103,8 +108,15 @@ function OfflineManifestScreen() {
    * either.
    */
   const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
+  const visibleDiscarded = verifiedTenantSlug
+    ? discarded.filter((record) => record.shopSlug === verifiedTenantSlug)
+    : discarded;
   const discardNotice = (
-    <DiscardedRecordsNotice t={t} records={discarded} onAcknowledge={acknowledgeDiscarded} />
+    <DiscardedRecordsNotice
+      t={t}
+      records={visibleDiscarded}
+      onAcknowledge={() => acknowledgeDiscarded(visibleDiscarded)}
+    />
   );
   // Sent here because DiveDay did not answer: keep asking the live manifest,
   // and offer it once it answers in time. Never a swap: the captain chooses
@@ -123,13 +135,29 @@ function OfflineManifestScreen() {
     return <OfflineOpeningScreen t={t} message={message} />;
   }
 
+  if (tenantChangePending) {
+    // Other in-flight reads can settle with ordinary "ready" copy after the
+    // 409. The quarantine status must remain authoritative until verification.
+    return (
+      <OfflineTenantVerificationScreen
+        t={t}
+        message={t("shared.offlineManifest.reconcile.tenantChanged")}
+      />
+    );
+  }
+
   if (!tripId) {
+    const visibleList =
+      list && verifiedTenantSlug
+        ? list.filter((saved) => saved.snapshot.shop.slug === verifiedTenantSlug)
+        : list;
     return (
       <OfflineManifestList
         t={t}
         shellVersionCopy={shellVersionCopy}
-        list={list}
+        list={visibleList}
         message={message}
+        foreignPendingChanges={foreignPendingChanges}
         discardNotice={discardNotice}
         readFailed={storeReadFailed}
         fallback={fallback}
@@ -143,14 +171,19 @@ function OfflineManifestScreen() {
   // undone by a read that was already in flight (see the reducer), so there is
   // no ordering in which a roster reaches the screen after its record has been
   // deleted — including for a single commit.
-  if (!envelope) {
+  const foreignTrip =
+    verifiedTenantSlug !== null &&
+    envelope !== null &&
+    envelope.snapshot.shop.slug !== verifiedTenantSlug;
+  if (!envelope || foreignTrip) {
     return (
       <OfflineNoSavedTrip
         t={t}
         message={message}
-        removedForOtherShop={removedForOtherShop}
+        removedForOtherShop={foreignTrip || removedForOtherShop}
         readFailed={storeReadFailed}
-        discardNotice={discardNotice}
+        foreignPendingChanges={foreignPendingChanges}
+        discardNotice={foreignTrip ? null : discardNotice}
       />
     );
   }
@@ -198,6 +231,8 @@ function OfflineManifestScreen() {
       view={view}
       controls={controls}
       tripId={tripId}
+      foreignPendingChanges={foreignPendingChanges}
+      noteLossMessage={tripNoteLossMessage}
       shellVersionCopy={shellVersionCopy}
       discardNotice={discardNotice}
       reconcile={reconcile}

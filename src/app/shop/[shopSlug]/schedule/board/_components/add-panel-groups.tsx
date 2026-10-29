@@ -727,10 +727,23 @@ export function CapacityField({
 }
 
 /** The public price is optional, with a currency-shaped input. */
-export function PriceInputGroup({ copy, price }: { copy: BuilderCopy; price: BuilderPriceInput }) {
+export function PriceInputGroup({
+  copy,
+  price,
+  coursePriceLabel,
+}: {
+  copy: BuilderCopy;
+  price: BuilderPriceInput;
+  coursePriceLabel?: string | null;
+}) {
+  const hasCoursePrice = Boolean(coursePriceLabel);
   return (
     <FieldGrid columns={1}>
-      <Field label={copy.price} hint={copy.optional} description={copy.priceDescription}>
+      <Field
+        label={copy.price}
+        hint={hasCoursePrice ? undefined : copy.optional}
+        description={coursePriceLabel ?? copy.priceDescription}
+      >
         <input
           name="priceDollars"
           type="number"
@@ -738,6 +751,8 @@ export function PriceInputGroup({ copy, price }: { copy: BuilderCopy; price: Bui
           min={0}
           max={price.max}
           placeholder={price.placeholder}
+          hidden={hasCoursePrice}
+          disabled={hasCoursePrice}
           className={`${controlClass} max-w-28 tabular-nums`}
         />
       </Field>

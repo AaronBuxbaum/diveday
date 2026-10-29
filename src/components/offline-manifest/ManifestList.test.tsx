@@ -15,9 +15,71 @@ vi.mock("@/lib/offline-manifest-store", async (original) => ({
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
 });
 
 describe("OfflineManifestList", () => {
+  for (const [locale, dates] of [
+    [
+      "en-US",
+      [
+        {
+          season: "winter",
+          startsAt: "2026-01-15T15:00:00.000Z",
+          local: "Jan 15, 2026, 10:00 AM",
+          zone: "EST",
+        },
+        {
+          season: "summer",
+          startsAt: "2026-07-15T15:00:00.000Z",
+          local: "Jul 15, 2026, 11:00 AM",
+          zone: "EDT",
+        },
+      ],
+    ],
+    [
+      "es-ES",
+      [
+        {
+          season: "winter",
+          startsAt: "2026-01-15T15:00:00.000Z",
+          local: "15 ene 2026, 10:00",
+          zone: "GMT-5",
+        },
+        {
+          season: "summer",
+          startsAt: "2026-07-15T15:00:00.000Z",
+          local: "15 jul 2026, 11:00",
+          zone: "GMT-4",
+        },
+      ],
+    ],
+  ] as const) {
+    for (const { season, startsAt, local, zone } of dates) {
+      it(`shows the saved shop time zone for ${season} dates in ${locale}`, () => {
+        vi.stubEnv("TZ", "UTC");
+        vi.spyOn(navigator, "language", "get").mockReturnValue(locale);
+        const saved = savedCopy();
+        const manifest = saved.snapshot.manifests[0];
+        if (!manifest) throw new Error("Expected one saved manifest");
+        manifest.trip.startsAt = startsAt;
+        const deviceTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        expect(deviceTimeZone).not.toBe(saved.snapshot.shop.timezone);
+        expect(locale).toBe(navigator.language);
+        const { container } = render(
+          <OfflineManifestList
+            t={offlineManifestTranslator(locale)}
+            shellVersionCopy={{ staleBanner: "", updateBanner: "", refreshButton: "" }}
+            list={[saved]}
+            message=""
+            discardNotice={null}
+          />,
+        );
+        expect(container.textContent).toContain(`${local} ${zone}`);
+      });
+    }
+  }
+
   it("lists the copies saved on this device", () => {
     const { container } = render(
       <OfflineManifestList

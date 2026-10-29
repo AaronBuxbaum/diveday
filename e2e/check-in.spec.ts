@@ -637,8 +637,10 @@ test("the counter releases a no-show's seat, offers it to the wait list, and the
       "data-hydrated",
       "true",
     );
-    await visitor.getByLabel("Name").fill("Nora Quinn");
-    await visitor.getByLabel("Email").fill(`waitlist-${e2eNow().getTime()}@example.com`);
+    await visitor.getByRole("textbox", { name: "Name" }).fill("Nora Quinn");
+    await visitor
+      .getByRole("textbox", { name: "Email" })
+      .fill(`waitlist-${e2eNow().getTime()}@example.com`);
     await visitor.getByRole("button", { name: "Join the wait list" }).click();
     await expect(
       visitor.getByRole("heading", { name: /You’re on the wait list, Nora/ }),

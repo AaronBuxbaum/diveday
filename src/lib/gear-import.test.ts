@@ -71,6 +71,18 @@ describe("prepareGearImport", () => {
     });
   });
 
+  it("does not treat a retired combined mask-and-fins kind as current", () => {
+    const prepared = prepareGearImport(
+      [
+        "gear_label,gear_kind",
+        "Legacy combined kit,mask_fins",
+        "Legacy combined kit 2,mask_and_fins",
+      ].join("\n"),
+    );
+    expect(prepared.fatal).toBeNull();
+    expect(prepared.rows.map((row) => row.kind)).toEqual(["other", "other"]);
+  });
+
   it("rejects service dive intervals without a due date", () => {
     const prepared = prepareGearImport("tag,service_date,next_due_dives\nBCD #1,2026-01-01,100");
     expect(prepared.rows[0]?.issues).toContain("dives_need_date");

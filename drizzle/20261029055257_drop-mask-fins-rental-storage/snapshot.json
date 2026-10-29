@@ -1,0 +1,75 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "a786f440-e2b2-449d-89df-611cc2325f44",
+  "prevIds": [
+    "93a63fae-3ed6-4c94-af6d-8bdb3a17d0e5",
+    "89017db3-4800-4ec9-b813-fdc29f7112e7"
+  ],
+  "footprints": [
+    {
+      "statementType": "recreate_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "rental_fit_item"
+      ],
+      "writes": [
+        "s|enum|public.rental_fit_item",
+        "n|enum|public.rental_fit_item",
+        "e|enum|public.rental_fit_item",
+        "n|type|public.rental_fit_item",
+        "s|colprop|public.rental_fit_profiles.fit_confirmed_item.type",
+        "s|colprop|public.rental_fit_profiles.fit_confirmed_item.default"
+      ],
+      "reads": [
+        "n|sch|public",
+        "n|tbl|public.rental_fit_profiles",
+        "n|sch|public",
+        "n|col|public.rental_fit_profiles.fit_confirmed_item"
+      ],
+      "sqlHash": "76b2f099c2fd1da9"
+    },
+    {
+      "statementType": "drop_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "rental_fit_profiles",
+        "rents_mask_fins"
+      ],
+      "writes": [
+        "s|col|public.rental_fit_profiles.rents_mask_fins",
+        "n|col|public.rental_fit_profiles.rents_mask_fins",
+        "e|col|public.rental_fit_profiles.rents_mask_fins"
+      ],
+      "reads": [
+        "n|tbl|public.rental_fit_profiles",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"rental_fit_profiles\",\"rents_mask_fins\"]"
+    },
+    {
+      "op": "alter",
+      "key": "enums\u0000[\"public\",\"rental_fit_item\"]",
+      "set": {
+        "values": [
+          "bcd",
+          "wetsuit",
+          "boots",
+          "fins",
+          "weights",
+          "drysuit",
+          "hood",
+          "gloves"
+        ]
+      }
+    }
+  ]
+}

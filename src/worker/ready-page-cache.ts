@@ -37,6 +37,11 @@
  * - **Read-only, network-first**: a cached copy is served only when `fetch`
  *   fails. Its forms post to the server like any page and fail offline like
  *   any page; nothing is queued.
+ * - **Expiry follows a trusted server generation time**: when a copy is
+ *   saved, that timestamp calibrates the device clock offset used to estimate
+ *   its trip expiry. A fixed offset works offline; an unobserved forward clock
+ *   jump after saving is indistinguishable from elapsed time and can expire a
+ *   copy early. A copy remains a saved snapshot, never live readiness.
  * - **Bounded by the trip, not only by the clock** (D2): the live page names
  *   the instant its copy expires ({@link READY_KEEP_UNTIL_META}: a day after
  *   the boat is due back), capped at {@link READY_COPY_MAX_AGE_MS}. A page
@@ -70,6 +75,7 @@ import {
   READY_KEEP_UNTIL_META,
   READY_OFFLINE_GENERATED_AT_PLACEHOLDER,
   READY_OFFLINE_NOTE_ATTR,
+  READY_ROLLBACK_SAVED_AT_PLACEHOLDER,
 } from "@/lib/ready-offline";
 
 /**
@@ -98,6 +104,12 @@ const LEGACY_FORGOTTEN_KEY_PREFIX = "/ready/forgotten/";
 const LEGACY_FORGOTTEN_VERSION_HEADER = "x-diveday-forgotten-version";
 const LEGACY_FORGOTTEN_AT_HEADER = "x-diveday-forgotten-at";
 const KEEP_UNTIL_HEADER = "x-diveday-keep-until";
+const DEVICE_SAVED_AT_HEADER = "x-diveday-device-saved-at";
+const SERVER_GENERATED_AT_HEADER = "x-diveday-server-generated-at";
+const CLOCK_WATERMARK_HEADER = "x-diveday-clock-watermark";
+const READY_CLOCK_CACHE_NAME = "diveday-ready-clock-v1";
+const READY_CLOCK_KEY = "/ready/clock-observation";
+const READY_CLOCK_STATE_HEADER = "x-diveday-ready-copy-time-state";
 
 /** Stands in for the bearer token in the stored body; not a legal token (wrong length). */
 const TOKEN_PLACEHOLDER = "__diveday_kept_token__";
@@ -236,7 +248,10 @@ function transformLegacyReadyCopy(html: string): string | undefined {
   if (!banner || hasAttribute(banner.opening, READY_COPY_GENERATED_AT_ATTR)) return undefined;
   const knownWarning = LEGACY_READY_BANNER_COPY.get(banner.text);
   if (!knownWarning) return undefined;
-  return html.replace(banner.element, `${banner.opening}${knownWarning}${banner.closing}`);
+  return html.replace(
+    banner.element,
+    `${banner.opening}${knownWarning.savedCopyWarning}${banner.closing}`,
+  );
 }
 
 /** Format the server-rendered page generation instant in the locale and shop zone. */
@@ -271,6 +286,145 @@ function readyGeneratedAtLabel(html: string, generatedAt: number): string | unde
 /** The token in a readiness path (`/ready/<token>`). */
 function tokenOf(path: string): string {
   return path.slice("/ready/".length);
+}
+
+function numericHeader(response: Response, name: string): number | null {
+  const value = Number(response.headers.get(name));
+  return Number.isSafeInteger(value) && value > 0 ? value : null;
+}
+
+type ClockWatermark = { kind: "missing" | "corrupt" } | { kind: "valid"; at: number };
+
+let readyClockOrder: Promise<unknown> = Promise.resolve();
+
+function serializeClockObservation<T>(operation: () => Promise<T>): Promise<T> {
+  const next = readyClockOrder.then(operation, operation);
+  readyClockOrder = next.then(
+    () => undefined,
+    () => undefined,
+  );
+  return next;
+}
+
+async function readClockWatermark(storage: CacheStorage): Promise<ClockWatermark> {
+  try {
+    const cache = await storage.open(READY_CLOCK_CACHE_NAME);
+    const marker = await cache.match(READY_CLOCK_KEY);
+    if (!marker) return { kind: "missing" };
+    const at = numericHeader(marker, CLOCK_WATERMARK_HEADER);
+    return at === null ? { kind: "corrupt" } : { kind: "valid", at };
+  } catch {
+    return { kind: "corrupt" };
+  }
+}
+
+/** Persist the highest readiness-worker wall-clock reading across restarts. */
+export async function observeReadyPageClock(storage: CacheStorage, now: number): Promise<void> {
+  if (!Number.isSafeInteger(now) || now <= 0) return;
+  await serializeClockObservation(async () => {
+    try {
+      const cache = await storage.open(READY_CLOCK_CACHE_NAME);
+      const marker = await cache.match(READY_CLOCK_KEY);
+      if (marker) {
+        const previous = numericHeader(marker, CLOCK_WATERMARK_HEADER);
+        // An unreadable marker may conceal a higher observation; never lower it.
+        if (previous === null || now <= previous) return;
+      }
+      await cache.put(
+        READY_CLOCK_KEY,
+        new Response(null, { headers: { [CLOCK_WATERMARK_HEADER]: String(now) } }),
+      );
+    } catch {
+      // The fallback will keep the copy visibly unverified if storage is unavailable.
+    }
+  });
+}
+
+function fallbackHeaders(
+  response: Response,
+  state: "known" | "unknown" | "rollback" | "unverified",
+): Headers {
+  const headers = new Headers(response.headers);
+  for (const name of [
+    "content-length",
+    "content-encoding",
+    "content-md5",
+    "content-range",
+    "content-digest",
+    "etag",
+    "last-modified",
+  ]) {
+    headers.delete(name);
+  }
+  headers.set(READY_CLOCK_STATE_HEADER, state);
+  return headers;
+}
+
+function revealMarked(html: string, attribute: string): string {
+  const openTag = new RegExp(
+    `(<(?:p|main|section)\\b(?=[^>]*\\b${attribute}="")[^>]*?)\\s+hidden(?:="")?`,
+    "i",
+  );
+  return html.replace(openTag, "$1");
+}
+
+function escapedHTML(value: string): string {
+  return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+}
+
+function legacyRollbackDocument(html: string): string | undefined {
+  const banner = visibleTextBanner(html);
+  const words = banner ? LEGACY_READY_BANNER_COPY.get(banner.text) : undefined;
+  if (!banner || !words) return undefined;
+  const main = `<main><h1>${escapedHTML(words.clockRollbackHeading)}</h1><p>${escapedHTML(words.clockRollbackUnknown)}</p></main>`;
+  const body = /<body\b[^>]*>[\s\S]*?<\/body>/i;
+  return body.test(html)
+    ? html.replace(body, `<body>${main}</body>`)
+    : html.replace(banner.element, main);
+}
+
+function rollbackWarningDocument(html: string, generatedAt: number): string | undefined {
+  const marker = html.match(
+    /<section\b(?=[^>]*\bdata-ready-clock-rollback="")[^>]*>[\s\S]*?<\/section>/i,
+  )?.[0];
+  const body = html.match(/<body\b[^>]*>[\s\S]*?<\/body>/i)?.[0];
+  if (!marker || !body) return legacyRollbackDocument(html);
+  const label = readyGeneratedAtLabel(html, generatedAt);
+  let warning = marker.replace(/\s+hidden(?:="")?/, "");
+  if (label) {
+    warning = revealMarked(warning, "data-ready-clock-rollback-saved").replaceAll(
+      READY_ROLLBACK_SAVED_AT_PLACEHOLDER,
+      label,
+    );
+  } else {
+    warning = revealMarked(warning, "data-ready-clock-rollback-unknown");
+  }
+  const replacement = body.replace(
+    /(<body\b[^>]*>)[\s\S]*?(<\/body>)/i,
+    `$1<main>${warning}</main>$2`,
+  );
+  return html.replace(body, replacement);
+}
+
+function unverifiedClockDocument(html: string, legacyCopy?: string): string | undefined {
+  const marker = html.match(
+    /<section\b(?=[^>]*\bdata-ready-clock-unverified="")[^>]*>[\s\S]*?<\/section>/i,
+  )?.[0];
+  if (marker) {
+    const body = html.match(/<body\b[^>]*>[\s\S]*?<\/body>/i)?.[0];
+    if (!body) return undefined;
+    const warning = revealMarked(
+      revealMarked(marker, "data-ready-clock-unverified"),
+      "data-ready-clock-unverified-copy",
+    );
+    return html.replace(body, body.replace(marker, warning));
+  }
+  if (!legacyCopy) return undefined;
+  const body = html.match(/<body\b[^>]*>[\s\S]*?<\/body>/i)?.[0];
+  const notice = `<p role="status">${escapedHTML(legacyCopy)}</p>`;
+  if (body) return html.replace(body, body.replace(/(<body\b[^>]*>)/i, `$1${notice}`));
+  const banner = visibleTextBanner(html);
+  return banner ? html.replace(banner.element, `${notice}${banner.element}`) : undefined;
 }
 
 async function pathHash(path: string): Promise<string> {
@@ -510,8 +664,16 @@ export async function saveReadyPage(
   // A body of its own, so the copy is complete before anything is replaced.
   const html = new TextDecoder().decode(await response.arrayBuffer());
   const named = Number(html.match(KEEP_UNTIL_PATTERN)?.[1] ?? Number.NaN);
+  const currentFormat = metaContent(html, READY_COPY_VERSION_META) === READY_COPY_VERSION;
+  const generatedAt = Number(singleMetaContent(html, READY_COPY_GENERATED_AT_META));
+  const generatedAtLabel = currentFormat ? readyGeneratedAtLabel(html, generatedAt) : undefined;
+  const hasTrustedServerTime =
+    Number.isSafeInteger(generatedAt) && generatedAt > 0 && generatedAtLabel !== undefined;
   const cache = await storage.open(READY_CACHE_NAME);
-  if (!Number.isFinite(named) || named <= now) {
+  // A live, server-rendered page establishes that it was current when the
+  // server rendered it. Do not let an already-fast phone clock erase that
+  // complete copy before it can be used offline.
+  if (!Number.isFinite(named) || named <= (hasTrustedServerTime ? generatedAt : now)) {
     // Process terminal truth even without a durable request marker. Order the
     // path check and epoch write together with request starts, preventing a
     // different token from slipping between the check and global marker.
@@ -521,9 +683,7 @@ export async function saveReadyPage(
   if (!order.durable) return false;
   // Pages rendered before the saved-time format cannot be transformed safely:
   // their banner has no reliable locale/zone or age context.
-  if (metaContent(html, READY_COPY_VERSION_META) !== READY_COPY_VERSION) return false;
-  const generatedAt = Number(singleMetaContent(html, READY_COPY_GENERATED_AT_META));
-  const generatedAtLabel = readyGeneratedAtLabel(html, generatedAt);
+  if (!currentFormat) return false;
   const safeHtml = withoutClientRuntime(html);
   const banner = singleTextBanner(safeHtml);
   const placeholderCount = safeHtml.split(READY_OFFLINE_GENERATED_AT_PLACEHOLDER).length - 1;
@@ -544,7 +704,13 @@ export async function saveReadyPage(
   const timestampedBanner = `${banner.opening.replace(/>$/, ` ${READY_COPY_GENERATED_AT_ATTR}="${generatedAt}">`)}${banner.text.replace(READY_OFFLINE_GENERATED_AT_PLACEHOLDER, generatedAtLabel)}${banner.closing}`;
   const timestampedHtml = safeHtml.replace(banner.element, timestampedBanner);
   const headers = new Headers(response.headers);
-  headers.set(KEEP_UNTIL_HEADER, String(Math.min(named, now + READY_COPY_MAX_AGE_MS)));
+  const ageAnchor = hasTrustedServerTime ? generatedAt : now;
+  headers.set(KEEP_UNTIL_HEADER, String(Math.min(named, ageAnchor + READY_COPY_MAX_AGE_MS)));
+  headers.set(DEVICE_SAVED_AT_HEADER, String(now));
+  if (hasTrustedServerTime) {
+    headers.set(SERVER_GENERATED_AT_HEADER, String(generatedAt));
+  }
+  await observeReadyPageClock(storage, now);
   if (!(await requestIsCurrent(storage, hash, order))) return false;
   headers.set(PATH_HASH_HEADER, hash);
   headers.set(COPY_FORGOTTEN_VERSION_HEADER, order.forgottenVersion);
@@ -601,11 +767,6 @@ export async function readyPageFallback(
   const cache = await storage.open(READY_CACHE_NAME);
   const cached = await cache.match(READY_COPY_KEY);
   if (!cached) return undefined;
-  const keepUntil = Number(cached.headers.get(KEEP_UNTIL_HEADER));
-  if (!Number.isFinite(keepUntil) || now > keepUntil) {
-    await cache.delete(READY_COPY_KEY);
-    return undefined;
-  }
   const hash = await pathHash(path);
   if (cached.headers.get(PATH_HASH_HEADER) !== hash) return undefined;
   try {
@@ -620,7 +781,42 @@ export async function readyPageFallback(
     return undefined;
   }
   const storedHtml = await cached.text();
+  const savedAtFromBody = Number(singleMetaContent(storedHtml, READY_COPY_GENERATED_AT_META));
+  const serverGeneratedAt =
+    numericHeader(cached, SERVER_GENERATED_AT_HEADER) ??
+    (Number.isSafeInteger(savedAtFromBody) && savedAtFromBody > 0 ? savedAtFromBody : null);
+  const deviceSavedAt = numericHeader(cached, DEVICE_SAVED_AT_HEADER);
+  const watermark = await readClockWatermark(storage);
+  const rollback =
+    Number.isSafeInteger(now) &&
+    [deviceSavedAt, watermark.kind === "valid" ? watermark.at : null].some(
+      (observedAt) => observedAt !== null && now < observedAt,
+    );
+  if (rollback) {
+    const warning = rollbackWarningDocument(storedHtml, serverGeneratedAt ?? 0);
+    if (!warning) {
+      await cache.delete(READY_COPY_KEY);
+      return undefined;
+    }
+    return new Response(warning, {
+      status: cached.status,
+      statusText: cached.statusText,
+      headers: fallbackHeaders(cached, "rollback"),
+    });
+  }
+  if (watermark.kind === "valid") await observeReadyPageClock(storage, now);
+  // Rebase wall-clock elapsed time onto the trusted server generation instant.
+  const estimatedServerNow =
+    serverGeneratedAt !== null && deviceSavedAt !== null
+      ? serverGeneratedAt + (now - deviceSavedAt)
+      : now;
+  const keepUntil = Number(cached.headers.get(KEEP_UNTIL_HEADER));
+  if (!Number.isFinite(keepUntil) || estimatedServerNow > keepUntil) {
+    await cache.delete(READY_COPY_KEY);
+    return undefined;
+  }
   let copyHtml = storedHtml;
+  let legacyUnverifiedCopy: string | undefined;
   if (metaContent(storedHtml, READY_COPY_VERSION_META) === READY_COPY_VERSION) {
     const banner = visibleTextBanner(storedHtml);
     const generatedAtValues = banner?.opening.match(
@@ -642,6 +838,10 @@ export async function readyPageFallback(
       return undefined;
     }
   } else {
+    const legacyBanner = visibleTextBanner(storedHtml);
+    legacyUnverifiedCopy = legacyBanner
+      ? LEGACY_READY_BANNER_COPY.get(legacyBanner.text)?.clockUnverified
+      : undefined;
     const legacyCopy = transformLegacyReadyCopy(storedHtml);
     if (!legacyCopy) {
       // Unknown or malformed legacy copy: fail closed for this verified path.
@@ -661,10 +861,22 @@ export async function readyPageFallback(
     return undefined;
   }
   const html = copyHtml.replaceAll(TOKEN_PLACEHOLDER, tokenOf(path));
+  if (watermark.kind !== "valid") {
+    const warning = unverifiedClockDocument(html, legacyUnverifiedCopy);
+    if (!warning) {
+      await cache.delete(READY_COPY_KEY);
+      return undefined;
+    }
+    return new Response(warning, {
+      status: cached.status,
+      statusText: cached.statusText,
+      headers: fallbackHeaders(cached, "unverified"),
+    });
+  }
   return new Response(html, {
     status: cached.status,
     statusText: cached.statusText,
-    headers: cached.headers,
+    headers: fallbackHeaders(cached, serverGeneratedAt !== null ? "known" : "unknown"),
   });
 }
 

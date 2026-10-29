@@ -2,7 +2,7 @@ import { and, eq, gt, isNotNull, isNull, notExists } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { createBoat } from "@/db/boats";
 import type { AppDb } from "@/db/client";
-import { activityEvents, boats, bookings, diveSites, tripDives, trips } from "@/db/schema";
+import { activityEvents, boats, bookings, courses, diveSites, tripDives, trips } from "@/db/schema";
 import { nowDate } from "@/lib/clock";
 import { utcToWallTime } from "@/lib/zoned";
 import { fileScopedShopContext } from "@/test/db";
@@ -203,6 +203,67 @@ describe("the details form in the activity log", () => {
       ),
     ).toContain("notice=saved");
     expect(await movedLines(db, trip.id)).toEqual([]);
+  });
+});
+
+describe("a priced course's session fee", () => {
+  it("clears the departure price when saving its booking details", async () => {
+    const { db, shop } = await context();
+    const [trip] = await db
+      .select()
+      .from(trips)
+      .where(
+        and(
+          eq(trips.shopId, shop.id),
+          isNull(trips.deletedAt),
+          isNotNull(trips.courseId),
+          gt(trips.startsAt, new Date(nowDate().getTime() + 2 * 24 * 60 * 60 * 1000)),
+          notExists(
+            db.select({ id: bookings.id }).from(bookings).where(eq(bookings.tripId, trips.id)),
+          ),
+        ),
+      )
+      .orderBy(trips.startsAt)
+      .limit(1);
+    if (!trip?.courseId) throw new Error("seeded empty future course session missing");
+    const [course] = await db.select().from(courses).where(eq(courses.id, trip.courseId)).limit(1);
+    if (!course) throw new Error("course for seeded session missing");
+
+    const originalPriceCents = trip.priceCents;
+    const originalCoursePriceCents = course.priceCents;
+    const originalELearningPriceCents = course.eLearningPriceCents;
+    try {
+      const sessionPriceCents = 19_500;
+      await db
+        .update(courses)
+        .set({ priceCents: 54_900, eLearningPriceCents: 16_000 })
+        .where(eq(courses.id, course.id));
+      await db.update(trips).set({ priceCents: sessionPriceCents }).where(eq(trips.id, trip.id));
+
+      const form = new FormData();
+      form.set("capacity", String(trip.capacity));
+      // A stale browser or forged submit cannot restore a session price that
+      // the course itself now owns.
+      form.set("priceDollars", String(sessionPriceCents / 100));
+      expect(
+        await redirectedTo(() => saveDetailsSection(shop.slug, trip.id, "booking", form)),
+      ).toContain("notice=saved");
+
+      const [saved] = await db
+        .select({ priceCents: trips.priceCents })
+        .from(trips)
+        .where(eq(trips.id, trip.id));
+      expect(saved?.priceCents).toBeNull();
+    } finally {
+      await db
+        .update(courses)
+        .set({
+          priceCents: originalCoursePriceCents,
+          eLearningPriceCents: originalELearningPriceCents,
+        })
+        .where(eq(courses.id, course.id));
+      await db.update(trips).set({ priceCents: originalPriceCents }).where(eq(trips.id, trip.id));
+    }
   });
 });
 

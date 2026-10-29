@@ -74,10 +74,10 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "bookkeeper_confirm_expires_at",
     "bookkeeper_stop_token_hash",
     "bookkeeper_bounced_at",
-    // #2450: DiveDay's own review of the name and a human's clearing of it; a
-    // bundle says nothing about either, and an import joins a reviewed shop.
+    // #2450 name review flags and the offline erasure cutoff are DiveDay-only shop state.
     "name_flagged_at",
     "name_cleared_at",
+    "offline_erasure_epoch",
   ], // DiveDay-side config, not shop records
   people: [
     "shop_id",
@@ -210,8 +210,6 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
   ],
   rental_fit_profiles: [
     "shop_id",
-    // Storage-only compatibility for the previous serving release.
-    "rents_mask_fins",
     // A DiveDay-side discriminator, not a fact about the diver: it separates a
     // row that states a fit from one holding only their note (schema.ts,
     // `fit_stated_at`). The import rebuilds it correctly on its own — a row
