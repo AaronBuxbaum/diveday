@@ -676,7 +676,10 @@ export async function listOfflineManifests(): Promise<OfflineManifestEnvelope[]>
  * earlier. Every other mutator in this module already goes through the same
  * lock for exactly this read-then-write race; this one hadn't.
  */
-export async function purgeOfflineManifestsExceptShop(currentShopSlug: string): Promise<string[]> {
+export async function purgeOfflineManifestsExceptShop(
+  currentShopSlug: string,
+  options: { isCurrent?: () => boolean } = {},
+): Promise<string[]> {
   // **The guard is here, at the chokepoint, and not at the call sites.**
   //
   // This is the most destructive function in the feature: it deletes every
@@ -699,17 +702,31 @@ export async function purgeOfflineManifestsExceptShop(currentShopSlug: string): 
   // silent no-op; this is the runtime half, for the values a cast lets past
   // the compiler.
   if (typeof currentShopSlug !== "string" || currentShopSlug.length === 0) return [];
+  const isCurrent = options.isCurrent ?? (() => true);
+  if (!isCurrent()) return [];
   const saved = await listOfflineManifests();
+  if (!isCurrent()) return [];
   const candidates = saved.filter((envelope) => envelope.snapshot.shop.slug !== currentShopSlug);
   const deletedTripIds = await Promise.all(
     candidates.map((envelope) => {
       const tripId = envelope.snapshot.manifests[0]?.trip.id;
       if (!tripId) return Promise.resolve(null);
       return withManifestLock(tripId, async () => {
+        // A later verification round may have started while this candidate
+        // waited for the trip lock. Do not let an older tenant answer delete
+        // records after the browser has established a newer tenant.
+        if (!isCurrent()) return null;
         const current = await loadOfflineManifest(tripId);
         if (!current) return null;
+        // Re-evaluate ownership from the locked record, not the pre-lock list.
+        if (current.snapshot.shop.slug === currentShopSlug) return null;
         if (pendingOfflineEventCount(current) > 0) return null;
-        await deleteOfflineManifest(tripId);
+        // loadOfflineManifest can yield to IndexedDB; the verification round
+        // may have changed while it was reading. Keep the final guard adjacent
+        // to deletion, inside the same per-trip lock.
+        if (!isCurrent()) return null;
+        const deleted = await deleteOfflineManifest(tripId, undefined, isCurrent);
+        if (!deleted) return null;
         return tripId;
       });
     }),
@@ -906,15 +923,22 @@ export async function wipeOfflineMedicalAlerts(keepSavedBy?: string): Promise<vo
 export async function deleteOfflineManifest(
   tripId: string,
   existingDb?: IDBDatabase,
-): Promise<void> {
+  isCurrent?: () => boolean,
+): Promise<boolean> {
+  const ownsDb = existingDb === undefined;
   const db = existingDb ?? (await openDatabase());
   try {
+    // The purge may have waited for openDatabase after its locked record
+    // reread. Recheck at the last synchronous point before queuing the delete
+    // request so a newer tenant round cannot be crossed by that await.
+    if (isCurrent && !isCurrent()) return false;
     const transaction = db.transaction(MANIFEST_STORE, "readwrite");
     transaction.objectStore(MANIFEST_STORE).delete(tripId);
     await transactionDone(transaction);
     announceManifestChange(tripId);
+    return true;
   } finally {
-    if (!existingDb) db.close();
+    if (ownsDb) db.close();
   }
 }
 

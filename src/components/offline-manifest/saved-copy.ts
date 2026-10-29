@@ -59,6 +59,28 @@ export type SavedCopyAction =
   | { type: "gone"; tenant: string; removedForOtherShop?: true }
   | { type: "tenant-changed" };
 
+export type ObservedTripShop = { tripId: string; shopSlug: string } | null;
+
+/** Preserve only enough prior snapshot provenance to explain verified removal. */
+export function observeTripShopChange(
+  observedRef: { current: ObservedTripShop },
+  tripId: string,
+  envelope: OfflineManifestEnvelope | null,
+  verifiedShop: string | null,
+  dispatch: (action: SavedCopyAction) => void,
+) {
+  if (envelope) {
+    observedRef.current = { tripId, shopSlug: envelope.snapshot.shop.slug };
+    return;
+  }
+  const observed = observedRef.current;
+  if (observed?.tripId === tripId && verifiedShop && observed.shopSlug !== verifiedShop) {
+    // The prior copy and current verified tenant prove it was foreign. An
+    // arbitrary missing record does not produce this message.
+    dispatch({ type: "gone", tenant: verifiedShop, removedForOtherShop: true });
+  }
+}
+
 export function savedCopyReducer(state: SavedCopyState, action: SavedCopyAction): SavedCopyState {
   switch (action.type) {
     case "suppress-notes":

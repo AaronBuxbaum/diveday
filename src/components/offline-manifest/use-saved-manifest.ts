@@ -11,7 +11,7 @@ import {
   useState,
 } from "react";
 import type { OfflineManifestTranslator } from "@/i18n/offline-manifest-messages";
-import { isRollCallCheckpoint, type RollCallCheckpoint } from "@/lib/manifests";
+import type { RollCallCheckpoint } from "@/lib/manifests";
 import {
   acknowledgeDiscardedOfflineRecords,
   type DiscardedOfflineRecord,
@@ -30,6 +30,8 @@ import {
 } from "@/lib/offline-manifests";
 import type { CopyCaveat } from "./controls";
 import { savedCopyReducer } from "./saved-copy";
+import { useSelectedTripEnvelopeHandler } from "./selected-trip-envelope";
+import { initialTripStatusMessage } from "./trip-status";
 import { useCrossShopPurge } from "./use-cross-shop-purge";
 import { useOfflineTenant } from "./use-offline-tenant";
 import {
@@ -118,19 +120,6 @@ function selectedTripNoteLossMessage(
   return envelope && (!currentShopSlug || envelope.snapshot.shop.slug === currentShopSlug)
     ? discardedNoteMessage([...envelope.events, ...envelope.checklistEvents], t)
     : "";
-}
-
-function initialTripStatusMessage(
-  noteLossMessage: string | null,
-  hasSavedTrip: boolean,
-  t: OfflineManifestTranslator,
-) {
-  if (noteLossMessage === null || noteLossMessage.length > 0) return "";
-  return t(
-    hasSavedTrip
-      ? "shared.offlineManifest.reconcile.ready"
-      : "shared.offlineManifest.reconcile.noneForTrip",
-  );
 }
 
 function listNoteLossMessage(
@@ -389,44 +378,6 @@ function useOnTenantVerified({
       setVerifiedTenantRevision,
     ],
   );
-}
-
-/**
- * **The copy this device holds, and keeping it honest**: the saved record (or
- * the list of them), the checkpoint, the status line, what retention threw
- * away, and the reconcile passes that sync it once there is signal.
- */
-function handleSelectedTripEnvelopeLoaded({
-  saved,
-  dispatchSaved,
-  setCheckpoint,
-  tripNoticeForEnvelope,
-  tripPurgedRef,
-  setMessage,
-  t,
-  reconcile,
-}: {
-  saved: OfflineManifestEnvelope | null;
-  dispatchSaved: Dispatch<Parameters<typeof savedCopyReducer>[1]>;
-  setCheckpoint: Dispatch<SetStateAction<RollCallCheckpoint>>;
-  tripNoticeForEnvelope: (saved: OfflineManifestEnvelope | null) => string | null;
-  tripPurgedRef: MutableRefObject<boolean>;
-  setMessage: Dispatch<SetStateAction<string>>;
-  t: OfflineManifestTranslator;
-  reconcile: () => Promise<void>;
-}) {
-  dispatchSaved({ type: "loaded", envelope: saved });
-  const plannedDives = saved?.snapshot.manifests[0]?.trip.plannedDives;
-  if (plannedDives !== undefined) {
-    setCheckpoint((current) =>
-      isRollCallCheckpoint(current, plannedDives) ? current : "departure",
-    );
-  }
-  const noteMessage = tripNoticeForEnvelope(saved);
-  if (!tripPurgedRef.current) {
-    setMessage(initialTripStatusMessage(noteMessage, Boolean(saved), t));
-  }
-  if (saved && navigator.onLine && !tripPurgedRef.current) void reconcile();
 }
 
 export function useSavedManifest(t: OfflineManifestTranslator) {
@@ -728,20 +679,17 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
     [t, tenantSlugRef],
   );
 
-  const onTripEnvelopeLoaded = useCallback(
-    (saved: OfflineManifestEnvelope | null) =>
-      handleSelectedTripEnvelopeLoaded({
-        saved,
-        dispatchSaved,
-        setCheckpoint,
-        tripNoticeForEnvelope,
-        tripPurgedRef,
-        setMessage,
-        t,
-        reconcile,
-      }),
-    [reconcile, t, tripNoticeForEnvelope, tripPurgedRef],
-  );
+  const onTripEnvelopeLoaded = useSelectedTripEnvelopeHandler({
+    tripId,
+    verifiedTenantSlugRef,
+    dispatchSaved,
+    setCheckpoint,
+    tripNoticeForEnvelope,
+    tripPurgedRef,
+    setMessage,
+    t,
+    reconcile,
+  });
   const onTripStorageReadStarted = useCallback(() => dispatchSaved({ type: "suppress-notes" }), []);
   const onTenantVerified = useOnTenantVerified({
     envelope,

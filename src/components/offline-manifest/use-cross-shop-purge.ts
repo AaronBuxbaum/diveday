@@ -62,23 +62,32 @@ export function useCrossShopPurge({
   tenantChangeRevision?: number;
 }) {
   const latestTenantChangeRevision = useRef(tenantChangeRevision);
+  const latestPurgeRound = useRef(0);
   latestTenantChangeRevision.current = tenantChangeRevision;
   useEffect(() => {
     let cancelled = false;
     const verificationRevision = tenantChangeRevision;
     const purge = async () => {
+      // A reconnect can start a newer verification while this pass is waiting
+      // on a trip lock. Supersede this pass before resolving the new tenant;
+      // the store checks this predicate immediately before every deletion.
+      const purgeRound = ++latestPurgeRound.current;
+      const isCurrentRound = () =>
+        !cancelled &&
+        purgeRound === latestPurgeRound.current &&
+        verificationRevision === latestTenantChangeRevision.current;
       // Re-verified each round rather than read from the cache: a reconnect is
       // exactly when the signed-in shop may have changed, which is the event
       // this whole mechanism exists for.
       tenantSlugRef.current = null;
       const slug = await resolveTenant();
-      if (cancelled || verificationRevision !== latestTenantChangeRevision.current || !slug) {
-        return;
-      }
+      if (!isCurrentRound() || !slug) return;
       onTenantVerified(slug);
       let purgedTripIds: string[];
       try {
-        purgedTripIds = await purgeOfflineManifestsExceptShop(slug);
+        purgedTripIds = await purgeOfflineManifestsExceptShop(slug, {
+          isCurrent: isCurrentRound,
+        });
       } catch {
         // Best-effort, unlike the auto-save path, which fails its whole round
         // when the purge throws. There the alternative is writing a second
@@ -87,7 +96,7 @@ export function useCrossShopPurge({
         // shortened when this succeeds and unchanged when it does not.
         return;
       }
-      if (cancelled || verificationRevision !== latestTenantChangeRevision.current) return;
+      if (!isCurrentRound()) return;
       // Re-read so a record the purge removed stops being displayed in this
       // round rather than at the next visit.
       //
@@ -132,7 +141,7 @@ export function useCrossShopPurge({
       // before changing this line.
       if (tripId) {
         const held = await loadOfflineManifest(tripId).catch(() => undefined);
-        if (!cancelled && held === null) {
+        if (isCurrentRound() && held === null) {
           dispatchSaved({
             type: "gone",
             tenant: slug,
@@ -143,7 +152,7 @@ export function useCrossShopPurge({
       } else {
         await listOfflineManifests()
           .then((saved) => {
-            if (!cancelled) {
+            if (isCurrentRound()) {
               setList((current) => (current === null ? current : saved));
               onListPurged(saved, slug);
             }
@@ -155,7 +164,7 @@ export function useCrossShopPurge({
       // A purge round is also when the store is most likely to have hit the
       // retention ceiling and thrown unsynced roll call away, so ask what was
       // lost right after it rather than only at mount.
-      if (!cancelled) refreshDiscarded();
+      if (isCurrentRound()) refreshDiscarded();
     };
     void purge();
     window.addEventListener("online", purge);

@@ -120,6 +120,31 @@ afterEach(() => {
 });
 
 describe("selected-trip invalidation", () => {
+  it("keeps the neutral foreign-removal reason when another context purges before this tab does", async () => {
+    vi.stubGlobal("BroadcastChannel", TestBroadcastChannel);
+    const foreign = envelope("trip-foreign", "Private trip title", { shopSlug: "shop-a" });
+    load.mockResolvedValueOnce(foreign).mockResolvedValue(null);
+    const { result } = at("trip=trip-foreign");
+    await waitFor(() => expect(result.current.envelope).toBe(foreign));
+
+    // This tab authenticates as Reef Runners, then receives another context's
+    // committed deletion before its own purge can return a deleted trip id.
+    act(() => {
+      purgeState.latest?.onTenantVerified("reef-runners");
+      window.dispatchEvent(
+        new CustomEvent("diveday-offline-manifest-change", {
+          detail: { tripId: "trip-foreign" },
+        }),
+      );
+    });
+
+    await waitFor(() => expect(result.current.removedForOtherShop).toBe(true));
+    expect(result.current.envelope).toBeNull();
+    expect(result.current.message).not.toContain("shop-a");
+    expect(result.current.message).not.toContain("Private trip title");
+    expect(purgeState.latest?.onTripPurged).toBeDefined();
+  });
+
   it("refreshes pending inventory after a worker changes a selected foreign trip", async () => {
     vi.stubGlobal("BroadcastChannel", TestBroadcastChannel);
     const selected = envelope("trip-foreign", "Private trip title", { shopSlug: "shop-a" });

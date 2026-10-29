@@ -78,7 +78,10 @@ describe("useCrossShopPurge", () => {
     rerender();
     await waitFor(() => expect(props.resolveTenant).toHaveBeenCalledTimes(2));
     expect(props.onTenantVerified).toHaveBeenLastCalledWith("reef-runners");
-    expect(purge).toHaveBeenLastCalledWith("reef-runners");
+    expect(purge).toHaveBeenLastCalledWith(
+      "reef-runners",
+      expect.objectContaining({ isCurrent: expect.any(Function) }),
+    );
   });
 
   it("purges nothing and repaints nothing when no shop is signed in", async () => {
@@ -96,7 +99,10 @@ describe("useCrossShopPurge", () => {
     list.mockResolvedValue(kept);
     const { props } = setup("", "blue-mantis");
     await waitFor(() => expect(props.refreshDiscarded).toHaveBeenCalledTimes(1));
-    expect(purge).toHaveBeenCalledWith("blue-mantis");
+    expect(purge).toHaveBeenCalledWith(
+      "blue-mantis",
+      expect.objectContaining({ isCurrent: expect.any(Function) }),
+    );
     // A list already painted is replaced; one not yet read stays unread, so the
     // purge can never assert "nothing saved" before the store was opened.
     expect(listAfter(props.setList, [])).toBe(kept);
@@ -156,6 +162,38 @@ describe("useCrossShopPurge", () => {
     expect(load).not.toHaveBeenCalled();
     expect(props.dispatchSaved).not.toHaveBeenCalled();
     expect(props.refreshDiscarded).not.toHaveBeenCalled();
+  });
+
+  it("invalidates an older purge as soon as a newer verification round starts", async () => {
+    let releaseOldPurge!: (ids: string[]) => void;
+    purge
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            releaseOldPurge = resolve;
+          }),
+      )
+      .mockResolvedValueOnce([]);
+    const { props } = setup("trip-1", "reef-runners");
+    await waitFor(() => expect(purge).toHaveBeenCalledTimes(1));
+    const oldGuard = purge.mock.calls[0][1]?.isCurrent;
+    expect(oldGuard?.()).toBe(true);
+
+    await act(async () => {
+      window.dispatchEvent(new Event("online"));
+    });
+    await waitFor(() => expect(purge).toHaveBeenCalledTimes(2));
+    const newGuard = purge.mock.calls[1][1]?.isCurrent;
+
+    expect(oldGuard?.()).toBe(false);
+    expect(newGuard?.()).toBe(true);
+    releaseOldPurge(["trip-1"]);
+    await act(async () => {});
+    // Only the current round's empty read may report the missing copy; the
+    // stale round's deletion result must not attach a foreign-purge reason.
+    expect(props.dispatchSaved).toHaveBeenCalledTimes(1);
+    expect(props.dispatchSaved).toHaveBeenCalledWith({ type: "gone", tenant: "reef-runners" });
+    expect(props.onTripPurged).toHaveBeenCalledTimes(1);
   });
 
   it("runs another round on every reconnect", async () => {
