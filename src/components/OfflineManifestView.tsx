@@ -177,6 +177,7 @@ function OfflineManifestScreen() {
         message={message}
         removedForOtherShop={foreignTrip || removedForOtherShop}
         readFailed={storeReadFailed}
+        foreignPendingChanges={foreignPendingChanges}
         discardNotice={foreignTrip ? null : discardNotice}
       />
     );

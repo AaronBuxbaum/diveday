@@ -266,6 +266,112 @@ it("shows the tenant-neutral recovery notice on a selected trip after shop verif
   expect(foreign.events[0]?.syncStatus).toBe("pending");
 });
 
+it("shows tenant-neutral recovery guidance instead of a foreign trip's identifiers", async () => {
+  searchParams = new URLSearchParams({ trip: "foreign-trip-45a" });
+  const foreign = envelope("foreign-trip-45a", "Private A departure", {
+    shopSlug: "blue-mantis",
+    shopName: "Blue Mantis Divers",
+  });
+  foreign.events.push({
+    clientEventId: "foreign-pending-event-45a",
+    snapshotId: foreign.snapshot.snapshotId,
+    snapshotSavedAt: foreign.snapshot.savedAt,
+    tripId: "foreign-trip-45a",
+    bookingId: "private-person-45a",
+    checkpoint: "departure",
+    status: "boarded",
+    occurredAt: new Date(FROZEN_MS).toISOString(),
+    note: "Private note text",
+    syncStatus: "pending",
+  });
+  vi.mocked(loadOfflineManifest).mockResolvedValue(foreign);
+  vi.mocked(listOfflineManifests).mockResolvedValue([foreign]);
+  vi.mocked(fetch).mockImplementation(async (input) =>
+    String(input) === "/api/offline-manifests/identity"
+      ? identityResponse("reef-runners")
+      : new Response(null, { status: 200 }),
+  );
+
+  render(<OfflineManifestView />);
+
+  expect(
+    await screen.findByRole("heading", { name: "This trip isn’t available here" }),
+  ).toBeInTheDocument();
+  expect(
+    await screen.findByText(
+      "Pending changes for another shop remain on this device. Sign in to that shop to sync or review them.",
+    ),
+  ).toBeInTheDocument();
+  expect(screen.queryByText("Private A departure")).not.toBeInTheDocument();
+  expect(screen.queryByText("Blue Mantis Divers")).not.toBeInTheDocument();
+  expect(screen.queryByText("foreign-trip-45a")).not.toBeInTheDocument();
+  expect(screen.queryByText("private-person-45a")).not.toBeInTheDocument();
+  expect(screen.queryByText("Private note text")).not.toBeInTheDocument();
+  expect(foreign.events[0]?.syncStatus).toBe("pending");
+});
+
+it("clears caught-up copy while reconnect waits for fresh tenant verification", async () => {
+  searchParams = new URLSearchParams({ trip: "trip-reconnect-51" });
+  const initial = richEnvelope("trip-reconnect-51");
+  const firstSuccess = { ...initial, events: [] };
+  const pendingMark = {
+    clientEventId: "cross-tab-pending-51",
+    snapshotId: initial.snapshot.snapshotId,
+    snapshotSavedAt: initial.snapshot.savedAt,
+    tripId: "trip-reconnect-51",
+    bookingId: "booking-12345678",
+    checkpoint: "departure" as const,
+    status: "boarded" as const,
+    occurredAt: new Date(FROZEN_MS).toISOString(),
+    note: null,
+    syncStatus: "pending" as const,
+  };
+  const afterCrossTabSync = {
+    ...initial,
+    events: [{ ...pendingMark, syncStatus: "applied" as const }],
+  };
+  vi.mocked(loadOfflineManifest).mockResolvedValue(initial);
+  vi.mocked(listOfflineManifests).mockResolvedValue([firstSuccess]);
+  vi.mocked(syncOfflineManifest).mockResolvedValue(firstSuccess);
+  let deferNextIdentity = false;
+  let resolveDeferredIdentity: ((response: Response) => void) | null = null;
+  vi.mocked(fetch).mockImplementation(async (input) => {
+    if (String(input) !== "/api/offline-manifests/identity")
+      return new Response(null, { status: 200 });
+    if (deferNextIdentity) {
+      deferNextIdentity = false;
+      return new Promise<Response>((resolve) => {
+        resolveDeferredIdentity = resolve;
+      });
+    }
+    return identityResponse("blue-mantis");
+  });
+
+  render(<OfflineManifestView />);
+  expect(await screen.findByRole("heading", { name: "Two-Tank Reef" })).toBeInTheDocument();
+  expect(await screen.findByText("Everything’s sent.")).toBeInTheDocument();
+  await waitFor(() => expect(syncOfflineManifest).toHaveBeenCalled());
+
+  // Another tab writes after the success; reconnect now needs a fresh identity.
+  vi.mocked(loadOfflineManifest).mockResolvedValue({ ...initial, events: [pendingMark] });
+  vi.mocked(listOfflineManifests).mockResolvedValue([{ ...initial, events: [pendingMark] }]);
+  vi.mocked(syncOfflineManifest).mockResolvedValue(afterCrossTabSync);
+  const callsBeforeReconnect = vi.mocked(syncOfflineManifest).mock.calls.length;
+  deferNextIdentity = true;
+  await act(async () => window.dispatchEvent(new Event("online")));
+  await waitFor(() => expect(resolveDeferredIdentity).not.toBeNull());
+
+  expect(screen.queryByText("Everything’s sent.")).not.toBeInTheDocument();
+  expect(vi.mocked(syncOfflineManifest).mock.calls.length).toBe(callsBeforeReconnect);
+
+  await act(async () => resolveDeferredIdentity?.(identityResponse("blue-mantis")));
+  await waitFor(() =>
+    expect(vi.mocked(syncOfflineManifest).mock.calls.length).toBeGreaterThan(callsBeforeReconnect),
+  );
+  expect(vi.mocked(syncOfflineManifest)).toHaveBeenCalledWith("trip-reconnect-51", "blue-mantis");
+  expect(pendingMark.syncStatus).toBe("pending");
+});
+
 it("withholds selected-trip caught-up copy until the tenant-scoped inventory settles", async () => {
   searchParams = new URLSearchParams({ trip: "trip-b-45" });
   const foreign = envelope("foreign-trip-45", "Private A departure", {

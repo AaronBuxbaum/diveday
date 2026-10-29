@@ -273,6 +273,8 @@ function beginTripSyncAttempt(
   t: OfflineManifestTranslator,
 ) {
   ref.current = null;
+  const caughtUp = t("shared.offlineManifest.reconcile.allCaughtUp");
+  setMessage((message) => (message === caughtUp ? "" : message));
   return resolveTenant().then((slug) => {
     if (!slug) setMessage(t("shared.offlineManifest.reconcile.reachError"));
     return slug;
