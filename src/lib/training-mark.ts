@@ -189,9 +189,22 @@ function seatTrainingRoom(
   if (seats.some((seat) => seat.rule === null)) {
     return { seated: new Set(), overRatio: new Set() };
   }
-  const aboardFor = (sessionTripId: string) =>
+  const availableFor = (sessionTripId: string) =>
     courseInstructorIdsAboard(sessionCrew.get(sessionTripId) ?? [], departureCrew);
-  const instructors = new Set(seats.flatMap((seat) => aboardFor(seat.sessionTripId)));
+  const instructors = new Set(seats.flatMap((seat) => availableFor(seat.sessionTripId)));
+  const sessionsByInstructor = new Map<string, Set<string>>();
+  for (const seat of seats) {
+    for (const personId of availableFor(seat.sessionTripId)) {
+      const sessions = sessionsByInstructor.get(personId) ?? new Set<string>();
+      sessions.add(seat.sessionTripId);
+      sessionsByInstructor.set(personId, sessions);
+    }
+  }
+  const instructorPreference = (left: string, right: string) =>
+    (sessionsByInstructor.get(left)?.size ?? 0) - (sessionsByInstructor.get(right)?.size ?? 0) ||
+    (left < right ? -1 : left > right ? 1 : 0);
+  const aboardFor = (sessionTripId: string) =>
+    availableFor(sessionTripId).sort(instructorPreference);
   const load = new Map<string, number>();
   // The tightest cap among the seats already on each instructor: a taker's new load must fit it too.
   //
@@ -210,21 +223,29 @@ function seatTrainingRoom(
   const seated = new Set<string>();
   const overRatio = new Set<string>();
   const orderedSeats = seats
-    .map((seat, index) => ({ seat, index }))
+    .map((seat, index) => ({ seat, index, eligible: aboardFor(seat.sessionTripId) }))
     .sort((left, right) => {
       const leftCap = left.seat.rule ? courseRatioCapacity(left.seat.rule, 1, 0) : Infinity;
       const rightCap = right.seat.rule ? courseRatioCapacity(right.seat.rule, 1, 0) : Infinity;
-      return leftCap - rightCap || left.index - right.index;
+      // Tightest ratio first, then the smallest instructor pool. Crew choices
+      // prefer instructors with fewer marked sessions, preserving the broader
+      // pool for seats that have fewer alternatives. Person id breaks ties so
+      // a query's unordered crew rows cannot change the assignment.
+      return (
+        leftCap - rightCap ||
+        left.eligible.length - right.eligible.length ||
+        left.index - right.index
+      );
     });
-  for (const { seat } of orderedSeats) {
+  for (const { seat, eligible } of orderedSeats) {
     if (!seat.rule || instructors.size === 0) continue;
     const cap = Math.floor(courseRatioCapacity(seat.rule, instructors.size, 0) / instructors.size);
-    const taker = aboardFor(seat.sessionTripId).find((personId) => {
+    const taker = eligible.find((personId) => {
       const newLoad = (load.get(personId) ?? 0) + 1;
       return newLoad <= Math.min(cap, tightest.get(personId) ?? cap);
     });
     if (taker === undefined) {
-      if (aboardFor(seat.sessionTripId).length > 0) overRatio.add(seat.id);
+      if (eligible.length > 0) overRatio.add(seat.id);
       continue;
     }
     load.set(taker, (load.get(taker) ?? 0) + 1);

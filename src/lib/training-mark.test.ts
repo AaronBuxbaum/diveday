@@ -588,6 +588,111 @@ describe("trainingRoom — conservative instructor capacity across sessions (rev
     expect(readinessFor("s2-1").status).toBe("blocked");
   });
 
+  it("keeps a DSD walk-in seatable whichever instructor comes first in crew order (#3042)", () => {
+    const dsd = {
+      baseStudentsPerInstructor: 2,
+      assistantBonusPerInstructor: 0,
+      maxStudentsPerInstructor: 2,
+    };
+    const owSeats = seats("s2", 3);
+    const dsdWalkIn = { id: "s1-walk-in", sessionTripId: "s1", rule: dsd };
+    const sessionCrew = new Map([
+      ["s1", [teacher2]],
+      ["s2", [teacher2, teacher]],
+    ]);
+
+    for (const departureCrew of [
+      [teacher2, teacher],
+      [teacher, teacher2],
+    ]) {
+      const room = trainingRoom({
+        marked: owSeats,
+        candidate: dsdWalkIn,
+        sessionCrew,
+        departureCrew,
+      });
+
+      expect(room.seated).toEqual(new Set(["s2-0", "s2-1", "s2-2"]));
+      expect(room.spare).toBe(true);
+    }
+  });
+
+  it("reserves the sole DSD instructor for that session when other DSD seats have an alternative (#3042)", () => {
+    const dsd = {
+      baseStudentsPerInstructor: 2,
+      assistantBonusPerInstructor: 0,
+      maxStudentsPerInstructor: 2,
+    };
+    const sessionCrew = new Map([
+      ["s1", [teacher2]],
+      ["s2", [teacher2, teacher]],
+    ]);
+    const marked = Array.from({ length: 2 }, (_, index) => ({
+      id: `s2-${index}`,
+      sessionTripId: "s2",
+      rule: dsd,
+    }));
+
+    for (const departureCrew of [
+      [teacher2, teacher],
+      [teacher, teacher2],
+    ]) {
+      const room = trainingRoom({
+        marked,
+        candidate: { id: "s1-walk-in", sessionTripId: "s1", rule: dsd },
+        sessionCrew,
+        departureCrew,
+      });
+
+      expect(room.seated.size).toBe(2);
+      expect(room.spare).toBe(true);
+    }
+  });
+
+  it("keeps a DSD candidate open through overlapping equal-sized instructor pools (#3042)", () => {
+    const dsd = {
+      baseStudentsPerInstructor: 2,
+      assistantBonusPerInstructor: 0,
+      maxStudentsPerInstructor: 2,
+    };
+    const instructor = (personId: string) => ({
+      personId,
+      shopRoles: ["instructor"],
+      tripRole: "instructor" as const,
+    });
+    const a = instructor("a");
+    const b = instructor("b");
+    const c = instructor("c");
+    const sessionCrew = new Map([
+      ["s1", [a, b]],
+      ["s2", [a, c]],
+      ["s3", [a, c]],
+    ]);
+    const marked = [
+      ...seats("s1", 2).map((seat) => ({ ...seat, rule: dsd })),
+      ...seats("s2", 2).map((seat) => ({ ...seat, rule: dsd })),
+    ];
+
+    for (const departureCrew of [
+      [a, b, c],
+      [a, c, b],
+      [b, a, c],
+      [b, c, a],
+      [c, a, b],
+      [c, b, a],
+    ]) {
+      const room = trainingRoom({
+        marked,
+        candidate: { id: "s3-walk-in", sessionTripId: "s3", rule: dsd },
+        sessionCrew,
+        departureCrew,
+      });
+
+      expect(room.seated.size).toBe(4);
+      expect(room.spare).toBe(true);
+    }
+  });
+
   it("keeps the DSD base cap across an instructor's mixed marked seats (#2830)", () => {
     const dsd = {
       baseStudentsPerInstructor: 2,
