@@ -8,7 +8,11 @@ import { SMS_CONSENT_ONCE_FILLED } from "@/components/SmsConsentNote";
 import { SEGMENT_CORNER, segmentedTrackClass } from "@/components/ui/segmented";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { nowDate } from "@/lib/clock";
-import { RETURNING_DIVER_MEMORY_MS, saveReturningDiver } from "@/lib/returning-diver";
+import {
+  loadReturningDiver,
+  RETURNING_DIVER_MEMORY_MS,
+  saveReturningDiver,
+} from "@/lib/returning-diver";
 import { MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
 import { renderDiver } from "@/test/intl";
 import { BookingPartyFields } from "./BookingPartyFields";
@@ -212,7 +216,7 @@ describe("BookingPartyFields — the group captions", () => {
     expect(screen.getByRole("status")).toHaveTextContent(
       "This browser could not confirm that the saved details were removed. They may remain on this device.",
     );
-    expect(localStorage.getItem("diveday:returning-diver:v2:blue-mantis")).toBeNull();
+    expect(loadReturningDiver("blue-mantis")).toBeNull();
   });
 });
 

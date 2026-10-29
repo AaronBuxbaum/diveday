@@ -5,16 +5,42 @@ import { nowDate } from "@/lib/clock";
 import {
   forgetReturningDiver,
   getOrCreateReturningDiverDeviceToken,
+  getReturningDiverDeviceSlots,
   loadReturningDiver,
   MAX_RETURNING_DIVER_DEVICE_SLOTS,
   RETURNING_DIVER_DEVICE_SLOT_MS,
   RETURNING_DIVER_MEMORY_MS,
   saveReturningDiver,
   snapshotReturningDiverClearGenerations,
+  subscribeToReturningDiverClears,
 } from "./returning-diver";
 
 const NOW = new Date("2026-10-28T12:00:00.000Z");
 const diver = { fullName: "Marco Reyes", email: "marco@example.com" };
+const receiptIds = {
+  bookingA: "00000000-0000-4000-8000-000000000001",
+  bookingB: "00000000-0000-4000-8000-000000000002",
+  old: "00000000-0000-4000-8000-000000000003",
+  newer: "00000000-0000-4000-8000-000000000004",
+  inFlight: "00000000-0000-4000-8000-000000000005",
+  quota: "00000000-0000-4000-8000-000000000006",
+  deletion: "00000000-0000-4000-8000-000000000007",
+} as const;
+const memoryKey = (shopSlug: string, receiptId = "manual") =>
+  `diveday:returning-diver:v2:${shopSlug}:${receiptId}`;
+const storedMemory = (shopSlug: string) => {
+  const prefix = `diveday:returning-diver:v2:${shopSlug}:`;
+  const key = Array.from({ length: localStorage.length }, (_, index) =>
+    localStorage.key(index),
+  ).find((candidate) => candidate?.startsWith(prefix));
+  return key ? localStorage.getItem(key) : null;
+};
+const storedMemoryCount = (shopSlug: string) => {
+  const prefix = `diveday:returning-diver:v2:${shopSlug}:`;
+  return Array.from({ length: localStorage.length }, (_, index) => localStorage.key(index)).filter(
+    (key) => key?.startsWith(prefix),
+  ).length;
+};
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -39,14 +65,14 @@ describe("opted-in returning-diver memory", () => {
 
     expect(loadReturningDiver("blue-mantis", new Date(expiresAt - 1))).toEqual(diver);
     expect(loadReturningDiver("blue-mantis", new Date(expiresAt))).toBeNull();
-    expect(localStorage.getItem("diveday:returning-diver:v2:blue-mantis")).toBeNull();
+    expect(storedMemory("blue-mantis")).toBeNull();
   });
 
   it("purges expired entries for other shops whenever a shop memory is read", () => {
     const expiresAt = NOW.getTime() + RETURNING_DIVER_MEMORY_MS;
     saveReturningDiver("blue-mantis", diver, expiresAt, NOW);
     localStorage.setItem(
-      "diveday:returning-diver:v2:red-reef",
+      memoryKey("red-reef"),
       JSON.stringify({
         fullName: "Priya Shah",
         email: "priya@example.com",
@@ -55,12 +81,12 @@ describe("opted-in returning-diver memory", () => {
     );
 
     expect(loadReturningDiver("blue-mantis", NOW)).toEqual(diver);
-    expect(localStorage.getItem("diveday:returning-diver:v2:red-reef")).toBeNull();
+    expect(storedMemory("red-reef")).toBeNull();
   });
 
   it("purges expired entries for other shops whenever a shop memory is written", () => {
     localStorage.setItem(
-      "diveday:returning-diver:v2:red-reef",
+      memoryKey("red-reef"),
       JSON.stringify({
         fullName: "Priya Shah",
         email: "priya@example.com",
@@ -70,7 +96,7 @@ describe("opted-in returning-diver memory", () => {
 
     saveReturningDiver("blue-mantis", diver, NOW.getTime() + RETURNING_DIVER_MEMORY_MS, NOW);
 
-    expect(localStorage.getItem("diveday:returning-diver:v2:red-reef")).toBeNull();
+    expect(storedMemory("red-reef")).toBeNull();
     expect(loadReturningDiver("blue-mantis", NOW)).toEqual(diver);
   });
 
@@ -112,12 +138,10 @@ describe("opted-in returning-diver memory", () => {
       { fullName: "Priya Shah", email: "priya@example.com" },
       newerExpiry,
       NOW,
-      { id: "receipt-booking-b", order: "22", generationAtStart: generation },
+      { id: receiptIds.bookingB, order: "22", generationAtStart: generation },
     );
 
-    // Simulate the older booking A response setting its shared retry cookie
-    // after booking B has already written. A's server-issued expiry predates B;
-    // the comparison is unchanged when this device's clock is ahead.
+    // Simulate booking A's delayed response after booking B already saved.
     expect(
       saveReturningDiver(
         "blue-mantis",
@@ -125,7 +149,7 @@ describe("opted-in returning-diver memory", () => {
         olderExpiry,
         new Date(NOW.getTime() + 10 * 86_400_000),
         {
-          id: "receipt-booking-a",
+          id: receiptIds.bookingA,
           order: "21",
           generationAtStart: generation,
         },
@@ -135,9 +159,40 @@ describe("opted-in returning-diver memory", () => {
       fullName: "Priya Shah",
       email: "priya@example.com",
     });
-    expect(
-      JSON.parse(localStorage.getItem("diveday:returning-diver:v2:blue-mantis") ?? "{}").receiptId,
-    ).toBe("receipt-booking-b");
+    expect(JSON.parse(storedMemory("blue-mantis") ?? "{}").receiptId).toBe(receiptIds.bookingB);
+    expect(storedMemoryCount("blue-mantis")).toBe(1);
+  });
+
+  it("selects the newest receipt when tabs finish storage writes out of order", () => {
+    const generation = snapshotReturningDiverClearGenerations()?.["blue-mantis"] ?? null;
+    const expiresAt = NOW.getTime() + RETURNING_DIVER_MEMORY_MS;
+    localStorage.setItem(
+      memoryKey("blue-mantis", receiptIds.newer),
+      JSON.stringify({
+        fullName: "Priya Shah",
+        email: "priya@example.com",
+        expiresAt,
+        clearGeneration: generation,
+        receiptId: receiptIds.newer,
+        receiptOrder: "102",
+      }),
+    );
+    localStorage.setItem(
+      memoryKey("blue-mantis", receiptIds.old),
+      JSON.stringify({
+        ...diver,
+        expiresAt,
+        clearGeneration: generation,
+        receiptId: receiptIds.old,
+        receiptOrder: "101",
+      }),
+    );
+
+    expect(loadReturningDiver("blue-mantis", NOW)).toEqual({
+      fullName: "Priya Shah",
+      email: "priya@example.com",
+    });
+    expect(storedMemoryCount("blue-mantis")).toBe(1);
   });
 
   it("clears only the current shop when the diver says it is not them", () => {
@@ -161,7 +216,7 @@ describe("opted-in returning-diver memory", () => {
 
   it("keeps a cleared receipt fenced despite clock skew and accepts a later opt-in", () => {
     const initialGeneration = snapshotReturningDiverClearGenerations()?.["blue-mantis"] ?? null;
-    const oldReceipt = { id: "receipt-old", order: "30", generationAtStart: initialGeneration };
+    const oldReceipt = { id: receiptIds.old, order: "30", generationAtStart: initialGeneration };
     const expiry = new Date("2050-01-01T00:00:00Z").getTime();
     saveReturningDiver("blue-mantis", diver, expiry, NOW, oldReceipt);
     expect(forgetReturningDiver("blue-mantis")).toBe("cleared");
@@ -179,7 +234,7 @@ describe("opted-in returning-diver memory", () => {
         { ...diver, fullName: "New opt-in" },
         expiry,
         skewedDeviceTime,
-        { id: "receipt-new", order: "31", generationAtStart: generation },
+        { id: receiptIds.newer, order: "31", generationAtStart: generation },
       ),
     ).toBe("saved");
     expect(loadReturningDiver("blue-mantis", skewedDeviceTime)).toEqual({
@@ -188,10 +243,53 @@ describe("opted-in returning-diver memory", () => {
     });
   });
 
+  it("ignores a delayed cloned-tab clear event after a fresh opt-in slot is created", () => {
+    const oldGeneration = snapshotReturningDiverClearGenerations()?.["blue-mantis"] ?? null;
+    const staleExpiry = nowDate().getTime() + 1_000;
+    const oldToken = getOrCreateReturningDiverDeviceToken("blue-mantis");
+    expect(oldToken).toBeTruthy();
+    expect(forgetReturningDiver("blue-mantis")).toBe("cleared");
+
+    const freshToken = getOrCreateReturningDiverDeviceToken("blue-mantis");
+    expect(freshToken).toBeTruthy();
+    expect(freshToken).not.toBe(oldToken);
+    const onClear = vi.fn();
+    const unsubscribe = subscribeToReturningDiverClears(onClear);
+    const clearState = JSON.parse(
+      localStorage.getItem("diveday:returning-diver:clear:v2:blue-mantis") ?? "{}",
+    ) as { generation?: string; expiresAt?: number };
+    window.dispatchEvent(
+      new CustomEvent("diveday:returning-diver:cleared", {
+        detail: {
+          shopSlug: "blue-mantis",
+          generation: oldGeneration ?? "00000000-0000-4000-8000-000000000099",
+          expiresAt: staleExpiry,
+          deviceToken: oldToken,
+        },
+      }),
+    );
+    window.dispatchEvent(
+      new CustomEvent("diveday:returning-diver:cleared", {
+        detail: {
+          shopSlug: "blue-mantis",
+          generation: clearState.generation,
+          expiresAt: clearState.expiresAt,
+          deviceToken: oldToken,
+        },
+      }),
+    );
+    unsubscribe();
+
+    expect(onClear).toHaveBeenCalledWith(expect.objectContaining({ deviceToken: oldToken }));
+    expect(getReturningDiverDeviceSlots()).toEqual([
+      expect.objectContaining({ token: freshToken }),
+    ]);
+  });
+
   it("rechecks the clear marker after a concurrent write and removes only that receipt", () => {
-    const key = "diveday:returning-diver:v2:blue-mantis";
+    const key = memoryKey("blue-mantis", receiptIds.inFlight);
     const initialGeneration = snapshotReturningDiverClearGenerations()?.["blue-mantis"] ?? null;
-    const receipt = { id: "receipt-in-flight", order: "32", generationAtStart: initialGeneration };
+    const receipt = { id: receiptIds.inFlight, order: "32", generationAtStart: initialGeneration };
     saveReturningDiver("blue-mantis", diver, NOW.getTime() + 1000, NOW, receipt);
     const originalSetItem = Storage.prototype.setItem;
     let clearedDuringWrite = false;
@@ -218,7 +316,7 @@ describe("opted-in returning-diver memory", () => {
   it("removes identity even when tombstone persistence fails", () => {
     const initialGeneration = snapshotReturningDiverClearGenerations()?.["blue-mantis"] ?? null;
     saveReturningDiver("blue-mantis", diver, NOW.getTime() + RETURNING_DIVER_MEMORY_MS, NOW, {
-      id: "receipt-quota",
+      id: receiptIds.quota,
       order: "33",
       generationAtStart: initialGeneration,
     });
@@ -235,14 +333,14 @@ describe("opted-in returning-diver memory", () => {
     });
 
     expect(forgetReturningDiver("blue-mantis")).toBe("partial");
-    expect(localStorage.getItem("diveday:returning-diver:v2:blue-mantis")).toBeNull();
+    expect(storedMemory("blue-mantis")).toBeNull();
     expect(loadReturningDiver("blue-mantis", NOW)).toBeNull();
   });
 
   it("reports partial clear when browser storage refuses identity deletion", () => {
     const initialGeneration = snapshotReturningDiverClearGenerations()?.["blue-mantis"] ?? null;
     saveReturningDiver("blue-mantis", diver, NOW.getTime() + RETURNING_DIVER_MEMORY_MS, NOW, {
-      id: "receipt-delete-fails",
+      id: receiptIds.deletion,
       order: "34",
       generationAtStart: initialGeneration,
     });
@@ -251,14 +349,14 @@ describe("opted-in returning-diver memory", () => {
       this: Storage,
       key: string,
     ) {
-      if (key === "diveday:returning-diver:v2:blue-mantis") {
+      if (key === memoryKey("blue-mantis", receiptIds.deletion)) {
         throw new Error("storage refused deletion");
       }
       return originalRemoveItem.call(this, key);
     });
 
     expect(forgetReturningDiver("blue-mantis")).toBe("partial");
-    expect(localStorage.getItem("diveday:returning-diver:v2:blue-mantis")).toContain("Marco Reyes");
+    expect(storedMemory("blue-mantis")).toContain("Marco Reyes");
   });
 
   it("bounds persisted clear fences and reports partial completion at the cap", () => {
@@ -303,10 +401,10 @@ describe("opted-in returning-diver memory", () => {
   });
 
   it("ignores malformed scoped data and removes it", () => {
-    localStorage.setItem("diveday:returning-diver:v2:blue-mantis", "not json");
+    localStorage.setItem(memoryKey("blue-mantis"), "not json");
 
     expect(loadReturningDiver("blue-mantis", NOW)).toBeNull();
-    expect(localStorage.getItem("diveday:returning-diver:v2:blue-mantis")).toBeNull();
+    expect(storedMemory("blue-mantis")).toBeNull();
   });
 
   it("treats unavailable storage as an optional convenience", () => {

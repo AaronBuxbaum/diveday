@@ -2,7 +2,11 @@
 
 import { act, cleanup, render, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { forgetReturningDiver, getReturningDiverDeviceSlots } from "@/lib/returning-diver";
+import {
+  forgetReturningDiver,
+  getReturningDiverDeviceSlots,
+  loadReturningDiver,
+} from "@/lib/returning-diver";
 import { RetryReturningDiverMemory } from "./RetryReturningDiverMemory";
 
 let pathname = "/ready/original";
@@ -17,6 +21,9 @@ vi.mock("@/app/actions/returning-diver-memory", () => ({
 }));
 
 const token = "a".repeat(64);
+const receiptA = "00000000-0000-4000-8000-000000000011";
+const receiptB = "00000000-0000-4000-8000-000000000012";
+const receiptCleared = "00000000-0000-4000-8000-000000000013";
 const slotKey = "diveday:returning-diver:device:v1:blue-mantis";
 
 function addSlot() {
@@ -47,14 +54,15 @@ afterEach(() => {
 describe("RetryReturningDiverMemory", () => {
   it("retries a lost acknowledgement on later same-origin navigation using the opted-in slot", async () => {
     addSlot();
-    prepare.mockResolvedValue([memory("receipt-a")]);
+    prepare.mockResolvedValue([memory(receiptA)]);
     acknowledge.mockRejectedValueOnce(new Error("response lost")).mockResolvedValue(true);
     const view = render(<RetryReturningDiverMemory />);
 
     await waitFor(() =>
-      expect(localStorage.getItem("diveday:returning-diver:v2:blue-mantis")).toContain(
-        "Marco Reyes",
-      ),
+      expect(loadReturningDiver("blue-mantis")).toEqual({
+        fullName: "Marco Reyes",
+        email: "marco@example.com",
+      }),
     );
     await waitFor(() => expect(acknowledge).toHaveBeenCalledTimes(1));
     expect(prepare).toHaveBeenCalledWith([{ token, generation: null }]);
@@ -63,7 +71,7 @@ describe("RetryReturningDiverMemory", () => {
     view.rerender(<RetryReturningDiverMemory />);
     await waitFor(() => expect(prepare).toHaveBeenCalledTimes(2));
     await waitFor(() => expect(acknowledge).toHaveBeenCalledTimes(2));
-    expect(localStorage.getItem("diveday:returning-diver:v2:red-reef")).toBeNull();
+    expect(loadReturningDiver("red-reef")).toBeNull();
   });
 
   it("does not create or submit a slot without explicit opt-in", async () => {
@@ -75,7 +83,7 @@ describe("RetryReturningDiverMemory", () => {
 
   it("does not acknowledge when storage is blocked", async () => {
     addSlot();
-    prepare.mockResolvedValue([memory("receipt-b")]);
+    prepare.mockResolvedValue([memory(receiptB)]);
     vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
       throw new Error("storage blocked");
     });
@@ -92,11 +100,11 @@ describe("RetryReturningDiverMemory", () => {
     await waitFor(() => expect(prepare).toHaveBeenCalledTimes(1));
 
     forgetReturningDiver("blue-mantis");
-    expect(localStorage.getItem("diveday:returning-diver:v2:blue-mantis")).toBeNull();
-    await act(async () => resolvePrepare([memory("receipt-cleared")]));
+    expect(loadReturningDiver("blue-mantis")).toBeNull();
+    await act(async () => resolvePrepare([memory(receiptCleared)]));
 
     await waitFor(() => expect(revoke).toHaveBeenCalledWith(token, expect.any(String)));
     expect(acknowledge).not.toHaveBeenCalled();
-    expect(localStorage.getItem("diveday:returning-diver:v2:blue-mantis")).toBeNull();
+    expect(loadReturningDiver("blue-mantis")).toBeNull();
   });
 });

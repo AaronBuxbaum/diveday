@@ -41,7 +41,20 @@ function isReturningDiver(value: unknown): value is ReturningDiver {
 }
 
 function storageKey(shopSlug: string): string | null {
-  return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(shopSlug) ? `${STORAGE_PREFIX}${shopSlug}` : null;
+  return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(shopSlug) ? `${STORAGE_PREFIX}${shopSlug}:` : null;
+}
+
+function receiptStorageKey(shopSlug: string, receiptId: string | null): string | null {
+  const prefix = storageKey(shopSlug);
+  return prefix ? `${prefix}${receiptId ?? "manual"}` : null;
+}
+
+function memoryKeys(shopSlug: string): string[] {
+  const prefix = storageKey(shopSlug);
+  if (!prefix) return [];
+  return Array.from({ length: localStorage.length }, (_, index) => localStorage.key(index)).filter(
+    (key): key is string => key?.startsWith(prefix) ?? false,
+  );
 }
 
 function clearKey(shopSlug: string): string | null {
@@ -245,6 +258,7 @@ export function subscribeToReturningDiverClears(
       generation?: unknown;
       expiresAt?: unknown;
       receiptId?: unknown;
+      deviceToken?: unknown;
     };
     if (
       typeof message.shopSlug !== "string" ||
@@ -255,11 +269,30 @@ export function subscribeToReturningDiverClears(
     ) {
       return;
     }
+    let currentClear: ClearState | null = null;
+    try {
+      currentClear = readClearState(message.shopSlug);
+    } catch {
+      // A volatile fence still orders clear events when localStorage is blocked.
+    }
+    const volatileClear = volatileClearGenerations.get(message.shopSlug);
+    if (volatileClear && (!currentClear || volatileClear.expiresAt > currentClear.expiresAt))
+      currentClear = volatileClear;
+    // Clear events are ordered by their same-device 24-hour expiry marker.
+    // Never let a delayed older tab event remove a slot created after a later clear.
+    if (currentClear && currentClear.generation !== message.generation) {
+      if (message.expiresAt <= currentClear.expiresAt) return;
+    }
     const receiptId = typeof message.receiptId === "string" ? message.receiptId : undefined;
-    let deviceToken: string | undefined;
+    const deviceToken =
+      typeof message.deviceToken === "string" &&
+      RETURNING_DIVER_DEVICE_TOKEN_PATTERN.test(message.deviceToken)
+        ? message.deviceToken
+        : undefined;
     const slotKey = deviceSlotKey(message.shopSlug);
     try {
       const raw = slotKey ? sessionStorage.getItem(slotKey) : null;
+      let currentSlotToken: string | undefined;
       if (raw) {
         const parsed: unknown = JSON.parse(raw);
         if (
@@ -268,10 +301,14 @@ export function subscribeToReturningDiverClears(
           typeof (parsed as { token?: unknown }).token === "string" &&
           RETURNING_DIVER_DEVICE_TOKEN_PATTERN.test((parsed as { token: string }).token)
         ) {
-          deviceToken = (parsed as { token: string }).token;
+          currentSlotToken = (parsed as { token: string }).token;
         }
       }
-      if (slotKey) sessionStorage.removeItem(slotKey);
+      // A delayed event from a previous clear must not remove a later opt-in's
+      // slot. Also never infer the revoked token from the current slot: the
+      // event may have been cloned or delayed across a deliberate new opt-in.
+      if (slotKey && deviceToken && currentSlotToken === deviceToken)
+        sessionStorage.removeItem(slotKey);
     } catch {
       // The persistent clear generation still fences the local response.
     }
@@ -280,7 +317,7 @@ export function subscribeToReturningDiverClears(
       expiresAt: message.expiresAt,
       ...(receiptId ? { blockedReceiptId: receiptId } : {}),
     });
-    if (receiptId) clearOnlyThisReceipt(storageKey(message.shopSlug) ?? "", receiptId);
+    if (receiptId) clearOnlyThisReceipt(message.shopSlug, receiptId);
     onClear({
       shopSlug: message.shopSlug,
       generation: message.generation,
@@ -303,19 +340,11 @@ export function subscribeToReturningDiverClears(
   };
 }
 
-function clearOnlyThisReceipt(key: string, receiptId: string | undefined): void {
+function clearOnlyThisReceipt(shopSlug: string, receiptId: string | undefined): void {
   if (!receiptId) return;
   try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return;
-    const parsed: unknown = JSON.parse(raw);
-    if (
-      typeof parsed === "object" &&
-      parsed !== null &&
-      (parsed as { receiptId?: unknown }).receiptId === receiptId
-    ) {
-      localStorage.removeItem(key);
-    }
+    const key = receiptStorageKey(shopSlug, receiptId);
+    if (key) localStorage.removeItem(key);
   } catch {
     // A blocked store cannot safely confirm or remove this write.
   }
@@ -342,32 +371,62 @@ function compareReceiptOrder(left: string, right: string): number | null {
   return normalizedLeft === normalizedRight ? 0 : normalizedLeft < normalizedRight ? -1 : 1;
 }
 
-function hasNewerSavedReceipt(key: string, incoming: { id: string; order: string }): boolean {
-  const raw = localStorage.getItem(key);
-  if (!raw) return false;
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    return false;
+function hasNewerSavedReceipt(shopSlug: string, incoming: { id: string; order: string }): boolean {
+  for (const key of memoryKeys(shopSlug)) {
+    const raw = localStorage.getItem(key);
+    if (!raw) continue;
+    try {
+      const parsed: unknown = JSON.parse(raw);
+      if (typeof parsed !== "object" || parsed === null) continue;
+      const stored = parsed as { receiptId?: unknown; receiptOrder?: unknown };
+      if (typeof stored.receiptId !== "string" || typeof stored.receiptOrder !== "string") continue;
+      const order = compareReceiptOrder(stored.receiptOrder, incoming.order);
+      if (order !== null && order > 0) return true;
+    } catch {
+      // A malformed row cannot establish a newer authoritative receipt.
+    }
   }
-  if (typeof parsed !== "object" || parsed === null) return false;
-  const stored = parsed as { receiptId?: unknown; receiptOrder?: unknown };
-  if (typeof stored.receiptId !== "string" || typeof stored.receiptOrder !== "string") return false;
-  const order = compareReceiptOrder(stored.receiptOrder, incoming.order);
-  return order !== null && order > 0;
+  return false;
+}
+
+/** Keep older out-of-order writes from lingering as extra personal data. */
+function pruneOlderSavedReceipts(shopSlug: string, order: string, keepKey: string): void {
+  try {
+    let newerReceiptExists = false;
+    for (const key of memoryKeys(shopSlug)) {
+      if (key === keepKey) continue;
+      const raw = localStorage.getItem(key);
+      if (!raw) continue;
+      try {
+        const parsed: unknown = JSON.parse(raw);
+        const storedOrder =
+          typeof parsed === "object" && parsed !== null
+            ? (parsed as { receiptOrder?: unknown }).receiptOrder
+            : undefined;
+        if (typeof storedOrder !== "string" || !/^\d+$/.test(storedOrder)) {
+          localStorage.removeItem(key);
+          continue;
+        }
+        const comparison = compareReceiptOrder(order, storedOrder);
+        if (comparison !== null && comparison > 0) localStorage.removeItem(key);
+        else if (comparison !== null && comparison < 0) newerReceiptExists = true;
+      } catch {
+        localStorage.removeItem(key);
+      }
+    }
+    if (newerReceiptExists) localStorage.removeItem(keepKey);
+  } catch {
+    // The latest receipt remains deterministically selected if pruning fails.
+  }
 }
 
 /** Remove expired shop-scoped copies opportunistically whenever memory is used. */
-function clearExpiredShopMemories(now: Date, preserveShopSlug?: string): void {
+function clearExpiredShopMemories(now: Date, preserveKey?: string): void {
   try {
-    const preservedKey = preserveShopSlug ? storageKey(preserveShopSlug) : null;
     const keys = Array.from({ length: localStorage.length }, (_, index) =>
       localStorage.key(index),
-    ).filter(
-      (key): key is string => (key?.startsWith(STORAGE_PREFIX) ?? false) && key !== preservedKey,
-    );
-    const live: Array<{ key: string; expiresAt: number }> = [];
+    ).filter((key): key is string => key?.startsWith(STORAGE_PREFIX) ?? false);
+    const live: Array<{ key: string; expiresAt: number; order: string }> = [];
     for (const key of keys) {
       const raw = localStorage.getItem(key);
       if (!raw) continue;
@@ -385,14 +444,27 @@ function clearExpiredShopMemories(now: Date, preserveShopSlug?: string): void {
           parsed !== null &&
           typeof (parsed as { expiresAt?: unknown }).expiresAt === "number"
         ) {
-          live.push({ key, expiresAt: (parsed as { expiresAt: number }).expiresAt });
+          live.push({
+            key,
+            expiresAt: (parsed as { expiresAt: number }).expiresAt,
+            order:
+              typeof (parsed as { receiptOrder?: unknown }).receiptOrder === "string"
+                ? (parsed as { receiptOrder: string }).receiptOrder
+                : "0",
+          });
+        } else {
+          localStorage.removeItem(key);
         }
       } catch {
         // The active shop's malformed value is removed by its normal read.
       }
     }
-    const limit = MAX_RETURNING_DIVER_MEMORIES - (preservedKey ? 1 : 0);
-    live.sort((left, right) => left.expiresAt - right.expiresAt);
+    const limit = MAX_RETURNING_DIVER_MEMORIES;
+    live.sort((left, right) => {
+      if (left.key === preserveKey) return 1;
+      if (right.key === preserveKey) return -1;
+      return left.expiresAt - right.expiresAt || compareReceiptOrder(left.order, right.order) || 0;
+    });
     while (live.length > limit) {
       const oldest = live.shift();
       if (oldest) localStorage.removeItem(oldest.key);
@@ -411,12 +483,16 @@ export function saveReturningDiver(
   receipt?: { id: string; order: string; generationAtStart: string | null },
 ): "saved" | "cleared" | "unavailable" {
   clearLegacyStorage();
-  // For receipt writes, preserve the target row until ordering has been
-  // compared. Device-clock skew must not expire a newer server-issued memory
-  // before a delayed older receipt gets a chance to compare against it.
-  clearExpiredShopMemories(now, shopSlug);
-  const key = storageKey(shopSlug);
-  if (!key || !diver.fullName.trim() || !diver.email.trim() || expiresAt <= now.getTime())
+  const key = receiptStorageKey(shopSlug, receipt?.id ?? null);
+  if (
+    !key ||
+    (receipt &&
+      (!/^\d+$/.test(receipt.order) ||
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(receipt.id))) ||
+    !diver.fullName.trim() ||
+    !diver.email.trim() ||
+    expiresAt <= now.getTime()
+  )
     return "unavailable";
   let clearState: ClearState | null;
   try {
@@ -429,12 +505,13 @@ export function saveReturningDiver(
     (receipt.generationAtStart !== (clearState?.generation ?? null) ||
       clearState?.blockedReceiptId === receipt.id)
   ) {
-    clearOnlyThisReceipt(key, receipt.id);
+    clearOnlyThisReceipt(shopSlug, receipt.id);
     return "cleared";
   }
   try {
-    if (receipt && hasNewerSavedReceipt(key, { id: receipt.id, order: receipt.order }))
+    if (receipt && hasNewerSavedReceipt(shopSlug, { id: receipt.id, order: receipt.order }))
       return "saved";
+    clearExpiredShopMemories(now);
     localStorage.setItem(
       key,
       JSON.stringify({
@@ -445,6 +522,8 @@ export function saveReturningDiver(
         ...(receipt ? { receiptOrder: receipt.order } : {}),
       } satisfies StoredReturningDiver),
     );
+    if (receipt) pruneOlderSavedReceipts(shopSlug, receipt.order, key);
+    clearExpiredShopMemories(now, key);
     // A clear in another tab may land between the pre-write check and setItem.
     // Recheck the generation and remove only this receipt, preserving a later
     // deliberate opt-in that may already have replaced it.
@@ -453,7 +532,7 @@ export function saveReturningDiver(
       (latestClear?.generation ?? null) !== (clearState?.generation ?? null) ||
       latestClear?.blockedReceiptId === receipt?.id
     ) {
-      clearOnlyThisReceipt(key, receipt?.id);
+      clearOnlyThisReceipt(shopSlug, receipt?.id);
       return "cleared";
     }
     return "saved";
@@ -466,40 +545,59 @@ export function saveReturningDiver(
 export function loadReturningDiver(shopSlug: string, now: Date = nowDate()): ReturningDiver | null {
   clearLegacyStorage();
   clearExpiredShopMemories(now);
-  const key = storageKey(shopSlug);
-  if (!key) return null;
   try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return null;
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(raw);
-    } catch {
-      localStorage.removeItem(key);
-      return null;
-    }
-    if (
-      !isReturningDiver(parsed) ||
-      typeof (parsed as { expiresAt?: unknown }).expiresAt !== "number"
-    ) {
-      localStorage.removeItem(key);
-      return null;
-    }
     const clearState = effectiveClearState(shopSlug);
-    const stored = parsed as StoredReturningDiver;
-    if (
-      clearState &&
-      (stored.clearGeneration !== clearState.generation ||
-        (stored.receiptId && clearState.blockedReceiptId === stored.receiptId))
-    ) {
-      localStorage.removeItem(key);
-      return null;
+    let latest: StoredReturningDiver | null = null;
+    let latestOrder = "0";
+    for (const key of memoryKeys(shopSlug)) {
+      const raw = localStorage.getItem(key);
+      if (!raw) continue;
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        localStorage.removeItem(key);
+        continue;
+      }
+      if (
+        !isReturningDiver(parsed) ||
+        typeof (parsed as unknown as { expiresAt?: unknown }).expiresAt !== "number" ||
+        (parsed as unknown as { expiresAt: number }).expiresAt <= now.getTime()
+      ) {
+        localStorage.removeItem(key);
+        continue;
+      }
+      const stored = parsed as StoredReturningDiver;
+      if (
+        (stored.receiptId !== undefined &&
+          (typeof stored.receiptOrder !== "string" || !/^\d+$/.test(stored.receiptOrder))) ||
+        (stored.receiptOrder !== undefined && !/^\d+$/.test(stored.receiptOrder))
+      ) {
+        localStorage.removeItem(key);
+        continue;
+      }
+      if (
+        clearState &&
+        (stored.clearGeneration !== clearState.generation ||
+          (stored.receiptId && clearState.blockedReceiptId === stored.receiptId))
+      ) {
+        localStorage.removeItem(key);
+        continue;
+      }
+      const order = typeof stored.receiptOrder === "string" ? stored.receiptOrder : "0";
+      const comparison = compareReceiptOrder(order, latestOrder);
+      if (!latest || (comparison !== null && comparison >= 0)) {
+        latest = stored;
+        latestOrder = order;
+      }
     }
-    if (stored.expiresAt <= now.getTime()) {
-      localStorage.removeItem(key);
-      return null;
-    }
-    return { fullName: parsed.fullName, email: parsed.email };
+    if (latest?.receiptId && latest.receiptOrder)
+      pruneOlderSavedReceipts(
+        shopSlug,
+        latest.receiptOrder,
+        receiptStorageKey(shopSlug, latest.receiptId) ?? "",
+      );
+    return latest ? { fullName: latest.fullName, email: latest.email } : null;
   } catch {
     return null;
   }
@@ -507,25 +605,38 @@ export function loadReturningDiver(shopSlug: string, now: Date = nowDate()): Ret
 
 export function forgetReturningDiver(shopSlug: string): "cleared" | "partial" | "unavailable" {
   clearLegacyStorage();
-  const key = storageKey(shopSlug);
+  const prefix = storageKey(shopSlug);
   const tombstone = clearKey(shopSlug);
   const slotKey = deviceSlotKey(shopSlug);
-  if (!key || !tombstone || !slotKey) return "unavailable";
+  if (!prefix || !tombstone || !slotKey) return "unavailable";
   let blockedReceiptId: string | undefined;
   let deviceToken: string | undefined;
   try {
-    const raw = localStorage.getItem(key);
-    if (raw) {
-      const parsed: unknown = JSON.parse(raw);
-      if (
-        typeof parsed === "object" &&
-        parsed !== null &&
-        typeof (parsed as { receiptId?: unknown }).receiptId === "string"
-      ) {
-        blockedReceiptId = (parsed as { receiptId: string }).receiptId;
+    const rows = memoryKeys(shopSlug).flatMap((key) => {
+      const raw = localStorage.getItem(key);
+      if (!raw) return [];
+      try {
+        const parsed: unknown = JSON.parse(raw);
+        if (typeof parsed !== "object" || parsed === null) return [];
+        return [{ raw, parsed: parsed as { receiptId?: unknown; receiptOrder?: unknown } }];
+      } catch {
+        return [];
       }
-    }
+    });
+    rows.sort((left, right) => {
+      const leftOrder =
+        typeof left.parsed.receiptOrder === "string" ? left.parsed.receiptOrder : "0";
+      const rightOrder =
+        typeof right.parsed.receiptOrder === "string" ? right.parsed.receiptOrder : "0";
+      return compareReceiptOrder(rightOrder, leftOrder) ?? 0;
+    });
+    const latest = rows[0]?.parsed;
+    if (typeof latest?.receiptId === "string") blockedReceiptId = latest.receiptId;
     blockedReceiptId ??= readClearState(shopSlug)?.blockedReceiptId;
+  } catch {
+    // Continue independently so failure reading memory cannot skip slot removal.
+  }
+  try {
     const slotRaw = sessionStorage.getItem(slotKey);
     if (slotRaw) {
       const slot: unknown = JSON.parse(slotRaw);
@@ -539,7 +650,7 @@ export function forgetReturningDiver(shopSlug: string): "cleared" | "partial" | 
       }
     }
   } catch {
-    // The clear still attempts both writes independently below.
+    // The clear still attempts slot deletion below.
   }
   const generation = nextClearGeneration();
   const expiresAt = nowDate().getTime() + RETURNING_DIVER_DEVICE_SLOT_MS;
@@ -575,10 +686,16 @@ export function forgetReturningDiver(shopSlug: string): "cleared" | "partial" | 
     }
   }
   try {
-    localStorage.removeItem(key);
     identityRemoved = true;
+    for (const key of memoryKeys(shopSlug)) {
+      try {
+        localStorage.removeItem(key);
+      } catch {
+        identityRemoved = false;
+      }
+    }
   } catch {
-    // Browser storage can refuse deletion; report partial completion honestly.
+    identityRemoved = false;
   }
   try {
     sessionStorage.removeItem(slotKey);
