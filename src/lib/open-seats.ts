@@ -1,6 +1,6 @@
+import { calendarDateInTimezone, calendarDaysBetween } from "./calendar-date";
 import { nowDate } from "./clock";
 import { hasSailed } from "./trips";
-import { utcToWallTime } from "./zoned";
 
 /**
  * **What the shop already knows about the seats that never sold** (issue
@@ -138,7 +138,13 @@ export function openSeatsDebrief(
   if (openSeats === 0) return null;
 
   const lastBookingDaysOut = input.lastBookingAt
-    ? Math.max(0, calendarDaysBetween(input.lastBookingAt, input.startsAt, input.timeZone))
+    ? Math.max(
+        0,
+        calendarDaysBetween(
+          calendarDateInTimezone(input.lastBookingAt, input.timeZone),
+          calendarDateInTimezone(input.startsAt, input.timeZone),
+        ),
+      )
     : null;
   const debrief: OpenSeatsDebrief = {
     openSeats,
@@ -151,22 +157,4 @@ export function openSeatsDebrief(
   // evening can still act on tomorrow.
   const hasClause = lastBookingDaysOut !== null || !input.dealSent || input.comparable !== null;
   return hasClause ? debrief : null;
-}
-
-/**
- * Whole calendar days from `from` to `to`, both read on the shop's own clock.
- *
- * Calendar days rather than elapsed hours, because "the last booking came in
- * one day out" is a thing a person says about dates, not about a 24-hour
- * window: a booking taken at 11 p.m. the night before a dawn departure is one
- * day out, and eight hours of elapsed time would call it zero. Each wall time
- * is projected onto a UTC midnight before subtracting, which is what makes the
- * arithmetic immune to the DST hour between the two dates.
- */
-function calendarDaysBetween(from: Date, to: Date, timeZone: string): number {
-  const start = utcToWallTime(from, timeZone);
-  const end = utcToWallTime(to, timeZone);
-  const startDay = Date.UTC(start.year, start.month - 1, start.day);
-  const endDay = Date.UTC(end.year, end.month - 1, end.day);
-  return Math.round((endDay - startDay) / (24 * 60 * 60 * 1000));
 }
