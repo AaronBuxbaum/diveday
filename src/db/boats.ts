@@ -1,4 +1,4 @@
-import { and, asc, count, eq, gt, inArray, isNotNull, isNull, ne } from "drizzle-orm";
+import { and, asc, count, eq, gt, inArray, isNotNull, isNull, ne, or } from "drizzle-orm";
 import {
   type BoatPaperRecord,
   type BoatSeatsRefusal,
@@ -12,6 +12,7 @@ import type { AppDb, DbExecutor } from "./client";
 import { queueMediaDeletion, retryMediaDeletion } from "./media-deletions";
 import { boats, trips } from "./schema";
 import { recordShopActivityWithin } from "./shop-activity";
+import { tripHasStandingSailedRollCall } from "./standing-sailed-roll-call";
 import { liveTrip } from "./trips-live";
 
 export type Boat = typeof boats.$inferSelect;
@@ -205,10 +206,16 @@ export async function countDeparturesByBoat(
   const rows = await db
     .select({ boatId: trips.boatId, departures: count(trips.id) })
     .from(trips)
-    // diveday:allow-deleted-trips: a hull's history is the point — a departure
-    // the shop took off the board still sailed on this boat, and the confirm is
-    // telling the shop how much history the delete touches.
-    .where(and(eq(trips.shopId, shopId), isNotNull(trips.boatId), ne(trips.status, "cancelled")))
+    // diveday:allow-deleted-trips: count every non-cancelled trip and any
+    // cancelled trip with standing diver or crew evidence that somebody sailed.
+    // The confirm is telling the shop how much history the delete touches.
+    .where(
+      and(
+        eq(trips.shopId, shopId),
+        isNotNull(trips.boatId),
+        or(ne(trips.status, "cancelled"), tripHasStandingSailedRollCall(db)),
+      ),
+    )
     .groupBy(trips.boatId);
   return new Map(rows.flatMap((row) => (row.boatId ? [[row.boatId, row.departures]] : [])));
 }
