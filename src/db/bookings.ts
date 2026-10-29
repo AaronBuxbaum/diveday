@@ -56,6 +56,7 @@ import { readCertificationEvidence } from "./certification-evidence";
 import { listCourseSeatsInTraining } from "./certifications-in-training";
 import type { AppDb, DbExecutor } from "./client";
 import {
+  dateRequestOfferBookingFor,
   lockDateRequestOffer,
   moveDateRequestOfferBooking,
   recordDateRequestOfferBooking,
@@ -79,11 +80,9 @@ import {
   buddyPairMembers,
   certifications,
   courses,
-  dateRequestOfferBookings,
   gearItemKind,
   gearReservations,
   inboundMessages,
-  interests,
   notificationSendQueue,
   people,
   personRoles,
@@ -1212,35 +1211,22 @@ async function writeSeat(
     .where(and(eq(bookings.tripId, trip.id), eq(bookings.personId, person.id)))
     .limit(1);
   if (existing && rowCanBeReactivated(existing.status, trip.startsAt)) {
-    const [link] = await tx
-      .select({ parentInterestId: interests.parentInterestId, tripId: interests.tripId })
-      .from(dateRequestOfferBookings)
-      .innerJoin(
-        interests,
-        and(
-          eq(interests.id, dateRequestOfferBookings.interestId),
-          eq(interests.shopId, req.shopId),
-        ),
-      )
-      .where(
-        and(
-          eq(dateRequestOfferBookings.shopId, req.shopId),
-          eq(dateRequestOfferBookings.bookingId, existing.id),
-        ),
-      )
-      .limit(1);
+    const link = await dateRequestOfferBookingFor(tx, {
+      shopId: req.shopId,
+      bookingId: existing.id,
+    });
     if (link) {
       if (
         link.tripId !== req.tripId ||
-        (req.dateRequestInterestId && link.parentInterestId !== req.dateRequestInterestId)
+        (req.dateRequestInterestId && link.requestId !== req.dateRequestInterestId)
       ) {
         return { ok: false, reason: "date_request_departure_conflict" };
       }
-      if (!req.dateRequestInterestId && link.parentInterestId) {
+      if (!req.dateRequestInterestId && link.requestId) {
         const pinnedOffer = await lockDateRequestOffer(tx, {
           shopId: req.shopId,
           tripId: req.tripId,
-          requestId: link.parentInterestId,
+          requestId: link.requestId,
           excludeBookingId: existing.id,
         });
         if (typeof pinnedOffer === "string") return { ok: false, reason: pinnedOffer };
@@ -1849,23 +1835,8 @@ export async function restoreBooking(
     // works. No hold check and no departure-time check here — see the doc
     // comment for why an undo is not a new booking.
     if (trip.status === "cancelled") return "trip_cancelled";
-    const [dateRequestLink] = await tx
-      .select({ requestId: interests.parentInterestId })
-      .from(dateRequestOfferBookings)
-      .innerJoin(
-        interests,
-        and(eq(interests.id, dateRequestOfferBookings.interestId), eq(interests.shopId, shopId)),
-      )
-      .where(
-        and(
-          eq(dateRequestOfferBookings.shopId, shopId),
-          eq(dateRequestOfferBookings.bookingId, bookingId),
-          eq(interests.scope, "departure"),
-          isNotNull(interests.parentInterestId),
-        ),
-      )
-      .limit(1);
-    if (dateRequestLink?.requestId) {
+    const dateRequestLink = await dateRequestOfferBookingFor(tx, { shopId, bookingId });
+    if (dateRequestLink?.scope === "departure" && dateRequestLink.requestId) {
       const pinnedOffer = await lockDateRequestOffer(tx, {
         shopId,
         tripId: trip.id,
@@ -2152,30 +2123,16 @@ export async function moveBooking(
     }
     if (!source) return { ok: false, reason: "not_found" };
     if (!target) return { ok: false, reason: "target_unavailable" };
-    const [dateRequestLink] = await tx
-      .select({ interestId: interests.id, requestId: interests.parentInterestId })
-      .from(dateRequestOfferBookings)
-      .innerJoin(
-        interests,
-        and(eq(interests.id, dateRequestOfferBookings.interestId), eq(interests.shopId, shopId)),
-      )
-      .where(
-        and(
-          eq(dateRequestOfferBookings.shopId, shopId),
-          eq(dateRequestOfferBookings.bookingId, bookingId),
-          eq(interests.scope, "departure"),
-          isNotNull(interests.parentInterestId),
-        ),
-      )
-      .limit(1);
-    const dateRequestOffer = dateRequestLink?.requestId
-      ? await lockDateRequestOffer(tx, {
-          shopId,
-          tripId: toTripId,
-          requestId: dateRequestLink.requestId,
-          excludeBookingId: bookingId,
-        })
-      : null;
+    const dateRequestLink = await dateRequestOfferBookingFor(tx, { shopId, bookingId });
+    const dateRequestOffer =
+      dateRequestLink?.scope === "departure" && dateRequestLink.requestId
+        ? await lockDateRequestOffer(tx, {
+            shopId,
+            tripId: toTripId,
+            requestId: dateRequestLink.requestId,
+            excludeBookingId: bookingId,
+          })
+        : null;
     if (typeof dateRequestOffer === "string") return { ok: false, reason: dateRequestOffer };
     const [booking] = await tx
       .select()
@@ -2300,7 +2257,7 @@ export async function moveBooking(
       const movedLink = await moveDateRequestOfferBooking(tx, {
         shopId,
         bookingId: booking.id,
-        fromOfferId: dateRequestLink.interestId,
+        fromOfferId: dateRequestLink.offerId,
         toOfferId: dateRequestOffer.offerId,
       });
       if (!movedLink) throw new Error("locked date request booking link could not follow its move");

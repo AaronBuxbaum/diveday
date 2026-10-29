@@ -8,6 +8,36 @@ export type DateRequestBookingRefusal =
   | "date_request_departure_conflict"
   | "date_request_party_full";
 
+/** Read the offered departure linked to one booking without exposing interests to booking code. */
+export async function dateRequestOfferBookingFor(
+  tx: DbExecutor,
+  input: { shopId: string; bookingId: string },
+) {
+  const [link] = await tx
+    .select({
+      offerId: interests.id,
+      tripId: interests.tripId,
+      requestId: interests.parentInterestId,
+      scope: interests.scope,
+    })
+    .from(dateRequestOfferBookings)
+    .innerJoin(
+      interests,
+      and(
+        eq(interests.id, dateRequestOfferBookings.interestId),
+        eq(interests.shopId, input.shopId),
+      ),
+    )
+    .where(
+      and(
+        eq(dateRequestOfferBookings.shopId, input.shopId),
+        eq(dateRequestOfferBookings.bookingId, input.bookingId),
+      ),
+    )
+    .limit(1);
+  return link;
+}
+
 /**
  * Lock the request before its offer child. This is the common serialization
  * point for every offered departure and matches erasure's parent-then-child
