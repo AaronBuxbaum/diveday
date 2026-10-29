@@ -588,6 +588,48 @@ describe("trainingRoom — conservative instructor capacity across sessions (rev
     expect(readinessFor("s2-1").status).toBe("blocked");
   });
 
+  it("finds a feasible mixed-course assignment when equal-sized instructor pools overlap", () => {
+    const dsd = {
+      baseStudentsPerInstructor: 2,
+      assistantBonusPerInstructor: 0,
+      maxStudentsPerInstructor: 2,
+    };
+    const instructor = (personId: string) => ({
+      personId,
+      shopRoles: ["instructor"],
+      tripRole: "instructor" as const,
+    });
+    const a = instructor("a");
+    const b = instructor("b");
+    const c = instructor("c");
+    const instructors = [a, b, c];
+    const sessionCrew = new Map([
+      ["dsd-bc", [b, c]],
+      ["dsd-ac", [a, c]],
+      ["ow-ab", [a, b]],
+    ]);
+    const marked = [
+      { id: "s1-1", sessionTripId: "dsd-bc", rule: dsd },
+      { id: "s1-2", sessionTripId: "dsd-bc", rule: dsd },
+      { id: "s2-1", sessionTripId: "dsd-ac", rule: dsd },
+      { id: "s2-2", sessionTripId: "dsd-ac", rule: dsd },
+    ];
+    const candidate = { id: "s3-1", sessionTripId: "ow-ab", rule: entry };
+
+    for (const departureCrew of [
+      instructors,
+      [...instructors].reverse(),
+      [instructors[1], instructors[0], instructors[2]],
+      [instructors[2], instructors[1], instructors[0]],
+      [instructors[0], instructors[2], instructors[1]],
+      [instructors[1], instructors[2], instructors[0]],
+    ]) {
+      const room = trainingRoom({ marked, candidate, sessionCrew, departureCrew });
+      expect(room.seated).toHaveLength(4);
+      expect(room.spare).toBe(true);
+    }
+  });
+
   it("keeps a DSD walk-in seatable whichever instructor comes first in crew order (#3042)", () => {
     const dsd = {
       baseStudentsPerInstructor: 2,
