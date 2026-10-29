@@ -215,6 +215,11 @@ test("a booking canceled after the recap page loaded gets an honest notice, not 
   await openBookingActions(diverRow);
   await diverRow.getByRole("button", { name: "Remove booking" }).click();
   await diverRow.getByRole("button", { name: "Yes, remove booking" }).click();
+  await expect(staffPage).toHaveURL(
+    (url) =>
+      url.pathname === `/shop/blue-mantis/trips/${tripId}` &&
+      url.searchParams.get("notice") === "booking-removed",
+  );
   await expect(staffPage.getByRole("status")).toContainText("Booking canceled");
   await staffContext.close();
 
