@@ -5,7 +5,12 @@ import { useRef, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { OfflineManifestTranslator } from "@/i18n/offline-manifest-messages";
 import type { RollCallCheckpoint } from "@/lib/manifests";
-import { appendOfflineRollCall, saveOfflineManifest } from "@/lib/offline-manifest-store";
+import {
+  appendOfflineRollCall,
+  loadOfflineManifest,
+  saveOfflineManifest,
+  syncOfflineManifest,
+} from "@/lib/offline-manifest-store";
 import type { OfflineManifestEnvelope, OfflineManifestPayload } from "@/lib/offline-manifests";
 import { useSelectedTripEnvelopeHandler } from "./selected-trip-envelope";
 import { type SelectedTripStorageState, useSelectedTripStorage } from "./use-selected-trip-storage";
@@ -129,7 +134,15 @@ describe("selected-trip storage invalidation", () => {
     const monitor = new TestBroadcastChannel("diveday-offline-manifest-changes-v1");
     monitor.onmessage = (event) => ownBroadcasts.push(event.data);
     const envelopesBeforeLocalRecord = envelopes.length;
+    let firstEventId = "";
     await act(async () => {
+      const first = await appendOfflineRollCall(tripId, {
+        bookingId,
+        checkpoint: "after_dive_1",
+        status: "not_boarded",
+        note: "Nora is still below.",
+      });
+      firstEventId = first.events[0]?.clientEventId ?? "";
       await appendOfflineRollCall(tripId, {
         bookingId,
         checkpoint: "after_dive_1",
@@ -138,7 +151,7 @@ describe("selected-trip storage invalidation", () => {
       });
     });
     await waitFor(() => expect(envelopes.length).toBeGreaterThan(envelopesBeforeLocalRecord));
-    await waitFor(() => expect(ownBroadcasts).toHaveLength(1));
+    await waitFor(() => expect(ownBroadcasts).toHaveLength(2));
     expect(reconcile).toHaveBeenCalledTimes(initialSyncRequests);
     expect(ownBroadcasts[0]).toMatchObject({ tripId, reason: "record" });
     monitor.close();
@@ -151,13 +164,46 @@ describe("selected-trip storage invalidation", () => {
     await broadcastFromOtherContext("sync");
     expect(reconcile).toHaveBeenCalledTimes(initialSyncRequests + 1);
 
+    const subscriber = TestBroadcastChannel.channels.find(
+      (channel) => channel.name === "diveday-offline-manifest-changes-v1",
+    );
+    const subscriberOnMessage = subscriber?.onmessage ?? null;
+    if (subscriber) subscriber.onmessage = null;
+    const restoreLocalEvent = suppressSameDocumentManifestEvent();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              results: [{ clientEventId: firstEventId, status: "applied" }],
+            }),
+            { status: 200, headers: { "content-type": "application/json" } },
+          ),
+      ),
+    );
+    try {
+      // Simulate another tab's sync merging E1's success while preserving E2
+      // as pending. Suppress same-context notices; the peer broadcast below
+      // is the only signal received by this tab.
+      await syncOfflineManifest(tripId);
+    } finally {
+      restoreLocalEvent();
+      if (subscriber) subscriber.onmessage = subscriberOnMessage;
+    }
+    const syncedEnvelope = await loadOfflineManifest(tripId);
+    expect(syncedEnvelope?.events.map((event) => event.syncStatus)).toEqual(["applied", "pending"]);
+
+    await broadcastFromOtherContext("sync");
+    await waitFor(() => expect(reconcile).toHaveBeenCalledTimes(initialSyncRequests + 2));
+
     // A later external snapshot refresh is a bounded retry opportunity even
     // though the event ID is unchanged and still pending.
     await broadcastFromOtherContext("snapshot");
-    await waitFor(() => expect(reconcile).toHaveBeenCalledTimes(initialSyncRequests + 2));
+    await waitFor(() => expect(reconcile).toHaveBeenCalledTimes(initialSyncRequests + 3));
 
     await broadcastFromOtherContext("sync");
-    expect(reconcile).toHaveBeenCalledTimes(initialSyncRequests + 2);
+    expect(reconcile).toHaveBeenCalledTimes(initialSyncRequests + 3);
 
     await act(async () => {
       window.dispatchEvent(
@@ -169,7 +215,7 @@ describe("selected-trip storage invalidation", () => {
     await act(async () => {
       window.dispatchEvent(new Event("focus"));
     });
-    await waitFor(() => expect(reconcile).toHaveBeenCalledTimes(initialSyncRequests + 3));
+    await waitFor(() => expect(reconcile).toHaveBeenCalledTimes(initialSyncRequests + 4));
   });
 
   it("reloads the committed erasure disposition in an open trip view", async () => {
