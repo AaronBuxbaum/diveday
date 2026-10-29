@@ -87,6 +87,21 @@ describe("the repository's .gitattributes", () => {
     expect(attributes).toMatch(/^scripts\/test-durations\.json merge=diveday-durations$/m);
   });
 
+  // 2026-10-22: export-bundle.divers.snap conflicted in 5 merges with no driver, although
+  // `pnpm regen` rewrites it in the same test run as the shop snapshot.
+  it("gives every snapshot `pnpm regen` rewrites the generated driver", () => {
+    const test = readFileSync(
+      path.join(path.dirname(SCRIPT), "..", "src/db/export-bundle.snapshot.test.ts"),
+      "utf8",
+    );
+    const snapshots = [...test.matchAll(/"\.\/(__snapshots__\/[\w.-]+\.snap)"/g)].map(
+      (match) => `src/db/${match[1]}`,
+    );
+    expect(snapshots.length).toBeGreaterThan(1);
+    for (const file of snapshots)
+      expect(attributes).toContain(`\n${file} merge=diveday-generated\n`);
+  });
+
   it("names only drivers that install defines", () => {
     const named = [...attributes.matchAll(/merge=([\w-]+)/g)].map((match) => match[1]);
     expect(named.length).toBeGreaterThan(0);
