@@ -186,6 +186,7 @@ describe("OfflineManifestView — one column, one text edge", () => {
   it("starts every toned notice's text on the panels' own inset", async () => {
     vi.mocked(readDiscardedOfflineRecords).mockResolvedValue([
       {
+        noticeId: "notice-trip-9",
         tripId: "trip-9",
         tripTitle: "Morning Two-Tank",
         shopName: "Reef Runners",

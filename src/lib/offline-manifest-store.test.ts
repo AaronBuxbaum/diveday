@@ -334,7 +334,7 @@ describe("loadOfflineManifest", () => {
     await loadOfflineManifest(tripId);
 
     const discarded = await readDiscardedOfflineRecords();
-    expect(discarded).toEqual([
+    expect(discarded).toMatchObject([
       {
         tripId,
         tripTitle: payload.manifests[0].trip.title,
@@ -365,41 +365,6 @@ describe("loadOfflineManifest", () => {
     expect(await readDiscardedOfflineRecords()).toHaveLength(1);
     await acknowledgeDiscardedOfflineRecords(await readDiscardedOfflineRecords());
     expect(await readDiscardedOfflineRecords()).toEqual([]);
-  });
-
-  it("acknowledges the shown shop's notice without deleting another shop's unseen warning", async () => {
-    const ownTripId = payload.manifests[0].trip.id;
-    await saveOfflineManifest(payload);
-    await appendOfflineRollCall(ownTripId, {
-      bookingId: payload.manifests[0].divers[0].bookingId,
-      checkpoint: "departure",
-      status: "not_boarded",
-    });
-    await patchStoredExpiresAt(ownTripId, EXPIRED_PAST_GRACE);
-    await loadOfflineManifest(ownTripId);
-
-    const foreignTripId = otherShopPayload.manifests[0].trip.id;
-    await saveOfflineManifest(otherShopPayload);
-    await appendOfflineRollCall(foreignTripId, {
-      bookingId: otherShopPayload.manifests[0].divers[0].bookingId,
-      checkpoint: "departure",
-      status: "boarded",
-    });
-    await patchStoredExpiresAt(foreignTripId, EXPIRED_PAST_GRACE);
-    await loadOfflineManifest(foreignTripId);
-
-    const notices = await readDiscardedOfflineRecords();
-    const ownNotice = notices.find((notice) => notice.shopSlug === payload.shop.slug);
-    const unseenForeignNotice = notices.find(
-      (notice) => notice.shopSlug === otherShopPayload.shop.slug,
-    );
-    if (!ownNotice || !unseenForeignNotice) {
-      throw new Error("expected both shops to have a discarded-roll-call notice");
-    }
-
-    await acknowledgeDiscardedOfflineRecords([ownNotice]);
-
-    expect(await readDiscardedOfflineRecords()).toEqual([unseenForeignNotice]);
   });
 
   it("says nothing when an expired record with no pending events is cleaned up", async () => {

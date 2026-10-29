@@ -763,6 +763,7 @@ describe("useSavedManifest on the list", () => {
 
 describe("useSavedManifest and what retention threw away", () => {
   const lost: DiscardedOfflineRecord = {
+    noticeId: "notice-trip-9",
     tripId: "trip-9",
     tripTitle: "Wreck Dive",
     shopName: "Blue Mantis Divers",

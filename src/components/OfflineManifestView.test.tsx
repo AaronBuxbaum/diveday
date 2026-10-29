@@ -255,6 +255,7 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
     vi.mocked(listOfflineManifests).mockResolvedValue([envelope("trip-own", "This shop's trip")]);
     vi.mocked(readDiscardedOfflineRecords).mockResolvedValue([
       {
+        noticeId: "notice-foreign-private",
         tripId: "trip-foreign-private",
         tripTitle: "Private synthetic trip title",
         shopName: "Private synthetic shop name",

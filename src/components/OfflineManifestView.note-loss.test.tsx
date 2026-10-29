@@ -166,6 +166,7 @@ describe("OfflineManifestView note-loss status", () => {
 describe("OfflineManifestView — reporting roll call the ceiling threw away", () => {
   const discarded = [
     {
+      noticeId: "notice-trip-9",
       tripId: "trip-9",
       tripTitle: "Morning Two-Tank",
       shopName: "Reef Runners",
@@ -227,6 +228,7 @@ describe("OfflineManifestView — reporting roll call the ceiling threw away", (
   it("acknowledges only the verified shop's visible notice", async () => {
     const ownNotice = {
       ...discarded[0],
+      noticeId: "notice-own-loss",
       tripId: "trip-own-loss",
       tripTitle: "Own shop trip",
       shopName: "Blue Mantis Divers",
@@ -234,6 +236,7 @@ describe("OfflineManifestView — reporting roll call the ceiling threw away", (
     };
     const unseenOtherShopNotice = {
       ...discarded[0],
+      noticeId: "notice-other-loss",
       tripId: "trip-other-loss",
       tripTitle: "Other shop trip",
       shopName: "Reef Runners",

@@ -14,9 +14,8 @@ import { atShopMoneyLine, payStepLines } from "@/app/ready/[token]/_components/p
 import { resolvePaymentReceipt } from "@/app/ready/[token]/_components/payment-receipt";
 import { ReadyFitForm } from "@/app/ready/[token]/_components/ReadyFitForm";
 import { ReadyThreadPage } from "@/app/ready/[token]/_components/ReadyMasthead";
-import { ReadyOfflineCopy } from "@/app/ready/[token]/_components/ReadyOfflineCopy";
+import { ReadyOfflineCopyForTrip } from "@/app/ready/[token]/_components/ReadyOfflineCopyForTrip";
 import { READY_NOTICES } from "@/app/ready/[token]/_components/ready-notices";
-import { readyOfflineWords } from "@/app/ready/[token]/_components/ready-offline-words";
 import { SignStepActions } from "@/app/ready/[token]/_components/SignStepActions";
 import { ThreadSections } from "@/app/ready/[token]/_components/ThreadSections";
 import {
@@ -54,7 +53,6 @@ import { formatMoneyCents } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { connectionForRoute } from "@/lib/observability/render-connection";
 import { seatRentalItems } from "@/lib/participant-types";
-import { readyCopyKeepUntil } from "@/lib/ready-offline";
 import { nitroxAvailableOn } from "@/lib/rentals";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import {
@@ -333,7 +331,7 @@ async function DiverReadinessPage({
       getShopBySlug(db, shop.slug),
       getTripWithBookedOnce(db, shop.id, data.trip.id),
       listTripDives(db, shop.id, data.trip.id),
-      listTripChangeEvents(db, shop.id, data.trip.id),
+      listTripChangeEvents(db, shop.id, data.trip.id, data.bookingCreatedAt),
       // The crew who agreed to be named (issue #1181, D21), the same filter as
       // the public page, each marked away on this departure's days (item 12).
       diverCrewWithAway(db, shop.id, detail.trip, detail.shop.timezone),
@@ -604,7 +602,7 @@ async function DiverReadinessPage({
       {/* Keep this page on the phone for the marina with no signal, on both
           openings (the booked card and the ordinary masthead), and date the
           copy by the live page itself (security review of layer 8, D2). */}
-      <ReadyOfflineCopy copy={readyOfflineWords(t)} keepUntil={readyCopyKeepUntil(detail.trip)} />
+      <ReadyOfflineCopyForTrip detail={detail} locale={locale} t={t} />
       {/* The spine, the arrival card, the packing list and the cancel door
           read seven more things between them, and arrive behind a body-shaped
           fallback rather than holding the opening above them (UX audit #5). */}

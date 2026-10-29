@@ -1,10 +1,24 @@
 // The default `node` environment, as the worker's own test: this module runs
 // in a service worker, never in a DOM context.
-import { beforeEach, describe, expect, it } from "vitest";
-import { READY_CACHE_NAME, READY_KEEP_UNTIL_META } from "@/lib/ready-offline";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  READY_CACHE_NAME,
+  READY_COPY_GENERATED_AT_ATTR,
+  READY_COPY_GENERATED_AT_META,
+  READY_COPY_LOCALE_META,
+  READY_COPY_TIME_ZONE_META,
+  READY_COPY_VERSION,
+  READY_COPY_VERSION_META,
+  READY_FORGOTTEN_CACHE_NAME,
+  READY_KEEP_UNTIL_META,
+  READY_OFFLINE_GENERATED_AT_PLACEHOLDER,
+  READY_OFFLINE_NOTE_ATTR,
+} from "@/lib/ready-offline";
+import {
+  beginReadyPageRequest,
   forgetReadyPage,
   isReadyScope,
+  READY_COPY_KEY,
   READY_COPY_MAX_AGE_MS,
   readyPageFallback,
   readyPagePath,
@@ -41,13 +55,27 @@ function fakeStorage() {
   return { storage: storage as unknown as CacheStorage, caches };
 }
 
+/** A current-format response with no automatic banner, for malformed-page tests. */
+function renderedPage(body: string, init: ResponseInit = {}, keepUntil = NOW + 30 * DAY_MS) {
+  return new Response(
+    `<meta name="${READY_KEEP_UNTIL_META}" content="${keepUntil}"/><meta name="${READY_COPY_VERSION_META}" content="${READY_COPY_VERSION}"/>${body}`,
+    {
+      status: 200,
+      headers: { "content-type": "text/html; charset=utf-8" },
+      ...init,
+    },
+  );
+}
+
 /** The live page as the server renders it: kept until `keepUntil` (default: well past NOW). */
 function page(body = "<p>Ready</p>", init: ResponseInit = {}, keepUntil = NOW + 30 * DAY_MS) {
-  return new Response(`<meta name="${READY_KEEP_UNTIL_META}" content="${keepUntil}"/>${body}`, {
-    status: 200,
-    headers: { "content-type": "text/html; charset=utf-8" },
-    ...init,
-  });
+  const generatedAt = body.includes(`name="${READY_COPY_GENERATED_AT_META}"`)
+    ? ""
+    : `<meta name="${READY_COPY_GENERATED_AT_META}" content="${NOW}"/>`;
+  const withBanner = body.includes(`${READY_OFFLINE_NOTE_ATTR}=""`)
+    ? `${generatedAt}${body}`
+    : `<meta name="${READY_COPY_LOCALE_META}" content="en-US"/><meta name="${READY_COPY_TIME_ZONE_META}" content="America/New_York"/>${generatedAt}${body}<p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">No signal: ${READY_OFFLINE_GENERATED_AT_PLACEHOLDER}</p>`;
+  return renderedPage(withBanner, init, keepUntil);
 }
 
 describe("readyPagePath", () => {
@@ -85,6 +113,272 @@ describe("saveReadyPage and readyPageFallback", () => {
     const served = await readyPageFallback(store.storage, `/ready/${TOKEN}`, NOW + 1000);
     expect(await served?.text()).toContain("newer");
     expect(await readyPageFallback(store.storage, `/ready/${OTHER}`, NOW)).toBeUndefined();
+  });
+
+  it("shows the server page-generation time in the page locale and shop zone, not device save or fallback time", async () => {
+    const locale = "en-US";
+    const timeZone = "America/New_York";
+    const body = [
+      `<meta name="${READY_COPY_LOCALE_META}" content="${locale}"/>`,
+      `<meta name="${READY_COPY_TIME_ZONE_META}" content="${timeZone}"/>`,
+      `<meta name="${READY_COPY_GENERATED_AT_META}" content="${NOW}"/>`,
+      `<p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">Saved ${READY_OFFLINE_GENERATED_AT_PLACEHOLDER}</p>`,
+    ].join("");
+    const request = await beginReadyPageRequest(store.storage, `/ready/${TOKEN}`);
+    expect(await saveReadyPage(store.storage, `/ready/${TOKEN}`, page(body), NOW, request)).toBe(
+      true,
+    );
+
+    const served = await readyPageFallback(store.storage, `/ready/${TOKEN}`, NOW + DAY_MS);
+    const text = await served?.text();
+    const expected = new Intl.DateTimeFormat(locale, {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      timeZoneName: "short",
+      timeZone,
+    }).format(new Date(NOW));
+    expect(text?.replaceAll("\u00a0", " ")).toContain(`Saved ${expected}`);
+    expect(text).not.toContain(READY_OFFLINE_GENERATED_AT_PLACEHOLDER);
+    expect(text).toMatch(
+      new RegExp(`${READY_OFFLINE_NOTE_ATTR}=""[^>]*${READY_COPY_GENERATED_AT_ATTR}="${NOW}"`),
+    );
+  });
+
+  it("does not make a replayed server page look newer using the device clock", async () => {
+    const deviceSaveAt = NOW + 40 * 60_000;
+    expect(
+      await saveReadyPage(store.storage, `/ready/${TOKEN}`, page("replayed page"), deviceSaveAt),
+    ).toBe(true);
+    const text = await (
+      await readyPageFallback(store.storage, `/ready/${TOKEN}`, deviceSaveAt)
+    )?.text();
+    const serverLabel = new Intl.DateTimeFormat("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      timeZoneName: "short",
+      timeZone: "America/New_York",
+    }).format(new Date(NOW));
+    expect(text?.replaceAll("\u00a0", " ")).toContain(`No signal: ${serverLabel}`);
+    expect(text).toContain(`${READY_COPY_GENERATED_AT_ATTR}="${NOW}"`);
+    expect(text).not.toContain(`${READY_COPY_GENERATED_AT_ATTR}="${deviceSaveAt}"`);
+  });
+
+  it.each([
+    ["missing generation metadata", ""],
+    [
+      "duplicate generation metadata",
+      `<meta name="${READY_COPY_GENERATED_AT_META}" content="${NOW}"/>`,
+    ],
+  ])("does not save a response with %s", async (_label, extraMetadata) => {
+    const generationMeta = `<meta name="${READY_COPY_GENERATED_AT_META}" content="${NOW}"/>`;
+    const body = [
+      `<meta name="${READY_COPY_LOCALE_META}" content="en-US"/>`,
+      `<meta name="${READY_COPY_TIME_ZONE_META}" content="America/New_York"/>`,
+      extraMetadata === "" ? "" : generationMeta,
+      extraMetadata,
+      `<p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">${READY_OFFLINE_GENERATED_AT_PLACEHOLDER}</p>`,
+    ].join("");
+    expect(await saveReadyPage(store.storage, `/ready/${TOKEN}`, renderedPage(body), NOW)).toBe(
+      false,
+    );
+    expect(store.caches.get(READY_CACHE_NAME)?.size ?? 0).toBe(0);
+  });
+
+  it.each([
+    [
+      "English",
+      "No signal: this is the copy your phone saved. Anything you change here needs signal.",
+      "No signal: this is the copy your phone saved. Save time unavailable; later changes may be missing. Anything you change here needs signal.",
+    ],
+    [
+      "Spanish",
+      "Sin cobertura: esta es la copia que guardó tu teléfono. Para cambiar algo aquí necesitas cobertura.",
+      "Sin cobertura: esta es la copia que guardó tu teléfono. No se conoce la hora de guardado; puede que falten cambios posteriores. Para cambiar algo aquí necesitas cobertura.",
+    ],
+  ])(
+    "transforms the exact historical %s banner without inventing a time",
+    async (_locale, oldNote, warning) => {
+      await saveReadyPage(store.storage, `/ready/${TOKEN}`, page("current copy"), NOW);
+      const cache = await store.storage.open(READY_CACHE_NAME);
+      const previous = await cache.match(READY_COPY_KEY);
+      expect(previous).toBeDefined();
+      await cache.put(
+        READY_COPY_KEY,
+        new Response(
+          `<meta name="${READY_KEEP_UNTIL_META}" content="${NOW + 30 * DAY_MS}"/><p ${READY_OFFLINE_NOTE_ATTR}="">${oldNote}</p><a href="/ready/__diveday_kept_token__">Return</a>`,
+          { headers: previous?.headers },
+        ),
+      );
+
+      expect(
+        await readyPageFallback(store.storage, `/ready/${OTHER}`, NOW + 1_000),
+      ).toBeUndefined();
+      expect(store.caches.get(READY_CACHE_NAME)?.size).toBe(1);
+      const served = await readyPageFallback(store.storage, `/ready/${TOKEN}`, NOW + 1_000);
+      const text = await served?.text();
+      expect(text).toContain(warning);
+      expect(text).not.toContain("__diveday_ready_saved_at__");
+      expect(text).not.toContain(READY_COPY_GENERATED_AT_ATTR);
+      expect(text).toContain(`/ready/${TOKEN}`);
+      expect(text).not.toContain("__diveday_kept_token__");
+      expect(store.caches.get(READY_CACHE_NAME)?.size).toBe(1);
+    },
+  );
+
+  it.each([
+    ["unknown text", `<p ${READY_OFFLINE_NOTE_ATTR}="">Unrecognized older banner</p>`],
+    [
+      "malformed markup",
+      `<p ${READY_OFFLINE_NOTE_ATTR}="">No signal: this is the copy your phone saved. Anything you change here needs signal.`,
+    ],
+    [
+      "duplicate banners",
+      `<p ${READY_OFFLINE_NOTE_ATTR}="">No signal: this is the copy your phone saved. Anything you change here needs signal.</p><p ${READY_OFFLINE_NOTE_ATTR}="">No signal: this is the copy your phone saved. Anything you change here needs signal.</p>`,
+    ],
+    ["missing banner", "<p>Old saved page without a recognized banner</p>"],
+  ])(
+    "fails closed for a matching path with %s, without deleting on a wrong-path probe",
+    async (_case, body) => {
+      await saveReadyPage(store.storage, `/ready/${TOKEN}`, page("current copy"), NOW);
+      const cache = await store.storage.open(READY_CACHE_NAME);
+      const previous = await cache.match(READY_COPY_KEY);
+      expect(previous).toBeDefined();
+      await cache.put(READY_COPY_KEY, new Response(body, { headers: previous?.headers }));
+
+      expect(
+        await readyPageFallback(store.storage, `/ready/${OTHER}`, NOW + 1_000),
+      ).toBeUndefined();
+      expect(store.caches.get(READY_CACHE_NAME)?.size).toBe(1);
+      expect(
+        await readyPageFallback(store.storage, `/ready/${TOKEN}`, NOW + 1_000),
+      ).toBeUndefined();
+      expect(store.caches.get(READY_CACHE_NAME)?.size ?? 0).toBe(0);
+    },
+  );
+
+  it.each([
+    ["locale", `name="${READY_COPY_TIME_ZONE_META}" content="America/New_York"`],
+    ["shop time zone", `name="${READY_COPY_LOCALE_META}" content="es-ES"`],
+    ["valid locale", `name="${READY_COPY_LOCALE_META}" content="not-a-locale"`],
+    ["valid shop time zone", `name="${READY_COPY_TIME_ZONE_META}" content="Not/AZone"`],
+  ])("does not save a timestamped copy without a usable %s", async (_label, metadata) => {
+    const body = `${metadata}<p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">${READY_OFFLINE_GENERATED_AT_PLACEHOLDER}</p>`;
+    expect(await saveReadyPage(store.storage, `/ready/${TOKEN}`, page(body), NOW)).toBe(false);
+    expect(store.caches.get(READY_CACHE_NAME)?.size ?? 0).toBe(0);
+  });
+
+  it.each([
+    ["missing", `<p>Unmarked page content</p>`],
+    [
+      "duplicate",
+      `<p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">${READY_OFFLINE_GENERATED_AT_PLACEHOLDER}</p><p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">${READY_OFFLINE_GENERATED_AT_PLACEHOLDER}</p>`,
+    ],
+    [
+      "malformed duplicate",
+      `<p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">${READY_OFFLINE_GENERATED_AT_PLACEHOLDER}</p><p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">unfinished`,
+    ],
+    [
+      "malformed",
+      `<p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">${READY_OFFLINE_GENERATED_AT_PLACEHOLDER}<strong>nested markup</strong></p>`,
+    ],
+  ])("does not save a current-format response with a %s offline banner", async (_case, banner) => {
+    const body = [
+      `<meta name="${READY_COPY_LOCALE_META}" content="en-US"/>`,
+      `<meta name="${READY_COPY_TIME_ZONE_META}" content="America/New_York"/>`,
+      `<meta name="${READY_COPY_GENERATED_AT_META}" content="${NOW}"/>`,
+      banner,
+    ].join("");
+    expect(await saveReadyPage(store.storage, `/ready/${TOKEN}`, renderedPage(body), NOW)).toBe(
+      false,
+    );
+    expect(store.caches.get(READY_CACHE_NAME)?.size ?? 0).toBe(0);
+  });
+
+  it.each([
+    ["missing", (html: string, banner: string) => html.replace(banner, "")],
+    ["duplicate", (html: string, banner: string) => html.replace(banner, `${banner}${banner}`)],
+    [
+      "malformed duplicate",
+      (html: string, banner: string) =>
+        html.replace(banner, `${banner}<p ${READY_OFFLINE_NOTE_ATTR}="">unfinished`),
+    ],
+    [
+      "malformed",
+      (html: string, banner: string) =>
+        html.replace(banner, banner.replace("<p", "<div").replace("</p>", "</div>")),
+    ],
+    [
+      "wrong save time",
+      (html: string) =>
+        html.replace(
+          new RegExp(`${READY_COPY_GENERATED_AT_ATTR}="\\d+"`),
+          `${READY_COPY_GENERATED_AT_ATTR}="${NOW - DAY_MS}"`,
+        ),
+    ],
+    [
+      "missing time zone",
+      (html: string) => html.replace(/<meta name="diveday-ready-copy-time-zone"[^>]*>/, ""),
+    ],
+    [
+      "missing generation time",
+      (html: string) => html.replace(/<meta name="diveday-ready-copy-generated-at"[^>]*>/, ""),
+    ],
+    [
+      "duplicate generation time",
+      (html: string) =>
+        html.replace(/(<meta name="diveday-ready-copy-generated-at"[^>]*>)/, "$1$1"),
+    ],
+  ])(
+    "deletes a matching-path current copy with a %s banner, never on wrong-path lookup",
+    async (_case, alter) => {
+      await saveReadyPage(store.storage, `/ready/${TOKEN}`, page("current"), NOW);
+      const cache = await store.storage.open(READY_CACHE_NAME);
+      const previous = await cache.match(READY_COPY_KEY);
+      expect(previous).toBeDefined();
+      const html = await previous?.text();
+      const banner = html?.match(/<p\b[^>]*data-ready-offline-note=""[^>]*>[^<>]*<\/p>/)?.[0];
+      expect(html).toBeDefined();
+      expect(banner).toBeDefined();
+      await cache.put(
+        READY_COPY_KEY,
+        new Response(alter(html ?? "", banner ?? ""), { headers: previous?.headers }),
+      );
+
+      expect(
+        await readyPageFallback(store.storage, `/ready/${OTHER}`, NOW + 1_000),
+      ).toBeUndefined();
+      expect(store.caches.get(READY_CACHE_NAME)?.size).toBe(1);
+      expect(
+        await readyPageFallback(store.storage, `/ready/${TOKEN}`, NOW + 1_000),
+      ).toBeUndefined();
+      expect(store.caches.get(READY_CACHE_NAME)?.size ?? 0).toBe(0);
+    },
+  );
+
+  it("formats Spanish server generation times in the shop zone", async () => {
+    const locale = "es-ES";
+    const timeZone = "Pacific/Auckland";
+    const body = [
+      `<meta name="${READY_COPY_LOCALE_META}" content="${locale}"/>`,
+      `<meta name="${READY_COPY_TIME_ZONE_META}" content="${timeZone}"/>`,
+      `<meta name="${READY_COPY_GENERATED_AT_META}" content="${NOW}"/>`,
+      `<p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">Sin cobertura: ${READY_OFFLINE_GENERATED_AT_PLACEHOLDER}</p>`,
+    ].join("");
+    expect(await saveReadyPage(store.storage, `/ready/${TOKEN}`, page(body), NOW)).toBe(true);
+    const text = await (await readyPageFallback(store.storage, `/ready/${TOKEN}`, NOW))?.text();
+    const expected = new Intl.DateTimeFormat(locale, {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      timeZoneName: "short",
+      timeZone,
+    }).format(new Date(NOW));
+    expect(text?.replaceAll("\u00a0", " ")).toContain(`Sin cobertura: ${expected}`);
   });
 
   /**
@@ -295,6 +589,13 @@ describe("saveReadyPage and readyPageFallback", () => {
     expect(store.caches.get(READY_CACHE_NAME)?.size).toBe(0);
   });
 
+  it("keeps cancellation ordering in one bounded storage record across many paths", async () => {
+    for (let index = 0; index < 20; index += 1) {
+      await forgetReadyPage(store.storage, `/ready/${String(index).padStart(43, "A")}`, NOW);
+    }
+    expect(store.caches.get(READY_FORGOTTEN_CACHE_NAME)?.size).toBe(1);
+  });
+
   /**
    * Security review 2026-10-24 (#2979, finding 2): on a slow link a keep
    * request's fetch can start before the cancel and answer after it. What it
@@ -302,20 +603,63 @@ describe("saveReadyPage and readyPageFallback", () => {
    */
   it("stores nothing from a fetch that began before the path was forgotten", async () => {
     const path = `/ready/${TOKEN}`;
+    const staleRequest = await beginReadyPageRequest(store.storage, path);
     await forgetReadyPage(store.storage, path, NOW + 10);
-    expect(await saveReadyPage(store.storage, path, page("stale"), NOW + 20, NOW + 5)).toBe(false);
+    expect(await saveReadyPage(store.storage, path, page("stale"), NOW + 20, staleRequest)).toBe(
+      false,
+    );
     expect(store.caches.get(READY_CACHE_NAME)?.size ?? 0).toBe(0);
     // A load asked for after the forget is kept as ever, and another path is untouched.
-    expect(await saveReadyPage(store.storage, path, page("fresh"), NOW + 20, NOW + 15)).toBe(true);
+    const freshRequest = await beginReadyPageRequest(store.storage, path);
+    expect(await saveReadyPage(store.storage, path, page("fresh"), NOW + 20, freshRequest)).toBe(
+      true,
+    );
+    const otherRequest = await beginReadyPageRequest(store.storage, `/ready/${OTHER}`);
     expect(
-      await saveReadyPage(store.storage, `/ready/${OTHER}`, page("other"), NOW + 20, NOW + 5),
+      await saveReadyPage(store.storage, `/ready/${OTHER}`, page("other"), NOW + 20, otherRequest),
     ).toBe(true);
+  });
+
+  it("keeps the cancellation epoch across worker restart when the device clock moves backward", async () => {
+    const path = `/ready/${TOKEN}`;
+    const request = await beginReadyPageRequest(store.storage, path);
+    const cancellationObserved = NOW - 10;
+    await forgetReadyPage(store.storage, path, cancellationObserved);
+    vi.resetModules();
+    const restarted = await import("./ready-page-cache");
+
+    expect(
+      await restarted.saveReadyPage(
+        store.storage,
+        path,
+        page("pre-cancel page"),
+        NOW + 20,
+        request,
+      ),
+    ).toBe(false);
+    expect(await restarted.readyPageFallback(store.storage, path, NOW + 20)).toBeUndefined();
+  });
+
+  it("lets only the newest overlapping request publish, even after a worker restart", async () => {
+    const path = `/ready/${TOKEN}`;
+    const older = await beginReadyPageRequest(store.storage, path);
+    const newer = await beginReadyPageRequest(store.storage, path);
+
+    expect(await saveReadyPage(store.storage, path, page("newer response"), NOW, newer)).toBe(true);
+    expect(await saveReadyPage(store.storage, path, page("older response"), NOW, older)).toBe(
+      false,
+    );
+    expect(await (await readyPageFallback(store.storage, path, NOW))?.text()).toContain(
+      "newer response",
+    );
   });
 
   it("drops the copy a save put down when the forget lands while it was storing", async () => {
     const path = `/ready/${TOKEN}`;
+    const request = await beginReadyPageRequest(store.storage, path);
     const open = store.storage.open.bind(store.storage);
     let forgot = false;
+    let forgetting: Promise<boolean> | undefined;
     const racing = {
       delete: store.storage.delete.bind(store.storage),
       open: async (name: string) => {
@@ -326,13 +670,53 @@ describe("saveReadyPage and readyPageFallback", () => {
             await cache.put(key as string, response);
             if (!forgot && name === READY_CACHE_NAME) {
               forgot = true;
-              await forgetReadyPage(store.storage, path, NOW + 10);
+              forgetting = forgetReadyPage(store.storage, path, NOW + 10);
             }
           },
         };
       },
     } as unknown as CacheStorage;
-    expect(await saveReadyPage(racing, path, page("stale"), NOW + 20, NOW + 5)).toBe(false);
+    expect(await saveReadyPage(racing, path, page("stale"), NOW + 20, request)).toBe(false);
+    expect(await forgetting).toBe(true);
+    expect(store.caches.get(READY_CACHE_NAME)?.size ?? 0).toBe(0);
+  });
+
+  it("removes a stale copy when cancellation lands after validation but before the write completes", async () => {
+    const path = `/ready/${TOKEN}`;
+    const request = await beginReadyPageRequest(store.storage, path);
+    const open = store.storage.open.bind(store.storage);
+    let enteredPut: (() => void) | undefined;
+    let releasePut: (() => void) | undefined;
+    const putEntered = new Promise<void>((resolve) => {
+      enteredPut = resolve;
+    });
+    const putGate = new Promise<void>((resolve) => {
+      releasePut = resolve;
+    });
+    const racing = {
+      delete: store.storage.delete.bind(store.storage),
+      open: async (name: string) => {
+        const cache = await open(name);
+        return {
+          ...cache,
+          put: async (key: RequestInfo | URL, response: Response) => {
+            if (name === READY_CACHE_NAME) {
+              enteredPut?.();
+              await putGate;
+            }
+            await cache.put(key as string, response);
+          },
+        };
+      },
+    } as unknown as CacheStorage;
+    const saving = saveReadyPage(racing, path, page("pre-cancel page"), NOW, request);
+
+    await putEntered;
+    const forgetting = forgetReadyPage(store.storage, path, NOW - 10);
+    releasePut?.();
+
+    expect(await saving).toBe(false);
+    expect(await forgetting).toBe(true);
     expect(store.caches.get(READY_CACHE_NAME)?.size ?? 0).toBe(0);
   });
 
@@ -347,6 +731,41 @@ describe("saveReadyPage and readyPageFallback", () => {
     } as unknown as CacheStorage;
     await forgetReadyPage(broken, `/ready/${TOKEN}`, NOW);
     expect(store.caches.has(READY_CACHE_NAME)).toBe(false);
+  });
+
+  it("does not acknowledge a failed epoch write or let an in-flight save republish", async () => {
+    const path = `/ready/${TOKEN}`;
+    const pendingRequest = beginReadyPageRequest(store.storage, path);
+    const broken = {
+      delete: store.storage.delete.bind(store.storage),
+      open: async (name: string) => {
+        const cache = await store.storage.open(name);
+        if (name !== READY_FORGOTTEN_CACHE_NAME) return cache;
+        return {
+          ...cache,
+          put: async () => {
+            throw new Error("quota exceeded");
+          },
+        };
+      },
+    } as unknown as CacheStorage;
+
+    const forgetting = forgetReadyPage(broken, path, NOW);
+    const request = await pendingRequest;
+    expect(await forgetting).toBe(false);
+    expect(
+      await saveReadyPage(store.storage, path, page("pre-forget response"), NOW, request),
+    ).toBe(false);
+    expect(store.caches.get(READY_CACHE_NAME)?.size ?? 0).toBe(0);
+
+    // A later request durably replaces the old request ID even though the
+    // dedicated forget attempt failed; after restart, the old response stays stale.
+    await beginReadyPageRequest(store.storage, path);
+    vi.resetModules();
+    const restarted = await import("./ready-page-cache");
+    expect(
+      await restarted.saveReadyPage(store.storage, path, page("pre-forget response"), NOW, request),
+    ).toBe(false);
   });
 
   it("keeps nothing that is not the page itself", async () => {

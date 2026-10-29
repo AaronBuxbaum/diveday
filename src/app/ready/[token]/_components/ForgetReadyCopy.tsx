@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { forgetThisReadyPage } from "@/lib/ready-offline";
 
 /**
@@ -9,9 +9,14 @@ import { forgetThisReadyPage } from "@/lib/ready-offline";
  * redirect reaches a hydrated page without one, so the card asks the worker
  * itself. Silent: a phone with no worker has no copy to forget.
  */
-export function ForgetReadyCopy() {
+export function ForgetReadyCopy({ failedText }: { failedText: string }) {
+  const [failed, setFailed] = useState(false);
   useEffect(() => {
-    void forgetThisReadyPage();
+    void forgetThisReadyPage().then((ok) => setFailed(!ok));
   }, []);
-  return null;
+  return failed ? (
+    <p role="status" className="mx-auto max-w-prose px-4 text-center text-sm text-warning-strong">
+      {failedText}
+    </p>
+  ) : null;
 }

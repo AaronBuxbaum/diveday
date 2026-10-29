@@ -87,16 +87,16 @@ describe("GitHubActionsRestoreDrillRole", () => {
     expect(serialized).not.toContain("Backup");
   });
 
-  it("may sign in to ECR Public and mint a bearer token for that service alone", () => {
+  it("may sign in to ECR Public and mint the bearer token it needs", () => {
     const template = synthesize();
     const [logicalId] = drillRole(template);
     const allows = attachedStatements(template, logicalId).filter(
       (statement) => statement.Effect === "Allow",
     );
     const bearer = allows.find((statement) => statement.Action === "sts:GetServiceBearerToken");
-    expect(bearer?.Condition).toEqual({
-      StringEquals: { "sts:AWSServiceName": "ecr-public.amazonaws.com" },
-    });
+    // A condition on sts:AWSServiceName does not match the real request (AccessDenied in
+    // production, 2026-10-29), so the statement must stay unconditioned.
+    expect(bearer?.Condition).toBeUndefined();
     expect(bearer?.Resource).toBe("*");
     const signIn = allows.find(
       (statement) => statement.Action === "ecr-public:GetAuthorizationToken",

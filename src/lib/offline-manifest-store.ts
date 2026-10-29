@@ -167,6 +167,8 @@ export const OFFLINE_MANIFEST_PENDING_GRACE_MS = 2 * OFFLINE_MANIFEST_MAX_RETENT
  * describes a person.
  */
 export type DiscardedOfflineRecord = {
+  /** Stable identity keeps a later loss on the same trip from being acknowledged accidentally. */
+  noticeId: string;
   tripId: string;
   tripTitle: string;
   shopName: string;
@@ -496,6 +498,7 @@ async function noteDiscardedRecord(
       const next = [
         ...existing,
         {
+          noticeId: crypto.randomUUID(),
           tripId: trip?.id ?? "",
           tripTitle: trip?.title ?? "",
           shopName: envelope.snapshot.shop.name,
@@ -545,16 +548,14 @@ export async function readDiscardedOfflineRecords(): Promise<DiscardedOfflineRec
 
 /** Clears the notice above, once a human has actually seen it. */
 export async function acknowledgeDiscardedOfflineRecords(
-  acknowledged: Array<Pick<DiscardedOfflineRecord, "tripId" | "shopSlug">>,
+  acknowledged: Array<Pick<DiscardedOfflineRecord, "noticeId">>,
 ): Promise<void> {
   const db = await openDatabase();
   try {
     await withNoticeLock(async () => {
-      const acknowledgedKeys = new Set(
-        acknowledged.map(({ shopSlug, tripId }) => `${shopSlug}\u0000${tripId}`),
-      );
+      const acknowledgedIds = new Set(acknowledged.map(({ noticeId }) => noticeId));
       const remaining = (await readNotices(db)).filter(
-        (notice) => !acknowledgedKeys.has(`${notice.shopSlug}\u0000${notice.tripId}`),
+        (notice) => !acknowledgedIds.has(notice.noticeId),
       );
       const transaction = db.transaction(KEY_STORE, "readwrite");
       const notices = transaction.objectStore(KEY_STORE);

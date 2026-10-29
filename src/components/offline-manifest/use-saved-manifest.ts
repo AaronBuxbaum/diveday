@@ -40,12 +40,24 @@ import {
   useSavedManifestList,
   useTripPendingManifestInventory,
 } from "./use-saved-manifest-list";
+
 import {
   createSelectedTripStorageState,
   type SelectedTripStorageState,
   useSelectedTripPurgeState,
   useSelectedTripStorage,
 } from "./use-selected-trip-storage";
+
+function acknowledgeDiscardedNotices(
+  visibleNotices: DiscardedOfflineRecord[],
+  setDiscarded: Dispatch<SetStateAction<DiscardedOfflineRecord[]>>,
+): void {
+  // Clear the button immediately; if persistence fails, the notice returns on
+  // the next open. IDs preserve notices that arrived after the UI read.
+  const noticeIds = new Set(visibleNotices.map(({ noticeId }) => noticeId));
+  setDiscarded((current) => current.filter((notice) => !noticeIds.has(notice.noticeId)));
+  void acknowledgeDiscardedOfflineRecords(visibleNotices).catch(() => {});
+}
 
 function describeDiscardedNoteEvent(
   event: OfflineRollCallEvent | OfflineChecklistEvent,
@@ -786,19 +798,8 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
     tripPurgedRef,
   ]);
 
-  const acknowledgeDiscarded = (visibleNotices: DiscardedOfflineRecord[]) => {
-    // Cleared on screen first: the button must feel instant on a boat, and if
-    // the write behind it fails the notice simply comes back on the next open.
-    // Only notices the captain could see are removed; another shop's filtered
-    // warning remains available for its crew on this shared device.
-    const keys = new Set(
-      visibleNotices.map(({ shopSlug, tripId }) => `${shopSlug}\u0000${tripId}`),
-    );
-    setDiscarded((current) =>
-      current.filter((notice) => !keys.has(`${notice.shopSlug}\u0000${notice.tripId}`)),
-    );
-    void acknowledgeDiscardedOfflineRecords(visibleNotices).catch(() => {});
-  };
+  const acknowledgeDiscarded = (visibleNotices: DiscardedOfflineRecord[]) =>
+    acknowledgeDiscardedNotices(visibleNotices, setDiscarded);
 
   const verifiedTenantSlug = verifiedTenantRevision > 0 ? verifiedTenantSlugRef.current : null;
   const tripNoteLossMessage = selectedTripNoteLossMessage(envelope, verifiedTenantSlug, t);
