@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { issueAccountToken } from "./account-tokens";
@@ -57,10 +57,12 @@ async function requireShop(db: Db, slug: string) {
 }
 
 describe("deleteDemoShopCascade", () => {
-  it("removes a demo shop", async () => {
+  it("still removes a demo after the retired saved answers table has been dropped", async () => {
     const { db } = ctx;
     const { slug } = await createDemoShop(db, { history: false });
     const shop = await requireShop(db, slug);
+    await db.execute(sql`drop table if exists inbox_saved_answers`);
+
     await deleteDemoShopCascade(db, shop.id);
     expect(await findShop(db, slug)).toBeUndefined();
   });
@@ -234,10 +236,15 @@ describe("deleteDemoShopCascade", () => {
     const shop = await requireShop(db, slug);
     const [person] = await db.select().from(people).where(eq(people.shopId, shop.id)).limit(1);
     if (!person) throw new Error("test setup: demo shop has no people");
-    const [trip] = await db.select().from(trips).where(eq(trips.shopId, shop.id)).limit(1);
-    if (!trip) throw new Error("test setup: demo shop has no trips");
-    const [booking] = await db.select().from(bookings).where(eq(bookings.tripId, trip.id)).limit(1);
-    if (!booking) throw new Error("test setup: demo trip has no bookings");
+    const [bookedDeparture] = await db
+      .select({ trip: trips, booking: bookings })
+      .from(trips)
+      .innerJoin(bookings, eq(bookings.tripId, trips.id))
+      .where(and(eq(trips.shopId, shop.id), eq(bookings.shopId, shop.id)))
+      .orderBy(asc(trips.startsAt), asc(trips.id), asc(bookings.id))
+      .limit(1);
+    if (!bookedDeparture) throw new Error("test setup: demo shop has no booked trip");
+    const { trip, booking } = bookedDeparture;
 
     const [blowout] = await db
       .insert(tripBlowouts)
