@@ -39,6 +39,7 @@ const COPY = {
   clockRollbackHeading: "Phone clock looks wrong",
   clockRollbackSaved: `This page was generated ${READY_ROLLBACK_SAVED_AT_PLACEHOLDER}. Reconnect to check the current trip details.`,
   clockRollbackUnknown: "The saved time is unknown. Reconnect to check current trip details.",
+  clockUnverified: "Phone clock could not be verified. Reconnect to check current trip details.",
 };
 const KEEP_UNTIL = 1_800_000_000_000;
 const LOCALE = "en-US";
@@ -58,6 +59,8 @@ describe("ReadyOfflineCopy", () => {
     expect(html).toContain('data-ready-clock-rollback="" hidden');
     expect(html).toContain("Phone clock looks wrong");
     expect(html).toContain(READY_ROLLBACK_SAVED_AT_PLACEHOLDER);
+    expect(html).toContain('data-ready-clock-unverified="" hidden');
+    expect(html).toContain("Phone clock could not be verified.");
   });
 
   it("online, says nothing and keeps the page on the phone", () => {

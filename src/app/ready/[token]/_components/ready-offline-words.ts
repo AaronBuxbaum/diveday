@@ -17,5 +17,6 @@ export function readyOfflineWords(t: DiverTranslator) {
       when: READY_ROLLBACK_SAVED_AT_PLACEHOLDER,
     }),
     clockRollbackUnknown: t("ready.offlineClockRollbackUnknown"),
+    clockUnverified: t("ready.offlineClockUnverified"),
   };
 }

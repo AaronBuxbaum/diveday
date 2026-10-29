@@ -78,7 +78,8 @@
   seat, a departure called off, an expired link) clears it. Read-only: offline the page says it is
   the saved copy, when the server generated it, and that details may have changed. A copy with no
   trusted generation time says so. The server time calibrates a stable device-clock offset for
-  expiry. If the phone clock is detected moving backward, the page is replaced by a warning. An
+  expiry. If the phone clock is detected moving backward, the page is replaced by a warning; if
+  clock history is unreadable, the copy stays visible with a verification warning. An
   unobserved forward clock jump can expire a copy early because it cannot be separated from elapsed
   time offline. Even when its time is known, an offline copy is a snapshot, not live readiness.
   Rules in `src/worker/ready-page-cache.ts`.

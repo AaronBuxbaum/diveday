@@ -9,6 +9,7 @@ export const LEGACY_READY_BANNER_COPY = new Map([
       savedCopyWarning: en.savedCopyWarning,
       clockRollbackHeading: en.clockRollbackHeading,
       clockRollbackUnknown: en.clockRollbackUnknown,
+      clockUnverified: en.clockUnverified,
     },
   ],
   [
@@ -17,6 +18,7 @@ export const LEGACY_READY_BANNER_COPY = new Map([
       savedCopyWarning: es.savedCopyWarning,
       clockRollbackHeading: es.clockRollbackHeading,
       clockRollbackUnknown: es.clockRollbackUnknown,
+      clockUnverified: es.clockUnverified,
     },
   ],
 ]);

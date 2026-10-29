@@ -1015,6 +1015,7 @@
     "offlineClockRollbackHeading": "El reloj del teléfono parece incorrecto",
     "offlineClockRollbackSaved": "Esta página se generó {when}. Conéctate para revisar los detalles actuales de la salida antes de confiar en ellos.",
     "offlineClockRollbackUnknown": "No se conoce la hora de guardado. Esta página podría estar desactualizada. Conéctate para revisar los detalles actuales de la salida.",
+    "offlineClockUnverified": "No se pudo verificar el reloj del teléfono. Conéctate para revisar los detalles actuales de la salida.",
     "cancelledCopyForgetFailed": "Puede que la página guardada siga en este dispositivo. Libera espacio y vuelve a cargar esta página con conexión para intentarlo de nuevo.",
     "gearOnFile": "La tripulación ya tiene tus tallas.",
     "packageDivesUsed": "{line} · Usa {used, plural, one {# inmersión del paquete} other {# inmersiones del paquete}} ({left, plural, one {te queda #} other {te quedan #}}), una por tanque",

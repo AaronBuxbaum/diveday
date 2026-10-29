@@ -231,6 +231,66 @@ describe("saveReadyPage and readyPageFallback", () => {
     expect(served?.headers.get("x-diveday-ready-copy-time-state")).toBe("known");
   });
 
+  it("keeps the page but warns when a corrupt watermark hides an earlier high clock reading", async () => {
+    const path = `/ready/${TOKEN}`;
+    const body = `<meta name="${READY_COPY_LOCALE_META}" content="en-US"/><meta name="${READY_COPY_TIME_ZONE_META}" content="America/New_York"/><html><body><main><p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">No signal: ${READY_OFFLINE_GENERATED_AT_PLACEHOLDER}</p><p>offline trip copy</p><section data-ready-clock-rollback="" hidden><h1>Phone clock looks wrong</h1><p data-ready-clock-rollback-saved="" hidden>Generated ${READY_ROLLBACK_SAVED_AT_PLACEHOLDER}</p><p data-ready-clock-rollback-unknown="" hidden>Saved time unknown</p></section><section data-ready-clock-unverified="" hidden><p data-ready-clock-unverified-copy="" hidden>Phone clock could not be verified. Reconnect to check current trip details.</p></section></main></body></html>`;
+    expect(await saveReadyPage(store.storage, path, page(body), NOW + 2 * 60 * 60 * 1000)).toBe(
+      true,
+    );
+    const pageCache = await store.storage.open(READY_CACHE_NAME);
+    const saved = await pageCache.match(READY_COPY_KEY);
+    expect(saved).toBeDefined();
+    const headers = new Headers(saved?.headers);
+    headers.set("x-diveday-device-saved-at", String(NOW));
+    await pageCache.put(
+      READY_COPY_KEY,
+      new Response(await saved?.text(), {
+        status: saved?.status,
+        statusText: saved?.statusText,
+        headers,
+      }),
+    );
+    const clockCache = await store.storage.open("diveday-ready-clock-v1");
+    await clockCache.put(
+      "/ready/clock-observation",
+      new Response(null, { headers: { "x-diveday-clock-watermark": "corrupt" } }),
+    );
+
+    const served = await readyPageFallback(store.storage, path, NOW + 60 * 60 * 1000);
+    const text = await served?.text();
+
+    expect(text).toContain("offline trip copy");
+    expect(text).toContain("Phone clock could not be verified");
+    expect(served?.headers.get("x-diveday-ready-copy-time-state")).toBe("unverified");
+    expect(store.caches.get(READY_CACHE_NAME)?.size).toBe(1);
+
+    const confirmedRollback = await readyPageFallback(store.storage, path, NOW - 1);
+    expect(await confirmedRollback?.text()).toContain("Phone clock looks wrong");
+    expect(confirmedRollback?.headers.get("x-diveday-ready-copy-time-state")).toBe("rollback");
+    expect(store.caches.get(READY_CACHE_NAME)?.size).toBe(1);
+  });
+
+  it("keeps the page but warns when the watermark cannot be read", async () => {
+    const path = `/ready/${TOKEN}`;
+    const body = `<meta name="${READY_COPY_LOCALE_META}" content="en-US"/><meta name="${READY_COPY_TIME_ZONE_META}" content="America/New_York"/><html><body><main><p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">No signal: ${READY_OFFLINE_GENERATED_AT_PLACEHOLDER}</p><p>offline trip copy</p><section data-ready-clock-unverified="" hidden><p data-ready-clock-unverified-copy="" hidden>Phone clock could not be verified. Reconnect to check current trip details.</p></section></main></body></html>`;
+    expect(await saveReadyPage(store.storage, path, page(body), NOW)).toBe(true);
+    const originalOpen = store.storage.open.bind(store.storage);
+    vi.spyOn(store.storage, "open").mockImplementation(async (name) => {
+      const cache = await originalOpen(name);
+      return name === "diveday-ready-clock-v1"
+        ? { ...cache, match: async () => Promise.reject(new Error("clock watermark unavailable")) }
+        : cache;
+    });
+
+    const served = await readyPageFallback(store.storage, path, NOW + 1000);
+    const text = await served?.text();
+
+    expect(text).toContain("offline trip copy");
+    expect(text).toContain("Phone clock could not be verified");
+    expect(served?.headers.get("x-diveday-ready-copy-time-state")).toBe("unverified");
+    expect(store.caches.get(READY_CACHE_NAME)?.size).toBe(1);
+  });
+
   it("cancellation still removes a calibrated copy while the device clock is skewed", async () => {
     const path = `/ready/${TOKEN}`;
     const keepUntil = NOW + DAY_MS;

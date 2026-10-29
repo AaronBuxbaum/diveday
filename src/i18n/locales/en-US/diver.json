@@ -1015,6 +1015,7 @@
     "offlineClockRollbackHeading": "Phone clock looks wrong",
     "offlineClockRollbackSaved": "This saved page was generated {when}. Reconnect to check the current trip details before relying on them.",
     "offlineClockRollbackUnknown": "The saved time is unknown. This page may be out of date. Reconnect to check the current trip details.",
+    "offlineClockUnverified": "Phone clock could not be verified. Reconnect to check the current trip details.",
     "cancelledCopyForgetFailed": "The saved page may still be on this device. Free up device storage, then reload this page while online to try again.",
     "gearOnFile": "Your sizes are with the crew.",
     "packageDivesUsed": "{line} · Uses {used, plural, one {# package dive} other {# package dives}} ({left} left), one per tank",

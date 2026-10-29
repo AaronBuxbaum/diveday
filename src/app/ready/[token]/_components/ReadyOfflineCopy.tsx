@@ -47,6 +47,7 @@ export function ReadyOfflineCopy({
     clockRollbackHeading: string;
     clockRollbackSaved: string;
     clockRollbackUnknown: string;
+    clockUnverified: string;
   };
   keepUntil: number;
   locale: string;
@@ -103,6 +104,11 @@ export function ReadyOfflineCopy({
         </p>
         <p data-ready-clock-rollback-unknown="" hidden className="mt-3 text-base text-muted">
           {copy.clockRollbackUnknown}
+        </p>
+      </section>
+      <section data-ready-clock-unverified="" hidden className="mx-auto max-w-xl px-6 py-12">
+        <p data-ready-clock-unverified-copy="" hidden className="text-base text-muted">
+          {copy.clockUnverified}
         </p>
       </section>
       {/* Offline, the note above already says this is the saved copy. */}

@@ -340,7 +340,10 @@ export async function observeReadyPageClock(storage: CacheStorage, now: number):
   });
 }
 
-function fallbackHeaders(response: Response, state: "known" | "unknown" | "rollback"): Headers {
+function fallbackHeaders(
+  response: Response,
+  state: "known" | "unknown" | "rollback" | "unverified",
+): Headers {
   const headers = new Headers(response.headers);
   for (const name of [
     "content-length",
@@ -401,6 +404,27 @@ function rollbackWarningDocument(html: string, generatedAt: number): string | un
     `$1<main>${warning}</main>$2`,
   );
   return html.replace(body, replacement);
+}
+
+function unverifiedClockDocument(html: string, legacyCopy?: string): string | undefined {
+  const marker = html.match(
+    /<section\b(?=[^>]*\bdata-ready-clock-unverified="")[^>]*>[\s\S]*?<\/section>/i,
+  )?.[0];
+  if (marker) {
+    const body = html.match(/<body\b[^>]*>[\s\S]*?<\/body>/i)?.[0];
+    if (!body) return undefined;
+    const warning = revealMarked(
+      revealMarked(marker, "data-ready-clock-unverified"),
+      "data-ready-clock-unverified-copy",
+    );
+    return html.replace(body, body.replace(marker, warning));
+  }
+  if (!legacyCopy) return undefined;
+  const body = html.match(/<body\b[^>]*>[\s\S]*?<\/body>/i)?.[0];
+  const notice = `<p role="status">${escapedHTML(legacyCopy)}</p>`;
+  if (body) return html.replace(body, body.replace(/(<body\b[^>]*>)/i, `$1${notice}`));
+  const banner = visibleTextBanner(html);
+  return banner ? html.replace(banner.element, `${notice}${banner.element}`) : undefined;
 }
 
 async function pathHash(path: string): Promise<string> {
@@ -780,7 +804,7 @@ export async function readyPageFallback(
       headers: fallbackHeaders(cached, "rollback"),
     });
   }
-  await observeReadyPageClock(storage, now);
+  if (watermark.kind === "valid") await observeReadyPageClock(storage, now);
   // Rebase wall-clock elapsed time onto the trusted server generation instant.
   const estimatedServerNow =
     serverGeneratedAt !== null && deviceSavedAt !== null
@@ -792,6 +816,7 @@ export async function readyPageFallback(
     return undefined;
   }
   let copyHtml = storedHtml;
+  let legacyUnverifiedCopy: string | undefined;
   if (metaContent(storedHtml, READY_COPY_VERSION_META) === READY_COPY_VERSION) {
     const banner = visibleTextBanner(storedHtml);
     const generatedAtValues = banner?.opening.match(
@@ -813,6 +838,10 @@ export async function readyPageFallback(
       return undefined;
     }
   } else {
+    const legacyBanner = visibleTextBanner(storedHtml);
+    legacyUnverifiedCopy = legacyBanner
+      ? LEGACY_READY_BANNER_COPY.get(legacyBanner.text)?.clockUnverified
+      : undefined;
     const legacyCopy = transformLegacyReadyCopy(storedHtml);
     if (!legacyCopy) {
       // Unknown or malformed legacy copy: fail closed for this verified path.
@@ -832,6 +861,18 @@ export async function readyPageFallback(
     return undefined;
   }
   const html = copyHtml.replaceAll(TOKEN_PLACEHOLDER, tokenOf(path));
+  if (watermark.kind !== "valid") {
+    const warning = unverifiedClockDocument(html, legacyUnverifiedCopy);
+    if (!warning) {
+      await cache.delete(READY_COPY_KEY);
+      return undefined;
+    }
+    return new Response(warning, {
+      status: cached.status,
+      statusText: cached.statusText,
+      headers: fallbackHeaders(cached, "unverified"),
+    });
+  }
   return new Response(html, {
     status: cached.status,
     statusText: cached.statusText,
