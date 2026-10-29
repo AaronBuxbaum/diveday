@@ -19,6 +19,7 @@ import {
   getTotpSecret,
   grantStepUp,
   hasStepUp,
+  refreshAccountRecoveryCodes,
   storedSealings,
   verifyAccountSecondFactor,
 } from "./account-security";
@@ -103,6 +104,61 @@ describe("account-security recovery codes", () => {
     });
 
     expect(await verifyAccountSecondFactor(db, account.id, "ABCD234567")).toBe(false);
+  });
+});
+
+describe("refreshing account recovery codes", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("requires an enabled second factor and rejects a wrong code without changing recovery codes", async () => {
+    const { db, account } = await seededAccount();
+    expect(await refreshAccountRecoveryCodes(db, account.id, "000000")).toEqual({
+      ok: false,
+      reason: "invalid",
+    });
+
+    const { secret } = await enrolledEarlier(db, account.id);
+    const before = await getAccountSecurity(db, account.id);
+    const wrong = totpCode(secret, nowMs() + 10 * TOTP_STEP_SECONDS * 1000);
+    expect(await refreshAccountRecoveryCodes(db, account.id, wrong)).toEqual({
+      ok: false,
+      reason: "invalid",
+    });
+    expect((await getAccountSecurity(db, account.id))?.recoveryCodeHashes).toEqual(
+      before?.recoveryCodeHashes,
+    );
+  });
+
+  it("replaces old codes after a valid authenticator code", async () => {
+    const { db, account } = await seededAccount();
+    const { secret, recoveryCodes } = await enrolledEarlier(db, account.id);
+    const result = await refreshAccountRecoveryCodes(db, account.id, totpCode(secret));
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("rotation failed");
+    expect(result.codes.length).toBeGreaterThan(0);
+    expect(await verifyAccountSecondFactor(db, account.id, recoveryCodes[0] ?? "")).toBe(false);
+    expect(await verifyAccountSecondFactor(db, account.id, result.codes[0] ?? "")).toBe(true);
+  });
+
+  it("spends the recovery code used for rotation and replaces every previous code", async () => {
+    const { db, account } = await seededAccount();
+    const { recoveryCodes } = await enrolledEarlier(db, account.id);
+    const result = await refreshAccountRecoveryCodes(db, account.id, recoveryCodes[0] ?? "");
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("rotation failed");
+    expect(await verifyAccountSecondFactor(db, account.id, recoveryCodes[0] ?? "")).toBe(false);
+    expect(await verifyAccountSecondFactor(db, account.id, recoveryCodes[1] ?? "")).toBe(false);
+    expect(await verifyAccountSecondFactor(db, account.id, result.codes[0] ?? "")).toBe(true);
+  });
+
+  it("refuses rotation when the sealing key is unavailable", async () => {
+    const { db, account } = await seededAccount();
+    await enrolledEarlier(db, account.id);
+    vi.stubEnv("SECRET_ENCRYPTION_KEY", "");
+    expect(await refreshAccountRecoveryCodes(db, account.id, "000000")).toEqual({
+      ok: false,
+      reason: "unavailable",
+    });
   });
 });
 
