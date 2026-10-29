@@ -167,6 +167,7 @@ test("comment moderation is disclosed when the words land, not as a standing hin
 
 test("a booking canceled after the recap page loaded gets an honest notice, not a lie about a bad rating or a bad file (task 56)", async ({
   page,
+  request,
   staffStorageState,
   workerBaseURL,
 }) => {
@@ -184,26 +185,13 @@ test("a booking canceled after the recap page loaded gets an honest notice, not 
     ?.newContext({ baseURL: workerBaseURL, storageState: await staffStorageState("owner") });
   if (!staffContext) throw new Error("could not open a second browser context");
   const staffPage = makeActivitySafe(await staffContext.newPage());
-  // The seed schedules several other trips under this same title (task 56's
-  // fixture isn't the only "Two-Tank Reef — Molasses & French" departure),
-  // so finding it by title on the schedule board is ambiguous. Priya
-  // Sharma's own diver record links straight to her one still-scheduled
-  // trip — unambiguous by construction.
-  await staffPage.goto("/shop/blue-mantis/divers");
-  await staffPage.getByRole("searchbox", { name: "Search divers" }).fill("Priya Sharma");
-  await staffPage.getByRole("link", { name: "Priya Sharma", exact: true }).click();
-  // "The story" is the diver record's one chronological ledger now (slice 8a):
-  // the seats ahead lead it, so its first link identifies this booking's trip
-  // without an extra manifest navigation before opening the roster.
-  const tripHref = await staffPage
-    .getByRole("region", { name: "The story" })
-    .getByRole("link")
-    .first()
-    .getAttribute("href");
-  const tripId = tripHref?.match(/\/trips\/([^/?]+)/)?.[1];
-  if (!tripId) throw new Error("could not resolve the reef trip id from the diver story link");
-  // The diver record links to the trip manifest; the roster lives on the trip
-  // page itself, so go straight to that canonical route once we have its id.
+  // Resolve the seeded booking's canonical trip id through a guarded,
+  // read-only fixture endpoint instead of spending the test budget walking
+  // the diver directory and story to rediscover the same database relation.
+  const fixture = await request.get("/api/test/demo-recap-trip");
+  expect(fixture.status()).toBe(200);
+  const { tripId } = (await fixture.json()) as { tripId: string };
+  expect(tripId).toMatch(/^[0-9a-f-]{36}$/i);
   await staffPage.goto(`/shop/blue-mantis/trips/${tripId}`);
   const diverRow = staffPage.locator("li").filter({ hasText: "Priya Sharma" });
   // Removing a seat is administrative rather than the work of the day, so it
@@ -241,7 +229,9 @@ test("a booking canceled after the recap page loaded gets an honest notice, not 
   // is signed rather than stored and has deliberately no self-serve rescue
   // (issue #850), and for a booking that was cancelled or not boarded there is
   // no recap for the shop to send either (issue #1334).
-  await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
+  await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`, {
+    waitUntil: "domcontentloaded",
+  });
   await expect(page.getByText("There’s no recap for this booking.")).toBeVisible();
   await expect(page.getByText(/fresh link/i)).toHaveCount(0);
   // What replaced the dead advice: the shop's own name and contact, which is

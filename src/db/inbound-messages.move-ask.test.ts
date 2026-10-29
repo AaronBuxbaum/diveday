@@ -1,4 +1,4 @@
-import { and, eq, gt, ne } from "drizzle-orm";
+import { and, asc, eq, gt, ne, notExists } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { MOVE_ASK_NOTE_MAX_LENGTH } from "@/lib/inbox";
 import { fileScopedShopContext, type seededShopContext } from "@/test/db";
@@ -120,22 +120,28 @@ describe("an Ask to move", () => {
    */
   it("stands for one departure: a moved seat asks again", async () => {
     const { db, shop } = ctx;
-    const { bookingId, tripId } = await aBooking();
+    const { bookingId, personId, tripId } = await aBooking();
     const first = await recordMoveAsk(db, { shopId: shop.id, bookingId, now: NOW });
     if (first.status !== "recorded") throw new Error(`expected recorded, got ${first.status}`);
     const [other] = await db
       .select({ id: trips.id })
       .from(trips)
-      .innerJoin(bookings, eq(bookings.id, bookingId))
       .where(
         and(
           eq(trips.shopId, shop.id),
-          ne(trips.id, bookings.tripId),
+          ne(trips.id, tripId),
           gt(trips.startsAt, NOW),
           liveTrip(),
           notRehearsal(),
+          notExists(
+            db
+              .select({ id: bookings.id })
+              .from(bookings)
+              .where(and(eq(bookings.tripId, trips.id), eq(bookings.personId, personId))),
+          ),
         ),
       )
+      .orderBy(asc(trips.startsAt), asc(trips.id))
       .limit(1);
     if (!other) throw new Error("expected a second seeded trip");
     await db.update(bookings).set({ tripId: other.id }).where(eq(bookings.id, bookingId));
@@ -332,11 +338,23 @@ describe("an Ask to move", () => {
 
   it("refuses a form for the departure staff already moved the seat from", async () => {
     const { db, shop } = ctx;
-    const { bookingId, tripId } = await aBooking();
+    const { bookingId, personId, tripId } = await aBooking();
     const [other] = await db
       .select({ id: trips.id })
       .from(trips)
-      .where(and(eq(trips.shopId, shop.id), ne(trips.id, tripId)))
+      .where(
+        and(
+          eq(trips.shopId, shop.id),
+          ne(trips.id, tripId),
+          notExists(
+            db
+              .select({ id: bookings.id })
+              .from(bookings)
+              .where(and(eq(bookings.tripId, trips.id), eq(bookings.personId, personId))),
+          ),
+        ),
+      )
+      .orderBy(asc(trips.startsAt), asc(trips.id))
       .limit(1);
     if (!other) throw new Error("expected another trip");
     await db.update(bookings).set({ tripId: other.id }).where(eq(bookings.id, bookingId));
