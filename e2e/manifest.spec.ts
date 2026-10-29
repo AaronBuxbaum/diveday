@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { Page, Route } from "@playwright/test";
 import {
   DEMO_MEDICAL_ALERT,
   DEMO_MEDICAL_ALERT_DIVER,
@@ -21,6 +21,7 @@ import {
   openTripAbout,
   openTripFromBoard,
   openTripTab,
+  tripPathByTitle,
   waiverLinkFromResult,
 } from "./helpers";
 
@@ -67,6 +68,36 @@ async function waitForShellPrimed(page: Page) {
       }, OFFLINE_MANIFEST_SHELL_VERSION),
     )
     .toBe(true);
+}
+
+async function activeShellState(page: Page, expectedVersion: string, priorCache: string) {
+  return page.evaluate(
+    async ({ expectedVersion, priorCache }) => {
+      const registration = await navigator.serviceWorker.getRegistration("/manifest-sw.js");
+      const active = registration?.active;
+      if (active?.state !== "activated") return null;
+      const version = await new Promise<string | null>((resolve) => {
+        const channel = new MessageChannel();
+        const timeout = setTimeout(() => {
+          channel.port1.close();
+          resolve(null);
+        }, 1_000);
+        channel.port1.onmessage = (event) => {
+          clearTimeout(timeout);
+          channel.port1.close();
+          resolve(event.data?.version ?? null);
+        };
+        active.postMessage({ type: "GET_SHELL_VERSION" }, [channel.port2]);
+      });
+      const cacheName = `diveday-offline-manifest-shell-${expectedVersion}`;
+      const keys = await caches.keys();
+      const shellCached =
+        keys.includes(cacheName) &&
+        Boolean(await (await caches.open(cacheName)).match("/offline-manifest"));
+      return { version, shellCached, priorCachePresent: keys.includes(priorCache) };
+    },
+    { expectedVersion, priorCache },
+  );
 }
 
 test("live manifest retains blocked divers and records an explicit not-boarded result", async ({
@@ -302,6 +333,102 @@ test("captain saves the full checkpoint manifest, reloads it offline, and reconc
   await expect(page.getByRole("status").filter({ hasText: "Everything’s sent" })).toBeVisible();
   // And the crew result stuck: reconciled, not rolled back by the server.
   await expect(crewRow.getByRole("button", { name: "Aboard — tap again to undo" })).toBeVisible();
+});
+
+test("a new shell worker replaces the older cache without losing encrypted roll call", async ({
+  page,
+  context,
+  request,
+}) => {
+  const oldVersion = `v${Number(OFFLINE_MANIFEST_SHELL_VERSION.slice(1)) - 1}`;
+  expect(Number(oldVersion.slice(1))).toBeGreaterThan(0);
+  const oldCache = `diveday-offline-manifest-shell-${oldVersion}`;
+  const currentCache = `diveday-offline-manifest-shell-${OFFLINE_MANIFEST_SHELL_VERSION}`;
+  const workerResponse = await request.get("/manifest-sw.js");
+  expect(workerResponse.status()).toBe(200);
+  const currentWorker = await workerResponse.text();
+  const versionPattern = new RegExp(
+    `var OFFLINE_MANIFEST_SHELL_VERSION = "${OFFLINE_MANIFEST_SHELL_VERSION}";`,
+  );
+  expect(currentWorker).toMatch(versionPattern);
+
+  let serveOldWorker = true;
+  const workerRoute = async (route: Route) => {
+    const response = await route.fetch();
+    if (!serveOldWorker) {
+      await route.fulfill({ response });
+      return;
+    }
+    const body = await response.text();
+    await route.fulfill({
+      response,
+      body: body.replace(versionPattern, `var OFFLINE_MANIFEST_SHELL_VERSION = "${oldVersion}";`),
+    });
+  };
+  const blockOfflineApi = (route: Route) => route.abort();
+  await context.route("**/manifest-sw.js", workerRoute);
+
+  try {
+    const tripPath = await tripPathByTitle(
+      page,
+      "blue-mantis",
+      "Two-Tank Reef — Molasses & French",
+    );
+    await page.goto(`${tripPath}/manifest`);
+    await page
+      .getByRole("link", { name: "After dive 1" })
+      .evaluate((link: HTMLElement) => link.click());
+    await expect(page).toHaveURL(/checkpoint=after_dive_1/);
+    await offlineCopySaved(page);
+    await openOnThisPhone(page);
+    await page.getByRole("link", { name: "Open offline roll call" }).click();
+    await expect(page.getByText("Offline manifest", { exact: true })).toBeVisible();
+    await expect
+      .poll(() => activeShellState(page, oldVersion, currentCache))
+      .toEqual({ version: oldVersion, shellCached: true, priorCachePresent: false });
+
+    await context.setOffline(true);
+    await page.reload();
+    await expect(page.getByText("No signal · device copy")).toBeVisible();
+    await page.getByRole("button", { name: "After dive 1" }).click();
+    const crewRow = page.locator("#offline-crew-roll-call").getByRole("listitem").first();
+    await crewRow.getByRole("button", { name: "Mark aboard" }).click();
+    await expect(crewRow.getByRole("button", { name: "Aboard — tap again to undo" })).toBeVisible();
+    await expect(
+      page.getByRole("status").filter({ hasText: "when you’re back in service" }),
+    ).toBeVisible();
+
+    // Permit the browser's worker update fetch while refusing the manifest
+    // reconciliation endpoints, so this queued record remains on-device.
+    await context.route("**/api/offline-manifests/**", blockOfflineApi);
+    await context.setOffline(false);
+    serveOldWorker = false;
+    await page.evaluate(async () => {
+      const registration = await navigator.serviceWorker.getRegistration("/manifest-sw.js");
+      await registration?.update();
+    });
+    await expect
+      .poll(() => activeShellState(page, OFFLINE_MANIFEST_SHELL_VERSION, oldCache))
+      .toEqual({
+        version: OFFLINE_MANIFEST_SHELL_VERSION,
+        shellCached: true,
+        priorCachePresent: false,
+      });
+
+    // A fresh page under the new active worker decrypts the same snapshot and
+    // queued event after the old shell cache has been removed.
+    await context.setOffline(true);
+    await page.reload();
+    await expect(page.getByText("No signal · device copy")).toBeVisible();
+    await page.getByRole("button", { name: "After dive 1" }).click();
+    const preservedCrewRow = page.locator("#offline-crew-roll-call").getByRole("listitem").first();
+    await expect(
+      preservedCrewRow.getByRole("button", { name: "Aboard — tap again to undo" }),
+    ).toBeVisible();
+  } finally {
+    await context.setOffline(false);
+    await context.unroute("**/manifest-sw.js", workerRoute);
+  }
 });
 
 test("a captain who lost the saved copy to storage eviction still lands on a page after a failed reload", async ({

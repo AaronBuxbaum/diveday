@@ -12,6 +12,7 @@ import {
   tripReadMarks,
   trips,
 } from "./schema";
+import { liveTrip } from "./trips-live";
 
 /**
  * The catch-up strip's reader, against a real database (issues #1202, #1187).
@@ -29,19 +30,28 @@ async function catchUpFixture() {
     .where(and(eq(people.shopId, shop.id), isNull(people.deletedAt)));
   const reader = staff.find((row) => row.role === "owner");
   const desk = staff.find((row) => row.role === "instructor" && row.id !== reader?.id);
-  const [trip] = await db
-    .select({ id: trips.id })
-    .from(trips)
-    .where(eq(trips.shopId, shop.id))
-    .limit(1);
-  if (!reader || !desk || !trip) throw new Error("catch-up fixture needs two staff and a trip");
-  const roster = await db
-    .select({ id: bookings.id, personId: bookings.personId })
+  const [rosterSeat] = await db
+    .select({
+      id: bookings.id,
+      personId: bookings.personId,
+      tripId: trips.id,
+    })
     .from(bookings)
-    .where(and(eq(bookings.shopId, shop.id), eq(bookings.tripId, trip.id)))
-    .limit(2);
-  const [seat] = roster;
-  if (!seat) throw new Error("catch-up fixture needs a seated diver");
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .where(
+      and(
+        eq(bookings.shopId, shop.id),
+        eq(trips.shopId, shop.id),
+        ne(bookings.status, "cancelled"),
+        liveTrip(),
+      ),
+    )
+    .limit(1);
+  if (!reader || !desk || !rosterSeat) {
+    throw new Error("catch-up fixture needs two staff and a seated diver");
+  }
+  const { tripId, ...seat } = rosterSeat;
+  const trip = { id: tripId };
   return { db, shop, reader, desk, trip, seat };
 }
 

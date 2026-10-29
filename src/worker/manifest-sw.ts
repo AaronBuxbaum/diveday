@@ -12,6 +12,7 @@ import {
 import {
   fetchOfflineManifestShopSlug,
   OFFLINE_FALLBACK_PARAM,
+  OFFLINE_MANIFEST_SHELL_VERSION,
   type OfflineFallbackReason,
   offlineManifestMayHoldMedicalAlertWords,
   offlineManifestPayloads,
@@ -48,17 +49,15 @@ import {
  * returns (`sync`, below). Neither was possible before; the worker could only
  * show a notification and hope somebody opened the app.
  *
- * Bump the trailing "-v<n>" on a deploy that changes the offline shell, and
- * bump `OFFLINE_MANIFEST_SHELL_VERSION` in src/lib/offline-manifests.ts to
- * match. The two are still compared at runtime (`getActiveOfflineShellVersion`)
- * to tell a crew member holding a worker from an older deploy — and the build
- * script now *asserts* they agree, so a mismatch fails the build instead of
- * shipping a worker that misreports its version from a boat.
+ * Bump `OFFLINE_MANIFEST_SHELL_VERSION` in src/lib/offline-manifests.ts when a
+ * deploy changes this shell. The cache key and the version sent to pages both
+ * derive from that one value, while encrypted manifest records keep their own
+ * independent version.
  */
 declare const self: ServiceWorkerGlobalScope;
 
-const CACHE_NAME = "diveday-offline-manifest-shell-v5";
-const SHELL_VERSION = CACHE_NAME.slice(CACHE_NAME.lastIndexOf("-v") + 1);
+const CACHE_NAME = `diveday-offline-manifest-shell-${OFFLINE_MANIFEST_SHELL_VERSION}`;
+const SHELL_VERSION = OFFLINE_MANIFEST_SHELL_VERSION;
 const OFFLINE_SHELL = "/offline-manifest";
 
 /** Dev chunk names can be reused after an edit; only production assets promise immutability. */

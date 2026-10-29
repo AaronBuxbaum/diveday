@@ -17,6 +17,7 @@ import {
 } from "@/lib/offline-manifest-store";
 import {
   OFFLINE_MANIFEST_RECORD_VERSION,
+  OFFLINE_MANIFEST_SHELL_VERSION,
   type OfflineManifestEnvelope,
   type OfflineManifestPayload,
   type OfflineRollCallEvent,
@@ -148,7 +149,7 @@ const scope = {
   addEventListener: (type: string, listener: (event: unknown) => void) => {
     listeners.set(type, listener);
   },
-  clients: { matchAll: clientsMatchAll },
+  clients: { claim: async () => {}, matchAll: clientsMatchAll },
   registration: { showNotification, scope: "https://dive.day/" },
   skipWaiting: () => {},
   location: new URL("https://dive.day/"),
@@ -765,5 +766,43 @@ describe("a navigation on a network that never answers", () => {
     );
     if (landed === "still waiting") throw new Error("the live page never arrived");
     expect(await landed.text()).toBe("live manifest");
+  });
+});
+
+describe("offline shell versioning", () => {
+  it("reports the shared shell version to clients", () => {
+    const postMessage = vi.fn();
+    const handler = listeners.get("message");
+    if (!handler) throw new Error("the worker registered no message listener");
+
+    handler({
+      data: { type: "GET_SHELL_VERSION" },
+      ports: [{ postMessage }],
+    });
+
+    expect(postMessage).toHaveBeenCalledWith({ version: OFFLINE_MANIFEST_SHELL_VERSION });
+  });
+
+  it("keeps the versioned shell cache and removes older shell caches on activation", async () => {
+    const currentCache = `diveday-offline-manifest-shell-${OFFLINE_MANIFEST_SHELL_VERSION}`;
+    const previousShellVersion = Number(OFFLINE_MANIFEST_SHELL_VERSION.slice(1)) - 1;
+    const oldCache = `diveday-offline-manifest-shell-v${previousShellVersion}`;
+    const unrelatedCache = "diveday-ready-pages-v1";
+    const deleted: string[] = [];
+    vi.stubGlobal("caches", {
+      keys: async () => [oldCache, currentCache, unrelatedCache],
+      delete: async (name: string) => {
+        deleted.push(name);
+        return true;
+      },
+    });
+    const handler = listeners.get("activate");
+    if (!handler) throw new Error("the worker registered no activate listener");
+    const waits: Promise<unknown>[] = [];
+
+    handler({ waitUntil: (promise: Promise<unknown>) => waits.push(promise) });
+    await Promise.all(waits);
+
+    expect(deleted).toEqual([oldCache]);
   });
 });

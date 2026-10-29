@@ -78,11 +78,10 @@ export const OFFLINE_MANIFEST_RECORD_VERSION = 4 as const;
  * `OFFLINE_MANIFEST_RECORD_VERSION` above, which versions the encrypted
  * snapshot payload. This one versions the *app shell itself* (the cached
  * HTML/JS `public/manifest-sw.js` serves while offline) and must be bumped
- * there in lockstep — `CACHE_NAME`'s `-v<n>` suffix — whenever a deploy
- * changes that shell. `manifest-sw.js` is a static file outside the Next.js
- * build, so it can't import this constant directly; the two are compared at
- * runtime instead (`getActiveOfflineShellVersion` in
- * `offline-manifest-store.ts`) to warn a crew member holding a copy of the
+ * whenever a deploy changes that shell. The bundled worker imports this
+ * constant for both its cache key and reported shell version; the two remain
+ * compared at runtime by `getActiveOfflineShellVersion` in
+ * `offline-manifest-store.ts` to warn a crew member holding a copy of the
  * shell from an older deploy (task 124 / persona 15, Leo) rather than
  * silently serving it with no signal anything's stale.
  *
