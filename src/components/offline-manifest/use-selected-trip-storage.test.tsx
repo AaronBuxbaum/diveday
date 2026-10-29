@@ -18,9 +18,36 @@ const tripPayload = (epoch: number): OfflineManifestPayload => ({
   erasureEpochToken: `${epoch}.1.${"A".repeat(43)}`,
 });
 
+class TestBroadcastChannel {
+  static channels: TestBroadcastChannel[] = [];
+  onmessage: ((event: { data: unknown }) => void) | null = null;
+  constructor(readonly name: string) {
+    TestBroadcastChannel.channels.push(this);
+  }
+  postMessage(data: unknown) {
+    for (const peer of TestBroadcastChannel.channels) {
+      if (peer !== this && peer.name === this.name) peer.onmessage?.({ data });
+    }
+  }
+  close() {
+    TestBroadcastChannel.channels = TestBroadcastChannel.channels.filter((peer) => peer !== this);
+  }
+}
+
+function suppressSameDocumentManifestEvent() {
+  const dispatch = window.dispatchEvent.bind(window);
+  const spy = vi
+    .spyOn(window, "dispatchEvent")
+    .mockImplementation((event) =>
+      event.type === "diveday-offline-manifest-change" ? true : dispatch(event),
+    );
+  return () => spy.mockRestore();
+}
+
 afterEach(() => {
   cleanup();
   window.dispatchEvent(new Event("pagehide"));
+  TestBroadcastChannel.channels = [];
   vi.unstubAllGlobals();
 });
 
@@ -35,6 +62,7 @@ afterEach(
 
 describe("selected-trip storage invalidation", () => {
   it("reloads the committed erasure disposition in an open trip view", async () => {
+    vi.stubGlobal("BroadcastChannel", TestBroadcastChannel);
     await saveOfflineManifest(tripPayload(1));
     const before = await appendOfflineRollCall(tripId, {
       bookingId,
@@ -68,11 +96,19 @@ describe("selected-trip storage invalidation", () => {
     await waitFor(() => expect(mounted.result.current.read).toBe(true));
     expect(mounted.result.current.envelope?.events[0]?.note).toBe("Nora Quinn is still below.");
 
-    await act(async () => {
-      await saveOfflineManifest(tripPayload(2));
-    });
+    const restoreLocalEvent = suppressSameDocumentManifestEvent();
+    try {
+      await act(async () => {
+        // A worker has no window event to dispatch; the shared channel reaches
+        // this mounted page after the IDB write commits.
+        await saveOfflineManifest(tripPayload(2));
+      });
+    } finally {
+      restoreLocalEvent();
+    }
 
     await waitFor(() => expect(mounted.result.current.envelope?.events[0]?.note).toBeNull());
+    expect(TestBroadcastChannel.channels).toHaveLength(1);
     expect(mounted.result.current.envelope?.events[0]).toMatchObject({
       status: "not_boarded",
       occurredAt: before.events[0]?.occurredAt,
@@ -81,30 +117,19 @@ describe("selected-trip storage invalidation", () => {
     });
   });
 
-  it("sends only a trip-key invalidation to another browsing context", async () => {
+  it("sends only a trip-key invalidation over the worker-to-page channel", async () => {
     const received: unknown[] = [];
-    class TestBroadcastChannel {
-      static channels: TestBroadcastChannel[] = [];
-      onmessage: ((event: { data: unknown }) => void) | null = null;
-      constructor(readonly name: string) {
-        TestBroadcastChannel.channels.push(this);
-      }
-      postMessage(data: unknown) {
-        for (const peer of TestBroadcastChannel.channels) {
-          if (peer !== this && peer.name === this.name) peer.onmessage?.({ data });
-        }
-      }
-      close() {
-        TestBroadcastChannel.channels = TestBroadcastChannel.channels.filter(
-          (peer) => peer !== this,
-        );
-      }
-    }
     vi.stubGlobal("BroadcastChannel", TestBroadcastChannel);
     const peer = new TestBroadcastChannel("diveday-offline-manifest-changes-v1");
     peer.onmessage = (event) => received.push(event.data);
-    await saveOfflineManifest(tripPayload(1));
+    const restoreLocalEvent = suppressSameDocumentManifestEvent();
+    try {
+      await saveOfflineManifest(tripPayload(1));
+    } finally {
+      restoreLocalEvent();
+    }
     expect(received).toEqual([{ tripId }]);
+    expect(TestBroadcastChannel.channels).toHaveLength(1);
     peer.close();
   });
 });

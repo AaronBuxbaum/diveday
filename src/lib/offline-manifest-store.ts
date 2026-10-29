@@ -53,20 +53,24 @@ function validTripChange(value: unknown): value is { tripId: string } {
   );
 }
 
-let manifestChangeChannel: BroadcastChannel | null = null;
-
 function announceManifestChange(tripId: string): void {
   const browserWindow = manifestBrowserWindow();
   if (browserWindow) {
     browserWindow.dispatchEvent(new CustomEvent(MANIFEST_CHANGE_EVENT, { detail: { tripId } }));
-    if (typeof BroadcastChannel !== "undefined") {
-      try {
-        manifestChangeChannel ??= new BroadcastChannel(MANIFEST_CHANGE_CHANNEL);
-        manifestChangeChannel.postMessage({ tripId });
-      } catch {
-        // IndexedDB remains authoritative; the next focus/visibility reload
-        // picks up the mutation when cross-context messaging is unavailable.
-      }
+  }
+  // Service workers have no `window`, but they share this origin's
+  // BroadcastChannel namespace with open pages. The only payload is the
+  // non-sensitive trip key; receivers reload the encrypted record from IDB.
+  if (typeof BroadcastChannel !== "undefined") {
+    let channel: BroadcastChannel | null = null;
+    try {
+      channel = new BroadcastChannel(MANIFEST_CHANGE_CHANNEL);
+      channel.postMessage({ tripId });
+    } catch {
+      // IndexedDB remains authoritative; the next focus/visibility reload
+      // picks up the mutation when cross-context messaging is unavailable.
+    } finally {
+      channel?.close();
     }
   }
 }
@@ -100,14 +104,6 @@ export function subscribeOfflineManifestChanges(listener: OfflineManifestChangeL
     browserWindow.removeEventListener(MANIFEST_CHANGE_EVENT, onLocalChange);
     channel?.close();
   };
-}
-
-const browserWindow = manifestBrowserWindow();
-if (browserWindow) {
-  browserWindow.addEventListener("pagehide", () => {
-    manifestChangeChannel?.close();
-    manifestChangeChannel = null;
-  });
 }
 
 /**
