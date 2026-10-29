@@ -531,10 +531,14 @@ On the 2nd of each month at 07:00 UTC, and on demand from the workflow's **Run w
    in `POSTGRES_IMAGE`), printing only fixed failure categories and counts, because a Postgres
    error, `DETAIL` or `CONTEXT` line can quote row values;
 4. runs `scripts/restore-drill-verify.ts` against it: the seeded owner signs in through
-   `verifyCredentials`, the function sign-in calls, and every departure tomorrow in that shop's zone
-   loads its manifest through `getTripManifest` (the next departure after now when tomorrow has
-   none; no departure at all is a failure). It opens its own connection rather than `getDb()`,
-   because `getDb()` seeds the demo shop and would repair a restore before checking it;
+   `verifyCredentials`, the function sign-in calls; production holds no seeded owner, so when that
+   sign-in is refused it reads the restored records instead (an active account, its live person, the
+   shop and a staff role, with no password check) and says so in the log. Then every departure
+   tomorrow in a chosen shop's zone loads its manifest through `getTripManifest` (the next
+   departure after now when tomorrow has none; no shop with a departure at all is a failure). It
+   opens its own connection rather than `getDb()`, because `getDb()` seeds the demo shop and would
+   repair a restore before checking it, and it pins that connection's `search_path` to `public`,
+   because `pg_restore` leaves an empty one on the scratch branch;
 5. deletes the branch, and writes the timings and a log row to the run's step summary.
 
 The branch is created with a Neon expiry three hours out, and the workflow's `if: always()` step
