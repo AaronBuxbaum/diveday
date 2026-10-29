@@ -266,6 +266,8 @@ const ERASURE_KEEPS: Record<string, string> = {
   trip_invitations:
     "that an invitation was sent for a seat, by id. Its risk is not disclosure but #1616, where the foreign key aborts the erasure transaction outright",
   trip_read_marks: "how far a staff member has read a trip’s desk feed",
+  offline_manifest_snapshot_revisions:
+    "the shop/trip-scoped monotone snapshot revision used to reject late stale roster responses; it contains only shop and trip ids plus a counter, no diver data, and cascades with its shop or trip",
   today_read_marks: "a staff member’s Today catch-up state",
   today_read_mark_events: "IDs cascading with marks or desk events",
   stripe_refund_failures:
@@ -339,8 +341,6 @@ const ERASURE_KEEPS: Record<string, string> = {
   gear_service_events: "a technician's record of servicing a unit",
   boat_snags:
     "a crew member's note about a problem on a boat, and who later found it still there or fixed",
-  pre_departure_check_events:
-    "a crew member ticking a checklist line before a departure, and their note about the line",
   trip_stage_events: "the crew moving a departure through its stages",
   trip_blowouts: "who called a departure off, and when",
   marine_life_requests: "a staff member’s search for a species DiveDay does not carry",
