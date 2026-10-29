@@ -30,6 +30,7 @@ export function OfflineManifestList({
   shellVersionCopy,
   list,
   message,
+  foreignPendingChanges = false,
   discardNotice,
   fallback = null,
   readFailed = false,
@@ -39,6 +40,8 @@ export function OfflineManifestList({
   /** `null` until the store has been read. */
   list: OfflineManifestEnvelope[] | null;
   message: string;
+  /** Pending records from another tenant remain saved on this device. */
+  foreignPendingChanges?: boolean;
   discardNotice: ReactNode;
   /**
    * Why the worker opened this list, when it did: carried onto each trip's
@@ -104,6 +107,15 @@ export function OfflineManifestList({
         <div className="w-full max-w-md">
           <OfflineShellVersionBanner copy={shellVersionCopy} />
           {discardNotice}
+          {foreignPendingChanges ? (
+            <p
+              className={`mb-4 ${OFFLINE_NOTICE_CLASS} border-warning/40 bg-warning/10 text-pretty`}
+              role="status"
+              aria-live="polite"
+            >
+              {t("shared.offlineManifest.reconcile.foreignPending")}
+            </p>
+          ) : null}
           <section
             className={sectionCardClass({ className: "flex flex-col items-center text-center" })}
           >
@@ -167,6 +179,15 @@ export function OfflineManifestList({
             <p className="text-muted" role="status" aria-live="polite">
               <StatusMessage message={message} />
             </p>
+            {foreignPendingChanges ? (
+              <p
+                className={`mt-3 ${OFFLINE_NOTICE_CLASS} border-warning/40 bg-warning/10 text-pretty`}
+                role="status"
+                aria-live="polite"
+              >
+                {t("shared.offlineManifest.reconcile.foreignPending")}
+              </p>
+            ) : null}
             {/* Principle 2 wants a freshness state visible on a boat surface;
                 principle 9 refuses to spend a badge on the state every row is
                 normally in. Said once here, for the group, it is both: the
@@ -174,7 +195,7 @@ export function OfflineManifestList({
                 a copy that needs them. */}
             {savedRows.length > 0 &&
             (!unanswered || needRefreshCount > 0) &&
-            (needRefreshCount > 0 || !noteLossVisible) ? (
+            (needRefreshCount > 0 || (!noteLossVisible && !foreignPendingChanges)) ? (
               <p className="mt-1 text-sm font-semibold">
                 {needRefreshCount > 0
                   ? t("shared.offlineManifest.list.freshnessNeedRefresh", {

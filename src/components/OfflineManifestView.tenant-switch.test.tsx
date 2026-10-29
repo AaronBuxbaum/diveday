@@ -12,6 +12,7 @@ import {
 import type { OfflineManifestEnvelope } from "@/lib/offline-manifests";
 import { OfflineManifestView } from "./OfflineManifestView";
 import {
+  envelope,
   FROZEN_MS,
   identityResponse,
   richEnvelope,
@@ -109,6 +110,100 @@ it("quarantines the root list as soon as one trip detects a shop switch", async 
   expect(first.events[0]?.syncStatus).toBe("pending");
   expect(second.events[0]?.syncStatus).toBe("pending");
   allowShopB = true;
+});
+
+it("shows a tenant-neutral recovery notice for a verified shop with foreign pending events", async () => {
+  searchParams = new URLSearchParams();
+  const foreign = richEnvelope("foreign-trip-31");
+  foreign.events.push({
+    clientEventId: "foreign-pending-event",
+    snapshotId: foreign.snapshot.snapshotId,
+    snapshotSavedAt: foreign.snapshot.savedAt,
+    tripId: "foreign-trip-31",
+    bookingId: "sensitive-person-31",
+    checkpoint: "departure",
+    status: "boarded",
+    occurredAt: new Date(FROZEN_MS).toISOString(),
+    note: "Sensitive erased note text",
+    syncStatus: "pending",
+  });
+  vi.mocked(listOfflineManifests).mockResolvedValue([foreign]);
+  vi.mocked(fetch).mockImplementation(async (input) =>
+    String(input) === "/api/offline-manifests/identity"
+      ? identityResponse("reef-runners")
+      : new Response(null, { status: 200 }),
+  );
+
+  render(<OfflineManifestView />);
+
+  expect(
+    await screen.findByRole("heading", { name: "No saved manifest on this phone" }),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByText(
+      "Pending changes for another shop remain on this device. Sign in to that shop to sync or review them.",
+    ),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByText(
+      /Blue Mantis|Two-Tank Reef|foreign-trip-31|sensitive-person-31|Sensitive erased note text/,
+    ),
+  ).not.toBeInTheDocument();
+  expect(foreign.events[0]?.syncStatus).toBe("pending");
+  expect(foreign.events[0]?.note).toBe("Sensitive erased note text");
+});
+
+it("keeps the recovery notice and suppresses caught-up copy after current-shop sync", async () => {
+  searchParams = new URLSearchParams();
+  const foreign = envelope("foreign-trip-33", "Private A departure", {
+    shopSlug: "blue-mantis",
+    shopName: "Blue Mantis Divers",
+  });
+  const current = envelope("current-trip-34", "B morning", {
+    shopSlug: "reef-runners",
+    shopName: "Reef Runners",
+  });
+  const addPendingEvent = (saved: OfflineManifestEnvelope, id: string) => {
+    saved.events.push({
+      clientEventId: id,
+      snapshotId: saved.snapshot.snapshotId,
+      snapshotSavedAt: saved.snapshot.savedAt,
+      tripId: saved.snapshot.manifests[0]?.trip.id ?? "missing-trip",
+      bookingId: "sensitive-person",
+      checkpoint: "departure",
+      status: "boarded",
+      occurredAt: new Date(FROZEN_MS).toISOString(),
+      note: "Private note text",
+      syncStatus: "pending",
+    });
+  };
+  addPendingEvent(foreign, "foreign-pending-event");
+  addPendingEvent(current, "current-pending-event");
+  vi.mocked(listOfflineManifests).mockResolvedValue([foreign, current]);
+  vi.mocked(syncOfflineManifest).mockResolvedValue({ ...current, events: [] });
+  vi.mocked(fetch).mockImplementation(async (input) =>
+    String(input) === "/api/offline-manifests/identity"
+      ? identityResponse("reef-runners")
+      : new Response(null, { status: 200 }),
+  );
+
+  render(<OfflineManifestView />);
+
+  expect(await screen.findByRole("heading", { name: "Saved on this device" })).toBeInTheDocument();
+  expect(
+    await screen.findByText(
+      "Pending changes for another shop remain on this device. Sign in to that shop to sync or review them.",
+    ),
+  ).toBeInTheDocument();
+  await waitFor(() =>
+    expect(syncOfflineManifest).toHaveBeenCalledWith("current-trip-34", "reef-runners"),
+  );
+  expect(screen.queryByText("Everything’s sent across these trips.")).not.toBeInTheDocument();
+  expect(screen.queryByText("All up to date.")).not.toBeInTheDocument();
+  expect(screen.queryByText("Private A departure")).not.toBeInTheDocument();
+  expect(screen.queryByText("Blue Mantis Divers")).not.toBeInTheDocument();
+  expect(screen.queryByText("sensitive-person")).not.toBeInTheDocument();
+  expect(screen.queryByText("Private note text")).not.toBeInTheDocument();
 });
 
 afterEach(() => {

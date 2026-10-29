@@ -21,7 +21,7 @@ import type { CopyCaveat } from "./controls";
 import { savedCopyReducer } from "./saved-copy";
 import { useCrossShopPurge } from "./use-cross-shop-purge";
 import { useOfflineTenant } from "./use-offline-tenant";
-import { useSavedManifestList } from "./use-saved-manifest-list";
+import { hasForeignPendingManifestChanges, useSavedManifestList } from "./use-saved-manifest-list";
 
 function describeDiscardedNoteEvent(
   event: OfflineRollCallEvent | OfflineChecklistEvent,
@@ -154,13 +154,14 @@ function reconciledListMessage(
     0,
   );
   const pending = authorized.reduce((sum, envelope) => sum + pendingOfflineEventCount(envelope), 0);
+  const foreignPending = hasForeignPendingManifestChanges(envelopes, currentShopSlug);
   const noteLoss = listNoteLossMessage(authorized, t, currentShopSlug);
   const syncMessage =
     rejected > 0
       ? t("shared.offlineManifest.reconcile.listPendingRejected", { count: rejected })
       : pending > 0
         ? t("shared.offlineManifest.reconcile.pendingWaiting", { count: pending })
-        : noteLoss
+        : noteLoss || foreignPending
           ? ""
           : t("shared.offlineManifest.reconcile.listAllCaughtUp");
   return [syncMessage, noteLoss].filter(Boolean).join("\n");
@@ -593,10 +594,14 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
     void acknowledgeDiscardedOfflineRecords().catch(() => {});
   };
 
+  const verifiedTenantSlug = verifiedTenantRevision > 0 ? verifiedTenantSlugRef.current : null;
+  const foreignPendingChanges = hasForeignPendingManifestChanges(list ?? [], verifiedTenantSlug);
+
   return {
     tripId,
     envelope,
-    verifiedTenantSlug: verifiedTenantRevision > 0 ? verifiedTenantSlugRef.current : null,
+    verifiedTenantSlug,
+    foreignPendingChanges,
     tenantChangePending,
     removedForOtherShop,
     dispatchSaved,

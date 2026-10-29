@@ -9,6 +9,19 @@ function isShopChanged(error: unknown): boolean {
   );
 }
 
+export function hasForeignPendingManifestChanges(
+  envelopes: readonly OfflineManifestEnvelope[],
+  currentShopSlug: string | null,
+): boolean {
+  return (
+    currentShopSlug !== null &&
+    envelopes.some(
+      (envelope) =>
+        envelope.snapshot.shop.slug !== currentShopSlug && pendingOfflineEventCount(envelope) > 0,
+    )
+  );
+}
+
 export function useSavedManifestList({
   tenantSlugRef,
   initialListMessage,

@@ -393,6 +393,7 @@
       "savedCount": "{count, plural, one {# saved manifest} other {# saved manifests}} on this device",
       "listPendingRejected": "{count, plural, one {# change needs a look. Open that trip to sort it out.} other {# changes need a look. Open that trip to sort it out.}}",
       "listAllCaughtUp": "Everything’s sent across these trips.",
+      "foreignPending": "Pending changes for another shop remain on this device. Sign in to that shop to sync or review them.",
       "ready": "The manifest saved on this device is ready.",
       "noneForTrip": "There’s no current saved manifest for this trip on this device."
     },

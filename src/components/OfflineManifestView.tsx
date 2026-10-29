@@ -59,6 +59,7 @@ function OfflineManifestScreen() {
     tripId,
     envelope,
     verifiedTenantSlug,
+    foreignPendingChanges,
     tenantChangePending,
     removedForOtherShop,
     dispatchSaved,
@@ -151,6 +152,7 @@ function OfflineManifestScreen() {
         shellVersionCopy={shellVersionCopy}
         list={visibleList}
         message={message}
+        foreignPendingChanges={foreignPendingChanges}
         discardNotice={discardNotice}
         readFailed={storeReadFailed}
         fallback={fallback}

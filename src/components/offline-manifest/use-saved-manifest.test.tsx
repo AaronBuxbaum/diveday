@@ -563,9 +563,10 @@ describe("useSavedManifest on the list", () => {
     expect(sync).toHaveBeenCalledTimes(1);
     expect(sync).toHaveBeenCalledWith("trip-1", "blue-mantis");
     expect(result.current.list).toEqual([synced, theirs, quiet]);
-    // The foreign copy's event remains pending and is never submitted or
-    // surfaced as an aggregate status under this tenant's session.
-    expect(result.current.message).toBe(line("listAllCaughtUp"));
+    // The foreign copy's event remains pending and is never submitted. The
+    // hook leaves aggregate status empty rather than saying all trips are sent;
+    // the root list owns the tenant-neutral recovery notice.
+    expect(result.current.message).toBe("");
   });
 
   it("shows persisted roll-call and checklist note loss per saved trip after reload", async () => {

@@ -393,6 +393,7 @@
       "savedCount": "{count, plural, one {# manifiesto guardado} other {# manifiestos guardados}} en este dispositivo",
       "listPendingRejected": "{count, plural, one {# cambio necesita revisión. Abre esa salida para resolverlo.} other {# cambios necesitan revisión. Abre esa salida para resolverlo.}}",
       "listAllCaughtUp": "Todo enviado en estas salidas.",
+      "foreignPending": "Hay cambios pendientes de otro centro en este dispositivo. Inicia sesión en ese centro para enviarlos o revisarlos.",
       "ready": "El manifiesto guardado en este dispositivo está listo.",
       "noneForTrip": "No hay ningún manifiesto guardado actualmente para esta salida en este dispositivo."
     },
