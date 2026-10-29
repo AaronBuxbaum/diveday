@@ -17,6 +17,8 @@ export type IssuedCapability = { token: string; expiresAt: Date };
 /** The browser may return from hosted checkout before this one-use receipt expires. */
 export const RETURNING_DIVER_RECEIPT_TTL_MS = 24 * HOUR_MS;
 export const RETURNING_DIVER_MEMORY_MS = 30 * DAY_MS;
+export const RETURNING_DIVER_RECEIPT_LOCK_TIMEOUT = "250ms";
+export const RETURNING_DIVER_RECEIPT_STATEMENT_TIMEOUT = "400ms";
 
 export type IssuedReturningDiverReceipt = IssuedCapability & { memoryExpiresAt: number };
 
@@ -186,6 +188,12 @@ export async function issueReturningDiverReceipt(
 ): Promise<IssuedReturningDiverReceipt | null> {
   const now = input.now ?? nowDate();
   const issue = async (tx: DbExecutor) => {
+    // This optional path runs after the seat commits. Never let a held person,
+    // booking or capability row trap the diver before the success redirect.
+    await tx.execute(sql.raw(`set local lock_timeout = '${RETURNING_DIVER_RECEIPT_LOCK_TIMEOUT}'`));
+    await tx.execute(
+      sql.raw(`set local statement_timeout = '${RETURNING_DIVER_RECEIPT_STATEMENT_TIMEOUT}'`),
+    );
     // Match the lock order used by normal capability minting and erasure:
     // person, booking, then capability rows.
     const [person] = await tx

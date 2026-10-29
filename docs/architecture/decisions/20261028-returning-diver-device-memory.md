@@ -5,9 +5,8 @@
 
 ## Context
 
-The public booking form can reduce repeat typing, but it handles a name and email on a shared
-device. A `?booked=1` URL is editable and readiness links are shareable, so neither proves that the
-current browser just made the booking. The memory must be an explicit, scoped convenience and must
+The public form handles names and email on shared devices. Its editable `?booked=1` flag and
+shareable readiness links cannot prove that this browser opted in. Memory must be scoped and must
 not change the successful booking confirmation.
 
 ## Decision
@@ -21,6 +20,11 @@ not change the successful booking confirmation.
    lived HttpOnly, SameSite=Lax cookie scoped to `/ready`. No name or email enters the receipt,
    cookie, or URL. An explicit post-hydration Server Action atomically redeems it; page rendering
    and RSC prefetch never consume it. Failed redemption cannot change a successful booking.
+   Receipt issuance has a 500ms booking-response budget, plus transaction-local 250ms lock and
+   400ms statement limits. If the response budget wins before a delayed database operation
+   finishes, its receipt result is discarded and no cookie is set. A late database commit can
+   leave an opaque, PII-free receipt row with no browser-held token; it expires within 24 hours
+   and follows the existing capability-row cleanup schedule.
 3. After redemption, the browser may write name/email to local storage under a per-shop key for
    30 days. The checkbox is off by default, embeds never offer it, and the existing "Not you?"
    control clears this shop's memory. Old global memory is removed without migration.
@@ -39,8 +43,8 @@ not change the successful booking confirmation.
 
 ## Consequences
 
-Receipt rows contain no PII and expire within 24 hours; the existing capability-row retention
-policy prunes them 90 days after expiry. Device memory is local to a browser profile and shop,
+Receipt rows contain no PII, expire in 24 hours, and are pruned 90 days later; delayed issuance may
+leave an unusable row until then. Device memory is local to a browser profile and shop,
 expires for use after 30 days, and remains clearable. Each memory read or write also removes expired
 entries for other shops when browser storage is available. Because the browser cannot run cleanup
 while it is closed, expired bytes may remain on the device until a later memory read or write; the

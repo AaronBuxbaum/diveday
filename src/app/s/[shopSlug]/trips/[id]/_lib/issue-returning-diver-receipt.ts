@@ -9,6 +9,9 @@ import type { DbExecutor } from "@/db/client";
 import { log } from "@/lib/log";
 import { RETURNING_DIVER_RECEIPT_COOKIE } from "@/lib/returning-diver";
 
+/** The optional memory path must never hold a committed booking past this budget. */
+export const RETURNING_DIVER_RECEIPT_ISSUE_BUDGET_MS = 500;
+
 /** Best-effort, post-booking opt-in; receipt failures never undo a confirmed seat. */
 export async function issueReturningDiverReceiptForBooking(
   db: DbExecutor,
@@ -32,14 +35,40 @@ export async function issueReturningDiverReceiptForBooking(
   )
     return;
 
+  let budgetTimer: ReturnType<typeof setTimeout> | undefined;
   try {
-    const receipt = await issueReturningDiverReceipt(db, {
+    const issue = issueReturningDiverReceipt(db, {
       shopId: input.shopId,
       bookingId: input.bookingId,
       expectedPersonId: input.confirmedBooking.booking.personId,
       expectedTripId: input.tripId,
       redirectReadinessToken: input.redirectCapability.token,
+    }).then(
+      (receipt) => ({ kind: "finished" as const, receipt }),
+      (error: unknown) => {
+        log("booking.returning_diver_receipt_failed", "error", {
+          bookingId: input.bookingId,
+          errorCode: error instanceof Error ? error.name : "unknown_error",
+        });
+        return { kind: "failed" as const };
+      },
+    );
+    const timedOut = new Promise<{ kind: "timed_out" }>((resolve) => {
+      budgetTimer = setTimeout(
+        () => resolve({ kind: "timed_out" }),
+        RETURNING_DIVER_RECEIPT_ISSUE_BUDGET_MS,
+      );
     });
+    const result = await Promise.race([issue, timedOut]);
+    if (result.kind === "timed_out") {
+      log("booking.returning_diver_receipt_timed_out", "warn", {
+        bookingId: input.bookingId,
+        budgetMs: RETURNING_DIVER_RECEIPT_ISSUE_BUDGET_MS,
+      });
+      return;
+    }
+    if (result.kind !== "finished") return;
+    const receipt = result.receipt;
     if (!receipt) return;
 
     const cookieStore = await cookies();
@@ -57,5 +86,7 @@ export async function issueReturningDiverReceiptForBooking(
       bookingId: input.bookingId,
       errorCode: error instanceof Error ? error.name : "unknown_error",
     });
+  } finally {
+    if (budgetTimer) clearTimeout(budgetTimer);
   }
 }
