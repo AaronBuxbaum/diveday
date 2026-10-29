@@ -4,8 +4,9 @@
  * One of the per-feature `e2e/visual-*.spec.ts` files; the capture mechanics are
  * `e2e/visual-harness.ts`, and the procedure is the e2e-and-visual skill.
  */
+import { monthLabel } from "../src/lib/calendar";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { openBookingActions, openRosterDetails, seededTripId } from "./helpers";
+import { e2eNow, openBookingActions, openRosterDetails, seededTripId } from "./helpers";
 import { PAYMENT_HISTORY_CSV } from "./payment-history-fixture";
 import {
   capture,
@@ -197,12 +198,21 @@ for (const scheme of ["light", "dark"] as const) {
       }) => {
         await page.goto("/shop/blue-mantis/reports");
         await page.getByRole("link", { name: "Previous month" }).click();
-        // The current month renders a "Trips this month" region too, so waiting
-        // on the region alone is satisfied before the click has landed — which
-        // is how one baseline of this capture came to show July "so far" over
-        // June's final figures. The arrow's destination carries `?month=`; the
-        // landing page does not.
-        await expect(page).toHaveURL(/[?&]month=/);
+        // Wait for what only the destination renders. The previous-month link
+        // updates the URL when client navigation starts, before React commits
+        // the new report; the "Trips this month" region is on both pages.
+        const frozen = e2eNow();
+        const sailedStart = new Date(
+          Date.UTC(frozen.getUTCFullYear(), frozen.getUTCMonth() - 1, 1),
+        );
+        const sailed = {
+          year: sailedStart.getUTCFullYear(),
+          month: sailedStart.getUTCMonth() + 1,
+        };
+        await expect(
+          page.getByRole("heading", { level: 2, name: monthLabel(sailed), exact: true }),
+          "the capture never left the current month",
+        ).toBeVisible();
         await page.getByRole("region", { name: "Trips this month" }).waitFor();
         await capture(page, "reports-figures", scheme);
       });
