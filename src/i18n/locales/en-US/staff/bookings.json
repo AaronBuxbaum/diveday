@@ -19,6 +19,7 @@
     "addPersonAriaLabel": "Add {name} to this departure",
     "handEntryDescription": "Email is optional. A name is enough to hold the seat, and the rest can follow.",
     "fromRequest": "Booking from a request",
+    "partySeatAdded": "One requested seat is booked. Add the rest of the party to this departure.",
     "viewRequests": "View all requests",
     "relevantRequests": "Relevant requests",
     "bookFromRequest": "Book from this request",

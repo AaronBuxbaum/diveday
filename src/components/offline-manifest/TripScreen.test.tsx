@@ -19,6 +19,7 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => searchParams,
 }));
 vi.mock("@/lib/offline-manifest-store", async () => ({
+  beginOfflineTenantVerificationRound: vi.fn().mockResolvedValue(1),
   // The real class, not a stand-in: the view branches on
   // `error instanceof OfflineManifestError` and then on `error.code`, so a
   // duplicate declared here would make every refusal fall through to the
@@ -35,7 +36,7 @@ vi.mock("@/lib/offline-manifest-store", async () => ({
   appendOfflineRollCall: vi.fn(),
   listOfflineManifests: vi.fn(),
   loadOfflineManifest: vi.fn(),
-  purgeOfflineManifestsExceptShop: vi.fn().mockResolvedValue(undefined),
+  purgeOfflineManifestsExceptShop: vi.fn().mockResolvedValue([]),
   syncOfflineManifest: vi.fn(),
   // The retention ceiling's discard notice: nothing thrown away is the right
   // default for every test that isn't about one.
@@ -44,11 +45,13 @@ vi.mock("@/lib/offline-manifest-store", async () => ({
   // The version-mismatch banner (task 124) resolves this on mount; no active
   // worker in jsdom, so "nothing to warn about" is the correct default here.
   getActiveOfflineShellVersion: vi.fn().mockResolvedValue(null),
+  subscribeOfflineManifestChanges: vi.fn(() => () => {}),
 }));
 
 beforeEach(() => {
   searchParams = new URLSearchParams();
   setOnline(true);
+  vi.mocked(listOfflineManifests).mockResolvedValue([]);
   // reconcileList learns "the currently authenticated shop" from this same
   // endpoint before syncing any pending event — default to matching the
   // fixtures' own shop ("blue-mantis") so existing reconcile tests keep
@@ -183,9 +186,11 @@ describe("OfflineManifestView — one column, one text edge", () => {
   it("starts every toned notice's text on the panels' own inset", async () => {
     vi.mocked(readDiscardedOfflineRecords).mockResolvedValue([
       {
+        noticeId: "notice-trip-9",
         tripId: "trip-9",
         tripTitle: "Morning Two-Tank",
         shopName: "Reef Runners",
+        shopSlug: "blue-mantis",
         pendingEvents: 2,
         discardedAt: new Date(FROZEN_MS).toISOString(),
       },
@@ -193,9 +198,7 @@ describe("OfflineManifestView — one column, one text edge", () => {
     await renderTrip(richEnvelope("trip-1"));
 
     const freshness = screen.getByText(/Readiness reflects that moment/);
-    const discarded = (
-      await screen.findByText("Roll call that never sent has been removed")
-    ).closest("section");
+    const discarded = (await screen.findByText("Offline changes were removed")).closest("section");
     for (const notice of [freshness, discarded]) {
       expect(notice).toHaveClass("rounded-inset", "px-4", "py-3", "sm:px-5");
       expect(notice).not.toHaveClass("p-3");

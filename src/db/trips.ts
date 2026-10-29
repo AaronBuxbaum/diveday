@@ -127,6 +127,7 @@ export {
   getTripWithBookedOnce,
   listTripDives,
   listTripScheduleDays,
+  offlineSyncTripsBelongToShop,
   type PublicCrewMember,
   type SetParticipantTermsOutcome,
   setTripParticipantTerms,

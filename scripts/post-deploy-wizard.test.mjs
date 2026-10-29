@@ -1017,13 +1017,15 @@ describe("the deploy job's credential pre-flight", () => {
   );
   const deployJob = workflow.slice(workflow.indexOf("\n  deploy:\n"));
   const preFlight = deployJob.slice(
-    deployJob.indexOf("- name: Confirm the post-deploy wizard's credentials are set"),
+    deployJob.indexOf("- name: Confirm post-deploy and Neon dump credentials are set"),
   );
 
   it("checks every credential the wizard's deploy step is handed", () => {
-    const wizardEnvironment = deployJob
-      .slice(deployJob.indexOf("- run: pnpm infra:deploy"))
-      .matchAll(/^ +(\w+): \$\{\{ secrets\.(\w+) \}\}$/gm);
+    const wizardStep = deployJob.slice(
+      deployJob.indexOf("- run: pnpm infra:deploy"),
+      deployJob.indexOf("- name: Provision the direct Neon dump connection"),
+    );
+    const wizardEnvironment = wizardStep.matchAll(/^ +(\w+): \$\{\{ secrets\.(\w+) \}\}$/gm);
     const handed = [...wizardEnvironment].map(([, variable, secret]) => {
       // The names are identical on both sides of the colon on purpose -- that
       // is what stops the workflow's lookup and the stored secret drifting.
@@ -1033,7 +1035,8 @@ describe("the deploy job's credential pre-flight", () => {
 
     expect(handed).toEqual(["GH_TOKEN", "VERCEL_TOKEN", "VERCEL_ORG_ID", "VERCEL_PROJECT_ID"]);
     const checked = [...preFlight.matchAll(/^ +require (\w+) "\$\1"/gm)].map(([, name]) => name);
-    expect(checked).toEqual(handed);
+    expect(checked.slice(0, handed.length)).toEqual(handed);
+    expect(checked.slice(handed.length)).toEqual(["NEON_API_KEY", "NEON_PROJECT_ID"]);
   });
 
   it("names both the empty variable and the manual action that supplies it", () => {
@@ -1041,9 +1044,10 @@ describe("the deploy job's credential pre-flight", () => {
     // nobody has done; naming the manual action is what makes the second one
     // actionable without reading this workflow.
     expect(preFlight).toContain("$1 resolved to the empty string");
-    expect(preFlight).toContain("secrets.$1 this workflow reads");
+    expect(preFlight).toContain("environment setting named $1");
     expect(preFlight).toContain("ci-github-admin-token");
     expect(preFlight).toContain("ci-vercel-deploy-token");
+    expect(preFlight).toContain("neon-dump-provisioning-credentials");
     expect(preFlight).toContain("docs/engineering/manual-actions.md");
   });
 
@@ -1053,7 +1057,7 @@ describe("the deploy job's credential pre-flight", () => {
     // non-zero rather than skipping a step, which ADR 20260811-ci-deploy-full-wizard
     // rejects.
     const preFlightAt = deployJob.indexOf(
-      "- name: Confirm the post-deploy wizard's credentials are set",
+      "- name: Confirm post-deploy and Neon dump credentials are set",
     );
     const awsCredentialsAt = deployJob.indexOf("aws-actions/configure-aws-credentials");
     expect(preFlightAt).toBeGreaterThan(-1);

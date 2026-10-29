@@ -191,6 +191,7 @@ export function AgencyCheck({
           pendingLabel={copy.undoPending}
           undoLabel={copy.undo}
           dismissLabel={copy.dismiss}
+          placement="inline"
         />
       ) : null}
     </>

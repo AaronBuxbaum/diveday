@@ -160,12 +160,8 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
     timezone,
     shopRentalItems,
     offersHotelPickup,
-    tripNotice,
     pageNotice,
     noteDeleted,
-    confirmName,
-    confirmEmail,
-    confirmPhone,
     undoBookingId,
     keepOpenBookingId,
     paymentMarkRetry,
@@ -178,7 +174,6 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
     arrival,
     record,
     inWaterCrew,
-    walkInOpen = false,
     acceptsDivers,
     mayInviteFromWaitlist,
     mayDiscount,
@@ -190,14 +185,11 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
     trip,
     roster,
     requirement,
-    confirmMatches,
-    diverCandidates,
     notesByBooking,
     courseNextStepByBooking,
     paymentsConnected,
     demand,
     byBooking,
-    diverQuery,
     tripDateIso,
   } = guests;
   const {
@@ -424,53 +416,72 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
                 timeZone={timezone}
               />
             ) : null,
-          addDiverGroup: !acceptsDivers ? null : (
-            <div className="flex flex-col gap-4">
-              {!isFull(seatsOnSale(trip)) ? (
-                <Suspense fallback={null}>
-                  <MixedTrainingForTrip
-                    shopId={trip.shopId}
-                    tripId={trip.id}
-                    shopSlug={shopSlug}
-                    locale={locale}
-                    timeZone={timezone}
-                  />
-                </Suspense>
-              ) : null}
-              <AddDiverSection
-                context={{
-                  shopSlug,
-                  full: isFull(seatsOnSale(trip)),
-                  waitlistOn: guests.waitlistOn,
-                  query: diverQuery,
-                  candidates: diverCandidates,
-                  tripId: trip.id,
-                  addBookingAction: walkInOpen
-                    ? actions.walkInAddBookingAction
-                    : actions.addBookingAction,
-                  addToWaitlistAction: actions.addToWaitlistAction,
-                  addKnownToWaitlistAction: actions.addKnownToWaitlistAction,
-                  addExistingDiverAction: walkInOpen
-                    ? actions.walkInAddExistingDiverAction
-                    : actions.addExistingDiverAction,
-                  offerAction: actions.createDirectTripInvitationAction,
-                  status: noticeForForm(tripNotice, "add-diver"),
-                  locale,
-                  timeZone: timezone,
-                  confirmName,
-                  confirmEmail,
-                  confirmPhone,
-                  confirmMatches,
-                  shopRentalItems,
-                  walkInOpen,
-                }}
-              />
-            </div>
-          ),
+          addDiverGroup: !acceptsDivers ? null : <AddDiverGroup context={context} />,
         }}
       />
 
       {afterRoster}
+    </div>
+  );
+}
+
+/** The mixed-training suggestion and manual diver search beside the roster. */
+function AddDiverGroup({ context }: { context: TripRosterContentContext }) {
+  const {
+    guests,
+    shopSlug,
+    locale,
+    timezone,
+    shopRentalItems,
+    tripNotice,
+    confirmName,
+    confirmEmail,
+    confirmPhone,
+    actions,
+    walkInOpen = false,
+  } = context;
+  const { trip, diverCandidates, diverQuery, confirmMatches } = guests;
+
+  return (
+    <div className="flex flex-col gap-4">
+      {!isFull(seatsOnSale(trip)) ? (
+        <Suspense fallback={null}>
+          <MixedTrainingForTrip
+            shopId={trip.shopId}
+            tripId={trip.id}
+            shopSlug={shopSlug}
+            locale={locale}
+            timeZone={timezone}
+          />
+        </Suspense>
+      ) : null}
+      <AddDiverSection
+        context={{
+          shopSlug,
+          full: isFull(seatsOnSale(trip)),
+          waitlistOn: guests.waitlistOn,
+          query: diverQuery,
+          candidates: diverCandidates,
+          recentInviteDates: guests.recentInvites,
+          tripId: trip.id,
+          addBookingAction: walkInOpen ? actions.walkInAddBookingAction : actions.addBookingAction,
+          addToWaitlistAction: actions.addToWaitlistAction,
+          addKnownToWaitlistAction: actions.addKnownToWaitlistAction,
+          addExistingDiverAction: walkInOpen
+            ? actions.walkInAddExistingDiverAction
+            : actions.addExistingDiverAction,
+          offerAction: actions.createDirectTripInvitationAction,
+          status: noticeForForm(tripNotice, "add-diver"),
+          locale,
+          timeZone: timezone,
+          confirmName,
+          confirmEmail,
+          confirmPhone,
+          confirmMatches,
+          shopRentalItems,
+          walkInOpen,
+        }}
+      />
     </div>
   );
 }

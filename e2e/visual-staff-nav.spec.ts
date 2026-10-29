@@ -143,6 +143,33 @@ test.describe("staff navigation", () => {
       await capture(page, "staff-navigation-spanish-enlarged-text", "light", {
         locale: SPANISH,
         beforeShot: async () => {
+          if (page.viewportSize()?.width === 390) {
+            const geometry = await page.evaluate(async () => {
+              const heading = document.querySelector<HTMLElement>("main h1");
+              const tabbar = document.querySelector<HTMLElement>("[data-staff-tabbar]");
+              if (!heading || !tabbar)
+                throw new Error("checklist heading or phone tab bar is missing");
+              const title = heading.getBoundingClientRect();
+              const navTop = tabbar.getBoundingClientRect().top;
+              window.scrollBy(0, Math.max(0, title.bottom - navTop + 8));
+              await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+              const visibleTitle = heading.getBoundingClientRect();
+              const nav = tabbar.getBoundingClientRect();
+              return {
+                scrollY: window.scrollY,
+                viewportHeight: window.innerHeight,
+                documentWidth: document.documentElement.scrollWidth,
+                viewportWidth: document.documentElement.clientWidth,
+                title: { top: visibleTitle.top, bottom: visibleTitle.bottom },
+                tabbar: { top: nav.top, bottom: nav.bottom },
+              };
+            });
+            expect(geometry.documentWidth, JSON.stringify(geometry)).toBe(geometry.viewportWidth);
+            expect(geometry.title.top, JSON.stringify(geometry)).toBeGreaterThanOrEqual(0);
+            expect(geometry.title.bottom, JSON.stringify(geometry)).toBeLessThanOrEqual(
+              geometry.tabbar.top,
+            );
+          }
           await expectNavigationDoesNotExpandPage(page);
           await expectScrollCueMatchesRail(page);
         },

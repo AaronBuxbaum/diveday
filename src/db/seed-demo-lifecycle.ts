@@ -3,7 +3,6 @@ import { DAY_MS, nowMs } from "@/lib/clock";
 import type { AppDb, DbExecutor } from "./client";
 import { DEMO_SHOP_SLUG } from "./demo-shop";
 import { deleteHeldSendsAndDeskRows } from "./departure-notes";
-import { withRetiredSavedAnswers } from "./retired-saved-answers";
 import {
   accountSecurity,
   accountSessions,
@@ -46,7 +45,6 @@ import {
   gearServiceEvents,
   importedPaymentHistory,
   inboundMessages,
-  inboxSavedAnswers,
   incidentReportAddenda,
   incidentReports,
   integrationDeliveries,
@@ -245,9 +243,6 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   // The inbox: replies before the messages and people they name.
   await db.delete(staffReplies).where(eq(staffReplies.shopId, shopId));
   await db.delete(inboundMessages).where(eq(inboundMessages.shopId, shopId));
-  await withRetiredSavedAnswers(db, (tx) =>
-    tx.delete(inboxSavedAnswers).where(eq(inboxSavedAnswers.shopId, shopId)),
-  );
   // Course forms, children first (records → requirements → versions → forms).
   await db.delete(courseFormRecords).where(eq(courseFormRecords.shopId, shopId));
   await db.delete(courseFormRequirements).where(eq(courseFormRequirements.shopId, shopId));

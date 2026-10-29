@@ -1,3 +1,6 @@
 {
-  "savedCopyWarning": "No signal: this is the copy your phone saved. Save time unavailable; later changes may be missing. Anything you change here needs signal."
+  "savedCopyWarning": "No signal: this is the copy your phone saved. Save time unavailable; later changes may be missing. Anything you change here needs signal.",
+  "clockRollbackHeading": "Phone clock looks wrong",
+  "clockRollbackUnknown": "The saved time is unknown. This page may be out of date. Reconnect to check the current trip details.",
+  "clockUnverified": "Phone clock could not be verified. Reconnect to check the current trip details."
 }
