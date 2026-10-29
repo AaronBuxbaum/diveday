@@ -640,6 +640,57 @@ describe("saveReadyPage and readyPageFallback", () => {
     expect(await restarted.readyPageFallback(store.storage, path, NOW + 20)).toBeUndefined();
   });
 
+  it("serializes terminal path checks with a concurrent request for another token", async () => {
+    const path = `/ready/${TOKEN}`;
+    const otherPath = `/ready/${OTHER}`;
+    await saveReadyPage(store.storage, path, page("old token"), NOW);
+    const terminalRequest = await beginReadyPageRequest(store.storage, path);
+    const baseOpen = store.storage.open.bind(store.storage);
+    let blockNextMatch = false;
+    let enteredMatch: (() => void) | undefined;
+    let releaseMatch: (() => void) | undefined;
+    const matchEntered = new Promise<void>((resolve) => {
+      enteredMatch = resolve;
+    });
+    const matchGate = new Promise<void>((resolve) => {
+      releaseMatch = resolve;
+    });
+    const racing = {
+      delete: store.storage.delete.bind(store.storage),
+      open: async (name: string) => {
+        const cache = await baseOpen(name);
+        if (name !== READY_FORGOTTEN_CACHE_NAME) return cache;
+        return {
+          ...cache,
+          match: async (key: string | Request) => {
+            if (blockNextMatch) {
+              blockNextMatch = false;
+              enteredMatch?.();
+              await matchGate;
+            }
+            return cache.match(key);
+          },
+        };
+      },
+    } as unknown as CacheStorage;
+    blockNextMatch = true;
+    const terminal = saveReadyPage(
+      racing,
+      path,
+      new Response("Cancelled", { headers: { "content-type": "text/html" } }),
+      NOW,
+      terminalRequest,
+    );
+    await matchEntered;
+    const newerRequest = beginReadyPageRequest(store.storage, otherPath);
+    releaseMatch?.();
+
+    expect(await terminal).toBe(false);
+    const next = await newerRequest;
+    expect(await saveReadyPage(store.storage, otherPath, page("new token"), NOW, next)).toBe(true);
+    expect(await readyPageFallback(store.storage, otherPath, NOW)).toBeDefined();
+  });
+
   it("lets only the newest overlapping request publish, even after a worker restart", async () => {
     const path = `/ready/${TOKEN}`;
     const older = await beginReadyPageRequest(store.storage, path);

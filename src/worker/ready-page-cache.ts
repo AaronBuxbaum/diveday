@@ -413,8 +413,9 @@ async function requestIsCurrent(
  * Reads the body (pass a clone). Returns whether it was kept; a page that
  * names no keep-until, or one already past, clears the copy.
  *
- * `request` was durably captured before the fetch began. A later forget or
- * newer request invalidates it across clock changes and worker restarts.
+ * `request` records whether ordering was durably captured before the fetch.
+ * A nondurable request may still process terminal truth and return the live
+ * response, but cannot publish a saved copy.
  */
 export async function saveReadyPage(
   storage: CacheStorage,
@@ -428,31 +429,19 @@ export async function saveReadyPage(
   if (!storable(response)) return false;
   const hash = await pathHash(path);
   const order = request ?? (await beginReadyPageRequest(storage, path));
-  if (order.pathHash !== hash || !order.durable) return false;
+  if (order.pathHash !== hash) return false;
   // A body of its own, so the copy is complete before anything is replaced.
   const html = new TextDecoder().decode(await response.arrayBuffer());
   const named = Number(html.match(KEEP_UNTIL_PATTERN)?.[1] ?? Number.NaN);
   const cache = await storage.open(READY_CACHE_NAME);
   if (!Number.isFinite(named) || named <= now) {
-    // Terminal truth for this path invalidates saves for the same path even
-    // when observed by an older request, but must not erase a newer token's
-    // shared-slot copy when this response belongs to another path.
-    const markers = await storage.open(READY_FORGOTTEN_CACHE_NAME);
-    const latest = await markers.match(LATEST_REQUEST_KEY);
-    if (latest && latest.headers.get(REQUEST_PATH_HASH_HEADER) !== hash) return false;
-    localForgetVersion += 1;
-    const epoch = crypto.randomUUID();
-    const invalidated = serializeReadyOrder(() => writeForgetMarker(storage, epoch));
-    return serializeReadyPublication(async () => {
-      if (!(await invalidated)) {
-        await storage.delete(READY_CACHE_NAME).catch(() => false);
-        return false;
-      }
-      await deleteForgottenCopy(storage, path);
-      if (mayPublish()) await clearCopies(cache);
-      return false;
-    });
+    // Process terminal truth even without a durable request marker. Order the
+    // path check and epoch write together with request starts, preventing a
+    // different token from slipping between the check and global marker.
+    await forgetTerminalReadyPath(storage, path, hash);
+    return false;
   }
+  if (!order.durable) return false;
   // Pages rendered before the saved-time format cannot be transformed safely:
   // their banner has no reliable locale/zone or age context.
   if (metaContent(html, READY_COPY_VERSION_META) !== READY_COPY_VERSION) return false;
@@ -624,6 +613,44 @@ async function deleteForgottenCopy(storage: CacheStorage, path: string): Promise
   const cache = await storage.open(READY_CACHE_NAME);
   const cached = await cache.match(READY_COPY_KEY);
   if (cached?.headers.get(PATH_HASH_HEADER) === hash) await cache.delete(READY_COPY_KEY);
+}
+
+/** Clear a terminal path in this worker even when request-order storage failed. */
+async function forgetTerminalReadyPath(
+  storage: CacheStorage,
+  path: string,
+  hash: string,
+): Promise<boolean> {
+  const invalidated = serializeReadyOrder(async () => {
+    try {
+      const markers = await storage.open(READY_FORGOTTEN_CACHE_NAME);
+      const latest = await markers.match(LATEST_REQUEST_KEY);
+      // The slot now belongs to a different token; an old response must not
+      // invalidate that token's request or remove its saved page.
+      if (latest && latest.headers.get(REQUEST_PATH_HASH_HEADER) !== hash) return false;
+      const durable = await writeForgetMarker(storage, crypto.randomUUID());
+      // A durable marker invalidates prior request IDs without touching the
+      // local generation, so requests queued after this terminal observation
+      // can start cleanly. If persistence failed, fail closed for requests
+      // already captured in this worker.
+      if (!durable) localForgetVersion += 1;
+      return durable;
+    } catch {
+      // A marker read failure cannot establish which token owns the slot. Do
+      // not advance the global epoch; path-scoped deletion below is still safe.
+      return false;
+    }
+  });
+  return serializeReadyPublication(async () => {
+    const durable = await invalidated;
+    try {
+      await deleteForgottenCopy(storage, path);
+    } catch {
+      await storage.delete(READY_CACHE_NAME).catch(() => false);
+      return false;
+    }
+    return durable;
+  });
 }
 
 /** Drop the saved page and durably invalidate saves that began before it. */

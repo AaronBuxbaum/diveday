@@ -617,6 +617,26 @@ describe("the /ready/ registration's fetch", () => {
     await offline.settle();
   });
 
+  it("clears a matching stale copy when a live terminal response arrives despite marker failure", async () => {
+    fetchMock.mockResolvedValueOnce(html("previous saved copy"));
+    const initial = navigate(`https://dive.day${PATH}`);
+    await initial.responded;
+    await initial.settle();
+    expect(kept.size).toBe(1);
+
+    failMarkerWrites = true;
+    fetchMock.mockResolvedValueOnce(
+      new Response("This booking is no longer active", {
+        headers: { "content-type": "text/html" },
+      }),
+    );
+    const terminal = navigate(`https://dive.day${PATH}`);
+    expect(await (await terminal.responded)?.text()).toContain("This booking is no longer active");
+    await terminal.settle();
+
+    expect(kept.size).toBe(0);
+  });
+
   it("serves the kept copy within four seconds when the network never answers", async () => {
     fetchMock.mockResolvedValueOnce(html("live"));
     const online = navigate(`https://dive.day${PATH}`);
