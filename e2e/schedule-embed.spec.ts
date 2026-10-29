@@ -50,6 +50,18 @@ test("a repeated embed param can't smuggle framing past what the page actually r
   await expect(page.getByRole("heading", { name: "Schedule", exact: true })).toBeVisible();
 });
 
+test("a client cannot forge proxy headers to grant framing", async ({ page }) => {
+  await page.setExtraHTTPHeaders({
+    "x-diveday-embed-request": "1",
+    "x-diveday-request-path": "/s/blue-mantis",
+  });
+  const response = await page.goto("/s/blue-mantis?embed=0");
+  expect(response?.status()).toBe(200);
+  expect(response?.headers()["x-frame-options"]).toBe("DENY");
+  expect(response?.headers()["content-security-policy"]).toContain("frame-ancestors 'none'");
+  await expect(page.getByRole("heading", { name: "Schedule", exact: true })).toBeVisible();
+});
+
 test.describe("as owner", () => {
   signedInAsOwner();
 
