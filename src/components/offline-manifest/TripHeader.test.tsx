@@ -30,8 +30,9 @@ describe("OfflineTripHeader", () => {
     expect(container.textContent).toMatch(/Saved.*7:00\s*AM\s*(?:EST|GMT-5|UTC-5)/);
   });
 
-  it("qualifies roster freshness and omits an empty sync count when note text was removed", () => {
+  it("qualifies saved readiness and note loss when the saved copy has a blocked diver", () => {
     const copy = savedCopy();
+    copy.snapshot.manifests[0].divers[0].readiness = { status: "blocked", blockers: [] };
     copy.events = [
       {
         clientEventId: "erased-note-event",
@@ -49,12 +50,13 @@ describe("OfflineTripHeader", () => {
     ];
     const noteLossView = offlineTripView(copy, "departure");
     if (!noteLossView) throw new Error("the fixture carries a manifest");
+    expect(noteLossView.manifest.divers[0].readiness.status).toBe("blocked");
 
     const { container } = render(<OfflineTripHeader view={noteLossView} controls={controls()} />);
 
     expect(container.textContent).toContain("Fresh roster · older notes removed");
     expect(container.textContent).toContain(
-      "The saved roster is current. Older offline note text was removed after a data erasure; see the notice below.",
+      "The saved roster is current. Readiness reflects that moment, and we’ll re-check everything once you’re back in signal. Older offline note text was removed after a data erasure; see the notice below.",
     );
     expect(container.textContent).toContain(
       "Older offline note text was removed after a data erasure",

@@ -425,7 +425,7 @@
       "savedAt": "Guardado {when}",
       "expiredBanner": "Esta copia guardada ha caducado y no se puede usar para embarcar buceadores. Cualquier cambio que siga esperando para enviarse abajo seguirá intentándolo, pero el nuevo pase de lista debe registrarse en el manifiesto en vivo.",
       "freshnessBanner": "{freshnessNote}. La disponibilidad refleja ese momento, y lo verificamos todo de nuevo en cuanto tengas señal.",
-      "freshnessBannerWithNoteLoss": "{freshnessNote}. Se eliminó texto de notas sin conexión anteriores tras borrar datos; consulta el aviso siguiente.",
+      "freshnessBannerWithNoteLoss": "{freshnessNote}. La disponibilidad refleja ese momento, y lo verificamos todo de nuevo en cuanto tengas señal. Se eliminó texto de notas sin conexión anteriores tras borrar datos; consulta el aviso siguiente.",
       "unansweredBanner": "DiveDay no respondió, así que esta es la lista que guardó este teléfono, no la del manifiesto en vivo.",
       "liveAnswering": "DiveDay vuelve a responder.",
       "pendingRejectedCounts": "{pending} esperando para enviarse · {rejected} necesitan revisión",

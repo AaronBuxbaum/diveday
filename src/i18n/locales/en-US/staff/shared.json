@@ -425,7 +425,7 @@
       "savedAt": "Saved {when}",
       "expiredBanner": "This saved copy has expired and can’t be used to board divers. Any change still waiting to send below will keep trying, but new roll call must be recorded on the live manifest.",
       "freshnessBanner": "{freshnessNote}. Readiness reflects that moment, and we’ll re-check everything once you’re back in signal.",
-      "freshnessBannerWithNoteLoss": "{freshnessNote}. Older offline note text was removed after a data erasure; see the notice below.",
+      "freshnessBannerWithNoteLoss": "{freshnessNote}. Readiness reflects that moment, and we’ll re-check everything once you’re back in signal. Older offline note text was removed after a data erasure; see the notice below.",
       "unansweredBanner": "DiveDay didn’t answer, so this is the list this phone saved, not the live one.",
       "liveAnswering": "DiveDay is answering again.",
       "pendingRejectedCounts": "{pending} waiting to send · {rejected} need a look",
