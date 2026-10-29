@@ -143,12 +143,11 @@ async function runOn(fresh: typeof proxy, req: NextRequest): Promise<Response> {
   return res;
 }
 
-describe("proxy request-header overrides", () => {
-  it("stamps both proxy headers in one override and keeps every original request header on the surviving list", async () => {
-    // Regression guard for the bug this helper's doc comment describes twice
-    // over: (a) an override list built from scratch dropped `cookie` and
-    // signed every visitor out on their next navigation; (b) two sequential
-    // single-header calls rebuilt the list and the second dropped the first.
+describe("proxy request-header forwarding", () => {
+  it("forwards the complete request with trusted stamps, including the cookie", async () => {
+    // NextResponse.next emits the forwarding protocol from the supplied
+    // request headers. Keep the cookie assertion: omitting it would sign every
+    // visitor out on their next navigation.
     const res = await run(
       request("/shop/blue-mantis/divers", { cookie: "better-auth.session_token=abc" }),
     );
@@ -1066,6 +1065,7 @@ describe("proxy retired-query redirects", () => {
     ] as const) {
       const res = await run(request(from));
       expect(res.status, from).toBe(308);
+      expect(res.headers.has("x-middleware-override-headers"), from).toBe(false);
       // Absolute, because Next's middleware adapter parses this header through
       // `NextURL` and a relative value there has no base to resolve against —
       // it throws and the request answers 500. The origin is the request's

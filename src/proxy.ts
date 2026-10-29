@@ -202,36 +202,11 @@ async function authGateResponse(req: NextRequest): Promise<Response | undefined>
   return undefined;
 }
 
-/**
- * Stamp the `x-middleware-request-*` / `x-middleware-override-headers` pair
- * onto `res` — the wire protocol `NextResponse.next({request:{headers}})`
- * itself compiles down to (see node_modules/next/dist/server/web/
- * spec-extension/response.js `handleMiddlewareField`). Next's dev router
- * (server/lib/router-utils/resolve-routes.js) treats `x-middleware-override-
- * headers` as the *complete* set of request headers that survive — every
- * header on the original request that isn't named in that list gets deleted
- * before the request continues. So the list must always be seeded from the
- * full original request headers (here, `req`), never built up from scratch
- * with only the one header this function means to add/change — that
- * previously dropped `cookie` (and everything else) off every request that
- * passed through this proxy, signing every visitor back out on their very
- * next navigation.
- *
- * Takes every override in one call for the same reason: each call rewrites
- * `x-middleware-override-headers` in full from `req.headers`, so a second call
- * would silently drop the first call's header back off the surviving set.
- */
-function overrideRequestHeaders(
-  req: NextRequest,
-  res: Response,
-  overrides: Record<string, string>,
-): void {
+/** Build the complete upstream header set passed to NextResponse.next/rewrite. */
+function requestHeaders(req: NextRequest, overrides: Record<string, string>): Headers {
   const requestHeaders = new Headers(req.headers);
   for (const [name, value] of Object.entries(overrides)) requestHeaders.set(name, value);
-  for (const [key, headerValue] of requestHeaders) {
-    res.headers.set(`x-middleware-request-${key}`, headerValue);
-  }
-  res.headers.set("x-middleware-override-headers", [...requestHeaders.keys()].join(","));
+  return requestHeaders;
 }
 
 /** `/shop/<slug>/settings/whatsapp`, the one route that loads Meta's SDK. */
@@ -352,13 +327,19 @@ function rememberPartnerReferral(req: NextRequest, res: Response): void {
  * `HttpOnly` and `SameSite=Lax` all the same, and every response that carries an arm is
  * `private, no-store`, so no shared cache hands one visitor's arm to another.
  */
-function rememberPricingArm(req: NextRequest, res: Response): string | null {
-  const decision = visitorPricingArm({
+function pricingArmDecision(req: NextRequest) {
+  return visitorPricingArm({
     pathname: req.nextUrl.pathname,
     cookie: req.cookies.get(PRICING_ARM_COOKIE)?.value,
     config: pricingConfig(),
     method: req.method,
   });
+}
+
+function rememberPricingArm(
+  res: Response,
+  decision: ReturnType<typeof visitorPricingArm>,
+): string | null {
   if (!decision.arm) return null;
   if (decision.setCookie && res instanceof NextResponse) {
     res.cookies.set(PRICING_ARM_COOKIE, decision.arm, {
@@ -806,10 +787,34 @@ export async function proxy(req: NextRequest, _ctx: unknown): Promise<Response |
   // names no segment for a segment. A refusal and the auth gate both outrank
   // the rewrite.
   const embedRender = isEmbedRequest ? embedRenderPath(req.nextUrl.pathname) : null;
+  const pricingDecision = pricingArmDecision(req);
+  const forwardedHeaders = requestHeaders(req, {
+    [EMBED_REQUEST_HEADER]: isEmbedRequest ? "1" : "",
+    [EMBED_BRAND_HEADER]: embedBrand ?? "",
+    [EMBED_FONT_HEADER]: embedFont ?? "",
+    [EMBED_LOCALE_HEADER]: embedLocale,
+    [REQUEST_PATH_HEADER]: isRefusalRender
+      ? (req.headers.get(REQUEST_PATH_HEADER) ?? req.nextUrl.pathname)
+      : publicPath,
+    [REFUSED_SHOP_SLUG_HEADER]: isRefusalRender
+      ? (req.headers.get(REFUSED_SHOP_SLUG_HEADER) ?? "")
+      : (refused?.liveShopSlug ?? ""),
+    [PRICING_ARM_HEADER]: pricingDecision.arm ?? "",
+  });
+  const authResponse = refused ? undefined : await authGateResponse(req);
+  // NextResponse.next/rewrite compile request forwarding metadata from these
+  // options. A redirect has no upstream render to receive request headers, so
+  // keep it as returned by the auth gate.
   const res = refused
-    ? NextResponse.rewrite(new URL(NOT_FOUND_ROUTE, req.nextUrl))
-    : ((await authGateResponse(req)) ??
-      (embedRender ? NextResponse.rewrite(embedRenderUrl(req, embedRender)) : NextResponse.next()));
+    ? NextResponse.rewrite(new URL(NOT_FOUND_ROUTE, req.nextUrl), {
+        request: { headers: forwardedHeaders },
+      })
+    : (authResponse ??
+      (embedRender
+        ? NextResponse.rewrite(embedRenderUrl(req, embedRender), {
+            request: { headers: forwardedHeaders },
+          })
+        : NextResponse.next({ request: { headers: forwardedHeaders } })));
   // **A refusal says for itself that it is not cacheable.** The rewrite keeps
   // the original URL, so whatever the `/_not-found` render emits is what
   // attaches to the refused path — and a negative answer pinned at a shared
@@ -838,36 +843,7 @@ export async function proxy(req: NextRequest, _ctx: unknown): Promise<Response |
   if (refused || isRefusalRender) res.headers.set("Cache-Control", "no-store");
   rememberPartnerReferral(req, res);
   rememberBuddyReferral(req, res);
-  const pricingArm = rememberPricingArm(req, res);
-  // Forward embed-mode and the request's own pathname to the server-component
-  // tree — a layout can't read searchParams or the URL itself (only page.tsx
-  // can), so these headers are the one way it learns "this render is going
-  // into someone else's iframe" and "this is which route." Both are always
-  // overridden, on the request as it continues, never left at whatever a
-  // client happened to send: a spoofed value must never survive. Since the
-  // public namespace split (ADR 20260803-public-shop-namespace) the embed
-  // header's reader is the /s shell; the pathname header's is that namespace's
-  // `not-found.tsx`, which Next hands no props at all and which would
-  // otherwise have no way to know which shop's schedule to offer a diver whose
-  // link died (issue #765). That reader is only safe because the value is
-  // overwritten here on every proxied request rather than trusted from the
-  // client, and src/proxy.test.ts pins that. `isRefusalRender` is the one
-  // exception and the note beside it says why: on that pass the URL is
-  // `/_not-found` and recomputing from it would throw away what the pass that
-  // did the lookups already knows.
-  overrideRequestHeaders(req, res, {
-    [EMBED_REQUEST_HEADER]: isEmbedRequest ? "1" : "",
-    [EMBED_BRAND_HEADER]: embedBrand ?? "",
-    [EMBED_FONT_HEADER]: embedFont ?? "",
-    [EMBED_LOCALE_HEADER]: embedLocale,
-    [REQUEST_PATH_HEADER]: isRefusalRender
-      ? (req.headers.get(REQUEST_PATH_HEADER) ?? req.nextUrl.pathname)
-      : publicPath,
-    [REFUSED_SHOP_SLUG_HEADER]: isRefusalRender
-      ? (req.headers.get(REFUSED_SHOP_SLUG_HEADER) ?? "")
-      : (refused?.liveShopSlug ?? ""),
-    [PRICING_ARM_HEADER]: pricingArm ?? "",
-  });
+  rememberPricingArm(res, pricingDecision);
   // Deny framing everywhere by default (clickjacking on staff/sign-in surfaces);
   // an actual embed request is the one deliberate exception, so a shop can
   // embed its booking calendar on its own website (docs ADR 20260726-schedule-embed).
