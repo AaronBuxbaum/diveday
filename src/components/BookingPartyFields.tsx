@@ -112,10 +112,8 @@ export function BookingPartyFields({
   const t = useTranslations();
   const [size, setSize] = useState(1);
   const [hydrated, setHydrated] = useState(false);
-  const { party, updateMember, rememberedDiver, forgetRememberedDiver } = usePartyMembers(
-    lead,
-    rememberForShop,
-  );
+  const { party, updateMember, rememberedDiver, forgetRememberedDiver, forgetCouldNotConfirm } =
+    usePartyMembers(lead, rememberForShop);
   const [phone, setPhone] = useState(lead?.phone ?? "");
   const [blurred, setBlurred] = useState<Record<number, boolean>>({});
   // Per-member (index > 0 only): "use the main contact's email instead of
@@ -282,6 +280,11 @@ export function BookingPartyFields({
                         </button>
                       ),
                     })}
+                  </p>
+                ) : null}
+                {index === 0 && forgetCouldNotConfirm ? (
+                  <p role="status" className="mb-3 text-sm text-muted">
+                    {t("party.rememberClearUnconfirmed")}
                   </p>
                 ) : null}
                 {/* One box to a row. Name and Email stood side by side in a

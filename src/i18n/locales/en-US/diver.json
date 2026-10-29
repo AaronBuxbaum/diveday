@@ -1423,6 +1423,7 @@
     "phoneHint": "(if the crew needs to reach you)",
     "didYouMeanEmail": "Did you mean {email}?",
     "rememberedChip": "Booking as <strong>{name}</strong> · <button>Not you?</button>",
+    "rememberClearUnconfirmed": "This browser could not confirm that the saved details were removed. They may remain on this device.",
     "useMainContactEmail": "Use the main contact’s email for this diver",
     "under18": "Under 18",
     "under18Hint": "A parent or guardian signs the waiver too.",

@@ -1423,6 +1423,7 @@
     "phoneHint": "(por si la tripulación necesita contactarte)",
     "didYouMeanEmail": "¿Quisiste decir {email}?",
     "rememberedChip": "Reservando como <strong>{name}</strong> · <button>¿No eres tú?</button>",
+    "rememberClearUnconfirmed": "No se pudo confirmar que se eliminaran los datos guardados. Es posible que sigan en este dispositivo.",
     "useMainContactEmail": "Usar el correo del contacto principal para este buceador",
     "under18": "Menor de 18 años",
     "under18Hint": "Un padre, madre o tutor legal también firma la exención.",

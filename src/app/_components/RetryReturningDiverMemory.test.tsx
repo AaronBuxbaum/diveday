@@ -2,16 +2,22 @@
 
 import { act, cleanup, render, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { forgetReturningDiver } from "@/lib/returning-diver";
+import {
+  forgetReturningDiver,
+  saveReturningDiver,
+  snapshotReturningDiverClearGenerations,
+} from "@/lib/returning-diver";
 import { RetryReturningDiverMemory } from "./RetryReturningDiverMemory";
 
 let pathname = "/ready/original";
 const prepare = vi.fn();
 const acknowledge = vi.fn();
+const revoke = vi.fn();
 vi.mock("next/navigation", () => ({ usePathname: () => pathname }));
 vi.mock("@/app/actions/returning-diver-memory", () => ({
   prepareReturningDiverMemory: () => prepare(),
-  acknowledgeReturningDiverMemory: () => acknowledge(),
+  acknowledgeReturningDiverMemory: (...args: unknown[]) => acknowledge(...args),
+  revokeClearedReturningDiverReceipt: (...args: unknown[]) => revoke(...args),
 }));
 
 afterEach(() => {
@@ -28,7 +34,6 @@ describe("RetryReturningDiverMemory", () => {
       kind: "ready",
       shopSlug: "blue-mantis",
       receiptId: "receipt-a",
-      issuedAt: Date.now() - 1000,
       diver: { fullName: "Marco Reyes", email: "marco@example.com" },
       expiresAt: Date.now() + 86_400_000,
     });
@@ -58,7 +63,6 @@ describe("RetryReturningDiverMemory", () => {
         kind: "ready",
         shopSlug: "blue-mantis",
         receiptId: "receipt-b",
-        issuedAt: Date.now() - 1000,
         diver: { fullName: "Marco Reyes", email: "marco@example.com" },
         expiresAt: Date.now() + 86_400_000,
       })
@@ -77,12 +81,10 @@ describe("RetryReturningDiverMemory", () => {
   });
 
   it("does not resurrect a cleared diver after an ack failure and later navigation", async () => {
-    const issuedAt = Date.now() - 1000;
     prepare.mockResolvedValue({
       kind: "ready",
       shopSlug: "blue-mantis",
       receiptId: "receipt-cleared",
-      issuedAt,
       diver: { fullName: "Marco Reyes", email: "marco@example.com" },
       expiresAt: Date.now() + 86_400_000,
     });
@@ -94,14 +96,48 @@ describe("RetryReturningDiverMemory", () => {
       ),
     );
 
-    forgetReturningDiver("blue-mantis", new Date(issuedAt + 1));
+    forgetReturningDiver("blue-mantis");
     expect(localStorage.getItem("diveday:returning-diver:v2:blue-mantis")).toBeNull();
     pathname = "/s/red-reef/trips/next";
     view.rerender(<RetryReturningDiverMemory />);
 
     await waitFor(() => expect(prepare).toHaveBeenCalledTimes(2));
     await waitFor(() => expect(acknowledge).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(revoke).toHaveBeenCalledWith("blue-mantis", "receipt-cleared"));
     expect(localStorage.getItem("diveday:returning-diver:v2:blue-mantis")).toBeNull();
     expect(localStorage.getItem("diveday:returning-diver:v2:red-reef")).toBeNull();
+  });
+
+  it("fences a response already in flight when the user clears that receipt", async () => {
+    let resolvePrepare!: (result: unknown) => void;
+    prepare.mockReturnValue(new Promise((resolve) => (resolvePrepare = resolve)));
+    acknowledge.mockResolvedValue(true);
+    saveReturningDiver(
+      "blue-mantis",
+      { fullName: "Marco Reyes", email: "marco@example.com" },
+      Date.now() + 86_400_000,
+      new Date(),
+      {
+        id: "receipt-in-flight",
+        generationAtStart: snapshotReturningDiverClearGenerations()?.["blue-mantis"] ?? null,
+      },
+    );
+    render(<RetryReturningDiverMemory />);
+    await waitFor(() => expect(prepare).toHaveBeenCalledTimes(1));
+
+    forgetReturningDiver("blue-mantis");
+    await act(async () => {
+      resolvePrepare({
+        kind: "ready",
+        shopSlug: "blue-mantis",
+        receiptId: "receipt-in-flight",
+        diver: { fullName: "Marco Reyes", email: "marco@example.com" },
+        expiresAt: Date.now() + 86_400_000,
+      });
+    });
+
+    await waitFor(() => expect(revoke).toHaveBeenCalledWith("blue-mantis", "receipt-in-flight"));
+    await waitFor(() => expect(acknowledge).toHaveBeenCalledWith("receipt-in-flight"));
+    expect(localStorage.getItem("diveday:returning-diver:v2:blue-mantis")).toBeNull();
   });
 });

@@ -3,7 +3,7 @@
 import { cleanup, fireEvent, screen } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { SMS_CONSENT_ONCE_FILLED } from "@/components/SmsConsentNote";
 import { SEGMENT_CORNER, segmentedTrackClass } from "@/components/ui/segmented";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
@@ -15,6 +15,8 @@ import { BookingPartyFields } from "./BookingPartyFields";
 
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
+  localStorage.clear();
 });
 
 describe("BookingPartyFields", () => {
@@ -184,6 +186,33 @@ describe("BookingPartyFields — the group captions", () => {
     } finally {
       localStorage.clear();
     }
+  });
+
+  it("reports when the browser cannot persist its clear marker", () => {
+    saveReturningDiver(
+      "blue-mantis",
+      { fullName: "Marco Rossi", email: "marco@example.com" },
+      nowDate().getTime() + RETURNING_DIVER_MEMORY_MS,
+    );
+    const originalSetItem = Storage.prototype.setItem;
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(function (
+      this: Storage,
+      key: string,
+      value: string,
+    ) {
+      if (key === "diveday:returning-diver:clear:v2:blue-mantis") {
+        throw new Error("quota exceeded");
+      }
+      return originalSetItem.call(this, key, value);
+    });
+    renderDiver(<BookingPartyFields maxPartySize={4} rememberForShop="blue-mantis" />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Not you?" }));
+
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "This browser could not confirm that the saved details were removed. They may remain on this device.",
+    );
+    expect(localStorage.getItem("diveday:returning-diver:v2:blue-mantis")).toBeNull();
   });
 });
 

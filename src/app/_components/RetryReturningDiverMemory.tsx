@@ -5,8 +5,13 @@ import { useEffect } from "react";
 import {
   acknowledgeReturningDiverMemory,
   prepareReturningDiverMemory,
+  revokeClearedReturningDiverReceipt,
 } from "@/app/actions/returning-diver-memory";
-import { saveReturningDiver } from "@/lib/returning-diver";
+import {
+  saveReturningDiver,
+  snapshotReturningDiverClearGenerations,
+  subscribeToReturningDiverClears,
+} from "@/lib/returning-diver";
 
 /**
  * Retries an opted-in write on same-origin public navigation; renders nothing.
@@ -15,11 +20,20 @@ import { saveReturningDiver } from "@/lib/returning-diver";
 export function RetryReturningDiverMemory() {
   const pathname = usePathname();
 
+  useEffect(
+    () =>
+      subscribeToReturningDiverClears(({ shopSlug, receiptId }) => {
+        if (receiptId) void revokeClearedReturningDiverReceipt(shopSlug, receiptId);
+      }),
+    [],
+  );
+
   useEffect(() => {
     // This receipt belongs to a diver's public flow. Staff pages on a shared
     // shop device must never resolve it or persist diver details there.
     if (!pathname || !(pathname.startsWith("/s/") || pathname.startsWith("/ready/"))) return;
     let active = true;
+    const clearSnapshot = snapshotReturningDiverClearGenerations();
     void prepareReturningDiverMemory()
       .then(async (result) => {
         if (!active || !result) return;
@@ -30,7 +44,7 @@ export function RetryReturningDiverMemory() {
           undefined,
           {
             id: result.receiptId,
-            issuedAt: result.issuedAt,
+            generationAtStart: clearSnapshot?.[result.shopSlug] ?? null,
           },
         );
         // An explicit clear is itself final: acknowledge the receipt so it

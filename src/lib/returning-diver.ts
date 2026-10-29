@@ -9,6 +9,8 @@ import { DAY_MS, nowDate } from "@/lib/clock";
 
 const STORAGE_PREFIX = "diveday:returning-diver:v2:";
 const CLEAR_PREFIX = "diveday:returning-diver:clear:v2:";
+const CLEAR_EVENT = "diveday:returning-diver:cleared";
+const CLEAR_CHANNEL = "diveday:returning-diver-clear-v2";
 const LEGACY_STORAGE_KEY = "diveday:returning-diver:v1";
 export const RETURNING_DIVER_MEMORY_MS = 30 * DAY_MS;
 export const RETURNING_DIVER_RECEIPT_COOKIE = "diveday-returning-diver-receipt";
@@ -18,8 +20,11 @@ export type ReturningDiver = { fullName: string; email: string };
 type StoredReturningDiver = ReturningDiver & {
   expiresAt: number;
   receiptId?: string;
-  issuedAt?: number;
+  clearGeneration?: string | null;
 };
+
+type ClearState = { generation: string; blockedReceiptId?: string };
+const volatileClearGenerations = new Map<string, string>();
 
 function isReturningDiver(value: unknown): value is ReturningDiver {
   return (
@@ -38,7 +43,9 @@ function clearKey(shopSlug: string): string | null {
   return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(shopSlug) ? `${CLEAR_PREFIX}${shopSlug}` : null;
 }
 
-function activeClearTimestamp(key: string, now: Date): number | null {
+function readClearState(shopSlug: string): ClearState | null {
+  const key = clearKey(shopSlug);
+  if (!key) return null;
   const raw = localStorage.getItem(key);
   if (!raw) return null;
   try {
@@ -46,21 +53,87 @@ function activeClearTimestamp(key: string, now: Date): number | null {
     if (
       typeof parsed !== "object" ||
       parsed === null ||
-      typeof (parsed as { clearedAt?: unknown }).clearedAt !== "number" ||
-      typeof (parsed as { expiresAt?: unknown }).expiresAt !== "number"
+      typeof (parsed as { generation?: unknown }).generation !== "string"
     ) {
       localStorage.removeItem(key);
       return null;
     }
-    const clear = parsed as { clearedAt: number; expiresAt: number };
-    if (clear.expiresAt <= now.getTime()) {
-      localStorage.removeItem(key);
-      return null;
-    }
-    return clear.clearedAt;
+    const state = parsed as ClearState;
+    return state;
   } catch {
     throw new Error("device storage is unavailable");
   }
+}
+
+function effectiveClearState(shopSlug: string): ClearState | null {
+  const persistent = readClearState(shopSlug);
+  const volatile = volatileClearGenerations.get(shopSlug);
+  if (!volatile || persistent?.generation === volatile) return persistent;
+  return { ...persistent, generation: volatile };
+}
+
+function nextClearGeneration(): string {
+  try {
+    return (
+      globalThis.crypto?.randomUUID?.() ??
+      `${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`
+    );
+  } catch {
+    return `${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`;
+  }
+}
+
+/** Capture shop clear generations before the retry request starts. */
+export function snapshotReturningDiverClearGenerations(): Record<string, string> | null {
+  try {
+    const snapshot: Record<string, string> = {};
+    const slugs = new Set(volatileClearGenerations.keys());
+    for (let index = 0; index < localStorage.length; index += 1) {
+      const key = localStorage.key(index);
+      if (key?.startsWith(CLEAR_PREFIX)) slugs.add(key.slice(CLEAR_PREFIX.length));
+    }
+    for (const slug of slugs) {
+      const state = effectiveClearState(slug);
+      if (state) snapshot[slug] = state.generation;
+    }
+    return snapshot;
+  } catch {
+    return null;
+  }
+}
+
+export function subscribeToReturningDiverClears(
+  onClear: (input: { shopSlug: string; receiptId?: string }) => void,
+): () => void {
+  if (typeof window === "undefined") return () => {};
+  const receive = (value: unknown) => {
+    if (typeof value !== "object" || value === null) return;
+    const message = value as { shopSlug?: unknown; generation?: unknown; receiptId?: unknown };
+    if (
+      typeof message.shopSlug !== "string" ||
+      !storageKey(message.shopSlug) ||
+      typeof message.generation !== "string"
+    ) {
+      return;
+    }
+    const receiptId = typeof message.receiptId === "string" ? message.receiptId : undefined;
+    volatileClearGenerations.set(message.shopSlug, message.generation);
+    if (receiptId) clearOnlyThisReceipt(storageKey(message.shopSlug) ?? "", receiptId);
+    onClear({ shopSlug: message.shopSlug, ...(receiptId ? { receiptId } : {}) });
+  };
+  const onWindowEvent = (event: Event) => receive((event as CustomEvent<unknown>).detail);
+  window.addEventListener(CLEAR_EVENT, onWindowEvent);
+  let channel: BroadcastChannel | null = null;
+  try {
+    channel = typeof BroadcastChannel === "undefined" ? null : new BroadcastChannel(CLEAR_CHANNEL);
+  } catch {
+    channel = null;
+  }
+  if (channel) channel.onmessage = (event: MessageEvent<unknown>) => receive(event.data);
+  return () => {
+    window.removeEventListener(CLEAR_EVENT, onWindowEvent);
+    channel?.close();
+  };
 }
 
 function clearOnlyThisReceipt(key: string, receiptId: string | undefined): void {
@@ -123,37 +196,45 @@ export function saveReturningDiver(
   diver: ReturningDiver,
   expiresAt: number,
   now: Date = nowDate(),
-  receipt?: { id: string; issuedAt: number },
+  receipt?: { id: string; generationAtStart: string | null },
 ): "saved" | "cleared" | "unavailable" {
   clearLegacyStorage();
   clearExpiredShopMemories(now);
   const key = storageKey(shopSlug);
   if (!key || !diver.fullName.trim() || !diver.email.trim() || expiresAt <= now.getTime())
     return "unavailable";
-  let clearedAt: number | null;
+  let clearState: ClearState | null;
   try {
-    const tombstone = clearKey(shopSlug);
-    clearedAt = tombstone ? activeClearTimestamp(tombstone, now) : null;
+    clearState = effectiveClearState(shopSlug);
   } catch {
     return "unavailable";
   }
-  const issuedAt = receipt?.issuedAt ?? now.getTime();
-  if (clearedAt !== null && issuedAt <= clearedAt) return "cleared";
+  if (
+    receipt &&
+    (receipt.generationAtStart !== (clearState?.generation ?? null) ||
+      clearState?.blockedReceiptId === receipt.id)
+  ) {
+    clearOnlyThisReceipt(key, receipt.id);
+    return "cleared";
+  }
   try {
     localStorage.setItem(
       key,
       JSON.stringify({
         ...diver,
         expiresAt,
-        ...(receipt ? { receiptId: receipt.id, issuedAt: receipt.issuedAt } : {}),
+        clearGeneration: clearState?.generation ?? null,
+        ...(receipt ? { receiptId: receipt.id } : {}),
       } satisfies StoredReturningDiver),
     );
     // A clear in another tab may land between the pre-write check and setItem.
-    // Recheck afterward and remove only this receipt, preserving any newer
-    // opt-in that may already have replaced it.
-    const tombstone = clearKey(shopSlug);
-    const latestClear = tombstone ? activeClearTimestamp(tombstone, now) : null;
-    if (latestClear !== null && issuedAt <= latestClear) {
+    // Recheck the generation and remove only this receipt, preserving a later
+    // deliberate opt-in that may already have replaced it.
+    const latestClear = effectiveClearState(shopSlug);
+    if (
+      (latestClear?.generation ?? null) !== (clearState?.generation ?? null) ||
+      latestClear?.blockedReceiptId === receipt?.id
+    ) {
       clearOnlyThisReceipt(key, receipt?.id);
       return "cleared";
     }
@@ -186,14 +267,17 @@ export function loadReturningDiver(shopSlug: string, now: Date = nowDate()): Ret
       localStorage.removeItem(key);
       return null;
     }
-    const tombstone = clearKey(shopSlug);
-    const clearedAt = tombstone ? activeClearTimestamp(tombstone, now) : null;
-    const issuedAt = (parsed as StoredReturningDiver).issuedAt;
-    if (clearedAt !== null && (typeof issuedAt !== "number" || issuedAt <= clearedAt)) {
+    const clearState = effectiveClearState(shopSlug);
+    const stored = parsed as StoredReturningDiver;
+    if (
+      clearState &&
+      (stored.clearGeneration !== clearState.generation ||
+        (stored.receiptId && clearState.blockedReceiptId === stored.receiptId))
+    ) {
       localStorage.removeItem(key);
       return null;
     }
-    if ((parsed as StoredReturningDiver).expiresAt <= now.getTime()) {
+    if (stored.expiresAt <= now.getTime()) {
       localStorage.removeItem(key);
       return null;
     }
@@ -203,20 +287,72 @@ export function loadReturningDiver(shopSlug: string, now: Date = nowDate()): Ret
   }
 }
 
-export function forgetReturningDiver(shopSlug: string, now: Date = nowDate()): void {
+export function forgetReturningDiver(shopSlug: string): "cleared" | "partial" | "unavailable" {
   clearLegacyStorage();
-  clearExpiredShopMemories(now);
   const key = storageKey(shopSlug);
   const tombstone = clearKey(shopSlug);
-  if (!key || !tombstone) return;
+  if (!key || !tombstone) return "unavailable";
+  let blockedReceiptId: string | undefined;
   try {
-    const clearedAt = now.getTime();
+    const raw = localStorage.getItem(key);
+    if (raw) {
+      const parsed: unknown = JSON.parse(raw);
+      if (
+        typeof parsed === "object" &&
+        parsed !== null &&
+        typeof (parsed as { receiptId?: unknown }).receiptId === "string"
+      ) {
+        blockedReceiptId = (parsed as { receiptId: string }).receiptId;
+      }
+    }
+    blockedReceiptId ??= readClearState(shopSlug)?.blockedReceiptId;
+  } catch {
+    // The clear still attempts both writes independently below.
+  }
+  const generation = nextClearGeneration();
+  volatileClearGenerations.set(shopSlug, generation);
+  let markerWritten = false;
+  let identityRemoved = false;
+  try {
     localStorage.setItem(
       tombstone,
-      JSON.stringify({ clearedAt, expiresAt: clearedAt + RETURNING_DIVER_MEMORY_MS }),
+      JSON.stringify({
+        generation,
+        ...(blockedReceiptId ? { blockedReceiptId } : {}),
+      } satisfies ClearState),
     );
-    localStorage.removeItem(key);
+    markerWritten = true;
   } catch {
-    // Storage can be blocked; forgetting in the current form still works.
+    // Persistence may fail from quota; still make the same-tab fence volatile.
   }
+  try {
+    localStorage.removeItem(key);
+    identityRemoved = true;
+  } catch {
+    // Browser storage can refuse deletion; report partial completion honestly.
+  }
+  const outcome =
+    markerWritten && identityRemoved
+      ? "cleared"
+      : markerWritten || identityRemoved
+        ? "partial"
+        : "unavailable";
+  if (typeof window !== "undefined") {
+    const detail = {
+      shopSlug,
+      generation,
+      ...(blockedReceiptId ? { receiptId: blockedReceiptId } : {}),
+    };
+    window.dispatchEvent(new CustomEvent(CLEAR_EVENT, { detail }));
+    try {
+      if (typeof BroadcastChannel !== "undefined") {
+        const channel = new BroadcastChannel(CLEAR_CHANNEL);
+        channel.postMessage(detail);
+        channel.close();
+      }
+    } catch {
+      // The local generation and server revocation still fence future retries.
+    }
+  }
+  return outcome;
 }

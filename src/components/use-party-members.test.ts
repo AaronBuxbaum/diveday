@@ -28,6 +28,7 @@ describe("usePartyMembers", () => {
 
   it("fills the first slot from the remembered diver, and forgets it on request", () => {
     remembered.mockReturnValue({ fullName: "Priya Shah", email: "priya@example.com" } as never);
+    vi.mocked(forgetReturningDiver).mockReturnValue("cleared");
     const { result } = renderHook(() => usePartyMembers(null, "blue-mantis"));
     expect(result.current.rememberedDiver?.fullName).toBe("Priya Shah");
     expect(result.current.party[0]).toEqual({ fullName: "Priya Shah", email: "priya@example.com" });
@@ -35,6 +36,17 @@ describe("usePartyMembers", () => {
     expect(result.current.rememberedDiver).toBeNull();
     expect(result.current.party[0]).toEqual({ fullName: "", email: "" });
     expect(forgetReturningDiver).toHaveBeenCalledWith("blue-mantis");
+  });
+
+  it("reports when browser storage could not confirm a clear", () => {
+    remembered.mockReturnValue({ fullName: "Priya Shah", email: "priya@example.com" } as never);
+    vi.mocked(forgetReturningDiver).mockReturnValue("partial");
+    const { result } = renderHook(() => usePartyMembers(null, "blue-mantis"));
+
+    act(() => result.current.forgetRememberedDiver());
+
+    expect(result.current.forgetCouldNotConfirm).toBe(true);
+    expect(result.current.rememberedDiver).toBeNull();
   });
 
   it("asks nothing of the device when remembering is off", () => {

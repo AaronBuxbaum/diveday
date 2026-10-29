@@ -11,6 +11,7 @@ import {
   issueReturningDiverReceipt,
   RETURNING_DIVER_MEMORY_MS,
   readReturningDiverReceipt,
+  revokeReturningDiverReceipt,
 } from "./booking-capabilities";
 import { createBooking, createBookingParty } from "./bookings";
 import { bookingCapabilities, bookings, people } from "./schema";
@@ -124,6 +125,48 @@ describe("returning-diver receipt", () => {
     ).toBeNull();
 
     await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, booking.id));
+    expect(await readReturningDiverReceipt(db, { receiptToken: receipt.token, now })).toBeNull();
+  });
+
+  it("revokes only the cookie-bound receipt for its matching shop", async () => {
+    const { db, shop, trip, booking, redirect } = await readyBooking();
+    const now = nowDate();
+    const receipt = await issueReturningDiverReceipt(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      expectedPersonId: booking.personId,
+      expectedTripId: trip.id,
+      redirectReadinessToken: redirect.token,
+      now,
+    });
+    if (!receipt) throw new Error("expected receipt to be issued");
+    const memory = await readReturningDiverReceipt(db, { receiptToken: receipt.token, now });
+    if (!memory) throw new Error("expected retryable receipt");
+
+    expect(
+      await revokeReturningDiverReceipt(db, {
+        receiptToken: receipt.token,
+        expectedReceiptId: "00000000-0000-0000-0000-000000000000",
+        shopSlug: shop.slug,
+        now,
+      }),
+    ).toBe(false);
+    expect(
+      await revokeReturningDiverReceipt(db, {
+        receiptToken: receipt.token,
+        expectedReceiptId: memory.receiptId,
+        shopSlug: "another-shop",
+        now,
+      }),
+    ).toBe(false);
+    expect(
+      await revokeReturningDiverReceipt(db, {
+        receiptToken: receipt.token,
+        expectedReceiptId: memory.receiptId,
+        shopSlug: shop.slug,
+        now,
+      }),
+    ).toBe(true);
     expect(await readReturningDiverReceipt(db, { receiptToken: receipt.token, now })).toBeNull();
   });
 

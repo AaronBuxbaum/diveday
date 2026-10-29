@@ -28,6 +28,7 @@ export function usePartyMembers(
     ),
   );
   const [rememberedDiver, setRememberedDiver] = useState<ReturningDiver | null>(null);
+  const [forgetCouldNotConfirm, setForgetCouldNotConfirm] = useState(false);
 
   const updateMember = useCallback((index: number, patch: Partial<PartyMember>) => {
     setParty((current) => current.map((m, i) => (i === index ? { ...m, ...patch } : m)));
@@ -42,10 +43,12 @@ export function usePartyMembers(
   }, [rememberForShop, lead, updateMember]);
 
   function forgetRememberedDiver() {
-    if (rememberForShop) forgetReturningDiver(rememberForShop);
+    if (rememberForShop) {
+      setForgetCouldNotConfirm(forgetReturningDiver(rememberForShop) !== "cleared");
+    }
     setRememberedDiver(null);
     updateMember(0, { fullName: "", email: "" });
   }
 
-  return { party, updateMember, rememberedDiver, forgetRememberedDiver };
+  return { party, updateMember, rememberedDiver, forgetRememberedDiver, forgetCouldNotConfirm };
 }

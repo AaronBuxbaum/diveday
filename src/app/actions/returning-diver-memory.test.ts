@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   delete: vi.fn(),
   read: vi.fn(),
   acknowledge: vi.fn(),
+  revoke: vi.fn(),
   getDb: vi.fn(() => ({ db: true })),
 }));
 
@@ -17,11 +18,14 @@ vi.mock("@/db/client", () => ({ getDb: mocks.getDb }));
 vi.mock("@/db/booking-capabilities", () => ({
   readReturningDiverReceipt: mocks.read,
   acknowledgeReturningDiverReceipt: mocks.acknowledge,
+  revokeReturningDiverReceipt: mocks.revoke,
 }));
 
-const { acknowledgeReturningDiverMemory, prepareReturningDiverMemory } = await import(
-  "./returning-diver-memory"
-);
+const {
+  acknowledgeReturningDiverMemory,
+  prepareReturningDiverMemory,
+  revokeClearedReturningDiverReceipt,
+} = await import("./returning-diver-memory");
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -32,7 +36,6 @@ describe("returning-diver memory server actions", () => {
   it("returns only the receipt-authorized shop identity and never accepts caller identity", async () => {
     mocks.read.mockResolvedValue({
       receiptId: "receipt-row-id",
-      issuedAt: 100,
       shopSlug: "blue-mantis",
       diver: { fullName: "Marco Reyes", email: "marco@example.com" },
       memoryExpiresAt: 200,
@@ -41,7 +44,6 @@ describe("returning-diver memory server actions", () => {
     await expect(prepareReturningDiverMemory()).resolves.toEqual({
       kind: "ready",
       receiptId: "receipt-row-id",
-      issuedAt: 100,
       shopSlug: "blue-mantis",
       diver: { fullName: "Marco Reyes", email: "marco@example.com" },
       expiresAt: 200,
@@ -70,6 +72,23 @@ describe("returning-diver memory server actions", () => {
       {
         receiptToken: "receipt-token-that-is-long-enough",
         expectedReceiptId: "receipt-row-id",
+      },
+    );
+    expect(mocks.delete).toHaveBeenCalledWith("diveday-returning-diver-receipt");
+  });
+
+  it("revokes only the matching receipt and shop on clear", async () => {
+    mocks.revoke.mockResolvedValue(true);
+    const receiptId = "00000000-0000-0000-0000-000000000001";
+
+    await expect(revokeClearedReturningDiverReceipt("blue-mantis", receiptId)).resolves.toBe(true);
+
+    expect(mocks.revoke).toHaveBeenCalledWith(
+      { db: true },
+      {
+        receiptToken: "receipt-token-that-is-long-enough",
+        expectedReceiptId: receiptId,
+        shopSlug: "blue-mantis",
       },
     );
     expect(mocks.delete).toHaveBeenCalledWith("diveday-returning-diver-receipt");

@@ -6,6 +6,7 @@ import {
   loadReturningDiver,
   RETURNING_DIVER_MEMORY_MS,
   saveReturningDiver,
+  snapshotReturningDiverClearGenerations,
 } from "./returning-diver";
 
 const NOW = new Date("2026-10-28T12:00:00.000Z");
@@ -95,25 +96,40 @@ describe("opted-in returning-diver memory", () => {
     });
   });
 
-  it("keeps a cleared pending receipt from returning but accepts a later opt-in", () => {
-    const oldReceipt = { id: "receipt-old", issuedAt: NOW.getTime() - 1 };
-    const expiry = NOW.getTime() + RETURNING_DIVER_MEMORY_MS;
+  it("keeps a cleared receipt fenced despite clock skew and accepts a later opt-in", () => {
+    const initialGeneration = snapshotReturningDiverClearGenerations()?.["blue-mantis"] ?? null;
+    const oldReceipt = { id: "receipt-old", generationAtStart: initialGeneration };
+    const expiry = new Date("2050-01-01T00:00:00Z").getTime();
     saveReturningDiver("blue-mantis", diver, expiry, NOW, oldReceipt);
-    forgetReturningDiver("blue-mantis", NOW);
+    expect(forgetReturningDiver("blue-mantis")).toBe("cleared");
 
-    expect(saveReturningDiver("blue-mantis", diver, expiry, NOW, oldReceipt)).toBe("cleared");
-    expect(loadReturningDiver("blue-mantis", NOW)).toBeNull();
+    const skewedDeviceTime = new Date("2040-01-01T00:00:00Z");
+    expect(saveReturningDiver("blue-mantis", diver, expiry, skewedDeviceTime, oldReceipt)).toBe(
+      "cleared",
+    );
+    expect(loadReturningDiver("blue-mantis", skewedDeviceTime)).toBeNull();
+    const generation = snapshotReturningDiverClearGenerations()?.["blue-mantis"] ?? null;
+    expect(generation).toBeTruthy();
     expect(
-      saveReturningDiver("blue-mantis", { ...diver, fullName: "New opt-in" }, expiry, NOW, {
-        id: "receipt-new",
-        issuedAt: NOW.getTime() + 1,
-      }),
+      saveReturningDiver(
+        "blue-mantis",
+        { ...diver, fullName: "New opt-in" },
+        expiry,
+        skewedDeviceTime,
+        { id: "receipt-new", generationAtStart: generation },
+      ),
     ).toBe("saved");
-    expect(loadReturningDiver("blue-mantis", NOW)).toEqual({ ...diver, fullName: "New opt-in" });
+    expect(loadReturningDiver("blue-mantis", skewedDeviceTime)).toEqual({
+      ...diver,
+      fullName: "New opt-in",
+    });
   });
 
   it("rechecks the clear marker after a concurrent write and removes only that receipt", () => {
     const key = "diveday:returning-diver:v2:blue-mantis";
+    const initialGeneration = snapshotReturningDiverClearGenerations()?.["blue-mantis"] ?? null;
+    const receipt = { id: "receipt-in-flight", generationAtStart: initialGeneration };
+    saveReturningDiver("blue-mantis", diver, NOW.getTime() + 1000, NOW, receipt);
     const originalSetItem = Storage.prototype.setItem;
     let clearedDuringWrite = false;
     vi.spyOn(Storage.prototype, "setItem").mockImplementation(function (
@@ -123,18 +139,61 @@ describe("opted-in returning-diver memory", () => {
     ) {
       if (name === key && !clearedDuringWrite) {
         clearedDuringWrite = true;
-        forgetReturningDiver("blue-mantis", new Date(NOW.getTime() + 1));
+        forgetReturningDiver("blue-mantis");
       }
       return originalSetItem.call(this, name, value);
     });
 
     expect(
       saveReturningDiver("blue-mantis", diver, NOW.getTime() + 1000, NOW, {
-        id: "receipt-in-flight",
-        issuedAt: NOW.getTime(),
+        ...receipt,
       }),
     ).toBe("cleared");
     expect(loadReturningDiver("blue-mantis", new Date(NOW.getTime() + 2))).toBeNull();
+  });
+
+  it("removes identity even when tombstone persistence fails", () => {
+    const initialGeneration = snapshotReturningDiverClearGenerations()?.["blue-mantis"] ?? null;
+    saveReturningDiver("blue-mantis", diver, NOW.getTime() + RETURNING_DIVER_MEMORY_MS, NOW, {
+      id: "receipt-quota",
+      generationAtStart: initialGeneration,
+    });
+    const originalSetItem = Storage.prototype.setItem;
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(function (
+      this: Storage,
+      key: string,
+      value: string,
+    ) {
+      if (key === "diveday:returning-diver:clear:v2:blue-mantis") {
+        throw new Error("quota exceeded");
+      }
+      return originalSetItem.call(this, key, value);
+    });
+
+    expect(forgetReturningDiver("blue-mantis")).toBe("partial");
+    expect(localStorage.getItem("diveday:returning-diver:v2:blue-mantis")).toBeNull();
+    expect(loadReturningDiver("blue-mantis", NOW)).toBeNull();
+  });
+
+  it("reports partial clear when browser storage refuses identity deletion", () => {
+    const initialGeneration = snapshotReturningDiverClearGenerations()?.["blue-mantis"] ?? null;
+    saveReturningDiver("blue-mantis", diver, NOW.getTime() + RETURNING_DIVER_MEMORY_MS, NOW, {
+      id: "receipt-delete-fails",
+      generationAtStart: initialGeneration,
+    });
+    const originalRemoveItem = Storage.prototype.removeItem;
+    vi.spyOn(Storage.prototype, "removeItem").mockImplementation(function (
+      this: Storage,
+      key: string,
+    ) {
+      if (key === "diveday:returning-diver:v2:blue-mantis") {
+        throw new Error("storage refused deletion");
+      }
+      return originalRemoveItem.call(this, key);
+    });
+
+    expect(forgetReturningDiver("blue-mantis")).toBe("partial");
+    expect(localStorage.getItem("diveday:returning-diver:v2:blue-mantis")).toContain("Marco Reyes");
   });
 
   it("deletes the old unscoped v1 value without migrating it", () => {

@@ -404,7 +404,6 @@ export async function readReturningDiverReceipt(
   input: { receiptToken: string; now?: Date },
 ): Promise<{
   receiptId: string;
-  issuedAt: number;
   shopSlug: string;
   diver: { fullName: string; email: string };
   memoryExpiresAt: number;
@@ -508,7 +507,6 @@ export async function readReturningDiverReceipt(
     if (!source || !receipt) return null;
     return {
       receiptId: receipt.id,
-      issuedAt: receipt.issuedAt.getTime(),
       shopSlug: row.shopSlug,
       diver: { fullName: row.fullName, email: row.email },
       memoryExpiresAt: receipt.issuedAt.getTime() + RETURNING_DIVER_MEMORY_MS,
@@ -550,6 +548,35 @@ export async function acknowledgeReturningDiverReceipt(
         gt(bookingCapabilities.expiresAt, now),
       ),
     );
+  return true;
+}
+
+/** Revoke only the receipt currently held by this device for its cleared shop. */
+export async function revokeReturningDiverReceipt(
+  db: DbExecutor,
+  input: { receiptToken: string; expectedReceiptId: string; shopSlug: string; now?: Date },
+): Promise<boolean> {
+  const now = input.now ?? nowDate();
+  const [receipt] = await db
+    .select({ id: bookingCapabilities.id, revokedAt: bookingCapabilities.revokedAt })
+    .from(bookingCapabilities)
+    .innerJoin(shops, eq(shops.id, bookingCapabilities.shopId))
+    .where(
+      and(
+        eq(bookingCapabilities.tokenHash, hashCapabilityToken(input.receiptToken)),
+        eq(bookingCapabilities.id, input.expectedReceiptId),
+        eq(bookingCapabilities.purpose, "returning_diver_receipt"),
+        eq(shops.slug, input.shopSlug),
+      ),
+    )
+    .limit(1);
+  if (!receipt) return false;
+  if (!receipt.revokedAt) {
+    await db
+      .update(bookingCapabilities)
+      .set({ revokedAt: now })
+      .where(and(eq(bookingCapabilities.id, receipt.id), isNull(bookingCapabilities.revokedAt)));
+  }
   return true;
 }
 

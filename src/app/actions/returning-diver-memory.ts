@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import {
   acknowledgeReturningDiverReceipt,
   readReturningDiverReceipt,
+  revokeReturningDiverReceipt,
 } from "@/db/booking-capabilities";
 import { getDb } from "@/db/client";
 import { RETURNING_DIVER_RECEIPT_COOKIE } from "@/lib/returning-diver";
@@ -16,7 +17,6 @@ function validReceiptToken(value: string | undefined): value is string {
 export async function prepareReturningDiverMemory(): Promise<{
   kind: "ready";
   receiptId: string;
-  issuedAt: number;
   shopSlug: string;
   diver: { fullName: string; email: string };
   expiresAt: number;
@@ -30,7 +30,6 @@ export async function prepareReturningDiverMemory(): Promise<{
       return {
         kind: "ready",
         receiptId: memory.receiptId,
-        issuedAt: memory.issuedAt,
         shopSlug: memory.shopSlug,
         diver: memory.diver,
         expiresAt: memory.memoryExpiresAt,
@@ -56,6 +55,30 @@ export async function acknowledgeReturningDiverMemory(expectedReceiptId: string)
     });
     if (acknowledged) cookieStore.delete(RETURNING_DIVER_RECEIPT_COOKIE);
     return acknowledged;
+  } catch {
+    return false;
+  }
+}
+
+/** A clear revokes only the receipt ID held in the current HttpOnly cookie. */
+export async function revokeClearedReturningDiverReceipt(
+  shopSlug: string,
+  expectedReceiptId: string,
+): Promise<boolean> {
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(shopSlug)) return false;
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(expectedReceiptId))
+    return false;
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get(RETURNING_DIVER_RECEIPT_COOKIE)?.value;
+    if (!validReceiptToken(token)) return false;
+    const revoked = await revokeReturningDiverReceipt(await getDb(), {
+      receiptToken: token,
+      expectedReceiptId,
+      shopSlug,
+    });
+    if (revoked) cookieStore.delete(RETURNING_DIVER_RECEIPT_COOKIE);
+    return revoked;
   } catch {
     return false;
   }
