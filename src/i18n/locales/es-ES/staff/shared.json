@@ -499,9 +499,9 @@
       "refreshButton": "Actualizar ahora"
     },
     "discarded": {
-      "heading": "Se eliminó un pase de lista que nunca se envió",
-      "body": "{count, plural, one {# cambio de recuento registrado} other {# cambios de recuento registrados}} en este dispositivo nunca llegaron a DiveDay, y la copia guardada superó la fecha en que un manifiesto puede permanecer en un dispositivo. Vuelve a introducir en el manifiesto en vivo lo que siga haciendo falta.",
-      "item": "{shop} · {trip} · {count, plural, one {# cambio perdido} other {# cambios perdidos}}",
+      "heading": "Se eliminaron cambios sin conexión",
+      "body": "Estos cambios nunca llegaron a DiveDay y la copia guardada llegó al límite de retención. Vuelve a introducir en el manifiesto en vivo lo que siga haciendo falta.",
+      "item": "{shop} · {trip} · {count, plural, one {# cambio sin conexión perdido} other {# cambios sin conexión perdidos}}",
       "acknowledge": "Entendido"
     }
   },

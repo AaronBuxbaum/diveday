@@ -499,9 +499,9 @@
       "refreshButton": "Refresh now"
     },
     "discarded": {
-      "heading": "Roll call that never sent has been removed",
-      "body": "{count, plural, one {# roll-call change} other {# roll-call changes}} recorded on this device never reached DiveDay, and the saved copy is past the date a manifest may stay on a device. Re-enter anything still needed on the live manifest.",
-      "item": "{shop} · {trip} · {count, plural, one {# change lost} other {# changes lost}}",
+      "heading": "Offline changes were removed",
+      "body": "These changes never reached DiveDay, and the saved copy reached its retention limit. Re-enter anything still needed on the live manifest.",
+      "item": "{shop} · {trip} · {count, plural, one {# offline change lost} other {# offline changes lost}}",
       "acknowledge": "Got it"
     }
   },

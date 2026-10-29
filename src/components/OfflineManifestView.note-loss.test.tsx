@@ -163,7 +163,7 @@ describe("OfflineManifestView note-loss status", () => {
   });
 });
 
-describe("OfflineManifestView — reporting roll call the ceiling threw away", () => {
+describe("OfflineManifestView — reporting offline changes the ceiling threw away", () => {
   const discarded = [
     {
       noticeId: "notice-trip-9",
@@ -186,13 +186,12 @@ describe("OfflineManifestView — reporting roll call the ceiling threw away", (
 
     render(<OfflineManifestView />);
 
+    expect(await screen.findByText("Offline changes were removed")).toBeInTheDocument();
     expect(
-      await screen.findByText("Roll call that never sent has been removed"),
+      screen.getByText("Reef Runners · Morning Two-Tank · 2 offline changes lost"),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText("Reef Runners · Morning Two-Tank · 2 changes lost"),
-    ).toBeInTheDocument();
-    expect(screen.getByText(/2 roll-call changes/)).toBeInTheDocument();
+    expect(screen.getByText(/These changes never reached DiveDay/)).toBeInTheDocument();
+    expect(screen.queryByText(/roll-call/)).not.toBeInTheDocument();
   });
 
   it("says it on the single-trip branch too, wherever the captain happens to look", async () => {
@@ -203,9 +202,7 @@ describe("OfflineManifestView — reporting roll call the ceiling threw away", (
 
     render(<OfflineManifestView />);
 
-    expect(
-      await screen.findByText("Roll call that never sent has been removed"),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("Offline changes were removed")).toBeInTheDocument();
   });
 
   it("stays put until a human acknowledges it", async () => {
@@ -213,16 +210,14 @@ describe("OfflineManifestView — reporting roll call the ceiling threw away", (
     vi.mocked(readDiscardedOfflineRecords).mockResolvedValue(discarded);
 
     render(<OfflineManifestView />);
-    const notice = await screen.findByText("Roll call that never sent has been removed");
+    const notice = await screen.findByText("Offline changes were removed");
     await act(async () => window.dispatchEvent(new Event("online")));
     expect(notice).toBeInTheDocument();
 
     screen.getByRole("button", { name: "Got it" }).click();
 
     await waitFor(() => expect(acknowledgeDiscardedOfflineRecords).toHaveBeenCalled());
-    expect(
-      screen.queryByText("Roll call that never sent has been removed"),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Offline changes were removed")).not.toBeInTheDocument();
   });
 
   it("acknowledges only the verified shop's visible notice", async () => {
@@ -248,7 +243,7 @@ describe("OfflineManifestView — reporting roll call the ceiling threw away", (
     render(<OfflineManifestView />);
 
     expect(
-      await screen.findByText("Blue Mantis Divers · Own shop trip · 2 changes lost"),
+      await screen.findByText("Blue Mantis Divers · Own shop trip · 2 offline changes lost"),
     ).toBeInTheDocument();
     expect(screen.queryByText(/Reef Runners · Other shop trip/)).not.toBeInTheDocument();
 
@@ -265,8 +260,6 @@ describe("OfflineManifestView — reporting roll call the ceiling threw away", (
     render(<OfflineManifestView />);
 
     await screen.findByText("Two-Tank Reef");
-    expect(
-      screen.queryByText("Roll call that never sent has been removed"),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Offline changes were removed")).not.toBeInTheDocument();
   });
 });

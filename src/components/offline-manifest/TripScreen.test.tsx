@@ -198,9 +198,7 @@ describe("OfflineManifestView — one column, one text edge", () => {
     await renderTrip(richEnvelope("trip-1"));
 
     const freshness = screen.getByText(/Readiness reflects that moment/);
-    const discarded = (
-      await screen.findByText("Roll call that never sent has been removed")
-    ).closest("section");
+    const discarded = (await screen.findByText("Offline changes were removed")).closest("section");
     for (const notice of [freshness, discarded]) {
       expect(notice).toHaveClass("rounded-inset", "px-4", "py-3", "sm:px-5");
       expect(notice).not.toHaveClass("p-3");

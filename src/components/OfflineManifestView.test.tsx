@@ -270,9 +270,7 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
 
     await screen.findByText("This shop's trip");
     await waitFor(() => expect(purgeOfflineManifestsExceptShop).toHaveBeenCalled());
-    expect(
-      screen.queryByText("Roll call that never sent has been removed"),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Offline changes were removed")).not.toBeInTheDocument();
     expect(screen.queryByText(/Private synthetic/)).not.toBeInTheDocument();
     expect(screen.queryByText(/trip-foreign-private/)).not.toBeInTheDocument();
   });

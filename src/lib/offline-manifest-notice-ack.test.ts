@@ -4,6 +4,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import { TEST_FROZEN_CLOCK } from "@/test/frozen-clock";
 import {
   acknowledgeDiscardedOfflineRecords,
+  appendOfflineArrival,
+  appendOfflineChecklistCheck,
   appendOfflineRollCall,
   loadOfflineManifest,
   OFFLINE_MANIFEST_PENDING_GRACE_MS,
@@ -132,5 +134,23 @@ describe("acknowledgeDiscardedOfflineRecords", () => {
     await acknowledgeDiscardedOfflineRecords([earlier]);
 
     expect(await readDiscardedOfflineRecords()).toEqual([newer]);
+  });
+
+  it("counts arrival and checklist evidence without describing it as roll call", async () => {
+    const withChecklist = {
+      ...payload,
+      checklist: { items: [{ id: "oxygen", label: "Oxygen kit" }] },
+    } satisfies OfflineManifestPayload;
+    await saveOfflineManifest(withChecklist);
+    await appendOfflineArrival(tripId, { bookingId, status: "arrived" });
+    await appendOfflineChecklistCheck(tripId, {
+      checklistItemId: "oxygen",
+      status: "checked",
+      note: null,
+    });
+    await backdateExpiry(tripId);
+
+    expect(await loadOfflineManifest(tripId)).toBeNull();
+    expect(await readDiscardedOfflineRecords()).toMatchObject([{ pendingEvents: 2 }]);
   });
 });
