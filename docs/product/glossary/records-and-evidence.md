@@ -218,8 +218,9 @@
   statement, with its observation interval. The lapse figure uses that observed credential state only
   when the entire interval and the scheduled departure fall on the same shop-local start day; it
   judges date-based renewal through the departure's final shop-local day and does not establish the
-  actual departure time. A card issued after the scheduled start day cannot establish what was held
-  for that departure. Offline,
+  actual departure time. The snapshot carries credential type and dates, but not DiveDay's review
+  status or confirmation from the issuer, so a date judged current is not a verified credential.
+  A card issued after the scheduled start day cannot establish what was held for that departure. Offline,
   unmarked, mismatched-day and older records without an observation remain unavailable. An interval
   crossing midnight in the shop's zone cannot establish one observation day and is also unavailable.
   Current credentials remain on Team. The observed role is not captured, so the report identifies an
