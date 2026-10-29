@@ -108,8 +108,6 @@ export const ERASURE_KEEPS: Record<string, string> = {
   gear_service_events: "a technician's record of servicing a unit",
   boat_snags:
     "a crew member's note about a problem on a boat, and who later found it still there or fixed",
-  pre_departure_check_events:
-    "a crew member ticking a checklist line before a departure, and their note about the line",
   trip_stage_events: "the crew moving a departure through its stages",
   trip_blowouts: "who called a departure off, and when",
   marine_life_requests: "a staff member’s search for a species DiveDay does not carry",
