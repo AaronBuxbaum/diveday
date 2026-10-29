@@ -56,10 +56,19 @@
  * the two ends: the copy shows offline, and a `?cancelled=` landing clears it.
  */
 
+import { LEGACY_READY_BANNER_COPY } from "@/i18n/ready-offline-legacy";
+import { keepUnitsWhole } from "@/lib/date-parts";
 import {
   READY_CACHE_NAME,
+  READY_COPY_GENERATED_AT_ATTR,
+  READY_COPY_GENERATED_AT_META,
+  READY_COPY_LOCALE_META,
+  READY_COPY_TIME_ZONE_META,
+  READY_COPY_VERSION,
+  READY_COPY_VERSION_META,
   READY_FORGOTTEN_CACHE_NAME,
   READY_KEEP_UNTIL_META,
+  READY_OFFLINE_GENERATED_AT_PLACEHOLDER,
   READY_OFFLINE_NOTE_ATTR,
 } from "@/lib/ready-offline";
 
@@ -76,9 +85,18 @@ export const READY_COPY_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
 export const READY_COPY_KEY = "/ready/kept-copy";
 
 const PATH_HASH_HEADER = "x-diveday-path-sha256";
-const FORGOTTEN_AT_HEADER = "x-diveday-forgotten-at";
-/** A forget marker's key: a fixed prefix and the path's hash, never the token. */
-const FORGOTTEN_KEY_PREFIX = "/ready/forgotten/";
+const COPY_FORGOTTEN_VERSION_HEADER = "x-diveday-copy-forgotten-version";
+const COPY_REQUEST_ID_HEADER = "x-diveday-copy-request-id";
+const REQUEST_ID_HEADER = "x-diveday-ready-request-id";
+const REQUEST_PATH_HASH_HEADER = "x-diveday-ready-request-path-hash";
+const REQUEST_FORGOTTEN_VERSION_HEADER = "x-diveday-ready-request-forgotten-version";
+const REQUEST_CANCELLED_PATH_HASH_HEADER = "x-diveday-ready-cancelled-path-hash";
+const REQUEST_CANCELLED_VERSION_HEADER = "x-diveday-ready-cancelled-version";
+/** One durable slot orders requests and forgets; this cache keeps only one page. */
+const LATEST_REQUEST_KEY = "/ready/latest-request";
+const LEGACY_FORGOTTEN_KEY_PREFIX = "/ready/forgotten/";
+const LEGACY_FORGOTTEN_VERSION_HEADER = "x-diveday-forgotten-version";
+const LEGACY_FORGOTTEN_AT_HEADER = "x-diveday-forgotten-at";
 const KEEP_UNTIL_HEADER = "x-diveday-keep-until";
 
 /** Stands in for the bearer token in the stored body; not a legal token (wrong length). */
@@ -157,6 +175,99 @@ const OFFLINE_NOTE_SHOWN = `${READY_OFFLINE_NOTE_ATTR}=""`;
 
 const KEEP_UNTIL_PATTERN = new RegExp(`<meta name="${READY_KEEP_UNTIL_META}" content="(\\d+)"`);
 
+type ReadyBanner = { element: string; opening: string; text: string; closing: string };
+
+function readyBanners(html: string): ReadyBanner[] {
+  const pattern = new RegExp(
+    `(<p\\b[^>]*\\b${READY_OFFLINE_NOTE_ATTR}=""[^>]*>)([^<>]*)(<\\/p>)`,
+    "gi",
+  );
+  return [...html.matchAll(pattern)].map((match) => ({
+    element: match[0],
+    opening: match[1] ?? "",
+    text: match[2] ?? "",
+    closing: match[3] ?? "",
+  }));
+}
+
+function hasAttribute(opening: string, name: string): boolean {
+  return new RegExp(`\\b${name}="[^"]*"`).test(opening);
+}
+
+function singleTextBanner(html: string): ReadyBanner | undefined {
+  const banners = readyBanners(html);
+  const banner = banners[0];
+  const allNoteMarkers = html.match(new RegExp(`\\b${READY_OFFLINE_NOTE_ATTR}=""`, "g"));
+  const noteMarkers = banner?.opening.match(new RegExp(`\\b${READY_OFFLINE_NOTE_ATTR}=""`, "g"));
+  if (
+    banners.length !== 1 ||
+    allNoteMarkers?.length !== 1 ||
+    !banner ||
+    noteMarkers?.length !== 1
+  ) {
+    return undefined;
+  }
+  return banner;
+}
+
+function visibleTextBanner(html: string): ReadyBanner | undefined {
+  const banner = singleTextBanner(html);
+  return banner && !/\shidden(?:\s|=|>)/i.test(banner.opening) ? banner : undefined;
+}
+
+function metaContent(html: string, name: string): string | undefined {
+  return html.match(
+    new RegExp(`<meta\\b[^>]*\\bname="${name}"[^>]*\\bcontent="([^"]*)"[^>]*>`, "i"),
+  )?.[1];
+}
+
+function singleMetaContent(html: string, name: string): string | undefined {
+  const matches = [
+    ...html.matchAll(
+      new RegExp(`<meta\\b[^>]*\\bname="${name}"[^>]*\\bcontent="([^"]*)"[^>]*>`, "gi"),
+    ),
+  ];
+  return matches.length === 1 ? matches[0]?.[1] : undefined;
+}
+
+/** Recognize and warn on the two exact historical, localized offline banners. */
+function transformLegacyReadyCopy(html: string): string | undefined {
+  const banner = visibleTextBanner(html);
+  if (!banner || hasAttribute(banner.opening, READY_COPY_GENERATED_AT_ATTR)) return undefined;
+  const knownWarning = LEGACY_READY_BANNER_COPY.get(banner.text);
+  if (!knownWarning) return undefined;
+  return html.replace(banner.element, `${banner.opening}${knownWarning}${banner.closing}`);
+}
+
+/** Format the server-rendered page generation instant in the locale and shop zone. */
+function readyGeneratedAtLabel(html: string, generatedAt: number): string | undefined {
+  const locale = metaContent(html, READY_COPY_LOCALE_META);
+  const timeZone = metaContent(html, READY_COPY_TIME_ZONE_META);
+  const declaredGeneratedAt = Number(singleMetaContent(html, READY_COPY_GENERATED_AT_META));
+  if (
+    !locale ||
+    !timeZone ||
+    !Number.isSafeInteger(generatedAt) ||
+    declaredGeneratedAt !== generatedAt
+  ) {
+    return undefined;
+  }
+  try {
+    return keepUnitsWhole(
+      new Intl.DateTimeFormat(locale, {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        timeZoneName: "short",
+        timeZone,
+      }).formatToParts(new Date(generatedAt)),
+    );
+  } catch {
+    return undefined;
+  }
+}
+
 /** The token in a readiness path (`/ready/<token>`). */
 function tokenOf(path: string): string {
   return path.slice("/ready/".length);
@@ -198,27 +309,180 @@ function storable(response: Response): boolean {
   return (response.headers.get("content-type") ?? "").includes("text/html");
 }
 
-/**
- * Whether `path` was forgotten at or after `requestedAt`: a page fetched
- * before a cancel is the pre-cancel page, however late it answers (#2979).
- */
-async function forgottenSince(
-  storage: CacheStorage,
-  hash: string,
-  requestedAt: number,
-): Promise<boolean> {
-  const markers = await storage.open(READY_FORGOTTEN_CACHE_NAME);
-  const marker = await markers.match(`${FORGOTTEN_KEY_PREFIX}${hash}`);
-  const at = Number(marker?.headers.get(FORGOTTEN_AT_HEADER));
-  return Number.isFinite(at) && marker !== undefined && at >= requestedAt;
+export type ReadyPageRequest = {
+  pathHash: string;
+  forgottenVersion: string;
+  requestId: string;
+  /** Network requests remain useful when storage is unavailable; they just cannot publish. */
+  durable: boolean;
+};
+
+// One request ID is enough because the durable marker has one latest-request
+// slot. This closes same-worker races when a forget marker write fails.
+let locallyInvalidatedRequestId: string | null = null;
+let localLatestRequest: { path: string; pathHash: string; requestId: string } | null = null;
+
+// Order request starts and forget markers separately from cache publication,
+// so a new fetch can start while an older response is being written.
+let readyOrder: Promise<unknown> = Promise.resolve();
+function serializeReadyOrder<T>(operation: () => Promise<T>): Promise<T> {
+  const next = readyOrder.then(operation, operation);
+  readyOrder = next.then(
+    () => undefined,
+    () => undefined,
+  );
+  return next;
+}
+let readyPublication: Promise<unknown> = Promise.resolve();
+function serializeReadyPublication<T>(operation: () => Promise<T>): Promise<T> {
+  const next = readyPublication.then(operation, operation);
+  readyPublication = next.then(
+    () => undefined,
+    () => undefined,
+  );
+  return next;
 }
 
-// Only publication is serialized; a slow asset fetch never blocks a newer save.
-let readyPublication: Promise<unknown> = Promise.resolve();
-function publishReadyCopy(write: () => Promise<boolean>): Promise<boolean> {
-  const next = readyPublication.then(write, write);
-  readyPublication = next.catch(() => {});
-  return next;
+async function forgottenVersion(storage: CacheStorage): Promise<string> {
+  const markers = await storage.open(READY_FORGOTTEN_CACHE_NAME);
+  const latest = await markers.match(LATEST_REQUEST_KEY);
+  return latest?.headers.get(REQUEST_FORGOTTEN_VERSION_HEADER) ?? "";
+}
+
+function legacyForgottenKey(hash: string): string {
+  return `${LEGACY_FORGOTTEN_KEY_PREFIX}${hash}`;
+}
+
+function legacyForgottenVersion(marker: Response | undefined, hash: string): string {
+  if (!marker) return "";
+  const version = marker.headers.get(LEGACY_FORGOTTEN_VERSION_HEADER);
+  if (version) return version;
+  const at = marker.headers.get(LEGACY_FORGOTTEN_AT_HEADER);
+  return at?.trim() && Number.isSafeInteger(Number(at))
+    ? `legacy-at:${at}`
+    : `legacy-invalid:${hash}`;
+}
+
+async function clearLegacyForgetMarkers(markers: Cache): Promise<void> {
+  for (const request of await markers.keys()) {
+    if (new URL(request.url).pathname.startsWith(LEGACY_FORGOTTEN_KEY_PREFIX)) {
+      await markers.delete(request);
+    }
+  }
+}
+
+async function isCopyInvalidated(
+  storage: CacheStorage,
+  hash: string,
+  cached: Response,
+): Promise<boolean> {
+  const markers = await storage.open(READY_FORGOTTEN_CACHE_NAME);
+  const latest = await markers.match(LATEST_REQUEST_KEY);
+  if (latest?.headers.get(REQUEST_CANCELLED_PATH_HASH_HEADER) === hash) {
+    return (
+      cached.headers.get(COPY_FORGOTTEN_VERSION_HEADER) !==
+      latest.headers.get(REQUEST_CANCELLED_VERSION_HEADER)
+    );
+  }
+  const legacy = await markers.match(legacyForgottenKey(hash));
+  const legacyVersion = legacyForgottenVersion(legacy, hash);
+  return Boolean(legacy && cached.headers.get(COPY_FORGOTTEN_VERSION_HEADER) !== legacyVersion);
+}
+
+export function beginReadyPageRequest(
+  storage: CacheStorage,
+  path: string,
+): Promise<ReadyPageRequest> {
+  return serializeReadyOrder(async () => {
+    const hash = await pathHash(path);
+    const request: ReadyPageRequest = {
+      pathHash: hash,
+      forgottenVersion: "",
+      requestId: crypto.randomUUID(),
+      durable: false,
+    };
+    try {
+      const markers = await storage.open(READY_FORGOTTEN_CACHE_NAME);
+      const marker = await markers.match(LATEST_REQUEST_KEY);
+      const oldPathMarker = await markers.match(legacyForgottenKey(hash));
+      const oldPathVersion = legacyForgottenVersion(oldPathMarker, hash);
+      const cancelledPathHash = marker?.headers.get(REQUEST_CANCELLED_PATH_HASH_HEADER) ?? "";
+      const cancelledVersion = marker?.headers.get(REQUEST_CANCELLED_VERSION_HEADER) ?? "";
+      const readyCache = await storage.open(READY_CACHE_NAME);
+      const cached = await readyCache.match(READY_COPY_KEY);
+      const cachedHash = cached?.headers.get(PATH_HASH_HEADER) ?? "";
+      const cachedVersion = cached?.headers.get(COPY_FORGOTTEN_VERSION_HEADER) ?? "";
+      let migratedPathHash = cancelledPathHash;
+      let migratedVersion = cancelledVersion;
+      if (cancelledPathHash !== cachedHash && cachedHash) {
+        const oldCachedMarker = await markers.match(legacyForgottenKey(cachedHash));
+        const oldCachedVersion = legacyForgottenVersion(oldCachedMarker, cachedHash);
+        if (oldCachedVersion && cachedVersion !== oldCachedVersion) {
+          migratedPathHash = cachedHash;
+          migratedVersion = oldCachedVersion;
+        } else if (oldPathVersion) {
+          migratedPathHash = hash;
+          migratedVersion = oldPathVersion;
+        }
+      } else if (oldPathVersion && !cancelledPathHash) {
+        migratedPathHash = hash;
+        migratedVersion = oldPathVersion;
+      }
+      request.forgottenVersion =
+        cancelledPathHash === hash
+          ? cancelledVersion
+          : oldPathVersion || (marker?.headers.get(REQUEST_FORGOTTEN_VERSION_HEADER) ?? "");
+      await markers.put(
+        LATEST_REQUEST_KEY,
+        new Response(null, {
+          headers: {
+            [REQUEST_ID_HEADER]: request.requestId,
+            [REQUEST_PATH_HASH_HEADER]: request.pathHash,
+            [REQUEST_FORGOTTEN_VERSION_HEADER]: request.forgottenVersion,
+            [REQUEST_CANCELLED_PATH_HASH_HEADER]: migratedPathHash,
+            [REQUEST_CANCELLED_VERSION_HEADER]: migratedVersion,
+          },
+        }),
+      );
+      locallyInvalidatedRequestId = null;
+      localLatestRequest = { path, pathHash: hash, requestId: request.requestId };
+      request.durable = true;
+      await clearLegacyForgetMarkers(markers);
+    } catch {
+      // Storage failure must not block the live page. The response carries an
+      // unpublishable request so it cannot overwrite or fall back to stale data.
+      request.durable = false;
+    }
+    return request;
+  });
+}
+
+async function forgottenVersionIsCurrent(
+  storage: CacheStorage,
+  hash: string,
+  request: ReadyPageRequest,
+): Promise<boolean> {
+  if (request.pathHash !== hash) return false;
+  return (
+    request.requestId !== locallyInvalidatedRequestId &&
+    (await forgottenVersion(storage)) === request.forgottenVersion
+  );
+}
+
+async function requestIsCurrent(
+  storage: CacheStorage,
+  hash: string,
+  request: ReadyPageRequest,
+): Promise<boolean> {
+  if (!(await forgottenVersionIsCurrent(storage, hash, request))) return false;
+  const markers = await storage.open(READY_FORGOTTEN_CACHE_NAME);
+  const latest = await markers.match(LATEST_REQUEST_KEY);
+  if (!latest) return false;
+  return (
+    latest.headers.get(REQUEST_ID_HEADER) === request.requestId &&
+    latest.headers.get(REQUEST_PATH_HASH_HEADER) === request.pathHash &&
+    latest.headers.get(REQUEST_FORGOTTEN_VERSION_HEADER) === request.forgottenVersion
+  );
 }
 
 /**
@@ -226,45 +490,72 @@ function publishReadyCopy(write: () => Promise<boolean>): Promise<boolean> {
  * Reads the body (pass a clone). Returns whether it was kept; a page that
  * names no keep-until, or one already past, clears the copy.
  *
- * `requestedAt` is when the fetch that produced `response` began; a forget
- * of this path at or after it (a cancel landing first) means nothing is kept.
+ * `request` records whether ordering was durably captured before the fetch.
+ * A nondurable request may still process terminal truth and return the live
+ * response, but cannot publish a saved copy.
  */
 export async function saveReadyPage(
   storage: CacheStorage,
   path: string,
   response: Response,
   now: number,
-  requestedAt: number = now,
+  request?: ReadyPageRequest,
   prepareAssets?: (html: string) => Promise<void>,
   mayPublish: () => boolean = () => true,
-  observationTime: () => number = () => now,
 ): Promise<boolean> {
   if (!storable(response)) return false;
+  const hash = await pathHash(path);
+  const order = request ?? (await beginReadyPageRequest(storage, path));
+  if (order.pathHash !== hash) return false;
   // A body of its own, so the copy is complete before anything is replaced.
   const html = new TextDecoder().decode(await response.arrayBuffer());
   const named = Number(html.match(KEEP_UNTIL_PATTERN)?.[1] ?? Number.NaN);
   const cache = await storage.open(READY_CACHE_NAME);
   if (!Number.isFinite(named) || named <= now) {
-    return publishReadyCopy(async () => {
-      // Observed terminal truth always forgets this path, including an older
-      // response. Only the current request may clear another path's copy.
-      await forgetReadyPage(storage, path, observationTime());
-      if (mayPublish()) await clearCopies(cache);
-      return false;
-    });
+    // Process terminal truth even without a durable request marker. Order the
+    // path check and epoch write together with request starts, preventing a
+    // different token from slipping between the check and global marker.
+    await forgetTerminalReadyPath(storage, path, hash);
+    return false;
   }
+  if (!order.durable) return false;
+  // Pages rendered before the saved-time format cannot be transformed safely:
+  // their banner has no reliable locale/zone or age context.
+  if (metaContent(html, READY_COPY_VERSION_META) !== READY_COPY_VERSION) return false;
+  const generatedAt = Number(singleMetaContent(html, READY_COPY_GENERATED_AT_META));
+  const generatedAtLabel = readyGeneratedAtLabel(html, generatedAt);
+  const safeHtml = withoutClientRuntime(html);
+  const banner = singleTextBanner(safeHtml);
+  const placeholderCount = safeHtml.split(READY_OFFLINE_GENERATED_AT_PLACEHOLDER).length - 1;
+  // A current-format page must have one text-only banner (hidden online), one
+  // placeholder and usable locale/zone context. Keep the previous complete
+  // copy if a new response is malformed.
+  if (!banner) return false;
+  if (
+    !banner.opening.includes(OFFLINE_NOTE_HIDDEN) ||
+    hasAttribute(banner.opening, READY_COPY_GENERATED_AT_ATTR) ||
+    placeholderCount !== 1 ||
+    !banner.text.includes(READY_OFFLINE_GENERATED_AT_PLACEHOLDER) ||
+    !Number.isSafeInteger(now) ||
+    generatedAtLabel === undefined
+  ) {
+    return false;
+  }
+  const timestampedBanner = `${banner.opening.replace(/>$/, ` ${READY_COPY_GENERATED_AT_ATTR}="${generatedAt}">`)}${banner.text.replace(READY_OFFLINE_GENERATED_AT_PLACEHOLDER, generatedAtLabel)}${banner.closing}`;
+  const timestampedHtml = safeHtml.replace(banner.element, timestampedBanner);
   const headers = new Headers(response.headers);
   headers.set(KEEP_UNTIL_HEADER, String(Math.min(named, now + READY_COPY_MAX_AGE_MS)));
-  const hash = await pathHash(path);
-  if (await forgottenSince(storage, hash, requestedAt)) return false;
+  if (!(await requestIsCurrent(storage, hash, order))) return false;
   headers.set(PATH_HASH_HEADER, hash);
+  headers.set(COPY_FORGOTTEN_VERSION_HEADER, order.forgottenVersion);
+  headers.set(COPY_REQUEST_ID_HEADER, order.requestId);
   // The page's links carry the token; a same-origin script reading the stored
   // body must not recover it (residual D1), so it is put back on the way out.
   // Every other capability on the page is dropped for good: the Flight
   // payload whole (#3003), then a claim link, a checkout link, a bound
   // action's fields and a recap token in the markup (#2693).
   const copy = new Response(
-    withoutClientRuntime(html)
+    timestampedHtml
       .replaceAll(OFFLINE_NOTE_HIDDEN, OFFLINE_NOTE_SHOWN)
       .replaceAll(tokenOf(path), TOKEN_PLACEHOLDER)
       .replace(CLAIM_TOKEN_PATTERN, CLAIM_REMOVED)
@@ -280,16 +571,20 @@ export async function saveReadyPage(
   // Publish the document only after its required static assets are stored.
   // Failure leaves the previous complete copy available, never a partial new one.
   await prepareAssets?.(html);
-  return publishReadyCopy(async () => {
-    if (await forgottenSince(storage, hash, requestedAt)) return false;
+  return serializeReadyPublication(async () => {
+    if (!(await requestIsCurrent(storage, hash, order))) return false;
     if (!mayPublish()) return false;
     await cache.put(READY_COPY_KEY, copy);
-    // Forgetting invalidates the copy even during its write. A newer request
-    // alone leaves this complete copy until its prepared replacement publishes.
-    // The queue keeps this cleanup ahead of any newer publication.
-    if (await forgottenSince(storage, hash, requestedAt)) {
+    // A forget or newer request can land between the pre-write check and
+    // Cache.put. Recheck after the write and remove only this request's copy.
+    if (!(await forgottenVersionIsCurrent(storage, hash, order))) {
       const kept = await cache.match(READY_COPY_KEY);
-      if (kept?.headers.get(PATH_HASH_HEADER) === hash) await cache.delete(READY_COPY_KEY);
+      if (
+        kept?.headers.get(PATH_HASH_HEADER) === hash &&
+        kept.headers.get(COPY_REQUEST_ID_HEADER) === order.requestId
+      ) {
+        await cache.delete(READY_COPY_KEY);
+      }
       return false;
     }
     await clearCopies(cache, READY_COPY_KEY);
@@ -311,8 +606,61 @@ export async function readyPageFallback(
     await cache.delete(READY_COPY_KEY);
     return undefined;
   }
-  if (cached.headers.get(PATH_HASH_HEADER) !== (await pathHash(path))) return undefined;
-  const html = (await cached.text()).replaceAll(TOKEN_PLACEHOLDER, tokenOf(path));
+  const hash = await pathHash(path);
+  if (cached.headers.get(PATH_HASH_HEADER) !== hash) return undefined;
+  try {
+    if (await isCopyInvalidated(storage, hash, cached)) {
+      await cache.delete(READY_COPY_KEY).catch(() => false);
+      return undefined;
+    }
+  } catch {
+    // If durable invalidation state cannot be read, do not serve a possibly
+    // cancelled page offline. Legacy copies remain eligible when it is read
+    // successfully and no matching cancellation is recorded.
+    return undefined;
+  }
+  const storedHtml = await cached.text();
+  let copyHtml = storedHtml;
+  if (metaContent(storedHtml, READY_COPY_VERSION_META) === READY_COPY_VERSION) {
+    const banner = visibleTextBanner(storedHtml);
+    const generatedAtValues = banner?.opening.match(
+      new RegExp(`\\b${READY_COPY_GENERATED_AT_ATTR}="(\\d+)"`, "g"),
+    );
+    const generatedAt = Number(
+      banner?.opening.match(new RegExp(`\\b${READY_COPY_GENERATED_AT_ATTR}="(\\d+)"`))?.[1],
+    );
+    const expectedLabel = readyGeneratedAtLabel(storedHtml, generatedAt);
+    if (
+      !banner ||
+      generatedAtValues?.length !== 1 ||
+      !Number.isSafeInteger(generatedAt) ||
+      !expectedLabel ||
+      banner.text.split(expectedLabel).length !== 2 ||
+      storedHtml.includes(READY_OFFLINE_GENERATED_AT_PLACEHOLDER)
+    ) {
+      await cache.delete(READY_COPY_KEY);
+      return undefined;
+    }
+  } else {
+    const legacyCopy = transformLegacyReadyCopy(storedHtml);
+    if (!legacyCopy) {
+      // Unknown or malformed legacy copy: fail closed for this verified path.
+      await cache.delete(READY_COPY_KEY);
+      return undefined;
+    }
+    copyHtml = legacyCopy;
+  }
+  // Recheck after asynchronous body parsing: cancellation may persist its
+  // marker while this fallback was preparing the response.
+  try {
+    if (await isCopyInvalidated(storage, hash, cached)) {
+      await cache.delete(READY_COPY_KEY).catch(() => false);
+      return undefined;
+    }
+  } catch {
+    return undefined;
+  }
+  const html = copyHtml.replaceAll(TOKEN_PLACEHOLDER, tokenOf(path));
   return new Response(html, {
     status: cached.status,
     statusText: cached.statusText,
@@ -322,36 +670,176 @@ export async function readyPageFallback(
 
 /**
  * Drop the kept copy if it is `path`'s: the seat it was for has just been
- * cancelled. Notes the moment first, so a save whose fetch began before it
- * stores nothing (#2979), and a forget that cannot finish deletes every copy
- * on the phone rather than leave this one: never throws.
+ * cancelled. Writes a durable epoch first, so saves begun before it store
+ * nothing (#2979), and a forget that cannot finish deletes every copy on the
+ * phone rather than leave this one: never throws.
  */
-export async function forgetReadyPage(
+async function writeForgetMarker(
+  storage: CacheStorage,
+  cancellationEpoch: string,
+  cancelledPathHash: string,
+  latest: Response | undefined,
+): Promise<boolean> {
+  try {
+    const markers = await storage.open(READY_FORGOTTEN_CACHE_NAME);
+    const readyCache = await storage.open(READY_CACHE_NAME);
+    const cached = await readyCache.match(READY_COPY_KEY);
+    const previousCancelledPathHash = latest?.headers.get(REQUEST_CANCELLED_PATH_HASH_HEADER) ?? "";
+    const previousCancelledVersion = latest?.headers.get(REQUEST_CANCELLED_VERSION_HEADER) ?? "";
+    const cachedHash = cached?.headers.get(PATH_HASH_HEADER) ?? "";
+    const oldCachedMarker = cachedHash
+      ? await markers.match(legacyForgottenKey(cachedHash))
+      : undefined;
+    const oldCachedVersion = legacyForgottenVersion(oldCachedMarker, cachedHash);
+    const preservePreviousCancellation =
+      previousCancelledPathHash !== "" && cachedHash === previousCancelledPathHash;
+    const preserveLegacyCancellation =
+      !preservePreviousCancellation &&
+      cachedHash !== "" &&
+      oldCachedVersion !== "" &&
+      cached?.headers.get(COPY_FORGOTTEN_VERSION_HEADER) !== oldCachedVersion;
+    const preserveCachedCancellation =
+      cachedHash !== cancelledPathHash &&
+      (preservePreviousCancellation || preserveLegacyCancellation);
+    const effectiveCancelledPathHash = preserveCachedCancellation
+      ? preservePreviousCancellation
+        ? previousCancelledPathHash
+        : cachedHash
+      : cancelledPathHash;
+    const effectiveCancelledVersion = preserveCachedCancellation
+      ? preservePreviousCancellation
+        ? previousCancelledVersion
+        : oldCachedVersion
+      : cancellationEpoch;
+    const preserveRequest =
+      latest &&
+      latest.headers.get(REQUEST_PATH_HASH_HEADER) !== "" &&
+      latest.headers.get(REQUEST_PATH_HASH_HEADER) !== cancelledPathHash;
+    const requestId = preserveRequest ? latest.headers.get(REQUEST_ID_HEADER) : crypto.randomUUID();
+    const requestPathHash = preserveRequest ? latest.headers.get(REQUEST_PATH_HASH_HEADER) : "";
+    const requestForgottenVersion = preserveRequest
+      ? latest.headers.get(REQUEST_FORGOTTEN_VERSION_HEADER)
+      : cancellationEpoch;
+    // Replace the request record atomically: this rejects every older response
+    // when the forgotten path owned it, while retaining an unrelated current
+    // token. Cancellation state remains path-scoped in this same bounded slot.
+    await markers.put(
+      LATEST_REQUEST_KEY,
+      new Response(null, {
+        headers: {
+          [REQUEST_ID_HEADER]: requestId ?? crypto.randomUUID(),
+          [REQUEST_PATH_HASH_HEADER]: requestPathHash ?? "",
+          [REQUEST_FORGOTTEN_VERSION_HEADER]: requestForgottenVersion ?? cancellationEpoch,
+          [REQUEST_CANCELLED_PATH_HASH_HEADER]: effectiveCancelledPathHash,
+          [REQUEST_CANCELLED_VERSION_HEADER]: effectiveCancelledVersion,
+        },
+      }),
+    );
+    if (!preserveRequest) localLatestRequest = null;
+    // The current record now preserves any old marker needed by the one kept
+    // copy, so the historical per-path tombstones can be removed.
+    await clearLegacyForgetMarkers(markers);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function deleteForgottenCopy(storage: CacheStorage, path: string): Promise<void> {
+  const hash = await pathHash(path);
+  const cache = await storage.open(READY_CACHE_NAME);
+  const cached = await cache.match(READY_COPY_KEY);
+  if (cached?.headers.get(PATH_HASH_HEADER) === hash) await cache.delete(READY_COPY_KEY);
+}
+
+/** Clear a terminal path in this worker even when request-order storage failed. */
+async function forgetTerminalReadyPath(
   storage: CacheStorage,
   path: string,
-  now: number,
-): Promise<void> {
-  try {
-    const hash = await pathHash(path);
-    const markers = await storage.open(READY_FORGOTTEN_CACHE_NAME);
-    await markers.put(
-      `${FORGOTTEN_KEY_PREFIX}${hash}`,
-      new Response(null, { headers: { [FORGOTTEN_AT_HEADER]: String(now) } }),
-    );
-    // Old markers go: no fetch outlives the longest copy.
-    for (const request of await markers.keys()) {
-      const marker = await markers.match(request);
-      const at = Number(marker?.headers.get(FORGOTTEN_AT_HEADER));
-      if (!Number.isFinite(at) || at < now - READY_COPY_MAX_AGE_MS) await markers.delete(request);
-    }
-    const cache = await storage.open(READY_CACHE_NAME);
-    const cached = await cache.match(READY_COPY_KEY);
-    if (cached && cached.headers.get(PATH_HASH_HEADER) === hash) {
-      await cache.delete(READY_COPY_KEY);
-    }
-  } catch {
-    await storage.delete(READY_CACHE_NAME).catch(() => false);
+  hash: string,
+): Promise<boolean> {
+  if (localLatestRequest?.pathHash === hash) {
+    locallyInvalidatedRequestId = localLatestRequest.requestId;
   }
+  const invalidated = serializeReadyOrder(async () => {
+    try {
+      const markers = await storage.open(READY_FORGOTTEN_CACHE_NAME);
+      const latest = await markers.match(LATEST_REQUEST_KEY);
+      // Preserve a different token's request fields while recording this
+      // terminal path for fallback's crash-window check.
+      const durable = await writeForgetMarker(storage, crypto.randomUUID(), hash, latest);
+      // If persistence failed, block the current same-path request ID in this
+      // worker. The marker write is serialized with starts, so the next request
+      // can replace this single local invalidation record.
+      if (!durable && latest) {
+        locallyInvalidatedRequestId = latest.headers.get(REQUEST_ID_HEADER);
+      }
+      return durable;
+    } catch {
+      // A marker read failure cannot establish which token owns the slot. Do
+      // not advance the global epoch; path-scoped deletion below is still safe.
+      return false;
+    }
+  });
+  return serializeReadyPublication(async () => {
+    const durable = await invalidated;
+    try {
+      await deleteForgottenCopy(storage, path);
+    } catch {
+      await storage.delete(READY_CACHE_NAME).catch(() => false);
+      return false;
+    }
+    return durable;
+  });
+}
+
+/** Drop the saved page and durably invalidate saves that began before it. */
+export function forgetReadyPage(
+  storage: CacheStorage,
+  path: string,
+  _now: number,
+): Promise<boolean> {
+  // Close the same-worker validation/write window immediately, scoped to the
+  // request that currently owns this path. A different token is untouched.
+  if (localLatestRequest?.path === path) {
+    locallyInvalidatedRequestId = localLatestRequest.requestId;
+  }
+  const invalidated = pathHash(path).then((hash) =>
+    serializeReadyOrder(async () => {
+      try {
+        const markers = await storage.open(READY_FORGOTTEN_CACHE_NAME);
+        const latest = await markers.match(LATEST_REQUEST_KEY);
+        // A different token owns the one-copy slot. Its request stays current;
+        // an older response for this path is already rejected by request ID.
+        if (!latest) return writeForgetMarker(storage, crypto.randomUUID(), hash, latest);
+        if (latest.headers.get(REQUEST_PATH_HASH_HEADER) === hash) {
+          locallyInvalidatedRequestId = latest.headers.get(REQUEST_ID_HEADER);
+        }
+        return writeForgetMarker(storage, crypto.randomUUID(), hash, latest);
+      } catch {
+        return false;
+      }
+    }),
+  );
+  return serializeReadyPublication(async () => {
+    if (!(await invalidated)) {
+      // The marker write failed, so report the limit and delete only this
+      // path's copy. A different token may already own the shared slot.
+      try {
+        await deleteForgottenCopy(storage, path);
+      } catch {
+        await storage.delete(READY_CACHE_NAME).catch(() => false);
+      }
+      return false;
+    }
+    try {
+      await deleteForgottenCopy(storage, path);
+      return true;
+    } catch {
+      await storage.delete(READY_CACHE_NAME).catch(() => false);
+      return false;
+    }
+  });
 }
 
 /**

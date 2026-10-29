@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, gte, inArray } from "drizzle-orm";
 import {
   type TripArrivalSnapshot,
   type TripChangeSnapshot,
@@ -113,6 +113,7 @@ export async function listTripChangeEvents(
   db: AppDb,
   shopId: string,
   tripId: string,
+  since?: Date,
 ): Promise<TripChangeEvent[]> {
   const rows = await db
     .select({ event: tripChangeEvents })
@@ -125,6 +126,7 @@ export async function listTripChangeEvents(
         eq(trips.shopId, shopId),
         eq(trips.status, "scheduled"),
         liveTrip(),
+        since ? gte(tripChangeEvents.occurredAt, since) : undefined,
       ),
     )
     // Keep the bounded read useful after a long-lived departure has had more

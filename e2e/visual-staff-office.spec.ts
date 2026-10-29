@@ -579,6 +579,7 @@ test.describe("light mode — course date requests without a shop email", () => 
     await expect(inquiry.locator("> summary")).toHaveText(diverCopy("course.askAnotherDate"));
     await inquiry.locator("> summary").click();
     await expect(inquiry.getByLabel(diverCopy("inquiry.yourEmail"))).toBeVisible();
+    await expect(inquiry.getByText(diverCopy("inquiry.contactHint"))).toBeVisible();
     await capture(page, "course-request-no-email", "light");
   });
 });
