@@ -1091,6 +1091,19 @@ exports.handler = async (event) => {
     // To serve another country, add its code here after reading that country's
     // carrier rules. The configuration is the account default, which is the one
     // that also governs SNS.
+    const bundleLambdaHandler = (entryPath: string): string => {
+      const result = esbuild.buildSync({
+        entryPoints: [entryPath],
+        write: false,
+        bundle: true,
+        target: "node24",
+        format: "cjs",
+        platform: "node",
+        external: ["@aws-sdk/*"],
+      });
+      return result.outputFiles[0].text;
+    };
+
     const smsMonthlySpendLimitUsd = 50;
     const smsAllowedCountries = ["US"];
     const smsAccountGuard = new lambda.Function(this, "SmsAccountGuard", {
@@ -1104,15 +1117,7 @@ exports.handler = async (event) => {
         removalPolicy: cdk.RemovalPolicy.DESTROY,
       }),
       code: lambda.Code.fromInline(
-        esbuild.buildSync({
-          entryPoints: [path.join(__dirname, "sms-account-guard-handler.ts")],
-          write: false,
-          bundle: true,
-          target: "node24",
-          format: "cjs",
-          platform: "node",
-          external: ["@aws-sdk/*"],
-        }).outputFiles[0].text,
+        bundleLambdaHandler(path.join(__dirname, "sms-account-guard-handler.ts")),
       ),
     });
     smsAccountGuard.addToRolePolicy(
@@ -3960,19 +3965,6 @@ exports.handler = async () => {
       retention: logs.RetentionDays.ONE_MONTH,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
-
-    const bundleLambdaHandler = (entryPath: string): string => {
-      const result = esbuild.buildSync({
-        entryPoints: [entryPath],
-        write: false,
-        bundle: true,
-        target: "node24",
-        format: "cjs",
-        platform: "node",
-        external: ["@aws-sdk/*"],
-      });
-      return result.outputFiles[0].text;
-    };
 
     const visualBucketPruner = new lambda.Function(this, "VisualBucketPruner", {
       functionName: "diveday-visual-bucket-pruner",
