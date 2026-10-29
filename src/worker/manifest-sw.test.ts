@@ -502,6 +502,18 @@ describe("a navigation on a network that never answers", () => {
 
   const hung = () => new Promise<Response>(() => {});
 
+  function hangingFetchStarted(): Promise<void> {
+    let resolveStarted!: () => void;
+    const started = new Promise<void>((resolve) => {
+      resolveStarted = resolve;
+    });
+    fetchMock.mockImplementationOnce(() => {
+      resolveStarted();
+      return hung();
+    });
+    return started;
+  }
+
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     shellSaved = true;
@@ -612,15 +624,21 @@ describe("a navigation on a network that never answers", () => {
 
   it("serves a readiness network response that arrives just before the four-second deadline", async () => {
     const digest = vi.spyOn(crypto.subtle, "digest").mockResolvedValue(new Uint8Array(32).buffer);
+    let resolveFetchStarted!: () => void;
+    const fetchStarted = new Promise<void>((resolve) => {
+      resolveFetchStarted = resolve;
+    });
     let answer: ((response: Response) => void) | undefined;
     fetchMock.mockImplementationOnce(
       () =>
         new Promise<Response>((resolve) => {
+          resolveFetchStarted();
           answer = resolve;
         }),
     );
     const navigation = navigateReady(`https://dive.day${READY_PATH}`);
     try {
+      await fetchStarted;
       expect(await settledAfter(navigation.response, 3_999)).toBe("still waiting");
       answer?.(
         new Response("live readiness page", {
@@ -659,12 +677,16 @@ describe("a navigation on a network that never answers", () => {
     try {
       await cacheReadyCopy(READY_PATH, "saved readiness page");
 
+      const matchingFetchStarted = hangingFetchStarted();
       const matching = navigateReady(`https://dive.day${READY_PATH}`);
+      await matchingFetchStarted;
       const saved = await settledAfter(matching.response, 4_000);
       if (saved === "still waiting") throw new Error("the saved readiness page never arrived");
       expect(await saved.text()).toContain("saved readiness page");
 
+      const otherFetchStarted = hangingFetchStarted();
       const other = navigateReady(`https://dive.day${OTHER_READY_PATH}`);
+      await otherFetchStarted;
       const missing = await settledAfter(other.response, 4_000);
       if (missing === "still waiting") throw new Error("a path without a saved page kept waiting");
       expect(missing.type).toBe("error");
@@ -675,18 +697,9 @@ describe("a navigation on a network that never answers", () => {
 
   it("returns the browser error and aborts an uncached readiness request at four seconds", async () => {
     const digest = vi.spyOn(crypto.subtle, "digest").mockResolvedValue(new Uint8Array(32).buffer);
-    let resolveFetchStarted: (() => void) | undefined;
-    const fetchStarted = new Promise<void>((resolve) => {
-      resolveFetchStarted = resolve;
-    });
-    fetchMock.mockImplementationOnce(() => {
-      resolveFetchStarted?.();
-      return hung();
-    });
+    const fetchStarted = hangingFetchStarted();
     const navigation = navigateReady(`https://dive.day${READY_PATH}`);
     try {
-      // Reach the actual network request before starting the fake four-second
-      // deadline; native WebCrypto scheduling must not race the clock here.
       await fetchStarted;
       expect(await settledAfter(navigation.response, 3_999)).toBe("still waiting");
       const result = await settledAfter(navigation.response, 1);
@@ -710,27 +723,38 @@ describe("a navigation on a network that never answers", () => {
   });
 
   it("ignores a readiness response that arrives after the uncached deadline", async () => {
+    const digest = vi.spyOn(crypto.subtle, "digest").mockResolvedValue(new Uint8Array(32).buffer);
+    let resolveFetchStarted!: () => void;
+    const fetchStarted = new Promise<void>((resolve) => {
+      resolveFetchStarted = resolve;
+    });
     let answer: ((response: Response) => void) | undefined;
     fetchMock.mockImplementationOnce(
       () =>
         new Promise<Response>((resolve) => {
+          resolveFetchStarted();
           answer = resolve;
         }),
     );
     const navigation = navigateReady(`https://dive.day${READY_PATH}`);
-    const failed = await settledAfter(navigation.response, 4_000);
-    if (failed === "still waiting") throw new Error("the uncached readiness page kept waiting");
-    expect(failed.type).toBe("error");
+    try {
+      await fetchStarted;
+      const failed = await settledAfter(navigation.response, 4_000);
+      if (failed === "still waiting") throw new Error("the uncached readiness page kept waiting");
+      expect(failed.type).toBe("error");
 
-    answer?.(
-      new Response("late readiness page", {
-        headers: { "content-type": "text/html" },
-      }),
-    );
-    await Promise.resolve();
-    await Promise.allSettled(navigation.waits);
-    expect(navigation.waits).toHaveLength(0);
-    expect(cacheEntries.get(READY_CACHE_NAME)?.size ?? 0).toBe(0);
+      answer?.(
+        new Response("late readiness page", {
+          headers: { "content-type": "text/html" },
+        }),
+      );
+      await Promise.resolve();
+      await Promise.allSettled(navigation.waits);
+      expect(navigation.waits).toHaveLength(0);
+      expect(cacheEntries.get(READY_CACHE_NAME)?.size ?? 0).toBe(0);
+    } finally {
+      digest.mockRestore();
+    }
   });
 
   it("still serves the live page when it answers inside four seconds", async () => {
