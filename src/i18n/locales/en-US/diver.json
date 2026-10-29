@@ -400,6 +400,7 @@
     "headingToPayment": "Heading to payment…",
     "booking": "Booking…",
     "rememberOnDevice": "Remember my name and email on this device for this shop for up to 30 days.",
+    "rememberUnavailable": "This tab could not save the opt-in for retry. Your booking can still be confirmed.",
     "fullHeading": "This boat’s full",
     "alternativeSameCourse": "Same course, {date}",
     "alternativeSameSite": "Same site, {date}",

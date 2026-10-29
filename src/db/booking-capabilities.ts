@@ -20,7 +20,11 @@ export const RETURNING_DIVER_MEMORY_MS = 30 * DAY_MS;
 export const RETURNING_DIVER_RECEIPT_LOCK_TIMEOUT = "250ms";
 export const RETURNING_DIVER_RECEIPT_STATEMENT_TIMEOUT = "400ms";
 
-export type IssuedReturningDiverReceipt = IssuedCapability & { memoryExpiresAt: number };
+export type IssuedReturningDiverReceipt = {
+  receiptId: string;
+  receiptOrder: string;
+  memoryExpiresAt: number;
+};
 
 /**
  * How many live capabilities one booking may hold for one purpose at a time.
@@ -183,9 +187,17 @@ export async function issueReturningDiverReceipt(
     expectedPersonId: string;
     expectedTripId: string;
     redirectReadinessToken: string;
+    deviceToken: string;
+    deviceGeneration: string | null;
     now?: Date;
   },
 ): Promise<IssuedReturningDiverReceipt | null> {
+  if (!/^[A-Za-z0-9_-]{40,128}$/.test(input.deviceToken)) return null;
+  if (
+    input.deviceGeneration !== null &&
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input.deviceGeneration)
+  )
+    return null;
   const now = input.now ?? nowDate();
   const issue = async (tx: DbExecutor) => {
     // This optional path runs after the seat commits. Never let a held person,
@@ -266,151 +278,62 @@ export async function issueReturningDiverReceipt(
         redirectCapability.expiresAt.getTime(),
       ),
     );
-    await tx.insert(bookingCapabilities).values({
-      shopId: input.shopId,
-      bookingId: input.bookingId,
-      purpose: "returning_diver_receipt",
-      tokenHash: hashCapabilityToken(token),
-      sourceCapabilityId: redirectCapability.id,
-      issuedAt: now,
-      expiresAt,
-      delivered: false,
-    });
-    return { token, expiresAt, memoryExpiresAt: now.getTime() + RETURNING_DIVER_MEMORY_MS };
+    const [receipt] = await tx
+      .insert(bookingCapabilities)
+      .values({
+        shopId: input.shopId,
+        bookingId: input.bookingId,
+        purpose: "returning_diver_receipt",
+        tokenHash: hashCapabilityToken(token),
+        returningDeviceHash: hashCapabilityToken(input.deviceToken),
+        returningDeviceGeneration: input.deviceGeneration,
+        sourceCapabilityId: redirectCapability.id,
+        issuedAt: now,
+        expiresAt,
+        delivered: false,
+      })
+      .returning({ id: bookingCapabilities.id, order: bookingCapabilities.returningOrder });
+    if (receipt) {
+      await tx
+        .update(bookingCapabilities)
+        .set({ revokedAt: now })
+        .where(
+          and(
+            eq(bookingCapabilities.returningDeviceHash, hashCapabilityToken(input.deviceToken)),
+            eq(bookingCapabilities.shopId, input.shopId),
+            eq(bookingCapabilities.purpose, "returning_diver_receipt"),
+            lte(bookingCapabilities.returningOrder, receipt.order),
+            ne(bookingCapabilities.id, receipt.id),
+            isNull(bookingCapabilities.revokedAt),
+          ),
+        );
+    }
+    return receipt
+      ? {
+          receiptId: receipt.id,
+          receiptOrder: receipt.order.toString(),
+          memoryExpiresAt: now.getTime() + RETURNING_DIVER_MEMORY_MS,
+        }
+      : null;
   };
   return isTransactionExecutor(db) ? issue(db) : db.transaction(issue);
-}
-
-/**
- * Atomically redeem the browser receipt for its exact undelivered redirect
- * readiness capability. This is called by a post-hydration Server Action only;
- * rendering or prefetching `/ready` never consumes it.
- */
-export async function consumeReturningDiverReceipt(
-  db: DbExecutor,
-  input: { receiptToken: string; redirectReadinessToken: string; now?: Date },
-): Promise<{ diver: { fullName: string; email: string }; memoryExpiresAt: number } | null> {
-  const now = input.now ?? nowDate();
-  const redeem = async (tx: DbExecutor) => {
-    const receiptHash = hashCapabilityToken(input.receiptToken);
-    const readinessHash = hashCapabilityToken(input.redirectReadinessToken);
-    const [hint] = await tx
-      .select({ bookingId: bookingCapabilities.bookingId, shopId: bookingCapabilities.shopId })
-      .from(bookingCapabilities)
-      .where(
-        and(
-          eq(bookingCapabilities.tokenHash, receiptHash),
-          eq(bookingCapabilities.purpose, "returning_diver_receipt"),
-          isNull(bookingCapabilities.revokedAt),
-          gt(bookingCapabilities.expiresAt, now),
-        ),
-      )
-      .limit(1);
-    if (!hint) return null;
-
-    // Keep the same person → booking → capability lock order as erasure,
-    // cancellation and capability minting.
-    const [person] = await tx
-      .select({ id: people.id, fullName: people.fullName, email: people.email })
-      .from(bookings)
-      .innerJoin(people, eq(people.id, bookings.personId))
-      .where(
-        and(
-          eq(bookings.id, hint.bookingId),
-          eq(bookings.shopId, hint.shopId),
-          ne(bookings.status, "cancelled"),
-          isNull(bookings.identityUnconfirmedAt),
-          isNull(people.anonymizedAt),
-          isNull(people.deletedAt),
-          isNotNull(people.email),
-          ne(people.email, ""),
-        ),
-      )
-      .limit(1)
-      .for("update", { of: people });
-    if (!person) return null;
-
-    const [booking] = await tx
-      .select({ tripStatus: trips.status, tripDeletedAt: trips.deletedAt })
-      .from(bookings)
-      .innerJoin(trips, eq(trips.id, bookings.tripId))
-      .where(and(eq(bookings.id, hint.bookingId), eq(bookings.shopId, hint.shopId)))
-      .limit(1)
-      .for("update", { of: bookings });
-    if (!booking || booking.tripStatus === "cancelled" || booking.tripDeletedAt) return null;
-
-    const [source] = await tx
-      .select({ id: bookingCapabilities.id })
-      .from(bookingCapabilities)
-      .where(
-        and(
-          eq(bookingCapabilities.tokenHash, readinessHash),
-          eq(bookingCapabilities.purpose, "readiness"),
-          eq(bookingCapabilities.shopId, hint.shopId),
-          eq(bookingCapabilities.bookingId, hint.bookingId),
-          eq(bookingCapabilities.delivered, false),
-          isNull(bookingCapabilities.revokedAt),
-          gt(bookingCapabilities.expiresAt, now),
-        ),
-      )
-      .limit(1)
-      .for("update");
-    if (!source) return null;
-
-    const [receipt] = await tx
-      .select({
-        id: bookingCapabilities.id,
-        sourceCapabilityId: bookingCapabilities.sourceCapabilityId,
-        issuedAt: bookingCapabilities.issuedAt,
-      })
-      .from(bookingCapabilities)
-      .where(
-        and(
-          eq(bookingCapabilities.tokenHash, receiptHash),
-          eq(bookingCapabilities.purpose, "returning_diver_receipt"),
-          eq(bookingCapabilities.shopId, hint.shopId),
-          eq(bookingCapabilities.bookingId, hint.bookingId),
-          eq(bookingCapabilities.sourceCapabilityId, source.id),
-          isNull(bookingCapabilities.revokedAt),
-          gt(bookingCapabilities.expiresAt, now),
-        ),
-      )
-      .limit(1)
-      .for("update");
-    if (!receipt) return null;
-
-    await tx
-      .update(bookingCapabilities)
-      .set({ revokedAt: now })
-      .where(
-        and(
-          eq(bookingCapabilities.id, receipt.id),
-          isNull(bookingCapabilities.revokedAt),
-          gt(bookingCapabilities.expiresAt, now),
-        ),
-      );
-    if (!person.email) return null;
-    return {
-      diver: { fullName: person.fullName, email: person.email },
-      memoryExpiresAt: receipt.issuedAt.getTime() + RETURNING_DIVER_MEMORY_MS,
-    };
-  };
-  return isTransactionExecutor(db) ? redeem(db) : db.transaction(redeem);
 }
 
 /** Resolve an unacknowledged receipt without consuming it, for retry after navigation or a lost response. */
 export async function readReturningDiverReceipt(
   db: DbExecutor,
-  input: { receiptToken: string; now?: Date },
+  input: { deviceToken: string; deviceGeneration: string | null; now?: Date },
 ): Promise<{
   receiptId: string;
+  receiptOrder: string;
+  deviceGeneration: string | null;
   shopSlug: string;
   diver: { fullName: string; email: string };
   memoryExpiresAt: number;
 } | null> {
   const now = input.now ?? nowDate();
   const resolve = async (tx: DbExecutor) => {
-    const receiptHash = hashCapabilityToken(input.receiptToken);
+    const deviceHash = hashCapabilityToken(input.deviceToken);
     const [row] = await tx
       .select({
         receiptId: bookingCapabilities.id,
@@ -418,6 +341,8 @@ export async function readReturningDiverReceipt(
         shopId: bookingCapabilities.shopId,
         sourceId: bookingCapabilities.sourceCapabilityId,
         issuedAt: bookingCapabilities.issuedAt,
+        receiptOrder: bookingCapabilities.returningOrder,
+        deviceGeneration: bookingCapabilities.returningDeviceGeneration,
         fullName: people.fullName,
         email: people.email,
         personId: people.id,
@@ -436,8 +361,11 @@ export async function readReturningDiverReceipt(
       .innerJoin(trips, eq(trips.id, bookings.tripId))
       .where(
         and(
-          eq(bookingCapabilities.tokenHash, receiptHash),
+          eq(bookingCapabilities.returningDeviceHash, deviceHash),
           eq(bookingCapabilities.purpose, "returning_diver_receipt"),
+          input.deviceGeneration === null
+            ? isNull(bookingCapabilities.returningDeviceGeneration)
+            : eq(bookingCapabilities.returningDeviceGeneration, input.deviceGeneration),
           isNull(bookingCapabilities.revokedAt),
           gt(bookingCapabilities.expiresAt, now),
           ne(bookings.status, "cancelled"),
@@ -450,6 +378,7 @@ export async function readReturningDiverReceipt(
           isNull(trips.deletedAt),
         ),
       )
+      .orderBy(desc(bookingCapabilities.returningOrder))
       .limit(1)
       .for("update", { of: people });
     if (!row?.sourceId || !row.email) return null;
@@ -488,16 +417,24 @@ export async function readReturningDiverReceipt(
       .limit(1)
       .for("update");
     const [receipt] = await tx
-      .select({ id: bookingCapabilities.id, issuedAt: bookingCapabilities.issuedAt })
+      .select({
+        id: bookingCapabilities.id,
+        issuedAt: bookingCapabilities.issuedAt,
+        returningOrder: bookingCapabilities.returningOrder,
+        returningDeviceGeneration: bookingCapabilities.returningDeviceGeneration,
+      })
       .from(bookingCapabilities)
       .where(
         and(
           eq(bookingCapabilities.id, row.receiptId),
-          eq(bookingCapabilities.tokenHash, receiptHash),
+          eq(bookingCapabilities.returningDeviceHash, deviceHash),
           eq(bookingCapabilities.bookingId, row.bookingId),
           eq(bookingCapabilities.shopId, row.shopId),
           eq(bookingCapabilities.purpose, "returning_diver_receipt"),
           eq(bookingCapabilities.sourceCapabilityId, row.sourceId),
+          input.deviceGeneration === null
+            ? isNull(bookingCapabilities.returningDeviceGeneration)
+            : eq(bookingCapabilities.returningDeviceGeneration, input.deviceGeneration),
           isNull(bookingCapabilities.revokedAt),
           gt(bookingCapabilities.expiresAt, now),
         ),
@@ -507,6 +444,8 @@ export async function readReturningDiverReceipt(
     if (!source || !receipt) return null;
     return {
       receiptId: receipt.id,
+      receiptOrder: receipt.returningOrder.toString(),
+      deviceGeneration: receipt.returningDeviceGeneration,
       shopSlug: row.shopSlug,
       diver: { fullName: row.fullName, email: row.email },
       memoryExpiresAt: receipt.issuedAt.getTime() + RETURNING_DIVER_MEMORY_MS,
@@ -518,32 +457,52 @@ export async function readReturningDiverReceipt(
 /** Acknowledge storage only after the browser confirms localStorage succeeded. */
 export async function acknowledgeReturningDiverReceipt(
   db: DbExecutor,
-  input: { receiptToken: string; expectedReceiptId: string; now?: Date },
+  input: {
+    deviceToken: string;
+    expectedReceiptId: string;
+    deviceGeneration: string | null;
+    now?: Date;
+  },
 ): Promise<boolean> {
   const now = input.now ?? nowDate();
-  const receiptHash = hashCapabilityToken(input.receiptToken);
+  const deviceHash = hashCapabilityToken(input.deviceToken);
   const [receipt] = await db
-    .select({ id: bookingCapabilities.id, revokedAt: bookingCapabilities.revokedAt })
+    .select({
+      id: bookingCapabilities.id,
+      shopId: bookingCapabilities.shopId,
+      order: bookingCapabilities.returningOrder,
+      revokedAt: bookingCapabilities.revokedAt,
+    })
     .from(bookingCapabilities)
     .where(
       and(
-        eq(bookingCapabilities.tokenHash, receiptHash),
+        eq(bookingCapabilities.returningDeviceHash, deviceHash),
         eq(bookingCapabilities.id, input.expectedReceiptId),
         eq(bookingCapabilities.purpose, "returning_diver_receipt"),
+        input.deviceGeneration === null
+          ? isNull(bookingCapabilities.returningDeviceGeneration)
+          : eq(bookingCapabilities.returningDeviceGeneration, input.deviceGeneration),
         gt(bookingCapabilities.expiresAt, now),
       ),
     )
     .limit(1);
   if (!receipt) return false;
   if (receipt.revokedAt) return true; // idempotent after a lost acknowledgement response
-  if (!(await readReturningDiverReceipt(db, { receiptToken: input.receiptToken, now })))
-    return false;
+  const latest = await readReturningDiverReceipt(db, {
+    deviceToken: input.deviceToken,
+    deviceGeneration: input.deviceGeneration,
+    now,
+  });
+  if (latest?.receiptId !== receipt.id) return false;
   await db
     .update(bookingCapabilities)
     .set({ revokedAt: now })
     .where(
       and(
-        eq(bookingCapabilities.id, receipt.id),
+        eq(bookingCapabilities.returningDeviceHash, deviceHash),
+        eq(bookingCapabilities.shopId, receipt.shopId),
+        eq(bookingCapabilities.purpose, "returning_diver_receipt"),
+        lte(bookingCapabilities.returningOrder, receipt.order),
         isNull(bookingCapabilities.revokedAt),
         gt(bookingCapabilities.expiresAt, now),
       ),
@@ -554,30 +513,37 @@ export async function acknowledgeReturningDiverReceipt(
 /** Revoke only the receipt currently held by this device for its cleared shop. */
 export async function revokeReturningDiverReceipt(
   db: DbExecutor,
-  input: { receiptToken: string; expectedReceiptId: string; shopSlug: string; now?: Date },
+  input: {
+    deviceToken: string;
+    nextDeviceGeneration: string;
+    now?: Date;
+  },
 ): Promise<boolean> {
   const now = input.now ?? nowDate();
-  const [receipt] = await db
-    .select({ id: bookingCapabilities.id, revokedAt: bookingCapabilities.revokedAt })
-    .from(bookingCapabilities)
-    .innerJoin(shops, eq(shops.id, bookingCapabilities.shopId))
+  if (!/^[A-Za-z0-9_-]{40,128}$/.test(input.deviceToken)) return false;
+  if (
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      input.nextDeviceGeneration,
+    )
+  )
+    return false;
+  const deviceHash = hashCapabilityToken(input.deviceToken);
+  const revoked = await db
+    .update(bookingCapabilities)
+    .set({ revokedAt: now })
     .where(
       and(
-        eq(bookingCapabilities.tokenHash, hashCapabilityToken(input.receiptToken)),
-        eq(bookingCapabilities.id, input.expectedReceiptId),
+        eq(bookingCapabilities.returningDeviceHash, deviceHash),
         eq(bookingCapabilities.purpose, "returning_diver_receipt"),
-        eq(shops.slug, input.shopSlug),
+        or(
+          isNull(bookingCapabilities.returningDeviceGeneration),
+          ne(bookingCapabilities.returningDeviceGeneration, input.nextDeviceGeneration),
+        ),
+        isNull(bookingCapabilities.revokedAt),
       ),
     )
-    .limit(1);
-  if (!receipt) return false;
-  if (!receipt.revokedAt) {
-    await db
-      .update(bookingCapabilities)
-      .set({ revokedAt: now })
-      .where(and(eq(bookingCapabilities.id, receipt.id), isNull(bookingCapabilities.revokedAt)));
-  }
-  return true;
+    .returning({ id: bookingCapabilities.id });
+  return revoked.length > 0;
 }
 
 /**

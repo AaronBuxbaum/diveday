@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  bigserial,
   boolean,
   check,
   foreignKey,
@@ -822,6 +823,12 @@ export const bookingCapabilities = pgTable(
       .notNull()
       .references(() => bookings.id),
     purpose: bookingCapabilityPurpose("purpose").notNull(),
+    /** Strict database order for receipt issuance, independent of app/device clocks. */
+    returningOrder: bigserial("returning_order", { mode: "bigint" }).notNull(),
+    /** HMAC of the opt-in, shop-scoped device slot; null for other capabilities. */
+    returningDeviceHash: text("returning_device_hash"),
+    /** Per-shop clear generation captured when the diver opted in. */
+    returningDeviceGeneration: text("returning_device_generation"),
     tokenHash: text("token_hash").notNull().unique(),
     issuedAt: appNowTimestamp("issued_at").notNull(),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
@@ -854,6 +861,9 @@ export const bookingCapabilities = pgTable(
       table.purpose,
       table.revokedAt,
     ),
+    index("booking_capabilities_returning_device_idx")
+      .on(table.returningDeviceHash, table.purpose, table.returningOrder)
+      .where(sql`${table.returningDeviceHash} is not null`),
     uniqueIndex("booking_capabilities_returning_receipt_source_unique")
       .on(table.sourceCapabilityId)
       .where(sql`${table.sourceCapabilityId} is not null`),

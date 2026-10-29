@@ -1,13 +1,8 @@
-import { cookies } from "next/headers";
-import {
-  type IssuedCapability,
-  issueReturningDiverReceipt,
-  RETURNING_DIVER_RECEIPT_TTL_MS,
-} from "@/db/booking-capabilities";
+import { type IssuedCapability, issueReturningDiverReceipt } from "@/db/booking-capabilities";
 import type { getBookingForTrip } from "@/db/bookings";
 import type { DbExecutor } from "@/db/client";
 import { log } from "@/lib/log";
-import { RETURNING_DIVER_RECEIPT_COOKIE } from "@/lib/returning-diver";
+import { RETURNING_DIVER_DEVICE_TOKEN_PATTERN } from "@/lib/returning-diver";
 
 /** The optional memory path must never hold a committed booking past this budget. */
 export const RETURNING_DIVER_RECEIPT_ISSUE_BUDGET_MS = 500;
@@ -23,12 +18,16 @@ export async function issueReturningDiverReceiptForBooking(
     tripId: string;
     confirmedBooking: Awaited<ReturnType<typeof getBookingForTrip>>;
     redirectCapability: IssuedCapability | null;
+    deviceToken: string | null;
+    deviceGeneration: string | null;
   },
 ): Promise<void> {
   if (
     !input.optedIn ||
     input.embed ||
     !input.redirectCapability ||
+    !input.deviceToken ||
+    !RETURNING_DIVER_DEVICE_TOKEN_PATTERN.test(input.deviceToken) ||
     !input.confirmedBooking ||
     input.confirmedBooking.booking.identityUnconfirmedAt !== null ||
     !input.confirmedBooking.person.email
@@ -43,6 +42,8 @@ export async function issueReturningDiverReceiptForBooking(
       expectedPersonId: input.confirmedBooking.booking.personId,
       expectedTripId: input.tripId,
       redirectReadinessToken: input.redirectCapability.token,
+      deviceToken: input.deviceToken,
+      deviceGeneration: input.deviceGeneration,
     }).then(
       (receipt) => ({ kind: "finished" as const, receipt }),
       (error: unknown) => {
@@ -71,18 +72,8 @@ export async function issueReturningDiverReceiptForBooking(
     const receipt = result.receipt;
     if (!receipt) return;
 
-    const cookieStore = await cookies();
-    // There is one pending receipt slot on the device. If two opted-in
-    // bookings finish concurrently, the last Set-Cookie response wins. Each
-    // receipt stays bound to its own booking and shop, so the winner can never
-    // combine or overwrite identity fields from another receipt.
-    cookieStore.set(RETURNING_DIVER_RECEIPT_COOKIE, receipt.token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: Math.ceil(RETURNING_DIVER_RECEIPT_TTL_MS / 1000),
-    });
+    // The opt-in slot is tab-scoped and already present in sessionStorage.
+    // No per-booking Set-Cookie response can overwrite a concurrent receipt.
   } catch (error) {
     // The booking is already confirmed. Memory is optional and cannot turn
     // a successful seat into an error page.

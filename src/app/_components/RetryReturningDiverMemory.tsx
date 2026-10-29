@@ -4,10 +4,11 @@ import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import {
   acknowledgeReturningDiverMemory,
-  prepareReturningDiverMemory,
+  prepareReturningDiverMemories,
   revokeClearedReturningDiverReceipt,
 } from "@/app/actions/returning-diver-memory";
 import {
+  getReturningDiverDeviceSlots,
   saveReturningDiver,
   snapshotReturningDiverClearGenerations,
   subscribeToReturningDiverClears,
@@ -22,8 +23,8 @@ export function RetryReturningDiverMemory() {
 
   useEffect(
     () =>
-      subscribeToReturningDiverClears(({ shopSlug, receiptId }) => {
-        if (receiptId) void revokeClearedReturningDiverReceipt(shopSlug, receiptId);
+      subscribeToReturningDiverClears(({ deviceToken, generation }) => {
+        if (deviceToken) void revokeClearedReturningDiverReceipt(deviceToken, generation);
       }),
     [],
   );
@@ -33,24 +34,41 @@ export function RetryReturningDiverMemory() {
     // shop device must never resolve it or persist diver details there.
     if (!pathname || !(pathname.startsWith("/s/") || pathname.startsWith("/ready/"))) return;
     let active = true;
-    const clearSnapshot = snapshotReturningDiverClearGenerations();
-    void prepareReturningDiverMemory()
+    const slots = getReturningDiverDeviceSlots();
+    if (slots.length === 0) return;
+    void prepareReturningDiverMemories(slots)
       .then(async (result) => {
-        if (!active || !result) return;
-        const saved = saveReturningDiver(
-          result.shopSlug,
-          result.diver,
-          result.expiresAt,
-          undefined,
-          {
-            id: result.receiptId,
-            generationAtStart: clearSnapshot?.[result.shopSlug] ?? null,
-          },
+        if (!active) return;
+        await Promise.all(
+          result.map(async (memory) => {
+            const slot = slots.find(({ token }) => token === memory.deviceToken);
+            if (!slot) return;
+            const saved = saveReturningDiver(
+              memory.shopSlug,
+              memory.diver,
+              memory.expiresAt,
+              undefined,
+              {
+                id: memory.receiptId,
+                order: memory.receiptOrder,
+                generationAtStart: memory.deviceGeneration,
+              },
+            );
+            // A clear is final: revoke its server receipt so a cloned tab or a
+            // lost local marker cannot retry this now-withdrawn consent.
+            if (saved === "cleared" && active) {
+              const generation = snapshotReturningDiverClearGenerations()?.[memory.shopSlug];
+              if (generation)
+                await revokeClearedReturningDiverReceipt(memory.deviceToken, generation);
+            } else if (saved === "saved" && active) {
+              await acknowledgeReturningDiverMemory(
+                memory.deviceToken,
+                memory.receiptId,
+                memory.deviceGeneration,
+              );
+            }
+          }),
         );
-        // An explicit clear is itself final: acknowledge the receipt so it
-        // cannot keep retrying, while storage failures remain retryable.
-        if (saved !== "unavailable" && active)
-          await acknowledgeReturningDiverMemory(result.receiptId);
       })
       .catch(() => {
         // This optional memory retry never affects navigation or a booking.

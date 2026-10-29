@@ -5,21 +5,26 @@
  * client writes the memory.
  */
 
-import { DAY_MS, nowDate } from "@/lib/clock";
+import { DAY_MS, HOUR_MS, nowDate } from "@/lib/clock";
 
 const STORAGE_PREFIX = "diveday:returning-diver:v2:";
+const DEVICE_SLOT_PREFIX = "diveday:returning-diver:device:v1:";
 const CLEAR_PREFIX = "diveday:returning-diver:clear:v2:";
 const CLEAR_EVENT = "diveday:returning-diver:cleared";
 const CLEAR_CHANNEL = "diveday:returning-diver-clear-v2";
 const LEGACY_STORAGE_KEY = "diveday:returning-diver:v1";
 export const RETURNING_DIVER_MEMORY_MS = 30 * DAY_MS;
-export const RETURNING_DIVER_RECEIPT_COOKIE = "diveday-returning-diver-receipt";
+export const RETURNING_DIVER_DEVICE_SLOT_MS = 24 * HOUR_MS;
+export const MAX_RETURNING_DIVER_DEVICE_SLOTS = 32;
+export const MAX_RETURNING_DIVER_MEMORIES = 32;
+export const RETURNING_DIVER_DEVICE_TOKEN_PATTERN = /^[A-Za-z0-9_-]{40,128}$/;
 
 export type ReturningDiver = { fullName: string; email: string };
 
 type StoredReturningDiver = ReturningDiver & {
   expiresAt: number;
   receiptId?: string;
+  receiptOrder?: string;
   clearGeneration?: string | null;
 };
 
@@ -41,6 +46,95 @@ function storageKey(shopSlug: string): string | null {
 
 function clearKey(shopSlug: string): string | null {
   return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(shopSlug) ? `${CLEAR_PREFIX}${shopSlug}` : null;
+}
+
+function deviceSlotKey(shopSlug: string): string | null {
+  return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(shopSlug) ? `${DEVICE_SLOT_PREFIX}${shopSlug}` : null;
+}
+
+/** Create a per-shop, per-tab receipt slot only after explicit opt-in. */
+export function getOrCreateReturningDiverDeviceToken(
+  shopSlug: string,
+  now: Date = nowDate(),
+): string | null {
+  const key = deviceSlotKey(shopSlug);
+  if (!key) return null;
+  try {
+    const raw = sessionStorage.getItem(key);
+    if (raw) {
+      const parsed: unknown = JSON.parse(raw);
+      if (
+        typeof parsed === "object" &&
+        parsed !== null &&
+        typeof (parsed as { token?: unknown }).token === "string" &&
+        RETURNING_DIVER_DEVICE_TOKEN_PATTERN.test((parsed as { token: string }).token) &&
+        typeof (parsed as { expiresAt?: unknown }).expiresAt === "number" &&
+        (parsed as { expiresAt: number }).expiresAt > now.getTime()
+      ) {
+        return (parsed as { token: string }).token;
+      }
+      sessionStorage.removeItem(key);
+    }
+    const slotCount = Array.from({ length: sessionStorage.length }, (_, index) =>
+      sessionStorage.key(index),
+    ).filter((storageKey) => storageKey?.startsWith(DEVICE_SLOT_PREFIX)).length;
+    if (slotCount >= MAX_RETURNING_DIVER_DEVICE_SLOTS) return null;
+    const bytes = new Uint8Array(32);
+    globalThis.crypto.getRandomValues(bytes);
+    const token = Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+    sessionStorage.setItem(
+      key,
+      JSON.stringify({ token, expiresAt: now.getTime() + RETURNING_DIVER_DEVICE_SLOT_MS }),
+    );
+    return token;
+  } catch {
+    // Memory is optional. A tab without session storage gets no retry slot.
+    return null;
+  }
+}
+
+/** Read only slots created by explicit opt-in in this tab. */
+export function getReturningDiverDeviceSlots(): Array<{
+  token: string;
+  generation: string | null;
+}> {
+  try {
+    const slots: Array<{ token: string; generation: string | null }> = [];
+    for (let index = 0; index < sessionStorage.length; index += 1) {
+      const key = sessionStorage.key(index);
+      if (!key?.startsWith(DEVICE_SLOT_PREFIX)) continue;
+      const shopSlug = key.slice(DEVICE_SLOT_PREFIX.length);
+      if (!storageKey(shopSlug)) continue;
+      const raw = sessionStorage.getItem(key);
+      if (!raw) continue;
+      const parsed: unknown = JSON.parse(raw);
+      if (
+        typeof parsed !== "object" ||
+        parsed === null ||
+        typeof (parsed as { token?: unknown }).token !== "string" ||
+        !RETURNING_DIVER_DEVICE_TOKEN_PATTERN.test((parsed as { token: string }).token) ||
+        typeof (parsed as { expiresAt?: unknown }).expiresAt !== "number"
+      ) {
+        sessionStorage.removeItem(key);
+        continue;
+      }
+      if ((parsed as { expiresAt: number }).expiresAt <= nowDate().getTime()) {
+        sessionStorage.removeItem(key);
+        continue;
+      }
+      let generation: string | null = null;
+      try {
+        generation = effectiveClearState(shopSlug)?.generation ?? null;
+      } catch {
+        // A blocked clear marker fails closed for this shop slot.
+        continue;
+      }
+      slots.push({ token: (parsed as { token: string }).token, generation });
+    }
+    return slots.length <= MAX_RETURNING_DIVER_DEVICE_SLOTS ? slots : [];
+  } catch {
+    return [];
+  }
 }
 
 function readClearState(shopSlug: string): ClearState | null {
@@ -103,7 +197,12 @@ export function snapshotReturningDiverClearGenerations(): Record<string, string>
 }
 
 export function subscribeToReturningDiverClears(
-  onClear: (input: { shopSlug: string; receiptId?: string }) => void,
+  onClear: (input: {
+    shopSlug: string;
+    generation: string;
+    receiptId?: string;
+    deviceToken?: string;
+  }) => void,
 ): () => void {
   if (typeof window === "undefined") return () => {};
   const receive = (value: unknown) => {
@@ -117,9 +216,33 @@ export function subscribeToReturningDiverClears(
       return;
     }
     const receiptId = typeof message.receiptId === "string" ? message.receiptId : undefined;
+    let deviceToken: string | undefined;
+    const slotKey = deviceSlotKey(message.shopSlug);
+    try {
+      const raw = slotKey ? sessionStorage.getItem(slotKey) : null;
+      if (raw) {
+        const parsed: unknown = JSON.parse(raw);
+        if (
+          typeof parsed === "object" &&
+          parsed !== null &&
+          typeof (parsed as { token?: unknown }).token === "string" &&
+          RETURNING_DIVER_DEVICE_TOKEN_PATTERN.test((parsed as { token: string }).token)
+        ) {
+          deviceToken = (parsed as { token: string }).token;
+        }
+      }
+      if (slotKey) sessionStorage.removeItem(slotKey);
+    } catch {
+      // The persistent clear generation still fences the local response.
+    }
     volatileClearGenerations.set(message.shopSlug, message.generation);
     if (receiptId) clearOnlyThisReceipt(storageKey(message.shopSlug) ?? "", receiptId);
-    onClear({ shopSlug: message.shopSlug, ...(receiptId ? { receiptId } : {}) });
+    onClear({
+      shopSlug: message.shopSlug,
+      generation: message.generation,
+      ...(receiptId ? { receiptId } : {}),
+      ...(deviceToken ? { deviceToken } : {}),
+    });
   };
   const onWindowEvent = (event: Event) => receive((event as CustomEvent<unknown>).detail);
   window.addEventListener(CLEAR_EVENT, onWindowEvent);
@@ -163,11 +286,19 @@ function clearLegacyStorage(): void {
 }
 
 /**
- * The memory expiry is derived from the receipt's server-issued time. Use it
- * as the receipt ordering key so a delayed response cannot replace a newer
- * booking's saved identity. Receipt ID breaks equal-time ties consistently.
+ * Database sequence order is authoritative; client clocks and receipt UUIDs
+ * do not establish which booking was issued later.
  */
-function hasNewerSavedReceipt(key: string, incoming: { id: string; expiresAt: number }): boolean {
+function compareReceiptOrder(left: string, right: string): number | null {
+  if (!/^\d+$/.test(left) || !/^\d+$/.test(right)) return null;
+  const normalizedLeft = left.replace(/^0+(?=\d)/, "");
+  const normalizedRight = right.replace(/^0+(?=\d)/, "");
+  if (normalizedLeft.length !== normalizedRight.length)
+    return normalizedLeft.length < normalizedRight.length ? -1 : 1;
+  return normalizedLeft === normalizedRight ? 0 : normalizedLeft < normalizedRight ? -1 : 1;
+}
+
+function hasNewerSavedReceipt(key: string, incoming: { id: string; order: string }): boolean {
   const raw = localStorage.getItem(key);
   if (!raw) return false;
   let parsed: unknown;
@@ -177,12 +308,10 @@ function hasNewerSavedReceipt(key: string, incoming: { id: string; expiresAt: nu
     return false;
   }
   if (typeof parsed !== "object" || parsed === null) return false;
-  const stored = parsed as { receiptId?: unknown; expiresAt?: unknown };
-  if (typeof stored.receiptId !== "string" || typeof stored.expiresAt !== "number") return false;
-  return (
-    stored.expiresAt > incoming.expiresAt ||
-    (stored.expiresAt === incoming.expiresAt && stored.receiptId.localeCompare(incoming.id) > 0)
-  );
+  const stored = parsed as { receiptId?: unknown; receiptOrder?: unknown };
+  if (typeof stored.receiptId !== "string" || typeof stored.receiptOrder !== "string") return false;
+  const order = compareReceiptOrder(stored.receiptOrder, incoming.order);
+  return order !== null && order > 0;
 }
 
 /** Remove expired shop-scoped copies opportunistically whenever memory is used. */
@@ -194,6 +323,7 @@ function clearExpiredShopMemories(now: Date, preserveShopSlug?: string): void {
     ).filter(
       (key): key is string => (key?.startsWith(STORAGE_PREFIX) ?? false) && key !== preservedKey,
     );
+    const live: Array<{ key: string; expiresAt: number }> = [];
     for (const key of keys) {
       const raw = localStorage.getItem(key);
       if (!raw) continue;
@@ -206,10 +336,22 @@ function clearExpiredShopMemories(now: Date, preserveShopSlug?: string): void {
           (parsed as { expiresAt: number }).expiresAt <= now.getTime()
         ) {
           localStorage.removeItem(key);
+        } else if (
+          typeof parsed === "object" &&
+          parsed !== null &&
+          typeof (parsed as { expiresAt?: unknown }).expiresAt === "number"
+        ) {
+          live.push({ key, expiresAt: (parsed as { expiresAt: number }).expiresAt });
         }
       } catch {
         // The active shop's malformed value is removed by its normal read.
       }
+    }
+    const limit = MAX_RETURNING_DIVER_MEMORIES - (preservedKey ? 1 : 0);
+    live.sort((left, right) => left.expiresAt - right.expiresAt);
+    while (live.length > limit) {
+      const oldest = live.shift();
+      if (oldest) localStorage.removeItem(oldest.key);
     }
   } catch {
     // Storage can be blocked; remembering anyone is optional.
@@ -222,13 +364,13 @@ export function saveReturningDiver(
   diver: ReturningDiver,
   expiresAt: number,
   now: Date = nowDate(),
-  receipt?: { id: string; generationAtStart: string | null },
+  receipt?: { id: string; order: string; generationAtStart: string | null },
 ): "saved" | "cleared" | "unavailable" {
   clearLegacyStorage();
   // For receipt writes, preserve the target row until ordering has been
   // compared. Device-clock skew must not expire a newer server-issued memory
   // before a delayed older receipt gets a chance to compare against it.
-  clearExpiredShopMemories(now, receipt ? shopSlug : undefined);
+  clearExpiredShopMemories(now, shopSlug);
   const key = storageKey(shopSlug);
   if (!key || !diver.fullName.trim() || !diver.email.trim() || expiresAt <= now.getTime())
     return "unavailable";
@@ -247,7 +389,8 @@ export function saveReturningDiver(
     return "cleared";
   }
   try {
-    if (receipt && hasNewerSavedReceipt(key, { id: receipt.id, expiresAt })) return "saved";
+    if (receipt && hasNewerSavedReceipt(key, { id: receipt.id, order: receipt.order }))
+      return "saved";
     localStorage.setItem(
       key,
       JSON.stringify({
@@ -255,6 +398,7 @@ export function saveReturningDiver(
         expiresAt,
         clearGeneration: clearState?.generation ?? null,
         ...(receipt ? { receiptId: receipt.id } : {}),
+        ...(receipt ? { receiptOrder: receipt.order } : {}),
       } satisfies StoredReturningDiver),
     );
     // A clear in another tab may land between the pre-write check and setItem.
@@ -321,8 +465,10 @@ export function forgetReturningDiver(shopSlug: string): "cleared" | "partial" | 
   clearLegacyStorage();
   const key = storageKey(shopSlug);
   const tombstone = clearKey(shopSlug);
-  if (!key || !tombstone) return "unavailable";
+  const slotKey = deviceSlotKey(shopSlug);
+  if (!key || !tombstone || !slotKey) return "unavailable";
   let blockedReceiptId: string | undefined;
+  let deviceToken: string | undefined;
   try {
     const raw = localStorage.getItem(key);
     if (raw) {
@@ -336,6 +482,18 @@ export function forgetReturningDiver(shopSlug: string): "cleared" | "partial" | 
       }
     }
     blockedReceiptId ??= readClearState(shopSlug)?.blockedReceiptId;
+    const slotRaw = sessionStorage.getItem(slotKey);
+    if (slotRaw) {
+      const slot: unknown = JSON.parse(slotRaw);
+      if (
+        typeof slot === "object" &&
+        slot !== null &&
+        typeof (slot as { token?: unknown }).token === "string" &&
+        RETURNING_DIVER_DEVICE_TOKEN_PATTERN.test((slot as { token: string }).token)
+      ) {
+        deviceToken = (slot as { token: string }).token;
+      }
+    }
   } catch {
     // The clear still attempts both writes independently below.
   }
@@ -343,6 +501,7 @@ export function forgetReturningDiver(shopSlug: string): "cleared" | "partial" | 
   volatileClearGenerations.set(shopSlug, generation);
   let markerWritten = false;
   let identityRemoved = false;
+  let slotRemoved = false;
   try {
     localStorage.setItem(
       tombstone,
@@ -361,10 +520,16 @@ export function forgetReturningDiver(shopSlug: string): "cleared" | "partial" | 
   } catch {
     // Browser storage can refuse deletion; report partial completion honestly.
   }
+  try {
+    sessionStorage.removeItem(slotKey);
+    slotRemoved = true;
+  } catch {
+    // A retained slot could retry old consent, so a refused deletion is partial.
+  }
   const outcome =
-    markerWritten && identityRemoved
+    markerWritten && identityRemoved && slotRemoved
       ? "cleared"
-      : markerWritten || identityRemoved
+      : markerWritten || identityRemoved || slotRemoved
         ? "partial"
         : "unavailable";
   if (typeof window !== "undefined") {
@@ -372,6 +537,7 @@ export function forgetReturningDiver(shopSlug: string): "cleared" | "partial" | 
       shopSlug,
       generation,
       ...(blockedReceiptId ? { receiptId: blockedReceiptId } : {}),
+      ...(deviceToken ? { deviceToken } : {}),
     };
     window.dispatchEvent(new CustomEvent(CLEAR_EVENT, { detail }));
     try {

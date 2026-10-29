@@ -21,6 +21,10 @@ import { type ParticipantType, rentsGear } from "@/lib/participant-types";
 import type { PassThroughFee } from "@/lib/pass-through-fee";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { hasAnyRentalPricing, type LastGear, type RentalPricing } from "@/lib/rentals";
+import {
+  getOrCreateReturningDiverDeviceToken,
+  snapshotReturningDiverClearGenerations,
+} from "@/lib/returning-diver";
 import { capacityLabel } from "@/lib/trips";
 import type { BookingFormTrip } from "../_lib/booking-form-trip";
 import { type BookingFormState, bookSpot, joinWaitlist, type TripRef } from "../actions";
@@ -486,6 +490,7 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
   // `BookingPartyFields` the same way the size is. Only read when the
   // departure sells more than diver seats.
   const [partyTypes, setPartyTypes] = useState<ParticipantType[]>(["diver"]);
+  const [memorySlotUnavailable, setMemorySlotUnavailable] = useState(false);
   const typesOffered = otherSeatOffers.length > 0;
   const typeOf = (index: number): ParticipantType =>
     typesOffered ? (partyTypes[index] ?? "diver") : "diver";
@@ -578,8 +583,27 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
       {/* No `description` any more. It quoted the per-diver price under the
           heading — the second of the five places this card said the money, on a
           page whose hero had already said it at figure scale. */}
-      <form action={formAction} className="flex flex-col gap-4">
+      <form
+        action={formAction}
+        className="flex flex-col gap-4"
+        onSubmit={(event) => {
+          const form = event.currentTarget;
+          const remember = form.elements.namedItem("rememberBooker");
+          if (!(remember instanceof HTMLInputElement) || !remember.checked || tripRef.embed) return;
+          const token = getOrCreateReturningDiverDeviceToken(tripRef.shopSlug);
+          const tokenField = form.elements.namedItem("returningDiverDeviceToken");
+          const generationField = form.elements.namedItem("returningDiverDeviceGeneration");
+          if (tokenField instanceof HTMLInputElement) tokenField.value = token ?? "";
+          if (generationField instanceof HTMLInputElement) {
+            generationField.value =
+              snapshotReturningDiverClearGenerations()?.[tripRef.shopSlug] ?? "";
+          }
+          setMemorySlotUnavailable(!token);
+        }}
+      >
         {requirement ? <p className="text-sm text-muted">{requirement}</p> : null}
+        <input type="hidden" name="returningDiverDeviceToken" defaultValue="" />
+        <input type="hidden" name="returningDiverDeviceGeneration" defaultValue="" />
         {knownDiver ? (
           <KnownDiverPanel
             name={knownDiver.name}
@@ -605,9 +629,22 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
             name="rememberBooker"
             value="on"
             className="border-t border-border pt-3"
+            onChange={(event) => {
+              if (event.currentTarget.checked) {
+                const token = getOrCreateReturningDiverDeviceToken(tripRef.shopSlug);
+                setMemorySlotUnavailable(!token);
+              } else {
+                setMemorySlotUnavailable(false);
+              }
+            }}
           >
             {t("rememberOnDevice")}
           </ChoiceRow>
+        ) : null}
+        {memorySlotUnavailable ? (
+          <p role="status" className="text-sm text-muted">
+            {t("rememberUnavailable")}
+          </p>
         ) : null}
         {/* A rider stays aboard and rents nothing, so no gear step. */}
         {showGearFields

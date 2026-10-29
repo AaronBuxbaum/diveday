@@ -62,6 +62,9 @@ describePostgres("returning-diver receipt lock bounds", () => {
       expectedPersonId: person.id,
       expectedTripId: trip.id,
       redirectReadinessToken: redirect.token,
+      deviceToken:
+        crypto.randomUUID().replaceAll("-", "") + crypto.randomUUID().replaceAll("-", ""),
+      deviceGeneration: null,
       now,
     });
     try {

@@ -400,6 +400,7 @@
     "headingToPayment": "Vamos al pago…",
     "booking": "Reservando…",
     "rememberOnDevice": "Recuerda mi nombre y correo en este dispositivo para este centro durante un máximo de 30 días.",
+    "rememberUnavailable": "Esta pestaña no pudo guardar la opción para volver a intentarlo. La reserva se puede confirmar igualmente.",
     "fullHeading": "Este barco está completo",
     "alternativeSameCourse": "El mismo curso, {date}",
     "alternativeSameSite": "El mismo sitio de buceo, {date}",

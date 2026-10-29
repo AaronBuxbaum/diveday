@@ -1,88 +1,112 @@
 "use server";
 
-import { cookies } from "next/headers";
 import {
   acknowledgeReturningDiverReceipt,
   readReturningDiverReceipt,
   revokeReturningDiverReceipt,
 } from "@/db/booking-capabilities";
 import { getDb } from "@/db/client";
-import { RETURNING_DIVER_RECEIPT_COOKIE } from "@/lib/returning-diver";
+import { RETURNING_DIVER_DEVICE_TOKEN_PATTERN } from "@/lib/returning-diver";
 
-function validReceiptToken(value: string | undefined): value is string {
-  return Boolean(value && /^[A-Za-z0-9_-]{20,128}$/.test(value));
+const MAX_DEVICE_SLOTS_PER_REQUEST = 32;
+
+function validReceiptId(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 }
 
-/** The HttpOnly receipt is the sole authority; callers cannot select a shop or diver. */
-export async function prepareReturningDiverMemory(): Promise<{
-  kind: "ready";
-  receiptId: string;
-  shopSlug: string;
-  diver: { fullName: string; email: string };
-  expiresAt: number;
-} | null> {
+function validGeneration(value: string | null): boolean {
+  return (
+    value === null || /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
+  );
+}
+
+/** Resolve opt-in receipts from opaque, shop-scoped tab slots; identity stays server-bound. */
+export async function prepareReturningDiverMemories(
+  slots: Array<{ token: string; generation: string | null }>,
+): Promise<
+  Array<{
+    deviceToken: string;
+    receiptId: string;
+    receiptOrder: string;
+    deviceGeneration: string | null;
+    shopSlug: string;
+    diver: { fullName: string; email: string };
+    expiresAt: number;
+  }>
+> {
+  if (!Array.isArray(slots) || slots.length > MAX_DEVICE_SLOTS_PER_REQUEST) return [];
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get(RETURNING_DIVER_RECEIPT_COOKIE)?.value;
-    if (!validReceiptToken(token)) return null;
-    const memory = await readReturningDiverReceipt(await getDb(), { receiptToken: token });
-    if (memory)
-      return {
-        kind: "ready",
-        receiptId: memory.receiptId,
-        shopSlug: memory.shopSlug,
-        diver: memory.diver,
-        expiresAt: memory.memoryExpiresAt,
-      };
-    // Leave an invalid cookie in place until its short Max-Age expires. A
-    // response-time deletion can race a newer booking's Set-Cookie response
-    // and erase that newer receipt. Invalid receipts are harmless: the DB
-    // lookup returns no identity, and every receipt expires within 24 hours.
-    return null;
+    const unique = new Map<string, string | null>();
+    for (const slot of slots) {
+      if (
+        typeof slot?.token === "string" &&
+        RETURNING_DIVER_DEVICE_TOKEN_PATTERN.test(slot.token) &&
+        validGeneration(slot.generation)
+      ) {
+        unique.set(slot.token, slot.generation);
+      }
+    }
+    const db = await getDb();
+    const results = await Promise.all(
+      [...unique].map(async ([deviceToken, deviceGeneration]) => {
+        const memory = await readReturningDiverReceipt(db, { deviceToken, deviceGeneration });
+        return memory
+          ? {
+              deviceToken,
+              receiptId: memory.receiptId,
+              receiptOrder: memory.receiptOrder,
+              deviceGeneration: memory.deviceGeneration,
+              shopSlug: memory.shopSlug,
+              diver: memory.diver,
+              expiresAt: memory.memoryExpiresAt,
+            }
+          : null;
+      }),
+    );
+    return results.filter((result): result is NonNullable<typeof result> => result !== null);
   } catch {
-    return null;
+    return [];
   }
 }
 
-/** Called only after the browser confirms the shop-scoped localStorage write. */
-export async function acknowledgeReturningDiverMemory(expectedReceiptId: string): Promise<boolean> {
-  try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get(RETURNING_DIVER_RECEIPT_COOKIE)?.value;
-    if (!validReceiptToken(token)) return false;
-    const acknowledged = await acknowledgeReturningDiverReceipt(await getDb(), {
-      receiptToken: token,
-      expectedReceiptId,
-    });
-    // Do not delete the shared cookie here. This response may arrive after a
-    // newer booking has replaced it in the browser. The acknowledged DB row
-    // makes this token inert; Max-Age bounds how long it remains on-device.
-    return acknowledged;
-  } catch {
-    return false;
-  }
-}
-
-/** A clear revokes only the receipt ID held in the current HttpOnly cookie. */
-export async function revokeClearedReturningDiverReceipt(
-  shopSlug: string,
+/** Called only after the browser confirms its shop-scoped localStorage write. */
+export async function acknowledgeReturningDiverMemory(
+  deviceToken: string,
   expectedReceiptId: string,
+  deviceGeneration: string | null,
 ): Promise<boolean> {
-  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(shopSlug)) return false;
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(expectedReceiptId))
+  if (
+    !RETURNING_DIVER_DEVICE_TOKEN_PATTERN.test(deviceToken) ||
+    !validReceiptId(expectedReceiptId) ||
+    !validGeneration(deviceGeneration)
+  )
     return false;
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get(RETURNING_DIVER_RECEIPT_COOKIE)?.value;
-    if (!validReceiptToken(token)) return false;
-    const revoked = await revokeReturningDiverReceipt(await getDb(), {
-      receiptToken: token,
+    return await acknowledgeReturningDiverReceipt(await getDb(), {
+      deviceToken,
       expectedReceiptId,
-      shopSlug,
+      deviceGeneration,
     });
-    // Revocation is scoped to this receipt row. Avoid a response-time cookie
-    // deletion that could erase a newer booking's replacement receipt.
-    return revoked;
+  } catch {
+    return false;
+  }
+}
+
+/** A receipt row supplies the shop binding; callers cannot select a shop. */
+export async function revokeClearedReturningDiverReceipt(
+  deviceToken: string,
+  nextDeviceGeneration: string,
+): Promise<boolean> {
+  if (
+    !RETURNING_DIVER_DEVICE_TOKEN_PATTERN.test(deviceToken) ||
+    !validGeneration(nextDeviceGeneration)
+  )
+    return false;
+  try {
+    return await revokeReturningDiverReceipt(await getDb(), {
+      deviceToken,
+      nextDeviceGeneration,
+    });
   } catch {
     return false;
   }

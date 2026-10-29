@@ -69,6 +69,27 @@ describe("opted-in returning-diver memory", () => {
     expect(loadReturningDiver("blue-mantis", NOW)).toEqual(diver);
   });
 
+  it("bounds stored shop memories and keeps the most recent shop write", () => {
+    for (let index = 0; index < 40; index += 1) {
+      const shopSlug = `shop-${index}`;
+      saveReturningDiver(
+        shopSlug,
+        { fullName: `Diver ${index}`, email: `diver-${index}@example.com` },
+        NOW.getTime() + RETURNING_DIVER_MEMORY_MS + index,
+        NOW,
+      );
+    }
+    const memoryCount = Array.from({ length: localStorage.length }, (_, index) =>
+      localStorage.key(index),
+    ).filter((key) => key?.startsWith("diveday:returning-diver:v2:")).length;
+
+    expect(memoryCount).toBeLessThanOrEqual(32);
+    expect(loadReturningDiver("shop-39", NOW)).toEqual({
+      fullName: "Diver 39",
+      email: "diver-39@example.com",
+    });
+  });
+
   it("does not write blank or already-expired data", () => {
     const expiresAt = NOW.getTime() + RETURNING_DIVER_MEMORY_MS;
     saveReturningDiver("blue-mantis", { ...diver, fullName: " " }, expiresAt, NOW);
@@ -86,7 +107,7 @@ describe("opted-in returning-diver memory", () => {
       { fullName: "Priya Shah", email: "priya@example.com" },
       newerExpiry,
       NOW,
-      { id: "receipt-booking-b", generationAtStart: generation },
+      { id: "receipt-booking-b", order: "22", generationAtStart: generation },
     );
 
     // Simulate the older booking A response setting its shared retry cookie
@@ -100,6 +121,7 @@ describe("opted-in returning-diver memory", () => {
         new Date(NOW.getTime() + 10 * 86_400_000),
         {
           id: "receipt-booking-a",
+          order: "21",
           generationAtStart: generation,
         },
       ),
@@ -134,7 +156,7 @@ describe("opted-in returning-diver memory", () => {
 
   it("keeps a cleared receipt fenced despite clock skew and accepts a later opt-in", () => {
     const initialGeneration = snapshotReturningDiverClearGenerations()?.["blue-mantis"] ?? null;
-    const oldReceipt = { id: "receipt-old", generationAtStart: initialGeneration };
+    const oldReceipt = { id: "receipt-old", order: "30", generationAtStart: initialGeneration };
     const expiry = new Date("2050-01-01T00:00:00Z").getTime();
     saveReturningDiver("blue-mantis", diver, expiry, NOW, oldReceipt);
     expect(forgetReturningDiver("blue-mantis")).toBe("cleared");
@@ -152,7 +174,7 @@ describe("opted-in returning-diver memory", () => {
         { ...diver, fullName: "New opt-in" },
         expiry,
         skewedDeviceTime,
-        { id: "receipt-new", generationAtStart: generation },
+        { id: "receipt-new", order: "31", generationAtStart: generation },
       ),
     ).toBe("saved");
     expect(loadReturningDiver("blue-mantis", skewedDeviceTime)).toEqual({
@@ -164,7 +186,7 @@ describe("opted-in returning-diver memory", () => {
   it("rechecks the clear marker after a concurrent write and removes only that receipt", () => {
     const key = "diveday:returning-diver:v2:blue-mantis";
     const initialGeneration = snapshotReturningDiverClearGenerations()?.["blue-mantis"] ?? null;
-    const receipt = { id: "receipt-in-flight", generationAtStart: initialGeneration };
+    const receipt = { id: "receipt-in-flight", order: "32", generationAtStart: initialGeneration };
     saveReturningDiver("blue-mantis", diver, NOW.getTime() + 1000, NOW, receipt);
     const originalSetItem = Storage.prototype.setItem;
     let clearedDuringWrite = false;
@@ -192,6 +214,7 @@ describe("opted-in returning-diver memory", () => {
     const initialGeneration = snapshotReturningDiverClearGenerations()?.["blue-mantis"] ?? null;
     saveReturningDiver("blue-mantis", diver, NOW.getTime() + RETURNING_DIVER_MEMORY_MS, NOW, {
       id: "receipt-quota",
+      order: "33",
       generationAtStart: initialGeneration,
     });
     const originalSetItem = Storage.prototype.setItem;
@@ -215,6 +238,7 @@ describe("opted-in returning-diver memory", () => {
     const initialGeneration = snapshotReturningDiverClearGenerations()?.["blue-mantis"] ?? null;
     saveReturningDiver("blue-mantis", diver, NOW.getTime() + RETURNING_DIVER_MEMORY_MS, NOW, {
       id: "receipt-delete-fails",
+      order: "34",
       generationAtStart: initialGeneration,
     });
     const originalRemoveItem = Storage.prototype.removeItem;

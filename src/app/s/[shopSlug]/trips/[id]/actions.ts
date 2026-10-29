@@ -78,6 +78,28 @@ export type TripRef = {
   embed?: boolean;
 };
 
+function returningDiverOptIn(formData: FormData, embed: boolean | undefined) {
+  const optedIn = !embed && formData.get("rememberBooker") === "on";
+  const token = formData.get("returningDiverDeviceToken");
+  const rawGeneration = formData.get("returningDiverDeviceGeneration");
+  const validGeneration =
+    rawGeneration === ""
+      ? null
+      : typeof rawGeneration === "string" &&
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawGeneration)
+        ? rawGeneration
+        : undefined;
+  const deviceToken =
+    optedIn &&
+    typeof token === "string" &&
+    /^[A-Za-z0-9_-]{40,128}$/.test(token) &&
+    validGeneration !== undefined
+      ? token
+      : null;
+  const deviceGeneration = validGeneration ?? null;
+  return { optedIn, deviceToken, deviceGeneration };
+}
+
 /** `&embed=1` after an existing query, `?embed=1` to start one — never plain mode. */
 function embedParam(embed: boolean | undefined, delimiter: "&" | "?"): string {
   return embed ? `${delimiter}embed=1` : "";
@@ -118,6 +140,46 @@ const bookingForm = z
   })
   .catchall(formValue());
 
+function validateBookingParty(
+  fields: z.infer<typeof bookingForm>,
+  t: ReturnType<typeof diverTranslator>,
+) {
+  const partySize = z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(MAX_PUBLIC_PARTY_SIZE)
+    .safeParse(fields.partySize);
+  if (!partySize.success)
+    return { ok: false as const, state: { error: t(ERROR_MESSAGE_KEYS.invalid) } };
+  const fieldErrors: Record<string, string> = {};
+  const validParty: { fullName: string; email: string; minorDeclared: boolean }[] = [];
+  for (let index = 0; index < partySize.data; index++) {
+    const fullName = String(fields[`fullName-${index}`] ?? "").trim();
+    const email = String(fields[`email-${index}`] ?? "").trim();
+    if (!fullName) fieldErrors[`fullName-${index}`] = t("booking.fieldErrors.nameRequired");
+    if (fullName.length > DIVER_NAME_MAX)
+      fieldErrors[`fullName-${index}`] = t("booking.fieldErrors.nameTooLong");
+    if (index === 0 && !email) {
+      fieldErrors[`email-${index}`] = t("booking.fieldErrors.emailInvalid");
+    } else if (email && !emailField.safeParse(email).success) {
+      fieldErrors[`email-${index}`] = t("booking.fieldErrors.emailInvalid");
+    }
+    validParty.push({ fullName, email, minorDeclared: fields[`minor-${index}`] === "on" });
+  }
+  if (fields.phone.length > DIVER_PHONE_MAX)
+    fieldErrors.phone = t("booking.fieldErrors.phoneTooLong");
+  if (Object.keys(fieldErrors).length > 0)
+    return { ok: false as const, state: { error: t("booking.errors.checkFields"), fieldErrors } };
+  return {
+    ok: true as const,
+    partySize: partySize.data,
+    validParty,
+    phone: fields.phone,
+    promoCodeInput: fields.promoCode,
+  };
+}
+
 /**
  * The banner code for a booking `createBookingParty` refused. Anything not
  * named here is `unavailable`, which is deliberate for the refusals that
@@ -141,63 +203,27 @@ const waitlistForm = z.object({
   partySize: formValue(),
 });
 
+/**
+ * Error messages are translated here because useActionState does not re-run a
+ * Server Component render after validation fails.
+ */
 export async function bookSpot(
   { shopSlug, tripId, embed }: TripRef,
   _prev: BookingFormState,
   formData: FormData,
 ): Promise<BookingFormState> {
-  // Locale for every error this action can hand back, resolved once up
-  // front — a Client Component reads `state.error` straight from
-  // `useActionState` with no further round trip through a Server Component,
-  // so it has to arrive already translated (unlike the `?error=` codes that
-  // flow back through page.tsx, which resolves them itself).
   const locale = await requestLocale();
   const t = diverTranslator(locale);
   const ip = await clientIp();
-  // Unchecked by default. A receipt is minted further below only after the
-  // booking transaction has succeeded and the booking identity is eligible.
-  const rememberBooker = !embed && formData.get("rememberBooker") === "on";
+  const {
+    optedIn: rememberBooker,
+    deviceToken,
+    deviceGeneration,
+  } = returningDiverOptIn(formData, embed);
   const fields = readForm(bookingForm, formData);
-  // Bounded, and the bound is measured — see MAX_PUBLIC_PARTY_SIZE for the
-  // numbers and for why the lock, not the row count, is what decides it.
-  const partySize = z.coerce
-    .number()
-    .int()
-    .min(1)
-    .max(MAX_PUBLIC_PARTY_SIZE)
-    .safeParse(fields.partySize);
-  if (!partySize.success) return { error: t(ERROR_MESSAGE_KEYS.invalid) };
-  // Validate per field so the form can point at the exact box that is wrong,
-  // and keep everything else the diver typed.
-  const fieldErrors: Record<string, string> = {};
-  const validParty: { fullName: string; email: string; minorDeclared: boolean }[] = [];
-  for (let index = 0; index < partySize.data; index++) {
-    const fullName = String(fields[`fullName-${index}`] ?? "").trim();
-    const email = String(fields[`email-${index}`] ?? "").trim();
-    if (!fullName) fieldErrors[`fullName-${index}`] = t("booking.fieldErrors.nameRequired");
-    if (fullName.length > DIVER_NAME_MAX)
-      fieldErrors[`fullName-${index}`] = t("booking.fieldErrors.nameTooLong");
-    // The lead booker's email is the one address DiveDay actually uses (the
-    // confirmation, the waiver, the readiness link) and stays required.
-    // Every other party member's is optional (task 21) — a disabled "use the
-    // main contact's email" checkbox in BookingPartyFields.tsx simply omits
-    // the field from the submission, and an empty non-lead email books that
-    // diver through the same no-email walk-in path a counter booking already
-    // uses (src/db/bookings.ts), never by writing the lead's own address onto
-    // a second person row (which would collide as "already booked" the
-    // moment a third member also opted in).
-    if (index === 0 && !email) {
-      fieldErrors[`email-${index}`] = t("booking.fieldErrors.emailInvalid");
-    } else if (email && !emailField.safeParse(email).success) {
-      fieldErrors[`email-${index}`] = t("booking.fieldErrors.emailInvalid");
-    }
-    validParty.push({ fullName, email, minorDeclared: fields[`minor-${index}`] === "on" });
-  }
-  const { phone, promoCode: promoCodeInput } = fields;
-  if (phone.length > DIVER_PHONE_MAX) fieldErrors.phone = t("booking.fieldErrors.phoneTooLong");
-  if (Object.keys(fieldErrors).length > 0) {
-    return { error: t("booking.errors.checkFields"), fieldErrors };
-  }
+  const validation = validateBookingParty(fields, t);
+  if (!validation.ok) return validation.state;
+  const { partySize, validParty, phone, promoCodeInput } = validation;
 
   const dbi = await getDb();
   const shopNow = await getShopBySlug(dbi, shopSlug);
@@ -248,7 +274,7 @@ export async function bookSpot(
   // What each person is coming as (ADR 20261007-participant-types), checked
   // against what this departure sells rather than trusted from the form.
   const parsedTypes = parsePartyTypes(
-    Array.from({ length: partySize.data }, (_, index) => fields[`participantType-${index}`]),
+    Array.from({ length: partySize }, (_, index) => fields[`participantType-${index}`]),
     tripForGear,
   );
   if (!parsedTypes.ok) {
@@ -288,7 +314,7 @@ export async function bookSpot(
   const gearSelections: Array<{ rentedKinds: RentableItemKind[]; wantsNitrox: boolean }> = [];
   const plannedDives = tripForGear?.plannedDives ?? 2;
   if (offersGearAtCheckout && (offeredGearItems.length > 0 || nitroxOfferedAtCheckout)) {
-    for (let index = 0; index < partySize.data; index++) {
+    for (let index = 0; index < partySize; index++) {
       gearSelections.push({
         // One suit, held here as well as in `saveRentalFit`, so a post that
         // ticks both is charged for the suit that gets packed (H-78).
@@ -488,6 +514,8 @@ export async function bookSpot(
     tripId,
     confirmedBooking,
     redirectCapability,
+    deviceToken,
+    deviceGeneration,
   });
   await consumeHandoffFromForm(dbi, shopNow.id, fields.handoff);
   const ownLocale = await recordLeadBookerLocale(dbi, primaryBookingId);
