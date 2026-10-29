@@ -81,6 +81,15 @@ jobs:
         with:
           aws-region: us-east-1
           role-to-assume: ${{ vars.RESTORE_DRILL_ROLE_ARN }}
+      - name: Sign in to ECR Public so the Postgres image pull is not rate-limited
+        # GitHub's runners share addresses, and anonymous pulls from public.ecr.aws hit
+        # `toomanyrequests: Data limit exceeded` (2026-10-29). The password goes through a pipe,
+        # never an argument or a log line.
+        timeout-minutes: 2
+        run: |
+          set -o pipefail
+          aws ecr-public get-login-password --region us-east-1 \
+            | docker login --username AWS --password-stdin public.ecr.aws
       - name: Restore, sign in, read tomorrow's manifest, delete the branch
         # Above the script's own worst case (`worstCaseMs`), so its `finally` deletes the branch.
         timeout-minutes: 55
