@@ -9,6 +9,7 @@ import {
   PARTY_RETURN_COOKIE,
   PARTY_RETURN_MAX_AGE_SECONDS,
   partyReturnCookiePath,
+  partyReturnCookieSecure,
 } from "@/lib/party-return";
 import { base, bounceTarget, contextFor, refuseWhileHeld } from "./action-helpers";
 
@@ -48,7 +49,7 @@ export async function signMinorWaiverAction(token: string, formData: FormData) {
     maxAge: PARTY_RETURN_MAX_AGE_SECONDS,
     sameSite: "lax",
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: partyReturnCookieSecure(),
   });
   redirect(`/waivers/${opened.token}`);
 }
