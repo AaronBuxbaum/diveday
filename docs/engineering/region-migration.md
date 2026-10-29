@@ -143,15 +143,11 @@ Every step has a trap that a careful person executing a list still walks into; t
 7. **Redeploy the app.**
    `RUM_APP_MONITOR_ID`, `MEDIA_PUBLIC_URL_BASE` and every AWS credential in the environment changed.
    The post-deploy wizard pushes the credentials; the redeploy is what makes the app use them.
-8. **Re-paste the database connection string** (manual action `database-dump-connection`).
-   The secret lives in the same account and region as the stack, so a move creates a fresh one holding the literal `unset`, and the weekly dump refuses to run rather than writing a zero-byte object.
-   That refusal is the correct behaviour and it is also silent: the first Monday after a move produces no backup and no complaint.
-   It is the only backup layer that can restore a login — the per-shop export bundles exclude `user_accounts`, `account_tokens` and `calendar_feeds` — so losing it quietly costs more than losing the bundles quietly.
-
-   ```
-   aws secretsmanager put-secret-value --secret-id diveday/database-url-unpooled --secret-string '<DATABASE_URL_UNPOOLED from Neon, the direct endpoint>'
-   aws codebuild start-build --project-name diveday-database-dump
-   ```
+8. **Confirm the dump connection was provisioned.**
+   The post-deploy infra workflow retrieves Neon's direct connection URI and stores it in the new stack's `diveday/database-url-unpooled` secret.
+   It starts one dump build when that secret was still `unset`; confirm the build and object in `diveday-database-dumps` before the next weekly watchdog run.
+   The workflow needs `NEON_API_KEY` and `NEON_PROJECT_ID` on the `infra-deploy` environment (manual action `neon-dump-provisioning-credentials`).
+   GitHub does not expose the saved secret to jobs using another environment, so those values must be present there too.
 9. **Re-confirm both webhook subscriptions** (manual action `verify-webhook-subscriptions`), *after* the redeploy above and not with the other verifications.
    A move replaces both topics, so both subscriptions are recreated pointing at an app that does not yet know the new ARNs, and each route answers 503 until its ARN is in the running app's environment.
    SNS deletes an unconfirmed subscription after roughly three days, so a check run before the redeploy passes nothing and buys nothing.

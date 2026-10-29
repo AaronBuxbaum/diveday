@@ -62,12 +62,14 @@ the part to read before adding anything that can write to either.
   `pg_dump` that died mid-stream would store a truncated dump and report success, which is the single
   worst outcome available here. The buildspec then reads the object's own `ContentLength` back, so
   "the PUT was accepted" is not mistaken for "a dump is there".
-- **Its own credential, in its own secret.** `diveday/database-url-unpooled`, deployed holding the
-  literal `unset`, filled in once by a human (§17's `database-dump-connection` action, now on the
-  short checklist). Not folded into `diveday/env`: that secret is the stack's *outbound* hand-off
-  document, rewritten from a rendered `.env.example` on every deploy, so a pasted value there would be
-  overwritten by the next `cdk deploy`. A stack that was never handed a connection string fails its
-  first build with a named message rather than storing a zero-byte object every week.
+- **Its own credential, in its own secret.** `diveday/database-url-unpooled` deploys holding the
+  literal `unset`; the reviewer-gated infra-deploy workflow retrieves the direct URI from Neon's
+  Management API after each deploy and updates this secret only when the value changes. A fresh
+  secret also starts one initial dump build. The URI is never part of the CloudFormation template,
+  stack outputs, logs, or repository. It is not folded into `diveday/env`: that secret is the stack's
+  *outbound* hand-off document, rewritten from a rendered `.env.example` on every deploy, so a value
+  placed there would be overwritten by the next `cdk deploy`. The one-time credential setup for the
+  workflow is described in the amendment below and §17.
 - **Write-only, into one prefix.** The job's role holds `s3:PutObject`/`AbortMultipartUpload` and
   (for the size read-back) `GetObject`, all scoped to `dumps/*`. It cannot reach the shop bundles
   under `exports/` — since the 2026-08-15 amendment below it holds no grant on their bucket at all —
@@ -191,9 +193,10 @@ is the rarer, more dangerous artifact. If one moves behind a stricter boundary i
 - **The recovery story is now complete but two-part.** A full restore is: `pg_restore` the newest dump
   for accounts, tokens and calendar feeds, and the bundles for anything newer than the dump. Section 2c
   of the backup-and-restore runbook is the procedure; section 4's quarterly restore test now covers it.
-- **A new manual step, on the short checklist.** Until `diveday/database-url-unpooled` is filled in
-  the dump layer does not exist. The watchdog says so within a week rather than silently — but the
-  checklist entry is what stops that week happening at all.
+- **One manual GitHub setup step, on the short checklist.** The existing Neon API key and project ID
+  are stored on the `restore-drill` environment, which the `infra-deploy` job cannot read. Copying
+  those two values to the already reviewer-gated `infra-deploy` environment lets the workflow
+  provision `diveday/database-url-unpooled`; no one pastes or handles the database connection URI.
 - **One more secret**, so Secrets Manager's fixed cost goes from $0.80 to $1.20 a month. Against the
   $30 budget that is noise; §16's "one secret, not eight" argument is about the *hand-off document*
   having one reader, and this is not that document.
@@ -201,12 +204,11 @@ is the rarer, more dangerous artifact. If one moves behind a stricter boundary i
   read it, its bucket expires everything in it, and the job that writes it has no grant on the bundle
   bucket — but the file exists, and anyone with account admin can read it. That is the same posture as
   the bundles and it is worth stating rather than implying.
-- **The 2026-08-15 split is a cutover with one deploy-day step, and one prefix left behind.** The
-  sequence is §2c of [the backup and restore runbook](../../engineering/backup-and-restore-runbook.md).
-  The step that is not optional: **the new bucket is empty until a dump runs into it**, so a deploy
-  landing between a Monday dump and the Tuesday watchdog raises one honest false alarm unless a build
-  is started by hand — the same command the setup step already documents, which doubles as proof the
-  new grant works. The prefix left behind: **old dumps are not copied** (a copy re-dates them and
+- **The 2026-08-15 split remains a cutoff with one prefix left behind.** The sequence is §2c of
+  [the backup and restore runbook](../../engineering/backup-and-restore-runbook.md). On a fresh
+  deployment, the workflow fills an unset secret and starts one initial build, so the new bucket does
+  not wait for the weekly schedule. Later deployments with an unchanged URI do not start extra
+  builds. The prefix left behind: **old dumps are not copied** (a copy re-dates them and
   restarts their expiry clock) and, per the bullet above, not drained either. They are abandoned in a
   `RETAIN` bucket until a human deletes them, and no restore consults them.
 - **Two buckets to re-adopt after a `cdk destroy`, not one.** The `backup-bucket-readoption` manual
@@ -215,3 +217,22 @@ is the rarer, more dangerous artifact. If one moves behind a stricter boundary i
 - **Escape hatch:** if the Neon PITR window is later lengthened to something comfortable, this layer
   narrows from day-to-day recovery to vendor-independence insurance, and the schedule could drop to
   monthly by changing one cron expression. Nothing else keys on the cadence.
+
+### Amendment (2026-10-29): provision the direct URI after infra deploy
+
+The first implementation deployed `diveday/database-url-unpooled` as `unset` and required an
+operator to paste Neon's direct connection string into AWS Secrets Manager. That step was missed, so
+the weekly job kept refusing and the dump bucket stayed empty. The post-deploy workflow now calls
+Neon's documented
+[`GET /projects/{project_id}/connection_uri`](https://neon.com/docs/reference/api/projects/get-connection-uri)
+endpoint with `pooled=false`, which selects the default branch's read-write endpoint and returns the
+direct, non-pooled URI. It compares the result to the secret and writes only a changed value. The
+connection string is masked in GitHub Actions and is never sent through CloudFormation, outputs,
+workflow outputs, or command arguments. A first seed starts one CodeBuild run; later unchanged
+deploys do not create an extra dump.
+
+GitHub secrets and variables are environment-scoped. `NEON_API_KEY` and `NEON_PROJECT_ID` currently
+live on `restore-drill`, so they must also be present on `infra-deploy` for this workflow to read
+them. This is the only remaining manual setup: the URI itself is retrieved and stored without a
+person copying it. The infra deploy role has `GetSecretValue`/`PutSecretValue` only on
+`diveday/database-url-unpooled`, and `codebuild:StartBuild` only on `diveday-database-dump`.

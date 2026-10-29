@@ -69,6 +69,45 @@ function dumpRoleStatements(): { Sid?: string; Action?: unknown; Resource?: unkn
     );
 }
 
+/** Statements on the OIDC deploy role, used for the post-deploy Neon seed. */
+function deployRoleStatements(): {
+  Sid?: string;
+  Effect?: string;
+  Action?: unknown;
+  Resource?: unknown;
+  NotResource?: unknown;
+}[] {
+  const rendered = template();
+  const roles = rendered.findResources("AWS::IAM::Role") as Record<
+    string,
+    { Properties?: { RoleName?: string } }
+  >;
+  const roleId = Object.entries(roles).find(
+    ([, role]) => role.Properties?.RoleName === "diveday-github-actions-cdk-deploy",
+  )?.[0];
+  if (!roleId) throw new Error("the infra deploy role is missing");
+  const policies = rendered.findResources("AWS::IAM::Policy") as Record<
+    string,
+    {
+      Properties?: {
+        Roles?: unknown[];
+        PolicyDocument?: {
+          Statement?: {
+            Sid?: string;
+            Effect?: string;
+            Action?: unknown;
+            Resource?: unknown;
+            NotResource?: unknown;
+          }[];
+        };
+      };
+    }
+  >;
+  return Object.values(policies)
+    .filter((policy) => JSON.stringify(policy.Properties?.Roles).includes(roleId))
+    .flatMap((policy) => policy.Properties?.PolicyDocument?.Statement ?? []);
+}
+
 function buildSpecOf(rendered: Template): string {
   const projects = rendered.findResources("AWS::CodeBuild::Project") as Record<
     string,
@@ -118,11 +157,11 @@ describe("the weekly database dump", () => {
     expect(spec).toContain("--no-privileges");
   });
 
-  it("refuses to run before a human has supplied the connection string", () => {
+  it("refuses to run before the infra deploy has provisioned the connection string", () => {
     const spec = buildSpecOf(template());
-    // A stack deployed but never handed a connection string must fail loudly on
-    // its first run rather than write a zero-byte object every week forever.
-    expect(spec).toContain("has not been filled in");
+    // A stack whose Neon credential setup is incomplete must fail loudly rather
+    // than write a zero-byte object every week forever.
+    expect(spec).toContain("has not been provisioned");
     expect(spec).toContain("exit 1");
   });
 
@@ -131,11 +170,32 @@ describe("the weekly database dump", () => {
   });
 
   it("keeps the connection string in its own secret, not the hand-off document", () => {
-    // `diveday/env` is rewritten from a rendered .env.example on every deploy, so
-    // a human-pasted value there would be silently overwritten.
+    // `diveday/env` is rewritten from a rendered .env.example on every deploy;
+    // the actual URI stays in its dedicated secret, outside CloudFormation.
     template().hasResourceProperties("AWS::SecretsManager::Secret", {
       Name: "diveday/database-url-unpooled",
     });
+  });
+
+  it("scopes Neon URI provisioning and first-dump launch to one secret and one project", () => {
+    const statements = deployRoleStatements();
+    const secretAccess = statements.find(
+      (statement) => statement.Sid === "ReadAndUpdateDatabaseDumpConnection",
+    );
+    expect([secretAccess?.Action].flat()).toEqual([
+      "secretsmanager:GetSecretValue",
+      "secretsmanager:PutSecretValue",
+    ]);
+    expect(JSON.stringify(secretAccess?.Resource)).toContain("DatabaseDumpConnection");
+    expect(JSON.stringify(secretAccess?.Resource)).not.toContain("CredentialsEnvDocument");
+
+    const deny = statements.find((statement) => statement.Sid === "NeverReadAnyOtherSecretValue");
+    expect(JSON.stringify(deny?.NotResource)).toContain("CredentialsEnvDocument");
+    expect(JSON.stringify(deny?.NotResource)).toContain("DatabaseDumpConnection");
+
+    const startBuild = statements.find((statement) => statement.Sid === "StartFirstDatabaseDump");
+    expect([startBuild?.Action].flat()).toEqual(["codebuild:StartBuild"]);
+    expect(JSON.stringify(startBuild?.Resource)).toContain("DatabaseDumpProject");
   });
 
   it("can write a dump and read one back only under its own prefix", () => {

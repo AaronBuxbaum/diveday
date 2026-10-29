@@ -268,9 +268,8 @@ const AUDIT_TRAIL_RETENTION_DAYS = 365;
 
 /**
  * The direct (non-pooled) connection string, in its own secret because the dump
- * job is the only thing that reads it and it is the only credential in this
- * stack that a human supplies rather than CloudFormation minting (S17's
- * `database-dump-connection` action).
+ * job reads it, and the infra-deploy workflow refreshes it from Neon's
+ * Management API without putting the value in CloudFormation state.
  *
  * Not folded into `diveday/env`: that secret is the stack's *outbound* hand-off
  * document, rewritten on every deploy from a rendered `.env.example`, so a value
@@ -2554,24 +2553,22 @@ exports.handler = async (event) => {
           "diveday-mcp-readonly-local -> a named profile in ~/.aws/credentials. diveday-mcp-readonly-cloud -> the Claude Code cloud environment's variables. diveday-backup-uploader -> Vercel Production as the four PLATFORM_BACKUP_* values, read by the weekly /api/cron/platform-backup route (it left the 'Not .env values' section on 2026-08-12, when the runner landed).",
       },
       {
-        id: "database-dump-connection",
-        title: "Give the weekly database dump its connection string",
+        id: "neon-dump-provisioning-credentials",
+        title: "Make the Neon API credentials available to infra deploys",
         category: "Credentials",
-        when: "once, before the first Monday after this stack is deployed, and again if the Neon connection string changes",
-        why: "The dump is the only backup layer that can restore a login -- the per-shop export bundles exclude user_accounts, account_tokens and calendar_feeds by design -- and it needs Neon's direct (non-pooled) connection string, which is another vendor's credential this stack has no identity to mint or read. It deploys holding the literal 'unset' and refuses to run until this is done, rather than writing a zero-byte object every week.",
+        when: "once before the first infra workflow deploy, and again after rotating the Neon API key or project",
+        why: "GitHub environment secrets are scoped to one environment. The existing NEON_API_KEY and NEON_PROJECT_ID are on restore-drill, so the infra-deploy job cannot read them while it provisions the direct dump connection after deployment.",
         run: [
-          "aws secretsmanager put-secret-value --secret-id diveday/database-url-unpooled --secret-string '<the DATABASE_URL_UNPOOLED value from Neon -- the direct endpoint, not -pooler>'",
-          "aws codebuild start-build --project-name diveday-database-dump",
+          "In GitHub Settings -> Environments -> infra-deploy, add the existing NEON_API_KEY value as an environment secret and the existing NEON_PROJECT_ID value as an environment variable.",
         ],
         produces:
-          "A weekly full-cluster pg_dump at s3://<dump bucket>/dumps/<YYYY-MM-DD>/diveday.dump.gz, kept 35 days. The DatabaseDumpBucketName output names the bucket; it is not the export bundles' bucket (ADR 20260812-platform-database-dump, 2026-08-15).",
+          "The approved infra deploy can retrieve Neon's direct connection URI, store it in Secrets Manager, and start the first dump when that secret is still unset.",
         store:
-          "AWS Secrets Manager, secret diveday/database-url-unpooled, in the same account and region as the stack -- the DatabaseDumpSetup stack output names it. Deliberately NOT diveday/env: that secret is rewritten from a rendered .env.example on every deploy, so a pasted value there would be overwritten.",
+          "GitHub repository AaronBuxbaum/diveday -> Environments -> infra-deploy -> environment secret NEON_API_KEY and environment variable NEON_PROJECT_ID. Keep the existing restore-drill values in that environment too.",
         verify: [
-          "aws codebuild batch-get-builds --ids <the build id from start-build> --query 'builds[0].buildStatus'",
-          "AWS_PROFILE=diveday-admin aws s3 ls s3://diveday-database-dumps/dumps/ --recursive",
+          "GitHub Settings -> Environments -> infra-deploy -> confirm NEON_API_KEY is listed under environment secrets and NEON_PROJECT_ID under environment variables, without revealing either value.",
         ],
-        note: "A transaction-mode pooler is unreliable for pg_dump, the same reason migrations use the direct connection. The resulting file holds every password hash and every medical answer in the platform, which is why it lives in its own bucket that nothing holding Vercel-resident credentials can touch, why everything in that bucket is deleted after 35 days while the export bundles never expire, and why the job's own role is write-only. Restoring one is a deliberate human act with the admin profile.",
+        note: "GitHub cannot reveal an already-saved secret. Use the original API key source; if that is unavailable, create a replacement Neon API key and update both environments. The connection URI itself is never stored in GitHub.",
       },
       {
         id: "usage-guardrail-tokens",
@@ -2919,13 +2916,10 @@ exports.handler = async (event) => {
         // Same class, and optional until the pilot's first real booking
         // (H-158): the deploy gate's token, plus the switch it turns on.
         "production-deploy-gate",
-        // Same class again: Neon's direct connection string is another vendor's
-        // credential, so no CLI here can learn the value even though one can
-        // place it. It earns the short list on consequence rather than only on
-        // class -- until it is done, the one backup layer that can restore a
-        // login does not exist, and the export bundles cannot cover for it
-        // (ADR 20260812-platform-database-dump).
-        "database-dump-connection",
+        // Same class again: GitHub environment secrets do not cross environment
+        // boundaries. The infra-deploy job needs the existing Neon API key on
+        // its own environment to provision the dump connection automatically.
+        "neon-dump-provisioning-credentials",
         "ses-production-access",
         "sns-sms-account-limits",
         // Clicking a link in an email is the whole step, and no CLI can do it
@@ -3189,6 +3183,17 @@ exports.handler = async (event) => {
     );
     cdkDiffRole.addToPolicy(denyReadingAnySecret());
 
+    // The secret contains only the public placeholder in the synthesized
+    // template. The approved infra-deploy workflow replaces it from Neon's API
+    // after deployment; the real URI never enters CloudFormation state.
+    const dumpConnectionSecret = new secretsmanager.Secret(this, "DatabaseDumpConnection", {
+      secretName: DUMP_CONNECTION_SECRET_NAME,
+      description:
+        "The direct (non-pooled) Postgres connection string the weekly pg_dump uses. The infra-deploy workflow provisions it from Neon's Management API after deployment.",
+      secretStringValue: cdk.SecretValue.unsafePlainText("unset"),
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+    });
+
     const cdkDeployRole = new iam.Role(this, "GitHubActionsCdkDeployRole", {
       roleName: "diveday-github-actions-cdk-deploy",
       assumedBy: githubActionsPrincipal(
@@ -3276,12 +3281,9 @@ exports.handler = async (event) => {
         ],
       }),
     );
-    // The one exception to "neither CI role can read a secret" (ADR
-    // 20260811-ci-deploy-full-wizard): scoped to this secret's own ARN, so it
-    // widens nothing else. `denyReadingAnySecret()` below still applies to
-    // every *other* secret in the account, including the app-secret seed this
-    // stack also creates (S16) -- NotResource makes the Deny bind everywhere
-    // except the one ARN just allowed, rather than nowhere at all.
+    // Scoped reads for the post-deploy wizard and Neon dump provisioning. The
+    // value from Neon is read only to compare it with the stored URI before a
+    // put; neither secret grants access to any other secret in the account.
     cdkDeployRole.addToPolicy(
       new iam.PolicyStatement({
         sid: "ReadCredentialsDocumentForPostDeployWizard",
@@ -3291,10 +3293,17 @@ exports.handler = async (event) => {
     );
     cdkDeployRole.addToPolicy(
       new iam.PolicyStatement({
+        sid: "ReadAndUpdateDatabaseDumpConnection",
+        actions: ["secretsmanager:GetSecretValue", "secretsmanager:PutSecretValue"],
+        resources: [dumpConnectionSecret.secretArn],
+      }),
+    );
+    cdkDeployRole.addToPolicy(
+      new iam.PolicyStatement({
         sid: "NeverReadAnyOtherSecretValue",
         effect: iam.Effect.DENY,
         actions: ["secretsmanager:GetSecretValue"],
-        notResources: [credentialsSecret.secretArn],
+        notResources: [credentialsSecret.secretArn, dumpConnectionSecret.secretArn],
       }),
     );
 
@@ -3782,19 +3791,6 @@ exports.handler = async () => {
     // Cost: build.general1.small is billed by the minute; a dump of this database
     // is a couple of minutes, so this is cents a month, plus the S3 storage the
     // 35-day expiry bounds.
-    const dumpConnectionSecret = new secretsmanager.Secret(this, "DatabaseDumpConnection", {
-      secretName: DUMP_CONNECTION_SECRET_NAME,
-      description:
-        "The direct (non-pooled) Postgres connection string the weekly pg_dump uses. Filled in by a human -- see the DatabaseDumpSetup output and S17.",
-      // A placeholder rather than a generated value: nothing can invent Neon's
-      // connection string, and an *empty* secret would make the build fail with a
-      // parse error instead of the named refusal the buildspec prints.
-      secretStringValue: cdk.SecretValue.unsafePlainText("unset"),
-      // The one secret in the stack whose value a human owns. Deleting the
-      // construct must not take it with them mid-incident.
-      removalPolicy: cdk.RemovalPolicy.RETAIN,
-    });
-
     const dumpLogs = new logs.LogGroup(this, "DatabaseDumpLogs", {
       logGroupName: "/aws/codebuild/diveday-database-dump",
       retention: logs.RetentionDays.THREE_MONTHS,
@@ -3902,10 +3898,9 @@ exports.handler = async () => {
                   "set -eu",
                   "set -o pipefail",
                   'CONNECTION="$(aws secretsmanager get-secret-value --secret-id "$CONNECTION_SECRET" --query SecretString --output text)"',
-                  // The named refusal. A stack deployed but never handed a
-                  // connection string must fail loudly on its first run rather
-                  // than emit a zero-byte object every week.
-                  `if [ -z "$CONNECTION" ] || [ "$CONNECTION" = "unset" ]; then echo "The ${DUMP_CONNECTION_SECRET_NAME} secret has not been filled in -- see the DatabaseDumpSetup stack output."; exit 1; fi`,
+                  // The named refusal. If the infra-deploy workflow has not
+                  // provisioned the URI, fail loudly rather than emit a zero-byte object.
+                  `if [ -z "$CONNECTION" ] || [ "$CONNECTION" = "unset" ]; then echo "The ${DUMP_CONNECTION_SECRET_NAME} secret has not been provisioned -- configure NEON_API_KEY and NEON_PROJECT_ID on the infra-deploy environment and run an infra deploy."; exit 1; fi`,
                   // `$PREFIX` unbraced: the next character is a `$`, so the
                   // variable name cannot run on, and it keeps this out of the
                   // `${...}`-in-a-string shape that reads as a botched template
@@ -3931,6 +3926,17 @@ exports.handler = async () => {
         ),
       },
     });
+
+    // Initialize one recovery point only when the deploy workflow has just
+    // replaced the placeholder secret. A normal infra deployment does not
+    // create an extra full-cluster copy.
+    cdkDeployRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: "StartFirstDatabaseDump",
+        actions: ["codebuild:StartBuild"],
+        resources: [dumpProject.attrArn],
+      }),
+    );
 
     // Weekly, Monday 05:30 UTC: after the export pass (05:00, vercel.json) and
     // well before the Tuesday 06:00 watchdog that now checks this prefix too, so
@@ -3968,9 +3974,9 @@ exports.handler = async () => {
     });
 
     new cdk.CfnOutput(this, "DatabaseDumpSetup", {
-      value: `${dumpConnectionSecret.secretName} <- put DATABASE_URL_UNPOOLED here`,
+      value: dumpConnectionSecret.secretName,
       description:
-        "The weekly full-cluster pg_dump (diveday-database-dump) reads its connection string from this secret, which deploys holding the literal 'unset' and fails loudly until a human fills it in: aws secretsmanager put-secret-value --secret-id diveday/database-url-unpooled --secret-string '<direct Neon connection string>'. Run it by hand to test: aws codebuild start-build --project-name diveday-database-dump. See docs/engineering/backup-and-restore-runbook.md section 2c.",
+        "Name of the secret the weekly full-cluster pg_dump reads. The infra-deploy workflow provisions its direct Neon URI after deployment; configure NEON_API_KEY and NEON_PROJECT_ID on that GitHub environment. See docs/engineering/backup-and-restore-runbook.md section 2c.",
     });
 
     // 21. Visual Regression Bucket Pruner -- cleans up stale visual snapshot prefixes
