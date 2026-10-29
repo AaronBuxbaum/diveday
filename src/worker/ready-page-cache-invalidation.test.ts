@@ -189,6 +189,52 @@ describe("ready page invalidation ordering", () => {
     expect(await restarted.readyPageFallback(store.storage, path, NOW)).toBeUndefined();
   });
 
+  it("honors the predecessor timestamp-only cancellation marker after restart", async () => {
+    const path = `/ready/${TOKEN}`;
+    await seedLegacyCopy(store.storage, path);
+    const cache = await store.storage.open(READY_CACHE_NAME);
+    const saved = await cache.match(READY_COPY_KEY);
+    if (!saved) throw new Error("expected legacy copy");
+    const headers = new Headers(saved.headers);
+    headers.delete("x-diveday-copy-forgotten-version");
+    await cache.put(READY_COPY_KEY, new Response(await saved.text(), { headers }));
+    const markers = await store.storage.open(READY_FORGOTTEN_CACHE_NAME);
+    await markers.put(
+      `/ready/forgotten/${await pathHash(path)}`,
+      new Response(null, { headers: { "x-diveday-forgotten-at": String(NOW) } }),
+    );
+    vi.resetModules();
+    const restarted = await import("./ready-page-cache");
+
+    expect(await restarted.readyPageFallback(store.storage, path, NOW)).toBeUndefined();
+  });
+
+  it("migrates a timestamp-only cancellation marker before online navigation can fail", async () => {
+    const path = `/ready/${TOKEN}`;
+    await seedLegacyCopy(store.storage, path);
+    const cache = await store.storage.open(READY_CACHE_NAME);
+    const saved = await cache.match(READY_COPY_KEY);
+    if (!saved) throw new Error("expected legacy copy");
+    const headers = new Headers(saved.headers);
+    headers.delete("x-diveday-copy-forgotten-version");
+    await cache.put(READY_COPY_KEY, new Response(await saved.text(), { headers }));
+    const markers = await store.storage.open(READY_FORGOTTEN_CACHE_NAME);
+    await markers.put(
+      `/ready/forgotten/${await pathHash(path)}`,
+      new Response(null, { headers: { "x-diveday-forgotten-at": String(NOW) } }),
+    );
+    vi.resetModules();
+    const restarted = await import("./ready-page-cache");
+
+    const request = await restarted.beginReadyPageRequest(store.storage, path);
+    expect(request.durable).toBe(true);
+    expect(request.forgottenVersion).toBe(`legacy-at:${NOW}`);
+    // Simulate the online fetch failing: after marker migration, fallback must
+    // still reject the pre-cancel copy, while the marker cache remains bounded.
+    expect(await restarted.readyPageFallback(store.storage, path, NOW)).toBeUndefined();
+    expect(await (await store.storage.open(READY_FORGOTTEN_CACHE_NAME)).keys()).toHaveLength(1);
+  });
+
   it("migrates an old hashed cancellation marker into the bounded record before pruning it", async () => {
     const path = `/ready/${TOKEN}`;
     await seedLegacyCopy(store.storage, path);

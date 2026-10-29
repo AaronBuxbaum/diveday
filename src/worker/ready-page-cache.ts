@@ -96,6 +96,7 @@ const REQUEST_CANCELLED_VERSION_HEADER = "x-diveday-ready-cancelled-version";
 const LATEST_REQUEST_KEY = "/ready/latest-request";
 const LEGACY_FORGOTTEN_KEY_PREFIX = "/ready/forgotten/";
 const LEGACY_FORGOTTEN_VERSION_HEADER = "x-diveday-forgotten-version";
+const LEGACY_FORGOTTEN_AT_HEADER = "x-diveday-forgotten-at";
 const KEEP_UNTIL_HEADER = "x-diveday-keep-until";
 
 /** Stands in for the bearer token in the stored body; not a legal token (wrong length). */
@@ -352,6 +353,14 @@ function legacyForgottenKey(hash: string): string {
   return `${LEGACY_FORGOTTEN_KEY_PREFIX}${hash}`;
 }
 
+function legacyForgottenVersion(marker: Response | undefined): string {
+  if (!marker) return "";
+  const version = marker.headers.get(LEGACY_FORGOTTEN_VERSION_HEADER);
+  if (version) return version;
+  const at = marker.headers.get(LEGACY_FORGOTTEN_AT_HEADER);
+  return at && Number.isFinite(Number(at)) ? `legacy-at:${at}` : "";
+}
+
 async function clearLegacyForgetMarkers(markers: Cache): Promise<void> {
   for (const request of await markers.keys()) {
     if (new URL(request.url).pathname.startsWith(LEGACY_FORGOTTEN_KEY_PREFIX)) {
@@ -374,7 +383,7 @@ async function isCopyInvalidated(
     );
   }
   const legacy = await markers.match(legacyForgottenKey(hash));
-  const legacyVersion = legacy?.headers.get(LEGACY_FORGOTTEN_VERSION_HEADER);
+  const legacyVersion = legacyForgottenVersion(legacy);
   return Boolean(legacy && cached.headers.get(COPY_FORGOTTEN_VERSION_HEADER) !== legacyVersion);
 }
 
@@ -394,7 +403,7 @@ export function beginReadyPageRequest(
       const markers = await storage.open(READY_FORGOTTEN_CACHE_NAME);
       const marker = await markers.match(LATEST_REQUEST_KEY);
       const oldPathMarker = await markers.match(legacyForgottenKey(hash));
-      const oldPathVersion = oldPathMarker?.headers.get(LEGACY_FORGOTTEN_VERSION_HEADER) ?? "";
+      const oldPathVersion = legacyForgottenVersion(oldPathMarker);
       const cancelledPathHash = marker?.headers.get(REQUEST_CANCELLED_PATH_HASH_HEADER) ?? "";
       const cancelledVersion = marker?.headers.get(REQUEST_CANCELLED_VERSION_HEADER) ?? "";
       const readyCache = await storage.open(READY_CACHE_NAME);
@@ -405,8 +414,7 @@ export function beginReadyPageRequest(
       let migratedVersion = cancelledVersion;
       if (cancelledPathHash !== cachedHash && cachedHash) {
         const oldCachedMarker = await markers.match(legacyForgottenKey(cachedHash));
-        const oldCachedVersion =
-          oldCachedMarker?.headers.get(LEGACY_FORGOTTEN_VERSION_HEADER) ?? "";
+        const oldCachedVersion = legacyForgottenVersion(oldCachedMarker);
         if (oldCachedVersion && cachedVersion !== oldCachedVersion) {
           migratedPathHash = cachedHash;
           migratedVersion = oldCachedVersion;
@@ -680,7 +688,7 @@ async function writeForgetMarker(
     const oldCachedMarker = cachedHash
       ? await markers.match(legacyForgottenKey(cachedHash))
       : undefined;
-    const oldCachedVersion = oldCachedMarker?.headers.get(LEGACY_FORGOTTEN_VERSION_HEADER) ?? "";
+    const oldCachedVersion = legacyForgottenVersion(oldCachedMarker);
     const preservePreviousCancellation =
       previousCancelledPathHash !== "" && cachedHash === previousCancelledPathHash;
     const preserveLegacyCancellation =
