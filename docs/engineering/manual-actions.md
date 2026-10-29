@@ -123,16 +123,14 @@ this file is the checklist, not the argument.
     if not   A 503 from the endpoint means one of the three values is missing or malformed in the running app (a price id must start price_, the key sk_ or rk_, the secret whsec_). A 400 means the signing secret belongs to a different endpoint; Connect's STRIPE_WEBHOOK_SECRET is not this one.
     note     Keep these keys apart from STRIPE_SECRET_KEY/STRIPE_WEBHOOK_SECRET even when both live on the same Stripe account: one moves divers' money to shops through Connect, the other bills shops for DiveDay, and a restricted billing key cannot reach a connected account. Stripe Tax is not turned on here; the CPA question in docs/product/stakeholders/finance-and-tax.md decides whether it should be. A free term granted to a founding shop is set with pnpm billing:free-term <shop-slug> <last-free-day>, not in Stripe.
 
-[11] Give the weekly database dump its connection string
-    when     once, before the first Monday after this stack is deployed, and again if the Neon connection string changes
-    why      The dump is the only backup layer that can restore a login -- the per-shop export bundles exclude user_accounts, account_tokens and calendar_feeds by design -- and it needs Neon's direct (non-pooled) connection string, which is another vendor's credential this stack has no identity to mint or read. It deploys holding the literal 'unset' and refuses to run until this is done, rather than writing a zero-byte object every week.
-    run      aws secretsmanager put-secret-value --secret-id diveday/database-url-unpooled --secret-string '<the DATABASE_URL_UNPOOLED value from Neon -- the direct endpoint, not -pooler>'
-             aws codebuild start-build --project-name diveday-database-dump
-    produces A weekly full-cluster pg_dump at s3://<dump bucket>/dumps/<YYYY-MM-DD>/diveday.dump.gz, kept 35 days. The DatabaseDumpBucketName output names the bucket; it is not the export bundles' bucket (ADR 20260812-platform-database-dump, 2026-08-15).
-    store    AWS Secrets Manager, secret diveday/database-url-unpooled, in the same account and region as the stack -- the DatabaseDumpSetup stack output names it. Deliberately NOT diveday/env: that secret is rewritten from a rendered .env.example on every deploy, so a pasted value there would be overwritten.
-    verify   aws codebuild batch-get-builds --ids <the build id from start-build> --query 'builds[0].buildStatus'
-             AWS_PROFILE=diveday-admin aws s3 ls s3://diveday-database-dumps/dumps/ --recursive
-    note     A transaction-mode pooler is unreliable for pg_dump, the same reason migrations use the direct connection. The resulting file holds every password hash and every medical answer in the platform, which is why it lives in its own bucket that nothing holding Vercel-resident credentials can touch, why everything in that bucket is deleted after 35 days while the export bundles never expire, and why the job's own role is write-only. Restoring one is a deliberate human act with the admin profile.
+[11] Make the Neon API credentials available to infra deploys
+    when     once before the first infra workflow deploy, and again after rotating the Neon API key or project
+    why      GitHub environment secrets are scoped to one environment. The existing NEON_API_KEY and NEON_PROJECT_ID are on restore-drill, so the infra-deploy job cannot read them while it provisions the direct dump connection after deployment.
+    run      In GitHub Settings -> Environments -> infra-deploy, add the existing NEON_API_KEY value as an environment secret and the existing NEON_PROJECT_ID value as an environment variable.
+    produces The approved infra deploy can retrieve Neon's direct connection URI, store it in Secrets Manager, and start the first dump when that secret is still unset.
+    store    GitHub repository AaronBuxbaum/diveday -> Environments -> infra-deploy -> environment secret NEON_API_KEY and environment variable NEON_PROJECT_ID. Keep the existing restore-drill values in that environment too.
+    verify   GitHub Settings -> Environments -> infra-deploy -> confirm NEON_API_KEY is listed under environment secrets and NEON_PROJECT_ID under environment variables, without revealing either value.
+    note     GitHub cannot reveal an already-saved secret. Use the original API key source; if that is unavailable, create a replacement Neon API key and update both environments. The connection URI itself is never stored in GitHub.
 
 [12] Mint the Vercel and Neon usage read tokens
     when     once, before the usage monitor can measure anything, and again after rotating either

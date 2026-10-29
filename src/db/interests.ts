@@ -16,13 +16,14 @@ import {
   orderLastMinuteRecipients,
   reviewLastMinuteRecipients,
 } from "@/lib/interests";
-import { rowCanBeReactivated } from "@/lib/no-show";
+import { rowCanBeReactivated, SEAT_HELD_STATUSES } from "@/lib/no-show";
 import { seatRefusal } from "@/lib/participant-types";
 import { unionRequirements } from "@/lib/requirement";
 import { MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { courseStudentSeatCap } from "./bookings";
 import type { AppDb, DbExecutor } from "./client";
+import { lockDateRequestOffer, recordDateRequestOfferBooking } from "./date-request-offer-bookings";
 import { findOrCreatePerson } from "./people";
 import { getTripRequirements, getTripSiteRequirement } from "./readiness";
 import {
@@ -659,6 +660,51 @@ export async function setDateInterestOutcome(
     .where(input.outcome === "booked" ? and(scope, isNull(interests.closedAt)) : scope)
     .returning({ id: interests.id });
   return rows.length > 0;
+}
+
+/**
+ * Link one successfully seated booking to one offered departure child. A date
+ * request can ask for several seats, so each booking gets its own row and only
+ * one active linked seat is subtracted from the offer. The request row is the
+ * serialization point across all its offered departures: every active booking
+ * linked to the request stays on one departure. Once every linked seat is
+ * released, another offer may take the party; historical associations remain
+ * for safe reactivation. No diver identity is inferred.
+ */
+export async function associateDateRequestOfferBooking(
+  db: AppDb,
+  input: { shopId: string; tripId: string; requestId: string; bookingId: string },
+): Promise<boolean> {
+  return db.transaction(async (tx) => {
+    const offer = await lockDateRequestOffer(tx, {
+      shopId: input.shopId,
+      tripId: input.tripId,
+      requestId: input.requestId,
+      excludeBookingId: input.bookingId,
+    });
+    if (typeof offer === "string") return false;
+
+    const [booking] = await tx
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(
+        and(
+          eq(bookings.id, input.bookingId),
+          eq(bookings.shopId, input.shopId),
+          eq(bookings.tripId, input.tripId),
+          inArray(bookings.status, [...SEAT_HELD_STATUSES]),
+        ),
+      )
+      .limit(1)
+      .for("update");
+    if (!booking) return false;
+    return recordDateRequestOfferBooking(tx, {
+      shopId: input.shopId,
+      offerId: offer.offerId,
+      bookingId: input.bookingId,
+      partySize: offer.partySize,
+    });
+  });
 }
 
 /**

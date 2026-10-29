@@ -325,6 +325,20 @@ describe("a price against a payment gate", () => {
     expect(ok({ priceDollars: 195, requiresPayment: true }).priceCents).toBe(19500);
   });
 
+  it("clears a course session fee while validating the course total against its payment gate", () => {
+    const result = tripDetailsPatch(
+      {
+        ...base,
+        priceDollars: undefined,
+        paymentGatePriceCents: 70_900,
+        requiresPayment: true,
+      },
+      shop,
+    );
+
+    expect(result).toMatchObject({ ok: true, patch: { priceCents: null } });
+  });
+
   it("leaves an unpriced departure alone when nothing demands payment", () => {
     // A free or pay-at-the-counter charter is legitimate — this rule is about
     // the *combination*, never about requiring a price.

@@ -191,8 +191,8 @@ test("an instructor certifies a diver from the course roster, and they can book 
   await expect(page.getByRole("heading", { name: "Upcoming dates" })).toBeVisible();
   await page.getByRole("link", { name: "Book this date" }).first().click();
   await expect(page.getByLabel("People", { exact: true })).toHaveAttribute("data-hydrated", "true");
-  await page.getByLabel("Name").fill(diverName);
-  await page.getByLabel("Email").fill(diverEmail);
+  await page.getByRole("textbox", { name: "Name" }).fill(diverName);
+  await page.getByRole("textbox", { name: "Email" }).fill(diverEmail);
   await acceptAgeAttestation(page);
   await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
   await expect(page.getByRole("heading", { name: /You.ve got a seat/ })).toBeVisible();

@@ -29,7 +29,7 @@ import { findSimilarDivers, lastDiveDaysHere, listBookableDivers } from "./diver
 import { otherSameNamePeople } from "./identity-repoint";
 import { listDateInterestsInReach } from "./interest-dates";
 import { listDepartureInterests, listOpenAnytimeInterests, specialtiesForFit } from "./interests";
-import { listInviteSuggestions } from "./invite-suggestions";
+import { listInviteSuggestions, recentInviteDates } from "./invite-suggestions";
 import { listBookingNotes, listDiverNotesForTrip, listTripActivity } from "./operations";
 import { getTripRosterWithPaymentMarks } from "./payment-marks";
 import { getTripRequirements, getTripSiteRequirement, listTripReadiness } from "./readiness";
@@ -116,6 +116,27 @@ function lastMinuteRecipientsOf<M extends { person: { id: string } }>(input: {
 }
 
 export type TripGuests = NonNullable<Awaited<ReturnType<typeof getTripGuests>>>;
+
+function inviteDatesForCandidates(
+  db: AppDb,
+  shopId: string,
+  candidates: readonly { person: { id: string } }[],
+) {
+  return recentInviteDates(
+    db,
+    shopId,
+    candidates.map(({ person }) => person.id),
+    nowDate(),
+  );
+}
+
+function seatedPersonIdsOf(roster: readonly { booking: { personId: string; status: string } }[]) {
+  return new Set(
+    roster
+      .filter(({ booking }) => booking.status !== "cancelled")
+      .map(({ booking }) => booking.personId),
+  );
+}
 
 export async function getTripGuests(
   db: AppDb,
@@ -205,11 +226,7 @@ export async function getTripGuests(
   // **Seated means hidden**: an interest reserves nothing and the booking transaction
   // never writes to this table (ADR 20261017-one-interest-with-a-scope, R1), so who
   // wants in is read against the seats at read time.
-  const seatedPersonIds = new Set(
-    roster
-      .filter(({ booking }) => booking.status !== "cancelled")
-      .map(({ booking }) => booking.personId),
-  );
+  const seatedPersonIds = seatedPersonIdsOf(roster);
   // A seated diver's interest is hidden. **The wait list's switch hides
   // nobody** (review 2026-10-23, item 8): a diver already waiting when it went
   // off, and a reply to a date request (that feature's own row), stay on the
@@ -234,6 +251,7 @@ export async function getTripGuests(
   // list, all in hand, so none waits on another. They used to be five reads
   // one after another, most of the trip page's serial phases.
   const [
+    recentInvites,
     sameNameHeldSeats,
     sameNamePeople,
     heldLastDiveDays,
@@ -246,6 +264,7 @@ export async function getTripGuests(
     trainingMarks,
     specialtiesByPerson,
   ] = await Promise.all([
+    inviteDatesForCandidates(db, shop.id, diverCandidates),
     // What "Different person" on a held seat can offer to move along with it:
     // other held seats under the same name on the same matched diver, on other
     // departures, named by departure (issue #2081).
@@ -452,6 +471,7 @@ export async function getTripGuests(
     activity,
     confirmMatches,
     diverCandidates,
+    recentInvites,
     notesByBooking,
     courseNextStepByBooking,
     sameNameHeldSeats,

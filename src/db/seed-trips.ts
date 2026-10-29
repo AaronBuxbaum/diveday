@@ -55,6 +55,7 @@ function openWaterSession(session: {
   diveSiteId: string | undefined;
   startsAt: Date;
   endsAt: Date;
+  coursePriceCents: number | null;
 }) {
   return {
     ...session,
@@ -64,8 +65,37 @@ function openWaterSession(session: {
     // session's "N spots left" distinct from every other seeded trip's, which
     // e2e assertions match on by text.
     capacity: 5,
-    priceCents: 59500,
+    priceCents: session.coursePriceCents !== null ? null : 59500,
   };
+}
+
+function courseSessionRows(
+  shopId: string,
+  courseRows: (typeof courses.$inferSelect)[],
+  courseIdByTitle: Map<string, string>,
+  courseTitle: string,
+  trip: {
+    title: string;
+    description: string;
+    startsAt: Date;
+    endsAt: Date;
+    capacity: number;
+    plannedDives?: number;
+    priceCents?: number;
+  },
+) {
+  const courseId = courseIdByTitle.get(courseTitle);
+  const course = courseRows.find((row) => row.id === courseId);
+  return courseId
+    ? [
+        {
+          shopId,
+          courseId,
+          ...trip,
+          priceCents: course?.priceCents != null ? null : trip.priceCents,
+        },
+      ]
+    : [];
 }
 
 /**
@@ -116,21 +146,8 @@ export async function seedTrips(
    * The catalog decides what can be scheduled; a session with no course behind
    * it would be a trip whose admission rule came from nowhere.
    */
-  function courseSession(
-    courseTitle: string,
-    trip: {
-      title: string;
-      description: string;
-      startsAt: Date;
-      endsAt: Date;
-      capacity: number;
-      plannedDives?: number;
-      priceCents?: number;
-    },
-  ) {
-    const courseId = courseIdByTitle.get(courseTitle);
-    return courseId ? [{ shopId, courseId, ...trip }] : [];
-  }
+  const courseSession = (courseTitle: string, trip: Parameters<typeof courseSessionRows>[4]) =>
+    courseSessionRows(shopId, courseRows, courseIdByTitle, courseTitle, trip);
   const todaySailStart = demoTodayDepartureStart();
   const tripRows = await db
     .insert(trips)
@@ -207,6 +224,7 @@ export async function seedTrips(
               diveSiteId: siteByName.get("Pickles Reef")?.id,
               startsAt: at(9, 8, 0),
               endsAt: at(11, 17, 0),
+              coursePriceCents: openWaterCourse.priceCents,
             }),
           ]
         : []),

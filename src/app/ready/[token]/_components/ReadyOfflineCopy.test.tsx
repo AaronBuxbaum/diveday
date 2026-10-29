@@ -11,6 +11,7 @@ import {
   READY_COPY_VERSION,
   READY_COPY_VERSION_META,
   READY_OFFLINE_GENERATED_AT_PLACEHOLDER,
+  READY_ROLLBACK_SAVED_AT_PLACEHOLDER,
 } from "@/lib/ready-offline";
 import { readyPageFallback, saveReadyPage } from "@/worker/ready-page-cache";
 import { ReadyOfflineCopy } from "./ReadyOfflineCopy";
@@ -35,12 +36,33 @@ const COPY = {
   remove: "Remove saved copy",
   removed: "Removed from this device until you next open this link.",
   removeFailed: "Could not remove the saved copy. Free up storage and try again online.",
+  clockRollbackHeading: "Phone clock looks wrong",
+  clockRollbackSaved: `This page was generated ${READY_ROLLBACK_SAVED_AT_PLACEHOLDER}. Reconnect to check the current trip details.`,
+  clockRollbackUnknown: "The saved time is unknown. Reconnect to check current trip details.",
+  clockUnverified: "Phone clock could not be verified. Reconnect to check current trip details.",
 };
 const KEEP_UNTIL = 1_800_000_000_000;
 const LOCALE = "en-US";
 const TIME_ZONE = "America/New_York";
 
 describe("ReadyOfflineCopy", () => {
+  it("ships a script-free, hidden clock rollback warning with localized copy", () => {
+    const html = renderToStaticMarkup(
+      <ReadyOfflineCopy
+        copy={COPY}
+        keepUntil={KEEP_UNTIL}
+        locale={LOCALE}
+        timeZone={TIME_ZONE}
+        generatedAt={KEEP_UNTIL}
+      />,
+    );
+    expect(html).toContain('data-ready-clock-rollback="" hidden');
+    expect(html).toContain("Phone clock looks wrong");
+    expect(html).toContain(READY_ROLLBACK_SAVED_AT_PLACEHOLDER);
+    expect(html).toContain('data-ready-clock-unverified="" hidden');
+    expect(html).toContain("Phone clock could not be verified.");
+  });
+
   it("online, says nothing and keeps the page on the phone", () => {
     vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
     render(
@@ -232,7 +254,7 @@ describe("ReadyOfflineCopy", () => {
         keepUntil={KEEP_UNTIL}
         locale={LOCALE}
         timeZone={TIME_ZONE}
-        generatedAt={KEEP_UNTIL}
+        generatedAt={now}
       />,
     );
     expect(markup).toMatch(/<p [^>]*hidden=""[^>]*>No signal/);
@@ -258,7 +280,7 @@ describe("ReadyOfflineCopy", () => {
       minute: "2-digit",
       timeZoneName: "short",
       timeZone: TIME_ZONE,
-    }).format(new Date(KEEP_UNTIL));
+    }).format(new Date(now));
     expect(served.replaceAll("\u00a0", " ")).toContain(
       `No signal: this is a copy of the page generated ${expected}.`,
     );
@@ -266,7 +288,7 @@ describe("ReadyOfflineCopy", () => {
     expect(served).toContain(`name="${READY_COPY_LOCALE_META}" content="${LOCALE}"`);
     expect(served).toContain(`name="${READY_COPY_TIME_ZONE_META}" content="${TIME_ZONE}"`);
     expect(served).toContain(`name="${READY_COPY_VERSION_META}" content="${READY_COPY_VERSION}"`);
-    expect(served).toContain(`${READY_COPY_GENERATED_AT_ATTR}="${KEEP_UNTIL}"`);
+    expect(served).toContain(`${READY_COPY_GENERATED_AT_ATTR}="${now}"`);
     expect(served).not.toMatch(/<p [^>]*hidden=""[^>]*>No signal/);
   });
 });

@@ -159,6 +159,7 @@ export const EXCLUDED_TABLES = [
   // Per-staff read state has no meaning without the desk events.
   // It is not portable to another system.
   "trip_read_marks",
+  "offline_manifest_snapshot_revisions", // monotone device-snapshot ordering machinery, not a shop record
   "today_read_marks",
   "today_read_mark_events",
   // Held sends live eight seconds; exporting one would export a tap, not a record.

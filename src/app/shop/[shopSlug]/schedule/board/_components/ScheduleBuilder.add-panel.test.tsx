@@ -87,9 +87,9 @@ describe("ScheduleBuilder add panel: price, and options fetched on open", () => 
   it("groups course choices by agency while keeping each agency's order", async () => {
     loadOptions.mockResolvedValueOnce({
       courses: [
-        { id: "padi-ow", title: "Open Water Diver", agency: "padi" },
-        { id: "ssi-ow", title: "SSI Open Water Diver", agency: "ssi" },
-        { id: "other", title: "Custom Course", agency: "naui" },
+        { id: "padi-ow", title: "Open Water Diver", agency: "padi", priceLabel: null },
+        { id: "ssi-ow", title: "SSI Open Water Diver", agency: "ssi", priceLabel: null },
+        { id: "other", title: "Custom Course", agency: "naui", priceLabel: null },
       ],
       diveSites: [],
     });
@@ -125,7 +125,7 @@ describe("ScheduleBuilder add panel: price, and options fetched on open", () => 
    */
   it("takes the self-guided box away once a course is chosen", async () => {
     loadOptions.mockResolvedValueOnce({
-      courses: [{ id: "padi-ow", title: "Open Water Diver", agency: "padi" }],
+      courses: [{ id: "padi-ow", title: "Open Water Diver", agency: "padi", priceLabel: null }],
       diveSites: [],
     });
     const { container } = renderBuilder();

@@ -3,7 +3,11 @@
 import { useEffect, useState, useTransition } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { fill } from "@/i18n/fill";
-import { loadOfflineManifest, saveOfflineMedicalAlerts } from "@/lib/offline-manifest-store";
+import {
+  beginOfflineTenantVerificationRound,
+  loadOfflineManifest,
+  saveOfflineMedicalAlerts,
+} from "@/lib/offline-manifest-store";
 import type { OfflineMedicalAlertsResponse } from "@/lib/offline-manifests";
 
 export type MedicalAlertOfflineSaveCopy = {
@@ -72,6 +76,7 @@ export function MedicalAlertOfflineSave({
           setProblem(copy.noCopy);
           return;
         }
+        const tenantRound = await beginOfflineTenantVerificationRound();
         const response = await fetch(`/api/offline-manifests/${tripId}/medical-alerts`, {
           method: "POST",
           credentials: "same-origin",
@@ -81,7 +86,12 @@ export function MedicalAlertOfflineSave({
           setProblem(copy.failed);
           return;
         }
-        const saved = await saveOfflineMedicalAlerts(tripId, answer.texts, answer.savedBy);
+        const saved = await saveOfflineMedicalAlerts(
+          tripId,
+          answer.texts,
+          answer.savedBy,
+          tenantRound,
+        );
         setProblem(null);
         setSavedBy(saved?.medicalAlertsSavedBy?.name ?? null);
       } catch {

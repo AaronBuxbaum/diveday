@@ -40,6 +40,21 @@ function diveFieldCountProps(courseId: string, plannedDives: number) {
   return { count: plannedDives, maxDives: maxPlannedDives(courseId !== "") };
 }
 
+function selectedCoursePriceLabel(
+  courseId: string,
+  courses: BuilderOptions["courses"] | undefined,
+  initialCourse: BuilderInitialCourse | null,
+) {
+  return (
+    courses?.find((course) => course.id === courseId)?.priceLabel ??
+    (initialCourse?.id === courseId ? initialCourse.priceLabel : null)
+  );
+}
+
+function selectedBoatOption(diveMode: string, boats: BuilderOptions["boats"], boatId: string) {
+  return diveMode === "boat" ? boats?.find((boat) => boat.id === boatId) : undefined;
+}
+
 /** What every add panel on the board shares, built once by `ScheduleBuilder`: the draft, the loaders, the options and the words. */
 export type AddPanelBuilder = {
   /** The reader's language, for the time fields' readings. */
@@ -148,10 +163,9 @@ export function AddPanel({
     requestPlan,
     startExpanded,
   });
-  // Here rather than in the hook, so the check narrows `initialCourse` below.
   const onCourse = initialCourse !== null && courseId === initialCourse.id;
-  const selectedBoat =
-    diveMode === "boat" ? options?.boats?.find((boat) => boat.id === selectedBoatId) : undefined;
+  const coursePriceLabel = selectedCoursePriceLabel(courseId, options?.courses, initialCourse);
+  const selectedBoat = selectedBoatOption(diveMode, options?.boats, selectedBoatId);
 
   return (
     <FieldGrid
@@ -295,7 +309,7 @@ export function AddPanel({
           settled. The box is narrow, its helper line is not, so only the input
           is capped, by `max-w-28`: a `w-28` beside `controlClass`'s `w-full`
           races by stylesheet order and lost (visual review A33). */}
-      <PriceInputGroup copy={copy} price={price} />
+      <PriceInputGroup copy={copy} price={price} coursePriceLabel={coursePriceLabel} />
       <PayAtBookingGroup copy={copy} price={price} expanded={expanded} />
       {/* Two columns in both states: `columns={expanded ? 1 : 2}` made the
           Course select jump from half-width to full on every toggle. */}

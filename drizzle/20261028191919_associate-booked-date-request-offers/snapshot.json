@@ -1,0 +1,167 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "4957f76f-c97e-43ef-b6d6-962c4f6ba614",
+  "prevIds": [
+    "93a63fae-3ed6-4c94-af6d-8bdb3a17d0e5",
+    "89017db3-4800-4ec9-b813-fdc29f7112e7"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "interests",
+        "booked_booking_id"
+      ],
+      "writes": [
+        "s|col|public.interests.booked_booking_id",
+        "n|col|public.interests.booked_booking_id",
+        "e|col|public.interests.booked_booking_id"
+      ],
+      "reads": [
+        "n|tbl|public.interests",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "interests",
+        "interests_booked_booking_unique"
+      ],
+      "writes": [
+        "s|idx|public.interests_booked_booking_unique",
+        "n|idx|public.interests_booked_booking_unique",
+        "e|idx|public.interests_booked_booking_unique",
+        "n|rel|public.interests_booked_booking_unique"
+      ],
+      "reads": [
+        "n|tbl|public.interests",
+        "n|sch|public",
+        "n|col|public.interests.booked_booking_id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "interests"
+      ],
+      "writes": [
+        "s|fk|public.interests.interests_booked_booking_id_bookings_id_fkey",
+        "n|fk|public.interests.interests_booked_booking_id_bookings_id_fkey",
+        "e|fk|public.interests.interests_booked_booking_id_bookings_id_fkey",
+        "n|con|public.interests.interests_booked_booking_id_bookings_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.interests",
+        "n|sch|public",
+        "n|tbl|public.bookings",
+        "n|sch|public",
+        "n|col|public.interests.booked_booking_id",
+        "n|col|public.bookings.id",
+        "e|uniqueness|public.bookings.id"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "interests"
+      ],
+      "writes": [
+        "s|ck|public.interests.interests_booked_booking_is_date_offer",
+        "n|ck|public.interests.interests_booked_booking_is_date_offer",
+        "e|ck|public.interests.interests_booked_booking_is_date_offer",
+        "n|con|public.interests.interests_booked_booking_is_date_offer"
+      ],
+      "reads": [
+        "n|tbl|public.interests",
+        "n|sch|public",
+        "n|col|public.interests.booked_booking_id",
+        "n|col|public.interests.scope",
+        "n|col|public.interests.parent_interest_id",
+        "n|col|public.interests.offered_at"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "interests",
+        "name": "booked_booking_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "interests",
+        "name": "interests_booked_booking_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "booked_booking_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "interests",
+        "name": "interests_booked_booking_id_bookings_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "booked_booking_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "bookings",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "SET NULL",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "interests",
+        "name": "interests_booked_booking_is_date_offer",
+        "value": "\"booked_booking_id\" is null or (\"scope\" = 'departure' and \"parent_interest_id\" is not null and \"offered_at\" is not null)",
+        "entityType": "checks"
+      }
+    }
+  ]
+}

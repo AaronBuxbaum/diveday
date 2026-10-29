@@ -179,6 +179,7 @@
     "readyCount": "{ready} of {booked} ready",
     "blockedCount": "{count} blocked",
     "departuresLabel": "Departures",
+    "lastRollCall": "Last roll call · {day}",
     "needsYouCount": "{count, plural, one {# thing} other {# things}}",
     "needsYouCountCrewAway": "{count, plural, one {# thing} other {# things}}, {away, plural, one {# crew member away} other {# crew members away}}",
     "needsYouCountBeforeNext": "{count, plural, one {# thing} other {# things}} · {before, plural, =0 {none before the {time}} other {# before the {time}}}",

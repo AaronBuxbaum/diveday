@@ -1,0 +1,295 @@
+// @vitest-environment jsdom
+import "fake-indexeddb/auto";
+import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
+import { useRef, useState } from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import type { OfflineManifestTranslator } from "@/i18n/offline-manifest-messages";
+import type { RollCallCheckpoint } from "@/lib/manifests";
+import {
+  appendOfflineRollCall,
+  loadOfflineManifest,
+  saveOfflineManifest,
+  syncOfflineManifest,
+} from "@/lib/offline-manifest-store";
+import type { OfflineManifestEnvelope, OfflineManifestPayload } from "@/lib/offline-manifests";
+import { useSelectedTripEnvelopeHandler } from "./selected-trip-envelope";
+import { type SelectedTripStorageState, useSelectedTripStorage } from "./use-selected-trip-storage";
+import { richPayload } from "./view-fixtures";
+
+const tripId = "11111111-1111-1111-1111-111111111111";
+const bookingId = "diver-priya";
+const t = ((key: string) => key) as unknown as OfflineManifestTranslator;
+const tripPayload = (epoch: number): OfflineManifestPayload => ({
+  ...richPayload(tripId),
+  snapshotId: `snapshot-${epoch}`,
+  erasureEpochToken: `${epoch}.1.${"A".repeat(43)}`,
+});
+
+class TestBroadcastChannel {
+  static channels: TestBroadcastChannel[] = [];
+  onmessage: ((event: { data: unknown }) => void) | null = null;
+  constructor(readonly name: string) {
+    TestBroadcastChannel.channels.push(this);
+  }
+  postMessage(data: unknown) {
+    for (const peer of TestBroadcastChannel.channels) {
+      if (peer !== this && peer.name === this.name) peer.onmessage?.({ data });
+    }
+  }
+  close() {
+    TestBroadcastChannel.channels = TestBroadcastChannel.channels.filter((peer) => peer !== this);
+  }
+}
+
+function suppressSameDocumentManifestEvent() {
+  const dispatch = window.dispatchEvent.bind(window);
+  const spy = vi
+    .spyOn(window, "dispatchEvent")
+    .mockImplementation((event) =>
+      event.type === "diveday-offline-manifest-change" ? true : dispatch(event),
+    );
+  return () => spy.mockRestore();
+}
+
+afterEach(() => {
+  cleanup();
+  window.dispatchEvent(new Event("pagehide"));
+  TestBroadcastChannel.channels = [];
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
+
+afterEach(
+  () =>
+    new Promise<void>((resolve, reject) => {
+      const request = indexedDB.deleteDatabase("diveday-offline-manifests");
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error ?? new Error("failed to reset IndexedDB"));
+    }),
+);
+
+describe("selected-trip storage invalidation", () => {
+  it("syncs remote records and autosaves without syncing its own or a remote sync-result broadcast", async () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    vi.stubGlobal("BroadcastChannel", TestBroadcastChannel);
+    await saveOfflineManifest(tripPayload(1));
+    const reconcile = vi.fn(async () => {});
+    const envelopes: Array<OfflineManifestEnvelope | null> = [];
+    const state = { current: { changeRevision: 0, readRequest: 0, reload: () => {} } };
+
+    const mounted = renderHook(() => {
+      const [message, setMessage] = useState("");
+      const [read, setRead] = useState(false);
+      const [, setReadFailed] = useState(false);
+      const [checkpoint, setCheckpoint] = useState<RollCallCheckpoint>("departure");
+      const tripPurgedRef = useRef(false);
+      const verifiedTenantSlugRef = useRef<string | null>("blue-mantis");
+      const handleEnvelope = useSelectedTripEnvelopeHandler({
+        tripId,
+        verifiedTenantSlugRef,
+        dispatchSaved: () => {},
+        setCheckpoint,
+        tripNoticeForEnvelope: () => "",
+        tripPurgedRef,
+        setMessage,
+        t,
+      });
+      useSelectedTripStorage({
+        tripId,
+        verifiedTenantRevision: 0,
+        tripPurgedRef,
+        storageStateRef: state as { current: SelectedTripStorageState },
+        onEnvelope: (saved) => {
+          envelopes.push(saved);
+          handleEnvelope(saved);
+        },
+        onReadStarted: () => {},
+        onOnline: reconcile,
+        setMessage,
+        t,
+        setStoreRead: setRead,
+        setStoreReadFailed: setReadFailed,
+        refreshDiscarded: () => {},
+      });
+      return { checkpoint, message, read };
+    });
+
+    await waitFor(() => expect(mounted.result.current.read).toBe(true));
+    await waitFor(() => expect(envelopes.length).toBeGreaterThan(0));
+    await waitFor(() => expect(reconcile).toHaveBeenCalled());
+    const initialSyncRequests = reconcile.mock.calls.length;
+
+    const broadcastFromOtherContext = async (reason: string) => {
+      const peer = new TestBroadcastChannel("diveday-offline-manifest-changes-v1");
+      await act(async () => {
+        peer.postMessage({ tripId, sourceId: "another-tab", reason });
+      });
+      peer.close();
+    };
+
+    await broadcastFromOtherContext("snapshot");
+    expect(reconcile).toHaveBeenCalledTimes(initialSyncRequests);
+
+    const ownBroadcasts: unknown[] = [];
+    const monitor = new TestBroadcastChannel("diveday-offline-manifest-changes-v1");
+    monitor.onmessage = (event) => ownBroadcasts.push(event.data);
+    const envelopesBeforeLocalRecord = envelopes.length;
+    let firstEventId = "";
+    await act(async () => {
+      const first = await appendOfflineRollCall(tripId, {
+        bookingId,
+        checkpoint: "after_dive_1",
+        status: "not_boarded",
+        note: "Nora is still below.",
+      });
+      firstEventId = first.events[0]?.clientEventId ?? "";
+      await appendOfflineRollCall(tripId, {
+        bookingId,
+        checkpoint: "after_dive_1",
+        status: "not_boarded",
+        note: "Nora is still below.",
+      });
+    });
+    await waitFor(() => expect(envelopes.length).toBeGreaterThan(envelopesBeforeLocalRecord));
+    await waitFor(() => expect(ownBroadcasts).toHaveLength(2));
+    expect(reconcile).toHaveBeenCalledTimes(initialSyncRequests);
+    expect(ownBroadcasts[0]).toMatchObject({ tripId, reason: "record" });
+    monitor.close();
+
+    await broadcastFromOtherContext("record");
+    await waitFor(() => expect(reconcile).toHaveBeenCalledTimes(initialSyncRequests + 1));
+
+    // A failed remote sync can leave the same event pending. Its sync-result
+    // write must not cause each other tab to retry it in a feedback loop.
+    await broadcastFromOtherContext("sync");
+    expect(reconcile).toHaveBeenCalledTimes(initialSyncRequests + 1);
+
+    const subscriber = TestBroadcastChannel.channels.find(
+      (channel) => channel.name === "diveday-offline-manifest-changes-v1",
+    );
+    const subscriberOnMessage = subscriber?.onmessage ?? null;
+    if (subscriber) subscriber.onmessage = null;
+    const restoreLocalEvent = suppressSameDocumentManifestEvent();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              results: [{ clientEventId: firstEventId, status: "applied" }],
+            }),
+            { status: 200, headers: { "content-type": "application/json" } },
+          ),
+      ),
+    );
+    try {
+      // Simulate another tab's sync merging E1's success while preserving E2
+      // as pending. Suppress same-context notices; the peer broadcast below
+      // is the only signal received by this tab.
+      await syncOfflineManifest(tripId);
+    } finally {
+      restoreLocalEvent();
+      if (subscriber) subscriber.onmessage = subscriberOnMessage;
+    }
+    const syncedEnvelope = await loadOfflineManifest(tripId);
+    expect(syncedEnvelope?.events.map((event) => event.syncStatus)).toEqual(["applied", "pending"]);
+
+    await broadcastFromOtherContext("sync");
+    await waitFor(() => expect(reconcile).toHaveBeenCalledTimes(initialSyncRequests + 2));
+
+    // A later external snapshot refresh is a bounded retry opportunity even
+    // though the event ID is unchanged and still pending.
+    await broadcastFromOtherContext("snapshot");
+    await waitFor(() => expect(reconcile).toHaveBeenCalledTimes(initialSyncRequests + 3));
+
+    await broadcastFromOtherContext("sync");
+    expect(reconcile).toHaveBeenCalledTimes(initialSyncRequests + 3);
+
+    await act(async () => {
+      window.dispatchEvent(
+        new CustomEvent("diveday-offline-manifest-change", { detail: { tripId } }),
+      );
+    });
+    await waitFor(() => expect(envelopes.length).toBeGreaterThan(1));
+
+    await act(async () => {
+      window.dispatchEvent(new Event("focus"));
+    });
+    await waitFor(() => expect(reconcile).toHaveBeenCalledTimes(initialSyncRequests + 4));
+  });
+
+  it("reloads the committed erasure disposition in an open trip view", async () => {
+    vi.stubGlobal("BroadcastChannel", TestBroadcastChannel);
+    await saveOfflineManifest(tripPayload(1));
+    const before = await appendOfflineRollCall(tripId, {
+      bookingId,
+      checkpoint: "after_dive_1",
+      status: "not_boarded",
+      note: "Nora Quinn is still below.",
+    });
+    const state = { current: { changeRevision: 0, readRequest: 0, reload: () => {} } };
+
+    const mounted = renderHook(() => {
+      const [envelope, setEnvelope] = useState<OfflineManifestEnvelope | null>(null);
+      const [read, setRead] = useState(false);
+      const [message, setMessage] = useState("");
+      const [, setReadFailed] = useState(false);
+      const tripPurgedRef = useRef(false);
+      useSelectedTripStorage({
+        tripId,
+        verifiedTenantRevision: 0,
+        tripPurgedRef,
+        storageStateRef: state as { current: SelectedTripStorageState },
+        onEnvelope: setEnvelope,
+        onReadStarted: () => {},
+        onOnline: () => {},
+        setMessage,
+        t,
+        setStoreRead: setRead,
+        setStoreReadFailed: setReadFailed,
+        refreshDiscarded: () => {},
+      });
+      return { envelope, read, message };
+    });
+    await waitFor(() => expect(mounted.result.current.read).toBe(true));
+    expect(mounted.result.current.envelope?.events[0]?.note).toBe("Nora Quinn is still below.");
+
+    const restoreLocalEvent = suppressSameDocumentManifestEvent();
+    try {
+      await act(async () => {
+        // A worker has no window event to dispatch; the shared channel reaches
+        // this mounted page after the IDB write commits.
+        await saveOfflineManifest(tripPayload(2));
+      });
+    } finally {
+      restoreLocalEvent();
+    }
+
+    await waitFor(() => expect(mounted.result.current.envelope?.events[0]?.note).toBeNull());
+    expect(TestBroadcastChannel.channels).toHaveLength(1);
+    expect(mounted.result.current.envelope?.events[0]).toMatchObject({
+      status: "not_boarded",
+      occurredAt: before.events[0]?.occurredAt,
+      note: null,
+      noteDisposition: "discarded_erasure_cutoff",
+    });
+  });
+
+  it("sends only the trip key and non-sensitive write metadata over the worker-to-page channel", async () => {
+    const received: unknown[] = [];
+    vi.stubGlobal("BroadcastChannel", TestBroadcastChannel);
+    const peer = new TestBroadcastChannel("diveday-offline-manifest-changes-v1");
+    peer.onmessage = (event) => received.push(event.data);
+    const restoreLocalEvent = suppressSameDocumentManifestEvent();
+    try {
+      await saveOfflineManifest(tripPayload(1));
+    } finally {
+      restoreLocalEvent();
+    }
+    expect(received).toHaveLength(1);
+    expect(received[0]).toMatchObject({ tripId, reason: "snapshot" });
+    expect((received[0] as { sourceId?: unknown }).sourceId).toEqual(expect.any(String));
+    expect(TestBroadcastChannel.channels).toHaveLength(1);
+    peer.close();
+  });
+});

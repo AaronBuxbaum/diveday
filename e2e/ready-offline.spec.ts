@@ -50,11 +50,16 @@ async function openKeptReadyPage(
   // prove the banner does not use the phone's clock as freshness provenance.
   await context.route("**/manifest-sw.js", async (route) => {
     const response = await route.fetch();
-    const frozen = `const __fixed = new Date(${JSON.stringify(E2E_FROZEN_CLOCK)}).getTime() + ${phoneClockOffsetMs};
+    const frozen = `globalThis.__diveDayTestClock = new Date(${JSON.stringify(E2E_FROZEN_CLOCK)}).getTime() + ${phoneClockOffsetMs};
 const __RealDate = Date;
 globalThis.Date = new Proxy(__RealDate, {
-  construct: (target, args) => Reflect.construct(target, args.length === 0 ? [__fixed] : args),
-  get: (target, prop, receiver) => (prop === "now" ? () => __fixed : Reflect.get(target, prop, receiver)),
+  construct: (target, args) => Reflect.construct(target, args.length === 0 ? [globalThis.__diveDayTestClock] : args),
+  get: (target, prop, receiver) => (prop === "now" ? () => globalThis.__diveDayTestClock : Reflect.get(target, prop, receiver)),
+});
+self.addEventListener("message", (event) => {
+  if (event.data?.type !== "e2e-set-clock") return;
+  globalThis.__diveDayTestClock = event.data.now;
+  event.ports[0]?.postMessage({ ok: true });
 });
 `;
     await route.fulfill({ response, body: frozen + (await response.text()) });
@@ -79,6 +84,27 @@ globalThis.Date = new Proxy(__RealDate, {
   await expect.poll(() => keptCopies(page), { timeout: 30_000 }).toBeGreaterThan(0);
   await expect(page.getByRole("button", { name: diver("ready.offlineRemove") })).toBeVisible();
   return readyPath;
+}
+
+async function setWorkerClock(page: Page, now: number) {
+  await page.evaluate(async (value) => {
+    const registration = await navigator.serviceWorker.getRegistration("/ready/");
+    const worker = registration?.active;
+    if (!worker) throw new Error("The readiness worker is not active");
+    await new Promise<void>((resolve, reject) => {
+      const channel = new MessageChannel();
+      const timeout = window.setTimeout(
+        () => reject(new Error("The worker clock did not respond")),
+        5_000,
+      );
+      channel.port1.onmessage = () => {
+        window.clearTimeout(timeout);
+        channel.port1.close();
+        resolve();
+      };
+      worker.postMessage({ type: "e2e-set-clock", now: value }, [channel.port2]);
+    });
+  }, now);
 }
 
 test("the saved /ready copy shows with no signal, and a cancel landing forgets it", async ({
@@ -175,6 +201,40 @@ test("the saved /ready copy shows with no signal, and a cancel landing forgets i
   ).rejects.toThrow();
   // This test's context is disposed after the test. Restoring its network here
   // can wait indefinitely on the timed-out navigation still in Chromium.
+});
+
+test("a detected clock rollback replaces the offline copy with a warning", async ({
+  page,
+  context,
+}) => {
+  await openKeptReadyPage(page, context, "Casey Clock Rollback", 40 * 60_000);
+  const keepUntil = Number(
+    await page.locator('meta[name="diveday-ready-keep-until"]').getAttribute("content"),
+  );
+  // Record the forward jump while online; the worker sees the request and
+  // persists its clock observation before the next step simulates rollback.
+  await setWorkerClock(page, keepUntil + 1);
+  await page.evaluate(async () => {
+    await fetch(`${location.pathname}?clock-observation`, { cache: "no-store" }).catch(() => null);
+  });
+  await expect
+    .poll(() =>
+      page.evaluate(async () => {
+        const marker = await (await caches.open("diveday-ready-clock-v1")).match(
+          "/ready/clock-observation",
+        );
+        return Number(marker?.headers.get("x-diveday-clock-watermark"));
+      }),
+    )
+    .toBe(keepUntil + 1);
+  await context.setOffline(true);
+  await setWorkerClock(page, new Date(E2E_FROZEN_CLOCK).getTime() + 40 * 60_000);
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: diver("ready.offlineClockRollbackHeading") }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Running late" })).toHaveCount(0);
+  await expect.poll(() => keptCopies(page)).toBe(1);
 });
 
 /**

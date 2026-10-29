@@ -78,6 +78,12 @@ export default async function SafetyChecklistPage({
         eyebrow={t("settings.main.eyebrow")}
         eyebrowHref={`/shop/${shopSlug}/settings`}
         title={t("settings.safetyChecklist.title")}
+        titleClassName={
+          locale === "es-ES"
+            ? "hyphens-auto text-pretty max-sm:break-words"
+            : "text-pretty max-sm:break-words"
+        }
+        titleLang={locale}
         description={t("settings.safetyChecklist.description")}
         descriptionIsCaption
       />

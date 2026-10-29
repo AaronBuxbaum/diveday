@@ -9,6 +9,7 @@ import { FormStatus } from "@/components/ui/form";
 import type { BookableDiver, SimilarDiver } from "@/db/divers";
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { DAY_MS, nowDate } from "@/lib/clock";
 import { rentalFitLine } from "@/lib/dive-prep";
 import { noDiveDayNeedsSaying } from "@/lib/name-match-evidence";
 import { newDiverHref } from "@/lib/person-fields";
@@ -21,6 +22,7 @@ export type AddDiverContext = {
   full: boolean;
   query: string;
   candidates: BookableDiver[];
+  recentInviteDates?: ReadonlyMap<string, Date>;
   addBookingAction: (formData: FormData) => void;
   addToWaitlistAction: (formData: FormData) => void;
   /** Puts a diver already on file on the full boat's wait list, by `personId`. */
@@ -94,6 +96,7 @@ export function AddDiverSection({
     full,
     query,
     candidates,
+    recentInviteDates,
     addBookingAction,
     addToWaitlistAction,
     addKnownToWaitlistAction,
@@ -265,19 +268,37 @@ export function AddDiverSection({
                     personHref: (personId) => `/shop/${shopSlug}/divers/${personId}`,
                     // "Same as last time": the fit already on file carries onto the
                     // trip, so staff confirm rather than re-enter.
-                    extraLine: ({ rentalFit }) => (
-                      <p className="mt-0.5 text-xs text-muted">
-                        {rentalFit
-                          ? t("trips.addDiver.rentalFitOnFile", {
-                              fit: rentalFitLineText(
-                                t,
-                                locale,
-                                rentalFitLine(rentalFit, shopRentalItems),
-                              ),
-                            })
-                          : t("trips.addDiver.noRentalFitYet")}
-                      </p>
-                    ),
+                    extraLine: ({ person, rentalFit }) => {
+                      const invitedAt = offerAction ? recentInviteDates?.get(person.id) : undefined;
+                      const days = invitedAt
+                        ? Math.max(
+                            0,
+                            Math.floor((nowDate().getTime() - invitedAt.getTime()) / DAY_MS),
+                          )
+                        : null;
+                      return (
+                        <>
+                          <p className="mt-0.5 text-xs text-muted">
+                            {rentalFit
+                              ? t("trips.addDiver.rentalFitOnFile", {
+                                  fit: rentalFitLineText(
+                                    t,
+                                    locale,
+                                    rentalFitLine(rentalFit, shopRentalItems),
+                                  ),
+                                })
+                              : t("trips.addDiver.noRentalFitYet")}
+                          </p>
+                          {days === null ? null : (
+                            <p className="mt-0.5 text-xs text-muted">
+                              {days === 0
+                                ? t("trips.addDiver.invitedToday")
+                                : t("trips.addDiver.invitedDaysAgo", { days })}
+                            </p>
+                          )}
+                        </>
+                      );
+                    },
                     addLabel: t("trips.addDiver.addToTrip"),
                     pendingLabel: t("seatDiver.adding"),
                     addPersonAriaLabel: (name) => t("trips.addDiver.addPersonAriaLabel", { name }),
