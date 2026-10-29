@@ -57,6 +57,43 @@ describe("RetryReturningDiverMemory", () => {
     expect(localStorage.getItem("diveday:returning-diver:v2:red-reef")).toBeNull();
   });
 
+  it("keeps the newer booking memory when an older receipt arrives on later navigation", async () => {
+    const newerExpiry = Date.now() + 86_400_000;
+    prepare
+      .mockResolvedValueOnce({
+        kind: "ready",
+        shopSlug: "blue-mantis",
+        receiptId: "receipt-booking-b",
+        diver: { fullName: "Priya Shah", email: "priya@example.com" },
+        expiresAt: newerExpiry,
+      })
+      .mockResolvedValueOnce({
+        kind: "ready",
+        shopSlug: "blue-mantis",
+        receiptId: "receipt-booking-a",
+        diver: { fullName: "Marco Reyes", email: "marco@example.com" },
+        expiresAt: newerExpiry - 60_000,
+      });
+    acknowledge.mockResolvedValue(true);
+    const view = render(<RetryReturningDiverMemory />);
+
+    await waitFor(() =>
+      expect(localStorage.getItem("diveday:returning-diver:v2:blue-mantis")).toContain(
+        "Priya Shah",
+      ),
+    );
+    pathname = "/s/blue-mantis/trips/next";
+    view.rerender(<RetryReturningDiverMemory />);
+
+    await waitFor(() => expect(prepare).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(acknowledge).toHaveBeenCalledTimes(2));
+    expect(localStorage.getItem("diveday:returning-diver:v2:blue-mantis")).toContain("Priya Shah");
+    expect(localStorage.getItem("diveday:returning-diver:v2:blue-mantis")).not.toContain(
+      "Marco Reyes",
+    );
+    expect(localStorage.getItem("diveday:returning-diver:v2:red-reef")).toBeNull();
+  });
+
   it("does not acknowledge when storage is blocked and does nothing without consent", async () => {
     prepare
       .mockResolvedValueOnce({

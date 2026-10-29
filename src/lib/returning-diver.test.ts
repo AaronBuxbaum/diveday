@@ -77,6 +77,42 @@ describe("opted-in returning-diver memory", () => {
     expect(loadReturningDiver("blue-mantis", NOW)).toBeNull();
   });
 
+  it("keeps a newer booking when an older receipt is retried later", () => {
+    const generation = snapshotReturningDiverClearGenerations()?.["blue-mantis"] ?? null;
+    const newerExpiry = NOW.getTime() + RETURNING_DIVER_MEMORY_MS;
+    const olderExpiry = newerExpiry - 60_000;
+    saveReturningDiver(
+      "blue-mantis",
+      { fullName: "Priya Shah", email: "priya@example.com" },
+      newerExpiry,
+      NOW,
+      { id: "receipt-booking-b", generationAtStart: generation },
+    );
+
+    // Simulate the older booking A response setting its shared retry cookie
+    // after booking B has already written. A's server-issued expiry predates B;
+    // the comparison is unchanged when this device's clock is ahead.
+    expect(
+      saveReturningDiver(
+        "blue-mantis",
+        diver,
+        olderExpiry,
+        new Date(NOW.getTime() + 10 * 86_400_000),
+        {
+          id: "receipt-booking-a",
+          generationAtStart: generation,
+        },
+      ),
+    ).toBe("saved");
+    expect(loadReturningDiver("blue-mantis", NOW)).toEqual({
+      fullName: "Priya Shah",
+      email: "priya@example.com",
+    });
+    expect(
+      JSON.parse(localStorage.getItem("diveday:returning-diver:v2:blue-mantis") ?? "{}").receiptId,
+    ).toBe("receipt-booking-b");
+  });
+
   it("clears only the current shop when the diver says it is not them", () => {
     const expiresAt = NOW.getTime() + RETURNING_DIVER_MEMORY_MS;
     saveReturningDiver("blue-mantis", diver, expiresAt, NOW);

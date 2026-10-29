@@ -162,12 +162,38 @@ function clearLegacyStorage(): void {
   }
 }
 
-/** Remove expired shop-scoped copies opportunistically whenever memory is used. */
-function clearExpiredShopMemories(now: Date): void {
+/**
+ * The memory expiry is derived from the receipt's server-issued time. Use it
+ * as the receipt ordering key so a delayed response cannot replace a newer
+ * booking's saved identity. Receipt ID breaks equal-time ties consistently.
+ */
+function hasNewerSavedReceipt(key: string, incoming: { id: string; expiresAt: number }): boolean {
+  const raw = localStorage.getItem(key);
+  if (!raw) return false;
+  let parsed: unknown;
   try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return false;
+  }
+  if (typeof parsed !== "object" || parsed === null) return false;
+  const stored = parsed as { receiptId?: unknown; expiresAt?: unknown };
+  if (typeof stored.receiptId !== "string" || typeof stored.expiresAt !== "number") return false;
+  return (
+    stored.expiresAt > incoming.expiresAt ||
+    (stored.expiresAt === incoming.expiresAt && stored.receiptId.localeCompare(incoming.id) > 0)
+  );
+}
+
+/** Remove expired shop-scoped copies opportunistically whenever memory is used. */
+function clearExpiredShopMemories(now: Date, preserveShopSlug?: string): void {
+  try {
+    const preservedKey = preserveShopSlug ? storageKey(preserveShopSlug) : null;
     const keys = Array.from({ length: localStorage.length }, (_, index) =>
       localStorage.key(index),
-    ).filter((key): key is string => key?.startsWith(STORAGE_PREFIX) ?? false);
+    ).filter(
+      (key): key is string => (key?.startsWith(STORAGE_PREFIX) ?? false) && key !== preservedKey,
+    );
     for (const key of keys) {
       const raw = localStorage.getItem(key);
       if (!raw) continue;
@@ -199,7 +225,10 @@ export function saveReturningDiver(
   receipt?: { id: string; generationAtStart: string | null },
 ): "saved" | "cleared" | "unavailable" {
   clearLegacyStorage();
-  clearExpiredShopMemories(now);
+  // For receipt writes, preserve the target row until ordering has been
+  // compared. Device-clock skew must not expire a newer server-issued memory
+  // before a delayed older receipt gets a chance to compare against it.
+  clearExpiredShopMemories(now, receipt ? shopSlug : undefined);
   const key = storageKey(shopSlug);
   if (!key || !diver.fullName.trim() || !diver.email.trim() || expiresAt <= now.getTime())
     return "unavailable";
@@ -218,6 +247,7 @@ export function saveReturningDiver(
     return "cleared";
   }
   try {
+    if (receipt && hasNewerSavedReceipt(key, { id: receipt.id, expiresAt })) return "saved";
     localStorage.setItem(
       key,
       JSON.stringify({
