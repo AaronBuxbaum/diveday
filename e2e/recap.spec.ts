@@ -193,14 +193,17 @@ test("a booking canceled after the recap page loaded gets an honest notice, not 
   await staffPage.getByRole("searchbox", { name: "Search divers" }).fill("Priya Sharma");
   await staffPage.getByRole("link", { name: "Priya Sharma", exact: true }).click();
   // "The story" is the diver record's one chronological ledger now (slice 8a):
-  // the seats ahead lead it, so the first link in it is still the departure
-  // this test needs.
-  await staffPage.getByRole("region", { name: "The story" }).getByRole("link").first().click();
-  await staffPage.waitForURL(/\/trips\//);
-  const tripId = staffPage.url().match(/\/trips\/([^/?]+)/)?.[1];
-  if (!tripId) throw new Error("could not resolve the reef trip id from the URL");
+  // the seats ahead lead it, so its first link identifies this booking's trip
+  // without an extra manifest navigation before opening the roster.
+  const tripHref = await staffPage
+    .getByRole("region", { name: "The story" })
+    .getByRole("link")
+    .first()
+    .getAttribute("href");
+  const tripId = tripHref?.match(/\/trips\/([^/?]+)/)?.[1];
+  if (!tripId) throw new Error("could not resolve the reef trip id from the diver story link");
   // The diver record links to the trip manifest; the roster lives on the trip
-  // page itself.
+  // page itself, so go straight to that canonical route once we have its id.
   await staffPage.goto(`/shop/blue-mantis/trips/${tripId}`);
   const diverRow = staffPage.locator("li").filter({ hasText: "Priya Sharma" });
   // Removing a seat is administrative rather than the work of the day, so it
@@ -209,6 +212,11 @@ test("a booking canceled after the recap page loaded gets an honest notice, not 
   await openBookingActions(diverRow);
   await diverRow.getByRole("button", { name: "Remove booking" }).click();
   await diverRow.getByRole("button", { name: "Yes, remove booking" }).click();
+  await expect(staffPage).toHaveURL(
+    (url) =>
+      url.pathname === `/shop/blue-mantis/trips/${tripId}` &&
+      url.searchParams.get("notice") === "booking-removed",
+  );
   await expect(staffPage.getByRole("status")).toContainText("Booking canceled");
   await staffContext.close();
 
