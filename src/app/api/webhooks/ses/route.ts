@@ -10,12 +10,7 @@ import {
   parseSesBounceReports,
   parseSesEmailEvent,
 } from "@/lib/notifications/ses-events";
-import {
-  confirmSnsSubscription,
-  readWebhookPayload,
-  verifySnsMessage,
-} from "@/lib/notifications/sns";
-import { logWebhookRefusal } from "@/lib/webhook-refusal";
+import { gateSnsWebhook } from "@/lib/notifications/sns-webhook";
 
 /**
  * The SES delivery-outcome webhook (ADR 20260802-ses-adapter-and-webhook,
@@ -30,32 +25,9 @@ import { logWebhookRefusal } from "@/lib/webhook-refusal";
  * it never tracked — would buy an endless redelivery loop and nothing else.
  */
 export async function POST(request: Request) {
-  const payload = await readWebhookPayload(request);
-  if (payload === null) return new Response(null, { status: 400 });
-
-  const verification = await verifySnsMessage(payload, process.env.SES_SNS_TOPIC_ARN);
-
-  if (verification.status !== "verified") {
-    logWebhookRefusal("ses", verification.status);
-    return new Response(null, { status: verification.status === "not_configured" ? 503 : 400 });
-  }
-
-  const { message } = verification;
-
-  // The one-time handshake: SNS won't deliver Notification messages to this
-  // endpoint until it confirms the subscription. Only reached after
-  // signature verification above, and confirmSnsSubscription independently
-  // re-validates SubscribeURL's host before fetching it.
-  if (message.Type === "SubscriptionConfirmation" || message.Type === "UnsubscribeConfirmation") {
-    const confirmed = message.SubscribeURL
-      ? await confirmSnsSubscription(message.SubscribeURL)
-      : false;
-    log("ses_webhook.subscription_confirmation", confirmed ? "info" : "warn", {
-      type: message.Type,
-      confirmed,
-    });
-    return new Response(null, { status: 200 });
-  }
+  const gate = await gateSnsWebhook(request, process.env.SES_SNS_TOPIC_ARN, "ses");
+  if (gate.kind === "response") return gate.response;
+  const { message } = gate;
 
   const event = parseSesEmailEvent(message.Message, nowDate());
   if (event.kind === "ignored") return new Response(null, { status: 200 });

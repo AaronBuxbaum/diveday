@@ -52,6 +52,10 @@ const inbound = (messageBody: string) => ({
 });
 
 beforeEach(() => {
+  vi.stubEnv(
+    "SMS_SNS_TOPIC_ARN",
+    "arn:aws:sns:us-east-1:123456789012:diveday-sms-delivery-receipts",
+  );
   vi.mocked(getDb).mockResolvedValue(FAKE_DB as never);
   vi.mocked(applyProviderEmailEvent).mockReset().mockResolvedValue("applied");
   vi.mocked(recordSmsKeyword).mockReset();
@@ -65,6 +69,10 @@ describe("sms webhook route — replies to the texting number", () => {
     verified(inbound("Stop"));
     const response = await POST(webhookRequest());
     expect(response.status).toBe(200);
+    expect(verifySnsMessage).toHaveBeenCalledWith(
+      "{}",
+      "arn:aws:sns:us-east-1:123456789012:diveday-sms-delivery-receipts",
+    );
     expect(recordSmsKeyword).toHaveBeenCalledWith(FAKE_DB, {
       phone: "+13055550134",
       optedOut: true,

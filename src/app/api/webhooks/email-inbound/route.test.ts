@@ -192,6 +192,7 @@ describe("email-inbound webhook — filing a reply", () => {
   it("resolves the shop from the reply-to token, reads the message, and files it", async () => {
     vi.mocked(verifySnsMessage).mockResolvedValue(verifiedNotification(receivedMessage()));
     expect((await POST(webhookRequest("{}"))).status).toBe(200);
+    expect(verifySnsMessage).toHaveBeenCalledWith("{}", TOPIC);
     expect(shopIdForInboundEmailToken).toHaveBeenCalledWith(FAKE_DB, TOKEN);
     expect(read).toHaveBeenCalledWith("mail/ses-id-1");
     expect(recordInboundMessage).toHaveBeenCalledWith(FAKE_DB, {

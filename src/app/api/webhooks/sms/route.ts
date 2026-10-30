@@ -7,12 +7,7 @@ import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import { parseSmsDeliveryEvent } from "@/lib/notifications/sms-events";
 import { parseSmsReply } from "@/lib/notifications/sms-replies";
-import {
-  confirmSnsSubscription,
-  readWebhookPayload,
-  verifySnsMessage,
-} from "@/lib/notifications/sns";
-import { logWebhookRefusal } from "@/lib/webhook-refusal";
+import { gateSnsWebhook } from "@/lib/notifications/sns-webhook";
 
 /**
  * SMS delivery receipts (docs ADR 20260802-sms-delivery-receipts), and the
@@ -32,27 +27,9 @@ import { logWebhookRefusal } from "@/lib/webhook-refusal";
  * bad signature, before any record is read.
  */
 export async function POST(request: Request) {
-  const payload = await readWebhookPayload(request);
-  if (payload === null) return new Response(null, { status: 400 });
-
-  const verification = await verifySnsMessage(payload, process.env.SMS_SNS_TOPIC_ARN);
-  if (verification.status !== "verified") {
-    logWebhookRefusal("sms", verification.status);
-    return new Response(null, { status: verification.status === "not_configured" ? 503 : 400 });
-  }
-
-  const { message } = verification;
-
-  if (message.Type === "SubscriptionConfirmation" || message.Type === "UnsubscribeConfirmation") {
-    const confirmed = message.SubscribeURL
-      ? await confirmSnsSubscription(message.SubscribeURL)
-      : false;
-    log("sms_webhook.subscription_confirmation", confirmed ? "info" : "warn", {
-      type: message.Type,
-      confirmed,
-    });
-    return new Response(null, { status: 200 });
-  }
+  const gate = await gateSnsWebhook(request, process.env.SMS_SNS_TOPIC_ARN, "sms");
+  if (gate.kind === "response") return gate.response;
+  const { message } = gate;
 
   const reply = parseSmsReply(message.Message);
   if (reply.kind === "late") {
