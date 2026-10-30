@@ -36,7 +36,8 @@ Each step in full, with its commands and incidents: [loop.md](loop.md).
    `gh pr`): checks and review threads. A red check on your own branch is fixed now, on the branch
    that owns the defect (`reg` excepted: explain each diff image). Answer every open review thread:
    fixed, declined with a reason, or filed. An open `automation/durations-refresh` pull request gets
-   an empty commit, a push and a merge once green.
+   an empty commit and push to start CI. Once green, name it as ready and stop for the human to
+   merge.
 3. **Pick** from `ready-for-agent` (REST), skipping `in-progress`; a claim `pnpm gates` reports
    **stale** is free to take.
 4. **Refuse the ones that are not yours**: a *Blocked by* a human decision gets `ready-for-human`
