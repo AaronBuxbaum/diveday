@@ -427,11 +427,11 @@ export const PRUNE_ARMS = {
     clock: crewNotices.createdAt,
   },
   // Finished sends only, on the instant they were finished. `sent`, or
-  // `failed` with the payload already cleared: a parked
+  // `failed` with the payload already cleared. A
   // `sealed_payload_unreadable` row keeps its payload while the drain may still
-  // offer it, so it never matches (`drainableStatus`, src/db/notifications.ts).
-  // A `queued` or `processing` row is someone's work in flight and never
-  // matches either.
+  // offer it. A `retry_subject_unbound` failed row also retains payload,
+  // but is not drainable. Neither matches until its payload is cleared.
+  // A `queued` or `processing` row is work in flight and never matches either.
   notification_send_queue: {
     from: notificationSendQueue,
     id: notificationSendQueue.id,
