@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { unseededTestDb } from "@/test/db";
 import type { AppDb } from "./client";
 import { createDiver, listDiverSummaries, listDiversForExport, notBackCutoff } from "./divers";
-import { bookings, priorVisits, shops, trips } from "./schema";
+import { bookings, people, personRoles, priorVisits, shops, trips } from "./schema";
 
 /**
  * The roster's "Last dived" sort, its "Not back in 12 months" view, and the
@@ -112,20 +112,39 @@ describe("the roster by last dive", () => {
     const other = await freshShop(db);
     await roster(db, shopId);
     await diver(db, other, "Zed Elsewhere");
-    const rows = await listDiversForExport(db, shopId, {
+    const result = await listDiversForExport(db, shopId, {
       filter: "not_back",
       sort: "last_dived",
       now: NOW,
     });
-    expect(rows.map((row) => row.fullName)).toEqual(["Cy Imported", "Bo Lapsed"]);
-    expect(Object.keys(rows[0] ?? {}).sort()).toEqual([
+    expect(result.exceededLimit).toBe(false);
+    expect(result.rows.map((row) => row.fullName)).toEqual(["Cy Imported", "Bo Lapsed"]);
+    expect(Object.keys(result.rows[0] ?? {}).sort()).toEqual([
       "email",
       "fullName",
       "lastDivedAt",
       "phone",
     ]);
-    expect((await listDiversForExport(db, other, { now: NOW })).map((row) => row.fullName)).toEqual(
-      ["Zed Elsewhere"],
-    );
+    expect(
+      (await listDiversForExport(db, other, { now: NOW })).rows.map((row) => row.fullName),
+    ).toEqual(["Zed Elsewhere"]);
+  });
+
+  it("fetches one row past the limit and returns no partial export", async () => {
+    const db = await unseededTestDb();
+    const shopId = await freshShop(db);
+    const peopleRows = Array.from({ length: 5_001 }, (_, index) => ({
+      shopId,
+      fullName: `Diver ${String(index).padStart(4, "0")}`,
+    }));
+    const inserted = await db.insert(people).values(peopleRows).returning({ id: people.id });
+    await db
+      .insert(personRoles)
+      .values(inserted.map(({ id }) => ({ personId: id, role: "diver" as const })));
+
+    const result = await listDiversForExport(db, shopId, { now: NOW });
+
+    expect(result.exceededLimit).toBe(true);
+    expect(result.rows).toEqual([]);
   });
 });

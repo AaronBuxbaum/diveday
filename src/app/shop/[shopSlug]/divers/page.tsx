@@ -50,6 +50,7 @@ const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
   // (CR-008), or the record was erased and has no way back. Distinct from
   // `invalid`, which is about the add-a-diver form's three fields.
   "restore-refused": { tone: "danger", key: "divers.page.noticeRestoreRefused" },
+  "download-too-large": { tone: "danger", key: "divers.page.noticeDownloadTooLarge" },
   erased: { tone: "success", key: "divers.page.noticeErased" },
   // The erasure landed locally and deleted what it could at Stripe, but
   // something there is still owed — a failed customer delete, or the invoice
