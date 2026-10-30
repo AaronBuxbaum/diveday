@@ -2020,6 +2020,7 @@ export async function listTripsReadiness(
     const referral = overriddenReferral(
       effectiveWaiver,
       signedWaiversByPerson.get(row.person.id) ?? [],
+      timezone,
     );
 
     const trainingMark = trainingMarks.get(row.booking.id);

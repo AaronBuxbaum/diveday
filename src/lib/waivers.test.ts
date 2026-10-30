@@ -1152,6 +1152,47 @@ describe("a referral a later clean signature stood over", () => {
       overriddenReferral(reSigned(), [oldClearance, heartReferral, reSigned()])?.recordId,
     ).toBe("referral");
   });
+
+  it("keeps a Tokyo referral open when the only matching clearance is on the prior shop day", () => {
+    const referredAt = new Date("2026-07-18T15:30:00.000Z");
+    const referral = completedWaiver({
+      id: "tokyo-referral",
+      status: "medical_review",
+      medicalAnswers: flags(heartId),
+      signedAt: referredAt,
+      completedAt: referredAt,
+    });
+    const earlierClearance = cleared({
+      id: "tokyo-earlier-clearance",
+      medicalAnswers: flags(heartId),
+      signedAt: new Date("2026-07-18T16:00:00.000Z"),
+      completedAt: new Date("2026-07-18T16:00:00.000Z"),
+      medicalClearanceEvaluatedOn: "2026-07-18",
+      medicalClearedAt: new Date("2026-07-18T16:00:00.000Z"),
+    });
+    const standing = completedWaiver({
+      id: "tokyo-standing-release",
+      signedAt: new Date("2026-07-19T16:30:00.000Z"),
+      completedAt: new Date("2026-07-19T16:30:00.000Z"),
+    });
+    const records = [earlierClearance, referral, standing];
+
+    expect(overriddenReferral(standing, records, "Asia/Tokyo")?.recordId).toBe(referral.id);
+    // The older behavior treated the UTC date as the shop date and hid it.
+    expect(overriddenReferral(standing, records, "UTC")).toBeNull();
+
+    expect(
+      shopWaiverStatus({
+        personSignedWaivers: records,
+        currentTemplateVersion: 1,
+        now: new Date("2026-07-20T00:00:00.000Z"),
+        signer: { dateOfBirth: null, minorDeclared: false, timezone: "Asia/Tokyo" },
+      }),
+    ).toMatchObject({
+      state: "current",
+      medical: { overriddenReferral: { recordId: referral.id, personId: referral.personId } },
+    });
+  });
 });
 
 /**
