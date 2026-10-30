@@ -14,9 +14,13 @@
  * `./course-templates.ts` and `./marine-life-catalog.ts` have, and the reason
  * this file is exempt from the message-bundle rule. Importing copies the whole
  * briefing into the shop's own row (`importGlobalDiveSiteTemplate`), where the
- * shop rewrites whatever it likes in its own language. Nothing here is read
- * again afterwards, so publishing a correction never overwrites what a shop
- * put on its own page.
+ * shop rewrites whatever it likes in its own language. The shop's site page
+ * reads that row; catalog previews read the published template, and publishing
+ * a revision never rewrites the shop's copy. For a newer version, a shop can
+ * preview a field-aware diff, then choose to preserve its edits or replace
+ * template-managed fields when pulling (conservation guidance stays
+ * shop-owned); it can undo the latest pull once (`getDiveSiteTemplateUpdate`,
+ * `pullDiveSiteTemplateUpdates`, `undoDiveSiteTemplateUpdate`).
  *
  * **What the numbers mean.** Coordinates are the published position of the site
  * — a lighthouse, a sanctuary marker, a wreck's recorded resting place, a
