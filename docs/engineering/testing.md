@@ -337,7 +337,7 @@ the walk takes exactly the screenshots it always did. ADR
 
 Like the one-day simulation it is the e2e fleet's own machinery under a config of its own:
 `scripts/persona-bots/playwright.config.ts` starts a worker server on this checkout's port block,
-`walk.spec.ts` drives it, and the screenshots come from `scripts/screenshot.mjs` rather than a
+`walk.spec.mts` drives it, and the screenshots come from `scripts/screenshot.mjs` rather than a
 capture driver written for the occasion. **Nothing in it is a gate**, in either direction: a
 finding is data written to `persona-bots/findings.json` and never a red test, and every way the run
 can break — no browser, no build, an incomplete walk, an unreachable `gh` — prints `DID NOT RUN` or

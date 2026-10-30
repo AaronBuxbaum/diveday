@@ -1,5 +1,6 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { type BrowserContext, expect, type Page, test } from "@playwright/test";
 import { DEV_STAFF_LOGINS } from "../../src/db/dev-credentials";
 import { runBounded, SUBPROCESS_TIMEOUTS } from "../subprocess.mjs";
@@ -27,6 +28,8 @@ import {
  * the harness broke. That split is what lets the bot fail open: an incomplete
  * walk files nothing rather than filing whatever it happened to reach.
  */
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 type Finding = {
   probe: string;

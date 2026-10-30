@@ -19,7 +19,7 @@ function expectAuxiliaryConfig(
 ) {
   expect(config.testDir).toBe(".");
   expect(config.testMatch).toEqual(testPattern);
-  expect(config.testMatch.test("walk.spec.ts") || config.testMatch.test("day.spec.ts")).toBe(true);
+  expect(config.testMatch.test("walk.spec.mts") || config.testMatch.test("day.spec.ts")).toBe(true);
   expect(config.fullyParallel).toBe(false);
   expect(config.workers).toBe(1);
   expect(config.retries).toBe(0);
@@ -58,12 +58,13 @@ describe("auxiliary Playwright configs", () => {
     expectAuxiliaryConfig(personaConfig, {
       baseURL: PERSONA_BASE_URL,
       port: PERSONA_PORT,
-      testPattern: /walk\.spec\.ts$/,
+      testPattern: /walk\.spec\.mts$/,
       outputDir: "../../test-results/persona-bots",
       timeout: 120_000,
       viewport: { width: 1280, height: 900 },
     });
-    expect(personaConfig.testMatch.test("walk.spec.ts")).toBe(true);
+    expect(personaConfig.testMatch.test("walk.spec.mts")).toBe(true);
+    expect(personaConfig.testMatch.test("walk.spec.ts")).toBe(false);
     expect(personaConfig.testMatch.test("day.spec.ts")).toBe(false);
     expect(personaConfig.use.screenshot).toBe("off");
     expect(personaConfig.use.trace).toBe("off");
@@ -80,7 +81,7 @@ describe("auxiliary Playwright configs", () => {
       serverEnv: { DIVEDAY_CLOCK: SIMULATION_DAY_START },
     });
     expect(simulationConfig.testMatch.test("day.spec.ts")).toBe(true);
-    expect(simulationConfig.testMatch.test("walk.spec.ts")).toBe(false);
+    expect(simulationConfig.testMatch.test("walk.spec.mts")).toBe(false);
     expect(simulationConfig.use.screenshot).toBe("only-on-failure");
     expect(simulationConfig.use.trace).toBe("retain-on-failure");
     expect(simulationConfig.webServer.env.DIVEDAY_CLOCK).toBe(SIMULATION_DAY_START);

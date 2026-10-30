@@ -17,7 +17,7 @@ export default auxiliaryPlaywrightConfig({
   baseURL: PERSONA_BASE_URL,
   port: PERSONA_PORT,
   outputDir: "../../test-results/persona-bots",
-  testMatch: /walk\.spec\.ts$/,
+  testMatch: /walk\.spec\.mts$/,
   // Visits use a warm server; the first also pays for migrate and seed. This
   // finite ceiling only bounds a hung navigation.
   timeout: 120_000,
