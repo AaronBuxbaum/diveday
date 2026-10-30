@@ -1,8 +1,11 @@
+import { copyFile, mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { matchesTintedInk } from "./check-tinted-ink.mjs";
-import { readBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
+import { readBounded, runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
 const CHECK_SCRIPT = fileURLToPath(new URL("./check-tinted-ink.mjs", import.meta.url));
 
@@ -60,5 +63,49 @@ describe("what the tinted-ink check flags", () => {
     });
 
     expect(output).toBe("tinted-ink: no coloured text sits on a translucent fill of its own hue\n");
+  });
+
+  it("honors line and boat-mode exemptions in a controlled scanner tree", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "tinted-ink-scanner-"));
+    const scriptDirectory = path.join(root, "scripts");
+    const sourceDirectory = path.join(root, "src");
+    const boatModeFile = path.join(
+      sourceDirectory,
+      "app/shop/[shopSlug]/trips/[id]/manifest/_components/DiverRollCall.tsx",
+    );
+    const violationPath = path.join("src", "unannotated.tsx");
+    const violation = 'const violation = "bg-danger/10 text-danger";';
+
+    try {
+      await mkdir(scriptDirectory, { recursive: true });
+      await mkdir(sourceDirectory, { recursive: true });
+      await mkdir(path.dirname(boatModeFile), { recursive: true });
+      await copyFile(CHECK_SCRIPT, path.join(scriptDirectory, "check-tinted-ink.mjs"));
+      await writeFile(
+        path.join(sourceDirectory, "exemptions.tsx"),
+        [
+          'const sameLine = "bg-danger/10 text-danger"; // diveday:allow-tinted-ink: fixture',
+          "// diveday:allow-tinted-ink: fixture",
+          'const precedingLine = "bg-success/15 text-success-strong";',
+        ].join("\n"),
+      );
+      await writeFile(boatModeFile, 'const boatMode = "bg-warning/15 text-warning";');
+      await writeFile(path.join(sourceDirectory, "unannotated.tsx"), violation);
+
+      const result = runBounded(
+        process.execPath,
+        [await realpath(path.join(scriptDirectory, "check-tinted-ink.mjs"))],
+        { encoding: "utf8", timeoutMs: SUBPROCESS_TIMEOUTS.nodeScript },
+      );
+      const diagnostics = result.stderr.match(/^- src[\\/].*$/gm) ?? [];
+
+      expect(result.status).toBe(1);
+      expect(diagnostics).toEqual([`- ${violationPath}:1: ${violation}`]);
+      expect(result.stderr).toContain("Coloured ink on a translucent fill of its own hue:");
+      expect(result.stderr).not.toContain("exemptions.tsx");
+      expect(result.stderr).not.toContain("DiverRollCall.tsx");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 });
