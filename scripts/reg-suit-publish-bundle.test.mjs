@@ -4,7 +4,6 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import os from "node:os";
 import path from "node:path";
 import { Readable } from "node:stream";
-import { test } from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
 import { gzipSync } from "node:zlib";
 import {
@@ -13,6 +12,7 @@ import {
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
+import { test } from "vitest";
 
 import { publishBundle } from "./reg-suit-publish-bundle.mjs";
 
@@ -397,27 +397,26 @@ test("same-version retries cryptographically verify CRC-only legacy object check
   }
 });
 
-test("main-owner same-version retries accept absent or None PR ownership metadata", async (t) => {
-  for (const representation of ["absent", "none"]) {
-    await t.test(representation, async () => {
-      const f = fixture();
-      try {
-        const initial = mapFromFixture(f, { prNumber: "" });
-        for (const object of initial.values()) {
-          if (representation === "absent") delete object.head.Metadata["diveday-pr-number"];
-          else object.head.Metadata["diveday-pr-number"] = "None";
-        }
-        const s3 = fakeS3({ initial });
-        await assert.doesNotReject(
-          publishBundle(args(f, s3, { prNumber: "" })),
-          `same-version main retry should accept ${representation} owner metadata`,
-        );
-      } finally {
-        f.cleanup();
+test.each(["absent", "none"])(
+  "main-owner same-version retries accept %s PR ownership metadata",
+  async (representation) => {
+    const f = fixture();
+    try {
+      const initial = mapFromFixture(f, { prNumber: "" });
+      for (const object of initial.values()) {
+        if (representation === "absent") delete object.head.Metadata["diveday-pr-number"];
+        else object.head.Metadata["diveday-pr-number"] = "None";
       }
-    });
-  }
-});
+      const s3 = fakeS3({ initial });
+      await assert.doesNotReject(
+        publishBundle(args(f, s3, { prNumber: "" })),
+        `same-version main retry should accept ${representation} owner metadata`,
+      );
+    } finally {
+      f.cleanup();
+    }
+  },
+);
 
 test("main publication omits pull-request ownership metadata", async () => {
   const f = fixture();
@@ -680,42 +679,41 @@ test("absent-marker 412 is accepted only when the winning marker selects this ex
   }
 });
 
-test("bundle path and report validation fails before S3 is called", async (t) => {
-  const cases = [
-    {
-      name: "foreign snapshot prefix",
-      edit: (text) =>
-        text.replace(`snapshots/${VERSION_1}/actual`, `snapshots/${VERSION_2}/actual`),
-    },
-    {
-      name: "path traversal",
-      edit: (text) =>
-        text.replace(
-          `snapshots/${VERSION_1}/actual/capture.png`,
-          `snapshots/${VERSION_1}/actual/../escape.png`,
-        ),
-    },
-    { name: "duplicate key", edit: (text) => `${text}${text.split("\n")[0]}\n` },
-    {
-      name: "unsupported root key",
-      edit: (text) => `${text}arbitrary.js\tapplication/javascript\n`,
-    },
-  ];
-  for (const item of cases) {
-    await t.test(item.name, async () => {
-      const f = fixture();
-      try {
-        const manifest = readFileSync(path.join(f.bundle, "manifest.tsv"), "utf8");
-        writeFileSync(path.join(f.bundle, "manifest.tsv"), item.edit(manifest));
-        const s3 = fakeS3();
-        await assert.rejects(publishBundle(args(f, s3)));
-        assert.equal(s3.events.length, 0);
-      } finally {
-        f.cleanup();
-      }
-    });
-  }
-});
+const invalidBundleCases = [
+  {
+    name: "foreign snapshot prefix",
+    edit: (text) => text.replace(`snapshots/${VERSION_1}/actual`, `snapshots/${VERSION_2}/actual`),
+  },
+  {
+    name: "path traversal",
+    edit: (text) =>
+      text.replace(
+        `snapshots/${VERSION_1}/actual/capture.png`,
+        `snapshots/${VERSION_1}/actual/../escape.png`,
+      ),
+  },
+  { name: "duplicate key", edit: (text) => `${text}${text.split("\n")[0]}\n` },
+  {
+    name: "unsupported root key",
+    edit: (text) => `${text}arbitrary.js\tapplication/javascript\n`,
+  },
+];
+
+test.each(invalidBundleCases)(
+  "bundle validation rejects $name before S3 is called",
+  async (item) => {
+    const f = fixture();
+    try {
+      const manifest = readFileSync(path.join(f.bundle, "manifest.tsv"), "utf8");
+      writeFileSync(path.join(f.bundle, "manifest.tsv"), item.edit(manifest));
+      const s3 = fakeS3();
+      await assert.rejects(publishBundle(args(f, s3)));
+      assert.equal(s3.events.length, 0);
+    } finally {
+      f.cleanup();
+    }
+  },
+);
 
 test("request timeout and caller cancellation abort the S3 call", async () => {
   const f = fixture();
