@@ -23,7 +23,7 @@ describe("findUnpinnedActions", () => {
 
   it("refuses a pinned SHA that does not say which version it is", () => {
     expect(findUnpinnedActions("ci.yml", `      - uses: actions/checkout@${SHA}`)).toEqual([
-      `ci.yml:1: actions/checkout@${SHA} has no "# vX.Y.Z" comment naming the version it is`,
+      `ci.yml:1: actions/checkout@${SHA} has no version comment or permitted matching immutable-commit comment`,
     ]);
   });
 
@@ -34,6 +34,35 @@ describe("findUnpinnedActions", () => {
       "      - uses: ./.github/actions/setup",
     ].join("\n");
     expect(findUnpinnedActions("ci.yml", text)).toEqual([]);
+  });
+
+  it("accepts an untagged immutable revision only when the comment repeats its SHA", () => {
+    const otherSha = "4".repeat(40);
+    expect(
+      findUnpinnedActions(
+        "ci.yml",
+        `      - uses: AaronBuxbaum/diveday/.github/workflows/reg-suit-publish.yml@${SHA} # immutable commit ${SHA}`,
+      ),
+    ).toEqual([]);
+    expect(
+      findUnpinnedActions(
+        "ci.yml",
+        `      - uses: AaronBuxbaum/diveday/.github/workflows/reg-suit-publish.yml@${SHA} # immutable commit ${otherSha}`,
+      ),
+    ).toEqual([
+      `ci.yml:1: AaronBuxbaum/diveday/.github/workflows/reg-suit-publish.yml@${SHA} has no version comment or permitted matching immutable-commit comment`,
+    ]);
+  });
+
+  it("rejects immutable-commit comments for unrelated actions", () => {
+    expect(
+      findUnpinnedActions(
+        "ci.yml",
+        `      - uses: actions/checkout@${SHA} # immutable commit ${SHA}`,
+      ),
+    ).toEqual([
+      `ci.yml:1: actions/checkout@${SHA} has no version comment or permitted matching immutable-commit comment`,
+    ]);
   });
 
   it("refuses a docker image by tag and accepts one by digest", () => {

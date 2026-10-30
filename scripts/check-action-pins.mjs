@@ -12,7 +12,9 @@ import { fileURLToPath } from "node:url";
  * reads; a moved tag (the tj-actions incident, March 2025) would have run
  * someone else's code with those credentials (2026-10-13 review, row 14).
  * A full commit SHA cannot be moved. The `# vX.Y.Z` comment is what a reader
- * and Dependabot's github-actions updates read to know what the SHA is.
+ * and Dependabot's github-actions updates read to know what the SHA is. The
+ * internal reg-suit reusable workflow may name its exact immutable commit
+ * when it has no release tag.
  *
  * A local action (`./.github/actions/...`) is this repository's own code and is
  * exempt. Docker references are refused unless pinned by digest.
@@ -24,6 +26,8 @@ const USES = /^\s*-?\s*uses:\s*(?<ref>[^\s#]+)\s*(?:#\s*(?<comment>.*))?$/u;
 const PINNED = /^[\w.-]+\/[\w./-]+@[0-9a-f]{40}$/u;
 const DOCKER_PINNED = /^docker:\/\/[^@\s]+@sha256:[0-9a-f]{64}$/u;
 const VERSION_COMMENT = /^v\d+\.\d+\.\d+\b/u;
+const IMMUTABLE_COMMIT_COMMENT = /^immutable commit (?<sha>[0-9a-f]{40})$/u;
+const UNTAGGED_WORKFLOW_REF = "AaronBuxbaum/diveday/.github/workflows/reg-suit-publish.yml";
 
 /**
  * The unpinned `uses:` lines in one file's text, as `file:line: why`.
@@ -48,8 +52,16 @@ export function findUnpinnedActions(file, text) {
       problems.push(`${where}: ${ref} is not pinned to a 40-character commit SHA`);
       continue;
     }
-    if (!comment || !VERSION_COMMENT.test(comment.trim())) {
-      problems.push(`${where}: ${ref} has no "# vX.Y.Z" comment naming the version it is`);
+    const sha = ref.slice(ref.lastIndexOf("@") + 1);
+    const immutableCommit = comment?.trim().match(IMMUTABLE_COMMIT_COMMENT)?.groups?.sha;
+    const allowsImmutableCommit = ref.slice(0, ref.lastIndexOf("@")) === UNTAGGED_WORKFLOW_REF;
+    if (
+      !comment ||
+      (!VERSION_COMMENT.test(comment.trim()) && !(allowsImmutableCommit && immutableCommit === sha))
+    ) {
+      problems.push(
+        `${where}: ${ref} has no version comment or permitted matching immutable-commit comment`,
+      );
     }
   }
   return problems;
@@ -76,7 +88,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     console.error("action-pins: a workflow runs an Action by a tag its owner can move:");
     console.error(problems.map((line) => `- ${line}`).join("\n"));
     console.error(
-      "\nPin it to the commit the tag points at, with the version as a comment: `uses: owner/repo@<40-hex sha> # v1.2.3`. `git ls-remote --tags https://github.com/owner/repo` lists both.",
+      "\nPin it to the commit the tag points at, with the version as a comment: `uses: owner/repo@<40-hex sha> # v1.2.3`. Only the untagged DiveDay reg-suit reusable workflow may use `# immutable commit <same 40-hex sha>`. `git ls-remote --tags https://github.com/owner/repo` lists tags.",
     );
     process.exit(1);
   }

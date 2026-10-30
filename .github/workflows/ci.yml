@@ -942,7 +942,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    uses: AaronBuxbaum/diveday/.github/workflows/reg-suit-publish.yml@8abd4af37968f7e3276a3c04e5a6a9766cee1463 # v1.0.4
+    uses: AaronBuxbaum/diveday/.github/workflows/reg-suit-publish.yml@03e4f27f7a3a80404f9ae502da8c02340327920c # immutable commit 03e4f27f7a3a80404f9ae502da8c02340327920c
     with:
       capture-mode: ${{ needs.visual-plan.outputs.mode }}
       capture-shards: ${{ needs.visual-plan.outputs.shards }}
@@ -983,7 +983,10 @@ jobs:
 
       - name: Summarize the visual result on the pull request
         id: summary
-        if: ${{ !cancelled() }}
+        # The sticky comment reads this commit's out.json. Only update it after
+        # this run's captures and publisher succeed; an old out.json for the
+        # same head SHA must never make a failed retry look current.
+        if: ${{ !cancelled() && needs.visual.result == 'success' && needs.visual-publish.result == 'success' }}
         continue-on-error: true
         run: |
           if [ -n "$PR_HEAD_SHA" ]; then
@@ -998,6 +1001,109 @@ jobs:
           REG_SUIT_S3_BUCKET_NAME: ${{ secrets.REG_SUIT_S3_BUCKET_NAME }}
           REG_BASELINE_NOTE: ${{ needs.visual-publish.outputs.baseline_note }}
           VISUAL_SELECTION_NOTE: ${{ needs.visual-publish.outputs.selection_note }}
+
+      - name: Mark this run's visual result unavailable on the pull request
+        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && !cancelled() && (needs.visual.result != 'success' || needs.visual-publish.result != 'success') }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_API_URL: ${{ github.api_url }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          RUNNER_TEMP: ${{ runner.temp }}
+        run: |
+          node --input-type=module <<'NODE'
+          const marker = "<!-- diveday:visual-summary -->";
+          const commit = process.env.PR_HEAD_SHA;
+          const repository = process.env.GITHUB_REPOSITORY;
+          const pullRequest = process.env.PR_NUMBER;
+          const token = process.env.GH_TOKEN;
+          const timeoutCandidate = Number(process.env.VISUAL_COMMENT_API_TIMEOUT_MS || "10000");
+          const timeoutMs = Number.isFinite(timeoutCandidate)
+            ? Math.min(Math.max(timeoutCandidate, 1), 10000)
+            : 10000;
+          const apiRoot = new URL(process.env.GITHUB_API_URL || "https://api.github.com");
+          const apiBase = apiRoot.href.endsWith("/") ? apiRoot.href : apiRoot.href + "/";
+
+          async function request(apiPath, options = {}) {
+            const method = options.method || "GET";
+            const body = options.body;
+            const response = await fetch(new URL(apiPath, apiBase), {
+              method,
+              headers: {
+                accept: "application/vnd.github+json",
+                authorization: "Bearer " + token,
+                "x-github-api-version": "2022-11-28",
+                ...(body ? { "content-type": "application/json" } : {}),
+              },
+              ...(body ? { body: JSON.stringify(body) } : {}),
+              signal: AbortSignal.timeout(timeoutMs),
+            });
+            const responseText = await response.text();
+            if (!response.ok) {
+              throw new Error("GitHub API returned HTTP " + response.status + ": " + responseText.slice(0, 300));
+            }
+            return responseText ? JSON.parse(responseText) : null;
+          }
+
+          const body = [
+            marker,
+            "<!-- diveday:visual-commit: " + commit + " -->",
+            "### Visual verification did not complete for this run",
+            "",
+            "This run did not successfully verify and publish a visual comparison for commit " + commit + ". Do not read any earlier summary as this run's result.",
+            "",
+            "Inspect the visual and publisher logs. If the publisher reports a snapshot mismatch for this commit, use a fresh commit key; rerunning the same SHA will not resolve that mismatch.",
+          ].join("\n");
+
+          try {
+            let existing = null;
+            for (let page = 1; page <= 3; page++) {
+              const comments = await request(
+                "repos/" + repository + "/issues/" + pullRequest + "/comments?per_page=100&page=" + page,
+              );
+              existing = comments.find(
+                (comment) => comment.user?.login === "github-actions[bot]" && comment.body?.includes(marker),
+              );
+              if (existing || comments.length < 100) break;
+            }
+
+            if (existing) {
+              await request("repos/" + repository + "/issues/comments/" + existing.id, {
+                method: "PATCH",
+                body: { body },
+              });
+              console.log("Updated bot-owned visual summary comment " + existing.id + ".");
+            } else {
+              const created = await request("repos/" + repository + "/issues/" + pullRequest + "/comments", {
+                method: "POST",
+                body: { body },
+              });
+              console.log("Posted bot-owned visual summary comment " + created.id + ".");
+            }
+          } catch (error) {
+            const detail =
+              error?.name === "TimeoutError"
+                ? "request timed out after " + timeoutMs + "ms"
+                : error?.message || String(error);
+            console.error("Could not update the visual summary: " + detail);
+            process.exitCode = 1;
+          }
+          NODE
+
+      - name: Explain the missing visual report on a fork pull request
+        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && !cancelled() && (needs.visual.result != 'success' || needs.visual-publish.result != 'success') }}
+        run: |
+          {
+            echo "### Visual verification did not complete for this run"
+            echo
+            echo "This fork pull request did not successfully verify and publish a visual comparison in this run. The trusted publisher does not publish snapshots for forks; this check remains read-only and exempt."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Refuse a same-repository PR report without this run's published snapshot
+        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && !cancelled() && (needs.visual.result != 'success' || needs.visual-publish.result != 'success') }}
+        run: |
+          echo "::error title=Visual verification incomplete for this run::This run did not successfully verify and publish a visual comparison. The sticky notice updates only a github-actions[bot] comment with the existing visual-summary marker, posting a marked comment if none exists. Inspect this run's visual and publisher logs. If the publisher reports a snapshot mismatch for this commit, use a fresh commit key; rerunning the same SHA will not resolve that mismatch."
+          exit 1
 
       - name: Refuse to miss main's baseline silently
         if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && (needs.visual.result != 'success' || needs.visual-publish.result != 'success') }}
