@@ -1,5 +1,5 @@
 import { and, count, eq, inArray, isNotNull, ne } from "drizzle-orm";
-import { type DiveIntent, type DiveIntentCount, diveIntentTally } from "@/lib/dive-intent";
+import { type DiveIntent, type DiveIntentCount, orderedDiveIntentCounts } from "@/lib/dive-intent";
 import type { AppDb } from "./client";
 import { bookings, trips } from "./schema";
 import { liveTrip } from "./trips-live";
@@ -17,9 +17,8 @@ import { liveTrip } from "./trips-live";
  * direct; the join to `trips` is there for `liveTrip()` alone, so a departure
  * a shop took off the board cannot go on speaking through its old seats.
  *
- * The grouping happens in SQL and the *ordering* comes from `diveIntentTally`,
- * so this reader and the pure function can never drift about which answer
- * reads first.
+ * The grouping happens in SQL and the ordered projection is shared with the
+ * pure tally, so they cannot drift about which answer reads first.
  */
 export async function diveIntentTallyForTrip(
   db: AppDb,
@@ -40,7 +39,7 @@ export async function diveIntentTallyForTrip(
       ),
     )
     .groupBy(bookings.diveIntent);
-  return expand(rows);
+  return projectCounts(rows);
 }
 
 /**
@@ -74,17 +73,19 @@ export async function diveIntentTallyForTrips(
     if (list) list.push(row);
     else byTrip.set(row.tripId, [row]);
   }
-  return new Map([...byTrip].map(([tripId, list]) => [tripId, expand(list)]));
+  return new Map([...byTrip].map(([tripId, list]) => [tripId, projectCounts(list)]));
 }
 
 /**
- * SQL counted the seats; `diveIntentTally` decides the order. Repeating each
- * answer `seats` times is a handful of array slots on a boat of at most a few
- * dozen people, and it buys one definition of "which answer reads first"
- * instead of two.
+ * SQL already counted the seats; project those grouped counts without
+ * expanding them back into one entry per seat.
  */
-function expand(rows: readonly { intent: DiveIntent | null; seats: number }[]): DiveIntentCount[] {
-  return diveIntentTally(
-    rows.flatMap(({ intent, seats }) => Array.from({ length: seats }, () => intent)),
-  );
+function projectCounts(
+  rows: readonly { intent: DiveIntent | null; seats: number }[],
+): DiveIntentCount[] {
+  const counts = new Map<DiveIntent, number>();
+  for (const { intent, seats } of rows) {
+    if (intent !== null) counts.set(intent, seats);
+  }
+  return orderedDiveIntentCounts(counts);
 }
