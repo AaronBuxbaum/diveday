@@ -59,9 +59,8 @@ export type WeekDeparture = {
   /**
    * The boat is back and somebody on its list was never counted (DOM-H3) —
    * **the loudest thing this board can say**, and it outranks the price flag
-   * rather than stacking with it. It renders in both compositions or the
-   * desktop board becomes the quietest place in the app to notice a diver
-   * nobody has accounted for.
+   * rather than stacking with it, so a diver nobody has accounted for is
+   * unmistakable on every screen size.
    */
   rollCallOpen: { diveNumber: number; uncounted: number } | null;
   /**
@@ -137,9 +136,7 @@ export type BuilderWeek = LastYearWeekView & {
   thisWeekHref: string | null;
   /**
    * Every departure still to sail in this week is unpriced. Said once above
-   * the grid instead of on each of seven cells (principle 9) — the grid's own
-   * gate, computed over the week, since the stream's is computed over a
-   * cursor page that reaches different departures.
+   * the grid instead of on each of seven cells (principle 9).
    */
   allUnpriced: boolean;
   /**
@@ -254,7 +251,7 @@ function RowActions({
   >;
   className: string;
 }) {
-  const key = `w:menu:${departure.tripId}`;
+  const key = `menu:${departure.tripId}`;
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   useMenuDismissal({ open, close: onClose, inside: [rootRef], returnFocus: triggerRef });
@@ -315,10 +312,7 @@ function focusOnMount(el: HTMLElement | null) {
 }
 
 /**
- * "None of these has a price yet", once. Both compositions say it and both
- * said it in their own hand-typed markup until the two drifted apart in
- * review; one element now, and the caller supplies only the width it belongs
- * to (`xl:hidden` on the stream's, nothing on the grid's).
+ * "None of these has a price yet", once above the week grid.
  */
 export function AllUnpricedNotice({
   children,
@@ -338,14 +332,11 @@ export function AllUnpricedNotice({
 
 /**
  * **The loudest thing this board can say** (DOM-H3): the boat is back and
- * somebody on its list was never counted. It is the same fact, the same tone
- * and the same destination as the stream's row badge — a departure that
- * shouted at 1279px and went quiet at 1280 would make the desktop board the
- * worst place in the app to notice a diver nobody has accounted for.
+ * somebody on its list was never counted. It appears in the departure's flag
+ * slot and links to the roll call that needs finishing.
  *
  * Drawn mark and words together, never hue alone, and it **outranks** the
- * price flag rather than stacking with it: one slot, one grammar (issue 758,
- * the same call the stream made).
+ * price flag rather than stacking with it: one slot, one grammar (issue 758).
  *
  * Both flags are a 44px target that ends at its words (`FLAG_CLASS`), lifted
  * over the row's own door.
@@ -413,23 +404,19 @@ function PriceFlag({
 }
 
 /**
- * The staff board as a **week** — seven columns, one per day, at `xl` (1280px)
- * and up only. Below that the vertical day stream renders instead, unchanged
- * (H-63, 2026-08-27).
+ * The staff board as a **week** — seven columns, one per day, with responsive
+ * layout from narrow screens through desktop.
  *
  * **This component must not drift from ADR
  * 20260827-clearwater-surface-language, decision 5**, which is what it exists
  * to satisfy: a week of departures read as seven columns rather than as
  * ~2,700px of scroll, a multi-day course drawn once as a spanning bar rather
- * than once per day it covers, today marked, past days set down. The
- * cursor-paged stream underneath is a different reading of the same rows and
- * keeps its own contract; this pages by `?week=` (`src/lib/week-board.ts`) and
- * the two deliberately never mix.
+ * than once per day it covers, today marked, past days set down. The board
+ * pages by `?week=` (`src/lib/week-board.ts`).
  *
- * Nothing here holds state. The disclosures a cell opens — the day's add
- * panel, a departure's move/copy/remove — are the board's own, keyed with a
- * `w:` prefix so a control in this grid hands focus back to itself rather
- * than to its twin in the hidden stream.
+ * Nothing here holds state. The disclosures a row opens — a departure's
+ * move/copy/remove panel — are keyed by action and trip ID, which also lets
+ * the panel return focus to the row's menu.
  */
 /**
  * **A departure's seats: a bar and its count.** Tide's week is a run of days
@@ -639,7 +626,7 @@ function WeekBoat({
         {actions ? (
           <RowActions
             departure={departure}
-            open={openKey === `w:menu:${departure.tripId}`}
+            open={openKey === `menu:${departure.tripId}`}
             onToggle={onToggle}
             onChoose={onChoose}
             onClose={onCloseMenu}
@@ -679,14 +666,9 @@ function WeekBoat({
  * and clipped. As rows, an empty day is one line saying "No boats" and a boat
  * has the full measure.
  *
- * **Still `xl` and up for now, and that is the half of the slice still to
- * come.** Rows need no breakpoint — a day is a row on a phone and a row on a
- * desk — so this is meant to become the board's one reading and the
- * `xl:hidden` day stream is meant to go. That deletion is its own commit: the
- * stream owns the cursor paging that reaches past this week, and what happens
- * to a reader who was scrolling forward through departures is a product
- * question, not a layout one. Until then the two compositions stay as they
- * were, panels rendered once outside both (issue #1309).
+ * **Rows, because a day is a row on a phone and a row on a desk.** The same
+ * responsive board serves the week at every screen size, with row actions
+ * rendered beside the departure that owns them.
  */
 export function WeekBoard({
   week,

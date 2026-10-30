@@ -445,6 +445,7 @@ describe("ScheduleBuilder top add panel opened by link (?add=)", () => {
       />,
     );
     expect(screen.queryByPlaceholderText(COPY.titlePlaceholder)).not.toBeInTheDocument();
+    expect(loadOptions).not.toHaveBeenCalled();
 
     rerender(
       <ScheduleBuilder
@@ -455,6 +456,9 @@ describe("ScheduleBuilder top add panel opened by link (?add=)", () => {
       />,
     );
     expect(screen.getByPlaceholderText(COPY.titlePlaceholder)).toBeInTheDocument();
+    expect(await screen.findByRole("option", { name: "Open Water Diver" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Molasses Reef" })).toBeInTheDocument();
+    expect(loadOptions).toHaveBeenCalledTimes(1);
   });
 
   it("stays open through a StrictMode double-invoke, so a cross-route link lands on the form", () => {

@@ -326,7 +326,7 @@ describe("ScheduleBuilder week board", () => {
     expect(flag.querySelector("svg")).not.toBeNull();
   });
 
-  it("opens move, copy and remove from a cell, keyed apart from the stream's own", async () => {
+  it("opens move, copy and remove from a cell", async () => {
     const user = userEvent.setup();
     board(
       week({
@@ -343,8 +343,7 @@ describe("ScheduleBuilder week board", () => {
       }),
     );
 
-    // The stream renders the same departure; only one of the two can ever be
-    // on screen, and each hands focus back to its own control.
+    // The departure has one action menu, and its panel opens for that row.
     await user.click(
       within(grid()).getByRole("button", { name: /^Move, copy, or remove Two-Tank Reef/ }),
     );

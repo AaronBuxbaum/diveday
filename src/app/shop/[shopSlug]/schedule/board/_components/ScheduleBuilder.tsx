@@ -72,9 +72,8 @@ type PanelTrip = {
  * Take a departure off the board. Two deliberate steps: the row menu's
  * "Remove" only discloses this, and this holds the only real submit.
  *
- * Module scope, and shared by both compositions — the vertical day stream and
- * the `xl` week grid render the same three panels, so a change to a refusal or
- * a field lands in one place rather than in two that drift.
+ * Module scope, and shared by the week board's three row actions, so a change
+ * to a refusal or a field lands in one place.
  */
 function RemovePanel({
   trip,
@@ -503,15 +502,6 @@ function CopyPanel({
  * on the title. This surface is deliberately shallow.
  */
 
-/**
- * **Two add keys, not one prefix.** The header's panel is `add:top` and a
- * day's is `w:add:<dateIso>`. One prefix covered both while the day stream
- * existed, because its own per-day keys were `add:<dateIso>`; deleting it
- * (#1923) left `startsWith("add:")` matching only the header's, so a day's
- * panel opened onto selects that never filled for the rest of the visit.
- */
-const isAddKey = (key: string | null) => key === "add:top" || (key?.startsWith("w:add:") ?? false);
-
 /** Everything `ScheduleBuilder` draws, assembled once by its caller and handed over as one object. */
 export type ScheduleBuilderContext = {
   shopSlug: string;
@@ -620,10 +610,7 @@ export function ScheduleBuilder({ context }: { context: ScheduleBuilderContext }
     document.querySelector<HTMLElement>("[data-board-add]")?.focus();
   };
 
-  // The week grid's own disclosures, read back out of the one `open` key.
-  // Everything the grid opens is prefixed `w:` so a control there hands focus
-  // back to itself rather than to its identically-keyed twin in the stream,
-  // which is `display:none` at this width and cannot take focus at all.
+  // The week grid's disclosures, read back out of the one `open` key.
   // **Spans as well as cells.** A multi-day course is drawn once, as a bar
   // across the days it owns, *instead of* the entries for those days — so if
   // the bar were left out of this lookup the desktop board would be the one
@@ -635,11 +622,8 @@ export function ScheduleBuilder({ context }: { context: ScheduleBuilderContext }
    * **The panel a disclosure opens, resolved once.** It renders under the row
    * that opened it (`WeekBoard`'s `panel`), never at the foot of the week.
    *
-   * The `w:` prefix on the key is what is left of the two compositions this
-   * board used to have (#1923). It is now redundant — there is one "⋯" button
-   * per departure and it is always the week's — but it stays on the key rather
-   * than being stripped, because it is also the focus-return address and
-   * rewriting every key to drop two characters buys nothing.
+   * Menu and action keys share the same trip ID so the row panel can return
+   * focus to the menu that opened it.
    *
    * **Spans as well as cells.** A multi-day course is drawn once as a bar
    * across the days it owns, *instead of* the entries for those days, so a
@@ -654,11 +638,11 @@ export function ScheduleBuilder({ context }: { context: ScheduleBuilderContext }
   } | null => {
     if (!open) return null;
     for (const kind of ["move", "copy", "remove"] as const) {
-      const prefix = `w:${kind}:`;
+      const prefix = `${kind}:`;
       if (!open.startsWith(prefix)) continue;
       const tripId = open.slice(prefix.length);
       const entry = weekDepartures.find((candidate) => candidate.tripId === tripId);
-      if (entry) return { kind, trip: panelTripOf(entry), closeKey: `w:menu:${tripId}` };
+      if (entry) return { kind, trip: panelTripOf(entry), closeKey: `menu:${tripId}` };
     }
     return null;
   })();
@@ -670,10 +654,10 @@ export function ScheduleBuilder({ context }: { context: ScheduleBuilderContext }
   // and the list closes itself (outside tap, Escape) through
   // `useMenuDismissal` in `WeekBoard`. Stable, because that hook lists it.
   const chooseRowAction = useCallback((kind: "move" | "copy" | "remove", tripId: string) => {
-    setOpen(`w:${kind}:${tripId}`);
+    setOpen(`${kind}:${tripId}`);
   }, []);
   const closeRowMenu = useCallback(() => {
-    setOpen((current) => (current?.startsWith("w:menu:") ? null : current));
+    setOpen((current) => (current?.startsWith("menu:") ? null : current));
   }, []);
 
   // The add panel's selects, fetched the first time any add panel opens and
@@ -683,7 +667,7 @@ export function ScheduleBuilder({ context }: { context: ScheduleBuilderContext }
   const [options, setOptions] = useState<BuilderOptions | null>(initialOptions);
   const optionsRequested = useRef(initialOptions !== null);
   useEffect(() => {
-    if (!isAddKey(open) || optionsRequested.current) return;
+    if (open !== "add:top" || optionsRequested.current) return;
     optionsRequested.current = true;
     loadOptions().then(setOptions, () => {
       optionsRequested.current = false;
@@ -755,8 +739,8 @@ export function ScheduleBuilder({ context }: { context: ScheduleBuilderContext }
   };
 
   return (
-    // `data-schedule-builder` is the copy-free hook a test asks "has the
-    // board finished streaming?" with — true whether or not the week has
+    // `data-schedule-builder` is the copy-free hook a test asks whether the
+    // board has rendered — true whether or not the week has
     // anything on it, which `data-week-board` is not. The `aria-label` beside
     // it is localised, so a Spanish run cannot name the region; that is the
     // same finding `data-day-stream` and `data-week-board` already carry
