@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  baselineEnvironment,
   DEFAULT_MAX_ANCESTORS,
   layerBelowBaseline,
   nearestPublishedAncestor,
@@ -9,13 +10,35 @@ import {
 const KEY = "3333333333333333333333333333333333333333";
 const BUCKET = "diveday-vrt";
 
+describe("baselineEnvironment", () => {
+  it("exports the versioned cache key and leaves unknown versions uncached", () => {
+    const version = "a".repeat(64);
+    expect(baselineEnvironment({ key: KEY, version })).toEqual([
+      `REG_EXPECTED_KEY=${KEY}`,
+      `REG_EXPECTED_VERSION=${version}`,
+      `REG_EXPECTED_CACHE_KEY=reg-baseline-${KEY}-${version}`,
+    ]);
+    expect(baselineEnvironment({ key: KEY, version: null })).toEqual([
+      `REG_EXPECTED_KEY=${KEY}`,
+      "REG_EXPECTED_VERSION=",
+      "REG_EXPECTED_CACHE_KEY=",
+    ]);
+  });
+});
+
 /** A fake bucket: `objects` is the set of keys a HEAD finds, and nothing else exists. */
-function bucketWith({ objects = [] }) {
+function bucketWith({ objects = [], versions = {} }) {
   const state = { heads: 0 };
   const present = new Set(objects);
   const fetchImpl = async (url) => {
     state.heads += 1;
-    return { ok: present.has(decodeURIComponent(new URL(url).pathname.slice(1))), status: 404 };
+    const key = decodeURIComponent(new URL(url).pathname.slice(1));
+    const version = versions[key];
+    return {
+      ok: present.has(key),
+      status: present.has(key) ? 200 : 404,
+      headers: new Headers(version ? { "x-amz-meta-diveday-snapshot-version": version } : {}),
+    };
   };
   return { state, fetchImpl };
 }
@@ -41,7 +64,7 @@ describe("nearestPublishedAncestor", () => {
       },
       fetchImpl: fixture.fetchImpl,
     });
-    expect(found).toEqual({ key: KEY, skipped: 0 });
+    expect(found).toEqual({ key: KEY, skipped: 0, version: "legacy" });
     expect(fixture.state.heads).toBe(1);
   });
 
@@ -55,7 +78,44 @@ describe("nearestPublishedAncestor", () => {
       git: git({ [revList]: `${A}\n${B}\n${C}\n` }),
       fetchImpl: fixture.fetchImpl,
     });
-    expect(found).toEqual({ key: B, skipped: 2 });
+    expect(found).toEqual({ key: B, skipped: 2, version: "legacy" });
+  });
+
+  it("reads the immutable snapshot version from the published report marker", async () => {
+    const version = "a".repeat(64);
+    const fixture = bucketWith({
+      objects: [`${KEY}/out.json`],
+      versions: { [`${KEY}/out.json`]: version },
+    });
+    await expect(
+      nearestPublishedAncestor({
+        bucket: BUCKET,
+        key: KEY,
+        git: () => {
+          throw new Error("git must not be consulted");
+        },
+        fetchImpl: fixture.fetchImpl,
+      }),
+    ).resolves.toEqual({ key: KEY, skipped: 0, version });
+  });
+
+  it("skips a marker with malformed version metadata and keeps walking", async () => {
+    const version = "d".repeat(64);
+    const fixture = bucketWith({
+      objects: [`${KEY}/out.json`, `${B}/out.json`],
+      versions: {
+        [`${KEY}/out.json`]: "not-a-version",
+        [`${B}/out.json`]: version,
+      },
+    });
+    const found = await nearestPublishedAncestor({
+      bucket: BUCKET,
+      key: KEY,
+      git: git({ [revList]: `${B}\n${C}\n` }),
+      fetchImpl: fixture.fetchImpl,
+    });
+
+    expect(found).toEqual({ key: B, skipped: 1, version });
   });
 
   it("gives up rather than inventing a key when nothing within reach is published", async () => {
@@ -107,7 +167,7 @@ describe("layerBelowBaseline", () => {
   it("compares a stacked layer against the layer below when that commit is published", async () => {
     const { fetchImpl } = bucketWith({ objects: [`${BELOW}/out.json`] });
     const result = await layerBelowBaseline({ bucket: BUCKET, ...layer, fetchImpl });
-    expect(result?.key).toBe(BELOW);
+    expect(result).toMatchObject({ key: BELOW, version: "legacy" });
     expect(result?.note).toContain("claude/layer-1");
   });
 

@@ -44,7 +44,7 @@ import { appendFileSync } from "node:fs";
 import process from "node:process";
 
 import { gitReader } from "./reg-suit-keys.mjs";
-import { DEFAULT_BUCKET } from "./visual-report-lib.mjs";
+import { baselineCacheKey, DEFAULT_BUCKET } from "./visual-report-lib.mjs";
 
 /** A reg-suit key is a full commit sha; anything else is a bug, not a baseline. */
 const COMMIT_SHA = /^[0-9a-f]{40}$/;
@@ -53,7 +53,7 @@ const BUCKET_NAME = /^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/;
 
 /** How long a single HTTP probe may take before it is abandoned. */
 const REQUEST_TIMEOUT_MS = 20_000;
-async function exists(bucket, key, { fetchImpl }) {
+async function publishedSnapshot(bucket, key, { fetchImpl }) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
@@ -61,9 +61,20 @@ async function exists(bucket, key, { fetchImpl }) {
       method: "HEAD",
       signal: controller.signal,
     });
-    return res.ok;
+    if (!res.ok) return null;
+    const metadataVersion = res.headers?.get("x-amz-meta-diveday-snapshot-version");
+    if (
+      metadataVersion !== null &&
+      metadataVersion !== undefined &&
+      !/^[0-9a-f]{64}$/u.test(metadataVersion)
+    ) {
+      return null;
+    }
+    return {
+      version: metadataVersion ?? "legacy",
+    };
   } catch {
-    return false;
+    return null;
   } finally {
     clearTimeout(timer);
   }
@@ -93,7 +104,8 @@ export async function nearestPublishedAncestor({
   maxAncestors = DEFAULT_MAX_ANCESTORS,
   fetchImpl = fetch,
 }) {
-  if (await exists(bucket, `${key}/out.json`, { fetchImpl })) return { key, skipped: 0 };
+  const current = await publishedSnapshot(bucket, `${key}/out.json`, { fetchImpl });
+  if (current) return { key, skipped: 0, version: current.version };
   let ancestors;
   try {
     ancestors = git(["rev-list", "--first-parent", `--max-count=${maxAncestors}`, `${key}^`])
@@ -104,8 +116,9 @@ export async function nearestPublishedAncestor({
     return null;
   }
   for (const [index, sha] of ancestors.entries()) {
-    if (await exists(bucket, `${sha}/out.json`, { fetchImpl })) {
-      return { key: sha, skipped: index + 1 };
+    const published = await publishedSnapshot(bucket, `${sha}/out.json`, { fetchImpl });
+    if (published) {
+      return { key: sha, skipped: index + 1, version: published.version };
     }
   }
   return null;
@@ -114,6 +127,19 @@ export async function nearestPublishedAncestor({
 function appendEnv(file, lines) {
   if (!file) return;
   appendFileSync(file, `${lines.join("\n")}\n`);
+}
+
+export function baselineEnvironment({ key, version, note }) {
+  const lines = [`REG_EXPECTED_KEY=${key}`];
+  if (version) {
+    lines.push(`REG_EXPECTED_VERSION=${version}`);
+    lines.push(`REG_EXPECTED_CACHE_KEY=${baselineCacheKey(key, version)}`);
+  } else {
+    lines.push("REG_EXPECTED_VERSION=");
+    lines.push("REG_EXPECTED_CACHE_KEY=");
+  }
+  if (note) lines.push(`REG_BASELINE_NOTE=${note}`);
+  return lines;
 }
 
 /**
@@ -143,9 +169,11 @@ export async function layerBelowBaseline({
     return null;
   }
   if (!COMMIT_SHA.test(below) || below === key) return null;
-  if (!(await exists(bucket, `${below}/out.json`, { fetchImpl }))) return null;
+  const published = await publishedSnapshot(bucket, `${below}/out.json`, { fetchImpl });
+  if (!published) return null;
   return {
     key: below,
+    version: published.version,
     note:
       `Compared against the layer below (${baseRef} at ${below.slice(0, 7)}), so these changes ` +
       "are this layer's own.",
@@ -178,10 +206,10 @@ async function main() {
   });
   if (layer) {
     console.log(`wait-for-baseline: ${layer.note} Comparing against ${layer.key}.`);
-    appendEnv(process.env.GITHUB_ENV, [
-      `REG_EXPECTED_KEY=${layer.key}`,
-      `REG_BASELINE_NOTE=${layer.note}`,
-    ]);
+    appendEnv(
+      process.env.GITHUB_ENV,
+      baselineEnvironment({ key: layer.key, version: layer.version, note: layer.note }),
+    );
     return;
   }
   const nearest = await nearestPublishedAncestor({ bucket, key, git: gitReader() });
@@ -196,6 +224,10 @@ async function main() {
   }
   if (nearest.skipped === 0) {
     console.log(`wait-for-baseline: the baseline for ${key} is published. Comparing.`);
+    appendEnv(
+      process.env.GITHUB_ENV,
+      baselineEnvironment({ key: nearest.key, version: nearest.version }),
+    );
     return;
   }
   const note =
@@ -206,10 +238,10 @@ async function main() {
   console.log(
     `::warning title=Baseline resolved to an ancestor::${note} Comparing against ${nearest.key}.`,
   );
-  appendEnv(process.env.GITHUB_ENV, [
-    `REG_EXPECTED_KEY=${nearest.key}`,
-    `REG_BASELINE_NOTE=${note}`,
-  ]);
+  appendEnv(
+    process.env.GITHUB_ENV,
+    baselineEnvironment({ key: nearest.key, version: nearest.version, note }),
+  );
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

@@ -15,6 +15,9 @@ on:
       REG_SUIT_S3_BUCKET_NAME:
         required: true
     outputs:
+      snapshot_version:
+        description: Immutable version of the capture bundle published by this run
+        value: ${{ jobs.publish.outputs.snapshot_version }}
       baseline_note:
         description: Any older baseline commit used for the comparison
         value: ${{ jobs.publish.outputs.baseline_note }}
@@ -41,6 +44,7 @@ jobs:
       selection_note: ${{ steps.compare.outputs.selection_note || steps.selection.outputs.selection_note }}
       actual_key: ${{ steps.keys.outputs.actual }}
       region: ${{ steps.region.outputs.region }}
+      snapshot_version: ${{ steps.bundle.outputs.snapshot_version }}
     steps:
       # The github context belongs to the caller of a reusable workflow. Use
       # the called-workflow identity so checkout matches the revision selected
@@ -72,17 +76,6 @@ jobs:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           DEFAULT_BRANCH: main
           REG_SUIT_TRUSTED_BASE_CODE: "true"
-
-      # Baselines are keyed by immutable commits. The main workflow's visual
-      # report job saves main captures here; misses fall back to the public S3
-      # baseline lookup below.
-      - name: Restore the baseline images
-        id: baseline-cache
-        if: ${{ env.REG_EXPECTED_KEY != '' }}
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: .reg-baseline
-          key: reg-baseline-${{ env.REG_EXPECTED_KEY }}
 
       - name: Require complete visual coverage before publishing
         id: selection
@@ -158,12 +151,23 @@ jobs:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           DEFAULT_BRANCH: main
 
+      # A commit can have more than one completed capture set after a retry.
+      # Resolve the marker's immutable snapshot version before looking up cache.
+      - name: Restore the baseline images
+        id: baseline-cache
+        if: ${{ env.REG_EXPECTED_KEY != '' && env.REG_EXPECTED_CACHE_KEY != '' }}
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .reg-baseline
+          key: ${{ env.REG_EXPECTED_CACHE_KEY }}
+
       - name: Prepare expected screenshots without AWS credentials
         run: node scripts/visual-prepare-baseline.mjs
         env:
           REG_SUIT_S3_BUCKET_NAME: ${{ secrets.REG_SUIT_S3_BUCKET_NAME }}
           REG_SUIT_AWS_REGION: ${{ steps.region.outputs.region }}
           REG_EXPECTED_KEY: ${{ env.REG_EXPECTED_KEY }}
+          REG_EXPECTED_VERSION: ${{ env.REG_EXPECTED_VERSION }}
           VISUAL_BASELINE_DIR: ${{ steps.baseline-cache.outputs.cache-hit == 'true' && '.reg-baseline' || '' }}
           VISUAL_BASELINE_KEY: ${{ steps.baseline-cache.outputs.cache-primary-key }}
 
@@ -188,6 +192,7 @@ jobs:
           GITHUB_EVENT_NAME: ${{ github.event_name }}
 
       - name: Build the trusted S3 publish bundle
+        id: bundle
         run: node scripts/visual-build-publish-bundle.mjs
         env:
           VISUAL_PUBLISH_SOURCE: .reg
@@ -218,6 +223,7 @@ jobs:
       selection_note: ${{ needs.prepare.outputs.selection_note }}
       actual_key: ${{ needs.prepare.outputs.actual_key }}
       region: ${{ needs.prepare.outputs.region }}
+      snapshot_version: ${{ needs.prepare.outputs.snapshot_version }}
     steps:
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
@@ -239,6 +245,7 @@ jobs:
       - name: Publish the precompressed reg-suit bundle
         env:
           REG_ACTUAL_KEY: ${{ needs.prepare.outputs.actual_key }}
+          SNAPSHOT_VERSION: ${{ needs.prepare.outputs.snapshot_version }}
           REG_SUIT_AWS_REGION: ${{ needs.prepare.outputs.region }}
           REG_SUIT_S3_BUCKET_NAME: ${{ secrets.REG_SUIT_S3_BUCKET_NAME }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -246,6 +253,7 @@ jobs:
         run: |
           set -euo pipefail
           [[ "$REG_ACTUAL_KEY" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$SNAPSHOT_VERSION" =~ ^[0-9a-f]{64}$ ]]
           [[ "$REG_SUIT_S3_BUCKET_NAME" =~ ^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$ ]]
           if [[ -n "$PR_NUMBER" ]]; then
             [[ "$PR_NUMBER" =~ ^[1-9][0-9]*$ ]]
@@ -315,19 +323,21 @@ jobs:
           test "$count" -gt 0
           test "$marker_count" -eq 1
           head_error="$RUNNER_TEMP/reg-suit-head-object.err"
-          head_query='[ContentLength,ContentType,ContentEncoding,Metadata."diveday-sha256",Metadata."diveday-size",Metadata."diveday-pr-number"]'
+          head_query='[ContentLength,ContentType,ContentEncoding,Metadata."diveday-sha256",Metadata."diveday-size",Metadata."diveday-pr-number",Metadata."diveday-snapshot-version"]'
           expected_pr_metadata="None"
           if [[ -n "$PR_NUMBER" ]]; then
             expected_pr_metadata="$PR_NUMBER"
           fi
           # HEAD compares uploader-supplied hashes with this bundle; it does not
-          # download and hash S3 bodies. A changed bundle under a completed SHA
-          # fails closed, while a marker-less partial prefix can be repaired.
-          publish_parallelism=8
-          export head_query expected_pr_metadata head_error
+          # download and hash S3 bodies. Versioned capture paths let same-SHA
+          # retries publish new images while the root report marker stays last.
+          publish_parallelism=32
+          export head_query expected_pr_metadata head_error SNAPSHOT_VERSION
           expected_head() {
-            printf '%s\t%s\t%s\t%s\t%s\t%s' \
-              "$4" "$2" "gzip" "$3" "$4" "$expected_pr_metadata"
+            snapshot_metadata="None"
+            if [[ "$1" == "out.json" ]]; then snapshot_metadata="$SNAPSHOT_VERSION"; fi
+            printf '%s\t%s\t%s\t%s\t%s\t%s\t%s' \
+              "$4" "$2" "gzip" "$3" "$4" "$expected_pr_metadata" "$snapshot_metadata"
           }
           head_object() {
             aws s3api head-object \
@@ -344,11 +354,21 @@ jobs:
           marker_head_status=$?
           set -e
           if [[ "$marker_head_status" -eq 0 ]]; then
-            marker_expected="$(expected_head "$object_path" "$content_type" "$payload_sha256" "$payload_size")"
-            if [[ "$marker_head" != "$marker_expected" ]]; then
-              echo "::error title=Visual snapshot provenance mismatch::Refusing to reuse $REG_ACTUAL_KEY/out.json; its size, type, encoding, content hash, or PR ownership metadata does not match this run. Publish under a fresh commit key or investigate manually."
+            marker_owner="$(cut -f6 <<< "$marker_head")"
+            marker_version="$(cut -f7 <<< "$marker_head")"
+            if [[ "$marker_owner" != "$expected_pr_metadata" ]]; then
+              echo "::error title=Visual snapshot ownership mismatch::Refusing to replace $REG_ACTUAL_KEY/out.json because it belongs to a different publisher."
               exit 1
             fi
+            marker_expected="$(expected_head "$object_path" "$content_type" "$payload_sha256" "$payload_size")"
+            if [[ "$marker_head" != "$marker_expected" ]]; then
+              if [[ "$marker_version" == "$SNAPSHOT_VERSION" ]]; then
+                echo "::error title=Visual snapshot provenance mismatch::Refusing to replace $REG_ACTUAL_KEY/out.json because its content changed without a new snapshot version."
+                exit 1
+              fi
+              printf 'Replacing same-owner snapshot marker %s from version %s with %s after publishing its assets.\n' \
+                "$REG_ACTUAL_KEY" "$marker_version" "$SNAPSHOT_VERSION"
+            else
             verify_existing_object() {
               set -euo pipefail
               object_path="$1"
@@ -373,8 +393,9 @@ jobs:
               echo "::error title=Visual snapshot provenance mismatch::Refusing to reuse $REG_ACTUAL_KEY because one or more report objects differ. Publish under a fresh commit key or investigate manually."
               exit 1
             fi
-            printf 'Reusing provenance-verified reg-suit snapshot %s.\n' "$REG_ACTUAL_KEY"
-            exit 0
+              printf 'Reusing provenance-verified reg-suit snapshot %s.\n' "$REG_ACTUAL_KEY"
+              exit 0
+            fi
           elif grep -Eq '404|Not Found|NoSuchKey' "$head_error"; then
             :
           else
@@ -399,11 +420,28 @@ jobs:
               printf 'Verified existing reg-suit object %s; skipping upload.\n' "$object_path"
               return 0
             fi
+            if [[ "$existing_head_status" -eq 0 ]]; then
+              existing_owner="$(cut -f6 <<< "$existing_head")"
+              existing_version="$(cut -f7 <<< "$existing_head")"
+              if [[ "$existing_owner" != "$expected_pr_metadata" ]]; then
+                echo "::error title=Visual snapshot ownership mismatch::Refusing to replace $REG_ACTUAL_KEY/$object_path because it belongs to a different publisher." >&2
+                exit 1
+              fi
+              if [[ "$object_path" != "out.json" || "$existing_version" == "$SNAPSHOT_VERSION" ]]; then
+                echo "::error title=Visual snapshot provenance mismatch::Refusing to replace $REG_ACTUAL_KEY/$object_path because its content does not match the immutable snapshot version." >&2
+                exit 1
+              fi
+            fi
             if [[ "$existing_head_status" -ne 0 ]] && ! grep -Eq '404|Not Found|NoSuchKey' "$head_error"; then
               cat "$head_error" >&2
               exit "$existing_head_status"
             fi
+            object_metadata="diveday-sha256=$payload_sha256,diveday-size=$payload_size"
+            if [[ "$object_path" == "out.json" ]]; then
+              object_metadata+=",diveday-snapshot-version=$SNAPSHOT_VERSION"
+            fi
             if [[ -n "$PR_NUMBER" ]]; then
+              object_metadata+=",diveday-pr-number=$PR_NUMBER"
               aws s3api put-object \
                 --bucket "$REG_SUIT_S3_BUCKET_NAME" \
                 --key "$REG_ACTUAL_KEY/$object_path" \
@@ -411,7 +449,7 @@ jobs:
                 --content-type "$content_type" \
                 --content-encoding gzip \
                 --region "$REG_SUIT_AWS_REGION" \
-                --metadata "diveday-sha256=$payload_sha256,diveday-size=$payload_size,diveday-pr-number=$PR_NUMBER" \
+                --metadata "$object_metadata" \
                 --query ETag --output text --no-cli-pager
             else
               aws s3api put-object \
@@ -421,7 +459,7 @@ jobs:
                 --content-type "$content_type" \
                 --content-encoding gzip \
                 --region "$REG_SUIT_AWS_REGION" \
-                --metadata "diveday-sha256=$payload_sha256,diveday-size=$payload_size" \
+                --metadata "$object_metadata" \
                 --query ETag --output text --no-cli-pager
             fi
           }

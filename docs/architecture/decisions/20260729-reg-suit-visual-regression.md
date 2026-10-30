@@ -208,3 +208,29 @@ a deterministic failure into an intermittent pass, which `pnpm check:e2e-hygiene
 **The call, made by the owner on 2026-10-14 (test review, decision 1).** `capture()` shoots light at 390 and 1280 (and 820 for a `TABLET_SURFACES` name), and dark at 1280 alone; `captureStickyFoot()` follows the same rule and the phone-only fold capture is light only. A run is 912 images instead of 1,218. The two schemes share one layout and differ only in tokens, so the dark phone image mostly repeated the light one's geometry, at a quarter of the capture minutes and of every UI pull request's review. The accepted risk is a dark-only defect that shows at phone width alone.
 
 **The baseline.** The first `main` run after this lands reports every `-dark-vw-390` and `-dark-vw-820` image as deleted (not captured), which is expected and not red, and publishes a baseline without them. A pull request cut before that run sees the same deletions for the surfaces it selects. Revisit if a dark phone defect reaches a shop.
+
+### Amended 2026-10-30: versioned retries under one commit key
+
+**What failed.** The publisher treated a completed commit prefix as immutable. If a visual run
+failed after publishing its marker, a retry of the same head SHA could not publish changed captures:
+the prefix already had an `out.json`, and the old image paths would either be reused or refused.
+That left a same-SHA retry unable to repair a stale baseline.
+
+**The decision.** Each trusted bundle receives a deterministic SHA-256 version from its sorted
+relative paths, content types, sizes, and bytes. The publisher stores `actual`, `expected`, and
+`diff` under `<commit>/snapshots/<version>/`; the HTML report and root `out.json` remain at the
+commit prefix. The root report is published last and carries the version in S3 metadata. A retry by
+the same publisher may add a new version and replace the root marker only after every asset is
+available. The publisher still serializes by commit SHA, rejects ownership changes, rejects a
+content change that claims the same version, and verifies every object before reusing a complete
+version. Old image versions remain covered by the existing whole-prefix pruner.
+
+Baseline caches now use both commit and snapshot version. A report published before version metadata
+was introduced is read from its legacy `actual/` path and keeps the previous commit-only cache key.
+This lets current branches use their existing published baseline while new retries remain isolated
+from stale cache contents. The publisher never copies or re-uploads those legacy objects; the first
+versioned publication for a commit writes only its new snapshot paths.
+
+The trusted OIDC publisher uses 32 bounded upload workers. The previous 8-worker run hit its
+15-minute limit after uploading only part of a 3,480-object bundle; CI remains the measure for the
+new bound and marker-last retry behavior.

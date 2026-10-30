@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   BLIND_VERDICTS,
+  baselineCacheKey,
   COMMENT_MARKER,
   changedSetDelta,
   comparedAnything,
@@ -15,6 +16,7 @@ import {
   PNG_SIGNATURE,
   previousCommitFromComment,
   readPngSize,
+  snapshotVersionFromReport,
   summarizeReport,
   verdictHeadline,
 } from "./visual-report-lib.mjs";
@@ -248,6 +250,47 @@ describe("fetchFromBucket", () => {
     });
     expect(result).toMatchObject({ ok: false, status: 404 });
     expect(result.url).toBe(`https://${BUCKET}.s3.amazonaws.com/k/out.json`);
+  });
+});
+
+describe("snapshotVersionFromReport", () => {
+  it("recognizes legacy and versioned report directories", () => {
+    expect(snapshotVersionFromReport(outJson({}))).toBe("legacy");
+    const version = "a".repeat(64);
+    expect(
+      snapshotVersionFromReport({
+        actualDir: `snapshots/${version}/actual`,
+        expectedDir: `snapshots/${version}/expected`,
+        diffDir: `snapshots/${version}/diff`,
+      }),
+    ).toBe(version);
+  });
+
+  it("refuses partially versioned or malformed directory sets", () => {
+    const version = "a".repeat(64);
+    expect(
+      snapshotVersionFromReport({
+        actualDir: `snapshots/${version}/actual`,
+        expectedDir: "expected",
+        diffDir: `snapshots/${version}/diff`,
+      }),
+    ).toBeNull();
+    expect(
+      snapshotVersionFromReport({
+        actualDir: "../actual",
+        expectedDir: "expected",
+        diffDir: "diff",
+      }),
+    ).toBeNull();
+  });
+});
+
+describe("baselineCacheKey", () => {
+  it("keeps legacy cache keys and versions new snapshot caches", () => {
+    expect(baselineCacheKey(COMMIT, "legacy")).toBe(`reg-baseline-${COMMIT}`);
+    expect(baselineCacheKey(COMMIT, "a".repeat(64))).toBe(
+      `reg-baseline-${COMMIT}-${"a".repeat(64)}`,
+    );
   });
 });
 

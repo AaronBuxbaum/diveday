@@ -41,6 +41,9 @@ const PUBLISH_SCRIPT = (() => {
       'object_path_lower="$(printf "%s" "$object_path" | tr "[:upper:]" "[:lower:]")"',
     );
 })();
+const SNAPSHOT_VERSION = "b".repeat(64);
+const PREVIOUS_VERSION = "c".repeat(64);
+const VERSIONED_CAPTURE = `snapshots/${SNAPSHOT_VERSION}/actual`;
 
 function publisherFixture({
   existingSnapshot = false,
@@ -54,9 +57,14 @@ function publisherFixture({
   const bundle = path.join(root, "bundle");
   const payload = path.join(bundle, "payload");
   const bin = path.join(root, "bin");
-  mkdirSync(path.join(payload, "actual"), { recursive: true });
+  mkdirSync(path.join(payload, VERSIONED_CAPTURE), { recursive: true });
   mkdirSync(bin);
-  for (const file of ["actual/one.png", "actual/two.png", "index.html", "out.json"]) {
+  for (const file of [
+    `${VERSIONED_CAPTURE}/one.png`,
+    `${VERSIONED_CAPTURE}/two.png`,
+    "index.html",
+    "out.json",
+  ]) {
     const fullPath = path.join(payload, `${file}.gz`);
     mkdirSync(path.dirname(fullPath), { recursive: true });
     writeFileSync(fullPath, "opaque compressed payload");
@@ -64,7 +72,8 @@ function publisherFixture({
   writeFileSync(
     path.join(bundle, "manifest.tsv"),
     manifestContent ??
-      "actual/one.png\timage/png\nactual/two.png\timage/png\nindex.html\ttext/html\nout.json\tapplication/json\n",
+      `${VERSIONED_CAPTURE}/one.png\timage/png\n${VERSIONED_CAPTURE}/two.png\timage/png\n` +
+        "index.html\ttext/html\nout.json\tapplication/json\n",
   );
   const eventsPath = path.join(root, "events.log");
   writeFileSync(eventsPath, "");
@@ -94,7 +103,11 @@ if [[ "$operation" == "head-object" ]]; then
   printf 'HEAD\\t%s\\t%s\\n' "$key" "$query" >> "$EVENTS_PATH"
   if [[ "$EXISTING_SNAPSHOT" == "true" ]]; then
     object_path="\${key#"$REG_ACTUAL_KEY/"}"
-    if [[ "$EXISTING_MODE" == "missing-object" && "$object_path" == "actual/two.png" ]]; then
+    if [[ "$EXISTING_MODE" == "previous-version" && "$object_path" == snapshots/"$SNAPSHOT_VERSION"/actual/*.png ]]; then
+      echo 'An error occurred (404) when calling the HeadObject operation: Not Found' >&2
+      exit 1
+    fi
+    if [[ "$EXISTING_MODE" == "missing-object" && "$object_path" == "${VERSIONED_CAPTURE}/two.png" ]]; then
       echo 'An error occurred (404) when calling the HeadObject operation: Not Found' >&2
       exit 1
     fi
@@ -104,7 +117,7 @@ if [[ "$operation" == "head-object" ]]; then
     size="$(wc -c < "$payload" | tr -d '[:space:]')"
     encoding="gzip"
     case "$object_path" in
-      actual/*.png) type="image/png" ;;
+      snapshots/*/actual/*.png) type="image/png" ;;
       index.html) type="text/html" ;;
       out.json) type="application/json" ;;
       *) type="application/octet-stream" ;;
@@ -112,14 +125,17 @@ if [[ "$operation" == "head-object" ]]; then
     owner="$EXISTING_PR"
     case "$EXISTING_MODE:$object_path" in
       changed-report:out.json) sha256="$(printf changed | sha256sum)"; sha256="\${sha256%% *}" ;;
-      changed-asset:actual/one.png) sha256="$(printf changed | sha256sum)"; sha256="\${sha256%% *}" ;;
+      changed-asset:${VERSIONED_CAPTURE}/one.png) sha256="$(printf changed | sha256sum)"; sha256="\${sha256%% *}" ;;
       wrong-size:*) size=$((size + 1)) ;;
-      wrong-type:actual/one.png) type="text/plain" ;;
-      wrong-encoding:actual/one.png) encoding="identity" ;;
+      wrong-type:${VERSIONED_CAPTURE}/one.png) type="text/plain" ;;
+      wrong-encoding:${VERSIONED_CAPTURE}/one.png) encoding="identity" ;;
       missing-metadata:*) sha256="None"; size="None" ;;
     esac
-    if [[ "$query" == '[ContentLength,ContentType,ContentEncoding,Metadata."diveday-sha256",Metadata."diveday-size",Metadata."diveday-pr-number"]' ]]; then
-      printf '%s\\t%s\\t%s\\t%s\\t%s\\t%s\\n' "$size" "$type" "$encoding" "$sha256" "$size" "$owner"
+    snapshot_version="None"
+    if [[ "$object_path" == "out.json" ]]; then snapshot_version="$SNAPSHOT_VERSION"; fi
+    if [[ "$EXISTING_MODE" == "previous-version" && "$object_path" == "out.json" ]]; then snapshot_version="$PREVIOUS_VERSION"; fi
+    if [[ "$query" == '[ContentLength,ContentType,ContentEncoding,Metadata."diveday-sha256",Metadata."diveday-size",Metadata."diveday-pr-number",Metadata."diveday-snapshot-version"]' ]]; then
+      printf '%s\\t%s\\t%s\\t%s\\t%s\\t%s\\t%s\\n' "$size" "$type" "$encoding" "$sha256" "$size" "$owner" "$snapshot_version"
       exit 0
     fi
     echo "unexpected head query: $query" >&2
@@ -134,11 +150,10 @@ if [[ "$operation" == "put-object" ]]; then
   sha256="$(sha256sum "$payload")"
   sha256="\${sha256%% *}"
   size="$(wc -c < "$payload" | tr -d '[:space:]')"
-  if [[ -n "$PR_NUMBER" ]]; then
-    [[ "$metadata" == "diveday-sha256=$sha256,diveday-size=$size,diveday-pr-number=$PR_NUMBER" ]]
-  else
-    [[ "$metadata" == "diveday-sha256=$sha256,diveday-size=$size" ]]
-  fi
+  expected_metadata="diveday-sha256=$sha256,diveday-size=$size"
+  if [[ "$key" == */out.json ]]; then expected_metadata+=",diveday-snapshot-version=$SNAPSHOT_VERSION"; fi
+  if [[ -n "$PR_NUMBER" ]]; then expected_metadata+=",diveday-pr-number=$PR_NUMBER"; fi
+  [[ "$metadata" == "$expected_metadata" ]]
   printf 'PUT\\t%s\\t%s\\n' "$key" "$metadata" >> "$EVENTS_PATH"
   [[ "$key" != "$FAIL_KEY" ]] || exit 1
   sleep 0.03
@@ -188,6 +203,8 @@ fi
       REG_SUIT_AWS_REGION: "us-east-1",
       REG_SUIT_S3_BUCKET_NAME: "diveday-vrt",
       PR_NUMBER: prNumber,
+      SNAPSHOT_VERSION,
+      PREVIOUS_VERSION,
       VISUAL_PUBLISH_BUNDLE: bundle,
     },
   });
@@ -198,9 +215,8 @@ fi
 
 describe("reg-suit publisher workflow", () => {
   it("pins the caller to the publisher revision that contains its runtime scripts", () => {
-    expect(VISUAL_PUBLISH_CALL).toContain(
-      "uses: AaronBuxbaum/diveday/.github/workflows/reg-suit-publish.yml@" +
-        "03e4f27f7a3a80404f9ae502da8c02340327920c # immutable commit 03e4f27f7a3a80404f9ae502da8c02340327920c",
+    expect(VISUAL_PUBLISH_CALL).toMatch(
+      /uses: AaronBuxbaum\/diveday\/.github\/workflows\/reg-suit-publish\.yml@([0-9a-f]{40}) # immutable commit \1/u,
     );
   });
 
@@ -256,6 +272,8 @@ describe("reg-suit publisher workflow", () => {
     );
     expect(WORKFLOW).toContain('VISUAL_VERIFY_COMPLETE: "true"');
     const sanitizeAt = PREPARE.indexOf("node scripts/visual-publish-artifacts.mjs");
+    const baselineResolveAt = PREPARE.indexOf("name: Resolve a baseline that actually exists");
+    const baselineCacheAt = PREPARE.indexOf("name: Restore the baseline images");
     const baselineAt = PREPARE.indexOf("node scripts/visual-prepare-baseline.mjs");
     const compareAt = PREPARE.indexOf("run: pnpm visual:compare");
     const inventoryAt = PREPARE.indexOf(
@@ -266,7 +284,10 @@ describe("reg-suit publisher workflow", () => {
     const assumeAt = PUBLISH.indexOf("name: Assume the reg-suit publisher role");
     const putAt = PUBLISH.indexOf("aws s3api put-object");
     expect(sanitizeAt).toBeGreaterThanOrEqual(0);
+    expect(baselineCacheAt).toBeGreaterThan(baselineResolveAt);
     expect(baselineAt).toBeGreaterThan(sanitizeAt);
+    expect(PREPARE).toContain("REG_EXPECTED_CACHE_KEY");
+    expect(PREPARE).toContain("REG_EXPECTED_VERSION: ${{ env.REG_EXPECTED_VERSION }}");
     expect(compareAt).toBeGreaterThan(baselineAt);
     expect(inventoryAt).toBeGreaterThan(compareAt);
     expect(bundleAt).toBeGreaterThan(compareAt);
@@ -276,6 +297,10 @@ describe("reg-suit publisher workflow", () => {
     expect(PREPARE).toContain('VISUAL_EXPECTED_READY: "true"');
     expect(PREPARE).toContain('REG_SUIT_COMPARE_ONLY: "true"');
     expect(PUBLISH).toContain("REG_ACTUAL_KEY: ${{ needs.prepare.outputs.actual_key }}");
+    expect(PUBLISH).toContain("SNAPSHOT_VERSION: ${{ needs.prepare.outputs.snapshot_version }}");
+    expect(CI_WORKFLOW).toContain(
+      "key: reg-baseline-${{ github.sha }}-${{ needs.visual-publish.outputs.snapshot_version }}",
+    );
     expect(PUBLISH).toContain("--content-encoding gzip");
     expect(PUBLISH).toContain('--key "$REG_ACTUAL_KEY/$object_path"');
     expect(PUBLISH).not.toMatch(
@@ -289,10 +314,10 @@ describe("reg-suit publisher workflow", () => {
     expect(PUBLISH).toContain('Metadata."diveday-pr-number"');
     expect(PUBLISH).toContain('Metadata."diveday-sha256"');
     expect(PUBLISH).toContain('Metadata."diveday-size"');
+    expect(PUBLISH).toContain('Metadata."diveday-snapshot-version"');
     expect(PUBLISH).toContain("404|Not Found|NoSuchKey");
-    expect(PUBLISH).toContain(
-      '--metadata "diveday-sha256=$payload_sha256,diveday-size=$payload_size,diveday-pr-number=$PR_NUMBER"',
-    );
+    expect(PUBLISH).toContain('object_metadata+=",diveday-snapshot-version=$SNAPSHOT_VERSION"');
+    expect(PUBLISH).toContain('--metadata "$object_metadata"');
     expect(PUBLISH).toContain('cat "$head_error" >&2');
   });
 
@@ -307,7 +332,7 @@ describe("reg-suit publisher workflow", () => {
     expect(PUBLISH).toContain('integrity_manifest="$RUNNER_TEMP/reg-suit-manifest.integrity.tsv"');
     expect(PUBLISH).toContain('sha256sum "$payload"');
     expect(PUBLISH).toContain("ContentLength,ContentType,ContentEncoding");
-    expect(PUBLISH).toContain("publish_parallelism=8");
+    expect(PUBLISH).toContain("publish_parallelism=32");
     expect(PUBLISH).toContain('test "$marker_count" -eq 1');
     expect(PUBLISH).toContain('[[ "$object_path" == "out.json" ]]');
     expect(manifestValidationAt).toBeGreaterThanOrEqual(0);
@@ -327,11 +352,12 @@ describe("reg-suit publisher workflow", () => {
       const puts = run.events.filter((event) => event.startsWith("PUT\t"));
       expect(puts.at(-1)).toMatch(
         new RegExp(
-          `^PUT\\t${"a".repeat(40)}/out\\.json\\tdiveday-sha256=[0-9a-f]{64},diveday-size=[0-9]+,diveday-pr-number=3325$`,
+          `^PUT\\t${"a".repeat(40)}/out\\.json\\tdiveday-sha256=[0-9a-f]{64},diveday-size=[0-9]+,diveday-snapshot-version=${SNAPSHOT_VERSION},diveday-pr-number=3325$`,
         ),
       );
       expect(run.events.filter((event) => event.startsWith("DONE\t"))).toHaveLength(4);
       expect(run.events.at(-1)).toBe(`DONE\t${"a".repeat(40)}/out.json`);
+      expect(puts.at(-1)).toContain(`diveday-snapshot-version=${SNAPSHOT_VERSION}`);
     } finally {
       rmSync(run.root, { recursive: true, force: true });
     }
@@ -344,12 +370,15 @@ describe("reg-suit publisher workflow", () => {
       const puts = run.events.filter((event) => event.startsWith("PUT\t"));
       expect(puts).toHaveLength(4);
       expect(
-        puts.every((event) => /\tdiveday-sha256=[0-9a-f]{64},diveday-size=[0-9]+$/.test(event)),
+        puts
+          .slice(0, -1)
+          .every((event) => /\tdiveday-sha256=[0-9a-f]{64},diveday-size=[0-9]+$/.test(event)),
       ).toBe(true);
+      expect(puts.at(-1)).toContain(`diveday-snapshot-version=${SNAPSHOT_VERSION}`);
       expect(puts.every((event) => !event.includes("diveday-pr-number"))).toBe(true);
       expect(puts.at(-1)).toMatch(
         new RegExp(
-          `^PUT\\t${"a".repeat(40)}/out\\.json\\tdiveday-sha256=[0-9a-f]{64},diveday-size=[0-9]+$`,
+          `^PUT\\t${"a".repeat(40)}/out\\.json\\tdiveday-sha256=[0-9a-f]{64},diveday-size=[0-9]+,diveday-snapshot-version=${SNAPSHOT_VERSION}$`,
         ),
       );
     } finally {
@@ -358,7 +387,7 @@ describe("reg-suit publisher workflow", () => {
   });
 
   it("does not publish out.json when any asset upload fails", () => {
-    const key = `${"a".repeat(40)}/actual/two.png`;
+    const key = `${"a".repeat(40)}/${VERSIONED_CAPTURE}/two.png`;
     const run = publisherFixture({ failKey: key });
     try {
       expect(run.result.status).not.toBe(0);
@@ -402,7 +431,7 @@ describe("reg-suit publisher workflow", () => {
       const run = publisherFixture({ existingSnapshot: true, existingMode, existingPr, prNumber });
       try {
         expect(run.result.status).not.toBe(0);
-        expect(run.result.stdout).toContain("provenance mismatch");
+        expect(run.result.stdout).toMatch(/(?:provenance|ownership) mismatch/u);
         expect(run.events.filter((event) => event.startsWith("PUT\t"))).toHaveLength(0);
       } finally {
         rmSync(run.root, { recursive: true, force: true });
@@ -410,8 +439,22 @@ describe("reg-suit publisher workflow", () => {
     },
   );
 
+  it("publishes a changed same-owner snapshot version and replaces the marker last", () => {
+    const run = publisherFixture({ existingSnapshot: true, existingMode: "previous-version" });
+    try {
+      expect(run.result.status, run.result.stderr).toBe(0);
+      const puts = run.events.filter((event) => event.startsWith("PUT\t"));
+      expect(puts).toHaveLength(3);
+      expect(puts.at(-1)).toContain(`${"a".repeat(40)}/out.json`);
+      expect(puts.at(-1)).toContain(`diveday-snapshot-version=${SNAPSHOT_VERSION}`);
+      expect(run.events.at(-1)).toBe(`DONE\t${"a".repeat(40)}/out.json`);
+    } finally {
+      rmSync(run.root, { recursive: true, force: true });
+    }
+  });
+
   it.each([
-    ["missing marker", "actual/one.png\timage/png\n"],
+    ["missing marker", `${VERSIONED_CAPTURE}/one.png\timage/png\n`],
     ["duplicate marker", "out.json\tapplication/json\nout.json\tapplication/json\n"],
     ["incorrect marker type", "out.json\ttext/plain\n"],
   ])("rejects a manifest with %s before any upload", (_label, manifestContent) => {
