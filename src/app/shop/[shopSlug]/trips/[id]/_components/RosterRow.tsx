@@ -7,6 +7,7 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { CalendarDate } from "@/lib/calendar-date";
 import { BLOCKER_CATEGORY } from "@/lib/readiness";
 import type { CountedAboardBlocked } from "@/lib/roll-call-readiness";
+import { TurnAwayRowStateProvider } from "../_arrivals/TurnAwayScript";
 import type { PaymentStatusControlCopy } from "./PaymentStatusControl";
 import { RosterRecordBlocked } from "./RosterRecordBlocked";
 import type {
@@ -172,7 +173,7 @@ export function RosterRow({
       )}
     </summary>
   );
-  return (
+  const row = (
     <li
       key={booking.id}
       // Today's queue deep-links straight to the diver it is about;
@@ -264,4 +265,5 @@ export function RosterRow({
       </AutoOpenDetails>
     </li>
   );
+  return arrival ? <TurnAwayRowStateProvider>{row}</TurnAwayRowStateProvider> : row;
 }
