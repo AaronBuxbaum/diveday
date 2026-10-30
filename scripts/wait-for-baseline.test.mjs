@@ -115,6 +115,76 @@ describe("nearestPublishedAncestor", () => {
     expect(found).toEqual({ key: null, skipped: 2, version: null, freshStart: true });
   });
 
+  it("treats a public-bucket 403 as an absent key when legacy markers are confirmed", async () => {
+    const fixture = bucketWith({ objects: [`${A}/out.json`] });
+    const fetchImpl = async (url, options) => {
+      const key = decodeURIComponent(new URL(url).pathname.slice(1));
+      if (key === `${KEY}/out.json`) {
+        return { ok: false, status: 403, headers: new Headers() };
+      }
+      return fixture.fetchImpl(url, options);
+    };
+    const found = await nearestPublishedAncestor({
+      bucket: BUCKET,
+      key: KEY,
+      git: git({ [revList]: `${A}\n` }),
+      fetchImpl,
+    });
+
+    expect(found).toEqual({ key: null, skipped: 2, version: null, freshStart: true });
+  });
+
+  it("does not treat an unavailable current marker as a fresh start", async () => {
+    const fixture = bucketWith({ objects: [`${A}/out.json`] });
+    const fetchImpl = async (url, options) => {
+      const key = decodeURIComponent(new URL(url).pathname.slice(1));
+      if (key === `${KEY}/out.json`) {
+        return { ok: false, status: 503, headers: new Headers() };
+      }
+      return fixture.fetchImpl(url, options);
+    };
+    const found = await nearestPublishedAncestor({
+      bucket: BUCKET,
+      key: KEY,
+      git: git({ [revList]: `${A}\n` }),
+      fetchImpl,
+    });
+
+    expect(found).toBeNull();
+  });
+
+  it("does not treat a malformed current marker as a fresh start", async () => {
+    const fixture = bucketWith({
+      objects: [`${KEY}/out.json`, `${A}/out.json`],
+      versions: { [`${KEY}/out.json`]: "not-a-version" },
+    });
+    const found = await nearestPublishedAncestor({
+      bucket: BUCKET,
+      key: KEY,
+      git: git({ [revList]: `${A}\n` }),
+      fetchImpl: fixture.fetchImpl,
+    });
+
+    expect(found).toBeNull();
+  });
+
+  it("does not treat an unavailable ancestor as proof that only legacy markers exist", async () => {
+    const fixture = bucketWith({ objects: [`${KEY}/out.json`, `${A}/out.json`] });
+    const fetchImpl = async (url, options) => {
+      const key = decodeURIComponent(new URL(url).pathname.slice(1));
+      if (key === `${A}/out.json`) throw new Error("network unavailable");
+      return fixture.fetchImpl(url, options);
+    };
+    const found = await nearestPublishedAncestor({
+      bucket: BUCKET,
+      key: KEY,
+      git: git({ [revList]: `${A}\n` }),
+      fetchImpl,
+    });
+
+    expect(found).toBeNull();
+  });
+
   it("does not allow a fresh start when marker metadata is malformed", async () => {
     const fixture = bucketWith({
       objects: [`${KEY}/out.json`, `${A}/out.json`],

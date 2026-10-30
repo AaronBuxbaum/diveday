@@ -61,17 +61,23 @@ async function publishedSnapshot(bucket, key, { fetchImpl }) {
       method: "HEAD",
       signal: controller.signal,
     });
-    if (!res.ok) return null;
+    // This bucket serves every existing baseline marker publicly but does not
+    // grant public ListBucket. S3 therefore returns 403, rather than 404, for
+    // a missing key. Treat only those two statuses as absent; an outage or
+    // other response must not be mistaken for proof that no versioned marker
+    // exists.
+    if (res.status === 403 || res.status === 404) return { kind: "absent" };
+    if (!res.ok) return { kind: "unavailable", status: res.status };
     const metadataVersion = res.headers?.get("x-amz-meta-diveday-snapshot-version");
     // Unversioned markers identify the old snapshot format. They are observed
     // only to allow a one-time baseline reset, never returned as baselines.
-    if (metadataVersion === null || metadataVersion === undefined) return { legacy: true };
+    if (metadataVersion === null || metadataVersion === undefined) return { kind: "legacy" };
     if (!/^[0-9a-f]{64}$/u.test(metadataVersion)) {
-      return null;
+      return { kind: "malformed" };
     }
-    return { version: metadataVersion };
-  } catch {
-    return null;
+    return { kind: "versioned", version: metadataVersion };
+  } catch (error) {
+    return { kind: "unavailable", error };
   } finally {
     clearTimeout(timer);
   }
@@ -85,8 +91,10 @@ export const DEFAULT_MAX_ANCESTORS = 40;
 /**
  * The nearest commit at or before `key` (first-parent, so a walk along main
  * stays on main) whose versioned snapshot is published, or null when none
- * within `maxAncestors` is. When only unversioned markers are found, returns a
- * freshStart signal so the caller can publish the new baseline once.
+ * within `maxAncestors` is. When only unversioned markers are found and every
+ * probe is definitive, returns a freshStart signal so the caller can publish
+ * the new baseline once. A timeout, server error, or malformed marker blocks
+ * freshStart because it cannot prove that no versioned baseline exists.
  *
  * `skipped` counts the commits walked past: 0 means `key` itself is
  * published and nothing changes. The check is `out.json` alone rather than
@@ -103,8 +111,9 @@ export async function nearestPublishedAncestor({
   fetchImpl = fetch,
 }) {
   const current = await publishedSnapshot(bucket, `${key}/out.json`, { fetchImpl });
-  if (current?.version) return { key, skipped: 0, version: current.version };
-  let legacyFound = current?.legacy === true;
+  if (current.kind === "versioned") return { key, skipped: 0, version: current.version };
+  let legacyFound = current.kind === "legacy";
+  let unresolvedFound = current.kind === "malformed" || current.kind === "unavailable";
   let ancestors;
   try {
     ancestors = git(["rev-list", "--first-parent", `--max-count=${maxAncestors}`, `${key}^`])
@@ -116,12 +125,15 @@ export async function nearestPublishedAncestor({
   }
   for (const [index, sha] of ancestors.entries()) {
     const published = await publishedSnapshot(bucket, `${sha}/out.json`, { fetchImpl });
-    if (published?.version) {
+    if (published.kind === "versioned") {
       return { key: sha, skipped: index + 1, version: published.version };
     }
-    if (published?.legacy) legacyFound = true;
+    if (published.kind === "legacy") legacyFound = true;
+    if (published.kind === "malformed" || published.kind === "unavailable") {
+      unresolvedFound = true;
+    }
   }
-  if (legacyFound) {
+  if (legacyFound && !unresolvedFound) {
     return { key: null, skipped: ancestors.length + 1, version: null, freshStart: true };
   }
   return null;
