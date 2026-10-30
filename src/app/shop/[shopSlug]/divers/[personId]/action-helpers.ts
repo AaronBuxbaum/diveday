@@ -103,7 +103,7 @@ export async function requireDiverActionContext(
   // shop. The reads and writes below scope by the session's shop, but the
   // paths revalidated and redirected to are built from the slug, so a slug
   // that is not the session's shop is a 404 before either is built.
-  const { session: staff, db } = await requireShopSurface(shopSlug);
+  const { session: staff, db, shop } = await requireShopSurface(shopSlug);
   const base = shopPath(shopSlug, "divers", personId);
   if (!(await isLiveStaff(db, staff.user.shopId, staff.user.personId))) {
     revalidateAndRedirect(base, backTo(base, unauthorizedNotice, form));
@@ -117,7 +117,7 @@ export async function requireDiverActionContext(
     const kept = shopPath(shopSlug, "divers", mergedInto);
     revalidateAndRedirect(kept, noticeUrl(kept, "merged-record-moved"));
   }
-  return { base, db, personId, staff };
+  return { base, db, personId, staff, shop };
 }
 
 /**

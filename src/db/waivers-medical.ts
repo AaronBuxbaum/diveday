@@ -357,6 +357,8 @@ export async function recordMedicalEvaluation(
   db: AppDb,
   input: {
     shopId: string;
+    /** The shop's timezone, used for its calendar-date policy. */
+    timeZone: string;
     personId: string;
     recordedByPersonId: string;
     /** Which way the physician answered. Never inferred — the staffer says which. */
@@ -395,9 +397,9 @@ export async function recordMedicalEvaluation(
   if (!documentUrl && !physicianName && !diverFormRecordId) {
     return { ok: false, reason: "evidence_required" };
   }
-  // The shop's own day, not the host's: on a UTC box a Key Largo evening is
-  // already tomorrow, and a form dated today would read as the future.
-  if (input.evaluatedOn > calendarDateInTimezone(now, "UTC")) {
+  // The shop's own day, not the host's: a form dated today follows the same
+  // calendar the shop's date picker uses.
+  if (input.evaluatedOn > calendarDateInTimezone(now, input.timeZone)) {
     return { ok: false, reason: "evaluation_in_future" };
   }
   const result = await db.transaction(async (tx): Promise<MedicalEvaluationResult> => {
@@ -427,9 +429,10 @@ export async function recordMedicalEvaluation(
         : { ok: false, reason: "answer_already_recorded" };
     }
 
-    // The evaluation must post-date the answers it clears. Compared as calendar
-    // dates in UTC, matching how the column is read back everywhere else.
-    const disclosedOn = calendarDateInTimezone(signatureInstant(open), "UTC");
+    // The evaluation must post-date the answers it clears. Both are calendar
+    // dates at the shop: the disclosure instant becomes the day the staff saw
+    // when the diver signed, and the doctor's form is dated the same way.
+    const disclosedOn = calendarDateInTimezone(signatureInstant(open), input.timeZone);
     let covering: WaiverRecord | null = null;
     if (input.evaluatedOn < disclosedOn) {
       // A letter older than this record can still be the one that covers it: the

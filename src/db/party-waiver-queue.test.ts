@@ -243,6 +243,7 @@ describe("party release QR handoff", () => {
     const evaluated = await recordMedicalEvaluation(f.db, {
       outcome: "not_cleared",
       shopId: f.shop.id,
+      timeZone: f.shop.timezone,
       personId: booking.personId,
       recordedByPersonId: f.staff.id,
       evaluatedOn: signingDate(nowDate(), f.shop.timezone),

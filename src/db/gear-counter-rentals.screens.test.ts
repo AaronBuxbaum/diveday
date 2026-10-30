@@ -531,6 +531,7 @@ describe("counterRentalWaiverStandings", () => {
     await recordMedicalEvaluation(db, {
       outcome: "not_cleared",
       shopId: shop.id,
+      timeZone: shop.timezone,
       personId: booking.personId,
       recordedByPersonId: desk.id,
       evaluatedOn: calendarDateInTimezone(new Date(t0), shop.timezone),

@@ -231,6 +231,7 @@ describe("the doctor's page", () => {
         const answered = await recordMedicalEvaluation(db, {
           outcome: "not_cleared",
           shopId: shop.id,
+          timeZone: shop.timezone,
           personId: person.id,
           recordedByPersonId: staff.person.id,
           evaluatedOn: "2026-07-18",
