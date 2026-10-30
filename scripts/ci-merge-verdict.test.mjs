@@ -10,6 +10,7 @@ const jobs = [
   "fast-lane",
   "visual-plan",
   "visual",
+  "visual-publish",
   "visual-report",
   "changes",
   "real-postgres",
@@ -74,6 +75,18 @@ describe("CI merge verdict", () => {
     expect(ciMergeVerdict(needs, context)).toEqual([]);
     needs["visual-flakes"].result = "skipped";
     expect(ciMergeVerdict(needs, context)).toEqual(["visual-flakes: skipped"]);
+  });
+  it("allows the publisher job to skip on a fork PR while requiring the report job", () => {
+    const needs = green();
+    needs["unit-tests-docs"].result = "skipped";
+    needs["real-postgres"].result = "skipped";
+    needs["visual-publish"].result = "skipped";
+    expect(
+      ciMergeVerdict(needs, { code: "true", db: "false", event: "pull_request", fork: true }),
+    ).toEqual([]);
+    expect(
+      ciMergeVerdict(needs, { code: "true", db: "false", event: "pull_request", fork: false }),
+    ).toContain("visual-publish: skipped");
   });
   it("fails closed when change detection evidence is missing or malformed", () => {
     expect(ciMergeVerdict(green(), { code: "", db: "false", event: "pull_request" })).not.toEqual(

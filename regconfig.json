@@ -14,16 +14,8 @@
       "bucketName": "$REG_SUIT_S3_BUCKET_NAME",
       "enableACL": false,
       "sdkOptions": {
-        "region": "$REG_SUIT_AWS_REGION",
-        "credentials": {
-          "accessKeyId": "$REG_SUIT_AWS_ACCESS_KEY_ID",
-          "secretAccessKey": "$REG_SUIT_AWS_SECRET_ACCESS_KEY"
-        }
+        "region": "$REG_SUIT_AWS_REGION"
       }
-    },
-    "reg-notify-github-plugin": {
-      "clientId": "MzQ2MAICY1ND/ZTMstSUxEp9QxNLS1NzI0tTfcfEovw8p9KKpMTSXAA=",
-      "setCommitStatus": false
     }
   }
 }
