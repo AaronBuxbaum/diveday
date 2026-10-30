@@ -250,7 +250,7 @@ jobs:
               --bucket "$REG_SUIT_S3_BUCKET_NAME" \
               --key "$REG_ACTUAL_KEY/out.json" \
               --region "$REG_SUIT_AWS_REGION" \
-              --query 'Metadata.diveday-pr-number' --output text --no-cli-pager \
+              --query 'Metadata."diveday-pr-number"' --output text --no-cli-pager \
               2>"$head_error")"
             head_status=$?
             set -e

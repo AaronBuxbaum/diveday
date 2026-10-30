@@ -1,3 +1,5 @@
+import { EventEmitter } from "node:events";
+import { PassThrough } from "node:stream";
 import { gzipSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 
@@ -230,6 +232,35 @@ describe("fetchFromBucket", () => {
     const result = await fetchFromBucket(BUCKET, "k/out.json", {
       fetchImpl: async () => response(gzipSync(Buffer.from(payload))),
     });
+    expect(result.ok).toBe(true);
+    expect(result.body.toString("utf8")).toBe(payload);
+  });
+
+  it("streams the public S3 response through Node HTTPS without Undici", async () => {
+    const payload = JSON.stringify({ failedItems: [] });
+    let requestedUrl;
+    let timeoutMs;
+    const result = await fetchFromBucket(BUCKET, "k/out.json", {
+      getImpl: (url, onResponse) => {
+        requestedUrl = url;
+        const request = new EventEmitter();
+        request.setTimeout = (milliseconds) => {
+          timeoutMs = milliseconds;
+        };
+        request.destroy = (error) => request.emit("error", error);
+
+        const response = new PassThrough();
+        response.statusCode = 200;
+        queueMicrotask(() => {
+          onResponse(response);
+          response.end(gzipSync(Buffer.from(payload)));
+        });
+        return request;
+      },
+    });
+
+    expect(requestedUrl).toBe(`https://${BUCKET}.s3.amazonaws.com/k/out.json`);
+    expect(timeoutMs).toBeGreaterThan(0);
     expect(result.ok).toBe(true);
     expect(result.body.toString("utf8")).toBe(payload);
   });

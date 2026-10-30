@@ -10,6 +10,7 @@
 //
 // See ADR 20260729-reg-suit-visual-regression and
 // 20260802-visual-diff-pr-comment.
+import https from "node:https";
 import { gunzipSync } from "node:zlib";
 
 export const DEFAULT_BUCKET = "diveday-vrt";
@@ -147,17 +148,49 @@ export function hostedReportUrl(bucket, commit) {
   return objectUrl(bucket, `${commit}/index.html`);
 }
 
-// S3 serves these objects with `Content-Encoding: gzip`, but some fetch clients
-// (Node's global fetch among them) already transparently decode that before
-// returning the body, while others (plain `curl`, `https.get`) hand back the raw
-// gzip bytes. Trust the magic number, not the header.
-export async function fetchFromBucket(bucket, key, { fetchImpl = fetch } = {}) {
+const REQUEST_TIMEOUT_MS = 20_000;
+
+function requestHttpsBuffer(url, getImpl) {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const fail = (error) => {
+      if (settled) return;
+      settled = true;
+      reject(error);
+    };
+    const request = getImpl(url, (response) => {
+      const chunks = [];
+      response.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
+      response.once("error", fail);
+      response.once("aborted", () => fail(new Error(`S3 response was aborted: ${url}`)));
+      response.once("end", () => {
+        if (settled) return;
+        settled = true;
+        resolve({
+          ok: response.statusCode >= 200 && response.statusCode < 300,
+          status: response.statusCode ?? 0,
+          body: Buffer.concat(chunks),
+        });
+      });
+    });
+    request.setTimeout(REQUEST_TIMEOUT_MS, () => {
+      request.destroy(new Error(`S3 request timed out after ${REQUEST_TIMEOUT_MS}ms: ${url}`));
+    });
+    request.once("error", fail);
+  });
+}
+
+// S3 serves these objects with `Content-Encoding: gzip`. Use Node's HTTPS
+// stream directly so a socket closing while fetch's Undici parser is paused
+// cannot raise an uncaught assertion. Trust the body magic number rather than
+// the header: fetch clients can transparently decode the response.
+export async function fetchFromBucket(bucket, key, { fetchImpl, getImpl = https.get } = {}) {
   const url = objectUrl(bucket, key);
-  const res = await fetchImpl(url);
+  const res = fetchImpl ? await fetchImpl(url) : await requestHttpsBuffer(url, getImpl);
   if (!res.ok) {
     return { ok: false, status: res.status, url };
   }
-  const buf = Buffer.from(await res.arrayBuffer());
+  const buf = Buffer.isBuffer(res.body) ? res.body : Buffer.from(await res.arrayBuffer());
   const body = buf.subarray(0, 2).equals(GZIP_MAGIC) ? gunzipSync(buf) : buf;
   return { ok: true, body, url };
 }

@@ -106,7 +106,7 @@ describe("reg-suit publisher workflow", () => {
 
   it("refuses to overwrite a snapshot owned by main or another PR", () => {
     expect(PUBLISH).toContain("aws s3api head-object");
-    expect(PUBLISH).toContain("Metadata.diveday-pr-number");
+    expect(PUBLISH).toContain('Metadata."diveday-pr-number"');
     expect(PUBLISH).toContain('if [[ "$existing_pr" != "$PR_NUMBER" ]]; then');
     expect(PUBLISH).toContain("404|Not Found|NoSuchKey");
     expect(PUBLISH).toContain('metadata_args=(--metadata "diveday-pr-number=$PR_NUMBER")');
