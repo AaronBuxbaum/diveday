@@ -1,0 +1,332 @@
+name: Trusted reg-suit publisher
+
+on:
+  workflow_call:
+    inputs:
+      capture-mode:
+        description: Capture selection mode emitted by visual-plan
+        required: true
+        type: string
+      capture-shards:
+        description: Consecutive visual shard numbers emitted by visual-plan
+        required: true
+        type: string
+    secrets:
+      REG_SUIT_S3_BUCKET_NAME:
+        required: true
+    outputs:
+      baseline_note:
+        description: Any older baseline commit used for the comparison
+        value: ${{ jobs.publish.outputs.baseline_note }}
+      selection_note:
+        description: Which captures were compared from the selected set
+        value: ${{ jobs.publish.outputs.selection_note }}
+      actual_key:
+        description: Immutable snapshot key published by this run
+        value: ${{ jobs.publish.outputs.actual_key }}
+
+jobs:
+  prepare:
+    name: Prepare reg-suit comparison
+    # Repeat the caller's same-repository PR filter so the normal publication
+    # path does not run for forks. The deployed role still trusts any
+    # pull_request subject; #3274 tracks narrowing that trust to this workflow.
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    outputs:
+      baseline_note: ${{ steps.baseline.outputs.note }}
+      selection_note: ${{ steps.compare.outputs.selection_note || steps.selection.outputs.selection_note }}
+      actual_key: ${{ steps.keys.outputs.actual }}
+      region: ${{ steps.region.outputs.region }}
+    steps:
+      # The github context belongs to the caller of a reusable workflow. Use
+      # the called-workflow identity so checkout matches the revision selected
+      # in the caller's `uses:` reference.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          fetch-depth: 0
+
+      - name: Resolve the visual bucket's region
+        id: region
+        run: |
+          node --input-type=module -e "import { PRIMARY_REGION } from './config/aws-regions.mjs'; console.log('region=' + PRIMARY_REGION)" >> "$GITHUB_OUTPUT"
+
+      - uses: ./.github/actions/setup
+
+      # For a PR, fetch its event SHA into Git's object graph without checking
+      # out or running any PR files. The trusted resolver accepts it only when
+      # this reusable workflow sets REG_SUIT_TRUSTED_BASE_CODE itself.
+      - name: Resolve the reg-suit snapshot keys
+        id: keys
+        run: node scripts/reg-suit-keys.mjs --github-env
+        env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          DEFAULT_BRANCH: main
+          REG_SUIT_TRUSTED_BASE_CODE: "true"
+
+      # Baselines are keyed by immutable commits. The main workflow's visual
+      # report job saves main captures here; misses fall back to the public S3
+      # baseline lookup below.
+      - name: Restore the baseline images
+        id: baseline-cache
+        if: ${{ env.REG_EXPECTED_KEY != '' }}
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .reg-baseline
+          key: reg-baseline-${{ env.REG_EXPECTED_KEY }}
+
+      - name: Require complete visual coverage before publishing
+        id: selection
+        run: |
+          node scripts/visual-publish-artifacts.mjs --validate-selection
+          if [[ "$VISUAL_CAPTURE_MODE" == "all" ]]; then
+            echo 'selection_note=Complete visual capture (all eight shards).' >> "$GITHUB_OUTPUT"
+          else
+            echo "selection_note=Selective visual capture ($VISUAL_CAPTURE_MODE mode); uncaptured surfaces are filled from the trusted baseline." >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          VISUAL_CAPTURE_MODE: ${{ inputs.capture-mode }}
+          VISUAL_CAPTURE_SHARDS: ${{ inputs.capture-shards }}
+
+      # Artifact names and extraction paths are fixed by this trusted workflow.
+      # Their contents are PR-produced inert data; the sanitizer rejects
+      # directories, symlinks, non-PNG files and unsafe names before reg-suit
+      # sees them. Only visual-plan's selected shards are downloaded.
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: ${{ contains(fromJSON(inputs.capture-shards), 1) }}
+        with:
+          name: visual-screenshots-1
+          path: ${{ runner.temp }}/reg-suit-artifacts/shard-1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: ${{ contains(fromJSON(inputs.capture-shards), 2) }}
+        with:
+          name: visual-screenshots-2
+          path: ${{ runner.temp }}/reg-suit-artifacts/shard-2
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: ${{ contains(fromJSON(inputs.capture-shards), 3) }}
+        with:
+          name: visual-screenshots-3
+          path: ${{ runner.temp }}/reg-suit-artifacts/shard-3
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: ${{ contains(fromJSON(inputs.capture-shards), 4) }}
+        with:
+          name: visual-screenshots-4
+          path: ${{ runner.temp }}/reg-suit-artifacts/shard-4
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: ${{ contains(fromJSON(inputs.capture-shards), 5) }}
+        with:
+          name: visual-screenshots-5
+          path: ${{ runner.temp }}/reg-suit-artifacts/shard-5
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: ${{ contains(fromJSON(inputs.capture-shards), 6) }}
+        with:
+          name: visual-screenshots-6
+          path: ${{ runner.temp }}/reg-suit-artifacts/shard-6
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: ${{ contains(fromJSON(inputs.capture-shards), 7) }}
+        with:
+          name: visual-screenshots-7
+          path: ${{ runner.temp }}/reg-suit-artifacts/shard-7
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: ${{ contains(fromJSON(inputs.capture-shards), 8) }}
+        with:
+          name: visual-screenshots-8
+          path: ${{ runner.temp }}/reg-suit-artifacts/shard-8
+
+      - name: Accept only inert screenshot PNGs
+        run: node scripts/visual-publish-artifacts.mjs
+        env:
+          VISUAL_ARTIFACT_ROOT: ${{ runner.temp }}/reg-suit-artifacts
+          VISUAL_CAPTURE_SHARDS: ${{ inputs.capture-shards }}
+
+      - name: Resolve a baseline that actually exists
+        id: baseline
+        run: node scripts/wait-for-baseline.mjs
+        env:
+          REG_SUIT_S3_BUCKET_NAME: ${{ secrets.REG_SUIT_S3_BUCKET_NAME }}
+          REG_SUIT_AWS_REGION: ${{ steps.region.outputs.region }}
+          PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          DEFAULT_BRANCH: main
+
+      - name: Prepare expected screenshots without AWS credentials
+        run: node scripts/visual-prepare-baseline.mjs
+        env:
+          REG_SUIT_S3_BUCKET_NAME: ${{ secrets.REG_SUIT_S3_BUCKET_NAME }}
+          REG_SUIT_AWS_REGION: ${{ steps.region.outputs.region }}
+          REG_EXPECTED_KEY: ${{ env.REG_EXPECTED_KEY }}
+          VISUAL_BASELINE_DIR: ${{ steps.baseline-cache.outputs.cache-hit == 'true' && '.reg-baseline' || '' }}
+          VISUAL_BASELINE_KEY: ${{ steps.baseline-cache.outputs.cache-primary-key }}
+
+      # This job has no id-token permission. Decode and compare the PR-produced
+      # images here, then hand only a trusted, precompressed file bundle onward.
+      - name: Compare screenshots without AWS credentials
+        id: compare
+        run: pnpm visual:compare
+        env:
+          VISUAL_FILL_FROM_EXPECTED: ${{ inputs.capture-mode == 'affected' || inputs.capture-mode == 'light' }}
+          VISUAL_VERIFY_COMPLETE: "true"
+          VISUAL_EXPECTED_READY: "true"
+          REG_SUIT_COMPARE_ONLY: "true"
+          REG_SUIT_CONFIG: oidc
+          REG_SUIT_AWS_REGION: ${{ steps.region.outputs.region }}
+          REG_SUIT_S3_BUCKET_NAME: ${{ secrets.REG_SUIT_S3_BUCKET_NAME }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+
+      - name: Verify complete screenshot inventory
+        run: node scripts/visual-publish-artifacts.mjs --verify-complete
+        env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+
+      - name: Build the trusted S3 publish bundle
+        run: node scripts/visual-build-publish-bundle.mjs
+        env:
+          VISUAL_PUBLISH_SOURCE: .reg
+          VISUAL_PUBLISH_BUNDLE: ${{ runner.temp }}/reg-suit-publish-bundle
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: reg-suit-publish-bundle
+          path: ${{ runner.temp }}/reg-suit-publish-bundle/
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    name: reg-suit visual regression
+    needs: prepare
+    if: ${{ needs.prepare.result == 'success' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      id-token: write
+    outputs:
+      baseline_note: ${{ needs.prepare.outputs.baseline_note }}
+      selection_note: ${{ needs.prepare.outputs.selection_note }}
+      actual_key: ${{ needs.prepare.outputs.actual_key }}
+      region: ${{ needs.prepare.outputs.region }}
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: reg-suit-publish-bundle
+          path: ${{ runner.temp }}/reg-suit-publish-bundle
+
+      # The normal publication path has no checkout, package installation,
+      # repository script, or image decoder after OIDC. It uploads only the
+      # bundle prepared by the unprivileged job. The IAM trust restriction is
+      # tracked separately in #3274.
+      - name: Assume the reg-suit publisher role
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_REG_SUIT_ROLE_ARN }}
+          role-session-name: reg-suit-${{ github.run_id }}-${{ github.run_attempt }}
+          aws-region: ${{ needs.prepare.outputs.region }}
+          unset-current-credentials: true
+
+      - name: Publish the precompressed reg-suit bundle
+        env:
+          REG_ACTUAL_KEY: ${{ needs.prepare.outputs.actual_key }}
+          REG_SUIT_AWS_REGION: ${{ needs.prepare.outputs.region }}
+          REG_SUIT_S3_BUCKET_NAME: ${{ secrets.REG_SUIT_S3_BUCKET_NAME }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          VISUAL_PUBLISH_BUNDLE: ${{ runner.temp }}/reg-suit-publish-bundle
+        run: |
+          set -euo pipefail
+          [[ "$REG_ACTUAL_KEY" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$REG_SUIT_S3_BUCKET_NAME" =~ ^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$ ]]
+          if [[ -n "$PR_NUMBER" ]]; then
+            [[ "$PR_NUMBER" =~ ^[1-9][0-9]*$ ]]
+            head_error="$RUNNER_TEMP/reg-suit-head-object.err"
+            set +e
+            existing_pr="$(aws s3api head-object \
+              --bucket "$REG_SUIT_S3_BUCKET_NAME" \
+              --key "$REG_ACTUAL_KEY/out.json" \
+              --region "$REG_SUIT_AWS_REGION" \
+              --query 'Metadata.diveday-pr-number' --output text --no-cli-pager \
+              2>"$head_error")"
+            head_status=$?
+            set -e
+            if [[ "$head_status" -eq 0 ]]; then
+              if [[ "$existing_pr" != "$PR_NUMBER" ]]; then
+                echo "::error title=Visual snapshot key already exists::Refusing to overwrite $REG_ACTUAL_KEY because its existing report is not owned by PR #$PR_NUMBER."
+                exit 1
+              fi
+            elif grep -Eq '404|Not Found|NoSuchKey' "$head_error"; then
+              :
+            else
+              cat "$head_error" >&2
+              exit "$head_status"
+            fi
+          fi
+          manifest="$VISUAL_PUBLISH_BUNDLE/manifest.tsv"
+          test ! -L "$manifest"
+          test -f "$manifest"
+          bundle_root="$(realpath -e -- "$VISUAL_PUBLISH_BUNDLE")"
+          payload_root="$(realpath -e -- "$VISUAL_PUBLISH_BUNDLE/payload")"
+          [[ "$payload_root" == "$bundle_root/payload" ]]
+          validated_manifest="$RUNNER_TEMP/reg-suit-manifest.validated.tsv"
+          : > "$validated_manifest"
+          count=0
+          object_path=""
+          content_type=""
+          extra=""
+          while IFS=$'\t' read -r object_path content_type extra || [[ -n "${object_path}${content_type}${extra}" ]]; do
+            [[ -n "$object_path" && -n "$content_type" && -z "$extra" ]]
+            [[ "$object_path" =~ ^[A-Za-z0-9._/-]+$ ]]
+            [[ "$object_path" != /* && "$object_path" != *//* ]]
+            case "/$object_path/" in */../*|*/./*) exit 1 ;; esac
+            object_path_lower="${object_path,,}"
+            if [[ "$object_path_lower" == *.wasm && "$object_path:$content_type" != "detector.wasm:application/wasm" ]]; then
+              exit 1
+            fi
+            case "$object_path:$content_type" in
+              detector.wasm:application/wasm) ;;
+              detector.wasm:*|*:application/wasm) exit 1 ;;
+              *:application/json|*:application/javascript|*:application/octet-stream|*:image/gif|*:image/png|*:image/svg+xml|*:image/webp|*:image/x-icon|*:text/css|*:text/html|*:text/plain|*:font/otf|*:font/ttf|*:font/woff|*:font/woff2) ;;
+              *) exit 1 ;;
+            esac
+            payload="$VISUAL_PUBLISH_BUNDLE/payload/$object_path.gz"
+            test ! -L "$payload"
+            test -f "$payload"
+            resolved_payload="$(realpath -e -- "$payload")"
+            case "$resolved_payload" in "$payload_root"/*) ;; *) exit 1 ;; esac
+            printf '%s\t%s\n' "$object_path" "$content_type" >> "$validated_manifest"
+            count=$((count + 1))
+            object_path=""
+            content_type=""
+            extra=""
+          done < "$manifest"
+          test "$count" -gt 0
+
+          publish_parallelism=8
+          printf 'Publishing %s reg-suit objects with at most %s concurrent uploads.\n' \
+            "$count" "$publish_parallelism"
+          xargs -r -P "$publish_parallelism" -n 2 bash -c '
+            set -euo pipefail
+            object_path="$1"
+            content_type="$2"
+            payload="$VISUAL_PUBLISH_BUNDLE/payload/$object_path.gz"
+            test ! -L "$payload"
+            test -f "$payload"
+            metadata_args=()
+            if [[ -n "$PR_NUMBER" ]]; then
+              metadata_args=(--metadata "diveday-pr-number=$PR_NUMBER")
+            fi
+            aws s3api put-object \
+              --bucket "$REG_SUIT_S3_BUCKET_NAME" \
+              --key "$REG_ACTUAL_KEY/$object_path" \
+              --body "$payload" \
+              --content-type "$content_type" \
+              --content-encoding gzip \
+              --region "$REG_SUIT_AWS_REGION" \
+              "${metadata_args[@]}" \
+              --query ETag --output text --no-cli-pager
+          ' _ < "$validated_manifest"

@@ -1,0 +1,21 @@
+{
+  "core": {
+    "workingDir": ".reg",
+    "actualDir": "e2e/screenshots",
+    "enableAntialias": true,
+    "addExtraItems": true
+  },
+  "plugins": {
+    "reg-simple-keygen-plugin": {
+      "expectedKey": "${REG_EXPECTED_KEY}",
+      "actualKey": "${REG_ACTUAL_KEY}"
+    },
+    "reg-publish-s3-plugin": {
+      "bucketName": "$REG_SUIT_S3_BUCKET_NAME",
+      "enableACL": false,
+      "sdkOptions": {
+        "region": "$REG_SUIT_AWS_REGION"
+      }
+    }
+  }
+}

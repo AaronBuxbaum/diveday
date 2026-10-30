@@ -2531,13 +2531,16 @@ exports.handler = async (event) => {
       },
       {
         id: "credentials-to-github-actions",
-        title: "Put the reg-suit credentials into GitHub Actions secrets",
+        title: "Configure reg-suit for GitHub Actions",
         category: "Credentials",
-        when: "after the first deploy, and after rotating reg-suit-bot",
+        when: "after the first deploy, and after replacing the GitHub OIDC role",
         why: "CI compares visual baselines against the visual-regression bucket (infra-stack.ts S1). GitHub is a third platform, and its secrets are write-only through an API this stack has no credential for.",
-        run: ["gh secret set --env-file .env.github"],
+        run: [
+          "gh secret set REG_SUIT_S3_BUCKET_NAME --body <S3BucketName output>",
+          "gh variable set AWS_REG_SUIT_ROLE_ARN --body <GitHubActionsRegSuitRoleArn output>",
+        ],
         store:
-          ".env.github (gitignored) is the full GitHub Actions target file, imported as repository secrets. It contains REG_SUIT_S3_BUCKET_NAME, REG_SUIT_AWS_ACCESS_KEY_ID, REG_SUIT_AWS_SECRET_ACCESS_KEY, and REG_SUIT_GITHUB_CLIENT_ID.",
+          "GitHub repository Actions secrets: REG_SUIT_S3_BUCKET_NAME. Actions variables: AWS_REG_SUIT_ROLE_ARN. CI uses GitHub OIDC to assume the stack role; do not add REG_SUIT_AWS_REGION, REG_SUIT_AWS_ACCESS_KEY_ID or REG_SUIT_AWS_SECRET_ACCESS_KEY as GitHub secrets.",
         verify: ["Push a branch and confirm the visual job uploads a report rather than skipping."],
       },
       {
@@ -2903,6 +2906,10 @@ exports.handler = async (event) => {
         // post-deploy wizard can run unattended (ADR 20260811-ci-deploy-full-wizard).
         "ci-github-admin-token",
         "ci-vercel-deploy-token",
+        // CI now assumes the reg-suit role with OIDC. Its role ARN is a
+        // repository variable, while the bucket name remains a repository
+        // secret, so both destinations need a human handoff after deploy.
+        "credentials-to-github-actions",
         // Same class a third time, and the only entry on this list that is
         // genuinely optional: `vercel.json` turns automatic preview
         // deployments off for every branch but main, and
@@ -3038,7 +3045,7 @@ exports.handler = async (event) => {
         `repo:${GITHUB_REPO_SUB}:ref:refs/heads/main`,
       ]),
       description:
-        "Assumed by .github/workflows/ci.yml's visual-report job to publish and compare reg-suit snapshots in the visual bucket. Cannot delete objects or touch any other resource.",
+        "Assumed by .github/workflows/ci.yml's visual-publish job to upload prebuilt reg-suit snapshots to the visual bucket. Cannot delete objects or touch any other resource.",
       maxSessionDuration: cdk.Duration.hours(1),
     });
     regSuitRole.addToPolicy(
@@ -3059,7 +3066,7 @@ exports.handler = async (event) => {
     new cdk.CfnOutput(this, "GitHubActionsRegSuitRoleArn", {
       value: regSuitRole.roleArn,
       description:
-        "role-to-assume for .github/workflows/ci.yml's visual-report job. Store as the AWS_REG_SUIT_ROLE_ARN repository variable.",
+        "role-to-assume for the pinned reusable publisher called by .github/workflows/ci.yml's visual-publish job. Store as the AWS_REG_SUIT_ROLE_ARN repository variable.",
     });
 
     // The monthly restore drill's identity (issue #2986): `.github/workflows/restore-drill.yml`

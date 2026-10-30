@@ -1079,9 +1079,10 @@ export const ENV_GROUPS = [
   {
     doc: [
       "reg-suit visual regression testing via S3. The reg-suit-bot IAM user",
-      "(infra/lib/infra-stack.ts S2). CI reads the same values as GitHub Actions",
-      "repository secrets; locally they are only for running `pnpm visual`. Never sent",
-      "to Vercel -- the application does not read them. The region is here because",
+      "(infra/lib/infra-stack.ts S2). Locally these values are only for running",
+      "`pnpm visual`; CI assumes the GitHub OIDC role instead of using static AWS",
+      "credentials. The bucket name is also sent to GitHub Actions as a repository",
+      "secret. Never sent to Vercel -- the application does not read them. The region is here because",
       "the bucket moved with the estate and two callers were still pointing at the",
       "old one, which reads as an empty baseline rather than an error.",
     ],
@@ -1089,7 +1090,7 @@ export const ENV_GROUPS = [
       {
         key: "REG_SUIT_AWS_REGION",
         from: "stack",
-        targets: LOCAL_AND_GITHUB,
+        targets: LOCAL,
         absent: "`pnpm visual` reaches for the baseline bucket in the wrong region",
       },
       {
@@ -1101,13 +1102,13 @@ export const ENV_GROUPS = [
       {
         key: "REG_SUIT_AWS_ACCESS_KEY_ID",
         from: "stack",
-        targets: LOCAL_AND_GITHUB,
+        targets: LOCAL,
         absent: "as REG_SUIT_S3_BUCKET_NAME",
       },
       {
         key: "REG_SUIT_AWS_SECRET_ACCESS_KEY",
         from: "stack",
-        targets: LOCAL_AND_GITHUB,
+        targets: LOCAL,
         absent: "as REG_SUIT_S3_BUCKET_NAME",
       },
     ],

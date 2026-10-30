@@ -12,6 +12,7 @@ export const CI_JOBS = [
   "fast-lane",
   "visual-plan",
   "visual",
+  "visual-publish",
   "visual-report",
   "changes",
   "real-postgres",
@@ -75,7 +76,7 @@ function readCurrentPullRequest(env) {
 }
 
 /** The aggregate is green only when every expected result exists and required lanes ran. */
-export function ciMergeVerdict(needs, { code, db, event, ref = "" }) {
+export function ciMergeVerdict(needs, { code, db, event, ref = "", fork = false }) {
   const problems = [];
   if (!["true", "false"].includes(code) || !["true", "false"].includes(db))
     problems.push("change detection outputs are missing or invalid");
@@ -96,6 +97,7 @@ export function ciMergeVerdict(needs, { code, db, event, ref = "" }) {
       "coverage-floors",
     ])
       required.add(id);
+  if (code === "true" && !fork) required.add("visual-publish");
   if (db === "true") required.add("real-postgres");
   if (code === "true" && ["push", "workflow_dispatch"].includes(event) && ref === "refs/heads/main")
     required.add("visual-flakes");
@@ -125,6 +127,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       db: needs?.changes?.outputs?.db,
       event: env.GITHUB_EVENT_NAME,
       ref: env.GITHUB_REF,
+      fork: env.PR_IS_FORK === "true",
     });
     problems.push(...candidateProblems);
     if (problems.length) {

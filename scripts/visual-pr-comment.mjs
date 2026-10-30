@@ -1,17 +1,11 @@
 #!/usr/bin/env node
 // Posts (or updates) the sticky reg-suit summary comment on a pull request, and
 // writes the same summary to the job summary. Runs in CI only, from the
-// `visual-report` job.
+// `visual-report` job, which has pull-requests:write and no AWS identity.
 //
-// Why this exists when reg-suit already has a GitHub App: the app's payload is
-// counts plus a report link and nothing else — verified in
-// node_modules/reg-notify-github-plugin/lib/github-notifier-plugin.js, which
-// POSTs `{failedItemsCount, newItemsCount, deletedItemsCount, passedItemsCount,
-// reportUrl}` — so it can never name a surface, and it cannot distinguish "0
-// changed because nothing moved" from "0 changed because no baseline resolved
-// and nothing was compared" (ADR 20260729-reg-suit-visual-regression). It also
-// posts nothing at all when `reg-suit run` itself throws, which is the loudest
-// failure and the quietest signal.
+// This is the only GitHub notifier. `regconfig.json` has no reg-suit GitHub
+// plugin, so the trusted reporter posts both the comparison summary and the
+// failure path without sharing a job with AWS credentials.
 //
 // Three rules govern this script:
 //   1. It never fails the build. Every path exits 0; the workflow step is
@@ -59,8 +53,8 @@ function parseArgs(argv) {
 }
 
 // On a `pull_request` event GITHUB_SHA is the ephemeral merge commit, which is
-// never a reg-suit key. The `visual-report` job checks out the branch by name,
-// so HEAD is the same commit reg-suit keyed its upload under.
+// never a reg-suit key. The workflow checks out trusted base code and passes
+// the PR head SHA explicitly, so PR-edited code never runs with the write token.
 function resolveCommit(explicit) {
   if (explicit) return explicit;
   try {
@@ -182,9 +176,8 @@ async function main() {
   writeStepOutput("compared", String(comparedAnything(summary)));
   // Set by scripts/wait-for-baseline.mjs when it substituted an older baseline
   // for one that was never published; empty on the ordinary path.
-  // And by scripts/visual-compare.mjs when a pull request captured only what its
-  // diff can reach (scripts/visual-fill.mjs), so the reader knows the rest are
-  // the baseline's own images.
+  // And by the trusted publisher after it validates the selected captures
+  // against the complete baseline inventory.
   const note = [process.env.REG_BASELINE_NOTE, process.env.VISUAL_SELECTION_NOTE]
     .filter(Boolean)
     .join(" ");

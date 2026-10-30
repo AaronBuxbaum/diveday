@@ -1,6 +1,7 @@
 import * as cdk from "aws-cdk-lib";
 import { Template } from "aws-cdk-lib/assertions";
 import { describe, expect, it } from "vitest";
+import { goesTo } from "../../config/env-registry.mjs";
 import { envExampleKeys, fillEnvExample, readEnvExample } from "./credentials-document";
 import { InfraStack } from "./infra-stack";
 import { MANUAL_ACTION_CATEGORIES, renderManualActionsDoc } from "./manual-actions";
@@ -371,6 +372,21 @@ describe("the manual-action registry", () => {
 });
 
 describe("the credentials document", () => {
+  it("keeps static reg-suit AWS credentials local while sending only the bucket to GitHub", () => {
+    expect(goesTo("REG_SUIT_AWS_REGION", "local")).toBe(true);
+    expect(goesTo("REG_SUIT_AWS_ACCESS_KEY_ID", "local")).toBe(true);
+    expect(goesTo("REG_SUIT_AWS_SECRET_ACCESS_KEY", "local")).toBe(true);
+    expect(goesTo("REG_SUIT_S3_BUCKET_NAME", "local")).toBe(true);
+    expect(goesTo("REG_SUIT_S3_BUCKET_NAME", "github")).toBe(true);
+    for (const key of [
+      "REG_SUIT_AWS_REGION",
+      "REG_SUIT_AWS_ACCESS_KEY_ID",
+      "REG_SUIT_AWS_SECRET_ACCESS_KEY",
+    ]) {
+      expect(goesTo(key, "github"), `${key} must not be sent to GitHub`).toBe(false);
+    }
+  });
+
   it("fills only keys .env.example actually declares", () => {
     expect(() => fillEnvExample("FOO=\n", { BAR: "x" })).toThrow(/declares no BAR/);
   });
