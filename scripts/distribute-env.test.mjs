@@ -69,6 +69,7 @@ const source = [
   "SES_AWS_ACCESS_KEY_ID=ses-id",
   "PLACES_AWS_ACCESS_KEY_ID=minted-by-the-stack",
   "PLACES_AWS_SECRET_ACCESS_KEY=minted-secret",
+  "REG_SUIT_AWS_REGION=us-east-1",
   "REG_SUIT_S3_BUCKET_NAME=diveday-vrt",
   "REG_SUIT_AWS_ACCESS_KEY_ID=reg-suit-id",
   "REG_SUIT_AWS_SECRET_ACCESS_KEY=reg-suit-secret",
@@ -145,6 +146,7 @@ describe("distribute-env", () => {
 
   it("sends each target only what that target consumes", () => {
     const cwd = workspace();
+    const local = distribute("local", cwd, source).output;
     const vercel = distribute("vercel", cwd, source).output;
     const github = distribute("github", cwd, source).output;
 
@@ -154,7 +156,20 @@ describe("distribute-env", () => {
     expect(vercel).toContain("AUTH_SECRET=");
     // Visual-regression credentials are CI's, not the application's.
     expect(vercel).not.toMatch(/^REG_SUIT_/m);
-    expect(github).toContain("REG_SUIT_AWS_ACCESS_KEY_ID=reg-suit-id");
+    expect(local).toContain("REG_SUIT_AWS_REGION=us-east-1");
+    expect(local).toContain("REG_SUIT_AWS_ACCESS_KEY_ID=reg-suit-id");
+    expect(local).toContain("REG_SUIT_AWS_SECRET_ACCESS_KEY=reg-suit-secret");
+    expect(local).toContain("REG_SUIT_S3_BUCKET_NAME=diveday-vrt");
+    expect(github).toContain("REG_SUIT_S3_BUCKET_NAME=diveday-vrt");
+    for (const key of [
+      "REG_SUIT_AWS_REGION",
+      "REG_SUIT_AWS_ACCESS_KEY_ID",
+      "REG_SUIT_AWS_SECRET_ACCESS_KEY",
+    ]) {
+      expect(github, `${key} must stay out of GitHub output`).not.toMatch(
+        new RegExp(`^${key}=`, "m"),
+      );
+    }
     expect(github).not.toContain("AUTH_SECRET=");
     // The deployer's own credentials are never any target's business.
     expect(vercel).not.toMatch(/^AWS_ACCESS_KEY_ID=/m);
@@ -186,7 +201,9 @@ describe("distribute-env", () => {
     expect(local).toContain("PLACES_AWS_ACCESS_KEY_ID=minted-by-the-stack");
     expect(vercel).toContain("PLACES_AWS_ACCESS_KEY_ID=minted-by-the-stack");
     expect(vercel).not.toContain("stale-local-value");
-    expect(github).toContain("REG_SUIT_AWS_ACCESS_KEY_ID=reg-suit-id");
+    expect(github).toContain("REG_SUIT_S3_BUCKET_NAME=diveday-vrt");
+    expect(github).not.toContain("REG_SUIT_AWS_ACCESS_KEY_ID=");
+    expect(github).not.toContain("REG_SUIT_AWS_SECRET_ACCESS_KEY=");
     // The administrator profile reads the credentials secret out of the region
     // the main stack is in, not out of whatever the shell was pointing at.
     expect(readFileSync(join(directory, "aws-profile-used"), "utf8")).toBe(

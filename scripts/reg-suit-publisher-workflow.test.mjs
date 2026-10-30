@@ -42,7 +42,9 @@ describe("reg-suit publisher workflow", () => {
     expect(WORKFLOW).not.toContain("pattern: visual-screenshots-*");
     expect(WORKFLOW).not.toContain("path: e2e/screenshots");
     expect(WORKFLOW).toContain("node scripts/visual-publish-artifacts.mjs --validate-selection");
-    expect(WORKFLOW.match(/if: \$\{\{ contains\(fromJSON\(inputs\.capture-shards\), [1-8]\) \}\}/gu)).toHaveLength(8);
+    expect(
+      WORKFLOW.match(/if: \$\{\{ contains\(fromJSON\(inputs\.capture-shards\), [1-8]\) \}\}/gu),
+    ).toHaveLength(8);
     expect(WORKFLOW.match(/name: visual-screenshots-[1-8]/gu)).toHaveLength(8);
     expect(WORKFLOW).toContain(
       "VISUAL_FILL_FROM_EXPECTED: ${{ inputs.capture-mode == 'affected' || inputs.capture-mode == 'light' }}",
