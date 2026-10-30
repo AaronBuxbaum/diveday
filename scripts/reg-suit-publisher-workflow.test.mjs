@@ -42,23 +42,26 @@ describe("reg-suit publisher workflow", () => {
     expect(WORKFLOW).not.toContain("pattern: visual-screenshots-*");
     expect(WORKFLOW).not.toContain("path: e2e/screenshots");
     expect(WORKFLOW).toContain("node scripts/visual-publish-artifacts.mjs --validate-selection");
-    expect(WORKFLOW).not.toContain("contains(fromJSON(inputs.capture-shards)");
+    expect(WORKFLOW.match(/if: \$\{\{ contains\(fromJSON\(inputs\.capture-shards\), [1-8]\) \}\}/gu)).toHaveLength(8);
     expect(WORKFLOW.match(/name: visual-screenshots-[1-8]/gu)).toHaveLength(8);
-    expect(WORKFLOW).toContain('VISUAL_FILL_FROM_EXPECTED: "false"');
+    expect(WORKFLOW).toContain(
+      "VISUAL_FILL_FROM_EXPECTED: ${{ inputs.capture-mode == 'affected' || inputs.capture-mode == 'light' }}",
+    );
+    expect(WORKFLOW).toContain('VISUAL_VERIFY_COMPLETE: "true"');
     const sanitizeAt = PREPARE.indexOf("node scripts/visual-publish-artifacts.mjs");
     const baselineAt = PREPARE.indexOf("node scripts/visual-prepare-baseline.mjs");
+    const compareAt = PREPARE.indexOf("run: pnpm visual:compare");
     const inventoryAt = PREPARE.indexOf(
       "node scripts/visual-publish-artifacts.mjs --verify-complete",
     );
-    const compareAt = PREPARE.indexOf("run: pnpm visual:compare");
     const bundleAt = PREPARE.indexOf("node scripts/visual-build-publish-bundle.mjs");
     const uploadArtifactAt = PREPARE.indexOf("name: reg-suit-publish-bundle");
     const assumeAt = PUBLISH.indexOf("name: Assume the reg-suit publisher role");
     const putAt = PUBLISH.indexOf("aws s3api put-object");
     expect(sanitizeAt).toBeGreaterThanOrEqual(0);
     expect(baselineAt).toBeGreaterThan(sanitizeAt);
-    expect(inventoryAt).toBeGreaterThan(baselineAt);
-    expect(compareAt).toBeGreaterThan(inventoryAt);
+    expect(compareAt).toBeGreaterThan(baselineAt);
+    expect(inventoryAt).toBeGreaterThan(compareAt);
     expect(bundleAt).toBeGreaterThan(compareAt);
     expect(uploadArtifactAt).toBeGreaterThan(bundleAt);
     expect(assumeAt).toBeGreaterThanOrEqual(0);
