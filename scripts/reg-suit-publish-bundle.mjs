@@ -316,8 +316,8 @@ function expectedMetadata(entry, prNumber) {
   const metadata = {
     "diveday-sha256": entry.sha256,
     "diveday-size": String(entry.size),
-    "diveday-pr-number": prNumber || "None",
   };
+  if (prNumber) metadata["diveday-pr-number"] = prNumber;
   if (entry.kind === "marker") metadata["diveday-snapshot-version"] = entry.snapshotVersion;
   return metadata;
 }
@@ -325,10 +325,14 @@ function expectedMetadata(entry, prNumber) {
 function metadataMatches(head, entry, prNumber) {
   const expected = expectedMetadata(entry, prNumber);
   const actual = head?.Metadata ?? {};
+  const ownerMatches = prNumber
+    ? actual["diveday-pr-number"] === prNumber
+    : actual["diveday-pr-number"] === undefined || actual["diveday-pr-number"] === "None";
   return (
     head?.ContentLength === entry.size &&
     head?.ContentType === entry.contentType &&
     head?.ContentEncoding === "gzip" &&
+    ownerMatches &&
     Object.entries(expected).every(([key, value]) => actual[key] === value)
   );
 }

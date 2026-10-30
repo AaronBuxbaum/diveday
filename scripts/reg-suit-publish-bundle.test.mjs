@@ -276,6 +276,9 @@ function fakeS3({
             snapshotVersion: input.Metadata["diveday-snapshot-version"],
             metadataOverrides: input.Metadata,
           });
+          if (!Object.hasOwn(input.Metadata, "diveday-pr-number")) {
+            delete next.head.Metadata["diveday-pr-number"];
+          }
           objects.set(key, next);
           events.push(["PUT_DONE", key, input.IfNoneMatch ?? input.IfMatch]);
           await delay(1);
@@ -391,6 +394,41 @@ test("same-version retries cryptographically verify CRC-only legacy object check
     assert.equal(first.events.filter(([event]) => event === "PUT_START").length, 0);
     assert.equal(first.events.filter(([event]) => event === "GET").length, f.entries.length);
     assert.ok(first.events.filter(([event]) => event === "GET").every(([, , etag]) => etag));
+  } finally {
+    f.cleanup();
+  }
+});
+
+test("main-owner same-version retries accept absent or None PR ownership metadata", async (t) => {
+  for (const representation of ["absent", "none"]) {
+    await t.test(representation, async () => {
+      const f = fixture();
+      try {
+        const initial = mapFromFixture(f, { prNumber: "" });
+        for (const object of initial.values()) {
+          if (representation === "absent") delete object.head.Metadata["diveday-pr-number"];
+          else object.head.Metadata["diveday-pr-number"] = "None";
+        }
+        const s3 = fakeS3({ initial });
+        await assert.doesNotReject(
+          publishBundle(args(f, s3, { prNumber: "" })),
+          `same-version main retry should accept ${representation} owner metadata`,
+        );
+      } finally {
+        f.cleanup();
+      }
+    });
+  }
+});
+
+test("main publication omits pull-request ownership metadata", async () => {
+  const f = fixture();
+  try {
+    const s3 = fakeS3();
+    await publishBundle(args(f, s3, { prNumber: "" }));
+    for (const object of s3.objects.values()) {
+      assert.equal(object.head.Metadata["diveday-pr-number"], undefined);
+    }
   } finally {
     f.cleanup();
   }
