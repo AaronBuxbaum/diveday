@@ -69,7 +69,7 @@ describe("the day's advice", () => {
   it("names the hull that fits and the crew the shop's own target implies", () => {
     const lines = requestAdviceLines(adviseRequests(party(3, 2), MANTIS), 6, t);
     expect(lines.map((line) => line.text)).toEqual([
-      "Suggested boat: Mantis II (12 seats)",
+      "Suggested boat: Mantis II (12 total occupants)",
       "Bring 1 divemaster for your 6:1 target.",
     ]);
     expect(lines.every((line) => line.tone === undefined)).toBe(true);
@@ -85,7 +85,9 @@ describe("the day's advice", () => {
       t,
     );
     const exceeded = lines.find((line) => line.tone === "warning");
-    expect(exceeded?.text).toBe("Party size exceeds largest boat capacity.");
+    expect(exceeded?.text).toBe(
+      "The group plus recommended crew exceeds the largest boat capacity.",
+    );
     expect(lines.some((line) => line.text.startsWith("Suggested boat"))).toBe(false);
   });
 
@@ -112,7 +114,7 @@ describe("the day's advice", () => {
     // the day rather than as a card's worth of bullet lines.
     expect(container.querySelectorAll("p")).toHaveLength(1);
     expect(container.querySelector("p")?.textContent).toBe(
-      "Suggested boat: Mantis II (12 seats) · Bring 1 divemaster for your 6:1 target.",
+      "Suggested boat: Mantis II (12 total occupants) · Bring 1 divemaster for your 6:1 target.",
     );
   });
 });
