@@ -1,5 +1,4 @@
 import type { DiverTranslator } from "@/i18n/messages";
-import { publicSchedulePath } from "@/lib/public-routes";
 
 /**
  * How the storefront's identity band lays out: how many panels it has, and
@@ -33,14 +32,13 @@ export function identityBand(
  * Never in the frame, so neither link carries `embed=1`.
  */
 export function monthRailSides(
-  shopSlug: string,
   previousKey: string | null,
   nextKey: string | null,
-  filterSuffix: string,
+  monthHref: (monthKey: string) => string,
   t: DiverTranslator,
 ) {
   const side = (key: string | null, label: string) =>
-    key ? { href: `${publicSchedulePath(shopSlug)}?month=${key}${filterSuffix}`, label } : null;
+    key ? { href: monthHref(key), label } : null;
   return {
     previous: side(previousKey, t("schedule.previousMonth")),
     next: side(nextKey, t("schedule.nextMonth")),

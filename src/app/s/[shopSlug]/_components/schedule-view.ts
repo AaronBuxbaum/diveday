@@ -82,12 +82,13 @@ export function scheduleViewLinks(view: ScheduleView) {
     if (activeLens) params.set("lens", activeLens.slug);
     return params;
   };
-  /** The same filters as `withViewParams`, for links that already carry their own `?month=`. */
-  const filterSuffix = `${hasSpaceFilter ? "&hasSpace=1" : ""}${
-    tripTypeFilter ? `&tripType=${tripTypeFilter}` : ""
-  }${canDiveFilter ? `&canDive=${canDiveFilter}` : ""}${hideAboveFilter ? "&hideAbove=1" : ""}${
-    activeLens ? `&lens=${activeLens.slug}` : ""
-  }`;
+  /** Month rail links replace the current month and always leave the embed frame. */
+  const monthHref = (monthKey: string) => {
+    const params = withViewParams(new URLSearchParams());
+    params.set("month", monthKey);
+    params.delete("embed");
+    return `${publicSchedulePath(shopSlug)}?${params.toString()}`;
+  };
   /**
    * A chip's destination: the current view with the lens swapped, and the
    * cursor dropped. `after`/`back` describe a position in a *different* list,
@@ -101,7 +102,7 @@ export function scheduleViewLinks(view: ScheduleView) {
     const query = params.toString();
     return `${publicSchedulePath(shopSlug)}${query ? `?${query}` : ""}`;
   };
-  return { withViewParams, filterSuffix, lensHref };
+  return { withViewParams, monthHref, lensHref };
 }
 
 /**
