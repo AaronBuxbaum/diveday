@@ -14,7 +14,9 @@ describe("reg-suit publisher workflow", () => {
     expect(PUBLISH).toContain("repository: ${{ job.workflow_repository }}");
     expect(PUBLISH).toContain("ref: ${{ job.workflow_sha }}");
     expect(PUBLISH).not.toContain("github.workflow_sha");
-    expect(PUBLISH).toMatch(/uses: actions\/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7\.0\.1/u);
+    expect(PUBLISH).toMatch(
+      /uses: actions\/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7\.0\.1/u,
+    );
     expect(PUBLISH).toContain("uses: ./.github/actions/setup");
     expect(PUBLISH).toContain('ignore-scripts: "true"');
   });
@@ -49,7 +51,9 @@ describe("reg-suit publisher workflow", () => {
     const publisherAt = PUBLISH.indexOf("run: node scripts/reg-suit-publish-bundle.mjs");
     expect(publisherAt).toBeGreaterThan(assumeAt);
     expect(PUBLISH.slice(assumeAt)).not.toMatch(/^\s+- uses:/mu);
-    expect(PUBLISH.slice(assumeAt)).not.toMatch(/(?:npm|pnpm) (?:install|exec)|node (?!scripts\/reg-suit-publish-bundle\.mjs)/u);
+    expect(PUBLISH.slice(assumeAt)).not.toMatch(
+      /(?:npm|pnpm) (?:install|exec)|node (?!scripts\/reg-suit-publish-bundle\.mjs)/u,
+    );
     for (const assignment of [
       "VISUAL_PUBLISH_BUNDLE: ${{ runner.temp }}/reg-suit-publish-bundle",
       "REG_ACTUAL_KEY: ${{ needs.prepare.outputs.actual_key }}",
@@ -63,7 +67,10 @@ describe("reg-suit publisher workflow", () => {
   });
 
   it("keeps comparison and bundle construction in the unprivileged prepare job", () => {
-    const prepare = WORKFLOW.slice(WORKFLOW.indexOf("\n  prepare:\n"), WORKFLOW.indexOf("\n  publish:\n"));
+    const prepare = WORKFLOW.slice(
+      WORKFLOW.indexOf("\n  prepare:\n"),
+      WORKFLOW.indexOf("\n  publish:\n"),
+    );
     expect(prepare).toContain("permissions:\n      contents: read");
     expect(prepare).not.toContain("id-token:");
     expect(prepare).toContain("run: pnpm visual:compare");
