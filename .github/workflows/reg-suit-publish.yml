@@ -204,6 +204,11 @@ jobs:
     name: reg-suit visual regression
     needs: prepare
     if: ${{ needs.prepare.result == 'success' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+    # Serialize publishers for this key. Out-of-band or older workflow versions
+    # do not share this group and must not publish concurrently during rollout.
+    concurrency:
+      group: reg-suit-publish-${{ needs.prepare.outputs.actual_key }}
+      cancel-in-progress: false
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
@@ -244,27 +249,6 @@ jobs:
           [[ "$REG_SUIT_S3_BUCKET_NAME" =~ ^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$ ]]
           if [[ -n "$PR_NUMBER" ]]; then
             [[ "$PR_NUMBER" =~ ^[1-9][0-9]*$ ]]
-            head_error="$RUNNER_TEMP/reg-suit-head-object.err"
-            set +e
-            existing_pr="$(aws s3api head-object \
-              --bucket "$REG_SUIT_S3_BUCKET_NAME" \
-              --key "$REG_ACTUAL_KEY/out.json" \
-              --region "$REG_SUIT_AWS_REGION" \
-              --query 'Metadata."diveday-pr-number"' --output text --no-cli-pager \
-              2>"$head_error")"
-            head_status=$?
-            set -e
-            if [[ "$head_status" -eq 0 ]]; then
-              if [[ "$existing_pr" != "$PR_NUMBER" ]]; then
-                echo "::error title=Visual snapshot key already exists::Refusing to overwrite $REG_ACTUAL_KEY because its existing report is not owned by PR #$PR_NUMBER."
-                exit 1
-              fi
-            elif grep -Eq '404|Not Found|NoSuchKey' "$head_error"; then
-              :
-            else
-              cat "$head_error" >&2
-              exit "$head_status"
-            fi
           fi
           manifest="$VISUAL_PUBLISH_BUNDLE/manifest.tsv"
           test ! -L "$manifest"
@@ -272,10 +256,23 @@ jobs:
           bundle_root="$(realpath -e -- "$VISUAL_PUBLISH_BUNDLE")"
           payload_root="$(realpath -e -- "$VISUAL_PUBLISH_BUNDLE/payload")"
           [[ "$payload_root" == "$bundle_root/payload" ]]
+          validated_manifest="$RUNNER_TEMP/reg-suit-manifest.validated.tsv"
+          payload_manifest="$RUNNER_TEMP/reg-suit-manifest.payload.tsv"
+          integrity_manifest="$RUNNER_TEMP/reg-suit-manifest.integrity.tsv"
+          : > "$validated_manifest"
+          : > "$payload_manifest"
+          : > "$integrity_manifest"
           count=0
-          while IFS=$'\t' read -r object_path content_type; do
-            [[ "$object_path" =~ ^[A-Za-z0-9._/-]+$ ]]
-            [[ "$object_path" != /* && "$object_path" != *//* ]]
+          marker_count=0
+          marker_path=""
+          marker_content_type=""
+          object_path=""
+          content_type=""
+          extra=""
+          while IFS=$'\t' read -r object_path content_type extra || [[ -n "${object_path}${content_type}${extra}" ]]; do
+            [[ -n "$object_path" && -n "$content_type" && -z "$extra" ]] || exit 1
+            [[ "$object_path" =~ ^[A-Za-z0-9._/-]+$ ]] || exit 1
+            [[ "$object_path" != /* && "$object_path" != *//* ]] || exit 1
             case "/$object_path/" in */../*|*/./*) exit 1 ;; esac
             object_path_lower="${object_path,,}"
             if [[ "$object_path_lower" == *.wasm && "$object_path:$content_type" != "detector.wasm:application/wasm" ]]; then
@@ -288,23 +285,155 @@ jobs:
               *) exit 1 ;;
             esac
             payload="$VISUAL_PUBLISH_BUNDLE/payload/$object_path.gz"
-            test ! -L "$payload"
-            test -f "$payload"
+            test ! -L "$payload" || exit 1
+            test -f "$payload" || exit 1
             resolved_payload="$(realpath -e -- "$payload")"
             case "$resolved_payload" in "$payload_root"/*) ;; *) exit 1 ;; esac
-            metadata_args=()
-            if [[ -n "$PR_NUMBER" ]]; then
-              metadata_args=(--metadata "diveday-pr-number=$PR_NUMBER")
+            payload_sha256="$(sha256sum "$payload")"
+            payload_sha256="${payload_sha256%% *}"
+            payload_size="$(wc -c < "$payload" | tr -d '[:space:]')"
+            [[ "$payload_sha256" =~ ^[0-9a-f]{64}$ && "$payload_size" =~ ^[0-9]+$ ]] || exit 1
+            printf '%s\t%s\n' "$object_path" "$content_type" >> "$validated_manifest" || exit 1
+            printf '%s\t%s\t%s\t%s\n' \
+              "$object_path" "$content_type" "$payload_sha256" "$payload_size" \
+              >> "$integrity_manifest" || exit 1
+            if [[ "$object_path" == "out.json" ]]; then
+              [[ "$content_type" == "application/json" ]] || exit 1
+              marker_count=$((marker_count + 1))
+              marker_path="$object_path"
+              marker_content_type="$content_type"
+            else
+              printf '%s\t%s\t%s\t%s\n' \
+                "$object_path" "$content_type" "$payload_sha256" "$payload_size" \
+                >> "$payload_manifest" || exit 1
             fi
-            aws s3api put-object \
-              --bucket "$REG_SUIT_S3_BUCKET_NAME" \
-              --key "$REG_ACTUAL_KEY/$object_path" \
-              --body "$payload" \
-              --content-type "$content_type" \
-              --content-encoding gzip \
-              --region "$REG_SUIT_AWS_REGION" \
-              "${metadata_args[@]}" \
-              --query ETag --output text --no-cli-pager
             count=$((count + 1))
+            object_path=""
+            content_type=""
+            extra=""
           done < "$manifest"
           test "$count" -gt 0
+          test "$marker_count" -eq 1
+          head_error="$RUNNER_TEMP/reg-suit-head-object.err"
+          head_query='[ContentLength,ContentType,ContentEncoding,Metadata."diveday-sha256",Metadata."diveday-size",Metadata."diveday-pr-number"]'
+          expected_pr_metadata="None"
+          if [[ -n "$PR_NUMBER" ]]; then
+            expected_pr_metadata="$PR_NUMBER"
+          fi
+          # HEAD compares uploader-supplied hashes with this bundle; it does not
+          # download and hash S3 bodies. A changed bundle under a completed SHA
+          # fails closed, while a marker-less partial prefix can be repaired.
+          publish_parallelism=8
+          export head_query expected_pr_metadata head_error
+          expected_head() {
+            printf '%s\t%s\t%s\t%s\t%s\t%s' \
+              "$4" "$2" "gzip" "$3" "$4" "$expected_pr_metadata"
+          }
+          head_object() {
+            aws s3api head-object \
+              --bucket "$REG_SUIT_S3_BUCKET_NAME" \
+              --key "$REG_ACTUAL_KEY/$1" \
+              --region "$REG_SUIT_AWS_REGION" \
+              --query "$head_query" --output text --no-cli-pager
+          }
+          export -f expected_head head_object
+          marker_entry="$(awk -F '\t' '$1 == "out.json" { print; exit }' "$integrity_manifest")"
+          IFS=$'\t' read -r object_path content_type payload_sha256 payload_size <<< "$marker_entry"
+          set +e
+          marker_head="$(head_object "$object_path" 2>"$head_error")"
+          marker_head_status=$?
+          set -e
+          if [[ "$marker_head_status" -eq 0 ]]; then
+            marker_expected="$(expected_head "$object_path" "$content_type" "$payload_sha256" "$payload_size")"
+            if [[ "$marker_head" != "$marker_expected" ]]; then
+              echo "::error title=Visual snapshot provenance mismatch::Refusing to reuse $REG_ACTUAL_KEY/out.json; its size, type, encoding, content hash, or PR ownership metadata does not match this run. Publish under a fresh commit key or investigate manually."
+              exit 1
+            fi
+            verify_existing_object() {
+              set -euo pipefail
+              object_path="$1"
+              content_type="$2"
+              payload_sha256="$3"
+              payload_size="$4"
+              head_error="$RUNNER_TEMP/reg-suit-head-object-$$.err"
+              expected="$(expected_head "$object_path" "$content_type" "$payload_sha256" "$payload_size")"
+              set +e
+              existing_head="$(head_object "$object_path" 2>"$head_error")"
+              existing_head_status=$?
+              set -e
+              if [[ "$existing_head_status" -ne 0 || "$existing_head" != "$expected" ]]; then
+                echo "::error title=Visual snapshot provenance mismatch::Refusing to reuse $REG_ACTUAL_KEY; $object_path is missing or its size, type, encoding, content hash, or PR ownership metadata differs. Publish under a fresh commit key or investigate manually." >&2
+                if [[ "$existing_head_status" -ne 0 ]]; then cat "$head_error" >&2; fi
+                exit 1
+              fi
+            }
+            export -f verify_existing_object
+            if ! xargs -r -P "$publish_parallelism" -n 4 bash -c \
+              'verify_existing_object "$@"' _ < "$integrity_manifest"; then
+              echo "::error title=Visual snapshot provenance mismatch::Refusing to reuse $REG_ACTUAL_KEY because one or more report objects differ. Publish under a fresh commit key or investigate manually."
+              exit 1
+            fi
+            printf 'Reusing provenance-verified reg-suit snapshot %s.\n' "$REG_ACTUAL_KEY"
+            exit 0
+          elif grep -Eq '404|Not Found|NoSuchKey' "$head_error"; then
+            :
+          else
+            cat "$head_error" >&2
+            exit "$marker_head_status"
+          fi
+          payload_count=$((count - marker_count))
+          printf 'Publishing %s reg-suit assets with at most %s concurrent uploads; the report marker uploads last.\n' \
+            "$payload_count" "$publish_parallelism"
+          publish_object() {
+            set -euo pipefail
+            payload="$VISUAL_PUBLISH_BUNDLE/payload/$object_path.gz"
+            test ! -L "$payload"
+            test -f "$payload"
+            head_error="$RUNNER_TEMP/reg-suit-head-object-$$.err"
+            expected="$(expected_head "$object_path" "$content_type" "$payload_sha256" "$payload_size")"
+            set +e
+            existing_head="$(head_object "$object_path" 2>"$head_error")"
+            existing_head_status=$?
+            set -e
+            if [[ "$existing_head_status" -eq 0 && "$existing_head" == "$expected" ]]; then
+              printf 'Verified existing reg-suit object %s; skipping upload.\n' "$object_path"
+              return 0
+            fi
+            if [[ "$existing_head_status" -ne 0 ]] && ! grep -Eq '404|Not Found|NoSuchKey' "$head_error"; then
+              cat "$head_error" >&2
+              exit "$existing_head_status"
+            fi
+            if [[ -n "$PR_NUMBER" ]]; then
+              aws s3api put-object \
+                --bucket "$REG_SUIT_S3_BUCKET_NAME" \
+                --key "$REG_ACTUAL_KEY/$object_path" \
+                --body "$payload" \
+                --content-type "$content_type" \
+                --content-encoding gzip \
+                --region "$REG_SUIT_AWS_REGION" \
+                --metadata "diveday-sha256=$payload_sha256,diveday-size=$payload_size,diveday-pr-number=$PR_NUMBER" \
+                --query ETag --output text --no-cli-pager
+            else
+              aws s3api put-object \
+                --bucket "$REG_SUIT_S3_BUCKET_NAME" \
+                --key "$REG_ACTUAL_KEY/$object_path" \
+                --body "$payload" \
+                --content-type "$content_type" \
+                --content-encoding gzip \
+                --region "$REG_SUIT_AWS_REGION" \
+                --metadata "diveday-sha256=$payload_sha256,diveday-size=$payload_size" \
+                --query ETag --output text --no-cli-pager
+            fi
+          }
+          export -f expected_head head_object publish_object
+          xargs -r -P "$publish_parallelism" -n 4 bash -c '
+            set -euo pipefail
+            object_path="$1"
+            content_type="$2"
+            payload_sha256="$3"
+            payload_size="$4"
+            publish_object
+          ' _ < "$payload_manifest"
+          object_path="$marker_path"
+          content_type="$marker_content_type"
+          publish_object
