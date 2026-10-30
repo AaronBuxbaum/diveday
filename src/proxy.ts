@@ -571,8 +571,8 @@ async function refusedPublicRoute(
     // they are: the editor mints the parameter where it already knows the
     // reader is this shop's live staff, and the check here is one HMAC over the
     // two segments the route resolved — no database, no session, no cookie
-    // cache. `src/db/public-route-existence.ts`'s invariant block has the three
-    // cheaper mechanisms and why each of them is worse than the disclosure was.
+    // cache. The `src/db/public-route-existence.ts` header summarizes this
+    // capability boundary and why session-cookie heuristics cannot replace it.
     //
     // The parameter is not an authorisation and is not treated as one. The page
     // still runs `isLiveShopStaff`, live and per-shop, so a token in a
