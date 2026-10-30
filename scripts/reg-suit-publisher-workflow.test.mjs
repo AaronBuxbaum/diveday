@@ -49,6 +49,19 @@ describe("reg-suit publisher workflow", () => {
     expect(publisherPermissions).not.toContain("pull-requests:");
   });
 
+  it("allows WebAssembly only for reg-suit's root detector asset", () => {
+    expect(PUBLISH).toContain('object_path_lower="${object_path,,}"');
+    const wasmGuard =
+      'if [[ "$object_path_lower" == *.wasm && "$object_path:$content_type" != "detector.wasm:application/wasm" ]]; then';
+    expect(PUBLISH).toContain(wasmGuard);
+    expect(PUBLISH).toContain('case "$object_path:$content_type" in');
+    expect(PUBLISH).toContain("detector.wasm:application/wasm) ;;");
+    expect(PUBLISH).toContain("detector.wasm:*|*:application/wasm) exit 1 ;;");
+    expect(PUBLISH.indexOf('case "$object_path:$content_type" in')).toBeGreaterThan(
+      PUBLISH.indexOf(wasmGuard),
+    );
+  });
+
   it("decodes and compares in the unprivileged job, then uploads only a fixed bundle", () => {
     expect(WORKFLOW).toContain("name: visual-screenshots-1");
     expect(WORKFLOW).not.toContain("pattern: visual-screenshots-*");
