@@ -962,7 +962,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    uses: AaronBuxbaum/diveday/.github/workflows/reg-suit-publish.yml@20e3a00c0afa30aebf6e71d6ebd96810bcbc8821 # immutable commit 20e3a00c0afa30aebf6e71d6ebd96810bcbc8821
+    uses: AaronBuxbaum/diveday/.github/workflows/reg-suit-publish.yml@07e78f3a6f07d3df555dce111d0726472022456b # immutable commit 07e78f3a6f07d3df555dce111d0726472022456b
     with:
       capture-mode: ${{ needs.visual-plan.outputs.mode }}
       capture-shards: ${{ needs.visual-plan.outputs.shards }}
