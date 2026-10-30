@@ -132,7 +132,7 @@ test("a boat's papers and the kit aboard it reach the departure that sails on it
   await row.getByRole("button", { name: "Save boat" }).click();
   const refused = boatRow(page, BOAT).getByRole("alert");
   await expect(refused).toHaveText(
-    "The certificate allows 10 passengers, so this boat can’t sell 14. Lower the seats, or correct the certificate.",
+    /The departure on .+ sells more seats than the certificate’s 10\. Lower its capacity first\./,
   );
   await expect(
     boatRow(page, BOAT).getByLabel("Passengers allowed on the certificate (not crew)"),
