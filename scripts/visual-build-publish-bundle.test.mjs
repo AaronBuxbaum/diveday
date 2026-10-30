@@ -65,9 +65,9 @@ describe("buildVisualPublishBundle", () => {
     expect(readFileSync(path.join(bundleDir, "manifest.tsv"), "utf8")).toBe(
       "detector.wasm\tapplication/wasm\n",
     );
-    expect(
-      gunzipSync(readFileSync(path.join(bundleDir, "payload", "detector.wasm.gz"))),
-    ).toEqual(detector);
+    expect(gunzipSync(readFileSync(path.join(bundleDir, "payload", "detector.wasm.gz")))).toEqual(
+      detector,
+    );
 
     const nested = fixture();
     mkdirSync(path.join(nested.sourceDir, "assets"));
