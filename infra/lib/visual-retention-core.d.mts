@@ -9,6 +9,7 @@ export const KEEP_MAIN_BASELINE_AGE_MS: number;
 export const CANDIDATE_PAGE_SIZE: number;
 export const MAX_CANDIDATE_PAGES: number;
 export const MIN_PRUNE_AGE_MS: number;
+export const MIN_PUBLICATION_GRACE_MS: number;
 export function mainFirstParentChain<T extends RetentionCommit>(candidates: readonly T[]): T[];
 export function outsideMainBaselineAgeWindow(commit: RetentionCommit, now: number): boolean;
 export function chainCoversMainBaselineFloors(

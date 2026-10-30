@@ -19,8 +19,11 @@ on:
         description: Immutable version of the capture bundle published by this run
         value: ${{ jobs.publish.outputs.snapshot_version }}
       baseline_note:
-        description: Any older baseline commit used for the comparison
+        description: Baseline resolution note, including a deliberate fresh start
         value: ${{ jobs.publish.outputs.baseline_note }}
+      baseline_reset:
+        description: Whether this run intentionally started without a versioned baseline
+        value: ${{ jobs.publish.outputs.baseline_reset }}
       selection_note:
         description: Which captures were compared from the selected set
         value: ${{ jobs.publish.outputs.selection_note }}
@@ -41,6 +44,7 @@ jobs:
       contents: read
     outputs:
       baseline_note: ${{ steps.baseline.outputs.note }}
+      baseline_reset: ${{ steps.baseline.outputs.fresh_start }}
       selection_note: ${{ steps.compare.outputs.selection_note || steps.selection.outputs.selection_note }}
       actual_key: ${{ steps.keys.outputs.actual }}
       region: ${{ steps.region.outputs.region }}
@@ -135,11 +139,19 @@ jobs:
           name: visual-screenshots-8
           path: ${{ runner.temp }}/reg-suit-artifacts/shard-8
 
+      - name: Download the planned visual capture inventory
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: visual-list
+          path: ${{ runner.temp }}/reg-suit-visual-plan
+
       - name: Accept only inert screenshot PNGs
         run: node scripts/visual-publish-artifacts.mjs
         env:
           VISUAL_ARTIFACT_ROOT: ${{ runner.temp }}/reg-suit-artifacts
           VISUAL_CAPTURE_SHARDS: ${{ inputs.capture-shards }}
+          VISUAL_EXPECTED_CAPTURE_TESTS: ${{ runner.temp }}/reg-suit-visual-plan/visual-list.json
+          VISUAL_EXPECTED_CAPTURE_MANIFEST: ${{ runner.temp }}/reg-suit-capture-manifest.json
 
       - name: Resolve a baseline that actually exists
         id: baseline
@@ -149,7 +161,14 @@ jobs:
           REG_SUIT_AWS_REGION: ${{ steps.region.outputs.region }}
           PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           DEFAULT_BRANCH: main
+
+      - name: Require all captures for a fresh baseline
+        if: ${{ steps.baseline.outputs.fresh_start == 'true' && inputs.capture-mode != 'all' }}
+        run: |
+          echo "::error title=Full visual capture required::A fresh baseline must include every light and dark capture. Re-run after the planner detects the fresh-start marker."
+          exit 1
 
       # A commit can have more than one completed capture set after a retry.
       # Resolve the marker's immutable snapshot version before looking up cache.
@@ -180,16 +199,22 @@ jobs:
           VISUAL_FILL_FROM_EXPECTED: ${{ inputs.capture-mode == 'affected' || inputs.capture-mode == 'light' }}
           VISUAL_VERIFY_COMPLETE: "true"
           VISUAL_EXPECTED_READY: "true"
+          VISUAL_CAPTURE_MODE: ${{ inputs.capture-mode }}
           REG_SUIT_COMPARE_ONLY: "true"
           REG_SUIT_CONFIG: oidc
           REG_SUIT_AWS_REGION: ${{ steps.region.outputs.region }}
           REG_SUIT_S3_BUCKET_NAME: ${{ secrets.REG_SUIT_S3_BUCKET_NAME }}
           GITHUB_EVENT_NAME: ${{ github.event_name }}
+          VISUAL_FRESH_START: ${{ steps.baseline.outputs.fresh_start }}
+          VISUAL_EXPECTED_CAPTURE_MANIFEST: ${{ runner.temp }}/reg-suit-capture-manifest.json
 
       - name: Verify complete screenshot inventory
         run: node scripts/visual-publish-artifacts.mjs --verify-complete
         env:
           GITHUB_EVENT_NAME: ${{ github.event_name }}
+          VISUAL_FRESH_START: ${{ steps.baseline.outputs.fresh_start }}
+          VISUAL_CAPTURE_MODE: ${{ inputs.capture-mode }}
+          VISUAL_EXPECTED_CAPTURE_MANIFEST: ${{ runner.temp }}/reg-suit-capture-manifest.json
 
       - name: Build the trusted S3 publish bundle
         id: bundle
@@ -217,23 +242,35 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
+      contents: read
       id-token: write
     outputs:
       baseline_note: ${{ needs.prepare.outputs.baseline_note }}
+      baseline_reset: ${{ needs.prepare.outputs.baseline_reset }}
       selection_note: ${{ needs.prepare.outputs.selection_note }}
       actual_key: ${{ needs.prepare.outputs.actual_key }}
       region: ${{ needs.prepare.outputs.region }}
       snapshot_version: ${{ needs.prepare.outputs.snapshot_version }}
     steps:
+      # Run only code from this reusable-workflow revision in the credentialed
+      # job. The bundle downloaded below remains opaque data until the trusted
+      # publisher validates and uploads it.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+
+      - uses: ./.github/actions/setup
+        with:
+          ignore-scripts: "true"
+
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: reg-suit-publish-bundle
           path: ${{ runner.temp }}/reg-suit-publish-bundle
 
-      # The normal publication path has no checkout, package installation,
-      # repository script, or image decoder after OIDC. It uploads only the
-      # bundle prepared by the unprivileged job. The IAM trust restriction is
-      # tracked separately in #3274.
+      # Dependencies and publisher code come from the immutable reusable
+      # workflow checkout. The IAM trust restriction is tracked separately in #3274.
       - name: Assume the reg-suit publisher role
         uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
@@ -242,7 +279,7 @@ jobs:
           aws-region: ${{ needs.prepare.outputs.region }}
           unset-current-credentials: true
 
-      - name: Publish the precompressed reg-suit bundle
+      - name: Publish the reg-suit bundle with the trusted SDK publisher
         env:
           REG_ACTUAL_KEY: ${{ needs.prepare.outputs.actual_key }}
           SNAPSHOT_VERSION: ${{ needs.prepare.outputs.snapshot_version }}
@@ -250,228 +287,4 @@ jobs:
           REG_SUIT_S3_BUCKET_NAME: ${{ secrets.REG_SUIT_S3_BUCKET_NAME }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           VISUAL_PUBLISH_BUNDLE: ${{ runner.temp }}/reg-suit-publish-bundle
-        run: |
-          set -euo pipefail
-          [[ "$REG_ACTUAL_KEY" =~ ^[0-9a-f]{40}$ ]]
-          [[ "$SNAPSHOT_VERSION" =~ ^[0-9a-f]{64}$ ]]
-          [[ "$REG_SUIT_S3_BUCKET_NAME" =~ ^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$ ]]
-          if [[ -n "$PR_NUMBER" ]]; then
-            [[ "$PR_NUMBER" =~ ^[1-9][0-9]*$ ]]
-          fi
-          manifest="$VISUAL_PUBLISH_BUNDLE/manifest.tsv"
-          test ! -L "$manifest"
-          test -f "$manifest"
-          bundle_root="$(realpath -e -- "$VISUAL_PUBLISH_BUNDLE")"
-          payload_root="$(realpath -e -- "$VISUAL_PUBLISH_BUNDLE/payload")"
-          [[ "$payload_root" == "$bundle_root/payload" ]]
-          validated_manifest="$RUNNER_TEMP/reg-suit-manifest.validated.tsv"
-          payload_manifest="$RUNNER_TEMP/reg-suit-manifest.payload.tsv"
-          integrity_manifest="$RUNNER_TEMP/reg-suit-manifest.integrity.tsv"
-          : > "$validated_manifest"
-          : > "$payload_manifest"
-          : > "$integrity_manifest"
-          count=0
-          marker_count=0
-          marker_path=""
-          marker_content_type=""
-          object_path=""
-          content_type=""
-          extra=""
-          while IFS=$'\t' read -r object_path content_type extra || [[ -n "${object_path}${content_type}${extra}" ]]; do
-            [[ -n "$object_path" && -n "$content_type" && -z "$extra" ]] || exit 1
-            [[ "$object_path" =~ ^[A-Za-z0-9._/-]+$ ]] || exit 1
-            [[ "$object_path" != /* && "$object_path" != *//* ]] || exit 1
-            case "/$object_path/" in */../*|*/./*) exit 1 ;; esac
-            object_path_lower="${object_path,,}"
-            if [[ "$object_path_lower" == *.wasm && "$object_path:$content_type" != "detector.wasm:application/wasm" ]]; then
-              exit 1
-            fi
-            case "$object_path:$content_type" in
-              detector.wasm:application/wasm) ;;
-              detector.wasm:*|*:application/wasm) exit 1 ;;
-              *:application/json|*:application/javascript|*:application/octet-stream|*:image/gif|*:image/png|*:image/svg+xml|*:image/webp|*:image/x-icon|*:text/css|*:text/html|*:text/plain|*:font/otf|*:font/ttf|*:font/woff|*:font/woff2) ;;
-              *) exit 1 ;;
-            esac
-            payload="$VISUAL_PUBLISH_BUNDLE/payload/$object_path.gz"
-            test ! -L "$payload" || exit 1
-            test -f "$payload" || exit 1
-            resolved_payload="$(realpath -e -- "$payload")"
-            case "$resolved_payload" in "$payload_root"/*) ;; *) exit 1 ;; esac
-            payload_sha256="$(sha256sum "$payload")"
-            payload_sha256="${payload_sha256%% *}"
-            payload_size="$(wc -c < "$payload" | tr -d '[:space:]')"
-            [[ "$payload_sha256" =~ ^[0-9a-f]{64}$ && "$payload_size" =~ ^[0-9]+$ ]] || exit 1
-            printf '%s\t%s\n' "$object_path" "$content_type" >> "$validated_manifest" || exit 1
-            printf '%s\t%s\t%s\t%s\n' \
-              "$object_path" "$content_type" "$payload_sha256" "$payload_size" \
-              >> "$integrity_manifest" || exit 1
-            if [[ "$object_path" == "out.json" ]]; then
-              [[ "$content_type" == "application/json" ]] || exit 1
-              marker_count=$((marker_count + 1))
-              marker_path="$object_path"
-              marker_content_type="$content_type"
-            else
-              printf '%s\t%s\t%s\t%s\n' \
-                "$object_path" "$content_type" "$payload_sha256" "$payload_size" \
-                >> "$payload_manifest" || exit 1
-            fi
-            count=$((count + 1))
-            object_path=""
-            content_type=""
-            extra=""
-          done < "$manifest"
-          test "$count" -gt 0
-          test "$marker_count" -eq 1
-          head_error="$RUNNER_TEMP/reg-suit-head-object.err"
-          head_query='[ContentLength,ContentType,ContentEncoding,Metadata."diveday-sha256",Metadata."diveday-size",Metadata."diveday-pr-number",Metadata."diveday-snapshot-version"]'
-          expected_pr_metadata="None"
-          if [[ -n "$PR_NUMBER" ]]; then
-            expected_pr_metadata="$PR_NUMBER"
-          fi
-          # HEAD compares uploader-supplied hashes with this bundle; it does not
-          # download and hash S3 bodies. Versioned capture paths let same-SHA
-          # retries publish new images while the root report marker stays last.
-          publish_parallelism=32
-          export head_query expected_pr_metadata head_error SNAPSHOT_VERSION
-          expected_head() {
-            snapshot_metadata="None"
-            if [[ "$1" == "out.json" ]]; then snapshot_metadata="$SNAPSHOT_VERSION"; fi
-            printf '%s\t%s\t%s\t%s\t%s\t%s\t%s' \
-              "$4" "$2" "gzip" "$3" "$4" "$expected_pr_metadata" "$snapshot_metadata"
-          }
-          head_object() {
-            aws s3api head-object \
-              --bucket "$REG_SUIT_S3_BUCKET_NAME" \
-              --key "$REG_ACTUAL_KEY/$1" \
-              --region "$REG_SUIT_AWS_REGION" \
-              --query "$head_query" --output text --no-cli-pager
-          }
-          export -f expected_head head_object
-          marker_entry="$(awk -F '\t' '$1 == "out.json" { print; exit }' "$integrity_manifest")"
-          IFS=$'\t' read -r object_path content_type payload_sha256 payload_size <<< "$marker_entry"
-          set +e
-          marker_head="$(head_object "$object_path" 2>"$head_error")"
-          marker_head_status=$?
-          set -e
-          if [[ "$marker_head_status" -eq 0 ]]; then
-            marker_owner="$(cut -f6 <<< "$marker_head")"
-            marker_version="$(cut -f7 <<< "$marker_head")"
-            if [[ "$marker_owner" != "$expected_pr_metadata" ]]; then
-              echo "::error title=Visual snapshot ownership mismatch::Refusing to replace $REG_ACTUAL_KEY/out.json because it belongs to a different publisher."
-              exit 1
-            fi
-            marker_expected="$(expected_head "$object_path" "$content_type" "$payload_sha256" "$payload_size")"
-            if [[ "$marker_head" != "$marker_expected" ]]; then
-              if [[ "$marker_version" == "$SNAPSHOT_VERSION" ]]; then
-                echo "::error title=Visual snapshot provenance mismatch::Refusing to replace $REG_ACTUAL_KEY/out.json because its content changed without a new snapshot version."
-                exit 1
-              fi
-              printf 'Replacing same-owner snapshot marker %s from version %s with %s after publishing its assets.\n' \
-                "$REG_ACTUAL_KEY" "$marker_version" "$SNAPSHOT_VERSION"
-            else
-            verify_existing_object() {
-              set -euo pipefail
-              object_path="$1"
-              content_type="$2"
-              payload_sha256="$3"
-              payload_size="$4"
-              head_error="$RUNNER_TEMP/reg-suit-head-object-$$.err"
-              expected="$(expected_head "$object_path" "$content_type" "$payload_sha256" "$payload_size")"
-              set +e
-              existing_head="$(head_object "$object_path" 2>"$head_error")"
-              existing_head_status=$?
-              set -e
-              if [[ "$existing_head_status" -ne 0 || "$existing_head" != "$expected" ]]; then
-                echo "::error title=Visual snapshot provenance mismatch::Refusing to reuse $REG_ACTUAL_KEY; $object_path is missing or its size, type, encoding, content hash, or PR ownership metadata differs. Publish under a fresh commit key or investigate manually." >&2
-                if [[ "$existing_head_status" -ne 0 ]]; then cat "$head_error" >&2; fi
-                exit 1
-              fi
-            }
-            export -f verify_existing_object
-            if ! xargs -r -P "$publish_parallelism" -n 4 bash -c \
-              'verify_existing_object "$@"' _ < "$integrity_manifest"; then
-              echo "::error title=Visual snapshot provenance mismatch::Refusing to reuse $REG_ACTUAL_KEY because one or more report objects differ. Publish under a fresh commit key or investigate manually."
-              exit 1
-            fi
-              printf 'Reusing provenance-verified reg-suit snapshot %s.\n' "$REG_ACTUAL_KEY"
-              exit 0
-            fi
-          elif grep -Eq '404|Not Found|NoSuchKey' "$head_error"; then
-            :
-          else
-            cat "$head_error" >&2
-            exit "$marker_head_status"
-          fi
-          payload_count=$((count - marker_count))
-          printf 'Publishing %s reg-suit assets with at most %s concurrent uploads; the report marker uploads last.\n' \
-            "$payload_count" "$publish_parallelism"
-          publish_object() {
-            set -euo pipefail
-            payload="$VISUAL_PUBLISH_BUNDLE/payload/$object_path.gz"
-            test ! -L "$payload"
-            test -f "$payload"
-            head_error="$RUNNER_TEMP/reg-suit-head-object-$$.err"
-            expected="$(expected_head "$object_path" "$content_type" "$payload_sha256" "$payload_size")"
-            set +e
-            existing_head="$(head_object "$object_path" 2>"$head_error")"
-            existing_head_status=$?
-            set -e
-            if [[ "$existing_head_status" -eq 0 && "$existing_head" == "$expected" ]]; then
-              printf 'Verified existing reg-suit object %s; skipping upload.\n' "$object_path"
-              return 0
-            fi
-            if [[ "$existing_head_status" -eq 0 ]]; then
-              existing_owner="$(cut -f6 <<< "$existing_head")"
-              existing_version="$(cut -f7 <<< "$existing_head")"
-              if [[ "$existing_owner" != "$expected_pr_metadata" ]]; then
-                echo "::error title=Visual snapshot ownership mismatch::Refusing to replace $REG_ACTUAL_KEY/$object_path because it belongs to a different publisher." >&2
-                exit 1
-              fi
-              if [[ "$object_path" != "out.json" || "$existing_version" == "$SNAPSHOT_VERSION" ]]; then
-                echo "::error title=Visual snapshot provenance mismatch::Refusing to replace $REG_ACTUAL_KEY/$object_path because its content does not match the immutable snapshot version." >&2
-                exit 1
-              fi
-            fi
-            if [[ "$existing_head_status" -ne 0 ]] && ! grep -Eq '404|Not Found|NoSuchKey' "$head_error"; then
-              cat "$head_error" >&2
-              exit "$existing_head_status"
-            fi
-            object_metadata="diveday-sha256=$payload_sha256,diveday-size=$payload_size"
-            if [[ "$object_path" == "out.json" ]]; then
-              object_metadata+=",diveday-snapshot-version=$SNAPSHOT_VERSION"
-            fi
-            if [[ -n "$PR_NUMBER" ]]; then
-              object_metadata+=",diveday-pr-number=$PR_NUMBER"
-              aws s3api put-object \
-                --bucket "$REG_SUIT_S3_BUCKET_NAME" \
-                --key "$REG_ACTUAL_KEY/$object_path" \
-                --body "$payload" \
-                --content-type "$content_type" \
-                --content-encoding gzip \
-                --region "$REG_SUIT_AWS_REGION" \
-                --metadata "$object_metadata" \
-                --query ETag --output text --no-cli-pager
-            else
-              aws s3api put-object \
-                --bucket "$REG_SUIT_S3_BUCKET_NAME" \
-                --key "$REG_ACTUAL_KEY/$object_path" \
-                --body "$payload" \
-                --content-type "$content_type" \
-                --content-encoding gzip \
-                --region "$REG_SUIT_AWS_REGION" \
-                --metadata "$object_metadata" \
-                --query ETag --output text --no-cli-pager
-            fi
-          }
-          export -f expected_head head_object publish_object
-          xargs -r -P "$publish_parallelism" -n 4 bash -c '
-            set -euo pipefail
-            object_path="$1"
-            content_type="$2"
-            payload_sha256="$3"
-            payload_size="$4"
-            publish_object
-          ' _ < "$payload_manifest"
-          object_path="$marker_path"
-          content_type="$marker_content_type"
-          publish_object
+        run: node scripts/reg-suit-publish-bundle.mjs

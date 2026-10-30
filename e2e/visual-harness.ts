@@ -1,4 +1,5 @@
-import { readFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import path from "node:path";
 import type { Browser, BrowserContext, Locator, Page } from "@playwright/test";
 import { requireFreshBuild } from "../scripts/e2e-build-evidence.mjs";
 import {
@@ -1319,8 +1320,44 @@ async function recordCapture(
   });
 }
 
+/** Record the intended filename before capture so publication can detect a missing image. */
+export function registerExpectedVisualCapture(image: string) {
+  const name = path.basename(image);
+  if (
+    path.dirname(image) !== path.join("e2e", "screenshots") ||
+    !/^[A-Za-z0-9][A-Za-z0-9._-]{0,179}\.png$/u.test(name)
+  ) {
+    throw new Error("visual capture manifest requires a safe screenshot filename");
+  }
+
+  const directory = path.join("e2e", "capture-manifest");
+  mkdirSync(directory, { recursive: true });
+  const manifestPath = path.join(directory, `${name}.json`);
+  const manifest = {
+    version: 1,
+    screenshot: name,
+    testId: test.info().testId,
+  };
+  try {
+    writeFileSync(manifestPath, `${JSON.stringify(manifest)}\n`, { flag: "wx" });
+  } catch (error) {
+    if (!(error instanceof Error) || !("code" in error) || error.code !== "EEXIST") throw error;
+    const previous = JSON.parse(readFileSync(manifestPath, "utf8"));
+    if (
+      previous.version !== manifest.version ||
+      previous.screenshot !== manifest.screenshot ||
+      previous.testId !== manifest.testId
+    ) {
+      throw new Error(`visual capture filename was planned by more than one test: ${name}`);
+    }
+    // The main-branch wedge retry can revisit the same test ID after its first
+    // attempt. Keep the first intent and allow that one retry to replace the PNG.
+  }
+}
+
 async function screenshotOrGiveUp(page: Page, path: string) {
   const build = await assertCaptureState(page);
+  registerExpectedVisualCapture(path);
   let timer: ReturnType<typeof setTimeout> | undefined;
   // Folded to a value for the same reason as `withRendererBound`: the losing
   // arm must not surface later as an unhandled rejection at context teardown.
@@ -1905,6 +1942,7 @@ export async function captureStickyFoot(page: Page, name: string, scheme: "light
       );
       const build = await assertCaptureState(page);
       const shot = `e2e/screenshots/${name}-${scheme}-vw-${viewport.width}.png`;
+      registerExpectedVisualCapture(shot);
       await page.screenshot({
         path: shot,
         animations: "disabled",
@@ -1949,6 +1987,7 @@ export async function captureFolded(page: Page, name: string, scheme: "light") {
     });
     const build = await assertCaptureState(page);
     const shot = `e2e/screenshots/${name}-${scheme}-vw-390.png`;
+    registerExpectedVisualCapture(shot);
     await page.screenshot({ path: shot });
     await recordCapture(page, shot, build);
     if (baseViewport) await page.setViewportSize(baseViewport);

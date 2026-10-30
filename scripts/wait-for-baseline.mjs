@@ -61,20 +61,23 @@ async function publishedSnapshot(bucket, key, { fetchImpl }) {
       method: "HEAD",
       signal: controller.signal,
     });
-    if (!res.ok) return null;
+    // This bucket serves every existing baseline marker publicly but does not
+    // grant public ListBucket. S3 therefore returns 403, rather than 404, for
+    // a missing key. Treat only those two statuses as absent; an outage or
+    // other response must not be mistaken for proof that no versioned marker
+    // exists.
+    if (res.status === 403 || res.status === 404) return { kind: "absent" };
+    if (!res.ok) return { kind: "unavailable", status: res.status };
     const metadataVersion = res.headers?.get("x-amz-meta-diveday-snapshot-version");
-    if (
-      metadataVersion !== null &&
-      metadataVersion !== undefined &&
-      !/^[0-9a-f]{64}$/u.test(metadataVersion)
-    ) {
-      return null;
+    // Unversioned markers identify the old snapshot format. They are observed
+    // only to allow a one-time baseline reset, never returned as baselines.
+    if (metadataVersion === null || metadataVersion === undefined) return { kind: "legacy" };
+    if (!/^[0-9a-f]{64}$/u.test(metadataVersion)) {
+      return { kind: "malformed" };
     }
-    return {
-      version: metadataVersion ?? "legacy",
-    };
-  } catch {
-    return null;
+    return { kind: "versioned", version: metadataVersion };
+  } catch (error) {
+    return { kind: "unavailable", error };
   } finally {
     clearTimeout(timer);
   }
@@ -87,8 +90,11 @@ export const DEFAULT_MAX_ANCESTORS = 40;
 
 /**
  * The nearest commit at or before `key` (first-parent, so a walk along main
- * stays on main) whose snapshot is published, or null when none within
- * `maxAncestors` is.
+ * stays on main) whose versioned snapshot is published, or null when none
+ * within `maxAncestors` is. When only unversioned markers are found and every
+ * probe is definitive, returns a freshStart signal so the caller can publish
+ * the new baseline once. A timeout, server error, or malformed marker blocks
+ * freshStart because it cannot prove that no versioned baseline exists.
  *
  * `skipped` counts the commits walked past: 0 means `key` itself is
  * published and nothing changes. The check is `out.json` alone rather than
@@ -105,7 +111,9 @@ export async function nearestPublishedAncestor({
   fetchImpl = fetch,
 }) {
   const current = await publishedSnapshot(bucket, `${key}/out.json`, { fetchImpl });
-  if (current) return { key, skipped: 0, version: current.version };
+  if (current.kind === "versioned") return { key, skipped: 0, version: current.version };
+  let legacyFound = current.kind === "legacy";
+  let unresolvedFound = current.kind === "malformed" || current.kind === "unavailable";
   let ancestors;
   try {
     ancestors = git(["rev-list", "--first-parent", `--max-count=${maxAncestors}`, `${key}^`])
@@ -117,14 +125,26 @@ export async function nearestPublishedAncestor({
   }
   for (const [index, sha] of ancestors.entries()) {
     const published = await publishedSnapshot(bucket, `${sha}/out.json`, { fetchImpl });
-    if (published) {
+    if (published.kind === "versioned") {
       return { key: sha, skipped: index + 1, version: published.version };
     }
+    if (published.kind === "legacy") legacyFound = true;
+    if (published.kind === "malformed" || published.kind === "unavailable") {
+      unresolvedFound = true;
+    }
+  }
+  if (legacyFound && !unresolvedFound) {
+    return { key: null, skipped: ancestors.length + 1, version: null, freshStart: true };
   }
   return null;
 }
 
 function appendEnv(file, lines) {
+  if (!file) return;
+  appendFileSync(file, `${lines.join("\n")}\n`);
+}
+
+function appendOutput(file, lines) {
   if (!file) return;
   appendFileSync(file, `${lines.join("\n")}\n`);
 }
@@ -144,7 +164,7 @@ export function baselineEnvironment({ key, version, note }) {
 
 /**
  * A stacked layer's own baseline: the commit of the layer below that this branch contains
- * (`merge-base` of the PR's base sha and HEAD), but only when that commit's snapshot is already
+ * (`merge-base` of the PR's base and head shas), but only when that commit's snapshot is already
  * published. Then the diff is this layer's own change instead of the whole stack's since `main`,
  * which on 2026-10-12 was ~926 changed captures per layer, most of them other layers' work, and
  * the costliest triage sessions spent tokens on. Never waits: an unpublished layer below falls
@@ -156,21 +176,29 @@ export async function layerBelowBaseline({
   bucket,
   baseRef,
   baseSha,
+  headSha,
   defaultBranch,
   key,
   git,
   fetchImpl = fetch,
 }) {
-  if (!baseRef || baseRef === defaultBranch || !COMMIT_SHA.test(baseSha ?? "")) return null;
+  if (
+    !baseRef ||
+    baseRef === defaultBranch ||
+    !COMMIT_SHA.test(baseSha ?? "") ||
+    !COMMIT_SHA.test(headSha ?? "")
+  ) {
+    return null;
+  }
   let below;
   try {
-    below = git(["merge-base", baseSha, "HEAD"]).trim();
+    below = git(["merge-base", baseSha, headSha]).trim();
   } catch {
     return null;
   }
   if (!COMMIT_SHA.test(below) || below === key) return null;
   const published = await publishedSnapshot(bucket, `${below}/out.json`, { fetchImpl });
-  if (!published) return null;
+  if (!published?.version) return null;
   return {
     key: below,
     version: published.version,
@@ -200,6 +228,7 @@ async function main() {
     bucket,
     baseRef: process.env.PR_BASE_REF,
     baseSha: process.env.PR_BASE_SHA,
+    headSha: process.env.PR_HEAD_SHA,
     defaultBranch: process.env.DEFAULT_BRANCH || "main",
     key,
     git: gitReader(),
@@ -220,6 +249,14 @@ async function main() {
         "*new* rather than compared, and its Changed count means nothing. Re-run a green main run's " +
         "failed jobs to publish a baseline, then re-run this job.",
     );
+    return;
+  }
+  if (nearest.freshStart) {
+    const note =
+      "No versioned baseline exists; unversioned visual snapshots were ignored and this run starts fresh.";
+    console.log(`::notice title=Fresh visual baseline::${note}`);
+    appendEnv(process.env.GITHUB_ENV, baselineEnvironment({ key: "", version: null, note }));
+    appendOutput(process.env.GITHUB_OUTPUT, [`fresh_start=true`, `note=${note}`]);
     return;
   }
   if (nearest.skipped === 0) {

@@ -18,6 +18,7 @@ import {
   hostedReportUrl,
   itemRows,
   readPngSize,
+  snapshotVersionFromReport,
   summarizeReport,
   verdictHeadline,
 } from "./visual-report-lib.mjs";
@@ -123,7 +124,7 @@ async function main() {
     `Baseline images downloaded: ${summary.baselineCount} · Captured: ${summary.capturedCount}`,
     ...(geometrySummary ? [geometrySummary] : []),
     "",
-    `Hosted report (needs a browser, not agent-fetchable): ${hostedReportUrl(bucket, commit)}`,
+    `Hosted report (needs a browser, not agent-fetchable): ${hostedReportUrl(bucket, commit, snapshotVersionFromReport(report))}`,
     "",
   ];
 

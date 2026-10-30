@@ -76,8 +76,8 @@ function probeClient(shasWithSnapshots) {
   };
 }
 
-/** A fake bucket: prefix -> objects, plus the per-key errors DeleteObjects returns. */
-function fakeBucket(objectsByPrefix, deleteErrors = []) {
+/** A fake bucket: prefix -> objects, plus per-key errors DeleteObjects returns. */
+function fakeBucket(objectsByPrefix, deleteErrors = [], afterList) {
   const sent = [];
   const s3Client = {
     send: vi.fn(async (cmd) => {
@@ -88,8 +88,30 @@ function fakeBucket(objectsByPrefix, deleteErrors = []) {
           IsTruncated: false,
         };
       }
-      if (cmd.input?.Delete) return { Errors: deleteErrors };
-      return { Contents: objectsByPrefix[cmd.input?.Prefix] ?? [], IsTruncated: false };
+      if (cmd.input?.Delete) {
+        afterList?.(cmd.input.Delete.Objects);
+        const requested = cmd.input.Delete.Objects;
+        const Deleted = requested
+          .filter((entry) => {
+            const live = Object.values(objectsByPrefix)
+              .flat()
+              .find((object) => object.Key === entry.Key);
+            return (
+              live &&
+              (live.ETag ?? '"listed"') === entry.ETag &&
+              !deleteErrors.some((error) => error.Key === entry.Key)
+            );
+          })
+          .map(({ Key }) => ({ Key }));
+        return { Errors: deleteErrors, Deleted };
+      }
+      return {
+        Contents: (objectsByPrefix[cmd.input?.Prefix] ?? []).map((object) => ({
+          ETag: '"listed"',
+          ...object,
+        })),
+        IsTruncated: false,
+      };
     }),
   };
   const deletedKeys = () =>
@@ -321,8 +343,8 @@ describe("prune-visual-bucket-lib", () => {
         prefix: "prefix/",
       });
       expect(objects).toEqual([
-        { Key: "prefix/out.json", Size: 100, LastModified: null },
-        { Key: "prefix/index.html", Size: 200, LastModified: null },
+        { Key: "prefix/out.json", Size: 100, LastModified: null, ETag: null },
+        { Key: "prefix/index.html", Size: 200, LastModified: null, ETag: null },
       ]);
     });
   });
@@ -366,6 +388,70 @@ describe("prune-visual-bucket-lib", () => {
 
       expect(result.keptRecentPrefixes).toEqual([`${SHA_2}/`]);
       expect(deletedKeys()).toEqual([]);
+    });
+
+    it("keeps a publication within the 30 minute grace even with minAgeMs zero", async () => {
+      const { s3Client, deletedKeys } = fakeBucket({
+        [`${SHA_1}/`]: [{ Key: `${SHA_1}/out.json`, Size: 10, LastModified: OLD }],
+        [`${SHA_2}/`]: [
+          { Key: `${SHA_2}/out.json`, Size: 20, LastModified: new Date(NOW - 29 * 60 * 1000) },
+        ],
+      });
+      const result = await pruneVisualBucket({
+        s3Client,
+        bucket: "test-bucket",
+        keepShas: [SHA_1],
+        now: NOW,
+        minAgeMs: 0,
+        log: () => {},
+      });
+      expect(result.keptRecentPrefixes).toEqual([`${SHA_2}/`]);
+      expect(deletedKeys()).toEqual([]);
+    });
+
+    it("does not delete a replacement object after listing, even with identical content", async () => {
+      const object = { Key: `${SHA_2}/out.json`, Size: 20, LastModified: OLD, ETag: '"listed"' };
+      const { s3Client, sent } = fakeBucket(
+        {
+          [`${SHA_1}/`]: [{ Key: `${SHA_1}/out.json`, Size: 10, LastModified: OLD }],
+          [`${SHA_2}/`]: [object],
+        },
+        [],
+        (requested) => {
+          object.ETag = '"replacement"';
+          // A retry under a new key with the same content must also survive: it was not in the listing.
+          object.Key = `${SHA_2}/retry/out.json`;
+          expect(requested).toEqual([{ Key: `${SHA_2}/out.json`, ETag: '"listed"' }]);
+        },
+      );
+      const result = await pruneVisualBucket({
+        s3Client,
+        bucket: "test-bucket",
+        keepShas: [SHA_1],
+        now: NOW,
+        log: () => {},
+      });
+      expect(sent.find((cmd) => cmd.input?.Delete)?.input?.Delete.Objects).toEqual([
+        { Key: `${SHA_2}/out.json`, ETag: '"listed"' },
+      ]);
+      expect(result.deletedObjectsCount).toBe(0);
+    });
+
+    it("does not delete stale objects whose listed ETag is missing", async () => {
+      const { s3Client, deletedKeys } = fakeBucket({
+        [`${SHA_1}/`]: [{ Key: `${SHA_1}/out.json`, Size: 10, LastModified: OLD }],
+        [`${SHA_2}/`]: [{ Key: `${SHA_2}/out.json`, Size: 20, LastModified: OLD, ETag: null }],
+      });
+      const result = await pruneVisualBucket({
+        s3Client,
+        bucket: "test-bucket",
+        keepShas: [SHA_1],
+        now: NOW,
+        log: () => {},
+      });
+      expect(deletedKeys()).toEqual([]);
+      expect(result.deletedObjectsCount).toBe(0);
+      expect(result.deleteErrors).toEqual([`${SHA_2}/out.json: MissingETag`]);
     });
 
     /**

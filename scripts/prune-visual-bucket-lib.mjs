@@ -11,6 +11,7 @@ import {
   KEEP_MAIN_BASELINES,
   MAX_CANDIDATE_PAGES,
   MIN_PRUNE_AGE_MS,
+  MIN_PUBLICATION_GRACE_MS,
   mainBaselineProbeOrder,
   mainFirstParentChain,
   shouldFetchAnotherCandidatePage,
@@ -23,6 +24,7 @@ export {
   KEEP_MAIN_BASELINES,
   MAX_CANDIDATE_PAGES,
   MIN_PRUNE_AGE_MS,
+  MIN_PUBLICATION_GRACE_MS,
   mainFirstParentChain,
 };
 
@@ -314,6 +316,7 @@ export async function listPrefixObjects({ s3Client, bucket, prefix }) {
             Key: item.Key,
             Size: item.Size ?? 0,
             LastModified: item.LastModified ?? null,
+            ETag: item.ETag ?? null,
           });
         }
       }
@@ -375,7 +378,7 @@ export async function pruneVisualBucket({
     );
     // An unknown timestamp counts as new. Erring towards keeping a prefix costs
     // storage; erring the other way costs a branch its baseline silently.
-    if (newestMs === 0 || now - newestMs < minAgeMs) {
+    if (newestMs === 0 || now - newestMs < Math.max(minAgeMs, MIN_PUBLICATION_GRACE_MS)) {
       keptRecentPrefixes.push(prefix);
       continue;
     }
@@ -387,17 +390,26 @@ export async function pruneVisualBucket({
   let deletedBytesTotal = 0;
   const deleteErrors = [];
 
+  const deletedPrefixes = [];
   for (const prefix of stalePrefixes) {
     const objects = staleObjects.get(prefix) ?? [];
     if (objects.length === 0) continue;
 
     if (!dryRun) {
+      let prefixDeleted = 0;
       for (let i = 0; i < objects.length; i += batchSize) {
-        const chunk = objects.slice(i, i + batchSize).map((o) => ({ Key: o.Key }));
+        const eligible = objects.slice(i, i + batchSize);
+        const chunk = eligible
+          .filter((o) => typeof o.ETag === "string" && o.ETag.length > 0)
+          .map((o) => ({ Key: o.Key, ETag: o.ETag }));
+        for (const object of eligible) {
+          if (!object.ETag) deleteErrors.push(`${object.Key}: MissingETag`);
+        }
+        if (chunk.length === 0) continue;
         const res = await s3Client.send(
           new DeleteObjectsCommand({
             Bucket: bucket,
-            Delete: { Objects: chunk, Quiet: true },
+            Delete: { Objects: chunk, Quiet: false },
           }),
         );
         // DeleteObjects reports per-key failures in the body instead of
@@ -406,12 +418,26 @@ export async function pruneVisualBucket({
         for (const error of res?.Errors ?? []) {
           deleteErrors.push(`${error.Key ?? "(unknown key)"}: ${error.Code ?? "unknown"}`);
         }
+        const failed = new Set((res?.Errors ?? []).map((error) => error.Key));
+        const deletedKeys =
+          res?.Deleted?.map((object) => object.Key) ??
+          chunk.filter((object) => !failed.has(object.Key)).map((object) => object.Key);
+        const deleted = deletedKeys.length;
+        deletedObjectsCount += deleted;
+        prefixDeleted += deleted;
+        const deletedSet = new Set(deletedKeys);
+        deletedBytesTotal += eligible
+          .filter((object) => deletedSet.has(object.Key))
+          .reduce((sum, object) => sum + object.Size, 0);
       }
+      if (prefixDeleted > 0) deletedPrefixes.push(prefix);
+      continue;
     }
 
     const prefixBytes = objects.reduce((sum, o) => sum + o.Size, 0);
     deletedObjectsCount += objects.length;
     deletedBytesTotal += prefixBytes;
+    deletedPrefixes.push(prefix);
 
     if (dryRun) {
       log(
@@ -434,7 +460,7 @@ export async function pruneVisualBucket({
     bucket,
     keptPrefixes,
     keptRecentPrefixes,
-    deletedPrefixes: stalePrefixes,
+    deletedPrefixes,
     deletedObjectsCount,
     deletedBytesTotal,
     deleteErrors,

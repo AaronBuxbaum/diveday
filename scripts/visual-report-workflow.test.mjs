@@ -151,10 +151,14 @@ describe("visual-report workflow failure notice", () => {
     expect(report).toContain(
       "if: ${{ !cancelled() && needs.visual.result == 'success' && needs.visual-publish.result == 'success' }}",
     );
+    expect(report).toContain("steps.summary.outputs.verdict != 'superseded'");
     expect(report).toContain(
       "ref: ${{ github.event_name == 'pull_request' && 'refs/heads/main' || github.sha }}",
     );
     expect(existsSync(path.join(ROOT, "scripts/visual-pr-comment.mjs"))).toBe(true);
+    const reporter = readFileSync(path.join(ROOT, "scripts/visual-pr-comment.mjs"), "utf8");
+    expect(reporter).toContain("publicationReportStatus(report, expectedPublicationId)");
+    expect(reporter).toContain("This run's visual report was not published or verified");
     const noticeSection = failureNoticeSection();
     expect(noticeSection).toContain("needs.visual-publish.result != 'success'");
     expect(noticeSection).toContain(

@@ -23,12 +23,18 @@ describe("reg-suit consumer workflow", () => {
     expect(planner).toContain("--light-only");
     expect(planner).toContain("--base");
     expect(planner).toContain("--all --github-output");
+    expect(planner).toContain("node scripts/reg-suit-keys.mjs --github-env");
+    expect(planner).toContain("node scripts/wait-for-baseline.mjs");
+    expect(planner).toContain("FRESH_START: ${{ steps.baseline.outputs.fresh_start }}");
+    expect(planner).toContain('[ "${FRESH_START}" = "true" ]');
     expect(CI).toContain("shard: ${{ fromJSON(needs.visual-plan.outputs.shards) }}");
   });
 
-  it("uploads only screenshot PNGs to the trusted publisher", () => {
+  it("uploads screenshots and capture intents to the trusted publisher", () => {
     const visual = job("visual");
-    expect(visual).toMatch(/^\s+path: e2e\/screenshots\/\*\.png$/mu);
+    expect(visual).toMatch(
+      /^[ \t]+path: \|\n[ \t]+e2e\/screenshots\/\*\.png\n[ \t]+e2e\/capture-manifest\/\*\.json\n[ \t]+if-no-files-found: error$/mu,
+    );
     expect(visual).not.toMatch(/^\s+path: e2e\/screenshots\/$/mu);
   });
 

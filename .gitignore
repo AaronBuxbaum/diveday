@@ -49,6 +49,7 @@ next-env.d.ts
 /e2e-durations/
 /playwright-report/
 /e2e/screenshots/
+/e2e/capture-manifest/
 
 # env files
 .env*

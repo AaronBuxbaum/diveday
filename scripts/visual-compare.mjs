@@ -151,6 +151,9 @@ if (fill || restored || expectedReady) {
         actualDir: path.join(repoRoot, "e2e", "screenshots"),
         expectedDir,
         requireExpected: process.env.GITHUB_EVENT_NAME === "pull_request",
+        allowEmptyExpected: process.env.VISUAL_FRESH_START === "true",
+        captureMode: process.env.VISUAL_CAPTURE_MODE ?? "",
+        captureManifest: process.env.VISUAL_EXPECTED_CAPTURE_MANIFEST ?? "",
       });
       console.log(
         `visual:compare: verified ${inventory.actualCount} captures against ` +

@@ -823,6 +823,8 @@ under top-level commit SHA prefixes. Capture images live under
 published only after its assets are complete. A same-SHA retry can therefore publish a new capture
 version without exposing a partial report. Baseline caches include both commit and version, while
 older reports without version metadata continue to use their existing commit-only cache key.
+The whole-prefix pruner can race a same-SHA retry for an old, non-retained prefix; #3326 tracks the
+remaining coordination work.
 
 ### Schedule and Behavior
 

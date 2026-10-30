@@ -304,8 +304,12 @@ describe("visual-bucket-pruner-handler", () => {
      * holds under it, so each test states only the ages it cares about.
      */
     function fakeBucket(
-      objectsByPrefix: Record<string, Array<{ Key: string; LastModified?: Date }>>,
+      objectsByPrefix: Record<
+        string,
+        Array<{ Key: string; LastModified?: Date; ETag?: string | null }>
+      >,
       deleteErrors: Array<{ Key: string; Code: string }> = [],
+      afterList?: (requested: Array<{ Key: string; ETag?: string }>) => void,
     ) {
       const sent: Array<{ input?: Record<string, unknown> }> = [];
       const client = {
@@ -317,9 +321,29 @@ describe("visual-bucket-pruner-handler", () => {
               IsTruncated: false,
             };
           }
-          if (cmd.input?.Delete) return { Errors: deleteErrors };
+          if (cmd.input?.Delete) {
+            const request = cmd.input.Delete as { Objects: Array<{ Key: string; ETag?: string }> };
+            afterList?.(request.Objects);
+            const Deleted = request.Objects.filter((entry) => {
+              const live = Object.values(objectsByPrefix)
+                .flat()
+                .find((object) => object.Key === entry.Key);
+              return (
+                live &&
+                (live.ETag ?? '"listed"') === entry.ETag &&
+                !deleteErrors.some((error) => error.Key === entry.Key)
+              );
+            }).map(({ Key }) => ({ Key }));
+            return { Errors: deleteErrors, Deleted };
+          }
           const prefix = cmd.input?.Prefix as string | undefined;
-          return { Contents: (prefix && objectsByPrefix[prefix]) || [], IsTruncated: false };
+          return {
+            Contents: ((prefix && objectsByPrefix[prefix]) || []).map((object) => ({
+              ETag: '"listed"',
+              ...object,
+            })),
+            IsTruncated: false,
+          };
         }),
       } as unknown as S3Client;
       return { client, sent };
@@ -377,6 +401,38 @@ describe("visual-bucket-pruner-handler", () => {
       expect(deletedKeys(sent)).toEqual([]);
     });
 
+    it("keeps a publication within the 30 minute grace even with minAgeMs zero", async () => {
+      const { client, sent } = fakeBucket({
+        [`${SHA_1}/`]: [{ Key: `${SHA_1}/out.json`, LastModified: OLD }],
+        [`${SHA_2}/`]: [{ Key: `${SHA_2}/out.json`, LastModified: new Date(NOW - 29 * 60 * 1000) }],
+      });
+      const result = await pruneBucket(client, "test-bucket", [SHA_1], { now: NOW, minAgeMs: 0 });
+      expect(result.keptRecentCount).toBe(1);
+      expect(deletedKeys(sent)).toEqual([]);
+    });
+
+    it("conditionally preserves a replacement and a same-content retry under a new key", async () => {
+      const listed = { Key: `${SHA_2}/out.json`, LastModified: OLD, ETag: '"listed"' };
+      const retry = { Key: `${SHA_2}/retry/out.json`, LastModified: OLD, ETag: '"replacement"' };
+      const { client, sent } = fakeBucket(
+        {
+          [`${SHA_1}/`]: [{ Key: `${SHA_1}/out.json`, LastModified: OLD }],
+          [`${SHA_2}/`]: [listed],
+        },
+        [],
+        (requested) => {
+          listed.ETag = '"replacement"';
+          listed.Key = retry.Key;
+          // Identical content can be republished under a new key; it was not listed.
+          expect(requested).toEqual([{ Key: `${SHA_2}/out.json`, ETag: '"listed"' }]);
+        },
+      );
+      const result = await pruneBucket(client, "test-bucket", [SHA_1], { now: NOW });
+      expect(deletedKeys(sent)).toEqual([`${SHA_2}/out.json`]);
+      expect(result.deletedObjectsCount).toBe(0);
+      expect(result.deletedPrefixesCount).toBe(0);
+    });
+
     /**
      * The floor is a day, not a week: a branch that published two days ago and
      * is not a main baseline is captures nobody is comparing against any more.
@@ -396,12 +452,23 @@ describe("visual-bucket-pruner-handler", () => {
     it("keeps a prefix whose objects carry no timestamp", async () => {
       const { client, sent } = fakeBucket({
         [`${SHA_1}/`]: [{ Key: `${SHA_1}/out.json`, LastModified: OLD }],
-        [`${SHA_2}/`]: [{ Key: `${SHA_2}/out.json` }],
+        [`${SHA_2}/`]: [{ Key: `${SHA_2}/out.json`, ETag: null }],
       });
 
       const result = await pruneBucket(client, "test-bucket", [SHA_1], { now: NOW });
       expect(result.keptRecentCount).toBe(1);
       expect(deletedKeys(sent)).toEqual([]);
+    });
+
+    it("does not delete stale objects whose listed ETag is missing", async () => {
+      const { client, sent } = fakeBucket({
+        [`${SHA_1}/`]: [{ Key: `${SHA_1}/out.json`, LastModified: OLD }],
+        [`${SHA_2}/`]: [{ Key: `${SHA_2}/out.json`, LastModified: OLD, ETag: null }],
+      });
+      const result = await pruneBucket(client, "test-bucket", [SHA_1], { now: NOW });
+      expect(deletedKeys(sent)).toEqual([]);
+      expect(result.deletedObjectsCount).toBe(0);
+      expect(result.deleteErrors).toEqual([`${SHA_2}/out.json: MissingETag`]);
     });
 
     it("refuses to prune when nothing is named to keep", async () => {

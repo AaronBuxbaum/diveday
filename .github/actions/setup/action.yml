@@ -3,6 +3,11 @@ description: >
   Sets up pnpm, Node 24 with the pnpm cache, and installs dependencies with a
   frozen lockfile — the setup steps every CI job needs before it can run
   anything else.
+inputs:
+  ignore-scripts:
+    description: Disable dependency lifecycle scripts during install.
+    required: false
+    default: "false"
 runs:
   using: composite
   steps:
@@ -26,5 +31,9 @@ runs:
         # volume (scripts/mac-runner/start.sh), and restoring it there would
         # download the whole store over a home connection for every job.
         cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
-    - run: pnpm install --frozen-lockfile
+    - if: ${{ inputs.ignore-scripts != 'true' }}
+      run: pnpm install --frozen-lockfile
+      shell: bash
+    - if: ${{ inputs.ignore-scripts == 'true' }}
+      run: pnpm install --frozen-lockfile --ignore-scripts
       shell: bash

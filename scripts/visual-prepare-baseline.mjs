@@ -148,7 +148,7 @@ async function reencodeCachedBaseline(sourceDir) {
 export async function prepareVisualBaseline({
   bucket = DEFAULT_BUCKET,
   key = "",
-  version = "legacy",
+  version = "",
   sourceDir = "",
   sourceKey = "",
   outputDir,
@@ -157,13 +157,13 @@ export async function prepareVisualBaseline({
   if (!outputDir) throw new Error("outputDir is required");
   if (!BUCKET_NAME.test(bucket)) throw new Error("bucket name is invalid");
   if (key && !COMMIT_SHA.test(key)) throw new Error("baseline key must be a full commit sha");
-  if (version !== "legacy" && !/^[0-9a-f]{64}$/u.test(version)) {
+  if (key && !/^[0-9a-f]{64}$/u.test(version)) {
     throw new Error("baseline snapshot version is invalid");
   }
 
   let files = [];
-  const expectedCacheKey = baselineCacheKey(key, version);
-  if (sourceDir && sourceKey === expectedCacheKey && existsSync(sourceDir)) {
+  const expectedCacheKey = key ? baselineCacheKey(key, version) : "";
+  if (sourceDir && expectedCacheKey && sourceKey === expectedCacheKey && existsSync(sourceDir)) {
     files = await reencodeCachedBaseline(sourceDir);
     if (files.length > 0) {
       console.log(`visual-prepare-baseline: using ${files.length} cached screenshots.`);
@@ -191,7 +191,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     const result = await prepareVisualBaseline({
       bucket: process.env.REG_SUIT_S3_BUCKET_NAME || DEFAULT_BUCKET,
       key: process.env.REG_EXPECTED_KEY ?? "",
-      version: process.env.REG_EXPECTED_VERSION || "legacy",
+      version: process.env.REG_EXPECTED_VERSION ?? "",
       sourceDir: process.env.VISUAL_BASELINE_DIR ?? "",
       sourceKey: process.env.VISUAL_BASELINE_KEY ?? "",
       outputDir: path.resolve(".reg/expected"),
