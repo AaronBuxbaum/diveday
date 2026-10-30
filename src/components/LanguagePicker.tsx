@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { type LanguageChoice, LanguageChoices } from "@/components/LanguageChoices";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { GroupLabel } from "@/components/ui/group-label";
 import { MENU_PANEL, MENU_TICK_GUTTER } from "@/components/ui/menu";
 import { useExitAnimation } from "@/components/useExitAnimation";
+import { useMenuDismissalEvents } from "@/components/useMenuDismissal";
 import { motionMs } from "@/lib/motion";
 
 export type LanguagePickerCopy = {
@@ -73,6 +74,13 @@ export function LanguagePicker({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const [placement, setPlacement] = useState<PanelPlacement>();
+  const close = useCallback(() => setOpen(false), []);
+  useMenuDismissalEvents({
+    open,
+    close,
+    inside: [rootRef],
+    returnFocus: triggerRef,
+  });
   // 180ms matches .animate-scale-out in globals.css — the two must move together.
   const { mounted, closing } = useExitAnimation(open, motionMs("base"));
 
@@ -145,25 +153,6 @@ export function LanguagePicker({
       observer?.disconnect();
     };
   }, [mounted]);
-
-  useEffect(() => {
-    if (!open) return;
-    const onPointerDown = (event: PointerEvent) => {
-      if (event.target instanceof Node && rootRef.current?.contains(event.target)) return;
-      setOpen(false);
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      setOpen(false);
-      triggerRef.current?.focus();
-    };
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [open]);
 
   return (
     <div ref={rootRef} className="relative flex shrink-0">
