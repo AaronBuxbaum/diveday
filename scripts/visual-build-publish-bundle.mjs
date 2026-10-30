@@ -62,7 +62,10 @@ function collectFiles(root, directory = root, collected = []) {
     if (!safeRelativePath(relative)) {
       throw new Error(`reg-suit output has an unsafe path: ${relative}`);
     }
-    const contentType = CONTENT_TYPES.get(path.extname(relative).toLowerCase());
+    const contentType =
+      relative === "detector.wasm"
+        ? "application/wasm"
+        : CONTENT_TYPES.get(path.extname(relative).toLowerCase());
     if (!contentType) throw new Error(`reg-suit output has an unsupported file type: ${relative}`);
     if (stat.size > MAX_FILE_BYTES)
       throw new Error(`reg-suit output file is too large: ${relative}`);
