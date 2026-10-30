@@ -172,6 +172,7 @@ describe("visual-report workflow failure notice", () => {
       "updates only a github-actions[bot] comment with the existing visual-summary marker",
     );
     expect(report).toContain("use a fresh commit key");
+    expect(report).toContain("rerun this SHA to publish a new version");
     const forkNoticeStart = report.indexOf(
       "      - name: Explain the missing visual report on a fork pull request",
     );
@@ -218,6 +219,7 @@ describe("visual-report workflow failure notice", () => {
     expect(updated).toContain("Do not read any earlier summary as this run's result");
     expect(updated).toContain("Inspect the visual and publisher logs");
     expect(updated).toContain("use a fresh commit key");
+    expect(updated).toContain("rerun this SHA to publish a new version");
     expect(updated).not.toContain("home.png");
     expect(state.calls.map((call) => call.method)).toEqual(["GET", "PATCH"]);
     expect(

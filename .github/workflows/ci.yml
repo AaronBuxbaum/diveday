@@ -942,7 +942,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    uses: AaronBuxbaum/diveday/.github/workflows/reg-suit-publish.yml@03e4f27f7a3a80404f9ae502da8c02340327920c # immutable commit 03e4f27f7a3a80404f9ae502da8c02340327920c
+    uses: AaronBuxbaum/diveday/.github/workflows/reg-suit-publish.yml@08f5c4ce1886a1ea84805d34f84730d6fc7d5414 # immutable commit 08f5c4ce1886a1ea84805d34f84730d6fc7d5414
     with:
       capture-mode: ${{ needs.visual-plan.outputs.mode }}
       capture-shards: ${{ needs.visual-plan.outputs.shards }}
@@ -979,7 +979,7 @@ jobs:
         continue-on-error: true
         with:
           path: .reg-baseline
-          key: reg-baseline-${{ github.sha }}
+          key: reg-baseline-${{ github.sha }}-${{ needs.visual-publish.outputs.snapshot_version }}
 
       - name: Summarize the visual result on the pull request
         id: summary
@@ -1052,7 +1052,7 @@ jobs:
             "",
             "This run did not successfully verify and publish a visual comparison for commit " + commit + ". Do not read any earlier summary as this run's result.",
             "",
-            "Inspect the visual and publisher logs. If the publisher reports a snapshot mismatch for this commit, use a fresh commit key; rerunning the same SHA will not resolve that mismatch.",
+            "Inspect the visual and publisher logs. If captures changed, rerun this SHA to publish a new version. If the unchanged version still mismatches, investigate the publisher or use a fresh commit key.",
           ].join("\n");
 
           try {
@@ -1102,7 +1102,7 @@ jobs:
       - name: Refuse a same-repository PR report without this run's published snapshot
         if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && !cancelled() && (needs.visual.result != 'success' || needs.visual-publish.result != 'success') }}
         run: |
-          echo "::error title=Visual verification incomplete for this run::This run did not successfully verify and publish a visual comparison. The sticky notice updates only a github-actions[bot] comment with the existing visual-summary marker, posting a marked comment if none exists. Inspect this run's visual and publisher logs. If the publisher reports a snapshot mismatch for this commit, use a fresh commit key; rerunning the same SHA will not resolve that mismatch."
+          echo "::error title=Visual verification incomplete for this run::This run did not successfully verify and publish a visual comparison. The sticky notice updates only a github-actions[bot] comment with the existing visual-summary marker, posting a marked comment if none exists. Inspect this run's visual and publisher logs. If captures changed, rerun this SHA to publish a new version. If the unchanged version still mismatches, investigate the publisher or use a fresh commit key."
           exit 1
 
       - name: Refuse to miss main's baseline silently
@@ -1270,7 +1270,7 @@ jobs:
             echo "code=true" >> "$GITHUB_OUTPUT"
           else
             echo "code=false" >> "$GITHUB_OUTPUT"
-            echo "Only docs, Markdown or \`.claude/\` changed — the build, the unit, Playwright and visual shards and the reg-suit compare are skipped. The safeguards, lint, typecheck and the unit files that quote a document path still ran. The next code commit's visual baseline resolves past this one (scripts/wait-for-baseline.mjs)." >> "$GITHUB_STEP_SUMMARY"
+            echo "Only docs, Markdown or \`.claude/\` changed — the build, the unit, Playwright and visual shards and the reg-suit compare are skipped. The safeguards, lint, typecheck and the unit files that quote a document path still ran. The next code commit's visual baseline resolves past this one (scripts/wait-for-baseline.mjs). Re-running a completed capture on the same commit publishes a new versioned snapshot." >> "$GITHUB_STEP_SUMMARY"
           fi
       # Where the safeguards, lint, typecheck and unit jobs run: Aaron's Mac
       # when one of its runners is online, GitHub-hosted otherwise

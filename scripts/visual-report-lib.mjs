@@ -147,6 +147,29 @@ export function hostedReportUrl(bucket, commit) {
   return objectUrl(bucket, `${commit}/index.html`);
 }
 
+/** Snapshot version encoded in a reg-suit report's image directories. */
+export function snapshotVersionFromReport(report) {
+  if (
+    report?.actualDir === "actual" &&
+    report.expectedDir === "expected" &&
+    report.diffDir === "diff"
+  ) {
+    return "legacy";
+  }
+  const match = /^snapshots\/([0-9a-f]{64})\/actual$/u.exec(report?.actualDir ?? "");
+  if (!match) return null;
+  const [, version] = match;
+  return report.expectedDir === `snapshots/${version}/expected` &&
+    report.diffDir === `snapshots/${version}/diff`
+    ? version
+    : null;
+}
+
+/** Existing legacy cache keys are kept warm; new caches are immutable per snapshot. */
+export function baselineCacheKey(commit, version) {
+  return version === "legacy" ? `reg-baseline-${commit}` : `reg-baseline-${commit}-${version}`;
+}
+
 // S3 serves these objects with `Content-Encoding: gzip`, but some fetch clients
 // (Node's global fetch among them) already transparently decode that before
 // returning the body, while others (plain `curl`, `https.get`) hand back the raw

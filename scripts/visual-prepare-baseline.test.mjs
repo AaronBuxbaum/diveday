@@ -28,6 +28,16 @@ function fixture() {
   return { root, sourceDir, outputDir };
 }
 
+function report(actualItems, version = "legacy") {
+  const root = version === "legacy" ? "" : `snapshots/${version}/`;
+  return {
+    actualDir: `${root}actual`,
+    expectedDir: `${root}expected`,
+    diffDir: `${root}diff`,
+    actualItems,
+  };
+}
+
 afterEach(() => {
   for (const temp of temps.splice(0)) rmSync(temp, { recursive: true, force: true });
 });
@@ -115,10 +125,10 @@ describe("prepareVisualBaseline", () => {
     const fetchImpl = async (url) => {
       calls.push(String(url));
       if (String(url).endsWith(`${KEY}/out.json`)) {
-        return new Response(
-          JSON.stringify({ actualDir: "actual", actualItems: ["baseline.png"] }),
-          { status: 200, headers: { "content-type": "application/json" } },
-        );
+        return new Response(JSON.stringify(report(["baseline.png"])), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
       }
       if (String(url).endsWith(`${KEY}/actual/baseline.png`)) {
         return new Response(PNG, { status: 200, headers: { "content-type": "image/png" } });
@@ -136,6 +146,42 @@ describe("prepareVisualBaseline", () => {
     expect(readFileSync(path.join(outputDir, "baseline.png"))).not.toEqual(PNG);
   });
 
+  it("fetches capture images from the versioned directory named by the marker", async () => {
+    const { outputDir } = fixture();
+    const version = "b".repeat(64);
+    const calls = [];
+    const fetchImpl = async (url) => {
+      calls.push(String(url));
+      if (String(url).endsWith(`${KEY}/out.json`)) {
+        return new Response(JSON.stringify(report(["baseline.png"], version)), { status: 200 });
+      }
+      return String(url).endsWith(`${KEY}/snapshots/${version}/actual/baseline.png`)
+        ? new Response(PNG, { status: 200 })
+        : new Response(null, { status: 404 });
+    };
+
+    await expect(
+      prepareVisualBaseline({ bucket: BUCKET, key: KEY, version, outputDir, fetchImpl }),
+    ).resolves.toMatchObject({ count: 1 });
+    expect(calls).toEqual([
+      `https://${BUCKET}.s3.amazonaws.com/${KEY}/out.json`,
+      `https://${BUCKET}.s3.amazonaws.com/${KEY}/snapshots/${version}/actual/baseline.png`,
+    ]);
+  });
+
+  it("rejects a versioned report that disagrees with the marker version", async () => {
+    const { outputDir } = fixture();
+    const version = "b".repeat(64);
+    const fetchImpl = async (url) =>
+      String(url).endsWith(`${KEY}/out.json`)
+        ? new Response(JSON.stringify(report(["baseline.png"], "c".repeat(64))), { status: 200 })
+        : new Response(PNG, { status: 200 });
+
+    await expect(
+      prepareVisualBaseline({ bucket: BUCKET, key: KEY, version, outputDir, fetchImpl }),
+    ).rejects.toThrow(/does not match the published marker/u);
+  });
+
   it("ignores legacy print PDFs in a fetched baseline manifest", async () => {
     const { outputDir } = fixture();
     const calls = [];
@@ -143,10 +189,9 @@ describe("prepareVisualBaseline", () => {
       calls.push(String(url));
       if (String(url).endsWith(`${KEY}/out.json`)) {
         return new Response(
-          JSON.stringify({
-            actualDir: "actual",
-            actualItems: ["baseline.png", "trip-mixed-training-depth-manifest-print-a4.pdf"],
-          }),
+          JSON.stringify(
+            report(["baseline.png", "trip-mixed-training-depth-manifest-print-a4.pdf"]),
+          ),
           { status: 200 },
         );
       }
@@ -173,12 +218,9 @@ describe("prepareVisualBaseline", () => {
     writeFileSync(path.join(sourceDir, "wrong-baseline.png"), PNG);
     const fetchImpl = async (url) =>
       String(url).endsWith(`${KEY}/out.json`)
-        ? new Response(
-            JSON.stringify({ actualDir: "actual", actualItems: ["right-baseline.png"] }),
-            {
-              status: 200,
-            },
-          )
+        ? new Response(JSON.stringify(report(["right-baseline.png"])), {
+            status: 200,
+          })
         : new Response(PNG, { status: 200 });
 
     await expect(
@@ -208,7 +250,7 @@ describe("prepareVisualBaseline", () => {
         bucket: BUCKET,
         key: KEY,
         outputDir,
-        fetchImpl: fetchWithReport({ actualDir: "actual", actualItems: ["../outside.png"] }),
+        fetchImpl: fetchWithReport(report(["../outside.png"])),
       }),
     ).rejects.toThrow(/unsafe screenshot name/u);
 
@@ -217,7 +259,7 @@ describe("prepareVisualBaseline", () => {
         bucket: BUCKET,
         key: KEY,
         outputDir,
-        fetchImpl: fetchWithReport({ actualDir: "actual", actualItems: ["../outside.pdf"] }),
+        fetchImpl: fetchWithReport(report(["../outside.pdf"])),
       }),
     ).rejects.toThrow(/unsafe screenshot name/u);
 
@@ -226,7 +268,7 @@ describe("prepareVisualBaseline", () => {
         bucket: BUCKET,
         key: KEY,
         outputDir,
-        fetchImpl: fetchWithReport({ actualDir: "actual", actualItems: ["baseline.png"] }),
+        fetchImpl: fetchWithReport(report(["baseline.png"])),
       }),
     ).rejects.toThrow(/PNG/u);
   });

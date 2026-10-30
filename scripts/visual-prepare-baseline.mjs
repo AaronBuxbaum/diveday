@@ -13,7 +13,12 @@ import {
 import path from "node:path";
 import process from "node:process";
 import { reencodePng } from "./visual-publish-artifacts.mjs";
-import { DEFAULT_BUCKET, fetchFromBucket } from "./visual-report-lib.mjs";
+import {
+  baselineCacheKey,
+  DEFAULT_BUCKET,
+  fetchFromBucket,
+  snapshotVersionFromReport,
+} from "./visual-report-lib.mjs";
 
 const COMMIT_SHA = /^[0-9a-f]{40}$/u;
 const BUCKET_NAME = /^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/u;
@@ -30,7 +35,7 @@ function requireDirectory(directory, label) {
 }
 
 function reportNames(report) {
-  if (report?.actualDir !== "actual" || !Array.isArray(report.actualItems)) {
+  if (!snapshotVersionFromReport(report) || !Array.isArray(report.actualItems)) {
     throw new Error("baseline report has an unexpected shape");
   }
   if (report.actualItems.length > MAX_SCREENSHOTS) {
@@ -51,7 +56,7 @@ function reportNames(report) {
   return screenshots;
 }
 
-async function fetchBaseline({ bucket, key, fetchImpl }) {
+async function fetchBaseline({ bucket, key, version, fetchImpl }) {
   const manifest = await fetchFromBucket(bucket, `${key}/out.json`, { fetchImpl });
   if (!manifest.ok) {
     // Private/missing S3 objects can both be 403 when ListBucket is unavailable.
@@ -65,6 +70,11 @@ async function fetchBaseline({ bucket, key, fetchImpl }) {
   } catch {
     throw new Error("baseline report is not valid JSON");
   }
+  const reportVersion = snapshotVersionFromReport(report);
+  if (!reportVersion) throw new Error("baseline report has unsafe image directories");
+  if (version && version !== reportVersion) {
+    throw new Error("baseline report version does not match the published marker");
+  }
   const names = reportNames(report);
   const files = [];
   let cursor = 0;
@@ -73,7 +83,9 @@ async function fetchBaseline({ bucket, key, fetchImpl }) {
   const workers = Array.from({ length: Math.min(2, names.length) }, async () => {
     while (cursor < names.length && !failure) {
       const name = names[cursor++];
-      const result = await fetchFromBucket(bucket, `${key}/actual/${name}`, { fetchImpl });
+      const result = await fetchFromBucket(bucket, `${key}/${report.actualDir}/${name}`, {
+        fetchImpl,
+      });
       if (!result.ok) {
         failure = new Error(`could not fetch baseline screenshot ${name} (HTTP ${result.status})`);
         return;
@@ -136,6 +148,7 @@ async function reencodeCachedBaseline(sourceDir) {
 export async function prepareVisualBaseline({
   bucket = DEFAULT_BUCKET,
   key = "",
+  version = "legacy",
   sourceDir = "",
   sourceKey = "",
   outputDir,
@@ -144,16 +157,20 @@ export async function prepareVisualBaseline({
   if (!outputDir) throw new Error("outputDir is required");
   if (!BUCKET_NAME.test(bucket)) throw new Error("bucket name is invalid");
   if (key && !COMMIT_SHA.test(key)) throw new Error("baseline key must be a full commit sha");
+  if (version !== "legacy" && !/^[0-9a-f]{64}$/u.test(version)) {
+    throw new Error("baseline snapshot version is invalid");
+  }
 
   let files = [];
-  if (sourceDir && sourceKey === `reg-baseline-${key}` && existsSync(sourceDir)) {
+  const expectedCacheKey = baselineCacheKey(key, version);
+  if (sourceDir && sourceKey === expectedCacheKey && existsSync(sourceDir)) {
     files = await reencodeCachedBaseline(sourceDir);
     if (files.length > 0) {
       console.log(`visual-prepare-baseline: using ${files.length} cached screenshots.`);
     }
   }
   if (files.length === 0 && key) {
-    files = await fetchBaseline({ bucket, key, fetchImpl });
+    files = await fetchBaseline({ bucket, key, version, fetchImpl });
     if (files.length > 0) {
       console.log(`visual-prepare-baseline: fetched ${files.length} public baseline screenshots.`);
     }
@@ -174,6 +191,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     const result = await prepareVisualBaseline({
       bucket: process.env.REG_SUIT_S3_BUCKET_NAME || DEFAULT_BUCKET,
       key: process.env.REG_EXPECTED_KEY ?? "",
+      version: process.env.REG_EXPECTED_VERSION || "legacy",
       sourceDir: process.env.VISUAL_BASELINE_DIR ?? "",
       sourceKey: process.env.VISUAL_BASELINE_KEY ?? "",
       outputDir: path.resolve(".reg/expected"),

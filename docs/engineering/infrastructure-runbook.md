@@ -818,7 +818,11 @@ account.
 ## 11. Visual Regression Bucket Pruner
 
 Visual regression testing (`reg-suit`) publishes captured screenshots and diff reports to `diveday-vrt`
-under top-level commit SHA prefixes.
+under top-level commit SHA prefixes. Capture images live under
+`<commit>/snapshots/<version>/{actual,expected,diff}`; the root `out.json` names the version and is
+published only after its assets are complete. A same-SHA retry can therefore publish a new capture
+version without exposing a partial report. Baseline caches include both commit and version, while
+older reports without version metadata continue to use their existing commit-only cache key.
 
 ### Schedule and Behavior
 
