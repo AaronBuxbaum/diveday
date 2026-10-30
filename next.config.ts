@@ -391,41 +391,8 @@ const sentryConfig = withSentryConfig(nextConfig, {
   // side errors will fail.
   tunnelRoute: "/monitoring",
 
-  // Bundle-size treeshaking: strips the Sentry SDK's debug/tracing/replay
-  // code, which we never use (`tracesSampleRate: 0`, no `replayIntegration`
-  // call — see instrumentation-client.ts). Set for when it applies, but
-  // verify before crediting it with any KB: as of @sentry/nextjs 10.69.0 this
-  // (and the older `webpack.treeshake` option) is wired only for webpack
-  // builds via `webpack.DefinePlugin` — Sentry's own docs say so explicitly
-  // ("this guide... does not apply to Turbopack builds"), and this repo's
-  // `next build` uses Turbopack (Next 16 default), whose
-  // `constructTurbopackConfig`/`generateValueInjectionRules` in this SDK
-  // version inject build values for the tunnel route and Vercel Crons but
-  // nothing for bundle-size excludes. Measured here: adding this block plus
-  // dropping `enableLogs` below did not move the shared first-load number
-  // (259.9 KB gzip, unchanged) — confirmed by also diagnostically deleting
-  // the whole `Sentry.init` call, which dropped it to 167.5 KB, so Sentry's
-  // true footprint (~92 KB) is real but not reachable through this option
-  // today. Leaving it set anyway: harmless now, and it should start working
-  // for free if/when Sentry ships Turbopack parity for this feature.
-  //
-  // 2026-09-04: the obvious way round this was tried and does **not** work, so
-  // it is written down rather than left for the next reader to re-derive.
-  // Setting Sentry's five guard constants directly through Next's own
-  // `compiler.define` — `__SENTRY_DEBUG__`/`__SENTRY_TRACING__` false,
-  // `__RRWEB_EXCLUDE_IFRAME__`/`__RRWEB_EXCLUDE_SHADOW_DOM__`/
-  // `__SENTRY_EXCLUDE_REPLAY_WORKER__` true, polarity read off
-  // `config/webpack.js` rather than guessed — reaches Turbopack, but buys
-  // essentially nothing: 353.2 -> 348.8 KB gzip across the Sentry chunks
-  // (4.4 KB), the shared floor unmoved at 237.4 -> 237.3 KB, total static
-  // chunks *up* 2.77 -> 2.79 MB, and `rrweb` still present in the output. The
-  // constants gate runtime branches; they do not stop the modules being
-  // bundled. Also worth knowing: `bundleSizeOptimizations` is now deprecated in
-  // favour of `webpack.treeshake.*`, and it is the latter that the webpack
-  // `DefinePlugin` path actually reads — so this block is doubly inert here.
-  // Sentry's ~63 KB of the floor was real and the lever was not a build flag:
-  // `src/instrumentation-client.ts` now loads the browser SDK on idle
-  // (`deferSentry`, code review 2026-10-13b item 34), and the floor fell 57 KB.
+  // Request Sentry's debug, tracing and replay exclusions; their current
+  // production bundle impact has not been measured (#3227).
   bundleSizeOptimizations: {
     excludeDebugStatements: true,
     excludeTracing: true,
