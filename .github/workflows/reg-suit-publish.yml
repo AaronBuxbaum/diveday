@@ -272,8 +272,14 @@ jobs:
           bundle_root="$(realpath -e -- "$VISUAL_PUBLISH_BUNDLE")"
           payload_root="$(realpath -e -- "$VISUAL_PUBLISH_BUNDLE/payload")"
           [[ "$payload_root" == "$bundle_root/payload" ]]
+          validated_manifest="$RUNNER_TEMP/reg-suit-manifest.validated.tsv"
+          : > "$validated_manifest"
           count=0
-          while IFS=$'\t' read -r object_path content_type; do
+          object_path=""
+          content_type=""
+          extra=""
+          while IFS=$'\t' read -r object_path content_type extra || [[ -n "${object_path}${content_type}${extra}" ]]; do
+            [[ -n "$object_path" && -n "$content_type" && -z "$extra" ]]
             [[ "$object_path" =~ ^[A-Za-z0-9._/-]+$ ]]
             [[ "$object_path" != /* && "$object_path" != *//* ]]
             case "/$object_path/" in */../*|*/./*) exit 1 ;; esac
@@ -292,6 +298,24 @@ jobs:
             test -f "$payload"
             resolved_payload="$(realpath -e -- "$payload")"
             case "$resolved_payload" in "$payload_root"/*) ;; *) exit 1 ;; esac
+            printf '%s\t%s\n' "$object_path" "$content_type" >> "$validated_manifest"
+            count=$((count + 1))
+            object_path=""
+            content_type=""
+            extra=""
+          done < "$manifest"
+          test "$count" -gt 0
+
+          publish_parallelism=8
+          printf 'Publishing %s reg-suit objects with at most %s concurrent uploads.\n' \
+            "$count" "$publish_parallelism"
+          xargs -r -P "$publish_parallelism" -n 2 bash -c '
+            set -euo pipefail
+            object_path="$1"
+            content_type="$2"
+            payload="$VISUAL_PUBLISH_BUNDLE/payload/$object_path.gz"
+            test ! -L "$payload"
+            test -f "$payload"
             metadata_args=()
             if [[ -n "$PR_NUMBER" ]]; then
               metadata_args=(--metadata "diveday-pr-number=$PR_NUMBER")
@@ -305,6 +329,4 @@ jobs:
               --region "$REG_SUIT_AWS_REGION" \
               "${metadata_args[@]}" \
               --query ETag --output text --no-cli-pager
-            count=$((count + 1))
-          done < "$manifest"
-          test "$count" -gt 0
+          ' _ < "$validated_manifest"

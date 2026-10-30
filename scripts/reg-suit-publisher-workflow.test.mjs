@@ -112,4 +112,18 @@ describe("reg-suit publisher workflow", () => {
     expect(PUBLISH).toContain('metadata_args=(--metadata "diveday-pr-number=$PR_NUMBER")');
     expect(PUBLISH).toContain('cat "$head_error" >&2');
   });
+
+  it("validates the full upload manifest before publishing with bounded concurrency", () => {
+    const manifestValidationAt = PUBLISH.indexOf('done < "$manifest"');
+    const uploadAt = PUBLISH.indexOf('xargs -r -P "$publish_parallelism" -n 2 bash -c');
+    const publishAt = PUBLISH.indexOf("aws s3api put-object", uploadAt);
+
+    expect(PUBLISH).toContain('validated_manifest="$RUNNER_TEMP/reg-suit-manifest.validated.tsv"');
+    expect(PUBLISH).toContain("publish_parallelism=8");
+    expect(manifestValidationAt).toBeGreaterThanOrEqual(0);
+    expect(uploadAt).toBeGreaterThan(manifestValidationAt);
+    expect(publishAt).toBeGreaterThan(uploadAt);
+    expect(PUBLISH).toContain("' _ < \"$validated_manifest\"");
+    expect(PUBLISH.slice(0, uploadAt)).not.toContain("aws s3api put-object");
+  });
 });
