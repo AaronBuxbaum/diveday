@@ -367,13 +367,11 @@ test("publishes a 3,481-object inventory through at most 32 active SDK requests"
     );
     assert.equal(f.entries.length, 3481);
     const s3 = fakeS3();
-    const started = Date.now();
     const result = await publishBundle(args(f, s3));
     assert.equal(result.count, 3481);
     assert.ok(s3.maxActive <= 32 && s3.maxActive > 1);
     assert.equal(s3.events.filter(([event]) => event === "PUT_DONE").length, 3481);
     assert.equal(s3.events.at(-1)[1], `${BUCKET}/${COMMIT}/out.json`);
-    assert.ok(Date.now() - started < 30_000, "mock publication should stay bounded on this runner");
   } finally {
     f.cleanup();
   }

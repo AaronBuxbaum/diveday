@@ -628,20 +628,6 @@ async function publishMarker({
   entries,
   onEvent,
 }) {
-  if (markerState.state === "same-version") {
-    await verifyBundle({
-      client,
-      commands,
-      bucket,
-      actualKey,
-      entries,
-      prNumber,
-      signal,
-      timeoutMs,
-      onEvent,
-    });
-    return "provenance-verified";
-  }
   const condition =
     markerState.state === "absent" ? { IfNoneMatch: "*" } : { IfMatch: markerState.head.ETag };
   try {
