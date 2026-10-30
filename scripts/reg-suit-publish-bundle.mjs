@@ -123,6 +123,12 @@ function classifyKey(key, contentType, snapshotVersion) {
     if (contentType !== "text/html") throw new Error("snapshot index.html must be text/html");
     return "snapshot-asset";
   }
+  if (relative === "worker.js") {
+    if (contentType !== "application/javascript") {
+      throw new Error("snapshot worker.js must be application/javascript");
+    }
+    return "snapshot-asset";
+  }
   if (relative === "detector.wasm") {
     if (contentType !== "application/wasm") {
       throw new Error("snapshot detector.wasm must be application/wasm");

@@ -153,6 +153,32 @@ describe("buildVisualPublishBundle", () => {
     );
   });
 
+  it("includes reg-suit's root worker JavaScript asset", () => {
+    const { sourceDir, bundleDir } = fixture();
+    writeFileSync(path.join(sourceDir, "worker.js"), "self.onmessage = () => {};");
+    writeFileSync(
+      path.join(sourceDir, "out.json"),
+      JSON.stringify({
+        actualDir: "actual",
+        expectedDir: "expected",
+        diffDir: "diff",
+        actualItems: [],
+      }),
+    );
+
+    const result = buildVisualPublishBundle({ sourceDir, bundleDir, publicationId: "4101-1" });
+    expect(readFileSync(path.join(bundleDir, "manifest.tsv"), "utf8")).toContain(
+      `snapshots/${result.snapshotVersion}/worker.js\tapplication/javascript\n`,
+    );
+    expect(
+      gunzipSync(
+        readFileSync(
+          path.join(bundleDir, "payload", "snapshots", result.snapshotVersion, "worker.js.gz"),
+        ),
+      ).toString(),
+    ).toBe("self.onmessage = () => {};");
+  });
+
   it("changes the version when any published capture changes", () => {
     const first = fixture();
     mkdirSync(path.join(first.sourceDir, "actual"));

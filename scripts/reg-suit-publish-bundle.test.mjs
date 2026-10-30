@@ -62,6 +62,7 @@ function fixture({
   capture = "capture one",
   index = "<main>visual report</main>",
   detector = false,
+  worker = false,
   count = 1,
 } = {}) {
   const root = mkdtempSync(path.join(os.tmpdir(), "diveday-sdk-publisher-"));
@@ -93,6 +94,12 @@ function fixture({
       key: `snapshots/${version}/detector.wasm`,
       contentType: "application/wasm",
       bytes: Buffer.from([0, 97, 115, 109]),
+    });
+  if (worker)
+    entries.push({
+      key: `snapshots/${version}/worker.js`,
+      contentType: "application/javascript",
+      bytes: Buffer.from("self.onmessage = () => {};"),
     });
   entries.push({
     key: `snapshots/${version}/out.json`,
@@ -343,12 +350,13 @@ function args(f, client, overrides = {}) {
 }
 
 test("publishes versioned objects with bounded workers and the root marker last", async () => {
-  const f = fixture({ count: 40, detector: true });
+  const f = fixture({ count: 40, detector: true, worker: true });
   try {
     const s3 = fakeS3();
     const result = await publishBundle(args(f, s3));
     assert.deepEqual(result, { status: "published", count: f.entries.length });
     assert.ok(s3.maxActive <= 32 && s3.maxActive > 1);
+    assert.ok(s3.objects.has(`${BUCKET}/${COMMIT}/snapshots/${VERSION_1}/worker.js`));
     const markerStart = s3.events.findIndex(
       ([event, key]) => event === "PUT_START" && key === `${BUCKET}/${COMMIT}/out.json`,
     );
