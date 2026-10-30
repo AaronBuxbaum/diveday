@@ -12,7 +12,7 @@ import {
   wallTimeToUtc,
 } from "@/lib/zoned";
 import { rebindDepartureBoatSafetyTime } from "./boat-safety";
-import type { AppDb, DbExecutor } from "./client";
+import type { AppDb, AppTransaction, DbExecutor } from "./client";
 import { clearCrewAwayAcknowledgements } from "./crew-away-acknowledgements";
 import { flushUrgentCrewNotices, recordCrewTimeMoved } from "./crew-notices";
 import { rewindowTripGearReservations } from "./gear";
@@ -167,13 +167,22 @@ export async function countRollCallEvidence(
  * **The crew hear it** (#2283): everyone on the departure but the staffer who
  * moved it gets a `time_moved` crew notice with the time it left before, sent
  * at once when either time is within a day and otherwise on the hour.
+ * `beforeMove` is a narrow composition point for related database writes that
+ * must commit with the schedule change. It runs inside the same transaction,
+ * after the refusal checks, and only for an actual move. Keep external effects
+ * out of it; notices and manifest publication still run after commit.
  */
 export async function moveTrip(
   db: AppDb,
   shopId: string,
   tripId: string,
   startsAt: Date,
-  options: { actorPersonId?: string | null; now?: Date; captureRescheduleStart?: boolean } = {},
+  options: {
+    actorPersonId?: string | null;
+    now?: Date;
+    captureRescheduleStart?: boolean;
+    beforeMove?: (tx: AppTransaction) => Promise<void>;
+  } = {},
 ): Promise<MoveTripOutcome> {
   if (Number.isNaN(startsAt.getTime())) return { ok: false, reason: "invalid" };
   const now = options.now ?? nowDate();
@@ -203,6 +212,7 @@ export async function moveTrip(
       .limit(1);
     if (!shop) return { ok: false, reason: "not_found" };
     const shift = tripShiftPlan(existing.startsAt, startsAt, shop.timezone);
+    await options.beforeMove?.(tx);
 
     const [trip] = await tx
       .update(trips)
