@@ -20,7 +20,7 @@ describe("reg-suit publisher workflow", () => {
   it("pins the caller to the publisher revision that contains its runtime scripts", () => {
     expect(VISUAL_PUBLISH_CALL).toContain(
       "uses: AaronBuxbaum/diveday/.github/workflows/reg-suit-publish.yml@" +
-        "0957f47220668dd3c1f280c79a977b62d1c63f90 # v1.0.1",
+        "47bd273c605ef0037749a884929c004ae9513a81 # v1.0.3",
     );
   });
 
@@ -47,6 +47,19 @@ describe("reg-suit publisher workflow", () => {
     expect(publisherPermissions.trim()).toBe("permissions:\n      id-token: write");
     expect(publisherPermissions).not.toContain("contents:");
     expect(publisherPermissions).not.toContain("pull-requests:");
+  });
+
+  it("allows WebAssembly only for reg-suit's root detector asset", () => {
+    expect(PUBLISH).toContain('object_path_lower="${object_path,,}"');
+    const wasmGuard =
+      'if [[ "$object_path_lower" == *.wasm && "$object_path:$content_type" != "detector.wasm:application/wasm" ]]; then';
+    expect(PUBLISH).toContain(wasmGuard);
+    expect(PUBLISH).toContain('case "$object_path:$content_type" in');
+    expect(PUBLISH).toContain("detector.wasm:application/wasm) ;;");
+    expect(PUBLISH).toContain("detector.wasm:*|*:application/wasm) exit 1 ;;");
+    expect(PUBLISH.indexOf('case "$object_path:$content_type" in')).toBeGreaterThan(
+      PUBLISH.indexOf(wasmGuard),
+    );
   });
 
   it("decodes and compares in the unprivileged job, then uploads only a fixed bundle", () => {
