@@ -112,13 +112,13 @@ describe("the waiver group", () => {
     renderCard(profile(false));
 
     expect(screen.getByTestId("diver-file-group-waiver")).toHaveTextContent(
-      /Good until Jul 20, 2027 \(shop date\)/,
+      /Good until Jul 20, 2027 \(shop’s local date\)/,
     );
 
     cleanup();
     renderCard(profile(true));
     expect(screen.getByTestId("diver-file-group-waiver")).toHaveTextContent(
-      /Runs out Jul 20, 2027 \(shop date\), before the trip\. Sign again\./,
+      /Runs out Jul 20, 2027 \(shop’s local date\), before the trip\. Sign again\./,
     );
   });
 
