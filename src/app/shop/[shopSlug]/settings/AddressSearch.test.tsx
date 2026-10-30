@@ -270,6 +270,83 @@ describe("the address card with a geocoder", () => {
     }
   });
 
+  it("restores suggestions after the query is shortened below the minimum and restored", async () => {
+    vi.useFakeTimers();
+    try {
+      suggest.mockResolvedValue({ status: "ok", suggestions: [RAINBOW_REEF] });
+      renderCard();
+      const combobox = screen.getByRole("combobox");
+
+      fireEvent.change(combobox, { target: { value: "Rainbow Reef" } });
+      await act(async () => {
+        vi.advanceTimersByTime(500);
+      });
+      expect(screen.getByRole("option", { name: /Rainbow Reef Dive Center/ })).toBeInTheDocument();
+
+      fireEvent.change(combobox, { target: { value: "10" } });
+      await act(async () => {
+        vi.advanceTimersByTime(500);
+      });
+      expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+
+      fireEvent.change(combobox, { target: { value: "Rainbow Reef" } });
+      await act(async () => {
+        vi.advanceTimersByTime(500);
+      });
+
+      expect(screen.getByRole("option", { name: /Rainbow Reef Dive Center/ })).toBeInTheDocument();
+      expect(suggest).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("retries a lookup interrupted by a short query and ignores its late response", async () => {
+    vi.useFakeTimers();
+    try {
+      let resolveFirst: ((result: AddressLookupResult) => void) | undefined;
+      suggest
+        .mockImplementationOnce(
+          () =>
+            new Promise((resolve) => {
+              resolveFirst = resolve;
+            }),
+        )
+        .mockResolvedValueOnce({ status: "ok", suggestions: [RAINBOW_REEF] });
+      renderCard();
+      const combobox = screen.getByRole("combobox");
+
+      fireEvent.change(combobox, { target: { value: "Rainbow Reef" } });
+      await act(async () => {
+        vi.advanceTimersByTime(500);
+      });
+      expect(suggest).toHaveBeenCalledTimes(1);
+
+      fireEvent.change(combobox, { target: { value: "10" } });
+      await act(async () => {
+        vi.advanceTimersByTime(500);
+      });
+      fireEvent.change(combobox, { target: { value: "Rainbow Reef" } });
+      await act(async () => {
+        vi.advanceTimersByTime(500);
+      });
+
+      expect(suggest).toHaveBeenCalledTimes(2);
+      expect(screen.getByRole("option", { name: /Rainbow Reef Dive Center/ })).toBeInTheDocument();
+
+      await act(async () => {
+        resolveFirst?.({
+          status: "ok",
+          suggestions: [{ ...RAINBOW_REEF, id: "stale", label: "Stale result" }],
+        });
+      });
+      expect(screen.queryByRole("option", { name: /Stale result/ })).not.toBeInTheDocument();
+      expect(screen.getByRole("option", { name: /Rainbow Reef Dive Center/ })).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("says the lookup is resting, not broken, when the hour's budget is spent", async () => {
     const user = userEvent.setup();
     suggest.mockResolvedValue({ status: "rate_limited" });
