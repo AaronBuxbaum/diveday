@@ -1,22 +1,11 @@
-/**
- * Caps enforced both by `src/lib/courses.ts` and by DayByDayEditor's "Add day"
- * and "Add item" buttons, so a save can never build a schedule the server would
- * reject.
- *
- * They sit in their own module because those editors are `"use client"`, and
- * while these numbers lived beside the zod parsers in `courses.ts`, reading them
- * put a 375,158-byte (83.5 KB gzipped) zod chunk in the course-editor route's
- * browser bundle. `courses.ts` re-exports them, so nothing else moved.
- */
+/** Shared by server validation and client editors; kept outside `courses.ts`
+ * so client code does not import its Zod validators. */
 export const MAX_SCHEDULE_DAYS = 30;
 export const MAX_SCHEDULE_DAY_ITEMS = 20;
 
-/** Cap enforced both by `src/lib/courses.ts` and by `FaqEditor`'s "Add question" button. */
+/** Shared FAQ cap for server validation and the client editor. */
 export const MAX_FAQS = 20;
 
-/**
- * Caps on a course's learning materials, enforced by `sanitizeLearningMaterials`
- * and by `LearningMaterialsEditor`'s "Add material" button and box lengths.
- */
+/** Shared learning-material count and field limits for validation and editors. */
 export const MAX_LEARNING_MATERIALS = 8;
 export const LEARNING_MATERIAL_LIMITS = { name: 120, url: 500, note: 200 } as const;
