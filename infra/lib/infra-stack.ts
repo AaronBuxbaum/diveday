@@ -3045,7 +3045,7 @@ exports.handler = async (event) => {
         `repo:${GITHUB_REPO_SUB}:ref:refs/heads/main`,
       ]),
       description:
-        "Assumed by .github/workflows/ci.yml's visual-report job to publish and compare reg-suit snapshots in the visual bucket. Cannot delete objects or touch any other resource.",
+        "Assumed by .github/workflows/ci.yml's visual-publish job to upload prebuilt reg-suit snapshots to the visual bucket. Cannot delete objects or touch any other resource.",
       maxSessionDuration: cdk.Duration.hours(1),
     });
     regSuitRole.addToPolicy(
@@ -3066,7 +3066,7 @@ exports.handler = async (event) => {
     new cdk.CfnOutput(this, "GitHubActionsRegSuitRoleArn", {
       value: regSuitRole.roleArn,
       description:
-        "role-to-assume for .github/workflows/ci.yml's visual-report job. Store as the AWS_REG_SUIT_ROLE_ARN repository variable.",
+        "role-to-assume for the pinned reusable publisher called by .github/workflows/ci.yml's visual-publish job. Store as the AWS_REG_SUIT_ROLE_ARN repository variable.",
     });
 
     // The monthly restore drill's identity (issue #2986): `.github/workflows/restore-drill.yml`
