@@ -714,6 +714,16 @@ describe("the pieces", () => {
               suites: [],
             },
             {
+              file: "e2e/visual-audit-remaining-expanded.ts",
+              specs: [
+                {
+                  id: "audit-claim-id",
+                  title: "the party link disclosure shows the complete claim URL",
+                },
+              ],
+              suites: [],
+            },
+            {
               file: "e2e/visual-consistency.spec.ts",
               specs: [{ id: "geometry-id", title: "the email correction is a touch target" }],
               suites: [],

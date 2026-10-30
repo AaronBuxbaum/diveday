@@ -16,10 +16,11 @@ import path from "node:path";
 import process from "node:process";
 import { gzipSync } from "node:zlib";
 
+import { isPublicationId, publicationIdFromEnv } from "./visual-publication-id.mjs";
+
 const MAX_FILES = 10_000;
 const MAX_FILE_BYTES = 100_000_000;
 const MAX_TOTAL_BYTES = 8_000_000_000;
-const SNAPSHOT_DIRS = new Set(["actual", "expected", "diff"]);
 const SAFE_PATH = /^[A-Za-z0-9][A-Za-z0-9._/-]{0,259}$/u;
 const CONTENT_TYPES = new Map([
   [".css", "text/css"],
@@ -86,8 +87,7 @@ function collectFiles(root, directory = root, collected = []) {
 }
 
 function snapshotPath(filePath, snapshotVersion) {
-  const [directory] = filePath.split("/");
-  return SNAPSHOT_DIRS.has(directory) ? `snapshots/${snapshotVersion}/${filePath}` : filePath;
+  return `snapshots/${snapshotVersion}/${filePath}`;
 }
 
 function readReport(file) {
@@ -111,9 +111,10 @@ function readReport(file) {
   return report;
 }
 
-/** Build a deterministic versioned image bundle and a validated TSV manifest. */
-export function buildVisualPublishBundle({ sourceDir, bundleDir }) {
+/** Build an attempt-scoped report bundle and a validated TSV manifest. */
+export function buildVisualPublishBundle({ sourceDir, bundleDir, publicationId }) {
   if (!sourceDir || !bundleDir) throw new Error("sourceDir and bundleDir are required");
+  if (!isPublicationId(publicationId)) throw new Error("a valid publicationId is required");
   requireDirectory(sourceDir, "reg-suit output");
   const files = collectFiles(sourceDir).sort((a, b) => a.path.localeCompare(b.path));
   if (files.length === 0) throw new Error("reg-suit output is empty");
@@ -122,6 +123,7 @@ export function buildVisualPublishBundle({ sourceDir, bundleDir }) {
 
   let totalBytes = 0;
   const snapshotInput = createHash("sha256");
+  snapshotInput.update(`publication-id\t${publicationId}\n`);
   for (const file of files) {
     const bytes = readFileSync(file.absolute);
     snapshotInput.update(
@@ -129,20 +131,51 @@ export function buildVisualPublishBundle({ sourceDir, bundleDir }) {
     );
   }
   const snapshotVersion = snapshotInput.digest("hex");
-  const report = readReport(reportFile);
-  report.actualDir = `snapshots/${snapshotVersion}/actual`;
-  report.expectedDir = `snapshots/${snapshotVersion}/expected`;
-  report.diffDir = `snapshots/${snapshotVersion}/diff`;
+  const sourceReport = readReport(reportFile);
+  const markerReport = {
+    ...sourceReport,
+    actualDir: `snapshots/${snapshotVersion}/actual`,
+    expectedDir: `snapshots/${snapshotVersion}/expected`,
+    diffDir: `snapshots/${snapshotVersion}/diff`,
+    snapshotVersion,
+    publicationId,
+  };
+  const snapshotReport = {
+    ...markerReport,
+    actualDir: "actual",
+    expectedDir: "expected",
+    diffDir: "diff",
+  };
 
   rmSync(bundleDir, { recursive: true, force: true });
   const manifest = [];
+  const outputFiles = [];
   for (const file of files) {
     const publishPath = snapshotPath(file.path, snapshotVersion);
-    const bytes =
-      file.path === "out.json" ? Buffer.from(JSON.stringify(report)) : readFileSync(file.absolute);
+    if (file.path === "out.json") {
+      outputFiles.push({
+        path: publishPath,
+        contentType: file.contentType,
+        bytes: Buffer.from(JSON.stringify(snapshotReport)),
+      });
+      outputFiles.push({
+        path: "out.json",
+        contentType: file.contentType,
+        bytes: Buffer.from(JSON.stringify(markerReport)),
+      });
+      continue;
+    }
+    outputFiles.push({
+      path: publishPath,
+      contentType: file.contentType,
+      bytes: readFileSync(file.absolute),
+    });
+  }
+  for (const outputFile of outputFiles) {
+    const { path: publishPath, contentType, bytes } = outputFile;
     totalBytes += bytes.length;
     if (bytes.length > MAX_FILE_BYTES) {
-      throw new Error(`reg-suit output file is too large: ${file.path}`);
+      throw new Error(`reg-suit output file is too large: ${publishPath}`);
     }
     if (totalBytes > MAX_TOTAL_BYTES) {
       throw new Error("reg-suit output exceeds the publisher limits");
@@ -152,10 +185,10 @@ export function buildVisualPublishBundle({ sourceDir, bundleDir }) {
     writeFileSync(output, gzipSync(bytes, { level: 9, mtime: 0 }), {
       flag: "wx",
     });
-    manifest.push(`${publishPath}\t${file.contentType}`);
+    manifest.push(`${publishPath}\t${contentType}`);
   }
   writeFileSync(path.join(bundleDir, "manifest.tsv"), `${manifest.join("\n")}\n`, { flag: "wx" });
-  return { count: files.length, totalBytes, snapshotVersion };
+  return { count: outputFiles.length, totalBytes, snapshotVersion, publicationId };
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
@@ -163,12 +196,14 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     const result = buildVisualPublishBundle({
       sourceDir: path.resolve(process.env.VISUAL_PUBLISH_SOURCE ?? ".reg"),
       bundleDir: path.resolve(process.env.VISUAL_PUBLISH_BUNDLE ?? ".reg-publish-bundle"),
+      publicationId: publicationIdFromEnv(),
     });
     console.log(
       `visual-build-publish-bundle: prepared ${result.count} files (${result.totalBytes} bytes) for snapshot ${result.snapshotVersion}`,
     );
     if (process.env.GITHUB_OUTPUT) {
       appendFileSync(process.env.GITHUB_OUTPUT, `snapshot_version=${result.snapshotVersion}\n`);
+      appendFileSync(process.env.GITHUB_OUTPUT, `publication_id=${result.publicationId}\n`);
     }
   } catch (error) {
     console.error(`visual-build-publish-bundle: ${error.message}`);

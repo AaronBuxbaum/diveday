@@ -4,6 +4,8 @@ export const KEEP_MAIN_BASELINE_AGE_MS = 72 * 60 * 60 * 1000;
 export const CANDIDATE_PAGE_SIZE = 100;
 export const MAX_CANDIDATE_PAGES = 4;
 export const MIN_PRUNE_AGE_MS = 24 * 60 * 60 * 1000;
+/** Keep in-flight publications safe even when a caller lowers the normal age floor. */
+export const MIN_PUBLICATION_GRACE_MS = 30 * 60 * 1000;
 
 /** Main's own tips, newest first, following only first-parent links. */
 export function mainFirstParentChain(candidates) {

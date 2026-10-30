@@ -175,7 +175,7 @@ describe("sanitizeVisualArtifacts", () => {
     addCapture(plan.root, 1, "present.png");
     setExpectedCaptureTests(plan, ["test-1", "omitted-test"]);
     await expect(sanitizeVisualArtifacts({ ...plan, shards: ALL_SHARDS })).rejects.toThrow(
-      /capture test IDs do not match the complete visual plan: 1 missing/u,
+      /capture test IDs do not match the complete visual plan: 1 missing.*missing IDs: "omitted-test"/u,
     );
   });
 });

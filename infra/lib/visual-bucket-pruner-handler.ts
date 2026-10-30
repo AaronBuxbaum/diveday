@@ -4,6 +4,7 @@ import {
   KEEP_MAIN_BASELINES,
   MAX_CANDIDATE_PAGES,
   MIN_PRUNE_AGE_MS,
+  MIN_PUBLICATION_GRACE_MS,
   mainBaselineProbeOrder,
   shouldFetchAnotherCandidatePage,
   shouldStopMainBaselineProbes,
@@ -15,6 +16,7 @@ export {
   KEEP_MAIN_BASELINES,
   MAX_CANDIDATE_PAGES,
   MIN_PRUNE_AGE_MS,
+  MIN_PUBLICATION_GRACE_MS,
   mainFirstParentChain,
 } from "./visual-retention-core.mjs";
 
@@ -63,6 +65,7 @@ export async function listPrefixes(client: S3Client, bucket: string): Promise<st
 
 export interface PrunerObject {
   key: string;
+  etag: string | null;
   lastModifiedMs: number | null;
 }
 
@@ -87,6 +90,7 @@ export async function listObjects(
       if (item.Key) {
         objects.push({
           key: item.Key,
+          etag: item.ETag ?? null,
           lastModifiedMs: item.LastModified ? item.LastModified.getTime() : null,
         });
       }
@@ -253,7 +257,7 @@ export async function pruneBucket(
   deleteErrors: string[];
 }> {
   const now = options.now ?? Date.now();
-  const minAgeMs = options.minAgeMs ?? MIN_PRUNE_AGE_MS;
+  const minAgeMs = Math.max(options.minAgeMs ?? MIN_PRUNE_AGE_MS, MIN_PUBLICATION_GRACE_MS);
   const keepSet = new Set(keepShas.map((sha) => sha.trim().toLowerCase()));
   // There is no state in which deleting every baseline is the right answer, so
   // it is not reachable from here. See the handler's unverified branch.
@@ -287,17 +291,26 @@ export async function pruneBucket(
   }
 
   let totalDeletedObjects = 0;
+  let deletedPrefixesCount = 0;
   const deleteErrors: string[] = [];
 
   for (const { prefix, objects } of stale) {
     if (objects.length === 0) continue;
 
+    let prefixDeleted = 0;
     for (let i = 0; i < objects.length; i += 1000) {
-      const chunk = objects.slice(i, i + 1000).map((object) => ({ Key: object.key }));
+      const eligible = objects.slice(i, i + 1000);
+      const chunk = eligible.flatMap((object) =>
+        object.etag ? [{ Key: object.key, ETag: object.etag }] : [],
+      );
+      for (const object of eligible) {
+        if (!object.etag) deleteErrors.push(`${object.key}: MissingETag`);
+      }
+      if (chunk.length === 0) continue;
       const res = await client.send(
         new DeleteObjectsCommand({
           Bucket: bucket,
-          Delete: { Objects: chunk, Quiet: true },
+          Delete: { Objects: chunk, Quiet: false },
         }),
       );
       // DeleteObjects reports per-key failures in the body instead of throwing,
@@ -305,16 +318,21 @@ export async function pruneBucket(
       for (const error of res.Errors ?? []) {
         deleteErrors.push(`${error.Key ?? "(unknown key)"}: ${error.Code ?? "unknown"}`);
       }
+      const failed = new Set((res.Errors ?? []).map((error) => error.Key));
+      const deleted =
+        res.Deleted?.length ?? chunk.filter((object) => !failed.has(object.Key)).length;
+      totalDeletedObjects += deleted;
+      prefixDeleted += deleted;
     }
 
-    totalDeletedObjects += objects.length;
-    console.log(`Pruned prefix ${prefix} (${objects.length} objects)`);
+    if (prefixDeleted > 0) deletedPrefixesCount++;
+    if (prefixDeleted > 0) console.log(`Pruned prefix ${prefix} (${prefixDeleted} objects)`);
   }
 
   return {
     keptCount: keptPrefixes.length,
     keptRecentCount: keptRecentPrefixes.length,
-    deletedPrefixesCount: stale.length,
+    deletedPrefixesCount,
     deletedObjectsCount: totalDeletedObjects,
     deleteErrors,
   };

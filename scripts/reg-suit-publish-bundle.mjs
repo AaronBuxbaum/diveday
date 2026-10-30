@@ -8,6 +8,8 @@ import path from "node:path";
 import process from "node:process";
 import { gunzipSync } from "node:zlib";
 
+import { comparePublicationIds, publicationIdFromEnv } from "./visual-publication-id.mjs";
+
 const PARALLELISM = 32;
 const MAX_FILES = 10_000;
 const MAX_FILE_BYTES = 101_000_000;
@@ -105,21 +107,28 @@ function classifyKey(key, contentType, snapshotVersion) {
     if (contentType !== "application/json") throw new Error("out.json must be application/json");
     return "marker";
   }
-  if (key === "index.html") {
-    if (contentType !== "text/html") throw new Error("index.html must be text/html");
-    return "root-static";
-  }
-  if (key === "detector.wasm") {
-    if (contentType !== "application/wasm")
-      throw new Error("detector.wasm must be application/wasm");
-    return "root-static";
-  }
 
   const prefix = `snapshots/${snapshotVersion}/`;
   if (!key.startsWith(prefix)) {
     throw new Error(`publisher object is outside snapshot ${snapshotVersion}: ${key}`);
   }
   const relative = key.slice(prefix.length);
+  if (relative === "out.json") {
+    if (contentType !== "application/json") {
+      throw new Error("snapshot out.json must be application/json");
+    }
+    return "snapshot-asset";
+  }
+  if (relative === "index.html") {
+    if (contentType !== "text/html") throw new Error("snapshot index.html must be text/html");
+    return "snapshot-asset";
+  }
+  if (relative === "detector.wasm") {
+    if (contentType !== "application/wasm") {
+      throw new Error("snapshot detector.wasm must be application/wasm");
+    }
+    return "snapshot-asset";
+  }
   const slash = relative.indexOf("/");
   if (slash < 1 || !["actual", "expected", "diff"].includes(relative.slice(0, slash))) {
     throw new Error(`publisher object is outside the versioned image directories: ${key}`);
@@ -179,6 +188,8 @@ function readVersionedReport(marker) {
     report.actualDir !== `snapshots/${marker.snapshotVersion}/actual` ||
     report.expectedDir !== `snapshots/${marker.snapshotVersion}/expected` ||
     report.diffDir !== `snapshots/${marker.snapshotVersion}/diff` ||
+    report.snapshotVersion !== marker.snapshotVersion ||
+    report.publicationId !== marker.publicationId ||
     !Array.isArray(report.actualItems) ||
     report.actualItems.length > MAX_REPORT_ITEMS
   ) {
@@ -198,6 +209,7 @@ async function validateBundle({
   bundle,
   actualKey,
   snapshotVersion,
+  publicationId,
   bucket,
   prNumber,
   signal,
@@ -206,6 +218,9 @@ async function validateBundle({
   aborted(signal);
   if (!/^[0-9a-f]{40}$/u.test(actualKey ?? "")) throw new Error("invalid immutable snapshot key");
   if (!/^[0-9a-f]{64}$/u.test(snapshotVersion ?? "")) throw new Error("invalid snapshot version");
+  if (!/^([1-9][0-9]{0,19})-([1-9][0-9]{0,5})$/u.test(publicationId ?? "")) {
+    throw new Error("invalid publication identity");
+  }
   if (!/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/u.test(bucket ?? ""))
     throw new Error("invalid S3 bucket");
   if (prNumber && !/^[1-9][0-9]*$/u.test(prNumber)) throw new Error("invalid PR number");
@@ -282,7 +297,35 @@ async function validateBundle({
     );
   }
   marker.snapshotVersion = snapshotVersion;
+  marker.publicationId = publicationId;
   const actualItems = readVersionedReport({ ...marker, bytes: readFileSync(marker.file) });
+  const localReportEntry = entries.find(
+    (entry) => entry.key === `snapshots/${snapshotVersion}/out.json`,
+  );
+  if (!localReportEntry) throw new Error("snapshot bundle is missing its local out.json report");
+  let localReport;
+  try {
+    localReport = JSON.parse(
+      gunzipSync(readFileSync(localReportEntry.file), {
+        maxOutputLength: MAX_REPORT_BYTES,
+      }).toString("utf8"),
+    );
+  } catch {
+    throw new Error("snapshot out.json is not a bounded gzip report");
+  }
+  if (
+    !localReport ||
+    typeof localReport !== "object" ||
+    Array.isArray(localReport) ||
+    localReport.actualDir !== "actual" ||
+    localReport.expectedDir !== "expected" ||
+    localReport.diffDir !== "diff" ||
+    localReport.snapshotVersion !== snapshotVersion ||
+    localReport.publicationId !== publicationId ||
+    JSON.stringify(localReport.actualItems) !== JSON.stringify(actualItems)
+  ) {
+    throw new Error("snapshot out.json does not match the root publication marker");
+  }
   const actualKeys = new Set(
     entries.filter((entry) => entry.kind === "snapshot-asset").map((entry) => entry.key),
   );
@@ -318,7 +361,10 @@ function expectedMetadata(entry, prNumber) {
     "diveday-size": String(entry.size),
   };
   if (prNumber) metadata["diveday-pr-number"] = prNumber;
-  if (entry.kind === "marker") metadata["diveday-snapshot-version"] = entry.snapshotVersion;
+  if (entry.kind === "marker") {
+    metadata["diveday-snapshot-version"] = entry.snapshotVersion;
+    metadata["diveday-publication-id"] = entry.publicationId;
+  }
   return metadata;
 }
 
@@ -455,6 +501,10 @@ function markerVersion(head) {
   return head?.Metadata?.["diveday-snapshot-version"] ?? "legacy";
 }
 
+function markerPublicationId(head) {
+  return head?.Metadata?.["diveday-publication-id"];
+}
+
 function markerOwnerMatches(head, prNumber) {
   return (head?.Metadata?.["diveday-pr-number"] ?? "None") === (prNumber || "None");
 }
@@ -466,6 +516,7 @@ async function readMarker({
   actualKey,
   marker,
   prNumber,
+  publicationId,
   signal,
   timeoutMs,
 }) {
@@ -482,7 +533,13 @@ async function readMarker({
     if (!markerOwnerMatches(head, prNumber)) {
       throw new Error(`publisher ownership mismatch at ${actualKey}/out.json`);
     }
-    if (markerVersion(head) === marker.snapshotVersion) {
+    if (comparePublicationIds(markerPublicationId(head), publicationId) > 0) {
+      return { state: "superseded", head };
+    }
+    if (
+      markerVersion(head) === marker.snapshotVersion &&
+      markerPublicationId(head) === publicationId
+    ) {
       return { state: "same-version", head };
     }
     if (!head.ETag) throw new Error(`snapshot marker has no ETag at ${actualKey}/out.json`);
@@ -558,31 +615,6 @@ async function publishImmutableAsset(args, onEvent) {
   onEvent("reused", args.entry.key);
 }
 
-async function publishRootStatic(args, onEvent) {
-  let prior;
-  try {
-    prior = await existingMatches(args);
-  } catch (error) {
-    if (!isMissing(error)) throw error;
-  }
-  if (prior) {
-    if (!prior.matches)
-      throw new Error(`root asset provenance mismatch at ${args.actualKey}/${args.entry.key}`);
-    onEvent("reused", args.entry.key);
-    return;
-  }
-  try {
-    await putCreateOnly(args);
-    onEvent("uploaded", args.entry.key);
-  } catch (error) {
-    if (!isPreconditionFailed(error)) throw error;
-    const competing = await existingMatches(args);
-    if (!competing.matches)
-      throw new Error(`root asset provenance mismatch at ${args.actualKey}/${args.entry.key}`);
-    onEvent("reused", args.entry.key);
-  }
-}
-
 async function verifyBundle({
   client,
   commands,
@@ -622,15 +654,42 @@ async function publishMarker({
   actualKey,
   marker,
   prNumber,
-  markerState,
+  publicationId,
   signal,
   timeoutMs,
   entries,
   onEvent,
 }) {
-  const condition =
-    markerState.state === "absent" ? { IfNoneMatch: "*" } : { IfMatch: markerState.head.ETag };
-  try {
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const markerState = await readMarker({
+      client,
+      commands,
+      bucket,
+      actualKey,
+      marker,
+      prNumber,
+      publicationId,
+      signal,
+      timeoutMs,
+    });
+    if (markerState.state === "superseded") return "superseded";
+    if (markerState.state === "same-version") {
+      await verifyBundle({
+        client,
+        commands,
+        bucket,
+        actualKey,
+        entries,
+        prNumber,
+        signal,
+        timeoutMs,
+        onEvent,
+      });
+      return "provenance-verified";
+    }
+
+    const condition =
+      markerState.state === "absent" ? { IfNoneMatch: "*" } : { IfMatch: markerState.head.ETag };
     const args = {
       client,
       commands,
@@ -642,42 +701,16 @@ async function publishMarker({
       timeoutMs,
       condition,
     };
-    if (markerState.state === "absent") await putCreateOnly(args);
-    else await putObject(args);
-    onEvent("marker-published", marker.key);
-    return markerState.state === "absent" ? "published" : "replaced";
-  } catch (error) {
-    if (markerState.state === "absent" && isPreconditionFailed(error)) {
-      const current = await readMarker({
-        client,
-        commands,
-        bucket,
-        actualKey,
-        marker,
-        prNumber,
-        signal,
-        timeoutMs,
-      });
-      if (current.state === "same-version") {
-        await verifyBundle({
-          client,
-          commands,
-          bucket,
-          actualKey,
-          entries,
-          prNumber,
-          signal,
-          timeoutMs,
-          onEvent,
-        });
-        return "provenance-verified";
-      }
+    try {
+      if (markerState.state === "absent") await putCreateOnly(args);
+      else await putObject(args);
+      onEvent("marker-published", marker.key);
+      return markerState.state === "absent" ? "published" : "replaced";
+    } catch (error) {
+      if (!isPreconditionFailed(error) && !isConditionalConflict(error)) throw error;
     }
-    if (isPreconditionFailed(error) || isConditionalConflict(error)) {
-      throw new Error(`snapshot marker changed during publication at ${actualKey}/out.json`);
-    }
-    throw error;
   }
+  throw new Error(`snapshot marker kept changing during publication at ${actualKey}/out.json`);
 }
 
 export async function publishBundle({
@@ -686,6 +719,7 @@ export async function publishBundle({
   bundle,
   actualKey,
   snapshotVersion,
+  publicationId,
   bucket,
   prNumber = "",
   signal = new AbortController().signal,
@@ -696,6 +730,7 @@ export async function publishBundle({
     bundle,
     actualKey,
     snapshotVersion,
+    publicationId,
     bucket,
     prNumber,
     signal,
@@ -708,6 +743,7 @@ export async function publishBundle({
     actualKey,
     marker,
     prNumber,
+    publicationId,
     signal,
     timeoutMs: requestTimeoutMs,
   });
@@ -726,6 +762,9 @@ export async function publishBundle({
     });
     return { status: "provenance-verified", count: entries.length };
   }
+  if (markerState.state === "superseded") {
+    return { status: "superseded", count: 0 };
+  }
 
   await pool(
     assets,
@@ -740,8 +779,7 @@ export async function publishBundle({
         signal: poolSignal,
         timeoutMs: requestTimeoutMs,
       };
-      if (entry.kind === "snapshot-asset") await publishImmutableAsset(args, onEvent);
-      else await publishRootStatic(args, onEvent);
+      await publishImmutableAsset(args, onEvent);
     },
     signal,
   );
@@ -752,7 +790,7 @@ export async function publishBundle({
     actualKey,
     marker,
     prNumber,
-    markerState,
+    publicationId,
     signal,
     timeoutMs: requestTimeoutMs,
     entries,
@@ -765,6 +803,7 @@ async function main() {
   const bundle = path.resolve(process.env.VISUAL_PUBLISH_BUNDLE ?? "reg-suit-publish-bundle");
   const actualKey = process.env.REG_ACTUAL_KEY;
   const snapshotVersion = process.env.SNAPSHOT_VERSION;
+  const publicationId = publicationIdFromEnv();
   const bucket = process.env.REG_SUIT_S3_BUCKET_NAME;
   const region = process.env.REG_SUIT_AWS_REGION;
   const prNumber = process.env.PR_NUMBER ?? "";
@@ -784,6 +823,7 @@ async function main() {
       bundle,
       actualKey,
       snapshotVersion,
+      publicationId,
       bucket,
       prNumber,
       signal: controller.signal,

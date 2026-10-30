@@ -1137,7 +1137,7 @@ jobs:
           echo "This run ignored unversioned legacy snapshots and published a new versioned baseline. The next visual run will compare against it." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Refuse a green check over nothing compared
-        if: ${{ !cancelled() && steps.summary.outcome != 'skipped' && steps.summary.outputs.compared != 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && !(needs.visual-publish.outputs.baseline_reset == 'true' && steps.summary.outputs.verdict == 'no-baseline') && !((github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && (needs.visual.result != 'success' || needs.visual-publish.result != 'success')) }}
+        if: ${{ !cancelled() && steps.summary.outcome != 'skipped' && steps.summary.outputs.verdict != 'superseded' && steps.summary.outputs.compared != 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && !(needs.visual-publish.outputs.baseline_reset == 'true' && steps.summary.outputs.verdict == 'no-baseline') && !((github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && (needs.visual.result != 'success' || needs.visual-publish.result != 'success')) }}
         run: |
           echo "::error title=Nothing was compared::The visual run published no usable report for this commit (verdict: ${VERDICT:-unknown}), so nothing is known about this commit's pixels. Read the sticky visual-summary comment and visual-publish logs; re-run failed jobs."
           exit 1

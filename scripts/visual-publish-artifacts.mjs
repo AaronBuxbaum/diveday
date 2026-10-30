@@ -328,9 +328,17 @@ export async function sanitizeVisualArtifacts({ root, output, shards, expectedTe
   const missingTests = [...expectedTestIds].filter((testId) => !capturedTestIds.has(testId));
   const unexpectedTests = [...capturedTestIds].filter((testId) => !expectedTestIds.has(testId));
   if (missingTests.length > 0 || unexpectedTests.length > 0) {
+    const formatTestIds = (testIds) =>
+      testIds.length === 0
+        ? "(none)"
+        : testIds
+            .slice(0, 10)
+            .map((testId) => JSON.stringify(testId.slice(0, 180)))
+            .join(", ") + (testIds.length > 10 ? `, … ${testIds.length - 10} more` : "");
     throw new Error(
       `capture test IDs do not match the complete visual plan: ${missingTests.length} ` +
-        `missing and ${unexpectedTests.length} unexpected`,
+        `missing and ${unexpectedTests.length} unexpected; missing IDs: ${formatTestIds(missingTests)}; ` +
+        `unexpected IDs: ${formatTestIds(unexpectedTests)}`,
     );
   }
   return {

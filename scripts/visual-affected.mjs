@@ -966,6 +966,10 @@ const NO_SCREENSHOT_SPEC_FILES = new Set([
 
 const NO_SCREENSHOT_TESTS = new Map([
   [
+    "visual-audit-remaining-expanded.ts",
+    new Set(["the party link disclosure shows the complete claim URL"]),
+  ],
+  [
     "visual-print-filter-context.spec.ts",
     new Set(["printed roster states its visible subset rather than a web page number"]),
   ],

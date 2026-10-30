@@ -4,13 +4,13 @@
 // same three things: the S3 fetch with its gzip quirk, one honest reading of
 // what the report actually says, and one wording of it.
 //
-// Keep this file dependency-free and built only on node builtins: the CI step
-// invokes it with a bare `node`, deliberately, so it still reports when
-// `pnpm install` or `reg-suit run` is the thing that failed.
+// Keep this file free of package dependencies: CI invokes it with bare `node`,
+// deliberately, so it still reports when `pnpm install` or `reg-suit run` fails.
 //
 // See ADR 20260729-reg-suit-visual-regression and
 // 20260802-visual-diff-pr-comment.
 import { gunzipSync } from "node:zlib";
+import { comparePublicationIds, isPublicationId } from "./visual-publication-id.mjs";
 
 export const DEFAULT_BUCKET = "diveday-vrt";
 export const GZIP_MAGIC = Buffer.from([0x1f, 0x8b]);
@@ -143,8 +143,9 @@ export function objectUrl(bucket, key) {
   return `https://${bucket}.s3.amazonaws.com/${key}`;
 }
 
-export function hostedReportUrl(bucket, commit) {
-  return objectUrl(bucket, `${commit}/index.html`);
+export function hostedReportUrl(bucket, commit, snapshotVersion = null) {
+  const reportPath = snapshotVersion ? `snapshots/${snapshotVersion}/index.html` : "index.html";
+  return objectUrl(bucket, `${commit}/${reportPath}`);
 }
 
 /** Snapshot version encoded in a reg-suit report's image directories. */
@@ -156,6 +157,16 @@ export function snapshotVersionFromReport(report) {
     report.diffDir === `snapshots/${version}/diff`
     ? version
     : null;
+}
+
+/** Whether a root report belongs to this workflow attempt or a newer one. */
+export function publicationReportStatus(report, expectedPublicationId) {
+  if (!report || !isPublicationId(expectedPublicationId) || !snapshotVersionFromReport(report)) {
+    return "unpublished";
+  }
+  const order = comparePublicationIds(report.publicationId, expectedPublicationId);
+  if (order > 0) return "superseded";
+  return report.publicationId === expectedPublicationId ? "current" : "unpublished";
 }
 
 /** Baseline caches are isolated by their immutable snapshot version. */
@@ -441,6 +452,7 @@ export function formatPrComment({
   commit,
   bucket,
   summary,
+  snapshotVersion = null,
   note = "",
   delta = null,
   limit = ITEM_LIST_LIMIT,
@@ -485,7 +497,7 @@ export function formatPrComment({
       "**Look at the pixels**",
       "",
       `- Agents: \`pnpm visual:report --commit ${commit}\` — writes \`.reg-report/${short}…/REPORT.md\` plus the expected/actual/diff PNGs, readable without a browser.`,
-      `- Humans: [hosted reg-suit report](${hostedReportUrl(bucket, commit)}) — a client-rendered SPA, so it needs a browser.`,
+      `- Humans: [hosted reg-suit report](${hostedReportUrl(bucket, commit, snapshotVersion)}) — a client-rendered SPA, so it needs a browser.`,
       "",
     );
   }

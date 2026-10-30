@@ -24,6 +24,7 @@ import { appendFileSync } from "node:fs";
 import process from "node:process";
 
 import { readBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
+import { publicationIdFromEnv } from "./visual-publication-id.mjs";
 import {
   COMMENT_MARKER,
   changedSetDelta,
@@ -32,6 +33,8 @@ import {
   fetchFromBucket,
   formatPrComment,
   previousCommitFromComment,
+  publicationReportStatus,
+  snapshotVersionFromReport,
   summarizeReport,
 } from "./visual-report-lib.mjs";
 
@@ -167,6 +170,29 @@ async function main() {
     );
   }
 
+  let publicationNote = "";
+  if (process.env.GITHUB_RUN_ID || process.env.GITHUB_RUN_ATTEMPT) {
+    const expectedPublicationId = publicationIdFromEnv();
+    const publicationStatus = publicationReportStatus(report, expectedPublicationId);
+    if (publicationStatus === "superseded") {
+      const message =
+        `Visual report skipped: publication ${expectedPublicationId} was superseded by ` +
+        `${report.publicationId}; the newer attempt owns this commit's report.`;
+      writeStepOutput("verdict", "superseded");
+      writeStepOutput("compared", "false");
+      if (process.env.GITHUB_STEP_SUMMARY)
+        appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${message}\n`);
+      console.log(message);
+      return;
+    }
+    if (publicationStatus !== "current") {
+      report = null;
+      publicationNote =
+        "This run's visual report was not published or verified; an older report is not being " +
+        "treated as current.";
+    }
+  }
+
   const summary = summarizeReport(report);
   // Written before anything that can throw — the GitHub API calls below, a
   // read-only fork token, an S3 blip. The workflow reads a *missing* output as
@@ -178,7 +204,7 @@ async function main() {
   // for one that was never published; empty on the ordinary path.
   // And by the trusted publisher after it validates the selected captures
   // against the complete baseline inventory.
-  const note = [process.env.REG_BASELINE_NOTE, process.env.VISUAL_SELECTION_NOTE]
+  const note = [process.env.REG_BASELINE_NOTE, process.env.VISUAL_SELECTION_NOTE, publicationNote]
     .filter(Boolean)
     .join(" ");
 
@@ -202,7 +228,14 @@ async function main() {
         ? await previousSummary(bucket, previousCommit)
         : null,
   });
-  const body = formatPrComment({ commit, bucket, summary, note, delta });
+  const body = formatPrComment({
+    commit,
+    bucket,
+    summary,
+    snapshotVersion: snapshotVersionFromReport(report),
+    note,
+    delta,
+  });
 
   // The job summary is the one destination that works for every event,
   // including a push to main, where there is no PR to comment on.

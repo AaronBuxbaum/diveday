@@ -58,6 +58,7 @@ function s3Error(name, status) {
 
 function fixture({
   version = VERSION_1,
+  publicationId = "4101-1",
   capture = "capture one",
   index = "<main>visual report</main>",
   detector = false,
@@ -82,13 +83,33 @@ function fixture({
       });
     }
   }
-  entries.push({ key: "index.html", contentType: "text/html", bytes: Buffer.from(index) });
+  entries.push({
+    key: `snapshots/${version}/index.html`,
+    contentType: "text/html",
+    bytes: Buffer.from(index),
+  });
   if (detector)
     entries.push({
-      key: "detector.wasm",
+      key: `snapshots/${version}/detector.wasm`,
       contentType: "application/wasm",
       bytes: Buffer.from([0, 97, 115, 109]),
     });
+  entries.push({
+    key: `snapshots/${version}/out.json`,
+    contentType: "application/json",
+    bytes: Buffer.from(
+      JSON.stringify({
+        actualDir: "actual",
+        expectedDir: "expected",
+        diffDir: "diff",
+        snapshotVersion: version,
+        publicationId,
+        actualItems: Array.from({ length: count }, (_, i) =>
+          count === 1 ? "capture.png" : `capture-${String(i).padStart(3, "0")}.png`,
+        ),
+      }),
+    ),
+  });
   entries.push({
     key: "out.json",
     contentType: "application/json",
@@ -97,6 +118,8 @@ function fixture({
         actualDir: `snapshots/${version}/actual`,
         expectedDir: `snapshots/${version}/expected`,
         diffDir: `snapshots/${version}/diff`,
+        snapshotVersion: version,
+        publicationId,
         actualItems: Array.from({ length: count }, (_, i) =>
           count === 1 ? "capture.png" : `capture-${String(i).padStart(3, "0")}.png`,
         ),
@@ -114,7 +137,13 @@ function fixture({
     path.join(bundle, "manifest.tsv"),
     `${entries.map((entry) => `${entry.key}\t${entry.contentType}`).join("\n")}\n`,
   );
-  return { root, bundle, entries, cleanup: () => rmSync(root, { recursive: true, force: true }) };
+  return {
+    root,
+    bundle,
+    entries,
+    publicationId,
+    cleanup: () => rmSync(root, { recursive: true, force: true }),
+  };
 }
 
 function storedObject({
@@ -123,6 +152,7 @@ function storedObject({
   contentType,
   prNumber = PR,
   snapshotVersion,
+  publicationId,
   checksumPresent = true,
   metadataOverrides = {},
 }) {
@@ -134,6 +164,8 @@ function storedObject({
   };
   if (key.endsWith("/out.json") && snapshotVersion)
     metadata["diveday-snapshot-version"] = snapshotVersion;
+  if (key === `${BUCKET}/${COMMIT}/out.json` && publicationId)
+    metadata["diveday-publication-id"] = publicationId;
   const etag = `"${digest(bytes).slice(0, 32)}"`;
   const head = {
     ContentLength: bytes.length,
@@ -159,6 +191,7 @@ function mapFromFixture(f, { version = VERSION_1, prNumber = PR, checksumPresent
         contentType: entry.contentType,
         prNumber,
         snapshotVersion: entry.key === "out.json" ? version : undefined,
+        publicationId: entry.key === "out.json" ? f.publicationId : undefined,
         checksumPresent,
       }),
     );
@@ -301,6 +334,7 @@ function args(f, client, overrides = {}) {
     bundle: f.bundle,
     actualKey: COMMIT,
     snapshotVersion: VERSION_1,
+    publicationId: f.publicationId,
     bucket: BUCKET,
     prNumber: PR,
     requestTimeoutMs: 250,
@@ -355,7 +389,7 @@ test("publishes versioned objects with bounded workers and the root marker last"
   }
 });
 
-test("publishes a 3,481-object inventory through at most 32 active SDK requests", async () => {
+test("publishes a 3,482-object inventory through at most 32 active SDK requests", async () => {
   const f = fixture({ count: 1160 });
   try {
     const omitted = f.entries.find((entry) => entry.key.includes("/diff/"));
@@ -365,12 +399,12 @@ test("publishes a 3,481-object inventory through at most 32 active SDK requests"
       path.join(f.bundle, "manifest.tsv"),
       `${f.entries.map((entry) => `${entry.key}\t${entry.contentType}`).join("\n")}\n`,
     );
-    assert.equal(f.entries.length, 3481);
+    assert.equal(f.entries.length, 3482);
     const s3 = fakeS3();
     const result = await publishBundle(args(f, s3));
-    assert.equal(result.count, 3481);
+    assert.equal(result.count, 3482);
     assert.ok(s3.maxActive <= 32 && s3.maxActive > 1);
-    assert.equal(s3.events.filter(([event]) => event === "PUT_DONE").length, 3481);
+    assert.equal(s3.events.filter(([event]) => event === "PUT_DONE").length, 3482);
     assert.equal(s3.events.at(-1)[1], `${BUCKET}/${COMMIT}/out.json`);
   } finally {
     f.cleanup();
@@ -460,7 +494,7 @@ test("a changed same-owner version replaces only the root marker after all new a
       }
     }
     const marker = s3.events.findIndex(
-      ([event, key]) => event === "PUT_START" && key.endsWith("/out.json"),
+      ([event, key]) => event === "PUT_START" && key === `${BUCKET}/${COMMIT}/out.json`,
     );
     assert.ok(
       s3.events
@@ -506,7 +540,7 @@ test("a same-owner legacy marker is replaced without touching legacy flat assets
         `${BUCKET}/${COMMIT}/index.html`,
         storedObject({
           key: `${COMMIT}/index.html`,
-          bytes: f.entries.find((entry) => entry.key === "index.html").gz,
+          bytes: f.entries.find((entry) => entry.key.endsWith("/index.html")).gz,
           contentType: "text/html",
         }),
       ],
@@ -622,11 +656,14 @@ test("marker compare-and-swap loss fails closed and preserves the concurrent mar
           actualDir: `snapshots/${VERSION_3}/actual`,
           expectedDir: `snapshots/${VERSION_3}/expected`,
           diffDir: `snapshots/${VERSION_3}/diff`,
+          snapshotVersion: VERSION_3,
+          publicationId: "4102-1",
           actualItems: ["capture.png"],
         }),
       ),
       contentType: "application/json",
       snapshotVersion: VERSION_3,
+      metadataOverrides: { "diveday-publication-id": "4102-1" },
     });
     const s3Race = fakeS3({
       initial: s3.objects,
@@ -639,18 +676,23 @@ test("marker compare-and-swap loss fails closed and preserves the concurrent mar
         }
       },
     });
-    await assert.rejects(
-      publishBundle(args(current, s3Race, { snapshotVersion: VERSION_2 })),
-      /marker changed during publication/u,
-    );
+    const result = await publishBundle(args(current, s3Race, { snapshotVersion: VERSION_2 }));
+    assert.equal(result.status, "superseded");
     assert.equal(
       s3Race.objects.get(`${BUCKET}/${COMMIT}/out.json`).head.Metadata["diveday-snapshot-version"],
       VERSION_3,
     );
     assert.equal(
-      s3Race.events.filter(([event, key]) => event === "PUT_START" && key.endsWith("/out.json"))
-        .length,
+      s3Race.events.filter(
+        ([event, key]) => event === "PUT_START" && key === `${BUCKET}/${COMMIT}/out.json`,
+      ).length,
       1,
+    );
+    assert.equal(
+      s3Race.events.find(
+        ([event, key]) => event === "PUT_START" && key === `${BUCKET}/${COMMIT}/out.json`,
+      )[2],
+      oldMarker.head.ETag,
     );
   } finally {
     old.cleanup();
@@ -671,7 +713,9 @@ test("absent-marker 412 is accepted only when the winning marker selects this ex
     const result = await publishBundle(args(f, s3));
     assert.equal(result.status, "provenance-verified");
     assert.equal(
-      s3.events.filter(([event, key]) => event === "PUT_START" && key.endsWith("/out.json")).length,
+      s3.events.filter(
+        ([event, key]) => event === "PUT_START" && key === `${BUCKET}/${COMMIT}/out.json`,
+      ).length,
       1,
     );
   } finally {
@@ -866,6 +910,9 @@ function sdkTransport() {
         "x-amz-meta-diveday-sha256": meta["diveday-sha256"],
         "x-amz-meta-diveday-size": meta["diveday-size"],
         "x-amz-meta-diveday-pr-number": meta["diveday-pr-number"],
+        ...(meta["diveday-publication-id"]
+          ? { "x-amz-meta-diveday-publication-id": meta["diveday-publication-id"] }
+          : {}),
       };
       if (meta["diveday-snapshot-version"]) {
         httpHeaders["x-amz-meta-diveday-snapshot-version"] = meta["diveday-snapshot-version"];

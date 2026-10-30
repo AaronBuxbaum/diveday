@@ -12,9 +12,11 @@ import {
   formatPrComment,
   geometryLine,
   geometrySummaryLine,
+  hostedReportUrl,
   itemRows,
   PNG_SIGNATURE,
   previousCommitFromComment,
+  publicationReportStatus,
   readPngSize,
   snapshotVersionFromReport,
   summarizeReport,
@@ -193,6 +195,19 @@ describe("formatPrComment", () => {
     expect(body).toContain(`https://${BUCKET}.s3.amazonaws.com/${COMMIT}/index.html`);
   });
 
+  it("links the report to this immutable publication's snapshot directory", () => {
+    const version = "a".repeat(64);
+    const body = formatPrComment({
+      commit: COMMIT,
+      bucket: BUCKET,
+      summary: summarizeReport(outJson({ passed: ["a.png"] })),
+      snapshotVersion: version,
+    });
+    expect(body).toContain(
+      `https://${BUCKET}.s3.amazonaws.com/${COMMIT}/snapshots/${version}/index.html`,
+    );
+  });
+
   it("omits the report links when nothing was published to link to", () => {
     const body = comment(null);
     expect(body).not.toContain("Look at the pixels");
@@ -282,6 +297,38 @@ describe("snapshotVersionFromReport", () => {
         diffDir: "diff",
       }),
     ).toBeNull();
+  });
+});
+
+describe("hostedReportUrl", () => {
+  it("links directly to the immutable snapshot's report", () => {
+    const version = "b".repeat(64);
+    expect(hostedReportUrl(BUCKET, COMMIT, version)).toBe(
+      `https://${BUCKET}.s3.amazonaws.com/${COMMIT}/snapshots/${version}/index.html`,
+    );
+  });
+});
+
+describe("publicationReportStatus", () => {
+  const version = "a".repeat(64);
+  const report = (publicationId) => ({
+    actualDir: `snapshots/${version}/actual`,
+    expectedDir: `snapshots/${version}/expected`,
+    diffDir: `snapshots/${version}/diff`,
+    publicationId,
+  });
+
+  it("accepts only this attempt, skips older reports, and identifies a newer owner", () => {
+    expect(publicationReportStatus(report("4102-1"), "4102-1")).toBe("current");
+    expect(publicationReportStatus(report("4101-9"), "4102-1")).toBe("unpublished");
+    expect(publicationReportStatus(report("4102-2"), "4102-1")).toBe("superseded");
+    expect(publicationReportStatus(null, "4102-1")).toBe("unpublished");
+  });
+
+  it("does not trust a newer ID on a legacy unversioned report", () => {
+    expect(
+      publicationReportStatus({ publicationId: "4102-2", actualDir: "actual" }, "4102-1"),
+    ).toBe("unpublished");
   });
 });
 

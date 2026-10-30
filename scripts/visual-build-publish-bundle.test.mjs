@@ -44,15 +44,18 @@ describe("buildVisualPublishBundle", () => {
       }),
     );
 
-    const result = buildVisualPublishBundle({ sourceDir, bundleDir });
-    expect(result).toMatchObject({ count: 5 });
+    const publicationId = "4101-1";
+    const result = buildVisualPublishBundle({ sourceDir, bundleDir, publicationId });
+    expect(result).toMatchObject({ count: 6, publicationId });
     expect(result.snapshotVersion).toMatch(/^[0-9a-f]{64}$/u);
     const manifest = readFileSync(path.join(bundleDir, "manifest.tsv"), "utf8");
     expect(manifest).toBe(
       `snapshots/${result.snapshotVersion}/actual/capture.png\timage/png\n` +
         `snapshots/${result.snapshotVersion}/diff/capture.png\timage/png\n` +
         `snapshots/${result.snapshotVersion}/expected/capture.png\timage/png\n` +
-        "index.html\ttext/html\nout.json\tapplication/json\n",
+        `snapshots/${result.snapshotVersion}/index.html\ttext/html\n` +
+        `snapshots/${result.snapshotVersion}/out.json\tapplication/json\n` +
+        "out.json\tapplication/json\n",
     );
     expect(
       gunzipSync(
@@ -75,9 +78,25 @@ describe("buildVisualPublishBundle", () => {
       actualDir: `snapshots/${result.snapshotVersion}/actual`,
       expectedDir: `snapshots/${result.snapshotVersion}/expected`,
       diffDir: `snapshots/${result.snapshotVersion}/diff`,
+      snapshotVersion: result.snapshotVersion,
+      publicationId,
+    });
+    const localReport = JSON.parse(
+      gunzipSync(
+        readFileSync(
+          path.join(bundleDir, "payload", "snapshots", result.snapshotVersion, "out.json.gz"),
+        ),
+      ).toString("utf8"),
+    );
+    expect(localReport).toMatchObject({
+      actualDir: "actual",
+      expectedDir: "expected",
+      diffDir: "diff",
+      snapshotVersion: result.snapshotVersion,
+      publicationId,
     });
 
-    const repeated = buildVisualPublishBundle({ sourceDir, bundleDir });
+    const repeated = buildVisualPublishBundle({ sourceDir, bundleDir, publicationId });
     expect(repeated.snapshotVersion).toBe(result.snapshotVersion);
   });
 
@@ -86,11 +105,15 @@ describe("buildVisualPublishBundle", () => {
     const outside = path.join(linked.root, "outside.png");
     writeFileSync(outside, "opaque");
     symlinkSync(outside, path.join(linked.sourceDir, "linked.png"));
-    expect(() => buildVisualPublishBundle(linked)).toThrow(/symlink/u);
+    expect(() => buildVisualPublishBundle({ ...linked, publicationId: "4101-1" })).toThrow(
+      /symlink/u,
+    );
 
     const unsupported = fixture();
     writeFileSync(path.join(unsupported.sourceDir, "run.sh"), "echo not executable here");
-    expect(() => buildVisualPublishBundle(unsupported)).toThrow(/unsupported file type/u);
+    expect(() => buildVisualPublishBundle({ ...unsupported, publicationId: "4101-1" })).toThrow(
+      /unsupported file type/u,
+    );
   });
 
   it("includes only reg-suit's root browser detector WebAssembly asset", () => {
@@ -107,19 +130,27 @@ describe("buildVisualPublishBundle", () => {
       }),
     );
 
-    const result = buildVisualPublishBundle({ sourceDir, bundleDir });
-    expect(result).toMatchObject({ count: 2 });
+    const result = buildVisualPublishBundle({ sourceDir, bundleDir, publicationId: "4101-1" });
+    expect(result).toMatchObject({ count: 3 });
     expect(readFileSync(path.join(bundleDir, "manifest.tsv"), "utf8")).toBe(
-      "detector.wasm\tapplication/wasm\nout.json\tapplication/json\n",
+      `snapshots/${result.snapshotVersion}/detector.wasm\tapplication/wasm\n` +
+        `snapshots/${result.snapshotVersion}/out.json\tapplication/json\n` +
+        "out.json\tapplication/json\n",
     );
-    expect(gunzipSync(readFileSync(path.join(bundleDir, "payload", "detector.wasm.gz")))).toEqual(
-      detector,
-    );
+    expect(
+      gunzipSync(
+        readFileSync(
+          path.join(bundleDir, "payload", "snapshots", result.snapshotVersion, "detector.wasm.gz"),
+        ),
+      ),
+    ).toEqual(detector);
 
     const nested = fixture();
     mkdirSync(path.join(nested.sourceDir, "assets"));
     writeFileSync(path.join(nested.sourceDir, "assets", "detector.wasm"), detector);
-    expect(() => buildVisualPublishBundle(nested)).toThrow(/unsupported file type/u);
+    expect(() => buildVisualPublishBundle({ ...nested, publicationId: "4101-1" })).toThrow(
+      /unsupported file type/u,
+    );
   });
 
   it("changes the version when any published capture changes", () => {
@@ -135,10 +166,42 @@ describe("buildVisualPublishBundle", () => {
         actualItems: ["capture.png"],
       }),
     );
-    const firstVersion = buildVisualPublishBundle(first).snapshotVersion;
+    const firstVersion = buildVisualPublishBundle({
+      ...first,
+      publicationId: "4101-1",
+    }).snapshotVersion;
 
     writeFileSync(path.join(first.sourceDir, "actual", "capture.png"), "changed capture");
-    const changedVersion = buildVisualPublishBundle(first).snapshotVersion;
+    const changedVersion = buildVisualPublishBundle({
+      ...first,
+      publicationId: "4101-1",
+    }).snapshotVersion;
     expect(changedVersion).not.toBe(firstVersion);
+  });
+
+  it("gives every same-SHA workflow attempt a fresh snapshot namespace", () => {
+    const { sourceDir, bundleDir } = fixture();
+    mkdirSync(path.join(sourceDir, "actual"));
+    writeFileSync(path.join(sourceDir, "actual", "capture.png"), "same capture");
+    writeFileSync(
+      path.join(sourceDir, "out.json"),
+      JSON.stringify({
+        actualDir: "actual",
+        expectedDir: "expected",
+        diffDir: "diff",
+        actualItems: ["capture.png"],
+      }),
+    );
+
+    const first = buildVisualPublishBundle({ sourceDir, bundleDir, publicationId: "4101-1" });
+    const retry = buildVisualPublishBundle({ sourceDir, bundleDir, publicationId: "4101-2" });
+    expect(retry.snapshotVersion).not.toBe(first.snapshotVersion);
+
+    const repeatedRetry = buildVisualPublishBundle({
+      sourceDir,
+      bundleDir,
+      publicationId: "4101-2",
+    });
+    expect(repeatedRetry.snapshotVersion).toBe(retry.snapshotVersion);
   });
 });
