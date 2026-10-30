@@ -1,18 +1,11 @@
 import { z } from "zod";
 
 /**
- * Bounded diver person fields (name / email / phone) shared by every form that
- * creates or edits a person row. Before this module, six actions each carried
- * their own copy of these bounds and they had drifted — name `min(1)` here and
- * `min(2)` there, email `max(200)` vs `max(320)`, phone `max(30)` vs `max(40)`
- * — so what counted as a valid diver depended on which door they came through.
- * One set of bounds, the most permissive of the drifted copies so nothing
- * already stored becomes invalid, following the `emergencyContactSchema`
- * precedent (src/lib/contact.ts).
+ * Shared name, email, and phone length bounds preserve the widest values
+ * previously accepted by any form.
  *
- * The fragments carry bounds only, never per-site error copy: each action
- * composes them into its own schema (required vs optional vs blank-able email
- * is a per-surface call) and keeps its own error keys/codes.
+ * These fragments define bounds, not error copy. Each surface chooses whether
+ * fields are required or blankable and keeps its own error keys.
  */
 export const DIVER_NAME_MAX = 120;
 export const DIVER_EMAIL_MAX = 320;
@@ -32,19 +25,8 @@ export const diverPhoneSchema = z.string().trim().max(DIVER_PHONE_MAX);
 export const blankableDiverEmailSchema = z.union([z.literal(""), diverEmailSchema]);
 
 /**
- * Splits or maps search query text to name, email, or phone. The command
- * palette and every seat-a-diver surface use the same prefill rule, so a
- * searched phone number does not arrive in the name field.
- */
-/**
- * The digits of a phone number and nothing else — the one comparable form.
- *
- * `people.phone` is free text: the seed holds `"+1 305 555 0142"`, and a
- * staffer typing what caller ID showed them (`3055550142`) matched nothing,
- * because search compared the raw strings (issue #719). The normalisation
- * already existed on the way *in* (`diverSearchPrefill` below strips the same
- * way to decide whether a query even is a phone number); it did not exist on
- * the way back out.
+ * Digits-only normalization lets differently formatted phone values compare
+ * consistently across person search, inbox matching, and duplicate checks.
  */
 export function phoneDigits(value: string): string {
   return value.replace(/\D/g, "");
@@ -53,6 +35,7 @@ export function phoneDigits(value: string): string {
 /** A query worth comparing as a phone number at all — see `phoneDigits`. */
 export const MIN_PHONE_SEARCH_DIGITS = 4;
 
+/** Classifies a query as email, phone, or name for form prefill. */
 export function diverSearchPrefill(query: string): {
   name?: string;
   email?: string;
