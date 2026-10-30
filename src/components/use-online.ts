@@ -2,12 +2,10 @@
 
 import { useEffect, useState } from "react";
 
-/**
- * `navigator.onLine`, kept current. Starts `true` so the first client render
- * matches `ConnectivityStatus`'s, and reconciles after mount.
- */
+/** Keep the device's online signal current without changing the first render. */
 export function useOnline(): boolean {
   const [online, setOnline] = useState(true);
+
   useEffect(() => {
     const sync = () => setOnline(navigator.onLine);
     sync();
@@ -18,5 +16,6 @@ export function useOnline(): boolean {
       window.removeEventListener("offline", sync);
     };
   }, []);
+
   return online;
 }

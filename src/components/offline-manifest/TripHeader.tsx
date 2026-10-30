@@ -3,11 +3,11 @@ import { OfflineFreshnessPill } from "@/components/OfflineFreshnessPill";
 import { OFFLINE_NOTICE_CLASS } from "@/components/offline-notice";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
+import { useOnline } from "@/components/use-online";
 import type { OfflineTripControls } from "./controls";
 import { offlineHeaderChip } from "./header-chip";
 import { StatusMessage } from "./StatusMessage";
 import type { OfflineTripView } from "./trip-view";
-import { useOnline } from "./use-online";
 
 /**
  * The saved copy's header: which departure, when, how fresh, and what is

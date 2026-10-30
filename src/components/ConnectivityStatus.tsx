@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useOnline } from "@/components/use-online";
 
 export type ConnectivityStatusCopy = {
   online: string;
@@ -54,18 +54,7 @@ export function ConnectivityStatus({
   // navigator.onLine read in the initializer differs across the boundary and
   // trips a hydration mismatch on any server-rendered surface. The effect
   // reconciles to the real state immediately after mount.
-  const [online, setOnline] = useState(true);
-
-  useEffect(() => {
-    const sync = () => setOnline(navigator.onLine);
-    sync();
-    window.addEventListener("online", sync);
-    window.addEventListener("offline", sync);
-    return () => {
-      window.removeEventListener("online", sync);
-      window.removeEventListener("offline", sync);
-    };
-  }, []);
+  const online = useOnline();
 
   const connected = online && !unanswered;
   if (connected && onlyWhenOffline) return null;
