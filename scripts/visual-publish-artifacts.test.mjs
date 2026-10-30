@@ -160,4 +160,42 @@ describe("verifyCompleteScreenshotInventory", () => {
       expectedCount: 0,
     });
   });
+
+  it("allows an empty trusted baseline only for an explicit fresh start", () => {
+    const { root } = fixture();
+    const actualDir = path.join(root, "actual");
+    const expectedDir = path.join(root, "expected");
+    mkdirSync(actualDir);
+    mkdirSync(expectedDir);
+    writeFileSync(path.join(actualDir, "new.png"), PNG);
+
+    expect(
+      verifyCompleteScreenshotInventory({
+        actualDir,
+        expectedDir,
+        requireExpected: true,
+        allowEmptyExpected: true,
+        captureMode: "all",
+      }),
+    ).toEqual({ actualCount: 1, expectedCount: 0 });
+  });
+
+  it("refuses a selective capture as the first trusted baseline", () => {
+    const { root } = fixture();
+    const actualDir = path.join(root, "actual");
+    const expectedDir = path.join(root, "expected");
+    mkdirSync(actualDir);
+    mkdirSync(expectedDir);
+    writeFileSync(path.join(actualDir, "new.png"), PNG);
+
+    expect(() =>
+      verifyCompleteScreenshotInventory({
+        actualDir,
+        expectedDir,
+        requireExpected: true,
+        allowEmptyExpected: true,
+        captureMode: "light",
+      }),
+    ).toThrow(/fresh baseline requires a complete all-mode capture/u);
+  });
 });

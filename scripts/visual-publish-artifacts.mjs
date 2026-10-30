@@ -103,15 +103,20 @@ function screenshotInventory(directory, label) {
   return names;
 }
 
-/** Require every screenshot in the trusted baseline manifest in the new capture. */
+/** Require a complete capture, except when a full-capture fresh start has no baseline yet. */
 export function verifyCompleteScreenshotInventory({
   actualDir,
   expectedDir,
   requireExpected = false,
+  allowEmptyExpected = false,
+  captureMode = "",
 }) {
   const actual = screenshotInventory(actualDir, "actual screenshots");
   const expected = screenshotInventory(expectedDir, "expected screenshots");
-  if (requireExpected && expected.size === 0) {
+  if (allowEmptyExpected && captureMode !== "all") {
+    throw new Error("fresh baseline requires a complete all-mode capture");
+  }
+  if (requireExpected && !allowEmptyExpected && expected.size === 0) {
     throw new Error("no trusted baseline screenshot inventory is available for this PR");
   }
   const missing = [...expected].filter((name) => !actual.has(name));
@@ -182,6 +187,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
         actualDir: path.resolve(process.env.VISUAL_ACTUAL_DIR ?? "e2e/screenshots"),
         expectedDir: path.resolve(process.env.VISUAL_EXPECTED_DIR ?? ".reg/expected"),
         requireExpected: process.env.GITHUB_EVENT_NAME === "pull_request",
+        allowEmptyExpected: process.env.VISUAL_FRESH_START === "true",
+        captureMode: process.env.VISUAL_CAPTURE_MODE ?? "",
       });
       console.log(
         `visual-publish-artifacts: verified ${result.actualCount} captures against ` +

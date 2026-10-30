@@ -710,11 +710,26 @@ jobs:
           # depth-1 checkout.
           fetch-depth: 0
       - uses: ./.github/actions/setup
+      - name: Resolve the visual baseline key
+        run: node scripts/reg-suit-keys.mjs --github-env
+        env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+      - name: Detect a fresh visual baseline
+        id: baseline
+        run: node scripts/wait-for-baseline.mjs
+        env:
+          PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
       - name: Choose the captures
         id: plan
         env:
           EVENT_NAME: ${{ github.event_name }}
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          FRESH_START: ${{ steps.baseline.outputs.fresh_start }}
           # The `visual-all` label is the reviewer's way to ask for every
           # capture on a pull request the selection may have under-read,
           # dark mode included.
@@ -722,7 +737,10 @@ jobs:
         run: |
           set -euo pipefail
           pnpm exec playwright test e2e/visual --list --reporter=json > visual-list.full.json
-          if [ "${EVENT_NAME}" = "pull_request" ] && [ "${WANTS_ALL}" != "true" ]; then
+          if [ "${EVENT_NAME}" = "pull_request" ] && [ "${FRESH_START}" = "true" ]; then
+            # A first baseline cannot fill uncaptured dark screenshots from a prior versioned snapshot.
+            node scripts/visual-affected.mjs --list visual-list.full.json --out visual-list.json --all --github-output
+          elif [ "${EVENT_NAME}" = "pull_request" ] && [ "${WANTS_ALL}" != "true" ]; then
             # `|| true` and the script's own fallback: a base it cannot diff
             # against captures everything, never nothing.
             git fetch --no-tags origin "${DEFAULT_BRANCH}" > /dev/null 2>&1 || true

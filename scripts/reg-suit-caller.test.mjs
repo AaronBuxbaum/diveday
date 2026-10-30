@@ -23,6 +23,10 @@ describe("reg-suit consumer workflow", () => {
     expect(planner).toContain("--light-only");
     expect(planner).toContain("--base");
     expect(planner).toContain("--all --github-output");
+    expect(planner).toContain("node scripts/reg-suit-keys.mjs --github-env");
+    expect(planner).toContain("node scripts/wait-for-baseline.mjs");
+    expect(planner).toContain("FRESH_START: ${{ steps.baseline.outputs.fresh_start }}");
+    expect(planner).toContain('[ "${FRESH_START}" = "true" ]');
     expect(CI).toContain("shard: ${{ fromJSON(needs.visual-plan.outputs.shards) }}");
   });
 

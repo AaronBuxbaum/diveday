@@ -64,7 +64,8 @@
 // `--light-only` (a pull request) drops every dark-mode capture unless the diff touches a colour
 // token or theme module ({@link THEME}); `mode` is then `light` when the diff was unbounded (every
 // light capture), and `visual-report` fills the dark ones from the baseline as it fills an
-// `affected` run's uncaptured surfaces.
+// `affected` run's uncaptured surfaces. When CI has no versioned baseline to fill from, it selects
+// every capture instead so the first published snapshot includes both colour schemes.
 //
 // `--grep` writes a Playwright `--grep` for the chosen captures in light mode only: the local
 // pass a push can afford (#2517).
@@ -1124,7 +1125,7 @@ async function main() {
   // The diff's paths, or null when there is no diff to read (dark mode is then kept).
   let changedFiles = null;
   if (args.includes("--all")) {
-    result = { mode: "all", why: "not a pull request: every capture, published as the baseline" };
+    result = { mode: "all", why: "complete visual capture requested" };
   } else {
     const git = gitReader(ROOT);
     const base = option(args, "base") ?? "origin/main";

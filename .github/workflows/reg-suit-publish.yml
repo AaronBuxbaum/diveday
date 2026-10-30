@@ -155,6 +155,12 @@ jobs:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           DEFAULT_BRANCH: main
 
+      - name: Require all captures for a fresh baseline
+        if: ${{ steps.baseline.outputs.fresh_start == 'true' && inputs.capture-mode != 'all' }}
+        run: |
+          echo "::error title=Full visual capture required::A fresh baseline must include every light and dark capture. Re-run after the planner detects the fresh-start marker."
+          exit 1
+
       # A commit can have more than one completed capture set after a retry.
       # Resolve the marker's immutable snapshot version before looking up cache.
       - name: Restore the baseline images
@@ -184,16 +190,20 @@ jobs:
           VISUAL_FILL_FROM_EXPECTED: ${{ inputs.capture-mode == 'affected' || inputs.capture-mode == 'light' }}
           VISUAL_VERIFY_COMPLETE: "true"
           VISUAL_EXPECTED_READY: "true"
+          VISUAL_CAPTURE_MODE: ${{ inputs.capture-mode }}
           REG_SUIT_COMPARE_ONLY: "true"
           REG_SUIT_CONFIG: oidc
           REG_SUIT_AWS_REGION: ${{ steps.region.outputs.region }}
           REG_SUIT_S3_BUCKET_NAME: ${{ secrets.REG_SUIT_S3_BUCKET_NAME }}
           GITHUB_EVENT_NAME: ${{ github.event_name }}
+          VISUAL_FRESH_START: ${{ steps.baseline.outputs.fresh_start }}
 
       - name: Verify complete screenshot inventory
         run: node scripts/visual-publish-artifacts.mjs --verify-complete
         env:
           GITHUB_EVENT_NAME: ${{ github.event_name }}
+          VISUAL_FRESH_START: ${{ steps.baseline.outputs.fresh_start }}
+          VISUAL_CAPTURE_MODE: ${{ inputs.capture-mode }}
 
       - name: Build the trusted S3 publish bundle
         id: bundle
