@@ -3,7 +3,14 @@ import { getTableConfig } from "drizzle-orm/pg-core";
 import { expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { rentalFitProfiles as migrationProfiles } from "./migration-schema";
-import { diveSites, rentalFitProfiles } from "./schema";
+import {
+  bookingCapabilities,
+  calendarFeeds,
+  diveSites,
+  interestUnsubscribeTokens,
+  personCourtesyEmailUnsubscribeTokens,
+  rentalFitProfiles,
+} from "./schema";
 
 const ctx = fileScopedShopContext();
 
@@ -55,4 +62,53 @@ it("keeps each natural-key unique index without its duplicate lookup index", asy
   `);
   expect(result.rows.map((row) => row.indexname)).toEqual([...expected].sort());
   expect(result.rows.every((row) => row.indexdef.startsWith("CREATE UNIQUE INDEX"))).toBe(true);
+});
+
+it("keeps token-hash uniqueness while dropping only duplicate lookup indexes", async () => {
+  const tokenTables = [
+    "booking_capabilities",
+    "calendar_feeds",
+    "interest_unsubscribe_tokens",
+    "person_courtesy_email_unsubscribe_tokens",
+  ];
+  const tables = [
+    bookingCapabilities,
+    calendarFeeds,
+    interestUnsubscribeTokens,
+    personCourtesyEmailUnsubscribeTokens,
+  ];
+  for (const table of tables) {
+    const config = getTableConfig(table);
+    const tokenHash = config.columns.find((column) => column.name === "token_hash");
+    expect(tokenHash?.notNull).toBe(true);
+    expect(tokenHash?.isUnique).toBe(true);
+  }
+
+  const result = await ctx.db.execute<{
+    tablename: string;
+    indexname: string;
+    indexdef: string;
+  }>(sql`
+    select tablename, indexname, indexdef
+      from pg_indexes
+     where schemaname = 'public'
+       and tablename in (
+         'booking_capabilities', 'calendar_feeds',
+         'interest_unsubscribe_tokens', 'person_courtesy_email_unsubscribe_tokens'
+       )
+       and indexdef like '%(token_hash)%'
+     order by tablename, indexname
+  `);
+  expect(result.rows.map((row) => row.tablename)).toEqual(tokenTables);
+  expect(result.rows.every((row) => row.indexdef.startsWith("CREATE UNIQUE INDEX"))).toBe(true);
+  expect(result.rows.map((row) => row.indexname)).not.toContain(
+    "person_courtesy_email_unsubscribe_tokens_token_hash_idx",
+  );
+  expect(result.rows.map((row) => row.indexname)).not.toContain(
+    "interest_unsubscribe_tokens_token_hash_idx",
+  );
+  expect(result.rows.map((row) => row.indexname)).not.toContain("calendar_feeds_token_hash_idx");
+  expect(result.rows.map((row) => row.indexname)).not.toContain(
+    "booking_capabilities_token_hash_idx",
+  );
 });

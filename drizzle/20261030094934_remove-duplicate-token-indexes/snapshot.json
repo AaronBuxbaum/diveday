@@ -1,0 +1,113 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "d9905f01-3030-4cc9-87e6-cc90594bb27e",
+  "prevIds": [
+    "6b14dc32-34b2-4ca4-9aab-48abc298b306"
+  ],
+  "footprints": [
+    {
+      "statementType": "drop_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "booking_capabilities",
+        "booking_capabilities_token_hash_idx"
+      ],
+      "writes": [
+        "s|idx|public.booking_capabilities_token_hash_idx",
+        "n|idx|public.booking_capabilities_token_hash_idx",
+        "e|idx|public.booking_capabilities_token_hash_idx",
+        "n|rel|public.booking_capabilities_token_hash_idx"
+      ],
+      "reads": [
+        "e|tbl|public.booking_capabilities",
+        "n|sch|public",
+        "e|col|public.booking_capabilities.token_hash"
+      ],
+      "sharedWrites": []
+    },
+    {
+      "statementType": "drop_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "calendar_feeds",
+        "calendar_feeds_token_hash_idx"
+      ],
+      "writes": [
+        "s|idx|public.calendar_feeds_token_hash_idx",
+        "n|idx|public.calendar_feeds_token_hash_idx",
+        "e|idx|public.calendar_feeds_token_hash_idx",
+        "n|rel|public.calendar_feeds_token_hash_idx"
+      ],
+      "reads": [
+        "e|tbl|public.calendar_feeds",
+        "n|sch|public",
+        "e|col|public.calendar_feeds.token_hash"
+      ],
+      "sharedWrites": []
+    },
+    {
+      "statementType": "drop_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "person_courtesy_email_unsubscribe_tokens",
+        "person_courtesy_email_unsubscribe_tokens_token_hash_idx"
+      ],
+      "writes": [
+        "s|idx|public.person_courtesy_email_unsubscribe_tokens_token_hash_idx",
+        "n|idx|public.person_courtesy_email_unsubscribe_tokens_token_hash_idx",
+        "e|idx|public.person_courtesy_email_unsubscribe_tokens_token_hash_idx",
+        "n|rel|public.person_courtesy_email_unsubscribe_tokens_token_hash_idx"
+      ],
+      "reads": [
+        "e|tbl|public.person_courtesy_email_unsubscribe_tokens",
+        "n|sch|public",
+        "e|col|public.person_courtesy_email_unsubscribe_tokens.token_hash"
+      ],
+      "sharedWrites": []
+    },
+    {
+      "statementType": "drop_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "interest_unsubscribe_tokens",
+        "interest_unsubscribe_tokens_token_hash_idx"
+      ],
+      "writes": [
+        "s|idx|public.interest_unsubscribe_tokens_token_hash_idx",
+        "n|idx|public.interest_unsubscribe_tokens_token_hash_idx",
+        "e|idx|public.interest_unsubscribe_tokens_token_hash_idx",
+        "n|rel|public.interest_unsubscribe_tokens_token_hash_idx"
+      ],
+      "reads": [
+        "e|tbl|public.interest_unsubscribe_tokens",
+        "n|sch|public",
+        "e|col|public.interest_unsubscribe_tokens.token_hash"
+      ],
+      "sharedWrites": []
+    }
+  ],
+  "deltas": [
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"booking_capabilities_token_hash_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"calendar_feeds_token_hash_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"person_courtesy_email_unsubscribe_tokens_token_hash_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"interest_unsubscribe_tokens_token_hash_idx\"]"
+    }
+  ]
+}
