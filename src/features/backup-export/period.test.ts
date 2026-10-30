@@ -44,29 +44,56 @@ describe("backupPeriodKey", () => {
 });
 
 describe("backupObjectKey", () => {
+  const manualAttempt = { trigger: "manual" as const, deliveryId: "delivery-one" };
+
   it("joins a prefix with one slash however the prefix was written", () => {
     for (const prefix of ["diveday", "diveday/", "/diveday", "/diveday/"]) {
-      expect(backupObjectKey(prefix, "blue-mantis", "2026-W32")).toBe(
-        "diveday/diveday-backup-blue-mantis-2026-W32.zip",
+      expect(backupObjectKey(prefix, "blue-mantis", "2026-W32", manualAttempt)).toBe(
+        "diveday/diveday-backup-blue-mantis-2026-W32-manual-delivery-one.zip",
       );
     }
   });
 
   it("lands at the bucket root when the prefix is empty", () => {
-    expect(backupObjectKey("", "blue-mantis", "2026-W32")).toBe(
-      "diveday-backup-blue-mantis-2026-W32.zip",
+    expect(backupObjectKey("", "blue-mantis", "2026-W32", manualAttempt)).toBe(
+      "diveday-backup-blue-mantis-2026-W32-manual-delivery-one.zip",
     );
   });
 
   it("keeps nested prefixes intact", () => {
-    expect(backupObjectKey("backups/diveday", "blue-mantis", "2026-W32")).toBe(
-      "backups/diveday/diveday-backup-blue-mantis-2026-W32.zip",
+    expect(backupObjectKey("backups/diveday", "blue-mantis", "2026-W32", manualAttempt)).toBe(
+      "backups/diveday/diveday-backup-blue-mantis-2026-W32-manual-delivery-one.zip",
     );
   });
 
-  it("is deterministic for a period, so a retried week overwrites its own object", () => {
-    const first = backupObjectKey("diveday", "blue-mantis", "2026-W32");
-    expect(backupObjectKey("diveday", "blue-mantis", "2026-W32")).toBe(first);
+  it("gives each manual delivery a unique object key", () => {
+    const first = backupObjectKey("diveday", "blue-mantis", "2026-W32", manualAttempt);
+    const second = backupObjectKey("diveday", "blue-mantis", "2026-W32", {
+      trigger: "manual",
+      deliveryId: "delivery-two",
+    });
+    expect(first).toBe("diveday/diveday-backup-blue-mantis-2026-W32-manual-delivery-one.zip");
+    expect(second).not.toBe(first);
+  });
+
+  it("gives each scheduled attempt its own object key", () => {
+    expect(
+      backupObjectKey("diveday", "blue-mantis", "2026-W32", {
+        trigger: "scheduled",
+        attemptNumber: 1,
+      }),
+    ).toBe("diveday/diveday-backup-blue-mantis-2026-W32-attempt-1.zip");
+    expect(
+      backupObjectKey("diveday", "blue-mantis", "2026-W32", {
+        trigger: "scheduled",
+        attemptNumber: 2,
+      }),
+    ).not.toBe(
+      backupObjectKey("diveday", "blue-mantis", "2026-W32", {
+        trigger: "scheduled",
+        attemptNumber: 1,
+      }),
+    );
   });
 });
 

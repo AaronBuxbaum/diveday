@@ -1,12 +1,19 @@
+import { randomUUID } from "node:crypto";
 import type { AppDb } from "@/db/client";
 import type { BackupDeliveryTrigger } from "@/db/schema";
+import {
+  claimShopBackupDelivery,
+  finishShopBackupDelivery,
+  renewShopBackupDeliveryClaim,
+  supersedeShopBackupDelivery,
+} from "@/db/shop-backup-delivery-claims";
 import type { FeedLabels } from "@/features/calendar-sync";
 import { nowDate } from "@/lib/clock";
 import { buildBackupBundle } from "./bundle";
 import {
   beginBackupDelivery,
   finishBackupDelivery,
-  hasDeliveredScheduledBackup,
+  setBackupDeliveryObjectKey,
 } from "./delivery-store";
 import {
   type BackupSecretOptions,
@@ -39,6 +46,8 @@ export type BackupRunErrorCode =
 export type RunShopBackupResult =
   | { status: "delivered"; deliveryId: string; objectKey: string; byteCount: number }
   | { status: "skipped_already_delivered"; periodKey: string }
+  | { status: "skipped_in_progress"; periodKey: string }
+  | { status: "skipped_superseded"; periodKey: string }
   | { status: "no_destination" }
   | { status: "failed"; errorCode: BackupRunErrorCode; deliveryId: string };
 
@@ -67,12 +76,26 @@ export async function runShopBackup(
   const destination = await getShopBackupDestination(db, input.shopId);
   if (!destination) return { status: "no_destination" };
 
-  if (
-    input.trigger === "scheduled" &&
-    (await hasDeliveredScheduledBackup(db, input.shopId, periodKey))
-  ) {
+  const scheduledToken = input.trigger === "scheduled" ? randomUUID() : null;
+  const scheduledClaim =
+    scheduledToken !== null
+      ? await claimShopBackupDelivery(db, {
+          shopId: input.shopId,
+          periodKey,
+          token: scheduledToken,
+          now,
+        })
+      : null;
+  if (scheduledClaim?.status === "already_delivered") {
     return { status: "skipped_already_delivered", periodKey };
   }
+  if (scheduledClaim?.status === "in_progress") {
+    return { status: "skipped_in_progress", periodKey };
+  }
+  const claim =
+    scheduledClaim?.status === "claimed" && scheduledToken !== null
+      ? { token: scheduledToken, attemptNumber: scheduledClaim.attemptNumber }
+      : null;
 
   const delivery = await beginBackupDelivery(db, {
     shopId: input.shopId,
@@ -81,7 +104,13 @@ export async function runShopBackup(
     now,
   });
   const fail = async (errorCode: BackupRunErrorCode): Promise<RunShopBackupResult> => {
-    await finishBackupDelivery(db, { id: delivery.id, status: "failed", errorCode, now });
+    await finishBackupDelivery(db, {
+      id: delivery.id,
+      shopId: input.shopId,
+      status: "failed",
+      errorCode,
+      now: input.now ?? nowDate(),
+    });
     return { status: "failed", errorCode, deliveryId: delivery.id };
   };
 
@@ -111,7 +140,33 @@ export async function runShopBackup(
     return fail("bundle_failed");
   }
 
-  const objectKey = backupObjectKey(destination.prefix, shopSlug, periodKey);
+  if (claim) {
+    const renewed = await renewShopBackupDeliveryClaim(db, {
+      shopId: input.shopId,
+      periodKey,
+      token: claim.token,
+      now: input.now ?? nowDate(),
+    });
+    if (!renewed) {
+      await supersedeShopBackupDelivery(db, {
+        shopId: input.shopId,
+        periodKey,
+        deliveryId: delivery.id,
+        now: input.now ?? nowDate(),
+      });
+      return { status: "skipped_superseded", periodKey };
+    }
+  }
+
+  const objectKey = backupObjectKey(
+    destination.prefix,
+    shopSlug,
+    periodKey,
+    claim
+      ? { trigger: "scheduled", attemptNumber: claim.attemptNumber }
+      : { trigger: "manual", deliveryId: delivery.id },
+  );
+  await setBackupDeliveryObjectKey(db, { id: delivery.id, shopId: input.shopId, objectKey });
   const uploaded = await putS3Object({
     endpoint: destination.endpoint,
     region: destination.region,
@@ -120,18 +175,33 @@ export async function runShopBackup(
     body: zip,
     contentType: "application/zip",
     credentials,
-    now,
+    now: input.now ?? nowDate(),
     fetchImpl: input.fetchImpl,
   });
   if (!uploaded.ok) return fail(uploaded.errorCode);
 
-  await finishBackupDelivery(db, {
-    id: delivery.id,
-    status: "succeeded",
-    objectKey,
-    byteCount: zip.byteLength,
-    now,
-  });
-  await markShopBackupVerified(db, input.shopId, now);
+  const finishedAt = input.now ?? nowDate();
+  if (claim) {
+    const completion = await finishShopBackupDelivery(db, {
+      shopId: input.shopId,
+      periodKey,
+      token: claim.token,
+      deliveryId: delivery.id,
+      objectKey,
+      byteCount: zip.byteLength,
+      now: finishedAt,
+    });
+    if (completion === "superseded") return { status: "skipped_superseded", periodKey };
+  } else {
+    await finishBackupDelivery(db, {
+      id: delivery.id,
+      shopId: input.shopId,
+      status: "succeeded",
+      objectKey,
+      byteCount: zip.byteLength,
+      now: finishedAt,
+    });
+  }
+  await markShopBackupVerified(db, input.shopId, finishedAt);
   return { status: "delivered", deliveryId: delivery.id, objectKey, byteCount: zip.byteLength };
 }

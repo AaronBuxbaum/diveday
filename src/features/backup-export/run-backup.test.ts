@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { unzipSync } from "fflate";
 import { describe, expect, it, vi } from "vitest";
-import { shopBackupDeliveries } from "@/db/schema";
+import { shopBackupDeliveries, shopBackupDeliveryClaims } from "@/db/schema";
 import { fileScopedShopContext } from "@/test/db";
 import { listBackupDeliveries } from "./delivery-store";
 import {
@@ -42,6 +42,7 @@ const LABELS = {
 async function backupContext() {
   const { db, shop } = ctx;
   await disconnectShopBackupDestination(db, shop.id);
+  await db.delete(shopBackupDeliveryClaims).where(eq(shopBackupDeliveryClaims.shopId, shop.id));
   await db.delete(shopBackupDeliveries).where(eq(shopBackupDeliveries.shopId, shop.id));
   const saved = await saveShopBackupDestination(
     db,
@@ -59,6 +60,14 @@ function capturingFetch(status = 200) {
     return new Response(null, { status });
   });
   return { fetchImpl: fetchImpl as unknown as typeof fetch, calls };
+}
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
 }
 
 function runInput(overrides: Record<string, unknown> = {}) {
@@ -80,14 +89,14 @@ describe("runShopBackup", () => {
     const result = await runShopBackup(db, { ...runInput({ fetchImpl }), shopId: shop.id });
     expect(result.status).toBe("delivered");
     if (result.status !== "delivered") throw new Error("unreachable");
-    expect(result.objectKey).toBe("diveday/diveday-backup-blue-mantis-2026-W32.zip");
+    expect(result.objectKey).toMatch(
+      /^diveday\/diveday-backup-blue-mantis-2026-W32-manual-.+\.zip$/,
+    );
     expect(result.byteCount).toBeGreaterThan(0);
 
     // One PUT, to the destination's path-style URL for that key.
     expect(calls).toHaveLength(1);
-    expect(calls[0]?.url).toBe(
-      "https://backups.example.com/shop-backups/diveday/diveday-backup-blue-mantis-2026-W32.zip",
-    );
+    expect(calls[0]?.url).toBe(`https://backups.example.com/shop-backups/${result.objectKey}`);
 
     // The uploaded bytes are the real bundle: README plus CSVs plus the feed.
     const entries = unzipSync(calls[0]?.body ?? new Uint8Array());
@@ -108,7 +117,7 @@ describe("runShopBackup", () => {
       status: "succeeded",
       trigger: "manual",
       periodKey: "2026-W32",
-      objectKey: "diveday/diveday-backup-blue-mantis-2026-W32.zip",
+      objectKey: result.objectKey,
       byteCount: result.byteCount,
     });
     expect((await getShopBackupDestination(db, shop.id))?.verifiedAt).not.toBeNull();
@@ -160,6 +169,78 @@ describe("runShopBackup", () => {
     expect((await listBackupDeliveries(db, shop.id, { pageSize: 50 })).total).toBe(before);
   });
 
+  it("claims a scheduled run before upload so overlapping calls do not upload twice", async () => {
+    const { db, shop } = await backupContext();
+    const uploadStarted = deferred<void>();
+    const finishUpload = deferred<Response>();
+    const slowFetch = vi.fn(async () => {
+      uploadStarted.resolve();
+      return finishUpload.promise;
+    });
+    const firstRun = runShopBackup(db, {
+      ...runInput({ fetchImpl: slowFetch as unknown as typeof fetch, trigger: "scheduled" }),
+      shopId: shop.id,
+    });
+    await uploadStarted.promise;
+
+    const secondUpload = capturingFetch();
+    const secondRun = await runShopBackup(db, {
+      ...runInput({ fetchImpl: secondUpload.fetchImpl, trigger: "scheduled" }),
+      shopId: shop.id,
+    });
+
+    expect(secondRun).toEqual({ status: "skipped_in_progress", periodKey: "2026-W32" });
+    expect(secondUpload.calls).toHaveLength(0);
+
+    const manualUpload = capturingFetch();
+    const manualRun = await runShopBackup(db, {
+      ...runInput({ fetchImpl: manualUpload.fetchImpl, trigger: "manual" }),
+      shopId: shop.id,
+    });
+    expect(manualRun.status).toBe("delivered");
+    expect(manualUpload.calls).toHaveLength(1);
+
+    finishUpload.resolve(new Response(null, { status: 200 }));
+    expect((await firstRun).status).toBe("delivered");
+    expect((await listBackupDeliveries(db, shop.id, { pageSize: 5 })).rows).toHaveLength(2);
+  });
+
+  it("keeps a late expired upload from replacing the newer scheduled attempt", async () => {
+    const { db, shop } = await backupContext();
+    const uploadStarted = deferred<void>();
+    const finishUpload = deferred<Response>();
+    let firstUrl = "";
+    const slowFetch = vi.fn(async (url: URL | RequestInfo) => {
+      firstUrl = String(url);
+      uploadStarted.resolve();
+      return finishUpload.promise;
+    });
+    const firstRun = runShopBackup(db, {
+      ...runInput({ fetchImpl: slowFetch as unknown as typeof fetch, trigger: "scheduled" }),
+      shopId: shop.id,
+    });
+    await uploadStarted.promise;
+
+    const later = new Date(NOW.getTime() + 11 * 60_000);
+    const secondUpload = capturingFetch();
+    const secondRun = await runShopBackup(db, {
+      ...runInput({ fetchImpl: secondUpload.fetchImpl, now: later, trigger: "scheduled" }),
+      shopId: shop.id,
+    });
+    expect(secondRun.status).toBe("delivered");
+    expect(secondUpload.calls[0]?.url).toContain("2026-W32-attempt-2.zip");
+
+    finishUpload.resolve(new Response(null, { status: 200 }));
+    expect(await firstRun).toEqual({ status: "skipped_superseded", periodKey: "2026-W32" });
+    expect(firstUrl).toContain("2026-W32-attempt-1.zip");
+
+    const rows = (await listBackupDeliveries(db, shop.id, { pageSize: 5 })).rows;
+    expect(rows.filter((row) => row.status === "succeeded")).toHaveLength(1);
+    expect(rows.find((row) => row.status === "superseded")?.objectKey).toContain(
+      "2026-W32-attempt-1.zip",
+    );
+  });
+
   it("skips a second scheduled run in the same week, but lets a manual run proceed", async () => {
     const { db, shop } = await backupContext();
     const { fetchImpl } = capturingFetch();
@@ -185,6 +266,37 @@ describe("runShopBackup", () => {
     expect(thisWeeks).toHaveLength(2);
   });
 
+  it("keeps overlapping manual uploads on separate keys", async () => {
+    const { db, shop } = await backupContext();
+    const uploadStarted = deferred<void>();
+    const finishUpload = deferred<Response>();
+    let firstUrl = "";
+    const slowFetch = vi.fn(async (url: URL | RequestInfo) => {
+      firstUrl = String(url);
+      uploadStarted.resolve();
+      return finishUpload.promise;
+    });
+    const firstRun = runShopBackup(db, {
+      ...runInput({ fetchImpl: slowFetch as unknown as typeof fetch }),
+      shopId: shop.id,
+    });
+    await uploadStarted.promise;
+
+    const secondUpload = capturingFetch();
+    const secondRun = await runShopBackup(db, {
+      ...runInput({ fetchImpl: secondUpload.fetchImpl }),
+      shopId: shop.id,
+    });
+    expect(secondRun.status).toBe("delivered");
+    expect(secondUpload.calls[0]?.url).not.toBe(firstUrl);
+
+    finishUpload.resolve(new Response(null, { status: 200 }));
+    expect((await firstRun).status).toBe("delivered");
+    const rows = (await listBackupDeliveries(db, shop.id, { pageSize: 5 })).rows;
+    expect(rows.filter((row) => row.status === "succeeded")).toHaveLength(2);
+    expect(new Set(rows.map((row) => row.objectKey)).size).toBe(2);
+  });
+
   it("retries the week after a failed scheduled run instead of treating failure as done", async () => {
     const { db, shop } = await backupContext();
     const failing = capturingFetch(500);
@@ -196,12 +308,15 @@ describe("runShopBackup", () => {
 
     const working = capturingFetch();
     const second = await runShopBackup(db, {
-      ...runInput({ fetchImpl: working.fetchImpl, trigger: "scheduled" }),
+      ...runInput({
+        fetchImpl: working.fetchImpl,
+        trigger: "scheduled",
+        now: new Date(NOW.getTime() + 11 * 60_000),
+      }),
       shopId: shop.id,
     });
     expect(second.status).toBe("delivered");
-    // The retry overwrote the same deterministic object key.
-    expect(working.calls[0]?.url).toContain("diveday-backup-blue-mantis-2026-W32.zip");
+    expect(working.calls[0]?.url).toContain("diveday-backup-blue-mantis-2026-W32-attempt-2.zip");
   });
 
   it("never lets the plaintext secret reach the URL or the delivery row", async () => {

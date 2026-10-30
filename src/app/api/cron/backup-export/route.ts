@@ -43,8 +43,9 @@ const CRON_MONITOR_CONFIG = {
  * along) and PUT it to the shop's own bucket.
  *
  * Idempotent per shop per week — a re-invoked tick skips shops already
- * delivered, and a retried shop overwrites its own deterministic object key.
- * Failures become recorded delivery rows the settings page shows; the pass
+ * delivered or held by another live invocation, and each scheduled attempt has
+ * its own object key so a late worker cannot replace a newer bundle. Failures
+ * become recorded delivery rows the settings page shows; the pass
  * never retries a shop inside one tick, so a misconfigured bucket costs one
  * failed row per week, never a storm. One shop's failure never blocks the
  * next shop's backup.
