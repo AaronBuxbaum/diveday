@@ -21,31 +21,12 @@ async function chosenLocale(): Promise<DiverLocale | null> {
 }
 
 /**
- * The locale for the current request: what the visitor's device asked for if
- * DiveDay carries it, otherwise the shop's stored default
- * (docs ADR 20260729-diver-copy-localization).
- *
- * Reading `headers()` opts a route into dynamic rendering. That's free for the
- * schedule/trip/staff surfaces — they already call `connection()` or sit
- * behind a session — but it is *not* free for the marketing pages (`/`,
- * `/pricing`, `/product`, `/about`, `/switching/**`): they have no session and
- * no live data, so this `headers()` read is the only thing standing between
- * them and a fully static, CDN-cacheable response. `DIVER_LOCALES` (./settings)
- * is exactly two values, so the ideal fix is caching each page's body as a
- * function of the negotiated `DiverLocale` with `"use cache"` + `cacheLife`,
- * keeping only this thin negotiation dynamic.
- *
- * That fix needs the `cacheComponents` flag in `next.config.ts` — without it,
- * `"use cache"` fails the build outright ("To use 'use cache', please enable
- * the feature flag `cacheComponents`..."), and there is no old-model
- * (route-segment-config) way to vary output by request header while still
- * getting a static/ISR classification: `dynamic = 'force-static'` forces
- * `headers()` to read empty, which would silently stop honoring
- * `Accept-Language: es` rather than cache it. So this file still reads
- * `headers()` per request, unmemoized, pending `cacheComponents` — verified by
- * attempting the "use cache" restructuring directly (see the frontend
- * performance audit notes); flip the flag first, then hoist each marketing
- * page's body into a `"use cache"` function keyed by this locale.
+ * Resolve the request's display language. An explicit reader choice in the
+ * `diveday_locale` cookie wins, then the embed's fixed language, then
+ * `Accept-Language`; `negotiateLocale` uses the shop default when the header
+ * has no supported match. Reading request cookies and headers is request
+ * scoped; callers that need a static shell keep this read behind the route's
+ * appropriate Suspense boundary (Cache Components are enabled).
  */
 export async function requestLocale(shopDefaultLocale?: string | null): Promise<DiverLocale> {
   const chosen = await chosenLocale();
