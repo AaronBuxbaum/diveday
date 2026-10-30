@@ -1,0 +1,68 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "6b14dc32-34b2-4ca4-9aab-48abc298b306",
+  "prevIds": [
+    "38831028-7aea-4e3c-a339-707f6294a460",
+    "a786f440-e2b2-449d-89df-611cc2325f44",
+    "2cdde3ba-db57-4fd3-bfcf-19a372ecce9b",
+    "95706554-b934-4c58-80e3-eeb2b1189b5c"
+  ],
+  "footprints": [
+    {
+      "statementType": "drop_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "dive_sites",
+        "dive_sites_shop_name_idx"
+      ],
+      "writes": [
+        "s|idx|public.dive_sites_shop_name_idx",
+        "n|idx|public.dive_sites_shop_name_idx",
+        "e|idx|public.dive_sites_shop_name_idx",
+        "n|rel|public.dive_sites_shop_name_idx"
+      ],
+      "reads": [
+        "e|tbl|public.dive_sites",
+        "n|sch|public",
+        "e|col|public.dive_sites.shop_id",
+        "e|col|public.dive_sites.name"
+      ],
+      "sharedWrites": []
+    },
+    {
+      "statementType": "drop_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "rental_fit_profiles",
+        "rental_fit_profiles_shop_person_idx"
+      ],
+      "writes": [
+        "s|idx|public.rental_fit_profiles_shop_person_idx",
+        "n|idx|public.rental_fit_profiles_shop_person_idx",
+        "e|idx|public.rental_fit_profiles_shop_person_idx",
+        "n|rel|public.rental_fit_profiles_shop_person_idx"
+      ],
+      "reads": [
+        "e|tbl|public.rental_fit_profiles",
+        "n|sch|public",
+        "e|col|public.rental_fit_profiles.shop_id",
+        "e|col|public.rental_fit_profiles.person_id"
+      ],
+      "sharedWrites": []
+    }
+  ],
+  "deltas": [
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"dive_sites_shop_name_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"rental_fit_profiles_shop_person_idx\"]"
+    }
+  ]
+}
