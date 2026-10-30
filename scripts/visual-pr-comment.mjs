@@ -176,8 +176,8 @@ async function main() {
   writeStepOutput("compared", String(comparedAnything(summary)));
   // Set by scripts/wait-for-baseline.mjs when it substituted an older baseline
   // for one that was never published; empty on the ordinary path.
-  // And by the trusted publisher after it validates all eight capture shards
-  // against the baseline inventory.
+  // And by the trusted publisher after it validates the selected captures
+  // against the complete baseline inventory.
   const note = [process.env.REG_BASELINE_NOTE, process.env.VISUAL_SELECTION_NOTE]
     .filter(Boolean)
     .join(" ");
