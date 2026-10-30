@@ -10,7 +10,7 @@
 // reg-suit directly any more: everything goes through here, which resolves the
 // keys first (`scripts/reg-suit-keys.mjs`) and refuses to run without one.
 //
-// CI resolves the keys in an earlier step, because the `visual-report` job
+// CI resolves the keys in an earlier step, because the `visual-publish` job
 // needs the expected key *before* the compare to wait for a stacked layer's
 // baseline. Values already in the environment win, so that step and this script
 // can never disagree — and so a human triaging by hand can override either key
@@ -19,7 +19,7 @@ import { appendFileSync, cpSync, mkdirSync, rmSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
-
+import { regSuitConfigArgs } from "./reg-suit-config.mjs";
 import { gitReader, resolveRegSuitKeys } from "./reg-suit-keys.mjs";
 import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 import { fillFromExpected, selectionNote } from "./visual-fill.mjs";
@@ -79,8 +79,9 @@ console.log(
 // which is fine. Resolved from node_modules rather than PATH so this behaves
 // the same when invoked as a bare `node scripts/visual-compare.mjs`.
 const binDir = path.join(repoRoot, "node_modules", ".bin");
+const configArgs = regSuitConfigArgs(process.env.REG_SUIT_CONFIG);
 const regSuit = (...args) =>
-  runBounded(path.join(binDir, "dotenv"), ["-c", "--", "reg-suit", ...args], {
+  runBounded(path.join(binDir, "dotenv"), ["-c", "--", "reg-suit", ...configArgs, ...args], {
     cwd: repoRoot,
     stdio: "inherit",
     // Nothing is logged from here: dotenv is about to load live AWS credentials
@@ -108,14 +109,18 @@ const regSuit = (...args) =>
 // the fetch is skipped (code re-review 2026-10-13, item 27).
 const fill = process.env.VISUAL_FILL_FROM_EXPECTED === "true";
 const restored = process.env.VISUAL_EXPECTED_DIR;
-if (fill || restored) {
+const expectedReady = process.env.VISUAL_EXPECTED_READY === "true";
+const compareOnly = process.env.REG_SUIT_COMPARE_ONLY === "true";
+if (fill || restored || expectedReady) {
   const expectedDir = path.join(repoRoot, ".reg", "expected");
   const stages = [
-    restored ? ["restore"] : ["sync-expected"],
+    restored ? ["restore"] : expectedReady ? [] : ["sync-expected"],
     ...(fill ? [["fill"]] : []),
     ["compare"],
-    ["publish", "-n"],
-  ];
+    ...(!compareOnly
+      ? [["publish", ...(process.env.REG_SUIT_SKIP_NOTIFICATION === "true" ? [] : ["-n"])]]
+      : []),
+  ].filter((stage) => stage.length > 0);
   for (const [stage, ...args] of stages) {
     if (stage === "restore") {
       rmSync(expectedDir, { recursive: true, force: true });
@@ -135,9 +140,26 @@ if (fill || restored) {
       if (process.env.GITHUB_ENV) {
         appendFileSync(process.env.GITHUB_ENV, `VISUAL_SELECTION_NOTE=${selectionNote(filled)}\n`);
       }
+      if (process.env.GITHUB_OUTPUT) {
+        appendFileSync(process.env.GITHUB_OUTPUT, `selection_note=${selectionNote(filled)}\n`);
+      }
       continue;
     }
     const step = regSuit(stage, ...args);
+    if (step.status !== 0) process.exit(step.status ?? 1);
+  }
+  process.exit(0);
+}
+
+if (process.env.REG_SUIT_SKIP_NOTIFICATION === "true") {
+  // Keep `run`'s bundled notifier off for callers that publish GitHub reports
+  // elsewhere. The trusted CI workflow now compares in a job without id-token
+  // and publishes a prepared bundle in a separate minimal OIDC job.
+  const stages = compareOnly
+    ? ["sync-expected", "compare"]
+    : ["sync-expected", "compare", "publish"];
+  for (const stage of stages) {
+    const step = regSuit(stage);
     if (step.status !== 0) process.exit(step.status ?? 1);
   }
   process.exit(0);
