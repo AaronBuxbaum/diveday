@@ -147,9 +147,9 @@ describe("publicRouteLookup", () => {
    * That is closed now, one layer up: this module still does not *apply*
    * `isActive` — the row exists either way and the page is the one that decides
    * who may read it — it **reports** the flag, and `src/proxy.ts` refuses a
-   * reader carrying no signed preview (issue #1735). The header on this module
-   * has the three cheaper mechanisms and why each is worse than the disclosure
-   * was.
+   * reader carrying no signed preview (issue #1735). The module header
+   * summarizes the capability requirement, page recheck, bookmark limitation,
+   * and why session-cookie heuristics cannot establish live shop staff.
    */
   it("finds a course a shop has hidden, and says it is hidden", async () => {
     const courseSlug = await aCourseSlug();

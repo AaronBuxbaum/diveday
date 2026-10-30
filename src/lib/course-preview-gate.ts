@@ -18,12 +18,11 @@ import { nowMs } from "./clock";
  * so a stranger with a dozen guesses and `curl -w '%{http_code}'` learned which
  * unpublished drafts a shop was holding.
  *
- * The invariant block on `src/db/public-route-existence.ts` sets out why the
- * cheap fixes are all worse than the disclosure — `getSessionCookie` verifies
- * nothing, the cookie cache is five minutes wide and names one shop while staff
- * roles are per-shop — and closes by naming what is wanted instead: *the
- * previewer arrives carrying something the edge can verify*. This is that
- * thing.
+ * The `src/db/public-route-existence.ts` header summarizes the current boundary:
+ * after a successful existence lookup reports a hidden course, the short-lived
+ * signed preview capability bypasses the edge refusal. If that lookup fails,
+ * the proxy serves the page; its live per-shop staff check remains the content
+ * boundary. This is the capability the editor mints and the proxy verifies.
  *
  * **The same grammar the waiver, recap and ready links already use**, and the
  * same one as `trip-admission-gate.ts`: HMAC-SHA256 under a key derived from
