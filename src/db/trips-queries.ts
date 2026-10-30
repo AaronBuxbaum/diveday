@@ -30,7 +30,7 @@ import {
 } from "@/lib/trip-dives";
 import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 import { shiftWeek, weekDates } from "@/lib/week-board";
-import { shopDayBounds, wallTimeToUtc } from "@/lib/zoned";
+import { shopDayBounds, shopDaysBounds, wallTimeToUtc } from "@/lib/zoned";
 import type { AppDb, DbExecutor } from "./client";
 import { decodeCursor, encodeCursor } from "./cursor";
 import { offsetPage } from "./paging";
@@ -160,6 +160,35 @@ export async function upcomingTripsWithCounts(
       bookedDivers,
     }),
   );
+}
+
+/** A shop-local day of scheduled staff departures, including private/rehearsal trips. */
+export async function shopDayTripsWithCounts(
+  db: DbExecutor,
+  shopId: string,
+  date: CalendarDate,
+  timeZone: string,
+  now: Date = nowDate(),
+): Promise<{ id: string; booked: number }[]> {
+  const { from, to } = shopDaysBounds(date, date, timeZone);
+  const lowerBound = new Date(now.getTime() - DEPARTURE_BUFFER_MS);
+  const startsAtFrom = from > lowerBound ? from : lowerBound;
+
+  return db
+    .select({ id: trips.id, booked: count(bookings.id) })
+    .from(trips)
+    .leftJoin(bookings, liveBookingJoin)
+    .where(
+      and(
+        liveTrip(),
+        eq(trips.shopId, shopId),
+        eq(trips.status, "scheduled"),
+        gte(trips.startsAt, startsAtFrom),
+        lt(trips.startsAt, to),
+      ),
+    )
+    .groupBy(trips.id)
+    .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id));
 }
 
 /**
