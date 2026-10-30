@@ -53,9 +53,8 @@ const contactSchema = z.object({
 });
 
 const addressSchema = z.object({
-  // Every field is optional and clears independently on empty — a geocoded
-  // place may carry no postcode, and an all-empty submission is the card's
-  // Remove control walking the whole address back to nothing.
+  // All five text fields are submitted; absent parts of a geocoded place arrive
+  // as empty strings and clear independently. An all-empty address is Remove.
   addressStreet: z.string().trim().max(200),
   addressLocality: z.string().trim().max(120),
   addressRegion: z.string().trim().max(120),
@@ -297,6 +296,8 @@ export async function resendContactConfirmationAction() {
  * revalidates the same schema: a server action's arguments are
  * attacker-controlled whatever calls it, and the same shape keeps the
  * hand-crafted-POST case and the honest one on one path.
+ * The database write replaces the complete address; empty text fields become
+ * null, and omitted coordinates are explicitly passed as null.
  *
  * An all-empty address is the Remove control, and it says so rather than
  * reporting "saved" for a thing that is now gone.
