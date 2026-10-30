@@ -298,7 +298,7 @@ test.describe("schedule builder", () => {
     await page.getByLabel("Date").fill(addDay);
     await page.getByLabel("Departs").fill("09:00");
     await page.getByLabel("Returns").fill("13:00");
-    await page.getByLabel("Seats").fill("8");
+    await page.getByLabel("Passenger places").fill("8");
     await page.getByRole("button", { name: "Put it on the board" }).click();
     // Named, so a staffer adding three departures in a row can read which one
     // landed (ADR 20260806-one-trip-create-form).
@@ -360,7 +360,7 @@ test.describe("schedule builder", () => {
     await page.getByRole("link", { name: "Add a departure", exact: true }).click();
     await page.getByLabel("What is it").fill(title);
     await page.getByLabel("Date").fill(daysFromNow(4));
-    await page.getByLabel("Seats").fill("6");
+    await page.getByLabel("Passenger places").fill("6");
     await page.getByLabel(/Price per diver/).fill("129");
     await page.getByRole("button", { name: "Put it on the board" }).click();
     // Named, so a staffer adding three departures in a row can read which one
@@ -726,7 +726,7 @@ test.describe("schedule builder", () => {
     await page.getByLabel("Date").fill(addDay);
     await page.getByLabel("Departs").fill("11:30");
     await page.getByLabel("Returns").fill("15:00");
-    await page.getByLabel("Seats").fill("12");
+    await page.getByLabel("Passenger places").fill("12");
     await page.getByRole("button", { name: "Put it on the board" }).click();
     await expect(page.getByRole("status")).toContainText(`“${title}” is on the board.`);
 
@@ -779,7 +779,7 @@ test.describe("schedule builder", () => {
     await page.getByLabel("Date").fill(addDay);
     await page.getByLabel("Departs").fill("08:00");
     await page.getByLabel("Returns").fill("12:00");
-    await page.getByLabel("Seats").fill("10");
+    await page.getByLabel("Passenger places").fill("10");
     await page.getByRole("button", { name: "Put it on the board" }).click();
     await expect(page.getByRole("status")).toContainText(`“${title}” is on the board.`);
 
@@ -839,7 +839,7 @@ test.describe("schedule builder", () => {
     await page.getByLabel("Date").fill(addDay);
     await page.getByLabel("Departs").fill("10:00");
     await page.getByLabel("Returns").fill("14:00");
-    await page.getByLabel("Seats").fill("12");
+    await page.getByLabel("Passenger places").fill("12");
 
     // Expand the form to access "More options" and check "Private charter"
     await page.getByRole("button", { name: /More options/i }).click();

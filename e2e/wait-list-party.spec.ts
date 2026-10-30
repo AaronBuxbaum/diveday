@@ -29,7 +29,7 @@ test("a full date in a weekly run points at the next one, and a party waits whol
   await page.getByLabel("Date").fill(daysFromNow(4));
   await page.getByLabel("Departs").fill("08:00");
   await page.getByLabel("Returns").fill("11:00");
-  await page.getByLabel("Seats").fill("2");
+  await page.getByLabel("Passenger places").fill("2");
   await page.getByLabel("How often").selectOption("1");
   await page.getByRole("button", { name: "Put it on the board" }).click();
   await expect(page.getByRole("status")).toContainText(title);

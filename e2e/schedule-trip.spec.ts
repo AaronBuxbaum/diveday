@@ -43,7 +43,7 @@ test("staff schedules a trip and it appears on shop and public schedules", async
   await page.getByLabel("Date").fill(daysFromNow(3));
   await page.getByLabel("Departs").fill("09:00");
   await page.getByLabel("Returns").fill("12:30");
-  await page.getByLabel("Seats").fill("8");
+  await page.getByLabel("Passenger places").fill("8");
   await page.getByLabel("Number of dives").selectOption("3");
   await page.getByLabel("Name").nth(0).fill("Morning reef");
   await page
@@ -148,7 +148,7 @@ test("a multi-day departure is one trip with a meeting day per day", async ({ pa
   await page.getByLabel("Date").fill(date);
   await page.getByLabel("Departs").fill("08:30");
   await page.getByLabel("Returns").fill("12:30");
-  await page.getByLabel("Seats").fill("6");
+  await page.getByLabel("Passenger places").fill("6");
   await page.getByLabel("How many days").fill("3");
   await page.getByRole("button", { name: "Put it on the board" }).click();
   await expect(page.getByRole("status")).toContainText(title);

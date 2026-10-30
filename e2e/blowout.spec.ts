@@ -145,7 +145,7 @@ test.describe("weather blow-out cascade", () => {
     await page.getByLabel("Date").fill(daysFromNow(4));
     await page.getByLabel("Departs").fill("08:00");
     await page.getByLabel("Returns").fill("12:00");
-    await page.getByLabel("Seats").fill("6");
+    await page.getByLabel("Passenger places").fill("6");
     await page.getByRole("button", { name: "Put it on the board" }).click();
     // Named, so a staffer adding several departures in a row can read which one
     // landed (ADR 20260806-one-trip-create-form).
