@@ -6,9 +6,10 @@ import type { ChecklistState, DiverChecklistItem } from "./readiness-summary";
 import { RECAP_AUTOMATIC_DELAY_MS } from "./recap-schedule";
 
 /**
- * Builds the diver's fixed sequence: sign → certification → pay → gear or
- * changes → day-of. Every step counts toward progress and can settle. Optional
- * pickup and note answers stay inside Day-of details and do not gate it.
+ * Builds the diver's fixed sequence (ADR 20260827-the-divers-thread): sign →
+ * certification → pay → gear or changes → day-of. Every step counts toward
+ * progress and can settle. Optional pickup and note answers stay inside Day-of
+ * details and do not gate it.
  * Readiness-owned states pass through unchanged; gear and day-of use caller
  * booleans. The caller resolves these ids through `src/i18n/thread-labels.ts`.
  */
