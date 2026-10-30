@@ -48,8 +48,25 @@ describe("fresh versioned visual baseline workflow", () => {
   it("plans all captures before publishing the first baseline", () => {
     expect(PLANNER_WORKFLOW).toContain("node scripts/reg-suit-keys.mjs --github-env");
     expect(PLANNER_WORKFLOW).toContain("node scripts/wait-for-baseline.mjs");
+    const plannerBaselineAt = PLANNER_WORKFLOW.indexOf("name: Detect a fresh visual baseline");
+    const plannerChooseAt = PLANNER_WORKFLOW.indexOf("name: Choose the captures");
+    expect(PLANNER_WORKFLOW.slice(plannerBaselineAt, plannerChooseAt)).toContain(
+      "PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}",
+    );
     expect(PLANNER_WORKFLOW).toContain("FRESH_START: ${{ steps.baseline.outputs.fresh_start }}");
     expect(PLANNER_WORKFLOW).toContain('[ "${FRESH_START}" = "true" ]');
+  });
+
+  it("resolves the published baseline against the caller's PR head", () => {
+    const publisherBaselineAt = PUBLISH_WORKFLOW.indexOf(
+      "name: Resolve a baseline that actually exists",
+    );
+    const fullCaptureGuardAt = PUBLISH_WORKFLOW.indexOf(
+      "name: Require all captures for a fresh baseline",
+    );
+    expect(PUBLISH_WORKFLOW.slice(publisherBaselineAt, fullCaptureGuardAt)).toContain(
+      "PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}",
+    );
   });
 
   it("carries a separate pre-capture inventory through the trusted publisher", () => {

@@ -161,6 +161,7 @@ jobs:
           REG_SUIT_AWS_REGION: ${{ steps.region.outputs.region }}
           PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           DEFAULT_BRANCH: main
 
       - name: Require all captures for a fresh baseline

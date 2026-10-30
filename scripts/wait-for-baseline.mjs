@@ -164,7 +164,7 @@ export function baselineEnvironment({ key, version, note }) {
 
 /**
  * A stacked layer's own baseline: the commit of the layer below that this branch contains
- * (`merge-base` of the PR's base sha and HEAD), but only when that commit's snapshot is already
+ * (`merge-base` of the PR's base and head shas), but only when that commit's snapshot is already
  * published. Then the diff is this layer's own change instead of the whole stack's since `main`,
  * which on 2026-10-12 was ~926 changed captures per layer, most of them other layers' work, and
  * the costliest triage sessions spent tokens on. Never waits: an unpublished layer below falls
@@ -176,15 +176,23 @@ export async function layerBelowBaseline({
   bucket,
   baseRef,
   baseSha,
+  headSha,
   defaultBranch,
   key,
   git,
   fetchImpl = fetch,
 }) {
-  if (!baseRef || baseRef === defaultBranch || !COMMIT_SHA.test(baseSha ?? "")) return null;
+  if (
+    !baseRef ||
+    baseRef === defaultBranch ||
+    !COMMIT_SHA.test(baseSha ?? "") ||
+    !COMMIT_SHA.test(headSha ?? "")
+  ) {
+    return null;
+  }
   let below;
   try {
-    below = git(["merge-base", baseSha, "HEAD"]).trim();
+    below = git(["merge-base", baseSha, headSha]).trim();
   } catch {
     return null;
   }
@@ -220,6 +228,7 @@ async function main() {
     bucket,
     baseRef: process.env.PR_BASE_REF,
     baseSha: process.env.PR_BASE_SHA,
+    headSha: process.env.PR_HEAD_SHA,
     defaultBranch: process.env.DEFAULT_BRANCH || "main",
     key,
     git: gitReader(),

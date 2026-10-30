@@ -276,14 +276,22 @@ describe("nearestPublishedAncestor", () => {
 
 describe("layerBelowBaseline", () => {
   const BASE = "dddddddddddddddddddddddddddddddddddddddd";
+  const PR_HEAD = "ffffffffffffffffffffffffffffffffffffffff";
   const BELOW = "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
   const git = (args) => {
-    if (args.join(" ") === `merge-base ${BASE} HEAD`) return `${BELOW}\n`;
+    if (args.join(" ") === `merge-base ${BASE} ${PR_HEAD}`) return `${BELOW}\n`;
     throw new Error(`stub git: no answer for \`git ${args.join(" ")}\``);
   };
-  const layer = { baseRef: "claude/layer-1", baseSha: BASE, defaultBranch: "main", key: KEY, git };
+  const layer = {
+    baseRef: "claude/layer-1",
+    baseSha: BASE,
+    headSha: PR_HEAD,
+    defaultBranch: "main",
+    key: KEY,
+    git,
+  };
 
-  it("compares a stacked layer against the layer below when that commit is published", async () => {
+  it("uses the PR head, not the trusted checkout HEAD, to find the layer below", async () => {
     const { fetchImpl } = bucketWith({
       objects: [`${BELOW}/out.json`],
       versions: { [`${BELOW}/out.json`]: VERSION },
@@ -317,5 +325,13 @@ describe("layerBelowBaseline", () => {
     expect(
       await layerBelowBaseline({ bucket: BUCKET, ...layer, baseSha: undefined, fetchImpl }),
     ).toBeNull();
+  });
+
+  it("leaves a pull request with no valid head sha alone", async () => {
+    const { state, fetchImpl } = bucketWith({ objects: [`${BELOW}/out.json`] });
+    expect(
+      await layerBelowBaseline({ bucket: BUCKET, ...layer, headSha: undefined, fetchImpl }),
+    ).toBeNull();
+    expect(state.heads).toBe(0);
   });
 });
