@@ -254,8 +254,8 @@ describe("fetchFromBucket", () => {
 });
 
 describe("snapshotVersionFromReport", () => {
-  it("recognizes legacy and versioned report directories", () => {
-    expect(snapshotVersionFromReport(outJson({}))).toBe("legacy");
+  it("recognizes only versioned report directories", () => {
+    expect(snapshotVersionFromReport(outJson({}))).toBeNull();
     const version = "a".repeat(64);
     expect(
       snapshotVersionFromReport({
@@ -286,11 +286,10 @@ describe("snapshotVersionFromReport", () => {
 });
 
 describe("baselineCacheKey", () => {
-  it("keeps legacy cache keys and versions new snapshot caches", () => {
-    expect(baselineCacheKey(COMMIT, "legacy")).toBe(`reg-baseline-${COMMIT}`);
-    expect(baselineCacheKey(COMMIT, "a".repeat(64))).toBe(
-      `reg-baseline-${COMMIT}-${"a".repeat(64)}`,
-    );
+  it("keys baseline caches by immutable snapshot version", () => {
+    const version = "a".repeat(64);
+    expect(baselineCacheKey(COMMIT, version)).toBe(`reg-baseline-${COMMIT}-${version}`);
+    expect(() => baselineCacheKey(COMMIT, "legacy")).toThrow(/version/u);
   });
 });
 

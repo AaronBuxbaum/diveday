@@ -63,16 +63,10 @@ async function publishedSnapshot(bucket, key, { fetchImpl }) {
     });
     if (!res.ok) return null;
     const metadataVersion = res.headers?.get("x-amz-meta-diveday-snapshot-version");
-    if (
-      metadataVersion !== null &&
-      metadataVersion !== undefined &&
-      !/^[0-9a-f]{64}$/u.test(metadataVersion)
-    ) {
+    if (typeof metadataVersion !== "string" || !/^[0-9a-f]{64}$/u.test(metadataVersion)) {
       return null;
     }
-    return {
-      version: metadataVersion ?? "legacy",
-    };
+    return { version: metadataVersion };
   } catch {
     return null;
   } finally {

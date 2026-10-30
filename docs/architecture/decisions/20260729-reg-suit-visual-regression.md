@@ -225,11 +225,10 @@ available. The publisher still serializes by commit SHA, rejects ownership chang
 content change that claims the same version, and verifies every object before reusing a complete
 version. Old image versions remain covered by the existing whole-prefix pruner.
 
-Baseline caches now use both commit and snapshot version. A report published before version metadata
-was introduced is read from its legacy `actual/` path and keeps the previous commit-only cache key.
-This lets current branches use their existing published baseline while new retries remain isolated
-from stale cache contents. The publisher never copies or re-uploads those legacy objects; the first
-versioned publication for a commit writes only its new snapshot paths.
+Baseline caches use both commit and snapshot version. Only reports whose image directories and S3
+marker carry a valid version are eligible baselines. Existing unversioned reports and commit-only
+cache entries are ignored; they are neither migrated nor copied into new versioned snapshots. The
+first versioned publication starts the comparison history from a clean baseline.
 
 The trusted OIDC publisher uses 32 bounded upload workers. The previous 8-worker run hit its
 15-minute limit after uploading only part of a 3,480-object bundle; CI remains the measure for the

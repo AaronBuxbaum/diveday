@@ -149,13 +149,6 @@ export function hostedReportUrl(bucket, commit) {
 
 /** Snapshot version encoded in a reg-suit report's image directories. */
 export function snapshotVersionFromReport(report) {
-  if (
-    report?.actualDir === "actual" &&
-    report.expectedDir === "expected" &&
-    report.diffDir === "diff"
-  ) {
-    return "legacy";
-  }
   const match = /^snapshots\/([0-9a-f]{64})\/actual$/u.exec(report?.actualDir ?? "");
   if (!match) return null;
   const [, version] = match;
@@ -165,9 +158,12 @@ export function snapshotVersionFromReport(report) {
     : null;
 }
 
-/** Existing legacy cache keys are kept warm; new caches are immutable per snapshot. */
+/** Baseline caches are isolated by their immutable snapshot version. */
 export function baselineCacheKey(commit, version) {
-  return version === "legacy" ? `reg-baseline-${commit}` : `reg-baseline-${commit}-${version}`;
+  if (typeof version !== "string" || !/^[0-9a-f]{64}$/u.test(version)) {
+    throw new Error("baseline snapshot version is invalid");
+  }
+  return `reg-baseline-${commit}-${version}`;
 }
 
 // S3 serves these objects with `Content-Encoding: gzip`, but some fetch clients

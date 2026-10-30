@@ -9,6 +9,7 @@ import {
 
 const KEY = "3333333333333333333333333333333333333333";
 const BUCKET = "diveday-vrt";
+const VERSION = "a".repeat(64);
 
 describe("baselineEnvironment", () => {
   it("exports the versioned cache key and leaves unknown versions uncached", () => {
@@ -55,7 +56,10 @@ describe("nearestPublishedAncestor", () => {
   const revList = `rev-list --first-parent --max-count=${DEFAULT_MAX_ANCESTORS} ${KEY}^`;
 
   it("keeps a key whose snapshot is published, without touching git", async () => {
-    const fixture = bucketWith({ objects: [`${KEY}/out.json`] });
+    const fixture = bucketWith({
+      objects: [`${KEY}/out.json`],
+      versions: { [`${KEY}/out.json`]: VERSION },
+    });
     const found = await nearestPublishedAncestor({
       bucket: BUCKET,
       key: KEY,
@@ -64,21 +68,39 @@ describe("nearestPublishedAncestor", () => {
       },
       fetchImpl: fixture.fetchImpl,
     });
-    expect(found).toEqual({ key: KEY, skipped: 0, version: "legacy" });
+    expect(found).toEqual({ key: KEY, skipped: 0, version: VERSION });
     expect(fixture.state.heads).toBe(1);
   });
 
   // A docs-only commit, or a cancelled main run, publishes nothing; the commit
   // before it is the honest baseline and the count says how far back it is.
   it("walks past unpublished ancestors to the nearest published one", async () => {
-    const fixture = bucketWith({ objects: [`${B}/out.json`, `${C}/out.json`] });
+    const fixture = bucketWith({
+      objects: [`${B}/out.json`, `${C}/out.json`],
+      versions: { [`${B}/out.json`]: VERSION, [`${C}/out.json`]: "c".repeat(64) },
+    });
     const found = await nearestPublishedAncestor({
       bucket: BUCKET,
       key: KEY,
       git: git({ [revList]: `${A}\n${B}\n${C}\n` }),
       fetchImpl: fixture.fetchImpl,
     });
-    expect(found).toEqual({ key: B, skipped: 2, version: "legacy" });
+    expect(found).toEqual({ key: B, skipped: 2, version: VERSION });
+  });
+
+  it("ignores old markers without a version and finds the first versioned baseline", async () => {
+    const fixture = bucketWith({
+      objects: [`${KEY}/out.json`, `${B}/out.json`],
+      versions: { [`${B}/out.json`]: VERSION },
+    });
+    const found = await nearestPublishedAncestor({
+      bucket: BUCKET,
+      key: KEY,
+      git: git({ [revList]: `${B}\n${C}\n` }),
+      fetchImpl: fixture.fetchImpl,
+    });
+
+    expect(found).toEqual({ key: B, skipped: 1, version: VERSION });
   });
 
   it("reads the immutable snapshot version from the published report marker", async () => {
@@ -165,10 +187,18 @@ describe("layerBelowBaseline", () => {
   const layer = { baseRef: "claude/layer-1", baseSha: BASE, defaultBranch: "main", key: KEY, git };
 
   it("compares a stacked layer against the layer below when that commit is published", async () => {
-    const { fetchImpl } = bucketWith({ objects: [`${BELOW}/out.json`] });
+    const { fetchImpl } = bucketWith({
+      objects: [`${BELOW}/out.json`],
+      versions: { [`${BELOW}/out.json`]: VERSION },
+    });
     const result = await layerBelowBaseline({ bucket: BUCKET, ...layer, fetchImpl });
-    expect(result).toMatchObject({ key: BELOW, version: "legacy" });
+    expect(result).toMatchObject({ key: BELOW, version: VERSION });
     expect(result?.note).toContain("claude/layer-1");
+  });
+
+  it("does not use a legacy layer snapshot as a baseline", async () => {
+    const { fetchImpl } = bucketWith({ objects: [`${BELOW}/out.json`] });
+    expect(await layerBelowBaseline({ bucket: BUCKET, ...layer, fetchImpl })).toBeNull();
   });
 
   it("keeps the fork point when the layer below has not published, and never waits", async () => {

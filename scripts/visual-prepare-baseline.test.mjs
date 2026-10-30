@@ -8,6 +8,7 @@ import { prepareVisualBaseline } from "./visual-prepare-baseline.mjs";
 
 const KEY = "a".repeat(40);
 const BUCKET = "diveday-vrt";
+const VERSION = "b".repeat(64);
 let PNG;
 const temps = [];
 
@@ -28,8 +29,8 @@ function fixture() {
   return { root, sourceDir, outputDir };
 }
 
-function report(actualItems, version = "legacy") {
-  const root = version === "legacy" ? "" : `snapshots/${version}/`;
+function report(actualItems, version = VERSION) {
+  const root = `snapshots/${version}/`;
   return {
     actualDir: `${root}actual`,
     expectedDir: `${root}expected`,
@@ -52,8 +53,9 @@ describe("prepareVisualBaseline", () => {
       prepareVisualBaseline({
         bucket: BUCKET,
         key: KEY,
+        version: VERSION,
         sourceDir,
-        sourceKey: `reg-baseline-${KEY}`,
+        sourceKey: `reg-baseline-${KEY}-${VERSION}`,
         outputDir,
       }),
     ).resolves.toMatchObject({ count: 1 });
@@ -75,8 +77,9 @@ describe("prepareVisualBaseline", () => {
       prepareVisualBaseline({
         bucket: BUCKET,
         key: KEY,
+        version: VERSION,
         sourceDir,
-        sourceKey: `reg-baseline-${KEY}`,
+        sourceKey: `reg-baseline-${KEY}-${VERSION}`,
         outputDir,
       }),
     ).resolves.toMatchObject({ count: 1 });
@@ -95,8 +98,9 @@ describe("prepareVisualBaseline", () => {
       prepareVisualBaseline({
         bucket: BUCKET,
         key: KEY,
+        version: VERSION,
         sourceDir,
-        sourceKey: `reg-baseline-${KEY}`,
+        sourceKey: `reg-baseline-${KEY}-${VERSION}`,
         outputDir,
       }),
     ).resolves.toMatchObject({ count: 1 });
@@ -112,8 +116,9 @@ describe("prepareVisualBaseline", () => {
       prepareVisualBaseline({
         bucket: BUCKET,
         key: KEY,
+        version: VERSION,
         sourceDir,
-        sourceKey: `reg-baseline-${KEY}`,
+        sourceKey: `reg-baseline-${KEY}-${VERSION}`,
         outputDir,
       }),
     ).rejects.toThrow(/unsafe filename/u);
@@ -130,18 +135,18 @@ describe("prepareVisualBaseline", () => {
           headers: { "content-type": "application/json" },
         });
       }
-      if (String(url).endsWith(`${KEY}/actual/baseline.png`)) {
+      if (String(url).endsWith(`${KEY}/snapshots/${VERSION}/actual/baseline.png`)) {
         return new Response(PNG, { status: 200, headers: { "content-type": "image/png" } });
       }
       return new Response(null, { status: 404 });
     };
 
     await expect(
-      prepareVisualBaseline({ bucket: BUCKET, key: KEY, outputDir, fetchImpl }),
+      prepareVisualBaseline({ bucket: BUCKET, key: KEY, version: VERSION, outputDir, fetchImpl }),
     ).resolves.toMatchObject({ count: 1 });
     expect(calls).toEqual([
       `https://${BUCKET}.s3.amazonaws.com/${KEY}/out.json`,
-      `https://${BUCKET}.s3.amazonaws.com/${KEY}/actual/baseline.png`,
+      `https://${BUCKET}.s3.amazonaws.com/${KEY}/snapshots/${VERSION}/actual/baseline.png`,
     ]);
     expect(readFileSync(path.join(outputDir, "baseline.png"))).not.toEqual(PNG);
   });
@@ -167,6 +172,28 @@ describe("prepareVisualBaseline", () => {
       `https://${BUCKET}.s3.amazonaws.com/${KEY}/out.json`,
       `https://${BUCKET}.s3.amazonaws.com/${KEY}/snapshots/${version}/actual/baseline.png`,
     ]);
+  });
+
+  it("rejects an unversioned legacy baseline marker without fetching its images", async () => {
+    const { outputDir } = fixture();
+    const calls = [];
+    const fetchImpl = async (url) => {
+      calls.push(String(url));
+      return new Response(
+        JSON.stringify({
+          actualDir: "actual",
+          expectedDir: "expected",
+          diffDir: "diff",
+          actualItems: ["baseline.png"],
+        }),
+        { status: 200 },
+      );
+    };
+
+    await expect(
+      prepareVisualBaseline({ bucket: BUCKET, key: KEY, version: VERSION, outputDir, fetchImpl }),
+    ).rejects.toThrow(/unsafe image directories/u);
+    expect(calls).toEqual([`https://${BUCKET}.s3.amazonaws.com/${KEY}/out.json`]);
   });
 
   it("rejects a versioned report that disagrees with the marker version", async () => {
@@ -195,18 +222,18 @@ describe("prepareVisualBaseline", () => {
           { status: 200 },
         );
       }
-      if (String(url).endsWith(`${KEY}/actual/baseline.png`)) {
+      if (String(url).endsWith(`${KEY}/snapshots/${VERSION}/actual/baseline.png`)) {
         return new Response(PNG, { status: 200 });
       }
       return new Response(null, { status: 404 });
     };
 
     await expect(
-      prepareVisualBaseline({ bucket: BUCKET, key: KEY, outputDir, fetchImpl }),
+      prepareVisualBaseline({ bucket: BUCKET, key: KEY, version: VERSION, outputDir, fetchImpl }),
     ).resolves.toMatchObject({ count: 1 });
     expect(calls).toEqual([
       `https://${BUCKET}.s3.amazonaws.com/${KEY}/out.json`,
-      `https://${BUCKET}.s3.amazonaws.com/${KEY}/actual/baseline.png`,
+      `https://${BUCKET}.s3.amazonaws.com/${KEY}/snapshots/${VERSION}/actual/baseline.png`,
     ]);
     expect(
       existsSync(path.join(outputDir, "trip-mixed-training-depth-manifest-print-a4.pdf")),
@@ -227,8 +254,9 @@ describe("prepareVisualBaseline", () => {
       prepareVisualBaseline({
         bucket: BUCKET,
         key: KEY,
+        version: VERSION,
         sourceDir,
-        sourceKey: `reg-baseline-${"b".repeat(40)}`,
+        sourceKey: `reg-baseline-${"b".repeat(40)}-${VERSION}`,
         outputDir,
         fetchImpl,
       }),
@@ -249,6 +277,7 @@ describe("prepareVisualBaseline", () => {
       prepareVisualBaseline({
         bucket: BUCKET,
         key: KEY,
+        version: VERSION,
         outputDir,
         fetchImpl: fetchWithReport(report(["../outside.png"])),
       }),
@@ -258,6 +287,7 @@ describe("prepareVisualBaseline", () => {
       prepareVisualBaseline({
         bucket: BUCKET,
         key: KEY,
+        version: VERSION,
         outputDir,
         fetchImpl: fetchWithReport(report(["../outside.pdf"])),
       }),
@@ -267,6 +297,7 @@ describe("prepareVisualBaseline", () => {
       prepareVisualBaseline({
         bucket: BUCKET,
         key: KEY,
+        version: VERSION,
         outputDir,
         fetchImpl: fetchWithReport(report(["baseline.png"])),
       }),
