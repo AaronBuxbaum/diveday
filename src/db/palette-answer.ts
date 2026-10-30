@@ -1,5 +1,4 @@
 import { and, asc, eq, gte, ne } from "drizzle-orm";
-import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import type { PaletteAnswerFacts, PaletteNaming } from "@/lib/palette-answer";
 import type { AppDb } from "./client";
@@ -7,14 +6,12 @@ import { listTripReadiness } from "./readiness";
 import { bookings, trips } from "./schema";
 import { tripCrewByTrip } from "./trips-crew";
 import { liveTrip } from "./trips-live";
-import { tripSellableSeatsSql, upcomingTripsWithCounts } from "./trips-queries";
+import { shopDayTripsWithCounts, tripSellableSeatsSql } from "./trips-queries";
 
 /**
  * The facts behind the palette's answer card (ADR 20260906-before-you-ask,
- * decision 3), read through the readers the home and the roster already use —
- * `listTripReadiness` for who is blocked, `upcomingTripsWithCounts` for the
- * board — so the card can never disagree with the page it opens. Reads only,
- * and only within the caller's own shop.
+ * decision 3), read through the same readiness and schedule-count rules as the
+ * roster and board. Reads only, and only within the caller's own shop.
  */
 export async function paletteAnswerFacts(
   db: AppDb,
@@ -69,8 +66,12 @@ export async function paletteAnswerFacts(
       };
     }
     case "day": {
-      const onDay = (await upcomingTripsWithCounts(db, input.shopId, now)).filter(
-        (trip) => calendarDateInTimezone(trip.startsAt, input.timeZone) === naming.date,
+      const onDay = await shopDayTripsWithCounts(
+        db,
+        input.shopId,
+        naming.date,
+        input.timeZone,
+        now,
       );
       const crewByTrip = await tripCrewByTrip(
         db,
