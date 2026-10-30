@@ -10,12 +10,12 @@ import { bookings, people, personRoles, shops, trips } from "./schema";
 /**
  * The oversell guard, under genuine contention.
  *
- * `createBookingRecord` opens its transaction with `SELECT ... FOR UPDATE` on
+ * `createBookingRecord` opens its transaction with `SELECT ... FOR NO KEY UPDATE` on
  * the trip row, and the comment above it says why: under READ COMMITTED two
  * transactions would otherwise both read `booked = capacity - 1` and both
  * insert, putting a diver on a boat that has no seat for them. Every existing
  * test of that function runs on PGlite, which is single-connection — so the
- * lock has never once been contended in CI, and deleting the `.for("update")`
+ * lock has never once been contended in CI, and removing the trip-row lock
  * would leave the whole suite green. This file is the one place that is not
  * true (docs/engineering/testing.md; the same gap is stated from the money side
  * in `src/db/money-replay.test.ts`).
@@ -35,7 +35,7 @@ import { bookings, people, personRoles, shops, trips } from "./schema";
  *
  * The gate proves *simultaneity*; the **seat count** proves the *guard*. Those
  * are two different jobs and it is worth being exact about which does which,
- * because the obvious reading — "no `FOR UPDATE` means nobody blocks, so
+ * because the obvious reading — "no booking lock means nobody blocks, so
  * `waitForLockWaiters` times out" — is wrong, and a future reader who believes
  * it might delete the seat-count assertions as redundant.
  *
@@ -45,12 +45,13 @@ import { bookings, people, personRoles, shops, trips } from "./schema";
  * conflicts with the gate's `FOR UPDATE`. So `waitForLockWaiters` succeeds
  * either way.
  *
- * This was measured, not reasoned about. Deleting the `.for("update")` on
- * `src/db/bookings.ts`'s trip read and rerunning this file: `waitForLockWaiters`
- * still passed, and the tests failed on the outcome instead — the one-seat trip
- * sold **2** seats, and the two-seat trip sold **5**. That is the oversell this
- * file exists to make impossible to ship, and the `expect(...seatsTaken...)`
- * lines are what report it.
+ * The historical experiment in `abb06df9f` removed the production `.for("update")`
+ * then in use and reran this file: `waitForLockWaiters` still passed, and the
+ * tests failed on the outcome instead — the one-seat trip sold **2** seats, and
+ * the two-seat trip sold **5**. Production changed to `.for("no key update")`
+ * in `bc4d803ff`; that current lock mode was not mutation-tested here. This is
+ * the oversell the seat-count assertions catch when the trip-row lock is
+ * missing.
  */
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -129,8 +130,9 @@ describePostgres("createBooking under real concurrency", () => {
     expect(outcomes.filter((outcome) => outcome.ok)).toHaveLength(1);
     expect(outcomes.filter((outcome) => !outcome.ok)).toEqual([{ ok: false, reason: "trip_full" }]);
     // The refusal is not the point on its own — the seat count is, and this is
-    // the line that fails when the `FOR UPDATE` goes away: an oversell reads as
-    // 2 here even though both callers were told "ok".
+    // the line that failed in the historical removal of the production
+    // `FOR UPDATE` lock: an oversell reads as 2 here even though both callers
+    // were told "ok".
     expect(await seatsTaken(pg.db, tripId)).toBe(1);
   });
 
@@ -169,10 +171,10 @@ describePostgres("createBooking under real concurrency", () => {
     // row and one seat, rather than colliding on `bookings_trip_person_unique`
     // and surfacing as a 500.
     //
-    // Unlike the two above, this one survives the `FOR UPDATE` being deleted —
-    // measured, same experiment as the header describes. That is not a weakness
-    // in the test, it is the point: here the unique index is the backstop, and
-    // what is being checked is that the collision is turned into a clean
+    // Unlike the two above, this one survived removal of the production
+    // `FOR UPDATE` lock in the historical experiment above. That is not a
+    // weakness in the test, it is the point: here the unique index is the
+    // backstop, and what is being checked is that the collision is turned into a clean
     // `already_booked` refusal instead of an unhandled constraint violation.
     // The oversell tests above are what hold the lock itself to account.
     const pg = await postgresTestDb();
