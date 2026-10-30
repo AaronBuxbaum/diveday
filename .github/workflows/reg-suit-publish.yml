@@ -277,8 +277,10 @@ jobs:
             [[ "$object_path" =~ ^[A-Za-z0-9._/-]+$ ]]
             [[ "$object_path" != /* && "$object_path" != *//* ]]
             case "/$object_path/" in */../*|*/./*) exit 1 ;; esac
-            case "$content_type" in
-              application/json|application/javascript|application/octet-stream|image/gif|image/png|image/svg+xml|image/webp|image/x-icon|text/css|text/html|text/plain|font/otf|font/ttf|font/woff|font/woff2) ;;
+            case "$object_path:$content_type" in
+              detector.wasm:application/wasm) ;;
+              detector.wasm:*|*:application/wasm) exit 1 ;;
+              *:application/json|*:application/javascript|*:application/octet-stream|*:image/gif|*:image/png|*:image/svg+xml|*:image/webp|*:image/x-icon|*:text/css|*:text/html|*:text/plain|*:font/otf|*:font/ttf|*:font/woff|*:font/woff2) ;;
               *) exit 1 ;;
             esac
             payload="$VISUAL_PUBLISH_BUNDLE/payload/$object_path.gz"
