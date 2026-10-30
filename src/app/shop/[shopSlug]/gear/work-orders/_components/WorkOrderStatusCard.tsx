@@ -17,24 +17,12 @@ import {
 import { restoreWorkOrderAction, setWorkOrderStatusAction } from "../actions";
 
 /**
- * **Where the ticket goes next**: the status it is in, as a static pill, then
- * one secondary button per move this status allows (`workOrderMoves`), the
- * step the bench takes next first. No move is filled: the pill says where the
- * ticket is, and every button is a place it can go (visual review 2026-10-24,
- * A29).
- *
- * "Picked up" is the one-way door: a collected ticket has nothing to move to,
- * so the card goes away and the header's badge says where it ended. Where that
- * door is a secondary button rather than the next step, it asks first.
- *
- * A deleted ticket shows Restore in the same place, because the act the
- * staffer wants is the one that undoes the mistake they just made.
- *
- * **Actions, captioned as moves, never a segmented control** (UX review
- * 2026-10-10, item 25). Four status words in a row read as a picker whose
- * filled one was the current status, so "In progress" looked already chosen
- * on a ticket that was Received. The caption "Move to" says each button is a
- * move; the current status is a pill, never a button.
+ * The status is a badge; the accessible "Move to" group contains actions,
+ * never a segmented control that could make a move look selected.
+ * `workOrderMoves` puts the next step on a secondary button and other allowed
+ * moves in a menu. Pickup asks for confirmation when it is in that menu.
+ * A picked-up ticket has no moves, so this card disappears. A deleted ticket
+ * stays readable and offers Restore to undo the deletion.
  */
 export function WorkOrderStatusCard({
   workOrder,
