@@ -61,6 +61,13 @@ export function diveIntentTally(
     if (!answer) continue;
     counts.set(answer, (counts.get(answer) ?? 0) + 1);
   }
+  return orderedDiveIntentCounts(counts);
+}
+
+/** Project counts in the order the answers are offered, omitting silence. */
+export function orderedDiveIntentCounts(
+  counts: ReadonlyMap<DiveIntent, number>,
+): DiveIntentCount[] {
   return DIVE_INTENTS.flatMap((intent) => {
     const count = counts.get(intent) ?? 0;
     return count > 0 ? [{ intent, count }] : [];

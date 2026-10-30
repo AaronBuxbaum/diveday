@@ -401,37 +401,10 @@ const sentryConfig = withSentryConfig(nextConfig, {
     excludeReplayWorker: true,
   },
 
-  // Cron monitoring is NOT configured here. `webpack.automaticVercelMonitors:
-  // true` used to be set at this spot and never once produced a check-in;
-  // removing it rather than leaving it set, because unlike
-  // `bundleSizeOptimizations` above it cannot start working "for free" later —
-  // the strategy it selects is structurally wrong for our only cron. Verified
-  // by reading the installed @sentry/nextjs 10.69.0, not from memory:
-  //
-  //   * `maybeGetVercelCronsConfig` (config/withSentryConfig/
-  //     getFinalConfigObjectUtils.js) maps `webpack.automaticVercelMonitors` to
-  //     the legacy `"wrapper"` strategy, and `maybeConstructTurbopackConfig`
-  //     (…/getFinalConfigObjectBundlerUtils.js) forwards the crons config to
-  //     Turbopack's value injection *only* when the strategy is `"spans"`. So
-  //     under this repo's Turbopack build (Next 16 default) nothing is injected
-  //     at all — the same Turbopack/webpack split as the bundle-size option
-  //     above, confirmed independently for this option rather than inherited.
-  //   * Even under webpack it would not have helped: the wrapper loader is
-  //     applied only to files under `pages/api/**` (config/webpack.js), which is
-  //     what Sentry's stock "does not yet work with App Router route handlers"
-  //     note meant. Our only cron *is* an App Router route handler.
-  //   * The newer `_experimental.vercelCronsMonitoring: true` does reach
-  //     Turbopack (`"spans"` strategy → `_sentryVercelCronsConfig` injected into
-  //     instrumentation.*), but it hangs the check-in off root-span attributes
-  //     (server/vercelCronsMonitoring.js, via handleOnSpanStart). This app runs
-  //     `tracesSampleRate: 0` (instrumentation.ts), so there is no recording
-  //     span to carry them — it is not an option here either.
-  //   * Both also short-circuit on `!process.env.VERCEL`, so neither ever
-  //     produced anything locally or in CI.
-  //
-  // The daily tick therefore checks itself in explicitly, from
-  // src/app/api/cron/reminders/route.ts. That has the further advantage of
-  // being visible in the handler a reader is already looking at.
+  // Scheduled handlers report Sentry cron check-ins explicitly with
+  // `Sentry.captureCheckIn`; see docs/engineering/monitoring-runbook.md.
+  // Automatic Vercel cron instrumentation is not configured here. Revalidate
+  // it against the current Sentry SDK and build before enabling it.
 });
 
 export default function config(phase: string) {

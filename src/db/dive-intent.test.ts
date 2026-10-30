@@ -1,9 +1,11 @@
 import { and, eq, isNotNull, notInArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { createTrip } from "@/db/trips";
+import { diveIntentTally } from "@/lib/dive-intent";
 import { fileScopedShopContext } from "@/test/db";
 import type { AppDb } from "./client";
 import { diveIntentTallyForTrip, diveIntentTallyForTrips } from "./dive-intent";
-import { bookings, people, trips } from "./schema";
+import { bookings, people, shops, trips } from "./schema";
 
 let seq = 0;
 
@@ -49,7 +51,8 @@ describe("diveIntentTallyForTrip", () => {
   it("counts an answer once per seat that gave one", async () => {
     const { db, shop } = ctx;
     const [trip] = await twoTrips(db, shop.id);
-    for (const intent of ["small_life", "small_life", "easing_back"] as const) {
+    const answers = ["small_life", "small_life", "easing_back", "good_day", "easing_back"] as const;
+    for (const intent of answers) {
       await db.insert(bookings).values({
         bookedAs: "diver",
         shopId: shop.id,
@@ -58,9 +61,11 @@ describe("diveIntentTallyForTrip", () => {
         diveIntent: intent,
       });
     }
+    expect(await diveIntentTallyForTrip(db, shop.id, trip)).toEqual(diveIntentTally(answers));
     expect(await diveIntentTallyForTrip(db, shop.id, trip)).toEqual([
-      { intent: "easing_back", count: 1 },
+      { intent: "easing_back", count: 2 },
       { intent: "small_life", count: 2 },
+      { intent: "good_day", count: 1 },
     ]);
   });
 
@@ -138,22 +143,55 @@ describe("diveIntentTallyForTrips", () => {
   it("answers a whole day in one read, and leaves silent departures out", async () => {
     const { db, shop } = ctx;
     const [answered, silent] = await twoTrips(db, shop.id);
-    await db.insert(bookings).values({
-      bookedAs: "diver",
-      shopId: shop.id,
-      tripId: answered,
-      personId: await makeDiver(db, shop.id),
-      diveIntent: "easing_back",
-    });
+    const answers = ["small_life", "easing_back", "good_day", "small_life", "easing_back"] as const;
+    for (const intent of answers) {
+      await db.insert(bookings).values({
+        bookedAs: "diver",
+        shopId: shop.id,
+        tripId: answered,
+        personId: await makeDiver(db, shop.id),
+        diveIntent: intent,
+      });
+    }
     await db.insert(bookings).values({
       bookedAs: "diver",
       shopId: shop.id,
       tripId: silent,
       personId: await makeDiver(db, shop.id),
     });
-    const byTrip = await diveIntentTallyForTrips(db, shop.id, [answered, silent]);
-    expect(byTrip.get(answered)).toEqual([{ intent: "easing_back", count: 1 }]);
+
+    const [rival] = await db
+      .insert(shops)
+      .values({ name: "Rival Reef", slug: "intent-rival-reef", timezone: "America/New_York" })
+      .returning();
+    if (!rival) throw new Error("rival shop insert failed");
+    const rivalTrip = await createTrip(db, {
+      shopId: rival.id,
+      title: "Rival Reef morning dive",
+      startsAt: new Date("2030-09-01T12:00:00Z"),
+      endsAt: new Date("2030-09-01T16:00:00Z"),
+      capacity: 6,
+      plannedDives: 2,
+      diveMode: "shore",
+    });
+    if (!rivalTrip) throw new Error("rival trip creation failed");
+    await db.insert(bookings).values({
+      bookedAs: "diver",
+      shopId: rival.id,
+      tripId: rivalTrip.id,
+      personId: await makeDiver(db, rival.id),
+      diveIntent: "a_wreck",
+    });
+
+    const byTrip = await diveIntentTallyForTrips(db, shop.id, [answered, silent, rivalTrip.id]);
+    expect(byTrip.get(answered)).toEqual(diveIntentTally(answers));
+    expect(byTrip.get(answered)).toEqual([
+      { intent: "easing_back", count: 2 },
+      { intent: "small_life", count: 2 },
+      { intent: "good_day", count: 1 },
+    ]);
     expect(byTrip.has(silent)).toBe(false);
+    expect(byTrip.has(rivalTrip.id)).toBe(false);
   });
 
   it("asks nothing of the database for an empty day", async () => {
