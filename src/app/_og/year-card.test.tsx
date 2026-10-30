@@ -27,12 +27,16 @@ const copy = {
 };
 
 describe("YearCard image rendering", () => {
-  it("rasterizes a light-brand card with readable text", async () => {
+  it.each([
+    ["pale", "#fdf1b3"],
+    ["saturated red", "#ff0000"],
+    ["dark", "#111827"],
+  ])("rasterizes a readable %s card", async (_name, brandColor) => {
     const response = new ImageResponse(
-      <YearCard year={year} copy={copy} brandColor="#fdf1b3" />,
+      <YearCard year={year} copy={copy} brandColor={brandColor} />,
       YEAR_CARD_SIZE,
     );
-    const palette = yearCardPalette("#fdf1b3");
+    const palette = yearCardPalette(brandColor);
     const png = Buffer.from(await response.arrayBuffer());
     const { data, info } = await sharp(png)
       .extract({ left: 1180, top: 300, width: 1, height: 1 })

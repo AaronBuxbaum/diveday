@@ -45,26 +45,36 @@ export type YearCardPalette = {
   fills: readonly [string, string, string, string];
 };
 
+const LIGHT_MUTED_OPACITY = 0.78;
+const DARK_MUTED_OPACITY = 0.82;
+
+function hasReadableText(ink: string, mutedOpacity: number, ground: string): boolean {
+  return (
+    contrastRatio(ink, ground) >= AA_TEXT_CONTRAST &&
+    contrastRatio(mixHex(ground, ink, mutedOpacity), ground) >= AA_TEXT_CONTRAST
+  );
+}
+
 /**
  * The sea a shop's colour makes. Light brands keep their light hue and use
  * dark ink; dark brands use paper-white ink. A mid-tone brand moves toward
- * black only as far as needed for the white ink to meet AA. Each gradient's
- * other stops move farther toward their ink's matching end, so the entire
- * gradient keeps that contrast. A shop that set no colour gets DiveDay's own
- * lagoon.
+ * black only as far as needed for both inks to meet AA after compositing the
+ * muted ink. Each gradient's other stops move farther toward their ink's
+ * matching end, so the entire gradient keeps that contrast. A shop that set
+ * no colour gets DiveDay's own lagoon.
  */
 export function yearCardPalette(brandColor: string | null | undefined): YearCardPalette {
   const { value } = parseBrandColor(brandColor ?? "");
   const brand = value ?? DIVEDAY_BRAND_COLOR;
   const paperInk = "#fffdf8";
-  const lightBrand = contrastRatio(BRAND_INK, brand) >= AA_TEXT_CONTRAST;
+  const lightBrand = hasReadableText(BRAND_INK, LIGHT_MUTED_OPACITY, brand);
   if (lightBrand) {
     return {
       near: mixHex(brand, "#ffffff", 0.24),
       mid: brand,
       far: mixHex(brand, "#ffffff", 0.12),
       ink: BRAND_INK,
-      muted: "rgba(22, 35, 44, 0.78)",
+      muted: `rgba(22, 35, 44, ${LIGHT_MUTED_OPACITY})`,
       fills: [
         "rgba(22, 35, 44, 0.16)",
         "rgba(22, 35, 44, 0.38)",
@@ -78,7 +88,7 @@ export function yearCardPalette(brandColor: string | null | undefined): YearCard
   let near = brand;
   // A mid-tone brand may not carry either ink. Keep the deep-card treatment
   // and move it toward black in small, deterministic steps, retaining hue.
-  for (let step = 0; step < 16 && contrastRatio(ink, near) < AA_TEXT_CONTRAST; step += 1) {
+  for (let step = 0; step < 16 && !hasReadableText(ink, DARK_MUTED_OPACITY, near); step += 1) {
     near = mixHex(near, "#000000", 0.08);
   }
   return {
@@ -86,7 +96,7 @@ export function yearCardPalette(brandColor: string | null | undefined): YearCard
     mid: mixHex(near, "#000000", 0.18),
     far: mixHex(near, "#000000", 0.68),
     ink,
-    muted: "rgba(255, 253, 248, 0.82)",
+    muted: `rgba(255, 253, 248, ${DARK_MUTED_OPACITY})`,
     fills: [
       "rgba(255, 253, 248, 0.18)",
       "rgba(255, 253, 248, 0.42)",
