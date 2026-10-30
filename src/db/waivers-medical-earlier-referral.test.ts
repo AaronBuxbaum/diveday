@@ -208,6 +208,59 @@ describe("a physician's letter that predates a re-signed referral", () => {
     ).toEqual({ ok: false, reason: "evaluation_predates_disclosure" });
   });
 
+  it("compares an earlier referral's date west of UTC", async () => {
+    const context = await waiverContext();
+    const { db, shop, booking, person } = context;
+    await db.update(shops).set({ timezone: "America/Los_Angeles" }).where(eq(shops.id, shop.id));
+    const firstAt = new Date("2026-07-18T01:00:00.000Z");
+    const issued = await issueWaiverRequest(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      now: firstAt,
+    });
+    if (!issued.ok) throw new Error("expected a waiver link");
+    await completeWaiver(db, issued.token, {
+      signerName: person.fullName,
+      agreed: true,
+      medicalAnswers: answers("q3"),
+      now: firstAt,
+    });
+
+    const secondAt = new Date("2026-07-20T12:00:00.000Z");
+    const again = await issueWaiverRequest(db, {
+      shopId: shop.id,
+      personId: person.id,
+      now: secondAt,
+    });
+    if (!again.ok) throw new Error("expected a fresh person-scoped link");
+    await completeWaiver(db, again.token, {
+      signerName: person.fullName,
+      agreed: true,
+      medicalAnswers: answers("q3"),
+      now: secondAt,
+    });
+
+    const [staff] = await listStaff(db, shop.id);
+    if (!staff) throw new Error("demo staff missing");
+    expect(await earlierReferralForOpenHold(db, shop.id, person.id, shop.timezone)).toMatchObject({
+      on: "2026-07-17",
+    });
+
+    expect(
+      await recordMedicalEvaluation(db, {
+        outcome: "cleared",
+        shopId: shop.id,
+        timeZone: shop.timezone,
+        personId: person.id,
+        recordedByPersonId: staff.person.id,
+        evaluatedOn: "2026-07-17",
+        physicianName: "Dr. Imani Reyes",
+        earlierLetterConfirmed: true,
+        now: new Date("2026-07-21T12:00:00.000Z"),
+      }),
+    ).toMatchObject({ ok: true });
+  });
+
   it("does not count an earlier referral a physician already answered", async () => {
     const context = await waiverContext();
     const { db, shop, booking, person } = context;

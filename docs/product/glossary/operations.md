@@ -1597,8 +1597,10 @@
   the answers that were referred — so a later disclosure signs a new record, parks again, and needs
   its own clearance; "cleared for this diver forever" is not a state that exists. It carries the
   **physician's evaluation date**, which is not the day a staffer typed it in: the release then
-  stands only while *both* clocks run, a year from the signature and a year from the evaluation,
-  and an evaluation predating the answers it would clear is refused, with one exception (issue
+  stands only while *both* clocks run, a year from the signature and a year from the evaluation.
+  The future-date check and comparisons with disclosures and earlier referrals use the shop's
+  calendar; the evaluation's separate expiry clock remains anchored to UTC midnight. An evaluation
+  predating the answers it would clear is refused, with one exception (issue
   #2616, decided 2026-10-16): when the diver re-signed the same "yes" before the letter was recorded,
   a letter dated on or after the **earliest earlier referral still unanswered** whose flagged
   prompts include every prompt the open record flags, and still inside its own year, clears the open
