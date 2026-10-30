@@ -317,7 +317,7 @@ describe("ScheduleBuilder add panel: the weekday pattern", () => {
     expect(screen.getByLabelText("Departs")).toHaveValue("7:00 AM");
     expect(container.querySelector('input[name="startTime"]')).toHaveValue("07:00");
     expect(container.querySelector('select[name="diveSiteId"]')).toHaveValue("site-1");
-    expect(screen.getByLabelText("Seats")).toHaveValue(10);
+    expect(screen.getByLabelText(COPY.seats)).toHaveValue(10);
     expect(screen.getByLabelText(/Price per diver/)).toHaveValue(95);
 
     // The crew ride along as hidden fields, one per chip, and one line names them.
@@ -351,14 +351,14 @@ describe("ScheduleBuilder add panel: the weekday pattern", () => {
     renderBuilder({ loadPattern: () => delayed });
     const title = await screen.findByLabelText("What is it");
     await userEvent.type(title, "My trip");
-    await userEvent.clear(screen.getByLabelText("Seats"));
-    await userEvent.type(screen.getByLabelText("Seats"), "6");
+    await userEvent.clear(screen.getByLabelText(COPY.seats));
+    await userEvent.type(screen.getByLabelText(COPY.seats), "6");
     await act(async () => {
       resolvePattern(pattern);
       await delayed;
     });
     expect(title).toHaveValue("My trip");
-    expect(screen.getByLabelText("Seats")).toHaveValue(6);
+    expect(screen.getByLabelText(COPY.seats)).toHaveValue(6);
     expect(screen.queryByText(/Filled from your last/)).not.toBeInTheDocument();
   });
 
