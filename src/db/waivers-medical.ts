@@ -453,7 +453,7 @@ export async function recordMedicalEvaluation(
         now.getTime();
       if (
         covering === null ||
-        input.evaluatedOn < calendarDateInTimezone(signatureInstant(covering), "UTC") ||
+        input.evaluatedOn < calendarDateInTimezone(signatureInstant(covering), input.timeZone) ||
         !withinItsYear ||
         input.earlierLetterConfirmed !== true
       ) {
