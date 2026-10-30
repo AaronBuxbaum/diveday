@@ -942,7 +942,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    uses: AaronBuxbaum/diveday/.github/workflows/reg-suit-publish.yml@0957f47220668dd3c1f280c79a977b62d1c63f90 # v1.0.1
+    uses: AaronBuxbaum/diveday/.github/workflows/reg-suit-publish.yml@47bd273c605ef0037749a884929c004ae9513a81 # v1.0.3
     with:
       capture-mode: ${{ needs.visual-plan.outputs.mode }}
       capture-shards: ${{ needs.visual-plan.outputs.shards }}
