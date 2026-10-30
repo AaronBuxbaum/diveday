@@ -80,9 +80,9 @@ All skill bodies live in `.agents/skills/`; Claude directories are symlinks. Loc
   command walkthroughs) lives in those files. An invoked skill stays in context for the rest of the
   thread, so its length is paid on every later call (H-114).
 - An upstream skill (`sourceType: github` in `skills-lock.json`) is pinned, and a
-  sync overwrites it. The few lines changed locally are listed in `VENDORED_SKILL_OVERRIDES`
-  (`scripts/agent-layer.mjs`) with the wording that replaced them; after a sync, `pnpm check:agents`
-  names each one the sync brought back, and the fix is to re-apply that wording.
+  sync overwrites it. `VENDORED_SKILL_OVERRIDES` (`scripts/agent-layer.mjs`) records an upstream
+  sentinel for each adapted file; after a sync, `pnpm check:agents` names any sentinel it restored,
+  and the fix is to reapply that file's repository wording.
 - `pnpm check:agents` (part of `check:repo`/`check`) fails on drift: a skill missing from this
   index, an index entry with no skill, frontmatter whose name doesn't match its directory or with
   no description, an unmentioned reviewer agent, a `task:context` area pointing at a doc that

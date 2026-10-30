@@ -1149,8 +1149,8 @@ For `scripts/`, `.claude/` and `.github/`; the rules themselves are in `.claude/
 - **The agent layer is checked** (`scripts/check-agents.mjs`): every skill has frontmatter whose
   `name` matches its directory and a `description` (the only part every session pays for), a skill
   linked in from `.agents/skills/` included; every local skill is in `.claude/skills/README.md` and
-  mentioned in `AGENTS.md`, and every linked one has a `skills-lock.json` entry and keeps the local
-  lines a sync would undo (`VENDORED_SKILL_OVERRIDES`); every reviewer agent is in the index; every `task:context` path exists; every backticked repo path in `AGENTS.md` and in
+  mentioned in `AGENTS.md`, and every linked one has a `skills-lock.json` entry; each repository
+  override has an upstream sentinel in `VENDORED_SKILL_OVERRIDES`; every reviewer agent is in the index; every `task:context` path exists; every backticked repo path in `AGENTS.md` and in
   `.claude/rules/*.md` exists, and in the handoff docs (`docs/agents/*.md`, the local skills'
   `SKILL.md`, `.claude/agents/*.md`) too, except on a line telling history ("(was …)", "until
   2026-…") or naming a gitignored output — ten live instructions there pointed at moved files on

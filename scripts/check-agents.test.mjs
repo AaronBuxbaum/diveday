@@ -201,7 +201,9 @@ describe("local overrides of vendored skills", () => {
       "to-spec/SKILL.md": "If not, tell the user to run `/setup-matt-pocock-skills`.",
     });
     expect(problems).toHaveLength(1);
-    expect(problems[0]).toContain(".agents/skills/to-spec/SKILL.md");
+    expect(problems[0]).toBe(
+      ".agents/skills/to-spec/SKILL.md: upstream wording `/setup-matt-pocock-skills` returned; reapply the local override",
+    );
   });
 
   it("refuses upstream wording restored in a supporting file", () => {

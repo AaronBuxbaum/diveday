@@ -94,7 +94,12 @@ const locked = Object.keys(
   JSON.parse(await readFile(path.join(ROOT, "skills-lock.json"), "utf8")).skills ?? {},
 );
 problems.push(...linkedSkillProblems([...linkedSkills], locked));
-const overrideFiles = [...new Set(VENDORED_SKILL_OVERRIDES.map(({ path }) => path))];
+const overrideFiles = [
+  ...new Set([
+    ...[...linkedSkills].map((name) => `${name}/SKILL.md`),
+    ...VENDORED_SKILL_OVERRIDES.map(({ path }) => path).filter((file) => file !== "**/SKILL.md"),
+  ]),
+];
 const vendored = Object.fromEntries(
   await Promise.all(
     overrideFiles.map(async (file) => [
