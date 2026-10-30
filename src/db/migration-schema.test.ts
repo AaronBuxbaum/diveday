@@ -10,6 +10,7 @@ import {
   interestUnsubscribeTokens,
   personCourtesyEmailUnsubscribeTokens,
   rentalFitProfiles,
+  tripDives,
 } from "./schema";
 
 const ctx = fileScopedShopContext();
@@ -111,4 +112,24 @@ it("keeps token-hash uniqueness while dropping only duplicate lookup indexes", a
   expect(result.rows.map((row) => row.indexname)).not.toContain(
     "booking_capabilities_token_hash_idx",
   );
+});
+
+it("keeps trip-dive ordering uniqueness without its duplicate lookup index", async () => {
+  const indexes = getTableConfig(tripDives).indexes.map((index) => index.config);
+  expect(indexes.find((index) => index.name === "trip_dives_trip_number_unique")?.unique).toBe(
+    true,
+  );
+  expect(indexes.map((index) => index.name)).not.toContain("trip_dives_trip_idx");
+  expect(indexes.map((index) => index.name)).toContain("trip_dives_dive_site_idx");
+
+  const result = await ctx.db.execute<{ indexname: string; indexdef: string }>(sql`
+    select indexname, indexdef
+      from pg_indexes
+     where schemaname = 'public'
+       and tablename = 'trip_dives'
+       and indexname in ('trip_dives_trip_number_unique', 'trip_dives_trip_idx')
+     order by indexname
+  `);
+  expect(result.rows.map((row) => row.indexname)).toEqual(["trip_dives_trip_number_unique"]);
+  expect(result.rows[0]?.indexdef.startsWith("CREATE UNIQUE INDEX")).toBe(true);
 });

@@ -1,0 +1,1 @@
+DROP INDEX "trip_dives_trip_idx";

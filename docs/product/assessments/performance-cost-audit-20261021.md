@@ -414,18 +414,16 @@ pre-aggregated sources/UNION rather than multiplied joins. Measure statement cou
 phases, pool wait, and total DB time for one-month and year exports with realistic refunds,
 deposits, currencies, and imported histories. Effort M, preserve financial tests.
 
-### DB-11 — One schema index duplicates an existing unique index exactly (P3)
+### DB-11 — Duplicate trip-dive index removed (P3)
 
-**Confirmed definition.** `src/db/schema/trips.ts:801-802` defines both
-`trip_dives_trip_number_unique` and `trip_dives_trip_idx` on `(tripId,diveNumber)`, with no
-predicate or included-column distinction. Keeping both pays storage/WAL and write maintenance
-for the same lookup key. This is a specific cleanup, not a reason to drop every overlapping
-index. For example, full versus partial live-trip indexes can serve different reads.
+**Implemented in #3307.** The schema retains `trip_dives_trip_number_unique` on
+`(tripId,diveNumber)` and `trip_dives_dive_site_idx` for site lookups. The generated forward
+migration drops only the duplicate `trip_dives_trip_idx`. This is a specific cleanup, not a reason
+to drop every overlapping index; full and partial live-trip indexes, for example, can serve
+different reads.
 
-**Change:** verify actual deployed index definitions/dependencies and query plans, retain the
-unique constraint, remove the redundant nonunique index through normal generated migration
-workflow. Inspect index usage/size before estimating savings. Effort S, likely small absolute
-cost saving but straightforward maintenance improvement.
+The original audit did not inspect deployed index definitions or query plans. Production index
+usage and realized savings remain unverified.
 
 ### DB-12 — Non-render cost attribution
 

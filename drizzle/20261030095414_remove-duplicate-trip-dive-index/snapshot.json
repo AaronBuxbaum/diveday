@@ -1,0 +1,39 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "7fa04f3e-d0bc-4977-9495-03f56d58c268",
+  "prevIds": [
+    "d9905f01-3030-4cc9-87e6-cc90594bb27e"
+  ],
+  "footprints": [
+    {
+      "statementType": "drop_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "trip_dives",
+        "trip_dives_trip_idx"
+      ],
+      "writes": [
+        "s|idx|public.trip_dives_trip_idx",
+        "n|idx|public.trip_dives_trip_idx",
+        "e|idx|public.trip_dives_trip_idx",
+        "n|rel|public.trip_dives_trip_idx"
+      ],
+      "reads": [
+        "e|tbl|public.trip_dives",
+        "n|sch|public",
+        "e|col|public.trip_dives.trip_id",
+        "e|col|public.trip_dives.dive_number"
+      ],
+      "sharedWrites": []
+    }
+  ],
+  "deltas": [
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"trip_dives_trip_idx\"]"
+    }
+  ]
+}
