@@ -38,26 +38,29 @@ afterEach(() => {
 });
 
 describe("parseCaptureShards", () => {
-  it("accepts only the complete consecutive shard set", () => {
+  it("accepts a complete set or a consecutive selected prefix", () => {
     expect(parseCaptureShards("[1,2,3,4,5,6,7,8]")).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+    expect(parseCaptureShards("[1,2,3]")).toEqual([1, 2, 3]);
     for (const invalid of [
       "",
       "not-json",
       "[]",
-      "[1]",
-      "[1,2,3,4,5,6,7]",
       "[2]",
       "[1,3]",
+      "[1,1]",
+      "[1.5]",
       "[1,2,3,4,5,6,7,8,9]",
     ]) {
       expect(() => parseCaptureShards(invalid)).toThrow();
     }
   });
 
-  it("rejects partial or non-all selections before a privileged publish can run", () => {
+  it("requires all eight shards only for all-capture mode", () => {
     expect(validateCaptureSelection("all", "[1,2,3,4,5,6,7,8]")).toHaveLength(8);
-    expect(() => validateCaptureSelection("affected", "[1,2,3,4,5,6,7,8]")).toThrow(/complete/);
+    expect(validateCaptureSelection("affected", "[1,2,3]")).toEqual([1, 2, 3]);
+    expect(validateCaptureSelection("light", "[1]")).toEqual([1]);
     expect(() => validateCaptureSelection("all", "[1]")).toThrow(/every shard/);
+    expect(() => validateCaptureSelection("unknown", "[1]")).toThrow(/capture mode/);
   });
 });
 

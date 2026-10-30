@@ -22,6 +22,7 @@ import { fileURLToPath } from "node:url";
 import { regSuitConfigArgs } from "./reg-suit-config.mjs";
 import { gitReader, resolveRegSuitKeys } from "./reg-suit-keys.mjs";
 import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
+import { verifyCompleteScreenshotInventory } from "./visual-publish-artifacts.mjs";
 import { fillFromExpected, selectionNote } from "./visual-fill.mjs";
 import { DEFAULT_BUCKET } from "./visual-report-lib.mjs";
 import { nearestPublishedAncestor } from "./wait-for-baseline.mjs";
@@ -144,6 +145,17 @@ if (fill || restored || expectedReady) {
         appendFileSync(process.env.GITHUB_OUTPUT, `selection_note=${selectionNote(filled)}\n`);
       }
       continue;
+    }
+    if (stage === "compare" && process.env.VISUAL_VERIFY_COMPLETE === "true") {
+      const inventory = verifyCompleteScreenshotInventory({
+        actualDir: path.join(repoRoot, "e2e", "screenshots"),
+        expectedDir,
+        requireExpected: process.env.GITHUB_EVENT_NAME === "pull_request",
+      });
+      console.log(
+        `visual:compare: verified ${inventory.actualCount} captures against ` +
+          `${inventory.expectedCount} trusted baseline screenshots.`,
+      );
     }
     const step = regSuit(stage, ...args);
     if (step.status !== 0) process.exit(step.status ?? 1);
