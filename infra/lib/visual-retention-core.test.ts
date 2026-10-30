@@ -6,6 +6,7 @@ import {
   KEEP_MAIN_BASELINES,
   MAX_CANDIDATE_PAGES,
   MIN_PRUNE_AGE_MS,
+  MIN_PUBLICATION_GRACE_MS,
   mainBaselineProbeOrder,
   mainFirstParentChain,
   outsideMainBaselineAgeWindow,
@@ -26,6 +27,7 @@ describe("visual retention core", () => {
     expect(KEEP_MAIN_BASELINES).toBe(10);
     expect(KEEP_MAIN_BASELINE_AGE_MS).toBe(72 * 60 * 60 * 1000);
     expect(MIN_PRUNE_AGE_MS).toBe(24 * 60 * 60 * 1000);
+    expect(MIN_PUBLICATION_GRACE_MS).toBe(30 * 60 * 1000);
     expect(CANDIDATE_PAGE_SIZE).toBe(100);
     expect(MAX_CANDIDATE_PAGES).toBe(4);
   });
