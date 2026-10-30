@@ -187,6 +187,11 @@ import { seedWeeklyRun } from "./seed-weekly-run";
 import { seedWorkOrders } from "./seed-work-orders";
 import { syncDemoStripeAccount } from "./stripe-accounts";
 
+const DEMO_BOAT_CAPACITIES = {
+  "Mantis I": 17,
+  "Mantis II": 20,
+} as const;
+
 /**
  * Demo data: one Key Largo shop with staff, customers, and a week of trips.
  * Dates are relative to "now" so the schedule always shows upcoming trips.
@@ -507,7 +512,7 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
     {
       shopId: shop.id,
       name: "Mantis I",
-      capacity: 17,
+      capacity: DEMO_BOAT_CAPACITIES["Mantis I"],
       description:
         "The small boat — fourteen passenger places, plus room aboard for its three-person crew.",
       // Each hull's radio identity, printed on its departures' emergency card
@@ -518,7 +523,7 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
     {
       shopId: shop.id,
       name: "Mantis II",
-      capacity: 20,
+      capacity: DEMO_BOAT_CAPACITIES["Mantis II"],
       description: "The big boat: camera table, warm freshwater showers and a ladder on each side.",
       callSign: "WDM2202",
       mmsi: "338055501",
@@ -776,7 +781,7 @@ export async function createDemoShop(
     {
       shopId: shop.id,
       name: "Mantis I",
-      capacity: 17,
+      capacity: DEMO_BOAT_CAPACITIES["Mantis I"],
       description:
         "The small boat — fourteen passenger places, plus room aboard for its three-person crew.",
       // Each hull's radio identity, printed on its departures' emergency card
@@ -787,7 +792,7 @@ export async function createDemoShop(
     {
       shopId: shop.id,
       name: "Mantis II",
-      capacity: 20,
+      capacity: DEMO_BOAT_CAPACITIES["Mantis II"],
       description: "The big boat: camera table, warm freshwater showers and a ladder on each side.",
       callSign: "WDM2202",
       mmsi: "338055501",
@@ -1470,11 +1475,17 @@ export async function clearDemoSchedule(
   await db.delete(gearServiceEvents).where(eq(gearServiceEvents.shopId, shopId));
   await db.delete(priorGearAssignments).where(eq(priorGearAssignments.shopId, shopId));
   await db.delete(gearItems).where(eq(gearItems.shopId, shopId));
-  // A boat's certificate and paper dates are settings, like the boat itself,
-  // but the demo seeds none and the one writer outside Settings is a trouble
-  // state (`/api/test/seed-trouble-states?boatSafety=1`). So the reset puts
-  // them back to "never recorded" rather than let one capture's lapsing
-  // insurance or certificate stand on the next test's manifest.
+  // A trouble-state capture can lower a boat's raw capacity as well as change
+  // its papers. Restore the seeded hull limits so one capture's over-capacity
+  // example cannot close the next test's boat.
+  for (const [name, capacity] of Object.entries(DEMO_BOAT_CAPACITIES)) {
+    await db
+      .update(boats)
+      .set({ capacity })
+      .where(and(eq(boats.shopId, shopId), eq(boats.name, name)));
+  }
+  // The demo seeds no certificate or paper dates. Reset them too, so one
+  // capture's lapse cannot stand on the next test's manifest.
   await db
     .update(boats)
     .set({
