@@ -63,7 +63,10 @@ async function publishedSnapshot(bucket, key, { fetchImpl }) {
     });
     if (!res.ok) return null;
     const metadataVersion = res.headers?.get("x-amz-meta-diveday-snapshot-version");
-    if (typeof metadataVersion !== "string" || !/^[0-9a-f]{64}$/u.test(metadataVersion)) {
+    // Unversioned markers identify the old snapshot format. They are observed
+    // only to allow a one-time baseline reset, never returned as baselines.
+    if (metadataVersion === null || metadataVersion === undefined) return { legacy: true };
+    if (!/^[0-9a-f]{64}$/u.test(metadataVersion)) {
       return null;
     }
     return { version: metadataVersion };
@@ -81,8 +84,9 @@ export const DEFAULT_MAX_ANCESTORS = 40;
 
 /**
  * The nearest commit at or before `key` (first-parent, so a walk along main
- * stays on main) whose snapshot is published, or null when none within
- * `maxAncestors` is.
+ * stays on main) whose versioned snapshot is published, or null when none
+ * within `maxAncestors` is. When only unversioned markers are found, returns a
+ * freshStart signal so the caller can publish the new baseline once.
  *
  * `skipped` counts the commits walked past: 0 means `key` itself is
  * published and nothing changes. The check is `out.json` alone rather than
@@ -99,7 +103,8 @@ export async function nearestPublishedAncestor({
   fetchImpl = fetch,
 }) {
   const current = await publishedSnapshot(bucket, `${key}/out.json`, { fetchImpl });
-  if (current) return { key, skipped: 0, version: current.version };
+  if (current?.version) return { key, skipped: 0, version: current.version };
+  let legacyFound = current?.legacy === true;
   let ancestors;
   try {
     ancestors = git(["rev-list", "--first-parent", `--max-count=${maxAncestors}`, `${key}^`])
@@ -111,14 +116,23 @@ export async function nearestPublishedAncestor({
   }
   for (const [index, sha] of ancestors.entries()) {
     const published = await publishedSnapshot(bucket, `${sha}/out.json`, { fetchImpl });
-    if (published) {
+    if (published?.version) {
       return { key: sha, skipped: index + 1, version: published.version };
     }
+    if (published?.legacy) legacyFound = true;
+  }
+  if (legacyFound) {
+    return { key: null, skipped: ancestors.length + 1, version: null, freshStart: true };
   }
   return null;
 }
 
 function appendEnv(file, lines) {
+  if (!file) return;
+  appendFileSync(file, `${lines.join("\n")}\n`);
+}
+
+function appendOutput(file, lines) {
   if (!file) return;
   appendFileSync(file, `${lines.join("\n")}\n`);
 }
@@ -164,7 +178,7 @@ export async function layerBelowBaseline({
   }
   if (!COMMIT_SHA.test(below) || below === key) return null;
   const published = await publishedSnapshot(bucket, `${below}/out.json`, { fetchImpl });
-  if (!published) return null;
+  if (!published?.version) return null;
   return {
     key: below,
     version: published.version,
@@ -214,6 +228,14 @@ async function main() {
         "*new* rather than compared, and its Changed count means nothing. Re-run a green main run's " +
         "failed jobs to publish a baseline, then re-run this job.",
     );
+    return;
+  }
+  if (nearest.freshStart) {
+    const note =
+      "No versioned baseline exists; unversioned visual snapshots were ignored and this run starts fresh.";
+    console.log(`::notice title=Fresh visual baseline::${note}`);
+    appendEnv(process.env.GITHUB_ENV, baselineEnvironment({ key: "", version: null, note }));
+    appendOutput(process.env.GITHUB_OUTPUT, [`fresh_start=true`, `note=${note}`]);
     return;
   }
   if (nearest.skipped === 0) {

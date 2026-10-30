@@ -103,6 +103,33 @@ describe("nearestPublishedAncestor", () => {
     expect(found).toEqual({ key: B, skipped: 1, version: VERSION });
   });
 
+  it("signals a fresh start when only old unversioned markers exist", async () => {
+    const fixture = bucketWith({ objects: [`${KEY}/out.json`, `${A}/out.json`] });
+    const found = await nearestPublishedAncestor({
+      bucket: BUCKET,
+      key: KEY,
+      git: git({ [revList]: `${A}\n` }),
+      fetchImpl: fixture.fetchImpl,
+    });
+
+    expect(found).toEqual({ key: null, skipped: 2, version: null, freshStart: true });
+  });
+
+  it("does not allow a fresh start when marker metadata is malformed", async () => {
+    const fixture = bucketWith({
+      objects: [`${KEY}/out.json`, `${A}/out.json`],
+      versions: { [`${KEY}/out.json`]: "bad", [`${A}/out.json`]: "bad" },
+    });
+    const found = await nearestPublishedAncestor({
+      bucket: BUCKET,
+      key: KEY,
+      git: git({ [revList]: `${A}\n` }),
+      fetchImpl: fixture.fetchImpl,
+    });
+
+    expect(found).toBeNull();
+  });
+
   it("reads the immutable snapshot version from the published report marker", async () => {
     const version = "a".repeat(64);
     const fixture = bucketWith({

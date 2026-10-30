@@ -19,8 +19,11 @@ on:
         description: Immutable version of the capture bundle published by this run
         value: ${{ jobs.publish.outputs.snapshot_version }}
       baseline_note:
-        description: Any older baseline commit used for the comparison
+        description: Baseline resolution note, including a deliberate fresh start
         value: ${{ jobs.publish.outputs.baseline_note }}
+      baseline_reset:
+        description: Whether this run intentionally started without a versioned baseline
+        value: ${{ jobs.publish.outputs.baseline_reset }}
       selection_note:
         description: Which captures were compared from the selected set
         value: ${{ jobs.publish.outputs.selection_note }}
@@ -41,6 +44,7 @@ jobs:
       contents: read
     outputs:
       baseline_note: ${{ steps.baseline.outputs.note }}
+      baseline_reset: ${{ steps.baseline.outputs.fresh_start }}
       selection_note: ${{ steps.compare.outputs.selection_note || steps.selection.outputs.selection_note }}
       actual_key: ${{ steps.keys.outputs.actual }}
       region: ${{ steps.region.outputs.region }}
@@ -220,6 +224,7 @@ jobs:
       id-token: write
     outputs:
       baseline_note: ${{ needs.prepare.outputs.baseline_note }}
+      baseline_reset: ${{ needs.prepare.outputs.baseline_reset }}
       selection_note: ${{ needs.prepare.outputs.selection_note }}
       actual_key: ${{ needs.prepare.outputs.actual_key }}
       region: ${{ needs.prepare.outputs.region }}
