@@ -91,4 +91,11 @@ Two supporting changes come with it. The candidate fetch is `per_page=100` and p
 
 **What this does not change.** The 24-hour floor, and its job: a stacked pull request's lower layer is still on no branch the chain walk can name. The refusal to prune when nothing verified is left to keep. The lifecycle expiry staying a floor *beneath* the pruner. And the pruner keeps strictly more than it did — a chain of one out of a list of many means the payload carried no parent links at all, and that case falls back to the flat newest-first walk this replaced, so a surprise in the response can never make the pruner keep less than before.
 
-**The two copies are now pinned to each other.** There are four retention constants in `scripts/prune-visual-bucket-lib.mjs` and `infra/lib/visual-bucket-pruner-handler.ts`, held apart because the handler is bundled into a Lambda and cannot import from `scripts/`. "They must move together" was prose until now; the case named "holds the same retention constants as the CLI copy in scripts/" in `infra/lib/visual-bucket-pruner-handler.test.ts` reads the `.mjs` literals and fails on a drift.
+**The CLI and Lambda now share a runtime-neutral policy core.**
+`infra/lib/visual-retention-core.mjs` owns the retention constants, first-parent traversal,
+age/count stopping decisions, page stopping rule, and malformed-parent fallback order. The CLI
+imports it directly and the existing esbuild Lambda bundler includes it with the handler. GitHub
+and local-git resolution, S3 snapshot verification, pagination and deletion, error handling, and
+entry-point refusal behavior remain adapters at their original boundaries. Shared-core tests cover
+the policy edges; the former source-regex test that compared two copies is removed because there is
+now one implementation.

@@ -1,4 +1,5 @@
 import { nowDate, nowMs } from "./clock";
+import { AsyncTtlCache } from "./ttl-lru";
 /** Open-Meteo supplies sea-surface temperature only ten days ahead. */
 export const AUTOMATED_FORECAST_WINDOW_DAYS = 10;
 
@@ -201,13 +202,15 @@ const AUTOMATED_FORECAST_CACHE_MAX_ENTRIES = 256;
 
 /** Both providers' answers for one site, parsed; either may be missing. */
 type ProviderPayloads = { marine: MarineResponse | null; weather: WeatherResponse | null };
-type CachedPayloads = { expiresAt: number; value: Promise<ProviderPayloads | null> };
-const payloadCaches = new WeakMap<Fetcher, Map<string, CachedPayloads>>();
+const payloadCaches = new WeakMap<Fetcher, AsyncTtlCache<string, ProviderPayloads | null>>();
 
 function payloadCacheFor(fetcher: Fetcher) {
   const existing = payloadCaches.get(fetcher);
   if (existing) return existing;
-  const created = new Map<string, CachedPayloads>();
+  const created = new AsyncTtlCache<string, ProviderPayloads | null>(
+    AUTOMATED_FORECAST_CACHE_MAX_ENTRIES,
+    nowMs,
+  );
   payloadCaches.set(fetcher, created);
   return created;
 }
@@ -339,27 +342,11 @@ function providerPayloads(
   point: ForecastPoint,
   fetcher: Fetcher,
 ): Promise<ProviderPayloads | null> {
-  const cache = payloadCacheFor(fetcher);
   const key = payloadCacheKey(point);
-  const cached = cache.get(key);
-  if (cached) {
-    if (cached.expiresAt > nowMs()) return cached.value;
-    cache.delete(key);
-  }
-  if (cache.size >= AUTOMATED_FORECAST_CACHE_MAX_ENTRIES) {
-    const oldestKey = cache.keys().next().value;
-    if (oldestKey) cache.delete(oldestKey);
-  }
-  const entry: CachedPayloads = {
-    expiresAt: nowMs() + AUTOMATED_FORECAST_CACHE_TTL_MS,
-    value: requestProviderPayloads(point, fetcher),
-  };
-  cache.set(key, entry);
-  void entry.value.then((payloads) => {
-    const whole = payloads?.marine && payloads?.weather;
-    if (!whole && cache.get(key) === entry) cache.delete(key);
+  return payloadCacheFor(fetcher).getOrLoad(key, () => requestProviderPayloads(point, fetcher), {
+    ttlMs: AUTOMATED_FORECAST_CACHE_TTL_MS,
+    shouldCache: (payloads) => Boolean(payloads?.marine && payloads.weather),
   });
-  return entry.value;
 }
 
 async function requestProviderPayloads(

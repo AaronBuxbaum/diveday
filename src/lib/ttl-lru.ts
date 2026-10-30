@@ -58,3 +58,65 @@ export class TtlLru<V> {
     return this.entries.size;
   }
 }
+
+type AsyncEntry<V> = { expiresAt: number; value: Promise<V> };
+
+/**
+ * A bounded cache for values loaded asynchronously. The entry is installed
+ * before the loader settles, so concurrent callers share its promise. Callers
+ * choose the TTL for the in-flight entry and the settled value, and whether a
+ * settled value is worth retaining.
+ */
+export class AsyncTtlCache<K, V> {
+  private readonly entries = new Map<K, AsyncEntry<V>>();
+
+  constructor(
+    private readonly maxEntries: number,
+    private readonly now: () => number,
+  ) {
+    if (maxEntries < 1) throw new RangeError(`AsyncTtlCache: maxEntries must be at least 1`);
+  }
+
+  getOrLoad(
+    key: K,
+    load: () => Promise<V>,
+    options: {
+      ttlMs: number;
+      /** Return a TTL to start at settlement, or `undefined` to keep request-start expiry. */
+      ttlForValue?: (value: V) => number | undefined;
+      shouldCache?: (value: V) => boolean;
+    },
+  ): Promise<V> {
+    const cached = this.entries.get(key);
+    if (cached && cached.expiresAt > this.now()) return cached.value;
+    if (cached) this.entries.delete(key);
+
+    while (this.entries.size >= this.maxEntries) {
+      const oldestKey = this.entries.keys().next().value;
+      if (oldestKey === undefined) break;
+      this.entries.delete(oldestKey);
+    }
+
+    const entry: AsyncEntry<V> = { expiresAt: this.now() + options.ttlMs, value: load() };
+    this.entries.set(key, entry);
+    void entry.value.then(
+      (value) => {
+        if (this.entries.get(key) !== entry) return;
+        if (options.shouldCache?.(value) === false) {
+          this.entries.delete(key);
+          return;
+        }
+        const settledTtlMs = options.ttlForValue?.(value);
+        if (settledTtlMs !== undefined) entry.expiresAt = this.now() + settledTtlMs;
+      },
+      () => {
+        if (this.entries.get(key) === entry) this.entries.delete(key);
+      },
+    );
+    return entry.value;
+  }
+
+  get size(): number {
+    return this.entries.size;
+  }
+}
