@@ -26,6 +26,12 @@ describe("reg-suit consumer workflow", () => {
     expect(CI).toContain("shard: ${{ fromJSON(needs.visual-plan.outputs.shards) }}");
   });
 
+  it("uploads only screenshot PNGs to the trusted publisher", () => {
+    const visual = job("visual");
+    expect(visual).toMatch(/^\s+path: e2e\/screenshots\/\*\.png$/mu);
+    expect(visual).not.toMatch(/^\s+path: e2e\/screenshots\/$/mu);
+  });
+
   it("calls the pinned publisher with OIDC only", () => {
     const publisher = job("visual-publish");
     expect(publisher).toContain("      id-token: write");
