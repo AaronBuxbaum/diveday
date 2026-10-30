@@ -2,34 +2,9 @@
 
 import { useActionState, useEffect, useRef } from "react";
 import { ShopNotice } from "@/components/ShopPageHeader";
+import { type FormControlSnapshot, snapshotFormControls } from "./form-control-snapshot";
 
 export type SaveResult = { ok: false; reason: "conflict" } | null;
-
-/** One control's state as the writer left it, addressed by name and position. */
-type Typed = { name: string; index: number; value: string; checked: boolean };
-
-/** Every named control in the form, in document order, with what it holds. */
-function snapshot(form: HTMLFormElement): Typed[] {
-  const seen = new Map<string, number>();
-  const out: Typed[] = [];
-  for (const element of Array.from(form.elements)) {
-    const field = element as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
-    if (!field.name) continue;
-    // A file input's value cannot be assigned, so restoring one is impossible
-    // rather than merely awkward. The writer re-picks the photo; every word
-    // they typed survives, which is the part that took an afternoon.
-    if (field instanceof HTMLInputElement && field.type === "file") continue;
-    const index = seen.get(field.name) ?? 0;
-    seen.set(field.name, index + 1);
-    out.push({
-      name: field.name,
-      index,
-      value: field.value,
-      checked: field instanceof HTMLInputElement ? field.checked : false,
-    });
-  }
-  return out;
-}
 
 /**
  * **The form, and the one refusal that must not cost the writer their work.**
@@ -69,7 +44,7 @@ export function ConflictGuardedForm({
   children: React.ReactNode;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
-  const typed = useRef<Typed[] | null>(null);
+  const typed = useRef<FormControlSnapshot[] | null>(null);
   const [result, formAction] = useActionState<SaveResult, FormData>(
     async (_previous, formData) => action(formData),
     null,
@@ -106,7 +81,7 @@ export function ConflictGuardedForm({
       ref={formRef}
       action={formAction}
       onSubmit={(event) => {
-        typed.current = snapshot(event.currentTarget);
+        typed.current = snapshotFormControls(event.currentTarget);
       }}
       className={className}
     >

@@ -93,6 +93,43 @@ describe("UnsavedChangesGuard", () => {
     expect(stored.find((field) => field.name === "subhead")?.value).toBe("One two");
   });
 
+  it("stores repeated, disabled and unchecked controls while omitting files", () => {
+    vi.useFakeTimers();
+    const { container } = render(
+      <UnsavedChangesGuard storageKey={KEY}>
+        <form>
+          <input name="faq" defaultValue="Question" />
+          <input name="faq" type="file" />
+          <input name="faq" type="checkbox" value="answer" defaultChecked />
+          <input name="required" type="checkbox" value="yes" />
+          <input name="courseDays" type="radio" value="one" />
+          <input name="courseDays" type="radio" value="two" defaultChecked />
+          <input name="locked" defaultValue="kept" disabled />
+          <input aria-label="Trigger draft" name="trigger" />
+        </form>
+      </UnsavedChangesGuard>,
+    );
+    fireEvent.input(screen.getByLabelText("Trigger draft"), { target: { value: "changed" } });
+    vi.advanceTimersByTime(600);
+
+    const stored = JSON.parse(window.sessionStorage.getItem(KEY) ?? "[]") as Array<{
+      name: string;
+      index: number;
+      value: string;
+      checked: boolean;
+    }>;
+    expect(stored).toEqual([
+      { name: "faq", index: 0, value: "Question", checked: false },
+      { name: "faq", index: 1, value: "answer", checked: true },
+      { name: "required", index: 0, value: "yes", checked: false },
+      { name: "courseDays", index: 0, value: "one", checked: false },
+      { name: "courseDays", index: 1, value: "two", checked: true },
+      { name: "locked", index: 0, value: "kept", checked: false },
+      { name: "trigger", index: 0, value: "changed", checked: false },
+    ]);
+    expect(container.querySelector<HTMLInputElement>('input[type="file"]')?.value).toBe("");
+  });
+
   it("puts a draft back on mount, and says it did", () => {
     window.sessionStorage.setItem(
       KEY,
