@@ -298,6 +298,9 @@ describe("reg-suit publisher workflow", () => {
     expect(PREPARE).toContain('REG_SUIT_COMPARE_ONLY: "true"');
     expect(PUBLISH).toContain("REG_ACTUAL_KEY: ${{ needs.prepare.outputs.actual_key }}");
     expect(PUBLISH).toContain("SNAPSHOT_VERSION: ${{ needs.prepare.outputs.snapshot_version }}");
+    expect(CI_WORKFLOW).toContain(
+      "key: reg-baseline-${{ github.sha }}-${{ needs.visual-publish.outputs.snapshot_version }}",
+    );
     expect(PUBLISH).toContain("--content-encoding gzip");
     expect(PUBLISH).toContain('--key "$REG_ACTUAL_KEY/$object_path"');
     expect(PUBLISH).not.toMatch(
