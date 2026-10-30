@@ -19,33 +19,12 @@ export const INTEGRATION_DELIVERY_SETTLEMENT_RESERVE_MS = 1_000;
 const MINIMUM_USEFUL_DELIVERY_SLICE_MS = 1_000;
 
 /**
- * **The outbox drain's cadence: twice an hour, on `:00` and `:30`.**
- *
- * It shipped as a ten-minute poll, which was the single largest consumer of
- * database compute in the product and had nothing to do with how much work
- * there was to do. A serverless Postgres compute sleeps after five idle minutes and is
- * billed for the time it spends awake, so a pass every ten minutes is a
- * compute that is awake all month whether or not one delivery is due — and
- * with no shop connected yet, every one of those 144 daily passes drained an
- * empty outbox.
- *
- * Hourly, at `:03`, inside the five minutes the other hourly passes already
- * keep the database awake for, so this drain costs no wake-up of its own (it
- * was on their shared `:00` until they were staggered a minute apart, code
- * review 2026-10-10 item 11). It was `0,30` until
- * 2026-10-06, and the `:30` tick was a wake-up nothing else shared: about half
- * of the compute DiveDay pays for while nobody is using it (ADR
- * 20260919-integration-delivery-is-write-driven's amendment). The price is
- * the retry ladder in `markIntegrationDeliveryFailed`
- * (`src/db/integration-events.ts`), `min(60, 2 ** (attempt - 1))` minutes:
- * the cron is the real floor under every rung, so a failed delivery now
- * retries at the next hour (or the next write that drains), and the
- * dead-letter horizon stretches from roughly two hours to eight. A first
- * attempt is unaffected, because it is dispatched on write.
- *
- * Mirrors `vercel.json`, and `src/lib/cron-schedule.test.ts` fails if the two
- * drift. The cadence stops mattering entirely once delivery is dispatched on
- * write instead of polled for.
+ * Hourly at `:03`, matching `vercel.json` (pinned by `dispatcher.test.ts`).
+ * The write path attempts new deliveries after the response; this cron retries
+ * failures when no later write triggers another drain. Hourly retries can wait
+ * up to an hour and stretch the dead-letter horizon to about eight hours. This
+ * accepts slower recovery to avoid a separate database wake-up (ADR
+ * 20260919-integration-delivery-is-write-driven, amendment).
  */
 export const INTEGRATIONS_CRON_CRONTAB = "3 * * * *";
 
