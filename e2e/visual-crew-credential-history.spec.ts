@@ -31,6 +31,18 @@ test.describe("light mode", () => {
         .getByRole("button", { name: staffCopy("staffing.credentials.saveRenewal") })
         .boundingBox();
       expect(renewalDate && save && save.y >= renewalDate.y + renewalDate.height).toBe(true);
+      // Seeded demo references embed a random person UUID; stabilize only the unsaved visual value.
+      const referenceNumber = row.getByLabel(staffCopy("staffing.credentials.identifier"));
+      const originalReference = await referenceNumber.inputValue();
+      const stableReference = originalReference.replace(
+        /^(DEMO-)[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(-)/i,
+        (_match, prefix: string, separator: string) =>
+          `${prefix}00000000-0000-4000-8000-000000000000${separator}`,
+      );
+      expect(stableReference).not.toBe(originalReference);
+      expect(stableReference).toHaveLength(originalReference.length);
+      await referenceNumber.fill(stableReference);
+      await referenceNumber.evaluate((input) => input.blur());
       await capture(page, "team-credential-renewal-editor", "light");
     });
     test("Safety names unavailable crew evidence and links to current credentials", async ({
