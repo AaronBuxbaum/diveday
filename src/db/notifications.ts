@@ -157,10 +157,10 @@ const RETRY_QUEUE_MAX_ATTEMPTS = dailyPassesWithin(RETRY_WINDOW_MS);
  * back has to notice the fault first. Three daily passes is not that window;
  * a fortnight is roughly one person's holiday, which is the real unit here.
  *
- * The pass that reaches the bound is the row's last, and it writes the row off
- * the way every other finished write does: payload and all four handles
- * cleared. Why that is the right end for a row nothing will offer again is
- * argued where it happens, at the park in `drainNotificationRetries` below.
+ * The pass that reaches the bound is this recovery path's last attempt and
+ * clears the payload and all six auxiliary fields. The row can then enter
+ * ordinary queue retention; the `retry_subject_unbound` park is a separate
+ * failed state that retains its payload and fields for follow-up and erasure.
  *
  * Counted in `recovery_attempts`, its own column since issue #1719. It used to
  * share `attempts` with the three-pass bound above, which is how a row that
@@ -1536,13 +1536,8 @@ export async function drainNotificationRetries(
           lockedUntil: null,
           errorCode: "missing_payload",
           lastError: null,
-          // **Finished, so it drops its handles like the other finished
-          // writes.** There is nothing here to restore — the payload is
-          // already gone, which is this branch's own condition — and nothing
-          // prunes this table, so a row that kept a recipient would keep it
-          // for good. It did until a `security-reviewer` pass read the four
-          // terminal writes against the schema comment claiming all of them
-          // cleared (issue #1298).
+          // Clear the erasure fields beside the already-null payload. Queue
+          // retention later removes the row and its idempotency key after 90 days.
           recipientEmail: null,
           subjectEmail: null,
           subjectPhone: null,
@@ -1577,18 +1572,9 @@ export async function drainNotificationRetries(
     // the row findable meanwhile; erasure's own delete carries no status
     // filter, so it still reaches this one.
     //
-    // **The park that crosses the bound is the row's last write, so it is the
-    // one that finishes the row off.** `drainableStatus()` offers this code
-    // only while `recovery_attempts` is below the bound and this write is what
-    // increments it, so a row leaving here at or past it is never claimed
-    // again by anything. Past that point the payload buys no recovery — no
-    // code path would ever open it — and what it costs is a rendered outbound
-    // message, a name and an address kept for good in a table nothing prunes
-    // (`notification_send_queue` is deliberately absent from `RETENTION_DAYS`,
-    // src/lib/retention.ts). That is the same thing the `missing_payload`
-    // branch above refuses, and H-02's retention promise refuses it here too
-    // (`security-reviewer`). An earlier version of this branch parked past the
-    // bound holding all five columns forever.
+    // **The park that crosses the bound ends this recovery path.** This write
+    // clears the payload and all six auxiliary fields; the failed row can enter
+    // 90-day queue retention. Its idempotency key remains until the row is pruned.
     //
     // `next_attempt_at` moves forward with the park. Left in the past the row
     // would be due on every invocation rather than once a day, and two
@@ -1637,8 +1623,8 @@ export async function drainNotificationRetries(
     }
     const switchedOff = await switchedOffSinceQueued(db, notification);
     if (switchedOff || (await courtesyRecipientOptedOut(db, notification))) {
-      // Finished, so it drops its handles like every other finished write. Not
-      // a `send_abandoned` loss: the diver, or the shop's switch, asked for this.
+      // This terminal refusal clears the payload and all six auxiliary fields.
+      // Not a `send_abandoned` loss: the diver or the shop's switch asked for it.
       await db
         .update(notificationSendQueue)
         .set({

@@ -357,80 +357,31 @@ export const notificationSendQueue = pgTable(
      * credentials — for a mailbox, a password reset, a staff invite or a
      * signed waiver (issue #1297).
      *
-     * Null after a terminal outcome, sent or failed; a queued or processing row
-     * always carries it.
+     * Null after a `sent` outcome or an ordinary terminal failure. A bounded
+     * `sealed_payload_unreadable` park retains it while recovery remains;
+     * `retry_subject_unbound` retains it for follow-up and erasure. Queued and
+     * processing rows normally carry it; the drain terminalizes a lost payload
+     * as `missing_payload`.
      */
     payloadSealed: text("payload_sealed"),
     /**
-     * The three handles legal erasure needs, lifted out of the payload because
-     * it is now sealed and no `->>` can reach inside it (issue #1297).
+     * Unsealed match and snapshot fields for the sealed retry payload. The
+     * email, phone and booking keys support shop-scoped erasure; the person id
+     * also lets person erasure find retries without a booking or address. The
+     * trip and person snapshots bind booking retries to the subject and trip
+     * they were queued for. The retry writer sets all six; subject email and
+     * phone cover messages whose subject differs from their recipient.
      *
-     * `scrub` (src/db/anonymize.ts, reached from `anonymizeDiver`) has to drop
-     * a person's queued mail — a rendered message carrying their name and
-     * address — and the only matches it ever had were `payload ->> 'to'` and
-     * `payload ->> 'bookingId'`. As real columns those matches are typed, and
-     * can no longer silently miss a row whose payload shape drifted. All four
-     * nullable, because a kind may carry none of them. None is indexed: the
-     * address matches are `lower(...)`, which a plain btree would not serve
-     * anyway, and an erasure is rare enough that a sequential scan of one
-     * shop's queue is the right cost.
+     * Ordinary terminal writes clear the payload and all six fields. Retryable
+     * rows retain them so erasure can find the sealed content. The bounded
+     * `sealed_payload_unreadable` park retains them while the drain may retry;
+     * its final attempt clears them. A `retry_subject_unbound` failed row also
+     * retains its payload and fields for follow-up and erasure. It is not
+     * drainable and does not match queue retention while its payload remains;
+     * this comment does not resolve that row's retention policy.
      *
-     * None is a new disclosure — every one of them is an address or a number
-     * this same tenant already stores in a plaintext column of its own
-     * (`people`, `shops`, `interests`), unlike the payload, which held
-     * raw bearer tokens that exist nowhere else un-hashed.
-     *
-     * **Cleared when a row is finished with, retained while it is only
-     * parked.** `sent`, `failed` and `missing_payload` clear all four beside
-     * `payload_sealed`, so a row that is done holds nothing — which matters
-     * because the retention prune keeps a finished row for 90 days
-     * (`RETENTION_DAYS.notification_send_queue`), and a `sent` row that kept
-     * its recipient would keep it all that time. The one
-     * exception is `sealed_payload_unreadable`, which keeps the payload *and*
-     * the handles on purpose: that row is parked rather than finished, and a
-     * parked row that had dropped its handles would be a row an erasure could
-     * no longer find. What does the waiting is the drain's own candidate query
-     * (`drainableStatus` in src/db/notifications.ts), which re-offers this one
-     * code on each daily pass until the row's `recovery_attempts` reach a
-     * fortnight's worth — long enough for somebody to notice a mis-set
-     * `SECRET_ENCRYPTION_KEY` and put it back (issue #1340).
-     *
-     * **The exception ends with the waiting.** The pass that takes the row's
-     * last attempt parks it clearing all five columns, because past the bound
-     * nothing offers the row again: the payload could not be drained by a
-     * restored key, and the handles would be keeping a name and an address
-     * alive in a table with no window. Parked used to mean kept for good here
-     * (H-02; `security-reviewer`). An earlier version of this paragraph
-     * claimed a blanket clear and was wrong about two of the four writes
-     * (`security-reviewer`, on issue #1298).
-     *
-     * `booking_id` deliberately carries no foreign key: it is a match handle
-     * for a sweep, not a relationship, and a real reference would make an
-     * erasure's delete order depend on this queue.
-     *
-     * **`subject_email` and `subject_phone` are the person the message is
-     * *about***, when that is not the person it is addressed to — and null when
-     * the two are the same, which is almost every kind. Two are not:
-     * `interest_received` mails the shop's own front desk about a diver who used
-     * the public composer and carries their name, address, phone and free-text
-     * message; and the `new_account` operator alert mails DiveDay about a shop owner.
-     * Before these a live row for either survived an erasure until it drained,
-     * because neither handle could see it and no `->>` probe can be added to a
-     * sealed payload (issue #1298).
-     *
-     * **Two handles rather than one, because an interest may carry no address at
-     * all.** The public composer takes an address *or* a number, so a diver who
-     * leaves only a number produces a row a `subject_email` alone still could
-     * not reach — the first version of this fix shipped that hole and a
-     * `security-reviewer` pass found it. The phone match carries the same
-     * accepted over-reach the the date-interest phone sweep does, and for the
-     * same written reason.
-     *
-     * Both are written from `notificationSubjectEmail`/`notificationSubjectPhone`
-     * (`src/lib/notifications/kinds.ts`), and `kinds.test.ts` fails on a kind
-     * that declares a contact handle either function has forgotten — so this is
-     * not one more thing to remember the next time a subject and a recipient
-     * come apart.
+     * `booking_id` has no foreign key because it is an erasure match key, not a
+     * relationship; a reference would constrain erasure delete order.
      */
     recipientEmail: text("recipient_email"),
     subjectEmail: text("subject_email"),
@@ -477,10 +428,9 @@ export const notificationSendQueue = pgTable(
 );
 
 /**
- * Singleton team-wide permit clock for a provider needing coordinated
- * per-second throttling. Currently unused — SES's own SDK retry/backoff
- * covers that need (20260803-ses-sole-email-provider) — kept as generic,
- * provider-keyed infrastructure rather than dropped.
+ * Durable keyed claims for usage alerts and founder digests. A claim can be
+ * replaced only when `next_allowed_at` is due; callers release it when sending
+ * fails so a later run can retry.
  */
 export const notificationRateLimitState = pgTable("notification_rate_limit_state", {
   key: text("key").primaryKey(),

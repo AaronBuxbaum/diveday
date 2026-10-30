@@ -100,19 +100,12 @@
  * resolved live, so erasure reaches them without a row moving. Chosen by the product owner, 2026-10-13, over the `activity_events`
  * window (issue #2316).
  *
- * **`notification_send_queue` empties its own rows of personal data, and the
- * window below only bounds what is left.** It holds a rendered outbound
- * message, a recipient and a subject's address and phone while a row is being
- * worked, and every write that finishes a row (`sent`, `failed`,
- * `missing_payload`, and the park that spends a parked row's last attempt)
- * nulls the payload and all four handles. That is an invariant rather than an
- * observation: `src/db/notifications.ts` states it at each of those writes and
- * `notifications.test.ts` pins it, and if a fifth terminal write ever keeps a
- * handle, the answer is to clear it there. What a finished row still holds is
- * a status, an idempotency key and two instants, one per notification ever
- * sent, so the table grew with traffic for ever; its window (code review
- * 2026-10-11, item 14) takes only finished rows, never one the drain could
- * still offer again.
+ * **Ordinary terminal writes clear the queue payload and six auxiliary fields.**
+ * The idempotency key remains until the row is pruned and can itself contain an
+ * address (`trip_conditions_hold`). `retry_subject_unbound` retains payload
+ * and fields for follow-up/erasure; a bounded `sealed_payload_unreadable` park
+ * retains them while retries remain. Retention selects sent or failed rows
+ * whose payload is null and removes them after 90 days.
  *
  * **What is kept for ever, by decision, outside this list.** The event-like
  * trails that carry no window, one line each, so "how long is X kept?" has an
@@ -445,11 +438,12 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
   /**
    * 90 days, measured on `updated_at` (the instant the row was finished), and
    * only rows that are finished: `sent`, or `failed` with the payload already
-   * cleared. A parked `sealed_payload_unreadable` row keeps its payload while
-   * the drain may still offer it again, so it is never eligible. A finished row
-   * holds no personal data (the paragraph at the top of this file); what it
-   * holds is the idempotency key, and three months is far past the moment any
-   * producer would queue the same notification twice. What was sent is the
+   * cleared. A `sealed_payload_unreadable` row retains payload while the drain
+   * may retry it; `retry_subject_unbound` also retains payload but is not
+   * drainable. Neither is eligible while payload remains. A retention-eligible
+   * row has its payload and six auxiliary fields cleared; its idempotency key
+   * remains and can contain a recipient address (`trip_conditions_hold`). The
+   * 90-day window bounds that row. What was sent is the
    * delivery trail's to remember (`notification_deliveries`, 400 days).
    */
   notification_send_queue: 90,
