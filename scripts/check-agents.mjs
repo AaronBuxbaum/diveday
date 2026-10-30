@@ -14,6 +14,7 @@ import {
   missingDocPaths,
   providerSkillProblems,
   spawnedGuardCount,
+  VENDORED_SKILL_OVERRIDES,
   vendoredSkillProblems,
 } from "./agent-layer.mjs";
 import { listDirs } from "./check-context-budget.mjs";
@@ -93,12 +94,15 @@ const locked = Object.keys(
   JSON.parse(await readFile(path.join(ROOT, "skills-lock.json"), "utf8")).skills ?? {},
 );
 problems.push(...linkedSkillProblems([...linkedSkills], locked));
-const vendored = {};
-for (const name of linkedSkills)
-  vendored[name] = await readFile(
-    path.join(ROOT, ".agents/skills", name, "SKILL.md"),
-    "utf8",
-  ).catch(() => "");
+const overrideFiles = [...new Set(VENDORED_SKILL_OVERRIDES.map(({ path }) => path))];
+const vendored = Object.fromEntries(
+  await Promise.all(
+    overrideFiles.map(async (file) => [
+      file,
+      await readFile(path.join(ROOT, ".agents/skills", file), "utf8").catch(() => ""),
+    ]),
+  ),
+);
 problems.push(...vendoredSkillProblems(vendored));
 
 // 3. Reviewer agents: filename matches frontmatter, and the skill index mentions each.

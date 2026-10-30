@@ -189,17 +189,29 @@ describe("skills linked in from .agents/skills", () => {
 
 describe("local overrides of vendored skills", () => {
   it("passes a skill that carries the local wording", () => {
-    expect(vendoredSkillProblems({ triage: "read the Agent skills section of CLAUDE.md" })).toEqual(
-      [],
-    );
+    expect(
+      vendoredSkillProblems({
+        "triage/SKILL.md": "read the canonical index and provider contract",
+      }),
+    ).toEqual([]);
   });
 
   it("refuses a skill a sync gave back the upstream setup command", () => {
     const problems = vendoredSkillProblems({
-      "to-spec": "If not, tell the user to run `/setup-matt-pocock-skills`.",
+      "to-spec/SKILL.md": "If not, tell the user to run `/setup-matt-pocock-skills`.",
     });
     expect(problems).toHaveLength(1);
     expect(problems[0]).toContain(".agents/skills/to-spec/SKILL.md");
+  });
+
+  it("refuses upstream wording restored in a supporting file", () => {
+    const problems = vendoredSkillProblems({
+      "domain-modeling/ADR-FORMAT.md":
+        "ADRs live in `docs/adr/` and use sequential numbering: 0001-slug.md.",
+    });
+    expect(problems).toEqual([
+      expect.stringContaining(".agents/skills/domain-modeling/ADR-FORMAT.md"),
+    ]);
   });
 });
 

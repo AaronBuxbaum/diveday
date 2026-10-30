@@ -70,24 +70,159 @@ export function linkedSkillProblems(linked, locked) {
 }
 
 /**
- * Lines a vendored skill carries from its upstream pack that are wrong here, each with the
- * local wording that replaced it. A sync from `skills-lock.json`'s source rewrites the files
- * under `.agents/skills/` and brings the upstream line back; this refusal is what notices.
+ * Files a vendored skill carries from its upstream pack that are wrong here, each with the
+ * local wording that replaced it. A sync from `skills-lock.json`'s source rewrites files under
+ * `.agents/skills/` and brings the upstream wording back; this refusal is what notices.
  */
 export const VENDORED_SKILL_OVERRIDES = [
   {
+    path: "implement-spec/SKILL.md",
     phrase: "/setup-matt-pocock-skills",
-    fix: 'point at the "Agent skills" section of CLAUDE.md and docs/agents/issue-tracker.md instead — this repository has no such command',
+    fix: "use the repository's canonical skill index and provider contract",
+  },
+  {
+    path: "to-spec/SKILL.md",
+    phrase: "/setup-matt-pocock-skills",
+    fix: "use the repository's canonical skill index and provider contract",
+  },
+  {
+    path: "to-tickets/SKILL.md",
+    phrase: "/setup-matt-pocock-skills",
+    fix: "use the repository's canonical skill index and provider contract",
+  },
+  {
+    path: "triage/SKILL.md",
+    phrase: "/setup-matt-pocock-skills",
+    fix: "use the repository's canonical skill index and provider contract",
+  },
+  {
+    path: "wayfinder/SKILL.md",
+    phrase: "/setup-matt-pocock-skills",
+    fix: "use AGENTS.md and the provider contract to find this repository's tracker instructions",
+  },
+  {
+    path: "implement-spec/SKILL.md",
+    phrase: "which points at `docs/agents/issue-tracker.md` and `docs/agents/triage-labels.md`",
+    fix: "use AGENTS.md and the provider contract to find the repository's tracker instructions",
+  },
+  {
+    path: "wayfinder/SKILL.md",
+    phrase: "which points at `docs/agents/issue-tracker.md` and `docs/agents/triage-labels.md`",
+    fix: "use AGENTS.md and the provider contract to find the repository's tracker instructions",
+  },
+  {
+    path: "implement-spec/SKILL.md",
+    phrase: "background where possible for maximum concurrency",
+    fix: "delegate only when the work is independent and merits parallel work, following the repository's worker limit",
+  },
+  {
+    path: "implement-spec/SKILL.md",
+    phrase: "Use **implementer subagents** to implement each ticket",
+    fix: "implement tickets in the integration session by default; delegate independent work when repository rules or the user's request call for it",
+  },
+  {
+    path: "implement-spec/SKILL.md",
+    phrase: "calls the Skill tool with `tdd`",
+    fix: "invoke the `tdd` skill",
+  },
+  {
+    path: "implement-spec/SKILL.md",
+    phrase: "open a draft PR after the first merge in step 5",
+    fix: "open a draft PR with the first commit, following repository worktree and stack rules",
+  },
+  {
+    path: "implement-spec/SKILL.md",
+    phrase: "reviewer agents in `.claude/agents/`",
+    fix: "reviewer roles required by AGENTS.md, using the active provider's supported review mechanism",
+  },
+  {
+    path: "implement-spec/SKILL.md",
+    phrase: "single **implementer subagent**",
+    fix: "one assigned worker when review findings are independent and delegation is warranted",
+  },
+  {
+    path: "research/SKILL.md",
+    phrase: "Spin up a **background agent** to do the research",
+    fix: "research in the current session by default; delegate when independent focus or parallel work merits it under repository rules",
+  },
+  {
+    path: "research/SKILL.md",
+    phrase: "reading is delegated to a background agent",
+    fix: "a focused research question or independent research work merits delegation",
+  },
+  {
+    path: "tdd/SKILL.md",
+    phrase: 'call the Skill tool with "codebase-design"',
+    fix: "consult the `codebase-design` skill",
+  },
+  {
+    path: "tdd/SKILL.md",
+    phrase: "reviewer agents in `.claude/agents/`",
+    fix: "the review stage and reviewer roles required by repository rules",
+  },
+  {
+    path: "wayfinder/SKILL.md",
+    phrase: 'calls the Skill tool with "research"',
+    fix: "use the `research` skill, delegating when the repository's rules warrant parallel work",
+  },
+  {
+    path: "wayfinder/SKILL.md",
+    phrase: 'by calling the Skill tool with "prototype"',
+    fix: "use the `prototype` skill",
+  },
+  {
+    path: "wayfinder/SKILL.md",
+    phrase: "Always call the Skill tool twice",
+    fix: "consult the `grilling` and `domain-modeling` skills",
+  },
+  {
+    path: "wayfinder/SKILL.md",
+    phrase: "Call the Skill tool twice",
+    fix: "consult the `grilling` and `domain-modeling` skills",
+  },
+  {
+    path: "wayfinder/SKILL.md",
+    phrase: "call the Skill tool for whichever skills",
+    fix: "consult whichever skills",
+  },
+  {
+    path: "wayfinder/SKILL.md",
+    phrase: "Fire the research subagents",
+    fix: "delegate independent research tickets in parallel under the repository's worker limit",
+  },
+  {
+    path: "wayfinder/SKILL.md",
+    phrase: "assigning it to the dev driving the map",
+    fix: "using the repository's documented issue-claim procedure",
+  },
+  {
+    path: "wayfinder/SKILL.md",
+    phrase: "**Claim it**: assign it to yourself before any work",
+    fix: "claim it through the tracker's documented procedure before any work",
+  },
+  {
+    path: "domain-modeling/ADR-FORMAT.md",
+    phrase: "ADRs live in `docs/adr/` and use sequential numbering",
+    fix: "follow the linked repository ADR guide for the location and collision-resistant date-slug IDs",
+  },
+  {
+    path: "codebase-design/DESIGN-IT-TWICE.md",
+    phrase: "Spawn 3+ sub-agents in parallel",
+    fix: "spawn at most three independent subagents in parallel under the repository's delegation rules",
+  },
+  {
+    path: "codebase-design/DESIGN-IT-TWICE.md",
+    phrase: "Agent 4 (if applicable)",
+    fix: "fold adapter constraints into one of the three design briefs",
   },
 ];
 
-/** Each override a vendored skill has lost, given `{ [name]: SKILL.md contents }`. */
-export function vendoredSkillProblems(contentsByName) {
+/** Each override names a vendored file, upstream wording, and its repository-specific replacement. */
+export function vendoredSkillProblems(contentsByPath) {
   const problems = [];
-  for (const [name, contents] of Object.entries(contentsByName))
-    for (const { phrase, fix } of VENDORED_SKILL_OVERRIDES)
-      if (contents.includes(phrase))
-        problems.push(`.agents/skills/${name}/SKILL.md: names \`${phrase}\`; ${fix}`);
+  for (const { path, phrase, fix } of VENDORED_SKILL_OVERRIDES)
+    if (contentsByPath[path]?.includes(phrase))
+      problems.push(`.agents/skills/${path}: names \`${phrase}\`; ${fix}`);
   return problems;
 }
 
