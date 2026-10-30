@@ -123,7 +123,7 @@ describe("reg-suit publisher workflow", () => {
     expect(manifestValidationAt).toBeGreaterThanOrEqual(0);
     expect(uploadAt).toBeGreaterThan(manifestValidationAt);
     expect(publishAt).toBeGreaterThan(uploadAt);
-    expect(PUBLISH).toContain("' _ < \"$validated_manifest\"");
+    expect(PUBLISH).toContain('\' _ < "$validated_manifest"');
     expect(PUBLISH.slice(0, uploadAt)).not.toContain("aws s3api put-object");
   });
 });
