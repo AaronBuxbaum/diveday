@@ -19,7 +19,7 @@ import { completeWaiver } from "./waivers-completion";
 import {
   getMedicalClearanceDocument,
   hasUnansweredMedicalHold,
-  recordMedicalEvaluation,
+  recordMedicalEvaluation as recordMedicalEvaluationInShop,
 } from "./waivers-medical";
 import { issueWaiverRequest } from "./waivers-requests";
 import { getCurrentWaiverTemplate } from "./waivers-templates";
@@ -49,19 +49,35 @@ describe("physician medical clearance", () => {
   /** After the referral was signed (`now`), and not in the future. */
   const EVALUATED_ON = "2026-07-18";
 
-  async function heldContext() {
+  async function heldContext(signedAt = now) {
     const context = await waiverContext();
     const { db, shop, booking, person } = context;
-    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
+    const issued = await issueWaiverRequest(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      now: signedAt,
+    });
     if (!issued.ok) throw new Error("expected a waiver link");
     await completeWaiver(db, issued.token, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers: medicalReferralAnswers,
-      now,
+      now: signedAt,
     });
     const staff = await staffPerson(db, shop.id);
     return { ...context, staff };
+  }
+
+  async function recordMedicalEvaluation(
+    db: Parameters<typeof recordMedicalEvaluationInShop>[0],
+    input: Omit<Parameters<typeof recordMedicalEvaluationInShop>[1], "timeZone">,
+  ) {
+    const [shop] = await db
+      .select({ timezone: shops.timezone })
+      .from(shops)
+      .where(eq(shops.id, input.shopId));
+    if (!shop) throw new Error("medical evaluation shop missing");
+    return recordMedicalEvaluationInShop(db, { ...input, timeZone: shop.timezone });
   }
 
   async function staffPerson(db: Awaited<ReturnType<typeof waiverContext>>["db"], shopId: string) {
@@ -445,6 +461,78 @@ describe("physician medical clearance", () => {
         now,
       }),
     ).toEqual({ ok: false, reason: "evaluation_in_future" });
+  });
+
+  it("accepts the signed day when the shop is behind UTC", async () => {
+    const signedAt = new Date("2026-07-18T01:00:00.000Z");
+    const { db, shop, booking, staff } = await heldContext(signedAt);
+    await db.update(shops).set({ timezone: "America/Los_Angeles" }).where(eq(shops.id, shop.id));
+
+    const outcome = await recordMedicalEvaluation(db, {
+      outcome: "cleared",
+      shopId: shop.id,
+      personId: booking.personId,
+      recordedByPersonId: staff.id,
+      evaluatedOn: "2026-07-17",
+      physicianName: "Dr. Imani Reyes",
+      now: new Date("2026-07-18T12:00:00.000Z"),
+    });
+
+    expect(outcome).toMatchObject({ ok: true, alreadyRecorded: false });
+  });
+
+  it("does not accept tomorrow when UTC has rolled over but the shop day has not", async () => {
+    const signedAt = new Date("2026-07-17T12:00:00.000Z");
+    const { db, shop, booking, staff } = await heldContext(signedAt);
+    await db.update(shops).set({ timezone: "America/Los_Angeles" }).where(eq(shops.id, shop.id));
+
+    const outcome = await recordMedicalEvaluation(db, {
+      outcome: "cleared",
+      shopId: shop.id,
+      personId: booking.personId,
+      recordedByPersonId: staff.id,
+      evaluatedOn: "2026-07-18",
+      physicianName: "Dr. Imani Reyes",
+      now: new Date("2026-07-18T01:00:00.000Z"),
+    });
+
+    expect(outcome).toEqual({ ok: false, reason: "evaluation_in_future" });
+  });
+
+  it("compares the disclosure date in the shop timezone when the shop is ahead of UTC", async () => {
+    const signedAt = new Date("2026-07-18T23:30:00.000Z");
+    const { db, shop, booking, staff } = await heldContext(signedAt);
+    await db.update(shops).set({ timezone: "Asia/Tokyo" }).where(eq(shops.id, shop.id));
+
+    const outcome = await recordMedicalEvaluation(db, {
+      outcome: "cleared",
+      shopId: shop.id,
+      personId: booking.personId,
+      recordedByPersonId: staff.id,
+      evaluatedOn: "2026-07-18",
+      physicianName: "Dr. Imani Reyes",
+      now: signedAt,
+    });
+
+    expect(outcome).toEqual({ ok: false, reason: "evaluation_predates_disclosure" });
+  });
+
+  it("accepts the shop's current day after UTC has not reached it yet", async () => {
+    const localToday = new Date("2026-07-18T23:30:00.000Z");
+    const { db, shop, booking, staff } = await heldContext(localToday);
+    await db.update(shops).set({ timezone: "Asia/Tokyo" }).where(eq(shops.id, shop.id));
+
+    const outcome = await recordMedicalEvaluation(db, {
+      outcome: "cleared",
+      shopId: shop.id,
+      personId: booking.personId,
+      recordedByPersonId: staff.id,
+      evaluatedOn: "2026-07-19",
+      physicianName: "Dr. Imani Reyes",
+      now: localToday,
+    });
+
+    expect(outcome).toMatchObject({ ok: true, alreadyRecorded: false });
   });
 
   it("never clears a diver in another shop, even for that shop's own live staff", async () => {

@@ -130,6 +130,7 @@ describe("the doctor's form a diver sends", () => {
       const answered = await recordMedicalEvaluation(db, {
         outcome,
         shopId: shop.id,
+        timeZone: shop.timezone,
         personId: person.id,
         recordedByPersonId: staff.id,
         evaluatedOn: EVALUATED_ON,
@@ -198,6 +199,7 @@ describe("the doctor's form a diver sends", () => {
     await recordMedicalEvaluation(held.db, {
       outcome: "cleared",
       shopId: held.shop.id,
+      timeZone: held.shop.timezone,
       personId: held.person.id,
       recordedByPersonId: held.staff.id,
       evaluatedOn: EVALUATED_ON,
@@ -270,6 +272,7 @@ describe("the doctor's form a diver sends", () => {
       recordMedicalEvaluation(db, {
         outcome: "cleared",
         shopId: shop.id,
+        timeZone: shop.timezone,
         personId: person.id,
         recordedByPersonId: staff.id,
         evaluatedOn: EVALUATED_ON,
@@ -328,6 +331,7 @@ describe("the doctor's form a diver sends", () => {
       await recordMedicalEvaluation(db, {
         outcome: "cleared",
         shopId: shop.id,
+        timeZone: shop.timezone,
         personId: person.id,
         recordedByPersonId: staff.id,
         evaluatedOn: EVALUATED_ON,
@@ -383,6 +387,7 @@ describe("the doctor's form a diver sends", () => {
       const answered = await recordMedicalEvaluation(db, {
         outcome: "not_cleared",
         shopId: shop.id,
+        timeZone: shop.timezone,
         personId: person.id,
         recordedByPersonId: staff.id,
         evaluatedOn: EVALUATED_ON,
@@ -430,6 +435,7 @@ describe("the doctor's form a diver sends", () => {
       const refused = await recordMedicalEvaluation(db, {
         outcome: "cleared",
         shopId: shop.id,
+        timeZone: shop.timezone,
         personId: person.id,
         recordedByPersonId: staff.id,
         evaluatedOn: EVALUATED_ON,

@@ -82,6 +82,7 @@ describe("a physician's letter that predates a re-signed referral", () => {
       earlierLetterConfirmed,
       outcome,
       shopId: ctx.shop.id,
+      timeZone: ctx.shop.timezone,
       personId: ctx.person.id,
       recordedByPersonId: ctx.staff.id,
       evaluatedOn,
@@ -180,6 +181,7 @@ describe("a physician's letter that predates a re-signed referral", () => {
       await recordMedicalEvaluation(db, {
         outcome: "not_cleared",
         shopId: shop.id,
+        timeZone: shop.timezone,
         personId: person.id,
         recordedByPersonId: staff.person.id,
         evaluatedOn: "2026-07-19",
@@ -203,6 +205,7 @@ describe("a physician's letter that predates a re-signed referral", () => {
       await recordMedicalEvaluation(db, {
         outcome: "cleared",
         shopId: shop.id,
+        timeZone: shop.timezone,
         personId: person.id,
         recordedByPersonId: staff.person.id,
         evaluatedOn: LETTER_BETWEEN,

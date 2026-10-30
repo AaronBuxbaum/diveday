@@ -133,6 +133,7 @@ describe("the actual completed waiver branch", () => {
     if (!staff) throw new Error("staff missing");
     const outcome = await recordMedicalEvaluation(db, {
       shopId: shop.id,
+      timeZone: shop.timezone,
       personId: booking.personId,
       recordedByPersonId: staff.person.id,
       outcome: "not_cleared",

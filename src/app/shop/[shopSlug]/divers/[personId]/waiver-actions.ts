@@ -173,6 +173,7 @@ export async function recordMedicalClearanceAction(
 
   const result = await recordMedicalEvaluation(db, {
     shopId: staff.user.shopId,
+    timeZone: context.shop.timezone,
     personId,
     recordedByPersonId: staff.user.personId,
     outcome,

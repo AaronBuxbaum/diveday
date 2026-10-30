@@ -175,6 +175,7 @@ describe("sendDoctorFormAction", () => {
     await recordMedicalEvaluation(db, {
       outcome: "cleared",
       shopId: shop.id,
+      timeZone: shop.timezone,
       personId: person.id,
       recordedByPersonId: staff.id,
       evaluatedOn: "2026-07-18",
@@ -204,6 +205,7 @@ describe("sendDoctorFormAction", () => {
       await recordMedicalEvaluation(db, {
         outcome: "cleared",
         shopId: shop.id,
+        timeZone: shop.timezone,
         personId: person.id,
         recordedByPersonId: staff.id,
         evaluatedOn: "2026-07-18",

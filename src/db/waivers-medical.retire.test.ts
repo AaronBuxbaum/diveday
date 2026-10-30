@@ -97,6 +97,7 @@ describe("physician medical clearance: retiring a refusal", () => {
       await recordMedicalEvaluation(db, {
         outcome: "not_cleared",
         shopId: shop.id,
+        timeZone: shop.timezone,
         personId: person.id,
         recordedByPersonId: owner.id,
         evaluatedOn: EVALUATED_ON,
