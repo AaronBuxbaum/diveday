@@ -18,11 +18,14 @@ export function ScheduleBoardNoticeView({
   initialNotice,
   gearMessage,
   resultId,
+  resultKey,
 }: {
   notice: BoardNotice | undefined;
   initialNotice: RescheduleNoticeSnapshot | null;
   gearMessage: string | undefined;
   resultId: string | undefined;
+  /** Action-result identity, including the unique signed token for a move. */
+  resultKey?: string;
 }) {
   const firstGearNotice = gearMessage && resultId ? { id: resultId, message: gearMessage } : null;
   const [gearNotices, setGearNotices] = useState<GearNotice[]>(() =>
@@ -37,13 +40,16 @@ export function ScheduleBoardNoticeView({
       seenGearResults.current.add(resultId);
       setGearNotices((current) => [...current, { id: resultId, message: gearMessage }]);
     }
+  }, [gearMessage, resultId]);
 
+  useEffect(() => {
+    if (!resultKey) return;
     const url = clearBoardResultParams(new URL(window.location.href));
     const next = `${url.pathname}${url.search}${url.hash}`;
     if (next !== `${window.location.pathname}${window.location.search}${window.location.hash}`) {
       window.history.replaceState(window.history.state, "", next);
     }
-  }, [gearMessage, resultId]);
+  }, [resultKey]);
 
   useEffect(() => {
     if (!initialNotice) return;

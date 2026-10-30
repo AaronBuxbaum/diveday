@@ -21,7 +21,9 @@ for (const scheme of ["light", "dark"] as const) {
     test.use({ colorScheme: scheme, viewport: { width: 1280, height: 800 } });
     test.describe("staff", () => {
       test(`the party waiver queue shows each person's next step (${scheme})`, async ({ page }) => {
-        const tripId = await seededTripId(page, "blue-mantis", "Two-Tank Reef — Molasses & French");
+        const tripId = await seededTripId(page, "blue-mantis", "Two-Tank Reef — Benwood & Elbow", {
+          daysOut: 3,
+        });
         await page.goto(walkInFormPath("blue-mantis", tripId));
         await page.getByRole("button", { name: "Add another person" }).click();
         const child = page.getByRole("group", { name: "Person 2" });
@@ -42,7 +44,9 @@ for (const scheme of ["light", "dark"] as const) {
         browser,
         workerBaseURL,
       }) => {
-        const tripId = await seededTripId(page, "blue-mantis", "Two-Tank Reef — Molasses & French");
+        const tripId = await seededTripId(page, "blue-mantis", "Two-Tank Reef — Benwood & Elbow", {
+          daysOut: 3,
+        });
         await page.goto(walkInFormPath("blue-mantis", tripId));
         await page.getByRole("button", { name: "Add another person" }).click();
         await page

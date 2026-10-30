@@ -29,7 +29,7 @@ it("accumulates separate move results and consumes their query parameters once",
   };
   const view = render(
     <StrictMode>
-      <ScheduleBoardNoticeView {...props} resultId="move-one" />
+      <ScheduleBoardNoticeView {...props} resultId="move-one" resultKey="move-one" />
     </StrictMode>,
   );
 
@@ -48,6 +48,7 @@ it("accumulates separate move results and consumes their query parameters once",
         notice={{ tone: "warning", message: second }}
         gearMessage={second}
         resultId="move-two"
+        resultKey="move-two"
       />
     </StrictMode>,
   );
@@ -74,4 +75,32 @@ it("clears a visit's gear notices before a cached page can be restored", () => {
 
   act(() => window.dispatchEvent(new PageTransitionEvent("pageshow", { persisted: true })));
   expect(view.container).toBeEmptyDOMElement();
+});
+
+it("consumes a move result with no gear warning and keeps its undo hold in the URL", () => {
+  const view = render(
+    <ScheduleBoardNoticeView
+      initialNotice={null}
+      notice={undefined}
+      gearMessage={undefined}
+      resultId={undefined}
+    />,
+  );
+
+  window.history.replaceState(
+    {},
+    "",
+    "/shop/reef/schedule/board?week=2026-10-26&builder=moved&result=move-one&held=hold-one&tell=2",
+  );
+  view.rerender(
+    <ScheduleBoardNoticeView
+      initialNotice={null}
+      notice={{ tone: "success", message: "Moved" }}
+      gearMessage={undefined}
+      resultId={undefined}
+      resultKey="move-one"
+    />,
+  );
+
+  expect(window.location.search).toBe("?week=2026-10-26&held=hold-one&tell=2");
 });

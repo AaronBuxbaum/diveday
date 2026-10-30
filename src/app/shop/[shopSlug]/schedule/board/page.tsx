@@ -87,6 +87,9 @@ export default async function ScheduleBoardPage({
   const query = await searchParams;
   const { builder, count, created, held, tell, series, add, date, course, requests, site, week } =
     query;
+  const actionResultKey =
+    query.result ??
+    (builder ? [builder, count, created, series].filter(Boolean).join(":") : undefined);
   const createPage = query._createPage === "1";
   const legacyHref = legacyAddHref(shopSlug, query);
   if (legacyHref) redirect(legacyHref);
@@ -301,6 +304,7 @@ export default async function ScheduleBoardPage({
         initialNotice={rescheduleNotice}
         gearMessage={gearNotice?.message}
         resultId={gearNotice?.id}
+        resultKey={actionResultKey}
       />
 
       {!createPage && !hasUpcoming ? (

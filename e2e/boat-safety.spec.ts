@@ -141,7 +141,7 @@ test("a boat's papers and the kit aboard it reach the departure that sails on it
 
   //    …and so are fewer seats under it while today's departure still sells
   //    fourteen on this hull.
-  await boatRow(page, BOAT).getByLabel("Capacity (seats)").fill("12");
+  await boatRow(page, BOAT).getByLabel("Total occupants (passengers + crew)").fill("12");
   await boatRow(page, BOAT)
     .getByLabel("Passengers allowed on the certificate (not crew)")
     .fill("12");
