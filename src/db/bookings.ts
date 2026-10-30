@@ -500,12 +500,7 @@ export async function createBookingParty(
     .catch((error: unknown): BookingPartyOutcome => {
       if (error instanceof PartyBookingError) {
         const refusal = error.refusal;
-        // Narrowed rather than spread blind: the `trip_prerequisite` arm
-        // carries a `refusal` payload the others don't, and both arms have to
-        // land as their own member of `BookingPartyOutcome`.
-        return refusal.reason === "trip_prerequisite"
-          ? { ...refusal, failedIndex: error.index }
-          : { ...refusal, failedIndex: error.index };
+        return { ...refusal, failedIndex: error.index };
       }
       throw error;
     });
@@ -988,7 +983,7 @@ function tripTakesSeatFrom(
  * `seat-lock-order.postgres.test.ts` races the pairs on a real server.
  */
 async function createBookingRecord(
-  db: DbExecutor,
+  tx: DbExecutor,
   req: BookingRequest,
   /**
    * Where this seat's declaration goes instead of straight to the database —
@@ -996,7 +991,6 @@ async function createBookingRecord(
    */
   pending: PendingDeclaration[],
 ): Promise<BookingOutcome> {
-  const tx = db;
   await boundLockWaits(tx);
   // FOR NO KEY UPDATE (not FOR UPDATE, which also blocks every insert that
   // references the trip by foreign key) serializes concurrent bookings on the
@@ -1005,8 +999,7 @@ async function createBookingRecord(
   // and both insert. The unit suite runs on PGlite, which is single-connection
   // and therefore cannot exhibit the race — but this is no longer untested.
   // `src/db/bookings.postgres.test.ts` races two real connections for the last
-  // seat against a genuine Postgres server in CI, and asserts exactly one
-  // wins; with this `.for("no key update")` removed, a one-seat trip sells two.
+  // seat against a genuine Postgres server in CI, and asserts exactly one wins.
   const [trip] = await tx
     .select()
     .from(trips)
@@ -2045,8 +2038,6 @@ async function moveAdmissionRefusal(
 ): Promise<Extract<MoveBookingOutcome, { ok: false }> | null> {
   // Capacity, participant type, course ratio, and admission are checked under
   // the target lock, matching the staff-seat path.
-  // Both limits and the course ratio, read under the target's lock, exactly
-  // as `createBookingRecord` reads them for a new seat.
   const held = await heldSeatCounts(tx, target.shopId, target.id);
   const full = seatRefusal(
     booking.participantType,

@@ -1,12 +1,10 @@
 import { DIVER_LOCALES, type DiverLocale, isDiverLocale, toDiverLocale } from "./settings";
 
 /**
- * Which language to render for whoever just loaded the page.
- *
- * DiveDay does not ask. There is no language switcher and no `/es/` URL — a
- * diver opening a shop's schedule gets the page in the language their device
- * says they read, and a shop's own stored default is the fallback when we carry
- * nothing they asked for (docs ADR 20260729-diver-copy-localization).
+ * Language negotiation for the request. The explicit reader choice is handled
+ * by `requestLocale`; this module matches `Accept-Language` and falls back to
+ * the shop default. Locale stays out of the URL (docs ADR
+ * 20260729-diver-copy-localization and 20260812-reader-chosen-language).
  */
 
 type Preference = { tag: string; quality: number };

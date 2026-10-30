@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MENU_PANEL, MENU_TICK_GUTTER } from "@/components/ui/menu";
@@ -194,6 +194,22 @@ describe("LanguagePicker viewport placement", () => {
     const trigger = screen.getByRole("button", { name: "Change language" });
     expect(trigger).toHaveAttribute("aria-expanded", "false");
     expect(trigger).toHaveFocus();
+  });
+
+  it("keeps the picker open for pointerdowns inside its root", async () => {
+    await openPicker();
+    const trigger = screen.getByRole("button", { name: "Change language" });
+    fireEvent.pointerDown(screen.getByRole("button", { name: "English (US)" }));
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("dismisses on an outside pointerdown and keeps the exit animation mounted", async () => {
+    const panel = await openPicker();
+    const trigger = screen.getByRole("button", { name: "Change language" });
+    fireEvent.pointerDown(document.body);
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    expect(panel).toHaveClass("animate-scale-out");
+    expect(panel).toBeInTheDocument();
   });
 
   it("observes panel and trigger changes and disconnects on unmount", async () => {

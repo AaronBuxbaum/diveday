@@ -48,6 +48,42 @@ describe("isDraftableField", () => {
   it.each(["fullName", "phone", "date", "startTime", "title", "description"])("allows %s", (name) =>
     expect(isDraftableField(name)).toBe(true),
   );
+
+  it("opts in only the three fixed boat document dates", () => {
+    expect(
+      draftableFields(
+        [
+          ["coiExpiresOn", "2027-01-01"],
+          ["registrationExpiresOn", "2027-02-01"],
+          ["insuranceExpiresOn", "2027-03-01"],
+          ["cardExpiresOn", "11/30"],
+          ["medicalExpiresOn", "private"],
+          ["secretExpiresOn", "credential"],
+          ["passwordExpiresOn", "credential"],
+          ["apiTokenExpiresOn", "credential"],
+          ["arbitraryExpiresOn", "surprise"],
+        ],
+        "boat-paper-dates",
+      ),
+    ).toEqual({
+      coiExpiresOn: "2027-01-01",
+      registrationExpiresOn: "2027-02-01",
+      insuranceExpiresOn: "2027-03-01",
+    });
+  });
+
+  it("does not allow the boat policy to opt in payment, medical, secrets or arbitrary expired fields", () => {
+    for (const name of [
+      "cardExpiry",
+      "medicalNote",
+      "secretToken",
+      "apiSecret",
+      "passwordExpiry",
+      "arbitraryExpiresOn",
+    ]) {
+      expect(isDraftableField(name, "boat-paper-dates"), name).toBe(false);
+    }
+  });
 });
 
 describe("draftIsFresh", () => {

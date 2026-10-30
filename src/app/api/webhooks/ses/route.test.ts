@@ -123,6 +123,10 @@ describe("ses webhook route — subscription handshake", () => {
 
     const response = await POST(webhookRequest("{}"));
     expect(response.status).toBe(200);
+    expect(verifySnsMessage).toHaveBeenCalledWith(
+      "{}",
+      "arn:aws:sns:us-east-1:123456789012:diveday-ses-email-events",
+    );
     expect(confirmSnsSubscription).toHaveBeenCalledWith(
       "https://sns.us-east-1.amazonaws.com/?Action=ConfirmSubscription",
     );

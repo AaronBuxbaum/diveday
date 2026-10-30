@@ -1,4 +1,11 @@
-import { createHash, createHmac } from "node:crypto";
+import {
+  encodeS3KeyPath,
+  encodeS3KeySegment,
+  sha256S3Payload,
+  signS3RequestHeaders,
+} from "@/lib/storage/s3-signing";
+
+export { encodeS3KeyPath } from "@/lib/storage/s3-signing";
 
 /**
  * A minimal S3-compatible client: AWS Signature Version 4 over `fetch`, PUT
@@ -21,41 +28,6 @@ export type S3Credentials = {
   secretAccessKey: string;
 };
 
-const SERVICE = "s3";
-
-function sha256Hex(data: Uint8Array | string): string {
-  return createHash("sha256").update(data).digest("hex");
-}
-
-function hmac(key: Buffer | string, data: string): Buffer {
-  return createHmac("sha256", key).update(data).digest();
-}
-
-/**
- * RFC 3986 encoding as SigV4 demands it: everything but unreserved characters
- * is percent-encoded, uppercase hex. `encodeURIComponent` gets close; the four
- * characters it leaves bare (`!'()*`) must still be encoded.
- */
-function encodeRfc3986(segment: string): string {
-  return encodeURIComponent(segment).replace(
-    /[!'()*]/g,
-    (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`,
-  );
-}
-
-/** A key's canonical URI path: each slash-separated segment encoded once. */
-export function encodeS3KeyPath(key: string): string {
-  return key.split("/").map(encodeRfc3986).join("/");
-}
-
-/** "20260804T060000Z" — SigV4's basic-format timestamp. */
-function amzDate(now: Date): string {
-  return now
-    .toISOString()
-    .replace(/[-:]/g, "")
-    .replace(/\.\d{3}/, "");
-}
-
 export type SignRequestInput = {
   method: string;
   /** Full request URL. The query string must be empty — this client never signs one. */
@@ -76,51 +48,13 @@ export type SignRequestInput = {
  * vectors assert it byte for byte.
  */
 export function signS3Request(input: SignRequestInput): Record<string, string> {
-  const dateTime = amzDate(input.now);
-  const date = dateTime.slice(0, 8);
-
-  const headers: Record<string, string> = {
-    ...Object.fromEntries(
-      Object.entries(input.headers ?? {}).map(([name, value]) => [
-        name.toLowerCase(),
-        value.trim(),
-      ]),
-    ),
-    host: input.url.host,
-    "x-amz-content-sha256": input.payloadSha256Hex,
-    "x-amz-date": dateTime,
-  };
-
-  const signedHeaderNames = Object.keys(headers).sort();
-  const canonicalHeaders = signedHeaderNames.map((name) => `${name}:${headers[name]}\n`).join("");
-  const signedHeaders = signedHeaderNames.join(";");
-
-  // The pathname arrives already segment-encoded by the URL/`encodeS3KeyPath`;
-  // signing it as-is keeps the signature over exactly the bytes sent.
-  const canonicalRequest = [
-    input.method,
-    input.url.pathname || "/",
-    "", // canonical query string — always empty here
-    canonicalHeaders,
-    signedHeaders,
-    input.payloadSha256Hex,
-  ].join("\n");
-
-  const scope = `${date}/${input.region}/${SERVICE}/aws4_request`;
-  const stringToSign = ["AWS4-HMAC-SHA256", dateTime, scope, sha256Hex(canonicalRequest)].join(
-    "\n",
-  );
-
-  const signingKey = hmac(
-    hmac(hmac(hmac(`AWS4${input.credentials.secretAccessKey}`, date), input.region), SERVICE),
-    "aws4_request",
-  );
-  const signature = createHmac("sha256", signingKey).update(stringToSign).digest("hex");
-
-  return {
-    ...headers,
-    authorization: `AWS4-HMAC-SHA256 Credential=${input.credentials.accessKeyId}/${scope}, SignedHeaders=${signedHeaders}, Signature=${signature}`,
-  };
+  // The pathname arrives already segment-encoded; signing it as-is preserves
+  // the exact path bytes sent by this caller.
+  return signS3RequestHeaders({
+    ...input,
+    accessKeyId: input.credentials.accessKeyId,
+    secretAccessKey: input.credentials.secretAccessKey,
+  });
 }
 
 /**
@@ -184,7 +118,7 @@ export function s3ObjectUrl(input: {
   const base = input.endpoint.replace(/\/+$/, "");
   const encodedKey = encodeS3KeyPath(input.key);
   if (input.addressing !== "virtual-hosted") {
-    return new URL(`${base}/${encodeRfc3986(input.bucket)}/${encodedKey}`);
+    return new URL(`${base}/${encodeS3KeySegment(input.bucket)}/${encodedKey}`);
   }
   // The bucket becomes a host label, so it is never percent-encoded: an S3
   // bucket name is already restricted to DNS-safe characters, and encoding one
@@ -204,7 +138,7 @@ export async function putS3Object(input: PutObjectInput): Promise<PutObjectResul
     method: "PUT",
     url,
     headers: { "content-type": input.contentType },
-    payloadSha256Hex: sha256Hex(input.body),
+    payloadSha256Hex: sha256S3Payload(input.body),
     credentials: input.credentials,
     region: input.region,
     now: input.now,

@@ -11,12 +11,7 @@ import { log } from "@/lib/log";
 import { inboundEmailDomain } from "@/lib/notifications/inbound-address";
 import { inboundMailStoreFromEnvironment } from "@/lib/notifications/inbound-mail-store";
 import { parseSesInboundNotification } from "@/lib/notifications/ses-inbound";
-import {
-  confirmSnsSubscription,
-  readWebhookPayload,
-  verifySnsMessage,
-} from "@/lib/notifications/sns";
-import { logWebhookRefusal } from "@/lib/webhook-refusal";
+import { gateSnsWebhook } from "@/lib/notifications/sns-webhook";
 
 /**
  * Mail a diver sent back (ADR 20260907-two-way-inbox). SES's receipt rule
@@ -36,26 +31,13 @@ import { logWebhookRefusal } from "@/lib/webhook-refusal";
  * verification is a failed S3 read, which is worth SNS's handful of retries.
  */
 export async function POST(request: Request) {
-  const payload = await readWebhookPayload(request);
-  if (payload === null) return new Response(null, { status: 400 });
-
-  const verification = await verifySnsMessage(payload, process.env.EMAIL_INBOUND_SNS_TOPIC_ARN);
-  if (verification.status !== "verified") {
-    logWebhookRefusal("email_inbound", verification.status);
-    return new Response(null, { status: verification.status === "not_configured" ? 503 : 400 });
-  }
-
-  const { message } = verification;
-  if (message.Type === "SubscriptionConfirmation" || message.Type === "UnsubscribeConfirmation") {
-    const confirmed = message.SubscribeURL
-      ? await confirmSnsSubscription(message.SubscribeURL)
-      : false;
-    log("email_inbound.subscription_confirmation", confirmed ? "info" : "warn", {
-      type: message.Type,
-      confirmed,
-    });
-    return new Response(null, { status: 200 });
-  }
+  const gate = await gateSnsWebhook(
+    request,
+    process.env.EMAIL_INBOUND_SNS_TOPIC_ARN,
+    "email_inbound",
+  );
+  if (gate.kind === "response") return gate.response;
+  const { message } = gate;
 
   const now = nowDate();
   const notification = parseSesInboundNotification(message.Message, now);

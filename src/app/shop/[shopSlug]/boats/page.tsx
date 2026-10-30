@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { FlashParams } from "@/components/FlashParams";
+import { KeepTypedOnRefusal } from "@/components/KeepTypedOnRefusal";
 import { keptTypedScope } from "@/components/kept-typed-scope";
 import { RemovablePhoto, removablePhotoGridClass } from "@/components/RemovablePhoto";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
@@ -26,7 +27,6 @@ import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam } from "@/lib/staff-notices";
 import { registerPaneClass } from "../_components/register-pane";
 import { BoatPaperFacts, BoatPaperFields } from "./_components/BoatPaperFields";
-import { KeepBoatTypedOnRefusal } from "./_components/KeepBoatTypedOnRefusal";
 import { createBoatAction, deleteBoatAction, updateBoatAction } from "./actions";
 import { boatCertificateError, boatRowId } from "./certificate-error";
 import { boatNoticeMessages, boatValidationError } from "./notices";
@@ -288,9 +288,11 @@ export default async function BoatsSettingsPage({
           open={Boolean(errorFor("new"))}
         >
           <FieldGrid as="form" columns={2} action={createBoatAction}>
-            <KeepBoatTypedOnRefusal
+            <KeepTypedOnRefusal
+              form="boats-add"
               scope={keptTypedScope(shopSlug, session.user.personId)}
               restore={Boolean(errorFor("new"))}
+              policy="boat-paper-dates"
             />
             <Field label={t("boats.nameLabel")}>
               <input name="name" type="text" required className={controlClass} />
