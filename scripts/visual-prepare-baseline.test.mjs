@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import sharp from "sharp";
@@ -56,6 +56,26 @@ describe("prepareVisualBaseline", () => {
     });
   });
 
+  it("ignores legacy print PDFs in a cached baseline", async () => {
+    const { sourceDir, outputDir } = fixture();
+    writeFileSync(path.join(sourceDir, "baseline.png"), PNG);
+    writeFileSync(path.join(sourceDir, "trip-mixed-training-depth-manifest-print.pdf"), "%PDF");
+
+    await expect(
+      prepareVisualBaseline({
+        bucket: BUCKET,
+        key: KEY,
+        sourceDir,
+        sourceKey: `reg-baseline-${KEY}`,
+        outputDir,
+      }),
+    ).resolves.toMatchObject({ count: 1 });
+    expect(existsSync(path.join(outputDir, "baseline.png"))).toBe(true);
+    expect(existsSync(path.join(outputDir, "trip-mixed-training-depth-manifest-print.pdf"))).toBe(
+      false,
+    );
+  });
+
   it("fetches and validates the public S3 manifest and its named images without AWS credentials", async () => {
     const { outputDir } = fixture();
     const calls = [];
@@ -81,6 +101,38 @@ describe("prepareVisualBaseline", () => {
       `https://${BUCKET}.s3.amazonaws.com/${KEY}/actual/baseline.png`,
     ]);
     expect(readFileSync(path.join(outputDir, "baseline.png"))).not.toEqual(PNG);
+  });
+
+  it("ignores legacy print PDFs in a fetched baseline manifest", async () => {
+    const { outputDir } = fixture();
+    const calls = [];
+    const fetchImpl = async (url) => {
+      calls.push(String(url));
+      if (String(url).endsWith(`${KEY}/out.json`)) {
+        return new Response(
+          JSON.stringify({
+            actualDir: "actual",
+            actualItems: ["baseline.png", "trip-mixed-training-depth-manifest-print-a4.pdf"],
+          }),
+          { status: 200 },
+        );
+      }
+      if (String(url).endsWith(`${KEY}/actual/baseline.png`)) {
+        return new Response(PNG, { status: 200 });
+      }
+      return new Response(null, { status: 404 });
+    };
+
+    await expect(
+      prepareVisualBaseline({ bucket: BUCKET, key: KEY, outputDir, fetchImpl }),
+    ).resolves.toMatchObject({ count: 1 });
+    expect(calls).toEqual([
+      `https://${BUCKET}.s3.amazonaws.com/${KEY}/out.json`,
+      `https://${BUCKET}.s3.amazonaws.com/${KEY}/actual/baseline.png`,
+    ]);
+    expect(
+      existsSync(path.join(outputDir, "trip-mixed-training-depth-manifest-print-a4.pdf")),
+    ).toBe(false);
   });
 
   it("does not use a cache restored for a different baseline key", async () => {
@@ -124,6 +176,15 @@ describe("prepareVisualBaseline", () => {
         key: KEY,
         outputDir,
         fetchImpl: fetchWithReport({ actualDir: "actual", actualItems: ["../outside.png"] }),
+      }),
+    ).rejects.toThrow(/unsafe screenshot name/u);
+
+    await expect(
+      prepareVisualBaseline({
+        bucket: BUCKET,
+        key: KEY,
+        outputDir,
+        fetchImpl: fetchWithReport({ actualDir: "actual", actualItems: ["../outside.pdf"] }),
       }),
     ).rejects.toThrow(/unsafe screenshot name/u);
 
