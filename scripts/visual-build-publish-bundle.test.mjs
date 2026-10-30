@@ -55,4 +55,23 @@ describe("buildVisualPublishBundle", () => {
     writeFileSync(path.join(unsupported.sourceDir, "run.sh"), "echo not executable here");
     expect(() => buildVisualPublishBundle(unsupported)).toThrow(/unsupported file type/u);
   });
+
+  it("includes only reg-suit's root browser detector WebAssembly asset", () => {
+    const { sourceDir, bundleDir } = fixture();
+    const detector = Buffer.from([0x00, 0x61, 0x73, 0x6d]);
+    writeFileSync(path.join(sourceDir, "detector.wasm"), detector);
+
+    expect(buildVisualPublishBundle({ sourceDir, bundleDir })).toMatchObject({ count: 1 });
+    expect(readFileSync(path.join(bundleDir, "manifest.tsv"), "utf8")).toBe(
+      "detector.wasm\tapplication/wasm\n",
+    );
+    expect(
+      gunzipSync(readFileSync(path.join(bundleDir, "payload", "detector.wasm.gz"))),
+    ).toEqual(detector);
+
+    const nested = fixture();
+    mkdirSync(path.join(nested.sourceDir, "assets"));
+    writeFileSync(path.join(nested.sourceDir, "assets", "detector.wasm"), detector);
+    expect(() => buildVisualPublishBundle(nested)).toThrow(/unsupported file type/u);
+  });
 });
