@@ -31,7 +31,7 @@
 // push to `main` reporting every surface as new. Both keys stay full shas.
 //
 // Consumed by `scripts/visual-compare.mjs` (which puts them in the environment
-// `regconfig.json` reads) and by the `visual-report` job in
+// `regconfig.json` reads) and by the trusted `reg-suit-publish.yml` workflow in
 // `.github/workflows/ci.yml` (which also needs the expected key *before* the
 // compare, to settle it on a commit that actually published —
 // `scripts/wait-for-baseline.mjs`).
@@ -85,22 +85,30 @@ function attempt(git, args) {
 export function resolveRegSuitKeys({ env = process.env, git }) {
   const event = env.GITHUB_EVENT_NAME || "local";
   const defaultBranch = env.DEFAULT_BRANCH || "main";
-  const actualKey = attempt(git, ["rev-parse", "HEAD"]);
-
-  // A tripwire, not a fallback. This job checks out `pull_request.head.sha`
-  // deliberately (the merge commit is ephemeral and is never a reg-suit key),
-  // and if that ever regresses to a default checkout the keys would be computed
-  // from a commit that exists only inside this run — published under a sha no
-  // later run can ask for. Fail on the mismatch instead of publishing it.
+  const trustedPublisher = event === "pull_request" && env.REG_SUIT_TRUSTED_BASE_CODE === "true";
   const declaredHead = env.PR_HEAD_SHA;
-  if (declaredHead && actualKey && declaredHead !== actualKey) {
+  if (trustedPublisher && !COMMIT_SHA.test(declaredHead ?? "")) {
+    throw new Error("reg-suit-keys: trusted publisher requires the event's full PR head sha.");
+  }
+  const historyRef = trustedPublisher ? declaredHead : "HEAD";
+  const actualKey = trustedPublisher
+    ? attempt(git, ["rev-parse", `${declaredHead}^{commit}`])
+    : attempt(git, ["rev-parse", "HEAD"]);
+
+  // A tripwire, not a fallback. The original publisher checked out
+  // `pull_request.head.sha` deliberately because the merge commit is ephemeral
+  // and is never a reg-suit key. The trusted reusable publisher checks out
+  // `main` code, fetches the event's PR head as a git object without checking
+  // it out, and asks us to resolve keys against that object. The event sha is
+  // accepted only in that fixed workflow.
+  if (!trustedPublisher && declaredHead && actualKey && declaredHead !== actualKey) {
     throw new Error(
       `reg-suit-keys: HEAD is ${actualKey} but the event says the pull request head is ${declaredHead}. ` +
-        "The visual-report job must check out the head commit itself; a merge commit is never a reg-suit key.",
+        "A merge commit is never a reg-suit key.",
     );
   }
 
-  const parent = () => attempt(git, ["rev-parse", "HEAD^"]);
+  const parent = () => attempt(git, ["rev-parse", `${historyRef}^`]);
   let expectedKey = null;
   let source = "";
 
@@ -136,14 +144,14 @@ export function resolveRegSuitKeys({ env = process.env, git }) {
     // statement about the merged result. The bottom layer is unaffected: its
     // base *is* the default branch, so this resolves the same commit it always
     // did (ADR 20260919-stack-ci-cancels-superseded-layers).
-    expectedKey = attempt(git, ["merge-base", `origin/${defaultBranch}`, "HEAD"]);
+    expectedKey = attempt(git, ["merge-base", `origin/${defaultBranch}`, historyRef]);
     if (expectedKey) source = `merge-base with origin/${defaultBranch}`;
     // Only for a pull request that targets the default branch directly. For a
     // stacked layer `PR_BASE_SHA` is the layer below's head, which is the one
     // answer this no longer wants; falling back to it would reintroduce the
     // dependency by the back door on the one path nobody watches.
     if (!expectedKey && baseRef === defaultBranch && COMMIT_SHA.test(env.PR_BASE_SHA ?? "")) {
-      expectedKey = attempt(git, ["merge-base", env.PR_BASE_SHA, "HEAD"]) ?? env.PR_BASE_SHA;
+      expectedKey = attempt(git, ["merge-base", env.PR_BASE_SHA, historyRef]) ?? env.PR_BASE_SHA;
       source = "merge-base with the event's base sha (the base branch is gone)";
     }
   } else if (event === "push" || event === "workflow_dispatch") {
@@ -195,6 +203,20 @@ function writeLines(file, lines) {
 }
 
 function main(argv) {
+  if (
+    process.env.GITHUB_EVENT_NAME === "pull_request" &&
+    process.env.REG_SUIT_TRUSTED_BASE_CODE === "true"
+  ) {
+    const head = process.env.PR_HEAD_SHA ?? "";
+    if (!COMMIT_SHA.test(head)) {
+      throw new Error("reg-suit-keys: trusted publisher requires the event's full PR head sha.");
+    }
+    readBounded("git", ["fetch", "--no-tags", "origin", head], {
+      encoding: "utf8",
+      timeoutMs: SUBPROCESS_TIMEOUTS.gitFetch,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+  }
   const keys = resolveRegSuitKeys({ git: gitReader() });
   const { actualKey, expectedKey, stacked, source } = keys;
 
