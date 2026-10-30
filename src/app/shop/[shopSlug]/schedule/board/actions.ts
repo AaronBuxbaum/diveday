@@ -44,6 +44,7 @@ import {
   type WeekdaySet,
   weekdaySetFrom,
 } from "@/lib/recurrence";
+import { signScheduleMoveResult } from "@/lib/schedule-move-result";
 import { requireShopSurface, requireStaffSession } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 import { MAX_TRIP_DAYS, MIN_TRIP_DAYS } from "@/lib/trip-days";
@@ -834,7 +835,7 @@ export async function moveDepartureAction(shopSlug: string, formData: FormData) 
   });
   // **Tell the divers** (ux review 2026-10-11, item 1): every booked seat
   // hears the new time after the same eight-second hold every staff send
-  // takes; the board shows "Telling 6 divers the new time" with Undo. Nothing
+  // takes; the board shows count-free progress with Undo. Nothing
   // is held for a departure with nobody on it.
   const notice = await holdRescheduleNotice(db, {
     shopId: shop.id,
@@ -843,10 +844,9 @@ export async function moveDepartureAction(shopSlug: string, formData: FormData) 
     meetingPointMoved: false,
     actorPersonId: session.user.personId,
   });
-  // A move that had to let go of gear says so on the way back. Silence here is
-  // a unit somebody still thinks is packed for this departure.
+  // The shop-bound proof keeps a copied or invented gear count from becoming a warning.
   const params = new URLSearchParams({ builder: "moved" });
-  if (outcome.gearReleased > 0) params.set("gear", String(outcome.gearReleased));
+  params.set("result", signScheduleMoveResult(shop.id, crypto.randomUUID(), outcome.gearReleased));
   if (notice) {
     params.set("held", notice.id);
     params.set("tell", String(notice.told));

@@ -1870,7 +1870,7 @@ describe("createBooking identity safeguard (H-13)", () => {
       async function secondHeldSeat(db: AppDb, shopId: string, fullName: string) {
         const all = await upcomingTripsWithCounts(db, shopId);
         const other = all.find(
-          (t) => !t.title.startsWith("Night Dive") && t.title !== "Wreck Trip — Spiegel Grove",
+          (t) => !t.title.startsWith("Night Dive") && t.booked < t.sellableCapacity,
         );
         if (!other) throw new Error("expected another seeded trip");
         const seat = await createBooking(db, {

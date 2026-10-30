@@ -11,7 +11,7 @@
   "deleteConfirm": "Delete",
   "deleteCancel": "Never mind",
   "deletePending": "Deleting…",
-  "deleteDepartures": "{count, plural, one {# departure carries this tag and loses it.} other {# departures carry this tag and lose it.}}",
+  "deleteDepartures": "{count, plural, one {Trip history keeps this tag attached to # departure, even after you delete it.} other {Trip history keeps this tag attached to # departures, even after you delete it.}}",
   "noLenses": "No trip tags yet",
   "created": "Trip tag added",
   "updated": "Trip tag saved",

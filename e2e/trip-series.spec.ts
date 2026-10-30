@@ -41,7 +41,7 @@ test("a repeating trip is scheduled on two weekdays, stopped, and canceled as on
   await page.getByLabel("Date").fill(startDate);
   await page.getByLabel("Departs").fill("08:00");
   await page.getByLabel("Returns").fill("11:00");
-  await page.getByLabel("Seats").fill("6");
+  await page.getByLabel("Passenger places").fill("6");
   await page.getByLabel("How often").selectOption("1");
 
   // The chosen date's own weekday is pre-checked, so the shop only adds the
@@ -139,7 +139,7 @@ test("an open-ended run says it keeps going on the board's last month", async ({
   await page.getByLabel("Date").fill(daysFromNow(5));
   await page.getByLabel("Departs").fill("08:00");
   await page.getByLabel("Returns").fill("11:00");
-  await page.getByLabel("Seats").fill("6");
+  await page.getByLabel("Passenger places").fill("6");
   await page.getByLabel("How often").selectOption("1");
   await page.getByRole("button", { name: "Put it on the board" }).click();
   await expect(page.getByRole("status")).toContainText(title);
@@ -195,7 +195,7 @@ test("applying a series' standing crew reaches later dates, and spares one a cre
   await page.getByLabel("Date").fill(first);
   await page.getByLabel("Departs").fill("05:00");
   await page.getByLabel("Returns").fill("07:00");
-  await page.getByLabel("Seats").fill("6");
+  await page.getByLabel("Passenger places").fill("6");
   await page.getByLabel("How often").selectOption("1");
   await page.getByRole("button", { name: "Put it on the board" }).click();
   await expect(page.getByRole("status")).toContainText(title);

@@ -2,6 +2,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  CapacityField,
   CourseSelect,
   DayKindSelects,
   DescriptionAndPrivacy,
@@ -35,6 +36,35 @@ const OPTIONS: BuilderOptions = {
   boats: [{ id: "b1", name: "Mantis II", capacity: 14 }],
   lenses: [{ id: "l1", title: "Night" }],
 };
+
+describe("CapacityField", () => {
+  it("warns when passenger places exceed boat capacity after assigned crew reserves places", () => {
+    const copy = new Proxy({} as BuilderCopy, {
+      get: (_, key) =>
+        key === "boatCapacityWarning" ? "Capacity left after crew: {count}." : String(key),
+    });
+    const { rerender } = render(
+      <CapacityField
+        copy={copy}
+        capacity={7}
+        boatCapacity={8}
+        assignedCrewCount={2}
+        setCapacity={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("Capacity left after crew: 6.")).toBeTruthy();
+    rerender(
+      <CapacityField
+        copy={copy}
+        capacity={6}
+        boatCapacity={8}
+        assignedCrewCount={2}
+        setCapacity={vi.fn()}
+      />,
+    );
+    expect(screen.queryByText("Capacity left after crew: 6.")).toBeNull();
+  });
+});
 
 describe("PayAtBookingGroup", () => {
   it("leaves the submission while collapsed, and offers its four boxes when open", () => {
@@ -103,7 +133,7 @@ describe("CourseSelect", () => {
     expect(screen.getByRole("option", { name: "Deep" })).toBeTruthy();
     // No "Loading…" option: the box pulses, busy, and says no word (A33).
     expect(screen.queryByRole("option", { name: /loading/i })).toBeNull();
-    expect(screen.getByRole("combobox")).toHaveAttribute("aria-busy", "true");
+    expect(screen.getByRole("combobox").getAttribute("aria-busy")).toBe("true");
   });
 });
 
@@ -182,7 +212,7 @@ describe("DayKindSelects", () => {
     expect(mode?.value).toBe("boat");
   });
 
-  it("takes a picked boat's capacity as the seat count", () => {
+  it("starts passenger places from a picked boat's maximum total occupants", () => {
     const setCapacity = vi.fn();
     const { container } = render(
       <DayKindSelects

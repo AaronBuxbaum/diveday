@@ -11,7 +11,7 @@ import { type HeldTicket, SendHold } from "@/components/SendHold";
 import { buttonClass } from "@/components/ui/button";
 
 export type RescheduleHoldCopy = {
-  /** "Telling 6 divers the new time…", already counted. */
+  /** Count-free progress while a reschedule notice is being sent. */
   telling: string;
   /** "Told 6 divers the new time.", one per count from 1 to the seats held for. */
   told: Record<number, string>;

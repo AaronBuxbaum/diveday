@@ -77,11 +77,16 @@ export async function countShopTrips(db: DbExecutor, shopId: string): Promise<nu
 
 export type TripWithBookedCount = typeof trips.$inferSelect & {
   booked: number;
+  /** The boat's raw total-occupant capacity, including assigned crew places. */
+  boatCapacity: number | null;
+  /** Crew assignments on this trip, each reserving one boat occupant place. */
+  assignedCrewCount: number;
   /**
    * The seats this departure may actually sell (H-107, #2321): `capacity`
-   * capped at its boat's certificate (`sellableSeats`). Every seats-left a
-   * diver reads is measured against this; `capacity` stays the stated number
-   * the details form edits.
+   * capped at the boat's passenger certificate and total-occupant capacity
+   * after assigned crew places (`sellableSeats`). Every seats-left read is
+   * measured against this; `capacity` stays the passenger-place count the
+   * details form edits.
    */
   sellableCapacity: number;
   /**
@@ -118,6 +123,8 @@ export async function upcomingTripsWithCounts(
       booked: count(bookings.id),
       bookedDivers: bookedDiversCount(),
       certifiedPassengers: tripBoatCertifiedPassengers(),
+      boatCapacity: tripBoatCapacity(),
+      assignedCrewCount: tripAssignedCrewCount(),
     })
     .from(trips)
     .leftJoin(courses, eq(courses.id, trips.courseId))
@@ -135,13 +142,24 @@ export async function upcomingTripsWithCounts(
     // The paged board's own order, so the two never disagree over same-minute boats.
     .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id));
 
-  return rows.map(({ trip, course, diveSite, booked, bookedDivers, certifiedPassengers }) => ({
-    ...withSellableCapacity(trip, certifiedPassengers),
-    course,
-    diveSite,
-    booked,
-    bookedDivers,
-  }));
+  return rows.map(
+    ({
+      trip,
+      course,
+      diveSite,
+      booked,
+      bookedDivers,
+      certifiedPassengers,
+      boatCapacity,
+      assignedCrewCount,
+    }) => ({
+      ...withSellableCapacity(trip, certifiedPassengers, boatCapacity, assignedCrewCount),
+      course,
+      diveSite,
+      booked,
+      bookedDivers,
+    }),
+  );
 }
 
 /**
@@ -280,7 +298,7 @@ function upcomingTripScope(
  * of the row as functionally dependent on it.
  */
 function hasSpaceHaving(hasSpace: boolean | undefined) {
-  return hasSpace ? sql`count(${bookings.id}) < ${sellableSeatsSql()}` : undefined;
+  return hasSpace ? sql`count(${bookings.id}) < ${tripSellableSeatsSql()}` : undefined;
 }
 
 /**
@@ -301,22 +319,50 @@ export const tripBoatCertifiedTotalPersons = () =>
     number | null
   >`(select ${boats.certifiedTotalPersons} from ${boats} where ${boats.id} = ${trips.boatId} and ${boats.shopId} = ${trips.shopId})`;
 
+/** Raw total occupants allowed aboard the assigned hull, or null without one. */
+export const tripBoatCapacity = () =>
+  sql<
+    number | null
+  >`(select ${boats.capacity} from ${boats} where ${boats.id} = ${trips.boatId} and ${boats.shopId} = ${trips.shopId})`;
+
+/** Every assigned crew member reserves one occupant place, whether boarded yet or not. */
+export const tripAssignedCrewCount = () =>
+  sql<number>`(select count(*)::int from ${tripAssignments} where ${tripAssignments.tripId} = ${trips.id})`.mapWith(
+    Number,
+  );
+
 /**
  * `sellableSeats` spelled in SQL, for the one place the number has to be
  * compared inside the query: `hasSpace`'s `having`, which a page of results
  * cannot filter after the fact. Every row read returns the number through
  * `sellableSeats` itself; `certificate-ceiling.test.ts` pins the two together.
  */
-function sellableSeatsSql() {
-  return sql`least(${trips.capacity}, coalesce(${tripBoatCertifiedPassengers()}, ${trips.capacity}))`;
+export function tripSellableSeatsSql() {
+  return sql<number>`greatest(0, least(
+    ${trips.capacity},
+    coalesce(${tripBoatCertifiedPassengers()}, ${trips.capacity}),
+    coalesce(${tripBoatCapacity()} - ${tripAssignedCrewCount()}, ${trips.capacity})
+  ))`.mapWith(Number);
 }
 
 /** A counted trip row with its seats on sale beside its stated capacity. */
 function withSellableCapacity<T extends { capacity: number }>(
   trip: T,
   certifiedPassengers: number | null,
-): T & { sellableCapacity: number } {
-  return { ...trip, sellableCapacity: sellableSeats(trip.capacity, certifiedPassengers) };
+  boatCapacity: number | null,
+  assignedCrewCount: number,
+): T & { boatCapacity: number | null; assignedCrewCount: number; sellableCapacity: number } {
+  return {
+    ...trip,
+    boatCapacity,
+    assignedCrewCount,
+    sellableCapacity: sellableSeats(
+      trip.capacity,
+      certifiedPassengers,
+      boatCapacity,
+      assignedCrewCount,
+    ),
+  };
 }
 
 /**
@@ -412,18 +458,48 @@ export async function heldSeatCounts(
 }
 
 /**
- * **The capacity a seat-granting gate measures against** (H-107): the
- * departure's own seats, capped at its boat's certificate passenger limit
- * (`sellableSeats`). Read by the caller inside the transaction that holds the
- * trip-row lock, beside `heldSeatCounts`, and handed to `seatRefusal` in place
- * of `trip.capacity`. A deleted boat's certificate still binds: the hull is the
- * same hull.
+ * **The passenger capacity a seat-granting gate measures against** (H-107):
+ * the departure's passenger places, capped at the boat's passenger certificate
+ * and total-occupant capacity after assigning one place per crew member
+ * (`sellableSeats`). A grant calls this inside the transaction holding the
+ * trip-row lock, beside `heldSeatCounts`, and hands it to `seatRefusal` in
+ * place of `trip.capacity`. Crew writers take that same trip lock, and the
+ * boat read is shared-locked after it, so either writer sees the other commit.
+ * A deleted boat still binds: the hull is the same hull.
  */
 export async function sellableCapacity(
   tx: DbExecutor,
-  trip: { shopId: string; boatId: string | null; capacity: number },
+  trip: {
+    shopId: string;
+    boatId: string | null;
+    capacity: number;
+    id?: string;
+    tripId?: string;
+  },
 ): Promise<number> {
-  return sellableSeats(trip.capacity, await boatCertifiedPassengers(tx, trip.shopId, trip.boatId));
+  const tripId = trip.id ?? trip.tripId;
+  if (!tripId) throw new Error("sellableCapacity requires the trip id to count assigned crew");
+  const [boat] = trip.boatId
+    ? await tx
+        .select({ capacity: boats.capacity, certifiedPassengers: boats.certifiedPassengers })
+        .from(boats)
+        .where(and(eq(boats.id, trip.boatId), eq(boats.shopId, trip.shopId)))
+        // Seat grants already hold the trip row. Boat-capacity edits lock
+        // affected trips before the boat row, so this shared read keeps the
+        // same trip -> boat lock order.
+        .for("share", { of: boats })
+        .limit(1)
+    : [];
+  const [crew] = await tx
+    .select({ total: count() })
+    .from(tripAssignments)
+    .where(eq(tripAssignments.tripId, tripId));
+  return sellableSeats(
+    trip.capacity,
+    boat?.certifiedPassengers ?? null,
+    boat?.capacity ?? null,
+    crew?.total ?? 0,
+  );
 }
 
 /** The boat's certificate passenger limit, or null when there is no boat or none recorded. */
@@ -487,6 +563,8 @@ export async function pagedUpcomingTripsWithCounts(
       booked: count(bookings.id),
       bookedDivers: bookedDiversCount(),
       certifiedPassengers: tripBoatCertifiedPassengers(),
+      boatCapacity: tripBoatCapacity(),
+      assignedCrewCount: tripAssignedCrewCount(),
     })
     .from(trips)
     .leftJoin(courses, eq(courses.id, trips.courseId))
@@ -520,13 +598,24 @@ export async function pagedUpcomingTripsWithCounts(
 
   const page = rows
     .slice(0, limit)
-    .map(({ trip, course, diveSite, booked, bookedDivers, certifiedPassengers }) => ({
-      ...withSellableCapacity(trip, certifiedPassengers),
-      course,
-      diveSite,
-      booked,
-      bookedDivers,
-    }));
+    .map(
+      ({
+        trip,
+        course,
+        diveSite,
+        booked,
+        bookedDivers,
+        certifiedPassengers,
+        boatCapacity,
+        assignedCrewCount,
+      }) => ({
+        ...withSellableCapacity(trip, certifiedPassengers, boatCapacity, assignedCrewCount),
+        course,
+        diveSite,
+        booked,
+        bookedDivers,
+      }),
+    );
   const last = page.at(-1);
   return {
     trips: page,
@@ -642,6 +731,8 @@ export async function offsetUpcomingTripsWithCounts(
           booked: count(bookings.id),
           bookedDivers: bookedDiversCount(),
           certifiedPassengers: tripBoatCertifiedPassengers(),
+          boatCapacity: tripBoatCapacity(),
+          assignedCrewCount: tripAssignedCrewCount(),
         })
         .from(trips)
         .leftJoin(courses, eq(courses.id, trips.courseId))
@@ -657,8 +748,17 @@ export async function offsetUpcomingTripsWithCounts(
 
   return {
     trips: paged.rows.map(
-      ({ trip, course, diveSite, booked, bookedDivers, certifiedPassengers }) => ({
-        ...withSellableCapacity(trip, certifiedPassengers),
+      ({
+        trip,
+        course,
+        diveSite,
+        booked,
+        bookedDivers,
+        certifiedPassengers,
+        boatCapacity,
+        assignedCrewCount,
+      }) => ({
+        ...withSellableCapacity(trip, certifiedPassengers, boatCapacity, assignedCrewCount),
         course,
         diveSite,
         booked,
@@ -783,7 +883,7 @@ export async function upcomingScheduleStats(
   const perTrip = db
     .select({
       tripId: trips.id,
-      capacity: trips.capacity,
+      capacity: tripSellableSeatsSql().as("capacity"),
       booked: count(bookings.id).as("booked"),
     })
     .from(trips)
@@ -970,6 +1070,8 @@ export async function listUpcomingSessionsForCourse(
       siteName: diveSites.name,
       booked: count(bookings.id),
       certifiedPassengers: tripBoatCertifiedPassengers(),
+      boatCapacity: tripBoatCapacity(),
+      assignedCrewCount: tripAssignedCrewCount(),
     })
     .from(trips)
     .leftJoin(bookings, liveBookingJoin)
@@ -994,12 +1096,14 @@ export async function listUpcomingSessionsForCourse(
     .groupBy(trips.id, diveSites.id)
     .orderBy(asc(trips.startsAt));
   // A diver-only read: `capacity` here is the seats on sale (#2321).
-  return rows.map(({ trip, siteName, booked, certifiedPassengers }) => ({
-    ...trip,
-    siteName,
-    capacity: sellableSeats(trip.capacity, certifiedPassengers),
-    booked,
-  }));
+  return rows.map(
+    ({ trip, siteName, booked, certifiedPassengers, boatCapacity, assignedCrewCount }) => ({
+      ...trip,
+      siteName,
+      capacity: sellableSeats(trip.capacity, certifiedPassengers, boatCapacity, assignedCrewCount),
+      booked,
+    }),
+  );
 }
 
 /**
@@ -1214,6 +1318,9 @@ export async function weekBoard(
     .select({
       trip: trips,
       diveSiteName: diveSites.name,
+      certifiedPassengers: tripBoatCertifiedPassengers(),
+      boatCapacity: tripBoatCapacity(),
+      assignedCrewCount: tripAssignedCrewCount(),
       // `countDistinct`, not `count`: the meeting-window join multiplies a
       // multi-day course's rows by its days, and a plain count would report a
       // three-day class as three times as booked as it is.
@@ -1267,8 +1374,23 @@ export async function weekBoard(
 
   const spans: WeekBoardSpan[] = [];
   const sailedBefore = new Date(now.getTime() - 60 * 60 * 1000);
-  for (const { trip, diveSiteName, booked, course } of overlapping) {
+  for (const {
+    trip,
+    diveSiteName,
+    booked,
+    course,
+    certifiedPassengers,
+    boatCapacity,
+    assignedCrewCount,
+  } of overlapping) {
     const priceCents = perDiverBookingPriceCents(trip, course);
+    // Sailed rows have no live availability to report, and their crew
+    // assignments are not historical snapshots. For current and upcoming
+    // departures, show the same passenger ceiling the booking gate enforces.
+    const capacity =
+      trip.endsAt < sailedBefore
+        ? trip.capacity
+        : sellableSeats(trip.capacity, certifiedPassengers, boatCapacity, assignedCrewCount);
     // A trip with no meeting rows at all is its own single window — the same
     // reading `tripScheduleDayCounts` callers already take.
     const windows = windowsByTrip.get(trip.id) ?? [trip.startsAt];
@@ -1282,7 +1404,7 @@ export async function weekBoard(
         dayCount: windows.length,
         status: trip.endsAt < sailedBefore ? "sailed" : "upcoming",
         booked,
-        capacity: trip.capacity,
+        capacity,
         priceCents,
         instructorName: null,
       });
@@ -1295,7 +1417,7 @@ export async function weekBoard(
       startsAt: trip.startsAt,
       endsAt: trip.endsAt,
       booked,
-      capacity: trip.capacity,
+      capacity,
       priceCents,
       isRehearsal: trip.isRehearsal,
       status: trip.endsAt < sailedBefore ? "sailed" : "upcoming",

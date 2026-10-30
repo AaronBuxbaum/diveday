@@ -295,8 +295,9 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     // shop copies can review this wording change without losing their own
     // overview, pricing, or photography. Version 3 adds PADI's Youth Diving
     // acknowledgment (10615) for students up to 11 (issue #2265): a shop on
-    // version 2 is offered it, and the pull sets it up with its age.
-    version: 3,
+    // version 2 is offered it, and the pull sets it up with its age. Version 4
+    // separates the eLearning fee from course-fee inclusions (issue #3136).
+    version: 4,
     title: "Open Water Diver",
     agency: "padi",
     standardForms: PADI_OPEN_WATER_FORMS,
@@ -328,7 +329,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         // sentence twice in a row (2026-08-28 diver-views review, finding 16).
         "Divers aged 10–11 certify as Junior Open Water Divers, dive to a maximum of {depth12}, and must dive with a PADI Professional or a certified parent or guardian; divers aged 12–14 dive to {depth18} with any certified adult. Those restrictions lift at 15. Every student completes a medical questionnaire first; some answers need a physician's sign-off before getting in the water.",
       includes: [
-        "All PADI learning materials and certification fees",
+        "PADI certification fees",
         "Complete rental gear for the whole course",
         "Four open-water training dives",
         "Light lunch on full days",

@@ -4,7 +4,6 @@ import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { bindFormDraft, draftForForm } from "@/app/actions/form-draft-props";
 import { EmptyState } from "@/components/EmptyState";
-import { ShopNotice } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { canPersonConfigureTrips } from "@/db/authz";
 import { listBoats, listBoatsForHistory } from "@/db/boats";
@@ -18,11 +17,10 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { toShopCurrency } from "@/lib/money";
 import { requireShopSurface } from "@/lib/session";
-import { noticeRole } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { resolveWeekStart, weekDates } from "@/lib/week-board";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
-import { RescheduleNotice } from "../../_components/RescheduleNotice";
+import { resolveRescheduleNoticeSnapshot } from "../../_components/RescheduleNotice";
 import { ScheduleViews } from "../_components/ScheduleViews";
 import { BoardPageShell } from "./_components/BoardPageShell";
 import { requestedCourseAndSite, weekAroundRead } from "./_components/board-reads";
@@ -35,6 +33,7 @@ import {
 } from "./_components/builder-copy";
 import { builderCoursePriceLabel } from "./_components/builder-course-options";
 import { builderRequestPlan } from "./_components/builder-request-plan";
+import { ScheduleBoardNoticeView } from "./_components/ScheduleBoardNoticeView";
 import {
   type BuilderInitialCourse,
   type BuilderInitialSite,
@@ -50,7 +49,7 @@ import {
   moveDepartureAction,
   removeDepartureAction,
 } from "./actions";
-import { builderNoticeFor } from "./builder-notices";
+import { builderNoticeFor, verifiedGearMoveNotice } from "./builder-notices";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -86,21 +85,11 @@ export default async function ScheduleBoardPage({
   await connection(); // schedule is live data — render per request, not at build
   const { shopSlug } = await params;
   const query = await searchParams;
-  const {
-    builder,
-    count,
-    created,
-    gear,
-    held,
-    tell,
-    series,
-    add,
-    date,
-    course,
-    requests,
-    site,
-    week,
-  } = query;
+  const { builder, count, created, held, tell, series, add, date, course, requests, site, week } =
+    query;
+  const actionResultKey =
+    query.result ??
+    (builder ? [builder, count, created, series].filter(Boolean).join(":") : undefined);
   const createPage = query._createPage === "1";
   const legacyHref = legacyAddHref(shopSlug, query);
   if (legacyHref) redirect(legacyHref);
@@ -210,7 +199,12 @@ export default async function ScheduleBoardPage({
   const hasUpcoming = range.first !== null;
   const requestPlan = builderRequestPlan({ requestRows, shop, shopBoats, st });
 
-  const builderNotice = builderNoticeFor({ builder, count, created, gear, series, st });
+  const builderNotice = builderNoticeFor({ builder, count, created, series, st });
+  const rescheduleNotice =
+    builder === "moved" || (held !== undefined && tell !== undefined)
+      ? await resolveRescheduleNoticeSnapshot({ shopId: shop.id, heldId: held, tell, t: st })
+      : null;
+  const gearNotice = builder === "moved" ? verifiedGearMoveNotice(query.result, shop.id, st) : null;
   const builderCopy = scheduleBuilderCopy(st, shop.timezone);
 
   const builderMore = scheduleBuilderMore(st, locale);
@@ -305,20 +299,13 @@ export default async function ScheduleBoardPage({
           a phone it pushed the first departure two screens down. The board
           rows carry the operational facts (design/principles.md #10:
           remove until it breaks). */}
-      {builderNotice ? (
-        <ShopNotice
-          tone={builderNotice.tone}
-          role={noticeRole(builderNotice.tone)}
-          className="mb-6"
-        >
-          {builderNotice.message}
-          {builder === "moved" ? (
-            <div className="mt-2">
-              <RescheduleNotice shopId={shop.id} heldId={held} tell={tell} t={st} />
-            </div>
-          ) : null}
-        </ShopNotice>
-      ) : null}
+      <ScheduleBoardNoticeView
+        notice={builderNotice}
+        initialNotice={rescheduleNotice}
+        gearMessage={gearNotice?.message}
+        resultId={gearNotice?.id}
+        resultKey={actionResultKey}
+      />
 
       {!createPage && !hasUpcoming ? (
         <EmptyState

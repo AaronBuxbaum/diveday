@@ -49,7 +49,7 @@ describe("transparent request advisor", () => {
     expect(advice.experienceMix).toEqual({ never: 1, tried: 1, certified: 0, lapsed: 0 });
   });
 
-  it("suggests the smallest boat that fits the party", () => {
+  it("suggests the smallest boat that fits passengers plus the recommended crew", () => {
     const boats = [
       { id: "big", name: "Large Catamaran", capacity: 24 },
       { id: "small", name: "Small Rib", capacity: 8 },
@@ -64,12 +64,12 @@ describe("transparent request advisor", () => {
     );
     expect(advice.estimatedDivers).toBe(10);
     expect(advice.suggestedBoat?.name).toBe("Monohull");
-    expect(advice.suggestedCapacity).toBe(14);
+    expect(advice.suggestedCapacity).toBe(10);
     expect(advice.exceedsKnownBoats).toBe(false);
     expect(advice.suggestedDepartureCount).toBe(1);
   });
 
-  it("flags when party size exceeds every known boat", () => {
+  it("flags when passengers plus recommended crew exceed every known boat", () => {
     const boats = [
       { id: "small", name: "Small Rib", capacity: 8 },
       { id: "medium", name: "Monohull", capacity: 12 },
@@ -104,14 +104,12 @@ describe("transparent request advisor", () => {
     expect(advice.exceedsKnownBoats).toBe(false);
   });
 
-  it("crews for the divers who asked, not for a suggested hull's empty seats", () => {
-    // A party of four on the smallest free 12-seat boat wants one divemaster,
-    // not the two a 12-seat capacity would imply at a 3:1 target.
+  it("reserves the recommended crew from a suggested boat's total occupants", () => {
     const advice = transparentHeadcountAdvisor(
       [{ id: "one", divers: 4, experienceLevel: "certified", courseId: null }],
       withHulls([{ id: "a", name: "Rib", capacity: 12 }], 3),
     );
-    expect(advice.suggestedCapacity).toBe(12);
+    expect(advice.suggestedCapacity).toBe(4);
     expect(advice.suggestedDivemasters).toBe(2);
   });
 

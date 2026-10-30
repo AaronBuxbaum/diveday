@@ -817,36 +817,37 @@
   array rather than a widened roll-call event, and its own answer — checked, by whom, when, or
   explicitly not checked — is what the **departure log** prints.
   See [20260824-pre-departure-safety-check](../../architecture/decisions/20260824-pre-departure-safety-check.md).
+- **Boat capacity** — `boats.capacity`, the total people aboard the hull: passengers plus crew.
+  Existing numbers stay as entered and are interpreted this way. `trips.capacity` remains
+  passenger places. The effective passenger limit is the lowest of trip capacity, the optional
+  passenger certificate, and boat capacity minus one place for each assigned crew member
+  (`sellableCapacity`). Seat grants use that value under the trip-row lock; assigned-crew changes
+  lock the same trip, and boat-capacity edits lock affected trips before the boat row. Adding crew
+  can leave existing bookings above the new limit; those bookings stay, and new grants stop until
+  there is room.
 - **Certificate passenger limit** — the passenger ceiling printed on a passenger vessel's
   certificate (in the US, the Coast Guard's Certificate of Inspection), stored as
-  `boats.certified_passengers` beside the boat's own `capacity`. The two are different numbers:
-  capacity is the seats the shop sells, a business choice, and the certificate is what a boarding
-  officer counts against. When the people booked on a departure pass it, the departure's **Boat**
-  tab says so in danger ink above the **pre-departure checklist**; once the crew have recorded more
-  people aboard than it allows, the line counts them ("13 passengers aboard") instead of the
-  bookings. **No seat above it is sold** (H-107): a boat whose seats on sale pass it is refused at
-  save with a field error, so is a certificate lowered under the seats an upcoming departure on the
-  hull still sells, and a departure may not sell more seats than its boat's certificate
-  (`boatSeatsRefusal`, `tripDetailsPatch`). **The booking transaction is the ceiling that holds
-  whatever the forms missed**: it sells at most the lower of the departure's `capacity` and the
-  certificate, read under the trip-row lock (`sellableCapacity`), as do an undo, a no-show undo and
-  the wait list's "go and book it"; a copy and a series roll start the new departure at the
-  certificate, and "apply to the rest of the series" gives a date on a smaller hull the details
-  with its seats capped at the certificate; only a date holding more seats than that, or with a
-  roll call past the new dive count, is left alone.
-  The field reads **passengers only, not crew**, the same people capacity counts: everyone aboard
-  but the crew. A boat saved over it before H-107 keeps sailing, its fleet row says so in danger
-  ink, and its next save must fix it (`src/lib/boat-safety.ts`).
+  `boats.certified_passengers`. When booked passengers pass it, the departure's **Boat** tab says
+  so in danger ink above the **pre-departure checklist**; once the crew have recorded more people
+  aboard than it allows, the line counts them ("13 passengers aboard") instead of the bookings.
+  **No passenger place above it is sold** (H-107): a certificate lowered under seats an upcoming
+  departure sells is refused at boat save, and a departure may not sell above its assigned hull's
+  passenger certificate (`boatSeatsRefusal`, `tripDetailsPatch`). The booking transaction applies
+  the lowest of the trip's passenger places, this certificate and boat capacity after crew
+  reservations, read under the trip-row lock (`sellableCapacity`); the same limit applies to undo,
+  no-show undo, wait-list answers and seat moves. A boat saved over the passenger certificate
+  before H-107 keeps sailing, its fleet row says so in danger ink, and its next save must fix it.
 - **Certificate total-persons limit** — the second number some certificates print: everyone
   aboard, **crew included** (`boats.certified_total_persons`, issue 2302). Optional, and independent
   of the **certificate passenger limit**: some flag states (Spain among them) print only this one,
-  and a certificate with only a passenger figure is never asked for it. Checked at the manifest
-  beside the passenger line and never at the point of sale: when the people booked plus the crew
+  and a certificate with only a passenger figure is never asked for it. Boat capacity above this
+  figure is refused at boat save; it does not change the passenger booking limit. Checked at the
+  manifest beside the passenger line: when the people booked plus the crew
   named for the departure pass it, the Boat tab says so in danger ink, and once the crew roll call
   has counted more people and crew aboard than it allows, the line counts them instead, and the
-  head count goes danger. Passengers or seats above persons is refused at save as a typo
-  (`passengers_above_total_persons`, `seats_above_total_persons`). The booking
-  transaction counts seats exactly as before (Aaron, 2026-10-13).
+  head count goes danger. A passenger certificate above this total, or total boat capacity above
+  it, is refused at save as a mismatch (`passengers_above_total_persons`,
+  `capacity_above_total_persons`). This warning stays separate from passenger seat sales.
 - **Boat papers** — a boat's four dated documents: when its certificate itself expires (a
   Certificate of Inspection runs for years, apart from the annual inspection, issue 2302), when its
   next safety inspection is due, and when its registration and hull insurance expire
@@ -2168,7 +2169,7 @@
   the shop has never recorded for anybody raises nothing. Pure logic in
   `src/lib/staffing-warnings.ts`; words in `src/i18n/staffing-warning-labels.ts`.
 - **Decompression card reminder** — one line per departure, on the staff roster, the roll call at the dock checkpoint, the printed packet and the offline copy, telling crew to check each diver's and guide's decompression card because DiveDay records no technical card ([H-144](../human-decisions/H-144-decompression-departure-reminds-crew-to-check-cards.md)). Shown when the departure is marked `exceeds_no_deco_limits` and someone aboard dives; never on a finished departure's record. It informs and never gates: `needsDecompressionCardReminder` in `src/lib/decompression-reminder.ts`, read by none of readiness, trip admission or the roll-call readiness.
-- **Seat** — the one word for what a diver buys and what a boat holds, said by staff and divers alike ([H-122](../human-decisions/H-122-seat-is-the-word.md)): "3 seats left", "Book 2 seats", "Cancel my seat". Never "spot" for capacity. `scripts/check-seat-word.mjs` reads the staff bundles and `diver.json` both; its allowlist keeps words that are not the thing bought (a marine-life "spot", "on the spot").
+- **Seat** — one passenger place, the thing a diver buys and the trip offers, said by staff and divers alike ([H-122](../human-decisions/H-122-seat-is-the-word.md)): "3 seats left", "Book 2 seats", "Cancel my seat". Sellable seats subtract one boat-occupant place for each assigned crew member. Never "spot" for capacity. `scripts/check-seat-word.mjs` reads the staff bundles and `diver.json` both; its allowlist keeps words that are not the thing bought (a marine-life "spot", "on the spot").
 - **Ask to move** — a diver's request, from their own `/ready`, that the shop move their seat to another date ([H-126](../human-decisions/H-126-ask-to-move.md)). Offered on a paid seat the diver may still release where cancelling would return nothing right away: past the free-cancellation window, or on a trip with none. It is a request, not a move: it files one Inbox row per booking and departure on the `page` channel, naming the booking (`inbound_messages.booking_id`, `recordMoveAsk` in `src/db/inbound-messages.ts`), and the page then says it was asked while that row stands. Staff decide, and a move is a **seat move**, which answers the ask; one staff answered or deleted no longer stands, and asking again files it anew.
 - **Reply notes** — what AI should know when it drafts a reply to a diver, in the shop's own words: where to park, which wetsuits it rents, what to bring. One box under the AI switch in Settings → Features ("Notes for AI"), drawn only while the shop's AI suggestions are lit, and an owner or manager changes it with the page’s one Save (Aaron, 2026-10-23; it began at the foot of the Inbox); and the `inbox-draft` assist reads it beside the schedule, prices and desk hours, so a time or price written there is one a draft may quote. Never a diver's details. Column `shops.reply_notes`, read by `replyFacts` (`src/db/inbox-assists.ts`).
 - **Weather day** — on Reports, a shop-local day with at least one departure the weather called

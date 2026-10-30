@@ -403,9 +403,12 @@ export async function readWeeklyDigestFacts(
 
   // One readiness pass, shared with Today below so the two cannot disagree.
   const evidence = await inHorizonReadiness(db, shop.id, now);
-  const thisWeekTrips = evidence.trips.filter(
-    (trip) => trip.startsAt.getTime() < weeks.thisWeek.endUtc.getTime(),
-  );
+  const thisWeekTrips = evidence.trips
+    .filter((trip) => trip.startsAt.getTime() < weeks.thisWeek.endUtc.getTime())
+    // This week's departures have a current booking ceiling, so seat counts
+    // and the deal recommendation use the passenger places actually on sale.
+    // Last week's report below keeps the capacity recorded for that history.
+    .map((trip) => ({ ...trip, capacity: trip.sellableCapacity }));
   const owingDivers = new Set<string>();
   const owingTrips = new Set<string>();
   for (const trip of thisWeekTrips) {

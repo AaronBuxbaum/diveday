@@ -552,7 +552,7 @@ describe("callTripBlowout — what the message says", () => {
     // email-reuse path.
     const alternatives = await upcomingTripsWithCounts(ctx.db, ctx.shop.id, nowDate());
     const target = alternatives.find(
-      (candidate) => candidate.id !== ctx.trip.id && candidate.booked < candidate.capacity,
+      (candidate) => candidate.id !== ctx.trip.id && candidate.booked < candidate.sellableCapacity,
     );
     if (!target) throw new Error("no rebookable seeded trip");
     const rebook = await createBookingParty(ctx.db, [

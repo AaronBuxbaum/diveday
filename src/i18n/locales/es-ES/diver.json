@@ -142,7 +142,7 @@
       "line": "Visto en {seen} de las {trips, plural, one {# salida de {month}} other {# salidas de {month}}} que registraron nuestras tripulaciones",
       "honest": "Lo que registraron nuestras tripulaciones en las salidas de {month}, en todas las temporadas registradas. Dice lo que se vio, no lo que verás."
     },
-    "boatSeats": "{count, plural, one {# buceador} other {# buceadores}}"
+    "boatCapacity": "{count, plural, one {# persona a bordo, incluida la tripulación} other {# personas a bordo, incluida la tripulación}}"
   },
   "trip": {
     "boatLabel": "Embarcación",
@@ -588,6 +588,11 @@
     "whoCanEnroll": "Quién puede matricularse",
     "fromTheShop": "Del centro",
     "feeCovers": "Qué cubre el precio",
+    "templateCopy": {
+      "openWaterCertificationFees": "Tarifas de certificación de PADI",
+      "openWaterElearningQuestion": "¿Puedo hacer la teoría antes de llegar?",
+      "openWaterElearningAnswer": "Sí, y la mayoría de los alumnos lo hace. PADI eLearning se cobra por separado, en una línea aparte, y terminarlo antes te deja los días libres para bucear."
+    },
     "galleryHeading": "Fotos del curso {course}",
     "photoAltFallback": "{course} — foto {n}",
     "datesHeading": "Próximas fechas",

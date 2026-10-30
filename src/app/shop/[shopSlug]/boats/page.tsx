@@ -128,7 +128,7 @@ export default async function BoatsSettingsPage({
               open={Boolean(error)}
               value={
                 <div className="space-y-1">
-                  <p>{t("boats.seats", { count: boat.capacity })}</p>
+                  <p>{t("boats.peopleAboard", { count: boat.capacity })}</p>
                   {boat.description ? <p>{boat.description}</p> : null}
                   <BoatPaperFacts boat={boat} t={t} todayLocal={todayLocal} locale={locale} />
                 </div>

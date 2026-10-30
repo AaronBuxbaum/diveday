@@ -9,20 +9,20 @@
  * (ADR 20260824-pre-departure-safety-check). The certificate is the exception
  * since H-107:
  *
- * - **Too many people for the certificate.** A passenger vessel's certificate
- *   (in the US, the Coast Guard's Certificate of Inspection) names a passenger
- *   limit. **No seat above it is sold** (H-107, reversing "informs, never
- *   gates" for this one fact): a boat whose seats on sale pass it is refused
- *   at save (`boatSeatsRefusal`), and so is a departure whose own capacity
- *   does (`tripDetailsPatch`). Capacity and the certificate count the same
- *   people — everyone aboard who is not crew — so they compare directly. When
- *   the people aboard pass it anyway (a hull saved before H-107), the
- *   manifest still says so.
+ * - **Too many passengers for the certificate.** A passenger vessel's
+ *   certificate (in the US, the Coast Guard's Certificate of Inspection)
+ *   names a passenger limit. **No seat above it is sold** (H-107, reversing
+ *   "informs, never gates" for this one fact): a boat save is refused if an
+ *   upcoming departure sells above it, and a trip cannot be saved above it
+ *   (`boatSeatsRefusal`, `tripDetailsPatch`). The boat's own capacity is total
+ *   occupants including crew and is not compared to this passenger-only
+ *   number. When booked passengers pass it anyway (a hull or trip saved before
+ *   H-107), the manifest still says so.
  * - **Too many persons for the certificate, crew included** (#2302). Some
  *   certificates print a total-persons limit beside the passenger one, and
- *   some print only that. Checked at the manifest beside the passenger line,
- *   never at the point of sale: the booking transaction counts seats as it
- *   always has (Aaron, 2026-10-13).
+ *   some print only that. Compared with total hull capacity during boat save,
+ *   then checked at the manifest beside the passenger line. It does not set
+ *   the booking limit.
  * - **The boat's papers**: the certificate's own expiry, next safety
  *   inspection, registration and insurance.
  * - **The safety kit aboard**: O2 kit, AED, first-aid kit and flares are gear
@@ -461,13 +461,11 @@ export function departureCrewCount(crew: readonly { rollCall?: { state: string }
 /**
  * **Why a boat's numbers may not be saved** (H-107), or null when they may.
  *
- * - `seats_above_certificate`: the seats on sale (`capacity`) pass the
- *   certificate's passenger limit. One code for both directions — raising the
- *   seats, or lowering the certificate under them — because the fix is the
- *   same pair of boxes either way.
+ * - `capacity_above_total_persons`: the hull's total occupant limit passes the
+ *   certificate's total-person limit.
  * - `departures_above_certificate`: the hull is fine, but upcoming
  *   departures on it still sell more seats than the certificate allows. A
- *   departure's seats are its own number (`trips.capacity`), and lowering the
+ *   departure's passenger places are its own number (`trips.capacity`), and lowering the
  *   certificate under one would leave a sale nobody refused.
  *
  * A boat with no certificate recorded is never refused. **A row already over
@@ -482,11 +480,9 @@ export type BoatSeatsRefusal =
    */
   | { code: "passengers_above_total_persons"; passengers: number; limit: number }
   /**
-   * More seats than persons on the certificate (dive-domain review D2): a typo
-   * at save, refused like the one above. Caps no sale.
+   * Total occupant capacity above the certificate's total-person limit.
    */
-  | { code: "seats_above_total_persons"; capacity: number; limit: number }
-  | { code: "seats_above_certificate"; capacity: number; limit: number }
+  | { code: "capacity_above_total_persons"; capacity: number; limit: number }
   | {
       code: "departures_above_certificate";
       departures: number;
@@ -501,10 +497,7 @@ export const NAMED_DEPARTURES = 3;
 export function boatSeatsRefusal(input: {
   capacity: number;
   certifiedPassengers: number | null;
-  /**
-   * Total persons, crew included (#2302). Only ever compared with the
-   * passenger figure: it caps no seat on sale.
-   */
+  /** Total persons, crew included (#2302); it never caps a booking. */
   certifiedTotalPersons?: number | null;
   /**
    * The hull's upcoming, live, scheduled departures, soonest first: each
@@ -514,15 +507,12 @@ export function boatSeatsRefusal(input: {
 }): BoatSeatsRefusal | null {
   const limit = input.certifiedPassengers;
   const totalPersons = input.certifiedTotalPersons ?? null;
-  if (totalPersons !== null && input.capacity > totalPersons) {
-    return { code: "seats_above_total_persons", capacity: input.capacity, limit: totalPersons };
+  if (totalPersons !== null && boatCapacityAboveTotalPersons(input.capacity, totalPersons)) {
+    return { code: "capacity_above_total_persons", capacity: input.capacity, limit: totalPersons };
   }
   if (limit === null) return null;
   if (totalPersons !== null && limit > totalPersons) {
     return { code: "passengers_above_total_persons", passengers: limit, limit: totalPersons };
-  }
-  if (passengersAboveCertificate(input.capacity, limit)) {
-    return { code: "seats_above_certificate", capacity: input.capacity, limit };
   }
   const over = (input.upcomingDepartures ?? []).filter((departure) =>
     passengersAboveCertificate(departure.capacity, limit),
@@ -537,23 +527,37 @@ export function boatSeatsRefusal(input: {
     : null;
 }
 
+/** A hull's total-occupant capacity exceeds its optional total-person certificate. */
+export function boatCapacityAboveTotalPersons(
+  capacity: number,
+  certifiedTotalPersons: number | null | undefined,
+): boolean {
+  return certifiedTotalPersons != null && capacity > certifiedTotalPersons;
+}
+
 /**
- * **The seats a departure may actually sell** (H-107): its own `capacity`,
- * never more than its boat's certificate allows. Both count everyone aboard
- * but crew, so they compare directly.
+ * **The passenger places a departure may actually sell** (H-107): its own
+ * `capacity`, never more than its boat's passenger certificate allows or the
+ * boat's total-occupant capacity after reserving one place per assigned crew
+ * member.
  *
- * This is the point-of-sale ceiling. The forms refuse a capacity above the
- * certificate, but a departure can still carry one — written before H-107,
+ * This is the point-of-sale ceiling. A departure can still carry a capacity
+ * above an applicable limit — written before H-107,
  * copied, rolled from a series, reinstated, or moved onto a smaller hull — and
  * the booking transaction reads this under the trip-row lock so none of those
- * paths can sell seat certificate + 1. No boat, or no certificate recorded,
- * means the capacity alone binds.
+ * paths can sell above an applicable limit. Without a passenger certificate
+ * or boat capacity, that limit simply does not apply.
  */
 export function sellableSeats(
   capacity: number,
   certifiedPassengers: number | null | undefined,
+  boatCapacity?: number | null,
+  assignedCrew = 0,
 ): number {
-  return certifiedPassengers == null ? capacity : Math.min(capacity, certifiedPassengers);
+  const passengerLimit =
+    certifiedPassengers == null ? capacity : Math.min(capacity, certifiedPassengers);
+  if (boatCapacity == null) return passengerLimit;
+  return Math.max(0, Math.min(passengerLimit, boatCapacity - assignedCrew));
 }
 
 /**

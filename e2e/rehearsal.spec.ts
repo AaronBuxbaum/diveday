@@ -20,7 +20,7 @@ test("staff add a rehearsal from the builder, and its trip page says so", async 
   await page.getByLabel("Date").fill(daysFromNow(2));
   await page.getByLabel("Departs").fill("09:00");
   await page.getByLabel("Returns").fill("12:00");
-  await page.getByLabel("Seats").fill("6");
+  await page.getByLabel("Passenger places").fill("6");
   await page.getByLabel("Rehearsal for training day").check();
   await page.getByRole("button", { name: "Put it on the board" }).click();
   await expect(page.getByRole("status")).toContainText(`“${title}” is on the board.`);

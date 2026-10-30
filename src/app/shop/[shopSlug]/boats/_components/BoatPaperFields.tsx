@@ -3,9 +3,9 @@ import type { Boat } from "@/db/boats";
 import { boatSafetyNoticeText } from "@/i18n/boat-safety-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import {
+  boatCapacityAboveTotalPersons,
   boatPaperNotices,
   boatSafetyNoticeTone,
-  passengersAboveCertificate,
 } from "@/lib/boat-safety";
 import { MAX_CALL_SIGN_LENGTH, MAX_WORKING_CHANNEL_LENGTH } from "@/lib/emergency-reference";
 
@@ -128,15 +128,14 @@ export function BoatPaperFields({
 }
 
 /**
- * What the row's own numbers say, in the pre-departure check's words: seats on
- * sale past the certificate, and a paper inside its last 30 days or past them.
+ * What the row's own numbers say: total occupants over the total-person limit,
+ * and a paper inside its last 30 days or past them.
  * Nothing renders for a boat in order.
  *
- * **Seats past the certificate is danger now** (H-107): a hull saved before the
- * decision keeps sailing, but its next save is refused until the seats come
- * down or the certificate is corrected, and the row says so before the shop
- * finds out by pressing Save. The papers still only inform, and a lapsed one
- * reads in danger ink, as on the manifest and Today (H-136).
+ * A total-person mismatch prevents a contradictory boat setup; the passenger
+ * certificate remains a separate limit on upcoming trip bookings. The papers
+ * still only inform, and a lapsed one reads in danger ink, as on the manifest
+ * and Today (H-136).
  */
 const PAPER_INK = {
   danger: "font-medium text-danger",
@@ -156,15 +155,15 @@ export function BoatPaperFacts({
   locale: string;
 }) {
   const papers = boatPaperNotices(boat, todayLocal);
-  const overSold = passengersAboveCertificate(boat.capacity, boat.certifiedPassengers);
-  if (papers.length === 0 && !overSold) return null;
+  const overTotalPersons = boatCapacityAboveTotalPersons(boat.capacity, boat.certifiedTotalPersons);
+  if (papers.length === 0 && !overTotalPersons) return null;
   return (
     <ul className="w-full space-y-1 text-base sm:basis-full">
-      {overSold ? (
+      {overTotalPersons ? (
         <li className="font-medium text-danger">
-          {t("boats.seatsAboveCertificate", {
+          {t("boats.capacityAboveTotalPersons", {
             capacity: boat.capacity,
-            limit: boat.certifiedPassengers ?? 0,
+            limit: boat.certifiedTotalPersons ?? 0,
           })}
         </li>
       ) : null}

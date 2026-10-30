@@ -57,6 +57,29 @@ describe("resetDemoSchedule", () => {
     expect((await upcomingTripsWithCounts(db, shop.id)).length).toBeGreaterThan(0);
   });
 
+  it("restores seeded boat capacities after an over-capacity fixture changes them", async () => {
+    const { db, shop } = ctx;
+    await db
+      .update(boats)
+      .set({ capacity: 9 })
+      .where(and(eq(boats.shopId, shop.id), eq(boats.name, "Mantis I")));
+    await db
+      .update(boats)
+      .set({ capacity: 11 })
+      .where(and(eq(boats.shopId, shop.id), eq(boats.name, "Mantis II")));
+
+    await resetDemoSchedule(db, shop.id);
+
+    const hulls = await db
+      .select({ name: boats.name, capacity: boats.capacity })
+      .from(boats)
+      .where(eq(boats.shopId, shop.id));
+    expect(Object.fromEntries(hulls.map(({ name, capacity }) => [name, capacity]))).toEqual({
+      "Mantis I": 17,
+      "Mantis II": 20,
+    });
+  });
+
   it("clears Today read marks so the next visit gets a fresh baseline", async () => {
     const { db, shop } = ctx;
     const [staff] = await db.select().from(people).where(eq(people.shopId, shop.id)).limit(1);

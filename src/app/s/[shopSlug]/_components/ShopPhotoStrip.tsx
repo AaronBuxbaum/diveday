@@ -78,7 +78,7 @@ export function BoatsShelf({
                 {boat.name}
               </span>
               <span className="shrink-0 text-sm text-muted tabular-nums">
-                {t("schedule.boatSeats", { count: boat.capacity })}
+                {t("schedule.boatCapacity", { count: boat.capacity })}
               </span>
             </div>
             {boat.description ? (

@@ -76,7 +76,7 @@ describe("ScheduleBuilder add panel: one form, two depths (ADR 20260806-one-trip
     // *on screen* is a stylesheet's job and the visual specs' to prove; what
     // this asserts is the half that decides the payload.)
     expect(screen.getByLabelText("What is it")).toBeEnabled();
-    expect(screen.getByLabelText("Seats")).toBeEnabled();
+    expect(screen.getByLabelText(COPY.seats)).toBeEnabled();
     expect(screen.getByLabelText("Dives")).toBeEnabled();
     expect(screen.getByLabelText(/^Description/)).toBeDisabled();
     expect(screen.getByLabelText("How many days")).toBeDisabled();

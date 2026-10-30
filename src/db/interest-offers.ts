@@ -378,7 +378,10 @@ export async function offerSeats(
   ]);
   // A rehearsal is never sold or announced (ADR 20261012-rehearsal-departures).
   if (!shop || !tripRow || !offerable) return refused("trip_unavailable");
-  const openSeats = spotsRemaining({ capacity: tripRow.capacity, booked: tripRow.booked });
+  // The promo code is sold for the seats this trip can actually offer: its
+  // own passenger limit, the boat's passenger certificate, and the total
+  // occupant limit after assigned crew reserve their places.
+  const openSeats = spotsRemaining({ capacity: tripRow.sellableCapacity, booked: tripRow.booked });
   if (openSeats <= 0) return refused("trip_full");
   if (!canAcceptPayments(account)) return refused("not_connected");
   const stripeAccountId = (account as NonNullable<typeof account>).stripeAccountId;

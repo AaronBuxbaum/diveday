@@ -43,6 +43,19 @@ describe("standard course forms", () => {
   });
 });
 
+describe("PADI Open Water pricing copy", () => {
+  it("keeps separately billed eLearning out of course-fee inclusions", () => {
+    const openWater = COURSE_TEMPLATES.find((template) => template.slug === "open-water-diver");
+    expect(openWater).toBeDefined();
+    expect(openWater?.content.includes).toContain("PADI certification fees");
+    expect(openWater?.content.includes.join(" ")).not.toMatch(/PADI learning materials?/i);
+
+    const elearningFaq = openWater?.content.faqs.find((faq) => faq.question.includes("theory"));
+    expect(elearningFaq?.answer).toContain("PADI eLearning is a separate fee");
+    expect(elearningFaq?.answer).toContain("billed as its own line");
+  });
+});
+
 /** Every string in a template that a diver ever reads. */
 function proseOf(template: (typeof COURSE_TEMPLATES)[number]): string[] {
   const { content } = template;

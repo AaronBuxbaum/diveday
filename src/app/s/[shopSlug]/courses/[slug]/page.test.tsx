@@ -1,9 +1,11 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { COURSE_TEMPLATES } from "@/content/course-templates";
 import type { Course, Shop } from "@/db/schema";
 import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
+import { courseTemplateSnapshot } from "@/lib/course-template-sync";
 
 const request = vi.hoisted(() => ({ locale: "en-US" as DiverLocale }));
 
@@ -90,6 +92,37 @@ function shop(contactEmail: string | null, contactPhone: string | null): Shop {
     // This setting controls the general schedule request, not course inquiries.
     dateRequestsEnabled: false,
   } as Shop;
+}
+
+function requiredOpenWaterTemplate() {
+  const template = COURSE_TEMPLATES.find((candidate) => candidate.slug === "open-water-diver");
+  if (!template) throw new Error("Missing Open Water template");
+  return template;
+}
+
+const openWaterTemplate = requiredOpenWaterTemplate();
+
+function openWaterTemplateCourse(legacyVersion = false): Course {
+  const latest = courseTemplateSnapshot(openWaterTemplate);
+  const baseline = legacyVersion
+    ? {
+        ...latest,
+        includes: latest.includes.map((item) =>
+          item === "PADI certification fees"
+            ? "All PADI learning materials and certification fees"
+            : item,
+        ),
+      }
+    : latest;
+  return {
+    ...course,
+    summary: openWaterTemplate.content.summary,
+    includes: baseline.includes,
+    faqs: baseline.faqs,
+    sourceTemplateSlug: openWaterTemplate.slug,
+    sourceTemplateVersion: legacyVersion ? 3 : openWaterTemplate.version,
+    sourceTemplateSnapshot: baseline,
+  };
 }
 
 const scheduled = {
@@ -180,5 +213,77 @@ describe.each(["en-US", "es-ES"] as const)("public course requests in %s", (loca
         params: Promise.resolve({ shopSlug: "blue-mantis", slug: "open-water-diver" }),
       }),
     ).rejects.toThrow("NOT_FOUND");
+  });
+});
+
+describe("public Open Water template copy", () => {
+  it.each([
+    { locale: "en-US" as const, legacyVersion: false },
+    { locale: "es-ES" as const, legacyVersion: false },
+    { locale: "es-ES" as const, legacyVersion: true },
+  ])("uses $locale copy for template-owned pricing text", async ({ locale, legacyVersion }) => {
+    request.locale = locale;
+    vi.mocked(shopBySlugCached).mockResolvedValue(shop(null, null));
+    vi.mocked(getCourseBySlug).mockResolvedValue(openWaterTemplateCourse(legacyVersion));
+    vi.mocked(listUpcomingSessionsForCourse).mockResolvedValue([]);
+    const { container } = render(
+      await CoursePage({
+        params: Promise.resolve({ shopSlug: "blue-mantis", slug: "open-water-diver" }),
+      }),
+    );
+
+    const t = diverTranslator(locale);
+    const includedFees = t("course.templateCopy.openWaterCertificationFees");
+    const faqQuestion = t("course.templateCopy.openWaterElearningQuestion");
+    const faqAnswer = t("course.templateCopy.openWaterElearningAnswer");
+
+    expect(screen.getByText(includedFees)).toBeInTheDocument();
+    expect(screen.getAllByText(faqQuestion).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(faqAnswer).length).toBeGreaterThan(0);
+    if (locale === "es-ES") {
+      expect(screen.queryByText("PADI certification fees")).not.toBeInTheDocument();
+      expect(
+        screen.queryAllByText("All PADI learning materials and certification fees"),
+      ).toHaveLength(0);
+      expect(screen.queryByText("Can I do the theory before I arrive?")).not.toBeInTheDocument();
+      expect(
+        screen.queryAllByText(
+          "Yes, and most students do. PADI eLearning is a separate fee, billed as its own line, and finishing it beforehand frees your days for diving.",
+        ),
+      ).toHaveLength(0);
+    }
+    expect(container.querySelector("#included")).toBeInTheDocument();
+  });
+
+  it("preserves shop-edited inclusion and FAQ text on the Spanish page", async () => {
+    request.locale = "es-ES";
+    const shopCopy = openWaterTemplateCourse();
+    vi.mocked(shopBySlugCached).mockResolvedValue(shop(null, null));
+    vi.mocked(getCourseBySlug).mockResolvedValue({
+      ...shopCopy,
+      includes: ["Curso incluye materiales seleccionados por el centro"],
+      faqs: [
+        {
+          question: "¿Qué material debo traer?",
+          answer: "El centro envía la lista al inscribirte.",
+        },
+      ],
+    });
+    vi.mocked(listUpcomingSessionsForCourse).mockResolvedValue([]);
+
+    render(
+      await CoursePage({
+        params: Promise.resolve({ shopSlug: "blue-mantis", slug: "open-water-diver" }),
+      }),
+    );
+
+    expect(
+      screen.getByText("Curso incluye materiales seleccionados por el centro"),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText("¿Qué material debo traer?").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("El centro envía la lista al inscribirte.").length).toBeGreaterThan(
+      0,
+    );
+    expect(screen.queryByText("Tarifas de certificación de PADI")).not.toBeInTheDocument();
   });
 });

@@ -2,7 +2,7 @@ import jsQR from "jsqr";
 import sharp from "sharp";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
-import { seededTripId, walkInFormPath } from "./helpers";
+import { walkInFormPath } from "./helpers";
 import {
   capture,
   installVisualBuildGuard,
@@ -20,8 +20,17 @@ for (const scheme of ["light", "dark"] as const) {
   test.describe(`${scheme} mode`, () => {
     test.use({ colorScheme: scheme, viewport: { width: 1280, height: 800 } });
     test.describe("staff", () => {
-      test(`the party waiver queue shows each person's next step (${scheme})`, async ({ page }) => {
-        const tripId = await seededTripId(page, "blue-mantis", "Two-Tank Reef — Molasses & French");
+      test(`the party waiver queue shows each person's next step (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        const response = await request.post("/api/test/seed-trouble-states?partyWaiverCapacity=1");
+        if (!response.ok()) throw new Error("party waiver capacity was not seeded");
+        const body = (await response.json()) as {
+          partyWaiverCapacity?: { tripId: string; capacity: number };
+        };
+        const tripId = body.partyWaiverCapacity?.tripId;
+        if (!tripId) throw new Error("seed-trouble-states found no party waiver departure");
         await page.goto(walkInFormPath("blue-mantis", tripId));
         await page.getByRole("button", { name: "Add another person" }).click();
         const child = page.getByRole("group", { name: "Person 2" });
@@ -41,8 +50,15 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         browser,
         workerBaseURL,
+        request,
       }) => {
-        const tripId = await seededTripId(page, "blue-mantis", "Two-Tank Reef — Molasses & French");
+        const response = await request.post("/api/test/seed-trouble-states?partyWaiverCapacity=1");
+        if (!response.ok()) throw new Error("party waiver capacity was not seeded");
+        const body = (await response.json()) as {
+          partyWaiverCapacity?: { tripId: string; capacity: number };
+        };
+        const tripId = body.partyWaiverCapacity?.tripId;
+        if (!tripId) throw new Error("seed-trouble-states found no party waiver departure");
         await page.goto(walkInFormPath("blue-mantis", tripId));
         await page.getByRole("button", { name: "Add another person" }).click();
         await page

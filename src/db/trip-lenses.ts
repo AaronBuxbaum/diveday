@@ -1,8 +1,9 @@
-import { and, asc, count, eq, isNotNull, isNull, ne } from "drizzle-orm";
+import { and, asc, count, eq, isNotNull, isNull, ne, or } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { lensSlugFrom } from "@/lib/trip-lenses";
 import type { AppDb } from "./client";
 import { tripLenses, trips } from "./schema";
+import { tripHasStandingSailedRollCall } from "./standing-sailed-roll-call";
 
 export type TripLens = typeof tripLenses.$inferSelect;
 
@@ -56,10 +57,16 @@ export async function countDeparturesByTripLens(
   const rows = await db
     .select({ lensId: trips.lensId, departures: count(trips.id) })
     .from(trips)
-    // diveday:allow-deleted-trips: the confirm is telling the shop how much of
-    // its own history this word is attached to, and a departure taken off the
-    // board still wore it.
-    .where(and(eq(trips.shopId, shopId), isNotNull(trips.lensId), ne(trips.status, "cancelled")))
+    // diveday:allow-deleted-trips: count every non-cancelled trip and any
+    // cancelled trip with standing diver or crew evidence that somebody sailed.
+    // The confirm is telling the shop how much history this word is attached to.
+    .where(
+      and(
+        eq(trips.shopId, shopId),
+        isNotNull(trips.lensId),
+        or(ne(trips.status, "cancelled"), tripHasStandingSailedRollCall(db)),
+      ),
+    )
     .groupBy(trips.lensId);
   return new Map(rows.flatMap((row) => (row.lensId ? [[row.lensId, row.departures]] : [])));
 }

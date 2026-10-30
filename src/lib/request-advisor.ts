@@ -67,7 +67,9 @@ export type RequestAdvisor = (
  * rounded to six-seat steps and capped at the product's trip maximum.
  *
  * When the shop has configured boats, the advisor finds the smallest boat that
- * fits the group, or flags if the party size exceeds every known boat. When the
+ * fits the group and its recommended divemasters, or flags if the group exceeds
+ * every known boat. A boat's capacity includes all occupants; the suggested
+ * departure capacity remains passenger places. When the
  * shop runs no boats there is no seat count to fit anyone into, so the day is
  * one departure the size of the people who asked for it. Either way the crew
  * suggestion comes off the shop's target ratio. Nothing here books a seat,
@@ -84,6 +86,7 @@ export const transparentHeadcountAdvisor: RequestAdvisor = (requests, shape) => 
     if (request.experienceLevel) experienceMix[request.experienceLevel] += 1;
     return total + Math.max(1, request.divers ?? 1);
   }, 0);
+  const suggestedDivemasters = divemastersNeeded(estimatedDivers, shape.diversPerDivemaster);
 
   let suggestedCapacity = Math.min(
     MAX_DEPARTURE_CAPACITY,
@@ -106,19 +109,23 @@ export const transparentHeadcountAdvisor: RequestAdvisor = (requests, shape) => 
     suggestedDepartureCount = Math.max(1, Math.ceil(estimatedDivers / MAX_DEPARTURE_CAPACITY));
   } else if (shape.hulls.length > 0) {
     const sortedBoats = [...shape.hulls].sort((a, b) => a.capacity - b.capacity);
-    const fittingBoat = sortedBoats.find((boat) => boat.capacity >= estimatedDivers);
+    const fittingBoat = sortedBoats.find(
+      (boat) => boat.capacity >= estimatedDivers + suggestedDivemasters,
+    );
     if (fittingBoat) {
       suggestedBoat = {
         id: fittingBoat.id,
         name: fittingBoat.name,
         capacity: fittingBoat.capacity,
       };
-      suggestedCapacity = fittingBoat.capacity;
+      suggestedCapacity = estimatedDivers;
       suggestedDepartureCount = 1;
     } else {
       exceedsKnownBoats = true;
       const largestBoat = sortedBoats[sortedBoats.length - 1];
-      suggestedDepartureCount = Math.max(1, Math.ceil(estimatedDivers / largestBoat.capacity));
+      const passengerPlaces = Math.max(1, largestBoat.capacity - suggestedDivemasters);
+      suggestedCapacity = Math.min(suggestedCapacity, passengerPlaces);
+      suggestedDepartureCount = Math.max(1, Math.ceil(estimatedDivers / passengerPlaces));
     }
   }
 
@@ -131,7 +138,7 @@ export const transparentHeadcountAdvisor: RequestAdvisor = (requests, shape) => 
     // suggested hull happens to carry: recommending three divemasters for a
     // party of four because the smallest free boat seats twelve is advice no
     // shop would follow.
-    suggestedDivemasters: divemastersNeeded(estimatedDivers, shape.diversPerDivemaster),
+    suggestedDivemasters,
     experienceMix,
     suggestedBoat,
     exceedsKnownBoats,

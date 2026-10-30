@@ -126,6 +126,32 @@ it("waits when the field mounts before the session check starts", () => {
   cancel();
 });
 
+it("keeps the focus request when streamed content mounts during session unlock", async () => {
+  const frames: FrameRequestCallback[] = [];
+  vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+    frames.push(callback);
+    return frames.length;
+  });
+
+  const check = document.createElement("span");
+  check.hidden = true;
+  check.setAttribute("data-staff-session-check", "pending");
+  const field = document.createElement("input");
+  document.body.append(check, field);
+
+  // The unlock event ran, but React has not yet committed the settled marker.
+  document.dispatchEvent(new Event("staff-session-unlocked"));
+  const cancel = focusAfterStaffCheck(field);
+  expect(document.activeElement).not.toBe(field);
+
+  check.setAttribute("data-staff-session-check", "settled");
+  await Promise.resolve();
+  frames[0]?.(0);
+
+  expect(document.activeElement).toBe(field);
+  cancel();
+});
+
 it("keeps the session-unlocked focus when the trap closes", () => {
   const frames: FrameRequestCallback[] = [];
   vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {

@@ -503,7 +503,7 @@ export async function createTrip(
     await select.selectOption(value);
   }
   if (options.capacity !== undefined) {
-    await page.getByLabel("Seats").fill(String(options.capacity));
+    await page.getByLabel("Passenger places").fill(String(options.capacity));
   }
   if (options.price !== undefined) {
     await page.getByLabel(/Price per diver/).fill(String(options.price));

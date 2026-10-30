@@ -7,7 +7,7 @@ import type { AppDb } from "./client";
 import { hasMoveAsk } from "./inbound-messages";
 import { bookings, courses, trips } from "./schema";
 import { liveTrip } from "./trips-live";
-import { heldSeatCounts, seatHeld, sellableCapacity } from "./trips-queries";
+import { heldSeatCounts, seatHeld, sellableCapacity, tripSellableSeatsSql } from "./trips-queries";
 
 /**
  * **How many departures one cancelled card weighs**, soonest first. The card
@@ -119,7 +119,7 @@ export async function strandedMoveOffer(
               ),
             ),
         ),
-        sql`(select count(*) from ${bookings} where ${and(eq(bookings.tripId, trips.id), seatHeld)}) < ${trips.capacity}`,
+        sql`(select count(*) from ${bookings} where ${and(eq(bookings.tripId, trips.id), seatHeld)}) < ${tripSellableSeatsSql()}`,
       ),
     )
     .orderBy(asc(trips.startsAt))

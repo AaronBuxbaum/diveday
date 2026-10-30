@@ -631,11 +631,11 @@
     "undo": "Deshacer"
   },
   "rescheduleHold": {
-    "telling": "{count, plural, one {Avisando del nuevo horario a # buceador…} other {Avisando del nuevo horario a # buceadores…}}",
+    "telling": "Avisando del nuevo horario a los buceadores…",
     "told": "{count, plural, one {Avisamos del nuevo horario a # buceador.} other {Avisamos del nuevo horario a # buceadores.}}",
     "someMissed": "{count, plural, one {No pudimos avisar a # buceador por correo ni por mensaje.} other {No pudimos avisar a # buceadores por correo ni por mensaje.}}",
     "notTold": "Sin avisar. Los buceadores siguen con el horario anterior.",
-    "tellingPlace": "{count, plural, one {Avisando del nuevo punto de encuentro a # buceador…} other {Avisando del nuevo punto de encuentro a # buceadores…}}",
+    "tellingPlace": "Avisando del nuevo punto de encuentro a los buceadores…",
     "toldPlace": "{count, plural, one {Avisamos del nuevo punto de encuentro a # buceador.} other {Avisamos del nuevo punto de encuentro a # buceadores.}}",
     "notToldPlace": "Sin avisar. Los buceadores siguen con el punto de encuentro anterior.",
     "tellThem": "Avisarles"

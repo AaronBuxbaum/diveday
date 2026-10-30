@@ -1,4 +1,5 @@
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
+import { verifyScheduleMoveResult } from "@/lib/schedule-move-result";
 import { noticeFromParam } from "@/lib/staff-notices";
 
 /**
@@ -69,21 +70,19 @@ export function builderNoticeMessage(
 /**
  * The board's notice after a builder action, from the redirect's own params:
  * the named form whenever the action passed a title back, the series count
- * when a repeating submission put up several dates, and a warning when a move
- * had to release gear. Undefined when `?builder=` names no known outcome.
+ * when a repeating submission put up several dates. Undefined when `?builder=`
+ * names no known outcome. Gear warnings require a separately verified action result.
  */
 export function builderNoticeFor({
   builder,
   count,
   created,
-  gear,
   series,
   st,
 }: {
   builder: string | undefined;
   count: string | undefined;
   created: string | undefined;
-  gear: string | undefined;
   series: string | undefined;
   st: StaffTranslator;
 }): { tone: "success" | "danger" | "warning"; message: string } | undefined {
@@ -91,21 +90,30 @@ export function builderNoticeFor({
   // The named form whenever the action passed a title back; the anonymous
   // "It's on the board" survives for a URL that carries none.
   const seriesCount = series ? Number.parseInt(series, 10) : 0;
-  // A move that could not carry its gear onto the new dates reports what it let
-  // go of, and in a warning tone rather than the plain success one: the schedule
-  // edit worked, and somebody now has kit to reassign on the prep page.
-  const gearReleased = gear ? Number.parseInt(gear, 10) : 0;
-  const movedWithGear = builderNoticeEntry?.key === "schedule.notices.moved" && gearReleased > 0;
   return builderNoticeEntry
     ? {
-        tone: movedWithGear ? ("warning" as const) : builderNoticeEntry.tone,
-        message: movedWithGear
-          ? st("schedule.notices.movedGearReleased", { count: gearReleased })
-          : builderNoticeEntry.key === "schedule.notices.added" && created
+        tone: builderNoticeEntry.tone,
+        message:
+          builderNoticeEntry.key === "schedule.notices.added" && created
             ? seriesCount > 1
               ? st("schedule.notices.addedSeries", { title: created, count: seriesCount })
               : st("schedule.notices.addedNamed", { title: created })
             : builderNoticeMessage(st, builderNoticeEntry.key, count),
       }
     : undefined;
+}
+
+/** A gear warning exists only when the move action signed its result for this shop. */
+export function verifiedGearMoveNotice(
+  result: string | undefined,
+  shopId: string,
+  st: StaffTranslator,
+): { id: string; message: string } | null {
+  const move = verifyScheduleMoveResult(result, shopId);
+  return move && move.gearReleased > 0
+    ? {
+        id: move.id,
+        message: st("schedule.notices.movedGearReleased", { count: move.gearReleased }),
+      }
+    : null;
 }

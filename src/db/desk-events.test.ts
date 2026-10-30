@@ -1,4 +1,4 @@
-import { and, eq, isNotNull, isNull, ne } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, ne, notExists } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
@@ -343,7 +343,20 @@ describe("listDeskEventsSince, against the roster it sits above", () => {
     const [other] = await db
       .select({ id: trips.id })
       .from(trips)
-      .where(and(eq(trips.shopId, shop.id), ne(trips.id, trip.id)))
+      .where(
+        and(
+          eq(trips.shopId, shop.id),
+          ne(trips.id, trip.id),
+          eq(trips.status, "scheduled"),
+          liveTrip(),
+          notExists(
+            db
+              .select({ id: bookings.id })
+              .from(bookings)
+              .where(and(eq(bookings.tripId, trips.id), eq(bookings.personId, seat.personId))),
+          ),
+        ),
+      )
       .limit(1);
     if (!other) throw new Error("expected a second departure");
     await db.update(bookings).set({ tripId: other.id }).where(eq(bookings.id, seat.id));

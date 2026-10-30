@@ -12,8 +12,10 @@ export type BoardSearchParams = {
   count?: string; // the number a builder notice names (`builderNoticeMessage`)
   /** The departure just created, named so the notice can say which. */
   created?: string;
-  /** Gear assignments a move had to release — see `moveTrip`. */
+  /** Legacy unsigned gear count; retained only so old/fabricated URLs are scrubbed. */
   gear?: string;
+  /** Short-lived signed marker for a real move result, removed after the notice is read. */
+  result?: string;
   /** The reschedule notice a move held, and how many seats it tells. */
   held?: string;
   tell?: string;
@@ -38,6 +40,21 @@ export type BoardSearchParams = {
    */
   week?: string;
 };
+
+/** Result-only parameters are consumed by the board notice and scrubbed afterward. */
+export const BOARD_RESULT_PARAMS = [
+  "builder",
+  "count",
+  "created",
+  "gear",
+  "result",
+  "series",
+] as const;
+
+export function clearBoardResultParams(url: URL): URL {
+  for (const key of BOARD_RESULT_PARAMS) url.searchParams.delete(key);
+  return url;
+}
 
 /** Preserve old add links and their context when moving to the creation page. */
 export function legacyAddHref(shopSlug: string, params: BoardSearchParams): string | null {

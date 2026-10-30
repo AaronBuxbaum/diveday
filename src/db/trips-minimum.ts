@@ -9,6 +9,7 @@ import { recordSystemTripActivity } from "./operations";
 import { bookings, people, shops, trips } from "./schema";
 import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";
 import { liveTrip } from "./trips-live";
+import { tripSellableSeatsSql } from "./trips-queries";
 
 /**
  * The minimum-head-count sweep: cancel every departure whose decision moment
@@ -79,7 +80,7 @@ export async function listDeparturesAwaitingMinimumDecision(
       shopDefaultLocale: shops.defaultLocale,
       title: trips.title,
       startsAt: trips.startsAt,
-      capacity: trips.capacity,
+      capacity: tripSellableSeatsSql(),
       minimumBookings: trips.minimumBookings,
       minimumDecisionHours: trips.minimumDecisionHours,
       booked: count(bookings.id),
@@ -109,7 +110,7 @@ export async function listDeparturesAwaitingMinimumDecision(
     // skipped, and `deferred` would report 0 while doing it. `least(...)` is
     // `effectiveMinimum`'s clamp said in SQL; the two are asserted against each
     // other in this file's tests.
-    .having(sql`count(${bookings.id}) < least(${trips.minimumBookings}, ${trips.capacity})`)
+    .having(sql`count(${bookings.id}) < least(${trips.minimumBookings}, ${tripSellableSeatsSql()})`)
     // Oldest deadline first, so a capped pass always clears the departures
     // whose divers have been waiting longest for an answer.
     .orderBy(asc(trips.startsAt))
@@ -207,7 +208,7 @@ export async function cancelDeparturesBelowMinimum(
             sql`(
               select count(*) from ${bookings}
               where ${bookings.tripId} = ${trips.id} and ${bookings.status} <> 'cancelled'
-            ) < least(${trips.minimumBookings}, ${trips.capacity})`,
+            ) < least(${trips.minimumBookings}, ${tripSellableSeatsSql()})`,
           ),
         )
         .returning({ id: trips.id });

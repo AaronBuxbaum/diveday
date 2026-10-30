@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { activityEvents, bookings, trips } from "@/db/schema";
 import { nowDate } from "@/lib/clock";
+import { verifyScheduleMoveResult } from "@/lib/schedule-move-result";
 import { utcToWallTime } from "@/lib/zoned";
 import { fileScopedShopContext } from "@/test/db";
 import {
@@ -104,9 +105,11 @@ describe("the board's acts in the activity log", () => {
     form.set("startTime", `${pad(target.hour)}:${pad(target.minute)}`);
     signIn(shop, owner);
 
-    expect(await redirectedTo(() => moveDepartureAction(shop.slug, form))).toContain(
-      "builder=moved",
-    );
+    const location = await redirectedTo(() => moveDepartureAction(shop.slug, form));
+    expect(location).toContain("builder=moved");
+    const result =
+      new URL(location, "https://example.test").searchParams.get("result") ?? undefined;
+    expect(verifyScheduleMoveResult(result, shop.id)).toMatchObject({ gearReleased: 0 });
     expect(await linesOn(db, trip.id, "departure_moved")).toEqual([
       expect.objectContaining({ actorPersonId: owner, shopId: shop.id }),
     ]);

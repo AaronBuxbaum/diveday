@@ -69,7 +69,7 @@ describe("demo seed + schedule queries (in-memory PGlite)", () => {
     const before = await upcomingTripsWithCounts(db, shop.id);
     const wreck = before.find((t) => t.title === "Wreck Trip — Spiegel Grove");
     if (!wreck) throw new Error("wreck trip missing");
-    expect(wreck.booked).toBe(wreck.capacity); // seeded sold out
+    expect(wreck.booked).toBe(wreck.sellableCapacity); // seeded sold out
 
     const [first] = await db.select().from(bookings).limit(1);
     if (!first) throw new Error("no bookings seeded");
@@ -200,8 +200,8 @@ describe("paged schedule queries", () => {
   it("filters to trips with an open seat on request", async () => {
     const { db, shop } = ctx;
     const all = await upcomingTripsWithCounts(db, shop.id);
-    expect(all.some((t) => t.booked >= t.capacity)).toBe(true); // the seed has a full trip
-    expect(all.some((t) => t.booked < t.capacity)).toBe(true);
+    expect(all.some((t) => t.booked >= t.sellableCapacity)).toBe(true); // the seed has a full trip
+    expect(all.some((t) => t.booked < t.sellableCapacity)).toBe(true);
 
     const withSpace = await pagedUpcomingTripsWithCounts(db, shop.id, {
       hasSpace: true,
@@ -209,7 +209,7 @@ describe("paged schedule queries", () => {
     });
     expect(withSpace.trips.length).toBeGreaterThan(0);
     expect(withSpace.trips.length).toBeLessThan(all.length);
-    expect(withSpace.trips.every((t) => t.booked < t.capacity)).toBe(true);
+    expect(withSpace.trips.every((t) => t.booked < t.sellableCapacity)).toBe(true);
   });
 
   /**
@@ -258,8 +258,8 @@ describe("paged schedule queries", () => {
     const lens = await createTripLens(db, shop.id, "Wrecks");
     if (!lens) throw new Error("lens insert failed");
     const all = await upcomingTripsWithCounts(db, shop.id);
-    const full = all.find((trip) => trip.booked >= trip.capacity);
-    const roomy = all.find((trip) => trip.booked < trip.capacity);
+    const full = all.find((trip) => trip.booked >= trip.sellableCapacity);
+    const roomy = all.find((trip) => trip.booked < trip.sellableCapacity);
     if (!full || !roomy) throw new Error("expected the seed to hold a full and a roomy departure");
     for (const trip of [full, roomy]) {
       await db.update(trips).set({ lensId: lens.id }).where(eq(trips.id, trip.id));
@@ -356,7 +356,7 @@ describe("paged schedule queries", () => {
   it("counts only the departures its filters actually list", async () => {
     const { db, shop } = ctx;
     const all = await upcomingTripsWithCounts(db, shop.id);
-    const withSpaceCount = all.filter((trip) => trip.booked < trip.capacity).length;
+    const withSpaceCount = all.filter((trip) => trip.booked < trip.sellableCapacity).length;
     expect(withSpaceCount).toBeLessThan(all.length); // the seed has a full trip
 
     const spaced = await offsetUpcomingTripsWithCounts(db, shop.id, { hasSpace: true, limit: 5 });
@@ -390,9 +390,9 @@ describe("paged schedule queries", () => {
     expect(stats.departures).toBe(all.length);
     expect(stats.booked).toBe(all.reduce((sum, t) => sum + t.booked, 0));
     expect(stats.openSeats).toBe(
-      all.reduce((sum, t) => sum + Math.max(0, t.capacity - t.booked), 0),
+      all.reduce((sum, t) => sum + Math.max(0, t.sellableCapacity - t.booked), 0),
     );
-    expect(stats.atCapacity).toBe(all.filter((t) => t.booked >= t.capacity).length);
+    expect(stats.atCapacity).toBe(all.filter((t) => t.booked >= t.sellableCapacity).length);
 
     const range = await upcomingScheduleRange(db, shop.id);
     expect(range.first?.getTime()).toBe(all[0]?.startsAt.getTime());

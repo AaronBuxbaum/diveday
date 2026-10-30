@@ -23,6 +23,7 @@ import { DIVER_CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestTranslator } from "@/i18n/request";
 import { courseDepthFormat } from "@/i18n/unit-labels";
 import { auth } from "@/lib/auth";
+import { withLocalizedOpenWaterTemplateCopy } from "@/lib/course-template-localization";
 import { courseTotalCents, resolveCourseContentDepths, resolveCourseDepths } from "@/lib/courses";
 import { toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
@@ -143,7 +144,15 @@ export default async function CoursePage({
   // new prose field cannot quietly opt out (src/lib/courses.ts).
   const resolved = resolveCourseContentDepths(stored, courseDepthFormat(t, shop.depthUnit));
   // The shop's own Spanish summary for a reader in Spanish (`shop-translate`).
-  const course = await withTranslatedFields(db, shop, locale, "course", resolved, ["summary"]);
+  const translated = await withTranslatedFields(db, shop, locale, "course", resolved, ["summary"]);
+  const course =
+    locale === "es-ES"
+      ? withLocalizedOpenWaterTemplateCopy(translated, {
+          certificationFees: t("course.templateCopy.openWaterCertificationFees"),
+          elearningQuestion: t("course.templateCopy.openWaterElearningQuestion"),
+          elearningAnswer: t("course.templateCopy.openWaterElearningAnswer"),
+        })
+      : translated;
 
   const certificationRequired = course.minimumCertificationLevel
     ? t("course.certificationOrHigher", {

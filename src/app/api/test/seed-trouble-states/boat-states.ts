@@ -9,6 +9,7 @@ import { STAFF_ROLES } from "@/lib/authz";
 import { HOUR_MS } from "@/lib/clock";
 import { boatClashState } from "./boat-clash";
 import { gearSliceStates } from "./gear-states";
+import { makeRoomForPartyWaiverCaptures } from "./party-waiver-capacity-state";
 
 /**
  * The boat states `seed-trouble-states` writes on request, kept beside the
@@ -32,9 +33,13 @@ export async function boatSliceStates(request: Request, db: AppDb, shopId: strin
     ? await checkInADiverThenBlockThem(db, shopId, now)
     : null;
   const uncountedSeat = asked("uncountedSeat") ? await leaveASeatUncounted(db, shopId) : null;
+  const partyWaiverCapacity = asked("partyWaiverCapacity")
+    ? await makeRoomForPartyWaiverCaptures(db, shopId)
+    : null;
   return {
     ...(checkedInBlocked ? { checkedInBlocked } : {}),
     ...(uncountedSeat ? { uncountedSeat } : {}),
+    ...(partyWaiverCapacity ? { partyWaiverCapacity } : {}),
     ...(await gearSliceStates(request, db, shopId, now)),
     ...(await boatClashState(request, db, shopId, now)),
   };

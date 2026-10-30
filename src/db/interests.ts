@@ -317,9 +317,10 @@ async function lockFullDeparture(
   if (trip?.status !== "scheduled" || trip.startsAt <= nowDate()) {
     return { ok: false, reason: "trip_unavailable" };
   }
-  // The form offers "up to the boat's seats"; the server keeps that promise,
-  // so a hand-posted party cannot claim more demand than the boat holds.
-  const partySize = Math.max(1, Math.min(askedParty, trip.capacity));
+  // A wait-list party is clipped to the same passenger places the booking
+  // gate can sell after assigned crew reserves their boat places.
+  const capacity = await sellableCapacity(tx, trip);
+  const partySize = Math.max(1, Math.min(askedParty, capacity));
 
   // `heldSeatCounts`, the same counts `createBookingRecord` reads — this
   // decision has to be the one the booking door would make, or the two
@@ -330,13 +331,12 @@ async function lockFullDeparture(
   // A wait list is for a diver's seat, so "available" means a diver could
   // book one: a boat with room aboard but every diver's seat taken is still
   // full for this person (ADR 20261007-participant-types).
-  // Measured against the certificate-capped seats, as the booking door is
-  // (H-107): an over-limit departure is full at its certificate.
+  // Measured against certificate-capped passenger places after assigned crew
+  // reserves places aboard, exactly as the booking door is.
   //
   // A party waits until the whole party fits (ADR 20260719-trip-waitlist,
   // amended): its last diver must fit beside the others, so the counts are
   // read as if the rest were already aboard.
-  const capacity = await sellableCapacity(tx, trip);
   const held = await heldSeatCounts(tx, shopId, trip.id);
   const withParty = { aboard: held.aboard + partySize - 1, divers: held.divers + partySize - 1 };
   // A course session also seats its students at the crew's ratio, as the

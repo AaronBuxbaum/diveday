@@ -1,4 +1,4 @@
-import { and, asc, count, eq, gt, inArray, isNotNull, isNull, ne } from "drizzle-orm";
+import { and, asc, count, eq, gt, inArray, isNotNull, isNull, ne, or } from "drizzle-orm";
 import {
   type BoatPaperRecord,
   type BoatSeatsRefusal,
@@ -12,6 +12,7 @@ import type { AppDb, DbExecutor } from "./client";
 import { queueMediaDeletion, retryMediaDeletion } from "./media-deletions";
 import { boats, trips } from "./schema";
 import { recordShopActivityWithin } from "./shop-activity";
+import { tripHasStandingSailedRollCall } from "./standing-sailed-roll-call";
 import { liveTrip } from "./trips-live";
 
 export type Boat = typeof boats.$inferSelect;
@@ -205,10 +206,16 @@ export async function countDeparturesByBoat(
   const rows = await db
     .select({ boatId: trips.boatId, departures: count(trips.id) })
     .from(trips)
-    // diveday:allow-deleted-trips: a hull's history is the point — a departure
-    // the shop took off the board still sailed on this boat, and the confirm is
-    // telling the shop how much history the delete touches.
-    .where(and(eq(trips.shopId, shopId), isNotNull(trips.boatId), ne(trips.status, "cancelled")))
+    // diveday:allow-deleted-trips: count every non-cancelled trip and any
+    // cancelled trip with standing diver or crew evidence that somebody sailed.
+    // The confirm is telling the shop how much history the delete touches.
+    .where(
+      and(
+        eq(trips.shopId, shopId),
+        isNotNull(trips.boatId),
+        or(ne(trips.status, "cancelled"), tripHasStandingSailedRollCall(db)),
+      ),
+    )
     .groupBy(trips.boatId);
   return new Map(rows.flatMap((row) => (row.boatId ? [[row.boatId, row.departures]] : [])));
 }
@@ -326,12 +333,13 @@ export type BoatSaveOutcome =
  *
  * The check and the write used to be two steps in the settings action, so a
  * departure edited between them could slip past the certificate the save had
- * just approved. Here the boat row is locked, then each of its upcoming
- * departures (`for no key update`, in id order, so two saves of one hull
- * queue rather than cross), and only then are their seats read and the
- * refusal decided — a trip edit either lands before and is counted, or waits
- * behind the save. The booking transaction still enforces the certificate at
- * the point of sale whatever this says.
+ * just approved. Lock live scheduled departures on the hull first (`for no
+ * key update`, in id order), then lock the boat. Seat grants lock their trip
+ * before reading the boat; crew changes lock the trip before changing
+ * assignments. Both therefore serialize with this write, and a booking sees
+ * either the old or saved boat capacity. A trip edit either lands before and
+ * is counted, or waits behind the save. The booking transaction still
+ * enforces passenger limits at the point of sale.
  */
 export async function updateBoatWithinCertificate(
   db: AppDb,
@@ -350,6 +358,19 @@ export async function updateBoatWithinCertificate(
 ): Promise<BoatSaveOutcome> {
   const { shopId, boatId, now = nowDate() } = input;
   return db.transaction(async (tx): Promise<BoatSaveOutcome> => {
+    await tx
+      .select({ id: trips.id })
+      .from(trips)
+      .where(
+        and(
+          eq(trips.shopId, shopId),
+          eq(trips.boatId, boatId),
+          eq(trips.status, "scheduled"),
+          liveTrip(),
+        ),
+      )
+      .orderBy(asc(trips.id))
+      .for("no key update");
     const [boat] = await tx
       .select()
       .from(boats)
@@ -360,22 +381,6 @@ export async function updateBoatWithinCertificate(
       // trip, and must not be made to wait here while this waits on that trip.
       .for("no key update");
     if (!boat) return { ok: false, reason: "not_found" };
-    if (input.papers.certifiedPassengers !== null) {
-      await tx
-        .select({ id: trips.id })
-        .from(trips)
-        .where(
-          and(
-            eq(trips.shopId, shopId),
-            eq(trips.boatId, boatId),
-            eq(trips.status, "scheduled"),
-            liveTrip(),
-            gt(trips.startsAt, now),
-          ),
-        )
-        .orderBy(asc(trips.id))
-        .for("no key update");
-    }
     const refusal = boatSeatsRefusal({
       capacity: input.capacity,
       ...input.papers,

@@ -42,6 +42,8 @@ function summary(overrides: Partial<TripManifest["summary"]> = {}): TripManifest
     notBoarded: 1,
     notBackAboard: 1,
     awaiting: 0,
+    overCapacity: 0,
+    overBoatCapacity: 0,
     notHere: 0,
     ...overrides,
   } as TripManifest["summary"];
@@ -202,41 +204,52 @@ describe("the closed checkpoint (ADR 20260901-diveday-reimagined, slice 13h)", (
  * **The line that exists because nothing refuses.**
  *
  * A seat the counter released as a no-show is sellable at once, and boarding
- * the diver who turns up anyway takes the seat back rather than refusing a body
- * the crew is looking at (`reclaimReleasedSeat`, src/db/manifests.ts). The boat
- * can then be carrying one more person than it seats, and this panel is the
- * only place that is said — so it is pinned with the other danger lines, not
- * left to the prose half that scrolls away.
+ * the passenger who turns up anyway takes the seat back rather than refusing a
+ * body the crew is looking at (`reclaimReleasedSeat`, src/db/manifests.ts).
+ * Both the passenger and total-occupant limits are warnings, and both stay
+ * pinned with the other danger lines.
  */
-describe("a boat carrying more than it seats says so", () => {
-  it("raises the count of divers aboard beyond the seats, and stays quiet within them", () => {
+describe("manifest capacity warnings", () => {
+  it("raises the count beyond the trip capacity, and stays quiet within it", () => {
     renderPanel({ summary: summary({ overCapacity: 1 }) });
-    const line = screen.getByText(/aboard beyond the seats this boat has/);
-    expect(line.textContent).toContain("1 person is aboard beyond the seats this boat has.");
+    const line = screen.getByText(/aboard beyond the passenger capacity set for this trip/);
+    expect(line.textContent).toContain("This warning does not block boarding.");
     // Pinned, never in the half a captain can scroll past.
     expect(line.closest("section")).not.toBeNull();
 
     cleanup();
     renderPanel({ summary: summary({ overCapacity: 0 }) });
-    expect(screen.queryByText(/aboard beyond the seats this boat has/)).toBeNull();
+    expect(screen.queryByText(/aboard beyond the passenger capacity set for this trip/)).toBeNull();
+  });
+
+  it("says separately when passengers and crew exceed the assigned boat's capacity", () => {
+    renderPanel({ summary: summary({ overBoatCapacity: 2 }) });
+    expect(
+      screen.getByText(/aboard beyond the total capacity set for this boat, crew included/)
+        .textContent,
+    ).toContain("This warning does not block boarding.");
   });
 });
 
 /**
- * Batch 6, item 2: more passengers aboard than the certificate allows. The
- * count itself says it, and the seats line stands down so the boat is not told
- * the same overload twice in two sets of words.
+ * Batch 6, item 2: more passengers aboard than the certificate allows. This
+ * remains independent of both configured-capacity warnings.
  */
 describe("a boat carrying more than its certificate allows says so on the count", () => {
-  it("names the limit beside the count and drops the seats line", () => {
+  it("names the limit beside the count and keeps the separate capacity warning", () => {
     renderPanel({
-      summary: summary({ boarded: 13, overCapacity: 1 }),
+      summary: summary({ boarded: 13, overCapacity: 1, overBoatCapacity: 2 }),
       overCertificate: { aboard: 13, limit: 12 },
     });
     const line = screen.getByText("Certificate allows 12 passengers");
     expect(line.closest("section")).not.toBeNull();
     expect(screen.getByRole("progressbar")).toHaveClass("border-danger");
-    expect(screen.queryByText(/aboard beyond the seats this boat has/)).toBeNull();
+    expect(
+      screen.getByText(/aboard beyond the passenger capacity set for this trip/),
+    ).toBeVisible();
+    expect(
+      screen.getByText(/aboard beyond the total capacity set for this boat, crew included/),
+    ).toBeVisible();
   });
 
   it("says nothing about the certificate within it", () => {

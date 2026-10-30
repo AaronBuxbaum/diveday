@@ -3,6 +3,8 @@
  * The tab bar can scroll within its own viewport; the page itself stays fixed
  * to the device width. The capture matrix includes phone and desktop.
  */
+
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { seededTripId } from "./helpers";
 import {
@@ -12,6 +14,8 @@ import {
   SURFACE_TIMEOUT_MS,
   VISUAL_STEP_BOUNDS,
 } from "./visual-harness";
+
+const spanish = staffTranslator(SPANISH);
 
 async function expectNavigationDoesNotExpandPage(page: Parameters<typeof capture>[0]) {
   const widths = await page.evaluate(async () => {
@@ -28,11 +32,36 @@ async function expectNavigationDoesNotExpandPage(page: Parameters<typeof capture
 }
 
 async function expectPageWithinViewport(page: Parameters<typeof capture>[0]) {
-  const widths = await page.evaluate(() => ({
-    document: document.documentElement.scrollWidth,
-    viewport: document.documentElement.clientWidth,
-  }));
+  const widths = await page.evaluate(() => {
+    const viewport = document.documentElement.clientWidth;
+    const wideElements = [...document.querySelectorAll<HTMLElement>("body *")]
+      .filter((element) => !element.closest("[data-staff-tab-scroll]"))
+      .map((element) => ({ element, rect: element.getBoundingClientRect() }))
+      .filter(
+        ({ element, rect }) =>
+          getComputedStyle(element).display !== "none" && rect.right > viewport + 1,
+      )
+      .sort((a, b) => b.rect.right - a.rect.right)
+      .slice(0, 5)
+      .map(({ element, rect }) => ({
+        tag: element.tagName.toLowerCase(),
+        className: typeof element.className === "string" ? element.className : "",
+        right: Math.round(rect.right),
+        text: element.textContent?.trim().slice(0, 48),
+      }));
+    return {
+      document: document.documentElement.scrollWidth,
+      viewport,
+      wideElements,
+    };
+  });
   expect(widths.document, JSON.stringify(widths)).toBeLessThanOrEqual(widths.viewport);
+}
+
+async function expectPrepContent(page: Parameters<typeof capture>[0]) {
+  await expect(
+    page.getByRole("heading", { name: spanish("tripPrep.tanksHeading"), exact: true }),
+  ).toBeVisible();
 }
 
 async function expectScrollCueMatchesRail(page: Parameters<typeof capture>[0]) {
@@ -181,6 +210,7 @@ test.describe("staff navigation", () => {
       await page.goto(`/shop/blue-mantis/trips/${tripId}/prep`);
       const nav = page.getByRole("navigation", { name: "Principal", exact: true });
       await expect(nav).toHaveAttribute("data-hydrated", "true");
+      await expectPrepContent(page);
       await page.setViewportSize({ width: 390, height: 844 });
       await page.evaluate(() => {
         document.documentElement.style.fontSize = "200%";
@@ -231,6 +261,7 @@ test.describe("staff navigation", () => {
       // before capturing so the product state and the probe state stay apart.
       await page.reload();
       await expect(nav).toHaveAttribute("data-hydrated", "true");
+      await expectPrepContent(page);
       await page.evaluate(() => {
         document.documentElement.style.fontSize = "200%";
       });

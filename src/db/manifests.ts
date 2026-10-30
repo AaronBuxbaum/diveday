@@ -1266,11 +1266,13 @@ export async function getTripManifests(
     startsAt: trip.startsAt,
     endsAt: trip.endsAt,
     plannedDives: trip.plannedDives,
-    // The seats this boat sells, carried so the manifest can say when the head
-    // count has passed them (`summary.overCapacity`). Nothing on the boarding
-    // path refuses, so this is the only place the boat being over gets said.
-    // Capped at the boat's certificate (#2321): over the certificate is over.
-    capacity: trip.sellableCapacity,
+    // The trip's configured passenger capacity. Keep this separate from the
+    // certificate-capped sellable capacity: roll call reports who is aboard,
+    // while the certificate has its own warning.
+    capacity: trip.capacity,
+    // The assigned boat's total-occupant capacity. The manifest compares it
+    // with counted passengers plus counted crew.
+    boatCapacity: trip.boatCapacity,
     // The certificate itself, so the head count can say when the people the
     // crew counted aboard pass it (batch 6, item 2).
     certifiedPassengers: trip.certifiedPassengers,
@@ -1701,11 +1703,12 @@ async function gateOfflineRollCallNote(
  * *consequence* of the tap, never a gate in front of it: the diver goes back on
  * the expected list and the seat count goes back to counting them.
  *
- * **No capacity check, deliberately.** If the walk-in already holds the seat
- * the boat is over, and saying so is the manifest's job
- * (`summary.overCapacity`, src/lib/manifests.ts) — refusing here would leave a
- * person aboard whom the manifest does not carry, which is the worse of the two
- * states by a distance.
+ * **No capacity check, deliberately.** If the walk-in already holds the seat,
+ * the manifest says when the trip's passenger limit is exceeded
+ * (`summary.overCapacity`) and when passengers plus crew exceed the assigned
+ * boat's total-occupant capacity (`summary.overBoatCapacity`,
+ * src/lib/manifests.ts). Refusing here would leave a person aboard whom the
+ * manifest does not carry, which is the worse of the two states by a distance.
  *
  * **Two halves of the head count reach here, not one.** `recordRollCall`
  * calls it for the diver trail and `recordCrewRollCall` for the crew trail,

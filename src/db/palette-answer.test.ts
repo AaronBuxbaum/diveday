@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { fileScopedShopContext } from "@/test/db";
+import { createBoat } from "./boats";
 import { paletteAnswerFacts } from "./palette-answer";
 import { searchShop } from "./search";
-import { upcomingTripsWithCounts } from "./trips";
+import { createTrip, listStaff, setTripCrew, upcomingTripsWithCounts } from "./trips";
 
 const ctx = fileScopedShopContext();
 
@@ -61,7 +62,7 @@ describe("paletteAnswerFacts", () => {
       kind: "departure",
       tripId: first.id,
       title: first.title,
-      capacity: first.capacity,
+      capacity: first.sellableCapacity,
       booked: first.booked,
     });
     if (facts?.kind === "departure") expect(facts.blocked).toBeLessThanOrEqual(facts.booked);
@@ -72,5 +73,36 @@ describe("paletteAnswerFacts", () => {
         timeZone: ctx.shop.timezone,
       }),
     ).toBeNull();
+  });
+
+  it("reports the boat's remaining passenger capacity after assigned crew", async () => {
+    const boat = await createBoat(ctx.db, ctx.shop.id, "Eight total occupants", 8);
+    const startsAt = new Date("2031-08-01T12:00:00Z");
+    const trip = await createTrip(ctx.db, {
+      shopId: ctx.shop.id,
+      title: "Crew-reserved palette departure",
+      startsAt,
+      endsAt: new Date("2031-08-01T16:00:00Z"),
+      capacity: 10,
+      boatId: boat.id,
+    });
+    if (!trip) throw new Error("capacity trip not created");
+    const staff = await listStaff(ctx.db, ctx.shop.id);
+    if (staff.length < 2) throw new Error("two seeded staff members are required");
+    expect(
+      await setTripCrew(
+        ctx.db,
+        ctx.shop.id,
+        trip.id,
+        staff.slice(0, 2).map(({ person }) => person.id),
+      ),
+    ).toBe(true);
+
+    const facts = await paletteAnswerFacts(ctx.db, {
+      shopId: ctx.shop.id,
+      naming: { kind: "departure", tripId: trip.id },
+      timeZone: ctx.shop.timezone,
+    });
+    expect(facts).toMatchObject({ kind: "departure", tripId: trip.id, capacity: 6, booked: 0 });
   });
 });

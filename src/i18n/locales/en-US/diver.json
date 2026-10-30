@@ -142,7 +142,7 @@
       "line": "Seen on {seen} of the {trips, plural, one {# {month} trip} other {# {month} trips}} our crews logged",
       "honest": "What our crews logged on {month} trips, in every season on record. It says what was seen, not what you will see."
     },
-    "boatSeats": "{count, plural, one {# diver} other {# divers}}"
+    "boatCapacity": "{count, plural, one {# person aboard, including crew} other {# people aboard, including crew}}"
   },
   "trip": {
     "boatLabel": "Boat",
@@ -588,6 +588,11 @@
     "whoCanEnroll": "Who can enroll",
     "fromTheShop": "From the shop",
     "feeCovers": "What the fee covers",
+    "templateCopy": {
+      "openWaterCertificationFees": "PADI certification fees",
+      "openWaterElearningQuestion": "Can I do the theory before I arrive?",
+      "openWaterElearningAnswer": "Yes, and most students do. PADI eLearning is a separate fee, billed as its own line, and finishing it beforehand frees your days for diving."
+    },
     "galleryHeading": "Photos from the {course} course",
     "photoAltFallback": "{course} — photo {n}",
     "datesHeading": "Upcoming dates",

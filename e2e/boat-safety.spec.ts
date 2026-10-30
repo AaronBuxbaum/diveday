@@ -68,7 +68,7 @@ test("a distress-channel refusal reopens the new boat editor", async ({ page, pr
   await expect(page.getByRole("status").filter({ hasText: t("boats.boatCreated") })).toBeVisible();
   const created = boatRow(page, "Radio test");
   await expect(created).toHaveCount(1);
-  await expect(created.locator("summary")).toContainText(t("boats.seats", { count: 10 }));
+  await expect(created.locator("summary")).toContainText(t("boats.peopleAboard", { count: 10 }));
   await created.locator("summary").click();
   await expect(created.getByLabel(t("boats.workingChannelLabel"))).toHaveValue("68");
   for (const [label, day] of paperDates) await expect(created.getByLabel(label)).toHaveValue(day);
@@ -132,7 +132,7 @@ test("a boat's papers and the kit aboard it reach the departure that sails on it
   await row.getByRole("button", { name: "Save boat" }).click();
   const refused = boatRow(page, BOAT).getByRole("alert");
   await expect(refused).toHaveText(
-    "The certificate allows 10 passengers, so this boat can’t sell 14. Lower the seats, or correct the certificate.",
+    /The departure on .+ sells more seats than the certificate’s 10\. Lower its capacity first\./,
   );
   await expect(
     boatRow(page, BOAT).getByLabel("Passengers allowed on the certificate (not crew)"),
@@ -141,7 +141,7 @@ test("a boat's papers and the kit aboard it reach the departure that sails on it
 
   //    …and so are fewer seats under it while today's departure still sells
   //    fourteen on this hull.
-  await boatRow(page, BOAT).getByLabel("Capacity (seats)").fill("12");
+  await boatRow(page, BOAT).getByLabel("Total occupants (passengers + crew)").fill("12");
   await boatRow(page, BOAT)
     .getByLabel("Passengers allowed on the certificate (not crew)")
     .fill("12");

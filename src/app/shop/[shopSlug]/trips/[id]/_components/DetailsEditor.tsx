@@ -13,8 +13,8 @@ import {
 
 /**
  * The details form, and under its Save row whatever the save set going: a
- * retime's reschedule notice (ux review 2026-10-11, item 1), "Telling 8 divers
- * the new time…" with Undo. Outside the form, because the hold's Undo and
+ * retime's reschedule notice (ux review 2026-10-11, item 1), count-free
+ * progress with Undo. Outside the form, because the hold's Undo and
  * "Tell them" are a form of their own.
  */
 export async function DetailsEditor({

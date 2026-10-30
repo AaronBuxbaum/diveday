@@ -7,7 +7,7 @@ import { listTripReadiness } from "./readiness";
 import { bookings, trips } from "./schema";
 import { tripCrewByTrip } from "./trips-crew";
 import { liveTrip } from "./trips-live";
-import { upcomingTripsWithCounts } from "./trips-queries";
+import { tripSellableSeatsSql, upcomingTripsWithCounts } from "./trips-queries";
 
 /**
  * The facts behind the palette's answer card (ADR 20260906-before-you-ask,
@@ -90,7 +90,7 @@ export async function paletteAnswerFacts(
     }
     case "departure": {
       const [trip] = await db
-        .select({ title: trips.title, startsAt: trips.startsAt, capacity: trips.capacity })
+        .select({ title: trips.title, startsAt: trips.startsAt, capacity: tripSellableSeatsSql() })
         .from(trips)
         .where(and(eq(trips.id, naming.tripId), eq(trips.shopId, input.shopId), liveTrip()))
         .limit(1);

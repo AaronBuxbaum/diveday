@@ -519,7 +519,15 @@ export function DayKindSelects({
             <option value="">{copy.unassignedBoat}</option>
             {options.boats.map((boat) => (
               <option key={boat.id} value={boat.id}>
-                {boat.name} ({boat.capacity} seats)
+                {boat.name} (
+                {fill(
+                  pluralForm(boat.capacity, {
+                    one: copy.boatCapacityOne,
+                    other: copy.boatCapacityOther,
+                  }),
+                  { capacity: boat.capacity },
+                )}
+                )
               </option>
             ))}
           </select>
@@ -691,24 +699,28 @@ export function PanelFooter({
   );
 }
 
-/** A configured boat limit is advisory; it never disables the seat field. */
+/** The passenger ceiling after crew places is advisory; it never disables the field. */
 export function CapacityField({
   copy,
   capacity,
   boatCapacity,
+  assignedCrewCount = 0,
   setCapacity,
 }: {
   copy: BuilderCopy;
   capacity: number;
   boatCapacity?: number;
+  assignedCrewCount?: number;
   setCapacity: (capacity: number) => void;
 }) {
+  const passengerLimit =
+    boatCapacity === undefined ? undefined : Math.max(0, boatCapacity - assignedCrewCount);
   return (
     <Field
       label={copy.seats}
       description={
-        boatCapacity !== undefined && capacity > boatCapacity
-          ? fill(copy.boatCapacityWarning, { count: boatCapacity })
+        passengerLimit !== undefined && capacity > passengerLimit
+          ? fill(copy.boatCapacityWarning, { count: passengerLimit })
           : undefined
       }
     >

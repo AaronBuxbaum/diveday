@@ -142,7 +142,7 @@ test("a hull is added on its own page, and the save lands back on it", async ({
     .locator("form")
     .filter({ has: page.getByRole("button", { name: "Add a boat" }) });
   await addForm.getByLabel("Boat name").fill("Second Wind");
-  await addForm.getByLabel("Capacity (seats)").fill("12");
+  await addForm.getByLabel("Total occupants (passengers + crew)").fill("12");
   await addForm.getByRole("button", { name: "Add a boat" }).click();
 
   // The action's own redirect lands back on this page rather than at the top of

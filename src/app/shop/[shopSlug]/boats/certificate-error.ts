@@ -51,15 +51,10 @@ export function boatCertificateError(
   const boat = params.boat;
   const limit = count(params.limit);
   if (!boat || limit === null) return null;
-  if (params.notice === "boat-above-certificate") {
+  if (params.notice === "boat-capacity-above-persons") {
     const capacity = count(params.capacity);
     if (capacity === null) return null;
-    return { boat, text: t("boats.seatsAboveCertificateError", { capacity, limit }) };
-  }
-  if (params.notice === "boat-seats-above-persons") {
-    const capacity = count(params.capacity);
-    if (capacity === null) return null;
-    return { boat, text: t("boats.seatsAboveTotalPersonsError", { capacity, limit }) };
+    return { boat, text: t("boats.capacityAboveTotalPersonsError", { capacity, limit }) };
   }
   if (params.notice === "boat-passengers-above-persons") {
     const passengers = count(params.passengers);

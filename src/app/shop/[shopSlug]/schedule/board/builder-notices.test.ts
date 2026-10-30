@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { builderNoticeFor, builderNoticeMessage } from "./builder-notices";
+import { signScheduleMoveResult } from "@/lib/schedule-move-result";
+import { builderNoticeFor, builderNoticeMessage, verifiedGearMoveNotice } from "./builder-notices";
 
 const st = staffTranslator("en-US");
 
@@ -35,7 +36,7 @@ describe("builderNoticeMessage", () => {
 });
 
 describe("builderNoticeFor", () => {
-  const none = { count: undefined, created: undefined, gear: undefined, series: undefined, st };
+  const none = { count: undefined, created: undefined, series: undefined, st };
 
   it("says nothing for an unknown or missing outcome", () => {
     expect(builderNoticeFor({ ...none, builder: undefined })).toBeUndefined();
@@ -52,11 +53,24 @@ describe("builderNoticeFor", () => {
     ).toBe(st("schedule.notices.addedSeries", { title: "Night Dive", count: 4 }));
   });
 
-  it("warns when a move had to release gear", () => {
-    expect(builderNoticeFor({ ...none, builder: "moved", gear: "2" })).toEqual({
-      tone: "warning",
-      message: st("schedule.notices.movedGearReleased", { count: 2 }),
+  it("keeps a move query at its ordinary success notice without a verified action result", () => {
+    expect(builderNoticeFor({ ...none, builder: "moved" })).toEqual({
+      tone: "success",
+      message: st("schedule.notices.moved"),
     });
-    expect(builderNoticeFor({ ...none, builder: "moved", gear: "0" })?.tone).toBe("success");
+  });
+});
+
+describe("verifiedGearMoveNotice", () => {
+  it("shows the signed count from a real move and ignores fabricated result values", () => {
+    const shopId = "b22e9ed4-d836-47a0-a019-a88ac462a488";
+    const id = "6b9de0d1-80c3-4245-b5d1-a57c2f9f74b3";
+    const result = signScheduleMoveResult(shopId, id, 5);
+    expect(verifiedGearMoveNotice(result, shopId, st)).toEqual({
+      id,
+      message: st("schedule.notices.movedGearReleased", { count: 5 }),
+    });
+    expect(verifiedGearMoveNotice("anything", shopId, st)).toBeNull();
+    expect(verifiedGearMoveNotice(result, "f04f4175-d8b0-4f02-a2a3-c2e05f496345", st)).toBeNull();
   });
 });

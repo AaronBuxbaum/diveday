@@ -161,6 +161,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Blocked / Ready
 - Boarding
 - Boat at departure
+- Boat capacity
 - Boat clash
 - Boat mode
 - Boat papers
