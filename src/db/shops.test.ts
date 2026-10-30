@@ -73,6 +73,30 @@ describe("setShopAddress", () => {
     expect(after?.addressLocality).toBe("Key Largo");
   });
 
+  it("replaces coordinates too, clearing them when omitted", async () => {
+    const { db, shop } = ctx;
+    await setShopAddress(db, shop.id, {
+      addressStreet: "123 Reef Rd",
+      addressLocality: "Key Largo",
+      addressRegion: "FL",
+      addressPostalCode: "33037",
+      addressCountry: "US",
+      latitude: 25.0865,
+      longitude: -80.4473,
+    });
+
+    const after = await setShopAddress(db, shop.id, {
+      addressStreet: "123 Reef Rd",
+      addressLocality: "Key Largo",
+      addressRegion: "FL",
+      addressPostalCode: "33037",
+      addressCountry: "US",
+    });
+
+    expect(after?.latitude).toBeNull();
+    expect(after?.longitude).toBeNull();
+  });
+
   it("leaves an unfilled address as all null", async () => {
     const db = ctx.db;
     const [freshShop] = await db
