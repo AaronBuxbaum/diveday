@@ -29,6 +29,35 @@ describe("resolveRegSuitKeys", () => {
     expect(keys).toMatchObject({ actualKey: HEAD, expectedKey: MAIN_FORK, stacked: false });
   });
 
+  it("resolves PR keys from a fetched commit while the trusted publisher runs base code", () => {
+    const keys = resolveRegSuitKeys({
+      env: {
+        GITHUB_EVENT_NAME: "pull_request",
+        PR_BASE_REF: "main",
+        PR_HEAD_SHA: HEAD,
+        REG_SUIT_TRUSTED_BASE_CODE: "true",
+      },
+      git: git({
+        [`rev-parse ${HEAD}^{commit}`]: HEAD,
+        [`merge-base origin/main ${HEAD}`]: MAIN_FORK,
+      }),
+    });
+    expect(keys).toMatchObject({ actualKey: HEAD, expectedKey: MAIN_FORK, stacked: false });
+  });
+
+  it("rejects an invalid PR head before using it as a git revision", () => {
+    expect(() =>
+      resolveRegSuitKeys({
+        env: {
+          GITHUB_EVENT_NAME: "pull_request",
+          PR_HEAD_SHA: "--upload-pack=evil",
+          REG_SUIT_TRUSTED_BASE_CODE: "true",
+        },
+        git: git({}),
+      }),
+    ).toThrow(/full PR head sha/);
+  });
+
   // The whole of the change in ADR 20260919-stack-ci-cancels-superseded-layers,
   // in one assertion. A stacked layer used to be keyed to the layer below's
   // head, which only the layer below's own run could publish — so the layer
