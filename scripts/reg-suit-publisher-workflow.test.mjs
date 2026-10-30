@@ -20,7 +20,7 @@ describe("reg-suit publisher workflow", () => {
   it("pins the caller to the publisher revision that contains its runtime scripts", () => {
     expect(VISUAL_PUBLISH_CALL).toContain(
       "uses: AaronBuxbaum/diveday/.github/workflows/reg-suit-publish.yml@" +
-        "47bd273c605ef0037749a884929c004ae9513a81 # v1.0.3",
+        "8abd4af37968f7e3276a3c04e5a6a9766cee1463 # v1.0.4",
     );
   });
 
