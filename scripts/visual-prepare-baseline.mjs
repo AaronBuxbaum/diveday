@@ -17,6 +17,7 @@ import { DEFAULT_BUCKET, fetchFromBucket } from "./visual-report-lib.mjs";
 
 const COMMIT_SHA = /^[0-9a-f]{40}$/u;
 const BUCKET_NAME = /^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/u;
+const SAFE_BASELINE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,179}$/u;
 const SAFE_SCREENSHOT = /^[A-Za-z0-9][A-Za-z0-9._-]{0,179}\.png$/u;
 const MAX_SCREENSHOTS = 2_000;
 const MAX_TOTAL_BYTES = 2_000_000_000;
@@ -36,15 +37,18 @@ function reportNames(report) {
     throw new Error("baseline has too many screenshots");
   }
   const names = new Set();
+  const screenshots = [];
   for (const name of report.actualItems) {
-    if (typeof name !== "string" || !SAFE_SCREENSHOT.test(name)) {
+    if (typeof name !== "string" || !SAFE_BASELINE_NAME.test(name)) {
       throw new Error("baseline report contains an unsafe screenshot name");
     }
-    if (names.has(name))
-      throw new Error(`baseline report contains a duplicate screenshot: ${name}`);
+    if (names.has(name)) throw new Error(`baseline report contains a duplicate entry: ${name}`);
     names.add(name);
+    // Print checks previously shared this directory with screenshots. Those
+    // non-PNG outputs belong to the test artifact, not the visual baseline.
+    if (SAFE_SCREENSHOT.test(name)) screenshots.push(name);
   }
-  return [...names];
+  return screenshots;
 }
 
 async function fetchBaseline({ bucket, key, fetchImpl }) {
@@ -96,15 +100,25 @@ async function reencodeCachedBaseline(sourceDir) {
   requireDirectory(sourceDir, "cached baseline");
   const files = [];
   let totalBytes = 0;
-  for (const entry of readdirSync(sourceDir, { withFileTypes: true })) {
+  const entries = readdirSync(sourceDir, { withFileTypes: true });
+  if (entries.length > MAX_SCREENSHOTS) {
+    throw new Error("cached baseline has too many entries");
+  }
+  for (const entry of entries) {
     const file = path.join(sourceDir, entry.name);
     const stat = lstatSync(file);
     if (!entry.isFile() || entry.isSymbolicLink() || !stat.isFile()) {
       throw new Error("cached baseline contains a non-file entry");
     }
-    if (!SAFE_SCREENSHOT.test(entry.name))
+    if (!SAFE_BASELINE_NAME.test(entry.name))
       throw new Error("cached baseline contains an unsafe filename");
-    if (files.length >= MAX_SCREENSHOTS || stat.size > 20_000_000) {
+    if (stat.size > 20_000_000) {
+      throw new Error("cached baseline exceeds the publisher limits");
+    }
+    // Cached reports from before PNG-only capture can include print PDFs. They
+    // are safe named files, but only screenshots are comparison inputs.
+    if (!SAFE_SCREENSHOT.test(entry.name)) continue;
+    if (files.length >= MAX_SCREENSHOTS) {
       throw new Error("cached baseline exceeds the publisher limits");
     }
     const canonical = await reencodePng(readFileSync(file), `cached baseline ${entry.name}`);
