@@ -93,6 +93,35 @@ describe("the waiver group", () => {
     expect(row.querySelector("details")).toBeNull();
   });
 
+  it("labels a UTC-midnight medical cutoff with the shop-local date", () => {
+    const profile = (runsOutBeforeTrip: boolean) =>
+      diver({
+        waiver: {
+          state: "current",
+          signedAt: new Date("2026-07-21T15:00:00.000Z"),
+          expiresAt: new Date("2027-07-21T00:00:00.000Z"),
+          runsOutBeforeTrip,
+          medical: {
+            at: new Date("2026-07-21T00:00:00.000Z"),
+            source: "cleared",
+            overriddenReferralAt: null,
+            clearance: { recordId: "record-1", documentOnFile: true, fromDiver: false },
+          },
+        } as DiverProfile["waiver"],
+      });
+    renderCard(profile(false));
+
+    expect(screen.getByTestId("diver-file-group-waiver")).toHaveTextContent(
+      /Good until Jul 20, 2027 \(shop date\)/,
+    );
+
+    cleanup();
+    renderCard(profile(true));
+    expect(screen.getByTestId("diver-file-group-waiver")).toHaveTextContent(
+      /Runs out Jul 20, 2027 \(shop date\), before the trip\. Sign again\./,
+    );
+  });
+
   /**
    * UX review 2026-10-10, item 27: the signed row was the one row in the file
    * with no arrow, and no way to the signed document. It is a door to it now.
