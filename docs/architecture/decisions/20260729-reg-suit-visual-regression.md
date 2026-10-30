@@ -241,6 +241,10 @@ first versioned publication starts the comparison history from a clean baseline.
 finds only unversioned markers, it explicitly marks that run as a fresh start; the report publishes
 the new versioned baseline without a historical comparison, and subsequent runs compare against it.
 
-The trusted OIDC publisher uses 32 bounded upload workers. The previous 8-worker run hit its
-15-minute limit after uploading only part of a 3,480-object bundle; CI remains the measure for the
-new bound and marker-last retry behavior.
+The trusted OIDC publisher uses the existing S3 SDK with 32 bounded workers. New snapshot objects
+use conditional writes with SHA-256 checksums; the root marker uses a conditional write after the
+assets are ready. An existing object is reused only after its bytes are verified. The job installs
+the locked dependency graph from the pinned workflow revision with lifecycle scripts disabled.
+The AWS CLI implementation timed out with both 8 and 32 workers; hosted CI remains the measure for
+the SDK publisher. The whole-prefix pruner can race a same-SHA retry; #3326 tracks that separate
+coordination gap.
