@@ -205,8 +205,12 @@ a deterministic failure into an intermittent pass, which `pnpm check:e2e-hygiene
 
 The fresh-start transition below is the explicit exception: a run may publish one versioned
 baseline without comparison only after it confirms that unversioned markers exist and no
-versioned baseline was found. The report says it started fresh. A missing bucket, malformed marker,
-or unavailable history does not qualify; later runs must compare against the new versioned marker.
+versioned baseline was found, captures every light and dark surface on all eight shards, verifies
+every screenshot test in the independently generated Playwright plan produced an image, and
+verifies the resulting PNG names against a separate manifest recorded before each screenshot.
+Legacy images are not used as comparison inputs or copied into the new baseline. The report says
+it started fresh. A missing bucket, malformed marker, incomplete capture manifest, or unavailable
+history does not qualify; later runs must compare against the new versioned marker.
 
 ### Amended 2026-10-15: dark mode at the desktop width only
 

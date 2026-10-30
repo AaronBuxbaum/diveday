@@ -139,11 +139,19 @@ jobs:
           name: visual-screenshots-8
           path: ${{ runner.temp }}/reg-suit-artifacts/shard-8
 
+      - name: Download the planned visual capture inventory
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: visual-list
+          path: ${{ runner.temp }}/reg-suit-visual-plan
+
       - name: Accept only inert screenshot PNGs
         run: node scripts/visual-publish-artifacts.mjs
         env:
           VISUAL_ARTIFACT_ROOT: ${{ runner.temp }}/reg-suit-artifacts
           VISUAL_CAPTURE_SHARDS: ${{ inputs.capture-shards }}
+          VISUAL_EXPECTED_CAPTURE_TESTS: ${{ runner.temp }}/reg-suit-visual-plan/visual-list.json
+          VISUAL_EXPECTED_CAPTURE_MANIFEST: ${{ runner.temp }}/reg-suit-capture-manifest.json
 
       - name: Resolve a baseline that actually exists
         id: baseline
@@ -197,6 +205,7 @@ jobs:
           REG_SUIT_S3_BUCKET_NAME: ${{ secrets.REG_SUIT_S3_BUCKET_NAME }}
           GITHUB_EVENT_NAME: ${{ github.event_name }}
           VISUAL_FRESH_START: ${{ steps.baseline.outputs.fresh_start }}
+          VISUAL_EXPECTED_CAPTURE_MANIFEST: ${{ runner.temp }}/reg-suit-capture-manifest.json
 
       - name: Verify complete screenshot inventory
         run: node scripts/visual-publish-artifacts.mjs --verify-complete
@@ -204,6 +213,7 @@ jobs:
           GITHUB_EVENT_NAME: ${{ github.event_name }}
           VISUAL_FRESH_START: ${{ steps.baseline.outputs.fresh_start }}
           VISUAL_CAPTURE_MODE: ${{ inputs.capture-mode }}
+          VISUAL_EXPECTED_CAPTURE_MANIFEST: ${{ runner.temp }}/reg-suit-capture-manifest.json
 
       - name: Build the trusted S3 publish bundle
         id: bundle

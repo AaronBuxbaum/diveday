@@ -30,6 +30,7 @@ import {
   capture,
   FLOW_TIMEOUT_MS,
   installVisualBuildGuard,
+  registerExpectedVisualCapture,
   SAILED_TRIP,
   SURFACE_TIMEOUT_MS,
   staffCopy,
@@ -174,6 +175,7 @@ for (const scheme of ["light", "dark"] as const) {
           expect(
             await horizon.evaluate((element) => element.scrollWidth <= element.clientWidth),
           ).toBe(true);
+          registerExpectedVisualCapture("e2e/screenshots/today-arrival-lookup-light-vw-640.png");
           await page.screenshot({
             path: "e2e/screenshots/today-arrival-lookup-light-vw-640.png",
             fullPage: true,

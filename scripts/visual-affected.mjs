@@ -957,6 +957,55 @@ export function filterReport(report, keep) {
   };
 }
 
+// These suites assert capture plumbing, geometry, or PDF rendering without publishing PNGs.
+const NO_SCREENSHOT_SPEC_FILES = new Set([
+  "visual-capture-harness.spec.ts",
+  "visual-consistency.spec.ts",
+  "visual-print-departure-paper.spec.ts",
+]);
+
+const NO_SCREENSHOT_TESTS = new Map([
+  [
+    "visual-print-filter-context.spec.ts",
+    new Set(["printed roster states its visible subset rather than a web page number"]),
+  ],
+  [
+    "visual-print.spec.ts",
+    new Set(["every sheet of an expanded crew rota renders context and warning ink"]),
+  ],
+  [
+    "visual-staff-today.spec.ts",
+    new Set(["grouped departure links have a usable touch target and keyboard focus"]),
+  ],
+]);
+
+/** Test IDs for planned visual tests that must produce at least one PNG. */
+export function expectedCaptureTestIds(report) {
+  const ids = [];
+  function walk(suite, file) {
+    const suiteFile = suite.file ?? file;
+    for (const spec of suite.specs ?? []) {
+      const specFile = path.basename(spec.file ?? suiteFile);
+      if (
+        NO_SCREENSHOT_SPEC_FILES.has(specFile) ||
+        NO_SCREENSHOT_TESTS.get(specFile)?.has(spec.title)
+      ) {
+        continue;
+      }
+      if (typeof spec.id !== "string" || spec.id.length < 1 || spec.id.length > 512) {
+        throw new Error(`visual capture plan has no stable Playwright test ID: ${specFile}`);
+      }
+      ids.push(spec.id);
+    }
+    for (const child of suite.suites ?? []) walk(child, suiteFile);
+  }
+  for (const suite of report?.suites ?? []) walk(suite, suite.file ?? "");
+  if (ids.length === 0 || new Set(ids).size !== ids.length) {
+    throw new Error("visual capture plan must contain unique screenshot test IDs");
+  }
+  return ids.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+}
+
 /**
  * How many shards a selection needs: as many as keep each near the full run's per-shard weight,
  * never more than {@link FULL_SHARDS} and never more than there are captures to deal.
@@ -1165,7 +1214,10 @@ async function main() {
     }
   }
   const filtered = mode === "all" ? report : filterReport(report, new Set(chosen));
-  writeFileSync(outFile, JSON.stringify(filtered));
+  writeFileSync(
+    outFile,
+    JSON.stringify({ ...filtered, expectedCaptureTestIds: expectedCaptureTestIds(filtered) }),
+  );
   const grepFile = option(args, "grep");
   if (grepFile) writeFileSync(grepFile, lightGrep(chosen) ?? "");
   const shards = mode === "all" ? FULL_SHARDS : shardCount(chosen, durations);

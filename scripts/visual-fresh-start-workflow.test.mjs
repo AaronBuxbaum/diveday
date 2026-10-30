@@ -52,6 +52,19 @@ describe("fresh versioned visual baseline workflow", () => {
     expect(PLANNER_WORKFLOW).toContain('[ "${FRESH_START}" = "true" ]');
   });
 
+  it("carries a separate pre-capture inventory through the trusted publisher", () => {
+    expect(CI_WORKFLOW).toContain("e2e/capture-manifest/*.json");
+    expect(PUBLISH_WORKFLOW).toContain("name: Download the planned visual capture inventory");
+    expect(PUBLISH_WORKFLOW).toContain("name: visual-list");
+    expect(PUBLISH_WORKFLOW).toContain("VISUAL_EXPECTED_CAPTURE_TESTS");
+    expect(
+      PUBLISH_WORKFLOW.match(
+        /VISUAL_EXPECTED_CAPTURE_MANIFEST: \$\{\{ runner\.temp \}\}\/reg-suit-capture-manifest\.json/gu,
+      ),
+    ).toHaveLength(3);
+    expect(PUBLISH_WORKFLOW).toContain("name: Verify complete screenshot inventory");
+  });
+
   it("allows a no-comparison report only for the explicit fresh start", () => {
     expect(CI_WORKFLOW).toContain(
       "needs.visual-publish.outputs.baseline_reset == 'true' && steps.summary.outputs.verdict == 'no-baseline'",

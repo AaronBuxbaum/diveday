@@ -11,6 +11,7 @@ import {
   changedMessageKeys,
   changedRoutes,
   covers,
+  expectedCaptureTestIds,
   FULL_SHARDS,
   filterReport,
   helperBodies,
@@ -692,6 +693,68 @@ describe("the pieces", () => {
     const filtered = filterReport(report, keep);
     expect(filtered.suites[0].suites[0].specs).toHaveLength(1);
     expect(filterReport(report, new Set()).suites).toEqual([]);
+  });
+
+  it("lists planned screenshot test IDs and excludes deliberate no-image checks", () => {
+    const planned = {
+      suites: [
+        {
+          file: "e2e/visual-staff-today.spec.ts",
+          specs: [
+            { id: "capture-id", title: "the day spine renders true to the design" },
+            {
+              id: "touch-check-id",
+              title: "grouped departure links have a usable touch target and keyboard focus",
+            },
+          ],
+          suites: [
+            {
+              file: "e2e/visual-capture-harness.spec.ts",
+              specs: [{ id: "harness-id", title: "a pass that never settles is bounded" }],
+              suites: [],
+            },
+            {
+              file: "e2e/visual-consistency.spec.ts",
+              specs: [{ id: "geometry-id", title: "the email correction is a touch target" }],
+              suites: [],
+            },
+            {
+              file: "e2e/visual-print-departure-paper.spec.ts",
+              specs: [
+                { id: "pdf-id", title: "standalone manifest and log repeat visible context" },
+              ],
+              suites: [],
+            },
+            {
+              file: "e2e/visual-print-filter-context.spec.ts",
+              specs: [
+                {
+                  id: "print-filter-id",
+                  title: "printed roster states its visible subset rather than a web page number",
+                },
+              ],
+              suites: [],
+            },
+            {
+              file: "e2e/visual-print.spec.ts",
+              specs: [
+                {
+                  id: "print-id",
+                  title: "every sheet of an expanded crew rota renders context and warning ink",
+                },
+              ],
+              suites: [],
+            },
+          ],
+        },
+      ],
+    };
+    expect(expectedCaptureTestIds(planned)).toEqual(["capture-id"]);
+    expect(() =>
+      expectedCaptureTestIds({
+        suites: [{ file: "e2e/visual-staff.spec.ts", specs: [{ title: "missing id" }] }],
+      }),
+    ).toThrow(/no stable Playwright test ID/u);
   });
 
   it("deals a narrowed set onto as few shards as keep each near a full shard's weight", () => {
