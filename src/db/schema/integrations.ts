@@ -362,8 +362,6 @@ export const calendarFeeds = pgTable(
     createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
-    // The verify-path lookup: hash the bearer token, find the row.
-    index("calendar_feeds_token_hash_idx").on(table.tokenHash),
     // "Does this person already have a live feed for this scope?" — the
     // issue/rotate path and the staff settings panel both ask exactly this.
     index("calendar_feeds_person_scope_idx").on(table.personId, table.scope, table.revokedAt),
