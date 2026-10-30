@@ -76,6 +76,7 @@ export const VENDORED_SKILL_OVERRIDES = [
     path: "implement-spec/SKILL.md",
     phrase: "Use **implementer subagents** to implement each ticket",
   },
+  { path: "implement/SKILL.md", phrase: "the full test suite once at the end" },
   { path: "research/SKILL.md", phrase: "Spin up a **background agent** to do the research" },
   { path: "tdd/SKILL.md", phrase: 'call the Skill tool with "codebase-design"' },
   { path: "wayfinder/SKILL.md", phrase: "Always call the Skill tool twice" },

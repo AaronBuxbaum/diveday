@@ -215,6 +215,13 @@ describe("local overrides of vendored skills", () => {
       expect.stringContaining(".agents/skills/domain-modeling/ADR-FORMAT.md"),
     ]);
   });
+
+  it("refuses the full-suite instruction restored by a skill sync", () => {
+    const problems = vendoredSkillProblems({
+      "implement/SKILL.md": "Run the full test suite once at the end.",
+    });
+    expect(problems).toEqual([expect.stringContaining(".agents/skills/implement/SKILL.md")]);
+  });
 });
 
 describe("the handoff docs' paths", () => {

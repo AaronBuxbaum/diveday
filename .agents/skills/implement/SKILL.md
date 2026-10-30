@@ -6,10 +6,11 @@ disable-model-invocation: true
 
 Implement the work described by the user in the spec or tickets.
 
-Use /tdd where possible, at pre-agreed seams.
+Use the `tdd` skill where possible, at pre-agreed seams.
 
-Run typechecking regularly, single test files regularly, and the full test suite once at the end.
+Run typechecking and focused test files regularly. The full suite belongs to CI.
 
-Once done, review the work the way this repo does: the `verify` skill, then the reviewer agents in `.claude/agents/` that AGENTS.md requires for the surfaces touched.
+Once done, review with the `verify` and `code-review` skills. Run any reviewer roles AGENTS.md
+requires for the surfaces touched through the active provider's supported review mechanism.
 
 Commit your work to the current branch.
