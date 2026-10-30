@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 import { fileScopedShopContext } from "@/test/db";
 import { createDiveSite } from "./dive-sites";
 import { bookings, courses, shops, trips } from "./schema";
@@ -277,14 +278,13 @@ describe("paged schedule queries", () => {
   });
 
   it("keeps the one-hour late-arrival buffer under a lens", async () => {
-    // AGENTS.md's trips buffer: a departure that left half an hour ago has not
-    // "sailed" yet, and a new predicate beside `nowWithBuffer` must not be what
-    // takes it off the board.
+    // This departure is exactly at the buffer cutoff; the lens must not add a
+    // second query predicate that removes it from the board.
     const { db, shop } = ctx;
     const lens = await createTripLens(db, shop.id, "After dark");
     if (!lens) throw new Error("lens insert failed");
     const now = nowDate();
-    const startsAt = new Date(now.getTime() - 30 * 60 * 1000);
+    const startsAt = new Date(now.getTime() - DEPARTURE_BUFFER_MS);
     const trip = await createTrip(db, {
       shopId: shop.id,
       title: "Late-arrival lens departure",
@@ -937,13 +937,13 @@ describe("the week board", () => {
     const seeded = Object.values((await weekBoard(db, shop.id, THIS_WEEK, TZ, now)).days).flat()[0];
     if (!seeded) throw new Error("no departure in the seeded week to re-time");
 
-    // Back at the dock half an hour ago: inside the standing one-hour buffer
-    // every "has it sailed" check in this app carries, so still the day's work.
+    // At the dock exactly one hour ago: equality is still inside the standing
+    // buffer because the board marks a run sailed only strictly after it.
     await db
       .update(trips)
       .set({
         startsAt: new Date(now.getTime() - 3 * 60 * 60 * 1000),
-        endsAt: new Date(now.getTime() - 30 * 60 * 1000),
+        endsAt: new Date(now.getTime() - DEPARTURE_BUFFER_MS),
       })
       .where(eq(trips.id, seeded.tripId));
     const inside = Object.values((await weekBoard(db, shop.id, THIS_WEEK, TZ, now)).days)
@@ -951,12 +951,12 @@ describe("the week board", () => {
       .find((entry) => entry.tripId === seeded.tripId);
     expect(inside?.status).toBe("upcoming");
 
-    // Two hours ago, and the column it sits in is history.
+    // One millisecond past the buffer, and the column it sits in is history.
     await db
       .update(trips)
       .set({
         startsAt: new Date(now.getTime() - 5 * 60 * 60 * 1000),
-        endsAt: new Date(now.getTime() - 2 * 60 * 60 * 1000),
+        endsAt: new Date(now.getTime() - DEPARTURE_BUFFER_MS - 1),
       })
       .where(eq(trips.id, seeded.tripId));
     const outside = Object.values((await weekBoard(db, shop.id, THIS_WEEK, TZ, now)).days)
