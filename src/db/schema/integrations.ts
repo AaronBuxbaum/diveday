@@ -6,6 +6,7 @@ import {
   jsonb,
   pgEnum,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
@@ -60,6 +61,7 @@ export const backupDeliveryStatus = pgEnum("backup_delivery_status", [
   "started",
   "succeeded",
   "failed",
+  "superseded",
 ]);
 
 export const backupDeliveryTrigger = pgEnum("backup_delivery_trigger", ["scheduled", "manual"]);
@@ -98,6 +100,25 @@ export const shopBackupDeliveries = pgTable(
   (table) => [
     index("shop_backup_deliveries_shop_started_idx").on(table.shopId, table.startedAt),
     index("shop_backup_deliveries_shop_period_idx").on(table.shopId, table.periodKey),
+  ],
+);
+
+/** One scheduled shop backup claim per shop and ISO week; an attempt token fences late workers. */
+export const shopBackupDeliveryClaims = pgTable(
+  "shop_backup_delivery_claims",
+  {
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id, { onDelete: "cascade" }),
+    periodKey: text("period_key").notNull(),
+    attemptNumber: integer("attempt_number").notNull(),
+    leaseToken: uuid("lease_token"),
+    leaseUntil: timestamp("lease_until", { withTimezone: true }),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+  },
+  (table) => [
+    primaryKey({ columns: [table.shopId, table.periodKey] }),
+    index("shop_backup_delivery_claims_lease_idx").on(table.leaseUntil),
   ],
 );
 
