@@ -22,8 +22,8 @@ import { fileURLToPath } from "node:url";
 import { regSuitConfigArgs } from "./reg-suit-config.mjs";
 import { gitReader, resolveRegSuitKeys } from "./reg-suit-keys.mjs";
 import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
-import { verifyCompleteScreenshotInventory } from "./visual-publish-artifacts.mjs";
 import { fillFromExpected, selectionNote } from "./visual-fill.mjs";
+import { verifyCompleteScreenshotInventory } from "./visual-publish-artifacts.mjs";
 import { DEFAULT_BUCKET } from "./visual-report-lib.mjs";
 import { nearestPublishedAncestor } from "./wait-for-baseline.mjs";
 
