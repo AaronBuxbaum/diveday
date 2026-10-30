@@ -58,9 +58,9 @@ export const metadata: Metadata = {
       "Step-by-step guides to bring your divers, cards, and sizes into DiveDay, with a clear picture of what comes across.",
     url: "/switching",
   },
-  // `summary_large_image`: the OG block above names the shared link card
-  // (`sharedLinkCard` → `src/app/opengraph-image.tsx`), so the large card has an
-  // image to fill it — docs/product/marketing.md, Twitter-card policy. These
+  // `summary_large_image`: the OG block above names the shared card via
+  // `sharedLinkCard`; its image is served at `src/app/link-card/route.tsx` —
+  // docs/product/marketing.md, Twitter-card policy. These
   // pages get pasted into shop owners' chat groups more than any other, which
   // is the whole reason the card block is not optional here.
   twitter: {

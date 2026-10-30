@@ -38,9 +38,9 @@ export const metadata: Metadata = {
       "The story behind DiveDay’s roll call, the divers who build it, and how a shop gets set up.",
     url: "/about",
   },
-  // `summary_large_image`: the OG block above names the shared link card
-  // (`sharedLinkCard` → `src/app/opengraph-image.tsx`), so the large card has an
-  // image to fill it — docs/product/marketing.md, Twitter-card policy.
+  // `summary_large_image`: the OG block above names the shared card via
+  // `sharedLinkCard`; its image is served at `src/app/link-card/route.tsx` —
+  // docs/product/marketing.md, Twitter-card policy.
   twitter: {
     card: "summary_large_image",
     title: "Why DiveDay exists — DiveDay",

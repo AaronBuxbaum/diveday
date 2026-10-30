@@ -37,9 +37,9 @@ export const metadata: Metadata = {
       "Each feature has its own page, with the screen that does the job and the demo opened on it.",
     url: "/product",
   },
-  // `summary_large_image`: the OG block above names the shared link card
-  // (`sharedLinkCard` → `src/app/opengraph-image.tsx`), so the large card has an
-  // image to fill it (docs/product/marketing.md, Twitter-card policy). Title and
+  // `summary_large_image`: the OG block above names the shared card via
+  // `sharedLinkCard`; its image is served at `src/app/link-card/route.tsx`
+  // (docs/product/marketing.md, Twitter-card policy). Title and
   // description are restated here rather than left to inherit, so a shared link
   // never unfurls with the root layout's generic site-level words.
   twitter: {
