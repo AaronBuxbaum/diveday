@@ -1,10 +1,13 @@
 /** Preserve an initial focus request made while staff content is covered. */
 export function focusAfterStaffCheck(element: HTMLElement | null): () => void {
   if (!element) return () => {};
-  const sessionCheckPending = document.querySelector('[data-staff-session-check="pending"]');
+  const pendingCheck = document.querySelector('[data-staff-session-check="pending"]');
   let frame: number | undefined;
+  let observer: MutationObserver | undefined;
   const unlocked = () => {
+    if (frame !== undefined) return;
     frame = requestAnimationFrame(() => {
+      frame = undefined;
       const active = document.activeElement;
       if (
         element.isConnected &&
@@ -15,9 +18,25 @@ export function focusAfterStaffCheck(element: HTMLElement | null): () => void {
     });
   };
   document.addEventListener("staff-session-unlocked", unlocked, { once: true });
-  if (!element.closest("[inert]") && !sessionCheckPending) element.focus({ preventScroll: true });
+  if (pendingCheck) {
+    // A streamed client component can mount after the unlock event but before
+    // React updates this marker. Watch the marker too, so its focus request is
+    // not lost in that gap.
+    observer = new MutationObserver(() => {
+      if (pendingCheck.getAttribute("data-staff-session-check") === "pending") return;
+      observer?.disconnect();
+      unlocked();
+    });
+    observer.observe(pendingCheck, {
+      attributes: true,
+      attributeFilter: ["data-staff-session-check"],
+    });
+  } else if (!element.closest("[inert]")) {
+    element.focus({ preventScroll: true });
+  }
   return () => {
     document.removeEventListener("staff-session-unlocked", unlocked);
+    observer?.disconnect();
     if (frame !== undefined) cancelAnimationFrame(frame);
   };
 }

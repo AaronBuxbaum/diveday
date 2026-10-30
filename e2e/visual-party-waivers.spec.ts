@@ -14,7 +14,7 @@ installVisualBuildGuard();
 test.describe.configure({ timeout: SURFACE_TIMEOUT_MS });
 test.use({ ...VISUAL_STEP_BOUNDS, screenshot: "off", trace: "off" });
 const t = staffTranslator("en-US");
-const WALK_IN_TRIP_TITLE = "Two-Tank Reef — Molasses & French";
+const WALK_IN_TRIP_TITLE = "Morning Two-Tank — Molasses Reef";
 signedInAsOwner();
 
 for (const scheme of ["light", "dark"] as const) {
@@ -22,9 +22,9 @@ for (const scheme of ["light", "dark"] as const) {
     test.use({ colorScheme: scheme, viewport: { width: 1280, height: 800 } });
     test.describe("staff", () => {
       test(`the party waiver queue shows each person's next step (${scheme})`, async ({ page }) => {
-        // Walk-ins only open near sailing; keep both captures on today's departure.
+        // This next-morning boat is inside the walk-in window and has party capacity.
         const tripId = await seededTripId(page, "blue-mantis", WALK_IN_TRIP_TITLE, {
-          daysOut: 0,
+          daysOut: 1,
         });
         await page.goto(walkInFormPath("blue-mantis", tripId));
         await page.getByRole("button", { name: "Add another person" }).click();
@@ -47,7 +47,7 @@ for (const scheme of ["light", "dark"] as const) {
         workerBaseURL,
       }) => {
         const tripId = await seededTripId(page, "blue-mantis", WALK_IN_TRIP_TITLE, {
-          daysOut: 0,
+          daysOut: 1,
         });
         await page.goto(walkInFormPath("blue-mantis", tripId));
         await page.getByRole("button", { name: "Add another person" }).click();
