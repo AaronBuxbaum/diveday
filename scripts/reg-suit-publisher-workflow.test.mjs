@@ -5,6 +5,11 @@ import { describe, expect, it } from "vitest";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const WORKFLOW = readFileSync(path.join(ROOT, ".github/workflows/reg-suit-publish.yml"), "utf8");
+const CI_WORKFLOW = readFileSync(path.join(ROOT, ".github/workflows/ci.yml"), "utf8");
+const VISUAL_PUBLISH_CALL = CI_WORKFLOW.slice(
+  CI_WORKFLOW.indexOf("\n  visual-publish:\n"),
+  CI_WORKFLOW.indexOf("\n  visual-report:\n"),
+);
 const PREPARE = WORKFLOW.slice(
   WORKFLOW.indexOf("\n  prepare:\n"),
   WORKFLOW.indexOf("\n  publish:\n"),
@@ -12,6 +17,13 @@ const PREPARE = WORKFLOW.slice(
 const PUBLISH = WORKFLOW.slice(WORKFLOW.indexOf("\n  publish:\n"));
 
 describe("reg-suit publisher workflow", () => {
+  it("pins the caller to the publisher revision that contains its runtime scripts", () => {
+    expect(VISUAL_PUBLISH_CALL).toContain(
+      "uses: AaronBuxbaum/diveday/.github/workflows/reg-suit-publish.yml@" +
+        "0957f47220668dd3c1f280c79a977b62d1c63f90 # v1.0.1",
+    );
+  });
+
   it("accepts workflow calls only and repeats the same-repository fork guard", () => {
     expect(WORKFLOW).toMatch(/^on:\n {2}workflow_call:/mu);
     expect(WORKFLOW).toContain("repository: ${{ job.workflow_repository }}");
