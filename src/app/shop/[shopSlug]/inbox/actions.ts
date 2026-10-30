@@ -29,6 +29,15 @@ const lateForm = z.object({
   bookingId: z.string().default(""),
 });
 
+/** The shared live-staff and shop-binding gate for inbox writes. */
+async function requireInboxActionContext() {
+  const session = await requireStaffSession();
+  const inbox = shopPath(session.user.shopSlug, "inbox");
+  const db = await getDb();
+  if (!(await loadActiveStaffRoles(db, session.user.shopId, session.user.personId))) notFound();
+  return { session, inbox, db };
+}
+
 /**
  * **Delete a message from a sender nobody on the roster holds** (issue #1506;
  * ADR 20260907-two-way-inbox, decision 9 and its delete amendment).
@@ -62,18 +71,7 @@ const lateForm = z.object({
  * a staffer is offered; it cannot decide what the server accepts.
  */
 export async function deleteInboxMessageAction(formData: FormData): Promise<void> {
-  const session = await requireStaffSession();
-  const inbox = shopPath(session.user.shopSlug, "inbox");
-  const db = await getDb();
-
-  // `requireStaffSession` re-reads the account's live roles by *person*, and
-  // says in as many words that checking the session's claimed `shopId` is
-  // somebody else's job (`loadActiveStaffRolesByPerson`, src/db/authz.ts).
-  // A staff page borrows that check from `requireShopSurface`, and a gated
-  // mutation borrows it from its own `canPerson*` call. This one has no gate
-  // to borrow it from, so it asserts the binding itself rather than trusting
-  // a signed claim on its own (ADR-0006, the server re-checks).
-  if (!(await loadActiveStaffRoles(db, session.user.shopId, session.user.personId))) notFound();
+  const { session, inbox, db } = await requireInboxActionContext();
 
   // A posted id is caller-controlled, so it is narrowed before it reaches a
   // `uuid` comparison — an unparseable one would otherwise be a 500 rather
@@ -104,10 +102,7 @@ export async function deleteInboxMessageAction(formData: FormData): Promise<void
  * moved row is its own confirmation, so success redirects with no notice.
  */
 export async function setInboxMessageDoneAction(formData: FormData): Promise<void> {
-  const session = await requireStaffSession();
-  const inbox = shopPath(session.user.shopSlug, "inbox");
-  const db = await getDb();
-  if (!(await loadActiveStaffRoles(db, session.user.shopId, session.user.personId))) notFound();
+  const { session, inbox, db } = await requireInboxActionContext();
 
   const parsed = parseForm(doneMessageForm, formData);
   const messageId = parsed.ok ? uuidParam(parsed.data.messageId) : null;
@@ -139,10 +134,7 @@ export async function setInboxMessageDoneAction(formData: FormData): Promise<voi
  * which is why any live staff role may set it.
  */
 export async function markInboxSenderLateAction(formData: FormData): Promise<void> {
-  const session = await requireStaffSession();
-  const inbox = shopPath(session.user.shopSlug, "inbox");
-  const db = await getDb();
-  if (!(await loadActiveStaffRoles(db, session.user.shopId, session.user.personId))) notFound();
+  const { session, inbox, db } = await requireInboxActionContext();
 
   const parsed = parseForm(lateForm, formData);
   const messageId = parsed.ok ? uuidParam(parsed.data.messageId) : null;
