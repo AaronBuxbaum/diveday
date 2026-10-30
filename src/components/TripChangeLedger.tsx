@@ -21,10 +21,8 @@ const ARRIVAL_GUIDANCE_FIELDS = [
 type FactKey = "meetingPoint" | "arrivalGuidance" | "arrivalPhoto" | "conditions" | "sites";
 
 /**
- * The facts one event changed, each "{fact}: {new value}", or none. A part
- * whose value did not move is left out rather than restated (visual review
- * 2026-10-24, B21): the card had repeated the meeting point the page already
- * shows above it, unchanged.
+ * The facts one event changed, each "{fact}: {new value}", or none. Unchanged
+ * values are omitted so the ledger does not restate facts already on the page.
  */
 function changedFacts(
   event: TripChangeEvent,
@@ -57,9 +55,7 @@ function changedFacts(
     return facts;
   }
   if (event.kind === "site_change") {
-    // The day's sites moved (issue #3060): the new run, worded as the
-    // "Planned sites" row words it (`siteRunsLine`), so the two never differ.
-    // Site names are public on the trip page, so a public page shows them too.
+    // Match the "Planned sites" row; site names are public on the trip page.
     const sites = tripSiteNames(event.afterValue);
     if (sites.join("\n") === tripSiteNames(before).join("\n")) return [];
     return [
@@ -74,20 +70,16 @@ function changedFacts(
   const summary = valueText(event.afterValue.conditionsSummary);
   const was = valueText(before.conditionsSummary);
   if (summary === was) return [];
-  // A cleared note is a change too: a diver who read "Strong current" is told
-  // it is gone, not left with the old warning (dive-domain review, B21).
+  // Report a cleared note so readers do not rely on its previous warning.
   if (!summary) return was ? [["conditions", t("trip.changeConditionsCleared")]] : [];
   return [["conditions", t("trip.changeConditionsWithSummary", { summary })]];
 }
 
 /**
- * **What changed**: the trip's facts that moved, each once with its newest
- * value, and when (visual review 2026-10-24, B21). One entry per fact, at its
- * newest change across every event, because a diver needs where the boat
- * leaves from now, not each step it took to get there. No self-description and no source chip,
- * but the muted line keeps the broad source word, shop or crew (ADR 20260904-reef-all-the-way-down,
- * Budget rule 5; glossary "Change ledger"): an office edit must never read as the crew's word from
- * the dock. When nothing changed, nothing renders. No private actor data is shown.
+ * Show each changed trip fact once, at its newest value and time. Keep the
+ * broad source (shop or crew) so an office edit is not attributed to the crew;
+ * show no private actor data. Public pages may name a changed arrival fact but
+ * never reveal its exact place. Render nothing when no fact changed.
  */
 export function TripChangeLedger({
   events,
@@ -104,9 +96,8 @@ export function TripChangeLedger({
   className?: string;
 }) {
   const t = diverTranslator(locale);
-  // Each fact at its newest change, across every event: a later event that
-  // touched only the arrival photo must not hide the earlier move of the
-  // meeting point (dive-domain review, B21).
+  // Keep the newest event for each fact independently; a photo change must
+  // not hide an earlier meeting-point change.
   const newest = new Map<
     FactKey,
     { text: string; occurredAt: Date; source: TripChangeEvent["source"]; id: string }
