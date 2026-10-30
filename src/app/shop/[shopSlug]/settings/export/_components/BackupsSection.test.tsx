@@ -54,6 +54,26 @@ const DELIVERY: ShopBackupDelivery = {
  * run, outcome and size, then the details on a line of their own.
  */
 describe("BackupsSection's delivery history", () => {
+  it.each([
+    ["en-US", "Replaced", "A newer weekly attempt took over this run."],
+    ["es-ES", "Reemplazado", "Una entrega semanal más reciente tomó el control de este intento."],
+  ] as const)(
+    "explains a superseded delivery in %s and shows its unique key",
+    (locale, status, details) => {
+      const superseded: ShopBackupDelivery = {
+        ...DELIVERY,
+        status: "superseded",
+        objectKey: "diveday/diveday-backup-blue-mantis-2026-W32-attempt-1.zip",
+      };
+
+      renderSection(locale, [superseded]);
+
+      expect(screen.getByText(status)).toBeVisible();
+      expect(screen.getByText(details)).toBeVisible();
+      expect(screen.getByText(superseded.objectKey as string)).toBeVisible();
+    },
+  );
+
   it("stacks every row at every width, with no table breakpoint left", () => {
     renderSection("en-US", [DELIVERY]);
     const table = screen.getByRole("table");
