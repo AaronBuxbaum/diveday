@@ -48,15 +48,10 @@ export const earlyAccessPrice = {
   price: "$99", // i18n-exempt: currency figure, the H-12 single source — never restate elsewhere
   nameKey: "marketing.price.name",
   cadenceKey: "marketing.price.cadence",
-  // The price's lines in `/pricing`'s one "Notes" list, beside the invoice
-  // notes and the trial (visual review 2026-10-24, B11). "What the price
-  // covers" was a second list restating the invoice and `/product`, so only
-  // the two lines the invoice cannot say stayed. The numbering is not
-  // resequenced: each key keeps naming the string it always named.
-  // `item7` is the one service line: the storefront in the shop's brand and
-  // the embeds are shipped, and the website built to order is the second
-  // authorized service offer (H-64/H-65, docs/product/marketing.md), a
-  // person's commitment, never a turnaround time or a page count.
+  // The two `/pricing` notes that add to the invoice and trial: shipped
+  // storefront and embeds, plus the owner-authorized website built to order
+  // (H-64/H-65, docs/product/marketing.md). The latter is a person's offer,
+  // never a turnaround time or page count.
   includedKeys: ["marketing.price.item3", "marketing.price.item7"],
 } as const satisfies {
   price: string;
@@ -98,24 +93,11 @@ export const continuityPromise = {
 } as const satisfies { claimKey: DiverMessageKey };
 
 /**
- * The mid-season answer, rendered on the homepage's records band
- * (docs/product/marketing-review-20260827.md, "Mid-season answered where it
- * disqualifies"). One claim, told at two lengths: the switching guides walk it
- * as the steps of `guides.shared.cutover.*`, and `/` compresses the same
- * promise to a sentence for a reader who will never open a guide.
- *
- * So the key deliberately lives in the **guides'** namespace rather than the
- * homepage's, and this constant is what makes that legible at the call site:
- * every clause in the sentence is a compression of
- * `guides.shared.cutover.step1`, `step3` and `step4`, so an editor rewriting
- * that cutover rail is reading the homepage's sentence in the same
- * block of the bundle and cannot leave it behind. Two wordings of one promise
- * is the failure this prevents — the rule marketing.md states one namespace
- * over for the export claim ("Never let a surface restate the export claim in
- * its own words"), which is why this reads like `fullShopExport` above.
- *
- * The guides do **not** additionally render this sentence: beside the steps
- * it summarizes, it would be a caption restating its own section.
+ * The homepage's records band and switching guides share one mid-season
+ * promise. Its key stays in `guides.shared.cutover.*` because the homepage
+ * sentence compresses steps 1, 3 and 4; keeping both in one bundle namespace
+ * prevents them drifting apart. The guides use the steps without repeating
+ * the summary beside them.
  */
 export const midSeasonCutover = {
   claimKey: "marketing.guides.shared.cutover.midSeason",
@@ -158,22 +140,10 @@ export interface CapabilityAreaKeys {
  * open beside it, and it earns nothing by being written like the bands above
  * it.
  *
- * **It is the full inventory, not a highlight reel.** Until 2026-09-01 this
- * held 49 lines in seven groups — one chosen line per area, which read as
- * precise and left a buyer with the incumbent's feature page open counting
- * what was missing. The bar for a line is that it is walkable in the product,
- * in the buyer's words; the bar for *leaving one out* is that it is not a
- * thing a shop would ever look for. One thing is never listed twice.
- *
- * **Grouped by feature page since 2026-10-05** (H-93). The nine groups it had
- * were the product's own areas ("The dive day", "Reaching divers"), which is
- * how the code is organised and not how a shop asks; each feature page now
- * renders its own group as its checklist, so a line lives under the page a
- * buyer would look for it on. The same rework checked every line against the
- * code and corrected the ones that had drifted: a diver cancels a booking but
- * cannot move it, the courtesy text is SMS, a cancelled departure refunds by
- * itself only when weather or a short head count cancelled it, and the inbox
- * hears replies to email.
+ * **This is the full inventory, not a highlight reel.** List each shipped
+ * workflow once, in the buyer's words, under the feature page where a shop
+ * would look for it. Keep every claim accurate to the product and remove it
+ * when it stops being true.
  */
 export const productCapabilityIndex: readonly CapabilityAreaKeys[] = [
   {
