@@ -6,30 +6,11 @@ import type { ChecklistState, DiverChecklistItem } from "./readiness-summary";
 import { RECAP_AUTOMATIC_DELAY_MS } from "./recap-schedule";
 
 /**
- * **The diver's thread as a spine of steps** — ADR 20260827-the-divers-thread,
- * decision 3, slice 7c.
- *
- * `readiness-summary.ts` turns the readiness engine's blockers into a diver's
- * checklist; this turns that checklist into the *order a diver walks*. The
- * difference is not cosmetic. A checklist is a set of categories that happen
- * to exist; a spine is a fixed sequence — sign → certification → pay → gear →
- * day-of — with one figure over it that says how far along it the diver is,
- * and that figure is the whole reason this module exists.
- *
- * **The figure must always be able to fill.** The page it replaced counted
- * `items.length + 2` and showed a wave-filled bar whose own copy admitted it
- * could never reach the end: the note, the hotel pickup and the other optional
- * questions were rendered as rows a diver could answer, left out of the count,
- * and three of the seven rows on screen therefore moved nothing when answered. So every step this module emits is countable and every one of them
- * is finishable — the optional questions fold into Day-of details, which
- * settles on the one question that is genuinely asked of everybody (when did
- * you last dive), and the rest ride inside it without gating it.
- *
- * It decides nothing about readiness and re-voices nothing: the states come
- * straight off the checklist the engine already produced, and the two steps
- * that carry no blocker at all (gear, day-of) are booleans the caller
- * computes. Framework-free, no words — the caller resolves every id through
- * `src/i18n/thread-labels.ts`, per the repo's codes-not-sentences rule.
+ * Builds the diver's fixed sequence: sign → certification → pay → gear or
+ * changes → day-of. Every step counts toward progress and can settle. Optional
+ * pickup and note answers stay inside Day-of details and do not gate it.
+ * Readiness-owned states pass through unchanged; gear and day-of use caller
+ * booleans. The caller resolves these ids through `src/i18n/thread-labels.ts`.
  */
 
 /**
@@ -52,18 +33,9 @@ export const THREAD_STEP_ORDER = [
 export type ThreadStepId = (typeof THREAD_STEP_ORDER)[number];
 
 /**
- * Three states, not four.
- *
- * The SPEC proposed a fourth, `upcoming`, "reserved for steps with nothing
- * actionable yet" — and nothing in this product produces one. Every step is
- * either finished, the diver's to do, or the shop's to finish; gear and
- * day-of are answerable from the moment the booking exists, and a waiver the
- * shop has not issued is the shop's (`waiver_not_sent` is a `waiting`
- * blocker), not a future the diver waits for. The quiet, dimmed reading the
- * artboard gives a later step is carried by `current` instead — the first
- * `your_turn` step is open, the rest are closed lines — which is a rendering
- * decision rather than a state, and leaves no branch here that no test can
- * reach.
+ * A step is done, the diver's turn, or the shop's turn. Later steps need no
+ * fourth state: `current` identifies the first diver-owned step and rendering
+ * can show subsequent steps as closed without changing their state.
  */
 export type ThreadStepState = "done" | "your_turn" | "with_shop";
 
@@ -207,18 +179,8 @@ export function buildThreadSteps(input: ThreadStepsInput): ThreadSpine {
     steps.push({ id: "pay", state: "done" });
   }
 
-  // **One slot, filled two ways** (ADR 20260904-reef-all-the-way-down, D15
-  // with D19 folded in). A diver whose sizes the shop was already holding has
-  // answered the gear question, so a settled "Gear and sizes" row beside a
-  // live "Anything changed?" would be two rows for one fact — the duplication
-  // decision 3 exists to end. A returning diver is asked once; a first-timer's
-  // spine is what it always was; neither ever sees both.
-  //
-  // `changes` is countable and finishable like every other step, which is what
-  // keeps the figure over the spine able to fill. The ThreadPhone artboard
-  // draws "3 of 4 done" over five rows, which would need the fourth `upcoming`
-  // state this module refused above; the ADR is what code obeys ("the thread
-  // gains one step"), so the shipped figure counts five.
+  // Returning divers confirm carried fit facts in one `changes` step; first
+  // timers answer in one `gear` step. Never show both for the same booking.
   // A rider stays aboard: no sizes to give, and nothing carried to confirm.
   if (rentsGear(input.participantType) && input.carriedFacts) {
     steps.push({ id: "changes", state: input.carriedFactsConfirmed ? "done" : "your_turn" });
@@ -315,42 +277,12 @@ export function theBoatIsHome(input: { endsAt: Date; now?: Date }): boolean {
 export type DepartureRollCall = "boarded" | "not_boarded" | null;
 
 /**
- * **The diver dived**, which is the condition that turns the thread page from
- * its prep state into its after-state (ADR 20260827-the-divers-thread,
- * decision 4, slice 7d).
- *
- * It opened on the clock alone until a review caught it (2026-08-28): the
- * one-hour late-arrival buffer above, and nothing else. That buffer is the
- * right rule for *has it sailed* and the wrong one for *did this person dive*,
- * because the only thing standing between a diver who never boarded and a page
- * saying "Welcome back" was `bookings.status = 'no_show'`, and that status is
- * not a record of the dock. It has a writer now (`markBookingNoShow`,
- * src/db/no-show.ts, issue #1209), tapped at the counter while the boat is
- * still in sight rather than at close-out, and it still may not carry this: the
- * mark is one staffer's discretionary act on a *seat*, a shop that never works
- * the counter queue writes none at all, its door shuts six hours after the
- * departure (`noShowGate`, src/lib/no-show.ts), and a diver the crew board
- * after it is written has the seat handed straight back (`reclaimReleasedSeat`,
- * src/db/manifests.ts). A page that opened on it would be reading a shop's desk
- * work as evidence about the water. So the diver who overslept, or who was held
- * at the desk on a medical hold and never left the dock, opened the durable link
- * already sitting in their inbox and got a printable dive record for a day they
- * spent on land, and an invitation to tip the crew who dived without them.
- *
- * Three answers, in the order the evidence deserves:
- *
- * - **`not_boarded` never sees the afterglow.** The crew wrote down that this
- *   person did not get on the boat; no clock overrides that.
- * - **`boarded` opens it at the buffer**, because the shop has recorded that
- *   they were aboard — the clock is no longer asserting anything on its own.
- * - **No roll call at all waits for the recap floor**
- *   (`RECAP_AUTOMATIC_DELAY_HOURS`, four hours). It is the delay the recap
- *   *send* has always used before it asserts the same thing by email, and a
- *   shop that does not run roll call should not have a second, looser rule
- *   invented for it here.
- *
- * Still deliberately blind to cancellation — of the booking or of the departure
- * — which are terminal notices the page decides before it ever asks this.
+ * Whether the diver can see the after-dive page. The clock alone cannot prove
+ * they boarded: `not_boarded` always stays in prep, while `boarded` opens once
+ * the return buffer passes. Without roll call, wait for the same delay as the
+ * automatic recap before asserting a dive. A no-show booking status is not
+ * dock evidence; it may be discretionary, absent, or reversed after boarding.
+ * Cancellation is handled upstream as a terminal state.
  */
 export function isAfterTheDive(input: {
   endsAt: Date;

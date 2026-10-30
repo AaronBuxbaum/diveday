@@ -64,34 +64,16 @@ const TILE_SIZE: Record<ImageTileShape, string> = {
 };
 
 /**
- * **A photo is picked from a tile in the photo grid, and the tile then shows
- * the photo.** A file input that rejects an oversize or wrong-type photo the
- * moment it's picked, before the form is ever submitted — the server
- * (`storeImage` in `src/lib/storage/index.ts`) still re-validates on receipt
- * and remains the actual authority; this only saves a round trip on the common
- * mistake (CR-011). Clearing the input on rejection means a submit can't
- * silently carry a file the user was just told is invalid.
+ * A pick previews in the next cell of the saved-photo grid; the caller's form
+ * save submits it. `ImageUploadTile` handles forms where picking submits
+ * immediately. This component checks type and size at pick time and clears an
+ * invalid selection, while `storeImage` remains the server authority and
+ * validates again on receipt.
  *
- * **It used to be a grey "Choose a photo" button with a filename beside it**,
- * under or over a grid of the photos already saved: the photo you picked was a
- * word, the ones you had were pictures, and the two sat in different places on
- * the form. Aaron read it as confusing on every editor that had one
- * (2026-10-06). Now the control is a dashed tile drawn at the size of the
- * photo it stands for, placed as the next cell of the grid its photos sit in,
- * and a pick turns into the photo itself, named under it, until the form's own
- * save sends it. `ImageUploadTile` is the same tile for a form whose only job
- * is the one photo, where the pick submits; this one rides a larger save, so
- * the pick never submits.
- *
- * **It renders grid cells, not a block.** One picked photo is drawn inside the
- * tile (the tile *becomes* the photo, captioned "Choose another"); several are
- * drawn as cells of their own before the tile. So the caller places this
- * inside the same grid as the stored photos, as the last cell.
- *
- * The anatomy is the one issue #807 settled: the input `sr-only` inside the
- * `<label>` that is the visible control, so it is one tab stop, the app's own
- * words in the reader's language rather than the device's, and the label draws
- * the ring from `has-[:focus-visible]`.
+ * One file fills the tile; multiple files render as cells before it. The
+ * visually hidden input sits inside the visible label, giving one tab stop,
+ * translated control text instead of the browser's device-language label,
+ * and a focus ring on the control.
  *
  * **There is deliberately no `className` escape hatch.** A prop that lets each
  * call site keep the appearance it happens to have preserves the drift behind
