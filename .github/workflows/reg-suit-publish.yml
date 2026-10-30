@@ -229,7 +229,7 @@ jobs:
       # Run only code from this reusable-workflow revision in the credentialed
       # job. The bundle downloaded below remains opaque data until the trusted
       # publisher validates and uploads it.
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: ${{ job.workflow_repository }}
           ref: ${{ job.workflow_sha }}

@@ -14,7 +14,7 @@ describe("reg-suit publisher workflow", () => {
     expect(PUBLISH).toContain("repository: ${{ job.workflow_repository }}");
     expect(PUBLISH).toContain("ref: ${{ job.workflow_sha }}");
     expect(PUBLISH).not.toContain("github.workflow_sha");
-    expect(PUBLISH).toMatch(/uses: actions\/checkout@[0-9a-f]{40} # v4\.2\.2/u);
+    expect(PUBLISH).toMatch(/uses: actions\/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7\.0\.1/u);
     expect(PUBLISH).toContain("uses: ./.github/actions/setup");
     expect(PUBLISH).toContain('ignore-scripts: "true"');
   });
