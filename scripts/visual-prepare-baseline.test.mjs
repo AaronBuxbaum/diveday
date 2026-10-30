@@ -76,6 +76,39 @@ describe("prepareVisualBaseline", () => {
     );
   });
 
+  it("ignores non-PNG cache metadata with names outside the screenshot allowlist", async () => {
+    const { sourceDir, outputDir } = fixture();
+    writeFileSync(path.join(sourceDir, "baseline.png"), PNG);
+    writeFileSync(path.join(sourceDir, ".DS_Store"), "metadata");
+
+    await expect(
+      prepareVisualBaseline({
+        bucket: BUCKET,
+        key: KEY,
+        sourceDir,
+        sourceKey: `reg-baseline-${KEY}`,
+        outputDir,
+      }),
+    ).resolves.toMatchObject({ count: 1 });
+    expect(existsSync(path.join(outputDir, "baseline.png"))).toBe(true);
+    expect(existsSync(path.join(outputDir, ".DS_Store"))).toBe(false);
+  });
+
+  it("rejects cached PNGs with names outside the screenshot allowlist", async () => {
+    const { sourceDir, outputDir } = fixture();
+    writeFileSync(path.join(sourceDir, "ñame.png"), PNG);
+
+    await expect(
+      prepareVisualBaseline({
+        bucket: BUCKET,
+        key: KEY,
+        sourceDir,
+        sourceKey: `reg-baseline-${KEY}`,
+        outputDir,
+      }),
+    ).rejects.toThrow(/unsafe filename/u);
+  });
+
   it("fetches and validates the public S3 manifest and its named images without AWS credentials", async () => {
     const { outputDir } = fixture();
     const calls = [];

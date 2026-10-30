@@ -110,14 +110,15 @@ async function reencodeCachedBaseline(sourceDir) {
     if (!entry.isFile() || entry.isSymbolicLink() || !stat.isFile()) {
       throw new Error("cached baseline contains a non-file entry");
     }
-    if (!SAFE_BASELINE_NAME.test(entry.name))
-      throw new Error("cached baseline contains an unsafe filename");
     if (stat.size > 20_000_000) {
       throw new Error("cached baseline exceeds the publisher limits");
     }
-    // Cached reports from before PNG-only capture can include print PDFs. They
-    // are safe named files, but only screenshots are comparison inputs.
-    if (!SAFE_SCREENSHOT.test(entry.name)) continue;
+    // Cache folders may contain metadata files alongside screenshots. They
+    // are never opened or copied; only PNGs are comparison inputs.
+    if (!entry.name.toLowerCase().endsWith(".png")) continue;
+    if (!SAFE_BASELINE_NAME.test(entry.name) || !SAFE_SCREENSHOT.test(entry.name)) {
+      throw new Error("cached baseline contains an unsafe filename");
+    }
     if (files.length >= MAX_SCREENSHOTS) {
       throw new Error("cached baseline exceeds the publisher limits");
     }
