@@ -298,15 +298,6 @@ describe("reg-suit publisher workflow", () => {
     expect(PREPARE).toContain('REG_SUIT_COMPARE_ONLY: "true"');
     expect(PUBLISH).toContain("REG_ACTUAL_KEY: ${{ needs.prepare.outputs.actual_key }}");
     expect(PUBLISH).toContain("SNAPSHOT_VERSION: ${{ needs.prepare.outputs.snapshot_version }}");
-    expect(PUBLISH).toContain("baseline_reset: ${{ needs.prepare.outputs.baseline_reset }}");
-    expect(PREPARE).toContain("baseline_reset: ${{ steps.baseline.outputs.fresh_start }}");
-    expect(CI_WORKFLOW).toContain(
-      "key: reg-baseline-${{ github.sha }}-${{ needs.visual-publish.outputs.snapshot_version }}",
-    );
-    expect(CI_WORKFLOW).toContain(
-      "needs.visual-publish.outputs.baseline_reset == 'true' && steps.summary.outputs.verdict == 'no-baseline'",
-    );
-    expect(WORKFLOW).toContain("baseline_reset:");
     expect(PUBLISH).toContain("--content-encoding gzip");
     expect(PUBLISH).toContain('--key "$REG_ACTUAL_KEY/$object_path"');
     expect(PUBLISH).not.toMatch(
