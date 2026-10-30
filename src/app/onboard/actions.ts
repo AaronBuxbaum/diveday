@@ -48,46 +48,27 @@ const onboardEnvelope = z.object({
 });
 
 export async function onboardAction(formData: FormData) {
-  // Non-secret fields only — never the password — echoed back so a bounce to
-  // `?error=` doesn't wipe a form a shop owner just spent a minute filling in.
-  // Not the address: a query string is written to request logs and history,
-  // and the form refills it from the request the link was minted for.
+  // Preserve selected fields in the bounce; email and password are omitted, and the bearer token
+  // stays in its HttpOnly cookie.
   const PRESERVED_FIELDS = ["shopName", "shopSlug", "timezone", "ownerName"] as const;
-  // **The door is shut unless an open setup link came with the form** (ADR
-  // 20261009-single-use-setup-links). The page hides the form without one, but
-  // an action is callable by anyone holding its id whether or not they were
-  // ever shown the form, so the link is spent here, in the transaction that
-  // creates the shop, and nowhere else. Up front only its *shape* is judged:
-  // that decides whether a bounce may carry it back, and a value that is not
-  // 43 base64url characters never reaches a `Location:` header or the
-  // database. The page re-reads whatever comes back and shows the form only
-  // for a link that is still open.
+  // This action is callable without visiting the gated page. Reject malformed token shapes
+  // before any bounce; createSignedUpShop verifies and spends a live token atomically with shop
+  // creation.
   const envelope = parseForm(onboardEnvelope, formData);
   const raw: z.infer<typeof onboardEnvelope> = envelope.ok ? envelope.data : {};
   const setupToken = raw[SETUP_LINK_PARAM];
   const tokenShaped = isSetupLinkTokenShape(setupToken);
-  // The form's two optional first-day fields, judged by the one module that
-  // judges them: a bounded name and an `HH:MM`. Junk in either loses that
-  // field and nothing else.
-  //
-  // **Parsed here rather than after the schema, because `backToForm` echoes
-  // them.** A refusal on the password must not cost a shop the boat it typed,
-  // so these ride the bounce like every other non-secret field — but a bounce
-  // writes a `Location:` header, and the raw form value is whatever a crafted
-  // POST put in the box. Echoing the *parsed* value means the header can only
-  // ever carry a name inside `MAX_FIRST_DAY_NAME` and an `HH:MM`.
+  // Parse optional first-day values before validation because backToForm reflects them into the
+  // redirect URL; invalid or oversized raw input must not be echoed.
   const firstDay = parseFirstDayFields({
     boat: raw.boat,
     departure: raw.departure,
   });
-  // Annotated so TypeScript treats the call as never-returning (control-flow
-  // analysis only honours that on an explicitly typed const).
+  // Explicit return type lets TypeScript treat the redirecting helper as never-returning.
   const backToForm: (message: string) => Promise<never> = async (message) => {
-    // Without a link there is no form to go back to, and nothing to echo.
     if (!tokenShaped) redirect("/onboard");
-    // The token goes back in an HttpOnly cookie, never in the `Location:`
-    // header, where every log and history entry the bounce passes would keep
-    // it; the page reads it from there (`setupLinkDoor`).
+    // Keep the bearer token out of the Location URL; setupLinkDoor reads it from this HttpOnly
+    // cookie.
     (await cookies()).set(SETUP_LINK_COOKIE, setupToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -100,7 +81,6 @@ export async function onboardAction(formData: FormData) {
       const value = raw[field];
       if (typeof value === "string" && value) params.set(field, value);
     }
-    // `OnboardPage` reads these back under the same names the form posts.
     if (firstDay.boatName) params.set("boat", firstDay.boatName);
     if (firstDay.departure) params.set("departure", firstDay.departure);
     redirect(`/onboard?${params.toString()}`);
@@ -108,37 +88,25 @@ export async function onboardAction(formData: FormData) {
 
   const ip = await clientIp();
   if (!(await checkRateLimit(rateLimitKey("onboard", ip), RATE_LIMITS.onboard)).allowed) {
-    // A code, like every other `backToForm` call below — OnboardPage resolves
-    // every code through ONBOARD_ERROR_MESSAGES into the visitor's own
-    // language. No sentence leaves this action in any path.
+    // The page maps these stable error codes to localized copy; this action returns no sentences.
     return await backToForm(RATE_LIMIT_MESSAGE);
   }
 
-  // After the rate limit, so a submission without a link still spends one of
-  // the five an hour. (The page itself answers a guess unmetered; 32 random
-  // bytes are what make that moot, not this.)
+  // Rate-limit before refusing a missing or malformed link so those submissions are bounded too.
   if (!tokenShaped) redirect("/onboard");
 
   const parsed = parseForm(onboardSchema, formData);
 
   if (!parsed.ok) {
-    // `onboardSchema`'s `.min()`/`.regex()`/`.refine()` messages are codes,
-    // not sentences (src/lib/onboarding.ts) — Zod wants a message at
-    // schema-definition time, before any request-scoped locale is known.
+    // The schema emits stable codes; the page resolves them using the request's locale.
     const firstError = parsed.messages[0] || "invalid_input";
     return await backToForm(firstError);
   }
 
   const { shopName, shopSlug, timezone, ownerName, ownerEmail, ownerPassword } = parsed.data;
 
-  // The reserved demo namespace is off limits to a real account, and now says
-  // so out loud. ADR 20260803-demo-bypass-containment's third condition — "no
-  // real shop's account can be in `*.demo.invalid`" — used to hold only as an
-  // emergent property (this action mails the address, and `.invalid` never
-  // resolves, so nobody *would* use one). Emergent is not enforced: it left one
-  // combination open, an insider or a bad migration flipping `is_demo` on a
-  // tenant that already holds an account in that namespace, which would hand
-  // `DEMO_BYPASS_PASSWORD` a real tenant. Refusing here makes it an invariant.
+  // Keep reserved demo addresses out of real accounts: the demo sign-in bypass trusts this
+  // namespace (ADR 20260803-demo-bypass-containment).
   if (isDemoAccountEmail(ownerEmail)) return await backToForm("email_reserved");
 
   const db = await getDb();
@@ -154,32 +122,22 @@ export async function onboardAction(formData: FormData) {
       ownerPassword,
     });
   } catch (err) {
-    // Never surface a raw exception to an unauthenticated visitor — it can
-    // carry internal detail (a DB driver error, a stack fragment). The real
-    // cause goes to the server log, where the shop's technical owner can see
-    // it; the visitor gets a generic, actionable message (CR-014).
+    // Log only the exception type; never expose database/provider details to an unauthenticated
+    // visitor (CR-014).
     log("onboard.create_shop_failed", "error", {
       errorCode: err instanceof Error ? err.name : "unknown_error",
     });
     return await backToForm("create_failed");
   }
-  // Outside the try: `backToForm` redirects, and a redirect is a throw the
-  // catch above would otherwise turn into `create_failed`.
+  // Keep outside the catch: backToForm redirects by throwing, which must not become create_failed.
   if (!outcome.ok) return await backToForm(outcome.reason);
   const createdShop = outcome.shop;
   const newAccountId = outcome.accountId;
   const newShopId = createdShop.id;
   const newShopLocale = createdShop.defaultLocale;
 
-  // The first day, if the form was given one: a real hull and a real departure on
-  // tomorrow's board, through the schedule's own create path, so the shop's
-  // first Today has a boat on it rather than an empty line.
-  //
-  // **Awaited, not deferred.** The owner is two seconds from looking at that
-  // board, and `after()` runs once the response is on its way. **And never
-  // fatal:** a failure here leaves a shop with no boat, which is a normal state
-  // of a new shop and thirty seconds of work in the schedule builder; it must
-  // not cost anybody the account they just created.
+  // Await the optional first-day write so Today is ready on arrival; failures are logged but
+  // cannot undo the shop/account already committed.
   if (createdShop && firstDay.boatName && firstDay.departure) {
     try {
       await createFirstDay(db, createdShop, {
@@ -194,26 +152,18 @@ export async function onboardAction(formData: FormData) {
     }
   }
 
-  // 2. Welcome + verify-email are best-effort — no working link exists
-  // without a configured APP_HOST, and a failed send never blocks
-  // onboarding either way (20260725-account-lifecycle-emails). Deferred with
-  // after() rather than awaited: a slow or hanging Resend call must not risk
-  // timing out the response the new owner is waiting on to reach their shop
-  // (security review finding) — a real database write and network call have
-  // no abort deadline otherwise.
+  // Owner email is best-effort and needs a valid canonical origin; APP_HOST may override
+  // `https://dive.day`. Defer it so provider latency cannot delay the redirect (ADR
+  // 20260725-account-lifecycle-emails).
   if (newAccountId && newShopId) {
     const accountId = newAccountId;
     const shopId = newShopId;
     const locale = toDiverLocale(newShopLocale);
 
-    // The founder alert needs no link, so it doesn't wait on APP_HOST being
-    // configured the way the owner-facing mail below does.
+    // Founder alert has no URL dependency and runs even when APP_HOST is unset.
     //
-    // try/catch rather than the trailing `.catch()` this used to carry alone:
-    // `getDb()` is awaited *as an argument*, so a database handle that failed
-    // to open rejected before any `.catch` was attached — an unhandled
-    // rejection inside `after()`, on the one path whose whole point is that a
-    // failed alert cannot touch a signup. The shape now covers both halves.
+    // Catch getDb() and sendNotification together: awaiting getDb() as an argument can reject
+    // before a trailing .catch is attached.
     after(async () => {
       try {
         await sendNotification(await getDb(), {
@@ -242,8 +192,7 @@ export async function onboardAction(formData: FormData) {
           userAccountId: accountId,
           purpose: "email_verification",
         }).catch((error: unknown) => {
-          // Degrades to "welcome sent, verification never arrives" — say so,
-          // or the only trace is a diver who cannot verify.
+          // Log token-issuance failure; the welcome may still send, but verification cannot.
           log("onboard.verification_token_failed", "error", {
             errorCode: error instanceof Error ? error.name : "unknown_error",
           });
@@ -278,7 +227,7 @@ export async function onboardAction(formData: FormData) {
     }
   }
 
-  // 3. Sign in the new owner and redirect to dashboard
+  // Sign in the new owner, then redirect to the shop.
   let pendingSignIn = false;
   try {
     const auth = await getAuth();
@@ -294,7 +243,7 @@ export async function onboardAction(formData: FormData) {
     throw error;
   }
   if (pendingSignIn) redirect("/sign-in?error=two-factor");
-  // The link is spent; a bounce cookie still holding it has nothing left to open.
+  // Clear the bounce cookie after successful creation; its link has been spent.
   (await cookies()).delete(SETUP_LINK_COOKIE);
   redirect(`/shop/${shopSlug}`);
 }
