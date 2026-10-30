@@ -38,7 +38,7 @@ jobs:
       contents: read
     outputs:
       baseline_note: ${{ steps.baseline.outputs.note }}
-      selection_note: ${{ steps.selection.outputs.selection_note }}
+      selection_note: ${{ steps.compare.outputs.selection_note || steps.selection.outputs.selection_note }}
       actual_key: ${{ steps.keys.outputs.actual }}
       region: ${{ steps.region.outputs.region }}
     steps:
@@ -88,7 +88,11 @@ jobs:
         id: selection
         run: |
           node scripts/visual-publish-artifacts.mjs --validate-selection
-          echo 'selection_note=Complete visual capture (all eight shards).' >> "$GITHUB_OUTPUT"
+          if [[ "$VISUAL_CAPTURE_MODE" == "all" ]]; then
+            echo 'selection_note=Complete visual capture (all eight shards).' >> "$GITHUB_OUTPUT"
+          else
+            echo "selection_note=Selective visual capture ($VISUAL_CAPTURE_MODE mode); uncaptured surfaces are filled from the trusted baseline." >> "$GITHUB_OUTPUT"
+          fi
         env:
           VISUAL_CAPTURE_MODE: ${{ inputs.capture-mode }}
           VISUAL_CAPTURE_SHARDS: ${{ inputs.capture-shards }}
@@ -96,36 +100,44 @@ jobs:
       # Artifact names and extraction paths are fixed by this trusted workflow.
       # Their contents are PR-produced inert data; the sanitizer rejects
       # directories, symlinks, non-PNG files and unsafe names before reg-suit
-      # sees them. Every shard is required, so partial captures cannot publish.
+      # sees them. Only visual-plan's selected shards are downloaded.
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: ${{ contains(fromJSON(inputs.capture-shards), 1) }}
         with:
           name: visual-screenshots-1
           path: ${{ runner.temp }}/reg-suit-artifacts/shard-1
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: ${{ contains(fromJSON(inputs.capture-shards), 2) }}
         with:
           name: visual-screenshots-2
           path: ${{ runner.temp }}/reg-suit-artifacts/shard-2
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: ${{ contains(fromJSON(inputs.capture-shards), 3) }}
         with:
           name: visual-screenshots-3
           path: ${{ runner.temp }}/reg-suit-artifacts/shard-3
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: ${{ contains(fromJSON(inputs.capture-shards), 4) }}
         with:
           name: visual-screenshots-4
           path: ${{ runner.temp }}/reg-suit-artifacts/shard-4
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: ${{ contains(fromJSON(inputs.capture-shards), 5) }}
         with:
           name: visual-screenshots-5
           path: ${{ runner.temp }}/reg-suit-artifacts/shard-5
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: ${{ contains(fromJSON(inputs.capture-shards), 6) }}
         with:
           name: visual-screenshots-6
           path: ${{ runner.temp }}/reg-suit-artifacts/shard-6
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: ${{ contains(fromJSON(inputs.capture-shards), 7) }}
         with:
           name: visual-screenshots-7
           path: ${{ runner.temp }}/reg-suit-artifacts/shard-7
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: ${{ contains(fromJSON(inputs.capture-shards), 8) }}
         with:
           name: visual-screenshots-8
           path: ${{ runner.temp }}/reg-suit-artifacts/shard-8
@@ -155,23 +167,25 @@ jobs:
           VISUAL_BASELINE_DIR: ${{ steps.baseline-cache.outputs.cache-hit == 'true' && '.reg-baseline' || '' }}
           VISUAL_BASELINE_KEY: ${{ steps.baseline-cache.outputs.cache-primary-key }}
 
-      - name: Verify complete screenshot inventory
-        run: node scripts/visual-publish-artifacts.mjs --verify-complete
-        env:
-          GITHUB_EVENT_NAME: ${{ github.event_name }}
-
       # This job has no id-token permission. Decode and compare the PR-produced
       # images here, then hand only a trusted, precompressed file bundle onward.
       - name: Compare screenshots without AWS credentials
         id: compare
         run: pnpm visual:compare
         env:
-          VISUAL_FILL_FROM_EXPECTED: "false"
+          VISUAL_FILL_FROM_EXPECTED: ${{ inputs.capture-mode == 'affected' || inputs.capture-mode == 'light' }}
+          VISUAL_VERIFY_COMPLETE: "true"
           VISUAL_EXPECTED_READY: "true"
           REG_SUIT_COMPARE_ONLY: "true"
           REG_SUIT_CONFIG: oidc
           REG_SUIT_AWS_REGION: ${{ steps.region.outputs.region }}
           REG_SUIT_S3_BUCKET_NAME: ${{ secrets.REG_SUIT_S3_BUCKET_NAME }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+
+      - name: Verify complete screenshot inventory
+        run: node scripts/visual-publish-artifacts.mjs --verify-complete
+        env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
 
       - name: Build the trusted S3 publish bundle
         run: node scripts/visual-build-publish-bundle.mjs

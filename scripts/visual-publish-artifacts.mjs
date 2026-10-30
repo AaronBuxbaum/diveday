@@ -59,19 +59,24 @@ export function parseCaptureShards(value) {
   }
   if (
     !Array.isArray(shards) ||
-    shards.length !== 8 ||
-    shards.some((shard, index) => shard !== index + 1)
+    shards.length < 1 ||
+    shards.length > 8 ||
+    shards.some((shard, index) => !Number.isInteger(shard) || shard !== index + 1)
   ) {
-    throw new Error("capture shard list must include every shard from 1 through 8");
+    throw new Error("capture shard list must be a consecutive prefix from 1 through 8");
   }
   return shards;
 }
 
 export function validateCaptureSelection(mode, shards) {
-  if (mode !== "all") {
-    throw new Error("reg-suit publishing requires complete all-capture mode");
+  if (!["all", "affected", "light"].includes(mode)) {
+    throw new Error("capture mode must be all, affected, or light");
   }
-  return parseCaptureShards(shards);
+  const parsed = parseCaptureShards(shards);
+  if (mode === "all" && parsed.length !== 8) {
+    throw new Error("all-capture mode must include every shard from 1 through 8");
+  }
+  return parsed;
 }
 
 function requireDirectory(directory, label) {
