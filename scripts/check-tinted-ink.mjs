@@ -56,8 +56,10 @@ const ALLOW = "diveday:allow-tinted-ink";
 
 /** `bg-success/10` with `text-success` or `text-success-strong`, at any opacity. */
 export function matchesTintedInk(hue, text) {
-  return new RegExp(`bg-${hue}\\/\\d+\\b`).test(text)
-    && new RegExp(`text-${hue}(-strong)?\\b`).test(text);
+  return (
+    new RegExp(`bg-${hue}\\/\\d+\\b`).test(text) &&
+    new RegExp(`text-${hue}(-strong)?\\b`).test(text)
+  );
 }
 
 /**
@@ -102,26 +104,28 @@ const BOAT_MODE_FILES = new Set(
   ].map((file) => path.normalize(file)),
 );
 
-async function walk(root, relativeDirectory) {
-  const entries = await readdir(path.join(root, relativeDirectory), { withFileTypes: true });
+async function walk(relativeDirectory) {
+  const entries = await readdir(path.join(ROOT, relativeDirectory), { withFileTypes: true });
   const files = [];
   for (const entry of entries) {
     const relativePath = path.join(relativeDirectory, entry.name);
-    if (entry.isDirectory()) files.push(...(await walk(root, relativePath)));
+    if (entry.isDirectory()) files.push(...(await walk(relativePath)));
     else if (EXTENSIONS.has(path.extname(entry.name))) files.push(relativePath);
   }
   return files;
 }
 
-export async function scanTintedInk(root = ROOT) {
+async function scanTintedInk() {
   const violations = [];
   for (const sourceRoot of ROOTS) {
-    for (const file of await walk(root, sourceRoot)) {
-      const contents = await readFile(path.join(root, file), "utf8");
+    for (const file of await walk(sourceRoot)) {
+      const contents = await readFile(path.join(ROOT, file), "utf8");
       if (BOAT_MODE_FILES.has(path.normalize(file))) continue;
       const lines = contents.split("\n");
       const allowLines = new Set(
-        lines.map((line, index) => (line.includes(ALLOW) ? index : -1)).filter((index) => index >= 0),
+        lines
+          .map((line, index) => (line.includes(ALLOW) ? index : -1))
+          .filter((index) => index >= 0),
       );
       lines.forEach((line, index) => {
         // On the line, or on the one directly above it. A `className` carrying a
@@ -140,25 +144,20 @@ export async function scanTintedInk(root = ROOT) {
   return violations;
 }
 
-export async function runTintedInkCheck({ root = ROOT, output = console } = {}) {
-  const violations = await scanTintedInk(root);
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const violations = await scanTintedInk();
   if (violations.length > 0) {
-    output.error(
+    console.error(
       `Coloured ink on a translucent fill of its own hue:\n${violations
         .map((v) => `- ${v.file}:${v.line}: ${v.text.slice(0, 140)}`)
         .join("\n")}`,
     );
-    output.error(
+    console.error(
       "Use the opaque `bg-<hue>-tint` token instead of `bg-<hue>/N`, or reach for `Badge` — a translucent fill contrasts against whatever is behind the element, not against `--surface`, which is the only background the palette's ratios were computed for (docs/design/forms-and-controls.md).",
     );
-    output.error(`A line that genuinely means the translucent form says \`${ALLOW}: <why>\`.`);
-    return false;
+    console.error(`A line that genuinely means the translucent form says \`${ALLOW}: <why>\`.`);
+    process.exitCode = 1;
+  } else {
+    console.log("tinted-ink: no coloured text sits on a translucent fill of its own hue");
   }
-
-  output.log("tinted-ink: no coloured text sits on a translucent fill of its own hue");
-  return true;
-}
-
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  if (!(await runTintedInkCheck())) process.exitCode = 1;
 }
