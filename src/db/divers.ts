@@ -1108,7 +1108,7 @@ export async function getDiverProfile(
   });
   const medicalEarlierReferral =
     waiver.state === "medical_review"
-      ? await earlierReferralForOpenHold(db, shopId, personId)
+      ? await earlierReferralForOpenHold(db, shopId, personId, shopTimezone)
       : null;
   const diverMedicalForm =
     waiver.state === "medical_review"

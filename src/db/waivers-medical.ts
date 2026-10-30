@@ -281,7 +281,7 @@ function openReferral(held: readonly WaiverRecord[]): WaiverRecord | undefined {
 
 /**
  * **The earlier referral a letter dated before the open one could cover**, for
- * the recording form (issue #2616): its id and its signing day as a UTC calendar
+ * the recording form (issue #2616): its id and its signing day as a shop-local calendar
  * date, or null when the open referral has none, so the form asks nothing extra.
  * Read-only; `recordMedicalEvaluation` decides again on its own.
  */
@@ -289,6 +289,7 @@ export async function earlierReferralForOpenHold(
   db: DbExecutor,
   shopId: string,
   personId: string,
+  timeZone: string,
 ): Promise<{ referralId: string; on: string } | null> {
   const held = await heldReferrals(db, shopId, personId);
   const open = openReferral(held);
@@ -299,7 +300,7 @@ export async function earlierReferralForOpenHold(
     await recordsOnPassedSeats(db, shopId, personId),
   );
   return earlier
-    ? { referralId: earlier.id, on: calendarDateInTimezone(signatureInstant(earlier), "UTC") }
+    ? { referralId: earlier.id, on: calendarDateInTimezone(signatureInstant(earlier), timeZone) }
     : null;
 }
 
@@ -602,7 +603,7 @@ export async function recordMedicalEvaluation(
         actor: actorName,
         diver: diverName,
         evaluated: input.evaluatedOn,
-        referred: calendarDateInTimezone(signatureInstant(covering), "UTC"),
+        referred: calendarDateInTimezone(signatureInstant(covering), input.timeZone),
         signed: disclosedOn,
         referral: covering.id,
         record: written.id,
