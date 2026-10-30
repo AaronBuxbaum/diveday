@@ -7,6 +7,7 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { ITEM_TITLE_CLASS, LEAD_TITLE_CLASS } from "@/components/ui/typography";
+import { useOnline } from "@/components/use-online";
 import type { OfflineManifestTranslator } from "@/i18n/offline-manifest-messages";
 import { cachedFormatter } from "@/lib/intl-cache";
 import {
@@ -18,7 +19,6 @@ import {
 } from "@/lib/offline-manifests";
 import { StatusMessage } from "./StatusMessage";
 import { deviceLocale, relativeAge } from "./shared";
-import { useOnline } from "./use-online";
 
 /**
  * **Every copy saved on this device**, the page `/offline-manifest` shows

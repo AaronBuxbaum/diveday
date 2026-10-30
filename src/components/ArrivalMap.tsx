@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useOnline } from "@/components/use-online";
 import { ARRIVAL_MAP_PROBES } from "@/lib/maps";
 import { useMapReachable } from "./use-map-reachable";
 
@@ -16,17 +16,7 @@ import { useMapReachable } from "./use-map-reachable";
  */
 export function ArrivalMap({ title, src }: { title: string; src: string }) {
   const reachable = useMapReachable(true, ARRIVAL_MAP_PROBES);
-  const [online, setOnline] = useState(true);
-  useEffect(() => {
-    const update = () => setOnline(navigator.onLine);
-    update();
-    window.addEventListener("online", update);
-    window.addEventListener("offline", update);
-    return () => {
-      window.removeEventListener("online", update);
-      window.removeEventListener("offline", update);
-    };
-  }, []);
+  const online = useOnline();
   if (!reachable || !online) return null;
   return (
     /* Inset to the card's own rhythm rather than bled to its edge, so it
