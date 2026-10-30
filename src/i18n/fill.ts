@@ -32,15 +32,9 @@ export function fill(
 }
 
 /**
- * Picks the correct translated form of a `{ one, other }` pair for `count`,
- * using the runtime's actual plural rules rather than a hand-rolled
- * `count === 1` check. English and Spanish (DiveDay's two locales today)
- * both resolve to exactly "one"/"other", so the naive check happened to
- * work — but it would silently mis-handle any locale with more plural
- * categories (Arabic, Polish, …) the day one is added. `locale` defaults to
- * the runtime's own locale, which is what these client components render
- * copy for since the words themselves already crossed from the server
- * translated.
+ * Selects `forms.one` when `Intl.PluralRules` returns `one`, and `forms.other`
+ * for every other category. Use ICU messages when more forms are needed.
+ * When omitted, `locale` defaults to the runtime's locale.
  */
 export function pluralForm(
   count: number,
