@@ -8,6 +8,7 @@ import { listTripReadiness } from "@/db/readiness";
 import { listOwedShopCancellationRefunds } from "@/db/refunds";
 import { bookings, people, trips } from "@/db/schema";
 import { getShopDayDepartures } from "@/db/today";
+import { liveTrip } from "@/db/trips-live";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { counterRentalWaiverFlag } from "@/lib/counter-rentals";
@@ -57,6 +58,38 @@ afterEach(() => {
 });
 
 describe("POST /api/test/seed-trouble-states", () => {
+  it("opens enough capacity for the party waiver captures when asked", async () => {
+    const { db, shop } = await seededShopContext();
+    vi.mocked(getDb).mockResolvedValue(db);
+
+    const [trip] = await db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(
+        and(
+          eq(trips.shopId, shop.id),
+          eq(trips.title, "Morning Two-Tank — Molasses Reef"),
+          liveTrip(),
+        ),
+      )
+      .limit(1);
+    if (!trip) throw new Error("party waiver visual departure was not seeded");
+
+    const response = await POST(seedRequest("?partyWaiverCapacity=1"));
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      partyWaiverCapacity?: { tripId: string; capacity: number };
+    };
+    expect(body.partyWaiverCapacity?.tripId).toBe(trip.id);
+    expect(body.partyWaiverCapacity?.capacity).toBeGreaterThanOrEqual(20);
+
+    const [updated] = await db
+      .select({ capacity: trips.capacity })
+      .from(trips)
+      .where(eq(trips.id, trip.id));
+    expect(updated?.capacity).toBeGreaterThanOrEqual(20);
+  }, 60_000);
+
   it("does not seed the rental lookup without its bearer or against a real database", async () => {
     vi.mocked(getDb).mockClear();
     const denied = await POST(
