@@ -4,8 +4,8 @@ How DiveDay learns two things about itself in production: that someone just crea
 and that the app is throwing errors. Decision and rationale:
 [20260727-sentry-error-monitoring-q7fk2p](../architecture/decisions/20260727-sentry-error-monitoring-q7fk2p.md).
 
-> **Sentry answers "what threw".** The different question — what the app *decided*, how often, and
-> how fast it felt to a real visitor — is answered by CloudWatch, and lives in
+> **Sentry reports errors and scheduled-handler check-ins.** The different question — what the app
+> *decided*, how often, and how fast it felt to a real visitor — lives in
 > [cloudwatch-observability-runbook.md](cloudwatch-observability-runbook.md). Neither replaces the
 > other: a refused payment reconciliation, a send that gave up, and a p75 LCP are all 200 responses
 > that Sentry never sees, while a stack trace and a release attribution are things CloudWatch has no
@@ -33,7 +33,12 @@ notification. The only new piece is the recipient:
 
 ## Error monitoring (Sentry)
 
-Wired with `withSentryConfig` in `next.config.ts` and runtime files (`src/app/observability.ts`, `src/instrumentation.ts`, `src/instrumentation-client.ts`, `src/app/global-error.tsx`). This handles automatic source-map uploads on production builds when `SENTRY_AUTH_TOKEN` is present. It does not use performance or replay features; it captures errors and nothing else.
+Wired with `withSentryConfig` in `next.config.ts` and runtime files
+(`src/app/observability.ts`, `src/instrumentation.ts`, `src/instrumentation-client.ts`,
+`src/app/global-error.tsx`). This handles automatic source-map uploads on production builds when
+`SENTRY_AUTH_TOKEN` is present. It does not use performance or replay features. Scheduled handlers
+call `Sentry.captureCheckIn` explicitly; source calls do not establish that production check-ins
+are arriving.
 
 The production build that matters for this is Vercel's own (`scripts/vercel-build.mjs` → `pnpm build`) on merge to `main` — that is the build that actually deploys and is what should upload source maps and create the release. Set `SENTRY_AUTH_TOKEN` as a **Vercel** project environment variable (Production), not a GitHub Actions secret: CI's `next build` (`build` job) always sets `DIVEDAY_E2E=1`, which `next.config.ts` reads to disable Sentry's source-map upload and telemetry outright — CI builds an ephemeral artifact for `perf:budget` and the e2e/visual suites, never something that deploys, so there is nothing for a CI-side Sentry token to usefully upload.
 
@@ -70,7 +75,7 @@ pins the narrowness.
 | Client-side uncaught exceptions / unhandled promise rejections | Sentry's default `GlobalHandlers` integration, initialized in `src/instrumentation-client.ts` |
 | A root-layout render crash | `src/app/global-error.tsx`, the one path `onRequestError` can't see (it's client-side, post-hydration) |
 | `src/proxy.ts` (the Auth.js edge middleware) | **Not covered.** A third runtime's worth of Sentry init was judged not worth it for this file's current size — see the ADR's consequences |
-| The daily cron tick (`/api/cron/reminders`) | Per-scan `Sentry.captureException` tagged `cron_scan`, plus a Sentry **Cron Monitor** check-in (`diveday-daily-tick`) that alerts when the tick never runs at all |
+| Scheduled cron handlers (`vercel.json`) | Each scheduled handler calls `Sentry.captureCheckIn`; `/api/cron/reminders` also captures per-scan exceptions tagged `cron_scan` and uses the monitor slug `diveday-daily-tick` |
 | The app being unreachable, or a deployment that never boots | **Not covered by Sentry** — there is no running app to report it. That is what the external uptime monitor over `/api/health` and the public schedule is for; see [incident-response-runbook.md](incident-response-runbook.md) |
 | A decision the app handled and returned 200 for — a refused payment reconciliation, a send that gave up, a prune that failed a table | **Not covered by Sentry**, because nothing threw. Counted and alarmed in CloudWatch; see [cloudwatch-observability-runbook.md](cloudwatch-observability-runbook.md) |
 | How fast a page felt to a real visitor | **Not covered by Sentry** (performance is off). Core Web Vitals go to CloudWatch as p75 metrics with alarms, and Vercel Speed Insights keeps its own copy — same runbook |
