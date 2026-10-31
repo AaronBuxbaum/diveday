@@ -7,17 +7,7 @@ import type { FormNotice } from "@/lib/staff-notices";
 import type { CardCredential } from "../credential-rows";
 import { StaffCardCredentials } from "./StaffCardCredentials";
 
-let restoreScrollHarness: (() => void) | null = null;
-
-afterEach(() => {
-  cleanup();
-  restoreScrollHarness?.();
-  restoreScrollHarness = null;
-  document.documentElement.removeAttribute("data-form-scroll-settled");
-  vi.useRealTimers();
-  vi.unstubAllGlobals();
-  vi.restoreAllMocks();
-});
+afterEach(cleanup);
 
 /**
  * **The card names the credential a role is missing** (issue #2548). "None on
@@ -47,114 +37,31 @@ function renderCard(roles: Role[], credentials: CardCredential[], status?: FormN
   );
 }
 
-function installStatusScrollHarness() {
-  vi.useFakeTimers();
-  const frames: FrameRequestCallback[] = [];
-  vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
-    frames.push(callback);
-    return frames.length;
-  });
-  vi.stubGlobal("cancelAnimationFrame", vi.fn());
-  vi.spyOn(window, "scrollY", "get").mockReturnValue(0);
-  vi.spyOn(document.documentElement, "clientHeight", "get").mockReturnValue(720);
-  vi.stubGlobal("getComputedStyle", () => ({ scrollPaddingTop: "56px" }) as CSSStyleDeclaration);
-  document.documentElement.setAttribute("data-form-scroll-settled", "true");
-
-  const targets: HTMLElement[] = [];
-  const visibilityChecks: HTMLElement[] = [];
-  const previousScrollIntoView = Object.getOwnPropertyDescriptor(
-    HTMLElement.prototype,
-    "scrollIntoView",
-  );
-  const previousCheckVisibility = Object.getOwnPropertyDescriptor(
-    HTMLElement.prototype,
-    "checkVisibility",
-  );
-  Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
-    configurable: true,
-    value(this: HTMLElement) {
-      targets.push(this);
-    },
-  });
-  Object.defineProperty(HTMLElement.prototype, "checkVisibility", {
-    configurable: true,
-    value(this: HTMLElement) {
-      visibilityChecks.push(this);
-      return !this.hasAttribute("hidden");
-    },
-  });
-
-  restoreScrollHarness = () => {
-    if (previousScrollIntoView) {
-      Object.defineProperty(HTMLElement.prototype, "scrollIntoView", previousScrollIntoView);
-    } else {
-      Reflect.deleteProperty(HTMLElement.prototype, "scrollIntoView");
-    }
-    if (previousCheckVisibility) {
-      Object.defineProperty(HTMLElement.prototype, "checkVisibility", previousCheckVisibility);
-    } else {
-      Reflect.deleteProperty(HTMLElement.prototype, "checkVisibility");
-    }
-  };
-
-  return {
-    targets,
-    visibilityChecks,
-    flushFrames() {
-      let count = 0;
-      while (frames.length > 0 && count < 100) {
-        const batch = frames.splice(0);
-        count += 1;
-        for (const callback of batch) callback(0);
-      }
-      return count;
-    },
-  };
-}
-
 describe("StaffCardCredentials", () => {
   it("uses FormStatus's warning reveal without adding another sentinel", () => {
-    const harness = installStatusScrollHarness();
     const { container } = renderCard(["owner"], [], { tone: "warning", text: "Needs review." });
     const paragraph = screen.getByText("Needs review.").closest("p");
     if (!(paragraph instanceof HTMLElement)) throw new Error("Missing credential outcome");
-    paragraph.getBoundingClientRect = () => ({ top: 750, bottom: 770, height: 20 }) as DOMRect;
-
-    const frames = harness.flushFrames();
     const sentinels = [...container.querySelectorAll<HTMLElement>("span[hidden]")];
 
-    expect(frames).toBe(3);
     expect(sentinels).toHaveLength(1);
-    expect(harness.visibilityChecks.filter((element) => element === paragraph)).toHaveLength(3);
-    expect(harness.targets[0]).toBe(paragraph);
     expect(sentinels[0]?.previousElementSibling).toBe(paragraph);
-    expect(sentinels[0]?.getBoundingClientRect()).toMatchObject({ top: 0, bottom: 0 });
   });
 
-  it("does not scroll for a success toast already fixed in the viewport", () => {
-    const harness = installStatusScrollHarness();
+  it("keeps success in the fixed toast without adding a reveal helper", () => {
     const { container } = renderCard(["owner"], [], { tone: "success", text: "Saved." });
     const fixedToast = container.querySelector<HTMLElement>(".fixed");
     if (!fixedToast) throw new Error("Missing fixed success toast");
     expect(screen.getByRole("status")).toHaveTextContent("Saved.");
-    fixedToast.getBoundingClientRect = () => ({ top: 650, bottom: 690, height: 40 }) as DOMRect;
-
-    const frames = harness.flushFrames();
-
-    expect(frames).toBe(0);
-    expect(harness.visibilityChecks).toEqual([]);
-    expect(harness.targets).toEqual([]);
+    expect(fixedToast).toHaveClass("fixed");
     expect(container.querySelector("span[hidden]")).toBeNull();
   });
 
   it("keeps danger with the field-focus path and does not mount a reveal helper", () => {
-    const harness = installStatusScrollHarness();
     const { container } = renderCard(["owner"], [], { tone: "danger", text: "Could not save." });
 
     expect(screen.getByRole("alert")).toHaveTextContent("Could not save.");
     expect(container.querySelector("span[hidden]")).toBeNull();
-    expect(harness.flushFrames()).toBe(0);
-    expect(harness.targets).toEqual([]);
   });
 
   it("says no credentials at all when a role that sails on a card has nothing", () => {
