@@ -22,44 +22,63 @@ export const READY_CACHE_NAME = "diveday-ready-page-v1";
 export const READY_FORGOTTEN_CACHE_NAME = "diveday-ready-forgotten-v1";
 
 /**
- * The `<meta name>` the live trip-prep page carries to say **until when** the
- * phone may keep its copy (security review of layer 8, D2). The worker keeps
- * no copy of a page without it, so a cancelled booking, a departure called
- * off or a dead link clears the copy on its next load rather than replacing it.
+ * **The offline snapshot's address** (issue #3225): `/ready/<token>/offline`, a
+ * JSON document the server builds for one verified booking
+ * (`src/lib/ready-snapshot.ts`). The worker fetches it when it keeps the page
+ * and stores it in place of the page itself.
  */
-export const READY_KEEP_UNTIL_META = "diveday-ready-keep-until";
-
-/** Placeholder for the trusted server time inside a rollback warning. */
-export const READY_ROLLBACK_SAVED_AT_PLACEHOLDER = "__DIVEDAY_ROLLBACK_SAVED_AT__";
+export function readySnapshotPath(readyPath: string): string {
+  return `${readyPath}/offline`;
+}
 
 /**
- * Marks the page's "No signal" line, which the server draws hidden. The
- * worker shows it in the kept copy (issue #3003): that copy runs no script,
- * and it is only ever on screen when the network did not answer.
+ * What the server hands the worker: the instants it calibrates expiry with, and
+ * the three whole documents the worker may serve. It holds no token, link or
+ * form, so the worker never edits a document: it only chooses one.
  */
-export const READY_OFFLINE_NOTE_ATTR = "data-ready-offline-note";
+export type ReadySnapshot = {
+  /** Server clock when the snapshot was built (epoch ms). */
+  generatedAt: number;
+  /** When the copy stops being served (epoch ms): `readyCopyKeepUntil`. */
+  keepUntil: number;
+  /** Served while the device clock agrees with the one it was saved on. */
+  saved: string;
+  /** Served with a warning when no clock history exists to check the device clock against. */
+  unverified: string;
+  /** Served instead of the copy when the device clock has gone backward. */
+  rollback: string;
+};
 
-/** The server-rendered timestamp placeholder the readiness worker fills when it saves the page. */
-export const READY_OFFLINE_GENERATED_AT_PLACEHOLDER = "__diveday_ready_generated_at__";
-
-/** The locale and shop time zone the worker uses to format the saved instant. */
-export const READY_COPY_LOCALE_META = "diveday-ready-copy-locale";
-export const READY_COPY_TIME_ZONE_META = "diveday-ready-copy-time-zone";
-/** Server clock instant when this live readiness page was rendered. */
-export const READY_COPY_GENERATED_AT_META = "diveday-ready-copy-generated-at";
-/** Distinguishes copies with the saved-time banner from older cached markup. */
-export const READY_COPY_VERSION_META = "diveday-ready-copy-version";
-export const READY_COPY_VERSION = "saved-time-v1";
-/** The save instant attached to the timestamped offline banner by the worker. */
-export const READY_COPY_GENERATED_AT_ATTR = "data-ready-copy-generated-at";
+/** The snapshot in `value`, or null when anything about its shape is off. */
+export function parseReadySnapshot(value: unknown): ReadySnapshot | null {
+  if (typeof value !== "object" || value === null) return null;
+  const { generatedAt, keepUntil, saved, unverified, rollback } = value as Record<string, unknown>;
+  if (
+    !Number.isSafeInteger(generatedAt) ||
+    (generatedAt as number) <= 0 ||
+    !Number.isSafeInteger(keepUntil) ||
+    typeof saved !== "string" ||
+    typeof unverified !== "string" ||
+    typeof rollback !== "string"
+  ) {
+    return null;
+  }
+  return {
+    generatedAt: generatedAt as number,
+    keepUntil: keepUntil as number,
+    saved,
+    unverified,
+    rollback,
+  };
+}
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
  * The instant (epoch ms) the phone's copy of this page stops being served: a
  * day after the boat is due back, or, with no return time, a day after it
- * leaves. Only the live page names one; a departure called off renders a
- * terminal card that names none, which clears the copy.
+ * leaves. Only a live booking gets a snapshot to name one; a cancelled seat or a
+ * departure called off gets none, which clears the copy.
  */
 export function readyCopyKeepUntil(trip: { startsAt: Date; endsAt?: Date | null }): number {
   return (trip.endsAt ?? trip.startsAt).getTime() + DAY_MS;

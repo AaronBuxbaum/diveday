@@ -2,9 +2,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   forgetReadyPageCopy,
   forgetThisReadyPage,
+  parseReadySnapshot,
   READY_CACHE_NAME,
   READY_FORGOTTEN_CACHE_NAME,
   readyCopyKeepUntil,
+  readySnapshotPath,
 } from "./ready-offline";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -174,5 +176,38 @@ describe("forgetThisReadyPage", () => {
     expect(await forgetThisReadyPage()).toBe(false);
     vi.stubGlobal("navigator", {});
     expect(await forgetThisReadyPage()).toBe(false);
+  });
+});
+
+describe("readySnapshotPath", () => {
+  it("is the readiness path with one fixed segment, so it binds to the same token", () => {
+    expect(readySnapshotPath(`/ready/${"A".repeat(43)}`)).toBe(`/ready/${"A".repeat(43)}/offline`);
+  });
+});
+
+describe("parseReadySnapshot", () => {
+  const good = {
+    generatedAt: 1_800_000_000_000,
+    keepUntil: 1_800_086_400_000,
+    saved: "<p>saved</p>",
+    unverified: "<p>unverified</p>",
+    rollback: "<p>rollback</p>",
+  };
+
+  it("takes a whole snapshot and drops anything beyond the five fields", () => {
+    expect(parseReadySnapshot({ ...good, token: "x", extra: 1 })).toEqual(good);
+  });
+
+  it.each([
+    ["null", null],
+    ["a string", "{}"],
+    ["a missing document", { ...good, rollback: undefined }],
+    ["a document that is not text", { ...good, saved: { html: "x" } }],
+    ["a fractional instant", { ...good, generatedAt: 1.5 }],
+    ["a text instant", { ...good, keepUntil: "1800086400000" }],
+    ["a zero server time", { ...good, generatedAt: 0 }],
+    ["an unsafe instant", { ...good, keepUntil: Number.MAX_SAFE_INTEGER + 2 }],
+  ])("refuses %s", (_case, value) => {
+    expect(parseReadySnapshot(value)).toBeNull();
   });
 });

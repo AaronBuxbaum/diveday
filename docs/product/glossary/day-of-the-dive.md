@@ -68,20 +68,20 @@
   evidence: readiness, trip admission, capacity, boarding, and roll-call completion do not read it.
   New note kinds must name their audience and retention before they are added; free text is not a
   license to put medical or boarding decisions into an unaudited gate.
-- **Saved trip-prep copy** — the last `/ready/<token>` page a diver's own browser rendered, kept on
-  their phone for a marina with no signal. The one service-worker script, registered a second time
-  from `/ready/` with that scope (`src/lib/ready-offline.ts`); the staff registration at `/` never
-  keeps one. One copy under a key that names no token (saving a page deletes any other; the copy
-  answers a path only by its hash), the page itself only (same origin, its exact path, no query, no
-  redirect, HTML), network-first (served only when `fetch` fails), and kept only until the day
-  after the boat is due back (two weeks at most). A load that is not the live page (a cancelled
-  seat, a departure called off, an expired link) clears it. Read-only: offline the page says it is
-  the saved copy, when the server generated it, and that details may have changed. A copy with no
-  trusted generation time says so. The server time calibrates a stable device-clock offset for
-  expiry. If the phone clock is detected moving backward, the page is replaced by a warning; if
-  clock history is unreadable, the copy stays visible with a verification warning. An
-  unobserved forward clock jump can expire a copy early because it cannot be separated from elapsed
-  time offline. Even when its time is known, an offline copy is a snapshot, not live readiness.
+- **Saved trip-prep copy** — a read-only snapshot of where to go and when, kept in a diver's own
+  browser for a marina with no signal. The server builds it from one verified booking, choosing
+  each field by name (`src/app/ready/[token]/offline/`); it is not the `/ready/<token>` page and
+  holds no token, link, form or script. The one service-worker script, registered a second time
+  from `/ready/` with that scope (`src/lib/ready-offline.ts`), fetches it each time the page is
+  kept; the staff registration at `/` never keeps one. One copy under a key that names no token
+  (saving one deletes any other; the copy answers a path only by its hash), network-first (served
+  only when `fetch` fails, with a policy that allows no script or request), and kept only until the
+  day after the boat is due back (two weeks at most). A cancelled seat, a departure called off or
+  an expired link gets no snapshot and clears it. The snapshot says when the server built it. That
+  server time calibrates a stable device-clock offset for expiry. If the phone clock is detected
+  moving backward, a warning replaces it; if clock history is unreadable, it is shown with a
+  verification warning. An unobserved forward clock jump can expire a copy early because it cannot
+  be separated from elapsed time offline. An offline copy is a snapshot, never live readiness.
   Rules in `src/worker/ready-page-cache.ts`.
 - **Dock rider** — a non-diving passenger a captain adds from the Boat tab while the boat is still
   at the dock (no stage recorded, or **boarding**): a name, an optional phone, an emergency
