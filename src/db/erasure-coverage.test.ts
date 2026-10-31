@@ -879,6 +879,11 @@ describe("erasure coverage", () => {
     expect(listed).toEqual(defined);
   });
 
+  it("never lists a table both as a keep and as outside the closure", () => {
+    const both = Object.keys(ERASURE_KEEPS).filter((name) => name in OUTSIDE_CLOSURE_REASONS);
+    expect(both.sort()).toEqual([]);
+  });
+
   it("decides every table outside the closure, not only the ones a pattern asks about", () => {
     const scoped = new Set(personScopedTableNames(tables));
     expect([...tables.keys()].filter((name) => !scoped.has(name)).sort()).toEqual(

@@ -12,6 +12,7 @@ import {
   deleteSpecialtyCertification,
   getBookingReadiness,
   getBookingReadinessDetail,
+  getTripMaxDepthMeters,
   issueShopCertification,
   issueShopNitroxCertification,
   issueShopSpecialtyCertification,
@@ -1061,6 +1062,79 @@ describe("site cert gate across the whole itinerary (DOM-C1)", () => {
     expect(
       (await getBookingReadiness(db, shop.id, rosterEntry.booking.id))?.blockers,
     ).not.toContainEqual(expect.objectContaining({ code: "certification_insufficient" }));
+  });
+
+  it("requires nitrox when only the last of three dives' site asks for enriched air", async () => {
+    const { db, shop, reef } = await threeDiveDay({ requiresNitrox: true });
+    const nitroxHolders = new Set(
+      (
+        await db
+          .select({ personId: nitroxCertifications.personId })
+          .from(nitroxCertifications)
+          .where(
+            and(eq(nitroxCertifications.shopId, shop.id), isNull(nitroxCertifications.deletedAt)),
+          )
+      ).map((r) => r.personId),
+    );
+    const entry = (await getTripRoster(db, shop.id, reef.id)).find(
+      (r) => !nitroxHolders.has(r.person.id),
+    );
+    if (!entry) throw new Error("expected a booked diver without a nitrox card");
+
+    expect((await getBookingReadiness(db, shop.id, entry.booking.id))?.blockers).toContainEqual(
+      expect.objectContaining({ code: "nitrox_missing" }),
+    );
+    const [batch] = (await listTripsReadiness(db, shop.id, [reef.id])).filter(
+      (row) => row.booking.id === entry.booking.id,
+    );
+    expect(batch?.readiness.blockers).toContainEqual(
+      expect.objectContaining({ code: "nitrox_missing" }),
+    );
+  });
+
+  it("measures the depth of the last of three dives' site, not the shallower ones", async () => {
+    const { db, shop, reef, rosterEntry } = await threeDiveDay({});
+    await db.update(shops).set({ depthUnit: "meters" }).where(eq(shops.id, shop.id));
+    await db
+      .update(diveSites)
+      .set({ maxDepthMeters: 10, depthMinMeters: null })
+      .where(eq(diveSites.shopId, shop.id));
+    await db
+      .update(diveSites)
+      .set({ maxDepthMeters: 35 })
+      .where(and(eq(diveSites.shopId, shop.id), eq(diveSites.slug, "gate-test-last-tank")));
+    await verifiedOpenWaterCard(db, shop.id, rosterEntry.person.id);
+
+    expect(await getTripMaxDepthMeters(db, shop.id, reef.id)).toBe(35);
+    const diver = (await listTripReadiness(db, shop.id, reef.id)).find(
+      (row) => row.booking.id === rosterEntry.booking.id,
+    );
+    expect(diver?.depthAdvisory).toMatchObject({ status: "exceeds", siteDepth: 35 });
+    // An advisory, never a gate (H-08).
+    expect(diver?.readiness.blockers.some((blocker) => blocker.code.includes("depth"))).toBe(false);
+  });
+
+  it("asks nothing and does not crash for a trip with zero trip_dives rows", async () => {
+    const { db, shop, reef, rosterEntry } = await threeDiveDay({
+      minimumCertificationLevel: "advanced_open_water",
+      requiredSpecialties: ["deep"],
+      requiresNitrox: true,
+    });
+    await db.delete(tripDives).where(eq(tripDives.tripId, reef.id));
+    await verifiedOpenWaterCard(db, shop.id, rosterEntry.person.id);
+
+    const codes = (await getBookingReadiness(db, shop.id, rosterEntry.booking.id))?.blockers.map(
+      (blocker) => blocker.code,
+    );
+    expect(codes).toBeDefined();
+    expect(codes).not.toContain("certification_insufficient");
+    expect(codes).not.toContain("specialty_missing");
+    expect(codes).not.toContain("nitrox_missing");
+    const [batch] = (await listTripsReadiness(db, shop.id, [reef.id])).filter(
+      (row) => row.booking.id === rosterEntry.booking.id,
+    );
+    expect(batch).toBeDefined();
+    expect(await getTripMaxDepthMeters(db, shop.id, reef.id)).toBeNull();
   });
 
   it("stops reading a deleted departure's site requirement", async () => {

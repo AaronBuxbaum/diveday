@@ -28,10 +28,42 @@ import { CALLING_CODES } from "./phone";
  * client component imports, which is why `anonymousTextRecipient` lives there).
  */
 export function canReceiveText(e164: string): boolean {
+  if (inLaggingNanpArea(e164)) return true;
   const number = parsePhoneNumberFromString(e164);
   if (!number) return false;
   const type = number.getType();
   return type === "MOBILE" || type === "FIXED_LINE_OR_MOBILE";
+}
+
+/**
+ * Area codes North American Numbering Plan Administrator (NANPA) has assigned
+ * and put in service that the installed `libphonenumber-js` metadata (1.13.15)
+ * does not know yet, so `isValid()` refuses every number in them. The old
+ * hand-kept table accepted these, so dropping them would turn newly issued
+ * phones in new overlays away as "foreign" (review finding M3). Source:
+ * https://nationalnanpa.com/ area-code assignments. No newer release is
+ * installed to refresh from; delete an entry once the package knows it (the
+ * test "lags the metadata" fails when it does). Colorado 983 is in the list
+ * because the metadata knows only part of its exchanges (600 to 699 are missing).
+ */
+export const LAGGING_NANP_AREA_CODES: Readonly<Record<string, readonly string[]>> = {
+  US: ["357", "436", "471", "624", "679", "861", "983"],
+  CA: ["387", "460"],
+};
+
+/**
+ * Whether a `+1` number is in one of `LAGGING_NANP_AREA_CODES`, with the
+ * shape the plan gives a subscriber number: ten digits, area code and
+ * exchange starting 2 to 9, the exchange not N11. The line type cannot tell a
+ * NANP mobile from a landline anyway, so structure is all there is to check.
+ */
+function inLaggingNanpArea(e164: string, country?: string): boolean {
+  const match = e164.match(/^\+1([2-9]\d{2})([2-9]\d{2})\d{4}$/);
+  if (!match || match[2].endsWith("11")) return false;
+  const [, area] = match;
+  return Object.entries(LAGGING_NANP_AREA_CODES).some(
+    ([code, areas]) => (country === undefined || code === country) && areas.includes(area),
+  );
 }
 
 /**
@@ -52,8 +84,9 @@ export function canReceiveText(e164: string): boolean {
  * 5XX ranges, a code nobody has been assigned, or a wrong length, so all of
  * those refuse; US territories (787, 671, 340, ...) resolve to their own
  * country codes, not `US`. Anything the metadata cannot place refuses, which
- * fails toward not texting. A newly assigned code that the installed metadata
- * does not know yet is refused until the package is updated.
+ * fails toward not texting. A newly assigned code the installed metadata does not know
+ * yet is refused until the package is updated, unless it is in
+ * `LAGGING_NANP_AREA_CODES`.
  */
 export function homeNumberingArea(
   e164: string,
@@ -63,6 +96,7 @@ export function homeNumberingArea(
   const home = CALLING_CODES[code];
   if (!home || !e164.startsWith(`+${home}`)) return "foreign_code";
   if (home !== "1") return "home";
+  if (inLaggingNanpArea(e164, code)) return "home";
   const number = parsePhoneNumberFromString(e164);
   return number?.isValid() && number.country === code ? "home" : "foreign_area_code";
 }

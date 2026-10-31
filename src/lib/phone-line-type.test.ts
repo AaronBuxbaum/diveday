@@ -1,5 +1,6 @@
+import { parsePhoneNumberFromString } from "libphonenumber-js/mobile";
 import { describe, expect, it } from "vitest";
-import { canReceiveText, homeNumberingArea } from "./phone-line-type";
+import { canReceiveText, homeNumberingArea, LAGGING_NANP_AREA_CODES } from "./phone-line-type";
 
 /**
  * **Which home numbers can take a text the shop pays for** (issue #2289).
@@ -123,5 +124,46 @@ describe("homeNumberingArea", () => {
     expect(homeNumberingArea("+17385550110", "US")).toBe("home");
     expect(homeNumberingArea("+17485550110", "US")).toBe("home");
     expect(homeNumberingArea("+12735550110", "CA")).toBe("home");
+  });
+});
+
+/**
+ * **Assigned codes the installed metadata lags** (review finding M3). The old
+ * table accepted these; the metadata refuses them, so an explicit allow list
+ * stands in until the package is refreshed.
+ */
+describe("LAGGING_NANP_AREA_CODES", () => {
+  it("takes numbers in the US codes the metadata lags, including Colorado 983 exchanges 600-699", () => {
+    for (const area of ["357", "436", "471", "624", "679", "861"]) {
+      expect(homeNumberingArea(`+1${area}2345678`, "US"), area).toBe("home");
+      expect(canReceiveText(`+1${area}2345678`), area).toBe(true);
+    }
+    expect(homeNumberingArea("+19836501234", "US")).toBe("home");
+    expect(canReceiveText("+19836501234")).toBe(true);
+  });
+
+  it("takes the Canadian codes the metadata lags, for a Canadian shop only", () => {
+    for (const area of ["387", "460"]) {
+      expect(homeNumberingArea(`+1${area}2345678`, "CA"), area).toBe("home");
+      expect(homeNumberingArea(`+1${area}2345678`, "US"), area).toBe("foreign_area_code");
+    }
+    expect(homeNumberingArea("+16792345678", "CA")).toBe("foreign_area_code");
+  });
+
+  it("still refuses a lagging code with a malformed number", () => {
+    for (const number of ["+167923456", "+16792345678901", "+16791234567", "+16794115678"]) {
+      expect(homeNumberingArea(number, "US"), number).toBe("foreign_area_code");
+      expect(canReceiveText(number), number).toBe(false);
+    }
+  });
+
+  it("lags the metadata: an entry the installed package already knows is deleted", () => {
+    for (const [country, areas] of Object.entries(LAGGING_NANP_AREA_CODES)) {
+      for (const area of areas) {
+        if (area === "983") continue; // partly known; only exchanges 600-699 lag
+        const number = parsePhoneNumberFromString(`+1${area}2345678`);
+        expect(number?.isValid() && number.country === country, `${country} ${area}`).toBeFalsy();
+      }
+    }
   });
 });

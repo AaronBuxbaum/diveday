@@ -60,3 +60,5 @@ text. The path is anonymous and public, so the gate must fail toward not sending
 - Leaving is cheap: one function and one import. Revisit if a provider's own line-type lookup
   becomes free at send time, or if per-country custom metadata (libphonenumber's generator) is
   wanted to cut the size further.
+- Metadata lag is bridged by `LAGGING_NANP_AREA_CODES` (`src/lib/phone-line-type.ts`), deleted
+  entry by entry as the package catches up. A client import of this module fails `check:architecture`.
