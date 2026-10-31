@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { collectOfflineShellAssets, normalizeAsset } from "./offline-shell-assets.mjs";
+import { collectOfflineShellAssets, normalizeAsset, readBuildId } from "./offline-shell-assets.mjs";
 
 let dist;
 beforeEach(() => {
@@ -10,10 +10,10 @@ beforeEach(() => {
 });
 afterEach(() => rmSync(dist, { recursive: true, force: true }));
 
-function touch(rel) {
+function touch(rel, body = "x") {
   const file = path.join(dist, rel);
   mkdirSync(path.dirname(file), { recursive: true });
-  writeFileSync(file, "x");
+  writeFileSync(file, body);
 }
 
 /** A fixture shaped like `next build` output for one App Router page. */
@@ -114,5 +114,35 @@ describe("collectOfflineShellAssets", () => {
     expect(() => collectOfflineShellAssets(dist)).toThrow(
       /lazy-es\.js is listed by the build but not on disk/,
     );
+  });
+
+  it("follows import() targets of listed chunks, transitively (Observability's lazy widgets)", () => {
+    build({
+      ...GOOD,
+      files: [...GOOD.files, "static/chunks/analytics.js", "static/chunks/analytics-dep.js"],
+    });
+    touch("static/chunks/layout.js", 'e.A(["static/chunks/analytics.js"])');
+    touch("static/chunks/analytics.js", 'import("static/chunks/analytics-dep.js")');
+    const assets = collectOfflineShellAssets(dist);
+    expect(assets).toContain("/_next/static/chunks/analytics.js");
+    expect(assets).toContain("/_next/static/chunks/analytics-dep.js");
+  });
+
+  it("ignores chunk names a listed chunk mentions that are not on disk", () => {
+    build(GOOD);
+    touch("static/chunks/page.js", '"static/chunks/not-built.js"');
+    expect(collectOfflineShellAssets(dist)).not.toContain("/_next/static/chunks/not-built.js");
+  });
+});
+
+describe("readBuildId", () => {
+  it("reads the id next build wrote", () => {
+    touch("BUILD_ID", "abc-123\n");
+    expect(readBuildId(dist)).toBe("abc-123");
+  });
+  it("fails without one", () => expect(() => readBuildId(dist)).toThrow(/BUILD_ID/));
+  it("refuses an id that cannot sit in an HTML attribute", () => {
+    touch("BUILD_ID", 'a"b');
+    expect(() => readBuildId(dist)).toThrow(/unusable/);
   });
 });

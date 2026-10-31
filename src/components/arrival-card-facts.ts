@@ -1,6 +1,6 @@
 import type { DiverTranslator } from "@/i18n/messages";
 import { dockCallAt } from "@/lib/dock-call";
-import { formatTime } from "@/lib/format";
+import { formatTimeTz } from "@/lib/format";
 import { meetingPointOf } from "@/lib/meeting-point";
 import type { ShopAddressParts } from "@/lib/shop-address";
 
@@ -68,7 +68,7 @@ export function arrivalDockCallLine(
   const at = dockCallAt(startsAt, dockCallMinutes);
   if (!at) return null;
   return t("ready.dockCallLine", {
-    time: formatTime(at, locale, timeZone),
+    time: formatTimeTz(at, locale, timeZone),
     dock: t("notifications.common.dockCallMinutes", { minutes: dockCallMinutes }),
   });
 }

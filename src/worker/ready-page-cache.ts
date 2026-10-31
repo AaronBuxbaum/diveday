@@ -89,6 +89,8 @@ const REQUEST_CANCELLED_VERSION_HEADER = "x-diveday-ready-cancelled-version";
 const LATEST_REQUEST_KEY = "/ready/latest-request";
 const KEEP_UNTIL_HEADER = "x-diveday-keep-until";
 const DEVICE_SAVED_AT_HEADER = "x-diveday-device-saved-at";
+/** Set on a kept copy when the diver has since seen the page online and the copy could not be refreshed. */
+const STALE_HEADER = "x-diveday-copy-stale";
 const CLOCK_WATERMARK_HEADER = "x-diveday-clock-watermark";
 const READY_CLOCK_CACHE_NAME = "diveday-ready-clock-v1";
 const READY_CLOCK_KEY = "/ready/clock-observation";
@@ -330,8 +332,10 @@ const SNAPSHOT_TIMEOUT_MS = 10_000;
 /**
  * The server's snapshot for `path`: the snapshot, `"gone"` when the server
  * says there is nothing to keep (a dead link, a cancelled seat, a departure
- * called off), or null when the answer could not be read, which changes
- * nothing. Same origin, no redirect, never from the HTTP cache.
+ * called off), or null when the answer could not be read: a timeout, a 5xx, a
+ * 429 from the throttle. Null never clears a copy (only 404 does), though the
+ * caller labels the held copy as older. Same origin, no redirect, never from
+ * the HTTP cache.
  */
 async function fetchSnapshot(path: string): Promise<ReadySnapshot | "gone" | null> {
   try {
@@ -361,8 +365,7 @@ async function fetchSnapshot(path: string): Promise<ReadySnapshot | "gone" | nul
  *
  * `request` records whether ordering was durably captured before the fetch.
  * A nondurable request may still process terminal truth, but cannot publish a
- * saved copy. The sixth parameter is the old stylesheet hook, unused now that
- * the snapshot carries its own style.
+ * saved copy.
  */
 export async function saveReadyPage(
   storage: CacheStorage,
@@ -370,7 +373,6 @@ export async function saveReadyPage(
   response: Response,
   now: number,
   request?: ReadyPageRequest,
-  _prepareAssets?: (html: string) => Promise<void>,
   mayPublish: () => boolean = () => true,
 ): Promise<boolean> {
   if (!storable(response)) return false;
@@ -378,7 +380,13 @@ export async function saveReadyPage(
   const order = request ?? (await beginReadyPageRequest(storage, path));
   if (order.pathHash !== hash) return false;
   const snapshot = await fetchSnapshot(path);
-  if (snapshot === null) return false;
+  if (snapshot === null) {
+    // The diver has just been served the live page (`response`) and no newer
+    // snapshot could be had: the held copy is now older than what they read.
+    // Keep it, but say so; never serve it as if it were current.
+    if (order.durable) await markCopyStale(storage, hash, order);
+    return false;
+  }
   // Process terminal truth even without a durable request marker. Order the
   // path check and epoch write together with request starts, preventing a
   // different token from slipping between the check and global marker.
@@ -420,6 +428,37 @@ export async function saveReadyPage(
     await clearCopies(cache, READY_COPY_KEY);
     return mayPublish();
   });
+}
+
+/** Label the copy kept for this path as older than what the diver last saw online. */
+async function markCopyStale(
+  storage: CacheStorage,
+  hash: string,
+  order: ReadyPageRequest,
+): Promise<void> {
+  try {
+    const cache = await storage.open(READY_CACHE_NAME);
+    await serializeReadyPublication(async () => {
+      if (!(await requestIsCurrent(storage, hash, order))) return;
+      const kept = await cache.match(READY_COPY_KEY);
+      if (kept?.headers.get(PATH_HASH_HEADER) !== hash || kept.headers.has(STALE_HEADER)) return;
+      const headers = new Headers(kept.headers);
+      headers.set(STALE_HEADER, "1");
+      await cache.put(READY_COPY_KEY, new Response(await kept.text(), { headers }));
+    });
+  } catch {
+    // Could not label it: the copy keeps its own dated banner.
+  }
+}
+
+/** `html` with the stale notice as its first paragraph. The notice is plain text; it is escaped here. */
+function withStaleNotice(html: string, text: string): string {
+  const escaped = text.replace(
+    /[&<>"']/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] ?? c,
+  );
+  const notice = `<p><strong>${escaped}</strong></p>`;
+  return html.includes("<body>") ? html.replace("<body>", `<body>${notice}`) : notice + html;
 }
 
 /** The kept copy for `path`, if there is one and it is still in date. */
@@ -471,9 +510,11 @@ export async function readyPageFallback(
   // Recheck after asynchronous body parsing: cancellation may persist its
   // marker while this fallback was preparing the response.
   if (!(await stillValid())) return undefined;
+  const stale = cached.headers.has(STALE_HEADER);
+  const body = (html: string) => (stale ? withStaleNotice(html, snapshot.staleNotice) : html);
   return watermark.kind === "valid"
-    ? new Response(snapshot.saved, { headers: documentHeaders("known") })
-    : new Response(snapshot.unverified, { headers: documentHeaders("unverified") });
+    ? new Response(body(snapshot.saved), { headers: documentHeaders("known") })
+    : new Response(body(snapshot.unverified), { headers: documentHeaders("unverified") });
 }
 
 /**
@@ -635,15 +676,26 @@ export function forgetReadyPage(
 }
 
 /**
- * The page's own stylesheets (`/_next/static/**.css`), so an offline copy
- * reads as the page rather than as bare HTML. No scripts: the copy keeps none
- * (issue #3003), and its inline streamed markup renders without them.
+ * **On a worker upgrade, drop every kept copy that is not a snapshot** (security
+ * review 2026-10-31, L1). Before issue #3225 the worker kept a redacted copy of
+ * the rendered page under this same cache name; a shared device that opened a
+ * link before the upgrade still holds it, and nothing reads it again unless
+ * that same link is opened with no signal. Only the one valid snapshot entry
+ * stays. Never creates the cache; never throws.
  */
-export function readyPageStylesheets(html: string, origin: string): string[] {
-  const paths = new Set<string>();
-  for (const match of html.matchAll(/href="([^"#?]*\/_next\/static\/[^"?#]+\.css)"/g)) {
-    const url = new URL(match[1] ?? "", origin);
-    if (url.origin === origin) paths.add(url.pathname);
+export async function purgeLegacyReadyCopies(storage: CacheStorage): Promise<void> {
+  try {
+    if (!(await storage.keys()).includes(READY_CACHE_NAME)) return;
+    const cache = await storage.open(READY_CACHE_NAME);
+    for (const request of await cache.keys()) {
+      const isCopy = new URL(request.url).pathname === READY_COPY_KEY;
+      if (isCopy) {
+        const body = await (await cache.match(request))?.json().catch(() => null);
+        if (parseReadySnapshot(body)) continue;
+      }
+      await cache.delete(request);
+    }
+  } catch {
+    // A cache that cannot be read is not served either (`readyPageFallback`).
   }
-  return [...paths];
 }

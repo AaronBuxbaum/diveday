@@ -17,6 +17,7 @@ export function snapshotOf(
     saved: `<!doctype html><p>No signal.</p>${body}`,
     unverified: `<!doctype html><p>Clock not verified.</p>${body}`,
     rollback: "<!doctype html><h1>Phone clock looks wrong</h1>",
+    staleNotice: "Newer details were seen online.",
     ...overrides,
   };
 }

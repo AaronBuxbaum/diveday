@@ -104,6 +104,8 @@ export default function RootLayout({
       className={`${fontVariables} h-full antialiased`}
     >
       <head>
+        {/* The build this document came from; the offline shell worker compares it with its asset list's. */}
+        <meta name="diveday-build" content={process.env.NEXT_PUBLIC_DIVEDAY_BUILD_ID ?? "dev"} />
         <script
           suppressHydrationWarning
           // biome-ignore lint/security/noDangerouslySetInnerHtml: static, locally-generated script (no user input) that corrects `lang` before first paint — see lang-script.ts

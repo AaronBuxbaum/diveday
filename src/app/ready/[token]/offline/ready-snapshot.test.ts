@@ -37,6 +37,11 @@ function facts(overrides: Partial<ReadySnapshotFacts> = {}): ReadySnapshotFacts 
       arrivalFirstInteraction: null,
     },
     pickup: { time: null, location: null },
+    openItems: [],
+    sites: [],
+    packing: { personal: [], bring: [] },
+    changes: [],
+    flySafe: null,
     ...overrides,
   };
 }
@@ -147,4 +152,86 @@ describe("buildReadySnapshot", () => {
       expect(documents).not.toContain(secret);
     }
   });
+
+  it("names the dock call's time zone, so it reads right from anywhere", () => {
+    expect(plain(buildReadySnapshot(facts()).saved)).toMatch(/dock by 7:30 AM EST/);
+  });
+
+  describe("the checklist and the rest of the page's outstanding words", () => {
+    it("lists the open items in the page's own sentences, as of the save", () => {
+      const { saved } = buildReadySnapshot(
+        facts({ openItems: ["certification_missing", "medical_review"] }),
+      );
+      const t = diverTranslator("en-US");
+      expect(saved).toContain(t("ready.offlineOutstandingHeading"));
+      expect(saved).toContain(t("ready.checklistDetail.certificationMissing"));
+      expect(saved).toContain(t("ready.checklistDetail.medicalReview"));
+      expect(saved).not.toContain(t("ready.offlineOutstandingNone"));
+    });
+
+    it("says an empty list was empty when saved, and never that the diver is ready", () => {
+      const { saved } = buildReadySnapshot(facts());
+      expect(saved).toContain("Nothing on your checklist was open when this was saved");
+      expect(saved).not.toMatch(/\bready to (dive|board)|all set/i);
+    });
+
+    it("carries the planned sites, the bring list, what changed and the fly-safe time", () => {
+      const { saved } = plainSnapshot(
+        facts({
+          sites: ["Palancar Reef", "Palancar Reef", "Columbia"],
+          packing: { personal: ["mask"], bring: ["Reef-safe sunscreen"] },
+          changes: [
+            {
+              id: "e1",
+              tripId: "t",
+              kind: "meeting_point",
+              source: "shop",
+              occurredAt: new Date(Date.UTC(2026, 10, 1, 9, 0)),
+              beforeValue: {},
+              afterValue: { meetingPointLabel: "North pier" },
+            } as never,
+          ],
+          flySafe: {
+            reason: "single",
+            from: new Date(Date.UTC(2026, 10, 3, 17, 0)),
+            hours: 18,
+          } as never,
+        }),
+      );
+      expect(saved).toContain("Planned sites");
+      expect(saved).toContain("Palancar Reef");
+      expect(saved).toContain("Columbia");
+      expect(saved).toContain("Reef-safe sunscreen");
+      expect(saved).toContain("What changed");
+      expect(saved).toContain("North pier");
+      expect(saved).toContain("Flying home soon?");
+      expect(saved).toContain("18 hours");
+    });
+
+    it("voices the open items in the page's language", () => {
+      const { saved } = buildReadySnapshot(
+        facts({ locale: "es-ES", openItems: ["certification_missing"] }),
+      );
+      expect(saved).toContain(diverTranslator("es-ES")("ready.offlineOutstandingHeading"));
+      expect(saved).toContain(
+        diverTranslator("es-ES")("ready.checklistDetail.certificationMissing"),
+      );
+    });
+
+    it("escapes everything it carries", () => {
+      const { saved } = buildReadySnapshot(
+        facts({
+          sites: ["<img src=x onerror=alert(1)>"],
+          packing: { personal: [], bring: ["<b>"] },
+        }),
+      );
+      expect(saved).not.toContain("<img");
+      expect(saved).not.toContain("<b>");
+    });
+  });
 });
+
+function plainSnapshot(f: ReadySnapshotFacts) {
+  const s = buildReadySnapshot(f);
+  return { ...s, saved: plain(s.saved) };
+}

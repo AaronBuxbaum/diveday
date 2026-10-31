@@ -14,6 +14,13 @@ import vm from "node:vm";
  * (`rootMainFiles`, `polyfillFiles`). `next build` itself unions the first
  * two for its route size table (`route-bundle-stats.js`).
  *
+ * `clientModules` lists only client-reference chunks. A chunk reached by
+ * `import()` or `next/dynamic` inside a client module (the root layout's
+ * Observability widgets, for one) is a separate async chunk group that no
+ * manifest names, so the walk below follows every `static/chunks/...` path a
+ * listed chunk's text mentions, transitively, to the files on disk. A chunk
+ * missed here is a ChunkLoadError at sea that lands in `global-error`.
+ *
  * The list is deliberately a superset of what the page's HTML names: a missed
  * chunk breaks the offline screen, and an extra one costs bytes. It is bounded
  * by one route's manifest, never the app's whole chunk graph.
@@ -47,6 +54,39 @@ function readRouteManifest(distDir, route) {
   return manifests[key];
 }
 
+/** The id `next build` wrote for this build (`generateBuildId` in next.config.ts). */
+export function readBuildId(distDir) {
+  const file = path.join(distDir, "BUILD_ID");
+  if (!existsSync(file)) throw new Error(`offline shell assets: ${file} is missing`);
+  const id = readFileSync(file, "utf8").trim();
+  if (!/^[\w.-]+$/.test(id)) throw new Error(`offline shell assets: unusable build id "${id}"`);
+  return id;
+}
+
+const CHUNK_MENTION = /static\/chunks\/[\w.~%@+-]+\.(?:js|css)/g;
+
+/** Every listed chunk's `import()` targets, transitively: names it mentions that exist on disk. */
+function followAsyncChunks(distDir, seeds) {
+  const found = new Set(seeds);
+  const queue = seeds.filter((a) => a.endsWith(".js"));
+  while (queue.length > 0) {
+    const asset = queue.pop();
+    const text = readFileSync(
+      path.join(distDir, decodeURIComponent(asset.slice("/_next/".length))),
+      "utf8",
+    );
+    for (const mention of text.match(CHUNK_MENTION) ?? []) {
+      const next = normalizeAsset(mention);
+      if (!next || found.has(next)) continue;
+      if (!existsSync(path.join(distDir, decodeURIComponent(next.slice("/_next/".length)))))
+        continue;
+      found.add(next);
+      if (next.endsWith(".js")) queue.push(next);
+    }
+  }
+  return found;
+}
+
 /** Sorted, de-duplicated `/_next/static/...` paths the offline shell needs. Throws rather than returns a thin list. */
 export function collectOfflineShellAssets(distDir, route = SHELL_ROUTE) {
   const manifest = readRouteManifest(distDir, route);
@@ -74,9 +114,8 @@ export function collectOfflineShellAssets(distDir, route = SHELL_ROUTE) {
     ...(buildManifest.rootMainFiles ?? []),
     ...(buildManifest.polyfillFiles ?? []),
   ];
-  const assets = [...new Set(raw.map(normalizeAsset).filter(Boolean))].sort();
-
-  for (const asset of assets) {
+  const listed = [...new Set(raw.map(normalizeAsset).filter(Boolean))];
+  for (const asset of listed) {
     const onDisk = path.join(distDir, decodeURIComponent(asset.slice("/_next/".length)));
     if (!existsSync(onDisk)) {
       throw new Error(
@@ -84,5 +123,8 @@ export function collectOfflineShellAssets(distDir, route = SHELL_ROUTE) {
       );
     }
   }
+  const assets = [...followAsyncChunks(distDir, listed)].sort();
+  if (assets.length === 0) throw new Error("offline shell assets: the list is empty");
+
   return assets;
 }

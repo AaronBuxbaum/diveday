@@ -3,8 +3,9 @@ import { act, cleanup, render, screen } from "@testing-library/react";
 import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { diverTranslator } from "@/i18n/messages";
+import { siteRunsLine } from "@/lib/site-runs";
 import { arrivalCardFacts, arrivalDockCallLine } from "./arrival-card-facts";
-import { siteRunsLine, TripArrivalCard } from "./TripArrivalCard";
+import { TripArrivalCard } from "./TripArrivalCard";
 
 afterEach(cleanup);
 
@@ -209,10 +210,10 @@ describe("the dock call", () => {
   it("is the saved card's line, in the shop's zone and the diver's language", () => {
     expect(
       arrivalDockCallLine(diverTranslator("en-US"), trip.startsAt, 30, "en-US", shop.timezone),
-    ).toBe("Aim to be at the dock by 8:30\u00a0AM, 30 minutes before we sail.");
+    ).toBe("Aim to be at the dock by 8:30\u00a0AM\u00a0EDT, 30 minutes before we sail.");
     expect(
       arrivalDockCallLine(diverTranslator("es-ES"), trip.startsAt, 45, "es-ES", shop.timezone),
-    ).toBe("Procura estar en el muelle a las 8:15, 45 minutos antes de zarpar.");
+    ).toBe("Procura estar en el muelle a las 8:15\u00a0GMT-4, 45 minutos antes de zarpar.");
   });
 
   it("says nothing when the shop asks for no lead time, or none is known", () => {

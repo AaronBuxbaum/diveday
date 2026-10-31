@@ -479,6 +479,7 @@ describe("a navigation on a network that never answers", () => {
         saved: `<p>${body}</p>`,
         unverified: `<p>unverified ${body}</p>`,
         rollback: "<p>rollback</p>",
+        staleNotice: "older",
       }),
     );
     await saveReadyPage(
@@ -806,5 +807,24 @@ describe("offline shell versioning", () => {
     await Promise.all(waits);
 
     expect(deleted).toEqual([oldCache]);
+  });
+
+  it("removes shell caches left by earlier builds of the same version", async () => {
+    const currentCache = `diveday-offline-manifest-shell-${OFFLINE_MANIFEST_SHELL_VERSION}`;
+    const deleted: string[] = [];
+    vi.stubGlobal("caches", {
+      keys: async () => [`${currentCache}-build-old`, currentCache],
+      delete: async (name: string) => {
+        deleted.push(name);
+        return true;
+      },
+    });
+    const handler = listeners.get("activate");
+    if (!handler) throw new Error("the worker registered no activate listener");
+    const waits: Promise<unknown>[] = [];
+    handler({ waitUntil: (promise: Promise<unknown>) => waits.push(promise) });
+    await Promise.all(waits);
+    // The test worker has no build list, so its cache carries no build id.
+    expect(deleted).toEqual([`${currentCache}-build-old`]);
   });
 });

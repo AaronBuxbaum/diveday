@@ -47,19 +47,29 @@ export type ReadySnapshot = {
   unverified: string;
   /** Served instead of the copy when the device clock has gone backward. */
   rollback: string;
+  /**
+   * One plain sentence the worker puts above `saved` or `unverified` when the
+   * diver has since seen the page online and the copy could not be refreshed.
+   * Text, never markup: the worker escapes it.
+   */
+  staleNotice: string;
 };
 
 /** The snapshot in `value`, or null when anything about its shape is off. */
 export function parseReadySnapshot(value: unknown): ReadySnapshot | null {
   if (typeof value !== "object" || value === null) return null;
-  const { generatedAt, keepUntil, saved, unverified, rollback } = value as Record<string, unknown>;
+  const { generatedAt, keepUntil, saved, unverified, rollback, staleNotice } = value as Record<
+    string,
+    unknown
+  >;
   if (
     !Number.isSafeInteger(generatedAt) ||
     (generatedAt as number) <= 0 ||
     !Number.isSafeInteger(keepUntil) ||
     typeof saved !== "string" ||
     typeof unverified !== "string" ||
-    typeof rollback !== "string"
+    typeof rollback !== "string" ||
+    typeof staleNotice !== "string"
   ) {
     return null;
   }
@@ -69,6 +79,7 @@ export function parseReadySnapshot(value: unknown): ReadySnapshot | null {
     saved,
     unverified,
     rollback,
+    staleNotice,
   };
 }
 

@@ -192,6 +192,7 @@ describe("parseReadySnapshot", () => {
     saved: "<p>saved</p>",
     unverified: "<p>unverified</p>",
     rollback: "<p>rollback</p>",
+    staleNotice: "older",
   };
 
   it("takes a whole snapshot and drops anything beyond the five fields", () => {
@@ -202,6 +203,7 @@ describe("parseReadySnapshot", () => {
     ["null", null],
     ["a string", "{}"],
     ["a missing document", { ...good, rollback: undefined }],
+    ["a missing stale notice", { ...good, staleNotice: undefined }],
     ["a document that is not text", { ...good, saved: { html: "x" } }],
     ["a fractional instant", { ...good, generatedAt: 1.5 }],
     ["a text instant", { ...good, keepUntil: "1800086400000" }],

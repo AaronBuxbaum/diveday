@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cacheOfflineShell } from "./offline-shell-cache";
+import { cacheOfflineShell, shellBuildId } from "./offline-shell-cache";
 
 function fakeCaches(failPutFor?: string) {
   const stores = new Map<string, Map<string, Response>>();
@@ -20,8 +20,19 @@ function fakeCaches(failPutFor?: string) {
 
 const ASSETS = ["/_next/static/chunks/a.js", "/_next/static/chunks/lazy.js"];
 
-function env(overrides: Partial<Parameters<typeof cacheOfflineShell>[0]> & { missing?: string }) {
+const BUILD = { id: "build-1", assets: ASSETS };
+const shellHtml = (id: string | null) =>
+  `<!doctype html><html><head>${id ? `<meta name="diveday-build" content="${id}">` : ""}</head></html>`;
+
+function env(
+  overrides: Partial<Parameters<typeof cacheOfflineShell>[0]> & {
+    missing?: string;
+    /** The build id the network's shell HTML names. */
+    served?: string | null;
+  },
+) {
   const { caches, stores } = fakeCaches();
+  const served = overrides.served === undefined ? "build-1" : overrides.served;
   const requested: string[] = [];
   return {
     stores,
@@ -29,14 +40,13 @@ function env(overrides: Partial<Parameters<typeof cacheOfflineShell>[0]> & { mis
     env: {
       fetch: async (input: string) => {
         requested.push(input);
-        return input === overrides.missing
-          ? new Response("no", { status: 404 })
-          : new Response(input);
+        if (input === overrides.missing) return new Response("no", { status: 404 });
+        return new Response(input === "/offline-manifest" ? shellHtml(served) : input);
       },
       caches,
       cacheName: "shell-v",
       shellPath: "/offline-manifest",
-      assets: ASSETS,
+      build: BUILD,
       ...overrides,
     },
   };
@@ -72,8 +82,45 @@ describe("cacheOfflineShell", () => {
   });
 
   it("precaches only the shell when no build produced an asset list (dev)", async () => {
-    const { env: e, stores } = env({ assets: null });
+    const { env: e, stores } = env({ build: null, served: null });
     await cacheOfflineShell(e);
     expect([...(stores.get("shell-v")?.keys() ?? [])]).toEqual(["/offline-manifest"]);
+  });
+
+  it("rejects the install, writing nothing, when the shell is another build than the list", async () => {
+    const { env: e, stores } = env({ served: "build-2" });
+    await expect(cacheOfflineShell(e)).rejects.toThrow(
+      /build build-2, not this worker's build build-1/,
+    );
+    expect(stores.size).toBe(0);
+  });
+
+  it("rejects a shell that names no build at all", async () => {
+    const { env: e, stores } = env({ served: null });
+    await expect(cacheOfflineShell(e)).rejects.toThrow(/build unknown/);
+    expect(stores.size).toBe(0);
+  });
+
+  it("fetches assets past the HTTP cache so an old immutable chunk cannot answer", async () => {
+    const inits: (RequestInit | undefined)[] = [];
+    const { env: e } = env({});
+    const inner = e.fetch;
+    await cacheOfflineShell({
+      ...e,
+      fetch: (input, init) => {
+        if (input !== "/offline-manifest") inits.push(init);
+        return inner(input);
+      },
+    });
+    expect(inits).toHaveLength(ASSETS.length);
+    for (const init of inits) expect(init?.cache).toBe("reload");
+  });
+});
+
+describe("shellBuildId", () => {
+  it("reads the meta whichever way round its attributes are", () => {
+    expect(shellBuildId('<meta content="b-9" name="diveday-build">')).toBe("b-9");
+    expect(shellBuildId('<meta name="diveday-build" content="b-9"/>')).toBe("b-9");
+    expect(shellBuildId("<html></html>")).toBeNull();
   });
 });

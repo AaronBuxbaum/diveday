@@ -26,10 +26,10 @@ import {
   forgetReadyPage,
   isReadyScope,
   observeReadyPageClock,
+  purgeLegacyReadyCopies,
   type ReadyPageRequest,
   readyPageFallback,
   readyPagePath,
-  readyPageStylesheets,
   saveReadyPage,
 } from "./ready-page-cache";
 
@@ -57,7 +57,18 @@ import {
  */
 declare const self: ServiceWorkerGlobalScope;
 
-const CACHE_NAME = `diveday-offline-manifest-shell-${OFFLINE_MANIFEST_SHELL_VERSION}`;
+/**
+ * The production build this worker was generated from (`{ id, assets }`),
+ * injected by `scripts/build-service-worker.mjs` from the build's route
+ * manifest. `null` in dev, where chunk names are mutable and only the shell
+ * document is precached.
+ */
+declare const __OFFLINE_SHELL_BUILD__: { id: string; assets: readonly string[] } | null | undefined;
+const SHELL_BUILD = typeof __OFFLINE_SHELL_BUILD__ === "undefined" ? null : __OFFLINE_SHELL_BUILD__;
+
+const SHELL_CACHE_PREFIX = "diveday-offline-manifest-shell-";
+/** Keyed by build too: one deploy's shell and chunks live and die together, so caches never pile up. */
+const CACHE_NAME = `${SHELL_CACHE_PREFIX}${OFFLINE_MANIFEST_SHELL_VERSION}${SHELL_BUILD ? `-${SHELL_BUILD.id}` : ""}`;
 const SHELL_VERSION = OFFLINE_MANIFEST_SHELL_VERSION;
 const OFFLINE_SHELL = "/offline-manifest";
 
@@ -173,20 +184,13 @@ async function offlineShellRedirect(
   return Response.redirect(redirectTarget.href, 302);
 }
 
-/**
- * The shell's precache list, injected by `scripts/build-service-worker.mjs`
- * from the production build's route manifest. Absent (`null`) in dev, where
- * chunk names are mutable and only the shell document is precached.
- */
-declare const __OFFLINE_SHELL_ASSETS__: readonly string[] | null | undefined;
-
 function cacheOfflineShell(): Promise<void> {
   return cacheShell({
     fetch: (input, init) => fetch(input, init),
     caches,
     cacheName: CACHE_NAME,
     shellPath: OFFLINE_SHELL,
-    assets: typeof __OFFLINE_SHELL_ASSETS__ === "undefined" ? null : __OFFLINE_SHELL_ASSETS__,
+    build: SHELL_BUILD,
   });
 }
 
@@ -198,36 +202,6 @@ function cacheOfflineShell(): Promise<void> {
  */
 function inReadyScope(): boolean {
   return isReadyScope(self.registration?.scope);
-}
-
-/** Keep the page's own styles and their local fonts before publishing its offline document. */
-async function keepReadyAssets(html: string): Promise<void> {
-  const cache = await caches.open(CACHE_NAME);
-  const keepAsset = async (path: string): Promise<Response> => {
-    const cached = await cache.match(path);
-    if (cached) return cached;
-    const response = await fetch(path, { credentials: "same-origin", redirect: "error" });
-    if (!response.ok) throw new Error("Readiness asset could not be loaded");
-    await cache.put(path, response.clone());
-    return response;
-  };
-  await Promise.all(
-    readyPageStylesheets(html, self.location.origin).map(async (path) => {
-      const sheet = await keepAsset(path);
-      const css = await sheet.text();
-      const fonts = new Set<string>();
-      for (const match of css.matchAll(/url\(\s*["']?([^"')\s]+)["']?\s*\)/g)) {
-        const url = new URL(match[1], new URL(path, self.location.origin));
-        if (
-          url.origin === self.location.origin &&
-          url.pathname.startsWith("/_next/static/") &&
-          /\.(?:woff2?|ttf|otf)$/.test(url.pathname)
-        )
-          fonts.add(url.pathname + url.search);
-      }
-      await Promise.all([...fonts].map(keepAsset));
-    }),
-  );
 }
 
 let readyRequestGeneration = 0;
@@ -243,7 +217,6 @@ function keepReadyPage(
     response,
     nowMs(),
     request,
-    keepReadyAssets,
     () => generation === readyRequestGeneration,
   );
 }
@@ -258,14 +231,13 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(
     Promise.all([
       self.clients.claim(),
+      purgeLegacyReadyCopies(caches),
       caches
         .keys()
         .then((keys) =>
           Promise.all(
             keys
-              .filter(
-                (key) => key.startsWith("diveday-offline-manifest-shell-") && key !== CACHE_NAME,
-              )
+              .filter((key) => key.startsWith(SHELL_CACHE_PREFIX) && key !== CACHE_NAME)
               .map((key) => caches.delete(key)),
           ),
         ),

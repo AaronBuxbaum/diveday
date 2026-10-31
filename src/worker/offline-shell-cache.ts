@@ -3,7 +3,7 @@
  *
  * The list is generated at build time from the production build's own route
  * manifest (`scripts/offline-shell-assets.mjs`) and injected into the worker as
- * `__OFFLINE_SHELL_ASSETS__`. This module used to find the assets by parsing
+ * `__OFFLINE_SHELL_BUILD__`. This module used to find the assets by parsing
  * the shell HTML and scanning minified chunks for lazy chunk names; that was a
  * dependency on the shape of the framework's output, and a miss left a crew
  * member's offline screen in the error boundary.
@@ -15,12 +15,30 @@ export interface OfflineShellCacheEnv {
   caches: CacheStorage;
   cacheName: string;
   shellPath: string;
-  /** Same-origin `/_next/static/...` paths; `null` when no production build produced a list. */
-  assets: readonly string[] | null;
+  /**
+   * The production build this worker was generated from: its id and its
+   * same-origin `/_next/static/...` list. `null` in dev, where only the shell
+   * document is precached and nothing is compared.
+   */
+  build: { id: string; assets: readonly string[] } | null;
+}
+
+/** The build id the root layout writes into every document (`<meta name="diveday-build">`). */
+export function shellBuildId(html: string): string | null {
+  const tag = /<meta\b[^>]*\bname="diveday-build"[^>]*>/i.exec(html)?.[0];
+  return tag ? (/\bcontent="([^"]*)"/i.exec(tag)?.[1] ?? null) : null;
 }
 
 /**
  * Fetch the shell and every listed asset, and only then write anything.
+ *
+ * The shell and the list must be the same build. The list is baked into this
+ * worker at its build; the shell is whatever the network answers now, which
+ * after a deploy is a newer build whose chunks are not on the list. A shell
+ * whose build id differs rejects the install (the old worker and cache keep
+ * serving) instead of pairing new HTML with old chunks. Assets are fetched with
+ * `cache: "reload"` so an old immutable chunk in the HTTP cache cannot answer
+ * for one the server no longer has.
  *
  * All-or-nothing on purpose: a deploy landing between requests, or a flaky
  * connection, must never overwrite a working copy with new HTML that points at
@@ -35,10 +53,19 @@ export interface OfflineShellCacheEnv {
 export async function cacheOfflineShell(env: OfflineShellCacheEnv): Promise<void> {
   const response = await env.fetch(env.shellPath, { credentials: "same-origin" });
   if (!response.ok) throw new Error("Offline manifest shell could not be loaded");
-  const assets = env.assets ?? [];
+  const build = env.build;
+  if (build) {
+    const served = shellBuildId(await response.clone().text());
+    if (served !== build.id) {
+      throw new Error(
+        `Offline manifest shell is build ${served ?? "unknown"}, not this worker's build ${build.id}`,
+      );
+    }
+  }
+  const assets = build?.assets ?? [];
   const entries = await Promise.all(
     assets.map(async (asset): Promise<[string, Response]> => {
-      const assetResponse = await env.fetch(asset);
+      const assetResponse = await env.fetch(asset, { cache: "reload" });
       if (!assetResponse.ok) {
         throw new Error(`Offline manifest asset ${asset} could not be loaded`);
       }

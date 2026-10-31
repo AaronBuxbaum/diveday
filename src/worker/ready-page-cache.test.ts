@@ -6,11 +6,11 @@ import {
   beginReadyPageRequest,
   forgetReadyPage,
   isReadyScope,
+  purgeLegacyReadyCopies,
   READY_COPY_KEY,
   READY_COPY_MAX_AGE_MS,
   readyPageFallback,
   readyPagePath,
-  readyPageStylesheets,
   saveReadyPage,
 } from "./ready-page-cache";
 import { DAY_MS, livePage, NOW, page, snapshotOf, stubSnapshotReply } from "./ready-test-support";
@@ -30,6 +30,7 @@ function fakeStorage() {
     new URL(typeof key === "string" ? key : key.url, ORIGIN).pathname;
   const storage = {
     delete: async (name: string) => caches.delete(name),
+    keys: async () => [...caches.keys()],
     open: async (name: string) => {
       const entries = caches.get(name) ?? new Map<string, Response>();
       caches.set(name, entries);
@@ -496,9 +497,81 @@ describe("saveReadyPage and readyPageFallback", () => {
   });
 });
 
-describe("readyPageStylesheets", () => {
-  it("finds the page's own stylesheets and nobody else's", () => {
-    const html = `<link rel="stylesheet" href="/_next/static/css/app.css"/><link href="https://cdn.example/_next/static/css/x.css"/><script src="/_next/static/chunks/a.js"></script>`;
-    expect(readyPageStylesheets(html, ORIGIN)).toEqual(["/_next/static/css/app.css"]);
+describe("a copy older than what the diver last saw online", () => {
+  let store: ReturnType<typeof fakeStorage>;
+  const path = `/ready/${TOKEN}`;
+  beforeEach(async () => {
+    store = fakeStorage();
+    await saveReadyPage(store.storage, path, page("Dock call 8:00"), NOW);
+  });
+
+  it.each([
+    ["a timeout", () => Promise.reject(new DOMException("timed out", "TimeoutError"))],
+    ["a throttle (429)", () => Promise.resolve(new Response("slow down", { status: 429 }))],
+    ["a server error", () => Promise.resolve(new Response("oops", { status: 503 }))],
+  ])("labels the held copy, and keeps it, after %s", async (_case, reply) => {
+    stubSnapshotReply(reply);
+    expect(await saveReadyPage(store.storage, path, livePage(), NOW)).toBe(false);
+    const served = await (await readyPageFallback(store.storage, path, NOW))?.text();
+    expect(served).toContain("Dock call 8:00");
+    expect(served).toContain("Newer details were seen online.");
+  });
+
+  it("serves an unlabelled copy when nothing newer was seen", async () => {
+    const served = await (await readyPageFallback(store.storage, path, NOW))?.text();
+    expect(served).not.toContain("Newer details were seen online.");
+  });
+
+  it("a later good snapshot replaces the copy and drops the label", async () => {
+    stubSnapshotReply(async () => new Response("no", { status: 429 }));
+    await saveReadyPage(store.storage, path, livePage(), NOW);
+    expect(await saveReadyPage(store.storage, path, page("Dock call 7:00"), NOW)).toBe(true);
+    const served = await (await readyPageFallback(store.storage, path, NOW))?.text();
+    expect(served).toContain("Dock call 7:00");
+    expect(served).not.toContain("Newer details were seen online.");
+  });
+
+  it("escapes the notice, which is text", async () => {
+    stubSnapshotReply(async () => new Response("no", { status: 429 }));
+    await saveReadyPage(store.storage, path, livePage(), NOW);
+    const cache = await store.storage.open(READY_CACHE_NAME);
+    const kept = await cache.match(READY_COPY_KEY);
+    const body = JSON.parse((await kept?.text()) ?? "{}");
+    await cache.put(
+      READY_COPY_KEY,
+      new Response(JSON.stringify({ ...body, staleNotice: "<script>x</script>" }), {
+        headers: kept?.headers,
+      }),
+    );
+    const served = await (await readyPageFallback(store.storage, path, NOW))?.text();
+    expect(served).not.toContain("<script>");
+    expect(served).toContain("&lt;script&gt;");
+  });
+});
+
+describe("purgeLegacyReadyCopies", () => {
+  it("deletes old HTML copies and keeps a valid snapshot", async () => {
+    const store = fakeStorage();
+    const path = `/ready/${TOKEN}`;
+    await saveReadyPage(store.storage, path, page("kept"), NOW);
+    const cache = await store.storage.open(READY_CACHE_NAME);
+    await cache.put(`/ready/${OTHER}`, new Response("<html>old redacted page</html>"));
+    await purgeLegacyReadyCopies(store.storage);
+    expect([...(store.caches.get(READY_CACHE_NAME)?.keys() ?? [])]).toEqual([READY_COPY_KEY]);
+    expect(await (await readyPageFallback(store.storage, path, NOW))?.text()).toContain("kept");
+  });
+
+  it("deletes a copy under the snapshot's own key whose body is old HTML", async () => {
+    const store = fakeStorage();
+    const cache = await store.storage.open(READY_CACHE_NAME);
+    await cache.put(READY_COPY_KEY, new Response("<html>old redacted page</html>"));
+    await purgeLegacyReadyCopies(store.storage);
+    expect(store.caches.get(READY_CACHE_NAME)?.size).toBe(0);
+  });
+
+  it("does not create the cache when there is none", async () => {
+    const store = fakeStorage();
+    await purgeLegacyReadyCopies(store.storage);
+    expect(store.caches.has(READY_CACHE_NAME)).toBe(false);
   });
 });
