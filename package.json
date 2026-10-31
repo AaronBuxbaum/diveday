@@ -183,6 +183,7 @@
     "msw": "^3.0.3",
     "next-devtools-mcp": "^0.4.0",
     "playwright-core": "^1.64.1",
+    "postcss": "8.5.32",
     "reg-notify-github-plugin": "^0.14.5",
     "reg-publish-s3-plugin": "^0.14.4",
     "reg-simple-keygen-plugin": "^0.14.2",
