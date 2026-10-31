@@ -124,10 +124,13 @@ test("the saved /ready copy shows with no signal, and a cancel landing forgets i
   await context.setOffline(true);
   await page.reload();
   await expect(page.getByRole("heading", { name: OPEN_BOAT })).toBeVisible();
+  // The server-built snapshot (not the live page): its banner dates the
+  // summary by the server's clock and says what it carries.
   await expect(
-    page.getByText(/No signal: this is a copy of the page generated .+ that your phone saved\./),
+    page.getByText(/No signal: this is a saved summary generated .+: where and when/),
   ).toBeVisible();
-  // Read-only: nothing on it posts, and nothing deletes the diver's only copy.
+  // Read-only: the snapshot is inert, so nothing on it posts, and nothing
+  // deletes the diver's only copy.
   await expect(page.getByRole("button")).toHaveCount(0);
   await expect(page.getByRole("button", { name: diver("ready.offlineRemove") })).toHaveCount(0);
 
