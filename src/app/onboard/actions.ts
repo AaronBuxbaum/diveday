@@ -55,13 +55,13 @@ export async function onboardAction(formData: FormData) {
   const PRESERVED_FIELDS = ["shopName", "shopSlug", "timezone", "ownerName"] as const;
   // **The door is shut unless an open setup link came with the form** (ADR
   // 20261009-single-use-setup-links). The page hides the form without one, but
-  // an action is callable by anyone holding its id whether or not they were
-  // ever shown the form, so the link is spent here, in the transaction that
-  // creates the shop, and nowhere else. Up front only its *shape* is judged:
-  // that decides whether a bounce may carry it back, and a value that is not
-  // 43 base64url characters never reaches a `Location:` header or the
-  // database. The page re-reads whatever comes back and shows the form only
-  // for a link that is still open.
+  // the action is callable by anyone holding its id. This action does not spend
+  // the link. `createSignedUpShop` does, atomically with creating the shop, in
+  // one transaction. Here only the link's *shape* is judged: that decides
+  // whether a bounce may carry it back, and a value that is not 43 base64url
+  // characters never reaches a `Location:` header or the database. The page
+  // re-reads whatever comes back and shows the form only for a link that is
+  // still open.
   const envelope = parseForm(onboardEnvelope, formData);
   const raw: z.infer<typeof onboardEnvelope> = envelope.ok ? envelope.data : {};
   const setupToken = raw[SETUP_LINK_PARAM];
@@ -131,14 +131,11 @@ export async function onboardAction(formData: FormData) {
 
   const { shopName, shopSlug, timezone, ownerName, ownerEmail, ownerPassword } = parsed.data;
 
-  // The reserved demo namespace is off limits to a real account, and now says
-  // so out loud. ADR 20260803-demo-bypass-containment's third condition — "no
-  // real shop's account can be in `*.demo.invalid`" — used to hold only as an
-  // emergent property (this action mails the address, and `.invalid` never
-  // resolves, so nobody *would* use one). Emergent is not enforced: it left one
-  // combination open, an insider or a bad migration flipping `is_demo` on a
-  // tenant that already holds an account in that namespace, which would hand
-  // `DEMO_BYPASS_PASSWORD` a real tenant. Refusing here makes it an invariant.
+  // The reserved demo namespace is off limits to a real account. ADR
+  // 20260803-demo-bypass-containment requires that no real shop's account is in
+  // `*.demo.invalid`. This refusal enforces it. Without it, an insider or a bad
+  // migration could set `is_demo` on a tenant that already holds such an
+  // account, and `DEMO_BYPASS_PASSWORD` would then open a real tenant.
   if (isDemoAccountEmail(ownerEmail)) return await backToForm("email_reserved");
 
   const db = await getDb();
@@ -209,11 +206,9 @@ export async function onboardAction(formData: FormData) {
     // The founder alert needs no link, so it doesn't wait on APP_HOST being
     // configured the way the owner-facing mail below does.
     //
-    // try/catch rather than the trailing `.catch()` this used to carry alone:
-    // `getDb()` is awaited *as an argument*, so a database handle that failed
-    // to open rejected before any `.catch` was attached — an unhandled
-    // rejection inside `after()`, on the one path whose whole point is that a
-    // failed alert cannot touch a signup. The shape now covers both halves.
+    // try/catch, not a trailing `.catch()`: `getDb()` is awaited as an argument,
+    // so a handle that failed to open rejects before any `.catch` is attached.
+    // The try covers both halves.
     after(async () => {
       try {
         await sendNotification(await getDb(), {
