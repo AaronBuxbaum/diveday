@@ -400,14 +400,25 @@ describe("ses webhook route — delivery events", () => {
     expect(optOutAddressAfterComplaint).not.toHaveBeenCalled();
   });
 
-  it("answers 200 for a verified event type it doesn't handle (Open)", async () => {
-    vi.mocked(verifySnsMessage).mockResolvedValue(
-      verifiedNotification(JSON.stringify({ eventType: "Open", mail: { messageId: "ses_1" } })),
-    );
+  it("acknowledges malformed and unmodeled SES messages without database effects", async () => {
+    vi.mocked(getDb).mockClear();
+    const messages = [
+      "{",
+      JSON.stringify({ eventType: "Bounce", mail: { messageId: 12 } }),
+      JSON.stringify({ eventType: "Open", mail: { messageId: "ses_1" } }),
+    ];
 
-    const response = await POST(webhookRequest("{}"));
-    expect(response.status).toBe(200);
+    for (const message of messages) {
+      vi.mocked(verifySnsMessage).mockResolvedValue(verifiedNotification(message));
+      const response = await POST(webhookRequest("{}"));
+      expect(response.status).toBe(200);
+    }
+
+    expect(getDb).not.toHaveBeenCalled();
     expect(applyProviderEmailEvent).not.toHaveBeenCalled();
+    expect(recordEmailBounces).not.toHaveBeenCalled();
+    expect(optOutAddressAfterComplaint).not.toHaveBeenCalled();
+    expect(recordBookkeeperDeliveryOutcome).not.toHaveBeenCalled();
   });
 
   it("answers 200 for a message it never tracked, so SNS stops retrying", async () => {

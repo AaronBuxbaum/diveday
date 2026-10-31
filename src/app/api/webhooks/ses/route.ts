@@ -6,9 +6,10 @@ import { applyProviderEmailEvent } from "@/db/notifications";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import {
-  parseSesBookkeeperOutcomes,
-  parseSesBounceReports,
-  parseSesEmailEvent,
+  parseSesEventData,
+  sesBookkeeperOutcomesFromData,
+  sesBounceReportsFromData,
+  sesEmailEventFromData,
 } from "@/lib/notifications/ses-events";
 import { gateSnsWebhook } from "@/lib/notifications/sns-webhook";
 
@@ -29,7 +30,9 @@ export async function POST(request: Request) {
   if (gate.kind === "response") return gate.response;
   const { message } = gate;
 
-  const event = parseSesEmailEvent(message.Message, nowDate());
+  const eventNow = nowDate();
+  const data = parseSesEventData(message.Message);
+  const event = sesEmailEventFromData(data, eventNow);
   if (event.kind === "ignored") return new Response(null, { status: 200 });
 
   const db = await getDb();
@@ -49,7 +52,7 @@ export async function POST(request: Request) {
   // so DiveDay can see which mail bounces, why, for which shop and who sent it
   // (`email_bounces`, read by the founder's digest). The log line carries the
   // classification and the recipient's domain, never the address.
-  const reports = parseSesBounceReports(message.Message, nowDate());
+  const reports = sesBounceReportsFromData(data, nowDate());
   if (reports.length > 0) {
     const recorded = await recordEmailBounces(db, reports);
     for (const report of reports) {
@@ -97,7 +100,7 @@ export async function POST(request: Request) {
   // A month-end send to the bookkeeper that bounced, or was delivered after
   // one did (issue #2798). Matched by the message's shop tag and the address
   // on file; the line carries the shop and the outcome, never the address.
-  for (const outcome of parseSesBookkeeperOutcomes(message.Message, nowDate())) {
+  for (const outcome of sesBookkeeperOutcomesFromData(data, nowDate())) {
     const result = await recordBookkeeperDeliveryOutcome(db, {
       shopId: outcome.shopId,
       recipient: outcome.recipient,

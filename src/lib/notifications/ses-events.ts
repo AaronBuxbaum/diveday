@@ -84,6 +84,20 @@ export type SesEmailEvent =
 
 const shopIdSchema = z.uuid();
 
+export type SesEventData = z.infer<typeof sesEventDataSchema>;
+
+/** Decodes and validates the shared SES event shape; malformed input returns null. */
+export function parseSesEventData(rawMessage: string): SesEventData | null {
+  let parsedJson: unknown;
+  try {
+    parsedJson = JSON.parse(rawMessage);
+  } catch {
+    return null;
+  }
+  const parsed = sesEventDataSchema.safeParse(parsedJson);
+  return parsed.success ? parsed.data : null;
+}
+
 function recipientOf(data: z.infer<typeof sesEventDataSchema>): string | null {
   const named =
     data.complaint?.complainedRecipients?.[0]?.emailAddress ??
@@ -131,36 +145,28 @@ function sesEventDetail(data: z.infer<typeof sesEventDataSchema>): string | null
   return null;
 }
 
-export function parseSesEmailEvent(rawMessage: string, now: Date): SesEmailEvent {
-  let parsedJson: unknown;
-  try {
-    parsedJson = JSON.parse(rawMessage);
-  } catch {
-    return { kind: "ignored" };
-  }
-  const data = sesEventDataSchema.safeParse(parsedJson);
-  if (!data.success) return { kind: "ignored" };
-
+export function sesEmailEventFromData(data: SesEventData | null, now: Date): SesEmailEvent {
+  if (!data) return { kind: "ignored" };
   const status =
     PROVIDER_STATUS_BY_SES_EVENT_TYPE[
-      data.data.eventType as keyof typeof PROVIDER_STATUS_BY_SES_EVENT_TYPE
+      data.eventType as keyof typeof PROVIDER_STATUS_BY_SES_EVENT_TYPE
     ];
   if (!status) return { kind: "ignored" };
 
   return {
     kind: "delivery",
-    providerMessageId: data.data.mail.messageId,
+    providerMessageId: data.mail.messageId,
     status,
-    detail: sesEventDetail(data.data),
-    recipient: recipientOf(data.data),
-    shopId: shopIdOf(data.data),
+    detail: sesEventDetail(data),
+    recipient: recipientOf(data),
+    shopId: shopIdOf(data),
     occurredAt: timestampFrom(
       [
-        data.data.bounce?.timestamp,
-        data.data.complaint?.timestamp,
-        data.data.delivery?.timestamp,
-        data.data.deliveryDelay?.timestamp,
-        data.data.mail.timestamp,
+        data.bounce?.timestamp,
+        data.complaint?.timestamp,
+        data.delivery?.timestamp,
+        data.deliveryDelay?.timestamp,
+        data.mail.timestamp,
       ],
       now,
     ),
@@ -197,23 +203,17 @@ function trimmedOrNull(value: string | undefined): string | null {
 /**
  * Every recipient a `Bounce` or `Complaint` names, one report each, with the
  * classification SES gave it and the email it was (the `diveday_kind` and
- * `diveday_purpose` tags). Empty for every other event and for anything that
- * does not parse. Kept apart from `parseSesEmailEvent`, which reduces an event
- * to one verdict on one message; this is the per-address record DiveDay keeps
- * to debug its own mail. A recipient SES did not name falls back to the
- * message's destinations, as `recipientOf` does.
+ * `diveday_purpose` tags). Other event types return no reports. Kept apart from
+ * `sesEmailEventFromData`, which reduces an event to one verdict on one
+ * message; this is the per-address record DiveDay keeps to debug its own mail.
+ * A recipient SES did not name falls back to the message's destinations, as
+ * `recipientOf` does.
  */
-export function parseSesBounceReports(rawMessage: string, now: Date): SesBounceReport[] {
-  let parsedJson: unknown;
-  try {
-    parsedJson = JSON.parse(rawMessage);
-  } catch {
-    return [];
-  }
-  const parsed = sesEventDataSchema.safeParse(parsedJson);
-  if (!parsed.success) return [];
-  const data = parsed.data;
-
+export function sesBounceReportsFromData(
+  data: SesEventData | null,
+  now: Date,
+): SesBounceReport[] {
+  if (!data) return [];
   const common = {
     providerMessageId: data.mail.messageId,
     kind: trimmedOrNull(data.mail.tags?.[SES_KIND_TAG]?.[0]),
@@ -296,16 +296,11 @@ export type SesBookkeeperOutcome = {
  * address wrong. Matched to the shop by its tag, never by a stored message id,
  * since this kind keeps no delivery row.
  */
-export function parseSesBookkeeperOutcomes(rawMessage: string, now: Date): SesBookkeeperOutcome[] {
-  let parsedJson: unknown;
-  try {
-    parsedJson = JSON.parse(rawMessage);
-  } catch {
-    return [];
-  }
-  const parsed = sesEventDataSchema.safeParse(parsedJson);
-  if (!parsed.success) return [];
-  const data = parsed.data;
+export function sesBookkeeperOutcomesFromData(
+  data: SesEventData | null,
+  now: Date,
+): SesBookkeeperOutcome[] {
+  if (!data) return [];
   if (trimmedOrNull(data.mail.tags?.[SES_KIND_TAG]?.[0]) !== BOOKKEEPER_MONTH_END_KIND) return [];
   const shopId = shopIdOf(data);
   if (!shopId) return [];
