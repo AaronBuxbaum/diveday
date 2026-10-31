@@ -398,10 +398,12 @@ describe("the /ready/ registration's fetch", () => {
       await vi.waitFor(() => expect(finishPut).toBeDefined());
       fetchMock.mockResolvedValueOnce(unsnapshotted("incomplete B"));
       const newer = message("KEEP_READY_PAGE", `https://dive.day${PATH}`);
-      await newer.settle();
-      expect(newer.replies).toEqual([{ ok: false }]);
+      // The newer save labels the held copy stale through the same publication
+      // queue the older put holds, so it can only finish once that put does.
+      await vi.waitFor(() => expect(snapshotAsked).toHaveLength(3));
       finishPut?.();
-      await older.settle();
+      await Promise.all([older.settle(), newer.settle()]);
+      expect(newer.replies).toEqual([{ ok: false }]);
       expect(older.replies).toEqual([{ ok: false }]);
       fetchMock.mockRejectedValue(new TypeError("offline"));
       const offline = navigate(`https://dive.day${PATH}`);
