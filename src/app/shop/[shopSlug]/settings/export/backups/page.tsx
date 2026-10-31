@@ -61,7 +61,7 @@ function noticeFrom(value: string | undefined): NoticeCode | null {
  * rendered by `../_components/BackupsSection.tsx`. Not a second feature:
  * `run-backup.ts` builds it from `loadShopExportBundleInput`, the export loader.
  * It shares the Export tab's gate, `canPersonExportShopData`, checked against
- * the database rather than the JWT, and `/settings/backup` is a 308 to this page.
+ * the database rather than the JWT.
  */
 export default async function BackupsSettingsPage({
   params,

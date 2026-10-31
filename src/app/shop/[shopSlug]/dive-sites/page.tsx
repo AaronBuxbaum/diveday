@@ -85,7 +85,7 @@ export default async function DiveSitesPage({
   // — it is DiveDay's own dataset — but it was reachable from exactly two
   // buttons on this page and nowhere else, so it earns the same treatment as
   // Not ready (ADR 20260803-not-ready-is-a-view / 20260806-dive-site-catalog-is-a-view):
-  // one route, a `?view=` switch, and a 308 from the URL it used to own.
+  // one route and a `?view=` switch for the published site catalog.
   if (view === "catalog") {
     return (
       <CatalogView

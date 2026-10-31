@@ -49,8 +49,8 @@ Every name, number and time is demo-seed fiction. Nothing here is real customer 
 | Slice | Status | Lands in | Pinned by |
 | --- | --- | --- | --- |
 | 9a — the dive-site library and the catalog door | shipped | `src/app/shop/[shopSlug]/dive-sites/_components/SiteLibraryLedger.tsx` | `SiteLibraryLedger.test.tsx`, `src/lib/dive-sites.test.ts`, `src/db/dive-sites.test.ts`, `e2e/dive-sites.spec.ts` |
-| 9b — the editor rail on the course editor | shipped | `src/components/editor/EditorRail.tsx` | `EditorRail.test.tsx`, `page.test.tsx`, `UnsavedChangesGuard.test.tsx`, `e2e/courses.spec.ts` |
-| 9c — the editor rail on the site form | shipped | `src/components/editor/EditorRail.tsx` | `EditorRail.test.tsx`, `site-form-sections.test.ts`, `SiteFormShell.test.tsx`, `e2e/dive-sites.spec.ts` |
+| 9b — course editor sections (rail retired 2026-10-24) | shipped | `src/components/editor/EditorSection.tsx` | `EditorSection.test.tsx`, course edit `page.test.tsx`, `UnsavedChangesGuard.test.tsx`, `e2e/courses.spec.ts` |
+| 9c — dive-site editor sections (rail retired 2026-10-24) | shipped | `src/components/editor/EditorSection.tsx` | `EditorSection.test.tsx`, `site-form-sections.test.ts`, `SiteFormShell.test.tsx`, `e2e/dive-sites.spec.ts` |
 | 9d — the gear register's one story | shipped | `src/app/shop/[shopSlug]/gear/_components/GearRegisterLedger.tsx` | `GearRegisterLedger.test.tsx`, `src/lib/gear.test.ts`, `src/db/gear.test.ts`, `e2e/gear.spec.ts` |
 | 9e — staffing as a week | shipped | `src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.tsx` | `staffing-week.test.ts`, `StaffingWeek.test.tsx`, `StaffCardCredentials.test.tsx`, `staffing.test.ts`, `e2e/staffing.spec.ts` |
 
@@ -72,6 +72,11 @@ in their doc comments, as does `src/components/seat-diver/PersonCandidateList.ts
 row still reads "courses roster, promos, team, add-booking" — Team shipped separately as 9h, and
 the roadmap's own 9g bullet already says the three.)
 | 9h — Team's per-row roles | shipped | `src/app/shop/[shopSlug]/settings/team/_components/StaffRolesDisclosure.tsx` | `StaffRolesDisclosure.test.tsx`, `notices.test.ts`, `actions.authz.test.ts`, `e2e/staff-invite.spec.ts` |
+
+Slices 9b and 9c shipped with sticky section rails; visual review A11 retired those rails on
+2026-10-24. The current section and disclosure behavior remains in `EditorSection` and its
+consumers. These dated artboards and the slice specifications record the earlier design, not the
+current editor layout.
 
 9h's server half is `saveStaffRolesAction` in that folder's `actions.ts` and the notice router in
 its `notices.ts`; the page-level bulk Save it replaced is gone.

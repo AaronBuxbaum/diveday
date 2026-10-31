@@ -48,7 +48,9 @@ export function CardsToProcess({
   const since = cardProcessingSince(now);
   const byAgency = new Map<CardToProcess["agency"], CardToProcess[]>();
   for (const card of current) {
-    byAgency.set(card.agency, [...(byAgency.get(card.agency) ?? []), card]);
+    const group = byAgency.get(card.agency);
+    if (group) group.push(card);
+    else byAgency.set(card.agency, [card]);
   }
   const agencyName = (agency: CardToProcess["agency"]) =>
     agency === "other" ? t("trips.roster.processedAgencyUnnamed") : t(AGENCY_KEYS[agency]);

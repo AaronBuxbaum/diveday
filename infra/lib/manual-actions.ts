@@ -121,52 +121,6 @@ export function renderCategory(
     .join("\n\n");
 }
 
-/**
- * A category's actions packed into as few strings as fit under `maxLength`,
- * splitting only on action boundaries.
- *
- * CloudFormation caps an output value at 4096 characters, and the Credentials
- * group crossed it the first time this registry was written -- a limit worth
- * absorbing here rather than paying for in shortened prose, because the reason
- * these entries are long is that they name every variable and platform they
- * touch, which is the whole point.
- */
-export function renderCategoryChunks(
-  actions: readonly ManualAction[],
-  category: ManualActionCategory,
-  maxBytes: number,
-): string[] {
-  const blocks = inReadingOrder(actions)
-    .map((action, index) => ({ action, number: index + 1 }))
-    .filter((entry) => entry.action.category === category)
-    .map((entry) => renderManualAction(entry.action, entry.number));
-
-  // Bytes, not `String.length`. CloudFormation states its output ceiling in
-  // bytes and this prose is full of em dashes, so UTF-16 code units undercount
-  // -- today's largest chunk is 3302 units and 3309 bytes, and that gap widens
-  // with the text rather than staying put.
-  const size = (text: string) => Buffer.byteLength(text, "utf8");
-
-  const chunks: string[] = [];
-  for (const block of blocks) {
-    if (size(block) > maxBytes) {
-      // Packing cannot honour the limit for a single oversized block, and
-      // silently emitting it anyway would turn a caught problem into a failed
-      // deploy. Split the action instead.
-      throw new Error(
-        `A single manual action renders to ${size(block)} bytes, over the ${maxBytes}-byte limit for one CloudFormation output. Split it into two actions.`,
-      );
-    }
-    const current = chunks[chunks.length - 1];
-    if (current !== undefined && size(current) + size(block) + 2 <= maxBytes) {
-      chunks[chunks.length - 1] = `${current}\n\n${block}`;
-    } else {
-      chunks.push(block);
-    }
-  }
-  return chunks;
-}
-
 /** The generated checklist at docs/engineering/manual-actions.md. */
 export function renderManualActionsDoc(actions: readonly ManualAction[]): string {
   const sections = MANUAL_ACTION_CATEGORIES.filter((category) =>

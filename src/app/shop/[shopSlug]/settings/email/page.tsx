@@ -61,7 +61,7 @@ export default async function EmailSettingsPage({
         title={t("emailSettings.title")}
       />
       <div className="space-y-10">
-        <SectionCard ariaLabel={t("emailSettings.digest.heading")}>
+        <SectionCard aria-label={t("emailSettings.digest.heading")}>
           <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2">
             <h2 className={SECTION_TITLE_CLASS}>{t("emailSettings.digest.heading")}</h2>
             <EmailPreferenceSwitch
@@ -86,7 +86,7 @@ export default async function EmailSettingsPage({
             {t("emailSettings.digest.preview")}
           </a>
         </SectionCard>
-        <SectionCard ariaLabel={t("emailSettings.afterHours.heading")}>
+        <SectionCard aria-label={t("emailSettings.afterHours.heading")}>
           <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2">
             <h2 className={SECTION_TITLE_CLASS}>{t("emailSettings.afterHours.heading")}</h2>
             <EmailPreferenceSwitch

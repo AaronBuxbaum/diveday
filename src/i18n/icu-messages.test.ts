@@ -8,12 +8,11 @@ import { STAFF_MESSAGES } from "./staff-messages";
  * Every message in every bundle is compiled and formatted here, rather than
  * only the handful a rendered surface happens to reach.
  *
- * Both translators are built with `onError: () => {}` so that one bad string
- * degrades to a fallback instead of blanking a page — which is right in
- * production and blind in a test: a malformed `{count, plural, …}` renders the
- * key and nothing throws, so it surfaces whenever some rare surface (a stale
- * crew roll call, an empty-state) is next looked at. A bulk copy edit touches
- * dozens of plurals at once, so the compile has to be its own assertion.
+ * The runtime translators send errors through `translatorOnError`; this sweep
+ * builds its own translator with an error collector so it can assert every
+ * message compiles, including strings a surface test may never render (a stale
+ * crew roll call, an empty-state). A bulk copy edit touches dozens of plurals
+ * at once, so compilation has to be its own assertion.
  */
 
 /** Every leaf as `dotted.path` → message. */

@@ -539,8 +539,8 @@ For `src/app/` and `src/components/`; the rules themselves are in `.claude/rules
 
 - **Public pages** (landing, sign-in): `src/app/`. **Diver-facing shop pages**:
   `src/app/s/[shopSlug]/**` — its own namespace, no auth anywhere in it; path strings come from
-  `src/lib/public-routes.ts`, which also holds the 308s from the old `/shop/**` URLs (ADR
-  20260803-public-shop-namespace). `/shop/**` is staff, without exception.
+  `src/lib/public-routes.ts`; `/shop/**` is staff, without exception. Old public-URL redirects
+  were removed under H-49.
 - **Where a diver can go**: the header nav in `src/components/PublicShopNav.tsx`, assembled once in
   `src/app/s/[shopSlug]/layout.tsx` and rendered by `src/components/PublicShopChrome.tsx`. Add a
   public destination there, never as a per-page cross-link; the whole header is dropped in
@@ -577,8 +577,8 @@ For `src/app/` and `src/components/`; the rules themselves are in `.claude/rules
   not a `?tripId=`, so a refusal can land back on it.
 - **The schedule builder**: `src/app/shop/[shopSlug]/schedule/board/_components/ScheduleBuilder.tsx`
   + `schedule/board/actions.ts`; mutations in `src/db/trips-schedule.ts`. The add panel is the
-  **one place a trip is created**; `/shop/[shopSlug]/trips/new` is a 308 to
-  `schedule/board?add=full` (ADR 20260806-one-trip-create-form).
+  **one place a trip is created**; the retired `/shop/[shopSlug]/trips/new` URL has no
+  compatibility route (H-49; ADR 20260806-one-trip-create-form).
 - **Schedule is one place with two views** (ADR 20261001-logbook): Week (`schedule/board`, the
   departures and the builder) and Crew (`staffing/`, the same week by who is working it), both
   titled "Schedule" under `schedule/_components/ScheduleViews.tsx`, which carries `?week=` across.
@@ -601,7 +601,9 @@ For `src/app/` and `src/components/`; the rules themselves are in `.claude/rules
   decision 4): `_components/today/DaySpine.tsx` composes them, `DayStation.tsx` is a departure
   card (time, stage pill from `tripPhaseOf`, readiness bar), and every job on the day, at a boat
   or at the desk, ranks in the one list and names its own boat. Its evening state is the settled
-  stations (`ClosingStation.tsx`) and the day's takings; there is no act of closing the day. `?view=` and `/blockers` 308 home (ADR 20260827-clearwater-surface-language). A
+  stations (`ClosingStation.tsx`) and the day's takings; there is no act of closing the day. The
+  retired `?view=` and `/blockers` compatibility redirects were removed under H-49 (ADR
+  20260827-clearwater-surface-language). A
   departure's **log** is generated from there (`trips/[id]/log`, owner-only).
 - **The back-office queues** are **not on Reports** — each sits with the object it is about and
   renders *nothing* when empty: stuck payment operations on the Orders index behind
@@ -851,7 +853,9 @@ that exists only to tolerate old rows gets **deleted**, not documented. A lifecy
 only to age out abandoned objects gets **removed**, not waited out. Do not write reconciliation,
 backfill, dual-read, or version-tolerance code for pre-pilot data, and do not read the absence of
 one as an oversight to fix — three follow-ups proposed exactly that in one week, and each was a
-migration spent on rows that have never had a reader. When in doubt the answer is the smaller tree.
+migration spent on rows that have never had a reader. Staff URLs follow the same rule: when a route
+leaves the tree, remove its handler and tests that exist only to preserve old bookmarks; do not
+keep a compatibility redirect. When in doubt the answer is the smaller tree.
 
 **Two things this does not relax**, because they are not about the value of the data: the
 **destructive-migration guard** and the expand/contract rule keep the *previous release* alive

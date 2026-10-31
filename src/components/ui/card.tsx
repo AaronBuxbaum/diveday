@@ -314,8 +314,7 @@ export function SectionCard({
   padding = "md",
   id,
   className = "",
-  ariaLabel,
-  "aria-label": ariaLabelProp,
+  "aria-label": ariaLabel,
   children,
 }: {
   /** The element this card *is*. A row in a list is an `li`; a disclosure is `details`. */
@@ -334,7 +333,6 @@ export function SectionCard({
   /** A fragment target (`#backups`, `#invite`). Pair it with `scroll-mt-*` in `className`. */
   id?: string;
   className?: string;
-  ariaLabel?: string;
   "aria-label"?: string;
   children?: ReactNode;
 }) {
@@ -385,7 +383,6 @@ export function SectionCard({
   // and since the suite's duplicate-id net went with its axe scan on
   // 2026-10-24, nothing automated would notice.
   const headingId = title != null ? `card-${generatedId}-${titleSlug(title)}` : undefined;
-  const resolvedAriaLabel = ariaLabelProp ?? ariaLabel;
   return (
     <Tag
       {...(Tag === "details" ? { open } : {})}
@@ -394,7 +391,7 @@ export function SectionCard({
       // in a list of cards is named by its content, and labelling it would make
       // a screen reader announce the heading twice.
       aria-labelledby={headingId != null && Tag !== "li" ? headingId : undefined}
-      aria-label={resolvedAriaLabel}
+      aria-label={ariaLabel}
       className={sectionCardClass({ padding, className })}
     >
       {hasHeader ? (

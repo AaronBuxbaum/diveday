@@ -75,6 +75,35 @@ describe("a hand-branched One/Other pair", () => {
       "blockedWarningOther",
     ]);
   });
+
+  it("finds nested siblings even when Other appears before One", () => {
+    const found = findUninflectedCounts({
+      nested: {
+        blockedWarningOther: "{count} divers cannot board yet.",
+        blockedWarningOne: "{count} diver cannot board yet.",
+      },
+    });
+    expect(found).toEqual({ violations: [], strings: 2 });
+  });
+
+  it("preserves depth-first violation order and string totals", () => {
+    const found = findUninflectedCounts({
+      first: "{open} seats open",
+      nested: { second: "{blocked} bloqueados" },
+    });
+    expect(found).toEqual({
+      violations: [
+        { keyPath: "first", text: "{open} seats open", placeholder: "open", word: "seats" },
+        {
+          keyPath: "nested.second",
+          text: "{blocked} bloqueados",
+          placeholder: "blocked",
+          word: "bloqueados",
+        },
+      ],
+      strings: 2,
+    });
+  });
 });
 
 describe("the allowlist", () => {

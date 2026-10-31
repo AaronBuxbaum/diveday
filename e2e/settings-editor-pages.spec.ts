@@ -167,6 +167,8 @@ test("a package is added on Promos, and the save lands back on its section", asy
 }) => {
   test.setTimeout(60_000);
   const SHOP = privateShop.slug;
+  // Packages are a section of Promos' Discounts tab (visual review
+  // 2026-10-24, A26).
   await page.goto(`/shop/${SHOP}/promos#dive-packages`);
   await expect(page.getByRole("heading", { level: 2, name: "Dive packages" })).toBeVisible();
 

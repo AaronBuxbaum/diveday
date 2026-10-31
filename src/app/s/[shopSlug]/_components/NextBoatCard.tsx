@@ -106,7 +106,7 @@ export function NextBoatCard({
   return (
     <SectionCard
       as="section"
-      ariaLabel={eyebrow}
+      aria-label={eyebrow}
       className={`flex h-full flex-col gap-4 ${flat ? "md:flex-row md:items-center md:gap-8" : ""}`}
     >
       <div className="min-w-0 flex-1">

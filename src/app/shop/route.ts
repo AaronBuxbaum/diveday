@@ -19,11 +19,10 @@ import { shopPath } from "@/lib/staff-notices";
  * live staff to sign-in. The shop is the session's own, read from the
  * database, so a renamed slug still lands.
  *
- * A Route Handler rather than a `page.tsx`, for the reason
- * `[shopSlug]/trips/new/route.ts` gives: under `cacheComponents` a redirect
- * thrown from a page body answers 200 and resolves in the streamed payload.
- * Here it is a real 307, temporary because where `/shop` leads depends on who
- * is asking.
+ * A Route Handler lets this response choose its destination from the live
+ * session. Under `cacheComponents`, a redirect thrown from a page body answers
+ * 200 and resolves in the streamed payload. Here it is a real 307, temporary
+ * because where `/shop` leads depends on who is asking.
  */
 export async function GET() {
   const session = await requireStaffSession();
@@ -31,8 +30,7 @@ export async function GET() {
   // The session's shop row is gone: there is no shop to open, the same answer
   // `requireShopSurface` gives.
   if (!shop) notFound();
-  // A relative `Location`, by hand, as `trips/new/route.ts` explains: an
-  // absolute one pins the visitor to whichever host it resolved.
+  // A relative `Location` keeps the redirect on the host the visitor used.
   // `private, no-store`: the answer is this staffer's own shop, and no shared
   // cache may hand it to the next person who asks.
   return new Response(null, {

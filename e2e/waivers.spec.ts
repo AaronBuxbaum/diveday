@@ -29,12 +29,10 @@ test.describe("signed out", () => {
   // empty and then signing in live.
   test.use({ storageState: { cookies: [], origins: [] } });
 
-  // Task 155's mandated security-reviewer pass found the Signatures tab —
-  // staff read access to signed, medical-adjacent evidence — had no direct
-  // adversarial coverage of its own, only the Template tab's. The gate is
-  // the same `canPersonManageWaiverTemplates` check either way, but the
-  // route is reached independently (deep link, bookmark), so it needs its
-  // own tests rather than inheriting confidence from the template page's.
+  // Task 155's mandated security-reviewer pass found staff read access to
+  // signed, medical-adjacent evidence needed direct adversarial coverage. The
+  // signed-record ledger now shares the waiver page, so exercise that current
+  // route directly rather than relying on template-editor coverage.
   test("an anonymous visitor is sent to sign in from the signed-waiver audit", async ({ page }) => {
     await page.goto("/shop/blue-mantis/waivers");
     await expect(page).toHaveURL(/\/sign-in/);
