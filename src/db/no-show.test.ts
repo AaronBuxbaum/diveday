@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, inArray, isNotNull, notInArray } from "drizzle-orm";
+import { and, count, desc, eq, inArray, notInArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { MINUTE_MS, nowMs } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
@@ -30,6 +30,7 @@ import {
   tripRequirements,
   trips,
 } from "./schema";
+import { planDiveOne, siteOfTrip } from "./trip-dives-test-fixtures";
 import {
   createTrip,
   getTripRoster,
@@ -257,28 +258,6 @@ async function seatStudents(
     ids.push(outcome.bookingId);
   }
   return ids;
-}
-
-/** The first site any of a departure's dives names. */
-async function siteOfTrip(db: Awaited<ReturnType<typeof context>>["db"], tripId: string) {
-  const [row] = await db
-    .select({ diveSiteId: tripDives.diveSiteId })
-    .from(tripDives)
-    .where(and(eq(tripDives.tripId, tripId), isNotNull(tripDives.diveSiteId)))
-    .orderBy(asc(tripDives.diveNumber))
-    .limit(1);
-  return row?.diveSiteId ?? null;
-}
-
-/** Plan dive one of each of these departures at `siteId`. */
-async function planDiveOne(
-  db: Awaited<ReturnType<typeof context>>["db"],
-  tripIds: string[],
-  siteId: string | null,
-) {
-  await db
-    .insert(tripDives)
-    .values(tripIds.map((tripId) => ({ tripId, diveNumber: 1, diveSiteId: siteId })));
 }
 
 describe("markBookingNoShow", () => {

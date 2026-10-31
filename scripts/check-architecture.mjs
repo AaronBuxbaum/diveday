@@ -180,7 +180,7 @@ async function clientReachViolations(root, record) {
   for (const file of await walk(root, "src")) {
     if (isTestFile(file)) continue;
     const contents = await read(file);
-    if (!/^\s*(?:\/\*[\s\S]*?\*\/\s*|\/\/[^\n]*\n\s*)*["']use client["']/.test(contents)) continue;
+    if (!startsWithUseClient(contents)) continue;
     const found = await reaches(file);
     if (found) {
       record(
@@ -189,6 +189,23 @@ async function clientReachViolations(root, record) {
       );
     }
   }
+}
+
+/** True when the first statement is a "use client" directive, after leading comments. */
+function startsWithUseClient(contents) {
+  let rest = contents.trimStart();
+  for (;;) {
+    if (rest.startsWith("/*")) {
+      const end = rest.indexOf("*/");
+      if (end < 0) return false;
+      rest = rest.slice(end + 2).trimStart();
+    } else if (rest.startsWith("//")) {
+      const end = rest.indexOf("\n");
+      if (end < 0) return false;
+      rest = rest.slice(end + 1).trimStart();
+    } else break;
+  }
+  return rest.startsWith('"use client"') || rest.startsWith("'use client'");
 }
 
 /**

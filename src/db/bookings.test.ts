@@ -45,6 +45,7 @@ import {
   waiverRecords,
 } from "./schema";
 import * as selfDeclaredCardsModule from "./self-declared-cards";
+import { setDiveOneSite } from "./trip-dives-test-fixtures";
 import {
   changeTripCrew,
   createTrip,
@@ -2773,13 +2774,9 @@ describe("createBooking trip admission (the boat's own cert gate, DOM-M6)", () =
     const [site] = await db
       .select()
       .from(diveSites)
-      .where(and(eq(diveSites.shopId, shop.id), eq(diveSites.name, "Spiegel Grove")))
-      .limit(1);
+      .where(and(eq(diveSites.shopId, shop.id), eq(diveSites.name, "Spiegel Grove")));
     if (!site) throw new Error("seeded Spiegel Grove site missing");
-    await db
-      .update(tripDives)
-      .set({ diveSiteId: site.id })
-      .where(and(eq(tripDives.tripId, open.id), eq(tripDives.diveNumber, 1)));
+    await setDiveOneSite(db, open.id, site.id);
     await demandOf(db, shop.id, open.id, null);
 
     const person = await diver(db, shop.id, "cass@example.com");

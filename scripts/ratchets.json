@@ -278,7 +278,6 @@
           "src/db/closeout.test.ts": "0 -> 903",
           "src/db/courses.test.ts": "1659 -> 1719",
           "src/db/executed-dives.test.ts": "1082 -> 1085",
-          "src/db/no-show.test.ts": "1100 -> 1165",
           "src/db/orders.test.ts": "3097 -> 3163",
           "src/db/recap.test.ts": "2114 -> 2138",
           "src/db/self-declared-cards.test.ts": "1836 -> 1864",
@@ -336,12 +335,6 @@
         }
       },
       {
-        "why": "fourth review layer 4 merged layer 3: both sides grew these files",
-        "files": {
-          "src/db/trips-queries.test.ts": "1143 -> 1209"
-        }
-      },
-      {
         "why": "merge of the ready-for-human batch's worker branches (#2611 tests from two sides)",
         "files": {
           "src/lib/trip-admission.test.ts": "984 -> 992"
@@ -370,7 +363,6 @@
           "src/db/closeout.test.ts": "0 -> 903",
           "src/db/courses.test.ts": "1659 -> 1719",
           "src/db/executed-dives.test.ts": "1082 -> 1085",
-          "src/db/no-show.test.ts": "1100 -> 1165",
           "src/db/orders.test.ts": "3097 -> 3163",
           "src/db/recap.test.ts": "2114 -> 2138",
           "src/db/self-declared-cards.test.ts": "1836 -> 1864",
@@ -394,7 +386,6 @@
           "src/db/closeout.test.ts": "0 -> 903",
           "src/db/courses.test.ts": "1659 -> 1719",
           "src/db/executed-dives.test.ts": "1082 -> 1085",
-          "src/db/no-show.test.ts": "1100 -> 1165",
           "src/db/orders.test.ts": "3097 -> 3163",
           "src/db/recap.test.ts": "2114 -> 2138",
           "src/db/self-declared-cards.test.ts": "1836 -> 1864",
@@ -442,11 +433,11 @@
     "src/db/import.test.ts": 1074,
     "src/db/incident-reports.test.ts": 1011,
     "src/db/manifests.test.ts": 3592,
-    "src/db/no-show.test.ts": 1165,
+    "src/db/no-show.test.ts": 1156,
     "src/db/notifications.test.ts": 1868,
     "src/db/orders.test.ts": 3174,
     "src/db/participant-types.test.ts": 1195,
-    "src/db/readiness.test.ts": 1512,
+    "src/db/readiness.test.ts": 1446,
     "src/db/recap.test.ts": 2138,
     "src/db/refunds.test.ts": 1151,
     "src/db/reminders.test.ts": 981,
@@ -458,7 +449,7 @@
     "src/db/self-declared-cards.test.ts": 1865,
     "src/db/staffing.test.ts": 952,
     "src/db/trips-crew.test.ts": 1489,
-    "src/db/trips-queries.test.ts": 1209,
+    "src/db/trips-queries.test.ts": 1176,
     "src/db/trips-series.test.ts": 1785,
     "src/db/waiver-issue.test.ts": 1179,
     "src/db/waivers-medical.test.ts": 1004,
@@ -494,24 +485,6 @@
         "files": {
           "src/app/shop/[shopSlug]/trips/[id]/_components/roster-seat.ts#rosterSeat": "308 -> 315"
         }
-      },
-      {
-        "why": "Merge current main trip-record extraction with the existing reschedule coordination and course limits",
-        "files": {
-          "src/db/trips-record.ts#updateTripRecord": "0 -> 311"
-        }
-      },
-      {
-        "why": "Reconcile the extracted main trip writer with revision fencing and reschedule safety",
-        "files": {
-          "src/db/trips-record.ts#updateTripRecord": "311 -> 321"
-        }
-      },
-      {
-        "why": "merge current main into PR #3132",
-        "files": {
-          "src/db/trips-record.ts#updateTripRecord": "0 -> 315"
-        }
       }
     ],
     "src/app/s/[shopSlug]/page.tsx#SchedulePage": 363,
@@ -524,10 +497,10 @@
     "src/db/export.ts#loadShopExportContext": 312,
     "src/db/reporting.ts#getMonthlyReport": 321,
     "src/db/seed-dive-sites.ts#seedDiveSites": 440,
-    "src/db/seed-history.ts#seedHistory": 680,
+    "src/db/seed-history.ts#seedHistory": 665,
     "src/db/seed-more-trips.ts#seedMoreTrips": 627,
-    "src/db/seed-trips.ts#seedTrips": 369,
-    "src/db/trips-record.ts#updateTripRecord": 321,
+    "src/db/seed-trips.ts#seedTrips": 363,
+    "src/db/trips-record.ts#updateTripRecord": 309,
     "src/lib/import.ts#prepareContactImport": 455
   },
   "live-people": {

@@ -97,6 +97,23 @@ function courseSessionRows(
     : [];
 }
 
+/** Dive one's site for the departures that name only one, by title. */
+function diveOneSites(
+  siteByName: Map<string, typeof diveSites.$inferSelect>,
+  benwood: typeof diveSites.$inferSelect | undefined,
+  french: typeof diveSites.$inferSelect | undefined,
+) {
+  return new Map<string, string | undefined>([
+    [DEMO_TODAY_TRIP_TITLE, siteByName.get("Molasses Reef")?.id],
+    ["Night Dive — City of Washington", siteByName.get("City of Washington")?.id],
+    ["Wreck Trip — Spiegel Grove", siteByName.get("Spiegel Grove")?.id],
+    ["Two-Tank Reef — Christ of the Abyss", siteByName.get("Christ of the Abyss")?.id],
+    ["Open Water Diver — three-day course", siteByName.get("Pickles Reef")?.id],
+    ["Two-Tank Reef — Benwood & Elbow", benwood?.id],
+    ["Afternoon Two-Tank — French Reef", french?.id],
+  ]);
+}
+
 /**
  * The three headline boats plus the rest of the week: each departure with its
  * meeting windows, its dive plan, the readiness requirements it gates on, its
@@ -148,17 +165,7 @@ export async function seedTrips(
   const courseSession = (courseTitle: string, trip: Parameters<typeof courseSessionRows>[4]) =>
     courseSessionRows(shopId, courseRows, courseIdByTitle, courseTitle, trip);
   const todaySailStart = demoTodayDepartureStart();
-  // Dive one's site for the departures that name only one; `trip_dives` is the
-  // only place a planned site lives, so this is read once, below, into dive one.
-  const diveOneSiteByTitle = new Map<string, string | undefined>([
-    [DEMO_TODAY_TRIP_TITLE, siteByName.get("Molasses Reef")?.id],
-    ["Night Dive — City of Washington", siteByName.get("City of Washington")?.id],
-    ["Wreck Trip — Spiegel Grove", siteByName.get("Spiegel Grove")?.id],
-    ["Two-Tank Reef — Christ of the Abyss", siteByName.get("Christ of the Abyss")?.id],
-    ["Open Water Diver — three-day course", siteByName.get("Pickles Reef")?.id],
-    ["Two-Tank Reef — Benwood & Elbow", benwood?.id],
-    ["Afternoon Two-Tank — French Reef", french?.id],
-  ]);
+  const diveOneSiteByTitle = diveOneSites(siteByName, benwood, french);
   const tripRows = await db
     .insert(trips)
     .values([

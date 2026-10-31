@@ -613,36 +613,7 @@ export async function seedHistory(
   // (src/db/seed-last-year.ts, market sheet 2026-10-22, item 4).
   tripPlan.push(...LAST_YEAR_SAILINGS);
 
-  const where = await sailedTripPlaces(db, shopId);
-  const histTrips = await db
-    .insert(trips)
-    .values(
-      tripPlan.map((plan) => ({
-        shopId,
-        title: plan.title,
-        description: "Sailed. Kept in the log for the shop's monthly numbers.",
-        startsAt: at(-plan.daysAgo, plan.hour),
-        endsAt: at(-plan.daysAgo, plan.hour + 4),
-        capacity: plan.capacity,
-        priceCents: plan.priceCents,
-        boatId: where(plan.title).boatId,
-        lensId: where(plan.title).lensId,
-      })),
-    )
-    .returning();
-
-  // The site lives on the dives: one row per planned dive, each at the title's
-  // site (a two-tank day at one reef dives it twice).
-  await db.insert(tripDives).values(
-    histTrips.flatMap((trip, index) => {
-      const diveSiteId = where(tripPlan[index]?.title ?? "").diveSiteId;
-      return Array.from({ length: trip.plannedDives }, (_, dive) => ({
-        tripId: trip.id,
-        diveNumber: dive + 1,
-        diveSiteId,
-      }));
-    }),
-  );
+  const histTrips = await seedSailedTrips(db, shopId, tripPlan);
 
   await equipHistoryBoats(db, shopId, histTrips);
 
@@ -990,6 +961,51 @@ export async function seedHistory(
     })
     .filter((row): row is NonNullable<typeof row> => row !== null);
   if (reviewRows.length > 0) await db.insert(tripReviews).values(reviewRows);
+}
+
+/**
+ * The sailed departures, and the dives under them. The site lives on the
+ * dives: one row per planned dive, each at the title's site (a two-tank day at
+ * one reef dives it twice).
+ */
+async function seedSailedTrips(
+  db: DbExecutor,
+  shopId: string,
+  tripPlan: readonly {
+    title: string;
+    daysAgo: number;
+    hour: number;
+    capacity: number;
+    priceCents: number;
+  }[],
+) {
+  const where = await sailedTripPlaces(db, shopId);
+  const histTrips = await db
+    .insert(trips)
+    .values(
+      tripPlan.map((plan) => ({
+        shopId,
+        title: plan.title,
+        description: "Sailed. Kept in the log for the shop's monthly numbers.",
+        startsAt: at(-plan.daysAgo, plan.hour),
+        endsAt: at(-plan.daysAgo, plan.hour + 4),
+        capacity: plan.capacity,
+        priceCents: plan.priceCents,
+        boatId: where(plan.title).boatId,
+        lensId: where(plan.title).lensId,
+      })),
+    )
+    .returning();
+  await db.insert(tripDives).values(
+    histTrips.flatMap((trip, index) =>
+      Array.from({ length: trip.plannedDives }, (_, dive) => ({
+        tripId: trip.id,
+        diveNumber: dive + 1,
+        diveSiteId: where(tripPlan[index]?.title ?? "").diveSiteId,
+      })),
+    ),
+  );
+  return histTrips;
 }
 
 /**
