@@ -283,7 +283,7 @@
   a plain level. Deliberately *not* the same
   thing as an **Imported certification**: a CSV a shop uploaded out of its own prior system is
   materially more trustworthy than a stranger's typing, and the two provenances are separate columns
-  so nothing can blur them. Turning one into real evidence takes a **Card sighting**, below. A claim
+  so nothing can blur them. Turning one into real evidence takes a **Card sighting**, below.
   For anonymous list payloads, `recordSelfDeclaredCards` applies anti-displacement: it writes no
   claim when the person has any live card the shop holds that is **not itself a still-unsighted
   self-declaration**. "Still unsighted" is `self_declared_at IS NOT NULL AND status = 'pending'`,
