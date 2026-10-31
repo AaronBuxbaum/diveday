@@ -223,7 +223,6 @@ export function LanguagePicker({
               choices={choices}
               setLocale={setLocale}
               onChosen={() => setOpen(false)}
-              layout="list"
             />
           </div>
         </div>
