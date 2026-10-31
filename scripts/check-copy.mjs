@@ -2,6 +2,7 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
+import { prepareLinePreservingSource } from "./line-preserving-source.mjs";
 import { bankCounts, ratchetFlags, readCounts } from "./ratchet.mjs";
 
 /**
@@ -167,13 +168,6 @@ const fallbackStringPatterns = [
 const EXEMPT_LINE = /(?:\/\/|\{\s*\/\*)[^\n]*\bi18n-exempt:\s*[A-Za-z]/;
 export const EXEMPT_FILE = /(?:\/\/|\{\s*\/\*)[^\n]*\bi18n-exempt-file:\s*[A-Za-z]/;
 
-/** Strips comments so their prose never reads as copy — but keeps line count. */
-function stripComments(source) {
-  return source
-    .replace(/\/\*[\s\S]*?\*\//g, (match) => match.replace(/[^\n]/g, " "))
-    .replace(/(^|[^:])\/\/[^\n]*/g, (match, lead) => lead + " ".repeat(match.length - lead.length));
-}
-
 /**
  * **An emoji is a word.** The letters test below is what a value has to pass to
  * count as prose, and a glyph has none — so `"💡 "`, sitting in JSX beside a
@@ -297,24 +291,8 @@ async function walk(relativeDirectory) {
 
 /** Every hard-coded user-facing string in one file, as `{ line, text }`. */
 export function findCopy(source, { isTsx }) {
-  const stripped = stripComments(source);
+  const { text: stripped, lineAt } = prepareLinePreservingSource(source);
   const rawLines = source.split("\n");
-  const lineStarts = [];
-  let offset = 0;
-  for (const line of stripped.split("\n")) {
-    lineStarts.push(offset);
-    offset += line.length + 1;
-  }
-  const lineAt = (index) => {
-    let low = 0;
-    let high = lineStarts.length - 1;
-    while (low < high) {
-      const mid = Math.ceil((low + high) / 2);
-      if (lineStarts[mid] <= index) low = mid;
-      else high = mid - 1;
-    }
-    return low;
-  };
 
   const exemptAt = (line) =>
     EXEMPT_LINE.test(rawLines[line] ?? "") || EXEMPT_LINE.test(rawLines[line - 1] ?? "");
