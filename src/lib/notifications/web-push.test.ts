@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   isAllowedPushEndpoint,
   sendWebPush,
+  WEB_PUSH_TIMEOUT_MS,
   WEB_PUSH_TTL_SECONDS,
   webPushConfig,
 } from "./web-push";
@@ -91,6 +92,16 @@ describe("sendWebPush", () => {
         },
         TTL: WEB_PUSH_TTL_SECONDS,
       }),
+    );
+  });
+
+  it("passes the library socket timeout to every send", async () => {
+    const send = vi.fn().mockResolvedValue(undefined);
+    await sendWebPush(target, {}, config, send);
+    expect(send).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      expect.objectContaining({ timeout: WEB_PUSH_TIMEOUT_MS }),
     );
   });
 
