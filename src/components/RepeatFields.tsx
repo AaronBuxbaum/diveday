@@ -62,7 +62,6 @@ export function RepeatFields({
   startDate,
   copy,
   initial,
-  disabled = false,
 }: {
   /** The departure's own date (`YYYY-MM-DD`), whose weekday seeds the picker. */
   startDate: string;
@@ -74,12 +73,6 @@ export function RepeatFields({
    * from the date.
    */
   initial?: RepeatFieldsInitial;
-  /**
-   * Inert and out of the submission entirely — for a caller that keeps this
-   * block mounted while it is off screen so a chosen cadence survives being
-   * hidden. Same reason the fields below are disabled rather than removed.
-   */
-  disabled?: boolean;
 }) {
   const editing = initial !== undefined;
   const [repeats, setRepeats] = useState(editing);
@@ -117,7 +110,6 @@ export function RepeatFields({
           <select
             name="repeatIntervalWeeks"
             defaultValue={String(initial?.intervalWeeks ?? 0)}
-            disabled={disabled}
             onChange={(event) => {
               const nextRepeats = event.currentTarget.value !== "0";
               setRepeats(nextRepeats);
@@ -142,7 +134,7 @@ export function RepeatFields({
         <Field label={copy.endsLabel}>
           <select
             value={endsOnDate ? "on" : "never"}
-            disabled={disabled || !repeats}
+            disabled={!repeats}
             onChange={(event) => setEndsOnDate(event.currentTarget.value === "on")}
             className={`${controlClass} disabled:cursor-not-allowed disabled:opacity-60`}
           >
@@ -154,7 +146,7 @@ export function RepeatFields({
 
       {/* A fieldset rather than a `<Field>`: seven toggles are one answer, and
           the legend is what tells a screen reader they belong together. */}
-      <fieldset disabled={disabled || !repeats} className="disabled:opacity-60">
+      <fieldset disabled={!repeats} className="disabled:opacity-60">
         <legend className="text-sm font-medium" id={groupId}>
           {copy.repeatsOnLabel}
         </legend>
@@ -210,7 +202,6 @@ export function RepeatFields({
             min={startDate}
             defaultValue={initial?.endsOn ?? undefined}
             required
-            disabled={disabled}
           />
         </Field>
       ) : null}

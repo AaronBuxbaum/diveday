@@ -11,9 +11,10 @@ import {
   PatternNote,
   PayAtBookingGroup,
   PriceInputGroup,
+  RepeatGroup,
   RequestPlanBrief,
 } from "./add-panel-groups";
-import type { BuilderCopy, BuilderOptions } from "./builder-types";
+import type { BuilderCopy, BuilderMoreOptions, BuilderOptions } from "./builder-types";
 
 afterEach(cleanup);
 
@@ -35,6 +36,15 @@ const OPTIONS: BuilderOptions = {
   diveSites: [],
   boats: [{ id: "b1", name: "Mantis II", capacity: 14 }],
   lenses: [{ id: "l1", title: "Night" }],
+};
+
+const MORE: BuilderMoreOptions = {
+  weekdayNames: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+  minDays: 1,
+  maxDays: 7,
+  diveFields: new Proxy({} as BuilderMoreOptions["diveFields"], {
+    get: (_, key) => String(key),
+  }),
 };
 
 describe("CapacityField", () => {
@@ -84,6 +94,39 @@ describe("PayAtBookingGroup", () => {
       expect(container.querySelector(`input[name="${name}"]`), name).not.toBeNull();
     }
     expect(container.querySelector("fieldset")?.disabled).toBe(false);
+  });
+});
+
+describe("RepeatGroup", () => {
+  it("keeps cadence out of collapsed submissions and includes it when expanded", () => {
+    const { container, rerender } = render(
+      <form>
+        <RepeatGroup copy={COPY} more={MORE} startDate="2026-08-21" expanded={false} />
+      </form>,
+    );
+    const form = container.querySelector("form");
+    const cadence = container.querySelector<HTMLSelectElement>(
+      'select[name="repeatIntervalWeeks"]',
+    );
+
+    if (!form || !cadence) throw new Error("RepeatGroup should render its form controls");
+    expect(cadence).toBeDisabled();
+    expect([...new FormData(form).keys()]).not.toContain("repeatIntervalWeeks");
+
+    rerender(
+      <form>
+        <RepeatGroup copy={COPY} more={MORE} startDate="2026-08-21" expanded={true} />
+      </form>,
+    );
+    const expandedCadence = container.querySelector<HTMLSelectElement>(
+      'select[name="repeatIntervalWeeks"]',
+    );
+    if (!expandedCadence) throw new Error("Expanded RepeatGroup should render its cadence");
+    expect(expandedCadence).toBeEnabled();
+    fireEvent.change(expandedCadence, { target: { value: "1" } });
+
+    expect([...new FormData(form).entries()]).toContainEqual(["repeatIntervalWeeks", "1"]);
+    expect([...new FormData(form).entries()]).toContainEqual(["repeatWeekday", "5"]);
   });
 });
 
