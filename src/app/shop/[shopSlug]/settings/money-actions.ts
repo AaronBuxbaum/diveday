@@ -10,7 +10,7 @@ import {
   refreshShopStripeAccountStatus,
 } from "@/db/stripe-accounts";
 import { readForm, trimmedText } from "@/lib/form-parse";
-import { majorToMinor, maxPriceMajor } from "@/lib/money";
+import { majorToMinor } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { parsePassThroughFee } from "@/lib/pass-through-fee";
 import { connectProviderFromEnvironment } from "@/lib/payments/connect";
@@ -41,19 +41,11 @@ export async function savePassThroughFeeAction(formData: FormData) {
   }
   const parsedAmount = Number(amount);
   const amountCents = majorToMinor(parsedAmount, shop.currency);
-  if (
-    !name ||
-    !Number.isFinite(parsedAmount) ||
-    parsedAmount <= 0 ||
-    parsedAmount > maxPriceMajor(shop.currency) ||
-    !parsePassThroughFee({ name, amountCents })
-  ) {
+  const fee = parsePassThroughFee({ name, amountCents });
+  if (!fee) {
     redirect(noticeUrl(settings, "pass-through-invalid", { saved: "passThrough" }));
   }
-  await setShopPassThroughFee(db, session.user.shopId, {
-    name: name.slice(0, 120),
-    amountCents,
-  });
+  await setShopPassThroughFee(db, session.user.shopId, fee);
   revalidateAndRedirect(
     settings,
     noticeUrl(settings, "pass-through-saved", { saved: "passThrough" }),
