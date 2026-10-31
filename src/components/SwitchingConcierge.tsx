@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { SkeletonLineBars } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { LEAD_TITLE_CLASS, MARKETING_EYEBROW_CLASS } from "@/components/ui/typography";
 import { diverTranslator } from "@/i18n/messages";
@@ -54,40 +53,6 @@ export function SwitchingConcierge({
             {t("marketing.common.getSetUp")}
           </Link>
         </div>
-      </div>
-    </section>
-  );
-}
-
-/**
- * **What the offer paints while a switching page streams** (K-406): its own
- * section and panel, a bar the height of each line its words wrap to, and a
- * 48px bar for the door. The copy is the same on every switching page, so the
- * line counts are this component's: counted in en-US on the switching hub's
- * capture, the eyebrow two 20px lines at 390 and one at 1280, the title two
- * 32px lines and one 36px line, the offer seven 32px lines and three; the door
- * is "Get set up", as wide as the pricing skeleton draws it. Nothing
- * in it is a link — a fallback holds shape, never interaction.
- */
-export function SwitchingConciergeSkeleton() {
-  return (
-    <section className={CONCIERGE_SECTION_CLASS}>
-      <div className={CONCIERGE_PANEL_CLASS}>
-        <div>
-          <SkeletonLineBars lines={{ base: 2, sm: 1 }} height="h-5" width="w-full max-w-xs" />
-        </div>
-        {/* `LEAD_TITLE_CLASS`'s 32px lines, `sm:text-3xl`'s 36. */}
-        <div className="mt-3">
-          <SkeletonLineBars
-            lines={{ base: 2, sm: 1 }}
-            height="h-8 sm:h-9"
-            width="w-full max-w-md"
-          />
-        </div>
-        <div className="mt-4">
-          <SkeletonLineBars lines={{ base: 7, sm: 3 }} height="h-8" width="w-full max-w-2xl" />
-        </div>
-        <div className="mt-6 h-12 w-full rounded-lg bg-surface-sunken sm:w-36" />
       </div>
     </section>
   );
