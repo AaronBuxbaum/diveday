@@ -11,6 +11,7 @@
 export const EXCLUDED_TABLES = [
   "retention_prune_state", // global scheduler cursor, no tenant or personal data
   "platform_backup_progress", // one shop-scoped scheduler checkpoint, not portable shop data
+  "shop_backup_delivery_claims", // one per-shop scheduler lease, not portable shop data
   // record, mirrored here only so an owner sees an open one on Today and on
   // the order; every field is Stripe's, kept current from Stripe's events, and
   // the shop's Stripe dashboard is where a dispute is answered and exported.

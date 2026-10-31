@@ -26,12 +26,17 @@ const copy = {
   ],
 };
 
+function rgbHex([red, green, blue]: readonly [number, number, number]): string {
+  return `#${[red, green, blue].map((channel) => channel.toString(16).padStart(2, "0")).join("")}`;
+}
+
 describe("YearCard image rendering", () => {
   it.each([
-    ["pale", "#fdf1b3"],
-    ["saturated red", "#ff0000"],
-    ["dark", "#111827"],
-  ])("rasterizes a readable %s card", async (_name, brandColor) => {
+    ["pale", [253, 241, 179]],
+    ["saturated red", [255, 0, 0]],
+    ["dark", [17, 24, 39]],
+  ] as const)("rasterizes a readable %s card", async (_name, rgb) => {
+    const brandColor = rgbHex(rgb);
     const response = new ImageResponse(
       <YearCard year={year} copy={copy} brandColor={brandColor} />,
       YEAR_CARD_SIZE,

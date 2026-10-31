@@ -80,6 +80,7 @@ import {
   rollCallCrewEvents,
   rollCallEvents,
   shopBackupDeliveries,
+  shopBackupDeliveryClaims,
   shopBackupDestinations,
   shopContactEmailConfirmationTokens,
   shopIntegrations,
@@ -385,6 +386,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(calendarFeeds).where(eq(calendarFeeds.shopId, shopId));
   // Deliveries reference the destination they were sent to, so they go first.
   await db.delete(shopBackupDeliveries).where(eq(shopBackupDeliveries.shopId, shopId));
+  await db.delete(shopBackupDeliveryClaims).where(eq(shopBackupDeliveryClaims.shopId, shopId));
   await db.delete(shopBackupDestinations).where(eq(shopBackupDestinations.shopId, shopId));
   await db.delete(shopWhatsappAccounts).where(eq(shopWhatsappAccounts.shopId, shopId));
   // References user_accounts/people/shops, all of which go below — a live
