@@ -15,25 +15,18 @@ import {
   offlineManifestViewerPersonId,
 } from "@/lib/offline-manifests";
 
-// Matches the single-trip auto-save cadence (OfflineManifestManager) — see
-// ADR 20260726-shopwide-offline-manifest-priming. No UI: this mounts on every
-// staff shop page, and the per-trip manifest page (and the offline shell's
-// own list) remain the visible surfaces that tell staff their device copy is
-// current. A failure here has nowhere to surface and no user action to
-// prompt, so it's silently best-effort — the next trigger (interval, focus,
-// reconnect) tries again.
+// Matches the single-trip cadence in OfflineManifestManager (ADR
+// 20260726-shopwide-offline-manifest-priming). No UI: failures have nowhere
+// to surface, so they are silently best-effort and the next trigger
+// (interval, focus, reconnect) retries.
 const AUTO_SAVE_INTERVAL_MS = 5 * 60 * 1000;
 
 /**
- * Primes the offline shell and saves a device copy for every trip in the
- * shop's rolling 48-hour window (server-side windowing lives in
- * GET /api/offline-manifests/upcoming), independent of whether staff opened
- * any particular trip's own live manifest page. Mounted once in the shop
- * layout so it runs no matter which staff page is open — including a trip's
- * own manifest page, where OfflineManifestManager already runs its own save
- * timer for that one trip. The two can both call saveOfflineManifest for the
- * same trip around the same time; that's an accepted, harmless overlap
- * (saveOfflineManifest is idempotent and cheap), not a bug to dedupe.
+ * Primes the offline shell and saves a device copy of every trip in the
+ * shop's rolling 48-hour window (windowed server-side by
+ * GET /api/offline-manifests/upcoming), whichever staff page is open. Mounted
+ * once in the shop layout. Overlap with OfflineManifestManager's per-trip
+ * save on the same trip is accepted: saveOfflineManifest is idempotent.
  */
 export function OfflineManifestAutoSave() {
   const inFlight = useRef<Promise<void> | null>(null);
@@ -42,16 +35,10 @@ export function OfflineManifestAutoSave() {
     if (!navigator.onLine) return Promise.resolve();
     if (inFlight.current) return inFlight.current;
     const task = (async () => {
-      // Fully independent of the fetch/purge/save sequence below — it's
-      // cheap, data-free, and caches a static shell that has nothing to do
-      // with any particular shop's board. It must still run even if the
-      // upcoming-manifests fetch itself fails or returns non-OK (a transient
-      // network blip, a cold Lambda), or a device that's never primed before
-      // would have no cached shell — and so no root-path offline fallback —
-      // for that entire round, purely because an unrelated fetch had a bad
-      // moment. primeOfflineManifestShell() already dedupes overlapping
-      // callers internally, so firing it here without awaiting is safe even
-      // if a concurrent trigger's own round is also priming.
+      // Independent of the fetch/purge/save sequence below: the shell is
+      // static and shop-agnostic, and must prime even if the upcoming fetch
+      // fails, so a device never lacks its root-path offline fallback.
+      // primeOfflineManifestShell() dedupes overlapping callers, so no await.
       void primeOfflineManifestShell().catch(() => {});
       try {
         const tenantRound = await beginOfflineTenantVerificationRound();
@@ -59,41 +46,20 @@ export function OfflineManifestAutoSave() {
           credentials: "same-origin",
         });
         if (!response.ok) return;
-        // **Parsed, not cast.** This used to be
-        // `(await response.json()) as OfflineManifestUpcomingResponse`, which
-        // is an assertion about a body nobody checked: `{}` satisfies it, and
-        // `body.shop.slug` then reads `undefined` without throwing on the way
-        // past — handing the device-wide delete pass a slug that matches no
-        // saved record, which is to say every one of them (security review,
-        // 2026-08-06). The store now refuses that at its own chokepoint; this
-        // side stops producing it, the same way the offline shell already
-        // parsed the identity response.
+        // Parsed, never cast: an unchecked body could yield an undefined slug
+        // that matches every saved record in the device-wide purge.
         const body: unknown = await response.json();
-        // Server-verified "who am I signed in as" — never a client-supplied
-        // value — so a device that just switched shops (a shared boat tablet,
-        // a freelance captain, a reassigned device) stops holding the
-        // previous shop's cached rosters the moment this runs. Read from this
-        // response rather than from `/api/offline-manifests/identity`: that
-        // route exists for the offline shell, which wants the tenant and
-        // nothing else (review 20260802, action item 12), whereas this caller
-        // is already here for the board and a second request would be a second
-        // round trip for a string it is being handed. See ADR
-        // 20260726-shopwide-offline-manifest-priming.
+        // Server-verified viewer's shop, never client-supplied, so a device
+        // that switched shops drops the previous shop's rosters on this run.
+        // Taken from this response, not /identity, to avoid a second request.
         const shopSlug = offlineManifestShopSlug(body);
-        // No tenant, no round. Saving without a purge is the cross-tenant
-        // failure this whole sequence exists to prevent, and it is exactly
-        // what a malformed body used to buy: the purge silently matched
-        // nothing (or everything), then the board was written in anyway.
+        // No tenant, no round: saving without a purge is a cross-tenant leak.
         if (!shopSlug) return;
-        // Deliberately not caught: if the purge itself fails, saving this
-        // shop's trips anyway would leave both shops' rosters readable side by
-        // side in the device-wide list — fail the whole round (the outer catch
-        // below) and let the next trigger retry the purge first, rather than
-        // fail open on a cross-tenant boundary.
+        // Not caught on purpose: a failed purge fails the round so the next
+        // trigger retries it first, rather than saving across tenants.
         await purgeOfflineManifestsExceptShop(shopSlug, tenantRound);
-        // Medical alert words another person saved on this device go before
-        // anything is saved for this one (H-153 amendment). A body that names
-        // nobody wipes them all: fail closed.
+        // Medical alert words saved by another person on this device are
+        // wiped before saving. An unnamed viewer wipes all of them (fail closed).
         await wipeOfflineMedicalAlerts(
           offlineManifestViewerPersonId(body) ?? undefined,
           tenantRound,
@@ -111,7 +77,7 @@ export function OfflineManifestAutoSave() {
           ),
         );
       } catch {
-        // Best-effort — see module comment.
+        // Best-effort; see the module comment.
       }
     })().finally(() => {
       inFlight.current = null;
@@ -126,7 +92,8 @@ export function OfflineManifestAutoSave() {
       if (navigator.onLine) void run();
     };
     const onVisible = () => {
-      if (document.visibilityState === "visible" && navigator.onLine) void run();
+      if (document.visibilityState === "visible" && navigator.onLine)
+        void run();
     };
     const interval = setInterval(() => {
       if (navigator.onLine) void run();
