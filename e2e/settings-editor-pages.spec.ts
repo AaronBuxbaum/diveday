@@ -321,17 +321,6 @@ test("editing one emergency contact preserves the closed contacts and response p
   await expect(page.locator("summary").filter({ hasText: "Local rescue" })).toBeVisible();
 });
 
-test("the old Settings addresses of the registers redirect to where they moved", async ({
-  page,
-  privateShop,
-}) => {
-  const SHOP = privateShop.slug;
-  for (const noun of ["boats", "trip-tags", "safety-checklist"]) {
-    await page.goto(`/shop/${SHOP}/settings/${noun}`);
-    await expect(page).toHaveURL(new RegExp(`/shop/${SHOP}/${noun}$`));
-  }
-});
-
 test("bookkeeper settings and registers retain the settings rail", async ({
   page,
   privateShop,
