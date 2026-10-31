@@ -100,18 +100,11 @@ describe("shopFirstBooking", () => {
   });
 
   /**
-   * **This reader's tie-break is unreachable, and that is why it needed no
-   * fix** (issue #1753, whose premise was that all seven readers on its list
-   * had an observable random-uuid order — this one does not).
-   *
-   * `limit(2)` plus the `rows.length !== 1` test makes the answer a function
-   * of the row *set*, never of its order: two seats sharing an instant end the
-   * moment whichever of them the database hands back first. Asserted with the
-   * ids forced *both* ways, because "it happens not to matter today" and "it
-   * cannot matter" are different claims and only the second one licenses
-   * leaving `asc(bookings.id)` in place.
+   * The query has no promised row order. Holding `createdAt` equal and
+   * reversing the UUIDs still proves the observable rule: two rows end the
+   * moment, regardless of which pair `limit(2)` returns.
    */
-  it("ends the moment on a second seat whichever way the booking uuids sort", async () => {
+  it("ends the moment on a second seat regardless of booking UUIDs", async () => {
     const together = new Date("2026-08-20T15:00:00.000Z");
     const lower = "00000000-0000-4000-8000-000000000001";
     const higher = "00000000-0000-4000-8000-000000000002";
