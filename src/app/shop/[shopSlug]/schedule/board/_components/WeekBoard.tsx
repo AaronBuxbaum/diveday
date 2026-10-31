@@ -254,7 +254,7 @@ function RowActions({
   >;
   className: string;
 }) {
-  const key = `w:menu:${departure.tripId}`;
+  const key = `menu:${departure.tripId}`;
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   useMenuDismissal({ open, close: onClose, inside: [rootRef], returnFocus: triggerRef });
@@ -427,9 +427,8 @@ function PriceFlag({
  * the two deliberately never mix.
  *
  * Nothing here holds state. The disclosures a cell opens — the day's add
- * panel, a departure's move/copy/remove — are the board's own, keyed with a
- * `w:` prefix so a control in this grid hands focus back to itself rather
- * than to its twin in the hidden stream.
+ * panel, a departure's move/copy/remove — are the board's own, keyed by kind
+ * and trip so a control in this grid hands focus back to itself.
  */
 /**
  * **A departure's seats: a bar and its count.** Tide's week is a run of days
@@ -639,7 +638,7 @@ function WeekBoat({
         {actions ? (
           <RowActions
             departure={departure}
-            open={openKey === `w:menu:${departure.tripId}`}
+            open={openKey === `menu:${departure.tripId}`}
             onToggle={onToggle}
             onChoose={onChoose}
             onClose={onCloseMenu}
