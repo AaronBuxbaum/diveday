@@ -80,9 +80,9 @@ export const metadata: Metadata = {
       "Bring the sheet you already keep (divers, certification records, sizes) and add what a spreadsheet cannot: readiness checked at the dock, the day’s blocker queue, and booking and waivers your divers do themselves.",
     url: "/switching/spreadsheet",
   },
-  // `summary_large_image`: the OG block above names the shared link card
-  // (`sharedLinkCard` → `src/app/opengraph-image.tsx`), so the large card has an
-  // image to fill it — docs/product/marketing.md, Twitter-card policy.
+  // `summary_large_image`: the shared link card (`sharedLinkCard`, served from
+  // `/link-card`) gives the large card an image to fill it — docs/product/marketing.md,
+  // Twitter-card policy.
   twitter: {
     card: "summary_large_image",
     title: "Move your dive shop off spreadsheets — DiveDay",

@@ -16,9 +16,9 @@ const flatMetadata: Metadata = {
       "One plan, line by line. No setup fee, no per-seat charge and no cut of your bookings.",
     url: "/pricing",
   },
-  // `summary_large_image`: the OG block above names the shared link card
-  // (`sharedLinkCard` → `src/app/opengraph-image.tsx`), so the large card has an
-  // image to fill it — docs/product/marketing.md, Twitter-card policy. The
+  // `summary_large_image`: the shared link card (`sharedLinkCard`, served from
+  // `/link-card`) gives the large card an image to fill it — docs/product/marketing.md,
+  // Twitter-card policy. The
   // price figure deliberately stays out of the card: it lives in exactly one
   // place (`earlyAccessPrice`), and a card is a copy that goes stale silently.
   twitter: {
