@@ -565,8 +565,9 @@ export function validateMedicalAnswers(
   if (options.requireCurrent && !CURRENT_QUESTIONNAIRES.includes(questionnaire)) {
     return { ok: false, missingQuestionIds: ["questionnaire"] };
   }
-  const responseKeys = new Set(Object.keys(answers.responses));
-  if ([...responseKeys].some((id) => !questionnaire.questions.some((q) => q.id === id))) {
+  if (
+    Object.keys(answers.responses).some((id) => !questionnaire.questions.some((q) => q.id === id))
+  ) {
     return { ok: false, missingQuestionIds: ["questionnaire"] };
   }
   const applicable = applicableMedicalQuestions(questionnaire, answers.responses);
