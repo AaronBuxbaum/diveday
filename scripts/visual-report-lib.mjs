@@ -9,12 +9,20 @@
 //
 // See ADR 20260729-reg-suit-visual-regression and
 // 20260802-visual-diff-pr-comment.
+
+import https from "node:https";
 import { gunzipSync } from "node:zlib";
 import { comparePublicationIds, isPublicationId } from "./visual-publication-id.mjs";
 
 export const DEFAULT_BUCKET = "diveday-vrt";
 export const GZIP_MAGIC = Buffer.from([0x1f, 0x8b]);
 export const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+const DEFAULT_BUCKET_TIMEOUT_MS = 30_000;
+const DEFAULT_BUCKET_MAX_BYTES = 64 * 1024 * 1024;
+const DEFAULT_BUCKET_MAX_DECOMPRESSED_BYTES = 64 * 1024 * 1024;
+const MAX_BUCKET_REDIRECTS = 3;
+const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
 
 /**
  * A PNG's dimensions, read out of its IHDR chunk, or `null` if the bytes are
@@ -177,18 +185,129 @@ export function baselineCacheKey(commit, version) {
   return `reg-baseline-v2-${commit}-${version}`;
 }
 
-// S3 serves these objects with `Content-Encoding: gzip`, but some fetch clients
-// (Node's global fetch among them) already transparently decode that before
-// returning the body, while others (plain `curl`, `https.get`) hand back the raw
-// gzip bytes. Trust the magic number, not the header.
-export async function fetchFromBucket(bucket, key, { fetchImpl = fetch } = {}) {
+// Node's global fetch has intermittently crashed in Undici's HTTP parser while
+// S3 closed a response stream. Use node:https for the bounded CI read instead;
+// it returns stored gzip bytes, while injected fetch clients may already decode
+// them. Trust the magic number, not the Content-Encoding header.
+function requestHttpsObject(url, { requestImpl = https.get, timeoutMs, maxBytes }) {
+  return new Promise((resolve, reject) => {
+    let request;
+    let settled = false;
+    const finish = (error, value) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (error) reject(error);
+      else resolve(value);
+    };
+    const timer = setTimeout(
+      () => request?.destroy(new Error(`S3 object request timed out after ${timeoutMs}ms`)),
+      timeoutMs,
+    );
+
+    try {
+      request = requestImpl(url, (response) => {
+        const status = Number.isInteger(response.statusCode) ? response.statusCode : 0;
+        const location = response.headers?.location;
+        if (REDIRECT_STATUSES.has(status) && typeof location === "string") {
+          response.on("error", (error) => finish(error));
+          response.on("end", () => finish(null, { ok: false, status, location }));
+          response.resume?.();
+          return;
+        }
+        if (status < 200 || status >= 300) {
+          response.on("error", (error) => finish(error));
+          response.on("end", () => finish(null, { ok: false, status }));
+          response.resume?.();
+          return;
+        }
+
+        const chunks = [];
+        let totalBytes = 0;
+        response.on("data", (chunk) => {
+          const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+          totalBytes += bytes.length;
+          if (totalBytes > maxBytes) {
+            const error = new Error(`S3 object exceeded the ${maxBytes}-byte limit`);
+            finish(error);
+            response.destroy?.();
+            return;
+          }
+          chunks.push(bytes);
+        });
+        response.on("error", (error) => finish(error));
+        response.on("end", () => {
+          finish(null, { ok: true, status, bodyBuffer: Buffer.concat(chunks) });
+        });
+      });
+      request.on("error", (error) => finish(error));
+    } catch (error) {
+      finish(error);
+    }
+  });
+}
+
+async function requestS3Object(url, { bucket, requestImpl, timeoutMs, maxBytes, redirects = 0 }) {
+  const response = await requestHttpsObject(url, { requestImpl, timeoutMs, maxBytes });
+  if (!response.location) return response;
+  if (redirects >= MAX_BUCKET_REDIRECTS) {
+    throw new Error("S3 object exceeded the redirect limit");
+  }
+
+  const target = new URL(response.location, url);
+  const bucketHost = `${bucket}.s3.amazonaws.com`;
+  const regionalBucketHost =
+    target.hostname.startsWith(`${bucket}.s3.`) && target.hostname.endsWith(".amazonaws.com");
+  if (
+    target.protocol !== "https:" ||
+    target.username ||
+    target.password ||
+    target.port ||
+    (target.hostname !== bucketHost && !regionalBucketHost)
+  ) {
+    throw new Error("S3 object redirected outside its bucket host");
+  }
+  return requestS3Object(target.href, {
+    bucket,
+    requestImpl,
+    timeoutMs,
+    maxBytes,
+    redirects: redirects + 1,
+  });
+}
+
+export async function fetchFromBucket(
+  bucket,
+  key,
+  {
+    fetchImpl = null,
+    requestImpl = https.get,
+    timeoutMs = DEFAULT_BUCKET_TIMEOUT_MS,
+    maxBytes = DEFAULT_BUCKET_MAX_BYTES,
+    maxDecompressedBytes = DEFAULT_BUCKET_MAX_DECOMPRESSED_BYTES,
+  } = {},
+) {
   const url = objectUrl(bucket, key);
-  const res = await fetchImpl(url);
+  const res = fetchImpl
+    ? await fetchImpl(url)
+    : await requestS3Object(url, { bucket, requestImpl, timeoutMs, maxBytes });
   if (!res.ok) {
     return { ok: false, status: res.status, url };
   }
-  const buf = Buffer.from(await res.arrayBuffer());
-  const body = buf.subarray(0, 2).equals(GZIP_MAGIC) ? gunzipSync(buf) : buf;
+  const buf = res.bodyBuffer ?? Buffer.from(await res.arrayBuffer());
+  let body = buf;
+  if (buf.subarray(0, 2).equals(GZIP_MAGIC)) {
+    try {
+      body = gunzipSync(buf, { maxOutputLength: maxDecompressedBytes });
+    } catch (error) {
+      if (error?.code === "ERR_BUFFER_TOO_LARGE") {
+        throw new Error(`S3 object exceeded the ${maxDecompressedBytes}-byte decompressed limit`, {
+          cause: error,
+        });
+      }
+      throw error;
+    }
+  }
   return { ok: true, body, url };
 }
 
