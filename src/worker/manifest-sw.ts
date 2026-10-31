@@ -20,6 +20,7 @@ import {
   offlineManifestViewerPersonId,
   pendingOfflineEventCount,
 } from "@/lib/offline-manifests";
+import { cacheOfflineShell as cacheShell } from "./offline-shell-cache";
 import {
   beginReadyPageRequest,
   forgetReadyPage,
@@ -173,85 +174,20 @@ async function offlineShellRedirect(
 }
 
 /**
- * Chunks the bundler's runtime loads *lazily*, which the shell HTML therefore
- * never names in a `src`/`href`. They are listed inside the chunks the HTML
- * does name, so one extra pass over those bodies finds them.
- *
- * Without this the offline shell could reload into the error boundary —
- * "Something went sideways" instead of the roll call — because hydration
- * asked for a chunk nothing had cached and the network was gone. It only
- * *sometimes* happened, since the browser's own HTTP cache often still had
- * the file; the flake in e2e/manifest.spec.ts's storage-eviction test is that
- * coin toss, and on a boat it is the same coin toss with a manifest on it.
- *
- * Deliberately **one level, not transitive closure**: at the time of writing
- * that is 3 extra chunks (~340 KB on top of ~1.8 MB) and it covers the case,
- * whereas following references recursively walks toward the whole app's chunk
- * graph on a crew member's phone. And deliberately **best-effort**, unlike the
- * HTML-referenced set below: these paths come from a regex over minified
- * JavaScript, so a false positive is possible and must not be able to fail a
- * shell save that is otherwise complete.
+ * The shell's precache list, injected by `scripts/build-service-worker.mjs`
+ * from the production build's route manifest. Absent (`null`) in dev, where
+ * chunk names are mutable and only the shell document is precached.
  */
-/** A path and the response fetched for it, the pair the shell cache works in. */
-type AssetEntry = [asset: string, assetResponse: Response];
+declare const __OFFLINE_SHELL_ASSETS__: readonly string[] | null | undefined;
 
-async function lazyChunkEntries(assetEntries: AssetEntry[]): Promise<AssetEntry[]> {
-  const referenced = new Set<string>();
-  await Promise.all(
-    assetEntries.map(async ([asset, assetResponse]) => {
-      if (!asset.endsWith(".js")) return;
-      const body = await assetResponse.clone().text();
-      for (const match of body.matchAll(/static\/chunks\/[A-Za-z0-9_\-.]+\.(?:js|css)/g)) {
-        referenced.add(`/_next/${match[0]}`);
-      }
-    }),
-  );
-  for (const [asset] of assetEntries) referenced.delete(asset);
-  const found = await Promise.all(
-    [...referenced].map(async (asset) => {
-      try {
-        const assetResponse = await fetch(asset);
-        return assetResponse.ok ? ([asset, assetResponse] as AssetEntry) : null;
-      } catch {
-        return null;
-      }
-    }),
-  );
-  return found.filter((entry) => entry !== null);
-}
-
-async function cacheOfflineShell() {
-  const response = await fetch(OFFLINE_SHELL, { credentials: "same-origin" });
-  if (!response.ok) throw new Error("Offline manifest shell could not be loaded");
-  const html = await response.clone().text();
-  const assetPaths = new Set<string>();
-  for (const match of html.matchAll(/(?:src|href)="([^"#?]*\/_next\/static\/[^"?#]+)"/g)) {
-    assetPaths.add(new URL(match[1], self.location.origin).pathname);
-  }
-  // Fetch the shell and every asset it references before writing anything.
-  // This now runs automatically (not just on an explicit "Save for offline"
-  // click), so a mid-fetch failure — a deploy landing between requests, a
-  // flaky connection — must never partially overwrite an already-working
-  // offline copy with new HTML pointing at assets that were never cached.
-  const assetEntries: AssetEntry[] = await Promise.all(
-    [...assetPaths].map(async (asset): Promise<AssetEntry> => {
-      const assetResponse = await fetch(asset);
-      if (!assetResponse.ok) {
-        throw new Error(`Offline manifest asset ${asset} could not be loaded`);
-      }
-      return [asset, assetResponse];
-    }),
-  );
-  assetEntries.push(...(await lazyChunkEntries(assetEntries)));
-  const cache = await caches.open(CACHE_NAME);
-  // Assets before the shell that references them: a cache write can still
-  // fail on its own (storage quota, eviction) even after every fetch
-  // succeeded. Writing leaves last means that failure aborts before the
-  // shell HTML is replaced, so the previous — still fully self-consistent —
-  // shell and asset set keep serving instead of a new document pointing at
-  // bundles that were never actually written.
-  await Promise.all(assetEntries.map(([asset, assetResponse]) => cache.put(asset, assetResponse)));
-  await cache.put(OFFLINE_SHELL, response);
+function cacheOfflineShell(): Promise<void> {
+  return cacheShell({
+    fetch: (input, init) => fetch(input, init),
+    caches,
+    cacheName: CACHE_NAME,
+    shellPath: OFFLINE_SHELL,
+    assets: typeof __OFFLINE_SHELL_ASSETS__ === "undefined" ? null : __OFFLINE_SHELL_ASSETS__,
+  });
 }
 
 /**
