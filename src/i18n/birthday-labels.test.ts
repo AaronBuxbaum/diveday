@@ -1,35 +1,41 @@
 import { describe, expect, it } from "vitest";
-import { birthdayText } from "./birthday-labels";
+import { birthdayCalloutText } from "./birthday-labels";
 import { staffTranslator } from "./staff-messages";
 
-const t = staffTranslator("en-US");
+describe.each([
+  {
+    locale: "en-US" as const,
+    today: "Birthday today",
+    upcomingOne: "Birthday in 1 day",
+    upcomingMany: "Birthday in 7 days",
+    recentOne: "Birthday 1 day ago",
+    recentMany: "Birthday 2 days ago",
+  },
+  {
+    locale: "es-ES" as const,
+    today: "Cumpleaños hoy",
+    upcomingOne: "Cumpleaños en 1 día",
+    upcomingMany: "Cumpleaños en 7 días",
+    recentOne: "Cumpleaños hace 1 día",
+    recentMany: "Cumpleaños hace 2 días",
+  },
+])(
+  "birthdayCalloutText ($locale)",
+  ({ locale, today, upcomingOne, upcomingMany, recentOne, recentMany }) => {
+    const t = staffTranslator(locale);
 
-describe("birthdayText", () => {
-  it("says 'today' on the day itself", () => {
-    expect(birthdayText(t, { status: "today" })).toBe("today");
-  });
+    it("names a birthday today", () => {
+      expect(birthdayCalloutText(t, { status: "today" })).toBe(today);
+    });
 
-  it("counts forward in whole words, singular and plural", () => {
-    // "in 1d" read as robot shorthand (and "3d" as three-dimensional at a
-    // glance) — a divemaster says "in 3 days" (design principle 4).
-    expect(birthdayText(t, { status: "soon", inDays: 1 })).toBe("in 1 day");
-    expect(birthdayText(t, { status: "soon", inDays: 7 })).toBe("in 7 days");
-  });
+    it("names an upcoming birthday with singular and plural timing", () => {
+      expect(birthdayCalloutText(t, { status: "soon", inDays: 1 })).toBe(upcomingOne);
+      expect(birthdayCalloutText(t, { status: "soon", inDays: 7 })).toBe(upcomingMany);
+    });
 
-  it("counts back", () => {
-    expect(birthdayText(t, { status: "recent", daysAgo: 2 })).toBe("2 days ago");
-  });
-
-  it("is timing only — the 🎂 beside it carries the meaning", () => {
-    // Guards the copy decision: no age, no name, no sentence, so the string
-    // stays short enough for a badge on an already-dense roster row.
-    for (const text of [
-      birthdayText(t, { status: "today" }),
-      birthdayText(t, { status: "soon", inDays: 3 }),
-      birthdayText(t, { status: "recent", daysAgo: 3 }),
-    ]) {
-      expect(text.length).toBeLessThanOrEqual(10);
-      expect(text).not.toMatch(/turns|birthday/i);
-    }
-  });
-});
+    it("names a recent birthday with singular and plural timing", () => {
+      expect(birthdayCalloutText(t, { status: "recent", daysAgo: 1 })).toBe(recentOne);
+      expect(birthdayCalloutText(t, { status: "recent", daysAgo: 2 })).toBe(recentMany);
+    });
+  },
+);
