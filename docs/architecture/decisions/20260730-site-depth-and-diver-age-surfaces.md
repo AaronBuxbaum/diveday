@@ -154,6 +154,15 @@ and the timing only — "🎂 today", "🎂 in 2d", "🎂 2d ago" — because a 
 and the cake carries the meaning. A visually-hidden "Birthday" keeps that legible to a screen
 reader, which would otherwise hear "in 2d" with no subject.
 
+### Amendment 2026-10-30 — birthday callouts name their subject
+
+The seven-day window is unchanged. The current roster and manifest use full, locale-authored
+sentences — "Birthday today", "Birthday in 2 days", and "Birthday 2 days ago" — so the timing
+needs no cake glyph to identify its subject. The former `Celebrations` section was later folded
+into the celebrating diver's row. Printed sheets use the same full sentence when another mark
+occupies the manifest capsule. Translating each sentence as a whole preserves each locale's word
+order.
+
 ## Consequences
 
 - The agency ceilings recorded as reference data in
