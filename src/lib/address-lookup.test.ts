@@ -53,6 +53,12 @@ describe("folding a looked-up place into the five columns", () => {
     );
   });
 
+  it("accepts Kosovo's XK, which AWS Location documents as its two-letter code", () => {
+    expect(
+      toShopAddressFields({ street: "Mother Teresa", countryCode: "XK" })?.addressCountry,
+    ).toBe("XK");
+  });
+
   it("refuses a country that is not an ISO alpha-2 code, rather than truncating it", () => {
     // Alpha-3 is not cut to two letters: "MEX" would become "ME", a different country.
     expect(toShopAddressFields({ street: "Ocean Drive", countryCode: "USA" })).toBeNull();

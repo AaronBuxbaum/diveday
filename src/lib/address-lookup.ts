@@ -96,7 +96,8 @@ export type LookedUpAddress = {
 };
 
 /**
- * The 249 ISO 3166-1 alpha-2 codes currently assigned. A provider's country
+ * The 249 ISO 3166-1 alpha-2 codes currently assigned, plus `XK` (Kosovo, a
+ * user-assigned code that AWS Location returns). A provider's country
  * that is not one of them is refused, not shortened: "USA" cut to two letters
  * is "US" by luck, and "MEX" cut to two is "ME", which is a different country.
  */
@@ -124,6 +125,7 @@ const ISO_3166_ALPHA2 = new Set(
    UA UG UM US UY UZ
    VA VC VE VG VI VN VU
    WF WS
+   XK
    YE YT
    ZA ZM ZW`.split(/\s+/),
 );
