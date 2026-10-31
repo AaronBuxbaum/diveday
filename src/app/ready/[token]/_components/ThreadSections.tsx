@@ -161,10 +161,6 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
             multiDay={false}
             siteBottomTimes={siteBottomTimes}
             legTravelTimes={legTravelTimes}
-            // This page renders no conditions card at all, so the suit line
-            // has nowhere else to land — and the morning of a dive is exactly
-            // when a diver is deciding what to put in the car.
-            temperatureStatedAbove={false}
             holdsCertification={data.holdsCertification}
             locale={locale}
           />
