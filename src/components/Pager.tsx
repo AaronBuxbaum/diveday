@@ -29,35 +29,13 @@ export function staffPagerWords(t: StaffTranslator): PagerWords {
 }
 
 /**
- * The one pager every paged list wears.
+ * Shared offset pager for staff lists and public reviews. The schedule board
+ * keeps its keyset pager because it streams upcoming departures without a
+ * page count.
  *
- * Four grammars used to coexist for one concept: numbered prev/next with a
- * position line (Orders, the by-departure view), forward-only "Show more" with
- * nothing but "Back to top" behind it (Divers, Reports, Reviews — a staffer on
- * page 3 could not go back one page), a cursor stack with "Show earlier" (the
- * schedule board), and "go look at the board" (the add-booking picker). Staff
- * learned four ways to move through one concept.
- *
- * This is the honest shape: both directions work, and it says where you are.
- * Everything except the board adopts it — the board pages a *stream* of
- * upcoming departures by keyset and has no page count to state, and its
- * "Show earlier" wording is load-bearing there (see `schedule/board/page.tsx`).
- * The public reviews archive wears it too, in the diver's words: a hand-copied
- * pager there kept the empty stand-in this one lost.
- *
- * Renders nothing when there is only one page: a shop with one screenful of
- * invoices should never be told it is on "page 1 of 1", so callers need no
- * `pageCount > 1` guard of their own.
- *
- * **Its offset from the list above is its own**, and there is no `className`
- * to change it. Every caller used to pass a top margin — `mt-4` on ten lists,
- * `mt-6` on six, `mt-8` on three — so one pager sat 16, 24 or 32px under its
- * list depending on the page (docs/design/pixel-craft.md, class 12). Nothing
- * else about it was ever a caller's to set.
- *
- * A Server Component, deliberately — staff copy never crosses to the client
- * (`src/i18n/staff-messages.ts`). A Client Component that needs a pager takes
- * the rendered element as a prop; see the diver roster's `pager`.
+ * It omits itself for a single-page result and owns its spacing, so callers
+ * need neither guard nor margin. It stays a Server Component to keep staff
+ * localization server-side; client callers accept the rendered element.
  */
 export function Pager({
   page,
@@ -82,41 +60,9 @@ export function Pager({
 }) {
   if (pageCount <= 1) return null;
   const position = words.position(page, pageCount);
-  // **Neither arrow is prefetched.** A page turn differs from the URL you are
-  // already on only in its search params, and the App Shell a `<Link>` pulls
-  // "does not include URL data that varies by destination, such as
-  // `searchParams`" — so the router can never commit off it, and every page
-  // wearing it renders per request (the staff lists are authenticated, the
-  // public archive calls `connection()`), so a prefetch is a whole extra
-  // server render of a page nobody asked for. Measured on the
-  // diver roster: click-to-URL is the same with it (199-264ms) and without
-  // (207-264ms), because the navigation blocks on the server either way.
-  //
-  // It is not free, though. With the prefetch in flight, the click attaches to
-  // *that* request rather than issuing its own — Chromium reports it
-  // `net::ERR_ABORTED` on every run — so a page turn that loses the race
-  // against the prefetch scheduler has nothing left to wait on and the URL
-  // never moves at all. That is the shape `divers.spec.ts`'s pager test failed
-  // in on CI (the URL still read `/shop/blue-mantis/divers` when the assertion
-  // gave up), and the shape it was reproduced in locally, where it sat for a
-  // full 60 seconds rather than merely being slow.
-  //
-  // **The readout is centred at every width, and nothing stands in for a
-  // missing link.** This was a `justify-between` row with an empty `<span>`
-  // where page 1's Previous goes. A spread row centres its middle only while
-  // both ends match, so the pixel probe measured "Page 1 of 3 · 47
-  // departures" 28px left of centre beside a 57px Next, and the empty span
-  // still took the row's 12px gap.
-  //
-  // From `sm` up it is three columns, the outer two equal, with each link
-  // pinned to its own column's outer edge. That shape alone does not hold on
-  // a phone: `1fr` is `minmax(auto, 1fr)`, the `auto` readout column takes its
-  // whole text width first, and an outer column cannot shrink below the link
-  // inside it, so once half the leftover is narrower than Previous the outer
-  // columns come out unequal ("Page 1 of 5 · 83 reviews you have ruled on"
-  // sat 25px off centre at 390 and 28px at 360). Below `sm` the readout has a
-  // row of its own across both columns and the links share the row beneath,
-  // which centres it exactly for one more row of height.
+  // Search params are not included in App Shell prefetch, so the speculative
+  // render cannot serve a page turn. Keep both links unprefetched to avoid that
+  // extra server work and the observed prefetch/click abort race.
   return (
     <nav
       aria-label={words.label}
@@ -136,6 +82,8 @@ export function Pager({
           {words.previous}
         </Link>
       ) : null}
+      {/* Separate phone row and equal outer columns keep long totals centered
+          without placeholder links at the first and last page. */}
       <p className="col-span-2 row-start-1 text-center text-sm text-muted sm:col-span-1 sm:col-start-2">
         {total ? `${position} · ${total}` : position}
       </p>
