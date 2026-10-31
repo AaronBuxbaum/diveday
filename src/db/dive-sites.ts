@@ -19,7 +19,6 @@ import { nowDate } from "@/lib/clock";
 import type { DepthUnit } from "@/lib/depth-units";
 import {
   type DiveSiteDifficulty,
-  parseDiveSiteDifficulty,
   SITE_LIBRARY_GROUPS,
   type SiteLibraryGroupLabel,
 } from "@/lib/dive-site-difficulty";
