@@ -104,40 +104,34 @@ describe("scheduleViewLinks", () => {
 });
 
 describe("schedulePagerHrefs", () => {
-  it("steps forward with the cursor stacked, and back to the next boat without month or cursor", () => {
+  it("steps forward with an after cursor, and back to the next boat without month or cursor", () => {
     const pager = schedulePagerHrefs({
       view: { ...VIEW, month: "2026-08", hasSpaceFilter: true },
-      after: undefined,
-      back: undefined,
+      prevCursor: null,
       nextCursor: "c2",
     });
     expect(pager.earlier).toBeNull();
     const later = new URL(`https://x${pager.later}`);
     expect(later.pathname).toBe("/s/blue-mantis");
     expect(later.searchParams.get("after")).toBe("c2");
-    // The first page's own position rides the stack, so "earlier" can come back to it.
-    expect(later.searchParams.get("back")).not.toBeNull();
+    // Nothing is stacked in the URL: Back is its own cursor, not history.
+    expect(later.searchParams.has("back")).toBe(false);
     expect(later.searchParams.get("month")).toBe("2026-08");
     expect(later.searchParams.get("hasSpace")).toBe("1");
     expect(pager.backToNext).toBe("/s/blue-mantis?hasSpace=1");
   });
 
-  it("finds the earlier page from the stack it was handed", () => {
-    const forward = schedulePagerHrefs({
-      view: VIEW,
-      after: undefined,
-      back: undefined,
-      nextCursor: "c2",
-    });
-    const second = new URL(`https://x${forward.later}`).searchParams;
-    const fromSecond = schedulePagerHrefs({
-      view: VIEW,
-      after: second.get("after") ?? undefined,
-      back: second.get("back") ?? undefined,
+  it("steps back with a before cursor and keeps the view", () => {
+    const pager = schedulePagerHrefs({
+      view: { ...VIEW, hasSpaceFilter: true },
+      prevCursor: "c1",
       nextCursor: null,
     });
-    expect(fromSecond.later).toBeNull();
-    expect(fromSecond.earlier).toBe("/s/blue-mantis");
+    expect(pager.later).toBeNull();
+    const earlier = new URL(`https://x${pager.earlier}`);
+    expect(earlier.searchParams.get("before")).toBe("c1");
+    expect(earlier.searchParams.has("after")).toBe(false);
+    expect(earlier.searchParams.get("hasSpace")).toBe("1");
   });
 });
 

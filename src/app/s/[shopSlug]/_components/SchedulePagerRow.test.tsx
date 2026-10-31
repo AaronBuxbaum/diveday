@@ -6,7 +6,7 @@ import { SchedulePagerRow } from "./SchedulePagerRow";
 import { WEEK_LEDGER_FOLLOWER_CLASS } from "./WeekLedger";
 
 const t = diverTranslator("en-US");
-const pager = { earlier: "/s/x?back=1", later: "/s/x?after=2", backToNext: "/s/x" };
+const pager = { earlier: "/s/x?before=1", later: "/s/x?after=2", backToNext: "/s/x" };
 
 afterEach(cleanup);
 

@@ -58,7 +58,7 @@ export async function readSchedulePage(
   {
     isEmbed,
     lens,
-    after,
+    cursor,
     now,
     listMonthBounds,
     hasSpaceFilter,
@@ -67,8 +67,8 @@ export async function readSchedulePage(
     isEmbed: boolean;
     /** The raw `?lens=`; resolved against the shop's own words here. */
     lens: string | undefined;
-    /** The keyset cursor, `?after=`. */
-    after: string | undefined;
+    /** The keyset cursor: `?after=` reads on from a departure, `?before=` reads back from one. */
+    cursor: { after: string | undefined; before: string | undefined };
     now: Date;
     /** The explicit month's bounds when the diver paged the rail to one. */
     listMonthBounds: { monthStart: Date; monthEnd: Date } | null;
@@ -109,7 +109,8 @@ export async function readSchedulePage(
   // **One batch, its dependents chained inside it** (code review 2026-10-10, item 24).
   const upcomingRead = activeLensRead.then((activeLens) =>
     pagedUpcomingTripsWithCounts(db, shop.id, {
-      cursor: after,
+      cursor: cursor.after,
+      before: cursor.before,
       now,
       ...listMonthBounds,
       hasSpace: hasSpaceFilter ? true : undefined,
@@ -125,7 +126,7 @@ export async function readSchedulePage(
     lenses,
     activeLens,
     range,
-    { trips: upcoming, nextCursor },
+    { trips: upcoming, nextCursor, prevCursor },
     reviewAggregate,
     activeCourses,
     boats,
@@ -160,7 +161,7 @@ export async function readSchedulePage(
     activeLens,
     range,
     upcoming,
-    nextCursor,
+    cursors: { nextCursor, prevCursor },
     reviewAggregate,
     activeCourses,
     boats,

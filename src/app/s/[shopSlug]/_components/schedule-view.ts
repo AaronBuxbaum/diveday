@@ -9,12 +9,6 @@ import { formatRelativeDay, formatShortDate } from "@/lib/format";
 import { offSeason } from "@/lib/off-season";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { certificationRank } from "@/lib/readiness";
-import {
-  decodeCursorStack,
-  encodeCursorStack,
-  popCursor,
-  pushCursor,
-} from "@/lib/schedule-pagination";
 import { capacityLabel, nextBookableDeparture } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { offSeasonLine } from "./OffSeasonPanel";
@@ -91,7 +85,7 @@ export function scheduleViewLinks(view: ScheduleView) {
   };
   /**
    * A chip's destination: the current view with the lens swapped, and the
-   * cursor dropped. `after`/`back` describe a position in a *different* list,
+   * cursor dropped. `after`/`before` describe a position in a *different* list,
    * so carrying them across a lens change would open the narrowed board
    * somewhere in its middle.
    */
@@ -232,45 +226,31 @@ export function scheduleFilterCopy(t: DiverTranslator) {
 
 /**
  * The pager row's three destinations under the week's list. Earlier and later
- * page through the keyset cursor (the earlier page from the stack of cursors
- * already passed, src/lib/schedule-pagination.ts) and keep the whole view;
- * "back to next" keeps the filters and drops both the cursor and any month.
+ * are keyset cursors in opposite directions (`?before=` the page's first
+ * departure, `?after=` its last) and keep the whole view; "back to next" keeps
+ * the filters and drops both the cursor and any month.
  */
 export function schedulePagerHrefs({
   view,
-  after,
-  back,
+  prevCursor,
   nextCursor,
 }: {
   view: ScheduleView;
-  after: string | undefined;
-  back: string | undefined;
+  prevCursor: string | null | undefined;
   nextCursor: string | null | undefined;
 }): { earlier: string | null; later: string | null; backToNext: string } {
   const { shopSlug, isEmbed, hasSpaceFilter, tripTypeFilter, canDiveFilter, hideAboveFilter } =
     view;
   const { withViewParams } = scheduleViewLinks(view);
-  const earlier = (() => {
-    const backStack = decodeCursorStack(back);
-    const previous = popCursor(backStack);
-    if (!previous) return null;
+  const cursorHref = (key: "before" | "after", cursor: string | null | undefined) => {
+    if (!cursor) return null;
     const params = new URLSearchParams();
-    if (previous.after) params.set("after", previous.after);
-    if (previous.stack.length > 0) params.set("back", encodeCursorStack(previous.stack));
+    params.set(key, cursor);
     withViewParams(params);
-    const query = params.toString();
-    return `${publicSchedulePath(shopSlug)}${query ? `?${query}` : ""}`;
-  })();
-  const later = nextCursor
-    ? (() => {
-        const params = new URLSearchParams();
-        params.set("after", nextCursor);
-        const nextStack = pushCursor(decodeCursorStack(back), after);
-        if (nextStack.length > 0) params.set("back", encodeCursorStack(nextStack));
-        withViewParams(params);
-        return `${publicSchedulePath(shopSlug)}?${params.toString()}`;
-      })()
-    : null;
+    return `${publicSchedulePath(shopSlug)}?${params.toString()}`;
+  };
+  const earlier = cursorHref("before", prevCursor);
+  const later = cursorHref("after", nextCursor);
   // The whole point of this link is "start from the shop's next
   // departure", so it keeps the filters but deliberately drops
   // both the cursor and any month bound.

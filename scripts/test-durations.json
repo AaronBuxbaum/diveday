@@ -1998,7 +1998,6 @@
   "src/lib/safe-json.test.ts": 10,
   "src/lib/safety-report.test.ts": 39,
   "src/lib/same-origin.test.ts": 26,
-  "src/lib/schedule-pagination.test.ts": 13,
   "src/lib/season.test.ts": 21,
   "src/lib/secret-box.test.ts": 20,
   "src/lib/security-headers.test.ts": 38,
