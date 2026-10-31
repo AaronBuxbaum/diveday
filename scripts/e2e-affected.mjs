@@ -501,9 +501,10 @@ export const SEED_STRONG_SPECS = 3;
 
 /**
  * The selection. `changed` is every file the diff touches, `diff` its parsed hunks, `specs`
- * every spec's source, `graph` the import graph (or null to skip the reach tier). With
- * `modules` (the `symbol-reach.mjs` index) and `lines` (each file's changed lines), the reach
- * tier follows an edit name by name instead of file by file.
+ * every spec's source, and `graph` the import graph. The reach tier is skipped only when both
+ * `graph` and `modules` are absent. With `modules` (the `symbol-reach.mjs` index) and `lines`
+ * (each file's changed lines), the reach tier follows an edit name by name instead of file by
+ * file.
  *
  * `strong` maps a spec to why it was picked. `reach` does too, and `rank` orders the reach
  * specs for {@link withinBudget}: the ones naming most of the diff's vocabulary first
