@@ -240,14 +240,7 @@ describe("stripe invoicing provider", () => {
 
   it("refunds a paid invoice's payment intent on the connected account", async () => {
     const fetchImpl = sequencedFetch([
-      ok({
-        id: "in_1",
-        status: "paid",
-        total: 22_000,
-        payments: {
-          data: [{ is_default: true, status: "paid", payment: { payment_intent: "pi_1" } }],
-        },
-      }),
+      ok({ id: "in_1", status: "paid", total: 22_000, payment_intent: "pi_1" }),
       ok({ id: "re_1" }),
     ]);
     const provider = providerWith({ STRIPE_SECRET_KEY: "sk_test" }, fetchImpl);
@@ -313,6 +306,19 @@ describe("stripe invoicing provider", () => {
       refundId: "re_10",
     });
     expect(fetchImpl.mock.calls[1][1].body).toContain("payment_intent=pi_settled");
+  });
+
+  it("still refunds an account pinned to the older flat-field shape", async () => {
+    const fetchImpl = sequencedFetch([
+      ok({ id: "in_1", status: "paid", total: 22_000, payment_intent: { id: "pi_legacy" } }),
+      ok({ id: "re_11" }),
+    ]);
+    const provider = providerWith({ STRIPE_SECRET_KEY: "sk_test" }, fetchImpl);
+    expect(await provider.refundInvoice("acct_123", "in_1", "intent-11")).toEqual({
+      status: "refunded",
+      refundId: "re_11",
+    });
+    expect(fetchImpl.mock.calls[1][1].body).toContain("payment_intent=pi_legacy");
   });
 
   it("reports not_refundable only when the invoice genuinely carries no payment", async () => {
