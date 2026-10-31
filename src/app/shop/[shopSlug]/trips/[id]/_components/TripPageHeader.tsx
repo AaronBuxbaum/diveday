@@ -108,13 +108,6 @@ export function TripPageHeader({
   boardHref: string;
   /** The nav's own word for it, so the two cannot drift (issue #824). */
   backLabel: string;
-  /**
-   * **Not drawn** (visual review 2026-10-24, B53): a departure has one way
-   * up, "‹ Schedule". The manifest still passes the day it once drew beside
-   * it; layer 4, which owns `manifest/**`, drops the argument, and this field
-   * goes with it.
-   */
-  today?: { href: string; label: string };
   locale: string;
   /** The shop's own zone — never the host's. See `src/lib/format.ts`. */
   timeZone: string;
