@@ -187,7 +187,10 @@ export function awsAddressLookupProvider(
           // address the moment it is chosen. If a result ever comes back
           // label-only again (a provider change, a place type with no
           // breakdown), it is dropped rather than offered.
-          if (!hasAddressParts(address)) return [];
+          // A country that is not an ISO alpha-2 code refuses the whole row for
+          // the same reason: the pick would save the address without a country,
+          // or with one cut from a longer string.
+          if (!address || !hasAddressParts(address)) return [];
           // For a business, `Title` is its name and the label is its street —
           // two different facts, and the second is what separates one franchise
           // location from the next. For a plain address result the two are the

@@ -32,38 +32,62 @@ describe("what is worth a billed lookup", () => {
 
 describe("folding a looked-up place into the five columns", () => {
   it("joins the street number and street into the one line the column holds", () => {
-    expect(toShopAddressFields({ streetNumber: "102", street: "Ocean Drive" }).addressStreet).toBe(
-      "102 Ocean Drive",
-    );
+    expect(
+      toShopAddressFields({ streetNumber: "102", street: "Ocean Drive", countryCode: "US" })
+        ?.addressStreet,
+    ).toBe("102 Ocean Drive");
   });
 
   it("does not leave a dangling space when only one part is known", () => {
-    expect(toShopAddressFields({ street: "Ocean Drive" }).addressStreet).toBe("Ocean Drive");
-    expect(toShopAddressFields({ streetNumber: "102" }).addressStreet).toBe("102");
+    expect(toShopAddressFields({ street: "Ocean Drive", countryCode: "US" })?.addressStreet).toBe(
+      "Ocean Drive",
+    );
+    expect(toShopAddressFields({ streetNumber: "102", countryCode: "US" })?.addressStreet).toBe(
+      "102",
+    );
   });
 
-  it("normalizes the country to upper-case alpha-2, which is what the column stores", () => {
-    expect(toShopAddressFields({ countryCode: "us" }).addressCountry).toBe("US");
-    // A provider that hands back alpha-3 must not overflow a two-char column.
-    expect(toShopAddressFields({ countryCode: "USA" }).addressCountry).toBe("US");
+  it("accepts an ISO alpha-2 country in any case, which is what the column stores", () => {
+    expect(toShopAddressFields({ street: "Ocean Drive", countryCode: "us" })?.addressCountry).toBe(
+      "US",
+    );
+  });
+
+  it("accepts Kosovo's XK, which AWS Location documents as its two-letter code", () => {
+    expect(
+      toShopAddressFields({ street: "Mother Teresa", countryCode: "XK" })?.addressCountry,
+    ).toBe("XK");
+  });
+
+  it("refuses a country that is not an ISO alpha-2 code, rather than truncating it", () => {
+    // Alpha-3 is not cut to two letters: "MEX" would become "ME", a different country.
+    expect(toShopAddressFields({ street: "Ocean Drive", countryCode: "USA" })).toBeNull();
+    expect(toShopAddressFields({ street: "Ocean Drive", countryCode: "MEX" })).toBeNull();
+    // "UK" is common and not the ISO code, which is GB.
+    expect(toShopAddressFields({ street: "Ocean Drive", countryCode: "UK" })).toBeNull();
+    expect(toShopAddressFields({ street: "Ocean Drive", countryCode: "U" })).toBeNull();
+    expect(toShopAddressFields({ street: "Ocean Drive", countryCode: "" })).toBeNull();
+    expect(toShopAddressFields({ street: "Ocean Drive" })).toBeNull();
   });
 
   it("returns every field, so picking a place replaces the address rather than merging into it", () => {
     // A place with no postcode has to *clear* the postcode box. Half of one
     // address and half of another is worse than either.
-    expect(toShopAddressFields({ street: "Ocean Drive" })).toEqual({
+    expect(toShopAddressFields({ street: "Ocean Drive", countryCode: "US" })).toEqual({
       addressStreet: "Ocean Drive",
       addressLocality: "",
       addressRegion: "",
       addressPostalCode: "",
-      addressCountry: "",
+      addressCountry: "US",
       latitude: null,
       longitude: null,
     });
   });
 
   it("trims what the provider sends", () => {
-    expect(toShopAddressFields({ locality: "  Key Largo  " }).addressLocality).toBe("Key Largo");
+    expect(
+      toShopAddressFields({ locality: "  Key Largo  ", countryCode: " US " })?.addressLocality,
+    ).toBe("Key Largo");
   });
 });
 
