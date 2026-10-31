@@ -152,7 +152,7 @@ export async function prepareVisualBaseline({
   sourceDir = "",
   sourceKey = "",
   outputDir,
-  fetchImpl = fetch,
+  fetchImpl,
 }) {
   if (!outputDir) throw new Error("outputDir is required");
   if (!BUCKET_NAME.test(bucket)) throw new Error("bucket name is invalid");

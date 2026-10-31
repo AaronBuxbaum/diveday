@@ -17,7 +17,7 @@ describe("baselineEnvironment", () => {
     expect(baselineEnvironment({ key: KEY, version })).toEqual([
       `REG_EXPECTED_KEY=${KEY}`,
       `REG_EXPECTED_VERSION=${version}`,
-      `REG_EXPECTED_CACHE_KEY=reg-baseline-${KEY}-${version}`,
+      `REG_EXPECTED_CACHE_KEY=reg-baseline-v2-${KEY}-${version}`,
     ]);
     expect(baselineEnvironment({ key: KEY, version: null })).toEqual([
       `REG_EXPECTED_KEY=${KEY}`,

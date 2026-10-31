@@ -76,7 +76,7 @@ describe("reg-suit publisher workflow", () => {
     expect(prepare).toContain("run: pnpm visual:compare");
     expect(prepare).toContain("node scripts/visual-build-publish-bundle.mjs");
     expect(CI_WORKFLOW).toContain(
-      "key: reg-baseline-${{ github.sha }}-${{ needs.visual-publish.outputs.snapshot_version }}",
+      "key: reg-baseline-v2-${{ github.sha }}-${{ needs.visual-publish.outputs.snapshot_version }}",
     );
   });
 });
