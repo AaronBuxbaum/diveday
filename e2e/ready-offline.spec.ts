@@ -109,49 +109,29 @@ test("the saved /ready copy shows with no signal, and a cancel landing forgets i
 }) => {
   const readyPath = await openKeptReadyPage(page, context, "Olive Offline", 40 * 60_000);
   await expect(page.getByRole("button", { name: "Running late" })).toBeVisible();
-  const generatedAtLabel = await page.evaluate(
-    ({ deviceClockOffset, serverClock }) => {
-      const locale = document
-        .querySelector('meta[name="diveday-ready-copy-locale"]')
-        ?.getAttribute("content");
-      const timeZone = document
-        .querySelector('meta[name="diveday-ready-copy-time-zone"]')
-        ?.getAttribute("content");
-      const generatedAt = document
-        .querySelector('meta[name="diveday-ready-copy-generated-at"]')
-        ?.getAttribute("content");
-      if (!locale || !timeZone || !generatedAt) {
-        throw new Error(
-          "Ready page is missing its locale, shop time zone, or server generation time",
-        );
-      }
-      const format = (at: number) =>
-        new Intl.DateTimeFormat(locale, {
-          month: "short",
-          day: "numeric",
-          hour: "numeric",
-          minute: "2-digit",
-          timeZoneName: "short",
-          timeZone,
-        }).format(new Date(at));
-      const generated = Number(generatedAt);
-      const device = new Date(serverClock).getTime() + deviceClockOffset;
-      return { label: format(generated), deviceLabel: format(device) };
-    },
-    { deviceClockOffset: 40 * 60_000, serverClock: E2E_FROZEN_CLOCK },
-  );
-  expect(generatedAtLabel.label).not.toBe(generatedAtLabel.deviceLabel);
+  // What the phone holds is the server's snapshot, dated by the server's clock
+  // (frozen by the harness), not the phone's, which this test sets 40 minutes
+  // ahead. It names no token anywhere.
+  const stored = await page.evaluate(async (name) => {
+    const cache = await caches.open(name);
+    const entry = await cache.match(new URL("/ready/kept-copy", location.origin).toString());
+    return { text: (await entry?.text()) ?? "", headers: [...(entry?.headers.values() ?? [])] };
+  }, COPY_CACHE);
+  expect(JSON.parse(stored.text).generatedAt).toBe(new Date(E2E_FROZEN_CLOCK).getTime());
+  expect(stored.text + stored.headers.join(" ")).not.toContain(readyPath.split("/").pop() ?? "");
 
-  // No signal: the reload is answered from the saved copy, and says so.
+  // No signal: the reload is answered from the saved snapshot, and says so.
   await context.setOffline(true);
   await page.reload();
-  await expect(page.getByRole("button", { name: "Running late" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: OPEN_BOAT })).toBeVisible();
+  // The server-built snapshot (not the live page): its banner dates the
+  // summary by the server's clock and says what it carries.
   await expect(
-    page.getByRole("status").filter({
-      hasText: `No signal: this is a copy of the page generated ${generatedAtLabel.label} that your phone saved.`,
-    }),
+    page.getByText(/No signal: this is a saved summary generated .+: where and when/),
   ).toBeVisible();
-  // It is the diver's only copy at the dock: nothing on it deletes it (domain review 2).
+  // Read-only: the snapshot is inert, so nothing on it posts, and nothing
+  // deletes the diver's only copy.
+  await expect(page.getByRole("button")).toHaveCount(0);
   await expect(page.getByRole("button", { name: diver("ready.offlineRemove") })).toHaveCount(0);
 
   // Back online, the diver cancels with the page's own button. Its redirect
@@ -188,9 +168,12 @@ test("a detected clock rollback replaces the offline copy with a warning", async
     return Number(marker?.headers.get("x-diveday-clock-watermark"));
   });
   expect(initialWatermark).toBe(new Date(E2E_FROZEN_CLOCK).getTime() + 40 * 60_000);
-  const keepUntil = Number(
-    await page.locator('meta[name="diveday-ready-keep-until"]').getAttribute("content"),
-  );
+  const keepUntil = await page.evaluate(async (name) => {
+    const entry = await (await caches.open(name)).match(
+      new URL("/ready/kept-copy", location.origin).toString(),
+    );
+    return Number(entry?.headers.get("x-diveday-keep-until"));
+  }, COPY_CACHE);
   // A prior online clock reading is setup state for this rollback journey.
   // Seed the durable watermark directly; observeReadyPageClock's persistence
   // and monotonic behavior is covered by its focused worker unit test.

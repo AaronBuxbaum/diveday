@@ -434,7 +434,7 @@ describe("trip records (in-memory PGlite)", () => {
 
   it("stores up to four ordered dives while allowing blank dive details", async () => {
     const { db, shop } = ctx;
-    const existing = (await upcomingTripsWithCounts(db, shop.id)).find((trip) => trip.diveSiteId);
+    const existing = (await upcomingTripsWithCounts(db, shop.id)).find((trip) => trip.diveSite);
     if (!existing) throw new Error("seeded dive site missing");
 
     const trip = await createTrip(db, {
@@ -445,7 +445,7 @@ describe("trip records (in-memory PGlite)", () => {
       capacity: 10,
       plannedDives: 4,
       dives: [
-        { title: "Morning reef", diveSiteId: existing.diveSiteId },
+        { title: "Morning reef", diveSiteId: existing.diveSite?.id },
         { title: "Second tank", description: "A relaxed second site." },
         {},
         { title: "Sunset drift" },
@@ -457,7 +457,7 @@ describe("trip records (in-memory PGlite)", () => {
     expect(dives).toHaveLength(4);
     expect(dives.map(({ dive }) => dive.diveNumber)).toEqual([1, 2, 3, 4]);
     expect(dives[0]?.dive.title).toBe("Morning reef");
-    expect(dives[0]?.diveSite?.id).toBe(existing.diveSiteId);
+    expect(dives[0]?.diveSite?.id).toBe(existing.diveSite?.id);
     expect(dives[1]?.dive.description).toBe("A relaxed second site.");
     expect(dives[2]?.dive.title).toBeNull();
     expect(

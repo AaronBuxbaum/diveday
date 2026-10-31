@@ -97,7 +97,6 @@ export async function seedCounterBlockers(
     .insert(trips)
     .values({
       shopId,
-      diveSiteId: duane.id,
       title: DEMO_COUNTER_BLOCKED_TRIP,
       description: "Deep wreck penetration on enriched air. Paid at booking.",
       startsAt,
@@ -123,7 +122,7 @@ export async function seedCounterBlockers(
 
   await db.insert(tripScheduleDays).values({ tripId: trip.id, dayNumber: 1, startsAt, endsAt });
   await db.insert(tripDives).values([
-    { tripId: trip.id, diveNumber: 1, diveSiteId: trip.diveSiteId ?? null },
+    { tripId: trip.id, diveNumber: 1, diveSiteId: duane.id },
     { tripId: trip.id, diveNumber: 2, diveSiteId: null },
   ]);
 

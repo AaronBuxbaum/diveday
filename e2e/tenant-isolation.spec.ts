@@ -39,7 +39,6 @@ const STAFF_PATHS = [
   "/orders",
   "/schedule/board",
   "/reviews",
-  "/blockers",
   // The highest-value staff surfaces by data sensitivity: team roster and
   // export live under settings, reports aggregate revenue, staffing shows
   // who works when.

@@ -1,27 +1,20 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  READY_CACHE_NAME,
-  READY_COPY_GENERATED_AT_META,
-  READY_COPY_LOCALE_META,
-  READY_COPY_TIME_ZONE_META,
-  READY_COPY_VERSION,
-  READY_COPY_VERSION_META,
-  READY_FORGOTTEN_CACHE_NAME,
-  READY_KEEP_UNTIL_META,
-  READY_OFFLINE_GENERATED_AT_PLACEHOLDER,
-  READY_OFFLINE_NOTE_ATTR,
-} from "@/lib/ready-offline";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { READY_CACHE_NAME, READY_FORGOTTEN_CACHE_NAME } from "@/lib/ready-offline";
 import {
   beginReadyPageRequest,
   forgetReadyPage,
   readyPageFallback,
   saveReadyPage,
 } from "./ready-page-cache";
+import { livePage, NOW, page, stubSnapshotReply } from "./ready-test-support";
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 const ORIGIN = "https://dive.day";
 const TOKEN = "A".repeat(43);
 const OTHER = "B".repeat(43);
-const NOW = 1_800_000_000_000;
 
 function fakeStorage() {
   const caches = new Map<string, Map<string, Response>>();
@@ -43,13 +36,6 @@ function fakeStorage() {
     },
   };
   return { storage: storage as unknown as CacheStorage, caches };
-}
-
-function page(body: string) {
-  return new Response(
-    `<meta name="${READY_KEEP_UNTIL_META}" content="${Number.MAX_SAFE_INTEGER}"/><meta name="${READY_COPY_VERSION_META}" content="${READY_COPY_VERSION}"/><meta name="${READY_COPY_LOCALE_META}" content="en-US"/><meta name="${READY_COPY_TIME_ZONE_META}" content="America/New_York"/><meta name="${READY_COPY_GENERATED_AT_META}" content="${NOW}"/><p>${body}</p><p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">No signal: ${READY_OFFLINE_GENERATED_AT_PLACEHOLDER}</p>`,
-    { headers: { "content-type": "text/html" } },
-  );
 }
 
 describe("ready page invalidation ordering", () => {
@@ -240,13 +226,8 @@ describe("ready page invalidation ordering", () => {
         };
       },
     } as unknown as CacheStorage;
-    const terminal = saveReadyPage(
-      racing,
-      path,
-      new Response("Cancelled", { headers: { "content-type": "text/html" } }),
-      NOW,
-      terminalRequest,
-    );
+    stubSnapshotReply(new Response("Not found", { status: 404 }));
+    const terminal = saveReadyPage(racing, path, livePage("Cancelled"), NOW, terminalRequest);
     await matchEntered;
     const newerRequest = beginReadyPageRequest(store.storage, otherPath);
     releaseMatch?.();

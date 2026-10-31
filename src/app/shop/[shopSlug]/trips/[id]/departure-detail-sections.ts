@@ -41,14 +41,7 @@ export function isDepartureDetailsSection(value: unknown): value is DepartureDet
 
 const PATCH_FIELDS: Record<DepartureDetailsSection, readonly (keyof TripPatch)[]> = {
   departure: ["title", "description", "lensId"],
-  plan: [
-    "plannedDives",
-    "dives",
-    "diveSiteId",
-    "wetsuitThicknessMm",
-    "exceedsNoDecoLimits",
-    "lunchAboard",
-  ],
+  plan: ["plannedDives", "dives", "wetsuitThicknessMm", "exceedsNoDecoLimits", "lunchAboard"],
   meeting: [
     "meetingPointLabel",
     "meetingPointAddress",

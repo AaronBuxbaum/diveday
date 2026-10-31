@@ -1,6 +1,7 @@
 import path from "node:path";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
+import { SAFETY_FILES } from "./scripts/coverage-safety-files.mjs";
 import { TEST_FROZEN_CLOCK } from "./src/test/frozen-clock";
 import { literalGlob, partitionTestFiles } from "./src/test/projects";
 import { CostWeightedSequencer } from "./src/test/shard-sequencer";
@@ -39,19 +40,7 @@ export default defineConfig({
     // already near total.
     coverage: {
       provider: "v8",
-      include: [
-        "src/lib/readiness.ts",
-        "src/lib/trip-admission.ts",
-        "src/lib/waivers.ts",
-        "src/lib/roll-call.ts",
-        "src/lib/trips.ts",
-        "src/lib/authz.ts",
-        "src/db/bookings.ts",
-        "src/db/checkouts.ts",
-        "src/db/refunds.ts",
-        "src/db/promo-caps.ts",
-        "src/db/account-security.ts",
-      ],
+      include: SAFETY_FILES,
       reporter: ["json-summary", "text-summary"],
       reportsDirectory: "coverage",
     },

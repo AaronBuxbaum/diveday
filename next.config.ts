@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { withSentryConfig } from "@sentry/nextjs/config";
 import type { NextConfig } from "next";
 import { applyDevOrigin } from "./scripts/dev-origin.mjs";
@@ -16,7 +17,20 @@ const isE2EBuild = process.env.DIVEDAY_E2E === "1";
 export const isVercelPreviewBuild =
   process.env.VERCEL === "1" && process.env.VERCEL_ENV !== "production";
 
+/**
+ * One id per build, shared by Next's `BUILD_ID` file, the root layout's
+ * `<meta name="diveday-build">` and the service worker's baked-in asset list.
+ * The offline shell worker refuses to install when the shell HTML it fetches
+ * names a different build than its list (scripts/offline-shell-assets.mjs).
+ * Exported to `process.env` so every process Next forks from this one reads the
+ * same value instead of generating its own.
+ */
+const buildId = process.env.DIVEDAY_BUILD_ID ?? randomUUID();
+process.env.DIVEDAY_BUILD_ID = buildId;
+
 const nextConfig: NextConfig = {
+  generateBuildId: () => buildId,
+  env: { NEXT_PUBLIC_DIVEDAY_BUILD_ID: buildId },
   // Baseline security headers (specialist-optimization-audit-20260731.md §5)
   // — see src/lib/security-headers.ts for the header set and rationale.
   async headers() {

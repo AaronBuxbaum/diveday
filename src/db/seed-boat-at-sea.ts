@@ -159,7 +159,6 @@ async function seedBoatAtSeaWithinTransaction(db: DbExecutor, shopId: string): P
     .values({
       shopId,
       boatId: await freeHull(db, shopId, plan),
-      diveSiteId: sites.get(dives[0]?.site ?? "") ?? null,
       lensId: lens?.id ?? null,
       title: plan.afterDark ? AT_SEA_DUSK_TITLE : AT_SEA_DAY_TITLE,
       description: plan.afterDark
@@ -208,7 +207,16 @@ async function seedBoatAtSeaWithinTransaction(db: DbExecutor, shopId: string): P
   if (divers.length < AT_SEA_ABOARD) {
     throw new Error(`seed: only ${divers.length} divers are free and ready for the boat at sea`);
   }
-  await writeTheRecord(db, shopId, { trip, plan, divers, crew, captainId, depthOf, dives });
+  await writeTheRecord(db, shopId, {
+    trip,
+    plan,
+    divers,
+    crew,
+    captainId,
+    depthOf,
+    dives,
+    diveOneSiteId: sites.get(dives[0]?.site ?? "") ?? null,
+  });
 }
 
 /** The boat at sea's two dives: the day boat's, or the dusk boat's. */
@@ -440,6 +448,7 @@ async function writeTheRecord(
     captainId: string;
     depthOf: (depth: { feet: number; meters: number }) => number;
     dives: { site: string; maxDepth: { feet: number; meters: number } }[];
+    diveOneSiteId: string | null;
   },
 ): Promise<void> {
   const { trip, plan, divers, crew, captainId } = ctx;
@@ -587,7 +596,7 @@ async function writeTheRecord(
       shopId,
       tripId: trip.id,
       diveNumber: 1,
-      actualSiteId: trip.diveSiteId,
+      actualSiteId: ctx.diveOneSiteId,
       enteredAt: plan.diveOne.enteredAt,
       exitedAt: plan.diveOne.exitedAt,
       maxDepthMeters: firstDive ? ctx.depthOf(firstDive.maxDepth) : null,

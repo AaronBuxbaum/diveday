@@ -6,6 +6,7 @@ import { similarDepartures } from "@/lib/similar-departures";
 import type { AppDb } from "./client";
 import { departureOpenToDiver } from "./interest-offers";
 import { bookings, people, trips } from "./schema";
+import { tripPrimarySiteId } from "./trip-primary-site";
 import { pagedUpcomingTripsWithCounts } from "./trips";
 import { liveTrip } from "./trips-live";
 
@@ -97,7 +98,7 @@ export async function sailedRebooking(
       id: trips.id,
       endsAt: trips.endsAt,
       courseId: trips.courseId,
-      diveSiteId: trips.diveSiteId,
+      diveSiteId: tripPrimarySiteId,
     })
     .from(trips)
     .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
@@ -158,7 +159,10 @@ export async function sailedRebooking(
   );
   const similar = similarDepartures({
     full: { tripId, courseId: trip.courseId, diveSiteId: trip.diveSiteId },
-    candidates: ahead,
+    candidates: ahead.map((candidate) => ({
+      ...candidate,
+      diveSiteId: candidate.diveSite?.id ?? null,
+    })),
     limit: ahead.length,
   });
   const similarIds = new Set(similar.map((departure) => departure.tripId));

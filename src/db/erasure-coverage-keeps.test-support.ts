@@ -31,8 +31,6 @@ export const ERASURE_KEEPS: Record<string, string> = {
   trip_invitations:
     "that an invitation was sent for a seat, by id. Its risk is not disclosure but #1616, where the foreign key aborts the erasure transaction outright",
   trip_read_marks: "how far a staff member has read a trip’s desk feed",
-  offline_manifest_snapshot_revisions:
-    "the shop/trip-scoped monotone snapshot revision used to reject late stale roster responses; it contains only shop and trip ids plus a counter, no diver data, and cascades with its shop or trip",
   today_read_marks: "a staff member’s Today catch-up state",
   today_read_mark_events: "IDs cascading with marks or desk events",
   stripe_refund_failures:
@@ -80,17 +78,12 @@ export const ERASURE_KEEPS: Record<string, string> = {
 
   // --- the shop's own objects, holding nobody ------------------------------
   trip_dives: "the dives inside a departure, by site and order",
-  trip_requirements:
-    "the gates a departure sets — a certification level, specialties, whether a waiver is needed",
-  trip_schedule_days: "the day boundaries of a multi-day departure",
   trip_recap_photos:
     "the shop’s photographs of a departure, uploaded by a staff member and attached to the trip rather than to anyone on it. A photo *of* a diver is `recap_photos`, which the erasure deletes and queues for blob deletion",
   dive_sites: "a place, its briefing and its conditions",
   dive_site_creatures: "which catalog species a site lists",
   dive_packages: "the shop’s price list of multi-dive packages",
   pre_departure_checklist_items: "the shop’s own checklist lines",
-  departure_boat_safety_snapshots:
-    "a boat’s papers and kit notices as the boat left — the shop’s own hull and units, nobody aboard",
   gear_items: "the shop’s own units: a serial number, a size, a service note about the unit",
   shop_promo_codes: "a discount the shop published, its window and its ceiling",
   trip_last_minute_promos:

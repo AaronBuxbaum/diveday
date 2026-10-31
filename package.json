@@ -8,7 +8,7 @@
   "packageManager": "pnpm@12.4.1",
   "scripts": {
     "dev": "pnpm build:sw && node scripts/dev-server.mjs",
-    "build": "pnpm build:sw && next build",
+    "build": "pnpm build:sw && next build && pnpm build:sw:assets",
     "start": "next start",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
@@ -108,6 +108,7 @@
     "billing:pricing-plan": "dotenv -c -- tsx scripts/billing-pricing-plan.ts",
     "billing:pricing-test": "dotenv -c -- tsx scripts/billing-pricing-test.ts",
     "build:sw": "node scripts/build-service-worker.mjs",
+    "build:sw:assets": "node scripts/build-service-worker.mjs --assets",
     "brand:icons": "tsx scripts/render-brand-icons.tsx",
     "check:context-budget": "node scripts/check-context-budget.mjs",
     "agent:health": "node scripts/agent-health.mjs",

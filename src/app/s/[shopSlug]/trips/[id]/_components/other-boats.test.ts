@@ -12,24 +12,26 @@ const now = new Date("2026-07-21T13:30:00Z");
 const trip = {
   id: "00000000-0000-4000-8000-000000000001",
   courseId: null,
-  diveSiteId: "site-a",
-  diveSite: { difficultyLevel: "advanced" },
+  diveSite: { id: "site-a", difficultyLevel: "advanced" },
   startsAt: new Date("2026-07-25T12:00:00Z"),
   capacity: 10,
   booked: 10,
 } as never;
 
-const candidate = (id: string, overrides: Record<string, unknown> = {}) => ({
-  id,
-  title: `Boat ${id}`,
-  courseId: null,
-  diveSiteId: "site-a",
-  diveSite: { difficultyLevel: "advanced" },
-  startsAt: new Date("2026-07-26T12:00:00Z"),
-  capacity: 10,
-  booked: 2,
-  ...overrides,
-});
+/** `diveSiteId` names the site the departure's first chosen dive is at; null is no site yet. */
+const candidate = (id: string, overrides: Record<string, unknown> = {}) => {
+  const { diveSiteId = "site-a", ...rest } = overrides;
+  return {
+    id,
+    title: `Boat ${id}`,
+    courseId: null,
+    diveSite: diveSiteId ? { id: diveSiteId, difficultyLevel: "advanced" } : null,
+    startsAt: new Date("2026-07-26T12:00:00Z"),
+    capacity: 10,
+    booked: 2,
+    ...rest,
+  };
+};
 
 /** The board as the page reads it: each departure's own ask, and the read boat's as the ceiling. */
 const board = (
@@ -113,7 +115,7 @@ describe("neither list offers a boat that asks more (fourth UX review, item 10)"
   });
 
   it("drops it from an open boat's list too, though it is also a morning boat", () => {
-    const open = { ...(trip as object), booked: 2, diveSiteId: null } as never;
+    const open = { ...(trip as object), booked: 2, diveSite: null } as never;
     const morning = new Date("2026-07-26T12:00:00Z");
     const rows = worthALookList(
       open,
@@ -141,7 +143,7 @@ describe("a first-timer's course session is only offered its own course", () => 
     ...(trip as object),
     courseId: "dsd",
     course: { minimumCertificationLevel: null },
-    diveSiteId: null,
+    diveSite: null,
   } as never;
   const morning = new Date("2026-07-26T12:00:00Z");
 
@@ -160,7 +162,7 @@ describe("a first-timer's course session is only offered its own course", () => 
 
   it("drops it from a full session's list too", () => {
     const rows = fullTripAlternatives(
-      { ...(dsd as object), diveSiteId: "site-a" } as never,
+      { ...(dsd as object), diveSite: { id: "site-a", difficultyLevel: "advanced" } } as never,
       board([candidate("reef"), candidate("dsd-2", { courseId: "dsd", diveSiteId: null })]),
       where,
     );

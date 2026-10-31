@@ -16,8 +16,9 @@ Keep the shared information on `trips` and store ordered optional detail rows in
 row may name a dive, reference a reusable dive-site briefing, and include a short diver-facing
 description. The trip's `planned_dives` remains the count used by manifests and is constrained to
 one through four; blank detail rows are valid and render as a transparent "details to be briefed"
-state. The legacy `trips.dive_site_id` remains synchronized to the first dive for compatibility
-with shared readiness and marine forecasting while consumers migrate to the ordered rows.
+state. The ordered rows are the only place a planned site lives; the trip row carries no site column
+(see the 2026-10-31 amendment, which removed the compatibility pointer this paragraph first
+introduced).
 
 ## Alternatives considered
 
@@ -31,8 +32,7 @@ with shared readiness and marine forecasting while consumers migrate to the orde
 ## Consequences
 
 Staff can publish a polished one-to-four-dive plan incrementally, while divers see only details the
-shop actually supplied. Readiness and forecast behavior remain backward-compatible through the
-first-dive compatibility field. Per-dive readiness gates and per-dive conditions remain future
+shop actually supplied. Readiness and the marine forecast read the ordered rows. Per-dive readiness gates and per-dive conditions remain future
 extensions; this slice is briefing and itinerary detail, not a second safety authorization path.
 
 ## Amendment 2026-08-05 — the migration off the compatibility field is finished, and it now tracks the first *chosen* site
@@ -67,3 +67,44 @@ union across every visited site, while the sentence naming the source of the rul
 `trip.diveSite` — so on a two-site day whose Deep gate came from tank two, staff were sent to the
 wrong site card to understand or change it. It now names every visited site, with a plural wording
 to match.
+
+## Amendment 2026-10-31 — `trips.dive_site_id` is gone; `trip_dives` is the single representation (issue #3237)
+
+The compatibility pointer duplicated a domain fact and the policy that kept it in step (create,
+edit, series propagation, a revision bump when it moved), and the zero-`trip_dives` fallback
+existed only to tolerate a shape no writer produces. Aaron decided on 2026-10-31 that prior
+behavior need not be preserved (H-49: no legacy), so both are deleted.
+
+- **The column, in two releases.** This release removes the `trips.dive_site_id` declaration and
+  every reader and writer; the column stays in the database, unread and unwritten (nullable, so
+  inserts that omit it are fine). The deploy guard (`pnpm check:migrations`) refuses a
+  `drop-column` while the previous release still declares the column, because that release's
+  whole-row selects name it. The next release drops it:
+  `ALTER TABLE "trips" DROP CONSTRAINT "trips_dive_site_id_dive_sites_id_fkey"` and
+  `DROP COLUMN "dive_site_id"` (generate it with `pnpm db:generate --name`). Per H-49 there is no
+  backfill: a trip that had a pointer and no `trip_dives` rows (only demo seeds did) is rebuilt by
+  the seed, not migrated.
+- **One projection for "the trip's site".** `tripPrimarySiteId` (`src/db/trip-primary-site.ts`) is
+  a correlated subquery: the site of the lowest-numbered dive that has one, which is exactly what
+  the pointer held. Its consumers are the ones that can show only one site: the `diveSite` joined
+  onto the schedule and trip-record reads (forecast point, card headline), the calendar feed's
+  `LOCATION`, similar-departure matching, the Today station line, and the demo-seed readers. It
+  is never a gate.
+- **Gates read every dive.** Readiness, the requirements summary and the depth advisory join
+  `dive_sites` through `trip_dives` alone (`tripVisitedSites`, `tripRequirementSummaries`,
+  `getTripMaxDepthMeters`), so a trip whose dives span several sites still requires the
+  certification, specialty and nitrox of every one of them, whichever tank carries the strictest
+  site. The tests in `src/db/readiness.test.ts` pin that, including a gate that lives only on the
+  last dive.
+- **"Trips at this site" asks every dive.** Site reviews and past-diver invitations use
+  `tripVisitsSite` / the dive rows, not the first site, so a second-tank visit counts.
+- **Writers.** `createTrip`, `createTripSeries` and `updateTrip` take only `dives`; the
+  single-site shorthand (`diveSiteId` on a new trip or a patch) is removed, and the schedule
+  builder's quick-row site becomes dive one. Series propagation copies the dive rows, and a
+  sibling's `revision` rises when its ordered site list changes, as before.
+- **Exports.** `trips.csv` no longer carries `dive_site_id` and `dive_site_name`; `trip_dives.csv`
+  holds each dive's site. The bundle contract changed deliberately and the export snapshot was
+  regenerated.
+- **Cost.** The correlated subquery runs once per listed trip against `trip_dives_trip_number_unique`
+  (an index probe returning the first non-null row), replacing a column read. A list is one page
+  of departures, so the added work is a bounded index lookup per row.

@@ -1086,134 +1086,85 @@ export async function getShopYear(
     inArray(bookings.status, [...ACTIVE_BOOKING_STATUSES]),
   );
 
-  const [
-    dayRows,
-    diverRows,
-    monthRows,
-    windowDivers,
-    boatRows,
-    plannedSiteRows,
-    departureSiteRows,
-    firstSailed,
-  ] = await queryAll(db, [
-    () =>
-      db
-        .select({ day: localDay, boats: count(), seats: sum(trips.capacity) })
-        .from(trips)
-        .where(and(sailedInYear, liveTrip(), notRehearsal()))
-        .groupBy(sql`1`),
-    () =>
-      db
-        .select({
-          day: localDay,
-          divers: countDistinct(bookings.personId),
-          aboard: count(bookings.id),
-        })
-        .from(trips)
-        .innerJoin(bookings, seated)
-        .where(and(sailedInYear, liveTrip(), notRehearsal()))
-        .groupBy(sql`1`),
-    () =>
-      db
-        .select({ month: localMonth, divers: countDistinct(bookings.personId) })
-        .from(trips)
-        .innerJoin(bookings, seated)
-        .where(and(sailedInYear, liveTrip(), notRehearsal()))
-        .groupBy(sql`1`),
-    () =>
-      db
-        .select({ divers: countDistinct(bookings.personId) })
-        .from(trips)
-        .innerJoin(bookings, seated)
-        .where(and(sailedInYear, liveTrip(), notRehearsal())),
-    // Days per hull, not departures per hull: a boat that goes out twice in a
-    // day was at sea once. A departure with no boat on it contributes to the
-    // year's other figures and to no hull's count.
-    () =>
-      db
-        .select({
-          name: boats.name,
-          days: sql<number>`count(distinct to_char(${trips.startsAt} at time zone ${timeZone}::text, 'YYYY-MM-DD'))`,
-        })
-        .from(trips)
-        .innerJoin(boats, and(eq(boats.id, trips.boatId), eq(boats.shopId, shopId)))
-        .where(and(sailedInYear, liveTrip(), notRehearsal()))
-        .groupBy(boats.id, boats.name),
-    // The times a site was dived, from the day's plan. `trip_dives` carries no
-    // `shop_id` of its own (CR-007), so it is reached only through `trips`,
-    // and the site is scoped to the shop as well.
-    () =>
-      db
-        .select({
-          siteId: diveSites.id,
-          name: diveSites.name,
-          deletedAt: diveSites.deletedAt,
-          times: count(),
-        })
-        .from(tripDives)
-        .innerJoin(trips, eq(trips.id, tripDives.tripId))
-        .innerJoin(
-          diveSites,
-          and(eq(diveSites.id, tripDives.diveSiteId), eq(diveSites.shopId, shopId)),
-        )
-        .where(and(sailedInYear, liveTrip(), notRehearsal()))
-        .groupBy(diveSites.id, diveSites.name, diveSites.deletedAt),
-    // **The departure's own site, where the plan names none** (fifth loop,
-    // section 6). A shop that never fills in per-dive sites still chose a site
-    // for the departure, and its year read "0 sites" without this. Counted
-    // once per departure, and only for one whose plan names no site at all, so
-    // a planned dive is never counted twice.
-    () =>
-      db
-        .select({
-          siteId: diveSites.id,
-          name: diveSites.name,
-          deletedAt: diveSites.deletedAt,
-          times: count(),
-        })
-        .from(trips)
-        .innerJoin(diveSites, and(eq(diveSites.id, trips.diveSiteId), eq(diveSites.shopId, shopId)))
-        .where(
-          and(
-            sailedInYear,
-            liveTrip(),
-            notRehearsal(),
-            not(
-              exists(
-                db
-                  .select({ id: tripDives.id })
-                  .from(tripDives)
-                  .where(and(eq(tripDives.tripId, trips.id), isNotNull(tripDives.diveSiteId))),
-              ),
+  const [dayRows, diverRows, monthRows, windowDivers, boatRows, siteRows, firstSailed] =
+    await queryAll(db, [
+      () =>
+        db
+          .select({ day: localDay, boats: count(), seats: sum(trips.capacity) })
+          .from(trips)
+          .where(and(sailedInYear, liveTrip(), notRehearsal()))
+          .groupBy(sql`1`),
+      () =>
+        db
+          .select({
+            day: localDay,
+            divers: countDistinct(bookings.personId),
+            aboard: count(bookings.id),
+          })
+          .from(trips)
+          .innerJoin(bookings, seated)
+          .where(and(sailedInYear, liveTrip(), notRehearsal()))
+          .groupBy(sql`1`),
+      () =>
+        db
+          .select({ month: localMonth, divers: countDistinct(bookings.personId) })
+          .from(trips)
+          .innerJoin(bookings, seated)
+          .where(and(sailedInYear, liveTrip(), notRehearsal()))
+          .groupBy(sql`1`),
+      () =>
+        db
+          .select({ divers: countDistinct(bookings.personId) })
+          .from(trips)
+          .innerJoin(bookings, seated)
+          .where(and(sailedInYear, liveTrip(), notRehearsal())),
+      // Days per hull, not departures per hull: a boat that goes out twice in a
+      // day was at sea once. A departure with no boat on it contributes to the
+      // year's other figures and to no hull's count.
+      () =>
+        db
+          .select({
+            name: boats.name,
+            days: sql<number>`count(distinct to_char(${trips.startsAt} at time zone ${timeZone}::text, 'YYYY-MM-DD'))`,
+          })
+          .from(trips)
+          .innerJoin(boats, and(eq(boats.id, trips.boatId), eq(boats.shopId, shopId)))
+          .where(and(sailedInYear, liveTrip(), notRehearsal()))
+          .groupBy(boats.id, boats.name),
+      // The times a site was dived, from the day's plan. `trip_dives` carries no
+      // `shop_id` of its own (CR-007), so it is reached only through `trips`,
+      // and the site is scoped to the shop as well.
+      () =>
+        db
+          .select({
+            siteId: diveSites.id,
+            name: diveSites.name,
+            deletedAt: diveSites.deletedAt,
+            times: count(),
+          })
+          .from(tripDives)
+          .innerJoin(trips, eq(trips.id, tripDives.tripId))
+          .innerJoin(
+            diveSites,
+            and(eq(diveSites.id, tripDives.diveSiteId), eq(diveSites.shopId, shopId)),
+          )
+          .where(and(sailedInYear, liveTrip(), notRehearsal()))
+          .groupBy(diveSites.id, diveSites.name, diveSites.deletedAt),
+      // The shop's first day at sea, ever — the "since May" rule's only input.
+      () =>
+        db
+          .select({ startsAt: sql<Date | null>`min(${trips.startsAt})` })
+          .from(trips)
+          .where(
+            and(
+              eq(trips.shopId, shopId),
+              ne(trips.status, "cancelled"),
+              lte(trips.startsAt, sailedBy),
+              liveTrip(),
+              notRehearsal(),
             ),
           ),
-        )
-        .groupBy(diveSites.id, diveSites.name, diveSites.deletedAt),
-    // The shop's first day at sea, ever — the "since May" rule's only input.
-    () =>
-      db
-        .select({ startsAt: sql<Date | null>`min(${trips.startsAt})` })
-        .from(trips)
-        .where(
-          and(
-            eq(trips.shopId, shopId),
-            ne(trips.status, "cancelled"),
-            lte(trips.startsAt, sailedBy),
-            liveTrip(),
-            notRehearsal(),
-          ),
-        ),
-  ]);
-
-  const siteTimes = new Map<string, (typeof plannedSiteRows)[number]>();
-  for (const row of [...plannedSiteRows, ...departureSiteRows]) {
-    const seen = siteTimes.get(row.siteId);
-    siteTimes.set(
-      row.siteId,
-      seen ? { ...seen, times: Number(seen.times) + Number(row.times) } : row,
-    );
-  }
-  const siteRows = [...siteTimes.values()];
+    ]);
 
   const diversByDay = new Map(diverRows.map((row) => [row.day, row]));
   const days: ShopYearDay[] = dayRows

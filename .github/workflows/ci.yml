@@ -413,7 +413,13 @@ jobs:
       # never registers, and every offline-manifest test fails on a shell that
       # never primes. Any future generated asset under `public/` needs the
       # same treatment.
-      - run: pnpm build:sw
+      #
+      # `build:sw:assets` and not `build:sw`: the worker must carry the offline
+      # shell list generated from THIS downloaded build, the one production
+      # ships. Plain `build:sw` bakes in no list (dev) and every offline spec
+      # would test a configuration production never runs. It fails the job on
+      # an empty list or a build without a route manifest.
+      - run: pnpm build:sw:assets
       - uses: ./.github/actions/playwright-shell
       # `--shard` is deliberately absent. Playwright's own sharding cuts the
       # sorted test list into four equal-*count* contiguous groups, and the
@@ -619,9 +625,10 @@ jobs:
         with:
           name: next-build
           path: .next
-      # The generated service worker, as in the playwright job above.
+      # The generated service worker with the production asset list, as in the
+      # playwright job above.
       - if: steps.plan.outputs.run == 'true'
-        run: pnpm build:sw
+        run: pnpm build:sw:assets
       - if: steps.plan.outputs.run == 'true'
         uses: ./.github/actions/playwright-shell
       # Crew captures and print-document specs inspect actual PDF pages.
@@ -793,7 +800,8 @@ jobs:
       # Same reason as the playwright job above: the generated service worker
       # is not in `.next/` and not in the checkout. A capture taken without it
       # would silently bake "no service worker" into the visual baseline.
-      - run: pnpm build:sw
+      # `--assets` for the reason given in the playwright job above.
+      - run: pnpm build:sw:assets
       - uses: ./.github/actions/playwright-shell
       - name: Install PDF rendering tools
         timeout-minutes: 5

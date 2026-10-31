@@ -47,7 +47,7 @@ export function fullTripAlternatives(trip: PublicTrip, board: Board, where: Othe
     full: {
       tripId: trip.id,
       courseId: trip.courseId,
-      diveSiteId: trip.diveSiteId,
+      diveSiteId: trip.diveSite?.id ?? null,
       seriesId: trip.seriesId,
       startsAt: trip.startsAt,
     },
@@ -61,7 +61,7 @@ export function fullTripAlternatives(trip: PublicTrip, board: Board, where: Othe
         title: candidate.title,
         startsAt: candidate.startsAt,
         courseId: candidate.courseId,
-        diveSiteId: candidate.diveSiteId,
+        diveSiteId: candidate.diveSite?.id ?? null,
         seriesId: candidate.seriesId,
       })),
   }).map((row) => ({
@@ -92,7 +92,7 @@ export function worthALookList(
     subject: {
       tripId: trip.id,
       courseId: trip.courseId,
-      diveSiteId: trip.diveSiteId,
+      diveSiteId: trip.diveSite?.id ?? null,
       difficultyLevel: trip.diveSite?.difficultyLevel ?? null,
       startsAt: trip.startsAt,
       seatsOpen: spotsRemaining(trip),
@@ -103,7 +103,7 @@ export function worthALookList(
       tripId: candidate.id,
       title: candidate.title,
       courseId: candidate.courseId,
-      diveSiteId: candidate.diveSiteId,
+      diveSiteId: candidate.diveSite?.id ?? null,
       difficultyLevel: candidate.diveSite?.difficultyLevel ?? null,
       startsAt: candidate.startsAt,
       seatsOpen: Math.max(candidate.capacity - candidate.booked, 0),

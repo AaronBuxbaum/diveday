@@ -437,7 +437,7 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       // **The `blockers` capture retired with its surface.** It photographed
-      // Today's by-departure view, reached through the `/blockers` redirect;
+      // Today's by-departure view, reached through the retired `/blockers` redirect;
       // the shop home is one chronological spine now and that view no longer
       // exists to shoot (ADR 20260827-clearwater-surface-language, decision 4).
       // Every blocked diver it used to frame is a row on their boat's station

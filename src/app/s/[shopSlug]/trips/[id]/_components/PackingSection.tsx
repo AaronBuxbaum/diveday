@@ -1,13 +1,13 @@
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { DiverMessageKey } from "@/i18n/messages";
 import { diverTranslator } from "@/i18n/messages";
+import { PERSONAL_GEAR_KEYS } from "@/i18n/packing-labels";
 import {
   type DiveMode,
   type DockDayStep,
   dockDayTimeline,
   exposureSuitFor,
   type LegTravelTimes,
-  type PersonalGearCode,
   type ProvidedItemCode,
   packingConfidence,
   packsLogbook,
@@ -39,13 +39,6 @@ const RENTAL_ITEM_KEYS: Record<RentableItemKind, DiverMessageKey> = {
   gloves: "trip.rentalItems.gloves",
   torch: "trip.rentalItems.torch",
   smb: "trip.rentalItems.smb",
-};
-
-const PERSONAL_GEAR_KEYS: Record<PersonalGearCode, DiverMessageKey> = {
-  mask: "trip.personalGear.mask",
-  fins: "trip.personalGear.fins",
-  snorkel: "trip.personalGear.snorkel",
-  boots: "trip.personalGear.boots",
 };
 
 const PROVIDED_ITEM_KEYS: Record<ProvidedItemCode, DiverMessageKey> = {
