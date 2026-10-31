@@ -21,6 +21,7 @@ export const CI_JOBS = [
 ];
 
 const SHA = /^[0-9a-f]{40}$/i;
+const isSha = (value) => typeof value === "string" && SHA.test(value);
 
 /** Refuse a green verdict when the run no longer names the PR's live candidate. */
 export function ciCandidateProblems({
@@ -31,9 +32,10 @@ export function ciCandidateProblems({
   headSha = "",
   baseSha = "",
   currentPullRequest = null,
+  candidateCommits = null,
 }) {
   const problems = [];
-  if (!SHA.test(sha)) problems.push("CI candidate SHA is missing or invalid");
+  if (!isSha(sha)) problems.push("CI candidate SHA is missing or invalid");
   if (["push", "workflow_dispatch"].includes(event)) {
     if (ref !== "refs/heads/main") problems.push("main CI run is not on refs/heads/main");
     return problems;
@@ -42,8 +44,8 @@ export function ciCandidateProblems({
   if (!/^\d+$/.test(prNumber)) problems.push("pull request number is missing or invalid");
   if (ref !== `refs/pull/${prNumber}/merge`)
     problems.push(`CI ref does not identify PR #${prNumber}'s merge candidate`);
-  if (!SHA.test(headSha)) problems.push("PR head SHA from this event is missing or invalid");
-  if (!SHA.test(baseSha)) problems.push("PR base SHA from this event is missing or invalid");
+  if (!isSha(headSha)) problems.push("PR head SHA from this event is missing or invalid");
+  if (!isSha(baseSha)) problems.push("PR base SHA from this event is missing or invalid");
   if (!currentPullRequest) {
     problems.push("current pull request evidence is unavailable");
     return problems;
@@ -52,27 +54,105 @@ export function ciCandidateProblems({
     problems.push("PR head changed after this CI run started");
   if (currentPullRequest.base?.sha !== baseSha)
     problems.push("PR base changed after this CI run started");
-  if (!SHA.test(currentPullRequest.merge_commit_sha ?? ""))
+  if (!isSha(currentPullRequest.merge_commit_sha))
     problems.push("current PR merge candidate SHA is missing or invalid");
-  else if (currentPullRequest.merge_commit_sha !== sha)
-    problems.push("PR merge candidate changed after this CI run started");
+  else if (currentPullRequest.merge_commit_sha !== sha) {
+    const runCommit = commitTreeAndParents(candidateCommits?.run, sha, headSha);
+    const currentCommit = commitTreeAndParents(
+      candidateCommits?.current,
+      currentPullRequest.merge_commit_sha,
+      headSha,
+    );
+    if (!runCommit || !currentCommit) {
+      problems.push("PR merge candidate tree/parent evidence is missing or invalid");
+    } else if (
+      runCommit.tree !== currentCommit.tree ||
+      runCommit.parents.length !== currentCommit.parents.length ||
+      runCommit.parents.some((parent, index) => parent !== currentCommit.parents[index])
+    ) {
+      problems.push("PR merge candidate tree or parents changed after this CI run started");
+    }
+  }
   return problems;
 }
 
-function readCurrentPullRequest(env) {
+/** The only merge-commit fields used for equivalence; reject partial or malformed REST data. */
+function commitTreeAndParents(commit, expectedSha, expectedHeadSha) {
+  if (commit?.sha !== expectedSha || !isSha(commit.sha)) return null;
+  const tree = commit.tree?.sha;
+  const parents = commit.parents;
+  if (
+    !isSha(tree) ||
+    !Array.isArray(parents) ||
+    parents.length !== 2 ||
+    !parents.every((parent) => isSha(parent?.sha))
+  )
+    return null;
+  const orderedParents = parents.map(({ sha }) => sha.toLowerCase());
+  if (!isSha(expectedHeadSha) || orderedParents[1] !== expectedHeadSha.toLowerCase()) return null;
+  return { tree: tree.toLowerCase(), parents: orderedParents };
+}
+
+function readCurrentPullRequest(env, timeoutMs = SUBPROCESS_TIMEOUTS.ghCli) {
   if (env.GITHUB_EVENT_NAME !== "pull_request") return null;
   if (!/^\d+$/.test(env.PR_NUMBER ?? "")) return null;
   try {
     return JSON.parse(
       readBounded("gh", ["api", `repos/${env.GITHUB_REPOSITORY}/pulls/${env.PR_NUMBER}`], {
         encoding: "utf8",
-        timeoutMs: SUBPROCESS_TIMEOUTS.ghCli,
+        timeoutMs,
         stdio: ["ignore", "pipe", "ignore"],
       }),
     );
   } catch {
     return null;
   }
+}
+
+/** Read a commit object only for the changed-SHA case, through the bounded GitHub CLI path. */
+function readCandidateCommit(repository, sha) {
+  if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository ?? "") || !isSha(sha)) return null;
+  try {
+    return JSON.parse(
+      readBounded("gh", ["api", `repos/${repository}/git/commits/${sha}`], {
+        encoding: "utf8",
+        timeoutMs: SUBPROCESS_TIMEOUTS.ghHookRead,
+        stdio: ["ignore", "pipe", "ignore"],
+      }),
+    );
+  } catch {
+    return null;
+  }
+}
+
+/** Recheck after three short metadata reads, which fit inside ci-result's five-minute job. */
+function readCandidateCommits(env, currentPullRequest) {
+  const currentSha = currentPullRequest?.merge_commit_sha ?? "";
+  const prNumber = env.PR_NUMBER ?? "";
+  if (
+    env.GITHUB_EVENT_NAME !== "pull_request" ||
+    currentSha === env.GITHUB_SHA ||
+    !/^\d+$/.test(prNumber) ||
+    env.GITHUB_REF !== `refs/pull/${prNumber}/merge` ||
+    !isSha(env.GITHUB_SHA) ||
+    !isSha(env.PR_HEAD_SHA) ||
+    !isSha(env.PR_BASE_SHA) ||
+    currentPullRequest?.head?.sha !== env.PR_HEAD_SHA ||
+    currentPullRequest?.base?.sha !== env.PR_BASE_SHA ||
+    !isSha(currentSha)
+  )
+    return null;
+  const run = readCandidateCommit(env.GITHUB_REPOSITORY, env.GITHUB_SHA);
+  const current = readCandidateCommit(env.GITHUB_REPOSITORY, currentSha);
+  if (!run || !current) return null;
+  const latestPullRequest = readCurrentPullRequest(env, SUBPROCESS_TIMEOUTS.ghHookRead);
+  if (
+    latestPullRequest?.head?.sha !== currentPullRequest.head.sha ||
+    latestPullRequest?.base?.sha !== currentPullRequest.base.sha ||
+    latestPullRequest?.merge_commit_sha !== currentSha
+  )
+    return null;
+  return { run, current };
 }
 
 /** The aggregate is green only when every expected result exists and required lanes ran. */
@@ -113,6 +193,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   try {
     const needs = JSON.parse(process.env.CI_NEEDS ?? "null");
     const env = process.env;
+    const currentPullRequest = readCurrentPullRequest(env);
     const candidateProblems = ciCandidateProblems({
       event: env.GITHUB_EVENT_NAME,
       ref: env.GITHUB_REF,
@@ -120,7 +201,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       prNumber: env.PR_NUMBER,
       headSha: env.PR_HEAD_SHA,
       baseSha: env.PR_BASE_SHA,
-      currentPullRequest: readCurrentPullRequest(env),
+      currentPullRequest,
+      candidateCommits: readCandidateCommits(env, currentPullRequest),
     });
     const problems = ciMergeVerdict(needs, {
       code: needs?.changes?.outputs?.code,
