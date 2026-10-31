@@ -9,18 +9,19 @@ import type { CertificationLevel } from "./readiness";
  * **What an anonymous joiner is allowed to say about their own diving**, and
  * the only shape of it the server will accept.
  *
- * Two public forms ask — the shop-wide last-minute-deal list and a full trip's
- * wait list — and between them they collect an optional certification level, an
- * optional agency and card number, and an optional nitrox tick
- * (`DiveDeclarationFields`). They post to different actions in different route
- * segments and both parse through here, so there is one answer to "what can a
- * stranger write".
+ * The shop-wide last-minute-deal form currently renders an optional level
+ * select. The full-trip wait-list form no longer renders declaration controls,
+ * but its action still accepts this optional payload; both list actions parse
+ * it here. The schema retains optional agency, card-number and nitrox wire
+ * fields too, though no current list form renders them. This keeps one answer
+ * to "what can an anonymous list action accept".
  *
  * The trip booking form asked too, per diver, between 2026-08-20 and
- * 2026-08-27. It no longer asks, and its per-index reader is gone with the
- * fields rather than left standing: an action that accepts what no form
- * renders is a route a hand-crafted POST has and an honest diver does not.
- * `/ready/<token>` asks the diver whose booking it is instead.
+ * 2026-08-27. It no longer asks, and its per-index reader is gone; its booking
+ * action does not parse declaration input. The separate wait-list action still
+ * parses supplied declaration payloads despite rendering no declaration
+ * controls. `/ready/<token>` asks the diver whose booking it is through its
+ * capability-bound certification step.
  *
  * Two properties this file exists to guarantee:
  *
@@ -28,7 +29,7 @@ import type { CertificationLevel } from "./readiness";
  *    five-rung ladder rather than trusted from the post, so nothing
  *    attacker-controlled reaches the `certifications.level` column or the staff
  *    panels that render it. Nitrox is a boolean.
- * 2. **Absent is a real answer.** Both fields are optional and a joiner who
+ * 2. **Absent is a real answer.** Every declaration value is optional and a joiner who
  *    skips them is "not said" — never a default, never a zero-value that reads
  *    as a claim. An unticked nitrox box in particular is silence, not "I am not
  *    nitrox certified", so it can never contradict a card already on file.
@@ -37,8 +38,8 @@ import type { CertificationLevel } from "./readiness";
 /**
  * The ladder as a runtime tuple. The `satisfies` is the point: adding a rung to
  * `CertificationLevel` without adding it here is a **compile error**, so the
- * public forms can never quietly stop accepting a level the rest of the app
- * understands (the same guard shape as `LEVEL_CODES` in trip-admission.ts).
+ * list-action parser stays aligned with the current ladder (the same guard
+ * shape as `LEVEL_CODES` in trip-admission.ts).
  */
 export const DECLARABLE_CERTIFICATION_LEVELS = [
   "open_water",
@@ -76,8 +77,8 @@ export { NO_CERTIFICATION_ANSWER } from "./certification-options";
  * The same two properties `isPlausibleCardNumber` asserts anywhere else — three
  * characters and a digit — and for the same reason: it is a typo filter, never
  * proof, and nothing downstream may cite it as evidence. What is different here
- * is what a *failure* costs. This box is optional on a booking form, so a number
- * that does not survive the filter must not take the booking down with it:
+ * is what a *failure* costs. This field is optional in the declaration payload,
+ * so a number that does not survive the filter must not refuse a list join:
  * `diveDeclarationSchema` catches the refusal and drops the field
  * (`toDiveDeclaration`), leaving the level standing on its own.
  */
@@ -94,26 +95,29 @@ export const diveDeclarationSchema = z.object({
   /**
    * **Which body issued the card, and its number — both optional, both inert.**
    *
-   * A level alone was all these forms collected until 2026-08-21, which left
-   * "verified before the dive date" with nothing to work from: the queue read
+   * These fields were added to the declaration payload on 2026-08-21 so staff
+   * could pre-check a claim before the dive date. No current list form renders
+   * either control, but the parser retains these optional fields. The earlier
+   * level-only flow left "verified before the dive date" with nothing to work
+   * from: the queue read
    * "Advanced Open Water (self-declared)" and the only check available was the
    * sighting at the dock that was happening anyway (issue #630, from #609).
    *
    * Optional is the decision, not the default. A diver who knows their rung but
-   * not their number is still worth believing at the sale, and refusing that
-   * submission trades a booking for a form field. And the number gates
-   * **nothing**: there is no agency lookup (H-10 was dropped), so it is evidence
-   * for a human to pre-check and a way to catch an obvious typo. The boarding
+   * not their number is still worth recording as a claim, and refusing that
+   * list join trades a useful contact for an optional field. And the number gates
+   * **nothing**: this parser does no agency lookup. A claim is evidence for a
+   * staffer to check and a way to catch an obvious typo. The boarding
    * sighting is unchanged, and `recordSelfDeclaredCards`' anti-displacement rule
    * still does the safety work — a claim never touches a real card.
    *
    * `.catch(undefined)` on both: an unparseable value is silence, exactly like
-   * an empty box. These ride on a form whose *point* is the booking, and a
-   * mistyped optional field must never refuse a sale.
+   * an empty box. These are optional declaration fields, and a mistyped one
+   * must never refuse the list join.
    */
   certificationAgency: z.enum(certificationAgency.enumValues).optional().catch(undefined),
   certificationNumber: declaredCardNumberSchema.optional().catch(undefined),
-  // The checkbox posts `on` or nothing at all. A literal rather than a coerced
+  // The nitrox checkbox wire value is `on` or absent. A literal rather than a coerced
   // boolean so an arbitrary posted string is a *refusal* to parse rather than a
   // truthy tick nobody made.
   nitroxCertified: z.literal("on").optional(),
@@ -140,7 +144,7 @@ export type DiveDeclaration = {
 };
 
 /**
- * The two optional fields as posted, ready for the parse. Empty strings become
+ * Optional declaration fields as posted, ready for the parse. Empty strings become
  * `undefined` because an untouched `<select>` posts `""`, and zod's enum would
  * refuse that as an invalid level and take the whole join down with it — a
  * joiner who answered nothing must never see their sign-up refused.
@@ -167,8 +171,8 @@ export function diveDeclarationInput(formData: FormData) {
 export function toDiveDeclaration(parsed: z.infer<typeof diveDeclarationSchema>): DiveDeclaration {
   const answer = parsed.certificationLevel;
   const level = answer === NO_CERTIFICATION_ANSWER ? undefined : answer;
-  // **The card fields ride with the level, and fall with it.** The form reveals
-  // them only once a real rung is picked, but a hand-crafted post can send them
+  // **The card fields ride with the level, and fall with it.** No current list
+  // form renders them, but a posted declaration can send them
   // beside "I'm not certified yet" or beside nothing at all — an agency and a
   // number describing a card the same submission says does not exist. Dropped
   // here rather than downstream, so nothing after this parse ever has to
@@ -187,8 +191,9 @@ export function toDiveDeclaration(parsed: z.infer<typeof diveDeclarationSchema>)
  * now** — the parsed one, or `undefined` because the address has had its
  * share.
  *
- * The two public forms that still collect a declaration are anonymous, and
- * both are bounded per IP only. A rotating set of addresses is exactly what a
+ * Both anonymous list actions can persist a supplied declaration; only the
+ * deal-list form currently renders a declaration field. The list actions are
+ * bounded per IP only. A rotating set of addresses is exactly what a
  * per-IP bucket cannot see, so `RATE_LIMITS.declarationByPerson` bounds the
  * write by the address the claim is *about* instead — see that entry for why
  * the key can only be the subject and never the submitter.
