@@ -197,3 +197,43 @@ describe("the ratchet", () => {
     expect(failures.some((f) => f.includes("Gone.tsx: clean or gone"))).toBe(true);
   });
 });
+
+describe("server-only modules stay out of client bundles", () => {
+  const phone = 'import { parsePhoneNumberFromString } from "libphonenumber-js/mobile";\n';
+
+  it("refuses a use-client file that imports the line-type module directly", async () => {
+    const root = await fixture({
+      "src/lib/phone-line-type.ts": phone,
+      "src/app/Form.tsx":
+        '"use client";\nimport { canReceiveText } from "@/lib/phone-line-type";\n',
+    });
+    expect(flat(await collectViolations(root))).toEqual([
+      expect.stringContaining(
+        'src/app/Form.tsx: a "use client" file reaches server-only src/lib/phone-line-type.ts',
+      ),
+    ]);
+  });
+
+  it("follows the chain through a helper and through the package itself", async () => {
+    const root = await fixture({
+      "src/lib/phone-line-type.ts": phone,
+      "src/lib/delivery.ts": 'import { canReceiveText } from "./phone-line-type";\n',
+      "src/app/A.tsx": '"use client";\nimport { x } from "@/lib/delivery";\n',
+      "src/app/B.tsx": '"use client";\nimport { parse } from "libphonenumber-js/max";\n',
+    });
+    const violations = await collectViolations(root);
+    expect([...violations.keys()].sort()).toEqual(["src/app/A.tsx", "src/app/B.tsx"]);
+  });
+
+  it("leaves alone a server file, a type-only import and a clean client file", async () => {
+    const root = await fixture({
+      "src/lib/phone-line-type.ts": phone,
+      "src/lib/phone.ts": "export const CALLING_CODES = {};\n",
+      "src/app/actions.ts":
+        '"use server";\nimport { canReceiveText } from "@/lib/phone-line-type";\n',
+      "src/app/Types.tsx":
+        '"use client";\nimport type { canReceiveText } from "@/lib/phone-line-type";\nimport { CALLING_CODES } from "@/lib/phone";\n',
+    });
+    expect(flat(await collectViolations(root))).toEqual([]);
+  });
+});

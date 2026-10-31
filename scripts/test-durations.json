@@ -2098,7 +2098,6 @@
   "src/lib/worth-a-look.test.ts": 18,
   "src/lib/zoned-hostile.test.ts": 76,
   "src/lib/zoned.test.ts": 37,
-  "src/next-config.test.ts": 463,
   "src/proxy-csp.test.ts": 212,
   "src/proxy-pricing-arm.test.ts": 297,
   "src/proxy.test.ts": 477,

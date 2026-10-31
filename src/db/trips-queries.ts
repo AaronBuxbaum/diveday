@@ -47,6 +47,7 @@ import {
   tripScheduleDays,
   trips,
 } from "./schema";
+import { tripPrimarySiteId } from "./trip-primary-site";
 import { liveTrip, notRehearsal } from "./trips-live";
 
 /**
@@ -129,7 +130,7 @@ export async function upcomingTripsWithCounts(
     })
     .from(trips)
     .leftJoin(courses, eq(courses.id, trips.courseId))
-    .leftJoin(diveSites, eq(diveSites.id, trips.diveSiteId))
+    .leftJoin(diveSites, eq(diveSites.id, tripPrimarySiteId))
     .leftJoin(bookings, liveBookingJoin)
     .where(
       and(
@@ -611,7 +612,7 @@ export async function pagedUpcomingTripsWithCounts(
     })
     .from(trips)
     .leftJoin(courses, eq(courses.id, trips.courseId))
-    .leftJoin(diveSites, eq(diveSites.id, trips.diveSiteId))
+    .leftJoin(diveSites, eq(diveSites.id, tripPrimarySiteId))
     .leftJoin(bookings, liveBookingJoin)
     .where(
       and(
@@ -802,7 +803,7 @@ export async function offsetUpcomingTripsWithCounts(
         })
         .from(trips)
         .leftJoin(courses, eq(courses.id, trips.courseId))
-        .leftJoin(diveSites, eq(diveSites.id, trips.diveSiteId))
+        .leftJoin(diveSites, eq(diveSites.id, tripPrimarySiteId))
         .leftJoin(bookings, liveBookingJoin)
         .where(and(scope, liveTrip()))
         .groupBy(trips.id, courses.id, diveSites.id)
@@ -841,22 +842,15 @@ export async function offsetUpcomingTripsWithCounts(
 /**
  * Where each of these departures actually goes, in one query.
  *
- * The list readers above join `dive_sites` on `trips.dive_site_id`, which is
- * only dive one's site copied onto the trip row — enough for the forecast point
- * and the calendar feed's location, never enough to *tell a diver where the
- * boat goes*. A two-site day named one site; a day whose undecided tank was the
- * first one named none. This reads the dives themselves, so a card can say both
- * how many sites the trip visits and how many tanks are still open.
+ * The list readers above join `dive_sites` on `tripPrimarySiteId`, the first
+ * dive's chosen site: enough for the forecast point and the calendar feed's
+ * location, never enough to *tell a diver where the boat goes*. A two-site day
+ * named one site. This reads the dives themselves, so a card can say both how
+ * many sites the trip visits and how many tanks are still open.
  *
- * Shop ownership is proven on the query — through the trip and again on each
- * site — rather than assumed from the trip's pointer (the CR-007 house rule).
- *
- * A departure with **no dive rows at all** falls back to its own
- * `dive_site_id`, which is the only thing it can say. Every write path mints
- * one dive row per planned dive (`insertTripInstance`, `replaceTripDives`), so
- * that shape should not exist — but a reader that answers "nowhere" for a trip
- * whose row plainly names a site would be a worse bug than the one it is
- * fixing, and the demo seed builds trips exactly that way today.
+ * Shop ownership is proven on the query, through the trip and again on each
+ * site (the CR-007 house rule). A departure with no dive rows is absent from
+ * the map; every write path mints one row per planned dive.
  */
 export async function tripDiveSiteSummaries(
   db: DbExecutor,
@@ -864,33 +858,21 @@ export async function tripDiveSiteSummaries(
   tripIds: string[],
 ): Promise<Map<string, TripDiveSiteSummary>> {
   if (tripIds.length === 0) return new Map();
-  // Two reaches into the same table — the site on each dive, and the trip's own
-  // fallback pointer — so they need distinct aliases.
-  const diveSite = alias(diveSites, "trip_dive_site");
-  const tripSite = alias(diveSites, "trip_primary_site");
   const rows = await db
     .select({
       tripId: trips.id,
       diveNumber: tripDives.diveNumber,
-      siteId: diveSite.id,
-      siteName: diveSite.name,
-      tripSiteId: tripSite.id,
-      tripSiteName: tripSite.name,
+      siteId: diveSites.id,
+      siteName: diveSites.name,
     })
     .from(trips)
     .leftJoin(tripDives, eq(tripDives.tripId, trips.id))
-    .leftJoin(diveSite, and(eq(diveSite.id, tripDives.diveSiteId), eq(diveSite.shopId, shopId)))
-    .leftJoin(tripSite, and(eq(tripSite.id, trips.diveSiteId), eq(tripSite.shopId, shopId)))
+    .leftJoin(diveSites, and(eq(diveSites.id, tripDives.diveSiteId), eq(diveSites.shopId, shopId)))
     .where(and(inArray(trips.id, tripIds), eq(trips.shopId, shopId), liveTrip()))
     .orderBy(asc(trips.id), asc(tripDives.diveNumber));
 
   const byTrip = new Map<string, TripDiveSiteRef[]>();
-  const fallbackByTrip = new Map<string, { id: string; name: string } | null>();
   for (const row of rows) {
-    fallbackByTrip.set(
-      row.tripId,
-      row.tripSiteId && row.tripSiteName ? { id: row.tripSiteId, name: row.tripSiteName } : null,
-    );
     const dives = byTrip.get(row.tripId) ?? [];
     // `diveNumber` is null only when the left join found no dive row at all.
     if (row.diveNumber !== null) {
@@ -904,14 +886,9 @@ export async function tripDiveSiteSummaries(
 
   const summaries = new Map<string, TripDiveSiteSummary>();
   for (const [tripId, dives] of byTrip) {
-    if (dives.length > 0) {
-      summaries.set(tripId, summarizeTripDiveSites(dives));
-      continue;
-    }
-    const fallback = fallbackByTrip.get(tripId) ?? null;
-    // No dives *and* no pointer says nothing — never "0 sites, 0 open tanks",
+    // A trip with no dive rows says nothing — never "0 sites, 0 open tanks",
     // which a surface would read as a real, empty answer.
-    if (fallback) summaries.set(tripId, { sites: [fallback], undecidedDives: 0 });
+    if (dives.length > 0) summaries.set(tripId, summarizeTripDiveSites(dives));
   }
   return summaries;
 }
@@ -1144,7 +1121,7 @@ export async function listUpcomingSessionsForCourse(
     .leftJoin(
       diveSites,
       and(
-        eq(diveSites.id, trips.diveSiteId),
+        eq(diveSites.id, tripPrimarySiteId),
         eq(diveSites.shopId, trips.shopId),
         isNull(diveSites.deletedAt),
       ),
@@ -1401,7 +1378,7 @@ export async function weekBoard(
     })
     .from(trips)
     .innerJoin(tripScheduleDays, eq(tripScheduleDays.tripId, trips.id))
-    .leftJoin(diveSites, eq(diveSites.id, trips.diveSiteId))
+    .leftJoin(diveSites, eq(diveSites.id, tripPrimarySiteId))
     .leftJoin(courses, eq(courses.id, trips.courseId))
     .leftJoin(bookings, liveBookingJoin)
     .where(

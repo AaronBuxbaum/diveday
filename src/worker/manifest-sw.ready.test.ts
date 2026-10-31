@@ -1,17 +1,8 @@
 // The real worker event surface in a node environment, isolated to diver readiness copies.
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  READY_CACHE_NAME,
-  READY_COPY_GENERATED_AT_META,
-  READY_COPY_LOCALE_META,
-  READY_COPY_TIME_ZONE_META,
-  READY_COPY_VERSION,
-  READY_COPY_VERSION_META,
-  READY_KEEP_UNTIL_META,
-  READY_OFFLINE_GENERATED_AT_PLACEHOLDER,
-  READY_OFFLINE_NOTE_ATTR,
-} from "@/lib/ready-offline";
+import { READY_CACHE_NAME } from "@/lib/ready-offline";
 import { advanceClock } from "@/test/clock";
+import { snapshotOf } from "./ready-test-support";
 
 vi.mock("@/lib/offline-manifest-store", () => ({
   listOfflineManifests: vi.fn(),
@@ -83,15 +74,50 @@ describe("the /ready/ registration's fetch", () => {
     return { responded, settle: async () => Promise.allSettled([responded, ...waits]) };
   }
 
-  /** The live page, naming the day its copy may be kept until (well past the frozen clock). */
-  const html = (body: string) =>
-    new Response(
-      `<meta name="${READY_KEEP_UNTIL_META}" content="${Number.MAX_SAFE_INTEGER}"/><meta name="${READY_COPY_VERSION_META}" content="${READY_COPY_VERSION}"/><meta name="${READY_COPY_LOCALE_META}" content="en-US"/><meta name="${READY_COPY_TIME_ZONE_META}" content="America/New_York"/><meta name="${READY_COPY_GENERATED_AT_META}" content="${Date.now()}"/>${body}<p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">No signal: ${READY_OFFLINE_GENERATED_AT_PLACEHOLDER}</p>`,
-      {
-        status: 200,
-        headers: { "content-type": "text/html" },
-      },
+  /**
+   * What the server will answer each `/ready/<token>/offline` request, in the
+   * order the worker asks. The worker keeps the snapshot, never the page, so a
+   * live page here only has to exist; its snapshot is queued beside it.
+   */
+  const snapshotReplies: Array<() => Response | Promise<Response>> = [];
+  const snapshotAsked: string[] = [];
+  const router = async (input: unknown, init?: unknown) => {
+    const url = typeof input === "string" ? input : (input as Request).url;
+    if (!url.endsWith("/offline")) return fetchMock(input, init);
+    snapshotAsked.push(url);
+    const reply = snapshotReplies.shift();
+    return reply ? reply() : new Response("no reply queued", { status: 500 });
+  };
+  const livePage = (body: string) =>
+    new Response(`<p>${body}</p>`, { status: 200, headers: { "content-type": "text/html" } });
+  /** A live page whose snapshot says `body`. */
+  const html = (body: string) => {
+    snapshotReplies.push(() => Response.json(snapshotOf(body, { generatedAt: Date.now() })));
+    return livePage(body);
+  };
+  /** A live page the server then refuses a snapshot for (cancelled, called off, dead link). */
+  const terminalPage = (body = "This link no longer works") => {
+    snapshotReplies.push(() => new Response("Not found", { status: 404 }));
+    return livePage(body);
+  };
+  /** A live page whose snapshot cannot be fetched. */
+  const unsnapshotted = (body: string) => {
+    snapshotReplies.push(() => {
+      throw new TypeError("snapshot unavailable");
+    });
+    return livePage(body);
+  };
+  /** Holds the next snapshot until `release` is called with what the server then says. */
+  const heldSnapshot = () => {
+    const held: { release?: (reply: Response) => void } = {};
+    snapshotReplies.push(
+      () =>
+        new Promise<Response>((resolve) => {
+          held.release = resolve;
+        }),
     );
+    return held;
+  };
 
   /** Every other cache the worker opens here (the forget markers), kept apart from the copy. */
   const others = new Map<string, Response>();
@@ -128,6 +154,9 @@ describe("the /ready/ registration's fetch", () => {
   }
 
   beforeEach(() => {
+    vi.stubGlobal("fetch", router);
+    snapshotReplies.length = 0;
+    snapshotAsked.length = 0;
     kept.clear();
     others.clear();
     failMarkerWrites = false;
@@ -143,78 +172,37 @@ describe("the /ready/ registration's fetch", () => {
     scope.registration.scope = "https://dive.day/";
   });
 
-  it("publishes no saved document before its stylesheet is stored", async () => {
-    let finishSheet: ((response: Response) => void) | undefined;
-    fetchMock.mockImplementation(async (input) => {
-      if (String(input) === PATH)
-        return html('<link rel="stylesheet" href="/_next/static/chunks/ready.css"/>');
-      if (String(input) === "/_next/static/chunks/ready.css") {
-        return new Promise<Response>((resolve) => {
-          finishSheet = resolve;
-        });
-      }
-      throw new Error("unexpected asset");
-    });
+  it("publishes no saved document before the snapshot arrives", async () => {
+    fetchMock.mockResolvedValueOnce(livePage("live"));
+    const snapshot = heldSnapshot();
     const keep = message("KEEP_READY_PAGE", `https://dive.day${PATH}`);
     try {
-      await vi.waitFor(() => expect(finishSheet).toBeDefined());
+      await vi.waitFor(() => expect(snapshot.release).toBeDefined());
+      expect(snapshotAsked).toEqual([`${PATH}/offline`]);
       expect(kept.size).toBe(0);
       expect(keep.replies).toEqual([]);
     } finally {
-      finishSheet?.(new Response("body { color: black }"));
+      snapshot.release?.(Response.json(snapshotOf("held")));
       await keep.settle();
     }
     expect(kept.size).toBe(1);
     expect(keep.replies).toEqual([{ ok: true }]);
   });
 
-  it("stores same-origin stylesheet fonts before acknowledging the copy", async () => {
-    fetchMock.mockImplementation(async (input) => {
-      if (String(input) === PATH)
-        return html('<link rel="stylesheet" href="/_next/static/chunks/ready.css"/>');
-      if (String(input) === "/_next/static/chunks/ready.css")
-        return new Response(
-          "@font-face{src:url(../media/plex.woff2)}body{background:url(https://elsewhere.test/x.woff2),url(/private/x.woff2)}",
-        );
-      if (String(input) === "/_next/static/media/plex.woff2") return new Response("font bytes");
-      throw new Error("unexpected asset");
-    });
-    const keep = message("KEEP_READY_PAGE", `https://dive.day${PATH}`);
-    await keep.settle();
-    expect(others.has("/_next/static/media/plex.woff2")).toBe(true);
-    expect(fetchMock.mock.calls.map(([input]) => String(input))).toEqual([
-      PATH,
-      "/_next/static/chunks/ready.css",
-      "/_next/static/media/plex.woff2",
-    ]);
-    expect(keep.replies).toEqual([{ ok: true }]);
-    expect(kept.size).toBe(1);
-  });
-
-  it("refuses a new saved copy when a required stylesheet cannot be fetched", async () => {
-    fetchMock.mockImplementation(async (input) => {
-      if (String(input) === PATH)
-        return html('<link rel="stylesheet" href="/_next/static/chunks/ready.css"/>');
-      throw new TypeError("stylesheet unavailable");
-    });
+  it("refuses a new saved copy when the snapshot cannot be fetched", async () => {
+    fetchMock.mockResolvedValueOnce(unsnapshotted("live"));
     const keep = message("KEEP_READY_PAGE", `https://dive.day${PATH}`);
     await keep.settle();
     expect(kept.size).toBe(0);
     expect(keep.replies).toEqual([{ ok: false }]);
   });
 
-  it("preserves the previous complete copy when a required font fails", async () => {
+  it("preserves the previous complete copy when the new snapshot fails", async () => {
     fetchMock.mockResolvedValueOnce(html("previous complete page"));
     const previous = navigate(`https://dive.day${PATH}`);
     await previous.responded;
     await previous.settle();
-    fetchMock.mockImplementation(async (input) => {
-      if (String(input) === PATH)
-        return html('<link href="/_next/static/chunks/ready.css"/>new incomplete page');
-      if (String(input) === "/_next/static/chunks/ready.css")
-        return new Response("@font-face{src:url(../media/plex.woff2)}");
-      throw new TypeError("font unavailable");
-    });
+    fetchMock.mockResolvedValueOnce(unsnapshotted("new incomplete page"));
     const keep = message("KEEP_READY_PAGE", `https://dive.day${PATH}`);
     await keep.settle();
     expect(keep.replies).toEqual([{ ok: false }]);
@@ -222,80 +210,60 @@ describe("the /ready/ registration's fetch", () => {
     expect(await [...kept.values()][0].clone().text()).not.toContain("new incomplete page");
   });
 
-  it("stores stylesheet dependencies for navigation saves too", async () => {
-    fetchMock.mockImplementation(async (input) => {
-      if (typeof input !== "string") return html('<link href="/_next/static/chunks/ready.css"/>');
-      if (input === "/_next/static/chunks/ready.css")
-        return new Response("@font-face{src:url(../media/plex.woff2)}");
-      if (input === "/_next/static/media/plex.woff2") return new Response("font bytes");
-      throw new Error("unexpected asset");
-    });
+  it("keeps the snapshot for navigation saves too, and nothing of the page", async () => {
+    fetchMock.mockResolvedValueOnce(html("where to go"));
     const navigation = navigate(`https://dive.day${PATH}`);
-    await navigation.responded;
+    expect(await (await navigation.responded)?.text()).toContain("<p>where to go</p>");
     await navigation.settle();
-    expect(others.has("/_next/static/media/plex.woff2")).toBe(true);
     expect(kept.size).toBe(1);
+    expect(snapshotAsked).toEqual([`${PATH}/offline`]);
   });
 
-  it("publishes nothing if the copy is forgotten while a font is loading", async () => {
-    let finishFont: ((response: Response) => void) | undefined;
-    fetchMock.mockImplementation(async (input) => {
-      if (String(input) === PATH) return html('<link href="/_next/static/chunks/ready.css"/>');
-      if (String(input) === "/_next/static/chunks/ready.css")
-        return new Response("@font-face{src:url(../media/plex.woff2)}");
-      return new Promise<Response>((resolve) => {
-        finishFont = resolve;
-      });
-    });
+  it("publishes nothing if the copy is forgotten while the snapshot is loading", async () => {
+    fetchMock.mockResolvedValueOnce(livePage("live"));
+    const snapshot = heldSnapshot();
     const put = vi.spyOn(cacheStub, "put");
     const keep = message("KEEP_READY_PAGE", `https://dive.day${PATH}`);
     try {
-      await vi.waitFor(() => expect(finishFont).toBeDefined());
+      await vi.waitFor(() => expect(snapshot.release).toBeDefined());
       await message("FORGET_READY_PAGE", `https://dive.day${PATH}?cancelled=1`).settle();
-      finishFont?.(new Response("font bytes"));
+      snapshot.release?.(Response.json(snapshotOf("pre-cancel")));
       await keep.settle();
       expect(put).not.toHaveBeenCalled();
       expect(kept.size).toBe(0);
       expect(keep.replies).toEqual([{ ok: false }]);
     } finally {
-      finishFont?.(new Response("font bytes"));
+      snapshot.release?.(Response.json(snapshotOf("pre-cancel")));
       await keep.settle();
       put.mockRestore();
     }
   });
 
   it.each(["terminal", "expired"] as const)(
-    "does not resurrect a copy after a newer %s response",
+    "does not resurrect a copy after a newer %s snapshot",
     async (state) => {
-      let finishFont: ((response: Response) => void) | undefined;
-      fetchMock.mockImplementation(async (input) => {
-        if (String(input) === PATH) return html('<link href="/_next/static/chunks/ready.css"/>');
-        if (String(input) === "/_next/static/chunks/ready.css")
-          return new Response("@font-face{src:url(../media/plex.woff2)}");
-        return new Promise<Response>((resolve) => {
-          finishFont = resolve;
-        });
-      });
+      fetchMock.mockResolvedValueOnce(livePage("live"));
+      const older = heldSnapshot();
       const keep = message("KEEP_READY_PAGE", `https://dive.day${PATH}`);
       try {
-        await vi.waitFor(() => expect(finishFont).toBeDefined());
-        fetchMock.mockResolvedValueOnce(
-          new Response(
-            state === "expired"
-              ? `<meta name="${READY_KEEP_UNTIL_META}" content="1"/>`
-              : "This link no longer works",
-            { headers: { "content-type": "text/html" } },
-          ),
-        );
+        await vi.waitFor(() => expect(older.release).toBeDefined());
+        if (state === "terminal") {
+          fetchMock.mockResolvedValueOnce(terminalPage());
+        } else {
+          fetchMock.mockResolvedValueOnce(livePage("expired"));
+          snapshotReplies.push(() =>
+            Response.json(snapshotOf("expired", { generatedAt: Date.now(), keepUntil: 1 })),
+          );
+        }
         const terminal = message("KEEP_READY_PAGE", `https://dive.day${PATH}`);
         await terminal.settle();
         expect(terminal.replies).toEqual([{ ok: false }]);
-        finishFont?.(new Response("font bytes"));
+        older.release?.(Response.json(snapshotOf("older")));
         await keep.settle();
         expect(keep.replies).toEqual([{ ok: false }]);
         expect(kept.size).toBe(0);
       } finally {
-        finishFont?.(new Response("font bytes"));
+        older.release?.(Response.json(snapshotOf("older")));
         await keep.settle();
       }
     },
@@ -328,36 +296,25 @@ describe("the /ready/ registration's fetch", () => {
   });
 
   it.each([false, true])(
-    "does not replace a newer valid copy after old assets finish, different path=%s",
+    "does not replace a newer valid copy after an old snapshot finishes, different path=%s",
     async (differentPath) => {
-      let finishFont: ((response: Response) => void) | undefined;
-      let first = true;
       const newerPath = differentPath ? `/ready/${"Y".repeat(43)}` : PATH;
-      fetchMock.mockImplementation(async (input) => {
-        if (String(input) === PATH && first) {
-          first = false;
-          return html('<link href="/_next/static/chunks/ready.css"/>old meeting point');
-        }
-        if (String(input) === newerPath) return html("new meeting point");
-        if (String(input) === "/_next/static/chunks/ready.css")
-          return new Response("@font-face{src:url(../media/plex.woff2)}");
-        return new Promise<Response>((resolve) => {
-          finishFont = resolve;
-        });
-      });
+      fetchMock.mockResolvedValue(livePage("live"));
+      const olderSnapshot = heldSnapshot();
       const older = message("KEEP_READY_PAGE", `https://dive.day${PATH}`);
       try {
-        await vi.waitFor(() => expect(finishFont).toBeDefined());
+        await vi.waitFor(() => expect(olderSnapshot.release).toBeDefined());
+        snapshotReplies.push(() => Response.json(snapshotOf("new meeting point")));
         const newer = message("KEEP_READY_PAGE", `https://dive.day${newerPath}`);
         await newer.settle();
         expect(newer.replies).toEqual([{ ok: true }]);
-        finishFont?.(new Response("font bytes"));
+        olderSnapshot.release?.(Response.json(snapshotOf("old meeting point")));
         await older.settle();
         expect(older.replies).toEqual([{ ok: false }]);
         expect(await [...kept.values()][0].clone().text()).toContain("new meeting point");
         expect(await [...kept.values()][0].clone().text()).not.toContain("old meeting point");
       } finally {
-        finishFont?.(new Response("font bytes"));
+        olderSnapshot.release?.(Response.json(snapshotOf("old meeting point")));
         await older.settle();
       }
     },
@@ -379,11 +336,7 @@ describe("the /ready/ registration's fetch", () => {
       const newer = message("KEEP_READY_PAGE", `https://dive.day${newerPath}`);
       await newer.settle();
       expect(newer.replies).toEqual([{ ok: true }]);
-      answerOlder?.(
-        state === "valid"
-          ? html("old meeting point")
-          : new Response("This link no longer works", { headers: { "content-type": "text/html" } }),
-      );
+      answerOlder?.(state === "valid" ? html("old meeting point") : terminalPage());
       await older.settle();
       expect(older.replies).toEqual([{ ok: false }]);
       expect(await [...kept.values()][0].clone().text()).toContain("new meeting point");
@@ -424,7 +377,7 @@ describe("the /ready/ registration's fetch", () => {
     }
   });
 
-  it("keeps a complete copy when a newer asset fetch fails during an older put", async () => {
+  it("keeps a complete copy when a newer snapshot fetch fails during an older put", async () => {
     fetchMock.mockResolvedValueOnce(html("complete C"));
     await message("KEEP_READY_PAGE", `https://dive.day${PATH}`).settle();
     let finishPut: (() => void) | undefined;
@@ -443,16 +396,14 @@ describe("the /ready/ registration's fetch", () => {
     const older = message("KEEP_READY_PAGE", `https://dive.day${PATH}`);
     try {
       await vi.waitFor(() => expect(finishPut).toBeDefined());
-      fetchMock.mockImplementation(async (input) => {
-        if (String(input) === PATH)
-          return html('<link href="/_next/static/chunks/failed.css"/>incomplete B');
-        throw new TypeError("stylesheet unavailable");
-      });
+      fetchMock.mockResolvedValueOnce(unsnapshotted("incomplete B"));
       const newer = message("KEEP_READY_PAGE", `https://dive.day${PATH}`);
-      await newer.settle();
-      expect(newer.replies).toEqual([{ ok: false }]);
+      // The newer save labels the held copy stale through the same publication
+      // queue the older put holds, so it can only finish once that put does.
+      await vi.waitFor(() => expect(snapshotAsked).toHaveLength(3));
       finishPut?.();
-      await older.settle();
+      await Promise.all([older.settle(), newer.settle()]);
+      expect(newer.replies).toEqual([{ ok: false }]);
       expect(older.replies).toEqual([{ ok: false }]);
       fetchMock.mockRejectedValue(new TypeError("offline"));
       const offline = navigate(`https://dive.day${PATH}`);
@@ -493,81 +444,55 @@ describe("the /ready/ registration's fetch", () => {
   });
 
   it.each([false, true])(
-    "forgets an observed terminal page even after a newer same-path request, newer assets fail=%s",
-    async (assetsFail) => {
+    "forgets an observed terminal page even after a newer same-path request, newer snapshot fails=%s",
+    async (snapshotFails) => {
       fetchMock.mockResolvedValueOnce(html("complete P"));
       await message("KEEP_READY_PAGE", `https://dive.day${PATH}`).settle();
-      let answerOlder: ((response: Response) => void) | undefined;
-      fetchMock.mockImplementationOnce(
-        () =>
-          new Promise<Response>((resolve) => {
-            answerOlder = resolve;
-          }),
-      );
+      fetchMock.mockResolvedValueOnce(livePage("older"));
+      const olderSnapshot = heldSnapshot();
       const older = message("KEEP_READY_PAGE", `https://dive.day${PATH}`);
-      fetchMock.mockImplementation(async (input) => {
-        if (String(input) === PATH)
-          return assetsFail
-            ? html('<link href="/_next/static/chunks/failed.css"/>incomplete B')
-            : html("complete B");
-        throw new TypeError("stylesheet unavailable");
-      });
+      await vi.waitFor(() => expect(olderSnapshot.release).toBeDefined());
+      fetchMock.mockResolvedValueOnce(
+        snapshotFails ? unsnapshotted("incomplete B") : html("complete B"),
+      );
       const newer = message("KEEP_READY_PAGE", `https://dive.day${PATH}`);
       await newer.settle();
-      expect(newer.replies).toEqual([{ ok: !assetsFail }]);
-      answerOlder?.(
-        new Response("This link no longer works", { headers: { "content-type": "text/html" } }),
-      );
+      expect(newer.replies).toEqual([{ ok: !snapshotFails }]);
+      olderSnapshot.release?.(new Response("Not found", { status: 404 }));
       await older.settle();
       expect(older.replies).toEqual([{ ok: false }]);
       expect(kept.size).toBe(0);
     },
   );
 
-  it("dates terminal observation after its delayed body, invalidating a newer pending save", async () => {
+  it("dates terminal observation after its delayed answer, invalidating a newer pending save", async () => {
     fetchMock.mockResolvedValueOnce(html("complete P"));
     await message("KEEP_READY_PAGE", `https://dive.day${PATH}`).settle();
-    let finishBody: ((body: ArrayBuffer) => void) | undefined;
-    let finishFont: ((response: Response) => void) | undefined;
-    const terminalResponse = new Response("terminal", { headers: { "content-type": "text/html" } });
-    const bodyRead = vi.spyOn(terminalResponse, "arrayBuffer").mockImplementation(
-      () =>
-        new Promise<ArrayBuffer>((resolve) => {
-          finishBody = resolve;
-        }),
-    );
-    fetchMock.mockResolvedValueOnce(terminalResponse);
+    fetchMock.mockResolvedValueOnce(livePage("terminal"));
+    const terminalSnapshot = heldSnapshot();
     const terminal = message("KEEP_READY_PAGE", `https://dive.day${PATH}`);
     let newer: ReturnType<typeof message> | undefined;
+    const newerSnapshot = heldSnapshot();
     try {
-      await vi.waitFor(() => expect(finishBody).toBeDefined());
+      await vi.waitFor(() => expect(terminalSnapshot.release).toBeDefined());
       advanceClock();
-      fetchMock.mockImplementation(async (input) => {
-        if (String(input) === PATH)
-          return html('<link href="/_next/static/chunks/ready.css"/>new pending page');
-        if (String(input) === "/_next/static/chunks/ready.css")
-          return new Response("@font-face{src:url(../media/plex.woff2)}");
-        return new Promise<Response>((resolve) => {
-          finishFont = resolve;
-        });
-      });
+      fetchMock.mockResolvedValueOnce(livePage("new pending page"));
       newer = message("KEEP_READY_PAGE", `https://dive.day${PATH}`);
-      await vi.waitFor(() => expect(finishFont).toBeDefined());
+      await vi.waitFor(() => expect(newerSnapshot.release).toBeDefined());
       advanceClock();
-      finishBody?.(new TextEncoder().encode("This link no longer works").buffer);
+      terminalSnapshot.release?.(new Response("Not found", { status: 404 }));
       await terminal.settle();
       advanceClock();
-      finishFont?.(new Response("font bytes"));
+      newerSnapshot.release?.(Response.json(snapshotOf("new pending page")));
       await newer.settle();
       expect(terminal.replies).toEqual([{ ok: false }]);
       expect(newer.replies).toEqual([{ ok: false }]);
       expect(kept.size).toBe(0);
     } finally {
-      finishBody?.(new TextEncoder().encode("This link no longer works").buffer);
-      finishFont?.(new Response("font bytes"));
+      terminalSnapshot.release?.(new Response("Not found", { status: 404 }));
+      newerSnapshot.release?.(Response.json(snapshotOf("new pending page")));
       await terminal.settle();
       await newer?.settle();
-      bodyRead.mockRestore();
     }
   });
 
@@ -625,11 +550,7 @@ describe("the /ready/ registration's fetch", () => {
     expect(kept.size).toBe(1);
 
     failMarkerWrites = true;
-    fetchMock.mockResolvedValueOnce(
-      new Response("This booking is no longer active", {
-        headers: { "content-type": "text/html" },
-      }),
-    );
+    fetchMock.mockResolvedValueOnce(terminalPage("This booking is no longer active"));
     const terminal = navigate(`https://dive.day${PATH}`);
     expect(await (await terminal.responded)?.text()).toContain("This booking is no longer active");
     await terminal.settle();

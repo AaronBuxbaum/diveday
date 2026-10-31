@@ -82,7 +82,6 @@ export async function seedMinimumSeats(
     .insert(trips)
     .values({
       shopId,
-      diveSiteId: site.id,
       title: DEMO_MINIMUM_TRIP,
       description:
         "A long day offshore. We run this one with at least six divers aboard — if it hasn't filled two days out, we call it off and let everyone know.",
@@ -99,7 +98,7 @@ export async function seedMinimumSeats(
 
   await db.insert(tripScheduleDays).values({ tripId: trip.id, dayNumber: 1, startsAt, endsAt });
   await db.insert(tripDives).values([
-    { tripId: trip.id, diveNumber: 1, diveSiteId: trip.diveSiteId ?? null },
+    { tripId: trip.id, diveNumber: 1, diveSiteId: site.id },
     { tripId: trip.id, diveNumber: 2, diveSiteId: null },
     { tripId: trip.id, diveNumber: 3, diveSiteId: null },
   ]);

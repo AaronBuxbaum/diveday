@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { arrivalDockCallLine } from "@/components/TripArrivalCard";
+import { arrivalDockCallLine } from "@/components/arrival-card-facts";
 import { verifyBookingCapability } from "@/db/booking-capabilities";
 import { getBookingPickupTime } from "@/db/bookings";
 import { getDb } from "@/db/client";
@@ -7,6 +7,7 @@ import { getShopBySlug } from "@/db/shops";
 import { getTripWithBooked } from "@/db/trips";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
+import { arrivalCardDocument, escapeHtml } from "@/lib/arrival-card-document";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { publicAppUrl } from "@/lib/notifications/app-url";
 import { publicTripPath } from "@/lib/public-routes";
@@ -14,26 +15,6 @@ import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 import { type ShopAddressParts, shopAddressLines } from "@/lib/shop-address";
 import { uuidParam } from "@/lib/uuid";
-
-function escapeHtml(value: string): string {
-  return value.replace(
-    /[&<>"']/g,
-    (character) =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character] ??
-      character,
-  );
-}
-
-function field(label: string, value: string | null | undefined): string {
-  const clean = value?.trim();
-  return clean
-    ? '<section><p class="label">' +
-        escapeHtml(label) +
-        "</p><p>" +
-        escapeHtml(clean) +
-        "</p></section>"
-    : "";
-}
 
 /**
  * A deliberately boring HTML download: it is a saved post-booking place card,
@@ -125,41 +106,25 @@ export async function GET(
     ? null
     : arrivalDockCallLine(t, trip.startsAt, shop.dockCallMinutes, locale, shop.timezone);
   const filename = `${shopSlug.replace(/[^a-z0-9_-]/gi, "-")}-arrival-card.html`;
-  const html = [
-    "<!doctype html>",
-    '<html lang="',
-    escapeHtml(locale),
-    '"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">',
-    "<title>",
-    escapeHtml(t("trip.arrivalHeading")),
-    " · ",
-    escapeHtml(trip.title),
-    "</title>",
-    "<style>body{font-family:system-ui,sans-serif;max-width:38rem;margin:0 auto;padding:2rem;line-height:1.5;color:currentColor}h1{line-height:1.15}p{margin:.45rem 0}.label{font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;opacity:.68}section{border-top:1px solid currentColor;margin-top:1.5rem;padding-top:1rem}a{color:inherit;font-weight:600}</style></head>",
-    '<body><p class="label">',
-    escapeHtml(shop.name),
-    "</p><h1>",
-    escapeHtml(trip.title),
-    "</h1><p>",
-    escapeHtml(formatShortDate(trip.startsAt, locale, shop.timezone)),
-    " · ",
-    escapeHtml(formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, shop.timezone)),
-    "</p>",
-    dockCallLine ? `<p><strong>${escapeHtml(dockCallLine)}</strong></p>` : "",
-    field(t("trip.arrivalAtShop"), label),
-    field(t("trip.arrivalAddress"), addressText),
-    field(t("trip.arrivalLandmark"), trip.arrivalLandmark),
-    field(t("trip.arrivalLookFor"), trip.arrivalLookFor),
-    field(t("trip.arrivalParking"), trip.arrivalParkingNote),
-    field(t("trip.arrivalTransit"), trip.arrivalTransitNote),
-    field(t("trip.arrivalFirstInteraction"), trip.arrivalFirstInteraction),
-    field(t("trip.arrivalSupport"), support),
-    '<p><a href="',
-    escapeHtml(tripUrl),
-    '">',
-    escapeHtml(t("trip.openPublicTrip")),
-    "</a></p></body></html>",
-  ].join("");
+  const html = arrivalCardDocument({
+    locale,
+    title: `${t("trip.arrivalHeading")} · ${trip.title}`,
+    shopName: shop.name,
+    tripTitle: trip.title,
+    when: `${formatShortDate(trip.startsAt, locale, shop.timezone)} · ${formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, shop.timezone)}`,
+    dockCallLine,
+    fields: [
+      { label: t("trip.arrivalAtShop"), value: label },
+      { label: t("trip.arrivalAddress"), value: addressText },
+      { label: t("trip.arrivalLandmark"), value: trip.arrivalLandmark },
+      { label: t("trip.arrivalLookFor"), value: trip.arrivalLookFor },
+      { label: t("trip.arrivalParking"), value: trip.arrivalParkingNote },
+      { label: t("trip.arrivalTransit"), value: trip.arrivalTransitNote },
+      { label: t("trip.arrivalFirstInteraction"), value: trip.arrivalFirstInteraction },
+      { label: t("trip.arrivalSupport"), value: support },
+    ],
+    footerHtml: `<p><a href="${escapeHtml(tripUrl)}">${escapeHtml(t("trip.openPublicTrip"))}</a></p>`,
+  });
 
   return new NextResponse(html, {
     headers: {

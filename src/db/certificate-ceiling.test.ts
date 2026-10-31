@@ -486,7 +486,7 @@ describe("every reader counts seats against the certificate", () => {
       endsAt: at("2030-06-01T16:00:00.000Z"),
       capacity: STATED,
       boatId: boat.id,
-      diveSiteId: site.id,
+      dives: [{ diveSiteId: site.id }],
     });
     if (!trip) throw new Error("trip not created");
     const departures = await listUpcomingDeparturesForSite(db, shop.id, site.id, SOON);

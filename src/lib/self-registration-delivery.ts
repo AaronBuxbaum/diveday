@@ -1,5 +1,6 @@
 import { nowMs } from "./clock";
-import { canReceiveText } from "./phone-line-type";
+import { toE164 } from "./phone";
+import { canReceiveText, homeNumberingArea } from "./phone-line-type";
 import {
   checkRateLimit,
   RATE_LIMITS,
@@ -7,7 +8,48 @@ import {
   type RateLimitStore,
   rateLimitKey,
 } from "./rate-limit";
-import { type AnonymousTextRefusal, anonymousTextRecipient } from "./self-registration";
+
+/**
+ * Why an anonymous registrant's release will not go out by text, or null when
+ * it may.
+ */
+export type AnonymousTextRefusal =
+  | "demo_shop"
+  | "unreadable_number"
+  | "foreign_number"
+  /** A `+1` number outside the shop's own NANP country, or in none (issue #2151). */
+  | "foreign_area_code";
+
+/**
+ * **The one number the counter QR will text, or why not** (issue #2092,
+ * security review 2026-10-06).
+ *
+ * The QR is anonymous, and a text costs the shop money per message, more for a
+ * premium international route. Without a gate the form is an SMS-pumping
+ * endpoint: type any number, and the shop's sender texts it. So the anonymous
+ * path texts only a number in the shop's **own** country (its calling code),
+ * read the way the row stores it (`toE164`), and never from a demo shop. A
+ * refused number is still stored; the shop can send the release itself.
+ *
+ * For a `+1` shop the calling code is not enough: it is shared by the US,
+ * Canada and the Caribbean, where premium routes live. So the area code must
+ * be one of the shop's own country's (`homeNumberingArea`, issue #2151).
+ * Staff-initiated texts are not gated here: a person chose that recipient.
+ */
+export function anonymousTextRecipient(
+  phone: string | null | undefined,
+  shop: { addressCountry: string | null; isDemo: boolean },
+):
+  | { recipient: string; refused?: undefined }
+  | { recipient?: undefined; refused: AnonymousTextRefusal } {
+  if (shop.isDemo) return { refused: "demo_shop" };
+  const e164 = toE164(phone, shop.addressCountry);
+  if (!e164) return { refused: "unreadable_number" };
+  const area = homeNumberingArea(e164, shop.addressCountry);
+  if (area === "foreign_code") return { refused: "foreign_number" };
+  if (area === "foreign_area_code") return { refused: "foreign_area_code" };
+  return { recipient: e164 };
+}
 
 /** Whether a counter-QR registration's release goes out, or the code for why not. */
 export type SelfRegistrationDelivery =

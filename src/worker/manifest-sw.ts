@@ -20,15 +20,16 @@ import {
   offlineManifestViewerPersonId,
   pendingOfflineEventCount,
 } from "@/lib/offline-manifests";
+import { cacheOfflineShell as cacheShell } from "./offline-shell-cache";
 import {
   beginReadyPageRequest,
   forgetReadyPage,
   isReadyScope,
   observeReadyPageClock,
+  purgeLegacyReadyCopies,
   type ReadyPageRequest,
   readyPageFallback,
   readyPagePath,
-  readyPageStylesheets,
   saveReadyPage,
 } from "./ready-page-cache";
 
@@ -56,7 +57,18 @@ import {
  */
 declare const self: ServiceWorkerGlobalScope;
 
-const CACHE_NAME = `diveday-offline-manifest-shell-${OFFLINE_MANIFEST_SHELL_VERSION}`;
+/**
+ * The production build this worker was generated from (`{ id, assets }`),
+ * injected by `scripts/build-service-worker.mjs` from the build's route
+ * manifest. `null` in dev, where chunk names are mutable and only the shell
+ * document is precached.
+ */
+declare const __OFFLINE_SHELL_BUILD__: { id: string; assets: readonly string[] } | null | undefined;
+const SHELL_BUILD = typeof __OFFLINE_SHELL_BUILD__ === "undefined" ? null : __OFFLINE_SHELL_BUILD__;
+
+const SHELL_CACHE_PREFIX = "diveday-offline-manifest-shell-";
+/** Keyed by build too: one deploy's shell and chunks live and die together, so caches never pile up. */
+const CACHE_NAME = `${SHELL_CACHE_PREFIX}${OFFLINE_MANIFEST_SHELL_VERSION}${SHELL_BUILD ? `-${SHELL_BUILD.id}` : ""}`;
 const SHELL_VERSION = OFFLINE_MANIFEST_SHELL_VERSION;
 const OFFLINE_SHELL = "/offline-manifest";
 
@@ -172,86 +184,14 @@ async function offlineShellRedirect(
   return Response.redirect(redirectTarget.href, 302);
 }
 
-/**
- * Chunks the bundler's runtime loads *lazily*, which the shell HTML therefore
- * never names in a `src`/`href`. They are listed inside the chunks the HTML
- * does name, so one extra pass over those bodies finds them.
- *
- * Without this the offline shell could reload into the error boundary —
- * "Something went sideways" instead of the roll call — because hydration
- * asked for a chunk nothing had cached and the network was gone. It only
- * *sometimes* happened, since the browser's own HTTP cache often still had
- * the file; the flake in e2e/manifest.spec.ts's storage-eviction test is that
- * coin toss, and on a boat it is the same coin toss with a manifest on it.
- *
- * Deliberately **one level, not transitive closure**: at the time of writing
- * that is 3 extra chunks (~340 KB on top of ~1.8 MB) and it covers the case,
- * whereas following references recursively walks toward the whole app's chunk
- * graph on a crew member's phone. And deliberately **best-effort**, unlike the
- * HTML-referenced set below: these paths come from a regex over minified
- * JavaScript, so a false positive is possible and must not be able to fail a
- * shell save that is otherwise complete.
- */
-/** A path and the response fetched for it, the pair the shell cache works in. */
-type AssetEntry = [asset: string, assetResponse: Response];
-
-async function lazyChunkEntries(assetEntries: AssetEntry[]): Promise<AssetEntry[]> {
-  const referenced = new Set<string>();
-  await Promise.all(
-    assetEntries.map(async ([asset, assetResponse]) => {
-      if (!asset.endsWith(".js")) return;
-      const body = await assetResponse.clone().text();
-      for (const match of body.matchAll(/static\/chunks\/[A-Za-z0-9_\-.]+\.(?:js|css)/g)) {
-        referenced.add(`/_next/${match[0]}`);
-      }
-    }),
-  );
-  for (const [asset] of assetEntries) referenced.delete(asset);
-  const found = await Promise.all(
-    [...referenced].map(async (asset) => {
-      try {
-        const assetResponse = await fetch(asset);
-        return assetResponse.ok ? ([asset, assetResponse] as AssetEntry) : null;
-      } catch {
-        return null;
-      }
-    }),
-  );
-  return found.filter((entry) => entry !== null);
-}
-
-async function cacheOfflineShell() {
-  const response = await fetch(OFFLINE_SHELL, { credentials: "same-origin" });
-  if (!response.ok) throw new Error("Offline manifest shell could not be loaded");
-  const html = await response.clone().text();
-  const assetPaths = new Set<string>();
-  for (const match of html.matchAll(/(?:src|href)="([^"#?]*\/_next\/static\/[^"?#]+)"/g)) {
-    assetPaths.add(new URL(match[1], self.location.origin).pathname);
-  }
-  // Fetch the shell and every asset it references before writing anything.
-  // This now runs automatically (not just on an explicit "Save for offline"
-  // click), so a mid-fetch failure — a deploy landing between requests, a
-  // flaky connection — must never partially overwrite an already-working
-  // offline copy with new HTML pointing at assets that were never cached.
-  const assetEntries: AssetEntry[] = await Promise.all(
-    [...assetPaths].map(async (asset): Promise<AssetEntry> => {
-      const assetResponse = await fetch(asset);
-      if (!assetResponse.ok) {
-        throw new Error(`Offline manifest asset ${asset} could not be loaded`);
-      }
-      return [asset, assetResponse];
-    }),
-  );
-  assetEntries.push(...(await lazyChunkEntries(assetEntries)));
-  const cache = await caches.open(CACHE_NAME);
-  // Assets before the shell that references them: a cache write can still
-  // fail on its own (storage quota, eviction) even after every fetch
-  // succeeded. Writing leaves last means that failure aborts before the
-  // shell HTML is replaced, so the previous — still fully self-consistent —
-  // shell and asset set keep serving instead of a new document pointing at
-  // bundles that were never actually written.
-  await Promise.all(assetEntries.map(([asset, assetResponse]) => cache.put(asset, assetResponse)));
-  await cache.put(OFFLINE_SHELL, response);
+function cacheOfflineShell(): Promise<void> {
+  return cacheShell({
+    fetch: (input, init) => fetch(input, init),
+    caches,
+    cacheName: CACHE_NAME,
+    shellPath: OFFLINE_SHELL,
+    build: SHELL_BUILD,
+  });
 }
 
 /**
@@ -262,36 +202,6 @@ async function cacheOfflineShell() {
  */
 function inReadyScope(): boolean {
   return isReadyScope(self.registration?.scope);
-}
-
-/** Keep the page's own styles and their local fonts before publishing its offline document. */
-async function keepReadyAssets(html: string): Promise<void> {
-  const cache = await caches.open(CACHE_NAME);
-  const keepAsset = async (path: string): Promise<Response> => {
-    const cached = await cache.match(path);
-    if (cached) return cached;
-    const response = await fetch(path, { credentials: "same-origin", redirect: "error" });
-    if (!response.ok) throw new Error("Readiness asset could not be loaded");
-    await cache.put(path, response.clone());
-    return response;
-  };
-  await Promise.all(
-    readyPageStylesheets(html, self.location.origin).map(async (path) => {
-      const sheet = await keepAsset(path);
-      const css = await sheet.text();
-      const fonts = new Set<string>();
-      for (const match of css.matchAll(/url\(\s*["']?([^"')\s]+)["']?\s*\)/g)) {
-        const url = new URL(match[1], new URL(path, self.location.origin));
-        if (
-          url.origin === self.location.origin &&
-          url.pathname.startsWith("/_next/static/") &&
-          /\.(?:woff2?|ttf|otf)$/.test(url.pathname)
-        )
-          fonts.add(url.pathname + url.search);
-      }
-      await Promise.all([...fonts].map(keepAsset));
-    }),
-  );
 }
 
 let readyRequestGeneration = 0;
@@ -307,7 +217,6 @@ function keepReadyPage(
     response,
     nowMs(),
     request,
-    keepReadyAssets,
     () => generation === readyRequestGeneration,
   );
 }
@@ -322,14 +231,13 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(
     Promise.all([
       self.clients.claim(),
+      purgeLegacyReadyCopies(caches),
       caches
         .keys()
         .then((keys) =>
           Promise.all(
             keys
-              .filter(
-                (key) => key.startsWith("diveday-offline-manifest-shell-") && key !== CACHE_NAME,
-              )
+              .filter((key) => key.startsWith(SHELL_CACHE_PREFIX) && key !== CACHE_NAME)
               .map((key) => caches.delete(key)),
           ),
         ),

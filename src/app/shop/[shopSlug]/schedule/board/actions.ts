@@ -532,7 +532,8 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
     description: description || undefined,
     capacity,
     plannedDives,
-    dives: plannedDiveCards,
+    // Dive one's site from the quick row's select when no per-dive card was filled.
+    dives: plannedDiveCards ?? (diveSiteId ? [{ diveSiteId }] : undefined),
     priceCents: details.patch.priceCents,
     depositCents: details.patch.depositCents,
     cancellationWindowHours: details.patch.cancellationWindowHours,
@@ -592,7 +593,6 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
 
   const created = await createTrip(db, {
     ...common,
-    diveSiteId: plannedDiveCards ? undefined : diveSiteId,
     startsAt,
     endsAt,
     scheduleDays,
@@ -695,7 +695,7 @@ async function addPatternDeparture(
     diveMode: details.patch.diveMode,
     boatId: details.patch.boatId,
     lensId: also.lensId,
-    diveSiteId: also.diveSiteId ?? undefined,
+    dives: also.diveSiteId ? [{ diveSiteId: also.diveSiteId }] : undefined,
     startsAt: details.patch.startsAt,
     endsAt: details.patch.endsAt,
     scheduleDays: details.patch.scheduleDays,

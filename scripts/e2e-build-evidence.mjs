@@ -17,6 +17,8 @@ export function buildFingerprint(root = process.cwd()) {
       const relative = path.posix.join(dir, entry.name);
       if (TEST_INPUT.test(relative)) continue;
       if (relative.endsWith(".tsbuildinfo")) continue;
+      // Written from the finished build by `build:sw:assets`, so it is an output, not an input.
+      if (relative === "public/manifest-sw.js") continue;
       if (entry.isDirectory()) walk(relative);
       else if (entry.isFile() || entry.isSymbolicLink()) files.push(relative);
     }

@@ -1,7 +1,10 @@
+import type { PersonalGearCode } from "@/lib/diver-planning";
 import type { BuddyAlert } from "@/lib/manifests";
 import type { PartyLeftReason } from "@/lib/party-teams";
 import { buddyAlertText, partyLeftReasonText } from "./buddy-labels";
 import { codeRows, everyCodeOf, type LabelMapCase } from "./label-map-test-fixtures";
+import { diverTranslator } from "./messages";
+import { PERSONAL_GEAR_KEYS } from "./packing-labels";
 import { staffTranslator } from "./staff-messages";
 
 const BUDDY_ALERTS = everyCodeOf<BuddyAlert>({
@@ -22,6 +25,14 @@ const PARTY_LEFT_REASONS = everyCodeOf<PartyLeftReason>({
   too_large: true,
 });
 
+const PERSONAL_GEAR_CODES = everyCodeOf<PersonalGearCode>({
+  mask: true,
+  fins: true,
+  snorkel: true,
+  boots: true,
+});
+
+/** The buddy maps, and the one packing map that rides with them (one fixture file keeps the table file short). */
 export const BUDDY_LABEL_MAP_CASES: readonly LabelMapCase[] = [
   {
     module: "buddy-labels.ts",
@@ -40,6 +51,13 @@ export const BUDDY_LABEL_MAP_CASES: readonly LabelMapCase[] = [
     map: "PARTY_LEFT_KEYS",
     rows: codeRows(PARTY_LEFT_REASONS, (locale, reason) =>
       partyLeftReasonText(staffTranslator(locale), reason),
+    ),
+  },
+  {
+    module: "packing-labels.ts",
+    map: "PERSONAL_GEAR_KEYS",
+    rows: codeRows(PERSONAL_GEAR_CODES, (locale, code) =>
+      diverTranslator(locale)(PERSONAL_GEAR_KEYS[code]),
     ),
   },
 ];

@@ -61,7 +61,7 @@ async function departure(
     shopId,
     title: input.title,
     ...(input.lensId === undefined ? {} : { lensId: input.lensId }),
-    ...(input.diveSiteId === undefined ? {} : { diveSiteId: input.diveSiteId }),
+    ...(input.diveSiteId === undefined ? {} : { dives: [{ diveSiteId: input.diveSiteId }] }),
     startsAt: input.startsAt,
     endsAt: new Date(input.startsAt.getTime() + 4 * 60 * 60 * 1000),
     capacity: input.capacity ?? 6,
@@ -406,8 +406,7 @@ describe("nextDiveForBooking — the shop's own word for a kind of day (#1408)",
     if (!lens) throw new Error("lens not created");
 
     // The site match is sooner, so only precedence can put the lens first.
-    const sited = await departure(db, shop.id, { title: "French Reef again", startsAt: AT(24) });
-    await db.update(trips).set({ diveSiteId: null }).where(eq(trips.id, sited.id));
+    await departure(db, shop.id, { title: "French Reef again", startsAt: AT(24) });
     const lensed = await departure(db, shop.id, {
       title: "Another easy day",
       startsAt: AT(48),
