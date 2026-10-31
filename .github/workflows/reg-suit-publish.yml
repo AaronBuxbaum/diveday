@@ -74,6 +74,7 @@ jobs:
         run: node scripts/reg-suit-keys.mjs --github-env
         env:
           GITHUB_EVENT_NAME: ${{ github.event_name }}
+          EVENT_SHA: ${{ github.sha }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_BASE_REF: ${{ github.event.pull_request.base.ref }}

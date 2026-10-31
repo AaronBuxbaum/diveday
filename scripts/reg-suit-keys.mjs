@@ -86,14 +86,24 @@ export function resolveRegSuitKeys({ env = process.env, git }) {
   const event = env.GITHUB_EVENT_NAME || "local";
   const defaultBranch = env.DEFAULT_BRANCH || "main";
   const trustedPublisher = event === "pull_request" && env.REG_SUIT_TRUSTED_BASE_CODE === "true";
+  const trustedEvent =
+    (event === "push" || event === "workflow_dispatch") &&
+    env.REG_SUIT_TRUSTED_BASE_CODE === "true";
   const declaredHead = env.PR_HEAD_SHA;
   if (trustedPublisher && !COMMIT_SHA.test(declaredHead ?? "")) {
     throw new Error("reg-suit-keys: trusted publisher requires the event's full PR head sha.");
   }
-  const historyRef = trustedPublisher ? declaredHead : "HEAD";
-  const actualKey = trustedPublisher
-    ? attempt(git, ["rev-parse", `${declaredHead}^{commit}`])
-    : attempt(git, ["rev-parse", "HEAD"]);
+  if (trustedEvent && !COMMIT_SHA.test(env.EVENT_SHA ?? "")) {
+    throw new Error("reg-suit-keys: trusted publisher requires the event's full commit sha.");
+  }
+  const historyRef = trustedPublisher ? declaredHead : trustedEvent ? env.EVENT_SHA : "HEAD";
+  const actualKey =
+    trustedPublisher || trustedEvent
+      ? attempt(git, ["rev-parse", `${historyRef}^{commit}`])
+      : attempt(git, ["rev-parse", "HEAD"]);
+  if (trustedEvent && !actualKey) {
+    throw new Error("reg-suit-keys: trusted publisher cannot resolve the event commit.");
+  }
 
   // A tripwire, not a fallback. The original publisher checked out
   // `pull_request.head.sha` deliberately because the merge commit is ephemeral
@@ -203,15 +213,14 @@ function writeLines(file, lines) {
 }
 
 function main(argv) {
-  if (
-    process.env.GITHUB_EVENT_NAME === "pull_request" &&
-    process.env.REG_SUIT_TRUSTED_BASE_CODE === "true"
-  ) {
-    const head = process.env.PR_HEAD_SHA ?? "";
-    if (!COMMIT_SHA.test(head)) {
-      throw new Error("reg-suit-keys: trusted publisher requires the event's full PR head sha.");
+  const event = process.env.GITHUB_EVENT_NAME;
+  const trusted = process.env.REG_SUIT_TRUSTED_BASE_CODE === "true";
+  const eventCommit = event === "pull_request" ? process.env.PR_HEAD_SHA : process.env.EVENT_SHA;
+  if (trusted && (event === "pull_request" || event === "push" || event === "workflow_dispatch")) {
+    if (!COMMIT_SHA.test(eventCommit ?? "")) {
+      throw new Error("reg-suit-keys: trusted publisher requires the event's full commit sha.");
     }
-    readBounded("git", ["fetch", "--no-tags", "origin", head], {
+    readBounded("git", ["fetch", "--no-tags", "origin", eventCommit], {
       encoding: "utf8",
       timeoutMs: SUBPROCESS_TIMEOUTS.gitFetch,
       stdio: ["ignore", "pipe", "pipe"],
