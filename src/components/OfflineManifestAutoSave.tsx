@@ -47,7 +47,7 @@ export function OfflineManifestAutoSave() {
         });
         if (!response.ok) return;
         // Parsed, never cast: an unchecked body could yield an undefined slug
-        // that matches every saved record in the device-wide purge.
+        // that matches no saved record, so the device-wide purge would delete every one.
         const body: unknown = await response.json();
         // Server-verified viewer's shop, never client-supplied, so a device
         // that switched shops drops the previous shop's rosters on this run.

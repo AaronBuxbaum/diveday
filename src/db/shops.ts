@@ -636,19 +636,6 @@ export async function saveShopRentals(
 }
 
 /**
- * Sets how the shop fills nitrox (issue 3004), which decides where Rent out's
- * O2-clean warning starts (`o2CleanWarnsForFill`). Advisory only.
- */
-export async function setShopNitroxFillMethod(db: AppDb, shopId: string, method: NitroxFillMethod) {
-  const [shop] = await db
-    .update(shops)
-    .set({ nitroxFillMethod: method })
-    .where(eq(shops.id, shopId))
-    .returning();
-  return shop ?? null;
-}
-
-/**
  * Sets the front-desk address published on the shop's public pages. Empty
  * strings clear the field rather than publishing a blank contact, so a shop can
  * take itself back off the public page by emptying the box.
