@@ -18,12 +18,17 @@ const t = staffTranslator("en-US");
 const since = CARD_PROCESSING_SINCE.getTime();
 const now = new Date(since + 60 * DAY_MS);
 
-function card(id: string, fullName: string, issuedAt: Date): CardToProcess {
+function card(
+  id: string,
+  fullName: string,
+  issuedAt: Date,
+  agency: CardToProcess["agency"] = "padi",
+): CardToProcess {
   return {
     kind: "level",
     what: { kind: "level", level: "open_water" },
     certificationId: id,
-    agency: "padi",
+    agency,
     issuedAt,
     processedAt: null,
     personId: `p-${id}`,
@@ -33,6 +38,33 @@ function card(id: string, fullName: string, issuedAt: Date): CardToProcess {
 }
 
 describe("CardsToProcess", () => {
+  it("groups interleaved agencies in first-seen order and preserves each card order", () => {
+    const padiFirst = card("padi-1", "Ana PADI", new Date(since + 55 * DAY_MS));
+    const ssi = card("ssi-1", "Ben SSI", new Date(since + 56 * DAY_MS), "ssi");
+    const padiSecond = card("padi-2", "Cora PADI", new Date(since + 57 * DAY_MS));
+    render(
+      <CardsToProcess
+        cards={[padiFirst, ssi, padiSecond]}
+        markProcessed={() => {}}
+        now={now}
+        locale="en-US"
+        timeZone="UTC"
+        t={t}
+      />,
+    );
+
+    const padiLine = screen.getByText("2 cards to process with PADI");
+    const ssiLine = screen.getByText("1 card to process with SSI");
+    expect(
+      padiLine.compareDocumentPosition(ssiLine) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    const padiNames = within(padiLine.parentElement as HTMLElement)
+      .getAllByRole("listitem")
+      .map((item) => item.querySelector(".font-medium")?.textContent);
+    expect(padiNames).toEqual(["Ana PADI", "Cora PADI"]);
+    expect(within(ssiLine.parentElement as HTMLElement).getByText("Ben SSI")).toBeTruthy();
+  });
+
   it("keeps cards from before the stamp in one collapsed line, none of them late", () => {
     const cards = [
       card("old-1", "Ana Old", new Date(since - 400 * DAY_MS)),
