@@ -1,7 +1,6 @@
 import { withSentryConfig } from "@sentry/nextjs/config";
 import type { NextConfig } from "next";
 import { applyDevOrigin } from "./scripts/dev-origin.mjs";
-import { LEGACY_PUBLIC_SHOP_REDIRECTS } from "./src/lib/public-routes";
 import { securityHeaderRules } from "./src/lib/security-headers";
 import { managedImageRemotePatterns } from "./src/lib/storage/blob-host";
 
@@ -22,29 +21,6 @@ const nextConfig: NextConfig = {
   // — see src/lib/security-headers.ts for the header set and rationale.
   async headers() {
     return securityHeaderRules();
-  },
-  /**
-   * The diver-facing shop surfaces moved out of the staff `/shop` namespace
-   * into `/s/<shopSlug>` (ADR 20260803-public-shop-namespace). Every old URL
-   * 308s to its new home — a permanent redirect, because a QR code printed on
-   * a shop counter, a booking link in a diver's inbox, and an `?embed=1`
-   * iframe already pasted into a shop's own website are all out of our reach
-   * forever. Next carries the query string through, so `?embed=1`, `?month=`,
-   * and `?booking=<token>` all survive the hop, and these run *ahead of* the
-   * proxy (docs: app/api-reference/file-conventions/proxy — headers, then
-   * redirects, then proxy), so the auth layer never sees the old paths at all.
-   */
-  async redirects() {
-    return [
-      ...LEGACY_PUBLIC_SHOP_REDIRECTS.map((rule) => ({ ...rule, permanent: true })),
-      // The counter's walk-in page folded into the departure door (#2816); a
-      // bookmark or a printed link lands on the same door, in walk-in mode.
-      {
-        source: "/shop/:shopSlug/trips/:id/walk-in",
-        destination: "/shop/:shopSlug/divers/new?surface=departure&tripId=:id&walkIn=true",
-        permanent: true,
-      },
-    ];
   },
   // PGlite ships WASM assets that must load from node_modules at runtime,
   // not be inlined into the server bundle (ADR-0005). node-postgres (pg)

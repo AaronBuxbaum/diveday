@@ -5,10 +5,8 @@ import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
  * The Backups tab of Your data (docs ADR 20260806-one-data-out-surface, tabs
  * since issue #2813): scheduled delivery lives at `/settings/export/backups`,
  * beside the download it schedules and behind the identical gate.
- * `/settings/backup` is a 308 that this spec also pins.
  */
 const BACKUP_SETTINGS = "/shop/blue-mantis/settings/export/backups";
-const OLD_BACKUP_SETTINGS = "/shop/blue-mantis/settings/backup";
 const backupSettingsFor = (shopSlug: string) => `/shop/${shopSlug}/settings/export/backups`;
 
 /**
@@ -59,32 +57,6 @@ async function saveDestination(page: Page, shopSlug: string) {
 
 test.describe("backup settings", () => {
   signedInAsOwner();
-
-  test("the old /settings/backup URL still lands, query and section carried", async ({ page }) => {
-    // A real 308 at the request level, not a 200 whose hop resolves inside
-    // the streamed payload — a Route Handler, because under `cacheComponents`
-    // a page-based `permanentRedirect()` answers 200 and only a browser
-    // follows it; a bookmark manager, a crawler, and a `curl` do not (ADR
-    // 20260806-one-trip-create-form).
-    const direct = await page.request.get(`${OLD_BACKUP_SETTINGS}?page=2`, {
-      maxRedirects: 0,
-    });
-    expect(direct.status()).toBe(308);
-    expect(direct.headers().location).toBe("/shop/blue-mantis/settings/export/backups?page=2");
-
-    // Removing a surface never removes the destination (ADR
-    // 20260806-one-data-out-surface). A bookmark deep into the delivery
-    // history keeps its page, rather than silently restarting at page 1 —
-    // the quiet kind of "it still works" that makes staff re-hunt.
-    await page.goto(`${OLD_BACKUP_SETTINGS}?page=2`);
-
-    await expect(page).toHaveURL("/shop/blue-mantis/settings/export/backups?page=2");
-    await expect(page.getByRole("heading", { name: "Delivery history" })).toBeVisible();
-
-    // And the bare URL, which is what the runbook and every older link say.
-    await page.goto(OLD_BACKUP_SETTINGS);
-    await expect(page).toHaveURL("/shop/blue-mantis/settings/export/backups");
-  });
 
   test("one place: the bundle you would download, and the copy that keeps happening", async ({
     page,
@@ -236,12 +208,6 @@ test.describe("backup settings authorization", () => {
     // those are reachable without the page (settings/export/actions.ts).
     await expect(page.getByText("Data export is limited to owners and managers.")).toBeVisible();
     await expect(page.getByRole("heading", { name: "Delivery history" })).toHaveCount(0);
-  });
-
-  test("and the old URL refuses too, rather than redirecting into a hole", async ({ page }) => {
-    await page.goto(OLD_BACKUP_SETTINGS);
-
-    await expect(page.getByText("Data export is limited to owners and managers.")).toBeVisible();
   });
 
   test("and is not offered the door from the settings index", async ({ page }) => {

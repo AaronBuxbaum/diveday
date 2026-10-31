@@ -121,27 +121,6 @@ test("a departure's title is said once — the station owns it, no row repeats i
   await expect(first.getByText(title.trim(), { exact: true })).toHaveCount(1);
 });
 
-test("the old /blockers URL lands on the home in a single hop", async ({ request }) => {
-  // A real 308 at the request level, not a 200 whose hop resolves inside the
-  // streamed payload — a Route Handler, because under `cacheComponents` a
-  // page-based `permanentRedirect()` answers 200 and only a browser follows
-  // it; a bookmark manager, a crawler, and a `curl` do not (ADR
-  // 20260806-one-trip-create-form).
-  const direct = await request.get("/shop/blue-mantis/blockers?page=2", { maxRedirects: 0 });
-  expect(direct.status()).toBe(308);
-  // **One hop.** It used to land on `?view=departures`, which is itself now a
-  // 308 back here — leaving it would have made every old bookmark a chain.
-  expect(direct.headers().location).toBe("/shop/blue-mantis");
-});
-
-test("a request still carrying ?view= is redirected to the bare home", async ({ request }) => {
-  for (const query of ["?view=departures", "?view=urgency", "?view=departures&page=3"]) {
-    const response = await request.get(`/shop/blue-mantis${query}`, { maxRedirects: 0 });
-    expect(response.status(), query).toBe(308);
-    expect(response.headers().location, query).toMatch(/\/shop\/blue-mantis$/);
-  }
-});
-
 /**
  * **One window, proved by the rows rather than by a sentence.**
  *

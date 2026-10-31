@@ -19,7 +19,6 @@ import { nowDate } from "@/lib/clock";
 import type { DepthUnit } from "@/lib/depth-units";
 import {
   type DiveSiteDifficulty,
-  parseDiveSiteDifficulty,
   SITE_LIBRARY_GROUPS,
   type SiteLibraryGroupLabel,
 } from "@/lib/dive-site-difficulty";
@@ -1713,11 +1712,7 @@ export async function importGlobalDiveSiteTemplate(db: AppDb, shopId: string, te
   // `creatureSlugs` names catalog rows rather than repeating their words, so it
   // is not a site column — it is resolved here into the shop's own field-guide
   // rows, which the shop then edits like anything else it typed.
-  // `difficulty` is dropped along with `creatureSlugs`: neither is a column on
-  // the shop's row any more. A version published before 2026-08-13 still holds
-  // free text there, so it is narrowed rather than ignored — every value any
-  // template ever carried is one of the three codes.
-  const { creatureSlugs, difficulty, difficultyLevel, ...columns } = briefing;
+  const { creatureSlugs, difficultyLevel, ...columns } = briefing;
   // Resolved once: the slug is minted from the *deconflicted* name, so an
   // imported "Molasses Reef 2" is `molasses-reef-2` rather than colliding with
   // the site the shop already holds under that URL.
@@ -1727,7 +1722,7 @@ export async function importGlobalDiveSiteTemplate(db: AppDb, shopId: string, te
     .values({
       shopId,
       ...columns,
-      difficultyLevel: difficultyLevel ?? parseDiveSiteDifficulty(difficulty),
+      difficultyLevel,
       name,
       slug: await availableSiteSlug(db, shopId, name),
       sourceTemplateId: row.template.id,

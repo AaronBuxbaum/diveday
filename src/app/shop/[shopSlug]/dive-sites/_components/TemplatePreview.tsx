@@ -16,7 +16,6 @@ import type { DiverTranslator } from "@/i18n/messages";
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { DepthUnit } from "@/lib/depth-units";
-import { parseDiveSiteDifficulty } from "@/lib/dive-site-difficulty";
 import { capturePhoto } from "@/lib/marine-life-tiles";
 
 /**
@@ -49,10 +48,7 @@ export function TemplatePreview({
   const depth = staffDiveSiteDepthText(t, briefing, depthUnit);
   // Resolved for the reader, exactly as the imported site's own briefing will
   // render it -- the preview's whole job is showing what you are about to take.
-  const templateDifficulty = diveSiteDifficultyLabel(
-    briefing.difficultyLevel ?? parseDiveSiteDifficulty(briefing.difficulty),
-    diverT,
-  );
+  const templateDifficulty = diveSiteDifficultyLabel(briefing.difficultyLevel, diverT);
   const species = (briefing.creatureSlugs ?? [])
     .filter(isMarineLifeSlug)
     .map((slug) => marineLifeCard(slug, diverT));

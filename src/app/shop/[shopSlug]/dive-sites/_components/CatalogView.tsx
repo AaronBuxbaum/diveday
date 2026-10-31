@@ -14,7 +14,6 @@ import { staffDiveSiteDepthText } from "@/i18n/depth-labels";
 import { diveSiteDifficultyLabel } from "@/i18n/dive-site-labels";
 import type { DiverTranslator } from "@/i18n/messages";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { parseDiveSiteDifficulty } from "@/lib/dive-site-difficulty";
 import { joinFacts } from "@/lib/format";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { shopPath } from "@/lib/staff-notices";
@@ -111,10 +110,7 @@ export async function CatalogView({
     longitude: site.longitude,
     details: [
       staffDiveSiteDepthText(t, site, shop.depthUnit),
-      diveSiteDifficultyLabel(
-        site.difficultyLevel ?? parseDiveSiteDifficulty(site.difficulty),
-        diverT,
-      ),
+      diveSiteDifficultyLabel(site.difficultyLevel, diverT),
     ].filter((detail): detail is string => Boolean(detail)),
     description: site.description,
     href: `${catalogPageHref}&template=${encodeURIComponent(site.slug)}`,

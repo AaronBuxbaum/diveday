@@ -50,17 +50,8 @@ export function parseFieldGuideSelection(raw: unknown): MarineLifeSlug[] {
   const slugs: MarineLifeSlug[] = [];
   for (const entry of list) {
     if (slugs.length >= MAX_SITE_CREATURES) break;
-    // Tolerates both shapes the form and the templates have posted: a bare
-    // slug string, and the `{ slug, name, … }` object the pre-selection editor
-    // sent. The words on the old shape are ignored, which is the migration.
-    const value =
-      typeof entry === "string"
-        ? entry
-        : typeof entry === "object" && entry !== null
-          ? (entry as Record<string, unknown>).slug
-          : undefined;
-    if (typeof value !== "string") continue;
-    const slug = value.trim();
+    if (typeof entry !== "string") continue;
+    const slug = entry.trim();
     if (!isMarineLifeSlug(slug) || slugs.includes(slug)) continue;
     slugs.push(slug);
   }

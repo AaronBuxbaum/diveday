@@ -270,7 +270,7 @@ describe("ready-page clock rollback", () => {
     expect(served?.headers.get("x-diveday-ready-copy-time-state")).toBe("rollback");
   });
 
-  it("keeps a legacy copy and shows an unknown-time rollback warning", async () => {
+  it("deletes a copy with no rollback marker instead of serving it after a clock rollback", async () => {
     await saveReadyPage(store.storage, `/ready/${TOKEN}`, page("current copy"), NOW + 100);
     const cache = await store.storage.open(READY_CACHE_NAME);
     const saved = await cache.match(READY_COPY_KEY);
@@ -283,11 +283,7 @@ describe("ready-page clock rollback", () => {
       ),
     );
 
-    const served = await readyPageFallback(store.storage, `/ready/${TOKEN}`, NOW);
-    const text = await served?.text();
-    expect(text).toContain("Phone clock looks wrong");
-    expect(text).toContain("The saved time is unknown.");
-    expect(text).not.toContain("current copy");
-    expect(store.caches.get(READY_CACHE_NAME)?.size).toBe(1);
+    expect(await readyPageFallback(store.storage, `/ready/${TOKEN}`, NOW)).toBeUndefined();
+    expect(store.caches.get(READY_CACHE_NAME)?.size ?? 0).toBe(0);
   });
 });

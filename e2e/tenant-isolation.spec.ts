@@ -89,12 +89,11 @@ test("a second shop's owner reaches none of Blue Mantis's staff surfaces", async
   await expect(page.getByRole("navigation", { name: "Main", exact: true })).toBeVisible();
 
   // The public schedule stays public, for this signed-in outsider as much as
-  // for an anonymous visitor. Since the namespace split (ADR
-  // 20260803-public-shop-namespace) it lives at /s/<slug>; the legacy staff-
-  // namespace URL rides the 308 there, query and all. This is the regression
+  // for an anonymous visitor. It lives at
+  // /s/<slug> (ADR 20260803-public-shop-namespace). This is the regression
   // guard that fails first if the tenant check below is ever widened to
   // "any mismatched slug is a 404" — a 404 here would strand real divers.
-  const scheduleResponse = await page.goto("/shop/blue-mantis/schedule");
+  const scheduleResponse = await page.goto("/s/blue-mantis");
   expect(scheduleResponse?.status()).toBe(200);
   await expect(page).toHaveURL(/\/s\/blue-mantis$/);
   // The public schedule leads with dates; its authored identity remains below the board.

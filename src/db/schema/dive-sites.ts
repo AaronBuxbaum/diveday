@@ -405,12 +405,6 @@ export type GlobalDiveSiteBriefing = {
   marineLife?: string;
   marineLifeDescription?: string;
   conservationNote?: string;
-  /**
-   * Legacy free text, on versions published before 2026-08-13. Published
-   * snapshots are immutable, so the field stays readable forever; the import
-   * narrows it through `parseDiveSiteDifficulty` like any other stored value.
-   */
-  difficulty?: string;
   /** How demanding the site is, as a `dive_site_difficulty` code. */
   difficultyLevel?: (typeof diveSiteDifficulty.enumValues)[number];
   /** Whether snorkelers get anything out of the site; absent when the template does not know. */

@@ -1,6 +1,6 @@
 import { isMarineLifeSlug, type MarineLifeSlug } from "@/db/marine-life-catalog";
 import type { DiveSpecialty } from "@/db/schema";
-import { type DiveSiteDifficulty, parseDiveSiteDifficulty } from "./dive-site-difficulty";
+import type { DiveSiteDifficulty } from "./dive-site-difficulty";
 import { type DiveSiteLandmark, parseDiveSiteLandmarks } from "./dive-site-landmarks";
 import type { CertificationLevel } from "./readiness";
 
@@ -71,7 +71,6 @@ export type DiveSiteTemplateSource = {
   forecastLongitude?: number;
   marineLife?: string;
   marineLifeDescription?: string;
-  difficulty?: string;
   difficultyLevel?: DiveSiteDifficulty;
   snorkelSuitable?: boolean;
   depthMinMeters?: number;
@@ -134,7 +133,7 @@ export function diveSiteTemplateSnapshot(source: DiveSiteTemplateSource): DiveSi
     forecastLongitude: source.forecastLongitude ?? null,
     marineLife: source.marineLife ?? null,
     marineLifeDescription: source.marineLifeDescription ?? null,
-    difficultyLevel: source.difficultyLevel ?? parseDiveSiteDifficulty(source.difficulty),
+    difficultyLevel: source.difficultyLevel ?? null,
     snorkelSuitable: source.snorkelSuitable ?? null,
     depthMinMeters: source.depthMinMeters ?? null,
     maxDepthMeters: source.maxDepthMeters ?? null,

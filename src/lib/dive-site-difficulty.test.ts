@@ -5,13 +5,7 @@ import {
   snorkelersOnUnsuitableSites,
 } from "./dive-site-difficulty";
 
-/**
- * `dive_sites.difficulty` was free text until 2026-08-13, and immutable
- * published template versions still carry whatever was written there. So the
- * parser is not only a form guard — it is the reader for two generations of
- * stored data, and the property that matters is that it never invents a
- * reading it was not given.
- */
+/** The parser is a form guard: it never invents a reading it was not given. */
 describe("parseDiveSiteDifficulty", () => {
   it("takes the three codes", () => {
     expect(parseDiveSiteDifficulty("beginner")).toBe("beginner");
@@ -19,10 +13,7 @@ describe("parseDiveSiteDifficulty", () => {
     expect(parseDiveSiteDifficulty("advanced")).toBe("advanced");
   });
 
-  it("reads the legacy free text every shop and template actually stored", () => {
-    // The column held whatever a staffer typed, and the migration's backfill
-    // matches on exactly this shape. If these stopped parsing, a published
-    // template would silently import with no difficulty at all.
+  it("ignores case and surrounding whitespace", () => {
     expect(parseDiveSiteDifficulty("Advanced")).toBe("advanced");
     expect(parseDiveSiteDifficulty("  Beginner  ")).toBe("beginner");
   });

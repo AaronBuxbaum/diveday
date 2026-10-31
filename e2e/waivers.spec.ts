@@ -1077,11 +1077,6 @@ test("saving the release unchanged publishes nothing and says so", async ({ page
 test("the signature audit pages both ways, and keeps a pinned record while it does", async ({
   page,
 }) => {
-  // The old two-tab surface is one page now (ADR 20260827-people-not-lists);
-  // this starts at the retired URL deliberately, because a bookmark four pages
-  // into a shop's signed evidence is exactly the thing the 308 exists for.
-  await page.goto("/shop/blue-mantis/waivers/signatures?page=2");
-  await expect(page).toHaveURL(/\/waivers\?page=2/);
   await page.goto("/shop/blue-mantis/waivers");
   const pager = page.getByRole("navigation", { name: "Pages" });
   // Not "skip when there's nothing to page": the demo shop's signed history is

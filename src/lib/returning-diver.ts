@@ -12,7 +12,6 @@ const DEVICE_SLOT_PREFIX = "diveday:returning-diver:device:v1:";
 const CLEAR_PREFIX = "diveday:returning-diver:clear:v2:";
 const CLEAR_EVENT = "diveday:returning-diver:cleared";
 const CLEAR_CHANNEL = "diveday:returning-diver-clear-v2";
-const LEGACY_STORAGE_KEY = "diveday:returning-diver:v1";
 export const RETURNING_DIVER_MEMORY_MS = 30 * DAY_MS;
 export const RETURNING_DIVER_DEVICE_SLOT_MS = 24 * HOUR_MS;
 export const MAX_RETURNING_DIVER_DEVICE_SLOTS = 32;
@@ -389,14 +388,6 @@ function clearOnlyThisReceipt(shopSlug: string, receiptId: string | undefined): 
   }
 }
 
-function clearLegacyStorage(): void {
-  try {
-    localStorage.removeItem(LEGACY_STORAGE_KEY);
-  } catch {
-    // Storage can be blocked; remembering anyone is optional.
-  }
-}
-
 /**
  * Database sequence order is authoritative; client clocks and receipt UUIDs
  * do not establish which booking was issued later.
@@ -521,7 +512,6 @@ export function saveReturningDiver(
   now: Date = nowDate(),
   receipt?: { id: string; order: string; generationAtStart: string | null },
 ): "saved" | "cleared" | "unavailable" {
-  clearLegacyStorage();
   const key = receiptStorageKey(shopSlug, receipt?.id ?? null);
   if (
     !key ||
@@ -588,7 +578,6 @@ export function loadReturningDiver(shopSlug: string, now: Date = nowDate()): Ret
 
 /** Check for a stored candidate without judging its expiry on the device clock. */
 export function hasStoredReturningDiver(shopSlug: string): boolean {
-  clearLegacyStorage();
   try {
     return memoryKeys(shopSlug).some((key) => localStorage.getItem(key) !== null);
   } catch {
@@ -598,7 +587,6 @@ export function hasStoredReturningDiver(shopSlug: string): boolean {
 
 /** Check whether this device has any shop-scoped memory that may need expiry cleanup. */
 export function hasAnyStoredReturningDiver(): boolean {
-  clearLegacyStorage();
   try {
     return Array.from({ length: localStorage.length }, (_, index) => localStorage.key(index)).some(
       (key) => key?.startsWith(STORAGE_PREFIX) ?? false,
@@ -613,7 +601,6 @@ export function loadReturningDiverRecord(
   shopSlug: string,
   now: Date = nowDate(),
 ): ReturningDiverMemoryRecord | null {
-  clearLegacyStorage();
   clearExpiredShopMemories(now);
   try {
     const clearState = effectiveClearState(shopSlug);
@@ -682,7 +669,6 @@ export function loadReturningDiverRecord(
 }
 
 export function forgetReturningDiver(shopSlug: string): "cleared" | "partial" | "unavailable" {
-  clearLegacyStorage();
   const prefix = storageKey(shopSlug);
   const tombstone = clearKey(shopSlug);
   const slotKey = deviceSlotKey(shopSlug);
