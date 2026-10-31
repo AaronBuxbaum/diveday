@@ -20,7 +20,7 @@ it("accumulates separate move results and consumes their query parameters once",
   window.history.replaceState(
     {},
     "",
-    "/shop/reef/schedule/board?week=2026-10-26&builder=moved&gear=2&result=move-one",
+    "/shop/reef/schedule/board?week=2026-10-26&builder=moved&result=move-one",
   );
   const props = {
     initialNotice: null,
@@ -39,7 +39,7 @@ it("accumulates separate move results and consumes their query parameters once",
   window.history.replaceState(
     {},
     "",
-    "/shop/reef/schedule/board?builder=moved&gear=1&result=move-two",
+    "/shop/reef/schedule/board?builder=moved&result=move-two",
   );
   view.rerender(
     <StrictMode>
