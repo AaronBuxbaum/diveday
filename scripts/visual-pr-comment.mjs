@@ -235,6 +235,9 @@ async function main() {
     snapshotVersion: snapshotVersionFromReport(report),
     note,
     delta,
+    // This value comes only from the trusted publisher's workflow output.
+    // The formatter also requires the report verdict to be no-baseline.
+    freshBaselineBootstrap: process.env.VISUAL_BASELINE_RESET === "true",
   });
 
   // The job summary is the one destination that works for every event,
