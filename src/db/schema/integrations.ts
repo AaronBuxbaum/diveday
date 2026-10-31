@@ -103,7 +103,10 @@ export const shopBackupDeliveries = pgTable(
   ],
 );
 
-/** One scheduled shop backup claim per shop and ISO week; an attempt token fences late workers. */
+/**
+ * One scheduled shop backup claim per shop and ISO week; attempt tokens fence late workers.
+ * Completed and expired claims are retained 400 days.
+ */
 export const shopBackupDeliveryClaims = pgTable(
   "shop_backup_delivery_claims",
   {

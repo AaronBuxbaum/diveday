@@ -172,6 +172,7 @@ export type RetainedTable =
   | "inbound_messages"
   | "staff_replies"
   | "weekly_digest_sends"
+  | "shop_backup_delivery_claims"
   | "claude_usage"
   | "claude_call_content"
   | "assist_results"
@@ -402,6 +403,15 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
    * delivery trail keeps, and every newer email carries a live one of its own.
    */
   weekly_digest_sends: 400,
+  /**
+   * 400 days from completion, or from lease expiry when an attempt never
+   * completed. The composite shop/week claim fences concurrent uploads and
+   * must outlive the successful-delivery write; keeping a full season plus
+   * year preserves that history while bounding one row per scheduled week.
+   * Incomplete rows without a lease timestamp are retained because their
+   * eligibility cannot be established safely.
+   */
+  shop_backup_delivery_claims: 400,
   /**
    * 400 days, measured on `created_at`. A row is one Claude call's token
    * counts and cost (ADR 20261018-claude-assists): codes and numbers, nobody's

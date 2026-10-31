@@ -20,7 +20,6 @@ export const OUTSIDE_RETENTION: readonly string[] = [
   "today_read_mark_events", // junction rows cascade with the 30-day mark or event; no independent clock
   "retention_prune_state", // one mutable scheduler cursor, never an age-pruned trail
   "platform_backup_progress", // one mutable per-shop checkpoint, replaced on attempts and deleted with its shop
-  "shop_backup_delivery_claims", // one mutable per-shop scheduler lease, replaced per attempt and deleted with its shop
   "claude_call_content_erasures", // one per-shop erasure stamp, overwritten, never a trail
   // Monotone per-trip device-snapshot ordering; no person data, and resetting
   // while stale device copies exist could let an older response win.

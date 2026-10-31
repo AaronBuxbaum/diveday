@@ -452,7 +452,7 @@
     "src/db/reminders.test.ts": 981,
     "src/db/rental-fit.test.ts": 1227,
     "src/db/reporting.test.ts": 1379,
-    "src/db/retention.test.ts": 1097,
+    "src/db/retention.test.ts": 1093,
     "src/db/reviews.test.ts": 1034,
     "src/db/seat-claims.test.ts": 1525,
     "src/db/self-declared-cards.test.ts": 1865,

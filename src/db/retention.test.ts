@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { eq, inArray } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { RETENTION_DAYS, type RetainedTable, UNBOUNDED_BY_DECISION } from "@/lib/retention";
 import { fileScopedShopContext } from "@/test/db";
@@ -10,7 +10,8 @@ import {
 import { setupRequestForRetention } from "@/test/retention-setup-request";
 import { schemaTableNames } from "@/test/schema-tables";
 import { setBookingPayment } from "./payments";
-import { PRUNE_ARMS, pruneExpiredRecords } from "./retention";
+import { PRUNE_ARMS, pruneExpiredRecords, retentionIdentityMatches } from "./retention";
+import { writeBackupDeliveryClaimFixture } from "./retention-backup-delivery-claims.test-support";
 import { OUTSIDE_RETENTION } from "./retention-table-classification.test-support";
 import * as schema from "./schema";
 import {
@@ -401,7 +402,6 @@ describe("pruneExpiredRecords", () => {
     expect(left).toEqual([{ kind: "gear_changed" }]);
     expect(await db.select().from(tripReadMarks)).toHaveLength(0);
   });
-
   it("prunes demo entries past their window and keeps the recent ones", async () => {
     const { db } = await retentionContext();
     await db.insert(schema.demoEntries).values([
@@ -546,16 +546,10 @@ describe("pruneExpiredRecords", () => {
 });
 
 /**
- * **Declaration is not deletion.** The classification below proves every
- * table is declared somewhere; this proves every declared window deletes. For
- * each `RETENTION_DAYS` key it writes one row a day past the window and one a
- * day inside it, on the column the window is measured from, and expects the
- * pass to take exactly the first. An arm that names the wrong column leaves
- * the stale row (its other timestamps default to the database's own now,
- * months after {@link NOW}) and fails here.
- *
- * `satisfies Record<RetainedTable, …>`: a new window does not compile until
- * it has a row here.
+ * The classification proves every table is declared; this proves every
+ * window deletes. Each retained table gets a stale and a fresh row on its
+ * declared clock, and only the stale row should be taken. The exhaustive
+ * fixture map makes a new window fail compilation until it has a fixture.
  */
 type Fixture = Awaited<ReturnType<typeof retentionContext>> & {
   waiverRecordId: string;
@@ -841,6 +835,8 @@ const STALE_AND_FRESH = {
         })
         .returning({ id: schema.weeklyDigestSends.id }),
     ),
+  shop_backup_delivery_claims: async ({ db, shop }, at, n) =>
+    writeBackupDeliveryClaimFixture(db, shop.id, at, n),
   crew_notices: async ({ db, shop, reef, people }, at) =>
     idOf(
       await db
@@ -985,7 +981,7 @@ describe("every retention window deletes", () => {
       const left = await db
         .select({ id: arm.id })
         .from(arm.from)
-        .where(inArray(arm.id, [stale, fresh]));
+        .where(retentionIdentityMatches(arm.id, [stale, fresh]));
       expect(left.map((row) => row.id)).toEqual([fresh]);
     },
   );
