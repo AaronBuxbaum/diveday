@@ -243,12 +243,15 @@ export async function seedCertGates(
     },
   ];
 
+  const tripDefSite = (index: number) => {
+    const name = tripDefs[index]?.siteName;
+    return name ? (siteByName.get(name)?.id ?? null) : null;
+  };
   const insertedTrips = await db
     .insert(trips)
     .values(
       tripDefs.map((def) => ({
         shopId,
-        diveSiteId: def.siteName ? siteByName.get(def.siteName)?.id : undefined,
         courseId: def.courseId,
         title: def.title,
         description: def.description,
@@ -284,11 +287,11 @@ export async function seedCertGates(
   // but the first one carries the trip's site, which is what makes the
   // itinerary's own gate reachable through `tripVisitedSites`.
   await db.insert(tripDives).values(
-    insertedTrips.flatMap((trip) =>
+    insertedTrips.flatMap((trip, i) =>
       Array.from({ length: trip.plannedDives }, (_, index) => ({
         tripId: trip.id,
         diveNumber: index + 1,
-        diveSiteId: index === 0 ? (trip.diveSiteId ?? null) : null,
+        diveSiteId: index === 0 ? tripDefSite(i) : null,
       })),
     ),
   );

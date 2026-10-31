@@ -18,6 +18,7 @@ import {
   rollCallEvents,
   tips,
   tripAssignments,
+  tripDives,
   tripLenses,
   tripRequirements,
   tripReviews,
@@ -624,10 +625,24 @@ export async function seedHistory(
         endsAt: at(-plan.daysAgo, plan.hour + 4),
         capacity: plan.capacity,
         priceCents: plan.priceCents,
-        ...where(plan.title),
+        boatId: where(plan.title).boatId,
+        lensId: where(plan.title).lensId,
       })),
     )
     .returning();
+
+  // The site lives on the dives: one row per planned dive, each at the title's
+  // site (a two-tank day at one reef dives it twice).
+  await db.insert(tripDives).values(
+    histTrips.flatMap((trip, index) => {
+      const diveSiteId = where(tripPlan[index]?.title ?? "").diveSiteId;
+      return Array.from({ length: trip.plannedDives }, (_, dive) => ({
+        tripId: trip.id,
+        diveNumber: dive + 1,
+        diveSiteId,
+      }));
+    }),
+  );
 
   await equipHistoryBoats(db, shopId, histTrips);
 

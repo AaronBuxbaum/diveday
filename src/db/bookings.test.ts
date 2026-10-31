@@ -2776,7 +2776,10 @@ describe("createBooking trip admission (the boat's own cert gate, DOM-M6)", () =
       .where(and(eq(diveSites.shopId, shop.id), eq(diveSites.name, "Spiegel Grove")))
       .limit(1);
     if (!site) throw new Error("seeded Spiegel Grove site missing");
-    await db.update(trips).set({ diveSiteId: site.id }).where(eq(trips.id, open.id));
+    await db
+      .update(tripDives)
+      .set({ diveSiteId: site.id })
+      .where(and(eq(tripDives.tripId, open.id), eq(tripDives.diveNumber, 1)));
     await demandOf(db, shop.id, open.id, null);
 
     const person = await diver(db, shop.id, "cass@example.com");
@@ -3248,7 +3251,7 @@ describe("createBooking trip admission (the boat's own cert gate, DOM-M6)", () =
     const session = await createTrip(db, {
       shopId: shop.id,
       courseId: course.id,
-      diveSiteId: advancedSite.id,
+      dives: [{ diveSiteId: advancedSite.id }],
       title: "AOW course — deep adventure dive",
       startsAt,
       endsAt: new Date(startsAt.getTime() + 5 * 60 * 60 * 1000),

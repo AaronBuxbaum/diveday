@@ -184,13 +184,8 @@ describe("a marked training dive's level (issue #2731, in-memory PGlite)", () =>
     await ctx.db
       .delete(tripDives)
       .where(and(eq(tripDives.tripId, ctx.charter.id), eq(tripDives.diveNumber, 2)));
-    await ctx.db
-      .update(trips)
-      .set({ plannedDives: 1, diveSiteId: sites[1].id })
-      .where(eq(trips.id, ctx.charter.id));
-    // One dive but two distinct visited-site sources still cannot identify the site.
-    expect(await levelCodes(ctx)).toEqual(["certification_missing"]);
-    await ctx.db.update(trips).set({ diveSiteId: sites[0].id }).where(eq(trips.id, ctx.charter.id));
+    await ctx.db.update(trips).set({ plannedDives: 1 }).where(eq(trips.id, ctx.charter.id));
+    // One dive at one site identifies the site; two dives at two sites did not.
     expect(await levelCodes(ctx)).toEqual([]);
   });
 
@@ -297,10 +292,10 @@ describe("a marked training dive's level (issue #2731, in-memory PGlite)", () =>
       })
       .returning();
     if (!site) throw new Error("test site missing");
+    await ctx.db.update(trips).set({ plannedDives: 1 }).where(eq(trips.id, ctx.charter.id));
     await ctx.db
-      .update(trips)
-      .set({ plannedDives: 1, diveSiteId: site.id })
-      .where(eq(trips.id, ctx.charter.id));
+      .insert(tripDives)
+      .values({ tripId: ctx.charter.id, diveNumber: 1, diveSiteId: site.id });
     await teachesAndAboard(ctx);
     expect(await markSeat(ctx)).toMatchObject({ ok: true });
     expect(await levelCodes(ctx)).toEqual(["certification_insufficient"]);
@@ -413,10 +408,10 @@ describe("a marked training dive's level (issue #2731, in-memory PGlite)", () =>
       })
       .returning();
     if (!site) throw new Error("site missing");
+    await ctx.db.update(trips).set({ plannedDives: 1 }).where(eq(trips.id, ctx.charter.id));
     await ctx.db
-      .update(trips)
-      .set({ plannedDives: 1, diveSiteId: site.id })
-      .where(eq(trips.id, ctx.charter.id));
+      .insert(tripDives)
+      .values({ tripId: ctx.charter.id, diveNumber: 1, diveSiteId: site.id });
     await teachesAndAboard(ctx);
     expect(await markSeat(ctx)).toMatchObject({ ok: true });
     expect(await rosterWarning(ctx)).toBe(true);

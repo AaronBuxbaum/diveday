@@ -21,6 +21,7 @@ import {
   people,
   personRoles,
   specialtyCertifications,
+  tripDives,
   tripRequirements,
   trips,
   waiverRecords,
@@ -101,11 +102,11 @@ async function fixture() {
         startsAt,
         endsAt: new Date(startsAt.getTime() + 4 * 3_600_000),
         capacity: 12,
-        diveSiteId: site.id,
         isRehearsal,
         isPrivate: isRehearsal,
       })
       .returning();
+    await db.insert(tripDives).values({ tripId: row.id, diveNumber: 1, diveSiteId: site.id });
     return row;
   };
   const target = await trip("Next wall dive", new Date(now.getTime() + 10 * DAY_MS));
@@ -370,10 +371,12 @@ describe("listInviteSuggestions", () => {
         startsAt,
         endsAt: new Date(startsAt.getTime() + 4 * 3_600_000),
         capacity: 4,
-        diveSiteId: site.id,
         courseId: dsd.id,
       })
       .returning();
+    await db
+      .insert(tripDives)
+      .values({ tripId: dsdSession.id, diveNumber: 1, diveSiteId: site.id });
     await seat(dsdSession.id, taster.id);
 
     const got = await listInviteSuggestions(db, { shopId: shop.id, tripId: target.id, now });
@@ -430,10 +433,10 @@ describe("listInviteSuggestions", () => {
         startsAt,
         endsAt: new Date(startsAt.getTime() + 4 * 3_600_000),
         capacity: 6,
-        diveSiteId: site.id,
         courseId: ow.id,
       })
       .returning();
+    await db.insert(tripDives).values({ tripId: session.id, diveNumber: 1, diveSiteId: site.id });
     expect(
       await listInviteSuggestions(db, { shopId: shop.id, tripId: session.id, now }),
     ).toBeNull();
@@ -598,9 +601,11 @@ describe("admittedToTrip, the branches the booking gate takes", () => {
         startsAt,
         endsAt: new Date(startsAt.getTime() + 4 * 3_600_000),
         capacity: 12,
-        diveSiteId: deepSite.id,
       })
       .returning();
+    await db
+      .insert(tripDives)
+      .values({ tripId: siteTrip.id, diveNumber: 1, diveSiteId: deepSite.id });
     const aow = await diver("Site AOW");
     const ow = await diver("Site OW");
     const pendingAow = await diver("Site Pending AOW");

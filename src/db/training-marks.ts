@@ -410,7 +410,6 @@ export async function trainingMarksForRoster(
     startsAt: Date;
     endsAt: Date;
     plannedDives: number;
-    diveSiteId: string | null;
   },
   seats: readonly RosterSeatInput[],
   now: Date = nowDate(),
@@ -434,9 +433,7 @@ export async function trainingMarksForRoster(
           .select({ id: tripDives.diveSiteId })
           .from(tripDives)
           .where(eq(tripDives.tripId, trip.id));
-  const siteIds = new Set(
-    [trip.diveSiteId, ...plannedSites.map((site) => site.id)].filter(Boolean),
-  );
+  const siteIds = new Set(plannedSites.map((site) => site.id).filter(Boolean));
   const siteAttributionUnknown = trip.plannedDives !== 1 || siteIds.size !== 1;
   const staffIds = [
     ...new Set(

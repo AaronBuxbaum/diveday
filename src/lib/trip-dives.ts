@@ -68,10 +68,10 @@ export type TripDiveSiteRef = {
 /**
  * Where a departure actually goes, composed from its dives.
  *
- * `trips.dive_site_id` is only dive one's site copied onto the trip row, so a
- * surface that reads it names one site for a two-site day and names *none* on
- * the day whose undecided tank happens to be the first one. Every surface that
- * answers "where does this trip go" composes this instead.
+ * `trip_dives` is the only place a planned site lives; a surface that named
+ * only the first dive's site would name one site for a two-site day and *none*
+ * on the day whose undecided tank happens to be the first one. Every surface
+ * that answers "where does this trip go" composes this.
  *
  * Sites are distinct and in dive order: a two-tank day that dives the same site
  * twice visits one site, not two. `undecidedDives` is the other half of the

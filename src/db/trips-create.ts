@@ -27,7 +27,6 @@ import {
 export type NewTrip = {
   shopId: string;
   courseId?: string;
-  diveSiteId?: string;
   title: string;
   description?: string;
   startsAt: Date;
@@ -93,26 +92,6 @@ export function normalizedDiveDrafts(plannedDives: number, drafts: TripDiveDraft
       travelMinutes: draft?.travelMinutes ?? null,
     };
   });
-}
-
-/**
- * What goes in `trips.dive_site_id`: the first dive that *has* a site, not
- * strictly dive one's.
- *
- * That column is a denormalized pointer with two consumers — the automated
- * marine forecast's coordinate and the calendar feed's `LOCATION` — and both
- * want any real site on the day rather than nothing. Reading dive one alone
- * left it null on a departure whose second tank was the planned one, so a trip
- * that plainly visits Spiegel Grove offered no forecast and no directions.
- *
- * It is never a *gate*: readiness and the depth advisory already union this
- * pointer with every `trip_dives` site (`tripVisitedSites` in src/db/readiness.ts),
- * and every surface that answers "where does this trip go" reads the dives
- * (`summarizeTripDiveSites`, src/lib/trip-dives.ts). Widening it here can only
- * add a site the trip already visits, never change what anyone is cleared for.
- */
-export function primaryDiveSiteId(drafts: Array<{ diveSiteId: string | null }>): string | null {
-  return drafts.find((draft) => draft.diveSiteId)?.diveSiteId ?? null;
 }
 
 export async function validateDiveSites(
@@ -297,7 +276,6 @@ export async function insertTripInstances(tx: AppTransaction, list: TripInstance
           minimumBookings: rehearsal ? null : params.minimumBookings,
           minimumDecisionHours: rehearsal ? null : params.minimumDecisionHours,
           plannedDives: params.plannedDives,
-          diveSiteId: primaryDiveSiteId(params.drafts),
           isPrivate: rehearsal ? true : (params.isPrivate ?? false),
           isRehearsal: rehearsal,
           // **A course session is never self-guided** (issue #1342).
@@ -394,10 +372,7 @@ export async function createTrip(db: DbExecutor, input: NewTrip) {
     if (!ok) return null;
     const plannedDives = normalizedDiveCount(input.plannedDives, course !== null);
     if (!plannedDives) return null;
-    const drafts = normalizedDiveDrafts(
-      plannedDives,
-      input.dives ?? (input.diveSiteId ? [{ diveSiteId: input.diveSiteId }] : undefined),
-    );
+    const drafts = normalizedDiveDrafts(plannedDives, input.dives);
     if (!(await validateDiveSites(tx, input.shopId, drafts))) return null;
     if (!(await validateBoat(tx, input.shopId, input.boatId))) return null;
     return insertTripInstance(tx, {

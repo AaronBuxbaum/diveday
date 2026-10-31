@@ -655,8 +655,6 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "series_id",
       "series_occurrence_date",
       "course_id",
-      "dive_site_id",
-      "dive_site_name",
       "dive_mode",
       "boat_id",
       "boat_name",
@@ -695,7 +693,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "deleted_at",
       "created_at",
     ],
-    rows: ({ siteName, tripRows, boatName }) =>
+    rows: ({ tripRows, boatName }) =>
       tripRows.map((row) => [
         row.id,
         row.title,
@@ -716,8 +714,6 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.seriesId,
         row.seriesOccurrenceDate,
         row.courseId,
-        row.diveSiteId,
-        row.diveSiteId ? siteName.get(row.diveSiteId) : null,
         row.diveMode,
         row.boatId,
         row.boatId ? boatName.get(row.boatId) : null,

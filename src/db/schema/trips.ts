@@ -364,8 +364,6 @@ export const trips = pgTable(
      * renders nothing — never "Uncategorised".
      */
     lensId: uuid("lens_id").references(() => tripLenses.id, { onDelete: "set null" }),
-    /** Compatibility pointer to the first dive's site for readiness and forecast consumers. */
-    diveSiteId: uuid("dive_site_id").references(() => diveSites.id),
     /** Present only for a scheduled course session; ordinary charters leave this empty. */
     courseId: uuid("course_id").references(() => courses.id),
     title: text("title").notNull(),

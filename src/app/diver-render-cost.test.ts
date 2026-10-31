@@ -297,11 +297,15 @@ describe("how many round trips a diver's page waits for, one after another", () 
 // 63 → 64: minting the after-state's handoff now locks the diver before the
 // booking so it cannot race erasure. Those locks stay separate to preserve
 // erasure's person-then-booking order; the extra statement is one round trip.
-const READY_AFTER_CEILING = 64;
+// 64 → 65: the sailed demo departures carry their planned dives now (the trip's
+// site lives only in `trip_dives`, issue #3237), and the page reads them.
+const READY_AFTER_CEILING = 65;
 const READY_AFTER_PHASE_CEILING = 12;
 // `/recap/[token]`, replayed from item 32: the recap's 3 and the after-state's
 // next-dive read, with no handoff. Before item 32 the same reads were 7 + 2.
-const RECAP_CEILING = 31;
+// 31 → 32: the sailed demo departures now carry their planned dives (the trip's
+// site lives only in `trip_dives`, issue #3237), so the recap reads them.
+const RECAP_CEILING = 32;
 const RECAP_PHASE_CEILING = 5;
 // The shop, `readSchedulePage`'s batch with its chained reads, then the
 // board's-end read. 16 → 14 statements and 7 → 5 phases (item 29): the

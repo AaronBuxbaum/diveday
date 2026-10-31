@@ -396,7 +396,6 @@ async function saveDepartureDetails(
     cancellationWindowHours: details.patch.cancellationWindowHours,
     minimumBookings: details.patch.minimumBookings,
     minimumDecisionHours: details.patch.minimumDecisionHours,
-    diveSiteId: dives[0]?.diveSiteId ?? null,
     dives,
   };
   if (section && !formData.has("lensId")) delete patch.lensId;

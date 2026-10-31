@@ -52,7 +52,6 @@ async function crewIdsByRole(db: DbExecutor, shopId: string): Promise<Map<string
 function openWaterSession(session: {
   shopId: string;
   courseId: string;
-  diveSiteId: string | undefined;
   startsAt: Date;
   endsAt: Date;
   coursePriceCents: number | null;
@@ -149,13 +148,23 @@ export async function seedTrips(
   const courseSession = (courseTitle: string, trip: Parameters<typeof courseSessionRows>[4]) =>
     courseSessionRows(shopId, courseRows, courseIdByTitle, courseTitle, trip);
   const todaySailStart = demoTodayDepartureStart();
+  // Dive one's site for the departures that name only one; `trip_dives` is the
+  // only place a planned site lives, so this is read once, below, into dive one.
+  const diveOneSiteByTitle = new Map<string, string | undefined>([
+    [DEMO_TODAY_TRIP_TITLE, siteByName.get("Molasses Reef")?.id],
+    ["Night Dive — City of Washington", siteByName.get("City of Washington")?.id],
+    ["Wreck Trip — Spiegel Grove", siteByName.get("Spiegel Grove")?.id],
+    ["Two-Tank Reef — Christ of the Abyss", siteByName.get("Christ of the Abyss")?.id],
+    ["Open Water Diver — three-day course", siteByName.get("Pickles Reef")?.id],
+    ["Two-Tank Reef — Benwood & Elbow", benwood?.id],
+    ["Afternoon Two-Tank — French Reef", french?.id],
+  ]);
   const tripRows = await db
     .insert(trips)
     .values([
       {
         shopId,
         boatId: boatByName.get("Mantis I"),
-        diveSiteId: siteByName.get("Molasses Reef")?.id,
         title: DEMO_TODAY_TRIP_TITLE,
         // Time-neutral copy: this trip sails at whatever hour keeps it on
         // today's board, so "morning" would read as a bug after lunch.
@@ -170,7 +179,6 @@ export async function seedTrips(
       {
         shopId,
         boatId: boatByName.get("Mantis I"),
-        diveSiteId: siteByName.get("City of Washington")?.id,
         title: "Night Dive — City of Washington",
         description: "Torches, tarpon, and bioluminescence.",
         // A twilight double: depart ~7:30 PM Eastern, dive 1 at dusk (matching
@@ -185,7 +193,6 @@ export async function seedTrips(
         shopId,
         // The big boat for the deep wreck: two hulls a crew tells apart.
         boatId: boatByName.get("Mantis II"),
-        diveSiteId: siteByName.get("Spiegel Grove")?.id,
         title: "Wreck Trip — Spiegel Grove",
         description: "The big one.",
         startsAt: at(5, 12, 0),
@@ -195,7 +202,6 @@ export async function seedTrips(
       },
       {
         shopId,
-        diveSiteId: siteByName.get("Christ of the Abyss")?.id,
         title: "Two-Tank Reef — Christ of the Abyss",
         description: "Classic shallow sites, great for refreshers and new OW divers.",
         startsAt: at(7, 11, 30),
@@ -221,7 +227,6 @@ export async function seedTrips(
             openWaterSession({
               shopId,
               courseId: openWaterCourse.id,
-              diveSiteId: siteByName.get("Pickles Reef")?.id,
               startsAt: at(9, 8, 0),
               endsAt: at(11, 17, 0),
               coursePriceCents: openWaterCourse.priceCents,
@@ -235,7 +240,6 @@ export async function seedTrips(
       // showing the same count make that assertion ambiguous.
       {
         shopId,
-        diveSiteId: benwood?.id,
         title: "Two-Tank Reef — Benwood & Elbow",
         description: "Shallow wreck first, coral heads second. A good day-two boat.",
         startsAt: at(3, 11, 30),
@@ -245,7 +249,6 @@ export async function seedTrips(
       },
       {
         shopId,
-        diveSiteId: french?.id,
         title: "Afternoon Two-Tank — French Reef",
         description: "Swim-throughs and ledges, with the light coming in low on the second tank.",
         startsAt: at(6, 13, 0),
@@ -443,7 +446,7 @@ export async function seedTrips(
         diveSiteId: dive?.site
           ? (siteByName.get(dive.site)?.id ?? null)
           : index === 0
-            ? (trip.diveSiteId ?? null)
+            ? (diveOneSiteByTitle.get(trip.title) ?? null)
             : null,
         description: dive?.description ?? null,
       };

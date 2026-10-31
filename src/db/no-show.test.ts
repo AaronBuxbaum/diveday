@@ -1,4 +1,4 @@
-import { and, count, desc, eq, inArray, notInArray } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNotNull, notInArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { MINUTE_MS, nowMs } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
@@ -26,6 +26,7 @@ import {
   people,
   rollCallEvents,
   shops,
+  tripDives,
   tripRequirements,
   trips,
 } from "./schema";
@@ -256,6 +257,28 @@ async function seatStudents(
     ids.push(outcome.bookingId);
   }
   return ids;
+}
+
+/** The first site any of a departure's dives names. */
+async function siteOfTrip(db: Awaited<ReturnType<typeof context>>["db"], tripId: string) {
+  const [row] = await db
+    .select({ diveSiteId: tripDives.diveSiteId })
+    .from(tripDives)
+    .where(and(eq(tripDives.tripId, tripId), isNotNull(tripDives.diveSiteId)))
+    .orderBy(asc(tripDives.diveNumber))
+    .limit(1);
+  return row?.diveSiteId ?? null;
+}
+
+/** Plan dive one of each of these departures at `siteId`. */
+async function planDiveOne(
+  db: Awaited<ReturnType<typeof context>>["db"],
+  tripIds: string[],
+  siteId: string | null,
+) {
+  await db
+    .insert(tripDives)
+    .values(tripIds.map((tripId) => ({ tripId, diveNumber: 1, diveSiteId: siteId })));
 }
 
 describe("markBookingNoShow", () => {
@@ -933,10 +956,7 @@ describe("noShowSalvage", () => {
 
   it("falls back to a day the diver who missed could be put on instead", async () => {
     const { db, shop, trip, personId, now } = await context();
-    const [site] = await db
-      .select({ diveSiteId: trips.diveSiteId })
-      .from(trips)
-      .where(eq(trips.id, trip.id));
+    const siteId = await siteOfTrip(db, trip.id);
     const [alternative] = await db
       .insert(trips)
       .values({
@@ -945,10 +965,10 @@ describe("noShowSalvage", () => {
         startsAt: new Date(trip.startsAt.getTime() + 24 * 60 * MINUTE_MS),
         endsAt: new Date(trip.startsAt.getTime() + 28 * 60 * MINUTE_MS),
         capacity: 8,
-        diveSiteId: site?.diveSiteId ?? null,
       })
       .returning();
     if (!alternative) throw new Error("alternative trip insert failed");
+    await planDiveOne(db, [alternative.id], siteId);
 
     const offer = await salvageFor(db, { shopId: shop.id, tripId: trip.id, personId, now });
     expect(offer.kind).toBe("rebook");
@@ -963,23 +983,20 @@ describe("noShowSalvage", () => {
    */
   it("offers only a day the diver who missed could book", async () => {
     const { db, shop, trip, personId, now } = await context();
-    const [site] = await db
-      .select({ diveSiteId: trips.diveSiteId })
-      .from(trips)
-      .where(eq(trips.id, trip.id));
+    const siteId = await siteOfTrip(db, trip.id);
     const day = (hours: number, title: string) => ({
       shopId: shop.id,
       title,
       startsAt: new Date(trip.startsAt.getTime() + hours * 60 * MINUTE_MS),
       endsAt: new Date(trip.startsAt.getTime() + (hours + 4) * 60 * MINUTE_MS),
       capacity: 8,
-      diveSiteId: site?.diveSiteId ?? null,
     });
     const [alreadyOn, gated, open] = await db
       .insert(trips)
       .values([day(20, "Booked Reef Run"), day(21, "Advanced Reef Run"), day(30, "Open Reef Run")])
       .returning();
     if (!alreadyOn || !gated || !open) throw new Error("alternative trip insert failed");
+    await planDiveOne(db, [alreadyOn.id, gated.id, open.id], siteId);
     // They already hold a seat on one day…
     const rebooked = await createBooking(db, {
       actor: "staff",
@@ -1026,17 +1043,13 @@ describe("noShowSalvage", () => {
    */
   it("walks past refusals a step at a time and keeps the days in rank order", async () => {
     const { db, shop, trip, personId, now } = await context();
-    const [site] = await db
-      .select({ diveSiteId: trips.diveSiteId })
-      .from(trips)
-      .where(eq(trips.id, trip.id));
+    const siteId = await siteOfTrip(db, trip.id);
     const day = (hours: number, title: string) => ({
       shopId: shop.id,
       title,
       startsAt: new Date(trip.startsAt.getTime() + hours * 60 * MINUTE_MS),
       endsAt: new Date(trip.startsAt.getTime() + (hours + 3) * 60 * MINUTE_MS),
       capacity: 8,
-      diveSiteId: site?.diveSiteId ?? null,
     });
     const [first, held, rescue, master, fifth] = await db
       .insert(trips)
@@ -1049,6 +1062,7 @@ describe("noShowSalvage", () => {
       ])
       .returning();
     if (!first || !held || !rescue || !master || !fifth) throw new Error("trip insert failed");
+    await planDiveOne(db, [first.id, held.id, rescue.id, master.id, fifth.id], siteId);
     // The pool is exactly these five: the shop's other days go private, which
     // the salvage board never reads.
     const pool = [first, held, rescue, master, fifth].map((row) => row.id);
@@ -1091,10 +1105,7 @@ describe("noShowSalvage", () => {
     const roster = await getTripRoster(db, shop.id, trip.id);
     const other = roster.find((seat) => seat.person.id !== personId)?.person.id;
     if (!other) throw new Error("expected a second seat on the reef trip");
-    const [site] = await db
-      .select({ diveSiteId: trips.diveSiteId })
-      .from(trips)
-      .where(eq(trips.id, trip.id));
+    const siteId = await siteOfTrip(db, trip.id);
     const [alternative] = await db
       .insert(trips)
       .values({
@@ -1103,10 +1114,10 @@ describe("noShowSalvage", () => {
         startsAt: new Date(trip.startsAt.getTime() + 24 * 60 * MINUTE_MS),
         endsAt: new Date(trip.startsAt.getTime() + 28 * 60 * MINUTE_MS),
         capacity: 8,
-        diveSiteId: site?.diveSiteId ?? null,
       })
       .returning();
     if (!alternative) throw new Error("alternative trip insert failed");
+    await planDiveOne(db, [alternative.id], siteId);
     const held = await createBooking(db, {
       actor: "staff",
       shopId: shop.id,
@@ -1133,7 +1144,8 @@ describe("noShowSalvage", () => {
   it("says there is nothing rather than inventing an offer", async () => {
     const { db, shop, trip, personId, now } = await context();
     // Nothing else on this shop's board shares the reef trip's site or course.
-    await db.update(trips).set({ diveSiteId: null, courseId: null }).where(eq(trips.id, trip.id));
+    await db.update(trips).set({ courseId: null }).where(eq(trips.id, trip.id));
+    await db.update(tripDives).set({ diveSiteId: null }).where(eq(tripDives.tripId, trip.id));
     expect(await salvageFor(db, { shopId: shop.id, tripId: trip.id, personId, now })).toEqual({
       kind: "none",
     });

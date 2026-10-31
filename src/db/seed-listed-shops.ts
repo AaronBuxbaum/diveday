@@ -160,9 +160,10 @@ export async function seedListedShops(db: DbExecutor): Promise<void> {
       priceCents: 14_500,
     },
   ];
-  for (const departure of departures) {
+  for (const { diveSiteId, ...departure } of departures) {
     const trip = await createTrip(db, {
       ...departure,
+      dives: [{ diveSiteId }],
       endsAt: new Date(departure.startsAt.getTime() + hours(4)),
     });
     if (!trip) throw new Error(`seedListedShops: ${departure.title} did not insert`);

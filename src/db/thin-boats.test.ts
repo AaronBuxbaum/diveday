@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
-import { bookings, courses, diveSites, people, shops, trips } from "./schema";
+import { bookings, courses, diveSites, people, shops, tripDives, trips } from "./schema";
 import { listThinBoats } from "./thin-boats";
 
 const ctx = fileScopedShopContext();
@@ -97,10 +97,10 @@ describe("listThinBoats", () => {
           startsAt,
           endsAt: new Date(startsAt.getTime() + 4 * 3_600_000),
           capacity: 4,
-          diveSiteId: site.id,
           ...extra,
         })
         .returning();
+      await db.insert(tripDives).values({ tripId: row.id, diveNumber: 1, diveSiteId: site.id });
       return row;
     };
     const session = await insert("Thin OW session", 2, { courseId: course.id });

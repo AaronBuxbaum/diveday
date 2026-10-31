@@ -14,6 +14,7 @@ import {
   people,
   trips,
 } from "./schema";
+import { tripPrimarySiteId } from "./trip-primary-site";
 import { liveTrip } from "./trips-live";
 
 /**
@@ -143,7 +144,7 @@ export async function searchShop(
         siteName: diveSites.name,
       })
       .from(trips)
-      .leftJoin(diveSites, eq(diveSites.id, trips.diveSiteId))
+      .leftJoin(diveSites, eq(diveSites.id, tripPrimarySiteId))
       .where(
         and(
           eq(trips.shopId, shopId),
@@ -327,7 +328,7 @@ export async function resolveRecentRecords(
             siteName: diveSites.name,
           })
           .from(trips)
-          .leftJoin(diveSites, eq(diveSites.id, trips.diveSiteId))
+          .leftJoin(diveSites, eq(diveSites.id, tripPrimarySiteId))
           .where(and(eq(trips.shopId, shopId), liveTrip(), inArray(trips.id, tripIds))),
     orderIds.length === 0
       ? none
