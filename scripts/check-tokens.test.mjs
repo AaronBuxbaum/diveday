@@ -13,6 +13,16 @@ import {
 const texts = (source) => findTokenViolations(source).map((hit) => hit.text);
 
 describe("hex colors", () => {
+  it("reports original one-based lines across comments, CRLF, and Unicode", () => {
+    const source =
+      '/* ignored #fff\r\n🐟 ignored bg-cyan-600 */\r\nconst hex = "#aaa";\r\nconst palette = "bg-red-500";';
+
+    expect(findTokenViolations(source)).toEqual([
+      { line: 3, text: "raw hex #aaa" },
+      { line: 4, text: "palette-scale class bg-red-500" },
+    ]);
+  });
+
   it("catches every valid hex length, in styles, attributes, and arbitrary values", () => {
     expect(texts('style={{ color: "#333" }}')).toEqual(["raw hex #333"]);
     expect(texts('<stop stopColor="#22d3eecc" />')).toEqual(["raw hex #22d3eecc"]);
@@ -131,6 +141,15 @@ describe("the tree walk", () => {
 describe("undefined color utilities", () => {
   const tokens = definedColorTokens("--color-danger: var(--danger);\n--color-warning-strong: x;");
   const texts = (source) => findUndefinedColorClasses(source, tokens).map((hit) => hit.text);
+
+  it("reports original one-based lines across comments, CRLF, and Unicode", () => {
+    const source =
+      '/* ignored text-danger-strong\r\n🐟 still ignored */\r\n\n🐟 const x = "text-danger-strong";\r\n';
+
+    expect(findUndefinedColorClasses(source, tokens)).toEqual([
+      { line: 4, text: "undefined color token danger-strong" },
+    ]);
+  });
 
   it("flags a semantic utility with no token behind it", () => {
     expect(texts('<p className="font-semibold text-danger-strong">x</p>')).toEqual([
