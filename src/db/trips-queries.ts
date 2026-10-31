@@ -3,6 +3,7 @@ import {
   asc,
   count,
   countDistinct,
+  desc,
   eq,
   gt,
   gte,
@@ -562,6 +563,12 @@ export async function pagedUpcomingTripsWithCounts(
   shopId: string,
   options: {
     cursor?: string;
+    /**
+     * The page *before* this cursor instead of the one after it: the same
+     * (start, title, id) key read in reverse, so Back needs no history in the
+     * URL. Wins over `cursor` when both are given.
+     */
+    before?: string;
     limit?: number;
     now?: Date;
     monthStart?: Date;
@@ -575,11 +582,18 @@ export async function pagedUpcomingTripsWithCounts(
     /** Only departures wearing this one of the shop's own words for a kind of day. */
     lensId?: string;
   } = {},
-): Promise<{ trips: TripWithBookedCount[]; nextCursor: string | null }> {
+): Promise<{
+  trips: TripWithBookedCount[];
+  nextCursor: string | null;
+  /** The cursor that opens the page before this one; null on the first page. */
+  prevCursor: string | null;
+}> {
   const now = options.now ?? nowDate();
   const limit = options.limit ?? SCHEDULE_PAGE_SIZE;
-  const after = decodeCursor(options.cursor);
+  const before = decodeCursor(options.before);
+  const after = before ? null : decodeCursor(options.cursor);
   const afterDate = after ? new Date(after[0]) : null;
+  const beforeDate = before ? new Date(before[0]) : null;
   const nowWithBuffer = new Date(now.getTime() - DEPARTURE_BUFFER_MS);
   const lowerBound =
     options.monthStart && options.monthStart > nowWithBuffer ? options.monthStart : nowWithBuffer;
@@ -616,42 +630,65 @@ export async function pagedUpcomingTripsWithCounts(
               and(eq(trips.startsAt, afterDate), eq(trips.title, after[1]), gt(trips.id, after[2])),
             )
           : undefined,
+        beforeDate && before && !Number.isNaN(beforeDate.getTime())
+          ? or(
+              lt(trips.startsAt, beforeDate),
+              and(eq(trips.startsAt, beforeDate), lt(trips.title, before[1])),
+              and(
+                eq(trips.startsAt, beforeDate),
+                eq(trips.title, before[1]),
+                lt(trips.id, before[2]),
+              ),
+            )
+          : undefined,
       ),
     )
     .groupBy(trips.id, courses.id, diveSites.id)
     .having(hasSpaceHaving(options.hasSpace))
     // The keyset cursor carries all three keys (`src/db/cursor.ts`, issue
-    // #2175), so the filter above resumes exactly after the last row shown.
-    .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id))
+    // #2175), so the filter above resumes exactly after (or, reading back,
+    // exactly before) the row the cursor names.
+    .orderBy(
+      ...(before
+        ? [desc(trips.startsAt), desc(trips.title), desc(trips.id)]
+        : [asc(trips.startsAt), asc(trips.title), asc(trips.id)]),
+    )
     .limit(limit + 1);
 
-  const page = rows
-    .slice(0, limit)
-    .map(
-      ({
-        trip,
-        course,
-        diveSite,
-        booked,
-        bookedDivers,
-        certifiedPassengers,
-        boatCapacity,
-        assignedCrewCount,
-      }) => ({
-        ...withSellableCapacity(trip, certifiedPassengers, boatCapacity, assignedCrewCount),
-        course,
-        diveSite,
-        booked,
-        bookedDivers,
-      }),
-    );
+  const hasMore = rows.length > limit;
+  const kept = rows.slice(0, limit);
+  // A backward read arrives newest-first; the page always reads oldest-first.
+  const ordered = before ? kept.reverse() : kept;
+  const page = ordered.map(
+    ({
+      trip,
+      course,
+      diveSite,
+      booked,
+      bookedDivers,
+      certifiedPassengers,
+      boatCapacity,
+      assignedCrewCount,
+    }) => ({
+      ...withSellableCapacity(trip, certifiedPassengers, boatCapacity, assignedCrewCount),
+      course,
+      diveSite,
+      booked,
+      bookedDivers,
+    }),
+  );
+  const first = page.at(0);
   const last = page.at(-1);
+  const cursorOf = (trip: { startsAt: Date; title: string; id: string }) =>
+    encodeCursor(trip.startsAt.toISOString(), trip.title, trip.id);
   return {
     trips: page,
-    nextCursor:
-      rows.length > limit && last
-        ? encodeCursor(last.startsAt.toISOString(), last.title, last.id)
-        : null,
+    // Paging back stopped at a known row, so there is always a page after this one.
+    nextCursor: last && (before || hasMore) ? cursorOf(last) : null,
+    // Reading back: an extra row means there are earlier pages. Reading
+    // forward from a cursor: the row before this page's first is what the
+    // cursor left behind. The very first page has neither.
+    prevCursor: first && (before ? hasMore : after) ? cursorOf(first) : null,
   };
 }
 

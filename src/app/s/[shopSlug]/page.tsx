@@ -135,10 +135,8 @@ export default async function SchedulePage({
   searchParams: Promise<{
     month?: string;
     after?: string;
-    /** The stack of every earlier page's cursor, oldest first — how
-     * "Previous page" (task 17) finds its way back without a backward
-     * keyset query. See src/lib/schedule-pagination.ts. */
-    back?: string;
+    /** The page before this departure: Previous page reads the keyset in reverse. */
+    before?: string;
     embed?: string;
     /** `host` when the loader drew the credit on the host page — see `public/embed.js`. */
     credit?: string;
@@ -152,7 +150,7 @@ export default async function SchedulePage({
 }) {
   await connectionForRoute("/s/[shopSlug]"); // live data — render per request, not at build
   const { shopSlug } = await params;
-  const { month, after, back, embed, hasSpace, tripType, canDive, hideAbove, credit, lens } =
+  const { month, after, before, embed, hasSpace, tripType, canDive, hideAbove, credit, lens } =
     await searchParams;
   const hasSpaceFilter = hasSpace === "1";
   const tripTypeFilter = tripType === "fun_dive" || tripType === "course" ? tripType : undefined;
@@ -216,7 +214,7 @@ export default async function SchedulePage({
     activeLens,
     range,
     upcoming,
-    nextCursor,
+    cursors,
     reviewAggregate,
     activeCourses,
     boats,
@@ -227,7 +225,7 @@ export default async function SchedulePage({
   } = await readSchedulePage(db, shop, {
     isEmbed,
     lens,
-    after,
+    cursor: { after, before },
     now,
     listMonthBounds,
     hasSpaceFilter,
@@ -245,12 +243,8 @@ export default async function SchedulePage({
   };
   const { monthHref, lensHref } = scheduleViewLinks(view);
 
-  // The widget shows a window; the page shows the schedule. Sliced here rather
-  // than asked for in the query so the two surfaces read the same list and can
-  // never disagree about what is next (issue #805).
-  // Declared below, once the composed requirements are known — hiding has to
-  // happen before the embed slice, or an embed showing three departures could
-  // show fewer than three for no visible reason.
+  // The widget shows a window, sliced below once the composed requirements are
+  // known so hiding happens first and both surfaces read one list (issue #805).
   // The zone the times below are in, for the widget's footer. Anchored on a
   // real departure so a shop that switches to summer time reads correctly
   // either side of the change, falling back to the range's first.
@@ -285,7 +279,7 @@ export default async function SchedulePage({
     visibleUpcoming,
     isEmbed,
     explicitMonth,
-    after,
+    after: after ?? before,
     hasSpaceFilter,
     tripTypeFilter,
     hideAboveFilter,
@@ -301,7 +295,7 @@ export default async function SchedulePage({
   });
 
   // The board's last month says which runs keep going (`PromotedDateAsk`).
-  const settled = explicitMonth !== null || !nextCursor;
+  const settled = explicitMonth !== null || !cursors.nextCursor;
   const atBoardsEnd =
     !isEmbed && !quiet.quiet && viewsBoardsEnd(currentMonth, lastTripMonth, settled);
   const runningLines = atBoardsEnd
@@ -342,7 +336,7 @@ export default async function SchedulePage({
    * condition would disagree the day a state is added to one of them.
    */
   const showsWeekLedger = hasUpcoming && visibleUpcoming.length > 0;
-  const pager = schedulePagerHrefs({ view, after, back, nextCursor });
+  const pager = schedulePagerHrefs({ view, ...cursors });
 
   const shelfCourses = shelfCourseCards({
     activeCourses,
@@ -516,10 +510,10 @@ export default async function SchedulePage({
           takes it into its margin, so it still sits 20px under that row's
           box. Under an empty state (a month or a filter with nothing in it)
           no room is handed back. */}
-      {!isEmbed && (nextCursor || after || explicitMonth) ? (
+      {!isEmbed && (cursors.nextCursor || after || before || explicitMonth) ? (
         <SchedulePagerRow
           pager={pager}
-          showsBackToNext={Boolean(after || explicitMonth)}
+          showsBackToNext={Boolean(after || before || explicitMonth)}
           followsWeekLedger={showsWeekLedger}
           t={t}
         />

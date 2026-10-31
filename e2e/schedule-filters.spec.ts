@@ -205,6 +205,13 @@ test("paging and month arrows keep the filters a diver applied", { tag: READ_ONL
     /hasSpace=1/,
   );
 
+  // Going back is a cursor of its own (`before`), not a stack of history in
+  // the URL, and it lands on a page that offers the way forward again.
+  await page.getByRole("link", { name: "Show earlier departures" }).click();
+  await expect(page).toHaveURL(/before=/);
+  await expect(page).not.toHaveURL(/back=/);
+  await expect(page.getByRole("link", { name: "Show later departures" })).toBeVisible();
+
   // The month rail's arrows re-render the same page (the list is bounded by
   // the filters), so they carry the whole view as well.
   await page.goto("/s/blue-mantis?hasSpace=1&tripType=fun_dive");

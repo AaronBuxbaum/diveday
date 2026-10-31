@@ -7,7 +7,7 @@ const ctx = fileScopedShopContext();
 
 const VIEW = {
   lens: undefined,
-  after: undefined,
+  cursor: { after: undefined, before: undefined },
   listMonthBounds: null,
   hasSpaceFilter: false,
   tripTypeFilter: undefined,

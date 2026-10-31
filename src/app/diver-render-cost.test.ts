@@ -199,7 +199,7 @@ async function publicSchedulePageReads(db: AppDb, shopSlug: string) {
   await readSchedulePage(db, shop, {
     isEmbed: false,
     lens: undefined,
-    after: undefined,
+    cursor: { after: undefined, before: undefined },
     now,
     listMonthBounds: null,
     hasSpaceFilter: false,
