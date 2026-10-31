@@ -1,28 +1,20 @@
 // The default `node` environment: these tests exercise the service worker without a DOM.
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  READY_CACHE_NAME,
-  READY_COPY_GENERATED_AT_META,
-  READY_COPY_LOCALE_META,
-  READY_COPY_TIME_ZONE_META,
-  READY_COPY_VERSION,
-  READY_COPY_VERSION_META,
-  READY_KEEP_UNTIL_META,
-  READY_OFFLINE_GENERATED_AT_PLACEHOLDER,
-  READY_OFFLINE_NOTE_ATTR,
-  READY_ROLLBACK_SAVED_AT_PLACEHOLDER,
-} from "@/lib/ready-offline";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { READY_CACHE_NAME } from "@/lib/ready-offline";
 import {
   forgetReadyPage,
   READY_COPY_KEY,
   readyPageFallback,
   saveReadyPage,
 } from "./ready-page-cache";
+import { DAY_MS, NOW, page, snapshotOf, stubSnapshotReply } from "./ready-test-support";
 
 const ORIGIN = "https://dive.day";
 const TOKEN = "A".repeat(43);
-const NOW = 1_800_000_000_000;
-const DAY_MS = 24 * 60 * 60 * 1000;
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 /** A Cache Storage with just the surface the module uses, keyed by path. */
 function fakeStorage() {
@@ -47,28 +39,6 @@ function fakeStorage() {
   return { storage: storage as unknown as CacheStorage, caches };
 }
 
-/** A current-format response with no automatic banner, for malformed-page tests. */
-function renderedPage(body: string, init: ResponseInit = {}, keepUntil = NOW + 30 * DAY_MS) {
-  return new Response(
-    `<meta name="${READY_KEEP_UNTIL_META}" content="${keepUntil}"/><meta name="${READY_COPY_VERSION_META}" content="${READY_COPY_VERSION}"/>${body}`,
-    {
-      status: 200,
-      headers: { "content-type": "text/html; charset=utf-8" },
-      ...init,
-    },
-  );
-}
-
-/** The live page as the server renders it: kept until `keepUntil` (default: well past NOW). */
-function page(body = "<p>Ready</p>", init: ResponseInit = {}, keepUntil = NOW + 30 * DAY_MS) {
-  const generatedAt = body.includes(`name="${READY_COPY_GENERATED_AT_META}"`)
-    ? ""
-    : `<meta name="${READY_COPY_GENERATED_AT_META}" content="${NOW}"/>`;
-  const withBanner = body.includes(`${READY_OFFLINE_NOTE_ATTR}=""`)
-    ? `${generatedAt}${body}`
-    : `<meta name="${READY_COPY_LOCALE_META}" content="en-US"/><meta name="${READY_COPY_TIME_ZONE_META}" content="America/New_York"/>${generatedAt}${body}<p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">No signal: ${READY_OFFLINE_GENERATED_AT_PLACEHOLDER}</p>`;
-  return renderedPage(withBanner, init, keepUntil);
-}
 describe("ready-page clock rollback", () => {
   let store: ReturnType<typeof fakeStorage>;
   beforeEach(() => {
@@ -77,7 +47,7 @@ describe("ready-page clock rollback", () => {
 
   it("persists an online clock watermark across restart and detects its rollback", async () => {
     const path = `/ready/${TOKEN}`;
-    const body = `<meta name="${READY_COPY_LOCALE_META}" content="en-US"/><meta name="${READY_COPY_TIME_ZONE_META}" content="America/New_York"/><html><body><main><p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">No signal: ${READY_OFFLINE_GENERATED_AT_PLACEHOLDER}</p><p>offline trip copy</p><section data-ready-clock-rollback="" hidden><h1>Phone clock looks wrong</h1><p data-ready-clock-rollback-saved="" hidden>Generated ${READY_ROLLBACK_SAVED_AT_PLACEHOLDER}</p><p data-ready-clock-rollback-unknown="" hidden>Saved time unknown</p></section></main></body></html>`;
+    const body = "offline trip copy";
     const higherClock = NOW + 2 * 60 * 60 * 1000;
     expect(
       await saveReadyPage(store.storage, path, page(body, {}, NOW + DAY_MS), higherClock),
@@ -107,7 +77,7 @@ describe("ready-page clock rollback", () => {
   it("keeps a server-current page through a restart when the device clock is past trip expiry", async () => {
     const keepUntil = NOW + DAY_MS;
     const deviceClockAheadAtSave = NOW + 3 * DAY_MS;
-    const body = `<meta name="${READY_COPY_LOCALE_META}" content="en-US"/><meta name="${READY_COPY_TIME_ZONE_META}" content="America/New_York"/><html><body><main><p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">No signal: ${READY_OFFLINE_GENERATED_AT_PLACEHOLDER}</p><p>offline trip copy</p><section data-ready-clock-rollback="" hidden=""><h1>Phone clock looks wrong</h1><p data-ready-clock-rollback-saved="" hidden="">Generated ${READY_ROLLBACK_SAVED_AT_PLACEHOLDER}</p><p data-ready-clock-rollback-unknown="" hidden="">Saved time unknown</p></section></main></body></html>`;
+    const body = "offline trip copy";
     const kept = await saveReadyPage(
       store.storage,
       `/ready/${TOKEN}`,
@@ -169,7 +139,7 @@ describe("ready-page clock rollback", () => {
 
   it("keeps the page but warns when a corrupt watermark hides an earlier high clock reading", async () => {
     const path = `/ready/${TOKEN}`;
-    const body = `<meta name="${READY_COPY_LOCALE_META}" content="en-US"/><meta name="${READY_COPY_TIME_ZONE_META}" content="America/New_York"/><html><body><main><p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">No signal: ${READY_OFFLINE_GENERATED_AT_PLACEHOLDER}</p><p>offline trip copy</p><section data-ready-clock-rollback="" hidden><h1>Phone clock looks wrong</h1><p data-ready-clock-rollback-saved="" hidden>Generated ${READY_ROLLBACK_SAVED_AT_PLACEHOLDER}</p><p data-ready-clock-rollback-unknown="" hidden>Saved time unknown</p></section><section data-ready-clock-unverified="" hidden><p data-ready-clock-unverified-copy="" hidden>Phone clock could not be verified. Reconnect to check current trip details.</p></section></main></body></html>`;
+    const body = "offline trip copy";
     expect(await saveReadyPage(store.storage, path, page(body), NOW + 2 * 60 * 60 * 1000)).toBe(
       true,
     );
@@ -196,7 +166,7 @@ describe("ready-page clock rollback", () => {
     const text = await served?.text();
 
     expect(text).toContain("offline trip copy");
-    expect(text).toContain("Phone clock could not be verified");
+    expect(text).toContain("Clock not verified.");
     expect(served?.headers.get("x-diveday-ready-copy-time-state")).toBe("unverified");
     expect(store.caches.get(READY_CACHE_NAME)?.size).toBe(1);
 
@@ -208,7 +178,7 @@ describe("ready-page clock rollback", () => {
 
   it("keeps the page but warns when the watermark cannot be read", async () => {
     const path = `/ready/${TOKEN}`;
-    const body = `<meta name="${READY_COPY_LOCALE_META}" content="en-US"/><meta name="${READY_COPY_TIME_ZONE_META}" content="America/New_York"/><html><body><main><p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">No signal: ${READY_OFFLINE_GENERATED_AT_PLACEHOLDER}</p><p>offline trip copy</p><section data-ready-clock-unverified="" hidden><p data-ready-clock-unverified-copy="" hidden>Phone clock could not be verified. Reconnect to check current trip details.</p></section></main></body></html>`;
+    const body = "offline trip copy";
     expect(await saveReadyPage(store.storage, path, page(body), NOW)).toBe(true);
     const originalOpen = store.storage.open.bind(store.storage);
     vi.spyOn(store.storage, "open").mockImplementation(async (name) => {
@@ -222,7 +192,7 @@ describe("ready-page clock rollback", () => {
     const text = await served?.text();
 
     expect(text).toContain("offline trip copy");
-    expect(text).toContain("Phone clock could not be verified");
+    expect(text).toContain("Clock not verified.");
     expect(served?.headers.get("x-diveday-ready-copy-time-state")).toBe("unverified");
     expect(store.caches.get(READY_CACHE_NAME)?.size).toBe(1);
   });
@@ -247,41 +217,49 @@ describe("ready-page clock rollback", () => {
     expect(store.caches.get(READY_CACHE_NAME)?.size).toBe(0);
   });
 
-  it("replaces the readiness page with a timestamped warning after a detected rollback", async () => {
-    const serverSavedAt = NOW;
-    const html = `<meta name="${READY_COPY_LOCALE_META}" content="en-US"/><meta name="${READY_COPY_TIME_ZONE_META}" content="America/New_York"/><meta name="${READY_COPY_GENERATED_AT_META}" content="${serverSavedAt}"/><html><body><main><p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">No signal: ${READY_OFFLINE_GENERATED_AT_PLACEHOLDER}</p><button>Running late</button><section data-ready-clock-rollback="" hidden=""><h1>Phone clock looks wrong</h1><p data-ready-clock-rollback-saved="" hidden="">Generated ${READY_ROLLBACK_SAVED_AT_PLACEHOLDER}</p><p data-ready-clock-rollback-unknown="" hidden="">Saved time unknown</p></section></main></body></html>`;
-    expect(await saveReadyPage(store.storage, `/ready/${TOKEN}`, page(html), NOW + 100)).toBe(true);
+  it("serves the server's own warning, and none of the saved page, after a detected rollback", async () => {
+    stubSnapshotReply(
+      snapshotOf("<button>Running late</button>", {
+        rollback: "<h1>Phone clock looks wrong</h1><p>Generated Oct 14, 2:40 PM EDT</p>",
+      }),
+    );
+    expect(
+      await saveReadyPage(
+        store.storage,
+        `/ready/${TOKEN}`,
+        new Response("<p>live</p>", { headers: { "content-type": "text/html" } }),
+        NOW + 100,
+      ),
+    ).toBe(true);
 
     const served = await readyPageFallback(store.storage, `/ready/${TOKEN}`, NOW);
     const text = await served?.text();
     expect(text).toContain("Phone clock looks wrong");
-    const generatedLabel = new Intl.DateTimeFormat("en-US", {
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-      timeZoneName: "short",
-      timeZone: "America/New_York",
-    }).format(new Date(serverSavedAt));
-    expect(text?.replaceAll("\u00a0", " ")).toContain(
-      `Generated ${generatedLabel.replaceAll("\u00a0", " ")}`,
-    );
+    expect(text).toContain("Generated Oct 14, 2:40 PM EDT");
     expect(text).not.toContain("Running late");
     expect(served?.headers.get("x-diveday-ready-copy-time-state")).toBe("rollback");
   });
 
-  it("deletes a copy with no rollback marker instead of serving it after a clock rollback", async () => {
+  it("expires by the server's clock, not the phone's, after a fixed offset", async () => {
+    const path = `/ready/${TOKEN}`;
+    const deviceAhead = NOW + 5 * DAY_MS;
+    expect(
+      await saveReadyPage(store.storage, path, page("trip", {}, NOW + DAY_MS), deviceAhead),
+    ).toBe(true);
+    // Half a day on the phone is half a day on the server, whatever the phone reads.
+    expect(await readyPageFallback(store.storage, path, deviceAhead + DAY_MS / 2)).toBeDefined();
+    expect(await readyPageFallback(store.storage, path, deviceAhead + DAY_MS + 1)).toBeUndefined();
+    expect(store.caches.get(READY_CACHE_NAME)?.size ?? 0).toBe(0);
+  });
+
+  it("deletes a copy that lost its save time instead of serving it after a clock rollback", async () => {
     await saveReadyPage(store.storage, `/ready/${TOKEN}`, page("current copy"), NOW + 100);
     const cache = await store.storage.open(READY_CACHE_NAME);
     const saved = await cache.match(READY_COPY_KEY);
     expect(saved).toBeDefined();
-    await cache.put(
-      READY_COPY_KEY,
-      new Response(
-        `<p ${READY_OFFLINE_NOTE_ATTR}="">No signal: this is the copy your phone saved. Anything you change here needs signal.</p>`,
-        { headers: saved?.headers },
-      ),
-    );
+    const headers = new Headers(saved?.headers);
+    headers.delete("x-diveday-device-saved-at");
+    await cache.put(READY_COPY_KEY, new Response(await saved?.text(), { headers }));
 
     expect(await readyPageFallback(store.storage, `/ready/${TOKEN}`, NOW)).toBeUndefined();
     expect(store.caches.get(READY_CACHE_NAME)?.size ?? 0).toBe(0);

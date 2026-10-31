@@ -1,7 +1,7 @@
 import { and, asc, eq, gte, lt } from "drizzle-orm";
 import type { DbExecutor } from "@/db/client";
 import { courses, diveSites, people, tripAssignments, tripScheduleDays, trips } from "@/db/schema";
-import { liveTrip, notRehearsal } from "@/db/trips";
+import { liveTrip, notRehearsal, tripPrimarySiteId } from "@/db/trips";
 import { nowDate } from "@/lib/clock";
 import type { FeedTrip } from "./feed-document";
 import type { FeedScope } from "./feed-store";
@@ -64,7 +64,7 @@ export async function listFeedTrips(
     })
     .from(trips)
     .leftJoin(courses, eq(courses.id, trips.courseId))
-    .leftJoin(diveSites, eq(diveSites.id, trips.diveSiteId))
+    .leftJoin(diveSites, eq(diveSites.id, tripPrimarySiteId))
     // Left, not inner: a trip with no `trip_schedule_days` rows is a
     // single-day trip whose span lives on the trip row itself. An inner join
     // silently drops those, which for a calendar means a captain's departure

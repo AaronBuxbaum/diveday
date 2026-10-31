@@ -198,7 +198,7 @@ globalThis.Date = new Proxy(__RealDate, {
       await context.setOffline(true);
       try {
         await page.reload();
-        await page.getByRole("status").filter({ hasText: "No signal" }).waitFor();
+        await page.getByText(/No signal: this is a saved summary/).waitFor();
         await capture(page, "ready-saved-offline", "light");
       } finally {
         await context.setOffline(false);

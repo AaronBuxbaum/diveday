@@ -3,9 +3,11 @@ import { describe, expect, it } from "vitest";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
+import type { DbExecutor } from "./client";
 import { createDiveSite } from "./dive-sites";
 import { bookings, courses, shops, trips } from "./schema";
 import { createTripLens } from "./trip-lenses";
+import { tripPrimarySiteId } from "./trip-primary-site";
 import {
   countShopTrips,
   createTrip,
@@ -619,77 +621,44 @@ describe("tripDiveSiteSummaries", () => {
 
 describe("tripDiveSiteSummaries — a departure with no dive rows", () => {
   /**
-   * Every write path mints one `trip_dives` row per planned dive, so this shape
-   * only reaches the reader from data written around them (the demo seed's
-   * `seed-more-trips.ts` does exactly that today). The reader falls back to the
-   * trip's own pointer rather than telling a diver the boat goes nowhere.
+   * `trip_dives` is the only place a planned site lives, so a departure with no
+   * rows says nothing about where it goes: absent from the map, never
+   * `{ sites: [], undecidedDives: 0 }`, which a surface would read as "no dives
+   * are open".
    */
-  it("falls back to the trip's own site, and says nothing when there isn't one", async () => {
+  it("is absent from the map", async () => {
     const { db, shop } = ctx;
-    const site = await createDiveSite(db, { shopId: shop.id, name: "Test Fallback Reef" });
-    const [withPointer] = await db
+    const [bare] = await db
       .insert(trips)
       .values({
         shopId: shop.id,
-        diveSiteId: site.id,
         title: "Row-only trip",
         startsAt: new Date("2030-08-15T12:00:00Z"),
         endsAt: new Date("2030-08-15T16:00:00Z"),
         capacity: 4,
       })
       .returning();
-    const [withoutPointer] = await db
-      .insert(trips)
-      .values({
-        shopId: shop.id,
-        title: "Row-only trip, no site",
-        startsAt: new Date("2030-08-16T12:00:00Z"),
-        endsAt: new Date("2030-08-16T16:00:00Z"),
-        capacity: 4,
-      })
-      .returning();
-    if (!withPointer || !withoutPointer) throw new Error("trip not created");
+    if (!bare) throw new Error("trip not created");
 
-    const summaries = await tripDiveSiteSummaries(db, shop.id, [withPointer.id, withoutPointer.id]);
-    expect(summaries.get(withPointer.id)).toEqual({
-      sites: [{ id: site.id, name: "Test Fallback Reef" }],
-      undecidedDives: 0,
-    });
-    // Absent, not `{ sites: [], undecidedDives: 0 }` — a surface must not read
-    // "no dives are open" from a trip that never described its dives.
-    expect(summaries.has(withoutPointer.id)).toBe(false);
-  });
-
-  it("prefers the dives over the pointer when both exist and disagree", async () => {
-    const { db, shop } = ctx;
-    const stale = await createDiveSite(db, { shopId: shop.id, name: "Test Stale Pointer" });
-    const real = await createDiveSite(db, { shopId: shop.id, name: "Test Real Site" });
-    const trip = await createTrip(db, {
-      shopId: shop.id,
-      title: "Pointer disagrees",
-      startsAt: new Date("2030-08-15T12:00:00Z"),
-      endsAt: new Date("2030-08-15T16:00:00Z"),
-      capacity: 4,
-      plannedDives: 1,
-      dives: [{ diveSiteId: real.id }],
-    });
-    if (!trip) throw new Error("trip not created");
-    await db.update(trips).set({ diveSiteId: stale.id }).where(eq(trips.id, trip.id));
-
-    expect((await tripDiveSiteSummaries(db, shop.id, [trip.id])).get(trip.id)).toEqual({
-      sites: [{ id: real.id, name: "Test Real Site" }],
-      undecidedDives: 0,
-    });
+    expect((await tripDiveSiteSummaries(db, shop.id, [bare.id])).has(bare.id)).toBe(false);
   });
 });
 
-describe("trips.dive_site_id — the denormalized pointer the forecast and calendar feed read", () => {
+/** The site `tripPrimarySiteId` projects for a trip. */
+async function primarySiteOf(db: DbExecutor, tripId: string) {
+  const [row] = await db
+    .select({ siteId: tripPrimarySiteId })
+    .from(trips)
+    .where(eq(trips.id, tripId));
+  return row?.siteId ?? null;
+}
+
+describe("tripPrimarySiteId — the one site the forecast and calendar feed read", () => {
   /**
-   * It used to be strictly *dive one's* site, so a departure planned second
-   * tank first stored null and offered no forecast point, no calendar
-   * `LOCATION`, and no directions — for a trip that plainly visits a site.
-   * Never a gate: readiness unions the pointer with every `trip_dives` site, so
-   * widening it can only add a site the trip already visits.
+   * A projection of `trip_dives`, never a second copy. It is the first dive
+   * that has a site, so a departure planned second tank first still offers a
+   * forecast point, a calendar `LOCATION` and directions. Never a gate:
+   * readiness reads every `trip_dives` site.
    */
   it("points at the first dive that has a site, not strictly dive one", async () => {
     const { db, shop } = ctx;
@@ -704,7 +673,7 @@ describe("trips.dive_site_id — the denormalized pointer the forecast and calen
       dives: [{}, { diveSiteId: elbow.id }],
     });
     if (!trip) throw new Error("trip not created");
-    expect(trip.diveSiteId).toBe(elbow.id);
+    expect(await primarySiteOf(db, trip.id)).toBe(elbow.id);
   });
 
   it("still prefers dive one when dive one has a site", async () => {
@@ -721,7 +690,7 @@ describe("trips.dive_site_id — the denormalized pointer the forecast and calen
       dives: [{ diveSiteId: first.id }, { diveSiteId: second.id }],
     });
     if (!trip) throw new Error("trip not created");
-    expect(trip.diveSiteId).toBe(first.id);
+    expect(await primarySiteOf(db, trip.id)).toBe(first.id);
   });
 
   it("stays null when no tank has a site at all", async () => {
@@ -736,7 +705,7 @@ describe("trips.dive_site_id — the denormalized pointer the forecast and calen
       dives: [{}, {}],
     });
     if (!trip) throw new Error("trip not created");
-    expect(trip.diveSiteId).toBeNull();
+    expect(await primarySiteOf(db, trip.id)).toBeNull();
   });
 
   it("follows an edit that moves the site from tank one to tank two", async () => {
@@ -760,13 +729,11 @@ describe("trips.dive_site_id — the denormalized pointer the forecast and calen
       endsAt: trip.endsAt,
       capacity: trip.capacity,
       plannedDives: 2,
-      // What the trip editor sends: the form's dive-one site, which is now blank.
-      diveSiteId: null,
       dives: [{ diveSiteId: null }, { diveSiteId: second.id }],
     });
     expect(outcome.ok).toBe(true);
     if (!outcome.ok) throw new Error("update refused");
-    expect(outcome.trip.diveSiteId).toBe(second.id);
+    expect(await primarySiteOf(db, trip.id)).toBe(second.id);
 
     // And the surfaces still read the dives, which is the answer that matters.
     expect((await tripDiveSiteSummaries(db, shop.id, [trip.id])).get(trip.id)).toEqual({

@@ -60,9 +60,13 @@ async function waitForShellPrimed(page: Page) {
     .poll(() =>
       page.evaluate(async (version) => {
         const registration = await navigator.serviceWorker.getRegistration("/manifest-sw.js");
-        const cache = await caches.open(`diveday-offline-manifest-shell-${version}`);
+        const base = `diveday-offline-manifest-shell-${version}`;
+        // Production names the cache by build too (`-<build id>`).
+        const name = (await caches.keys()).find((k) => k === base || k.startsWith(`${base}-`));
+        const cache = name ? await caches.open(name) : null;
         return (
           registration?.active?.state === "activated" &&
+          cache !== null &&
           (await cache.match("/offline-manifest")) !== undefined
         );
       }, OFFLINE_MANIFEST_SHELL_VERSION),
@@ -89,12 +93,14 @@ async function activeShellState(page: Page, expectedVersion: string, priorCache:
         };
         active.postMessage({ type: "GET_SHELL_VERSION" }, [channel.port2]);
       });
-      const cacheName = `diveday-offline-manifest-shell-${expectedVersion}`;
+      // Production names a shell cache by build too (`-<build id>`).
+      const named = (base: string) => (key: string) => key === base || key.startsWith(`${base}-`);
       const keys = await caches.keys();
+      const cacheName = keys.find(named(`diveday-offline-manifest-shell-${expectedVersion}`));
       const shellCached =
-        keys.includes(cacheName) &&
+        cacheName !== undefined &&
         Boolean(await (await caches.open(cacheName)).match("/offline-manifest"));
-      return { version, shellCached, priorCachePresent: keys.includes(priorCache) };
+      return { version, shellCached, priorCachePresent: keys.some(named(priorCache)) };
     },
     { expectedVersion, priorCache },
   );

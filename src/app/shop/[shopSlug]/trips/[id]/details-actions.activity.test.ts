@@ -432,7 +432,6 @@ describe("scoped departure saves (issue 3141)", () => {
       plannedDives: trip.plannedDives,
       startsAt: trip.startsAt,
       endsAt: trip.endsAt,
-      diveSiteId: trip.diveSiteId,
       meetingPointLabel: "North jetty",
       meetingPointAddress: "12 Dock Road",
     });

@@ -488,7 +488,6 @@ export async function seedMoreTrips(
     .values(
       tripDefs.map((def) => ({
         shopId,
-        diveSiteId: def.siteName ? siteByName.get(def.siteName)?.id : undefined,
         courseId: def.courseTitle ? courseByTitle.get(def.courseTitle)?.id : undefined,
         title: def.title,
         description: def.description,
@@ -539,10 +538,9 @@ export async function seedMoreTrips(
   // These thirty departures used to have none at all while every one of them
   // claimed `planned_dives = 2` (the column's default) — a shop whose schedule
   // says "two-tank" over a trip with zero dives on file. Nothing looked broken,
-  // because "where does this trip go" falls back to the trip's own
-  // `dive_site_id`, but the fallback is exactly what `summarizeTripDiveSites`
-  // exists to replace: a two-site day named one site, and the count of tanks
-  // still to be decided was unanswerable.
+  // because "where does this trip go" used to fall back to a site on the trip
+  // row, which could not say a two-site day named two, nor how many tanks were
+  // still to be decided.
   //
   // Dive one carries the trip's site; dive two carries the second site when the
   // title names two moorings, and otherwise the same one — a two-tank day at a
@@ -554,13 +552,14 @@ export async function seedMoreTrips(
   await db.insert(tripDives).values(
     insertedTrips.flatMap((trip, index) => {
       const def = tripDefs[index];
+      const firstSiteId = def?.siteName ? (siteByName.get(def.siteName)?.id ?? null) : null;
       const secondSiteId = def?.secondSiteName
         ? (siteByName.get(def.secondSiteName)?.id ?? null)
-        : (trip.diveSiteId ?? null);
+        : firstSiteId;
       return Array.from({ length: trip.plannedDives }, (_, dive) => ({
         tripId: trip.id,
         diveNumber: dive + 1,
-        diveSiteId: dive === 0 ? (trip.diveSiteId ?? null) : secondSiteId,
+        diveSiteId: dive === 0 ? firstSiteId : secondSiteId,
       }));
     }),
   );
@@ -937,6 +936,7 @@ async function seedDawnBoatRecord(
     .from(tripDives)
     .where(eq(tripDives.tripId, trip.id))
     .orderBy(tripDives.diveNumber);
+  const firstPlannedSiteId = plan.find((dive) => dive.diveSiteId)?.diveSiteId ?? null;
   if (plan.length > 0) {
     await db.insert(executedDives).values(
       plan.map((dive) => {
@@ -945,7 +945,7 @@ async function seedDawnBoatRecord(
           shopId,
           tripId: trip.id,
           diveNumber: dive.diveNumber,
-          actualSiteId: dive.diveSiteId ?? trip.diveSiteId,
+          actualSiteId: dive.diveSiteId ?? firstPlannedSiteId,
           enteredAt: new Date(
             afterDive - (DAWN_DIVE_MINUTES + DAWN_EXIT_BEFORE_COUNT_MINUTES) * minute,
           ),

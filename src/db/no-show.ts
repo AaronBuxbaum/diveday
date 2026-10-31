@@ -24,6 +24,7 @@ import { onTheWaterByRollCall } from "./manifests";
 import { activityEvents, bookings, courses, people, trips } from "./schema";
 import { lockSeatDeparture } from "./seat-locks";
 import { shopHasFeatureOn } from "./shops";
+import { tripPrimarySiteId } from "./trip-primary-site";
 import { pagedUpcomingTripsWithCounts } from "./trips";
 import { liveTrip } from "./trips-live";
 import { heldSeatCounts, sellableCapacity } from "./trips-queries";
@@ -473,7 +474,7 @@ export async function noShowSalvage(
       on ? listDepartureInterests(db, input.shopId, input.tripId) : [],
     ),
     db
-      .select({ id: trips.id, courseId: trips.courseId, diveSiteId: trips.diveSiteId })
+      .select({ id: trips.id, courseId: trips.courseId, diveSiteId: tripPrimarySiteId })
       .from(trips)
       .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip()))
       .limit(1),
@@ -501,7 +502,7 @@ export async function noShowSalvage(
       title: candidate.title,
       startsAt: candidate.startsAt,
       courseId: candidate.courseId,
-      diveSiteId: candidate.diveSiteId,
+      diveSiteId: candidate.diveSite?.id ?? null,
     })),
     limit: board.trips.length,
   });

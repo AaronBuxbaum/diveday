@@ -664,9 +664,10 @@
   *dive site*** — so every picker, label, and empty state in the library says that, and *briefing*
   survives only where briefing content is written or read (the site editor's "Underwater
   briefing", the diver-facing per-dive cards). And **no surface answers "where does this trip go"
-  from `trips.dive_site_id`**: that column is dive one's site copied onto the trip row for the
-  forecast point and the calendar feed's location, so reading it named one site for a two-site day
-  and named *none* on the day whose open tank happened to be the first one.
+  from one site**: the ordered `trip_dives` rows are the only place a planned site lives (there is
+  no site column on the trip), and a surface that names only the first chosen site names one site
+  for a two-site day. Only the forecast point and the calendar feed's location take a single site,
+  through `tripPrimarySiteId`.
 - **Predicted conditions** — crew-entered expectations for one dated charter, such as water
   temperature, visibility, and surface state. It is a briefing rather than a live guarantee;
   the crew makes the final go/no-go call.

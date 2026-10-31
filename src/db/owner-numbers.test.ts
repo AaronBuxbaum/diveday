@@ -176,7 +176,7 @@ describe("each departure's net (item 26)", () => {
 });
 
 describe("the staff year's sites (section 6)", () => {
-  it("falls back to the departure's own site when its plan names none", async () => {
+  it("counts each planned dive's site once per departure that dives it", async () => {
     const db = await unseededTestDb();
     const shopId = await shopRow(db, "year-departure-sites");
     const [benwood, duane] = await db
@@ -187,15 +187,14 @@ describe("the staff year's sites (section 6)", () => {
       ])
       .returning();
     if (!benwood || !duane) throw new Error("site insert failed");
-    const bare = await trip(db, shopId, "2026-05-01T13:00:00Z");
-    const bareAgain = await trip(db, shopId, "2026-05-08T13:00:00Z");
+    const firstBenwood = await trip(db, shopId, "2026-05-01T13:00:00Z");
+    const secondBenwood = await trip(db, shopId, "2026-05-08T13:00:00Z");
     const planned = await trip(db, shopId, "2026-05-09T13:00:00Z");
-    await db
-      .update(trips)
-      .set({ diveSiteId: benwood.id })
-      .where(inArray(trips.id, [bare, bareAgain, planned]));
-    // Its plan names a site, so its departure site is not counted again.
-    await db.insert(tripDives).values({ tripId: planned, diveNumber: 1, diveSiteId: duane.id });
+    await db.insert(tripDives).values([
+      { tripId: firstBenwood, diveNumber: 1, diveSiteId: benwood.id },
+      { tripId: secondBenwood, diveNumber: 1, diveSiteId: benwood.id },
+      { tripId: planned, diveNumber: 1, diveSiteId: duane.id },
+    ]);
 
     const year = summarizeShopYear(
       await getShopYear(db, shopId, {

@@ -441,7 +441,7 @@ describe("past-diver invites switched off", () => {
     const [row] = await db.select().from(shops).where(eq(shops.id, shop.id));
     if (!row) throw new Error("shop missing");
     const upcoming = await upcomingTripsWithCounts(db, shop.id, new Date(0));
-    const open = upcoming.find((trip) => trip.booked < trip.capacity && trip.diveSiteId);
+    const open = upcoming.find((trip) => trip.booked < trip.capacity && trip.diveSite);
     if (!open) throw new Error("seed has no open boat at a site");
     await db.update(shops).set({ pastDiverInvitesEnabled: false }).where(eq(shops.id, shop.id));
     const guests = await getTripGuests(db, { ...row, pastDiverInvitesEnabled: false }, open.id);

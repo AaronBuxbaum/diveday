@@ -122,8 +122,8 @@ export async function upsertTripRequirements(
 }
 
 /**
- * Every site a trip visits, for the cert gate — its primary site *and* every
- * site on its ordered dives. `trip_dives.dive_site_id` is nullable (a planned
+ * Every site a trip visits, for the cert gate — the site on every one of its
+ * ordered dives, never just the first. `trip_dives.dive_site_id` is nullable (a planned
  * dive with no site chosen yet is legal), and the `in (…)` simply never matches
  * those rows.
  *
@@ -144,13 +144,13 @@ function tripVisitedSites(db: DbExecutor, shopId: string, tripId: string) {
       .from(trips)
       .innerJoin(
         diveSites,
-        sql`${diveSites.id} = ${trips.diveSiteId} or ${diveSites.id} in (
+        sql`${diveSites.id} in (
           select ${tripDives.diveSiteId} from ${tripDives} where ${tripDives.tripId} = ${trips.id}
         )`,
       )
-      // `dive_sites.shop_id` as well as the trip's: the join above reaches sites
-      // through two paths, so shop ownership is proven on the query rather than
-      // assumed from the trip's pointer (the CR-007 house rule).
+      // `dive_sites.shop_id` as well as the trip's: shop ownership is proven on
+      // the query rather than assumed from a dive row's pointer (the CR-007
+      // house rule).
       .where(
         and(
           eq(trips.id, tripId),
@@ -194,12 +194,11 @@ export async function getTripSiteRequirement(
  * a rule, which is what got "Payment: not required" deleted from the staff
  * summary (issue #695, docs/design/principles.md).
  *
- * The site half reaches through both paths a trip can name a site by — the
- * `trips.dive_site_id` pointer and its ordered dives — for the reason
- * `combineSiteRequirements` exists at all: reading only the primary site goes
- * quiet on exactly the two-tank day where dive two is the one that needs the
- * card. Shop ownership is proven on the query rather than inherited from the
- * trip's pointer (the CR-007 house rule), and `dive_sites.deleted_at` is
+ * The site half reads every ordered dive (`trip_dives`, the only place a
+ * planned site lives), for the reason `combineSiteRequirements` exists at all:
+ * reading only the first site goes quiet on exactly the two-tank day where
+ * dive two is the one that needs the card. Shop ownership is proven on the
+ * query rather than inherited from a dive's pointer (the CR-007 house rule), and `dive_sites.deleted_at` is
  * deliberately not filtered, inherited from the depth advisory — change all
  * three together or none.
  */
@@ -234,7 +233,7 @@ export async function tripRequirementSummaries(
         .from(trips)
         .innerJoin(
           diveSites,
-          sql`${diveSites.id} = ${trips.diveSiteId} or ${diveSites.id} in (
+          sql`${diveSites.id} in (
             select ${tripDives.diveSiteId} from ${tripDives} where ${tripDives.tripId} = ${trips.id}
           )`,
         )
@@ -282,14 +281,13 @@ export async function getTripMaxDepthMeters(
     .from(trips)
     .innerJoin(
       diveSites,
-      sql`${diveSites.id} = ${trips.diveSiteId} or ${diveSites.id} in (
+      sql`${diveSites.id} in (
         select ${tripDives.diveSiteId} from ${tripDives} where ${tripDives.tripId} = ${trips.id}
       )`,
     )
-    // `dive_sites.shop_id` as well as the trip's: the join above reaches sites
-    // through two paths, and proving the row belongs to this shop on the query
-    // beats relying on the invariant that a trip never points at a foreign
-    // site (the CR-007 house rule).
+    // `dive_sites.shop_id` as well as the trip's: proving the row belongs to this
+    // shop on the query beats relying on the invariant that a dive never points
+    // at a foreign site (the CR-007 house rule).
     .where(
       and(eq(trips.id, tripId), eq(trips.shopId, shopId), eq(diveSites.shopId, shopId), liveTrip()),
     );
@@ -1798,9 +1796,8 @@ export async function listTripsReadiness(
           .where(
             and(eq(tripRequirements.shopId, shopId), inArray(tripRequirements.tripId, tripIds)),
           ),
-      // Every site every trip visits — see `tripVisitedSites` for why the join
-      // reaches through `trip_dives` too, and why `dive_sites.shop_id` is
-      // re-proven here.
+      // Every site every trip visits (every `trip_dives` row) — see
+      // `tripVisitedSites`; `dive_sites.shop_id` is re-proven here.
       () =>
         db
           .select({
@@ -1812,7 +1809,7 @@ export async function listTripsReadiness(
           .from(trips)
           .innerJoin(
             diveSites,
-            sql`${diveSites.id} = ${trips.diveSiteId} or ${diveSites.id} in (
+            sql`${diveSites.id} in (
             select ${tripDives.diveSiteId} from ${tripDives} where ${tripDives.tripId} = ${trips.id}
           )`,
           )

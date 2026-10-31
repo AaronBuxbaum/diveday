@@ -63,7 +63,7 @@ test("the public schedule lists seeded trips with capacity states, a month rail,
   await expect(monthNav.getByRole("link", { name: "Next month" })).toBeVisible();
 
   // The card names *every* site the departure visits, not just dive one's.
-  // Reading `trips.dive_site_id` here is what made a two-site day look like
+  // Naming only the first dive's site is what made a two-site day look like
   // "one dive site, two dive briefings" (glossary: Dive site / Dive briefing).
   const twoSiteCard = tripList
     .locator("li")

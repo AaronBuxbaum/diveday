@@ -46,7 +46,7 @@ export const EXPORT_FILE_NOTES = {
     "Specialty certifications (deep, wreck, night, drysuit) with verification status.",
   "nitrox_certifications.csv": "Nitrox (EANx) certifications with verification status.",
   "trips.csv":
-    "Every trip ever scheduled, including canceled ones, with sites and predicted conditions.",
+    "Every trip ever scheduled, including canceled ones, with predicted conditions; its sites are in trip_dives.csv.",
   "trip_change_events.csv":
     "The public-safe change ledger for departures: what meeting point or conditions snapshot changed, the before and after values, broad source, and timestamp. No readiness, waiver, contact, or capability state is included.",
   "trip_stage_events.csv":

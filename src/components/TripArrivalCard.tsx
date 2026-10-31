@@ -1,83 +1,15 @@
 import { ArrivalMap } from "@/components/ArrivalMap";
+import {
+  type ArrivalCardShop,
+  type ArrivalCardTrip,
+  arrivalCardFacts,
+} from "@/components/arrival-card-facts";
 import { ShopContactLinks } from "@/components/ShopContactLinks";
 import { StoredPhoto } from "@/components/StoredPhoto";
 import { SectionCard } from "@/components/ui/card";
-import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
-import { dockCallAt } from "@/lib/dock-call";
-import { formatTime } from "@/lib/format";
-import { cachedListFormat } from "@/lib/intl-cache";
+import { diverTranslator } from "@/i18n/messages";
 import { openMapsUrl, osmMapEmbedUrl } from "@/lib/maps";
-import { meetingPointOf } from "@/lib/meeting-point";
-import type { ShopAddressParts } from "@/lib/shop-address";
-
-export type ArrivalCardShop = {
-  name: string;
-  slug: string;
-  timezone: string;
-  contactPhone: string | null;
-  contactEmail: string | null;
-  address: ShopAddressParts;
-};
-
-export type ArrivalCardTrip = {
-  id: string;
-  title: string;
-  startsAt: Date;
-  endsAt: Date;
-  meetingPointLabel: string | null;
-  meetingPointAddress: string | null;
-  arrivalLandmark: string | null;
-  arrivalParkingNote: string | null;
-  arrivalTransitNote: string | null;
-  arrivalLookFor: string | null;
-  arrivalFirstInteraction: string | null;
-  arrivalPhotoUrl: string | null;
-};
-
-function clean(value: string | null | undefined): string | null {
-  return value?.trim() || null;
-}
-
-/** The arrival projection shared by the booked Ready view and saved card. */
-export function arrivalCardFacts(shop: ArrivalCardShop, trip: ArrivalCardTrip) {
-  // One reading of "where to go", shared with the mail and the printed pass
-  // (`src/lib/meeting-point.ts`), so the page and what the diver carries agree.
-  const point = meetingPointOf({
-    shopName: shop.name,
-    shopAddress: shop.address,
-    meetingPointLabel: trip.meetingPointLabel,
-    meetingPointAddress: trip.meetingPointAddress,
-    arrivalLandmark: trip.arrivalLandmark,
-    arrivalParkingNote: trip.arrivalParkingNote,
-  });
-  return {
-    label: point.label,
-    address: point.address,
-    mapQuery: point.mapQuery,
-    landmark: point.landmark,
-    parkingNote: point.parking,
-    transitNote: clean(trip.arrivalTransitNote),
-    lookFor: clean(trip.arrivalLookFor),
-    firstInteraction: clean(trip.arrivalFirstInteraction),
-    photoUrl: clean(trip.arrivalPhotoUrl),
-  };
-}
-
-export function arrivalDockCallLine(
-  t: DiverTranslator,
-  startsAt: Date,
-  dockCallMinutes: number | null | undefined,
-  locale: string,
-  timeZone: string,
-): string | null {
-  if (dockCallMinutes == null) return null;
-  const at = dockCallAt(startsAt, dockCallMinutes);
-  if (!at) return null;
-  return t("ready.dockCallLine", {
-    time: formatTime(at, locale, timeZone),
-    dock: t("notifications.common.dockCallMinutes", { minutes: dockCallMinutes }),
-  });
-}
+import { siteRunsLine } from "@/lib/site-runs";
 
 function ArrivalFact({ label, value }: { label: string; value: string }) {
   return (
@@ -85,31 +17,6 @@ function ArrivalFact({ label, value }: { label: string; value: string }) {
       <dt className="text-sm font-semibold">{label}</dt>
       <dd className="mt-1 text-sm text-muted">{value}</dd>
     </div>
-  );
-}
-
-/**
- * The Sites row's words. Consecutive dives at the same site are one run, so a
- * two-tank day on one reef reads "Molasses Reef, two dives" rather than the
- * site twice, which looked like a data error on the card a diver screenshots
- * (UX audit #14). Only *consecutive* repeats collapse: a day that goes A, B,
- * then back to A still reads in the order it runs.
- */
-export function siteRunsLine(sites: readonly string[], locale: string, t: DiverTranslator): string {
-  const runs: { site: string; dives: number }[] = [];
-  for (const site of sites) {
-    const last = runs.at(-1);
-    if (last && last.site === site) last.dives += 1;
-    else runs.push({ site, dives: 1 });
-  }
-  const [only] = runs;
-  if (runs.length === 1 && only && only.dives > 1) {
-    return t("trip.arrivalSiteRun", { site: only.site, count: only.dives });
-  }
-  return cachedListFormat(locale, { style: "long", type: "unit" }).format(
-    runs.map(({ site, dives }) =>
-      dives > 1 ? t("trip.arrivalSiteRunInList", { site, count: dives }) : site,
-    ),
   );
 }
 

@@ -14,8 +14,9 @@ import { atShopMoneyLine, payStepLines } from "@/app/ready/[token]/_components/p
 import { resolvePaymentReceipt } from "@/app/ready/[token]/_components/payment-receipt";
 import { ReadyFitForm } from "@/app/ready/[token]/_components/ReadyFitForm";
 import { ReadyThreadPage } from "@/app/ready/[token]/_components/ReadyMasthead";
-import { ReadyOfflineCopyForTrip } from "@/app/ready/[token]/_components/ReadyOfflineCopyForTrip";
+import { ReadyOfflineCopy } from "@/app/ready/[token]/_components/ReadyOfflineCopy";
 import { READY_NOTICES } from "@/app/ready/[token]/_components/ready-notices";
+import { readyOfflineWords } from "@/app/ready/[token]/_components/ready-offline-words";
 import { SignStepActions } from "@/app/ready/[token]/_components/SignStepActions";
 import { ThreadSections } from "@/app/ready/[token]/_components/ThreadSections";
 import {
@@ -599,10 +600,8 @@ async function DiverReadinessPage({
           </ShopNotice>
         </div>
       ) : null}
-      {/* Keep this page on the phone for the marina with no signal, on both
-          openings (the booked card and the ordinary masthead), and date the
-          copy by the live page itself (security review of layer 8, D2). */}
-      <ReadyOfflineCopyForTrip detail={detail} locale={locale} t={t} />
+      {/* Keep the server's offline snapshot on the phone, on both openings. */}
+      <ReadyOfflineCopy copy={readyOfflineWords(t)} />
       {/* The spine, the arrival card, the packing list and the cancel door
           read seven more things between them, and arrive behind a body-shaped
           fallback rather than holding the opening above them (UX audit #5). */}

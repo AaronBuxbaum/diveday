@@ -10,6 +10,7 @@ import {
 } from "@/lib/weekday-pattern";
 import type { AppDb } from "./client";
 import { tripAssignments, trips } from "./schema";
+import { tripPrimarySiteId } from "./trip-primary-site";
 import { liveTrip } from "./trips-live";
 
 /** `HH:MM` on the shop's own clock, for a stored instant. */
@@ -45,7 +46,7 @@ export async function departuresOnWeekday(
       startsAt: trips.startsAt,
       endsAt: trips.endsAt,
       title: trips.title,
-      diveSiteId: trips.diveSiteId,
+      diveSiteId: tripPrimarySiteId,
       boatId: trips.boatId,
       capacity: trips.capacity,
       priceCents: trips.priceCents,

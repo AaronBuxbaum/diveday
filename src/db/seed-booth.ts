@@ -457,6 +457,12 @@ async function seedWeatherCall(
   const back = daysSinceLastSaturday(nowDate());
   const window = { startsAt: at(-back, 8, 0), endsAt: at(-back, 12, 0) };
   const calledAt = at(-back - 1, 17, 15);
+  const { diveSiteId: weatherSiteId, lensId: weatherLensId } = await siteAndLens(
+    db,
+    shopId,
+    "Molasses Reef",
+    "Easygoing reef",
+  );
   const [trip] = await db
     .insert(trips)
     .values({
@@ -468,7 +474,7 @@ async function seedWeatherCall(
       plannedDives: 2,
       priceCents: WEATHER_PRICE_CENTS,
       boatId: await freeHull(db, shopId, window),
-      ...(await siteAndLens(db, shopId, "Molasses Reef", "Easygoing reef")),
+      lensId: weatherLensId,
       status: "cancelled",
       cancelledAt: calledAt,
       createdAt: at(-back - 30, 10, 0),
@@ -476,7 +482,7 @@ async function seedWeatherCall(
     .returning();
   if (!trip) throw new Error("seed: the weather-called Saturday was not written");
   await db.insert(tripDives).values([
-    { tripId: trip.id, diveNumber: 1, title: "Molasses Reef", diveSiteId: trip.diveSiteId },
+    { tripId: trip.id, diveNumber: 1, title: "Molasses Reef", diveSiteId: weatherSiteId },
     { tripId: trip.id, diveNumber: 2, title: "French Reef", diveSiteId: null },
   ]);
   await db.insert(tripRequirements).values({
@@ -692,7 +698,8 @@ async function seedShopCertified(
       plannedDives: SHOP_CERTIFIED_DIVES.length,
       priceCents: null,
       boatId: hull.id,
-      ...(await siteAndLens(db, shopId, SHOP_CERTIFIED_DIVES[0]?.site ?? "", "Learning")),
+      lensId: (await siteAndLens(db, shopId, SHOP_CERTIFIED_DIVES[0]?.site ?? "", "Learning"))
+        .lensId,
       createdAt: at(-back - 40, 10, 0),
     })
     .returning();

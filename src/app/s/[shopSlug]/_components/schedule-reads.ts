@@ -36,9 +36,9 @@ export async function everHadDepartureRead(
 /** What the schedule's cards say about each listed departure, one read each for the page. */
 export function listedDepartureSummaries(db: AppDb, shopId: string, tripIds: string[]) {
   return Promise.all([
-    // Where each departure actually goes, read off the *dives* rather than `trips.dive_site_id`
-    // (dive one's site, copied onto the trip row), so a two-site day names both and a day whose
-    // open tank is the first one still names the site it visits.
+    // Where each departure actually goes, read off the *dives* (`trip_dives`, the only place a
+    // planned site lives), so a two-site day names both and a day whose open tank is the first
+    // one still names the site it visits.
     tripDiveSiteSummaries(db, shopId, tripIds),
     // What each departure asks of anybody — the trip's own gate folded with every site it visits.
     // A property of the *trip*, so it is safe on an anonymous page: it says nothing about any

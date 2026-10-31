@@ -51,7 +51,7 @@ async function marchDeparture(
     startsAt,
     endsAt: new Date(startsAt.getTime() + 4 * HOUR_MS),
     capacity: 6,
-    diveSiteId: f.site.id,
+    dives: [{ diveSiteId: f.site.id }],
     isRehearsal: options.rehearsal,
     isPrivate: options.private,
   });

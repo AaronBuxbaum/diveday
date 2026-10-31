@@ -18,6 +18,7 @@
  * | `./trips-clashes.ts` | two departures in each other's way: the overlap rule, and one hull on two at once |
  * | `./trips-prep.ts` | the trip-prep page's one read: crew, gear and every diver's rental fit; the screen a gear pick passes |
  * | `./trips-roster.ts` | who is on it: bookings, wait list, contacts |
+ * | `./trip-primary-site.ts` | `tripPrimarySiteId`, the one projection of `trip_dives` to "the trip's site" |
  * | `./trips-queries.ts` | reading the board: schedule lists, aggregates, calendar feeds |
  * | `./trips-guests.ts` | everything the trip's Guests page reads, in one call |
  * | `./trips-overview.ts` | everything the trip's Overview reads, in one call |
@@ -34,6 +35,7 @@
  * trip without the rows that make it readable as a safety document.
  */
 
+export { tripPrimarySiteId, tripVisitsSite } from "./trip-primary-site";
 export {
   type BoatClash,
   boatClashes,

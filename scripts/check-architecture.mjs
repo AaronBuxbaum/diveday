@@ -42,6 +42,13 @@ import { bankCounts, ratchetFlags, readCounts } from "./ratchet.mjs";
  *    renamed, or merged without a repo-wide edit, and the module's surface is
  *    reviewable in one file rather than inferred from every call site.
  *
+ * 4. **Server-only modules stay out of client bundles.** A module in
+ *    `SERVER_ONLY_MODULES` (or a `libphonenumber-js` import) must not be
+ *    reachable by value imports from any `"use client"` file. The phone line-type
+ *    metadata is about 100 kB the browser has no use for (ADR
+ *    20261014-phone-line-type-metadata); the repo has no `server-only` package, so the
+ *    import graph is the only thing keeping it out, and this walks it.
+ *
  * ## The ratchet
  *
  * Widening the forbidden table found pre-existing debt (shared components in
@@ -115,6 +122,91 @@ export const seams = [
       `${file}: imports ${specifier} — reach the trips modules through the "@/db/trips" barrel`,
   },
 ];
+
+/** Modules a client bundle must never reach, by value import, at any depth. */
+export const SERVER_ONLY_MODULES = ["src/lib/phone-line-type.ts"];
+const SERVER_ONLY_PACKAGE = /^libphonenumber-js(?:\/|$)/;
+
+/** The repo file a specifier names, or null for a package or a file not on disk. */
+async function resolveFile(root, importer, specifier) {
+  const base = resolveSpecifier(importer, specifier);
+  if (!base) return null;
+  const candidates = [
+    base,
+    ...[".ts", ".tsx", ".js", ".mjs"].map((extension) => base + extension),
+    ...[".ts", ".tsx"].map((extension) => path.join(base, `index${extension}`)),
+  ];
+  for (const candidate of candidates) {
+    try {
+      if ((await stat(path.join(root, candidate))).isFile()) return candidate;
+    } catch {}
+  }
+  return null;
+}
+
+/**
+ * Rule 4: from each `"use client"` file, follow value imports; a server-only
+ * module or package reached anywhere on the way is a violation on that file.
+ */
+async function clientReachViolations(root, record) {
+  const sources = new Map();
+  const read = async (file) => {
+    if (!sources.has(file)) sources.set(file, await readFile(path.join(root, file), "utf8"));
+    return sources.get(file);
+  };
+  const reach = new Map();
+  const reaches = async (file) => {
+    if (reach.has(file)) return reach.get(file);
+    reach.set(file, null);
+    let found = null;
+    for (const { specifier, typeOnly } of importsOf(await read(file))) {
+      if (typeOnly) continue;
+      if (SERVER_ONLY_PACKAGE.test(specifier)) {
+        found = specifier;
+        break;
+      }
+      const target = await resolveFile(root, file, specifier);
+      if (!target) continue;
+      if (SERVER_ONLY_MODULES.includes(target.replaceAll(path.sep, "/"))) {
+        found = target;
+        break;
+      }
+      found = await reaches(target);
+      if (found) break;
+    }
+    reach.set(file, found);
+    return found;
+  };
+  for (const file of await walk(root, "src")) {
+    if (isTestFile(file)) continue;
+    const contents = await read(file);
+    if (!startsWithUseClient(contents)) continue;
+    const found = await reaches(file);
+    if (found) {
+      record(
+        file,
+        `${file.replaceAll(path.sep, "/")}: a "use client" file reaches server-only ${found} — the browser would download it; keep the import on the server side`,
+      );
+    }
+  }
+}
+
+/** True when the first statement is a "use client" directive, after leading comments. */
+function startsWithUseClient(contents) {
+  let rest = contents.trimStart();
+  for (;;) {
+    if (rest.startsWith("/*")) {
+      const end = rest.indexOf("*/");
+      if (end < 0) return false;
+      rest = rest.slice(end + 2).trimStart();
+    } else if (rest.startsWith("//")) {
+      const end = rest.indexOf("\n");
+      if (end < 0) return false;
+      rest = rest.slice(end + 1).trimStart();
+    } else break;
+  }
+  return rest.startsWith('"use client"') || rest.startsWith("'use client'");
+}
 
 /**
  * Test code, exempt from the seams: test files, the shared harness in
@@ -266,6 +358,9 @@ export async function collectViolations(root = ROOT) {
       }
     }
   }
+
+  // 4. Server-only modules never reach a client bundle.
+  await clientReachViolations(root, record);
 
   // 3. Feature-module contract.
   let features = [];

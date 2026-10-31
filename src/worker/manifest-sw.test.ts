@@ -22,17 +22,7 @@ import {
   type OfflineManifestPayload,
   type OfflineRollCallEvent,
 } from "@/lib/offline-manifests";
-import {
-  READY_CACHE_NAME,
-  READY_COPY_GENERATED_AT_META,
-  READY_COPY_LOCALE_META,
-  READY_COPY_TIME_ZONE_META,
-  READY_COPY_VERSION,
-  READY_COPY_VERSION_META,
-  READY_KEEP_UNTIL_META,
-  READY_OFFLINE_GENERATED_AT_PLACEHOLDER,
-  READY_OFFLINE_NOTE_ATTR,
-} from "@/lib/ready-offline";
+import { READY_CACHE_NAME } from "@/lib/ready-offline";
 import { saveReadyPage } from "./ready-page-cache";
 
 vi.mock("@/lib/offline-manifest-store", () => ({
@@ -482,12 +472,23 @@ describe("a navigation on a network that never answers", () => {
 
   async function cacheReadyCopy(path: string, body: string) {
     const now = nowMs();
-    const keepUntil = now + 24 * 60 * 60 * 1000;
-    const response = new Response(
-      `<meta name="${READY_KEEP_UNTIL_META}" content="${keepUntil}"/><meta name="${READY_COPY_VERSION_META}" content="${READY_COPY_VERSION}"/><meta name="${READY_COPY_LOCALE_META}" content="en-US"/><meta name="${READY_COPY_TIME_ZONE_META}" content="America/New_York"/><meta name="${READY_COPY_GENERATED_AT_META}" content="${now}"/>${body}<p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">No signal: ${READY_OFFLINE_GENERATED_AT_PLACEHOLDER}</p>`,
-      { headers: { "content-type": "text/html" } },
+    vi.stubGlobal("fetch", async () =>
+      Response.json({
+        generatedAt: now,
+        keepUntil: now + 24 * 60 * 60 * 1000,
+        saved: `<p>${body}</p>`,
+        unverified: `<p>unverified ${body}</p>`,
+        rollback: "<p>rollback</p>",
+        staleNotice: "older",
+      }),
     );
-    await saveReadyPage(cacheStorage as unknown as CacheStorage, path, response, now);
+    await saveReadyPage(
+      cacheStorage as unknown as CacheStorage,
+      path,
+      new Response("<p>live</p>", { headers: { "content-type": "text/html" } }),
+      now,
+    );
+    vi.stubGlobal("fetch", fetchMock);
   }
 
   /** Settles `promise` or reports that it is still waiting after `ms` of fake time. */
@@ -638,6 +639,8 @@ describe("a navigation on a network that never answers", () => {
         }),
     );
     const navigation = navigateReady(`https://dive.day${READY_PATH}`);
+    // The save that follows asks the server for its snapshot.
+    fetchMock.mockResolvedValueOnce(new Response("Not found", { status: 404 }));
     try {
       await fetchStarted;
       expect(await settledAfter(navigation.response, 3_999)).toBe("still waiting");
@@ -804,5 +807,24 @@ describe("offline shell versioning", () => {
     await Promise.all(waits);
 
     expect(deleted).toEqual([oldCache]);
+  });
+
+  it("removes shell caches left by earlier builds of the same version", async () => {
+    const currentCache = `diveday-offline-manifest-shell-${OFFLINE_MANIFEST_SHELL_VERSION}`;
+    const deleted: string[] = [];
+    vi.stubGlobal("caches", {
+      keys: async () => [`${currentCache}-build-old`, currentCache],
+      delete: async (name: string) => {
+        deleted.push(name);
+        return true;
+      },
+    });
+    const handler = listeners.get("activate");
+    if (!handler) throw new Error("the worker registered no activate listener");
+    const waits: Promise<unknown>[] = [];
+    handler({ waitUntil: (promise: Promise<unknown>) => waits.push(promise) });
+    await Promise.all(waits);
+    // The test worker has no build list, so its cache carries no build id.
+    expect(deleted).toEqual([`${currentCache}-build-old`]);
   });
 });
