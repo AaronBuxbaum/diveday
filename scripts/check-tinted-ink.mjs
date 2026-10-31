@@ -1,6 +1,7 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
+import { pathToFileURL } from "node:url";
 
 /**
  * **A coloured ink never sits on a translucent fill of its own hue.**
@@ -53,8 +54,13 @@ const ROOTS = ["src"];
 const EXTENSIONS = new Set([".ts", ".tsx"]);
 const ALLOW = "diveday:allow-tinted-ink";
 
-/** `bg-success/10`, `hover:bg-success/15`, `peer-checked:bg-danger/5` — any opacity. */
-const fillPattern = (hue) => new RegExp(`bg-${hue}\\/\\d+\\b`);
+/** `bg-success/10` with `text-success` or `text-success-strong`, at any opacity. */
+export function matchesTintedInk(hue, text) {
+  return (
+    new RegExp(`bg-${hue}\\/\\d+\\b`).test(text) &&
+    new RegExp(`text-${hue}(-strong)?\\b`).test(text)
+  );
+}
 
 /**
  * **The roll-call surfaces, which render under a different palette.**
@@ -97,7 +103,6 @@ const BOAT_MODE_FILES = new Set(
     "src/components/OfflineManifestView.tsx",
   ].map((file) => path.normalize(file)),
 );
-const inkPattern = (hue) => new RegExp(`text-${hue}(-strong)?\\b`);
 
 async function walk(relativeDirectory) {
   const entries = await readdir(path.join(ROOT, relativeDirectory), { withFileTypes: true });
@@ -110,41 +115,49 @@ async function walk(relativeDirectory) {
   return files;
 }
 
-const violations = [];
-for (const root of ROOTS) {
-  for (const file of await walk(root)) {
-    const contents = await readFile(path.join(ROOT, file), "utf8");
-    if (BOAT_MODE_FILES.has(path.normalize(file))) continue;
-    const lines = contents.split("\n");
-    const allowLines = new Set(
-      lines.map((line, index) => (line.includes(ALLOW) ? index : -1)).filter((index) => index >= 0),
-    );
-    lines.forEach((line, index) => {
-      // On the line, or on the one directly above it. A `className` carrying a
-      // fill is routinely 200 characters long, and an annotation appended to
-      // the end of one is unreadable and unfindable — the same reason
-      // `biome-ignore` sits above what it excuses.
-      if (allowLines.has(index) || allowLines.has(index - 1)) return;
-      for (const hue of HUES) {
-        if (fillPattern(hue).test(line) && inkPattern(hue).test(line)) {
-          violations.push({ file, line: index + 1, hue, text: line.trim() });
+async function scanTintedInk() {
+  const violations = [];
+  for (const sourceRoot of ROOTS) {
+    for (const file of await walk(sourceRoot)) {
+      const contents = await readFile(path.join(ROOT, file), "utf8");
+      if (BOAT_MODE_FILES.has(path.normalize(file))) continue;
+      const lines = contents.split("\n");
+      const allowLines = new Set(
+        lines
+          .map((line, index) => (line.includes(ALLOW) ? index : -1))
+          .filter((index) => index >= 0),
+      );
+      lines.forEach((line, index) => {
+        // On the line, or on the one directly above it. A `className` carrying a
+        // fill is routinely 200 characters long, and an annotation appended to
+        // the end of one is unreadable and unfindable — the same reason
+        // `biome-ignore` sits above what it excuses.
+        if (allowLines.has(index) || allowLines.has(index - 1)) return;
+        for (const hue of HUES) {
+          if (matchesTintedInk(hue, line)) {
+            violations.push({ file, line: index + 1, hue, text: line.trim() });
+          }
         }
-      }
-    });
+      });
+    }
+  }
+  return violations;
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const violations = await scanTintedInk();
+  if (violations.length > 0) {
+    console.error(
+      `Coloured ink on a translucent fill of its own hue:\n${violations
+        .map((v) => `- ${v.file}:${v.line}: ${v.text.slice(0, 140)}`)
+        .join("\n")}`,
+    );
+    console.error(
+      "Use the opaque `bg-<hue>-tint` token instead of `bg-<hue>/N`, or reach for `Badge` — a translucent fill contrasts against whatever is behind the element, not against `--surface`, which is the only background the palette's ratios were computed for (docs/design/forms-and-controls.md).",
+    );
+    console.error(`A line that genuinely means the translucent form says \`${ALLOW}: <why>\`.`);
+    process.exitCode = 1;
+  } else {
+    console.log("tinted-ink: no coloured text sits on a translucent fill of its own hue");
   }
 }
-
-if (violations.length > 0) {
-  console.error(
-    `Coloured ink on a translucent fill of its own hue:\n${violations
-      .map((v) => `- ${v.file}:${v.line}: ${v.text.slice(0, 140)}`)
-      .join("\n")}`,
-  );
-  console.error(
-    "Use the opaque `bg-<hue>-tint` token instead of `bg-<hue>/N`, or reach for `Badge` — a translucent fill contrasts against whatever is behind the element, not against `--surface`, which is the only background the palette's ratios were computed for (docs/design/forms-and-controls.md).",
-  );
-  console.error(`A line that genuinely means the translucent form says \`${ALLOW}: <why>\`.`);
-  process.exit(1);
-}
-
-console.log("tinted-ink: no coloured text sits on a translucent fill of its own hue");
