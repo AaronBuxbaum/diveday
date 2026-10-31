@@ -72,17 +72,9 @@ async function activityCodesFor(
 }
 
 /**
- * **Two tests here still hydrate their own database** (issue #1244), through
- * `manifestContext({ fresh: true })`. "Resolves a same-transaction,
- * same-timestamp pair to the later-appended event", for bookings and for crew,
- * have transaction semantics as their *subject*: they open their own
- * transaction so a pair of roll-call rows share one `now()`, then assert the
- * append-order tie-break. Under `fileScopedShopContext` that inner transaction
- * becomes a savepoint and the outer one has already frozen `now()`, so *every*
- * row in the test would carry the same timestamp and the pair would stop being
- * the thing under test. The assertion would still pass, and prove less. Every
- * other test shares the file's one seeded database, each in a rolled-back
- * transaction.
+ * Both append-order cases use Drizzle's pinned application-clock default for
+ * equal timestamps; the database sequence distinguishes insertion order.
+ * They share the file's seeded database, each in a rolled-back transaction.
  */
 describe("trip manifest and roll call (in-memory PGlite)", () => {
   it("derives every active booking into the manifest, including blocked divers", async () => {
@@ -1678,16 +1670,13 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
    * clock's resolution (ADR 20260815-roll-call-order-is-a-property-of-the-data).
    *
    * `occurred_at` ties routinely — the e2e clock is frozen, and an offline
-   * batch is applied with whatever timestamps the device recorded — and
-   * `created_at` is `defaultNow()`, which in Postgres is **transaction time**:
-   * two rows written inside one transaction share it to the microsecond. Both
-   * tied, the order was whatever the heap handed back, and the device/server
-   * agreement this repo pinned would have stopped holding silently, with every
-   * test green. `seq` is what makes "the later-appended row wins" true of the
-   * rows themselves.
+   * batch is applied with whatever timestamps the device recorded. Drizzle
+   * writes `created_at` from the pinned application clock, while PostgreSQL
+   * still supplies its transaction-time default to raw SQL. `seq` makes "the
+   * later-appended row wins" true of the rows themselves.
    */
   it("resolves a same-transaction, same-timestamp pair to the later-appended event", async () => {
-    const { db, shop, reef, booking, staff } = await manifestContext({ fresh: true });
+    const { db, shop, reef, booking, staff } = await manifestContext();
     const occurredAt = new Date("2026-07-20T14:00:00.000Z");
     await db.transaction(async (tx) => {
       await tx.insert(rollCallEvents).values([
@@ -1737,7 +1726,7 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
   });
 
   it("resolves a same-transaction crew pair the same way", async () => {
-    const { db, shop, reef, staff } = await manifestContext({ fresh: true });
+    const { db, shop, reef, staff } = await manifestContext();
     await db
       .insert(tripAssignments)
       .values({ tripId: reef.id, personId: staff.id })
@@ -1765,6 +1754,24 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
         },
       ]);
     });
+    const written = await db
+      .select({
+        createdAt: rollCallCrewEvents.createdAt,
+        seq: rollCallCrewEvents.seq,
+      })
+      .from(rollCallCrewEvents)
+      .where(
+        and(
+          eq(rollCallCrewEvents.tripId, reef.id),
+          eq(rollCallCrewEvents.personId, staff.id),
+          eq(rollCallCrewEvents.checkpoint, "departure"),
+        ),
+      );
+    expect(written).toHaveLength(2);
+    const [one, two] = written;
+    if (!one || !two) throw new Error("expected both crew events");
+    expect(one.createdAt.getTime()).toBe(two.createdAt.getTime());
+    expect(new Set(written.map((row) => row.seq)).size).toBe(2);
     const manifest = await getTripManifest(db, shop.id, reef.id, "departure");
     expect(manifest?.crew.find((member) => member.id === staff.id)?.rollCall?.state).toBe(
       "boarded",
