@@ -120,7 +120,7 @@ export function buildReadySnapshot(facts: ReadySnapshotFacts): ReadySnapshot {
     fields: [
       {
         label: t("ready.offlineOutstandingHeading"),
-        value: openItems.length > 0 ? openItems.join("; ") : t("ready.offlineOutstandingNone"),
+        value: openItems.length > 0 ? semicolonList(openItems) : t("ready.offlineOutstandingNone"),
       },
       { label: t("trip.arrivalAtShop"), value: point.label },
       { label: t("trip.arrivalAddress"), value: point.address },
@@ -137,8 +137,8 @@ export function buildReadySnapshot(facts: ReadySnapshotFacts): ReadySnapshot {
         label: t("trip.arrivalSupport"),
         value: [shop.contactPhone, shop.contactEmail].filter(Boolean).join(" · "),
       },
-      { label: t("trip.packBring"), value: packing.join("; ") },
-      { label: t("trip.changeLedgerHeading"), value: changes.join("; ") },
+      { label: t("trip.packBring"), value: semicolonList(packing) },
+      { label: t("trip.changeLedgerHeading"), value: semicolonList(changes) },
     ],
     // Says "Flying home soon?" itself, so it needs no label of its own.
     footerHtml: flySafe ? `<section><p>${escapeHtml(flySafe)}</p></section>` : "",
@@ -159,4 +159,15 @@ export function buildReadySnapshot(facts: ReadySnapshotFacts): ReadySnapshot {
       bodyHtml: `<h1>${escapeHtml(t("ready.offlineClockRollbackHeading"))}</h1><p>${escapeHtml(t("ready.offlineClockRollbackSaved", { when: savedAt }))}</p>`,
     }),
   };
+}
+
+/** Joins entries with "; ", or a space after one that already ends its sentence. */
+function semicolonList(entries: readonly string[]): string {
+  return entries.reduce(
+    (joined, entry, index) =>
+      index === 0
+        ? entry
+        : `${joined}${/[.!?]$/.test(entries[index - 1] ?? "") ? " " : "; "}${entry}`,
+    "",
+  );
 }
