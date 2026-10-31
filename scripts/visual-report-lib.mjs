@@ -174,7 +174,7 @@ export function baselineCacheKey(commit, version) {
   if (typeof version !== "string" || !/^[0-9a-f]{64}$/u.test(version)) {
     throw new Error("baseline snapshot version is invalid");
   }
-  return `reg-baseline-${commit}-${version}`;
+  return `reg-baseline-v2-${commit}-${version}`;
 }
 
 // S3 serves these objects with `Content-Encoding: gzip`, but some fetch clients

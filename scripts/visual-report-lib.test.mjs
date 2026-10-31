@@ -335,7 +335,7 @@ describe("publicationReportStatus", () => {
 describe("baselineCacheKey", () => {
   it("keys baseline caches by immutable snapshot version", () => {
     const version = "a".repeat(64);
-    expect(baselineCacheKey(COMMIT, version)).toBe(`reg-baseline-${COMMIT}-${version}`);
+    expect(baselineCacheKey(COMMIT, version)).toBe(`reg-baseline-v2-${COMMIT}-${version}`);
     expect(() => baselineCacheKey(COMMIT, "legacy")).toThrow(/version/u);
   });
 });
