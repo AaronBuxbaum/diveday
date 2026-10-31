@@ -966,21 +966,26 @@ join).
 
 ## The dive-site briefing gets a rail (delivered 2026-08-28)
 
+The rail was retired on 2026-10-24 under visual review A11. The current editors use open and
+closed named sections without a section rail; the historical description below records the
+original 2026-08-28 release. The grouped sections and save-time unsaved-changes sentence remain.
+
 Slice 9c of [20260827-the-shops-shelves](../architecture/decisions/20260827-the-shops-shelves.md),
 the long-form editor pattern. The briefing was fourteen blocks running some four thousand pixels,
 four of them bordered fieldsets at two radii, with no way to know where you were in it and one Save
-at the far end that said nothing about what it still owed. It is now **ten named sections on
-hairlines beside a sticky rail** — `EditorRail` and `EditorSection`
+at the far end that said nothing about what it still owed. At release it became **ten named
+sections on hairlines beside a sticky rail** — `EditorRail` and `EditorSection`
 (`src/components/editor/`), built to serve the course editor as well as this one.
 
-The rail is one list rendered two ways: from `lg` up a column pinned at `top-(--chrome-h)` — the
-chrome bar's height read, never measured, which is the mistake the settings rail made and
-`chrome.test.ts` caught — and below `lg` the app's existing jump row, `JumpNav`, the one grammar
-for "places on this page". Both are plain `#anchor` links the browser resolves itself, so the rail
-works before its JavaScript arrives and cannot disturb a form mid-edit; the entry you are reading
-is tinted, tracked by an observer watching a band across the top of the viewport rather than a
+At release the rail was one list rendered two ways: from `lg` up a column pinned at
+`top-(--chrome-h)` — the chrome bar's height read, never measured, which is the mistake the
+settings rail made and `chrome.test.ts` caught — and below `lg` the app's existing jump row,
+`JumpNav`, the one grammar
+for "places on this page". Both were plain `#anchor` links the browser resolves itself, so the rail
+worked before its JavaScript arrived and could not disturb a form mid-edit; the entry being read
+was tinted, tracked by an observer watching a band across the top of the viewport rather than a
 scroll proportion, because these sections are wildly uneven (two coordinate fields above a map
-editor). Anchors land the group label below the bar rather than behind it.
+editor). Anchors landed the group label below the bar rather than behind it.
 
 **The boxes are gone and the grouping is not.** A section that is genuinely one group — the GPS
 location, the route, the photos, the fit reading, the landmarks, the field guide, the certification
@@ -1003,14 +1008,11 @@ would be the worse error. `SiteFormShell`'s refusal handling, the `expectedVersi
 and the whole submission-comes-back-with-the-refusal contract are untouched; the refusal simply
 renders in the row beside the button that earned it instead of at the foot of the document.
 
-Both pages widen to `max-w-5xl` from `lg` up so the rail takes a column of its own rather than out
-of the fields' measure, and both `loading.tsx` files are its twin — a rail of bars beside sections
-on hairlines, where they used to draw a form skeleton and a stack of cards. Pinned by
-`EditorRail.test.tsx` (every section the rail names is reachable, the rail pins by reading the
-chrome token, the phone renders the same anchors as a jump row, the sentence names one section and
-counts two, and a section keeps its fieldset while losing its box),
-`site-form-sections.test.ts` (the section list, its anchors and its words in both locales) and
-`SiteFormShell.test.tsx` (Save, the unsaved note and the refusal in one row).
+At release both pages widened to `max-w-5xl` from `lg` up so the rail took a column of its own, and
+both `loading.tsx` files matched it. The rail anchor and pin tests were retired with the rail under
+A11. Current page tests pin the no-rail grouped layout and folded sections
+(`courses/[slug]/edit/page.test.tsx`, `dive-sites/_components/site-form-sections.test.ts`); the
+save note remains covered by `EditorRail.test.tsx` and `SiteFormShell.test.tsx`.
 
 ## The gear register says one thing once (delivered 2026-08-28)
 
@@ -1095,19 +1097,23 @@ disk and fails without.
 
 ## The course editor stops being a wall of boxes (delivered 2026-08-28)
 
+The rail was retired on 2026-10-24 under visual review A11. The current course editor uses named,
+open and closed sections without a rail; the description below records the original 2026-08-28
+release. Its one-save flow and section-specific unsaved note remain.
+
 Slice 9b of [20260827-the-shops-shelves](../architecture/decisions/20260827-the-shops-shelves.md),
 the long-form editor pattern. The course editor was eight bordered fieldsets and about four
 thousand pixels, with no way to know where in it you were, no way to get to the section you came
 for, and — after pressing the one Save at the foot — no way to tell which section you had actually
-changed. It now composes as a sticky section rail beside unboxed sections: group labels and
+changed. At release it composed as a sticky section rail beside unboxed sections: group labels and
 hairlines where the borders were, `EditorSections` drawing the one rule between each pair rather
 than each section drawing a box around itself, and the depth-marker hint moved out of its panel
 above the form to sit beside the prose it governs. The `<fieldset>`/`<legend>` pairs stay — the
 legend is still the accessible name of a group of controls, which is the half of the old
 composition that was doing work.
 
-The rail is `src/components/editor/EditorRail.tsx`, built shared because 9c takes it to the
-dive-site form next. It pins at `top-(--chrome-h)` and never at a number: the chrome guard fails
+At release the rail lived in `src/components/editor/EditorRail.tsx`, shared with the dive-site form.
+It pinned at `top-(--chrome-h)` and never at a number: the chrome guard failed
 the build on the alternative, and that is the mistake it caught on the settings rail. Position
 comes from a scroll listener over the sections' own elements rather than an `IntersectionObserver`,
 because a form section can be taller than the viewport *and* shorter than one text box, so "which
@@ -1115,22 +1121,21 @@ one is intersecting" has no single answer while "which one did I last scroll pas
 `<nav>` in both readings — a column from `lg`, the same list as a jump-row across the top on a
 phone — rather than two hidden copies a screen reader would read twice.
 
-The sticky Save now names the section holding the unsaved work ("Unsaved changes in The pitch",
+The sticky Save named the section holding the unsaved work ("Unsaved changes in The pitch",
 "Unsaved changes in 2 sections"), which is what makes the rail actionable: "Unsaved changes" was
 true and useless when the section it meant was four screens away. Which sections are dirty is read
 off the DOM by containment — every section wraps its own controls, so there is no registry for a
 new field to forget to join — and the sentences are built on the server, because staff copy never
 crosses to the client as a bundle. A restored draft still says it was put back; that fact wins over
-the section it filled.
+the section it filled. The section-specific note remains useful after A11 retired the rail.
 
-Nothing about the save moved. `ConflictGuardedForm`'s `rowVersion` refusal, `UnsavedChangesGuard`'s
+Nothing about the save moved when A11 retired the rail. `ConflictGuardedForm`'s `rowVersion`
+refusal, `UnsavedChangesGuard`'s
 draft, the depth-marker refusal (`courseDepthPlaceholderIssues`) and the template-update
 keep-vs-replace panel are untouched, and the day-by-day section keeps the id `scheduleDaysJson` it
 has always had, because that is what `?field=` names when the payload is refused and what
-`FieldErrorFocus` resolves. Two tests pin the rule rather than the pixels: every rail anchor lands
-on a section of the real page and every section is in the rail (stated against the rendered page,
-since a section added to the form and forgotten in the rail renders perfectly), and the section
-that was typed in is the one the Save bar names.
+`FieldErrorFocus` resolves. The current page tests pin the no-rail layout, the section that opens
+for a refused save, and the section named by the Save bar.
 
 ## Staffing is a week, and the gap sits in its day (delivered 2026-08-28)
 

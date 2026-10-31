@@ -475,10 +475,8 @@ const CUT_RINGS: readonly (readonly [file: string, anchor: string, needs: readon
     "group flex gap-4 px-2",
     ["focus-visible:focus-ring-inset"],
   ],
-  // The page rail's one row: the editor's section rail and the settings map
-  // both draw it (EditorRail.test.tsx, SettingsRail.test.tsx). Its box is
-  // `RAIL_ROW_BOX`, which the settings rail's skeleton wears too (K-345), and
-  // the row composes the box with its ring.
+  // The settings rail's one row. Its box is `RAIL_ROW_BOX`, which the settings
+  // rail's skeleton wears too (K-345), and the row composes the box with its ring.
   ["components/ui/rail.ts", "min-h-11 items-center rounded-lg px-3 py-2", []],
   ["components/ui/rail.ts", "RAIL_ROW_BOX} text-sm", ["focus-visible:focus-ring-inset"]],
   ["components/JumpNav.tsx", "focus-visible:focus-ring-inset", []],

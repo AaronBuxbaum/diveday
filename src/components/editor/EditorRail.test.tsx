@@ -2,8 +2,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
-import { RAIL_ROW_CLASS } from "@/components/ui/rail";
-import { EditorRail, EditorRailSkeleton, UnsavedSections } from "./EditorRail";
+import { UnsavedSections } from "./EditorRail";
 import { EditorSection, type EditorSectionRef, type EditorUnsavedCopy } from "./EditorSection";
 
 afterEach(cleanup);
@@ -23,149 +22,23 @@ const COPY: EditorUnsavedCopy = {
   inSections: ["", "", "Unsaved changes in 2 sections", "Unsaved changes in 3 sections"],
 };
 
-/** The two halves as a page mounts them: rail outside the form, note inside it. */
+/** The form shell that contains section fields and the save-time note. */
 function Editor() {
   return (
-    <div>
-      <EditorRail sections={SECTIONS} navLabel="On this page" />
-      <form>
-        <EditorSection id="block-pitch" label="The pitch" lead>
-          <input aria-label="One sentence" name="summary" />
-        </EditorSection>
-        <EditorSection id="block-pricing" label="Pricing" as="fieldset">
-          <input aria-label="Price" name="price" />
-        </EditorSection>
-        <EditorSection id="block-photos" label="Photos" as="fieldset">
-          <input aria-label="Hero alt text" name="heroAlt" />
-        </EditorSection>
-        <UnsavedSections sections={SECTIONS} copy={COPY} />
-      </form>
-    </div>
+    <form>
+      <EditorSection id="block-pitch" label="The pitch" lead>
+        <input aria-label="One sentence" name="summary" />
+      </EditorSection>
+      <EditorSection id="block-pricing" label="Pricing" as="fieldset">
+        <input aria-label="Price" name="price" />
+      </EditorSection>
+      <EditorSection id="block-photos" label="Photos" as="fieldset">
+        <input aria-label="Hero alt text" name="heroAlt" />
+      </EditorSection>
+      <UnsavedSections sections={SECTIONS} copy={COPY} />
+    </form>
   );
 }
-
-/** The rail proper — the pinned one, not the phone jump row beside it. */
-function railNav(): HTMLElement {
-  const nav = screen
-    .getAllByRole("navigation", { name: "On this page" })
-    .find((candidate) => candidate.className.includes("lg:sticky"));
-  if (!nav) throw new Error("no pinned rail rendered");
-  return nav;
-}
-
-describe("the editor rail", () => {
-  /**
-   * The pin ADR 20260827-the-shops-shelves' editor pattern turns on: the rail
-   * *names the sections*, so a section the rail names with nothing under it is
-   * a section a staffer cannot reach. Checked against the anchors rather than
-   * against a snapshot, because that is the rule — a restyle may move every
-   * pixel and must not break this.
-   */
-  it("reaches every section it names", () => {
-    render(<Editor />);
-
-    for (const section of SECTIONS) {
-      const links = screen.getAllByRole("link", { name: section.label });
-      expect(links.length).toBeGreaterThan(0);
-      for (const link of links) expect(link).toHaveAttribute("href", `#${section.id}`);
-      // The anchor's destination exists, and it is the element carrying the
-      // section's own name.
-      const target = document.getElementById(section.id);
-      expect(target).not.toBeNull();
-      expect(target?.textContent).toContain(section.label);
-    }
-  });
-
-  /**
-   * One page rail, one row: the settings map draws the same `RAIL_ROW_CLASS`
-   * (its test asserts on the same export), so the two rails cannot drift to
-   * two heights, two insets or two type sizes again.
-   */
-  it("draws every link as the page rail's one row", () => {
-    render(<Editor />);
-    for (const link of railNav().querySelectorAll("a")) {
-      expect(link).toHaveClass(...RAIL_ROW_CLASS.split(" "));
-    }
-  });
-
-  /**
-   * The chrome bar's height is a token, never a number
-   * (ADR 20260827-clearwater-surface-language, decision 10). The settings rail
-   * got this wrong once and `src/components/chrome/chrome.test.ts` caught the
-   * measured offset; this is the same rule stated where the rail lives, so a
-   * rail that stops pinning at all is caught too.
-   */
-  it("pins under the chrome bar by reading its height", () => {
-    render(<Editor />);
-
-    const rail = railNav();
-    expect(rail.className).toContain("lg:sticky");
-    expect(rail.className).toContain("lg:top-(--chrome-h)");
-  });
-
-  /**
-   * The rail is a desktop column now; below `lg` it is gone, because each
-   * section folds to a header that names it and opens it (EditorSection).
-   * A bare `hover:bg-surface-sunken` on the current row outranked its tint,
-   * so the current row carries no hover at all.
-   */
-  it("stands only from lg up, and keeps the current section's tint under the pointer", () => {
-    render(<Editor />);
-
-    const rail = railNav();
-    expect(rail).toHaveClass("max-lg:hidden");
-    const tokens = (link: Element | null | undefined) => link?.className.split(/\s+/) ?? [];
-    const current = tokens(rail.querySelector("a[aria-current='true']"));
-    expect(current).toContain("bg-primary-tint");
-    expect(current).not.toContain("hover:bg-surface-sunken");
-    expect(current).not.toContain("hover:text-foreground");
-
-    const other = tokens(rail.querySelector("a:not([aria-current])"));
-    expect(other).toContain("hover:bg-surface-sunken");
-    expect(other).toContain("hover:text-foreground");
-  });
-
-  /**
-   * **One landmark, whatever the width.** This rail was first written as the
-   * app's `JumpNav` for the phone beside a sticky column for the desktop, which
-   * read as reuse of the one "places on this page" grammar — but `JumpNav`
-   * brings a `<nav>` of its own, so the editor offered two landmarks under one
-   * name and a screen reader read the same anchor list twice. `lg:hidden` does
-   * not help: both are in the accessibility tree at every width. The list
-   * changes shape at `lg`; the landmark does not.
-   */
-  it("is one navigation landmark, holding every anchor exactly once", () => {
-    render(<Editor />);
-
-    const navs = screen.getAllByRole("navigation", { name: "On this page" });
-    expect(navs).toHaveLength(1);
-    expect(
-      Array.from(navs[0].querySelectorAll("a")).map((link) => link.getAttribute("href")),
-    ).toEqual(SECTIONS.map((section) => `#${section.id}`));
-  });
-});
-
-/**
- * **The rail's skeleton is the rail's geometry** (docs/design/pixel-craft.md,
- * class 11: 0px of shift on load): the rail's own boxes, one 44px stub per
- * section, and like the rail nothing below `lg`.
- */
-describe("the editor rail's skeleton", () => {
-  it("draws one 44px stub per section, in the rail's own two boxes", () => {
-    render(<Editor />);
-    const rail = railNav();
-    const list = rail.querySelector("ul");
-    const { container } = render(<EditorRailSkeleton count={11} />);
-    const skeleton = container.firstElementChild;
-    const stubs = skeleton?.firstElementChild;
-
-    expect(skeleton?.className).toBe(rail.className);
-    expect(stubs?.className).toBe(list?.className);
-    expect(skeleton).toHaveClass("max-lg:hidden", "lg:pt-1");
-    expect(stubs?.children).toHaveLength(11);
-    for (const stub of stubs?.children ?? []) expect(stub).toHaveClass("h-11", "w-full");
-  });
-});
 
 describe("the unsaved-changes sentence", () => {
   it("says nothing until something is edited", () => {
