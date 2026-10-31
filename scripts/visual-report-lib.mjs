@@ -595,7 +595,11 @@ export function formatPrComment({
     commitMarker(commit),
     `### ${verdictHeadline(summary)}`,
     "",
-    verdictBody(summary, { commit, bucket, freshBaselineBootstrap: approvedFreshBaselineBootstrap }),
+    verdictBody(summary, {
+      commit,
+      bucket,
+      freshBaselineBootstrap: approvedFreshBaselineBootstrap,
+    }),
     "",
     // Above the table, so the set comparison is read before the totals.
     ...deltaSection(delta, limit),
