@@ -8,9 +8,8 @@ import { DEFAULT_DIVER_LOCALE, type DiverLocale, toDiverLocale } from "./setting
  * The staff-facing message bundle — the `/shop/**` counterpart to
  * `./messages.ts` (docs ADR 20260730-staff-copy-localization).
  *
- * **Server-side only, on purpose.** There is no `StaffIntlProvider`, and *this*
- * bundle — all 31 namespaces in both locales — never crosses to the client. Two
- * reasons:
+ * **Server-side only, on purpose.** There is no `StaffIntlProvider`, and this
+ * bundle never crosses to the client. Two reasons:
  *
  * 1. `useTranslations()` types against the single global `AppConfig.Messages`
  *    augmentation, which is the diver bundle. A second client-side bundle
@@ -26,20 +25,15 @@ import { DEFAULT_DIVER_LOCALE, type DiverLocale, toDiverLocale } from "./setting
  *
  * ## The one surface that does ship staff copy, and why it is not a hole
  *
- * `/offline-manifest` renders from an encrypted IndexedDB snapshot on a phone
- * that may have no signal, so it cannot be a Server Component and cannot be
- * handed words as props: there is no server in the loop at the moment it
- * matters. It composes its own translator over **three** namespaces in
- * `./offline-manifest-messages.ts`, and that module deliberately does not
- * import this one.
+ * `/offline-manifest` opens an encrypted IndexedDB snapshot on a phone that may
+ * have no signal. It therefore needs a client-side translator, composed from
+ * the two namespaces it uses in `./offline-manifest-messages.ts`; that module
+ * deliberately does not import this one.
  *
- * The separation is the safeguard. Importing `staffTranslator` from a Client
- * Component is what made that route the heaviest page in the app — 62 JSON
- * modules to render three namespaces, 438.9 KB gzip first load against a
- * 237.3 KB floor (issue #1353). Nothing here stops that happening again, so if
- * a second client surface needs staff words, give it its own narrow module
- * rather than reaching for this one. Reason 2 above still holds either way:
- * that route is behind a staff session, not an anonymous diver's page.
+ * The separate module is the safeguard: if another client surface needs staff
+ * words, give it a narrow module rather than importing this bundle. Staff copy
+ * stays out of anonymous divers' JavaScript; client components receive staff
+ * words as props from their server-rendered parent.
  */
 
 export const STAFF_MESSAGES = {
