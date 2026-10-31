@@ -209,10 +209,7 @@ function trimmedOrNull(value: string | undefined): string | null {
  * A recipient SES did not name falls back to the message's destinations, as
  * `recipientOf` does.
  */
-export function sesBounceReportsFromData(
-  data: SesEventData | null,
-  now: Date,
-): SesBounceReport[] {
+export function sesBounceReportsFromData(data: SesEventData | null, now: Date): SesBounceReport[] {
   if (!data) return [];
   const common = {
     providerMessageId: data.mail.messageId,

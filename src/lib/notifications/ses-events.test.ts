@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   parseSesEventData,
-  sesBounceReportsFromData,
   sesBookkeeperOutcomesFromData,
+  sesBounceReportsFromData,
   sesEmailEventFromData,
   smtpStatusOf,
 } from "./ses-events";
