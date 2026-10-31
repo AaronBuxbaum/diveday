@@ -25,9 +25,8 @@ import { GEAR_KIND_ORDER, type GearItemKind } from "@/lib/gear";
 import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
 import { StaffSectionTabs } from "../_components/StaffSectionTabs";
+import { AddUnitControl } from "./_components/AddUnitControl";
 import { AddUnitForm } from "./_components/AddUnitForm";
-import { AddUnitLink } from "./_components/AddUnitLink";
-import { AddUnitSheet } from "./_components/AddUnitSheet";
 import { DeletedList } from "./_components/DeletedGearList";
 import { GearRegisterLedger, GearServiceDueList } from "./_components/GearRegisterLedger";
 import { GearRentalsList } from "./_components/GearRentalsList";
@@ -258,6 +257,25 @@ export default async function GearRegisterPage({
       label: t("gear.deleted.filter", { count: deletedPage.total }),
     });
   }
+  const addUnitControl = (
+    <AddUnitControl
+      className={buttonClass({
+        variant: fleetTotal === 0 && showDeleted ? "secondary" : "primary",
+      })}
+      initialOpen={Boolean(addStatus)}
+      title={t("gear.addUnit.title")}
+    >
+      <AddUnitForm
+        t={t}
+        keptScope={keptTypedScope(shopSlug, session.user.personId)}
+        refused={Boolean(addStatus)}
+        labelError={fieldError("label")}
+        purchasedOnError={fieldError("purchasedOn")}
+        status={addStatus && { tone: addStatus.tone, text: noticeField ? null : t(addStatus.key) }}
+        focusKey={notice}
+      />
+    </AddUnitControl>
+  );
   return (
     <StaffPage width="full">
       <FlashParams params={["notice", "undoId"]} />
@@ -265,7 +283,11 @@ export default async function GearRegisterPage({
         title={t("gear.title")}
         // Rent out, then the page's primary "Add a unit"; the empty register
         // keeps its one door in the card below.
-        actions={fleetTotal > 0 ? <RegisterHeaderActions shopSlug={shopSlug} t={t} /> : undefined}
+        actions={
+          fleetTotal > 0 ? (
+            <RegisterHeaderActions shopSlug={shopSlug} t={t} addUnitControl={addUnitControl} />
+          ) : undefined
+        }
       />
       {/* The register is the Gear section's first tab; the bench is the second
           (ADR 20261008-gear-work-orders). */}
@@ -292,11 +314,7 @@ export default async function GearRegisterPage({
 
       <div className="space-y-10">
         {fleetTotal === 0 && !showDeleted ? (
-          <EmptyState
-            title={t("gear.empty.heading")}
-            action={<AddUnitLink className={buttonClass()}>{t("gear.addUnit.title")}</AddUnitLink>}
-            className="mt-4"
-          />
+          <EmptyState title={t("gear.empty.heading")} action={addUnitControl} className="mt-4" />
         ) : (
           <section
             aria-label={
@@ -371,27 +389,8 @@ export default async function GearRegisterPage({
           </section>
         )}
 
-        {/* The form opens as a sheet from the header's door or the empty
-            register's (visual review A48); a refusal reopens it. The deleted
-            view of an empty register has neither door, so it keeps one here. */}
-        {fleetTotal === 0 && showDeleted ? (
-          <AddUnitLink className={buttonClass({ variant: "secondary" })}>
-            {t("gear.addUnit.title")}
-          </AddUnitLink>
-        ) : null}
-        <AddUnitSheet initialOpen={Boolean(addStatus)} title={t("gear.addUnit.title")}>
-          <AddUnitForm
-            t={t}
-            keptScope={keptTypedScope(shopSlug, session.user.personId)}
-            refused={Boolean(addStatus)}
-            labelError={fieldError("label")}
-            purchasedOnError={fieldError("purchasedOn")}
-            status={
-              addStatus && { tone: addStatus.tone, text: noticeField ? null : t(addStatus.key) }
-            }
-            focusKey={notice}
-          />
-        </AddUnitSheet>
+        {/* The only control moves to this view when the whole fleet is deleted. */}
+        {fleetTotal === 0 && showDeleted ? addUnitControl : null}
       </div>
     </StaffPage>
   );
