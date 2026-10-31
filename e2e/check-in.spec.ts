@@ -1,4 +1,5 @@
-import type { Locator, Page } from "@playwright/test";
+import type { Locator, Page, Route } from "@playwright/test";
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import {
   bookASeatAndOpenThread,
@@ -755,6 +756,7 @@ test("the counter releases a no-show's seat, offers it to the wait list, and the
 test("the desk turns a blocked diver away before the boat leaves, says why, and frees the seat", async ({
   page,
 }) => {
+  const staff = staffTranslator("en-US");
   const title = `Turned Away ${e2eNow().getTime()}`;
   // 09:45 against the frozen 09:30: still ahead, so "Not here" is closed.
   await createTrip(page, {
@@ -780,6 +782,31 @@ test("the desk turns a blocked diver away before the boat leaves, says why, and 
   await odile.getByRole("button", { name: "Turn away", exact: true }).click();
   await expect(odile.getByRole("radio", { name: "Waiver" })).toBeChecked();
   await expect(odile.getByRole("radio", { name: "Medical" })).toHaveCount(0);
+
+  // **The send fails on this row and leaves it ready to retry**: the browser
+  // cannot tell whether a transport error happened before or after the server
+  // handled the request, so it keeps the visible state and says only that the
+  // send failed. The row's reason and open panel remain available.
+  let interruptedAction = false;
+  const failServerAction = async (route: Route) => {
+    const request = route.request();
+    if (request.method() === "POST" && request.headers()["next-action"]) {
+      interruptedAction = true;
+      await route.abort();
+      return;
+    }
+    await route.continue();
+  };
+  await page.route("**/*", failServerAction);
+  await odile.getByRole("button", { name: "Turn Odile Marchand away" }).click();
+  await expect(odile.getByRole("alert")).toHaveText(staff("checkIn.sendFailedButton"));
+  expect(interruptedAction).toBe(true);
+  await expect(odile.getByRole("radio", { name: "Waiver" })).toBeChecked();
+  await expect(odile.getByRole("button", { name: "Turn away", exact: true })).toHaveAttribute(
+    "aria-expanded",
+    "true",
+  );
+  await page.unroute("**/*", failServerAction);
   await odile.getByRole("button", { name: "Turn Odile Marchand away" }).click();
 
   // Its own group and its own words, never "Not here".
