@@ -91,7 +91,7 @@ export type RollCallRecord = {
    * The stored event this result came from (`roll_call_events` or
    * `roll_call_crew_events` id). Lets a list tell whether two results are the
    * same event without comparing formatted text. Absent on results never
-   * stored, and on carried-forward ones (`implied`).
+   * stored; a carried-forward (`implied`) result keeps its source event's id.
    */
   eventId?: string;
 };
