@@ -36,11 +36,7 @@ import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { WORK_ORDER_TEXT_LIMITS } from "@/lib/work-orders";
 import { pieceDueLine } from "../_components/piece-dates";
-import {
-  NEW_ORDER_NOTICE_FIELD,
-  NEW_ORDER_NOTICES,
-  type NewOrderNoticeField,
-} from "../_lib/new-order-notices";
+import { NEW_ORDER_NOTICES, type NewOrderNoticeField } from "../_lib/new-order-notices";
 import { addCustomerGearItemAction, createWorkOrderAction } from "../actions";
 
 export const instant = true;
@@ -96,12 +92,12 @@ export default async function NewWorkOrderPage({
     unitId && !unit ? (await listBenchUnits(db, shop.id)).find((row) => row.id === unitId) : unit;
   if (unitId && !chosenUnit) notFound();
 
-  const noticeKey = noticeFromParam(search.notice, NEW_ORDER_NOTICES);
+  const notice = noticeFromParam(search.notice, NEW_ORDER_NOTICES);
+  const noticeKey = notice?.messageKey;
   // A refusal says itself beside the box it is about (fifth loop, item 14);
   // the foot keeps the ones no single box owns.
-  const noticeField = noticeFromParam(search.notice, NEW_ORDER_NOTICE_FIELD);
   const fieldError = (field: NewOrderNoticeField) =>
-    noticeField === field && noticeKey ? t(noticeKey) : undefined;
+    notice?.field === field && noticeKey ? t(noticeKey) : undefined;
   const refused = noticeKey != null && search.notice !== "piece-added";
   const subjectName = customer?.person.fullName ?? chosenUnit?.label;
 
@@ -293,13 +289,13 @@ export default async function NewWorkOrderPage({
                 <SubmitButton pendingLabel={t("workOrders.new.pending")} className={buttonClass()}>
                   {t("workOrders.new.submit")}
                 </SubmitButton>
-                {refused && !noticeField ? (
+                {refused && !notice?.field ? (
                   <FormStatus tone="danger">{t(noticeKey)}</FormStatus>
                 ) : null}
               </FieldActions>
             </FieldGrid>
-            {refused && noticeField ? (
-              <FieldErrorFocus key={search.notice} field={noticeField} />
+            {refused && notice?.field ? (
+              <FieldErrorFocus key={search.notice} field={notice.field} />
             ) : null}
           </SectionCard>
         ) : null}
