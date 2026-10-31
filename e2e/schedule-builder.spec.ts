@@ -26,18 +26,18 @@ async function chooseRowAction(page: Page, verb: string, title: string) {
 }
 
 test.describe("schedule builder", () => {
-  test("does not trust fabricated gear result query values", async ({ page }) => {
+  test("does not trust fabricated move result query values", async ({ page }) => {
     const staff = staffTranslator("en-US");
     const message = staff("schedule.notices.movedGearReleased", { count: 2 });
-    await page.goto(`${BOARD}?week=2026-10-26&builder=moved&gear=2&result=fabricated-result`);
-    // An invented token and count cannot authorize the warning; result params
+    await page.goto(`${BOARD}?week=2026-10-26&builder=moved&result=fabricated-result`);
+    // An invented token cannot authorize the warning; result params
     // are still consumed while the selected week remains in place.
     await expect(page.getByText(message, { exact: true })).toHaveCount(0);
     await expect(page.getByText("Moved", { exact: true })).toBeVisible();
     await expect
       .poll(() => {
         const url = new URL(page.url());
-        return !url.searchParams.has("builder") && !url.searchParams.has("gear");
+        return !url.searchParams.has("builder") && !url.searchParams.has("result");
       })
       .toBe(true);
     expect(new URL(page.url()).searchParams.get("week")).toBe("2026-10-26");
@@ -253,7 +253,7 @@ test.describe("schedule builder", () => {
         const url = new URL(page.url());
         return (
           !url.searchParams.has("builder") &&
-          !url.searchParams.has("gear") &&
+          !url.searchParams.has("result") &&
           url.searchParams.has("held") &&
           url.searchParams.has("tell")
         );

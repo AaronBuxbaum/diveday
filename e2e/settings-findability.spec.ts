@@ -46,10 +46,9 @@ test.describe("as owner", () => {
 
     // Discounts is Money's tab now, so Settings carries no door to it; dive
     // packages are a section of it (ADR 20261001-logbook; visual review
-    // 2026-10-24, A26), and their old address lands there.
+    // 2026-10-24, A26).
     await expect(page.getByRole("main").locator(`a[href="/shop/${SHOP}/promos"]`)).toHaveCount(0);
-    await page.goto(`/shop/${SHOP}/promos/packages`);
-    await expect(page).toHaveURL(`/shop/${SHOP}/promos#dive-packages`);
+    await page.goto(`/shop/${SHOP}/promos#dive-packages`);
     await expect(page.getByRole("heading", { level: 2, name: "Dive packages" })).toBeVisible();
   });
 

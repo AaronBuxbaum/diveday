@@ -459,8 +459,8 @@ describe("ScheduleBuilder top add panel opened by link (?add=)", () => {
 
   it("stays open through a StrictMode double-invoke, so a cross-route link lands on the form", () => {
     // Every door into this form from *another* route — the catalogue's
-    // "schedule a session of this course", the `/trips/new` 308, a pasted
-    // `?add=full` — arrives as a fresh mount carrying `openAdd`, and React
+    // "schedule a session of this course" and a pasted `?add=full` — arrive as
+    // a fresh mount carrying `openAdd`, and React
     // runs every effect twice on mount in development. The disarm-on-revisit
     // effect used to close unconditionally on its second pass, so the panel
     // opened and shut again before anyone saw it and the whole catalogue

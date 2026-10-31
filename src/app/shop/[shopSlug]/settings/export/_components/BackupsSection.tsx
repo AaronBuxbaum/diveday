@@ -96,7 +96,7 @@ export function BackupsSection({
   return (
     // `id`/`scroll-mt` because the settings hub still keeps a "Set up backups"
     // door of its own — one surface, two doors — and it deep-links here rather
-    // than to a route of its own. The 308 from `/settings/backup` lands here too.
+    // than to a route of its own.
     // No `mt-*`: the page stacks its two halves in `space-y-10`, and a card
     // carries no outer margin (docs/design/forms-and-controls.md).
     <section id="backups" className="scroll-mt-8">

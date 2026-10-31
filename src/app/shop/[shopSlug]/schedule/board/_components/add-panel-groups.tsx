@@ -245,7 +245,6 @@ export function RepeatGroup({
         <legend className={`${legendClass} text-sm font-medium`}>{copy.repeatLegend}</legend>
         <RepeatFields
           startDate={startDate}
-          disabled={!expanded}
           copy={{
             howOftenLabel: copy.howOftenLabel,
             doesntRepeat: copy.doesntRepeat,

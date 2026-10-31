@@ -40,6 +40,15 @@ describe("SectionCard", () => {
 });
 
 describe("naming the region", () => {
+  it("uses the native aria-label attribute for an untitled region", () => {
+    render(<SectionCard aria-label="Weekly email digest">body</SectionCard>);
+
+    expect(screen.getByRole("region", { name: "Weekly email digest" })).toHaveAttribute(
+      "aria-label",
+      "Weekly email digest",
+    );
+  });
+
   it("labels a titled card with its own heading", () => {
     // The hand-rolled panels this replaces paired a written `aria-labelledby`
     // with a written heading id, and mostly did not bother. Deriving it means

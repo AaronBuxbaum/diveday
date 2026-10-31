@@ -6,7 +6,7 @@ import {
   IntegrationDeliveryDeadlineError,
   untilAborted,
 } from "./delivery-deadline";
-import type { IntegrationEventType } from "./registry";
+import { INTEGRATION_PROVIDER_REGISTRY, type IntegrationEventType } from "./registry";
 
 export const ZAPIER_HOOK_HOST = "hooks.zapier.com";
 
@@ -46,13 +46,9 @@ export function normalizeZapierWebhookUrl(value: string): string | null {
 }
 
 export function normalizeZapierEventTypes(values: readonly string[]): IntegrationEventType[] {
-  const allowed: IntegrationEventType[] = [
-    "order.created",
-    "order.paid",
-    "order.refunded",
-    "order.voided",
-  ];
-  return allowed.filter((eventType) => values.includes(eventType));
+  return INTEGRATION_PROVIDER_REGISTRY.zapier.eventTypes.filter((eventType) =>
+    values.includes(eventType),
+  );
 }
 
 function zapierCredentials(value: unknown): ZapierCredentials | null {

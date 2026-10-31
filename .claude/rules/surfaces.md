@@ -22,6 +22,8 @@ Each rule names what enforces it; the reasoning, the ADRs and the longer form of
   structured data or telemetry carrying the token.
 - **A staff page opens with** `requireShopSurface` (`src/lib/session.ts`); every refusal throws, a
   cross-tenant miss is `notFound()` (`src/lib/session.test.ts`).
+- **A retired staff URL is deleted, not redirected** (H-49); the full rule is in
+  [repo checks](../../docs/agents/repo-checks.md#there-is-no-legacy-delete-it).
 - **Server actions**: inline `"use server"` for one page, `src/app/actions/` when shared, a sibling
   `actions.ts` for a large page; seating a diver through `src/app/actions/seat-diver.ts`.
 - **Schedule**: the builder (`schedule/board/_components/ScheduleBuilder.tsx`) is the one place a
