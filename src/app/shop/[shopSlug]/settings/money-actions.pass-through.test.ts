@@ -60,8 +60,11 @@ beforeEach(() => {
 });
 
 describe("savePassThroughFeeAction", () => {
-  it("clears the fee when both fields are blank", async () => {
-    const to = await redirectedTo(() => savePassThroughFeeAction(feeForm("", "")));
+  it.each([
+    ["empty", "", ""],
+    ["whitespace-only", "  ", " \t"],
+  ])("clears the fee when both fields are %s", async (_label, name, amount) => {
+    const to = await redirectedTo(() => savePassThroughFeeAction(feeForm(name, amount)));
 
     expect(to).toBe(noticeUrl(settingsPath, "pass-through-saved", { saved: "passThrough" }));
     expect(mocks.setShopPassThroughFee).toHaveBeenCalledWith(expect.anything(), shop.id, null);
@@ -71,6 +74,9 @@ describe("savePassThroughFeeAction", () => {
     ["a missing name", "", "2.50"],
     ["a missing amount", "Park", ""],
     ["a non-number amount", "Park", "not money"],
+    ["a zero amount", "Park", "0"],
+    ["a negative amount", "Park", "-1"],
+    ["a positive USD amount that rounds to zero minor units", "Park", "0.001"],
     ["a fee above the shared parser's minor-unit cap", "Park", "10000.01"],
   ])("refuses %s without writing", async (_label, name, amount) => {
     const to = await redirectedTo(() => savePassThroughFeeAction(feeForm(name, amount)));
@@ -88,5 +94,27 @@ describe("savePassThroughFeeAction", () => {
       name: "P".repeat(120),
       amountCents: 1_000_000,
     });
+  });
+
+  it("accepts whole-unit fees and rejects sub-unit values for a zero-decimal currency", async () => {
+    mocks.getShopById.mockResolvedValue({ ...shop, currency: "jpy" });
+
+    const acceptedTo = await redirectedTo(() => savePassThroughFeeAction(feeForm("Park", "1")));
+
+    expect(acceptedTo).toBe(
+      noticeUrl(settingsPath, "pass-through-saved", { saved: "passThrough" }),
+    );
+    expect(mocks.setShopPassThroughFee).toHaveBeenCalledWith(expect.anything(), shop.id, {
+      name: "Park",
+      amountCents: 1,
+    });
+
+    mocks.setShopPassThroughFee.mockClear();
+    const rejectedTo = await redirectedTo(() => savePassThroughFeeAction(feeForm("Park", "0.4")));
+
+    expect(rejectedTo).toBe(
+      noticeUrl(settingsPath, "pass-through-invalid", { saved: "passThrough" }),
+    );
+    expect(mocks.setShopPassThroughFee).not.toHaveBeenCalled();
   });
 });
