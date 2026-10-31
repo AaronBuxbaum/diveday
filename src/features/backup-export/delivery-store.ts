@@ -9,7 +9,8 @@ import { nowDate } from "@/lib/clock";
  * The delivery ledger: one row per backup attempt, inserted as `started` and
  * finished in place — so a crash mid-upload leaves an honest `started` row
  * rather than silence, and "when did my data last land in my bucket" is a
- * query, not a guess. Error codes only, never sentences (ADR
+ * query, not a guess. A late scheduled attempt that lost its lease is marked
+ * `superseded` rather than failed. Error codes only, never sentences (ADR
  * 20260731-domain-layer-copy-leaks).
  */
 
@@ -39,8 +40,23 @@ export async function beginBackupDelivery(
 export async function finishBackupDelivery(
   db: DbExecutor,
   input:
-    | { id: string; status: "succeeded"; objectKey: string; byteCount: number; now?: Date }
-    | { id: string; status: "failed"; errorCode: string; now?: Date },
+    | {
+        id: string;
+        shopId: string;
+        status: "succeeded";
+        objectKey: string;
+        byteCount: number;
+        now?: Date;
+      }
+    | {
+        id: string;
+        shopId: string;
+        status: "failed";
+        errorCode: string;
+        objectKey?: string;
+        byteCount?: number;
+        now?: Date;
+      },
 ): Promise<void> {
   await db
     .update(shopBackupDeliveries)
@@ -56,10 +72,31 @@ export async function finishBackupDelivery(
         : {
             status: "failed",
             errorCode: input.errorCode,
+            ...(input.objectKey ? { objectKey: input.objectKey } : {}),
+            ...(input.byteCount !== undefined ? { byteCount: input.byteCount } : {}),
             finishedAt: input.now ?? nowDate(),
           },
     )
-    .where(eq(shopBackupDeliveries.id, input.id));
+    .where(
+      and(eq(shopBackupDeliveries.id, input.id), eq(shopBackupDeliveries.shopId, input.shopId)),
+    );
+}
+
+/** Persist the attempt-specific key before S3 starts, so a crash leaves useful history. */
+export async function setBackupDeliveryObjectKey(
+  db: DbExecutor,
+  input: { id: string; shopId: string; objectKey: string },
+): Promise<void> {
+  await db
+    .update(shopBackupDeliveries)
+    .set({ objectKey: input.objectKey })
+    .where(
+      and(
+        eq(shopBackupDeliveries.id, input.id),
+        eq(shopBackupDeliveries.shopId, input.shopId),
+        eq(shopBackupDeliveries.status, "started"),
+      ),
+    );
 }
 
 /**

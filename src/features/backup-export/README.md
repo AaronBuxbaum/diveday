@@ -71,9 +71,10 @@ Never `@/app/**`.
   request, so a destination pointing at a loopback/link-local/private address is refused with a
   code before a row is ever written.
 - **Idempotent per shop per ISO week.** A re-invoked cron skips shops with a succeeded scheduled
-  delivery for the period; the object key is deterministic for the period, so a retry overwrites
-  its own bundle rather than accumulating copies. The platform runner cannot read its bucket and
-  always attempts a fresh bundle, relying on the deterministic date key to overwrite additively.
+  delivery for the period. Every shop-owned delivery gets a unique object key (scheduled attempt
+  number or manual delivery id), so an expired or overlapping upload cannot replace a newer
+  bundle. The platform runner cannot read its bucket and always attempts a fresh bundle, relying on
+  the deterministic date key to overwrite additively.
 - **The platform uploader is write-only, and nothing here pretends otherwise.** No function in
   this module lists, reads, or deletes from `DatabaseBackupBucket`. Whether a bundle actually
   landed is answered by a different principal entirely (the watchdog in `infra/`), which is what

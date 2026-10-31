@@ -26,6 +26,8 @@
 export const OUTSIDE_CLOSURE_REASONS: Record<string, string> = {
   platform_backup_progress:
     "one per-shop operational checkpoint for attempts, successes and leases, with no diver identity; it is deleted with its shop",
+  shop_backup_delivery_claims:
+    "one per-shop scheduler lease for platform backups, with no diver identity; it is deleted with its shop",
   retention_prune_state:
     "global scheduler machinery containing only a table code, no personal data",
   // Reached by text rather than by a key, and swept that way. These two are the

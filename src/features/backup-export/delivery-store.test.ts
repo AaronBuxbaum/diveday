@@ -48,6 +48,7 @@ describe("delivery lifecycle", () => {
 
     await finishBackupDelivery(db, {
       id: row.id,
+      shopId: shop.id,
       status: "succeeded",
       objectKey: "diveday-backup-x.zip",
       byteCount: 12_345,
@@ -70,7 +71,12 @@ describe("delivery lifecycle", () => {
       periodKey: PERIOD,
       trigger: "manual",
     });
-    await finishBackupDelivery(db, { id: row.id, status: "failed", errorCode: "bucket_not_found" });
+    await finishBackupDelivery(db, {
+      id: row.id,
+      shopId: shop.id,
+      status: "failed",
+      errorCode: "bucket_not_found",
+    });
 
     const page = await listBackupDeliveries(db, shop.id, { pageSize: 10 });
     expect(page.rows[0]).toMatchObject({ status: "failed", errorCode: "bucket_not_found" });
@@ -91,6 +97,7 @@ describe("hasDeliveredScheduledBackup", () => {
     });
     await finishBackupDelivery(db, {
       id: failed.id,
+      shopId: shop.id,
       status: "failed",
       errorCode: "network_unreachable",
     });
@@ -104,6 +111,7 @@ describe("hasDeliveredScheduledBackup", () => {
     });
     await finishBackupDelivery(db, {
       id: manual.id,
+      shopId: shop.id,
       status: "succeeded",
       objectKey: "k.zip",
       byteCount: 1,
@@ -117,6 +125,7 @@ describe("hasDeliveredScheduledBackup", () => {
     });
     await finishBackupDelivery(db, {
       id: scheduled.id,
+      shopId: shop.id,
       status: "succeeded",
       objectKey: "k.zip",
       byteCount: 1,
@@ -139,6 +148,7 @@ describe("listBackupDeliveries", () => {
       });
       await finishBackupDelivery(db, {
         id: row.id,
+        shopId: shop.id,
         status: "succeeded",
         objectKey: `k-${week}.zip`,
         byteCount: week,
@@ -186,6 +196,7 @@ describe("listShopsDueForBackup", () => {
     });
     await finishBackupDelivery(db, {
       id: row.id,
+      shopId: shop.id,
       status: "succeeded",
       objectKey: "k.zip",
       byteCount: 1,
@@ -205,6 +216,7 @@ describe("listShopsDueForBackup", () => {
     });
     await finishBackupDelivery(db, {
       id: row.id,
+      shopId: shop.id,
       status: "failed",
       errorCode: "upload_unauthorized",
     });

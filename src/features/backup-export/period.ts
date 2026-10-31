@@ -8,7 +8,7 @@ import { isoWeekKeyUTC } from "@/lib/iso-week";
  * redeploy replaying the tick, an operator invoking it by hand — and "one
  * succeeded scheduled delivery per shop per period" is what turns those into
  * no-ops instead of duplicate uploads. ISO weeks rather than calendar dates so
- * the key is stable across however many days a retry drifts, and UTC rather
+ * the cadence is stable across however many days a retry drifts, and UTC rather
  * than each shop's timezone so one cron pass computes one key for every shop.
  */
 
@@ -126,12 +126,26 @@ export function parsePlatformBackupCensusKey(key: string): PlatformBackupCensus 
 }
 
 /**
- * Where the period's bundle lands inside the bucket. Deterministic on purpose:
- * a retried week overwrites its own object instead of accumulating copies, and
- * a shop browsing its bucket reads the week straight off the file name.
+ * Where one delivery's bundle lands inside the bucket. Every delivery has a
+ * distinct key, so an out-of-order upload cannot replace a newer successful
+ * backup. Scheduled attempts use their monotonic number; manual runs use the
+ * delivery row id.
  */
-export function backupObjectKey(prefix: string, shopSlug: string, periodKey: string): string {
+export type BackupObjectAttempt =
+  | { trigger: "scheduled"; attemptNumber: number }
+  | { trigger: "manual"; deliveryId: string };
+
+export function backupObjectKey(
+  prefix: string,
+  shopSlug: string,
+  periodKey: string,
+  attempt: BackupObjectAttempt,
+): string {
   const cleaned = prefix.replace(/^\/+|\/+$/g, "");
-  const name = `diveday-backup-${shopSlug}-${periodKey}.zip`;
+  const suffix =
+    attempt.trigger === "scheduled"
+      ? `-attempt-${attempt.attemptNumber}`
+      : `-manual-${attempt.deliveryId}`;
+  const name = `diveday-backup-${shopSlug}-${periodKey}${suffix}.zip`;
   return cleaned ? `${cleaned}/${name}` : name;
 }

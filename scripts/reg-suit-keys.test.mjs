@@ -35,6 +35,7 @@ describe("resolveRegSuitKeys", () => {
         GITHUB_EVENT_NAME: "pull_request",
         PR_BASE_REF: "main",
         PR_HEAD_SHA: HEAD,
+        EVENT_SHA: LAYER_ONE_HEAD,
         REG_SUIT_TRUSTED_BASE_CODE: "true",
       },
       git: git({
@@ -121,6 +122,47 @@ describe("resolveRegSuitKeys", () => {
       git: git({ "rev-parse HEAD": HEAD, "rev-parse HEAD^": PARENT }),
     });
     expect(keys).toMatchObject({ actualKey: HEAD, expectedKey: PARENT, stacked: false });
+  });
+
+  it.each(["push", "workflow_dispatch"])("keys a trusted %s to the triggering commit", (event) => {
+    const keys = resolveRegSuitKeys({
+      env: {
+        GITHUB_EVENT_NAME: event,
+        REG_SUIT_TRUSTED_BASE_CODE: "true",
+        EVENT_SHA: HEAD,
+      },
+      git: git({
+        "rev-parse HEAD": LAYER_ONE_HEAD,
+        [`rev-parse ${HEAD}^{commit}`]: HEAD,
+        [`rev-parse ${HEAD}^`]: PARENT,
+      }),
+    });
+    expect(keys).toMatchObject({ actualKey: HEAD, expectedKey: PARENT });
+  });
+
+  it.each([undefined, "1111111", "--upload-pack=evil"])(
+    "rejects a missing or invalid trusted event commit (%s)",
+    (eventSha) => {
+      expect(() =>
+        resolveRegSuitKeys({
+          env: {
+            GITHUB_EVENT_NAME: "push",
+            REG_SUIT_TRUSTED_BASE_CODE: "true",
+            EVENT_SHA: eventSha,
+          },
+          git: git({}),
+        }),
+      ).toThrow(/full commit sha/);
+    },
+  );
+
+  it("rejects an unresolvable trusted event commit", () => {
+    expect(() =>
+      resolveRegSuitKeys({
+        env: { GITHUB_EVENT_NAME: "push", REG_SUIT_TRUSTED_BASE_CODE: "true", EVENT_SHA: HEAD },
+        git: git({}),
+      }),
+    ).toThrow(/cannot resolve the event commit/);
   });
 
   it("keys a dispatched run of main to the previous commit, as the push it stands in for", () => {

@@ -60,11 +60,17 @@ export function deliveryErrorText(t: StaffTranslator, code: string | null): stri
   return key ? t(key) : t("backup.deliveryError.unknown");
 }
 
-const STATUS_TONE = { succeeded: "success", failed: "danger", started: "neutral" } as const;
+const STATUS_TONE = {
+  succeeded: "success",
+  failed: "danger",
+  started: "neutral",
+  superseded: "neutral",
+} as const;
 
 function statusText(t: StaffTranslator, status: ShopBackupDelivery["status"]): string {
   if (status === "succeeded") return t("backup.history.status.succeeded");
   if (status === "failed") return t("backup.history.status.failed");
+  if (status === "superseded") return t("backup.history.status.superseded");
   return t("backup.history.status.started");
 }
 
@@ -342,6 +348,18 @@ export function BackupsSection({
                       <Td pad={false} muted align="baseline" className="basis-full">
                         {delivery.status === "failed" ? (
                           deliveryErrorText(t, delivery.errorCode)
+                        ) : delivery.status === "superseded" ? (
+                          <span>
+                            {t("backup.history.supersededDetails")}
+                            {delivery.objectKey ? (
+                              <>
+                                <br />
+                                <span className="font-mono text-xs [overflow-wrap:anywhere]">
+                                  {delivery.objectKey}
+                                </span>
+                              </>
+                            ) : null}
+                          </span>
                         ) : delivery.objectKey ? (
                           <span className="font-mono text-xs [overflow-wrap:anywhere]">
                             {delivery.objectKey}

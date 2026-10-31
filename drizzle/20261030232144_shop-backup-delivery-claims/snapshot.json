@@ -1,0 +1,267 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "f1c0e981-7971-4905-862d-d83ccae7a118",
+  "prevIds": [
+    "38831028-7aea-4e3c-a339-707f6294a460",
+    "a786f440-e2b2-449d-89df-611cc2325f44",
+    "2cdde3ba-db57-4fd3-bfcf-19a372ecce9b",
+    "95706554-b934-4c58-80e3-eeb2b1189b5c"
+  ],
+  "footprints": [
+    {
+      "statementType": "alter_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "backup_delivery_status"
+      ],
+      "writes": [
+        "s|enum|public.backup_delivery_status"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "shop_backup_delivery_claims"
+      ],
+      "writes": [
+        "s|tbl|public.shop_backup_delivery_claims",
+        "n|tbl|public.shop_backup_delivery_claims",
+        "e|tbl|public.shop_backup_delivery_claims",
+        "n|rel|public.shop_backup_delivery_claims",
+        "n|type|public.shop_backup_delivery_claims",
+        "n|rel|public.shop_backup_delivery_claims_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "shop_backup_delivery_claims",
+        "shop_backup_delivery_claims_lease_idx"
+      ],
+      "writes": [
+        "s|idx|public.shop_backup_delivery_claims_lease_idx",
+        "n|idx|public.shop_backup_delivery_claims_lease_idx",
+        "e|idx|public.shop_backup_delivery_claims_lease_idx",
+        "n|rel|public.shop_backup_delivery_claims_lease_idx"
+      ],
+      "reads": [
+        "n|tbl|public.shop_backup_delivery_claims",
+        "n|sch|public",
+        "n|col|public.shop_backup_delivery_claims.lease_until"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "shop_backup_delivery_claims"
+      ],
+      "writes": [
+        "s|fk|public.shop_backup_delivery_claims.shop_backup_delivery_claims_shop_id_shops_id_fkey",
+        "n|fk|public.shop_backup_delivery_claims.shop_backup_delivery_claims_shop_id_shops_id_fkey",
+        "e|fk|public.shop_backup_delivery_claims.shop_backup_delivery_claims_shop_id_shops_id_fkey",
+        "n|con|public.shop_backup_delivery_claims.shop_backup_delivery_claims_shop_id_shops_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.shop_backup_delivery_claims",
+        "n|sch|public",
+        "n|tbl|public.shops",
+        "n|sch|public",
+        "n|col|public.shop_backup_delivery_claims.shop_id",
+        "n|col|public.shops.id",
+        "e|uniqueness|public.shops.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "shop_backup_delivery_claims",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "shop_backup_delivery_claims",
+        "name": "shop_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "shop_backup_delivery_claims",
+        "name": "period_key",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "shop_backup_delivery_claims",
+        "name": "attempt_number",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "shop_backup_delivery_claims",
+        "name": "lease_token",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "shop_backup_delivery_claims",
+        "name": "lease_until",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "shop_backup_delivery_claims",
+        "name": "completed_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "shop_backup_delivery_claims",
+        "name": "shop_backup_delivery_claims_lease_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "lease_until",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "shop_backup_delivery_claims",
+        "name": "shop_backup_delivery_claims_shop_id_shops_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "shop_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "shops",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "shop_backup_delivery_claims",
+        "name": "shop_backup_delivery_claims_pkey",
+        "columns": [
+          "shop_id",
+          "period_key"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "enums\u0000[\"public\",\"backup_delivery_status\"]",
+      "set": {
+        "values": [
+          "started",
+          "succeeded",
+          "failed",
+          "superseded"
+        ]
+      }
+    }
+  ]
+}

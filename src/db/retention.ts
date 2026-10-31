@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNotNull, isNull, lt, SQL, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, lt, or, SQL, sql } from "drizzle-orm";
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
@@ -38,6 +38,7 @@ import {
   pushSubscriptions,
   retentionPruneState,
   setupRequests,
+  shopBackupDeliveryClaims,
   shopContactEmailConfirmationTokens,
   shopShoreAlertTokens,
   staffReplies,
@@ -215,6 +216,12 @@ function olderThan(clock: PgColumn | SQL, cutoff: Date): SQL {
   return clock instanceof SQL ? lt(clock, cutoff) : lt(clock, cutoff);
 }
 
+/** Match recorded prune identities, including SQL expressions for composite keys. */
+export function retentionIdentityMatches(id: PgColumn | SQL, ids: string[]): SQL {
+  if (id instanceof SQL) return inArray(id, ids);
+  return inArray(id, ids);
+}
+
 /**
  * Selects at most `batchLimit` eligible candidates, then rechecks their age and
  * extra eligibility when deleting. A committed legal hold must survive a wait
@@ -243,7 +250,7 @@ async function pruneBatch(
       .delete(arm.from)
       .where(
         and(
-          inArray(
+          retentionIdentityMatches(
             arm.id,
             rows.map((row) => row.id),
           ),
@@ -279,7 +286,8 @@ async function pruneBatch(
  */
 type PruneArm = {
   from: PgTable;
-  id: PgColumn;
+  /** A single key column or a unique SQL expression for composite keys. */
+  id: PgColumn | SQL;
   clock: PgColumn | SQL;
   extraWhere?: SQL;
 };
@@ -394,6 +402,20 @@ export const PRUNE_ARMS = {
     from: weeklyDigestSends,
     id: weeklyDigestSends.id,
     clock: weeklyDigestSends.createdAt,
+  },
+  // Claims remain the duplicate-upload fence until the successful delivery
+  // row is visible and for a full season/year afterward. Incomplete attempts
+  // age from lease expiry; completed attempts age from completion. The
+  // composite expression identifies one shop/week without widening deletes
+  // to other shops that share the same period key.
+  shop_backup_delivery_claims: {
+    from: shopBackupDeliveryClaims,
+    id: sql<string>`${shopBackupDeliveryClaims.shopId}::text || ':' || ${shopBackupDeliveryClaims.periodKey}`,
+    clock: sql`coalesce(${shopBackupDeliveryClaims.completedAt}, ${shopBackupDeliveryClaims.leaseUntil})`,
+    extraWhere: or(
+      isNotNull(shopBackupDeliveryClaims.completedAt),
+      isNotNull(shopBackupDeliveryClaims.leaseUntil),
+    ),
   },
   // Claude's per-call cost ledger (ADR 20261018-claude-assists), on its own age.
   claude_usage: {

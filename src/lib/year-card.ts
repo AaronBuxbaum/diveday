@@ -1,4 +1,11 @@
-import { DIVEDAY_BRAND_COLOR, mixHex, parseBrandColor } from "./brand";
+import {
+  AA_TEXT_CONTRAST,
+  BRAND_INK,
+  contrastRatio,
+  DIVEDAY_BRAND_COLOR,
+  mixHex,
+  parseBrandColor,
+} from "./brand";
 
 /**
  * **The year card's palette** (ADR 20260908-one-hand, decision 6, lever T).
@@ -26,11 +33,11 @@ export const YEAR_CARD_SIZE = { width: 1200, height: 800 } as const;
 export type YearCardPalette = {
   /** The gradient's near corner — the shallows. */
   near: string;
-  /** The shop's colour, at depth. */
+  /** The shop's own colour. */
   mid: string;
   /** The gradient's far corner. */
   far: string;
-  /** The card's reading ink: DiveDay's paper white, which reads on all three. */
+  /** The card's reading ink, chosen to read on all three gradient stops. */
   ink: string;
   /** Labels and the range line, one step quieter. */
   muted: string;
@@ -38,22 +45,58 @@ export type YearCardPalette = {
   fills: readonly [string, string, string, string];
 };
 
+const LIGHT_MUTED_OPACITY = 0.78;
+const DARK_MUTED_OPACITY = 0.82;
+
+function hasReadableText(ink: string, mutedOpacity: number, ground: string): boolean {
+  return (
+    contrastRatio(ink, ground) >= AA_TEXT_CONTRAST &&
+    contrastRatio(mixHex(ground, ink, mutedOpacity), ground) >= AA_TEXT_CONTRAST
+  );
+}
+
 /**
- * The sea a shop's colour makes. Every value is the shop's own hue moved
- * toward white or black, so a shop that set no colour gets DiveDay's lagoon and
- * a shop that set one gets its own, and neither can produce a card whose text
- * fails to read: the ink is paper white and the deepest of the three grounds is
- * more than half-way to black.
+ * The sea a shop's colour makes. Light brands keep their light hue and use
+ * dark ink; dark brands use paper-white ink. A mid-tone brand moves toward
+ * black only as far as needed for both inks to meet AA after compositing the
+ * muted ink. Each gradient's other stops move farther toward their ink's
+ * matching end, so the entire gradient keeps that contrast. A shop that set
+ * no colour gets DiveDay's own lagoon.
  */
 export function yearCardPalette(brandColor: string | null | undefined): YearCardPalette {
   const { value } = parseBrandColor(brandColor ?? "");
   const brand = value ?? DIVEDAY_BRAND_COLOR;
+  const paperInk = "#fffdf8";
+  const lightBrand = hasReadableText(BRAND_INK, LIGHT_MUTED_OPACITY, brand);
+  if (lightBrand) {
+    return {
+      near: mixHex(brand, "#ffffff", 0.24),
+      mid: brand,
+      far: mixHex(brand, "#ffffff", 0.12),
+      ink: BRAND_INK,
+      muted: `rgba(22, 35, 44, ${LIGHT_MUTED_OPACITY})`,
+      fills: [
+        "rgba(22, 35, 44, 0.16)",
+        "rgba(22, 35, 44, 0.38)",
+        "rgba(22, 35, 44, 0.64)",
+        BRAND_INK,
+      ],
+    };
+  }
+
+  const ink = paperInk;
+  let near = brand;
+  // A mid-tone brand may not carry either ink. Keep the deep-card treatment
+  // and move it toward black in small, deterministic steps, retaining hue.
+  for (let step = 0; step < 16 && !hasReadableText(ink, DARK_MUTED_OPACITY, near); step += 1) {
+    near = mixHex(near, "#000000", 0.08);
+  }
   return {
-    near: mixHex(brand, "#ffffff", 0.32),
-    mid: mixHex(brand, "#000000", 0.18),
-    far: mixHex(brand, "#000000", 0.68),
-    ink: "#fffdf8",
-    muted: "rgba(255, 253, 248, 0.82)",
+    near,
+    mid: mixHex(near, "#000000", 0.18),
+    far: mixHex(near, "#000000", 0.68),
+    ink,
+    muted: `rgba(255, 253, 248, ${DARK_MUTED_OPACITY})`,
     fills: [
       "rgba(255, 253, 248, 0.18)",
       "rgba(255, 253, 248, 0.42)",

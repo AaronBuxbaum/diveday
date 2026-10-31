@@ -66,8 +66,10 @@
     "status": {
       "succeeded": "Delivered",
       "failed": "Failed",
-      "started": "Did not finish"
+      "started": "Did not finish",
+      "superseded": "Replaced"
     },
+    "supersededDetails": "A newer weekly attempt took over this run.",
     "total": "{count, plural, one {# delivery} other {# deliveries}}"
   },
   "deliveryError": {

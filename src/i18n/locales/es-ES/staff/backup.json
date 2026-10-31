@@ -66,8 +66,10 @@
     "status": {
       "succeeded": "Entregado",
       "failed": "Falló",
-      "started": "No terminó"
+      "started": "No terminó",
+      "superseded": "Reemplazado"
     },
+    "supersededDetails": "Una entrega semanal más reciente tomó el control de este intento.",
     "total": "{count, plural, one {# entrega} other {# entregas}}"
   },
   "deliveryError": {
