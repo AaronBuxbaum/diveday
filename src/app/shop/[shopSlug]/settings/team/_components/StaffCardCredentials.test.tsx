@@ -3,7 +3,9 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { Role } from "@/lib/authz";
+import type { FormNotice } from "@/lib/staff-notices";
 import type { CardCredential } from "../credential-rows";
+import { TEAM_FORMS } from "../notices";
 import { StaffCardCredentials } from "./StaffCardCredentials";
 
 afterEach(cleanup);
@@ -21,7 +23,7 @@ function card(name: string, kind: string, extra: Partial<CardCredential> = {}): 
 
 const noop = () => {};
 
-function renderCard(roles: Role[], credentials: CardCredential[]) {
+function renderCard(roles: Role[], credentials: CardCredential[], status?: FormNotice) {
   return render(
     <StaffCardCredentials
       personId="p1"
@@ -31,11 +33,50 @@ function renderCard(roles: Role[], credentials: CardCredential[]) {
       t={t}
       reviewAction={noop}
       deleteAction={noop}
+      status={status}
     />,
   );
 }
 
 describe("StaffCardCredentials", () => {
+  it("uses FormStatus's warning reveal without adding another sentinel", () => {
+    const { container } = renderCard(["owner"], [], {
+      form: TEAM_FORMS.credential("p1"),
+      tone: "warning",
+      text: "Needs review.",
+    });
+    const paragraph = screen.getByText("Needs review.").closest("p");
+    if (!(paragraph instanceof HTMLElement)) throw new Error("Missing credential outcome");
+    const sentinels = [...container.querySelectorAll<HTMLElement>("span[hidden]")];
+
+    expect(sentinels).toHaveLength(1);
+    expect(sentinels[0]?.previousElementSibling).toBe(paragraph);
+  });
+
+  it("keeps success in the fixed toast without adding a reveal helper", () => {
+    const { container } = renderCard(["owner"], [], {
+      form: TEAM_FORMS.credential("p1"),
+      tone: "success",
+      text: "Saved.",
+    });
+    const fixedToast = container.querySelector<HTMLElement>(".fixed");
+    if (!fixedToast) throw new Error("Missing fixed success toast");
+    expect(screen.getByRole("status")).toHaveTextContent("Saved.");
+    expect(fixedToast).toHaveClass("fixed");
+    expect(container.querySelector("span[hidden]")).toBeNull();
+  });
+
+  it("keeps danger with the field-focus path and does not mount a reveal helper", () => {
+    const { container } = renderCard(["owner"], [], {
+      form: TEAM_FORMS.credential("p1"),
+      tone: "danger",
+      text: "Could not save.",
+    });
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Could not save.");
+    expect(container.querySelector("span[hidden]")).toBeNull();
+  });
+
   it("says no credentials at all when a role that sails on a card has nothing", () => {
     renderCard(["captain"], []);
     expect(screen.getByText("No credentials on file")).toBeVisible();
