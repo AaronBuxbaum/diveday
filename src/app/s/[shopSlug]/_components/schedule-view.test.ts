@@ -53,7 +53,7 @@ describe("scheduleMonthBounds", () => {
 
 describe("scheduleViewLinks", () => {
   it("carries every filter and the resolved lens forward", () => {
-    const { withViewParams, filterSuffix, lensHref } = scheduleViewLinks({
+    const { withViewParams, monthHref, lensHref } = scheduleViewLinks({
       ...VIEW,
       month: "2026-08",
       hasSpaceFilter: true,
@@ -65,8 +65,8 @@ describe("scheduleViewLinks", () => {
     expect(withViewParams(new URLSearchParams()).toString()).toBe(
       "month=2026-08&hasSpace=1&tripType=course&canDive=open_water&hideAbove=1&lens=night",
     );
-    expect(filterSuffix).toBe(
-      "&hasSpace=1&tripType=course&canDive=open_water&hideAbove=1&lens=night",
+    expect(new URL(`https://x${monthHref("2026-09")}`).searchParams.toString()).toBe(
+      "month=2026-09&hasSpace=1&tripType=course&canDive=open_water&hideAbove=1&lens=night",
     );
     expect(lensHref("wreck")).toBe(
       "/s/blue-mantis?month=2026-08&hasSpace=1&tripType=course&canDive=open_water&hideAbove=1&lens=wreck",
@@ -76,6 +76,30 @@ describe("scheduleViewLinks", () => {
   it("drops the lens for the reset chip", () => {
     const { lensHref } = scheduleViewLinks({ ...VIEW, activeLens: { slug: "night" } });
     expect(lensHref(null)).toBe("/s/blue-mantis");
+  });
+
+  it("encodes a resolved lens with reserved characters and omits an unresolved lens", () => {
+    const reserved = scheduleViewLinks({
+      ...VIEW,
+      activeLens: { slug: "night & wreck/reef?" },
+    });
+    const reservedHref = reserved.monthHref("2026-09");
+    expect(reservedHref).toContain("lens=night+%26+wreck%2Freef%3F");
+    expect(new URL(`https://x${reservedHref}`).searchParams.get("lens")).toBe(
+      "night & wreck/reef?",
+    );
+
+    const unresolved = scheduleViewLinks({ ...VIEW, activeLens: null });
+    expect(new URL(`https://x${unresolved.monthHref("2026-09")}`).searchParams.has("lens")).toBe(
+      false,
+    );
+  });
+
+  it.each([false, true])("replaces the month and drops embed=%s from month links", (isEmbed) => {
+    const { monthHref } = scheduleViewLinks({ ...VIEW, month: "2026-08", isEmbed });
+    const params = new URL(`https://x${monthHref("2026-09")}`).searchParams;
+    expect(params.get("month")).toBe("2026-09");
+    expect(params.has("embed")).toBe(false);
   });
 });
 
