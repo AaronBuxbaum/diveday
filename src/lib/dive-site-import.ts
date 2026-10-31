@@ -12,6 +12,7 @@ import {
   MAX_IMPORT_ROWS,
   parseCsv,
 } from "./import";
+import { normalizeImportKey } from "./import-key";
 import { isManagedStorageUrl } from "./storage/blob-host";
 import { TIDE_PREFERENCES, type TidePreference } from "./tides";
 
@@ -172,15 +173,6 @@ export const DIVE_SITE_IMPORT_COLUMNS = [
 ] as const;
 
 type Column = (typeof DIVE_SITE_IMPORT_COLUMNS)[number];
-
-/** Header matching is case- and separator-insensitive; a value never is. */
-function normalizeHeader(value: string): string {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
-}
 
 function text(value: string | undefined): string | null {
   const trimmed = value?.trim();
@@ -370,7 +362,7 @@ export function prepareDiveSiteImport(
   const indexes = new Map<Column, number>();
   const unknownColumns: string[] = [];
   header.forEach((raw, index) => {
-    const name = normalizeHeader(raw);
+    const name = normalizeImportKey(raw);
     if (!name) return;
     if (!known.has(name)) {
       unknownColumns.push(raw.trim() || name);
@@ -586,7 +578,7 @@ export type PreparedDiveSiteCreaturesImport = {
  */
 export function isDiveSiteCreaturesCsv(csv: string): boolean {
   const header = parseCsv(csv.slice(0, 4096))[0] ?? [];
-  const names = new Set(header.map(normalizeHeader));
+  const names = new Set(header.map(normalizeImportKey));
   return names.has("catalog_slug") && names.has("dive_site_id");
 }
 
@@ -610,7 +602,7 @@ export function prepareDiveSiteCreaturesImport(csv: string): PreparedDiveSiteCre
   const indexes = new Map<CreatureColumn, number>();
   const unknownColumns: string[] = [];
   header.forEach((raw, index) => {
-    const name = normalizeHeader(raw);
+    const name = normalizeImportKey(raw);
     if (!name) return;
     if (!known.has(name)) {
       unknownColumns.push(raw.trim() || name);

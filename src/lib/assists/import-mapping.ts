@@ -12,6 +12,7 @@ import {
   parseCsv,
   unclaimedImportHeaders,
 } from "@/lib/import";
+import { normalizeImportKey } from "../import-key";
 
 /**
  * **Matching an old system's export to DiveDay's import** (ADR
@@ -69,14 +70,6 @@ const NEVER_SAMPLE =
 const LEVEL_HEADERS =
   /^(?:certification_level|cert_level|level|certification|cert|certification_name|course)$/;
 
-function normalizedHeader(raw: string): string {
-  return raw
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
-}
-
 /**
  * What one file would send, or null when there is nothing to ask: every
  * header is already known and every level spelling already reads.
@@ -103,7 +96,7 @@ export function importAssistSample(text: string): ImportSample | null {
       }
       columns.push({ header, samples: [...samples] });
     }
-    if (LEVEL_HEADERS.test(normalizedHeader(header))) {
+    if (LEVEL_HEADERS.test(normalizeImportKey(header))) {
       for (const row of body) {
         const cell = (row[index] ?? "").trim();
         if (cell && cell.length <= SAMPLE_CELL_MAX && !normalizeLevel(cell)) {
