@@ -14,7 +14,8 @@ import { DEFAULT_DIVER_LOCALE, type DiverLocale, toDiverLocale } from "./setting
  * whole point is a manifest that opens from cache on a phone with no signal at
  * the rail -- and it imported `staffTranslator`. That module statically imports
  * both locale barrels, so the route shipped **31 namespaces in two locales, 62
- * JSON modules**, for the handful it reads. At 438.9 KB gzip first load it was the
+ * JSON modules** (a measurement from #1353, not the current count) for the
+ * handful it reads. At 438.9 KB gzip first load it was the
  * heaviest page in the app by a wide margin, against a 237.3 KB floor, and the
  * next largest browser-byte item was about ten times smaller.
  *
@@ -34,15 +35,11 @@ import { DEFAULT_DIVER_LOCALE, type DiverLocale, toDiverLocale } from "./setting
  * where the strings are, and a stripper that guesses wrong deletes a real
  * `t()` call from the scan silently, on a safety surface.
  *
- * **Then the same problem one layer in, fixed at the cause** (issue #1368). Two
- * rounds of narrowing had made `shared` the answer, and `shared` had itself
- * become too wide: the manifest reached 15 of its 41 subtrees and shipped the
- * other 26, the largest being the shop home's own `today` copy at ~27.5 KB
- * minified across the two locales — on a route that renders no shop home. The
- * fix was not a third narrowing here but giving `today` its own area bundle, as
- * ADR 20260807-per-area-staff-bundles says an area gets. Nothing in this file
- * changed; `shared.json` got smaller beneath it, and so did every other staff
- * bundle that imports it.
+ * **The same problem one layer in** (issue #1368). `shared` had become too wide
+ * for this route: the manifest used 15 of its 41 subtrees and shipped the other
+ * 26, the largest being the shop home's `today` copy. The fix was giving `today`
+ * its own area bundle (ADR 20260807-per-area-staff-bundles), not a third
+ * narrowing here. Nothing in this file changed; `shared.json` shrank beneath it.
  *
  * **Its own module, not a second export beside `staffTranslator`.** Putting the
  * narrow composer in `staff-messages.ts` would leave the saving resting on
