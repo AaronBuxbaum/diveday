@@ -963,7 +963,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    uses: AaronBuxbaum/diveday/.github/workflows/reg-suit-publish.yml@192683ef0644fcad68ace043fe602798fce4d0f0 # immutable commit 192683ef0644fcad68ace043fe602798fce4d0f0
+    uses: AaronBuxbaum/diveday/.github/workflows/reg-suit-publish.yml@77123ca6db5ec5dc4e5fcfaf23778f08580200c8 # immutable commit 77123ca6db5ec5dc4e5fcfaf23778f08580200c8
     with:
       capture-mode: ${{ needs.visual-plan.outputs.mode }}
       capture-shards: ${{ needs.visual-plan.outputs.shards }}
@@ -1020,6 +1020,7 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           REG_SUIT_S3_BUCKET_NAME: ${{ secrets.REG_SUIT_S3_BUCKET_NAME }}
+          VISUAL_BASELINE_RESET: ${{ needs.visual-publish.outputs.baseline_reset }}
           REG_BASELINE_NOTE: ${{ needs.visual-publish.outputs.baseline_note }}
           VISUAL_SELECTION_NOTE: ${{ needs.visual-publish.outputs.selection_note }}
 

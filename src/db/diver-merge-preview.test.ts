@@ -1,4 +1,4 @@
-import { and, eq, gt } from "drizzle-orm";
+import { and, asc, eq, gt } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { guardianSignatureMissing } from "@/lib/guardian";
@@ -25,6 +25,7 @@ import {
   waiverRecords,
   waiverTemplates,
 } from "./schema";
+import { liveTrip } from "./trips-live";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).
@@ -51,7 +52,15 @@ async function fixtures({ fresh = false }: { fresh?: boolean } = {}) {
   const [trip] = await db
     .select({ id: trips.id, title: trips.title })
     .from(trips)
-    .where(eq(trips.shopId, shop.id))
+    .where(
+      and(
+        eq(trips.shopId, shop.id),
+        eq(trips.status, "scheduled"),
+        liveTrip(),
+        gt(trips.startsAt, nowDate()),
+      ),
+    )
+    .orderBy(asc(trips.startsAt), asc(trips.id))
     .limit(1);
   if (!owner || !trip) throw new Error("fixture needs the seeded owner and a trip");
   const [source, survivor] = await db
@@ -759,16 +768,10 @@ describe("writes aimed at a record merged away", () => {
   it("refuses a booking for the merged-away id", async () => {
     const f = await fixtures();
     expect((await merge(f)).ok).toBe(true);
-    const [future] = await f.db
-      .select({ id: trips.id })
-      .from(trips)
-      .where(and(eq(trips.shopId, f.shop.id), gt(trips.startsAt, nowDate())))
-      .limit(1);
-    if (!future) throw new Error("expected a seeded future departure");
     const result = await createBooking(f.db, {
       actor: "staff",
       shopId: f.shop.id,
-      tripId: future.id,
+      tripId: f.trip.id,
       personId: f.source.id,
     });
     expect(result).toMatchObject({ ok: false, reason: "person_not_found" });

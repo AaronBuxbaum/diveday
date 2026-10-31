@@ -164,6 +164,38 @@ describe("formatPrComment", () => {
     expect(body).not.toContain("no differences");
   });
 
+  it("reports an approved fresh-baseline bootstrap as passing with unknown pixel parity", () => {
+    const body = formatPrComment({
+      commit: COMMIT,
+      bucket: BUCKET,
+      summary: summarizeReport(outJson({ added: items("about", 234), expected: [] })),
+      freshBaselineBootstrap: true,
+    });
+    expect(body).toContain("Visual regression — NOTHING WAS COMPARED");
+    expect(body).toMatch(/pixel parity is unknown/i);
+    expect(body).toContain("fresh versioned baseline");
+    expect(body).not.toContain("This fails the `visual-report` check");
+  });
+
+  it("does not grant bootstrap wording to an unapproved no-baseline run", () => {
+    const body = comment(outJson({ added: items("about", 234), expected: [] }));
+    expect(body).toContain("This fails the `visual-report` check");
+    expect(body).not.toMatch(/pixel parity is unknown/i);
+  });
+
+  it("does not grant bootstrap wording when the report is missing or captured nothing", () => {
+    for (const report of [null, outJson({})]) {
+      const body = formatPrComment({
+        commit: COMMIT,
+        bucket: BUCKET,
+        summary: summarizeReport(report),
+        freshBaselineBootstrap: true,
+      });
+      expect(body).toContain("This fails the `visual-report` check");
+      expect(body).not.toContain("This approved bootstrap passes");
+    }
+  });
+
   it("explains a missing out.json instead of implying a pass", () => {
     const body = comment(null);
     expect(body).toContain("no report was published");
