@@ -31,13 +31,13 @@ describe("parseFieldGuideSelection", () => {
     ]);
   });
 
-  it("never lets free text through, whatever the old object shape carried", () => {
-    // The pre-selection editor posted words beside the slug; only the slug survives.
+  it("drops anything that is not a bare slug string", () => {
     const posted = [
       { slug: butterflyfish, name: "<script>alert(1)</script>", description: "typed by a shop" },
       { name: "no slug at all" },
-      { slug: 42 },
-      { slug: "not-a-species" },
+      42,
+      "not-a-species",
+      butterflyfish,
     ];
     expect(parseFieldGuideSelection(posted)).toEqual([butterflyfish]);
   });
@@ -47,9 +47,10 @@ describe("parseFieldGuideSelection", () => {
   });
 
   it("removes repeats, keeping the first position", () => {
-    expect(
-      parseFieldGuideSelection([hamlet, butterflyfish, hamlet, { slug: butterflyfish }]),
-    ).toEqual([hamlet, butterflyfish]);
+    expect(parseFieldGuideSelection([hamlet, butterflyfish, hamlet, butterflyfish])).toEqual([
+      hamlet,
+      butterflyfish,
+    ]);
   });
 
   it(`caps the guide at ${MAX_SITE_CREATURES} species`, () => {

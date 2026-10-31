@@ -229,17 +229,9 @@ const invoiceResponseSchema = z.object({
     .array(z.object({ amount: z.number().int().nonnegative() }))
     .nullable()
     .optional(),
-  payment_intent: z
-    .union([z.string().min(1), z.object({ id: z.string().min(1) })])
-    .nullable()
-    .optional(),
   /**
-   * The current shape of "which charge paid this invoice". Stripe moved the
-   * payment off the Invoice object and into a list of `invoice_payment`
-   * records; `payment_intent` above is the older spelling, kept because this
-   * repo sends no `Stripe-Version` header (see `stripe-api-version.test.ts`),
-   * so which of the two an account returns depends on the API version that
-   * account defaults to. Accept either rather than betting on one.
+   * "Which charge paid this invoice": Stripe moved the payment off the Invoice
+   * object into a list of `invoice_payment` records.
    */
   payments: z
     .object({
@@ -276,22 +268,17 @@ const invoiceResponseSchema = z.object({
  * "we looked in the wrong field".
  */
 function paidPaymentIntentId(
-  invoice: Pick<z.infer<typeof invoiceResponseSchema>, "payments" | "payment_intent">,
+  invoice: Pick<z.infer<typeof invoiceResponseSchema>, "payments">,
 ): string | null {
   const payments = invoice.payments?.data ?? [];
   const settled =
     payments.find((payment) => payment.is_default && payment.payment?.payment_intent) ??
     payments.find((payment) => payment.status === "paid" && payment.payment?.payment_intent) ??
     payments.find((payment) => payment.payment?.payment_intent);
-  if (settled?.payment?.payment_intent) return settled.payment.payment_intent;
-
-  const legacy = invoice.payment_intent;
-  if (typeof legacy === "string") return legacy;
-  return legacy?.id ?? null;
+  return settled?.payment?.payment_intent ?? null;
 }
 
 const invoicePaymentFieldsSchema = invoiceResponseSchema.pick({
-  payment_intent: true,
   payments: true,
 });
 

@@ -45,12 +45,10 @@ export type SiteLibraryGroupLabel = (typeof SITE_LIBRARY_GROUPS)[number];
 /**
  * A stored or posted value narrowed to a code, or null.
  *
- * Reads the legacy free text too, lower-cased and trimmed: `dive_sites.difficulty`
- * held whatever a shop typed until 2026-08-13, published template versions are
- * immutable snapshots that still carry it, and every value either of them ever
- * held was one of these three. Anything else reads as "not said" — which is
- * what the briefing already renders when the field is empty, so an unrecognised
- * word degrades to silence rather than to a wrong reading.
+ * Lower-cased and trimmed. Anything that is not one of the three codes reads as
+ * "not said" — which is what the briefing already renders when the field is
+ * empty, so an unrecognised word degrades to silence rather than to a wrong
+ * reading.
  */
 export function parseDiveSiteDifficulty(value: unknown): DiveSiteDifficulty | null {
   if (typeof value !== "string") return null;

@@ -268,20 +268,12 @@ describe("the briefing a shop writes in its own words", () => {
     expect(result.creatures).toEqual(["stoplight-parrotfish", "green-moray"]);
   });
 
-  it("keeps nothing a post says about a species except which one it is", () => {
-    // The editor posted four free-text fields per row until 2026-08-13, and an
-    // older tab can still be open. The words are DiveDay's now, so a post
-    // carrying its own are read for the slug and nothing else — which is also
-    // what closes the injection surface those fields were on a public page.
+  it("keeps only slugs a post names, never words about a species", () => {
     const result = parseDiveSiteForm(
       formEntries({
         creatures: JSON.stringify([
-          {
-            slug: "stoplight-parrotfish",
-            name: "Free swag, click here",
-            description: "<script>alert(1)</script>",
-            imageUrl: "https://example.com/barracuda.jpg",
-          },
+          "stoplight-parrotfish",
+          { slug: "stoplight-parrotfish", name: "Free swag, click here" },
         ]),
       }),
       "meters",

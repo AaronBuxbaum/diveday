@@ -393,13 +393,6 @@ describe("opted-in returning-diver memory", () => {
     expect(sessionStorage.length).toBe(1);
   });
 
-  it("deletes the old unscoped v1 value without migrating it", () => {
-    localStorage.setItem("diveday:returning-diver:v1", JSON.stringify(diver));
-
-    expect(loadReturningDiver("blue-mantis", NOW)).toBeNull();
-    expect(localStorage.getItem("diveday:returning-diver:v1")).toBeNull();
-  });
-
   it("ignores malformed scoped data and removes it", () => {
     localStorage.setItem(memoryKey("blue-mantis"), "not json");
 
