@@ -5,6 +5,7 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import type { Role } from "@/lib/authz";
 import type { FormNotice } from "@/lib/staff-notices";
 import type { CardCredential } from "../credential-rows";
+import { TEAM_FORMS } from "../notices";
 import { StaffCardCredentials } from "./StaffCardCredentials";
 
 afterEach(cleanup);
@@ -39,7 +40,11 @@ function renderCard(roles: Role[], credentials: CardCredential[], status?: FormN
 
 describe("StaffCardCredentials", () => {
   it("uses FormStatus's warning reveal without adding another sentinel", () => {
-    const { container } = renderCard(["owner"], [], { tone: "warning", text: "Needs review." });
+    const { container } = renderCard(["owner"], [], {
+      form: TEAM_FORMS.credential("p1"),
+      tone: "warning",
+      text: "Needs review.",
+    });
     const paragraph = screen.getByText("Needs review.").closest("p");
     if (!(paragraph instanceof HTMLElement)) throw new Error("Missing credential outcome");
     const sentinels = [...container.querySelectorAll<HTMLElement>("span[hidden]")];
@@ -49,7 +54,11 @@ describe("StaffCardCredentials", () => {
   });
 
   it("keeps success in the fixed toast without adding a reveal helper", () => {
-    const { container } = renderCard(["owner"], [], { tone: "success", text: "Saved." });
+    const { container } = renderCard(["owner"], [], {
+      form: TEAM_FORMS.credential("p1"),
+      tone: "success",
+      text: "Saved.",
+    });
     const fixedToast = container.querySelector<HTMLElement>(".fixed");
     if (!fixedToast) throw new Error("Missing fixed success toast");
     expect(screen.getByRole("status")).toHaveTextContent("Saved.");
@@ -58,7 +67,11 @@ describe("StaffCardCredentials", () => {
   });
 
   it("keeps danger with the field-focus path and does not mount a reveal helper", () => {
-    const { container } = renderCard(["owner"], [], { tone: "danger", text: "Could not save." });
+    const { container } = renderCard(["owner"], [], {
+      form: TEAM_FORMS.credential("p1"),
+      tone: "danger",
+      text: "Could not save.",
+    });
 
     expect(screen.getByRole("alert")).toHaveTextContent("Could not save.");
     expect(container.querySelector("span[hidden]")).toBeNull();
