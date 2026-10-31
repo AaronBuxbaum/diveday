@@ -269,12 +269,12 @@ test.describe("H-14 role permissions", () => {
       await expect(page.getByRole("button", { name: "Put it on the board" })).toBeVisible();
 
       // Money and the legal waiver are still owner/manager only — including
-      // its Signatures tab.
+      // the signed-record ledger on the waiver page.
       await page.goto(`/shop/${SHOP}/waivers`);
       await expect(page).toHaveURL(`/shop/${SHOP}`);
       await expect(page.locator('textarea[name="body"]').filter({ visible: true })).toHaveCount(0);
 
-      await page.goto(`/shop/${SHOP}/waivers/signatures`);
+      await page.goto(`/shop/${SHOP}/waivers`);
       await expect(page).toHaveURL(`/shop/${SHOP}`);
       await expect(page.locator('details[id^="waiver-record-"]')).toHaveCount(0);
 
@@ -321,7 +321,7 @@ test.describe("H-14 role permissions", () => {
       await page.getByText("Edit the release").click();
       await expect(page.locator('textarea[name="body"]').filter({ visible: true })).toBeVisible();
 
-      await page.goto(`/shop/${SHOP}/waivers/signatures`);
+      await page.goto(`/shop/${SHOP}/waivers`);
       await expect(page).toHaveURL(`/shop/${SHOP}/waivers`);
       await expect(page.locator('details[id^="waiver-record-"]').first()).toBeVisible();
 

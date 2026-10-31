@@ -536,7 +536,7 @@ test.describe("staff", () => {
   test("staff import a DiveDay catalog site and it lands in the shop's own library", async ({
     page,
   }) => {
-    // The catalog (`/shop/[shopSlug]/dive-sites/catalog`) shipped with no e2e
+    // The catalog (`/shop/[shopSlug]/dive-sites?view=catalog`) shipped with no e2e
     // or visual coverage — found by the 2026-08-03 test-system evaluation,
     // which is why scripts/route-coverage.json carried an exemption for it
     // until this test landed.
@@ -761,7 +761,7 @@ test("the dive-site catalog is staff-only", async ({ page }) => {
   // The catalog's only gate is `requireStaffSession()`: any staff role may
   // browse and import, and there is no owner/manager split on this route.
   // Signed out, the staff gate sends an anonymous visitor to sign in.
-  await page.goto("/shop/blue-mantis/dive-sites/catalog");
+  await page.goto("/shop/blue-mantis/dive-sites?view=catalog");
   await expect(page).toHaveURL(/\/sign-in/);
 });
 

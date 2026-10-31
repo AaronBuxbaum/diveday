@@ -205,11 +205,11 @@ for (const scheme of ["light", "dark"] as const) {
       // the library they feed (ADR 20260827-the-shops-shelves): the row is the
       // preview door; import lives on the preview itself. It is the
       // library's own catalog *view* rather than a route of its own
-      // (ADR 20260806-dive-site-catalog-is-a-view), so this navigates through
-      // the redirect the old URL still serves and keeps the
+      // (ADR 20260806-dive-site-catalog-is-a-view), so this uses the view
+      // selector and keeps the
       // `dive-sites-catalog` capture name.
       test(`the dive-site catalog renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/dive-sites/catalog");
+        await page.goto("/shop/blue-mantis/dive-sites?view=catalog");
         await page.getByRole("heading", { level: 1, name: "DiveDay common dive sites" }).waitFor();
         await waitForSiteMap(page);
         await capture(page, "dive-sites-catalog", scheme, {
