@@ -257,7 +257,7 @@ describe("findCopy — JSX", () => {
   });
 
   it("reports the original line after a multiline comment", () => {
-    const source = '/* first\n * second\n */\n<p>Ready to dive?</p>';
+    const source = "/* first\n * second\n */\n<p>Ready to dive?</p>";
     expect(findCopy(source, { isTsx: true })[0].line).toBe(4);
   });
 
