@@ -61,7 +61,6 @@
  * the two ends: the copy shows offline, and a `?cancelled=` landing clears it.
  */
 
-import { LEGACY_READY_BANNER_COPY } from "@/i18n/ready-offline-legacy";
 import { keepUnitsWhole } from "@/lib/date-parts";
 import {
   READY_CACHE_NAME,
@@ -100,9 +99,6 @@ const REQUEST_CANCELLED_PATH_HASH_HEADER = "x-diveday-ready-cancelled-path-hash"
 const REQUEST_CANCELLED_VERSION_HEADER = "x-diveday-ready-cancelled-version";
 /** One durable slot orders requests and forgets; this cache keeps only one page. */
 const LATEST_REQUEST_KEY = "/ready/latest-request";
-const LEGACY_FORGOTTEN_KEY_PREFIX = "/ready/forgotten/";
-const LEGACY_FORGOTTEN_VERSION_HEADER = "x-diveday-forgotten-version";
-const LEGACY_FORGOTTEN_AT_HEADER = "x-diveday-forgotten-at";
 const KEEP_UNTIL_HEADER = "x-diveday-keep-until";
 const DEVICE_SAVED_AT_HEADER = "x-diveday-device-saved-at";
 const SERVER_GENERATED_AT_HEADER = "x-diveday-server-generated-at";
@@ -242,18 +238,6 @@ function singleMetaContent(html: string, name: string): string | undefined {
   return matches.length === 1 ? matches[0]?.[1] : undefined;
 }
 
-/** Recognize and warn on the two exact historical, localized offline banners. */
-function transformLegacyReadyCopy(html: string): string | undefined {
-  const banner = visibleTextBanner(html);
-  if (!banner || hasAttribute(banner.opening, READY_COPY_GENERATED_AT_ATTR)) return undefined;
-  const knownWarning = LEGACY_READY_BANNER_COPY.get(banner.text);
-  if (!knownWarning) return undefined;
-  return html.replace(
-    banner.element,
-    `${banner.opening}${knownWarning.savedCopyWarning}${banner.closing}`,
-  );
-}
-
 /** Format the server-rendered page generation instant in the locale and shop zone. */
 function readyGeneratedAtLabel(html: string, generatedAt: number): string | undefined {
   const locale = metaContent(html, READY_COPY_LOCALE_META);
@@ -368,27 +352,12 @@ function revealMarked(html: string, attribute: string): string {
   return html.replace(openTag, "$1");
 }
 
-function escapedHTML(value: string): string {
-  return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
-}
-
-function legacyRollbackDocument(html: string): string | undefined {
-  const banner = visibleTextBanner(html);
-  const words = banner ? LEGACY_READY_BANNER_COPY.get(banner.text) : undefined;
-  if (!banner || !words) return undefined;
-  const main = `<main><h1>${escapedHTML(words.clockRollbackHeading)}</h1><p>${escapedHTML(words.clockRollbackUnknown)}</p></main>`;
-  const body = /<body\b[^>]*>[\s\S]*?<\/body>/i;
-  return body.test(html)
-    ? html.replace(body, `<body>${main}</body>`)
-    : html.replace(banner.element, main);
-}
-
 function rollbackWarningDocument(html: string, generatedAt: number): string | undefined {
   const marker = html.match(
     /<section\b(?=[^>]*\bdata-ready-clock-rollback="")[^>]*>[\s\S]*?<\/section>/i,
   )?.[0];
   const body = html.match(/<body\b[^>]*>[\s\S]*?<\/body>/i)?.[0];
-  if (!marker || !body) return legacyRollbackDocument(html);
+  if (!marker || !body) return undefined;
   const label = readyGeneratedAtLabel(html, generatedAt);
   let warning = marker.replace(/\s+hidden(?:="")?/, "");
   if (label) {
@@ -406,25 +375,18 @@ function rollbackWarningDocument(html: string, generatedAt: number): string | un
   return html.replace(body, replacement);
 }
 
-function unverifiedClockDocument(html: string, legacyCopy?: string): string | undefined {
+function unverifiedClockDocument(html: string): string | undefined {
   const marker = html.match(
     /<section\b(?=[^>]*\bdata-ready-clock-unverified="")[^>]*>[\s\S]*?<\/section>/i,
   )?.[0];
-  if (marker) {
-    const body = html.match(/<body\b[^>]*>[\s\S]*?<\/body>/i)?.[0];
-    if (!body) return undefined;
-    const warning = revealMarked(
-      revealMarked(marker, "data-ready-clock-unverified"),
-      "data-ready-clock-unverified-copy",
-    );
-    return html.replace(body, body.replace(marker, warning));
-  }
-  if (!legacyCopy) return undefined;
+  if (!marker) return undefined;
   const body = html.match(/<body\b[^>]*>[\s\S]*?<\/body>/i)?.[0];
-  const notice = `<p role="status">${escapedHTML(legacyCopy)}</p>`;
-  if (body) return html.replace(body, body.replace(/(<body\b[^>]*>)/i, `$1${notice}`));
-  const banner = visibleTextBanner(html);
-  return banner ? html.replace(banner.element, `${notice}${banner.element}`) : undefined;
+  if (!body) return undefined;
+  const warning = revealMarked(
+    revealMarked(marker, "data-ready-clock-unverified"),
+    "data-ready-clock-unverified-copy",
+  );
+  return html.replace(body, body.replace(marker, warning));
 }
 
 async function pathHash(path: string): Promise<string> {
@@ -503,28 +465,6 @@ async function forgottenVersion(storage: CacheStorage): Promise<string> {
   return latest?.headers.get(REQUEST_FORGOTTEN_VERSION_HEADER) ?? "";
 }
 
-function legacyForgottenKey(hash: string): string {
-  return `${LEGACY_FORGOTTEN_KEY_PREFIX}${hash}`;
-}
-
-function legacyForgottenVersion(marker: Response | undefined, hash: string): string {
-  if (!marker) return "";
-  const version = marker.headers.get(LEGACY_FORGOTTEN_VERSION_HEADER);
-  if (version) return version;
-  const at = marker.headers.get(LEGACY_FORGOTTEN_AT_HEADER);
-  return at?.trim() && Number.isSafeInteger(Number(at))
-    ? `legacy-at:${at}`
-    : `legacy-invalid:${hash}`;
-}
-
-async function clearLegacyForgetMarkers(markers: Cache): Promise<void> {
-  for (const request of await markers.keys()) {
-    if (new URL(request.url).pathname.startsWith(LEGACY_FORGOTTEN_KEY_PREFIX)) {
-      await markers.delete(request);
-    }
-  }
-}
-
 async function isCopyInvalidated(
   storage: CacheStorage,
   hash: string,
@@ -532,15 +472,11 @@ async function isCopyInvalidated(
 ): Promise<boolean> {
   const markers = await storage.open(READY_FORGOTTEN_CACHE_NAME);
   const latest = await markers.match(LATEST_REQUEST_KEY);
-  if (latest?.headers.get(REQUEST_CANCELLED_PATH_HASH_HEADER) === hash) {
-    return (
-      cached.headers.get(COPY_FORGOTTEN_VERSION_HEADER) !==
-      latest.headers.get(REQUEST_CANCELLED_VERSION_HEADER)
-    );
-  }
-  const legacy = await markers.match(legacyForgottenKey(hash));
-  const legacyVersion = legacyForgottenVersion(legacy, hash);
-  return Boolean(legacy && cached.headers.get(COPY_FORGOTTEN_VERSION_HEADER) !== legacyVersion);
+  if (latest?.headers.get(REQUEST_CANCELLED_PATH_HASH_HEADER) !== hash) return false;
+  return (
+    cached.headers.get(COPY_FORGOTTEN_VERSION_HEADER) !==
+    latest.headers.get(REQUEST_CANCELLED_VERSION_HEADER)
+  );
 }
 
 export function beginReadyPageRequest(
@@ -558,34 +494,12 @@ export function beginReadyPageRequest(
     try {
       const markers = await storage.open(READY_FORGOTTEN_CACHE_NAME);
       const marker = await markers.match(LATEST_REQUEST_KEY);
-      const oldPathMarker = await markers.match(legacyForgottenKey(hash));
-      const oldPathVersion = legacyForgottenVersion(oldPathMarker, hash);
       const cancelledPathHash = marker?.headers.get(REQUEST_CANCELLED_PATH_HASH_HEADER) ?? "";
       const cancelledVersion = marker?.headers.get(REQUEST_CANCELLED_VERSION_HEADER) ?? "";
-      const readyCache = await storage.open(READY_CACHE_NAME);
-      const cached = await readyCache.match(READY_COPY_KEY);
-      const cachedHash = cached?.headers.get(PATH_HASH_HEADER) ?? "";
-      const cachedVersion = cached?.headers.get(COPY_FORGOTTEN_VERSION_HEADER) ?? "";
-      let migratedPathHash = cancelledPathHash;
-      let migratedVersion = cancelledVersion;
-      if (cancelledPathHash !== cachedHash && cachedHash) {
-        const oldCachedMarker = await markers.match(legacyForgottenKey(cachedHash));
-        const oldCachedVersion = legacyForgottenVersion(oldCachedMarker, cachedHash);
-        if (oldCachedVersion && cachedVersion !== oldCachedVersion) {
-          migratedPathHash = cachedHash;
-          migratedVersion = oldCachedVersion;
-        } else if (oldPathVersion) {
-          migratedPathHash = hash;
-          migratedVersion = oldPathVersion;
-        }
-      } else if (oldPathVersion && !cancelledPathHash) {
-        migratedPathHash = hash;
-        migratedVersion = oldPathVersion;
-      }
       request.forgottenVersion =
         cancelledPathHash === hash
           ? cancelledVersion
-          : oldPathVersion || (marker?.headers.get(REQUEST_FORGOTTEN_VERSION_HEADER) ?? "");
+          : (marker?.headers.get(REQUEST_FORGOTTEN_VERSION_HEADER) ?? "");
       await markers.put(
         LATEST_REQUEST_KEY,
         new Response(null, {
@@ -593,15 +507,14 @@ export function beginReadyPageRequest(
             [REQUEST_ID_HEADER]: request.requestId,
             [REQUEST_PATH_HASH_HEADER]: request.pathHash,
             [REQUEST_FORGOTTEN_VERSION_HEADER]: request.forgottenVersion,
-            [REQUEST_CANCELLED_PATH_HASH_HEADER]: migratedPathHash,
-            [REQUEST_CANCELLED_VERSION_HEADER]: migratedVersion,
+            [REQUEST_CANCELLED_PATH_HASH_HEADER]: cancelledPathHash,
+            [REQUEST_CANCELLED_VERSION_HEADER]: cancelledVersion,
           },
         }),
       );
       locallyInvalidatedRequestId = null;
       localLatestRequest = { path, pathHash: hash, requestId: request.requestId };
       request.durable = true;
-      await clearLegacyForgetMarkers(markers);
     } catch {
       // Storage failure must not block the live page. The response carries an
       // unpublishable request so it cannot overwrite or fall back to stale data.
@@ -681,8 +594,8 @@ export async function saveReadyPage(
     return false;
   }
   if (!order.durable) return false;
-  // Pages rendered before the saved-time format cannot be transformed safely:
-  // their banner has no reliable locale/zone or age context.
+  // A page without the current copy format has no reliable locale, zone or
+  // age context for its banner, so it is never kept.
   if (!currentFormat) return false;
   const safeHtml = withoutClientRuntime(html);
   const banner = singleTextBanner(safeHtml);
@@ -776,8 +689,7 @@ export async function readyPageFallback(
     }
   } catch {
     // If durable invalidation state cannot be read, do not serve a possibly
-    // cancelled page offline. Legacy copies remain eligible when it is read
-    // successfully and no matching cancellation is recorded.
+    // cancelled page offline.
     return undefined;
   }
   const storedHtml = await cached.text();
@@ -815,40 +727,26 @@ export async function readyPageFallback(
     await cache.delete(READY_COPY_KEY);
     return undefined;
   }
-  let copyHtml = storedHtml;
-  let legacyUnverifiedCopy: string | undefined;
-  if (metaContent(storedHtml, READY_COPY_VERSION_META) === READY_COPY_VERSION) {
-    const banner = visibleTextBanner(storedHtml);
-    const generatedAtValues = banner?.opening.match(
-      new RegExp(`\\b${READY_COPY_GENERATED_AT_ATTR}="(\\d+)"`, "g"),
-    );
-    const generatedAt = Number(
-      banner?.opening.match(new RegExp(`\\b${READY_COPY_GENERATED_AT_ATTR}="(\\d+)"`))?.[1],
-    );
-    const expectedLabel = readyGeneratedAtLabel(storedHtml, generatedAt);
-    if (
-      !banner ||
-      generatedAtValues?.length !== 1 ||
-      !Number.isSafeInteger(generatedAt) ||
-      !expectedLabel ||
-      banner.text.split(expectedLabel).length !== 2 ||
-      storedHtml.includes(READY_OFFLINE_GENERATED_AT_PLACEHOLDER)
-    ) {
-      await cache.delete(READY_COPY_KEY);
-      return undefined;
-    }
-  } else {
-    const legacyBanner = visibleTextBanner(storedHtml);
-    legacyUnverifiedCopy = legacyBanner
-      ? LEGACY_READY_BANNER_COPY.get(legacyBanner.text)?.clockUnverified
-      : undefined;
-    const legacyCopy = transformLegacyReadyCopy(storedHtml);
-    if (!legacyCopy) {
-      // Unknown or malformed legacy copy: fail closed for this verified path.
-      await cache.delete(READY_COPY_KEY);
-      return undefined;
-    }
-    copyHtml = legacyCopy;
+  // Only a current-format copy with one visible, timestamped banner is served.
+  const banner = visibleTextBanner(storedHtml);
+  const generatedAtValues = banner?.opening.match(
+    new RegExp(`\\b${READY_COPY_GENERATED_AT_ATTR}="(\\d+)"`, "g"),
+  );
+  const generatedAt = Number(
+    banner?.opening.match(new RegExp(`\\b${READY_COPY_GENERATED_AT_ATTR}="(\\d+)"`))?.[1],
+  );
+  const expectedLabel = readyGeneratedAtLabel(storedHtml, generatedAt);
+  if (
+    metaContent(storedHtml, READY_COPY_VERSION_META) !== READY_COPY_VERSION ||
+    !banner ||
+    generatedAtValues?.length !== 1 ||
+    !Number.isSafeInteger(generatedAt) ||
+    !expectedLabel ||
+    banner.text.split(expectedLabel).length !== 2 ||
+    storedHtml.includes(READY_OFFLINE_GENERATED_AT_PLACEHOLDER)
+  ) {
+    await cache.delete(READY_COPY_KEY);
+    return undefined;
   }
   // Recheck after asynchronous body parsing: cancellation may persist its
   // marker while this fallback was preparing the response.
@@ -860,9 +758,9 @@ export async function readyPageFallback(
   } catch {
     return undefined;
   }
-  const html = copyHtml.replaceAll(TOKEN_PLACEHOLDER, tokenOf(path));
+  const html = storedHtml.replaceAll(TOKEN_PLACEHOLDER, tokenOf(path));
   if (watermark.kind !== "valid") {
-    const warning = unverifiedClockDocument(html, legacyUnverifiedCopy);
+    const warning = unverifiedClockDocument(html);
     if (!warning) {
       await cache.delete(READY_COPY_KEY);
       return undefined;
@@ -899,29 +797,16 @@ async function writeForgetMarker(
     const previousCancelledPathHash = latest?.headers.get(REQUEST_CANCELLED_PATH_HASH_HEADER) ?? "";
     const previousCancelledVersion = latest?.headers.get(REQUEST_CANCELLED_VERSION_HEADER) ?? "";
     const cachedHash = cached?.headers.get(PATH_HASH_HEADER) ?? "";
-    const oldCachedMarker = cachedHash
-      ? await markers.match(legacyForgottenKey(cachedHash))
-      : undefined;
-    const oldCachedVersion = legacyForgottenVersion(oldCachedMarker, cachedHash);
-    const preservePreviousCancellation =
-      previousCancelledPathHash !== "" && cachedHash === previousCancelledPathHash;
-    const preserveLegacyCancellation =
-      !preservePreviousCancellation &&
-      cachedHash !== "" &&
-      oldCachedVersion !== "" &&
-      cached?.headers.get(COPY_FORGOTTEN_VERSION_HEADER) !== oldCachedVersion;
+    // Keep the previous cancellation while the one kept copy is still its path's.
     const preserveCachedCancellation =
-      cachedHash !== cancelledPathHash &&
-      (preservePreviousCancellation || preserveLegacyCancellation);
+      previousCancelledPathHash !== "" &&
+      cachedHash === previousCancelledPathHash &&
+      cachedHash !== cancelledPathHash;
     const effectiveCancelledPathHash = preserveCachedCancellation
-      ? preservePreviousCancellation
-        ? previousCancelledPathHash
-        : cachedHash
+      ? previousCancelledPathHash
       : cancelledPathHash;
     const effectiveCancelledVersion = preserveCachedCancellation
-      ? preservePreviousCancellation
-        ? previousCancelledVersion
-        : oldCachedVersion
+      ? previousCancelledVersion
       : cancellationEpoch;
     const preserveRequest =
       latest &&
@@ -948,9 +833,6 @@ async function writeForgetMarker(
       }),
     );
     if (!preserveRequest) localLatestRequest = null;
-    // The current record now preserves any old marker needed by the one kept
-    // copy, so the historical per-path tombstones can be removed.
-    await clearLegacyForgetMarkers(markers);
     return true;
   } catch {
     return false;

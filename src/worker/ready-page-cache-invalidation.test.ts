@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { LEGACY_READY_BANNER_COPY } from "@/i18n/ready-offline-legacy";
 import {
   READY_CACHE_NAME,
   READY_COPY_GENERATED_AT_META,
@@ -15,8 +14,6 @@ import {
 import {
   beginReadyPageRequest,
   forgetReadyPage,
-  READY_COPY_KEY,
-  READY_COPY_MAX_AGE_MS,
   readyPageFallback,
   saveReadyPage,
 } from "./ready-page-cache";
@@ -52,30 +49,6 @@ function page(body: string) {
   return new Response(
     `<meta name="${READY_KEEP_UNTIL_META}" content="${Number.MAX_SAFE_INTEGER}"/><meta name="${READY_COPY_VERSION_META}" content="${READY_COPY_VERSION}"/><meta name="${READY_COPY_LOCALE_META}" content="en-US"/><meta name="${READY_COPY_TIME_ZONE_META}" content="America/New_York"/><meta name="${READY_COPY_GENERATED_AT_META}" content="${NOW}"/><p>${body}</p><p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">No signal: ${READY_OFFLINE_GENERATED_AT_PLACEHOLDER}</p>`,
     { headers: { "content-type": "text/html" } },
-  );
-}
-
-async function pathHash(path: string): Promise<string> {
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(path));
-  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
-}
-
-async function seedLegacyCopy(
-  storage: CacheStorage,
-  path: string,
-  forgottenVersion = "before-cancel",
-) {
-  await saveReadyPage(storage, path, page("legacy source"), NOW);
-  const cache = await storage.open(READY_CACHE_NAME);
-  const saved = await cache.match(READY_COPY_KEY);
-  if (!saved) throw new Error("expected saved copy");
-  const headers = new Headers(saved.headers);
-  headers.set("x-diveday-copy-forgotten-version", forgottenVersion);
-  const legacyBanner = [...LEGACY_READY_BANNER_COPY.keys()][0];
-  if (!legacyBanner) throw new Error("expected recognized legacy banner");
-  await cache.put(
-    READY_COPY_KEY,
-    new Response(`<p ${READY_OFFLINE_NOTE_ATTR}="">${legacyBanner}</p>`, { headers }),
   );
 }
 
@@ -175,139 +148,6 @@ describe("ready page invalidation ordering", () => {
     expect(await restarted.readyPageFallback(store.storage, path, NOW)).toBeUndefined();
   });
 
-  it("honors an old hashed cancellation marker when no new marker exists after restart", async () => {
-    const path = `/ready/${TOKEN}`;
-    await seedLegacyCopy(store.storage, path);
-    const markers = await store.storage.open(READY_FORGOTTEN_CACHE_NAME);
-    await markers.put(
-      `/ready/forgotten/${await pathHash(path)}`,
-      new Response(null, { headers: { "x-diveday-forgotten-version": "after-cancel" } }),
-    );
-    vi.resetModules();
-    const restarted = await import("./ready-page-cache");
-
-    expect(await restarted.readyPageFallback(store.storage, path, NOW)).toBeUndefined();
-  });
-
-  it("honors the predecessor timestamp-only cancellation marker after restart", async () => {
-    const path = `/ready/${TOKEN}`;
-    await seedLegacyCopy(store.storage, path);
-    const cache = await store.storage.open(READY_CACHE_NAME);
-    const saved = await cache.match(READY_COPY_KEY);
-    if (!saved) throw new Error("expected legacy copy");
-    const headers = new Headers(saved.headers);
-    headers.delete("x-diveday-copy-forgotten-version");
-    await cache.put(READY_COPY_KEY, new Response(await saved.text(), { headers }));
-    const markers = await store.storage.open(READY_FORGOTTEN_CACHE_NAME);
-    await markers.put(
-      `/ready/forgotten/${await pathHash(path)}`,
-      new Response(null, { headers: { "x-diveday-forgotten-at": String(NOW) } }),
-    );
-    vi.resetModules();
-    const restarted = await import("./ready-page-cache");
-
-    expect(await restarted.readyPageFallback(store.storage, path, NOW)).toBeUndefined();
-  });
-
-  it("migrates a timestamp-only cancellation marker before online navigation can fail", async () => {
-    const path = `/ready/${TOKEN}`;
-    await seedLegacyCopy(store.storage, path);
-    const cache = await store.storage.open(READY_CACHE_NAME);
-    const saved = await cache.match(READY_COPY_KEY);
-    if (!saved) throw new Error("expected legacy copy");
-    const headers = new Headers(saved.headers);
-    headers.delete("x-diveday-copy-forgotten-version");
-    await cache.put(READY_COPY_KEY, new Response(await saved.text(), { headers }));
-    const markers = await store.storage.open(READY_FORGOTTEN_CACHE_NAME);
-    await markers.put(
-      `/ready/forgotten/${await pathHash(path)}`,
-      new Response(null, { headers: { "x-diveday-forgotten-at": String(NOW) } }),
-    );
-    vi.resetModules();
-    const restarted = await import("./ready-page-cache");
-
-    const request = await restarted.beginReadyPageRequest(store.storage, path);
-    expect(request.durable).toBe(true);
-    expect(request.forgottenVersion).toBe(`legacy-at:${NOW}`);
-    // Simulate the online fetch failing: after marker migration, fallback must
-    // still reject the pre-cancel copy, while the marker cache remains bounded.
-    expect(await restarted.readyPageFallback(store.storage, path, NOW)).toBeUndefined();
-    expect(await (await store.storage.open(READY_FORGOTTEN_CACHE_NAME)).keys()).toHaveLength(1);
-  });
-
-  it.each([undefined, "not-a-timestamp"])(
-    "fails closed and migrates an unrecognized legacy marker (%s)",
-    async (at) => {
-      const path = `/ready/${TOKEN}`;
-      await seedLegacyCopy(store.storage, path);
-      const cache = await store.storage.open(READY_CACHE_NAME);
-      const saved = await cache.match(READY_COPY_KEY);
-      if (!saved) throw new Error("expected legacy copy");
-      const headers = new Headers(saved.headers);
-      headers.delete("x-diveday-copy-forgotten-version");
-      await cache.put(READY_COPY_KEY, new Response(await saved.text(), { headers }));
-      const markers = await store.storage.open(READY_FORGOTTEN_CACHE_NAME);
-      const legacyHeaders = new Headers();
-      if (at !== undefined) legacyHeaders.set("x-diveday-forgotten-at", at);
-      await markers.put(
-        `/ready/forgotten/${await pathHash(path)}`,
-        new Response(null, { headers: legacyHeaders }),
-      );
-      vi.resetModules();
-      const restarted = await import("./ready-page-cache");
-
-      expect(await restarted.readyPageFallback(store.storage, path, NOW)).toBeUndefined();
-      const request = await restarted.beginReadyPageRequest(store.storage, path);
-      expect(request.durable).toBe(true);
-      expect(request.forgottenVersion).toBe(`legacy-invalid:${await pathHash(path)}`);
-      expect(await restarted.readyPageFallback(store.storage, path, NOW)).toBeUndefined();
-      expect(await (await store.storage.open(READY_FORGOTTEN_CACHE_NAME)).keys()).toHaveLength(1);
-    },
-  );
-
-  it("keeps an unrelated token save eligible while migrating a malformed marker", async () => {
-    const cancelledPath = `/ready/${TOKEN}`;
-    const currentPath = `/ready/${OTHER}`;
-    await seedLegacyCopy(store.storage, cancelledPath);
-    const markers = await store.storage.open(READY_FORGOTTEN_CACHE_NAME);
-    await markers.put(`/ready/forgotten/${await pathHash(cancelledPath)}`, new Response(null));
-    vi.resetModules();
-    const restarted = await import("./ready-page-cache");
-
-    const request = await restarted.beginReadyPageRequest(store.storage, currentPath);
-    expect(request.durable).toBe(true);
-    expect(
-      await restarted.saveReadyPage(store.storage, currentPath, page("other token"), NOW, request),
-    ).toBe(true);
-    expect(
-      await (await restarted.readyPageFallback(store.storage, currentPath, NOW))?.text(),
-    ).toContain("other token");
-  });
-
-  it("migrates an old hashed cancellation marker into the bounded record before pruning it", async () => {
-    const path = `/ready/${TOKEN}`;
-    await seedLegacyCopy(store.storage, path);
-    const markers = await store.storage.open(READY_FORGOTTEN_CACHE_NAME);
-    await markers.put(
-      `/ready/forgotten/${await pathHash(path)}`,
-      new Response(null, { headers: { "x-diveday-forgotten-version": "after-cancel" } }),
-    );
-    vi.resetModules();
-    const restarted = await import("./ready-page-cache");
-
-    const request = await restarted.beginReadyPageRequest(store.storage, path);
-    expect(request.forgottenVersion).toBe("after-cancel");
-    expect(await (await store.storage.open(READY_FORGOTTEN_CACHE_NAME)).keys()).toHaveLength(1);
-    expect(await restarted.readyPageFallback(store.storage, path, NOW)).toBeUndefined();
-
-    expect(
-      await restarted.saveReadyPage(store.storage, path, page("fresh server copy"), NOW, request),
-    ).toBe(true);
-    expect(await (await restarted.readyPageFallback(store.storage, path, NOW))?.text()).toContain(
-      "fresh server copy",
-    );
-  });
-
   it("fails closed when durable cancellation state cannot be read", async () => {
     const path = `/ready/${TOKEN}`;
     await saveReadyPage(store.storage, path, page("saved copy"), NOW);
@@ -321,54 +161,6 @@ describe("ready page invalidation ordering", () => {
 
     expect(await readyPageFallback(broken, path, NOW)).toBeUndefined();
     expect(await readyPageFallback(store.storage, path, NOW)).toBeDefined();
-  });
-
-  it("keeps recognized legacy copies with the selected unknown-time warning", async () => {
-    const path = `/ready/${TOKEN}`;
-    await saveReadyPage(store.storage, path, page("legacy source"), NOW);
-    const cache = await store.storage.open(READY_CACHE_NAME);
-    const saved = await cache.match(READY_COPY_KEY);
-    if (!saved) throw new Error("expected saved copy");
-    const headers = new Headers(saved.headers);
-    headers.delete("x-diveday-copy-forgotten-version");
-    const legacyBanner = [...LEGACY_READY_BANNER_COPY.entries()][0];
-    if (!legacyBanner) throw new Error("expected recognized legacy banner");
-    await cache.put(
-      READY_COPY_KEY,
-      new Response(`<p ${READY_OFFLINE_NOTE_ATTR}="">${legacyBanner[0]}</p>`, { headers }),
-    );
-
-    const served = await readyPageFallback(store.storage, path, NOW + READY_COPY_MAX_AGE_MS - 1);
-    expect(await served?.text()).toContain(legacyBanner[1].savedCopyWarning);
-  });
-
-  it("keeps a recognized legacy copy with both unknown-time and unverified-clock warnings", async () => {
-    const path = `/ready/${TOKEN}`;
-    await saveReadyPage(store.storage, path, page("legacy source"), NOW);
-    const cache = await store.storage.open(READY_CACHE_NAME);
-    const saved = await cache.match(READY_COPY_KEY);
-    if (!saved) throw new Error("expected saved copy");
-    const legacyBanner = [...LEGACY_READY_BANNER_COPY.entries()][0];
-    if (!legacyBanner) throw new Error("expected recognized legacy banner");
-    await cache.put(
-      READY_COPY_KEY,
-      new Response(`<p ${READY_OFFLINE_NOTE_ATTR}="">${legacyBanner[0]}</p>`, {
-        headers: saved.headers,
-      }),
-    );
-    const clockCache = await store.storage.open("diveday-ready-clock-v1");
-    await clockCache.put(
-      "/ready/clock-observation",
-      new Response(null, { headers: { "x-diveday-clock-watermark": "corrupt" } }),
-    );
-
-    const served = await readyPageFallback(store.storage, path, NOW + 1000);
-    const text = await served?.text();
-
-    expect(text).toContain(legacyBanner[1].savedCopyWarning);
-    expect(text).toContain(legacyBanner[1].clockUnverified);
-    expect(served?.headers.get("x-diveday-ready-copy-time-state")).toBe("unverified");
-    expect(store.caches.get(READY_CACHE_NAME)?.size).toBe(1);
   });
 
   it("serializes an old-path forget against a different-token request acquiring the marker", async () => {
