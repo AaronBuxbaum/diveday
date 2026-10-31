@@ -36,11 +36,7 @@ it("accumulates separate move results and consumes their query parameters once",
   expect(screen.getByText(first)).toBeVisible();
   expect(window.location.search).toBe("?week=2026-10-26");
 
-  window.history.replaceState(
-    {},
-    "",
-    "/shop/reef/schedule/board?builder=moved&result=move-two",
-  );
+  window.history.replaceState({}, "", "/shop/reef/schedule/board?builder=moved&result=move-two");
   view.rerender(
     <StrictMode>
       <ScheduleBoardNoticeView
