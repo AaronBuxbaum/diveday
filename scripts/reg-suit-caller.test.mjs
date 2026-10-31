@@ -62,11 +62,11 @@ describe("reg-suit consumer workflow", () => {
     expect(report).toContain(
       "ref: ${{ github.event_name == 'pull_request' && 'refs/heads/main' || github.sha }}",
     );
-    expect(report).toMatch(
-      /pattern: visual-screenshots-\*\n[ \t]+path: e2e\n/u,
-    );
+    expect(report).toMatch(/pattern: visual-screenshots-\*\n[ \t]+path: e2e\n/u);
     expect(report).toContain("cp -R e2e/screenshots .reg-baseline");
-    expect(report).toContain("key: reg-baseline-v2-${{ github.sha }}-${{ needs.visual-publish.outputs.snapshot_version }}");
+    expect(report).toContain(
+      "key: reg-baseline-v2-${{ github.sha }}-${{ needs.visual-publish.outputs.snapshot_version }}",
+    );
     expect(report).not.toContain("id-token: write");
   });
 
