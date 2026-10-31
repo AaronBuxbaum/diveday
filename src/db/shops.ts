@@ -587,38 +587,6 @@ export async function setShopRentalItems(db: AppDb, shopId: string, rentalItems:
 }
 
 /**
- * Replaces the shop's rental price list (set price, per-piece prices, per-dive
- * nitrox surcharge). The route validates and normalizes amounts to minor units
- * before calling this; a price is never inventory, only what a diver is quoted.
- */
-export async function setShopRentalPricing(
-  db: AppDb,
-  shopId: string,
-  rentalPricing: RentalPricing,
-) {
-  const [shop] = await db
-    .update(shops)
-    .set({ rentalPricing })
-    .where(eq(shops.id, shopId))
-    .returning();
-  return shop ?? null;
-}
-
-/**
- * Replaces the shop's rental terms, printed on every rental ticket. The route
- * reads the box through `parseRentalTerms` (src/lib/rental-terms.ts) first, so
- * what arrives is trimmed text within the limit, or `null` to print none.
- */
-export async function setShopRentalTerms(db: AppDb, shopId: string, rentalTerms: string | null) {
-  const [shop] = await db
-    .update(shops)
-    .set({ rentalTerms })
-    .where(eq(shops.id, shopId))
-    .returning();
-  return shop ?? null;
-}
-
-/**
  * Replaces the notes Claude reads when it drafts a reply (`shops.reply_notes`).
  * The action trims and caps the box first, so what arrives is text within
  * `REPLY_NOTES_MAX_LENGTH`, or `null` for none.
@@ -633,6 +601,41 @@ export async function setShopReplyNotes(db: AppDb, shopId: string, replyNotes: s
 }
 
 /**
+ * Writes the Rentals page's whole save in one UPDATE, so a failed write changes
+ * none of its columns: the catalog, the price list, the terms every rental
+ * ticket prints, and the two optional settings. An omitted optional setting is
+ * left as stored (the regulator interval while work orders are off, the nitrox
+ * fill method when the form does not post it). The route validates and
+ * normalizes every value before calling this.
+ */
+export async function saveShopRentals(
+  db: DbExecutor,
+  shopId: string,
+  write: {
+    rentalItems: string[];
+    rentalPricing: RentalPricing;
+    rentalTerms: string | null;
+    customerRegulatorServiceMonths?: CustomerRegulatorServiceMonths;
+    nitroxFillMethod?: NitroxFillMethod;
+  },
+) {
+  const [shop] = await db
+    .update(shops)
+    .set({
+      rentalItems: write.rentalItems,
+      rentalPricing: write.rentalPricing,
+      rentalTerms: write.rentalTerms,
+      ...(write.customerRegulatorServiceMonths !== undefined
+        ? { customerRegulatorServiceMonths: write.customerRegulatorServiceMonths }
+        : {}),
+      ...(write.nitroxFillMethod !== undefined ? { nitroxFillMethod: write.nitroxFillMethod } : {}),
+    })
+    .where(eq(shops.id, shopId))
+    .returning();
+  return shop ?? null;
+}
+
+/**
  * Sets how the shop fills nitrox (issue 3004), which decides where Rent out's
  * O2-clean warning starts (`o2CleanWarnsForFill`). Advisory only.
  */
@@ -640,23 +643,6 @@ export async function setShopNitroxFillMethod(db: AppDb, shopId: string, method:
   const [shop] = await db
     .update(shops)
     .set({ nitroxFillMethod: method })
-    .where(eq(shops.id, shopId))
-    .returning();
-  return shop ?? null;
-}
-
-/**
- * Sets how often the shop services a customer's regulator (12 or 24 months),
- * the interval a customer regulator's suggested next-due date counts from.
- */
-export async function setShopCustomerRegulatorServiceMonths(
-  db: AppDb,
-  shopId: string,
-  months: CustomerRegulatorServiceMonths,
-) {
-  const [shop] = await db
-    .update(shops)
-    .set({ customerRegulatorServiceMonths: months })
     .where(eq(shops.id, shopId))
     .returning();
   return shop ?? null;
