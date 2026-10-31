@@ -417,7 +417,7 @@
     "src/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm.test.tsx": 934,
     "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx": 1075,
     "src/app/shop/[shopSlug]/orders/page.test.tsx": 926,
-    "src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx": 1041,
+    "src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx": 1040,
     "src/app/shop/[shopSlug]/schedule/board/actions.ts": 916,
     "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": 1165,
     "src/components/MarketingFeatureScreens.tsx": 1064,
@@ -583,7 +583,7 @@
     "src/app/shop/[shopSlug]/reviews/page.tsx": 430,
     "src/app/shop/[shopSlug]/settings/team/page.tsx": 581,
     "src/app/shop/[shopSlug]/staffing/page.tsx": 591,
-    "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 474,
+    "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 473,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 493
   },
   "tokens": {
