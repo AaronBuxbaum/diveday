@@ -9,12 +9,21 @@
 //
 // See ADR 20260729-reg-suit-visual-regression and
 // 20260802-visual-diff-pr-comment.
+
+import https from "node:https";
 import { gunzipSync } from "node:zlib";
 import { comparePublicationIds, isPublicationId } from "./visual-publication-id.mjs";
 
 export const DEFAULT_BUCKET = "diveday-vrt";
 export const GZIP_MAGIC = Buffer.from([0x1f, 0x8b]);
 export const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+const DEFAULT_BUCKET_TIMEOUT_MS = 30_000;
+// Keep aligned with the repository's roughly 100 MB publisher file limits.
+const DEFAULT_BUCKET_MAX_BYTES = 101_000_000;
+const DEFAULT_BUCKET_MAX_DECOMPRESSED_BYTES = 101_000_000;
+const MAX_BUCKET_REDIRECTS = 3;
+const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
 
 /**
  * A PNG's dimensions, read out of its IHDR chunk, or `null` if the bytes are
@@ -174,21 +183,132 @@ export function baselineCacheKey(commit, version) {
   if (typeof version !== "string" || !/^[0-9a-f]{64}$/u.test(version)) {
     throw new Error("baseline snapshot version is invalid");
   }
-  return `reg-baseline-${commit}-${version}`;
+  return `reg-baseline-v2-${commit}-${version}`;
 }
 
-// S3 serves these objects with `Content-Encoding: gzip`, but some fetch clients
-// (Node's global fetch among them) already transparently decode that before
-// returning the body, while others (plain `curl`, `https.get`) hand back the raw
-// gzip bytes. Trust the magic number, not the header.
-export async function fetchFromBucket(bucket, key, { fetchImpl = fetch } = {}) {
+// Node's global fetch has intermittently crashed in Undici's HTTP parser while
+// S3 closed a response stream. Use node:https for the bounded CI read instead;
+// it returns stored gzip bytes, while injected fetch clients may already decode
+// them. Trust the magic number, not the Content-Encoding header.
+function requestHttpsObject(url, { requestImpl = https.get, timeoutMs, maxBytes }) {
+  return new Promise((resolve, reject) => {
+    let request;
+    let settled = false;
+    const finish = (error, value) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (error) reject(error);
+      else resolve(value);
+    };
+    const timer = setTimeout(
+      () => request?.destroy(new Error(`S3 object request timed out after ${timeoutMs}ms`)),
+      timeoutMs,
+    );
+
+    try {
+      request = requestImpl(url, (response) => {
+        const status = Number.isInteger(response.statusCode) ? response.statusCode : 0;
+        const location = response.headers?.location;
+        if (REDIRECT_STATUSES.has(status) && typeof location === "string") {
+          response.on("error", (error) => finish(error));
+          response.on("end", () => finish(null, { ok: false, status, location }));
+          response.resume?.();
+          return;
+        }
+        if (status < 200 || status >= 300) {
+          response.on("error", (error) => finish(error));
+          response.on("end", () => finish(null, { ok: false, status }));
+          response.resume?.();
+          return;
+        }
+
+        const chunks = [];
+        let totalBytes = 0;
+        response.on("data", (chunk) => {
+          const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+          totalBytes += bytes.length;
+          if (totalBytes > maxBytes) {
+            const error = new Error(`S3 object exceeded the ${maxBytes}-byte limit`);
+            finish(error);
+            response.destroy?.();
+            return;
+          }
+          chunks.push(bytes);
+        });
+        response.on("error", (error) => finish(error));
+        response.on("end", () => {
+          finish(null, { ok: true, status, bodyBuffer: Buffer.concat(chunks) });
+        });
+      });
+      request.on("error", (error) => finish(error));
+    } catch (error) {
+      finish(error);
+    }
+  });
+}
+
+async function requestS3Object(url, { bucket, requestImpl, timeoutMs, maxBytes, redirects = 0 }) {
+  const response = await requestHttpsObject(url, { requestImpl, timeoutMs, maxBytes });
+  if (!response.location) return response;
+  if (redirects >= MAX_BUCKET_REDIRECTS) {
+    throw new Error("S3 object exceeded the redirect limit");
+  }
+
+  const target = new URL(response.location, url);
+  const bucketHost = `${bucket}.s3.amazonaws.com`;
+  const regionalBucketHost =
+    target.hostname.startsWith(`${bucket}.s3.`) && target.hostname.endsWith(".amazonaws.com");
+  if (
+    target.protocol !== "https:" ||
+    target.username ||
+    target.password ||
+    target.port ||
+    (target.hostname !== bucketHost && !regionalBucketHost)
+  ) {
+    throw new Error("S3 object redirected outside its bucket host");
+  }
+  return requestS3Object(target.href, {
+    bucket,
+    requestImpl,
+    timeoutMs,
+    maxBytes,
+    redirects: redirects + 1,
+  });
+}
+
+export async function fetchFromBucket(
+  bucket,
+  key,
+  {
+    fetchImpl = null,
+    requestImpl = https.get,
+    timeoutMs = DEFAULT_BUCKET_TIMEOUT_MS,
+    maxBytes = DEFAULT_BUCKET_MAX_BYTES,
+    maxDecompressedBytes = DEFAULT_BUCKET_MAX_DECOMPRESSED_BYTES,
+  } = {},
+) {
   const url = objectUrl(bucket, key);
-  const res = await fetchImpl(url);
+  const res = fetchImpl
+    ? await fetchImpl(url)
+    : await requestS3Object(url, { bucket, requestImpl, timeoutMs, maxBytes });
   if (!res.ok) {
     return { ok: false, status: res.status, url };
   }
-  const buf = Buffer.from(await res.arrayBuffer());
-  const body = buf.subarray(0, 2).equals(GZIP_MAGIC) ? gunzipSync(buf) : buf;
+  const buf = res.bodyBuffer ?? Buffer.from(await res.arrayBuffer());
+  let body = buf;
+  if (buf.subarray(0, 2).equals(GZIP_MAGIC)) {
+    try {
+      body = gunzipSync(buf, { maxOutputLength: maxDecompressedBytes });
+    } catch (error) {
+      if (error?.code === "ERR_BUFFER_TOO_LARGE") {
+        throw new Error(`S3 object exceeded the ${maxDecompressedBytes}-byte decompressed limit`, {
+          cause: error,
+        });
+      }
+      throw error;
+    }
+  }
   return { ok: true, body, url };
 }
 
@@ -331,7 +451,7 @@ export function verdictHeadline(summary) {
   }
 }
 
-function verdictBody(summary, { commit, bucket }) {
+function verdictBody(summary, { commit, bucket, freshBaselineBootstrap }) {
   switch (summary.verdict) {
     case "no-report":
       return [
@@ -349,6 +469,15 @@ function verdictBody(summary, { commit, bucket }) {
         "Nothing was compared; this is not a clean run.",
       ].join("\n");
     case "no-baseline":
+      if (freshBaselineBootstrap) {
+        return [
+          "The trusted publisher deliberately created a fresh versioned baseline for this run.",
+          `reg-suit downloaded **0 baseline images**, so all ${summary.capturedCount} captured`,
+          "surface(s) were reported as *new* rather than diffed. **Pixel parity is unknown:** no",
+          "pixel on this commit was compared against an earlier baseline. This passing result only",
+          "records the approved bootstrap; review the screenshots and use the next run for parity.",
+        ].join("\n");
+      }
       return [
         `reg-suit downloaded **0 baseline images**, so all ${summary.capturedCount} captured`,
         "surface(s) were reported as *new* rather than diffed. **No pixel on this commit was",
@@ -443,9 +572,9 @@ function deltaSection(delta, limit) {
 }
 
 /**
- * Renders the sticky PR comment. Never throws, never blocks: the wording states
- * outright that this check is informational, because the enforcement of
- * "account for every pixel" is human review, not a red build
+ * Renders the sticky PR comment without throwing or blocking directly. Changed
+ * pixels need human review; unapproved blind runs fail in the workflow, while
+ * an approved full-baseline bootstrap passes with parity marked unknown
  * (ADR 20260802-visual-diff-pr-comment).
  */
 export function formatPrComment({
@@ -456,14 +585,21 @@ export function formatPrComment({
   note = "",
   delta = null,
   limit = ITEM_LIST_LIMIT,
+  freshBaselineBootstrap = false,
 }) {
+  const approvedFreshBaselineBootstrap =
+    freshBaselineBootstrap === true && summary.verdict === "no-baseline";
   const short = commit.slice(0, 7);
   const lines = [
     COMMENT_MARKER,
     commitMarker(commit),
     `### ${verdictHeadline(summary)}`,
     "",
-    verdictBody(summary, { commit, bucket }),
+    verdictBody(summary, {
+      commit,
+      bucket,
+      freshBaselineBootstrap: approvedFreshBaselineBootstrap,
+    }),
     "",
     // Above the table, so the set comparison is read before the totals.
     ...deltaSection(delta, limit),
@@ -507,11 +643,18 @@ export function formatPrComment({
   // is a red check as of issue #1137, because a skipped or blind job used to
   // report as passing and this paragraph was the only thing arguing otherwise.
   lines.push(
-    ...(comparedAnything(summary)
+    ...(comparedAnything(summary) || approvedFreshBaselineBootstrap
       ? [
-          "A visual difference never fails the build. Accounting for every changed pixel is the",
-          "reviewer's job (AGENTS.md), and merging an explained change is what makes it the next",
-          "baseline.",
+          ...(approvedFreshBaselineBootstrap
+            ? [
+                "This approved bootstrap passes with pixel parity unknown. Review the captured",
+                "screenshots; the next visual run will compare against this fresh baseline.",
+              ]
+            : [
+                "A visual difference never fails the build. Accounting for every changed pixel is the",
+                "reviewer's job (AGENTS.md), and merging an explained change is what makes it the next",
+                "baseline.",
+              ]),
         ]
       : [
           "**This fails the `visual-report` check.** Nothing was compared, so nothing is known — a",

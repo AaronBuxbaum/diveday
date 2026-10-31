@@ -153,6 +153,7 @@
     "noticeDeleted": "Buceador eliminado",
     "noticeRestored": "Buceador restaurado",
     "noticeRestoreRefused": "No se pudo restaurar a ese buceador, porque un buceador activo usa ahora su correo. Cambia ese correo e inténtalo de nuevo.",
+    "noticeDownloadTooLarge": "Esta lista tiene más de 5.000 buceadores. Limita la búsqueda o elige un filtro y vuelve a descargarla.",
     "removedToast": "Buceador eliminado",
     "noticeErased": "Datos personales borrados. La exención firmada, las salidas y los pagos quedan registrados sin los datos del buceador. Esto no se puede deshacer.",
     "noticeErasedProcessorOwed": "Datos personales borrados aquí, pero algo en Stripe quedó sin terminar. Abre Ajustes para ver qué falta y resolverlo. Hasta entonces este buceador no está borrado del todo.",

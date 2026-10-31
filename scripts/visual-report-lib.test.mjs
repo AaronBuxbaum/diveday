@@ -1,3 +1,4 @@
+import { EventEmitter } from "node:events";
 import { gzipSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 
@@ -163,6 +164,38 @@ describe("formatPrComment", () => {
     expect(body).not.toContain("no differences");
   });
 
+  it("reports an approved fresh-baseline bootstrap as passing with unknown pixel parity", () => {
+    const body = formatPrComment({
+      commit: COMMIT,
+      bucket: BUCKET,
+      summary: summarizeReport(outJson({ added: items("about", 234), expected: [] })),
+      freshBaselineBootstrap: true,
+    });
+    expect(body).toContain("Visual regression — NOTHING WAS COMPARED");
+    expect(body).toMatch(/pixel parity is unknown/i);
+    expect(body).toContain("fresh versioned baseline");
+    expect(body).not.toContain("This fails the `visual-report` check");
+  });
+
+  it("does not grant bootstrap wording to an unapproved no-baseline run", () => {
+    const body = comment(outJson({ added: items("about", 234), expected: [] }));
+    expect(body).toContain("This fails the `visual-report` check");
+    expect(body).not.toMatch(/pixel parity is unknown/i);
+  });
+
+  it("does not grant bootstrap wording when the report is missing or captured nothing", () => {
+    for (const report of [null, outJson({})]) {
+      const body = formatPrComment({
+        commit: COMMIT,
+        bucket: BUCKET,
+        summary: summarizeReport(report),
+        freshBaselineBootstrap: true,
+      });
+      expect(body).toContain("This fails the `visual-report` check");
+      expect(body).not.toContain("This approved bootstrap passes");
+    }
+  });
+
   it("explains a missing out.json instead of implying a pass", () => {
     const body = comment(null);
     expect(body).toContain("no report was published");
@@ -251,6 +284,15 @@ describe("fetchFromBucket", () => {
     expect(result.body.toString("utf8")).toBe(payload);
   });
 
+  it("bounds decompressed gzip bytes", async () => {
+    await expect(
+      fetchFromBucket(BUCKET, "k/out.json", {
+        fetchImpl: async () => response(gzipSync(Buffer.alloc(1024, "a"))),
+        maxDecompressedBytes: 128,
+      }),
+    ).rejects.toThrow("exceeded the 128-byte decompressed limit");
+  });
+
   it("passes an already-decoded body through untouched", async () => {
     const payload = JSON.stringify({ failedItems: [] });
     const result = await fetchFromBucket(BUCKET, "k/out.json", {
@@ -265,6 +307,98 @@ describe("fetchFromBucket", () => {
     });
     expect(result).toMatchObject({ ok: false, status: 404 });
     expect(result.url).toBe(`https://${BUCKET}.s3.amazonaws.com/k/out.json`);
+  });
+
+  function requestResponse({ statusCode = 200, headers = {}, chunks = [] } = {}) {
+    return (_url, callback) => {
+      const request = new EventEmitter();
+      request.destroy = (error) => request.emit("error", error);
+      queueMicrotask(() => {
+        const response = new EventEmitter();
+        response.statusCode = statusCode;
+        response.headers = headers;
+        response.resume = () => {};
+        response.destroy = (error) => response.emit("error", error);
+        callback(response);
+        for (const chunk of chunks) response.emit("data", chunk);
+        response.emit("end");
+      });
+      return request;
+    };
+  }
+
+  it("reads raw gzip through native HTTPS without Node fetch decoding", async () => {
+    const payload = Buffer.from(JSON.stringify({ failedItems: [] }));
+    const compressed = gzipSync(payload);
+    const urls = [];
+    const result = await fetchFromBucket(BUCKET, "k/out.json", {
+      fetchImpl: null,
+      requestImpl: (url, callback) => {
+        urls.push(url);
+        return requestResponse({ chunks: [compressed.subarray(0, 8), compressed.subarray(8)] })(
+          url,
+          callback,
+        );
+      },
+    });
+    expect(urls).toEqual([`https://${BUCKET}.s3.amazonaws.com/k/out.json`]);
+    expect(result.body).toEqual(payload);
+  });
+
+  it("follows only same-bucket regional S3 redirects", async () => {
+    const urls = [];
+    const result = await fetchFromBucket(BUCKET, "k/out.json", {
+      fetchImpl: null,
+      requestImpl: (url, callback) => {
+        urls.push(url);
+        if (urls.length === 1) {
+          return requestResponse({
+            statusCode: 301,
+            headers: { location: `https://${BUCKET}.s3.us-east-1.amazonaws.com/k/out.json` },
+          })(url, callback);
+        }
+        return requestResponse({ chunks: [Buffer.from("ok")] })(url, callback);
+      },
+    });
+    expect(urls).toEqual([
+      `https://${BUCKET}.s3.amazonaws.com/k/out.json`,
+      `https://${BUCKET}.s3.us-east-1.amazonaws.com/k/out.json`,
+    ]);
+    expect(result.body.toString()).toBe("ok");
+  });
+
+  it("rejects a redirect outside the bucket's S3 host", async () => {
+    await expect(
+      fetchFromBucket(BUCKET, "k/out.json", {
+        fetchImpl: null,
+        requestImpl: requestResponse({
+          statusCode: 302,
+          headers: { location: "https://example.com/out.json" },
+        }),
+      }),
+    ).rejects.toThrow("redirected outside its bucket host");
+  });
+
+  it("bounds response bytes and request duration", async () => {
+    await expect(
+      fetchFromBucket(BUCKET, "k/out.json", {
+        fetchImpl: null,
+        maxBytes: 4,
+        requestImpl: requestResponse({ chunks: [Buffer.from("large")] }),
+      }),
+    ).rejects.toThrow("exceeded the 4-byte limit");
+
+    await expect(
+      fetchFromBucket(BUCKET, "k/out.json", {
+        fetchImpl: null,
+        timeoutMs: 5,
+        requestImpl: () => {
+          const request = new EventEmitter();
+          request.destroy = (error) => request.emit("error", error);
+          return request;
+        },
+      }),
+    ).rejects.toThrow("timed out after 5ms");
   });
 });
 
@@ -335,7 +469,7 @@ describe("publicationReportStatus", () => {
 describe("baselineCacheKey", () => {
   it("keys baseline caches by immutable snapshot version", () => {
     const version = "a".repeat(64);
-    expect(baselineCacheKey(COMMIT, version)).toBe(`reg-baseline-${COMMIT}-${version}`);
+    expect(baselineCacheKey(COMMIT, version)).toBe(`reg-baseline-v2-${COMMIT}-${version}`);
     expect(() => baselineCacheKey(COMMIT, "legacy")).toThrow(/version/u);
   });
 });

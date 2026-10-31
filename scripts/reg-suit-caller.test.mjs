@@ -46,6 +46,9 @@ describe("reg-suit consumer workflow", () => {
       /uses: AaronBuxbaum\/diveday\/.github\/workflows\/reg-suit-publish\.yml@[0-9a-f]{40}/u,
     );
     expect(publisher).not.toContain("reg-suit-publish.yml@refs/heads/main");
+    expect(publisher).toContain(
+      "uses: AaronBuxbaum/diveday/.github/workflows/reg-suit-publish.yml@77123ca6db5ec5dc4e5fcfaf23778f08580200c8 # immutable commit 77123ca6db5ec5dc4e5fcfaf23778f08580200c8",
+    );
     expect(publisher).not.toContain("steps:");
     expect(publisher).toContain("capture-mode: ${{ needs.visual-plan.outputs.mode }}");
     expect(publisher).toContain("capture-shards: ${{ needs.visual-plan.outputs.shards }}");
@@ -61,6 +64,11 @@ describe("reg-suit consumer workflow", () => {
     expect(report).toContain("needs: [visual-publish, visual, changes, visual-plan]");
     expect(report).toContain(
       "ref: ${{ github.event_name == 'pull_request' && 'refs/heads/main' || github.sha }}",
+    );
+    expect(report).toMatch(/pattern: visual-screenshots-\*\n[ \t]+path: e2e\n/u);
+    expect(report).toContain("cp -R e2e/screenshots .reg-baseline");
+    expect(report).toContain(
+      "key: reg-baseline-v2-${{ github.sha }}-${{ needs.visual-publish.outputs.snapshot_version }}",
     );
     expect(report).not.toContain("id-token: write");
   });

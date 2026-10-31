@@ -6,6 +6,7 @@ import { nowDate } from "@/lib/clock";
 import { exportDateStamp } from "@/lib/export";
 import { hasRequiredStepUp, stepUpChallengeUrl } from "@/lib/security-step-up";
 import { requireStaffSession } from "@/lib/session";
+import { shopPath } from "@/lib/staff-notices";
 import { diversListCsv } from "./divers-list-csv";
 
 /**
@@ -44,15 +45,29 @@ export async function GET(request: Request, { params }: { params: Promise<{ shop
   const filter = isDiverFilter(requested) && requested !== "removed" ? requested : "all";
   const sortParam = search.get("sort") ?? undefined;
   const now = nowDate();
-  const rows = await listDiversForExport(db, shop.id, {
+  const result = await listDiversForExport(db, shop.id, {
     query: search.get("q") ?? "",
     filter,
     sort: isDiverSort(sortParam) ? sortParam : "name",
     timeZone: shop.timezone,
     now,
   });
+  if (result.exceededLimit) {
+    const rosterUrl = new URL(shopPath(shop.slug, "divers"), request.url);
+    const query = search.get("q");
+    if (query) rosterUrl.searchParams.set("q", query);
+    if (filter !== "all") rosterUrl.searchParams.set("filter", filter);
+    if (isDiverSort(sortParam) && sortParam !== "name") {
+      rosterUrl.searchParams.set("sort", sortParam);
+    }
+    rosterUrl.searchParams.set("notice", "download-too-large");
+    return new Response(null, {
+      status: 303,
+      headers: { Location: rosterUrl.toString(), "Cache-Control": "no-store" },
+    });
+  }
   const fileName = `diveday-divers-${shop.slug}-${exportDateStamp(now, shop.timezone)}.csv`;
-  return new Response(diversListCsv(rows, shop.timezone), {
+  return new Response(diversListCsv(result.rows, shop.timezone), {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
       "Content-Disposition": `attachment; filename="${fileName}"`,
