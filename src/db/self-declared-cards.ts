@@ -18,12 +18,13 @@ import {
  * **What a diver said about themselves on a public opt-in, written down as
  * what it is.**
  *
- * Both of DiveDay's "tell me when something comes up" lists — the shop-wide
- * last-minute-deal list and a full trip's wait list — used to collect a name,
- * an email, and nothing about diving, so a discount blast could invite an Open
- * Water diver onto a deep wreck charter the admission gate would refuse
- * (FU-20260813). They now ask, optionally, for a level and whether the diver is
- * nitrox certified, and the answer lands here.
+ * The shop-wide last-minute-deal form currently asks for an optional level.
+ * The full-trip wait-list page no longer renders declaration controls, though
+ * its action still passes a supplied declaration here. The list-action parser
+ * retains optional agency, card-number and nitrox payload fields; no
+ * current list form renders those controls. Earlier list forms collected none
+ * of this data, so a discount blast could invite an Open Water diver onto a
+ * deep wreck charter the admission gate would refuse (FU-20260813).
  *
  * It lands on the **person**, not as a parallel column on the list entry: both
  * lists resolve to one `people` row, the app already understands a card there,
@@ -49,10 +50,11 @@ import {
 /**
  * **The anti-displacement rule, and why it is this strict.**
  *
- * The caller is an *unauthenticated* form. An anonymous poster who guesses (or
- * simply knows) an existing diver's email address resolves to that diver's
- * real `people` row — `findOrCreatePerson` matches on shop + email — and would
- * otherwise be writing certification data onto a stranger's safety record.
+ * The anonymous list-action callers use forms that resolve a person by shop +
+ * email. A poster who guesses (or simply knows) an existing diver's address
+ * reaches that diver's real `people` row — `findOrCreatePerson` matches on
+ * shop + email — and would otherwise write certification data onto a stranger's
+ * safety record.
  *
  * So: **a real card always wins, and a claim never touches one.** If this
  * person already has any live card that is not itself a self-declaration —
@@ -399,19 +401,19 @@ async function recordNoCertification(
       // **A fresh answer un-clears an old correction — but only the half that
       // is current state.** Without this, one `clearNoCertificationDeclaration`
       // would silently swallow every "I'm not certified yet" the diver gave
-      // afterwards: a permanent, invisible gate on one answer of one form,
-      // chosen by nobody. Nulling it is also what lets every reader below test
+      // afterwards: a permanent, invisible gate on one answer, chosen by
+      // nobody. Nulling it is also what lets every reader below test
       // `clearedAt IS NULL` and nothing else — the frozen e2e clock makes two
       // timestamps genuinely incomparable, so "which statement is later" has to
       // be structural rather than chronological.
       noCertificationClearedAt: null,
-      // **`clearedByPersonId` deliberately survives.** This function is reached
-      // from an *unauthenticated* form, and the row it is writing carries a fact
-      // a member of staff authored. Clearing that too would let an anonymous
-      // post erase the shop's own audit of its own correction — the same shape
-      // as the 2026-08-14 bug this ADR records, one column over — and would let
-      // a griefer loop the stamp back on with nothing left saying a staffer had
-      // ever disagreed (`security-reviewer`/`dive-domain-expert`, 2026-08-15).
+      // **`clearedByPersonId` deliberately survives.** Anonymous list actions
+      // and the booked diver's capability-bound `/ready` form can write an
+      // answer here, but neither is a staff correction. Clearing the staff
+      // attribution too would let a diver's later answer erase the shop's audit
+      // of its correction — the same shape as the 2026-08-14 bug this ADR
+      // records, one column over — and leave no record that a staffer disagreed
+      // (`security-reviewer`/`dive-domain-expert`, 2026-08-15).
       // A set `clearedByPersonId` with a null `clearedAt` is a real and
       // readable state: *corrected once, and stated again since*.
     })
@@ -421,13 +423,15 @@ async function recordNoCertification(
 
 /**
  * **A staffer saying this diver never told us that** — the eraser for a stamp
- * `recordNoCertification` wrote on an unauthenticated form.
+ * `recordNoCertification` wrote from an anonymous list action or the booked
+ * diver's capability-bound `/ready` step.
  *
- * Those forms resolve a person by shop + email, so for a diver the shop holds
- * no card for, anybody holding a name and an email address off any manifest can
- * mark them *"Not certified yet — unverified"* on the send lists and in every
- * CSV the shop exports from then on. Until this existed the only thing that
- * cleared it was owner-only erasure of the whole record.
+ * The list actions resolve a person by shop + email, so for a diver the shop
+ * holds no card for, anybody holding a name and an email address off any
+ * manifest can mark them *"Not certified yet — unverified"* on the send lists
+ * and in every CSV the shop exports from then on. The `/ready` path is instead
+ * bound to its booking's diver. Until this existed the only thing that cleared
+ * the stamp was owner-only erasure of the whole record.
  *
  * **It supersedes rather than deletes** (`people.no_certification_cleared_at`),
  * for the reason the ADR gives about `self_declared_at`: where a record began is
