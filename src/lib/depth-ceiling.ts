@@ -5,6 +5,7 @@ import { type DepthUnit, depthInUnit } from "./depth-units";
 import {
   type CertificationLevel,
   certificationRank,
+  holdsSpecialtyCard,
   validVerifiedCertification,
 } from "./readiness";
 
@@ -173,17 +174,9 @@ export function diverDepthLimit(
 
   if (!level) return { ceiling: NO_CARD_LIMIT, basis: "no_card", level: null, ...uncertain };
 
-  // A Deep specialty is exactly the training that lifts an Open Water diver past
-  // 18 m, so it raises the ceiling to the recreational limit — but it can only
-  // ever raise, never lower an already-deeper level. Held to the *same*
-  // predicate as the specialty readiness gate (src/lib/readiness.ts), which is
-  // why the imported-but-unconfirmed card is excluded here too.
-  const hasDeep = specialtyCertifications.some(
-    (card) =>
-      card.specialty === "deep" &&
-      card.status === "verified" &&
-      (!card.importedAt || card.reviewedAt),
-  );
+  // A Deep specialty raises an Open Water diver's ceiling to the recreational
+  // limit, but it can only ever raise, never lower an already-deeper level.
+  const hasDeep = holdsSpecialtyCard(specialtyCertifications, "deep");
   const levelLimit = LEVEL_DEPTH_LIMIT[level];
   if (hasDeep && levelLimit.meters < RECREATIONAL_LIMIT.meters) {
     return { ceiling: RECREATIONAL_LIMIT, basis: "deep_specialty", level, ...uncertain };
