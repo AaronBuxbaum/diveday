@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
+import { createContext, useContext, useState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { ChoiceFieldset, ChoicePill } from "@/components/ui/form";
@@ -13,9 +14,9 @@ import { RowActionForm } from "./RowActionForm";
  * **The door sits on the row's action side, beside its Blocked pill**
  * (visual review A08): `TurnAwayDoor`, a secondary "Turn away" button. The
  * confirm it opens is unchanged and still opens at the foot of the row
- * (`TurnAwayScript`, H-135): one confirm, every string a prop. The two halves
- * of one row talk through one window event named by the booking, since the
- * roster places them in two slots. What it adds is the reason, chosen
+ * (`TurnAwayScript`, H-135): one confirm, every string a prop. Although the
+ * roster places them in two slots, both halves share this row's React state
+ * provider, so opening one panel cannot open another. What it adds is the reason, chosen
  * from this row's own blockers (`turnAwayReasons`, src/lib/turn-away.ts) and
  * only from them: the page passes the categories readiness shows, and the
  * writer refuses any other. A row with one reason has it chosen already.
@@ -30,23 +31,28 @@ export type TurnAwayScriptCopy = {
   sendFailed: string;
 };
 
-const toggleEvent = (bookingId: string) => `turn-away:toggle:${bookingId}`;
-const stateEvent = (bookingId: string) => `turn-away:state:${bookingId}`;
+type TurnAwayRowState = { open: boolean; toggle: () => void };
+const TurnAwayContext = createContext<TurnAwayRowState>({ open: false, toggle: () => {} });
+
+/** Scope the door and panel to one roster row, even though their slots differ. */
+export function TurnAwayRowStateProvider({ children }: { children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <TurnAwayContext.Provider value={{ open, toggle: () => setOpen((was) => !was) }}>
+      {children}
+    </TurnAwayContext.Provider>
+  );
+}
 
 /** The row's door: opens and closes the confirm at the row's foot. */
 export function TurnAwayDoor({ bookingId, label }: { bookingId: string; label: string }) {
-  const [open, setOpen] = useState(false);
-  useEffect(() => {
-    const onState = (event: Event) => setOpen(Boolean((event as CustomEvent).detail));
-    window.addEventListener(stateEvent(bookingId), onState);
-    return () => window.removeEventListener(stateEvent(bookingId), onState);
-  }, [bookingId]);
+  const { open, toggle } = useContext(TurnAwayContext);
   return (
     <button
       type="button"
       aria-expanded={open}
       aria-controls={`turn-away-${bookingId}`}
-      onClick={() => window.dispatchEvent(new Event(toggleEvent(bookingId)))}
+      onClick={toggle}
       className={buttonClass({ variant: "secondary", size: "sm", className: "print:hidden" })}
     >
       {label}
@@ -67,15 +73,7 @@ export function TurnAwayScript({
   copy: TurnAwayScriptCopy;
 }) {
   const only = reasons.length === 1;
-  const [open, setOpen] = useState(false);
-  useEffect(() => {
-    const onToggle = () => setOpen((was) => !was);
-    window.addEventListener(toggleEvent(bookingId), onToggle);
-    return () => window.removeEventListener(toggleEvent(bookingId), onToggle);
-  }, [bookingId]);
-  useEffect(() => {
-    window.dispatchEvent(new CustomEvent(stateEvent(bookingId), { detail: open }));
-  }, [bookingId, open]);
+  const { open } = useContext(TurnAwayContext);
   return (
     <div id={`turn-away-${bookingId}`} hidden={!open} className="pb-2 print:hidden">
       <RowActionForm action={action} sendFailedLabel={copy.sendFailed}>
