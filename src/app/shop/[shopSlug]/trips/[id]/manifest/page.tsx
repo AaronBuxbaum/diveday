@@ -262,7 +262,6 @@ export default async function TripManifestPage({
         <TripPageHeader
           boardHref={shopPath(shopSlug, "schedule", "board")}
           backLabel={t(STAFF_DESTINATION_LABEL_KEYS.board)}
-          today={{ href: shopPath(shopSlug), label: t(STAFF_DESTINATION_LABEL_KEYS.today) }}
           trip={manifest.trip}
           locale={locale}
           timeZone={shop.timezone}
