@@ -207,7 +207,7 @@
     "e2e/agency-check-padi.spec.ts": 7,
     "e2e/agency-check-roster.spec.ts": 3,
     "e2e/agency-check.spec.ts": 1,
-    "e2e/backup.spec.ts": 6,
+    "e2e/backup.spec.ts": 5,
     "e2e/blowout.spec.ts": 2,
     "e2e/booking.spec.ts": 2,
     "e2e/buddy-pairs.spec.ts": 1,
@@ -478,7 +478,7 @@
     "src/lib/today.test.ts": 1475,
     "src/lib/trip-admission.test.ts": 992,
     "src/lib/waivers.test.ts": 1402,
-    "src/proxy.test.ts": 1221
+    "src/proxy.test.ts": 1171
   },
   "function-length": {
     "//": "Code lines (blank and comment lines left out) of the top-level functions under src/app, src/components, src/features, src/db, src/lib still over 300, keyed <file>#<name>. Written by `node scripts/check-page-length.mjs --write`. Each number may only go down — see scripts/check-page-length.mjs.",
@@ -582,7 +582,7 @@
     "src/app/shop/[shopSlug]/reports/page.tsx": 492,
     "src/app/shop/[shopSlug]/reviews/page.tsx": 430,
     "src/app/shop/[shopSlug]/settings/team/page.tsx": 581,
-    "src/app/shop/[shopSlug]/staffing/page.tsx": 591,
+    "src/app/shop/[shopSlug]/staffing/page.tsx": 590,
     "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 473,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 493
   },

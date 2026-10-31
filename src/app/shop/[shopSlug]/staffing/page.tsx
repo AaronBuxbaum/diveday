@@ -133,8 +133,8 @@ export default async function StaffingPage({
   const { shopSlug } = await params;
   const query = await searchParams;
   const { session, db, shop } = await requireShopSurface(shopSlug);
-  // A shop that keeps no crew schedule has no Crew view: an old link or a
-  // bookmark lands on the week of departures it was one tab away from.
+  // A shop that keeps no crew schedule has no Crew view: a bookmark lands on
+  // the week of departures it was one tab away from.
   if (!shop.crewScheduleEnabled) redirect(shopPath(shopSlug, "schedule", "board"));
   // Negotiated from the request, falling back to the shop's default — a staff
   // member reads dates and copy in their own language, not the shop row's.
@@ -267,9 +267,8 @@ export default async function StaffingPage({
   return (
     <StaffPage width="full" className="staffing-print-rota">
       {/* `week` is a reading of the page and stays in the URL; the rest is
-          one-shot chrome, including the retired `from`/`to` an old bookmark
-          may still carry. */}
-      <FlashParams params={["from", "to", "notice"]} />
+          one-shot chrome. */}
+      <FlashParams params={["notice"]} />
       {/* Schedule's Crew view (ADR 20261001-logbook) carries the week across. */}
       <CrewPageHeader shopName={shop.name} t={t} />
       <ScheduleViews

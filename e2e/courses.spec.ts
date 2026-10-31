@@ -483,8 +483,7 @@ test.describe("staff", () => {
     await row.getByRole("link", { name: "Edit" }).click();
     await expect(page).toHaveURL(/\/courses\/rescue-diver\/edit/);
 
-    // "Live at" names the URL a diver actually has, not the deprecated
-    // /shop/** one that only still resolves through a 308 (ADR
+    // "Live at" names the URL a diver actually has (ADR
     // 20260803-public-shop-namespace) — the shop copies this into its own
     // links and posts.
     const liveAt = page.getByRole("link", { name: "/s/blue-mantis/courses/rescue-diver" });

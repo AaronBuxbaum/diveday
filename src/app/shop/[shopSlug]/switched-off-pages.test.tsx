@@ -109,14 +109,6 @@ describe("a switched-off staff page", () => {
     ).toBe("/shop/blue-mantis/settings");
   });
 
-  // The old packages address lands on Discounts whatever the switch says
-  // (visual review 2026-10-24, A26); Discounts gates itself.
-  it("Dive packages lands on Discounts", async () => {
-    expect(
-      await openSwitchedOff("divePackagesEnabled", () => import("./promos/packages/page")),
-    ).toBe("/shop/blue-mantis/promos#dive-packages");
-  });
-
   it("Discounts lands on Orders once codes, deals and packages are all off", async () => {
     expect(
       await openSwitchedOff(

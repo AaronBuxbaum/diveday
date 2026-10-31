@@ -102,22 +102,6 @@ test("staff schedules a trip and it appears on shop and public schedules", async
   await expect(page.getByRole("button", { name: "Reinstate trip" })).toBeVisible();
 });
 
-test("the old /trips/new URL still works — 308 to the board's own form", async ({ page }) => {
-  // Removing a surface never removes the destination: a bookmark, a training
-  // doc, a chat link. The `?course=` a catalogue link carried survives too.
-  const direct = await page.request.get("/shop/blue-mantis/trips/new", {
-    maxRedirects: 0,
-  });
-  expect(direct.status()).toBe(308);
-  expect(direct.headers().location).toContain("/shop/blue-mantis/schedule/board?add=full");
-
-  await page.goto("/shop/blue-mantis/trips/new");
-  await expect(page).toHaveURL(/\/shop\/blue-mantis\/schedule\/board\/new\?add=full$/);
-  // Landed on the whole form, not merely the board.
-  await expect(page.getByRole("button", { name: "Fewer options" })).toBeVisible();
-  await expect(page.getByLabel("How often")).toBeVisible();
-});
-
 test("end-before-start is rejected with a friendly message", async ({ page }) => {
   await page.goto("/shop/blue-mantis/schedule/board/new?add=full");
   await page.getByLabel("What is it").fill("Backwards Trip");

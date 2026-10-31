@@ -612,44 +612,6 @@ test.describe("staff", () => {
     await expect(updateReady).toBeVisible();
   });
 
-  test("the old /dive-sites/catalog URL still works, and keeps the page it was deep-linked to", async ({
-    page,
-  }) => {
-    // A real 308 at the request level, not a 200 whose hop resolves inside
-    // the streamed payload — a Route Handler, because under `cacheComponents`
-    // a page-based `permanentRedirect()` answers 200 and only a browser
-    // follows it; a bookmark manager, a crawler, and a `curl` do not (ADR
-    // 20260806-one-trip-create-form).
-    const direct = await page.request.get("/shop/blue-mantis/dive-sites/catalog?page=2", {
-      maxRedirects: 0,
-    });
-    expect(direct.status()).toBe(308);
-    expect(direct.headers().location).toBe("/shop/blue-mantis/dive-sites?view=catalog&page=2");
-
-    // The route folded into the library as `?view=catalog`
-    // (ADR 20260806-dive-site-catalog-is-a-view); the links already out in
-    // the world did not. A bare bookmark lands on the catalog view.
-    await page.goto("/shop/blue-mantis/dive-sites/catalog");
-    await expect(page).toHaveURL(/\/dive-sites\?view=catalog$/);
-    await expect(
-      page.getByRole("heading", { level: 1, name: "DiveDay common dive sites" }),
-    ).toBeVisible();
-
-    // A `?page=` deep link keeps its page rather than silently restarting at
-    // the top of the catalog — landing a bookmarked page 3 on page 1 is the
-    // quiet kind of "it still works" that makes staff re-hunt for a template
-    // they'd found.
-    await page.goto("/shop/blue-mantis/dive-sites/catalog?page=2");
-    await expect(page).toHaveURL(/\/dive-sites\?view=catalog&page=2$/);
-
-    // Page 1 and nonsense both mean "the start of the catalog", which is the
-    // default, so neither is carried across as a query param.
-    for (const query of ["?page=1", "?page=banana"]) {
-      await page.goto(`/shop/blue-mantis/dive-sites/catalog${query}`);
-      await expect(page).toHaveURL(/\/dive-sites\?view=catalog$/);
-    }
-  });
-
   // The SSRF check this used to exercise has no dive-site caller left: photos
   // are uploaded from the staffer's own device now, so there is no pasted URL
   // for the server to fetch (2026-08-12 amendment to
