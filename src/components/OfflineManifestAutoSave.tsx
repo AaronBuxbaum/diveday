@@ -92,8 +92,7 @@ export function OfflineManifestAutoSave() {
       if (navigator.onLine) void run();
     };
     const onVisible = () => {
-      if (document.visibilityState === "visible" && navigator.onLine)
-        void run();
+      if (document.visibilityState === "visible" && navigator.onLine) void run();
     };
     const interval = setInterval(() => {
       if (navigator.onLine) void run();
