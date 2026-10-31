@@ -91,7 +91,7 @@ export function TripDealsSection({
  * 20261001-logbook), listed here rather than behind a door (visual review
  * 2026-10-24, A26): a row per package (name, dives, price, scope) ending on
  * one "⋯" that holds its Delete (a red word wrapped under each row at 390), what the shop still owes in dives, and "Add a package" opening the
- * form. `/promos/packages` redirects here. Packages have no edit: a package is
+ * form. Packages have no edit: a package is
  * a price already sold against, so a change is a new package and a Delete.
  * Drawn only while the shop sells dive packages (the Features page).
  */

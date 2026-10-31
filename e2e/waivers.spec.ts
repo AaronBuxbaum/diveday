@@ -36,7 +36,7 @@ test.describe("signed out", () => {
   // route is reached independently (deep link, bookmark), so it needs its
   // own tests rather than inheriting confidence from the template page's.
   test("an anonymous visitor is sent to sign in from the signed-waiver audit", async ({ page }) => {
-    await page.goto("/shop/blue-mantis/waivers/signatures");
+    await page.goto("/shop/blue-mantis/waivers");
     await expect(page).toHaveURL(/\/sign-in/);
   });
 });
@@ -61,7 +61,7 @@ test.describe("as captain", () => {
   test("staff outside owner/manager can't reach the signed-waiver audit either", async ({
     page,
   }) => {
-    await page.goto("/shop/blue-mantis/waivers/signatures");
+    await page.goto("/shop/blue-mantis/waivers");
     await expect(page).toHaveURL(/\/shop\/blue-mantis(\?.*)?$/);
     await expect(
       page.getByText("Editing the waiver is limited to owners and managers."),
