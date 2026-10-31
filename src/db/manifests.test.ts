@@ -73,10 +73,9 @@ async function activityCodesFor(
 
 /**
  * Every test here shares the file's one seeded database, each in a rolled-back
- * transaction. The same-transaction append-order tests (issue #1244) also use
- * it: their `created_at` comes from the pinned application clock, so the pair
- * is equal on that column by construction, and their `seq` values are what
- * order it. Those tests assert both halves explicitly.
+ * transaction, including the same-transaction append-order tests (issue
+ * #1244): their `created_at` comes from the pinned application clock, so a pair
+ * ties on it by construction and `seq` orders it. Both halves are asserted.
  */
 describe("trip manifest and roll call (in-memory PGlite)", () => {
   it("derives every active booking into the manifest, including blocked divers", async () => {
@@ -1759,23 +1758,12 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
       ]);
     });
     const written = await db
-      .select({
-        createdAt: rollCallCrewEvents.createdAt,
-        seq: rollCallCrewEvents.seq,
-      })
+      .select({ at: rollCallCrewEvents.createdAt, seq: rollCallCrewEvents.seq })
       .from(rollCallCrewEvents)
       .where(
-        and(
-          eq(rollCallCrewEvents.tripId, reef.id),
-          eq(rollCallCrewEvents.personId, staff.id),
-          eq(rollCallCrewEvents.checkpoint, "departure"),
-        ),
+        and(eq(rollCallCrewEvents.tripId, reef.id), eq(rollCallCrewEvents.personId, staff.id)),
       );
-    expect(written).toHaveLength(2);
-    // The tie is real on both halves of the old ordering key.
-    const [one, two] = written;
-    if (!one || !two) throw new Error("expected both crew events");
-    expect(one.createdAt.getTime()).toBe(two.createdAt.getTime());
+    expect(new Set(written.map((row) => row.at.getTime())).size).toBe(1);
     expect(new Set(written.map((row) => row.seq)).size).toBe(2);
     const manifest = await getTripManifest(db, shop.id, reef.id, "departure");
     expect(manifest?.crew.find((member) => member.id === staff.id)?.rollCall?.state).toBe(
