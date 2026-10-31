@@ -331,7 +331,7 @@ export function verdictHeadline(summary) {
   }
 }
 
-function verdictBody(summary, { commit, bucket }) {
+function verdictBody(summary, { commit, bucket, freshBaselineBootstrap }) {
   switch (summary.verdict) {
     case "no-report":
       return [
@@ -349,6 +349,15 @@ function verdictBody(summary, { commit, bucket }) {
         "Nothing was compared; this is not a clean run.",
       ].join("\n");
     case "no-baseline":
+      if (freshBaselineBootstrap) {
+        return [
+          "The trusted publisher deliberately created a fresh versioned baseline for this run.",
+          `reg-suit downloaded **0 baseline images**, so all ${summary.capturedCount} captured`,
+          "surface(s) were reported as *new* rather than diffed. **Pixel parity is unknown:** no",
+          "pixel on this commit was compared against an earlier baseline. This passing result only",
+          "records the approved bootstrap; review the screenshots and use the next run for parity.",
+        ].join("\n");
+      }
       return [
         `reg-suit downloaded **0 baseline images**, so all ${summary.capturedCount} captured`,
         "surface(s) were reported as *new* rather than diffed. **No pixel on this commit was",
@@ -443,9 +452,9 @@ function deltaSection(delta, limit) {
 }
 
 /**
- * Renders the sticky PR comment. Never throws, never blocks: the wording states
- * outright that this check is informational, because the enforcement of
- * "account for every pixel" is human review, not a red build
+ * Renders the sticky PR comment without throwing or blocking directly. Changed
+ * pixels need human review; unapproved blind runs fail in the workflow, while
+ * an approved full-baseline bootstrap passes with parity marked unknown
  * (ADR 20260802-visual-diff-pr-comment).
  */
 export function formatPrComment({
@@ -456,14 +465,17 @@ export function formatPrComment({
   note = "",
   delta = null,
   limit = ITEM_LIST_LIMIT,
+  freshBaselineBootstrap = false,
 }) {
+  const approvedFreshBaselineBootstrap =
+    freshBaselineBootstrap === true && summary.verdict === "no-baseline";
   const short = commit.slice(0, 7);
   const lines = [
     COMMENT_MARKER,
     commitMarker(commit),
     `### ${verdictHeadline(summary)}`,
     "",
-    verdictBody(summary, { commit, bucket }),
+    verdictBody(summary, { commit, bucket, freshBaselineBootstrap: approvedFreshBaselineBootstrap }),
     "",
     // Above the table, so the set comparison is read before the totals.
     ...deltaSection(delta, limit),
@@ -507,11 +519,18 @@ export function formatPrComment({
   // is a red check as of issue #1137, because a skipped or blind job used to
   // report as passing and this paragraph was the only thing arguing otherwise.
   lines.push(
-    ...(comparedAnything(summary)
+    ...(comparedAnything(summary) || approvedFreshBaselineBootstrap
       ? [
-          "A visual difference never fails the build. Accounting for every changed pixel is the",
-          "reviewer's job (AGENTS.md), and merging an explained change is what makes it the next",
-          "baseline.",
+          ...(approvedFreshBaselineBootstrap
+            ? [
+                "This approved bootstrap passes with pixel parity unknown. Review the captured",
+                "screenshots; the next visual run will compare against this fresh baseline.",
+              ]
+            : [
+                "A visual difference never fails the build. Accounting for every changed pixel is the",
+                "reviewer's job (AGENTS.md), and merging an explained change is what makes it the next",
+                "baseline.",
+              ]),
         ]
       : [
           "**This fails the `visual-report` check.** Nothing was compared, so nothing is known — a",
