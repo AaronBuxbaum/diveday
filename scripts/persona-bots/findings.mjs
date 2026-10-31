@@ -2,7 +2,7 @@
  * What the weekly persona walk is allowed to do to a one-person triage inbox
  * (N-61), and the shape of the issues it files.
  *
- * The walk (`walk.spec.ts`) reports raw findings. This module is the pure half
+ * The walk (`walk.spec.mts`) reports raw findings. This module is the pure half
  * that turns them into `needs-triage` issues and — the part that matters —
  * decides how few of them may exist. Fifteen personas walking forty-odd
  * surfaces every week can find a great deal; an inbox one person reads cannot

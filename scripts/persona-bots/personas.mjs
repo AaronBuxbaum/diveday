@@ -16,7 +16,7 @@
  * opinions, which is the exact failure the volume policy in
  * `scripts/persona-bots/findings.mjs` exists to prevent.
  *
- * Pure data and pure functions: nothing here touches a browser. `walk.spec.ts`
+ * Pure data and pure functions: nothing here touches a browser. `walk.spec.mts`
  * drives it and `findings.mjs` shapes what comes back, and both halves are
  * unit-tested without a network.
  */

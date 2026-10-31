@@ -2,7 +2,7 @@
  * The judged half of the weekly persona walk (#1498) — opt-in, and off unless
  * a human dispatched the workflow with it on.
  *
- * The mechanical walk (`walk.spec.ts`) answers yes-or-no questions from the
+ * The mechanical walk (`walk.spec.mts`) answers yes-or-no questions from the
  * rendered page: a missing skip link, a message key on screen, a page that did
  * not render. Almost everything the personas' own "hold the line on" lists ask
  * for is a judgement instead — whether a refusal states a *true* reason,
