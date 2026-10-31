@@ -1,16 +1,14 @@
 /**
- * The hostile-instants suite: every conversion in `zoned.ts` (and the two
- * day-semantics consumers beside it, `formatRelativeDay` and `dueReminder`)
- * pinned to the moments where timezone code actually breaks — the
- * spring-forward night whose 2:30am doesn't exist, the fall-back night whose
- * 1:30am exists twice, zones that jump *at midnight* so the shop day itself
- * starts or ends inside the gap, departures that cross midnight in shop-local
- * but not UTC (and vice versa), a week that is 167 or 169 hours long, and
- * zones whose offset is not a whole hour (including a *30-minute* DST shift).
+ * Example-based contracts for wall-time conversion, calendar-day shifts,
+ * shop-day/month bounds, and selected consumers (`formatRelativeDay`,
+ * `dueReminder`, and `calendarDateInTimezone`). Cases cover gaps, folds,
+ * midnight transitions, UTC/local date crossings, variable-length weeks,
+ * and non-hour offsets. This suite does not cover every export in `zoned.ts`.
  *
  * A dive shop lives on wall-clock time while the database lives in UTC;
  * `wallTimeToUtc`/`utcToWallTime` are the one sanctioned seam between them.
- * If date math bypasses that seam, one of these tables is built to fail.
+ * Gap resolution moves forward by the gap length; ambiguous readings resolve
+ * to one pinned instant. These examples protect those wall-clock policies.
  *
  * Fixed transition facts used below (IANA tzdb):
  * - America/New_York 2026: spring forward Mar 8 02:00→03:00 (07:00Z),
@@ -82,17 +80,13 @@ describe("the spring-forward night: wall times that do not exist", () => {
     (zone, gapWall, expectedUtc, readsBackAs) => {
       const resolved = wallTimeToUtc(gapWall, zone);
       expect(resolved.toISOString()).toBe(expectedUtc);
-      // The resolved instant reads back as a wall time that actually exists,
-      // *after* the jump — the pre-fix two-pass result could land before it,
-      // reading as an earlier hour (and, in a midnight-gap zone, yesterday).
+      // The result is a valid wall time after the gap.
       expect(utcToWallTime(resolved, zone)).toEqual(readsBackAs);
     },
   );
 
   it("never resolves a gap time onto the previous calendar day (the Santiago regression)", () => {
-    // Before the gap fix, Santiago's nonexistent Sep 6 00:00 resolved to
-    // 03:00Z — which reads as Sep *5*, 23:00. Any "today" boundary built on
-    // it leaked the previous day's last hour into today.
+    // Midnight resolution must stay on Sep 6, not fall back to Sep 5.
     const resolved = wallTimeToUtc(wall(2026, 9, 6, 0, 0), "America/Santiago");
     expect(utcToWallTime(resolved, "America/Santiago").day).toBe(6);
   });
@@ -139,9 +133,7 @@ describe("shopDayBounds across the clock change", () => {
   });
 
   it("keeps a 23:30 boat on the day it sails when tomorrow's midnight is in the gap (Santiago)", () => {
-    // The mirror case: on Sep 5 the day's *end* is tomorrow's nonexistent
-    // midnight. Before the gap fix `to` resolved to 03:00Z (= Sep 5, 23:00
-    // local), so a 23:30 departure fell out of its own day and into the next.
+    // Sep 5 ends at Sep 6's nonexistent midnight; 23:30 remains within Sep 5.
     const boat2330 = wallTimeToUtc(wall(2026, 9, 5, 23, 30), "America/Santiago");
     const sep5 = shopDayBounds(new Date("2026-09-05T15:00:00Z"), "America/Santiago");
     const sep6 = shopDayBounds(new Date("2026-09-06T15:00:00Z"), "America/Santiago");
@@ -184,9 +176,7 @@ describe("shopMonthBounds: the month a bookkeeper means", () => {
   });
 
   it("keeps the last night of the month on that month's sheet", () => {
-    // 23:00 on 31 July in Los Angeles is already 1 August in UTC. A
-    // UTC-bracketed month drops this departure out of July entirely — and the
-    // sheet still adds up, which is why nobody notices.
+    // July 31 at 23:00 in Los Angeles is August 1 in UTC, but remains in July.
     const lastNight = wallTimeToUtc(wall(2026, 7, 31, 23, 0), "America/Los_Angeles");
     expect(lastNight.toISOString()).toBe("2026-08-01T06:00:00.000Z");
     const july = shopMonthBounds({ year: 2026, month: 7 }, "America/Los_Angeles");
@@ -197,7 +187,7 @@ describe("shopMonthBounds: the month a bookkeeper means", () => {
   });
 
   it("keeps the first morning of the month off the previous one, east of UTC", () => {
-    // The mirror case: Tokyo, 1 July 08:00 local is 30 June in UTC.
+    // July 1 at 08:00 in Tokyo is June 30 in UTC, but belongs to July.
     const firstBoat = wallTimeToUtc(wall(2026, 7, 1, 8, 0), "Asia/Tokyo");
     expect(firstBoat.toISOString()).toBe("2026-06-30T23:00:00.000Z");
     const june = shopMonthBounds({ year: 2026, month: 6 }, "Asia/Tokyo");
@@ -285,7 +275,7 @@ describe("week and month aggregates spanning the shift", () => {
     const from = wallTimeToUtc(wall(2026, 11, 1, 0, 0), "America/New_York");
     const to = wallTimeToUtc(wall(2026, 12, 1, 0, 0), "America/New_York");
     expect((to.getTime() - from.getTime()) / 3_600_000).toBe(30 * 24 + 1);
-    // And a departure in the repeated 1am hour lands inside it, once.
+    // A departure in the repeated 1am hour remains inside the month.
     const repeatedHourBoat = new Date("2026-11-01T06:30:00Z"); // 01:30 EST, the second 01:30
     expect(repeatedHourBoat.getTime()).toBeGreaterThanOrEqual(from.getTime());
     expect(repeatedHourBoat.getTime()).toBeLessThan(to.getTime());
@@ -302,7 +292,7 @@ describe("week and month aggregates spanning the shift", () => {
       const next = shiftInstantByCalendarDays(first, days, "America/New_York");
       const read = utcToWallTime(next, "America/New_York");
       expect({ hour: read.hour, minute: read.minute }).toEqual({ hour: 7, minute: 30 });
-      // ...which means the UTC delta is NOT a whole week of milliseconds.
+      // Preserving the wall time means elapsed UTC time is not exactly a week.
       expect(next.getTime() - first.getTime()).not.toBe(7 * 24 * 3_600_000);
     }
   });
@@ -332,9 +322,7 @@ describe("zones with non-hour offsets", () => {
 
 describe("moving a trip across the shift (the schedule builder's seam)", () => {
   it("a whole-day move never drifts the hour; a time-of-day move lands on the asked-for time", () => {
-    // moveTrip composes wallTimeDeltaMs + shiftInstantByWallTimeDelta. A move
-    // from Sat Mar 7 09:00 to Sun Mar 8 07:15 crosses spring forward AND
-    // changes the time of day: the result must be exactly Mar 8 07:15 local.
+    // A day and time move across spring forward lands at the requested local time.
     const from = wall(2026, 3, 7, 9, 0);
     const to = wall(2026, 3, 8, 7, 15);
     const delta = wallTimeDeltaMs(from, to);
@@ -347,8 +335,7 @@ describe("moving a trip across the shift (the schedule builder's seam)", () => {
   });
 
   it("a multi-day course's later days keep their published hour across the shift", () => {
-    // Open Water weekend: day 1 Sat Mar 7 08:30, day 2 Sun Mar 8 08:30 — the
-    // second morning is after the jump and must still read 08:30 local.
+    // The second course morning remains 08:30 local after the jump.
     const dayOne = wall(2026, 3, 7, 8, 30);
     const dayTwo = addCalendarDays(dayOne, 1);
     const utcOne = wallTimeToUtc(dayOne, "America/New_York");
@@ -358,9 +345,7 @@ describe("moving a trip across the shift (the schedule builder's seam)", () => {
   });
 
   it("a shift that lands ON the nonexistent hour resolves forward, not backward", () => {
-    // A 02:30 dawn departure copied from Mar 7 to Mar 8 has nowhere to land:
-    // it reads 03:30 EDT, never 01:30 EST (which would be BEFORE the original
-    // wall time it was promised at).
+    // A copied 02:30 departure lands at 03:30 after the gap, not before it.
     const dawn = wallTimeToUtc(wall(2026, 3, 7, 2, 30), "America/New_York");
     const copied = shiftInstantByCalendarDays(dawn, 1, "America/New_York");
     expect(utcToWallTime(copied, "America/New_York")).toEqual(wall(2026, 3, 8, 3, 30));
@@ -369,9 +354,7 @@ describe("moving a trip across the shift (the schedule builder's seam)", () => {
 
 describe("day-relative words and reminder offsets at the boundaries", () => {
   it("formatRelativeDay reads the shop's calendar, not UTC's", () => {
-    // Jul 18 23:00 New York (Jul 19 03:00Z), read the same evening at 18:00
-    // local (Jul 18 22:00Z): "today" in the shop's zone even though the boat's
-    // UTC date is tomorrow relative to the reader's UTC date.
+    // The boat is tomorrow in UTC, but today in New York for both instants.
     const boat = new Date("2026-07-19T03:00:00.000Z");
     const readAt = new Date("2026-07-18T22:00:00.000Z"); // 18:00 Jul 18 local
     expect(formatRelativeDay(boat, readAt, "en-US", "America/New_York")).toBe("today");
@@ -379,18 +362,14 @@ describe("day-relative words and reminder offsets at the boundaries", () => {
   });
 
   it("formatRelativeDay counts calendar days, not 24-hour blocks, across the shift", () => {
-    // Sat Mar 7 09:00 EST → Sat Mar 14 09:00 EDT is 167 elapsed hours; a
-    // millisecond division would floor it to 6 days. It is 7 calendar days.
+    // Seven local calendar days span 167 elapsed hours over spring forward.
     const now = wallTimeToUtc(wall(2026, 3, 7, 9, 0), "America/New_York");
     const nextWeek = wallTimeToUtc(wall(2026, 3, 14, 9, 0), "America/New_York");
     expect(formatRelativeDay(nextWeek, now, "en-US", "America/New_York")).toBe("in 7 days");
   });
 
   it("dueReminder's 24h bucket still opens the evening before across spring forward", () => {
-    // Boat: Sun Mar 8 09:00 EDT (13:00Z). T-24h = Sat 13:00Z = 08:00 EST —
-    // only 23 wall-clock hours before departure. The night-before scan (Sat
-    // evening) is inside the bucket either way; pin that the cadence's
-    // absolute-time contract holds and nothing fires after departure.
+    // The 24-hour reminder window is elapsed-time based across the spring shift.
     const startsAt = wallTimeToUtc(wall(2026, 3, 8, 9, 0), "America/New_York");
     const saturdayEvening = wallTimeToUtc(wall(2026, 3, 7, 19, 0), "America/New_York");
     expect(dueReminder({ startsAt, now: saturdayEvening, sentKinds: new Set() })?.kind).toBe(
@@ -407,8 +386,7 @@ describe("day-relative words and reminder offsets at the boundaries", () => {
   });
 
   it("a date-only expiry in a far-east zone expires on the shop's calendar, not UTC's", () => {
-    // A cert that expires 2026-07-18: at 2026-07-18T13:00Z it is already Jul
-    // 19 in Auckland (expired) but still Jul 18 in Honolulu (valid).
+    // The same instant is July 19 in Auckland and July 18 in Honolulu.
     const instant = new Date("2026-07-18T13:00:00.000Z");
     expect(calendarDateInTimezone(instant, "Pacific/Auckland")).toBe("2026-07-19");
     expect(calendarDateInTimezone(instant, "Pacific/Honolulu")).toBe("2026-07-18");
