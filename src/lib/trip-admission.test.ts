@@ -284,30 +284,6 @@ describe("decideTripAdmission — a course that gets them there first", () => {
       },
     });
   });
-
-  it.each(["unknown_level", "", undefined])(
-    "does not let a malformed in-training level clear the requirement (%s)",
-    (level) => {
-      expect(
-        decideTripAdmission({
-          requirement: advancedTrip,
-          siteRequirement: null,
-          evidence: evidence({
-            certifications: [certification({ level: "open_water" })],
-            levelsInTraining: [level as CertificationLevel],
-          }),
-        }),
-      ).toEqual({
-        admitted: false,
-        refusal: {
-          requiredLevel: "advanced_open_water",
-          missingSpecialties: [],
-          nitroxRequired: false,
-          heldLevel: "open_water",
-        },
-      });
-    },
-  );
 });
 
 describe("decideTripAdmission — the ladder", () => {

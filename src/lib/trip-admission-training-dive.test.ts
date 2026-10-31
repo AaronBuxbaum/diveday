@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Certification, TripRequirement } from "@/db/schema";
 import {
+  type CertificationLevel,
   type CertRequirementSource,
   calculateReadiness,
   type SiteCertRequirement,
@@ -115,4 +116,28 @@ describe("decideTripAdmission — a course seat a training mark could name (issu
       }).admitted,
     ).toBe(true);
   });
+
+  it.each(["unknown_level", "", undefined])(
+    "does not let a malformed in-training level clear the requirement (%s)",
+    (level) => {
+      expect(
+        decideTripAdmission({
+          requirement: advancedTrip,
+          siteRequirement: null,
+          evidence: evidence({
+            certifications: [certification({ level: "open_water" })],
+            levelsInTraining: [level as CertificationLevel],
+          }),
+        }),
+      ).toEqual({
+        admitted: false,
+        refusal: {
+          requiredLevel: "advanced_open_water",
+          missingSpecialties: [],
+          nitroxRequired: false,
+          heldLevel: "open_water",
+        },
+      });
+    },
+  );
 });
