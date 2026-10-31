@@ -275,6 +275,7 @@ async function listLatestCrewRollCalls(db: AppDb, shopId: string, tripId: string
       occurredAt: event.occurredAt,
       recordedByName: recorder.fullName,
       note: event.note,
+      eventId: event.id,
     });
   }
   return latest;
@@ -309,6 +310,7 @@ async function listLatestRollCallByBooking(
       occurredAt: Date;
       recordedByName: string;
       note: string | null;
+      eventId: string;
     }
   >();
   // Rows are newest-first, so the first row per booking wins. A latest `cleared`
@@ -324,6 +326,7 @@ async function listLatestRollCallByBooking(
       occurredAt: event.occurredAt,
       recordedByName: recorder.fullName,
       note: event.note,
+      eventId: event.id,
     });
   }
   return latest;
