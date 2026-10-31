@@ -2,6 +2,7 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
+import { prepareLinePreservingSource } from "./line-preserving-source.mjs";
 import { bankCounts, ratchetFlags, readCounts } from "./ratchet.mjs";
 
 /**
@@ -182,40 +183,17 @@ export const paletteClassPattern = new RegExp(
   "g",
 );
 
-/** Strips comments so a documented hex value never reads as a violation. */
-function stripComments(source) {
-  return source
-    .replace(/\/\*[\s\S]*?\*\//g, (match) => match.replace(/[^\n]/g, " "))
-    .replace(/(^|[^:])\/\/[^\n]*/g, (match, lead) => lead + " ".repeat(match.length - lead.length));
-}
-
 /** Every violation in one file's source, as `{ line, text }`. */
 export function findTokenViolations(source) {
-  const stripped = stripComments(source);
-  const lineStarts = [];
-  let offset = 0;
-  for (const line of stripped.split("\n")) {
-    lineStarts.push(offset);
-    offset += line.length + 1;
-  }
-  const lineAt = (index) => {
-    let low = 0;
-    let high = lineStarts.length - 1;
-    while (low < high) {
-      const mid = Math.ceil((low + high) / 2);
-      if (lineStarts[mid] <= index) low = mid;
-      else high = mid - 1;
-    }
-    return low + 1;
-  };
+  const { text: stripped, lineAt } = prepareLinePreservingSource(source);
 
   const found = [];
   for (const match of stripped.matchAll(hexColorPattern)) {
     if (isIssueReference(stripped, match.index, match[0])) continue;
-    found.push({ line: lineAt(match.index), text: `raw hex ${match[0]}` });
+    found.push({ line: lineAt(match.index) + 1, text: `raw hex ${match[0]}` });
   }
   for (const match of stripped.matchAll(paletteClassPattern)) {
-    found.push({ line: lineAt(match.index), text: `palette-scale class ${match[1]}` });
+    found.push({ line: lineAt(match.index) + 1, text: `palette-scale class ${match[1]}` });
   }
   return found.sort((a, b) => a.line - b.line);
 }
@@ -244,11 +222,11 @@ export function definedColorTokens(css) {
 
 /** Every semantic color utility in `source` whose token is not in `tokens`, as `{ line, text }`. */
 export function findUndefinedColorClasses(source, tokens) {
-  const stripped = stripComments(source);
+  const { text: stripped, lineAt } = prepareLinePreservingSource(source);
   const found = [];
   for (const match of stripped.matchAll(semanticClassPattern)) {
     if (tokens.has(match[1])) continue;
-    const line = stripped.slice(0, match.index + 1).split("\n").length;
+    const line = lineAt(match.index + 1) + 1;
     found.push({ line, text: `undefined color token ${match[1]}` });
   }
   return found;
