@@ -284,12 +284,17 @@
   thing as an **Imported certification**: a CSV a shop uploaded out of its own prior system is
   materially more trustworthy than a stranger's typing, and the two provenances are separate columns
   so nothing can blur them. Turning one into real evidence takes a **Card sighting**, below. A claim
-  never displaces a card the shop already holds — if the person has any live card that is **not
-  itself a still-unsighted self-declaration**, nothing is written at all. "Still unsighted" is
-  `self_declared_at IS NOT NULL AND status = 'pending'`, and the second half is load-bearing: the
-  stamp stays forever after a sighting, so a rule phrased as "not self-declared" would read a
-  staff-verified card as displaceable and let an anonymous post re-grade it
+  For anonymous list payloads, `recordSelfDeclaredCards` applies anti-displacement: it writes no
+  claim when the person has any live card the shop holds that is **not itself a still-unsighted
+  self-declaration**. "Still unsighted" is `self_declared_at IS NOT NULL AND status = 'pending'`,
+  and the second half is load-bearing: the stamp stays forever after a sighting, so a rule phrased
+  as "not self-declared" would treat a staff-verified card as displaceable and let an anonymous
+  post re-grade it
   ([20260814-self-declared-cards](../../architecture/decisions/20260814-self-declared-cards.md)).
+  The `/ready/[token]` card entry uses `createCertification` separately: it adds its own pending
+  card row and refuses a live duplicate shop/agency/identifier, but does not run the list writer's
+  anti-displacement check. The capability binds that write to the booked diver, and the `pending`
+  status still requires staff review before the card clears readiness.
 - **Declared uncertified** — a person's *"I'm not certified yet"* answer from an anonymous
   list-action payload or the booked diver's capability-bound `/ready/[token]` form: Discover Scuba
   and Try Scuba customers, snorkelers, the non-diving half of a couple,
