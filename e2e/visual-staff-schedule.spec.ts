@@ -479,7 +479,7 @@ for (const scheme of ["light", "dark"] as const) {
        * **Both widths show the panel** as of issue #1309. This used to force
        * the phone viewport before opening, because the board's two
        * compositions — the vertical day stream below `xl`, the week grid at and
-       * above it — keyed their panels separately (`move:` against `w:move:`),
+       * above it — keyed their panels separately (`move:` against a `w:move:` twin),
        * so whichever was open closed the moment `capture()` resized through the
        * other and the 1280 sibling was a duplicate of the plain week grid: two
        * baseline names for one image, and a reviewer triaging the same board

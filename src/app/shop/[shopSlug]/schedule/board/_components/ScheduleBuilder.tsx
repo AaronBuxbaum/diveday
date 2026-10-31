@@ -503,14 +503,8 @@ function CopyPanel({
  * on the title. This surface is deliberately shallow.
  */
 
-/**
- * **Two add keys, not one prefix.** The header's panel is `add:top` and a
- * day's is `w:add:<dateIso>`. One prefix covered both while the day stream
- * existed, because its own per-day keys were `add:<dateIso>`; deleting it
- * (#1923) left `startsWith("add:")` matching only the header's, so a day's
- * panel opened onto selects that never filled for the rest of the visit.
- */
-const isAddKey = (key: string | null) => key === "add:top" || (key?.startsWith("w:add:") ?? false);
+/** The header's add panel is the only add key: a day's "+ Add" navigates to the standalone form. */
+const isAddKey = (key: string | null) => key === "add:top";
 
 /** Everything `ScheduleBuilder` draws, assembled once by its caller and handed over as one object. */
 export type ScheduleBuilderContext = {
@@ -621,9 +615,8 @@ export function ScheduleBuilder({ context }: { context: ScheduleBuilderContext }
   };
 
   // The week grid's own disclosures, read back out of the one `open` key.
-  // Everything the grid opens is prefixed `w:` so a control there hands focus
-  // back to itself rather than to its identically-keyed twin in the stream,
-  // which is `display:none` at this width and cannot take focus at all.
+  // Keys are `<kind>:<tripId>` (`menu`, `move`, `copy`, `remove`), so a control
+  // in the grid hands focus back to its own menu key.
   // **Spans as well as cells.** A multi-day course is drawn once, as a bar
   // across the days it owns, *instead of* the entries for those days — so if
   // the bar were left out of this lookup the desktop board would be the one
@@ -634,12 +627,6 @@ export function ScheduleBuilder({ context }: { context: ScheduleBuilderContext }
   /**
    * **The panel a disclosure opens, resolved once.** It renders under the row
    * that opened it (`WeekBoard`'s `panel`), never at the foot of the week.
-   *
-   * The `w:` prefix on the key is what is left of the two compositions this
-   * board used to have (#1923). It is now redundant — there is one "⋯" button
-   * per departure and it is always the week's — but it stays on the key rather
-   * than being stripped, because it is also the focus-return address and
-   * rewriting every key to drop two characters buys nothing.
    *
    * **Spans as well as cells.** A multi-day course is drawn once as a bar
    * across the days it owns, *instead of* the entries for those days, so a
@@ -654,11 +641,11 @@ export function ScheduleBuilder({ context }: { context: ScheduleBuilderContext }
   } | null => {
     if (!open) return null;
     for (const kind of ["move", "copy", "remove"] as const) {
-      const prefix = `w:${kind}:`;
+      const prefix = `${kind}:`;
       if (!open.startsWith(prefix)) continue;
       const tripId = open.slice(prefix.length);
       const entry = weekDepartures.find((candidate) => candidate.tripId === tripId);
-      if (entry) return { kind, trip: panelTripOf(entry), closeKey: `w:menu:${tripId}` };
+      if (entry) return { kind, trip: panelTripOf(entry), closeKey: `menu:${tripId}` };
     }
     return null;
   })();
@@ -670,10 +657,10 @@ export function ScheduleBuilder({ context }: { context: ScheduleBuilderContext }
   // and the list closes itself (outside tap, Escape) through
   // `useMenuDismissal` in `WeekBoard`. Stable, because that hook lists it.
   const chooseRowAction = useCallback((kind: "move" | "copy" | "remove", tripId: string) => {
-    setOpen(`w:${kind}:${tripId}`);
+    setOpen(`${kind}:${tripId}`);
   }, []);
   const closeRowMenu = useCallback(() => {
-    setOpen((current) => (current?.startsWith("w:menu:") ? null : current));
+    setOpen((current) => (current?.startsWith("menu:") ? null : current));
   }, []);
 
   // The add panel's selects, fetched the first time any add panel opens and

@@ -158,8 +158,8 @@ const RETRY_QUEUE_MAX_ATTEMPTS = dailyPassesWithin(RETRY_WINDOW_MS);
  * a fortnight is roughly one person's holiday, which is the real unit here.
  *
  * The pass that reaches the bound is the row's last, and it writes the row off
- * the way every other finished write does: payload and all four handles
- * cleared. Why that is the right end for a row nothing will offer again is
+ * the way every other finished write does: payload and all six auxiliary
+ * columns cleared. Why that is the right end for a row nothing will offer again is
  * argued where it happens, at the park in `drainNotificationRetries` below.
  *
  * Counted in `recovery_attempts`, its own column since issue #1719. It used to
@@ -942,8 +942,8 @@ export type NotificationRetrySummary = {
  * `queued` is the ordinary arm. The second is the one issue #1340 added: a row
  * parked as `sealed_payload_unreadable` is *waiting for a restored key*, not
  * finished, and until this predicate existed nothing anywhere moved it back.
- * The payload and the four handles that branch deliberately keeps sat there
- * for good, and its written promise — "a restored key can still drain it" —
+ * The payload and handles that branch keeps sat there with no path back, and
+ * its written promise — "a restored key can still drain it" —
  * was true of no code path in this file.
  *
  * One error code and nothing else, because every other `failed` row has
@@ -1539,10 +1539,8 @@ export async function drainNotificationRetries(
           // **Finished, so it drops its handles like the other finished
           // writes.** There is nothing here to restore — the payload is
           // already gone, which is this branch's own condition — and nothing
-          // prunes this table, so a row that kept a recipient would keep it
-          // for good. It did until a `security-reviewer` pass read the four
-          // terminal writes against the schema comment claiming all of them
-          // cleared (issue #1298).
+          // prunes a finished row only once its payload is null, so a row that
+          // kept a recipient would keep it.
           recipientEmail: null,
           subjectEmail: null,
           subjectPhone: null,
@@ -1583,12 +1581,9 @@ export async function drainNotificationRetries(
     // increments it, so a row leaving here at or past it is never claimed
     // again by anything. Past that point the payload buys no recovery — no
     // code path would ever open it — and what it costs is a rendered outbound
-    // message, a name and an address kept for good in a table nothing prunes
-    // (`notification_send_queue` is deliberately absent from `RETENTION_DAYS`,
-    // src/lib/retention.ts). That is the same thing the `missing_payload`
-    // branch above refuses, and H-02's retention promise refuses it here too
-    // (`security-reviewer`). An earlier version of this branch parked past the
-    // bound holding all five columns forever.
+    // message, a name and an address, held with no end date. That is the same
+    // thing the `missing_payload` branch above refuses, and H-02's retention
+    // promise refuses it here too (`security-reviewer`).
     //
     // `next_attempt_at` moves forward with the park. Left in the past the row
     // would be due on every invocation rather than once a day, and two

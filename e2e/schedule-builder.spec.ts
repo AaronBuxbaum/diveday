@@ -763,7 +763,7 @@ test.describe("schedule builder", () => {
    * change what sails, and at desktop the only door to them is a week cell's
    * "⋯" — the stream's is `display:none` and out of the accessibility tree.
    * Covered here because the functional fleet drives 1279, so no other spec
-   * in this suite ever exercises the `w:`-keyed panels.
+   * in this suite ever exercises the week grid's own panels.
    */
   test("staff move and remove a departure from the week, not only from the stream", async ({
     page,
