@@ -11,9 +11,10 @@
  *   node scripts/cost-report.mjs --json
  *   node scripts/cost-report.mjs --markdown
  */
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { join } from "node:path";
 import process from "node:process";
+import { pathToFileURL } from "node:url";
 import { parseDotenv } from "./dotenv.mjs";
 
 const ROOT = process.cwd();
@@ -286,6 +287,6 @@ function main() {
   }
 }
 
-if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/.*\/([^/]+)$/, "$1"))) {
+if (process.argv[1] && pathToFileURL(realpathSync(process.argv[1])).href === import.meta.url) {
   main();
 }
