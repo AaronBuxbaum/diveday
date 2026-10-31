@@ -5,7 +5,6 @@ import { buttonClass } from "@/components/ui/button";
 import { CompactDisclosureRow } from "@/components/ui/disclosure";
 import { controlClass, DateField, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
-import { StatusInView } from "@/components/ui/StatusInView";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { Role } from "@/lib/authz";
 import { rolesMissingCredential } from "@/lib/crew-roles";
@@ -89,12 +88,7 @@ export function StaffCardCredentials({
   );
   return (
     <div className="mt-4">
-      {status ? (
-        <>
-          <FormStatus tone={status.tone}>{status.text}</FormStatus>
-          {status.tone !== "danger" ? <StatusInView /> : null}
-        </>
-      ) : null}
+      {status ? <FormStatus tone={status.tone}>{status.text}</FormStatus> : null}
       {atRest.length > 0 ? (
         <ul
           aria-label={t("staffing.credentials.heading")}
