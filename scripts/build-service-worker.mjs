@@ -20,12 +20,26 @@ import process from "node:process";
  *
  * Run before every build (`pnpm dev`, `pnpm build`, `pnpm e2e:build`); the
  * output is generated and gitignored.
+ *
+ * **Two passes.** The first, before `next build`, bundles the worker with no
+ * asset list (`__OFFLINE_SHELL_ASSETS__` is `null`: dev, where chunk names are
+ * not immutable and nothing is precached but the shell). The second, `--assets`
+ * after `next build`, rebundles with the offline shell's asset list read from
+ * that build's output (`scripts/offline-shell-assets.mjs`) and throws if the
+ * list is empty or lacks the shell route's chunks. Passing `--assets` without a
+ * build fails the build; it never reads a stale `.next` because the pipeline
+ * runs it only straight after `next build`.
  */
 import { build } from "esbuild";
+import { collectOfflineShellAssets } from "./offline-shell-assets.mjs";
 
 const ROOT = process.cwd();
 const ENTRY = path.join(ROOT, "src/worker/manifest-sw.ts");
 const OUT = path.join(ROOT, "public/manifest-sw.js");
+
+const withAssets = process.argv.includes("--assets");
+const assets = withAssets ? collectOfflineShellAssets(path.join(ROOT, ".next")) : null;
+if (assets && assets.length === 0) throw new Error("offline shell assets: the list is empty");
 
 const result = await build({
   entryPoints: [ENTRY],
@@ -41,6 +55,8 @@ const result = await build({
   sourcemap: false,
   legalComments: "none",
   define: {
+    // The explicit, build-generated precache list; `null` outside a production build.
+    __OFFLINE_SHELL_ASSETS__: JSON.stringify(assets),
     // `src/lib/clock.ts` reads these. In a worker there is no `process`, and
     // the honest value is "unset": the clock override is an e2e-harness
     // concern and a worker must always use the live clock, exactly as the
@@ -64,4 +80,7 @@ await writeFile(
   "utf8",
 );
 
-console.log(`service worker: built ${path.relative(ROOT, OUT)}`);
+console.log(
+  `service worker: built ${path.relative(ROOT, OUT)}` +
+    (assets ? ` with ${assets.length} offline shell assets` : ""),
+);

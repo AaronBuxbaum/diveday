@@ -23,5 +23,10 @@ const result = runBounded("pnpm", ["exec", "next", "build"], {
   },
 });
 if (result.status !== 0) process.exit(result.status ?? 1);
+const swAssets = runBounded("pnpm", ["build:sw:assets"], {
+  stdio: "inherit",
+  timeoutMs: SUBPROCESS_TIMEOUTS.build,
+});
+if (swAssets.status !== 0) process.exit(swAssets.status ?? 1);
 writeBuildEvidence(root, fingerprint);
 console.log("e2e: production build input fingerprint recorded.");

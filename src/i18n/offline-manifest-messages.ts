@@ -55,14 +55,13 @@ import { DEFAULT_DIVER_LOCALE, type DiverLocale, toDiverLocale } from "./setting
  *
  * **Both locales stay statically imported, and that is not an oversight.**
  * Splitting them behind a dynamic import would halve this again, and it is the
- * wrong trade on this exact surface: the service worker discovers assets by
- * regexing the shell HTML plus one level of lazy chunks
- * (`lazyChunkEntries`, explicitly best-effort over minified JavaScript), and
- * `cacheOfflineShell` is all-or-nothing. A locale chunk it failed to find means
- * a Spanish divemaster reloading at the dock lands in the error boundary
- * instead of the roll call. Fewer bytes is worth having here — 107 KB less is
- * directly fewer failed saves on a marina connection — but not at the cost of
- * the offline guarantee the page exists for.
+ * wrong trade on this exact surface: the service worker precaches the route's
+ * chunks from an explicit build-generated list (`scripts/offline-shell-assets.mjs`),
+ * and a locale chunk loaded lazily is only as safe as that list is complete.
+ * Fewer bytes is worth having here -- 107 KB less is directly fewer failed
+ * saves on a marina connection -- but not at the cost of the offline guarantee
+ * the page exists for: a Spanish divemaster reloading at the dock must not land
+ * in the error boundary instead of the roll call.
  */
 const OFFLINE_MANIFEST_MESSAGES = {
   "en-US": { manifest: enManifest, shared: enShared },
