@@ -262,15 +262,6 @@ export async function setShopPassThroughFee(
 }
 
 /**
- * Sets the shop's whole dock-day rhythm — the arrival call and the five minute
- * amounts the rest of the day is laid out from (src/lib/diver-planning.ts).
- *
- * All six together, never a field at a time: the beats before departure are
- * clamped against the arrival call, so saving a briefing without the call it
- * has to fit inside is how a shop ends up with a day that reads back
- * differently from the one they typed.
- */
-/**
  * The shop's own emergency reference — the numbers a crew dials during, carried
  * into the offline manifest snapshot (issue #688). Replaced wholesale: it is one
  * card the shop retypes, not a set of independently-edited fields.
@@ -458,6 +449,15 @@ export async function markShopUnitsConfirmed(db: AppDb, shopId: string, now = no
   return shop ?? null;
 }
 
+/**
+ * Sets the shop's whole dock-day rhythm — the arrival call and the five minute
+ * amounts the rest of the day is laid out from (src/lib/diver-planning.ts).
+ *
+ * All six together, never a field at a time: the beats before departure are
+ * clamped against the arrival call, so saving a briefing without the call it
+ * has to fit inside is how a shop ends up with a day that reads back
+ * differently from the one they typed.
+ */
 export async function setShopDockDayRhythm(db: AppDb, shopId: string, rhythm: DockDayRhythm) {
   const [shop] = await db.update(shops).set(rhythm).where(eq(shops.id, shopId)).returning();
   return shop ?? null;
@@ -696,11 +696,13 @@ export async function setShopContact(
 }
 
 /**
- * Sets the shop's physical business address, published in structured data so
- * search engines can place the shop as a real venue. Each field clears
- * independently on an empty string, so a shop can walk an address back to
- * nothing (or fill in only what it knows, like locality and country) rather
- * than being forced to supply all five at once.
+ * Replaces the shop's physical business address as a whole, published in
+ * structured data so search engines can place the shop as a real venue.
+ *
+ * This is a full replacement, not a patch: every field is written, and an
+ * omitted field (or latitude/longitude) is stored as null. Text fields are
+ * trimmed, and a blank one becomes null, so an empty address clears the row.
+ * Callers must pass the complete address they mean to keep.
  */
 export async function setShopAddress(
   db: AppDb,

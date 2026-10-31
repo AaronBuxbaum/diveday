@@ -53,9 +53,11 @@ const contactSchema = z.object({
 });
 
 const addressSchema = z.object({
-  // Every field is optional and clears independently on empty — a geocoded
+  // Every text field is required in the form but may be empty: a geocoded
   // place may carry no postcode, and an all-empty submission is the card's
-  // Remove control walking the whole address back to nothing.
+  // Remove control walking the whole address back to nothing. The write is a
+  // whole-address replacement (setShopAddress), so the parsed fields are the
+  // complete address.
   addressStreet: z.string().trim().max(200),
   addressLocality: z.string().trim().max(120),
   addressRegion: z.string().trim().max(120),
@@ -288,8 +290,9 @@ export async function resendContactConfirmationAction() {
 }
 
 /**
- * The shop's physical business address. Published in structured data so search
- * engines can place the shop as a real venue.
+ * Replaces the shop's physical business address with the complete address in
+ * the form. Published in structured data so search engines can place the shop
+ * as a real venue.
  *
  * Called by the address card's *pick*, not by a Save button — the card is one
  * search box and choosing a place is the whole of the intent (ADR
