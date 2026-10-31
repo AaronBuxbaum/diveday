@@ -421,14 +421,11 @@ export async function listSiteReviews(
 ): Promise<SiteReview[]> {
   if (siteIds.length === 0) return [];
   const ids = [...new Set(siteIds)];
-  const wentThere = or(
-    inArray(trips.diveSiteId, ids),
-    exists(
-      db
-        .select({ one: tripDives.id })
-        .from(tripDives)
-        .where(and(eq(tripDives.tripId, trips.id), inArray(tripDives.diveSiteId, ids))),
-    ),
+  const wentThere = exists(
+    db
+      .select({ one: tripDives.id })
+      .from(tripDives)
+      .where(and(eq(tripDives.tripId, trips.id), inArray(tripDives.diveSiteId, ids))),
   );
   const rows = await db
     .select({

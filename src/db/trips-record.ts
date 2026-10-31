@@ -67,12 +67,12 @@ import {
   recordTripChangeEvent,
   tripSiteRunSnapshot,
 } from "./trip-change-events";
+import { tripPrimarySiteId } from "./trip-primary-site";
 import { rememberUnnotifiedTripStart } from "./trip-reschedule-marker";
 import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";
 import {
   normalizedDiveCount,
   normalizedDiveDrafts,
-  primaryDiveSiteId,
   replaceTripDives,
   type TripDiveDraft,
   type TripScheduleDayInput,
@@ -181,7 +181,7 @@ export async function getTripWithBooked(db: DbExecutor, shopId: string, tripId: 
     })
     .from(trips)
     .leftJoin(courses, eq(courses.id, trips.courseId))
-    .leftJoin(diveSites, eq(diveSites.id, trips.diveSiteId))
+    .leftJoin(diveSites, eq(diveSites.id, tripPrimarySiteId))
     .leftJoin(bookings, and(eq(bookings.tripId, trips.id), seatHeld))
     .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
     .groupBy(trips.id, courses.id, diveSites.id)
@@ -457,8 +457,7 @@ export type TripSitePeek = {
 
 /**
  * Every distinct dive site a trip touches, diver-facing preview shape only —
- * the trip's own single `diveSiteId` plus any per-dive sites recorded on
- * `tripDives` for a multi-dive trip, deduped by name (primary site first).
+ * the site of every ordered dive in `tripDives`, deduped by name (dive order).
  * Shared by every diver-facing page that shows "what you'll explore" (the
  * waiver success page and `/ready`), so the two surfaces can't drift apart
  * on what counts as the trip's site list.
@@ -476,21 +475,16 @@ export async function getTripDiveSitesPeek(
     maxDepthMeters: diveSites.maxDepthMeters,
     imageUrls: diveSites.imageUrls,
   };
-  const primarySite = await db
-    .select(peekColumns)
-    .from(trips)
-    .innerJoin(diveSites, eq(diveSites.id, trips.diveSiteId))
-    .where(and(eq(trips.id, tripId), liveTrip()))
-    .limit(1);
-  const multiDiveSites = await db
+  const diveRows = await db
     .select(peekColumns)
     .from(tripDives)
     .innerJoin(diveSites, eq(diveSites.id, tripDives.diveSiteId))
-    .where(eq(tripDives.tripId, tripId));
+    .where(eq(tripDives.tripId, tripId))
+    .orderBy(asc(tripDives.diveNumber));
 
   const seenNames = new Set<string>();
   const sites: TripSitePeek[] = [];
-  for (const site of [...primarySite, ...multiDiveSites]) {
+  for (const site of diveRows) {
     if (!seenNames.has(site.name)) {
       seenNames.add(site.name);
       sites.push(site);
@@ -518,7 +512,6 @@ export type TripPatch = {
   capacity: number;
   plannedDives: number;
   dives?: TripDiveDraft[];
-  diveSiteId?: string | null;
   priceCents?: number | null;
   depositCents?: number | null;
   cancellationWindowHours?: number | null;
@@ -716,7 +709,6 @@ async function updateTripRecord(
         status: trips.status,
         // Read so a changed return time files the activity line too (#2313).
         endsAt: trips.endsAt,
-        diveSiteId: trips.diveSiteId,
         meetingPointLabel: trips.meetingPointLabel,
         meetingPointAddress: trips.meetingPointAddress,
         arrivalLandmark: trips.arrivalLandmark,
@@ -772,8 +764,7 @@ async function updateTripRecord(
     }
 
     const drafts = patch.dives ? normalizedDiveDrafts(plannedDives, patch.dives) : undefined;
-    const sitesToValidate = drafts ?? (patch.diveSiteId ? [{ diveSiteId: patch.diveSiteId }] : []);
-    if (!(await validateDiveSites(tx, shopId, sitesToValidate))) {
+    if (drafts && !(await validateDiveSites(tx, shopId, drafts))) {
       return { ok: false, reason: "invalid" };
     }
     // The same tenant rule creating a departure applies: a hull named on an
@@ -837,17 +828,8 @@ async function updateTripRecord(
     // A patch with no `dives` leaves the plan exactly as it was, so its "after"
     // is its "before" — the dive rows are only replaced when `drafts` exists.
     const afterSites = drafts ? tripSiteList(drafts) : beforeSites;
-    const nextDiveSiteId =
-      patch.diveSiteId === undefined
-        ? existing.diveSiteId
-        : (patch.diveSiteId ?? (drafts ? primaryDiveSiteId(drafts) : null));
     const startMoved = patch.startsAt.getTime() !== existing.startsAt.getTime();
-    const revisionMoved =
-      startMoved ||
-      tripSiteListChanged(beforeSites, afterSites) ||
-      // The denormalized pointer counts on its own: it is what the feed reads
-      // for `LOCATION` when the trip has no meeting point of its own.
-      nextDiveSiteId !== existing.diveSiteId;
+    const revisionMoved = startMoved || tripSiteListChanged(beforeSites, afterSites);
 
     const [trip] = await tx
       .update(trips)
@@ -917,9 +899,6 @@ async function updateTripRecord(
         ...(patch.wetsuitThicknessMm === undefined
           ? {}
           : { wetsuitThicknessMm: patch.wetsuitThicknessMm }),
-        ...(patch.diveSiteId === undefined
-          ? {}
-          : { diveSiteId: patch.diveSiteId ?? (drafts ? primaryDiveSiteId(drafts) : null) }),
       })
       .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
       .returning();

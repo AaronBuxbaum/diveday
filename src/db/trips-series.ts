@@ -399,10 +399,7 @@ export async function createTripSeries(db: AppDb, input: NewTripSeries) {
     if (!ok) return null;
     const plannedDives = normalizedDiveCount(input.plannedDives, course !== null);
     if (!plannedDives) return null;
-    const drafts = normalizedDiveDrafts(
-      plannedDives,
-      input.dives ?? (input.diveSiteId ? [{ diveSiteId: input.diveSiteId }] : undefined),
-    );
+    const drafts = normalizedDiveDrafts(plannedDives, input.dives);
     if (!(await validateDiveSites(tx, input.shopId, drafts))) return null;
 
     const [series] = await tx
@@ -1428,7 +1425,6 @@ export async function applyDetailsToFutureSeries(
     const siblings = await tx
       .select({
         id: trips.id,
-        diveSiteId: trips.diveSiteId,
         diverCapacity: trips.diverCapacity,
         certifiedPassengers: boats.certifiedPassengers,
         booked: count(bookings.id),
@@ -1520,9 +1516,10 @@ export async function applyDetailsToFutureSeries(
         skipped += 1;
         continue;
       }
-      const siteListMoved =
-        tripSiteListChanged(tripSiteList(divesByTrip.get(sibling.id) ?? []), sourceSites) ||
-        source.diveSiteId !== sibling.diveSiteId;
+      const siteListMoved = tripSiteListChanged(
+        tripSiteList(divesByTrip.get(sibling.id) ?? []),
+        sourceSites,
+      );
       await tx
         .update(trips)
         .set({
@@ -1537,7 +1534,6 @@ export async function applyDetailsToFutureSeries(
           priceCents: source.priceCents,
           depositCents: source.depositCents,
           cancellationWindowHours: source.cancellationWindowHours,
-          diveSiteId: source.diveSiteId,
         })
         .where(and(eq(trips.id, sibling.id), eq(trips.shopId, shopId)));
       await replaceTripDives(tx, sibling.id, drafts);

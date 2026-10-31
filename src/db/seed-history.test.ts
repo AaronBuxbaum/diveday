@@ -10,11 +10,13 @@ import {
   diveSites,
   rollCallEvents,
   tripAssignments,
+  tripDives,
   tripRequirements,
   trips as tripsTable,
 } from "./schema";
 import { resetDemoSchedule } from "./seed";
 import { DEMO_COMPLETED_TRIP_TITLE } from "./seed-more-trips";
+import { tripPrimarySiteId } from "./trip-primary-site";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).
@@ -78,12 +80,12 @@ describe("seeded history manifests", () => {
       .select({
         id: tripsTable.id,
         title: tripsTable.title,
-        siteId: tripsTable.diveSiteId,
+        siteId: tripPrimarySiteId,
         siteMaxDepth: diveSites.maxDepthMeters,
         siteGate: diveSites.minimumCertificationLevel,
       })
       .from(tripsTable)
-      .leftJoin(diveSites, eq(diveSites.id, tripsTable.diveSiteId))
+      .leftJoin(diveSites, eq(diveSites.id, tripPrimarySiteId))
       .where(and(eq(tripsTable.shopId, shop.id), eq(tripsTable.description, HISTORY_DESCRIPTION)));
     expect(history.length).toBeGreaterThan(0);
     expect(history.filter((trip) => /Duane|Bibb|Spiegel/.test(trip.title))).toEqual([]);
@@ -94,7 +96,9 @@ describe("seeded history manifests", () => {
       .from(rollCallEvents)
       .innerJoin(bookings, eq(bookings.id, rollCallEvents.bookingId))
       .innerJoin(tripsTable, eq(tripsTable.id, rollCallEvents.tripId))
-      .innerJoin(diveSites, eq(diveSites.id, tripsTable.diveSiteId))
+      // Every dive's site, not just the first: a deep second tank still refuses.
+      .innerJoin(tripDives, eq(tripDives.tripId, tripsTable.id))
+      .innerJoin(diveSites, eq(diveSites.id, tripDives.diveSiteId))
       .innerJoin(certifications, eq(certifications.personId, bookings.personId))
       .where(
         and(

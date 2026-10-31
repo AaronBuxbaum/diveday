@@ -241,8 +241,7 @@ export type DepartureSummary = {
    * station is a *rendering* of this row, and a second query at the page would
    * be a second answer about the same boat.
    *
-   * `siteName` is `trips.dive_site_id`'s name — the compatibility pointer to
-   * the first dive's site that readiness and the forecast already read — and
+   * `siteName` is the first dive's chosen site (`tripPrimarySiteId`) and
    * `boatName` is `boats.name` through `trips.boat_id`. All three are null for
    * a departure that has not been given one: a shop may price at the counter,
    * run a shore dive, or not own a hull.

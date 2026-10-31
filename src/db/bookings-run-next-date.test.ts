@@ -5,7 +5,7 @@ import { similarDepartures } from "@/lib/similar-departures";
 import { fileScopedShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
 import { createDiver } from "./divers";
-import { certifications, diveSites, trips } from "./schema";
+import { certifications, diveSites, tripDives } from "./schema";
 import { createTrip } from "./trips";
 import { createTripSeries } from "./trips-series";
 
@@ -80,7 +80,10 @@ describe("the run's next date is gated at the sale like a direct visit (issue #2
     );
     if (!full || !edited || !sibling) throw new Error("expected three dates");
     // One date of the run, edited on its own to the deep wreck.
-    await db.update(trips).set({ diveSiteId: site.id }).where(eq(trips.id, edited.id));
+    await db
+      .update(tripDives)
+      .set({ diveSiteId: site.id })
+      .where(and(eq(tripDives.tripId, edited.id), eq(tripDives.diveNumber, 1)));
 
     // The full Saturday offers the edited one as its run's next date.
     const offered = similarDepartures({
@@ -106,7 +109,7 @@ describe("the run's next date is gated at the sale like a direct visit (issue #2
     const direct = await createTrip(db, {
       shopId: shop.id,
       title: "Duane, one-off",
-      diveSiteId: site.id,
+      dives: [{ diveSiteId: site.id }],
       startsAt: new Date("2030-09-14T11:00:00.000Z"),
       endsAt: new Date("2030-09-14T15:00:00.000Z"),
       capacity: 12,

@@ -1958,7 +1958,7 @@ async function logPastSeasonsOfThisMonth(
       startsAt,
       endsAt: new Date(startsAt.getTime() + 4 * HOUR_MS),
       capacity: 8,
-      diveSiteId: site.id,
+      dives: [{ diveSiteId: site.id }],
     });
     if (!trip) return null;
     await db.insert(tripSightings).values(

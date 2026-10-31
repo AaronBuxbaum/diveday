@@ -10,6 +10,7 @@ import {
 import type { DbExecutor } from "./client";
 import { queryAll } from "./query-helpers";
 import { bookings, shops, trips } from "./schema";
+import { tripPrimarySiteId } from "./trip-primary-site";
 import { liveTrip, notRehearsal } from "./trips-live";
 import {
   liveBookingJoin,
@@ -70,7 +71,7 @@ export async function listThinBoats(
           capacity: trips.capacity,
           minimumBookings: trips.minimumBookings,
           minimumDecisionHours: trips.minimumDecisionHours,
-          diveSiteId: trips.diveSiteId,
+          diveSiteId: tripPrimarySiteId,
           courseId: trips.courseId,
           certifiedPassengers: tripBoatCertifiedPassengers(),
           boatCapacity: tripBoatCapacity(),

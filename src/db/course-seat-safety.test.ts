@@ -10,7 +10,6 @@ import {
   specialtyCertifications,
   tripDives,
   tripRequirements,
-  trips,
 } from "./schema";
 import { changeTripCrew } from "./trips-crew";
 
@@ -41,7 +40,6 @@ describe("an Advanced course seat on a Deep-gated site", () => {
         requiredSpecialties: ["deep"],
       })
       .where(and(eq(diveSites.id, site.id), eq(diveSites.shopId, ctx.shop.id)));
-    await ctx.db.update(trips).set({ diveSiteId: site.id }).where(eq(trips.id, ctx.course.tripId));
     await ctx.db
       .update(tripDives)
       .set({ diveSiteId: site.id })

@@ -36,6 +36,7 @@ import {
   trips,
   waiverRecords,
 } from "./schema";
+import { tripPrimarySiteId, tripVisitsSite } from "./trip-primary-site";
 import { livePerson, liveTrip, notRehearsal } from "./trips-live";
 
 /**
@@ -177,7 +178,7 @@ export async function pastDiversOfSite(
         // A diver's seat, on anything but an intro session (review F1).
         eq(bookings.participantType, "diver"),
         or(isNull(trips.courseId), eq(courses.isIntroCourse, false)),
-        eq(trips.diveSiteId, input.diveSiteId),
+        tripVisitsSite(input.diveSiteId),
         lt(trips.startsAt, sailedBefore),
         liveTrip(),
         notRehearsal(),
@@ -215,12 +216,12 @@ export async function listInviteSuggestions(
         .select({
           id: trips.id,
           startsAt: trips.startsAt,
-          diveSiteId: trips.diveSiteId,
+          diveSiteId: tripPrimarySiteId,
           courseId: trips.courseId,
           siteName: diveSites.name,
         })
         .from(trips)
-        .innerJoin(diveSites, eq(diveSites.id, trips.diveSiteId))
+        .innerJoin(diveSites, eq(diveSites.id, tripPrimarySiteId))
         .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip()))
         .limit(1),
     () =>
