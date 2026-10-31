@@ -22,9 +22,8 @@ type FactKey = "meetingPoint" | "arrivalGuidance" | "arrivalPhoto" | "conditions
 
 /**
  * The facts one event changed, each "{fact}: {new value}", or none. A part
- * whose value did not move is left out rather than restated (visual review
- * 2026-10-24, B21): the card had repeated the meeting point the page already
- * shows above it, unchanged.
+ * whose value did not move is left out rather than restated, because the page
+ * already shows it.
  */
 function changedFacts(
   event: TripChangeEvent,
@@ -75,19 +74,20 @@ function changedFacts(
   const was = valueText(before.conditionsSummary);
   if (summary === was) return [];
   // A cleared note is a change too: a diver who read "Strong current" is told
-  // it is gone, not left with the old warning (dive-domain review, B21).
+  // it is gone, not left with the old warning.
   if (!summary) return was ? [["conditions", t("trip.changeConditionsCleared")]] : [];
   return [["conditions", t("trip.changeConditionsWithSummary", { summary })]];
 }
 
 /**
  * **What changed**: the trip's facts that moved, each once with its newest
- * value, and when (visual review 2026-10-24, B21). One entry per fact, at its
- * newest change across every event, because a diver needs where the boat
- * leaves from now, not each step it took to get there. No self-description and no source chip,
- * but the muted line keeps the broad source word, shop or crew (ADR 20260904-reef-all-the-way-down,
- * Budget rule 5; glossary "Change ledger"): an office edit must never read as the crew's word from
- * the dock. When nothing changed, nothing renders. No private actor data is shown.
+ * value and when. One entry per fact, at its newest change across every event,
+ * because a diver needs where the boat leaves from now, not each step it took
+ * to get there. There is no source chip, but the muted line keeps the broad
+ * source word, shop or crew (ADR 20260904-reef-all-the-way-down, Budget rule 5;
+ * glossary "Change ledger"). An office edit must never read as the crew's word
+ * from the dock. When nothing changed, nothing renders. No private actor data
+ * is shown.
  */
 export function TripChangeLedger({
   events,
