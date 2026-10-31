@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { inMemoryRateLimitStore, RATE_LIMITS } from "./rate-limit";
-import { anonymousTextRecipient } from "./self-registration";
-import { selfRegistrationReleaseDelivery } from "./self-registration-delivery";
+import {
+  anonymousTextRecipient,
+  selfRegistrationReleaseDelivery,
+} from "./self-registration-delivery";
 
 const usShop = { id: "shop-us", addressCountry: "US", isDemo: false };
 const now = Date.UTC(2026, 9, 6, 12);
