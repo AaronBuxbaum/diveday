@@ -31,8 +31,8 @@ Each rule names what enforces it; the reasoning, the ADRs and the longer form of
 - **Back-office queues** sit with their object and render nothing when empty, never on Reports.
 - **A day not on the board**: `src/components/DateRequestForm.tsx` + `src/app/actions/inquiry.ts`,
   never the wait list.
-- **A dive-site briefing** is written in `SiteFields.tsx` and read in `TripDayPlan.tsx`, every
-  sentence off the site row.
+- **A dive-site briefing** is written in `SiteFields.tsx` and rendered by
+  `src/components/SiteBriefing.tsx` on site and trip pages, every sentence off the site row.
 - **Tokens and wrappers**: `src/app/globals.css`, `src/components/ui/`; readiness words in
   `src/i18n/readiness-labels.ts`; heading levels in `src/components/ui/typography.ts`.
 - **Paging**: `src/components/Pager.tsx` + `offsetPage`; a count shares the row query's exact scope.

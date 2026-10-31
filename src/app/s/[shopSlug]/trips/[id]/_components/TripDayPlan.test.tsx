@@ -2,11 +2,14 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { TripLookFor, TripRoutes, TripSiteNotes } from "@/components/SiteBriefing";
 import { diverTranslator } from "@/i18n/messages";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
-import { courseDayPlan, TripDayPlan, TripLookFor, TripSiteNotes } from "./TripDayPlan";
+import { courseDayPlan, TripDayPlan } from "./TripDayPlan";
 import type { DiveBriefing } from "./types";
+
+vi.mock("@/components/MapFrame", () => ({ MapFrame: () => null }));
 
 /**
  * The pitch, above the form: the run of dives and the faces the shop put on
@@ -807,5 +810,46 @@ describe("TripSiteNotes", () => {
     );
     // A canned fit sentence over a bare name is the page talking to fill space.
     expect(container).toBeEmptyDOMElement();
+  });
+});
+
+describe("shared site briefing beats", () => {
+  it("renders a site's drawn route beside its own authored notes", () => {
+    const diveSite = {
+      id: "site-1",
+      name: "French Reef",
+      fitTone: null,
+      fitNote: "A gentle mooring with a sand channel to follow back.",
+      divePlan: "Follow the north ridge and return along the sand.",
+      currentNote: null,
+      conservationNote: null,
+      marineLife: null,
+      marineLifeDescription: null,
+      landmarks: null,
+      forecastLatitude: 24.6,
+      forecastLongitude: -80.3,
+      routeZoom: 16,
+      routePoints: [
+        { x: 12, y: 20 },
+        { x: 84, y: 72 },
+      ],
+      routeLabel: "North reef ridge",
+      routeNote: "Return west with the current.",
+    };
+    const briefings = [briefing({ diveSite } as unknown as Partial<DiveBriefing>)];
+
+    render(
+      <>
+        <TripRoutes briefings={briefings} locale={DEFAULT_DIVER_LOCALE} />
+        <TripSiteNotes briefings={briefings} locale={DEFAULT_DIVER_LOCALE} />
+      </>,
+    );
+
+    expect(screen.getByRole("heading", { level: 2, name: "The route" })).toBeVisible();
+    expect(screen.getByRole("heading", { level: 2, name: "The site" })).toBeVisible();
+    expect(screen.getByText("North reef ridge")).toBeVisible();
+    expect(screen.getByText("Return west with the current.")).toBeVisible();
+    expect(screen.getByText("Follow the north ridge and return along the sand.")).toBeVisible();
+    expect(screen.getByRole("link", { name: "Open map ↗" })).toHaveAttribute("target", "_blank");
   });
 });

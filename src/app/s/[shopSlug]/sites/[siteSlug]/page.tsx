@@ -3,15 +3,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { cache } from "react";
-import {
-  TripLookFor,
-  TripRoutes,
-  TripSiteNotes,
-} from "@/app/s/[shopSlug]/trips/[id]/_components/TripDayPlan";
-import type { SiteBriefing } from "@/app/s/[shopSlug]/trips/[id]/_components/types";
 import { EmptyState } from "@/components/EmptyState";
 import { JsonLd } from "@/components/JsonLd";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
+import type { SiteBriefing } from "@/components/SiteBriefing";
+import { TripLookFor, TripRoutes, TripSiteNotes } from "@/components/SiteBriefing";
 import { StoredPhoto } from "@/components/StoredPhoto";
 import { buttonClass } from "@/components/ui/button";
 import { GroupLabel } from "@/components/ui/group-label";
