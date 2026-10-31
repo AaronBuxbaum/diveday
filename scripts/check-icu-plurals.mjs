@@ -213,15 +213,19 @@ export function findUninflectedCounts(bundle, { relative = "" } = {}) {
   let strings = 0;
   const seen = new Set();
 
-  // Two passes: the second needs to know whether a `…One` sibling exists for a
-  // `…Other` key, and JSON key order does not promise which comes first.
+  // Collect before checking so a `…Other` key sees its `…One` sibling even
+  // when JSON lists the two in the opposite order.
+  const stringsInBundle = [];
   const collect = (node, keyPath) => {
     if (node && typeof node === "object") {
       for (const [key, value] of Object.entries(node))
         collect(value, keyPath ? `${keyPath}.${key}` : key);
       return;
     }
-    if (typeof node === "string") seen.add(keyPath);
+    if (typeof node === "string") {
+      stringsInBundle.push({ keyPath, text: node });
+      seen.add(keyPath);
+    }
   };
   collect(bundle, "");
 
@@ -241,34 +245,25 @@ export function findUninflectedCounts(bundle, { relative = "" } = {}) {
     return pair !== null && seen.has(pair);
   };
 
-  const walk = (node, keyPath) => {
-    if (node && typeof node === "object") {
-      for (const [key, value] of Object.entries(node)) {
-        walk(value, keyPath ? `${keyPath}.${key}` : key);
-      }
-      return;
-    }
-    if (typeof node !== "string") return;
+  for (const { keyPath, text } of stringsInBundle) {
     strings += 1;
-    if (handBranched(keyPath)) return;
+    if (handBranched(keyPath)) continue;
     // A value that already reaches for ICU has made the decision, even if only
     // one of its several counts is wrapped — checking each count separately
     // would need a real ICU parse, and every message in this tree that carries
     // one plural carries them for all its counts.
-    if (/\{\s*[a-zA-Z]+\s*,\s*plural\s*,/.test(node)) return;
-    if (allowed.has(`${relative}:${keyPath}`)) return;
-    for (const match of node.matchAll(COUNT_THEN_PLURAL)) {
+    if (/\{\s*[a-zA-Z]+\s*,\s*plural\s*,/.test(text)) continue;
+    if (allowed.has(`${relative}:${keyPath}`)) continue;
+    for (const match of text.matchAll(COUNT_THEN_PLURAL)) {
       const [, first, second, word] = match;
       // The noun agrees with whichever number stands nearest it: in "3 of 8
       // divers" that is the second.
       const governing = second ?? first;
       if (!COUNT_NAMES.has(governing)) continue;
-      violations.push({ keyPath, text: node, placeholder: governing, word });
+      violations.push({ keyPath, text, placeholder: governing, word });
       break;
     }
-  };
-
-  walk(bundle, "");
+  }
   return { violations, strings };
 }
 
