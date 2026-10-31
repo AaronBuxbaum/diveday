@@ -1,4 +1,12 @@
 import { LogEntryPreview } from "@/components/LogEntryPreview";
+import {
+  fieldGuideCardsFor,
+  routeSitesFor,
+  siteNotePassagesFor,
+  TripLookFor,
+  TripRoutes,
+  TripSiteNotes,
+} from "@/components/SiteBriefing";
 import { StoredPhoto } from "@/components/StoredPhoto";
 import { LedgerGroup } from "@/components/ui/ledger";
 import type { PublicCrewMember } from "@/db/trips";
@@ -8,14 +16,6 @@ import { formatShortDate } from "@/lib/format";
 import { capturePhoto } from "@/lib/marine-life-tiles";
 
 import { TripCrewLine } from "./TripCrewLine";
-import {
-  fieldGuideCardsFor,
-  routeSitesFor,
-  siteNotePassagesFor,
-  TripLookFor,
-  TripRoutes,
-  TripSiteNotes,
-} from "./TripDayPlan";
 import type { DiveBriefing } from "./types";
 
 /**
