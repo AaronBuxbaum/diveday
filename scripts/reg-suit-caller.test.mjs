@@ -47,7 +47,7 @@ describe("reg-suit consumer workflow", () => {
     );
     expect(publisher).not.toContain("reg-suit-publish.yml@refs/heads/main");
     expect(publisher).toContain(
-      "uses: AaronBuxbaum/diveday/.github/workflows/reg-suit-publish.yml@4283106bb9a83e8e7ecbb154826e0cdc3f22293a # immutable commit 4283106bb9a83e8e7ecbb154826e0cdc3f22293a",
+      "uses: AaronBuxbaum/diveday/.github/workflows/reg-suit-publish.yml@77123ca6db5ec5dc4e5fcfaf23778f08580200c8 # immutable commit 77123ca6db5ec5dc4e5fcfaf23778f08580200c8",
     );
     expect(publisher).not.toContain("steps:");
     expect(publisher).toContain("capture-mode: ${{ needs.visual-plan.outputs.mode }}");
