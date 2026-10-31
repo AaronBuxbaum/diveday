@@ -103,14 +103,16 @@
  * **`notification_send_queue` empties its own rows of personal data, and the
  * window below only bounds what is left.** It holds a rendered outbound
  * message, a recipient and a subject's address and phone while a row is being
- * worked, and every write that finishes a row (`sent`, `failed`,
- * `missing_payload`, and the park that spends a parked row's last attempt)
- * nulls the payload and all four handles. That is an invariant rather than an
- * observation: `src/db/notifications.ts` states it at each of those writes and
- * `notifications.test.ts` pins it, and if a fifth terminal write ever keeps a
- * handle, the answer is to clear it there. What a finished row still holds is
- * a status, an idempotency key and two instants, one per notification ever
- * sent, so the table grew with traffic for ever; its window (code review
+ * worked. Each write that finishes a row (`sent`, `failed` for a cleared
+ * reason, and the park that spends a parked row's last attempt) nulls the
+ * payload and all six auxiliary columns. Two `failed` writes keep them: a
+ * `sealed_payload_unreadable` row still waiting for a key, and a
+ * `retry_subject_unbound` row kept for follow-up. The window below skips both,
+ * because it only takes rows whose payload is already null. `src/db/notifications.ts`
+ * states the clearing at each write, and `notifications.test.ts` pins it. If a
+ * new terminal write keeps a handle, clear it there. What a finished row still
+ * holds is a status, an idempotency key and two instants, one per notification
+ * ever sent, so the table grew with traffic for ever. Its window (code review
  * 2026-10-11, item 14) takes only finished rows, never one the drain could
  * still offer again.
  *
