@@ -1,7 +1,57 @@
 import { describe, expect, it } from "vitest";
-import { parseSesBounceReports, parseSesEmailEvent, smtpStatusOf } from "./ses-events";
+import {
+  parseSesEventData,
+  sesBookkeeperOutcomesFromData,
+  sesBounceReportsFromData,
+  sesEmailEventFromData,
+  smtpStatusOf,
+} from "./ses-events";
 
 const now = new Date("2026-08-02T18:00:00.000Z");
+
+function parseSesEmailEvent(rawMessage: string, at: Date) {
+  return sesEmailEventFromData(parseSesEventData(rawMessage), at);
+}
+
+function parseSesBounceReports(rawMessage: string, at: Date) {
+  return sesBounceReportsFromData(parseSesEventData(rawMessage), at);
+}
+
+describe("parseSesEventData", () => {
+  it("returns null for malformed JSON and every schema-invalid shape", () => {
+    expect(parseSesEventData("not json")).toBeNull();
+    expect(
+      parseSesEventData(JSON.stringify({ eventType: "Bounce", mail: { messageId: 12 } })),
+    ).toBeNull();
+    expect(
+      parseSesEventData(
+        JSON.stringify({
+          eventType: "Bounce",
+          mail: { messageId: "ses-1", tags: { diveday_shop: "not-an-array" } },
+        }),
+      ),
+    ).toBeNull();
+  });
+
+  it("keeps unmodeled but valid event data for the projections to ignore", () => {
+    const data = parseSesEventData(
+      JSON.stringify({ eventType: "Open", mail: { messageId: "ses-open" } }),
+    );
+
+    expect(data?.eventType).toBe("Open");
+    expect(sesEmailEventFromData(data, now)).toEqual({ kind: "ignored" });
+    expect(sesBounceReportsFromData(data, now)).toEqual([]);
+    expect(sesBookkeeperOutcomesFromData(data, now)).toEqual([]);
+  });
+
+  it("makes malformed data a no-op for all projections", () => {
+    const data = parseSesEventData("{");
+
+    expect(sesEmailEventFromData(data, now)).toEqual({ kind: "ignored" });
+    expect(sesBounceReportsFromData(data, now)).toEqual([]);
+    expect(sesBookkeeperOutcomesFromData(data, now)).toEqual([]);
+  });
+});
 
 describe("parseSesEmailEvent", () => {
   it("parses a bounce and prefers the recipient's own diagnostic code", () => {

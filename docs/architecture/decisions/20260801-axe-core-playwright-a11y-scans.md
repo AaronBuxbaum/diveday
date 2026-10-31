@@ -6,7 +6,7 @@
 > **Deprecated (2026-10-24).** The suite's scans (`e2e/a11y.spec.ts`, `e2e/a11y-map.spec.ts`,
 > `e2e/a11y-scan.ts`) were removed: they were the week's top CI failure site and the product does
 > not prioritize automated a11y (Aaron, 2026-10-24). `@axe-core/playwright` stays for the weekly
-> persona walk's probe (`scripts/persona-bots/walk.spec.ts`), which files issues and blocks nothing.
+> persona walk's probe (`scripts/persona-bots/walk.spec.mts`), which files issues and blocks nothing.
 > The record below is history. See `docs/engineering/testing.md`, "What each layer is for".
 
 ## Context

@@ -36,7 +36,7 @@ one hand-written issue. A bot filing unattended every Monday is a machine for pr
 Build it, with the volume policy in code rather than in intention, and with the generator
 validating its own output against the guard that would otherwise catch it in front of everyone else.
 
-**The walk.** `scripts/persona-bots/walk.spec.ts` opens every surface `personas.md` names, as the
+**The walk.** `scripts/persona-bots/walk.spec.mts` opens every surface `personas.md` names, as the
 persona who lives on it — anonymously for the diver-facing ones, signed in as the role the persona
 holds for the staff ones, and in Spanish for Ingrid, whose findings are invisible in English. It
 runs the e2e fleet's own machinery under a config of its own, exactly as

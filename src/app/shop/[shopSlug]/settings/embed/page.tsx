@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { canPersonManageShopSettings } from "@/db/authz";
-import { getDb } from "@/db/client";
 import { listActiveCourses } from "@/db/courses";
 import { pagedUpcomingTripsWithCounts } from "@/db/trips";
 import { localeEndonym } from "@/i18n/language-labels";
@@ -63,8 +62,7 @@ export default async function EmbedSettingsPage({
       </main>
     );
   }
-  void db;
-  const { trips } = await pagedUpcomingTripsWithCounts(await getDb(), shop.id, {
+  const { trips } = await pagedUpcomingTripsWithCounts(db, shop.id, {
     now: nowDate(),
     limit: 30,
     publicOnly: true,
@@ -80,7 +78,7 @@ export default async function EmbedSettingsPage({
   // the roster's progression order rather than alphabetically — the same order
   // `listActiveCourses` gives every other surface, so a shop picking "Open
   // Water" finds it where it always is.
-  const courseChoices = (await listActiveCourses(await getDb(), shop.id)).map((course) => ({
+  const courseChoices = (await listActiveCourses(db, shop.id)).map((course) => ({
     id: course.slug,
     label: course.title,
   }));

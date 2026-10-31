@@ -65,23 +65,17 @@ const TILE_SIZE: Record<ImageTileShape, string> = {
 
 /**
  * **A photo is picked from a tile in the photo grid, and the tile then shows
- * the photo.** A file input that rejects an oversize or wrong-type photo the
- * moment it's picked, before the form is ever submitted — the server
- * (`storeImage` in `src/lib/storage/index.ts`) still re-validates on receipt
- * and remains the actual authority; this only saves a round trip on the common
- * mistake (CR-011). Clearing the input on rejection means a submit can't
- * silently carry a file the user was just told is invalid.
+ * the photo.** The pick is checked for type and size before the form is
+ * submitted, so a bad file is refused at once. That check only saves a round
+ * trip. The server (`storeImage` in `src/lib/storage/index.ts`) re-validates on
+ * receipt and remains the authority. A rejected pick clears the input, so a
+ * submit cannot carry a file the user was just told is invalid (CR-011).
  *
- * **It used to be a grey "Choose a photo" button with a filename beside it**,
- * under or over a grid of the photos already saved: the photo you picked was a
- * word, the ones you had were pictures, and the two sat in different places on
- * the form. Aaron read it as confusing on every editor that had one
- * (2026-10-06). Now the control is a dashed tile drawn at the size of the
- * photo it stands for, placed as the next cell of the grid its photos sit in,
- * and a pick turns into the photo itself, named under it, until the form's own
- * save sends it. `ImageUploadTile` is the same tile for a form whose only job
- * is the one photo, where the pick submits; this one rides a larger save, so
- * the pick never submits.
+ * The tile is drawn at the size of the photo it stands for, as the next cell of
+ * the photo grid. A pick turns into the photo, named under it, until the form's
+ * own save sends it. `ImageUploadTile` is the same tile for a form whose only
+ * job is the one photo, where the pick submits. This one rides a larger save,
+ * so the pick never submits.
  *
  * **It renders grid cells, not a block.** One picked photo is drawn inside the
  * tile (the tile *becomes* the photo, captioned "Choose another"); several are

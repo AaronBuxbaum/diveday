@@ -3,14 +3,7 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@/db/client";
-import {
-  getShopById,
-  setShopCustomerRegulatorServiceMonths,
-  setShopNitroxFillMethod,
-  setShopRentalItems,
-  setShopRentalPricing,
-  setShopRentalTerms,
-} from "@/db/shops";
+import { getShopById, saveShopRentals } from "@/db/shops";
 import { formValue, readForm } from "@/lib/form-parse";
 import { majorToMinor, maxPriceMajor, toShopCurrency } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -128,14 +121,12 @@ export async function saveRentalsAction(formData: FormData) {
     redirect(noticeUrl(page, "nitrox-fill-invalid"));
   }
 
-  await setShopRentalItems(db, session.user.shopId, rentalItems);
-  await setShopRentalPricing(db, session.user.shopId, {
-    setCents: set.cents,
-    perItemCents,
-    nitroxCents,
+  await saveShopRentals(db, session.user.shopId, {
+    rentalItems,
+    rentalPricing: { setCents: set.cents, perItemCents, nitroxCents },
+    rentalTerms: terms.terms,
+    customerRegulatorServiceMonths: months ?? undefined,
+    nitroxFillMethod: fillMethod ?? undefined,
   });
-  await setShopRentalTerms(db, session.user.shopId, terms.terms);
-  if (months !== null) await setShopCustomerRegulatorServiceMonths(db, session.user.shopId, months);
-  if (fillMethod !== null) await setShopNitroxFillMethod(db, session.user.shopId, fillMethod);
   revalidateAndRedirect(page, noticeUrl(page, "rentals-saved"));
 }

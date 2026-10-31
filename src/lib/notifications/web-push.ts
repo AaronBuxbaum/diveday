@@ -60,13 +60,15 @@ export const WEB_PUSH_TTL_SECONDS = 600;
 /**
  * Hard ceiling on one send.
  *
- * The `web-push` library issues a bare `https.request` with no timeout of its
- * own, so without this a push service that accepts a connection and then never
- * answers hangs this call indefinitely. That matters more here than it looks:
- * the fan-out is awaited inside `publishManifestEvent`, which is awaited by
- * `recordRollCall` — so an un-timed send does not merely delay a notification,
- * it blocks a captain's "Boarded" tap. Catching exceptions protects against a
- * send that *throws*; only a timeout protects against one that hangs.
+ * Two bounds work together. The `web-push` library's `timeout` option destroys
+ * a socket that goes quiet for this long, which stops a push service that
+ * accepts a connection and never answers. It does not bound total time: a
+ * response that trickles bytes keeps the socket active, so the wall-clock race
+ * in `sendWebPush` is the return bound. That matters because the fan-out is
+ * awaited inside `publishManifestEvent`, which is awaited by `recordRollCall` —
+ * an unbounded send would block a captain's "Boarded" tap. Catching exceptions
+ * protects against a send that *throws*; the bounds protect against one that
+ * hangs.
  */
 export const WEB_PUSH_TIMEOUT_MS = 5_000;
 
@@ -194,6 +196,7 @@ export async function sendWebPush(
           privateKey: config.privateKey,
         },
         TTL: WEB_PUSH_TTL_SECONDS,
+        timeout: WEB_PUSH_TIMEOUT_MS,
       },
     );
     // A timeout is reported as `failed`, never `gone`: a slow push service must

@@ -262,15 +262,6 @@ export async function setShopPassThroughFee(
 }
 
 /**
- * Sets the shop's whole dock-day rhythm — the arrival call and the five minute
- * amounts the rest of the day is laid out from (src/lib/diver-planning.ts).
- *
- * All six together, never a field at a time: the beats before departure are
- * clamped against the arrival call, so saving a briefing without the call it
- * has to fit inside is how a shop ends up with a day that reads back
- * differently from the one they typed.
- */
-/**
  * The shop's own emergency reference — the numbers a crew dials during, carried
  * into the offline manifest snapshot (issue #688). Replaced wholesale: it is one
  * card the shop retypes, not a set of independently-edited fields.
@@ -458,6 +449,15 @@ export async function markShopUnitsConfirmed(db: AppDb, shopId: string, now = no
   return shop ?? null;
 }
 
+/**
+ * Sets the shop's whole dock-day rhythm — the arrival call and the five minute
+ * amounts the rest of the day is laid out from (src/lib/diver-planning.ts).
+ *
+ * All six together, never a field at a time: the beats before departure are
+ * clamped against the arrival call, so saving a briefing without the call it
+ * has to fit inside is how a shop ends up with a day that reads back
+ * differently from the one they typed.
+ */
 export async function setShopDockDayRhythm(db: AppDb, shopId: string, rhythm: DockDayRhythm) {
   const [shop] = await db.update(shops).set(rhythm).where(eq(shops.id, shopId)).returning();
   return shop ?? null;
@@ -587,38 +587,6 @@ export async function setShopRentalItems(db: AppDb, shopId: string, rentalItems:
 }
 
 /**
- * Replaces the shop's rental price list (set price, per-piece prices, per-dive
- * nitrox surcharge). The route validates and normalizes amounts to minor units
- * before calling this; a price is never inventory, only what a diver is quoted.
- */
-export async function setShopRentalPricing(
-  db: AppDb,
-  shopId: string,
-  rentalPricing: RentalPricing,
-) {
-  const [shop] = await db
-    .update(shops)
-    .set({ rentalPricing })
-    .where(eq(shops.id, shopId))
-    .returning();
-  return shop ?? null;
-}
-
-/**
- * Replaces the shop's rental terms, printed on every rental ticket. The route
- * reads the box through `parseRentalTerms` (src/lib/rental-terms.ts) first, so
- * what arrives is trimmed text within the limit, or `null` to print none.
- */
-export async function setShopRentalTerms(db: AppDb, shopId: string, rentalTerms: string | null) {
-  const [shop] = await db
-    .update(shops)
-    .set({ rentalTerms })
-    .where(eq(shops.id, shopId))
-    .returning();
-  return shop ?? null;
-}
-
-/**
  * Replaces the notes Claude reads when it drafts a reply (`shops.reply_notes`).
  * The action trims and caps the box first, so what arrives is text within
  * `REPLY_NOTES_MAX_LENGTH`, or `null` for none.
@@ -633,30 +601,35 @@ export async function setShopReplyNotes(db: AppDb, shopId: string, replyNotes: s
 }
 
 /**
- * Sets how the shop fills nitrox (issue 3004), which decides where Rent out's
- * O2-clean warning starts (`o2CleanWarnsForFill`). Advisory only.
+ * Writes the Rentals page's whole save in one UPDATE, so a failed write changes
+ * none of its columns: the catalog, the price list, the terms every rental
+ * ticket prints, and the two optional settings. An omitted optional setting is
+ * left as stored (the regulator interval while work orders are off, the nitrox
+ * fill method when the form does not post it). The route validates and
+ * normalizes every value before calling this.
  */
-export async function setShopNitroxFillMethod(db: AppDb, shopId: string, method: NitroxFillMethod) {
-  const [shop] = await db
-    .update(shops)
-    .set({ nitroxFillMethod: method })
-    .where(eq(shops.id, shopId))
-    .returning();
-  return shop ?? null;
-}
-
-/**
- * Sets how often the shop services a customer's regulator (12 or 24 months),
- * the interval a customer regulator's suggested next-due date counts from.
- */
-export async function setShopCustomerRegulatorServiceMonths(
-  db: AppDb,
+export async function saveShopRentals(
+  db: DbExecutor,
   shopId: string,
-  months: CustomerRegulatorServiceMonths,
+  write: {
+    rentalItems: string[];
+    rentalPricing: RentalPricing;
+    rentalTerms: string | null;
+    customerRegulatorServiceMonths?: CustomerRegulatorServiceMonths;
+    nitroxFillMethod?: NitroxFillMethod;
+  },
 ) {
   const [shop] = await db
     .update(shops)
-    .set({ customerRegulatorServiceMonths: months })
+    .set({
+      rentalItems: write.rentalItems,
+      rentalPricing: write.rentalPricing,
+      rentalTerms: write.rentalTerms,
+      ...(write.customerRegulatorServiceMonths !== undefined
+        ? { customerRegulatorServiceMonths: write.customerRegulatorServiceMonths }
+        : {}),
+      ...(write.nitroxFillMethod !== undefined ? { nitroxFillMethod: write.nitroxFillMethod } : {}),
+    })
     .where(eq(shops.id, shopId))
     .returning();
   return shop ?? null;
@@ -696,11 +669,13 @@ export async function setShopContact(
 }
 
 /**
- * Sets the shop's physical business address, published in structured data so
- * search engines can place the shop as a real venue. Each field clears
- * independently on an empty string, so a shop can walk an address back to
- * nothing (or fill in only what it knows, like locality and country) rather
- * than being forced to supply all five at once.
+ * Replaces the shop's physical business address as a whole, published in
+ * structured data so search engines can place the shop as a real venue.
+ *
+ * This is a full replacement, not a patch: every field is written, and an
+ * omitted field (or latitude/longitude) is stored as null. Text fields are
+ * trimmed, and a blank one becomes null, so an empty address clears the row.
+ * Callers must pass the complete address they mean to keep.
  */
 export async function setShopAddress(
   db: AppDb,

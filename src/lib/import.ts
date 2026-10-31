@@ -87,6 +87,7 @@ import type { CertificationAgency, DiveSpecialty } from "@/db/schema";
 import { isPlausibleDateOfBirth } from "./age";
 import { type CalendarDate, isValidCalendarDate } from "./calendar-date";
 import { CERTIFICATION_AGENCIES } from "./certification-options";
+import { normalizeImportKey } from "./import-key";
 import { currencyMinorUnits, isShopCurrency } from "./money";
 import { RENTAL_FIT_TEXT_LIMITS, type SizedRentalKind } from "./rentals";
 
@@ -569,15 +570,6 @@ export const IMPORT_HONESTY_TABLE: {
   { id: "serviceHistory", scope: "included" },
   { id: "diverNotes", scope: "included" },
 ];
-
-/** Normalize a header for alias lookup: lower, trim, punctuation/space → single "_". */
-function normalizeHeader(raw: string): string {
-  return raw
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
-}
 
 /**
  * RFC-4180 CSV reader: quoted fields, embedded commas, CR/LF/CRLF newlines, and
@@ -1720,7 +1712,7 @@ export function unclaimedImportHeaders(headers: readonly string[]): string[] {
   const out: string[] = [];
   for (const raw of headers) {
     const header = raw.trim();
-    const normalized = normalizeHeader(header);
+    const normalized = normalizeImportKey(header);
     if (!normalized) continue;
     if (SENSITIVE_PAYMENT_HEADER_PATTERN.test(normalized) || MEDICAL_HEADER_PATTERN.test(header)) {
       continue;
@@ -1767,7 +1759,7 @@ function mapImportHeaders(headers: readonly string[], assist: ImportAssist | und
 
   headers.forEach((rawHeader, columnIndex) => {
     const header = rawHeader.trim();
-    const normalized = normalizeHeader(header);
+    const normalized = normalizeImportKey(header);
     if (!normalized) return;
     if (SENSITIVE_PAYMENT_HEADER_PATTERN.test(normalized)) {
       unmappedColumns.push(header);

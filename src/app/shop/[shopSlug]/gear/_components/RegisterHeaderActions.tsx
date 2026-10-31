@@ -1,8 +1,8 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { buttonClass } from "@/components/ui/button";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { shopPath } from "@/lib/staff-notices";
-import { AddUnitLink } from "./AddUnitLink";
 
 /**
  * The register's header acts on a register with units: lend some out, and add
@@ -11,7 +11,15 @@ import { AddUnitLink } from "./AddUnitLink";
  * somebody who is not on a boat (ADR 20260815-minimal-gear-register, amended
  * 2026-10-08). The empty register keeps its one door in the card instead.
  */
-export function RegisterHeaderActions({ shopSlug, t }: { shopSlug: string; t: StaffTranslator }) {
+export function RegisterHeaderActions({
+  shopSlug,
+  t,
+  addUnitControl,
+}: {
+  shopSlug: string;
+  t: StaffTranslator;
+  addUnitControl: ReactNode;
+}) {
   return (
     <>
       <Link
@@ -20,7 +28,7 @@ export function RegisterHeaderActions({ shopSlug, t }: { shopSlug: string; t: St
       >
         {t("counterRentals.rentOut")}
       </Link>
-      <AddUnitLink className={buttonClass()}>{t("gear.addUnit.title")}</AddUnitLink>
+      {addUnitControl}
     </>
   );
 }

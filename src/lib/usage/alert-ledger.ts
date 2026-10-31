@@ -22,13 +22,13 @@ import { nowDate } from "@/lib/clock";
  *
  * ## Why this table
  *
- * `notification_rate_limit_state` already exists, is empty, and is exactly the
- * shape needed: a text `key` and a `next_allowed_at` instant. Its original
- * purpose — a coordinated per-second permit clock for a provider needing one —
- * was never taken up (`src/db/schema.ts` says so), and "this notification may
- * not be sent again before T" is the same question the column was named for.
- * Reusing it costs no migration and adds no table, which matters more than
- * naming purity for a monitor whose entire job is to be cheap.
+ * `notification_rate_limit_state` already exists and has the shape needed: a
+ * text `key` and a `next_allowed_at` instant. The founder weekly digest claims
+ * rows in it too (`claimFounderDigest`). Its name refers to a per-second permit
+ * clock that is not used (see the schema comment). "This notification may not
+ * be sent again before T" is the question the table answers. Reusing it costs
+ * no migration and adds no table, which matters more than naming purity for a
+ * monitor whose entire job is to be cheap.
  *
  * ## Semantics
  *

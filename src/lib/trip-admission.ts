@@ -5,6 +5,7 @@ import type {
   NitroxCertification,
   SpecialtyCertification,
 } from "@/db/schema";
+import { higherCertificationLevel } from "./certification-levels";
 import { isDiver, type ParticipantType } from "./participant-types";
 import { type CertificationLevel, certificationRank } from "./readiness";
 import { type Requirement, requirementDemandsNothing, unionRequirements } from "./requirement";
@@ -198,16 +199,6 @@ export type SelfDeclaration = {
   nitrox?: boolean;
 };
 
-/** The higher of two rungs, either of which may be absent. */
-function highestOf(
-  a: CertificationLevel | null,
-  b: CertificationLevel | null,
-): CertificationLevel | null {
-  if (!a) return b;
-  if (!b) return a;
-  return certificationRank(a) >= certificationRank(b) ? a : b;
-}
-
 export type TripAdmissionInput = {
   /** The trip's own requirement row, or null when the shop hasn't configured one. */
   requirement: Requirement | null;
@@ -336,12 +327,12 @@ export function decideTripAdmission(input: TripAdmissionInput): TripAdmission {
   // The strongest thing said about this diver, from any direction: the record,
   // or the sentence they just typed. Taking the higher of the two is what stops
   // a stale Open Water row refusing somebody who has since qualified and says so.
-  const heldLevel = highestOf(highestLevelOnFile(certifications), declaredLevel);
+  const heldLevel = higherCertificationLevel(highestLevelOnFile(certifications), declaredLevel);
   // A course that gets them there before the boat counts toward the rung, but
   // not toward `heldLevel`: the refusal names what the diver holds, and a
   // course they are booked on is not a card.
   const reachedLevel = (evidence.levelsInTraining ?? []).reduce<CertificationLevel | null>(
-    (best, level) => highestOf(best, level),
+    (best, level) => higherCertificationLevel(best, level),
     heldLevel,
   );
   const reaches = (level: CertificationLevel | null) =>

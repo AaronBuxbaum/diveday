@@ -241,7 +241,6 @@ export function PackingSection({
   multiDay,
   siteBottomTimes,
   legTravelTimes,
-  temperatureStatedAbove,
   holdsCertification,
   locale,
 }: {
@@ -275,22 +274,6 @@ export function PackingSection({
    */
   legTravelTimes?: LegTravelTimes;
   /**
-   * Whether a conditions card above this one already states the water
-   * temperature — and with it the suit most divers want (`ForecastSection`).
-   *
-   * The booking page renders that card and passes `true`, so the advice is
-   * given once, under the reading it is derived from. `/ready/[token]` renders
-   * this section with **no** conditions card anywhere on the page and passes
-   * `false`, so the suit line lands here instead: the morning of a dive is
-   * when a diver is deciding what to put in the car, and that page would
-   * otherwise say nothing at all about the water they are getting into.
-   *
-   * An explicit prop, not a guess from `trip.waterTemperatureC`: which sections
-   * a page renders is the page's own knowledge, and the two surfaces have
-   * genuinely different layouts rather than one being a subset of the other.
-   */
-  temperatureStatedAbove: boolean;
-  /**
    * This diver has a certification card on file. Read only on a try-dive
    * session, where a student with none has no dives to log and is not told to
    * bring a logbook (`packsLogbook`, issue #2795).
@@ -311,16 +294,8 @@ export function PackingSection({
     holdsCertification,
   });
   const t = diverTranslator(locale);
-  // Said here only when nothing above has said it. This used to be an
-  // unconditional "water is expected around 24°C — use the shop's wetsuit
-  // guidance", which on the booking page restated the reading from the
-  // conditions card a few inches up and then pointed at advice it did not
-  // give. The card now names the suit itself; this is the same sentence, on
-  // the one page that has no card to put it on.
   const exposureSuit =
-    temperatureStatedAbove || trip.waterTemperatureC === null
-      ? null
-      : exposureSuitFor(trip.waterTemperatureC);
+    trip.waterTemperatureC === null ? null : exposureSuitFor(trip.waterTemperatureC);
   return (
     // No outer card: this is pre-trip reading, not a decision, and the three
     // columns plus the rhythm below are their own shape.

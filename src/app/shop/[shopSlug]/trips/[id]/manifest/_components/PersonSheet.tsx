@@ -19,6 +19,8 @@ export type PersonTrailEntry = {
   detail: string;
   state: "aboard" | "ashore" | "notBack";
   note?: string | null;
+  /** The stored roll-call event this line is about; see `RollCallRecord.eventId`. */
+  eventId?: string;
 };
 
 const SHEET_DURATION_MS = motionMs("base");

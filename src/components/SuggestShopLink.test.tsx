@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { StrictMode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { SuggestShopLink } from "./SuggestShopLink";
 
@@ -36,6 +37,11 @@ function mount({ slugValue = "", fieldError }: { slugValue?: string; fieldError?
 const nameBox = () => document.getElementById("shop-name") as HTMLInputElement;
 const slugBox = () => document.getElementById("shop-slug") as HTMLInputElement;
 const hint = () => screen.getByTestId("hint");
+function inputById(id: string): HTMLInputElement {
+  const input = document.getElementById(id);
+  if (!(input instanceof HTMLInputElement)) throw new Error(`Expected input #${id}`);
+  return input;
+}
 
 describe("the storefront address under the shop-link field", () => {
   it("reads the address the slug already in the box produces", () => {
@@ -106,5 +112,110 @@ describe("the storefront address under the shop-link field", () => {
     fireEvent.input(nameBox(), { target: { value: "Something Else Entirely" } });
     expect(slugBox().value).toBe("mine");
     expect(hint()).toHaveTextContent("dive.day/s/mine");
+  });
+
+  it("leaves a prefilled link alone as the shop name changes", () => {
+    mount({ slugValue: "existing-link" });
+    fireEvent.input(nameBox(), { target: { value: "A Different Shop Name" } });
+
+    expect(slugBox().value).toBe("existing-link");
+    expect(hint()).toHaveTextContent("dive.day/s/existing-link");
+  });
+
+  it("does not resume suggesting after a generated link is manually cleared", () => {
+    mount();
+    fireEvent.input(nameBox(), { target: { value: "First Shop Name" } });
+    expect(slugBox().value).toBe("first-shop-name");
+
+    fireEvent.input(slugBox(), { target: { value: "my-own-link" } });
+    fireEvent.input(slugBox(), { target: { value: "" } });
+    fireEvent.input(nameBox(), { target: { value: "Another Shop Name" } });
+
+    expect(slugBox().value).toBe("");
+    expect(hint()).toBeEmptyDOMElement();
+  });
+
+  it("removes its input listeners when it unmounts", () => {
+    render(
+      <>
+        <input id="unmounted-shop-name" defaultValue="" />
+        <input id="unmounted-shop-slug" defaultValue="" />
+      </>,
+    );
+    const suggestion = render(
+      <SuggestShopLink
+        nameId="unmounted-shop-name"
+        slugId="unmounted-shop-slug"
+        urlLead="Your schedule will live at"
+        urlHost="dive.day"
+      />,
+    );
+
+    suggestion.unmount();
+    fireEvent.input(inputById("unmounted-shop-name"), {
+      target: { value: "No Longer Mounted" },
+    });
+
+    expect(inputById("unmounted-shop-slug").value).toBe("");
+  });
+
+  it("keeps the remaining instance wired when another instance unmounts", () => {
+    render(
+      <>
+        <input id="shared-shop-name" defaultValue="" />
+        <input id="shared-shop-slug" defaultValue="" />
+      </>,
+    );
+    const first = render(
+      <p data-testid="second-hint">
+        <SuggestShopLink
+          nameId="shared-shop-name"
+          slugId="shared-shop-slug"
+          urlLead="Your schedule will live at"
+          urlHost="dive.day"
+        />
+      </p>,
+    );
+    const second = render(
+      <p data-testid="remaining-hint">
+        <SuggestShopLink
+          nameId="shared-shop-name"
+          slugId="shared-shop-slug"
+          urlLead="Your schedule will live at"
+          urlHost="dive.day"
+        />
+      </p>,
+    );
+
+    first.unmount();
+    fireEvent.input(inputById("shared-shop-name"), {
+      target: { value: "Reef Runners" },
+    });
+
+    expect(inputById("shared-shop-slug").value).toBe("reef-runners");
+    expect(second.getByTestId("remaining-hint")).toHaveTextContent("dive.day/s/reef-runners");
+  });
+
+  it("keeps listener cleanup balanced under Strict Mode", () => {
+    const { unmount } = render(
+      <StrictMode>
+        <input id="strict-shop-name" defaultValue="" />
+        <input id="strict-shop-slug" defaultValue="" />
+        <p data-testid="strict-hint">
+          <SuggestShopLink
+            nameId="strict-shop-name"
+            slugId="strict-shop-slug"
+            urlLead="Your schedule will live at"
+            urlHost="dive.day"
+          />
+        </p>
+      </StrictMode>,
+    );
+    fireEvent.input(inputById("strict-shop-name"), {
+      target: { value: "Coral Cove" },
+    });
+    expect(inputById("strict-shop-slug").value).toBe("coral-cove");
+    expect(screen.getByTestId("strict-hint")).toHaveTextContent("dive.day/s/coral-cove");
+    unmount();
   });
 });

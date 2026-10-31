@@ -163,8 +163,7 @@ export function pushEquipmentRows(actions: TodayAction[], ctx: TodayRowsContext)
       dueAt,
     });
   }
-  // **The boat and its emergency kit** (roadmap N-08, N-10; dive-domain review
-  // 2026-10-09). Two kinds of row from one read:
+  // **The boat and its emergency kit**. Two kinds of row from one read:
   //
   // - On each departure sailing today, the life-safety kit: no O2 kit or AED
   //   aboard, or oxygen, AED or flares run out or about to. Danger, every
@@ -250,7 +249,7 @@ export function pushEquipmentRows(actions: TodayAction[], ctx: TodayRowsContext)
       dueAt: localMidnight(row.since, late ? 1 : 0),
     });
   }
-  // **What the day taught the shop about a diver's size** (issue #1174, D14).
+  // **What the day taught the shop about a diver's size.**
   // A question, not a problem: the desk already confirmed the swap at the
   // counter, and this asks once whether to keep it. `href` is the diver's own
   // record, where the same edit can be made by hand.

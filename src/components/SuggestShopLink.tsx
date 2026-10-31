@@ -62,8 +62,6 @@ export function SuggestShopLink({
     const name = document.getElementById(nameId);
     const slugField = document.getElementById(slugId);
     if (!(name instanceof HTMLInputElement) || !(slugField instanceof HTMLInputElement)) return;
-    if (slugField.dataset.slugSuggest === "wired") return;
-    slugField.dataset.slugSuggest = "wired";
     // A pre-filled slug is an answer, not a blank — never touch it.
     let suggesting = slugField.value === "";
     const onNameInput = () => {
@@ -80,7 +78,6 @@ export function SuggestShopLink({
     return () => {
       name.removeEventListener("input", onNameInput);
       slugField.removeEventListener("input", onSlugInput);
-      delete slugField.dataset.slugSuggest;
     };
   }, [nameId, slugId]);
 

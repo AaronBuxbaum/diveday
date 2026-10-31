@@ -243,7 +243,7 @@ export default async function SchedulePage({
     hideAboveFilter,
     activeLens,
   };
-  const { filterSuffix, lensHref } = scheduleViewLinks(view);
+  const { monthHref, lensHref } = scheduleViewLinks(view);
 
   // The widget shows a window; the page shows the schedule. Sliced here rather
   // than asked for in the query so the two surfaces read the same list and can
@@ -361,7 +361,7 @@ export default async function SchedulePage({
         aria-label={t("schedule.monthNav")}
         month={monthLabel(currentMonth, locale)}
         className=""
-        {...monthRailSides(shopSlug, prevMonthKey, nextMonthKey, filterSuffix, t)}
+        {...monthRailSides(prevMonthKey, nextMonthKey, monthHref, t)}
       />
     ) : null;
 

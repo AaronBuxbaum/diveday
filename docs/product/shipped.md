@@ -1962,8 +1962,10 @@ word and the count — **Still to clear**, **Ready**, **Waiting for a seat**, **
 of a card stack with two visual grammars. A cleared seat is a name, at most one exception capsule,
 and a drawn check; open work stays in the open with each item beside its fix. The filter chips are
 gone (the groups are the filter), the Celebrations panel folded into the celebrating diver's own
-row capsule, the wait list and recorded invitations stopped being sibling cards, and
-Activity/Promote settled into two chromeless hairline rows at the page's tail. Every emoji mark on
+row capsule, and the wait list and recorded invitations stopped being sibling cards. Its birthday
+copy is a full locale-authored sentence (for example, "Birthday in 2 days") without a cake glyph;
+the printed sheet uses that same sentence when another mark occupies the capsule. Activity/Promote
+settled into two chromeless hairline rows at the page's tail. Every emoji mark on
 the surface became drawn SVG or a plain word (`ReadyMark`, `birthdayCalloutText`, a mark-free
 Minor capsule), and every control kept its identity and order — waiver send, paper waiver,
 payment, notes, contact, pickup, certify, remove. `RosterSection.test.tsx` pins the rules: the

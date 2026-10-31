@@ -815,7 +815,6 @@ export const tripDives = pgTable(
   },
   (table) => [
     uniqueIndex("trip_dives_trip_number_unique").on(table.tripId, table.diveNumber),
-    index("trip_dives_trip_idx").on(table.tripId, table.diveNumber),
     // "Which departures dive this site" (dive-sites.ts), a read by site alone.
     index("trip_dives_dive_site_idx").on(table.diveSiteId),
     // The same bounds `DOCK_DAY_LIMITS.boatRideMinutes` puts on the shop-wide

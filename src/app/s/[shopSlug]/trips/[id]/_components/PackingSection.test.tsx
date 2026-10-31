@@ -6,17 +6,7 @@ import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
 import { PackingSection } from "./PackingSection";
 import type { Shop, Trip } from "./types";
 
-/**
- * Where the "what to wear" line lands, which is not the same place on both
- * pages that render this section.
- *
- * The booking page puts a conditions card above it (`ForecastSection`) and says
- * it there, under the reading it comes from. `/ready/[token]` renders no
- * conditions card anywhere — it is a rental-fit and paperwork page — so if this
- * section stays quiet there, the page a diver reads the *morning they sail*
- * says nothing at all about the water they are getting into. A visual
- * regression caught exactly that.
- */
+/** The Ready page has no conditions card, so suit advice belongs here when temperature is recorded. */
 
 afterEach(cleanup);
 
@@ -30,7 +20,7 @@ const shop = {
   bottomTimeMinutes: 45,
 } as unknown as Shop;
 
-function renderPacking(overrides: { waterTemperatureC: number | null; statedAbove: boolean }) {
+function renderPacking(overrides: { waterTemperatureC: number | null }) {
   const trip = {
     startsAt: new Date("2026-08-12T12:00:00Z"),
     endsAt: new Date("2026-08-12T16:00:00Z"),
@@ -42,7 +32,6 @@ function renderPacking(overrides: { waterTemperatureC: number | null; statedAbov
       shop={shop}
       trip={trip}
       multiDay={false}
-      temperatureStatedAbove={overrides.statedAbove}
       holdsCertification={false}
       locale={DEFAULT_DIVER_LOCALE}
     />,
@@ -54,28 +43,21 @@ describe("PackingSection — its place on the page", () => {
     // `/ready` sets its sections 40px apart once, with `space-y-10`; a
     // built-in `mt-10` here was one of five per-child margins that stepped the
     // column 32, 24 and 40 (K-233).
-    const { container } = renderPacking({ waterTemperatureC: null, statedAbove: false });
+    const { container } = renderPacking({ waterTemperatureC: null });
     expect(container.querySelector("section")?.className ?? "").not.toMatch(/(^|\s)m[ty]?-/);
   });
 });
 
 describe("PackingSection — the exposure-suit line", () => {
-  it("names the suit when no conditions card above it has", () => {
+  it("names the suit when water temperature is recorded", () => {
     // The `/ready/[token]` case: no card on the page, so this is the only
     // chance a diver gets to be told what to bring for 19°C water.
-    renderPacking({ waterTemperatureC: 19, statedAbove: false });
+    renderPacking({ waterTemperatureC: 19 });
     expect(screen.getByText(/7 mm full suit/i)).toBeInTheDocument();
   });
 
-  it("stays quiet when the card above already said it", () => {
-    // The booking page case. Saying it twice on one page is the duplication
-    // the old "use the shop's wetsuit guidance" line was guilty of.
-    renderPacking({ waterTemperatureC: 19, statedAbove: true });
-    expect(screen.queryByText(/mm/)).not.toBeInTheDocument();
-  });
-
   it("says nothing when nobody has recorded a temperature", () => {
-    renderPacking({ waterTemperatureC: null, statedAbove: false });
+    renderPacking({ waterTemperatureC: null });
     expect(screen.queryByText(/mm/)).not.toBeInTheDocument();
     // …but the rest of the packing list is untouched, so a silent suit line is
     // not a section that failed to render.
@@ -83,11 +65,7 @@ describe("PackingSection — the exposure-suit line", () => {
   });
 });
 
-/**
- * Issue #704 slice 2. Renders on both pages `PackingSection` is shared
- * between — the booking page and `/ready/[token]` — since neither has any
- * other section that reads a departure's own meeting point.
- */
+/** Issue #704 slice 2: show the departure's meeting point alongside its dock-day rhythm. */
 describe("PackingSection — the dock-day rhythm's meeting point", () => {
   function renderRhythm(overrides: {
     meetingPointLabel: string | null;
@@ -108,7 +86,6 @@ describe("PackingSection — the dock-day rhythm's meeting point", () => {
         shop={shop}
         trip={trip}
         multiDay={false}
-        temperatureStatedAbove={false}
         holdsCertification={false}
         locale={DEFAULT_DIVER_LOCALE}
       />,
@@ -177,7 +154,6 @@ describe("PackingSection — the logbook line", () => {
         shop={{ ...shop, packingLogbook: options.packingLogbook } as Shop}
         trip={trip}
         multiDay={false}
-        temperatureStatedAbove={false}
         holdsCertification={options.holdsCertification}
         locale={DEFAULT_DIVER_LOCALE}
       />,

@@ -256,6 +256,11 @@ describe("findCopy — JSX", () => {
     expect(texts("/* Ready to dive? */\nconst a = 1;")).toEqual([]);
   });
 
+  it("reports the original line after a multiline comment", () => {
+    const source = "/* first\n * second\n */\n<p>Ready to dive?</p>";
+    expect(findCopy(source, { isTsx: true })[0].line).toBe(4);
+  });
+
   it("finds nothing in a .ts file's JSX-shaped text", () => {
     // Only `.tsx` carries JSX; the `.ts` walk is the narrower label-map one.
     expect(texts("<p>Ready to dive?</p>", false)).toEqual([]);

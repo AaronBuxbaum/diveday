@@ -52,7 +52,7 @@ describe("TripPageHeader", () => {
    * UX audit 2026-10-07, item 39: the Boat tab hides the shell, so "‹ Schedule"
    * was its only door and the day was two hops away.
    */
-  it("draws one way up, the schedule, even where a tab still passes the day (B53)", () => {
+  it("draws one way up, the schedule, with no Today link (B53)", () => {
     render(
       <TripPageHeader
         trip={{
@@ -62,7 +62,6 @@ describe("TripPageHeader", () => {
         }}
         boardHref="/shop/blue-mantis/schedule/board"
         backLabel="Schedule"
-        today={{ href: "/shop/blue-mantis", label: "Today" }}
         locale="en-US"
         timeZone="America/New_York"
       />,

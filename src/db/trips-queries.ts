@@ -135,7 +135,7 @@ export async function upcomingTripsWithCounts(
         liveTrip(),
         eq(trips.shopId, shopId),
         eq(trips.status, "scheduled"),
-        gte(trips.startsAt, new Date(now.getTime() - 60 * 60 * 1000)),
+        gte(trips.startsAt, new Date(now.getTime() - DEPARTURE_BUFFER_MS)),
       ),
     )
     .groupBy(trips.id, courses.id, diveSites.id)
@@ -217,7 +217,7 @@ export async function listTripIdsInOfflineManifestWindow(
         liveTrip(),
         eq(trips.shopId, shopId),
         eq(trips.status, "scheduled"),
-        gte(trips.endsAt, new Date(now.getTime() - 60 * 60 * 1000)),
+        gte(trips.endsAt, new Date(now.getTime() - DEPARTURE_BUFFER_MS)),
         lte(trips.startsAt, until),
       ),
     )
@@ -580,7 +580,7 @@ export async function pagedUpcomingTripsWithCounts(
   const limit = options.limit ?? SCHEDULE_PAGE_SIZE;
   const after = decodeCursor(options.cursor);
   const afterDate = after ? new Date(after[0]) : null;
-  const nowWithBuffer = new Date(now.getTime() - 60 * 60 * 1000);
+  const nowWithBuffer = new Date(now.getTime() - DEPARTURE_BUFFER_MS);
   const lowerBound =
     options.monthStart && options.monthStart > nowWithBuffer ? options.monthStart : nowWithBuffer;
 
@@ -922,7 +922,7 @@ export async function upcomingScheduleStats(
         liveTrip(),
         eq(trips.shopId, shopId),
         eq(trips.status, "scheduled"),
-        gte(trips.startsAt, new Date(now.getTime() - 60 * 60 * 1000)),
+        gte(trips.startsAt, new Date(now.getTime() - DEPARTURE_BUFFER_MS)),
       ),
     )
     .groupBy(trips.id)
@@ -969,7 +969,7 @@ export async function upcomingScheduleRange(
         eq(trips.shopId, shopId),
         eq(trips.status, "scheduled"),
         options.publicOnly ? eq(trips.isPrivate, false) : undefined,
-        gte(trips.startsAt, new Date(now.getTime() - 60 * 60 * 1000)),
+        gte(trips.startsAt, new Date(now.getTime() - DEPARTURE_BUFFER_MS)),
       ),
     );
   return {
@@ -1026,7 +1026,7 @@ export async function upcomingStaffSchedule(
         liveTrip(),
         eq(trips.shopId, shopId),
         eq(trips.status, "scheduled"),
-        gte(trips.endsAt, new Date(now.getTime() - 60 * 60 * 1000)),
+        gte(trips.endsAt, new Date(now.getTime() - DEPARTURE_BUFFER_MS)),
         lt(tripScheduleDays.startsAt, monthEndUtc),
         gt(tripScheduleDays.endsAt, monthStartUtc),
       ),
@@ -1119,7 +1119,7 @@ export async function listUpcomingSessionsForCourse(
         eq(trips.courseId, courseId),
         eq(trips.status, "scheduled"),
         eq(trips.isPrivate, false),
-        gte(trips.startsAt, new Date(now.getTime() - 60 * 60 * 1000)),
+        gte(trips.startsAt, new Date(now.getTime() - DEPARTURE_BUFFER_MS)),
       ),
     )
     .groupBy(trips.id, diveSites.id)
@@ -1183,7 +1183,7 @@ export async function nextSessionStartByCourse(
         eq(trips.shopId, shopId),
         inArray(trips.courseId, [...courseIds]),
         eq(trips.status, "scheduled"),
-        gte(trips.startsAt, new Date(now.getTime() - 60 * 60 * 1000)),
+        gte(trips.startsAt, new Date(now.getTime() - DEPARTURE_BUFFER_MS)),
       ),
     )
     .groupBy(trips.courseId);
@@ -1219,7 +1219,7 @@ async function nextSellableSessionByCourse(
         eq(trips.status, "scheduled"),
         eq(trips.isPrivate, false),
         eq(trips.conditionsHold, false),
-        gte(trips.startsAt, new Date(now.getTime() - 60 * 60 * 1000)),
+        gte(trips.startsAt, new Date(now.getTime() - DEPARTURE_BUFFER_MS)),
       ),
     )
     .groupBy(trips.id)
@@ -1402,7 +1402,7 @@ export async function weekBoard(
   }
 
   const spans: WeekBoardSpan[] = [];
-  const sailedBefore = new Date(now.getTime() - 60 * 60 * 1000);
+  const sailedBefore = new Date(now.getTime() - DEPARTURE_BUFFER_MS);
   for (const {
     trip,
     diveSiteName,

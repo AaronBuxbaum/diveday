@@ -9,7 +9,7 @@ import { DEFAULT_DIVER_LOCALE, type DiverLocale, toDiverLocale } from "./setting
  * `./messages.ts` (docs ADR 20260730-staff-copy-localization).
  *
  * **Server-side only, on purpose.** There is no `StaffIntlProvider`, and *this*
- * bundle — all 31 namespaces in both locales — never crosses to the client. Two
+ * bundle — every staff namespace, in both locales — never crosses to the client. Two
  * reasons:
  *
  * 1. `useTranslations()` types against the single global `AppConfig.Messages`
@@ -29,14 +29,14 @@ import { DEFAULT_DIVER_LOCALE, type DiverLocale, toDiverLocale } from "./setting
  * `/offline-manifest` renders from an encrypted IndexedDB snapshot on a phone
  * that may have no signal, so it cannot be a Server Component and cannot be
  * handed words as props: there is no server in the loop at the moment it
- * matters. It composes its own translator over **three** namespaces in
+ * matters. It composes its own translator over **two** namespaces in
  * `./offline-manifest-messages.ts`, and that module deliberately does not
  * import this one.
  *
  * The separation is the safeguard. Importing `staffTranslator` from a Client
- * Component is what made that route the heaviest page in the app — 62 JSON
- * modules to render three namespaces, 438.9 KB gzip first load against a
- * 237.3 KB floor (issue #1353). Nothing here stops that happening again, so if
+ * Component once made that route the heaviest page in the app: it shipped every
+ * staff namespace to render a handful (measured in issue #1353). Nothing here
+ * stops that happening again, so if
  * a second client surface needs staff words, give it its own narrow module
  * rather than reaching for this one. Reason 2 above still holds either way:
  * that route is behind a staff session, not an anonymous diver's page.

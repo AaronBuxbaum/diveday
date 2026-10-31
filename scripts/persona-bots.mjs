@@ -26,7 +26,7 @@ import { tracker } from "./tracker.mjs";
  * 1. Checks a Chromium is available, and builds the e2e production build — or,
  *    with `--no-build`, verifies one is already on disk, which is what the
  *    weekly workflow does after its own `pnpm e2e:build`.
- * 2. Runs `scripts/persona-bots/walk.spec.ts`: every surface
+ * 2. Runs `scripts/persona-bots/walk.spec.mts`: every surface
  *    `docs/product/personas.md` names, opened as the persona who lives on it,
  *    probed deterministically, and photographed through
  *    `scripts/screenshot.mjs`.

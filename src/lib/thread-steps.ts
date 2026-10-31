@@ -7,7 +7,7 @@ import { RECAP_AUTOMATIC_DELAY_MS } from "./recap-schedule";
 
 /**
  * **The diver's thread as a spine of steps** — ADR 20260827-the-divers-thread,
- * decision 3, slice 7c.
+ * decision 3.
  *
  * `readiness-summary.ts` turns the readiness engine's blockers into a diver's
  * checklist; this turns that checklist into the *order a diver walks*. The
@@ -16,14 +16,11 @@ import { RECAP_AUTOMATIC_DELAY_MS } from "./recap-schedule";
  * day-of — with one figure over it that says how far along it the diver is,
  * and that figure is the whole reason this module exists.
  *
- * **The figure must always be able to fill.** The page it replaced counted
- * `items.length + 2` and showed a wave-filled bar whose own copy admitted it
- * could never reach the end: the note, the hotel pickup and the other optional
- * questions were rendered as rows a diver could answer, left out of the count,
- * and three of the seven rows on screen therefore moved nothing when answered. So every step this module emits is countable and every one of them
- * is finishable — the optional questions fold into Day-of details, which
- * settles on the one question that is genuinely asked of everybody (when did
- * you last dive), and the rest ride inside it without gating it.
+ * **The figure must always be able to fill.** Every step this module emits is
+ * countable and finishable. Optional questions (the note, the hotel pickup and
+ * the like) never count as steps of their own. They fold into Day-of details,
+ * which settles on the one question asked of everybody (when did you last
+ * dive), and the rest ride inside it without gating it.
  *
  * It decides nothing about readiness and re-voices nothing: the states come
  * straight off the checklist the engine already produced, and the two steps
@@ -52,18 +49,12 @@ export const THREAD_STEP_ORDER = [
 export type ThreadStepId = (typeof THREAD_STEP_ORDER)[number];
 
 /**
- * Three states, not four.
- *
- * The SPEC proposed a fourth, `upcoming`, "reserved for steps with nothing
- * actionable yet" — and nothing in this product produces one. Every step is
- * either finished, the diver's to do, or the shop's to finish; gear and
- * day-of are answerable from the moment the booking exists, and a waiver the
- * shop has not issued is the shop's (`waiver_not_sent` is a `waiting`
- * blocker), not a future the diver waits for. The quiet, dimmed reading the
- * artboard gives a later step is carried by `current` instead — the first
- * `your_turn` step is open, the rest are closed lines — which is a rendering
- * decision rather than a state, and leaves no branch here that no test can
- * reach.
+ * Three states. Each step is finished, the diver's to do, or the shop's to
+ * finish. Gear and day-of can be answered from the moment the booking exists.
+ * A waiver the shop has not issued is the shop's (`waiver_not_sent` is a
+ * `waiting` blocker), not a future the diver waits for, so there is no fourth,
+ * "upcoming", state. A later step's dimmed look comes from `current` (the first
+ * `your_turn` step) and is a rendering decision, not a state.
  */
 export type ThreadStepState = "done" | "your_turn" | "with_shop";
 
@@ -72,10 +63,10 @@ export type ThreadStep = {
   state: ThreadStepState;
   /**
    * The checklist item this step re-voices, for the three steps the readiness
-   * engine owns. Absent on `gear`, `changes` and `dayof`, which no blocker produces — the
-   * caller's own booleans decide those, and it is deliberate that they are
-   * booleans: a rental fit reserves nothing and a recency answer gates nobody
-   * (docs/product/glossary.md), so neither may ever become a blocker.
+   * engine owns. Absent on `gear`, `changes` and `dayof`, which no blocker
+   * produces. The caller's own booleans decide those, on purpose: a rental fit
+   * reserves nothing and a recency answer gates nobody (docs/product/glossary.md),
+   * so neither may ever become a blocker.
    */
   item?: DiverChecklistItem;
 };

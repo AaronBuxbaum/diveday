@@ -10,7 +10,6 @@ import { formatMoneyCents, weekdayNames } from "@/lib/format";
 import { currencyFractionDigits, maxPriceMajor, type ShopCurrency } from "@/lib/money";
 import { MAX_TRIP_DAYS, MIN_TRIP_DAYS } from "@/lib/trip-days";
 import type { BuilderCopy, BuilderMoreOptions, BuilderPriceInput } from "./ScheduleBuilder";
-import { weekDayCopy } from "./week-copy";
 
 /** Every word the departure builder says, resolved for the reader: a Client Component cannot translate itself. */
 export function scheduleBuilderCopy(st: StaffTranslator, timeZone: string): BuilderCopy {
@@ -39,7 +38,9 @@ export function scheduleBuilderCopy(st: StaffTranslator, timeZone: string): Buil
     noPriceSetAria: st.raw("schedule.builder.noPriceSetAria"),
     noPriceSetAll: st("schedule.builder.noPriceSetAll"),
     rehearsal: st("trips.rehearsal.label"),
-    ...weekDayCopy(st),
+    noBoats: st("schedule.week.noBoats"),
+    quietDays: st.raw("schedule.week.quietDays"),
+    asked: st("schedule.week.asked"),
     addDeparture: st("requests.addDeparture"),
     rollCallOpen: st.raw("schedule.builder.rollCallOpen"),
     rollCallOpenAria: st.raw("schedule.builder.rollCallOpenAria"),

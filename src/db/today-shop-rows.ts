@@ -57,23 +57,17 @@ export function pushShopRows(actions: TodayAction[], ctx: TodayRowsContext): voi
     }
   }
 
-  // Platform-health chores (task 157, UX persona lens 17): stuck Stripe
-  // operations and photo deletions that never finished used to surface only
-  // on the owner-only monthly Reports page — urgent work buried behind a
-  // report nobody opens daily. Forced `urgency: "now"` (not derived from a
-  // departure — there isn't one) so they land in today's queue the same day
-  // they go stale; `dueAt: null` still sorts them after every dated row
-  // within that band, matching the "undated work never jumps the line"
-  // invariant every other action kind already follows. The full panels these
-  // rows mirror moved off Reports with the surface consolidation — payments to
-  // Orders, deletions to Settings' Data group — and each row's `href` points at
-  // wherever its panel now is.
+  // Platform-health chores: stuck Stripe operations and photo deletions that
+  // never finished. Forced `urgency: "now"` (there is no departure to derive
+  // it from) so they land in today's queue the day they go stale; `dueAt: null`
+  // keeps them after every dated row in that band. Each row's `href` points at
+  // the panel that owns the work: payments on Orders, deletions in Settings.
   if (opsAlerts) {
     const [stuckOperations, pendingDeletions, owedRefunds, openDisputes, restrictedSince] =
       opsAlerts;
 
-    // Stripe turned card payments off (batch 6 item 8). One row while they
-    // stay off: bookings already fall back to paying at the shop, so this is
+    // Stripe card payments are off for this shop. One row while they stay
+    // off: bookings already fall back to paying at the shop, so this is
     // the standing reminder that the owner has something to answer in
     // Stripe, beside the one email they got when it happened.
     if (restrictedSince) {
@@ -138,7 +132,7 @@ export function pushShopRows(actions: TodayAction[], ctx: TodayRowsContext): voi
         detail: stuckPaymentOperationDetailText(t, op.intent.kind, when),
         // Points at the trip roster when there's one to point at; otherwise
         // Orders, which carries the reconciliation detail (Stripe id, exact
-        // timestamp) to act from. That panel used to live on Reports.
+        // timestamp) to act from.
         actionLabel: op.tripId ? openTripActionText(t) : openOrdersActionText(t),
         href: op.tripId ? `/shop/${shopSlug}/trips/${op.tripId}` : `/shop/${shopSlug}/orders`,
         dueAt: null,
@@ -225,12 +219,9 @@ export function pushShopRows(actions: TodayAction[], ctx: TodayRowsContext): voi
     });
   }
 
-  // Reviews waiting on moderation. This used to be a count badge on a nav row;
-  // when Reviews left the header, the signal moved here — the queue is the one
-  // page that ranks pending work, and a badge on a menu was the only signal in
-  // the app that never said what to do about itself. One row for the whole
-  // queue (never one per review), `later` urgency and `dueAt: null` because
-  // nothing sails or refunds on a review — it informs, it never nags.
+  // Reviews waiting on moderation. One row for the whole queue (never one per
+  // review), `later` urgency and `dueAt: null` because nothing sails or refunds
+  // on a review — it informs, it never nags.
   // At a count of exactly 1 the row lands on that review's own anchor rather
   // than the top of the index, since there is a single "the" review to open;
   // at 2 or more there is not, and the destination stays the bare list. The
@@ -259,7 +250,7 @@ export function pushShopRows(actions: TodayAction[], ctx: TodayRowsContext): voi
   // and `dueAt: null` — the shape the reviews row above already has, and for
   // the same reason: nothing sails on an unanswered message, and a row per
   // message would be the inbox rendered twice. Nothing at all at zero.
-  // Open date requests count into the same row (issue #2658): one unanswered
+  // Open date requests count into the same row: one unanswered
   // count on Today, while the requests keep their own page. It opens the inbox
   // when a message is waiting (Requests is a tab beside it), else Requests.
   if (unanswered + openDateRequests > 0) {

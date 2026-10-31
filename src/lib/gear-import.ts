@@ -7,6 +7,7 @@ import {
   MAX_IMPORT_ROWS,
   parseCsv,
 } from "./import";
+import { normalizeImportKey } from "./import-key";
 
 export type PreparedGearImportRow = {
   rowNumber: number;
@@ -82,21 +83,13 @@ const aliases = {
   assignmentNote: ["assignment_note", "rental_note", "rental_notes"],
 } as const;
 
-function normalize(value: string) {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
-}
-
 function text(value: string | undefined) {
   const trimmed = value?.trim();
   return trimmed ? trimmed : null;
 }
 
 function kind(value: string | null): GearItemKind {
-  const normalized = normalize(value ?? "");
+  const normalized = normalizeImportKey(value ?? "");
   const aliasesByKind: Partial<Record<GearItemKind, string[]>> = {
     bcd: ["bcd", "buoyancy_compensator"],
     regulator: ["regulator", "regs"],
@@ -116,7 +109,7 @@ function kind(value: string | null): GearItemKind {
 }
 
 function serviceKind(value: string | null): GearServiceKind {
-  const normalized = normalize(value ?? "service");
+  const normalized = normalizeImportKey(value ?? "service");
   if (normalized.includes("hydro")) return "hydro_test";
   if (normalized.includes("visual")) return "visual_inspection";
   if (normalized.includes("o2") || normalized.includes("oxygen")) return "o2_clean";
@@ -140,7 +133,7 @@ export function prepareGearImport(csv: string): PreparedGearImport {
     return { rows: [], unmappedColumns: [], fatal: "too_many_rows" };
   if (grid.some((row) => row.some((cell) => cell.length > MAX_IMPORT_CELL_LENGTH)))
     return { rows: [], unmappedColumns: [], fatal: "cell_too_long" };
-  const headers = grid[0].map(normalize);
+  const headers = grid[0].map(normalizeImportKey);
   const indexes = new Map<string, number>();
   const unmappedColumns: string[] = [];
   headers.forEach((header, index) => {

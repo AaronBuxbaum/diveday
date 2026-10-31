@@ -23,8 +23,10 @@ function trailLabel(
  * Keeps a row's current explicit event visible when a roll-call list is used
  * without the page-level history index (for example, the client component's
  * isolated render). The page normally supplies the complete trail; matching
- * the formatted detail prevents this local fallback from duplicating its
- * current event.
+ * the stored event id prevents this local fallback from duplicating its
+ * current event. Formatted text is not compared: two different events can
+ * format identically (same minute, same recorder) and each keeps its own line.
+ * A result without an id (never stored) cannot match, so it is shown.
  */
 export function personTrailWithCurrentRecord({
   trail,
@@ -43,11 +45,7 @@ export function personTrailWithCurrentRecord({
 }): readonly PersonTrailEntry[] {
   if (!rollCall || rollCall.implied) return trail;
 
-  const detail = t("manifest.personTrailDetail", {
-    time: formatTime(rollCall.occurredAt, locale, timezone),
-    name: rollCall.recordedByName,
-  });
-  if (trail.some((entry) => entry.detail === detail && entry.note === rollCall.note)) {
+  if (rollCall.eventId && trail.some((entry) => entry.eventId === rollCall.eventId)) {
     return trail;
   }
 
@@ -57,9 +55,13 @@ export function personTrailWithCurrentRecord({
     ...trail,
     {
       label: trailLabel(t, checkpoint, state),
-      detail,
+      detail: t("manifest.personTrailDetail", {
+        time: formatTime(rollCall.occurredAt, locale, timezone),
+        name: rollCall.recordedByName,
+      }),
       state,
       note: rollCall.note,
+      eventId: rollCall.eventId,
     },
   ];
 }
@@ -94,6 +96,7 @@ export function personTrailIndex(
       }),
       state,
       note: rollCall.note,
+      eventId: rollCall.eventId,
     });
     index.set(id, entries);
   };

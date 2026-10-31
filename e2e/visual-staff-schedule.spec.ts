@@ -288,84 +288,26 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
-       * **Wait for the list's own tail, not just the shell.**
-       *
-       * The board is `instant = true` with a `loading.tsx`, so its departures
-       * arrive by PPR streaming *after* the heading these shots used to gate on.
-       * That is the same race this file already documents for the public
-       * schedule ("two runs catching different skeleton frames is what produced
-       * the schedule-dark diffs on builds with no code change") — and it came
-       * back here: `schedule-builder-add-dark-vw-390` reported changed on a PR
-       * that touches neither the board nor anything it renders, and the whole
-       * difference was 168px of missing tail with "Show later departures" in it.
-       * One variant out of four, which is what a race looks like and what a code
-       * change does not.
-       *
-       * **The signal is the week's own pager now** (#1923). It used to be the
-       * day stream's cursor link, `a[data-board-pager='next']`, and that went
-       * with the stream. The week's "Next week" step is the same kind of
-       * thing: it arrives in the board's streamed payload and is stable —
-       * every week has a next one, whatever the seed holds.
-       *
-       * **Attached, and by attribute.** A visibility wait is what spent three
-       * board captures' whole 184s budget once, and the role query cannot
-       * express "attached": `e2e/fixtures.ts` appends
-       * `.filter({ visible: true })` to every one of them, which is visible in
-       * the CI call log and which silently discards `includeHidden`.
-       * `page.locator` is the query it leaves alone.
+       * The board streams its departures after the shell renders. Wait for the
+       * week's stable next-step link to attach before capturing the list.
        */
       const boardListSettled = (page: Page) =>
         page.locator('[data-week-board] a[data-week-step="next"]').waitFor({ state: "attached" });
 
       /**
-       * **Prove the add panel is open before photographing it — every other
-       * gate this capture has is equally true of the board with it shut.**
-       *
-       * `schedule-builder-add` used to gate on the placeholder `<option
-       * disabled>` inside `select[name="courseId"]` detaching, which is the
-       * right signal that the panel's own fetch has landed and the shot will
-       * not be of "Loading…". It is the wrong signal for whether the panel
-       * exists: Playwright resolves `state: "detached"` **immediately** for a
-       * locator matching nothing, and before the panel mounts there is no
-       * `select[name="courseId"]` at all. The gate was therefore true at
-       * exactly the moment it was meant to be false, and the capture's two
-       * other gates cannot tell the pages apart — the `Board` heading and the
-       * board's trailing pager render identically either way.
-       *
-       * Measured rather than reasoned. Instrumenting `capture()` to log
-       * `location.href` beside `document.documentElement.scrollHeight`, a
-       * `--repeat-each=5` run caught `schedule-builder-add` shooting
-       * `/schedule/board` with no `?add=` twice, at 3,828px — the
-       * `schedule-builder` baseline's own height, the same page — against
-       * 4,986px on `/schedule/board?add=1`. The click's client navigation had
-       * simply not committed, and nothing waited for it. The old gate also
-       * admitted a half-settled panel at 4,818px, the 168px that made this
-       * look like a pager appearing and disappearing.
-       *
-       * It is not the pager. The trailing "Show later departures" control was
-       * present in every probe of both runs, and the demo shop seeds 48
-       * upcoming departures against a 14-row keyset page, so `nextCursor` is
-       * never null and the control is never conditional. With the gates below,
-       * 20 consecutive captures measured 4,986px and 3,136px, every one.
-       *
-       * Read the two heights as history: that control was the day stream's,
-       * and the stream is gone (#1923). The gates are what mattered and they
-       * still hold; the numbers they stabilised moved with the composition.
+       * Wait for navigation, then for the panel and its loaded course options.
+       * The detached wait alone is insufficient: it passes immediately while
+       * the select is not mounted, before the panel has opened.
        */
       const addPanelSettled = async (page: Page) => {
-        // The click's client navigation has committed. Every other gate below
-        // — and both of this capture's outer ones — is equally true of the
-        // *pre-click* board, so this is the only one that can tell the two
-        // pages apart. A no-op for the expanded capture, which `goto`s the
-        // panel state directly.
+        // Confirms the click navigated to the panel; direct panel captures
+        // already start at this URL.
         await page.waitForURL(/\/schedule\/board\/new/);
         const courseSelect = page.locator('select[name="courseId"]');
-        // The panel is mounted. Without this the wait below is vacuous.
+        // Ensure the detached wait below cannot pass before the select mounts.
         await courseSelect.waitFor({ state: "attached" });
-        // `loadBuilderOptionsAction` has answered. One select speaks for both:
-        // the two placeholders are driven by the same `options === null`, and
-        // the dive-site select is `hidden` in the expanded panel, where a wait
-        // on its visibility would never resolve.
+        // The disabled placeholder disappears when builder options load. Use
+        // the course select because the dive-site select is hidden when expanded.
         await courseSelect.locator("option[disabled]").waitFor({ state: "detached" });
       };
 
@@ -479,7 +421,7 @@ for (const scheme of ["light", "dark"] as const) {
        * **Both widths show the panel** as of issue #1309. This used to force
        * the phone viewport before opening, because the board's two
        * compositions — the vertical day stream below `xl`, the week grid at and
-       * above it — keyed their panels separately (`move:` against `w:move:`),
+       * above it — keyed their panels separately (`move:` against a `w:move:` twin),
        * so whichever was open closed the moment `capture()` resized through the
        * other and the 1280 sibling was a duplicate of the plain week grid: two
        * baseline names for one image, and a reviewer triaging the same board

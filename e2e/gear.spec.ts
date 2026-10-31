@@ -14,14 +14,11 @@ import { e2eNow, seededTripId } from "./helpers";
  * Open the "Add a unit" sheet through the page's one door, the header's "Add
  * a unit" (visual review A48), once React owns it.
  *
- * The wait stays: `AddUnitLink` is a client
- * handler talking to a client listener in `AddUnitSheet`, and a click that
- * lands before hydration is swallowed in silence. That window used to be
- * closed by accident, because `/shop/**` had no static shell and nothing
- * painted until the server had finished; giving the staff surfaces one (issue
- * 1446) is what made it a window at all, and shard 2/4 found it.
- * `data-hydrated` is the same flag the rest of the staff surfaces publish
- * (`CheckInSearch`, `OrdersToolbar`, `CrewSection`) for exactly this.
+ * The wait stays: `AddUnitControl` owns both the client trigger and its local
+ * sheet state. Its `data-hydrated` marker is set after React attaches the
+ * trigger handler, so this click cannot race hydration. The marker matches
+ * what the other staff surfaces publish (`CheckInSearch`, `OrdersToolbar`,
+ * `CrewSection`) for the same reason.
  */
 async function openAddGear(page: Page) {
   const door = page.getByRole("button", { name: "Add a unit", exact: true });

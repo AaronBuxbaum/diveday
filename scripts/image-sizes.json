@@ -91,7 +91,7 @@
       "1920": 275
     }
   },
-  "src/app/s/[shopSlug]/trips/[id]/_components/TripDayPlan.tsx :: (min-width: 896px) 26rem, (min-width: 640px) 46vw, 92vw": {
+  "src/components/SiteBriefing.tsx :: (min-width: 896px) 26rem, (min-width: 640px) 46vw, 92vw": {
     "measured": "2026-10-05, /s/blue-mantis/sites/molasses-reef (the widest it renders). A photographed landmark, two-up from sm. Inside the trip page's briefing door it is narrower (256px at 768 and up), one candidate step below what this declares.",
     "rendered": {
       "390": 358,

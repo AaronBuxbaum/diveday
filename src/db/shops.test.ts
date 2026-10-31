@@ -11,10 +11,10 @@ import {
   getShopBySlug,
   listShopsForDiverPicker,
   listShopsForSitemap,
+  saveShopRentals,
   setShopAddress,
   setShopCrewLead,
   setShopDepthUnit,
-  setShopNitroxFillMethod,
   setShopReopensOn,
   setShopSearchListing,
   setShopTemperatureUnit,
@@ -134,7 +134,7 @@ describe("setShopTemperatureUnit", () => {
 });
 
 /** Issue 3004: how the shop fills nitrox, which places Rent out's O2-clean warning. */
-describe("setShopNitroxFillMethod", () => {
+describe("nitrox fill method default", () => {
   it("starts a brand-new shop on blending, so the warning stays on every EANx fill", async () => {
     const [freshShop] = await ctx.db
       .insert(shops)
@@ -146,21 +146,77 @@ describe("setShopNitroxFillMethod", () => {
   it("starts the seeded shop on blending", async () => {
     expect((await getShopBySlug(ctx.db, ctx.shop.slug))?.nitroxFillMethod).toBe("blending");
   });
+});
 
-  it("stores the shop's choice and reads it back, for this shop only", async () => {
+/** Issue 3355: the Rentals page's save is one UPDATE, so it lands whole or not at all. */
+describe("saveShopRentals", () => {
+  const rentalPricing = { setCents: 6000, perItemCents: { wetsuit: 4000 }, nitroxCents: 1200 };
+
+  it("writes the catalog, prices, terms and given settings in one update", async () => {
     const { db, shop } = ctx;
-    const [other] = await db
-      .insert(shops)
-      .values({ name: "Other Shop", slug: "other-shop-nitrox-fill", timezone: "America/New_York" })
-      .returning();
-    expect((await setShopNitroxFillMethod(db, shop.id, "membrane_premix"))?.nitroxFillMethod).toBe(
-      "membrane_premix",
-    );
-    expect((await getShopBySlug(db, shop.slug))?.nitroxFillMethod).toBe("membrane_premix");
-    expect((await getShopBySlug(db, "other-shop-nitrox-fill"))?.nitroxFillMethod).toBe("blending");
-    expect(other).toBeDefined();
-    await setShopNitroxFillMethod(db, shop.id, "blending");
-    expect((await getShopBySlug(db, shop.slug))?.nitroxFillMethod).toBe("blending");
+    const saved = await saveShopRentals(db, shop.id, {
+      rentalItems: ["wetsuit", "bcd"],
+      rentalPricing,
+      rentalTerms: "Rinse it.",
+      customerRegulatorServiceMonths: 24,
+      nitroxFillMethod: "membrane_premix",
+    });
+    expect(saved).toMatchObject({
+      rentalItems: ["wetsuit", "bcd"],
+      rentalPricing,
+      rentalTerms: "Rinse it.",
+      customerRegulatorServiceMonths: 24,
+      nitroxFillMethod: "membrane_premix",
+    });
+  });
+
+  it("leaves an omitted interval and fill method as they were stored", async () => {
+    const { db, shop } = ctx;
+    await saveShopRentals(db, shop.id, {
+      rentalItems: ["wetsuit"],
+      rentalPricing,
+      rentalTerms: null,
+      customerRegulatorServiceMonths: 24,
+      nitroxFillMethod: "membrane_premix",
+    });
+    const after = await saveShopRentals(db, shop.id, {
+      rentalItems: ["bcd"],
+      rentalPricing: { setCents: null, perItemCents: {}, nitroxCents: null },
+      rentalTerms: "Changed.",
+    });
+    expect(after).toMatchObject({
+      rentalItems: ["bcd"],
+      rentalTerms: "Changed.",
+      customerRegulatorServiceMonths: 24,
+      nitroxFillMethod: "membrane_premix",
+    });
+  });
+
+  it("changes none of its columns when the database refuses one of them", async () => {
+    const { db, shop } = ctx;
+    await saveShopRentals(db, shop.id, {
+      rentalItems: ["wetsuit"],
+      rentalPricing,
+      rentalTerms: "Kept.",
+      customerRegulatorServiceMonths: 12,
+    });
+    // 18 is outside the `in (12, 24)` check, so the whole UPDATE is rejected.
+    // A savepoint, so the refusal does not abort the test's transaction.
+    await expect(
+      db.transaction((tx) =>
+        saveShopRentals(tx, shop.id, {
+          rentalItems: ["bcd", "regulator"],
+          rentalPricing: { setCents: null, perItemCents: {}, nitroxCents: null },
+          rentalTerms: "Refused.",
+          customerRegulatorServiceMonths: 18 as never,
+        }),
+      ),
+    ).rejects.toThrow();
+    const after = await getShopBySlug(db, shop.slug);
+    expect(after?.rentalItems).toEqual(["wetsuit"]);
+    expect(after?.rentalPricing).toEqual(rentalPricing);
+    expect(after?.rentalTerms).toBe("Kept.");
+    expect(after?.customerRegulatorServiceMonths).toBe(12);
   });
 });
 

@@ -87,9 +87,9 @@ export async function generateMetadata({
       description,
       url: `/switching/${guide.slug}`,
     },
-    // `summary_large_image`: the OG block above names the shared link card
-    // (`sharedLinkCard` → `src/app/opengraph-image.tsx`) for every registered
-    // guide — docs/product/marketing.md, Twitter-card policy. Built from the
+    // `summary_large_image`: the shared link card (`sharedLinkCard`, served from
+    // `/link-card`) for every registered guide — docs/product/marketing.md,
+    // Twitter-card policy. Built from the
     // same two strings as the OG block so a guide can never unfurl one story on
     // one network and another elsewhere.
     twitter: { card: "summary_large_image", title, description },

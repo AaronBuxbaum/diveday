@@ -406,4 +406,24 @@ describe("Amazon Location address suggestions", () => {
     const result = await awsAddressLookupProvider(config, { client }).suggest("Key Largo");
     expect(result.status === "ok" && result.suggestions.map((s) => s.id)).toEqual(["place-1"]);
   });
+
+  it("refuses a result whose country is not an ISO alpha-2 code, rather than saving it without one", async () => {
+    // A pick replaces and saves the whole address, so a row whose country cannot
+    // be held is refused as a whole: no partial address is offered.
+    const client = clientReturning({
+      ResultItems: [
+        {
+          ...fullResult,
+          Place: { PlaceId: "alpha-3", Address: { ...CORE_ADDRESS, Country: { Code2: "USA" } } },
+        },
+        {
+          ...fullResult,
+          Place: { PlaceId: "no-country", Address: { ...CORE_ADDRESS, Country: undefined } },
+        },
+        fullResult,
+      ],
+    });
+    const result = await awsAddressLookupProvider(config, { client }).suggest("102 Ocean");
+    expect(result.status === "ok" && result.suggestions.map((s) => s.id)).toEqual(["place-1"]);
+  });
 });

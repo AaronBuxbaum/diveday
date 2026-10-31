@@ -1,7 +1,12 @@
 /**
- * The hostile-instants suite: every conversion in `zoned.ts` (and the two
- * day-semantics consumers beside it, `formatRelativeDay` and `dueReminder`)
- * pinned to the moments where timezone code actually breaks — the
+ * The hostile-instants suite: example-based coverage of the conversions that
+ * shop day, month and schedule math depend on (`wallTimeToUtc`,
+ * `utcToWallTime`, `addCalendarDays`, `shopDayBounds`, `shopMonthBounds`, the
+ * shift helpers), plus the `formatRelativeDay`, `dueReminder` and
+ * `calendarDateInTimezone` consumers. Not every export of `zoned.ts` is
+ * exercised here; `shopDaysBounds`, the input-value and parse helpers,
+ * `zonedIsoString` and `sameMomentYearBefore` have no cases in this file.
+ * The cases pin the moments where timezone code breaks: the
  * spring-forward night whose 2:30am doesn't exist, the fall-back night whose
  * 1:30am exists twice, zones that jump *at midnight* so the shop day itself
  * starts or ends inside the gap, departures that cross midnight in shop-local
@@ -82,17 +87,15 @@ describe("the spring-forward night: wall times that do not exist", () => {
     (zone, gapWall, expectedUtc, readsBackAs) => {
       const resolved = wallTimeToUtc(gapWall, zone);
       expect(resolved.toISOString()).toBe(expectedUtc);
-      // The resolved instant reads back as a wall time that actually exists,
-      // *after* the jump — the pre-fix two-pass result could land before it,
-      // reading as an earlier hour (and, in a midnight-gap zone, yesterday).
+      // The resolved instant reads back as a wall time that exists, after the
+      // jump: never an earlier hour, and never the previous day.
       expect(utcToWallTime(resolved, zone)).toEqual(readsBackAs);
     },
   );
 
-  it("never resolves a gap time onto the previous calendar day (the Santiago regression)", () => {
-    // Before the gap fix, Santiago's nonexistent Sep 6 00:00 resolved to
-    // 03:00Z — which reads as Sep *5*, 23:00. Any "today" boundary built on
-    // it leaked the previous day's last hour into today.
+  it("never resolves a gap time onto the previous calendar day (Santiago)", () => {
+    // Santiago's nonexistent Sep 6 00:00 must not read back as Sep 5, 23:00:
+    // a "today" boundary built on that instant would leak yesterday's last hour.
     const resolved = wallTimeToUtc(wall(2026, 9, 6, 0, 0), "America/Santiago");
     expect(utcToWallTime(resolved, "America/Santiago").day).toBe(6);
   });
@@ -139,9 +142,8 @@ describe("shopDayBounds across the clock change", () => {
   });
 
   it("keeps a 23:30 boat on the day it sails when tomorrow's midnight is in the gap (Santiago)", () => {
-    // The mirror case: on Sep 5 the day's *end* is tomorrow's nonexistent
-    // midnight. Before the gap fix `to` resolved to 03:00Z (= Sep 5, 23:00
-    // local), so a 23:30 departure fell out of its own day and into the next.
+    // On Sep 5 the day's end is tomorrow's nonexistent midnight, so a 23:30
+    // departure must stay inside Sep 5 rather than fall into the next day.
     const boat2330 = wallTimeToUtc(wall(2026, 9, 5, 23, 30), "America/Santiago");
     const sep5 = shopDayBounds(new Date("2026-09-05T15:00:00Z"), "America/Santiago");
     const sep6 = shopDayBounds(new Date("2026-09-06T15:00:00Z"), "America/Santiago");

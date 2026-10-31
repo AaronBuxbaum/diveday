@@ -391,7 +391,8 @@ const sentryConfig = withSentryConfig(nextConfig, {
   // side errors will fail.
   tunnelRoute: "/monitoring",
 
-  // Request Sentry's debug, tracing and replay exclusions; their current
+  // Request Sentry's debug, tracing and replay exclusions. @sentry/nextjs 11.10
+  // maps these into Turbopack's compiler.define, so they are live here; their
   // production bundle impact has not been measured (#3227).
   bundleSizeOptimizations: {
     excludeDebugStatements: true,

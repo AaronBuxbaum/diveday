@@ -1,36 +1,21 @@
 import { utcToWallTime } from "./zoned";
 
 /**
- * Which drawing marks a departure — Reef's site mark (ADR
- * 20260901-diveday-reimagined, decision 1, slice 13f) — and the rest of the
- * hand's creatures, named in one place so a drawing cannot be invented at a
- * call site.
+ * The decorative site mark on a departure, and the rest of the hand's
+ * drawings, named in one place so a drawing cannot be invented at a call site
+ * (ADR 20260901-diveday-reimagined, decision 1).
  *
- * The system sheet draws six: the green turtle (the all-clear), the
- * parrotfish (the reef trip), the sea fan (courses), the brain coral (the dive
- * site), the bubble trail (the mark) and the swell (the divider and the band,
- * deleted with the Logbook retheme). Four of them stand for
- * a departure on the home spine and the week board — the parrotfish for a
- * reef, the sea fan for a course session (taught, whatever the site), the
- * bubble trail for open water or a site nobody has named yet — plus a
- * **seventh the canvas did not draw**: the wreck. Key Largo's boats run the
- * Spiegel Grove and the Duane every week, and a wreck marked with a reef fish
- * is a mark saying the wrong thing; it is drawn in the same hand and
- * recorded in the ADR as the set's one addition. The brain coral marks a
- * *site* rather than a trip (a dive site with no photograph of its own), and
- * the turtle is not a site mark at all: it is the morning's all-clear, the one
- * drawing a staff surface's earned moment may carry.
- *
- * A site carries no "kind" column — its briefing is the shop's own words
- * (ADR 20260813-dive-site-briefings-are-the-shops-own-words) — so the mark
- * reads the site's *name*, the way `siteFit()` reads a briefing for its tone.
- * A miss costs nothing: the bubble trail is the honest default, and the mark
- * is decoration beside a time and a title that carry the fact.
+ * A site has no kind column (its briefing is the shop's own words, ADR
+ * 20260813-dive-site-briefings-are-the-shops-own-words), so `siteMarkFor`
+ * reads the site's name: a course session is always "course"; a name with
+ * "wreck" in it, or a ship word as a whole word, is "wreck"; a name with a
+ * reef-type word as a whole word is "reef"; anything else, including no name,
+ * is "open", the honest fallback. The mark is decoration beside a time and a
+ * title that carry the fact, so a miss costs nothing.
  */
 export const SITE_MARKS = ["reef", "wreck", "course", "open"] as const;
 export type SiteMarkCode = (typeof SITE_MARKS)[number];
 
-/** Every drawing in the hand that renders as a tile; the swell is the sixth. */
 /**
  * The hand's whole vocabulary. The eighth is the **boat** (ADR
  * 20260904-reef-all-the-way-down, decision 2, Budget rule 2): the one drawing

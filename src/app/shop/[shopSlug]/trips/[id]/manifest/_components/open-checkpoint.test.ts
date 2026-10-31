@@ -18,7 +18,6 @@ describe("openCheckpoint", () => {
     const page = opened(openCheckpoint(all, departure, "after_dive_2"));
     expect(page.checkpoint).toBe("after_dive_2");
     expect(page.isDeparture).toBe(false);
-    expect(page.checkpoints).toEqual(["departure", "after_dive_1", "after_dive_2"]);
   });
 
   it("opens the dock when the URL names no checkpoint", () => {

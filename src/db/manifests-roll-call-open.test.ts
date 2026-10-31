@@ -2,7 +2,12 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
-import { recordCrewRollCall, recordRollCall, rollCallOpenOnTrip } from "./manifests";
+import {
+  getTripManifest,
+  recordCrewRollCall,
+  recordRollCall,
+  rollCallOpenOnTrip,
+} from "./manifests";
 import { rollCallCrewEvents, rollCallEvents, shops, tripAssignments, trips } from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 
@@ -196,5 +201,29 @@ describe("rollCallOpenOnTrip", () => {
       "eeeeeeee-2285-4285-8285-eeeeeeeeeee2",
     );
     expect(before.ok).toBe(true);
+  });
+
+  it("carries each stored event id onto the manifest's diver and crew results", async () => {
+    const { db, shop, reef, bookingId, staffId } = await reefDeparture();
+    const diver = await recordRollCall(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      bookingId,
+      recordedByPersonId: staffId,
+      status: "not_boarded",
+    });
+    const crew = await recordCrewRollCall(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      personId: staffId,
+      recordedByPersonId: staffId,
+      status: "boarded",
+    });
+    if (!diver.ok || !crew.ok) throw new Error("roll call write refused");
+    const manifest = await getTripManifest(db, shop.id, reef.id, "departure");
+    expect(manifest?.divers.find((d) => d.bookingId === bookingId)?.rollCall?.eventId).toBe(
+      diver.eventId,
+    );
+    expect(manifest?.crew.find((m) => m.id === staffId)?.rollCall?.eventId).toBe(crew.eventId);
   });
 });

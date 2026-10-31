@@ -933,8 +933,8 @@ export type TodayAction = {
   /**
    * Present on a single-diver `payment` row (payment_due/payment_refunded).
    * `orderId`/`hostedInvoiceUrl` start unset here — this module has no DB
-   * access — and `src/db/today.ts` fills them in only when that booking was
-   * actually invoiced through Stripe and the invoice is still open. The
+   * access — and `src/db/today-shop-rows.ts` fills them in only when that
+   * booking was actually invoiced through Stripe and the invoice is still open. The
    * queue renders the inline "copy link"/"resend invoice" control only once
    * `orderId` is present; otherwise the row keeps its `href` fallback to the
    * roster (never a dead button). A collapsed multi-diver row has no single
