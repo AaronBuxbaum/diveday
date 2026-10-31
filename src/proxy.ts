@@ -100,10 +100,11 @@ type CachedSessionSnapshot = {
  */
 async function authGateResponse(req: NextRequest): Promise<Response | undefined> {
   const { pathname } = req.nextUrl;
-  // Before staff auth: this destination is public and reads only this device's
-  // saved copy, so signed-out staffers belong there too. The slug is not read,
-  // so the hop says nothing about which shops exist. Build the absolute target
-  // from `req.nextUrl` to keep the request's origin.
+  // Before staff auth: this public destination shows saved manifests offline
+  // and may verify or reconcile them when online, so signed-out staffers belong
+  // there too. The slug is not read, so the hop says nothing about which shops
+  // exist. Build the absolute target from `req.nextUrl` to keep the request's
+  // origin.
   if (STAFF_SHAPED_OFFLINE_MANIFEST_PATH.test(pathname)) {
     const url = new URL(req.nextUrl);
     url.pathname = "/offline-manifest";
