@@ -19,8 +19,9 @@ export const GZIP_MAGIC = Buffer.from([0x1f, 0x8b]);
 export const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
 const DEFAULT_BUCKET_TIMEOUT_MS = 30_000;
-const DEFAULT_BUCKET_MAX_BYTES = 64 * 1024 * 1024;
-const DEFAULT_BUCKET_MAX_DECOMPRESSED_BYTES = 64 * 1024 * 1024;
+// Keep aligned with the repository's roughly 100 MB publisher file limits.
+const DEFAULT_BUCKET_MAX_BYTES = 101_000_000;
+const DEFAULT_BUCKET_MAX_DECOMPRESSED_BYTES = 101_000_000;
 const MAX_BUCKET_REDIRECTS = 3;
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
 
