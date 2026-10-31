@@ -1,59 +1,55 @@
 /**
- * **The diver's trip-prep page, kept on their own phone** — the last copy of
- * `/ready/<token>` this browser rendered, served only when the network fails.
+ * **The diver's trip-prep copy, kept on their own phone** — what the last
+ * `/ready/<token>` this browser opened could say, served only when the network
+ * fails.
  *
- * At a marina with no signal the diver had the printed pass or nothing; the
- * page with "Where to go", the pass and "Running late" was a live page. This
- * keeps exactly one copy of it, under rules chosen so the copy can never be a
- * way in that the link itself was not:
+ * At a marina with no signal the diver had the printed pass or nothing. This
+ * keeps exactly one copy of a purpose-built snapshot (issue #3225), under
+ * rules chosen so the copy can never be a way in that the link itself was not:
  *
+ * - **A snapshot, not the page.** The worker never stores the page it was
+ *   handed. It asks the server for `/ready/<token>/offline` (the route
+ *   `src/app/ready/[token]/offline/route.ts`), which reads a short list of
+ *   fields off the verified booking and answers three finished documents.
+ *   They hold no token, no link and no form, so there is nothing to redact
+ *   here: no HTML is parsed or rewritten, and the worker only chooses which
+ *   document to serve. The served document carries a Content-Security-Policy
+ *   that allows no script and no network.
  * - **Only from a registration scoped to `/ready/`** (the caller checks): the
  *   staff worker at `/` never stores one, so a shared shop tablet that opens a
  *   diver's link through the staff app keeps nothing.
  * - **Only the page itself, same origin, by its exact path**: the token in the
  *   path *is* the capability, so the cache answers only someone who already
  *   holds it. No query string, nothing under it (`/forms`), no redirect.
- * - **One copy, the last one rendered, under a key that names no token**
+ * - **One copy, the last one saved, under a key that names no token**
  *   (security review of layer 8, D1): Cache Storage is origin-wide and any
  *   same-origin script can list its keys, so the copy lives at
  *   {@link READY_COPY_KEY} and carries only a SHA-256 of its path. A request
  *   is answered only when its own path hashes to the same value, so a phone
  *   that opened two bookings holds only the newer.
- * - **No other capability rides along** (issue #2693): a party claim link, a
- *   pending tip's Stripe checkout link, a bound server action's `$ACTION_*`
- *   fields and a recap token are dropped from the stored body for good.
- * - **No Flight payload and no client runtime** (issue #3003): React flushes
- *   the payload in 4096-byte views cut at any byte, and Next writes each as
- *   its own `self.__next_f.push` script, so a token straddling a cut reaches
- *   the page in two halves that no pattern above matches. The copy keeps none
- *   of those scripts, and none of the page's external scripts either: with no
- *   payload the runtime could only fail to hydrate. What is kept is the
- *   server's markup and React's own streaming instructions, which put each
- *   Suspense boundary's content in place, so the copy reads as the page did
- *   and taps nothing that needs signal. Its "No signal" line is drawn by the
- *   server, hidden, and shown here ({@link READY_OFFLINE_NOTE_ATTR}).
  * - **The diver can remove it**: "Remove saved copy" on the page, and every
  *   staff sign-out, run `forgetReadyPageCopy` (`src/lib/ready-offline.ts`).
  * - **Read-only, network-first**: a cached copy is served only when `fetch`
- *   fails. Its forms post to the server like any page and fail offline like
- *   any page; nothing is queued.
- * - **Expiry follows a trusted server generation time**: when a copy is
- *   saved, that timestamp calibrates the device clock offset used to estimate
- *   its trip expiry. A fixed offset works offline; an unobserved forward clock
- *   jump after saving is indistinguishable from elapsed time and can expire a
- *   copy early. A copy remains a saved snapshot, never live readiness.
- * - **Bounded by the trip, not only by the clock** (D2): the live page names
- *   the instant its copy expires ({@link READY_KEEP_UNTIL_META}: a day after
- *   the boat is due back), capped at {@link READY_COPY_MAX_AGE_MS}. A page
- *   that names none (a cancelled booking, a departure called off, a dead link)
- *   clears the copy instead of replacing it, and a cancelled landing
- *   forgets it outright: by navigation, or by the cancelled card asking the
- *   worker when the cancel's redirect was not one (#2979). A save whose fetch
- *   began before that forget stores nothing.
+ *   fails. It has no control that posts anything; nothing is queued.
+ * - **Expiry follows a trusted server time**: the snapshot carries the server's
+ *   clock when it was built. That instant calibrates the device clock offset
+ *   used to estimate expiry. A fixed offset works offline; an unobserved
+ *   forward clock jump after saving is indistinguishable from elapsed time and
+ *   can expire a copy early. A backward jump, or no clock history to compare
+ *   with, serves a warning document instead. A copy remains a saved snapshot,
+ *   never live readiness.
+ * - **Bounded by the trip, not only by the clock** (D2): the snapshot names the
+ *   instant its copy expires (a day after the boat is due back), capped at
+ *   {@link READY_COPY_MAX_AGE_MS}. A server that refuses one (a cancelled
+ *   booking, a departure called off, a dead link) clears the copy instead of
+ *   replacing it, and a cancelled landing forgets it outright: by navigation,
+ *   or by the cancelled card asking the worker when the cancel's redirect was
+ *   not one (#2979). A save whose request began before that forget stores
+ *   nothing.
  *
  * **A residual we accept** (issue #2478, decided 2026-10-16): a staff cancel
  * or a blow-out (`src/db/blowouts.ts`) reaches the copy only when the diver
- * next opens the link online. A phone that never does keeps showing the page
+ * next opens the link online. A phone that never does keeps showing the copy
  * until its date. A push could drop the copy, but divers have no push
  * subscription (web push serves staff manifests, ADR 20260804-manifest-web-push)
  * and a diver offline at the marina is the one phone a push cannot reach, so
@@ -61,20 +57,12 @@
  * the two ends: the copy shows offline, and a `?cancelled=` landing clears it.
  */
 
-import { keepUnitsWhole } from "@/lib/date-parts";
 import {
+  parseReadySnapshot,
   READY_CACHE_NAME,
-  READY_COPY_GENERATED_AT_ATTR,
-  READY_COPY_GENERATED_AT_META,
-  READY_COPY_LOCALE_META,
-  READY_COPY_TIME_ZONE_META,
-  READY_COPY_VERSION,
-  READY_COPY_VERSION_META,
   READY_FORGOTTEN_CACHE_NAME,
-  READY_KEEP_UNTIL_META,
-  READY_OFFLINE_GENERATED_AT_PLACEHOLDER,
-  READY_OFFLINE_NOTE_ATTR,
-  READY_ROLLBACK_SAVED_AT_PLACEHOLDER,
+  type ReadySnapshot,
+  readySnapshotPath,
 } from "@/lib/ready-offline";
 
 /**
@@ -101,176 +89,10 @@ const REQUEST_CANCELLED_VERSION_HEADER = "x-diveday-ready-cancelled-version";
 const LATEST_REQUEST_KEY = "/ready/latest-request";
 const KEEP_UNTIL_HEADER = "x-diveday-keep-until";
 const DEVICE_SAVED_AT_HEADER = "x-diveday-device-saved-at";
-const SERVER_GENERATED_AT_HEADER = "x-diveday-server-generated-at";
 const CLOCK_WATERMARK_HEADER = "x-diveday-clock-watermark";
 const READY_CLOCK_CACHE_NAME = "diveday-ready-clock-v1";
 const READY_CLOCK_KEY = "/ready/clock-observation";
 const READY_CLOCK_STATE_HEADER = "x-diveday-ready-copy-time-state";
-
-/** Stands in for the bearer token in the stored body; not a legal token (wrong length). */
-const TOKEN_PLACEHOLDER = "__diveday_kept_token__";
-
-/**
- * A party seat's claim link (`/claim/<token>`, relative or absolute) is a
- * second bearer token on the page. The copy keeps no claim token at all, and
- * serves this stand-in, a link that opens nothing, in its place: the real link
- * is back once the page is read online again.
- */
-const CLAIM_TOKEN_PATTERN = /\/claim\/[A-Za-z0-9_-]{43}/g;
-const CLAIM_REMOVED = "/claim/__diveday_claim_not_kept__";
-
-/**
- * **No way to pay from a kept copy** (issue #2693). A pending tip's Stripe
- * checkout link opens a live checkout session, so the copy carries a link
- * that opens nothing in its place, in the HTML and in the Flight payload alike
- * (the character class stops at a JSON string's escaped quote).
- */
-const CHECKOUT_LINK_PATTERN = /https:\/\/checkout\.stripe\.com\/[^"'\s<>\\]*/g;
-const CHECKOUT_REMOVED = "#checkout-not-kept";
-
-/**
- * **A bound server action's form fields** (`$ACTION_REF_*`, `$ACTION_<id>:<n>`,
- * `$ACTION_KEY`; React's `encodeFormAction`) carry the action's bound
- * arguments. The copy drops the fields whole: a kept page is read-only, and
- * hydration skips a missing hidden input.
- */
-const BOUND_ACTION_FIELD_PATTERN = /<input\b[^>]*\bname="\$ACTION_[^"]*"[^>]*>/g;
-
-/**
- * **A recap token** (`signRecapToken`: base64url of `recap:<booking>:<iat>`,
- * a dot, a 43-character signature) is what the after-state's actions are
- * bound to, so it rides in the Flight payload as well as those fields. A
- * second, 180-day bearer credential the copy never keeps (issue #2693). Its
- * payload always opens with `cmVjYXA6`, the base64url of `recap:`.
- */
-const RECAP_TOKEN_PATTERN = /cmVjYXA6[A-Za-z0-9_-]*\.[A-Za-z0-9_-]{43}/g;
-const RECAP_TOKEN_REMOVED = "__diveday_recap_not_kept__";
-
-/** Every `<script>` element, its opening tag's attributes and its inline text. */
-const SCRIPT_ELEMENT_PATTERN = /<script\b([^>]*)>([\s\S]*?)<\/script\b[^>]*>/gi;
-
-/**
- * **The page's scripts, minus React's streaming instructions** (issue #3003).
- * Drops every script that loads from a `src` (the client runtime, which with
- * no payload could only fail to hydrate) and every inline script that touches
- * `__next_f` (the Flight payload, where a token can sit split across two).
- * React's inline `$RC`-style instructions carry only boundary ids, and the
- * copy needs them to show anything past the loading skeleton.
- */
-function withoutClientRuntime(html: string): string {
-  // Until nothing more drops, so removing one element cannot join the text
-  // around it into another the pass did not see.
-  let previous: string;
-  let current = html;
-  do {
-    previous = current;
-    current = previous.replace(
-      SCRIPT_ELEMENT_PATTERN,
-      (element, attributes: string, text: string) =>
-        /\bsrc\s*=/i.test(attributes) || text.includes("__next_f") ? "" : element,
-    );
-  } while (current !== previous);
-  return current;
-}
-
-/**
- * The page's "No signal" line, drawn by the server and hidden there
- * (`ReadyOfflineCopy`). The copy is only ever on screen when the network did
- * not answer, and it runs no script to unhide the line, so it is shown here.
- */
-const OFFLINE_NOTE_HIDDEN = `${READY_OFFLINE_NOTE_ATTR}="" hidden=""`;
-const OFFLINE_NOTE_SHOWN = `${READY_OFFLINE_NOTE_ATTR}=""`;
-
-const KEEP_UNTIL_PATTERN = new RegExp(`<meta name="${READY_KEEP_UNTIL_META}" content="(\\d+)"`);
-
-type ReadyBanner = { element: string; opening: string; text: string; closing: string };
-
-function readyBanners(html: string): ReadyBanner[] {
-  const pattern = new RegExp(
-    `(<p\\b[^>]*\\b${READY_OFFLINE_NOTE_ATTR}=""[^>]*>)([^<>]*)(<\\/p>)`,
-    "gi",
-  );
-  return [...html.matchAll(pattern)].map((match) => ({
-    element: match[0],
-    opening: match[1] ?? "",
-    text: match[2] ?? "",
-    closing: match[3] ?? "",
-  }));
-}
-
-function hasAttribute(opening: string, name: string): boolean {
-  return new RegExp(`\\b${name}="[^"]*"`).test(opening);
-}
-
-function singleTextBanner(html: string): ReadyBanner | undefined {
-  const banners = readyBanners(html);
-  const banner = banners[0];
-  const allNoteMarkers = html.match(new RegExp(`\\b${READY_OFFLINE_NOTE_ATTR}=""`, "g"));
-  const noteMarkers = banner?.opening.match(new RegExp(`\\b${READY_OFFLINE_NOTE_ATTR}=""`, "g"));
-  if (
-    banners.length !== 1 ||
-    allNoteMarkers?.length !== 1 ||
-    !banner ||
-    noteMarkers?.length !== 1
-  ) {
-    return undefined;
-  }
-  return banner;
-}
-
-function visibleTextBanner(html: string): ReadyBanner | undefined {
-  const banner = singleTextBanner(html);
-  return banner && !/\shidden(?:\s|=|>)/i.test(banner.opening) ? banner : undefined;
-}
-
-function metaContent(html: string, name: string): string | undefined {
-  return html.match(
-    new RegExp(`<meta\\b[^>]*\\bname="${name}"[^>]*\\bcontent="([^"]*)"[^>]*>`, "i"),
-  )?.[1];
-}
-
-function singleMetaContent(html: string, name: string): string | undefined {
-  const matches = [
-    ...html.matchAll(
-      new RegExp(`<meta\\b[^>]*\\bname="${name}"[^>]*\\bcontent="([^"]*)"[^>]*>`, "gi"),
-    ),
-  ];
-  return matches.length === 1 ? matches[0]?.[1] : undefined;
-}
-
-/** Format the server-rendered page generation instant in the locale and shop zone. */
-function readyGeneratedAtLabel(html: string, generatedAt: number): string | undefined {
-  const locale = metaContent(html, READY_COPY_LOCALE_META);
-  const timeZone = metaContent(html, READY_COPY_TIME_ZONE_META);
-  const declaredGeneratedAt = Number(singleMetaContent(html, READY_COPY_GENERATED_AT_META));
-  if (
-    !locale ||
-    !timeZone ||
-    !Number.isSafeInteger(generatedAt) ||
-    declaredGeneratedAt !== generatedAt
-  ) {
-    return undefined;
-  }
-  try {
-    return keepUnitsWhole(
-      new Intl.DateTimeFormat(locale, {
-        month: "short",
-        day: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-        timeZoneName: "short",
-        timeZone,
-      }).formatToParts(new Date(generatedAt)),
-    );
-  } catch {
-    return undefined;
-  }
-}
-
-/** The token in a readiness path (`/ready/<token>`). */
-function tokenOf(path: string): string {
-  return path.slice("/ready/".length);
-}
 
 function numericHeader(response: Response, name: string): number | null {
   const value = Number(response.headers.get(name));
@@ -324,69 +146,19 @@ export async function observeReadyPageClock(storage: CacheStorage, now: number):
   });
 }
 
-function fallbackHeaders(
-  response: Response,
-  state: "known" | "unknown" | "rollback" | "unverified",
-): Headers {
-  const headers = new Headers(response.headers);
-  for (const name of [
-    "content-length",
-    "content-encoding",
-    "content-md5",
-    "content-range",
-    "content-digest",
-    "etag",
-    "last-modified",
-  ]) {
-    headers.delete(name);
-  }
-  headers.set(READY_CLOCK_STATE_HEADER, state);
-  return headers;
-}
-
-function revealMarked(html: string, attribute: string): string {
-  const openTag = new RegExp(
-    `(<(?:p|main|section)\\b(?=[^>]*\\b${attribute}="")[^>]*?)\\s+hidden(?:="")?`,
-    "i",
-  );
-  return html.replace(openTag, "$1");
-}
-
-function rollbackWarningDocument(html: string, generatedAt: number): string | undefined {
-  const marker = html.match(
-    /<section\b(?=[^>]*\bdata-ready-clock-rollback="")[^>]*>[\s\S]*?<\/section>/i,
-  )?.[0];
-  const body = html.match(/<body\b[^>]*>[\s\S]*?<\/body>/i)?.[0];
-  if (!marker || !body) return undefined;
-  const label = readyGeneratedAtLabel(html, generatedAt);
-  let warning = marker.replace(/\s+hidden(?:="")?/, "");
-  if (label) {
-    warning = revealMarked(warning, "data-ready-clock-rollback-saved").replaceAll(
-      READY_ROLLBACK_SAVED_AT_PLACEHOLDER,
-      label,
-    );
-  } else {
-    warning = revealMarked(warning, "data-ready-clock-rollback-unknown");
-  }
-  const replacement = body.replace(
-    /(<body\b[^>]*>)[\s\S]*?(<\/body>)/i,
-    `$1<main>${warning}</main>$2`,
-  );
-  return html.replace(body, replacement);
-}
-
-function unverifiedClockDocument(html: string): string | undefined {
-  const marker = html.match(
-    /<section\b(?=[^>]*\bdata-ready-clock-unverified="")[^>]*>[\s\S]*?<\/section>/i,
-  )?.[0];
-  if (!marker) return undefined;
-  const body = html.match(/<body\b[^>]*>[\s\S]*?<\/body>/i)?.[0];
-  if (!body) return undefined;
-  const warning = revealMarked(
-    revealMarked(marker, "data-ready-clock-unverified"),
-    "data-ready-clock-unverified-copy",
-  );
-  return html.replace(body, body.replace(marker, warning));
+/**
+ * The document the phone is shown. The policy allows inline style and nothing
+ * else: no script, no request, no frame, no form.
+ */
+function documentHeaders(state: "known" | "unverified" | "rollback"): Headers {
+  return new Headers({
+    "content-type": "text/html; charset=utf-8",
+    "content-security-policy":
+      "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+    "cache-control": "no-store",
+    "x-content-type-options": "nosniff",
+    [READY_CLOCK_STATE_HEADER]: state,
+  });
 }
 
 async function pathHash(path: string): Promise<string> {
@@ -552,14 +324,45 @@ async function requestIsCurrent(
   );
 }
 
+/** A snapshot that has not come in this long is not coming; the save gives up. */
+const SNAPSHOT_TIMEOUT_MS = 10_000;
+
 /**
- * Keep `response` as the one copy for `path`, replacing whatever was kept.
- * Reads the body (pass a clone). Returns whether it was kept; a page that
- * names no keep-until, or one already past, clears the copy.
+ * The server's snapshot for `path`: the snapshot, `"gone"` when the server
+ * says there is nothing to keep (a dead link, a cancelled seat, a departure
+ * called off), or null when the answer could not be read, which changes
+ * nothing. Same origin, no redirect, never from the HTTP cache.
+ */
+async function fetchSnapshot(path: string): Promise<ReadySnapshot | "gone" | null> {
+  try {
+    const reply = await fetch(readySnapshotPath(path), {
+      cache: "no-store",
+      credentials: "same-origin",
+      redirect: "error",
+      signal: AbortSignal.timeout(SNAPSHOT_TIMEOUT_MS),
+    });
+    if (reply.status === 404) return "gone";
+    if (!reply.ok || reply.redirected) return null;
+    // Same origin only: nothing opaque or cross-origin is a snapshot.
+    if (reply.type !== "basic" && reply.type !== "default") return null;
+    if (!(reply.headers.get("content-type") ?? "").includes("application/json")) return null;
+    return parseReadySnapshot(await reply.json());
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Keep the server's snapshot for `path` as the one copy, replacing whatever
+ * was kept. `response` is the live page this save was triggered by: it only
+ * has to be a real page of ours (`storable`); none of it is stored. Returns
+ * whether a copy was kept; a server that refuses a snapshot, or one already
+ * past its date, clears the copy.
  *
  * `request` records whether ordering was durably captured before the fetch.
- * A nondurable request may still process terminal truth and return the live
- * response, but cannot publish a saved copy.
+ * A nondurable request may still process terminal truth, but cannot publish a
+ * saved copy. The sixth parameter is the old stylesheet hook, unused now that
+ * the snapshot carries its own style.
  */
 export async function saveReadyPage(
   storage: CacheStorage,
@@ -567,89 +370,37 @@ export async function saveReadyPage(
   response: Response,
   now: number,
   request?: ReadyPageRequest,
-  prepareAssets?: (html: string) => Promise<void>,
+  _prepareAssets?: (html: string) => Promise<void>,
   mayPublish: () => boolean = () => true,
 ): Promise<boolean> {
   if (!storable(response)) return false;
   const hash = await pathHash(path);
   const order = request ?? (await beginReadyPageRequest(storage, path));
   if (order.pathHash !== hash) return false;
-  // A body of its own, so the copy is complete before anything is replaced.
-  const html = new TextDecoder().decode(await response.arrayBuffer());
-  const named = Number(html.match(KEEP_UNTIL_PATTERN)?.[1] ?? Number.NaN);
-  const currentFormat = metaContent(html, READY_COPY_VERSION_META) === READY_COPY_VERSION;
-  const generatedAt = Number(singleMetaContent(html, READY_COPY_GENERATED_AT_META));
-  const generatedAtLabel = currentFormat ? readyGeneratedAtLabel(html, generatedAt) : undefined;
-  const hasTrustedServerTime =
-    Number.isSafeInteger(generatedAt) && generatedAt > 0 && generatedAtLabel !== undefined;
-  const cache = await storage.open(READY_CACHE_NAME);
-  // A live, server-rendered page establishes that it was current when the
-  // server rendered it. Do not let an already-fast phone clock erase that
-  // complete copy before it can be used offline.
-  if (!Number.isFinite(named) || named <= (hasTrustedServerTime ? generatedAt : now)) {
-    // Process terminal truth even without a durable request marker. Order the
-    // path check and epoch write together with request starts, preventing a
-    // different token from slipping between the check and global marker.
+  const snapshot = await fetchSnapshot(path);
+  if (snapshot === null) return false;
+  // Process terminal truth even without a durable request marker. Order the
+  // path check and epoch write together with request starts, preventing a
+  // different token from slipping between the check and global marker.
+  if (snapshot === "gone" || snapshot.keepUntil <= snapshot.generatedAt) {
     await forgetTerminalReadyPath(storage, path, hash);
     return false;
   }
-  if (!order.durable) return false;
-  // A page without the current copy format has no reliable locale, zone or
-  // age context for its banner, so it is never kept.
-  if (!currentFormat) return false;
-  const safeHtml = withoutClientRuntime(html);
-  const banner = singleTextBanner(safeHtml);
-  const placeholderCount = safeHtml.split(READY_OFFLINE_GENERATED_AT_PLACEHOLDER).length - 1;
-  // A current-format page must have one text-only banner (hidden online), one
-  // placeholder and usable locale/zone context. Keep the previous complete
-  // copy if a new response is malformed.
-  if (!banner) return false;
-  if (
-    !banner.opening.includes(OFFLINE_NOTE_HIDDEN) ||
-    hasAttribute(banner.opening, READY_COPY_GENERATED_AT_ATTR) ||
-    placeholderCount !== 1 ||
-    !banner.text.includes(READY_OFFLINE_GENERATED_AT_PLACEHOLDER) ||
-    !Number.isSafeInteger(now) ||
-    generatedAtLabel === undefined
-  ) {
-    return false;
-  }
-  const timestampedBanner = `${banner.opening.replace(/>$/, ` ${READY_COPY_GENERATED_AT_ATTR}="${generatedAt}">`)}${banner.text.replace(READY_OFFLINE_GENERATED_AT_PLACEHOLDER, generatedAtLabel)}${banner.closing}`;
-  const timestampedHtml = safeHtml.replace(banner.element, timestampedBanner);
-  const headers = new Headers(response.headers);
-  const ageAnchor = hasTrustedServerTime ? generatedAt : now;
-  headers.set(KEEP_UNTIL_HEADER, String(Math.min(named, ageAnchor + READY_COPY_MAX_AGE_MS)));
-  headers.set(DEVICE_SAVED_AT_HEADER, String(now));
-  if (hasTrustedServerTime) {
-    headers.set(SERVER_GENERATED_AT_HEADER, String(generatedAt));
-  }
+  if (!order.durable || !Number.isSafeInteger(now)) return false;
+  const cache = await storage.open(READY_CACHE_NAME);
+  const headers = new Headers({
+    "content-type": "application/json",
+    [KEEP_UNTIL_HEADER]: String(
+      Math.min(snapshot.keepUntil, snapshot.generatedAt + READY_COPY_MAX_AGE_MS),
+    ),
+    [DEVICE_SAVED_AT_HEADER]: String(now),
+    [PATH_HASH_HEADER]: hash,
+    [COPY_FORGOTTEN_VERSION_HEADER]: order.forgottenVersion,
+    [COPY_REQUEST_ID_HEADER]: order.requestId,
+  });
   await observeReadyPageClock(storage, now);
   if (!(await requestIsCurrent(storage, hash, order))) return false;
-  headers.set(PATH_HASH_HEADER, hash);
-  headers.set(COPY_FORGOTTEN_VERSION_HEADER, order.forgottenVersion);
-  headers.set(COPY_REQUEST_ID_HEADER, order.requestId);
-  // The page's links carry the token; a same-origin script reading the stored
-  // body must not recover it (residual D1), so it is put back on the way out.
-  // Every other capability on the page is dropped for good: the Flight
-  // payload whole (#3003), then a claim link, a checkout link, a bound
-  // action's fields and a recap token in the markup (#2693).
-  const copy = new Response(
-    timestampedHtml
-      .replaceAll(OFFLINE_NOTE_HIDDEN, OFFLINE_NOTE_SHOWN)
-      .replaceAll(tokenOf(path), TOKEN_PLACEHOLDER)
-      .replace(CLAIM_TOKEN_PATTERN, CLAIM_REMOVED)
-      .replace(CHECKOUT_LINK_PATTERN, CHECKOUT_REMOVED)
-      .replace(BOUND_ACTION_FIELD_PATTERN, "")
-      .replace(RECAP_TOKEN_PATTERN, RECAP_TOKEN_REMOVED),
-    {
-      status: response.status,
-      statusText: response.statusText,
-      headers,
-    },
-  );
-  // Publish the document only after its required static assets are stored.
-  // Failure leaves the previous complete copy available, never a partial new one.
-  await prepareAssets?.(html);
+  const copy = new Response(JSON.stringify(snapshot), { headers });
   return serializeReadyPublication(async () => {
     if (!(await requestIsCurrent(storage, hash, order))) return false;
     if (!mayPublish()) return false;
@@ -682,22 +433,26 @@ export async function readyPageFallback(
   if (!cached) return undefined;
   const hash = await pathHash(path);
   if (cached.headers.get(PATH_HASH_HEADER) !== hash) return undefined;
-  try {
-    if (await isCopyInvalidated(storage, hash, cached)) {
+  // Whether this copy is still the diver's to see. A cancelled path's copy is
+  // deleted; one whose cancellation state cannot be read is only withheld.
+  const stillValid = async (): Promise<boolean> => {
+    try {
+      if (!(await isCopyInvalidated(storage, hash, cached))) return true;
       await cache.delete(READY_COPY_KEY).catch(() => false);
-      return undefined;
+    } catch {
+      // Do not serve a possibly cancelled copy offline.
     }
-  } catch {
-    // If durable invalidation state cannot be read, do not serve a possibly
-    // cancelled page offline.
+    return false;
+  };
+  if (!(await stillValid())) return undefined;
+  const snapshot = parseReadySnapshot(await cached.json().catch(() => null));
+  const keepUntil = Number(cached.headers.get(KEEP_UNTIL_HEADER));
+  const deviceSavedAt = numericHeader(cached, DEVICE_SAVED_AT_HEADER);
+  // A copy this worker did not write, or one that lost a field, is not served.
+  if (!snapshot || deviceSavedAt === null || !Number.isFinite(keepUntil)) {
+    await cache.delete(READY_COPY_KEY);
     return undefined;
   }
-  const storedHtml = await cached.text();
-  const savedAtFromBody = Number(singleMetaContent(storedHtml, READY_COPY_GENERATED_AT_META));
-  const serverGeneratedAt =
-    numericHeader(cached, SERVER_GENERATED_AT_HEADER) ??
-    (Number.isSafeInteger(savedAtFromBody) && savedAtFromBody > 0 ? savedAtFromBody : null);
-  const deviceSavedAt = numericHeader(cached, DEVICE_SAVED_AT_HEADER);
   const watermark = await readClockWatermark(storage);
   const rollback =
     Number.isSafeInteger(now) &&
@@ -705,77 +460,20 @@ export async function readyPageFallback(
       (observedAt) => observedAt !== null && now < observedAt,
     );
   if (rollback) {
-    const warning = rollbackWarningDocument(storedHtml, serverGeneratedAt ?? 0);
-    if (!warning) {
-      await cache.delete(READY_COPY_KEY);
-      return undefined;
-    }
-    return new Response(warning, {
-      status: cached.status,
-      statusText: cached.statusText,
-      headers: fallbackHeaders(cached, "rollback"),
-    });
+    return new Response(snapshot.rollback, { headers: documentHeaders("rollback") });
   }
   if (watermark.kind === "valid") await observeReadyPageClock(storage, now);
   // Rebase wall-clock elapsed time onto the trusted server generation instant.
-  const estimatedServerNow =
-    serverGeneratedAt !== null && deviceSavedAt !== null
-      ? serverGeneratedAt + (now - deviceSavedAt)
-      : now;
-  const keepUntil = Number(cached.headers.get(KEEP_UNTIL_HEADER));
-  if (!Number.isFinite(keepUntil) || estimatedServerNow > keepUntil) {
-    await cache.delete(READY_COPY_KEY);
-    return undefined;
-  }
-  // Only a current-format copy with one visible, timestamped banner is served.
-  const banner = visibleTextBanner(storedHtml);
-  const generatedAtValues = banner?.opening.match(
-    new RegExp(`\\b${READY_COPY_GENERATED_AT_ATTR}="(\\d+)"`, "g"),
-  );
-  const generatedAt = Number(
-    banner?.opening.match(new RegExp(`\\b${READY_COPY_GENERATED_AT_ATTR}="(\\d+)"`))?.[1],
-  );
-  const expectedLabel = readyGeneratedAtLabel(storedHtml, generatedAt);
-  if (
-    metaContent(storedHtml, READY_COPY_VERSION_META) !== READY_COPY_VERSION ||
-    !banner ||
-    generatedAtValues?.length !== 1 ||
-    !Number.isSafeInteger(generatedAt) ||
-    !expectedLabel ||
-    banner.text.split(expectedLabel).length !== 2 ||
-    storedHtml.includes(READY_OFFLINE_GENERATED_AT_PLACEHOLDER)
-  ) {
+  if (snapshot.generatedAt + (now - deviceSavedAt) > keepUntil) {
     await cache.delete(READY_COPY_KEY);
     return undefined;
   }
   // Recheck after asynchronous body parsing: cancellation may persist its
   // marker while this fallback was preparing the response.
-  try {
-    if (await isCopyInvalidated(storage, hash, cached)) {
-      await cache.delete(READY_COPY_KEY).catch(() => false);
-      return undefined;
-    }
-  } catch {
-    return undefined;
-  }
-  const html = storedHtml.replaceAll(TOKEN_PLACEHOLDER, tokenOf(path));
-  if (watermark.kind !== "valid") {
-    const warning = unverifiedClockDocument(html);
-    if (!warning) {
-      await cache.delete(READY_COPY_KEY);
-      return undefined;
-    }
-    return new Response(warning, {
-      status: cached.status,
-      statusText: cached.statusText,
-      headers: fallbackHeaders(cached, "unverified"),
-    });
-  }
-  return new Response(html, {
-    status: cached.status,
-    statusText: cached.statusText,
-    headers: fallbackHeaders(cached, serverGeneratedAt !== null ? "known" : "unknown"),
-  });
+  if (!(await stillValid())) return undefined;
+  return watermark.kind === "valid"
+    ? new Response(snapshot.saved, { headers: documentHeaders("known") })
+    : new Response(snapshot.unverified, { headers: documentHeaders("unverified") });
 }
 
 /**

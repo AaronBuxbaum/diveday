@@ -3,12 +3,8 @@ import { act, cleanup, render, screen } from "@testing-library/react";
 import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { diverTranslator } from "@/i18n/messages";
-import {
-  arrivalCardFacts,
-  arrivalDockCallLine,
-  siteRunsLine,
-  TripArrivalCard,
-} from "./TripArrivalCard";
+import { arrivalCardFacts, arrivalDockCallLine } from "./arrival-card-facts";
+import { siteRunsLine, TripArrivalCard } from "./TripArrivalCard";
 
 afterEach(cleanup);
 

@@ -1,19 +1,7 @@
 // The default `node` environment, as the worker's own test: this module runs
 // in a service worker, never in a DOM context.
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  READY_CACHE_NAME,
-  READY_COPY_GENERATED_AT_ATTR,
-  READY_COPY_GENERATED_AT_META,
-  READY_COPY_LOCALE_META,
-  READY_COPY_TIME_ZONE_META,
-  READY_COPY_VERSION,
-  READY_COPY_VERSION_META,
-  READY_FORGOTTEN_CACHE_NAME,
-  READY_KEEP_UNTIL_META,
-  READY_OFFLINE_GENERATED_AT_PLACEHOLDER,
-  READY_OFFLINE_NOTE_ATTR,
-} from "@/lib/ready-offline";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { READY_CACHE_NAME, READY_FORGOTTEN_CACHE_NAME } from "@/lib/ready-offline";
 import {
   beginReadyPageRequest,
   forgetReadyPage,
@@ -25,12 +13,15 @@ import {
   readyPageStylesheets,
   saveReadyPage,
 } from "./ready-page-cache";
+import { DAY_MS, livePage, NOW, page, snapshotOf, stubSnapshotReply } from "./ready-test-support";
 
 const ORIGIN = "https://dive.day";
 const TOKEN = "A".repeat(43);
 const OTHER = "B".repeat(43);
-const NOW = 1_800_000_000_000;
-const DAY_MS = 24 * 60 * 60 * 1000;
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 /** A Cache Storage with just the surface the module uses, keyed by path. */
 function fakeStorage() {
@@ -53,29 +44,6 @@ function fakeStorage() {
     },
   };
   return { storage: storage as unknown as CacheStorage, caches };
-}
-
-/** A current-format response with no automatic banner, for malformed-page tests. */
-function renderedPage(body: string, init: ResponseInit = {}, keepUntil = NOW + 30 * DAY_MS) {
-  return new Response(
-    `<meta name="${READY_KEEP_UNTIL_META}" content="${keepUntil}"/><meta name="${READY_COPY_VERSION_META}" content="${READY_COPY_VERSION}"/>${body}`,
-    {
-      status: 200,
-      headers: { "content-type": "text/html; charset=utf-8" },
-      ...init,
-    },
-  );
-}
-
-/** The live page as the server renders it: kept until `keepUntil` (default: well past NOW). */
-function page(body = "<p>Ready</p>", init: ResponseInit = {}, keepUntil = NOW + 30 * DAY_MS) {
-  const generatedAt = body.includes(`name="${READY_COPY_GENERATED_AT_META}"`)
-    ? ""
-    : `<meta name="${READY_COPY_GENERATED_AT_META}" content="${NOW}"/>`;
-  const withBanner = body.includes(`${READY_OFFLINE_NOTE_ATTR}=""`)
-    ? `${generatedAt}${body}`
-    : `<meta name="${READY_COPY_LOCALE_META}" content="en-US"/><meta name="${READY_COPY_TIME_ZONE_META}" content="America/New_York"/>${generatedAt}${body}<p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">No signal: ${READY_OFFLINE_GENERATED_AT_PLACEHOLDER}</p>`;
-  return renderedPage(withBanner, init, keepUntil);
 }
 
 describe("readyPagePath", () => {
@@ -113,235 +81,6 @@ describe("saveReadyPage and readyPageFallback", () => {
     const served = await readyPageFallback(store.storage, `/ready/${TOKEN}`, NOW + 1000);
     expect(await served?.text()).toContain("newer");
     expect(await readyPageFallback(store.storage, `/ready/${OTHER}`, NOW)).toBeUndefined();
-  });
-
-  it("shows the server page-generation time in the page locale and shop zone, not device save or fallback time", async () => {
-    const locale = "en-US";
-    const timeZone = "America/New_York";
-    const body = [
-      `<meta name="${READY_COPY_LOCALE_META}" content="${locale}"/>`,
-      `<meta name="${READY_COPY_TIME_ZONE_META}" content="${timeZone}"/>`,
-      `<meta name="${READY_COPY_GENERATED_AT_META}" content="${NOW}"/>`,
-      `<p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">Saved ${READY_OFFLINE_GENERATED_AT_PLACEHOLDER}</p>`,
-    ].join("");
-    const request = await beginReadyPageRequest(store.storage, `/ready/${TOKEN}`);
-    expect(await saveReadyPage(store.storage, `/ready/${TOKEN}`, page(body), NOW, request)).toBe(
-      true,
-    );
-
-    const served = await readyPageFallback(store.storage, `/ready/${TOKEN}`, NOW + DAY_MS);
-    const text = await served?.text();
-    const expected = new Intl.DateTimeFormat(locale, {
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-      timeZoneName: "short",
-      timeZone,
-    }).format(new Date(NOW));
-    expect(text?.replaceAll("\u00a0", " ")).toContain(`Saved ${expected}`);
-    expect(text).not.toContain(READY_OFFLINE_GENERATED_AT_PLACEHOLDER);
-    expect(text).toMatch(
-      new RegExp(`${READY_OFFLINE_NOTE_ATTR}=""[^>]*${READY_COPY_GENERATED_AT_ATTR}="${NOW}"`),
-    );
-  });
-
-  it("does not make a replayed server page look newer using the device clock", async () => {
-    const deviceSaveAt = NOW + 40 * 60_000;
-    expect(
-      await saveReadyPage(store.storage, `/ready/${TOKEN}`, page("replayed page"), deviceSaveAt),
-    ).toBe(true);
-    const text = await (
-      await readyPageFallback(store.storage, `/ready/${TOKEN}`, deviceSaveAt)
-    )?.text();
-    const serverLabel = new Intl.DateTimeFormat("en-US", {
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-      timeZoneName: "short",
-      timeZone: "America/New_York",
-    }).format(new Date(NOW));
-    expect(text?.replaceAll("\u00a0", " ")).toContain(`No signal: ${serverLabel}`);
-    expect(text).toContain(`${READY_COPY_GENERATED_AT_ATTR}="${NOW}"`);
-    expect(text).not.toContain(`${READY_COPY_GENERATED_AT_ATTR}="${deviceSaveAt}"`);
-  });
-
-  it.each([
-    ["missing generation metadata", ""],
-    [
-      "duplicate generation metadata",
-      `<meta name="${READY_COPY_GENERATED_AT_META}" content="${NOW}"/>`,
-    ],
-  ])("does not save a response with %s", async (_label, extraMetadata) => {
-    const generationMeta = `<meta name="${READY_COPY_GENERATED_AT_META}" content="${NOW}"/>`;
-    const body = [
-      `<meta name="${READY_COPY_LOCALE_META}" content="en-US"/>`,
-      `<meta name="${READY_COPY_TIME_ZONE_META}" content="America/New_York"/>`,
-      extraMetadata === "" ? "" : generationMeta,
-      extraMetadata,
-      `<p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">${READY_OFFLINE_GENERATED_AT_PLACEHOLDER}</p>`,
-    ].join("");
-    expect(await saveReadyPage(store.storage, `/ready/${TOKEN}`, renderedPage(body), NOW)).toBe(
-      false,
-    );
-    expect(store.caches.get(READY_CACHE_NAME)?.size ?? 0).toBe(0);
-  });
-
-  it.each([
-    ["unknown text", `<p ${READY_OFFLINE_NOTE_ATTR}="">Unrecognized older banner</p>`],
-    [
-      "a visible banner but no current-format markers",
-      `<p ${READY_OFFLINE_NOTE_ATTR}="">No signal: this is the copy your phone saved. Anything you change here needs signal.</p>`,
-    ],
-    [
-      "malformed markup",
-      `<p ${READY_OFFLINE_NOTE_ATTR}="">No signal: this is the copy your phone saved. Anything you change here needs signal.`,
-    ],
-    [
-      "duplicate banners",
-      `<p ${READY_OFFLINE_NOTE_ATTR}="">No signal: this is the copy your phone saved. Anything you change here needs signal.</p><p ${READY_OFFLINE_NOTE_ATTR}="">No signal: this is the copy your phone saved. Anything you change here needs signal.</p>`,
-    ],
-    ["missing banner", "<p>Old saved page without a recognized banner</p>"],
-  ])(
-    "fails closed for a matching path with %s, without deleting on a wrong-path probe",
-    async (_case, body) => {
-      await saveReadyPage(store.storage, `/ready/${TOKEN}`, page("current copy"), NOW);
-      const cache = await store.storage.open(READY_CACHE_NAME);
-      const previous = await cache.match(READY_COPY_KEY);
-      expect(previous).toBeDefined();
-      await cache.put(READY_COPY_KEY, new Response(body, { headers: previous?.headers }));
-
-      expect(
-        await readyPageFallback(store.storage, `/ready/${OTHER}`, NOW + 1_000),
-      ).toBeUndefined();
-      expect(store.caches.get(READY_CACHE_NAME)?.size).toBe(1);
-      expect(
-        await readyPageFallback(store.storage, `/ready/${TOKEN}`, NOW + 1_000),
-      ).toBeUndefined();
-      expect(store.caches.get(READY_CACHE_NAME)?.size ?? 0).toBe(0);
-    },
-  );
-
-  it.each([
-    ["locale", `name="${READY_COPY_TIME_ZONE_META}" content="America/New_York"`],
-    ["shop time zone", `name="${READY_COPY_LOCALE_META}" content="es-ES"`],
-    ["valid locale", `name="${READY_COPY_LOCALE_META}" content="not-a-locale"`],
-    ["valid shop time zone", `name="${READY_COPY_TIME_ZONE_META}" content="Not/AZone"`],
-  ])("does not save a timestamped copy without a usable %s", async (_label, metadata) => {
-    const body = `${metadata}<p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">${READY_OFFLINE_GENERATED_AT_PLACEHOLDER}</p>`;
-    expect(await saveReadyPage(store.storage, `/ready/${TOKEN}`, page(body), NOW)).toBe(false);
-    expect(store.caches.get(READY_CACHE_NAME)?.size ?? 0).toBe(0);
-  });
-
-  it.each([
-    ["missing", `<p>Unmarked page content</p>`],
-    [
-      "duplicate",
-      `<p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">${READY_OFFLINE_GENERATED_AT_PLACEHOLDER}</p><p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">${READY_OFFLINE_GENERATED_AT_PLACEHOLDER}</p>`,
-    ],
-    [
-      "malformed duplicate",
-      `<p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">${READY_OFFLINE_GENERATED_AT_PLACEHOLDER}</p><p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">unfinished`,
-    ],
-    [
-      "malformed",
-      `<p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">${READY_OFFLINE_GENERATED_AT_PLACEHOLDER}<strong>nested markup</strong></p>`,
-    ],
-  ])("does not save a current-format response with a %s offline banner", async (_case, banner) => {
-    const body = [
-      `<meta name="${READY_COPY_LOCALE_META}" content="en-US"/>`,
-      `<meta name="${READY_COPY_TIME_ZONE_META}" content="America/New_York"/>`,
-      `<meta name="${READY_COPY_GENERATED_AT_META}" content="${NOW}"/>`,
-      banner,
-    ].join("");
-    expect(await saveReadyPage(store.storage, `/ready/${TOKEN}`, renderedPage(body), NOW)).toBe(
-      false,
-    );
-    expect(store.caches.get(READY_CACHE_NAME)?.size ?? 0).toBe(0);
-  });
-
-  it.each([
-    ["missing", (html: string, banner: string) => html.replace(banner, "")],
-    ["duplicate", (html: string, banner: string) => html.replace(banner, `${banner}${banner}`)],
-    [
-      "malformed duplicate",
-      (html: string, banner: string) =>
-        html.replace(banner, `${banner}<p ${READY_OFFLINE_NOTE_ATTR}="">unfinished`),
-    ],
-    [
-      "malformed",
-      (html: string, banner: string) =>
-        html.replace(banner, banner.replace("<p", "<div").replace("</p>", "</div>")),
-    ],
-    [
-      "wrong save time",
-      (html: string) =>
-        html.replace(
-          new RegExp(`${READY_COPY_GENERATED_AT_ATTR}="\\d+"`),
-          `${READY_COPY_GENERATED_AT_ATTR}="${NOW - DAY_MS}"`,
-        ),
-    ],
-    [
-      "missing time zone",
-      (html: string) => html.replace(/<meta name="diveday-ready-copy-time-zone"[^>]*>/, ""),
-    ],
-    [
-      "missing generation time",
-      (html: string) => html.replace(/<meta name="diveday-ready-copy-generated-at"[^>]*>/, ""),
-    ],
-    [
-      "duplicate generation time",
-      (html: string) =>
-        html.replace(/(<meta name="diveday-ready-copy-generated-at"[^>]*>)/, "$1$1"),
-    ],
-  ])(
-    "deletes a matching-path current copy with a %s banner, never on wrong-path lookup",
-    async (_case, alter) => {
-      await saveReadyPage(store.storage, `/ready/${TOKEN}`, page("current"), NOW);
-      const cache = await store.storage.open(READY_CACHE_NAME);
-      const previous = await cache.match(READY_COPY_KEY);
-      expect(previous).toBeDefined();
-      const html = await previous?.text();
-      const banner = html?.match(/<p\b[^>]*data-ready-offline-note=""[^>]*>[^<>]*<\/p>/)?.[0];
-      expect(html).toBeDefined();
-      expect(banner).toBeDefined();
-      await cache.put(
-        READY_COPY_KEY,
-        new Response(alter(html ?? "", banner ?? ""), { headers: previous?.headers }),
-      );
-
-      expect(
-        await readyPageFallback(store.storage, `/ready/${OTHER}`, NOW + 1_000),
-      ).toBeUndefined();
-      expect(store.caches.get(READY_CACHE_NAME)?.size).toBe(1);
-      expect(
-        await readyPageFallback(store.storage, `/ready/${TOKEN}`, NOW + 1_000),
-      ).toBeUndefined();
-      expect(store.caches.get(READY_CACHE_NAME)?.size ?? 0).toBe(0);
-    },
-  );
-
-  it("formats Spanish server generation times in the shop zone", async () => {
-    const locale = "es-ES";
-    const timeZone = "Pacific/Auckland";
-    const body = [
-      `<meta name="${READY_COPY_LOCALE_META}" content="${locale}"/>`,
-      `<meta name="${READY_COPY_TIME_ZONE_META}" content="${timeZone}"/>`,
-      `<meta name="${READY_COPY_GENERATED_AT_META}" content="${NOW}"/>`,
-      `<p ${READY_OFFLINE_NOTE_ATTR}="" hidden="">Sin cobertura: ${READY_OFFLINE_GENERATED_AT_PLACEHOLDER}</p>`,
-    ].join("");
-    expect(await saveReadyPage(store.storage, `/ready/${TOKEN}`, page(body), NOW)).toBe(true);
-    const text = await (await readyPageFallback(store.storage, `/ready/${TOKEN}`, NOW))?.text();
-    const expected = new Intl.DateTimeFormat(locale, {
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-      timeZoneName: "short",
-      timeZone,
-    }).format(new Date(NOW));
-    expect(text?.replaceAll("\u00a0", " ")).toContain(`Sin cobertura: ${expected}`);
   });
 
   /**
@@ -387,134 +126,138 @@ describe("saveReadyPage and readyPageFallback", () => {
     expect([...(kept?.headers.values() ?? [])].join(" ")).not.toContain(TOKEN);
   });
 
-  /** The page's own links carry the token; the stored body must not (D1, residual). */
-  it("keeps a body that names the token only with the placeholder, and puts the token back", async () => {
-    const body = `<a href="/ready/${TOKEN}/forms">Forms</a><p>${TOKEN}</p>`;
-    await saveReadyPage(store.storage, `/ready/${TOKEN}`, page(body), NOW);
+  /**
+   * **The stored bytes are the snapshot, never the page** (issue #3225). The
+   * live page here carries every capability the old rewriter hunted for, and
+   * none of it may reach Cache Storage or the document served from it.
+   */
+  it("stores the server's snapshot and nothing of the live page", async () => {
+    const path = `/ready/${TOKEN}`;
+    const claim = "C".repeat(43);
+    const recap = `cmVjYXA6${"r".repeat(70)}.${"S".repeat(43)}`;
+    const secrets = [
+      TOKEN,
+      claim,
+      recap,
+      "checkout.stripe.com",
+      "$ACTION_",
+      "__next_f",
+      "<script",
+      "main-app.js",
+    ];
+    const hostile = [
+      `<a href="/ready/${TOKEN}/forms">Forms</a>`,
+      `<a href="/claim/${claim}">Seat</a>`,
+      `<a href="https://checkout.stripe.com/c/pay/cs_test_a1B2c3">Tip</a>`,
+      `<input type="hidden" name="$ACTION_KEY" value="${recap}"/>`,
+      `<script>self.__next_f.push([1,"${claim}"])</script>`,
+      `<script src="/_next/static/chunks/main-app.js"></script>`,
+    ].join("");
+    const fetchMock = stubSnapshotReply(snapshotOf("<p>Where to go</p>"));
+    expect(await saveReadyPage(store.storage, path, livePage(hostile), NOW)).toBe(true);
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${path}/offline`,
+      expect.objectContaining({ cache: "no-store", redirect: "error" }),
+    );
 
     const kept = store.caches.get(READY_CACHE_NAME)?.values().next().value;
-    const stored = await kept?.clone().text();
-    expect(stored).not.toContain(TOKEN);
-    expect(stored).toContain("__diveday_kept_token__");
-
-    const served = await readyPageFallback(store.storage, `/ready/${TOKEN}`, NOW + 1000);
-    const text = await served?.text();
-    expect(text).toContain(`href="/ready/${TOKEN}/forms"`);
-    expect(text).toContain(`<p>${TOKEN}</p>`);
-    expect(text).not.toContain("__diveday_kept_token__");
+    const stored = (await kept?.clone().text()) ?? "";
+    const headers = [...(kept?.headers.values() ?? [])].join(" ");
+    const served = await readyPageFallback(store.storage, path, NOW + 1000);
+    const text = (await served?.text()) ?? "";
+    expect(text).toContain("Where to go");
+    for (const secret of secrets) {
+      expect(stored).not.toContain(secret);
+      expect(headers).not.toContain(secret);
+      expect(text).not.toContain(secret);
+    }
     expect(await readyPageFallback(store.storage, `/ready/${OTHER}`, NOW + 1000)).toBeUndefined();
   });
 
-  /** A party seat's claim link is a second bearer token; the copy keeps none of it. */
-  it("keeps no party claim token in the stored body", async () => {
-    const claim = "C".repeat(43);
-    const body = `<a href="/claim/${claim}">Seat</a><input value="https://dive.day/claim/${claim}"/>`;
-    await saveReadyPage(store.storage, `/ready/${TOKEN}`, page(body), NOW);
-
-    const kept = store.caches.get(READY_CACHE_NAME)?.values().next().value;
-    const stored = await kept?.clone().text();
-    expect(stored).not.toContain(claim);
-    expect(stored).toContain("/claim/__diveday_claim_not_kept__");
-
+  it("serves a document that can run nothing and reach nowhere", async () => {
+    await saveReadyPage(store.storage, `/ready/${TOKEN}`, page(), NOW);
     const served = await readyPageFallback(store.storage, `/ready/${TOKEN}`, NOW + 1000);
-    expect(await served?.text()).not.toContain(claim);
+    const policy = served?.headers.get("content-security-policy") ?? "";
+    expect(policy).toContain("default-src 'none'");
+    expect(policy).toContain("form-action 'none'");
+    expect(policy).not.toContain("script-src");
+    expect(served?.headers.get("content-type")).toContain("text/html");
+    expect(served?.headers.get("x-content-type-options")).toBe("nosniff");
   });
 
-  /**
-   * **No way to pay, and no other link's capability, in the kept copy** (issue
-   * #2693). A pending tip's Stripe checkout link opens a live checkout, and a
-   * bound server action carries its bound arguments in the page twice: as the
-   * form's `$ACTION_*` hidden fields and in the inline Flight payload. On the
-   * after-state those arguments are a recap token, a second bearer credential
-   * this copy has no business holding.
-   */
-  it("keeps no checkout link and no bound action payload", async () => {
-    const recapToken = `cmVjYXA6${"r".repeat(70)}.${"S".repeat(43)}`;
-    const body = [
-      `<a href="https://checkout.stripe.com/c/pay/cs_test_a1B2c3#fidkdWxOYHwn">Finish your tip</a>`,
-      `<form action="" method="POST" enctype="multipart/form-data">`,
-      `<input type="hidden" name="$ACTION_REF_«R1»"/>`,
-      `<input type="hidden" name="$ACTION_«R1»:0" value="{&quot;id&quot;:&quot;7f00aa&quot;,&quot;bound&quot;:&quot;$@1&quot;}"/>`,
-      `<input type="hidden" name="$ACTION_«R1»:1" value="[&quot;${recapToken}&quot;]"/>`,
-      `<input type="hidden" name="$ACTION_KEY" value="k1234"/>`,
-      `<input type="hidden" name="photoId" value="5b1d7e2a"/>`,
-      `</form>`,
-      // The Flight payload is a JS string of JSON: its quotes arrive escaped.
-      String.raw`<script>self.__next_f.push([1,"5:{\"id\":\"7f00aa\",\"bound\":\"$@6\"}\n6:[\"` +
-        recapToken +
-        String.raw`\"]\n7:[\"$\",\"a\",null,{\"href\":\"https://checkout.stripe.com/c/pay/cs_test_a1B2c3\"}]\n"])</script>`,
-    ].join("");
-    await saveReadyPage(store.storage, `/ready/${TOKEN}`, page(body), NOW);
-
-    const kept = store.caches.get(READY_CACHE_NAME)?.values().next().value;
-    const stored = (await kept?.clone().text()) ?? "";
-    expect(stored).toContain("Finish your tip");
-    expect(stored).not.toContain("checkout.stripe.com");
-    expect(stored).not.toContain("$ACTION_");
-    expect(stored).not.toContain(recapToken);
-    // A form's own hidden fields are the page, not a capability.
-    expect(stored).toContain(`name="photoId" value="5b1d7e2a"`);
-
-    const served =
-      (await (await readyPageFallback(store.storage, `/ready/${TOKEN}`, NOW))?.text()) ?? "";
-    expect(served).not.toContain("checkout.stripe.com");
-    expect(served).not.toContain(recapToken);
+  it("clears the copy when the server says there is nothing to keep", async () => {
+    const path = `/ready/${TOKEN}`;
+    await saveReadyPage(store.storage, path, page(), NOW);
+    expect(store.caches.get(READY_CACHE_NAME)?.size).toBe(1);
+    stubSnapshotReply(new Response("Not found", { status: 404 }));
+    expect(await saveReadyPage(store.storage, path, livePage(), NOW)).toBe(false);
+    expect(store.caches.get(READY_CACHE_NAME)?.size).toBe(0);
+    expect(await readyPageFallback(store.storage, path, NOW)).toBeUndefined();
   });
 
-  /**
-   * **No Flight payload in the kept copy** (issue #3003). Next writes the
-   * payload as `self.__next_f.push` scripts cut at an arbitrary byte, so a
-   * token straddling a cut reaches the page in two halves that no pattern
-   * matches. Joining the push strings back together must find no token.
-   */
-  it("keeps no Flight push script, so a token split between two survives nowhere", async () => {
-    const claim = "C".repeat(20) + "D".repeat(23);
-    const body = [
-      `<a href="/ready/${TOKEN}/forms">Forms</a>`,
-      `<script>(self.__next_f=self.__next_f||[]).push([0])</script>`,
-      // The payload's quotes arrive escaped (`\"`), as in the test above.
-      `<script>self.__next_f.push([1,"8:[\\"$\\",\\"a\\",null,{\\"href\\":\\"/claim/${claim.slice(0, 20)}"])</script>`,
-      `<script>self.__next_f.push([1,"${claim.slice(20)}\\"}]\\n"])</script>`,
-      `<script src="/_next/static/chunks/main-app.js" async=""></script>`,
-      // React's own streaming instruction moves a Suspense boundary's content
-      // into place: the copy needs it to show anything past the skeleton.
-      `<div hidden id="S:0"><p>Where to go</p></div><script>$RC("B:0","S:0")</script>`,
-    ].join("");
-    await saveReadyPage(store.storage, `/ready/${TOKEN}`, page(body), NOW);
-
-    const kept = store.caches.get(READY_CACHE_NAME)?.values().next().value;
-    const stored = (await kept?.clone().text()) ?? "";
-    const joined = [...stored.matchAll(/self\.__next_f\.push\(\[1,"((?:[^"\\]|\\.)*)"\]\)/g)]
-      .map((match) => match[1])
-      .join("");
-    expect(`${stored}${joined}`).not.toContain(claim);
-    expect(stored).not.toContain("__next_f");
-    // With no payload to hydrate from, the client runtime is left out too, so
-    // the copy is the server's markup as rendered rather than a failed hydration.
-    expect(stored).not.toContain("main-app.js");
-    expect(stored).toContain(`$RC("B:0","S:0")`);
-    expect(stored).toContain("Where to go");
-
-    const served =
-      (await (await readyPageFallback(store.storage, `/ready/${TOKEN}`, NOW))?.text()) ?? "";
-    expect(served).toContain(`href="/ready/${TOKEN}/forms"`);
-    expect(served).not.toContain(claim);
+  it("clears the copy when the snapshot is already past its own date", async () => {
+    const path = `/ready/${TOKEN}`;
+    await saveReadyPage(store.storage, path, page(), NOW);
+    stubSnapshotReply(snapshotOf("<p>x</p>", { keepUntil: NOW }));
+    expect(await saveReadyPage(store.storage, path, livePage(), NOW)).toBe(false);
+    expect(store.caches.get(READY_CACHE_NAME)?.size).toBe(0);
   });
 
-  it("drops a script whose end tag carries whitespace or junk, and one the first pass joins", async () => {
-    const body = [
-      `<p>Kept</p>`,
-      `<script>self.__next_f.push([1,"a"])</script\t\n bar>`,
-      // Removing the inner element joins the outer one's halves into a script.
-      `<scr<script src="/x.js"></script>ipt>self.__next_f.push([1,"b"])</script>`,
-    ].join("");
-    await saveReadyPage(store.storage, `/ready/${TOKEN}`, page(body), NOW);
+  it.each([
+    ["a server error", () => new Response("boom", { status: 500 })],
+    ["a throttle", () => new Response("slow down", { status: 429 })],
+    ["not JSON", () => new Response("<p>html</p>", { headers: { "content-type": "text/html" } })],
+    [
+      "malformed JSON",
+      () => new Response("{", { headers: { "content-type": "application/json" } }),
+    ],
+    [
+      "a snapshot missing a document",
+      () => Response.json({ generatedAt: NOW, keepUntil: NOW + DAY_MS, saved: "<p>x</p>" }),
+    ],
+    [
+      "a snapshot with a fractional instant",
+      () => Response.json({ ...snapshotOf(), generatedAt: NOW + 0.5 }),
+    ],
+  ])("keeps the previous copy when the snapshot answer is %s", async (_case, reply) => {
+    const path = `/ready/${TOKEN}`;
+    await saveReadyPage(store.storage, path, page("previous"), NOW);
+    stubSnapshotReply(async () => reply());
+    expect(await saveReadyPage(store.storage, path, livePage(), NOW)).toBe(false);
+    expect(await (await readyPageFallback(store.storage, path, NOW))?.text()).toContain("previous");
+  });
 
-    const kept = store.caches.get(READY_CACHE_NAME)?.values().next().value;
-    const stored = (await kept?.clone().text()) ?? "";
-    expect(stored).not.toContain("__next_f");
-    expect(stored).not.toContain("x.js");
-    expect(stored).toContain("<p>Kept</p>");
+  it("keeps the previous copy when the snapshot cannot be fetched or is redirected", async () => {
+    const path = `/ready/${TOKEN}`;
+    await saveReadyPage(store.storage, path, page("previous"), NOW);
+    stubSnapshotReply(async () => {
+      throw new TypeError("redirect mode is error");
+    });
+    expect(await saveReadyPage(store.storage, path, livePage(), NOW)).toBe(false);
+    const redirected = Response.json(snapshotOf("<p>elsewhere</p>"));
+    Object.defineProperty(redirected, "redirected", { value: true });
+    stubSnapshotReply(async () => redirected);
+    expect(await saveReadyPage(store.storage, path, livePage(), NOW)).toBe(false);
+    expect(await (await readyPageFallback(store.storage, path, NOW))?.text()).toContain("previous");
+  });
+
+  it("deletes a matching-path copy that is not a snapshot, never on a wrong-path probe", async () => {
+    await saveReadyPage(store.storage, `/ready/${TOKEN}`, page(), NOW);
+    const cache = await store.storage.open(READY_CACHE_NAME);
+    const previous = await cache.match(READY_COPY_KEY);
+    // An older copy was the page's own HTML; a damaged one lost a document.
+    for (const body of [`<html><p>An older saved page</p></html>`, `{"saved":"<p>x</p>"}`]) {
+      await cache.put(READY_COPY_KEY, new Response(body, { headers: previous?.headers }));
+      expect(
+        await readyPageFallback(store.storage, `/ready/${OTHER}`, NOW + 1_000),
+      ).toBeUndefined();
+      expect(store.caches.get(READY_CACHE_NAME)?.size).toBe(1);
+      expect(
+        await readyPageFallback(store.storage, `/ready/${TOKEN}`, NOW + 1_000),
+      ).toBeUndefined();
+      expect(store.caches.get(READY_CACHE_NAME)?.size ?? 0).toBe(0);
+      await cache.put(READY_COPY_KEY, new Response("x", { headers: previous?.headers }));
+    }
   });
 
   /**
@@ -530,16 +273,8 @@ describe("saveReadyPage and readyPageFallback", () => {
     expect(store.caches.get(READY_CACHE_NAME)?.size).toBe(0);
 
     await saveReadyPage(store.storage, path, page(), NOW);
-    expect(
-      await saveReadyPage(
-        store.storage,
-        path,
-        new Response("<p>Cancelled</p>", {
-          headers: { "content-type": "text/html" },
-        }),
-        NOW,
-      ),
-    ).toBe(false);
+    stubSnapshotReply(new Response("Not found", { status: 404 }));
+    expect(await saveReadyPage(store.storage, path, livePage("<p>Cancelled</p>"), NOW)).toBe(false);
     expect(store.caches.get(READY_CACHE_NAME)?.size).toBe(0);
     expect(await saveReadyPage(store.storage, path, page("x", {}, NOW - 1), NOW)).toBe(false);
   });
