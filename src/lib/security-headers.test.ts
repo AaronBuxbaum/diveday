@@ -127,14 +127,16 @@ describe("securityHeaderRules (specialist-optimization-audit-20260731.md §5)", 
     // — a route group splitting `unsubscribe` across `(marketing)/` and the
     // root would list it twice — and the rule set holds one entry per prefix,
     // not one per directory (CodeRabbit review on PR #951).
-    const tokenSources = [...new Set(tokenRouteDirectories())].map((prefix) => `/${prefix}/:token`);
+    const tokenSources = [...new Set(tokenRouteDirectories())].map(
+      (prefix) => `/${prefix}/:token/:rest*`,
+    );
     for (const source of tokenSources) {
       const rule = rules.find((r) => r.source === source);
       expect(rule, `expected a header rule for ${source}`).toBeDefined();
       expect(rule?.headers).toEqual([{ key: "Referrer-Policy", value: "no-referrer" }]);
     }
-    // Nothing outside the catch-all and the two sources per prefix.
-    expect(rules).toHaveLength(1 + tokenSources.length * 2);
+    // One wildcard source per prefix plus the catch-all baseline.
+    expect(rules).toHaveLength(1 + tokenSources.length);
   });
 
   it("covers a route nested below the token segment, at any depth", () => {
