@@ -543,9 +543,8 @@ export type ScheduleBuilderContext = {
   /** Requests selected from the Requests page, or null for an ordinary add. */
   requestPlan?: BuilderRequestPlan | null;
   /**
-   * Whether to arrive with the add panel already open, and how deep. Every
-   * former door to `/trips/new` now lands here instead, and a link that used to
-   * open a whole page of form has to open something.
+   * Whether to arrive with the add panel already open, and how deep. Links to
+   * create a departure open this panel at the requested depth.
    */
   openAdd: "closed" | "quick" | "expanded";
   createPage?: boolean;
@@ -586,7 +585,7 @@ export function ScheduleBuilder({ context }: { context: ScheduleBuilderContext }
   const [open, setOpen] = useState<string | null>(openAdd === "closed" ? null : "add:top");
 
   // The top add panel is opened by *links* — the header's "Add a departure",
-  // the empty board's call to action, the former /trips/new doors — all of
+  // the empty board's call to action, and course scheduling links — all of
   // which land as a `?add=` client navigation to this same route. The state
   // initializer above only covers a fresh mount, so a prop change (same
   // component instance, new search params) has to open the panel too, or the
@@ -712,8 +711,8 @@ export function ScheduleBuilder({ context }: { context: ScheduleBuilderContext }
   // in development (React StrictMode): first pass armed the ref, second pass
   // immediately shut the panel the first pass had just been told to open. That
   // took out every cross-route door to this form at once — the catalogue's
-  // "schedule a session of this course", the `/trips/new` 308, a pasted
-  // `?add=full` — each of which lands as a fresh mount carrying `openAdd`.
+  // "schedule a session of this course" and a pasted `?add=full` — each of
+  // which lands as a fresh mount carrying `openAdd`.
   // Re-deriving from `openAdd` makes a second run a no-op and still resets a
   // stale panel on a genuine re-navigation, which is what the reset is for.
   const pathnameEffectRan = useRef(false);

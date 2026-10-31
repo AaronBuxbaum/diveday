@@ -57,8 +57,7 @@ export const metadata: Metadata = {
  * subject read in one sitting — "what does it say, and who has agreed to it" —
  * and a tab strip made them two destinations that could disagree. The strip,
  * the shell layout that held it, and `waivers/signatures/page.tsx` are gone
- * (H-49); the old URL is a 308 Route Handler that keeps `?record=` and
- * `?page=`.
+ * (H-49). The former signatures URL has no compatibility route.
  *
  * **The release is a door and the signed records are the page.** The editor
  * opens in place from one control, and on the `#release` fragment or any

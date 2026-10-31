@@ -26,7 +26,7 @@ import { noticeUrl, shopPath } from "@/lib/staff-notices";
  *
  * These live beside the export page because scheduled delivery *is* the export
  * bundle on a schedule — one surface, `/settings/export`, since ADR
- * 20260806-one-data-out-surface. `/settings/backup` is a 308 to it.
+ * 20260806-one-data-out-surface.
  *
  * Two rules run through all three actions, the same two as the WhatsApp
  * settings beside them. The gate is re-checked against live roles on every
