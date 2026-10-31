@@ -1,5 +1,5 @@
 import type { DiveSpecialty } from "@/db/schema";
-import { JUNIOR_AGE_END } from "@/lib/age";
+import { ageOnDate, JUNIOR_AGE_END } from "@/lib/age";
 import { MIN_CARD_NUMBER_LENGTH } from "@/lib/card-number";
 import type { CERTIFICATION_AGENCIES } from "@/lib/certification-options";
 
@@ -592,12 +592,6 @@ function hasCardNumber(record: readonly string[], cardNumber: string | null): bo
   return false;
 }
 
-/** Whole years old on a calendar date; both are `YYYY-MM-DD`. */
-function ageOn(birthDate: string, today: string): number {
-  const years = Number(today.slice(0, 4)) - Number(birthDate.slice(0, 4));
-  return today.slice(5) >= birthDate.slice(5) ? years : years - 1;
-}
-
 /** How sure each verdict about one of this diver's records is: the best wins. */
 const RECORD_RANK = {
   level_unconfirmed: 1,
@@ -840,7 +834,7 @@ function readAgencyPage(input: AgencyPageInput): {
     );
     if (limited) return "limited_card";
     if (oneDiver && recordLines.some(juniorLevel)) {
-      if (!input.birthDate || ageOn(input.birthDate, input.today) < JUNIOR_AGE_END) {
+      if (!input.birthDate || ageOnDate(input.birthDate, input.today) < JUNIOR_AGE_END) {
         return "junior_under_15";
       }
     }
