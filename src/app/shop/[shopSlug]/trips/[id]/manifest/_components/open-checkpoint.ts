@@ -3,7 +3,6 @@ import {
   isRollCallCheckpoint,
   manifestAtCheckpoint,
   type RollCallCheckpoint,
-  rollCallCheckpoints,
   type TripManifest,
 } from "@/lib/manifests";
 
@@ -27,7 +26,6 @@ export function openCheckpoint(
   requestedCheckpoint: string | undefined,
 ) {
   const plannedDiveCount = departureManifest.trip.plannedDives;
-  const checkpoints = rollCallCheckpoints(plannedDiveCount);
   const requested = requestedCheckpoint ?? "departure";
   if (!isRollCallCheckpoint(requested, plannedDiveCount)) return { stale: true } as const;
   const checkpointManifest = manifestAtCheckpoint(completeManifests, requested);
@@ -46,5 +44,5 @@ export function openCheckpoint(
   // physical head count — a diver who is aboard is recorded present regardless
   // of a paperwork state that changed after the boat left.
   const isDeparture = checkpoint === "departure";
-  return { checkpoints, checkpoint, isDeparture, manifest };
+  return { checkpoint, isDeparture, manifest };
 }
