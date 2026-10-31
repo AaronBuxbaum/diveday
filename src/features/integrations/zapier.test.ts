@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { INTEGRATION_PROVIDER_REGISTRY } from "./registry";
 import { normalizeZapierEventTypes, normalizeZapierWebhookUrl } from "./zapier";
 
 describe("Zapier integration", () => {
@@ -19,5 +20,13 @@ describe("Zapier integration", () => {
       "order.created",
       "order.refunded",
     ]);
+
+    const reversedRegistryEvents: string[] = [
+      ...INTEGRATION_PROVIDER_REGISTRY.zapier.eventTypes,
+    ].reverse();
+    reversedRegistryEvents.push("future.event");
+    expect(normalizeZapierEventTypes(reversedRegistryEvents)).toEqual(
+      INTEGRATION_PROVIDER_REGISTRY.zapier.eventTypes,
+    );
   });
 });
