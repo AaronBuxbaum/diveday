@@ -37,9 +37,13 @@ async function openOffline(page: Page, manifest: string) {
     .poll(() =>
       page.evaluate(async (version) => {
         const registration = await navigator.serviceWorker.getRegistration("/");
-        const cache = await caches.open(`diveday-offline-manifest-shell-${version}`);
+        const base = `diveday-offline-manifest-shell-${version}`;
+        // Production names the cache by build too (`-<build id>`).
+        const name = (await caches.keys()).find((k) => k === base || k.startsWith(`${base}-`));
+        const cache = name ? await caches.open(name) : null;
         return (
           registration?.active?.state === "activated" &&
+          cache !== null &&
           (await cache.match("/offline-manifest")) !== undefined
         );
       }, OFFLINE_MANIFEST_SHELL_VERSION),

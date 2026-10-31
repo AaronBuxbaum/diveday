@@ -10,6 +10,27 @@ vi.mock("@/db/booking-capabilities", () => ({
 vi.mock("@/db/ready", () => ({
   getReadyPageData: (...args: unknown[]) => getReadyPageData(...args),
 }));
+const checkRateLimit = vi.fn();
+vi.mock("@/lib/rate-limit", () => ({
+  checkRateLimit: (...args: unknown[]) => checkRateLimit(...args),
+  rateLimitKey: (...parts: string[]) => parts.join(":"),
+  RATE_LIMITS: { capabilityAction: { limit: 60, windowSeconds: 3600 } },
+}));
+vi.mock("@/lib/request-ip", () => ({ clientIp: async () => "203.0.113.9" }));
+vi.mock("@/db/shops", () => ({
+  getShopBySlug: async () => ({ packingList: ["Reef-safe sunscreen"], briefingMinutes: 15 }),
+}));
+vi.mock("@/db/trips", () => ({
+  listTripDives: async () => [{ diveSite: { name: "Palancar Reef" } }],
+}));
+vi.mock("@/db/trip-change-events", () => ({ listTripChangeEvents: async () => [] }));
+vi.mock("@/db/fly-safe-plan", () => ({ readPlannedFlySafe: async () => null }));
+vi.mock("@/lib/readiness-summary", () => ({
+  buildDiverChecklist: () => [
+    { state: "done", detailCode: "waiver_done" },
+    { state: "action", detailCode: "certification_missing" },
+  ],
+}));
 vi.mock("@/i18n/request", () => ({ requestLocale: async () => "en-US" }));
 
 import { GET } from "./route";
@@ -38,7 +59,12 @@ function pageData(overrides: Record<string, unknown> = {}) {
     identityHeld: false,
     pickupTime: null,
     hotelPickupLocation: null,
+    bookingCreatedAt: new Date("2098-12-01T00:00:00Z"),
+    participantType: "diver",
+    rentalFit: null,
     shop: {
+      id: "shop-1",
+      slug: "blue-mantis",
       defaultLocale: "en-US",
       contactPhone: "+52 984 555 0100",
       contactEmail: "dock@bluemantis.example",
@@ -53,6 +79,8 @@ function pageData(overrides: Record<string, unknown> = {}) {
       rentalItems: ["secret rental"],
     },
     trip: {
+      id: "trip-uuid-secret",
+      course: null,
       meetingPointLabel: null,
       meetingPointAddress: null,
       arrivalLandmark: "Blue awning",
@@ -72,6 +100,8 @@ function pageData(overrides: Record<string, unknown> = {}) {
 beforeEach(() => {
   verifyBookingCapability.mockReset();
   getReadyPageData.mockReset();
+  checkRateLimit.mockReset();
+  checkRateLimit.mockResolvedValue({ allowed: true });
   verifyBookingCapability.mockResolvedValue({ bookingId: "booking-secret", shopId: "shop-1" });
   getReadyPageData.mockResolvedValue(pageData());
 });
@@ -91,6 +121,7 @@ describe("GET /ready/[token]/offline", () => {
       "keepUntil",
       "rollback",
       "saved",
+      "staleNotice",
       "unverified",
     ]);
     expect(snapshot.saved).toContain("Two-Tank Reef");
@@ -150,5 +181,22 @@ describe("GET /ready/[token]/offline", () => {
     const response = await call();
     expect(response.status).toBe(404);
     expect(response.headers.get("cache-control")).toBe("no-store");
+  });
+
+  it("carries the open checklist items, the planned sites and the bring list as named content", async () => {
+    const { saved } = await (await call()).json();
+    expect(saved).toContain("Add your certification details to your record.");
+    expect(saved).toContain("Palancar Reef");
+    expect(saved).toContain("Reef-safe sunscreen");
+    expect(saved).not.toContain("waiver");
+  });
+
+  it("answers 429, not 404, when throttled, before looking the token up", async () => {
+    checkRateLimit.mockResolvedValue({ allowed: false });
+    const response = await call();
+    expect(response.status).toBe(429);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(verifyBookingCapability).not.toHaveBeenCalled();
+    expect(checkRateLimit).toHaveBeenCalledWith("ready-offline:203.0.113.9", expect.anything());
   });
 });

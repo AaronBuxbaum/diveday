@@ -5,7 +5,7 @@ import { issueBookingCapability } from "@/db/booking-capabilities";
 import { cancelBooking, setBookingPickupDetails } from "@/db/bookings";
 import { bookingCapabilities, shops, trips } from "@/db/schema";
 import { getTripRoster, upcomingTripsWithCounts } from "@/db/trips";
-import { formatTime } from "@/lib/format";
+import { formatTimeTz } from "@/lib/format";
 import { publicAppUrl } from "@/lib/notifications/app-url";
 import { fileScopedShopContext } from "@/test/db";
 import { nextHeadersStub } from "@/test/next-headers";
@@ -189,10 +189,10 @@ describe("GET /s/[shopSlug]/trips/[id]/arrival-card", () => {
    * the diver is being collected from their hotel, or the shop asks for no
    * lead time.
    */
-  it("names when to be at the dock, the same minute /ready gives", async () => {
+  it("names when to be at the dock, the same minute /ready gives, and its zone", async () => {
     const { shop, trip, token } = await bookedDiver();
     expect(shop.dockCallMinutes).toBeGreaterThan(0);
-    const time = formatTime(
+    const time = formatTimeTz(
       new Date(trip.startsAt.getTime() - shop.dockCallMinutes * 60_000),
       shop.defaultLocale,
       shop.timezone,

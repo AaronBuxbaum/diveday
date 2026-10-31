@@ -36,6 +36,8 @@ const NOT_REGISTERED = {
   VERCEL_GIT_COMMIT_SHA: "set by Vercel",
   GITHUB_ACTIONS: "set by GitHub Actions; the failed-file annotations switch on under it",
   TZ: "the test setup pins the process zone",
+  NEXT_PUBLIC_DIVEDAY_BUILD_ID:
+    "set by next.config.ts from the build id; names the build in every document",
   // Overrides of a value compiled into the code (src/lib/configured.ts). The
   // registry holds only values that come from somewhere else; see its header.
   APP_HOST: "compiled-in origin; the variable is a fork's override",
