@@ -12,7 +12,7 @@ import {
 } from "node:fs";
 import path from "node:path";
 import process from "node:process";
-import { reencodePng } from "./visual-publish-artifacts.mjs";
+import { mapConcurrent, reencodePng } from "./visual-publish-artifacts.mjs";
 import {
   baselineCacheKey,
   DEFAULT_BUCKET,
@@ -77,34 +77,26 @@ async function fetchBaseline({ bucket, key, version, fetchImpl }) {
   }
   const names = reportNames(report);
   const files = [];
-  let cursor = 0;
   let totalBytes = 0;
-  let failure;
-  const workers = Array.from({ length: Math.min(2, names.length) }, async () => {
-    while (cursor < names.length && !failure) {
-      const name = names[cursor++];
+  // Downloads are I/O bound and re-encoding is CPU bound: keep both busy.
+  await mapConcurrent(
+    names,
+    async (name) => {
       const result = await fetchFromBucket(bucket, `${key}/${report.actualDir}/${name}`, {
         fetchImpl,
       });
       if (!result.ok) {
-        failure = new Error(`could not fetch baseline screenshot ${name} (HTTP ${result.status})`);
-        return;
+        throw new Error(`could not fetch baseline screenshot ${name} (HTTP ${result.status})`);
       }
-      try {
-        const canonical = await reencodePng(result.body, `baseline ${name}`);
-        totalBytes += canonical.length;
-        if (totalBytes > MAX_TOTAL_BYTES) {
-          throw new Error("baseline screenshots exceed the publisher limits");
-        }
-        files.push([name, canonical]);
-      } catch (error) {
-        failure = error;
-        return;
+      const canonical = await reencodePng(result.body, `baseline ${name}`);
+      totalBytes += canonical.length;
+      if (totalBytes > MAX_TOTAL_BYTES) {
+        throw new Error("baseline screenshots exceed the publisher limits");
       }
-    }
-  });
-  await Promise.all(workers);
-  if (failure) throw failure;
+      files.push([name, canonical]);
+    },
+    8,
+  );
   return files;
 }
 
@@ -116,6 +108,7 @@ async function reencodeCachedBaseline(sourceDir) {
   if (entries.length > MAX_SCREENSHOTS) {
     throw new Error("cached baseline has too many entries");
   }
+  const pngs = [];
   for (const entry of entries) {
     const file = path.join(sourceDir, entry.name);
     const stat = lstatSync(file);
@@ -131,16 +124,19 @@ async function reencodeCachedBaseline(sourceDir) {
     if (!SAFE_BASELINE_NAME.test(entry.name) || !SAFE_SCREENSHOT.test(entry.name)) {
       throw new Error("cached baseline contains an unsafe filename");
     }
-    if (files.length >= MAX_SCREENSHOTS) {
+    if (pngs.length >= MAX_SCREENSHOTS) {
       throw new Error("cached baseline exceeds the publisher limits");
     }
-    const canonical = await reencodePng(readFileSync(file), `cached baseline ${entry.name}`);
+    pngs.push({ file, name: entry.name });
+  }
+  await mapConcurrent(pngs, async ({ file, name }) => {
+    const canonical = await reencodePng(readFileSync(file), `cached baseline ${name}`);
     totalBytes += canonical.length;
     if (totalBytes > MAX_TOTAL_BYTES) {
       throw new Error("cached baseline exceeds the publisher limits");
     }
-    files.push([entry.name, canonical]);
-  }
+    files.push([name, canonical]);
+  });
   return files;
 }
 
