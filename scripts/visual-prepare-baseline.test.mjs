@@ -55,7 +55,7 @@ describe("prepareVisualBaseline", () => {
         key: KEY,
         version: VERSION,
         sourceDir,
-        sourceKey: `reg-baseline-${KEY}-${VERSION}`,
+        sourceKey: `reg-baseline-v2-${KEY}-${VERSION}`,
         outputDir,
       }),
     ).resolves.toMatchObject({ count: 1 });
@@ -79,7 +79,7 @@ describe("prepareVisualBaseline", () => {
         key: KEY,
         version: VERSION,
         sourceDir,
-        sourceKey: `reg-baseline-${KEY}-${VERSION}`,
+        sourceKey: `reg-baseline-v2-${KEY}-${VERSION}`,
         outputDir,
       }),
     ).resolves.toMatchObject({ count: 1 });
@@ -100,7 +100,7 @@ describe("prepareVisualBaseline", () => {
         key: KEY,
         version: VERSION,
         sourceDir,
-        sourceKey: `reg-baseline-${KEY}-${VERSION}`,
+        sourceKey: `reg-baseline-v2-${KEY}-${VERSION}`,
         outputDir,
       }),
     ).resolves.toMatchObject({ count: 1 });
@@ -118,7 +118,7 @@ describe("prepareVisualBaseline", () => {
         key: KEY,
         version: VERSION,
         sourceDir,
-        sourceKey: `reg-baseline-${KEY}-${VERSION}`,
+        sourceKey: `reg-baseline-v2-${KEY}-${VERSION}`,
         outputDir,
       }),
     ).rejects.toThrow(/unsafe filename/u);
@@ -256,7 +256,7 @@ describe("prepareVisualBaseline", () => {
         key: KEY,
         version: VERSION,
         sourceDir,
-        sourceKey: `reg-baseline-${"b".repeat(40)}-${VERSION}`,
+        sourceKey: `reg-baseline-v2-${"b".repeat(40)}-${VERSION}`,
         outputDir,
         fetchImpl,
       }),
