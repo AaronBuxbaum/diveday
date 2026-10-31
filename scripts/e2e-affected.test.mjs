@@ -292,11 +292,6 @@ describe("ranking the reach tier by what the diff says", () => {
         ],
       ]),
     );
-    const graph = new Map([
-      ["src/lib/shifts.ts", new Set()],
-      ["src/app/shop/[shopSlug]/staffing/page.tsx", new Set(["src/lib/shifts.ts"])],
-      ["src/app/shop/[shopSlug]/gear/page.tsx", new Set(["src/lib/shifts.ts"])],
-    ]);
     const specs = new Map([
       ["e2e/gear.spec.ts", 'goto("/shop/blue-mantis/gear")'],
       ["e2e/staffing.spec.ts", 'goto("/shop/blue-mantis/staffing")'],
@@ -305,7 +300,7 @@ describe("ranking the reach tier by what the diff says", () => {
       changed: ["src/lib/shifts.ts"],
       diff: new Map(),
       specs,
-      graph,
+      graph: null,
       modules,
       lines: new Map([["src/lib/shifts.ts", new Set([2])]]),
     });

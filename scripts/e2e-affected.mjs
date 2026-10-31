@@ -608,8 +608,11 @@ export function selectSpecs({
   }
 
   // Routes whose entry files reach an edited module through imports.
-  if (graph) {
-    const edited = changed.filter((file) => graph.has(file) && !file.startsWith("src/app/"));
+  if (graph || modules) {
+    const edited = changed.filter(
+      (file) =>
+        (modules ? modules.index.has(file) : graph.has(file)) && !file.startsWith("src/app/"),
+    );
     if (edited.length > 0) {
       const reached = new Map();
       const importers = modules
@@ -864,7 +867,6 @@ export function affectedSpecs({ root = ROOT, base, commit, git = gitReader(root)
     changed: names,
     diff: parseDiff(diffText),
     specs,
-    graph: importGraph(root),
     modules: moduleIndex(readModules(root)),
     lines: changedLinesByFile(diffText),
     localeKeys,
