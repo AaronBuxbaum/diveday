@@ -610,7 +610,7 @@ describe("the people in a report", () => {
 });
 
 describe("erasing a diver named in a report", () => {
-  it("keeps the report and removes the diver's identity from it", async () => {
+  it("keeps the report and unlinks the diver, leaving the words staff wrote", async () => {
     const { db, shop } = ctx;
     const f = await fixture(db, shop.id);
     const name = f.seat.person.fullName;
@@ -653,21 +653,21 @@ describe("erasing a diver named in a report", () => {
 
     const view = await getIncidentReport(db, shop.id, started.reportId, f.owner.id);
     expect(view?.status).toBe("filed");
-    expect(view?.fields.whatHappened).toBe("[redacted] surfaced coughing. Oxygen started at once.");
+    expect(view?.fields.whatHappened).toBe(`${name} surfaced coughing. Oxygen started at once.`);
     expect(view?.fields.oxygenMinutes).toBe(25);
-    expect(view?.addenda[0]?.body).toBe("Called [redacted] the next day.");
-    expect(JSON.stringify(view)).not.toContain(name);
+    expect(view?.addenda[0]?.body).toBe(`Called ${name.toUpperCase()} the next day.`);
     // The seat link stays, under the erased name.
     expect(view?.people.map((person) => [person.kind, person.involvement])).toEqual([
       ["booking", "affected"],
       ["outsider", "witness"],
     ]);
+    expect(JSON.stringify(view?.people)).not.toContain(name);
   });
 });
 
 describe("erasing a diver named in a report under a legal hold", () => {
   /** Erasure wins over the hold on personal fields; the hold keeps the report itself (#2391). */
-  it("scrubs the diver's name and still keeps the report", async () => {
+  it("unlinks the diver and still keeps the report", async () => {
     const { db, shop } = ctx;
     const f = await fixture(db, shop.id);
     const name = f.seat.person.fullName;
@@ -702,7 +702,7 @@ describe("erasing a diver named in a report under a legal hold", () => {
 
     const view = await getIncidentReport(db, shop.id, started.reportId, f.owner.id);
     expect(view?.status).toBe("filed");
-    expect(view?.fields.whatHappened).toBe("[redacted] surfaced coughing.");
+    expect(view?.fields.whatHappened).toBe(`${name} surfaced coughing.`);
     const [row] = await db
       .select({ heldAt: incidentReports.legalHoldAt, deletedAt: incidentReports.deletedAt })
       .from(incidentReports)

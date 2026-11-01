@@ -1,6 +1,7 @@
-import { createHmac, hkdfSync, timingSafeEqual } from "node:crypto";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { authSecret } from "./auth-secret";
 import { MINUTE_MS } from "./clock";
+import { deriveLabelKey } from "./signed-token";
 
 /**
  * **What a one-word reply means, and how a cancellation is confirmed** (ADR
@@ -153,9 +154,7 @@ function codeSecret(): string {
   // in dev and e2e, where `auth-secret.ts` supplies a fixed fallback. Fail
   // loud rather than sign a cancellation code with an empty key.
   if (!authSecret) throw new Error("AUTH_SECRET is required to sign reply-keyword codes.");
-  return Buffer.from(hkdfSync("sha256", authSecret, "", "diveday-reply-keyword", 32)).toString(
-    "base64url",
-  );
+  return deriveLabelKey(authSecret, "diveday-reply-keyword").toString("base64url");
 }
 
 function codeForWindow(subject: ConfirmationCodeSubject, windowIndex: number): string {

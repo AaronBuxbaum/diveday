@@ -2305,9 +2305,9 @@ export async function recordCrewRollCall(
         if (!staffId) return { ok: false, reason: "staff_not_found" };
         const captureCredentials =
           source === "live" && checkpoint === "departure" && input.status === "boarded";
-        // Acquire the shop fence before trip or seat locks: a note can name a
-        // different person, and erasure takes this fence before its person and
-        // booking sweeps. Conservatively fence non-empty text even when the
+        // Acquire the shop fence before trip or seat locks: erasure takes
+        // this fence before its person and booking sweeps (a stale offline note
+        // is discarded shop-wide; narrowing that is a filed follow-up). Conservatively fence non-empty text even when the
         // checkpoint rule later drops it.
         const mayWriteNote = Boolean(input.note?.trim());
         const evidenceLockMode =

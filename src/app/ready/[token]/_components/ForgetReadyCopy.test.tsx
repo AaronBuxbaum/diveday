@@ -17,10 +17,16 @@ afterEach(cleanup);
  * redirect, a reload, a staff cancel opened online), and silent.
  */
 describe("ForgetReadyCopy", () => {
-  it("asks the worker to forget this page's copy once, and draws nothing on success", () => {
-    const { container } = render(<ForgetReadyCopy failedText="Could not remove saved page." />);
+  it("asks the worker to forget this page's copy once, and shows only a hidden marker on success", async () => {
+    const { container, findByText } = render(
+      <ForgetReadyCopy failedText="Could not remove saved page." />,
+    );
     expect(forgetThisReadyPage).toHaveBeenCalledTimes(1);
-    expect(container.innerHTML).toBe("");
+    await vi.waitFor(() =>
+      expect(container.querySelector("[data-ready-copy-forgotten][hidden]")).not.toBeNull(),
+    );
+    expect(container.textContent).toBe("");
+    expect(await findByText("", { selector: "[data-ready-copy-forgotten]" })).toBeTruthy();
   });
 
   it("reports that the saved page may remain when the worker cannot forget it", async () => {
