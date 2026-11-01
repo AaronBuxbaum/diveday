@@ -93,13 +93,7 @@ describe("the footer line's place", () => {
 });
 
 describe("the menu's glyphs", () => {
-  /**
-   * **The ••• and the × are drawn at the text's size, not the button's**
-   * (pixel-craft class 2, K-555). An `<svg>` with a `viewBox` and no size
-   * stretches to its grid cell: the dots ran 34px across a 48px circle, 7px
-   * from its border, and the × filled its button. `size-5` is the size
-   * `DiverSheet` draws the same × at.
-   */
+  // Keep the menu glyphs smaller than their touch targets.
   it("sizes the trigger's dots and the panel's close mark", () => {
     render(
       <ManifestMoreMenu
