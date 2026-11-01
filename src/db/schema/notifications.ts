@@ -48,10 +48,7 @@ export const personCourtesyEmailUnsubscribeTokens = pgTable(
     tokenHash: text("token_hash").notNull().unique(),
     issuedAt: appNowTimestamp("issued_at").notNull(),
   },
-  (table) => [
-    index("person_courtesy_email_unsubscribe_tokens_token_hash_idx").on(table.tokenHash),
-    index("person_courtesy_email_unsubscribe_tokens_person_idx").on(table.personId),
-  ],
+  (table) => [index("person_courtesy_email_unsubscribe_tokens_person_idx").on(table.personId)],
 );
 
 /**
