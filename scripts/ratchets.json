@@ -46,7 +46,7 @@
       "CLAUDE.md": 45,
       "AGENTS.md": 1059,
       ".claude/rules/*.md (without paths: frontmatter)": 0,
-      ".claude/skills/*/SKILL.md (description lines)": 776,
+      ".claude/skills/*/SKILL.md (description lines)": 769,
       ".claude/agents/*.md (description lines)": 130
     },
     "raises": [

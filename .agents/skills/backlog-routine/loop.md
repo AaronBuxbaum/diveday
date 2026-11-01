@@ -34,13 +34,15 @@ Part of the **backlog-routine** skill ([SKILL.md](SKILL.md)). The SKILL.md loop 
    diff image, explain each one in the pull request, and carry on
    ([visual-triage](../visual-triage/SKILL.md)).
 
-   **An open `automation/durations-refresh` pull request gets an empty commit and a merge.** The
+   **An open `automation/durations-refresh` pull request gets an empty commit to start CI.** The
    weekly refresh (`.github/workflows/durations-refresh.yml`) commits the recorded shard durations
    straight to `main` and opens that pull request only when the push was refused. A pull request
    opened with the workflow token starts no CI, so it waits unchecked until someone pushes:
    `gh api "$R/pulls?state=open&head=AaronBuxbaum:automation/durations-refresh"`; if one is there, check it out,
-   `git commit --allow-empty -m "Run CI on the durations refresh"`, push, and merge it once green.
-   The diff is two JSON files the next run's shards are dealt by; there is nothing to review.
+   `git commit --allow-empty -m "Run CI on the durations refresh"`, and push so CI runs. Check its
+   status with the other pull requests. Once it is green, name it as ready and stop for the human
+   to merge it, as required by *What ends a turn* in [SKILL.md](SKILL.md). The diff is two JSON
+   files that record shard durations for the next run.
 
    **Read the review comments in the same pass, not only the checks.** `sourcery-ai` reviews every
    pull request here within minutes of it opening, and Aaron's comments
