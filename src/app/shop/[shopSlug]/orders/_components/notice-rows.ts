@@ -1,10 +1,10 @@
 import { tapTargetLinkClass } from "@/components/ui/button";
 
-/** Keeps the 44px link target on the existing text baseline (K-389). */
+/** Keeps the 44px link target on the text baseline (K-389). */
 export const OPEN_TRIP_LINE = "inline-flex h-5 items-center";
 export const OPEN_TRIP_LINK = `${tapTargetLinkClass} font-medium text-primary underline underline-offset-2`;
 
-/** A 24px row gap keeps adjacent 44px targets from overlapping (K-389). */
+/** A 24px row gap separates adjacent 44px targets (K-389). */
 export const NOTICE_ROWS = "mt-3 space-y-6 text-sm";
 
 /**

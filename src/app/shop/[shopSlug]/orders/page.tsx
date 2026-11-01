@@ -52,47 +52,16 @@ import { PaymentsSetupCard } from "./_components/PaymentsSetupCard";
 import { PayoutLines, readBackOffice } from "./_components/PayoutLines";
 import { type OrdersHrefOverrides, orderIndexFilter, ordersIndexHref } from "./order-index-filter";
 
-// `instant = true` asserts that navigating *into* this page paints immediately — this segment's
-// `loading.tsx`, with no request read above it. Since the staff shell became synchronous (issue
-// 1446) that holds for a cold, direct visit too: the shell's session, shop row and nav stream in
-// beside the page from `ShopChrome` rather than above it, so the route gets a static shell and its
-// own reads are the only ones the reader waits on. See ADR 20260804-instant-navigation.
+// This page's loading.tsx can paint before its reads; no request read sits above it.
 export const instant = true;
 
 export const metadata: Metadata = { title: "Orders — DiveDay" };
 
-/*
- * **The index reads the canonical status words** (`ORDER_STATUS_KEYS`), not the
- * order *detail* page's longer phrasing, which is what it used to import.
- *
- * On a page with room for a sentence, "Open — awaiting payment" is a helpful
- * gloss. On a ledger row it is three words wrapping inside a `rounded-full`
- * pill, beside rows whose whole status is one word. The word is "Open"; what
- * it means is what the order record is for.
- *
- * `ORDER_STATUS_KEYS` keeps the property the local copy existed for: it is
- * keyed by the enum, not by `string`, and the filter below maps over
- * `orderStatus.enumValues` — so a status added to the column is a compile error
- * rather than a dropdown option rendering the raw database value, which is
- * exactly what happened when `partly_refunded` arrived (issue #699).
- */
+/* Use concise canonical status labels here; enum-keyed copy keeps new database
+ * statuses from silently appearing as raw values in the filter. */
 
-/**
- * **What happened, as a sentence — not the enum and not the object id.**
- *
- * The panel's rows read "Checkout · … · started Jul 21 · Stripe: cs_e2e_stuck"
- * under a paragraph explaining that "Stripe was asked to do something and the
- * app never confirmed how it went". Between them that is a database enum, an
- * internal identifier and the mechanism, on a surface a shop owner opens to
- * find out what they owe somebody (principle 4 — never surface the
- * implementation). The row says what happened to whose money instead; the id is
- * still here, one tap down, because it is what a shop types into Stripe's own
- * search box.
- *
- * Keyed by the enum so a kind added to the column is a compile-time hole rather
- * than a row rendering `checkout_session`; `OPERATION_UNFINISHED_FALLBACK`
- * catches one that arrives anyway.
- */
+/** Show the unfinished money operation in shop language; keep its Stripe id
+ * available on demand for lookup. The fallback avoids exposing raw enum values. */
 const OPERATION_UNFINISHED_KEYS: Record<string, StaffMessageKey> = {
   checkout_session: "orders.index.paymentOps.unfinished.checkout_session",
   invoice: "orders.index.paymentOps.unfinished.invoice",
@@ -112,13 +81,8 @@ function safeImportedDocumentUrl(url: string | null): string | null {
   return url.startsWith("/") || isManagedStorageUrl(url) ? url : null;
 }
 
-/**
- * Where `orders/new` lands a staffer it turned away — for having no connected
- * account and no diver in hand, or for not being an owner/manager (H-14) — this
- * index, the surface that door belongs to, rather than `/divers`, which has
- * nothing to say about payments. Reading orders stays open to every staff role;
- * only raising one is gated, so this is a page they can still use.
- */
+/** Keep refusals from creating an order on the order surface, where every staff
+ * role can still read orders and find payment guidance. */
 const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
   "payment-not-connected": { tone: "warning", key: "orders.index.notice.paymentNotConnected" },
   "not-authorized": { tone: "danger", key: "orders.index.notice.notAuthorized" },
@@ -151,18 +115,8 @@ const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
   },
 };
 
-/**
- * **The shop's money as a day ledger** — ADR
- * 20260827-clearwater-surface-language, decision 7.
- *
- * Every order the shop has ever sent, grouped into the days it took them: the
- * day header owns the date, the count and the subtotal, and a row is a diver,
- * what they bought, and an amount. The five-control filter card that used to
- * stand above it is a toolbar; the imported payment history that used to stand
- * beside it as a second table and a second pager is one disclosure row at the
- * foot. Reports' revenue rows, the roster's payment cells, the command palette,
- * and Settings' Money group all link in here.
- */
+/** The day ledger groups orders with the date, count and currency-specific
+ * subtotal in each header; imported history remains a separate disclosure. */
 export default async function OrdersIndexPage({
   params,
   searchParams,
@@ -191,39 +145,21 @@ export default async function OrdersIndexPage({
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const banner = noticeFromParam(notice, NOTICES);
-  // Hiding the New order button when there's no account to invoice from is a
-  // courtesy — `orders/new` re-checks and refuses regardless. What it buys is
-  // that a day-one shop's Orders index offers the one thing that actually
-  // moves them forward instead of a button that bounces them right back here.
+  // The destination re-checks payment setup; hiding this door avoids a dead end.
   const paymentsConnected = canAcceptPayments(await getShopStripeAccount(db, session.user.shopId));
 
-  // Stripe operations the app started and never saw finish — money that may or
-  // may not have moved. They used to hang off the bottom of the monthly report,
-  // which is a page about how the month *went*, not a queue; reconciling an
-  // unconfirmed charge is order work, so it lives on the order surface now.
+  // Unconfirmed Stripe operations are money work and remain conspicuous here.
   //
-  // Read behind `canPersonManagePaymentSettings` — the identical owner/manager
-  // role set (`isOwnerOrManager`) that the reports gate it left was built from,
-  // so exactly the same people see it, checked against the database rather than
-  // the JWT. Reading orders itself stays open to every staff role; this panel
-  // does not, and the query does not even run for the roles that can't see it.
-  //
-  // `canManageOrders` is read for itself, never borrowed from the line above:
-  // the two predicates agree today and are separate on purpose (ADR
-  // 20260803-invoicing-role-gate). It hides the two "New order" doors from a
-  // reader `orders/new` would only bounce back here (issue #1925) — a
-  // courtesy, never the gate; the route, its action and `createOrder` each
-  // refuse on their own.
-  // `canExportOrders` is the Reports CSV's gate, for the same reason: a file
-  // of every filtered order with diver names is the owner's or manager's to
-  // take away, and `orders/download` refuses everyone else on its own.
+  // Keep the DB-backed permissions separate: reconciliation is payment-manager
+  // only, order creation has its own gate, and exports follow report access.
+  // Unauthorized staff never trigger the privileged reconciliation read; each
+  // destination also enforces its own permission.
   const [canReconcilePayments, canManageOrders, canExportOrders] = await Promise.all([
     canPersonManagePaymentSettings(db, session.user.shopId, session.user.personId),
     canPersonManageOrders(db, session.user.shopId, session.user.personId),
     canPersonViewShopReports(db, session.user.shopId, session.user.personId),
   ]);
-  // The one "New order" door, drawn in the header and the empty state alike:
-  // absent for a reader `orders/new` would refuse (issue #1925).
+  // Reuse one permission-gated door in both the header and empty state.
   const newOrderDoor = canManageOrders ? (
     <Link href={`/shop/${shopSlug}/orders/new`} className={buttonClass()}>
       {t("orders.index.newOrder")}
@@ -235,8 +171,7 @@ export default async function OrdersIndexPage({
     canReconcilePayments,
   );
 
-  // One reading of the URL, shared with "Download orders (CSV)" so the file
-  // holds the orders this page shows (`orderIndexFilter`).
+  // Page and CSV use the same URL filter so they describe the same orders.
   const {
     filter: orderFilter,
     range: selectedRange,
@@ -263,12 +198,8 @@ export default async function OrdersIndexPage({
     { page: Number.parseInt(page ?? "", 10) },
   );
   const orderPage = ledger.page;
-  // Imported source history has no local trip/order status to filter against.
-  // It does follow the diver filter and an explicitly chosen calendar range,
-  // but it is deliberately not trapped in the live Orders page's default
-  // 90-day window — a migration's oldest receipt must stay findable. A trip
-  // filter means "only records tied to this live departure", which imported
-  // history cannot honestly claim, so that narrow view renders no history.
+  // Imported history has no local trip or order status: honor diver and explicit
+  // date filters, omit the live-order default window, and hide it for trip views.
   const importedHistoryPage = tripFilter
     ? null
     : await listImportedPaymentHistory(
@@ -304,14 +235,11 @@ export default async function OrdersIndexPage({
       path,
     );
 
-  // Looked up rather than read off the first row: a filter that matches
-  // nothing still has to say whose orders it was looking for.
+  // Resolve filter labels independently so empty results still name the filter.
   const filteredPersonName = personFilter
     ? await getShopPersonName(db, shop.id, personFilter)
     : null;
-  // Same reason, same shape: shop-scoped so another tenant's `?tripId=` names
-  // nothing, and looked up so a departure with no open orders left still says
-  // which departure the empty screen is about.
+  // Shop-scope the trip lookup; an empty result still names its departure.
   const filteredTripTitle = tripFilter ? await getShopTripTitle(db, shop.id, tripFilter) : null;
   const hasFilters = Boolean(
     statusFilter ||
@@ -328,23 +256,17 @@ export default async function OrdersIndexPage({
 
   const today = calendarDateInTimezone(nowDate(), shop.timezone);
   const days: OrderLedgerDay[] = ledger.groups.map((group) => {
-    // A calendar day has no instant in it, so it is formatted from its own
-    // UTC midnight in UTC — running a date-only value through the shop's zone
-    // is what shifts a header onto the day before the rows it names.
+    // Format date-only ledger headers at UTC midnight in UTC to avoid shifting
+    // them to the prior day in the shop's timezone.
     const date = formatShortDate(calendarDateToUtcMidnight(group.day), locale, "UTC");
     const named = group.day === today ? t("orders.index.ledger.today", { date }) : date;
     return {
       key: group.day,
-      // A day cut in half by the page boundary restates its header rather than
-      // starting mid-list under nothing, and says so — the subtotal beside it
-      // is the whole day's, and a reader must not read it as new money.
+      // Mark a day continued across pages; its subtotal still covers the whole day.
       label: group.continued ? t("orders.index.ledger.continued", { day: named }) : named,
       meta: t("orders.index.ledger.dayMeta", {
         count: group.count,
-        // One figure per currency the day's orders were charged in, each in
-        // its own. Almost always one; two only for a day that straddles a
-        // change of `shops.currency`, where a single figure in the *current*
-        // setting would re-price what was charged in the old one.
+        // Preserve each order's stored currency if a day spans a shop currency change.
         subtotal: group.subtotals
           .map((entry) => formatMoneyCents(entry.cents, entry.currency, locale))
           .join(" · "),
@@ -353,9 +275,7 @@ export default async function OrdersIndexPage({
     };
   });
 
-  // A control with nothing to govern: on a shop that has never taken an order
-  // and is not filtering, the toolbar is three empty boxes above an empty
-  // state that already says the one thing there is to do.
+  // Avoid an empty toolbar until there are orders, history, or active filters.
   const showToolbar = hasFilters || orderPage.total > 0 || hasImportedHistory;
 
   return (
@@ -365,12 +285,8 @@ export default async function OrdersIndexPage({
         title={t("shared.shopSections.money")}
         actions={
           <>
-            {/* While the unfiltered list is empty, the empty state below holds
-                this same door — two identical primaries for one action is
-                triage work the layout should do (principle 8), so the header
-                stands down. */}
-            {/* Without an account there is no order to send, and connecting
-                one is the setup card's below, never this header's. */}
+            {/* Keep one primary action when the empty state already offers it;
+                payment setup belongs to the setup card below. */}
             {!paymentsConnected || (orderPage.total === 0 && !hasImportedHistory && !hasFilters)
               ? null
               : newOrderDoor}
@@ -396,22 +312,15 @@ export default async function OrdersIndexPage({
         />
       ) : null}
 
-      {/* Above the toolbar because it is not something you filter for, and
-          danger-toned rather than folded away: unconfirmed money is a financial
-          obligation, not a notification to dismiss. An empty queue renders
-          nothing at all — the calm state of this page is no panel. A
-          tone-carrying operational panel is one of the three jobs the bordered
-          card keeps (ADR 20260827-clearwater-surface-language, decision 2). */}
+      {/* Keep this operational queue above filters in a bordered, danger-toned
+          panel; an empty queue adds no panel. */}
       {stuckPaymentOperations.length > 0 ? (
         <section aria-label={t("orders.index.paymentOps.sectionLabel")} className="mb-6">
           <ShopNotice tone="danger" role="status">
             <p className="font-medium">
               {t("orders.index.paymentOps.heading", { count: stuckPaymentOperations.length })}
             </p>
-            {/* No second paragraph under the heading: it explained the
-                mechanism ("Stripe was asked to do something and the app never
-                confirmed how it went"), and the heading above already says what
-                to do about it. */}
+            {/* The heading already states the action, so omit a repeated explanation. */}
             <ul className={NOTICE_ROWS}>
               {stuckPaymentOperations.map(({ intent, tripId: opTripId, tripTitle, personName }) => (
                 <li key={intent.id} className="group/op">
@@ -421,11 +330,8 @@ export default async function OrdersIndexPage({
                         date: formatShortDate(intent.startedAt, locale, shop.timezone),
                       })}
                     </span>
-                    {/* Whose money and which boat, joined here rather than
-                        each carrying its own separator — a row with a name and
-                        no departure used to open on a stray bullet — with the
-                        dot bound to the departure, so a phone's line never
-                        opens on "· Priya Sharma" (K-569). */}
+                    {/* Keep the separator with the departure so phone wrapping
+                        never starts the next line with a bullet. */}
                     {tripTitle || personName ? (
                       <span>{[tripTitle, personName].filter(Boolean).join(FACT_SEPARATOR)}</span>
                     ) : null}
@@ -440,27 +346,10 @@ export default async function OrdersIndexPage({
                       </span>
                     ) : null}
                   </p>
-                  {/* The identifier a shop pastes into Stripe's own search, one
-                      tap down rather than on the row's face. Mono, because it is
-                      a string to be transcribed character for character. */}
-                  {/* **On the last row, the target's spare height hangs
-                      below the words, into the notice's padding** (K-388). The
-                      summary is a 44px box round a 16px line, and the 14px
-                      under the words stood on the notice's `py-3`: 13px from
-                      the border to the heading's ink, 27px from "Stripe
-                      reference" to the border. `-mb-3.5` gives those 14px back
-                      there, so the words end on the content edge and the
-                      padding is 13 and 13; the box spills into the padding,
-                      which nothing clips. Only on the last row (the row is
-                      `group/op`): on any other, the margin would collapse into
-                      the gap below it and pull the next row up under the
-                      reference, which would then read as that row's. And only
-                      the bottom: a box lifted 14px would put its ring across
-                      the row's first line. `flex w-fit` rather than
-                      `inline-flex`, so the margin is taken whole; an inline
-                      box's line keeps the strut of the row's `text-sm` under
-                      it. Open, the id starts 4px under the box on every row:
-                      `mt-1`, or 14 + 4 where the box has bled. */}
+                  {/* Keep the Stripe lookup id one tap away and monospaced for
+                      accurate transcription. The 44px target uses the notice's
+                      bottom padding only on the final row; other rows keep their
+                      gap, and its focus ring clears the row above. */}
                   {intent.stripeObjectId ? (
                     <details className="mt-1">
                       <summary className="flex min-h-11 w-fit cursor-pointer list-none items-center text-xs text-muted underline underline-offset-2 group-last/op:-mb-3.5 [&::-webkit-details-marker]:hidden">
@@ -526,11 +415,8 @@ export default async function OrdersIndexPage({
         </p>
       ) : null}
 
-      {/* The departure is not a control in the toolbar — it is a filter that
-          arrives from a link — so this line is the only thing on screen that
-          says the list is narrowed to one boat, and the only way back to the
-          boat itself. Dropping the filter is "Clear filters", as it is for
-          every other one. */}
+      {/* A linked trip filter has no toolbar control, so identify the narrowed
+          list here and keep a path back to its departure. */}
       {tripFilter && filteredTripTitle ? (
         <p className="mt-4 flex flex-wrap items-baseline gap-x-2 text-sm text-muted">
           <span>{t("orders.index.filteredByTrip", { title: filteredTripTitle })}</span>
@@ -553,10 +439,7 @@ export default async function OrdersIndexPage({
       />
 
       {days.length === 0 && (hasFilters || !hasImportedHistory) ? (
-        // The same fork the header makes (Loop 3): with no orders on file the
-        // one thing that moves a shop forward is either sending the first one
-        // or connecting the account that can. Filtered-to-nothing is a
-        // different problem and gets the way back out instead.
+        // Offer setup or a first order when truly empty; filtered results get a clear action.
         <EmptyState
           title={hasFilters ? t("orders.index.emptyFiltered") : t("orders.index.emptyAll")}
           action={
@@ -585,10 +468,7 @@ export default async function OrdersIndexPage({
         href={(target) => hrefWith({ page: target })}
       />
 
-      {/* **The ledger as a bookkeeper's file** (third UX review, item 34): every
-          order this filter found, across every page, one row per line. A plain
-          anchor, as Reports' download is, so the browser saves the file rather
-          than the router fetching it. */}
+      {/* Export every matching page as a browser download. */}
       {canExportOrders && days.length > 0 ? (
         <p className="mt-2 text-end text-sm print:hidden">
           <a
@@ -600,11 +480,8 @@ export default async function OrdersIndexPage({
         </p>
       ) : null}
 
-      {/* One disclosure row at the foot, where a second full table and a second
-          pager used to stand permanently open (decision 7). It is history from
-          another system: worth keeping findable, never worth a third of the
-          money screen. Open already when a reader has paged into it, so paging
-          does not fold it back up. */}
+      {/* Keep imported history findable as a separate collapsed record; leave it
+          open while paging through it. */}
       {hasImportedHistory && importedHistoryPage ? (
         <section aria-label={t("orders.index.importedHistory.sectionLabel")} className="mt-10">
           <LedgerGroup
@@ -622,8 +499,7 @@ export default async function OrdersIndexPage({
               </span>
             }
           >
-            {/* The explanation opens with the rows it is about, rather than
-                standing on the page above them. */}
+            {/* Keep the explanation adjacent to the imported rows it describes. */}
             <p className="mt-2 max-w-3xl text-sm text-muted">
               {t("orders.index.importedHistory.detail")}
             </p>
@@ -651,16 +527,8 @@ export default async function OrdersIndexPage({
                           {history.title ?? history.sourceReference ?? "—"}
                         </div>
                       </Td>
-                      {/* Three things, where there were five.
-                          `Unverified import` was on every row of this table and
-                          again under every diver's name on a phone — a badge
-                          stating the one fact the disclosure's own badge
-                          already states about all of it, repeated once per row
-                          down a warning-toned column. And the receipt was two
-                          items, a reference and a link to the same document;
-                          they are now one link wearing the reference as its
-                          name, so a row carrying every field is a title, a
-                          source, and a receipt rather than a paragraph. */}
+                      {/* The section badge marks all rows as unverified; the receipt
+                          reference labels its document link when available. */}
                       <Td muted hideBelow="sm" align="middle">
                         <div className="text-base sm:text-sm">
                           {history.title ?? history.sourceReference ?? "—"}

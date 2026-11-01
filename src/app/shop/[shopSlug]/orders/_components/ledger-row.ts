@@ -5,9 +5,8 @@ import { formatMoneyCents } from "@/lib/format";
 import type { OrderLedgerRow } from "./OrdersLedger";
 
 /**
- * One ledger row, worded and formatted for the day ledger (`OrdersLedger`):
- * an order, or a seat a diver paid for online at booking (fourth UX review,
- * item 18), which opens its departure, since it has no order record of its own.
+ * One ledger row for an order or a seat paid online at booking. A seat opens
+ * its departure because it has no order record of its own.
  */
 export function orderLedgerRow(
   row: LedgerRow,
@@ -37,17 +36,14 @@ export function orderLedgerRow(
   return {
     id: row.order.id,
     href: `/shop/${shopSlug}/orders/${row.order.id}`,
-    // The diver and the amount, and deliberately not the date: the day
-    // heading above already carries it, in the accessibility tree as
-    // well as on screen (`OrdersLedger.test.tsx`).
+    // Include diver and amount, not the date already supplied by the day
+    // heading in the accessibility tree and on screen (`OrdersLedger.test.tsx`).
     linkLabel: t("orders.index.ledger.rowLabel", { name: row.person.fullName, amount }),
     diver: row.person.fullName,
-    // The departure, or the order's own description.
+    // The departure or the order's own description.
     detail: (row.trip?.title ?? row.order.description) || null,
-    // Paid is the expected state and renders as nothing at all; only the
-    // exceptional statuses earn a badge (principle 9). That is this
-    // page's call, made here — `ORDER_STATUS_TONES` still knows paid is
-    // `success`, because the two surfaces that do show it need that.
+    // Paid is routine here, so only exceptional statuses get a badge
+    // (principle 9). Other surfaces still use its `success` tone.
     status:
       row.order.status === "paid"
         ? null
@@ -57,8 +53,8 @@ export function orderLedgerRow(
               : row.order.status,
             tone: ORDER_STATUS_TONES[row.order.status] ?? "neutral",
           },
-    // Money taken at the counter says how (ADR 20261009-counter-payments); a
-    // Stripe invoice is the ordinary case and says nothing.
+    // Name the counter collection method; omit the ordinary Stripe invoice
+    // case (ADR 20261009-counter-payments).
     method:
       row.order.collection === "stripe_invoice"
         ? null

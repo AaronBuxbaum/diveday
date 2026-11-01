@@ -47,10 +47,8 @@ type QueueProps<Row> = {
 };
 
 /**
- * Cancellation refunds the shop still owes a diver. Renders nothing when
- * nothing is owed: a queue, not a heading that sits on the page announcing
- * its own emptiness. Warning rather than danger: nothing is broken, somebody
- * is just owed money.
+ * Cancellation refunds the shop still owes a diver. Use a warning because
+ * money is due, but nothing is broken; omit the queue when empty.
  */
 export function OwedRefundsQueue({
   queue,
@@ -69,16 +67,8 @@ export function OwedRefundsQueue({
         <p className="mt-1 text-sm">{t("orders.index.owedRefunds.detail")}</p>
         <ul className={NOTICE_ROWS}>
           {queue.map((owed) => (
-            // **Running text, not flex items** (K-569). Each fact was a
-            // flex item opening on its own "·", so the row spaced its
-            // dots two ways and, wrapped on a phone, began lines
-            // "· $60.00"; and a single joined span, as one flex item,
-            // left the name's line whole on a phone and pushed "Open
-            // trip" to a line of its own. As one run of text the row
-            // breaks only after a dot or inside the departure's words,
-            // every dot bound to the word before it, and "Open trip"
-            // (a 20px `inline-flex` on the text's baseline) shares the
-            // last line.
+            // Keep this as running text: separators stay with the preceding
+            // fact on phone wraps, and “Open trip” stays inline (K-569).
             <li key={owed.bookingId}>
               <span className="font-medium">{owed.diverName}</span>
               {FACT_SEPARATOR}
@@ -110,8 +100,8 @@ export function OwedRefundsQueue({
 }
 
 /**
- * Money a diver's card paid on a checkout DiveDay had already closed (issue
- * #2335), each with its refund. Renders nothing while nothing is owed.
+ * Card payments that arrive after checkout closes, each with its refund.
+ * Omit the queue when empty.
  */
 export function PaidAfterCloseQueue({
   queue,
@@ -163,9 +153,8 @@ export function PaidAfterCloseQueue({
 }
 
 /**
- * Refunds Stripe reported failed or canceled after DiveDay counted them
- * (issue #2291): the money is still the diver's. Renders nothing while none is
- * owed.
+ * Refunds Stripe reports failed or canceled after DiveDay counted them; the
+ * money is still owed to the diver. Omit the queue when empty.
  */
 export function FailedRefundsQueue({
   queue,
@@ -223,10 +212,9 @@ export function FailedRefundsQueue({
 }
 
 /**
- * A refund made in the Stripe dashboard on a party's checkout names an amount,
- * never a seat (issue #2293). Each row offers the checkout's seats that still
- * hold money from it; the tap says whose it was. Nothing is split on a rule.
- * Renders nothing while none is waiting.
+ * A dashboard refund on a party checkout identifies an amount, not a seat.
+ * Offer the seats still holding its money for staff to match; do not split it
+ * automatically. Omit the queue when none is waiting.
  */
 export function UnattributedRefundsQueue({
   queue,
