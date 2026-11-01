@@ -1,5 +1,4 @@
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import type { Role } from "@/lib/authz";
 import type { HorizonReadinessEvidence } from "./blockers";
 import type { TodayWave } from "./today";
 
@@ -12,24 +11,14 @@ import type { TodayWave } from "./today";
 export type TodayRowsContext = {
   wave: TodayWave;
   inWindow: HorizonReadinessEvidence["trips"];
-  upcoming: HorizonReadinessEvidence["upcoming"];
   readinessByTrip: HorizonReadinessEvidence["readinessByTrip"];
   todayTrips: HorizonReadinessEvidence["trips"];
-  /** The shop's own calendar day, as `shopDay` spells it. */
-  today: string;
   todayLocal: string;
-  todayTripIds: string[];
-  bookingIdsByTrip: Map<string, string[]>;
-  horizon: Date;
   shopSlug: string;
   timeZone: string;
   locale: string;
   t: StaffTranslator;
   now: Date;
   diversPerDivemaster: number | null;
-  roles: readonly Role[] | undefined;
-  personId: string | undefined;
   helpRequestsByTrip: Map<string, TodayWave["helpRequests"]>;
-  availableStaff: { id: string; fullName: string; roles: TodayWave["rawStaff"][number]["roles"] }[];
-  includeOpsAlerts: boolean;
 };
