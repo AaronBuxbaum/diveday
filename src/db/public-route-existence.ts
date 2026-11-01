@@ -1,109 +1,22 @@
 /**
- * **Does this public URL name anything?** — the database half of the public
- * namespace's edge refusal (ADR
- * 20260912-the-public-namespace-refuses-at-the-edge).
+ * The database half of the public namespace refusal (ADR
+ * 20260912-the-public-namespace-refuses-at-the-edge). `publicRouteShape`
+ * selects the question; the proxy asks it before sending the public page shell.
+ * A closed-list miss never reaches this lookup.
  *
- * `src/lib/public-route-shape.ts` reads the pathname and says which question
- * to ask; this file asks it, from `src/proxy.ts`, before any static shell has
- * gone out. One indexed read for a shop-only route or a malformed segment, two
- * for a route that names a course, a dive site or a departure inside a shop. A
- * closed-list miss (`absent`) never arrives here at all — it is not in
- * `PublicRouteQuery`, so nothing can hand it to a database.
+ * The lookup returns both route existence and shop existence so a refusal can
+ * render that shop's own 404 (issue #765). It uses each page's reader and scope;
+ * canceled or private trips retain their public soft landing, while removed
+ * trips are excluded by `liveTrip()`.
  *
- * ## Two answers, one shop read
- *
- * A refusal is framed as the shop the URL sat under, because a diver whose
- * link died is owed that shop's own 404 and not DiveDay's sales page (issue
- * #765). So the proxy needs a second fact — is that shop real? — and it used
- * to get it by calling this function again with `{ kind: "shop" }`, re-asking
- * the question the lookup below opens with. A dead URL under a live shop cost
- * three reads where two do, unauthenticated, on a pool capped at five
- * connections per instance, and a dead URL is the one request nobody
- * legitimate is making. Both facts now ride back on the one read.
- *
- * That is also why a malformed segment, which needs no query to be refused,
- * still pays for the shop probe: the read is not asking whether the segment
- * names a row, it is asking whose refusal the diver is about to read.
- *
- * ## The invariant, applied to predicates
- *
- * The rule and the reason behind it are stated once, on `publicRouteShape` —
- * **the edge may never refuse what the page would have served.** There it
- * governs which segments are judged by shape; here it governs which predicates
- * a lookup is allowed to carry. So every reader below is the *page's own*
- * reader, not a hand-written join that could forget a tenant scope or a
- * soft-delete predicate, and every "should this be visible?" question is
- * deliberately left where it already lives, in the page:
- *
- * - a course is looked up without `isActive`, because
- *   `courses/[slug]/page.tsx` serves an inactive course to a staff previewer —
- *   the flag is *reported* rather than applied, and who may see past it is
- *   settled one layer up (see "The one predicate the edge applies" below);
- * - a departure is looked up without status and without `isPrivate`, because a
- *   cancelled one gets its own soft landing at 200 and a private one is
- *   still served to whoever holds its link — but *with* `liveTrip()`,
- *   because every public reader of a departure carries it and 404s a removed
- *   one anyway, so the filter matches the page rather than overruling it
- *   (`tripExistsForShop` states the whole of that reasoning);
- * - a shop that opted out of search listing is still a shop — only
- *   `availability.json` and the year card refuse it, and both do so themselves.
- *
- * Every row this file finds still meets its page's own `notFound()` a moment
- * later. It only removes the cases where there was never a row at all.
- *
- * ## The one predicate the edge applies, and what it cost to get there
- *
- * A hidden course is the exception to the paragraph above, and it is worth
- * reading as an exception rather than as a second rule. Course slugs are minted
- * from a shared template catalogue, so leaving `is_active` entirely to the page
- * put the two cases on different status lines — 200 with the shop's refusal
- * streamed under it for a draft, 404 for a slug that never existed — and a
- * stranger swept a shop's namespace with a dozen guesses to learn which
- * unpublished drafts it held. `is_active` is the shop's own "not yet", and
- * nobody outside the shop is owed it.
- *
- * Every *cheap* way to close that is worse than the disclosure, which is why it
- * stood as an accepted cost for a while (issue #1735):
- *
- * - a refusal keyed on "no session cookie" is undone by one forged `Cookie:`
- *   header — better-auth's `getSessionCookie` returns whatever string sits under
- *   the cookie name and verifies nothing — so it would deter a crawler and not
- *   the reader who is probing;
- * - the snapshot `getCookieCache` decrypts is sound about what it holds, but it
- *   is a *cache*, five minutes wide (`src/lib/auth.ts`), and `authGateResponse`
- *   already declines to read a cold one as "signed out" for this exact reason:
- *   a staffer back from lunch tapping Preview holds a live session and no
- *   readable snapshot, and would meet a hard 404 on their own shop's course;
- * - that snapshot names one shop while staff roles are per-shop
- *   (`loadActiveStaffRoles`), so even a warm one is not a sound "not staff
- *   here" either.
- *
- * All three are the edge *guessing* who is reading. What closed it instead is
- * the previewer arriving carrying something the edge can check: the editor
- * mints a short-lived signed parameter where it already knows the reader is
- * this shop's live staff, and `coursePreviewIsValid`
- * (`src/lib/course-preview-gate.ts`) verifies it in `src/proxy.ts` with no
- * database read and no opinion about sessions at all. The capability is the
- * same grammar the waiver, recap and ready links use.
- *
- * So this file reports `hidden` and decides nothing. The proxy applies it, the
- * page keeps its own live per-shop `isLiveShopStaff` check, and a token in a
- * stranger's hands still renders them `notFound()` — the parameter buys one
- * thing, which is not being refused before the page is asked.
- *
- * **What it costs, stated plainly.** A staffer who bookmarked a hidden course's
- * public URL now meets a 404 there, because a bare URL carries no capability
- * and the edge cannot tell them from the reader who was guessing. They reach it
- * from the editor, which is where the Preview link lives. That is a real
- * narrowing of the rule this block opens with, and the only one: for this one
- * flag the edge does refuse what the page would have served, to a reader who
- * arrives without the thing that makes them legible.
- *
- * The departure bullet has the same shape and not the same cost: a trip id is a
- * random uuid, so there is no namespace to sweep, and `trips/[id]/page.tsx`
- * carries no `isPrivate` check at all — whoever holds the uuid already reads the
- * whole booking page, so the status line tells them strictly less than the page
- * does.
+ * Hidden courses are reported to the proxy. After a successful existence
+ * lookup reports one hidden, the proxy refuses it unless the URL carries the
+ * short-lived signed preview capability minted by the editor for live staff of
+ * that shop. On a lookup failure the proxy serves the page; its live per-shop
+ * staff check remains the content boundary. A bookmarked public URL has no
+ * capability and is refused after a successful lookup; staff open Preview from
+ * the editor. A missing cookie, a forged cookie value, or a cached session
+ * snapshot cannot establish live staff for this shop.
  */
 
 import type { PublicRouteQuery } from "@/lib/public-route-shape";

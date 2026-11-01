@@ -115,22 +115,9 @@ export function Copyable({
   const buttonText =
     status === "copied" ? copiedLabel : status === "failed" ? failedLabel : copyLabel;
 
-  // In the panel, the trigger gives back what its 44px target adds above the
-  // label's 20px line — `-mt-3`, with the row's items at its top so the label
-  // and "Copy link" share one centre — and `flush`'s 8px of room handed back
-  // as `-mx-2` at the sides, so the caption sets the panel's top inset and its
-  // start edge. With its whole box in the header row, lined up by baseline,
-  // the target made the band above the caption 27px deep against 13px under
-  // the URL, and ended
-  // "Copy link" 23px inside the edge the caption starts 11px inside.
-  //
-  // **Only above.** Given back below as well (`-my-3`), the box ran 12px under
-  // a row the URL starts 8px beneath: its hover wash covered the top of the
-  // URL's first line, and at 390, where that line runs under the button, its
-  // inset ring's bottom edge lay on the URL's ink (K-108 review). Below the
-  // label the row keeps the box's lower half, so the URL starts 8px clear of
-  // it. The target stays 44px, and its hover wash and ring take that whole box.
-  // Inline, it sits in its caller's row as is.
+  // The panel's 44px target extends above the label only, keeping the URL
+  // clear below. Its inset focus ring stays within the panel. Inline buttons
+  // stay in their caller's row.
   const panel = layout === "panel";
   const button = (
     <button
@@ -140,10 +127,6 @@ export function Copyable({
         variant: "ghost",
         size: "sm",
         flush,
-        // `-mt-3` (K-108) is the panel's alone: see above. The panel's 12px
-        // inset leaves a flush fill 4px from the sunken box's edge, and the
-        // outdented box reaches its top, so the ring is drawn inside rather
-        // than a pixel outside the box.
         className: panel ? "-mt-3 focus-visible:focus-ring-inset print:hidden" : "print:hidden",
       })}
     >

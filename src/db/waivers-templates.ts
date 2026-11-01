@@ -198,26 +198,9 @@ export async function saveWaiverTemplate(
       .orderBy(desc(waiverTemplates.version))
       .limit(1);
     const title = (input.title?.normalize("NFC").trim() || current?.title) ?? DEFAULT_WAIVER_TITLE;
-    // Newlines normalised, not just trimmed. A browser submits a `<textarea>`
-    // with CRLF line breaks whatever it was rendered with (the HTML form
-    // payload spec), so a release stored with LF comes back with a `\r` on
-    // every line and compares unequal to itself — the no-op check below would
-    // never once fire in a real browser while passing every unit test, and the
-    // stored text would gain a `\r` per line on each save. Normalising on the
-    // way in keeps one spelling in the column.
-    // Newlines *and* Unicode form. A browser submits a `<textarea>` with CRLF
-    // whatever it was rendered with, so a release stored with LF comes back
-    // with a `\r` on every line — the no-op check below would never once fire
-    // in a real browser while passing every unit test.
-    //
-    // NFC for the same class of invisible difference: text pasted back from
-    // Word, Pages or an email can arrive decomposed, so `exención` is
-    // byte-unequal to the identical-looking stored string. A Spanish shop is
-    // the likeliest victim, and the cost is an edit nobody made invalidating
-    // every signature the shop holds (`dive-domain-expert`, after #720
-    // shipped). Safe in a way semantic diffing is not: NFC is *canonical
-    // equivalence*, so the rendered legal text is the same document — this is
-    // not inferring materiality from a diff.
+    // Normalize textarea CRLF/CR to LF and Unicode to NFC before comparison.
+    // This makes line endings and canonically equivalent pasted text a no-op;
+    // it does not infer legal materiality from a textual diff.
     const body = input.body.replace(/\r\n?/g, "\n").normalize("NFC").trim();
     const questions = input.questions ?? current?.questions ?? [];
     // The questions are part of the version, so a changed list is a new one,
