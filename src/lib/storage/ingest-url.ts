@@ -1,5 +1,12 @@
-import { lookup as dnsLookup } from "node:dns/promises";
 import { isIP } from "node:net";
+import {
+  isPrivateAddressError,
+  isUnsafeAddress,
+  type ResolvedAddress,
+  type ResolveHost,
+  resolveHost,
+} from "@/lib/net/public-address";
+import { publicOnlyFetch } from "@/lib/net/public-fetch";
 import { type ImageUpload, isManagedStorageUrl, type StoredImage } from "./index";
 import { MAX_IMAGE_BYTES } from "./limits";
 
@@ -22,61 +29,7 @@ export type IngestResult =
   | { status: "not_configured" }
   | { status: "failed" };
 
-type DnsAddress = { address: string; family: number };
-export type DnsLookup = (hostname: string) => Promise<DnsAddress[]>;
 type Fetch = typeof fetch;
-
-/**
- * `dns.lookup()` takes no `AbortSignal` and, against a hostname the resolver
- * can't reach, can hang far longer than the fetch step's own
- * `FETCH_TIMEOUT_MS` — that budget never starts if this step never finishes.
- * A staff-pasted URL to a briefly-unreachable host would otherwise stall the
- * whole save indefinitely instead of failing the ingest cleanly.
- */
-const DNS_LOOKUP_TIMEOUT_MS = 5_000;
-
-async function defaultLookup(hostname: string): Promise<DnsAddress[]> {
-  return Promise.race([
-    dnsLookup(hostname, { all: true }),
-    new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error("DNS lookup timed out")), DNS_LOOKUP_TIMEOUT_MS);
-    }),
-  ]);
-}
-
-/** IPv4 loopback, private, link-local (incl. cloud metadata 169.254.169.254), CGNAT, and reserved/test/multicast ranges. */
-function isUnsafeIPv4(ip: string): boolean {
-  const parts = ip.split(".").map(Number);
-  if (
-    parts.length !== 4 ||
-    parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)
-  ) {
-    return true; // malformed — refuse rather than guess
-  }
-  const [a, b, c] = parts;
-  if (a === 0 || a === 10 || a === 127) return true;
-  if (a === 169 && b === 254) return true;
-  if (a === 172 && b >= 16 && b <= 31) return true;
-  if (a === 192 && b === 168) return true;
-  if (a === 100 && b >= 64 && b <= 127) return true; // carrier-grade NAT
-  if (a === 192 && b === 0 && (c === 0 || c === 2)) return true; // IETF protocol assignments / TEST-NET-1
-  if (a === 198 && (b === 18 || b === 19)) return true; // benchmarking
-  if (a === 198 && b === 51 && c === 100) return true; // TEST-NET-2
-  if (a === 203 && b === 0 && c === 113) return true; // TEST-NET-3
-  if (a >= 224) return true; // multicast (224-239) + reserved (240-255)
-  return false;
-}
-
-/** IPv6 loopback, unique-local, link-local, and IPv4-mapped addresses (checked against the v4 rules). */
-function isUnsafeIPv6(ip: string): boolean {
-  const lower = ip.toLowerCase();
-  if (lower === "::1" || lower === "::") return true;
-  if (lower.startsWith("fc") || lower.startsWith("fd")) return true; // fc00::/7
-  if (/^fe[89ab]/.test(lower)) return true; // fe80::/10
-  const mapped = lower.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
-  if (mapped?.[1]) return isUnsafeIPv4(mapped[1]);
-  return false;
-}
 
 /** Reads the response body up to `maxBytes`, aborting the stream early rather than trusting Content-Length alone. */
 async function readBounded(response: Response, maxBytes: number): Promise<ArrayBuffer | null> {
@@ -113,7 +66,7 @@ export async function ingestImageUrl(
   store: (upload: Omit<ImageUpload, "keyPrefix">) => Promise<StoredImage>,
   options: {
     fetchImpl?: Fetch;
-    lookup?: DnsLookup;
+    lookup?: ResolveHost;
     env?: Readonly<Record<string, string | undefined>>;
   } = {},
 ): Promise<IngestResult> {
@@ -136,56 +89,74 @@ export async function ingestImageUrl(
   // lookup (previously ungated: DIVEDAY_DISABLE_EXTERNAL_HTTP was set in every e2e worker's env
   // but nothing here read it). A literal IP is exempt: `dns.lookup()` resolves those synchronously
   // with no network round-trip regardless, which is exactly why the CR-020 SSRF e2e test
-  // (dive-sites.spec.ts) uses a loopback literal — it wants the *real* isUnsafeIPv4/6 check to
+  // (dive-sites.spec.ts) uses a loopback literal — it wants the *real* isUnsafeAddress check to
   // run, not a stubbed-out one. Passing an explicit `lookup` still exercises the real code path
   // in unit tests.
-  const lookup = options.lookup ?? defaultLookup;
+  const lookup = options.lookup ?? resolveHost;
   if (
     process.env.DIVEDAY_DISABLE_EXTERNAL_HTTP === "1" &&
-    lookup === defaultLookup &&
+    lookup === resolveHost &&
     !isIP(parsed.hostname)
   ) {
     return { status: "failed" };
   }
-  let addresses: DnsAddress[];
+  let addresses: ResolvedAddress[];
   try {
     addresses = await lookup(parsed.hostname);
   } catch {
     return { status: "failed" };
   }
   if (addresses.length === 0) return { status: "failed" };
-  for (const { address, family } of addresses) {
-    if (family === 6 ? isUnsafeIPv6(address) : isUnsafeIPv4(address)) {
-      return { status: "blocked" };
-    }
-  }
+  // The early answer: refuse before opening any connection. It is not the
+  // guard against DNS rebinding — a second resolution can answer differently.
+  // That guard is the default transport, which checks the address it actually
+  // connects to (issue #3267).
+  if (addresses.some(({ address }) => isUnsafeAddress(address))) return { status: "blocked" };
 
-  const fetchImpl = options.fetchImpl ?? fetch;
+  const fetchImpl = options.fetchImpl ?? publicOnlyFetch({ resolve: lookup });
+  // One budget for the whole download, headers and body alike: a server that
+  // answers promptly and then trickles the body must not hold the save open.
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   let response: Response;
+  let bytes: ArrayBuffer | null;
   try {
-    response = await fetchImpl(parsed.toString(), {
-      // Never auto-follow — a redirect to an internal address is the classic
-      // SSRF bypass for a same-host-validated URL.
-      redirect: "manual",
-      signal: controller.signal,
-      headers: { "user-agent": "DiveDayImageIngest/1.0" },
-    });
-  } catch {
-    return { status: "failed" };
+    try {
+      response = await fetchImpl(parsed.toString(), {
+        // Never auto-follow — a redirect to an internal address is the classic
+        // SSRF bypass for a same-host-validated URL.
+        redirect: "manual",
+        signal: controller.signal,
+        headers: { "user-agent": "DiveDayImageIngest/1.0" },
+      });
+    } catch (error) {
+      return isPrivateAddressError(error) ? { status: "blocked" } : { status: "failed" };
+    }
+    // An unread body would hold the connection open; release it on every refusal.
+    const release = async () => {
+      await response.body?.cancel().catch(() => undefined);
+    };
+    if (response.status >= 300 && response.status < 400) {
+      await release();
+      return { status: "blocked" };
+    }
+    if (!response.ok) {
+      await release();
+      return { status: "failed" };
+    }
+    const contentLength = Number(response.headers.get("content-length"));
+    if (Number.isFinite(contentLength) && contentLength > MAX_IMAGE_BYTES) {
+      await release();
+      return { status: "failed" };
+    }
+    try {
+      bytes = await readBounded(response, MAX_IMAGE_BYTES);
+    } catch {
+      return { status: "failed" };
+    }
   } finally {
     clearTimeout(timeout);
   }
-  if (response.status >= 300 && response.status < 400) return { status: "blocked" };
-  if (!response.ok) return { status: "failed" };
-
-  const contentLength = Number(response.headers.get("content-length"));
-  if (Number.isFinite(contentLength) && contentLength > MAX_IMAGE_BYTES) {
-    return { status: "failed" };
-  }
-
-  const bytes = await readBounded(response, MAX_IMAGE_BYTES);
   if (bytes === null) return { status: "failed" };
 
   const contentType = response.headers.get("content-type")?.split(";")[0]?.trim() ?? "";

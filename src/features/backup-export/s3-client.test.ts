@@ -1,4 +1,9 @@
+import { createServer as createHttpServer, type IncomingHttpHeaders } from "node:http";
+import { type AddressInfo, createServer as createTcpServer, type LookupFunction } from "node:net";
 import { describe, expect, it, vi } from "vitest";
+import type { ResolvedAddress } from "@/lib/net/public-address";
+import { fetchOverNode, publicOnlyFetch } from "@/lib/net/public-fetch";
+import { backupEndpointRefusal } from "./destination-store";
 import { encodeS3KeyPath, putS3Object, s3ObjectUrl, signS3Request } from "./s3-client";
 
 /**
@@ -262,5 +267,131 @@ describe("putS3Object — virtual-hosted addressing", () => {
     expect(calls[0]?.headers.get("host")).toBe("diveday-backups.s3.us-east-1.amazonaws.com");
     expect(calls[0]?.headers.get("authorization")).toContain("SignedHeaders=");
     expect(calls[0]?.headers.get("authorization")).toContain("host");
+  });
+});
+
+/**
+ * Issue #3267: the endpoint's hostname is checked when it is saved, but what it
+ * resolves to is the DNS owner's choice on every upload. The default transport
+ * checks the address it actually connects to. Each test listens on 127.0.0.1
+ * and counts TCP connections, so "refused" means no socket was ever opened —
+ * the signed bundle went nowhere.
+ */
+describe("putS3Object — private destinations, at connection time", () => {
+  async function withListener(
+    run: (port: number, connections: () => number) => Promise<void>,
+  ): Promise<void> {
+    let count = 0;
+    const server = createTcpServer((socket) => {
+      count += 1;
+      socket.destroy();
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    try {
+      await run((server.address() as AddressInfo).port, () => count);
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  }
+
+  it.each([
+    ["a name the system resolves to loopback", "localhost"],
+    ["a literal loopback address", "127.0.0.1"],
+    ["a literal IPv4-mapped IPv6 loopback", "[::ffff:127.0.0.1]"],
+  ])("refuses %s with no fetchImpl, opening no connection", async (_label, host) => {
+    await withListener(async (port, connections) => {
+      const result = await putS3Object({ ...PUT_INPUT, endpoint: `https://${host}:${port}` });
+      expect(result).toEqual({ ok: false, errorCode: "network_unreachable" });
+      expect(connections()).toBe(0);
+    });
+  });
+
+  it("refuses a name that passed the save-time check but resolves to loopback at upload", async () => {
+    await withListener(async (port, connections) => {
+      const endpoint = `https://backups.example.com:${port}`;
+      // What the settings form accepted: a public-looking HTTPS name.
+      expect(backupEndpointRefusal(endpoint)).toBeNull();
+      const resolve = vi.fn(
+        async (): Promise<ResolvedAddress[]> => [{ address: "127.0.0.1", family: 4 }],
+      );
+      const result = await putS3Object({
+        ...PUT_INPUT,
+        endpoint,
+        fetchImpl: publicOnlyFetch({ resolve }),
+      });
+      expect(result).toEqual({ ok: false, errorCode: "network_unreachable" });
+      // Resolved once, by the transport, as the socket's own resolver.
+      expect(resolve).toHaveBeenCalledOnce();
+      expect(resolve).toHaveBeenCalledWith("backups.example.com");
+      expect(connections()).toBe(0);
+    });
+  });
+
+  it("refuses a name with one private answer among public ones", async () => {
+    await withListener(async (port, connections) => {
+      const resolve = async (): Promise<ResolvedAddress[]> => [
+        { address: "93.184.216.34", family: 4 },
+        { address: "::ffff:7f00:1", family: 6 },
+      ];
+      const result = await putS3Object({
+        ...PUT_INPUT,
+        endpoint: `https://backups.example.com:${port}`,
+        fetchImpl: publicOnlyFetch({ resolve }),
+      });
+      expect(result).toEqual({ ok: false, errorCode: "network_unreachable" });
+      expect(connections()).toBe(0);
+    });
+  });
+
+  it("still delivers a signed PUT through the same transport when the answer is allowed", async () => {
+    // Stands in for a public answer: the lookup sends any name to 127.0.0.1.
+    const toLoopback: LookupFunction = (_hostname, options, callback) => {
+      if (options.all) callback(null, [{ address: "127.0.0.1", family: 4 }]);
+      else callback(null, "127.0.0.1", 4);
+    };
+    const received: {
+      method?: string;
+      url?: string;
+      headers: IncomingHttpHeaders;
+      body: string;
+    }[] = [];
+    const server = createHttpServer((request, response) => {
+      const chunks: Buffer[] = [];
+      request.on("data", (chunk: Buffer) => chunks.push(chunk));
+      request.on("end", () => {
+        received.push({
+          method: request.method,
+          url: request.url,
+          headers: request.headers,
+          body: Buffer.concat(chunks).toString("utf8"),
+        });
+        response.writeHead(200, { etag: '"abc"' });
+        response.end("<ignored/>");
+      });
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const { port } = server.address() as AddressInfo;
+    try {
+      const result = await putS3Object({
+        ...PUT_INPUT,
+        endpoint: `http://backups.example.com:${port}`,
+        fetchImpl: fetchOverNode(toLoopback),
+      });
+      expect(result).toEqual({ ok: true });
+      expect(received).toHaveLength(1);
+      expect(received[0]).toMatchObject({
+        method: "PUT",
+        url: "/shop-backups/diveday/diveday-backup-blue-mantis-2026-W32.zip",
+        body: "zip-bytes",
+      });
+      // The host S3 sees is the host that was signed.
+      expect(received[0]?.headers.host).toBe(`backups.example.com:${port}`);
+      expect(received[0]?.headers["content-length"]).toBe("9");
+      expect(received[0]?.headers.authorization).toMatch(
+        /^AWS4-HMAC-SHA256 .*SignedHeaders=.*host/,
+      );
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
   });
 });

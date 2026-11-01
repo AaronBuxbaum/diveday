@@ -32,7 +32,7 @@ remaining scope is dive-site media only.
   rather than following it (the classic bypass for a same-host-validated URL); a 10s fetch timeout;
   a `Content-Length` pre-check plus a streamed read that aborts once the real byte count exceeds the
   cap even when `Content-Length` lied.
-- **Known residual gap: DNS rebinding.** The hostname is resolved once before the fetch; a
+- **Known residual gap: DNS rebinding** (closed 2026-11-01; see the amendment below). The hostname is resolved once before the fetch; a
   DNS-rebinding attacker could in principle serve a public IP to the resolver and switch to a
   private one before Node's own `fetch` connects. Not closed here — doing so needs pinning the
   resolved IP for the actual connection (a custom `dns.lookup`/socket-level override), which is a
@@ -76,7 +76,7 @@ remaining scope is dive-site media only.
   not-configured/rejected distinction deterministically, without a real network call.
 - A shop without Blob storage configured cannot add a dive-site image via URL until an operator sets
   `BLOB_READ_WRITE_TOKEN` — an accepted, documented trade-off, not a silent regression.
-- DNS-rebinding remains a known, documented residual gap; closing it fully is a candidate follow-up.
+- DNS-rebinding remained a known, documented residual gap until the 2026-11-01 amendment.
 
 ## Amendment 2026-08-12 — dive-site photos are uploads, so there is no URL to ingest
 
@@ -100,3 +100,27 @@ every SSRF defense in it, because contact-import waiver documents (`src/db/impor
 No migration and no compatibility read: the three columns still hold first-party URLs, they are just
 written by an upload now. Replaced and removed photos queue through the media-deletion ledger like
 course photos do (a new `dive_site_photo` kind), so a superseded blob is not silently orphaned.
+
+## Amendment 2026-11-01 — the address is checked where the socket connects
+
+The rebinding gap above is closed (issue #3267). `src/lib/net/public-address.ts` now holds the
+address rules, and `src/lib/net/public-fetch.ts` is a `fetch`-shaped request over `node:http` and
+`node:https` whose socket resolver (`lookup`) is the check: it resolves the name, refuses the whole
+name if any answer is not public, and hands the socket exactly the answers it checked. A literal IP
+host, for which Node skips `lookup`, is checked before the request. It never follows a redirect.
+TLS still verifies the certificate against the hostname.
+
+`ingestImageUrl` keeps its up-front resolution, which refuses early without opening a connection,
+and sends the request through this transport with the same resolver, so a second, different
+answer is checked too. Shop backup uploads (`putS3Object`) use the same transport. No new runtime
+dependency: global `fetch` takes no `lookup`, and giving it one would mean an `undici` dispatcher.
+
+The rules also widened: an IPv6 address is parsed rather than prefix-matched, so an IPv4-mapped
+address written in hex (`::ffff:7f00:1`, which is how `URL` writes `[::ffff:127.0.0.1]`), NAT64 and
+6to4 addresses are judged by the IPv4 address inside them, and anything outside IPv6 global unicast
+is refused. Address rules cannot see through a NAT64 gateway with its own network-specific prefix;
+a deployment behind one would need an egress policy instead.
+
+Because the transport is Node's own client, it brings no undici defaults: it has its own idle
+timeout, and `ingestImageUrl`'s ten-second budget now covers reading the body as well as the
+headers, so a server that answers and then trickles cannot hold a save open.

@@ -1,3 +1,4 @@
+import { publicOnlyFetch } from "@/lib/net/public-fetch";
 import {
   encodeS3KeyPath,
   encodeS3KeySegment,
@@ -104,6 +105,12 @@ export type PutObjectInput = {
   credentials: S3Credentials;
   now: Date;
   addressing?: S3Addressing;
+  /**
+   * Tests only. The default is `publicOnlyFetch`, which refuses a private,
+   * loopback or link-local address at connection time (issue #3267): the
+   * endpoint's hostname passed `backupEndpointRefusal` when it was saved, but
+   * what it resolves to is the DNS owner's choice, then and on every upload.
+   */
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
 };
@@ -129,9 +136,13 @@ export function s3ObjectUrl(input: {
   return url;
 }
 
-/** PUT one object. Never throws — every failure is a code the caller records. */
+/**
+ * PUT one object. Never throws — every failure is a code the caller records.
+ * A refused private address is `network_unreachable`: the honest answer to
+ * "why didn't it land" is that DiveDay would not reach that endpoint.
+ */
 export async function putS3Object(input: PutObjectInput): Promise<PutObjectResult> {
-  const fetchImpl = input.fetchImpl ?? fetch;
+  const fetchImpl = input.fetchImpl ?? publicOnlyFetch();
   const url = s3ObjectUrl(input);
 
   const headers = signS3Request({
@@ -159,6 +170,8 @@ export async function putS3Object(input: PutObjectInput): Promise<PutObjectResul
       // endpoint/region is wrong, which is exactly an `upload_rejected`.
       redirect: "manual",
     });
+    // The body is never read (it is untrusted prose); release the connection.
+    await response.body?.cancel().catch(() => undefined);
     if (response.ok) return { ok: true };
     if (response.status === 401 || response.status === 403) {
       return { ok: false, errorCode: "upload_unauthorized" };
