@@ -1,58 +1,13 @@
 import type { ReactNode } from "react";
 
 /**
- * The one header bar both shells wear — the staff app's and the shopfront's.
- * Its phone behavior is part of ADR 20260830-responsive-surface-consistency.
- *
- * ADR 20260827-clearwater-surface-language, decision 10 ("One chrome spec").
- * **This component must not drift.** Before it, the two shells were two bars:
- * the staff one 69px of `bg-surface` at `z-30`, the public one a shorter
- * `bg-surface/95` at `z-40`, and a child component three directories away
- * carrying `sticky top-[68px]` because the staff bar's height was content-
- * driven and could only be measured, never read. One of the two bars painted
- * over its own sticky day headers as a result.
- *
- * The staff bar keeps that fixed height. The public bar can grow when its
- * existing controls wrap; its observer publishes the actual height to the
- * same `--chrome-h` token every sticky surface reads. Its independent baseline
- * minimum never reads that output, so the header can shrink again too.
- * `src/components/chrome/chrome.test.ts` scans `src/app`, `src/components`,
- * `src/features` and `e2e` and fails on a hand-written distance: a bracketed
- * offset whose measured part is a length rather than a variable
- * (`top-[68px]`, `pt-[68px]`, `scroll-mt-[3.5rem]`), or Tailwind's own scale
- * on a sticky/fixed element (`sticky top-20`, which is how the roll-call panel
- * spent a day pinned 24px below a bar that had become 56px). That guard has
- * its own fixture test, because a detector nobody has run against a positive
- * case is an assertion about a regex.
- *
- * Chrome recedes: the page background at 85% behind a blur, one hairline, no
- * shadow (decision 1 — elevation is earned, and a bar that is always there is
- * not floating). The `supports-[backdrop-filter]` pair is the fallback, not
- * decoration: where the blur cannot run, the bar is solid `bg-background`
- * rather than 85% of it, because a translucent bar with nothing blurring
- * behind it is just content showing through the navigation.
- *
- * **The page's `<h1>` stays in the page** — but below `lg` the bar now carries
- * a *folded label*, which is not the same thing. ADR
- * 20260827-clearwater-surface-language deferred the collapsing large title and
- * named the condition for revisiting it: "a new fact (a CSS-only mechanism),
- * not a fresh opinion". `animation-timeline: scroll()` is that fact, and ADR
- * 20260907-nothing-from-nowhere decision 5 spends it — over the first 120px of
- * scroll the shop's name gives way and the page's own title takes its place at
- * 17/600, with the mark staying and still opening the shop menu. No scroll
- * listener, so the instant, skeleton-first navigation this bar was protecting
- * costs nothing.
- *
- * The bar itself still renders neither: `ShopNav` puts an empty, `aria-hidden`
- * `[data-chrome-title-slot]` in the leading slot and the page's own
- * `ShopPageHeader` fills it through a portal (`FoldedPageTitle`). The heading
- * stays one element in the page; the label is a decorative copy. And the
- * storefront does not fold — `PublicShopChrome` composes this same bar and
- * renders no slot, so the portal has no target there.
- *
- * It also carries no connectivity indicator: `ConnectivityStatus` stays a
- * page-level `onlyWhenOffline` mount, so the chrome says nothing on the
- * ordinary day.
+ * Shared staff and storefront chrome (ADR 20260827-clearwater-surface-language,
+ * decision 10; phone behavior: ADR 20260830-responsive-surface-consistency).
+ * Staff height is fixed; public chrome can wrap and publishes its measured
+ * height as `--chrome-h` for sticky clearance. The title slot is decorative,
+ * portal-filled, and absent from the storefront; connectivity stays page-level
+ * (`onlyWhenOffline`). Keep the receding surface and fallback from decision 1.
+ * The title behavior follows ADR 20260907-nothing-from-nowhere, decision 5.
  */
 
 /**
@@ -105,17 +60,9 @@ export function ChromeBar({
       data-chrome-stacked={stackedOnPhone || undefined}
       data-chrome-natural={naturalHeight || undefined}
     >
-      {/* The fixed staff row shrinks its slots; public chrome also lets them
-          wrap when the viewport or enlarged text needs more room. `min-w-0`
-          keeps a long shop name from pushing the row beyond the viewport.
-
-          The gaps tighten below `sm` and the horizontal padding does not: the
-          padding is what lines the shop's name up with the left edge of the
-          page under it, so buying phone pixels there would buy them from the
-          one thing the bar is supposed to hold still. */}
-      {/* The staff bar spans the window, because the sidebar under it does:
-          the shop's name sits over the nav it names (ADR 20261001-logbook).
-          The shopfront's bar keeps the page's own measure. */}
+      {/* Slots may shrink or wrap; min-w-0 contains long names. Keep the
+          horizontal inset aligned with the page content. Staff chrome spans
+          the window above its sidebar (ADR 20261001-logbook). */}
       <div
         className={`mx-auto flex ${naturalHeight ? "flex-wrap max-sm:flex-nowrap" : "h-full"} w-full items-center gap-x-2 px-4 sm:gap-x-3 sm:px-6 ${staffChrome ? "" : "max-w-6xl"} ${stackedOnPhone ? "max-sm:flex-col max-sm:items-stretch max-sm:justify-center max-sm:gap-0" : ""}`}
       >
