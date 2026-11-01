@@ -18,7 +18,7 @@ import {
   sql,
   sum,
 } from "drizzle-orm";
-import { canViewShopReports, type Role } from "@/lib/authz";
+import { canViewShopReports } from "@/lib/authz";
 import type { MonthRef } from "@/lib/calendar";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import type { CertificationLevel } from "@/lib/certification-levels";
@@ -28,6 +28,7 @@ import type { MonthlyReportInput, ReportTrip } from "@/lib/reporting";
 import type { ShopYearDay, ShopYearInput } from "@/lib/shop-year";
 import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 import { shopDaysBounds, shopMonthBounds, wallTimeToUtc } from "@/lib/zoned";
+import { readActiveStaffRoles } from "./authz";
 import { buddyReferredSeatsForWindow } from "./buddy-referrals";
 import type { DbExecutor } from "./client";
 import { offsetPage, PAGE_SIZE } from "./paging";
@@ -42,18 +43,15 @@ import {
   diveSites,
   importedPaymentHistory,
   orders,
-  people,
-  personRoles,
   shops,
   tips,
   tripAssignments,
   tripDives,
   tripLenses,
   trips,
-  userAccounts,
   waiverRecords,
 } from "./schema";
-import { livePerson, liveTrip, notRehearsal } from "./trips-live";
+import { liveTrip, notRehearsal } from "./trips-live";
 
 /**
  * Owner reporting exposes shop-wide revenue, so it re-checks authorization
@@ -67,25 +65,8 @@ export async function canPersonViewShopReports(
   shopId: string,
   personId: string,
 ): Promise<boolean> {
-  const [person] = await db
-    .select({ id: people.id })
-    .from(people)
-    .where(and(eq(people.id, personId), eq(people.shopId, shopId), livePerson()))
-    .limit(1);
-  if (!person) return false;
-
-  const [account] = await db
-    .select({ status: userAccounts.status })
-    .from(userAccounts)
-    .where(eq(userAccounts.personId, personId))
-    .limit(1);
-  if (account?.status !== "active") return false;
-
-  const roleRows = await db
-    .select({ role: personRoles.role })
-    .from(personRoles)
-    .where(eq(personRoles.personId, personId));
-  return canViewShopReports(roleRows.map((row) => row.role as Role));
+  const roles = await readActiveStaffRoles(db, shopId, personId);
+  return roles !== null && canViewShopReports(roles);
 }
 
 /**
