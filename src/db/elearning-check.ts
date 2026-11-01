@@ -26,6 +26,7 @@ export async function seatForElearningCheck(
   query: ElearningQuery;
   materialsDone: boolean;
   materialsDoneBy: string | null;
+  materialsDoneAt: Date | null;
 } | null> {
   const [row] = await db
     .select({
@@ -70,5 +71,10 @@ export async function seatForElearningCheck(
       around: row.startsAt,
     })
   ).get(row.personId);
-  return { query, materialsDone: Boolean(done), materialsDoneBy: done?.byPersonId ?? null };
+  return {
+    query,
+    materialsDone: Boolean(done),
+    materialsDoneBy: done?.byPersonId ?? null,
+    materialsDoneAt: done?.at ?? null,
+  };
 }

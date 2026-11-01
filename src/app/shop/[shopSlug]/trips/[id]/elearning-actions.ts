@@ -14,7 +14,12 @@ import { tripPath } from "./roster-booking";
 export type ElearningCheckResult =
   | null
   /** PADI shows this course finished; the materials are ticked done. */
-  | { ok: true; verdict: "complete"; evidence: string; undo: { bookingId: string } }
+  | {
+      ok: true;
+      verdict: "complete";
+      evidence: string;
+      undo: { bookingId: string; markedAt: string };
+    }
   /** Somebody had already ticked them; nothing changed. */
   | { ok: true; verdict: "already_done" }
   | { ok: true; verdict: "undone" }
@@ -30,6 +35,7 @@ export type ElearningCheckResult =
 const elearningForm = z.object({
   bookingId: text(),
   intent: formValue(),
+  markedAt: formValue(),
   pageText: formValue(),
 });
 
@@ -68,10 +74,15 @@ export async function elearningCheckAction(
   if (!seat) return { ok: false, reason: "invalid" };
 
   if (fields.intent === "undo") {
-    // Undo takes back only a tick that is still this staffer's: a colleague
-    // who ticked or re-ticked since keeps theirs.
-    if (!seat.materialsDone) return { ok: true, verdict: "undone" };
-    if (seat.materialsDoneBy !== staff.user.personId) return { ok: true, verdict: "already_done" };
+    // Undo takes back only the tick the check made: a tick stamped by a
+    // colleague, or re-made by anyone since (a newer stamp), stays.
+    if (!seat.materialsDoneAt) return { ok: true, verdict: "undone" };
+    if (
+      seat.materialsDoneBy !== staff.user.personId ||
+      fields.markedAt !== seat.materialsDoneAt.toISOString()
+    ) {
+      return { ok: true, verdict: "already_done" };
+    }
     const undone = await recordCourseMaterialsDone(db, {
       shopId,
       bookingId,
@@ -102,5 +113,12 @@ export async function elearningCheckAction(
   });
   revalidatePath(back);
   if (!outcome.ok) return { ok: false, reason: "invalid" };
-  return { ok: true, verdict: "complete", evidence: judged.evidence, undo: { bookingId } };
+  const marked = await seatForElearningCheck(db, { shopId, tripId: trip, bookingId });
+  if (!marked?.materialsDoneAt) return { ok: false, reason: "invalid" };
+  return {
+    ok: true,
+    verdict: "complete",
+    evidence: judged.evidence,
+    undo: { bookingId, markedAt: marked.materialsDoneAt.toISOString() },
+  };
 }

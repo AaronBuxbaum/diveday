@@ -140,7 +140,7 @@ export function ElearningCheck({
         <UndoToast
           message={copy.complete}
           action={formAction}
-          fields={{ bookingId: undo.bookingId, intent: "undo" }}
+          fields={{ bookingId: undo.bookingId, markedAt: undo.markedAt, intent: "undo" }}
           pendingLabel={copy.undoPending}
           undoLabel={copy.undo}
           dismissLabel={copy.dismiss}

@@ -118,3 +118,22 @@ describe.each([
     expect(nav()?.getAttribute("data-hydrated")).toBe("true");
   });
 });
+
+describe("the tab bar, on keyboard focus", () => {
+  it("scrolls the focused tab the least distance into its rail (#3433)", async () => {
+    location.pathname = root;
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    const container = document.createElement("div");
+    document.body.append(container);
+    await act(async () => {
+      hydrateRoot(container, <ShopTabBar {...props} />);
+    });
+
+    await act(async () => {
+      link(container, "Inbox").focus();
+    });
+
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: "nearest", inline: "nearest" });
+  });
+});
