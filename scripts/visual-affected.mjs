@@ -75,7 +75,7 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 import { collectVisualSources } from "./check-route-coverage.mjs";
-import { importersOf, importGraph, routeOf } from "./e2e-affected.mjs";
+import { importersOf, routeOf } from "./e2e-affected.mjs";
 import { listedTests, testListLine } from "./e2e-shard.mjs";
 import { gitReader } from "./stack-map.mjs";
 import { changedLinesByFile, moduleIndex, readModules, symbolReach } from "./symbol-reach.mjs";
@@ -494,6 +494,7 @@ export function dataReach(
  */
 export function changedRoutes(changed, graph, context = {}) {
   const { before, after, sources, configImports = [], lines, modules } = context;
+  const hasModule = (file) => (modules ? modules.index.has(file) : graph.has(file));
   const routes = new Map();
   const add = (route) => {
     const key = route.route;
@@ -596,10 +597,10 @@ export function changedRoutes(changed, graph, context = {}) {
     if (file.startsWith("src/app/")) {
       addEntry(file);
       // A route's own component can be imported by another route's page too.
-      if (modules && graph.has(file)) seed(file, lines?.get(file) ?? "all");
+      if (modules && hasModule(file)) seed(file, lines?.get(file) ?? "all");
       continue;
     }
-    if (!graph.has(file)) {
+    if (!hasModule(file)) {
       // Deleted: every module that imported it is in the same diff, and carries the reach.
       if (after && after(file) === null) continue;
       return { all: `${file} is not in the import graph` };
@@ -1192,7 +1193,7 @@ async function main() {
         files: visualSpecs(ROOT),
         report,
         diff,
-        graph: importGraph(ROOT),
+        graph: null,
         visualSources: await collectVisualSources(ROOT),
         readSource: (file) => readFileSync(path.join(ROOT, file), "utf8"),
         linesFor: (file) => changedLines(git(["diff", "--unified=0", forkPoint, "--", file]) ?? ""),
