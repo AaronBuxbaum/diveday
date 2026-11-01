@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import { CERT_SCAN_FEATURE, certScanCall, certScanFields, scanCard } from "@/lib/assists/cert-scan";
 import { sourceDigest } from "@/lib/assists/shop-translate";
@@ -33,6 +33,7 @@ import {
   trips,
 } from "./schema";
 import { readTranslations, saveTranslation, translatedOr } from "./shop-text-translations";
+import { liveTrip } from "./trips-live";
 
 const ctx = fileScopedShopContext({ history: true });
 const env = { ANTHROPIC_API_KEY: "test-anthropic-key" };
@@ -40,7 +41,10 @@ const now = new Date("2026-10-19T12:00:00.000Z");
 
 // The seeded shop is a demo, and demos are dark; these are about a real shop.
 beforeEach(async () => {
-  await ctx.db.update(shops).set({ isDemo: false }).where(eq(shops.id, ctx.shop.id));
+  await ctx.db
+    .update(shops)
+    .set({ isDemo: false, claudeSuggestionsEnabled: true, sightingsEnabled: true })
+    .where(eq(shops.id, ctx.shop.id));
 });
 
 function answering(value: unknown) {
@@ -387,7 +391,8 @@ describe("the recap highlight", () => {
     const [trip] = await ctx.db
       .select({ id: trips.id })
       .from(trips)
-      .where(eq(trips.shopId, ctx.shop.id))
+      .where(and(eq(trips.shopId, ctx.shop.id), liveTrip()))
+      .orderBy(asc(trips.startsAt), asc(trips.id))
       .limit(1);
     const [site] = await ctx.db
       .select({ id: diveSites.id, name: diveSites.name })
