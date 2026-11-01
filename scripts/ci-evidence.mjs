@@ -12,18 +12,12 @@ export function failureGroups(jobs, annotations) {
   const groups = new Map();
   for (const job of jobs.filter((item) => item.conclusion === "failure")) {
     const failedSteps =
-      job.steps
-        ?.filter((step) => step.conclusion === "failure")
-        .map((step) => step.name) ?? [];
+      job.steps?.filter((step) => step.conclusion === "failure").map((step) => step.name) ?? [];
     const items = annotations
       .filter((item) => item.job === job.name)
       .flatMap((item) => (Array.isArray(item.items) ? item.items : []));
-    const excerpts = items.map((item) =>
-      String(item.message ?? "").slice(0, 2000),
-    );
-    const setup = failedSteps.find((name) =>
-      /install|setup|download|restore|checkout/i.test(name),
-    );
+    const excerpts = items.map((item) => String(item.message ?? "").slice(0, 2000));
+    const setup = failedSteps.find((name) => /install|setup|download|restore|checkout/i.test(name));
     const signature = setup
       ? `setup:${setup}`
       : `${failedSteps.join("|")}:${excerpts[0] ?? "no diagnostic"}`;
@@ -36,9 +30,7 @@ export function failureGroups(jobs, annotations) {
               typeof file === "string" &&
               !file.split("/").includes("..") &&
               existsSync(file) &&
-              /^(src|scripts|e2e)\/[\w/.-]+\.(?:test\.(?:ts|tsx|mjs)|spec\.ts)$/.test(
-                file,
-              ),
+              /^(src|scripts|e2e)\/[\w/.-]+\.(?:test\.(?:ts|tsx|mjs)|spec\.ts)$/.test(file),
           ),
       ),
     ];
@@ -79,9 +71,7 @@ export function specOwners({ files, pulls, filesFor, headSha = null }) {
     if (headSha && pull.head?.sha === headSha) continue;
     const changed = filesFor(pull.number);
     if (!Array.isArray(changed)) continue;
-    const shared = files.filter((file) =>
-      changed.some((item) => item.filename === file),
-    );
+    const shared = files.filter((file) => changed.some((item) => item.filename === file));
     if (shared.length)
       owners.push({
         number: pull.number,
@@ -114,9 +104,7 @@ export function evidenceManifest({
       id,
       result: job.result,
       reproduction: REPRO[id] ?? null,
-      classification: ["failure", "cancelled"].includes(job.result)
-        ? "unclassified"
-        : null,
+      classification: ["failure", "cancelled"].includes(job.result) ? "unclassified" : null,
     })),
     attempts: jobs.map((job) => ({
       id: job.id,
@@ -133,9 +121,7 @@ export function evidenceManifest({
           completedAt: step.completed_at ?? null,
         })) ?? [],
       failedSteps:
-        job.steps
-          ?.filter((step) => step.conclusion === "failure")
-          .map((step) => step.name) ?? [],
+        job.steps?.filter((step) => step.conclusion === "failure").map((step) => step.name) ?? [],
     })),
     annotations,
     artifacts: artifacts.map((item) => ({
@@ -165,41 +151,27 @@ function main() {
     }
   };
   const prefix = `repos/${env.GITHUB_REPOSITORY}/actions/runs/${env.GITHUB_RUN_ID}`;
-  const jobs = read(
-    `${prefix}/attempts/${env.GITHUB_RUN_ATTEMPT}/jobs?per_page=100`,
-  );
+  const jobs = read(`${prefix}/attempts/${env.GITHUB_RUN_ATTEMPT}/jobs?per_page=100`);
   const artifacts = read(`${prefix}/artifacts?per_page=100`);
   const annotations = [];
-  for (const job of (jobs?.jobs ?? [])
-    .filter((job) => job.conclusion === "failure")
-    .slice(0, 12)) {
+  for (const job of (jobs?.jobs ?? []).filter((job) => job.conclusion === "failure").slice(0, 12)) {
     if (job.conclusion !== "failure") continue;
     const check = job.check_run_url?.split("/check-runs/")[1];
     if (check)
       annotations.push({
         job: job.name,
-        items: read(
-          `repos/${env.GITHUB_REPOSITORY}/check-runs/${check}/annotations?per_page=100`,
-        ),
+        items: read(`repos/${env.GITHUB_REPOSITORY}/check-runs/${check}/annotations?per_page=100`),
       });
   }
   const failingSpecs = [
-    ...new Set(
-      failureGroups(jobs?.jobs ?? [], annotations).flatMap(
-        (group) => group.files,
-      ),
-    ),
+    ...new Set(failureGroups(jobs?.jobs ?? [], annotations).flatMap((group) => group.files)),
   ];
   const owners = failingSpecs.length
     ? specOwners({
         files: failingSpecs,
-        pulls: read(
-          `repos/${env.GITHUB_REPOSITORY}/pulls?state=open&per_page=100`,
-        ),
+        pulls: read(`repos/${env.GITHUB_REPOSITORY}/pulls?state=open&per_page=100`),
         filesFor: (number) =>
-          read(
-            `repos/${env.GITHUB_REPOSITORY}/pulls/${number}/files?per_page=100`,
-          ),
+          read(`repos/${env.GITHUB_REPOSITORY}/pulls/${number}/files?per_page=100`),
         headSha: env.PR_HEAD_SHA || env.GITHUB_SHA || null,
       })
     : [];
@@ -220,20 +192,12 @@ function main() {
   ];
   manifest.truncated = Boolean(
     annotations.some((item) => item.items?.length === 100) ||
-    jobs?.total_count > 100 ||
-    artifacts?.total_count > 100 ||
-    (jobs?.jobs ?? []).filter((job) => job.conclusion === "failure").length >
-      12,
+      jobs?.total_count > 100 ||
+      artifacts?.total_count > 100 ||
+      (jobs?.jobs ?? []).filter((job) => job.conclusion === "failure").length > 12,
   );
   mkdirSync(".agent-out", { recursive: true });
-  writeFileSync(
-    ".agent-out/ci-result.json",
-    `${JSON.stringify(manifest, null, 2)}\n`,
-  );
+  writeFileSync(".agent-out/ci-result.json", `${JSON.stringify(manifest, null, 2)}\n`);
   console.log("CI evidence: .agent-out/ci-result.json");
 }
-if (
-  process.argv[1] &&
-  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
-)
-  main();
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main();

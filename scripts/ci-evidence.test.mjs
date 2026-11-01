@@ -63,9 +63,7 @@ it("lists open PRs that change a failing spec, and not the PR under test", () =>
   ]);
 });
 it("stays quiet when the pull request API is unavailable", () => {
-  expect(
-    specOwners({ files: ["e2e/a.spec.ts"], pulls: null, filesFor: () => null }),
-  ).toEqual([]);
+  expect(specOwners({ files: ["e2e/a.spec.ts"], pulls: null, filesFor: () => null })).toEqual([]);
   expect(
     specOwners({
       files: ["e2e/a.spec.ts"],
@@ -82,11 +80,7 @@ it("stays quiet when the pull request API is unavailable", () => {
   ).toEqual([]);
 });
 it("records spec owners on the manifest", () => {
-  const owners = [
-    { number: 7, title: "t", url: "u", files: ["e2e/a.spec.ts"] },
-  ];
-  expect(evidenceManifest({ env: {}, specOwners: owners }).specOwners).toEqual(
-    owners,
-  );
+  const owners = [{ number: 7, title: "t", url: "u", files: ["e2e/a.spec.ts"] }];
+  expect(evidenceManifest({ env: {}, specOwners: owners }).specOwners).toEqual(owners);
   expect(evidenceManifest({ env: {} }).specOwners).toEqual([]);
 });
