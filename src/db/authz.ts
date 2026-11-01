@@ -137,7 +137,13 @@ async function readActiveStaffRolesByPerson(
  */
 export const loadActiveStaffRoles = cache(readActiveStaffRoles);
 
-/** The live staff person's id for a shop-scoped recorder or attestor, or null. */
+/**
+ * The live staff person's id for a shop-scoped recorder or attestor, or null.
+ * A result requires a person in this shop who is not soft-deleted, has an
+ * active account, and currently holds a staff role. Pass the caller's own
+ * `DbExecutor` so transaction callers keep the same executor and query order;
+ * this delegates to `loadActiveStaffRoles` without changing its cache behavior.
+ */
 export async function requireActiveStaffId(
   db: DbExecutor,
   shopId: string,

@@ -130,43 +130,6 @@ function isOnTripCrew(db: DbExecutor, shopId: string, tripId: string) {
   );
 }
 
-/**
- * The `people.id` of the staff member **writing** a head-count row, or `null`
- * when whoever is claiming to record it is not this shop's live staff right
- * now. Every writer in this file asks it, so the three of them can never answer
- * "who is allowed to write this" differently.
- *
- * Not to be confused with `isOnTripCrew` above, which is about the **subject**
- * of a result — a former divemaster stays a subject forever, because who was on
- * the boat that day does not change. This is about the **author**, and
- * employment very much does change that.
- *
- * The three writers each grew their own `person_roles` join instead, filtering
- * `people.id` / `people.shopId` / `person_roles.role` and stopping there. That
- * catches the case it was written for — a diver, or somebody demoted out of
- * every staff role — and misses the two `loadActiveStaffRoles` exists for: a
- * **deleted** person and a **disabled** account whose stale role row is still
- * there. Neither comes from `removeStaffMember`, which deletes every staff role
- * row and disables the account and never soft-deletes the `people` row — a
- * fully removed staff member was already refused. They come from two ordinary
- * shipped operations that touch roles not at all: `deleteDiver`
- * (`src/db/divers.ts`) sets `people.deleted_at` and nothing else, and
- * `setStaffAccountStatus` (`src/db/staff-accounts.ts`) revokes sign-in and
- * leaves `person_roles` entirely intact. Suspending an employee's login is the
- * everyday case, and it left them writing roll call. Both wrote real
- * `roll_call_events` rows attributed to somebody who could no longer sign in.
- * `/api/offline-manifests/sync` refuses both at the door, so nothing shipped was
- * exploitable — but a writer in `src/db` is inherited by every future call site,
- * and roll call is the record of who came back from a dive.
- *
- * So the join is gone and `src/db/authz.ts` is the one place the rule lives:
- * `loadActiveStaffRoles` takes a `DbExecutor`, so it composes inside these
- * transactions unchanged, and widening "who counts as live staff" happens once
- * for the role gates and these writers together. It costs two extra indexed
- * point-lookups per call — paid once per event, including down the sync route's
- * batch loop, which is the right trade against a head count signed by a name
- * that is not there.
- */
 async function listTripCrew(db: DbExecutor, shopId: string, tripId: string) {
   const rows = await db
     .select({ person: people, tripRole: tripAssignments.tripRole, role: personRoles.role })
@@ -1978,6 +1941,7 @@ async function writeRollCall(
 ): Promise<RecordRollCallOutcome> {
   const checkpoint = input.checkpoint ?? "departure";
   const source = input.source ?? "live";
+  // This checks the event author; crew and divers remain historical subjects of the manifest.
   const staffId = await requireActiveStaffId(tx, input.shopId, input.recordedByPersonId);
   if (!staffId) return { ok: false, reason: "staff_not_found" };
   const captureCards =
@@ -2336,6 +2300,7 @@ export async function recordCrewRollCall(
         const checkpoint = input.checkpoint ?? "departure";
         const source = input.source ?? "live";
 
+        // This checks the event author; crew and divers remain historical subjects of the manifest.
         const staffId = await requireActiveStaffId(tx, input.shopId, input.recordedByPersonId);
         if (!staffId) return { ok: false, reason: "staff_not_found" };
         const captureCredentials =

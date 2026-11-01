@@ -119,24 +119,6 @@ function memberKey(member: BuddyTeamMemberInput): string {
     : `crew:${member.personId.toLowerCase()}`;
 }
 
-/**
- * The staff gate every roll-call write applies, which is the same gate every
- * team write applies: a pairing is a named staff member's call, and the
- * recorder must be this shop's **live** staff — `loadActiveStaffRoles` in
- * `src/db/authz.ts`, the one place that rule lives.
- *
- * This was a copy of the roll-call writers' hand-rolled `person_roles` join,
- * filtering `people.id` / `people.shopId` / `person_roles.role` and stopping
- * there. It caught what it was written for (a diver, or somebody demoted out of
- * every staff role) and missed the two cases `loadActiveStaffRoles` exists for:
- * a **deleted** person, because `deleteDiver` sets `people.deleted_at` and
- * leaves every role row where it is, and a **disabled** account, because
- * `setStaffAccountStatus` revokes sign-in and leaves `person_roles` entirely
- * intact — a suspended employee keeps every role row they had. Teams inform
- * rather than gate, so what both bought was a `buddy_team_events` entry
- * attributed to somebody the shop had already removed: a trail that outlives
- * the membership rows, naming the wrong person for the act.
- */
 /** Same tenancy and trip-status gate `recordRollCall` applies. */
 async function requireScheduledTrip(tx: Tx, shopId: string, tripId: string): Promise<boolean> {
   // **Locked**, the same trip row every seat write locks first: a seat's type
@@ -506,6 +488,7 @@ async function formBuddyTeamInTx(
   // read works on them exactly as it does on divers.
   if (input.members.length < MIN_BUDDY_TEAM_SIZE) return { ok: false, reason: "too_few_members" };
 
+  // Team events inform the roster, but their durable recorder attribution is staff-only.
   const staffId = await requireActiveStaffId(tx, input.shopId, input.recordedByPersonId);
   if (!staffId) return { ok: false, reason: "staff_not_found" };
   if (!(await requireScheduledTrip(tx, input.shopId, input.tripId))) {

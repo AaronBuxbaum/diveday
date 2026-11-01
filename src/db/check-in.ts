@@ -392,26 +392,6 @@ export type CheckInOutcome =
     };
 
 /**
- * The `people.id` of the staff member **behind the counter**, or `null` when
- * whoever is claiming to check this diver in is not this shop's live staff
- * right now.
- *
- * This used to be a hand-rolled `person_roles` join here, against a local copy
- * of `STAFF_ROLES` — `people.id` / `people.shopId` / `person_roles.role` and
- * nothing else. It catches what it was written for (a diver, or somebody
- * demoted out of every staff role) and misses the two cases
- * `loadActiveStaffRoles` exists for: a **deleted** person, because
- * `deleteDiver` sets `people.deleted_at` and leaves every role row where it is,
- * and a **disabled** account, because `setStaffAccountStatus` revokes sign-in
- * and leaves `person_roles` entirely intact — a suspended employee keeps every
- * role row they had. Both moved a booking to `checked_in` and signed the
- * activity trail with their name.
- *
- * `src/db/authz.ts` is the one place the rule lives; `loadActiveStaffRoles`
- * takes a `DbExecutor`, so `requireActiveStaffId` composes inside this
- * transaction unchanged.
- */
-/**
  * The newest arrival statement standing for one seat, or nothing.
  *
  * `desc(occurredAt), desc(createdAt), desc(seq)` — the same three keys
@@ -531,6 +511,7 @@ export async function checkInBooking(
   const source = input.source ?? "live";
   const occurredAt = input.occurredAt ?? now;
   return db.transaction(async (tx) => {
+    // The counter actor is durably recorded in the check-in activity trail.
     const recordedBy = await requireActiveStaffId(tx, input.shopId, input.recordedByPersonId);
     if (!recordedBy) return { ok: false, reason: "staff_not_found" };
 
@@ -707,6 +688,7 @@ export async function undoCheckInBooking(
   const source = input.source ?? "live";
   const occurredAt = input.occurredAt ?? now;
   return db.transaction(async (tx) => {
+    // The undo actor is durably recorded alongside the check-in reversal.
     const recordedBy = await requireActiveStaffId(tx, input.shopId, input.recordedByPersonId);
     if (!recordedBy) return { ok: false, reason: "staff_not_found" };
 
