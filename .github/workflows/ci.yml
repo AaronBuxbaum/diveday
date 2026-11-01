@@ -226,10 +226,11 @@ jobs:
       # shard. They are bounded by reading the repository, not by test count,
       # so dealing them four ways bought nothing and cost each shard the walk.
       #
-      # `--coverage.enabled` and the blob reporter feed `coverage-floors` below: v8 coverage of
+      # `--coverage.enabled` (only when `changes` says a safety file, its tests or the harness moved:
+      # `safety`, scripts/coverage-relevant.mjs; always on main) and the blob reporter feed `coverage-floors` below: v8 coverage of
       # the eleven safety files `vitest.config.ts` names, carried in this shard's blob so that job
       # can merge all four without running a test (test review 2026-10-14, decision 6).
-      - run: pnpm exec vitest run --project '!guards' --reporter=dot --reporter=./src/test/duration-reporter.ts --reporter=./src/test/failed-files-reporter.ts --reporter=blob --coverage.enabled --shard=${{ matrix.shard }}/4
+      - run: pnpm exec vitest run --project '!guards' --reporter=dot --reporter=./src/test/duration-reporter.ts --reporter=./src/test/failed-files-reporter.ts --reporter=blob ${{ needs.changes.outputs.safety != 'false' && '--coverage.enabled' || '' }} --shard=${{ matrix.shard }}/4
         env:
           DIVEDAY_TEST_DURATIONS_OUT: test-durations/shard-${{ matrix.shard }}.json
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -261,8 +262,8 @@ jobs:
   # waits for all four to pass rather than reading a partial number as a fall.
   coverage-floors:
     name: Safety-file coverage floors
-    needs: unit-tests
-    if: ${{ !cancelled() && needs.unit-tests.result == 'success' }}
+    needs: [unit-tests, changes]
+    if: ${{ !cancelled() && needs.unit-tests.result == 'success' && needs.changes.outputs.safety != 'false' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -333,7 +334,7 @@ jobs:
     needs: changes
     # Nightly runs `real-postgres` only. A change that touches no code skips the
     # build, and with it every job that needs the build (`jobs:` above).
-    if: github.event_name != 'schedule' && needs.changes.outputs.code == 'true'
+    if: github.event_name != 'schedule' && needs.changes.outputs.code == 'true' && needs.changes.outputs.browser != 'false'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:
@@ -701,7 +702,7 @@ jobs:
   visual-plan:
     name: Plan the visual captures
     needs: changes
-    if: github.event_name != 'schedule' && needs.changes.outputs.code == 'true'
+    if: github.event_name != 'schedule' && needs.changes.outputs.code == 'true' && needs.changes.outputs.browser != 'false'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -981,7 +982,7 @@ jobs:
   visual-report:
     name: reg-suit PR report
     needs: [visual-publish, visual, changes, visual-plan]
-    if: ${{ !cancelled() && github.event_name != 'schedule' && needs.changes.outputs.code == 'true' }}
+    if: ${{ !cancelled() && github.event_name != 'schedule' && needs.changes.outputs.code == 'true' && needs.changes.outputs.browser != 'false' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
@@ -1196,6 +1197,8 @@ jobs:
       code: ${{ steps.filter.outputs.code }}
       db: ${{ steps.filter.outputs.db }}
       pixel_probe: ${{ steps.filter.outputs.pixel_probe }}
+      safety: ${{ steps.filter.outputs.safety }}
+      browser: ${{ steps.filter.outputs.browser }}
       runner: ${{ steps.runner.outputs.runner }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -1253,6 +1256,8 @@ jobs:
             echo "db=true" >> "$GITHUB_OUTPUT"
             echo "code=true" >> "$GITHUB_OUTPUT"
             echo "pixel_probe=true" >> "$GITHUB_OUTPUT"
+            echo "safety=true" >> "$GITHUB_OUTPUT"
+            echo "browser=true" >> "$GITHUB_OUTPUT"
             echo "Diff range '${base}...${head}' is unresolvable — running everything." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
@@ -1270,6 +1275,20 @@ jobs:
           else
             echo "pixel_probe=false" >> "$GITHUB_OUTPUT"
             echo "Nothing pixel-probe tests changed — e2e/pixel-probe.spec.ts skipped." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          # `safety` — can this change move branch coverage of the safety files
+          # (scripts/coverage-safety-files.mjs)? Coverage costs every unit shard
+          # a v8 collector, and the floors job a download and a merge, on runs
+          # that touched none of it. It runs when a safety file or a sibling of
+          # one (its tests) changed, when the shared test harness, the coverage
+          # config, the dependencies or this file changed, and on every push to
+          # main, which is the backstop for a test deleted elsewhere.
+          safety_changed=$(git diff --name-only "${base}...${head}" | node scripts/coverage-relevant.mjs)
+          if [ -z "${BASE_REF}" ] || [ -n "${safety_changed}" ]; then
+            echo "safety=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "safety=false" >> "$GITHUB_OUTPUT"
+            echo "Nothing the safety-file coverage floors measure changed — unit shards run without coverage and the floors job is skipped (main still runs it)." >> "$GITHUB_STEP_SUMMARY"
           fi
           # Three-dot, from the merge base: what this branch changed, not what
           # main did underneath it. Two dots would report every file main added
@@ -1303,8 +1322,23 @@ jobs:
             ':(exclude)docs/**' ':(exclude)**/*.md' ':(exclude).claude/**' ':(exclude)LICENSE')
           if [ -n "${code_paths}" ]; then
             echo "code=true" >> "$GITHUB_OUTPUT"
+            # `browser` — does anything a browser renders or drives sit in this
+            # diff? A change to unit-test files only (`*.test.ts|tsx|mts|mjs`)
+            # cannot move a page, a build or a screenshot: the build, every
+            # Playwright shard, the fast lane and the visual capture and compare
+            # chain (~110 of a run's ~170 runner-minutes) have nothing to
+            # answer. They skip exactly as on a docs-only change; the unit
+            # shards, safeguards and the coverage floors still run. Fails open:
+            # a push to main and anything else is `true`.
+            if [ -n "${BASE_REF}" ] && [ -z "$(printf '%s\n' "${code_paths}" | grep -Ev '[.]test[.](ts|tsx|mts|mjs)$' || true)" ]; then
+              echo "browser=false" >> "$GITHUB_OUTPUT"
+              echo "Only unit-test files changed — the build, Playwright, fast lane and visual jobs are skipped; the unit shards still run." >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "browser=true" >> "$GITHUB_OUTPUT"
+            fi
           else
             echo "code=false" >> "$GITHUB_OUTPUT"
+            echo "browser=false" >> "$GITHUB_OUTPUT"
             echo "Only docs, Markdown or \`.claude/\` changed — the build, the unit, Playwright and visual shards and the reg-suit compare are skipped. The safeguards, lint, typecheck and the unit files that quote a document path still ran. The next code commit's visual baseline resolves past this one (scripts/wait-for-baseline.mjs). Re-running a completed capture on the same commit publishes a new versioned snapshot." >> "$GITHUB_STEP_SUMMARY"
           fi
       # Where the safeguards, lint, typecheck and unit jobs run: Aaron's Mac

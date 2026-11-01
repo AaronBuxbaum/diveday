@@ -1,0 +1,111 @@
+name: Playwright workers trial
+
+# **Do two workers per functional Playwright shard hold up on a CI runner?**
+#
+# ci.yml runs twelve shards at `E2E_WORKERS: "1"` (moved off two after
+# unrelated functional timeouts on #3162 and #3163). Playwright is 45% of a
+# green PR run's runner-minutes (CI profile 2026-11-01,
+# /mnt/project-files/ci-speed/2026-11-01-ci-profile.md): ~77 of 172, about 79
+# minutes of recorded spec time dealt twelve ways. Six shards at two workers
+# would use roughly 45 runner-minutes and six fewer concurrent jobs, if the
+# 4-core runner is not CPU-bound at one worker. This workflow answers that one
+# question and changes nothing else.
+#
+# It deals the same specs ci.yml does (`scripts/e2e-shard.mjs`) six ways and
+# runs each shard at `E2E_WORKERS=2`, `repeat` times from one build. A red
+# shard, a timeout, or a shard slower than ~7.5 minutes means the trial failed.
+# Decide from the job summary (per-run seconds) and the failure annotations;
+# there is no baseline and no reg-suit. Dispatched by hand from main, never on
+# a pull request or a push.
+on:
+  workflow_dispatch:
+    inputs:
+      repeat:
+        description: Times each shard runs from the one build (to see variance)
+        default: "2"
+        type: string
+
+concurrency:
+  group: playwright-workers-trial
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - run: pnpm e2e:build
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: trial-next-build
+          path: |
+            .next/
+            !.next/cache/**
+            !.next/trace
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
+
+  shard:
+    name: Shard ${{ matrix.shard }}/6 at two workers
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: trial-next-build
+          path: .next
+      - run: pnpm build:sw:assets
+      - uses: ./.github/actions/playwright-shell
+      - name: Run this shard at two workers
+        env:
+          REPEAT: ${{ inputs.repeat }}
+          E2E_WORKERS: "2"
+        run: |
+          set -uo pipefail
+          mapfile -t spec_files < <(node scripts/e2e-shard.mjs --shard=${{ matrix.shard }}/6 --explain --summary="$GITHUB_STEP_SUMMARY")
+          if [ "${#spec_files[@]}" -eq 0 ]; then
+            echo "::error::scripts/e2e-shard.mjs dealt this shard nothing."
+            exit 1
+          fi
+          if printf '%s\n' "${spec_files[@]}" | grep -qx 'e2e/agency-check-extension.spec.ts'; then
+            pnpm exec playwright install chromium
+          fi
+          if printf '%s\n' "${spec_files[@]}" | grep -Eq '^e2e/(staff-saved-print|boarding-certification-paper|five-dive-departure-log|trip-document-print|public-document-identity)[.]spec[.]ts$'; then
+            sudo apt-get update -qq
+            sudo apt-get install -y --no-install-recommends poppler-utils
+          fi
+          failed=0
+          for i in $(seq 1 "${REPEAT:-2}"); do
+            started=$(date +%s)
+            status=0
+            pnpm exec playwright test "${spec_files[@]}" --reporter=line > "run-${i}.log" 2>&1 || status=$?
+            echo "shard ${{ matrix.shard }}/6, run ${i}: ${#spec_files[@]} specs, exit ${status}, $(( $(date +%s) - started ))s" | tee -a "$GITHUB_STEP_SUMMARY"
+            if [ "$status" -ne 0 ]; then
+              failed=1
+              grep -E "^\s+[0-9]+\) |Test timeout" "run-${i}.log" | head -20 >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done
+          exit "$failed"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: playwright-workers-trial-${{ matrix.shard }}
+          path: |
+            run-*.log
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 7
