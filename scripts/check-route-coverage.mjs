@@ -87,6 +87,7 @@ import { readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { filesUnder } from "./files-under.mjs";
 import { isVisualSpec, visualSpecs } from "./visual-specs.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -104,22 +105,8 @@ const ENTRY_KEYS = new Set(["e2e", "visual", "exempt"]);
 // Enumerating the tree — pure-ish readers, each rooted at a directory so the
 // unit test can point them at a fixture instead of the repo.
 
-async function walk(root, relativeDirectory, fileName) {
-  let entries;
-  try {
-    entries = await readdir(path.join(root, relativeDirectory), { withFileTypes: true });
-  } catch (error) {
-    if (error?.code === "ENOENT") return [];
-    throw error;
-  }
-  const files = [];
-  for (const entry of entries) {
-    const relativePath = path.join(relativeDirectory, entry.name);
-    if (entry.isDirectory()) files.push(...(await walk(root, relativePath, fileName)));
-    else if (entry.name === fileName) files.push(relativePath);
-  }
-  return files;
-}
+const listDirectory = (root) => (relative) =>
+  readdir(path.join(root, relative), { withFileTypes: true });
 
 /**
  * `src/app/shop/[shopSlug]/staffing/page.tsx` → `/shop/[shopSlug]/staffing`.
@@ -140,7 +127,11 @@ export function routePatternFor(relativeFile) {
 }
 
 export async function collectRoutes(root) {
-  const files = await walk(root, APP_DIR, "page.tsx");
+  const files = await filesUnder(
+    APP_DIR,
+    listDirectory(root),
+    (relative) => path.basename(relative) === "page.tsx",
+  );
   return [...new Set(files.map(routePatternFor))].sort();
 }
 

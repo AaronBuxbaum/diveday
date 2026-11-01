@@ -1,4 +1,4 @@
-import { eq, isNull } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { people, trips } from "./schema";
 
 /**
@@ -57,3 +57,11 @@ export const livePerson = () => isNull(people.deletedAt);
  * `diveday:allow-rehearsal: <why>` comment.
  */
 export const notRehearsal = () => eq(trips.isRehearsal, false);
+
+/**
+ * The shop-owned, live, non-private trip scope shared by public reef reads.
+ * Callers keep their own evidence-row filters, rehearsal and date/site filters;
+ * this helper does not say whether a trip has sailed or is a rehearsal.
+ */
+export const livePublicTripForShop = (shopId: string) =>
+  and(eq(trips.shopId, shopId), liveTrip(), eq(trips.isPrivate, false));

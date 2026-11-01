@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import { enqueueIntegrationEvent } from "./integration-events";
 import {
@@ -56,6 +56,16 @@ async function connectQuickBooks(
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
 const ctx = fileScopedShopContext();
+afterEach(() => vi.unstubAllEnvs());
+
+describe("integration encryption key", () => {
+  it("keeps the existing invalid-key refusal when environment configuration is malformed", async () => {
+    vi.stubEnv("SECRET_ENCRYPTION_KEY", "invalid");
+    const { db, shop } = ctx;
+    await expect(connectQuickBooks(db, shop.id)).rejects.toThrow("encryption_key_invalid");
+    expect(await getShopIntegration(db, shop.id, "quickbooks")).toBeNull();
+  });
+});
 
 describe("disconnect and reconnect", () => {
   it("keeps the sync map, so a reconnect does not re-create a synced customer", async () => {

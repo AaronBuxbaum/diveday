@@ -106,19 +106,23 @@ describe("the import wizard's client-composed copy", () => {
   }
 
   for (const locale of DIVER_LOCALES) {
-    for (const count of [1, 3]) {
+    for (const count of [0, 1, 2, 1000]) {
       it(`says how many bookings are after today, and where they were sold, in ${locale} at ${count}`, () => {
-        for (const key of ["wizard.bookingsAfterToday", "wizard.bookingsAfterTodayMore"]) {
-          const rendered = fill(
-            pluralForm(count, {
-              one: importMessage(locale, `${key}One`),
-              other: importMessage(locale, `${key}Other`),
-            }),
-            { count, system: "FareHarbor" },
-          );
-          expect(rendered, `${locale} ${key} at ${count}`).not.toContain("{");
-          expect(rendered).toContain(String(count));
-        }
+        const bookingKey = "wizard.bookingsAfterToday";
+        const booking = fill(
+          pluralForm(count, {
+            one: importMessage(locale, `${bookingKey}One`),
+            other: importMessage(locale, `${bookingKey}Other`),
+          }),
+          { count, system: "FareHarbor" },
+        );
+        expect(booking, `${locale} ${bookingKey} at ${count}`).not.toContain("{");
+        expect(booking).toContain(String(count));
+
+        const more = fill(importMessage(locale, "wizard.bookingsAfterTodayMore"), { count });
+        expect(more).toBe(
+          `${locale === "en-US" ? "And" : "Y"} ${count} ${locale === "en-US" ? "more." : "más."}`,
+        );
         expect(importMessage(locale, "wizard.oldSystem").length).toBeGreaterThan(0);
       });
     }

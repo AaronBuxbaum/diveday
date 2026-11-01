@@ -381,13 +381,9 @@ export function RequestPlanBrief({
             }),
             { divers: requestPlan.estimatedDivers },
           ),
-          capacityPart: fill(
-            pluralForm(requestPlan.suggestedCapacity, {
-              one: copy.requestPlanRecommendationCapacityOne ?? "",
-              other: copy.requestPlanRecommendationCapacityOther ?? "",
-            }),
-            { capacity: requestPlan.suggestedCapacity },
-          ),
+          capacityPart: fill(copy.requestPlanRecommendationCapacity ?? "", {
+            capacity: requestPlan.suggestedCapacity,
+          }),
         })}
       </p>
       {requestPlan.suggestedBoatName ? (

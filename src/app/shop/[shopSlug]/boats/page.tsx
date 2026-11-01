@@ -136,9 +136,8 @@ export default async function BoatsSettingsPage({
             >
               <form action={updateBoatAction} className="space-y-4">
                 <input type="hidden" name="boatId" value={boat.id} />
-                {/* Captioned like the add form below (third review #36):
-                        capacity is a safety number, and a bare "14" beside
-                        the certificate's limit read as either. */}
+                {/* Capacity is a safety number; label it so it cannot be confused with the
+                    certificate's limit. */}
                 <FieldGrid columns={2}>
                   <Field label={t("boats.nameLabel")}>
                     <input
@@ -161,10 +160,8 @@ export default async function BoatsSettingsPage({
                       className={`${controlClass} tabular-nums`}
                     />
                   </Field>
-                  {/* A textarea, because the value is a sentence of up to
-                          200 characters: a one-line box cut the seed's 72 at
-                          its padding edge, mid-word (K-446). It grows with its
-                          text and never shows fewer than two lines. */}
+                  {/* Descriptions are sentences up to 200 characters; the textarea avoids the
+                      mid-word clipping noted in K-446, grows with its text, and shows two lines. */}
                   <Field label={t("boats.descriptionLabel")} className="sm:col-span-2">
                     <textarea
                       name="description"
@@ -211,16 +208,9 @@ export default async function BoatsSettingsPage({
                     {error.text}
                   </p>
                 ) : null}
-                {/* **Save and Delete on one line**, in the update form's
-                        own action row rather than a form of their own apart.
-                        The confirm posts to the delete through `formAction`,
-                        taking the row's hidden `boatId` with it; Save comes
-                        first, so Enter in a field saves and never deletes, and
-                        names its own action so a delete in flight never reads
-                        as a save. `flex-wrap` gives an armed confirm's message
-                        a line of its own. Delete is `flush` (below), so the
-                        row's gap hands back the 12px it gave up beside Save:
-                        `gap-x-5`, the words 20px from Save's box as before. */}
+                {/* Keep Save and Delete in the update form's action row. Delete's `formAction`
+                    submits the hidden boat ID; Save comes first so Enter submits the update.
+                    Wrapping gives an armed confirmation message its own line. */}
                 <div className="flex flex-wrap items-center gap-x-5 gap-y-2 w-full sm:w-auto justify-end">
                   <SubmitButton
                     pendingLabel={t("boats.submitting")}
@@ -276,11 +266,8 @@ export default async function BoatsSettingsPage({
           );
         })}
 
-        {/* **Every box says what it is for, above it.** An empty form has
-              no values to read a box by, and its placeholders were its only
-              labels: the 128px capacity box read "Capacity (se" and the
-              description lost twenty characters of its own at 390 (K-145).
-              Captions, the same ones the rows above carry. */}
+        {/* Give each empty-form field a visible caption; placeholders alone do not identify the
+            fields, especially when narrow boxes truncate their text (K-145). */}
         <DisclosureRow
           id={boatRowId("new")}
           className="print:hidden"

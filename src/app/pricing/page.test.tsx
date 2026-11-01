@@ -1,5 +1,6 @@
 import { isValidElement, type ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { JsonLd } from "@/components/JsonLd";
 
 /**
  * /pricing per pricing arm (ADR 20261022-pricing-ab-test). The page is
@@ -40,7 +41,18 @@ async function pricingBody(arm: string | null, locale: "en-US" | "es-ES" = "en-U
   if (!body) throw new Error("no pricing body in the page");
   const render = body.type as (props: unknown) => Promise<unknown>;
   const tree = await render(body.props);
-  return { offer: body.props.offer, text: await textOf(tree) };
+  const bodyTree = tree as ReactElement<{ children: unknown }>;
+  const bodyChildren = Array.isArray(bodyTree.props.children)
+    ? bodyTree.props.children
+    : [bodyTree.props.children];
+  const structuredDataElement = bodyChildren.find(
+    (child) => isValidElement(child) && child.type === JsonLd,
+  );
+  if (!isValidElement(structuredDataElement)) throw new Error("no pricing JSON-LD component");
+  const jsonLdProps = structuredDataElement.props as Parameters<typeof JsonLd>[0];
+  const script = JsonLd(jsonLdProps);
+  const jsonLd = script?.props.dangerouslySetInnerHTML?.__html as string;
+  return { offer: body.props.offer, text: await textOf(tree), jsonLd, data: jsonLdProps.data };
 }
 
 beforeEach(() => {
@@ -102,6 +114,23 @@ describe("/pricing with the test on", () => {
       const { text } = await pricingBody("percent_of_volume", locale);
       expect(text).not.toMatch(/no cut|sin comisión|ninguna comisión/i);
     }
+  });
+
+  it("preserves pricing FAQ JSON-LD bytes for both plans and locales", async () => {
+    for (const locale of ["en-US", "es-ES"] as const) {
+      for (const arm of ["flat_monthly", "percent_of_volume"] as const) {
+        const { jsonLd, data } = await pricingBody(arm, locale);
+        const legacyOutput = JSON.stringify(data).replace(/</g, "\\u003c");
+        expect(jsonLd).toBe(legacyOutput);
+      }
+    }
+  });
+
+  it("keeps markup in JSON-LD strings escaped from the script element", () => {
+    const script = JsonLd({ data: { "@type": "Thing", name: "</script><script>" } });
+    expect(script?.props.dangerouslySetInnerHTML?.__html).toBe(
+      '{"@type":"Thing","name":"\\u003c/script>\\u003cscript>"}',
+    );
   });
 
   it("follows the configured numbers, a base fee included", async () => {

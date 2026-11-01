@@ -2,8 +2,8 @@ import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 import { formatShortDate } from "@/lib/format";
 import { escapeHtml } from "@/lib/html";
-import { firstNameOf } from "@/lib/person-name";
 import type { NotificationEmail } from "./email";
+import { notificationGreeting } from "./greeting";
 
 // i18n-exempt-file: the terminal renderer for the held-seat note (#2381), on
 // the same footing as `./course-certified.ts`: no React component picks words
@@ -29,7 +29,7 @@ export type SeatAlreadyHeldInput = {
  */
 export function seatAlreadyHeldEmail(input: SeatAlreadyHeldInput): NotificationEmail {
   const t = diverTranslator(input.locale);
-  const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));
+  const greeting = notificationGreeting(t, input.diverName);
   const date = formatShortDate(input.startsAt, input.locale, input.timezone);
   const key =
     input.attempt === "booking"
@@ -47,8 +47,8 @@ export function seatAlreadyHeldEmail(input: SeatAlreadyHeldInput): NotificationE
   });
   return {
     subject: t("notifications.seatAlreadyHeld.subject", { tripTitle: input.tripTitle }),
-    text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p>`,
+    text: `${greeting.text}\n\n${body}\n`,
+    html: `<p>${greeting.html}</p><p>${bodyHtml}</p>`,
   };
 }
 
@@ -70,7 +70,7 @@ export type PartyNotBookedInput = {
  */
 export function partyNotBookedEmail(input: PartyNotBookedInput): NotificationEmail {
   const t = diverTranslator(input.locale);
-  const firstName = firstNameOf(input.leadName, t("notifications.common.genericName"));
+  const greeting = notificationGreeting(t, input.leadName);
   const date = formatShortDate(input.startsAt, input.locale, input.timezone);
   const body = t("notifications.partyNotBooked.body", {
     shopName: input.shopName,
@@ -84,7 +84,7 @@ export function partyNotBookedEmail(input: PartyNotBookedInput): NotificationEma
   });
   return {
     subject: t("notifications.partyNotBooked.subject", { tripTitle: input.tripTitle }),
-    text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p>`,
+    text: `${greeting.text}\n\n${body}\n`,
+    html: `<p>${greeting.html}</p><p>${bodyHtml}</p>`,
   };
 }

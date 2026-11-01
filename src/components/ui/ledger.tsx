@@ -6,116 +6,33 @@ import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { GROUP_META_CLASS, GroupLabel, type GroupLabelElement } from "@/components/ui/group-label";
 
 /**
- * **The open ledger** — the composition ADR 20260827-clearwater-surface-language
- * (decision 2) makes the app's default, in place of the stack of same-weight
- * cards. Rows sit directly on the page background, separated by hairlines,
- * under a group header that owns every fact the rows share: a date, a
- * departure, a state word, a count.
- *
- * It is not a new idea in this repo — the schedule board and the public
- * schedule both arrived at it independently, and Settings arrived at the other
- * good grammar (`InsetGroup` below). This file is those two spellings written
- * down once so the surfaces that speak them next cannot drift apart, and so a
- * later slice recomposing the home, orders or the counter has a vocabulary to
- * compose *in* rather than a card to hand-roll again.
- *
- * Three things this file deliberately owns, because owning them one place is
- * the whole point:
- *
- * - **The group label's spelling.** `groupLabelClass()` (`group-label.tsx`) is the only place
- *   in `src/` that *renders* `tracking-[0.14em]`; `ledger.test.tsx` names the
- *   value once to pin it, and its sweep fails the build on a copy in any other
- *   file — source or test, `.ts`, `.tsx` or `.css`. What that sweep catches is
- *   the realistic drift, a paste of this class string; it cannot catch a
- *   *different* spelling of the same idea (`tracking-wide`, `tracking-widest`).
- *   The designed surfaces now route their small-caps group labels through this
- *   helper as well. It is a *function* of the tone rather than a bare constant because
- *   the ink is part of the spelling: appending `text-primary` at a call site
- *   would race `text-muted` in a stylesheet Tailwind orders by token name, the
- *   same trap `buttonClass` carries a warning about. The eyebrow's `0.18em`
- *   (`ShopPageHeader.EYEBROW_CLASS`) is a different thing at a different
- *   volume and stays where it is.
- * - **The one disclosure spelling.** A ledger group that collapses is a native
- *   `<details>` whose `<summary>` carries the group label plus the shared
- *   `DisclosureCaret` — `LedgerGroup`'s `folded` prop, and nothing else. 6c's
- *   Tomorrow row, 6f's imported-history foot and 6h's settled group are all
- *   this; no slice invents a second.
- * - **The kind word.** A row's kind is a word in the row's own type with tone
- *   in the *ink* — never a pill. `Badge` is the only pill in the app
- *   (decision 3), and it marks the exceptional state rather than every row.
+ * Shared ledger composition: group labels, native `<details>` disclosure, and
+ * text-based row kinds. Callers decide whether groups fold; this module keeps
+ * their keyboard and screen-reader behavior native (ADR 20260827-clearwater-
+ * surface-language, decisions 2 and 3).
  */
 
 /**
- * **The room a row keeps around its words**: 8px of padding inside the row's
- * box, handed back as an equal negative margin, so a fill reaches 8px past the
- * words while the words stay on the column the group label starts on.
- *
- * The pixel rubric asks a hover fill for at least 4px
- * (docs/design/pixel-craft.md, class 5), and a ledger row had none: its fill
- * paints the row, the row had no horizontal padding, and the probe measured
- * the fill's edge running straight into the first word — 0px, 102 times
- * across 50 captures, from the orders ledger to the diver roster
- * (2026-09-25). Today's spine had already found this answer and spelled it
- * by hand on every one of its rows; this is that spelling, owned once. 8px
- * rather than more because a phone's gutter is 16px, and the global focus
- * ring reaches 5px beyond whatever box it rings.
- *
- * The hairline moves out with the fill, deliberately: a fill that ran 8px past
- * the ends of the rules above and below it would read as a block that had
- * slipped, where one that spans rule to rule reads as the row lighting up.
- *
- * **Every row takes it, door or not.** A plain row paints no fill, but a rule
- * left on the column would step 8px wherever a plain row met a door — inside
- * one list (the inbox's unknown senders, a retired dive site) and between two
- * lists on one page (the diver record's status rows over its bookings, the
- * promo codes over the deals, the counter's queue over its walk-in door). One
- * box for every row is the only spelling under which no two rules on a page
- * disagree.
+ * Keep hover fill inset from row words while extending the hairline to the fill
+ * edge. The inset also leaves room for the shared focus ring
+ * (docs/design/pixel-craft.md, class 5).
  */
+
 const FILL_ROOM = "-mx-2 px-2";
 
-/**
- * **The ledger's room, for a hairline `LedgerRow` does not draw** — a rule
- * over a paragraph in a column of ledger rows (the public trip's requirement
- * note, a settled station's recap). Its rule then ends where the rows' rules
- * end, and its words stay on the column.
- */
+/** Inset for a non-interactive row within a ledger list. */
 export const ledgerRowRoomClass = FILL_ROOM;
 
 /**
- * **A ledger row's box in a list that leaves its close to what follows**: its
- * room and its top rule, without the `last:border-b` that closes a list on the
- * page ground. For a list inside a card, whose edge is the close, or above a
- * block that opens with its own rule (pixel-craft class 6) — `LedgerRow`'s
- * `closed={false}`, and a hand-set line in such a list.
+ * Row inset and top rule for lists whose final boundary belongs to following
+ * content.
  */
 export const ledgerRowOpenBoxClass = `${FILL_ROOM} border-t border-border`;
 
-/**
- * **A ledger row's box, for a row `LedgerRow` does not draw**: its room and its
- * two rules. A loading skeleton standing in for a list of `LedgerRow`s takes
- * it, or its rules sit 8px inside the loaded rows' and jump on arrival
- * (docs/design/pixel-craft.md, class 11); so does a hand-set line inside a
- * ledger's list, or it steps the list's rules. `LedgerRow` spells its own box
- * with it (or, in a list that does not close, `ledgerRowOpenBoxClass`), so
- * there is one string to keep.
- */
+/** Complete row box, including the closing rule used by loading placeholders. */
 export const ledgerRowBoxClass = `${ledgerRowOpenBoxClass} last:border-b`;
 
-/**
- * A ledger row's focus ring, drawn inside the row instead of 2px outside it:
- * a door's overlay link and a horizon's summary are each the row's whole box,
- * so the global ring's offset put it 5px past the fill, across the hairlines
- * and over the rows either side of it — and, where the column is only 12px
- * from the screen (the public trip's door inside an embed frame), off the
- * screen's edges. The words sit 8px in (`FILL_ROOM`), so the 3px ring clears
- * them by 5px.
- *
- * `focus-ring-inset` is the app's one ring moved inside its box — the same
- * width and colour, the offset its own width — defined once in `globals.css`
- * beside the global rule. Spelling the offset here instead would be a second
- * copy of the ring's width, and it would drift the day the ring changes.
- */
+/** Keep row focus rings inside the row so they do not cross neighboring rules. */
 const INSET_RING = "focus-visible:focus-ring-inset";
 
 /**

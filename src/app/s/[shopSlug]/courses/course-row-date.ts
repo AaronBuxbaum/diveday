@@ -1,14 +1,10 @@
 import type { DiverTranslator } from "@/i18n/messages";
-import { formatShortDate } from "@/lib/format";
+import { courseNextStartLabel } from "../course-date-label";
 
 /**
- * **When a course next runs, on the catalog's row** (fourth UX review, item
- * 33). The storefront's shelf said "Next Fri, Oct 23" under Open Water, and
- * the catalog a diver opens from the nav said nothing, so finding a date meant
- * opening every course. The same line here, from the same read
- * (`nextSessionStartByCourse`); a course with no session on the board offers
- * "Ask for a date" instead, the door its own page keeps (`#get-in-touch`),
- * when the shop takes date requests by email. Otherwise, nothing.
+ * Catalog rows reuse the shelf's shop-local next-start label (UX review 4,
+ * item 33). With no date, offer a request link only when the shop accepts
+ * email inquiries.
  */
 export function courseRowDate(input: {
   nextStart: Date | null;
@@ -21,9 +17,7 @@ export function courseRowDate(input: {
   if (nextStart) {
     return {
       kind: "next",
-      text: t("courses.shelf.nextStart", {
-        date: formatShortDate(nextStart, input.locale, input.timeZone),
-      }),
+      text: courseNextStartLabel(nextStart, input.locale, input.timeZone, t),
     };
   }
   return input.canAsk ? { kind: "ask", text: t("courses.index.askForADate") } : null;

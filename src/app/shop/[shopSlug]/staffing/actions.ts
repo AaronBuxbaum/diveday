@@ -113,16 +113,14 @@ export async function deleteShiftAction(week: string, formData: FormData) {
 }
 
 /**
- * **The crew's own two acts, and the owner's answer** (issue #1235, ADR
- * 20260902-crew-requests-and-blackouts).
+ * **Crew requests and availability, with a manager's answer** (issue #1235,
+ * ADR 20260902-crew-requests-and-blackouts).
  *
- * These are the only writes on this page that are *not* behind
- * `requireStaffingManager`: the whole point of the slice is that a crew member
- * writes their own rows. What replaces the manager gate is the domain layer's
- * own check, which reads the actor's live roles from the database and refuses
- * anything that is not their own row — a session claim is not evidence, and a
- * person removed from the shop this morning must not be able to book
- * themselves onto Saturday's boat this afternoon.
+ * A crew member can request their own assignment; the domain write checks
+ * their live shop roles and refuses requests for anyone else. Availability can
+ * be recorded by its subject or a roster manager, with authorization checked
+ * by the domain layer. Managers answer assignment requests through the same
+ * live-role boundary. Public-name consent is a separate self-only write below.
  */
 const awaySchema = z.object({
   personId: z.string().uuid(),
@@ -135,9 +133,9 @@ const awaySchema = z.object({
  * **One staff member's own agreement to be named to divers** (issue #1181,
  * delight report D21).
  *
- * The third of this page's crew-owned writes, and it belongs beside the other
- * two for the reason ADR 20260902-crew-requests-and-blackouts gives: a crew
- * member writes their own rows. It is deliberately *not* on the team page,
+ * Public-name consent belongs beside crew members' other self-service
+ * actions: only the person can grant or withdraw permission to publish their
+ * name. It is deliberately *not* on the team page,
  * which is behind `canPersonManageStaffAccounts` — a divemaster could never
  * reach a switch that lives there, and a consent an owner recorded on their
  * behalf would not be a consent at all.

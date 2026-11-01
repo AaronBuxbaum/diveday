@@ -159,13 +159,7 @@ export function OfflineManifestList({
       {discardNotice}
       <ShopPageHeader
         eyebrow={t("shared.offlineManifest.list.eyebrow")}
-        title={
-          savedTrips.length > 0
-            ? t("shared.offlineManifest.list.headingWithTrips")
-            : readFailed
-              ? t("shared.offlineManifest.list.readFailedHeading")
-              : t("shared.offlineManifest.list.headingEmpty")
-        }
+        title={t("shared.offlineManifest.list.headingWithTrips")}
         description={oneShopName ?? undefined}
         meta={
           <>

@@ -1,21 +1,18 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { EntryShell } from "@/components/account/EntryShell";
+import { PasswordConfirmForm } from "@/components/account/PasswordConfirmForm";
 import {
   passwordConfirmErrorField,
   passwordConfirmErrorText,
 } from "@/components/account/passwordConfirmError";
 import { DeadLink } from "@/components/DeadLink";
-import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
-import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { checkAccountToken } from "@/db/account-tokens";
 import { getDb } from "@/db/client";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { connectionForRoute } from "@/lib/observability/render-connection";
-import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from "@/lib/onboarding";
 import { submitPasswordReset } from "./actions";
 
 export const metadata: Metadata = {
@@ -83,47 +80,17 @@ export default async function ResetPasswordPage({
         </p>
       }
     >
-      {errorField && errorField !== "form" ? <FieldErrorFocus key={error} /> : null}
-      <form action={submitPasswordReset.bind(null, token)} className="flex flex-col gap-4">
-        <FieldGrid columns={1} className="gap-y-4">
-          <Field
-            label={t("account.resetPassword.newPassword")}
-            error={errorField === "password" ? errorText : undefined}
-          >
-            <input
-              name="password"
-              type="password"
-              required
-              minLength={MIN_PASSWORD_LENGTH}
-              maxLength={MAX_PASSWORD_LENGTH}
-              autoComplete="new-password"
-              className={controlClass}
-            />
-          </Field>
-          <Field
-            label={t("account.resetPassword.confirmPassword")}
-            error={errorField === "confirm" ? errorText : undefined}
-          >
-            <input
-              name="confirmPassword"
-              type="password"
-              required
-              minLength={MIN_PASSWORD_LENGTH}
-              maxLength={MAX_PASSWORD_LENGTH}
-              autoComplete="new-password"
-              className={controlClass}
-            />
-          </Field>
-        </FieldGrid>
-        <SubmitButton pendingLabel={t("account.common.saving")} className={buttonClass()}>
-          {t("account.resetPassword.submit")}
-        </SubmitButton>
-        {errorField === "form" ? (
-          <FormStatus tone="danger" className="justify-center">
-            {errorText}
-          </FormStatus>
-        ) : null}
-      </form>
+      <PasswordConfirmForm
+        action={submitPasswordReset.bind(null, token)}
+        passwordLabel={t("account.resetPassword.newPassword")}
+        confirmPasswordLabel={t("account.resetPassword.confirmPassword")}
+        submitLabel={t("account.resetPassword.submit")}
+        savingLabel={t("account.common.saving")}
+        submitClassName={buttonClass()}
+        errorKey={error}
+        errorField={errorField}
+        errorText={errorText}
+      />
     </EntryShell>
   );
 }

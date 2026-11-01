@@ -13,9 +13,8 @@ import {
 const ctx = fileScopedShopContext();
 
 /**
- * The new-site form's action. It was an inline closure in `page.tsx` that no
- * test could import (2026-10-11 review, item 34). Runs against the seeded shop
- * so the name rule, which only the database can check, is the real one.
+ * The new-site form's action. It runs against the seeded shop so the name
+ * rule, which only the database can check, is the real one.
  */
 
 vi.mock("next/navigation", () => ({

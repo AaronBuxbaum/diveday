@@ -422,45 +422,6 @@ export function readSpecs(root = ROOT) {
   return specs;
 }
 
-/** `src/` modules by path, each with the modules it imports, resolved to repository paths. */
-export function importGraph(root = ROOT) {
-  const modules = new Map();
-  const walk = (dir) => {
-    for (const entry of readdirSync(path.join(root, dir), { withFileTypes: true })) {
-      const rel = `${dir}/${entry.name}`;
-      if (entry.isDirectory()) walk(rel);
-      else if (SOURCE_EXT.test(rel) && !TEST_FILE.test(rel)) {
-        modules.set(rel, readFileSync(path.join(root, rel), "utf8"));
-      }
-    }
-  };
-  walk("src");
-  const resolve = (from, spec) => {
-    let base;
-    if (spec.startsWith("@/")) base = `src/${spec.slice(2)}`;
-    else if (spec.startsWith(".")) base = path.posix.join(path.posix.dirname(from), spec);
-    else return null;
-    for (const candidate of [
-      base,
-      ...[".ts", ".tsx", ".js", ".mjs"].map((ext) => base + ext),
-      ...["/index.ts", "/index.tsx"].map((ext) => base + ext),
-    ]) {
-      if (modules.has(candidate)) return candidate;
-    }
-    return null;
-  };
-  const graph = new Map();
-  for (const [file, source] of modules) {
-    const deps = new Set();
-    for (const match of source.matchAll(/(?:from|import)\s*\(?\s*["']([^"']+)["']/g)) {
-      const target = resolve(file, match[1]);
-      if (target) deps.add(target);
-    }
-    graph.set(file, deps);
-  }
-  return graph;
-}
-
 /** Every module that reaches one of `changed` through imports, `changed` included. */
 export function importersOf(graph, changed) {
   const reverse = new Map();

@@ -23,18 +23,11 @@ export function ManifestMilestones({
 }) {
   return (
     <>
-      {/* Keyed by trip id + checkpoint: each holds a `prevPct`/`isInitial`
-        (MilestoneHaptics) or `prevComplete` (SubSurfaceRipple) ref that
-        assumes a monotonic same-trip-same-checkpoint lifecycle. Rendered
-        once per manifest page, this route/key is otherwise identical
-        across a trip or checkpoint switch, so if `cacheComponents: true`'s
-        Activity-based navigation is ever re-enabled, an un-keyed instance
-        could survive one and fire a false completion ripple/haptic buzz
-        off the old numbers with no real remount to reset it (docs ADR
-        20260801-cache-components-activity-state, currently reverted,
-        commit 100fcf8). The `key` forces a full remount — and fresh refs — on either
-        change. The two are siblings in this one fragment, so each key carries
-        its own suffix: a shared key makes React warn and may drop one. */}
+      {/* Each child keeps progress/completion refs for one trip and
+        checkpoint. These distinct keys force fresh refs when either changes,
+        including if Activity navigation preserves this route (ADR
+        20260801-cache-components-activity-state). They are siblings, so each
+        key needs its own suffix. */}
       <MilestoneHaptics
         key={`${tripId}-${checkpoint}-haptics`}
         total={summary.totalDivers}

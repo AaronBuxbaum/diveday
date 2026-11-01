@@ -1,6 +1,5 @@
 import { and, asc, desc, eq, gte, inArray, lte, ne, or } from "drizzle-orm";
 import { ARRIVAL_RETRACTION_SUPERSEDED } from "@/lib/arrival";
-import { isStaff } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import type { IdentityMatchKind } from "@/lib/identity-match";
 import { offlineEventOutOfBounds } from "@/lib/offline-events";
@@ -10,7 +9,7 @@ import type { ReadinessResult } from "@/lib/readiness";
 import { runningLateShown } from "@/lib/running-late";
 import type { TurnAwayReason } from "@/lib/turn-away";
 import { isUuid } from "@/lib/uuid";
-import { loadActiveStaffRoles } from "./authz";
+import { requireActiveStaffId } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
 import { recordDeskEvent } from "./desk-events";
 import {
@@ -393,38 +392,6 @@ export type CheckInOutcome =
     };
 
 /**
- * The `people.id` of the staff member **behind the counter**, or `null` when
- * whoever is claiming to check this diver in is not this shop's live staff
- * right now.
- *
- * This used to be a hand-rolled `person_roles` join here, against a local copy
- * of `STAFF_ROLES` — `people.id` / `people.shopId` / `person_roles.role` and
- * nothing else. It catches what it was written for (a diver, or somebody
- * demoted out of every staff role) and misses the two cases
- * `loadActiveStaffRoles` exists for: a **deleted** person, because
- * `deleteDiver` sets `people.deleted_at` and leaves every role row where it is,
- * and a **disabled** account, because `setStaffAccountStatus` revokes sign-in
- * and leaves `person_roles` entirely intact — a suspended employee keeps every
- * role row they had. Both moved a booking to `checked_in` and signed the
- * activity trail with their name.
- *
- * `src/db/authz.ts` is the one place the rule lives; `loadActiveStaffRoles`
- * takes a `DbExecutor`, so it composes inside this transaction unchanged. Same
- * shape as `activeStaffRecorderId` in `src/db/manifests.ts`.
- */
-async function activeStaffRecorderId(
-  tx: DbExecutor,
-  shopId: string,
-  personId: string,
-): Promise<string | null> {
-  const roles = await loadActiveStaffRoles(tx, shopId, personId);
-  // `loadActiveStaffRoles` has already proven the person is this shop's, alive,
-  // and holds an active account; `isStaff` is the same `STAFF_ROLES` membership
-  // the old join expressed as an `inArray`.
-  return roles && isStaff(roles) ? personId : null;
-}
-
-/**
  * The newest arrival statement standing for one seat, or nothing.
  *
  * `desc(occurredAt), desc(createdAt), desc(seq)` — the same three keys
@@ -544,7 +511,8 @@ export async function checkInBooking(
   const source = input.source ?? "live";
   const occurredAt = input.occurredAt ?? now;
   return db.transaction(async (tx) => {
-    const recordedBy = await activeStaffRecorderId(tx, input.shopId, input.recordedByPersonId);
+    // The counter actor is durably recorded in the check-in activity trail.
+    const recordedBy = await requireActiveStaffId(tx, input.shopId, input.recordedByPersonId);
     if (!recordedBy) return { ok: false, reason: "staff_not_found" };
 
     // The departure, then the seat (`lockSeatDeparture`, #2324): one joined
@@ -720,7 +688,8 @@ export async function undoCheckInBooking(
   const source = input.source ?? "live";
   const occurredAt = input.occurredAt ?? now;
   return db.transaction(async (tx) => {
-    const recordedBy = await activeStaffRecorderId(tx, input.shopId, input.recordedByPersonId);
+    // The undo actor is durably recorded alongside the check-in reversal.
+    const recordedBy = await requireActiveStaffId(tx, input.shopId, input.recordedByPersonId);
     if (!recordedBy) return { ok: false, reason: "staff_not_found" };
 
     // The departure, then the seat (`lockSeatDeparture`, #2324): one joined

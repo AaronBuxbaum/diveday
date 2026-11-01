@@ -442,11 +442,7 @@ type CourseSession = {
   instructors?: readonly string[];
 };
 
-/**
- * Who leads the date and where, as plain words on the row (visual review
- * 2026-10-24, B42): never a link of its own, so the row stays one tap. Null
- * when the session names neither.
- */
+/** Instructor and site text stay within the row's single link (visual review 2026-10-24, B42). */
 function sessionLead(session: CourseSession, locale: string, t: DiverTranslator): string | null {
   const names = session.instructors ?? [];
   const parts = [
@@ -460,16 +456,14 @@ function sessionLead(session: CourseSession, locale: string, t: DiverTranslator)
   return parts.length > 0 ? parts.join(" · ") : null;
 }
 
-/** One session's dates/time/seats, shared by the featured row and the compact list. */
+/** Shop-local dates, times, and remaining seats for one session row. */
 function sessionFacts(
   session: { startsAt: Date; endsAt: Date; capacity: number; booked: number },
   timezone: string,
   locale: string,
   t: DiverTranslator,
 ) {
-  // A course typically runs across days, and rendering a three-day course as
-  // "Wed, Jul 29 · 8:00 AM – 5:00 PM" hides two of them. Show the span when
-  // the session ends on a later local day.
+  // Use shop-local days so a multi-day course shows its full date span.
   const startDay = toDateInputValue(utcToWallTime(session.startsAt, timezone));
   const endDay = toDateInputValue(utcToWallTime(session.endsAt, timezone));
   const multiDay = startDay !== endDay;
@@ -488,7 +482,7 @@ function sessionFacts(
   };
 }
 
-/** The same next bookable date as the dates panel, brought into the opening. */
+/** The dates panel's featured session, brought into the opening (principle 10). */
 export function courseHeroDate(
   sessions: readonly CourseSession[],
   shopSlug: string,
@@ -497,7 +491,7 @@ export function courseHeroDate(
   t: DiverTranslator,
   waitlistOn = true,
 ) {
-  const next = sessions.find((session) => !isFull(session)) ?? sessions[0];
+  const next = firstBookableCourseSession(sessions);
   if (!next) return null;
   const full = isFull(next);
   return {
@@ -514,13 +508,10 @@ export function courseHeroDate(
 }
 
 /**
- * The booking moment — the one tinted panel on the page, so the eye lands
- * here from anywhere in the scroll. It leads with the *next* date (the answer
- * a diver actually came for, principle 10) and that date's button is the
- * page's one primary; later dates are compact hairline rows beneath it.
- *
- * Sessions come from the schedule, not from a second booking path: each links
- * to the trip page that already owns capacity, readiness, and payment.
+ * Principles 8/10: feature the first bookable date as the panel's primary
+ * action. If all dates are full, feature the first full date; the waitlist is
+ * a secondary fallback. Remaining sessions stay in schedule order, and each
+ * linked trip page owns booking, readiness, capacity, and payment.
  */
 export function CourseSessions({
   sessions,
@@ -542,18 +533,8 @@ export function CourseSessions({
   t: DiverTranslator;
 }) {
   const fullLabel = waitlistOn ? t("course.joinWaitList") : t("course.seeFullDate");
-  // The featured slot answers "when can I start?" — so it holds the soonest
-  // date a diver can actually book, not merely the soonest date. When the
-  // very next session is full but a later one is open, featuring the full one
-  // would put a waitlist in the page's most prominent slot while the bookable
-  // date hid in a compact row below (and would leave the page with no primary
-  // at all, breaking its principle-8 promise). The skipped full session still
-  // shows in the rows beneath, in date order, so nothing is hidden — and the
-  // label switches to "Next open date" so the slot never claims a full
-  // earlier date doesn't exist. Only when every session is full does the
-  // featured slot carry the waitlist, secondary on purpose: joining a
-  // waitlist is a fallback, never the page's one primary act.
-  const next = sessions.find((session) => !isFull(session)) ?? sessions[0];
+  // Full earlier dates remain in the rows; the featured open date is labeled accordingly.
+  const next = firstBookableCourseSession(sessions);
   const later = sessions.filter((session) => session !== next);
   const nextIsSoonest = next === sessions[0];
   return (
@@ -621,9 +602,7 @@ export function CourseSessions({
                     const facts = sessionFacts(session, timezone, locale, t);
                     const lead = sessionLead(session, locale, t);
                     const full = isFull(session);
-                    // The whole row is the one link (B42): the date, who
-                    // leads it and where are its words, and the button face
-                    // at its end is the same tap, not a second target.
+                    // The whole date row is one link (visual review 2026-10-24, B42).
                     return (
                       <li key={session.id}>
                         <Link
@@ -703,12 +682,9 @@ export function CourseFaqs({ faqs, t }: { faqs: CourseFaq[]; t: DiverTranslator 
 }
 
 /**
- * Where the phone's foot bar points on a course page (UX audit #8). The dates
- * panel sits about four screens down a phone page, so the trip page's foot bar
- * comes here too, pointing where the dates panel's own primary act does: Book
- * when a date has room, the wait list when every date is full, and, with no
- * dates on the board, the date request. No dates and no address leaves no
- * door to keep, and no bar.
+ * Phone CTA mirrors `#dates` (UX audit #8): book if any date is open;
+ * otherwise show the enabled waitlist or full-date label. With no dates,
+ * request only when an inquiry exists.
  */
 export function courseFootBar(
   sessions: ReadonlyArray<{ capacity: number; booked: number }>,
@@ -727,4 +703,9 @@ export function courseFootBar(
     };
   }
   return inquiryHref ? { href: inquiryHref, label: t("course.requestDateLink") } : null;
+}
+
+/** First open session, or the first full session when none can be booked. */
+function firstBookableCourseSession(sessions: readonly CourseSession[]): CourseSession | undefined {
+  return sessions.find((session) => !isFull(session)) ?? sessions[0];
 }

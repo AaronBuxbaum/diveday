@@ -18,10 +18,8 @@ import { WORK_ORDER_TEXT_LIMITS } from "@/lib/work-orders";
 import { saveWorkOrderAction } from "../actions";
 
 /**
- * **The job**: what came in, the day promised, who has it, the bench notes and
- * what the customer is told. One form and one Save, because these are written
- * together at the counter and again at the bench, and a page of small forms
- * each with its own Save loses whichever one was not pressed.
+ * **The job**: problem, promise date, technician, bench notes, and customer
+ * line save atomically in one form. A deleted ticket shows these facts read-only.
  *
  * A deleted ticket reads the same words back without the form.
  */

@@ -2,6 +2,7 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
+import { filesUnder } from "./files-under.mjs";
 
 /**
  * Every write that moves a departure bumps `trips.revision`.
@@ -83,22 +84,7 @@ const BUMPS = /\brevision\b/;
 const IS_TEST = /\.test\.tsx?$/;
 const COMMENT_LINE = /^(?:\/\/|\/\*|\*)/;
 
-async function walk(relativeDirectory) {
-  let entries;
-  try {
-    entries = await readdir(path.join(ROOT, relativeDirectory), { withFileTypes: true });
-  } catch (error) {
-    if (error?.code === "ENOENT") return [];
-    throw error;
-  }
-  const files = [];
-  for (const entry of entries) {
-    const relativePath = path.join(relativeDirectory, entry.name);
-    if (entry.isDirectory()) files.push(...(await walk(relativePath)));
-    else if (SOURCE_EXTENSIONS.has(path.extname(entry.name))) files.push(relativePath);
-  }
-  return files;
-}
+const listDirectory = (relative) => readdir(path.join(ROOT, relative), { withFileTypes: true });
 
 /**
  * The object literal starting at the first `{` at or after `from`, by depth
@@ -194,7 +180,9 @@ async function main() {
   let moves = 0;
 
   for (const root of GUARDED_ROOTS) {
-    for (const file of await walk(root)) {
+    for (const file of await filesUnder(root, listDirectory, (relative) =>
+      SOURCE_EXTENSIONS.has(path.extname(relative)),
+    )) {
       if (IS_TEST.test(file) || path.basename(file).startsWith("seed-")) continue;
       const source = await readFile(path.join(ROOT, file), "utf8");
       const result = findFlatRevisionWrites(source);

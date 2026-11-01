@@ -1,22 +1,19 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { buttonClass } from "@/components/ui/button";
+import { type ButtonVariant, buttonClass } from "@/components/ui/button";
 
-/**
- * The download anchor with a brief acknowledgment: the browser gives no
- * in-page signal when a download starts, and this is the "yours to keep"
- * promise being fulfilled — it deserves a nod. Text-only swap, so it is
- * reduced-motion-safe by construction.
- */
-export function DownloadExportButton({
+/** A download link that briefly confirms the click, since browsers give no in-page signal. */
+export function DownloadAcknowledgmentLink({
   href,
   idleLabel,
   acknowledgedLabel,
+  variant = "primary",
 }: {
   href: string;
   idleLabel: string;
   acknowledgedLabel: string;
+  variant?: ButtonVariant;
 }) {
   const [acknowledged, setAcknowledged] = useState(false);
   const timer = useRef<number | undefined>(undefined);
@@ -26,7 +23,7 @@ export function DownloadExportButton({
     <a
       href={href}
       download
-      className={buttonClass()}
+      className={buttonClass({ variant })}
       aria-live="polite"
       onClick={() => {
         setAcknowledged(true);

@@ -3,6 +3,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-libra
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CLEAR_CONFIRM_MIN_GAP_MS, CLEAR_CONFIRM_TIMEOUT_MS } from "@/lib/pre-departure-check";
+import type { PreDepartureCheckResult } from "../actions";
 import {
   type PreDepartureCheckAction,
   PreDepartureCheckList,
@@ -284,6 +285,32 @@ describe("clearing a checked item", () => {
     await pause(CLEAR_CONFIRM_TIMEOUT_MS);
     expect(oxygen()).not.toHaveTextContent("Tap again to clear");
     expect(action).not.toHaveBeenCalled();
+  });
+
+  it("spends the ask when a server action settles, including a refusal", async () => {
+    let settleAction!: (result: PreDepartureCheckResult) => void;
+    const action: PreDepartureCheckAction = vi.fn(
+      () =>
+        new Promise<PreDepartureCheckResult>((resolve) => {
+          settleAction = resolve;
+        }),
+    );
+    render(<PreDepartureCheckList action={action} items={items} copy={copy} atDeparture />);
+    const oxygen = screen.getByRole("button", { name: /Emergency oxygen kit aboard/ });
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+
+    await user.click(oxygen);
+    await pause();
+    await user.click(oxygen);
+    await waitFor(() => expect(action).toHaveBeenCalledOnce());
+    await act(async () => settleAction({ ok: false, reason: "error" }));
+    await waitFor(() => expect(oxygen).toBeEnabled());
+    expect(oxygen).not.toHaveTextContent("Tap again to clear");
+
+    await user.click(oxygen);
+    await pause();
+    expect(action).toHaveBeenCalledOnce();
+    expect(oxygen).toHaveTextContent("Tap again to clear");
   });
 });
 

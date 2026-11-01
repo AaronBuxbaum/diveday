@@ -240,11 +240,9 @@ export function CertificationEntries({
 /**
  * The diver's own card, typed in.
  *
- * **Capture, never clearance.** The card lands `pending` and a staff review is
- * what makes it count toward readiness (`src/db/readiness.ts`), so nothing here
- * can clear the diver's own gate — which is why it can be offered behind a
- * bearer link at all. The copy says so plainly rather than implying the row is
- * settled.
+ * **Capture, never clearance.** The card lands `pending` and must be verified
+ * through staff review or an agency check before it counts toward readiness
+ * (`src/db/readiness.ts`). Submission alone does not clear the diver's gate.
  *
  * Before this, the checklist named "we still need your certification card" and
  * offered no way to answer it, so the card arrived as a photo in a reply-to
@@ -446,15 +444,12 @@ function SpecialtyEntry({
  * qualification and `nitrox_certifications` has no expiry state at all
  * (`src/lib/readiness.ts` raises no `nitrox_expired`).
  *
- * `optional` is the case where the trip demands nothing and the shop simply
- * fills enriched air: the card is what makes the gear row's request box appear
- * at all, so the offer belongs here with the other cards — pilled, so it never
- * reads as one more thing standing between the diver and the boat.
+ * `optional` is when the trip does not require nitrox but the shop fills it.
+ * The card can make the gear-row request box available; it is not fill
+ * authorization, so the optional offer must not read as a boarding gate.
  *
- * This is also where "what is nitrox?" is answered (issue 627). It used to sit
- * on the gear row's request legend, which a diver only reaches *after* filing a
- * card — the explanation arriving one step after the decision it was for. Here
- * it meets them at the word itself.
+ * Explain nitrox beside the card decision, before the request control may
+ * become available below.
  */
 function NitroxEntry({
   token,
@@ -474,13 +469,9 @@ function NitroxEntry({
         action={saveNitroxCertificationFromReady.bind(null, token)}
         className="flex flex-col gap-3"
       >
-        {/* What the word means, said plainly rather than hidden behind a
-            marker. This is the gear row's old `InfoHint` detail, moved to the
-            section that asks for the card (issue 627) — as text, because an
-            `InfoHint` is a `<button>` and `<summary>` is already one, and
-            because this page is read on a phone, where there is no hover to
-            discover. Same string, so the booking page's hint and this cannot
-            drift apart. */}
+        {/* Keep the booking gear hint's shared wording inline here: the
+            disclosure summary is already a button, and hover cannot reveal
+            help reliably on a phone. */}
         <p className="text-sm text-muted">{t("rental.jargonHints.nitrox")}</p>
         <FieldGrid columns={2}>
           <Field label={t("ready.certAgency")}>

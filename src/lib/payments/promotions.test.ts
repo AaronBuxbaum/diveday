@@ -47,7 +47,11 @@ describe("stripe promotion provider", () => {
 
     expect(fetchImpl.mock.calls[0][0]).toBe("https://api.stripe.com/v1/coupons");
     const couponCall = fetchImpl.mock.calls[0][1];
-    expect(couponCall.headers["Stripe-Account"]).toBe("acct_123");
+    expect(couponCall.headers).toMatchObject({
+      Authorization: "Bearer sk_test",
+      "Content-Type": "application/x-www-form-urlencoded",
+      "Stripe-Account": "acct_123",
+    });
     expect(couponCall.headers["Idempotency-Key"]).toBe("promo-1:coupon");
     const couponForm = new URLSearchParams(couponCall.body);
     expect(couponForm.get("percent_off")).toBe("50");

@@ -6,51 +6,14 @@ import { buttonClass } from "@/components/ui/button";
 import { ChoiceFieldset, ChoiceRow, controlClass, Field } from "@/components/ui/form";
 
 /**
- * **One diver's rental set, coming home** (issue #1186, delight report D26).
- *
- * A counter is handed an armful at 4pm by somebody who wants to go home, so
- * the ordinary evening is one tap: **All good**, and the whole set is closed.
- * That is the ticket's boundary — "default to a fast all-good path" — and it is
- * why the outcome is asked once for the set rather than once per piece.
- *
- * **Each outcome is its own submit button carrying its own value.** A submit
- * button's `name`/`value` reaches the form data, so there is no hidden field to
- * keep in step with a selection and no way for a tap on one answer to post
- * another. The only state here is whether the note is open.
- *
- * **A service concern asks for words before it will save.** A flag with no note
- * is something a technician cannot act on, so that one button opens a field
- * instead of submitting, and `returnTripGearSet` refuses the write without it —
- * in the domain writer rather than this form, so the register's own
- * single-unit return obeys the same rule. "Fit adjusted" opens nothing: the
- * fact *is* that the fit was adjusted, and writing the new size onto the
- * diver's profile is #1174's mutation, not this one's.
- *
- * **What it deliberately does not do**: write a `gear_service_events` row.
- * Those drive the clocks a shop uses to decide when a regulator gets bench
- * time, and a busy desk tapping "concern" for a scratched mask would turn
- * "this needs a technician" into "somebody was mildly annoyed". The concern is
- * a flag on the reservation that a technician promotes deliberately, and it
- * shows on the unit's own page where they are already looking.
- *
- * **The set is whatever the action's hidden fields name** — a booking on a
- * departure here, a counter rental's ticket on `/gear/rentals` — so one pane
- * asks the one question wherever a set comes home. `children` is anything else
- * that set's return asks beside the outcome (a counter rental's dive count),
- * posted with whichever answer is tapped.
- *
- * **`bench` offers to pull units to Needs service with the concern** (issue
- * #2205): one checkbox per unit in the set, unticked unless the caller says
- * otherwise (one unit off the boat starts a regulator, BCD or cylinder ticked,
- * `pullStartsTicked`), and only once the concern is open. Never automatic — a scratched mask and a free-flowing
- * regulator are both concerns, and auto-pulling every one would turn the flag
- * into a pager nobody trusts. Absent, the pane asks nothing extra.
- *
- * **An open concern is the only answer on offer** (dive-domain review). With
- * the note and the boxes open, "All good" and "Fit adjusted" are hidden: a tap
- * on either used to post the set as fine and throw away the typed concern and
- * every tick. The way out is Cancel, which closes the concern and brings the
- * fast answers back.
+ * Return one rental set with one outcome. Each submit button carries its own
+ * `name`/`value`; the action's hidden fields identify the set, and `children`
+ * accompany every answer. A service concern requires a note in
+ * `returnTripGearSet`; it flags the reservation and does not create a
+ * `gear_service_events` row. Optional `bench` pulls are explicit per-unit
+ * choices, never automatic. While concern is open, fast answers are hidden;
+ * Cancel discards the note and choices. Fit adjustment does not change the
+ * diver profile.
  */
 export function GearReturnPane({
   fields,

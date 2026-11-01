@@ -5,44 +5,25 @@ import { buttonClass } from "@/components/ui/button";
 import type { ConfirmProposalsResult } from "../proposal-actions";
 
 export interface ProposedUnitCopy {
-  /**
-   * "Proposed: BCD #4 · L", said as a proposal so it never reads as held; or,
-   * on a piece with no proposal, "No unit yet".
-   */
+  /** Proposal wording must not imply a reservation; otherwise say no unit yet. */
   line: string;
   /** "Change", or "Pick" where nothing is proposed. */
   reveal: string;
 }
 
-/**
- * **One piece, one line, one text button** (visual review 2026-10-24, A10).
- *
- * The row says which unit DiveDay would hand over and offers one quiet act:
- * Change reveals the row's own
- * picker inline (`children`, its `RentalUnitPicker`), where choosing a unit is
- * the assignment. Nothing is held by the proposal: "Assign all" at the top
- * confirms every proposal at once, and the exclusion constraint is still the
- * only thing that can say a unit is free. The per-row Assign is gone; a
- * proposal confirmed alone is a Change and a pick of that unit.
- */
+/** A proposal names a suggested unit but reserves nothing; Change reveals its picker. */
 export function ProposedUnit({
   copy,
   proposed = true,
   children,
 }: {
   copy: ProposedUnitCopy;
-  /**
-   * False on a piece DiveDay has no unit to propose for: the same line and
-   * text button (one idiom per row, visual review polish), the line muted
-   * because it names no unit.
-   */
+  /** False when there is no proposed unit; the line is muted. */
   proposed?: boolean;
   children: ReactNode;
 }) {
   const [changing, setChanging] = useState(false);
-  // A client-only act painted by the static shell; a tap before React owns it
-  // is swallowed, so the suite waits on this flag (the instant-navigation
-  // skill's "A static shell paints a control").
+  // Keep client-only controls inert until hydration completes.
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => setHydrated(true), []);
 
@@ -73,12 +54,7 @@ export function ProposedUnit({
   );
 }
 
-/**
- * **Every proposal on the tab, in one tap.** Sends the picks the staffer is
- * looking at; the server reserves each through the same write a single pick
- * uses and says how many it could not. Those rows stay open for a person,
- * which is what the sentence under the button tells them.
- */
+/** Confirm all visible proposals together; refused picks remain open for staff. */
 export function ConfirmProposals({
   tripId,
   picks,

@@ -409,6 +409,21 @@ describe("CourseSessions featured date", () => {
     expect(featured).toHaveAttribute("href", "/s/blue-mantis/trips/trip-1");
   });
 
+  it("uses the same featured session in the hero and dates panel", () => {
+    const sessions = [
+      session({ id: "trip-full", booked: 6 }),
+      session({ id: "trip-open", startsAt: new Date("2026-08-06T13:00:00Z"), booked: 1 }),
+    ];
+    const hero = courseHeroDate(sessions, props.shopSlug, props.timezone, props.locale, t);
+    render(<CourseSessions sessions={sessions} {...props} />);
+
+    expect(hero?.href).toBe("/s/blue-mantis/trips/trip-open");
+    expect(screen.getByRole("link", { name: "Book this date" })).toHaveAttribute(
+      "href",
+      "/s/blue-mantis/trips/trip-open",
+    );
+  });
+
   it("skips past a full soonest session to feature the first open one, honestly labeled", () => {
     render(
       <CourseSessions

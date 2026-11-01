@@ -5,32 +5,9 @@ import { groupLabelClass } from "@/components/ui/group-label";
 import { FIGURE_LARGE_CLASS } from "@/components/ui/typography";
 
 /**
- * **The month's five figures, unboxed** — ADR 20260827-the-shops-shelves,
- * decision 3 ("Reports keeps its shape and sheds its chrome"), speaking
- * Clearwater (ADR 20260827-clearwater-surface-language, decisions 1 and 3).
- *
- * What this replaced was six `sectionCardClass` tiles in a three-column grid:
- * six bordered boxes at equal weight, none of which floats above anything, for
- * six numbers whose whole job is to be read in one sweep. Decision 1 says
- * elevation is earned and a resting panel is flat; six flat boxes are still
- * six boxes, so the boxes go and the hairlines stay. The figure is the ink now
- * — `text-3xl` semibold and `tabular-nums`, the ramp's figure size — over a
- * group label, with at most one quiet line beneath it and the baseline
- * comparison one step quieter than that.
- *
- * Five figures, not six: the tax tile left for the quiet line beside the CSV
- * door (the page owns that line), and the departure count folded into the
- * Seats figure's own subline, where it was always the denominator of.
- *
- * **The label is `groupLabelClass()`, never a copy of its spelling.** The
- * tracking value lives in one file and `ledger.test.tsx` sweeps `src/` for a
- * second copy of it.
- *
- * **At most one coral element, and it is the Waivers figure's earned line**
- * (decision 11's table, row "Reports"). `earned` is condition-derived by the
- * page and never stored; it replaces the detail line rather than joining it,
- * and it never animates — this page is a monthly read, so a month that closed
- * complete is a fact on arrival, not a thing that just happened.
+ * Unboxed monthly figures use the shared group label and earn emphasis only
+ * for the conditional, non-animated waiver line (ADRs 20260827-the-shops-shelves,
+ * decision 3, and 20260827-clearwater-surface-language, decisions 1, 3, 11).
  */
 
 /** One figure in the row: a label, the number, and at most one line under it. */
@@ -65,37 +42,7 @@ export type MonthFigure = {
   href?: string;
 };
 
-/**
- * Where the hairlines fall, from the figure's index alone.
- *
- * The row is one column on a phone, two from `sm`, and all five from `lg`, so
- * "is this figure the first in its visual row" has a different answer at each
- * width and the rules are stated per breakpoint rather than guessed:
- *
- * - a **rule above** every figure that starts a new visual row (the container
- *   draws the row's own top and bottom edges);
- * - a **gutter beside** every figure that does not.
- *
- * **Its rules are a ledger's length.** The band sits over the departures
- * ledger, whose rows keep 8px of room each side of the column
- * (`ledgerRowBoxClass`, src/components/ui/ledger.tsx), so the band reaches out
- * by the same 8px (`-mx-2`, `FIGURE_COLUMNS`) and every figure takes the 8px
- * back as start padding — a figure beside another keeps its 24px gutter
- * instead. The first figure of each visual row starts on the column, and the
- * band's rules, the rules between its stacked rows and the ledger's rules
- * below all end at one x.
- *
- * **The end gutter is a column gutter, so it waits for a column.** On a phone
- * the figures stack one to a row with nothing beside them, and a stacked figure
- * takes the band's 8px back on the right exactly as it does on the left
- * (`pe-2`); the 24px `pe-6` that keeps a figure off its neighbour's rule starts
- * at `sm`, where the neighbour does. It was `pe-6` at every width, and a
- * stacked figure's words stopped 24px short of its rule on the right and 8px
- * on the left (K-573).
- *
- * Exported for the route's loading skeleton, which stands the same cells in
- * for these and would otherwise be a second spelling of where they sit.
- */
+/** Breakpoint-specific hairlines and gutters align figures with ledger rows (K-573); shared with the loading skeleton. */
 export function figureCellClass(index: number): string {
   const rule =
     index === 0
@@ -114,15 +61,7 @@ export function figureCellClass(index: number): string {
   return `py-5 ps-2 pe-2 sm:pe-6 ${rule} ${gutter}`.replace(/\s+/g, " ").trim();
 }
 
-/**
- * One column count per figure row. An entry per row shape, because there are three of them
- * in the tree — the month's five, the year's four and the year's three money
- * figures (fourth UX review, item 25) (ADR 20260908-one-hand,
- * decision 6, lever T) — and a second component for the second one would be a
- * second spelling of one grammar, which is the drift decision 1 exists to end.
- * The class strings are written out rather than interpolated: Tailwind reads
- * class names as literals.
- */
+/** Literal Tailwind grids shared by month and year rows (ADR 20260908-one-hand, decision 6, lever T; UX review 4, item 25). */
 const FIGURE_COLUMNS = {
   3: "-mx-2 grid grid-cols-1 border-y border-border sm:grid-cols-2 lg:grid-cols-3",
   4: "-mx-2 grid grid-cols-1 border-y border-border sm:grid-cols-2 lg:grid-cols-4",
@@ -144,8 +83,7 @@ export function MonthFigures({
   /** How many the row holds at `lg`. The hairline rules read the index alone and need no telling. */
   columns?: keyof typeof FIGURE_COLUMNS;
 }) {
-  // A month with nothing in it renders no figure row at all rather than five
-  // zeroes — the page's own empty state says what happened instead.
+  // The page's empty state replaces an empty figure row.
   if (figures.length === 0) return null;
   const lastSpansTheRow = figures.length % 2 === 1;
   return (
@@ -155,17 +93,13 @@ export function MonthFigures({
           <div
             key={figure.key}
             className={`${figureCellClass(index)}${
-              // An odd count leaves the last figure alone in its two-column
-              // row; spanning it keeps the hairline above it full width.
+              // Span the final figure when an odd count leaves it alone at `sm`.
               lastSpansTheRow && index === figures.length - 1 ? " sm:col-span-2 lg:col-span-1" : ""
             }`}
           >
             <dt className={groupLabelClass()}>{figure.label}</dt>
             <dd className="mt-2">
-              {/* The figure carries its own type rather than the `<dd>`
-                  carrying it for everything inside — the lines beneath are a
-                  different size, and inheriting one to override it three times
-                  is how a ramp drifts. */}
+              {/* Keep the figure size on the value; its detail lines use a smaller size. */}
               {figure.href ? (
                 <Link
                   href={figure.href}
@@ -176,12 +110,7 @@ export function MonthFigures({
               ) : (
                 <span className={`block ${FIGURE_LARGE_CLASS}`}>{figure.value}</span>
               )}
-              {/* **One block owns the lines under the value**, so the first of
-                  them starts 8px down whichever it is. The detail took `mt-2`
-                  and the comparison `mt-1`, so a figure with no detail (net
-                  revenue) set its comparison 4px higher than every
-                  neighbour's first line (K-287). Rendered only when it holds
-                  something: an empty `mt-2` block is a phantom gap. */}
+              {/* One shared block aligns the first detail or comparison line (K-287). */}
               {figure.earned || figure.detail || figure.comparison ? (
                 <div className="mt-2 space-y-1">
                   {figure.earned ? (
@@ -202,12 +131,7 @@ export function MonthFigures({
                   ) : null}
                 </div>
               ) : null}
-              {/* **A quiet link still clears 44px.** The line box keeps the
-                  `text-sm` line's 20px (`h-5`) and the link takes the shared
-                  tap-target floor, centred on it, so its target overhangs the
-                  line 12px each side, up into the gap above it and down into
-                  the cell's `py-5`, without moving a line on the page. As an `inline-block` it was a 78x20 target
-                  on a phone (K-288). */}
+              {/* Preserve the 44px tap target without changing the 20px text line (K-288). */}
               {figure.link ? (
                 // A link does nothing on paper, so it does not print (review F3).
                 <span className="mt-2 flex h-5 items-center print:hidden">

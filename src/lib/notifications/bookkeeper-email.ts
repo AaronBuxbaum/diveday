@@ -3,8 +3,8 @@ import type { DiverLocale } from "@/i18n/settings";
 import { monthLabel, parseMonthKey } from "@/lib/calendar";
 import { formatDateTimeTz } from "@/lib/format";
 import { escapeHtml } from "@/lib/html";
-import { firstNameOf } from "@/lib/person-name";
 import { emailButton, type NotificationEmail } from "./email";
+import { notificationGreeting } from "./greeting";
 
 // i18n-exempt-file: the terminal renderer for the month-end email (fifth loop,
 // item 35), on the same footing as `./weekly-digest-email.ts`: no React
@@ -98,10 +98,7 @@ export type BookkeeperNoticeInput = {
  */
 export function bookkeeperNoticeEmail(input: BookkeeperNoticeInput): NotificationEmail {
   const t = diverTranslator(input.locale);
-  const generic = t("notifications.common.genericName");
-  const firstName = input.recipientName ? firstNameOf(input.recipientName, generic) : generic;
-  const greetingText = t("notifications.common.greeting", { firstName });
-  const greetingHtml = t("notifications.common.greeting", { firstName: escapeHtml(firstName) });
+  const greeting = notificationGreeting(t, input.recipientName);
   const ref = input.month ? parseMonthKey(input.month) : null;
   const values = {
     shopName: input.shopName,
@@ -119,7 +116,7 @@ export function bookkeeperNoticeEmail(input: BookkeeperNoticeInput): Notificatio
   const open = t("notifications.bookkeeperNotice.open");
   return {
     subject: t(`notifications.bookkeeperNotice.subject.${input.event}`, values),
-    text: `${greetingText}\n\n${body}\n\n${open}:\n${input.reportsUrl}\n`,
-    html: `<p>${greetingHtml}</p><p>${escapeHtml(body)}</p>${emailButton(input.reportsUrl, open)}`,
+    text: `${greeting.text}\n\n${body}\n\n${open}:\n${input.reportsUrl}\n`,
+    html: `<p>${greeting.html}</p><p>${escapeHtml(body)}</p>${emailButton(input.reportsUrl, open)}`,
   };
 }

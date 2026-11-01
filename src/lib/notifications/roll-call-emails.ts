@@ -3,8 +3,8 @@ import type { DiverLocale } from "@/i18n/settings";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { formatDateTimeTz, formatShortDate, formatTimeTz } from "@/lib/format";
 import { escapeHtml } from "@/lib/html";
-import { firstNameOf } from "@/lib/person-name";
 import { emailButton, type NotificationEmail } from "./email";
+import { notificationGreeting } from "./greeting";
 
 // i18n-exempt-file: the terminal renderer for the stale-roll-call alert, on the
 // same footing as `./desk-emails.ts` — no React component picks words for a
@@ -86,9 +86,7 @@ function staleSentences(
  */
 export function rollCallStaleEmail(input: RollCallStaleEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
-  const firstName = firstNameOf(input.recipientName, t("notifications.common.genericName"));
-  const greetingText = t("notifications.common.greeting", { firstName });
-  const greetingHtml = t("notifications.common.greeting", { firstName: escapeHtml(firstName) });
+  const { text: greetingText, html: greetingHtml } = notificationGreeting(t, input.recipientName);
   const body = staleSentences(t, input);
   const open = t("notifications.rollCallStale.open");
   return {
@@ -187,9 +185,7 @@ export type ShoreAlertStoppedEmailInput = {
  */
 export function shoreAlertStoppedEmail(input: ShoreAlertStoppedEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
-  const firstName = firstNameOf(input.recipientName, t("notifications.common.genericName"));
-  const greetingText = t("notifications.common.greeting", { firstName });
-  const greetingHtml = t("notifications.common.greeting", { firstName: escapeHtml(firstName) });
+  const { text: greetingText, html: greetingHtml } = notificationGreeting(t, input.recipientName);
   const body = t("notifications.shoreAlertStopped.body");
   const open = t("notifications.shoreAlertStopped.open");
   return {

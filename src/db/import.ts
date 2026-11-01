@@ -36,7 +36,7 @@ import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import { rentalItemLabel } from "@/i18n/rental-labels";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
-import { canImportShopData, type Role } from "@/lib/authz";
+import { canImportShopData } from "@/lib/authz";
 import { calendarDateToUtcMidnight } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { type PreparedImport, type PreparedRow, parseImportedMoney } from "@/lib/import";
@@ -46,6 +46,7 @@ import { storeImportReceiptDocument, storeImportWaiverDocument } from "@/lib/sto
 import { ingestImageUrl } from "@/lib/storage/ingest-url";
 import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
 import { isCompletedWaiverCurrent } from "@/lib/waivers";
+import { readActiveStaffRoles } from "./authz";
 import type { AppDb } from "./client";
 import { isUniqueConstraintViolation } from "./query-helpers";
 import {
@@ -59,10 +60,8 @@ import {
   rentalFitProfiles,
   shops,
   specialtyCertifications,
-  userAccounts,
   waiverRecords,
 } from "./schema";
-import { livePerson } from "./trips-live";
 import { getCurrentWaiverTemplate } from "./waivers";
 
 export type ImportSummary = {
@@ -973,23 +972,6 @@ export async function canPersonImportShopData(
   shopId: string,
   personId: string,
 ): Promise<boolean> {
-  const [person] = await db
-    .select({ id: people.id })
-    .from(people)
-    .where(and(eq(people.id, personId), eq(people.shopId, shopId), livePerson()))
-    .limit(1);
-  if (!person) return false;
-
-  const [account] = await db
-    .select({ status: userAccounts.status })
-    .from(userAccounts)
-    .where(eq(userAccounts.personId, personId))
-    .limit(1);
-  if (account?.status !== "active") return false;
-
-  const roleRows = await db
-    .select({ role: personRoles.role })
-    .from(personRoles)
-    .where(eq(personRoles.personId, personId));
-  return canImportShopData(roleRows.map((row) => row.role as Role));
+  const roles = await readActiveStaffRoles(db, shopId, personId);
+  return roles !== null && canImportShopData(roles);
 }

@@ -2,6 +2,7 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import { filesUnder } from "./files-under.mjs";
 
 /**
  * A same-page tap must never silently send the reader back to the top of the
@@ -76,24 +77,7 @@ const allowed = new Set([
   path.normalize("scripts/check-scroll-preservation.test.mjs"),
 ]);
 
-async function walk(relativeDirectory) {
-  const absoluteDirectory = path.join(ROOT, relativeDirectory);
-  let entries;
-  try {
-    entries = await readdir(absoluteDirectory, { withFileTypes: true });
-  } catch (error) {
-    if (error?.code === "ENOENT") return [];
-    throw error;
-  }
-
-  const files = [];
-  for (const entry of entries) {
-    const relativePath = path.join(relativeDirectory, entry.name);
-    if (entry.isDirectory()) files.push(...(await walk(relativePath)));
-    else if (sourceExtensions.has(path.extname(entry.name))) files.push(relativePath);
-  }
-  return files;
-}
+const listDirectory = (relative) => readdir(path.join(ROOT, relative), { withFileTypes: true });
 
 /**
  * Whether a file's contents render `PreserveFormScroll` as JSX — `<PreserveFormScroll`
@@ -168,7 +152,9 @@ export function findFakeLinkHrefs(contents) {
 
 // Imported by the test, which must not run the scan or exit the process.
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const files = await walk(guardedRoot);
+  const files = await filesUnder(guardedRoot, listDirectory, (relative) =>
+    sourceExtensions.has(path.extname(relative)),
+  );
 
   const layoutFiles = [];
   const hrefViolations = [];

@@ -8,9 +8,9 @@ import {
   formatWeekdayTime,
 } from "@/lib/format";
 import { escapeHtml } from "@/lib/html";
-import { firstNameOf } from "@/lib/person-name";
 import { seatFillPercent } from "@/lib/weekly-digest";
 import type { NotificationEmail } from "./email";
+import { notificationGreeting } from "./greeting";
 import type { WeeklyDigestEmailSection } from "./kinds";
 
 // i18n-exempt-file: the terminal renderer for the Monday email, on the same
@@ -292,7 +292,7 @@ const SECTION_LINE_STYLE = "margin: 0;";
 
 export function weeklyDigestEmail(input: WeeklyDigestEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
-  const firstName = firstNameOf(input.recipientName, t("notifications.common.genericName"));
+  const greeting = notificationGreeting(t, input.recipientName);
   const entries = input.sections.map((section) => ({
     section,
     block: blockFor(section, input, t),
@@ -366,8 +366,8 @@ export function weeklyDigestEmail(input: WeeklyDigestEmailInput): NotificationEm
   const htmlBlocks = renderHtmlBlocks(reportingBlocks);
   return {
     subject: t("notifications.weeklyDigest.subject", { shopName: input.shopName }),
-    text: `${t("notifications.common.greeting", { firstName })}\n\n${prepared ? `${prepared}\n\n` : ""}${attentionText ? `${attentionText}\n\n` : ""}${readText ? `${readText}\n\n` : ""}${textBlocks}\n\n${note}\n${why}\n${settings}: ${input.settingsUrl}\n${turnOff}: ${input.turnOffUrl}\n`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p>${prepared ? `<p>${escapeHtml(prepared)}</p>` : ""}${attentionHtml}${readHtml}${htmlBlocks}<p style="margin-top: 32px; font-size: 13px; line-height: 1.5; opacity: 0.75;">${escapeHtml(note)}<br>${escapeHtml(why)}<br><a href="${escapeHtml(input.settingsUrl)}">${escapeHtml(settings)}</a> · <a href="${escapeHtml(input.turnOffUrl)}">${escapeHtml(turnOff)}</a></p>`,
+    text: `${greeting.text}\n\n${prepared ? `${prepared}\n\n` : ""}${attentionText ? `${attentionText}\n\n` : ""}${readText ? `${readText}\n\n` : ""}${textBlocks}\n\n${note}\n${why}\n${settings}: ${input.settingsUrl}\n${turnOff}: ${input.turnOffUrl}\n`,
+    html: `<p>${greeting.html}</p>${prepared ? `<p>${escapeHtml(prepared)}</p>` : ""}${attentionHtml}${readHtml}${htmlBlocks}<p style="margin-top: 32px; font-size: 13px; line-height: 1.5; opacity: 0.75;">${escapeHtml(note)}<br>${escapeHtml(why)}<br><a href="${escapeHtml(input.settingsUrl)}">${escapeHtml(settings)}</a> · <a href="${escapeHtml(input.turnOffUrl)}">${escapeHtml(turnOff)}</a></p>`,
   };
 }
 

@@ -2,10 +2,9 @@
 
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { useDirtySections } from "@/components/editor/EditorRail";
+import { type FormControlSnapshot, snapshotFormControls } from "./form-control-snapshot";
 
 /** One control's state as the writer left it, addressed by name and position. */
-type Typed = { name: string; index: number; value: string; checked: boolean };
-
 /**
  * Never carried in a draft: it is this render's optimistic-concurrency token,
  * and restoring a stale one would aim the save at a generation of the row that
@@ -62,11 +61,11 @@ function versionOnPage(): string | null {
  * Removes a stale draft as it finds one: nothing else would, and it would sit
  * in the tab shadowing every later visit to this course.
  */
-function liveDraft(storageKey: string): Typed[] | null {
+function liveDraft(storageKey: string): FormControlSnapshot[] | null {
   try {
     const stored = window.sessionStorage.getItem(storageKey);
     if (!stored) return null;
-    const saved = JSON.parse(stored) as Typed[];
+    const saved = JSON.parse(stored) as FormControlSnapshot[];
     if (!Array.isArray(saved)) return null;
     const typedAgainst = saved.find(
       (field) => field.name === "expectedVersion" && field.index === 0,
@@ -84,33 +83,8 @@ function liveDraft(storageKey: string): Typed[] | null {
   }
 }
 
-/** Every named control in a form, in document order, with what it holds. */
-function snapshot(form: HTMLFormElement): Typed[] {
-  const seen = new Map<string, number>();
-  const out: Typed[] = [];
-  for (const element of Array.from(form.elements)) {
-    const field = element as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
-    // `NEVER_RESTORED` is not skipped here: the row version is *stored* and
-    // never written back. Which version a draft was typed against is the only
-    // honest answer to "did my save land?" — see `liveDraft`.
-    if (!field.name) continue;
-    // A file input's value cannot be assigned, so restoring one is impossible
-    // rather than merely awkward — the writer re-picks the photo.
-    if (field instanceof HTMLInputElement && field.type === "file") continue;
-    const index = seen.get(field.name) ?? 0;
-    seen.set(field.name, index + 1);
-    out.push({
-      name: field.name,
-      index,
-      value: field.value,
-      checked: field instanceof HTMLInputElement ? field.checked : false,
-    });
-  }
-  return out;
-}
-
 /** Write a snapshot back into the form it came from. Returns what it changed. */
-function restore(form: HTMLFormElement, saved: Typed[]): number {
+function restore(form: HTMLFormElement, saved: FormControlSnapshot[]): number {
   const seen = new Map<string, number>();
   let changed = 0;
   for (const element of Array.from(form.elements)) {
@@ -253,7 +227,7 @@ export function UnsavedChangesGuard({
     const form = formEl.current;
     if (!form) return;
     try {
-      window.sessionStorage.setItem(storageKey, JSON.stringify(snapshot(form)));
+      window.sessionStorage.setItem(storageKey, JSON.stringify(snapshotFormControls(form)));
     } catch {
       // Out of quota, or storage refused. The in-tab protections above still
       // hold; there is nothing useful to tell the writer here.

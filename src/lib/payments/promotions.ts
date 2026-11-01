@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { PromoDiscount } from "../promo-codes";
 import { boundedStripeFetch } from "./stripe-fetch";
+import { connectedAccountHeaders } from "./stripe-headers";
 import { type StripeKeySource, secretKeyForCall } from "./stripe-keys";
 import { logStripeRequestThrew } from "./stripe-request-log";
 
@@ -101,14 +102,6 @@ type Fetch = typeof fetch;
 const couponResponseSchema = z.object({ id: z.string().min(1) });
 const promotionCodeResponseSchema = z.object({ id: z.string().min(1) });
 
-function headersFor(secretKey: string, stripeAccountId: string): Record<string, string> {
-  return {
-    Authorization: `Bearer ${secretKey}`,
-    "Content-Type": "application/x-www-form-urlencoded",
-    "Stripe-Account": stripeAccountId,
-  };
-}
-
 export function stripePromotionProvider(
   config: StripeKeySource,
   unboundedFetch: Fetch,
@@ -147,7 +140,7 @@ export function stripePromotionProvider(
       const couponResponse = await fetchImpl("https://api.stripe.com/v1/coupons", {
         method: "POST",
         headers: {
-          ...headersFor(
+          ...connectedAccountHeaders(
             await secretKeyForCall(config, request.stripeAccountId),
             request.stripeAccountId,
           ),
@@ -169,7 +162,7 @@ export function stripePromotionProvider(
       const promoResponse = await fetchImpl("https://api.stripe.com/v1/promotion_codes", {
         method: "POST",
         headers: {
-          ...headersFor(
+          ...connectedAccountHeaders(
             await secretKeyForCall(config, request.stripeAccountId),
             request.stripeAccountId,
           ),
@@ -214,7 +207,7 @@ export function stripePromotionProvider(
         const response = await fetchImpl("https://api.stripe.com/v1/coupons", {
           method: "POST",
           headers: {
-            ...headersFor(
+            ...connectedAccountHeaders(
               await secretKeyForCall(config, request.stripeAccountId),
               request.stripeAccountId,
             ),

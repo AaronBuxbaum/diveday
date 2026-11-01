@@ -2,8 +2,8 @@ import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 import { formatDateTimeTz } from "@/lib/format";
 import { escapeHtml } from "@/lib/html";
-import { firstNameOf } from "@/lib/person-name";
 import { emailButton, type NotificationEmail } from "./email";
+import { notificationGreeting } from "./greeting";
 
 // i18n-exempt-file: the terminal renderer for the after-hours desk ping, the
 // Stripe-restricted notice to owners and the Ask-to-move alert, on the
@@ -28,9 +28,7 @@ export type DeskAfterHoursEmailInput = {
  */
 export function deskAfterHoursEmail(input: DeskAfterHoursEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
-  const firstName = firstNameOf(input.recipientName, t("notifications.common.genericName"));
-  const greetingText = t("notifications.common.greeting", { firstName });
-  const greetingHtml = t("notifications.common.greeting", { firstName: escapeHtml(firstName) });
+  const greeting = notificationGreeting(t, input.recipientName);
   const body = t("notifications.deskAfterHours.body", { count: input.waiting });
   const open = t("notifications.deskAfterHours.open");
   const turnOff = t("notifications.deskAfterHours.turnOff");
@@ -39,8 +37,8 @@ export function deskAfterHoursEmail(input: DeskAfterHoursEmailInput): Notificati
       shopName: input.shopName,
       count: input.waiting,
     }),
-    text: `${greetingText}\n\n${body}\n\n${open}:\n${input.inboxUrl}\n\n${turnOff}:\n${input.settingsUrl}\n`,
-    html: `<p>${greetingHtml}</p><p>${escapeHtml(body)}</p>${emailButton(input.inboxUrl, open)}<p><a href="${escapeHtml(input.settingsUrl)}">${escapeHtml(turnOff)}</a></p>`,
+    text: `${greeting.text}\n\n${body}\n\n${open}:\n${input.inboxUrl}\n\n${turnOff}:\n${input.settingsUrl}\n`,
+    html: `<p>${greeting.html}</p><p>${escapeHtml(body)}</p>${emailButton(input.inboxUrl, open)}<p><a href="${escapeHtml(input.settingsUrl)}">${escapeHtml(turnOff)}</a></p>`,
   };
 }
 
@@ -60,15 +58,13 @@ export function stripePaymentsRestrictedEmail(
   input: StripePaymentsRestrictedEmailInput,
 ): NotificationEmail {
   const t = diverTranslator(input.locale);
-  const firstName = firstNameOf(input.recipientName, t("notifications.common.genericName"));
-  const greetingText = t("notifications.common.greeting", { firstName });
-  const greetingHtml = t("notifications.common.greeting", { firstName: escapeHtml(firstName) });
+  const greeting = notificationGreeting(t, input.recipientName);
   const body = t("notifications.stripeRestricted.body");
   const open = t("notifications.stripeRestricted.open");
   return {
     subject: t("notifications.stripeRestricted.subject", { shopName: input.shopName }),
-    text: `${greetingText}\n\n${body}\n\n${open}:\n${input.settingsUrl}\n`,
-    html: `<p>${greetingHtml}</p><p>${escapeHtml(body)}</p>${emailButton(input.settingsUrl, open)}`,
+    text: `${greeting.text}\n\n${body}\n\n${open}:\n${input.settingsUrl}\n`,
+    html: `<p>${greeting.html}</p><p>${escapeHtml(body)}</p>${emailButton(input.settingsUrl, open)}`,
   };
 }
 
@@ -89,9 +85,7 @@ export type MoveAskSoonEmailInput = {
  */
 export function moveAskSoonEmail(input: MoveAskSoonEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
-  const firstName = firstNameOf(input.recipientName, t("notifications.common.genericName"));
-  const greetingText = t("notifications.common.greeting", { firstName });
-  const greetingHtml = t("notifications.common.greeting", { firstName: escapeHtml(firstName) });
+  const greeting = notificationGreeting(t, input.recipientName);
   const body = t("notifications.moveAskSoon.body", {
     tripTitle: input.tripTitle,
     when: formatDateTimeTz(input.startsAt, input.locale, input.timezone),
@@ -102,7 +96,7 @@ export function moveAskSoonEmail(input: MoveAskSoonEmailInput): NotificationEmai
       shopName: input.shopName,
       tripTitle: input.tripTitle,
     }),
-    text: `${greetingText}\n\n${body}\n\n${open}:\n${input.inboxUrl}\n`,
-    html: `<p>${greetingHtml}</p><p>${escapeHtml(body)}</p>${emailButton(input.inboxUrl, open)}`,
+    text: `${greeting.text}\n\n${body}\n\n${open}:\n${input.inboxUrl}\n`,
+    html: `<p>${greeting.html}</p><p>${escapeHtml(body)}</p>${emailButton(input.inboxUrl, open)}`,
   };
 }

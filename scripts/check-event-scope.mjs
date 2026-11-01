@@ -2,6 +2,7 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
+import { filesUnder } from "./files-under.mjs";
 
 /**
  * Every read of an append-only event table names the shop.
@@ -54,23 +55,6 @@ const SKIPPED_FILES = new Set(
   ["src/db/retention.ts", "src/db/seed.ts"].map((file) => path.normalize(file)),
 );
 
-async function walk(relativeDirectory) {
-  let entries;
-  try {
-    entries = await readdir(path.join(ROOT, relativeDirectory), { withFileTypes: true });
-  } catch (error) {
-    if (error?.code === "ENOENT") return [];
-    throw error;
-  }
-  const files = [];
-  for (const entry of entries) {
-    const relativePath = path.join(relativeDirectory, entry.name);
-    if (entry.isDirectory()) files.push(...(await walk(relativePath)));
-    else if (SOURCE_EXTENSIONS.has(path.extname(entry.name))) files.push(relativePath);
-  }
-  return files;
-}
-
 /** The event tables a schema file declares with a `shopId` column. */
 export function eventTablesIn(schemaSource) {
   const tables = [];
@@ -118,13 +102,21 @@ export function findUnscopedEventReads(source, tables) {
 
 async function main() {
   const tables = [...EXTRA_TABLES];
-  for (const file of await walk(SCHEMA_DIR)) {
+  for (const file of await filesUnder(
+    SCHEMA_DIR,
+    (relativeDirectory) => readdir(path.join(ROOT, relativeDirectory), { withFileTypes: true }),
+    (relativePath) => SOURCE_EXTENSIONS.has(path.extname(relativePath)),
+  )) {
     tables.push(...eventTablesIn(await readFile(path.join(ROOT, file), "utf8")));
   }
   const violations = [];
   let guarded = 0;
   for (const root of GUARDED_ROOTS) {
-    for (const file of await walk(root)) {
+    for (const file of await filesUnder(
+      root,
+      (relativeDirectory) => readdir(path.join(ROOT, relativeDirectory), { withFileTypes: true }),
+      (relativePath) => SOURCE_EXTENSIONS.has(path.extname(relativePath)),
+    )) {
       const normalized = path.normalize(file);
       if (SKIPPED_FILES.has(normalized) || IS_TEST.test(file)) continue;
       if (normalized.startsWith(path.normalize(SCHEMA_DIR))) continue;

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { boundedStripeFetch } from "./stripe-fetch";
+import { connectedAccountHeaders } from "./stripe-headers";
 import { type StripeKeySource, secretKeyForCall } from "./stripe-keys";
 import { logStripeRequestThrew } from "./stripe-request-log";
 
@@ -327,14 +328,6 @@ const refundResponseSchema = z.object({
   amount: z.number().int().nonnegative().optional(),
 });
 
-function headersFor(secretKey: string, stripeAccountId: string): Record<string, string> {
-  return {
-    Authorization: `Bearer ${secretKey}`,
-    "Content-Type": "application/x-www-form-urlencoded",
-    "Stripe-Account": stripeAccountId,
-  };
-}
-
 function toCreatedInvoice(body: z.infer<typeof invoiceResponseSchema>, stripeCustomerId: string) {
   return {
     stripeCustomerId,
@@ -362,7 +355,10 @@ export function stripeInvoicingProvider(
     return fetchImpl(`https://api.stripe.com/v1${path}`, {
       method: "POST",
       headers: {
-        ...headersFor(await secretKeyForCall(config, stripeAccountId), stripeAccountId),
+        ...connectedAccountHeaders(
+          await secretKeyForCall(config, stripeAccountId),
+          stripeAccountId,
+        ),
         ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
       },
       body: form.toString(),
@@ -524,7 +520,12 @@ export function stripeInvoicingProvider(
         // needs, so ask for the plain object.
         const invoiceResponse = await fetchImpl(
           `https://api.stripe.com/v1/invoices/${stripeInvoiceId}`,
-          { headers: headersFor(await secretKeyForCall(config, stripeAccountId), stripeAccountId) },
+          {
+            headers: connectedAccountHeaders(
+              await secretKeyForCall(config, stripeAccountId),
+              stripeAccountId,
+            ),
+          },
         );
         if (!invoiceResponse.ok) return { status: "failed" };
         const invoiceBody = invoiceResponseSchema.safeParse(await invoiceResponse.json());
@@ -554,7 +555,10 @@ export function stripeInvoicingProvider(
     async retrieveInvoice(stripeAccountId, stripeInvoiceId) {
       try {
         const response = await fetchImpl(`https://api.stripe.com/v1/invoices/${stripeInvoiceId}`, {
-          headers: headersFor(await secretKeyForCall(config, stripeAccountId), stripeAccountId),
+          headers: connectedAccountHeaders(
+            await secretKeyForCall(config, stripeAccountId),
+            stripeAccountId,
+          ),
         });
         if (!response.ok) return { status: "failed" };
         const body = invoiceResponseSchema.safeParse(await response.json());

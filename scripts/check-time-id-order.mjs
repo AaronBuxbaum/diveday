@@ -2,6 +2,7 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
+import { filesUnder } from "./files-under.mjs";
 
 /**
  * No list is ordered by a timestamp and then a random id alone.
@@ -57,22 +58,7 @@ const ALLOW = /diveday:allow-time-id-order:[ \t]*\S/;
 const TIMESTAMP_KEY = /\.\w+At\b/;
 const ID_KEY = /^(?:(?:asc|desc)\(\s*)?[\w.]+\.id\s*\)?$/;
 
-async function walk(relativeDirectory) {
-  let entries;
-  try {
-    entries = await readdir(path.join(ROOT, relativeDirectory), { withFileTypes: true });
-  } catch (error) {
-    if (error?.code === "ENOENT") return [];
-    throw error;
-  }
-  const files = [];
-  for (const entry of entries) {
-    const relativePath = path.join(relativeDirectory, entry.name);
-    if (entry.isDirectory()) files.push(...(await walk(relativePath)));
-    else if (SOURCE_EXTENSIONS.has(path.extname(entry.name))) files.push(relativePath);
-  }
-  return files;
-}
+const listDirectory = (relative) => readdir(path.join(ROOT, relative), { withFileTypes: true });
 
 /**
  * The argument text of the call whose `(` is at `open`, by depth count, and the
@@ -167,7 +153,9 @@ async function main() {
   let orders = 0;
 
   for (const root of GUARDED_ROOTS) {
-    for (const file of await walk(root)) {
+    for (const file of await filesUnder(root, listDirectory, (relative) =>
+      SOURCE_EXTENSIONS.has(path.extname(relative)),
+    )) {
       if (IS_TEST.test(file) || EXEMPT_FILES.has(file)) continue;
       const source = await readFile(path.join(ROOT, file), "utf8");
       const result = findTimeIdOrders(source);

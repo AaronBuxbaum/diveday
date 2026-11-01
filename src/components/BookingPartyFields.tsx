@@ -45,10 +45,9 @@ export type BookingFieldErrors = Record<string, string>;
  * mean gmail.com?" correction. The nudge never blocks: the form submits
  * whatever was typed regardless.
  *
- * **Names and addresses, and nothing about anyone's diving.** A per-diver
- * certification question lived here between 2026-08-20 and 2026-08-27; it now
- * belongs to `/ready/<token>`, which asks the diver whose booking it is rather
- * than whoever filled the anonymous form (see `BookSpotSection`).
+ * **Names and addresses, and nothing about anyone's diving.** This form does
+ * not collect certification; the scoped `/ready/<token>` link lets its bearer
+ * submit pending evidence for that booking afterward.
  *
  * **Steps of one sheet, not boxes inside a box** (ADR
  * 20260827-the-divers-thread, decision 2). Each diver's fieldset used to wear

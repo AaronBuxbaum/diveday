@@ -1,7 +1,6 @@
 import { and, asc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { ageOnDate } from "@/lib/age";
-import { isStaff } from "@/lib/authz";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { seatName } from "@/lib/held-seat";
@@ -14,7 +13,7 @@ import {
   partyLeftReason,
 } from "@/lib/party-teams";
 import { isUuid } from "@/lib/uuid";
-import { loadActiveStaffRoles } from "./authz";
+import { requireActiveStaffId } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
 import { isLockWaitRefusal } from "./lock-bounds";
 import { publishManifestEvent } from "./manifest-events";
@@ -118,32 +117,6 @@ function memberKey(member: BuddyTeamMemberInput): string {
   return member.kind === "diver"
     ? `booking:${member.bookingId.toLowerCase()}`
     : `crew:${member.personId.toLowerCase()}`;
-}
-
-/**
- * The staff gate every roll-call write applies, which is the same gate every
- * team write applies: a pairing is a named staff member's call, and the
- * recorder must be this shop's **live** staff — `loadActiveStaffRoles` in
- * `src/db/authz.ts`, the one place that rule lives.
- *
- * This was a copy of the roll-call writers' hand-rolled `person_roles` join,
- * filtering `people.id` / `people.shopId` / `person_roles.role` and stopping
- * there. It caught what it was written for (a diver, or somebody demoted out of
- * every staff role) and missed the two cases `loadActiveStaffRoles` exists for:
- * a **deleted** person, because `deleteDiver` sets `people.deleted_at` and
- * leaves every role row where it is, and a **disabled** account, because
- * `setStaffAccountStatus` revokes sign-in and leaves `person_roles` entirely
- * intact — a suspended employee keeps every role row they had. Teams inform
- * rather than gate, so what both bought was a `buddy_team_events` entry
- * attributed to somebody the shop had already removed: a trail that outlives
- * the membership rows, naming the wrong person for the act.
- */
-async function requireStaff(tx: Tx, shopId: string, personId: string): Promise<string | null> {
-  const roles = await loadActiveStaffRoles(tx, shopId, personId);
-  // `loadActiveStaffRoles` has already proven the person is this shop's, alive,
-  // and holds an active account; `isStaff` is the same `STAFF_ROLES` membership
-  // the old join expressed as an `inArray`.
-  return roles && isStaff(roles) ? personId : null;
 }
 
 /** Same tenancy and trip-status gate `recordRollCall` applies. */
@@ -515,7 +488,8 @@ async function formBuddyTeamInTx(
   // read works on them exactly as it does on divers.
   if (input.members.length < MIN_BUDDY_TEAM_SIZE) return { ok: false, reason: "too_few_members" };
 
-  const staffId = await requireStaff(tx, input.shopId, input.recordedByPersonId);
+  // Team events inform the roster, but their durable recorder attribution is staff-only.
+  const staffId = await requireActiveStaffId(tx, input.shopId, input.recordedByPersonId);
   if (!staffId) return { ok: false, reason: "staff_not_found" };
   if (!(await requireScheduledTrip(tx, input.shopId, input.tripId))) {
     return { ok: false, reason: "trip_unavailable" };
@@ -841,7 +815,7 @@ export async function addBuddyTeamMember(
   },
 ): Promise<BuddyTeamMutationOutcome> {
   const outcome = await retryTeamMutation(db, async (tx): Promise<BuddyTeamMutationOutcome> => {
-    const staffId = await requireStaff(tx, input.shopId, input.recordedByPersonId);
+    const staffId = await requireActiveStaffId(tx, input.shopId, input.recordedByPersonId);
     if (!staffId) return { ok: false, reason: "staff_not_found" };
     if (!(await requireScheduledTrip(tx, input.shopId, input.tripId))) {
       return { ok: false, reason: "trip_unavailable" };
@@ -922,7 +896,7 @@ export async function removeBuddyTeamMember(
   // time, and the members as they stood, and the incident export renders it —
   // so what is lost is the live roster's convenience, never the record.
   const outcome = await retryTeamMutation(db, async (tx): Promise<BuddyTeamMutationOutcome> => {
-    const staffId = await requireStaff(tx, input.shopId, input.recordedByPersonId);
+    const staffId = await requireActiveStaffId(tx, input.shopId, input.recordedByPersonId);
     if (!staffId) return { ok: false, reason: "staff_not_found" };
     if (!(await lockTeamTrip(tx, input.shopId, input.tripId)))
       return { ok: false, reason: "team_not_found" };
@@ -984,7 +958,7 @@ export async function dissolveBuddyTeam(
   },
 ): Promise<BuddyTeamMutationOutcome> {
   const outcome = await retryTeamMutation(db, async (tx): Promise<BuddyTeamMutationOutcome> => {
-    const staffId = await requireStaff(tx, input.shopId, input.recordedByPersonId);
+    const staffId = await requireActiveStaffId(tx, input.shopId, input.recordedByPersonId);
     if (!staffId) return { ok: false, reason: "staff_not_found" };
     if (!(await lockTeamTrip(tx, input.shopId, input.tripId)))
       return { ok: false, reason: "team_not_found" };

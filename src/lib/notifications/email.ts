@@ -19,9 +19,9 @@ import type { ShopMilestone } from "@/lib/founder-metrics";
 import { escapeHtml } from "@/lib/html";
 import { openMapsUrl } from "@/lib/maps";
 import { getMigrationGuide } from "@/lib/migration-guides";
-import { firstNameOf } from "@/lib/person-name";
 import type { SetupCurrentSystem } from "@/lib/setup-requests";
 import { cachedListFormat } from "../intl-cache";
+import { notificationGreeting } from "./greeting";
 
 // i18n-exempt-file: the terminal renderer for outbound email — no downstream
 // React component picks words for a sent message, so this file resolves its
@@ -375,7 +375,7 @@ export function wrapEmailHtml(
 
 export function tripConditionsHoldEmail(input: TripConditionsHoldEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
-  const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));
+  const greeting = notificationGreeting(t, input.diverName);
   const date = formatShortDate(input.startsAt, input.locale, input.timezone);
   const detail = input.conditionsSummary?.trim();
   const body = t("notifications.tripConditionsHold.body", {
@@ -395,8 +395,8 @@ export function tripConditionsHoldEmail(input: TripConditionsHoldEmailInput): No
 
   return {
     subject: t("notifications.tripConditionsHold.subject", { tripTitle: input.tripTitle }),
-    text: `${t("notifications.common.greeting", { firstName })}\n\n${body}${detailText}\n\n${seeUpdate}:\n${input.tripUrl}\n`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p>${detailHtml}${emailButton(input.tripUrl, seeUpdate)}`,
+    text: `${greeting.text}\n\n${body}${detailText}\n\n${seeUpdate}:\n${input.tripUrl}\n`,
+    html: `<p>${greeting.html}</p><p>${bodyHtml}</p>${detailHtml}${emailButton(input.tripUrl, seeUpdate)}`,
   };
 }
 
@@ -431,7 +431,7 @@ export type TripMinimumNotMetEmailInput = {
  */
 export function tripMinimumNotMetEmail(input: TripMinimumNotMetEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
-  const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));
+  const greeting = notificationGreeting(t, input.diverName);
   const date = formatShortDate(input.startsAt, input.locale, input.timezone);
   const params = {
     shopName: input.shopName,
@@ -459,8 +459,8 @@ export function tripMinimumNotMetEmail(input: TripMinimumNotMetEmailInput): Noti
         : null;
   return {
     subject: t("notifications.tripMinimumNotMet.subject", { tripTitle: input.tripTitle }),
-    text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n${money ? `\n${money}\n` : ""}\n${findAnother}:\n${input.scheduleUrl}\n`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p>${money ? `<p>${escapeHtml(money)}</p>` : ""}${emailButton(input.scheduleUrl, findAnother)}`,
+    text: `${greeting.text}\n\n${body}\n${money ? `\n${money}\n` : ""}\n${findAnother}:\n${input.scheduleUrl}\n`,
+    html: `<p>${greeting.html}</p><p>${bodyHtml}</p>${money ? `<p>${escapeHtml(money)}</p>` : ""}${emailButton(input.scheduleUrl, findAnother)}`,
   };
 }
 
@@ -489,7 +489,7 @@ export type BookingCancelledEmailInput = {
  */
 export function bookingCancelledEmail(input: BookingCancelledEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
-  const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));
+  const greeting = notificationGreeting(t, input.diverName);
   const date = formatShortDate(input.startsAt, input.locale, input.timezone);
   const bodyKey =
     input.cancelledBy === "diver"
@@ -524,8 +524,8 @@ export function bookingCancelledEmail(input: BookingCancelledEmailInput): Notifi
   const findAnother = t("notifications.bookingCancelled.findAnother");
   return {
     subject: t("notifications.bookingCancelled.subject", { tripTitle: input.tripTitle }),
-    text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n${partyLines.map((line) => `\n${line}\n`).join("")}${money ? `\n${money}\n` : ""}\n${findAnother}:\n${input.scheduleUrl}\n`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p>${partyLines.map((line) => `<p>${escapeHtml(line)}</p>`).join("")}${money ? `<p>${escapeHtml(money)}</p>` : ""}${emailButton(input.scheduleUrl, findAnother)}`,
+    text: `${greeting.text}\n\n${body}\n${partyLines.map((line) => `\n${line}\n`).join("")}${money ? `\n${money}\n` : ""}\n${findAnother}:\n${input.scheduleUrl}\n`,
+    html: `<p>${greeting.html}</p><p>${bodyHtml}</p>${partyLines.map((line) => `<p>${escapeHtml(line)}</p>`).join("")}${money ? `<p>${escapeHtml(money)}</p>` : ""}${emailButton(input.scheduleUrl, findAnother)}`,
   };
 }
 
@@ -581,7 +581,7 @@ function blowoutMoneyKey(
  */
 export function tripBlowoutEmail(input: TripBlowoutEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
-  const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));
+  const greeting = notificationGreeting(t, input.diverName);
   const date = formatShortDate(input.startsAt, input.locale, input.timezone);
   // A run the shop stopped is not the weather, and the diver is told which.
   const bodyKey =
@@ -605,8 +605,8 @@ export function tripBlowoutEmail(input: TripBlowoutEmailInput): NotificationEmai
     const noAlternatives = t("notifications.tripBlowout.noAlternatives");
     return {
       subject: t("notifications.tripBlowout.subject", { tripTitle: input.tripTitle }),
-      text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n\n${money}\n\n${noAlternatives}\n${seeSchedule}:\n${input.scheduleUrl}\n`,
-      html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p><p>${escapeHtml(money)}</p><p>${escapeHtml(noAlternatives)}</p>${emailButton(input.scheduleUrl, seeSchedule)}`,
+      text: `${greeting.text}\n\n${body}\n\n${money}\n\n${noAlternatives}\n${seeSchedule}:\n${input.scheduleUrl}\n`,
+      html: `<p>${greeting.html}</p><p>${bodyHtml}</p><p>${escapeHtml(money)}</p><p>${escapeHtml(noAlternatives)}</p>${emailButton(input.scheduleUrl, seeSchedule)}`,
     };
   }
 
@@ -625,8 +625,8 @@ export function tripBlowoutEmail(input: TripBlowoutEmailInput): NotificationEmai
 
   return {
     subject: t("notifications.tripBlowout.subject", { tripTitle: input.tripTitle }),
-    text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n\n${money}\n\n${intro}\n${listText}\n\n${seeSchedule}:\n${input.scheduleUrl}\n`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p><p>${escapeHtml(money)}</p><p>${escapeHtml(intro)}</p>${listHtml}${emailButton(input.scheduleUrl, seeSchedule)}`,
+    text: `${greeting.text}\n\n${body}\n\n${money}\n\n${intro}\n${listText}\n\n${seeSchedule}:\n${input.scheduleUrl}\n`,
+    html: `<p>${greeting.html}</p><p>${bodyHtml}</p><p>${escapeHtml(money)}</p><p>${escapeHtml(intro)}</p>${listHtml}${emailButton(input.scheduleUrl, seeSchedule)}`,
   };
 }
 
@@ -806,7 +806,7 @@ function waiverStep(
 
 export function bookingConfirmationEmail(input: BookingConfirmationEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
-  const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));
+  const greeting = notificationGreeting(t, input.diverName);
   const date = formatShortDate(input.startsAt, input.locale, input.timezone);
   const time = formatTimeRangeTz(input.startsAt, input.endsAt, input.locale, input.timezone);
   const title = escapeHtml(input.tripTitle);
@@ -877,14 +877,14 @@ export function bookingConfirmationEmail(input: BookingConfirmationEmailInput): 
 
   return {
     subject: t("notifications.bookingConfirmation.subject", { tripTitle: input.tripTitle }),
-    text: `${t("notifications.common.greeting", { firstName })}\n\n${confirmed}\n\n${date}\n${time}${termsText}${waiver.text}\n\n${dockNote}${where.text}${readyText}${calendarText}${materials.text}${reminderText}`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${confirmedHtml}</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p>${termsHtml}${waiver.html}<p>${dockNoteHtml}</p>${where.html}${readyHtml}${calendarHtml}${materials.html}${reminderHtml}`,
+    text: `${greeting.text}\n\n${confirmed}\n\n${date}\n${time}${termsText}${waiver.text}\n\n${dockNote}${where.text}${readyText}${calendarText}${materials.text}${reminderText}`,
+    html: `<p>${greeting.html}</p><p>${confirmedHtml}</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p>${termsHtml}${waiver.html}<p>${dockNoteHtml}</p>${where.html}${readyHtml}${calendarHtml}${materials.html}${reminderHtml}`,
   };
 }
 
 export function waitlistInviteEmail(input: WaitlistInviteEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
-  const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));
+  const greeting = notificationGreeting(t, input.diverName);
   const date = formatShortDate(input.startsAt, input.locale, input.timezone);
   const time = formatTimeRangeTz(input.startsAt, input.endsAt, input.locale, input.timezone);
   const title = escapeHtml(input.tripTitle);
@@ -921,14 +921,14 @@ export function waitlistInviteEmail(input: WaitlistInviteEmailInput): Notificati
       seats > 1
         ? t("notifications.waitlistInvite.subjectParty", { seats, tripTitle: input.tripTitle })
         : t("notifications.waitlistInvite.subject", { tripTitle: input.tripTitle }),
-    text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n\n${date}\n${time}\n\n${claim}:\n${input.bookingUrl}\n\n${footer}${unsubscribeText}\n`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p>${emailButton(input.bookingUrl, t("notifications.waitlistInvite.claimLink"))}<p>${footer}</p>${unsubscribeHtml}`,
+    text: `${greeting.text}\n\n${body}\n\n${date}\n${time}\n\n${claim}:\n${input.bookingUrl}\n\n${footer}${unsubscribeText}\n`,
+    html: `<p>${greeting.html}</p><p>${bodyHtml}</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p>${emailButton(input.bookingUrl, t("notifications.waitlistInvite.claimLink"))}<p>${footer}</p>${unsubscribeHtml}`,
   };
 }
 
 export function tripInvitationEmail(input: TripInvitationEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
-  const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));
+  const greeting = notificationGreeting(t, input.diverName);
   const date = formatShortDate(input.startsAt, input.locale, input.timezone);
   const time = formatTimeRangeTz(input.startsAt, input.endsAt, input.locale, input.timezone);
   const title = escapeHtml(input.tripTitle);
@@ -948,10 +948,6 @@ export function tripInvitationEmail(input: TripInvitationEmailInput): Notificati
   const prerequisiteHtml = input.prerequisiteNote
     ? `<p>${t("notifications.tripInvitation.prerequisite", { note: escapeHtml(input.prerequisiteNote) })}</p>`
     : "";
-  const greeting = t("notifications.common.greeting", { firstName });
-  const greetingHtml = t("notifications.common.greeting", {
-    firstName: escapeHtml(firstName),
-  });
   // Only the commercial offer carries a way out (`seat_offer_commercial`,
   // issue #1953): the reply to a diver's own date request is service mail.
   // The schema decides which, by requiring the field on one kind and not
@@ -971,8 +967,8 @@ export function tripInvitationEmail(input: TripInvitationEmailInput): Notificati
       shopName: input.shopName,
       tripTitle: input.tripTitle,
     }),
-    text: `${[greeting, body, `${date} · ${time}`, ...(prerequisite ? [prerequisite] : []), note, `${link}:`, input.bookingUrl].join("\n\n")}${unsubscribeText}`,
-    html: `<p>${greetingHtml}</p><p>${bodyHtml}</p><p><strong>${date}</strong><br>${time}</p>${prerequisiteHtml}<p>${note}</p>${emailButton(input.bookingUrl, link)}${unsubscribeHtml}`,
+    text: `${[greeting.text, body, `${date} · ${time}`, ...(prerequisite ? [prerequisite] : []), note, `${link}:`, input.bookingUrl].join("\n\n")}${unsubscribeText}`,
+    html: `<p>${greeting.html}</p><p>${bodyHtml}</p><p><strong>${date}</strong><br>${time}</p>${prerequisiteHtml}<p>${note}</p>${emailButton(input.bookingUrl, link)}${unsubscribeHtml}`,
   };
 }
 
@@ -983,7 +979,7 @@ export function tripInvitationEmail(input: TripInvitationEmailInput): Notificati
  */
 export function lastMinuteDealEmail(input: LastMinuteDealEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
-  const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));
+  const greeting = notificationGreeting(t, input.diverName);
   const date = formatShortDate(input.startsAt, input.locale, input.timezone);
   const time = formatTimeRangeTz(input.startsAt, input.endsAt, input.locale, input.timezone);
   const expires = formatDateTimeTz(input.expiresAt, input.locale, input.timezone);
@@ -1019,8 +1015,8 @@ export function lastMinuteDealEmail(input: LastMinuteDealEmailInput): Notificati
       discount,
       tripTitle: input.tripTitle,
     }),
-    text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n\n${date}\n${time}\n\n${useCode}\n${input.bookingUrl}\n\n${expiry}\n\n${unsubscribe}:\n${input.unsubscribeUrl}\n`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p><p>${useCodeHtml}</p>${emailButton(input.bookingUrl, t("notifications.lastMinuteDeal.bookLink", { tripTitle: title }))}<p>${t("notifications.lastMinuteDeal.expiry", { expires: escapeHtml(expires) })}</p><p><a href="${unsubscribeUrl}">${escapeHtml(unsubscribe)}</a></p>`,
+    text: `${greeting.text}\n\n${body}\n\n${date}\n${time}\n\n${useCode}\n${input.bookingUrl}\n\n${expiry}\n\n${unsubscribe}:\n${input.unsubscribeUrl}\n`,
+    html: `<p>${greeting.html}</p><p>${bodyHtml}</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p><p>${useCodeHtml}</p>${emailButton(input.bookingUrl, t("notifications.lastMinuteDeal.bookLink", { tripTitle: title }))}<p>${t("notifications.lastMinuteDeal.expiry", { expires: escapeHtml(expires) })}</p><p><a href="${unsubscribeUrl}">${escapeHtml(unsubscribe)}</a></p>`,
   };
 }
 
@@ -1082,7 +1078,7 @@ type TripRescheduledEmailInput = {
  */
 export function tripRescheduledEmail(input: TripRescheduledEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
-  const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));
+  const greeting = notificationGreeting(t, input.diverName);
   const title = escapeHtml(input.tripTitle);
   const when = whenLines(input);
   // Only the meeting point moved (#2443): the same message without the old
@@ -1117,8 +1113,8 @@ export function tripRescheduledEmail(input: TripRescheduledEmailInput): Notifica
         : "notifications.tripRescheduled.subject",
       { tripTitle: input.tripTitle },
     ),
-    text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n\n${when.text}${dockNote ? `\n\n${dockNote}` : ""}${movedToo ? `\n\n${movedToo}` : ""}${where.text}${cantMakeIt ? `\n\n${cantMakeIt}` : ""}${readyText}`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p>${when.html}${dockNote ? `<p>${escapeHtml(dockNote)}</p>` : ""}${movedToo ? `<p>${escapeHtml(movedToo)}</p>` : ""}${where.html}${cantMakeIt ? `<p>${escapeHtml(cantMakeIt)}</p>` : ""}${readyHtml}`,
+    text: `${greeting.text}\n\n${body}\n\n${when.text}${dockNote ? `\n\n${dockNote}` : ""}${movedToo ? `\n\n${movedToo}` : ""}${where.text}${cantMakeIt ? `\n\n${cantMakeIt}` : ""}${readyText}`,
+    html: `<p>${greeting.html}</p><p>${bodyHtml}</p>${when.html}${dockNote ? `<p>${escapeHtml(dockNote)}</p>` : ""}${movedToo ? `<p>${escapeHtml(movedToo)}</p>` : ""}${where.html}${cantMakeIt ? `<p>${escapeHtml(cantMakeIt)}</p>` : ""}${readyHtml}`,
   };
 }
 
@@ -1135,7 +1131,7 @@ type WelcomeEmailInput = {
  */
 export function welcomeEmail(input: WelcomeEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
-  const firstName = firstNameOf(input.ownerName, t("notifications.common.genericName"));
+  const greeting = notificationGreeting(t, input.ownerName);
   const shop = escapeHtml(input.shopName);
 
   const body = t("notifications.welcome.body", { shopName: input.shopName });
@@ -1145,8 +1141,8 @@ export function welcomeEmail(input: WelcomeEmailInput): NotificationEmail {
 
   return {
     subject: t("notifications.welcome.subject", { shopName: input.shopName }),
-    text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n\n${signIn}:\n${input.signInUrl}\n\n${footer}\n`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p>${emailButton(input.signInUrl, signIn)}<p>${footer}</p>`,
+    text: `${greeting.text}\n\n${body}\n\n${signIn}:\n${input.signInUrl}\n\n${footer}\n`,
+    html: `<p>${greeting.html}</p><p>${bodyHtml}</p>${emailButton(input.signInUrl, signIn)}<p>${footer}</p>`,
   };
 }
 
@@ -1518,15 +1514,15 @@ type VerifyAccountEmailInput = {
 
 export function verifyAccountEmail(input: VerifyAccountEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
-  const firstName = firstNameOf(input.ownerName, t("notifications.common.genericName"));
+  const greeting = notificationGreeting(t, input.ownerName);
   const expiresAt = formatDateTimeTz(input.expiresAt, input.locale, input.timezone);
   const confirm = t("notifications.verifyAccount.confirm");
   const expiry = t("notifications.verifyAccount.expiry", { expiresAt });
 
   return {
     subject: t("notifications.verifyAccount.subject"),
-    text: `${t("notifications.common.greeting", { firstName })}\n\n${confirm}:\n${input.verifyUrl}\n\n${expiry}\n`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p>${emailButton(input.verifyUrl, confirm)}<p>${t("notifications.verifyAccount.expiry", { expiresAt: escapeHtml(expiresAt) })}</p>`,
+    text: `${greeting.text}\n\n${confirm}:\n${input.verifyUrl}\n\n${expiry}\n`,
+    html: `<p>${greeting.html}</p>${emailButton(input.verifyUrl, confirm)}<p>${t("notifications.verifyAccount.expiry", { expiresAt: escapeHtml(expiresAt) })}</p>`,
   };
 }
 
@@ -1578,7 +1574,7 @@ type StaffInviteEmailInput = {
 
 export function staffInviteEmail(input: StaffInviteEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
-  const firstName = firstNameOf(input.inviteeName, t("notifications.common.genericName"));
+  const greeting = notificationGreeting(t, input.inviteeName);
   const roles = cachedListFormat(input.locale, { style: "long", type: "conjunction" }).format(
     input.roleLabels,
   );
@@ -1603,8 +1599,8 @@ export function staffInviteEmail(input: StaffInviteEmailInput): NotificationEmai
       inviterName: input.inviterName,
       shopName: input.shopName,
     }),
-    text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n\n${setPassword}:\n${input.inviteUrl}\n\n${expiry}\n`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p>${emailButton(input.inviteUrl, setPassword)}<p>${t("notifications.staffInvite.expiry", { expiresAt: escapeHtml(expiresAt) })}</p>`,
+    text: `${greeting.text}\n\n${body}\n\n${setPassword}:\n${input.inviteUrl}\n\n${expiry}\n`,
+    html: `<p>${greeting.html}</p><p>${bodyHtml}</p>${emailButton(input.inviteUrl, setPassword)}<p>${t("notifications.staffInvite.expiry", { expiresAt: escapeHtml(expiresAt) })}</p>`,
   };
 }
 
@@ -1618,7 +1614,7 @@ type PasswordResetEmailInput = {
 
 export function passwordResetEmail(input: PasswordResetEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
-  const firstName = firstNameOf(input.ownerName, t("notifications.common.genericName"));
+  const greeting = notificationGreeting(t, input.ownerName);
   const expiresAt = formatDateTimeTz(input.expiresAt, input.locale, input.timezone);
   const body = t("notifications.passwordReset.body");
   const choose = t("notifications.passwordReset.choose");
@@ -1626,8 +1622,8 @@ export function passwordResetEmail(input: PasswordResetEmailInput): Notification
 
   return {
     subject: t("notifications.passwordReset.subject"),
-    text: `${t("notifications.common.greeting", { firstName })}\n\n${body} ${choose}:\n${input.resetUrl}\n\n${expiry}\n`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${body}</p>${emailButton(input.resetUrl, choose)}<p>${t("notifications.passwordReset.expiry", { expiresAt: escapeHtml(expiresAt) })}</p>`,
+    text: `${greeting.text}\n\n${body} ${choose}:\n${input.resetUrl}\n\n${expiry}\n`,
+    html: `<p>${greeting.html}</p><p>${body}</p>${emailButton(input.resetUrl, choose)}<p>${t("notifications.passwordReset.expiry", { expiresAt: escapeHtml(expiresAt) })}</p>`,
   };
 }
 
@@ -1646,7 +1642,7 @@ type PasswordChangedEmailInput = {
 
 export function passwordChangedEmail(input: PasswordChangedEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
-  const firstName = firstNameOf(input.ownerName, t("notifications.common.genericName"));
+  const greeting = notificationGreeting(t, input.ownerName);
   const recoveryText = input.forgotPasswordUrl
     ? `${t("notifications.passwordChanged.recoveryWithLink")}:\n${input.forgotPasswordUrl}\n`
     : `${t("notifications.passwordChanged.recoveryNoLink")}\n`;
@@ -1656,8 +1652,8 @@ export function passwordChangedEmail(input: PasswordChangedEmailInput): Notifica
 
   return {
     subject: t("notifications.passwordChanged.subject"),
-    text: `${t("notifications.common.greeting", { firstName })}\n\n${t("notifications.passwordChanged.body")}\n\n${recoveryText}`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${t("notifications.passwordChanged.body")}</p>${recoveryHtml}`,
+    text: `${greeting.text}\n\n${t("notifications.passwordChanged.body")}\n\n${recoveryText}`,
+    html: `<p>${greeting.html}</p><p>${t("notifications.passwordChanged.body")}</p>${recoveryHtml}`,
   };
 }
 
@@ -1689,7 +1685,7 @@ export function staffReplyEmail(input: StaffReplyEmailInput): NotificationEmail 
 
 export function waiverRequestEmail(input: WaiverRequestEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
-  const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));
+  const greeting = notificationGreeting(t, input.diverName);
   const expiresAt = formatDateTimeTz(input.expiresAt, input.locale, input.timezone);
   const tripTitle = input.tripTitle?.trim();
   const title = tripTitle ? escapeHtml(tripTitle) : null;
@@ -1716,8 +1712,8 @@ export function waiverRequestEmail(input: WaiverRequestEmailInput): Notification
 
   return {
     subject,
-    text: `${t("notifications.common.greeting", { firstName })}\n\n${body} ${completeText}:\n${input.completionUrl}\n\n${expiry}\n`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p>${emailButton(input.completionUrl, completeLink)}<p>${t("notifications.waiverRequest.expiry", { expiresAt: escapeHtml(expiresAt) })}</p>`,
+    text: `${greeting.text}\n\n${body} ${completeText}:\n${input.completionUrl}\n\n${expiry}\n`,
+    html: `<p>${greeting.html}</p><p>${bodyHtml}</p>${emailButton(input.completionUrl, completeLink)}<p>${t("notifications.waiverRequest.expiry", { expiresAt: escapeHtml(expiresAt) })}</p>`,
   };
 }
 
@@ -1735,7 +1731,7 @@ export function waiverRequestEmail(input: WaiverRequestEmailInput): Notification
  */
 export function guardianReleaseCopyEmail(input: GuardianReleaseCopyEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
-  const firstName = firstNameOf(input.guardianName, t("notifications.common.genericName"));
+  const greeting = notificationGreeting(t, input.guardianName);
   const signedAt = formatDateTimeTz(input.signedAt, input.locale, input.timezone);
   const values = {
     shopName: input.shopName,
@@ -1767,8 +1763,8 @@ export function guardianReleaseCopyEmail(input: GuardianReleaseCopyEmailInput): 
 
   return {
     subject: t("notifications.guardianReleaseCopy.subject", { diverName: input.diverName }),
-    text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n\n${note}\n`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p><p>${noteHtml}</p>`,
+    text: `${greeting.text}\n\n${body}\n\n${note}\n`,
+    html: `<p>${greeting.html}</p><p>${bodyHtml}</p><p>${noteHtml}</p>`,
   };
 }
 
@@ -1807,7 +1803,7 @@ const READINESS_LINK_WORDS = {
 
 export function readinessLinkEmail(input: ReadinessLinkEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
-  const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));
+  const greeting = notificationGreeting(t, input.diverName);
   const expiresAt = formatDateTimeTz(input.expiresAt, input.locale, input.timezone);
   // The course-forms send is the same link for a different reason: the release
   // is signed and the course's forms are not (ADR 20261008-course-forms), so it
@@ -1827,11 +1823,11 @@ export function readinessLinkEmail(input: ReadinessLinkEmailInput): Notification
 
   return {
     subject: t(words.subject, { tripTitle: input.tripTitle }),
-    text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n\n${input.readinessUrl}\n\n${t(
+    text: `${greeting.text}\n\n${body}\n\n${input.readinessUrl}\n\n${t(
       "notifications.readinessLink.expiry",
       { expiresAt },
     )}\n`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p>${emailButton(
+    html: `<p>${greeting.html}</p><p>${bodyHtml}</p>${emailButton(
       input.readinessUrl,
       openLink,
     )}<p>${t("notifications.readinessLink.expiry", { expiresAt: escapeHtml(expiresAt) })}</p>`,
@@ -1857,7 +1853,7 @@ type BookingHandoffEmailInput = {
  */
 export function bookingHandoffEmail(input: BookingHandoffEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
-  const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));
+  const greeting = notificationGreeting(t, input.diverName);
   const expiresAt = formatDateTimeTz(input.expiresAt, input.locale, input.timezone);
   const body = t("notifications.bookingHandoff.body", {
     shopName: input.shopName,
@@ -1871,11 +1867,11 @@ export function bookingHandoffEmail(input: BookingHandoffEmailInput): Notificati
 
   return {
     subject: t("notifications.bookingHandoff.subject", { tripTitle: input.tripTitle }),
-    text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n\n${input.bookingUrl}\n\n${t(
+    text: `${greeting.text}\n\n${body}\n\n${input.bookingUrl}\n\n${t(
       "notifications.bookingHandoff.expiry",
       { expiresAt },
     )}\n`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p>${emailButton(
+    html: `<p>${greeting.html}</p><p>${bodyHtml}</p>${emailButton(
       input.bookingUrl,
       openLink,
     )}<p>${t("notifications.bookingHandoff.expiry", { expiresAt: escapeHtml(expiresAt) })}</p>`,

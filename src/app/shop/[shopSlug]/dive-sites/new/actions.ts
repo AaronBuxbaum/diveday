@@ -16,9 +16,7 @@ import { siteFormExtras } from "../site-forms";
  * Create a dive site from the new-site form, in the session's own shop, and open
  * it. A refusal does not navigate: it answers into the form with the whole
  * submission, so a staffer fixes the one field that was wrong (`SiteFormShell`).
- * It was an inline closure in `page.tsx` until the 2026-10-11 review moved it
- * here to be testable; the shop and the way back come from the session, never
- * from the page's URL.
+ * The shop and the way back come from the session, never from the page's URL.
  */
 export async function createDiveSiteAction(
   _state: SiteFormState,

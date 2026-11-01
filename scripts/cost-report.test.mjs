@@ -1,3 +1,8 @@
+import { spawnSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   ARCHITECTURAL_RISKS,
@@ -45,5 +50,61 @@ describe("cost-report", () => {
     const mdOutput = renderMarkdownReport(report);
     expect(mdOutput).toContain("# DiveDay Infrastructure Cost & Risk Assessment");
     expect(mdOutput).toContain("| Provider | Tier | Monthly Base |");
+  });
+
+  it("runs only when this module is the process entry point", () => {
+    const direct = spawnSync(
+      process.execPath,
+      [join(process.cwd(), "scripts", "cost-report.mjs"), "--json"],
+      { encoding: "utf8" },
+    );
+    expect(direct.status).toBe(0);
+    expect(JSON.parse(direct.stdout)).toHaveProperty("baselineMonthlySpend");
+
+    const directory = mkdtempSync(join(tmpdir(), "diveday-cost-report-"));
+    const modulePath = join(process.cwd(), "scripts", "cost-report.mjs");
+    const preservedSymlink = join(
+      process.cwd(),
+      "scripts",
+      `cost-report-preserved-${process.pid}.mjs`,
+    );
+    try {
+      const symlinkDirectory = join(directory, "symlinked");
+      mkdirSync(symlinkDirectory);
+      const symlink = join(symlinkDirectory, "cost-report.mjs");
+      symlinkSync(modulePath, symlink);
+
+      const linked = spawnSync(process.execPath, [symlink, "--json"], { encoding: "utf8" });
+      expect(linked.status).toBe(0);
+      expect(JSON.parse(linked.stdout)).toHaveProperty("baselineMonthlySpend");
+
+      symlinkSync(modulePath, preservedSymlink);
+      const preservedLinked = spawnSync(
+        process.execPath,
+        ["--preserve-symlinks-main", preservedSymlink, "--json"],
+        { encoding: "utf8" },
+      );
+      expect(preservedLinked.status).toBe(0);
+      expect(JSON.parse(preservedLinked.stdout)).toHaveProperty("baselineMonthlySpend");
+
+      const importer = join(directory, "cost-report.mjs");
+      const moduleUrl = pathToFileURL(modulePath).href;
+      writeFileSync(importer, `import ${JSON.stringify(moduleUrl)};\n`);
+
+      const imported = spawnSync(process.execPath, [importer], { encoding: "utf8" });
+      expect(imported.status).toBe(0);
+      expect(imported.stdout).toBe("");
+
+      const importedWithMissingArg = spawnSync(
+        process.execPath,
+        ["-e", `import(${JSON.stringify(moduleUrl)})`, join(directory, "missing-argument")],
+        { encoding: "utf8" },
+      );
+      expect(importedWithMissingArg.status).toBe(0);
+      expect(importedWithMissingArg.stdout).toBe("");
+    } finally {
+      rmSync(preservedSymlink, { force: true });
+      rmSync(directory, { recursive: true, force: true });
+    }
   });
 });

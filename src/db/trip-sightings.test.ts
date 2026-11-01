@@ -50,7 +50,7 @@ async function departure(
   shopId: string,
   title: string,
   daysAgo: number,
-  isPrivate = false,
+  options: { private?: boolean; rehearsal?: boolean } = {},
 ) {
   const startsAt = new Date(NOW.getTime() - daysAgo * DAY_MS);
   const trip = await createTrip(db, {
@@ -60,7 +60,8 @@ async function departure(
     endsAt: new Date(startsAt.getTime() + 4 * HOUR_MS),
     capacity: 6,
     plannedDives: 1,
-    isPrivate,
+    isPrivate: options.private,
+    isRehearsal: options.rehearsal,
   });
   if (!trip) throw new Error(`createTrip refused ${title}`);
   return trip;
@@ -402,7 +403,7 @@ describe("siteSightings", () => {
 
   it("leaves a private charter's log off the public answer", async () => {
     const { db, shop, owner, site } = await reefFixture();
-    const charter = await departure(db, shop.id, "Charter", 3, true);
+    const charter = await departure(db, shop.id, "Charter", 3, { private: true });
     await recordTripSighting(db, {
       shopId: shop.id,
       tripId: charter.id,
@@ -414,6 +415,27 @@ describe("siteSightings", () => {
     await upsertExecutedDive(db, {
       shopId: shop.id,
       tripId: charter.id,
+      diveNumber: 1,
+      actualSiteId: site.id,
+      recordedByPersonId: owner.id,
+    });
+    expect(await siteSightingSummary(db, shop.id, site.id, NOW)).toBeNull();
+  });
+
+  it("leaves a rehearsal's tap and dive log off the public answer", async () => {
+    const { db, shop, owner, site } = await reefFixture();
+    const rehearsal = await departure(db, shop.id, "Rehearsal", 3, { rehearsal: true });
+    await recordTripSighting(db, {
+      shopId: shop.id,
+      tripId: rehearsal.id,
+      diveSiteId: site.id,
+      speciesSlug: "whale-shark",
+      recordedByPersonId: owner.id,
+      now: new Date(rehearsal.startsAt.getTime() + HOUR_MS),
+    });
+    await upsertExecutedDive(db, {
+      shopId: shop.id,
+      tripId: rehearsal.id,
       diveNumber: 1,
       actualSiteId: site.id,
       recordedByPersonId: owner.id,

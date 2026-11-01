@@ -3,6 +3,7 @@ import type { DiveSpecialty } from "@/db/schema";
 import type { DiveSiteDifficulty } from "./dive-site-difficulty";
 import { type DiveSiteLandmark, parseDiveSiteLandmarks } from "./dive-site-landmarks";
 import type { CertificationLevel } from "./readiness";
+import { sameTemplateValue } from "./template-value-comparison";
 
 /** Fields a template snapshot can compare. Conservation guidance is compared but stays local. */
 export const DIVE_SITE_TEMPLATE_SYNC_FIELDS = [
@@ -163,22 +164,6 @@ export function diveSiteTemplateSnapshotFromSite(
   };
 }
 
-function canonicalValue(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(canonicalValue);
-  if (value && typeof value === "object") {
-    return Object.fromEntries(
-      Object.entries(value)
-        .sort(([left], [right]) => left.localeCompare(right))
-        .map(([key, nested]) => [key, canonicalValue(nested)]),
-    );
-  }
-  return value;
-}
-
-function sameValue(left: unknown, right: unknown): boolean {
-  return JSON.stringify(canonicalValue(left)) === JSON.stringify(canonicalValue(right));
-}
-
 /** Show fields where the latest published version actually differs. */
 export function diveSiteTemplateDiff(
   current: DiveSiteTemplateSnapshot,
@@ -188,11 +173,11 @@ export function diveSiteTemplateDiff(
   return DIVE_SITE_TEMPLATE_SYNC_FIELDS.flatMap((field) => {
     const currentValue = current[field];
     const latestValue = latest[field];
-    if (sameValue(currentValue, latestValue)) return [];
+    if (sameTemplateValue(currentValue, latestValue)) return [];
     return [
       {
         field,
-        shopChanged: !sameValue(currentValue, baseline[field]),
+        shopChanged: !sameTemplateValue(currentValue, baseline[field]),
         current: currentValue,
         latest: latestValue,
       },
@@ -213,7 +198,7 @@ export function mergedDiveSiteTemplateSnapshot(
   const merged = Object.fromEntries(
     DIVE_SITE_TEMPLATE_SYNC_FIELDS.map((field) => [
       field,
-      sameValue(current[field], baseline[field]) ? latest[field] : current[field],
+      sameTemplateValue(current[field], baseline[field]) ? latest[field] : current[field],
     ]),
   ) as DiveSiteTemplateSnapshot;
   // Site-specific conservation guidance stays with the shop, even on replacement.

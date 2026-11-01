@@ -80,6 +80,41 @@ describe("pushTripAlert's recipients", () => {
   });
 });
 
+describe("pushTripAlert delivery outcomes", () => {
+  it("deletes a subscription the push service reports as gone", async () => {
+    vi.mocked(sendWebPush).mockResolvedValue({ status: "gone" });
+    const { db, staffer, push } = await following();
+
+    expect(await push()).toBe(0);
+    expect(
+      await db
+        .select()
+        .from(pushSubscriptions)
+        .where(eq(pushSubscriptions.personId, staffer.personId)),
+    ).toEqual([]);
+  });
+
+  it("keeps a subscription that merely failed", async () => {
+    vi.mocked(sendWebPush).mockResolvedValue({ status: "failed" });
+    const { db, staffer, push } = await following();
+
+    expect(await push()).toBe(0);
+    expect(
+      await db
+        .select()
+        .from(pushSubscriptions)
+        .where(eq(pushSubscriptions.personId, staffer.personId)),
+    ).toHaveLength(1);
+  });
+
+  it("returns zero when the transport rejects", async () => {
+    vi.mocked(sendWebPush).mockRejectedValue(new Error("transport exploded"));
+    const { push } = await following();
+
+    await expect(push()).resolves.toBe(0);
+  });
+});
+
 describe("setStaffAccountStatus", () => {
   it("drops a disabled staffer's manifest subscriptions", async () => {
     const { db, shop, staffer } = await following();

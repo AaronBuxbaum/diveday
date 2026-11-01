@@ -1066,8 +1066,7 @@
       "paymentHistoryRowsNoticeOther": "{count} payment, refund, or receipt source rows will be imported as unverified history. They never create Stripe orders or charges.",
       "bookingsAfterTodayOne": "{count} booking is after today. It isn’t a seat here. Add it on the board, or keep it in {system} until it sails.",
       "bookingsAfterTodayOther": "{count} bookings are after today. They aren’t seats here. Add them on the board, or keep them in {system} until they sail.",
-      "bookingsAfterTodayMoreOne": "And {count} more.",
-      "bookingsAfterTodayMoreOther": "And {count} more.",
+      "bookingsAfterTodayMore": "And {count} more.",
       "oldSystem": "your old system",
       "stats": {
         "diversInFile": "Divers in file",

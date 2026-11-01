@@ -2177,25 +2177,16 @@ export async function getTodayWork(
   const rows: TodayRowsContext = {
     wave,
     inWindow,
-    upcoming,
     readinessByTrip,
     todayTrips,
-    today,
     todayLocal,
-    todayTripIds,
-    bookingIdsByTrip,
-    horizon,
     shopSlug,
     timeZone,
     locale,
     t,
     now,
     diversPerDivemaster,
-    roles,
-    personId,
     helpRequestsByTrip,
-    availableStaff,
-    includeOpsAlerts,
   };
 
   pushRollCallRows(actions, rows);

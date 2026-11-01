@@ -668,19 +668,11 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
                 />
               ))
           : null}
-        {/* **The certification question is not asked here at all.** It was,
-            per diver, until 2026-08-27 (product owner) — and asking a
-            stranger for a rung before they have paid bought a sale-time
-            warning and a self-declared claim written onto a named person's
-            record from an anonymous form. `/ready/<token>` asks the same
-            question of the diver whose booking it is, after the sale, with
-            the agency and number beside it. The departure's own requirement
-            is stated by the page above this form, which is the half a
-            deciding diver needs. */}
-        {/* Self-declared only (task 23) — this checkbox is not persisted and
-            does not gate the booking transaction; full enforcement (a birth
-            date on file, a hard refusal) is deliberately out of scope, see
-            docs/product/human-decisions/README.md H-08/H-22. */}
+        {/* This anonymous booking form does not collect certification. After
+            booking, the scoped `/ready/<token>` link lets its bearer submit
+            pending evidence for that booking. */}
+        {/* Browser-required acknowledgement only: it is not persisted, does not
+            verify age, and does not add a server-side age refusal (H-22). */}
         {trip.course?.minimumAge ? (
           <label className="flex min-h-11 items-start gap-2 border-t border-border pt-4 text-sm">
             <input
@@ -692,15 +684,8 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
             {t("ageAttestation", { age: trip.course.minimumAge })}
           </label>
         ) : null}
-        {/* **Nothing about the dive itself is asked here.** "What's this dive
-            for?" and D18's three offers stood in this slot until 2026-09-06:
-            five chips and two sentences of consent grammar between a party of
-            divers' names and the price they were about to commit to, asked of
-            a stranger who has not bought anything yet. `/ready/<token>` asks
-            it after the sale, of the diver whose booking it is — which is also
-            where a party member and a walk-in the counter seated can answer it
-            at all. Same argument as the certification question, which left
-            this form for the same page on 2026-08-27. */}
+        {/* After booking, each diver's `/ready/<token>` link can be used to
+            provide dive intent. */}
         {payAtBooking && offerCodeField ? (
           <FieldGrid columns={1} className="max-w-64 border-t border-border pt-4">
             {/* A shop-wide code and a trip-scoped last-minute deal are typed
@@ -744,11 +729,8 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
                   })
                 : null,
               passThroughTotalCents,
-              // Only where there *is* a checkout for Stripe to add tax at. On a
-              // book-now-pay-later seat the sentence used to render anyway, under
-              // a total labelled "Due at the shop" — a page telling a diver about
-              // a checkout step that does not exist for them (issue #1019's line,
-              // read in the wrong branch).
+              // When Stripe Tax is enabled, tax is added at checkout;
+              // counter-payment bookings have no checkout tax line.
               taxLine: taxEnabled && payAtBooking ? "checkout" : "none",
               dueNow: payAtBooking ? "checkout" : "at_shop",
               deskPayment,
@@ -768,9 +750,8 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
           >
             {bookLabel}
           </SubmitButton>
-          {/* The scariest hop on hotel wifi (task 19) — said once, up front,
-              rather than only after the tap commits the diver to it. Only when
-              there is a checkout to hop to. */}
+          {/* Explain the external Stripe checkout before submission when
+              pay-at-booking is offered. */}
           {payAtBooking ? (
             <p className="mt-2 text-xs text-muted">
               {t(payAtBooking === "test-mode" ? "stripeTestModeHint" : "stripeHint")}
@@ -778,10 +759,7 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
           ) : null}
           {/* The one sentence still ahead of a diver who has decided. */}
           {terms}
-          {/* The refusal used to render above the whole form — above the party
-              fields, the gear fields, and the promo box. On a phone that is
-              several thumb-scrolls from the button the diver just tapped, so a
-              refused booking read as a button that did nothing. */}
+          {/* Keep a booking refusal beside the action that produced it. */}
           <ErrorNotice message={state.error ?? errorMessage} />
         </div>
       </form>

@@ -3,7 +3,6 @@
  * Imported through the `./waivers` barrel.
  */
 import { and, eq, isNull, ne } from "drizzle-orm";
-import { isStaff } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import {
   type GuardianRelationship,
@@ -24,7 +23,7 @@ import {
   isUnresolvedMedicalHold,
   waiverClockInstant,
 } from "@/lib/waivers";
-import { loadActiveStaffRoles } from "./authz";
+import { requireActiveStaffId } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
 import { publishManifestEventsForPerson } from "./manifest-events";
 import { peopleMinorDeclared } from "./minor-declared";
@@ -115,18 +114,15 @@ export type InPersonWaiverOutcome =
  * `src/db/authz.ts` is the one place the rule lives; `loadActiveStaffRoles`
  * takes a `DbExecutor`, so it composes inside this transaction unchanged and
  * "who counts as live staff" widens once for the role gates and this writer
- * together. Same shape as `activeStaffRecorderId` in `src/db/manifests.ts`.
+ * together. The exported function below remains a thin wrapper for callers of
+ * the original attestor API.
  */
 export async function activeStaffAttestorId(
   tx: DbExecutor,
   shopId: string,
   personId: string,
 ): Promise<string | null> {
-  const roles = await loadActiveStaffRoles(tx, shopId, personId);
-  // `loadActiveStaffRoles` has already proven the person is this shop's, alive,
-  // and holds an active account; `isStaff` is the same `STAFF_ROLES` membership
-  // the old join expressed as an `inArray`.
-  return roles && isStaff(roles) ? personId : null;
+  return requireActiveStaffId(tx, shopId, personId);
 }
 
 /** The diver a paper release will be filed for, resolved from either subject. */

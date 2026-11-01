@@ -35,6 +35,7 @@ import {
   canReplyToReviews,
   canRetireMedicalRefusal,
   canViewShopActivity,
+  isStaff,
   type Role,
 } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
@@ -73,17 +74,20 @@ async function activeStaffRolesFor(db: DbExecutor, personId: string): Promise<Ro
  * deleted person or a non-active account. The H-14 role gates check against
  * this rather than the roles baked into the JWT at sign-in, so a demoted,
  * disabled, or deleted staff member loses a gated surface immediately instead
- * of at their next sign-in — the same revocation window the export/import/
- * reports surfaces already close (`canPersonViewShopReports` et al.).
+ * of at their next sign-in.
  *
- * **Shop-scoped on purpose.** Every H-14 gate already runs inside an
- * established, verified shop context, so requiring `people.shop_id` to match
- * the caller's own `shopId` here is exactly the tenant-isolation check that
- * stops a person from one shop being asked about under another's id. A
- * caller with no shop yet resolved wants `loadActiveStaffRolesByPerson`
- * below instead.
+ * **Shop-scoped on purpose.** Every caller already has an established,
+ * verified shop context, so requiring `people.shop_id` to match the caller's
+ * own `shopId` is exactly the tenant-isolation check that stops a person from
+ * one shop being asked about under another's id. A caller with no shop yet
+ * resolved wants `loadActiveStaffRolesByPerson` below instead.
+ *
+ * This direct read is deliberately uncached. Authorization decisions such as
+ * import/export/report gates must not reuse a request-render cache entry. Keep
+ * the person, account, and role queries in this order so the shop-scoped live
+ * person and fresh active-account/role checks remain intact.
  */
-async function readActiveStaffRoles(
+export async function readActiveStaffRoles(
   db: DbExecutor,
   shopId: string,
   personId: string,
@@ -132,6 +136,22 @@ async function readActiveStaffRolesByPerson(
  * straight through and every call reads live, as before.
  */
 export const loadActiveStaffRoles = cache(readActiveStaffRoles);
+
+/**
+ * The live staff person's id for a shop-scoped recorder or attestor, or null.
+ * A result requires a person in this shop who is not soft-deleted, has an
+ * active account, and currently holds a staff role. Pass the caller's own
+ * `DbExecutor` so transaction callers keep the same executor and query order;
+ * this delegates to `loadActiveStaffRoles` without changing its cache behavior.
+ */
+export async function requireActiveStaffId(
+  db: DbExecutor,
+  shopId: string,
+  personId: string,
+): Promise<string | null> {
+  const roles = await loadActiveStaffRoles(db, shopId, personId);
+  return roles && isStaff(roles) ? personId : null;
+}
 
 /** {@link loadActiveStaffRoles}'s person-scoped sibling, memoized the same way. */
 export const loadActiveStaffRolesByPerson = cache(readActiveStaffRolesByPerson);

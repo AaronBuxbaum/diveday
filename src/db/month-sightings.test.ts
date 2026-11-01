@@ -3,8 +3,17 @@ import { describe, expect, it } from "vitest";
 import { HOUR_MS } from "@/lib/clock";
 import { MIN_MONTH_TRIPS } from "@/lib/month-sightings";
 import { fileScopedShopContext } from "@/test/db";
+import { upsertExecutedDive } from "./executed-dives";
 import { monthSightings } from "./month-sightings";
-import { diveSites, executedDives, people, personRoles, tripSightings, trips } from "./schema";
+import {
+  diveSites,
+  executedDives,
+  people,
+  personRoles,
+  shops,
+  tripSightings,
+  trips,
+} from "./schema";
 import { createTrip } from "./trips";
 
 /**
@@ -148,5 +157,30 @@ describe("monthSightings", () => {
     }
     await f.db.update(trips).set({ deletedAt: NOW }).where(eq(trips.id, created[0].id));
     expect(await monthSightings(f.db, f.shop.id, "America/New_York", NOW)).toBeNull();
+  });
+
+  it("does not let another shop's query read these logged and tapped departures", async () => {
+    const f = await fixture();
+    const [other] = await f.db
+      .insert(shops)
+      .values({ name: "Other Shop", slug: "other-shop-month-sightings", timezone: "UTC" })
+      .returning();
+    if (!other) throw new Error("second shop insert failed");
+
+    for (let index = 0; index < MIN_MONTH_TRIPS; index += 1) {
+      const trip = await marchDeparture(f, march(2029, index + 1), ["green-sea-turtle"]);
+      await upsertExecutedDive(f.db, {
+        shopId: f.shop.id,
+        tripId: trip.id,
+        diveNumber: 1,
+        actualSiteId: f.site.id,
+        recordedByPersonId: f.owner.id,
+      });
+    }
+
+    const own = await monthSightings(f.db, f.shop.id, "America/New_York", NOW);
+    expect(own?.trips).toBe(MIN_MONTH_TRIPS);
+    expect(own?.species).toEqual([{ speciesSlug: "green-sea-turtle", trips: MIN_MONTH_TRIPS }]);
+    expect(await monthSightings(f.db, other.id, "America/New_York", NOW)).toBeNull();
   });
 });

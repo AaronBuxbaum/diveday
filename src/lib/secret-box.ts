@@ -97,6 +97,19 @@ export function secretKeyFromEnvironment(
   };
 }
 
+export type SecretKeyRefusal = "encryption_key_unset" | "encryption_key_invalid";
+
+/** A supplied key, or the existing refusal codes used by credential stores. */
+export type SecretKeyResolution = SecretKey | SecretKeyRefusal;
+
+/** Resolve at the point of use so omitted keys observe environment changes. */
+export function resolveSecretKey(key: SecretKey | null | undefined): SecretKeyResolution {
+  if (key !== undefined) return key ?? "encryption_key_unset";
+  const result = secretKeyFromEnvironment();
+  if (result.status === "ok") return result.key;
+  return result.status === "unset" ? "encryption_key_unset" : "encryption_key_invalid";
+}
+
 type ParsedKey =
   | { status: "ok"; key: Buffer }
   | { status: "unset" }

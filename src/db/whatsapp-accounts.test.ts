@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { openSecret } from "@/lib/secret-box";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
@@ -22,6 +22,7 @@ import {
 } from "./whatsapp-accounts";
 
 const key = randomBytes(32);
+afterEach(() => vi.unstubAllEnvs());
 
 function connectInput(shopId: string, overrides: Record<string, unknown> = {}) {
   return {
@@ -60,6 +61,23 @@ function okFetch(id = "wamid.OK") {
 const ctx = fileScopedShopContext();
 
 describe("connectShopWhatsAppAccount", () => {
+  it("prefers an injected key over malformed environment configuration", async () => {
+    vi.stubEnv("SECRET_ENCRYPTION_KEY", "invalid");
+    const { db, shop } = ctx;
+    expect(await connectShopWhatsAppAccount(db, connectInput(shop.id), { key })).toMatchObject({
+      status: "connected",
+    });
+  });
+
+  it("maps a malformed environment key to the existing refusal code", async () => {
+    vi.stubEnv("SECRET_ENCRYPTION_KEY", "invalid");
+    const { db, shop } = ctx;
+    expect(await connectShopWhatsAppAccount(db, connectInput(shop.id))).toEqual({
+      status: "refused",
+      reason: "encryption_key_invalid",
+    });
+  });
+
   it("stores the token sealed, never in plaintext", async () => {
     const { db, shop } = ctx;
     const result = await connectShopWhatsAppAccount(db, connectInput(shop.id), { key });

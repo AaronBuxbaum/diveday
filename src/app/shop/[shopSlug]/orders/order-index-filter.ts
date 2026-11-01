@@ -20,12 +20,7 @@ export type OrderIndexParams = {
 
 const DATE_INPUT = /^(\d{4})-(\d{2})-(\d{2})$/;
 
-/**
- * An `?from=`/`?to=` day (shop-local, `<input type="date">` value) to a UTC
- * instant — the day's start for `from`, the *next* day's start for `to` so
- * the whole end day is included in a `[from, to)` range. Malformed or absent
- * input is simply not a filter, never a thrown error over a stray query param.
- */
+/** Convert shop-local date inputs to UTC boundaries; `to` is the exclusive start of the next day. */
 function dayBoundary(
   value: string | undefined,
   timeZone: string,
@@ -41,30 +36,18 @@ function dayBoundary(
 }
 
 /**
- * **One reading of the Orders index's URL**, for the page and for "Download
- * orders (CSV)" alike (third UX review, item 34): the file holds the orders the
- * page is showing, so the two read the same parameters the same way.
- *
- * Every id is validated the way `?status=` is validated against its enum:
- * `trips.id` and `orders.person_id` are `uuid` columns, so a stray
- * `?tripId=nope` reaching the query is not an empty list, it is a thrown
- * `invalid input syntax for type uuid` and a 500. A malformed value is simply
- * not a filter.
- *
- * The index is windowed unless it is told otherwise: without one it loaded
- * every invoice a shop has ever raised. `?range=all` is the stated way out,
- * and an explicit `?from=`/`?to=` replaces the window rather than nesting
- * inside it. `range` is authoritative when present: Custom with no bounds yet
- * filters nothing and is what puts the two date inputs on screen.
+ * Shared page/export URL filtering (UX review 3, item 34). Malformed UUIDs
+ * are ignored before querying. `all` and `recent` override date bounds;
+ * `custom` applies them. Without a recognized range, bounds select `custom`,
+ * otherwise the bounded recent window applies. Empty custom bounds impose no
+ * date constraint.
  */
 export function orderIndexFilter(params: OrderIndexParams, timeZone: string, now: Date) {
   const status = orderStatus.enumValues.find((value) => value === params.status);
   const query = params.q?.trim() || undefined;
   const tripId = uuidParam(params.tripId);
   const personId = uuidParam(params.personId);
-  // One departure's orders read the boat's live seats unless the cancelled
-  // seats are asked for by name (issue #2550): the pulse's count and the list
-  // it opens then agree, and the rest stays one link away.
+  // A trip filter defaults to live seats; cancelled seats remain an explicit alternate.
   const seats: "live" | "cancelled" | undefined = tripId
     ? params.seats === "cancelled"
       ? "cancelled"
@@ -119,10 +102,7 @@ export type OrdersHrefOverrides = {
   seats?: "live" | "cancelled";
 };
 
-/**
- * This page's URL with the filters kept and only the given params swapped, for
- * the pager, the download and the "other seats" line (issue #2550).
- */
+/** Keep current filters while links change paging, range, or seat selection. */
 export function ordersIndexHref(
   shopSlug: string,
   view: OrdersIndexView,

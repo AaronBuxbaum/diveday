@@ -17,17 +17,13 @@ import {
 import { restoreWorkOrderAction, setWorkOrderStatusAction } from "../actions";
 
 /**
- * **Where the ticket goes next**: the current status as a non-interactive pill,
- * then the next move (`workOrderMoves().forward`) as a secondary button, then
- * every other allowed move in the "other moves" menu. The status is never a
- * button and no move is pre-selected, so the "Move to" caption reads each
- * action as a move rather than a picker.
+ * **Where the ticket goes next**: show current status as a non-interactive
+ * pill, the forward move as a secondary button, and other allowed moves in a
+ * menu. The labelled ChoiceFieldset groups actions; status is never a choice
+ * or picker selection.
  *
- * "Picked up" is the one-way door. Once collected there are no moves left, so
- * the card is hidden and the header badge shows the outcome. In the menu,
- * "Picked up" asks for confirmation first.
- *
- * A deleted ticket (`readOnly`) shows only Restore in the same place.
+ * Pickup in the menu requires confirmation. Collected tickets have no further
+ * moves; the header badge shows outcome. Deleted tickets offer Restore only.
  */
 export function WorkOrderStatusCard({
   workOrder,

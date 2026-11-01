@@ -1,11 +1,11 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState } from "react";
 import { cardSummaryClass, sectionCardClass } from "@/components/ui/card";
 import { SummaryCaret } from "@/components/ui/disclosure";
 import { StatusMark } from "@/components/ui/StatusMark";
+import { useClearConfirmation } from "@/components/useClearConfirmation";
 import { scopedId } from "@/lib/element-id";
-import { CLEAR_CONFIRM_MIN_GAP_MS, CLEAR_CONFIRM_TIMEOUT_MS } from "@/lib/pre-departure-check";
 import type { PreDepartureCheckResult } from "../actions";
 import {
   type SnagAction,
@@ -65,41 +65,13 @@ function PreDepartureCheckRow({
 }) {
   const [result, formAction, isPending] = useActionState(action, null);
   const checked = item.checkedByLine !== undefined;
-  // **Checking is one tap; clearing is two** (#2481). A brushed button or a
-  // wet hand on a moving deck must not clear "Emergency oxygen kit aboard"
-  // unnoticed, so the first tap on a checked item only asks. A blur, Escape,
-  // or a few seconds untouched stand it down, so an ask left behind never
-  // turns a later stray tap into a clear.
-  // A bounced double tap (two taps ~50ms apart) is one tap, so the ask only
-  // arms — and only says "Tap again to clear" — once the gap has passed.
-  const [asking, setAsking] = useState(false);
-  const [settled, setSettled] = useState(false);
-  const standDown = () => {
-    setAsking(false);
-    setSettled(false);
-  };
-  const askingNow = asking && checked;
-  const armed = askingNow && settled;
-  useEffect(() => {
-    if (!askingNow) return;
-    const settle = setTimeout(() => setSettled(true), CLEAR_CONFIRM_MIN_GAP_MS);
-    const expire = setTimeout(() => {
-      setAsking(false);
-      setSettled(false);
-    }, CLEAR_CONFIRM_TIMEOUT_MS);
-    return () => {
-      clearTimeout(settle);
-      clearTimeout(expire);
-    };
-  }, [askingNow]);
-  // Whatever the server said, the ask is spent once the submit settles: a
-  // refused clear must not leave the item one tap from clearing.
-  useEffect(() => {
-    if (!isPending) {
-      setAsking(false);
-      setSettled(false);
-    }
-  }, [isPending]);
+  // **Checking is one tap; clearing is two** (#2481). The confirmation
+  // mechanics are shared with the saved offline checklist; this row retains
+  // its native form submission and server action.
+  const { armed, standDown, requestClear, onKeyDown } = useClearConfirmation({
+    checked,
+    pending: isPending,
+  });
   return (
     <li>
       <form action={formAction}>
@@ -111,23 +83,9 @@ function PreDepartureCheckRow({
           disabled={isPending}
           aria-busy={isPending}
           aria-pressed={checked}
-          onClick={(event) => {
-            if (checked && !armed) {
-              event.preventDefault();
-              // A tap inside the gap is the first one bouncing: ignored.
-              if (!askingNow) setAsking(true);
-            }
-          }}
+          onClick={requestClear}
           onBlur={standDown}
-          onKeyDown={(event) => {
-            // A held Enter repeats keydown, and each repeat clicks: one press
-            // could ask and then clear (#2567). Only the first press counts.
-            if (event.repeat) {
-              event.preventDefault();
-              return;
-            }
-            if (event.key === "Escape") standDown();
-          }}
+          onKeyDown={onKeyDown}
           // A flat row, not a card per line (visual review 2026-10-24, B07):
           // the mark says checked, and the list's dividers draw the rows.
           className="flex min-h-14 w-full touch-manipulation items-start gap-3 px-4 py-3 text-start text-base font-semibold hover:bg-surface-sunken disabled:opacity-60"

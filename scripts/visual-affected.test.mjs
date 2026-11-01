@@ -1,4 +1,5 @@
-import { readFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -11,6 +12,7 @@ import {
   changedMessageKeys,
   changedRoutes,
   covers,
+  diffContext,
   expectedCaptureTestIds,
   FULL_SHARDS,
   filterReport,
@@ -300,7 +302,82 @@ const bySymbol = (changed, context = {}) => {
   return changedRoutes(changed, graph, { modules, sources: tree, ...context });
 };
 
+describe("production module-index wiring", () => {
+  it("selects a known importer through diffContext without constructing a file graph", () => {
+    const root = mkdtempSync(path.join(os.tmpdir(), "visual-module-index-"));
+    try {
+      const changedSource = 'export function gearTitle() { return "new gear"; }\n';
+      mkdirSync(path.join(root, "src/app/shop/[shopSlug]/gear"), { recursive: true });
+      mkdirSync(path.join(root, "src/lib"), { recursive: true });
+      writeFileSync(
+        path.join(root, "src/app/shop/[shopSlug]/gear/page.tsx"),
+        [
+          'import { gearTitle } from "@/lib/gear";',
+          "export default function Page() { return gearTitle(); }",
+        ].join("\n"),
+      );
+      writeFileSync(path.join(root, "src/lib/gear.ts"), changedSource);
+      writeFileSync(path.join(root, "next.config.ts"), "export default {};\n");
+
+      const git = (args) => {
+        if (args[0] === "diff" && args[1] === "--name-only") return "src/lib/gear.ts\n";
+        if (args[0] === "diff" && args.at(-1) === "src") {
+          return [
+            "diff --git a/src/lib/gear.ts b/src/lib/gear.ts",
+            "--- a/src/lib/gear.ts",
+            "+++ b/src/lib/gear.ts",
+            "@@ -1 +1 @@",
+            '-export function gearTitle() { return "old gear"; }',
+            '+export function gearTitle() { return "new gear"; }',
+          ].join("\n");
+        }
+        if (args[0] === "diff" && args.at(-1) === "e2e/helpers.ts") return "";
+        if (args[0] === "show") return 'export function gearTitle() { return "old gear"; }\n';
+        throw new Error(`unexpected git args: ${args.join(" ")}`);
+      };
+
+      const diff = diffContext({ root, git, forkPoint: "base" });
+      const result = selectCaptures({
+        ...diff,
+        graph: null,
+        report,
+        source,
+        helpers,
+      });
+      expect(diff.changed).toEqual(["src/lib/gear.ts"]);
+      expect(result.mode).toBe("affected");
+      expect([...result.lines]).toContain(
+        "visual.spec.ts › light mode › the gear register renders true to the design (light)",
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("following an edit name by name", () => {
+  it("uses module-index membership without a separate graph and keeps deleted and unknown fallbacks", () => {
+    const modules = moduleIndex(tree);
+    const page = changedRoutes(["src/app/shop/[shopSlug]/gear/page.tsx"], null, {
+      modules,
+      sources: tree,
+    });
+    expect(page.routes).toEqual([{ route: "/shop/[shopSlug]/gear", broad: false }]);
+
+    const deleted = changedRoutes(["src/lib/deleted.ts"], null, {
+      modules,
+      after: () => null,
+    });
+    expect(deleted).not.toHaveProperty("all");
+    expect(deleted).toMatchObject({ routes: [], boundaries: [] });
+
+    const unknown = changedRoutes(["src/lib/unindexed.ts"], null, {
+      modules,
+      after: () => "export const unknown = true;",
+    });
+    expect(unknown.all).toMatch(/not in the import graph/);
+  });
+
   it("reaches only the pages that read the function whose lines changed", () => {
     const lines = new Map([["src/lib/gear.ts", new Set([8])]]);
     expect(bySymbol(["src/lib/gear.ts"], { lines }).routes).toEqual([

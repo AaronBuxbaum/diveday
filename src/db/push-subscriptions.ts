@@ -295,6 +295,45 @@ export async function deletePushSubscriptionsById(
     .where(and(eq(pushSubscriptions.shopId, shopId), inArray(pushSubscriptions.id, ids)));
 }
 
+type PushDeliveryTarget = WebPushTarget & { id: string; personId: string };
+
+/** Shared bounded delivery mechanics; target selection and payload policy stay with callers. */
+async function sendPushTargets(
+  db: AppDb,
+  shopId: string,
+  targets: PushDeliveryTarget[],
+  localeByPerson: Map<string, string | null>,
+  defaultLocale: string,
+  config: NonNullable<ReturnType<typeof webPushConfig>>,
+  payloadFor: (
+    target: PushDeliveryTarget,
+    t: ReturnType<typeof staffTranslator>,
+  ) => Parameters<typeof sendWebPush>[1],
+): Promise<number> {
+  let sent = 0;
+  const gone: string[] = [];
+  for (let index = 0; index < targets.length; index += PUSH_SEND_CONCURRENCY) {
+    const chunk = targets.slice(index, index + PUSH_SEND_CONCURRENCY);
+    const results = await Promise.all(
+      chunk.map(async (target) => {
+        const t = staffTranslator(
+          recipientLocale(localeByPerson.get(target.personId), defaultLocale),
+        );
+        return {
+          id: target.id,
+          result: await sendWebPush(target, payloadFor(target, t), config),
+        };
+      }),
+    );
+    for (const entry of results) {
+      if (entry.result.status === "sent") sent += 1;
+      if (entry.result.status === "gone") gone.push(entry.id);
+    }
+  }
+  await deletePushSubscriptionsById(db, shopId, gone);
+  return sent;
+}
+
 /**
  * Fan out one "this trip's roll call changed" push.
  *
@@ -376,33 +415,21 @@ export async function pushManifestChanged(
     // open socket, and this runs inside a roll-call write. A bounded number of
     // concurrent requests keeps the worst case proportional to the chunk size
     // rather than to the number of subscribers.
-    const gone: string[] = [];
-    for (let index = 0; index < targets.length; index += PUSH_SEND_CONCURRENCY) {
-      const chunk = targets.slice(index, index + PUSH_SEND_CONCURRENCY);
-      const results = await Promise.all(
-        chunk.map(async (target) => {
-          const t = staffTranslator(
-            recipientLocale(localeByPerson.get(target.personId), shop.defaultLocale),
-          );
-          return {
-            id: target.id,
-            result: await sendWebPush(
-              target,
-              {
-                kind: "manifest-changed",
-                tripId,
-                url,
-                title: t("trips.offlineManifestManager.pushNotificationTitle"),
-                body: t("trips.offlineManifestManager.pushNotificationBody"),
-              },
-              config,
-            ),
-          };
-        }),
-      );
-      for (const entry of results) if (entry.result.status === "gone") gone.push(entry.id);
-    }
-    await deletePushSubscriptionsById(db, shopId, gone);
+    await sendPushTargets(
+      db,
+      shopId,
+      targets,
+      localeByPerson,
+      shop.defaultLocale,
+      config,
+      (_target, t) => ({
+        kind: "manifest-changed",
+        tripId,
+        url,
+        title: t("trips.offlineManifestManager.pushNotificationTitle"),
+        body: t("trips.offlineManifestManager.pushNotificationBody"),
+      }),
+    );
   } catch {
     // Best-effort by design — see the docblock.
   }
@@ -498,35 +525,23 @@ export async function pushTripAlert(
         ),
       );
     const localeByPerson = new Map(localeRows.map((row) => [row.id, row.locale]));
-    let sent = 0;
-    const gone: string[] = [];
-    for (let index = 0; index < targets.length; index += PUSH_SEND_CONCURRENCY) {
-      const chunk = targets.slice(index, index + PUSH_SEND_CONCURRENCY);
-      const results = await Promise.all(
-        chunk.map(async (target) => {
-          const t = staffTranslator(
-            recipientLocale(localeByPerson.get(target.personId), shop.defaultLocale),
-          );
-          // The manifest's own payload shape, so the service worker shows it
-          // with no change: it already refreshes the saved copy and shows the
-          // title and body when no page of the app is visible.
-          return {
-            id: target.id,
-            result: await sendWebPush(
-              target,
-              { kind: "manifest-changed", tripId, url: message.url, ...message.words(t) },
-              config,
-            ),
-          };
-        }),
-      );
-      for (const entry of results) {
-        if (entry.result.status === "sent") sent += 1;
-        if (entry.result.status === "gone") gone.push(entry.id);
-      }
-    }
-    await deletePushSubscriptionsById(db, shopId, gone);
-    return sent;
+    // The manifest's own payload shape, so the service worker shows it with
+    // no change: it refreshes the saved copy and shows these words when no page
+    // of the app is visible.
+    return await sendPushTargets(
+      db,
+      shopId,
+      targets,
+      localeByPerson,
+      shop.defaultLocale,
+      config,
+      (_target, t) => ({
+        kind: "manifest-changed",
+        tripId,
+        url: message.url,
+        ...message.words(t),
+      }),
+    );
   } catch {
     // Best-effort by design — see the docblock.
     return 0;

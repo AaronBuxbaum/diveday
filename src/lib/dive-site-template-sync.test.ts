@@ -49,6 +49,20 @@ describe("dive-site template sync", () => {
     expect(diff.some((change) => change.field === "conservationNote")).toBe(false);
   });
 
+  it("does not treat reordered landmark keys as a shop edit", () => {
+    const baseline = diveSiteTemplateSnapshot(source);
+    const [landmark] = baseline.landmarks;
+    const current = {
+      ...baseline,
+      landmarks: [{ note: landmark.note, kind: landmark.kind, name: landmark.name }],
+    };
+    const latest = { ...baseline, marineLife: "Parrotfish and turtles" };
+
+    expect(diveSiteTemplateDiff(current, baseline, latest)).toEqual([
+      expect.objectContaining({ field: "marineLife", shopChanged: false }),
+    ]);
+  });
+
   it("can intentionally replace template-managed copy", () => {
     const baseline = diveSiteTemplateSnapshot(source);
     const current = diveSiteTemplateSnapshotFromSite({

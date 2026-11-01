@@ -1,21 +1,22 @@
 import { randomUUID } from "node:crypto";
-import { canPersonReadMedicalAlertOnTrip, loadActiveStaffRoles } from "@/db/authz";
+import {
+  authorizeOfflineManifestStaff,
+  OFFLINE_MANIFEST_NO_STORE,
+} from "@/app/api/offline-manifests/staff-context";
+import { canPersonReadMedicalAlertOnTrip } from "@/db/authz";
 import { lockBoardingCertificationEvidence } from "@/db/boarding-certification-snapshot";
 import { departureBoatSafetyFor } from "@/db/boat-safety";
 import { departureVessels } from "@/db/boats";
 import type { AppDb } from "@/db/client";
-import { getDb } from "@/db/client";
 import { getTripManifests } from "@/db/manifests";
 import { nextOfflineManifestSnapshotRevision } from "@/db/offline-manifest-snapshots";
 import { latestPreDepartureChecksForTrip, listChecklistItems } from "@/db/pre-departure-check";
-import { getShopById, getShopOfflineErasureEpoch } from "@/db/shops";
+import { getShopOfflineErasureEpoch } from "@/db/shops";
 import { listTripIdsInOfflineManifestWindow } from "@/db/trips";
 import { boatSafetySection } from "@/i18n/boat-safety-labels";
 import { crewBlockerText } from "@/i18n/identity-check-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { auth } from "@/lib/auth";
-import { isStaff } from "@/lib/authz";
 import { departureCrewCount } from "@/lib/boat-safety";
 import { nowDate } from "@/lib/clock";
 import { emergencyReferenceForDeparture } from "@/lib/emergency-reference";
@@ -41,8 +42,6 @@ const AUTO_SAVE_WINDOW_MS = 48 * 60 * 60 * 1000;
  * back/forward replay on the shared boat tablet this whole feature runs on
  * (review 20260802, action item 12).
  */
-const NO_STORE = { "Cache-Control": "private, no-store" } as const;
-
 /**
  * Every scheduled trip in the rolling window — including one already
  * underway, not only ones yet to depart, so a trip mid-charter still gets
@@ -62,41 +61,9 @@ const NO_STORE = { "Cache-Control": "private, no-store" } as const;
  * string and none of this.
  */
 async function getUpcomingManifests() {
-  const session = await auth();
-  // A pre-filter, not the gate. Deliberately ahead of any database work so a
-  // caller with no session — or a token that never claimed a staff role — is
-  // refused without costing a connection (there is a test asserting `getDb` is
-  // never reached on this path). The roles it reads are whatever the JWT was
-  // stamped with at sign-in, which is exactly why it cannot be the last word.
-  if (!session?.user || !isStaff(session.user.roles)) {
-    return Response.json({ error: "authentication_required" }, { status: 401, headers: NO_STORE });
-  }
-  const db = await getDb();
-  const shop = await getShopById(db, session.user.shopId);
-  if (!shop) return Response.json({ error: "not_found" }, { status: 404, headers: NO_STORE });
-
-  // The gate that decides: live roles, re-read on every request. The session
-  // sets no `expiresIn` (src/lib/auth.ts), so Better Auth's seven-day default
-  // applies, renewed while it is in use — a staffer removed from this shop this
-  // morning can still carry `captain` in their session for days, and `/api/**`
-  // is outside the edge gate (src/proxy.ts), so this handler is the only wall.
-  // `loadActiveStaffRoles` exists for that window (ADR
-  // 20260724-role-authorization): it is null for a deleted person, a disabled
-  // account, or someone who was never this shop's, and the roles it does return
-  // are the `person_roles` of right now.
-  //
-  // After the shop lookup rather than before, and the order is load-bearing:
-  // `loadActiveStaffRoles` is shop-scoped, so a session pointing at a shop row
-  // that no longer exists finds no person and would answer 401 where the shell
-  // is owed a 404 — "the tenant cannot be established" is a different fact from
-  // "you are no longer their staff", and only one of them is about the caller.
-  // Nothing has been said to the caller yet either way; the two refusals are one
-  // primary-key row read apart, and everything expensive — the trip window, the
-  // per-trip manifest assembly, the locale negotiation — is still below this.
-  const roles = await loadActiveStaffRoles(db, shop.id, session.user.personId);
-  if (!roles || !isStaff(roles)) {
-    return Response.json({ error: "authentication_required" }, { status: 401, headers: NO_STORE });
-  }
+  const access = await authorizeOfflineManifestStaff();
+  if (access.ok === false) return access.response;
+  const { db, shop, user } = access;
 
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
@@ -199,7 +166,7 @@ async function getUpcomingManifests() {
     mayHoldMedicalAlertWords[tripId] = await canPersonReadMedicalAlertOnTrip(
       db,
       shop.id,
-      session.user.personId,
+      user.personId,
       tripId,
     );
   }
@@ -218,10 +185,10 @@ async function getUpcomingManifests() {
     payloads: served,
     // Who asked, so the device wipes medical alert words someone else saved
     // (H-153 amendment). The board itself never carries those words.
-    viewer: { personId: session.user.personId },
+    viewer: { personId: user.personId },
     mayHoldMedicalAlertWords,
   };
-  return Response.json(body, { headers: NO_STORE });
+  return Response.json(body, { headers: OFFLINE_MANIFEST_NO_STORE });
 }
 
 export function GET() {

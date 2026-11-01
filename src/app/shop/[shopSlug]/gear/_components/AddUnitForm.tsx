@@ -46,7 +46,7 @@ export function AddUnitForm({
     <div className="border-t border-border p-5 sm:p-6">
       <FieldGrid as="form" action={createGearItemAction} columns={2}>
         {/* A refused tag or date comes back with the serial, brand and
-            size still typed (fifth loop, item 14). */}
+            size still typed. */}
         <KeepTypedOnRefusal form="gear-add-unit" scope={keptScope} restore={refused} />
         <Field label={t("gear.form.kind")}>
           <select name="kind" className={controlClass} defaultValue="bcd">

@@ -1,9 +1,10 @@
 import { randomBytes } from "node:crypto";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   keyringOpensStored,
   openSecret,
   openSecretWithKeyring,
+  resolveSecretKey,
   type SecretKeyring,
   sealSecret,
   secretKeyFingerprint,
@@ -12,6 +13,30 @@ import {
 
 const key = randomBytes(32);
 const base64Key = key.toString("base64");
+
+afterEach(() => vi.unstubAllEnvs());
+
+describe("resolveSecretKey", () => {
+  it("uses an injected key even when the environment is malformed", () => {
+    vi.stubEnv("SECRET_ENCRYPTION_KEY", "bad");
+    expect(resolveSecretKey(key)).toBe(key);
+  });
+
+  it("keeps explicit null unset even when the environment is valid", () => {
+    vi.stubEnv("SECRET_ENCRYPTION_KEY", base64Key);
+    expect(resolveSecretKey(null)).toBe("encryption_key_unset");
+  });
+
+  it("rereads and validates the environment on each omitted-key call", () => {
+    vi.stubEnv("SECRET_ENCRYPTION_KEY", base64Key);
+    expect(resolveSecretKey(undefined)).toEqual({ current: key, previous: null });
+    const nextKey = randomBytes(32);
+    vi.stubEnv("SECRET_ENCRYPTION_KEY", nextKey.toString("base64"));
+    expect(resolveSecretKey(undefined)).toEqual({ current: nextKey, previous: null });
+    vi.stubEnv("SECRET_ENCRYPTION_KEY", "bad");
+    expect(resolveSecretKey(undefined)).toBe("encryption_key_invalid");
+  });
+});
 
 describe("sealSecret / openSecret", () => {
   it("round-trips a credential", () => {

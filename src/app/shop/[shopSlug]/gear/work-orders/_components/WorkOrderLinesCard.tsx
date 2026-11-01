@@ -19,20 +19,17 @@ import { WorkOrderAddLine } from "./WorkOrderAddLine";
 import { WorkOrderLineMenu, type WorkOrderLineMenuCopy } from "./WorkOrderLineMenu";
 
 /**
- * **Parts and labor, and what the job comes to** — the shop's working figures
- * while the gear is on the bench.
+ * **Parts and labor estimates** recorded while the gear is on the bench.
  *
- * A table to read, with each line's Edit and Delete behind its "⋯", and one
- * add row at the foot. The total sits in the card's header, in the shop's own
- * currency, and no money from here reaches the claim tag: a figure on a
- * printed tag on the way in is a price promise nobody made.
+ * Accessible table headers label each line; Edit and Delete are in its row
+ * menu, with an add row below and the total in the card header. The native
+ * table lets the row menu escape its cell; the shared Table scroll clips it.
  *
- * Not the `Table` shell: its scroll region clips, and a row's menu has to float
- * over the rows below it. Below `sm` the quantity and price each fold under
- * the description, the way the orders index folds its columns.
+ * On narrow screens, quantity and price fold under the description.
  *
- * Nothing here charges anybody. Billing is orders and Stripe; a ticket's lines
- * are what the counter reads out when the owner comes to collect.
+ * These are estimates, not charges. Billing stays in Orders/Stripe. Deleted
+ * tickets retain read-only figures; the total remains a focus target for
+ * post-action feedback.
  */
 export function WorkOrderLinesCard({
   workOrderId,
@@ -90,8 +87,7 @@ export function WorkOrderLinesCard({
       {lines.length === 0 ? (
         <p className="text-muted text-sm">{t("workOrders.detail.linesEmpty")}</p>
       ) : (
-        // Pulled out by the cells' own inset, so a row's first word sits on
-        // the card title's edge at every width (`CELL_EDGE` steps out at sm).
+        // Match the card title edge at each width while keeping row menus unclipped.
         <table
           className="-mx-4 w-[calc(100%+2rem)] text-base sm:-mx-5 sm:w-[calc(100%+2.5rem)]"
           style={{ tableLayout: "fixed" }}

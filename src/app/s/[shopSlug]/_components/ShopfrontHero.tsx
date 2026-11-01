@@ -8,35 +8,11 @@ import type { ReviewAggregate } from "@/lib/reviews";
 import { BadgeWall } from "./BadgeWall";
 
 /**
- * **The shopfront's identity band** — ADR
- * 20260827-clearwater-surface-language, decision 8: the public schedule leads
- * with the shop, not with the word "Schedule".
- *
- * The page used to open on a `text-2xl` h1 reading "Schedule" over a DiveDay
- * sentence about finding your next day on the water. A diver comparing three
- * Key Largo shops in three tabs read the identical masthead in all three.
- *
- * **The one rule this component must not drift from: it renders only what the
- * shop authored.** The name is always there; the tagline line only when
- * `shops.tagline` is set; the rating line only once divers have actually left
- * one. There is no
- * DiveDay filler for the empty version of any of them — a hero apologising for
- * a shop that has not written a tagline yet is worse than a hero that is simply
- * shorter, and day zero (a name, and nothing else) is a real shipping shape
- * rather than a failure state.
- *
- * Contact is deliberately **not** here: phone, email and address live once, in
- * `PublicShopFooter`, and hoisting them turned the top of every public page
- * into a contact card (issue #777).
- *
- * The stars are the page's one accent — decision 11's coral budget, where a
- * filled rating star is data ink, counts as one appearance however many are
- * lit, and never fires beside an earned moment (the storefront has none).
- *
- * **The band is the shop's photograph or nothing** — ADR 20260919-one-idea,
- * slice 23d, as ADR 20261001-logbook left it. A shop with a cover photo gets
- * its name on the photograph; a shop without one gets its name on the page's
- * own surface. The sky that once filled a photo-less band is gone.
+ * The shop's identity band. It shows the shop name and authored copy, with
+ * contact details kept in `PublicShopFooter`. Ratings appear only when earned,
+ * with the star as the single accent. A cover photo carries the name when
+ * present; otherwise the name sits directly on the page surface (design
+ * canvas 20260919-one-idea, slice 23d).
  */
 export function ShopfrontHero({
   name,
@@ -67,8 +43,7 @@ export function ShopfrontHero({
   tagline: string | null;
   /**
    * `shops.description` — the shop's own paragraph about itself, authored in
-   * Settings and, until 2026-09-02, read by nothing but the page's metadata.
-   * It is the storefront's "about", under the name, or nothing at all.
+   * Settings and shown under the name when present.
    */
   description?: string | null;
   /** Rendered only at `count > 0`; a shop with no reviews says nothing about reviews. */

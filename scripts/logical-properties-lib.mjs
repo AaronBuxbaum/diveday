@@ -1,4 +1,5 @@
 import path from "node:path";
+import { filesUnder } from "./files-under.mjs";
 
 /**
  * **The scan behind `scripts/check-logical-properties.mjs`** — which files to
@@ -16,7 +17,7 @@ import path from "node:path";
  * injects whatever tree it needs.
  */
 
-const sourceExtensions = new Set([".ts", ".tsx"]);
+const isSourceFile = (relative) => [".ts", ".tsx"].includes(path.extname(relative));
 
 /**
  * The physical utilities that have a logical twin, and only those. `top-`,
@@ -62,32 +63,6 @@ function stripComments(source) {
 }
 
 /**
- * Every `.ts`/`.tsx` file under one root, depth first, through `listDirectory`
- * — a `readdir(…, { withFileTypes: true })` stand-in.
- *
- * A directory that is not there is an empty listing rather than a failure: the
- * roots are a fixed list, and one of them disappearing mid-walk is the same
- * ordinary concurrent edit the read below tolerates. Any other listing error
- * still throws.
- */
-async function sourceFilesUnder(relativeDirectory, listDirectory) {
-  let entries;
-  try {
-    entries = await listDirectory(relativeDirectory);
-  } catch (error) {
-    if (error?.code === "ENOENT") return [];
-    throw error;
-  }
-  const files = [];
-  for (const entry of entries) {
-    const relativePath = path.join(relativeDirectory, entry.name);
-    if (entry.isDirectory()) files.push(...(await sourceFilesUnder(relativePath, listDirectory)));
-    else if (sourceExtensions.has(path.extname(entry.name))) files.push(relativePath);
-  }
-  return files;
-}
-
-/**
  * Every physical directional utility in one file's source, as
  * `{ line, text, logical }` — comments stripped first, so the line numbers
  * still point at the real line.
@@ -127,7 +102,7 @@ export async function physicalUtilitiesInTree(roots, listDirectory, readText) {
   const details = new Map();
   const vanished = [];
   for (const root of roots) {
-    for (const file of await sourceFilesUnder(root, listDirectory)) {
+    for (const file of await filesUnder(root, listDirectory, isSourceFile)) {
       let source;
       try {
         source = await readText(file);

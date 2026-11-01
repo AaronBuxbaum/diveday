@@ -21,7 +21,6 @@ import {
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
 import { listCrewAssignmentRequests, readStaffingWeekAway } from "@/db/crew-requests";
 import { getStaffingView } from "@/db/staffing";
-import { listStaff } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { staffRoleLabels } from "@/i18n/staff-role-labels";
@@ -172,7 +171,9 @@ export default async function StaffingPage({
   const fromWall = parseWallTime(weekStart, "00:00");
   const toWall = parseWallTime(shiftCalendarDate(weekStart, 7), "00:00");
   if (!fromWall || !toWall) redirect(shopPath(shopSlug, "staffing"));
-  const [view, staff, { blocks, canManageStaffAccounts: canManage }] = await Promise.all([
+  // The grid, options and own consent share one roster read; the independent
+  // away/manager read is not part of a transaction-wide snapshot.
+  const [view, { blocks, canManageStaffAccounts: canManage }] = await Promise.all([
     getStaffingView(
       db,
       shop.id,
@@ -182,7 +183,6 @@ export default async function StaffingPage({
       // exactly as Today's queue and the trip page do.
       { diversPerDivemaster: shop.diversPerDivemaster },
     ),
-    listStaff(db, shop.id),
     // The whole week's blackouts, whoever's: a person's own draw as quiet
     // chips in their row, and everybody's are needed to warn on an assignment.
     // Each note only as this reader may read it (#2673).
@@ -238,8 +238,8 @@ export default async function StaffingPage({
   const gapWords = staffingGapWords(t);
 
   const myBlocks = blocks.filter((block) => block.personId === session.user.personId);
-  // The reader's own standing answer, off the roster this page already read.
-  const me = staff.find((member) => member.person.id === session.user.personId)?.person;
+  // The reader's own consent and public name, from the staffing view's roster.
+  const me = view.staff.find((member) => member.person.id === session.user.personId)?.person;
   const crewConsented = me?.crewPublicConsentAt != null;
   // What ships, or what would if they said yes. Somebody who has already agreed
   // sees the string that is on their departures right now; somebody who has not
@@ -256,9 +256,9 @@ export default async function StaffingPage({
   // to choose, and one binding cannot drift from another.
   const createShift = createShiftAction.bind(null, weekStart);
   const deleteShift = deleteShiftAction.bind(null, weekStart);
-  // The crew's own two acts, and the owner's answer (issue #1235). Bound to
-  // the week for the same reason every other act here is: a save that threw
-  // the reader back to this week made building next week's roster impossible.
+  // Crew requests, availability and public-name consent, plus the manager's
+  // answer (issue #1235). Each carries the week so a save keeps the reader on
+  // the roster they were editing.
   const requestCrew = requestCrewAction.bind(null, weekStart);
   const decideRequest = decideCrewRequestAction.bind(null, weekStart);
   const saveAway = saveAwayAction.bind(null, weekStart);
@@ -344,7 +344,7 @@ export default async function StaffingPage({
                 <Field label={t("staffing.addShift.person")}>
                   <select name="personId" required className={controlClass}>
                     <option value="">{t("staffing.addShift.choosePerson")}</option>
-                    {staff.map((member) => (
+                    {view.staff.map((member) => (
                       <option key={member.person.id} value={member.person.id}>
                         {member.person.fullName}
                       </option>
@@ -399,7 +399,7 @@ export default async function StaffingPage({
                     defaultValue={session.user.personId}
                     className={controlClass}
                   >
-                    {staff.map((member) => (
+                    {view.staff.map((member) => (
                       <option key={member.person.id} value={member.person.id}>
                         {member.person.fullName}
                       </option>

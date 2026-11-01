@@ -80,60 +80,15 @@ function excerpt(body: string): string {
 }
 
 /**
- * **One message, as a ledger row** (ADR 20260907-two-way-inbox; the grammar is
- * 20260827-clearwater-surface-language).
- *
- * Who wrote, what they said, and when. The row's kind is the channel, because
- * that is what decides where an answer goes; whether it has been answered is
- * the group the row sits in, so no row carries a state word of its own.
- *
- * **A row is a door only when there is a record behind it.** A message from an
- * address nobody on the roster holds has no diver page to open, so it renders
- * that address instead of a link — a stretched row link reaching nothing is a
- * promise the surface cannot keep, and the address is half of what that row is
- * for.
- *
- * **Every row ends on one chevron that opens it in place** (visual review A15;
- * `InboxRowOpen`), and the open view is the one place a row's acts live: Open
- * the record first when there is one, then the acts. A waiting message offers **Mark done** — one state for "answered somewhere
- * else" and "no longer relevant", the same `answered_at` a sent reply stamps —
- * and a done one offers **Move back to waiting**, for a message marked done too
- * early. Every row ends on the same control, so every date in the column ends
- * on the same line whatever the row offers. The dates carry no zone: the list
- * header names it once (`inbox/page.tsx`).
- *
- * **Only a stranger's row offers Delete** (issue #1506). With no record there
- * is no door and no composer, so a stranger's message could be read and never
- * answered. A row that *has* a record gets none: what a diver wrote belongs to
- * their conversation. The invariant that actually holds is `person_id is null`
- * in `deleteStrangerInboundMessage`'s `where` (`security-reviewer`, issue
- * 1506); a render guard decides what a staffer is offered, never what the
- * server accepts. The delete asks first: the write is soft (ADR
- * 20260820-every-delete-is-soft), but nothing a staffer can reach restores it.
- *
- * **A message about a boat names the boat** (UX review 2026-10-13, item 19).
- * When the sender holds a seat that was inside the running-late window when
- * they wrote (`messageSeats`, src/db/running-late.ts), the row says which
- * departure, and its "⋯" offers **Mark running late**: the mark the diver's
- * own tap sets, which the roster and the manifest already show. A sentence is
- * never read as a command (ADR 20260909-reply-keywords), so a person decides;
- * once the seat carries the mark, by any door, the row says so instead. When
- * the sender holds **more than one** such seat, the row names each and the "⋯"
- * offers **Mark running late for {trip}** once per seat, so the desk chooses
- * (issue #2551); the server re-derives the candidates and refuses any other.
- *
- * **The seat is a door, and moving it is one tap away** (fourth UX review,
- * item 32). Outside the late window the row names every seat the sender
- * already held when they wrote (`inboxSeats`), so "Could I switch to the
- * afternoon boat?" names the boat it is about. "Booked on …" opens that seat
- * on its roster, and the "⋯" offers **Move to another departure** (one per
- * seat, each naming its departure, when there are several), which opens the
- * same row with its move already open: the roster's one move path decides,
- * and nothing here moves a seat.
- *
- * **The door lands on the message, not the top of the conversation.** Each
- * inbound message on the record carries `id="message-<id>"`, and the record's
- * disclosure opens whichever group holds the fragment and scrolls it in.
+ * A linked row opens the exact message on the diver record; an unmatched
+ * sender has no record door. Delete is offered only for unmatched senders and
+ * the server independently restricts its soft-delete to stranger messages.
+ * Row acts stay in the expanded view. Intent labels are hints, never commands;
+ * late-seat candidates are explicit and re-derived by the server; when several
+ * seats match, each action names its departure. Moves open the roster's
+ * canonical flow. The disclosure opens and scrolls to the linked message
+ * anchor. Stranger bodies wrap in full; diver rows show an excerpt because the
+ * full message is one tap away.
  */
 export function InboxRow({
   row,
@@ -178,12 +133,9 @@ export function InboxRow({
   const recordHref = message.personId
     ? `${shopPath(shopSlug, "divers", message.personId)}#${inboxMessageAnchor(message.id)}`
     : null;
-  // **A stranger's words wrap, whole** (pixel-craft class 8, K-460). A door
-  // row's excerpt is one line because the whole message is on the record one
-  // tap away; a stranger has no record, so one line cut their words
-  // mid-sentence with nothing able to open the rest. No line count cuts them
-  // either: three lines held the seeded message only where its column was
-  // wide. The 140-character excerpt is what bounds the row.
+  // A diver's full message is one tap away, so the door row keeps a one-line
+  // excerpt. A stranger has no record to open; let their words wrap in full.
+  // The excerpt's 140-character cap bounds the row.
   const wordsCut = message.personId
     ? "truncate print:overflow-visible print:whitespace-normal print:text-clip"
     : "wrap-anywhere";
@@ -292,10 +244,9 @@ export function InboxRow({
           </div>
         }
       >
-        {/* The name beside the message from `md`, not `sm`: beside the kind
-          column, the date and the door's slot, its 176px column left the
-          message ~122px at 640 (K-460, K-461). Below `md` the name sits over
-          the message, which takes the body's whole width. */}
+        {/* Beside the kind, date and menu, the name needs a wider row to leave
+          the message room. Below `md` it sits above the message, which then
+          takes the body's full width. */}
         <div className="flex min-w-0 flex-col gap-1 md:flex-row md:items-baseline md:gap-4">
           <p className="min-w-0 truncate font-semibold md:w-44 md:shrink-0 print:overflow-visible print:whitespace-normal print:text-clip">
             {name}
@@ -325,9 +276,8 @@ export function InboxRow({
                 })}
               </p>
             ) : null}
-            {/* `wrap-anywhere`: a stranger's address has no break in it, and at
-              640 it ran 96px out of a 72px column (K-461). Cut, it would lose
-              half of what the row is for, so it breaks inside the column. */}
+            {/* A stranger's address may have no natural break; wrap it inside
+              the column so the row keeps the full address. */}
             {facts.length > 0 ? (
               <p className="mt-0.5 wrap-anywhere text-sm text-muted">
                 {facts.map((fact, index) => (

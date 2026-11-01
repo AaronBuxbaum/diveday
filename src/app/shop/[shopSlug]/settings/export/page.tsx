@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { DownloadAcknowledgmentLink } from "@/components/DownloadAcknowledgmentLink";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { cardSummaryClass, SectionCard } from "@/components/ui/card";
@@ -14,7 +15,6 @@ import { requireShopSurface } from "@/lib/session";
 import { utcToWallTime } from "@/lib/zoned";
 import { DataTabs } from "../_components/DataTabs";
 import { settingsPaneClass } from "../_components/settings-pane";
-import { DownloadExportButton } from "./DownloadExportButton";
 import { EXPORT_PURPOSE_KEYS } from "./file-index";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -88,7 +88,7 @@ export default async function DataOutSettingsPage({
         eyebrowHref={`/shop/${session.user.shopSlug}/settings`}
         title={t("settings.data.title")}
         actions={
-          <DownloadExportButton
+          <DownloadAcknowledgmentLink
             href={`${basePath}/download`}
             idleLabel={t("settings.export.downloadButton.idle")}
             acknowledgedLabel={t("settings.export.downloadButton.acknowledged")}

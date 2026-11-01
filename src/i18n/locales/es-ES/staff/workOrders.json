@@ -156,7 +156,7 @@
   "diver": {
     "heading": "Equipo propio",
     "gearEmpty": "Nada en ficha",
-    "onTheBench": "{count, plural, one {# en el taller} other {# en el taller}}",
+    "onTheBench": "{count, number} en el taller",
     "deletePiece": "Eliminar {label}",
     "deletePieceShort": "Eliminar",
     "deletingPiece": "Eliminando…",

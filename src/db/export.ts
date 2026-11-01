@@ -32,7 +32,7 @@
 import { and, asc, count, eq, getTableColumns, inArray, isNull, or } from "drizzle-orm";
 import { fieldGuideCards } from "@/i18n/marine-life-labels";
 import { diverTranslator } from "@/i18n/messages";
-import { canExportShopData, type Role } from "@/lib/authz";
+import { canExportShopData } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import {
   type DiverExportBundleInput,
@@ -41,6 +41,7 @@ import {
 } from "@/lib/export";
 import { isUnsightedSelfDeclaration } from "@/lib/readiness";
 import { withoutRehearsals } from "@/lib/rehearsal-export";
+import { readActiveStaffRoles } from "./authz";
 import { sortBuddyMemberRowsByTeam } from "./buddy-pairs";
 import type { AppDb, AppTransaction } from "./client";
 import { DIVER_EXPORT_FILES } from "./export-diver-files";
@@ -77,11 +78,9 @@ import {
   tripReviews,
   tripScheduleDays,
   trips,
-  userAccounts,
   workOrderCare,
   workOrderLines,
 } from "./schema";
-import { livePerson } from "./trips-live";
 
 /** Whose bundle to load: one shop's whole, or one diver's own inside it. */
 export type ExportBundleScope =
@@ -1395,23 +1394,6 @@ export async function canPersonExportShopData(
   shopId: string,
   personId: string,
 ): Promise<boolean> {
-  const [person] = await db
-    .select({ id: people.id })
-    .from(people)
-    .where(and(eq(people.id, personId), eq(people.shopId, shopId), livePerson()))
-    .limit(1);
-  if (!person) return false;
-
-  const [account] = await db
-    .select({ status: userAccounts.status })
-    .from(userAccounts)
-    .where(eq(userAccounts.personId, personId))
-    .limit(1);
-  if (account?.status !== "active") return false;
-
-  const roleRows = await db
-    .select({ role: personRoles.role })
-    .from(personRoles)
-    .where(eq(personRoles.personId, personId));
-  return canExportShopData(roleRows.map((row) => row.role as Role));
+  const roles = await readActiveStaffRoles(db, shopId, personId);
+  return roles !== null && canExportShopData(roles);
 }

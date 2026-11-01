@@ -6,33 +6,18 @@ import { log } from "@/lib/log";
 import { flushLogs } from "@/lib/observability";
 import { sentry } from "@/lib/observability/sentry";
 
-/**
- * A prune run takes batches of `PRUNE_BATCH_LIMIT` rows per table until each
- * table is inside its window or 45 seconds have gone (`PRUNE_TIME_BUDGET_MS`),
- * so an ordinary week finishes in seconds and a backlog spends at most the
- * budget plus one batch. 60s leaves room for that last batch and the log line,
- * and still kills a run that has wedged. Raise both together, and only with
- * evidence from `cron_retention.prune_complete`.
- */
+/** The 45s batch-admission budget is intended to leave room under the 60s
+ * platform limit for the last batch and completion log; an in-flight batch can
+ * still exceed it. Raise only with recent `cron_retention.prune_complete` evidence. */
 export const maxDuration = 60;
 
-/**
- * Sentry Cron Monitor identity for the weekly prune. Separate from the daily
- * tick's monitor: a missed prune and a missed reminders run are different
- * incidents with different urgency, and collapsing them would hide one behind
- * the other. `SENTRY_RETENTION_CRON_MONITOR_SLUG` lets an operator point at a
- * per-environment monitor without a deploy.
- */
+/** Dedicated weekly monitor, separate from the daily tick; the
+ * `SENTRY_RETENTION_CRON_MONITOR_SLUG` override selects its identity per environment. */
 const CRON_MONITOR_SLUG =
   process.env.SENTRY_RETENTION_CRON_MONITOR_SLUG || "diveday-retention-prune";
 
-/**
- * Must stay in lockstep with the `crons` entry in vercel.json — Sentry uses it
- * to decide when a check-in is *missing*, which is the whole point of the
- * dead-man's switch. `checkinMargin` is generous because a prune being a few
- * hours late is not an incident; `maxRuntime` sits above `maxDuration` so a
- * run the platform killed reads as timed-out rather than still running.
- */
+/** Match `vercel.json` in UTC so Sentry detects a missing check-in; keep
+ * `maxRuntime` above the platform's `maxDuration` to report killed runs as timed out. */
 const CRON_MONITOR_CONFIG = {
   schedule: { type: "crontab", value: "8 3 * * 0" },
   checkinMargin: 240,
@@ -41,27 +26,12 @@ const CRON_MONITOR_CONFIG = {
 } as const;
 
 /**
- * Prune the append-only tables past their retention windows (DATA-M4/PAY-L2,
- * ADR 20260803-append-only-retention). Weekly rather than daily: retention
- * windows here are measured in hundreds of days, so a daily pass would do
- * nothing 364 times a year while still costing a function invocation and a
- * table scan.
- *
- * **The windows are HD-11's decision to make, not this route's.** It applies
- * whatever `src/lib/retention.ts` states; changing a number is a one-file edit
- * there and needs no change here.
- *
- * Fails closed exactly like `/api/cron/reminders`: `CRON_SECRET` must be
- * configured and presented as a bearer token, or the endpoint answers 503
- * (unconfigured) / 401 (wrong or missing token) and deletes nothing. The auth
- * gate runs *before* the Sentry check-in so an unauthorized probe can never
- * tell the monitor the prune happened.
- *
- * Reports what it deleted three ways, because a prune that silently stops is
- * indistinguishable from a prune with nothing to do: the response body carries
- * the per-table outcomes, `cron_retention.prune_complete` carries the same
- * counts to the log drain, and the Sentry check-in catches the case no
- * in-handler logging can — the run never happening at all.
+ * Weekly pruning applies the HD-11 windows in `src/lib/retention.ts` (DATA-M4/PAY-L2;
+ * ADR 20260803-append-only-retention). Authorization fails closed: missing
+ * configuration returns 503, and a missing or wrong bearer token returns 401;
+ * the gate precedes Sentry check-in and all deletion. Per-table outcomes go in
+ * the response and completion log; the separate Sentry monitor detects a run
+ * that never starts, distinguishing no work from no check-in.
  */
 export async function GET(request: Request) {
   const refusal = requireCronSecret(request);

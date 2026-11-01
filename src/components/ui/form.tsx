@@ -118,30 +118,12 @@ export function textareaClassFor(rows: TextareaRows): string {
 }
 
 /**
- * **The one search box** — a `type="search"` control wearing `controlClass`,
- * a magnifier in its leading inset, and its label off-screen.
- *
- * Every staff list that can be searched renders this and nothing else around
- * it: no caption above the box, no "Search" button beside it. Four grammars
- * used to coexist — the orders toolbar's bare box, the diver roster's bare box,
- * the dive-site library's bordered card with a "Find a site" caption and a
- * Search button, and the counter's captioned box with a "Search queue" button
- * — and which one a page got was a function of when it was written. The
- * Clearwater decision that demoted the orders filter card to a toolbar (ADR
- * 20260827-clearwater-surface-language, decision 7) is the precedent: a search
- * is a toolbar control, and the glyph is what says so.
- *
- * The label is `sr-only` because the glyph and the placeholder already say
- * "search" to a sighted reader, and a caption restating them is what
- * copy-restraint deletes — but the accessible name is not the sighted reader's
- * convenience and stays. No submit button: a form with one text control
- * submits on Enter, and the surfaces that want type-to-apply drive
- * `requestSubmit()` themselves through `onInput`.
- *
- * Every native input prop passes through — `ref`, `value`/`onChange` for a
- * controlled box, `defaultValue` for a form-owned one, `data-*` hooks the e2e
- * suite waits on — so a surface never has a reason to spell the box by hand.
+ * Search input with a required accessible name and decorative magnifier. Native
+ * input props and refs pass through; Enter submits, while type-to-apply callers
+ * may handle `onInput` (ADR 20260827-clearwater-surface-language, decision 7).
+ * See docs/design/forms-and-controls.md.
  */
+
 export function SearchField({
   id,
   label,
@@ -192,45 +174,13 @@ export function SearchField({
 }
 
 /**
- * **A date box that looks like one on every platform** — a `type="date"`
- * control wearing `controlClass`, with our own calendar glyph in its trailing
- * inset (issue #1415).
- *
- * A bare `<input type="date">` is drawn by the platform, and the platforms
- * disagree about whether an empty one shows anything at all. Chromium paints
- * `mm/dd/yyyy` *and* its own calendar indicator; **iOS Safari paints neither**
- * — an empty date field there is a blank rounded rectangle, indistinguishable
- * from the text boxes above it, with no cue that tapping it opens a picker.
- * The glyph is ours so the box reads the same everywhere, and it is why every
- * date input in the app renders this rather than spelling itself.
- *
- * **`opacity-0`, never `hidden`.** Chromium's own indicator stays in the
- * layout underneath ours, so a Chromium tap on that spot still opens the
- * native picker; `display: none` would take the tap target away with the
- * pixels and leave the glyph looking live and doing nothing. Which is also
- * why `pe-9` and `end-3` are a pair: drift them apart and the visible glyph
- * stops sitting over the real control.
- *
- * Firefox draws a calendar icon of its own and exposes no pseudo-element to
- * hide it, so a Firefox reader sees two. Known and accepted — there is no CSS
- * that reaches it, and the alternative is measuring the browser in JavaScript
- * to hide our own glyph, which costs more than the duplicate.
- *
- * Every native prop passes through — `min`/`max`, `value`/`onChange`,
- * `defaultValue`, and a callback `ref` (the schedule builder focuses one on
- * mount) — so a surface never has a reason to reach past this.
- *
- * **Every temporal box, not only a date.** `type` takes `month`, `time` and
- * `datetime-local` too: spelled bare, those kept the platform's solid black
- * indicator, further in than a date box's muted outline on the same form,
- * and an empty one on iOS showed nothing at all (the pixel probe's state
- * atlas, K-54). A time draws a clock; the rest draw the calendar.
- *
- * **An empty box looks empty.** The input is `DateInput`, a client leaf that
- * marks itself `data-empty` while it holds no value, and `globals.css` paints
- * the platform's `mm/dd/yyyy` mask in the placeholder's colour when it does —
- * it used to draw in the ink of a filled answer (K-69).
+ * Native temporal input with a decorative trailing glyph. Native props and
+ * refs pass through. Keep the browser picker indicator transparent rather than
+ * hidden so its hit target remains usable beneath the glyph; Firefox's extra
+ * native glyph is an accepted platform difference. See
+ * docs/design/forms-and-controls.md.
  */
+
 export function DateField({
   type = "date",
   className = "",

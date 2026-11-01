@@ -1,5 +1,6 @@
 import { and, asc, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
+import { createBoat } from "@/db/boats";
 import { tripScheduleDays, trips } from "@/db/schema";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
@@ -145,6 +146,26 @@ describe("adding a course that meets on named days", () => {
     });
     expect(await redirectedTo(() => addDepartureAction(shop.slug, form))).toContain(
       "builder=days-span-repeat",
+    );
+    expect(await departures(db, shop.id)).toEqual([]);
+  });
+});
+
+describe("checking the assigned boat when adding a departure", () => {
+  it("refuses seats above the selected boat's passenger certificate", async () => {
+    const { db, shop } = await signedInOwner();
+    const boat = await createBoat(db, shop.id, "Certified hull", 8, null, {
+      certifiedPassengers: 4,
+      certifiedTotalPersons: null,
+      coiExpiresOn: null,
+      inspectionDueOn: null,
+      registrationExpiresOn: null,
+      insuranceExpiresOn: null,
+    });
+    const form = courseForm(shop.timezone, [], { capacity: "5", boatId: boat.id });
+
+    expect(await redirectedTo(() => addDepartureAction(shop.slug, form))).toContain(
+      "builder=capacity-above-certificate",
     );
     expect(await departures(db, shop.id)).toEqual([]);
   });

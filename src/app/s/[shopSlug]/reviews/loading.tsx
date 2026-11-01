@@ -2,22 +2,12 @@ import { ShopPageHeaderSkeleton, SkeletonLineBars } from "@/components/ShopPageH
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
 
 /**
- * Body-shaped skeleton for the public review archive (ADR
- * 20260804-instant-navigation).
- *
- * Without this file the route fell back to `src/app/s/[shopSlug]/loading.tsx`,
- * the *schedule* skeleton, at `max-w-6xl` — so a diver tapping "83 reviews"
- * watched day headers and departure rows at the wrong width and then landed on
- * a 4xl column of reviews. The width here tracks the page's own `max-w-4xl`
- * container, and the bars are shaped like the hairline rows `ReviewLedger`
- * renders (ADR 20260827-clearwater-surface-language, decision 2).
- *
- * **Each bar stands in the line box it replaces** (pixel-craft class 11,
- * K-383): the aggregate's 24px line, the histogram's five 20px rows `gap-1.5`
- * apart, and in each review the 24px line the stars sit on (their parent's
- * strut), the 24px quote — two lines on a phone — and the 20px byline. It had
- * no histogram and 16px-short reviews, so the first one landed 144px below its
- * grey row.
+ * Archive-shaped skeleton (ADR 20260804-instant-navigation), sized to the
+ * page's max-w-4xl column and the hairline ledger rows (ADR
+ * 20260827-clearwater-surface-language, decision 2). Match each placeholder
+ * to the line box it replaces (pixel-craft class 11, K-383): the 24px
+ * aggregate, five 20px histogram rows, and each review's 24px rating line,
+ * 24px quote (up to two phone lines), and 20px byline.
  */
 export default function PublicReviewsLoading() {
   return (
@@ -25,14 +15,13 @@ export default function PublicReviewsLoading() {
       <div className="animate-pulse">
         <ShopPageHeaderSkeleton titleWidth="w-48" description={false} />
 
-        {/* The aggregate, on one 24px line: the star row, then the figure and
-            the count. */}
+        {/* Aggregate line. */}
         <div className="flex h-6 items-center gap-2">
           <div className="h-4 w-24 rounded bg-surface-sunken" />
           <div className="h-4 w-28 rounded bg-surface-sunken" />
         </div>
 
-        {/* The five rating rows, one 20px `text-sm` line each. */}
+        {/* Five rating rows. */}
         <div data-histogram className="mt-4 flex max-w-sm flex-col gap-1.5">
           {[5, 4, 3, 2, 1].map((rating) => (
             <div key={rating} className="flex h-5 items-center">
@@ -41,7 +30,7 @@ export default function PublicReviewsLoading() {
           ))}
         </div>
 
-        {/* The ledger `ReviewLedger` renders — hairline rows, not a card grid. */}
+        {/* Hairline rows matching `ReviewLedger`. */}
         <div className="mt-4 flex flex-col">
           {[0, 1, 2, 3].map((row) => (
             <div key={row} className={`py-4 ${ledgerRowBoxClass}`}>

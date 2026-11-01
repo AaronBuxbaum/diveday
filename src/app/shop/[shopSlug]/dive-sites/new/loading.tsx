@@ -22,9 +22,7 @@ export default function NewDiveSiteLoading() {
   return (
     <StaffPage width="reading">
       <div className="animate-pulse">
-        {/* The header's eyebrow bar is the back link: the page draws one,
-            as the header's own eyebrow. A second, standalone bar above it
-            stood every bar below 36px lower than what replaced it (K-423). */}
+        {/* The header eyebrow is the back link; do not add a second stub (K-423). */}
         <ShopPageHeaderSkeleton
           titleWidth="w-56"
           description

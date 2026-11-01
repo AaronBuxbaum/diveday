@@ -60,9 +60,9 @@ export function Pager({
 }) {
   if (pageCount <= 1) return null;
   const position = words.position(page, pageCount);
-  // Search params are not included in App Shell prefetch, so the speculative
-  // render cannot serve a page turn. Keep both links unprefetched to avoid that
-  // extra server work and the observed prefetch/click abort race.
+  // Search params are absent from App Shell prefetch, so a page turn still
+  // needs a server read and speculative work can race the click. Keep both
+  // links unprefetched.
   return (
     <nav
       aria-label={words.label}

@@ -78,14 +78,9 @@ export default async function PublicReviewsPage({
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10 print:py-3">
-      {/* No standing description under the title. `reviews.allDescription`
-          said "read what divers who were on the boat said about their day" —
-          which is the page's own name plus a redundant explanation. It remains
-          the metadata description where a search result genuinely needs a
-          sentence, but does not add another paragraph to the page. */}
-      {/* The eyebrow is the way back (principle 10's one grammar for up); a
-          second "Back to schedule" button in `actions` went to the identical
-          destination, which is the second path copy-restraint deletes. */}
+      {/* Keep the description in metadata; repeating it below the title adds
+          no information. */}
+      {/* The eyebrow is the single way back to the schedule (principle 10). */}
       <ShopPageHeader
         eyebrow={t("reviews.sectionTitle")}
         eyebrowHref={publicSchedulePath(shop.slug)}
@@ -93,13 +88,8 @@ export default async function PublicReviewsPage({
       />
 
       <section aria-label={t("reviews.sectionTitle")}>
-        {/* **The aggregate, exactly once** (ADR
-            20260827-clearwater-surface-language, decision 8): the stars, the
-            figure and the count on one line — where it used to be a star row,
-            a second line repeating the average and count, and a third line of
-            explanatory copy. The
-            fill is `--accent` because this is a public page and a filled rating
-            star is data ink (decision 11). */}
+        {/* Show the aggregate once, with the stars, average and count together
+            (ADR 20260827-clearwater-surface-language, decisions 8 and 11). */}
         {average !== null ? (
           <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
             <StarRating
@@ -114,9 +104,7 @@ export default async function PublicReviewsPage({
                 maximumFractionDigits: 1,
               }).format(average)}
             </span>
-            {/* Ratings and written reviews are two counts (UX review
-                2026-10-10, item 17): "83 reviews" over four written ones read
-                as padding. */}
+            {/* Keep rating and written-review counts distinct. */}
             <span className="tabular-nums">
               {reviewPage.total > 0
                 ? t("reviews.ratingsAndReviews", {
@@ -128,24 +116,19 @@ export default async function PublicReviewsPage({
           </p>
         ) : null}
 
-        {/* **The bare ratings, as five counted rows.** Two-thirds of the
-            archive used to be stars+name+date rows with nothing to read —
-            the aggregate restated one rating at a time across five pages.
-            The distribution carries every released rating in 100px (the
-            counts are the facts, principle 6; the bars are the quiet shape,
-            aria-hidden like the reports ledger's), and the paged list below
-            keeps only the reviews with words. */}
+        {/* The distribution counts all published ratings, including those
+            without text; the paged ledger contains written reviews. Counts
+            carry the data (principle 6); bars are hidden from assistive tech. */}
         {average !== null ? (
           <ul className="mt-4 flex max-w-sm flex-col gap-1.5">
-            {/* A bar only once somebody gave that many stars: a row of
-                empty bars reads as a fabricated distribution. */}
+            {/* Render only ratings present in the distribution. */}
             {[5, 4, 3, 2, 1].map((rating) => {
               const ratingCount = distribution.get(rating) ?? 0;
               if (ratingCount === 0) return null;
               return (
                 <li key={rating} className="flex items-center gap-3 text-sm tabular-nums">
-                  {/* The row a screen reader hears: "5 out of 5 stars · 28".
-                      The numeral+dingbat is presentation. */}
+                  {/* Expose a localized rating name; the numeral and star are
+                      visual presentation. */}
                   <span className="sr-only">{t("reviews.ratingOption", { rating })}</span>
                   <span className="w-6 text-end" aria-hidden="true">
                     {rating}
@@ -170,10 +153,7 @@ export default async function PublicReviewsPage({
           </ul>
         ) : null}
 
-        {/* Only a shop with no released ratings at all is empty. With bare
-            ratings and no written words, the distribution above already
-            accounts for everything — an "empty" card under it would
-            contradict the counts it sits below. */}
+        {/* Empty only when there are no ratings or written reviews. */}
         {reviewPage.total === 0 && average === null ? (
           <EmptyState title={t("reviews.allEmptyHeading")} className="mt-4" />
         ) : null}
@@ -188,11 +168,7 @@ export default async function PublicReviewsPage({
         ) : null}
       </section>
 
-      {/* The shared pager in the diver's words. This was a hand-copied
-          `justify-between` row with an empty `<span>` standing in for a
-          missing link, the shape that put the staff pager's readout 28px off
-          centre; the one pager centres it at every width. It renders nothing
-          on a single page, so the archive needs no guard of its own. */}
+      {/* Shared pager owns its layout and omits itself on a single page. */}
       <Pager
         page={reviewPage.page}
         pageCount={reviewPage.pageCount}

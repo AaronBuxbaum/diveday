@@ -2,87 +2,24 @@ import { HOUR_MS } from "./clock";
 import { DEPARTURE_BUFFER_MS, hasReturned } from "./trips";
 
 /**
- * **"Earliest flight"** — when a diver may board a plane after a day's diving
- * (issue #1425, N-04; owner decision 2026-09-07).
+ * **Earliest flight** after a dive day (issue #1425, N-04). This advisory
+ * informs; it never gates. DiveDay uses fixed 18/24-hour intervals, above
+ * DAN's published 12/18-hour minimums; ADR 20261001-logbook removed the
+ * per-shop setting. Wording names the shop as the one asking and calls the
+ * interval a minimum, not a promise of safety or DAN's own figure (issue
+ * #1433).
  *
- * Informs, never gates. DAN's published guidance is a *minimum* preflight
- * surface interval — 12 hours after a single no-decompression dive, 18 after
- * repetitive dives or multiple days of diving — and DiveDay asks for longer:
- * 18 and 24 hours, {@link DEFAULT_FLY_SAFE_HOURS}, one fixed rule for every
- * shop. (It was a per-shop setting, `shops.fly_safe_hours_*`, until ADR
- * 20261001-logbook cut it; the defaults it shipped with are the rule now.)
- * The sentence a diver reads names the shop as the one asking and DAN as the
- * practice behind it ("{shop} asks you to wait at least until {when} before
- * flying: 24 hours after your last dive with us, following DAN's guidance")
- * rather than putting the figure in DAN's mouth: DAN publishes 12 and 18, so
- * a sentence reading "24 hours, by DAN's guidance" misquotes it.
+ * This covers only no-decompression diving. An explicitly flagged departure,
+ * or an earlier flagged dive, yields no answer (H-84, #1555); absent flags are
+ * treated as unflagged. Evidence is limited to this shop and its person
+ * records; the two-day lookback (#1439) can miss walk-ups without a shared
+ * person row. Recap surfaces reach bookings, not crew, so crew coverage
+ * remains deferred under H-75/#1557. This does not calculate from dive
+ * profiles or model other altitude exposure.
  *
- * For the same reason the lead-in states the interval rather than a verdict.
- * It read "Fly-safe from {when}:" until issue #1433: a minimum that lowers DCS
- * risk does not remove it, "safe" was the only word in the sentence that read
- * as a promise, and DAN's own term is *minimum preflight surface interval*.
- * The Spanish carried the verdict twice over — "Puedes volar a partir del" is
- * literally *you can fly* — so both locales moved together.
- *
- * Three more words of it are load-bearing, and each answers a limit below.
- * The shop is the *subject*, because "Earliest flight 18:10" followed by an
- * attributed reason read as a fact and then its justification, and the time
- * got the authority. "At least", because every DAN publication of these
- * figures carries the qualifier: they are consensus minimums, and longer is
- * safer. And "with us", because of the second limit below — the sentence may
- * not describe as *your* last dive a dive it knows only because it was booked
- * here. The earlier-day clause is scoped the same way ("our records show
- * another dive day in the last two days"), which is both the honest reading of
- * {@link FLY_SAFE_MULTI_DAY_LOOKBACK_DAYS} and the fact that clause
- * establishes; it said "this was not your first day diving", which is true of
- * every certified diver alive.
- *
- * Five limits worth knowing before this is extended, and none of them can be
- * closed from inside this module.
- *
- * DAN's guidance covers **no-decompression** recreational diving — a dive that
- * took stops needs substantially longer, and DiveDay knows only what the shop
- * says: a departure marked `trips.exceeds_no_deco_limits` gets no answer at all
- * (H-84, issue #1555), and one nobody marked is read as no-decompression.
- *
- * The only dives it can see are the ones booked at *this* shop: a diver who
- * spent the week with another operator and made one dive here today still
- * reads *single*, because nothing in DiveDay records the week.
- *
- * And it sees an earlier day only when both days resolve to one `people` row.
- * A booking taken without an email always inserts a fresh person (the unique
- * index is partial, so nulls never collide), so the cash walk-up who dives
- * Monday and comes back Tuesday is two people as far as this is concerned —
- * and walk-ups are a large share of a busy shop's multi-day divers. Issue
- * #1439 widened this to a second day at this shop; it did not make the shop's
- * records of a person complete.
- *
- * Whose answer it is, rather than what it can see: the sentence reaches a
- * person through a **booking** — `getRecapPageData` resolves it from a booking
- * id, and `sendRecaps` sends it to booking rows — so crew, who are
- * `trip_assignments` rows rather than bookings, never receive one at all.
- * Divemasters diving five or six days a week are the population the "multiple
- * days of diving" clause is most about, and they are the group this cannot
- * reach. That is a deferral, not an oversight: the reader needs no work, since
- * `peopleWhoDivedBefore` already answers for any person id, and what is
- * missing is a surface — the day close-out, the staffer's own record, or
- * nowhere. A `dive-domain-expert` review on #1552 raised it, issue #1557 has
- * the argument, and H-75 in `docs/product/human-decisions/` is where the
- * owner's call gets written down.
- *
- * What that guidance is about, finally, is **exposure to altitude**, of which
- * a pressurised cabin is only the common case. A shop with a mountain road
- * between the dock and the airport has divers whose real exposure is the drive,
- * hours before the flight this names, and nothing in DiveDay knows the road is
- * there. The diver's sentence stays a sentence about flying, because naming a
- * road DiveDay cannot see would be the same guess in longer words.
- *
- * Two things this deliberately does not do. It never computes from a dive
- * profile — depth and bottom time are a computer's business, and DiveDay is
- * not a dive computer. And it never chooses the shorter reading when the
- * record is ambiguous: a day whose record disagrees with its plan takes the
- * repetitive hours, and a record short of its plan or missing its last exit
- * time anchors on the buffered return rather than on an earlier dive.
+ * When records are incomplete or disagree with the plan, use the buffered
+ * return only after `hasReturned`; never anchor an earlier answer on a partial
+ * dive log.
  */
 export type FlySafeBasis = "single" | "repetitive";
 
@@ -111,25 +48,9 @@ export type FlySafeHours = { single: number; repetitive: number };
 export const DEFAULT_FLY_SAFE_HOURS: FlySafeHours = { single: 18, repetitive: 24 };
 
 /**
- * How far back "multiple days of diving" reaches: this many **local calendar
- * days** in the shop's own zone, counted back from the departure's day (issue
- * #1439). Two means yesterday and the day before.
- *
- * DAN publishes no window for that clause at all — 18 hours covers
- * "repetitive dives or multiple days of diving" and stops there — so the
- * figure is DiveDay's reading, not a quotation. What is *not* a judgement call
- * is the unit: DAN's clause counts days, and so does this. A span of hours got
- * three ordinary cases wrong at once — two 8 AM departures on consecutive days
- * are exactly 24 hours apart, the same pair is 25 across a fall-back boundary,
- * and Monday morning to Tuesday afternoon is 30 — and each error fell toward
- * the shorter advice.
- *
- * Two rather than one because a diver on a three-day package who takes a day
- * off the boat is still diving multiple days; more than two starts describing
- * a holiday rather than a surface interval. Erring wide costs a diver hours
- * ashore and nothing else: {@link DEFAULT_FLY_SAFE_HOURS}'s `repetitive` is
- * longer than its `single`, so reading repetitive can only ever lengthen a
- * wait.
+ * The two preceding **local calendar days** in the shop's zone (issue #1439).
+ * Calendar days preserve the intended unit across departure times and DST;
+ * an elapsed-hours window can miss a prior day at a boundary.
  */
 export const FLY_SAFE_MULTI_DAY_LOOKBACK_DAYS = 2;
 
@@ -211,10 +132,7 @@ export type FlySafeResult = {
  */
 export function flySafeFrom(input: FlySafeInput): FlySafeResult | null {
   const { executedDives, plannedDives, endsAt, divedRecently, now, hours } = input;
-  // DAN gives no preflight figure for a dive that took stops, so a departure
-  // the shop marked past no-decompression limits gets no answer at all — the
-  // same silence as a boat still at sea, never the recreational number with
-  // DAN's name beside it (H-84, issue #1555).
+  // H-84: DAN gives no figure for decompression diving.
   if (input.exceedsNoDecoLimits || input.decompressionRecently) return null;
   // The recorded count is read first so a day the crew logged as two tanks
   // says so, rather than being explained by a plan or by yesterday.
@@ -239,12 +157,7 @@ export function flySafeFrom(input: FlySafeInput): FlySafeResult | null {
   const laterDiveUntimed =
     lastExit !== null &&
     executedDives.some((dive) => dive.exitedAt === null && dive.diveNumber > lastExit.diveNumber);
-  // A tank the crew never opened a row for is the same hole as one logged
-  // without its exit, and the basis above already reads it that way. The
-  // anchor has to agree: on a two-tank morning charter with only tank one
-  // logged, its exit is around 09:45 against a 12:15 return, so anchoring
-  // there hands the diver a time two and a half hours early, in a sentence
-  // that ends by citing DAN.
+  // A missing planned dive is incomplete evidence; do not use an earlier exit.
   const recordShortOfPlan = executedDives.length < plannedDives;
 
   if (lastExit && !laterDiveUntimed && !recordShortOfPlan) {
@@ -257,22 +170,7 @@ export function flySafeFrom(input: FlySafeInput): FlySafeResult | null {
     };
   }
   if (endsAt && hasReturned(endsAt, now)) {
-    // A dive the crew never logged, or logged without an exit time: the
-    // return is the only instant on the record that is not before the day's
-    // real last dive ended — and the return that satisfies that is the
-    // *buffered* one. Boats run late, which is the whole reason this branch
-    // waits for `hasReturned` (scheduled return plus DEPARTURE_BUFFER_MS)
-    // before it answers at all; anchoring on the bare scheduled time would
-    // use that knowledge to decide whether to speak and then compute as if
-    // the boat tied up on time. A departure due at 14:00 that comes in at
-    // 15:30 would hand the diver a time ninety minutes early — the same
-    // shortfall the short-of-plan hole above reaches by its own route, and
-    // under the same floor.
-    //
-    // The copy is not the hole. It reads "after the day was due to end",
-    // never "after your last dive", so it never claims the anchor is an
-    // observation; an honest label on an early number is still an early
-    // number.
+    // For incomplete logs, the buffered return is the conservative floor.
     const scheduledHome = endsAt.getTime() + DEPARTURE_BUFFER_MS;
     const anchorAt = lastExit
       ? Math.max(lastExit.exitedAt.getTime(), scheduledHome)

@@ -46,13 +46,7 @@ export async function signOut(page: Page) {
   invalidateStaffStorageState();
 }
 
-/**
- * Check the minimum-age attestation box, present and `required` on a course
- * session's booking form whenever the course has a `minimumAge` (task 23) —
- * absent for a plain fun-dive trip. A no-op when the box isn't there, so
- * every course-session booking site can call this unconditionally right
- * before its submit click.
- */
+/** Check a course booking's required minimum-age attestation when present. */
 export async function acceptAgeAttestation(page: Page) {
   const checkbox = page.getByRole("checkbox", { name: /confirm every diver on this booking/ });
   if (await checkbox.isVisible().catch(() => false)) {
@@ -61,15 +55,8 @@ export async function acceptAgeAttestation(page: Page) {
 }
 
 /**
- * Choose the party size on a public booking form, whichever control the boat's
- * remaining seats put there.
- *
- * The count is a **segmented row of radios up to six seats and a `<select>`
- * above that** (ADR 20260827-the-divers-thread, decision 2 —
- * `MAX_PUBLIC_PARTY_SIZE` is 20, and a twenty-segment track fits no phone), so
- * which shape a spec meets depends on how full the departure is, which is not
- * a fact any of these specs is about. Both shapes answer to one accessible
- * name, so the wait is shared; only the act differs.
+ * Set party size after hydration; remaining capacity renders radios through six
+ * seats and a select above six.
  */
 export async function choosePartySize(page: Page, count: number) {
   const control = page.getByLabel("People", { exact: true });
@@ -79,34 +66,13 @@ export async function choosePartySize(page: Page, count: number) {
     return;
   }
   const label = count === 1 ? "1 person" : `${count} people`;
-  // Click the **label**, which is what a diver's thumb lands on, then assert
-  // the input took the value. `check()` on the radio itself cannot work here
-  // and cannot fail fast either: the input is `sr-only`, a 1px box lying under
-  // the very `<label>` that wraps it, so Playwright's hit-target check finds
-  // the label in front of its click point and retries that — "intercepts
-  // pointer events" — until the whole test times out. Three specs and both
-  // party-organizer captures died that way on 2026-08-28, each one a
-  // three-minute hang rather than an assertion.
-  //
-  // The label is found by the **value of the radio it wraps**, never by its own
-  // text: the segment showed "2 divers" until 2026-09-06 and shows "2" now, and
-  // a helper keyed on that spelling took the same 30-second hang the moment it
-  // changed (`courses.spec.ts`, CI on PR #1416). The accessible name is still
-  // the plural sentence, which is what the assertion below reads.
+  // Radio inputs are visually hidden: click the wrapping label by input value,
+  // then assert the radio's accessible name. Visible label copy may change.
   await control.locator(`label:has(input[value="${count}"])`).click();
   await expect(page.getByRole("radio", { name: label, exact: true })).toBeChecked();
 }
 
-/**
- * Answer "What's this dive for?" on the diver's own thread and save it.
- *
- * The question was five pills on the public booking form until 2026-09-06; it
- * is one `<select>` in the Day-of step of `/ready/<token>` now, asked after the
- * sale of the diver whose seat it is, and saved with the rest of the step
- * under one "Save day-of details" (third UX review, item 24). Waits on the
- * page's own notice rather than a timeout: the redirect carries no hash, so the
- * confirmation is the only thing that says it landed.
- */
+/** Save the diver's Day-of dive intent and wait for the action's status. */
 export async function saveDiveIntent(page: Page, label: string) {
   const step = await openThreadStep(page, "dayof");
   await step.getByLabel("What’s this dive for?").selectOption({ label });
@@ -116,25 +82,13 @@ export async function saveDiveIntent(page: Page, label: string) {
   ).toBeVisible();
 }
 
-/**
- * Book one seat on the departure whose public page is already open, and land
- * on the diver's own thread (`/ready/<token>`).
- *
- * The trip page stopped carrying the packing list and the dive briefings on
- * 2026-08-28 (ADR 20260827-the-divers-thread, decision 2 — the page sells, then
- * closes; what to bring and what you'll see down there are *preparation*, and
- * preparation belongs to a diver who has a seat). A spec about that reading
- * therefore has to hold one.
- */
+/** Submit one booking on the open public trip and wait for its `/ready/<token>` thread. */
 export async function bookASeatAndOpenThread(page: Page, name: string, email?: string) {
   await expect(page.getByLabel("People", { exact: true })).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Name", { exact: true }).fill(name);
   await page
     .getByLabel("Email", { exact: true })
-    // A caller passes one when it has to *say* the address afterwards — a
-    // test-only seed route that resolves a diver by email, say. Otherwise the
-    // derived one keeps every booking this makes distinct without a caller
-    // having to care.
+    // Pass an email when a caller needs to look up this diver; otherwise derive one.
     .fill(
       email ?? `${name.toLowerCase().replace(/[^a-z]+/g, "-")}-${e2eNow().getTime()}@example.com`,
     );
@@ -143,65 +97,28 @@ export async function bookASeatAndOpenThread(page: Page, name: string, email?: s
   await expect(page).toHaveURL(/\/ready\//);
 }
 
-/**
- * The thread page's **one status statement** — "Next: your gear, renting or
- * bringing your own?" over "2 of 4 done" (ADR 20260827-the-divers-thread, decision 3,
- * slice 7c; the sentence leads since UX review 2026-10-10, item 9).
- *
- * The stable anchor for "the prep state has rendered". Specs used to wait on
- * the heading "Your pre-trip checklist", which went with the card that carried
- * it; every remaining heading on the page is either the trip's own title or a
- * step name only some bookings have.
- *
- * A `data-testid` through `page.locator` rather than `getByTestId`, because
- * counting it is half of what it pins: exactly one element on the page may say
- * the booking's status.
- */
+/** Stable, unique anchor for the diver's trip-prep thread status. */
 export function threadStatus(page: Page): Locator {
   return page.locator('[data-testid="thread-status"]');
 }
 
 /**
- * Open one step of the thread's spine and hand back its `<details>`.
- *
- * **At most one step is open at rest**, so a spec that wants the rental form,
- * the recency select or a card-entry disclosure has to open its step first —
- * exactly as a diver does. The steps share one native `<details name>`
- * accordion, so opening one closes whichever was open.
- *
- * Scoped through `data-thread-step` and `page.locator`: `e2e/fixtures.ts`
- * filters every `getBy*` to visible nodes, which a closed disclosure's
- * contents are not. The `<details>` itself is filtered to visible here for
- * the same reason the fixture filters: a hidden copy of the thread (a
- * preserved `<Activity>` tree, outside `#main-content`) carries the same
- * `data-thread-step`, and strict mode refuses the pair (PR #2260's CI).
+ * Open and return the visible direct details for one trip-prep step. Steps use
+ * a named native accordion; the visible direct-child selector excludes nested
+ * card disclosures and a preserved hidden Activity copy.
  */
 export async function openThreadStep(page: Page, step: string): Promise<Locator> {
-  // Direct children, not descendants, in BOTH steps below. Slice 7c put per-card
-  // disclosures inside a step body, so a descendant selector matches the step *and*
-  // the cards within it, and Playwright refuses the ambiguity. The certification
-  // step is the one that proves it: its body holds "Add your certification" and
-  // "Add your nitrox card", so a descendant `summary` search finds three.
+  // Direct children avoid matching nested per-card disclosures.
   const details = page.locator(`[data-thread-step="${step}"] > details`).filter({ visible: true });
   await details.waitFor();
   if (await details.evaluate((element: HTMLDetailsElement) => element.open)) return details;
   await details.locator(":scope > summary").click();
-  // Wait on the disclosure's own state, never on the form inside it: a step
-  // whose body is slow to lay out is still open the instant the tap lands.
+  // The open attribute confirms the disclosure transition; its body can lay out later.
   await expect(details).toHaveAttribute("open", "");
   return details;
 }
 
-/**
- * Open one of the after-state's quiet doors and hand back its `<details>`.
- *
- * The thread's third state (ADR 20260827-the-divers-thread, decision 4) keeps
- * photos, the tip and the Google hand-off behind hairline `<details>` rows, so
- * a spec that wants the uploader or the tip presets opens its door first —
- * exactly as a diver does. Same construction and same reasoning as
- * {@link openThreadStep} above; the doors are not an accordion group, so
- * opening one leaves the others as they were.
- */
+/** Open one visible recap door; these independent disclosures may stay open together. */
 export async function openRecapDoor(page: Page, door: string): Promise<Locator> {
   const details = page.locator(`[data-recap-door="${door}"] details`).filter({ visible: true });
   await details.waitFor();
@@ -442,22 +359,11 @@ export async function openTripAboutRow(page: Page, label: string): Promise<Locat
 }
 
 /**
- * Put a departure on the board through the real staff form — the schedule
- * board's own add panel, opened at full depth (`?add=full`), which is the only
- * trip-creation form there is (ADR 20260806-one-trip-create-form). ~30 specs
- * need a departure of their own rather than sharing a seeded charter another
- * worker may be mutating.
- *
- * Only the four fields the form actually requires are positional-ish; the
- * rest are opt-in because the panel defaults them (seats, price, and the
- * free-cancellation window are all optional on it too). `course` is applied
- * *first* on purpose: picking a course re-renders the form around the
- * selection, so a title filled before it would be thrown away.
- *
- * Settling on the notice rather than the URL is deliberate — the notice names
- * the departure that just landed, which is the stable signal that the write
- * went through wherever the action decided to land (the board normally, the
- * shop home for a shop's very first departure ever).
+ * Create a trip through the full-depth (`?add=full`) board form. Title, date and times are
+ * required; other settings are optional. Course selection re-renders the form,
+ * and boat selection sets capacity, so select each before filling affected
+ * fields. Wait for the title in the success notice because a first trip may
+ * redirect to the shop home.
  */
 export async function createTrip(
   page: Page,
@@ -477,11 +383,6 @@ export async function createTrip(
     boat?: string;
   },
 ): Promise<void> {
-  // Always the full depth (`?add=full`), even for a caller that only fills the
-  // four required fields: this helper stands in for "a shop scheduled a trip"
-  // across ~30 specs, and the disclosed form is the superset — a spec that later
-  // wants a deposit or a cancellation window must not have to know which depth
-  // the helper happened to open.
   await page.goto(`/shop/${options.shopSlug ?? "blue-mantis"}/schedule/board/new?add=full`);
   if (options.course !== undefined) {
     // By name, not label: board rows carry aria-labels naming their departure,
@@ -493,7 +394,7 @@ export async function createTrip(
   await page.getByLabel("Departs").fill(options.departsAt);
   await page.getByLabel("Returns").fill(options.returnsAt);
   if (options.boat !== undefined) {
-    // Before the seats: picking a boat sets the seat count to its capacity.
+    // Selecting a boat initializes capacity to its total-occupant capacity.
     const select = page.locator('select[name="boatId"]');
     const value = await select
       .locator("option", { hasText: `${options.boat} (` })
@@ -522,19 +423,9 @@ export async function createTrip(
 }
 
 /**
- * Send the waiver to the first diver on the open trip's Trip roster and
- * return the bearer link it hands back — a relative `/waivers/<token>` path.
- *
- * The e2e fleet configures no email provider, so the shared
- * `WaiverSendControl` always falls to its private-link affordance instead of
- * "Waiver sent to …", and that inline `role="status"` result is where the
- * link lives. The button label is matched exactly, and the whole thing is
- * scoped to the Trip roster so it can't pick up a crew or wait-list control
- * with a similar name.
- *
- * Caller must already be on the trip's Trip surface (`openTripTab(page,
- * "Trip")`); this deliberately does not navigate, because several specs
- * need the staff URL they were on to return to afterwards.
+ * On the Trip surface, send a waiver to the first diver and return its relative
+ * bearer path. With no E2E email provider, the send result offers a private-link
+ * copy control; scope to the Trip roster to exclude crew and wait-list rows.
  */
 export async function sendWaiverForFirstDiver(page: Page): Promise<string> {
   const diverSection = page.locator("#roster").filter({ visible: true });
@@ -543,12 +434,7 @@ export async function sendWaiverForFirstDiver(page: Page): Promise<string> {
   return waiverLinkFromResult(page, diverSection.getByRole("status"));
 }
 
-/**
- * Open the first Divers-tab row that offers `control`, and return it. Every
- * seat is one line now, its fixes behind the row's own mark (owner,
- * 2026-10-05), so a spec that wants "the first diver with a Send waiver" has to
- * find that row while the control is still folded away.
- */
+/** Open and return the first booking row that offers a currently folded control. */
 export async function openFirstRosterRowWith(page: Page, control: string): Promise<Locator> {
   const row = page
     .locator('#roster li[id^="booking-"]')
@@ -571,28 +457,6 @@ export async function openRosterRow(page: Page, diverName: string): Promise<Loca
 }
 
 /**
- * Take the bearer link out of a send control's result strip, the way a staffer
- * does: by asking for it.
- *
- * The strip used to print the URL as a live anchor, and every spec below read
- * its `href`. It no longer prints one at all — a bearer credential sitting on
- * screen at rest, under a sentence suggesting somebody share it, was three
- * mistakes in a row (see `WaiverSendControl`) — so the only route to the link
- * is the control that puts it on the clipboard. Which makes this the honest
- * test of the new behaviour rather than a workaround for it.
- *
- * "Copied" is the deterministic signal that the write resolved; nothing here
- * sleeps or retries. Reading the clipboard back needs the permission, which is
- * granted per context and is a no-op the second time.
- */
-/**
- * How long a spec allows a held send's outcome to appear: the eight-second
- * hold every waiver, deal and wait-list send takes first (ADR
- * 20260906-before-you-ask, decision 2), then the send itself. Deterministic —
- * the hold is a fixed length the client counts down on its own clock — so it
- * is a bound, not a guess.
- */
-/**
  * **The staff home's one heading** — the date, since ADR 20260919-one-idea's
  * decision I · Tide, slice 23a. It replaced "Good morning, Dana": the home is
  * the day, so the day is what the page is called, and a shop's name and a
@@ -605,8 +469,14 @@ export async function openRosterRow(page: Page, diverName: string): Promise<Loca
  */
 export const STAFF_DAY_HEADING = /^[A-Z][a-z]+\s\d{1,2}$/;
 
+/** Allow the fixed eight-second hold and the send to finish (ADR 20260906-before-you-ask). */
 export const HELD_SEND_TIMEOUT_MS = 20_000;
 
+/**
+ * Copy the private waiver link from the send result and return its relative
+ * `/waivers/<token>` path. The URL is not displayed on the page; wait for
+ * “Copied” before reading the permitted clipboard value.
+ */
 export async function waiverLinkFromResult(page: Page, resultNotice: Locator): Promise<string> {
   await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
   // Matched on all three of the control's states, not just its resting label: a
@@ -626,13 +496,8 @@ export async function waiverLinkFromResult(page: Page, resultNotice: Locator): P
 }
 
 /**
- * The diver record's own "Copy link" channel button, which behaves nothing
- * like `waiverLinkFromResult`'s roster control: the tap copies immediately
- * (no second confirming button inside a result strip to click), and the
- * outcome is a `Toast` — a plain, non-interactive `role="status"` line, not a
- * box with a control inside it. Caller has already clicked "Copy link";
- * this waits for that toast to settle to its own resolved text and reads the
- * clipboard, the same deterministic signal `waiverLinkFromResult` uses.
+ * Read the link after the caller activates the diver-record copy button. This
+ * channel reports its resolved copy outcome in a toast instead of a result-strip button.
  */
 export async function waiverLinkFromToast(page: Page): Promise<string> {
   await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
@@ -645,73 +510,25 @@ export async function waiverLinkFromToast(page: Page): Promise<string> {
   return path;
 }
 
-/**
- * How far the crawl below pages before it gives up: a quarter of a year, which
- * is past anything the seed or a spec schedules. The throw names the title, so
- * a spec that outruns it says which departure it was hunting.
- */
+/** Bound the board crawl to 13 weekly hops (about a quarter year). */
 const MAX_WEEK_HOPS = 13;
 
 /**
- * **Find a departure on the staff board, paging forward a week at a time**,
- * and answer with its title link — `.click()` it, or read
- * `.getAttribute("href")` to get the path without racing the click's own
- * navigation. The page must already be on the board.
- *
- * **It walks weeks now, not a cursor** (#1923). The board used to draw the
- * same departures twice — a cursor-paged vertical stream and, from `xl` up, a
- * seven-column week — and this crawl stepped the stream's `?after=` pager
- * because it was the only one of the two that could walk a whole horizon in
- * one grammar. The stream is gone, so the horizon is walked seven days at a
- * time through the week pager's own `?week=` href. That costs hops: a
- * departure six weeks out is six navigations rather than two cursor pages.
- *
- * **Which is also why a spec can no longer assume the trip it just made is on
- * the board it lands on.** `E2E_FROZEN_CLOCK` is a Tuesday, so `daysFromNow(6)`
- * is the following Monday — deterministically off the week the board opens to,
- * which is how ten specs went red at once rather than flaking. A spec that
- * wants a *particular* week rather than the first one holding a title says so
- * with `?week=<any date in it>` instead of calling this.
- *
- * **It searches settled content and never waits for a write.** Each week is
- * read with `count()`, so a caller that has just submitted the departure it is
- * hunting must put the action's own barrier in between — the `role="status"`
- * line naming the title, or `page.waitForURL` on the `?notice=` redirect. A
- * crawl started mid-flight walks straight past the week the trip is about to
- * land on and hunts it to the end of the horizon
- * (`.claude/rules/e2e.md`'s `action-race`).
- *
- * **The link is matched by its exact accessible name**, not by row text: an
- * unpriced departure's row also carries a "Set a price for {title}, {date}
- * {time}" link, and a title that is another title's prefix — `X` beside
- * `X (PM)`, which this suite's rename specs create on purpose — matches both
- * under a substring.
+ * Find the exact title link on the current board, following its explicit
+ * next-week pager for at most `MAX_WEEK_HOPS`. Wait for streamed board content
+ * before counting links. This search does not wait for a just-submitted trip;
+ * callers must first await the action's notice or redirect.
  */
 async function walkBoardWeeksFor(page: Page, title: string | RegExp): Promise<Locator> {
-  // The same barrier every page below gets: `goto` resolves into the segment's
-  // loading.tsx skeleton while the real week streams in, and `count()` doesn't
-  // auto-wait — so a slow stream-in reads as "no rows and no pager" and the
-  // loop concludes the board ended (seen as a one-in-many-runs CI failure
-  // hunting a seeded trip). The builder section exists only in the streamed
-  // body, whatever the board holds, so its appearance proves the rows and the
-  // pager are in the DOM.
-  //
-  // **By its `data-` hook, never by its accessible name.** The section's
-  // `aria-label` is copy, so `getByRole("region", { name: "Schedule builder" })`
-  // waits forever on a Spanish run — which is how three visual captures went
-  // red the first time this crawl was shared with `openTripFromBoard`.
-  // Activity retains the creation page's builder after returning to the board.
-  // Only the visible builder and week belong to the route being searched.
+  // Wait for the streamed builder before count(), which does not auto-wait.
+  // Activity can retain a prior builder, so search only the visible board/hooks.
   await page.locator("[data-schedule-builder]").filter({ visible: true }).waitFor();
   const board = page.locator("[data-week-board]").filter({ visible: true });
   for (let hops = 0; hops < MAX_WEEK_HOPS; hops++) {
     const link = board.getByRole("link", { name: title, exact: true });
     if ((await link.count()) > 0) return link.first();
-    // The step's own copy-free hook, not "a link with a week in its href": the
-    // pager renders three of those — previous, next, and the way home — and a
-    // positional pick among them is one reorder away from walking backwards
-    // forever. A navigation rather than a click, so a step that has scrolled
-    // out of view on a tall week is still followable.
+    // Follow the explicit next-week link so pager order/copy cannot change the
+    // target; navigate by href even when the link is off-screen.
     const next = board.locator('a[data-week-step="next"]');
     if ((await next.count()) === 0) break;
     const nextHref = await next.getAttribute("href");
@@ -722,26 +539,20 @@ async function walkBoardWeeksFor(page: Page, title: string | RegExp): Promise<Lo
   throw new Error(`trip "${title}" not found on the schedule board after paging`);
 }
 
-/** The same crawl, from the top of the board rather than wherever the page is. */
+/** Open a shop's board and find a trip, optionally starting at a known week. */
 export async function findTripOnBoard(
   page: Page,
   shopSlug: string,
   title: string | RegExp,
   options: { daysOut?: number } = {},
 ): Promise<Locator> {
-  // A caller that knows how far out the seed puts the departure opens that
-  // week directly: a month out is five full board renders crawled one at a
-  // time, which is most of a 15-second test on a loaded box.
+  // Start near a known departure to avoid rendering every earlier week.
   const week = options.daysOut === undefined ? "" : `?week=${daysFromNow(options.daysOut)}`;
   await page.goto(`/shop/${shopSlug}/schedule/board${week}`);
   return walkBoardWeeksFor(page, title);
 }
 
-/**
- * A staff trip's path, read from the schedule card's own href. Clicking and
- * then reading `page.url()` races the streaming list — the card can still be
- * re-rendering, and the URL read lands on the wrong route.
- */
+/** Return the card href without clicking and racing its navigation. */
 export async function tripPathByTitle(
   page: Page,
   shopSlug: string,

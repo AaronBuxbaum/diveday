@@ -12,11 +12,9 @@ import {
  *
  * The card is a 3:2 image the shop sends to its crew, its landlord and its
  * marina, and — with the shop's yes — the one proof DiveDay's homepage carries.
- * It is rendered by satori into a bitmap with no stylesheet behind it, so the
- * semantic tokens cannot reach it and the colours have to be values. They live
- * here rather than in the route for the reason `src/app/_og/card.tsx` gives for
- * the link-preview chrome: two routes draw this card, and a palette copied into
- * both is a palette that drifts.
+ * Satori renders it into a bitmap without a stylesheet, so semantic tokens
+ * cannot reach it. The static palette and its contrast checks live together in
+ * this helper rather than in the route.
  *
  * **The band is drawn, never fetched.** The design calls for the shop's own
  * photograph with a drawn band standing in when it has none; this renders the

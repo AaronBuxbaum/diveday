@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { canPersonConfigureTrips } from "@/db/authz";
-import { listBoats } from "@/db/boats";
+import { getBoatById, listBoats } from "@/db/boats";
 import { type AppDb, getDb } from "@/db/client";
 import { listActiveCourses } from "@/db/courses";
 import { getDiveSite, listDiveSites } from "@/db/dive-sites";
@@ -458,9 +458,7 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
 
   // The hull the panel just assigned. Its own prefill puts this number in
   // the box, but the box is editable afterwards. The certificate remains a limit (H-107).
-  const assignedBoat = boatId
-    ? ((await listBoats(await getDb(), shop.id)).find((boat) => boat.id === boatId) ?? null)
-    : null;
+  const assignedBoat = boatId ? await getBoatById(db, shop.id, boatId) : null;
   const details = tripDetailsPatch(
     {
       date,

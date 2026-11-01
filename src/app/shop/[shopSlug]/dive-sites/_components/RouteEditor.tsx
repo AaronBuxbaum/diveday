@@ -40,28 +40,11 @@ export type RouteEditorCopy = {
 };
 
 /**
- * Draw the route a dive takes, by clicking it onto the site's terrain view.
- *
- * The one thing a shop could never do before: routes lived in a hand-authored
- * lookup table keyed by site name, so DiveDay's three demo sites had a line on
- * the map and nobody else could have one. This is the tool that replaced it.
- *
- * **The map does not move.** A waypoint is stored as a percentage of this
- * frame (see `src/lib/dive-site-route.ts`), so the frame has to be one the
- * briefing can reproduce exactly: the site's own coordinates at a zoom stored
- * alongside the points. Letting the embed be panned would silently break that
- * — the shop would draw over the reef and a diver would read a line over open
- * sand — so the iframe is `pointer-events-none` and the view is moved with the
- * two things that persist: the coordinate fields above, and the zoom here.
- * That is a real constraint, stated rather than hidden: this control is honest
- * about drawing on the picture the diver will see.
- *
- * **A pointer, deliberately.** Clicking waypoints onto a picture wants a mouse
- * or a finger on a big screen, and this is a configure-once surface a shop sets
- * up at a desk — so it takes clicks and taps and does not pretend to be
- * keyboard-drawable. What it does keep for everyone is the record: the points
- * ride in a hidden input, so the form posts and saves identically either way,
- * and every other route field (label, note, zoom) is an ordinary box.
+ * Draw a route on the site's terrain view. Waypoints are percentages of a
+ * persisted frame (`src/lib/dive-site-route.ts`): only the site coordinates
+ * and saved zoom move it, so the briefing reproduces the same geometry.
+ * Drawing uses a named pointer surface; route points remain in a hidden input,
+ * and label, note, and zoom remain ordinary controls.
  */
 export function RouteEditor({
   initialPoints,
@@ -90,13 +73,8 @@ export function RouteEditor({
   );
   const rootRef = useRef<HTMLDivElement>(null);
 
-  // The frame follows the coordinate boxes as they are typed, rather than only
-  // after a save. Without this a brand-new site is a chicken-and-egg: no
-  // coordinates means no map to draw on, and the only way to get coordinates
-  // onto the row is to save a site with no route and come back. Reading the two
-  // sibling inputs out of the shared `<form>` is the price of keeping them
-  // uncontrolled server-rendered fields — which is what lets a refused submit
-  // hand the whole briefing back exactly as it was typed (`SiteFormShell`).
+  // Read the sibling uncontrolled coordinate fields so new sites can draw
+  // before saving; SiteFormShell restores them after a refused submit.
   useEffect(() => {
     const form = rootRef.current?.closest("form");
     if (!form) return;
@@ -138,9 +116,7 @@ export function RouteEditor({
   const status = copy.status[points.length] ?? copy.status[copy.status.length - 1];
 
   return (
-    // No box and no legend of its own: the editor is the body of the form's
-    // "The route you swim" section, which carries the name and the sentence
-    // under it (ADR 20260827-the-shops-shelves, the long-form editor pattern).
+    // The form's route section supplies the legend (ADR 20260827-the-shops-shelves).
     <div ref={rootRef}>
       {/* The record the form posts. Always present, even with no coordinates:
           clearing a route has to be savable too. */}
@@ -150,11 +126,7 @@ export function RouteEditor({
       {coordinates ? (
         <>
           <div className="overflow-hidden rounded-lg border border-border">
-            {/* Never interactive: a panned map is a route drawn against a frame
-                the briefing cannot reproduce. See the note above. A staffer
-                clicking a waypoint here is fixing a percentage of this box, so
-                the frame has to stay exactly the one the percentages were
-                measured against (`MapEmbed`). */}
+            {/* A panned map would break the persisted percentage frame. */}
             <MapEmbed
               title={copy.mapAriaLabel}
               latitude={coordinates.lat}
@@ -162,12 +134,7 @@ export function RouteEditor({
               zoom={zoom}
               className="h-[calc(18rem+4rem)]"
             >
-              {/* The click surface sits over the whole frame. A `<button>`
-                  rather than a bare div so it is a real control with a name,
-                  and so a tap on a phone behaves like a tap and not a drag.
-                  It fills the window the frame's `overflow-hidden` clips,
-                  so its focus ring is drawn inside it, and its top corners
-                  are the frame's, or the clip shaves the ring's. */}
+              {/* A named button supports keyboard focus and taps without dragging. */}
               <button
                 type="button"
                 aria-label={copy.mapAriaLabel}
@@ -192,14 +159,11 @@ export function RouteEditor({
                   />
                 ) : null}
               </svg>
-              {/* The waypoints over the line, each a dot of its own: in the
-                  stretched box above, a circle drew as an oval (K-413). */}
+              {/* Separate dots stay circular over the stretched route frame (K-413). */}
               {points.map((point, index) => (
                 <RouteWaypoint
-                  // Waypoints have no identity beyond their position in the
-                  // route, and two clicks can land on the same spot — the
-                  // index is the only stable key here.
-                  // biome-ignore lint/suspicious/noArrayIndexKey: see above
+                  // Duplicate points are allowed; index is their only identity.
+                  // biome-ignore lint/suspicious/noArrayIndexKey: points have no unique id
                   key={index}
                   point={point}
                   className={`border-surface ${
@@ -214,19 +178,11 @@ export function RouteEditor({
             </MapEmbed>
           </div>
 
-          {/* Two groups that wrap whole — Zoom's pair, then Undo point with
-              Clear route — and every line ends at the column's right edge.
-              `mr-auto` pushes the controls away from the status only on the
-              status's own line; `justify-end` sends a line the controls
-              wrap onto to the same edge, where loose items had wrapped Undo
-              point to the left edge under a Zoom pair on the right (K-268). */}
+          {/* Keep each control pair together and align wrapped rows (K-268). */}
           <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
             <p className="mr-auto text-sm text-muted" aria-live="polite">
               {status}
             </p>
-            {/* Zoom is the *only* way the frame moves — see the note above on
-                why the map itself cannot be panned. Each button says what it
-                does, so the pair carries no group label of its own. */}
             <span className="flex items-center gap-2">
               <span className="text-sm font-medium text-muted">{copy.zoomLabel}</span>
               <button
@@ -246,11 +202,6 @@ export function RouteEditor({
                 {copy.zoomIn}
               </button>
             </span>
-            {/* Clear route is quiet and ends the row, so it is `flush`: its
-                label ends on the column's edge (it stood 12px inside it) and
-                its fill reaches 8px past. `gap-5` hands back the padding it
-                gave up beside Undo point, whose border its fill would
-                otherwise touch. */}
             <span className="flex items-center gap-5">
               <button
                 type="button"
@@ -272,8 +223,7 @@ export function RouteEditor({
           </div>
         </>
       ) : (
-        // Nested inside a section, so no icon — same shared panel the field
-        // guide and the landmark editor wear for the same state.
+        // Nested in a section, so use the compact shared empty state.
         <EmptyState title={copy.needsCoordinates} icon={false} />
       )}
 

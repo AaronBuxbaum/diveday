@@ -36,20 +36,9 @@ export type OfferSeatInterest = { interestId: string; name: string; email: strin
 
 type Fallback = { interest: OfferSeatInterest; mailto: string | null; message: string };
 
-/**
- * **Offer a seat** (ADR 20261017-one-interest-with-a-scope): the one act on who
- * wants in, always a held send (`seat_offer`, eight seconds, Undo where the
- * button stood), to the `interests` it is given: one row's person, on Who
- * wants in and on Today's row alike. The tick boxes and the bulk "Offer a
- * seat to N" went (visual review 2026-10-24, A14): two ways to offer on one
- * list, and a disabled button that waited for a tick.
- *
- * Only an interest the server could not email (no provider, no address, an opt-out
- * or a send inside the 24-hour window) falls back to a composer with the same
- * booking link, so an offer always goes out one way or another: a single
- * fallback opens the mail client (or copies the message when there is no
- * address), several are listed, one line each.
- */
+/** One held `seat_offer` send for the supplied interests, with Undo. Per-interest
+ * results marked unsent get a booking-link composer fallback (mailto or copy);
+ * deal-level failures use their own notice. */
 export function OfferSeat({
   formId,
   tripId,

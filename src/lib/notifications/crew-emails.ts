@@ -3,8 +3,8 @@ import type { DiverLocale } from "@/i18n/settings";
 import type { CrewNoticeChange, CrewTripRole } from "@/lib/crew-notices";
 import { formatDateTimeTz } from "@/lib/format";
 import { escapeHtml } from "@/lib/html";
-import { firstNameOf } from "@/lib/person-name";
 import { emailButton, type NotificationEmail } from "./email";
+import { notificationGreeting } from "./greeting";
 
 // i18n-exempt-file: the terminal renderer for the crew's schedule message, on
 // the same footing as `./email.ts` — no React component picks words for a sent
@@ -83,9 +83,7 @@ function line(
  */
 export function crewScheduleChangeEmail(input: CrewScheduleChangeEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
-  const firstName = firstNameOf(input.recipientName, t("notifications.common.genericName"));
-  const greetingText = t("notifications.common.greeting", { firstName });
-  const greetingHtml = t("notifications.common.greeting", { firstName: escapeHtml(firstName) });
+  const { text: greetingText, html: greetingHtml } = notificationGreeting(t, input.recipientName);
   const open = t("notifications.crewSchedule.open");
   const lines = input.changes.map((entry) => {
     const when = formatDateTimeTz(entry.startsAt, input.locale, input.timezone);

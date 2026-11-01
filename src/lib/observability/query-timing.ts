@@ -3,66 +3,18 @@ import { cache } from "react";
 import { log } from "@/lib/log";
 
 /**
- * **How many statements a server render sent, and how long it took** (app audit
- * 2026-10-07, item 4).
- *
- * Before this, every performance number about a staff page was inferred from
- * reading the code: nothing on the server counted a query or timed a render.
- * `src/test/query-count.ts` counts statements in a test; this counts them in
- * the running app, through the same hook — Drizzle's `logger`, which the
- * driver calls once per statement it sends, `BEGIN`/`COMMIT` included.
- *
- * ## The scope a count belongs to
- *
- * Two, and the first one found wins:
- *
- * 1. **An explicit scope**, {@link withQueryStats}: an `AsyncLocalStorage`
- *    store, for a test or a script that wants the cost of one call path.
- * 2. **The render pass**: a React `cache()`d record, one per React request
- *    scope, which is not always one per HTTP request: issue #1121 measured
- *    the staff shell and the page beside it rendering in separate passes, and
- *    on 2026-10-07 (Next 16.4) they shared one (`src/db/blockers.ts`). Either
- *    way each pass reports its own line, so a navigation that logs two lines
- *    rendered in two passes - which is itself worth knowing.
- *
- * Outside both — a cron, a route handler, a server action, a test that did not
- * ask — React's `cache()` calls straight through, so the count lands on a
- * fresh record nobody holds and is dropped. That is the whole "off" path: one
- * store lookup and one integer increment per statement, and nothing written.
- *
- * ## What `ms` and `db_ms` are
- *
- * `ms` is wall time from the first moment the pass asked for its record (its
- * first statement, or the gate that armed the report, whichever came first) to
- * the moment the response finished.
- *
- * `db_ms` is time spent waiting on the database: each statement timed from the
- * moment it is handed to the driver to the moment its answer comes back, and
- * summed (issue #2352). Drizzle's logger fires before a statement is sent and
- * is never told when it returns, so the timing is a wrapper around the
- * driver's own `query()` ({@link withStatementTiming}, installed in
- * `src/db/client.ts`). Statements sent together each count in full, so
- * `db_ms` can exceed `ms` on a page that fans out. Read the two side by side:
- * a page whose `ms` moves while its `db_ms` stays flat is waiting on
- * something other than the database, and one whose `db_ms` moves while its
- * `queries` stays flat has a slow statement.
- *
- * `performance.now()` rather than the app clock, because the e2e fleet freezes
- * the clock and a frozen clock times everything at zero.
- *
- * Server-only by construction: `node:async_hooks` does not resolve in a
- * browser bundle, and the one importer is `src/db/client.ts`.
+ * Count statements through Drizzle's logger and time them at the driver.
+ * Explicit async scopes take precedence over React render-pass stats; counts
+ * outside both scopes are discarded. `ms` runs from the first stats record to response completion. `db_ms` sums
+ * driver query times, so parallel statements can exceed `ms`.
+ * Use `performance.now()` because the app clock can be frozen. Server-only;
+ * see `docs/engineering/cloudwatch-observability-runbook.md` for interpretation.
  */
 export type QueryStats = {
-  /** Statements sent in this scope so far. */
   queries: number;
-  /** Milliseconds those statements took, each timed at the driver and summed. */
   dbMs: number;
-  /** `performance.now()` when the scope's record was first asked for. */
   startedAt: number;
-  /** The route template the report names, once a gate has armed it. */
   route: string | null;
-  /** Whether a report has been scheduled for this scope — it is scheduled once. */
   armed: boolean;
   /** Present only for test-only request diagnostics. */
   inFlightStatements?: Map<number, number>;
@@ -82,18 +34,14 @@ function freshStats(): QueryStats {
 
 const explicitScope = new AsyncLocalStorage<QueryStats>();
 
-/** One record per React render pass; a passthrough everywhere else (see above). */
+/** React render-pass stats; React cache passes through outside a render. */
 const renderPassStats = cache(freshStats);
 
-/** The record the statement being sent right now belongs to. */
 export function currentQueryStats(): QueryStats {
   return explicitScope.getStore() ?? renderPassStats();
 }
 
-/**
- * The Drizzle `logger` that does the counting. Handed to the driver once, in
- * `src/db/client.ts`; it never sees parameters, and it keeps none of the SQL.
- */
+/** Drizzle logger; receives no parameters and retains no SQL. */
 export const queryTimingLogger = {
   logQuery(): void {
     currentQueryStats().queries += 1;
@@ -242,10 +190,10 @@ export async function withE2EApiTiming<T>(route: string, work: () => Promise<T>)
   }
 }
 
-/** What a render reports, once its response has gone. */
+/** Render query report event, logged after the response. */
 export const QUERY_TIMING_EVENT = "render.db_queries";
 
-/** Schedules a task for after the response — `after` from `next/server`, injected. */
+/** Injected `after` scheduler from `next/server`. */
 export type AfterResponse = (task: () => void) => void;
 
 /**

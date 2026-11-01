@@ -16,18 +16,11 @@ import { figureCellClass } from "./_components/MonthFigures";
  * revenue/fill-rate/waiver-completion rollup has no loading state to show
  * meanwhile.
  *
- * Shaped to the page as ADR 20260827-the-shops-shelves recomposed it: a
- * hairline-bounded band of five figures, the quiet tax/CSV line under it, then
- * the departures ledger. It painted five bordered cards over one tall card
- * until that slice landed — and a skeleton of the previous page is a layout
- * jump on every navigation into the route, which is the one thing this file
- * exists to prevent.
+ * Follows the report body recomposed by ADR 20260827-the-shops-shelves so
+ * navigation into the route does not cause a layout jump.
  *
- * **Every row above the figures is the loaded row's height** (K-391). The
- * month/year tabs had no stand-in, so the page dropped 78px when it landed (a
- * 54px track and its `mb-6`); the stepper drew 44px controls beside the page's
- * `md` 48px ones; and its heading bar was a 24px line where `text-lg` sets 28,
- * which is the drop on a phone, where the heading has a line to itself.
+ * **Every row above the figures matches the loaded row's height** (K-391),
+ * including the month/year tabs, stepper, and heading.
  */
 export default function ReportsLoading() {
   return (
@@ -35,14 +28,11 @@ export default function ReportsLoading() {
       <div className="animate-pulse">
         <ShopPageHeaderSkeleton eyebrow={false} titleWidth="w-32" description={false} />
         <StaffSectionTabsSkeleton section="money" />
-        {/* `ReportRangeTabs`: the segmented track itself, one 44px option
-            deep, its current option raised as the page draws it. */}
+        {/* Reserve the loaded segmented track and raised active option. */}
         <div className={`${segmentedTrackClass} mb-6 w-48`}>
           <div className={`h-11 w-24 ${SEGMENT_CORNER} ${SEGMENT_RAISED}`} />
         </div>
-        {/* The month heading's 28px line, and the stepper at `md`: two 48px
-            `icon` squares either side of the 176px (`w-44`) month field and
-            its `md` "Go", grouped as the page groups them. */}
+        {/* Keep the heading and month controls in the loaded row geometry. */}
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <div className="h-7 w-40 rounded bg-surface-sunken" />
           <div className="flex flex-wrap items-center gap-2">
@@ -54,11 +44,8 @@ export default function ReportsLoading() {
             <div className="size-12 rounded-lg bg-surface-sunken" />
           </div>
         </div>
-        {/* The figure row: unboxed, one hairline above and below, and the same
-            one/two/five column run the figures themselves wear — reaching 8px
-            past the column, as the figures' band and the ledger below do. Each
-            cell is the figures' own `figureCellClass`, not a copy of it: the
-            copy kept a phone's 24px end gutter after the figures dropped it. */}
+        {/* Match the figures' band and grid; shared cell classes prevent the
+            fallback and loaded figures from drifting. */}
         <div className="-mx-2 grid grid-cols-1 border-y border-border sm:grid-cols-2 lg:grid-cols-5">
           {[0, 1, 2, 3, 4].map((index) => (
             <div
@@ -75,12 +62,8 @@ export default function ReportsLoading() {
           <div className="h-4 w-56 rounded bg-surface-sunken" />
         </div>
         <div className="mt-10 h-3 w-32 rounded bg-surface-sunken" />
-        {/* Each departure row as `LedgerRow` draws it (`md`: `min-h-13`,
-            `py-2`) holding the loaded row's two lines: the title's 24px line,
-            then the facts' 20px line, 8px down on a phone and 4px from `sm`
-            (DepartureLedger). 69px and 65px, as the rows that replace them.
-            From `lg` the facts move to the title's right, into the ledger's
-            own seats, crew and waivers columns, as the loaded rows do. */}
+        {/* Mirror the ledger's responsive row layout and shared column widths
+            so fallback rows align with loaded departures. */}
         <div className="mt-2">
           {[0, 1, 2, 3, 4, 5].map((row) => (
             <div key={row} className={`flex min-h-13 items-center py-2 ${ledgerRowBoxClass}`}>

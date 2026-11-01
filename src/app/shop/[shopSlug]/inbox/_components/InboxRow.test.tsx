@@ -219,17 +219,7 @@ describe("marking a message done", () => {
   });
 });
 
-/**
- * **A stranger's words are read here or nowhere** (pixel-craft class 8,
- * K-460). A door row's excerpt is one line because the whole message is on
- * the record one tap away; a stranger's row has no record, so its one line cut
- * "Hello, do you run night dives in October? Two of us, b…" at 328px of a
- * 534px line and nothing could open the rest. It wraps, and it is not cut at
- * any line count: three lines held the seeded message only where the message
- * column was wide, and at the `sm` seam that column was ~122px — three lines
- * held 46 of its characters. The excerpt's own 140-character cap is what
- * bounds the row's height.
- */
+/** A stranger has no record to open, so their complete excerpt wraps here. */
 describe("a stranger's message, which has no record to be read on", () => {
   const WORDS = "Hello, do you run night dives in October? Two of us, both AOW.";
 
@@ -241,13 +231,7 @@ describe("a stranger's message, which has no record to be read on", () => {
     expect(words.className).not.toMatch(/line-clamp/);
   });
 
-  /**
-   * **The name sits beside the message only from `md`** (the ledger's note on
-   * K-461). Beside the kind column, the date and the door's slot, the name's
-   * 176px column left the message ~122px at 640 — a door row's one line held
-   * about 16 characters and a stranger's words ran to nine lines. Below `md`
-   * the name sits over the message, which takes the body's whole width.
-   */
+  /** Keep the name above the message until the wider row can give both room. */
   it("sets the name beside the message only from md, where the message has room", () => {
     renderRow({ personId: null, fromAddress: "marta.keller@example.net", body: WORDS }, null);
     const name = screen.getByText("Unknown sender");
@@ -273,13 +257,7 @@ describe("a stranger's message, which has no record to be read on", () => {
     expect(screen.getByText(WORDS).className).not.toMatch(/line-clamp|truncate/);
   });
 
-  /**
-   * **The address breaks inside its column rather than out of it** (pixel-craft
-   * class 9, K-461). At 640 the name's 176px column and the date left the
-   * message 72px, and "marta.keller@example.net" has no break in it: it ran
-   * 96px past the column's edge, under the date. Cut with an ellipsis it would
-   * lose half of what the row is for, so it wraps anywhere instead.
-   */
+  /** Long addresses wrap inside their column instead of being cut off. */
   it("breaks a long address inside its column", () => {
     const address = "marta.keller.bookings.team@a-very-long-dive-club-domain.example.net";
     renderRow({ personId: null, fromAddress: address }, null);

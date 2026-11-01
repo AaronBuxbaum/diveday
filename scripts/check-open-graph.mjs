@@ -2,6 +2,7 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
+import { filesUnder } from "./files-under.mjs";
 
 /**
  * Every `openGraph` block under `src/app` spreads the site-level fields —
@@ -107,30 +108,15 @@ export function countOpenGraphBlocks(source) {
   return count;
 }
 
-async function walk(relativeDirectory) {
-  const absoluteDirectory = path.join(ROOT, relativeDirectory);
-  let entries;
-  try {
-    entries = await readdir(absoluteDirectory, { withFileTypes: true });
-  } catch (error) {
-    if (error?.code === "ENOENT") return [];
-    throw error;
-  }
-
-  const files = [];
-  for (const entry of entries) {
-    const relativePath = path.join(relativeDirectory, entry.name);
-    if (entry.isDirectory()) files.push(...(await walk(relativePath)));
-    else if (sourceExtensions.has(path.extname(entry.name))) files.push(relativePath);
-  }
-  return files;
-}
+const listDirectory = (relative) => readdir(path.join(ROOT, relative), { withFileTypes: true });
 
 async function main() {
   const violations = [];
   let checked = 0;
 
-  for (const file of await walk(guardedRoot)) {
+  for (const file of await filesUnder(guardedRoot, listDirectory, (relative) =>
+    sourceExtensions.has(path.extname(relative)),
+  )) {
     const contents = await readFile(path.join(ROOT, file), "utf8");
     checked += countOpenGraphBlocks(contents);
     for (const { line } of findBareOpenGraphBlocks(contents)) {

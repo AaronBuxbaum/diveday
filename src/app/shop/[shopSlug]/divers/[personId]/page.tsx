@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
+import { DownloadAcknowledgmentLink } from "@/components/DownloadAcknowledgmentLink";
 import { EarnedMomentLine } from "@/components/EarnedMoment";
 import { FlashParams } from "@/components/FlashParams";
 import { UndoToast } from "@/components/UndoToast";
@@ -28,7 +29,6 @@ import { DiverHeader } from "./_components/DiverHeader";
 import { DiverRecordFoot } from "./_components/DiverRecordFoot";
 import { DiverStatusLedger } from "./_components/DiverStatusLedger";
 import { DiverStory } from "./_components/DiverStory";
-import { DownloadDiverExportButton } from "./_components/DownloadDiverExportButton";
 import { FoundItemLine } from "./_components/FoundItemLine";
 import { NoticeBanner } from "./_components/NoticeBanner";
 import { RestoreDiver } from "./_components/RestoreDiver";
@@ -245,10 +245,11 @@ export default async function DiverDetailPage({
         status={cleared ? undefined : detailsStatus}
         download={
           canExport ? (
-            <DownloadDiverExportButton
+            <DownloadAcknowledgmentLink
               href={`/shop/${shopSlug}/divers/${personId}/export`}
               idleLabel={t("divers.export.downloadButton.idle")}
               acknowledgedLabel={t("divers.export.downloadButton.acknowledged")}
+              variant="secondary"
             />
           ) : null
         }

@@ -19,14 +19,6 @@ export function CoursePhotosSection({
 }) {
   return (
     <>
-      {/* **Every photo is one cell: the picture, its Remove tick, and its
-                    description under it.** The cover photo used to be a cell
-                    with its caption box three rows lower, past its own file
-                    picker, while each gallery photo carried its box inside its
-                    cell; the two read as different kinds of thing, and "Remove
-                    current photo" under one stood beside "Remove" under the
-                    rest. What a description is for is said once, in the
-                    section's line, not after every box (Aaron, 2026-10-05). */}
       <CourseSection as="fieldset" {...photos} description={t("courses.edit.photosDescription")}>
         <FieldGrid columns={1} className="gap-y-6">
           <Field

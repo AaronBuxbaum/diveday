@@ -4,58 +4,28 @@ import type { SalvageOffer } from "@/lib/no-show";
 import { shopPath } from "@/lib/staff-notices";
 import type { NoShowSalvageCopy } from "./NoShowScript";
 
-/**
- * **The salvage panel's words, once a staffer has written a diver off.**
- *
- * The precedence is `salvageOffer`'s (`src/lib/no-show.ts`) and this only picks
- * sentences for it — including the money one, which is a sentence and a link to
- * where that decision is made, never a charge or a refund control.
- *
- * **Each branch names who the offer is for**, which is the fix a
- * dive-domain-expert review asked for on 2026-09-11. The wait list is a buyer
- * for the freed seat. The second branch is not: a departure cannot take a seat
- * on another departure, so a list of other boats that "still have room",
- * sitting above the sentence saying the mark charges and refunds nothing, left
- * a staffer at a busy desk guessing whether it meant rebook the diver who just
- * missed or go and find a stranger. It means the first, so it says the first —
- * by name — and each link goes to the shipped seating door for that departure
- * with the diver already searched (`?diverq=`, the same hand-off the counter's
- * own walk-in link makes), rather than to another trip's staff page where
- * nothing about this diver is on screen.
- *
- * Extracted from the page because a rule about what the counter says is worth a test that does not need a database.
+/** Build salvage wording and links. The money line is descriptive and links to
+ * the relevant order or seat action; it never charges or refunds.
  */
 export function noShowSalvageCopy(input: {
   t: StaffTranslator;
   offer: SalvageOffer;
   shopSlug: string;
   tripId: string;
-  /**
-   * The diver the seat was taken from — the subject of the rebooking offer —
-   * and the released seat, whose row a turned-away diver's money line links to.
-   */
+  /** Diver whose seat was released and who is offered rebooking. */
   diver: { id: string; name: string; bookingId: string };
   /** The page holds the locale and the shop's zone; this holds neither. */
   formatWhen: (startsAt: Date) => string;
-  /**
-   * The desk turned this diver away (H-135) rather than marking them not
-   * here. Their next day is **their own booking moved** (`moveBooking` takes a
-   * turned-away seat), so the panel names that door, on their row, and offers
-   * no new booking: a second seat would charge them twice or spend a package
-   * dive twice, and their orders hold no refund for a seat paid at checkout
-   * (layer 3 review, dde-2 #3).
+  /** Turn-away rebooking moves this diver's existing seat; it does not create
+   * a second booking or issue a refund.
    */
   turnedAway?: boolean;
-  /**
-   * The turned-away seat cannot be moved: the boat's start has passed, or the
-   * diver leads a party (dde-3 #4+#5, #7). The money line names Remove.
-   */
+  /** The existing seat cannot be moved; link to its Remove action. */
   moveClosed?: boolean;
 }): NoShowSalvageCopy {
   const { t, offer, shopSlug, tripId, diver } = input;
   if (input.turnedAway) {
-    // A link to the door itself (#2907): the row's Move panel opens on its own
-    // hash, and a seat that can no longer move opens the row, where Remove is.
+    // Link to the existing seat's Move panel, or its row when Move is closed.
     const row = shopPath(shopSlug, "trips", tripId);
     const money = input.moveClosed
       ? {
@@ -89,10 +59,7 @@ export function noShowSalvageCopy(input: {
   };
   if (offer.kind === "waitlist") {
     return {
-      // The shipped offer control lives on the departure's Divers tab with its
-      // held send, its undo window and its copyable fallback
-      // (`WhoWantsInPanel.tsx`). The counter points at it rather than growing a
-      // second sender beside it.
+      // Keep the offer on the departure's existing wait-list control.
       line: t("checkIn.noShow.waiting", { count: offer.count }),
       links: [
         {
@@ -112,7 +79,7 @@ export function noShowSalvageCopy(input: {
           title: departure.title,
           when: input.formatWhen(departure.startsAt),
         }),
-        // The same day, sent rather than seated (UX review 2026-10-11, item 14).
+        // Sending an offer is distinct from seating the diver.
         offer: {
           tripId: departure.tripId,
           ariaLabel: t("checkIn.noShow.offerAriaLabel", {
@@ -149,12 +116,8 @@ export type SailedRebookCopy = {
   };
 };
 
-/**
- * **When the boat is home, the sailed list becomes the rebooking list**
- * (fifth-loop ideas, item 4): "Booked Sat 11:30 AM" for a diver already coming
- * back, which ends there, or "Nothing else booked · Thu 7:00 AM has 3 seats"
- * with the no-show salvage's two doors: the seating door with the diver
- * searched, and the same day emailed (`offerAnotherDayAction`).
+/** Describe the diver's next departure and provide its seating and offer
+ * actions when a seat is open.
  */
 export function sailedRebookCopy(input: {
   t: StaffTranslator;

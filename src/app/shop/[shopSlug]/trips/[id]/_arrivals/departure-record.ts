@@ -13,12 +13,8 @@ import type { RosterRecord } from "../_components/roster-model";
 import { buildArrivalDesk } from "./arrival-desk";
 import { sailedRebookBelow } from "./sailed-rebook-below";
 
-/**
- * **What the Divers tab draws above and into its ledger**: the desk while
- * arrivals are open, or, once the departure is finished, its record (UX
- * review 2026-10-10, item 10). A finished departure has no desk: nobody is
- * checked in to a boat that is home. Its record is the crew's roll call, seat
- * by seat (`RosterRecord`). Neither on the Details tab.
+/** The Divers tab shows the arrival desk while arrivals are open, then the
+ * finished departure's roll-call record.
  */
 export async function diversTabState(
   input: Parameters<typeof buildArrivalDesk>[0] & {
@@ -47,16 +43,14 @@ export async function diversTabState(
   });
   if (!onDivers) return { ...reading, desk: null, record: undefined };
   if (reading.finished) {
-    // The record, and under each seat what that diver could do next while the
-    // boat is freshly home (fifth-loop ideas, item 4), read off the same roll
-    // call so a diver not counted back aboard never gets a line.
+    // Rebooking lines use this same roll call; unaccounted divers get no line.
     const { record, rollCall } = await departureRollCall(
       input.db,
       input.shopId,
       input.tripId,
       reading.unaccounted,
     );
-    // When the crew said Home while that word stands (null when they have not).
+    // Keep the crew's Home timestamp for the rebooking offer, if recorded.
     const homeAt = reading.shown?.stage === "home" ? reading.shown.recordedAt : null;
     const below = await sailedRebookBelow({ ...input, rollCall, homeAt });
     return { ...reading, desk: null, record: { ...record, below } };
@@ -64,11 +58,8 @@ export async function diversTabState(
   return { ...reading, desk: await buildArrivalDesk(deskInput), record: undefined };
 }
 
-/**
- * The roll call a finished departure's record is filed from: each seat's
- * standing dock result, the seats with a standing after-dive result, whether
- * a dock roll call was taken at all, and the seats counted aboard while
- * blocked. Four reads keyed on one trip.
+/** Build the finished-departure record from shop- and trip-scoped dock,
+ * after-dive, taken, and blocked-counted-aboard reads.
  */
 export async function departureRollCall(
   db: AppDb,
@@ -100,12 +91,8 @@ export async function departureRollCall(
 
 type StageReading = Awaited<ReturnType<typeof latestTripStage>>;
 
-/**
- * **The departure stage both trip pages read**, with the one thing the clock
- * and the tap cannot say: whether a diver the crew counted out is still
- * unaccounted for (issue #2404). A boat does not read "home" with somebody
- * still in the water on the strength of the clock alone; only the crew's own
- * Home tap closes it over a missing diver (`departureStage`).
+/** Read departure timing and crew stage with shop-scoped unaccounted-diver
+ * data; the clock alone cannot mark a departure home while someone is missing.
  */
 export async function readDepartureStage(
   db: AppDb,

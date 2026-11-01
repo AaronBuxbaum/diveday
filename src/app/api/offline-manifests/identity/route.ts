@@ -1,8 +1,7 @@
-import { loadActiveStaffRoles } from "@/db/authz";
-import { getDb } from "@/db/client";
-import { getShopById } from "@/db/shops";
-import { auth } from "@/lib/auth";
-import { isStaff } from "@/lib/authz";
+import {
+  authorizeOfflineManifestStaff,
+  OFFLINE_MANIFEST_NO_STORE,
+} from "@/app/api/offline-manifests/staff-context";
 import type { OfflineManifestIdentityResponse } from "@/lib/offline-manifests";
 
 /**
@@ -21,8 +20,6 @@ import type { OfflineManifestIdentityResponse } from "@/lib/offline-manifests";
  * `private` as well as `no-store` because the answer is per-session: even a
  * well-behaved shared proxy must never hold it for a second caller.
  */
-const NO_STORE = { "Cache-Control": "private, no-store" } as const;
-
 /**
  * "Which shop is this browser signed in as?" — one string, and nothing else.
  *
@@ -40,13 +37,7 @@ const NO_STORE = { "Cache-Control": "private, no-store" } as const;
  * per-trip manifest assembly, no locale negotiation — which matters because the
  * shell blocks its purge on this request over a marina connection.
  *
- * Same staff gate and same session-derived shop scope as the roster route: the
- * answer is derived from `session.user.shopId`, never from anything the caller
- * sends, so there is no parameter to point at another tenant. "Same gate" is
- * meant literally — the two handlers' gates are byte-identical on purpose, and
- * the disclosure here being smaller is not a reason to let them drift. A reader
- * comparing them must not have to work out which of two near-identical checks
- * is the strict one.
+ * It shares the roster route's staff gate and session-derived shop scope.
  *
  * The slug is read from the database rather than taken from
  * `session.user.shopSlug`, which is carried on the session token and can be
@@ -56,46 +47,14 @@ const NO_STORE = { "Cache-Control": "private, no-store" } as const;
  * and delete them.
  */
 export async function GET() {
-  const session = await auth();
-  // A pre-filter, not the gate. Deliberately ahead of any database work so a
-  // caller with no session — or a token that never claimed a staff role — is
-  // refused without costing a connection (there is a test asserting `getDb` is
-  // never reached on this path). The roles it reads are whatever the JWT was
-  // stamped with at sign-in, which is exactly why it cannot be the last word.
-  if (!session?.user || !isStaff(session.user.roles)) {
-    return Response.json({ error: "authentication_required" }, { status: 401, headers: NO_STORE });
-  }
-  const db = await getDb();
-  const shop = await getShopById(db, session.user.shopId);
-  if (!shop) return Response.json({ error: "not_found" }, { status: 404, headers: NO_STORE });
-
-  // The gate that decides: live roles, re-read on every request. The session
-  // sets no `expiresIn` (src/lib/auth.ts), so Better Auth's seven-day default
-  // applies, renewed while it is in use — a staffer removed from this shop this
-  // morning can still carry `captain` in their session for days, and `/api/**`
-  // is outside the edge gate (src/proxy.ts), so this handler is the only wall.
-  // `loadActiveStaffRoles` exists for that window (ADR
-  // 20260724-role-authorization): it is null for a deleted person, a disabled
-  // account, or someone who was never this shop's, and the roles it does return
-  // are the `person_roles` of right now.
-  //
-  // After the shop lookup rather than before, and the order is load-bearing:
-  // `loadActiveStaffRoles` is shop-scoped, so a session pointing at a shop row
-  // that no longer exists finds no person and would answer 401 where the shell
-  // is owed a 404 — "the tenant cannot be established" is a different fact from
-  // "you are no longer their staff", and only one of them is about the caller.
-  // Nothing has been said to the caller yet either way; the two refusals are one
-  // primary-key row read apart.
-  const roles = await loadActiveStaffRoles(db, shop.id, session.user.personId);
-  if (!roles || !isStaff(roles)) {
-    return Response.json({ error: "authentication_required" }, { status: 401, headers: NO_STORE });
-  }
+  const access = await authorizeOfflineManifestStaff();
+  if (access.ok === false) return access.response;
 
   // Only the slug is serialized. The row carries the whole shop record and the
   // purge needs one field of it, so everything else stops here rather than
   // riding along — including counts, which would leak how big the board is.
   // The annotation is the guard: widening this body is a type change the one
   // reader has to agree to, not something that happens by spreading a row.
-  const body: OfflineManifestIdentityResponse = { shop: { slug: shop.slug } };
-  return Response.json(body, { headers: NO_STORE });
+  const body: OfflineManifestIdentityResponse = { shop: { slug: access.shop.slug } };
+  return Response.json(body, { headers: OFFLINE_MANIFEST_NO_STORE });
 }

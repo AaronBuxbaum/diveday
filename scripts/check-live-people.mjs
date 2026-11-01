@@ -2,6 +2,7 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
+import { filesUnder } from "./files-under.mjs";
 import { bankCounts, ratchetFlags, readCounts } from "./ratchet.mjs";
 
 /**
@@ -45,23 +46,6 @@ const QUERY_WINDOW = 60;
 const ANCHOR = /\.from\(people\)/;
 const FILTERED = /livePerson\(\)|isNull\(people\.deletedAt\)|diveday:allow-deleted-people:/;
 const GUARD = "live-people";
-
-async function walk(relativeDirectory) {
-  let entries;
-  try {
-    entries = await readdir(path.join(ROOT, relativeDirectory), { withFileTypes: true });
-  } catch (error) {
-    if (error?.code === "ENOENT") return [];
-    throw error;
-  }
-  const files = [];
-  for (const entry of entries) {
-    const relativePath = path.join(relativeDirectory, entry.name);
-    if (entry.isDirectory()) files.push(...(await walk(relativePath)));
-    else if (SOURCE_EXTENSIONS.has(path.extname(entry.name))) files.push(relativePath);
-  }
-  return files;
-}
 
 /**
  * Named predicates that carry the filter for every read in their module, so a
@@ -136,7 +120,11 @@ async function collect() {
   const counts = new Map();
   let guarded = 0;
   for (const root of GUARDED_ROOTS) {
-    for (const file of await walk(root)) {
+    for (const file of await filesUnder(
+      root,
+      (relativeDirectory) => readdir(path.join(ROOT, relativeDirectory), { withFileTypes: true }),
+      (relativePath) => SOURCE_EXTENSIONS.has(path.extname(relativePath)),
+    )) {
       if (IS_TEST.test(file)) continue;
       const base = path.basename(file);
       if (base === "seed.ts" || base.startsWith("seed-")) continue;

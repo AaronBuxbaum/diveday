@@ -10,93 +10,17 @@ import {
 } from "@/components/ui/segmented";
 
 /**
- * The one segmented control: a sunken track with a raised pill on the current
- * choice, for a small set of sibling destinations that are real URLs.
+ * Shared navigation for a small set of sibling destinations, drawn as a
+ * sunken track with one animated raised pill. See
+ * `docs/design/forms-and-controls.md#segmented-choices-segmentedcontrol` for
+ * the design rationale and measured wrapping history.
  *
- * Four surfaces used to hand-roll this grammar — the trip tab bar, the waiver
- * tabs, the manifest's checkpoint row, and the Today queue's view switch — and
- * they had already drifted (a fourth `rounded-full` variant, three subtly
- * different class strings). Like `buttonClass()` and `Pager`, the cure is one
- * component: if a segmented control looks wrong, fix it here, never at a call
- * site.
- *
- * The mechanics it guarantees, so no caller has to remember them:
- *
- * - **Links, not client state.** Every option is a real `<Link>` to a real
- *   URL, so it opens in a new tab, bookmarks, and works before JavaScript.
- *   The wrapper is a `<nav>` named by `ariaLabel`.
- * - **Dock-test targets.** `min-h-11` (44px) by default; `size="boat"` raises
- *   the floor to `min-h-14` with 16px labels for surfaces worked at the rail
- *   with wet hands (the manifest's checkpoint row). Labels are centered in
- *   the target structurally (`inline-flex items-center justify-center`).
- * - **No layout shift on selection.** Both states share one font size and one
- *   weight (`font-semibold`); selection is carried by the raised pill —
- *   fill, ink, and shadow plus `aria-current` — never by a weight change that
- *   would reflow the row, and never by color alone.
- * - **The pill slides.** The raised pill is one element that moves from the
- *   choice it was on to the choice it is on now — a FLIP on `transform`, 200ms
- *   on the arrival curve, nothing laid out twice — so a tap explains where the
- *   selection went instead of the highlight blinking off one option and on
- *   another. Every option is a navigation, so the slide happens across the
- *   re-render: the component keeps the last measured box in a ref and, when
- *   `currentKey` changes, starts the pill from there. Before JavaScript, and
- *   for the first paint, the current option still draws its own fill, so the
- *   control never depends on the effect to look selected; the pill takes over
- *   once it has measured. `prefers-reduced-motion` stills it through the
- *   global kill-switch.
- * - **Overflow wraps, never scrolls.** Labels stay `whitespace-nowrap`, and a
- *   row too wide for its container stacks onto more lines rather than sliding
- *   sideways — on a grid of equal columns that every line shares (below).
- *
- *   It scrolled until 2026-08-22, and that was measured wrong rather than
- *   decided wrong. At 390px the departure's four tabs came to `scrollWidth 343`
- *   in a `clientWidth 340` — three pixels, which turns a strip that visually
- *   fits into one that clips "Prep" by a hair, drags sideways and springs back,
- *   and jiggles under a thumb that meant to scroll the page. On the surface a
- *   crew member uses to get from the roster to the roll call, on a boat
- *   (issue #811).
- *
- *   **In Spanish the same strip is 436 against 340.** Ninety-six pixels, so no
- *   amount of gap or padding closes it and a scroller was always going to hide
- *   a whole tab from every Spanish-speaking shop. The checkpoint row below is
- *   `size="boat"` with longer labels still. A wrapped row asks for no gesture
- *   and hides nothing, which is what the dock test wants; `e2e/` asserts no
- *   control scrolls at 390px in either locale, because a rendered-pixel diff
- *   cannot tell a clipped strip from a scrollable one.
- *
- *   **A wrapped track is a grid, so its lines share column edges** (pixel-craft
- *   class 3). It wrapped as a flex row with `grow` options, which let each line
- *   divide its own leftover space: the counter's four departure chips split at
- *   x 627 on the first line and 616 on the second, labels centred at different
- *   x. So once the options measure wider than the track's room, the track lays
- *   them on equal columns — as many as its widest option allows, balanced so
- *   five make 3 + 2 rather than 4 + 1 — and goes back to one line of equal columns when
- *   there is room again. Measured, not guessed from the item count: a boat-size
- *   checkpoint row in Spanish fits fewer columns than four short times do.
- * - **A caller may supply a shorter word for below `sm`** (`shortLabel`), for a
- *   track whose full labels wrap a phone even after that. Only where the full
- *   name is already on screen at that width: the short form is a handle, not a
- *   rename. Both forms are in the DOM and `hidden` picks one, so whichever is
- *   shown is also the accessible name — no `aria-hidden` juggling and nothing
- *   read twice.
- * - **Never on paper.** A way to switch surfaces means nothing printed, so
- *   the track is `print:hidden` unconditionally.
- * - **Corners that nest.** The track, the options, their hover fill and the
- *   pill come from `segmented.ts`, which the party-size picker and the embed
- *   page's look toggle also take: every part laid on the track wears the
- *   track's corner less the track's inset, 7px, not the 12px control rung
- *   that stood inside a 12px corner until 2026-09-25.
- *
- * The current item renders **inert** (a `<span>` with `aria-current`) by
- * default — a tab bar's "you are here" is not a destination. A control whose
- * options are views of the *same* page (`?view=`, `?checkpoint=`) passes
- * `currentIsLink` so the current choice stays a harmless, clickable link, and
- * usually `scroll={false}` so switching views holds the reader's place.
- *
- * Labels arrive resolved: staff copy is server-side only, so each call site
- * translates its own options and passes words. A Client Component, for the
- * pill's measurement only; a Server Component call site may import it freely
- * (its props are serialisable) and so may a Client Component.
+ * Options are real links in a named `<nav>`; the current item is inert unless
+ * `currentIsLink` is set. Targets are 44px (`md`) or 56px (`boat`), wrapping
+ * uses equal columns without horizontal scrolling, and selection remains
+ * visible before hydration. The pill respects reduced motion, labels retain
+ * their accessible name when `shortLabel` is shown, and the control is hidden
+ * in print. Keep layout and corner styles centralized in `segmented.ts`.
  */
 export type SegmentedControlItem = {
   /** Stable identity, compared against `currentKey`. */
@@ -115,19 +39,7 @@ export type SegmentedControlItem = {
 };
 
 const sizes = {
-  /**
-   * The default 44px dock-test target.
-   *
-   * `px-2.5` rather than `px-3`, which is worth the half-step: the departure's
-   * four tabs came to 343px in a 340px container at the narrowest viewport we
-   * design for, and 2px off each side of each tab is 16px — enough that English
-   * stays on one row instead of wrapping for the sake of three pixels. The
-   * target's height is untouched, and its width is set by the label anyway
-   * (issue #811).
-   *
-   * The floor holds on both axes: `min-w-11` because a three-letter label
-   * ("SDI", "SSI" on the public courses page) came to 42–43px wide.
-   */
+  /** Default 44px target; width floor also protects short labels such as SDI and SSI (issue #811). */
   md: "min-h-11 min-w-11 px-2.5 text-sm",
   /** Boat surfaces: 56px targets on both axes, 16px labels, for wet hands and glare. */
   boat: "min-h-14 min-w-14 px-5 text-base",
@@ -238,62 +150,15 @@ export function SegmentedControl({
       }
       const navBox = nav.getBoundingClientRect();
       const box = current.getBoundingClientRect();
-      // **Snapped to the device pixel grid, and that is load-bearing.**
-      // `getBoundingClientRect` answers in fractions, and the fraction is not
-      // stable: measured three times on one commit under the e2e harness, the
-      // same option reported heights of 44.0608, 44.046 and 44.0319 and tops of
-      // 4.9696, 4.97702 and 4.98404 — text metrics still settling as the run
-      // warmed. Written straight through as inline styles, a box that lands a
-      // hundredth of a pixel differently antialiases its top and bottom edges
-      // differently, and reg-suit reported `prep-by-diver` as changed on
-      // branches that render nothing on that page: 898 pixels at a maximum
-      // channel delta of 47, on the pill's horizontal edges across its full
-      // width and nowhere else (issue 1578).
-      //
-      // The pill is a decorative fill *behind* an option whose own box is what
-      // a reader sees and what the pointer hits, so moving it by at most half a
-      // device pixel costs nothing visible and removes the whole class — every
-      // `SegmentedControl` in the suite, not just the one that was caught.
-      // Device pixels rather than CSS pixels because the grid antialiasing
-      // happens on is physical: at dpr 2 a half-pixel edge is exact, and
-      // rounding it away would be the only visible thing this does.
-      //
-      // **Offsets count from the track's padding edge, inside its border.**
-      // `getBoundingClientRect` measures from the border edge, but `left` and
-      // `top` on an absolutely positioned child are read from its container's
-      // padding edge — so the plain difference put the pill one border-width
-      // (1px) lower and further right than its own option. The probe saw it as
-      // a second inset: on `check-in-checked` the first option starts 5px
-      // inside the track and the pill 6px, which left the pill 6px off the
-      // track's left edge, 4px off its right, and 1px past its option's box.
-      // The border widths come from the computed style, not `clientLeft` /
-      // `clientTop`: those round to whole CSS pixels, and at 125% zoom a 1px
-      // border is laid out 0.8px wide. `|| 0` covers an engine that answers
-      // with no length at all (jsdom, a borderless track).
+      // Snap both option edges to the viewport device-pixel grid, then convert
+      // to the track's padding-edge origin. Keep issue 1578 and #2525: snapping
+      // in track coordinates or snapping size alone causes visible edge drift.
       const trackStyle = getComputedStyle(nav);
       const borderLeft = Number.parseFloat(trackStyle.borderLeftWidth) || 0;
       const borderTop = Number.parseFloat(trackStyle.borderTopWidth) || 0;
       //
-      // **Each edge is snapped, never the size** (issue #2525). The width is
-      // whatever lies between the two snapped edges, so the pill's sides sit
-      // on the device pixels nearest its option's, and a width measured
-      // either side of .5 cannot move one edge with nothing else moving.
-      // Snapping the width on its own flapped `reports-year-dark-vw-390` by
-      // one column at the pill's right edge.
-      //
-      // **The edges snap where the page is drawn, not inside the track.** The
-      // grid antialiasing happens on is the viewport's, and the track rarely
-      // starts on it: on the prep page's "Group by" at 390px it starts at x
-      // 214.8125. Snapped as offsets from the track, the pill's right edge
-      // came to 292.8125 and was drawn at 293, while the option's own fill —
-      // what the first paint shows, before this effect has run — ends at
-      // 292.4063 and was drawn at 292. So a capture that shot before the
-      // effect and one that shot after it differed by that one column, and
-      // which one a run got was a race (`prep-assignments-need-care-dark-vw-390`).
-      // Snapped in viewport coordinates, the pill's edges are the device
-      // pixels the option's own fill is drawn on, and the race draws the
-      // same picture either way. The written offsets are what is left once
-      // the track's padding-edge origin is subtracted, fraction and all.
+      // Snap each edge in viewport coordinates (issue #2525), then express
+      // the resulting box relative to the track's padding edge.
       const dpr = window.devicePixelRatio || 1;
       const snap = (value: number) => Math.round(value * dpr) / dpr;
       const originLeft = navBox.left + borderLeft;
@@ -394,13 +259,8 @@ export function SegmentedControl({
   // grid of `1fr` columns: in a `w-fit` track that sizes every column to the
   // widest option, and in a `fill` track it splits the room evenly.
   //
-  // **Its own compositor layer, always** (#2634). Chromium promotes a track
-  // that overlaps the sticky staff sidebar to a layer of its own ("Overlap")
-  // and leaves one that does not flat, and the two antialias the border over
-  // the fill one 8-bit step apart. Whether a given track was promoted was a
-  // side effect of the layout around it, and `reports-year-dark` flipped
-  // between the two on unchanged code. `will-change-transform` asks for the
-  // layer outright, so every track paints the same way.
+  // Keep every track on its own compositor layer so the border paints
+  // consistently across layouts (#2634).
   const track = `relative will-change-transform ${
     columns !== null
       ? segmentedGridTrackClass

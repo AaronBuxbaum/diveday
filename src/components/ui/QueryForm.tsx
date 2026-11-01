@@ -4,33 +4,11 @@ import { usePathname, useRouter } from "next/navigation";
 import { type FormEvent, type ReactNode, useTransition } from "react";
 
 /**
- * A filter/search form whose controls live in the URL — without reloading the
- * document.
- *
- * Every one of these surfaces was written as a plain `<form method="get">`,
- * deliberately: the URL carries the filter, the server re-renders the list, no
- * client state, pixel-stable for visual regression. All of that is right and
- * all of it is kept. What was not right is the *navigation*: a native GET
- * submit is a full document navigation. The browser tears the page down,
- * re-runs the whole shell, and lands at scroll top — so changing "Has space"
- * on a shop's schedule threw the diver back to the header, and the same
- * happened on every staff search box. On the public schedule the filters
- * auto-submit on change, so it fired on a single tap of a checkbox.
- *
- * This keeps the form a real GET form — before hydration it submits natively
- * and everything still works, so a tap landing in that beat is not lost — and
- * once
- * hydrated intercepts the submit to do the same navigation through the router
- * instead: same URL, same server render, but a client transition that keeps
- * the shell mounted and the viewport where it was (`scroll: false`).
- *
- * `replace` rather than `push` by default: ten filter tweaks are one act, not
- * ten entries a diver has to press Back through to leave the page.
- *
- * Empty values are dropped from the query, so clearing a filter clears it out
- * of the URL rather than leaving `?tripType=` behind. Every consumer already
- * reads an empty string as "no filter" (that is what the native submit
- * produced), so both paths land on the same server render.
+ * A filter/search form whose URL carries its state. Keep native GET submission
+ * before hydration; hydrated submits use router navigation with `scroll: false`.
+ * Navigation replaces by default, with `push` available when a caller wants a
+ * history entry. Hydrated submits omit empty fields and preserve nonempty
+ * `keep` params; native GET submits the form's own controls.
  */
 export function QueryForm({
   children,

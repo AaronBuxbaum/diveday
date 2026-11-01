@@ -2,8 +2,8 @@ import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 import { formatMoneyCents, formatShortDate } from "@/lib/format";
 import { escapeHtml } from "@/lib/html";
-import { firstNameOf } from "@/lib/person-name";
 import type { NotificationEmail } from "./email";
+import { notificationGreeting } from "./greeting";
 
 // i18n-exempt-file: the terminal renderer for the group receipt (#2566), on
 // the same footing as `./course-certified.ts`: no React component picks words
@@ -26,7 +26,7 @@ export type PartyPaymentReceiptInput = {
 /** "Paid by card for 4 seats: $720.00. Thank you." One line; no link, no button. */
 export function partyPaymentReceiptEmail(input: PartyPaymentReceiptInput): NotificationEmail {
   const t = diverTranslator(input.locale);
-  const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));
+  const greeting = notificationGreeting(t, input.diverName);
   const date = formatShortDate(input.startsAt, input.locale, input.timezone);
   const amount = formatMoneyCents(input.amountCents, input.currency, input.locale);
   const body = t("notifications.partyPaymentReceipt.body", {
@@ -43,7 +43,7 @@ export function partyPaymentReceiptEmail(input: PartyPaymentReceiptInput): Notif
   });
   return {
     subject: t("notifications.partyPaymentReceipt.subject", { tripTitle: input.tripTitle }),
-    text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p>`,
+    text: `${greeting.text}\n\n${body}\n`,
+    html: `<p>${greeting.html}</p><p>${bodyHtml}</p>`,
   };
 }

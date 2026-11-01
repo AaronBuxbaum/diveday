@@ -146,30 +146,11 @@ export function PaymentStatusControl({
           {packageNote}
         </span>
       ) : null}
-      {/* **The picker and the button it submits wrap as one.** Label,
-          select and Update were three siblings of this wrapping row, so on a
-          phone a short label ("Payment: Unpaid") kept the select on the first
-          line and sent Update down alone, while a longer one dropped both,
-          and the select stood at two x's down the roster (K-363). The pair
-          is one group, so the row breaks between the label and the pair, and
-          the pair moves down entire. The group wraps only inside a row too
-          narrow for the pair alone (a long status in Spanish at 360), where
-          the one alternative is pushing the page sideways. */}
+      {/* Keep the picker and Update together; on narrow rows, wrap the group
+          internally to avoid separating the button or causing page overflow. */}
       <span className="flex flex-wrap items-center gap-2">
-        {/* Sized by the wrapper, not by a width class on the control —
-            `controlClass` already carries `w-full`, and two width utilities
-            resolve by stylesheet order rather than class order (same trap as
-            `min-h-*`, see components/ui/button.ts). `w-fit` on the wrapper keeps
-            the shrink-to-content width this row has always had. The hand-rolled
-            class this replaces had dropped `py-2` and, more to the point,
-            `focus:border-primary` — the control had no focus indicator at all —
-            and carried a no-op `items-center` on an element that is not a flex
-            container.
-
-            `md` Update beside the select: every text control is 48px with 16px
-            type. The select used to take an appended `text-sm` to match an
-            `sm` Update; a control's type is 16px (K-45), and a 16px box beside
-            a 14px label is the mismatch `controlClass` names. */}
+        {/* `w-fit` overrides controlClass's `w-full` on the wrapper. Keep the
+            shared 16px control type, padding, and visible focus border. */}
         <span className="w-fit">
           <select
             name="status"

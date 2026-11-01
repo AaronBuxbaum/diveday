@@ -10,17 +10,9 @@ import { orderIndexFilter } from "../order-index-filter";
 import { ordersCsv } from "./orders-csv";
 
 /**
- * **"Download orders (CSV)"**: the Orders ledger, as filtered, for a
- * bookkeeper (third UX review, item 34). One row per order line
- * (`ordersCsv`), under the index's own reading of the URL
- * (`orderIndexFilter`), so the file holds the orders the page shows across
- * every page of them, and nothing the page would not.
- *
- * Security-sensitive: a bulk file of diver names and money. The gate is the
- * Reports CSV's (`canPersonViewShopReports`, owner or manager), re-checked
- * against the database so it closes the moment a manager is demoted, and the
- * shop is the session's, never the route's slug; a slug that names another
- * shop is a 404 rather than this shop's file under that shop's name.
+ * CSV export uses the index filter (UX review 3, item 34) and includes every
+ * matching page. The database rechecks the owner/manager role, and a route
+ * slug that does not match the session shop returns 404.
  */
 export async function GET(request: Request, { params }: { params: Promise<{ shopSlug: string }> }) {
   const { shopSlug } = await params;
@@ -50,8 +42,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ shop
     shop.timezone,
     now,
   );
-  // The seats divers paid for online ride beside the orders (fourth UX review,
-  // item 18), under the same filter, so the file matches the ledger on screen.
+  // Include online seat payments under the same filter (UX review 4, item 18).
   const [lines, seats] = await Promise.all([
     listOrderLinesForExport(db, shop.id, filter),
     listSeatPaymentsForExport(db, shop.id, filter, ORDER_EXPORT_MAX_LINES),

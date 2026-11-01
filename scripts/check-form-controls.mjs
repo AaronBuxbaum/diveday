@@ -2,6 +2,7 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
+import { filesUnder } from "./files-under.mjs";
 
 /**
  * **Two form-control mistakes an axe scan cannot see**, and since the suite's scan was
@@ -119,28 +120,18 @@ export function violationsIn(file, source) {
   ];
 }
 
-async function walk(directory) {
-  let entries;
-  try {
-    entries = await readdir(path.join(ROOT, directory), { withFileTypes: true });
-  } catch (error) {
-    if (error?.code === "ENOENT") return [];
-    throw error;
-  }
-  const files = [];
-  for (const entry of entries) {
-    const relative = path.join(directory, entry.name);
-    if (entry.isDirectory()) files.push(...(await walk(relative)));
-    else if (entry.name.endsWith(".tsx") && !entry.name.includes(".test.")) files.push(relative);
-  }
-  return files;
-}
+const listDirectory = (relative) => readdir(path.join(ROOT, relative), { withFileTypes: true });
 
 export async function main() {
   const violations = [];
   let scanned = 0;
   for (const root of ROOTS) {
-    for (const file of await walk(root)) {
+    for (const file of await filesUnder(
+      root,
+      listDirectory,
+      (relative) =>
+        path.extname(relative) === ".tsx" && !path.basename(relative).includes(".test."),
+    )) {
       scanned++;
       const source = await readFile(path.join(ROOT, file), "utf8");
       violations.push(...violationsIn(file.split(path.sep).join("/"), source));
