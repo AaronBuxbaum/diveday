@@ -92,6 +92,14 @@ described here as $22–24 until 2026-09-10.
 > the 60-day expiry *does* buy is a lower ceiling on a silent pruner outage: at ~19 GB a day of
 > accumulation, ~$27/month instead of ~$80.
 
+> **Update 2026-11-01: the publisher now uploads half as many objects.** `.reg/expected` is a copy of
+> the whole baseline, and the publish bundle uploaded it next to `actual/` on every run, although
+> the report viewer reads an expected image only for a changed or deleted item and the next run's
+> baseline reads `actual/` only. `scripts/visual-build-publish-bundle.mjs` now keeps `expected/`
+> files for `failedItems` and `deletedItems` only: about 1,700 fewer Tier-1 PUTs (~$0.0085) per
+> publishing run. Not taken: a pull request snapshot is never anyone's baseline (every PR is keyed
+> to its fork point on `main`), so a PR run could skip uploading `passed` actual images too.
+
 What moving would and would not do:
 
 - **Vercel → AWS (Lambda + CloudFront via OpenNext, or Amplify).** Saves the $20 and costs a
