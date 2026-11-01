@@ -3,11 +3,9 @@ import type { TripStage } from "@/lib/trip-stages";
 import type { StageStripCopy } from "./StageStrip";
 
 /**
- * **Where the boat is, on the packet's paper** (layer 4 review, dde-b 4).
- * `StageStrip` prints the crew's word under its buttons; the packet renders
- * no strip (`ManifestPaper`), so this is that printed word on its own: the
- * pressed tap's label and who said it when. With no word said there is
- * nothing to print, as on the strip (K-141).
+ * The packet prints the current stage label and recorded line without the
+ * interactive `StageStrip` (`ManifestPaper`). With no current stage, there is
+ * nothing to print (K-141).
  */
 export function PrintedStage({
   copy,

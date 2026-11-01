@@ -42,14 +42,10 @@ export function WaiverLine({
           version: waiver.templateVersion ?? 0,
         })}
         {method}
-        {/* A referral a physician cleared is the only thing in this document
-            that lifts a hard readiness block, so it is stated on its own.
-            **As the shop's act, not as a clinical determination**: `{date}` is
-            when a staff member recorded it and `{name}` is that staff member,
-            so a sentence reading "a physician cleared this diver on {date}"
-            would claim, to an insurer, more than these records hold. The
-            physician's own date is stated separately, because it is the one a
-            claims reader asks for (issue #1252, `dive-domain-expert` review). */}
+        {/* State the recorded clearance as the shop's act, not a clinical
+          determination: `{date}` is when staff recorded it and `{name}` is
+          the staff member. The physician's evaluation date is separate
+          (issue #1252, `dive-domain-expert` review). */}
         <MedicalClearanceSentence t={t} waiver={waiver} dateTime={dateTime} />
       </>
     );
@@ -58,13 +54,10 @@ export function WaiverLine({
     return <>{t("incidentExport.waiverMedicalReview")}</>;
   }
   {
-    /* The same act with the opposite answer, and stated the same careful way
-       (issue #1283): `{date}` is when a staff member recorded the outcome and
-       `{name}` is that staff member, never a sentence putting words in a
-       clinician's mouth. The physician's own evaluation date, their name and
-       whether the letter is on file follow, because a refusal earns that
-       evidence more than a clearance does — it is the record of why somebody
-       stayed ashore. */
+    /* For a declined clearance, `{date}` is when staff recorded the outcome;
+       `{name}` identifies that staff member, not a clinician. Preserve the
+       physician evaluation date, name, and whether the letter is on file
+       (issue #1283). */
   }
   if (waiver.state === "medical_not_cleared") {
     return (

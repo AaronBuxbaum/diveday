@@ -26,28 +26,14 @@ export function WantedPiece({
   const pieceLabel = item.size
     ? t("gear.prep.kindWithSize", { kindLabel, size: item.size })
     : kindLabel;
-  // Exactly this diver's size in its own band, everything
-  // else free in a second — the boundary the old flat
-  // ranked list could only imply.
+  // Keep exact-size units separate from other free units.
   const { exact, rest } = groupUnitsForSize(freeByKind.get(item.kind) ?? [], item.size);
   const selectId = `assign-${bookingId}-${item.kind}`;
-  // Preselect only an exact size match: defaulting an XS
-  // onto an L diver made a wrong reservation one tap
-  // away, and defaulting the same unit into every picker
-  // of a kind invited the somebody-got-it-first refusal.
-  // Anything else opens on a placeholder the form refuses
-  // to submit.
-  //
-  // A row with a proposal says so in words and holds
-  // its picker behind Change (`ProposedUnit`); one
-  // without holds it behind Pick and opens on the
-  // placeholder, because the exact units it could have
-  // preselected are the ones proposed to the divers
-  // above it.
+  // Never default a mismatched or shared unit; proposals remain choices, not
+  // reservations, and each picker opens without a selected unit.
   const proposal = proposals.get(proposalKey(bookingId, item.kind));
   const preselect = "";
-  // On an air diver's row a nitrox-designated regulator sorts after the air
-  // sets (domain review A2/F7); still offered, never refused.
+  // Air divers see nitrox-designated regulators last, but may still choose one.
   const designatedLast = (units: typeof exact) =>
     wantsNitrox
       ? units
@@ -59,15 +45,8 @@ export function WantedPiece({
       id: option.id,
       label: unitLine(t, option, wantsNitrox),
     }));
-  // **Nothing falls between the bands.** The first band
-  // is headed by the size it matches, so it can only
-  // exist where there is a size to name — and a unit
-  // sorted into it without one would otherwise be in
-  // neither band and reachable from no picker, which on
-  // this page means a staffer cannot assign a unit that
-  // is genuinely free. `groupUnitsForSize` does not
-  // produce that pair today; this makes it structural
-  // rather than something the next reader has to trace.
+  // Keep every free unit reachable, including exact matches when no size is
+  // available to label a separate band.
   const named = exact.length > 0 && item.size ? item.size : null;
   const exactBand = named ? exact : [];
   const restBand = named ? rest : [...exact, ...rest];
@@ -87,8 +66,7 @@ export function WantedPiece({
         }
       : null,
   ].filter((group) => group !== null);
-  // One sentence per refusal a pick can come back
-  // with, the same for a hand pick and a proposal.
+  // Use the same localized refusal messages for manual picks and proposals.
   const pickRefusals = {
     unit_unavailable: t("gear.prep.notice.unitUnavailable"),
     unit_out_of_service: t("gear.prep.notice.unitOutOfService"),
@@ -126,17 +104,10 @@ export function WantedPiece({
         {groups.length === 0 ? (
           <span className="text-muted">{t("gear.prep.noneFree", { kindLabel })}</span>
         ) : (
-          // The tile is the measure: the picker and a proposal's words
-          // with its one act both take the tile's width.
+          // Keep the picker and proposal within the piece's tile width.
           <div className="w-full min-w-0">
-            {/* **No "Assign" beside it.** The pick is the act
-                (issue #802). Every piece is one line and one text button:
-                a proposed piece says its unit and holds the picker behind
-                "Change" (A10); a piece with no proposal says it has no unit
-                yet and holds the picker behind "Pick", so the tab reads in
-                one idiom row by row (visual review polish). The refusal the
-                exclusion constraint can still answer with lands on this row,
-                and reverts it. */}
+            {/* Proposal and picker stay one row; a refused assignment is
+                reported here and leaves the unit unassigned. */}
             <ProposedUnit
               proposed={proposal !== undefined}
               copy={

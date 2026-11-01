@@ -11,25 +11,18 @@ import { formatDateWithYear } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 
 /**
- * **What the laminated boat card carried, on the printed manifest** (issue
- * #2035, Aaron's yes on 2026-10-05).
+ * The boat card's procedure and writable kit fields, on the printed manifest
+ * (issue #2035).
  *
- * ADR 20261001-logbook cut the boat card, and the packet kept the shop's own
- * emergency reference (`EmergencyReferenceCard`). Two things the card printed
- * then printed nowhere: DiveDay's missing-diver procedure, and ruled blanks
- * for where the oxygen and first aid kits are kept, when they were last
- * checked, and the oxygen cylinder's pressure at that check.
- * Both sit beside the reference on the paper copy of the manifest, which is
- * what the trip packet and the day's paper compose, so either printout carries
- * them.
+ * ADR 20261001-logbook removed the card; the packet retains the shop's
+ * emergency reference. The printed manifest also carries the missing-diver
+ * procedure and ruled fields for kit locations, check date, and oxygen
+ * pressure.
  *
- * DiveDay invents none of these facts: a value it made up is worse than a
- * rule to write on, because the crew who trusts it spends the minute finding
- * out (issue #688). What the shop's own gear register holds about this hull's
- * kit (fourth review, item 17) is a line of its own under the kit heading,
- * never an answer in a blank: the blanks ask where on the boat the kit is and
- * what the crew's own check read, which the register does not know (review
- * F2). Paper only; the screen has the live manifest.
+ * Do not invent values for the blanks (issue #688). Register facts about this
+ * hull's kits appear on their own line; they do not answer where the kits are
+ * aboard or what the crew's check measured. This is print-only; the screen
+ * shows the live manifest.
  */
 export type PrintedBoatProcedureCopy = {
   missingHeading: string;
@@ -149,12 +142,9 @@ export function PrintedKitBlanks({
 }
 
 /**
- * **The boat card on paper**: the missing-diver procedure above the numbers
- * it sends the crew to, the departure's emergency reference, and the kit
- * lines under them (issue #2035; the departure's own boat and its register,
- * fourth review items 11 and 17). Print only: on screen the reference sits
- * behind the manifest's own menus, and this is its complete copy outside
- * either disclosure.
+ * Print-only composition: missing-diver procedure, emergency reference, and
+ * kit lines for this departure's boat and register (issue #2035; review items
+ * 11 and 17). The screen reference remains behind the manifest menus.
  */
 export function PrintedBoatPaper({
   idPrefix,

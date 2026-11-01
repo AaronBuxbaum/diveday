@@ -11,8 +11,7 @@ import type { PrepView } from "./prep-view";
 export function PrepFitGaps({ view }: { view: PrepView }) {
   const { prep, t, locale, shopSlug, idPrefix } = view;
   const { checklist } = prep;
-  // The "Sizes still missing" card's two halves, sorted once: each is drawn
-  // only when it has somebody in it.
+  // Separate partial fits from seats that have never been asked.
   const partialFit = checklist.diversWithIncompleteFit.filter(
     (diver) => diver.state !== "not_recorded",
   );
@@ -21,26 +20,13 @@ export function PrepFitGaps({ view }: { view: PrepView }) {
   );
   return (
     <>
-      {/* Two gaps, one section, and each row says which it is. This used to
-              be "No rental fit on file", which was true of everyone in it back
-              when a fit was counted by the row existing. Now that it is counted
-              per item, most of this list is divers somebody *did* ask — and
-              telling the packer nobody asked would send them to re-ask a
-              question that already has half an answer. */}
+      {/* Keep partial fits distinct from seats never asked, so staff can see
+          what is missing without treating an existing answer as no fit. */}
       {checklist.diversWithIncompleteFit.length > 0 ? (
-        // No description: what a missing size costs is said on the piece
-        // itself, "Size missing" in the packing list below (UX review
-        // 2026-10-10, item 26), not in a sentence about the list.
+        // The packing-list item itself says when its size is missing.
         <SectionCard title={t("tripPrep.missingSizesHeading")}>
-          {/* Two different situations, said differently: a diver with
-                  *some* sizes on file keeps a row naming exactly what's
-                  missing, while the never-asked share one sentence said once
-                  above their names — the old list repeated "nothing on file;
-                  they may be bringing their own kit…" per row, the same clause
-                  chanted seven times (principle 9). One gap between the two,
-                  and only when both are there: an empty partial list used to
-                  hold the never-asked block's `mt-3` open under the
-                  description, a blank line that read as a missing row. */}
+          {/* Partial fits name each missing item; never-asked seats share one
+              lead. Keep a gap only when both groups are present. */}
           <div className="flex flex-col gap-3 text-sm">
             {partialFit.length > 0 ? (
               <ul className="flex flex-col gap-1">
@@ -68,14 +54,10 @@ export function PrepFitGaps({ view }: { view: PrepView }) {
               </ul>
             ) : null}
             {neverAsked.length > 0 ? (
-              // **One paragraph, names in a comma list** (visual review
-              // 2026-10-24, B54): the lead, then every never-asked diver,
-              // each still a link to their record. A wrapped flex of
-              // separate targets read as a second list beside the first.
+              // Keep the lead and names in one paragraph, with each name linked.
               <p>
                 <span className="text-muted">{t("tripPrep.missingSizesNobodyAskedLead")}</span>{" "}
-                {/* The locale's own list separators ("A, B, C" in English),
-                    each name still its own link. */}
+                {/* Preserve locale-specific separators and each linked name. */}
                 {(() => {
                   let at = 0;
                   return cachedListFormat(locale, { style: "short", type: "unit" })
@@ -101,10 +83,8 @@ export function PrepFitGaps({ view }: { view: PrepView }) {
         </SectionCard>
       ) : null}
 
-      {/* A held seat's sizes and nitrox card are the matched
-                  record's, which may be somebody else's (issue #2144). Its
-                  names are said once here, so nobody packs from that record
-                  or fills a fit onto it. */}
+      {/* A held seat may match somebody else's identity. Keep its details
+          visible without treating them as the diver's fit or card. */}
       {checklist.heldSeats.length > 0 ? (
         <SectionCard
           title={t("tripPrep.heldSeatsHeading")}
@@ -149,9 +129,7 @@ export function PrepFitGaps({ view }: { view: PrepView }) {
                     {diver.fullName}
                   </Link>
                   {diver.note ? <span className="text-muted"> — {diver.note}</span> : null}
-                  {/* What they asked for. The captain doing the fit can't edit
-                          the profile and sees no size on the packing line, so
-                          without this there is nothing to bring a range around. */}
+                  {/* Show stated sizes so staff can bring the right range. */}
                   {diver.statedSizes.length > 0 ? (
                     <span className="text-muted">
                       {" "}
@@ -162,8 +140,7 @@ export function PrepFitGaps({ view }: { view: PrepView }) {
                   ) : (
                     <span className="text-muted"> {t("tripPrep.noSizesOnFile")}</span>
                   )}
-                  {/* How old the flag is: a shortage is about one day, so a
-                          months-old flag is a prompt to re-ask, not to trust. */}
+                  {/* Flag age helps staff decide whether to confirm the request. */}
                   <span className="text-muted">
                     {" "}
                     {t("tripPrep.flaggedAgo", {

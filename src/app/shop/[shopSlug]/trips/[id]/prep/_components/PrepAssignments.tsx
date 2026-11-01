@@ -35,12 +35,7 @@ import { WantedPiece } from "./WantedPiece";
 export function PrepAssignments({ view }: { view: PrepView }) {
   const { prep, t, locale, shopSlug, tripId, idPrefix, cancelled, sailed, home } = view;
   const { assignmentRows, loadOut, proposals } = prep;
-  /**
-   * The unit proposed for each piece still to pick, in roster order (UX audit
-   * 2026-10-07, item 9): what the one-tap "Assign all" sends, and what each
-   * proposed row offers on its own. None on a cancelled departure, or once the
-   * boat has left the dock (fourth review, item 16).
-   */
+  /** Proposed units in roster order; they become reservations only on confirmation, which is unavailable after cancellation or sailing. */
   const proposalPicks =
     cancelled || sailed
       ? []
@@ -50,19 +45,15 @@ export function PrepAssignments({ view }: { view: PrepView }) {
             return unit ? [{ bookingId: diver.bookingId, gearItemId: unit.id }] : [];
           }),
         );
-  // The summary and the button read one count (A10, B54).
+  // Keep the summary and confirmation button on the same proposal count.
   const counts = assignmentCounts(assignmentRows, proposalPicks);
   return (
     <section
       aria-labelledby={scopedId(idPrefix, "assignments-heading")}
-      // On paper the section is only its assigned lines: with nothing
-      // assigned yet it would print as a heading over bare names, so
-      // it drops out of the packet entirely until a unit is on it.
+      // The paper projection is empty until there is an assigned unit.
       className={assignmentRows.some((row) => row.assigned.length > 0) ? undefined : "print:hidden"}
     >
-      {/* The heading and its cart on the left, the one-tap "Assign all" on
-          the right from `sm` up: stacked, the button was a third line of
-          preamble before the first diver. */}
+      {/* Keep the bulk action beside the heading when there is room. */}
       <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
         <div className="min-w-0">
           <h2
@@ -72,22 +63,10 @@ export function PrepAssignments({ view }: { view: PrepView }) {
           >
             {t("gear.prep.heading")}
           </h2>
-          {/* The cart, not a caption. What replaced a sentence restating
-                          the heading is the count a counter is working against — and
-                          its two exceptions, said only when there are any, so a clean
-                          load-out reads as one line rather than three reassurances
-                          (issue #1185). */}
+          {/* Show load-out counts and only the applicable exceptions. */}
           {loadOut ? (
             <p className="mt-1 text-sm text-muted print:hidden">
-              {/* One count that matters, "3 divers still need gear" (true
-                  at any piece count, where "a unit" was not), and the rest
-                  a muted tail (visual review 2026-10-24, A10 /
-                  B54): "· 13 proposed", the button's own number, so "Assign
-                  all 13 proposed units" beside it is the same count. The
-                  lead is dropped on a cancellation, where it is an
-                  instruction to pick on a day nothing is picked for, and at
-                  sea, where nothing more is picked; then the line is what
-                  went out. */}
+              {/* On cancellation or after sailing, report the load-out without inviting new picks. */}
               {counts.missing > 0 && !cancelled && !sailed ? (
                 <span className="font-medium text-foreground">
                   {t("gear.prep.cartDiversWaiting", { divers: counts.diversWaiting })}
@@ -127,13 +106,7 @@ export function PrepAssignments({ view }: { view: PrepView }) {
           />
         ) : null}
       </div>
-      {/* **One grammar per diver, not two stacked lists.** A row used
-          to be a list of assigned units in one shape followed by a list of
-          labelled `<select>`s in another. Every piece is one kit line now,
-          a row on a phone and a tile from `sm` up (`kitLineClass`): settled
-          ones sunken, open ones edged, so a diver's kit reads at a glance
-          as what is done and what is left. The diver's own acts, the ticket
-          and the hand-over, sit on the name's line. */}
+      {/* Each diver's assigned and wanted pieces share kit lines; ticket and hand-over actions stay by the name. */}
       <ul
         className={sectionCardClass({
           padding: "none",
@@ -148,18 +121,7 @@ export function PrepAssignments({ view }: { view: PrepView }) {
             >
               <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
                 <p className="font-medium">{diver.fullName}</p>
-                {/* The slip's door, and only once there is something to
-                          put on it — a ticket listing nothing is a wrong slip,
-                          not a short one. Hidden on paper: the departure packet
-                          is already printing this diver's units.
-
-                          `-my-2.5` hands (44 − 24) / 2 back, so the row keeps
-                          the name's 24px line: the 44px ghost set a diver with
-                          a unit 8–11px lower than the diver above (pixel-craft
-                          class 4). `flush` ends the label on the column's edge,
-                          as the name starts on it. The box then reaches into
-                          the row's padding of a card that clips, so its ring
-                          is drawn inside. */}
+                {/* A ticket is useful only for an assigned diver; paper already lists their units. */}
                 <div className="flex items-center gap-x-1">
                   {assigned.length > 0 ? (
                     <Link
@@ -174,12 +136,7 @@ export function PrepAssignments({ view }: { view: PrepView }) {
                       {t("gear.prep.ticketDoor")}
                     </Link>
                   ) : null}
-                  {/* **The set goes out in one act too** (issue #1185,
-                          D25) — the mirror of the return pane below it. One
-                          deliberate hand-over per diver, offered only while
-                          there is something still on the wall to hand across:
-                          a set already out has nothing to give, and a set with
-                          nothing assigned is not a set. */}
+                  {/* Hand over an assigned set once, while it remains in the shop. */}
                   {assigned.length > 0 && !handedOver && !home ? (
                     <form action={checkOutTripGearSetAction} className="-my-2 print:hidden">
                       <input type="hidden" name="tripId" value={tripId} />
@@ -207,8 +164,7 @@ export function PrepAssignments({ view }: { view: PrepView }) {
                     : null
                 }
               >
-                {/* Flagged for a staff fit (issue #2208): the row keeps a
-                        picker for every piece, proposes none, and says why. */}
+                {/* Staff-fit cases remain unproposed and explain the required review. */}
                 {needsStaffFit ? (
                   <p className="mt-1 text-sm font-medium text-warning-strong">
                     {rentalFitLineText(t, locale, {
@@ -217,8 +173,7 @@ export function PrepAssignments({ view }: { view: PrepView }) {
                     })}
                   </p>
                 ) : null}
-                {/* Already carrying the shop's kit off a counter rental:
-                        said, so nobody packs a second set. Counts stay put. */}
+                {/* Identify counter-held shop gear so staff do not pack a duplicate. */}
                 {counterHeld.length > 0 ? (
                   <p className="mt-1 text-sm text-warning-strong">
                     {counterHeldLine(t, locale, counterHeld)}
@@ -255,14 +210,7 @@ export function PrepAssignments({ view }: { view: PrepView }) {
                       </dd>
                     </div>
                   ))}
-                  {/* **The set comes home in one act** (issue #1186, D26).
-                          Until the boat is home: after that "Back from the
-                          boat" asks per unit (fifth-loop ideas, item 5).
-                          Only when something is actually out: a diver whose
-                          units are still on the wall has nothing to return, and
-                          a pane offering to close a set that never left would
-                          be the paperwork this replaces rather than the removal
-                          of it. */}
+                  {/* Before the boat returns, close a handed-over set together; afterward returns are per unit. */}
                   {!home && assigned.some((assignment) => assignment.checkedOutAt !== null) ? (
                     <GearReturnPane
                       fields={{ tripId, bookingId: diver.bookingId }}
@@ -286,14 +234,7 @@ export function PrepAssignments({ view }: { view: PrepView }) {
                       }}
                     />
                   ) : null}
-                  {/* **No new reservations on a departure that is not
-                          going.** A reservation holds an exclusion window over
-                          the unit, so picking a drysuit for a blown-out boat
-                          takes it off the boat that is sailing — and there is
-                          nothing to pick *for*. What stays above is the record
-                          half: what is already reserved, what is already out,
-                          and the two controls that undo them (dive-domain
-                          review 20260920). */}
+                  {/* Cancellation blocks new reservations, while existing assignments and release/return records remain visible. */}
                   {cancelled
                     ? null
                     : wanted.map((item) => (
@@ -373,15 +314,7 @@ function counterHeldLine(
   });
 }
 
-/**
- * **The assigned units, as the packet's paper carries them** (B03). The
- * printed packing list has only ever held the assigned lines of this section
- * (each control above is `print:hidden`, and a diver with nothing assigned
- * drops off the sheet), so on the packet that is all there is: the diver, the
- * one warning their row can carry, and each unit with its tag, its warnings
- * and "Out" once it has left the wall. Nothing to tap. With nothing assigned
- * yet the section is absent, as it was on paper.
- */
+/** Paper projection of assigned units and their warnings/hand-over state; interactive controls are omitted. */
 export function PrepAssignedPaper({ view }: { view: PrepView }) {
   const { prep, t, locale, idPrefix } = view;
   const rows = prep.assignmentRows.filter((row) => row.assigned.length > 0);
