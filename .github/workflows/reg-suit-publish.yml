@@ -87,7 +87,7 @@ jobs:
         run: |
           node scripts/visual-publish-artifacts.mjs --validate-selection
           if [[ "$VISUAL_CAPTURE_MODE" == "all" ]]; then
-            echo 'selection_note=Complete visual capture (all eight shards).' >> "$GITHUB_OUTPUT"
+            echo 'selection_note=Complete visual capture (all twelve shards).' >> "$GITHUB_OUTPUT"
           else
             echo "selection_note=Selective visual capture ($VISUAL_CAPTURE_MODE mode); uncaptured surfaces are filled from the trusted baseline." >> "$GITHUB_OUTPUT"
           fi
@@ -139,6 +139,30 @@ jobs:
         with:
           name: visual-screenshots-8
           path: ${{ runner.temp }}/reg-suit-artifacts/shard-8
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: ${{ contains(fromJSON(inputs.capture-shards), 9) }}
+        with:
+          name: visual-screenshots-9
+          path: ${{ runner.temp }}/reg-suit-artifacts/shard-9
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: ${{ contains(fromJSON(inputs.capture-shards), 10) }}
+        with:
+          name: visual-screenshots-10
+          path: ${{ runner.temp }}/reg-suit-artifacts/shard-10
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: ${{ contains(fromJSON(inputs.capture-shards), 11) }}
+        with:
+          name: visual-screenshots-11
+          path: ${{ runner.temp }}/reg-suit-artifacts/shard-11
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: ${{ contains(fromJSON(inputs.capture-shards), 12) }}
+        with:
+          name: visual-screenshots-12
+          path: ${{ runner.temp }}/reg-suit-artifacts/shard-12
 
       - name: Download the planned visual capture inventory
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2

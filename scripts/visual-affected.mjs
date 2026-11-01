@@ -84,7 +84,7 @@ import { isVisualSpec, visualSpecs } from "./visual-specs.mjs";
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 /** The visual run's shard count when it captures everything. */
-export const FULL_SHARDS = 8;
+export const FULL_SHARDS = 12;
 
 /**
  * Captures every pull request runs whatever it changed: the shells a reviewer sees first, so a

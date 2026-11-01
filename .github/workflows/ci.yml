@@ -767,7 +767,7 @@ jobs:
     name: Visual capture shard ${{ matrix.shard }}/${{ needs.visual-plan.outputs.count }}
     needs: [build, visual-plan]
     if: github.event_name != 'schedule' # nightly runs `real-postgres` only
-    # Eight shards on main, two workers each. The first two-worker trial was
+    # Twelve shards on main, two workers each. The first two-worker trial was
     # faster but not byte-identical; the owner chose to accept that initial
     # visual noise in #3056. Captures still surface real differences for review.
     #
@@ -787,7 +787,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Eight on main; on a pull request as many as its captures weigh (seven
+        # Twelve on main; on a pull request as many as its captures weigh (seven
         # for every light-mode capture).
         shard: ${{ fromJSON(needs.visual-plan.outputs.shards) }}
     steps:
