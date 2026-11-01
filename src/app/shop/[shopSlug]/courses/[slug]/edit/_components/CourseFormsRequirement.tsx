@@ -78,11 +78,9 @@ function courseFormsNotice(
  * **Which course forms this course asks each student to sign** (ADR
  * 20261008-course-forms).
  *
- * Its own `<form>` below the page's save form, because a form cannot nest in
- * another and because this is not page prose: it changes who is Blocked on
- * every session of the course the moment it saves, so it does not wait on the
- * page's Save or ride its conflict guard. The forms themselves are written on
- * the release's page, so this only chooses, and links there to write one.
+ * This section is part of the course editor's one form and Save. It selects
+ * which existing forms the course asks students to sign; form definitions are
+ * written on the waivers page, linked here for readers who can manage them.
  *
  * Ticked forms are listed first in the order students meet them; the number
  * box beside each is that order. A reader who may not take a form off (not an
