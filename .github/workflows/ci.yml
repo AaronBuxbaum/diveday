@@ -387,7 +387,7 @@ jobs:
           retention-days: 1
 
   playwright:
-    name: Playwright shard ${{ matrix.shard }}/12
+    name: Playwright shard ${{ matrix.shard }}/6
     needs: [build, changes]
     # Nightly runs `real-postgres` only.
     if: github.event_name != 'schedule'
@@ -398,7 +398,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+        shard: [1, 2, 3, 4, 5, 6]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
@@ -435,7 +435,7 @@ jobs:
       # what it last took on CI (`scripts/e2e-durations.json`, refreshed weekly
       # by durations-refresh.yml from the `e2e-durations-<n>` artifacts below),
       # and a source estimate scaled onto those milliseconds for a spec added
-      # since. It reads only committed files, so all twelve jobs compute the
+      # since. It reads only committed files, so all six jobs compute the
       # identical deal from their own checkouts — the property that matters,
       # since a deal two jobs disagreed about would run a spec twice or, worse,
       # not at all. `scripts/e2e-shard.test.mjs` pins that every spec lands in
@@ -451,7 +451,7 @@ jobs:
       # look first when one shard is slow again. An empty list is refused
       # here: `playwright test` with no file arguments runs every spec.
       # `--skip` leaves out the path-gated pixel-probe spec when the `changes`
-      # job says nothing it tests changed; all twelve shards read the same output.
+      # job says nothing it tests changed; all six shards read the same output.
       #
       # A failed run whose log carries `browserActivity`'s renderer verdict
       # ("wedged, not slow", e2e/fixtures.ts) gets exactly one `--last-failed`
@@ -465,15 +465,15 @@ jobs:
       - name: Run non-visual Playwright tests
         env:
           SKIP: ${{ needs.changes.outputs.pixel_probe == 'false' && 'e2e/pixel-probe.spec.ts' || '' }}
-          E2E_WORKERS: "1"
+          E2E_WORKERS: "2"
         run: |
           set -o pipefail
-          mapfile -t spec_files < <(node scripts/e2e-shard.mjs --shard=${{ matrix.shard }}/12 --skip="${SKIP}" --explain --summary="$GITHUB_STEP_SUMMARY")
+          mapfile -t spec_files < <(node scripts/e2e-shard.mjs --shard=${{ matrix.shard }}/6 --skip="${SKIP}" --explain --summary="$GITHUB_STEP_SUMMARY")
           if [ "${#spec_files[@]}" -eq 0 ]; then
             echo "::error::scripts/e2e-shard.mjs dealt this shard nothing; refusing to run every spec instead."
             exit 1
           fi
-          echo "shard ${{ matrix.shard }}/12: ${#spec_files[@]} specs"
+          echo "shard ${{ matrix.shard }}/6: ${#spec_files[@]} specs"
           # The cert-check extension spec loads the real extension, which the
           # headless shell cannot: only the shard dealt it pays for the full
           # Chromium (e2e/agency-check-extension.spec.ts).
@@ -506,15 +506,13 @@ jobs:
           if [ -d test-results ]; then cp -R test-results e2e-durations/retry-attempt-results; fi
           cp e2e-durations/first-attempt.json e2e-durations/results.json
           exit "$rerun"
-        # Trial one worker per shard after unrelated functional timeouts on
-        # two recent PR runs (#3162 and #3163). The failures do not establish
-        # worker contention as their cause, but 2 workers each start a browser
-        # and a next server on this 4-core runner. Twelve cost-balanced bins
-        # keep the largest estimated serial workload near 7 minutes of spec
-        # time; the 20-minute job ceiling remains in place to expose overruns.
-        # Compared with six 2-worker shards, this uses twelve runners instead
-        # of six and adds six jobs against the 20-job concurrency cap. Review
-        # shard durations and failure patterns before keeping this tradeoff.
+        # Six shards at two workers each (2026-11-01). Twelve at one worker
+        # (after unrelated timeouts on #3162 and #3163) cost ~77 runner-minutes
+        # a run; `playwright-workers-trial.yml` ran six at two workers 30
+        # shard-runs: 29 green (the one red never recurred), 374-633 s a
+        # run, ~60 runner-minutes and six fewer jobs against the concurrent-job
+        # cap. The price is a slowest shard of ~10 minutes against ~7. If
+        # functional timeouts return, look at this setting before the specs.
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
@@ -588,7 +586,7 @@ jobs:
   # before the build download, and every later step is skipped.
   #
   # Workers follow the shards they shadow: the specs at the Playwright job's
-  # default two, the captures at the visual job's `E2E_WORKERS=1`.
+  # two, the captures at the visual job's `E2E_WORKERS=1`.
   fast-lane:
     name: Fast lane
     needs: [build, changes]
