@@ -2,117 +2,13 @@ import { type ReactNode, useId } from "react";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 
 /**
- * The card — the bordered panel a staff page is mostly made of, and the last
- * piece of this folder's vocabulary to get a component.
- *
- * Until now every page retyped it. That spelling appeared **209 times across
- * 153 files**, at four radii (`rounded-2xl`, `rounded-lg`, `rounded-xl`,
- * `rounded-3xl`) and six paddings, with `shadow-sm` on only 26 of them — so
- * identically-shaped cards sat at two different elevations on one page, and
- * two sibling settings routes one tap apart rendered the same panel at two
- * different corner radii.
- *
- * The canonical spelling is the one the `<Table>` shell and every loading
- * skeleton share: `rounded-panel border border-border bg-surface shadow-bed`.
- * A card, a stat tile and a table shell are the same object, so they read as
- * one.
- *
- * ## On the bed
- *
- * **A resting panel is set off by its hairline, not a lift** (ADR
- * 20261001-logbook, decision 5): a 12px `--radius-panel` and the token
- * `--shadow-bed`, which Logbook sets to draw nothing. The token survives so the
- * panel's elevation stays one value that moves with the palette and never with
- * a call site; menus, sheets, dialogs and toasts keep their own
- * `shadow-lg`/`shadow-2xl` lift because they float. There is still no
- * `elevated` prop and no `shadow-sm` anywhere near a panel.
- *
- * The rule reaches the panels this component does not own, too: `card.test.tsx`
- * fails the build on any class string in `src/` that still wears the retired
- * `rounded-2xl` shell, or that pairs the panel radius with `shadow-sm`, so a
- * hand-rolled panel cannot end up at a second radius or a second elevation on
- * a page of consistent ones.
- *
- * There is deliberately **no `radius` prop**. A prop that lets every call site
- * keep the radius it happens to have today would preserve the drift behind an
- * abstraction and call it a design system. A card that looks wrong is fixed
- * here, not at the call site — the same rule `buttonClass()` and
- * `SegmentedControl` keep.
- *
- * Section rhythm belongs to the page, not the card: `SectionCard` carries no
- * outer margin at all. A page stacks its sections in `space-y-10` rather than
- * hanging a `mt-*` off each one (nine different values were in use), and a
- * list of *like* cards — two calendar feeds, a roster of people — keeps its own
- * tighter gap, because that is a list rather than a run of sections.
- *
- * ## What is *not* a section card
- *
- * Three migrations asked for a prop to widen this component, and the answer
- * each time was that the thing in front of them is a different object. Written
- * down so the fourth does not ask again:
- *
- * - **A sunken inset** (`bg-surface-sunken`, a roll-call row, a flagged
- *   fallback, a form's nested note). It is *carved into* a card rather than
- *   raised on the page. `ShopStat`'s `inset` variant is the precedent.
- * - **A panel on a `bg-surface` band** — the marketing pages set `bg-background`
- *   on their cards precisely because the band behind them is already
- *   `bg-surface`. This component hard-codes `bg-surface` and will not gain a
- *   fill prop: two fills is how a card starts meaning "any rectangle".
- * - **An overlay** — a dropdown, a modal, a toast, a bottom sheet. They carry
- *   `shadow-lg`/`shadow-2xl` because they float above the page rather than
- *   sitting in it.
- * - **A tone-carrying operational panel** — a warning, success confirmation,
- *   paid receipt or earned moment. Its border and fill communicate meaning,
- *   and `SectionCard` deliberately has no tone prop that could flatten it into
- *   neutral chrome. Keep that treatment at the call site — on the card's own
- *   geometry, `TONE_PANEL_CLASS`, so only the colour differs.
- *
- * A card nested directly inside another card at the same radius and fill reads
- * as a rendering bug, not as structure. If that is where you have arrived, the
- * inner thing is one of the three above.
- *
- * ## Headings: what size, and where one goes
- *
- * `title` renders the staff type scale (`text-2xl` — Reef's section rung,
- * drawn 26/600 on the system sheet and set in Plex at the ramp's nearest
- * step — or `text-base` for a card
- * inside a group that already owns the `h2`). The **marketing pages keep their
- * own scale at the call site** and pass no `title` — their headings sit under a
- * 36px display type where `text-base` would turn a page's one checkable proof
- * into fine print. A design system that flattens a deliberately different
- * surface is not being consistent, it is being indiscriminate.
- *
- * *Placement* is the other half, and the marketing exemption does not reach it:
- * a heading goes **inside the card it names, above the group it governs**. One
- * question decides which — would the heading still be telling the truth if the
- * card under it disappeared, multiplied, or swapped for an `EmptyState`?
- *
- * - **No**: the heading and the card live and die together, so it is the card's
- *   `title` and this component renders the `h2` and derives its
- *   `aria-labelledby`. A bare heading floated above a single card splits one
- *   object into two — the named region and the visible border disagree, so a
- *   screen reader lands on an unnamed panel while the heading sits ownerless in
- *   the gutter.
- * - **Yes**: the body is plural — sibling cards, a grid of object cards, a
- *   `padding="none"` shell of divided rows, anything that swaps to an
- *   `EmptyState`. The heading stands above as a bare
- *   `<h2 className={SECTION_TITLE_CLASS}>` — the section rung — the *same* scale a card's own
- *   `h2` gets, because a section speaks at one volume whether its heading sits
- *   inside one card or above five. Each card under it steps down with
- *   `titleAs="h3"`, or carries the object's own name.
- *
- * Two corollaries. A `<details>` never takes a bare heading above it: the
- * `<summary>` *is* the heading and the control, and a closed disclosure under a
- * floated heading is a heading over apparently nothing that a reader will press
- * and open nothing. And a band — a search or filter form wearing this chrome —
- * takes no heading at all; its field labels are its words.
- *
- * The full grammar, including the "one card or a group?" line and the anatomies
- * that hand-spell their heading (a tone panel, an eyebrow, a `<form>` card,
- * which this component's element set excludes): the "Where a heading goes"
- * section of docs/design/forms-and-controls.md.
+ * Canonical section-card shell. Callers choose padding and own section spacing.
+ * `title` renders a heading inside the region; its id names that region through
+ * `aria-labelledby`, and `titleAs` sets the heading level. The full grammar is
+ * in docs/design/forms-and-controls.md. ADR 20261001-logbook, decision 5,
+ * keeps resting panels on the hairline and shared bed token, with no radius,
+ * fill, elevation, or tone props. `card.test.tsx` guards the shell spelling.
  */
-
 const PADDING = {
   /** The card is a shell: a divided row list, a table, a `<details>` whose own parts pad themselves. */
   none: "",
@@ -143,77 +39,31 @@ export function sectionCardClass({
 }
 
 /**
- * **A tone panel's geometry**: the card's radius, bed and default (`md`)
- * padding, with no colour. A tone-carrying panel (above) spells its own
- * border colour and fill beside it, so it sits on the page as a card does and
- * differs only in the tone that means something.
- *
- * The roster's minimum-seats band and its unmet-demand panel hand-rolled
- * `p-5` with no `sm:` step and no bed, the second at the 12px inset radius:
- * on a phone their words started 4px right of every card above and below
- * them, and the demand panel's corners were visibly tighter (pixel-craft
- * classes 3 and 12). `card.test.tsx` refuses a tone panel hand-rolled on the
- * panel radius, and names the few that are deliberately something else.
+ * Tone-panel geometry; callers supply the semantic border and fill
+ * (docs/design/pixel-craft.md, classes 3 and 12).
  */
 export const TONE_PANEL_CLASS = "rounded-panel border p-4 shadow-bed sm:p-5";
 
-/**
- * **The `lg` twin**: the same panel on the inset of a card a person works
- * inside (`padding="lg"`), for a tone panel among such cards — Today's
- * stations, the public trip page's booked moment. Hand-rolled, those panels
- * wore that inset with no bed, or `p-5` with no step, which set their words
- * 4px inside the card's from `sm` up (pixel-craft classes 3 and 12).
- */
+/** Larger tone-panel inset for `padding="lg"` cards (pixel-craft class 12). */
 export const TONE_PANEL_LG_CLASS = "rounded-panel border p-5 shadow-bed sm:p-6";
 
 /**
- * **The overlay twin**: the default geometry with no bed, for a tone panel
- * carried inside a menu or a sheet — the emergency reference in the
- * manifest's phone menu. The bed is for a panel at rest; an overlay keeps its
- * own lift (ADR 20260901-diveday-reimagined), and a bed inside one smeared its
- * 26px blur across the popover's padding and, in dark mode, past its edge.
+ * Tone-panel geometry for overlays, which keep their own elevation
+ * (ADR 20260901-diveday-reimagined).
  */
 export const TONE_PANEL_IN_OVERLAY_CLASS = "rounded-panel border p-4 sm:p-5";
 
 /**
- * **A note carved into a card** — the first of the "not a section card"
- * objects above: a sentence of advice or context set on the sunken fill
- * inside a panel (a crew gap, a site's rule, a diver's ask, the model's
- * outlook). One box, 12px in and 8px down at 14px, the majority spelling
- * when the departure's panels drew it three ways: 16px in and down beside
- * 12px, and 12px all round at 12px type (pixel-craft class 12).
- *
- * `INSET_NOTE_BOX` is the geometry alone, for a note that carries a tone
- * instead of the sunken grey (a warning tint), or a sunken line in the
- * reader's own ink: a staff note on a roster row, a line of the activity
- * trail, a signed-in session, the builder's pattern line. The tone changes,
- * the box does not. A note's place in its panel (`mt-3`, `mt-4`) stays at the
- * call site, and `card.test.tsx` refuses the box retyped by hand.
- *
- * **Not a note**, and so not this box: a sunken step a person works inside (a
- * form, the 16px group inset), and a bordered sunken tile or band — a row
- * that is itself a link (`BookingRequestCards`), or a band
- * on the page above a card rather than carved into one (orders' linked
- * booking, `StaffPreviewBar`). Those take their hairline and the 16px inset.
+ * Shared sunken-note geometry; placement and tone remain caller-owned
+ * (pixel-craft class 12).
  */
 export const INSET_NOTE_BOX = "rounded-lg px-3 py-2 text-sm";
 export const INSET_NOTE_CLASS = `${INSET_NOTE_BOX} bg-surface-sunken text-muted`;
 
 /**
- * **The corner of a fill laid flush inside a panel**: the panel's radius less
- * the one thing between them, its 1px border — 20 − 1 = 19px, a curve that
- * runs parallel to the panel's own (docs/design/pixel-craft.md, class 6).
- *
- * For a `padding="none"` card whose first or only child paints a fill against
- * the panel's edge — a `<summary>`'s hover band — and where the card does not
- * clip. Apply it to the corners the fill actually touches; a corner that meets
- * the card's own body stays square. The manifest's "On this phone" summary
- * wore the control rung, 12px, flush in the 20px corner, so its hover fill
- * poked out past the panel's curve on every manifest capture the probe took.
- *
- * A clipped card (`DisclosureRowList`'s `overflow-hidden`) does not need it,
- * because the card's own corner cuts the fill; clipping is the wrong fix for a
- * card that holds focusable controls near its edge, whose rings it would cut.
+ * Inner corner radius for a fill flush against the panel border
+ * (docs/design/pixel-craft.md, class 6). Apply only where the fill reaches the
+ * edge. Do not clip the card: focus rings and controls need room outside it.
  */
 export const PANEL_INNER_RADIUS = "rounded-[calc(var(--radius-panel)-1px)]";
 
@@ -226,35 +76,9 @@ const CARD_SUMMARY_HOVER = {
 } as const;
 
 /**
- * **The face of a card that is itself a disclosure**: a `<summary>` that is
- * the first thing inside a `padding="none"` card, or inside a `<details>` that
- * wears the panel itself (`SectionCard as="details"`, `DangerDisclosure`).
- *
- * Nine of these were hand-rolled four ways (pixel-craft classes 7 and 12):
- *
- * - **No radius**, so the global ring, which follows the element's corners,
- *   drew a square around a 20px card and stood 8px off it at every corner.
- *   The face takes the panel's inner corner, `PANEL_INNER_RADIUS`, and squares
- *   its bottom once open, when the body is what meets the card's corner. The
- *   open state is spelled against the `<details>` (`[[open]>&]`) rather than
- *   `group-open:`, which would need every call site's group to be unnamed.
- * - **`items-center`**, so a title that wrapped left its caret floating
- *   between its lines, or level with the chips under it (12–21px low on the
- *   manifest at 390). The row starts at the top and the caret sits in a
- *   `SummaryCaret` (`ui/disclosure.tsx`), a box one first line tall. Top
- *   alignment means a single line no longer centres itself in a `min-h-*`
- *   floor, so a call site pads the face to its height: `py-4` round a 24px
- *   line is the 56px `min-h-14` exactly.
- * - **Two gaps** (8 and 12px) put two titles on one manifest 4px apart; one
- *   gap now.
- * - **Two hovers**, a fill on one card and an underline on the next; the fill
- *   takes the same corner, so it cannot poke past the card's curve. A heading
- *   inside may still underline with it.
- *
- * The card does not clip — clipping would cut the ring and the focusable
- * controls in the body — so the ring is the global one, 2px outside the face,
- * concentric with the card. Padding stays at the call site: a manifest row and
- * a settings section are different insets of the same face.
+ * Shared face for a card disclosure. It preserves the panel's inner corner,
+ * top-aligns wrapped content, and leaves padding and non-clipping focus room to
+ * the caller (docs/design/pixel-craft.md, classes 7 and 12).
  */
 export function cardSummaryClass({
   tone = "neutral",

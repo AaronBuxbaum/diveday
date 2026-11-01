@@ -415,7 +415,7 @@
     "src/components/search/CommandPalette.tsx": 923,
     "src/components/ui/button.test.ts": 971,
     "src/components/ui/form.test.tsx": 1464,
-    "src/components/ui/form.tsx": 1203,
+    "src/components/ui/form.tsx": 1153,
     "src/db/anonymize.test.ts": 1627,
     "src/db/bookings.test.ts": 3540,
     "src/db/buddy-pairs.test.ts": 975,
