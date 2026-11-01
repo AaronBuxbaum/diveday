@@ -96,6 +96,7 @@ export type TripAboutRow = {
  *
  * Keep focusable descendants out of `<summary>`; nested interactive elements
  * fail accessibility checks, so the edit affordance is a `<span>`.
+ * Design: 20260827-the-departure-is-two-working-surfaces, slice 5e.
  */
 export function TripAboutSection({
   rows,
