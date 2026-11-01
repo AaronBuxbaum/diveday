@@ -51,7 +51,9 @@ describe("ingestImageUrl — passthrough", () => {
       "https://attacker.s3.us-east-1.amazonaws.com/dive-sites/photo.jpg",
       "https://d1234.cloudfront.net/dive-sites/photo.jpg",
     ]) {
-      const result = await ingestImageUrl(url, storeStub, { env, lookup: lookupPublic });
+      const fetchImpl = vi.fn(async () => okResponse(TINY_JPEG));
+      const result = await ingestImageUrl(url, storeStub, { env, fetchImpl, lookup: lookupPublic });
+      expect(fetchImpl).toHaveBeenCalledTimes(1);
       expect(result.status).not.toBe("unchanged");
     }
   });
