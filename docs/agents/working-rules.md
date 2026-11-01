@@ -148,6 +148,9 @@ runs. Pass args directly. The shell guard refuses the bare form.
   (`.claude/agents/Explore.md`). Screenshot capture and test execution need an execution-capable
   worker; never assign shell commands or file output to a read-only scout. Design,
   judging and safety-critical code stay on the main model.
+- **Check the budget before fanning out.** Before starting workers or reviewers, a coordinator that
+  can read its 7-day usage status (`rate_limit_info`) does so. At the warning status it runs one
+  thread at a time; when the limit is rejected it starts no worker.
 - **A worker hands back a path.** A subagent or worker writes its full result to a file (the
   scratchpad, or `docs/` when the result is the deliverable) and hands back the path plus at most
   ten lines. A hand-back is read twice in the parent's transcript, and a long one crowds out the
@@ -224,14 +227,17 @@ runs. Pass args directly. The shell guard refuses the bare form.
   ([repo-checks.md](repo-checks.md#pr-body)). On every one of these surfaces that review is **two independent runs with different framing**, launched in parallel
   so neither sees the other: one as **a dock operator** (the boat is leaving, the count is
   called, the diver is at the rail — what does this code let happen?) and one as **an attacker**
-  (`security-reviewer` when the change touches personal or medical data, tokens or erasure;
-  otherwise a second `dive-domain-expert` run told to break the rule rather than check it).
+  (a second `dive-domain-expert` run told to break the rule rather than check it; a
+  `security-reviewer` the change also needs runs on its own line besides).
   Act on the union of their findings, each under the reviewers' evidence rule: it cites the
   rule, ADR or glossary line it violates and a failing input or a test, labelled confirmed or
-  possible. A finding is acted on once its test runs and fails. Both runs are named in "Reviews
-  launched" (CI checks that the agent is named, not that it ran twice). Ordinary PRs, plain
-  waiver signing and rental fit keep one run: two runs double the review
-  spend, and the voting is worth it only where a miss puts a diver in the water.
+  possible. A finding is acted on once its test runs and fails. Each run gets its own
+  `dive-domain-expert` line in "Reviews launched", one naming "dock operator" and one
+  "attacker", each answered "launched" or with what it "found"; CI refuses a safety diff with
+  one line or with lines that do not name their framing, and still takes one "not needed
+  because <reason>" line for a change that only moves layout. It checks that two runs are
+  recorded, not that they happened. Ordinary PRs and rental fit keep one run: two runs double
+  the review spend, and the voting is worth it only where a miss puts a diver in the water.
 - **Security-sensitive changes** (auth/authz, token flows, rows holding personal or medical data,
   export/import) get a `security-reviewer` review before merge, named in the same "Reviews
   launched" section (`scripts/check-pr-body.mjs`).
