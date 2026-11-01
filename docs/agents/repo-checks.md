@@ -1278,6 +1278,11 @@ For `infra/`, `config/`, `.env.example` and the deploy scripts; the rules themse
   rows in [docs/architecture/aws-migration-dossier.md](../architecture/aws-migration-dossier.md)
   awaiting H-45.
 
+### untested-logic
+
+`scripts/warn-untested-logic.mjs` is a warning, never a failure: a step in CI's `Repository safeguards` job prints one `::warning` annotation when the pull request adds or modifies a non-test `.ts` file under `src/lib`, `src/db` or `src/features` and changes no `*.test.*` file anywhere. A rename or a pure deletion does not count. It cannot tell whether a test covers the change; it asks the question on the check run, next to the e2e budget warnings. Locally: `node scripts/warn-untested-logic.mjs --base origin/main`.
+
+
 ### adrs and dependencies
 
 `pnpm check:adrs` also fails when a `package.json` runtime dependency's name appears in no ADR file, which is the "new runtime dependency → ADR" rule made checkable. The match is a plain substring, so a short name such as `next` is satisfied by `next-intl`; the check catches a dependency nobody wrote about, not a weak mention. Exactly two names are exempt, in `DEPENDENCY_EXEMPT` in `scripts/check-adrs.mjs`: `react-dom` (half of React) and `@vercel/speed-insights` (a measurement beacon beside `@vercel/analytics`). Adding a third means writing the ADR instead.
