@@ -73,10 +73,9 @@ describe("LanguageFallbackNotice", () => {
     expect(screen.getByText(/qtz/)).toBeInTheDocument();
   });
 
-  it("offers no language choice — there is no second bundle to switch to", () => {
-    // The guard on the thing this must never become. DiveDay has no switcher
-    // and no `[locale]` route by design (ADR 20260729-diver-copy-localization);
-    // a control here would promise a choice that does not exist.
+  it("keeps language controls in the header rather than in the notice", () => {
+    // Choosing a supported language belongs to the public header picker
+    // (ADR 20260812-reader-chosen-language), not this fallback explanation.
     const { container } = render(
       <LanguageFallbackNotice
         fallback={noticeFor("de-DE", "en-US")}

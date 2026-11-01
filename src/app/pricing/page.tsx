@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { Eyebrow } from "@/app/_components/Eyebrow";
 import { ClosingCta, FunnelCtas } from "@/app/_components/FunnelCtas";
 import { MarketingNav, MarketingNavFallback } from "@/app/_components/MarketingNav";
+import { JsonLd } from "@/components/JsonLd";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { MarketingSectionMotion } from "@/components/MarketingReveal";
 import { MarginNotes } from "@/components/MarketingSections";
@@ -120,13 +121,7 @@ async function PricingBody({ locale, offer }: { locale: DiverLocale; offer: Plan
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        // biome-ignore lint/security/noDangerouslySetInnerHtml: JSON-LD structured data built from our own constants above and `<`-escaped below.
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(faqJsonLd).replace(/</g, "\\u003c"),
-        }}
-      />
+      <JsonLd data={faqJsonLd} />
       <main className="flex-1">
         <MarketingSectionMotion />
         {/* The price is the hero, then the invoice beside its one list of
