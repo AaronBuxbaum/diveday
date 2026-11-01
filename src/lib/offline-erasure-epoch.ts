@@ -46,7 +46,8 @@ export function verifyOfflineErasureEpoch(input: {
   tripId: string;
   snapshotId: string | null | undefined;
 }): number | null {
-  if (!input.token || !input.snapshotId || !uuidShape.test(input.snapshotId)) return null;
+  const { snapshotId } = input;
+  if (!input.token || !snapshotId || !uuidShape.test(snapshotId)) return null;
   const parts = input.token.split(".");
   if (parts.length !== 3) return null;
   const [epochBody, revisionBody, supplied] = parts;
@@ -73,7 +74,7 @@ export function verifyOfflineErasureEpoch(input: {
   }
   if (
     !tagMatches(supplied, () =>
-      signature(input.shopId, input.tripId, input.snapshotId, epoch, snapshotRevision),
+      signature(input.shopId, input.tripId, snapshotId, epoch, snapshotRevision),
     )
   ) {
     return null;
