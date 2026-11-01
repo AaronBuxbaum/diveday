@@ -6,27 +6,19 @@ import { groupLabelClass } from "@/components/ui/group-label";
 import { AboutRowDetails } from "./AboutRowDetails";
 
 /**
- * Label, settled value, and the row's own control, on one grid at every width —
- * the same three columns whether the row opens or only states a fact, so a
- * column of them keeps one left edge.
+ * Label, settled value, and control share one grid at every width, keeping
+ * rows aligned whether they open or only state a fact.
  *
- * `px-2` is the ledger's room (`ledgerRowRoomClass`): the rows' rules reach 8px
- * past the panel's column (`ROWS_CLASS`) and the grid takes the 8px back, so
- * the words stay on the column and an editable row's fill, which is its whole
- * summary, runs rule to rule.
+ * `px-2` offsets `ROWS_CLASS`'s 8px rule overhang so words align with the panel
+ * column while an editable summary's fill spans the rules.
  *
- * `sm:items-baseline`: the label, the value's first line and the "Edit …"
- * words share one baseline. The action's words centre in its 44px box, so
- * top-aligned they sat 12px under the value they edit, and the 12px label 3px
- * off the 14px value (K-180). The value's later lines run on below.
+ * At `sm`, `items-baseline` aligns the label, first value line, and action;
+ * later value lines continue below.
  */
 const ROW_GRID =
   "grid w-full gap-1 px-2 py-3 sm:grid-cols-[9rem_minmax(0,1fr)_auto] sm:items-baseline sm:gap-4";
 
-/**
- * The rows' rules, a ledger's length: 8px past the panel's column on each side,
- * as every `LedgerRow`'s are, inside the panel's own 16px of padding.
- */
+/** The rows' rules extend 8px past the panel column on each side. */
 const ROWS_CLASS = "-mx-2 divide-y divide-border border-y border-border";
 
 /**
@@ -56,15 +48,8 @@ function AboutRow({ row, editLabel }: { row: TripAboutRow; editLabel: string }) 
       open={row.editorOpen}
       className="group/row scroll-mt-24"
     >
-      {/* The summary is the row's hover fill and spans the row, rule to rule:
-          the room around the label is the grid's (`ROW_GRID`), so the fill
-          clears the words by 8px on both sides (the probe measured 0px against
-          "THE PLAN") while the label stays on the fact rows' column. Square,
-          like the rules it spans. Its focus ring is drawn inside it, on the
-          fill's own edge, as a ledger row's stretched link draws its own: the
-          words sit 8px in, so the 3px ring clears them by 5px. (The outset
-          ring was kept here while the label and caret sat on the summary's
-          edges, where an inset ring landed on them.) */}
+      {/* The summary fill spans rule to rule; the inset focus ring stays clear
+          of the label and caret at the row edges. */}
       <summary className="flex cursor-pointer list-none transition-colors [&::-webkit-details-marker]:hidden hover:bg-surface-sunken focus-visible:focus-ring-inset">
         <span data-trip-detail-row className={ROW_GRID}>
           {beat}
@@ -102,26 +87,15 @@ export type TripAboutRow = {
 };
 
 /**
- * **The Details tab: the departure's definition, laid flat.** Slice 5e of
- * ADR 20260827-the-departure-is-two-working-surfaces, moved onto its own tab by
- * ADR 20261001-logbook.
- *
- * This is the only thing on the tab, so it is never folded: a staffer who
- * opened Details came for these rows (owner, 2026-10-05). It used to be a
- * collapsible "About this departure" card left over from when it shared a page
- * with the roster, and the tab opened it already open behind a "Close" control
- * nobody had a reason to press.
- *
- * Each row *is* its own disclosure: the label and the settled value are the
- * summary, the editor opens in place beneath it, and there is no second copy of
- * anything — the grammar `SettingsRows` and `DisclosureRowList` use.
+ * The Details tab lays out the departure definition as rows. Each editable row
+ * is its own disclosure: label and value form the summary, with the editor
+ * opening below it.
  *
  * The rare and destructive acts live below the card, in `TripMoreDisclosure`,
  * one of the tab's closed rows beside Promote and Activity.
  *
- * A row's `<summary>` carries no focusable descendants — an interactive element
- * nested in a `<summary>` fails axe's nested-interactive rule, which is why the
- * "Edit …" affordance is a `<span>` and the whole row is the control.
+ * Keep focusable descendants out of `<summary>`; nested interactive elements
+ * fail accessibility checks, so the edit affordance is a `<span>`.
  */
 export function TripAboutSection({
   rows,

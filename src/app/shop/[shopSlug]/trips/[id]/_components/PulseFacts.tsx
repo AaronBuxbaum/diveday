@@ -21,24 +21,15 @@ function FactLink({ fact }: { fact: TripPulseFact }) {
 }
 
 /**
- * The facts above the Divers tab's head count: one summary line, never a
- * stack of links that pull the eye before the count does (UX audit
- * 2026-10-07, item 23).
+ * Shows trip facts above the Divers tab's head count.
  *
- * A fact that holds the boat up (`tone: "danger"`) always stands on its own
- * line: a missing instructor or a boat clash is never one tap deep. A warning
- * (nitrox asked for with no verified card, issue #2549) also stands on its own
- * line, in warning ink, below the hazards. The rest
- * (rental sizes to take, orders awaiting payment) are work, not hazards: one
- * of them renders as its own link, and two or more fold into one line,
- * "Needs you · 7", that opens to the same links: Today's own rows for this
- * boat when it is in Today's window, so the two numbers are one. Not "before boarding": an
- * order awaiting payment does not gate boarding.
+ * Danger facts remain individually visible, followed by individually visible
+ * warnings. Work facts such as rental sizes and payment orders are not hazards:
+ * one stays a link, while multiple facts fold into a count that opens the same
+ * links. Payment is work, not a boarding gate.
  *
- * **The stack's gap is measured to the words** (K-262). Each fact is a 44px
- * link round a 20px line, and gives the unseen 12px back as `-my-3`, so the
- * row is its words' height and the targets overhang the gaps; `gap-y-7` keeps
- * a wrapped line's box 4px clear of the one above.
+ * The 44px links use `-my-3` to keep the flex row at text height; `gap-y-7`
+ * keeps wrapped targets clear while preserving their hit area.
  */
 export function PulseFacts({
   facts,
@@ -112,14 +103,9 @@ type PulseChip = {
 };
 
 /**
- * **The opened "Needs you · 9" is a count strip** (visual review 2026-10-24,
- * A46): one chip per kind (the Today kind, keyed apart from its translated
- * word, with a readiness blocker its own chip), drawn as Today draws that kind's row (its glyph,
- * its word, its count), in the order the kinds first appear. A kind of one
- * fact keeps that fact's own words; several become "Contact · 3". Nothing a
- * fact linked to is lost: a chip whose facts share a door opens it, and one
- * whose facts open different doors (three divers' records) opens the roster,
- * where every one of those divers has their row and its flag.
+ * Group chips by kind in first-seen order. Single facts keep their text; groups
+ * show a count. Shared destinations stay linked directly, while mixed
+ * destinations go to the roster so every affected diver remains reachable.
  */
 export function pulseChips(work: readonly TripPulseFact[], rosterHref: string): PulseChip[] {
   const chips: PulseChip[] = [];

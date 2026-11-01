@@ -93,27 +93,10 @@ export function PrepBody({
    */
   groupPath: string;
   /**
-   * **A blown-out departure packs nothing.**
-   *
-   * A cancellation cancels the *trip* and leaves every booking active (the
-   * glossary's *Blow-out*), so every count below still computes — and every
-   * one of them is an instruction about a check-in that is not happening. The
-   * tank tiles are the dangerous half: on a three-boat Saturday with one
-   * blown out, a staffer working down the day reads "Total 18 · Air 18" long
-   * after the Cancelled badge has scrolled off the top of a twelve-row roster.
-   * Nothing is lost by standing them down — they are derived per departure
-   * from each diver's own record and recompute, identically, on whatever
-   * departure those divers rebook onto (dive-domain review 20260920).
-   *
-   * **What survives is the half a cancellation creates work in**: units
-   * already reserved for today's window and sets already handed across a
-   * counter that are now walking back out of the shop. Those are records, not
-   * predictions, and releasing or taking them back is the morning's real job.
-   *
-   * The rule lives here rather than at the two call sites so `/prep` and the
-   * paper day cannot say something different from the departure page — a pull
-   * sheet printed for a blown-out boat is the same error on paper, where it
-   * cannot be corrected.
+   * A cancelled trip leaves bookings active, but derived pack/pick instructions
+   * no longer apply. Keep recorded reservations and handed-out sets visible so
+   * staff can release or return them. Centralize this rule so screen and paper
+   * agree; printed sheets cannot be corrected later.
    */
   cancelled?: boolean;
   /**

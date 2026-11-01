@@ -38,25 +38,11 @@ export interface RentalUnitPickerCopy {
 }
 
 /**
- * **A rental pick that commits itself.**
- *
- * This row used to be a `<form>` with a `<select>` and a separate "Assign"
- * button beside it. A seeded departure renders twenty-one of them, so one boat
- * was 21 dropdowns, 21 confirming taps, and the word "Assign" printed twenty-one
- * times down a single column — at a counter, on the morning of a departure,
- * against a clock (issue #802). Principle 10 is direct about it: a value a
- * staffer corrects often is edited where it is displayed, not behind a button
- * that is really an "Edit" once per row; principle 9's cross-out test deletes
- * the twenty repeats of the word.
- *
- * **The refusal is why this needed a component rather than a one-line change.**
- * A reservation's double-booking guard is a Postgres exclusion constraint, so
- * availability cannot be pre-checked as truth — the answer only exists after
- * the write. When it comes back refused the select goes back to what it held,
- * and the row says why, next to the pick that failed rather than in a banner at
- * the top of a long page. `previous` is the revert target and is only advanced
- * on success, so two refusals in a row cannot leave it pointing at a unit this
- * diver never held.
+ * Commits each pick immediately. Availability is authoritative only after the
+ * write; on refusal, restore the last successful assignment and show the reason
+ * beside the control. Advance `previous` only on success so consecutive
+ * refusals cannot point at a unit this diver never held. A care-flagged
+ * life-support unit requires explicit "Assign anyway" confirmation.
  */
 export function RentalUnitPicker({
   id,
@@ -137,13 +123,7 @@ export function RentalUnitPicker({
             {copy.pickUnit}
           </option>
         )}
-        {/* **Two headings, not one ranked list.** The exact-size units used to
-            be sorted to the top of a flat list, which put the boundary between
-            "this is their size" and "this is what else is free" nowhere on
-            screen — a staffer at a counter reading down sixteen free BCDs had
-            to spot where L stopped and XL started. `<optgroup>`, so the native
-            picker draws the split on every platform including a phone's
-            wheel. */}
+        {/* Separate size-match options from other available units in the native picker. */}
         {groups.map((group) => (
           <optgroup key={group.key} label={group.label}>
             {group.options.map((option) => (

@@ -3,27 +3,17 @@ import { sectionCardClass } from "@/components/ui/card";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 
 /**
- * The packing list's own shape while its reads are in flight — the Tanks
- * heading and the line saying where its total comes from, three tank tiles,
- * the kit cards, the assignments table — stacked at the gap the caller hands
- * `PrepBody` too, so nothing moves when the list arrives (K-487).
+ * Mirrors `PrepBody` while its reads load: title, basis line, three-wide tiles
+ * at every width, kit cards, and assignments, with the caller's section gap.
  *
  * Its own file rather than a second export from `PrepBody.tsx`: both callers
  * are boundaries a reader waits at, and importing the list itself would pull
  * the gear actions and both pickers into the chunk that is supposed to paint
  * first.
  *
- * **The top is the list's own top, line for line** (K-188). It predated the
- * per-dive basis line and the tiles' `grid-cols-3`: a bar short of the
- * heading, nothing for the basis line (two lines on a phone), and three
- * `h-28` boxes in `sm:grid-cols-3` — stacked 360px tall below 640px, where
- * the list draws one 98px row. On the departure page that collapse came right
- * after a jump to `#packing-list`. So: each section title in its own line box
- * (`SECTION_TITLE_CLASS`, the size the list sets every section title at), the
- * basis line's two phone lines and one desk line, and `ShopStat`'s own tile three across at every width. (The note under
- * the tiles went with UX review 2026-10-10, item 26.) Three because
- * a shop that offers nitrox draws Total, Air and Nitrox; one without draws
- * Total alone, which the skeleton cannot know.
+ * Keep the heading, basis line, and three-wide tiles aligned with the list at
+ * every width. This separate chunk keeps gear actions and pickers out of the
+ * loading path; the skeleton cannot know whether nitrox tiles will appear.
  */
 export function PrepBodySkeleton({ className }: { className: string }) {
   return (
