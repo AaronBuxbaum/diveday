@@ -22,7 +22,7 @@ on:
     inputs:
       repeat:
         description: Times each shard runs from the one build (to see variance)
-        default: "2"
+        default: "3"
         type: string
 
 concurrency:
@@ -89,15 +89,32 @@ jobs:
             sudo apt-get install -y --no-install-recommends poppler-utils
           fi
           failed=0
-          for i in $(seq 1 "${REPEAT:-2}"); do
+          for i in $(seq 1 "${REPEAT:-3}"); do
             started=$(date +%s)
             status=0
-            pnpm exec playwright test "${spec_files[@]}" --reporter=line > "run-${i}.log" 2>&1 || status=$?
+            PLAYWRIGHT_JSON_OUTPUT_NAME="results-${i}.json" \
+              pnpm exec playwright test "${spec_files[@]}" --reporter=line,json > "run-${i}.log" 2>&1 || status=$?
             echo "shard ${{ matrix.shard }}/6, run ${i}: ${#spec_files[@]} specs, exit ${status}, $(( $(date +%s) - started ))s" | tee -a "$GITHUB_STEP_SUMMARY"
-            if [ "$status" -ne 0 ]; then
-              failed=1
-              grep -E "^\s+[0-9]+\) |Test timeout" "run-${i}.log" | head -20 >> "$GITHUB_STEP_SUMMARY"
-            fi
+            # Into the job log, where a cloud session can read it: every failed
+            # test with its first error line, then the ten slowest spec files
+            # (their summed test time, the input for a deal tuned to two workers).
+            node -e '
+              const r = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+              const files = new Map(); const failed = [];
+              const walk = (suite, file) => {
+                for (const s of suite.suites ?? []) walk(s, s.file ?? file);
+                for (const t of suite.specs ?? []) {
+                  const res = t.tests?.[0]?.results?.at(-1);
+                  files.set(file, (files.get(file) ?? 0) + (res?.duration ?? 0));
+                  if (!t.ok) failed.push(file + " :: " + t.title + " :: " + (res?.error?.message ?? "").split("\n")[0].slice(0, 200));
+                }
+              };
+              for (const s of r.suites) walk(s, s.file);
+              for (const f of failed) console.log("TRIAL-FAILED " + f);
+              const top = [...files].sort((a, b) => b[1] - a[1]).slice(0, 10);
+              for (const [f, ms] of top) console.log("TRIAL-SLOW " + f + " " + ms + "ms");
+            ' "results-${i}.json" 2>&1 | sed "s|^|shard ${{ matrix.shard }}/6 run ${i}: |" || true
+            if [ "$status" -ne 0 ]; then failed=1; fi
           done
           exit "$failed"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -106,6 +123,7 @@ jobs:
           name: playwright-workers-trial-${{ matrix.shard }}
           path: |
             run-*.log
+            results-*.json
             test-results/
           if-no-files-found: ignore
           retention-days: 7
