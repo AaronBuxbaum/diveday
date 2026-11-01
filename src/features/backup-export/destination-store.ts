@@ -45,9 +45,7 @@ export type BackupSecretOptions = {
  * the form appear to succeed and the backup never run.
  */
 export function resolveBackupKey(options: BackupSecretOptions): SecretKey | BackupKeyRefusal {
-  const result = resolveSecretKey(options.key);
-  if (result.status === "ok") return result.key;
-  return result.status === "unset" ? "encryption_key_unset" : "encryption_key_invalid";
+  return resolveSecretKey(options.key);
 }
 
 const PRIVATE_HOST_PATTERNS = [

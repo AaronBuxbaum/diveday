@@ -23,9 +23,7 @@ export type IntegrationCredentialResult =
   | { status: IntegrationKeyRefusal | "invalid_credentials" };
 
 function encryptionKey(): SecretKey | IntegrationKeyRefusal {
-  const result = resolveSecretKey(undefined);
-  if (result.status === "ok") return result.key;
-  return result.status === "unset" ? "encryption_key_unset" : "encryption_key_invalid";
+  return resolveSecretKey(undefined);
 }
 
 /**

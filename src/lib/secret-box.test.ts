@@ -19,31 +19,22 @@ afterEach(() => vi.unstubAllEnvs());
 describe("resolveSecretKey", () => {
   it("uses an injected key even when the environment is malformed", () => {
     vi.stubEnv("SECRET_ENCRYPTION_KEY", "bad");
-    expect(resolveSecretKey(key)).toEqual({ status: "ok", key });
+    expect(resolveSecretKey(key)).toBe(key);
   });
 
   it("keeps explicit null unset even when the environment is valid", () => {
     vi.stubEnv("SECRET_ENCRYPTION_KEY", base64Key);
-    expect(resolveSecretKey(null)).toEqual({ status: "unset" });
+    expect(resolveSecretKey(null)).toBe("encryption_key_unset");
   });
 
   it("rereads and validates the environment on each omitted-key call", () => {
     vi.stubEnv("SECRET_ENCRYPTION_KEY", base64Key);
-    expect(resolveSecretKey(undefined)).toEqual({
-      status: "ok",
-      key: { current: key, previous: null },
-    });
+    expect(resolveSecretKey(undefined)).toEqual({ current: key, previous: null });
     const nextKey = randomBytes(32);
     vi.stubEnv("SECRET_ENCRYPTION_KEY", nextKey.toString("base64"));
-    expect(resolveSecretKey(undefined)).toEqual({
-      status: "ok",
-      key: { current: nextKey, previous: null },
-    });
+    expect(resolveSecretKey(undefined)).toEqual({ current: nextKey, previous: null });
     vi.stubEnv("SECRET_ENCRYPTION_KEY", "bad");
-    expect(resolveSecretKey(undefined)).toMatchObject({
-      status: "invalid",
-      variable: "SECRET_ENCRYPTION_KEY",
-    });
+    expect(resolveSecretKey(undefined)).toBe("encryption_key_invalid");
   });
 });
 

@@ -88,9 +88,7 @@ export type WhatsAppSenderOptions = {
  * watching the form appear to succeed and the channel never work.
  */
 function resolveKey(options: WhatsAppSenderOptions): SecretKey | WhatsAppKeyRefusal {
-  const result = resolveSecretKey(options.key);
-  if (result.status === "ok") return result.key;
-  return result.status === "unset" ? "encryption_key_unset" : "encryption_key_invalid";
+  return resolveSecretKey(options.key);
 }
 
 /**
