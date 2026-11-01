@@ -1,4 +1,5 @@
-import { createHash, createHmac, timingSafeEqual } from "node:crypto";
+import { createHash, timingSafeEqual } from "node:crypto";
+import { signPayload, tagMatches } from "./signed-token";
 
 /**
  * **A browser the founder has marked as his own, so his demo tries stay out
@@ -69,17 +70,14 @@ export function isDemoQuietKey(candidate: unknown, env: Env = process.env): bool
 export function quietDemoToken(env: Env = process.env): string | null {
   const key = demoQuietKey(env);
   if (!key) return null;
-  return createHmac("sha256", key).update("diveday quiet demo device v1").digest("base64url");
+  return signPayload(key, "diveday quiet demo device v1");
 }
 
 /** Whether a cookie value marks this browser as the founder's. */
 export function isQuietDemoDevice(candidate: unknown, env: Env = process.env): boolean {
   const token = quietDemoToken(env);
   if (!token || typeof candidate !== "string" || !candidate) return false;
-  // Compared as fixed-length digests: a cookie of the token's length in
-  // multibyte characters would otherwise reach `timingSafeEqual` at a
-  // different byte length, and throw out of the demo instead of saying no.
-  return timingSafeEqual(digest(candidate), digest(token));
+  return tagMatches(candidate, token);
 }
 
 function digest(value: string): Buffer {

@@ -1,6 +1,7 @@
-import { createHmac, hkdfSync, randomBytes, timingSafeEqual } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import { DAY_MS, nowMs } from "@/lib/clock";
 import { authSecret } from "./auth-secret";
+import { deriveLabelKey, signPayload, tagMatches } from "./signed-token";
 
 /**
  * **Which demo shop this browser is sitting in, when no session says so.**
@@ -35,13 +36,11 @@ const SEAT = /^([A-Za-z0-9_-]{22})\.(\d{1,15})\.([A-Za-z0-9_-]{43})$/;
 
 function seatKey(): Buffer {
   if (!authSecret) throw new Error("AUTH_SECRET is required to sign a demo seat.");
-  return Buffer.from(hkdfSync("sha256", authSecret, "", "diveday-demo-seat", 32));
+  return deriveLabelKey(authSecret, "diveday-demo-seat");
 }
 
 function seatSignature(shopId: string, nonce: string, expiresAt: number): string {
-  return createHmac("sha256", seatKey())
-    .update(`${PURPOSE}${shopId}.${nonce}.${expiresAt}`)
-    .digest("base64url");
+  return signPayload(seatKey(), `${PURPOSE}${shopId}.${nonce}.${expiresAt}`);
 }
 
 /** A fresh cookie value naming `shopId` as this browser's demo shop, good for a day. */
@@ -62,8 +61,5 @@ export function isDemoSeatFor(
   const [, nonce, expiry, signature] = seat;
   const expiresAt = Number(expiry);
   if (!(expiresAt > now)) return false;
-  return timingSafeEqual(
-    Buffer.from(signature),
-    Buffer.from(seatSignature(shopId, nonce, expiresAt)),
-  );
+  return tagMatches(signature, seatSignature(shopId, nonce, expiresAt));
 }
