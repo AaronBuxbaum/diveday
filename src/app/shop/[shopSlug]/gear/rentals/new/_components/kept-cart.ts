@@ -27,8 +27,8 @@ export type KeptCart = {
 };
 
 /**
- * The bill this tab last submitted, read back after a refusal (fifth loop,
- * item 14): the picks still on the register, their typed prices, the set
+ * The bill this tab last submitted, read back after a refusal: the picks
+ * still on the register, their typed prices, the set
  * price, gas choices, confirmation ticks and payment. Null when nothing was kept.
  */
 export function readKeptCart(

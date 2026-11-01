@@ -4,23 +4,9 @@ import type { TurnAwayOutcome } from "@/db/turn-away";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import { type FormNotice, type NoticeCodeOf, noticeFromParam } from "@/lib/staff-notices";
 
-/**
- * **What the desk's taps and the walk-in door can answer with**, in the
- * spelling that reaches the Divers tab's URL.
- *
- * Derived from the domain unions rather than listed, so **a refusal added to
- * either union with no words below is a compile error**. The reverse — an entry
- * left behind after a reason is deleted — is not caught, because the map also
- * carries codes from a vocabulary the desk only borrows (`SEAT_SURFACES
- * .departure.walkIn`). A guard claimed to be stronger than it
- * is gets trusted where it does not hold.
- *
- * `ArrivalOfflineRefusal` is excluded: those answer a device reconciling a
- * queued tap, never a staffer at the desk. The no-show refusals arrive prefixed
- * (`no_show_…`) so "not found" cannot mean two rows at once (issue #1209).
- *
- * The paper-release refusals are not here: the roster's own control records a
- * paper waiver and answers in its form (`TripNoticeBanner`'s `waiver-*`).
+/** Desk URL codes derived from the outcome unions. Offline refusals belong to
+ * queued-device reconciliation; no-show and turn-away codes are prefixed to
+ * keep their meanings distinct. Paper-waiver outcomes stay with their form.
  */
 type CheckInRefusal = Extract<CheckInOutcome, { ok: false }>["reason"];
 type UndoRefusal = Extract<UndoCheckInOutcome, { ok: false }>["reason"];
@@ -50,25 +36,19 @@ type DeskNoticeMap = Record<string, DeskNotice> & Record<DeskNoticeCode, DeskNot
 export const DESK_NOTICES: DeskNoticeMap = {
   "not-ready": { tone: "warning", key: "checkIn.notice.notReady" },
   "not-bookable": { tone: "danger", key: "checkIn.notice.notBookable" },
-  // Neutral, not a refusal: a diver already checked in is in the state the
-  // staffer wanted. `checkInBooking` answers this with idempotent success
-  // today; it is here because the reason is still in its union.
+  // Idempotent outcome: the diver is already in the requested state.
   "already-checked-in": { tone: "neutral", key: "checkIn.notice.alreadyCheckedIn" },
   "not-found": { tone: "danger", key: "checkIn.notice.notFound" },
   "staff-not-found": { tone: "danger", key: "checkIn.notice.staffNotFound" },
   invalid: { tone: "danger", key: "checkIn.notice.invalid" },
   "walkin-added": { tone: "success", key: "checkIn.notice.walkinAdded" },
-  // A walk-in seated on a later day's boat hears the booking confirmation.
   "walkin-added-confirmed": { tone: "success", key: "checkIn.notice.walkinAddedConfirmed" },
-  // The walk-in's *ordinary* outcome: added on a name alone, there is no
-  // address to mail a waiver to, so the notice says the link is still owed.
+  // The waiver link could not be delivered.
   "walkin-added-waiver-undelivered": {
     tone: "warning",
     key: "checkIn.notice.walkinAddedWaiverUndelivered",
   },
-  // The name-match prompt hands the seat an existing diver's record on a
-  // guess, held until somebody confirms it (H-13, issue #1556).
-  // A walk-in family seated together from one form (fifth loop, item 9).
+  // Walk-in outcomes include party seating and identity-unconfirmed matches.
   "walkin-party-added": { tone: "success", key: "checkIn.notice.walkinPartyAdded" },
   "walkin-party-added-waiver-undelivered": {
     tone: "warning",
@@ -78,8 +58,7 @@ export const DESK_NOTICES: DeskNoticeMap = {
     tone: "warning",
     key: "checkIn.notice.walkinAddedIdentityUnconfirmed",
   },
-  // The two roll-call refusals say different sentences because the desk's next
-  // act differs: the crew boarded this diver, or recorded them not back aboard.
+  // These outcomes distinguish boarded from not-back-aboard roll call states.
   "no-show-already-boarded": { tone: "danger", key: "checkIn.notice.noShowAlreadyBoarded" },
   "no-show-already-missing-after-dive": {
     tone: "danger",
@@ -92,25 +71,24 @@ export const DESK_NOTICES: DeskNoticeMap = {
   "no-show-before-departure": { tone: "warning", key: "checkIn.notice.noShowBeforeDeparture" },
   "no-show-window-closed": { tone: "warning", key: "checkIn.notice.noShowWindowClosed" },
   "no-show-not-marked": { tone: "neutral", key: "checkIn.notice.noShowNotMarked" },
-  // The seat was resold between the mark and the Undo.
+  // The seat was resold before the undo.
   "no-show-trip-full": { tone: "danger", key: "checkIn.notice.noShowTripFull" },
   "no-show-course-ratio-full": { tone: "danger", key: "checkIn.notice.noShowCourseRatioFull" },
   "no-show-not-found": { tone: "danger", key: "checkIn.notice.notFound" },
   "no-show-staff-not-found": { tone: "danger", key: "checkIn.notice.staffNotFound" },
-  // The desk turned this diver away and the boat's start has passed (dde-3 #2).
+  // The departure started after the diver was turned away.
   "no-show-turned-away-departed": {
     tone: "warning",
     key: "checkIn.notice.noShowTurnedAwayDeparted",
   },
-  // "Turned away" (H-135). The roll-call refusals come first for the reason
-  // the no-show's do; the rest say what changed on the row since it was drawn.
+  // Turn-away outcomes distinguish roll-call state and row changes.
   "turn-away-already-boarded": { tone: "danger", key: "checkIn.notice.turnAwayAlreadyBoarded" },
   "turn-away-already-missing-after-dive": {
     tone: "danger",
     key: "checkIn.notice.noShowAlreadyMissingAfterDive",
   },
   "turn-away-already-marked": { tone: "neutral", key: "checkIn.notice.turnAwayAlreadyMarked" },
-  // The boat left with this diver checked in (layer 3 review, dde-1 F1).
+  // The boat left after this diver checked in.
   "turn-away-sailed": { tone: "danger", key: "checkIn.notice.turnAwaySailed" },
   "turn-away-not-booked": { tone: "neutral", key: "checkIn.notice.noShowNotBooked" },
   "turn-away-trip-cancelled": { tone: "neutral", key: "checkIn.notice.noShowTripCancelled" },
@@ -122,9 +100,7 @@ export const DESK_NOTICES: DeskNoticeMap = {
   },
   "turn-away-not-found": { tone: "danger", key: "checkIn.notice.notFound" },
   "turn-away-staff-not-found": { tone: "danger", key: "checkIn.notice.staffNotFound" },
-  // "Email them this date" on the no-show panel (UX review 2026-10-11, item 14):
-  // whether the offer left, and when it did not, the reason that sends the
-  // staffer to the phone instead.
+  // Rebooking offer delivery outcomes.
   "offer-sent": { tone: "success", key: "checkIn.notice.offerSent" },
   "offer-already-sent": { tone: "neutral", key: "checkIn.notice.offerAlreadySent" },
   "offer-not-sent": { tone: "warning", key: "checkIn.notice.offerNotSent" },

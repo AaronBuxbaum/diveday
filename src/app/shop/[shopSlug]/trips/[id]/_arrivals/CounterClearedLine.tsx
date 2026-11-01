@@ -2,21 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 
-/**
- * **Everyone expected is here**, in the success wash (visual review A07: the
- * coral fill read as a warning). It reuses the shipped `checkIn.clearedTitle`
- * words; the count figure beside it deliberately does *not* also celebrate.
- *
- * **The first-paint guard is the whole reason this is a client component.**
- * `EarnedMomentLine` carries `rise-in`, which is right for a line that appears
- * because of the tap a staffer just made and wrong for a page that loads
- * already complete — a boat cleared an hour ago should not re-celebrate every
- * time somebody opens the counter. So the entrance plays only on a
- * client-side false -> true transition, the same ref guard `SettledCheck`
- * uses, and a page that arrives already cleared renders the line statically.
- *
- * Rendered unconditionally by the instrument (returning `null` when the boat
- * is not clear) so it is mounted *before* the transition it has to notice.
+/** Animate only a client-side false-to-true transition; an already-cleared
+ * first render stays static. The instrument mounts this unconditionally so the
+ * component can observe that transition.
  */
 export function CounterClearedLine({
   cleared,
@@ -44,8 +32,6 @@ export function CounterClearedLine({
 
   if (!cleared) return null;
   return (
-    // An all-clear in the success wash, never coral or amber, which read as a
-    // warning on a phone in the sun (visual review A07).
     <p
       role="status"
       className={`${entering ? "rise-in " : ""}mt-4 rounded-lg border border-success/30 bg-success-tint px-3 py-2 text-sm font-semibold text-success-strong`}

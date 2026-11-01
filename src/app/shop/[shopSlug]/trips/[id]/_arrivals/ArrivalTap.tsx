@@ -6,21 +6,8 @@ import { RowActionForm } from "./RowActionForm";
 
 type ArrivalAction = (formData: FormData) => Promise<{ ok: true }>;
 
-/**
- * **The desk's one tap, on the roster row** (owner, 2026-10-05: the Divers and
- * Check-in tabs were one list drawn twice). Once arrivals open, a cleared
- * diver's row on the Divers tab ends in this control; a checked-in diver's row
- * ends in the same control in its other state, and tapping it again undoes the
- * arrival (design principle 7 — a high-frequency toggle gets re-tap undo, never
- * a blocking confirm).
- *
- * **Optimistic, like the counter it replaces.** Check-in is reversible, local to
- * this screen and repeated all morning, so the word flips on the tap and the
- * server render settles the row into its group behind it. The roll call is the
- * opposite case and stays strictly non-optimistic on the Boat tab.
- *
- * A blocked row never draws this: readiness is the gate, and a tap beside the
- * reasons would be offering an act the server refuses.
+/** Reversible check-in toggle on the roster row; blocked rows omit the action.
+ * Check-in is optimistic, while boat roll call remains non-optimistic.
  */
 export function ArrivalTap({
   action,

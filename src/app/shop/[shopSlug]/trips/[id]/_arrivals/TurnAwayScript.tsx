@@ -7,19 +7,8 @@ import { buttonClass } from "@/components/ui/button";
 import { ChoiceFieldset, ChoicePill } from "@/components/ui/form";
 import { RowActionForm } from "./RowActionForm";
 
-/**
- * **"Turned away" — the desk saw this diver and would not board them**
- * (safety sheet 2026-10-15, item 6; H-135).
- *
- * **The door sits on the row's action side, beside its Blocked pill**
- * (visual review A08): `TurnAwayDoor`, a secondary "Turn away" button. The
- * confirm it opens is unchanged and still opens at the foot of the row
- * (`TurnAwayScript`, H-135): one confirm, every string a prop. Although the
- * roster places them in two slots, both halves share this row's React state
- * provider, so opening one panel cannot open another. What it adds is the reason, chosen
- * from this row's own blockers (`turnAwayReasons`, src/lib/turn-away.ts) and
- * only from them: the page passes the categories readiness shows, and the
- * writer refuses any other. A row with one reason has it chosen already.
+/** The door and confirmation share row-scoped state. Reasons come from this
+ * row's blockers; the form requires a choice and preselects a sole reason.
  */
 export type TurnAwayScriptCopy = {
   legend: string;
