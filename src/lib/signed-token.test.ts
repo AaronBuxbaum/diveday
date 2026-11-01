@@ -22,6 +22,17 @@ describe("primitives, known answers", () => {
   });
 });
 
+describe("tagMatches, lazy expected tag", () => {
+  it("refuses a malformed tag without computing the expected one", () => {
+    const boom = () => {
+      throw new Error("no secret");
+    };
+    expect(tagMatches("not base64url!", boom)).toBe(false);
+    expect(tagMatches("é", boom)).toBe(false);
+    expect(tagMatches("", boom)).toBe(false);
+  });
+});
+
 describe("tagMatches", () => {
   const key = deriveLabelKey(SECRET, "diveday-recap-link");
   const tag = signPayload(key, "payload");

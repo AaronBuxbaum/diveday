@@ -59,7 +59,7 @@ export function verifyTripAdmissionGate(
   if (separator <= 0) return null;
   const codes = value.slice(0, separator);
   const signature = value.slice(separator + 1);
-  if (!tagMatches(signature, sign(scope, codes))) return null;
+  if (!tagMatches(signature, () => sign(scope, codes))) return null;
   // A valid signature does not make malformed refusal codes valid.
   return decodeTripAdmissionRefusal(codes);
 }

@@ -71,7 +71,12 @@ export function verifyOfflineErasureEpoch(input: {
   ) {
     return null;
   }
-  const expected = signature(input.shopId, input.tripId, input.snapshotId, epoch, snapshotRevision);
-  if (!tagMatches(supplied, expected)) return null;
+  if (
+    !tagMatches(supplied, () =>
+      signature(input.shopId, input.tripId, input.snapshotId, epoch, snapshotRevision),
+    )
+  ) {
+    return null;
+  }
   return epoch;
 }

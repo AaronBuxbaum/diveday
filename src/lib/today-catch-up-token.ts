@@ -23,7 +23,7 @@ export function verifyTodayCatchUp(token: string, scope: Scope): string[] | null
   if (parts.length !== 2) return null;
   const [body, supplied] = parts;
   if (!body || !supplied) return null;
-  if (!tagMatches(supplied, signature(scope, body))) return null;
+  if (!tagMatches(supplied, () => signature(scope, body))) return null;
   try {
     const ids: unknown = JSON.parse(Buffer.from(body, "base64url").toString("utf8"));
     return Array.isArray(ids) && ids.every((id) => typeof id === "string" && uuidShape.test(id))
