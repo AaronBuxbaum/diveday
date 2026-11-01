@@ -63,15 +63,6 @@ function stripComments(source) {
 }
 
 /**
- * Every `.ts`/`.tsx` file under one root, depth first, through `listDirectory`
- * — a `readdir(…, { withFileTypes: true })` stand-in.
- *
- * A directory that is not there is an empty listing rather than a failure: the
- * roots are a fixed list, and one of them disappearing mid-walk is the same
- * ordinary concurrent edit the read below tolerates. Any other listing error
- * still throws.
- */
-/**
  * Every physical directional utility in one file's source, as
  * `{ line, text, logical }` — comments stripped first, so the line numbers
  * still point at the real line.
