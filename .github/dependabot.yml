@@ -6,10 +6,8 @@ updates:
       interval: weekly
     # Three days: the 2025 npm worm releases spread within hours of publication
     # and were pulled within a day or two, so a bump that waits three days skips
-    # them. Security updates are not delayed. pnpm's own `minimumReleaseAge`
-    # was dropped on 2026-10-15 because it also failed `--frozen-lockfile`
-    # installs for versions main had already locked; Dependabot's cooldown is
-    # the one delay now.
+    # them. Security updates are not delayed. pnpm's `minimumReleaseAge` (one day, in
+    # pnpm-workspace.yaml) is a second, shorter delay that also covers manual installs.
     cooldown:
       default-days: 3
     groups:

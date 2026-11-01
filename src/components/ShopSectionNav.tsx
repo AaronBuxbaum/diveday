@@ -249,8 +249,12 @@ export function ShopTabBar({ root, gates, items, blocked, copy }: NavProps) {
                 <li key={item.section} className="flex flex-auto">
                   <Link
                     href={staffDestinationHref(root, item.destination)}
+                    // Native focus already scrolls a tab into view; this only
+                    // finishes the job when it stopped short. "nearest" moves
+                    // the rail the least and, unlike "center", never asks for
+                    // an offset the rail cannot reach (#3433).
                     onFocus={(event) =>
-                      event.currentTarget.scrollIntoView({ block: "nearest", inline: "center" })
+                      event.currentTarget.scrollIntoView({ block: "nearest", inline: "nearest" })
                     }
                     aria-current={rowAriaCurrent(active, pathname, root, item)}
                     className={`${tabClass} ${

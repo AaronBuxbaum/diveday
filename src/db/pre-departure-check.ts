@@ -354,7 +354,8 @@ export async function recordPreDepartureCheck(
         const mayWriteNote = Boolean(input.note?.trim());
         if (mayWriteNote) {
           // A checklist narrative is retained shop evidence just like a roll-call
-          // note. Serialize it against the same erasure rewrite fence.
+          // note. Serialize it against the same erasure fence (which orders it
+          // against the stale-offline-note check, not a rewrite).
           await lockBoardingCertificationEvidence(tx, input.shopId, "boarding");
         }
         const verifiedEpoch =

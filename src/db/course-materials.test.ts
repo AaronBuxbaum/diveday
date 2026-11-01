@@ -92,6 +92,35 @@ describe("recordCourseMaterialsDone", () => {
     expect(await stored(db, studentBookingId)).toEqual({ at: null, by: null });
   });
 
+  it("takes the tick back only while it is still this staffer's with this stamp", async () => {
+    const { db, shop, staffId, studentBookingId } = await courseContext();
+    const base = { shopId: shop.id, bookingId: studentBookingId, staffPersonId: staffId };
+    const first = new Date("2026-10-01T09:00:00Z");
+    await recordCourseMaterialsDone(db, { ...base, done: true, now: first });
+    // Re-ticked after the caller read `first`: the stamp has moved.
+    const second = new Date("2026-10-01T09:05:00Z");
+    await db
+      .update(bookings)
+      .set({ courseMaterialsDoneAt: second })
+      .where(eq(bookings.id, studentBookingId));
+    expect(
+      await recordCourseMaterialsDone(db, {
+        ...base,
+        done: false,
+        onlyIf: { byPersonId: staffId, markedAt: first },
+      }),
+    ).toEqual({ ok: false, reason: "changed" });
+    expect(await stored(db, studentBookingId)).toEqual({ at: second, by: staffId });
+    expect(
+      await recordCourseMaterialsDone(db, {
+        ...base,
+        done: false,
+        onlyIf: { byPersonId: staffId, markedAt: second },
+      }),
+    ).toEqual({ ok: true });
+    expect(await stored(db, studentBookingId)).toEqual({ at: null, by: null });
+  });
+
   it("refuses a departure that teaches no course, and writes nothing", async () => {
     const { db, shop, staffId, funDiveBookingId } = await courseContext();
     expect(
