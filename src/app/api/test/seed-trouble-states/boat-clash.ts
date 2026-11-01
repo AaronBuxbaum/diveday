@@ -1,4 +1,4 @@
-import { and, eq, gte, inArray, isNull } from "drizzle-orm";
+import { and, eq, gte, isNull, or } from "drizzle-orm";
 import type { getDb } from "@/db/client";
 import { boats, trips } from "@/db/schema";
 import { moveTrip } from "@/db/trips";
@@ -39,11 +39,32 @@ async function slideOneDepartureOntoAnotherHull(
     (trip) => trip.id !== host?.id && host && trip.startsAt >= host.endsAt,
   );
   if (!host || !mover) return null;
-  await db
-    .update(trips)
-    .set({ boatId: hull.id })
-    .where(inArray(trips.id, [host.id, mover.id]));
-  if (!(await moveTrip(db, shopId, mover.id, host.startsAt)).ok) return null;
+  const outcome = await moveTrip(db, shopId, mover.id, host.startsAt, {
+    beforeMove: async (tx) => {
+      const assigned = await tx
+        .update(trips)
+        .set({ boatId: hull.id })
+        .where(
+          and(
+            eq(trips.shopId, shopId),
+            eq(trips.status, "scheduled"),
+            liveTrip(),
+            or(
+              and(
+                eq(trips.id, host.id),
+                eq(trips.startsAt, host.startsAt),
+                eq(trips.endsAt, host.endsAt),
+              ),
+              eq(trips.id, mover.id),
+            ),
+          ),
+        )
+        .returning({ id: trips.id });
+      if (assigned.length !== 2)
+        throw new Error("boat-clash fixture trips changed before the move");
+    },
+  });
+  if (!outcome.ok) return null;
   return { tripId: mover.id, otherTitle: host.title };
 }
 
