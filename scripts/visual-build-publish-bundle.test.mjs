@@ -22,6 +22,36 @@ afterEach(() => {
 });
 
 describe("buildVisualPublishBundle", () => {
+  it("uploads expected images only for changed and deleted items", () => {
+    const { sourceDir, bundleDir } = fixture();
+    for (const dir of ["actual", "expected", "diff"]) mkdirSync(path.join(sourceDir, dir));
+    for (const name of ["passed.png", "changed.png", "deleted.png"]) {
+      writeFileSync(path.join(sourceDir, "expected", name), "expected");
+    }
+    for (const name of ["passed.png", "changed.png"]) {
+      writeFileSync(path.join(sourceDir, "actual", name), "actual");
+    }
+    writeFileSync(
+      path.join(sourceDir, "out.json"),
+      JSON.stringify({
+        actualDir: "actual",
+        expectedDir: "expected",
+        diffDir: "diff",
+        actualItems: ["passed.png", "changed.png"],
+        failedItems: ["changed.png"],
+        deletedItems: ["deleted.png"],
+        passedItems: ["passed.png"],
+      }),
+    );
+    const result = buildVisualPublishBundle({ sourceDir, bundleDir, publicationId: "4102-1" });
+    const manifest = readFileSync(path.join(bundleDir, "manifest.tsv"), "utf8");
+    const prefix = `snapshots/${result.snapshotVersion}`;
+    expect(manifest).toContain(`${prefix}/expected/changed.png\t`);
+    expect(manifest).toContain(`${prefix}/expected/deleted.png\t`);
+    expect(manifest).not.toContain(`${prefix}/expected/passed.png`);
+    expect(manifest).toContain(`${prefix}/actual/passed.png\t`);
+  });
+
   it("builds deterministic snapshot versions and rewrites report paths before publication", () => {
     const { sourceDir, bundleDir } = fixture();
     mkdirSync(path.join(sourceDir, "actual"));
