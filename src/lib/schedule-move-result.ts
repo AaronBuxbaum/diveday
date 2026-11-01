@@ -1,11 +1,10 @@
-import { createHmac, hkdfSync, timingSafeEqual } from "node:crypto";
 import { authSecret } from "@/lib/auth-secret";
 import { nowMs } from "@/lib/clock";
+import { deriveLabelKey, signPayload, tagMatches } from "@/lib/signed-token";
 
 const PURPOSE = "schedule-move-result-v1";
 const MAX_AGE_MS = 2 * 60 * 1000;
 const MAX_FUTURE_SKEW_MS = 30 * 1000;
-const SIGNATURE_SHAPE = /^[A-Za-z0-9_-]{43}$/;
 const TOKEN_SHAPE = /^[A-Za-z0-9_-]{1,512}\.[A-Za-z0-9_-]{43}$/;
 
 export type ScheduleMoveResult = {
@@ -23,8 +22,7 @@ type Payload = {
 
 function signature(payload: string): string {
   if (!authSecret) throw new Error("AUTH_SECRET is required to sign schedule move results.");
-  const key = hkdfSync("sha256", authSecret, "", "diveday-schedule-move-result", 32);
-  return createHmac("sha256", Buffer.from(key)).update(payload).digest("base64url");
+  return signPayload(deriveLabelKey(authSecret, "diveday-schedule-move-result"), payload);
 }
 
 /** A short-lived, shop-bound proof that a move action released the signed gear count. */
@@ -46,9 +44,7 @@ export function verifyScheduleMoveResult(
   const dot = token.indexOf(".");
   const body = token.slice(0, dot);
   const supplied = token.slice(dot + 1);
-  if (!SIGNATURE_SHAPE.test(supplied)) return null;
-  const expected = signature(body);
-  if (!timingSafeEqual(Buffer.from(supplied), Buffer.from(expected))) return null;
+  if (!tagMatches(supplied, signature(body))) return null;
 
   try {
     const decoded = Buffer.from(body, "base64url").toString("utf8");
