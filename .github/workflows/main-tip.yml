@@ -10,13 +10,15 @@
 # graph, typecheck and `pnpm check:repo`. It reports "this layer plus main: OK"
 # or the first error.
 #
-# Only for a pull request whose base is not main: one based on main already has
-# that merge tested by CI itself. Not part of `CI result`, so a red main cannot
+# Only for a pull request whose base is not main (`branches-ignore` below): one based on main
+# already has that merge tested by CI itself. Not part of `CI result`, so a red main cannot
 # hold every stacked layer's merge; the check is there to be read.
 name: Main tip
 
 on:
   pull_request:
+    # A base of `main` is skipped at the trigger, so those pull requests log no run.
+    branches-ignore: [main]
 
 concurrency:
   group: main-tip-${{ github.event.pull_request.number }}
@@ -28,7 +30,6 @@ permissions:
 jobs:
   main-tip:
     name: This layer plus main
-    if: github.base_ref != github.event.repository.default_branch
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:

@@ -1,6 +1,6 @@
 # 20261015-coverage-and-mutation-testing — Measure the safety files with coverage-v8 and Stryker
 
-- **Status:** Accepted
+- **Status:** Accepted, **partly superseded** by [20261101-cut-mutation-testing](20261101-cut-mutation-testing.md)
 - **Date:** 2026-10-15
 
 ## Context
@@ -40,10 +40,7 @@ list of files that decide boarding, permissions and money.
 - The unit shards pay v8 coverage collection and upload a blob each. A new untested branch in a
   safety file fails `coverage-floors`; the fix is a test, or an absorbed fall with a reason.
 - The list is derived (`scripts/coverage-safety-files.mjs`); a new matching file needs a `--write`.
-- **Blocker found by the trial run:** under Vitest 5 every in-function mutant "survives" with its
-  tests green (trip-admission 7.5%, all 13 kills module-level), though forcing one on by hand fails
-  16 tests. The schedule stays off and no survivor issue is filed until a run kills an in-function
-  mutant; the runner fault is #2622.
+- Blocker: under Vitest 5 in-function mutants never switch on (#2622); see the superseding ADR.
 - Equivalent mutants will appear in the issues and need a human to call them; that is the cost of
   the signal.
 - Revisit if the weekly issues go unread for a month (drop the workflow and the two packages), or
