@@ -1,0 +1,45 @@
+name: CodeQL
+
+# Once a day, not on every push to main. GitHub's "default setup" scans each
+# push and cannot be scheduled, so this advanced-setup workflow replaces it
+# (default setup must be off in Settings → Code security, or both run).
+# It also scans pull requests into main, and runs by hand from the Run workflow
+# button. A schedule or a manual run never reaches a PR, so scripts/base-ci.mjs
+# does not hold a branch to its red (docs/agents/verifying.md).
+on:
+  schedule:
+    # 05:30 UTC, ahead of the other nightly work (e2e-nightly 06:00).
+    - cron: "30 5 * * *"
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: codeql-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [javascript-typescript, actions]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: github/codeql-action/init@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+      - uses: github/codeql-action/analyze@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
+        with:
+          category: /language:${{ matrix.language }}
