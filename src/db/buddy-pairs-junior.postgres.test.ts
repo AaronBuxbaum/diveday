@@ -392,7 +392,7 @@ describePostgres("one-tap party decisions against junior evidence changes", () =
 });
 
 describePostgres("one-tap planning against erasure", () => {
-  it("does not deadlock erasing the sole diver of a private departure named for them", async () => {
+  it("does not deadlock erasing the sole diver of a private departure", async () => {
     const pg = await postgresTestDb();
     const [shop] = await pg.db
       .insert(shops)

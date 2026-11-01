@@ -4836,8 +4836,8 @@
         "tokens": "Tokens caducados de inicio de sesión y de restablecimiento: 90 días después de su propia caducidad. Uno vigente no se poda nunca.",
         "push": "Registros de notificaciones por dispositivo: 30 días.",
         "assists": "Lo enviado a una sugerencia de IA y su respuesta: 30 días, y en las copias de seguridad hasta que caducan. Solo DiveDay puede leerlo, y un buceador puede pedirnos verlo. Una foto o un PDF nunca se guardan, solo lo que se leyó en ellos.",
-        "safety": "Los pases de lista se conservan mientras el centro use DiveDay, y los informes de incidente, siete años; si un buceador pide que se le borre, su identidad se elimina de ambos.",
-        "history": "El registro de quién cambió el plan de una salida, y de quién publicó u ocultó cada reseña, se conserva mientras el centro use DiveDay. Cuando se borran los datos de un buceador, se eliminan las notas de ese registro que lo nombran.",
+        "safety": "Los pases de lista se conservan mientras el centro use DiveDay, y los informes de incidente, siete años; si un buceador pide que se le borre, su registro se desvincula de ambos.",
+        "history": "El registro de quién cambió el plan de una salida, y de quién publicó u ocultó cada reseña, se conserva mientras el centro use DiveDay.",
         "reviewTerm": "Aún por decidir",
         "reviewBody": "cuánto tiempo debe conservarse una exención firmada y sus respuestas médicas después de que un buceador deje de bucear con un centro. Hoy se conservan hasta que el centro las elimina, porque una exención es evidencia que un centro puede necesitar años después, y acortar ese plazo sin asesoramiento sería el tipo de suposición equivocada. Está en revisión con los mismos asesores que revisan el texto de la exención, y esta página dirá la respuesta cuando la haya."
       },

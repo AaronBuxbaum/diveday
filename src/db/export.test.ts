@@ -917,8 +917,8 @@ describe("full-shop export dataset", () => {
       body: "Esme prefers the 5mm suit; ask before the second tank.",
       createdByPersonId: owner.id,
     });
-    // A note filed under *somebody else* that names her. Keyed on the other
-    // diver's `person_id`, so only the word-boundary body sweep can reach it.
+    // A note filed under *somebody else* that names her. Erasure removes her own
+    // data only, so this staff sentence survives (owner, 2026-11-01).
     await db.insert(internalNotes).values({
       shopId: shop.id,
       personId: owner.id,
@@ -957,8 +957,11 @@ describe("full-shop export dataset", () => {
     const wholeBundle = JSON.stringify(
       input.tables.map((exported) => ({ file: exported.file, rows: exported.rows })),
     );
+    const mention = "Split Erasable Esme from this group on the next boat.";
+    expect(wholeBundle).toContain(mention);
+    const ownData = wholeBundle.replace(mention, "");
     for (const secret of ["Erasable Esme", "esme@example.com", "555 0424", "5mm suit"]) {
-      expect(wholeBundle, `bundle still carries ${secret}`).not.toContain(secret);
+      expect(ownData, `bundle still carries ${secret}`).not.toContain(secret);
     }
   });
 

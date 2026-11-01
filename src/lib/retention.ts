@@ -41,7 +41,7 @@
  *
  * **`trip_change_events` and `review_moderation_events` are deliberately
  * unbounded.** The shop activity log reads these as the record of changes and
- * moderation; requested erasure redacts matching free-text names and staff
+ * moderation; a note on the diver's own review is redacted on erasure, a mention is not, and staff
  * identities resolve live (`src/db/anonymize.ts`). Chosen over the activity
  * window (issue #2316, 2026-10-13; ADR 20260813-review-moderation-has-a-floor).
  *

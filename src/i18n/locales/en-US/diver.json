@@ -4836,8 +4836,8 @@
         "tokens": "Expired sign-in and reset tokens: 90 days past their own expiry. A live one is never pruned.",
         "push": "Device notification registrations: 30 days.",
         "assists": "What an AI suggestion was sent and what it answered: 30 days, and in backups until they expire. Only DiveDay can read it, and a diver can ask us to see it. A photo or a PDF is never kept, only what was read off it.",
-        "safety": "Roll calls are kept for as long as the shop uses DiveDay, and incident reports for seven years; if a diver asks to be erased, their identity is removed from both.",
-        "history": "The record of who changed a departure’s plan, and of who published or hid each review, is kept for as long as the shop uses DiveDay. When a diver’s data is erased, the notes in it that name them are removed.",
+        "safety": "Roll calls are kept for as long as the shop uses DiveDay, and incident reports for seven years; if a diver asks to be erased, their record is unlinked from both.",
+        "history": "The record of who changed a departure’s plan, and of who published or hid each review, is kept for as long as the shop uses DiveDay.",
         "reviewTerm": "Still being decided",
         "reviewBody": "how long a signed waiver and its medical answers should be kept after a diver stops diving with a shop. Today they stay until the shop removes them, because a release is evidence a shop may need years later, and shortening that without advice would be the wrong kind of guess. It is under review with the same counsel reviewing the waiver text, and this page will say the answer when there is one."
       },
