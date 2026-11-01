@@ -157,6 +157,13 @@ jobs:
         run: |
           gh pr view "$PR_NUMBER" --json body --jq .body > "$RUNNER_TEMP/pr-body.md" 2>/dev/null || printf '%s' "$PR_BODY" > "$RUNNER_TEMP/pr-body.md"
           node scripts/check-pr-body.mjs --body-file "$RUNNER_TEMP/pr-body.md" --base "origin/$BASE_REF"
+      # A warning, never a failure: logic under src/lib, src/db or src/features changed and no
+      # test file did (scripts/warn-untested-logic.mjs; docs/agents/repo-checks.md#untested-logic).
+      - name: Logic changed with no test
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: node scripts/warn-untested-logic.mjs --base "origin/$BASE_REF"
 
   unit-tests:
     name: Unit tests shard ${{ matrix.shard }}/4
@@ -228,7 +235,7 @@ jobs:
       #
       # `--coverage.enabled` (only when `changes` says a safety file, its tests or the harness moved:
       # `safety`, scripts/coverage-relevant.mjs; always on main) and the blob reporter feed `coverage-floors` below: v8 coverage of
-      # the eleven safety files `vitest.config.ts` names, carried in this shard's blob so that job
+      # the safety files `vitest.config.ts` names, carried in this shard's blob so that job
       # can merge all four without running a test (test review 2026-10-14, decision 6).
       - run: pnpm exec vitest run --project '!guards' --reporter=dot --reporter=./src/test/duration-reporter.ts --reporter=./src/test/failed-files-reporter.ts --reporter=blob ${{ needs.changes.outputs.safety != 'false' && '--coverage.enabled' || '' }} --shard=${{ matrix.shard }}/4
         env:

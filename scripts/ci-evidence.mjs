@@ -62,16 +62,38 @@ export function failureGroups(jobs, annotations) {
   }
   return [...groups.values()];
 }
+// Open PRs whose changed files include a failing spec: the one to comment on instead of a second fix.
+// `pulls` null (API unavailable) or a PR whose files cannot be read yields no owner, quietly.
+export function specOwners({ files, pulls, filesFor, headSha = null }) {
+  if (!files.length || !Array.isArray(pulls)) return [];
+  const owners = [];
+  for (const pull of pulls) {
+    if (headSha && pull.head?.sha === headSha) continue;
+    const changed = filesFor(pull.number);
+    if (!Array.isArray(changed)) continue;
+    const shared = files.filter((file) => changed.some((item) => item.filename === file));
+    if (shared.length)
+      owners.push({
+        number: pull.number,
+        title: pull.title,
+        url: pull.html_url,
+        files: shared,
+      });
+  }
+  return owners;
+}
 export function evidenceManifest({
   needs = {},
   jobs = [],
   annotations = [],
   artifacts = [],
+  specOwners: owners = [],
   env = {},
 }) {
   return {
     version: 1,
     failureGroups: failureGroups(jobs, annotations),
+    specOwners: owners,
     sha: env.GITHUB_SHA ?? null,
     headSha: env.PR_HEAD_SHA || env.GITHUB_SHA || null,
     baseSha: env.PR_BASE_SHA || null,
@@ -141,7 +163,20 @@ function main() {
         items: read(`repos/${env.GITHUB_REPOSITORY}/check-runs/${check}/annotations?per_page=100`),
       });
   }
+  const failingSpecs = [
+    ...new Set(failureGroups(jobs?.jobs ?? [], annotations).flatMap((group) => group.files)),
+  ];
+  const owners = failingSpecs.length
+    ? specOwners({
+        files: failingSpecs,
+        pulls: read(`repos/${env.GITHUB_REPOSITORY}/pulls?state=open&per_page=100`),
+        filesFor: (number) =>
+          read(`repos/${env.GITHUB_REPOSITORY}/pulls/${number}/files?per_page=100`),
+        headSha: env.PR_HEAD_SHA || env.GITHUB_SHA || null,
+      })
+    : [];
   const manifest = evidenceManifest({
+    specOwners: owners,
     needs: JSON.parse(env.CI_NEEDS || "{}"),
     jobs: jobs?.jobs,
     annotations,

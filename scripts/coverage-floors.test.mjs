@@ -6,8 +6,10 @@ import {
   branchCoverage,
   compareFloors,
   FLOORS_PATH,
+  matchedSafetyFiles,
   nextFloors,
   SAFETY_FILES,
+  safetyFilesOnDisk,
 } from "./coverage-floors.mjs";
 
 const root = path.join(import.meta.dirname, "..");
@@ -89,6 +91,45 @@ describe("coverage-floors", () => {
     for (const file of SAFETY_FILES) {
       expect(typeof floors[file], file).toBe("number");
       expect(() => readFileSync(path.join(root, file)), file).not.toThrow();
+    }
+  });
+
+  it("requires a floor for every non-test lib and db file the safety reviewer patterns match", () => {
+    const fixture = [
+      "src/db/readiness.ts",
+      "src/db/readiness.test.ts",
+      "src/db/seat-diver.ts",
+      "src/db/seed-nitrox.ts",
+      "src/db/seed-medical-alert.ts",
+      "src/db/waiver-guardian-copy.ts",
+      "src/db/erasure-coverage-keeps.test-support.ts",
+      "src/db/guardian-erasure.ts",
+      "src/db/schema/erasure.ts",
+      "src/lib/anonymization.ts",
+      "src/lib/payments/erasure-failure.ts",
+      "src/lib/waiver-copy.ts",
+      "src/lib/format-date.ts",
+      "src/db/shops.ts",
+      "src/app/shop/manifests/page.tsx",
+      "src/i18n/locales/en-US/diver.json",
+      "scripts/manifest-thing.mjs",
+    ];
+    expect(matchedSafetyFiles(fixture)).toEqual([
+      "src/db/guardian-erasure.ts",
+      "src/db/readiness.ts",
+      "src/db/schema/erasure.ts",
+      "src/db/seat-diver.ts",
+      "src/lib/anonymization.ts",
+      "src/lib/payments/erasure-failure.ts",
+    ]);
+  });
+
+  it("holds every file on disk the patterns match to a floor", () => {
+    const floors = JSON.parse(readFileSync(path.join(root, FLOORS_PATH), "utf8"));
+    expect(SAFETY_FILES).toEqual(safetyFilesOnDisk(root));
+    for (const file of ["src/db/readiness.ts", "src/db/manifests.ts", "src/db/nitrox.ts"]) {
+      expect(SAFETY_FILES).toContain(file);
+      expect(typeof floors[file], file).toBe("number");
     }
   });
 });

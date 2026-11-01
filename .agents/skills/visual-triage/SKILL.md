@@ -33,6 +33,10 @@ Read the sticky `diveday:visual-summary` comment first ([pr-comment.md](pr-comme
    - **Regression:** the image reveals an unintended layout/content/state change. Fix the source, rerun comparison, and verify the diff is gone.
    - **Unclear:** do not merge and ask for a decision.
 
+## Many diffs
+
+When a PR has more than about 20 visual diffs, do not view them in the main thread. Start one Sonnet subagent with the diff list and the code change; it writes the explanation table into the PR body's "Visual diffs" section and returns one line. Diffs that are the same change on many captures (shared chrome) get one row.
+
 ## Reference
 
 - [pr-comment.md](pr-comment.md) — the sticky `diveday:visual-summary` comment in full: `NOTHING WAS COMPARED`, explicit baseline keys and inherited-layer attribution, what a PR captures (`visual-all`), and `pnpm visual:layers` for a stacked layer.

@@ -14,8 +14,6 @@
 # testing
 /coverage
 /.vitest/
-/reports/mutation/
-/.stryker-tmp/
 
 # next.js
 /.next/

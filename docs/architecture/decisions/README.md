@@ -426,5 +426,6 @@ script again.
 | 20261028-offline-erasure-loss-notices | Keep actionable erasure notices offline |
 | 20261028-returning-diver-device-memory | Remember a booker only by… |
 | 20261029-boat-capacity-total-occupants | Count assigned crew inside boat… |
+| 20261101-cut-mutation-testing | Cut mutation testing until the… |
 
 <!-- adr-index:end -->
