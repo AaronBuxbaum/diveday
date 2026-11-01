@@ -95,13 +95,14 @@ export function recordingCheckout(overrides: Partial<CheckoutProvider> = {}): {
 } {
   const requests: Parameters<CheckoutProvider["createCheckoutSession"]>[0][] = [];
   const inner = fakeCheckout(overrides);
-  const provider = fakeCheckout({
+  const provider: CheckoutProvider = {
+    ...inner,
     ...overrides,
     async createCheckoutSession(request) {
       requests.push(request);
       return inner.createCheckoutSession(request);
     },
-  });
+  };
   return { requests, provider };
 }
 
