@@ -7,6 +7,14 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## Erasure removes a person's own data only (built 2026-11-01)
+
+Erasing a diver no longer searches other people's free text for their name: departure titles and
+change values, other crew's roll-call and checklist notes, moderation notes on others' reviews,
+internal notes filed under another diver and incident narratives all stay as written. Their own
+records still go. Decided on #3437; H-20261013-incident-report-erasure closed; see the amendment in
+[20260802-diver-data-erasure](../architecture/decisions/20260802-diver-data-erasure.md).
+
 ## Medical alert for the crew (built 2026-10-23)
 
 A diver writes, after the medical questionnaire, what the crew should know in an emergency (an allergy and where the medicine is, diabetes, an inhaler); it is sealed with the signature and never gates. Every staffer sees a "Medical alert" chip on the manifest and roll call; an owner, a manager or that departure's crew opens the words, and each read is on the diver's trail. The offline copy carries the words only for those readers. Issue #2960, H-20261023-medical-alert-for-the, glossary *Medical alert for the crew*, ADR [20260729-staffing-waiver-audit-and-localized-copy](../architecture/decisions/20260729-staffing-waiver-audit-and-localized-copy.md) amendment.

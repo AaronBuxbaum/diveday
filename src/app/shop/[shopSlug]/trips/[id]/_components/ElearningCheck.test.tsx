@@ -122,4 +122,39 @@ describe("ElearningCheck", () => {
     renderCheck({ query: null, offNote: off, materialsDone: true });
     expect(screen.queryByText(off)).toBeNull();
   });
+
+  it("says so when an Undo changes nothing, even while the materials read as done", async () => {
+    document.documentElement.setAttribute("data-diveday-cert-check", "1.5.0");
+    vi.mocked(requestElearningPage).mockResolvedValue({ ok: true, pageText: "x" });
+    const action = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        verdict: "complete",
+        evidence: "done",
+        undo: { bookingId: "b-1", markedAt: "2026-10-01T09:00:00.000Z" },
+      })
+      .mockResolvedValueOnce({ ok: true, verdict: "already_done" });
+    const view = render(
+      <ElearningCheck
+        query={query}
+        bookingId="b-1"
+        materialsDone={false}
+        action={action}
+        copy={copy}
+      />,
+    );
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Check eLearning with PADI" }));
+    });
+    await act(async () => {
+      fireEvent.click(await screen.findByRole("button", { name: copy.undo }));
+    });
+    // The row settles to done (a colleague's tick stands) after the refresh.
+    view.rerender(
+      <ElearningCheck query={query} bookingId="b-1" materialsDone action={action} copy={copy} />,
+    );
+    expect(await screen.findByText(copy.alreadyDone)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Check eLearning with PADI" })).toBeNull();
+  });
 });

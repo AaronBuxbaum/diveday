@@ -30,10 +30,10 @@ access, export, retention and erasure are decided here.
 - **Export:** three files in the shop bundle, beside `waiver_records.csv`. The diver's own bundle
   leaves them out (H-20261013-incident-report-erasure).
 - **Retention:** 7 years from the incident (2555 days); people and addenda cascade.
-- **Erasure:** `anonymizeDiver` keeps the report. The diver's links survive with the erased name,
-  an outsider row with their name is redacted, and every word-boundary match of their name in the
-  narrative fields and addenda becomes `[redacted]`. A filed report changes only through this.
-  The trade-off is H-20261013-incident-report-erasure.
+- **Erasure:** `anonymizeDiver` keeps the report. The diver's links survive with the erased name
+  and an outsider row with their name is redacted. The narrative fields and addenda are staff
+  prose and stay verbatim (owner, 2026-11-01; H-20261013-incident-report-erasure). A filed report changes only through the
+  outsider row.
 - **Safety page:** an owner/manager destination at `/safety` reads the month's records and lists
   its reports.
 
@@ -46,6 +46,5 @@ access, export, retention and erasure are decided here.
 
 ## Consequences
 
-The report survives a diver's erasure with their identity removed. Name matching misses a nickname
-or a first name alone; H-20261013-incident-report-erasure states that residual. Revisit if counsel asks for a different
+The report survives a diver's erasure with their record unlinked; words staff wrote stay (H-20261013-incident-report-erasure). Revisit if counsel asks for a different
 retention period or full redaction on erasure.

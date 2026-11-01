@@ -79,10 +79,10 @@ export const OUTSIDE_CLOSURE_REASONS: Record<string, string> = {
   // to a person. `trips` reached the closure by accident, through its old
   // `dive_site_id` pointer to `dive_sites` (which names a staff author), and left
   // it when the pointer went (issue #3237). A diver reaches a departure through
-  // `bookings`, which the erasure strips; a private charter's title that carries
-  // a diver's name is renamed by `anonymizeDiver`, as the `trip_series` row says.
+  // `bookings`, which the erasure strips; a title that carries a diver's name is
+  // the shop's own word and stays (owner, 2026-11-01).
   trips:
-    "the shop's own departure: schedule, price, conditions and arrival notes. It names no person by key; an erased diver reaches it only through `bookings`, and a private charter's title carrying their name is renamed by the erasure",
+    "the shop's own departure: schedule, price, conditions and arrival notes. It names no person by key; an erased diver reaches it only through `bookings`, and a title that mentions them stays (owner, 2026-11-01)",
   trip_requirements:
     "the gates one departure asks of every diver (waiver, level, specialties, nitrox, payment): the shop's rule, never a diver's data",
   trip_schedule_days: "the meeting windows of one departure: timestamps only, no person",
@@ -91,7 +91,7 @@ export const OUTSIDE_CLOSURE_REASONS: Record<string, string> = {
   offline_manifest_snapshot_revisions:
     "a revision counter per departure that tells an offline manifest it is stale; it holds no manifest and no person",
   trip_series:
-    "the cadence a repeating departure is generated from. Its instances are ordinary `trips` rows; its title is renamed with them when an erased diver's own charter carries their name",
+    "the cadence a repeating departure is generated from. Its instances are ordinary `trips` rows; a title that mentions an erased diver stays (owner, 2026-11-01)",
   trip_series_skips:
     "a date the shop took out of that cadence, so the nightly roll does not put it back",
 

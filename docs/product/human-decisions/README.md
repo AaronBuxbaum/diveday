@@ -159,7 +159,7 @@ and run the command again.
 | H-20261009-rider-snorkeler-medical | Chosen | 2026-10-13 | Which medical form do a snorkeler and a rider get? |
 | H-20261013-call-off-queues-refunds | Implemented | 2026-10-13 | Which roles may trigger a cancellation that refunds money? |
 | H-20261013-cancelling-a-run-refunds | Implemented | 2026-10-13 | Does cancelling every upcoming date of a run refund each seat in full? |
-| H-20261013-incident-report-erasure | Open | 2026-10-13 | When a diver asks to be erased, what happens to an incident report that names them? |
+| H-20261013-incident-report-erasure | Implemented | 2026-11-01 | When a diver asks to be erased, what happens to an incident report that names them? |
 | H-20261013-incident-report-retention | Implemented | 2026-10-13 | How long is an incident report kept? |
 | H-20261013-under-18-on-party | Implemented | 2026-10-24 | Does the public party form ask "Under 18"? |
 | H-20261014-agents-md-size | Chosen | 2026-10-14 | Shrink AGENTS.md to about 2.5k tokens? |

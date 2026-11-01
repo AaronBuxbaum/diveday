@@ -1,7 +1,7 @@
-import { createHmac, hkdfSync, timingSafeEqual } from "node:crypto";
 import { DAY_MS, nowMs } from "@/lib/clock";
 import { authSecret } from "./auth-secret";
 import { cleanVisitorShopName } from "./demo-identity";
+import { deriveLabelKey, signPayload, tagMatches } from "./signed-token";
 
 /**
  * **The visitor's own shop name, worn by their demo** (H-20261014-demo-wears-visitor-shop; ADR
@@ -43,13 +43,11 @@ const VALUE = /^(\d{1,15})\.([A-Za-z0-9_-]{1,400})\.([A-Za-z0-9_-]{43})$/;
 
 function nameKey(): Buffer {
   if (!authSecret) throw new Error("AUTH_SECRET is required to sign a demo shop name.");
-  return Buffer.from(hkdfSync("sha256", authSecret, "", "diveday-demo-shop-name", 32));
+  return deriveLabelKey(authSecret, "diveday-demo-shop-name");
 }
 
 function signature(shopId: string, expiresAt: number, encoded: string): string {
-  return createHmac("sha256", nameKey())
-    .update(`${PURPOSE}${shopId}.${expiresAt}.${encoded}`)
-    .digest("base64url");
+  return signPayload(nameKey(), `${PURPOSE}${shopId}.${expiresAt}.${encoded}`);
 }
 
 /**
@@ -79,8 +77,7 @@ export function demoShopNameFor(
   const [, expiry, encoded, sig] = match;
   const expiresAt = Number(expiry);
   if (!(expiresAt > now)) return null;
-  const expected = signature(shopId, expiresAt, encoded);
-  if (!timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return null;
+  if (!tagMatches(sig, signature(shopId, expiresAt, encoded))) return null;
   // Cleaned again on the way out: the signature proves who wrote it, and the
   // cleaning is cheap enough to never trust that it was done.
   return cleanVisitorShopName(Buffer.from(encoded, "base64url").toString("utf8"));

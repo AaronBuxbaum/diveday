@@ -1020,8 +1020,8 @@
   report or on the row once the roll call has them back aboard (any of the departure's crew), is
   refused while the roll call still says not back aboard; it sends the owners one all-clear by
   email that counts, without names, anyone else on the departure still reported missing (issue
-  #2694). Marked not aboard again after Found, a raise opens a new report and alerts again. Kept seven years from the incident; erasing a diver removes their identity
-  from it and keeps the report
+  #2694). Marked not aboard again after Found, a raise opens a new report and alerts again. Kept seven years from the incident; erasing a diver unlinks their record
+  from it and keeps the report, words staff wrote included
   ([20261012-incident-reports](../../architecture/decisions/20261012-incident-reports.md)).
 - **Legal hold** (on an **incident report**) — an owner-set flag that keeps a report past its
   seven-year window while a claim is open. The retention prune skips a held report until an owner

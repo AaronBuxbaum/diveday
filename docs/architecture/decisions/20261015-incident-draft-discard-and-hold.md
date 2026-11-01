@@ -22,11 +22,10 @@ draft, and an owner-set hold that retention skips.
   (`incident_reports_a_held_report_is_kept`). The page offers it on a filed report.
 
 - **Erasure against a hold:** erasure wins on personal fields and the hold keeps the record shell.
-  `anonymizeDiver` scrubs a diver's name from a report's words and addenda whether or not the report
-  is held, and the held report stays (its seat links under the erased name, its dates, its
+  `anonymizeDiver` redacts a hand-typed outsider row naming the diver whether or not the report
+  is held, and leaves the narrative and addenda as staff wrote them (owner, 2026-11-01); the held report stays (its seat links under the erased name, its dates, its
   non-personal fields). A hold never stops an erasure; it stops the seven-year prune and the
-  discard of a draft. Counsel (H-20261013-incident-report-retention) may narrow this; until then the diver's request outranks the
-  claim on the words that name them.
+  discard of a draft. Counsel (H-20261013-incident-report-retention) may narrow this; until then the shop's claim on the words stands.
 - **What the owner is told:** the Delete confirm says the draft's words are kept for seven years,
   because they are (see Consequences).
 

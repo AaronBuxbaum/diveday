@@ -74,11 +74,12 @@ async function context() {
   };
 }
 
-function check(bookingId: string, pageText: string | null, intent?: "undo") {
+function check(bookingId: string, pageText: string | null, intent?: "undo", markedAt?: string) {
   const formData = new FormData();
   formData.set("bookingId", bookingId);
   if (pageText !== null) formData.set("pageText", pageText);
   if (intent) formData.set("intent", intent);
+  if (markedAt) formData.set("markedAt", markedAt);
   return formData;
 }
 
@@ -117,13 +118,14 @@ describe("elearningCheckAction", () => {
 
   it("takes the tick back on Undo", async () => {
     const { db, shop, tripId, bookingId } = await context();
-    await elearningCheckAction(shop.slug, tripId, null, check(bookingId, PAGE));
+    const ticked = await elearningCheckAction(shop.slug, tripId, null, check(bookingId, PAGE));
+    const markedAt = ticked?.ok && ticked.verdict === "complete" ? ticked.undo.markedAt : "";
 
     const result = await elearningCheckAction(
       shop.slug,
       tripId,
       null,
-      check(bookingId, null, "undo"),
+      check(bookingId, null, "undo", markedAt),
     );
 
     expect(result).toEqual({ ok: true, verdict: "undone" });
@@ -177,6 +179,27 @@ describe("elearningCheckAction", () => {
 
     expect(result).toEqual({ ok: true, verdict: "already_done" });
     expect((await tick(db, bookingId))?.at).toBeNull();
+  });
+
+  it("leaves a newer tick by the same staffer alone when the older tick is undone", async () => {
+    const { db, shop, staffId, tripId, bookingId } = await context();
+    const first = await elearningCheckAction(shop.slug, tripId, null, check(bookingId, PAGE));
+    const markedAt = first?.ok && first.verdict === "complete" ? first.undo.markedAt : "";
+    const newer = new Date(new Date(markedAt).getTime() + 60_000);
+    await db
+      .update(bookings)
+      .set({ courseMaterialsDoneAt: newer, courseMaterialsDoneByPersonId: staffId })
+      .where(eq(bookings.id, bookingId));
+
+    const result = await elearningCheckAction(
+      shop.slug,
+      tripId,
+      null,
+      check(bookingId, null, "undo", markedAt),
+    );
+
+    expect(result).toEqual({ ok: true, verdict: "already_done" });
+    expect((await tick(db, bookingId))?.at).toEqual(newer);
   });
 
   it("leaves a colleague's tick made since the check alone on Undo", async () => {

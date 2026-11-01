@@ -143,7 +143,10 @@ test("the saved /ready copy shows with no signal, and a cancel landing forgets i
   await page.getByRole("button", { name: diver("ready.cancelConfirmButton") }).click();
   await page.waitForURL((url) => url.searchParams.has("cancelled"));
   await expect(page.getByRole("heading", { name: diver("ready.cancelledHeading") })).toBeVisible();
-  await expect.poll(() => keptCopies(page), { timeout: 30_000 }).toBe(0);
+  // The cancelled card marks the page once the copy is gone (the worker's ack,
+  // or the page's own delete). Wait on that fact, then read the cache once.
+  await expect(page.locator("[data-ready-copy-forgotten]")).toBeAttached();
+  expect(await keptCopies(page)).toBe(0);
 
   // The cache is empty. A no-signal navigation can fail or remain pending
   // while the worker waits for a slow network; either way it must not render

@@ -409,10 +409,27 @@ test("a new shell worker replaces the older cache without losing encrypted roll 
     await context.route("**/api/offline-manifests/**", blockOfflineApi);
     await context.setOffline(false);
     serveOldWorker = false;
-    await page.evaluate(async () => {
+    // Wait on the new worker's own lifecycle, not on a 15s poll of its side
+    // effects: `update()` resolves with the registration holding the new
+    // worker as installing; its `activated` (install and activate finished,
+    // the old cache deleted inside activate's waitUntil) or `redundant`
+    // (install failed) is the event this test is about.
+    const lifecycle = await page.evaluate(async () => {
       const registration = await navigator.serviceWorker.getRegistration("/manifest-sw.js");
-      await registration?.update();
+      if (!registration) return "no registration";
+      await registration.update();
+      const next = registration.installing ?? registration.waiting ?? registration.active;
+      if (!next) return "no worker";
+      if (next.state !== "activated" && next.state !== "redundant") {
+        await new Promise<void>((resolve) => {
+          next.addEventListener("statechange", () => {
+            if (next.state === "activated" || next.state === "redundant") resolve();
+          });
+        });
+      }
+      return next.state;
     });
+    expect(lifecycle, "the new shell worker must install and activate").toBe("activated");
     await expect
       .poll(() => activeShellState(page, OFFLINE_MANIFEST_SHELL_VERSION, oldCache))
       .toEqual({

@@ -1,4 +1,4 @@
-import { createHmac, hkdfSync, timingSafeEqual } from "node:crypto";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { and, asc, desc, eq, gt, gte, inArray, isNotNull, isNull, ne } from "drizzle-orm";
 import { authSecret } from "@/lib/auth-secret";
 import { canManageWaiverTemplates, isStaff } from "@/lib/authz";
@@ -39,6 +39,7 @@ import {
   localTypedConsentProvider,
   namesakeAttestationProvider,
 } from "@/lib/signatures";
+import { deriveLabelKey } from "@/lib/signed-token";
 import { hasReturned } from "@/lib/trips";
 import { loadActiveStaffRoles } from "./authz";
 import { lockBoardingCertificationEvidence } from "./boarding-certification-snapshot";
@@ -1265,8 +1266,8 @@ export function courseFormDisplayDigest(input: {
   context: CourseFormContext;
 }): string {
   if (!authSecret) throw new Error("AUTH_SECRET is required to authenticate course forms.");
-  const key = hkdfSync("sha256", authSecret, "", "diveday course form display v1", 32);
-  return createHmac("sha256", Buffer.from(key))
+  const key = deriveLabelKey(authSecret, "diveday course form display v1");
+  return createHmac("sha256", key)
     .update(
       JSON.stringify([
         input.shopId,

@@ -504,7 +504,8 @@
       "noRecord": "PADI no encontró eLearning con el correo de este alumno.",
       "unreadable": "No se pudo leer la página de PADI.",
       "signedOut": "Inicia sesión en el PADI Pros’ Site primero y vuelve a verificar.",
-      "failed": "No se guardó. Inténtalo de nuevo."
+      "failed": "No se guardó. Inténtalo de nuevo.",
+      "alreadyDone": "Alguien ya los marcó. No cambió nada."
     },
     "agencyCheckAll": {
       "start": "{count, plural, one {Verificar # certificación con su agencia} other {Verificar las # certificaciones con sus agencias}}",
@@ -836,10 +837,6 @@
     "both": "visibilidad {visibility}, corriente {current}",
     "visibility": "visibilidad {visibility}",
     "current": "corriente {current}"
-  },
-  "erasedTitle": {
-    "private": "Chárter privado",
-    "public": "Salida"
   },
   "whoWantsIn": {
     "heading": "Quién quiere plaza · {count}",
