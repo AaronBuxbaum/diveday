@@ -130,11 +130,8 @@ export function DayOfDetails({
                 </select>
               </Field>
             </div>
-            {/* **The way back.** The booking form asks this and says "change it
-                any time from the link we send you"; this is that link, and it
-                is also where the divers who never saw a booking form get asked
-                at all (ADR 20260904-reef-all-the-way-down, D12). Who reads the
-                answer sits under the question and describes its select. */}
+            {/* A diver's post-booking link can be used to supply dive intent.
+                Keep the audience explanation associated with the select below. */}
             <div className="flex flex-col gap-3 py-5">
               <Field label={t("ready.intentHeading")} htmlFor="dive-intent">
                 <select
