@@ -9,12 +9,13 @@ import { DEPARTURE_BUFFER_MS, hasReturned } from "./trips";
  * interval a minimum, not a promise of safety or DAN's own figure (issue
  * #1433).
  *
- * This covers only no-decompression diving. A flagged departure or an earlier
- * flagged dive yields no answer (H-84, #1555). Evidence is limited to this
- * shop and its person records; the two-day lookback (#1439) can miss walk-ups
- * without a shared person row. Recap surfaces reach bookings, not crew, so
- * crew coverage remains deferred under H-75/#1557. This does not calculate
- * from dive profiles or model other altitude exposure.
+ * This covers only no-decompression diving. An explicitly flagged departure,
+ * or an earlier flagged dive, yields no answer (H-84, #1555); absent flags are
+ * treated as unflagged. Evidence is limited to this shop and its person
+ * records; the two-day lookback (#1439) can miss walk-ups without a shared
+ * person row. Recap surfaces reach bookings, not crew, so crew coverage
+ * remains deferred under H-75/#1557. This does not calculate from dive
+ * profiles or model other altitude exposure.
  *
  * When records are incomplete or disagree with the plan, use the buffered
  * return only after `hasReturned`; never anchor an earlier answer on a partial
