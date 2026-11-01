@@ -773,7 +773,7 @@ describe("the pieces", () => {
     );
     const all = Object.keys(durations);
     expect(shardCount(all, durations)).toBe(FULL_SHARDS);
-    expect(shardCount(all.slice(0, 10), durations)).toBe(2);
+    expect(shardCount(all.slice(0, 15), durations)).toBe(2);
     expect(shardCount(all.slice(0, 1), durations)).toBe(1);
     expect(shardCount(["a", "b"], {})).toBe(2);
   });

@@ -1,6 +1,6 @@
 name: Durations refresh
 
-# The four unit shards, the six Playwright shards and the twelve visual shards
+# The four unit shards, the six Playwright shards and the visual shards
 # are dealt by each file's or test's recorded CI duration
 # (`scripts/test-durations.json` for src/test/shard-sequencer.ts,
 # `scripts/e2e-durations.json` for scripts/e2e-shard.mjs). Those files are
