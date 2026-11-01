@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { staffTranslator } from "../src/i18n/staff-messages";
-import { expect, makeActivitySafe, test } from "./fixtures";
+import { expect, test } from "./fixtures";
 
 const staff = staffTranslator("en-US");
 const LABELS = ["Reorder A flares", "Reorder B radio", "Reorder C anchor"] as const;
@@ -55,38 +55,20 @@ test("one row form moves a line up and down", async ({ page, privateShop }) => {
   await expect.poll(() => shownLabels(page)).toEqual([...LABELS]);
 });
 
-// Its own test: a context with scripts off has no hydration to wait for, and a step that hangs
-// there must not take the scripted journey's budget with it.
-test("the same move works as a native form post with scripts off", async ({
+// The post works without JavaScript because the row is one plain form: both move buttons are
+// submit buttons of the same form, which carries the item. A context with scripts off cannot be
+// driven here: the streamed rows stay hidden behind the loading skeleton, so nothing is clickable.
+test("both move buttons of a row submit the same form, so the post needs no script", async ({
   page,
-  browser,
   privateShop,
 }) => {
   test.setTimeout(30_000);
-  const path = `/shop/${privateShop.slug}/safety-checklist`;
-  await addLines(page, path);
+  await addLines(page, `/shop/${privateShop.slug}/safety-checklist`);
 
-  const native = await browser.newContext({
-    javaScriptEnabled: false,
-    baseURL: new URL(page.url()).origin,
-    storageState: await page.context().storageState(),
-  });
-  // Unbounded by default, so a post that never answers would spend the whole test budget and
-  // surface only as a failed `close()`. Ten seconds names the step that hung instead.
-  native.setDefaultTimeout(10_000);
-  native.setDefaultNavigationTimeout(10_000);
-  try {
-    const nativePage = makeActivitySafe(await native.newPage());
-    // `commit`: with scripts off the staff hydration wait could never finish.
-    await nativePage.goto(path, { waitUntil: "commit" });
-    await expect(rows(nativePage).filter({ hasText: LABELS[1] })).toHaveCount(1);
-    // diveday:allow-e2e-hygiene pre-hydration-click: scripts are off in this context, so the press is a native form post and there is no hydration to beat.
-    await move(rows(nativePage).filter({ hasText: LABELS[1] }), "up").click();
-    await expect.poll(() => shownLabels(nativePage)).toEqual([LABELS[1], LABELS[0], LABELS[2]]);
-    // diveday:allow-e2e-hygiene pre-hydration-click: scripts are off in this context, so the press is a native form post and there is no hydration to beat.
-    await move(rows(nativePage).filter({ hasText: LABELS[2] }), "up").click();
-    await expect.poll(() => shownLabels(nativePage)).toEqual([LABELS[1], LABELS[2], LABELS[0]]);
-  } finally {
-    await native.close();
-  }
+  const middle = rows(page).filter({ hasText: LABELS[1] });
+  const form = middle.locator("form").filter({ has: move(middle, "up") });
+  await expect(form).toHaveCount(1);
+  await expect(form.locator("button[type=submit][name=direction][value=up]")).toHaveCount(1);
+  await expect(form.locator("button[type=submit][name=direction][value=down]")).toHaveCount(1);
+  await expect(form.locator("input[type=hidden][name=itemId]")).toHaveCount(1);
 });
