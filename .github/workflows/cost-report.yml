@@ -1,0 +1,87 @@
+name: Cost report
+
+# Lets an agent (or Aaron) read the AWS bill: Actions -> Cost report -> Run workflow, or
+# `gh workflow run cost-report.yml -f days=30 -f group_by=USAGE_TYPE -f service="Amazon Simple Storage Service"`.
+# The result is the run summary (and the job log), so an agent reads it with the Actions tools.
+#
+# The role it assumes (`diveday-github-actions-cost-explorer`, infra-stack.ts) is read-only on Cost
+# Explorer and budgets, trusts runs on main only, holds no key, and cannot read a secret or any
+# data. Setup is the `cost-explorer-role-variable` manual action (docs/engineering/manual-actions.md).
+on:
+  workflow_dispatch:
+    inputs:
+      days:
+        description: How many days back to report (1-365)
+        default: "30"
+      group_by:
+        description: Group costs by
+        type: choice
+        options:
+          - SERVICE
+          - USAGE_TYPE
+          - REGION
+        default: SERVICE
+      service:
+        description: Limit to one service by its Cost Explorer name (optional), for example Amazon Simple Storage Service
+        default: ""
+      granularity:
+        description: Bucket size
+        type: choice
+        options:
+          - MONTHLY
+          - DAILY
+        default: MONTHLY
+
+concurrency:
+  group: cost-report
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    name: Read Cost Explorer
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        timeout-minutes: 3
+        with:
+          aws-region: us-east-1
+          role-to-assume: ${{ vars.AWS_COST_EXPLORER_ROLE_ARN }}
+      - name: Query Cost Explorer
+        timeout-minutes: 5
+        env:
+          DAYS: ${{ inputs.days }}
+          GROUP_BY: ${{ inputs.group_by }}
+          SERVICE: ${{ inputs.service }}
+          GRANULARITY: ${{ inputs.granularity }}
+        run: |
+          set -euo pipefail
+          # Inputs arrive through the environment, never interpolated into the script.
+          case "$DAYS" in ''|*[!0-9]*) echo "days must be a number" >&2; exit 1;; esac
+          [ "$DAYS" -ge 1 ] && [ "$DAYS" -le 365 ] || { echo "days must be 1-365" >&2; exit 1; }
+          start=$(date -u -d "-${DAYS} days" +%F)
+          end=$(date -u -d "+1 day" +%F)
+          args=(--time-period "Start=${start},End=${end}" --granularity "$GRANULARITY"
+            --metrics UnblendedCost UsageQuantity --group-by "Type=DIMENSION,Key=${GROUP_BY}")
+          if [ -n "$SERVICE" ]; then
+            args+=(--filter "$(jq -cn --arg s "$SERVICE" '{Dimensions:{Key:"SERVICE",Values:[$s]}}')")
+          fi
+          aws ce get-cost-and-usage "${args[@]}" --output json > cost.json
+          {
+            echo "## AWS cost, ${start} to ${end} (by ${GROUP_BY}${SERVICE:+, ${SERVICE}})"
+            echo
+            echo "| Period | ${GROUP_BY} | Cost (USD) | Usage |"
+            echo "| --- | --- | ---: | ---: |"
+            jq -r '.ResultsByTime[] | .TimePeriod.Start as $p | .Groups[]
+              | select((.Metrics.UnblendedCost.Amount|tonumber) > 0.005)
+              | "| \($p) | \(.Keys[0]) | \(.Metrics.UnblendedCost.Amount|tonumber*100|round/100) | \(.Metrics.UsageQuantity.Amount|tonumber|round) |"' cost.json
+            echo
+            echo "Total: \$$(jq -r '[.ResultsByTime[].Groups[].Metrics.UnblendedCost.Amount|tonumber]|add // 0|.*100|round/100' cost.json)"
+          } | tee -a "$GITHUB_STEP_SUMMARY"

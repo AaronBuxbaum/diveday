@@ -172,7 +172,9 @@ describe("the synthesized stack", () => {
     //
     // Four since #2986: GitHubActionsRestoreDrillRole, which can read every database dump,
     // carries it too.
-    expect(denials).toHaveLength(4);
+    //
+    // Five since the Cost Explorer role: it reads the bill, and carries the deny too.
+    expect(denials).toHaveLength(5);
     const deployRoleDeny = denials.find((statement) => statement.includes("NotResource"));
     expect(deployRoleDeny, "the deploy role's deny must be scoped via NotResource").toBeDefined();
     expect(deployRoleDeny).toContain("CredentialsEnvDocument");
