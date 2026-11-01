@@ -23,25 +23,13 @@ import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 
+import { SAFETY_FILES } from "./coverage-safety-files.mjs";
 import { ratchetFlags } from "./ratchet.mjs";
+
+export { SAFETY_FILES };
 
 export const FLOORS_PATH = "scripts/coverage-floors.json";
 export const DEFAULT_SUMMARY = "coverage/coverage-summary.json";
-
-/** The files under a floor. `vitest.config.ts`'s `coverage.include` must name the same list. */
-export const SAFETY_FILES = [
-  "src/lib/readiness.ts",
-  "src/lib/trip-admission.ts",
-  "src/lib/waivers.ts",
-  "src/lib/roll-call.ts",
-  "src/lib/trips.ts",
-  "src/lib/authz.ts",
-  "src/db/bookings.ts",
-  "src/db/checkouts.ts",
-  "src/db/refunds.ts",
-  "src/db/promo-caps.ts",
-  "src/db/account-security.ts",
-];
 
 const NOTE =
   'Branch coverage floor (percent) per safety-critical file. A floor may only rise: `node scripts/coverage-floors.mjs --write` banks a rise and refuses a fall; `--absorb "<why>"` records a fall with its reason. See scripts/coverage-floors.mjs.';
@@ -72,7 +60,7 @@ export function compareFloors(floors, current) {
     const now = current[file];
     if (now === undefined) {
       failures.push(
-        `${file}: no coverage recorded. If it moved or was deleted, update SAFETY_FILES, vitest.config.ts's coverage.include and the floor together.`,
+        `${file}: no coverage recorded. If it moved or was deleted, update SAFETY_FILES in scripts/coverage-safety-files.mjs and the floor together.`,
       );
     } else if (now < floor) {
       failures.push(
