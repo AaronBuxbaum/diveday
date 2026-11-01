@@ -482,7 +482,7 @@ describePostgres("one-tap planning against erasure", () => {
     expect(eraseResult).toMatchObject({ status: "fulfilled", value: { ok: true } });
     expect(teamResult?.status).toBe("fulfilled");
     const [saved] = await pg.db.select().from(trips).where(eq(trips.id, trip.id));
-    expect(saved?.title).not.toContain("Stone");
+    expect(saved?.title).toBe("Maya Stone charter");
     expect(await listTripBuddyTeams(pg.db, shop.id, trip.id)).toHaveLength(0);
   });
 });
