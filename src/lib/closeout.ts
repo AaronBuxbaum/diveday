@@ -134,64 +134,16 @@ export type CloseoutPlanChange = {
 };
 
 /**
- * **Did this seat sail?** Asked of every non-cancelled booking on a departure,
- * and the whole of what {@link CloseoutTripInput.sailed} counts (issue #1689).
+ * **Did this seat sail?** Evidence order for every non-cancelled booking
+ * (issues #1689, #1704): explicit departure-checkpoint `boarded` or
+ * `not_boarded` wins; otherwise any standing after-dive result means sailed;
+ * otherwise `no_show` is the desk fallback. `not_boarded` means different
+ * things at departure (did not sail) and after-dive (did not return), so the
+ * caller uses checkpoint-specific readers.
  *
- * The evidence is ranked, strongest first, because the two statements this
- * product holds about a seat are made by different people at different moments
- * and can disagree:
- *
- * 1. **The crew's dock tap.** `boarded` at the `departure` checkpoint is
- *    somebody on the boat saying they counted this body aboard — "the
- *    strongest evidence this product holds about where a person is"
- *    (`reclaimReleasedSeat`, src/db/manifests.ts). `not_boarded` *there* means
- *    "never left the dock" and nothing else, which is why the caller must read
- *    it through a departure-pinned reader (`listDepartureRollCallByTrip`): the
- *    same word at an after-dive checkpoint means "did not come back", and that
- *    diver sailed.
- * 2. **The desk's mark.** `bookings.status = 'no_show'` is one staffer's
- *    statement that the diver never turned up. It answers only for a seat the
- *    crew said nothing about, which is why it is the fallback and not the rule.
- *
- * The ranking is the half of #1689 the first fix missed. It read the desk's
- * mark alone, and the commoner shape of the miscount is the other one: the
- * crew tap "Not boarded" for the two who never showed — which is what closes
- * the dock count at a busy dock — and nobody at the desk ever does the "Not
- * here?" tap inside its window. Booking status stayed `booked`, so the evening
- * counted those two out *and* home and said "10 divers and 2 crew out, 12
- * back" over a boat that carried eight.
- *
- * **A seat nobody spoke for counts.** No dock result and no mark is an
- * unfinished dock count, and `listRollCallGaps` is already raising
- * `departure_uncounted` or `no_roll_call` over it — so the station reads
- * `count_open` and {@link EveningClose.allHome} can never be granted on the
- * strength of this fallback.
- *
- * **The crew's evidence is ranked across every checkpoint, not the dock
- * alone** — which is what this function got wrong for one slice
- * (dive-domain-expert review, issue #1704). A seat with no dock result, an
- * after-dive `not_boarded`, and the desk's mark answered "did not sail" here
- * while `onTheWaterByRollCall` answered "on the water" about the same diver, so
- * the evening printed "0 divers out, 0 back" over a one-diver boat carrying
- * somebody the day was raising a top-severity missing-diver row about. The
- * clamp on {@link EveningClose} hid the `-1` that would have exposed it. The
- * dock still wins where it spoke, which keeps the ashore-then-boarded-later
- * case below; what changed is that its *silence* no longer outranks a statement
- * the crew made at sea. The test that guarded the old shape wrote the safety
- * argument down and the widening broke it: a `no_show` can never stand over a
- * diver the crew placed on the water, because `noShowGate` refuses one and
- * `reclaimReleasedSeat` undoes the other — and both now cover all of it.
- *
- * **Two cases it deliberately answers "not aboard" to, with the direction
- * stated so nobody reads them as oversights.** A diver the crew marked ashore
- * at the dock and then boarded at a later checkpoint — `inAfterDivePopulation`
- * in src/db/today.ts names them — is not counted, because "souls on board" is
- * how many the vessel *left with* (glossary) and nobody was left behind either
- * way: they carry no after-dive gap, so both halves of the sentence move
- * together. And a boarding recorded on an offline device that never syncs is
- * invisible here, so a seat the desk also marked lands in neither `out` nor
- * `back` where it used to land in both; `out === back` either way, and no
- * version of this count detects an event that never arrived.
+ * No dock result and no `no_show` leaves the count open through
+ * `listRollCallGaps`; this fallback cannot grant `allHome`. Offline events
+ * that never sync remain invisible.
  */
 export function seatSailed(input: {
   /** `bookings.status === "no_show"` — the desk's own statement. */

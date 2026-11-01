@@ -1,62 +1,17 @@
 import type { CertificationLevel } from "./certification-levels";
 
 /**
- * **One next dive, and one reason it is that one** — delight report D35 (issue
- * #1195), landed as slice 16i of ADR 20260904-reef-all-the-way-down.
+ * Picks one next departure for the diver and returns its checkable reason
+ * (issue #1195; ADR 20260904-reef-all-the-way-down, slice 16i). Reasons use
+ * literal evidence in this precedence: crew text names a candidate site;
+ * same course; same lens id; same site; otherwise the soonest departure with
+ * room. There is no affinity score or inferred course progression.
  *
- * The recap's last block used to be a bare fact: the shop's next public
- * departure, whatever it was. This picks one *for this diver* and says why in
- * a sentence they can check. The whole module is that "why": a card that
- * cannot state its reason has no business on a keepsake, because the alternative
- * is a recommendation the reader has to take on trust from software that just
- * watched them dive.
- *
- * **Five rules, in one fixed order, and every one is a check rather than an
- * inference.** A reason fires because a literal fact is true, so nothing here
- * can invent an affinity out of a name:
- *
- * 1. `crew_named_site` — the crew's own written word for the day names a site
- *    a candidate goes to. Whole-word containment, case-insensitive, nothing
- *    fuzzier (see `mentionsSite`).
- * 2. `course_next_session` — the day was a session of a course, and the
- *    candidate is another session of that same course. The plan for this slice
- *    called it `course_next_step` over "The next step after {course}", which
- *    the data cannot say: nothing in `courses` records what a course *awards*,
- *    so "after" would have to be inferred from a `minimum_certification_level`
- *    ladder a shop's catalog is under no obligation to be. What is checkable is
- *    `trips.course_id` matching — and it is also the more useful sentence for
- *    the reader it is for, a student mid-course whose next dive is the next day
- *    of the course they are already doing.
- * 3. `same_lens` — the candidate wears the same one of the shop's own words for
- *    a kind of day as the day just dived (`trips.lens_id`, ADR 20260904's
- *    decision 2, slice 16f). A **literal id match** and nothing else: two
- *    lenses whose names read alike are two words the shop chose to keep apart,
- *    and a similarity judgement here is exactly the invented affinity the rest
- *    of this list is built to refuse. Above `same_site` because "another day
- *    like that one" is a better reason than "the same reef again", and below
- *    `course_next_session` because a course session is a commitment the diver
- *    has already made.
- * 4. `same_site` — the candidate goes back to somewhere the day went.
- * 5. `soonest_with_room` — none of the above, so the honest reason is the only
- *    one left: it is next and it has a seat. Dull is fine; invented is not.
- *
- * **No score is exported or returned**, deliberately. A number on the card is
- * a claim about strength that nothing behind it can support, and a number in
- * the props is a number somebody eventually renders.
- *
- * **`rankNextDives` is the whole ranking and `pickNextDive` is its head**,
- * which is why both are exported: the precedence above is a claim, and a test
- * can only walk it against the list rather than against the one row that won.
- *
- * The reuse 16e planned — "Also worth a look" (#1161) taking its alternates
- * from here — did not happen and should not: `src/lib/worth-a-look.ts` reads a
- * public departure page for an **anonymous** visitor and knows nothing about
- * any diver, while every rule here is a fact about the day this diver just
- * finished. There is nothing for the two to disagree about, because they are
- * never answering the same question.
- *
- * Framework-free, deterministic, and wordless: `src/i18n/next-dive-labels.ts`
- * turns each code into a sentence (ADR 20260731-domain-layer-copy-leaks).
+ * `rankNextDives` exposes the full order for precedence checks;
+ * `pickNextDive` returns its head. Codes stay wordless here and are localized
+ * in `src/i18n/next-dive-labels.ts` (ADR 20260731-domain-layer-copy-leaks).
+ * The anonymous `worth-a-look` surface answers a different question and does
+ * not reuse this diver-specific ranking.
  */
 
 /**

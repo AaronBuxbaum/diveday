@@ -1,62 +1,13 @@
 /**
- * **What moving a departure will cost, said before it is moved.**
+ * Read-only advisory that composes the consequences of moving a departure
+ * (issue #1203). It is not a mutation pre-check: gear races are enforced by
+ * `gear_reservations_no_overlap`, and `moveTrip` remains authoritative.
  *
- * The schedule builder's Move panel asks for a date and a time and then does
- * it. Everything the move touches beyond those two fields is invisible until
- * afterwards — and one of them, the gear it has to let go of, was only ever
- * reported *after the fact* in a `?gear=N` notice (`moveTrip`). This composes
- * the consequences into something a staff member can read while the form is
- * still empty (issue #1203, D43).
- *
- * **Read-only, and never a pre-check the mutation trusts.** Nothing here
- * writes, and nothing the real path does is conditioned on what this said. The
- * gear line is the reason that distinction matters rather than being pedantry:
- * availability is enforced by the `gear_reservations_no_overlap` exclusion
- * constraint and raced for real in `gear-reservations.postgres.test.ts`, so a
- * read taken while a panel is open can be stale by the time the move commits.
- * The line therefore says what *travels*, and that collisions get released —
- * never that a particular unit is safe.
- *
- * **What it does not say is most of it.** The board row the panel opens under
- * already shows the departure's title, time, seat count, crew names and boat,
- * and a caption restating what the surface shows earns nothing (AGENTS.md). So
- * this carries only what the board cannot: who has already been *told* the
- * date, the kit that silently travels, and the money already taken. A departure
- * with none of those produces no sections at all, and the panel renders nothing
- * — never three empty headings.
- *
- * **Crew is a name or nothing, never a count.** A count was built for #1203
- * and measured against the demo shop's board at 24 of its 25 upcoming
- * departures — every one rosters the same two people — which is the identical
- * failure issue #757 fixed on the crew line itself, so it was removed. What
- * replaced it (issue #1310) is the half that is actually a *consequence of the
- * move*, and it is two facts rather than one:
- *
- * - a **clash**: somebody on this boat is already on another whose window
- *   overlaps where this one is going. The same overlap `setTripCrew` refuses,
- *   so the preview cannot call a problem something the roster would let you
- *   build — and a morning boat plus an afternoon boat stays the ordinary
- *   double shift it is;
- * - **away**: somebody on this boat has told the shop they are away then. That
- *   is the shop's own record (`crew_availability_blocks`, #1235), and it
- *   informs rather than gates — a blackout takes nobody off a boat — so
- *   without this line the panel would go quiet on the case the shop had
- *   explicitly written down.
- *
- * The third reading of "is she free on Thursday?" — over her hours — is
- * genuinely unmodelled, and nothing here implies it.
- *
- * **They are also the only facts here that depend on where the boat is
- * going**, which is why both arrive already resolved: the composer stays pure,
- * and the decision about *when* to re-read them belongs to the panel that owns
- * the date and time fields.
- *
- * **No judgement of its own.** The one thing that stops a move is roll-call
- * evidence, and that question is asked by `countRollCallEvidence` — the same
- * function `moveTrip`'s guard calls — so the preview and the refusal cannot
- * disagree. There is deliberately no "has this sailed" test here: `moveTrip`
- * refuses on evidence, not on the clock, and inventing a second, time-based
- * rule is how a preview starts lying about an outcome it does not decide.
+ * Sections report told seats, reserved gear, paid orders, crew clashes or
+ * away blocks, and time-dependent conflicts resolved by the panel's target
+ * date/time. Empty sections are omitted. Crew clashes and roll-call/status
+ * refusals follow `moveTrip`'s rules; away blocks and turnarounds inform but
+ * never block. Crew availability by hours is not modeled.
  */
 
 /**
@@ -103,27 +54,19 @@ export type MovePreflightFacts = {
    */
   boatClashes: readonly { boat: string; departure: string }[];
   /**
-   * Assigned crew the move would put in two places at once, and the departure
-   * it would collide with (`crewMoveConflicts`). Empty when no new time has
-   * been chosen yet, when the chosen one is where the departure already sits —
-   * moving a boat to where it is changes nothing, so a standing double-booking
-   * there is the staffing week's problem rather than this panel's — and, most
-   * of the time, because nobody clashes.
+   * Crew the move would put in overlapping departures, with the conflict.
+   * Empty until a target time exists, or when none would clash.
    */
   crewClashes: readonly { name: string; departure: string }[];
   /**
-   * Assigned crew who have told the shop they are away on one of the days the
-   * move proposes. Their own words, not an inference — and no bar to the move:
-   * the owner assigns crew, and a shorthanded Saturday with somebody's holiday
-   * on it is a conversation.
+   * Assigned crew who reported being away on a proposed day. Advisory only;
+   * the owner decides whether to proceed.
    */
   crewAway: readonly string[];
   /**
-   * **Tight turnarounds** (issue #2141, Aaron's decision (b)): other live,
-   * scheduled departures the move would put closer than the shop's minimum
-   * turnaround gap without overlapping them — on the same hull, or sharing a
-   * crew member who leaves from a different meeting point. Information only:
-   * H-80's half-open overlap is the clash, and nose to tail stays the plan.
+   * **Tight turnarounds** (issue #2141): live departures closer than the
+   * minimum gap without overlapping, on the same hull or shared crew.
+   * Information only; H-80's half-open overlap remains the clash rule.
    */
   turnarounds: readonly MoveTurnaround[];
 };
@@ -228,34 +171,20 @@ export type MovePreflight = {
 export function composeMovePreflight(facts: MovePreflightFacts): MovePreflight {
   const sections: MovePreflightSection[] = [];
 
-  // Crew lead, ahead of the divers they would otherwise follow. Every other
-  // line here describes work the move creates — letters to write, kit to
-  // re-reserve, money to explain. These two can mean the move should not
-  // happen, and a reason to stop belongs above the costs of going ahead.
-  //
-  // The boat leads them both (H-80): one hull cannot be on two departures, and
-  // a move that fixes the hull usually settles the crew question with it.
-  //
-  // The crew clash outranks the blackout because it is the roster contradicting
-  // itself rather than a preference the owner may decide to override.
+  // Put blocking conflicts first, with hull conflicts before crew; away is
+  // advisory, followed by the information-only turnaround.
   if (facts.boatClashes.length > 0) sections.push({ kind: "boat", clashes: facts.boatClashes });
   if (facts.crewClashes.length > 0) sections.push({ kind: "crew", clashes: facts.crewClashes });
   if (facts.crewAway.length > 0) sections.push({ kind: "crewAway", names: facts.crewAway });
-  // The near miss sits under every clash line (issue #2141): information about
-  // the squeeze, never a reason the move is refused, and nothing it says
-  // reaches `blocked`.
+  // A turnaround informs about the squeeze but never blocks a move (#2141).
   if (facts.turnarounds.length > 0) {
     sections.push({ kind: "turnaround", items: facts.turnarounds });
   }
 
-  // Silence when nobody has been told. A departure whose divers have heard
-  // nothing yet costs no letters, and saying "0 have been told" is the empty
-  // heading this exists not to render.
+  // Omit empty sections.
   if (facts.toldSeats > 0) sections.push({ kind: "told", reminded: facts.toldSeats });
   if (facts.gearReserved > 0) sections.push({ kind: "gear", count: facts.gearReserved });
-  // The window alone is not a consequence — it is a term the departure has
-  // always carried, and it only becomes worth printing beside money that has
-  // actually moved.
+  // A cancellation window matters here only when money has been paid.
   if (facts.paidOrders > 0) {
     sections.push({
       kind: "money",
