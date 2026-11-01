@@ -18,7 +18,7 @@ import {
   tripSightings,
   trips,
 } from "./schema";
-import { liveTrip, notRehearsal } from "./trips-live";
+import { livePublicTripForShop, liveTrip, notRehearsal } from "./trips-live";
 
 /**
  * **The living reef** — what a crew saw, per departure and per site, and what a
@@ -266,10 +266,8 @@ export async function siteSightings(
             eq(executedDives.shopId, shopId),
             inArray(executedDives.actualSiteId, sites),
             isNull(executedDives.deletedAt),
-            eq(trips.shopId, shopId),
-            liveTrip(),
+            livePublicTripForShop(shopId),
             notRehearsal(),
-            eq(trips.isPrivate, false),
             gte(trips.startsAt, since),
           ),
         ),
@@ -285,10 +283,8 @@ export async function siteSightings(
             eq(tripSightings.shopId, shopId),
             inArray(tripSightings.diveSiteId, sites),
             isNull(tripSightings.deletedAt),
-            eq(trips.shopId, shopId),
-            liveTrip(),
+            livePublicTripForShop(shopId),
             notRehearsal(),
-            eq(trips.isPrivate, false),
             gte(trips.startsAt, since),
           ),
         ),
@@ -308,10 +304,8 @@ export async function siteSightings(
             eq(tripSightings.shopId, shopId),
             inArray(tripSightings.diveSiteId, sites),
             isNull(tripSightings.deletedAt),
-            eq(trips.shopId, shopId),
-            liveTrip(),
+            livePublicTripForShop(shopId),
             notRehearsal(),
-            eq(trips.isPrivate, false),
             gte(trips.startsAt, since),
           ),
         )

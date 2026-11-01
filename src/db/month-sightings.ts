@@ -9,7 +9,7 @@ import { utcToWallTime } from "@/lib/zoned";
 import type { DbExecutor } from "./client";
 import { queryAll } from "./query-helpers";
 import { executedDives, tripSightings, trips } from "./schema";
-import { liveTrip, notRehearsal } from "./trips-live";
+import { livePublicTripForShop, notRehearsal } from "./trips-live";
 
 /**
  * **What this shop's crews have logged in the current calendar month, across
@@ -50,10 +50,8 @@ export async function monthSightings(
           and(
             eq(executedDives.shopId, shopId),
             isNull(executedDives.deletedAt),
-            eq(trips.shopId, shopId),
-            liveTrip(),
+            livePublicTripForShop(shopId),
             notRehearsal(),
-            eq(trips.isPrivate, false),
             sailed,
             inMonth,
           ),
@@ -67,10 +65,8 @@ export async function monthSightings(
           and(
             eq(tripSightings.shopId, shopId),
             isNull(tripSightings.deletedAt),
-            eq(trips.shopId, shopId),
-            liveTrip(),
+            livePublicTripForShop(shopId),
             notRehearsal(),
-            eq(trips.isPrivate, false),
             sailed,
             inMonth,
           ),
@@ -87,10 +83,8 @@ export async function monthSightings(
           and(
             eq(tripSightings.shopId, shopId),
             isNull(tripSightings.deletedAt),
-            eq(trips.shopId, shopId),
-            liveTrip(),
+            livePublicTripForShop(shopId),
             notRehearsal(),
-            eq(trips.isPrivate, false),
             sailed,
             inMonth,
           ),
