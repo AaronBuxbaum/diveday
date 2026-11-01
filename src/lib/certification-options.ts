@@ -1,16 +1,10 @@
 /**
- * The certification values a public form renders, and the ones the database
- * enum is built from.
+ * Certification agency codes shared by the database enum and server-side
+ * consumers. The enum is built from this list.
  *
- * This list lives here, away from `src/db/schema.ts`, for one reason:
- * **`DiveDeclarationFields` renders it, and that component is `"use client"`.**
- * It used to read `certificationAgency.enumValues` off the schema, and importing
- * the schema from the browser dragged drizzle-orm and all 360 KB of table
- * definitions into the bundle with it — measured on the build before this
- * change, chunk `25dmu3v5xhblz.js` was 133,786 bytes raw / 26.1 KB gzipped, in
- * the first load of `/s/[shopSlug]`, `/s/[shopSlug]/trips/[id]` and
- * `/shop/[shopSlug]/settings/import`. Two of those three are public pages a
- * diver opens on a phone.
+ * The list lives outside `src/db/schema.ts`, which imports it to build the
+ * enum. Server-side import and self-registration code can use the same agency
+ * set without depending on the schema module.
  *
  * `schema.ts` builds its `pgEnum` from this array, so there is still exactly one
  * list and a widening still lands everywhere at once — the enum, the zod
@@ -39,7 +33,7 @@ export const CERTIFICATION_AGENCIES = [
 /**
  * "I am not certified", the answer that is not a certification level.
  *
- * Deliberately no ordinal here. `DiveDeclarationFields` renders it *second*,
+ * Deliberately no ordinal here. `DiveCertificationField` renders it *second*,
  * between the empty placeholder and the five levels, and any count would drift
  * the moment an option moved. The word "sixth" in `dive-declaration.ts` means
  * something different and still holds there: this is a sixth *value* the select

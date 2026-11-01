@@ -25,8 +25,6 @@
     "rateLimited": "Demasiados intentos. Espera unos minutos e inténtalo de nuevo.",
     "certification": {
       "level": "Nivel de certificación",
-      "agency": "Agencia de certificación",
-      "agencyUnsaid": "No lo sé",
       "agencies": {
         "padi": "PADI",
         "ssi": "SSI",
@@ -42,12 +40,10 @@
         "iantd": "IANTD",
         "other": "Otra agencia"
       },
-      "cardNumber": "Número de certificación",
       "levelUnsaid": "Prefiero no decirlo",
       "levelNone": "Todavía no tengo certificación",
       "levelInfoLabel": "Por qué preguntamos por la certificación",
-      "levelDescription": "El centro compara esto con lo que pide cada salida. Respóndelo aunque no tengas la certificación a mano.",
-      "nitrox": "Tengo certificación de nitrox (aire enriquecido)"
+      "levelDescription": "El centro compara esto con lo que pide cada salida. Respóndelo aunque no tengas la certificación a mano."
     },
     "units": {
       "withReaderUnit": "{first} ({second})",

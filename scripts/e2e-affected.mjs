@@ -501,9 +501,10 @@ export const SEED_STRONG_SPECS = 3;
 
 /**
  * The selection. `changed` is every file the diff touches, `diff` its parsed hunks, `specs`
- * every spec's source, `graph` the import graph (or null to skip the reach tier). With
- * `modules` (the `symbol-reach.mjs` index) and `lines` (each file's changed lines), the reach
- * tier follows an edit name by name instead of file by file.
+ * every spec's source, and `graph` the import graph. The reach tier is skipped only when both
+ * `graph` and `modules` are absent. With `modules` (the `symbol-reach.mjs` index) and `lines`
+ * (each file's changed lines), the reach tier follows an edit name by name instead of file by
+ * file.
  *
  * `strong` maps a spec to why it was picked. `reach` does too, and `rank` orders the reach
  * specs for {@link withinBudget}: the ones naming most of the diff's vocabulary first
@@ -608,8 +609,11 @@ export function selectSpecs({
   }
 
   // Routes whose entry files reach an edited module through imports.
-  if (graph) {
-    const edited = changed.filter((file) => graph.has(file) && !file.startsWith("src/app/"));
+  if (graph || modules) {
+    const edited = changed.filter(
+      (file) =>
+        (modules ? modules.index.has(file) : graph.has(file)) && !file.startsWith("src/app/"),
+    );
     if (edited.length > 0) {
       const reached = new Map();
       const importers = modules
@@ -864,7 +868,6 @@ export function affectedSpecs({ root = ROOT, base, commit, git = gitReader(root)
     changed: names,
     diff: parseDiff(diffText),
     specs,
-    graph: importGraph(root),
     modules: moduleIndex(readModules(root)),
     lines: changedLinesByFile(diffText),
     localeKeys,

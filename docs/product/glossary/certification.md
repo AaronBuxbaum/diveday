@@ -253,40 +253,51 @@
   (`chartersRelyingOnCourseSeats`, issue #2058); it stays booked, a warning and never a gate, and
   boarding asks for the card as for anyone. A self-declared card is never pointed at an ended
   session: verifying it is the fix (agency review G6).
-- **Self-declared certification** — a level (or a nitrox tick) a **diver typed about themselves** on
-  one of the three public forms that ask: the shop-wide last-minute-deal list, a full trip's wait
-  list, or — since 2026-08-20 — the trip booking form itself. It lands on the person as a `pending`
-  card stamped `self_declared_at`. Since 2026-08-21 the forms also ask, optionally, for the **agency
-  and card number** (issue #630), and where those land is the point: the agency rides in `agency`
-  (`other` when unstated), while the number goes to its own **`declared_identifier`** column and
-  never to `identifier`. `identifier` is what the *shop* holds, and it is a key — a number a stranger
-  can write into it fails the sale on a collision, answers "is this number on file here?" to anyone
-  who watches, and takes the card-entry form away from the real diver. Neither field gates anything;
-  both exist so a staffer can pre-check the claim with the agency before the dive date, which is what
-  "verified asynchronously" had no way to do before.
+- **Self-declared certification** — a diver's claim about their certification, before a staffer
+  sights it.
+  The `/ready/[token]` certification step is capability-bound to the booked diver and records their
+  entered agency, level and number as a pending card. Anonymous list actions also accept optional
+  declaration payloads: the shop-wide last-minute-deal form currently asks for an optional level
+  only; the full-trip wait-list page no longer renders declaration controls, though its action still
+  parses supplied declaration fields. The trip booking form stopped asking in the 2026-08-27 change
+  and its action does not parse them. Earlier releases rendered declaration questions on all three
+  pages. For anonymous list payloads, the parser retains optional agency, card-number and nitrox
+  fields, but no current list form renders those controls. A supplied agency rides in `agency`
+  (`other` when unstated), while its number goes to **`declared_identifier`** and never to
+  `identifier`. That separation keeps an anonymous list writer from probing or displacing the
+  shop's card-number key. These optional list fields were added so staff could pre-check a claim
+  with the agency before the dive date, which is what "verified asynchronously" had no way to do
+  before (issue #630).
   **One gate reads it and one does not, and the split is the whole design.**
-  `decideTripAdmission` — the *sale* — believes it, because the question there is "could this diver
-  ever be cleared?" and a diver who names their rung has answered it. `calculateReadiness` — the
-  *boat* — does not, and never has: it clears on `verified` and nothing else, so a claim buys a seat
-  and never a place in the water
+  `decideTripAdmission` — the *sale* — believes a pending declared level already on the person's
+  record, because the question there is "could this diver ever be cleared?" `calculateReadiness` —
+  the *boat* — clears a certification blocker only on `verified`. A claim can support the sale
+  without clearing the diver for the water
   ([20260820-attested-at-booking-verified-at-boarding](../../architecture/decisions/20260820-attested-at-booking-verified-at-boarding.md)).
-  That means the sale-time gate **can be talked past** — a refused diver can type a higher rung and
-  succeed — and that is accepted rather than overlooked: it was never the thing keeping anyone out of
-  the water, and refusing a shop's own carded regulars to hold a line it could not hold was the worse
-  trade (H-27/H-29). Staff see it marked *"— unverified, no card"* in a warning tone wherever it renders, the
+  That means the sale-time gate **can be talked past** — a pending claim can name a higher rung
+  than the shop has verified — and that is accepted rather than overlooked: it was never the thing
+  keeping anyone out of the water, and refusing a shop's own carded regulars to hold a line it could
+  not hold was the worse trade (H-27/H-29). Staff see it marked *"— unverified, no card"* in a
+  warning tone wherever it renders, the
   same treatment an **Imported specialty card** gets for the same reason: it must never be scanned as
   a plain level. Deliberately *not* the same
   thing as an **Imported certification**: a CSV a shop uploaded out of its own prior system is
   materially more trustworthy than a stranger's typing, and the two provenances are separate columns
-  so nothing can blur them. Turning one into real evidence takes a **Card sighting**, below. A claim
-  never displaces a card the shop already holds — if the person has any live card that is **not
-  itself a still-unsighted self-declaration**, nothing is written at all. "Still unsighted" is
-  `self_declared_at IS NOT NULL AND status = 'pending'`, and the second half is load-bearing: the
-  stamp stays forever after a sighting, so a rule phrased as "not self-declared" would read a
-  staff-verified card as displaceable and let an anonymous post re-grade it
+  so nothing can blur them. Turning one into real evidence takes a **Card sighting**, below.
+  For anonymous list payloads, `recordSelfDeclaredCards` applies anti-displacement: it writes no
+  claim when the person has any live card the shop holds that is **not itself a still-unsighted
+  self-declaration**. "Still unsighted" is `self_declared_at IS NOT NULL AND status = 'pending'`,
+  and the second half is load-bearing: the stamp stays forever after a sighting, so a rule phrased
+  as "not self-declared" would treat a staff-verified card as displaceable and let an anonymous
+  post re-grade it
   ([20260814-self-declared-cards](../../architecture/decisions/20260814-self-declared-cards.md)).
-- **Declared uncertified** — a joiner's answer of *"I'm not certified yet"* on one of those same two
-  opt-ins: Discover Scuba and Try Scuba customers, snorkelers, the non-diving half of a couple,
+  The `/ready/[token]` card entry uses `createCertification` separately: it adds its own pending
+  card row and refuses a live duplicate shop/agency/identifier, but does not run the list writer's
+  anti-displacement check. The capability binds that write to the booked diver, and the `pending`
+  status still requires staff review before the card clears readiness.
+- **Declared uncertified** — a person's *"I'm not certified yet"* answer from an anonymous
+  list-action payload or the booked diver's capability-bound `/ready/[token]` form: Discover Scuba
+  and Try Scuba customers, snorkelers, the non-diving half of a couple,
   somebody booked onto a course they have not started. It is **not a Self-declared certification and
   not a level**: it lands as one nullable stamp on the person (`people.no_certification_declared_at`)
   and never as a `certifications` row, because a Discover Scuba experience is not a certification and
@@ -315,18 +326,20 @@
   unmet, the blocker reads `certification_not_yet` ("Says they're not certified yet") instead of
   `certification_missing`: the same Blocked seat, named so the desk knows which conversation to have.
 - **Clearing a declared-uncertified stamp** — a staffer saying, on the diver record, that this diver
-  never gave that answer. The forms that write it are unauthenticated and resolve a person by shop +
-  email, so for a diver the shop holds no card for anybody with a name and an email address can leave
-  the stamp; before this the only thing that removed it was owner-only erasure of the whole record.
+  never gave that answer. The anonymous list actions resolve a person by shop + email, so anybody
+  can leave the stamp for a diver the shop holds no card for; `/ready/[token]` can also record the
+  answer
+  for that booking's diver through its capability. Before this control, the only thing that removed
+  the stamp was owner-only erasure of the whole record.
   It **supersedes rather than deletes** (`people.no_certification_cleared_at`, plus the staff member
   who did it) for the same reason the stamp itself survives a real card: where a record began is
   history. The direction is the whole safety argument — clearing can only take a record from a
   *stated* absence of a card to *no statement at all*, the silence of somebody nobody asked. It never
   touches the three card tables, so it can never turn a claim into evidence; a **Card sighting** is
   still the only door. A later declaration un-clears it, so one correction cannot silently swallow
-  every answer the diver gives afterwards — but only the timestamp, never the staff member who made
-  it, because the writer of that later declaration is an anonymous form and must not be able to erase
-  the shop's own audit of its own correction. It is also, in effect, a **mute button on the deal
+  every answer the diver gives afterwards — the clear timestamp is reset, but the staff member who
+  made the correction remains recorded so a diver's later answer cannot erase the shop's audit. It
+  is also, in effect, a **mute button on the deal
   list**: a stated "I hold no card" counts as below the departure's minimum and is lifted to the top
   of the capped preview, and a cleared one is quiet, so the control's own words name that consequence
   ([20260814-self-declared-cards](../../architecture/decisions/20260814-self-declared-cards.md)).
@@ -413,10 +426,12 @@
   refuses**: a diver this shop has never carded books as before, the same trade-off H-08 settled
   for the course minimum-age gate. It exists to stop a diver **paying in full** for a dive they
   were never going to be allowed to do (DOM-M6) — it stops the money, never the manifest.
-  **One narrow exception since 2026-08-20**, on the public booking form only: when the shortfall
-  is a *level* and it rests on the rung this submitter just typed, the seat is sold with a warning
-  under their own answer rather than refused — the case H-30 itself describes as "a response to
-  what this submitter just typed rather than a disclosure about somebody on file". The refusal
+  **A historical narrow exception ran from 2026-08-20 through 2026-08-27**: the public booking form
+  supplied a just-typed level and the seat was sold with a warning under that answer rather than
+  refused — the case H-30 itself describes as "a response to what this submitter just typed rather
+  than a disclosure about somebody on file". The current booking form and action supply no
+  declaration, so a new booking is judged against the shop's record. The pure decision still accepts
+  an optional declared level, and a previously stored pending claim still counts. The refusal
   stands everywhere else: on a shortfall resting on the shop's **record** (H-30's own case, where
   the diver typed nothing and no warning could have reached them), on a **specialty or nitrox**
   gate (no field on the form can answer either), and at every staff door, reschedule and seat
@@ -431,10 +446,11 @@
   Distinct from **course admission**, which is a course's own enrolment rule and fails *closed*.
 - **Admission advisory** — what a trip asks for that a diver's record does not yet answer, on a
   booking that **went through anyway**. Deliberately a different word, and a different field, from
-  a refusal: one means the seat was not sold, the other means it was. Carried back on the success
-  result of `createBookingRecord` when `admissionGate: "advise"` and the shortfall is a
-  declared-level one; the public booking form is the only caller that asks for it. It is advice
-  about a *sale*, never about boarding — readiness still clears on a sighted card and nothing else.
+  a refusal: one means the seat was not sold, the other means it was. `createBookingRecord` can
+  return it when a caller explicitly requests `admissionGate: "advise"` and supplies a
+  declared-level answer. The current public booking action requests neither; the result shape
+  remains available to callers that provide the required input. It is advice about a *sale*;
+  readiness still clears on a sighted card and nothing else.
 - **Last known dive** — the latest day the shop knows this diver dived, anywhere: the later of the
   day a staff member recorded on the record (`people.last_dive_on`, off a logbook or a computer) and
   the diver's own last dive day with the shop (a departure that is back, not a pool session) or a
