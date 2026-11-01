@@ -874,11 +874,9 @@ describe("peopleWhoDivedBefore", () => {
   });
 
   it("is scoped on both tables of its join, not only the one it reads from", async () => {
-    // The join reaches `bookings -> trips`, so a scope on the first alone would
-    // leave a path into another tenant's rows. Re-pointing each table's
-    // `shop_id` in turn is the only probe that shows both predicates carry
-    // weight — a synthetic shop id fails on the first and proves nothing about
-    // the second.
+    // The join reaches `bookings -> trips`, so a scope on the first alone would leave a path into
+    // another tenant's rows. Re-pointing each table's `shop_id` in turn shows both predicates carry
+    // weight; the composite key refuses that row, so it is lifted below to probe the read.
     const reassign = {
       trips: (db: AppDb, tripId: string, shopId: string) =>
         db.update(trips).set({ shopId }).where(eq(trips.id, tripId)),
@@ -888,7 +886,6 @@ describe("peopleWhoDivedBefore", () => {
     for (const [table, moveToOtherShop] of Object.entries(reassign)) {
       const { db, shop, before, after, personId } = await twoDays(20, { fresh: true });
       const [other] = await otherShop(db);
-      // The composite key now refuses this row, so lift it for this transaction to probe the read.
       await db.execute(sql`set session_replication_role = replica`);
       await moveToOtherShop(db, before.id, other.id);
       const found = await peopleWhoDivedBefore(
