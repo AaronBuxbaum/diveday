@@ -2,6 +2,7 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
+import { filesUnder } from "./files-under.mjs";
 
 /**
  * Every read of `trips` that means "the board" filters out deleted departures.
@@ -96,23 +97,6 @@ const SKIPPED_FILES = new Set(
   ].map((file) => path.normalize(file)),
 );
 
-async function walk(relativeDirectory) {
-  let entries;
-  try {
-    entries = await readdir(path.join(ROOT, relativeDirectory), { withFileTypes: true });
-  } catch (error) {
-    if (error?.code === "ENOENT") return [];
-    throw error;
-  }
-  const files = [];
-  for (const entry of entries) {
-    const relativePath = path.join(relativeDirectory, entry.name);
-    if (entry.isDirectory()) files.push(...(await walk(relativePath)));
-    else if (SOURCE_EXTENSIONS.has(path.extname(entry.name))) files.push(relativePath);
-  }
-  return files;
-}
-
 /**
  * Every guarded read of `trips` in one file, and which of them prove nothing.
  *
@@ -144,7 +128,11 @@ async function main() {
   let guarded = 0;
 
   for (const root of GUARDED_ROOTS) {
-    for (const file of await walk(root)) {
+    for (const file of await filesUnder(
+      root,
+      (relativeDirectory) => readdir(path.join(ROOT, relativeDirectory), { withFileTypes: true }),
+      (relativePath) => SOURCE_EXTENSIONS.has(path.extname(relativePath)),
+    )) {
       const normalized = path.normalize(file);
       if (SKIPPED_FILES.has(normalized) || IS_TEST.test(file)) continue;
       if (path.basename(file).startsWith("seed-")) continue;
