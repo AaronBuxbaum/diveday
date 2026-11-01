@@ -105,7 +105,7 @@ Renaming a journey's test renames its row in the same change.
 | Before a push, optional (CI is the gate) | `pnpm verify:push`: regen and a clean tree, check:repo and `guards`, every source-reading test, `vitest related`, and the specs `pnpm e2e:affected` names ([verifying.md](../agents/verifying.md#the-pre-push-gate)) |
 | Every pull request | repo checks, lint, typecheck (one job), all unit tests (4 shards) with the coverage floors, the build, every Playwright spec (6 shards), the light-mode captures `visual-affected` selects (up to 8 shards, 7 for every light capture), the fast lane; real Postgres when `src/db/**` or `drizzle/**` changed |
 | Push to `main` | all of the above with every capture, light and dark: the next baseline |
-| Nightly | real Postgres (ci.yml's schedule), the one-day simulation, quarantined tests and the flake hunt (`e2e-nightly.yml`), CodeQL, the follow-up scan |
+| Nightly | real Postgres (ci.yml's schedule), the one-day simulation, quarantined tests and the flake hunt (`e2e-nightly.yml`), CodeQL (`codeql.yml`, daily 05:30 UTC), the follow-up scan |
 | Weekly | the persona walk, the shard-duration refresh; mutation testing once its runner works (manual until then) |
 
 **A scheduled run that goes red files itself.** `simulate-day.yml`, `durations-refresh.yml`,
