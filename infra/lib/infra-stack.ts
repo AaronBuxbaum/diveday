@@ -2378,26 +2378,6 @@ exports.handler = async (event) => {
         note: "The role trusts the restore-drill environment, and only that environment's branch rule (main alone) and required reviewer keep a pushed branch from assuming it. Check both before the first run (docs/engineering/backup-and-restore-runbook.md, 'Monthly restore drill').",
       },
       {
-        id: "cost-explorer-role-variable",
-        title: "Let agents read the AWS bill",
-        category: "Credentials",
-        when: "once, after the first deploy that includes GitHubActionsCostExplorerRole",
-        why: "Cost Explorer is off until an account owner turns it on, and the role ARN is a GitHub repository variable this stack cannot set. The role can only read spend totals; it holds no key, so nothing long-lived exists to leak.",
-        run: [
-          "Sign in to the AWS console as the account owner, open Billing and Cost Management -> Cost Explorer and choose Launch Cost Explorer (data appears within 24 hours). Skip if it is already on.",
-          "gh variable set AWS_COST_EXPLORER_ROLE_ARN --repo AaronBuxbaum/diveday --body <GitHubActionsCostExplorerRoleArn output>",
-        ],
-        produces:
-          ".github/workflows/cost-report.yml (Actions -> Cost report -> Run workflow) prints spend by service or usage type to the run summary, so an agent can read the bill.",
-        store:
-          "GitHub repo Settings -> Secrets and variables -> Actions -> Variables (AWS_COST_EXPLORER_ROLE_ARN) -- the CfnOutput is GitHubActionsCostExplorerRoleArn.",
-        verify: [
-          "gh variable list --repo AaronBuxbaum/diveday -- AWS_COST_EXPLORER_ROLE_ARN is listed.",
-          "gh workflow run cost-report.yml --repo AaronBuxbaum/diveday, then open the run: the summary lists services with a cost, not a DataUnavailableException.",
-        ],
-        note: "The role trusts runs on main only and allows ce:Get*, ce:List*, ce:Describe* and budgets:ViewBudget; Cost Explorer has no narrower resource scope. A DataUnavailableException means Cost Explorer was only just enabled: wait a day.",
-      },
-      {
         id: "ci-github-admin-token",
         title: "Mint a GitHub token for the CI deploy job's own gh CLI calls",
         category: "Credentials",
@@ -3147,35 +3127,6 @@ exports.handler = async (event) => {
       value: restoreDrillRole.roleArn,
       description:
         "role-to-assume for .github/workflows/restore-drill.yml. Store as the RESTORE_DRILL_ROLE_ARN variable on the restore-drill GitHub environment (manual action restore-drill-role-variable).",
-    });
-
-    // Cost Explorer for agents. `.github/workflows/cost-report.yml` is a workflow_dispatch an agent
-    // (or Aaron) can run to read the bill: Cost Explorer has no resource-level permissions, so
-    // the whole security argument is the action list. **Read-only**: `ce:Get*`, `ce:List*`,
-    // `ce:Describe*` and `budgets:ViewBudget` -- no write, no data-plane access (no S3, no
-    // database, no secret; the same Deny the other CI roles carry). **Trusted from `main` alone**,
-    // so an unreviewed branch cannot change what the workflow asks for. Cost data is spend
-    // totals by service, not customer data. Cost Explorer itself must be enabled on the account
-    // (manual action `cost-explorer-role-variable`); its API endpoint is us-east-1.
-    const costExplorerRole = new iam.Role(this, "GitHubActionsCostExplorerRole", {
-      roleName: "diveday-github-actions-cost-explorer",
-      assumedBy: githubActionsPrincipal(`repo:${GITHUB_REPO_SUB}:ref:refs/heads/main`),
-      description:
-        "Assumed by .github/workflows/cost-report.yml to read Cost Explorer and budgets. Read-only; no data access and cannot read a secret.",
-      maxSessionDuration: cdk.Duration.hours(1),
-    });
-    costExplorerRole.addToPolicy(
-      new iam.PolicyStatement({
-        sid: "ReadCostExplorer",
-        actions: ["ce:Get*", "ce:List*", "ce:Describe*", "budgets:ViewBudget"],
-        resources: ["*"],
-      }),
-    );
-    costExplorerRole.addToPolicy(denyReadingAnySecret());
-    new cdk.CfnOutput(this, "GitHubActionsCostExplorerRoleArn", {
-      value: costExplorerRole.roleArn,
-      description:
-        "role-to-assume for .github/workflows/cost-report.yml. Store as the AWS_COST_EXPLORER_ROLE_ARN repository variable (manual action cost-explorer-role-variable).",
     });
 
     const cdkDiffRole = new iam.Role(this, "GitHubActionsCdkDiffRole", {
