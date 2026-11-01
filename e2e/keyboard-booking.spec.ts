@@ -81,7 +81,7 @@ type FocusStop = {
  */
 async function beginWalk(page: Page): Promise<void> {
   await page.evaluate(() => {
-    (window as unknown as { __kbPrev?: HTMLElement | null }).__kbPrev = null;
+    (window as Window & { __kbPrev?: HTMLElement | null }).__kbPrev = null;
   });
 }
 
@@ -100,7 +100,7 @@ async function tab(page: Page, direction: "forward" | "back" = "forward"): Promi
   const stop = await snapshotFocus(page);
   if (!stop) {
     const previous = await page.evaluate(() => {
-      const prev = (window as unknown as { __kbPrev?: HTMLElement | null }).__kbPrev;
+      const prev = (window as Window & { __kbPrev?: HTMLElement | null }).__kbPrev;
       if (!prev) return null;
       return (prev.getAttribute("aria-label") ?? prev.textContent ?? prev.tagName)
         .replace(/\s+/g, " ")
@@ -118,7 +118,7 @@ async function tab(page: Page, direction: "forward" | "back" = "forward"): Promi
 
 async function snapshotFocus(page: Page): Promise<FocusStop | null> {
   return page.evaluate(() => {
-    const held = window as unknown as { __kbPrev?: HTMLElement | null };
+    const held = window as Window & { __kbPrev?: HTMLElement | null };
     const el = document.activeElement;
     if (!(el instanceof HTMLElement) || el === document.body) return null;
     const style = getComputedStyle(el);
@@ -221,7 +221,7 @@ async function tabUntil(
  */
 async function recordAnnouncements(page: Page): Promise<void> {
   await page.evaluate(() => {
-    const store = window as unknown as { __announced?: string[]; __announcer?: MutationObserver };
+    const store = window as Window & { __announced?: string[]; __announcer?: MutationObserver };
     store.__announcer?.disconnect();
     store.__announced = [];
     const LIVE = '[aria-live]:not([aria-live="off"]), [role="status"], [role="alert"]';
@@ -262,7 +262,7 @@ async function recordAnnouncements(page: Page): Promise<void> {
 
 /** Everything a live region has received since `recordAnnouncements`. */
 async function announcements(page: Page): Promise<string[]> {
-  return page.evaluate(() => (window as unknown as { __announced?: string[] }).__announced ?? []);
+  return page.evaluate(() => (window as Window & { __announced?: string[] }).__announced ?? []);
 }
 
 test("a booking can be seated with the keyboard alone, and says so out loud", async ({ page }) => {

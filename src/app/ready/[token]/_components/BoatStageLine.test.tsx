@@ -1,7 +1,5 @@
 // @vitest-environment jsdom
 
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { BoatStageLine } from "./BoatStageLine";
@@ -33,8 +31,13 @@ describe("BoatStageLine", () => {
     expect(stage).not.toHaveClass("items-start");
   });
 
-  it("spends no coral: the thread's three moments are booked, waiver and welcome home", () => {
-    const source = readFileSync(path.join(__dirname, "BoatStageLine.tsx"), "utf8");
-    expect(source).not.toMatch(/accent|EarnedMoment/);
+  it("keeps the boat mark neutral and does not spend an earned moment", () => {
+    const { container } = render(
+      <BoatStageLine sentence="Out on Molasses Reef." said="The crew said so at 7:04 AM." />,
+    );
+    const mark = container.querySelector('[data-site-mark="boat"] svg');
+    expect(mark).toBeInTheDocument();
+    expect(mark?.outerHTML).not.toMatch(/accent/);
+    expect(container.querySelector("[class*='accent'], .rise-in")).toBeNull();
   });
 });

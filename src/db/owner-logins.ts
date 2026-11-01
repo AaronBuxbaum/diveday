@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import type { DbExecutor } from "./client";
 import { people, personRoles, userAccounts } from "./schema";
 
@@ -10,8 +10,14 @@ export async function ownerLogins(db: DbExecutor, shopId: string) {
   return roleLogins(db, shopId, "owner");
 }
 
-/** The shop's people holding `role` with an active login, the same way. */
-export async function roleLogins(db: DbExecutor, shopId: string, role: "owner" | "manager") {
+/** The shop's people holding one of `roles` with an active login, the same way. */
+export async function roleLogins(
+  db: DbExecutor,
+  shopId: string,
+  roles: "owner" | "manager" | readonly ("owner" | "manager")[],
+) {
+  const hasRole =
+    typeof roles === "string" ? eq(personRoles.role, roles) : inArray(personRoles.role, roles);
   return db
     .selectDistinct({
       personId: people.id,
@@ -28,7 +34,7 @@ export async function roleLogins(db: DbExecutor, shopId: string, role: "owner" |
         isNull(people.deletedAt),
         isNull(people.anonymizedAt),
         eq(userAccounts.status, "active"),
-        eq(personRoles.role, role),
+        hasRole,
       ),
     );
 }

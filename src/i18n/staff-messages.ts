@@ -1,6 +1,7 @@
 import { createTranslator } from "next-intl";
 import enUS from "./locales/en-US/staff";
 import esES from "./locales/es-ES/staff";
+import { messageFallback } from "./message-fallback";
 import { translatorOnError } from "./on-error";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale, toDiverLocale } from "./settings";
 
@@ -64,7 +65,7 @@ export function staffTranslator(locale: string | null | undefined) {
     locale: resolved,
     messages: staffMessagesFor(resolved),
     onError: translatorOnError,
-    getMessageFallback: ({ key }) => staffFallbackMessage(key),
+    getMessageFallback: ({ key }) => messageFallback(STAFF_MESSAGES[DEFAULT_DIVER_LOCALE], key),
   });
 }
 
@@ -72,15 +73,3 @@ export type StaffTranslator = ReturnType<typeof staffTranslator>;
 
 /** A key the staff bundle actually holds — a typo is a type error, not a rendered key. */
 export type StaffMessageKey = Parameters<StaffTranslator>[0];
-
-/** The English string for a key, used when a translation is missing entirely. */
-function staffFallbackMessage(key: string): string {
-  const value = key
-    .split(".")
-    .reduce<unknown>(
-      (node, part) =>
-        node && typeof node === "object" ? (node as Record<string, unknown>)[part] : undefined,
-      STAFF_MESSAGES[DEFAULT_DIVER_LOCALE],
-    );
-  return typeof value === "string" ? value : key;
-}

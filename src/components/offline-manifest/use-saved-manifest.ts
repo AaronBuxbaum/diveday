@@ -285,11 +285,10 @@ function useManifestStatusMessages(
   verifiedTenantSlugRef: MutableRefObject<string | null>,
 ) {
   // The ref is intentionally read at call time after tenant verification.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: the slug is mutable tenant state, not a callback dependency.
   const initialMessageForList = useCallback(
     (saved: OfflineManifestEnvelope[]) =>
       initialListMessage(saved, t, verifiedTenantSlugRef.current),
-    [t],
+    [t, verifiedTenantSlugRef],
   );
   const initialMessageForShop = useCallback(
     (saved: OfflineManifestEnvelope[], slug: string) => initialListMessage(saved, t, slug),
@@ -629,7 +628,6 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
 
   const refreshDiscarded = useDiscardedRefresh(setDiscarded);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: getTenantRound is stable by contract.
   const reconcileOnce = useCallback(async () => {
     if (!tripId || !navigator.onLine) return;
     // A foreign pending copy stays on-device; never submit it under the
@@ -684,15 +682,19 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
       if (tenantSlugRef.current !== slug) return;
       setMessage(t("shared.offlineManifest.reconcile.reachError"));
     }
-  }, [tripId, t, resolveTenant, tenantSlugRef, handleTenantChanged, tripInventoryReadyRef]);
+  }, [
+    tripId,
+    t,
+    resolveTenant,
+    tenantSlugRef,
+    handleTenantChanged,
+    tripInventoryReadyRef,
+    getTenantRound,
+  ]);
 
-  // **One sync at a time, and at most one waiting** (captain review S2). Every
-  // tap asks for a pass, and a pass on a link that carries nothing takes the
-  // whole `SYNC_TIMEOUT_MS`; unserialized, ten taps counting a boat back
-  // aboard were ten overlapping POSTs of the same pending events. Taps made
-  // while a pass runs fold into the one queued behind it, which sends
-  // everything pending by the time it starts. The same pattern
-  // `useOfflineManifestSync` keeps for the live page.
+  // **One sync at a time, at most one waiting** (captain review S2): repeated
+  // taps during the `SYNC_TIMEOUT_MS` pass could otherwise POST identical
+  // pending events. Queue one follow-up pass; the live page uses this pattern too.
   const reconcileInFlight = useRef<Promise<void> | null>(null);
   const reconcileQueued = useRef(false);
   const reconcile = useCallback(async () => {

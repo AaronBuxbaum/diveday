@@ -388,9 +388,8 @@ export async function bookSpot(
       // answered, and there is no answer to warn about now. The sale-time gate
       // judges this booking on the shop's own record alone — which is what it
       // did before 2026-08-20, and it is still not a boarding decision.
-      // Empty for any non-lead diver who left the field to the "use the main
-      // contact's email" checkbox — never the lead's own address (see the
-      // comment above the loop that builds `validParty`).
+      // Empty when a non-lead diver chose "use the main contact's email";
+      // never substitute the lead's own address for that diver.
       email: entry.email || undefined,
       // Only the lead booker's phone is collected, so the crew can reach the party.
       phone: index === 0 && phone ? phone : undefined,
@@ -658,19 +657,6 @@ export async function bookSpot(
 }
 
 /**
- * **The buddy seat** (ADR 20260908-one-hand, decision 6, lever W): record which
- * diver's recap link brought this one, when one did.
- *
- * Read from the cookie the edge set, never from a hidden field — the same
- * argument the partner referral makes one function up: a form value is
- * something the page can set, and this is a fact about how the visitor arrived.
- * Matched against this shop before it is resolved, so a diver carrying another
- * shop's link books exactly as an unreferred one does.
- *
- * Never throws. A seat is a seat whether or not the shop gets to count where it
- * came from.
- */
-/**
  * The door remembers who opened it (ADR 20260906-before-you-ask, decision 3):
  * the handoff this page was opened through is single-use, and the booking is
  * its one use. A stale or forged value is a no-op.
@@ -686,13 +672,18 @@ async function consumeHandoffFromForm(dbi: AppDb, shopId: string, value: unknown
 }
 
 /**
- * The mail a completed booking sends, in order: the lead's confirmation, with
- * their waiver riding in it as its first step when one is owed, then every
- * other diver's waiver on its own. The seats are already committed before this
- * runs, so every failure in here is logged and dropped — it must never turn a
- * capacity-safe booking into an error page.
+ * **The buddy seat** (ADR 20260908-one-hand, decision 6, lever W): record which
+ * diver's recap link brought this one, when one did.
+ *
+ * Read from the cookie the edge set, never from a hidden field — the same
+ * argument the partner referral makes one function up: a form value is
+ * something the page can set, and this is a fact about how the visitor arrived.
+ * Matched against this shop before it is resolved, so a diver carrying another
+ * shop's link books exactly as an unreferred one does.
+ *
+ * Never throws. A seat is a seat whether or not the shop gets to count where it
+ * came from.
  */
-
 async function creditBuddyReferral(
   dbi: Awaited<ReturnType<typeof getDb>>,
   input: { shopId: string; shopSlug: string; bookingId: string },

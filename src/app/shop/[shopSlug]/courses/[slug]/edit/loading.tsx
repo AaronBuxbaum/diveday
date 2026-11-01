@@ -1,15 +1,10 @@
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
 import { EditorFormSkeleton } from "../../../dive-sites/_components/EditorFormSkeleton";
-
-/**
- * The editor's sections, counted: the `sections` list in `./page.tsx` names
- * nine, four open and five closed (visual review 2026-10-24, A11).
- * `src/app/editor-skeletons.test.tsx` reads that list and fails when the two
- * disagree.
- */
-const COURSE_EDITOR_SECTIONS = 9;
-const COURSE_EDITOR_OPEN_SECTIONS = 4;
+import {
+  COURSE_EDITOR_CLOSED_SECTIONS,
+  COURSE_EDITOR_OPEN_SECTIONS,
+} from "./course-editor-sections";
 
 /**
  * Form-shaped skeleton for the course editor (design principle 1). Without
@@ -34,8 +29,8 @@ export default function EditCourseLoading() {
         />
         <div className="mt-6">
           <EditorFormSkeleton
-            open={COURSE_EDITOR_OPEN_SECTIONS}
-            closed={COURSE_EDITOR_SECTIONS - COURSE_EDITOR_OPEN_SECTIONS}
+            open={COURSE_EDITOR_OPEN_SECTIONS.length}
+            closed={COURSE_EDITOR_CLOSED_SECTIONS.length}
           />
         </div>
       </div>

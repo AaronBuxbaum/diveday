@@ -1,6 +1,7 @@
 import { createTranslator } from "next-intl";
 import enUS from "./locales/en-US/diver.json";
 import esES from "./locales/es-ES/diver.json";
+import { messageFallback } from "./message-fallback";
 import { translatorOnError } from "./on-error";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale, toDiverLocale } from "./settings";
 
@@ -87,7 +88,7 @@ export function diverTranslator(locale: string | null | undefined) {
     // — `pnpm check:locale` is what keeps them that way).
     messages: messagesFor(resolved),
     onError: translatorOnError,
-    getMessageFallback: ({ key }) => fallbackMessage(key),
+    getMessageFallback: ({ key }) => messageFallback(DIVER_MESSAGES[DEFAULT_DIVER_LOCALE], key),
   });
 }
 
@@ -100,15 +101,3 @@ export type DiverTranslator = ReturnType<typeof diverTranslator>;
  * key is a type error at the map rather than a fallback string at render.
  */
 export type DiverMessageKey = Parameters<DiverTranslator>[0];
-
-/** The English string for a key, used when a translation is missing entirely. */
-function fallbackMessage(key: string): string {
-  const value = key
-    .split(".")
-    .reduce<unknown>(
-      (node, part) =>
-        node && typeof node === "object" ? (node as Record<string, unknown>)[part] : undefined,
-      DIVER_MESSAGES[DEFAULT_DIVER_LOCALE],
-    );
-  return typeof value === "string" ? value : key;
-}

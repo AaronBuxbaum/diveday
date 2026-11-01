@@ -191,6 +191,9 @@ describe("the offline manifest's message bundle", () => {
     }
     const module = readFileSync(path.join(ROOT, "src/i18n/offline-manifest-messages.ts"), "utf8");
     expect(module).not.toContain("./staff-messages");
+    const fallback = readFileSync(path.join(ROOT, "src/i18n/message-fallback.ts"), "utf8");
+    expect(module).toContain('from "./message-fallback"');
+    expect(fallback).not.toMatch(/^\s*import\s/m);
     expect([...module.matchAll(/from "\.\/locales\/[^"]+"/g)]).toHaveLength(4);
   });
 

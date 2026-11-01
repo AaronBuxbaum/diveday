@@ -50,6 +50,10 @@ import {
   saveCourseContentAction,
   setCourseVisibilityAction,
 } from "./actions";
+import {
+  COURSE_EDITOR_CLOSED_SECTIONS,
+  COURSE_EDITOR_OPEN_SECTIONS,
+} from "./course-editor-sections";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -132,20 +136,11 @@ export default async function EditCoursePage({
       : t("courses.edit.openToUncertified")) +
     (course.minimumAge ? t("courses.edit.ageSuffix", { age: course.minimumAge }) : "");
 
-  // The form and its unsaved note share one section order; refusals use these ids.
+  // The ordered IDs and their label keys are shared with the loading skeleton.
   const sections: EditorSectionRef[] = [
-    { id: "pitch", label: t("courses.edit.pitchLegend") },
-    { id: "pricing", label: t("courses.edit.pricingLegend") },
-    { id: "glance", label: t("courses.edit.glanceLegend") },
-    { id: "scheduleDaysJson", label: t("courses.edit.dayByDayLegend") },
-    { id: "photos", label: t("courses.edit.photosLegend") },
-    { id: "enroll", label: t("courses.edit.enrollLegend") },
-    { id: "fee-covers", label: t("courses.edit.feeCoversLegend") },
-    // `learningMaterialsJson`, like the day-by-day id: the save names it in
-    // `?field=` when the materials are refused, and `FieldErrorFocus` finds it.
-    { id: "learningMaterialsJson", label: t("courses.edit.materialsLegend") },
-    { id: "faq", label: t("courses.edit.faqLegend") },
-  ];
+    ...COURSE_EDITOR_OPEN_SECTIONS,
+    ...COURSE_EDITOR_CLOSED_SECTIONS,
+  ].map(({ id, labelKey }) => ({ id, label: t(labelKey) }));
   const unsavedTag = t("shared.formDraft.unsavedSection");
   // A closed section a refusal names opens, so the box to fix is in view.
   const refusedSection = refusedSectionId(error, field);
@@ -157,9 +152,11 @@ export default async function EditCoursePage({
     open: refusedSection === section.id,
   });
   const [pitch, pricing, glance, dayByDay] = sections
-    .slice(0, 4)
+    .slice(0, COURSE_EDITOR_OPEN_SECTIONS.length)
     .map((section) => ({ ...section, unsavedTag }));
-  const [photos, enroll, feeCovers, materials, faq] = sections.slice(4).map(closedRef);
+  const [photos, enroll, feeCovers, materials, faq] = sections
+    .slice(COURSE_EDITOR_OPEN_SECTIONS.length)
+    .map(closedRef);
   const formsSection = {
     id: "forms",
     label: t("courses.edit.forms.legend"),

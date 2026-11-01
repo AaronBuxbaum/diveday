@@ -55,9 +55,9 @@ describe("the CI result job", () => {
       return CI.slice(CI.indexOf(header) + header.length).split(/\n {2}[a-z0-9-]+:\n/u)[0];
     };
     expect(job("unit-tests")).toMatch(/^ {8}shard: \[1, 2, 3, 4\]$/mu);
-    expect(job("playwright")).toMatch(/^ {8}shard: \[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12\]$/mu);
+    expect(job("playwright")).toMatch(/^ {8}shard: \[1, 2, 3, 4, 5, 6\]$/mu);
     expect(job("playwright")).toMatch(
-      /- name: Run non-visual Playwright tests\n {8}env:\n {10}SKIP: [^\n]+\n {10}E2E_WORKERS: "1"/u,
+      /- name: Run non-visual Playwright tests\n {8}env:\n {10}SKIP: [^\n]+\n {10}E2E_WORKERS: "2"/u,
     );
     expect(job("visual")).toContain("shard: ${{ fromJSON(needs.visual-plan.outputs.shards) }}");
     expect(job("visual")).toMatch(/^\s+E2E_WORKERS: "2"$/mu);

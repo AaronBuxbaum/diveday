@@ -3,6 +3,7 @@ import enManifest from "./locales/en-US/staff/manifest.json";
 import enShared from "./locales/en-US/staff/shared.json";
 import esManifest from "./locales/es-ES/staff/manifest.json";
 import esShared from "./locales/es-ES/staff/shared.json";
+import { messageFallback } from "./message-fallback";
 import { translatorOnError } from "./on-error";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale, toDiverLocale } from "./settings";
 
@@ -83,30 +84,9 @@ export function offlineManifestTranslator(locale: string | null | undefined) {
     locale: resolved,
     messages: OFFLINE_MANIFEST_MESSAGES[resolved] as OfflineManifestMessages,
     onError: translatorOnError,
-    getMessageFallback: ({ key }) => offlineManifestFallback(key),
+    getMessageFallback: ({ key }) =>
+      messageFallback(OFFLINE_MANIFEST_MESSAGES[DEFAULT_DIVER_LOCALE], key),
   });
 }
 
 export type OfflineManifestTranslator = ReturnType<typeof offlineManifestTranslator>;
-
-/**
- * The English string for a missing key -- walking **these two namespaces**,
- * never the whole staff bundle.
- *
- * This is the half of the change that is easy to get silently wrong. Reusing
- * `staffFallbackMessage` from `staff-messages.ts` would pull all 31 en-US
- * namespaces back in at runtime through this one reference, turning roughly
- * -109 KB gzip into -57 KB, and no guard in the repository reports the
- * difference. The duplication is a few lines; the alternative is half the
- * saving, invisibly.
- */
-function offlineManifestFallback(key: string): string {
-  const value = key
-    .split(".")
-    .reduce<unknown>(
-      (node, part) =>
-        node && typeof node === "object" ? (node as Record<string, unknown>)[part] : undefined,
-      OFFLINE_MANIFEST_MESSAGES[DEFAULT_DIVER_LOCALE],
-    );
-  return typeof value === "string" ? value : key;
-}
