@@ -17,7 +17,7 @@ every other section stands.
 | Browser | Playwright, `e2e/*.spec.ts` | the [critical journeys](#critical-journeys) and the flows a change touches: the happy path plus the refusals that protect safety or money; found by role and message key | exact wording, layout, edge cases a rules test can carry |
 | Screenshots | reg-suit + S3, `e2e/visual-*.spec.ts` | a surface's populated and trouble states, per [captures.md](../../.claude/skills/e2e-and-visual/captures.md): light at phone and desktop, dark at desktop only, plus print ([ADR 20260729](../architecture/decisions/20260729-reg-suit-visual-regression.md)) | proving behavior |
 | Repo checks | `pnpm check:repo` (`scripts/check-*.mjs`) and the Vitest `guards` project | every rule that reads source: "every X has Y", no raw colour, one way imports | a single page's markup |
-| Coverage floors | `@vitest/coverage-v8`, ci.yml's `coverage-floors` ([below](#coverage-floors)) | branch coverage of the eleven safety files never falling | a coverage target for the rest of the tree |
+| Coverage floors | `@vitest/coverage-v8`, ci.yml's `coverage-floors` ([below](#coverage-floors)) | branch coverage of every safety file never falling | a coverage target for the rest of the tree |
 | Mutation | Stryker, `mutation.yml` ([below](#mutation-testing)) | survivors in the safety rules, filed as issues | failing a run |
 | Nightly and weekly | `simulate-day.yml`, `persona-bots.yml`, ci.yml's schedule | a whole shop day, persona walks, real Postgres against what other branches merged | blocking a PR |
 
@@ -351,9 +351,10 @@ on without it), `--no-build`, `--keep`, `--out <dir>`.
 
 ### Coverage floors
 
-`vitest.config.ts` measures coverage only with `--coverage.enabled`, and only on the eleven safety
-files: `src/lib/{readiness,trip-admission,waivers,roll-call,trips,authz}.ts` and
-`src/db/{bookings,checkouts,refunds,promo-caps,account-security}.ts`. CI's four unit shards run with
+`vitest.config.ts` measures coverage only with `--coverage.enabled`, and only on the safety
+files: every non-test `src/lib` and `src/db` file the `dive-domain-expert` patterns in
+`scripts/check-pr-body.mjs` match (minus seed and copy files), plus `trips`, `authz`, `checkouts`,
+`refunds`, `promo-caps` and `account-security` (`scripts/coverage-safety-files.mjs`). CI's four unit shards run with
 `--coverage.enabled --reporter=blob`; the `coverage-floors` job merges the blobs (`vitest run
 --merge-reports --coverage.enabled`, no second test run) and runs `node scripts/coverage-floors.mjs`,
 which fails when a file's branch coverage falls below its floor in `scripts/coverage-floors.json`. On a pull request that changed none of the safety files, their tests or the shared harness (`scripts/coverage-relevant.mjs`, the `changes` job's `safety` output) the shards run without coverage and the job is skipped; a push to main always runs both.
@@ -362,9 +363,9 @@ artifact, so a floor can be raised without a local full run. Locally: `pnpm cove
 unit run).
 
 Floors only rise: `--write <summary>` banks rises and refuses falls; `--write --absorb "<why>"`
-records a fall with its reason. The first floors (2026-10-15, branch coverage): readiness 97.07%,
+records a fall with its reason. The first floors for the original eleven (2026-10-15, branch coverage): readiness 97.07%,
 trip-admission 97.61%, lib/waivers 93.39%, roll-call 83.33%, lib/trips and lib/authz 100%, bookings
-86.41%, checkouts 87.29%, refunds 83.15%, promo-caps 75%, account-security 81.81%. ADR
+86.41%, checkouts 87.29%, refunds 83.15%, promo-caps 75%, account-security 81.81%; the rest were seeded on 2026-11-01 from their measured values. ADR
 [20261015-coverage-and-mutation-testing](../architecture/decisions/20261015-coverage-and-mutation-testing.md).
 
 ### Mutation testing

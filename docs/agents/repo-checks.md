@@ -1278,10 +1278,13 @@ For `infra/`, `config/`, `.env.example` and the deploy scripts; the rules themse
   rows in [docs/architecture/aws-migration-dossier.md](../architecture/aws-migration-dossier.md)
   awaiting H-45.
 
+### coverage-floors
+
+`scripts/coverage-floors.mjs` holds branch coverage to `scripts/coverage-floors.json`, outside `check:repo` (it needs a coverage run; CI's `coverage-floors` job). Which files need a floor is no longer a hand-kept list: `scripts/coverage-safety-files.mjs` takes every non-test `.ts` or `.tsx` under `src/lib` and `src/db` that the `dive-domain-expert` patterns in `scripts/check-pr-body.mjs` (`REVIEWS`) match, drops `seed-*`, `*-copy`, test-support and `.d.ts` files, and adds six hand-kept money and authorization files (`trips`, `authz`, `checkouts`, `refunds`, `promo-caps`, `account-security`). A file that needs the reviewer needs a floor, so a new readiness, manifest, nitrox, erasure or waiver module fails the job with "no floor yet" until `--write` seeds it from the measured value, rounded down. Until 2026-11-01 eleven files had floors while `src/db/readiness.ts`, `manifests.ts`, `nitrox.ts`, `seat-diver.ts`, `medical-alerts.ts`, `roll-call-alerts.ts`, the erasure modules and `waiver-signing.ts` had none. Floors only rise. The matching is tested against a fixture list in `scripts/coverage-floors.test.mjs`.
+
 ### untested-logic
 
 `scripts/warn-untested-logic.mjs` is a warning, never a failure: a step in CI's `Repository safeguards` job prints one `::warning` annotation when the pull request adds or modifies a non-test `.ts` file under `src/lib`, `src/db` or `src/features` and changes no `*.test.*` file anywhere. A rename or a pure deletion does not count. It cannot tell whether a test covers the change; it asks the question on the check run, next to the e2e budget warnings. Locally: `node scripts/warn-untested-logic.mjs --base origin/main`.
-
 
 ### adrs and dependencies
 

@@ -39,7 +39,7 @@ list of files that decide boarding, permissions and money.
 
 - The unit shards pay v8 coverage collection and upload a blob each. A new untested branch in a
   safety file fails `coverage-floors`; the fix is a test, or an absorbed fall with a reason.
-- Adding a file to the list means `SAFETY_FILES`, `coverage.include` and a `--write`, together.
+- The list is derived (`scripts/coverage-safety-files.mjs`); a new matching file needs a `--write`.
 - **Blocker found by the trial run:** under Vitest 5 every in-function mutant "survives" with its
   tests green (trip-admission 7.5%, all 13 kills module-level), though forcing one on by hand fails
   16 tests. The schedule stays off and no survivor issue is filed until a run kills an in-function
