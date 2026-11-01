@@ -1,8 +1,8 @@
-import type { OfflineManifestIdentityResponse } from "@/lib/offline-manifests";
 import {
   authorizeOfflineManifestStaff,
   OFFLINE_MANIFEST_NO_STORE,
 } from "@/app/api/offline-manifests/staff-context";
+import type { OfflineManifestIdentityResponse } from "@/lib/offline-manifests";
 
 /**
  * Never cached, and the reason is the whole point of this route.

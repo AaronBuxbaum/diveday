@@ -1,4 +1,8 @@
 import { randomUUID } from "node:crypto";
+import {
+  authorizeOfflineManifestStaff,
+  OFFLINE_MANIFEST_NO_STORE,
+} from "@/app/api/offline-manifests/staff-context";
 import { canPersonReadMedicalAlertOnTrip } from "@/db/authz";
 import { lockBoardingCertificationEvidence } from "@/db/boarding-certification-snapshot";
 import { departureBoatSafetyFor } from "@/db/boat-safety";
@@ -23,10 +27,6 @@ import type {
   OfflineManifestUpcomingResponse,
 } from "@/lib/offline-manifests";
 import { serializeManifests } from "@/lib/offline-manifests";
-import {
-  authorizeOfflineManifestStaff,
-  OFFLINE_MANIFEST_NO_STORE,
-} from "@/app/api/offline-manifests/staff-context";
 
 // See ADR 20260726-shopwide-offline-manifest-priming: 48 hours covers "today
 // and tomorrow" in any shop timezone without depending on a staffer having
