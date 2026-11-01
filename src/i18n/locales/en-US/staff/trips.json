@@ -504,7 +504,8 @@
       "noRecord": "PADI found no eLearning under this student’s email.",
       "unreadable": "Couldn’t read PADI’s page.",
       "signedOut": "Sign in to the PADI Pros’ Site first, then check again.",
-      "failed": "That didn’t save. Try again."
+      "failed": "That didn’t save. Try again.",
+      "alreadyDone": "Someone already ticked these. Nothing changed."
     },
     "agencyCheckAll": {
       "start": "{count, plural, one {Check # card with its agency} other {Check all # cards with their agencies}}",

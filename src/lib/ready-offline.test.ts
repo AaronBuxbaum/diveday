@@ -190,31 +190,104 @@ describe("forgetThisReadyPage", () => {
     expect(posted).toEqual([["/ready/", { type: "FORGET_READY_PAGE" }]]);
   });
 
-  it("drops the copy itself when no worker exists, and never throws", async () => {
-    const deleted: string[] = [];
+  /** A fake Cache Storage holding the kept copy of two bookings' pages, one slot each. */
+  async function storageWith(paths: string[]) {
+    const hash = async (path: string) =>
+      [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(path)))]
+        .map((byte) => byte.toString(16).padStart(2, "0"))
+        .join("");
+    const entries = new Map<string, Response>();
+    for (const path of paths) {
+      entries.set(
+        path,
+        new Response("copy", { headers: { "x-diveday-path-sha256": await hash(path) } }),
+      );
+    }
+    // Both pages' copies sit under distinct fake keys so the test can see which survives.
+    const cache = {
+      match: async () => {
+        const mine = entries.get(window.location.pathname);
+        return mine ?? entries.values().next().value;
+      },
+      delete: async () => {
+        const mine = entries.get(window.location.pathname);
+        if (mine) entries.delete(window.location.pathname);
+        return Boolean(mine);
+      },
+    };
+    const deletedCaches: string[] = [];
     vi.stubGlobal("caches", {
+      open: async () => cache,
       delete: async (name: string) => {
-        deleted.push(name);
+        deletedCaches.push(name);
         return true;
       },
     });
+    return { entries, deletedCaches };
+  }
+
+  function stubPage(path: string) {
+    vi.stubGlobal("location", { pathname: path });
+    vi.stubGlobal("window", { location: { pathname: path } });
+  }
+
+  it("drops only this page's copy when no worker exists, and never the whole cache", async () => {
+    stubPage("/ready/mine");
+    const { entries, deletedCaches } = await storageWith(["/ready/mine", "/ready/other"]);
     vi.stubGlobal("navigator", {
       serviceWorker: { controller: null, getRegistration: async () => undefined },
     });
     expect(await forgetThisReadyPage()).toBe(true);
-    expect(deleted).toEqual([READY_CACHE_NAME]);
-    vi.stubGlobal("navigator", {});
-    expect(await forgetThisReadyPage()).toBe(true);
+    expect([...entries.keys()]).toEqual(["/ready/other"]);
+    expect(deletedCaches).toEqual([]);
   });
 
-  it("drops the copy itself when the worker answers that it could not forget", async () => {
-    const deleted: string[] = [];
-    vi.stubGlobal("caches", {
-      delete: async (name: string) => {
-        deleted.push(name);
-        return true;
+  it("leaves another booking's copy alone when the slot holds that one", async () => {
+    stubPage("/ready/mine");
+    const { entries, deletedCaches } = await storageWith(["/ready/other"]);
+    vi.stubGlobal("navigator", {
+      serviceWorker: { controller: null, getRegistration: async () => undefined },
+    });
+    expect(await forgetThisReadyPage()).toBe(true);
+    expect([...entries.keys()]).toEqual(["/ready/other"]);
+    expect(deletedCaches).toEqual([]);
+  });
+
+  it("still drops this page's copy when the registration cannot be read", async () => {
+    stubPage("/ready/mine");
+    const { entries } = await storageWith(["/ready/mine"]);
+    vi.stubGlobal("navigator", {
+      serviceWorker: {
+        controller: null,
+        getRegistration: async () => {
+          throw new Error("no registration");
+        },
       },
     });
+    expect(await forgetThisReadyPage()).toBe(true);
+    expect(entries.size).toBe(0);
+  });
+
+  it("drops this page's copy when the worker never answers", async () => {
+    vi.useFakeTimers();
+    try {
+      stubPage("/ready/mine");
+      const { entries } = await storageWith(["/ready/mine", "/ready/other"]);
+      vi.stubGlobal("navigator", {
+        serviceWorker: { controller: { postMessage: () => undefined } },
+      });
+      const pending = forgetThisReadyPage();
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(await pending).toBe(true);
+      expect([...entries.keys()]).toEqual(["/ready/other"]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("leaves the cache alone when the worker answers that it could not forget", async () => {
+    stubPage("/ready/mine");
+    const { entries, deletedCaches } = await storageWith(["/ready/mine"]);
     vi.stubGlobal("navigator", {
       serviceWorker: {
         controller: {
@@ -222,13 +295,15 @@ describe("forgetThisReadyPage", () => {
         },
       },
     });
-    expect(await forgetThisReadyPage()).toBe(true);
-    expect(deleted).toEqual([READY_CACHE_NAME]);
+    expect(await forgetThisReadyPage()).toBe(false);
+    expect(entries.size).toBe(1);
+    expect(deletedCaches).toEqual([]);
   });
 
   it("answers false when neither the worker nor the page could remove the copy", async () => {
+    stubPage("/ready/mine");
     vi.stubGlobal("caches", {
-      delete: async () => {
+      open: async () => {
         throw new Error("storage unavailable");
       },
     });
