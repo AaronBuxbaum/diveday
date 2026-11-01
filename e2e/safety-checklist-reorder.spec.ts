@@ -62,10 +62,13 @@ test("one row form moves a line up and down, with and without JavaScript", async
   });
   try {
     const nativePage = makeActivitySafe(await native.newPage());
-    await nativePage.goto(path);
+    // `commit`: with scripts off the staff hydration wait could never finish.
+    await nativePage.goto(path, { waitUntil: "commit" });
     await expect(rows(nativePage).filter({ hasText: LABELS[1] })).toHaveCount(1);
+    // diveday:allow-e2e-hygiene pre-hydration-click: scripts are off in this context, so the press is a native form post and there is no hydration to beat.
     await move(rows(nativePage).filter({ hasText: LABELS[1] }), "up").click();
     await expect.poll(() => shownLabels(nativePage)).toEqual([LABELS[1], LABELS[0], LABELS[2]]);
+    // diveday:allow-e2e-hygiene pre-hydration-click: scripts are off in this context, so the press is a native form post and there is no hydration to beat.
     await move(rows(nativePage).filter({ hasText: LABELS[2] }), "up").click();
     await expect.poll(() => shownLabels(nativePage)).toEqual([LABELS[1], LABELS[2], LABELS[0]]);
   } finally {
