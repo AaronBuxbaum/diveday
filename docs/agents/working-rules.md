@@ -148,6 +148,9 @@ runs. Pass args directly. The shell guard refuses the bare form.
   (`.claude/agents/Explore.md`). Screenshot capture and test execution need an execution-capable
   worker; never assign shell commands or file output to a read-only scout. Design,
   judging and safety-critical code stay on the main model.
+- **Check the budget before fanning out.** Before starting workers or reviewers, a coordinator that
+  can read its 7-day usage status (`rate_limit_info`) does so. At the warning status it runs one
+  thread at a time; when the limit is rejected it starts no worker.
 - **A worker hands back a path.** A subagent or worker writes its full result to a file (the
   scratchpad, or `docs/` when the result is the deliverable) and hands back the path plus at most
   ten lines. A hand-back is read twice in the parent's transcript, and a long one crowds out the
