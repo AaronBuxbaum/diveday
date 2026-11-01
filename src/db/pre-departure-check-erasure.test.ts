@@ -67,7 +67,7 @@ describe("pre-departure checklist notes and diver erasure", () => {
     expect(event).toEqual({ note: null, status: "checked", occurredAt });
   });
 
-  it("redacts a diver name from already-saved checklist notes in the same shop", async () => {
+  it("leaves a diver name in already-saved checklist notes (staff prose, not their data)", async () => {
     const { db, shop, trip, booking, owner, item } = await fixture();
     await recordPreDepartureCheck(db, {
       shopId: shop.id,
@@ -88,7 +88,10 @@ describe("pre-departure checklist notes and diver erasure", () => {
       .select({ note: preDepartureCheckEvents.note, status: preDepartureCheckEvents.status })
       .from(preDepartureCheckEvents)
       .where(eq(preDepartureCheckEvents.tripId, trip.id));
-    expect(event).toEqual({ note: "[redacted] was named before erasure.", status: "checked" });
+    expect(event).toEqual({
+      note: `${booking.person.fullName} was named before erasure.`,
+      status: "checked",
+    });
   });
 
   it("accepts a note from a fresh snapshot issued after erasure", async () => {

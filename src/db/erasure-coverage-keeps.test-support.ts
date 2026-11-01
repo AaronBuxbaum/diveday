@@ -15,6 +15,18 @@
  *   departure — is the shop's record of its own day.
  */
 export const ERASURE_KEEPS: Record<string, string> = {
+  // --- staff prose that may mention a diver: not their data, so not swept ----
+  // Owner, 2026-11-01: erasure removes a person's own data only. The person is
+  // reached by a pointer, and a mention of them in words somebody else wrote is
+  // not redacted.
+  trip_change_events:
+    "staff-typed plan values for one departure (meeting point, conditions, sites); the person is reached only by the actor pointer, and a mention of an erased diver in a value is not redacted",
+  pre_departure_check_events:
+    "a crew member's checklist ticks and notes; a note that mentions an erased diver is staff prose and is not redacted (the erasure epoch still discards a stale offline note)",
+  incident_reports:
+    "the shop's liability record: the narrative is staff prose and is kept verbatim; the diver is unlinked through the seat and the erased name (ADR 20261012-incident-reports, H-111)",
+  incident_report_addenda:
+    "dated staff additions to a filed report; kept verbatim for the same reason as the report",
   // --- the diver is named only by a pointer, or not at all -----------------
   buddy_pair_members:
     "which seats dived together, by id; the team's words live in `buddy_team_events`, which the erasure does redact",

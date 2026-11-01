@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
+import { CERTIFICATION_LEVELS } from "./certification-levels";
 import {
   type CourseTemplateSource,
   courseTemplateDatabaseFields,
   courseTemplateDiff,
   courseTemplateSnapshot,
   mergedCourseTemplateSnapshot,
+  parseCourseTemplateSnapshot,
 } from "./course-template-sync";
 
 function template(overrides: Partial<CourseTemplateSource> = {}): CourseTemplateSource {
@@ -36,6 +38,20 @@ function template(overrides: Partial<CourseTemplateSource> = {}): CourseTemplate
 }
 
 describe("course template synchronization", () => {
+  it("parses exactly the full certification ladder or null in both level fields", () => {
+    const baseline = courseTemplateSnapshot(template());
+
+    for (const field of ["minimumCertificationLevel", "certifiesLevel"] as const) {
+      for (const level of CERTIFICATION_LEVELS) {
+        expect(parseCourseTemplateSnapshot({ ...baseline, [field]: level })?.[field]).toBe(level);
+      }
+      expect(parseCourseTemplateSnapshot({ ...baseline, [field]: null })?.[field]).toBeNull();
+      expect(
+        parseCourseTemplateSnapshot({ ...baseline, [field]: "level_not_in_ladder" }),
+      ).toBeNull();
+    }
+  });
+
   it("identifies shop edits separately from untouched fields", () => {
     const baseline = courseTemplateSnapshot(template());
     const current = { ...baseline, overview: "The shop’s own explanation." };

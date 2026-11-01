@@ -515,11 +515,8 @@ export async function getTripCrewAssignments(
   shopId: string,
   tripId: string,
 ): Promise<{ personId: string; tripRole: TripCrewRole | null }[]> {
-  return db
-    .select({ personId: tripAssignments.personId, tripRole: tripAssignments.tripRole })
-    .from(tripAssignments)
-    .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
-    .where(and(eq(tripAssignments.tripId, tripId), eq(trips.shopId, shopId), liveTrip()));
+  const byTrip = await getTripCrewAssignmentsByTrip(db, shopId, [tripId]);
+  return byTrip.get(tripId) ?? [];
 }
 
 /**

@@ -7,6 +7,7 @@ import {
   listOpenRecapPulses,
   MAX_RECAP_PULSE_NOTE_LENGTH,
   markRecapPulseAddressed,
+  parseRecapPulseCategories,
   submitRecapPulse,
 } from "./recap-pulses";
 import { bookings, people, recapPulses, shops, trips } from "./schema";
@@ -26,6 +27,28 @@ import { upcomingTripsWithCounts } from "./trips";
  */
 
 const OTHER_SHOP_ID = "00000000-0000-0000-0000-000000000000";
+
+describe("parseRecapPulseCategories", () => {
+  it("returns valid categories in enum order regardless of input order", () => {
+    expect(parseRecapPulseCategories(["other", "timing", "boat", "briefing", "gear"])).toEqual([
+      "gear",
+      "briefing",
+      "boat",
+      "timing",
+      "other",
+    ]);
+  });
+
+  it("removes duplicate categories", () => {
+    expect(parseRecapPulseCategories(["boat", "gear", "boat", "gear"])).toEqual(["gear", "boat"]);
+  });
+
+  it("discards invalid and non-string values", () => {
+    expect(
+      parseRecapPulseCategories([null, 2, "constructor", "__proto__", "refund", "gear"]),
+    ).toEqual(["gear"]);
+  });
+});
 
 async function pulseContext(divers = ["Pulse Diver"]) {
   const { db, shop } = ctx;

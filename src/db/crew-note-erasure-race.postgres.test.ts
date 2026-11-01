@@ -215,7 +215,7 @@ async function fixture() {
 }
 
 describePostgres("crew note writes ordered with erasure", () => {
-  it("erasure waits for an in-flight note write, then redacts its matching name", async () => {
+  it("erasure waits for an in-flight note write, then leaves its text, staff prose that mentions the diver", async () => {
     const f = await fixture();
     await f.pg.db.execute(
       sql`create function test_hold_crew_note_insert() returns trigger language plpgsql as $$ begin perform pg_advisory_xact_lock(281033); return new; end $$`,
@@ -240,7 +240,7 @@ describePostgres("crew note writes ordered with erasure", () => {
     }
     expect(await noteWrite).toMatchObject({ ok: true });
     expect(await erasure).toMatchObject({ ok: true });
-    expect(await f.notes()).toEqual([{ note: "[redacted] returned safely after dive one." }]);
+    expect(await f.notes()).toEqual([{ note: "Maya Rivera returned safely after dive one." }]);
   });
 
   it("allows a note ordered after erasure to retain its free text", async () => {
@@ -335,7 +335,7 @@ describePostgres("crew note writes ordered with erasure", () => {
     expect((await f.diverNotes())[0]?.occurredAt.getTime()).toBeGreaterThanOrEqual(atTap.getTime());
   });
 
-  it("orders a diver note writer already in flight before erasure and scrubs its text", async () => {
+  it("orders a diver note writer already in flight before erasure and erases its text", async () => {
     const f = await fixture();
     await f.pg.db.execute(
       sql`create function test_hold_diver_note_insert() returns trigger language plpgsql as $$ begin perform pg_advisory_xact_lock(281036); return new; end $$`,
@@ -361,7 +361,7 @@ describePostgres("crew note writes ordered with erasure", () => {
     expect(await f.diverNotes()).toMatchObject([{ note: null, status: "not_boarded" }]);
   });
 
-  it("orders a checklist note writer before erasure and scrubs its text", async () => {
+  it("orders a checklist note writer before erasure and leaves its text", async () => {
     const f = await fixture();
     await f.pg.db.execute(
       sql`create function test_hold_checklist_note_insert() returns trigger language plpgsql as $$ begin perform pg_advisory_xact_lock(281037); return new; end $$`,
@@ -385,7 +385,7 @@ describePostgres("crew note writes ordered with erasure", () => {
     expect(await noteWrite).toMatchObject({ ok: true });
     expect(await erasure).toMatchObject({ ok: true });
     expect(await f.checklistNotes()).toEqual([
-      { note: "[redacted] checked the oxygen bottle.", status: "checked" },
+      { note: "Maya Rivera checked the oxygen bottle.", status: "checked" },
     ]);
   });
 });

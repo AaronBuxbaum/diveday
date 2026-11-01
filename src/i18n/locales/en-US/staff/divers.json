@@ -368,7 +368,7 @@
     "description": "Destroys this diver’s details for good. Not the same as deleting them.",
     "summary": "Erase {name}’s personal data",
     "destroyedNote": "Destroyed: name, email, phone, date of birth, emergency contact, insurance, certification numbers and evidence photos, medical answers, rental sizes, staff notes, review comments, and any photos they shared.",
-    "keptNote": "Kept, with their name gone from all of it: that they signed your release, which version, and when, plus the trips they were on and what was paid. Signed releases stay verifiable.",
+    "keptNote": "Kept, with their name gone from all of it: that they signed your release, which version, and when, plus the trips they were on and what was paid. Signed releases stay verifiable. Notes, titles and reports other people wrote that mention them are not changed.",
     "noUndoNote": "No undo.",
     "confirmLabel": "Type {name} to confirm",
     "confirmHint": "Must match exactly.",

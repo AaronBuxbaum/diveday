@@ -391,8 +391,8 @@ type ActivityParamShapes = {
   departure_deleted: { actor: string };
   /**
    * An erasure renamed a departure that carried the erased diver's name
-   * (issue #2315). The actor is the staffer who ran the erasure; the old
-   * title is never kept, because it is the name.
+   * (issue #2315). No longer written (owner, 2026-11-01); kept so past lines
+   * still read. The actor is the staffer who ran the erasure.
    */
   departure_retitled_by_erasure: { actor: string };
   /**
