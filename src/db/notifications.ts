@@ -49,6 +49,7 @@ import { notificationTripTitle } from "@/lib/notifications/kinds";
 import { currentSendActor, type SendActor, sentByFor } from "@/lib/notifications/send-actor";
 import { shopVoiceOf } from "@/lib/notifications/shop-voice";
 import { openSecret, type SecretKey, sealSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
+import { hasSailed } from "@/lib/trips";
 import { lockBoardingCertificationEvidence } from "./boarding-certification-snapshot";
 import { issueBookingCapability } from "./booking-capabilities";
 import { settledPartyPayment } from "./checkouts";
@@ -346,6 +347,20 @@ function thrownErrorDetail(error: unknown): string {
   return errorClassToken(error);
 }
 
+/**
+ * The seat a queued retry is bound to: `bookingId` for a kind tracked per
+ * booking, `seatId` for a kind that names its seat without being tracked.
+ * Read by field, not by kind, so a seat-naming kind made queueable later is
+ * bound without anyone remembering this list. The writer and the drain read
+ * it through this one function, so a row is never written under one binding
+ * and checked against another.
+ */
+function queuedSeatId(notification: Notification): string | null {
+  if ("seatId" in notification && typeof notification.seatId === "string")
+    return notification.seatId;
+  return "bookingId" in notification ? (notification.bookingId ?? null) : null;
+}
+
 async function queueRetry(
   db: DbExecutor,
   input: Notification,
@@ -361,12 +376,7 @@ async function queueRetry(
   const key = queueSealingKey("queue");
   if (!key) return "queue_seal_unavailable";
   const persist = async (tx: DbExecutor): Promise<"queued" | QueueRefusal> => {
-    const bookingId =
-      input.kind === "fly_safe_correction"
-        ? input.seatId
-        : "bookingId" in input
-          ? (input.bookingId ?? null)
-          : null;
+    const bookingId = queuedSeatId(input);
     let recipientPersonId: string | null = null;
     let recipientTripId: string | null = null;
     if (bookingId) {
@@ -478,12 +488,7 @@ async function persistQueuedRetry(
       recipientEmail: "to" in input ? input.to : null,
       subjectEmail: notificationSubjectEmail(input),
       subjectPhone: notificationSubjectPhone(input),
-      bookingId:
-        input.kind === "fly_safe_correction"
-          ? input.seatId
-          : "bookingId" in input
-            ? (input.bookingId ?? null)
-            : null,
+      bookingId: queuedSeatId(input),
       recipientPersonId: subject.recipientPersonId,
       recipientTripId: subject.recipientTripId,
       status: "queued",
@@ -812,6 +817,9 @@ function reviveQueuedNotification(payload: Notification): Notification {
     "sailedStartsAt",
     "changedAt",
     "confirmedAt",
+    // A conditions hold's own instant, which also keys it: left a string, the
+    // revived payload fails its z.date() and the retry never drains.
+    "publishedAt",
   ]) {
     if (typeof copy[field] === "string") copy[field] = new Date(copy[field]);
   }
@@ -1198,6 +1206,27 @@ async function dispatchQueuedRetry(
                 retryable: false,
                 errorCode: "stale_reschedule",
               };
+            }
+          }
+          // A hold notice that waited for a retry goes out only while it is
+          // still true: the hold is still on and the departure is live, not
+          // moved and not sailed. A late "your trip is on hold" after the crew
+          // called it a go is worse than none (issue #3314 review).
+          if (notification.kind === "trip_conditions_hold") {
+            const tripId = claimed.recipientTripId;
+            const [current] = tripId
+              ? await tx
+                  .select({ conditionsHold: trips.conditionsHold, startsAt: trips.startsAt })
+                  .from(trips)
+                  .where(and(eq(trips.id, tripId), eq(trips.shopId, claimed.shopId), liveTrip()))
+                  .limit(1)
+              : [];
+            if (
+              !current?.conditionsHold ||
+              current.startsAt.getTime() !== notification.startsAt.getTime() ||
+              hasSailed(current.startsAt, nowDate())
+            ) {
+              return { status: "failed", retryable: false, errorCode: "stale_hold" };
             }
           }
           if (notification.kind === "fly_safe_correction") {
@@ -1597,12 +1626,7 @@ export async function drainNotificationRetries(
     }
 
     let notification = await refreshQueuedFlySafe(db, reviveQueuedNotification(opened));
-    const payloadBookingId =
-      notification.kind === "fly_safe_correction"
-        ? notification.seatId
-        : "bookingId" in notification
-          ? (notification.bookingId ?? null)
-          : null;
+    const payloadBookingId = queuedSeatId(notification);
     if (
       (payloadBookingId &&
         (claimed.bookingId !== payloadBookingId ||

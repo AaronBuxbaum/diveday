@@ -628,6 +628,14 @@ const tripRecapSchema = z.object({
 
 const tripConditionsHoldSchema = z.object({
   kind: z.literal("trip_conditions_hold"),
+  /**
+   * The seat this copy is for, which keys a queued retry and binds it to the
+   * seat's person and trip, so erasure, merge and a cancel reach the row
+   * (issue #3314). `seatId`, not `bookingId`, for the reason
+   * `departureNoteSchema` gives: that name makes a kind tracked per booking on
+   * `notification_deliveries`, and a hold notice is not.
+   */
+  seatId: z.uuid(),
   tripId: z.uuid(),
   shopId: z.uuid(),
   to: emailAddressSchema,
@@ -2366,8 +2374,10 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // One recap per booking after the trip departs.
     case "trip_recap":
       return `trip-recap/${notification.bookingId}`;
+    // One per seat per published hold. Never the address: the key outlives the
+    // row's erasure handles (issue #3314).
     case "trip_conditions_hold":
-      return `trip-conditions-hold/${notification.tripId}/${notification.publishedAt.toISOString()}/${notification.to}`;
+      return `trip-conditions-hold/${notification.seatId}/${notification.publishedAt.toISOString()}`;
     // One per booking on the departure that did not fill — the sweep cancels a
     // trip exactly once, so the booking alone keys it.
     case "trip_minimum_not_met":

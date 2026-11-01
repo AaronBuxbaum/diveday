@@ -99,6 +99,7 @@ export async function saveConditionsAction(shopSlug: string, tripId: string, for
             ? [
                 sendNotification(db, {
                   kind: "trip_conditions_hold",
+                  seatId: contact.bookingId,
                   tripId,
                   shopId: shop.id,
                   to: contact.email,

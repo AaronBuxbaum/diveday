@@ -287,20 +287,29 @@ describe("listTripDiverContacts", () => {
     const holder = await makeDiver(db, shop.id);
     const cancelled = await makeDiver(db, shop.id);
     const deleted = await makeDiver(db, shop.id, { deleted: true });
-    await db.insert(bookings).values([
-      { bookedAs: "diver", shopId: shop.id, tripId: trip, personId: holder.id },
-      {
-        bookedAs: "diver",
-        shopId: shop.id,
-        tripId: trip,
-        personId: cancelled.id,
-        status: "cancelled",
-      },
-      { bookedAs: "diver", shopId: shop.id, tripId: trip, personId: deleted.id },
-    ]);
+    const [held] = await db
+      .insert(bookings)
+      .values([
+        { bookedAs: "diver", shopId: shop.id, tripId: trip, personId: holder.id },
+        {
+          bookedAs: "diver",
+          shopId: shop.id,
+          tripId: trip,
+          personId: cancelled.id,
+          status: "cancelled",
+        },
+        { bookedAs: "diver", shopId: shop.id, tripId: trip, personId: deleted.id },
+      ])
+      .returning({ id: bookings.id });
 
     const contacts = await listTripDiverContacts(db, shop.id, trip);
-    expect(contacts).toContainEqual({ fullName: holder.fullName, email: holder.email });
+    // The seat comes with the contact: a conditions-hold retry is keyed and
+    // bound by it, never by the address (issue #3314).
+    expect(contacts).toContainEqual({
+      bookingId: held?.id,
+      fullName: holder.fullName,
+      email: holder.email,
+    });
     expect(contacts.map((c) => c.email)).not.toContain(cancelled.email);
     expect(contacts.map((c) => c.email)).not.toContain(deleted.email);
     expect(await listTripDiverContacts(db, OTHER_SHOP, trip)).toEqual([]);

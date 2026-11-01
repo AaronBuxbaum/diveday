@@ -11,10 +11,10 @@ import { bookings, people } from "./schema";
  * safely with only a trip UUID for the wrong shop.
  */
 
-/** Email recipients holding active seats on one tenant-scoped trip. */
+/** Email recipients holding active seats on one tenant-scoped trip, one row per seat. */
 export async function listTripDiverContacts(db: AppDb, shopId: string, tripId: string) {
   return db
-    .select({ fullName: people.fullName, email: people.email })
+    .select({ bookingId: bookings.id, fullName: people.fullName, email: people.email })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
     .where(
