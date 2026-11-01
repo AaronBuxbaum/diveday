@@ -28,8 +28,7 @@ export type ImportWizardCopy = {
   /** `{count}` and `{system}`: bookings dated after the shop's today, which are not seats here. */
   bookingsAfterTodayOne: string;
   bookingsAfterTodayOther: string;
-  bookingsAfterTodayMoreOne: string;
-  bookingsAfterTodayMoreOther: string;
+  bookingsAfterTodayMore: string;
   /** The system the file came from, when the page knows it; otherwise "your old system". */
   sourceSystem: string;
   stats: {
@@ -247,8 +246,7 @@ export function importWizardCopy(t: StaffTranslator, sourceSystem: string): Impo
     paymentHistoryRowsNoticeOther: t.raw("settings.import.wizard.paymentHistoryRowsNoticeOther"),
     bookingsAfterTodayOne: t.raw("settings.import.wizard.bookingsAfterTodayOne"),
     bookingsAfterTodayOther: t.raw("settings.import.wizard.bookingsAfterTodayOther"),
-    bookingsAfterTodayMoreOne: t.raw("settings.import.wizard.bookingsAfterTodayMoreOne"),
-    bookingsAfterTodayMoreOther: t.raw("settings.import.wizard.bookingsAfterTodayMoreOther"),
+    bookingsAfterTodayMore: t.raw("settings.import.wizard.bookingsAfterTodayMore"),
     sourceSystem,
     stats: {
       diversInFile: t("settings.import.wizard.stats.diversInFile"),

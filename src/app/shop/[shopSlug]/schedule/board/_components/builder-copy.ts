@@ -163,12 +163,7 @@ export function scheduleBuilderCopy(st: StaffTranslator, timeZone: string): Buil
     requestPlanRecommendationDiversOther: st.raw(
       "schedule.builder.requestPlanRecommendationDiversOther",
     ),
-    requestPlanRecommendationCapacityOne: st.raw(
-      "schedule.builder.requestPlanRecommendationCapacityOne",
-    ),
-    requestPlanRecommendationCapacityOther: st.raw(
-      "schedule.builder.requestPlanRecommendationCapacityOther",
-    ),
+    requestPlanRecommendationCapacity: st.raw("schedule.builder.requestPlanRecommendationCapacity"),
     requestPlanDiversOne: st.raw("schedule.builder.requestPlanDiversOne"),
     requestPlanDiversOther: st.raw("schedule.builder.requestPlanDiversOther"),
     requestPlanPersonOne: st.raw("schedule.builder.requestPlanPersonOne"),

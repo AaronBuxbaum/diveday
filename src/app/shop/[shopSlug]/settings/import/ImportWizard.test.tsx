@@ -102,8 +102,7 @@ const COPY = {
   paymentHistoryRowsNoticeOther: "{count} rows carry payment history",
   bookingsAfterTodayOne: "{count} booking is after today. Keep it in {system}.",
   bookingsAfterTodayOther: "{count} bookings are after today. Keep them in {system}.",
-  bookingsAfterTodayMoreOne: "And {count} more.",
-  bookingsAfterTodayMoreOther: "And {count} more.",
+  bookingsAfterTodayMore: "And {count} more.",
   sourceSystem: "FareHarbor",
   stats: {
     diversInFile: "Divers in file",

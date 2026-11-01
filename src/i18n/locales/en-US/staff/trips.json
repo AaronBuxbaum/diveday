@@ -862,7 +862,7 @@
     "noName": "No name given",
     "noEmail": "no email",
     "offeredAgo": "offered {time}",
-    "showMore": "{count, plural, one {Show # more} other {Show # more}}",
+    "showMore": "Show {count, number} more",
     "offerSeat": "Offer a seat",
     "offerSeatAria": "Offer {name} a seat",
     "addDiscount": "Add a discount to offers",

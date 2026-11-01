@@ -156,7 +156,7 @@
   "diver": {
     "heading": "Gear they own",
     "gearEmpty": "Nothing on file",
-    "onTheBench": "{count, plural, one {# on the bench} other {# on the bench}}",
+    "onTheBench": "{count, number} on the bench",
     "deletePiece": "Delete {label}",
     "deletePieceShort": "Delete",
     "deletingPiece": "Deleting…",

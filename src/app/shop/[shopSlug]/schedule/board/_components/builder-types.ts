@@ -243,8 +243,7 @@ export type BuilderCopy = {
   requestPlanRecommendation?: string;
   requestPlanRecommendationDiversOne?: string;
   requestPlanRecommendationDiversOther?: string;
-  requestPlanRecommendationCapacityOne?: string;
-  requestPlanRecommendationCapacityOther?: string;
+  requestPlanRecommendationCapacity?: string;
   requestPlanDiversOne?: string;
   requestPlanDiversOther?: string;
   requestPlanPersonOne?: string;

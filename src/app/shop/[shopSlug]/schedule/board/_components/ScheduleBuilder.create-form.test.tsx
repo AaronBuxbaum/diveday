@@ -2,6 +2,7 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { fill } from "@/i18n/fill";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { rendersFlush } from "@/test/button-flush";
 import { ScheduleBuilder, type ScheduleBuilderContext } from "./ScheduleBuilder";
@@ -381,11 +382,8 @@ describe("ScheduleBuilder request plan: copy composed on the client", () => {
       requestPlanRecommendationDiversOther: st.raw(
         "schedule.builder.requestPlanRecommendationDiversOther",
       ),
-      requestPlanRecommendationCapacityOne: st.raw(
-        "schedule.builder.requestPlanRecommendationCapacityOne",
-      ),
-      requestPlanRecommendationCapacityOther: st.raw(
-        "schedule.builder.requestPlanRecommendationCapacityOther",
+      requestPlanRecommendationCapacity: st.raw(
+        "schedule.builder.requestPlanRecommendationCapacity",
       ),
       requestPlanDiversOne: st.raw("schedule.builder.requestPlanDiversOne"),
       requestPlanDiversOther: st.raw("schedule.builder.requestPlanDiversOther"),
@@ -479,5 +477,20 @@ describe("ScheduleBuilder request plan: copy composed on the client", () => {
       // as a brace.
       expect(panel.textContent).not.toContain("{");
     });
+  }
+
+  for (const locale of ["en-US", "es-ES"] as const) {
+    for (const capacity of [0, 1, 2, 1000]) {
+      it(`preserves the suggested capacity sentence in ${locale} at ${capacity}`, () => {
+        const template = requestPlanCopy(locale).requestPlanRecommendationCapacity;
+        const rendered = fill(template, { capacity });
+        const expected =
+          locale === "en-US"
+            ? `Suggested starting passenger places: ${capacity}.`
+            : `Plazas iniciales para pasajeros sugeridas: ${capacity}.`;
+
+        expect(rendered).toBe(expected);
+      });
+    }
   }
 });

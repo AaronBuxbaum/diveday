@@ -1066,8 +1066,7 @@
       "paymentHistoryRowsNoticeOther": "{count} filas de pago, reembolso o recibo del origen se importarán como historial sin verificar. Nunca crean pedidos ni cargos en Stripe.",
       "bookingsAfterTodayOne": "{count} reserva es posterior a hoy. No es una plaza aquí. Agrégala en el tablero o déjala en {system} hasta que zarpe.",
       "bookingsAfterTodayOther": "{count} reservas son posteriores a hoy. No son plazas aquí. Agrégalas en el tablero o déjalas en {system} hasta que zarpen.",
-      "bookingsAfterTodayMoreOne": "Y {count} más.",
-      "bookingsAfterTodayMoreOther": "Y {count} más.",
+      "bookingsAfterTodayMore": "Y {count} más.",
       "oldSystem": "tu sistema anterior",
       "stats": {
         "diversInFile": "Buceadores en el archivo",

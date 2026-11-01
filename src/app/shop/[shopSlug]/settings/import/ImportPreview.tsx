@@ -169,13 +169,7 @@ export function ImportPreview({
           </ul>
           {unlistedAfterToday > 0 ? (
             <p className="mt-1 text-muted">
-              {fill(
-                pluralForm(unlistedAfterToday, {
-                  one: copy.bookingsAfterTodayMoreOne,
-                  other: copy.bookingsAfterTodayMoreOther,
-                }),
-                { count: unlistedAfterToday },
-              )}
+              {fill(copy.bookingsAfterTodayMore, { count: unlistedAfterToday })}
             </p>
           ) : null}
         </div>
