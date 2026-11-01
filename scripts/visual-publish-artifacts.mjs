@@ -3,6 +3,7 @@
 // The trusted reusable workflow downloads each fixed artifact into RUNNER_TEMP;
 // artifact contents never become scripts, package metadata, or workflow paths.
 import { lstatSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { availableParallelism } from "node:os";
 import path from "node:path";
 import process from "node:process";
 import sharp from "sharp";
@@ -15,6 +16,27 @@ const MAX_TOTAL_BYTES = 2_000_000_000;
 const MAX_IMAGE_PIXELS = 100_000_000;
 const MAX_CAPTURE_MANIFEST_BYTES = 1_000_000;
 const MAX_VISUAL_PLAN_BYTES = 1_000_000;
+
+/**
+ * Run `task` over `items` with at most `limit` in flight. The first failure
+ * stops new work and is rethrown once the running tasks settle.
+ */
+export async function mapConcurrent(items, task, limit = availableParallelism()) {
+  let cursor = 0;
+  let failure;
+  const workers = Array.from({ length: Math.max(1, Math.min(limit, items.length)) }, async () => {
+    while (cursor < items.length && !failure) {
+      const item = items[cursor++];
+      try {
+        await task(item);
+      } catch (error) {
+        failure ??= error;
+      }
+    }
+  });
+  await Promise.all(workers);
+  if (failure) throw failure;
+}
 
 /** Decode untrusted PNG bytes and emit a metadata-free canonical PNG. */
 export async function reencodePng(bytes, label = "screenshot") {
@@ -42,7 +64,10 @@ export async function reencodePng(bytes, label = "screenshot") {
 
   let canonical;
   try {
-    canonical = await image.png({ compressionLevel: 9, adaptiveFiltering: true }).toBuffer();
+    // Level 9 with adaptive filtering cost ~0.3 s per screenshot, single-threaded
+    // per image, for ~800 images on every run. Pixels are identical at any level;
+    // only the bytes in the cache and bucket grow a little.
+    canonical = await image.png({ compressionLevel: 3, adaptiveFiltering: false }).toBuffer();
   } catch {
     throw new Error(`malformed PNG data: ${label}`);
   }
@@ -261,6 +286,7 @@ export async function sanitizeVisualArtifacts({ root, output, shards, expectedTe
   const names = new Set();
   const captureNames = new Set();
   const captures = [];
+  const encodeJobs = [];
   let totalBytes = 0;
   for (const shard of validatedShards) {
     const source = path.join(root, `shard-${shard}`);
@@ -305,14 +331,8 @@ export async function sanitizeVisualArtifacts({ root, output, shards, expectedTe
       if (names.size >= MAX_SCREENSHOTS || totalBytes + stat.size > MAX_TOTAL_BYTES) {
         throw new Error("screenshot artifacts exceed the publisher limits");
       }
-      const bytes = readFileSync(file, { encoding: null, flag: "r" });
-      const canonical = await reencodePng(bytes, entry.name);
-      writeFileSync(path.join(output, entry.name), canonical, { flag: "wx" });
       names.add(entry.name);
-      totalBytes += canonical.length;
-      if (totalBytes > MAX_TOTAL_BYTES) {
-        throw new Error("screenshot artifacts exceed the publisher limits");
-      }
+      encodeJobs.push({ file, name: entry.name });
     }
     const missing = [...shardExpected].filter((name) => !shardActual.has(name));
     const unexpected = [...shardActual].filter((name) => !shardExpected.has(name));
@@ -323,6 +343,15 @@ export async function sanitizeVisualArtifacts({ root, output, shards, expectedTe
       );
     }
   }
+  // Re-encode after every name check passed, several at a time.
+  await mapConcurrent(encodeJobs, async ({ file, name }) => {
+    const canonical = await reencodePng(readFileSync(file, { encoding: null, flag: "r" }), name);
+    writeFileSync(path.join(output, name), canonical, { flag: "wx" });
+    totalBytes += canonical.length;
+    if (totalBytes > MAX_TOTAL_BYTES) {
+      throw new Error("screenshot artifacts exceed the publisher limits");
+    }
+  });
   if (names.size === 0) throw new Error("no screenshot files were found in the artifacts");
   const capturedTestIds = new Set(captures.map((capture) => capture.testId));
   const missingTests = [...expectedTestIds].filter((testId) => !capturedTestIds.has(testId));
