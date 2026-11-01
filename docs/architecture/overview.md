@@ -23,7 +23,7 @@ service until something other than the web app needs one ([ADR-0001](decisions/0
 | Marine outlook | Open-Meteo Marine API behind `src/lib/marine-forecast.ts` | [20260718 marine outlook](decisions/20260718-automated-marine-outlook.md) |
 | Claude assists | Anthropic API via `@anthropic-ai/sdk` behind `src/lib/claude/`, run through `runAssist` in `src/db/assists.ts`; dark without a key | [20261018 Claude assists](decisions/20261018-claude-assists.md) |
 | Lint/format | Biome | [0002](decisions/0002-toolchain.md) |
-| Unit tests | Vitest + Testing Library, MSW for real fetch boundaries; coverage-v8 floors and weekly Stryker mutation runs on the safety files | [0002](decisions/0002-toolchain.md), [20260719 MSW scope](decisions/20260719-msw-offline-sync-only.md), [20261015 coverage and mutation](decisions/20261015-coverage-and-mutation-testing.md) |
+| Unit tests | Vitest + Testing Library, MSW for real fetch boundaries; coverage-v8 floors on the safety files | [0002](decisions/0002-toolchain.md), [20260719 MSW scope](decisions/20260719-msw-offline-sync-only.md), [20261015 coverage floors](decisions/20261015-coverage-and-mutation-testing.md), [20261101 mutation cut](decisions/20261101-cut-mutation-testing.md) |
 | E2E tests | Playwright flows + reg-suit visual regression (the axe scans were removed 2026-10-24) | [0002](decisions/0002-toolchain.md), [20260729 reg-suit](decisions/20260729-reg-suit-visual-regression.md), [20260719 MSW scope](decisions/20260719-msw-offline-sync-only.md), [20260801 axe scans](decisions/20260801-axe-core-playwright-a11y-scans.md) |
 | Package manager | pnpm | [0002](decisions/0002-toolchain.md) |
 
