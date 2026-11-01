@@ -114,18 +114,8 @@ export async function generateMetadata({
 }
 
 /**
- * The public, canonical, embeddable dive schedule — a day-grouped agenda of
- * upcoming departures with a month rail above it, reviews, and the
- * last-minute-deal signup, and the root of a shop's diver namespace. Every visitor sees this exact page, signed in or not: the staff
- * operations board (KPI tiles, add/move/copy/remove) lives at
- * `/shop/[shopSlug]/schedule/board` instead (Lens 17 — this route used to be
- * four products crammed onto one, including a staff branch that could never
- * coexist with the diver-facing content it shared a component tree with; see
- * docs/product/features/story-backlog.md and the archive it supersedes).
- *
- * It used to live at `/shop/[shopSlug]/schedule`, a public page inside the
- * staff namespace held open by an allowlist; that URL now 308s here (ADR
- * 20260803-public-shop-namespace).
+ * The public, embeddable dive schedule and root of a shop's diver namespace.
+ * The staff operations board lives at `/shop/[shopSlug]/schedule/board`.
  */
 export default async function SchedulePage({
   params,

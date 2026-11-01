@@ -14,33 +14,11 @@ import {
 } from "./_components/PublicShopShell";
 
 /**
- * The diver-facing shell for `/s/[shopSlug]/**` — the shop's own identity,
- * never staff chrome (ADR 20260803-public-shop-namespace). These surfaces used
- * to live inside the auth-gated `/shop` namespace and be carved back out by an
- * allowlist; they now have a namespace of their own, so "public" is a property
- * of the URL rather than of a regular expression.
- *
- * **This function is synchronous, and that is the whole point** (ADR
- * 20260804-instant-navigation). It used to `await` the embed header, the shop
- * row, the negotiated locale, the session, and a `hasActiveCourses` probe
- * before returning anything — five request-scoped reads sitting above
- * `{children}`, which is the one position a `<Suspense>` boundary cannot
- * rescue, because the page *is* the child. That is what `instant = false` was
- * buying here: permission to have no static shell at all.
- *
- * Everything request-scoped now lives in the async components of
- * `./_components/PublicShopShell.tsx`, each behind its own boundary, and
- * `{children}` sits outside every one of them. The static
- * shell is the page frame — skip link, a header band holding its own height,
- * the main landmark, and the page's own `loading.tsx` — served without waiting
- * on a database round trip, while the shop's identity and its live inventory
- * stream in behind it.
- *
- * Three of those components need the shop row, and they cannot hand it to each
- * other: separate boundaries, and a prop would have to come from a read up
- * here. They each ask `shopBySlugCached` (`src/db/shops-cached.ts`) instead, which is
- * memoized for the render — so the three boundaries cost one query, not three
- * (issue #1737). A fourth component that needs the row asks the same reader.
+ * Synchronous diver-facing shell for `/s/[shopSlug]/**`; `/shop/**` remains
+ * staff-only. Keeping request-scoped work in the async shell components lets
+ * the static frame and `{children}` render outside their Suspense boundaries.
+ * The components that need the shop row use `shopBySlugCached`, memoized for
+ * the render so separate boundaries share one query.
  */
 export default function PublicShopLayout({
   children,
