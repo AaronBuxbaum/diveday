@@ -5,9 +5,10 @@
  *
  * Sections report told seats, reserved gear, paid orders, crew clashes or
  * away blocks, and time-dependent conflicts resolved by the panel's target
- * date/time. Empty sections are omitted. Crew clashes and roll-call/status
- * refusals follow `moveTrip`'s rules; away blocks and turnarounds inform but
- * never block. Crew availability by hours is not modeled.
+ * date/time. Empty sections are omitted. Crew clashes are advisory. Mutation
+ * refusals follow `moveTrip`'s order: status (`not_scheduled`), then roll-call
+ * evidence (`already_sailed`). Away blocks and turnarounds inform but never
+ * block. Crew availability by hours is not modeled.
  */
 
 /**
