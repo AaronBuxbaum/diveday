@@ -1606,14 +1606,14 @@ const CAPTURE_TRANSITIONS_OFF = `
   details[open]::details-content {
     transition: none !important;
   }
-  /* Tailwind's drop shadow (\`shadow-*\`) is the one blurred edge this app paints
-     that rasterizes to a different 1-3 colour unit result from the same build
-     and state (#3218: 13 pixels on the selected dive-site pin's lower contour).
-     Zeroing the variable it composes through, not \`box-shadow\`, leaves rings
-     (\`ring-*\`), outlines and borders, which carry the meaning, as they are. */
-  *,
-  *::before,
-  *::after {
+  /* Map markers only (#3218): the selected dive-site pin's Tailwind drop shadow
+     rasterized to one of two outputs (13 pixels, max 3 colour units, on its
+     lower contour) from the same build and state. Zeroing the variable it
+     composes through, not \`box-shadow\`, leaves the pin's ring (\`ring-*\`),
+     borders and every shadow outside the map as they are. */
+  .leaflet-container *,
+  .leaflet-container *::before,
+  .leaflet-container *::after {
     --tw-shadow: 0 0 #0000 !important;
     --tw-shadow-colored: 0 0 #0000 !important;
   }
