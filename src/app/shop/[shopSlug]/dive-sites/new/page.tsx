@@ -40,10 +40,7 @@ export const metadata: Metadata = { title: "Create dive site — DiveDay" };
 // Outcome section). Without a real Suspense boundary this route got a
 // Partial-Prerendered shell with an implicit dynamic hole around the
 // session/shop reads below; an explicit boundary makes the dynamic part exactly
-// what streams in. It used to matter for a second reason too — a rejected form
-// fired `redirect(...?error=...)`, which raced that hole's pending fetch and
-// lost, so the error banner never rendered. A refusal no longer navigates at
-// all (see `SiteFormShell`), so that race is gone with the redirect.
+// what streams in.
 export default function NewDiveSitePage({ params }: { params: Promise<{ shopSlug: string }> }) {
   return (
     // The fallback is the page's own shell at its width, so the column does

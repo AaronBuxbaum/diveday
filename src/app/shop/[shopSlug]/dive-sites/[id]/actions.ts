@@ -28,10 +28,9 @@ import { planSpanishBoxes, writeSpanishBoxes } from "../spanish-boxes";
 
 /**
  * The edit page's four doors: save the briefing, delete the site, and pull or undo an update
- * from the DiveDay template it was copied from. They lived inline in `page.tsx` as closures over
- * the page's `id`; the page now binds the site id, and each action re-validates it and scopes
- * every read and write to the session's own shop, so a tampered id can only name another of
- * the staffer's own sites.
+ * from the DiveDay template it was copied from. The page binds the site id, and each action
+ * re-validates it and scopes every read and write to the session's own shop, so a tampered id can
+ * only name another of the staffer's own sites.
  */
 
 export async function saveDiveSiteAction(
