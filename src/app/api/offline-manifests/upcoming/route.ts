@@ -62,7 +62,7 @@ const AUTO_SAVE_WINDOW_MS = 48 * 60 * 60 * 1000;
  */
 async function getUpcomingManifests() {
   const access = await authorizeOfflineManifestStaff();
-  if ("response" in access) return access.response;
+  if (access.ok === false) return access.response;
   const { db, shop, user } = access;
 
   const locale = await requestLocale(shop.defaultLocale);

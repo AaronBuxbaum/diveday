@@ -18,6 +18,7 @@ export async function authorizeOfflineManifestStaff() {
   // Avoid a database connection when the session never claimed staff access.
   if (!session?.user || !isStaff(session.user.roles)) {
     return {
+      ok: false as const,
       response: Response.json(
         { error: "authentication_required" },
         { status: 401, headers: OFFLINE_MANIFEST_NO_STORE },
@@ -29,6 +30,7 @@ export async function authorizeOfflineManifestStaff() {
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) {
     return {
+      ok: false as const,
       response: Response.json(
         { error: "not_found" },
         { status: 404, headers: OFFLINE_MANIFEST_NO_STORE },
@@ -39,6 +41,7 @@ export async function authorizeOfflineManifestStaff() {
   const roles = await loadActiveStaffRoles(db, shop.id, session.user.personId);
   if (!roles || !isStaff(roles)) {
     return {
+      ok: false as const,
       response: Response.json(
         { error: "authentication_required" },
         { status: 401, headers: OFFLINE_MANIFEST_NO_STORE },
@@ -46,5 +49,5 @@ export async function authorizeOfflineManifestStaff() {
     };
   }
 
-  return { db, shop, user: session.user };
+  return { ok: true as const, db, shop, user: session.user };
 }

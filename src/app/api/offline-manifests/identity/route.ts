@@ -48,7 +48,7 @@ import type { OfflineManifestIdentityResponse } from "@/lib/offline-manifests";
  */
 export async function GET() {
   const access = await authorizeOfflineManifestStaff();
-  if ("response" in access) return access.response;
+  if (access.ok === false) return access.response;
 
   // Only the slug is serialized. The row carries the whole shop record and the
   // purge needs one field of it, so everything else stops here rather than

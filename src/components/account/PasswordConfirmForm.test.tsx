@@ -15,6 +15,7 @@ function renderForm(errorField?: "password" | "confirm" | "form", errorText?: st
       confirmPasswordLabel="Confirm password"
       submitLabel="Continue"
       savingLabel="Saving"
+      submitClassName="test-submit"
       errorField={errorField}
       errorText={errorText}
     />,
