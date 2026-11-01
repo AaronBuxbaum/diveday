@@ -28,6 +28,8 @@ test("one row form moves a line up and down, with and without JavaScript", async
   browser,
   privateShop,
 }) => {
+  // Three lines added through the form, then two contexts: a long journey, not a slow step.
+  test.setTimeout(45_000);
   const path = `/shop/${privateShop.slug}/safety-checklist`;
   await page.goto(path);
   for (const label of LABELS) {
