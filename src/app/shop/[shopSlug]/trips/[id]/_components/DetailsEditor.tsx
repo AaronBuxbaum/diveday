@@ -43,6 +43,7 @@ export async function DetailsEditor({
               tell={tell}
               tripId={context.trip.id}
               t={t}
+              locale={context.locale}
             />
           </div>
         ) : null}

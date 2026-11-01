@@ -20,6 +20,8 @@ export type ElearningCheckCopy = {
   /** "Sign in to the PADI Pros’ Site first": the extension met PADI's sign-in. */
   signedOut: string;
   failed: string;
+  /** Someone ticked the materials first (or re-ticked since): the check or its Undo changed nothing. */
+  alreadyDone: string;
   undo: string;
   undoPending: string;
   dismiss: string;
@@ -106,10 +108,18 @@ export function ElearningCheck({
             ? copy.noRecord
             : result.verdict === "unreadable"
               ? copy.unreadable
-              : null;
+              : result.verdict === "already_done"
+                ? copy.alreadyDone
+                : null;
 
   return (
     <>
+      {materialsDone && outcome ? (
+        // The materials read as done, so the button is gone; a no-op Undo still says why.
+        <span className="mt-2 block print:hidden">
+          <FormStatus tone="warning">{outcome}</FormStatus>
+        </span>
+      ) : null}
       {materialsDone ? null : (
         <div className="mt-2">
           <button
@@ -140,7 +150,7 @@ export function ElearningCheck({
         <UndoToast
           message={copy.complete}
           action={formAction}
-          fields={{ bookingId: undo.bookingId, intent: "undo" }}
+          fields={{ bookingId: undo.bookingId, markedAt: undo.markedAt, intent: "undo" }}
           pendingLabel={copy.undoPending}
           undoLabel={copy.undo}
           dismissLabel={copy.dismiss}

@@ -109,11 +109,15 @@ export default async function SafetyChecklistPage({
                   stacked
                   trailing={
                     <ListItemActions>
-                      <form action={moveChecklistItemAction.bind(null, shopSlug)}>
+                      <form
+                        action={moveChecklistItemAction.bind(null, shopSlug)}
+                        className="flex items-center gap-2"
+                      >
                         <input type="hidden" name="itemId" value={item.id} />
-                        <input type="hidden" name="direction" value="up" />
                         <button
                           type="submit"
+                          name="direction"
+                          value="up"
                           disabled={index === 0}
                           aria-label={t("settings.safetyChecklist.moveUp")}
                           // Below `sm` the actions are the row's last line, and
@@ -125,12 +129,10 @@ export default async function SafetyChecklistPage({
                         >
                           <DiveDayIcon name="arrow-up" className="size-4" />
                         </button>
-                      </form>
-                      <form action={moveChecklistItemAction.bind(null, shopSlug)}>
-                        <input type="hidden" name="itemId" value={item.id} />
-                        <input type="hidden" name="direction" value="down" />
                         <button
                           type="submit"
+                          name="direction"
+                          value="down"
                           disabled={index === items.length - 1}
                           aria-label={t("settings.safetyChecklist.moveDown")}
                           className={buttonClass({

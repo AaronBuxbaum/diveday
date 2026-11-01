@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { act } from "@testing-library/react";
-import { hydrateRoot } from "react-dom/client";
+import { createRoot, hydrateRoot } from "react-dom/client";
 import { renderToString } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ALL_SWITCHES_ON } from "@/lib/shop-features";
@@ -116,5 +116,24 @@ describe.each([
     });
 
     expect(nav()?.getAttribute("data-hydrated")).toBe("true");
+  });
+});
+
+describe("the tab bar, on keyboard focus", () => {
+  it("scrolls the focused tab the least distance into its rail (issue 3433)", async () => {
+    location.pathname = root;
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    const container = document.createElement("div");
+    document.body.append(container);
+    await act(async () => {
+      createRoot(container).render(<ShopTabBar {...props} />);
+    });
+
+    await act(async () => {
+      link(container, "Inbox").focus();
+    });
+
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: "nearest", inline: "nearest" });
   });
 });

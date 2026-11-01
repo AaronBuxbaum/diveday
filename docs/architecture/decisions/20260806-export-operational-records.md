@@ -109,7 +109,7 @@ joins is exported (as `buddy_pair_members.id`).
   Harmless while notes never left the shop, and not harmless once `internal_notes.csv` carries them
   out of it — `anonymize.ts` now also redacts note bodies by word-boundary name match, the same
   handle and the same accepted over-reach the `activity_events` sweep already used, logged under
-  `internal_note_name`.
+  `internal_note_name`. *Superseded 2026-11-01: erasure no longer redacts a mention inside a note filed under someone else; see the amendment in 20260802-diver-data-erasure.*
 - **`course_inquiries.csv` was empty on every demo** until this change, because nothing seeded a
   lead. `src/db/seed-course-inquiries.ts` now seeds three, one per `person_id` state — linked,
   unlinked-with-an-address, and unlinked-with-no-address — which is also the first visible fixture
