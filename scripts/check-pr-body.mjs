@@ -44,10 +44,33 @@ const NOT_SURFACES = [/^src\/app\/manifest\.ts$/, /^src\/i18n\/locales\//];
 /** `src/db/waivers.ts`, `src/lib/waiver-tokens.ts`, … : signed consent and its medical answers. */
 const WAIVER_MODULES = /^src\/(db|lib)\/waivers?[^/]*\.ts$/;
 
+/** About a waiver without being one: test files and fixtures, message bundles, copy resolvers. */
+const NOT_WAIVER_LOGIC = [
+  /\.(test|spec)\.[cm]?[jt]sx?$/,
+  /test-fixtures/,
+  /^src\/test\//,
+  /^src\/app\/api\/test\//,
+  /^src\/i18n\//,
+  /^src\/(app|components)\/.*-copy\.ts$/,
+];
+
+/**
+ * Every other `src/**` path naming a waiver: the shop's waiver actions, the roster and party
+ * queues, the paper and counter forms, the diver's signing route. Until 2026-11-01 only the
+ * db/lib modules above matched, so a change to any of these passed with no reviewer named. A
+ * UI-only change answers "not needed because <reason>".
+ */
+const WAIVER_SURFACES = {
+  test: (file) => file.includes("waiver") && !NOT_WAIVER_LOGIC.some((re) => re.test(file)),
+};
+
+/** The doctor-referral form: a diver's medical answers, sent to and back from a physician. */
+const DOCTOR_FORM = /^src\/app\/waivers\/\[token\]\/doctor\//;
+
 /**
  * The paths each reviewer owns, from AGENTS.md's hard rules and the reviewer agents' own
  * descriptions. Only `src/**`: a document about a manifest is not a manifest. Matched against the
- * lowercased path.
+ * lowercased path; a pattern is anything with a `test(path)` method.
  */
 export const REVIEWS = [
   {
@@ -66,7 +89,8 @@ export const REVIEWS = [
       /erase|erasure|anonymi[sz]/,
       /seat-diver/,
       /nitrox/,
-      WAIVER_MODULES,
+      WAIVER_SURFACES,
+      DOCTOR_FORM,
       /^src\/db\/bookings\.ts$/,
     ],
   },

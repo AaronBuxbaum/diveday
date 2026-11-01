@@ -42,6 +42,47 @@ describe("which reviewer a diff needs", () => {
     }
   });
 
+  // Findings 2026-10-29: each of these changed signed consent or its medical answers and matched
+  // no reviewer, because waivers matched only `src/(db|lib)/waiver*.ts`.
+  it.each([
+    "src/app/shop/[shopSlug]/divers/[personId]/waiver-actions.ts",
+    "src/app/shop/[shopSlug]/divers/[personId]/waivers/[recordId]/actions.ts",
+    "src/app/shop/[shopSlug]/trips/[id]/roster-waiver-actions.ts",
+    "src/app/shop/[shopSlug]/trips/[id]/party/[leadId]/waivers/actions.ts",
+    "src/app/shop/[shopSlug]/waivers/actions.ts",
+    "src/app/waivers/[token]/doctor/actions.ts",
+    "src/db/party-waiver-queue.ts",
+    "src/lib/paper-waiver-form.ts",
+    "src/lib/counter-waiver-token.ts",
+  ])("asks dive-domain-expert for the waiver path %s", (file) => {
+    expect(reviewsNeeded([file]).map((r) => r.agent)).toContain("dive-domain-expert");
+  });
+
+  it("asks dive-domain-expert for the doctor-referral form and a waiver page", () => {
+    for (const file of [
+      "src/app/waivers/[token]/doctor/referral-labels.ts",
+      "src/app/shop/[shopSlug]/waivers/page.tsx",
+      "src/db/waiver-guardian-copy.ts",
+    ]) {
+      expect(reviewsNeeded([file]).map((r) => r.agent)).toContain("dive-domain-expert");
+    }
+  });
+
+  it("does not ask dive-domain-expert for a waiver's tests, fixtures and copy", () => {
+    expect(
+      reviewsNeeded([
+        "src/db/waivers.test.ts",
+        "src/lib/paper-waiver-form.test.ts",
+        "src/db/waivers-test-fixtures.ts",
+        "src/test/waiver-history.ts",
+        "src/i18n/waiver-labels.ts",
+        "src/i18n/locales/en-US/staff/waiversStaff.json",
+        "src/components/paper-waiver-copy.ts",
+        "src/app/waivers/[token]/waiver-rail-copy.ts",
+      ]).map((r) => r.agent),
+    ).not.toContain("dive-domain-expert");
+  });
+
   it("asks security-reviewer for auth, token routes, personal-data schema and export/import", () => {
     for (const file of [
       "src/proxy.ts",
@@ -72,7 +113,6 @@ describe("which reviewer a diff needs", () => {
         "src/app/ready/[token]/_components/TipAmountPicker.tsx",
         "scripts/check-pr-body.mjs",
         "src/db/bookings-history.ts",
-        "src/app/shop/[shopSlug]/waivers/page.tsx",
       ]),
     ).toEqual([]);
   });
@@ -146,6 +186,12 @@ describe("the whole check", () => {
       }),
     ).toEqual([]);
     expect(bodyProblems({ body: filled("launched", ""), files: both })).toHaveLength(1);
+  });
+
+  it("takes a reasoned 'not needed' for a UI-only waiver change", () => {
+    const body =
+      "## Reviews launched\n\n- `dive-domain-expert`: not needed because only a waiver page's layout moved\n";
+    expect(bodyProblems({ body, files: ["src/app/shop/[shopSlug]/waivers/page.tsx"] })).toEqual([]);
   });
 
   it("does not read a reviewer named outside the Reviews section", () => {
