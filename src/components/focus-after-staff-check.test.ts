@@ -178,3 +178,29 @@ it("keeps the session-unlocked focus when the trap closes", () => {
   rerender(createElement(FocusTrapHarness, { covered: false, open: false }));
   expect(field).toHaveFocus();
 });
+
+it("still focuses the field when the closing lock dialog holds focus after the lock flag clears", () => {
+  const frames: FrameRequestCallback[] = [];
+  vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+    frames.push(callback);
+    return frames.length;
+  });
+  const content = document.createElement("div");
+  const field = document.createElement("input");
+  const root = document.createElement("div");
+  root.setAttribute("data-staff-session-root", "");
+  const dialog = document.createElement("div");
+  dialog.tabIndex = -1;
+  root.append(dialog);
+  content.append(field);
+  document.body.append(content, root);
+
+  const cancel = focusAfterStaffCheck(field);
+  dialog.focus();
+  document.dispatchEvent(new Event("staff-session-unlocked"));
+  // StaffActivity clears data-staff-session-lock before React unmounts the dialog.
+  frames[0]?.(0);
+
+  expect(document.activeElement).toBe(field);
+  cancel();
+});
