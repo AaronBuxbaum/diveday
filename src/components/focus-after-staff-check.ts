@@ -12,7 +12,7 @@ export function focusAfterStaffCheck(element: HTMLElement | null): () => void {
       if (
         element.isConnected &&
         !element.closest("[inert]") &&
-        (active === document.body || active?.closest("[data-staff-session-lock]"))
+        (active === document.body || active?.closest("[data-staff-session-root], [data-staff-session-lock]"))
       )
         element.focus({ preventScroll: true });
     });
