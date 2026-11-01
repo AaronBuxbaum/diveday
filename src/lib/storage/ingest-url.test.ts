@@ -1,4 +1,6 @@
+import { type AddressInfo, createServer } from "node:net";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { ResolvedAddress } from "@/lib/net/public-address";
 import { ingestImageUrl } from "./ingest-url";
 
 const PUBLIC_ADDR = [{ address: "93.184.216.34", family: 4 }];
@@ -49,7 +51,9 @@ describe("ingestImageUrl — passthrough", () => {
       "https://attacker.s3.us-east-1.amazonaws.com/dive-sites/photo.jpg",
       "https://d1234.cloudfront.net/dive-sites/photo.jpg",
     ]) {
-      const result = await ingestImageUrl(url, storeStub, { env, lookup: lookupPublic });
+      const fetchImpl = vi.fn(async () => okResponse(TINY_JPEG));
+      const result = await ingestImageUrl(url, storeStub, { env, fetchImpl, lookup: lookupPublic });
+      expect(fetchImpl).toHaveBeenCalledTimes(1);
       expect(result.status).not.toBe("unchanged");
     }
   });
@@ -86,6 +90,47 @@ describe("ingestImageUrl — SSRF defenses", () => {
       const lookup = vi.fn(async () => [{ address, family: 6 }]);
       const result = await ingestImageUrl("https://evil.example/x.jpg", storeStub, { lookup });
       expect(result).toEqual({ status: "blocked" });
+    }
+  });
+
+  it.each([
+    ["dotted", "::ffff:127.0.0.1"],
+    ["hex", "::ffff:7f00:1"],
+    ["NAT64", "64:ff9b::a9fe:a9fe"],
+  ])("blocks an IPv4-mapped loopback or metadata address written %s", async (_label, address) => {
+    const lookup = vi.fn(async () => [{ address, family: 6 }]);
+    const result = await ingestImageUrl("https://evil.example/x.jpg", storeStub, { lookup });
+    expect(result).toEqual({ status: "blocked" });
+  });
+
+  /**
+   * Issue #3267. The up-front check resolves the name once; a rebinding DNS
+   * server then answers differently when the HTTP client resolves it again.
+   * The default transport resolves through the same lookup *as the socket's
+   * resolver*, so the second answer is checked too. A real listener on
+   * 127.0.0.1 counts connections: refused means none was opened.
+   */
+  it("blocks DNS rebinding: public at the check, loopback at the connection", async () => {
+    let connections = 0;
+    const server = createServer((socket) => {
+      connections += 1;
+      socket.destroy();
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const { port } = server.address() as AddressInfo;
+    try {
+      const lookup = vi
+        .fn<(hostname: string) => Promise<ResolvedAddress[]>>()
+        .mockResolvedValueOnce([{ address: "93.184.216.34", family: 4 }])
+        .mockResolvedValue([{ address: "127.0.0.1", family: 4 }]);
+      const result = await ingestImageUrl(`http://rebind.example:${port}/x.jpg`, storeStub, {
+        lookup,
+      });
+      expect(result).toEqual({ status: "blocked" });
+      expect(lookup).toHaveBeenCalledTimes(2);
+      expect(connections).toBe(0);
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
     }
   });
 
@@ -150,6 +195,31 @@ describe("ingestImageUrl — size bounds", () => {
       fetchImpl,
     });
     expect(result).toEqual({ status: "failed" });
+  });
+});
+
+describe("ingestImageUrl — slow bodies", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("fails a body that trickles past the fetch budget instead of holding the save open", async () => {
+    vi.useFakeTimers();
+    const fetchImpl = vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {
+      const body = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new Uint8Array([0xff, 0xd8]));
+          init?.signal?.addEventListener("abort", () => controller.error(new Error("aborted")));
+        },
+      });
+      return new Response(body, { status: 200, headers: { "content-type": "image/jpeg" } });
+    });
+    const pending = ingestImageUrl("https://cdn.example/slow.jpg", storeStub, {
+      lookup: lookupPublic,
+      fetchImpl,
+    });
+    await vi.advanceTimersByTimeAsync(10_000);
+    await expect(pending).resolves.toEqual({ status: "failed" });
   });
 });
 

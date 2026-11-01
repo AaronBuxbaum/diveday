@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
@@ -328,6 +328,8 @@ describe("the shop's panel", () => {
       .values({ name: "Other Shop", slug: "other-shop-pulse", timezone: "UTC" })
       .returning({ id: shops.id });
     if (!otherShop) throw new Error("shop insert failed");
+    // The composite key now refuses this row, so lift it for this transaction to probe the read.
+    await db.execute(sql`set local session_replication_role = replica`);
     await db.update(trips).set({ shopId: otherShop.id }).where(eq(trips.id, open.tripId));
 
     expect(await listOpenRecapPulses(db, shop.id)).toHaveLength(0);

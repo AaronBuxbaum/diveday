@@ -1,12 +1,13 @@
 import { randomBytes } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { afterEach, expect, it, vi } from "vitest";
-import { nowDate } from "@/lib/clock";
+import { DAY_MS, nowDate } from "@/lib/clock";
 import type { NotificationProvider } from "@/lib/notifications";
 import { describePostgres, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
 import { anonymizeDiver } from "./anonymize";
 import { lockBoardingCertificationEvidence } from "./boarding-certification-snapshot";
 import { drainNotificationRetries } from "./notifications";
+import { pruneExpiredRecords } from "./retention";
 import {
   notificationSendQueue,
   people,
@@ -266,7 +267,14 @@ describePostgres("person-scoped waiver send and erasure fence", () => {
     }
   });
 
-  it("parks an existing unbound person-waiver retry without dispatching it", async () => {
+  /**
+   * Issue #3312. No supported writer queues a person waiver without its person
+   * binding, so the state is made by hand. The drain must neither send it nor
+   * guess who it was for, and since nothing will ever re-offer it, it must not
+   * keep the sealed message or its handles either: the row is finished, and
+   * the 90-day prune takes it.
+   */
+  it("finishes an unbound person-waiver retry unsent, scrubbed, and prunable", async () => {
     const pg = await postgresTestDb();
     const suffix = randomBytes(4).toString("hex");
     const { shop, person } = await fixture(pg, suffix);
@@ -292,8 +300,31 @@ describePostgres("person-scoped waiver send and erasure fence", () => {
 
     expect(summary.failed).toBe(1);
     expect(retry).not.toHaveBeenCalled();
-    const [parked] = await pg.db.select().from(notificationSendQueue);
-    expect(parked).toMatchObject({ status: "failed", errorCode: "retry_subject_unbound" });
-    expect(parked?.payloadSealed).toBeTruthy();
+    const [finished] = await pg.db.select().from(notificationSendQueue);
+    expect(finished).toMatchObject({
+      status: "failed",
+      errorCode: "retry_subject_unbound",
+      payloadSealed: null,
+      recipientEmail: null,
+      subjectEmail: null,
+      subjectPhone: null,
+      bookingId: null,
+      recipientPersonId: null,
+      recipientTripId: null,
+      lockedUntil: null,
+    });
+
+    // A later pass leaves it alone: nothing re-offers this code.
+    await drainNotificationRetries(pg.db, {
+      now: new Date(nowDate().getTime() + 3 * 24 * 60 * 60 * 1000),
+      provider: provider(retry),
+    });
+    expect(retry).not.toHaveBeenCalled();
+
+    const updatedAt = finished?.updatedAt ?? nowDate();
+    await pruneExpiredRecords(pg.db, { now: new Date(updatedAt.getTime() + 89 * DAY_MS) });
+    expect(await pg.db.select().from(notificationSendQueue)).toHaveLength(1);
+    await pruneExpiredRecords(pg.db, { now: new Date(updatedAt.getTime() + 91 * DAY_MS) });
+    expect(await pg.db.select().from(notificationSendQueue)).toHaveLength(0);
   });
 });

@@ -26,7 +26,8 @@ Operational posture: [backup-and-restore runbook](../../../docs/engineering/back
   photos included) with the shop-wide `trips.ics` calendar document riding along. Assembled once
   in `bundle.ts` and shared by both runners, so the two copies of a shop's data are the same
   artifact and the runbook's restore procedure is correct for whichever one is at hand.
-- The S3-compatible upload seam — AWS SigV4 request signing over `fetch`, PUT only, no SDK.
+- The S3-compatible upload seam — AWS SigV4 request signing, PUT only, no SDK, sent over
+  `publicOnlyFetch` (`src/lib/net/public-fetch.ts`).
   Path-style addressing for portability (R2, B2, MinIO); virtual-hosted for AWS S3 itself.
 - **Both destinations a bundle may go to**, and nothing else: the shop's own bucket
   (`run-backup.ts`) and DiveDay's `DatabaseBackupBucket` (`platform-backup.ts`, the runbook's §2
@@ -69,7 +70,9 @@ Never `@/app/**`.
   credential is the same gesture as connecting one.
 - **Destinations are HTTPS, non-private hosts only.** The server is the party making this
   request, so a destination pointing at a loopback/link-local/private address is refused with a
-  code before a row is ever written.
+  code before a row is ever written. The saved hostname is only a name: every upload checks the
+  address the socket actually connects to, so a name that resolves (or rebinds) to a private
+  address gets `network_unreachable` and no connection (issue #3267).
 - **Idempotent per shop per ISO week.** A re-invoked cron skips shops with a succeeded scheduled
   delivery for the period. Every shop-owned delivery gets a unique object key (scheduled attempt
   number or manual delivery id), so an expired or overlapping upload cannot replace a newer

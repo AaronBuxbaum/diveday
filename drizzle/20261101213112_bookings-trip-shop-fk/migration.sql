@@ -1,0 +1,3 @@
+-- diveday:allow-destructive drop-constraint bookings.bookings_trip_id_trips_id_fkey: replaced in this migration by bookings_trip_shop_fk over (shop_id, trip_id), which still refuses a booking whose trip does not exist and keeps the same no-action delete behaviour; every writer in the previous release books a trip loaded for the booking's own shop, so its writes pass the new key (issue #3285)
+ALTER TABLE "bookings" DROP CONSTRAINT "bookings_trip_id_trips_id_fkey";--> statement-breakpoint
+ALTER TABLE "bookings" ADD CONSTRAINT "bookings_trip_shop_fk" FOREIGN KEY ("shop_id","trip_id") REFERENCES "trips"("shop_id","id");

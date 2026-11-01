@@ -592,3 +592,131 @@ describe("fly-safe correction queue identity", () => {
     expect(notificationIdempotencyKey(first)).toBe(notificationIdempotencyKey(first));
   });
 });
+
+/**
+ * **No queue key carries a way to reach a person** (issue #3314).
+ *
+ * `idempotency_key` is the one column of a `notification_send_queue` row that
+ * no finishing write clears: a sent or failed row drops its payload and every
+ * erasure handle, and keeps its key until retention prunes it. A key built
+ * from an address therefore outlives the erasure that was meant to remove it —
+ * `trip_conditions_hold` was keyed by `to` until it was keyed by its seat.
+ *
+ * Every queueable branch of the union gets a sample built from its own schema,
+ * each address and phone field a distinct value, so a kind added later is
+ * covered without anyone writing it a fixture.
+ */
+describe("no queueable kind puts an address or a phone number in its key", () => {
+  type Def = Record<string, unknown> & { type?: string };
+  const defOf = (type: unknown): Def => (type as { def: Def }).def;
+
+  /** A value of the schema's type; addresses and phones are told apart by the counter. */
+  function sampleOf(type: unknown, field: string, next: () => number): unknown {
+    const def = defOf(type);
+    switch (def.type) {
+      case "optional":
+      case "nullable":
+      case "default":
+      case "prefault":
+      case "readonly":
+      case "catch":
+      case "nonoptional":
+        return sampleOf(def.innerType, field, next);
+      case "pipe":
+        return sampleOf(def.in, field, next);
+      case "object":
+        return Object.fromEntries(
+          Object.entries(def.shape as Record<string, unknown>).map(([name, inner]) => [
+            name,
+            sampleOf(inner, name, next),
+          ]),
+        );
+      case "array":
+        return [sampleOf(def.element, field, next)];
+      case "union":
+        return sampleOf((def.options as unknown[])[0], field, next);
+      case "intersection":
+        return {
+          ...(sampleOf(def.left, field, next) as object),
+          ...(sampleOf(def.right, field, next) as object),
+        };
+      case "literal":
+        return (def.values as unknown[])[0];
+      case "enum":
+        return Object.values(def.entries as Record<string, unknown>)[0];
+      case "boolean":
+        return true;
+      case "number":
+        return next();
+      case "date":
+        return new Date(`2026-11-${String((next() % 28) + 1).padStart(2, "0")}T12:00:00.000Z`);
+      case "record":
+        return {};
+      case "string": {
+        const n = next();
+        if (def.format === "email") return `person${n}@example.invalid`;
+        if (def.format === "uuid") return `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
+        if (def.format === "url") return `https://diveday.invalid/p/${n}`;
+        if (/phone/i.test(field)) return `+1 305 555 ${String(1000 + n)}`;
+        return `${field}-${n}`;
+      }
+      default:
+        return `${field}-${next()}`;
+    }
+  }
+
+  /** Every branch, nested unions flattened, with the address and phone values its sample holds. */
+  function queueableSamples() {
+    const union = (
+      notificationSchema as unknown as { def: { left: { def: { options: ZodType[] } } } }
+    ).def.left.def.options;
+    let counter = 0;
+    const next = () => {
+      counter += 1;
+      return counter;
+    };
+    return union
+      .flatMap(
+        (option) => (option as unknown as { def: { options?: ZodType[] } }).def.options ?? [option],
+      )
+      .map((option) => {
+        const shape = (option as ZodObject).def.shape as Record<string, ZodType>;
+        const sample = sampleOf(option, "", next) as Record<string, unknown>;
+        const reach = Object.entries(shape)
+          .filter(
+            ([name, type]) =>
+              unwrap(type).format === "email" ||
+              (/phone/i.test(name) && unwrap(type).type === "string"),
+          )
+          .map(([name]) => sample[name])
+          .filter((value): value is string => typeof value === "string");
+        const name = sample.event
+          ? `${sample.kind}_${sample.event}`
+          : sample.purpose
+            ? `${sample.kind}_${sample.purpose}`
+            : String(sample.kind);
+        return { name, notification: sample as unknown as Notification, reach };
+      })
+      .filter(({ notification }) => notificationIsQueueable(notification));
+  }
+
+  const samples = queueableSamples();
+
+  it("finds the queueable kinds, trip_conditions_hold among them", () => {
+    // A floor, so the sweep below can never pass over an empty list.
+    expect(samples.length).toBeGreaterThan(20);
+    expect(samples.map(({ name }) => name)).toContain("trip_conditions_hold");
+    // And the samples really do carry addresses for the key to leak.
+    const hold = samples.find(({ name }) => name === "trip_conditions_hold");
+    expect(hold?.reach.some((value) => value.includes("@"))).toBe(true);
+  });
+
+  it.each(samples.map((sample) => [sample.name, sample] as const))(
+    "%s keys its queue row without an address or a phone number",
+    (_name, { notification, reach }) => {
+      const key = notificationIdempotencyKey(notification);
+      expect(key).not.toContain("@");
+      for (const value of reach) expect(key).not.toContain(value);
+    },
+  );
+});

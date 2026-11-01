@@ -92,8 +92,9 @@ function tripHandlesOf(notification: Notification): TripHandles {
     const value = fields[key];
     if (typeof value === "string" && isUuid(value)) handles[key] = value;
   }
-  // Fly-safe corrections name their booking as `seatId`; resolve it through
-  // the same tenant-scoped booking path as every other booking-bound notice.
+  // A kind not tracked per booking names its booking `seatId` (a fly-safe
+  // correction, a departure note, a conditions hold); resolve it through the
+  // same tenant-scoped booking path as every other booking-bound notice.
   const seatId = fields.seatId;
   if (typeof seatId === "string" && isUuid(seatId)) handles.bookingId = seatId;
   return handles;

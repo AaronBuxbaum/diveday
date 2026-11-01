@@ -104,6 +104,7 @@ const SAMPLES: Notification[] = [
   },
   {
     kind: "trip_conditions_hold",
+    seatId: dummyUuid,
     tripId: dummyUuid,
     shopId: dummyUuid,
     to: "diver@example.com",

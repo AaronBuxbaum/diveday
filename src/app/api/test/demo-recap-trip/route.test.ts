@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { bookings, shops, trips } from "@/db/schema";
@@ -58,6 +58,8 @@ describe("GET /api/test/demo-recap-trip", () => {
 
   it("does not return a booking assigned to another shop", async () => {
     const rival = await createRivalShop(seeded.db);
+    // The composite key now refuses this row, so lift it for this transaction to probe the read.
+    await seeded.db.execute(sql`set local session_replication_role = replica`);
     await seeded.db
       .update(bookings)
       .set({ shopId: rival.id })
@@ -76,6 +78,8 @@ describe("GET /api/test/demo-recap-trip", () => {
       .limit(1);
     if (!booking) throw new Error("demo recap booking is missing");
     const rival = await createRivalShop(seeded.db);
+    // The composite key now refuses this row, so lift it for this transaction to probe the read.
+    await seeded.db.execute(sql`set local session_replication_role = replica`);
     await seeded.db.update(trips).set({ shopId: rival.id }).where(eq(trips.id, booking.tripId));
 
     const response = await GET(request(authorized));

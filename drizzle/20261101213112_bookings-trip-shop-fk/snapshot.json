@@ -1,0 +1,83 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "ab690e23-c643-4d5e-a2a9-3cb17a167270",
+  "prevIds": [
+    "ee0bf573-825a-4d36-af7f-671045d43b0c"
+  ],
+  "footprints": [
+    {
+      "statementType": "drop_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "bookings"
+      ],
+      "writes": [
+        "s|fk|public.bookings.bookings_trip_id_trips_id_fkey",
+        "n|fk|public.bookings.bookings_trip_id_trips_id_fkey",
+        "e|fk|public.bookings.bookings_trip_id_trips_id_fkey",
+        "n|con|public.bookings.bookings_trip_id_trips_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.bookings",
+        "n|sch|public",
+        "e|col|public.bookings.trip_id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "bookings"
+      ],
+      "writes": [
+        "s|fk|public.bookings.bookings_trip_shop_fk",
+        "n|fk|public.bookings.bookings_trip_shop_fk",
+        "e|fk|public.bookings.bookings_trip_shop_fk",
+        "n|con|public.bookings.bookings_trip_shop_fk"
+      ],
+      "reads": [
+        "n|tbl|public.bookings",
+        "n|sch|public",
+        "n|tbl|public.trips",
+        "n|sch|public",
+        "n|col|public.bookings.shop_id",
+        "n|col|public.bookings.trip_id",
+        "n|col|public.trips.shop_id",
+        "n|col|public.trips.id",
+        "e|uniqueness|public.trips.id.shop_id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "bookings",
+        "name": "bookings_trip_shop_fk",
+        "nameExplicit": true,
+        "columns": [
+          "shop_id",
+          "trip_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "trips",
+        "columnsTo": [
+          "shop_id",
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"bookings\",\"bookings_trip_id_trips_id_fkey\"]"
+    }
+  ]
+}

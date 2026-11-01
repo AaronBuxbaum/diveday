@@ -71,8 +71,8 @@ const PRIVATE_HOST_PATTERNS = [
  * so an owner-supplied endpoint is server-side request forgery surface:
  * HTTPS only, no embedded credentials or query, and never a loopback,
  * link-local, or private-range host. Hostname-pattern checks, not DNS
- * resolution — a name that resolves privately still yields nothing more than
- * a signed PUT of the shop's own data and a coarse error code back.
+ * resolution: what a name resolves to is checked on every upload, at
+ * connection time, by `putS3Object`'s public-only transport (issue #3267).
  */
 export function backupEndpointRefusal(endpoint: string): BackupEndpointRefusal | null {
   let url: URL;

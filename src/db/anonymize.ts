@@ -2379,6 +2379,13 @@ async function scrubPiiBlob(
             notificationSendQueue.idempotencyKey,
             bookingIds.map((id) => `fly-safe-correction/${id}`),
           ),
+          // A finished conditions-hold row has dropped its booking handle and
+          // keeps only its key, `trip-conditions-hold/<seat>/<published>`
+          // (issue #3314): matched by the seat in it.
+          and(
+            like(notificationSendQueue.idempotencyKey, "trip-conditions-hold/%"),
+            inArray(sql`split_part(${notificationSendQueue.idempotencyKey}, '/', 2)`, bookingIds),
+          ),
         ),
       ),
     );
