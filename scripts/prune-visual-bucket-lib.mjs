@@ -153,8 +153,8 @@ export function fetchGitBranchCommits({
  *    (issue #1662).
  * 4. Walk those tips newest-to-oldest, testing whether `<sha>/out.json` exists
  *    in S3, and keep every one that does until *both* floors are satisfied:
- *    `KEEP_MAIN_BASELINES` of them, and none left inside
- *    `KEEP_MAIN_BASELINE_AGE_MS`. A push to main then resolves its parent, and a
+ *    `keepBaselines` of them (default `KEEP_MAIN_BASELINES`), and none left inside
+ *    `keepAgeMs` (default `KEEP_MAIN_BASELINE_AGE_MS`). A push to main then resolves its parent, and a
  *    branch resolves its fork point or an ancestor of it that is still there.
  * 5. If no tip has one, say so (`verified: false`) rather than nominating a
  *    prefix that is not in the bucket — see `pruneVisualBucket`.
@@ -169,7 +169,10 @@ export async function resolveActiveBaseline({
   s3Client,
   git,
   now = Date.now(),
+  keepBaselines = KEEP_MAIN_BASELINES,
+  keepAgeMs = KEEP_MAIN_BASELINE_AGE_MS,
 } = {}) {
+  const policy = { keepBaselines, keepAgeMs };
   if (explicitCommit) {
     const trimmed = explicitCommit.trim();
     if (!COMMIT_SHA.test(trimmed)) {
@@ -202,7 +205,7 @@ export async function resolveActiveBaseline({
     collect(rows);
     // The end of the branch's history, or a chain that already reaches past
     // both floors: either way there is nothing more worth asking for.
-    if (!shouldFetchAnotherCandidatePage(page, rows.length, candidates, now)) break;
+    if (!shouldFetchAnotherCandidatePage(page, rows.length, candidates, now, policy)) break;
   }
 
   if (candidates.length === 0 && git) {
@@ -225,7 +228,7 @@ export async function resolveActiveBaseline({
 
   const { chain, fallback } = mainBaselineProbeOrder(candidates);
   for (const commit of chain) {
-    if (shouldStopMainBaselineProbes(keepShas.length, commit, now)) break;
+    if (shouldStopMainBaselineProbes(keepShas.length, commit, now, policy)) break;
     await probe(commit);
   }
 
@@ -235,7 +238,7 @@ export async function resolveActiveBaseline({
   // in the response can never make the pruner keep *less* than it used to.
   if (fallback.length > 0) {
     for (const commit of fallback) {
-      if (keepShas.length >= KEEP_MAIN_BASELINES) break;
+      if (keepShas.length >= keepBaselines) break;
       await probe(commit);
     }
   }
