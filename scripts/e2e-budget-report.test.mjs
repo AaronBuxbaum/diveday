@@ -87,6 +87,30 @@ describe("e2e budget report", () => {
     expect(() => reportTests(null)).toThrow();
   });
 
+  it("omits a falsey nested suite title as the previous traversal did", () => {
+    const report = {
+      suites: [
+        {
+          title: "waivers.spec.ts",
+          file: "waivers.spec.ts",
+          suites: [
+            {
+              title: "",
+              specs: [
+                {
+                  title: "slow",
+                  tests: [{ timeout: 15_000, results: [result(14_000)] }],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    expect(reportTests(report).map((test) => test.title)).toEqual(["slow"]);
+  });
+
   it("measures each test against its own effective budget, slowest attempt first", () => {
     const close = closeToBudget(report);
     // 9s of a 45s slow() budget is 20%, so it is not listed beside 14s of 15s.
