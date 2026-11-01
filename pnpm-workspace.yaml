@@ -3,7 +3,12 @@ allowBuilds:
   '@swc/core': true
   esbuild: true
 
-minimumReleaseAge: 0
+# One day, in minutes (pnpm 12): a version is not installable until it has been published this long.
+minimumReleaseAge: 1440
+
+# Urgent security fix: add the package here as `name@version` (exact, so only that release skips
+# the delay), say why in a comment, and delete the entry once the version is a day old.
+minimumReleaseAgeExclude: []
 
 patchedDependencies:
   '@vercel/analytics@2.0.1': patches/@vercel__analytics@2.0.1.patch
