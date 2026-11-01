@@ -9,7 +9,8 @@ name: Stack
 # but git and `create_pull_request`, and an agent session still does it. What a
 # session can no longer do is the one REST call that turns the chain into a
 # registered stack, which is what buys the cascading rebase and the bottom-up
-# atomic merge.
+# atomic merge. A push changes neither a base ref nor a head ref, so `synchronize` is not a
+# trigger: the chain is walked from those refs alone (scripts/stack-register.mjs).
 #
 # Measured in a cloud session on 2026-09-07: `gh` is not installed, and
 # api.github.com refuses every repo-scoped request with "GitHub access is not
@@ -35,7 +36,7 @@ name: Stack
 
 on:
   pull_request:
-    types: [opened, reopened, edited, synchronize, ready_for_review]
+    types: [opened, reopened, edited, ready_for_review]
   workflow_dispatch:
     inputs:
       pull_request:
