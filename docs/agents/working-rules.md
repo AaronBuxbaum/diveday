@@ -72,6 +72,10 @@ runs. Pass args directly. The shell guard refuses the bare form.
 - **Create a worktree from the shell** (`git worktree add -B <branch> <path> <base>`), never with
   the `EnterWorktree` tool: its permission prompt parks the thread until a human answers, and on
   2026-10-13 that held a 328k-token thread all night.
+- **Retire the checkouts you make.** Each worktree or clone carries 2-5 GB of `node_modules` and
+  `.next`; 872 of them filled 142 GB in three days (2026-11-01). When your work is merged or
+  handed over, `git worktree remove` yours; `pnpm agent:gc` lists, and with `--apply` removes,
+  every checkout that is clean, fully pushed, idle 24 hours and not any process's working directory.
 - **Never switch a live thread's model; start a fresh thread with a state note instead.**
   Switching drops the prompt cache, so the next call re-reads the whole context at full price
   (H-117).

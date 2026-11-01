@@ -113,6 +113,7 @@
     "check:context-budget": "node scripts/check-context-budget.mjs",
     "agent:health": "node scripts/agent-health.mjs",
     "agent:doctor": "node scripts/agent-doctor.mjs",
+    "agent:gc": "node scripts/checkout-gc.mjs",
     "simulate:day": "node scripts/simulate-day.mjs",
     "persona:bots": "node scripts/persona-bots.mjs",
     "content:photos": "tsx scripts/content-photos.ts",
