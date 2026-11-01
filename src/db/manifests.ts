@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, exists, inArray, isNotNull, ne, or, sql } from "drizzle-orm";
 import { ageOnDate, birthdayCallout, isMinorOnDate } from "@/lib/age";
-import { isStaff, STAFF_ROLES } from "@/lib/authz";
+import { STAFF_ROLES } from "@/lib/authz";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { effectiveCrewRoles, standingRatingsBesideJob } from "@/lib/crew-roles";
@@ -40,7 +40,7 @@ import type { TrainingMarkState } from "@/lib/training-mark";
 import { medicalWaiverMark } from "@/lib/waivers";
 import { welcomeCueFor } from "@/lib/welcome-cue";
 import { standingArrivalStatus } from "./arrival-provenance";
-import { loadActiveStaffRoles } from "./authz";
+import { requireActiveStaffId } from "./authz";
 import {
   boardingCertificationSnapshot,
   lockBoardingCertificationEvidence,
@@ -167,18 +167,6 @@ function isOnTripCrew(db: DbExecutor, shopId: string, tripId: string) {
  * batch loop, which is the right trade against a head count signed by a name
  * that is not there.
  */
-async function activeStaffRecorderId(
-  tx: DbExecutor,
-  shopId: string,
-  personId: string,
-): Promise<string | null> {
-  const roles = await loadActiveStaffRoles(tx, shopId, personId);
-  // `loadActiveStaffRoles` has already proven the person is this shop's, alive,
-  // and holds an active account; `isStaff` is the same `STAFF_ROLES` membership
-  // the old join expressed as an `inArray`.
-  return roles && isStaff(roles) ? personId : null;
-}
-
 async function listTripCrew(db: DbExecutor, shopId: string, tripId: string) {
   const rows = await db
     .select({ person: people, tripRole: tripAssignments.tripRole, role: personRoles.role })
@@ -1990,7 +1978,7 @@ async function writeRollCall(
 ): Promise<RecordRollCallOutcome> {
   const checkpoint = input.checkpoint ?? "departure";
   const source = input.source ?? "live";
-  const staffId = await activeStaffRecorderId(tx, input.shopId, input.recordedByPersonId);
+  const staffId = await requireActiveStaffId(tx, input.shopId, input.recordedByPersonId);
   if (!staffId) return { ok: false, reason: "staff_not_found" };
   const captureCards =
     source === "live" && checkpoint === "departure" && input.status === "boarded";
@@ -2348,7 +2336,7 @@ export async function recordCrewRollCall(
         const checkpoint = input.checkpoint ?? "departure";
         const source = input.source ?? "live";
 
-        const staffId = await activeStaffRecorderId(tx, input.shopId, input.recordedByPersonId);
+        const staffId = await requireActiveStaffId(tx, input.shopId, input.recordedByPersonId);
         if (!staffId) return { ok: false, reason: "staff_not_found" };
         const captureCredentials =
           source === "live" && checkpoint === "departure" && input.status === "boarded";

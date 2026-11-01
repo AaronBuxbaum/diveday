@@ -26,6 +26,7 @@ import {
   emergencyMedicalAlertStanding,
   loadActiveStaffRoles,
   loadActiveStaffRolesByPerson,
+  requireActiveStaffId,
 } from "./authz";
 import type { AppDb } from "./client";
 import { people, personRoles, shops, tripAssignments, trips, userAccounts } from "./schema";
@@ -83,6 +84,24 @@ describe("loadActiveStaffRoles", () => {
     expect(await loadActiveStaffRoles(db, shop.id, deleted)).toBeNull();
     expect(
       await loadActiveStaffRoles(db, "00000000-0000-0000-0000-000000000000", owner),
+    ).toBeNull();
+  });
+});
+
+describe("requireActiveStaffId", () => {
+  it("returns an id only for live staff in the requested shop", async () => {
+    const { db, shop } = ctx;
+    const owner = await makeStaff(db, shop.id, ["owner"]);
+    const diver = await makeStaff(db, shop.id, ["diver"]);
+    const disabled = await makeStaff(db, shop.id, ["manager"], { status: "disabled" });
+    const deleted = await makeStaff(db, shop.id, ["captain"], { deleted: true });
+
+    expect(await requireActiveStaffId(db, shop.id, owner)).toBe(owner);
+    expect(await requireActiveStaffId(db, shop.id, diver)).toBeNull();
+    expect(await requireActiveStaffId(db, shop.id, disabled)).toBeNull();
+    expect(await requireActiveStaffId(db, shop.id, deleted)).toBeNull();
+    expect(
+      await requireActiveStaffId(db, "00000000-0000-0000-0000-000000000000", owner),
     ).toBeNull();
   });
 });

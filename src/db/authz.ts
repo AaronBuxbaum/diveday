@@ -35,6 +35,7 @@ import {
   canReplyToReviews,
   canRetireMedicalRefusal,
   canViewShopActivity,
+  isStaff,
   type Role,
 } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
@@ -135,6 +136,16 @@ async function readActiveStaffRolesByPerson(
  * straight through and every call reads live, as before.
  */
 export const loadActiveStaffRoles = cache(readActiveStaffRoles);
+
+/** The live staff person's id for a shop-scoped recorder or attestor, or null. */
+export async function requireActiveStaffId(
+  db: DbExecutor,
+  shopId: string,
+  personId: string,
+): Promise<string | null> {
+  const roles = await loadActiveStaffRoles(db, shopId, personId);
+  return roles && isStaff(roles) ? personId : null;
+}
 
 /** {@link loadActiveStaffRoles}'s person-scoped sibling, memoized the same way. */
 export const loadActiveStaffRolesByPerson = cache(readActiveStaffRolesByPerson);

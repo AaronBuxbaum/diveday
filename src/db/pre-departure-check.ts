@@ -1,5 +1,4 @@
 import { and, asc, eq, exists, gt, isNull, lte, or, sql } from "drizzle-orm";
-import { isStaff } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import { verifyOfflineErasureEpoch } from "@/lib/offline-erasure-epoch";
@@ -8,7 +7,7 @@ import {
   PRE_DEPARTURE_CHECK_RETRACTION_SUPERSEDED,
   type PreDepartureCheckStatus,
 } from "@/lib/pre-departure-check";
-import { canPersonManageSafetyChecklist, loadActiveStaffRoles } from "./authz";
+import { canPersonManageSafetyChecklist, requireActiveStaffId } from "./authz";
 import { lockBoardingCertificationEvidence } from "./boarding-certification-snapshot";
 import type { AppDb, DbExecutor } from "./client";
 import { boundLockWaits } from "./lock-bounds";
@@ -23,15 +22,6 @@ import { violatesUniqueIndex } from "./query-helpers";
 import { people, preDepartureCheckEvents, preDepartureChecklistItems, trips } from "./schema";
 import { getShopOfflineErasureEpoch } from "./shops";
 import { liveTrip } from "./trips-live";
-
-async function activeStaffRecorderId(
-  tx: DbExecutor,
-  shopId: string,
-  personId: string,
-): Promise<string | null> {
-  const roles = await loadActiveStaffRoles(tx, shopId, personId);
-  return roles && isStaff(roles) ? personId : null;
-}
 
 export type ChecklistItem = {
   id: string;
@@ -358,7 +348,7 @@ export async function recordPreDepartureCheck(
       db.transaction(async (tx): Promise<RecordPreDepartureCheckOutcome> => {
         const source = input.source ?? "live";
         const occurredAt = input.occurredAt ?? nowDate();
-        const staffId = await activeStaffRecorderId(tx, input.shopId, input.recordedByPersonId);
+        const staffId = await requireActiveStaffId(tx, input.shopId, input.recordedByPersonId);
         if (!staffId) return { ok: false, reason: "staff_not_found" };
 
         const mayWriteNote = Boolean(input.note?.trim());
