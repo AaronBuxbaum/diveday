@@ -34,9 +34,7 @@ describe("warn-untested-logic", () => {
   });
 
   it("treats a rename with edits as a rename", () => {
-    expect(
-      untestedLogicWarning(parseNameStatus("R087\tsrc/lib/a.ts\tsrc/lib/b.ts")),
-    ).toBeNull();
+    expect(untestedLogicWarning(parseNameStatus("R087\tsrc/lib/a.ts\tsrc/lib/b.ts"))).toBeNull();
   });
 
   it("leaves other files alone", () => {

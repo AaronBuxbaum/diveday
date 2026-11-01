@@ -142,12 +142,15 @@ describe("ADR code quotes", () => {
 });
 
 describe("runtime dependencies named in an ADR", () => {
-  const adrs = ["We chose better-auth for sessions.", "Maps use `maplibre-gl` and `@sentry/nextjs`."];
+  const adrs = [
+    "We chose better-auth for sessions.",
+    "Maps use `maplibre-gl` and `@sentry/nextjs`.",
+  ];
 
   it("passes a dependency an ADR names", () => {
-    expect(undocumentedDependencies(["better-auth", "maplibre-gl", "@sentry/nextjs"], adrs)).toEqual(
-      [],
-    );
+    expect(
+      undocumentedDependencies(["better-auth", "maplibre-gl", "@sentry/nextjs"], adrs),
+    ).toEqual([]);
   });
 
   it("fails a new dependency that no ADR names", () => {
