@@ -23,7 +23,13 @@ vi.mock("@/app/actions/held-sends", () => ({
 }));
 
 const HELD = "b0707cc2-aa54-4c28-b352-d29444f9478a";
-const props = { shopId: "shop-a", heldId: HELD, tell: "2", t: staffTranslator("en-US") };
+const props = {
+  shopId: "shop-a",
+  heldId: HELD,
+  tell: "2",
+  t: staffTranslator("en-US"),
+  locale: "en-US",
+};
 const row = {
   id: HELD,
   runAt: new Date(nowMs() + 8_000),
