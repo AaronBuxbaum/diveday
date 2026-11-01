@@ -151,22 +151,46 @@ export async function keepReadyPageOnDevice(): Promise<boolean> {
  */
 export async function forgetThisReadyPage(): Promise<boolean> {
   try {
+    const serviceWorker = typeof navigator === "undefined" ? undefined : navigator.serviceWorker;
+    // A page the worker does not control yet (it was loaded before the claim)
+    // still reaches the diver's registration, and the worker answers any
+    // client by its own URL.
     const worker =
-      typeof navigator === "undefined" ? undefined : navigator.serviceWorker?.controller;
-    if (!worker) return false;
-    return await new Promise<boolean>((resolve) => {
-      const channel = new MessageChannel();
-      const timer = setTimeout(() => {
-        channel.port1.close();
-        resolve(false);
-      }, ACTIVATE_TIMEOUT_MS);
-      channel.port1.onmessage = (event) => {
-        clearTimeout(timer);
-        channel.port1.close();
-        resolve(event.data?.ok === true);
-      };
-      worker.postMessage({ type: "FORGET_READY_PAGE" }, [channel.port2]);
-    });
+      serviceWorker?.controller ??
+      (await serviceWorker?.getRegistration(READY_WORKER_SCOPE))?.active ??
+      null;
+    if (worker && (await askWorkerToForget(worker))) return true;
+    // No worker, or one that did not confirm in time: the page is the last
+    // thing standing between a cancelled seat and its saved summary, so it
+    // drops the copy itself. The slot holds one copy, so this removes only
+    // that; a worker that never answered cannot be waited on.
+    return await dropReadyCopyCache();
+  } catch {
+    return false;
+  }
+}
+
+function askWorkerToForget(worker: ServiceWorker): Promise<boolean> {
+  return new Promise<boolean>((resolve) => {
+    const channel = new MessageChannel();
+    const timer = setTimeout(() => {
+      channel.port1.close();
+      resolve(false);
+    }, ACTIVATE_TIMEOUT_MS);
+    channel.port1.onmessage = (event) => {
+      clearTimeout(timer);
+      channel.port1.close();
+      resolve(event.data?.ok === true);
+    };
+    worker.postMessage({ type: "FORGET_READY_PAGE" }, [channel.port2]);
+  });
+}
+
+async function dropReadyCopyCache(): Promise<boolean> {
+  try {
+    if (typeof caches === "undefined" || !caches) return false;
+    await caches.delete(READY_CACHE_NAME);
+    return true;
   } catch {
     return false;
   }

@@ -228,8 +228,12 @@ self.addEventListener("install", (event) => {
 });
 
 self.addEventListener("activate", (event) => {
+  // allSettled, not all: one step failing must not end the activation early
+  // and leave the others (the old shell caches) to a terminated worker. The
+  // activation holds until every step has finished; a failed claim is still
+  // reported.
   event.waitUntil(
-    Promise.all([
+    Promise.allSettled([
       self.clients.claim(),
       purgeLegacyReadyCopies(caches),
       caches
@@ -241,7 +245,10 @@ self.addEventListener("activate", (event) => {
               .map((key) => caches.delete(key)),
           ),
         ),
-    ]),
+    ]).then((steps) => {
+      const failed = steps.find((step) => step.status === "rejected");
+      if (failed?.status === "rejected") throw failed.reason;
+    }),
   );
 });
 
