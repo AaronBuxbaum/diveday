@@ -2,6 +2,7 @@
 
 import { MeetingDaysField } from "@/app/shop/[shopSlug]/_components/MeetingDaysField";
 import { FormDraft, type FormDraftActions, type FormDraftProps } from "@/components/FormDraft";
+import { focusAfterStaffCheck } from "@/components/focus-after-staff-check";
 import { TripDiveFields } from "@/components/TripDiveFields";
 import { INSET_NOTE_BOX } from "@/components/ui/card";
 import { ForgivingInput } from "@/components/ui/ForgivingInput";
@@ -33,7 +34,6 @@ import type {
   BuilderRequestPlan,
   BuilderTideWindowInput,
 } from "./builder-types";
-import { focusOnMount } from "./focus-on-mount";
 import { useAddPanel } from "./use-add-panel";
 
 function diveFieldCountProps(courseId: string, plannedDives: number) {
@@ -281,7 +281,7 @@ export function AddPanel({
               : copy.titlePlaceholder
           }
           className={controlClass}
-          ref={focusOnMount}
+          ref={focusAfterStaffCheck}
         />
       </Field>
       <DescriptionAndPrivacy copy={copy} expanded={expanded} />

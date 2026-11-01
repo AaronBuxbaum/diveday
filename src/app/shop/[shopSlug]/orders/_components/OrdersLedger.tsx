@@ -3,28 +3,9 @@ import { GroupLabel } from "@/components/ui/group-label";
 import { LedgerRow } from "@/components/ui/ledger";
 
 /**
- * **Orders as a day ledger** — ADR 20260827-clearwater-surface-language,
- * decision 7.
- *
- * The index was a twenty-row table repeating the same two facts down every
- * row: the departure title, and the date. Eight of Wednesday's orders said
- * "Wed, Aug 26" one under the other, in a column as wide as the diver's name,
- * and the seven seats sold off one reef trip said its title seven times. That
- * is principle 9 ("say a shared fact once") enforced *within* a list and
- * violated *between* its rows.
- *
- * So the day owns its own facts. A group header carries the date, the day's
- * order count and the day's subtotal; a row is a diver, what they bought, and
- * an amount. **No row renders its group's date** — that is the rule this
- * file's test pins, and it is the reason the row's stretched-link label names
- * the diver and the amount rather than spelling the date out again in the
- * accessibility tree. The day heading is a real `h2` above the list, so a
- * screen reader still hears which day it is walking.
- *
- * Everything here is already worded and already formatted: the day label, the
- * "3 orders · $412.75" meta, the money. Staff copy is server-only and this
- * component knows nothing about locales or zones, which is also what lets its
- * test state a date once and prove it renders once.
+ * Each day heading owns its date, count and subtotal; rows omit the date from
+ * both visible copy and accessible names. Values arrive translated and formatted
+ * (ADR 20260827-clearwater-surface-language, decision 7).
  */
 
 export type OrderLedgerRow = {
@@ -81,11 +62,7 @@ export function OrdersLedger({
       {days.map((day) => {
         const labelId = `orders-day-${day.key}`;
         return (
-          // A `<div>` and a heading, not a `<section>`: eight days on a page
-          // would be eight `region` landmarks in a screen reader's landmark
-          // list, which is chrome pretending to be structure. The heading is
-          // what carries the day, and the list points back at it so a reader
-          // entering the rows is told which day they are in.
+          // The heading names the day; the list references it without adding a landmark.
           <div key={day.key}>
             <GroupLabel as="h2" id={labelId} meta={day.meta}>
               {day.label}

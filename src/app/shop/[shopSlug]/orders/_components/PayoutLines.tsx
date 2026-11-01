@@ -14,32 +14,7 @@ import { monthNames } from "@/lib/format";
 import { shopMonthBounds, utcToWallTime } from "@/lib/zoned";
 import { RoomChargesLine } from "./RoomChargesLine";
 
-/**
- * The Orders index's back-office reads, each behind
- * `canPersonManagePaymentSettings` and none of them run for a reader who
- * cannot see it.
- *
- * - **Stuck operations**: Stripe calls the app started and never saw finish.
- * - **Owed refunds**: money the shop owes divers for departures it cancelled
- *   and could not refund by card — a counter payment, a disconnected Stripe
- *   account, a refund Stripe refused. The sweep that creates most of these
- *   runs hourly from a cron with no human near it, and it tells every
- *   affected diver the shop will be in touch; until this panel there was
- *   nothing on any screen that said so (ADR
- *   20260813-shop-cancellation-refunds-itself's own consequence).
- * - **Paid after close**: money Stripe captured on a checkout DiveDay had
- *   already closed (issue #2335): no seat was marked paid from it, so it is
- *   owed back.
- * - **Failed refunds**: refunds Stripe accepted and then reported failed
- *   (issue #2291): the money is back in the shop's balance and the diver is
- *   owed it again.
- * - **Refunds made in Stripe**: a dashboard refund on a party's checkout,
- *   which names no seat, held until staff pick one (issue #2293). Left out of
- *   the stuck operations above so it is listed once, with its choices.
- * - **Payouts**: what Stripe last paid into the bank, and a payout that failed
- *   since (ADR 20261012-payouts-reach-diveday). Stored rows only, never a
- *   Stripe call.
- */
+/** Reads stored recovery and payout data for payment-settings managers; unattributed refunds stay separate (ADRs 20260813-shop-cancellation-refunds-itself and 20261012-payouts-reach-diveday). */
 export async function readBackOffice(
   db: AppDb,
   shop: { id: string; timezone: string },
@@ -56,8 +31,7 @@ export async function readBackOffice(
       payouts: { paid: null, failed: null, roomCharges: null },
     };
   }
-  // This month's room charges per hotel, for the owner or manager who settles
-  // with the front desk (fifth-loop ideas, item 57), beside the payouts.
+  // Owners and managers use monthly room totals to settle with the front desk (fifth-loop ideas, item 57).
   const wall = utcToWallTime(nowDate(), shop.timezone);
   const month = { year: wall.year, month: wall.month };
   const { from, to } = shopMonthBounds(month, shop.timezone);
@@ -89,11 +63,7 @@ export async function readBackOffice(
   };
 }
 
-/**
- * A failed payout is the shop's to fix in its own Stripe account, so it is
- * said where the money is read, warning-toned like the owed refunds; the last
- * paid one is a quiet line, the figure a bank statement is held against.
- */
+/** Shows failed payouts as warnings and the latest paid payout as a quiet bank-statement reference. */
 export function PayoutLines({
   payouts,
   locale,

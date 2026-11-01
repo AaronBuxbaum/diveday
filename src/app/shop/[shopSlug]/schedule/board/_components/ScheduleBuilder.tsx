@@ -3,6 +3,7 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
 import type { FormDraftProps } from "@/components/FormDraft";
+import { focusAfterStaffCheck } from "@/components/focus-after-staff-check";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { ForgivingInput } from "@/components/ui/ForgivingInput";
@@ -24,7 +25,6 @@ import type {
   BuilderRequestPlan,
   BuilderTideWindowInput,
 } from "./builder-types";
-import { focusOnMount } from "./focus-on-mount";
 import type { BuilderWeek, WeekDeparture } from "./WeekBoard";
 import { WeekBoard } from "./WeekBoard";
 
@@ -111,7 +111,7 @@ function RemovePanel({
             habit keeps the trip. */}
         <button
           type="button"
-          ref={focusOnMount}
+          ref={focusAfterStaffCheck}
           onClick={onCancel}
           className={buttonClass({ variant: "ghost" })}
         >
@@ -395,7 +395,7 @@ function MovePanel({
           required
           value={date}
           onChange={(event) => setDate(event.target.value)}
-          ref={focusOnMount}
+          ref={focusAfterStaffCheck}
         />
       </Field>
       <Field label={copy.newDepartureTime}>
@@ -450,7 +450,7 @@ function CopyPanel({
           name="date"
           required
           defaultValue={shiftCalendarDate(trip.dateIso, 7)}
-          ref={focusOnMount}
+          ref={focusAfterStaffCheck}
         />
       </Field>
       <Field label={copy.departureTime}>
