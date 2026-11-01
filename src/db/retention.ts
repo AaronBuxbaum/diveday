@@ -53,29 +53,15 @@ import {
 } from "./schema";
 
 /**
- * Delete rows past their retention window from operational tables that
- * otherwise grow without bound (DATA-M4/PAY-L2, ADR
- * 20260803-append-only-retention).
+ * Delete rows past their retention windows (DATA-M4/PAY-L2; ADR
+ * 20260803-append-only-retention). `src/lib/retention.ts` owns the HD-11
+ * windows; this module maps each one to its clock and any extra eligibility.
  *
- * The windows themselves are in `src/lib/retention.ts` — one table, one place a
- * human edits, and **their values are HD-11's decision, not this module's**.
- * This file only knows *which column* each window is measured against and how
- * to delete safely.
- *
- * Every arm ({@link PRUNE_ARMS}) is:
- *
- * - **Bounded.** At most {@link PRUNE_BATCH_LIMIT} rows per batch. Elapsed time
- *   bounds admission; one slow in-flight batch can outlast the budget. A backlog
- *   converges over successive weekly ticks (`vercel.json`, Sundays 03:08 UTC)
- *   instead of failing forever.
- * - **Independent.** One arm throwing does not starve the rest; it is reported
- *   with its own table code and the pass carries on, the same shape the daily
- *   reminders tick uses for its scans.
- * - **Age-based only.** No arm ever consults state a human could still be
- *   acting on. The token arms (`account_tokens`, `account_sessions`,
- *   `shop_contact_email_confirmation_tokens`, `booking_capabilities`) measure
- *   from each token's own `expires_at`, so a live credential is never eligible
- *   at any age.
+ * Each arm is bounded per batch, and elapsed time bounds admission rather than
+ * an in-flight query. Arm failures are reported independently so later tables
+ * can run. Token arms use each credential's own `expires_at`; live credentials
+ * are never eligible. Other eligibility checks protect unresolved work and
+ * legal holds.
  */
 export type PruneOutcome = {
   table: RetainedTable;

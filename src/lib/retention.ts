@@ -1,139 +1,64 @@
 /**
- * Retention windows for operational tables that otherwise grow forever
- * (DATA-M4/PAY-L2, ADR 20260803-append-only-retention).
+ * Retention windows for operational tables that grow without bounds
+ * (DATA-M4/PAY-L2; ADR 20260803-append-only-retention). This framework-free
+ * module owns the current windows and cutoff arithmetic; database deletion is
+ * in `src/db/retention.ts`, and scheduling is in the cron route and `vercel.json`.
  *
- * Framework-free on purpose: this file is nothing but the numbers, the reason
- * for each number, and the arithmetic that turns them into cutoffs. The
- * deletion itself lives in `src/db/retention.ts`; the schedule lives in
- * `src/app/api/cron/retention/route.ts` and `vercel.json`.
+ * **HD-11 owns these provisional defaults; they have not been reviewed by
+ * counsel.** Shortening a window is a policy change: update this table and the
+ * ADR. H-02 remains open for signed waiver/course evidence and medical data.
  *
- * **The values below are HD-11's decision, not an agent's.** HD-11 owns the
- * retention half of the erasure-versus-signed-evidence question, and nothing
- * here has been through counsel. What is written here is a set of deliberately
- * *conservative* defaults — long enough that no plausible investigation,
- * dispute, or provider retry loses evidence it needed, at the cost of keeping
- * rows longer than a minimal-retention posture would. Shortening any of them
- * is a policy change: edit this one table, say so in the ADR, and nothing else
- * in the codebase has to move.
+ * **There is no customer/contact dormancy clock.** Canonical person and interest
+ * records are not removed for inactivity; requested erasure is separate
+ * (`src/db/anonymize.ts`). Related operational rows may have their own windows.
+ * `setup_requests` records a prospective shop and has its own window rationale
+ * below (code review 2026-10-11, item 14).
  *
- * **This mechanism prunes trails, never people.** Every table below is an
- * operational trail entries — webhook events, delivery attempts, activity
- * rows, delivery outcomes, and tokens. No table holding a person lives here;
- * that is a standing decision rather than an omission: DiveDay retains customer
- * and contact data
- * indefinitely and deletes it only when somebody explicitly asks it to
- * (product owner, 2026-08-14). So a dormancy clock on `people` or
- * `interests` — expiring the record of
- * someone who inquired once and never booked — is not something to add here.
- * It was proposed and declined: an interest who books eight months later is
- * ordinary dive-shop behaviour, and the erasure path that does exist is the
- * requested one (`src/db/anonymize.ts`), not a timer. The one exception is
- * `setup_requests`: a shop asking DiveDay to be set up is nobody's customer
- * yet, so no shop's record or erasure reaches it, and its window is argued
- * beside its number below (code review 2026-10-11, item 14).
+ * **`certification_junior_reviews` is deliberately unbounded.** Corrections
+ * stay with the card; requested erasure removes the person's evidence, and
+ * deleting the card cascades it (#2810, 2026-10-27).
  *
- * **`certification_junior_reviews` is deliberately unbounded.** The owner's
- * decision on #2810 (2026-10-27) requires corrections to stay with the card.
- * Erasure removes the person's evidence, and deleting the card cascades it.
+ * **`gear_service_events` is deliberately unbounded.** Service, hydro-test and
+ * inspection history is equipment evidence; retiring a unit keeps its history,
+ * while deleting the unit cascades it. Chosen over a five-year post-retirement
+ * window (product owner, 2026-08-20).
  *
- * **`gear_service_events` is deliberately unbounded and does not belong here.**
- * It is append-only and its value is evidentiary rather than operational: a
- * unit's service, hydro-test and inspection history is what answers "was this
- * regulator serviced on schedule?" long after the dive it was carried on. A
- * window would delete exactly the rows that question reaches for. The history
- * is already bounded by the thing it describes — deleting a unit cascades its
- * events away, retiring one keeps them — and the volume is a few hundred rows a
- * year for a large fleet, so nothing about growth argues the other way. Chosen
- * by the product owner, 2026-08-20, over a 1825-day-past-retirement window.
+ * **`trip_stage_events` is deliberately unbounded.** A later incident review
+ * may need to know when the crew changed a departure's stage; a useful growth
+ * window would erase that evidence. Chosen over 30 days (issue #1397,
+ * 2026-09-10).
  *
- * **`trip_stage_events` is deliberately unbounded and does not belong here
- * either.** The five words a crew taps carry no diver data — a shop, a trip, a
- * stage code, a dive-site id, the staff person who tapped, an instant — so the
- * erasure half is answered by the live join to `people` rather than by a
- * window: a redacted staffer's name leaves every reading without a row moving.
- * Growth is a handful of rows per departure, and every reader takes only the
- * newest one (`latestTripStage`, `latestTripStagesByTrip`), so
- * the trail is dead weight operationally — which is the whole of the argument
- * for a window. Against it is `gear_service_events`' argument on a table with
- * more rows: the trail may become evidentiary, "when did the crew say this boat
- * was heading in?" is a question an incident review asks a year later, and any
- * window short enough to matter for growth deletes exactly those rows. It comes
- * out the same way. Chosen by the product owner, 2026-09-10, over a 30-day
- * window matching `trip_desk_events` (issue #1397).
+ * **`buddy_team_events`, `roll_call_events`, `roll_call_crew_events`, and
+ * `booking_arrival_events` are deliberately unbounded.** Desk arrivals,
+ * roll-call marks and buddy pairings are evidence for reconstructing a departure.
+ * The requested-erasure sweep handles person references and matching
+ * denormalized names (`src/db/anonymize.ts`; ADR 20260804-buddy-teams).
  *
- * **The roll-call and pairing trails are deliberately unbounded too**, and
- * their argument is written where each is declared rather than here: a roll
- * call, a crew's own check-in, an arrival tap at the desk and a buddy pairing
- * are safety evidence about a departure, so a window would put an expiry on
- * the answer to "who was on this boat, and who were they with?" exactly when
- * an old incident is being reconstructed. Erasure reaches all four through the
- * live join to `people`, so nothing here outlives a diver's request either.
- * Decided with the trails themselves (`buddy_team_events`,
- * `roll_call_events`, `roll_call_crew_events`, `booking_arrival_events`; ADR
- * 20260804-buddy-teams, and the docblock over each table in
- * `src/db/schema.ts`, which points back at this file for the statement this
- * paragraph now makes).
- *
- * **`pre_departure_check_events` is deliberately unbounded too.** It is the
- * pre-departure safety check (ADR 20260824-pre-departure-safety-check): who
- * confirmed each item of the shop's own checklist (life jackets, oxygen, the
- * radio) before a boat left, and when. That is the document an insurer or an
- * investigator asks for after an incident, and an incident is reconstructed
- * long after any window short enough to matter for growth. It is one row per
- * tap on a departure, so it grows with the schedule, not with traffic. Classified on the dive-domain
- * review of code review 2026-10-13 (layer B), which moved it here from the
- * out-of-scope list.
+ * **`pre_departure_check_events` is deliberately unbounded.** It records who
+ * confirmed the shop's safety checklist before departure, evidence an incident
+ * review may need later (ADR 20260824-pre-departure-safety-check; dive-domain
+ * review, 2026-10-13).
  *
  * **`trip_change_events` and `review_moderation_events` are deliberately
- * unbounded too.** The first is who changed a departure's plan and how (its
- * meeting point, its conditions); the second is who published or hid a
- * review and why. The shop activity log reads both as the record itself
- * (PR #2310), and the moderation trail is also what answers "how much of this
- * shop's record has been suppressed?" for as long as the reviews it describes
- * are shown (ADR 20260813-review-moderation-has-a-floor). A window would leave
- * a departure or a review the shop still has with a hole in its history and
- * free almost nothing: both grow with the shop's own departures and reviews,
- * not with traffic. Both hold free text a staffer typed (a meeting point's
- * label, a moderator's `reason_note`), which can name a diver, so erasure
- * redacts what names them (`scrubDepartureChangeTrail` and `scrubReviews` in
- * `src/db/anonymize.ts`); the staffer who acted is a `people` reference
- * resolved live, so erasure reaches them without a row moving. Chosen by the product owner, 2026-10-13, over the `activity_events`
- * window (issue #2316).
+ * unbounded.** The shop activity log reads these as the record of changes and
+ * moderation; requested erasure redacts matching free-text names and staff
+ * identities resolve live (`src/db/anonymize.ts`). Chosen over the activity
+ * window (issue #2316, 2026-10-13; ADR 20260813-review-moderation-has-a-floor).
  *
- * **`notification_send_queue` empties its own rows of personal data, and the
- * window below only bounds what is left.** It holds a rendered outbound
- * message, a recipient and a subject's address and phone while a row is being
- * worked. Each write that finishes a row (`sent`, `failed` for a cleared
- * reason, and the park that spends a parked row's last attempt) nulls the
- * payload and all six auxiliary columns. Two `failed` writes keep them: a
- * `sealed_payload_unreadable` row still waiting for a key, and a
- * `retry_subject_unbound` row kept for follow-up. The window below skips both,
- * because it only takes rows whose payload is already null. `src/db/notifications.ts`
- * states the clearing at each write, and `notifications.test.ts` pins it. If a
- * new terminal write keeps a handle, clear it there. What a finished row still
- * holds is a status, an idempotency key and two instants, one per notification
- * ever sent, so the table grew with traffic for ever. Its window (code review
- * 2026-10-11, item 14) takes only finished rows, never one the drain could
- * still offer again.
+ * **`notification_send_queue` is pruned only after its sealed payload clears.**
+ * The window takes `sent` or `failed` rows with a null payload; queued,
+ * processing and payload-retaining unresolved rows remain ineligible. A final
+ * unreadable attempt clears its payload and can later age out. Terminal writes
+ * also clear auxiliary personal-data fields (`src/db/notifications.ts` and
+ * `notifications.test.ts`; code review 2026-10-11, item 14).
  *
- * **What is kept for ever, by decision, outside this list.** The event-like
- * trails that carry no window, one line each, so "how long is X kept?" has an
- * answer for every one of them; ADR 20260803-append-only-retention carries the
- * same list. Safety records about a departure: `roll_call_events`,
- * `roll_call_crew_events`, `booking_arrival_events`, `buddy_team_events`,
- * `trip_stage_events`, `pre_departure_check_events` (argued above). Equipment evidence:
- * `gear_service_events` (argued above). Records of who changed what on a
- * departure, a review or a ticket, read as the record itself:
- * `trip_change_events`, `review_moderation_events` (argued above),
- * `work_order_events`. Queues and obligations deleted by their own work:
- * `held_sends` (its own sweep, `src/db/held-sends.ts`) and
- * `media_deletion_attempts`. Kept as the record of an erasure's outside work:
- * `processor_erasure_obligations`, which nothing prunes; a discharged row is
- * the attestation (ADR 20260803-processor-erasure-obligations). Signed
- * evidence H-02 has not ruled on: `waiver_records` and the course-form
- * records.
+ * **Other tables without a window are not one retention category.** The safety,
+ * equipment and operational evidence above are unbounded by decision; see
+ * `UNBOUNDED_BY_DECISION` below and ADR 20260803-append-only-retention. Other
+ * tables use other classifications, including `OUTSIDE_RETENTION` for those
+ * a clock does not govern. `waiver_records` and course-form records remain
+ * unresolved under H-02.
  */
-
 import { DAY_MS } from "@/lib/clock";
 
 /**
