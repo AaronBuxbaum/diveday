@@ -177,7 +177,13 @@ export default async function ScheduleBoardPage({
   const builderNotice = builderNoticeFor({ builder, count, created, series, st });
   const rescheduleNotice =
     builder === "moved" || (held !== undefined && tell !== undefined)
-      ? await resolveRescheduleNoticeSnapshot({ shopId: shop.id, heldId: held, tell, t: st })
+      ? await resolveRescheduleNoticeSnapshot({
+          shopId: shop.id,
+          heldId: held,
+          tell,
+          t: st,
+          locale,
+        })
       : null;
   const gearNotice = builder === "moved" ? verifiedGearMoveNotice(query.result, shop.id, st) : null;
   const builderCopy = scheduleBuilderCopy(st, shop.timezone);

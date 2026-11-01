@@ -628,12 +628,15 @@
     "undo": "Undo"
   },
   "rescheduleHold": {
+    "toldOne": "Told {count} diver the new time.",
+    "toldOther": "Told {count} divers the new time.",
+    "toldPlaceOne": "Told {count} diver the new meeting point.",
+    "toldPlaceOther": "Told {count} divers the new meeting point.",
+    "someMissedOne": "{count} diver could not be reached by email or text.",
+    "someMissedOther": "{count} divers could not be reached by email or text.",
     "telling": "Telling divers the new time…",
-    "told": "{count, plural, one {Told # diver the new time.} other {Told # divers the new time.}}",
-    "someMissed": "{count, plural, one {# diver could not be reached by email or text.} other {# divers could not be reached by email or text.}}",
     "notTold": "Not told. The divers still have the old time.",
     "tellingPlace": "Telling divers the new meeting point…",
-    "toldPlace": "{count, plural, one {Told # diver the new meeting point.} other {Told # divers the new meeting point.}}",
     "notToldPlace": "Not told. The divers still have the old meeting point.",
     "tellThem": "Tell them"
   },
