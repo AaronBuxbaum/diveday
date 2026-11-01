@@ -256,9 +256,9 @@ export default async function StaffingPage({
   // to choose, and one binding cannot drift from another.
   const createShift = createShiftAction.bind(null, weekStart);
   const deleteShift = deleteShiftAction.bind(null, weekStart);
-  // The crew's own two acts, and the owner's answer (issue #1235). Bound to
-  // the week for the same reason every other act here is: a save that threw
-  // the reader back to this week made building next week's roster impossible.
+  // Crew requests, availability and public-name consent, plus the manager's
+  // answer (issue #1235). Each carries the week so a save keeps the reader on
+  // the roster they were editing.
   const requestCrew = requestCrewAction.bind(null, weekStart);
   const decideRequest = decideCrewRequestAction.bind(null, weekStart);
   const saveAway = saveAwayAction.bind(null, weekStart);

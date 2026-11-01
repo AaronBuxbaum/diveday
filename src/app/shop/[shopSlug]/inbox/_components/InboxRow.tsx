@@ -178,12 +178,9 @@ export function InboxRow({
   const recordHref = message.personId
     ? `${shopPath(shopSlug, "divers", message.personId)}#${inboxMessageAnchor(message.id)}`
     : null;
-  // **A stranger's words wrap, whole** (pixel-craft class 8, K-460). A door
-  // row's excerpt is one line because the whole message is on the record one
-  // tap away; a stranger has no record, so one line cut their words
-  // mid-sentence with nothing able to open the rest. No line count cuts them
-  // either: three lines held the seeded message only where its column was
-  // wide. The 140-character excerpt is what bounds the row.
+  // A diver's full message is one tap away, so the door row keeps a one-line
+  // excerpt. A stranger has no record to open; let their words wrap in full.
+  // The excerpt's 140-character cap bounds the row.
   const wordsCut = message.personId
     ? "truncate print:overflow-visible print:whitespace-normal print:text-clip"
     : "wrap-anywhere";
@@ -292,10 +289,9 @@ export function InboxRow({
           </div>
         }
       >
-        {/* The name beside the message from `md`, not `sm`: beside the kind
-          column, the date and the door's slot, its 176px column left the
-          message ~122px at 640 (K-460, K-461). Below `md` the name sits over
-          the message, which takes the body's whole width. */}
+        {/* Beside the kind, date and menu, the name needs a wider row to leave
+          the message room. Below `md` it sits above the message, which then
+          takes the body's full width. */}
         <div className="flex min-w-0 flex-col gap-1 md:flex-row md:items-baseline md:gap-4">
           <p className="min-w-0 truncate font-semibold md:w-44 md:shrink-0 print:overflow-visible print:whitespace-normal print:text-clip">
             {name}
@@ -325,9 +321,8 @@ export function InboxRow({
                 })}
               </p>
             ) : null}
-            {/* `wrap-anywhere`: a stranger's address has no break in it, and at
-              640 it ran 96px out of a 72px column (K-461). Cut, it would lose
-              half of what the row is for, so it breaks inside the column. */}
+            {/* A stranger's address may have no natural break; wrap it inside
+              the column so the row keeps the full address. */}
             {facts.length > 0 ? (
               <p className="mt-0.5 wrap-anywhere text-sm text-muted">
                 {facts.map((fact, index) => (
