@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { cleanup, render } from "@testing-library/react";
 import type { ComponentType } from "react";
 import { afterEach, describe, expect, it } from "vitest";
+import {
+  COURSE_EDITOR_CLOSED_SECTIONS,
+  COURSE_EDITOR_OPEN_SECTIONS,
+} from "./shop/[shopSlug]/courses/[slug]/edit/course-editor-sections";
 import EditCourseLoading from "./shop/[shopSlug]/courses/[slug]/edit/loading";
 import {
   SITE_FORM_OPEN_SECTIONS,
@@ -14,22 +15,6 @@ import DiveSiteLoading from "./shop/[shopSlug]/dive-sites/[id]/loading";
 import NewDiveSiteLoading from "./shop/[shopSlug]/dive-sites/new/loading";
 
 afterEach(cleanup);
-
-const HERE = dirname(fileURLToPath(import.meta.url));
-
-/**
- * The course editor's sections are one inline list in its page, so the count
- * is read from there: a ninth section the skeleton does not know about fails
- * here rather than as a jump on every navigation into the editor.
- */
-function courseSectionCount(): number {
-  const page = readFileSync(
-    join(HERE, "shop", "[shopSlug]", "courses", "[slug]", "edit", "page.tsx"),
-    "utf8",
-  );
-  const list = page.match(/const sections: EditorSectionRef\[\] = \[([\s\S]*?)\];/)?.[1] ?? "";
-  return [...list.matchAll(/\{\s*id:/g)].length;
-}
 
 /**
  * **An editor's skeleton draws the editor it stands for** (docs/design/
@@ -55,7 +40,12 @@ const SKELETONS: [
     () => SITE_FORM_OPEN_SECTIONS.size,
     () => SITE_FORM_SECTION_ORDER.length - SITE_FORM_OPEN_SECTIONS.size,
   ],
-  ["the course editor", EditCourseLoading, () => 4, () => courseSectionCount() - 4],
+  [
+    "the course editor",
+    EditCourseLoading,
+    () => COURSE_EDITOR_OPEN_SECTIONS.length,
+    () => COURSE_EDITOR_CLOSED_SECTIONS.length,
+  ],
 ];
 
 describe("an editor's loading skeleton", () => {
