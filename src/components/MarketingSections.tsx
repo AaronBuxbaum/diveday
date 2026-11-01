@@ -146,11 +146,10 @@ export function MarginNotes({
  * and the whole row is the link, so a reader scanning for "waivers" lands on
  * the waivers page in one tap.
  *
- * **The homepage and the hub render the same directory**, which is the point:
- * the registry in `src/lib/feature-pages.ts` is the one list of pages, and a
- * page added there appears on both without either page naming it. It replaced
- * `FeatureGroupsGrid`'s four summary cards (2026-10-05), which described the
- * product in four paragraphs and linked nowhere.
+ * **The product hub renders the full feature directory.** The homepage uses a
+ * curated five-step path and links into these same feature pages; it does not
+ * render this directory. `src/lib/feature-pages.ts` supplies every row here
+ * and the homepage's feature-page destinations.
  *
  * **On the hub the directory is also the full list** (`lines`). Each row
  * carries a disclosure under the link, counted, holding that page's "What's in
@@ -159,12 +158,10 @@ export function MarginNotes({
  * your records) follow the phases as rows of their own. Until review on
  * 2026-10-05 the hub listed the same twelve names twice, the directory and
  * then a spec sheet one band down; now there is one list, and every line is
- * still on the page for find-in-page (Chromium and Firefox open a closed
- * `<details>` to reveal a match). The homepage only routes, so it draws the
- * rows without them.
+ * still in the page for native `<details>` find-in-page behavior.
  *
- * `headingLevel` follows the page: the phases sit under the homepage's band
- * heading (`h3`), and are the hub's own sections (`h2`).
+ * `headingLevel` lets the caller match the surrounding page hierarchy; the
+ * product hub renders these phase headings as `h2`.
  */
 export function FeatureDirectory({
   locale,

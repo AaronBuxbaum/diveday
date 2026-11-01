@@ -1,20 +1,11 @@
 /**
- * **The boring HTML a diver keeps**: one document with inline style, no script,
- * no form and no image, built by string from fields the caller chose. Two
- * callers: the downloadable arrival card
- * (`src/app/s/[shopSlug]/trips/[id]/arrival-card/route.ts`) and the offline
- * readiness snapshot (`src/lib/ready-snapshot.ts`). Every value passes
- * {@link escapeHtml}; nothing is read from a page.
+ * Inert HTML for the downloadable arrival card and offline readiness snapshot.
+ * Text fields are escaped here; callers must escape user values in supplied HTML.
  */
 
-export function escapeHtml(value: string): string {
-  return value.replace(
-    /[&<>"']/g,
-    (character) =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character] ??
-      character,
-  );
-}
+import { escapeHtml } from "./html";
+
+export { escapeHtml };
 
 const STYLE =
   "body{font-family:system-ui,sans-serif;max-width:38rem;margin:0 auto;padding:2rem;line-height:1.5;color:currentColor}h1{line-height:1.15}p{margin:.45rem 0}.label{font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;opacity:.68}section{border-top:1px solid currentColor;margin-top:1.5rem;padding-top:1rem}a{color:inherit;font-weight:600}";

@@ -104,15 +104,12 @@ export {
   pagedUpcomingTripsWithCounts,
   SCHEDULE_PAGE_SIZE,
   type ShopDayDeparture,
-  type StaffScheduleDay,
-  type StaffScheduleTrip,
   type TripWithBookedCount,
   tripDiveSiteSummaries,
   tripScheduleDayCounts,
   type UpcomingTripOffsetPage,
   upcomingScheduleRange,
   upcomingScheduleStats,
-  upcomingStaffSchedule,
   // Unbounded whole-schedule read kept ONLY as a test fixture — never call it
   // from product code (see its docstring in trips-queries.ts).
   upcomingTripsWithCounts,

@@ -448,7 +448,7 @@
     "src/db/seat-claims.test.ts": 1525,
     "src/db/self-declared-cards.test.ts": 1865,
     "src/db/staffing.test.ts": 952,
-    "src/db/trips-crew.test.ts": 1489,
+    "src/db/trips-crew.test.ts": 1474,
     "src/db/trips-queries.test.ts": 1176,
     "src/db/trips-series.test.ts": 1785,
     "src/db/waiver-issue.test.ts": 1179,
