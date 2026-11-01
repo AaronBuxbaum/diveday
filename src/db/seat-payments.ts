@@ -21,7 +21,6 @@
  * Shop-scoped on every table it reads, each join on its own `shop_id`.
  */
 import { and, eq, gte, ilike, inArray, isNull, lt, ne, or, type SQL, sql } from "drizzle-orm";
-import { seatBalanceOwedCents, seatListPriceCents } from "@/lib/deposits";
 import type { DbExecutor } from "./client";
 import type { ShopOrderFilter } from "./orders";
 import {
@@ -34,6 +33,7 @@ import {
   people,
   trips,
 } from "./schema";
+import { seatBalanceOwedCentsFromJoinedRow } from "./seat-balance";
 import { notRehearsal } from "./trips-live";
 
 /** What this seat was asked, the weight its share of the charge is split by. */
@@ -329,18 +329,7 @@ export async function owedSeatsAfterSailing(
   let cents = 0;
   let seats = 0;
   for (const row of rows) {
-    const course =
-      row.courseTitle !== null
-        ? {
-            title: row.courseTitle,
-            priceCents: row.coursePriceCents,
-            eLearningPriceCents: row.courseELearningPriceCents,
-          }
-        : null;
-    const owed = seatBalanceOwedCents(
-      seatListPriceCents(row.trip, course, row.participantType),
-      row.paymentStatus ? { status: row.paymentStatus, amountCents: row.paymentAmountCents } : null,
-    );
+    const owed = seatBalanceOwedCentsFromJoinedRow(row);
     if (owed === null) continue;
     seats += 1;
     cents += owed;

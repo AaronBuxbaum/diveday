@@ -6,9 +6,9 @@
  * read that puts them back on the order.
  */
 import { and, eq } from "drizzle-orm";
-import { seatBalanceOwedCents, seatListPriceCents } from "@/lib/deposits";
 import type { DbExecutor } from "./client";
 import { bookingPayments, bookings, courses, trips } from "./schema";
+import { seatBalanceOwedCentsFromJoinedRow } from "./seat-balance";
 
 export type OrderBookingContext = {
   bookingId: string;
@@ -58,23 +58,11 @@ export async function getOrderBookingContext(
     .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
     .limit(1);
   if (!row) return null;
-  const course =
-    row.courseTitle !== null
-      ? {
-          title: row.courseTitle,
-          priceCents: row.coursePriceCents,
-          eLearningPriceCents: row.courseELearningPriceCents,
-        }
-      : null;
-  const listPriceCents = seatListPriceCents(row.trip, course, row.participantType);
   return {
     bookingId: row.bookingId,
     tripId: row.trip.id,
     tripTitle: row.trip.title,
     tripStartsAt: row.trip.startsAt,
-    balanceOwedCents: seatBalanceOwedCents(
-      listPriceCents,
-      row.paymentStatus ? { status: row.paymentStatus, amountCents: row.paymentAmountCents } : null,
-    ),
+    balanceOwedCents: seatBalanceOwedCentsFromJoinedRow(row),
   };
 }

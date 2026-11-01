@@ -6,7 +6,6 @@
  */
 import { and, asc, eq, ne, or } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
-import { seatBalanceOwedCents, seatListPriceCents } from "@/lib/deposits";
 import {
   heldAfterMark,
   type ManualPaymentMethodCode,
@@ -16,6 +15,7 @@ import {
 import type { AppDb, DbExecutor } from "./client";
 import { getBookingPayment, setBookingPayment } from "./payments";
 import { bookingPayments, bookings, courses, people, shops, trips } from "./schema";
+import { seatBalanceOwedCentsFromJoinedRow } from "./seat-balance";
 import { recordShopActivityWithin } from "./shop-activity";
 import { tripRosterOrder, tripRosterWhere } from "./trips-roster";
 
@@ -75,21 +75,9 @@ type MarkRow = {
 };
 
 function markFacts(row: MarkRow): PaymentMarkFacts {
-  const course =
-    row.courseTitle !== null
-      ? {
-          title: row.courseTitle,
-          priceCents: row.coursePriceCents,
-          eLearningPriceCents: row.courseELearningPriceCents,
-        }
-      : null;
-  const listPriceCents = seatListPriceCents(row.trip, course, row.participantType);
   return {
     shopCurrency: row.shopCurrency,
-    balanceOwedCents: seatBalanceOwedCents(
-      listPriceCents,
-      row.paymentStatus ? { status: row.paymentStatus, amountCents: row.paymentAmountCents } : null,
-    ),
+    balanceOwedCents: seatBalanceOwedCentsFromJoinedRow(row),
     mark:
       row.paymentMethod && row.paymentAmountCents !== null && row.paymentCurrency
         ? {
