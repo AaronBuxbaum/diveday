@@ -31,14 +31,18 @@
  * The five-rung certification ladder. Labels for these live in the message
  * bundles (`src/i18n/readiness-labels.ts` maps each code to a translation key),
  * never here: this states facts about ordering and gates, `src/app` chooses
- * words.
+ * words. This ordered tuple is also the runtime source for validators that
+ * accept any held or awarded rung.
  */
-export type CertificationLevel =
-  | "open_water"
-  | "advanced_open_water"
-  | "rescue"
-  | "divemaster"
-  | "instructor";
+export const CERTIFICATION_LEVELS = [
+  "open_water",
+  "advanced_open_water",
+  "rescue",
+  "divemaster",
+  "instructor",
+] as const;
+
+export type CertificationLevel = (typeof CERTIFICATION_LEVELS)[number];
 
 /**
  * **What a site or a trip may demand of a diver — the top of it is Rescue.**

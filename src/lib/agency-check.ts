@@ -1,15 +1,10 @@
 import type { DiveSpecialty } from "@/db/schema";
 import { ageOnDate, JUNIOR_AGE_END } from "@/lib/age";
 import { MIN_CARD_NUMBER_LENGTH } from "@/lib/card-number";
+import type { CertificationLevel } from "@/lib/certification-levels";
 import type { CERTIFICATION_AGENCIES } from "@/lib/certification-options";
 
 type CertificationAgency = (typeof CERTIFICATION_AGENCIES)[number];
-type CertificationLevel =
-  | "open_water"
-  | "advanced_open_water"
-  | "rescue"
-  | "divemaster"
-  | "instructor";
 
 /**
  * **Reading an agency's lookup page, and deciding whether it certifies a card.**
