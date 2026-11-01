@@ -153,9 +153,8 @@ export const bookings = pgTable(
     shopId: uuid("shop_id")
       .notNull()
       .references(() => shops.id),
-    tripId: uuid("trip_id")
-      .notNull()
-      .references(() => trips.id),
+    // The trip's key is `bookings_trip_shop_fk` below, over the shop too.
+    tripId: uuid("trip_id").notNull(),
     personId: uuid("person_id")
       .notNull()
       .references(() => people.id),
@@ -559,6 +558,14 @@ export const bookings = pgTable(
     createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
+    // A seat is on one of its own shop's trips, in the database and not only
+    // in every writer (issue #3285): every reader that joins a booking to its
+    // trip by `trip_id` alone (`liveBookingJoin`) then stays inside one shop.
+    foreignKey({
+      name: "bookings_trip_shop_fk",
+      columns: [table.shopId, table.tripId],
+      foreignColumns: [trips.shopId, trips.id],
+    }),
     // The course seat a mark names is this shop's, in the database and not
     // only in every reader (security review U6): the key runs over the shop
     // too, against the (shop_id, id) pair below.
