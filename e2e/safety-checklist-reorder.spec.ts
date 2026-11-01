@@ -22,15 +22,8 @@ async function shownLabels(page: Page): Promise<string[]> {
     .map((text) => LABELS.find((label) => text.includes(label)) as string);
 }
 
-// A shop of its own: this writes the shop's checklist, which the per-test reset does not restore.
-test("one row form moves a line up and down, with and without JavaScript", async ({
-  page,
-  browser,
-  privateShop,
-}) => {
-  // Three lines added through the form, then two contexts: a long journey, not a slow step.
-  test.setTimeout(45_000);
-  const path = `/shop/${privateShop.slug}/safety-checklist`;
+/** Three lines added through the form, in order, on the page the shop's checklist opens at. */
+async function addLines(page: Page, path: string): Promise<void> {
   await page.goto(path);
   for (const label of LABELS) {
     await page.getByText(staff("settings.safetyChecklist.addTitle"), { exact: true }).click();
@@ -42,6 +35,13 @@ test("one row form moves a line up and down, with and without JavaScript", async
     await expect(rows(page).filter({ hasText: label })).toHaveCount(1);
   }
   await expect.poll(() => shownLabels(page)).toEqual([...LABELS]);
+}
+
+// A shop of its own: this writes the shop's checklist, which the per-test reset does not restore.
+test("one row form moves a line up and down", async ({ page, privateShop }) => {
+  // The mint and sign-in plus three adds under a loaded runner: a long journey, not a slow step.
+  test.setTimeout(30_000);
+  await addLines(page, `/shop/${privateShop.slug}/safety-checklist`);
 
   // Edges: the first row cannot go up, the last cannot go down.
   await expect(move(rows(page).first(), "up")).toBeDisabled();
@@ -53,13 +53,28 @@ test("one row form moves a line up and down, with and without JavaScript", async
   await expect.poll(() => shownLabels(page)).toEqual([LABELS[1], LABELS[0], LABELS[2]]);
   await move(rows(page).filter({ hasText: LABELS[1] }), "down").click();
   await expect.poll(() => shownLabels(page)).toEqual([...LABELS]);
+});
 
-  // The same move through a native form post, with scripts off.
+// Its own test: a context with scripts off has no hydration to wait for, and a step that hangs
+// there must not take the scripted journey's budget with it.
+test("the same move works as a native form post with scripts off", async ({
+  page,
+  browser,
+  privateShop,
+}) => {
+  test.setTimeout(30_000);
+  const path = `/shop/${privateShop.slug}/safety-checklist`;
+  await addLines(page, path);
+
   const native = await browser.newContext({
     javaScriptEnabled: false,
     baseURL: new URL(page.url()).origin,
     storageState: await page.context().storageState(),
   });
+  // Unbounded by default, so a post that never answers would spend the whole test budget and
+  // surface only as a failed `close()`. Ten seconds names the step that hung instead.
+  native.setDefaultTimeout(10_000);
+  native.setDefaultNavigationTimeout(10_000);
   try {
     const nativePage = makeActivitySafe(await native.newPage());
     // `commit`: with scripts off the staff hydration wait could never finish.
