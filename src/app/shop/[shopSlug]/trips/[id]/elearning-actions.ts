@@ -88,8 +88,11 @@ export async function elearningCheckAction(
       bookingId,
       staffPersonId: staff.user.personId,
       done: false,
+      // The same test again, inside the UPDATE: a re-tick since the read stays.
+      onlyIf: { byPersonId: staff.user.personId, markedAt: seat.materialsDoneAt },
     });
     revalidatePath(back);
+    if (!undone.ok && undone.reason === "changed") return { ok: true, verdict: "already_done" };
     return undone.ok ? { ok: true, verdict: "undone" } : { ok: false, reason: "invalid" };
   }
 

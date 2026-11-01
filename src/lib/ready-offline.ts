@@ -141,13 +141,24 @@ export async function keepReadyPageOnDevice(): Promise<boolean> {
   }
 }
 
+/** The key of the one kept copy inside {@link READY_CACHE_NAME} (`src/worker/ready-page-cache.ts`). */
+const READY_COPY_KEY = "/ready/kept-copy";
+
+/** The header the worker stamps on the kept copy: a SHA-256 of the page path it was kept for. */
+const READY_PATH_HASH_HEADER = "x-diveday-path-sha256";
+
 /**
  * **A cancelled seat takes its copy with it** (issue #2979, security review
  * 2026-10-24, finding 1). A self-cancel is a server action, and a hydrated
  * page follows its redirect without a navigation the worker can see, so the
  * card the cancel lands on asks the worker controlling it to forget this
  * page's copy (by its own path: another booking's copy stays). Answers
- * whether the worker said it did; never throws.
+ * whether this page's copy is gone; never throws.
+ *
+ * A worker that answers `ok: false` has already deleted this path's copy
+ * (or has none to delete), so the page does nothing more. With no worker, or
+ * one that does not answer in time, the page deletes only the cached entry
+ * stamped with the hash of its own path, never the whole cache.
  */
 export async function forgetThisReadyPage(): Promise<boolean> {
   try {
@@ -155,27 +166,33 @@ export async function forgetThisReadyPage(): Promise<boolean> {
     // A page the worker does not control yet (it was loaded before the claim)
     // still reaches the diver's registration, and the worker answers any
     // client by its own URL.
-    const worker =
-      serviceWorker?.controller ??
-      (await serviceWorker?.getRegistration(READY_WORKER_SCOPE))?.active ??
-      null;
-    if (worker && (await askWorkerToForget(worker))) return true;
-    // No worker, or one that did not confirm in time: the page is the last
+    let worker: ServiceWorker | null = serviceWorker?.controller ?? null;
+    if (!worker) {
+      try {
+        worker = (await serviceWorker?.getRegistration(READY_WORKER_SCOPE))?.active ?? null;
+      } catch {
+        worker = null;
+      }
+    }
+    const answer = worker ? await askWorkerToForget(worker) : null;
+    if (answer === true) return true;
+    if (answer === false) return false;
+    // No worker, or one that did not answer in time: the page is the last
     // thing standing between a cancelled seat and its saved summary, so it
-    // drops the copy itself. The slot holds one copy, so this removes only
-    // that; a worker that never answered cannot be waited on.
-    return await dropReadyCopyCache();
+    // drops its own path's copy itself.
+    return await dropThisPagesReadyCopy();
   } catch {
     return false;
   }
 }
 
-function askWorkerToForget(worker: ServiceWorker): Promise<boolean> {
-  return new Promise<boolean>((resolve) => {
+/** The worker's answer, or null when it gave none in time. */
+function askWorkerToForget(worker: ServiceWorker): Promise<boolean | null> {
+  return new Promise<boolean | null>((resolve) => {
     const channel = new MessageChannel();
     const timer = setTimeout(() => {
       channel.port1.close();
-      resolve(false);
+      resolve(null);
     }, ACTIVATE_TIMEOUT_MS);
     channel.port1.onmessage = (event) => {
       clearTimeout(timer);
@@ -186,10 +203,21 @@ function askWorkerToForget(worker: ServiceWorker): Promise<boolean> {
   });
 }
 
-async function dropReadyCopyCache(): Promise<boolean> {
+async function pagePathHash(path: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(path));
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+/** Deletes the kept copy only when it was kept for this page's path. */
+async function dropThisPagesReadyCopy(): Promise<boolean> {
   try {
-    if (typeof caches === "undefined" || !caches) return false;
-    await caches.delete(READY_CACHE_NAME);
+    if (typeof caches === "undefined" || !caches || typeof location === "undefined") return false;
+    const hash = await pagePathHash(location.pathname);
+    const cache = await caches.open(READY_CACHE_NAME);
+    const kept = await cache.match(READY_COPY_KEY);
+    if (kept && kept.headers.get(READY_PATH_HASH_HEADER) === hash) {
+      await cache.delete(READY_COPY_KEY);
+    }
     return true;
   } catch {
     return false;
