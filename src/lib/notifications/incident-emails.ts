@@ -2,8 +2,8 @@ import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 import { formatDateTimeTz } from "@/lib/format";
 import { escapeHtml } from "@/lib/html";
-import { firstNameOf } from "@/lib/person-name";
 import { emailButton, type NotificationEmail } from "./email";
+import { notificationGreeting } from "./greeting";
 
 // i18n-exempt-file: the terminal renderer for the missing-diver alert, on the
 // same footing as `./roll-call-emails.ts` — no React component picks words for
@@ -32,9 +32,7 @@ export function incidentMissingDiverEmail(
   input: IncidentMissingDiverEmailInput,
 ): NotificationEmail {
   const t = diverTranslator(input.locale);
-  const firstName = firstNameOf(input.recipientName, t("notifications.common.genericName"));
-  const greetingText = t("notifications.common.greeting", { firstName });
-  const greetingHtml = t("notifications.common.greeting", { firstName: escapeHtml(firstName) });
+  const { text: greetingText, html: greetingHtml } = notificationGreeting(t, input.recipientName);
   const body = t("notifications.incidentMissingDiver.body", {
     tripTitle: input.tripTitle,
     when: formatDateTimeTz(input.reportedAt, input.locale, input.timezone),
@@ -72,9 +70,7 @@ export function incidentMissingDiverFoundEmail(
   input: IncidentMissingDiverFoundEmailInput,
 ): NotificationEmail {
   const t = diverTranslator(input.locale);
-  const firstName = firstNameOf(input.recipientName, t("notifications.common.genericName"));
-  const greetingText = t("notifications.common.greeting", { firstName });
-  const greetingHtml = t("notifications.common.greeting", { firstName: escapeHtml(firstName) });
+  const { text: greetingText, html: greetingHtml } = notificationGreeting(t, input.recipientName);
   const body = t("notifications.incidentMissingDiverFound.body", {
     tripTitle: input.tripTitle,
     when: formatDateTimeTz(input.foundAt, input.locale, input.timezone),

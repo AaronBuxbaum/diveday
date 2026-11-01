@@ -5,9 +5,9 @@ import { type CalendarDate, formatCalendarDate } from "@/lib/calendar-date";
 import type { GearServiceKind } from "@/lib/gear";
 import { escapeHtml } from "@/lib/html";
 import { cachedListFormat } from "@/lib/intl-cache";
-import { firstNameOf } from "@/lib/person-name";
 import { shortenForText } from "@/lib/work-order-follow-up";
 import type { NotificationEmail } from "./email";
+import { notificationGreeting } from "./greeting";
 import type { CustomerGearPiece } from "./kinds";
 
 // i18n-exempt-file: the terminal renderer for the bench's two messages to a
@@ -46,7 +46,7 @@ export type WorkOrderReadyEmailInput = {
 /** "Your gear is ready to collect", with what the bench did to it. */
 export function workOrderReadyEmail(input: WorkOrderReadyEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
-  const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));
+  const greeting = notificationGreeting(t, input.diverName);
   const number = String(input.ticketNumber);
   const ready = (shopName: string, pieces: string) =>
     input.pieces.length > 0
@@ -66,8 +66,8 @@ export function workOrderReadyEmail(input: WorkOrderReadyEmailInput): Notificati
 
   return {
     subject: t("notifications.workOrderReady.subject", { number }),
-    text: `${t("notifications.common.greeting", { firstName })}\n\n${ready(input.shopName, list)}${workText}\n`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${ready(escapeHtml(input.shopName), escapeHtml(list))}</p>${workHtml}`,
+    text: `${greeting.text}\n\n${ready(input.shopName, list)}${workText}\n`,
+    html: `<p>${greeting.html}</p><p>${ready(escapeHtml(input.shopName), escapeHtml(list))}</p>${workHtml}`,
   };
 }
 
@@ -112,7 +112,7 @@ export type GearServiceDueEmailInput = {
 /** A customer piece coming due, a month out, with the courtesy way out. */
 export function gearServiceDueEmail(input: GearServiceDueEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
-  const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));
+  const greeting = notificationGreeting(t, input.diverName);
   // A calendar date with no instant in it: formatted through UTC so the day
   // never shifts (`formatCalendarDate`).
   const date = formatCalendarDate(input.dueOn as CalendarDate, input.locale);
@@ -131,8 +131,8 @@ export function gearServiceDueEmail(input: GearServiceDueEmailInput): Notificati
 
   return {
     subject: t("notifications.gearServiceDue.subject", { shopName: input.shopName }),
-    text: `${t("notifications.common.greeting", { firstName })}\n\n${due} ${dropBy}\n\n${unsubscribe}:\n${input.unsubscribeUrl}\n`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${dueHtml} ${dropByHtml}</p><p><a href="${escapeHtml(input.unsubscribeUrl)}">${escapeHtml(unsubscribe)}</a></p>`,
+    text: `${greeting.text}\n\n${due} ${dropBy}\n\n${unsubscribe}:\n${input.unsubscribeUrl}\n`,
+    html: `<p>${greeting.html}</p><p>${dueHtml} ${dropByHtml}</p><p><a href="${escapeHtml(input.unsubscribeUrl)}">${escapeHtml(unsubscribe)}</a></p>`,
   };
 }
 

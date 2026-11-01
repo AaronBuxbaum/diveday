@@ -2,8 +2,8 @@ import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 import { formatDateTimeTz, formatShortDate } from "@/lib/format";
 import { escapeHtml } from "@/lib/html";
-import { firstNameOf } from "@/lib/person-name";
 import type { NotificationEmail } from "./email";
+import { notificationGreeting } from "./greeting";
 
 // i18n-exempt-file: the terminal renderer for two desk messages to a diver
 // (batch 4: a note to a whole departure, J4; something found aboard, J2), on
@@ -29,7 +29,7 @@ export type DepartureNoteMessageInput = {
 /** "A note about Saturday's reef trip", the note, and the diver's own booking link. */
 export function departureNoteEmail(input: DepartureNoteMessageInput): NotificationEmail {
   const t = diverTranslator(input.locale);
-  const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));
+  const greeting = notificationGreeting(t, input.diverName);
   const date = formatDateTimeTz(input.startsAt, input.locale, input.timezone);
   const intro = t("notifications.departureNote.intro", {
     shopName: input.shopName,
@@ -48,8 +48,8 @@ export function departureNoteEmail(input: DepartureNoteMessageInput): Notificati
     : "";
   return {
     subject: t("notifications.departureNote.subject", { tripTitle: input.tripTitle }),
-    text: `${t("notifications.common.greeting", { firstName })}\n\n${intro}\n\n${input.body}${linkText}\n`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${introHtml}</p><blockquote><p>${escapeHtml(input.body)}</p></blockquote>${linkHtml}`,
+    text: `${greeting.text}\n\n${intro}\n\n${input.body}${linkText}\n`,
+    html: `<p>${greeting.html}</p><p>${introHtml}</p><blockquote><p>${escapeHtml(input.body)}</p></blockquote>${linkHtml}`,
   };
 }
 
@@ -89,7 +89,7 @@ export type LostItemMessageInput = {
 /** "The crew found this aboard after …", and that the shop is holding it. */
 export function lostItemEmail(input: LostItemMessageInput): NotificationEmail {
   const t = diverTranslator(input.locale);
-  const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));
+  const greeting = notificationGreeting(t, input.diverName);
   const date = formatShortDate(input.startsAt, input.locale, input.timezone);
   const body = t("notifications.lostItem.body", {
     tripTitle: input.tripTitle,
@@ -105,8 +105,8 @@ export function lostItemEmail(input: LostItemMessageInput): NotificationEmail {
   });
   return {
     subject: t("notifications.lostItem.subject", { tripTitle: input.tripTitle }),
-    text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p>`,
+    text: `${greeting.text}\n\n${body}\n`,
+    html: `<p>${greeting.html}</p><p>${bodyHtml}</p>`,
   };
 }
 
