@@ -32,6 +32,7 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
+import { playwrightReportSpecs } from "./playwright-report-walk.mjs";
 
 export const DEFAULT_SHARE = 0.5;
 /** The share of its budget past which a test is an annotation, not only a summary row. */
@@ -40,21 +41,19 @@ export const WARN_SHARE = 0.8;
 /** Every test in a Playwright JSON report, flattened with where it lives. */
 export function reportTests(report) {
   const tests = [];
-  const walk = (suite, titles) => {
-    const here = suite.title ? [...titles, suite.title] : titles;
-    for (const spec of suite.specs ?? []) {
-      for (const test of spec.tests ?? []) {
-        tests.push({
-          title: [...here.slice(1), spec.title].join(" › "),
-          file: spec.file ?? suite.file ?? "",
-          line: spec.line ?? 0,
-          test,
-        });
-      }
+  for (const { rootTitle, suiteTitles, suiteFile, spec } of playwrightReportSpecs(
+    report.suites ?? [],
+  )) {
+    const titles = [rootTitle, ...suiteTitles].filter(Boolean).slice(1);
+    for (const test of spec.tests ?? []) {
+      tests.push({
+        title: [...titles, spec.title].join(" › "),
+        file: spec.file ?? suiteFile ?? "",
+        line: spec.line ?? 0,
+        test,
+      });
     }
-    for (const child of suite.suites ?? []) walk(child, here);
-  };
-  for (const suite of report.suites ?? []) walk(suite, []);
+  }
   return tests;
 }
 

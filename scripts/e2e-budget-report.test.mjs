@@ -59,6 +59,34 @@ describe("e2e budget report", () => {
     );
   });
 
+  it("keeps the current suite file and existing untitled-root title behavior", () => {
+    const test = { timeout: 15_000, results: [result(14_000)] };
+    const report = {
+      suites: [
+        {
+          file: "root.spec.ts",
+          suites: [
+            {
+              title: "first describe",
+              suites: [
+                {
+                  title: "last describe",
+                  file: "current.spec.ts",
+                  specs: [{ title: "a slow test", tests: [test] }],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    expect(reportTests(report)).toEqual([
+      { title: "last describe › a slow test", file: "current.spec.ts", line: 0, test },
+    ]);
+    expect(() => reportTests(null)).toThrow();
+  });
+
   it("measures each test against its own effective budget, slowest attempt first", () => {
     const close = closeToBudget(report);
     // 9s of a 45s slow() budget is 20%, so it is not listed beside 14s of 15s.

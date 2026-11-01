@@ -4,6 +4,7 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 import { DURATIONS_FILE, testListLine } from "./e2e-shard.mjs";
+import { playwrightReportSpecs } from "./playwright-report-walk.mjs";
 import { isVisualSpec } from "./visual-specs.mjs";
 
 /**
@@ -39,24 +40,6 @@ const SPEC_ROOT = "e2e";
 export const DURATIONS_NOTE =
   "Recorded CI milliseconds the Playwright and visual shards are dealt by (scripts/e2e-shard.mjs): `functional` per spec file, `visual` per test as its --test-list line. Written by `node scripts/e2e-durations.mjs merge`, weekly by .github/workflows/durations-refresh.yml; never edited by hand.";
 
-/** The first result's duration of every test in a Playwright JSON report, with its file and titles. */
-function* reportedTests(report) {
-  function* walk(suite, titles, file) {
-    for (const spec of suite.specs ?? []) {
-      for (const test of spec.tests ?? []) {
-        const duration = test.results?.[0]?.duration;
-        yield {
-          file,
-          titles: [...titles, spec.title],
-          duration: Number.isFinite(duration) ? duration : 0,
-        };
-      }
-    }
-    for (const child of suite.suites ?? []) yield* walk(child, [...titles, child.title], file);
-  }
-  for (const suite of report?.suites ?? []) yield* walk(suite, [], suite.file);
-}
-
 /**
  * The compact map one shard records. Functional: spec path (repo-relative,
  * `e2e/…`) → the sum of its tests. Visual: `--test-list` line → that test.
@@ -66,11 +49,19 @@ function* reportedTests(report) {
 export function durationsFromReport(report, kind) {
   if (!KINDS.includes(kind)) throw new Error(`e2e-durations: unknown kind "${kind}"`);
   const map = {};
-  for (const { file, titles, duration } of reportedTests(report)) {
-    const spec = `${SPEC_ROOT}/${file}`;
-    const visual = isVisualSpec(spec);
-    if (kind === "functional" && !visual) map[spec] = (map[spec] ?? 0) + Math.round(duration);
-    if (kind === "visual" && visual) map[testListLine(file, titles)] = Math.round(duration);
+  for (const { rootFile, suiteTitles, spec } of playwrightReportSpecs(report?.suites ?? [])) {
+    const file = rootFile;
+    const specPath = `${SPEC_ROOT}/${file}`;
+    const visual = isVisualSpec(specPath);
+    for (const test of spec.tests ?? []) {
+      const duration = test.results?.[0]?.duration;
+      const titles = [...suiteTitles, spec.title];
+      const elapsed = Number.isFinite(duration) ? duration : 0;
+      if (kind === "functional" && !visual) {
+        map[specPath] = (map[specPath] ?? 0) + Math.round(elapsed);
+      }
+      if (kind === "visual" && visual) map[testListLine(file, titles)] = Math.round(elapsed);
+    }
   }
   return map;
 }

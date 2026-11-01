@@ -3,6 +3,7 @@ import { appendFile, readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
+import { playwrightReportSpecs } from "./playwright-report-walk.mjs";
 import { isVisualSpec } from "./visual-specs.mjs";
 
 /**
@@ -280,17 +281,18 @@ export function testListLine(file, titles) {
  * project* would need the project prefix; this suite has one project, and a
  * second is refused rather than silently dealt twice.
  */
-export function listedTests(report) {
+function visualIdentities(report) {
   const projects = new Set();
-  const lines = [];
-  function walk(suite, titles, file) {
-    for (const spec of suite.specs ?? []) {
-      for (const test of spec.tests ?? []) projects.add(test.projectName ?? "");
-      lines.push(testListLine(spec.file ?? file, [...titles, spec.title]));
-    }
-    for (const child of suite.suites ?? []) walk(child, [...titles, child.title], file);
+  const identities = [];
+  for (const { rootFile, suiteTitles, spec } of playwrightReportSpecs(report?.suites ?? [])) {
+    for (const test of spec.tests ?? []) projects.add(test.projectName ?? "");
+    const titles = [...suiteTitles, spec.title];
+    identities.push({
+      line: testListLine(spec.file ?? rootFile, titles),
+      loadLine: testListLine(rootFile, titles),
+    });
   }
-  for (const suite of report?.suites ?? []) walk({ ...suite, specs: suite.specs }, [], suite.file);
+  const lines = identities.map(({ line }) => line);
   if (projects.size > 1) {
     throw new Error(
       `e2e-shard: the visual list spans ${projects.size} projects (${[...projects].join(", ")}); deal one project per run.`,
@@ -301,7 +303,11 @@ export function listedTests(report) {
       "e2e-shard: two visual tests share one title path; a --test-list cannot tell them apart.",
     );
   }
-  return lines;
+  return identities;
+}
+
+export function listedTests(report) {
+  return visualIdentities(report).map(({ line }) => line);
 }
 
 /**
@@ -313,16 +319,9 @@ export function listedTests(report) {
  * Playwright load error. Keep these load lines out of deals and duration keys.
  */
 export function testListLines(report, selected) {
-  const known = new Set(listedTests(report));
-  const loadLines = new Map();
-  function walk(suite, titles, file) {
-    for (const spec of suite.specs ?? []) {
-      const names = [...titles, spec.title];
-      loadLines.set(testListLine(spec.file ?? file, names), testListLine(file, names));
-    }
-    for (const child of suite.suites ?? []) walk(child, [...titles, child.title], file);
-  }
-  for (const suite of report?.suites ?? []) walk(suite, [], suite.file);
+  const identities = visualIdentities(report);
+  const known = new Set(identities.map(({ line }) => line));
+  const loadLines = new Map(identities.map(({ line, loadLine }) => [line, loadLine]));
   const lines = new Set();
   for (const line of selected ?? known) {
     if (!known.has(line))
