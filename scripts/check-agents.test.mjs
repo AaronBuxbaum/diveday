@@ -201,6 +201,15 @@ describe("local overrides of vendored skills", () => {
     expect(problems).toHaveLength(1);
     expect(problems[0]).toContain(".agents/skills/to-spec/SKILL.md");
   });
+
+  it("refuses a skill a sync gave back an upstream description that overlaps another", () => {
+    const problems = vendoredSkillProblems({
+      handoff:
+        "description: Compact the current conversation into a handoff document for another agent to pick up.",
+    });
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain("claude-handoff");
+  });
 });
 
 describe("the handoff docs' paths", () => {

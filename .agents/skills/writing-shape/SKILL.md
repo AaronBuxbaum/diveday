@@ -1,6 +1,6 @@
 ---
 name: writing-shape
-description: "Writing, exploit: shape raw material into an article, paragraph by paragraph."
+description: "Writing step 2 (exploit), arguing each block: shape a fragments file into an article, paragraph by paragraph. Or writing-beats."
 disable-model-invocation: true
 ---
 

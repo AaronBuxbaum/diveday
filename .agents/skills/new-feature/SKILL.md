@@ -1,6 +1,6 @@
 ---
 name: new-feature
-description: Build a feature from scoped contracts through verified, reviewed delivery.
+description: "Build a product feature, docs to shipped slice. A ready spec: implement."
 ---
 
 # Build a feature

@@ -1,6 +1,6 @@
 ---
 name: implement-spec
-description: "Implement the result of /to-spec and /to-tickets in code."
+description: "Implement a spec's whole ticket graph on one integration branch, fanning out subagents only for independent tickets. One spec or ticket: implement."
 disable-model-invocation: true
 ---
 

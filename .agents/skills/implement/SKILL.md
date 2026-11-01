@@ -1,6 +1,6 @@
 ---
 name: implement
-description: "Implement a piece of work based on a spec or set of tickets."
+description: "Implement one spec or a few tickets yourself in this session. A whole ticket graph: implement-spec; a roadmap feature: new-feature."
 disable-model-invocation: true
 ---
 

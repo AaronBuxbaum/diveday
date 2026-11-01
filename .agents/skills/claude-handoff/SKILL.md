@@ -1,6 +1,6 @@
 ---
 name: claude-handoff
-description: Hand the current conversation off to a fresh background agent that picks up the work immediately.
+description: "Launch a background agent now (`claude --bg`) seeded with a handoff summary. For a document to read later: handoff."
 argument-hint: "What will the next session be used for?"
 disable-model-invocation: true
 ---

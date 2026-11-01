@@ -79,6 +79,39 @@ export const VENDORED_SKILL_OVERRIDES = [
     phrase: "/setup-matt-pocock-skills",
     fix: 'point at the "Agent skills" section of CLAUDE.md and docs/agents/issue-tracker.md instead — this repository has no such command',
   },
+  {
+    phrase: "Compact the current conversation into a handoff document",
+    fix: "set the description to: Write a handoff document for another agent to read later. To start one now: claude-handoff.",
+  },
+  {
+    phrase:
+      "Hand the current conversation off to a fresh background agent that picks up the work immediately.",
+    fix: "set the description to: Launch a background agent now (`claude --bg`) seeded with a handoff summary. For a document to read later: handoff.",
+  },
+  {
+    phrase: "Implement a piece of work based on a spec or set of tickets.",
+    fix: "set the description to: Implement one spec or a few tickets yourself in this session. A whole ticket graph: implement-spec; a roadmap feature: new-feature.",
+  },
+  {
+    phrase: "Implement the result of /to-spec and /to-tickets in code.",
+    fix: "set the description to: Implement a spec's whole ticket graph on one integration branch, fanning out subagents only for independent tickets. One spec or ticket: implement.",
+  },
+  {
+    phrase: "Writing, explore: mine raw fragments, no structure yet.",
+    fix: "set the description to: Writing step 1 (explore): collect raw fragments in one file, no structure. Then writing-shape or writing-beats.",
+  },
+  {
+    phrase: "Writing, exploit: shape raw material into an article, paragraph by paragraph.",
+    fix: "set the description to: Writing step 2 (exploit), arguing each block: shape a fragments file into an article, paragraph by paragraph. Or writing-beats.",
+  },
+  {
+    phrase: "Writing, exploit; assemble raw material into a journey of beats",
+    fix: "set the description to: Writing step 2 (exploit), picking among next beats: walk a fragments file as a journey of beats, each term grounded first. Or writing-shape.",
+  },
+  {
+    phrase: "or recording or editing an ADR.",
+    fix: "set the description to: Build and sharpen a project's domain model. Use when discussing codebase terminology or writing or editing a GLOSSARY.md. Recording an ADR: adr.",
+  },
 ];
 
 /** Each override a vendored skill has lost, given `{ [name]: SKILL.md contents }`. */

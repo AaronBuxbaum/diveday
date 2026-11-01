@@ -41,6 +41,29 @@ The **hooks** in `.claude/settings.json` are the mechanical half of the rules an
 | `expand-content` | Covering a new dive area, or adding sites or species to the starting content — sourced denominator, templates, species copy and vetted photos, to 80% coverage |
 | `commercial-outreach` | Drafting go-to-market collateral for a stakeholder conversation — the design-partner one-pager, case-study interview prep, DEMA/media pitch notes, or other prep material referenced by `docs/product/rollout.md` and `docs/product/stakeholders/commercial-and-industry.md` |
 
+### Skills that sound alike
+
+Each request below has one skill; the descriptions are written so no two match the same one.
+
+| Request | Skill |
+|---|---|
+| A handoff **document** for a later session | `handoff` |
+| Start a background agent on the work **now** | `claude-handoff` |
+| One spec or a few tickets, built in this session | `implement` |
+| A spec's whole ticket graph, on one integration branch | `implement-spec` |
+| A roadmap or product feature, docs to shipped slice | `new-feature` |
+| Writing, gather raw fragments (step 1) | `writing-fragments` |
+| Writing, shape the pile paragraph by paragraph (step 2, the user argues each block) | `writing-shape` |
+| Writing, walk the pile as a journey of beats (step 2, the user picks among next beats) | `writing-beats` |
+| A `/switching/*` guide or `src/lib/migration-guides.ts` | `switching-pages` |
+| Any other public marketing page | `marketing-page` |
+| `loading.tsx`, `instant`, layouts, redirects, `blocking-prerender-*` | `instant-navigation` |
+| A glossary or domain term | `domain-modeling` |
+| A hard-to-reverse decision | `adr` |
+
+`switching-pages` and `instant-navigation` do not compete: one is a guide's content, the other a
+route's shell, and a new guide route uses both.
+
 Reviewer agents (`.claude/agents/`): `design-critic` (delight principles), `dive-domain-expert`
 (dive-industry correctness — required for safety-critical surfaces), `security-reviewer` (tenant
 isolation, authz, data exposure — required for auth/allowlist/token/PII/export changes),
