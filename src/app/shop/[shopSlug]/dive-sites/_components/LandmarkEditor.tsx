@@ -45,21 +45,8 @@ export type LandmarkEditorCopy = {
 };
 
 /**
- * The landmarks a crew points at, each with the shop's own note on it.
- *
- * This replaced a one-per-line textarea whose lines were *only* names: the
- * paragraph a diver read under each one came from a table in
- * `src/lib/dive-site-landmarks.ts` keyed by site name and landmark name, so
- * seven landmarks at three DiveDay demo sites had words and every landmark any
- * real shop typed got the same generic sentence. There was no field anywhere
- * that could change that.
- *
- * Same shape as `RouteEditor` beside it: client state, one hidden input
- * carrying the whole list as JSON, and the server normalising what arrives
- * (`parseDiveSiteLandmarks`) rather than trusting it. That is what lets a
- * refused submit hand the list back exactly as it was typed — the form
- * re-renders from the server and this component's `initialLandmarks` is the
- * submitted value.
+ * Shop-authored landmark notes post as JSON and are normalized by
+ * `parseDiveSiteLandmarks`; refused submits restore the submitted list.
  */
 export function LandmarkEditor({
   initialLandmarks,
@@ -69,11 +56,8 @@ export function LandmarkEditor({
   copy: LandmarkEditorCopy;
 }) {
   const [landmarks, setLandmarks] = useState<DiveSiteLandmark[]>(initialLandmarks);
-  // **A key per row that survives a removal above it.** Each row now holds a
-  // file input, and a picked file lives in that input's DOM node, nowhere
-  // else. Keyed by index, removing row 1 would hand row 2's node — and its
-  // file — to what was row 3. The keys travel with the rows; the inputs'
-  // *names* follow the index, which is what the server reads them by.
+  // Keys stay with rows so removing an earlier row keeps a picked file with
+  // its input; posted input names still follow the server's row index.
   const nextKey = useRef(initialLandmarks.length);
   const [keys, setKeys] = useState<number[]>(() => initialLandmarks.map((_, index) => index));
   const idPrefix = useId();
@@ -89,9 +73,7 @@ export function LandmarkEditor({
   };
 
   return (
-    // No box and no legend of its own: the editor is the body of the form's
-    // "Landmarks" section, which carries the name and the sentence under it
-    // (ADR 20260827-the-shops-shelves, the long-form editor pattern).
+    // The form's "Landmarks" section supplies the legend (ADR 20260827-the-shops-shelves).
     <div>
       {/* The record the form posts. Always present, even when empty: clearing
           the last landmark has to be savable too. */}
@@ -118,9 +100,6 @@ export function LandmarkEditor({
                 </button>
               }
             >
-              {/* A row of controls only, now that Remove sits at the card's
-                  head: the name box and the kind select stand at the field
-                  size, each under a caption of its own, one field gap apart. */}
               <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
                 <Field label={copy.nameLabel} className="flex-1 sm:min-w-48">
                   <input
@@ -157,15 +136,9 @@ export function LandmarkEditor({
                   className={textareaClassFor(2)}
                 />
               </Field>
-              {/* The photo divers see beside the note: a stored one with its
-                  way off, or the tile whose file posts under this row's index.
-                  The tile is the stored photo's size, so the row looks the same
-                  before and after the save. */}
               <Field
                 label={copy.photoLabel}
                 className="mt-4"
-                // A stored photo and its button label themselves; the caption
-                // names the pair rather than wrapping the button.
                 group={Boolean(landmark.photoUrl)}
                 htmlFor={landmark.photoUrl ? undefined : `${idPrefix}-photo-${keys[index]}`}
               >

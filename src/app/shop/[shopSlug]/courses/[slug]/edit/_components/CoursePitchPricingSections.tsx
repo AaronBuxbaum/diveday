@@ -58,10 +58,7 @@ export function CoursePitchPricingSections({
               className={textareaClassFor(8)}
             />
           </Field>
-          {/* Beside the boxes it governs rather than in a panel above the
-                  whole form: a depth marker is typed into this section's prose,
-                  and it is the one piece of syntax this editor asks a shop to
-                  learn. Unboxed, like everything else in a section now. */}
+          {/* Depth markers are typed in this prose, so the hint sits beside it. */}
           <p className="text-sm text-muted">
             {t.rich("courses.edit.depthMarkersHint", {
               marker: (chunks) => (

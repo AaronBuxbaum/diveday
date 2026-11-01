@@ -47,27 +47,9 @@ function restore(field: Element, values: SubmittedFormValues) {
 }
 
 /**
- * The `<form>` both site briefings live in.
- *
- * A rejected submission used to `redirect(?error=...)`, which re-rendered a
- * twenty-field form completely blank — the staffer's whole briefing gone, and
- * a banner naming rules that had not failed ("check the required name and
- * links", when the real refusal was the both-coordinates-or-neither rule).
- * Handing the refusal back through `useActionState` instead means React never
- * navigates, so the banner can name the one rule that actually refused the
- * save. Same shape as the diver booking form
- * (`src/app/s/[shopSlug]/trips/[id]/actions.ts`), which fixed the same bug for
- * a whole booking party.
- *
- * Not navigating is only half of it: React empties an uncontrolled form as soon
- * as its action settles, so staying on the page is not by itself enough to keep
- * what was typed. The refusal therefore carries the submission back with it and
- * this puts it straight back on the controls, in a layout effect — after
- * React's reset, before the browser paints, so there is no flash of an empty
- * form. The alternative, making all twenty fields controlled, would drag every
- * label into the client bundle; staff copy is resolved server-side (AGENTS.md:
- * staff Client Components take words as props), which is why the fields arrive
- * as server-rendered `children` and `errorMessages` arrives already translated.
+ * Keep server-rendered fields uncontrolled and pass translated messages in.
+ * A refusal returns values for restoration after React resets the form, so
+ * staff keep their draft without moving field copy into the client bundle.
  */
 export function SiteFormShell({
   action,
@@ -98,13 +80,8 @@ export function SiteFormShell({
   actions?: ReactNode;
   children: ReactNode;
 }) {
-  // The attempt counter is what `FieldErrorFocus` is keyed on. Its effect is
-  // keyed on what it was told, so the *same* refusal twice in a row — a
-  // staffer who fixes the wrong coordinate and presses Save again — would
-  // otherwise leave the cursor where it was. `useActionState` hands back a
-  // fresh state object per attempt but no nonce, so wrapping the action is
-  // where one comes from; the shell's own state type carries it and the
-  // server action never sees it.
+  // A new key retriggers focus when the same refusal is returned twice;
+  // useActionState provides no attempt id, so the shell adds one locally.
   const [state, formAction] = useActionState<SiteFormState & { attempt?: number }, FormData>(
     async (previous, formData) => ({
       ...(await action(previous, formData)),
@@ -140,21 +117,9 @@ export function SiteFormShell({
       data-hydrated={hydrated ? "true" : undefined}
     >
       {children}
-      {/* The refusal used to render *above* the form. On a twenty-field
-          briefing that put it a full screen above the Save button the staffer
-          had just pressed — they saw nothing happen, and scrolling back up was
-          on them. It renders beside that button now: the action row rides the
-          bottom of the viewport with Save and the unsaved-changes sentence in
-          it, because on a ten-section briefing the foot of the document is
-          nowhere (ADR 20260827-the-shops-shelves).
-
-          `FormStatus` is the shared shape for that (components/ui/form.tsx),
-          and it brings the drawn danger mark a danger banner carried but a
-          bare paragraph did not; `FieldErrorFocus` is the shared scroll-and-focus
-          that this file used to re-implement with its own effect, ref and
-          `tabIndex={-1}`. Between them the hand-rolled half of this component
-          is gone — and the focus target picks up the brief ring the rest of the
-          app's refusals already have. */}
+      {/* Keep refusal beside Save and the unsaved note in the sticky action
+          row (ADR 20260827-the-shops-shelves). Shared status and focus helpers
+          provide the danger treatment, scrolling, and focus ring. */}
       <StickyFormActions>
         {actions}
         {state.errorCode ? (
