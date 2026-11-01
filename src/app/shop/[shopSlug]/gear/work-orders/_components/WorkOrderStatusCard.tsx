@@ -22,9 +22,8 @@ import { restoreWorkOrderAction, setWorkOrderStatusAction } from "../actions";
  * menu. The labelled ChoiceFieldset groups actions; status is never a choice
  * or picker selection.
  *
- * Pickup requires confirmation. Collected tickets have no further moves; the
- * header badge shows outcome. Deleted tickets offer Restore only.
- *
+ * Pickup in the menu requires confirmation. Collected tickets have no further
+ * moves; the header badge shows outcome. Deleted tickets offer Restore only.
  */
 export function WorkOrderStatusCard({
   workOrder,
