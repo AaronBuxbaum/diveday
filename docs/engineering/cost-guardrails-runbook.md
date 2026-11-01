@@ -97,8 +97,7 @@ described here as $22–24 until 2026-09-10.
 > the report viewer reads an expected image only for a changed or deleted item and the next run's
 > baseline reads `actual/` only. `scripts/visual-build-publish-bundle.mjs` now keeps `expected/`
 > files for `failedItems` and `deletedItems` only: about 1,700 fewer Tier-1 PUTs (~$0.0085) per
-> publishing run. Not taken: a pull request snapshot is never anyone's baseline (every PR is keyed
-> to its fork point on `main`), so a PR run could skip uploading `passed` actual images too.
+> publishing run. Also done, on Aaron's yes: a pull request snapshot is never anyone's baseline (every PR is keyed to its fork point on `main`), so pull request runs skip uploading `passed` actual images. Their report lists only the captures it uploaded (`partialActual: true`) and its Passed tab shows names without images; runs on `main` still upload everything, because they are the baselines.
 
 What moving would and would not do:
 
