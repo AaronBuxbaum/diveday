@@ -6,5 +6,5 @@ ALTER TABLE "bookings" ADD COLUMN "re_entry_ask" "re_entry_ask";--> statement-br
 -- would make your day?" box this column stored is replaced in this same change by dive_intent, which
 -- asks the identical question in five plain choices the crew can count; its only writer was the
 -- public booking form, which stops writing it in this release, and its only reader was the roster
--- note now rendered from re_entry_ask. Pre-pilot, no users, H-49.
+-- note now rendered from re_entry_ask. Pre-pilot, no users, H-20260815-no-legacy.
 ALTER TABLE "bookings" DROP COLUMN "group_preference";

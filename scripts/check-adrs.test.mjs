@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
 
 import { adrSummary, END, indexTable, START, withIndex } from "./adr-index.mjs";
-import { adrProblems, adrWords, isCapped, quoteProblems, WORD_CAP } from "./check-adrs.mjs";
+import {
+  adrProblems,
+  adrWords,
+  DEPENDENCY_EXEMPT,
+  isCapped,
+  quoteProblems,
+  undocumentedDependencies,
+  WORD_CAP,
+} from "./check-adrs.mjs";
 
 const adr = (id, { status = "Accepted", body = "Short." } = {}) =>
   [
@@ -130,5 +138,25 @@ describe("ADR code quotes", () => {
     );
     expect(quoteProblems("a.md", "See `src/x.ts:99` for it.", read)).toEqual([]);
     expect(quoteProblems("a.md", fence("// just a comment", "x"), read)).toEqual([]);
+  });
+});
+
+describe("runtime dependencies named in an ADR", () => {
+  const adrs = ["We chose better-auth for sessions.", "Maps use `maplibre-gl` and `@sentry/nextjs`."];
+
+  it("passes a dependency an ADR names", () => {
+    expect(undocumentedDependencies(["better-auth", "maplibre-gl", "@sentry/nextjs"], adrs)).toEqual(
+      [],
+    );
+  });
+
+  it("fails a new dependency that no ADR names", () => {
+    expect(undocumentedDependencies(["better-auth", "left-pad"], adrs)).toEqual(["left-pad"]);
+  });
+
+  it("exempts exactly two names", () => {
+    expect([...DEPENDENCY_EXEMPT].toSorted()).toEqual(["@vercel/speed-insights", "react-dom"]);
+    expect(undocumentedDependencies(["react-dom", "@vercel/speed-insights"], [])).toEqual([]);
+    expect(undocumentedDependencies(["react-dom-extra"], [])).toEqual(["react-dom-extra"]);
   });
 });

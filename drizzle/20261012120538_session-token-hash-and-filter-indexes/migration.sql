@@ -5,6 +5,6 @@ CREATE INDEX "gear_reservations_shop_checked_out_idx" ON "gear_reservations" ("s
 -- the cookie's token (src/lib/session-token-hash.ts), so a row written before this
 -- holds a raw token no lookup can match. Expired rather than hashed in place:
 -- every staffer signs in once more, and any raw token a copy of this table ever
--- held stops opening anything. Pre-pilot, no users (H-49).
--- diveday:allow-destructive delete-without-where account_sessions: signs every staffer out once so no raw session token survives; pre-pilot, no users (H-49)
+-- held stops opening anything. Pre-pilot, no users (H-20260815-no-legacy).
+-- diveday:allow-destructive delete-without-where account_sessions: signs every staffer out once so no raw session token survives; pre-pilot, no users (H-20260815-no-legacy)
 DELETE FROM "account_sessions";
