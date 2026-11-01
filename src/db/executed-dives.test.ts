@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { HOUR_MS, MINUTE_MS, nowDate } from "@/lib/clock";
 import { DEFAULT_FLY_SAFE_HOURS, flySafeFrom } from "@/lib/fly-safe";
@@ -888,6 +888,8 @@ describe("peopleWhoDivedBefore", () => {
     for (const [table, moveToOtherShop] of Object.entries(reassign)) {
       const { db, shop, before, after, personId } = await twoDays(20, { fresh: true });
       const [other] = await otherShop(db);
+      // The composite key now refuses this row, so lift it for this transaction to probe the read.
+      await db.execute(sql`set session_replication_role = replica`);
       await moveToOtherShop(db, before.id, other.id);
       const found = await peopleWhoDivedBefore(
         db,
