@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
-import { bookings, people, personRoles, shops, trips, waiverRecords } from "./schema";
+import { bookings, people, personRoles, shops, trips, userAccounts, waiverRecords } from "./schema";
 import { completeWaiver } from "./waivers-completion";
 import { issueWaiverRequest } from "./waivers-requests";
 import { saveWaiverTemplate } from "./waivers-templates";
@@ -31,6 +31,12 @@ describePostgres("person-scoped waiver issuance against a physician update", () 
       .returning();
     if (!person || !owner) throw new Error("people insert returned no rows");
     await pg.db.insert(personRoles).values({ personId: owner.id, role: "owner" });
+    await pg.db.insert(userAccounts).values({
+      personId: owner.id,
+      email: `owner-${suffix}@example.test`,
+      hashedPassword: "unused",
+      status: "active",
+    });
 
     const signedAt = new Date("2026-07-18T12:00:00.000Z");
     const startsAt = new Date(signedAt.getTime() + 7 * 24 * 60 * 60 * 1000);
