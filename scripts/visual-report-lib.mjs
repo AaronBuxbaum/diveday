@@ -361,7 +361,9 @@ export function summarizeReport(report) {
 
   const comparedCount = passed.length + changed.length + deleted.length;
   const changedCount = changed.length + added.length + deleted.length;
-  const capturedCount = actual.length || passed.length + changed.length + added.length;
+  // A pull request report lists only the captures it uploaded (`partialActual`),
+  // so count the compared outcome too.
+  const capturedCount = Math.max(actual.length, passed.length + changed.length + added.length);
 
   let verdict;
   if (capturedCount === 0 && comparedCount === 0) verdict = "nothing-captured";
