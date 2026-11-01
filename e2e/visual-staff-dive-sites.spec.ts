@@ -108,16 +108,7 @@ for (const scheme of ["light", "dark"] as const) {
               const tilesIdle =
                 map.querySelector(".leaflet-tile:not(.leaflet-tile-loaded)") === null;
 
-              // The scaled pin's edge is rasterized once its transform stops
-              // moving; wait for the compositor to finish any running animation
-              // and for two more frames so the last paint is the settled one (#3218).
-              const animating = [marker, popup, pane].some(
-                (element) => element.getAnimations({ subtree: true }).length > 0,
-              );
-              await nextFrame();
-              await nextFrame();
               return (
-                !animating &&
                 !pane.classList.contains("leaflet-pan-anim") &&
                 tilesIdle &&
                 JSON.stringify(before) === JSON.stringify(after)
@@ -129,13 +120,6 @@ for (const scheme of ["light", "dark"] as const) {
         let footerFocusedAtPreviousWidth = false;
         await capture(page, "dive-sites-library-pin-selected", scheme, {
           beforeShot: async () => {
-            // The scaled pin's soft drop shadow rasterizes to one of two outputs
-            // (13 pixels, max delta 3, on its lower contour) from the same build
-            // and state (#3218). The shadow is decoration; the ring, fill, glyph
-            // and popup stay captured.
-            await page.addStyleTag({
-              content: ".leaflet-site-marker button { box-shadow: none !important; }",
-            });
             await waitForSelectedMapToSettle();
             await expectPopupInMap(page, selectedPopup);
             for (const selector of [
