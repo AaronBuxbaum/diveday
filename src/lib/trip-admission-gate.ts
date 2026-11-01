@@ -7,66 +7,19 @@ import {
 } from "./trip-admission";
 
 /**
- * **The `?gate=` param, signed.**
+ * A signed `?gate=` carries a specific `TripAdmissionRefusal` across a redirect.
+ * The readable codes are not secret; the signature proves this deployment
+ * emitted them and prevents anyone from inventing refusal copy for a staffer.
  *
- * `src/lib/trip-admission.ts` flattens a `TripAdmissionRefusal` into one
- * query-param value so a staff seating's refusal survives the server action's
- * redirect. The codec is sound — it rejects unknown codes rather than
- * half-decoding them — but a codec proves only that a value is *well-formed*,
- * never that the refusal it describes ever happened. Without a signature,
- * anyone who gets a staffer to open a link renders a fabricated, specific
- * refusal:
+ * HMAC-SHA256 uses an HKDF-derived `AUTH_SECRET` with a gate-specific purpose.
+ * Scope is the route-owned trip id on trip/booking pages or person id on the
+ * diver record; callers supply it from path params, never from the query.
  *
- * ```
- * /shop/<slug>/trips/<id>?notice=diver-trip-prerequisite&gate=~~deep~0
- * ```
- *
- * — "…their Deep card isn't on file", which is exactly the sentence that points
- * a staffer at the certifications form, where a hand-entered card lands
- * `pending` and clears `decideTripAdmission` on the next attempt (H-24). The
- * tamper never bypasses a gate itself; it manufactures the prompt that gets a
- * staffer to bypass one. So the value is signed (security review finding).
- *
- * ## What is signed, and what it is bound to
- *
- * HMAC-SHA256 over `purpose | scope | codes`, keyed on a secret derived from
- * `AUTH_SECRET` by HKDF with its own info string — the same purpose-separation
- * `src/lib/recap-links.ts` uses, so a gate signature and a recap token are
- * never interchangeable and neither is the session-JWT key.
- *
- * **The scope is what stops a replay.** A signature that covered only the four
- * codes would be a bearer sentence: a staffer's own genuine refusal URL for one
- * departure, pasted at another, would still verify and still say "this charter
- * requires a Deep card" about a boat that requires nothing. So the payload
- * carries the id of the *route segment the landing page owns*, and the reader
- * re-supplies it from its own `params` rather than from the query:
- *
- * - the trip surfaces (`/trips/[id]` and `/bookings/new/[tripId]`) bind to the **trip id**;
- * - the diver record (`/divers/[personId]`), which has no departure in its URL
- *   at all, binds to the **person id**.
- *
- * Binding to a value the query supplies would be worthless — an attacker who
- * held a signature would simply supply the matching id with it. A path segment
- * the route resolved is the only value the reader can trust.
- *
- * ## What a failed verification does
- *
- * Returns null, and every caller falls back to the notice's own **generic**
- * sentence — never a blank banner, and never the specific one. A refusal a
- * staffer cannot read is a worse outcome than a vague one; a specific refusal
- * nobody can vouch for is worse than both.
- *
- * The codes stay legible in the URL (the signature is appended after a `.`)
- * rather than being wrapped in an opaque blob. Nothing in them is secret from
- * the staffer reading the page, and a debuggable param is worth more than the
- * obfuscation would buy.
+ * Invalid, absent, repeated, wrong-scope, or undecodable values return null.
+ * Notice callers then use generic copy. This verifies a notice, not admission.
  */
 
-/**
- * The identity the signature is bound to: whichever id the landing route holds
- * as a path segment. Two kinds rather than one because the three reading
- * surfaces genuinely differ — see the module docstring.
- */
+/** Route-owned identity included in the signature to prevent cross-surface replay. */
 export type TripAdmissionGateScope = { kind: "trip"; id: string } | { kind: "diver"; id: string };
 
 /** Folded into the signed payload so a gate signature verifies as nothing else. */
@@ -79,9 +32,7 @@ const SIGNATURE_SEPARATOR = ".";
 const SIGNATURE_SHAPE = /^[A-Za-z0-9_-]{43}$/;
 
 function gateSecret(): string {
-  // In production Auth.js refuses to boot without AUTH_SECRET; this is only
-  // ever null in dev/e2e, where auth-secret.ts supplies a fixed fallback. Fail
-  // loud rather than sign with an empty key.
+  // Production requires AUTH_SECRET; dev/e2e use auth-secret.ts's fixed fallback.
   if (!authSecret) throw new Error("AUTH_SECRET is required to sign trip-admission gates.");
   const derived = hkdfSync("sha256", authSecret, "", "diveday-trip-admission-gate", 32);
   return Buffer.from(derived).toString("base64url");
@@ -92,10 +43,7 @@ function sign(scope: TripAdmissionGateScope, codes: string): string {
   return createHmac("sha256", gateSecret()).update(payload).digest("base64url");
 }
 
-/**
- * The value to hang off `?gate=` — `<codes>.<signature>`, URL-safe as written
- * (the codes use `~`/`-`, the signature base64url, both unreserved).
- */
+/** The URL-safe `<codes>.<signature>` value to attach to `?gate=`. */
 export function signTripAdmissionGate(
   refusal: TripAdmissionRefusal,
   scope: TripAdmissionGateScope,
@@ -104,36 +52,23 @@ export function signTripAdmissionGate(
   return `${codes}${SIGNATURE_SEPARATOR}${sign(scope, codes)}`;
 }
 
-/**
- * The refusal a `?gate=` describes, **iff** this deployment signed it for this
- * exact scope. Null for anything else — absent, repeated (`string[]`),
- * unsigned, signed for another departure, or well-signed over codes the codec
- * refuses.
- */
+/** Return a decoded refusal only when this deployment signed it for this scope. */
 export function verifyTripAdmissionGate(
   value: string | readonly string[] | undefined | null,
   scope: TripAdmissionGateScope,
 ): TripAdmissionRefusal | null {
-  // An array is what `?gate=a&gate=b` delivers, and it is truthy — the shape
-  // that used to reach `.split()` and 500 the page.
+  // Repeated query params arrive as arrays and are unverified.
   if (typeof value !== "string") return null;
   const separator = value.lastIndexOf(SIGNATURE_SEPARATOR);
   if (separator <= 0) return null;
   const codes = value.slice(0, separator);
   const signature = value.slice(separator + 1);
-  // **Shape before bytes**, and a charset test rather than a length one.
-  // `timingSafeEqual` throws on buffers of unequal length; `signature.length`
-  // counts UTF-16 code units while `Buffer.from` encodes UTF-8, so a
-  // 43-*character* signature carrying one multibyte character is 44 *bytes* —
-  // the guard passed and the compare raised. Here that is a 500 on a staff page
-  // rather than an admission, which is why it stood; it is the same defect the
-  // security review of `course-preview-gate.ts` found failing open one module
-  // over, and the fix is two lines in both (issue #1735).
+  // Restrict to 43 single-byte base64url characters before timingSafeEqual;
+  // a UTF-16 length check alone can admit multibyte input and throw.
   if (!SIGNATURE_SHAPE.test(signature)) return null;
   const expected = sign(scope, codes);
   if (signature.length !== expected.length) return null;
   if (!timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) return null;
-  // Signed by us, for this page — but still only as trustworthy as the codec
-  // says. A signature over a malformed body is not a licence to half-decode it.
+  // A valid signature does not make malformed refusal codes valid.
   return decodeTripAdmissionRefusal(codes);
 }
