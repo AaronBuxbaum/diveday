@@ -229,11 +229,7 @@ runs. Pass args directly. The shell guard refuses the bare form.
   Act on the union of their findings, each under the reviewers' evidence rule: it cites the
   rule, ADR or glossary line it violates and a failing input or a test, labelled confirmed or
   possible. A finding is acted on once its test runs and fails. Each run gets its own
-  `dive-domain-expert` line in "Reviews launched", one naming "dock operator" and one
-  "attacker", each answered "launched" or with what it "found"; CI refuses a safety diff with
-  one line or with lines that do not name their framing, and still takes one "not needed
-  because <reason>" line for a change that only moves layout. It checks that two runs are
-  recorded, not that they happened. Ordinary PRs and rental fit keep one run: two runs double
+  `dive-domain-expert` line in "Reviews launched", labelled right after the agent name, `dive-domain-expert` (dock operator) and `dive-domain-expert` (attacker), each answered "launched" with what it found. CI reads the rendered text, ignores code fences, counts two identical lines once, and rejects an answer that says not, never, skipped, didn't or no time. A "not needed because <reason>" line is accepted only as the sole `dive-domain-expert` line, never beside a launched one; CI cannot tell whether the change only moves layout, so that judgement is the author's and a reviewer's. Waiver tests and fixtures need the review as much as waiver code; only message bundles and `*-copy.ts(x)` files are exempt. CI checks that two runs are recorded, not that they happened. Ordinary PRs and rental fit keep one run: two runs double
   the review spend, and the voting is worth it only where a miss puts a diver in the water.
 - **Security-sensitive changes** (auth/authz, token flows, rows holding personal or medical data,
   export/import) get a `security-reviewer` review before merge, named in the same "Reviews
