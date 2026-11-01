@@ -11,6 +11,7 @@ export function elearningCheckCopy(t: StaffTranslator): ElearningCheckCopy {
     noRecord: t("trips.roster.elearningCheck.noRecord"),
     unreadable: t("trips.roster.elearningCheck.unreadable"),
     signedOut: t("trips.roster.elearningCheck.signedOut"),
+    alreadyDone: t("trips.roster.elearningCheck.alreadyDone"),
     failed: t("trips.roster.elearningCheck.failed"),
     undo: t("shared.undoToast.undo"),
     undoPending: t("shared.undoToast.pendingLabel"),

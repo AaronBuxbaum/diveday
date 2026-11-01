@@ -21,6 +21,7 @@ export type RescheduleNoticeProps = {
   /** On a trip page, the trip the hold must be for. */
   tripId?: string;
   t: StaffTranslator;
+  locale: string;
 };
 
 /** Read the one pending row that can authorize a visible reschedule action. */
@@ -30,6 +31,7 @@ export async function resolveRescheduleNoticeSnapshot({
   tell,
   tripId,
   t,
+  locale,
 }: RescheduleNoticeProps): Promise<RescheduleNoticeSnapshot | null> {
   const id = z.uuid().safeParse(heldId);
   const count = z.coerce.number().int().min(1).max(500).safeParse(tell);
@@ -45,7 +47,7 @@ export async function resolveRescheduleNoticeSnapshot({
         holdMs: Math.max(0, row.runAt.getTime() - nowMs()),
       },
       tripId: row.payload.tripId,
-      copy: rescheduleHoldCopy(t, placeOnly),
+      copy: rescheduleHoldCopy(t, locale, placeOnly),
     };
   }
   return null;

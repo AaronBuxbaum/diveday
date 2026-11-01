@@ -1,0 +1,235 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "ee0bf573-825a-4d36-af7f-671045d43b0c",
+  "prevIds": [
+    "a9221b84-2214-4f68-9818-1635d64dc4b0"
+  ],
+  "footprints": [
+    {
+      "statementType": "drop_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "trips"
+      ],
+      "writes": [
+        "s|fk|public.trips.trips_dive_site_id_dive_sites_id_fkey",
+        "n|fk|public.trips.trips_dive_site_id_dive_sites_id_fkey",
+        "e|fk|public.trips.trips_dive_site_id_dive_sites_id_fkey",
+        "n|con|public.trips.trips_dive_site_id_dive_sites_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.trips",
+        "n|sch|public",
+        "e|col|public.trips.dive_site_id"
+      ]
+    },
+    {
+      "statementType": "drop_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "booking_capabilities",
+        "booking_capabilities_token_hash_idx"
+      ],
+      "writes": [
+        "s|idx|public.booking_capabilities_token_hash_idx",
+        "n|idx|public.booking_capabilities_token_hash_idx",
+        "e|idx|public.booking_capabilities_token_hash_idx",
+        "n|rel|public.booking_capabilities_token_hash_idx"
+      ],
+      "reads": [
+        "e|tbl|public.booking_capabilities",
+        "n|sch|public",
+        "e|col|public.booking_capabilities.token_hash"
+      ],
+      "sharedWrites": []
+    },
+    {
+      "statementType": "drop_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "calendar_feeds",
+        "calendar_feeds_token_hash_idx"
+      ],
+      "writes": [
+        "s|idx|public.calendar_feeds_token_hash_idx",
+        "n|idx|public.calendar_feeds_token_hash_idx",
+        "e|idx|public.calendar_feeds_token_hash_idx",
+        "n|rel|public.calendar_feeds_token_hash_idx"
+      ],
+      "reads": [
+        "e|tbl|public.calendar_feeds",
+        "n|sch|public",
+        "e|col|public.calendar_feeds.token_hash"
+      ],
+      "sharedWrites": []
+    },
+    {
+      "statementType": "drop_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "dive_sites",
+        "dive_sites_shop_name_idx"
+      ],
+      "writes": [
+        "s|idx|public.dive_sites_shop_name_idx",
+        "n|idx|public.dive_sites_shop_name_idx",
+        "e|idx|public.dive_sites_shop_name_idx",
+        "n|rel|public.dive_sites_shop_name_idx"
+      ],
+      "reads": [
+        "e|tbl|public.dive_sites",
+        "n|sch|public",
+        "e|col|public.dive_sites.shop_id",
+        "e|col|public.dive_sites.name"
+      ],
+      "sharedWrites": []
+    },
+    {
+      "statementType": "drop_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "global_dive_sites",
+        "global_dive_sites_slug_idx"
+      ],
+      "writes": [
+        "s|idx|public.global_dive_sites_slug_idx",
+        "n|idx|public.global_dive_sites_slug_idx",
+        "e|idx|public.global_dive_sites_slug_idx",
+        "n|rel|public.global_dive_sites_slug_idx"
+      ],
+      "reads": [
+        "e|tbl|public.global_dive_sites",
+        "n|sch|public",
+        "e|col|public.global_dive_sites.slug"
+      ],
+      "sharedWrites": []
+    },
+    {
+      "statementType": "drop_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "person_courtesy_email_unsubscribe_tokens",
+        "person_courtesy_email_unsubscribe_tokens_token_hash_idx"
+      ],
+      "writes": [
+        "s|idx|public.person_courtesy_email_unsubscribe_tokens_token_hash_idx",
+        "n|idx|public.person_courtesy_email_unsubscribe_tokens_token_hash_idx",
+        "e|idx|public.person_courtesy_email_unsubscribe_tokens_token_hash_idx",
+        "n|rel|public.person_courtesy_email_unsubscribe_tokens_token_hash_idx"
+      ],
+      "reads": [
+        "e|tbl|public.person_courtesy_email_unsubscribe_tokens",
+        "n|sch|public",
+        "e|col|public.person_courtesy_email_unsubscribe_tokens.token_hash"
+      ],
+      "sharedWrites": []
+    },
+    {
+      "statementType": "drop_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "rental_fit_profiles",
+        "rental_fit_profiles_shop_person_idx"
+      ],
+      "writes": [
+        "s|idx|public.rental_fit_profiles_shop_person_idx",
+        "n|idx|public.rental_fit_profiles_shop_person_idx",
+        "e|idx|public.rental_fit_profiles_shop_person_idx",
+        "n|rel|public.rental_fit_profiles_shop_person_idx"
+      ],
+      "reads": [
+        "e|tbl|public.rental_fit_profiles",
+        "n|sch|public",
+        "e|col|public.rental_fit_profiles.shop_id",
+        "e|col|public.rental_fit_profiles.person_id"
+      ],
+      "sharedWrites": []
+    },
+    {
+      "statementType": "drop_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "interest_unsubscribe_tokens",
+        "interest_unsubscribe_tokens_token_hash_idx"
+      ],
+      "writes": [
+        "s|idx|public.interest_unsubscribe_tokens_token_hash_idx",
+        "n|idx|public.interest_unsubscribe_tokens_token_hash_idx",
+        "e|idx|public.interest_unsubscribe_tokens_token_hash_idx",
+        "n|rel|public.interest_unsubscribe_tokens_token_hash_idx"
+      ],
+      "reads": [
+        "e|tbl|public.interest_unsubscribe_tokens",
+        "n|sch|public",
+        "e|col|public.interest_unsubscribe_tokens.token_hash"
+      ],
+      "sharedWrites": []
+    },
+    {
+      "statementType": "drop_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "trips",
+        "dive_site_id"
+      ],
+      "writes": [
+        "s|col|public.trips.dive_site_id",
+        "n|col|public.trips.dive_site_id",
+        "e|col|public.trips.dive_site_id"
+      ],
+      "reads": [
+        "n|tbl|public.trips",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"trips\",\"dive_site_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"booking_capabilities_token_hash_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"calendar_feeds_token_hash_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"dive_sites_shop_name_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"global_dive_sites_slug_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"person_courtesy_email_unsubscribe_tokens_token_hash_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"rental_fit_profiles_shop_person_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"interest_unsubscribe_tokens_token_hash_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"trips\",\"trips_dive_site_id_dive_sites_id_fkey\"]"
+    }
+  ]
+}

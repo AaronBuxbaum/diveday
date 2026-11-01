@@ -9,14 +9,17 @@ import {
 } from "@/app/actions/held-sends";
 import { type HeldTicket, SendHold } from "@/components/SendHold";
 import { buttonClass } from "@/components/ui/button";
+import { rescheduleCountLine } from "./reschedule-hold-copy";
 
 export type RescheduleHoldCopy = {
   /** Count-free progress while a reschedule notice is being sent. */
   telling: string;
-  /** "Told 6 divers the new time.", one per count from 1 to the seats held for. */
-  told: Record<number, string>;
-  /** "2 divers could not be reached…", one per count from 1 to the seats held for. */
-  someMissed: Record<number, string>;
+  /** Locale the plural forms below are chosen in. */
+  locale: string;
+  /** "Told {count} divers the new time." templates, singular and other. */
+  told: { one: string; other: string };
+  /** "{count} divers could not be reached…" templates, singular and other. */
+  someMissed: { one: string; other: string };
   notTold: string;
   tellThem: string;
   undo: string;
@@ -72,8 +75,10 @@ export function RescheduleHold({
       onOutcome={(outcome) => {
         if (outcome.kind !== "trip_rescheduled") return;
         const lines = [
-          outcome.told > 0 ? copy.told[outcome.told] : null,
-          outcome.failed > 0 ? copy.someMissed[outcome.failed] : null,
+          outcome.told > 0 ? rescheduleCountLine(copy.told, outcome.told, copy.locale) : null,
+          outcome.failed > 0
+            ? rescheduleCountLine(copy.someMissed, outcome.failed, copy.locale)
+            : null,
         ].filter(Boolean);
         // Nobody left to tell by the time it drained (every seat cancelled or
         // held): nothing happened, and the row says nothing.

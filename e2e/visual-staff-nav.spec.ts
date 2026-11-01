@@ -100,6 +100,24 @@ async function expectScrollCueMatchesRail(page: Parameters<typeof capture>[0]) {
   }
 }
 
+/** The focused tab lies wholly inside the rail that scrolls it (#3433). */
+async function expectFocusedTabWithinRail(page: Parameters<typeof capture>[0]) {
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const focused = document.activeElement;
+        const rail = focused?.closest<HTMLElement>("[data-staff-tab-scroll]");
+        if (!focused || !rail) return "no focused tab in the rail";
+        const tab = focused.getBoundingClientRect();
+        const box = rail.getBoundingClientRect();
+        return tab.left >= box.left - 0.5 && tab.right <= box.right + 0.5
+          ? "whole"
+          : `tab ${tab.left}-${tab.right} outside rail ${box.left}-${box.right}`;
+      }),
+    )
+    .toBe("whole");
+}
+
 async function expectTabletTabsFillRail(page: Parameters<typeof capture>[0]) {
   const geometry = await page.evaluate(() => {
     if (innerWidth !== 820) return null;
@@ -335,7 +353,10 @@ test.describe("staff navigation", () => {
         locale: SPANISH,
         beforeShot: async () => {
           const inbox = page.locator("[data-staff-tab-scroll] a").filter({ hasText: "Mensajes" });
-          if (await inbox.isVisible()) await inbox.focus();
+          if (await inbox.isVisible()) {
+            await inbox.focus();
+            await expectFocusedTabWithinRail(page);
+          }
           await expectNavigationDoesNotExpandPage(page);
           await expectScrollCueMatchesRail(page);
         },

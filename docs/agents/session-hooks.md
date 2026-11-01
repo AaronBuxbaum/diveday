@@ -32,7 +32,6 @@ what is currently wired.
 | `SessionStart` (all sources) | `scripts/session-context.mjs` | at startup and resume, fetches `main` and `claude/*` once, then fast-forwards the checkout to `origin/main` when it is the main worktree, clean, detached or on `main`, and has nothing main lacks; prints the checkout's state, the doctor's two-line summary (`scripts/agent-doctor.mjs`, read after the fetch; it names any scheduled workflow whose last two runs on main failed, from one `gh api` read cached an hour in the git common dir by `scripts/scheduled-runs.mjs`, `DIVEDAY_SCHEDULED_RUNS=0` turns it off), "Merge drivers: not installed" when `scripts/merge-drivers.mjs install` could not write them and one line asking for a papercut ([papercuts.md](papercuts.md)) when a guard or hook fights the session; after a compaction, the reminders a summary drops; puts the pinned Node first on PATH when it is installed but not running; in a cloud container, installs dependencies when `node_modules/` is missing or older than the lockfile |
 | `UserPromptSubmit` | `scripts/session-context.mjs --prompt` | one line: branch, uncommitted count, unpushed count against the upstream, stack position, and the account's open pull requests (`gh api`, cached ten minutes in the git common dir; `DIVEDAY_OPEN_PULLS=0` turns it off), because one PR's CI runs at a time; on the first prompt of a session, the last session's hook refusals, and "write a papercut" with a ready `file-follow-up.mjs --papercut` command when one rule has refused three or more times this week and no papercut has its slug |
 | `PreToolUse` on `Bash` | `scripts/guard-bash.mjs` | refuses eight command shapes, each naming the correct form; writes the quiet reporter into a focused test or e2e run |
-| `PreToolUse` on `Bash` | `scripts/guard-commit-format.mjs` | before a `git commit`, Biome's safe fixes over the fully staged files, re-staged; never refuses |
 | `PreToolUse` on the GitHub MCP's pull request create/update | `scripts/guard-pr-body.mjs` | runs CI's `check-pr-body.mjs` over the body first and refuses one CI would refuse |
 | `PreToolUse` on `Read` | `scripts/guard-read.mjs` | refuses a generated artifact and a whole-file read of a large source file |
 | `PostToolUse` on `Edit`/`Write` | `scripts/format-touched.mjs` | Biome over the one file just touched; hands back what its safe fixes could not clear |
@@ -222,18 +221,11 @@ because the point is `noUnusedImports` and `noUnusedVariables`, not the whitespa
 path outside the repository and stays silent for a file Biome declines (`drizzle/`, canvases, a
 file the edit just deleted).
 
-## `guard-commit-format.mjs` — formatting lands with the commit, not after it
+## Formatting is not a commit hook
 
-`format-touched.mjs` formats what an Edit or Write touched. What reaches the index another way — a
-merge from `main`, `git checkout <ref> -- <path>`, a file a script wrote — it never sees, and those
-produced the "Format …" commits and the papercut
-[2026-10-03-vendored-config-failed-lint-on-every-layer](papercuts/2026-10-03-vendored-config-failed-lint-on-every-layer.md).
-So on a command that runs `git commit` (alone, in a compound command, after a literal `cd`, or
-with `git -C`), this runs `biome check --write` over the staged files Biome handles and re-stages
-them. Only fully staged files: one with unstaged changes too is left alone, because re-adding it
-would commit hunks its author held back. With `-a`, every modified tracked file counts. A `cd` it
-cannot resolve to a literal path (a variable, `~`) makes it do nothing rather than format another
-checkout's index. It never refuses: what Biome cannot fix is the lint job's to report.
+`format-touched.mjs` formats each file right after an Edit or Write, and CI's lint job is the
+backstop for anything that reaches the index another way (a merge, `git checkout <ref> -- <path>`,
+a script's output). There is no pre-commit formatter.
 
 ## `explain-failure.mjs` — a signpost attached to a known failure
 
