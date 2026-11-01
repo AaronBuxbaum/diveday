@@ -1,6 +1,6 @@
 /**
  * Inert HTML for the downloadable arrival card and offline readiness snapshot.
- * Text fields are escaped here; callers must escape any supplied HTML.
+ * Text fields are escaped here; callers must escape user values in supplied HTML.
  */
 
 import { escapeHtml } from "./html";
