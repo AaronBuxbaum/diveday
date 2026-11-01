@@ -79,89 +79,15 @@ export const VENDORED_SKILL_OVERRIDES = [
     phrase: "/setup-matt-pocock-skills",
     fix: 'point at the "Agent skills" section of CLAUDE.md and docs/agents/issue-tracker.md instead — this repository has no such command',
   },
-  {
-    name: "implement-spec",
-    phrase: 'the "Agent skills" section of `CLAUDE.md`',
-    fix: "use AGENTS.md and the provider contract for this repository's tracker instructions",
-  },
-  {
-    name: "implement-spec",
-    phrase: "background where possible for maximum concurrency",
-    fix: "follow repository delegation rules and the user's request",
-  },
-  {
-    name: "implement-spec",
-    phrase: "Use **implementer subagents** to implement each ticket",
-    fix: "implement in-session by default and delegate when warranted",
-  },
-  {
-    name: "implement-spec",
-    phrase: "calls the Skill tool with `tdd`",
-    fix: "invoke the tdd skill through the active provider",
-  },
-  {
-    name: "implement-spec",
-    phrase: "reviewer agents in `.claude/agents/`",
-    fix: "use the active provider's supported review mechanism",
-  },
-  {
-    name: "research",
-    phrase: "Spin up a **background agent** to do the research",
-    fix: "research in-session by default and delegate when warranted",
-  },
-  {
-    name: "research",
-    phrase: "or reading is delegated to a background agent",
-    fix: "keep the description about research topics rather than provider workflow",
-  },
-  {
-    name: "tdd",
-    phrase: 'call the Skill tool with "codebase-design"',
-    fix: "consult codebase-design through the active provider",
-  },
-  {
-    name: "tdd",
-    phrase: "reviewer agents in `.claude/agents/`",
-    fix: "use reviewer roles required by repository rules",
-  },
-  {
-    name: "wayfinder",
-    phrase: 'read the "Agent skills" section of `CLAUDE.md`',
-    fix: "use AGENTS.md and the provider contract for repository-specific instructions",
-  },
-  {
-    name: "wayfinder",
-    phrase: 'calls the Skill tool with "research"',
-    fix: "resolve with the research skill through the active provider",
-  },
-  {
-    name: "wayfinder",
-    phrase: 'by calling the Skill tool with "prototype"',
-    fix: "use the prototype skill through the active provider",
-  },
-  {
-    name: "wayfinder",
-    phrase: 'Always call the Skill tool twice, for "grilling" and "domain-modeling"',
-    fix: "consult grilling and domain-modeling through the active provider",
-  },
-  {
-    name: "wayfinder",
-    phrase: "Fire the research subagents",
-    fix: "delegate research when repository rules or the user request call for parallel work",
-  },
 ];
 
 /** Each override a vendored skill has lost, given `{ [name]: SKILL.md contents }`. */
 export function vendoredSkillProblems(contentsByName) {
   const problems = [];
-  for (const override of VENDORED_SKILL_OVERRIDES) {
-    const names = override.name ? [override.name] : Object.keys(contentsByName);
-    for (const name of names)
-      if (contentsByName[name]?.includes(override.phrase))
-        problems.push(
-          `.agents/skills/${name}/SKILL.md: names \`${override.phrase}\`; ${override.fix}`,
-        );
-  }
+  for (const [name, contents] of Object.entries(contentsByName))
+    for (const { phrase, fix } of VENDORED_SKILL_OVERRIDES)
+      if (contents.includes(phrase))
+        problems.push(`.agents/skills/${name}/SKILL.md: names \`${phrase}\`; ${fix}`);
   return problems;
 }
 

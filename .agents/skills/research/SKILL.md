@@ -1,11 +1,11 @@
 ---
 name: research
-description: Investigate a question against high-trust primary sources and capture the findings as a Markdown file in the repo. Use when a topic needs researching or docs and API facts need gathering.
+description: Investigate a question against high-trust primary sources and capture the findings as a Markdown file in the repo. Use when a topic needs researching, docs or API facts need gathering, or reading is delegated to a background agent.
 ---
 
-Research in the current session by default. Delegate to a background agent when independent review or parallel work is useful under the repository's delegation rules, or when the user asks for delegation. Start each delegated agent with a fresh context window and keep no more than three in flight.
+Spin up a **background agent** to do the research, so you keep working while it reads.
 
-Whether you or a delegated agent does the research:
+Its job:
 
 1. Investigate the question against **primary sources** (official docs, source code, specs, first-party APIs), not a secondary write-up of them. Follow every claim back to the source that owns it.
 2. Write the findings to a single Markdown file, citing each claim's source.

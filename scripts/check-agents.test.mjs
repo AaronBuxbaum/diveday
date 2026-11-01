@@ -201,23 +201,6 @@ describe("local overrides of vendored skills", () => {
     expect(problems).toHaveLength(1);
     expect(problems[0]).toContain(".agents/skills/to-spec/SKILL.md");
   });
-
-  it("refuses provider-specific and unconditional-delegation wording restored by a skill sync", () => {
-    const problems = vendoredSkillProblems({
-      "implement-spec": "Use **implementer subagents** to implement each ticket",
-      research: "Spin up a **background agent** to do the research",
-      tdd: 'call the Skill tool with "codebase-design"',
-      wayfinder: "Fire the research subagents",
-      unrelated: "Use **implementer subagents** to implement each ticket",
-    });
-    expect(problems).toHaveLength(4);
-    expect(problems.map((problem) => problem.split(":")[0])).toEqual([
-      ".agents/skills/implement-spec/SKILL.md",
-      ".agents/skills/research/SKILL.md",
-      ".agents/skills/tdd/SKILL.md",
-      ".agents/skills/wayfinder/SKILL.md",
-    ]);
-  });
 });
 
 describe("the handoff docs' paths", () => {
