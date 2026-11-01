@@ -98,7 +98,30 @@ export function SettingsRail({
     reveal();
     setSettledFor(currentId);
     window.addEventListener("resize", reveal);
-    return () => window.removeEventListener("resize", reveal);
+    // The first reveal measures a page that is still settling: a logo, a font or
+    // a late banner moves the rows after it, and the current one then sits in the
+    // box's bottom fade or off its edge (a flaky `settings-findability` on CI).
+    // So the move repeats whenever the rail's content changes size, until the
+    // reader's own hand has touched the box. Their scroll is never overridden.
+    const scroller = scrollerRef.current;
+    let handled = false;
+    const markHandled = () => {
+      handled = true;
+    };
+    const resettle = () => {
+      if (!handled) reveal();
+    };
+    const hand = ["wheel", "touchstart", "pointerdown", "keydown"] as const;
+    for (const type of hand) scroller?.addEventListener(type, markHandled, { passive: true });
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(resettle);
+    if (scroller?.firstElementChild) observer?.observe(scroller.firstElementChild);
+    window.addEventListener("load", resettle);
+    return () => {
+      window.removeEventListener("resize", reveal);
+      window.removeEventListener("load", resettle);
+      for (const type of hand) scroller?.removeEventListener(type, markHandled);
+      observer?.disconnect();
+    };
   }, [currentId]);
   const moreBelow = useMoreBelow(scrollerRef);
 
