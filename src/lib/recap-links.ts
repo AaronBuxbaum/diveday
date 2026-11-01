@@ -1,8 +1,8 @@
-import { createHmac, hkdfSync, timingSafeEqual } from "node:crypto";
 import { DAY_MS } from "@/lib/clock";
 import { isUuid } from "@/lib/uuid";
 import { authSecret } from "./auth-secret";
 import { nowMs } from "./clock";
+import { deriveLabelKey, signPayload, tagMatches } from "./signed-token";
 
 /**
  * A diver's post-trip recap page needs the same kind of link the readiness page
@@ -31,30 +31,11 @@ function recapSecret(): string {
   // null in dev/e2e where auth-secret.ts supplies a fixed fallback. Fail loud
   // rather than sign with an empty key.
   if (!authSecret) throw new Error("AUTH_SECRET is required to sign recap links.");
-  const derived = hkdfSync("sha256", authSecret, "", "diveday-recap-link", 32);
-  return Buffer.from(derived).toString("base64url");
+  return deriveLabelKey(authSecret, "diveday-recap-link").toString("base64url");
 }
 
-/**
- * **A base64url signature, held to its charset before it is compared**
- * (security review, finding 3).
- *
- * `timingSafeEqual` compares *bytes* and throws `RangeError` on buffers of
- * unequal length, while the guard beside it counted *characters* — so a
- * 43-character signature carrying one multibyte character (`é`, an emoji, a
- * CJK glyph) passed the length check and then threw from inside the compare.
- * A verifier's whole contract is to answer null for anything that is not a
- * token; throwing hands the caller an error boundary instead, which on a
- * bearer page is a 500 where "this link isn't available" belongs.
- *
- * A real signature is 43 base64url characters — SHA-256's 32 bytes, unpadded —
- * and every one of them is a single byte, so this makes the length check below
- * true of bytes as well as characters.
- */
-const BASE64URL_SIGNATURE = /^[A-Za-z0-9_-]{43}$/;
-
 function sign(payload: string): string {
-  return createHmac("sha256", recapSecret()).update(payload).digest("base64url");
+  return signPayload(recapSecret(), payload);
 }
 
 /** `<base64url("recap:"+bookingId+":"+issuedAtSeconds)>.<sig>` — opaque, stable, self-verifying, and self-expiring. */
@@ -75,14 +56,7 @@ export function verifyRecapToken(token: string): string | null {
   if (dot <= 0) return null;
   const payload = token.slice(0, dot);
   const signature = token.slice(dot + 1);
-  // Charset first: `timingSafeEqual` throws on buffers of unequal *byte*
-  // length, and a multibyte character makes a 43-character string longer than
-  // 43 bytes (see `BASE64URL_SIGNATURE`).
-  if (!BASE64URL_SIGNATURE.test(signature)) return null;
-  const expected = sign(payload);
-  // Length-guard before timingSafeEqual, which throws on unequal buffers.
-  if (signature.length !== expected.length) return null;
-  if (!timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) return null;
+  if (!tagMatches(signature, sign(payload))) return null;
   const decoded = Buffer.from(payload, "base64url").toString("utf8");
   if (!decoded.startsWith(RECAP_PURPOSE)) return null;
   const rest = decoded.slice(RECAP_PURPOSE.length);
