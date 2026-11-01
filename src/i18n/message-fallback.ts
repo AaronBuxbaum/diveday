@@ -5,10 +5,13 @@
  * messages.
  */
 export function messageFallback(messages: unknown, key: string): string {
-  const value = key.split(".").reduce<unknown>((node, part) => {
-    if (!node || typeof node !== "object" || !Object.hasOwn(node, part)) return undefined;
-    return (node as Record<string, unknown>)[part];
-  }, messages);
+  const value = key
+    .split(".")
+    .reduce<unknown>(
+      (node, part) =>
+        node && typeof node === "object" ? (node as Record<string, unknown>)[part] : undefined,
+      messages,
+    );
 
   return typeof value === "string" ? value : key;
 }

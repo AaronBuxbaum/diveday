@@ -13,7 +13,8 @@ describe("messageFallback", () => {
     (key) => expect(messageFallback(messages, key)).toBe(key),
   );
 
-  it("does not resolve inherited object properties", () => {
-    expect(messageFallback({}, "constructor.name")).toBe("constructor.name");
+  it("preserves lookup through inherited properties", () => {
+    const inheritedMessages = Object.create({ common: { title: "Inherited English title" } });
+    expect(messageFallback(inheritedMessages, "common.title")).toBe("Inherited English title");
   });
 });

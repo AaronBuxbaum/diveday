@@ -65,8 +65,7 @@ export function staffTranslator(locale: string | null | undefined) {
     locale: resolved,
     messages: staffMessagesFor(resolved),
     onError: translatorOnError,
-    getMessageFallback: ({ key }) =>
-      messageFallback(STAFF_MESSAGES[DEFAULT_DIVER_LOCALE], key),
+    getMessageFallback: ({ key }) => messageFallback(STAFF_MESSAGES[DEFAULT_DIVER_LOCALE], key),
   });
 }
 
