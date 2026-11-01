@@ -6,38 +6,21 @@ import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { groupLabelClass } from "@/components/ui/group-label";
 import { EDITOR_REVEAL_EVENT } from "@/components/ui/reveal-event";
 
-/**
- * One section of a long-form editor, and the entry the rail beside it makes
- * for that section.
- *
- * ADR 20260827-the-shops-shelves, the long-form editor pattern: "a sticky
- * section rail beside unboxed sections — group labels and hairlines instead of
- * bordered fieldsets, the rail naming the sections and tracking position". The
- * `id` is both the anchor the rail links to and the DOM subtree the unsaved
- * note maps a control back to, so it is one fact, declared once, per section.
- */
+/** A long-form editor section and its rail entry (ADR 20260827-the-shops-shelves). */
 export type EditorSectionRef = {
-  /** The section element's `id`, and the rail's `#anchor`. */
+  /** The section element's id and the rail's #anchor. */
   id: string;
-  /** Already-translated: staff copy is resolved on the server. */
+  /** Already translated; staff copy is resolved on the server. */
   label: string;
-  /** The phone header's unsaved word; spread onto `EditorSection` with the rest. */
+  /** The phone header's unsaved word. */
   unsavedTag?: string;
 };
 
-/**
- * The unsaved-changes sentences, resolved per outcome rather than templated.
- *
- * Which sections are dirty is client state and staff copy is server-side only,
- * so the sentences arrive pre-pluralised — the same shape `RouteEditorCopy`'s
- * `status` array takes, and for the same reason: a component interpolating
- * `{count}` itself would be pluralising in the one place a translator cannot
- * reach (AGENTS.md).
- */
+/** Pre-translated unsaved-change sentences; pluralisation stays in staff copy (AGENTS.md). */
 export type EditorUnsavedCopy = {
-  /** One sentence per section, in the rail's own order, naming that section. */
+  /** One sentence per section, in rail order. */
   inSection: readonly string[];
-  /** One sentence per dirty-section count; only index 2 and up are ever read. */
+  /** One sentence per dirty-section count; indices 2 and up are read. */
   inSections: readonly string[];
 };
 
@@ -46,12 +29,9 @@ export type EditorUnsavedCopy = {
  * consequence under it, and the fields themselves — sitting on the page rather
  * than in a box.
  *
- * **The border is what this removes.** The dive-site form was fourteen blocks
- * wearing four bordered fieldsets at two radii, and the course editor eight —
- * the boxes-in-boxes composition `SectionCard`'s own documentation calls a
- * failure when nested. A `<legend>` on a hairline group label groups exactly as
- * well (ADR 20260827-the-shops-shelves, "Alternatives considered"), so the
- * `<fieldset>` stays for semantics and its border goes.
+ * Long-form editor pattern from ADR 20260827-the-shops-shelves: unboxed
+ * sections use group labels and hairlines. A fieldset keeps its semantics;
+ * its legend can sit on the hairline without a border.
  *
  * `as="fieldset"` for a run of controls that genuinely is one group — the route
  * a shop draws, its landmarks, its field guide, its certification demands —
@@ -60,13 +40,9 @@ export type EditorUnsavedCopy = {
  * where a `<fieldset>` would prefix every label with a name that only some of
  * them share.
  *
- * `scroll-mt` is a little air, and no longer the bar's height as well: an
- * anchor jump has to land the group label *below* the bar rather than behind
- * it (`ChromeBar`, ADR 20260827-clearwater-surface-language decision 10 — the
- * height is read, never measured), and since #1941 `globals.css` clears the
- * bar for every scroll in the app with one `scroll-padding-top` on `html`.
- * Scroll padding and scroll margin add, so keeping `--chrome-h` here as well
- * would land this label a whole bar's height too low.
+ * `scroll-mt-6` adds local spacing; `html`'s global scroll padding already
+ * clears the chrome bar (#1941; ADR 20260827-clearwater-surface-language,
+ * decision 10). Adding the bar height here would double the offset.
  */
 export function EditorSection({
   id,
@@ -111,22 +87,12 @@ export function EditorSection({
 
   useSectionWiring({ id, rootRef, bodyRef, setOpen, setPreview, setEdited, openAlone });
 
-  // Hairlines between, never above the first: the rule separates two sections,
-  // and a rule under the page header separates nothing. Below `lg` the header
-  // is a 48px button that carries its own air, so the rule's `pt-6` is a
-  // desktop measure only.
+  // Separate sections, but leave the first clear; phone headers provide their own air.
   const rule = lead ? "" : " border-t border-border lg:pt-6";
-  // The attribute the unsaved-note hook traces a typed control back to, and
-  // the one thing that makes a section findable without knowing its id. Written
-  // out rather than spread from a constant so JSX keeps its typing.
+  // Used to trace edited controls back to their section and reveal it by id.
   const marker = { "data-editor-section": id, "data-open": open ? "" : undefined };
-  // **Hidden, never unmounted.** A closed section's controls stay in the form,
-  // so what was typed in them survives the fold and still posts with Save; the
-  // fold is a class below `lg`, where the rail no longer fits, and from `lg` up
-  // every section stands open beside the rail as it always has.
-  // **Phone-only on purpose** (Aaron, 2026-10-13, issue #2439): the review's height
-  // numbers were phone heights, and on a wide screen the rail already tells a
-  // reader where they are. Revisit if desktop users report losing their place.
+  // Keep controls mounted so folded values still submit. Folding is phone-only
+  // (#2439); desktop keeps every section open beside the rail.
   const body = (
     <div
       ref={bodyRef}
@@ -148,15 +114,13 @@ export function EditorSection({
         onClick={() => {
           if (open) return setOpen(false);
           openAlone();
-          // The section above may just have folded, which moves this one up
-          // under the chrome bar: bring its header back to the top.
+          // The previous section may have folded; restore this header below the chrome.
           requestAnimationFrame(() => rootRef.current?.scrollIntoView?.({ block: "start" }));
         }}
         className="flex min-h-12 w-full items-center gap-3 rounded-lg py-3 text-start focus-visible:focus-ring lg:hidden"
       >
         <span className="flex min-w-0 flex-1 flex-col gap-1">
-          {/* **Where the edits are**, on the folded header a staffer scans
-              (#2438). Inside the button, so its name says it too. */}
+          {/* Keep the unsaved state in the button's accessible name (#2438). */}
           <span className="flex items-center gap-2">
             <span>{label}</span>
             {edited && unsavedTag ? (
@@ -165,9 +129,7 @@ export function EditorSection({
               </Badge>
             ) : null}
           </span>
-          {/* The line under a folded section's name says what is in it, read
-              off its own fields; the space is kept while it is empty so the
-              row does not grow when the page wakes up. */}
+          {/* Preview the section's own fields; reserve height until hydration. */}
           <span
             data-section-preview=""
             data-preview-ready={preview === null ? undefined : ""}
@@ -189,23 +151,10 @@ export function EditorSection({
     );
   if (as === "fieldset") {
     return (
-      // The rule and its air go on the legend, full width, and never on the
-      // fieldset. A fieldset draws its `<legend>` in its own top border, so on
-      // the fieldset they put the label on the hairline and the 24px between
-      // the label and its fields: 27–28px above the label and 40px under it,
-      // where a section's label sits 29px under its rule. A borderless
-      // fieldset sets its legend at its top, so a legend carrying the rule
-      // draws the section's geometry exactly.
-      //
-      // The anchor and the marker sit on the fieldset itself, the named group:
-      // the course editor's refused day-by-day save sends `?field=` with this
-      // id, and `FieldErrorFocus` focuses what carries it. A box around the
-      // fieldset took that focus with no role or name; the group says which
-      // section to fix.
-      //
-      // Named by the label alone (`aria-labelledby`), not by the legend's
-      // text: the legend also holds the phone's header button, whose preview
-      // line is not the group's name.
+      // Put the rule on the full-width legend: a borderless fieldset starts its
+      // legend at the top, matching section geometry (ADR 20260827-the-shops-shelves).
+      // Keep id and marker on the named group: ?field= and FieldErrorFocus target it.
+      // Name only the label; the legend also contains the phone header and preview.
       <fieldset
         ref={(element) => {
           rootRef.current = element;
@@ -215,10 +164,7 @@ export function EditorSection({
         aria-labelledby={labelId}
         className="min-w-0 scroll-mt-6"
       >
-        {/* `<legend>` has to be the fieldset's first child, so the label is
-            spelled with `groupLabelClass()` rather than `GroupLabel` — the one
-            documented use of the exported class: the same spelling, on the
-            element this element has to be. */}
+        {/* A fieldset's first child must be legend; use the class on that element. */}
         <legend className={`${groupLabelClass()} w-full${rule}`}>{heading}</legend>
         {describe}
         {body}
@@ -249,10 +195,8 @@ const EDITOR_SECTION_OPEN_EVENT = "editor-section-open";
  * Everything that opens a folded section without its header being tapped,
  * and the preview line a folded one shows.
  *
- * **Layout effects, on purpose.** They run before any component's passive
- * effect in the same commit, so a section is listening (and has already opened
- * for the URL's `#hash` or `?field=`) by the time `FieldErrorFocus` moves the
- * cursor.
+ * Layout effects install reveal listeners and open URL targets before passive
+ * effects such as FieldErrorFocus move focus.
  */
 function useSectionWiring({
   id,
@@ -276,9 +220,7 @@ function useSectionWiring({
     const body = bodyRef.current;
     if (!root || !body) return;
 
-    // The DOM is shown at once and the state follows: the browser's own
-    // validation and `FieldErrorFocus` both focus straight after telling us,
-    // and neither can wait for a render.
+    // Reveal synchronously before browser validation or FieldErrorFocus moves focus.
     const reveal = () => {
       body.classList.remove("max-lg:hidden");
       setOpen(true);
@@ -313,7 +255,7 @@ function useSectionWiring({
     const form = root.closest("form");
     const onSubmit = () => setEdited(false);
 
-    // Arriving at an address that names something in here.
+    // Open a section named by ?field= before focus moves.
     const field = new URLSearchParams(window.location.search).get("field");
     if (holds(field)) {
       reveal();
@@ -326,7 +268,7 @@ function useSectionWiring({
     document.addEventListener("click", onClick, true);
     window.addEventListener("hashchange", onHashChange);
     root.addEventListener(EDITOR_REVEAL_EVENT, reveal);
-    // `invalid` does not bubble, so it is heard on the way down.
+    // `invalid` does not bubble; capture it on the way down.
     root.addEventListener("invalid", reveal, true);
     root.addEventListener("input", onEdit, true);
     root.addEventListener("change", onEdit, true);
@@ -372,18 +314,9 @@ const PREVIEW_INPUT_TYPES = new Set([
 ]);
 
 /**
- * **What a folded section holds**, in its own words: the first two of its
- * fields that have something in them, in page order, joined by a middle dot.
- * A pick list says the option's words, never its code; a ticked box, its label.
- *
- * Read off the section's own controls, so there is nothing per section to keep
- * in step with the fields, and nothing to translate: it is the shop's text.
- * A section whose content is a drawn route or a photo grid says nothing here
- * rather than guess.
- *
- * Two inputs sharing `data-preview-pair` are one part, named by the templates
- * their first carries: `data-preview-range` ("{min}–{max} ft") when both hold
- * a value, `data-preview-one` ("{value} ft") when only one does.
+ * The first two populated controls, in page order, as staff-entered text.
+ * Selects use their option labels, checkboxes their labels; paired controls
+ * use their range/one-value templates. Drawn routes and photo grids stay blank.
  */
 export function sectionPreview(body: Element): string {
   const parts: string[] = [];
