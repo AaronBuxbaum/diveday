@@ -768,7 +768,7 @@ jobs:
     name: Visual capture shard ${{ matrix.shard }}/${{ needs.visual-plan.outputs.count }}
     needs: [build, visual-plan]
     if: github.event_name != 'schedule' # nightly runs `real-postgres` only
-    # Eight shards on main, two workers each (twelve once the pinned publisher accepts them). The first two-worker trial was
+    # Twelve shards on main, two workers each. The first two-worker trial was
     # faster but not byte-identical; the owner chose to accept that initial
     # visual noise in #3056. Captures still surface real differences for review.
     #
@@ -788,7 +788,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Eight on main; on a pull request as many as its captures weigh (seven
+        # Twelve on main; on a pull request as many as its captures weigh (seven
         # for every light-mode capture).
         shard: ${{ fromJSON(needs.visual-plan.outputs.shards) }}
     steps:
@@ -972,7 +972,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    uses: AaronBuxbaum/diveday/.github/workflows/reg-suit-publish.yml@3cb1d5b94f1ed387c60da37a6341b2f2218163bd # immutable commit 3cb1d5b94f1ed387c60da37a6341b2f2218163bd
+    uses: AaronBuxbaum/diveday/.github/workflows/reg-suit-publish.yml@42926746edc13b5e04ab7be76b172107ab5ca30e # immutable commit 42926746edc13b5e04ab7be76b172107ab5ca30e
     with:
       capture-mode: ${{ needs.visual-plan.outputs.mode }}
       capture-shards: ${{ needs.visual-plan.outputs.shards }}
