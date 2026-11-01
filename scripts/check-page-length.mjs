@@ -2,6 +2,8 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
+
+import { filesUnder } from "./files-under.mjs";
 import { LARGE_FILE_LINES } from "./guard-read.mjs";
 import { bankCounts, ratchetFlags, readCounts } from "./ratchet.mjs";
 
@@ -305,21 +307,11 @@ export function nextBaseline(counts, limit = PAGE_LINE_LIMIT) {
   );
 }
 
+const listDirectory = (relativeDirectory) =>
+  readdir(path.join(ROOT, relativeDirectory), { withFileTypes: true });
+
 async function walk(relativeDirectory, wanted = (name) => name === "page.tsx") {
-  let entries;
-  try {
-    entries = await readdir(path.join(ROOT, relativeDirectory), { withFileTypes: true });
-  } catch (error) {
-    if (error?.code === "ENOENT") return [];
-    throw error;
-  }
-  const files = [];
-  for (const entry of entries) {
-    const relativePath = path.join(relativeDirectory, entry.name);
-    if (entry.isDirectory()) files.push(...(await walk(relativePath, wanted)));
-    else if (wanted(entry.name)) files.push(relativePath);
-  }
-  return files;
+  return filesUnder(relativeDirectory, listDirectory, (_relativePath, entry) => wanted(entry.name));
 }
 
 const posix = (file) => file.split(path.sep).join("/");
