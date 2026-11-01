@@ -19,7 +19,11 @@ the stack pushes one layer at a time, because overlapping runs queue on a 20-job
 `main`: **no stack is open** (`git fetch origin main` first, every time), or **a fix that must
 merge now**. After merging a layer up, run **`pnpm regen`** and commit what it changed before you
 push. **Merge the layer below once its CI is green**, not while it is red: a red layer merged up is
-a red run on every layer above, unless your layer carries the fix. The reasoning and the measured incidents are in [why.md](why.md).
+a red run on every layer above, unless your layer carries the fix. **Push less often**: every
+push cancels the run in flight, and cancelled runs were about half of all PR compute (97 of 173 PR
+runs in two days, ~8,150 runner-minutes; CI profile 2026-11-01). Batch fixes into one push after
+the local check, hold a layer's push until the layer below is green, and push a cascade
+(`pnpm stack:sync --chain`) once, never per layer. The reasoning and the measured incidents are in [why.md](why.md).
 
 **`pnpm stack:sync`** does the merge: it reads the open chain from GitHub and merges this layer's
 base (`origin/main` for the bottom) into it, stops on a conflict with the files named, and pushes

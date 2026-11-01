@@ -156,7 +156,10 @@ function readCandidateCommits(env, currentPullRequest) {
 }
 
 /** The aggregate is green only when every expected result exists and required lanes ran. */
-export function ciMergeVerdict(needs, { code, db, event, ref = "", fork = false }) {
+export function ciMergeVerdict(
+  needs,
+  { code, db, safety = "true", browser = "true", event, ref = "", fork = false },
+) {
   const problems = [];
   if (!["true", "false"].includes(code) || !["true", "false"].includes(db))
     problems.push("change detection outputs are missing or invalid");
@@ -167,17 +170,15 @@ export function ciMergeVerdict(needs, { code, db, event, ref = "", fork = false 
     "repo-safeguards",
     code === "true" ? "unit-tests" : "unit-tests-docs",
   ]);
-  if (code === "true")
-    for (const id of [
-      "build",
-      "playwright",
-      "visual-plan",
-      "visual",
-      "visual-report",
-      "coverage-floors",
-    ])
+  // `browser` is false only for a pull request that changed unit-test files alone (ci.yml's
+  // `changes` job); a missing or malformed value fails closed, like `safety`.
+  if (code === "true" && browser !== "false")
+    for (const id of ["build", "playwright", "visual-plan", "visual", "visual-report"])
       required.add(id);
-  if (code === "true" && !fork) required.add("visual-publish");
+  // Only a pull request that touched nothing the safety-file floors measure may skip them
+  // (ci.yml's `safety` output, scripts/coverage-relevant.mjs); anything else fails closed.
+  if (code === "true" && safety !== "false") required.add("coverage-floors");
+  if (code === "true" && browser !== "false" && !fork) required.add("visual-publish");
   if (db === "true") required.add("real-postgres");
   if (code === "true" && ["push", "workflow_dispatch"].includes(event) && ref === "refs/heads/main")
     required.add("visual-flakes");
@@ -207,6 +208,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     const problems = ciMergeVerdict(needs, {
       code: needs?.changes?.outputs?.code,
       db: needs?.changes?.outputs?.db,
+      safety: needs?.changes?.outputs?.safety,
+      browser: needs?.changes?.outputs?.browser,
       event: env.GITHUB_EVENT_NAME,
       ref: env.GITHUB_REF,
       fork: env.PR_IS_FORK === "true",

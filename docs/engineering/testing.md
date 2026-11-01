@@ -356,7 +356,7 @@ files: `src/lib/{readiness,trip-admission,waivers,roll-call,trips,authz}.ts` and
 `src/db/{bookings,checkouts,refunds,promo-caps,account-security}.ts`. CI's four unit shards run with
 `--coverage.enabled --reporter=blob`; the `coverage-floors` job merges the blobs (`vitest run
 --merge-reports --coverage.enabled`, no second test run) and runs `node scripts/coverage-floors.mjs`,
-which fails when a file's branch coverage falls below its floor in `scripts/coverage-floors.json`.
+which fails when a file's branch coverage falls below its floor in `scripts/coverage-floors.json`. On a pull request that changed none of the safety files, their tests or the shared harness (`scripts/coverage-relevant.mjs`, the `changes` job's `safety` output) the shards run without coverage and the job is skipped; a push to main always runs both.
 A higher reading prints "can rise" and passes. The merged summary is the `coverage-summary`
 artifact, so a floor can be raised without a local full run. Locally: `pnpm coverage:floors` (a full
 unit run).

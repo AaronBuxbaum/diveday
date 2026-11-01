@@ -102,6 +102,9 @@ runs. Pass args directly. The shell guard refuses the bare form.
   depth: a stack has no cap, and a long one is the point) and the
   mechanics are in the **stacked-prs** skill and ADRs 20260821-stacked-pull-requests,
   20261003-every-stack-layer-runs-ci and 20260907-a-runner-registers-the-stack.
+- **Push less often.** A push cancels the PR's run in flight; cancelled runs were about half of PR
+  CI compute (2026-11-01 profile). Batch fixes into one push, hold a stacked layer's push until
+  the layer below is green, and push a stack cascade once.
 - Before fixing a failing or flaky test, search open PRs for one that already touches the same spec
   or test name; coordinate in that thread instead of pushing a competing fix.
 - **A thread builds one layer itself; parallel layers go to fresh workers.** A single layer or a

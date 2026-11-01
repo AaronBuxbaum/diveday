@@ -11,6 +11,8 @@ import sharp from "sharp";
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 const SAFE_SCREENSHOT = /^[A-Za-z0-9][A-Za-z0-9._-]{0,179}\.png$/u;
 const MAX_SCREENSHOTS = 2_000;
+/** The most visual capture shards a run deals; scripts/visual-affected.mjs deals the same number on main. */
+export const MAX_CAPTURE_SHARDS = 12;
 const MAX_FILE_BYTES = 20_000_000;
 const MAX_TOTAL_BYTES = 2_000_000_000;
 const MAX_IMAGE_PIXELS = 100_000_000;
@@ -87,10 +89,10 @@ export function parseCaptureShards(value) {
   if (
     !Array.isArray(shards) ||
     shards.length < 1 ||
-    shards.length > 8 ||
+    shards.length > MAX_CAPTURE_SHARDS ||
     shards.some((shard, index) => !Number.isInteger(shard) || shard !== index + 1)
   ) {
-    throw new Error("capture shard list must be a consecutive prefix from 1 through 8");
+    throw new Error("capture shard list must be a consecutive prefix from 1 through 12");
   }
   return shards;
 }
@@ -100,8 +102,8 @@ export function validateCaptureSelection(mode, shards) {
     throw new Error("capture mode must be all, affected, or light");
   }
   const parsed = parseCaptureShards(shards);
-  if (mode === "all" && parsed.length !== 8) {
-    throw new Error("all-capture mode must include every shard from 1 through 8");
+  if (mode === "all" && parsed.length !== MAX_CAPTURE_SHARDS) {
+    throw new Error("all-capture mode must include every shard from 1 through 12");
   }
   return parsed;
 }

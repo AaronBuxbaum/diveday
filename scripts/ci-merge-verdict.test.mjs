@@ -158,6 +158,45 @@ describe("CI merge verdict", () => {
       [],
     );
   });
+  it("lets coverage-floors skip only when change detection says no safety file moved", () => {
+    const needs = green();
+    needs["unit-tests-docs"].result = "skipped";
+    needs["real-postgres"].result = "skipped";
+    needs["visual-flakes"].result = "skipped";
+    needs["coverage-floors"].result = "skipped";
+    const context = { code: "true", db: "false", event: "pull_request" };
+    expect(ciMergeVerdict(needs, { ...context, safety: "false" })).toEqual([]);
+    expect(ciMergeVerdict(needs, { ...context, safety: "true" })).toEqual([
+      "coverage-floors: skipped",
+    ]);
+    // A missing or malformed output fails closed: the floors are required.
+    expect(ciMergeVerdict(needs, context)).toEqual(["coverage-floors: skipped"]);
+    expect(ciMergeVerdict(needs, { ...context, safety: undefined })).toEqual([
+      "coverage-floors: skipped",
+    ]);
+  });
+  it("lets the browser lanes skip only when change detection says unit-test files alone changed", () => {
+    const needs = green();
+    needs["unit-tests-docs"].result = "skipped";
+    needs["real-postgres"].result = "skipped";
+    needs["visual-flakes"].result = "skipped";
+    for (const id of [
+      "build",
+      "playwright",
+      "fast-lane",
+      "visual-plan",
+      "visual",
+      "visual-publish",
+      "visual-report",
+    ])
+      needs[id].result = "skipped";
+    const context = { code: "true", db: "false", event: "pull_request" };
+    expect(ciMergeVerdict(needs, { ...context, browser: "false" })).toEqual([]);
+    expect(ciMergeVerdict(needs, { ...context, browser: "true" })).toEqual(
+      expect.arrayContaining(["build: skipped", "playwright: skipped", "visual-report: skipped"]),
+    );
+    expect(ciMergeVerdict(needs, context)).toEqual(expect.arrayContaining(["build: skipped"]));
+  });
   it("requires visual-flake reporting for a main code push", () => {
     const needs = green();
     needs["unit-tests-docs"].result = "skipped";
