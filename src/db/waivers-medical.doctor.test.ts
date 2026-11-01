@@ -132,6 +132,7 @@ describe("getDoctorReferral", () => {
     const answered = await recordMedicalEvaluation(db, {
       outcome: "not_cleared",
       shopId: shop.id,
+      timeZone: shop.timezone,
       personId: booking.personId,
       recordedByPersonId: staff.person.id,
       evaluatedOn: "2026-07-18",

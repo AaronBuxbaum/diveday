@@ -4,7 +4,7 @@ import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
 import { getBookingReadiness, upsertTripRequirements } from "./readiness";
-import { activityEvents, bookings, people, waiverRecords } from "./schema";
+import { activityEvents, bookings, people, shops, waiverRecords } from "./schema";
 import { listStaff, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver } from "./waivers-completion";
 import { earlierReferralForOpenHold, recordMedicalEvaluation } from "./waivers-medical";
@@ -82,6 +82,7 @@ describe("a physician's letter that predates a re-signed referral", () => {
       earlierLetterConfirmed,
       outcome,
       shopId: ctx.shop.id,
+      timeZone: ctx.shop.timezone,
       personId: ctx.person.id,
       recordedByPersonId: ctx.staff.id,
       evaluatedOn,
@@ -158,6 +159,108 @@ describe("a physician's letter that predates a re-signed referral", () => {
     });
   });
 
+  it("compares an earlier referral's date in the shop timezone", async () => {
+    const context = await waiverContext();
+    const { db, shop, booking, person } = context;
+    await db.update(shops).set({ timezone: "Asia/Tokyo" }).where(eq(shops.id, shop.id));
+    const firstAt = new Date("2026-07-18T23:30:00.000Z");
+    const issued = await issueWaiverRequest(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      now: firstAt,
+    });
+    if (!issued.ok) throw new Error("expected a waiver link");
+    await completeWaiver(db, issued.token, {
+      signerName: person.fullName,
+      agreed: true,
+      medicalAnswers: answers("q3"),
+      now: firstAt,
+    });
+
+    const secondAt = new Date("2026-07-20T12:00:00.000Z");
+    const again = await issueWaiverRequest(db, {
+      shopId: shop.id,
+      personId: person.id,
+      now: secondAt,
+    });
+    if (!again.ok) throw new Error("expected a fresh person-scoped link");
+    await completeWaiver(db, again.token, {
+      signerName: person.fullName,
+      agreed: true,
+      medicalAnswers: answers("q3"),
+      now: secondAt,
+    });
+
+    const [staff] = await listStaff(db, shop.id);
+    if (!staff) throw new Error("demo staff missing");
+    expect(
+      await recordMedicalEvaluation(db, {
+        outcome: "cleared",
+        shopId: shop.id,
+        timeZone: "Asia/Tokyo",
+        personId: person.id,
+        recordedByPersonId: staff.person.id,
+        evaluatedOn: "2026-07-18",
+        physicianName: "Dr. Imani Reyes",
+        earlierLetterConfirmed: true,
+        now: new Date("2026-07-21T12:00:00.000Z"),
+      }),
+    ).toEqual({ ok: false, reason: "evaluation_predates_disclosure" });
+  });
+
+  it("compares an earlier referral's date west of UTC", async () => {
+    const context = await waiverContext();
+    const { db, shop, booking, person } = context;
+    await db.update(shops).set({ timezone: "America/Los_Angeles" }).where(eq(shops.id, shop.id));
+    const firstAt = new Date("2026-07-18T01:00:00.000Z");
+    const issued = await issueWaiverRequest(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      now: firstAt,
+    });
+    if (!issued.ok) throw new Error("expected a waiver link");
+    await completeWaiver(db, issued.token, {
+      signerName: person.fullName,
+      agreed: true,
+      medicalAnswers: answers("q3"),
+      now: firstAt,
+    });
+
+    const secondAt = new Date("2026-07-20T12:00:00.000Z");
+    const again = await issueWaiverRequest(db, {
+      shopId: shop.id,
+      personId: person.id,
+      now: secondAt,
+    });
+    if (!again.ok) throw new Error("expected a fresh person-scoped link");
+    await completeWaiver(db, again.token, {
+      signerName: person.fullName,
+      agreed: true,
+      medicalAnswers: answers("q3"),
+      now: secondAt,
+    });
+
+    const [staff] = await listStaff(db, shop.id);
+    if (!staff) throw new Error("demo staff missing");
+    expect(await earlierReferralForOpenHold(db, shop.id, person.id, shop.timezone)).toMatchObject({
+      on: "2026-07-17",
+    });
+
+    expect(
+      await recordMedicalEvaluation(db, {
+        outcome: "cleared",
+        shopId: shop.id,
+        timeZone: shop.timezone,
+        personId: person.id,
+        recordedByPersonId: staff.person.id,
+        evaluatedOn: "2026-07-17",
+        physicianName: "Dr. Imani Reyes",
+        earlierLetterConfirmed: true,
+        now: new Date("2026-07-21T12:00:00.000Z"),
+      }),
+    ).toMatchObject({ ok: true });
+  });
+
   it("does not count an earlier referral a physician already answered", async () => {
     const context = await waiverContext();
     const { db, shop, booking, person } = context;
@@ -180,6 +283,7 @@ describe("a physician's letter that predates a re-signed referral", () => {
       await recordMedicalEvaluation(db, {
         outcome: "not_cleared",
         shopId: shop.id,
+        timeZone: shop.timezone,
         personId: person.id,
         recordedByPersonId: staff.person.id,
         evaluatedOn: "2026-07-19",
@@ -203,6 +307,7 @@ describe("a physician's letter that predates a re-signed referral", () => {
       await recordMedicalEvaluation(db, {
         outcome: "cleared",
         shopId: shop.id,
+        timeZone: shop.timezone,
         personId: person.id,
         recordedByPersonId: staff.person.id,
         evaluatedOn: LETTER_BETWEEN,
@@ -342,12 +447,75 @@ describe("a physician's letter that predates a re-signed referral", () => {
     const covered = await signBoth(["q3"], ["q3"]);
     const [first] = await referrals(covered);
     expect(
-      await earlierReferralForOpenHold(covered.db, covered.shop.id, covered.person.id),
+      await earlierReferralForOpenHold(
+        covered.db,
+        covered.shop.id,
+        covered.person.id,
+        covered.shop.timezone,
+      ),
     ).toEqual({ referralId: first?.id, on: "2026-07-18" });
+  });
+
+  it("shows and records an earlier referral date in the shop calendar", async () => {
+    const context = await waiverContext();
+    const { db, shop, booking, person } = context;
+    await db.update(shops).set({ timezone: "Asia/Tokyo" }).where(eq(shops.id, shop.id));
+    const firstAt = new Date("2026-12-31T15:30:00.000Z");
+    const issued = await issueWaiverRequest(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      now: firstAt,
+    });
+    if (!issued.ok) throw new Error("expected a waiver link");
+    await completeWaiver(db, issued.token, {
+      signerName: person.fullName,
+      agreed: true,
+      medicalAnswers: answers("q3"),
+      now: firstAt,
+    });
+
+    const secondAt = new Date("2027-01-03T12:00:00.000Z");
+    const again = await issueWaiverRequest(db, {
+      shopId: shop.id,
+      personId: person.id,
+      now: secondAt,
+    });
+    if (!again.ok) throw new Error("expected a fresh person-scoped link");
+    await completeWaiver(db, again.token, {
+      signerName: person.fullName,
+      agreed: true,
+      medicalAnswers: answers("q3"),
+      now: secondAt,
+    });
+
+    const [staff] = await listStaff(db, shop.id);
+    if (!staff) throw new Error("demo staff missing");
+    expect(await earlierReferralForOpenHold(db, shop.id, person.id, "Asia/Tokyo")).toEqual({
+      referralId: (await referrals({ ...context, staff: staff.person }))[0]?.id,
+      on: "2027-01-01",
+    });
+
+    const result = await recordMedicalEvaluation(db, {
+      outcome: "cleared",
+      shopId: shop.id,
+      timeZone: "Asia/Tokyo",
+      personId: person.id,
+      recordedByPersonId: staff.person.id,
+      evaluatedOn: "2027-01-02",
+      physicianName: "Dr. Imani Reyes",
+      earlierLetterConfirmed: true,
+      now: new Date("2027-01-04T12:00:00.000Z"),
+    });
+    expect(result).toMatchObject({ ok: true });
+    const events = await earlierLetterEvents({ ...context, staff: staff.person });
+    expect(events).toHaveLength(1);
+    expect(events[0]?.params).toMatchObject({ referred: "2027-01-01" });
   });
 
   it("offers nothing when the re-signed referral flags a prompt the earlier one never did", async () => {
     const ctx = await signBoth(["q3"], ["q3", "q5"]);
-    expect(await earlierReferralForOpenHold(ctx.db, ctx.shop.id, ctx.person.id)).toBeNull();
+    expect(
+      await earlierReferralForOpenHold(ctx.db, ctx.shop.id, ctx.person.id, ctx.shop.timezone),
+    ).toBeNull();
   });
 });

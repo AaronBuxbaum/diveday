@@ -1,6 +1,9 @@
+import { eq } from "drizzle-orm";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { type fileScopedShopContext, seededShopContext } from "@/test/db";
+import { shops } from "./schema";
 import { getTripRoster, upcomingTripsWithCounts } from "./trips";
+import { recordMedicalEvaluation as recordMedicalEvaluationInShop } from "./waivers-medical";
 import { getCurrentWaiverTemplate } from "./waivers-templates";
 
 /**
@@ -18,6 +21,19 @@ export const medicalReferralAnswers = {
   ...clearAnswers,
   responses: { ...clearAnswers.responses, q3: true },
 };
+
+/** Record a physician evaluation using the timezone currently stored for its shop. */
+export async function recordMedicalEvaluationForShop(
+  db: Parameters<typeof recordMedicalEvaluationInShop>[0],
+  input: Omit<Parameters<typeof recordMedicalEvaluationInShop>[1], "timeZone">,
+) {
+  const [shop] = await db
+    .select({ timezone: shops.timezone })
+    .from(shops)
+    .where(eq(shops.id, input.shopId));
+  if (!shop) throw new Error("medical evaluation shop missing");
+  return recordMedicalEvaluationInShop(db, { ...input, timeZone: shop.timezone });
+}
 
 /**
  * The demo departure's first seat, its diver and the shop's current template,

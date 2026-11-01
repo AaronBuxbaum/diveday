@@ -16,17 +16,14 @@ import { bookings, people, personRoles, shops, userAccounts, waiverRecords } fro
 import { createTrip, listStaff } from "./trips";
 import { listSignedWaiversByPerson } from "./waivers-audit";
 import { completeWaiver } from "./waivers-completion";
-import {
-  getMedicalClearanceDocument,
-  hasUnansweredMedicalHold,
-  recordMedicalEvaluation,
-} from "./waivers-medical";
+import { getMedicalClearanceDocument, hasUnansweredMedicalHold } from "./waivers-medical";
 import { issueWaiverRequest } from "./waivers-requests";
 import { getCurrentWaiverTemplate } from "./waivers-templates";
 import {
   clearAnswers,
   medicalReferralAnswers,
   now,
+  recordMedicalEvaluationForShop as recordMedicalEvaluation,
   waiverContextFor,
 } from "./waivers-test-fixtures";
 

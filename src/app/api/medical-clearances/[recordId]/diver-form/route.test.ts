@@ -182,6 +182,7 @@ describe("GET /api/medical-clearances/[recordId]/diver-form", () => {
     await recordMedicalEvaluation(db, {
       outcome: "cleared",
       shopId: shop.id,
+      timeZone: shop.timezone,
       personId: person.id,
       recordedByPersonId: crew.person.id,
       evaluatedOn: "2026-07-18",

@@ -315,7 +315,6 @@
           "src/db/seat-claims.test.ts": "1047 -> 1094",
           "src/db/self-declared-cards.test.ts": "1864 -> 1865",
           "src/db/waiver-issue.test.ts": "1051 -> 1178",
-          "src/db/waivers-medical.test.ts": "0 -> 1004",
           "src/lib/trip-admission.test.ts": "918 -> 984",
           "src/lib/waivers.test.ts": "1205 -> 1402"
         }
@@ -449,7 +448,7 @@
     "src/db/trips-queries.test.ts": 1176,
     "src/db/trips-series.test.ts": 1785,
     "src/db/waiver-issue.test.ts": 1179,
-    "src/db/waivers-medical.test.ts": 1004,
+    "src/db/waivers-medical.test.ts": 1001,
     "src/db/work-order-follow-up.test.ts": 1213,
     "src/db/work-orders.test.ts": 1408,
     "src/i18n/label-maps.test.ts": 1259,

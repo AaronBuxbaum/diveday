@@ -142,6 +142,12 @@ for (const scheme of ["light", "dark"] as const) {
           .click();
         await staffPage.waitForURL(/\/trips\/[a-f0-9-]+$/);
         const unsent = await openFirstRosterRowWith(staffPage, "Send waiver");
+        const profileHref = await unsent
+          .locator('a[href*="/divers/"]')
+          .first()
+          .getAttribute("href");
+        if (!profileHref)
+          throw new Error("The waiver roster row did not link to its diver profile");
         await unsent.getByRole("button", { name: "Send waiver", exact: true }).click();
         const resultNotice = staffPage.locator("#roster").getByRole("status");
         await resultNotice.waitFor();
@@ -171,6 +177,24 @@ for (const scheme of ["light", "dark"] as const) {
         await page.mouse.move(0, 0);
         await expect(page.getByText(diverCopy("waiver.medicalReferralNext"))).toBeVisible();
         await capture(page, "waiver-medical-held", scheme);
+
+        // H-98 permits a new person-scoped clean release to stand over this
+        // open referral for other bookings; it does not clear this booking's
+        // hold. Show the staff route where that release can be sent.
+        const reviewContext = await browser.newContext({
+          baseURL: workerBaseURL,
+          storageState: await staffStorageState("owner"),
+        });
+        const reviewPage = makeActivitySafe(await reviewContext.newPage());
+        await reviewPage.goto(profileHref);
+        const waiverGroup = reviewPage.getByRole("region", { name: "Waiver", exact: true });
+        await expect(waiverGroup.getByRole("button", { name: "Email waiver" })).toBeVisible();
+        await expect(waiverGroup.getByRole("button", { name: "Copy link" })).toBeVisible();
+        await expect(waiverGroup.getByRole("button", { name: "Mark signed on paper" })).toHaveCount(
+          0,
+        );
+        await capture(reviewPage, "waiver-open-referral-person-release", scheme);
+        await reviewContext.close();
 
         await page.getByRole("link", { name: "Take this to your doctor" }).click();
         await page.getByTestId("doctor-evaluation-form").waitFor();

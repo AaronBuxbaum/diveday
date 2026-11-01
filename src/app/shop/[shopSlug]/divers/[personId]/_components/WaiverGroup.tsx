@@ -39,14 +39,13 @@ import { WaiverDeliveryActions } from "./WaiverDeliveryActions";
  * the ink rather than in a fill — and, for a release that still needs signing,
  * not even that: the door says "Not signed" and opens straight onto the routes.
  *
- * **The routes stay four peers, side by side.** A staffer with an
- * unsigned release in front of them is choosing between the diver's inbox,
- * their phone, a link to paste into a conversation of their own, and the sheet
- * of paper already in the diver's hand — and which is right is a fact about the
- * person standing there, not a fallback order DiveDay can rank. Nothing is
- * offered at all for a diver already covered: a current signature has nothing
- * to send (`issueWaiverRequest` refuses it), and a medical hold is resolved in
- * review, not by mailing another link.
+ * **The delivery routes stay peers, side by side.** A staffer with a release
+ * that needs signing chooses between the diver's inbox, their phone, a link to
+ * paste into a conversation of their own, and, where the state permits it, the
+ * sheet of paper already in the diver's hand. A person-scoped clean release
+ * may stand over an open referral for other bookings (H-98); the booking whose
+ * own release is held still waits for a physician. Nothing is offered for a
+ * diver already covered by a newer clean signature.
  */
 
 /** The anchor the status ledger's "Send the waiver" lands on — the row of routes. */
@@ -217,10 +216,9 @@ export function WaiverGroup({
     diver.waiver.state === "expired" ||
     diver.waiver.state === "guardian_missing" ||
     (diver.waiver.state === "current" && diver.waiver.runsOutBeforeTrip);
-  // A hold has exactly one way out, and it is not another link: the diver comes
-  // back with a physician's evaluation and a staffer records it (issue #1252).
-  // Before this the group offered nothing at all here, because the only lift in
-  // the app asserted the opposite of what had happened.
+  // A physician's evaluation is the only way to clear this booking's own hold.
+  // H-98 separately allows a newer person-scoped clean release to stand for
+  // other bookings, while keeping the open referral visible as a warning.
   const heldForMedical = diver.waiver.state === "medical_review";
   // **The release standing today replaced a referral instead of answering it**
   // (issue #1282). Sign-once is symmetric — a disclosure at or after the last
@@ -273,7 +271,7 @@ export function WaiverGroup({
   // The routes to a signature, wherever the release needs one: its own state
   // says so, or the next departure does (a release that reads "Signed" here
   // and is still not one that departure accepts).
-  const offersSend = needsAction || gap?.action?.target === "send_waiver";
+  const offersSend = needsAction || heldForMedical || gap?.action?.target === "send_waiver";
   const hasWork = Boolean(
     offersSend ||
       overriddenReferralAt ||
@@ -446,37 +444,39 @@ export function WaiverGroup({
                 }}
                 sendCopy={waiverSendCopy(t)}
               >
-                <PaperWaiverControl
-                  action={markWaiverInPersonAction.bind(null, shopSlug, personId)}
-                  copy={paperWaiverCopy(t, "diver")}
-                  // A minor's paper release names its co-signer too — measured
-                  // on today, the day the staffer records the signature
-                  // (ADR 20260907-guardian-co-signature).
-                  requiresGuardian={guardianSignatureRequired(
-                    diver.person.dateOfBirth,
-                    signingDate(nowDate(), timezone),
-                    // A booker's "Under 18" on a seat still ahead (#2553).
-                    diver.minorDeclared,
-                  )}
-                  // **No namesake confirmation here, deliberately** —
-                  // `offersNamesake` is left off. This door is the absentee
-                  // case — the family phoned ahead, or handed a release over
-                  // months before they booked (`waivers.ts`,
-                  // `InPersonWaiverSubject`) — and the confirmation asserts in
-                  // the first person that the staffer watched two people sign.
-                  // Offering it to somebody reading a scanned PDF in February
-                  // asks them to attest to a thing nobody witnessed, and the
-                  // value it writes exists to tell a regulator somebody did. A
-                  // namesake family is sent to the counter, where the words are
-                  // true (`divers.notices.waiverGuardianName`).
-                  variant="secondary"
-                  className=""
-                  // A page-level notice that landed the staffer back here
-                  // re-opens the form. A refused attestation no longer
-                  // navigates: it answers under the button with what they
-                  // typed still in the boxes (issue #1674).
-                  defaultOpen={Boolean(status) && status?.tone !== "success"}
-                />
+                {heldForMedical ? null : (
+                  <PaperWaiverControl
+                    action={markWaiverInPersonAction.bind(null, shopSlug, personId)}
+                    copy={paperWaiverCopy(t, "diver")}
+                    // A minor's paper release names its co-signer too — measured
+                    // on today, the day the staffer records the signature
+                    // (ADR 20260907-guardian-co-signature).
+                    requiresGuardian={guardianSignatureRequired(
+                      diver.person.dateOfBirth,
+                      signingDate(nowDate(), timezone),
+                      // A booker's "Under 18" on a seat still ahead (#2553).
+                      diver.minorDeclared,
+                    )}
+                    // **No namesake confirmation here, deliberately** —
+                    // `offersNamesake` is left off. This door is the absentee
+                    // case — the family phoned ahead, or handed a release over
+                    // months before they booked (`waivers.ts`,
+                    // `InPersonWaiverSubject`) — and the confirmation asserts in
+                    // the first person that the staffer watched two people sign.
+                    // Offering it to somebody reading a scanned PDF in February
+                    // asks them to attest to a thing nobody witnessed, and the
+                    // value it writes exists to tell a regulator somebody did. A
+                    // namesake family is sent to the counter, where the words are
+                    // true (`divers.notices.waiverGuardianName`).
+                    variant="secondary"
+                    className=""
+                    // A page-level notice that landed the staffer back here
+                    // re-opens the form. A refused attestation no longer
+                    // navigates: it answers under the button with what they
+                    // typed still in the boxes (issue #1674).
+                    defaultOpen={Boolean(status) && status?.tone !== "success"}
+                  />
+                )}
               </WaiverDeliveryActions>
             </div>
           ) : null}
