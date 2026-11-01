@@ -10,11 +10,9 @@ import type { ShopCurrency } from "@/lib/money";
 /**
  * **The bench, grouped by where each ticket is** (ADR 20261008-gear-work-orders).
  *
- * The register's instrument pattern, applied to work orders: the group
- * heading *is* the status, so a row never repeats it, and each row says the
- * three things a counter is asked at the phone — whose it is, what is wrong
- * with it, and whether it is late. Open groups come first in counter order and
- * the collected ones last.
+ * The group heading carries status; rows repeat it only for customer gear
+ * ready to collect or a shop unit's recorded outcome. Open work precedes
+ * collected tickets. Each row identifies the owner or unit, problem, and lateness.
  *
  * A Server Component: staff copy never crosses to the client.
  */

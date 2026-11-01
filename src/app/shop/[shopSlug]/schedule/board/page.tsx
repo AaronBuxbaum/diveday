@@ -118,14 +118,9 @@ export default async function ScheduleBoardPage({
   const returnWeek = week ? weekStartIso : undefined;
   const boardHref = `/shop/${shopSlug}/schedule/board${returnWeek ? `?week=${returnWeek}` : ""}`;
 
-  // The board works off one keyset page of departures, same as the public list — a shop with
-  // hundreds of upcoming departures still loads one page, not the whole future.
-  // The add panel's course and dive-site options are deliberately *not* here: they are two queries
-  // and a whole catalogue of client props for two selects inside a panel that is closed by
-  // default, so they load when it opens (`loadBuilderOptionsAction`).
-  //
-  // **One wave** (code review 2026-10-10, item 25): the week's crew and the request rows are
-  // chained onto the reads they need inside the batch, not awaited one at a time after it.
+  // The upcoming stream is keyset-paged; the week grid is a separate bounded read. Builder
+  // catalog options load lazily when the closed-by-default add panel opens.
+  // Dependent reads are batched below.
   const canConfigureRead = canPersonConfigureTrips(db, shop.id, session.user.personId);
   const weekRead = weekBoard(db, shop.id, weekStartIso, tz, now);
   const [
@@ -146,28 +141,17 @@ export default async function ScheduleBoardPage({
     readFormDraft(db, shop.id, session.user.personId, "add_departure", now),
     upcomingScheduleRange(db, shop.id, now),
     canConfigureRead,
-    // Departures that already came back with a head count still open (DOM-H3).
-    // `pagedUpcomingTripsWithCounts` cannot reach them — it only returns trips whose `startsAt` is
-    // still ahead of `now` — so this is its own backwards query, and one batched query for every
-    // such boat rather than a per-trip roll-call lookup.
-    //
-    // Read at every cursor page, not only the first, because the **week** also needs it and the
-    // week has no cursor: it is addressed by `?week=`, so a board sitting on `?after=` still draws
-    // a grid, and gating the read on the stream's pager is what made the loudest thing the board
-    // can say disappear at desktop. The stream's own placement is unchanged — those rows lead page
-    // one and are not repeated on top of every later page (`streamRollCalls` below).
+    // Returned departures with open roll calls are a separate batched backward read; the upcoming
+    // stream cannot include them. Read on every cursor page because the independently addressed
+    // `?week=` grid still needs them when the stream is paged. The stream shows them only on page
+    // one (`streamRollCalls` below).
     openAfterDiveRollCalls(db, shop.id, now),
     listBoats(db, shop.id),
-    // A second, bounded reading of the same departures — one week, not a cursor page — for the `xl`
-    // grid (ADR 20260827-clearwater-surface-language, decision 5). It reaches backwards, which the
-    // stream never does: a week that has already half-happened is most of what "what does my week
-    // look like" means.
+    // Bounded `xl` week-grid read (ADR 20260827-clearwater-surface-language, decision 5); unlike
+    // the upcoming stream, it includes departures earlier in the selected week.
     weekRead,
-    // **The days somebody asked for** (ADR 20260919-one-idea, slice 23f — "a request is a day
-    // someone asked for, drawn as a ghost on the week"). Bounded to the week for the same reason
-    // everything else here is: Tide files a thing under the hour it happens at, and an interest for a
-    // day three weeks out is that week's business. `/shop/<slug>/requests` stays the unbounded
-    // reading of the same rows.
+    // Requests are bounded to the displayed week (ADR 20260919-one-idea, slice 23f); the separate
+    // requests page reads them unbounded.
     listOpenDateInterestsForDates(db, shop.id, weekDates(weekStartIso)),
     // **Names come from every hull the shop has ever had, not just the live ones.** A departure
     // that sailed on a boat the shop has since deleted must still say which vessel — that is the
@@ -177,17 +161,8 @@ export default async function ScheduleBoardPage({
     listBoatsForHistory(db, shop.id),
     weekAroundRead(db, shop, weekRead, weekStartIso, now),
     requestedCourseAndSite(db, shop.id, { course, site }),
-    // Read for whoever can open the board, since 2026-09-16 (issue #1679). This carried the same
-    // `canPersonViewShopReports` check as `/requests`, on the written ground that it was "the same
-    // live report gate that protects /requests" — and that page is ungated now, so the check
-    // protected nothing and only broke the day group's one act: a captain tapping "Add departure"
-    // got a builder with no requests block and no explanation. `shop.id` is still the scope
-    // (`listDateInterestsByIds`), so a shareable URL still cannot pull another tenant's interest.
-    //
-    // Read only for a reader the add panel renders for: the plan is drawn inside it and nowhere
-    // else, so for anyone else these rows were loaded and shown to nobody. `/requests` no longer
-    // offers them the link (issue #1831); a hand-typed `?requests=` from a captain now reads
-    // nothing either.
+    // Request IDs only feed the add panel, so require its live configuration role and keep the
+    // lookup scoped to this shop. Readers without that role receive no request rows.
     requestIds.length > 0
       ? canConfigureRead.then((allowed) =>
           allowed ? listDateInterestsByIds(db, shop.id, requestIds) : [],
