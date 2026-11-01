@@ -106,3 +106,36 @@ security audit re-confirming the gap.
   fail-open path for a non-2xx response and malformed body, and bounded header/body stalls.
 - The in-memory store and its `MAX_BUCKETS` eviction bound are unchanged and remain the default
   everywhere the two env vars aren't set.
+
+## Addendum 2026-11-01 — `@upstash/ratelimit` reassessed, custom store kept (issue #3244)
+
+**Compared:** this store against `@upstash/ratelimit` 2.2.0 `Ratelimit.tokenBucket` on
+`@upstash/redis` 1.40.0, read from the published packages, and this file's Lua script run against a
+local `redis-server`: 200 concurrent `EVAL`s on one key at capacity 5 allowed exactly 5, refill
+lands on schedule and caps at capacity, and the key carries the 24-hour `PEXPIRE`.
+
+**Kept, because adopting it would change guarantees this module promises:**
+
+- *Timeout resolves to allowed.* The library's default 5-second timeout returns
+  `{ success: true, reason: "timeout" }` and does not abort the request. `checkRateLimitFailClosed`
+  (the doctor's page) would need an adapter that reads `reason`, and the 2-second abort-backed
+  deadline would be lost; `@upstash/redis` also retries 5 times by default with backoff.
+- *An unbounded in-process cache.* The default `ephemeralCache` is a plain `Map` of every refused
+  identifier, pruned only when that identifier is looked up again; the in-memory store's
+  `MAX_BUCKETS` bound exists to stop exactly that growth. It must be turned off.
+- *A clock nobody can set.* `Date.now()` is read inside the limiter, so `nowMs()` (`DIVEDAY_CLOCK`)
+  and `checkRateLimit`'s `now` argument stop reaching the bucket.
+- *Stepped refill.* Whole tokens per `interval`, not a continuous `refillPerMs`; each `RATE_LIMITS`
+  entry needs re-expressing and one `Ratelimit` instance per policy.
+- *Nothing removed.* There is no in-memory token bucket to replace ours, keys still need
+  `rateLimitKey()` hashing, and fail-open reporting stays. Net: about 60 lines out, an adapter in,
+  two runtime packages (about 1.7 MB unpacked, server-only) plus `@upstash/core-analytics` and
+  `uncrypto` added.
+
+What the library does better is small: `EVALSHA` instead of sending the script each call, a key
+expiry sized to the time until full rather than a flat 24 hours, and a refill time that never
+moves backwards when an instance's clock lags.
+
+**What would change the answer:** needing multi-region limits, deny lists or dynamic limits; a
+library timeout that rejects instead of allowing; or the Upstash REST `EVAL` API changing so the
+hand-rolled call stops being a single documented `POST`.
