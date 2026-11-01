@@ -37,6 +37,9 @@ export function StaffActivity({
     // An empty block after a named print page creates a trailing blank sheet.
     // The portal still hosts the fixed lock dialog without its own layout box.
     root.style.display = "contents";
+    // Unlike data-staff-session-lock this stays, so a focus request that lands
+    // while the closing dialog still holds focus can tell that focus is ours.
+    root.setAttribute("data-staff-session-root", "");
     document.body.append(root);
     setPortal(root);
     const previousInert = new Map<HTMLElement, boolean>();

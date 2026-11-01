@@ -853,8 +853,6 @@ export const bookingCapabilities = pgTable(
     createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
-    // The verify-path lookup: hash the bearer token, find the row.
-    index("booking_capabilities_token_hash_idx").on(table.tokenHash),
     // Revocation-cascade and staff-facing "active links for this booking" lookups.
     index("booking_capabilities_booking_purpose_idx").on(
       table.bookingId,

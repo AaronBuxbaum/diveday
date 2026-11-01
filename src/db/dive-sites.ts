@@ -1443,7 +1443,7 @@ export type UpcomingSiteTrip = {
 /**
  * Upcoming departures that dive this site — the reverse lookup from a site to
  * the trips that use it, joined through `trip_dives` (a trip can visit more
- * than one site across its dives, so this is not the same as `trips.diveSiteId`).
+ * than one site across its dives, so a trip has no single site).
  */
 export async function listUpcomingTripsForSite(
   db: AppDb,

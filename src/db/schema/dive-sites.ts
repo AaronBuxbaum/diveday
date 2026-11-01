@@ -347,7 +347,6 @@ export const diveSites = pgTable(
       "dive_sites_planning_note_not_blank",
       sql`${table.planningNote} is null or length(btrim(${table.planningNote})) > 0`,
     ),
-    index("dive_sites_shop_name_idx").on(table.shopId, table.name),
     // Null (the shop's own number applies) or a real duration — never zero,
     // for the same reason `shops_bottom_time_minutes_positive` exists.
     check(
@@ -371,16 +370,12 @@ export const diveSites = pgTable(
 );
 
 /** DiveDay-maintained common-site catalog; shops copy a published version into their own library. */
-export const globalDiveSites = pgTable(
-  "global_dive_sites",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    slug: text("slug").notNull().unique(),
-    currentVersion: integer("current_version").notNull(),
-    createdAt: appNowTimestamp("created_at").notNull(),
-  },
-  (table) => [index("global_dive_sites_slug_idx").on(table.slug)],
-);
+export const globalDiveSites = pgTable("global_dive_sites", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  slug: text("slug").notNull().unique(),
+  currentVersion: integer("current_version").notNull(),
+  createdAt: appNowTimestamp("created_at").notNull(),
+});
 
 /**
  * One published version of a catalog site, as a whole briefing.

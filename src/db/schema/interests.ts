@@ -292,10 +292,7 @@ export const interestUnsubscribeTokens = pgTable(
     tokenHash: text("token_hash").notNull().unique(),
     issuedAt: appNowTimestamp("issued_at").notNull(),
   },
-  (table) => [
-    index("interest_unsubscribe_tokens_token_hash_idx").on(table.tokenHash),
-    index("interest_unsubscribe_tokens_interest_idx").on(table.interestId),
-  ],
+  (table) => [index("interest_unsubscribe_tokens_interest_idx").on(table.interestId)],
 );
 
 export type InterestUnsubscribeToken = typeof interestUnsubscribeTokens.$inferSelect;

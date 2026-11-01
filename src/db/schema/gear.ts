@@ -252,7 +252,6 @@ export function makeRentalFitProfiles<Extra extends Record<string, AnyPgColumnBu
     },
     (table) => [
       uniqueIndex("rental_fit_profiles_shop_person_unique").on(table.shopId, table.personId),
-      index("rental_fit_profiles_shop_person_idx").on(table.shopId, table.personId),
       check(
         "rental_fit_profiles_rented_drysuit_is_dry",
         sql`not ${table.rentsDrysuit} or ${table.divesDry}`,
