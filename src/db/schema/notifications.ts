@@ -382,19 +382,19 @@ export const notificationSendQueue = pgTable(
      * held raw bearer tokens that exist nowhere else un-hashed.
      *
      * **Cleared on finish, kept while a row is parked.** The finished writes
-     * (`sent`, `failed` with `switched_off`, `opted_out`, `stale_recipient` or
-     * `missing_payload`, and the park that spends a row's last recovery attempt)
-     * null the payload and all six columns, so a done row holds no personal data
-     * and the 90-day prune can take it (`RETENTION_DAYS.notification_send_queue`).
-     * Two `failed` paths keep them:
-     * - `sealed_payload_unreadable` is parked for a restored key. The drain
-     *   re-offers it on each daily pass until `recovery_attempts` reaches
-     *   `UNREADABLE_RETRY_MAX_ATTEMPTS` (`drainableStatus`, issue #1340). The
-     *   final park clears everything.
-     * - `retry_subject_unbound` is kept for follow-up: the row's queued binding no
-     *   longer matches its payload, so the drain does not infer identity. Nothing
-     *   re-offers it, and the prune skips it because it still holds a payload.
-     *   Whether these rows should be pruned or swept is open, not decided here.
+     * (`sent`, `failed` with `switched_off`, `opted_out`, `stale_recipient`,
+     * `missing_payload` or `retry_subject_unbound`, and the park that spends a
+     * row's last recovery attempt) null the payload and all six columns, so a
+     * done row holds no personal data and the 90-day prune can take it
+     * (`RETENTION_DAYS.notification_send_queue`). `retry_subject_unbound` means
+     * the row's binding no longer matches its payload; the drain refuses to
+     * infer identity, and nothing re-offers the code, so it is finished too
+     * (issue #3312).
+     *
+     * One `failed` path keeps them: `sealed_payload_unreadable` is parked for a
+     * restored key. The drain re-offers it on each daily pass until
+     * `recovery_attempts` reaches `UNREADABLE_RETRY_MAX_ATTEMPTS`
+     * (`drainableStatus`, issue #1340). The final park clears everything.
      *
      * `booking_id` deliberately carries no foreign key: it is a match handle
      * for a sweep, not a relationship, and a real reference would make an

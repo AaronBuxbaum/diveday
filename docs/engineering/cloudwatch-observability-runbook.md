@@ -112,6 +112,7 @@ is the same fault with no usable key at all.
 | `not_configured` | A retry found no provider credentials. | The deployment lost its SES configuration; see [ses-email-runbook.md](ses-email-runbook.md). |
 | `payload_unreadable` | The fortnight of unreadable parks above ran out and the row was cleared. | The message is gone. Restore the key so the next ones are not, and tell the shop if `shopId` is one you can reach. |
 | `missing_payload` | A queued row had no payload. | A bug, not an outage: no write path should produce one. File it. |
+| `retry_subject_unbound` | A queued row's person, trip or booking binding no longer matched its payload, so the drain refused to guess who it was for and cleared the row unsent. | A bug, not an outage: no supported write path leaves an unbound row. File it with `kind` and `shopId`. |
 | `queue_seal_unavailable`, `queue_write_failed`, `not_queueable`, `no_shop` | A first send failed retryably and could not be put on the queue at all. | For the first two, fix the key or the database; the provider failure that started it is the line just before. `not_queueable` is `guardian_release_copy`, kept off the queue on purpose. |
 
 The person waiting on the message can always ask again — a new reset link, a re-sent invite — so

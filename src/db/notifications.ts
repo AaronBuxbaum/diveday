@@ -253,6 +253,7 @@ function queueSealingKey(where: "queue" | "drain"): SecretKey | null {
  * - `not_configured` — a drain attempt found no provider configured at all.
  * - `payload_unreadable` — the fortnight of unreadable parks is spent.
  * - `missing_payload` — a claimed row had no payload to send.
+ * - `retry_subject_unbound` — a claimed row's binding no longer matched its payload.
  * - `no_shop` / `not_queueable` / `queue_seal_unavailable` / `queue_write_failed`
  *   — a retryable first failure that could not be put on the queue at all.
  */
@@ -262,6 +263,7 @@ type SendAbandonedReason =
   | "not_configured"
   | "payload_unreadable"
   | "missing_payload"
+  | "retry_subject_unbound"
   | QueueRefusal
   | "queue_write_failed";
 
@@ -1637,20 +1639,43 @@ export async function drainNotificationRetries(
         notification.kind === "guardian_release_copy") &&
         !claimed.recipientPersonId)
     ) {
-      // Old queue rows have no durable binding to the person/trip that owned
-      // their sealed content. Do not infer that identity from today's booking
-      // or contact: a seat may have been repointed while this payload waited.
-      // Keep its sealed payload and erasure handles for follow-up/sweep.
+      // The row's binding no longer matches the person/trip that owned its
+      // sealed content. Do not infer that identity from today's booking or
+      // contact: a seat may have been repointed while this payload waited. No
+      // supported writer leaves a row like this (`persistQueuedRetry` binds
+      // every booking- and person-scoped retry it queues), so only an
+      // out-of-band edit reaches here.
+      //
+      // **It is a finishing write, so it drops the payload and its handles.**
+      // Nothing re-offers this code, so the payload buys no recovery, and
+      // H-02's retention promise refuses to hold a rendered message with no end
+      // date — the same call as `missing_payload` and the final unreadable park
+      // above (issue #3312). The error code and the abandoned line are the
+      // record that it happened, and the 90-day prune takes the row.
       await db
         .update(notificationSendQueue)
         .set({
           status: "failed",
+          payloadSealed: null,
+          recipientEmail: null,
+          subjectEmail: null,
+          subjectPhone: null,
+          bookingId: null,
+          recipientPersonId: null,
+          recipientTripId: null,
           lockedUntil: null,
+          httpStatus: null,
           errorCode: "retry_subject_unbound",
           lastError: null,
           updatedAt: nowDate(),
         })
         .where(eq(notificationSendQueue.id, claimed.id));
+      logSendAbandoned({
+        reason: "retry_subject_unbound",
+        shopId: claimed.shopId,
+        kind: notification.kind,
+        attempts: claimed.attempts,
+      });
       summary.failed += 1;
       continue;
     }
