@@ -48,6 +48,32 @@ describe("durationsFromReport", () => {
   it("refuses a kind it does not know", () => {
     expect(() => durationsFromReport(report, "unit")).toThrow(/unknown kind/);
   });
+
+  it("keeps the root file for nested and imported specs, and accepts a null report", () => {
+    const nested = {
+      suites: [
+        {
+          title: "root.spec.ts",
+          file: "root.spec.ts",
+          suites: [
+            {
+              title: "nested",
+              file: "nested.spec.ts",
+              specs: [
+                {
+                  title: "imported test",
+                  file: "imported.spec.ts",
+                  tests: [{ results: [{ duration: 1_234 }] }],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    expect(durationsFromReport(nested, "functional")).toEqual({ "e2e/root.spec.ts": 1_234 });
+    expect(durationsFromReport(null, "functional")).toEqual({});
+  });
 });
 
 describe("parseInput", () => {
