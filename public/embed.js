@@ -25,6 +25,7 @@
   }
   const mounted = new WeakSet();
   const DIVEDAY_LAGOON = "#0e7490";
+  const sheetStyle = document.createElement("style");
 
   function hostBrand(el) {
     // The host page's link colour, read off the element itself when it is a
@@ -141,18 +142,24 @@
     el.addEventListener("click", (event) => {
       if (event.metaKey || event.ctrlKey || event.shiftKey) return;
       event.preventDefault();
-      const scrim = document.createElement("div");
-      scrim.setAttribute("data-diveday-lightbox", "");
-      scrim.style.cssText =
-        "position:fixed;inset:0;z-index:2147483000;background:rgba(12,42,53,.55);display:flex;align-items:flex-end;justify-content:center;padding:0";
-      const sheet = document.createElement("div");
-      sheet.setAttribute("role", "dialog");
-      sheet.setAttribute("aria-modal", "true");
-      sheet.setAttribute("aria-label", el.textContent || "DiveDay");
-      // `dvh` where the browser has it, so a phone's own chrome never hides
-      // the bottom of the sheet; the `vh` line stays for the ones that do not.
-      sheet.style.cssText =
-        "position:relative;width:100%;max-width:720px;height:min(92vh,900px);height:min(92dvh,900px);background:#fff;border-radius:18px 18px 0 0;overflow:hidden";
+      // A native modal <dialog> is the sheet itself: the browser supplies the
+      // top layer, the inert page behind it, the Tab loop, Escape (also from
+      // inside the frame) and the backdrop. Everything below is explicit
+      // because the host page's own `dialog {}` and `*` rules apply to it.
+      const dialog = document.createElement("dialog");
+      dialog.setAttribute("data-diveday-lightbox", "");
+      dialog.setAttribute("aria-label", el.textContent || "DiveDay");
+      if (!sheetStyle.isConnected) {
+        // One stylesheet, every declaration !important: it outranks the host's
+        // `dialog {}` and `*` rules where an inline style would lose to an
+        // !important one, and it is the only way to reach ::backdrop. `dvh`
+        // where the browser has it, so a phone's own chrome never hides the
+        // bottom of the sheet; the `vh` line stays for the ones that do not.
+        sheetStyle.textContent =
+          "dialog[data-diveday-lightbox]{position:fixed!important;inset:0!important;margin:auto auto 0!important;padding:0!important;border:0!important;box-sizing:content-box!important;display:block!important;width:100%!important;max-width:720px!important;height:min(92vh,900px)!important;height:min(92dvh,900px)!important;max-height:none!important;background:#fff!important;border-radius:18px 18px 0 0!important;overflow:hidden!important}" +
+          "dialog[data-diveday-lightbox]::backdrop{background:rgba(12,42,53,.55)!important}";
+        document.head.appendChild(sheetStyle);
+      }
       const close = document.createElement("button");
       close.type = "button";
       close.setAttribute("aria-label", "Close");
@@ -173,41 +180,25 @@
       iframe.src = href.toString();
       iframe.title = el.textContent || "DiveDay";
       iframe.style.cssText = "width:100%;height:100%;border:0;display:block";
-      // The host page holds still under the sheet, and Tab stays inside it:
-      // the close button and the frame are the sheet's two stops.
+      // The host page holds still under the sheet (a modal dialog makes it
+      // inert but does not stop it scrolling).
       const previousOverflow = document.body.style.overflow;
       document.body.style.overflow = "hidden";
-      function dismiss() {
-        scrim.remove();
-        document.removeEventListener("keydown", onKey);
+      // Escape and the close button both end in `close`; the dialog itself is
+      // the backdrop's click target, as the frame covers the rest of the sheet.
+      dialog.addEventListener("close", () => {
+        dialog.remove();
         document.body.style.overflow = previousOverflow;
         el.focus();
-      }
-      function onKey(e) {
-        if (e.key === "Escape") {
-          dismiss();
-          return;
-        }
-        if (e.key !== "Tab") return;
-        const stops = [close, iframe];
-        const index = stops.indexOf(document.activeElement);
-        if (e.shiftKey && (index === 0 || index === -1)) {
-          e.preventDefault();
-          iframe.focus();
-        } else if (!e.shiftKey && (index === stops.length - 1 || index === -1)) {
-          e.preventDefault();
-          close.focus();
-        }
-      }
-      close.addEventListener("click", dismiss);
-      scrim.addEventListener("click", (e) => {
-        if (e.target === scrim) dismiss();
       });
-      document.addEventListener("keydown", onKey);
-      sheet.appendChild(close);
-      sheet.appendChild(iframe);
-      scrim.appendChild(sheet);
-      document.body.appendChild(scrim);
+      close.addEventListener("click", () => dialog.close());
+      dialog.addEventListener("click", (e) => {
+        if (e.target === dialog) dialog.close();
+      });
+      dialog.appendChild(close);
+      dialog.appendChild(iframe);
+      document.body.appendChild(dialog);
+      dialog.showModal();
       close.focus();
     });
   }
