@@ -67,14 +67,12 @@ test("both move buttons of a row submit the same form, so the post needs no scri
 
   const middle = rows(page).filter({ hasText: LABELS[1] });
   // `has` is matched inside each form, so the button is looked up from the page, not from the row.
-  const form = middle
-    .locator("form")
-    .filter({
-      has: page.getByRole("button", {
-        name: staff("settings.safetyChecklist.moveUp"),
-        exact: true,
-      }),
-    });
+  const form = middle.locator("form").filter({
+    has: page.getByRole("button", {
+      name: staff("settings.safetyChecklist.moveUp"),
+      exact: true,
+    }),
+  });
   await expect(form).toHaveCount(1);
   await expect(form.locator("button[type=submit][name=direction][value=up]")).toHaveCount(1);
   await expect(form.locator("button[type=submit][name=direction][value=down]")).toHaveCount(1);
