@@ -51,6 +51,19 @@ describe("course template synchronization", () => {
     ]);
   });
 
+  it("does not treat reordered schedule-day keys as a shop edit", () => {
+    const baseline = courseTemplateSnapshot(template());
+    const current = {
+      ...baseline,
+      scheduleDays: baseline.scheduleDays.map(({ title, items }) => ({ items, title })),
+    };
+    const latest = { ...baseline, summary: "Learn to dive with confidence" };
+
+    expect(courseTemplateDiff(current, baseline, latest)).toEqual([
+      expect.objectContaining({ field: "summary", shopChanged: false }),
+    ]);
+  });
+
   it("preserves shop-edited prose while applying untouched template changes", () => {
     const baseline = courseTemplateSnapshot(template());
     const current = {

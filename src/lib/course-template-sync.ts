@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { CourseContent } from "./courses";
 import type { CertificationLevel } from "./readiness";
+import { sameTemplateValue } from "./template-value-comparison";
 
 /**
  * Fields that a published course template owns. Media, prices, visibility, and
@@ -190,22 +191,6 @@ export function parseCourseTemplateSnapshot(value: unknown): CourseTemplateSnaps
   return parsed.success ? parsed.data : null;
 }
 
-function canonicalValue(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(canonicalValue);
-  if (value && typeof value === "object") {
-    return Object.fromEntries(
-      Object.entries(value)
-        .sort(([left], [right]) => left.localeCompare(right))
-        .map(([key, nested]) => [key, canonicalValue(nested)]),
-    );
-  }
-  return value;
-}
-
-function sameValue(left: unknown, right: unknown): boolean {
-  return JSON.stringify(canonicalValue(left)) === JSON.stringify(canonicalValue(right));
-}
-
 /** Show only fields whose current shop value differs from the latest template. */
 export function courseTemplateDiff(
   current: CourseTemplateSnapshot,
@@ -215,7 +200,7 @@ export function courseTemplateDiff(
   return COURSE_TEMPLATE_SYNC_FIELDS.flatMap((field) => {
     const currentValue = current[field];
     const latestValue = latest[field];
-    if (sameValue(currentValue, latestValue)) return [];
+    if (sameTemplateValue(currentValue, latestValue)) return [];
     return [
       {
         field,
@@ -223,7 +208,7 @@ export function courseTemplateDiff(
         // is that every editable prose field belongs to the shop; source facts
         // remain source-owned and are still allowed to update explicitly.
         shopChanged: baseline
-          ? !sameValue(currentValue, baseline[field])
+          ? !sameTemplateValue(currentValue, baseline[field])
           : COURSE_TEMPLATE_SHOP_EDITABLE_FIELDS.includes(
               field as (typeof COURSE_TEMPLATE_SHOP_EDITABLE_FIELDS)[number],
             ),
@@ -249,7 +234,7 @@ export function mergedCourseTemplateSnapshot(
 
   const next = { ...latest };
   for (const field of COURSE_TEMPLATE_SHOP_EDITABLE_FIELDS) {
-    if (!baseline || !sameValue(current[field], baseline[field])) {
+    if (!baseline || !sameTemplateValue(current[field], baseline[field])) {
       next[field] = current[field] as never;
     }
   }
