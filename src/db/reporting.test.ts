@@ -890,14 +890,13 @@ describe("getMonthlyReport partner referrals (issue #1285)", () => {
     if (!otherShop) throw new Error("second shop insert failed");
     const trip = await makeTrip(db, shop.id, new Date("2026-06-10T12:00:00Z"), 10, "Reef");
     await referredBooking(db, shop.id, trip, "Ours", "coral-sands");
-
     expect((await getMonthlyReport(db, shop.id, JUNE_START, JULY_START)).partnerReferredSeats).toBe(
       1,
     );
     expect(
       (await getMonthlyReport(db, otherShop.id, JUNE_START, JULY_START)).partnerReferredSeats,
     ).toBe(0);
-    // Last, because a refused insert aborts the test's transaction.
+    // Last: a refused insert aborts the transaction.
     await expect(
       referredBooking(db, otherShop.id, trip, "Theirs", "coral-sands"),
     ).rejects.toThrow();
