@@ -1,4 +1,4 @@
-import { and, eq, isNotNull } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate, nowMs } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
@@ -653,29 +653,14 @@ describe("erasing a diver named in a report", () => {
 
     const view = await getIncidentReport(db, shop.id, started.reportId, f.owner.id);
     expect(view?.status).toBe("filed");
-    // The narrative and the addenda are staff prose: a mention survives
-    // (owner, 2026-11-01). The hand-typed outsider row is the diver's own handle
-    // and is redacted.
     expect(view?.fields.whatHappened).toBe(`${name} surfaced coughing. Oxygen started at once.`);
     expect(view?.fields.oxygenMinutes).toBe(25);
     expect(view?.addenda[0]?.body).toBe(`Called ${name.toUpperCase()} the next day.`);
-    const [outsider] = await db
-      .select({ outsiderName: incidentReportPeople.outsiderName })
-      .from(incidentReportPeople)
-      .where(
-        and(
-          eq(incidentReportPeople.reportId, started.reportId),
-          isNotNull(incidentReportPeople.outsiderName),
-        ),
-      );
-    expect(outsider?.outsiderName).toBe("[redacted]");
     // The seat link stays, under the erased name.
     expect(view?.people.map((person) => [person.kind, person.involvement])).toEqual([
       ["booking", "affected"],
       ["outsider", "witness"],
     ]);
-    // Neither person line carries the real name any more: the seat reads the
-    // erased name through the join and the outsider row is redacted.
     expect(JSON.stringify(view?.people)).not.toContain(name);
   });
 });

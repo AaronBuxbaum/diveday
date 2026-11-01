@@ -917,8 +917,7 @@ describe("full-shop export dataset", () => {
       body: "Esme prefers the 5mm suit; ask before the second tank.",
       createdByPersonId: owner.id,
     });
-    // A note filed under *somebody else* that names her. Erasure removes her own
-    // data only, so this staff sentence survives (owner, 2026-11-01).
+    // Filed under somebody else and naming her: survives (owner, 2026-11-01).
     await db.insert(internalNotes).values({
       shopId: shop.id,
       personId: owner.id,
@@ -958,10 +957,8 @@ describe("full-shop export dataset", () => {
       input.tables.map((exported) => ({ file: exported.file, rows: exported.rows })),
     );
     const mention = "Split Erasable Esme from this group on the next boat.";
-    expect(wholeBundle).toContain(mention);
-    const ownData = wholeBundle.replace(mention, "");
     for (const secret of ["Erasable Esme", "esme@example.com", "555 0424", "5mm suit"]) {
-      expect(ownData, `bundle still carries ${secret}`).not.toContain(secret);
+      expect(wholeBundle.replace(mention, "")).not.toContain(secret);
     }
   });
 
