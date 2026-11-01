@@ -73,6 +73,7 @@ export function linkedSkillProblems(linked, locked) {
  * Lines a vendored skill carries from its upstream pack that are wrong here, each with the
  * local wording that replaced it. A sync from `skills-lock.json`'s source rewrites the files
  * under `.agents/skills/` and brings the upstream line back; this refusal is what notices.
+ * `skills` limits an entry to the named skills; without it the phrase is refused everywhere.
  */
 export const VENDORED_SKILL_OVERRIDES = [
   {
@@ -112,14 +113,69 @@ export const VENDORED_SKILL_OVERRIDES = [
     phrase: "or recording or editing an ADR.",
     fix: "set the description to: Build and sharpen a project's domain model. Use when discussing codebase terminology or writing or editing a GLOSSARY.md. Recording an ADR: adr.",
   },
+  {
+    phrase: "which points at `docs/agents/issue-tracker.md`",
+    skills: ["implement-spec", "wayfinder"],
+    fix: 'read `docs/agents/issue-tracker.md` and `docs/agents/triage-labels.md` and say that the CLAUDE.md "Agent skills" section points at the canonical skill index and provider contract, not at the tracker documents (#3302)',
+  },
+  {
+    phrase: "should be run in the background where possible for maximum concurrency",
+    skills: ["implement-spec"],
+    fix: 'make subagents the exception: main loop by default, independent tickets only, at most three, or when the user asked (working-rules "Delegating"; #3302)',
+  },
+  {
+    phrase: "calls the Skill tool with `tdd`",
+    skills: ["implement-spec"],
+    fix: "load the `tdd` skill by the host's mechanism and run one focused test file per cycle (#3302)",
+  },
+  {
+    phrase: "This allows for maximum concurrency.",
+    skills: ["implement-spec"],
+    fix: "keep new implementers inside the three-worker cap (#3302)",
+  },
+  {
+    phrase: "Fix all issues raised by the review in a single **implementer subagent**",
+    skills: ["implement-spec"],
+    fix: "fix review findings yourself unless you delegated (#3302)",
+  },
+  {
+    phrase: "Skill tool",
+    skills: ["wayfinder", "tdd"],
+    fix: "name the skill to load and leave the mechanism to the host; Claude Code uses the Skill tool (#3302)",
+  },
+  {
+    phrase: "Fire the research subagents",
+    skills: ["wayfinder"],
+    fix: "run research tickets in this context unless the reading would bloat it, the tickets are independent, or the user asked for workers (#3302)",
+  },
+  {
+    phrase: "Spin up a **background agent** to do the research",
+    skills: ["research"],
+    fix: 'research in this context by default; delegate only for a reason in working-rules "Delegating" (#3302)',
+  },
+  {
+    phrase: "(the reviewer agents in `.claude/agents/`)",
+    skills: ["tdd"],
+    fix: "name the `verify` skill and the reviewer agents AGENTS.md requires (#3302)",
+  },
+  {
+    phrase: "the full test suite once at the end",
+    skills: ["implement"],
+    fix: "one focused test file per change; CI runs the whole suite; a bare `pnpm test` is refused (#3302)",
+  },
+  {
+    phrase: "Use /tdd",
+    skills: ["implement"],
+    fix: "name the `tdd` skill, not a slash command (#3302)",
+  },
 ];
 
 /** Each override a vendored skill has lost, given `{ [name]: SKILL.md contents }`. */
 export function vendoredSkillProblems(contentsByName) {
   const problems = [];
   for (const [name, contents] of Object.entries(contentsByName))
-    for (const { phrase, fix } of VENDORED_SKILL_OVERRIDES)
-      if (contents.includes(phrase))
+    for (const { phrase, fix, skills } of VENDORED_SKILL_OVERRIDES)
+      if ((!skills || skills.includes(name)) && contents.includes(phrase))
         problems.push(`.agents/skills/${name}/SKILL.md: names \`${phrase}\`; ${fix}`);
   return problems;
 }

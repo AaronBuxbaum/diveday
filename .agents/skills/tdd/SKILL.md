@@ -23,7 +23,7 @@ A **seam** is the public boundary you test at: the interface where you observe b
 
 Ask: "What's the public interface, and which seams should we test?"
 
-When the shape of that interface is itself in question (how deep the module is, where the seam belongs, what the interface should expose), call the Skill tool with "codebase-design" for the vocabulary. It is the shared source of the module, interface, depth, seam, adapter, leverage and locality terms, and it is a reference to consult, not a session to run.
+When the shape of that interface is itself in question (how deep the module is, where the seam belongs, what the interface should expose), load the `codebase-design` skill for the vocabulary. It is the shared source of the module, interface, depth, seam, adapter, leverage and locality terms, and it is a reference to consult, not a session to run.
 
 ## Anti-patterns
 
@@ -34,5 +34,5 @@ When the shape of that interface is itself in question (how deep the module is, 
 ## Rules of the loop
 
 - **Red before green.** Write the failing test first, then only enough code to pass it. Don't anticipate future tests or add speculative features.
-- **One slice at a time.** One seam, one test, one minimal implementation per cycle.
-- **Refactoring is not part of the loop.** It belongs to the review stage (the reviewer agents in `.claude/agents/`), not the red → green implementation cycle.
+- **One slice at a time.** One seam, one test, one minimal implementation per cycle. Run that one test file each cycle (`pnpm test <file>`); CI runs the whole suite.
+- **Refactoring is not part of the loop.** It belongs to the review stage (the `verify` skill and the reviewer agents AGENTS.md requires), not the red → green implementation cycle.
