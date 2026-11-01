@@ -9,7 +9,7 @@ import { ELEARNING_PAGE_TEXT_MAX_LENGTH, judgeElearningPage } from "@/lib/elearn
 import { formValue, readForm, text } from "@/lib/form-parse";
 import { requireShopSurface } from "@/lib/session";
 import { uuidParam } from "@/lib/uuid";
-import { isRosterBooking, tripPath } from "./roster-booking";
+import { tripPath } from "./roster-booking";
 
 export type ElearningCheckResult =
   | null
@@ -64,11 +64,6 @@ export async function elearningCheckAction(
   const shopId = staff.user.shopId;
   const db = await getDb();
   const back = tripPath(shopSlug, trip);
-  // The shared roster check (./roster-booking.ts), before the seat read below
-  // narrows it further to a course seat.
-  if (!(await isRosterBooking(db, shopId, trip, bookingId)))
-    return { ok: false, reason: "invalid" };
-
   const seat = await seatForElearningCheck(db, { shopId, tripId: trip, bookingId });
   if (!seat) return { ok: false, reason: "invalid" };
 

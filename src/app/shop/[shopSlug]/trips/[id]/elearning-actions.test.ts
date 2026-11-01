@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { eq, ne } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { bookings, courses, people, shops, trips } from "@/db/schema";
@@ -247,6 +248,39 @@ describe("elearningCheckAction", () => {
     expect(
       await elearningCheckAction(shop.slug, funDive.tripId, null, check(funDive.bookingId, PAGE)),
     ).toEqual({ ok: false, reason: "invalid" });
+  });
+
+  it("refuses a booking from another shop", async () => {
+    const { db, tripId, bookingId, staffId } = await context();
+    const otherShopSlug = "elearning-other-tenant";
+    const [otherShop] = await db
+      .insert(shops)
+      .values({ name: "Other tenant", slug: otherShopSlug, timezone: "UTC" })
+      .returning({ id: shops.id, slug: shops.slug });
+    if (!otherShop) throw new Error("other tenant insert returned no row");
+    vi.mocked(requireShopSurface).mockResolvedValue({
+      session: staffSession({ shopId: otherShop.id, shopSlug: otherShop.slug, personId: staffId }),
+    } as never);
+
+    const result = await elearningCheckAction(otherShop.slug, tripId, null, check(bookingId, PAGE));
+
+    expect(result).toEqual({ ok: false, reason: "invalid" });
+    expect((await tick(db, bookingId))?.at).toBeNull();
+  });
+
+  it("refuses a valid but missing booking id and a cancelled booking", async () => {
+    const { db, shop, tripId, bookingId } = await context();
+    expect(await elearningCheckAction(shop.slug, tripId, null, check(randomUUID(), PAGE))).toEqual({
+      ok: false,
+      reason: "invalid",
+    });
+
+    await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, bookingId));
+    expect(await elearningCheckAction(shop.slug, tripId, null, check(bookingId, PAGE))).toEqual({
+      ok: false,
+      reason: "invalid",
+    });
+    expect((await tick(db, bookingId))?.at).toBeNull();
   });
 
   it("refuses a post with no page text, or no booking", async () => {
