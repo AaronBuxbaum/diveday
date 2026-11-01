@@ -181,21 +181,44 @@ export function AddressSearch({
   // pausing twice on the same text, would otherwise spend a second billed
   // request to be told the same thing.
   const lastSent = useRef<string | null>(null);
+  // Keep the last successful answer so briefly shortening a query can hide the
+  // list without making the same billed lookup again when the query returns.
+  const lastSuccessfulLookup = useRef<{
+    query: string;
+    suggestions: PlaceSuggestion[];
+  } | null>(null);
 
   function runLookup(value: string) {
-    const seq = ++requestSeq.current;
     if (!isLookupWorthy(value)) {
+      // A pending response for the previous query must not repopulate the list
+      // after this shorter query has cleared it. If no successful result was
+      // cached, allow that interrupted query to be sent again when restored.
+      requestSeq.current += 1;
+      if (lastSuccessfulLookup.current?.query !== lastSent.current) lastSent.current = null;
       setSuggestions([]);
       setStatus("idle");
       return;
     }
-    // Same text as last time buys nothing but another billed request.
-    if (value.trim() === lastSent.current) return;
-    lastSent.current = value.trim();
+    const normalizedQuery = value.trim();
+    // Reuse a completed answer when the same query returns after being
+    // shortened. If its earlier request was interrupted before completion,
+    // the short-query branch cleared lastSent so it is sent again instead.
+    if (normalizedQuery === lastSent.current) {
+      const cached = lastSuccessfulLookup.current;
+      if (cached?.query === normalizedQuery) {
+        setSuggestions(cached.suggestions);
+        setStatus(cached.suggestions.length === 0 ? "none" : "idle");
+        setActive(-1);
+      }
+      return;
+    }
+    const seq = ++requestSeq.current;
+    lastSent.current = normalizedQuery;
     startTransition(async () => {
       const result = await suggestAddressAction(value);
       if (seq !== requestSeq.current) return;
       if (result.status === "ok") {
+        lastSuccessfulLookup.current = { query: normalizedQuery, suggestions: result.suggestions };
         setSuggestions(result.suggestions);
         setStatus(result.suggestions.length === 0 ? "none" : "idle");
       } else if (result.status === "rate_limited") {

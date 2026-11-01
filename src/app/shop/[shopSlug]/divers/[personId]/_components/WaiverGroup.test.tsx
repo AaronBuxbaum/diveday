@@ -93,6 +93,35 @@ describe("the waiver group", () => {
     expect(row.querySelector("details")).toBeNull();
   });
 
+  it("labels a UTC-midnight medical cutoff with the shop-local date", () => {
+    const profile = (runsOutBeforeTrip: boolean) =>
+      diver({
+        waiver: {
+          state: "current",
+          signedAt: new Date("2026-07-21T15:00:00.000Z"),
+          expiresAt: new Date("2027-07-21T00:00:00.000Z"),
+          runsOutBeforeTrip,
+          medical: {
+            at: new Date("2026-07-21T00:00:00.000Z"),
+            source: "cleared",
+            overriddenReferralAt: null,
+            clearance: { recordId: "record-1", documentOnFile: true, fromDiver: false },
+          },
+        } as DiverProfile["waiver"],
+      });
+    renderCard(profile(false));
+
+    expect(screen.getByTestId("diver-file-group-waiver")).toHaveTextContent(
+      /Good until Jul 20, 2027 \(shop’s local date\)/,
+    );
+
+    cleanup();
+    renderCard(profile(true));
+    expect(screen.getByTestId("diver-file-group-waiver")).toHaveTextContent(
+      /Runs out Jul 20, 2027 \(shop’s local date\), before the trip\. Sign again\./,
+    );
+  });
+
   /**
    * UX review 2026-10-10, item 27: the signed row was the one row in the file
    * with no arrow, and no way to the signed document. It is a door to it now.
@@ -140,7 +169,7 @@ describe("the waiver group", () => {
     // The row has no door, so who signed it with them has to be on it.
     const row = screen.getByTestId("diver-file-group-waiver");
     expect(row).toHaveTextContent(
-      /Good until Jul 21, 2027 · Co-signed by Jordan Guardian \(parent\)/,
+      /Good until Jul 21, 2027(?: \(shop’s local date\))? · Co-signed by Jordan Guardian \(parent\)/,
     );
     expect(row.querySelector("details")).toBeNull();
   });
@@ -198,11 +227,7 @@ describe("the waiver group", () => {
     expect(anchor).toContainElement(screen.getByRole("button", { name: "Copy link" }));
   });
 
-  /**
-   * A medical hold is the one waiver state with an act only this group can
-   * take — the physician's answer goes in here and nowhere else in the product
-   * — so it is open work, and the record lands with the door open on it.
-   */
+  /** A held booking stays blocked while this person can still receive a new clean release. */
   it("opens itself on a held medical review", () => {
     renderCard(
       diver({
@@ -219,6 +244,9 @@ describe("the waiver group", () => {
       screen.getByTestId("diver-file-group-waiver").querySelector("summary"),
     ).toHaveTextContent(/Medical review · Held since Sep 2, 2026/);
     expect(screen.getByRole("button", { name: /Record the physician’s answer/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Email waiver" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Copy link" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Mark signed on paper" })).toBeNull();
   });
 
   /**
@@ -338,7 +366,7 @@ describe("the waiver group", () => {
     const group = screen.getByTestId("diver-file-group-waiver");
     const door = group.querySelector("summary");
     expect(door).toHaveTextContent(
-      /Signed · Good until Jul 21, 2027 · Physician referral open since Jun 2, 2026/,
+      /Signed · Good until Jul 21, 2027(?: \(shop’s local date\))? · Physician referral open since Jun 2, 2026/,
     );
     // Warning ink, because the summary stands on the diver's own second answer
     // rather than on anything the shop has seen.
@@ -414,7 +442,7 @@ describe("the waiver group", () => {
     const group = screen.getByTestId("diver-file-group-waiver");
     const door = group.querySelector("summary");
     expect(door).toHaveTextContent(
-      /Signed · Good until Jul 21, 2027 · A physician did not clear them on Jun 2, 2026/,
+      /Signed · Good until Jul 21, 2027(?: \(shop’s local date\))? · A physician did not clear them on Jun 2, 2026/,
     );
     expect(door?.querySelector("span")?.className).toContain("text-warning-strong");
     expect(group).toHaveAttribute("open");

@@ -118,7 +118,7 @@ function signatureTime(record: WaiverRecord): number {
 export function isUnresolvedMedicalHold(
   record: Pick<WaiverRecord, "status" | "supersededAt" | "medicalClearedAt">,
 ): boolean {
-  return record.status === "medical_review" && !record.supersededAt && !record.medicalClearedAt;
+  return isUnclearedReferral(record) && !record.supersededAt;
 }
 
 /**
@@ -196,7 +196,9 @@ export function isStandingRefusal(record: WaiverRecord): boolean {
  * does ({@link isStandingRefusal}). {@link isUnresolvedMedicalHold} stays the
  * live-record question a seat asks of its own record.
  */
-export function isUnclearedReferral(record: WaiverRecord): boolean {
+export function isUnclearedReferral(
+  record: Pick<WaiverRecord, "status" | "medicalClearedAt">,
+): boolean {
   return record.status === "medical_review" && !record.medicalClearedAt;
 }
 
@@ -673,6 +675,7 @@ export function shopWaiverStatus(input: {
   through?: Date;
 }): ShopWaiverStatus {
   const now = input.now ?? nowDate();
+  const timeZone = input.signer?.timezone ?? "UTC";
   const standsAt = (record: WaiverRecord, at: Date) =>
     isCompletedWaiverCurrent(record, input.currentTemplateVersion, at);
   const newest = (records: readonly WaiverRecord[]) =>
@@ -717,7 +720,7 @@ export function shopWaiverStatus(input: {
       signedAt: new Date(signatureTime(clean)),
       expiresAt: new Date(signatureTime(clean) + WAIVER_SIGNATURE_VALIDITY_MS),
       runsOutBeforeTrip: false,
-      medical: medicalWaiverMark(clean, input.personSignedWaivers),
+      medical: medicalWaiverMark(clean, input.personSignedWaivers, timeZone),
     };
   }
   // Standing today, gone by the departure: the seat is blocked, and the desk
@@ -735,7 +738,7 @@ export function shopWaiverStatus(input: {
           : Math.min(signatureEnds, evaluatedAt + WAIVER_SIGNATURE_VALIDITY_MS),
       ),
       runsOutBeforeTrip: true,
-      medical: medicalWaiverMark(cleanNow, input.personSignedWaivers),
+      medical: medicalWaiverMark(cleanNow, input.personSignedWaivers, timeZone),
     };
   }
 
@@ -871,8 +874,9 @@ export type MedicalWaiverMark = {
 export function overriddenReferralAt(
   standing: WaiverRecord | null,
   personSignedWaivers: readonly WaiverRecord[],
+  timeZone = "UTC",
 ): Date | null {
-  return overriddenReferral(standing, personSignedWaivers)?.at ?? null;
+  return overriddenReferral(standing, personSignedWaivers, timeZone)?.at ?? null;
 }
 
 /**
@@ -896,6 +900,7 @@ export type OverriddenReferral = { recordId: string; personId: string; at: Date 
 export function overriddenReferral(
   standing: WaiverRecord | null,
   personSignedWaivers: readonly WaiverRecord[],
+  timeZone = "UTC",
 ): OverriddenReferral | null {
   if (!standing || !isCleanCompletion(standing)) return null;
   const standingTime = signatureTime(standing);
@@ -905,7 +910,7 @@ export function overriddenReferral(
   const referral = personSignedWaivers
     .filter((record) => isUnclearedReferral(record) && !isStandingRefusal(record))
     .filter((record) => record.id !== standing.id && signatureTime(record) < standingTime)
-    .filter((record) => !answeredByLaterClearance(record, records))
+    .filter((record) => !answeredByLaterClearance(record, records, timeZone))
     .sort((a, b) => signatureTime(b) - signatureTime(a))[0];
   return referral
     ? { recordId: referral.id, personId: referral.personId, at: new Date(signatureTime(referral)) }
@@ -934,7 +939,7 @@ function decidedAfter(a: WaiverRecord, b: WaiverRecord): boolean {
 
 /**
  * **A referral a physician has since answered on another record**: a clearance
- * evaluated on or after the day the referral was signed (the day rule
+ * evaluated on or after the referral's shop-local day (the day rule
  * `recordMedicalEvaluation` applies to its own record), on a record that
  * flagged at least every question this one did — {@link overriddenRefusal}'s
  * rule for a refusal. Without it the record read "stood over a referral"
@@ -944,8 +949,9 @@ function decidedAfter(a: WaiverRecord, b: WaiverRecord): boolean {
 function answeredByLaterClearance(
   referral: WaiverRecord,
   records: readonly WaiverRecord[],
+  timeZone: string,
 ): boolean {
-  const referredOn = calendarDateInTimezone(new Date(signatureTime(referral)), "UTC");
+  const referredOn = calendarDateInTimezone(new Date(signatureTime(referral)), timeZone);
   const referredDay = Date.parse(`${referredOn}T00:00:00.000Z`);
   const referred = flaggedPromptsOf(referral);
   return records.some(
@@ -1153,11 +1159,12 @@ export function medicalWaiverMark(
    * the honest answer for a caller holding one record and no history.
    */
   personSignedWaivers: readonly WaiverRecord[] = [],
+  timeZone = "UTC",
 ): MedicalWaiverMark | null {
   if (record === null || !isCleanCompletion(record)) return null;
   const at = record.signedAt ?? record.completedAt;
   if (!at) return null;
-  const referral = overriddenReferral(record, personSignedWaivers);
+  const referral = overriddenReferral(record, personSignedWaivers, timeZone);
   const overridden = referral?.at ?? null;
   const refusal = overriddenRefusal(record, personSignedWaivers);
   const guardian = guardianSignatureOf(record);

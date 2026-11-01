@@ -2,7 +2,7 @@
  * Waivers: issuing a signing request — minting the bearer link for a booking
  * or a person. Imported through the `./waivers` barrel.
  */
-import { and, eq, gt, isNull, ne } from "drizzle-orm";
+import { and, eq, gt, isNull, ne, or } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { type GuardianSigner, guardianSignatureMissing } from "@/lib/guardian";
 import { isHeldToMedical } from "@/lib/participant-types";
@@ -11,7 +11,7 @@ import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
 import {
   bookingRecordLapsed,
   isCompletedWaiverCurrent,
-  isUnresolvedMedicalHold,
+  isUnclearedReferral,
   WAIVER_LINK_TTL_MS,
   waiverClockInstant,
 } from "@/lib/waivers";
@@ -216,6 +216,40 @@ export async function issueWaiverRequest(
         ),
       )
       .for("update");
+    // An unanswered referral remains evidence after its waiver row is
+    // superseded. Include the person's booking referrals only while that seat
+    // still belongs to them; a link may have moved with the seat to someone
+    // else. The person lock serializes referral signing and physician updates.
+    const personReferrals = booking
+      ? []
+      : await tx
+          .select({
+            id: waiverRecords.id,
+            status: waiverRecords.status,
+            medicalClearedAt: waiverRecords.medicalClearedAt,
+            signedAt: waiverRecords.signedAt,
+            completedAt: waiverRecords.completedAt,
+            createdAt: waiverRecords.createdAt,
+          })
+          .from(waiverRecords)
+          .leftJoin(
+            bookings,
+            and(eq(bookings.id, waiverRecords.bookingId), eq(bookings.shopId, input.shopId)),
+          )
+          .where(
+            and(
+              eq(waiverRecords.shopId, input.shopId),
+              eq(waiverRecords.personId, personId),
+              eq(waiverRecords.status, "medical_review"),
+              isNull(waiverRecords.medicalClearedAt),
+              or(isNull(waiverRecords.bookingId), eq(bookings.personId, personId)),
+            ),
+          )
+          .for("update", { of: waiverRecords });
+    const personReferralIds = new Set(personReferrals.map((record) => record.id));
+    const standingRecords = booking
+      ? current
+      : [...current.filter((record) => !personReferralIds.has(record.id)), ...personReferrals];
     // A row lock can wait past expiry or a concurrent signature. Re-read the
     // clock and terms only after every current record is locked.
     const now = input.now ?? nowDate();
@@ -237,6 +271,25 @@ export async function issueWaiverRequest(
       : now;
     const lapsed = (record: (typeof current)[number]) =>
       bookingRecordLapsed(record, template.materialGeneration, clockAt, heldToMedical);
+    const signatureTime = (
+      record: Pick<(typeof current)[number], "signedAt" | "completedAt" | "createdAt">,
+    ) => (record.signedAt ?? record.completedAt ?? record.createdAt).getTime();
+    const cleanPersonReleases = current.filter(
+      (record) =>
+        isCompletedWaiverCurrent(record, template.materialGeneration, clockAt) &&
+        !guardianSignatureMissing(record, signer),
+    );
+    // H-98's amendment allows a newer person-scoped clean release to stand over
+    // an open referral. An open referral may belong to this person or one of
+    // their current bookings; either makes an older clean person release
+    // insufficient, so staff must be able to issue the next person-scoped link.
+    // The booking-scoped branch above still refuses a booking whose own release
+    // is held; that seat waits for a physician.
+    const cleanPersonReleaseStands = cleanPersonReleases.some((clean) =>
+      standingRecords.every(
+        (record) => !isUnclearedReferral(record) || signatureTime(clean) > signatureTime(record),
+      ),
+    );
     const alreadyStanding = booking
       ? current.some(
           (record) =>
@@ -244,12 +297,7 @@ export async function issueWaiverRequest(
             !lapsed(record) &&
             !guardianSignatureMissing(record, signer),
         )
-      : current.some(
-          (record) =>
-            isUnresolvedMedicalHold(record) ||
-            (isCompletedWaiverCurrent(record, template.materialGeneration, clockAt) &&
-              !guardianSignatureMissing(record, signer)),
-        );
+      : cleanPersonReleaseStands;
     if (alreadyStanding) {
       return { ok: false, reason: "already_completed" };
     }
