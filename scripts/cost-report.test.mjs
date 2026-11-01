@@ -62,8 +62,13 @@ describe("cost-report", () => {
     expect(JSON.parse(direct.stdout)).toHaveProperty("baselineMonthlySpend");
 
     const directory = mkdtempSync(join(tmpdir(), "diveday-cost-report-"));
+    const modulePath = join(process.cwd(), "scripts", "cost-report.mjs");
+    const preservedSymlink = join(
+      process.cwd(),
+      "scripts",
+      `cost-report-preserved-${process.pid}.mjs`,
+    );
     try {
-      const modulePath = join(process.cwd(), "scripts", "cost-report.mjs");
       const symlinkDirectory = join(directory, "symlinked");
       mkdirSync(symlinkDirectory);
       const symlink = join(symlinkDirectory, "cost-report.mjs");
@@ -73,6 +78,15 @@ describe("cost-report", () => {
       expect(linked.status).toBe(0);
       expect(JSON.parse(linked.stdout)).toHaveProperty("baselineMonthlySpend");
 
+      symlinkSync(modulePath, preservedSymlink);
+      const preservedLinked = spawnSync(
+        process.execPath,
+        ["--preserve-symlinks-main", preservedSymlink, "--json"],
+        { encoding: "utf8" },
+      );
+      expect(preservedLinked.status).toBe(0);
+      expect(JSON.parse(preservedLinked.stdout)).toHaveProperty("baselineMonthlySpend");
+
       const importer = join(directory, "cost-report.mjs");
       const moduleUrl = pathToFileURL(modulePath).href;
       writeFileSync(importer, `import ${JSON.stringify(moduleUrl)};\n`);
@@ -80,7 +94,16 @@ describe("cost-report", () => {
       const imported = spawnSync(process.execPath, [importer], { encoding: "utf8" });
       expect(imported.status).toBe(0);
       expect(imported.stdout).toBe("");
+
+      const importedWithMissingArg = spawnSync(
+        process.execPath,
+        ["-e", `import(${JSON.stringify(moduleUrl)})`, join(directory, "missing-argument")],
+        { encoding: "utf8" },
+      );
+      expect(importedWithMissingArg.status).toBe(0);
+      expect(importedWithMissingArg.stdout).toBe("");
     } finally {
+      rmSync(preservedSymlink, { force: true });
       rmSync(directory, { recursive: true, force: true });
     }
   });

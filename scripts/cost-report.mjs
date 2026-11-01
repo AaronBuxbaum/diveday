@@ -12,7 +12,7 @@
  *   node scripts/cost-report.mjs --markdown
  */
 import { existsSync, readFileSync, realpathSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
 import { parseDotenv } from "./dotenv.mjs";
@@ -287,6 +287,16 @@ function main() {
   }
 }
 
-if (process.argv[1] && pathToFileURL(realpathSync(process.argv[1])).href === import.meta.url) {
-  main();
+if (process.argv[1]) {
+  const directEntryUrl = pathToFileURL(resolve(process.argv[1])).href;
+  let canonicalEntryUrl;
+  try {
+    canonicalEntryUrl = pathToFileURL(realpathSync(process.argv[1])).href;
+  } catch {
+    // A positional argument supplied to an importer may not name a file.
+  }
+
+  if (import.meta.url === directEntryUrl || import.meta.url === canonicalEntryUrl) {
+    main();
+  }
 }
