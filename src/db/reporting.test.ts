@@ -877,13 +877,11 @@ describe("getMonthlyReport partner referrals (issue #1285)", () => {
     expect(report.partnerReferredSeats).toBe(1);
   });
 
-  it("excludes a referred seat whose own shop_id doesn't match the trip's (CR-007)", async () => {
-    // **The booking-side `shop_id` filter, pinned so it cannot look
-    // redundant.** A test that merely reports on an empty second shop passes
-    // whether or not `eq(bookings.shopId, shopId)` is in the query — the trip
-    // scope alone carries it — and that is exactly how CR-007 happened. So the
-    // hostile row is hung off *this* shop's trip while carrying the other
-    // shop's id, which is the inconsistency the rule exists to distrust.
+  it("cannot hold a referred seat whose own shop_id doesn't match the trip's (CR-007)", async () => {
+    // The booking-side `shop_id` filter in the report used to be pinned by hanging a
+    // hostile row off this shop's trip while carrying another shop's id. The
+    // `bookings_trip_shop_fk` composite key (#3285) now refuses that row in the
+    // database, so the inconsistency the report distrusted can no longer be stored.
     const { db, shop } = ctx;
     const [otherShop] = await db
       .insert(shops)
@@ -892,7 +890,6 @@ describe("getMonthlyReport partner referrals (issue #1285)", () => {
     if (!otherShop) throw new Error("second shop insert failed");
     const trip = await makeTrip(db, shop.id, new Date("2026-06-10T12:00:00Z"), 10, "Reef");
     await referredBooking(db, shop.id, trip, "Ours", "coral-sands");
-    await referredBooking(db, otherShop.id, trip, "Theirs", "coral-sands");
 
     expect((await getMonthlyReport(db, shop.id, JUNE_START, JULY_START)).partnerReferredSeats).toBe(
       1,
@@ -900,6 +897,10 @@ describe("getMonthlyReport partner referrals (issue #1285)", () => {
     expect(
       (await getMonthlyReport(db, otherShop.id, JUNE_START, JULY_START)).partnerReferredSeats,
     ).toBe(0);
+    // Last, because a refused insert aborts the test's transaction.
+    await expect(
+      referredBooking(db, otherShop.id, trip, "Theirs", "coral-sands"),
+    ).rejects.toThrow();
   });
 
   it("excludes a referred seat on a canceled departure", async () => {
