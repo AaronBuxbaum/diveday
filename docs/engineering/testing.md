@@ -18,7 +18,6 @@ every other section stands.
 | Screenshots | reg-suit + S3, `e2e/visual-*.spec.ts` | a surface's populated and trouble states, per [captures.md](../../.claude/skills/e2e-and-visual/captures.md): light at phone and desktop, dark at desktop only, plus print ([ADR 20260729](../architecture/decisions/20260729-reg-suit-visual-regression.md)) | proving behavior |
 | Repo checks | `pnpm check:repo` (`scripts/check-*.mjs`) and the Vitest `guards` project | every rule that reads source: "every X has Y", no raw colour, one way imports | a single page's markup |
 | Coverage floors | `@vitest/coverage-v8`, ci.yml's `coverage-floors` ([below](#coverage-floors)) | branch coverage of the eleven safety files never falling | a coverage target for the rest of the tree |
-| Mutation | Stryker, `mutation.yml` ([below](#mutation-testing)) | survivors in the safety rules, filed as issues | failing a run |
 | Nightly and weekly | `simulate-day.yml`, `persona-bots.yml`, ci.yml's schedule | a whole shop day, persona walks, real Postgres against what other branches merged | blocking a PR |
 
 Almost every page in `src/app/` is an `async function Page()` reading the database directly and
@@ -106,10 +105,10 @@ Renaming a journey's test renames its row in the same change.
 | Every pull request | repo checks, lint, typecheck (one job), all unit tests (4 shards) with the coverage floors, the build, every Playwright spec (6 shards), the light-mode captures `visual-affected` selects (up to 8 shards, 7 for every light capture), the fast lane; real Postgres when `src/db/**` or `drizzle/**` changed |
 | Push to `main` | all of the above with every capture, light and dark: the next baseline |
 | Nightly | real Postgres (ci.yml's schedule), the one-day simulation, quarantined tests and the flake hunt (`e2e-nightly.yml`), CodeQL, the follow-up scan |
-| Weekly | the persona walk, the shard-duration refresh; mutation testing once its runner works (manual until then) |
+| Weekly | the persona walk, the shard-duration refresh |
 
-**A scheduled run that goes red files itself.** `simulate-day.yml`, `durations-refresh.yml`,
-`e2e-nightly.yml` and `mutation.yml` end with `node scripts/workflow-alert.mjs`: a red run on the
+**A scheduled run that goes red files itself.** `simulate-day.yml`, `durations-refresh.yml` and
+`e2e-nightly.yml` end with `node scripts/workflow-alert.mjs`: a red run on the
 default branch opens one `ci-red` + `needs-triage` issue in the follow-up format, each later red
 run comments on it, and the first green run closes it. A manual run on another branch files
 nothing.
@@ -230,14 +229,10 @@ about 50 s of job steps and the run's own setup.
 To measure again, run `pnpm e2e:build`, deal a shard with `node scripts/e2e-shard.mjs`, then
 run `E2E_WORKERS=1 VISUAL_TIMING_OUT=.agent-out/timing.json pnpm exec playwright test e2e/visual --test-list <list> --reporter=line,./e2e/visual-timing-reporter.ts`.
 
-**CI uses two workers per visual shard under option B; the trial remains incomplete.**
-`.github/workflows/visual-workers-trial.yml` runs on manual dispatch only. Each of its eight shards
-captures its list three times from one build: twice at `E2E_WORKERS=2` and once at 1.
-`scripts/compare-capture-sets.mjs` fails the shard if any PNG differs by one byte or is missing
-from a set, and lists each one in the step summary. This trial has not established a green result;
-unexplained visual differences remain unapproved.
+**CI uses two workers per visual shard under option B.** A worker-count trial workflow and its
+byte-comparison script were deleted; unexplained visual differences remain unapproved.
 
-Byte equality is stricter than reg-suit, which ignores anti-aliasing (`enableAntialias` in
+Byte equality is stricter than reg-suit would be, which ignores anti-aliasing (`enableAntialias` in
 `regconfig.json`). Two one-worker runs of shard 1 on 2026-10-24 differed in three of 201 PNGs. Two
 were a timed toast caught at one width and gone at the next, now waited out before the capture
 (`blowout-cascade`, `staffing-shift-remove-disclosure`). The third was anti-aliasing on one map
@@ -365,23 +360,8 @@ Floors only rise: `--write <summary>` banks rises and refuses falls; `--write --
 records a fall with its reason. The first floors (2026-10-15, branch coverage): readiness 97.07%,
 trip-admission 97.61%, lib/waivers 93.39%, roll-call 83.33%, lib/trips and lib/authz 100%, bookings
 86.41%, checkouts 87.29%, refunds 83.15%, promo-caps 75%, account-security 81.81%. ADR
-[20261015-coverage-and-mutation-testing](../architecture/decisions/20261015-coverage-and-mutation-testing.md).
-
-### Mutation testing
-
-`pnpm test:mutation --mutate <module>` runs Stryker (`@stryker-mutator/core` and `vitest-runner`
-9.6.1; 10.0.0 pulls in Babel 8, which Sentry's bundler plugin refuses as a peer) against the `lib`
-project's pure tests (`stryker.config.mjs`, `stryker.vitest.config.ts`; the threads pool, which the
-PGlite files cannot use). The report is `reports/mutation/mutation.json`.
-
-`.github/workflows/mutation.yml` runs it on `src/lib/readiness.ts` and `src/lib/trip-admission.ts`,
-by hand for now and Sundays 04:00 UTC once the runner works. `scripts/mutation-issues.mjs` files a
-module's survivors (`Survived` and `NoCoverage`) as one `mutation-survivors` + `needs-triage` issue,
-comments each later run's list on it, and closes it when none survive. Survivors never fail the run.
-
-**Not yet a real score.** Under Vitest 5 the runner never switches on a mutant inside a function, so
-every such mutant survives with its tests green (#2622 carries the trial and the debugging).
-Until that is fixed, read a survivor list as noise.
+[20261015-coverage-and-mutation-testing](../architecture/decisions/20261015-coverage-and-mutation-testing.md);
+mutation testing was cut by [20261101-cut-mutation-testing](../architecture/decisions/20261101-cut-mutation-testing.md).
 
 ### Why `playwright-core` is pinned in devDependencies
 
