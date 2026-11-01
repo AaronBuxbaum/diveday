@@ -1,10 +1,6 @@
 /**
- * **The boring HTML a diver keeps**: one document with inline style, no script,
- * no form and no image, built by string from fields the caller chose. Two
- * callers: the downloadable arrival card
- * (`src/app/s/[shopSlug]/trips/[id]/arrival-card/route.ts`) and the offline
- * readiness snapshot (`src/lib/ready-snapshot.ts`). Every value passes
- * {@link escapeHtml}; nothing is read from a page.
+ * Inert HTML for the downloadable arrival card and offline readiness snapshot.
+ * Text fields are escaped here; callers must escape any supplied HTML.
  */
 
 import { escapeHtml } from "./html";
