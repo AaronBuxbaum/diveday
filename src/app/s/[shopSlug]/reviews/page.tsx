@@ -116,9 +116,9 @@ export default async function PublicReviewsPage({
           </p>
         ) : null}
 
-        {/* Show bare ratings as counted rows; the paged ledger below contains
-            written reviews. Counts carry the data (principle 6); bars are
-            decorative and hidden from assistive technology. */}
+        {/* The distribution counts all published ratings, including those
+            without text; the paged ledger contains written reviews. Counts
+            carry the data (principle 6); bars are hidden from assistive tech. */}
         {average !== null ? (
           <ul className="mt-4 flex max-w-sm flex-col gap-1.5">
             {/* Render only ratings present in the distribution. */}

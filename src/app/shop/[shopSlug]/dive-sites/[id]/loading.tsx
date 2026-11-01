@@ -32,7 +32,7 @@ export default function DiveSiteLoading() {
           actions
         />
 
-        {/* Edit-only: reserve space for UpcomingSiteTrips before the editor (K-416). */}
+        {/* Edit-only: reserve the UpcomingSiteTrips space for a site with departures (K-416). */}
         <div className={sectionCardClass({ className: "mt-8 overflow-hidden" })}>
           <div className="h-8 w-56 max-w-full rounded bg-surface-sunken" />
           <div className="-mx-4 mt-4 -mb-4 divide-y divide-border border-t border-border sm:-mx-5 sm:-mb-5">
