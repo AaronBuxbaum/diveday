@@ -11,7 +11,8 @@ import { BadgeWall } from "./BadgeWall";
  * The shop's identity band. It shows the shop name and authored copy, with
  * contact details kept in `PublicShopFooter`. Ratings appear only when earned,
  * with the star as the single accent. A cover photo carries the name when
- * present; otherwise the name sits directly on the page surface.
+ * present; otherwise the name sits directly on the page surface (design
+ * canvas 20260919-one-idea, slice 23d).
  */
 export function ShopfrontHero({
   name,
