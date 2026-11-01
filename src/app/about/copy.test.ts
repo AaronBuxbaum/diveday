@@ -5,7 +5,7 @@ import type { DiverLocale } from "@/i18n/settings";
 /**
  * **`/about` speaks as the company, and tells the Lonergan story within its
  * limits** (docs/product/marketing.md, "Biography is a claim like any other";
- * the 2026-10-07 rewrite is H-99 in docs/product/human-decisions/README.md).
+ * the 2026-10-07 rewrite is H-20261006-about-say-whose-voice in docs/product/human-decisions/README.md).
  *
  * The page opens on why DiveDay exists: Tom and Eileen Lonergan, left behind
  * on the Great Barrier Reef in January 1998. Only what the public record holds
@@ -13,7 +13,7 @@ import type { DiverLocale } from "@/i18n/settings";
  * implies DiveDay would have prevented it. Everything after that section
  * speaks for the company in generalities: no individual is named, no CV is
  * stated, and the heading over each band is a statement the band can be read
- * against rather than a question (the spoken register, H-89, left with the
+ * against rather than a question (the spoken register, H-20260903-voice-public-pages-speak, left with the
  * 2026-10-07 rewrite).
  *
  * The tests below are the mechanical half of those rules. Each is arithmetic
@@ -112,7 +112,7 @@ describe("the rest of /about", () => {
 
   it.each(LOCALES)("promises no response time in %s", (_l, messages) => {
     // "Write in and a person reads it", never a turnaround (docs/product/
-    // marketing.md, founder-direct support retired 2026-08-05, H-12/H-26).
+    // marketing.md, founder-direct support retired 2026-08-05, H-20260724-public-founding-shop-price/H-20260802-what-game-is-this).
     const { workP2, whoAnswersValue } = messages.marketing.about;
     for (const value of [workP2, whoAnswersValue]) {
       expect(value).not.toMatch(
@@ -124,7 +124,7 @@ describe("the rest of /about", () => {
   it.each(LOCALES)("carries none of the retired spoken-register headings in %s", (_l, messages) => {
     // A ratchet, not a style note. From 2026-09-24 to 2026-10-07 every heading
     // on the page was the shop owner's question repeated back without a mark
-    // (H-89); the owner retired the register with the copy ("I really really
+    // (H-20260903-voice-public-pages-speak); the owner retired the register with the copy ("I really really
     // don't like the copy on About"). Asserted by value so none of them comes
     // back under a new key.
     const retired = new Set([

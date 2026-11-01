@@ -129,7 +129,7 @@ export type AssignGearUnitResult =
  * chose from the picker. A proposed pick is also re-read for care, and one
  * whose unit has since gained a lapsed clock or an open service concern is
  * refused (`needs_care`). A hand pick may still knowingly choose a labeled
- * unit, the dock decides (H-06), but a life-support unit asks first
+ * unit, the dock decides (H-20260724-initial-gear-policy-sizing), but a life-support unit asks first
  * (`needs_care_confirm`) and goes through only with `assignAnyway`.
  */
 export async function assignGearUnit(input: {

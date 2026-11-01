@@ -819,7 +819,7 @@ jobs:
       # `screenshotOrGiveUp`) gets exactly one rerun of only the failed
       # captures. On a pull request that is the only rerun, and it is
       # deliberately NOT a retry policy: the suite runs retries: 0 so a flake
-      # fails where a reviewer looks and is root-caused. On main (H-156) any
+      # fails where a reviewer looks and is root-caused. On main (H-20261022-visual-rerun-on-main) any
       # failed capture gets the same one rerun, because there a single flake
       # costs every branch its baseline; a capture that passes only on the
       # rerun is filed as a needs-triage issue naming its spec by the
@@ -870,7 +870,7 @@ jobs:
             if [ "${ON_MAIN}" != "true" ]; then
               exit 1
             fi
-            echo "::warning title=Rerunning on main::A capture failed without wedge evidence. On main every failed capture reruns once (H-156); one that passes on the rerun is filed as a flake."
+            echo "::warning title=Rerunning on main::A capture failed without wedge evidence. On main every failed capture reruns once (H-20261022-visual-rerun-on-main); one that passes on the rerun is filed as a flake."
           else
             echo "::warning title=Renderer wedge detected::Every first-attempt failure has structured wedge evidence; rerunning failed captures once."
           fi
@@ -929,7 +929,7 @@ jobs:
           retention-days: 7
 
   # A capture that passed only on main's rerun (the visual job's capture step,
-  # H-156) becomes a needs-triage issue naming its spec, or a comment on the
+  # H-20261022-visual-rerun-on-main) becomes a needs-triage issue naming its spec, or a comment on the
   # one already open. Its own job, so the shards keep `contents: read` and only
   # this holds `issues: write`.
   visual-flakes:
@@ -952,7 +952,7 @@ jobs:
           path: visual-flakes
           merge-multiple: true
       # A tracker that cannot be reached must not turn main red, since a red
-      # main stops the deploy gate (H-158); the warning names what was missed.
+      # main stops the deploy gate (H-20261021-deploy-gate-from-first); the warning names what was missed.
       - name: File one issue per flaky capture
         continue-on-error: true
         env:

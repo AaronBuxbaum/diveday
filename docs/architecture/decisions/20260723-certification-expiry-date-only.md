@@ -83,7 +83,7 @@ impossible dates like `2026-02-31`.
   HAVING count(*) > 1;
   ```
   and reconcile each by hand before migrating, same as the person-email-uniqueness migration.
-- **Resolved 2026-07-24 (H-08 relabel):** `docs/product/glossary.md`'s own **C-card** entry states
+- **Resolved 2026-07-24 (H-20260724-certification-levels-agency-rules relabel):** `docs/product/glossary.md`'s own **C-card** entry states
   real certification cards (Open Water through Instructor, and the Deep/Wreck/Night/Drysuit
   specialties) do not expire — only a shop-chosen refresher policy might. The product owner decided
   the field is presented to staff as a shop-set **"refresher due"** date, not a card "expiry": the
@@ -93,4 +93,4 @@ impossible dates like `2026-02-31`.
   unchanged** — a card past its refresher-due date still fails closed exactly as before; only the
   staff-facing wording changed. Scope note: the CSV export/import column keeps its `expires_at`
   data name (round-trip stability), and the internal `CardDisplayStatus` key stays `expired`. This
-  resolves only the relabel half of H-08; the course/agency-rules half stays open.
+  resolves only the relabel half of H-20260724-certification-levels-agency-rules; the course/agency-rules half stays open.

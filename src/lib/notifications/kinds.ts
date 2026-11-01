@@ -334,7 +334,7 @@ const guardianReleaseCopySchema = z.object({
  */
 /**
  * The door remembers who opened it (ADR 20260906-before-you-ask, decision 3;
- * H-68 b): one link to a booking page that arrives with the diver's standing
+ * H-20260906-diveday-fill-already-knows b): one link to a booking page that arrives with the diver's standing
  * facts folded, sent to an address typed cold into that form when it matches
  * a diver on file. Per booking like the readiness link, so the delivery row
  * is what keeps it to one an hour, and nothing on the page says it went.
@@ -371,7 +371,7 @@ const readinessLinkSchema = z.object({
    * finding the release signed and the course's forms still owed (ADR
    * 20261008-course-forms), so the words say that instead of "expired".
    * `other_day` and `log_entry` are a diver asking, from one booking's page,
-   * for the link to another of their days with the shop (H-132, ADR
+   * for the link to another of their days with the shop (H-20261014-other-days-send-fresh, ADR
    * 20261016-fresh-link-per-booking-row): an upcoming day's trip prep, or a
    * past day's recap, whose URL rides in `readinessUrl`.
    */
@@ -385,8 +385,8 @@ const readinessLinkSchema = z.object({
  * way out, and the schema is what makes that structural: an optional
  * `unsubscribeUrl` is one a future caller forgets.
  *
- * **`seat_offer` is service mail**: the diver asked for this (H-96's test;
- * Aaron, H-145 D-2 option b, 2026-10-17): a seat on the departure they joined
+ * **`seat_offer` is service mail**: the diver asked for this (H-20261006-staff-trip-invitation-service's test;
+ * Aaron, H-20261005-one-interest-table-names D-2 option b, 2026-10-17): a seat on the departure they joined
  * the wait list for, or the reply to their own date request. It reaches them
  * whatever their courtesy-email setting and carries no unsubscribe (issue
  * #1953).
@@ -474,7 +474,7 @@ const seatOfferCommercialSchema = seatOfferBase.extend({
 // `unsubscribeUrl` is required, in the same shape as the two siblings above:
 // this send goes to someone with no confirmed booking behind it, which is what
 // makes it commercial rather than service messaging
-// (ADR 20260814-checkout-recovery-is-commercial, H-09). Required rather than
+// (ADR 20260814-checkout-recovery-is-commercial, H-20260724-channel-sends-booking-waiver). Required rather than
 // optional on purpose — an optional field is one a future caller forgets.
 const checkoutRecoverySchema = z.object({
   kind: z.literal("checkout_recovery"),
@@ -527,7 +527,7 @@ const tripReminderFields = {
   /**
    * The fly-safe wait in hours, set only on the night-before reminder for a
    * diver whose last boat with the shop this is (`readReminderFlySafeHours`).
-   * The rule in hours, never a clock time (H-150): a late boat moves the time.
+   * The rule in hours, never a clock time (H-20261022-reminder-fly-safe-in): a late boat moves the time.
    */
   flySafeHours: z.number().int().min(12).max(48).optional(),
 };
@@ -813,7 +813,7 @@ const welcomeSchema = z.object({
  * `purpose` says whose: `account` is an owner proving the address on their
  * login (plain DiveDay, greeted by name); `shop_contact` is the front desk
  * proving the address that becomes Reply-To on diver mail (issue #1288);
- * `shore_alert` is the shore contact agreeing to hear roll-call alerts (H-118).
+ * `shore_alert` is the shore contact agreeing to hear roll-call alerts (H-20261014-stale-roll-call-recipients).
  * The last two go to the shop, in the shop's language, branded as the shop only for `shore_alert`; `shop_contact` goes out as plain DiveDay (`shop-voice.ts`).
  * The fields are the same across all three; only the name the copy uses
  * differs, and the schema holds each purpose to exactly its own.
@@ -1184,7 +1184,7 @@ const staffReplySchema = z.object({
 
 /**
  * **The Monday email** (market audit item 51): one shop's week, sent to its
- * owner — and to any other staffer who asked for it — as service mail. H-09's
+ * owner — and to any other staffer who asked for it — as service mail. H-20260724-channel-sends-booking-waiver's
  * transactional basis covers it: the recipient is the shop's own staff, the
  * content is the shop's own operation, and nothing in it sells anything.
  *
@@ -1387,7 +1387,7 @@ export type CustomerGearPiece = z.infer<typeof customerGearPieceSchema>;
  */
 /**
  * **The one correction to a fly-safe wait a diver was told** (issue #2927).
- * The night-before email said the rule in hours (H-150); a departure marked
+ * The night-before email said the rule in hours (H-20261022-reminder-fly-safe-in); a departure marked
  * as decompression diving after it went out leaves that figure wrong. One
  * line per seat, once, and no link: the diver's next step is to ask the
  * crew. `seatId`, not `bookingId`, for the reason `departureNoteSchema`
@@ -1826,7 +1826,7 @@ const rollCallStaleSchema = z.object({
   diveNumber: z.number().int().min(1).max(MAX_COURSE_DIVES),
   /**
    * The two counts, summed across the departure's diver and crew rows (EAP
-   * review on H-118): people recorded not back aboard, and people with no
+   * review on H-20261014-stale-roll-call-recipients): people recorded not back aboard, and people with no
    * result yet. Never one number that could mean either.
    */
   notBackAboard: z.number().int().min(0).max(10_000),
@@ -1839,7 +1839,7 @@ const rollCallStaleSchema = z.object({
 });
 
 /**
- * **A filed incident report of kind "missing diver"** (H-142, decided
+ * **A filed incident report of kind "missing diver"** (H-20261016-missing-diver-report-alerts, decided
  * 2026-10-16; `sendMissingDiverAlerts`, src/db/missing-diver-alerts.ts). Staff
  * safety mail to each of the shop's owners at once, once per report: whoever
  * filed it chose "missing diver" on purpose, so the shop does not wait for the
@@ -1901,7 +1901,7 @@ const incidentMissingDiverFoundSchema = z.object({
 });
 
 /**
- * **The same alert, to the shop's shore contact** (H-118, decided 2026-10-15).
+ * **The same alert, to the shop's shore contact** (H-20261014-stale-roll-call-recipients, decided 2026-10-15).
  * Addressed to somebody outside the shop's accounts, so it carries less than
  * the owners' copy: no person, no link behind a staff sign-in, and no name of
  * anybody aboard. The shop and its phone, the departure, the dive, the two
@@ -1935,7 +1935,7 @@ const rollCallStaleShoreSchema = z.object({
 });
 
 /**
- * **The shore contact stopped the alerts themselves** (H-118 re-review): one
+ * **The shore contact stopped the alerts themselves** (H-20261014-stale-roll-call-recipients re-review): one
  * email to each owner with an active login when a stop link took the address
  * off the shop, so the shop learns its shore contact is gone. Staff
  * operational mail, from DiveDay; the address that stopped is never in it.

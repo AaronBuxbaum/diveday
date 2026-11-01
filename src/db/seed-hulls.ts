@@ -14,7 +14,7 @@ import { liveTrip } from "./trips-live";
  * boat-mode departure with no hull takes the first of the fleet, by name, that
  * nothing else has out in its hours, in the order the departures sail. A
  * departure no hull is free for keeps none rather than putting one boat on
- * two departures at once (H-80, `src/db/trips-clashes.ts`).
+ * two departures at once (H-20260916-may-one-hull-carry, `src/db/trips-clashes.ts`).
  */
 export async function seedHulls(db: DbExecutor, shopId: string): Promise<void> {
   const fleet = await liveFleet(db, shopId);

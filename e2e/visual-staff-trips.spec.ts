@@ -309,7 +309,7 @@ for (const scheme of ["light", "dark"] as const) {
        * who has no certification declaration, is correctly absent from the
        * send list.
        *
-       * The deal is sent from the Divers tab's Who wants in panel now (H-145
+       * The deal is sent from the Divers tab's Who wants in panel now (H-20261005-one-interest-table-names
        * D-3), whose "Around these dates" group lists only who fits the
        * departure (dive-domain review of #2656, m1). The night charter asks for
        * a Night card nobody on the list holds, so this pins the shallow

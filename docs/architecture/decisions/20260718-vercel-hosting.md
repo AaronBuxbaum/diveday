@@ -22,7 +22,7 @@ preview deployment; `main` deploys to production only after the normal review an
 
 Production will use a managed Postgres provider connected to Vercel through its Marketplace, with
 separate preview and production credentials. The provider, region, account owner, backups,
-`DATABASE_URL` adapter, migration runner, domain, and incident owner remain explicit H-04 work;
+`DATABASE_URL` adapter, migration runner, domain, and incident owner remain explicit H-20260724-vercel-selected-web-hosting work;
 this ADR deliberately does not choose a database vendor or store secrets.
 
 ## Alternatives considered

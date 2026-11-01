@@ -16,7 +16,7 @@ import { base, bounceTarget, contextFor, refuseWhileHeld } from "./action-helper
 const seatSchema = z.string().uuid();
 
 /**
- * **"Sign Mia's waiver"** (H-124, ADR 20261014-parent-signs-minor-release).
+ * **"Sign Mia's waiver"** (H-20261014-parent-signs-minor-release, ADR 20261014-parent-signs-minor-release).
  * The lead opens the release of a seat they booked and declared "Under 18",
  * on their own device, and signs it as the parent: the waiver page asks for
  * the guardian's card beside the diver's signature for a declared minor.

@@ -10,7 +10,7 @@ import { upcomingTripsWithCounts } from "./trips";
 const ctx = fileScopedShopContext();
 
 /**
- * The queued arm (H-139): a caller who may not move money still tells the diver
+ * The queued arm (H-20261013-call-off-queues-refunds): a caller who may not move money still tells the diver
  * the truth about their seat, and moves nothing.
  */
 async function seatContext() {

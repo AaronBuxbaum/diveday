@@ -41,7 +41,7 @@ export const READY_NOTICES: Record<
   "error-seat-ask-shop": { tone: "danger", key: "seatClaim.addAskShop" },
   "error-seat-party-full": { tone: "danger", key: "seatClaim.addPartyFull" },
   "error-seat-name": { tone: "danger", key: "seatClaim.addNameMissing" },
-  // "Sign Mia's waiver" (H-124) refused: the seat was claimed, the release
+  // "Sign Mia's waiver" (H-20261014-parent-signs-minor-release) refused: the seat was claimed, the release
   // signed, or the boat left between the render and the tap. One answer.
   "error-minor-waiver": { tone: "danger", key: "seatClaim.minorWaiverUnavailable" },
   // A card the diver typed in. "Added", never "verified": a staff review is
@@ -59,7 +59,7 @@ export const READY_NOTICES: Record<
   // are deliberately never distinguished to a diver (a booking-state oracle is
   // still a leak); the shop's number is on the card below.
   "error-cancel": { tone: "danger", key: "ready.cancelUnavailable" },
-  // "Ask to move" (H-126): filed in the shop's Inbox, or refused because the
+  // "Ask to move" (H-20261014-ask-to-move): filed in the shop's Inbox, or refused because the
   // seat is no longer one that can be asked about. The shop's number is below.
   "saved-move-ask": { tone: "success", key: "ready.moveAsk.sent" },
   "error-move-ask": { tone: "danger", key: "ready.moveAsk.unavailable" },

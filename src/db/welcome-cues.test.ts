@@ -245,7 +245,7 @@ describe("welcomeCueInputsByBooking", () => {
     expect(inputs.get(now)).toMatchObject({ lastDivedAt: earlier.startsAt, nonDiver: true });
   });
 
-  // H-128: which boat with the shop this one is, by the recap's own rule.
+  // H-20261014-boat-count-milestones: which boat with the shop this one is, by the recap's own rule.
   it("counts earlier dive days and imported visits toward this boat's number", async () => {
     const { db, shop, earlier, later, seat } = await twoDepartures();
     const earlierSeat = await seat(earlier.id, "diver");

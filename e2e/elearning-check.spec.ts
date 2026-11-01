@@ -8,7 +8,7 @@ const SHOP = "blue-mantis";
 
 /**
  * **"Check eLearning with PADI", done by the DiveDay browser extension**
- * (H-106).
+ * (H-20261008-padi-elearning-check).
  *
  * The installed extension is `agency-check-extension.spec.ts`'s; this covers
  * the app's side of the answer, and the PADI Pros' Site is not ours to

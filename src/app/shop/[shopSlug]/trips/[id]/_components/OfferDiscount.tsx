@@ -26,7 +26,7 @@ const DiscountState = createContext<{
 
 /**
  * **One discount, riding with every row's Offer** (visual review 2026-10-24,
- * A14; H-145). Who wants in has one act per row, "Offer a seat", and one
+ * A14; H-20261005-one-interest-table-names). Who wants in has one act per row, "Offer a seat", and one
  * disclosure above the list, "Add a discount to offers". Open, the discount
  * it holds goes out with whichever row's offer is sent next, as the
  * `discount` and `discountKind` fields `holdSendAction` reads (the rider, in

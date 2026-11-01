@@ -229,7 +229,7 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
     }
   }
 
-  // PADI's published entry-level in-water ratio (H-08, src/lib/course-ratios.ts):
+  // PADI's published entry-level in-water ratio (H-20260724-certification-levels-agency-rules, src/lib/course-ratios.ts):
   // 8 students per solo instructor, no certified assistant. Open Water training
   // dives, *not* DSD — see the intro-session test below for that stricter cap.
   it("caps an entry-level session's bookings at the instructor ratio, independent of trip capacity", async () => {
@@ -363,7 +363,7 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
     }
   });
 
-  // H-08 option B: a course's minimum age is enforced only for a diver who
+  // H-20260724-certification-levels-agency-rules option B: a course's minimum age is enforced only for a diver who
   // actually has a date of birth on file, and is measured on the day the
   // course runs rather than the day it's booked.
   describe("course minimum age", () => {
@@ -472,7 +472,7 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
       // Refusing here would answer "is the holder of this address under N?" to
       // anyone who can guess an address — a disclosure about a minor, to an
       // unauthenticated caller, and unsound besides: the public form never
-      // proves the submitter is the person on file for that email (H-13).
+      // proves the submitter is the person on file for that email (H-20260724-one-person-per-email).
       const startsAt = new Date(nowMs() + OPEN_TEST_SESSION_OFFSET_MS);
       const { db, shop, trip } = await ageContext(15, startsAt);
       const tenYearsAgo = new Date(nowMs() - 10 * 365.25 * 24 * 60 * 60 * 1000)
@@ -811,7 +811,7 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
    * the booking form, a diver whose refresher came due since the shop last saw
    * them, and a record staff deliberately pulled.
    *
-   * Deliberately fails closed, unlike the minimum-age gate next door (H-08):
+   * Deliberately fails closed, unlike the minimum-age gate next door (H-20260724-certification-levels-agency-rules):
    * staff capture and verify a card, and *then* the same form admits the
    * diver. Capacity is never reserved on a self-assertion.
    */
@@ -915,7 +915,7 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
       // A migrated card lands `verified` with `importedAt` set and
       // `reviewedAt` still null — "verified, awaiting a quick confirm". That
       // pending confirm is a nudge, not a gate: the product owner's decision
-      // (H-20) is that what the prior system held was checked there, so the
+      // (H-20260724-contact-importer-trust-shop) is that what the prior system held was checked there, so the
       // level ladder clears on `verified` alone and the diver enrolls. The one
       // gate the confirm really holds is the enriched-air fill, not this.
       const diver = await diverHoldingCard(db, shop.id, "imported", {

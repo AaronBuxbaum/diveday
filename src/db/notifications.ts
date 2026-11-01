@@ -1582,7 +1582,7 @@ export async function drainNotificationRetries(
     // again by anything. Past that point the payload buys no recovery — no
     // code path would ever open it — and what it costs is a rendered outbound
     // message, a name and an address, held with no end date. That is the same
-    // thing the `missing_payload` branch above refuses, and H-02's retention
+    // thing the `missing_payload` branch above refuses, and H-20260730-evidence-retention-period-deletion's retention
     // promise refuses it here too (`security-reviewer`).
     //
     // `next_attempt_at` moves forward with the park. Left in the past the row
@@ -2220,7 +2220,7 @@ export async function applyProviderEmailEvent(
      * Optional because SES has nothing to scope by — its event names a message
      * id and nothing else, and those ids come from DiveDay's own single
      * account. A provider whose events *do* carry a tenant
-     * (WhatsApp names the sending phone number, H-83) passes it, so a delivery
+     * (WhatsApp names the sending phone number, H-20260916-may-dive-chain-share) passes it, so a delivery
      * outcome can never land on another shop's row even if a provider message
      * id were ever guessable or reused.
      */

@@ -123,7 +123,7 @@ describe("staff records a paper / in-person signature", () => {
   });
 
   /**
-   * **A seat held over *whose* seat it is takes no attestation** (H-13,
+   * **A seat held over *whose* seat it is takes no attestation** (H-20260724-one-person-per-email,
    * `dive-domain-expert` review of issue #1696).
    *
    * This record is the strongest evidence in the product: a named staffer says

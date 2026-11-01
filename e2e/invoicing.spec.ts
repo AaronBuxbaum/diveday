@@ -24,7 +24,7 @@ import { counterPath, openBookingActions, seededTripId } from "./helpers";
  * framing e2e/refunds.spec.ts and e2e/promo-codes.spec.ts use:
  *
  * - the connect-first refusal (no order form at all until the shop can take money);
- * - the role refusal (raising an invoice is owner/manager work, H-14);
+ * - the role refusal (raising an invoice is owner/manager work, H-20260724-staff-role-reach);
  * - the form rendering against real seeded customers;
  * - both pre-Stripe validation refusals, which never call Stripe;
  * - the Stripe-step failure, which is what a real submission actually reaches here.
@@ -459,7 +459,7 @@ test.describe("as captain", () => {
 
   /**
    * Billing a diver is owner/manager work, same as the refund on the order it
-   * becomes and the discount codes that set what a trip costs (H-14, ADR
+   * becomes and the discount codes that set what a trip costs (H-20260724-staff-role-reach, ADR
    * 20260724-role-authorization, extended by 20260803-invoicing-role-gate).
    * This spec used to pin the opposite — any staff role could raise an invoice —
    * as the place that decision would become visible; it was made, and this is

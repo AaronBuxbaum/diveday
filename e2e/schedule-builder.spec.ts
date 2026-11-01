@@ -859,7 +859,7 @@ test.describe("schedule builder, as the daily crew", () => {
   signedInAs("captain");
 
   test("a captain sees the board but none of its controls", async ({ page }) => {
-    // Trip definition is owner/manager/instructor work (H-14); the crew runs the
+    // Trip definition is owner/manager/instructor work (H-20260724-staff-role-reach); the crew runs the
     // day from each trip's own page.
     await page.goto(BOARD);
     await expect(page.getByRole("heading", { name: "Schedule", level: 1 })).toBeVisible();

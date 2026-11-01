@@ -10,7 +10,7 @@ import { findTripOnBoard, openDiverFileGroup, openTripTab, rosterRow } from "./h
 import { E2E_FROZEN_CLOCK } from "./servers";
 
 /**
- * **The cert-check extension itself, installed in a real Chromium** (H-105, ADR
+ * **The cert-check extension itself, installed in a real Chromium** (H-20261008-cert-check-extension, ADR
  * 20261008-cert-check-extension).
  *
  * Every other `agency-check*.spec.ts` stands in for the extension at the

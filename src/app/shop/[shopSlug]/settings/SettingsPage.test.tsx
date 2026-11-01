@@ -233,7 +233,7 @@ describe("the units card", () => {
   });
 
   it("drops the currency field for a manager who cannot manage payments", async () => {
-    // H-14: currency decides what a diver's card is charged in, and its gate is
+    // H-20260724-staff-role-reach: currency decides what a diver's card is charged in, and its gate is
     // narrower than the page's own. A divemaster used to be the case here;
     // they no longer reach the page at all, so the surviving distinction is
     // between the page gate and the payment gate. `saveUnitsAction` re-checks

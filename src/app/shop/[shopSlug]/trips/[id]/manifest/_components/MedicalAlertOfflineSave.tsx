@@ -36,7 +36,7 @@ function parsed(body: unknown): OfflineMedicalAlertsResponse | null {
 }
 
 /**
- * **"Save the medical alerts for offline"** (H-153 amendment, issue #2960):
+ * **"Save the medical alerts for offline"** (H-20261023-medical-alert-for-the amendment, issue #2960):
  * the one way a diver's medical alert words reach this phone. Offered only to
  * a reader allowed them on this departure (the owner, a manager, or crew a
  * manager put on it), inside the manifest's "On this phone" group. The tap

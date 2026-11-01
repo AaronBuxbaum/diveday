@@ -20,7 +20,7 @@ afterEach(() => {
 const ALERT = "Bee-sting allergy. EpiPen in the blue dry bag.";
 const UNREADABLE = t("manifest.medicalAlertReaders");
 // Named on the crew list, yet not named as a reader: a crew member who
-// rostered themselves cannot read it (H-153 amendment).
+// rostered themselves cannot read it (H-20261023-medical-alert-for-the amendment).
 const CREW = [{ fullName: "Keiko Tanaka" }] as TripManifest["crew"];
 
 type BindShow = (bookingId: string) => () => Promise<MedicalAlertResult>;

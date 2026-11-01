@@ -203,7 +203,7 @@ export type DepthCeilingCheck =
 /**
  * Does this site go deeper than this diver's training allows?
  *
- * **A warning, never a gate** (H-08, decided 2026-07-30). The site's maximum is
+ * **A warning, never a gate** (H-20260724-certification-levels-agency-rules, decided 2026-07-30). The site's maximum is
  * not the dive plan: an instructor may deliberately keep a student at 15 m on a
  * 30 m wall, and that is an ordinary, correct day of diving — refusing the
  * booking would make DiveDay wrong about the thing it was trying to be careful

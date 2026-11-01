@@ -67,7 +67,7 @@ export type MinimumSeatsState =
  * drops the boat to a 4-seat RIB has written a trip that can never run, and the
  * honest reading of that is "every seat", not "cancel it whatever happens".
  * Applied on read rather than on write so a later capacity change cannot strand
- * a departure — the same fail-open direction the age gate takes (H-08).
+ * a departure — the same fail-open direction the age gate takes (H-20260724-certification-levels-agency-rules).
  */
 export function effectiveMinimum(policy: MinimumSeatsPolicy, capacity: number): number | null {
   if (policy.minimumBookings === null) return null;

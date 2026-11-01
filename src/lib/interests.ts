@@ -27,10 +27,10 @@ export type InterestClosedAs = "booked" | "done" | "unsubscribed";
  * The mail class of an offer: **service** reaches the diver whatever their
  * courtesy-email setting and carries no unsubscribe; **commercial** carries the
  * one-click courtesy unsubscribe, takes the 24-hour cold-send window, and is
- * not sent to a person who opted out (H-96; 16 CFR 316.2).
+ * not sent to a person who opted out (H-20261006-staff-trip-invitation-service; 16 CFR 316.2).
  *
- * One pure function, so the rule is read in one place. H-96's test is "did the
- * diver ask for this?" (Aaron, H-145 D-2 option b, 2026-10-17):
+ * One pure function, so the rule is read in one place. H-20261006-staff-trip-invitation-service's test is "did the
+ * diver ask for this?" (Aaron, H-20261005-one-interest-table-names D-2 option b, 2026-10-17):
  *
  * - **Service**: the diver's own ask, answered where they asked it. A seat on
  *   the departure they joined the wait list for (a diver-asked departure row

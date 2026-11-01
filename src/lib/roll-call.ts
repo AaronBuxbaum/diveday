@@ -315,7 +315,7 @@ export type MedicalHoldCode = "medical_not_cleared" | "medical_review";
  * call there is a head count, and a danger-toned "Blocked" would compete with
  * the one red that means somebody is in the water. That stays. But a person a
  * physician did not clear, between dives, is not a paperwork state, and a
- * rider under the same "no" already keeps a chip at every checkpoint (H-109).
+ * rider under the same "no" already keeps a chip at every checkpoint (H-20261009-rider-snorkeler-medical).
  * So this names the medical fact for a warning-toned capsule, ranked where the
  * rider's sits — never "Blocked", and never a gate on the after-dive mark.
  *

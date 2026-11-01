@@ -60,7 +60,7 @@ progression and report ledger. Team composition and the two-minute expectation a
 hypotheses. The possible small-report-text observation was then measured and promoted to UX-10. No
 additional celebration was recommended for unfinished states.
 
-Light mode is appropriate to this non-color audit under H-90. Boat dark mode, high contrast,
+Light mode is appropriate to this non-color audit under H-20260925-many-colour-schemes-check. Boat dark mode, high contrast,
 landscape, narrow 320px devices, text enlargement and every intermediate responsive breakpoint were
 not systematically validated. Selected Spanish screenshots showed the intended translated layout;
 they do not certify all strings or their quality.

@@ -101,8 +101,8 @@ export function diverRowState(
   // buddy alert and a birthday the capsule did not take are on paper only.
   //
   // **The medical warnings** (`medicalWarningChips`, strongest first):
-  // a rider riding only under a "no" or an open referral (H-109), an
-  // earlier refusal (H-98), a referral replaced (#1282). Each boards,
+  // a rider riding only under a "no" or an open referral (H-20261009-rider-snorkeler-medical), an
+  // earlier refusal (H-20261007-after-physician-says-no), a referral replaced (#1282). Each boards,
   // so none is a blocker, but the crew at the rail decides with it in
   // view. The capsule takes the first; paper prints the rest, and
   // every other fact the capsule did not take, never one twice.

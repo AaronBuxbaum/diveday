@@ -276,7 +276,7 @@ export function rowOutstanding(seat: RowOutstandingInput) {
               lines (K-551). `-mb-3 align-bottom` gives that half back, as
               `buttonClass`'s `outdent` does for a quiet button, so the next
               line's box meets this one's and the target stays whole. */}
-          {/* A snorkeler is held on the dive medical exactly as a diver is (H-109).
+          {/* A snorkeler is held on the dive medical exactly as a diver is (H-20261009-rider-snorkeler-medical).
               The way aboard without it is a rider's seat, whose chip carries the
               warning; this only points at that switch, it clears nothing. */}
           {snorkelerMedicalHold ? (
@@ -333,7 +333,7 @@ export function rowOutstanding(seat: RowOutstandingInput) {
         />
       ) : null}
       {/* The materials tick, read off PADI's own eLearning page when the
-          DiveDay browser extension is here (H-106). */}
+          DiveDay browser extension is here (H-20261008-padi-elearning-check). */}
       {elearningCheckAction && isDiver(booking.participantType) ? (
         <ElearningCheck
           query={elearningQueryByBooking?.get(booking.id) ?? null}

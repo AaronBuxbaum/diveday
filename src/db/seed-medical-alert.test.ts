@@ -34,7 +34,7 @@ describe("the seeded medical alert", () => {
     if (!trip) throw new Error("seeded departure missing");
     const crew = await db.select().from(tripAssignments).where(eq(tripAssignments.tripId, trip.id));
     expect(crew.length).toBeGreaterThan(0);
-    // Assigned by someone else, so the crew reads the words (H-153).
+    // Assigned by someone else, so the crew reads the words (H-20261023-medical-alert-for-the).
     const readers: boolean[] = [];
     for (const member of crew) {
       expect(member.assignedByPersonId).not.toBeNull();

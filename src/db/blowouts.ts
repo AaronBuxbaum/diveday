@@ -88,7 +88,7 @@ import { rollCallStartedOn, setTripStatus } from "./trips-record";
  * shop just cancelled the trip (ADR 20260813-shop-cancellation-refunds-itself).
  * The message then says what actually happened rather than that the money is
  * safe. A counter payment or a disconnected account still lands on the staff
- * path behind the H-14 refund role, and the diver is told that in as many
+ * path behind the H-20260724-staff-role-reach refund role, and the diver is told that in as many
  * words. Refunding inside the claim keeps it once-per-diver, and a booking that
  * already reads `refunded` is a no-op, so a resume never reverses twice.
  */
@@ -118,10 +118,10 @@ export type CallBlowoutOutcome =
     };
 
 /**
- * What happens to the money when a call-off cancels paid seats (H-139).
+ * What happens to the money when a call-off cancels paid seats (H-20261013-call-off-queues-refunds).
  * `release` sends the card captures back at once; `queue` leaves them captured
  * for a refund holder to release, because the person who called it off may not
- * move money (`canRefund`, H-14). A system caller (the head-count sweep) is
+ * move money (`canRefund`, H-20260724-staff-role-reach). A system caller (the head-count sweep) is
  * never a person with a role and releases.
  */
 export type BlowoutRefundMode = "release" | "queue";
@@ -201,7 +201,7 @@ async function setUpTripBlowout(db: AppDb, input: CallBlowoutInput, now: Date) {
         .from(trips)
         .where(and(eq(trips.id, trip.id), liveTrip()));
       // The crew may also have taken the boat out before its time, or hold a
-      // diver aboard (`departureMayBeAtSea`, H-133): the stricter of the two.
+      // diver aboard (`departureMayBeAtSea`, H-20261015-aboard-diver-removal-at): the stricter of the two.
       if (
         departureUnderway(
           { startsAt: trip.startsAt, rollCallStarted: Boolean(started?.started) },

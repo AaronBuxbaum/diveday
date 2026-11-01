@@ -68,8 +68,8 @@ export function rollCallLabelText(t: StaffTranslator, label: RollCallLabel): str
 /**
  * **A row's medical warnings, strongest first**, as the chip words and the
  * dated sentences, in the same order: a rider boarding riding only under a
- * physician's "no", then under an open referral (H-109), then an earlier
- * refusal a clean release stands over (H-98), then a referral it replaced
+ * physician's "no", then under an open referral (H-20261009-rider-snorkeler-medical), then an earlier
+ * refusal a clean release stands over (H-20261007-after-physician-says-no), then a referral it replaced
  * (issue #1282). The live roll call, its printed sheet and the offline copy
  * all read this one list, so the capsule is always the first entry and paper
  * prints the rest.

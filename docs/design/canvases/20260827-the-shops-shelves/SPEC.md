@@ -7,7 +7,7 @@ behavior is not. Standing repo obligations apply unstated.
 
 **Contracts no slice may move**: `gear_reservations_no_overlap` and 23P01 handling
 (`violatesExclusionConstraint`) — never pre-check availability as truth; `progressionOrder` on
-every course read; H-59 — credential clocks inform, never gate; the depth-marker refusal
+every course read; H-20260825-staff-credentials-renewal-clock — credential clocks inform, never gate; the depth-marker refusal
 (`courseDepthPlaceholderIssues`) and `ConflictGuardedForm`'s `rowVersion`; template-update
 keep-vs-replace flows on courses and sites; promo/Stripe lifecycle; `adviseRequests`; all
 permission gates; ADR 20260813's vocabulary (difficulty is a code, marine-life copy is DiveDay's).
@@ -158,7 +158,7 @@ the heading.
   ends today render it in the shop's zone; date words otherwise; null falls back to date words.
   The displayed time is the trip's raw `endsAt` — the standing 1-hour late-arrival buffer
   applies to overdue *classification*, never to the displayed time.
-- The three `ShopStat` tiles and `ReturnsPanel` delete (H-49); their acts (check out, release,
+- The three `ShopStat` tiles and `ReturnsPanel` delete (H-20260815-no-legacy); their acts (check out, release,
   mark returned) ride the rows. Kind chips stay the one filter; Deleted stays a chip. Group
   headings speak the grammar "{label} — {n}" (Out / Overdue / On the wall).
 - Zero and all-home are different sentences: a group renders only when non-empty (no
@@ -217,7 +217,7 @@ export function staffWeek(input: { view: StaffingView; weekStartIso: string;
   the no-empty-groups rule. The Needs-crew row already renders nothing when every departure is
   covered (surfaces.md's staffing entry) — cite it, don't restate it.
 - Phone: the week collapses to a day list (people under each day) — the grid has no honest 390px
-  form (same reasoning as H-63).
+  form (same reasoning as H-20260827-clearwater-week-board-roadmap).
 - **Tests**: a gap renders in its day with its act and its per-code word; a crewed departure
   renders in its person's day cell; credentials never gate (no control disabled by a lapse —
   assert absence); shifts render in shop TZ; e2e L3.

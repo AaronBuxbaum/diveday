@@ -512,7 +512,7 @@ export async function setCourseFormRequirements(
  *
  * Each title the shop has no live form for becomes a new form with that title
  * and an empty body — DiveDay ships the agency's titles, never its words
- * (H-10) — and each listed form the course does not already ask for is added
+ * (H-20261007-request-supported-c-card) — and each listed form the course does not already ask for is added
  * to the end of its list. A form the shop already has, matched by title, is
  * reused as it stands, text and all. Nothing is ever removed or reordered.
  *

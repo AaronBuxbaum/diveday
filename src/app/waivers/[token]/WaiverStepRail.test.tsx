@@ -427,7 +427,7 @@ describe("what the rail must never say", () => {
 
   it("holds no copy of its own", () => {
     // Every word on this page sits under the waiver/medical wording freeze
-    // (H-01/H-03), so the rail takes its three names and its count from the
+    // (H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit), so the rail takes its three names and its count from the
     // caller's already-translated bundle and holds none itself. A file with no
     // strings in it is a file a reword cannot reach.
     expect(BODY).not.toContain("useTranslations");

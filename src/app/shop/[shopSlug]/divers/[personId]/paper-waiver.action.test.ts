@@ -31,7 +31,7 @@ const ctx = fileScopedShopContext();
  * are the other two) and the only one scoped to a *person* rather than a
  * departure. What these tests pin is that it stays that way: the subject comes
  * from the route, the record carries no seat, and the medical attestation is
- * still required here (H-01/H-03; ADR 20260811-person-scoped-paper-waivers).
+ * still required here (H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit; ADR 20260811-person-scoped-paper-waivers).
  */
 
 vi.mock("next/navigation", () => ({

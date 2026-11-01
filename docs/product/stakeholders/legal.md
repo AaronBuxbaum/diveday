@@ -2,15 +2,15 @@
 
 The longest-lead discipline and the rollout's critical path. Nothing here is legal advice; it is
 the preparation that makes the counsel engagement short and cheap. Status of record:
-[human-decisions/](../human-decisions/README.md) rows **H-01** (jurisdiction + waiver/medical
-templates), **H-02** (retention/deletion), **H-03** (e-signature sufficiency), **H-17** (imported
-waiver acceptance — decided, but counsel should see it), **H-18** (corporate footing + SaaS
+[human-decisions/](../human-decisions/README.md) rows **H-20260730-jurisdiction-waiver-text-medical** (jurisdiction + waiver/medical
+templates), **H-20260730-evidence-retention-period-deletion** (retention/deletion), **H-20260724-current-typed-name-explicit** (e-signature sufficiency), **H-20260724-contact-importer-trust-prior** (imported
+waiver acceptance — decided, but counsel should see it), **H-20260724-corporate-footing-diveday-operate** (corporate footing + SaaS
 contract set), and **V-03** (flow review against the approved policies).
 
 **Working assumptions (owner-confirmed 2026-07-24):** the launch jurisdiction planned around is
-**Florida** (H-01 records the final choice with counsel); the owner's existing entity is
+**Florida** (H-20260730-jurisdiction-waiver-text-medical records the final choice with counsel); the owner's existing entity is
 **Pseudorandom LLC** (S-corp election; current business: software contracting and mentorship) —
-see [the entity decision](#the-entity-decision-h-18).
+see [the entity decision](#the-entity-decision-h-20260724-corporate-footing-diveday-operate).
 
 **Two attorneys, not one (owner-confirmed 2026-07-24):** the owner already has a generalist
 attorney and prefers to default to her — reaching for the scuba-liability specialist only where the
@@ -28,23 +28,23 @@ are scoped to her Tier 3 work plus the Tier 2 items she signs off on, not the wh
   — PADI-*shaped*, not counsel-approved. A pilot shop sending a real release on unapproved
   language converts the differentiator into the founder's personal liability.
 - Phase 1 cannot start without a pilot agreement to sign, and no agreement can be signed without
-  knowing which entity signs it (H-18). **Pilot-before-counsel policy decided 2026-08-02 (H-25):**
+  knowing which entity signs it (H-20260724-corporate-footing-diveday-operate). **Pilot-before-counsel policy decided 2026-08-02 (H-20260802-pilot-before-counsel):**
   pilots run on the provisional waiver flow with a signed risk-acknowledgment clause in the pilot
-  agreement, rather than waiting for H-01–H-03 to close — see
+  agreement, rather than waiting for H-20260730-jurisdiction-waiver-text-medical, H-20260730-evidence-retention-period-deletion, H-20260724-current-typed-name-explicit to close — see
   [legal-engagement-scope.md](legal-engagement-scope.md#tier-1--generalist-no-specialist-needed).
-- The published founding-cohort claim needing contract language (H-12's open contract flow) is the
+- The published founding-cohort claim needing contract language (H-20260724-public-founding-shop-price's open contract flow) is the
   **two-year price lock**. The support promise it used to sit beside — "founder-direct support" —
   was retired 2026-08-05 (Aaron Buxbaum, [human-decisions/](../human-decisions/README.md#decision-register),
-  H-12/H-26): support is now a plain `support@dive.day` inbox with no personal-response or
+  H-20260724-public-founding-shop-price/H-20260802-what-game-is-this): support is now a plain `support@dive.day` inbox with no personal-response or
   response-time commitment, so it carries no binding-commercial-term weight for counsel to review.
 
 ## Who to talk to
 
 | Stakeholder | Role | Status | How to find them |
 | --- | --- | --- | --- |
-| The owner's existing generalist attorney | Tier 1 (entity, SaaS contract set, H-17 sanity check) and Tier 2 first drafts (H-02 retention, the general half of H-03) — full scope in [legal-engagement-scope.md](legal-engagement-scope.md) | **Already have her** — send the scope memo, no search needed | — |
-| Recreational-liability attorney with scuba release experience, licensed in Florida | Tier 3: H-01's waiver/medical template and minors' release, and Tier 2 sign-off on H-02/H-03 | **Not yet engaged** — find and brief her | DAN's risk-mitigation program refers; dive-industry insurance brokers (the PADI-endorsed broker, historically Vicencia & Buckley / HUB International) work with these attorneys daily and will name names; DEMA member legal resources; Florida Bar referral filtered to recreational/sports liability |
-| CPA | Tax half of the entity decision (S-corp interaction) | See [finance-and-tax.md](finance-and-tax.md) | Run H-18 past both the generalist and the CPA before forming anything |
+| The owner's existing generalist attorney | Tier 1 (entity, SaaS contract set, H-20260724-contact-importer-trust-prior sanity check) and Tier 2 first drafts (H-20260730-evidence-retention-period-deletion retention, the general half of H-20260724-current-typed-name-explicit) — full scope in [legal-engagement-scope.md](legal-engagement-scope.md) | **Already have her** — send the scope memo, no search needed | — |
+| Recreational-liability attorney with scuba release experience, licensed in Florida | Tier 3: H-20260730-jurisdiction-waiver-text-medical's waiver/medical template and minors' release, and Tier 2 sign-off on H-20260730-evidence-retention-period-deletion/H-20260724-current-typed-name-explicit | **Not yet engaged** — find and brief her | DAN's risk-mitigation program refers; dive-industry insurance brokers (the PADI-endorsed broker, historically Vicencia & Buckley / HUB International) work with these attorneys daily and will name names; DEMA member legal resources; Florida Bar referral filtered to recreational/sports liability |
+| CPA | Tax half of the entity decision (S-corp interaction) | See [finance-and-tax.md](finance-and-tax.md) | Run H-20260724-corporate-footing-diveday-operate past both the generalist and the CPA before forming anything |
 
 Selection bar for the liability specialist: has drafted or defended scuba/dive-charter releases
 in Florida, is comfortable opining on electronically signed exculpatory releases, and will quote
@@ -57,23 +57,23 @@ not drafting from scratch).
   no search needed, she's already engaged. In parallel, shortlist 2–3 specialist candidates and
   send the specialist engagement request with the briefing packet below. This is item 1 on the
   rollout's [30-day list](../rollout.md#the-next-30-days-in-order).
-- **Before any pilot agreement is signed (~early Sept):** H-18 entity direction chosen, pilot
+- **Before any pilot agreement is signed (~early Sept):** H-20260724-corporate-footing-diveday-operate entity direction chosen, pilot
   agreement template done, E&O/cyber bound ([insurance.md](insurance.md)).
-- **Before any real shop sends a real waiver:** H-01–H-03 outcomes recorded and V-03 performed.
+- **Before any real shop sends a real waiver:** H-20260730-jurisdiction-waiver-text-medical, H-20260730-evidence-retention-period-deletion, H-20260724-current-typed-name-explicit outcomes recorded and V-03 performed.
 
 ## The specialist's engagement — deliverables to request (one engagement, in writing)
 
-The generalist's Tier 1/2 scope (entity, SaaS contract set, H-17 sanity check, first drafts of
-H-02/H-03) is in [legal-engagement-scope.md](legal-engagement-scope.md) and does not need to be
+The generalist's Tier 1/2 scope (entity, SaaS contract set, H-20260724-contact-importer-trust-prior sanity check, first drafts of
+H-20260730-evidence-retention-period-deletion/H-20260724-current-typed-name-explicit) is in [legal-engagement-scope.md](legal-engagement-scope.md) and does not need to be
 asked of the specialist. What the specialist's engagement should produce:
 
-1. **H-01:** approved Florida waiver template + medical questionnaire, including the
+1. **H-20260730-jurisdiction-waiver-text-medical:** approved Florida waiver template + medical questionnaire, including the
    minor/guardian flow (the glossary's Junior-certification rules and Discover Scuba Diving
    participants are the hard cases).
-2. **H-02 sign-off:** confirm the generalist's draft retention window actually matches what the
+2. **H-20260730-evidence-retention-period-deletion sign-off:** confirm the generalist's draft retention window actually matches what the
    release needs to hold up evidentially, and that the immutability model satisfies spoliation
    expectations.
-3. **H-03 sign-off:** a written opinion on whether typed name + explicit consent + timestamp is a
+3. **H-20260724-current-typed-name-explicit sign-off:** a written opinion on whether typed name + explicit consent + timestamp is a
    sufficient assurance level for *this specific* Florida release, or the criteria a specialist
    e-signature provider must meet (the `SignatureProvider` seam exists; if required it becomes
    the one Phase-0 engineering task, per the rollout's
@@ -93,8 +93,8 @@ Everything already exists; the packet is links and screenshots, not new writing:
   [capability telemetry runbook](../../engineering/capability-telemetry-runbook.md)), append-only
   roll-call ledger.
 - The [imported-waiver ADR](../../architecture/decisions/20260724-import-waiver-acceptance.md)
-  (H-17) and the [person email-uniqueness ADR](../../architecture/decisions/20260723-person-email-uniqueness.md)
-  (H-13 identity handling) — the two decided-but-review-worthy postures.
+  (H-20260724-contact-importer-trust-prior) and the [person email-uniqueness ADR](../../architecture/decisions/20260723-person-email-uniqueness.md)
+  (H-20260724-one-person-per-email identity handling) — the two decided-but-review-worthy postures.
 - Screenshots or a live walkthrough of the signing flow (`/waivers/[token]`), the medical-flag
   blocker a staff member sees, and the export bundle (records leave with the shop —
   [full-shop export ADR](../../architecture/decisions/20260722-full-shop-export.md)).
@@ -109,20 +109,20 @@ Everything already exists; the packet is links and screenshots, not new writing:
   strictly shop↔diver?
 - Minors: does Florida's parental pre-injury release statute cover a dive shop's activities, what
   statutory language is mandatory, and how must the guardian flow capture it?
-- What limitations period (plus tolling for minors) should set the H-02 retention floor, and does
+- What limitations period (plus tolling for minors) should set the H-20260730-evidence-retention-period-deletion retention floor, and does
   our immutability model satisfy spoliation expectations? (Confirming the generalist's draft, not
   originating it — see [the scope memo](legal-engagement-scope.md#tier-2--generalist-drafts-specialist-blesses-before-it-goes-live).)
 - Is typed-name consent sufficient under Florida's UETA adoption / federal E-SIGN for *this
   specific* exculpatory release, or is identity-assurance (e.g. specialist provider) required
-  (H-03)? (The general UETA/E-SIGN question is the generalist's; this is the narrower
+  (H-20260724-current-typed-name-explicit)? (The general UETA/E-SIGN question is the generalist's; this is the narrower
   adventure-sport-scrutiny layer on top.)
 - Medical questionnaire: what duty does *collecting* medical flags create for the shop and for
-  DiveDay, and what handling/access boundary does that imply (feeds H-02 and the privacy policy)?
+  DiveDay, and what handling/access boundary does that imply (feeds H-20260730-evidence-retention-period-deletion and the privacy policy)?
 
 The indemnification and post-churn evidence-custody questions that used to live here are Tier 1
 generalist work — see [legal-engagement-scope.md](legal-engagement-scope.md#tier-1--generalist-no-specialist-needed).
 
-## The entity decision (H-18)
+## The entity decision (H-20260724-corporate-footing-diveday-operate)
 
 **Question:** run DiveDay inside Pseudorandom LLC (S-corp; software contracting + mentorship), or
 form a dedicated entity?
@@ -149,15 +149,15 @@ Open questions for the generalist + CPA (do not decide these unilaterally):
 - Formation state: home state vs. Florida vs. Delaware, and whether soliciting/operating with
   Florida shops requires Florida foreign qualification regardless.
 - Interim posture: if pilots start before formation completes, is signing under Pseudorandom
-  d/b/a DiveDay acceptable *with E&O/cyber bound* (H-19), or do pilot agreements wait?
+  d/b/a DiveDay acceptable *with E&O/cyber bound* (H-20260730-diveday-itself-carry-technology), or do pilot agreements wait?
 
-**Record the outcome in H-18** ([human-decisions/](../human-decisions/README.md#decision-register)).
+**Record the outcome in H-20260724-corporate-footing-diveday-operate** ([human-decisions/](../human-decisions/README.md#decision-register)).
 
 ## Where outcomes land
 
-- H-01, H-02, H-03, H-18 rows updated with owner, outcome, date, and linked evidence.
+- H-20260730-jurisdiction-waiver-text-medical, H-20260730-evidence-retention-period-deletion, H-20260724-current-typed-name-explicit, H-20260724-corporate-footing-diveday-operate rows updated with owner, outcome, date, and linked evidence.
 - Approved template text replaces the provisional shape in the product's waiver templates;
-  if H-03 demands a vendor, the `SignatureProvider` adapter becomes a
+  if H-20260724-current-typed-name-explicit demands a vendor, the `SignatureProvider` adapter becomes a
   [roadmap](../features/roadmap.md) item with an ADR.
 - V-03 performed against the approved policies; evidence recorded in the
   [verification queue](../human-decisions/README.md#human-verification-queue).

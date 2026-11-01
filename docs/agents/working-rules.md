@@ -38,7 +38,7 @@ in [route-map.md](route-map.md).
 | `node scripts/stack-map.mjs` | the stack HEAD is in — layers bottom to top, the top, other tips, merged sub-branches, each layer's paths — derived from remote refs (`--json` for a machine); the per-prompt line carries the position |
 | `pnpm stack:sync` | merges this layer's base (`origin/main` for the bottom) into it, read from the open pull requests; stops on a conflict, never pushes, prints what each layer above does (`--plan`, `--chain`; the **stacked-prs** skill) |
 | `pnpm check:env` / `pnpm env:manual` | the two structural facts about configuration, and the one file a human edits — see `.claude/rules/infra.md` |
-| `pnpm check:repo` | 63 static guards over the repository, spawned concurrently so one run reports every failure rather than the first. Each guard names itself and prints the offending line; the ones whose *why* is not obvious from that message are written up in [docs/agents/repo-checks.md](repo-checks.md) |
+| `pnpm check:repo` | 64 static guards over the repository, spawned concurrently so one run reports every failure rather than the first. Each guard names itself and prints the offending line; the ones whose *why* is not obvious from that message are written up in [docs/agents/repo-checks.md](repo-checks.md) |
 | `pnpm check:follow-ups` | every open `needs-triage` issue is still actionable cold. The one guard that calls `gh`, so it is not in `check:repo`: it runs daily in `.github/workflows/follow-ups.yml`, and locally reports **SKIPPED** when `gh` cannot answer ([docs/agents/issue-tracker.md](issue-tracker.md)'s "Filing a follow-up") |
 | `pnpm check:context-budget` | the words every session loads before it reads any code — this file, `CLAUDE.md`, any unscoped `.claude/rules/*.md`, and every skill's and reviewer agent's `description:` line — ratcheted (`--write` banks a fall, `--absorb "<why>"` records a deliberate rise), plus a 240-word cap on any single line. The fix for red is never to compress the prose: move the long half into `docs/` or a path-scoped rule and leave a pointer |
 | `pnpm check:copy` / `check:domain-strings` / `check:tokens` / `check:architecture` / `check:type-ramp` / `check:voice` / `check:locale` / `check:e2e-hygiene` / `check:route-coverage` / `check:critical-text` / `check:closing-keywords` / `check:rental-fit-caps` | the individual guards, each also inside `check:repo`; the ratcheted ones share `--report <path>` / `--write` / `--absorb`. What each refuses is in the path-scoped rule for the files it reads and in [docs/agents/repo-checks.md](repo-checks.md) |
@@ -74,13 +74,14 @@ runs. Pass args directly. The shell guard refuses the bare form.
   2026-10-13 that held a 328k-token thread all night.
 - **Never switch a live thread's model; start a fresh thread with a state note instead.**
   Switching drops the prompt cache, so the next call re-reads the whole context at full price
-  (H-117).
+  (H-20261014-no-mid-thread-model).
 - Never bare `git stash` / `git stash pop` — one stack shared with every worktree and every session
   (the shell guard refuses both). Prefer a `git worktree`, then a WIP commit, then
   `git stash push -u -m "<tag>"` restored by sha and popped immediately after.
 - Use a unique branch slug and open a draft PR early for non-trivial concurrent work; state owned
   paths, expected schema changes, and planned ADR ids in its description. New ADRs use
-  collision-resistant `YYYYMMDD-short-slug` ids; do not allocate the next integer. No branch-local
+  collision-resistant `YYYYMMDD-short-slug` ids and human decisions `H-YYYYMMDD-slug`; do not
+  allocate the next integer. No branch-local
   reservation ledgers. Split work by vertical slice or non-overlapping paths, and trial-merge the
   target branch before calling work complete.
 - **Stack everything, across threads, and run one PR's CI at a time: cut every branch from the
@@ -252,10 +253,10 @@ runs. Pass args directly. The shell guard refuses the bare form.
   `loading.tsx`.** Each of these is stated in full, with its incident and its guard, in the
   path-scoped rule for the files it governs — `.claude/rules/surfaces.md`, `i18n.md`, `db.md`,
   `domain.md` — and `pnpm check:repo` enforces the mechanical half of every one.
-- **There is no legacy. Delete it.** DiveDay is pre-pilot (H-49): a table nothing writes is
+- **There is no legacy. Delete it.** DiveDay is pre-pilot (H-20260815-no-legacy): a table nothing writes is
   dropped, a code path that only tolerates old rows is deleted, and no reconciliation, backfill,
   dual-read or version-tolerance code is written for pre-pilot data. The two things this does not
-  relax — the destructive-migration guard and H-02's retention and erasure promises — and the rule's
+  relax — the destructive-migration guard and H-20260730-evidence-retention-period-deletion's retention and erasure promises — and the rule's
   expiry are in `.claude/rules/db.md`.
 - **Text a human will copy is written unwrapped** — one line per paragraph and per bullet, in a
   document and in a chat reply alike; the worked examples are in `.claude/rules/docs.md`.

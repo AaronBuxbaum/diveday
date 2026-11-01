@@ -84,7 +84,7 @@ export type TripWithBookedCount = typeof trips.$inferSelect & {
   /** Crew assignments on this trip, each reserving one boat occupant place. */
   assignedCrewCount: number;
   /**
-   * The seats this departure may actually sell (H-107, #2321): `capacity`
+   * The seats this departure may actually sell (H-20261009-certificate-caps-seats, #2321): `capacity`
    * capped at the boat's passenger certificate and total-occupant capacity
    * after assigned crew places (`sellableSeats`). Every seats-left read is
    * measured against this; `capacity` stays the passenger-place count the
@@ -489,7 +489,7 @@ export async function heldSeatCounts(
 }
 
 /**
- * **The passenger capacity a seat-granting gate measures against** (H-107):
+ * **The passenger capacity a seat-granting gate measures against** (H-20261009-certificate-caps-seats):
  * the departure's passenger places, capped at the boat's passenger certificate
  * and total-occupant capacity after assigning one place per crew member
  * (`sellableSeats`). A grant calls this inside the transaction holding the
@@ -1154,7 +1154,7 @@ export type WeekBoardEntry = {
   endsAt: Date;
   booked: number;
   capacity: number;
-  /** Per seat, as the booking charges it: a course session's is the course total (H-125). */
+  /** Per seat, as the booking charges it: a course session's is the course total (H-20261014-course-session-price). */
   priceCents: number | null;
   /**
    * `sailed` once the boat is back — the departure has *ended*, with the
@@ -1209,7 +1209,7 @@ export type WeekBoardSpan = {
   status: "upcoming" | "sailed";
   booked: number;
   capacity: number;
-  /** Per seat, as the booking charges it: a course session's is the course total (H-125). */
+  /** Per seat, as the booking charges it: a course session's is the course total (H-20261014-course-session-price). */
   priceCents: number | null;
   instructorName: string | null;
 };
@@ -1267,7 +1267,7 @@ export async function weekBoard(
       // three-day class as three times as booked as it is.
       booked: countDistinct(bookings.id),
       // A course session is priced at the course total the booking charges,
-      // as the public schedule rows read it (H-125), never the trip row's own.
+      // as the public schedule rows read it (H-20261014-course-session-price), never the trip row's own.
       course: {
         title: courses.title,
         priceCents: courses.priceCents,

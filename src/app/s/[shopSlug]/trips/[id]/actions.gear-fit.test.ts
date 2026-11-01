@@ -20,11 +20,11 @@ import { fileScopedShopContext } from "@/test/db";
  *
  * `bookSpot` persists each party member's priced gear as their rental fit the
  * moment the seat exists (ADR 20260801-checkout-upsells-rental-gear). A seat
- * held on a shared email (H-13) attached itself to an *existing* person whose
+ * held on a shared email (H-20260724-one-person-per-email) attached itself to an *existing* person whose
  * name on file does not match the one typed, so the booker may be somebody
  * else, and the fit is that diver's standing record. A rented wetsuit ticked
  * there would clear their `dives_dry` and, with it, the drysuit weight check
- * on every later trip (`security-reviewer`, layer 2 of the H-78 work).
+ * on every later trip (`security-reviewer`, layer 2 of the H-20260916-rental-fit-describe-shop work).
  *
  * The real action on a real database, asserting rows: only the framework edge
  * (`next/*`), the request's IP and locale and the app's public URL are
@@ -164,7 +164,10 @@ describe("gear ticked at checkout", () => {
 
     const seat = await seatOf(db, tripId, danaId);
     expect(seat, "the seat attached to Dana").toBeDefined();
-    expect(seat?.identityUnconfirmedAt, "and is held (H-13)").not.toBeNull();
+    expect(
+      seat?.identityUnconfirmedAt,
+      "and is held (H-20260724-one-person-per-email)",
+    ).not.toBeNull();
     // Dana's standing fit is untouched: still dry, still a drysuit, no wetsuit.
     expect(await fitOf(db, shop.id, danaId)).toMatchObject({
       divesDry: true,

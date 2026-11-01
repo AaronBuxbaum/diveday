@@ -96,7 +96,7 @@ describe("askAnytime (in-memory PGlite)", () => {
   });
 
   /**
-   * **H-13's borrowed-identity rule, applied to the one write here that is
+   * **H-20260724-one-person-per-email's borrowed-identity rule, applied to the one write here that is
    * evidence about a body.**
    *
    * This form is unauthenticated and resolves a person by email alone, so an

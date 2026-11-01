@@ -147,7 +147,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       // Off unless the shop said yes: a restore must not publish its counts
       // for a shop that never chose to.
       "public_year_enabled",
-      // The shop's own yes to the PADI checks (H-121): a restore must not
+      // The shop's own yes to the PADI checks (H-20261014-padi-divechek): a restore must not
       // run them under a PADI membership whose shop never chose to.
       "padi_checks_enabled",
       // The shop's own Claude switch (ADR 20261018-claude-assists): a shop
@@ -200,7 +200,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       // `shops` columns, so a restore does not bring it back: the Move
       // panel's advice waits until it is set again in Settings.
       "min_turnaround_minutes",
-      // "Crew arrive N minutes before divers" (H-149): the shop's own
+      // "Crew arrive N minutes before divers" (H-20261022-crew-arrive-before-divers): the shop's own
       // operating policy, blank when the shop cleared it.
       "crew_lead_minutes",
       "review_url",
@@ -551,7 +551,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       // rather than dumps, resolves the pair down to one cell.
       "no_certification_cleared_at",
       "no_certification_cleared_by_person_id",
-      // A staffer's "18 or older" at a split, and whose (H-100): the age
+      // A staffer's "18 or older" at a split, and whose (H-20261007-held-seat-split-into): the age
       // answer the guardian rule read when no date was on file.
       "adult_attested_at",
       "adult_attested_by_person_id",

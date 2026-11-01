@@ -35,7 +35,7 @@ import { uuidParam } from "@/lib/uuid";
 
 /**
  * **The shop home's evening acts** (ADR 20260827-clearwater-surface-language,
- * decision 4; H-62).
+ * decision 4; H-20260827-close-out-remain-own).
  *
  * The evening is a state the home's spine settles into, not a second surface,
  * so its acts live in the sibling `actions.ts` AGENTS.md asks of a large page

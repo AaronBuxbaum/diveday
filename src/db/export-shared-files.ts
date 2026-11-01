@@ -141,7 +141,7 @@ export const CERTIFICATIONS_CSV = sharedFile<ShopRow<"certificationRows">>({
     },
     { header: "reviewed_by_person_id", in: "shop", value: (row) => row.reviewedByPersonId },
     // Set when the review was the agency's own page, read through the
-    // DiveDay browser extension (H-105); review_note then holds its words.
+    // DiveDay browser extension (H-20261008-cert-check-extension); review_note then holds its words.
     { header: "agency_checked_at", in: "both", value: (row) => row.agencyCheckedAt },
     // Provenance from the contact importer (ADR 20260724-import-verified-cards):
     // a non-null imported_at is the definitive "this card was migrated, not
@@ -235,7 +235,7 @@ export const SPECIALTY_CERTIFICATIONS_CSV = sharedFile<ShopRow<"specialtyRows">>
     },
     { header: "reviewed_by_person_id", in: "shop", value: (row) => row.reviewedByPersonId },
     // The agency's own page, read through the DiveDay browser extension
-    // (H-105, as certifications.csv above): review_note then holds its words.
+    // (H-20261008-cert-check-extension, as certifications.csv above): review_note then holds its words.
     { header: "agency_checked_at", in: "both", value: (row) => row.agencyCheckedAt },
     // The level card whose agency check listed this one (layer 3 of ADR
     // 20261008-cert-check-extension): review_note then holds the agency's
@@ -290,7 +290,7 @@ export const NITROX_CERTIFICATIONS_CSV = sharedFile<ShopRow<"nitroxRows">>({
     },
     { header: "reviewed_by_person_id", in: "shop", value: (row) => row.reviewedByPersonId },
     // The agency's own page, read through the DiveDay browser extension
-    // (H-105, as certifications.csv above): review_note then holds its words.
+    // (H-20261008-cert-check-extension, as certifications.csv above): review_note then holds its words.
     { header: "agency_checked_at", in: "both", value: (row) => row.agencyCheckedAt },
     { header: "imported_at", in: "both", value: (row) => row.importedAt },
     { header: "imported_from_label", in: "both", value: (row) => row.importedFromLabel },
@@ -348,7 +348,7 @@ export const BOOKINGS_CSV = sharedFile<ShopRow<"bookingRows">>({
       value: (row, { personName }) => personName.get(row.personId),
     },
     { header: "status", in: "both", value: (row) => row.status },
-    // Why the desk turned this diver away, on a released seat (H-135): a
+    // Why the desk turned this diver away, on a released seat (H-20261015-who-may-turn-someone): a
     // category from the seat's own blockers, never the evidence. Blank on a
     // plain no-show, which is the other statement `no_show` makes. The
     // diver's own export carries it too: it is a record about them.
@@ -540,7 +540,7 @@ export const BOOKINGS_CSV = sharedFile<ShopRow<"bookingRows">>({
 
 /**
  * **Everyone who wanted a seat**, every scope in one file (ADR
- * 20261017-one-interest-with-a-scope; H-02's portability promise holds, the file set
+ * 20261017-one-interest-with-a-scope; H-20260730-evidence-retention-period-deletion's portability promise holds, the file set
  * changed). `scope` says what the row asked for: `departure` (a wait-list entry
  * or an offer, with its trip), `date` (a day that was not on the board) or
  * `anytime` (the last-minute list). The contact snapshot a person-less date interest
@@ -909,7 +909,7 @@ export const WAIVER_RECORDS_CSV = sharedFile<ShopRow<"waiverRows">>({
     // The shop's own questions as asked, with the diver's answers
     // (glossary *Shop question*). Inside the v1 seal when present, so a
     // destination re-verifying the hash needs them. Shop-only, as
-    // `medical_answers` is (H-50, security review L4): on a seat still held
+    // `medical_answers` is (H-20261025-per-diver-record-export, security review L4): on a seat still held
     // over who is in it the staff card withholds them because they may not be
     // this diver's, and the diver's bundle has no way to tell a held seat, so
     // free text somebody else typed must not travel in it.
@@ -922,7 +922,7 @@ export const WAIVER_RECORDS_CSV = sharedFile<ShopRow<"waiverRows">>({
     // issue #2960): the diver's own health words, inside the v1 seal when
     // present, so a destination re-verifying the hash needs it. Shop-only,
     // exactly as `medical_answers` is: the diver's bundle holds no medical
-    // answers pending H-01/H-03, and this is medical-class text.
+    // answers pending H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit, and this is medical-class text.
     {
       header: "medical_alert",
       in: "shop",
@@ -1048,7 +1048,7 @@ export const WAIVER_RECORDS_CSV = sharedFile<ShopRow<"waiverRows">>({
     { header: "moved_at", in: "shop", value: (row) => row.movedAt },
     { header: "moved_by_person_id", in: "shop", value: (row) => row.movedByPersonId },
     // Version 4: the guardian asked for their address to be erased and
-    // the shop did (H-103, issue #1673). Inside the seal, so a
+    // the shop did (H-20261007-guardian-email-erasure, issue #1673). Inside the seal, so a
     // destination re-verifying it needs both.
     { header: "guardian_email_erased_at", in: "shop", value: (row) => row.guardianEmailErasedAt },
     {

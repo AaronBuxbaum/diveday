@@ -128,7 +128,7 @@ export const incidentReports = pgTable(
      */
     legalHoldAt: timestamp("legal_hold_at", { withTimezone: true }),
     /**
-     * **The missing-diver alert's lease** (H-142, decided 2026-10-16): stamped
+     * **The missing-diver alert's lease** (H-20261016-missing-diver-report-alerts, decided 2026-10-16): stamped
      * when a pass took the report to tell the owners, so two passes never send
      * at once. It is a lease, not the proof of a send: a pass that crashed
      * leaves it stamped, and once it is older than the lease the next pass

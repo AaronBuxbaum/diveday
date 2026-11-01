@@ -43,7 +43,7 @@
  *   way through: the namesake confirmation, offered on the surfaces where the
  *   staffer watched both people sign.
  * - `identity_unconfirmed` — the seat is still held over who the diver is
- *   (H-13), so no attestation may land on the matched person's history yet. The
+ *   (H-20260724-one-person-per-email), so no attestation may land on the matched person's history yet. The
  *   other refusal an *honest* submission produces, and the only one whose way
  *   through is a different control: confirm the identity on the row, then record
  *   the release.

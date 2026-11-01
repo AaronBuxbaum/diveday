@@ -246,7 +246,7 @@ describe("physician medical clearance: retiring a refusal", () => {
       expect(row?.overriddenRefusal).not.toBeNull();
     });
 
-    it("lets any staffer record paper after a refusal (H-98)", async () => {
+    it("lets any staffer record paper after a refusal (H-20261007-after-physician-says-no)", async () => {
       const { db, shop, booking, owner } = await refusedOverAnOlderCleanRelease();
       await retireMedicalRefusal(db, {
         shopId: shop.id,

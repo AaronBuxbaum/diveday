@@ -37,7 +37,7 @@ decides nothing: staff record the physician's answer.
   `medical_diver_form_not_used`. Staff "Can't use this form" does the same and reopens the slot.
 - **Erasure, export, retention.** `anonymizeDiver` queues the file and nulls the URL; the sent
   time survives as a fact. The export carries `diver_medical_form_sent_at`, never the URL. Retention
-  is the release's own (kept, pending H-02), and the column is empty once an answer is recorded.
+  is the release's own (kept, pending H-20260730-evidence-retention-period-deletion), and the column is empty once an answer is recorded.
 - The return line leads with the upload; the shop's email or counter is the fallback.
 
 ## Alternatives considered
@@ -51,4 +51,4 @@ The pre-decision read is wider than the evaluation's, briefly; the trail makes i
 form sent from a second seat's link is shown on the diver record and can be used for the answer, or
 stays until that hold is answered or the diver erased. The link never replaces a form; staff
 reopen the slot. Revisit if uploads are abused (a
-malware scan would be a new dependency and its own ADR), or if H-02 sets a retention clock.
+malware scan would be a new dependency and its own ADR), or if H-20260730-evidence-retention-period-deletion sets a retention clock.

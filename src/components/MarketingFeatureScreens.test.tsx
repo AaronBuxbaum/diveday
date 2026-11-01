@@ -216,7 +216,7 @@ describe("the feature screens' words", () => {
 
   /**
    * The release and the medical form stay English in every language
-   * (H-01/H-03), and the real page tells a reader in another language so
+   * (H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit), and the real page tells a reader in another language so
    * before they sign. The mock does both.
    */
   it("keeps the medical question English in Spanish, under the page's own notice", () => {

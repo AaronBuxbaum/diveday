@@ -140,7 +140,7 @@ function SectionMarker({ children, as: Tag = "p" }: { children: ReactNode; as?: 
 
 /**
  * One booking, followed from the shop's website to the boat and home again
- * (H-93, the 2026-10-05 rework). Each step is the screen that does it, two of
+ * (H-20261005-public-pages-sell, the 2026-10-05 rework). Each step is the screen that does it, two of
  * the builder's notes beside it, and a link to the feature page that tells the
  * rest. The order is the order a diver meets the shop in, which is also the
  * order an owner's doubts arrive in: will they book, does the paperwork come
@@ -196,7 +196,7 @@ const STEPS: readonly {
   },
   {
     // The hero draws the roll-call phone, so this step draws the check-in
-    // page's dock screen, by key (B14, 2026-10-25); the notes keep H-94's
+    // page's dock screen, by key (B14, 2026-10-25); the notes keep H-20260802-may-public-pages-say's
     // no-signal claim.
     id: "aboard",
     feature: "boat-manifest",
@@ -224,7 +224,7 @@ const STEPS: readonly {
  * Next's `"use cache"` interleaving rules).
  *
  * The page's shape (redesigned 2026-08-13, its middle rewritten 2026-10-05 for
- * H-93): the hero says what DiveDay is and what a shop gets, the steps follow
+ * H-20261005-public-pages-sell): the hero says what DiveDay is and what a shop gets, the steps follow
  * one booking to the boat, the directory names every feature page, and the
  * records band and the close answer how a shop arrives, leaves and pays. Each
  * section has its own composition rather than six renders of the same

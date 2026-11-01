@@ -31,7 +31,7 @@ async function recapContext(diver: { fullName: string; email: string } = RAE) {
   return { db, shop, reef, bookingId: party.bookings[0].bookingId };
 }
 
-describe("a photo shared with the boat (H-129)", () => {
+describe("a photo shared with the boat (H-20261014-share-photo-with-boat)", () => {
   const SAM = { fullName: "Sam Shutter", email: "recap-sam@example.com" };
 
   it("hides an ashore diver's photo until a later boarding, and still closes an ashore viewer's recap", async () => {

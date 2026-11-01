@@ -58,7 +58,7 @@ afterEach(() => {
 });
 
 /**
- * H-108 (issues #2261, #2346): the counter is told where the person stands
+ * H-20261008-counter-rental-waiver-informs (issues #2261, #2346): the counter is told where the person stands
  * with the waiver and offered the link, and nothing waits on it.
  */
 describe("CounterRentalWaiverLine", () => {
@@ -102,7 +102,7 @@ describe("CounterRentalWaiverLine", () => {
     expect(screen.queryByRole("button", { name: "Send waiver" })).toBeNull();
   });
 
-  // Dive-domain review: H-98 as amended lets a later clean release stand over
+  // Dive-domain review: H-20261007-after-physician-says-no as amended lets a later clean release stand over
   // a physician's "not cleared"; the counter says it as the manifest does.
   it("warns of a physician's earlier refusal under a later clean signature, with the record", () => {
     render(

@@ -153,7 +153,7 @@ export function decideBuild({ previousSha, commitSha }, git = gitReader) {
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  // The deploy gate first (scripts/deploy-gate.mjs, H-158): with
+  // The deploy gate first (scripts/deploy-gate.mjs, H-20261021-deploy-gate-from-first): with
   // DEPLOY_REQUIRES_GREEN on, a push-triggered production build is cancelled
   // here and deploy-gate.yml deploys the commit once its CI is green. Off, and
   // on every preview, this answers null and nothing below changes.

@@ -67,7 +67,7 @@ export function VoidCounterOrderForm({ orderId, t }: { orderId: string; t: Staff
 /**
  * **Record payment: cash / card machine / room** on an open invoice (fourth UX
  * review, item 19). Cash and the card machine are one tap each, held eight
- * seconds with Undo before anything is recorded (issue #3030, H-68;
+ * seconds with Undo before anything is recorded (issue #3030, H-20260906-diveday-fill-already-knows;
  * `CounterPaymentHold`). A room charge (fifth-loop ideas, item 57) opens to
  * ask which room, and which hotel where the shop serves more than one, and
  * records on its confirm.

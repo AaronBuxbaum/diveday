@@ -169,7 +169,7 @@ export type BuilderCopy = {
   impactTurnaroundBoat: string;
   impactTurnaroundCrew: string;
   /**
-   * The hull already out on another departure at those hours (H-80: one hull,
+   * The hull already out on another departure at those hours (H-20260916-may-one-hull-carry: one hull,
    * one departure at a time). Takes `{boat}` and `{departure}`; one line per
    * other departure, so no plural pair.
    */

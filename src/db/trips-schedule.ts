@@ -420,7 +420,7 @@ export async function duplicateTrip(
     // existed would otherwise propagate on every copy, which is how one
     // cross-tenant row becomes a season of them.
     const boatId = (await validateBoat(tx, shopId, source.boatId)) ? source.boatId : null;
-    // **A copy starts inside the certificate** (H-107). The source may predate
+    // **A copy starts inside the certificate** (H-20261009-certificate-caps-seats). The source may predate
     // the refusal, or sit on a hull whose certificate was recorded since; the
     // copy takes the lower number rather than carrying the old one forward.
     const seats = seatsWithinCertificate(
@@ -454,7 +454,7 @@ export async function duplicateTrip(
       // marked a charter self-guided and then copied it to next Saturday must
       // not find the copy raising the row the mark exists to silence.
       selfGuided: source.selfGuided,
-      // Copied too: a copy of a decompression charter is one (H-84).
+      // Copied too: a copy of a decompression charter is one (H-20260916-may-diveday-assert-about).
       exceedsNoDecoLimits: source.exceedsNoDecoLimits,
       diveMode: source.diveMode,
       // Copied outright, and deliberately *not* re-checked through

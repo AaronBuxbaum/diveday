@@ -608,7 +608,7 @@ body {
 }
 
 /*
- * **Boat mode** (ADR 20261001-logbook, decision 6, as amended by H-97). The
+ * **Boat mode** (ADR 20261001-logbook, decision 6, as amended by H-20261006-boat-mode-dark-sun). The
  * roll call wears it in both schemes, in Atkinson Hyperlegible, with navy and
  * marine safety yellow as its identity. **By day it is light**: white ground,
  * navy ink, navy actions labelled in yellow. Sun reflected off a screen lands
@@ -1871,7 +1871,7 @@ select:not([multiple]):not([size]):dir(rtl) {
  * declaration that lets the *release* animate, since leaving `:active`
  * restores the rule above it. Up takes `--motion-quick` on the spring: a
  * finger gave the thing weight, which is the one claim `--ease-spring` is
- * rationed for (H-69 a; the arrival curve is the whole of the change if that
+ * rationed for (H-20260907-diveday-move-like-thing a; the arrival curve is the whole of the change if that
  * ration is declined).
  *
  * Transform only. A pressed state that also wants a background says so at its

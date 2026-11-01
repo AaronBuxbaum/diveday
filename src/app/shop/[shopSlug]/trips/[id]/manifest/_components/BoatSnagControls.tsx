@@ -95,7 +95,7 @@ export function SnagAnswer({
  * save. One action at the foot rather than one under every line, so the list
  * reads as a list. Closed at rest; a saved note appears under the line it
  * names, and the box empties for the next one. A note informs the next crew
- * and holds nothing (H-51).
+ * and holds nothing (H-20261025-shop-authored-pre-departure).
  */
 export function SnagNoteForm({
   items,

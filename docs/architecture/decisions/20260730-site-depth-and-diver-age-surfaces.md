@@ -12,21 +12,21 @@
 Two product-owner decisions landed together on 2026-07-30 (`docs/product/human-decisions/README.md`) and
 share one data spine — a diver's date of birth — so they ship as one change.
 
-**H-08 (depth ceilings).**
+**H-20260724-certification-levels-agency-rules (depth ceilings).**
 [20260724-course-admission-standards](20260724-course-admission-standards.md) recorded the agency
 depth ceilings as *documented reference data, explicitly not enforced*, for a concrete reason: the
 only depth DiveDay stored was `dive_sites.depth_range`, deliberately free text ("6–12 m",
 "18–40 m"). There was no number to compare a certification against. That ADR named "convert
 `depth_range` to a structured min/max" as the follow-up it was declining to do yet.
 
-**H-21 (minor indicators).** The minimum-age gate shipped in
+**H-20260730-minimum-age-gate-data (minor indicators).** The minimum-age gate shipped in
 [20260724-gear-fit-fallback](20260724-gear-fit-fallback.md) made age a fact DiveDay holds and
 enforces — but it surfaced nowhere a crew reads. A captain looking at the boarding list had no way
 to know a booked diver was 12 without opening their profile. The product owner asked for age in
 years, a minor indicator, and — separately, as a delight item — a celebratory birthday callout.
 
 A third requirement arrived mid-implementation: **shops must be able to work in feet or metres**,
-configured in settings. The launch jurisdiction is Florida (H-01), where crews say "sixty feet",
+configured in settings. The launch jurisdiction is Florida (H-20260730-jurisdiction-waiver-text-medical), where crews say "sixty feet",
 while every agency standard DiveDay encodes is published in metres.
 
 ## Decision
@@ -144,7 +144,7 @@ list, which is exactly when a depth advisory is actionable.
 
 The birthday callout uses a **seven-day window in either direction** (product owner's choice) and
 appears in two places: a badge on the roster row and manifest, and a `Celebrations` section above
-the roster that renders nothing when there is nothing to celebrate. H-21 described it as "a section
+the roster that renders nothing when there is nothing to celebrate. H-20260730-minimum-age-gate-data described it as "a section
 similar to the existing dive-count milestone" — no such milestone section exists in the codebase,
 so the shape was confirmed with the product owner rather than guessed.
 
@@ -186,8 +186,8 @@ order.
   adult. DiveDay enforces and surfaces only the depth half, so a 10-year-old on a 12 m site
   produces no line at all even though their buddy pairing is constrained. In practice supervision
   is the junior rule that more often goes wrong; this is a known gap, not an oversight.
-- **Solo waiver signature by a minor remains possible.** H-21 accepted this as-is for now,
-  explicitly flagged rather than silently left open, to be revisited with the broader H-01–H-03
+- **Solo waiver signature by a minor remains possible.** H-20260730-minimum-age-gate-data accepted this as-is for now,
+  explicitly flagged rather than silently left open, to be revisited with the broader H-20260730-jurisdiction-waiver-text-medical, H-20260730-evidence-retention-period-deletion, H-20260724-current-typed-name-explicit
   waiver legal review. Surfacing the minor badge is what makes the gap *visible* to staff in the
   meantime; it is not a fix for it.
 

@@ -19,7 +19,7 @@ import { SharedDepthAdvisories, sharedDepthAdvisories } from "./SharedDepthAdvis
 export function DiverRollCall({ context }: { context: DiverRollCallContext }) {
   const { idPrefix, divers: rosterDivers, checkpoint, isDeparture, locale, t } = context;
   // **A held seat shows the seat, not the matched person** (issue #1690,
-  // H-79): everything below, on screen and on paper, reads the withheld row,
+  // H-20260916-unconfirmed-identity-withhold-cost): everything below, on screen and on paper, reads the withheld row,
   // so no capsule, fact block or shared advisory can reach past it.
   const divers = rosterDivers.map(withholdHeldSeatParticulars);
   const { sharedAdvisories, sharedAdvisoryTexts } = sharedDepthAdvisories(divers, t);

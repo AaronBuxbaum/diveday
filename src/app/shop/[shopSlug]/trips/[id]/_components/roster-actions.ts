@@ -92,7 +92,7 @@ export async function tripRosterActions({
     carryWaitlistAction: carryWaitlistAction.bind(null, shopSlug, tripId),
     // The diver record's own check, bound to the shop only: each card names
     // its diver, and the action re-proves card, diver and staffer as it does
-    // there (H-105).
+    // there (H-20261008-cert-check-extension).
     agencyCheckAction: agencyCheckAction.bind(null, shopSlug),
     agencyListedAction: addAgencyListedCardsAction.bind(null, shopSlug),
     moveSeat: await seatMoveFor({

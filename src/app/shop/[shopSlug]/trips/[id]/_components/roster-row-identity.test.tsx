@@ -18,7 +18,7 @@ import type { ReadinessByBooking, RentalFitByBooking, RosterEntry, WaiverByBooki
 afterEach(cleanup);
 
 /**
- * H-13's flag gates **disclosure** as well as boarding (security review
+ * H-20260724-one-person-per-email's flag gates **disclosure** as well as boarding (security review
  * 2026-09-11). A seat attached to an existing person on a guess — a reused
  * email under a different name, or a name tapped off the counter's trigram
  * prompt (issue #1556) — used to render that person's whole record under a
@@ -230,7 +230,7 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
 
   /**
    * **The armed "Same person" carries the fact it turns on** (issue #1789,
-   * H-79): the matched diver's last dive day here, the same line the
+   * H-20260916-unconfirmed-identity-withhold-cost): the matched diver's last dive day here, the same line the
    * name-match prompt showed the staffer when the seat was taken. Said every
    * time, including "none": this is one question about one person.
    */
@@ -271,7 +271,7 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
 
   /**
    * **"Different person" asks who the new diver is** (issue #2081): a date of
-   * birth or a "They're 18 or older" tick (H-100), the date itself on a course
+   * birth or a "They're 18 or older" tick (H-20261007-held-seat-split-into), the date itself on a course
    * with a minimum age, and an optional email or
    * phone. Every box but the name starts empty: nothing of the matched
    * record's is offered as the new diver's.
@@ -293,7 +293,7 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
       const optionalDate = document.querySelector<HTMLInputElement>('input[name="dateOfBirth"]');
       expect(optionalDate).not.toBeNull();
       expect(optionalDate?.required).toBe(false);
-      // H-100: the other answer, one tap for an adult; the writer refuses neither.
+      // H-20261007-held-seat-split-into: the other answer, one tap for an adult; the writer refuses neither.
       const tick = document.querySelector<HTMLInputElement>('input[name="adultAttested"]');
       expect(tick?.type).toBe("checkbox");
       expect(tick?.checked).toBe(false);

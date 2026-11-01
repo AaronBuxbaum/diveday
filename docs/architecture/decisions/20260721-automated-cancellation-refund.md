@@ -8,7 +8,7 @@
 [The deposit and declarative cancellation-window slice](20260721-deposit-cancellation-policy.md)
 shipped `trips.cancellation_window_hours` as a *shown* cue and deliberately kept refunds
 staff-initiated, naming the automated version as the "highest-value" follow-up but deferring it
-because it moves real money on a finance- and safety-adjacent path. H-07's owner has now chosen to
+because it moves real money on a finance- and safety-adjacent path. H-20260724-payment-deposit-cancellation-refund's owner has now chosen to
 automate it. This ADR ships that mechanism with the same conservative, fail-safe posture: money only
 moves through the shop's own connected account, only when the shop's stated window still holds, and
 only for a payment we can actually reverse — everything else degrades to the staff-run refund the
@@ -51,7 +51,7 @@ declarative window already supported.
 ## Consequences
 
 - A cancel inside a shop's stated window now returns the diver's money automatically through the
-  shop's own account, with no staff step — the highest-value half of H-07's money automation.
+  shop's own account, with no staff step — the highest-value half of H-20260724-payment-deposit-cancellation-refund's money automation.
 - The feature is off until a shop both connects Stripe and states a window; with either absent it is
   exactly today's staff-run refund, so nothing changes for shops that have not opted in.
 - Money only moves on confirmed Stripe reversals; every ambiguous or non-Stripe case is surfaced to

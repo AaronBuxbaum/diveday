@@ -50,7 +50,7 @@ async function shoreColumns() {
   return row;
 }
 
-/** H-118 review: no alert reaches an address before its inbox said yes. */
+/** H-20261014-stale-roll-call-recipients review: no alert reaches an address before its inbox said yes. */
 describe("confirming a shore contact's address", () => {
   it("resolves the link to the shop and address, and confirms on consume, once", async () => {
     const { db, shop } = await shoreOnFile();
@@ -135,7 +135,7 @@ describe("confirming a shore contact's address", () => {
   });
 });
 
-/** H-118 review: every alert carries a link that takes the address off the shop. */
+/** H-20261014-stale-roll-call-recipients review: every alert carries a link that takes the address off the shop. */
 describe("stopping shore alerts by the link in one", () => {
   it("clears the shop's shore contact, and a second use says it already has", async () => {
     const { db, shop } = await shoreOnFile();

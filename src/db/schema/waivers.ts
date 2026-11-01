@@ -359,7 +359,7 @@ export const waiverRecords = pgTable(
      * and how to reach them.
      *
      * All null on every record a guardian never touched: an adult's, a
-     * diver's with no date of birth on file (the rule fails open, as H-08's
+     * diver's with no date of birth on file (the rule fails open, as H-20260724-certification-levels-agency-rules's
      * does), and every record signed before this shipped. **Null on a minor's
      * record is the block**: `guardianSignatureMissing` raises
      * `guardian_signature_missing` in readiness, and the issue path refuses to
@@ -383,7 +383,7 @@ export const waiverRecords = pgTable(
     guardianSignedAt: timestamp("guardian_signed_at", { withTimezone: true }),
     /**
      * **The guardian's address was erased on their own request**, and by whom
-     * (H-103, issue #1673). The guardian is a third party with no record of
+     * (H-20261007-guardian-email-erasure, issue #1673). The guardian is a third party with no record of
      * their own, so `eraseGuardianEmail` (`src/db/guardian-erasure.ts`) nulls
      * `guardian_email` alone and leaves the diver, the medical answers and
      * the co-signature standing. `guardian_email` is inside the version 1
@@ -593,7 +593,7 @@ export const waiverRecords = pgTable(
         and ${table.medicalClearanceDeclinedAt} is null)`,
     ),
     // An erased address stays erased: no writer may put one back on a release
-    // the guardian asked to be taken off (H-103, issue #1673).
+    // the guardian asked to be taken off (H-20261007-guardian-email-erasure, issue #1673).
     check(
       "waiver_records_guardian_email_erased_stays_erased",
       sql`${table.guardianEmailErasedAt} is null or ${table.guardianEmail} is null`,

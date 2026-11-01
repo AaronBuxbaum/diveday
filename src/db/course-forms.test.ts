@@ -581,7 +581,7 @@ describe("course forms — signing and readiness (in-memory PGlite)", () => {
     expect(await ctx.db.select().from(courseFormRecords)).toEqual([]);
   });
 
-  it("refuses a held seat (H-13): the link holder may not be the student on file", async () => {
+  it("refuses a held seat (H-20260724-one-person-per-email): the link holder may not be the student on file", async () => {
     const ctx = await courseContext();
     const form = await requireOneForm(ctx);
     await ctx.db

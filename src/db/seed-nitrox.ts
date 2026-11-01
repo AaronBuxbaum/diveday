@@ -79,7 +79,7 @@ export async function seedNitrox(
   // The imported nitrox state, on the same diver as the imported specialty card
   // above: verified so it is never a boarding blocker, unconfirmed so the *fill*
   // still gives plain air (authorizesNitroxFill) and the confirm asks the staffer
-  // to attest they have seen the card (H-24).
+  // to attest they have seen the card (H-20260725-two-findings-dive-domain).
   if (customers[12]) {
     await db.insert(nitroxCertifications).values([
       {
@@ -90,7 +90,7 @@ export async function seedNitrox(
         status: "verified" as const,
         // No reviewer and no date, deliberately: an import is not a review, and
         // `importedAt IS NOT NULL AND reviewedAt IS NULL` is the exact pair that
-        // raises the "certified · confirm to clear" nudge (H-24).
+        // raises the "certified · confirm to clear" nudge (H-20260725-two-findings-dive-domain).
         importedAt: nowDate(),
         importedFromLabel: "Coral Coast Divers",
       },

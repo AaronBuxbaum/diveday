@@ -112,7 +112,7 @@ describe("SeatDiverPanel name-match prompt", () => {
   });
 
   /**
-   * H-79 (issue #1698): the date of birth is what tells two people with one
+   * H-20260916-unconfirmed-identity-withhold-cost (issue #1698): the date of birth is what tells two people with one
    * name apart. This panel is both the walk-in door and the global add-booking
    * door, so one pin covers both pages; each page's own formatter is the
    * `confirmMatchesBorn` it hands in.

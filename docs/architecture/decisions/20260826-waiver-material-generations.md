@@ -29,7 +29,7 @@ keeps the conservative material default for compatibility with the first release
 - A material revision still invalidates standing signatures through the existing readiness path.
 - The legal assertion is auditable and never overwritten; changing one's mind is another published
   version and another trail row.
-- H-01–H-03 remain open: this mechanism records a shop's choice but does not make a waiver legally
+- H-20260730-jurisdiction-waiver-text-medical, H-20260730-evidence-retention-period-deletion, H-20260724-current-typed-name-explicit remain open: this mechanism records a shop's choice but does not make a waiver legally
   sufficient in any jurisdiction.
 
 ## Alternatives considered

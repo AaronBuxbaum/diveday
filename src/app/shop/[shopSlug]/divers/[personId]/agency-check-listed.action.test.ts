@@ -10,7 +10,7 @@ import { SEEDED_OWNER_EMAIL, seededStaffPersonId, staffSession } from "@/test/st
 const ctx = fileScopedShopContext();
 
 /**
- * **A nitrox or specialty card certified by the agency's own page** (H-105, issue #2592), in a file of its own so the level-card tests stay under the file-length limit.
+ * **A nitrox or specialty card certified by the agency's own page** (H-20261008-cert-check-extension, issue #2592), in a file of its own so the level-card tests stay under the file-length limit.
  *
  * The extension hands back whatever text the agency's page showed; the verdict
  * is the server's, from the card and the diver as the database holds them.

@@ -22,7 +22,7 @@ import { sizedRentalKindOfGearKind } from "@/lib/rentals";
  * What this replaced said one fact three ways: three stat tiles counting out /
  * due back / service due, a Returns panel listing the first two again, and a
  * "Where it is" column saying it a third time on every row of a bordered
- * table. The tiles and the panel are gone (H-49 — there is no legacy to
+ * table. The tiles and the panel are gone (H-20260815-no-legacy — there is no legacy to
  * carry); their acts ride the rows they were always about.
  *
  * Four rules hold here, and `GearRegisterLedger.test.tsx` pins each one:

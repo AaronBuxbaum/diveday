@@ -6,7 +6,7 @@ import { liveTrip } from "@/db/trips-live";
 import { HOUR_MS } from "@/lib/clock";
 
 /**
- * **Two departures on one hull at the same hours** (H-80, issue #2135): the
+ * **Two departures on one hull at the same hours** (H-20260916-may-one-hull-carry, issue #2135): the
  * first two upcoming departures that do not overlap are put on the shop's
  * first boat, then the later one is moved onto the earlier one. Returns the
  * departure that moved and the one it landed on.

@@ -25,7 +25,7 @@ describe("the counter-rental ticket", () => {
   });
 
   /**
-   * Issue #2261, H-108: the person's waiver is said on screen with the link to
+   * Issue #2261, H-20261008-counter-rental-waiver-informs: the person's waiver is said on screen with the link to
    * send, never on the slip they carry away, and nothing on the ticket waits
    * on it.
    */

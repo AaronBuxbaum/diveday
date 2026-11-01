@@ -299,7 +299,7 @@ export const BLOCKER_CATEGORY: Record<ReadinessBlockerCode, BlockerCategory> = {
  * - **`unknown`** — nothing on file that clears them. An unsigned, unsent or
  *   expired waiver means **no medical declaration at all**, not a filing
  *   error; `identity_unconfirmed` means the human aboard may not be the human
- *   whose cards and answers are on file (H-13); `readiness_unavailable` means
+ *   whose cards and answers are on file (H-20260724-one-person-per-email); `readiness_unavailable` means
  *   the lookup failed, and this module already says a safety surface must
  *   never treat that as a pass; `requirements_not_configured` means nobody's
  *   cards were checked against anything.
@@ -452,7 +452,7 @@ export type ReadinessInput = {
   paymentStatus?: PaymentStatus | null;
   /**
    * The booking attached itself to an existing person on something short of
-   * proof and has not been staff-confirmed (H-13). Fails closed until staff
+   * proof and has not been staff-confirmed (H-20260724-one-person-per-email). Fails closed until staff
    * confirm it is the same human, so a seat can't board on borrowed evidence.
    *
    * **Two doors raise it, and the module that acts on the flag documented one**
@@ -469,7 +469,7 @@ export type ReadinessInput = {
   identityUnconfirmed?: boolean;
   /**
    * The course's stated minimum age and the diver's date of birth, if the shop
-   * has one on file (H-08). Checked here as well as at booking, because a
+   * has one on file (H-20260724-certification-levels-agency-rules). Checked here as well as at booking, because a
    * booking-time-only gate is inert for every diver whose date was recorded
    * *after* they booked — which, since nothing collected dates before this
    * shipped, is nearly all of them. Fails open: no date, no minimum, no
@@ -499,9 +499,9 @@ export type ReadinessInput = {
    * What this person is doing on the boat (ADR 20261007-participant-types).
    * Absent is a diver.
    *
-   * A snorkeler or a rider is held to the trip's **waiver** (H-01/H-03) and a
+   * A snorkeler or a rider is held to the trip's **waiver** (H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit) and a
    * snorkeler to its medical too; a rider is never held on a medical referral
-   * or refusal (H-109, `isHeldToMedical`). Both are held to its **payment**
+   * or refusal (H-20261009-rider-snorkeler-medical, `isHeldToMedical`). Both are held to its **payment**
    * gate, and to the identity and minimum-age checks, which are about the
    * person rather than the dive. They are held to
    * **no** certification, specialty or nitrox requirement: there is no dive for
@@ -983,7 +983,7 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
   // Evaluated ahead of — and independently of — the trip's own requirements: a
   // booking that attached itself to an existing person on something short of
   // proof must never board on that person's certs/waiver until staff confirm it
-  // is the same human (H-13), even on a trip whose requirements aren't
+  // is the same human (H-20260724-one-person-per-email), even on a trip whose requirements aren't
   // configured yet.
   if (input.identityUnconfirmed) {
     blockers.push({ code: "identity_unconfirmed" });
@@ -1007,7 +1007,7 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
   }
 
   const rawState = waiverState(input.waiver, now);
-  // A rider is never held on a medical (H-109, issue #2212): a release a
+  // A rider is never held on a medical (H-20261009-rider-snorkeler-medical, issue #2212): a release a
   // referral parked or a physician refused is still the release they signed,
   // and the caller hands in the one `effectiveReleaseForRiderSeat` chose, which
   // has already been checked for currency. A snorkeler keeps the dive medical.
@@ -1018,11 +1018,11 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
       : rawState;
 
   // A medical answer is a fact about the diver, not about the departure
-  // (H-104, issue #2096): a referral nobody has cleared, or a physician's "no",
+  // (H-20261006-medical-holds-every-departure, issue #2096): a referral nobody has cleared, or a physician's "no",
   // holds the diver on every trip, including one whose requirements leave the
   // release off, and — like the two checks above — one whose requirements
   // nobody has configured yet. A clean release signed after a refusal is the
-  // record handed in here instead (H-98), so it reads "complete" and raises
+  // record handed in here instead (H-20261007-after-physician-says-no), so it reads "complete" and raises
   // neither.
   if (state === "medical_review") {
     blockers.push({ code: "medical_review" });

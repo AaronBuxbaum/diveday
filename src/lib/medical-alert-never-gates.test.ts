@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 
 /**
  * **The medical alert for the crew never gates** (glossary *Medical alert for
- * the crew*, H-153; domain review 1, S7), held by the source rather than by
+ * the crew*, H-20261023-medical-alert-for-the; domain review 1, S7), held by the source rather than by
  * one fixture's words. No module that decides readiness, admission, roll-call
  * readiness or medical review may import or read the alert. Equality tests
  * catch a gate only if it fires on the fixture's text; this catches any read.

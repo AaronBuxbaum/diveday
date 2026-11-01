@@ -111,7 +111,7 @@ const departureNotePayload = z.object({
 
 /**
  * **Cash or the card machine at the counter** (issue #3030, decided
- * 2026-10-25: one tap with an eight-second Undo hold, H-68). Not a message:
+ * 2026-10-25: one tap with an eight-second Undo hold, H-20260906-diveday-fill-already-knows). Not a message:
  * the same hold, so a mis-tap on the wrong order is taken back before any
  * money is recorded. Ids only; the amount is the order's own balance, read by
  * the executor at record time, never a number off the form.

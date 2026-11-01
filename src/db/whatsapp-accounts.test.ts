@@ -152,7 +152,7 @@ describe("connectShopWhatsAppAccount", () => {
 
   it("refuses a phone number another shop already holds, and stores nothing", async () => {
     // The number is the tenant key every inbound WhatsApp event is routed on
-    // (H-83), and two rows holding one would make a diver's message — a reply
+    // (H-20260916-may-dive-chain-share), and two rows holding one would make a diver's message — a reply
     // keyword in it up to a cancellation — land in an arbitrary one of them.
     const { db, shop } = ctx;
     const sibling = await siblingShop(db, "sibling-shop-number-taken");
@@ -171,7 +171,7 @@ describe("connectShopWhatsAppAccount", () => {
     expect(await shopIdForWhatsAppEvent(db, { phoneNumberId: "555", wabaId: null })).toBe(shop.id);
   });
 
-  it("lets a chain connect two shops under one WABA, a number each (H-83)", async () => {
+  it("lets a chain connect two shops under one WABA, a number each (H-20260916-may-dive-chain-share)", async () => {
     const { db, shop } = ctx;
     const sibling = await siblingShop(db, "sibling-shop-chain");
     const chain = { wabaId: "waba_chain" };
@@ -283,7 +283,7 @@ describe("getShopWhatsAppAccount", () => {
 });
 
 /**
- * **Whose event is this** (H-83, issue #1767): two shops of one chain share a
+ * **Whose event is this** (H-20260916-may-dive-chain-share, issue #1767): two shops of one chain share a
  * WABA, and each receives only what was sent to its own number.
  */
 describe("shopIdForWhatsAppEvent", () => {
@@ -370,7 +370,7 @@ describe("shopIdForWhatsAppEvent", () => {
 });
 
 /**
- * **One Connect per number at a time** (issues #1769 and #1767, H-83).
+ * **One Connect per number at a time** (issues #1769 and #1767, H-20260916-may-dive-chain-share).
  * Registering a number at Meta mints a PIN, and a row refused after that
  * leaves the number bound to a PIN nobody holds; recovery runs through Meta
  * support. So the pre-check, the Meta calls and the insert all run under locks

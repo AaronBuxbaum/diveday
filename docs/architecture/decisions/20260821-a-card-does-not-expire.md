@@ -9,7 +9,7 @@ Supersedes [20260723-certification-expiry-date-only](20260723-certification-expi
 
 `certifications.expires_at` and `specialty_certifications.expires_at` modelled a rule that does
 not exist. Neither PADI nor SSI expires a recreational certification or mandates a refresher —
-the glossary's **C-card** entry has said so since it was written — and H-08 responded in
+the glossary's **C-card** entry has said so since it was written — and H-20260724-certification-levels-agency-rules responded in
 2026-07-24 by *keeping* the column and its gating and relabelling the staff copy as a shop-set
 "refresher due" date. The relabel shipped, and the code underneath did not change: a date in the
 past made `validVerifiedCertification` false, which raised `certification_expired` /
@@ -17,7 +17,7 @@ past made `validVerifiedCertification` false, which raised `certification_expire
 strictest gate in the product — the one that decides who gets in the water — was enforcing a shop
 policy that no agency asks for and most shops never set.
 
-The product owner reversed the relabel half of H-08 on 2026-08-21 (issue #630, combining #626 and
+The product owner reversed the relabel half of H-20260724-certification-levels-agency-rules on 2026-08-21 (issue #630, combining #626 and
 #609). This ADR records the removal and the two things it deliberately leaves alone.
 
 **The claim is about a recreational *diver* card, and it is worth being exact**, because a
@@ -34,7 +34,7 @@ card, and no agency asks for one (`dive-domain-expert`, 2026-08-21).
 ## Decision
 
 - **Both columns are dropped** (`drizzle/20260821223019_drop-certification-expiry`), with the
-  `-- diveday:allow-destructive` line the guard requires and "pre-pilot, no users, H-49" as the
+  `-- diveday:allow-destructive` line the guard requires and "pre-pilot, no users, H-20260815-no-legacy" as the
   reason. No backfill, no tolerance code: there are no rows anyone would miss.
 - **`validVerifiedCertification(card)` is `status === "verified"` and nothing else.** It takes no
   `todayLocal`, and neither do `hasVerifiedCertificationAtLeast`, `certificationBlocker`,

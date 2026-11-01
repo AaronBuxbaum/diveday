@@ -118,12 +118,12 @@ function OfflineDiverRow({
   // diver's circle is a drawn held ring with no tap.
   const showBoardControl = ready || !isDeparture;
   // The live roll call's four medical warnings, dates only: two riding-only
-  // (H-109), an earlier refusal (H-98) and a referral still open (#2163). A
+  // (H-20261009-rider-snorkeler-medical), an earlier refusal (H-20261007-after-physician-says-no) and a referral still open (#2163). A
   // held seat never carries them, and the facts block below says why instead.
   const withheld = diver.identityWithheld || isHeldSeat(diver);
   const medicalWarnings = withheld ? undefined : diver.medicalWarnings;
   // The live roll call's capsule for the same facts, strongest first: riding
-  // only (H-109), then an earlier refusal (H-98), then an open referral.
+  // only (H-20261009-rider-snorkeler-medical), then an earlier refusal (H-20261007-after-physician-says-no), then an open referral.
   // Ahead of them, after a dive, the live row's medical-hold capsule (#2380):
   // a diver boarded over a physician's "no" or an open review, read through
   // the one predicate both surfaces share (`medicalHoldAfterDive`).
@@ -336,7 +336,7 @@ function OfflineDiverRow({
                     </p>
                   ) : null}
                   {/* The medical alert's words, as the diver wrote them, on a
-                    copy a permitted reader saved with them on purpose (H-153
+                    copy a permitted reader saved with them on purpose (H-20261023-medical-alert-for-the
                     amendment), with who saved it and that nobody reviewed it;
                     otherwise that this copy was saved without them and who can
                     save one that has them. Reading it here writes no event:

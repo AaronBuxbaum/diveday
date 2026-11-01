@@ -18,7 +18,7 @@ afterEach(cleanup);
 
 /**
  * **A diver boarding over a physician's earlier "no" says so on the row**
- * (H-98; dive-domain review of #2096). A clean new release clears the diver,
+ * (H-20261007-after-physician-says-no; dive-domain review of #2096). A clean new release clears the diver,
  * and the warning used to live only in the person sheet, one tap away from
  * the rail where the crew decides. It takes the row's one capsule below a
  * split buddy team and a desk blocker, and above the minor, depth and
@@ -49,7 +49,7 @@ describe("the earlier-refusal capsule", () => {
     );
   });
 
-  it("gives way to a rider's riding-only warning, which the row and its details both say (H-109)", () => {
+  it("gives way to a rider's riding-only warning, which the row and its details both say (H-20261009-rider-snorkeler-medical)", () => {
     // A clean release over an older "no", and a later "no" the rider boards
     // under: both warnings stand, and the riding-only one takes the row.
     const { container } = renderList({

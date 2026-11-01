@@ -336,7 +336,7 @@ export async function getSignedWaiverForDiver(
     .limit(1);
   if (!row) return null;
   const { record } = row;
-  // A release on a seat still held over who is in it (H-13) may not be this
+  // A release on a seat still held over who is in it (H-20260724-one-person-per-email) may not be this
   // diver's: what it says about them waits for that confirmation, as it does
   // on the roster.
   const identityHeld = Boolean(row.identityUnconfirmedAt);
@@ -363,7 +363,7 @@ export async function getSignedWaiverForDiver(
     guardian: identityHeld ? null : guardianSignatureOf(record),
     integrity: verifyWaiverIntegrity(record),
     /**
-     * When the co-signing guardian's address was erased on request (H-103) —
+     * When the co-signing guardian's address was erased on request (H-20261007-guardian-email-erasure) —
      * the note a redacted release carries, so its blank address reads as the
      * shop's act rather than as a field nobody filled.
      */

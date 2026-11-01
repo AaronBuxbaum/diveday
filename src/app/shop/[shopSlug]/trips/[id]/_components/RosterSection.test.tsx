@@ -27,7 +27,7 @@ afterEach(cleanup);
  * a restyle may move everything here except what these assert.
  */
 
-describe("the decompression reminder on the roster (H-144)", () => {
+describe("the decompression reminder on the roster (H-20261017-decompression-departure-reminds-crew)", () => {
   const words = "decompression card";
   const rowsFor = (type: "diver" | "snorkeler" | "rider") => ({
     roster: [entry("b1", "Meera Iyer", { participantType: type })],
@@ -639,7 +639,7 @@ describe("the one-line row", () => {
 
 /**
  * **A snorkeler held on a medical is told how to board them riding only**
- * (H-109, issue #2382). Staff switch the seat to rider; the rider chip carries
+ * (H-20261009-rider-snorkeler-medical, issue #2382). Staff switch the seat to rider; the rider chip carries
  * the warning. No new clearance exists, so the hint is only a pointer, and only
  * on a seat that is in the water on a medical hold.
  */

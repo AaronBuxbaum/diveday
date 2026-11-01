@@ -5,13 +5,13 @@ type CertificationAgency = (typeof CERTIFICATION_AGENCIES)[number];
 /**
  * **Where a staffer checks a card with the agency that issued it.**
  *
- * H-10 (docs/product/human-decisions/README.md) dropped agency API integration because
+ * H-20261007-request-supported-c-card (docs/product/human-decisions/README.md) dropped agency API integration because
  * no agency offers one: a shop looks the diver up in the agency's own portal
  * and marks the card sighted. This registry is the shortcut to that portal and
  * nothing more. The staff UI renders each entry as a plain link that opens the
  * agency's page in a new tab; DiveDay's servers never fetch, scrape or post to
- * any of these addresses, which is what keeps it inside H-10 (market audit
- * 2026-10-07, item 30). Since H-105 the DiveDay browser extension may open the
+ * any of these addresses, which is what keeps it inside H-20261007-request-supported-c-card (market audit
+ * 2026-10-07, item 30). Since H-20261008-cert-check-extension the DiveDay browser extension may open the
  * same page from the staffer's own browser and fill it in for them
  * (`src/lib/agency-check.ts`, `extension/agencies.js`, which must name the same
  * addresses).

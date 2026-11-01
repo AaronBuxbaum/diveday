@@ -108,7 +108,7 @@ describe("NoticeBanner", () => {
    * card above"), which makes it the one where a *forged* specific refusal does
    * the most damage: "their Deep card isn't on file" points a staffer straight
    * at the certifications form, and a hand-entered card lands `pending` — which
-   * clears `decideTripAdmission` on the next attempt (H-24). So a value nobody
+   * clears `decideTripAdmission` on the next attempt (H-20260725-two-findings-dive-domain). So a value nobody
    * signed must degrade to the generic sentence, and never to the specific one
    * or to nothing at all.
    */

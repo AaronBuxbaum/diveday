@@ -171,7 +171,7 @@ describe("permission gating", () => {
     );
     // Neither the inbox nor Requests is on this list, and that pairing is the
     // point. The inbox's gate went on 2026-09-10 (issues #1505/#1518) and
-    // Requests' on 2026-09-16 (issue #1679), both as H-14 amendments and both
+    // Requests' on 2026-09-16 (issue #1679), both as H-20260724-staff-role-reach amendments and both
     // *deleted* rather than relaxed. The reason Requests carried one — a pile
     // of contact details for people who have not booked — stopped
     // distinguishing it the day the inbox began showing a stranger's address
@@ -321,7 +321,7 @@ describe("what each consumer derives", () => {
   });
 
   /**
-   * And Requests beside it, since 2026-09-16 (issue #1679, the same H-14 row).
+   * And Requests beside it, since 2026-09-16 (issue #1679, the same H-20260724-staff-role-reach row).
    * Asserted on its own for the same reason Inbox is: the gated-ids list above
    * would still pass if Requests were dropped from the registry outright.
    *
@@ -352,7 +352,7 @@ describe("what each consumer derives", () => {
 
   it("has no Close-out destination at all, and files Orders under Money", () => {
     // The evening is a state the shop home settles into, not a place to go
-    // (H-62). An entry pointing at the bare home would be a second row landing
+    // (H-20260827-close-out-remain-own). An entry pointing at the bare home would be a second row landing
     // on Today's own URL — the duplicate control principle 8 forbids — so this
     // registry holds nothing for it.
     expect(STAFF_DESTINATIONS.some((destination) => destination.suffix === "/close-out")).toBe(

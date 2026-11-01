@@ -61,7 +61,7 @@ const FILE_ROW_CLASS = `flex flex-col gap-3 ${FILE_ROW_INSET} sm:flex-row sm:ite
  * `state` is computed once by `certificationCardRowState`
  * (`src/lib/certification-cards.ts`) and never re-derived here. That matters
  * more than it looks: flattening the two shipped display unions into four
- * values is exactly where H-24 gets lost — an imported *level* card genuinely
+ * values is exactly where H-20260725-two-findings-dive-domain gets lost — an imported *level* card genuinely
  * clears and an imported *specialty* or *nitrox* card does not — and a row
  * component that recomputed it from a `kind` prop would be the second place
  * that rule could drift. So the SPEC's `kind` prop lives on the mapper

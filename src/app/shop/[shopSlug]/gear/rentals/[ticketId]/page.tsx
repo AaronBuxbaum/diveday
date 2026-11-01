@@ -94,7 +94,7 @@ const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey; counted?
  * and on paper: the lines, the total, and whether it is paid, with a code to
  * pay an open invoice by card on the spot (Aaron, 2026-10-09).
  *
- * Ungated beyond staff, like the rest of the register (H-06): handing gear
+ * Ungated beyond staff, like the rest of the register (H-20260724-initial-gear-policy-sizing): handing gear
  * over is day work. Tenancy is the session's shop; another shop's id, or a
  * reservation held by a booking, is a 404.
  */
@@ -171,7 +171,7 @@ export default async function CounterRentalTicketPage({
           </div>
         ) : null}
 
-        {/* **The person's waiver, informing only** (issue #2261, H-108).
+        {/* **The person's waiver, informing only** (issue #2261, H-20261008-counter-rental-waiver-informs).
             Screen only — the slip the person carries away is a receipt for
             gear, not a note about them. */}
         <CounterRentalWaiverLine

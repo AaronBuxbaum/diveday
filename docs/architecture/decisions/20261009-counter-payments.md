@@ -25,7 +25,7 @@ Stripe-settled order does.
   entitlements and the `order.paid` integration event, in one transaction. No Stripe call, no email,
   no booking. Line items carry `createOrder`'s exact bounds; the payer must belong to the shop.
 - **Any active staff member may record one.** Taking cash at the counter is day work, like renting
-  the gear out (H-06). Billing a diver by invoice stays owner/manager (H-14, `createOrder`).
+  the gear out (H-20260724-initial-gear-policy-sizing). Billing a diver by invoice stays owner/manager (H-20260724-staff-role-reach, `createOrder`).
 - **Correcting a mistake is local and owner/manager.** `voidCounterOrder` sets `void`, stamps
   `voided_at` and zeroes `amount_paid_cents`, so Reports drops it. Only a `paid` counter order
   qualifies (not a counter-settled invoice; see the 2026-10-14 amendment); a counter order is never
@@ -147,7 +147,7 @@ its id and that shop, and settles through the same `settleCounterClaim` a real c
 uses. A real shop never reaches it (`not_demo`), and a room charge on a demo shop stays refused with
 the demo note. Refresh, Void and Refund stay disabled on a demo order.
 
-## Amendment 2026-10-25: Record payment holds eight seconds with Undo (issue #3030, H-159)
+## Amendment 2026-10-25: Record payment holds eight seconds with Undo (issue #3030, H-20261024-counter-payment-undo-hold)
 
 Cash and Card machine on an open invoice stay one tap, but the tap no longer records: it holds the
 payment as a `counter_payment` held send ([20260906-before-you-ask](20260906-before-you-ask.md),

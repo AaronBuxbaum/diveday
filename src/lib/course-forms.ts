@@ -254,7 +254,7 @@ export function normalizeCourseFormText(text: string): string {
 /**
  * **A form still waiting for the shop's text.** A course template names the
  * forms its agency expects, by title only (DiveDay ships no agency wording,
- * H-10), so a form made from that list starts with an empty body. Until the
+ * H-20261007-request-supported-c-card), so a form made from that list starts with an empty body. Until the
  * shop pastes the agency's wording in, it is asked of nobody: it cannot be
  * signed, sent, or owed, and it blocks no one. Saving text over it is the
  * act that starts asking.

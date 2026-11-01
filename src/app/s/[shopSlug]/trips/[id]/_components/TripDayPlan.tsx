@@ -267,7 +267,7 @@ function SiteSeen({
  * heading as loud as the page's own `h1`, a swipeable deck of photo cards and a
  * comparison table — roughly a thousand pixels of reading placed where only a
  * diver who had already paid would ever reach it. Slice 7c then took the deck
- * off `/ready` too and deleted it (H-49), so these two beats are the whole of
+ * off `/ready` too and deleted it (H-20260815-no-legacy), so these two beats are the whole of
  * what the product says about what a day dives.
  *
  * What survives here is what a deciding diver actually needs: the run of dives

@@ -19,7 +19,7 @@ const ctx = fileScopedShopContext();
 
 /**
  * Team management is the gate over the gates: whoever can edit roles here can
- * hand themselves every other H-14 surface — refunds, erasure, pricing — on the
+ * hand themselves every other H-20260724-staff-role-reach surface — refunds, erasure, pricing — on the
  * next request. So a captain reaching `saveStaffRolesAction` with a hand-made
  * form post is the privilege-escalation path in this codebase, and
  * `teamManagementBlock()` is the only thing closing it.

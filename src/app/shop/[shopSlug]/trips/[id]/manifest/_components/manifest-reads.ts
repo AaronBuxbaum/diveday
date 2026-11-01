@@ -172,7 +172,7 @@ export async function readManifestPage(
     // What this reader may do here: start a report, and whose owners were
     // alerted (issue #2694); whether they may read the medical alerts (issue
     // #2960). Never the words: they leave the server only through a recorded
-    // tap or an explicit offline save (H-153).
+    // tap or an explicit offline save (H-20261023-medical-alert-for-the).
     reader: {
       mayStartIncidentReport,
       alerted: new Set(
@@ -185,7 +185,7 @@ export async function readManifestPage(
       // The server decides on the confirm.
       mayEmergencyReadMedicalAlerts:
         !mayReadMedicalAlerts && (emergencyStanding === "open" || emergencyStanding === "not_yet"),
-      // Offer "Save the medical alerts for offline" (H-153 amendment) only to
+      // Offer "Save the medical alerts for offline" (H-20261023-medical-alert-for-the amendment) only to
       // a reader allowed the words, on a departure where a seat has an alert.
       mayCarryMedicalAlertsOffline:
         mayReadMedicalAlerts &&

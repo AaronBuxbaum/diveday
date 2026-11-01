@@ -44,7 +44,7 @@ import { latestDiveDayBooking, planLogEntryLink, sendYourDayLink } from "./your-
  * Deliberately excludes: past departures (a booking whose boat has already
  * sailed has no readiness page worth reissuing; an address with no current
  * booking at all gets its latest log entry instead, `sendLatestLogEntry`,
- * H-132), cancelled bookings, and cancelled/completed trips. One
+ * H-20261014-other-days-send-fresh), cancelled bookings, and cancelled/completed trips. One
  * email per current booking, never a single digest naming all of them —
  * a digest would tell whoever typed the address every trip that person has
  * booked, which is a disclosure a plain "we sent your link" is not.
@@ -205,7 +205,7 @@ const LOG_ENTRY_RESEND_GAP_MS = 24 * 60 * 60 * 1000;
 
 /**
  * **An address with only past days gets its latest log entry** (fifth-loop
- * ideas, item 38; H-132). One email, the newest dive day's recap link, to the
+ * ideas, item 38; H-20261014-other-days-send-fresh). One email, the newest dive day's recap link, to the
  * address on file, never a list of every day: the same "one booking per mail"
  * line the current-booking half holds.
  *

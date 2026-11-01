@@ -80,7 +80,7 @@ Non-negotiable, from the ADRs:
   - Shipped code outranks the canvas; the ADR outranks both.
   - One measure on the thread; status said once by the spine; money resolves in one block.
   - Coral fires exactly three times: booked, paperwork done, home from the dive.
-  - The release text stays fully presented; waiver/medical wording stays English (H-01/H-03).
+  - The release text stays fully presented; waiver/medical wording stays English (H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit).
   - The embed contract, JSON-LD, capability-token discipline and anti-enumeration behavior of
     find-my-booking are untouched.
   - Every colour-carried state also carries a word; drawn SVG, never emoji, on anything new.

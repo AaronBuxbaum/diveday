@@ -25,7 +25,7 @@ export const instant = true;
  * `personId` is the record merged away and `survivorId` the record kept; the
  * preview's own "Keep … instead" swaps the two segments.
  *
- * Owner or manager only, like the merge itself (H-14): anyone else is sent to
+ * Owner or manager only, like the merge itself (H-20260724-staff-role-reach): anyone else is sent to
  * the record with the same refusal the action gives. A pair that is not two
  * records of this shop is a 404, the same answer a stranger's id gets
  * anywhere, so the page never says whether another shop has that diver. A

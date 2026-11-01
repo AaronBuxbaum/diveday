@@ -22,7 +22,7 @@ import { settingsBlock } from "./action-helpers";
 
 /**
  * The reference's fixed lines, the shore contact's alert address and its
- * consent box (H-118), plus a numbered label and phone per contact on the
+ * consent box (H-20261014-stale-roll-call-recipients), plus a numbered label and phone per contact on the
  * catch-all.
  */
 const emergencyForm = z
@@ -46,7 +46,7 @@ const emergencyForm = z
  * so any shape this imposed would be wrong somewhere — and a wrong number on
  * the one screen a crew reads offshore is worse than an empty one.
  *
- * The one exception is the shore contact's alert address (H-118), which
+ * The one exception is the shore contact's alert address (H-20261014-stale-roll-call-recipients), which
  * DiveDay sends to: it must be an address, and it saves only with the box
  * that records the shore contact agreed to hear, drawn for that address
  * (`shoreAlertConsentFor`; a changed address never inherits the old tick).
@@ -145,7 +145,7 @@ async function confirmationNotice(
 
 /**
  * Mints a confirmation link for the shop's shore address and sends it there,
- * and nowhere else (H-118 security review). Rate-limited per shop, and per
+ * and nowhere else (H-20261014-stale-roll-call-recipients security review). Rate-limited per shop, and per
  * recipient in the front desk confirmation's own bucket (issue #1288), so one
  * inbox has one hourly allowance whichever link the shop sends it (security
  * re-review #4): without them a save-and-resend loop is a branded-mail relay

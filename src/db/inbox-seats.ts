@@ -10,7 +10,7 @@ export type InboxSeat = MessageSeat & {
   /** Inside the running-late window when they wrote (`messageSeats`). */
   lateWindow: boolean;
   /**
-   * On an Ask to move (H-126), why the roster's Move will refuse this seat as
+   * On an Ask to move (H-20261014-ask-to-move), why the roster's Move will refuse this seat as
    * it stands (issue #2668): it leads a party (`moveBooking`'s `leads_party`,
    * with the party's live seats), or it sits on a buddy team (`on_buddy_team`).
    * Read off the booking when the Inbox lists it; absent otherwise.
@@ -22,7 +22,7 @@ type Message = {
   id: string;
   personId: string | null;
   receivedAt: Date;
-  /** Set on an "Ask to move" from the booking page (H-126): the seat it is about. */
+  /** Set on an "Ask to move" from the booking page (H-20261014-ask-to-move): the seat it is about. */
   bookingId?: string | null;
 };
 
@@ -44,7 +44,7 @@ export async function inboxSeats(
   now: Date,
 ): Promise<Map<string, InboxSeat[]>> {
   const found = new Map<string, InboxSeat[]>();
-  // A message that names its booking (an Ask to move, H-126) is about that
+  // A message that names its booking (an Ask to move, H-20261014-ask-to-move) is about that
   // seat alone, whenever it departs, and never offers the late mark; any other
   // answer here is the late-window seat.
   const late = await messageSeats(db, shopId, messages, now);

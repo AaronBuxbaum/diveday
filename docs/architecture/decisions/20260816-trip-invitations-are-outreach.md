@@ -49,7 +49,7 @@ not a booking, and not a readiness signal.
   with it**. Neither `anonymizeDiver` nor `eraseDiverAction` catches, so the owner would have met a
   server-action error over an erasure that never happened: total and opaque rather than silent.
 
-  H-49 is the rule that decides it: a column nothing writes is dropped rather than defended, and
+  H-20260815-no-legacy is the rule that decides it: a column nothing writes is dropped rather than defended, and
   dropping it removes the hazard instead of sequencing a delete around it. The bridge is still a
   fine idea; when someone builds it, it arrives with a writer, and re-adding a nullable column and
   an enum value is a smaller change than the silent-erasure failure this leaves behind.

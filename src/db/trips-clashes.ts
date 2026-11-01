@@ -22,7 +22,7 @@ import { tripShiftPlan } from "./trips-schedule";
 
 /**
  * **Two departures in each other's way** — the overlap rule both clash readers
- * share, and the boat half of it (H-80, issue #1780).
+ * share, and the boat half of it (H-20260916-may-one-hull-carry, issue #1780).
  *
  * ## One predicate
  *
@@ -40,7 +40,7 @@ import { tripShiftPlan } from "./trips-schedule";
  *
  * ## One hull, one departure at a time
  *
- * H-80 settled the product question #1780 asked: a boat is on one departure at
+ * H-20260916-may-one-hull-carry settled the product question #1780 asked: a boat is on one departure at
  * a time. A shop wanting a course group and a fun-dive group on one charter
  * models it as **one** departure, which is what a manifest with groups is for.
  * So two overlapping departures naming the same `boat_id` are a mistake worth

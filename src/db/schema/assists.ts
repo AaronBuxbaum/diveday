@@ -30,7 +30,7 @@ import { shops } from "./core";
  *
  * `cost_micro_usd` is computed at write time from the list price
  * (`costMicroUsd` in `src/lib/claude/models.ts`), so a later price change does
- * not rewrite history. Rows cascade with their shop and age out with H-02's
+ * not rewrite history. Rows cascade with their shop and age out with H-20260730-evidence-retention-period-deletion's
  * retention prune.
  */
 export const claudeUsage = pgTable(
@@ -148,7 +148,7 @@ export const claudeDemoSpend = pgTable("claude_demo_spend", {
  * Codes, ids and the shop's own derived sentences only. The themes hold review
  * ids, never quotes, and the page reads each quote from its review row, so an
  * erased or unpublished review leaves with its row. Rows cascade with the shop
- * and age out with H-02's retention prune.
+ * and age out with H-20260730-evidence-retention-period-deletion's retention prune.
  */
 export const assistResults = pgTable(
   "assist_results",
@@ -179,8 +179,8 @@ export const assistResults = pgTable(
  * showing until it is saved again.
  *
  * Only the fields `TRANSLATABLE_FIELDS` lists (`src/lib/assists/shop-translate.ts`)
- * are ever written: never a waiver, a medical question or a course form (H-01,
- * H-03). An emptied box stores null rather than removing the row.
+ * are ever written: never a waiver, a medical question or a course form (H-20260730-jurisdiction-waiver-text-medical,
+ * H-20260724-current-typed-name-explicit). An emptied box stores null rather than removing the row.
  */
 export const shopTextTranslations = pgTable(
   "shop_text_translations",

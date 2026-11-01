@@ -581,14 +581,14 @@ const CHROME_CEILING = 20;
 // (`readBoatWork`), its sizes, nitrox and contact questions one statement over
 // the seats, where Today used to send four. It also counts each boat's open
 // orders, a statement Today did not send before.
-// 65 → 66: a "certification pending" row offers the agency check (H-105), so
+// 65 → 66: a "certification pending" row offers the agency check (H-20261008-cert-check-extension), so
 // Today reads which of the blocked divers' cards the extension could look up
 // (`listAgencyCheckableCards`), one statement beside the wave, not after it.
 // 66 → 69 (fourth review, items 12 and 14): Today names rostered crew who are
 // away (`crewAwayByTrip`, the departures' crew, schedule days and days away)
 // and keeps every crew assignment on "Your week" (`readerCrewedTrips`), three
 // statements in the queue's one wave.
-// 69 → 70 (H-80, issue #2135): a boat on two departures at once is raised on
+// 69 → 70 (H-20260916-may-one-hull-carry, issue #2135): a boat on two departures at once is raised on
 // Today beside the crew clash (`boatClashesByTrip`), one batched read in the
 // same wave as the crew's.
 // 70 → 71 (fifth loop, items 3 and 7): the count of found items waiting to go
@@ -603,14 +603,14 @@ const CHROME_CEILING = 20;
 // beside the roster, one statement in the same phase.
 const TODAY_CEILING = 74;
 // 49 → 50: the roster reads each diver's unspent package dives for the payment
-// control (`spendableDivesForTrip`, H-79, issue #1697). The held seat's
+// control (`spendableDivesForTrip`, H-20260916-unconfirmed-identity-withhold-cost, issue #1697). The held seat's
 // last-dive-day read beside it (`lastDiveDaysHere`, #1789) skips itself when no
 // seat on the departure is held, as none is on the one measured here.
 // 50 → 51 (third review, item 4): the band reads the boat's work through the
 // reader Today reads (`readBoatWork`), so it now also names nitrox with no card
 // and missing emergency contacts. One statement over the seats replaces the
 // shared prep list's fit check, and the open-orders count is the one it sent.
-// 51 → 52: the roster's agency check (H-105) reads the seated divers' checkable
+// 51 → 52: the roster's agency check (H-20261008-cert-check-extension) reads the seated divers' checkable
 // cards (`listAgencyCheckableCards`), one statement in `getTripGuests`' fan-out.
 // 52 → 54: the same read also asks for the divers' pending nitrox and specialty
 // cards (issue #2592), one statement each, in the same wave as the level read.
@@ -618,7 +618,7 @@ const TODAY_CEILING = 74;
 // roster reads each diver's course seats a training mark may name
 // (`trainingMarksForRoster`), one statement in the same wave. The marks
 // themselves cost nothing until one is set.
-// 55 → 66 (fifth loop, r5-6 item 44, H-130): the Invite section's past divers
+// 55 → 66 (fifth loop, r5-6 item 44, H-20261014-one-to-one-invite): the Invite section's past divers
 // of the site (`listInviteSuggestions`): the departure row, who is aboard or
 // already asked, the 30-day cooldown and the boat's gate in one wave, the
 // site's past divers, then every candidate's cards and courses in training in
@@ -683,7 +683,7 @@ const PUBLIC_TRIP_CEILING = 21;
 // away on the departure's days (`diverCrewWithAway`), which reads the
 // schedule days and the days away beside the crew. Measured 38; the phases
 // stay 5, since both ride the thread's one wave.
-// 38 → 39 (#2687, H-126): a seat that can still be released reads whether an
+// 38 → 39 (#2687, H-20261014-ask-to-move): a seat that can still be released reads whether an
 // ask to move stands (`hasMoveAsk`, one read), beside the rest of the page's
 // fan-out, so the phases stay 5. The seed's booking ids are random, so which
 // seat the test lands on varies: both a seat past the free window and one not
@@ -716,6 +716,6 @@ const READY_PHASE_CEILING = 5;
 const READY_PARTY_PHASE_CEILING = 7;
 // A party of three or six: the single seat's 40, plus the party panel's
 // own reads and one claim-link mint for every unclaimed seat together.
-// 40 → 42 (#2687, H-126): the same move-ask read as the single seat's, and
+// 40 → 42 (#2687, H-20261014-ask-to-move): the same move-ask read as the single seat's, and
 // the same dive-package read.
 const READY_PARTY_CEILING = 42;

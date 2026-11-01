@@ -1,7 +1,7 @@
 -- Issue #2532: #2334 stopped provider free text reaching `last_error`; rows
 -- written before it may still hold some (a Stripe message can quote the
 -- customer or input it refused, a drained queue row a thrown error's message).
--- Erasure promises hold pre-pilot too (H-02), so the old rows are cleaned now
+-- Erasure promises hold pre-pilot too (H-20260730-evidence-retention-period-deletion), so the old rows are cleaned now
 -- rather than waiting for a retry that a finished or abandoned row never gets.
 --
 -- An erasure ledger value survives only if it is exactly what a writer emits

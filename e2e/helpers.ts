@@ -848,7 +848,7 @@ export async function openDiverFileGroup(page: Page, label: string): Promise<Loc
 }
 
 /**
- * Open the Gear and sizes group's "Can’t fill a size?" disclosure — the H-06
+ * Open the Gear and sizes group's "Can’t fill a size?" disclosure — the H-20260724-initial-gear-policy-sizing
  * flag, which is a link-weight door inside the group now rather than a standing
  * form under the facts. Opens the group itself first, so a caller needs one
  * call for the two doors between it and the flag.

@@ -1004,7 +1004,7 @@ function groupCounterRentals(rows: readonly CounterRentalRow[]): CounterRentalTi
 
 /**
  * **Where each counter-rental holder stands with the shop's release** (issue
- * #2261, H-108): the ticket and the Rentals list say it, and nothing gates on
+ * #2261, H-20261008-counter-rental-waiver-informs): the ticket and the Rentals list say it, and nothing gates on
  * it. Read through the same `shopWaiverStatus` the diver record uses, because
  * the release belongs to the person — signed once, on any booking or on a link
  * sent from their record — so a counter has had a person's waiver to read all
@@ -1012,7 +1012,7 @@ function groupCounterRentals(rows: readonly CounterRentalRow[]): CounterRentalTi
  * nothing, which the caller reads as "say nothing".
  *
  * The whole status, not just its state: a current release can stand over a
- * physician's earlier "not cleared" or an open referral (H-98 as amended),
+ * physician's earlier "not cleared" or an open referral (H-20261007-after-physician-says-no as amended),
  * and the counter says that warning as the manifest does.
  */
 export async function counterRentalWaiverStandings(

@@ -1,6 +1,6 @@
 # The maker is the proof — the marketing pages, one big loop
 
-- **Status:** Live (its ADR is Proposed; two decisions wait on H-66)
+- **Status:** Live (its ADR is Proposed; two decisions wait on H-20260725-founder-background-go-back)
 - **Date:** 2026-09-02
 - **ADR:** [20260902-the-maker-is-the-proof](../../../architecture/decisions/20260902-the-maker-is-the-proof.md)
 - **Published:** https://claude.ai/code/artifact/e9622fd1-7bf9-4097-b104-d48c6b7ccb2e
@@ -32,14 +32,14 @@ B sits inside the current policy and still takes the owner's nod, and the homepa
 | --- | --- | --- | --- |
 | 15a — `/about` "Who builds it" band, third person, with the ledger; "spec" leaves `founderP3` | open | — | — |
 | 15b — `/` echo band between the records diptych and the close | open | — | — |
-| 15c — the support sentence, "read by the people who build DiveDay", in five places (H-66, Option B) | open | — | — |
+| 15c — the support sentence, "read by the people who build DiveDay", in five places (H-20260725-founder-background-go-back, Option B) | open | — | — |
 | 15d — the voice pass across every marketing page, held to the seven tells | open | — | — |
 | 15e — `marketing.md` records parts 3–5 and un-retires the biography under part 1's shape | open | — | — |
 
 Each slice runs the `marketing-page` skill end to end: claims checklist, `e2e/marketing.spec.ts`
 assertions moved deliberately, both locales in one change, screenshots looked at, a
 `conversion-reviewer` pass. 15a carries a real person's name and 15c a promise about who reads the inbox, so both wait on
-the H-66 row; 15b, 15d and 15e do not.
+the H-20260725-founder-background-go-back row; 15b, 15d and 15e do not.
 
 ## The facts every board holds to
 

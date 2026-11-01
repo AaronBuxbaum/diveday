@@ -237,7 +237,7 @@ review. Audit status and execution readiness are independent.
 
 **Initial readiness (26 October):** Ready to implement. Owner explicitly approved: Move repeated
 catalogue to Product; preserve all essential booking-to-boat scenes. Homepage editorial replacement
-changes the settled H-93 booking-to-boat argument; preserve required dock check-in scene, and do not
+changes the settled H-20261005-public-pages-sell booking-to-boat argument; preserve required dock check-in scene, and do not
 reduce five scenes to three without deciding which.
 
 **Owner decision:** Move repeated catalogue to Product; preserve all essential booking-to-boat
@@ -254,7 +254,7 @@ the feature catalogue remain. The larger editorial proposal is still open.
 **Audit direction:** Keep a compact promise, one convincing product scene, three essential moments,
 migration reassurance, price and demo action. Move the full capability inventory to Product. This is
 an editorial redesign, not a request to shrink every section. Preserve the settled fourth homepage
-dock check-in scene (H-94).
+dock check-in scene (H-20260802-may-public-pages-say).
 
 **Acceptance:**
 
@@ -279,7 +279,7 @@ partial. Earlier homepage journey redesign; refined editorial reduction remains.
 partial. Removed duplicate marketing copy and mocks.
 
 - Historical/context: [PR #3061](https://github.com/AaronBuxbaum/diveday/pull/3061) — closed,
-related. Implements H-94 fourth dock check-in scene, which must be preserved.
+related. Implements H-20260802-may-public-pages-say fourth dock check-in scene, which must be preserved.
 
 **Evidence references in local artifact:** `current/landing-light-vw-390.png`,
 `current/landing-light-vw-1280.png`
@@ -413,7 +413,7 @@ software guarantees safety.
 closed records; related items are context only.
 
 - Historical/context: [PR #2165](https://github.com/AaronBuxbaum/diveday/pull/2165) — closed,
-related. H-99 explicitly keeps Lonergan hero and company voice; respect settled copy constraints.
+related. H-20261006-about-say-whose-voice explicitly keeps Lonergan hero and company voice; respect settled copy constraints.
 
 - Historical/context: [PR #2113](https://github.com/AaronBuxbaum/diveday/pull/2113) — closed,
 related. Earlier story-first About redesign, not proposed purpose-first composition.
@@ -428,7 +428,7 @@ related. Earlier story-first About redesign, not proposed purpose-first composit
 **Give the switching hub an outcome-led headline**
 
 **Initial readiness (26 October):** Ready to implement. Outcome-led heading is routine copy cleanup
-under settled H-93, with migration limits intact.
+under settled H-20261005-public-pages-sell, with migration limits intact.
 
 **Audit assessment (25 October):** still-open. The current switching hub still leads with “Every
 guide ends at the same import screen”. Its close is calmer, but the outcome-led headline proposal
@@ -2050,7 +2050,7 @@ Historical scope mapping: issue #3070 explicitly includes C09. Current implement
 **Summarize team credentials without hiding exceptions**
 
 **Initial readiness (26 October):** Ready to implement. Summarize existing credential lists with
-count while preserving exceptions at rest. H-59 forbids new gates; two domain reviews.
+count while preserving exceptions at rest. H-20260825-staff-credentials-renewal-clock forbids new gates; two domain reviews.
 
 **Audit assessment (25 October):** still-open. Credential exceptions now stand at rest, but
 collapsed summaries still print full long qualification lists; current native phone image confirms.
@@ -3335,7 +3335,7 @@ credential door and verify reviewed/expired correction parity without adding gat
 - Review and correction available equally for current/expired records
 - Existing #credentials and #add-credential links land and open the correct context
 
-**Preserve/review:** H-59: a credential clock informs, never gates. Retain authorization and audit
+**Preserve/review:** H-20260825-staff-credentials-renewal-clock: a credential clock informs, never gates. Retain authorization and audit
 trail. Coordinate with C10 but distinct scope: ledger vs collapsed summaries
 
 **Source:** src/app/shop/[shopSlug]/settings/team/_components/StaffCredentials.tsx:81;
@@ -3734,15 +3734,15 @@ Historical scope mapping: issue #3074 explicitly includes RP06. Current implemen
 **Initial readiness (26 October):** Already done. Artifact assessment marks resolved and current
 source is unchanged: Current phone and desktop success explicitly say the request was sent and now
 explain the optional field: “We use it to name your demo.” The original missing-purpose ambiguity is
-resolved while retaining H-131’s optional personalization.
+resolved while retaining H-20261014-demo-wears-visitor-shop’s optional personalization.
 
 **Audit assessment (25 October):** resolved. Current phone and desktop success explicitly say the
 request was sent and now explain the optional field: “We use it to name your demo.” The original
-missing-purpose ambiguity is resolved while retaining H-131’s optional personalization.
+missing-purpose ambiguity is resolved while retaining H-20261014-demo-wears-visitor-shop’s optional personalization.
 
 **Remaining observation:** Current phone and desktop success explicitly say the request was sent and
 now explain the optional field: “We use it to name your demo.” The original missing-purpose
-ambiguity is resolved while retaining H-131’s optional personalization.
+ambiguity is resolved while retaining H-20261014-demo-wears-visitor-shop’s optional personalization.
 
 **Audit direction:** No new issue from this historical proposal. Preserve the implemented behavior
 described in the current assessment.

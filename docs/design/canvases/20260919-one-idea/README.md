@@ -1,10 +1,10 @@
 # One idea — the app is the day, the boat, or the sea
 
-- **Status:** Superseded by ADR 20261001-logbook (H-91, decided 2026-10-01), which replaced the time-based bar with a nav of sections and the diver sheet with the diver's record. It was Live under **H-88: I · Tide**, decided 2026-09-19; read the table below for what shipped and what the restart removed.
+- **Status:** Superseded by ADR 20261001-logbook (H-20261001-staff-app-restart, decided 2026-10-01), which replaced the time-based bar with a nav of sections and the diver sheet with the diver's record. It was Live under **H-20260919-physical-thing-diveday-day: I · Tide**, decided 2026-09-19; read the table below for what shipped and what the restart removed.
 - **Date:** 2026-09-19
 - **ADR:** [20260919-one-idea](../../../architecture/decisions/20260919-one-idea.md)
 - **Published:** https://claude.ai/artifact/8oUihSuV75uRbj8DrJ9EpU (round 3 first, with rounds 2 and 1 below it for the record; the superseded canvas's own page stays at its URL)
-- **Supersedes:** [Nothing to explain](../20260918-nothing-to-explain/README.md) (2026-09-18, rounds 1–2), whose floor and round-2 surface stand and whose three directions and call (H-87) are withdrawn
+- **Supersedes:** [Nothing to explain](../20260918-nothing-to-explain/README.md) (2026-09-18, rounds 1–2), whose floor and round-2 surface stand and whose three directions and call (H-20260918-three-directions-inset-b) are withdrawn
 
 The sixteenth design canvas, and the third round of the 2026-09-18 brief. The owner's read of round 2,
 the same evening: "You're still not thinking big enough. I think the way that our current design looks
@@ -17,7 +17,7 @@ test ("name the physical thing the app is"), and the three boards beside it draw
 products**, each built on one physical thing a dive shop already thinks in — **I · Tide**, the app is
 the day; **II · Deck**, the app is the boat; **III · Chart**, the app is the sea — on the same fiction,
 the same six screens, each with its own home, its own way to reach anything, its own material and its
-own thing to tap. There is one call, H-88: which thing. **Nothing here is normative**; the ADR carries
+own thing to tap. There is one call, H-20260919-physical-thing-diveday-day: which thing. **Nothing here is normative**; the ADR carries
 the three ideas as tables, the recommendation and the call, and code obeys the ADR.
 
 ## Artboards

@@ -36,7 +36,7 @@ const LINK_CLASS = buttonClass({
 
 /**
  * **"Check with SSI", done for the staffer when the DiveDay extension is here**
- * (H-105).
+ * (H-20261008-cert-check-extension).
  *
  * Without the extension this is exactly the link it always was: the agency's
  * page in a new tab. With it, the same words become a button. The extension
@@ -83,7 +83,7 @@ export function AgencyCheck({
   /**
    * "PADI checks are off for this shop…": said under the link when the
    * extension is here but the shop's switch keeps this agency's check off
-   * (H-121), so a staffer with the extension knows why there is no button.
+   * (H-20261014-padi-divechek), so a staffer with the extension knows why there is no button.
    */
   offNote?: string;
 }) {

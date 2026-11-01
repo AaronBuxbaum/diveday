@@ -33,7 +33,7 @@ import {
 const ctx = fileScopedShopContext();
 
 /**
- * **A guardian's address, erased on its own** (H-103, issue #1673). The
+ * **A guardian's address, erased on its own** (H-20261007-guardian-email-erasure, issue #1673). The
  * guardian is a third party who co-signed a minor's release; they may ask for
  * their address to go without the child's record going with it, and the
  * release has to go on verifying — as redacted, never as tampered.

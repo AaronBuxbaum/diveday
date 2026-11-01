@@ -596,7 +596,7 @@ async function writeShopActivity(
     };
   } else {
     // A shop-level line about the shop's own settings (the shore contact's
-    // alert address, H-118): naming nobody but the staffer who acted, and
+    // alert address, H-20261014-stale-roll-call-recipients): naming nobody but the staffer who acted, and
     // never the address.
     values = {
       tripId: null,

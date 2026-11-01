@@ -368,7 +368,7 @@ export async function undoBookingNoShow(
       });
       return { ok: false, reason };
     };
-    // The boat's certificate caps the seats under the same lock (H-107).
+    // The boat's certificate caps the seats under the same lock (H-20261009-certificate-caps-seats).
     const capacity = await sellableCapacity(tx, trip);
     const full = seatRefusal(seat.participantType, { ...trip, capacity }, held);
     if (full) return await refuse(full);

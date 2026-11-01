@@ -9,7 +9,7 @@
 connector beside QuickBooks, with its own adapter, callback route, settings card, two env keys and
 delivery tests. Both do the same job, pushing each paid order as a sale and each refund as a refund
 record, and nothing about them is shared code, so carrying two doubles what an accounting change
-touches. DiveDay has no shops yet (H-49). Aaron decided on 2026-10-17 to keep QuickBooks, remove
+touches. DiveDay has no shops yet (H-20260815-no-legacy). Aaron decided on 2026-10-17 to keep QuickBooks, remove
 Xero, and keep the way back short because Xero may return (issue #2818).
 
 ## Decision
@@ -22,7 +22,7 @@ Xero, and keep the way back short because Xero may return (issue #2818).
   `git log --grep "Remove the Xero connector"`. Nothing Xero-related lives in any other commit, so
   the revert is whole. Reverting restores the code, the enum value and the env keys, not the rows
   the migration deleted; a returning Xero shop reconnects.
-- **The deploy window is accepted.** The previous release still serves the Xero connect and callback while the migration runs. No tenant has a Xero row (H-49), so a connect attempt in that window fails the migration or 500s, and both outcomes are acceptable.
+- **The deploy window is accepted.** The previous release still serves the Xero connect and callback while the migration runs. No tenant has a Xero row (H-20260815-no-legacy), so a connect attempt in that window fails the migration or 500s, and both outcomes are acceptable.
 - **Runbook:** revoke DiveDay in Xero connected apps; delete `XERO_*` from Vercel.
 - **QuickBooks, Shopify and Zapier are unchanged.** Their shared tables and the provider-agnostic
   dispatcher stay as they were.

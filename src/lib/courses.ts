@@ -341,7 +341,7 @@ export type CourseFaq = { question: string; answer: string };
  * (ADR 20261008-course-learning-materials).
  *
  * DiveDay delivers it; it does not provision it. No agency exposes an API that
- * enrolls a student (H-10), so `url` is a link the shop pasted — often its own
+ * enrolls a student (H-20261007-request-supported-c-card), so `url` is a link the shop pasted — often its own
  * affiliate link into the agency's store — and nothing here claims the student
  * has been signed up anywhere. Optional keys are omitted rather than stored
  * empty, the same shape `CourseScheduleDay` keeps.

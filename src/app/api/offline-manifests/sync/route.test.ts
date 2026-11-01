@@ -407,7 +407,7 @@ describe("POST /api/offline-manifests/sync", () => {
   });
 
   /**
-   * H-46. The crew half of a head count arrives through this same route, and
+   * H-20260814-where-diveday-sit-between. The crew half of a head count arrives through this same route, and
    * the only thing that differs is which subject field the event names — the
    * gate above it, the ordering, and the offline contract underneath are all
    * shared. Crew carry no readiness, so unlike the diver test below this one

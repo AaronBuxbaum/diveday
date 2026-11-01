@@ -122,7 +122,7 @@ test("a shop's own minutes are the day the diver reads", async ({ page, privateS
   await expect(page.getByRole("radio", { name: "Cash", exact: true })).toBeChecked();
 
   // **Crew arrive before divers** (ux-delight sheet 2026-10-22, item 2;
-  // H-149): shop-wide, 30 minutes until the shop changes it, and empty
+  // H-20261022-crew-arrive-before-divers): shop-wide, 30 minutes until the shop changes it, and empty
   // clears it so crew read the divers' time.
   const crewLead = page.getByLabel("Crew arrive before divers");
   await expect(crewLead).toHaveValue("30");

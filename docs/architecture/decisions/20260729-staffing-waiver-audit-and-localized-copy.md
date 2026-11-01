@@ -87,7 +87,7 @@ column's own null already says, and left every pre-existing record on a version 
 ## Amendment 2026-10-23 — the medical alert for the crew is a second conditional key
 
 A signed record can now carry the diver's **medical alert for the crew** (glossary entry of that
-name, issue #2960, H-153), `waiver_records.medical_alert`: plain text the diver wrote, at most 500
+name, issue #2960, H-20261023-medical-alert-for-the), `waiver_records.medical_alert`: plain text the diver wrote, at most 500
 characters. It is what the diver signed beside, so the seal covers it, by the rule above.
 
 - **The key is conditional.** `medicalAlert` joins the version 1 field set only when the column is

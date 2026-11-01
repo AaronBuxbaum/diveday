@@ -135,7 +135,7 @@ export function DiverList({
   importHref: string | null;
   /**
    * Whether this staffer may restore a deleted diver — owner/manager, the same
-   * gate the removal it reverses takes (H-14). It governs the Deleted chip
+   * gate the removal it reverses takes (H-20260724-staff-role-reach). It governs the Deleted chip
    * alone: the view exists to *find* a deleted diver, and there is nothing to
    * find there for someone who could not put them back (ADR
    * 20260724-role-gated-surfaces-hide-not-explain). The restore itself is on

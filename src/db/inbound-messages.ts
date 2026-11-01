@@ -243,7 +243,7 @@ type RecordMoveAskResult =
   | { status: "not_found" };
 
 /**
- * **A diver asks to move a seat** (H-126). Past the free-cancellation window a
+ * **A diver asks to move a seat** (H-20261014-ask-to-move). Past the free-cancellation window a
  * cancel forfeits the money, so the booking page offers "Ask to move" instead:
  * a request, not a move. It lands in the Inbox as a `page` message naming the
  * booking, with the diver's optional note as its words, and staff decide —
@@ -267,7 +267,7 @@ export async function recordMoveAsk(
     expectedTripId?: string;
     /**
      * The ask comes from a called-off departure's card (`askToMoveFromCancelledAction`,
-     * H-151): the seat must be on a cancelled departure, the one state an
+     * H-20261022-called-off-boat-offers): the seat must be on a cancelled departure, the one state an
      * ordinary ask refuses, and a boat that never sails is not refused as sailed.
      */
     calledOff?: true;
@@ -387,7 +387,7 @@ export async function recordMoveAsk(
 
 /**
  * Whether an ask sent at `receivedAt` predates the call-off at `cancelledAt`,
- * so it was about a boat that was still going (H-151). A cancelled departure
+ * so it was about a boat that was still going (H-20261022-called-off-boat-offers). A cancelled departure
  * with no recorded time (`trips.cancelled_at` is null only for trips cancelled
  * before the column existed, long sailed) gives nothing to compare: the ask
  * stands, rather than every tap filing another Inbox row.
@@ -408,7 +408,7 @@ function carriedMoveAskNote(note: string, carried: string): string {
 export type PendingMoveAsk = { note: string; sentAt: Date };
 
 /**
- * The standing request for this live booking and its current departure (H-126).
+ * The standing request for this live booking and its current departure (H-20261014-ask-to-move).
  * A known departure is an expectation, never permission to read an old request:
  * the booking is joined again so a concurrent move cannot expose a stale receipt.
  */
@@ -478,7 +478,7 @@ export async function getPendingMoveAsk(
   return row ?? null;
 }
 
-/** Whether this booking's current departure has a standing request (H-126). */
+/** Whether this booking's current departure has a standing request (H-20261014-ask-to-move). */
 export async function hasMoveAsk(
   db: DbExecutor,
   shopId: string,

@@ -83,7 +83,7 @@ export default async function NewOrderPage({
   const prefillPersonId = uuidParam(personId);
   const prefillBookingId = uuidParam(bookingId);
   const target = invoiceTargetKey(prefillBookingId, prefillPersonId);
-  // Billing a diver is owner/manager work (H-14, ADR 20260724-role-authorization),
+  // Billing a diver is owner/manager work (H-20260724-staff-role-reach, ADR 20260724-role-authorization),
   // like the refund on the order it becomes and the discount codes that set what
   // a trip costs. The whole page is that one concern, so for anyone else it isn't
   // a surface — but the landing is the Orders index with the reason rather than

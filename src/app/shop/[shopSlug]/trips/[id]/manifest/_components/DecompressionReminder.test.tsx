@@ -9,7 +9,7 @@ afterEach(cleanup);
 
 /**
  * **A decompression departure says once, above the list, that the crew checks
- * technical cards** (H-144). An advisory: it names no diver and blocks no one.
+ * technical cards** (H-20261017-decompression-departure-reminds-crew). An advisory: it names no diver and blocks no one.
  */
 describe("the decompression reminder on the roll call", () => {
   const words = (locale: (typeof DIVER_LOCALES)[number]) =>

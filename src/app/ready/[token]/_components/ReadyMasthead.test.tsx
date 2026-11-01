@@ -121,7 +121,7 @@ describe("ReadyBookedHeader", () => {
     expect(screen.getByRole("link", { name: "Add to calendar" })).toBeTruthy();
   });
 
-  it("says a milestone boat once, as a count, and nothing on any other (H-128)", () => {
+  it("says a milestone boat once, as a count, and nothing on any other (H-20261014-boat-count-milestones)", () => {
     const t = diverTranslator("en-US");
     render(
       withProvider(

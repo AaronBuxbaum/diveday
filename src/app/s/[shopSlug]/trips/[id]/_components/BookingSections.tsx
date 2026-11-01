@@ -419,7 +419,7 @@ export type BookSpotSectionContext = {
       })
     | null;
   /**
-   * H-68 b: offer one link to a cold-typed lead email that matches a diver on
+   * H-20260906-diveday-fill-already-knows b: offer one link to a cold-typed lead email that matches a diver on
    * file. Fire-and-forget — the form never hears back.
    */
   offerHandoff?: (email: string) => void;
@@ -547,7 +547,7 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
         .reduce((sum, [, cents]) => sum + cents, 0)
     : 0;
   // Sized by the party, not the boat's free seats: one diver booking reads
-  // "Book this seat", never "these spots" (fourth UX review item 7, H-122).
+  // "Book this seat", never "these spots" (fourth UX review item 7, H-20261014-seat-is-the-word).
   const bookLabel = payAtBooking
     ? remaining === 1
       ? t("bookAndPayLastSeat")
@@ -672,7 +672,7 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
             booking, the scoped `/ready/<token>` link lets its bearer submit
             pending evidence for that booking. */}
         {/* Browser-required acknowledgement only: it is not persisted, does not
-            verify age, and does not add a server-side age refusal (H-22). */}
+            verify age, and does not add a server-side age refusal (H-20260724-minimum-age-gate-fail). */}
         {trip.course?.minimumAge ? (
           <label className="flex min-h-11 items-start gap-2 border-t border-border pt-4 text-sm">
             <input

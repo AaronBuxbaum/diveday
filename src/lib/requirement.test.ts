@@ -364,7 +364,7 @@ describe("every gate still refuses and clears as it did, with a site in the sum"
   }
 
   it("a diver nobody has carded is let through the sale blind, and never cleared at the rail", () => {
-    // H-08: the sale-time gate fails open on absence of evidence; readiness
+    // H-20260724-certification-levels-agency-rules: the sale-time gate fails open on absence of evidence; readiness
     // does not. The pair is the whole of the safety argument.
     for (const trip of ALL_REQUIREMENTS) {
       for (const site of sites) {

@@ -15,7 +15,7 @@ export type RentalFitToggle = {
 };
 
 /**
- * **The suit, as one choice** (H-78): own wetsuit, ours, own drysuit, ours.
+ * **The suit, as one choice** (H-20260916-rental-fit-describe-shop): own wetsuit, ours, own drysuit, ours.
  * Its own question rather than two of the ticks, because a diver dives one
  * suit and the fit has to be able to say a drysuit is their own.
  */
@@ -41,7 +41,7 @@ export type RentalFitSize = {
   /**
    * The example to show instead while the suit choice is a drysuit. The
    * weighting box has one: its usual example is a wetsuit number, and a
-   * drysuit diver carries two to four kilos more (H-78).
+   * drysuit diver carries two to four kilos more (H-20260916-rental-fit-describe-shop).
    */
   drysuitPlaceholder?: string;
   defaultValue: string;

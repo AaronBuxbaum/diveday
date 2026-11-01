@@ -268,7 +268,7 @@ describePostgres("createBookingParty under real concurrency", () => {
       tripId,
       fullName: person.fullName,
       // The name must match the row it resolves to, or `identityUnconfirmed`
-      // skips the declaration entirely (H-13) and no lock is ever taken.
+      // skips the declaration entirely (H-20260724-one-person-per-email) and no lock is ever taken.
       email: person.email ?? "",
       declared: { level: "rescue" as const },
       // These trips carry no requirement row, so nothing is being talked past;

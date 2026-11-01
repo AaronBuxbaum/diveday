@@ -48,7 +48,7 @@ export async function GET(request: Request) {
  * tracked — would buy an endless redelivery loop and nothing else. That is the
  * same posture as the SES route.
  *
- * Both halves resolve the tenant the same way (`shopIdForWhatsAppEvent`, H-83):
+ * Both halves resolve the tenant the same way (`shopIdForWhatsAppEvent`, H-20260916-may-dive-chain-share):
  * the phone number id each change names, which one shop holds, and nothing
  * else. The WABA in `entry[].id` only has to agree with that number's row; a
  * chain may share a WABA across its shops, a number each, so the WABA alone

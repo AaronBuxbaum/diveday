@@ -21,7 +21,7 @@ export async function GET(request: Request) {
   const settingsUrl = new URL(shopPath(session.user.shopSlug, "settings"), request.url);
 
   // Connecting the shop's Stripe account is a payment setting — owner/manager
-  // only (H-14, ADR 20260724-role-authorization), re-checked against live roles.
+  // only (H-20260724-staff-role-reach, ADR 20260724-role-authorization), re-checked against live roles.
   const canPayments = await canPersonManagePaymentSettings(
     await getDb(),
     session.user.shopId,

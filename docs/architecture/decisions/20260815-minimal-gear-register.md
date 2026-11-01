@@ -174,7 +174,7 @@ schema sketch above, each for a reason worth keeping:
   `pnpm check:architecture` enforces). The surface is ordinary app routes at
   `/shop/[shopSlug]/gear`, like every other pillar's.
 - **Reservations cascade from bookings and items** (`ON DELETE CASCADE`) rather than blocking
-  them — a deleted booking frees its units, and pre-pilot (H-49) nothing mourns the row. A
+  them — a deleted booking frees its units, and pre-pilot (H-20260815-no-legacy) nothing mourns the row. A
   unit's own delete is offered only as the mistyped-row eraser, with an undo toast; the register's
   history-preserving exit stays `retired`.
 
@@ -365,7 +365,7 @@ amendment records what was built on it and the calls the build made.
   prefilled at the set price times the days; the action re-checks the set against what it
   wrote before billing it. Sending it is owner/manager work behind the
   money step-up and a connected Stripe account, like the new-order form; renting itself stays
-  any-staff (H-06). The rental is written first and the invoice only after it stands, so the
+  any-staff (H-20260724-initial-gear-policy-sizing). The rental is written first and the invoice only after it stands, so the
   one partial outcome is Stripe failing, which leaves the rental and says so.
 - **Two columns were added.** `gear_reservations.order_id`, nullable, a link and never money:
   nothing else can say which invoice billed a rental, and the order page needs its way back to
@@ -404,7 +404,7 @@ the counter nobody does, and the unit is gone for days.
   bare attestation tick: a tick records nothing anybody can check with the agency afterwards
   (ADR 20260804-card-evidence-is-the-number).
 - **The service screen: the one place a service clock gates.** Everywhere else a clock informs and
-  the dock decides (H-06). At the counter there is no dock, so a life-support unit is refused
+  the dock decides (H-20260724-initial-gear-policy-sizing). At the counter there is no dock, so a life-support unit is refused
   (`unit_needs_service`) when it is kept back the way a departure's proposals keep a unit back
   (`gearServiceKeepsUnitBack`: an overdue clock or an open service concern), with the clock read
   **as of the window's last day**. A flagged soft-goods unit sorts last on the form and goes only
@@ -415,7 +415,7 @@ the counter nobody does, and the unit is gone for days.
   like the trip side's planned dives.
 - **Counter tanks are air only, for now.** Superseded by the 2026-10-16 amendment below: a
   counter tank now records its fill, and EANx is gated on a nitrox card.
-- **The counter says the person's waiver, and never waits on it** (H-108, issue #2261; this
+- **The counter says the person's waiver, and never waits on it** (H-20261008-counter-rental-waiver-informs, issue #2261; this
   bullet called it a known gap until 2026-10-10). The one shop-wide waiver (CR-015) is signed once
   and belongs to the person, whichever booking or person-scoped link it was signed on, so the
   counter reads the same `shopWaiverStatus` the diver record does
@@ -495,4 +495,4 @@ tank a menu (not recorded, air, EANx 22 to 40; never a typed decimal, so nothing
 different mix), and the counter ticket prints the fill beside the unit.
 
 It is what the staffer said went in the tank, not a fill log and not an analyzer reading: the boat
-side's per-booking nitrox request (H-11) is unchanged, and a fill log (HD-8) is still open.
+side's per-booking nitrox request (H-20260730-nitrox-fill-station-procedure) is unchanged, and a fill log (HD-8) is still open.

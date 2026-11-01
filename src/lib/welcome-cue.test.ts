@@ -116,7 +116,7 @@ describe("welcomeCueFor", () => {
   });
 });
 
-describe("a regular's milestone dive day (H-128)", () => {
+describe("a regular's milestone dive day (H-20261014-boat-count-milestones)", () => {
   const consented = { sharedAt: NOW, lastDivedAt: yearsAgo(0), tripEndsAt: TRIP_ENDS, now: NOW };
 
   it("is said on the 10th, 25th, 50th and 100th dive day and on no other", () => {

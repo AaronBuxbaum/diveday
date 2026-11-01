@@ -594,7 +594,7 @@ function liveDeclarations(acknowledgement, schemas) {
     return [
       {
         line: acknowledgement.line,
-        message: `drop-column ${table}.${column}: the ${label} still declares it as ${table}.${property} in ${SCHEMA_DIR}/, so its whole-row selects and returning() name the column and fail while this migration's deploy is in flight — remove the declaration in one release and drop the column in the next (no marker reason, H-49 included, excuses this)`,
+        message: `drop-column ${table}.${column}: the ${label} still declares it as ${table}.${property} in ${SCHEMA_DIR}/, so its whole-row selects and returning() name the column and fail while this migration's deploy is in flight — remove the declaration in one release and drop the column in the next (no marker reason, H-20260815-no-legacy included, excuses this)`,
       },
     ];
   });

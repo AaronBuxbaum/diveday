@@ -7,7 +7,7 @@ import { setShopShoreAlertContact } from "./shops";
 import { issueShoreAlertStopToken } from "./shore-alert-tokens";
 
 /**
- * Erasure reaches the shore contact's address (H-118 security review). A diver
+ * Erasure reaches the shore contact's address (H-20261014-stale-roll-call-recipients security review). A diver
  * a shop also named as its shore contact asks to be forgotten: the address
  * leaves the shop's settings with its consent and confirmation, and the links
  * minted for it go too. An address that is not theirs is left alone.

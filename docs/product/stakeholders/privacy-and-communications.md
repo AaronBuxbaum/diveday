@@ -2,9 +2,9 @@
 
 The data DiveDay holds (medical flags, minors' records, capability URLs) and the messages it
 sends (booking email, waiver links, SMS reminders) each have a compliance owner to satisfy before
-a pilot. Status of record: [human-decisions/](../human-decisions/README.md) rows **H-02**
-(retention/deletion — shared with [legal.md](legal.md)), **H-04** (incident-response owner), and
-**H-09** (consent, copy, sender identity, credentials).
+a pilot. Status of record: [human-decisions/](../human-decisions/README.md) rows **H-20260730-evidence-retention-period-deletion**
+(retention/deletion — shared with [legal.md](legal.md)), **H-20260724-vercel-selected-web-hosting** (incident-response owner), and
+**H-20260724-channel-sends-booking-waiver** (consent, copy, sender identity, credentials).
 
 ## Subject access — a diver's own copy (issue #726, ADR 20260824-diver-record-export)
 
@@ -14,7 +14,7 @@ owner/manager like the shop-wide export. `security-reviewer` reviewed the shared
 diver's identifying data. **One field is deliberately withheld pending your call: signed
 medical answers.** The incident export withholds them because its reader is an investigator; a
 subject-access request's reader is the person who wrote them, which is the opposite case — see
-**H-50** in [human-decisions/](../human-decisions/README.md) for the question as recorded. Until it is
+**H-20261025-per-diver-record-export** in [human-decisions/](../human-decisions/README.md) for the question as recorded. Until it is
 answered, the export ships every other field of a diver's own signed waiver evidence and states
 the gap in the bundle's own README rather than leaving it silent. `/privacy` now names this
  export alongside the shop-wide one and says medical answers are excluded for now.
@@ -38,7 +38,7 @@ Before production, privacy/security counsel or the named security reviewer shoul
   recovery codes.
 
 This is a review packet, not a claim that a human security or privacy sign-off has happened. Record
-the reviewer, date, findings, and any changed policy in H-02/H-09 and the incident runbook.
+the reviewer, date, findings, and any changed policy in H-20260730-evidence-retention-period-deletion/H-20260724-channel-sends-booking-waiver and the incident runbook.
 
 ## Why this blocks rollout
 
@@ -46,9 +46,9 @@ the reviewer, date, findings, and any changed policy in H-02/H-09 and the incide
   SMS — the 7-day/24-hour reminder cadence
   ([ADR](../../architecture/decisions/20260721-scheduled-reminder-cadence.md)) stays `not_configured`
   without it.
-- No consent policy exists (H-09 asks for two paragraphs); sending even courtesy SMS to divers
+- No consent policy exists (H-20260724-channel-sends-booking-waiver asks for two paragraphs); sending even courtesy SMS to divers
   without recorded consent language is the kind of unforced error that outlives a pilot.
-- The privacy policy shops and divers will be shown does not exist yet (part of the H-18
+- The privacy policy shops and divers will be shown does not exist yet (part of the H-20260724-corporate-footing-diveday-operate
   contract set in [legal.md](legal.md)).
 
 ## Who to talk to
@@ -63,7 +63,7 @@ the reviewer, date, findings, and any changed policy in H-02/H-09 and the incide
 
 Prepare before starting; incomplete campaigns bounce back and reset the clock:
 
-- Brand: the legal entity (H-18 dependency — register under the entity that will operate
+- Brand: the legal entity (H-20260724-corporate-footing-diveday-operate dependency — register under the entity that will operate
   DiveDay), EIN, website.
 - Campaign type and description: transactional/customer-care booking and trip reminders for a
   dive-shop platform; **no marketing sends**.
@@ -73,11 +73,11 @@ Prepare before starting; incomplete campaigns bounce back and reset the clock:
   compliance ([SNS SMS ADR](../../architecture/decisions/20260802-sns-sms-adapter.md)).
 - Opt-in description: consent is captured at booking when the diver provides a phone number for
   trip communications — make the booking form's language actually say that (check it; if it
-  doesn't, that's a small copy fix to ship with H-09).
+  doesn't, that's a small copy fix to ship with H-20260724-channel-sends-booking-waiver).
 
-## The H-09 consent policy — draft to take to counsel
+## The H-20260724-channel-sends-booking-waiver consent policy — draft to take to counsel
 
-H-09 asks for two paragraphs. Proposed draft (owner + counsel edit, then record in H-09):
+H-20260724-channel-sends-booking-waiver asks for two paragraphs. Proposed draft (owner + counsel edit, then record in H-20260724-channel-sends-booking-waiver):
 
 > DiveDay sends transactional messages only: booking confirmations, waiver requests, trip
 > reminders, and freed-seat invitations tied to a booking or wait-list entry the recipient
@@ -91,7 +91,7 @@ H-09 asks for two paragraphs. Proposed draft (owner + counsel edit, then record 
 
 Sender identity: a real shop-facing address on the production domain (e.g. `bookings@…`), set as
 `SES_FROM_EMAIL` after DKIM domain verification and SES production access. Name the `CRON_SECRET` /
-`SNS_AWS_*` credential owner in the same H-09 update (rollout 0.2 pairs them).
+`SNS_AWS_*` credential owner in the same H-20260724-channel-sends-booking-waiver update (rollout 0.2 pairs them).
 
 ## Privacy counsel — question list
 
@@ -103,24 +103,24 @@ Sender identity: a real shop-facing address on the production domain (e.g. `book
   what does that change at pilot scale? (DiveDay is nowhere near the big statutes' revenue
   thresholds, but health-data laws key on data type, not size — get a real answer.)
 - **Minors:** what does storing a minor's medical answers and guardian consent require
-  (ties to the H-01 guardian flow in [legal.md](legal.md))?
+  (ties to the H-20260730-jurisdiction-waiver-text-medical guardian flow in [legal.md](legal.md))?
 - **Breach duties:** notification obligations for medical-flag data, and what the
-  incident-response runbook (H-04's still-unwritten half) must contain to meet them.
-- **Retention:** counsel's H-02 numbers applied to the shipped behaviors — waiver records,
+  incident-response runbook (H-20260724-vercel-selected-web-hosting's still-unwritten half) must contain to meet them.
+- **Retention:** counsel's H-20260730-evidence-retention-period-deletion numbers applied to the shipped behaviors — waiver records,
   notification logs ([ADR](../../architecture/decisions/20260720-notification-attempt-history.md)),
   offline snapshot retention ([ADR](../../architecture/decisions/20260718-offline-manifest-snapshots.md)),
   and backups.
 
 **Prepared material:** the same data inventory built for the insurance broker
-([insurance.md](insurance.md#workstream-a--divedays-own-coverage-h-19)) plus the
+([insurance.md](insurance.md#workstream-a--divedays-own-coverage-h-20260730-diveday-itself-carry-technology)) plus the
 [capability telemetry runbook](../../engineering/capability-telemetry-runbook.md) (how bearer
 URLs are kept out of analytics, and the audit/rotation story for an exposed one).
 
 ## Where outcomes land
 
-- H-09: consent policy text, sender identity, credential owners, approved copy.
-- H-02: retention/deletion policy (recorded with the legal engagement).
-- H-04: the incident-response runbook gains its breach-notification section.
-- Privacy policy and any DPA join the H-18 contract set ([legal.md](legal.md)).
+- H-20260724-channel-sends-booking-waiver: consent policy text, sender identity, credential owners, approved copy.
+- H-20260730-evidence-retention-period-deletion: retention/deletion policy (recorded with the legal engagement).
+- H-20260724-vercel-selected-web-hosting: the incident-response runbook gains its breach-notification section.
+- Privacy policy and any DPA join the H-20260724-corporate-footing-diveday-operate contract set ([legal.md](legal.md)).
 - Any consent-language copy fix on the booking form ships as a normal change with tests, and the
   SMS carrier-compliance sample messages stay in sync with shipped copy thereafter.

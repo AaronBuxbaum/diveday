@@ -12,7 +12,7 @@ import type { FunnelSource } from "@/lib/funnel";
  * submits `enterDemoAction` like every other "Try the live demo"
  * (docs/product/marketing.md), because each page's one primary is its own.
  *
- * **It asks for the reader's own shop name, optionally** (H-131). Typed, the
+ * **It asks for the reader's own shop name, optionally** (H-20261014-demo-wears-visitor-shop). Typed, the
  * demo's staff screens and its email preview wear it; blank, the demo keeps the
  * name it generated. The storefront never wears it. Nothing typed here is
  * stored: it rides in a cookie bound to the minted shop

@@ -92,7 +92,7 @@ explicitly. What it changes is that the feature does not reach `bookSpot` until 
 because every surface above it has to agree about what it is counting.
 
 The tables shipped ahead of that answer and are unused: no production path grants an entitlement, so
-changing the unit costs a migration and nothing else (H-49, pre-pilot).
+changing the unit costs a migration and nothing else (H-20260815-no-legacy, pre-pilot).
 
 ## Amendment, 2026-10-09: divers buy a package online
 
@@ -127,7 +127,7 @@ it says "bought online" rather than "by <their name>" whatever roles anyone hold
 
 ## Amendment, 2026-10-14: one dive is one tank, said where it is bought and spent
 
-[H-123](../../product/human-decisions/H-123-package-dive-is-a-tank.md) (fourth UX review, item 9)
+[H-20261014-package-dive-is-a](../../product/human-decisions/H-20261014-package-dive-is-a.md) (fourth UX review, item 9)
 keeps the 2026-08-22 unit and makes it something a diver reads, not only something the ledger
 knows. The packages card says "One dive is one tank, so a two-tank trip uses two". The booking's
 money block on `/ready` says "Uses 2 of your 5 package dives, one per tank"

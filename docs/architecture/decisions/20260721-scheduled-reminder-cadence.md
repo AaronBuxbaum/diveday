@@ -6,10 +6,10 @@
 ## Context
 
 The one-tap manual sends (booking confirmation, waiver link, wait-list invite) were built as the
-manual bridge the [UX audit](../../product/archive/ux-audit-20260721.md) said to ship ahead of the H-09
+manual bridge the [UX audit](../../product/archive/ux-audit-20260721.md) said to ship ahead of the H-20260724-channel-sends-booking-waiver
 policy decision, which explicitly deferred *auto-notification cadences* until the policy row was
 chosen and a cron/queue mechanism ADR existed — "no timer exists in the app today, by design."
-H-09's owner has now chosen to automate the pre-trip reminder cadence. This ADR supplies both the
+H-20260724-channel-sends-booking-waiver's owner has now chosen to automate the pre-trip reminder cadence. This ADR supplies both the
 cadence rules and the missing scheduling mechanism.
 
 ## Decision
@@ -54,7 +54,7 @@ cadence rules and the missing scheduling mechanism.
 ## Consequences
 
 - Divers now get automatic pre-trip reminders with a link to what's still outstanding, closing the
-  scheduled-cadence half of H-09; the manual one-tap sends remain for anything off-cadence.
+  scheduled-cadence half of H-20260724-channel-sends-booking-waiver; the manual one-tap sends remain for anything off-cadence.
 - The reminder scan is safe to over-call: the delivery-row dedup means an extra cron tick (or a
   manual hit of the endpoint) never double-sends.
 - With no email or SMS provider configured every reminder records `not_configured` and surfaces on

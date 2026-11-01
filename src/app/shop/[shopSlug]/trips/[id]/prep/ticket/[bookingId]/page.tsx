@@ -44,8 +44,8 @@ export const metadata: Metadata = {
  * 2026-10-08; the ADR's amendment of that date). A receipt for gear, signed
  * for the units, never a release.
  *
- * Read-only, no mutations, and ungated like the rest of the register (H-06,
- * amended on H-14's row 2026-08-20): handing gear over is day work.
+ * Read-only, no mutations, and ungated like the rest of the register (H-20260724-initial-gear-policy-sizing,
+ * amended on H-20260724-staff-role-reach's row 2026-08-20): handing gear over is day work.
  */
 export default async function RentalTicketPage({
   params,

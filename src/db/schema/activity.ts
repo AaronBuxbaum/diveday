@@ -77,7 +77,7 @@ export const activityEvents = pgTable(
     /**
      * Who did it. Null only for a line no account wrote: the system's own (an
      * automatic call-off) or the shore contact stopping roll-call alerts from
-     * the link in one (`shore_alert_contact_stopped`, H-118 re-review), or the
+     * the link in one (`shore_alert_contact_stopped`, H-20261014-stale-roll-call-recipients re-review), or the
      * bookkeeper stopping month-end files (`bookkeeper_email_stopped`). Then {@link activityEvents.systemReason} says
      * why; the check below holds the two together (issue #2539).
      */
@@ -332,7 +332,7 @@ export const heldSendKind = pgEnum("held_send_kind", [
   "trip_rescheduled",
   "departure_note",
   "seat_offer",
-  // A counter payment held eight seconds with Undo (issue #3030, H-68).
+  // A counter payment held eight seconds with Undo (issue #3030, H-20260906-diveday-fill-already-knows).
   "counter_payment",
 ]);
 
@@ -406,7 +406,7 @@ export const tripDeskEventKind = pgEnum("trip_desk_event_kind", [
   // A type change raised a paid seat's price: the difference is owed, and
   // nothing collects it on its own.
   "balance_owed",
-  // A seat the desk turned away (H-135) taken off the roster: the strip says
+  // A seat the desk turned away (H-20261015-who-may-turn-someone) taken off the roster: the strip says
   // so, rather than that the diver gave it up.
   "seat_turned_away",
 ]);

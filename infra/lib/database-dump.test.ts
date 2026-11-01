@@ -18,7 +18,7 @@ import { InfraStack } from "./infra-stack";
  *     merely out of scope.
  *  2. **The file does not live forever.** A dump holds every password hash and
  *     every medical answer in the platform; unlike the bundles (indefinite,
- *     pending H-02) everything in its bucket expires -- and the bucket is
+ *     pending H-20260730-evidence-retention-period-deletion) everything in its bucket expires -- and the bucket is
  *     unversioned, so expiring means gone rather than hidden behind a delete
  *     marker for another 35 days.
  *  3. **A truncated dump can never look like a good one.** `pipefail` is the
@@ -271,7 +271,7 @@ describe("the weekly database dump", () => {
     // loss, never months.
     expect(dumpRule?.ExpirationInDays).toBe(35);
 
-    // And the bundles still do not expire -- H-02 makes waiver retention a legal
+    // And the bundles still do not expire -- H-20260730-evidence-retention-period-deletion makes waiver retention a legal
     // call, so a lifecycle rule must never be what decides a bundle is finished.
     const bundleRules = bucketNamed("diveday-backups")?.Properties?.LifecycleConfiguration?.Rules;
     const bundleRule = (bundleRules ?? []).find(
@@ -313,7 +313,7 @@ describe("the weekly database dump", () => {
    * The dumps this bucket held before the 2026-08-15 split are ABANDONED, not
    * drained. A `drain-legacy-database-dumps` rule expired them for a day, on
    * the assumption that they were real dumps worth waiting out roughly 70 days
-   * of versioned lifecycle for; H-47 says otherwise -- DiveDay is pre-pilot,
+   * of versioned lifecycle for; H-20260814-production-database-disposable says otherwise -- DiveDay is pre-pilot,
    * the database is disposable, and what is under that prefix is seeded demo
    * data. So the rule went, and this asserts the bundle bucket now carries
    * exactly one lifecycle rule about bundles and nothing about dumps. Deleting

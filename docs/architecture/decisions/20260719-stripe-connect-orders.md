@@ -14,7 +14,7 @@ It was deliberately left unwired to any route: fine for a readiness *flag*, wron
 The product owner now wants two things this ADR settles together, since they are the same
 integration: (1) a shop supplies its own Stripe account rather than money flowing through a shared
 platform account, and (2) shops can generate an order/invoice for a diver, hand them a payable link,
-and see the paid result in the app without a human re-keying anything. H-07 (payment/deposit/refund/
+and see the paid result in the app without a human re-keying anything. H-20260724-payment-deposit-cancellation-refund (payment/deposit/refund/
 tax policy) in [human-decisions/](../../product/human-decisions/README.md) remains open for the *policy*
 questions (deposits, cancellation, refunds, tax); this ADR only settles the *mechanism*.
 
@@ -72,10 +72,10 @@ questions (deposits, cancellation, refunds, tax); this ADR only settles the *mec
   Stripe refund through its invoice payment intent. The local order becomes `refunded`, and a
   linked booking's payment gate becomes `refunded` so readiness requires payment again. A missing
   Stripe payment intent fails visibly; it never pretends that a refund happened. The policy details
-  around partial refunds, cancellation windows, taxes, and deposits remain H-07.
+  around partial refunds, cancellation windows, taxes, and deposits remain H-20260724-payment-deposit-cancellation-refund.
 - **No platform fee is taken today.** The shop's own account is the merchant of record for its
   invoices; this ADR does not implement Stripe Connect's `application_fee_amount`. A platform
-  commission is a commercial/H-07 decision, not a mechanism this ADR forecloses — add the fee
+  commission is a commercial/H-20260724-payment-deposit-cancellation-refund decision, not a mechanism this ADR forecloses — add the fee
   parameter to invoice creation when that policy is set.
 
 ## Alternatives considered
@@ -114,7 +114,7 @@ questions (deposits, cancellation, refunds, tax); this ADR only settles the *mec
   configured in the Stripe dashboard with its signing secret (`STRIPE_WEBHOOK_SECRET`). Until both
   are set, the connect button and order creation clearly report `not_configured` rather than
   half-working.
-- Tax, refunds, disputes, cancellation policy, and any future platform fee remain H-07 decisions —
+- Tax, refunds, disputes, cancellation policy, and any future platform fee remain H-20260724-payment-deposit-cancellation-refund decisions —
   this ADR intentionally ships the mechanism ahead of that policy, the same sequencing the prior
   payment-readiness ADR used for the manual-mark slice.
 - A new Stripe customer is created per order rather than reused; acceptable at today's volume, and

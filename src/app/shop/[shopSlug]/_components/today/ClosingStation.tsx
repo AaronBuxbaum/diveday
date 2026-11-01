@@ -17,7 +17,7 @@ import type { DaySpineContext } from "./DaySpine";
 
 /**
  * **A station that has settled** — the evening reading of the shop home's day
- * spine (ADR 20260827-clearwater-surface-language, decision 4, and H-62).
+ * spine (ADR 20260827-clearwater-surface-language, decision 4, and H-20260827-close-out-remain-own).
  *
  * The same departure the morning drew in full, drawn smaller because the
  * questions have changed. The morning station answers "can this boat sail?" —

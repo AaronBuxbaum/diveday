@@ -392,7 +392,7 @@ export async function POST(request: Request) {
       : null;
 
   // The same clash with both boats already out on the water, two hours gone:
-  // no longer stations, so Today files the sailed row at the desk (H-80,
+  // no longer stations, so Today files the sailed row at the desk (H-20260916-may-one-hull-carry,
   // issue #1814). Opt-in for the same reason, and it moves two departures.
   const crewClashSailed =
     new URL(request.url).searchParams.get("crewClashSailed") === "1"
@@ -890,7 +890,7 @@ async function countHeadsOnADepartureNobodyWillMove(
 }
 
 /**
- * **A seat the counter's own name prompt produced** (H-13, issues #1556 and
+ * **A seat the counter's own name prompt produced** (H-20260724-one-person-per-email, issues #1556 and
  * #1696) — a walk-in tapped off "Is this the same Zoe Bennett?", so the booking
  * carries an existing diver's record on a guess and `identity_unconfirmed`
  * refuses it at the rail until a staffer vouches for the person.

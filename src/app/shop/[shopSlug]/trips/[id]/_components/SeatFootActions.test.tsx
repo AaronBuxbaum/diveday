@@ -126,7 +126,7 @@ describe("the move to another departure", () => {
 });
 
 /**
- * **A diver marked aboard a boat that has left** (H-133): Remove says why it
+ * **A diver marked aboard a boat that has left** (H-20261015-aboard-diver-removal-at): Remove says why it
  * will not, and offers nothing that posts. `cancelBooking` refuses the same
  * seat under its locks; this is the row saying so before anyone tries.
  */

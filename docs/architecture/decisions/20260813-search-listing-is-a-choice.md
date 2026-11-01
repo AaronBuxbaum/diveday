@@ -24,7 +24,7 @@ crawls, caches, and may show for a while. First impressions of a real business w
 from its rehearsal.
 
 **A shop was indexed before it had decided to stay.** The trial is a fixed three weeks
-(`TRIAL_DURATION_DAYS`, H-12). A shop that evaluated DiveDay and walked away had, in the meantime,
+(`TRIAL_DURATION_DAYS`, H-20260724-public-founding-shop-price). A shop that evaluated DiveDay and walked away had, in the meantime,
 had a page published under someone else's domain, indexed against its business name, and quite
 possibly outranking pages it controls. For a business whose search presence is a real asset, that
 was a consequence of *trying* the software.
@@ -74,7 +74,7 @@ shop that objects with nothing to do about it. Half of this shipped anyway — t
 **Un-index on trial expiry.** Considered and not built: it makes the sitemap depend on billing
 state, and a shop that lapses for a week would drop out of search and come back, which is worse for
 its ranking than either steady state. A shop that leaves can opt out on the way out; what happens to
-a lapsed shop's pages is H-12's question, not this one's.
+a lapsed shop's pages is H-20260724-public-founding-shop-price's question, not this one's.
 
 ## Consequences
 

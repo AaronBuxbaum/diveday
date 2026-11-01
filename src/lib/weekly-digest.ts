@@ -11,7 +11,7 @@ import { wallTimeToUtc } from "@/lib/zoned";
 
 /**
  * **The Monday email** — a shop's week, sent to its owner as service mail
- * (market audit item 51; H-09: the owner is staff, so this is transactional,
+ * (market audit item 51; H-20260724-channel-sends-booking-waiver: the owner is staff, so this is transactional,
  * not marketing). This module is the whole of *what goes in it*: which weeks
  * it reads, who gets one, when it is due, and which sections have something
  * to say. Pure and framework-free; the reads are `src/db/weekly-digest.ts`

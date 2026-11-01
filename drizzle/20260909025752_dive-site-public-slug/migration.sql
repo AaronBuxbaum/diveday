@@ -11,7 +11,7 @@
 -- A collision between two names that fold to one segment is broken by the row
 -- id, which is arbitrary but stable and unique; the app's own minting appends
 -- `-2` instead. Neither can be reached by a shop that exists today: DiveDay is
--- pre-pilot (H-49) and every environment reseeds, so this backfill runs over
+-- pre-pilot (H-20260815-no-legacy) and every environment reseeds, so this backfill runs over
 -- seed rows only.
 ALTER TABLE "dive_sites" ADD COLUMN "slug" text;--> statement-breakpoint
 UPDATE "dive_sites" SET "slug" = coalesce(
@@ -34,7 +34,7 @@ UPDATE "dive_sites" d
 -- diveday:allow-destructive set-not-null dive_sites.slug: the backfill two statements
 -- above leaves no NULL behind, and the only writer that could add one during the
 -- build is the staff dive-site form of a shop in production -- of which there are
--- none: DiveDay is pre-pilot (H-49), every environment reseeds, and the new code
+-- none: DiveDay is pre-pilot (H-20260815-no-legacy), every environment reseeds, and the new code
 -- that supplies a slug on every insert ships in the same release as this file.
 ALTER TABLE "dive_sites" ALTER COLUMN "slug" SET NOT NULL;--> statement-breakpoint
 CREATE UNIQUE INDEX "dive_sites_shop_slug_key" ON "dive_sites" ("shop_id","slug") WHERE "deleted_at" is null;

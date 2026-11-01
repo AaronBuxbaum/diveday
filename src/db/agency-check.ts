@@ -27,7 +27,7 @@ import {
 
 /**
  * One level card the DiveDay browser extension may check with its agency
- * (H-105), and the lookup it would type: a live card on this live diver at
+ * (H-20261008-cert-check-extension), and the lookup it would type: a live card on this live diver at
  * this shop that is still waiting for somebody to confirm it — pending, or an
  * import awaiting its confirm. An unsighted self-declaration is not one: its
  * agency is often unstated and its number is the diver's typing, so it keeps
@@ -107,7 +107,7 @@ function checkableQuery(row: {
   dateOfBirth: string | null;
   padiChecksEnabled: boolean;
 }): AgencyCheckQuery | null {
-  // PADI waits for the shop's own switch (H-121).
+  // PADI waits for the shop's own switch (H-20261014-padi-divechek).
   if (!agencyCheckOffered(row.agency, row)) return null;
   if (isUnsightedSelfDeclaration(row)) return null;
   // A pending divemaster or instructor card keeps its link: a pro rating is
@@ -752,7 +752,7 @@ async function undoListedCardCheck(
 }
 
 /**
- * **The agency check's own Undo** (H-105): the level card's review goes back,
+ * **The agency check's own Undo** (H-20261008-cert-check-extension): the level card's review goes back,
  * and so do the cards its page listed that are still pending (layer 3, D1).
  * A listed card a staffer has since certified is theirs and stays. One
  * transaction, so a tick posted meanwhile either lands first and is archived

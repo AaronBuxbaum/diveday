@@ -215,7 +215,7 @@ describe("deleting a boat", () => {
 });
 
 /**
- * **The certificate check and the save are one transaction** (H-107, #2324):
+ * **The certificate check and the save are one transaction** (H-20261009-certificate-caps-seats, #2324):
  * the fleet row's save decides against the departures it has locked, and
  * writes nothing when it refuses.
  */

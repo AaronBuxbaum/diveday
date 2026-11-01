@@ -15,7 +15,7 @@ export function dockCallAt(startsAt: Date, dockCallMinutes: number): Date | null
 
 /**
  * What "Crew arrive N minutes before divers" accepts (`shops.crew_lead_minutes`,
- * H-149): the form's `min`/`max`, the action's parse and the table's CHECK.
+ * H-20261022-crew-arrive-before-divers): the form's `min`/`max`, the action's parse and the table's CHECK.
  */
 export const CREW_LEAD_LIMITS = { min: 5, max: 180 } as const;
 
@@ -44,7 +44,7 @@ export type CrewCall = { at: Date; source: "shift" | "crew" | "divers" };
  * **When a crew member should be at the dock** (fifth-loop ideas, item 47;
  * ux-delight sheet 2026-10-22, item 2; dive-domain review of layer 1).
  *
- * The shop's call first: its crew time (`crewLeadMinutes`, H-149), that many
+ * The shop's call first: its crew time (`crewLeadMinutes`, H-20261022-crew-arrive-before-divers), that many
  * minutes before the divers' dock call (or before the departure when divers
  * have none), as `crew`; with no crew time set, the divers' call, as
  * `divers`, so the line says it is the divers' time (dive-domain review of

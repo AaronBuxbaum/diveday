@@ -70,7 +70,7 @@ export async function createNitroxCertification(db: AppDb, input: NewNitroxCerti
  *
  * Like the specialty confirm beside it, an imported card no longer carries a
  * separate card-sighting attestation: every imported card confirms on one tap
- * (H-24, revised 2026-08-14 — ADR 20260814-one-tap-imported-card-confirm).
+ * (H-20260725-two-findings-dive-domain, revised 2026-08-14 — ADR 20260814-one-tap-imported-card-confirm).
  *
  * A **self-declared** card is the one exception, for the reason `CardSighting`
  * spells out: nobody has seen anything, and this tap is what authorizes a gas
@@ -89,7 +89,7 @@ export async function reviewNitroxCertification(
     sighting?: CardSighting;
     /**
      * The review is the agency's own lookup page listing this card for this
-     * diver (H-105, issue #2592), read by `judgeAgencyListedCard`. Stamps
+     * diver (H-20261008-cert-check-extension, issue #2592), read by `judgeAgencyListedCard`. Stamps
      * `agencyCheckedAt`. A card that needs a sighting is never certified this
      * way: a page does not stand in for the card in a staffer's hand.
      */

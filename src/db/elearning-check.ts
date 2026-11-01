@@ -8,7 +8,7 @@ import { liveTrip } from "./trips-live";
 
 /**
  * One course seat the DiveDay browser extension may check against the
- * agency's eLearning page (H-106), and what it would search for: a live seat
+ * agency's eLearning page (H-20261008-padi-elearning-check), and what it would search for: a live seat
  * (booked or checked in) on a live course session at this shop, held by a live
  * person, on a course from an agency whose eLearning the extension reads, at
  * a shop that turned that agency's checks on (`agencyCheckOffered`).
@@ -58,7 +58,7 @@ export async function seatForElearningCheck(
       ),
     )
     .limit(1);
-  // PADI's eLearning waits for the shop's own switch (H-121).
+  // PADI's eLearning waits for the shop's own switch (H-20261014-padi-divechek).
   if (!row || !agencyCheckOffered(row.agency, row)) return null;
   const query = elearningCheckQuery(row);
   if (!query || !row.courseId) return null;

@@ -28,7 +28,7 @@ output is always a draft artifact he reviews and sends himself.
 3. Read `docs/product/marketing.md`'s claims policy in full — it governs this collateral exactly
    as it governs the public pages. A pilot offer is a claims surface: "anything promised to a
    pilot in writing must already exist in the claims policy or get added there."
-4. Check [human-decisions/](../../../docs/product/human-decisions/README.md) H-12 for what commercial
+4. Check [human-decisions/](../../../docs/product/human-decisions/README.md) H-20260724-public-founding-shop-price for what commercial
    terms are actually authorized to promise today (founding price, two-year lock, founder-direct
    same-day support) versus still open (contract/intake flow, billing cadence, taxes/fees).
 
@@ -56,7 +56,7 @@ Everything in `marketing-page`'s claims policy applies here, plus:
   figure in prose, docs, JSON-LD literals, or images").
 - **Service commitments need product-owner sign-off**, same as the `SwitchingConcierge` claim —
   the concierge-migration offer, the weekly call, the shared founder thread, and the two-year price
-  lock are already authorized (rollout.md, H-12); a new commitment beyond what's already published
+  lock are already authorized (rollout.md, H-20260724-public-founding-shop-price); a new commitment beyond what's already published
   needs the same sign-off before it goes in a draft.
 - **Biography is a claim like any other** — the founder's credentials in a pitch note are limited
   to what `marketing.md`'s About-page confirmation list already authorizes. Never infer or embellish.

@@ -258,7 +258,7 @@ describe("BookingGearFields", () => {
     }
     // Five of the six core pieces, priced individually, come to
     // 1500+1500+1200+800+1000 = $60.00 — more than the $45.00 set, so the
-    // cheaper set price applies even though one piece is missing (H-06, HD-9).
+    // cheaper set price applies even though one piece is missing (H-20260724-initial-gear-policy-sizing, HD-9).
     expect(screen.getByText("Gear for this diver: $45.00")).toBeInTheDocument();
 
     fireEvent.click(screen.getByLabelText(/^Weights/));

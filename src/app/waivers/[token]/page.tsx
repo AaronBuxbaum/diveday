@@ -196,7 +196,7 @@ export default async function WaiverPage({
   /**
    * **A minor signs twice** (ADR 20260907-guardian-co-signature). Decided from
    * the date of birth the shop holds or, with none, the seat's "Under 18"
-   * (H-113), on the shop's calendar day this page is being signed: the rule
+   * (H-20261013-under-18-on-party), on the shop's calendar day this page is being signed: the rule
    * `completeWaiver` refuses on, so the section is never rendered for a diver
    * the writer would not ask, and never absent for one it would.
    */

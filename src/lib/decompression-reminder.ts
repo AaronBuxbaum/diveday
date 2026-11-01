@@ -18,7 +18,7 @@ export function crewDives(crew: ReadonlyArray<{ roles: readonly string[] }>): bo
 }
 
 /**
- * **Whether a decompression departure owes its crew the card reminder** (H-144,
+ * **Whether a decompression departure owes its crew the card reminder** (H-20261017-decompression-departure-reminds-crew,
  * issue #2384). One reminder per departure, never one per diver: DiveDay
  * records the recreational ladder and five recreational specialties, and no
  * technical or decompression card at all (the importer declines them by name),

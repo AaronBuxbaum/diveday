@@ -65,7 +65,7 @@ not alert him (`/api/demo/quiet?setup=<key>`).
 - **A CLI script against the production database.** Declined in 20260925 for the same reasons:
   production credentials on a laptop, and a second path to keep in step with the action.
 - **Keeping the key and adding links beside it.** Two doors to the same form, one of them the
-  standing credential this replaces; there is no legacy to carry (H-49).
+  standing credential this replaces; there is no legacy to carry (H-20260815-no-legacy).
 
 ## Consequences
 

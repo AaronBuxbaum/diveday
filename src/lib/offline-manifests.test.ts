@@ -26,7 +26,7 @@ import {
 
 /**
  * A copy with crew on it, in the two shapes a device can actually be holding:
- * one saved since H-46, whose crew carry person ids and are therefore
+ * one saved since H-20260814-where-diveday-sit-between, whose crew carry person ids and are therefore
  * recordable here, and one saved before it, whose crew carry none and are not.
  * Both have to render and both have to fail closed; only one has controls.
  */
@@ -1429,7 +1429,7 @@ describe("offline manifest policy", () => {
   });
 
   it("never writes age, minor status, or birthdays to a crew device", () => {
-    // H-21 put these on the roster and the live manifest — staff screens. The
+    // H-20260730-minimum-age-gate-data put these on the roster and the live manifest — staff screens. The
     // offline copy is different: it persists to a personal phone for up to two
     // weeks with no delete button, nothing renders these fields there, and they
     // describe children. The payload type is an allow-list so a future field
@@ -1512,7 +1512,7 @@ describe("offline manifest policy", () => {
 });
 
 /**
- * The crew half of the head count, with the radio off (H-46). Everything here
+ * The crew half of the head count, with the radio off (H-20260814-where-diveday-sit-between). Everything here
  * is written against one failure direction: **offline reading "closed" while
  * online says otherwise** — a checkpoint that looks finished while somebody is
  * still in the water. Every refusal below holds the checkpoint open; none of
@@ -1585,7 +1585,7 @@ describe("offline crew roll call", () => {
   it("refuses every crew member on a copy saved before crew ids, so the checkpoint stays open", () => {
     const old = crewSnapshot({ withIds: false });
     // There is no subject to write against, so there is nothing to record —
-    // in either direction, at any checkpoint. That is the pre-H-46 behaviour
+    // in either direction, at any checkpoint. That is the pre-H-20260814-where-diveday-sit-between behaviour
     // preserved exactly for the copies already sitting on devices (I2).
     expect(canRecordOfflineCrewStatus(old, "crew-dana", "boarded", "departure")).toBe(false);
     expect(canRecordOfflineCrewStatus(old, "crew-dana", "not_boarded", "after_dive_1")).toBe(false);

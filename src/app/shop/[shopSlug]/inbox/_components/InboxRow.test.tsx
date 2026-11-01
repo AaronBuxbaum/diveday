@@ -527,7 +527,7 @@ describe("a message asking to move a seat", () => {
   });
 });
 
-describe("an Ask to move from the booking page (H-126)", () => {
+describe("an Ask to move from the booking page (H-20261014-ask-to-move)", () => {
   const SEAT: InboxSeat = {
     bookingId: "bf000000-1111-4222-8333-444444444444",
     tripId: "cf000000-1111-4222-8333-444444444444",

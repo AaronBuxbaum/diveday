@@ -151,7 +151,7 @@ export async function peopleWhoDivedBefore(
 /**
  * {@link peopleWhoDivedBefore}, plus who among them sailed on a departure in
  * the window that the shop marked past no-decompression limits
- * (`trips.exceeds_no_deco_limits`, H-84). DAN gives no preflight figure for
+ * (`trips.exceeds_no_deco_limits`, H-20260916-may-diveday-assert-about). DAN gives no preflight figure for
  * such a dive, so a morning decompression boat silences the afternoon boat's
  * figure too (`flySafeFrom`'s `decompressionRecently`; dive-domain review of
  * issue #1555). Same evidence rule, seat by seat: a flagged seat counts when

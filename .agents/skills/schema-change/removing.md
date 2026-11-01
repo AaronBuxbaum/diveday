@@ -4,7 +4,7 @@ Part of the **schema-change** skill ([SKILL.md](SKILL.md)). Read it before dropp
 
 ## Removing something
 
-**There is no legacy data. Delete it** (H-49 in `docs/product/human-decisions/README.md`, extending H-47).
+**There is no legacy data. Delete it** (H-20260815-no-legacy in `docs/product/human-decisions/README.md`, extending H-20260814-production-database-disposable).
 DiveDay is pre-pilot: no users, nothing anyone would miss. So when you find a table, column or enum
 value nothing writes any more:
 
@@ -23,16 +23,16 @@ value nothing writes any more:
 - The **destructive-migration guard** (`pnpm check:migrations`, ADR 20260806) still applies. It
   exists because a migration runs inside the production build *while the previous release is still
   serving* — a deploy-time problem that having no users does not solve. Your `DROP TABLE` still
-  carries its acknowledgement line, and `pre-pilot, no users, H-49` is now a sufficient *why*:
+  carries its acknowledgement line, and `pre-pilot, no users, H-20260815-no-legacy` is now a sufficient *why*:
   ```sql
-  -- diveday:allow-destructive drop-table roll_call_crew_attestations: retired by H-46; no production caller, pre-pilot, no users (H-49)
+  -- diveday:allow-destructive drop-table roll_call_crew_attestations: retired by H-20260814-where-diveday-sit-between; no production caller, pre-pilot, no users (H-20260815-no-legacy)
   ```
 - **Expand/contract** still applies for the same reason: if the *currently deployed* code reads the
   thing you are dropping, split it across two deploys regardless of how worthless the data is.
   For a column the guard enforces it: a `drop-column` marker is refused while the previous
   release's or this branch's `src/db/schema/` still declares the column, whatever the reason says.
-- **H-02's retention windows and the erasure path** stand. Those are promises about data we *will*
+- **H-20260730-evidence-retention-period-deletion's retention windows and the erasure path** stand. Those are promises about data we *will*
   hold, not tolerance for data we already have.
 
 This rule expires when the first pilot shop has real divers in the system. Aaron says when; it is
-not an agent's call, and the H-49 row is where it gets retired.
+not an agent's call, and the H-20260815-no-legacy row is where it gets retired.

@@ -72,7 +72,7 @@ Two escape hatches, both ordinary existing acts rather than new controls:
 is deliberately **no** `minimum_bookings <= capacity` check constraint. A shop that set a minimum of
 6 and later moved the trip to a 4-seat RIB would otherwise be refused the capacity edit by a
 constraint about something else entirely — and the honest reading of a minimum above capacity is
-"every seat", not "this departure can never run". Same fail-open direction as the H-08 age gate.
+"every seat", not "this departure can never run". Same fail-open direction as the H-20260724-certification-levels-agency-rules age gate.
 
 ### Why its own notification kind
 
@@ -84,7 +84,7 @@ kept. The blow-out's wording would read as a shop that simply changed its mind.
 *(Superseded 2026-08-13: the sweep refunds every active seat and the message states the outcome —
 see [20260813-shop-cancellation-refunds-itself](20260813-shop-cancellation-refunds-itself.md).)*
 The message deliberately says nothing about money. Refunds stay staff-initiated on the per-booking
-path (H-07), and a template that promised a refund would be writing a policy this app does not
+path (H-20260724-payment-deposit-cancellation-refund), and a template that promised a refund would be writing a policy this app does not
 enforce.
 
 ## Alternatives considered

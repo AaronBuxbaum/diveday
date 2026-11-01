@@ -277,7 +277,7 @@ describe("erasing a diver's personal and medical data", () => {
 });
 
 /**
- * **A co-signing guardian's address, erased on its own** (H-103, issue #1673).
+ * **A co-signing guardian's address, erased on its own** (H-20261007-guardian-email-erasure, issue #1673).
  * Owner-only like the diver's erasure, typed back to confirm, and on a live
  * record — the child stays a diver.
  */
@@ -385,7 +385,7 @@ describe("erasing a guardian's email from a diver's releases", () => {
 
 /**
  * **Answering a diver is open to every live staff role** (issues #1505/#1518,
- * decided 2026-09-10 as an H-14 amendment). `replyToDiverAction` carried
+ * decided 2026-09-10 as an H-20260724-staff-role-reach amendment). `replyToDiverAction` carried
  * `canPersonAnswerShopInbox` on top of the live-staff check until then; with
  * that predicate deleted, this is the test that catches the gate coming back
  * by accident, and the one that names the check still standing —

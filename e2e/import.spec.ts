@@ -94,7 +94,7 @@ test.describe("contact import", () => {
     await openDiverFileGroup(page, "Certification records");
     await expect(page.getByText("Old Blue Reef Divers").first()).toBeVisible();
     // A level card's confirm stays one tap: it clears a soft nudge, not a gate —
-    // that card already satisfied readiness on arrival (H-24 scopes the
+    // that card already satisfied readiness on arrival (H-20260725-two-findings-dive-domain scopes the
     // attestation to the confirms that open something).
     const levelCard = page.locator("li").filter({ hasText: "PADI · Advanced Open Water" });
     await levelCard.getByRole("button", { name: "Confirm certification" }).click();

@@ -352,7 +352,7 @@ export type GearPick = { bookingId: string; gearItemId: string };
  * proposal was offered because neither was true when the page loaded, so a
  * staffer confirming it never knowingly chose a labeled unit. A hand pick
  * from the picker saw the label in the option and may still choose it: the
- * dock decides (H-06).
+ * dock decides (H-20260724-initial-gear-policy-sizing).
  *
  * This is the cheap first pass, for the stale tab. The same two questions are
  * asked again inside the write (`reserveGearUnit`'s `screen`, under the

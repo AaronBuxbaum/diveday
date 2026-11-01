@@ -333,7 +333,7 @@ describe("BookingPartyFields — the party-count control", () => {
 
 /**
  * **The SMS consent arrives with the number** (visual review 2026-10-24, B22).
- * The paragraph's words never change (H-09) and are always in the server
+ * The paragraph's words never change (H-20260724-channel-sends-booking-waiver) and are always in the server
  * HTML, so a form posted before hydration, or with scripts off, carried them;
  * CSS hides them while the box is empty (`:placeholder-shown`), so they show
  * the moment a number is in the box, however it got there.

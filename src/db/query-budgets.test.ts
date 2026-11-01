@@ -132,7 +132,7 @@ describe("what the assembly readers cost", () => {
  * a boat's checklist (`openSnagsForShop`), one statement in Today's one wave,
  * on top of the desk layer's count of found items waiting to go home.
  * 61 → 62 (merging main, 2026-10-17): main's boat-on-two-departures read
- * (`boatClashesByTrip`, H-80) beside the crew clash, in the same wave.
+ * (`boatClashesByTrip`, H-20260916-may-one-hull-carry) beside the crew clash, in the same wave.
  * 62 → 64 (merging batch 3): countOpenDateRequests (#2658) and
  * crewAwayAcknowledgedAt (#2678) in Today's wave.
  */

@@ -28,7 +28,10 @@ doc to update when.
   mechanics; [design/design-artifacts.md](../../docs/design/design-artifacts.md) sets what a canvas
   may claim.
 - **Human-owned decisions** live in [product/human-decisions/](../../docs/product/human-decisions/README.md);
-  an agent records an outcome there only when a human made the call. Unbuilt work lives in
+  an agent records an outcome there only when a human made the call. Its id is `H-YYYYMMDD-slug`
+  (the date of the call and a few words of the question), never the next integer; the README's
+  index is generated (`pnpm regen`) and `pnpm check:human-decisions` fails on a duplicate, a
+  numbered `H-<n>` or a citation that names no file. Unbuilt work lives in
   [product/features/](../../docs/product/features/README.md); shipped slices move to
   [product/shipped.md](../../docs/product/shipped.md).
 - **Follow-ups are GitHub issues** labelled `needs-triage`, never a doc section

@@ -191,7 +191,7 @@ describe("completeWhatsAppSignup", () => {
 
   /**
    * **A chain's second shop connects its own number on the shared WABA**
-   * (H-83, issue #1767), and each shop then receives only its own events.
+   * (H-20260916-may-dive-chain-share, issue #1767), and each shop then receives only its own events.
    */
   it("connects a second shop of a chain on the same WABA with a number of its own", async () => {
     const { db, shop } = ctx;

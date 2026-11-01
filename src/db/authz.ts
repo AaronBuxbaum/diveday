@@ -71,7 +71,7 @@ async function activeStaffRolesFor(db: DbExecutor, personId: string): Promise<Ro
 /**
  * The signed-in person's *live* staff roles, re-read from the database, or
  * `null` when they are not an active staff member of this shop right now — a
- * deleted person or a non-active account. The H-14 role gates check against
+ * deleted person or a non-active account. The H-20260724-staff-role-reach role gates check against
  * this rather than the roles baked into the JWT at sign-in, so a demoted,
  * disabled, or deleted staff member loses a gated surface immediately instead
  * of at their next sign-in.
@@ -178,7 +178,7 @@ export const canPersonActOnKind = (
   kind: TodayActionKind,
 ) => canPerson(db, shopId, personId, (roles) => rolesMayActOnKind(kind, roles));
 
-/** Live DB-checked companions of the H-14 predicates (src/lib/authz.ts). */
+/** Live DB-checked companions of the H-20260724-staff-role-reach predicates (src/lib/authz.ts). */
 export const canPersonManagePaymentSettings = (db: DbExecutor, shopId: string, personId: string) =>
   canPerson(db, shopId, personId, canManagePaymentSettings);
 
@@ -310,7 +310,7 @@ export const canPersonReadShopAnswers = (db: DbExecutor, shopId: string, personI
  * The owner and a manager read it however they got on the roster. A crew
  * member taken off the boat this morning loses the text online with the
  * assignment (a copy saved for offline drops it at the next refresh, or
- * keeps it until it expires at sea, H-153). The caller still confirms the
+ * keeps it until it expires at sea, H-20261023-medical-alert-for-the). The caller still confirms the
  * diver is booked on `tripId`.
  */
 export async function canPersonReadMedicalAlertOnTrip(
@@ -440,7 +440,7 @@ export const canPersonReadEveryIncidentReport = (
 export const canPersonOverrideCertBlock = (db: DbExecutor, shopId: string, personId: string) =>
   canPerson(db, shopId, personId, canOverrideCertBlock);
 
-/** Live DB-checked companion of the H-06 gear-override gate (src/lib/authz.ts). */
+/** Live DB-checked companion of the H-20260724-initial-gear-policy-sizing gear-override gate (src/lib/authz.ts). */
 export const canPersonOverrideGearRequest = (db: DbExecutor, shopId: string, personId: string) =>
   canPerson(db, shopId, personId, canOverrideGearRequest);
 

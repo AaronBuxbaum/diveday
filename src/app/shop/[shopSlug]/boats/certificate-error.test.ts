@@ -8,7 +8,7 @@ const t = staffTranslator(LOCALE);
 const plain = (text: string | undefined) => text?.replace(/\u00a0/g, " ");
 
 /**
- * The fleet row's H-107 field error, read back off the redirect. The numbers
+ * The fleet row's H-20261009-certificate-caps-seats field error, read back off the redirect. The numbers
  * arrive in a query string anyone can edit, so anything that is not a small
  * whole number says nothing rather than a garbled sentence.
  */

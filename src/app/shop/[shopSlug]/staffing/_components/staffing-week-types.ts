@@ -31,7 +31,7 @@ export type StaffingWeekWords = {
   /** "Away {dates}" — the warning a crewed departure wears when a blackout overlaps it. */
   awayConflict: string;
   /**
-   * "Also rostered on {departure}" (issue #1695, reworded under H-80): this person is
+   * "Also rostered on {departure}" (issue #1695, reworded under H-20260916-may-one-hull-carry): this person is
    * rostered on another departure at these very hours. Named, never counted —
    * which boat is the question a manager has the moment they see it.
    */

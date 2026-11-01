@@ -28,7 +28,7 @@
  *   and dives in pairs the divemaster picks.
  *
  * A seat with no date of birth and no "Under 18" box passes all of these as an
- * adult (H-08, H-113: the sale never asks an age), so two undeclared
+ * adult (H-20260724-certification-levels-agency-rules, H-20261013-under-18-on-party: the sale never asks an age), so two undeclared
  * thirteen-year-olds would pass. {@link partyAgesUnconfirmed} names those
  * parties, and one tap teams one only after a staffer confirms everyone in it
  * is 18 or over (issue 2808).

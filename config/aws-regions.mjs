@@ -22,7 +22,7 @@
  * Lambda, every log group, the credentials secret, the dashboard.
  *
  * us-east-1, and the same us-east-1 as {@link SES_REGION},
- * {@link ROUTE53_METRICS_REGION}, the Neon database (`aws-us-east-1`, H-04) and
+ * {@link ROUTE53_METRICS_REGION}, the Neon database (`aws-us-east-1`, H-20260724-vercel-selected-web-hosting) and
  * Vercel's default function region (`iad1`) -- the one region where nothing
  * this estate touches is a border away (ADR 20260924-one-region-in-us-east-1).
  * It was in us-east-2 for two weeks in September 2026, following mail there

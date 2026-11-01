@@ -1,5 +1,5 @@
 /**
- * Name matching for the identity-reuse safeguard (H-13).
+ * Name matching for the identity-reuse safeguard (H-20260724-one-person-per-email).
  *
  * A self-service booking is keyed to a person by `(shop, lower(email))`. When an
  * email matches an existing person we must decide whether the *name* submitted

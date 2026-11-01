@@ -1887,7 +1887,7 @@ describe("the roll-call recorder must be live staff (defense in depth)", () => {
   });
 });
 
-describe("age on the crew's boarding list (H-21)", () => {
+describe("age on the crew's boarding list (H-20260730-minimum-age-gate-data)", () => {
   it("carries age, minor status, and a birthday for divers with a date on file", async () => {
     const { db, shop, reef } = await manifestContext();
     const manifest = await getTripManifest(db, shop.id, reef.id, "departure");
@@ -2114,7 +2114,7 @@ describe("crew emergency contacts (in-memory PGlite)", () => {
     // The dock copy is an explicit allow-list, and it stays that way: a crew
     // contact is personal data about a colleague retained on personal phones
     // for up to 14 days, and whether it belongs there is its own decision
-    // (H-21's lesson — `age`, `minor` and `birthday` reached that payload by
+    // (H-20260730-minimum-age-gate-data's lesson — `age`, `minor` and `birthday` reached that payload by
     // riding along on a type). The live manifest gained two fields here; the
     // snapshot deliberately gained none.
     const { db, shop, reef, staff } = await manifestContext();
@@ -2380,7 +2380,7 @@ describe("crew aboard attestation (in-memory PGlite)", () => {
     });
 
     /**
-     * The offline contract, mirrored from `recordRollCall` (H-46). These are
+     * The offline contract, mirrored from `recordRollCall` (H-20260814-where-diveday-sit-between). These are
      * the three protections that make a device-recorded head count safe to
      * apply, and each one is tested here for crew because a crew-specific
      * reading of any of them is how a retried sync double-writes, or an
@@ -2847,7 +2847,7 @@ describe("crew aboard attestation (in-memory PGlite)", () => {
       expect(saved?.rollCall).toMatchObject({ state: "boarded", recordedByName: staff.fullName });
       // ISO string, not a Date — the snapshot is JSON before it is encrypted.
       expect(typeof saved?.rollCall?.occurredAt).toBe("string");
-      // The id rides along (H-46): it is the subject of a crew roll-call
+      // The id rides along (H-20260814-where-diveday-sit-between): it is the subject of a crew roll-call
       // write, and without it the crew half of the head count cannot be
       // recorded on a phone with no signal — which meant an after-dive
       // checkpoint could not be closed at sea at all.
@@ -2913,7 +2913,7 @@ describe("crew aboard attestation (in-memory PGlite)", () => {
     expect(afterDive?.crew.every((member) => member.rollCall?.state === "boarded")).toBe(true);
     // ISO string, not a Date: the snapshot is JSON before it is encrypted.
     expect(typeof afterDive?.crew[0]?.rollCall?.occurredAt).toBe("string");
-    // Crew person ids now ride along (H-46): they are the subject of a crew
+    // Crew person ids now ride along (H-20260814-where-diveday-sit-between): they are the subject of a crew
     // roll-call write, and carrying them is what makes the crew half of the
     // head count recordable with the radio off. Deliberately added to the
     // payload's allow-list, which is the allow-list working rather than being
@@ -3539,7 +3539,7 @@ describe("roll call on a cancelled trip that is already counting heads", () => {
 
 /**
  * **The rail and the prep list agree about a piece the booking already holds**
- * (issue #1811, H-78). The shop drops regulators from its catalog after one is
+ * (issue #1811, H-20260916-rental-fit-describe-shop). The shop drops regulators from its catalog after one is
  * reserved to a diver: the manifest's fit line for that diver carries no
  * "no longer rented" mark, and a diver holding none still does. The rule is
  * `rentalFitLine`'s; the manifest only hands it the register's facts.

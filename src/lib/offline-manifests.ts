@@ -59,7 +59,7 @@ import { medicalWarningDays } from "./waivers";
  * unsynced roll call riding on them — to delete a field nobody looks at would
  * trade a real safety cost for tidiness.
  *
- * And **not bumped for `crew[].id`** (H-46, 2026-08-14), the field that makes
+ * And **not bumped for `crew[].id`** (H-20260814-where-diveday-sit-between, 2026-08-14), the field that makes
  * the crew half of a head count recordable with no signal. Same reasoning a
  * third time, and it is the reasoning that matters most here: the copies this
  * would purge are precisely the ones a boat is out with, and the queued roll
@@ -134,7 +134,7 @@ export function offlineTripHref(tripId: string, fallback: OfflineFallbackReason 
 export const OFFLINE_MANIFEST_CURRENT_MS = 15 * MINUTE_MS;
 export const OFFLINE_MANIFEST_AGING_MS = 4 * 60 * 60 * 1000;
 export const OFFLINE_MANIFEST_MAX_RETENTION_MS = 14 * 24 * 60 * 60 * 1000;
-// Unchanged at seven days post-trip (owner decision 2026-07-26, H-05): there's
+// Unchanged at seven days post-trip (owner decision 2026-07-26, H-20260724-product-now-uses-explicit): there's
 // no manual delete button (ADR 20260726), so this lazy-on-read expiry is the
 // only way a device copy goes away once it's no longer needed.
 export const OFFLINE_MANIFEST_POST_TRIP_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
@@ -230,7 +230,7 @@ export type OfflineManifestPayload = {
         endsAt: string;
       };
       /**
-       * Names, roles, each crew member's saved result — and, since H-46, their
+       * Names, roles, each crew member's saved result — and, since H-20260814-where-diveday-sit-between, their
        * **person id**, which is the subject of a crew roll-call write (ADR
        * 20260803-per-person-crew-roll-call). The dock copy carries it because
        * it can now record one: a captain offshore with the radio off could
@@ -238,11 +238,11 @@ export type OfflineManifestPayload = {
        * halves, so the after-dive checkpoint — the one where a person may still
        * be in the water — could not be closed at sea.
        *
-       * H-46 (2026-08-14) settled the minimisation question this asks and it is
+       * H-20260814-where-diveday-sit-between (2026-08-14) settled the minimisation question this asks and it is
        * consumed here, not re-opened: while DiveDay is pre-pilot, the fuller
        * feature beats a tighter posture. Adding one field to this allow-list
        * deliberately is the allow-list working, not being abandoned — the
-       * *reason* it is an allow-list is that a deny-list once shipped H-21's
+       * *reason* it is an allow-list is that a deny-list once shipped H-20260730-minimum-age-gate-data's
        * age, minor status and birthdays to every crew phone for a fortnight
        * with nothing rendering them.
        *
@@ -257,7 +257,7 @@ export type OfflineManifestPayload = {
        */
       crew: Array<
         Pick<TripManifest["crew"][number], "fullName" | "roles"> & {
-          /** See above: optional, because a snapshot older than H-46 has none. */
+          /** See above: optional, because a snapshot older than H-20260814-where-diveday-sit-between has none. */
           id?: string;
           /**
            * Everyone on the teams this crew member is on, by name only — the
@@ -276,7 +276,7 @@ export type OfflineManifestPayload = {
            * cannot ring the office to ask where the divemaster is — so a crew
            * gap with no reason costs them the one minute that matters. The
            * payload is a departure title the shop already owns and prints on
-           * its own board, not a fact about a person, so H-21's argument about
+           * its own board, not a fact about a person, so H-20260730-minimum-age-gate-data's argument about
            * shipping age and birthdays to every crew phone does not reach it.
            *
            * The one caveat, and it is why this says *titles* rather than
@@ -323,7 +323,7 @@ export type OfflineManifestPayload = {
       /**
        * An explicit **allow-list**, not `Omit<...>`. It used to be a deny-list,
        * which meant every field later added to a manifest diver silently
-       * shipped to every crew phone — that is exactly how H-21's `age`,
+       * shipped to every crew phone — that is exactly how H-20260730-minimum-age-gate-data's `age`,
        * `minor`, and `birthday` reached this payload, retained for up to 14
        * days on personal devices, rendered by nothing, and describing children.
        * Written this way the next new field fails to compile instead.
@@ -439,7 +439,7 @@ export type OfflineManifestPayload = {
            */
           notHere?: boolean;
           /**
-           * **The desk saw this diver and turned them away** (H-135; layer 3
+           * **The desk saw this diver and turned them away** (H-20261015-who-may-turn-someone; layer 3
            * review, dde-1 F3): set only beside `notHere`, which it refines.
            * Without it the dock copy badged a turned-away diver "Not here", the
            * opposite statement about a person the desk stood in front of.
@@ -465,7 +465,7 @@ export type OfflineManifestPayload = {
            * **The two medical warnings the live roll call shows** (issue
            * #2163), as calendar days in the shop's zone and nothing else: the
            * day a physician refused an earlier release this one stands over
-           * (`overriddenRefusal`, H-98), and the day of a referral this release
+           * (`overriddenRefusal`, H-20261007-after-physician-says-no), and the day of a referral this release
            * replaced rather than answered (`overriddenReferralAt`, issue
            * #1282). `medicalWarningDays` (src/lib/waivers.ts) derives both, for
            * this copy and the live roll call alike. The words are the
@@ -498,7 +498,7 @@ export type OfflineManifestPayload = {
             referredOn?: CalendarDate;
             /**
              * A rider boarding riding only under a standing "no" or an open
-             * referral (H-109, `riderMedicalHold`): the same least-that-warns
+             * referral (H-20261009-rider-snorkeler-medical, `riderMedicalHold`): the same least-that-warns
              * rule, one day and no record. Optional and additive, no version
              * bump.
              */
@@ -509,7 +509,7 @@ export type OfflineManifestPayload = {
            * **The diver's medical alert for the crew** (glossary *Medical
            * alert for the crew*, issue #2960). The fact rides on every copy,
            * so a deckhand with no signal still sees the chip. `text` is never
-           * in a payload the server builds (H-153 amendment): it is written on
+           * in a payload the server builds (H-20261023-medical-alert-for-the amendment): it is written on
            * the device by `saveOfflineMedicalAlerts`, after a permitted
            * reader's explicit save, which the server records per diver, and
            * wiped on sign-out or another person's sign-in. Opening it at sea
@@ -812,7 +812,7 @@ export type OfflineManifestEnvelope = {
    */
   arrivalEvents?: OfflineArrivalEvent[];
   /**
-   * **Who saved the medical alerts' words onto this copy** (H-153
+   * **Who saved the medical alerts' words onto this copy** (H-20261023-medical-alert-for-the
    * amendment), and when. Set only by `saveOfflineMedicalAlerts`, after a
    * permitted reader's explicit save on this departure; absent, the copy
    * carries no words. Signing out, or another person signing in on this
@@ -931,7 +931,7 @@ export type OfflineManifestUpcomingResponse = {
   shop: OfflineManifestPayload["shop"];
   payloads: OfflineManifestPayload[];
   /**
-   * Who asked (H-153 amendment): a device that holds medical alert words
+   * Who asked (H-20261023-medical-alert-for-the amendment): a device that holds medical alert words
    * another person saved wipes them before it saves anything for this one
    * (`wipeOfflineMedicalAlerts`).
    */
@@ -942,7 +942,7 @@ export type OfflineManifestUpcomingResponse = {
    * live; security review 2, L3). A background refresh drops saved words for
    * any departure this does not answer true for, so a crew member taken off
    * the boat, or a manager demoted, loses them at the next refresh while the
-   * device is online. One already at sea keeps them until it expires (H-153).
+   * device is online. One already at sea keeps them until it expires (H-20261023-medical-alert-for-the).
    */
   mayHoldMedicalAlertWords: Record<string, boolean>;
 };
@@ -1138,7 +1138,7 @@ export function serializeManifests(
       },
       crew: manifest.crew.map((member) => ({
         // The subject of a crew roll-call write, and the only reason the crew
-        // half is recordable on this copy at all (H-46).
+        // half is recordable on this copy at all (H-20260814-where-diveday-sit-between).
         id: member.id,
         fullName: member.fullName,
         roles: member.roles,
@@ -1168,11 +1168,11 @@ export function serializeManifests(
       })),
       // Built field-by-field rather than spread, matching the allow-list type
       // above: what the dock needs, and nothing else. Age, minor status, and
-      // birthdays (H-21) are deliberately absent — they are staff-screen facts,
+      // birthdays (H-20260730-minimum-age-gate-data) are deliberately absent — they are staff-screen facts,
       // not something to persist on a deckhand's phone for a fortnight.
       //
       // A held seat goes through `withholdHeldSeatParticulars` first (issue
-      // #1690, H-79): the copy that lives longest on a crew phone is the last
+      // #1690, H-20260916-unconfirmed-identity-withhold-cost): the copy that lives longest on a crew phone is the last
       // one that should carry the matched person's next of kin, sizes or
       // medical hold under a name nobody has confirmed. The row is named as
       // booked, and carries `identityWithheld` so the saved copy says why its
@@ -1241,7 +1241,7 @@ export function serializeManifests(
 }
 
 /**
- * The dock copy's medical warnings for one diver (issue #2163, and H-109's
+ * The dock copy's medical warnings for one diver (issue #2163, and H-20261009-rider-snorkeler-medical's
  * riding-only pair): the days the live roll call warns on, and nothing else of
  * the mark. An empty object when there are none, so the spread writes no field.
  */
@@ -1258,7 +1258,7 @@ type OfflineDiverRow = OfflineManifestPayload["manifests"][number]["divers"][num
 
 /**
  * The dock copy's medical alert for one (already withheld) diver: the fact
- * alone. The server never serializes the words into a payload (H-153); they
+ * alone. The server never serializes the words into a payload (H-20261023-medical-alert-for-the); they
  * reach a stored copy only through `saveOfflineMedicalAlerts`, after a
  * permitted reader's explicit save. Nothing on a held seat or a diver who
  * wrote none.
@@ -1318,7 +1318,7 @@ export function offlineManifestAge(
 /**
  * A record kept past its retention window (because it still holds an
  * unsynced roll-call event — see loadOfflineManifest) is not the same as a
- * current one: the H-05 stop rule treats an expired copy as not a boarding
+ * current one: the H-20260724-product-now-uses-explicit stop rule treats an expired copy as not a boarding
  * source. Callers use this to keep showing/reconciling the preserved
  * evidence while refusing to record anything new against it.
  */
@@ -1419,7 +1419,7 @@ export function canRecordOfflineStatus(
  * - **No readiness gate at departure.** Crew hold no booking and therefore no
  *   readiness, so there is nothing to check and nothing to refuse. That mirrors
  *   `recordCrewRollCall`, which has no readiness gate either.
- * - **A crew member with no `id` is refused.** A copy saved before H-46 carries
+ * - **A crew member with no `id` is refused.** A copy saved before H-20260814-where-diveday-sit-between carries
  *   crew with no person id, so there is no subject to write an event against;
  *   that crew member stays uncounted on that copy and the checkpoint stays
  *   open, exactly as it does today. Fail closed, and closed here means the
@@ -2110,7 +2110,7 @@ export function latestOfflineRollCall(
  *
  * `crewPersonId` is required, so a crew member an older snapshot carries with
  * no id never reaches this: the caller reads that member's saved result
- * directly, which is all a pre-H-46 copy has. Both routes agree that *absence*
+ * directly, which is all a pre-H-20260814-where-diveday-sit-between copy has. Both routes agree that *absence*
  * is awaiting, never accounted for.
  */
 export function latestOfflineCrewRollCall(

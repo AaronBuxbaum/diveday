@@ -361,7 +361,7 @@ export async function sendDueCheckoutRecoveries(
     // this batch was talking to Stripe must not still receive the mail.
     //
     // This send is classified commercial (ADR 20260814-checkout-recovery-is-commercial,
-    // H-09): its recipient has no confirmed booking behind them and may have
+    // H-20260724-channel-sends-booking-waiver): its recipient has no confirmed booking behind them and may have
     // abandoned the checkout precisely because they changed their mind about
     // the shop. So it honours the same courtesy-email opt-out its two siblings
     // do, and it carries a working unsubscribe link — and where it cannot do

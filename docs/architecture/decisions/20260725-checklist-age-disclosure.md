@@ -5,7 +5,7 @@
 
 ## Context
 
-[20260724-gear-fit-fallback](20260724-gear-fit-fallback.md) shipped H-08's minimum-age gate. A
+[20260724-gear-fit-fallback](20260724-gear-fit-fallback.md) shipped H-20260724-certification-levels-agency-rules's minimum-age gate. A
 `security-reviewer` pass on that work found that refusing a public booking on age is an
 exploitable oracle — anyone who can guess a diver's email can probe course sessions with
 different published minimums (10/12/15/18) and, from which ones get refused, learn whether that
@@ -14,10 +14,10 @@ the diver's own `/ready` checklist, worded the resulting `under_minimum_age` blo
 **word-for-word identical** to the unrelated `identity_unconfirmed` blocker, so even a diver
 reading their own confirmation page couldn't tell which of the two problems applied.
 
-That closed the leak completely but at a UX cost the original H-08 decision never specified: a
+That closed the leak completely but at a UX cost the original H-20260724-certification-levels-agency-rules decision never specified: a
 family who books their 10-year-old onto a 12+ course gets a vague "we're finishing a check up"
-message instead of anything they can act on. H-08's "fail open" choice didn't settle how much the
-*diver-facing* copy should say — that gap became **H-22** (`docs/product/human-decisions/README.md`).
+message instead of anything they can act on. H-20260724-certification-levels-agency-rules's "fail open" choice didn't settle how much the
+*diver-facing* copy should say — that gap became **H-20260724-minimum-age-gate-fail** (`docs/product/human-decisions/README.md`).
 The product owner reviewed the tradeoff, including the specific gap noted below, and chose to
 disclose more.
 
@@ -28,7 +28,7 @@ course has a minimum age that the date of birth on file doesn't meet for this se
 wrong, give the shop a call and they'll sort it out."*
 
 This is a **known, accepted narrowing** of the original mitigation, not a full reversal of it.
-`identity_unconfirmed` (H-13) only flags a submitted name that doesn't **match** the name already
+`identity_unconfirmed` (H-20260724-one-person-per-email) only flags a submitted name that doesn't **match** the name already
 on file (`!nameMatches`) — it exists to catch a shared inbox, not to prove the submitter is really
 the account holder. `buildDiverChecklist` always shows `identity_unconfirmed`'s generic line ahead
 of `under_minimum_age`'s specific one when both apply, because `calculateReadiness` pushes the

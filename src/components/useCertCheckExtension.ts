@@ -74,7 +74,7 @@ export function requestAgencyPage(query: AgencyCheckQuery): Promise<ExtensionChe
   return requestPage(CHECK_REQUEST_TYPE, query);
 }
 
-/** Ask the extension to look one course student's eLearning up (H-106). */
+/** Ask the extension to look one course student's eLearning up (H-20261008-padi-elearning-check). */
 export function requestElearningPage(query: ElearningQuery): Promise<ExtensionCheckReply> {
   return requestPage(ELEARNING_REQUEST_TYPE, query);
 }

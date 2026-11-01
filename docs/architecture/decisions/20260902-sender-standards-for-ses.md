@@ -114,7 +114,7 @@ every kind was rendered for the production-access case (issue #1953).
   someone who did not ask for that message (CAN-SPAM, 16 CFR 316.2). It is service mail when it
   confirms, protects or answers something the recipient did or asked for. A commercial kind carries
   a required `unsubscribeUrl`, and through it the postal footer; the field follows from the test.
-- **The trip invitation splits by sender** (Aaron Buxbaum, 2026-10-06, H-96). A staffer answering a
+- **The trip invitation splits by sender** (Aaron Buxbaum, 2026-10-06, H-20261006-staff-trip-invitation-service). A staffer answering a
   diver's own date request sends `trip_invitation`, service mail: no unsubscribe, and it reaches a
   diver who turned off courtesy email, because they asked. A staffer inviting a diver on the shop's
   records who asked for nothing sends `direct_trip_invitation`, commercial: the courtesy unsubscribe
@@ -127,7 +127,7 @@ every kind was rendered for the production-access case (issue #1953).
 ## Amended 2026-10-22: a seat the diver waited for is service mail
 
 Every seat offer now comes from one table ([20261017-one-interest-with-a-scope](20261017-one-interest-with-a-scope.md)),
-and its mail class is the 2026-10-06 test applied once (Aaron Buxbaum, H-145 D-2 option b,
+and its mail class is the 2026-10-06 test applied once (Aaron Buxbaum, H-20261005-one-interest-table-names D-2 option b,
 2026-10-17; `offerMailClass`, `src/lib/interests.ts`). A seat on the departure the diver joined the
 wait list for, and the reply to their own date request, are `seat_offer`, service mail, so they reach
 a diver who turned off courtesy email. A cold invitation, a row carried or rolled to another

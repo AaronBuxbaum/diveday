@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 /**
  * **Reading a day is every role's; putting a boat on it is not** (issue #1831).
  *
- * Date requests is open to every live staff role (issue #1679, an H-14
+ * Date requests is open to every live staff role (issue #1679, an H-20260724-staff-role-reach
  * amendment). The day group's one act, "Add a departure", lands on the
  * schedule builder, whose add panel is `canConfigureTrips` — owner, manager,
  * instructor. A captain followed it to a board with no form. So the page asks

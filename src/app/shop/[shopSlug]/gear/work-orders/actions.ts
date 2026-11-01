@@ -44,7 +44,7 @@ import { announceReady } from "./_lib/announce-ready";
  * Every write the bench makes (ADR 20261008-gear-work-orders).
  *
  * Ungated like the rest of gear: handing equipment over the counter and
- * working it are day jobs, and a technician is staff (H-06). Tenancy is the
+ * working it are day jobs, and a technician is staff (H-20260724-initial-gear-policy-sizing). Tenancy is the
  * session's shop in every call — never a slug, never a form field — so a stale
  * tab cannot move another shop's ticket.
  */

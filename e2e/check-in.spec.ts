@@ -293,7 +293,7 @@ test("a counter walk-in family is seated together from one form", async ({ page 
 });
 
 /**
- * **The counter's own guess, cleared at the counter** (H-13, issues #1556 and
+ * **The counter's own guess, cleared at the counter** (H-20260724-one-person-per-email, issues #1556 and
  * #1696).
  *
  * The walk-in name prompt is where a held seat comes from: a staffer types a
@@ -346,7 +346,7 @@ test("a walk-in seated off the name prompt is confirmed and checked in without l
   await expect(
     row.getByText("Confirm this booking is Zoe Bennett?", { exact: false }),
   ).toBeVisible();
-  // The evidence the confirm is weighed against (H-79, issue #1789): the
+  // The evidence the confirm is weighed against (H-20260916-unconfirmed-identity-withhold-cost, issue #1789): the
   // matched diver's last dive day here, not counting this departure. The seed
   // checks Zoe Bennett in on this morning's dawn boat, 05:30 shop time on the
   // frozen clock's day, so the line names that day.
@@ -748,7 +748,7 @@ test("the counter releases a no-show's seat, offers it to the wait list, and the
 });
 
 /**
- * **"Turned away" at the desk** (safety sheet 2026-10-15, item 6; H-135): a
+ * **"Turned away" at the desk** (safety sheet 2026-10-15, item 6; H-20261015-who-may-turn-someone): a
  * diver the desk saw and would not board is recorded as that, with the reason
  * from their own row, and the seat is free before the boat leaves — where
  * "Not here" is still closed.

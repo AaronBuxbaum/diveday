@@ -46,7 +46,7 @@ const ctx = fileScopedShopContext();
 async function context() {
   const { db, shop } = ctx;
   vi.mocked(getDb).mockResolvedValue(db);
-  // A signed release on a seat nobody holds (H-13), given a questionnaire:
+  // A signed release on a seat nobody holds (H-20260724-one-person-per-email), given a questionnaire:
   // the seed signs its releases without one.
   const [record] = await db
     .select({ id: waiverRecords.id, personId: waiverRecords.personId })

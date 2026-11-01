@@ -38,7 +38,7 @@ import { boats } from "./trips";
  * `drysuit` was in that excluded company until issue 1414 gave it `drysuit_size`
  * below; it is a sized piece now, on a scale of its own, and belongs here.
  * `hood` and `gloves` joined it when they became two kinds with a size each
- * (H-102, issue #1816).
+ * (H-20261007-hood-glove-sizes, issue #1816).
  */
 export const rentalFitItem = pgEnum("rental_fit_item", [
   "bcd",
@@ -106,7 +106,7 @@ export function makeRentalFitProfiles<Extra extends Record<string, AnyPgColumnBu
       rentsGopro: boolean("rents_gopro").notNull().default(false),
       rentsDrysuit: boolean("rents_drysuit").notNull().default(false),
       /**
-       * Two kinds, not one "hood & gloves" (H-102, issue #1816): a warm-water
+       * Two kinds, not one "hood & gloves" (H-20261007-hood-glove-sizes, issue #1816): a warm-water
        * diver takes gloves and no hood, a quarry diver takes both in different
        * thicknesses, and one checkbox with one size could say neither.
        */
@@ -123,7 +123,7 @@ export function makeRentalFitProfiles<Extra extends Record<string, AnyPgColumnBu
        * plain wetsuit value written here drops the axis the wall is racked by.
        * `text`, not an enum: the grid varies by manufacturer, staff record an
        * off-grid size as free text, and which codes the diver's own select
-       * offers is the owner's open call (H-76).
+       * offers is the owner's open call (H-20260912-drysuit-sizes-diver-own).
        *
        * Most rental drysuits have their boots vulcanised on, so this size
        * answers for them too — there is no boot piece to pull off the rack
@@ -138,7 +138,7 @@ export function makeRentalFitProfiles<Extra extends Record<string, AnyPgColumnBu
        */
       drysuitSize: text("drysuit_size"),
       /**
-       * **Free text, like the drysuit's, on both fit forms** (H-102, issue
+       * **Free text, like the drysuit's, on both fit forms** (H-20261007-hood-glove-sizes, issue
        * #1816). A rental hood and rental gloves both rack by size *and*
        * thickness ("M, 5 mm", "L, 3 mm"); a closed select would need two axes and somebody
        * to own them, so the shop's own words reach the packing list verbatim.
@@ -149,7 +149,7 @@ export function makeRentalFitProfiles<Extra extends Record<string, AnyPgColumnBu
       finSize: text("fin_size"),
       weightPreference: text("weight_preference"),
       /**
-       * **The diver is in a drysuit** — their own or one of ours (H-78, issue
+       * **The diver is in a drysuit** — their own or one of ours (H-20260916-rental-fit-describe-shop, issue
        * #1752). The one fact on this row about what the diver *wears* rather
        * than what the shop hands over, and the one the drysuit's safety signals
        * key on: the in-water weight check (`weightPreference` is a wetsuit
@@ -162,7 +162,7 @@ export function makeRentalFitProfiles<Extra extends Record<string, AnyPgColumnBu
        *
        * A standing answer, not a per-trip one: the diver who dives dry in winter
        * and wet in summer will sometimes be wrong for one trip, which is the cost
-       * H-78 accepted. Every fit form asks it as one choice with the wetsuit
+       * H-20260916-rental-fit-describe-shop accepted. Every fit form asks it as one choice with the wetsuit
        * columns (`SuitChoice`, `src/lib/rentals.ts`), so a stated fit always
        * carries an answer; `false` on a row nobody has stated is the same
        * "claims nothing" every `rents_*` column defaults to.
@@ -201,7 +201,7 @@ export function makeRentalFitProfiles<Extra extends Record<string, AnyPgColumnBu
        */
       fitStatedAt: timestamp("fit_stated_at", { withTimezone: true }),
       /**
-       * The safe fallback when a requested size isn't available (H-06): staff
+       * The safe fallback when a requested size isn't available (H-20260724-initial-gear-policy-sizing): staff
        * flag the diver for hands-on fitting at check-in instead of silently
        * packing a different size. Set/cleared only by its own action — a size
        * edit never clears it, because a stale flag costs one extra look while a
@@ -633,7 +633,7 @@ export const gearReservations = pgTable(
      * **The gas in a counter-rented tank** (issue #2257, Aaron 2026-10-13,
      * option a), as oxygen percent: 21 is air, 22 to 40 is EANx. Null means
      * nobody recorded it. Only a counter rental carries it (a booking's gas is
-     * its nitrox request, H-11), and only a tank (the writer refuses any other
+     * its nitrox request, H-20260730-nitrox-fill-station-procedure), and only a tank (the writer refuses any other
      * kind). Above 21 the writer refuses unless the person holds a nitrox card
      * that authorizes a fill (`authorizesNitroxFill`, the trip gate's own
      * predicate). Not a fill log and not an analyzer reading: what the staffer

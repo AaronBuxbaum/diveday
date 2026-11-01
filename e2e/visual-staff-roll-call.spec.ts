@@ -44,7 +44,7 @@ for (const scheme of ["light", "dark"] as const) {
     test.describe("staff", () => {
       signedInAsOwner();
 
-      // H-13: a Night-trip seat booked through a shared inbox under a name that
+      // H-20260724-one-person-per-email: a Night-trip seat booked through a shared inbox under a name that
       // doesn't match the person on file shows the fail-closed "Confirm
       // identity" affordance and blocker until staff vouch for it — a
       // safety-critical state worth a baseline.
@@ -451,7 +451,7 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "manifest-buddy-teams-panel", scheme);
       });
 
-      // H-08: a site deeper than the seeded 12 m reaches 105 ft. The seeded
+      // H-20260724-certification-levels-agency-rules: a site deeper than the seeded 12 m reaches 105 ft. The seeded
       // cards do not establish junior/full status, so the roster asks the crew
       // to verify each diver's applicable limit before planning; it stays an
       // advisory outside the red blocker list.

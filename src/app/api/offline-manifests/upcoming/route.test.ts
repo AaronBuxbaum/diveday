@@ -428,7 +428,7 @@ describe("GET /api/offline-manifests/upcoming — the medical alert for the crew
     return manifest?.divers.find((diver) => diver.bookingId === bookingId);
   }
 
-  it("carries the fact and never the words, even for the owner (H-153: only an explicit save carries them)", async () => {
+  it("carries the fact and never the words, even for the owner (H-20261023-medical-alert-for-the: only an explicit save carries them)", async () => {
     const { db, shop, personId } = await staffContext();
     const { bookingId } = await alertOnDemoSeat(db, shop.id);
     vi.mocked(getDb).mockResolvedValue(db);

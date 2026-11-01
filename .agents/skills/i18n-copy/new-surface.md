@@ -15,7 +15,7 @@ register, Caribbean names for marine life), so a new string should match rather 
 argument, and anything you settle that the file does not cover gets added to it in the same change.
 
 The exception is copy with legal or medical weight — the waiver body and the medical questionnaire —
-which stays English pending H-01/H-03 and is not a translator's call.
+which stays English pending H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit and is not a translator's call.
 
 **Both languages are held to the same voice.** A sentence a language model would write (an em-dash
 pivot, "not a project, a file", *actually*, "Here's how") fails `pnpm check:voice` in either

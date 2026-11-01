@@ -78,7 +78,7 @@ All skill bodies live in `.agents/skills/`; Claude directories are symlinks. Loc
 - Keep each local `SKILL.md` under about 6k characters: the steps, and one pointer line per
   supporting file in the same folder saying when to read it. Reference (incidents, tables, full
   command walkthroughs) lives in those files. An invoked skill stays in context for the rest of the
-  thread, so its length is paid on every later call (H-114).
+  thread, so its length is paid on every later call (H-20261014-agents-md-size).
 - An upstream skill (`sourceType: github` in `skills-lock.json`) is pinned, and a
   sync overwrites it. The few lines changed locally are listed in `VENDORED_SKILL_OVERRIDES`
   (`scripts/agent-layer.mjs`) with the wording that replaced them; after a sync, `pnpm check:agents`

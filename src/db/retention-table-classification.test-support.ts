@@ -129,7 +129,7 @@ export const OUTSIDE_RETENTION: readonly string[] = [
   // review it answers, and goes the way the review goes.
   "review_replies",
   "recap_pulses",
-  // Waivers. H-02's question about these is whether signed evidence may be
+  // Waivers. H-20260730-evidence-retention-period-deletion's question about these is whether signed evidence may be
   // erased at all — the opposite end of the same question from a window, and
   // never an argument for expiring one on a clock.
   "waiver_records",

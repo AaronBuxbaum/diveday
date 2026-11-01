@@ -91,6 +91,6 @@ while describing nothing.
   false positives and both require a stated reason.
 - Static `metadata.title` stays English — Next resolves it before locale negotiation, the same
   carve-out 20260729 documents. The waiver body and medical questionnaire stay English regardless,
-  pending H-01/H-03.
+  pending H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit.
 - **Revisit when** the baseline reaches zero: `check:copy` then becomes a plain gate and the
   baseline file can be deleted.

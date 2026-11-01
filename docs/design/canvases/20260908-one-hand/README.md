@@ -1,6 +1,6 @@
 # One hand — why DiveDay feels like four products, and four ways to make it one
 
-- **Status:** Live (its ADR is Proposed, pending H-71; rounds 2 and 3 drawn 2026-09-09 and round 4 on 2026-09-10, each on the owner's read of the last; round 4's seven slices, 20n–20t, shipped 2026-09-10 as one stack of seven pull requests — the rows below name what each landed in)
+- **Status:** Live (its ADR is Proposed, pending H-20260908-four-directions-makes-diveday; rounds 2 and 3 drawn 2026-09-09 and round 4 on 2026-09-10, each on the owner's read of the last; round 4's seven slices, 20n–20t, shipped 2026-09-10 as one stack of seven pull requests — the rows below name what each landed in)
 - **Date:** 2026-09-08
 - **ADR:** [20260908-one-hand](../../../architecture/decisions/20260908-one-hand.md)
 - **Published:** https://claude.ai/code/artifact/cfd0c597-1a70-4990-a171-4548ebae401f
@@ -20,7 +20,7 @@ spellings, one state in five drawings, the eyebrow saying four kinds of thing, t
 in seven sentences. And **four directions** that each redraw the shop home and the Gear register for
 the same shop on the same morning: A finishes Reef by subtraction; B, C and D replace the surface
 and keep A's deletions underneath. **Nothing here is normative**; the ADR carries the decisions, the
-pick is the owner's (H-71), and code obeys the ADR.
+pick is the owner's (H-20260908-four-directions-makes-diveday), and code obeys the ADR.
 
 ## Artboards
 
@@ -171,7 +171,7 @@ they are Direction A in full and the first slice of the other three.
 ## Slices
 
 The ADR's slice table is the sequence; this table is the record of what has landed. Slices 20a–20e
-are the floor and move on the ADR alone; 20f waits on H-71 c, 20g on H-71 a, and 20h–20m (round 3)
+are the floor and move on the ADR alone; 20f waits on H-20260908-four-directions-makes-diveday c, 20g on H-20260908-four-directions-makes-diveday a, and 20h–20m (round 3)
 and 20n–20t (round 4) on the calls named beside each.
 
 | Slice | Status | Lands in | Pinned by |
@@ -181,21 +181,21 @@ and 20n–20t (round 4) on the calls named beside each.
 | 20c — one state: Badge loses its neutral tone, the good-news line, coral never a wash behind text nor a meter, ProgressBar the one bar, the two bugs | open | — | — |
 | 20d — one link, one skeleton, one disclosure: the link guard, `ui/skeleton.tsx`, the summary sweep | open | — | — |
 | 20e — the voice sheet in brand.md, `check:voice` grown to it, the bundle sweep | open | — | — |
-| 20f — the earned moment on the shared door (H-71 c) | open | — | — |
-| 20g — the levers on A (H-71 a, round 2): F, H and K as composed on the Composite and on every round-3 board; E answered by 20l, I kept on the canvas | open | — | — |
-| 20h — L, the trip's own line: the trip page, the thread, the lobby board, the reminder email (H-71 h) | open | — | — |
-| 20i — M, the pass: confirmed, the email, the counter's scan, "You're aboard"; composes 18f (H-71 f) | open | — | — |
-| 20j — O, the log: the close-out writes, Reports reads, the season strip (H-71 g) | open | — | — |
+| 20f — the earned moment on the shared door (H-20260908-four-directions-makes-diveday c) | open | — | — |
+| 20g — the levers on A (H-20260908-four-directions-makes-diveday a, round 2): F, H and K as composed on the Composite and on every round-3 board; E answered by 20l, I kept on the canvas | open | — | — |
+| 20h — L, the trip's own line: the trip page, the thread, the lobby board, the reminder email (H-20260908-four-directions-makes-diveday h) | open | — | — |
+| 20i — M, the pass: confirmed, the email, the counter's scan, "You're aboard"; composes 18f (H-20260908-four-directions-makes-diveday f) | open | — | — |
+| 20j — O, the log: the close-out writes, Reports reads, the season strip (H-20260908-four-directions-makes-diveday g) | open | — | — |
 | 20k — N, the postcard from the crew's log; the recap email and the thread's after-state | open | — | — |
 | 20l — P the six rooms in the empty states and on the lobby board, R the shop's card, S first light, Q's two new answers | open | — | — |
 | 20m — the surface sweep: every board's "Deleted here" applied to its pages, one family per session | open | — | — |
-| 20n — U, follow the boat: the public route, the pass's share line, the storefront's line, the Settings switch (H-71 j) (landed in [#1626](https://github.com/AaronBuxbaum/diveday/pull/1626); removed 2026-10-02 by ADR [20261001-logbook](../../../architecture/decisions/20261001-logbook.md), decision 7. The crew's stage taps and the diver's own stage line on `/ready` survive it) | dropped | — (removed 2026-10-02) | — |
+| 20n — U, follow the boat: the public route, the pass's share line, the storefront's line, the Settings switch (H-20260908-four-directions-makes-diveday j) (landed in [#1626](https://github.com/AaronBuxbaum/diveday/pull/1626); removed 2026-10-02 by ADR [20261001-logbook](../../../architecture/decisions/20261001-logbook.md), decision 7. The crew's stage taps and the diver's own stage line on `/ready` survive it) | dropped | — (removed 2026-10-02) | — |
 | 20o — Y, try it with your boats: the hero's three fields, the filled onboard door, the storefront preview, the four pictures (landed in [#1627](https://github.com/AaronBuxbaum/diveday/pull/1627); removed 2026-09-25 by the owner, when every shop became set up by hand — ADR [20260925-shops-are-set-up-by-hand](../../../architecture/decisions/20260925-shops-are-set-up-by-hand.md). The onboard form's optional boat and first departure survive it) | dropped | — (removed 2026-09-25) | — |
-| 20p — T, the shop's year: the year page over the log, the card, the homepage proof with a yes (H-71 k) | shipped | `src/lib/shop-year.ts` | `e2e/shop-year.spec.ts`, `src/lib/shop-year.test.ts` — landed in [#1629](https://github.com/AaronBuxbaum/diveday/pull/1629) |
-| 20q — W, give a dive: book for someone else, the gift pass, the claim, the giver's thread, the buddy seat on the postcard (H-71 l) (landed in [#1634](https://github.com/AaronBuxbaum/diveday/pull/1634); the gift removed 2026-10-02 by ADR [20261001-logbook](../../../architecture/decisions/20261001-logbook.md), decision 7. The buddy seat on the postcard survives it, in `src/db/buddy-referrals.ts`) | dropped | — (removed 2026-10-02) | — |
-| 20r — V, the living reef: sightings on the crew's log, the site page's month, the sun and moon on the tide line (H-71 n) | shipped | `src/db/trip-sightings.ts` | `e2e/sightings.spec.ts`, `src/db/trip-sightings.test.ts`, `src/lib/sightings.test.ts`, `src/lib/sun-moon.test.ts` — landed in [#1633](https://github.com/AaronBuxbaum/diveday/pull/1633) |
-| 20s — X, the shop on paper: the print register, six sheets, the print specimen in the kit (H-71 o); the register, dock sign, window sticker, boat card and site briefing cards removed 2026-10-02 by ADR [20261001-logbook](../../../architecture/decisions/20261001-logbook.md), decision 7, leaving the paper pass and the trip print packet | shipped | `src/lib/print-sheets.ts` | `e2e/shop-on-paper.spec.ts`, `src/lib/print-sheets.test.ts` — landed in [#1631](https://github.com/AaronBuxbaum/diveday/pull/1631) |
-| 20t — Z, the diver's shelf: the token scope, the shelf, the storefront's welcome, "Forget this phone" (H-71 m) (landed in [#1630](https://github.com/AaronBuxbaum/diveday/pull/1630); removed 2026-10-02 by ADR [20261001-logbook](../../../architecture/decisions/20261001-logbook.md), decision 7) | dropped | — (removed 2026-10-02) | — |
+| 20p — T, the shop's year: the year page over the log, the card, the homepage proof with a yes (H-20260908-four-directions-makes-diveday k) | shipped | `src/lib/shop-year.ts` | `e2e/shop-year.spec.ts`, `src/lib/shop-year.test.ts` — landed in [#1629](https://github.com/AaronBuxbaum/diveday/pull/1629) |
+| 20q — W, give a dive: book for someone else, the gift pass, the claim, the giver's thread, the buddy seat on the postcard (H-20260908-four-directions-makes-diveday l) (landed in [#1634](https://github.com/AaronBuxbaum/diveday/pull/1634); the gift removed 2026-10-02 by ADR [20261001-logbook](../../../architecture/decisions/20261001-logbook.md), decision 7. The buddy seat on the postcard survives it, in `src/db/buddy-referrals.ts`) | dropped | — (removed 2026-10-02) | — |
+| 20r — V, the living reef: sightings on the crew's log, the site page's month, the sun and moon on the tide line (H-20260908-four-directions-makes-diveday n) | shipped | `src/db/trip-sightings.ts` | `e2e/sightings.spec.ts`, `src/db/trip-sightings.test.ts`, `src/lib/sightings.test.ts`, `src/lib/sun-moon.test.ts` — landed in [#1633](https://github.com/AaronBuxbaum/diveday/pull/1633) |
+| 20s — X, the shop on paper: the print register, six sheets, the print specimen in the kit (H-20260908-four-directions-makes-diveday o); the register, dock sign, window sticker, boat card and site briefing cards removed 2026-10-02 by ADR [20261001-logbook](../../../architecture/decisions/20261001-logbook.md), decision 7, leaving the paper pass and the trip print packet | shipped | `src/lib/print-sheets.ts` | `e2e/shop-on-paper.spec.ts`, `src/lib/print-sheets.test.ts` — landed in [#1631](https://github.com/AaronBuxbaum/diveday/pull/1631) |
+| 20t — Z, the diver's shelf: the token scope, the shelf, the storefront's welcome, "Forget this phone" (H-20260908-four-directions-makes-diveday m) (landed in [#1630](https://github.com/AaronBuxbaum/diveday/pull/1630); removed 2026-10-02 by ADR [20261001-logbook](../../../architecture/decisions/20261001-logbook.md), decision 7) | dropped | — (removed 2026-10-02) | — |
 
 ## Working on it
 

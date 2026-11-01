@@ -12,7 +12,7 @@ const ctx = fileScopedShopContext();
 
 /**
  * **A course student's materials, ticked from PADI's own eLearning page**
- * (H-106).
+ * (H-20261008-padi-elearning-check).
  *
  * The extension hands back whatever PADI's page showed; the verdict is the
  * server's, from the seat, student and course as the database holds them.

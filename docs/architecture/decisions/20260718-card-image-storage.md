@@ -7,7 +7,7 @@
 
 Certification and specialty cards captured a `card_image_url` — a pasted reference, never an
 actual upload. Staff want to snap a photo of a diver's C-card at the desk. That needs durable blob
-storage, which is a hosting-coupled, credential-gated decision (H-04 / Vercel hosting ADR). The
+storage, which is a hosting-coupled, credential-gated decision (H-20260724-vercel-selected-web-hosting / Vercel hosting ADR). The
 capture flow must stay testable without real storage, and must never lose the working
 paste-a-URL path.
 

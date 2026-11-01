@@ -139,7 +139,7 @@ export default async function UnsubscribePage({ params }: { params: Promise<{ to
     );
   }
 
-  // The fourth kind: a shop's shore contact, from a roll-call alert (H-118).
+  // The fourth kind: a shop's shore contact, from a roll-call alert (H-20261014-stale-roll-call-recipients).
   const shore = await resolveShoreAlertStopToken(db, token);
   if (shore) {
     if (shore.alreadyStopped) {

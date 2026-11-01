@@ -27,7 +27,7 @@ import {
 /**
  * - `body` — the release is too short or too long to be one.
  * - `materiality` — signatures stand and the publish did not say whether the
- *   edit is a correction or a material change (H-54).
+ *   edit is a correction or a material change (H-20260822-may-shop-explicitly-declare).
  * - `questions` — the list breaks a rule; `questionNumber` names the question
  *   (1-based) when the refusal is about one.
  */

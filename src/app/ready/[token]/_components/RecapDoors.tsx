@@ -175,7 +175,7 @@ export function PhotoDoor({
   /** "Stop sharing" on the diver's own shared photo (#2806). */
   unshareAction: (formData: FormData) => void | Promise<void>;
 }) {
-  // Another diver's shared photos sit under their own words (H-129): the
+  // Another diver's shared photos sit under their own words (H-20261014-share-photo-with-boat): the
   // diver's own and the crew's stay the grid they always were, and nothing a
   // stranger chose reads as this diver's.
   const own = photos.filter((photo) => !photo.sharedBy);

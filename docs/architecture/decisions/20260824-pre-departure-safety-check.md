@@ -34,7 +34,7 @@ a crew has open at the rail) — nothing had assembled them.
   first look, and nothing else is DiveDay's words.
 - **Informs, never gates.** Nothing here may block a departure page from rendering, a trip from
   sailing, or any other surface's own logic. Whether it *should* gate is a real, live question —
-  recorded as H-51 in `docs/product/human-decisions/README.md`, not decided by this table's shape or by an
+  recorded as H-20261025-shop-authored-pre-departure in `docs/product/human-decisions/README.md`, not decided by this table's shape or by an
   engineer's default.
 - **Two states only: `checked` and `cleared`.** `cleared` is the undo — a re-tap of an already-
   checked item retracts it, mirroring roll call's own undo grammar, so an accidental tap leaves a
@@ -117,7 +117,7 @@ agree on what an absent field means.
 
 - A shop can define its own pre-departure line, a crew can tap it offline and have it sync, and it
   renders on the departure log with explicit absences — the "Done when" bar the issue set.
-- H-51 stays open until an owner decides whether an unchecked item should gate a departure. Nothing
+- H-20261025-shop-authored-pre-departure stays open until an owner decides whether an unchecked item should gate a departure. Nothing
   here changes if that decision goes either way: the writer, the events table, and the UI's tap
   targets are unaffected: only whether a refusal is *possible* upstream of them would change.
 - The next feature that wants a shop-authored ordered list (checklist or otherwise) has a template
@@ -136,5 +136,5 @@ pre-departure line, "O2 kit aboard and cylinder full"**, written by `createSigne
   reword it, reorder it or delete it, and it informs, never gates.
 - Still no other DiveDay words. Oxygen is the one item every recreational operation carries
   whatever its flag state; the rest of the list stays the shop's.
-- No backfill for shops created before the change (H-49). Per-departure kit assignment is left
+- No backfill for shops created before the change (H-20260815-no-legacy). Per-departure kit assignment is left
   until shops ask for it.

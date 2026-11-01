@@ -40,7 +40,7 @@
 - **Identity match key** — self-service paths (booking, wait-list, CSV import) treat a shop's
   active people as unique by `(shop_id, lower(email))` and **reuse** the matching person on any
   submission with that email, so a re-typed regular collapses onto their own cert/waiver/rental-fit
-  history (`findOrCreatePerson`, `src/db/people.ts`, CR-008). **Name-mismatch safeguard (H-13):** the
+  history (`findOrCreatePerson`, `src/db/people.ts`, CR-008). **Name-mismatch safeguard (H-20260724-one-person-per-email):** the
   reuse is no longer silent — `findOrCreatePerson` now compares the submitted name to the stored one
   (`personNamesMatch`, `src/lib/person-name.ts`; case/accent/order/middle-initial tolerant), and a
   public booking that reuses an email under a genuinely different name is stamped
@@ -55,7 +55,7 @@
   than the matching cleverer — the seat inherits no certification, waiver or rental fit until the
   same **Confirm identity** tap. Staff-facing diver create/edit/restore still **refuse** on the
   same email collision rather than reuse, and a soft-deleted person's email frees up for a new,
-  unrelated person (that soft-delete window is accepted as-is; it fails closed to a blank record). See H-13 in
+  unrelated person (that soft-delete window is accepted as-is; it fails closed to a blank record). See H-20260724-one-person-per-email in
   [human-decisions/](../human-decisions/README.md) and
   [20260723-person-email-uniqueness](../../architecture/decisions/20260723-person-email-uniqueness.md).
 - **Held seat** — a booking attached to an existing diver on a guess: it carries
@@ -105,7 +105,7 @@
   #2082): `/ready` and `/waivers` neither show nor write the record's emergency contact, rental
   fit, cards or language, a clean release signed on the seat does not carry to the diver's other
   bookings (a medical hold signed there still does), and no readiness reminder or recap is sent
-  until the flag clears. See H-13 in [human-decisions/](../human-decisions/README.md).
+  until the flag clears. See H-20260724-one-person-per-email in [human-decisions/](../human-decisions/README.md).
 - **Split off a held seat** ("Different person") — the other answer to a held seat: this booking is
   *not* the diver it was attached to. `splitBookingIdentity` (`src/db/bookings.ts`) creates a new
   diver record, named by the staffer and prefilled with the name the seat was booked under
@@ -115,7 +115,7 @@
   no cards, sizes, date of birth, contact or email (the shared address stays with the record that
   owns it, and is refused if typed). What the staffer types about the person in front of them
   lands on the new record (issue #2081): a **date of birth** or the staffer's **"They're 18 or
-  older"** (H-100), one of the two on every departure and the date itself when a moving seat is on a
+  older"** (H-20261007-held-seat-split-into), one of the two on every departure and the date itself when a moving seat is on a
   course with a minimum age, because the age check and the guardian co-signature rule both read the
   date and fail open without one (the tick is filed with who gave it, `people.adult_attested_at`),
   and an optional **email or phone** for sending their own waiver. When

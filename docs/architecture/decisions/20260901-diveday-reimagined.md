@@ -1,6 +1,6 @@
 # 20260901-diveday-reimagined — Reef for the shop, Harbor for the diver
 
-- **Status:** Accepted — decided 2026-09-01 (Aaron Buxbaum, in session; H-64)
+- **Status:** Accepted — decided 2026-09-01 (Aaron Buxbaum, in session; H-20260901-canvas-direction-brand)
 - **Date:** 2026-09-01
 - **Scope:** Every surface — the design system, the staff app, the public shopfront, the embeds a shop
   puts on its own website, the marketing pages, and the offer
@@ -72,7 +72,7 @@ drawing, which is why it may sit behind a manifest; the swell that rides it on t
 drawing, and only the home draws that. On the home itself the board's four missing parts landed
 together: every work row leads with its **glyph** from the shipped status family (a drawing is
 never a status), the head count is a **dial** whose water is `shallows`, the two horizons are two
-tideline panels side by side, and the board's **"First thing" panel** — H-62's one obvious next
+tideline panels side by side, and the board's **"First thing" panel** — H-20260827-close-out-remain-own's one obvious next
 action made literal — lifts the next boat's first blocking door above the spine, a repeat of the
 row beneath by design.
 
@@ -181,7 +181,7 @@ offers **a website, built for you**: a shop asks, and DiveDay builds it for them
 someone asks; nothing is built ahead of a request). It is an **authorized service offer** under the
 marketing claims policy, not a product feature: phrased as a human commitment, never a turnaround
 time, never a page-count. It appears on `/pricing`, `/product` and the FareHarbor guide, priced as
-part of the subscription until the owner says otherwise (H-65 asks). FareHarbor's equivalent is a
+part of the subscription until the owner says otherwise (H-20261025-built-order-website-priced asks). FareHarbor's equivalent is a
 separately-sold hosted website, and that comparison is stated the way the claims policy allows: as
 the figure third parties report, cited, never as the shop's own cost. *Corrected 2026-09-02, when
 slice 13e went to write it down*: FareHarbor publishes no price for it. The research round's

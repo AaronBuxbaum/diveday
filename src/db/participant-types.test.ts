@@ -209,13 +209,13 @@ describe("the gates a non-diver is not asked to clear", () => {
     for (const bookingId of [rider.bookingId, snorkeler.bookingId]) {
       const codes = codesOf(bookingId);
       expect(certCodes(codes)).toEqual([]);
-      // The waiver is still everyone's (H-01/H-03): nobody has signed yet.
+      // The waiver is still everyone's (H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit): nobody has signed yet.
       expect(codes.some((code) => code.startsWith("waiver_"))).toBe(true);
       expect(rows.find((row) => row.booking.id === bookingId)?.readiness.status).toBe("blocked");
     }
   });
 
-  it("never holds a rider on a referral or a refusal, and holds a snorkeler on both (H-109)", async () => {
+  it("never holds a rider on a referral or a refusal, and holds a snorkeler on both (H-20261009-rider-snorkeler-medical)", async () => {
     const { db, shop, trip, staff } = await benwood();
     await limits(db, trip.id, 8, null);
     for (const hold of ["referral", "refusal"] as const) {
@@ -237,7 +237,7 @@ describe("the gates a non-diver is not asked to clear", () => {
     }
   });
 
-  it("boards a rider past a referral or a refusal with a riding-only warning, online and offline (H-109)", async () => {
+  it("boards a rider past a referral or a refusal with a riding-only warning, online and offline (H-20261009-rider-snorkeler-medical)", async () => {
     const { db, shop, trip, staff } = await benwood();
     await limits(db, trip.id, 8, null);
     const refused = await seat(db, shop.id, trip.id, "rider");
@@ -278,7 +278,7 @@ describe("the gates a non-diver is not asked to clear", () => {
     expect(offlineRow(snorkeler.bookingId)?.medicalWarnings).toBeUndefined();
   });
 
-  it("warns at the rail about a retired refusal signed after a rider's clean release (H-109)", async () => {
+  it("warns at the rail about a retired refusal signed after a rider's clean release (H-20261009-rider-snorkeler-medical)", async () => {
     const { db, shop, trip, staff } = await benwood();
     await limits(db, trip.id, 8, null);
     const rider = await seat(db, shop.id, trip.id, "rider");
@@ -308,7 +308,7 @@ describe("the gates a non-diver is not asked to clear", () => {
     expect(row?.riderMedicalHold).toMatchObject({ kind: "not_cleared", evaluatedOn: "2026-01-01" });
   });
 
-  it("still asks a rider whose held release has aged out to sign again (H-109)", async () => {
+  it("still asks a rider whose held release has aged out to sign again (H-20261009-rider-snorkeler-medical)", async () => {
     const { db, shop, trip } = await benwood();
     await limits(db, trip.id, 8, null);
     const rider = await seat(db, shop.id, trip.id, "rider");
@@ -331,7 +331,7 @@ describe("the gates a non-diver is not asked to clear", () => {
     expect(fresh).toMatchObject({ ok: true });
   });
 
-  it("keeps a referral nobody cleared holding the diver's other seats after the rider's seat takes a fresh link (H-104)", async () => {
+  it("keeps a referral nobody cleared holding the diver's other seats after the rider's seat takes a fresh link (H-20261006-medical-holds-every-departure)", async () => {
     const { db, shop, trip } = await benwood();
     await limits(db, trip.id, 8, null);
     const rider = await seat(db, shop.id, trip.id, "rider");
@@ -667,7 +667,7 @@ describe("setBookingParticipantType", () => {
     expect(readiness?.blockers.map((blocker) => blocker.code)).toContain("medical_review");
   });
 
-  it("boards a diver switched to riding past a referral, and the record still says so (H-109)", async () => {
+  it("boards a diver switched to riding past a referral, and the record still says so (H-20261009-rider-snorkeler-medical)", async () => {
     // A rider is never held on a medical. The change is not silent: the
     // governing record still reads as held, which is what the roster shows,
     // and switching back into the water holds the seat again.

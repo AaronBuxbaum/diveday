@@ -33,7 +33,7 @@ import { liveTrip } from "./trips-live";
  * and it is not payroll.
  *
  * Only departures the reader crewed are read, and nothing else about money
- * leaves this function (decision H-141: crew see tips on their own boats and
+ * leaves this function (decision H-20261015-crew-see-tips-on: crew see tips on their own boats and
  * no other shop money).
  */
 export async function crewTipShare(

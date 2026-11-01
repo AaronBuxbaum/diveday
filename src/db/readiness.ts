@@ -394,7 +394,7 @@ export type NewShopIssuedCertification = {
    * is null.
    */
   level: CertificationLevel;
-  /** The instructor (or any active staff member — the same H-48 trust boundary `reviewCertification` uses) whose tap this is. */
+  /** The instructor (or any active staff member — the same H-20260814-may-sight-card trust boundary `reviewCertification` uses) whose tap this is. */
   issuedByPersonId: string;
 };
 
@@ -463,7 +463,7 @@ export async function courseCertifiesOnTrip(
 /**
  * **The student this seat holds**, or null (issue #2226, reviews G4/Y2): the
  * person on a live diver's seat of this shop's session, whose identity is not
- * held (H-13). A snorkeler or a rider on a course session is a passenger, and
+ * held (H-20260724-one-person-per-email). A snorkeler or a rider on a course session is a passenger, and
  * the session's roster never certifies one. The roster's Certify reads the
  * person from here, never from what the form posted.
  */
@@ -639,7 +639,7 @@ export async function reviewCertification(
     sighting?: LevelCardSighting;
     /**
      * The review is the agency's own lookup page naming this diver at this
-     * level (H-105), read by `judgeAgencyPage`. Stamps `agencyCheckedAt`; a
+     * level (H-20261008-cert-check-extension), read by `judgeAgencyPage`. Stamps `agencyCheckedAt`; a
      * still-unsighted self-declaration is never certified this way.
      */
     agencyChecked?: boolean;
@@ -1056,7 +1056,7 @@ export type NewShopIssuedSpecialty = {
   tripId: string;
   /** Which specialty this shop's class certifies. Chosen at the tap, never derived. */
   specialty: DiveSpecialty;
-  /** The staff member whose tap this is — same H-48 trust boundary as `reviewCertification`. */
+  /** The staff member whose tap this is — same H-20260814-may-sight-card trust boundary as `reviewCertification`. */
   issuedByPersonId: string;
 };
 
@@ -1289,7 +1289,7 @@ export type CertificationReviewRefusal =
  *
  * An **imported** card's confirm used to additionally require the staffer to
  * tick a card-sighting attestation, which was recorded in `reviewNote`. That
- * asymmetry is gone (H-24, revised 2026-08-14): every imported card now
+ * asymmetry is gone (H-20260725-two-findings-dive-domain, revised 2026-08-14): every imported card now
  * confirms on the same bare tap, including the *level* card that opens the same
  * depth on every gated boat in the shop. The gate is still per-card and still
  * needs a human act; what it no longer asks for is a second statement of why.
@@ -1312,7 +1312,7 @@ export async function reviewSpecialtyCertification(
     sighting?: CardSighting;
     /**
      * The review is the agency's own lookup page listing this specialty for
-     * this diver (H-105, issue #2592), read by `judgeAgencyListedCard`. Stamps
+     * this diver (H-20261008-cert-check-extension, issue #2592), read by `judgeAgencyListedCard`. Stamps
      * `agencyCheckedAt`; a card that needs a sighting is never certified this
      * way, as for the level and nitrox reviews.
      */
@@ -1478,7 +1478,7 @@ export async function restoreSpecialtyCertification(
  * The exact same result drives staff rosters today and diver/manifest views
  * later. The single-trip form of `listTripsReadiness`: it delegates the whole
  * evidence pipeline to the batched implementation and adds only the depth
- * advisory (H-08), which the roster and manifest read but the multi-trip
+ * advisory (H-20260724-certification-levels-agency-rules), which the roster and manifest read but the multi-trip
  * surfaces don't. One pipeline, not two — a readiness input added to a
  * separate single-trip copy and not the batch (or vice versa) would let Today
  * and the trip roster disagree about who is blocked.
@@ -1540,7 +1540,7 @@ export async function listTripReadiness(
       ...row,
       /**
        * Whether the deepest site on this trip goes past what this diver's card
-       * (and junior age band) is trained for — H-08, decided as a **warning,
+       * (and junior age band) is trained for — H-20260724-certification-levels-agency-rules, decided as a **warning,
        * not a block**. Deliberately a sibling of `readiness` rather than a
        * blocker inside it: an instructor may keep a diver shallower than the
        * site's maximum, so this must never be able to flip a `ready` diver to
@@ -1731,7 +1731,7 @@ type SeatReleaseInput = Parameters<typeof releaseLapseForBooking>[0];
  * release that lapses mid-dive blocks before it sails, and a liveaboard guest
  * on day two reads at now. Cards, payment and age keep their own instants.
  *
- * A rider is held to the release and never to its medical (H-109), so a hold
+ * A rider is held to the release and never to its medical (H-20261009-rider-snorkeler-medical), so a hold
  * does not outrank their signatures and a held record is a signed one — read
  * only while it is itself current, never the hold's own standing. `asOf` is
  * the departure log's alone (issue #3002).
@@ -2058,7 +2058,7 @@ export async function listTripsReadiness(
       // be a second answer to a safety question (issue #1282).
       overriddenReferralAt: referral?.at ?? null,
       // The referral itself, so the roster and the manifest can link the
-      // warning to it (issue #2195, amending H-98).
+      // warning to it (issue #2195, amending H-20261007-after-physician-says-no).
       overriddenReferral: referral,
       // The physician's "no" a clean new release stands over (issue #2158):
       // the seat boards, and every surface warns with a link to the refusal.
@@ -2066,7 +2066,7 @@ export async function listTripsReadiness(
         effectiveWaiver,
         signedWaiversByPerson.get(row.person.id) ?? [],
       ),
-      // A rider boards on a release a medical holds (H-109), and the crew
+      // A rider boards on a release a medical holds (H-20261009-rider-snorkeler-medical), and the crew
       // still reads it as a "riding only" warning, from the same record the
       // rider path chose (dive-domain review of #2212).
       riderMedicalHold: isHeldToMedical(row.booking.participantType)

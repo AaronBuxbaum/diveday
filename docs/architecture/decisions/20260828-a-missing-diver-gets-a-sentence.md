@@ -84,7 +84,7 @@ tamper-evident document. An unexplained missing-diver mark reads far worse than 
   departure rather than to the person it is about.
 
 - **Leave the gap and file it.** Defensible while DiveDay is pre-pilot, and rejected because "There
-  is no legacy. Delete it." governs dead code, not a promise about a safety record. H-02's
+  is no legacy. Delete it." governs dead code, not a promise about a safety record. H-20260730-evidence-retention-period-deletion's
   retention and erasure commitments are explicitly not relaxed by pre-pilot status, and this is the
   same kind of obligation.
 
@@ -98,7 +98,7 @@ tamper-evident document. An unexplained missing-diver mark reads far worse than 
 ## Consequences
 
 - Two columns return by migration, having been dropped days earlier. The erasure sweep and the
-  export column come back with them, which is the half of a restore that is easy to forget: H-02's
+  export column come back with them, which is the half of a restore that is easy to forget: H-20260730-evidence-retention-period-deletion's
   erasure promise is explicitly one of the things pre-pilot status does not relax. That churn is the honest cost
   of the round trip and is preferable to a shop discovering the gap on the day it matters.
 - `rollCallNoteAllowed` is now the single place the rule lives. A surface that wants to offer the

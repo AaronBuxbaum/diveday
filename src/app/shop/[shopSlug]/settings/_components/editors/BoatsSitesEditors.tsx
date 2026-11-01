@@ -93,7 +93,7 @@ const DOCK_DAY_FIELD_KEYS: Record<
 
 /**
  * The numbers a crew dials during, and the plan (issue #688), with the shore
- * contact's alert address beside the free-text shore contact (H-118): the
+ * contact's alert address beside the free-text shore contact (H-20261014-stale-roll-call-recipients): the
  * consent box, drawn for the address on file (`shoreAlertConsentFor`), who
  * recorded it and when, and whether the address has confirmed itself yet.
  */
@@ -224,7 +224,7 @@ export function EmergencyReferenceForm({
                 />
               </Field>
               {/* Free text for a person to read; nothing is ever sent to it
-              (owner review #4 on H-118). */}
+              (owner review #4 on H-20261014-stale-roll-call-recipients). */}
               <Field
                 label={t("settings.main.emergency.shoreContactLabel")}
                 description={t("settings.main.emergency.shoreContactDescription")}
@@ -490,7 +490,7 @@ export function TurnaroundFields({ shop, t }: { shop: SettingsShop; t: StaffTran
 
 /**
  * **"Crew arrive N minutes before divers"** (ux-delight sheet 2026-10-22,
- * item 2; H-149): one number, saved with the dock day, empty for "crew come with the
+ * item 2; H-20261022-crew-arrive-before-divers): one number, saved with the dock day, empty for "crew come with the
  * divers". A crew member's own shift still wins (`crewCallAt`).
  */
 export function CrewLeadFields({ shop, t }: { shop: SettingsShop; t: StaffTranslator }) {

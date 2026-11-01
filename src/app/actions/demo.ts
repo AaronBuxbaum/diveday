@@ -82,7 +82,7 @@ async function takeDemoSeat(shopId: string): Promise<void> {
 
 /**
  * Dress this browser's demo in the shop name the visitor typed at the door
- * (H-131), or take off a name an earlier demo wore when this one was given
+ * (H-20261014-demo-wears-visitor-shop), or take off a name an earlier demo wore when this one was given
  * none. Staff screens and the email preview read it; the storefront never does.
  */
 async function wearVisitorShopName(shopId: string, typed: unknown): Promise<void> {

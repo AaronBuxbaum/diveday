@@ -84,7 +84,7 @@ export function DiverFacts({
   // The two warning days, in the shop's zone and with the year: the refusal by
   // the physician's evaluation (dive-domain review of #2163).
   const warningDays = medicalWarningDays(diver.medicalWaiver, timezone, diver.riderMedicalHold);
-  // A rider boarding riding only under a medical hold (H-109): said in full on
+  // A rider boarding riding only under a medical hold (H-20261009-rider-snorkeler-medical): said in full on
   // screen and paper alike, with no medical mark to hang it on.
   const ridingOnly = ridingOnlyMedicalSentences(t, warningDays, (day) =>
     formatCalendarDate(day, locale),
@@ -261,7 +261,7 @@ export function DiverFacts({
                 date: formatCalendarDate(warningDays.referredOn ?? "", locale),
               })}
               {/* The override stands, and the warning links back to the
-                  referral (Aaron, 2026-10-09, issue #2195, amending H-98). */}
+                  referral (Aaron, 2026-10-09, issue #2195, amending H-20261007-after-physician-says-no). */}
               {waiverHref && diver.medicalWaiver.overriddenReferral ? (
                 <>
                   {" "}

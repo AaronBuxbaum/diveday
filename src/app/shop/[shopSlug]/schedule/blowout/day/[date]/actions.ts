@@ -19,8 +19,8 @@ import { uuidParam } from "@/lib/uuid";
  * 20261009-day-weather-call). Owner, manager and captain only
  * (`canCallDayBlowout`, the owner's decision of 2026-10-09); the single-trip
  * call stays open to all staff. A caller without the refund right (`canRefund`,
- * H-14) cancels and tells the divers but leaves the money captured for an owner
- * or manager to release (H-139).
+ * H-20260724-staff-role-reach) cancels and tells the divers but leaves the money captured for an owner
+ * or manager to release (H-20261013-call-off-queues-refunds).
  *
  * **The server decides what is called** (security review L2): the submitted
  * ids are re-read against this date's departures in the shop's own zone, and
@@ -63,7 +63,7 @@ export async function callDayBlowoutAction(shopSlug: string, date: string, formD
           tripIds: callable,
           calledByPersonId: session.user.personId,
           now,
-          // A captain may call the day; only a refund holder moves the money (H-139).
+          // A captain may call the day; only a refund holder moves the money (H-20261013-call-off-queues-refunds).
           refunds: (await canPersonRefund(db, shop.id, session.user.personId))
             ? "release"
             : "queue",

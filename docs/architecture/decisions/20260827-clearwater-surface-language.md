@@ -55,7 +55,7 @@ mirror.
 groups own their shared facts; chrome recedes; elevation is earned.** Ten decisions, the first
 three mechanical and app-wide, the rest recompositions of specific surfaces.
 
-Over all ten stands a direction Aaron set on 2026-08-27 (H-62): **fewer surfaces, each with one
+Over all ten stands a direction Aaron set on 2026-08-27 (H-20260827-close-out-remain-own): **fewer surfaces, each with one
 obvious next action.** Where a destination exists only to re-render another surface's content in a
 different order, the default is to fold it, not to restyle it — and every surface that remains must
 answer "what do I do here?" without the reader hunting.
@@ -118,12 +118,12 @@ In the evening the same spine **closes** — and this is a state, never a mode: 
 control and no second view, the stations simply settle one by one as head counts close, and the
 closing block appears beneath the spine once every departure of the shop day has ended (with the
 standing one-hour late-arrival buffer) or closed its count. The closing block is the leftovers
-group — each row carrying its own **Dismiss**, saved immediately with Undo, per H-57, so closing
+group — each row carrying its own **Dismiss**, saved immediately with Undo, per H-20260822-close-out-leftovers-resolved, so closing
 never owns those decisions — then the one closing act. Recaps and the log ride their stations. On a
 day with no departures the page collapses to its one-line quiet state (principles.md's
 whole-page-empty rule) rather than rendering empty groups.
 
-**Close-out's route folds away (H-62, decided 2026-08-27).** `/shop/[shopSlug]/close-out` becomes a
+**Close-out's route folds away (H-20260827-close-out-remain-own, decided 2026-08-27).** `/shop/[shopSlug]/close-out` becomes a
 308 to the home, its `?notice=` codes re-home, the `closeOut` destination leaves the registry (the
 phone dock drops to four destinations plus More), and `day_closeouts`, the close action, and the
 departure-log door are unchanged underneath. This is the concept-model table's "home becomes the
@@ -141,7 +141,7 @@ unchanged — this reshapes where the work renders, not what counts as work.
 
 At desktop the schedule board composes as a **seven-column week**: one column per day, departures
 as compact time-led entries, a multi-day course as a spanning bar, the current day marked, past
-days dimmed. Paging is by week. **The width floor is `xl` (1280px), decided 2026-08-27 (H-63):**
+days dimmed. Paging is by week. **The width floor is `xl` (1280px), decided 2026-08-27 (H-20260827-clearwater-week-board-roadmap):**
 seven columns are too squeezed on a portrait tablet, so tablets and phones keep the vertical day
 stream, and the board's cursor-paged "stream with no end" contract is unchanged underneath.
 
@@ -249,12 +249,12 @@ needs a new fact (a CSS-only mechanism), not a fresh opinion.
 
 **A `[phase]` or `?view=` control on the home** (morning/evening as tabs). Rejected: the clock
 already knows. A control asking the shop which part of the day it is would be chrome doing the
-content's job. The fold (decision 4, H-62) sharpens this into the load-bearing reading: the evening
+content's job. The fold (decision 4, H-20260827-close-out-remain-own) sharpens this into the load-bearing reading: the evening
 is not even a *state the page switches into* — the stations settle individually, so the page never
 has two renderings of one moment, and there is nothing for a control to choose between.
 
 **An acknowledgement gate on the closing act** (the current close-out's "close with things still
-open" checkbox). Rejected — H-57 already decided that leftovers carry forward by default and are
+open" checkbox). Rejected — H-20260822-close-out-leftovers-resolved already decided that leftovers carry forward by default and are
 dismissed per row, immediately, with Undo; closing the day does not own those decisions, so a gate
 re-asking them at the close is a confirm on a reversible act (principle 7).
 
@@ -273,8 +273,8 @@ collisions (two boats, one boat, none) are the board's whole question.
   and pane; (h) the counter instrument; (i) the storefront. Each ships with the standing
   obligations: the component names this ADR in a doc comment, a test pins the rule (never pixels),
   the slice table updates, screenshots in light and dark.
-- **Both owner calls this record originally surfaced are now decided** — the fold (H-62, decision
-  4) and the week board's width floor (H-63, decision 5) — so slice (d) removes the Close-out route
+- **Both owner calls this record originally surfaced are now decided** — the fold (H-20260827-close-out-remain-own, decision
+  4) and the week board's width floor (H-20260827-clearwater-week-board-roadmap, decision 5) — so slice (d) removes the Close-out route
   in the same change that ships the evening reading, and slice (e) carries no per-device judgment.
   One related call stays open and is deliberately not this ADR's: folding the counter Check-in into
   the home (the concept-model table's second half), which depends on the arrived-vs-aboard data

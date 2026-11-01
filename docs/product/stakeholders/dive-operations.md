@@ -2,8 +2,8 @@
 
 The safety spine (manifests, roll call, readiness, medical flags, nitrox) ships on provisional
 policy and is unproven in the field. These conversations turn it into evidence. Status of record:
-[human-decisions/](../human-decisions/README.md) rows **H-05** (offline-manifest thresholds), **H-06**
-(gear policy remainder), **H-08** (course/agency rules remainder), **H-11** (nitrox fill-station
+[human-decisions/](../human-decisions/README.md) rows **H-20260724-product-now-uses-explicit** (offline-manifest thresholds), **H-20260724-initial-gear-policy-sizing**
+(gear policy remainder), **H-20260724-certification-levels-agency-rules** (course/agency rules remainder), **H-20260730-nitrox-fill-station-procedure** (nitrox fill-station
 policy), and verification rows **V-01, V-02, V-04, V-05**.
 
 ## Why this blocks rollout
@@ -21,11 +21,11 @@ policy), and verification rows **V-01, V-02, V-04, V-05**.
 
 | Stakeholder | About | When |
 | --- | --- | --- |
-| Dive operations lead — a named human (realistically the founder until a pilot shop's ops lead takes it) | Owns V-02/V-04 execution and the H-05/H-06 acceptance | Name them now; it's the same "write it down" exercise as H-04 |
+| Dive operations lead — a named human (realistically the founder until a pilot shop's ops lead takes it) | Owns V-02/V-04 execution and the H-20260724-product-now-uses-explicit/H-20260724-initial-gear-policy-sizing acceptance | Name them now; it's the same "write it down" exercise as H-20260724-vercel-selected-web-hosting |
 | A friendly charter captain + their boat | The V-02 field day; later, first pilot boat day | Schedule within 30 days — needs weather, a hull, and goodwill |
 | `dive-domain-expert` reviewer | Sign-off on V-02 findings and V-05 nitrox correctness (agent review per AGENTS.md) | At each review point, before merge/production |
-| A gas-blending authority (instructor-trainer or fill-station operator) | H-11: fill procedure, ppO₂ ceilings, blender qualifications, O₂-clean tracking | Before any shop operates a fill station — not a pilot blocker unless the pilot fills |
-| Pilot shop instructors / course director | H-08 remainder: real course prerequisites, ratios, DSD rules, refresher policy | Phase 1 week 0 |
+| A gas-blending authority (instructor-trainer or fill-station operator) | H-20260730-nitrox-fill-station-procedure: fill procedure, ppO₂ ceilings, blender qualifications, O₂-clean tracking | Before any shop operates a fill station — not a pilot blocker unless the pilot fills |
+| Pilot shop instructors / course director | H-20260724-certification-levels-agency-rules remainder: real course prerequisites, ratios, DSD rules, refresher policy | Phase 1 week 0 |
 
 ## V-02 — the boat day (run the script, record everything)
 
@@ -46,7 +46,7 @@ the day isn't wasted:
 - **Recording plan:** screen recording on-device, photos of the phone in glare, notes template
   matching the V-02 evidence list (freshness shown, reconciliation results, findings).
 - **The stop rule** already understood: what the crew does when the device copy is missing,
-  expired, or corrupt (H-05's recorded rule).
+  expired, or corrupt (H-20260724-product-now-uses-explicit's recorded rule).
 
 Outcome: V-02 evidence + `dive-domain-expert` sign-off, or a written decision to pilot with
 print-backup-only and zero offline claims (the rollout's
@@ -61,7 +61,7 @@ print-backup-only and zero offline claims (the rollout's
   ([commercial-and-industry.md](commercial-and-industry.md) owns the pilot relationship; this
   playbook owns the operational rehearsal).
 
-## H-06 remainder — gear policy questions (for the ops lead + pilot shop)
+## H-20260724-initial-gear-policy-sizing remainder — gear policy questions (for the ops lead + pilot shop)
 
 The default-kit and computer-pricing halves are decided; still open, and best answered by a real
 shop's counter staff:
@@ -73,7 +73,7 @@ shop's counter staff:
 - The safe fallback when a requested size is unavailable — the answer must fail closed at
   check-in, never silently at the dock.
 
-## H-08 remainder — course/agency rules (for instructors)
+## H-20260724-certification-levels-agency-rules remainder — course/agency rules (for instructors)
 
 Per course the shop actually sells: prerequisites and proof, instructor ratios, DSD/intro rules
 (the no-C-card path), age minimums and junior handling, medical triggers, refresher policy (the
@@ -81,7 +81,7 @@ Per course the shop actually sells: prerequisites and proof, instructor ratios, 
 [certification-expiry ADR](../../architecture/decisions/20260723-certification-expiry-date-only.md)),
 and the exception process (who may waive what, recorded how).
 
-## H-11 / V-05 — nitrox (only when a shop fills)
+## H-20260730-nitrox-fill-station-procedure / V-05 — nitrox (only when a shop fills)
 
 Question list for the blending authority: fill log of record (paper sticker vs. system), accepted
 ppO₂ ceilings vs. the provisional 1.4/1.6 defaults, the EANx band (provisional 22–40%), blender
@@ -92,10 +92,10 @@ V-05 is the `dive-domain-expert` review that closes it.
 ## Where outcomes land
 
 - V-rows get their evidence recorded verbatim in the
-  [verification queue](../human-decisions/README.md#human-verification-queue); H-05/H-06/H-08/H-11 rows
+  [verification queue](../human-decisions/README.md#human-verification-queue); H-20260724-product-now-uses-explicit/H-20260724-initial-gear-policy-sizing/H-20260724-certification-levels-agency-rules/H-20260730-nitrox-fill-station-procedure rows
   move state with dates and owners.
 - The no-signal roll-call claim already runs on the public pages, worded with its condition, by
-  the owner's decision ([H-94](../human-decisions/README.md#decision-register), 2026-10-06). V-02 decides
+  the owner's decision ([H-20260802-may-public-pages-say](../human-decisions/README.md#decision-register), 2026-10-06). V-02 decides
   whether it stays: a pass lets the pages say it has been tested on a boat, and a failure takes the
   claim off every page through [marketing.md](../marketing.md)'s claims policy.
 - Field defects on safety surfaces become stop-the-line fixes with regression tests, per

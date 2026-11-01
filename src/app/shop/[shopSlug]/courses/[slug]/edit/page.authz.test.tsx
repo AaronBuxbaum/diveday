@@ -9,7 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  * The visibility toggle was gated on `requireStaffSession()` alone, which is
  * "somebody at this shop is signed in" — the same gate the roster control it
  * replaced had, so this is not a widening, but it is not the right one either.
- * What the dive is and who it admits is owner/manager/instructor work (H-14,
+ * What the dive is and who it admits is owner/manager/instructor work (H-20260724-staff-role-reach,
  * ADR 20260724-role-authorization), and taking a course off the diver-facing
  * catalog — or putting it back on — is exactly that.
  *

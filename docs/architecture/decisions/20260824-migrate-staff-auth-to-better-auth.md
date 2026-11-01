@@ -9,7 +9,7 @@
 next-auth (Auth.js) has been in maintenance mode since September 2025 — the Better Auth team
 maintains it for security fixes only, no new features, and its own docs point new projects at
 Better Auth. Vercel acquired Better Auth in July 2026. We are pinned to `next-auth@beta`
-(`5.0.0-beta.32`, last published 2026-07-20). DiveDay is pre-pilot with zero real users (H-49),
+(`5.0.0-beta.32`, last published 2026-07-20). DiveDay is pre-pilot with zero real users (H-20260815-no-legacy),
 which makes this the cheapest point in the project's life to move — every month past the first
 pilot shop turns this from a schema decision into a credential migration with a rollback plan.
 
@@ -74,7 +74,7 @@ Postgres/PGlite this app already runs. No new infrastructure.
   document navigation — none of which is what the deleted module guarded against.)
 - **Everything downstream of `auth()` is unchanged.** `src/lib/auth.ts` keeps exporting an
   `auth()` async function of the same shape; `src/lib/session.ts`'s `requireStaffSession()` and
-  the H-14 live-role gates in `src/db/authz.ts` (which already re-read roles from the database
+  the H-20260724-staff-role-reach live-role gates in `src/db/authz.ts` (which already re-read roles from the database
   rather than trusting the session) needed no changes at all.
 
 ## Alternatives considered

@@ -7,7 +7,7 @@ import { bounceTarget, contextFor } from "./action-helpers";
 
 /**
  * **A recap photo from the diver's own readiness link, the one door that may
- * share it with the boat** (H-129; security review of layer r5-4, F3).
+ * share it with the boat** (H-20261014-share-photo-with-boat; security review of layer r5-4, F3).
  *
  * The verified readiness token names the booking, and a held seat shares
  * nothing (its holder may not be the person whose name the photo would carry),

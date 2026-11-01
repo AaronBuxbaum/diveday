@@ -21,7 +21,7 @@ type CancellationMoney = Extract<Notification, { kind: "booking_cancelled" }>["m
 
 /**
  * What the refund step did, as the caller saw it. `not_attempted` is a staff
- * member without refund permission (H-14), or a refund step that threw: the
+ * member without refund permission (H-20260724-staff-role-reach), or a refund step that threw: the
  * seat is canceled and the money question is still open.
  */
 export type CancellationRefundSeen = CancellationRefundOutcome | { status: "not_attempted" };

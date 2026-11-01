@@ -31,10 +31,10 @@ Constraints a lower-context agent must not miss:
 
 - **The reason 20260815 said "never" was a competitor argument, and it does not reach these two.**
   Its worked example was a DiveShop360 connector — a direct competitor with no reason to build the
-  receiving end, the same dead end as PADI/SSI's absent C-card API (H-10). Shopify and Intuit are
+  receiving end, the same dead end as PADI/SSI's absent C-card API (H-20261007-request-supported-c-card). Shopify and Intuit are
   not competitors, they already publish stable public APIs, and the receiving end exists whether or
   not DiveDay writes anything.
-- **H-26 is the live constraint, and it bounds the *commitment*, not the direction.** DiveDay is a
+- **H-20260802-what-game-is-this is the live constraint, and it bounds the *commitment*, not the direction.** DiveDay is a
   founder-run lifestyle business ([`vision.md`](../../product/vision.md#what-kind-of-business-this-is));
   what it cannot carry is "an ongoing platform-review or support-queue commitment", named in
   20260815 as a public Zapier listing or a Shopify App Store submission. A private app a shop
@@ -57,7 +57,7 @@ private app that is never submitted to a public directory.**
 - **Private apps only.** No Shopify App Store submission, no public Zapier App Directory listing,
   no Intuit marketplace listing beyond what production credentials strictly require. A shop
   connects a DiveDay deployment's own registered app; the app is not offered to anyone who is not
-  already a DiveDay customer. This is the H-26 line, restated as the rule it always was: the ban is
+  already a DiveDay customer. This is the H-20260802-what-game-is-this line, restated as the rule it always was: the ban is
   on the review-and-support relationship, not on the outbound call.
 - **Outbound writes are one-way and non-authoritative.** A connector may push DiveDay's own facts
   into a shop's other system and read back only what it needs to make that push idempotent (an
@@ -92,7 +92,7 @@ the opposite.
 - **Keep them behind an off-by-default flag and decide later** — rejected as the status quo with a
   flag on it. They are already off by default (absent client credentials, nothing renders); a flag
   would add a switch without settling what the tree says.
-- **Publicly list the Shopify app so any shop can self-install** — rejected on H-26: a store
+- **Publicly list the Shopify app so any shop can self-install** — rejected on H-20260802-what-game-is-this: a store
   listing is the review-and-support commitment a one-person company cannot durably hold, and it
   buys nothing while every DiveDay shop is hand-recruited.
 - **Amend 20260815 in place** — rejected on the ADR skill's own rule: a superseded record keeps its

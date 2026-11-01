@@ -49,7 +49,7 @@ describe("RegisterForm card photo", () => {
 /**
  * Visual review 2026-10-24, B22: the SMS consent shows once a number is in the
  * box. Its words are always in the server HTML, hidden by CSS while the box is
- * empty, so a no-JS submit still carried them (H-09).
+ * empty, so a no-JS submit still carried them (H-20260724-channel-sends-booking-waiver).
  */
 describe("RegisterForm SMS consent", () => {
   const consent = /you agree to texts from DiveDay/i;

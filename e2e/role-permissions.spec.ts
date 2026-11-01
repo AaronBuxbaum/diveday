@@ -4,7 +4,7 @@ import { expect, READ_ONLY, signedInAs, test } from "./fixtures";
 import { openTripAbout, openTripAboutRow, openTripMore } from "./helpers";
 
 /**
- * H-14 (ADR 20260724-role-authorization) draws real boundaries on five staff
+ * H-20260724-staff-role-reach (ADR 20260724-role-authorization) draws real boundaries on five staff
  * surfaces. This lens signs in as three roles and checks each sees only what
  * its role admits: the daily crew (captain) is denied money, the legal waiver,
  * diver deletion, and trip configuration; an instructor may configure trips but
@@ -55,7 +55,7 @@ async function firstTripManageHref(page: Page): Promise<string> {
   return href;
 }
 
-test.describe("H-14 role permissions", () => {
+test.describe("H-20260724-staff-role-reach role permissions", () => {
   test.describe("captain", () => {
     signedInAs("captain");
 
@@ -185,7 +185,7 @@ test.describe("H-14 role permissions", () => {
 
     /**
      * **The inbox is not one of the gated surfaces** (issues #1505/#1518,
-     * decided 2026-09-10 as an H-14 amendment; the reasoning is in ADR
+     * decided 2026-09-10 as an H-20260724-staff-role-reach amendment; the reasoning is in ADR
      * 20260907-two-way-inbox decision 9). It was, for the three days between
      * shipping and that amendment, which is why it is asserted here at all:
      * this file's captain lens is where a gate would come back. The two halves
@@ -215,7 +215,7 @@ test.describe("H-14 role permissions", () => {
     });
 
     /**
-     * **Nor is Date requests, since 2026-09-16** (issue #1679, the same H-14
+     * **Nor is Date requests, since 2026-09-16** (issue #1679, the same H-20260724-staff-role-reach
      * row). It was owner/manager on the written ground that the rows carry
      * contact details for people who have not booked — which is what the inbox
      * above shows this same captain, for a stranger with no diver record, and

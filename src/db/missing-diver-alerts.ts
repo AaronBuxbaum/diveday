@@ -13,8 +13,8 @@ import { incidentReports, people, shops, trips, userAccounts } from "./schema";
 import { livePerson, liveTrip, notRehearsal } from "./trips-live";
 
 /**
- * **A filed report of a missing diver tells the owners at once** (H-142,
- * decided 2026-10-16; the stale roll-call alert it rides beside is H-118,
+ * **A filed report of a missing diver tells the owners at once** (H-20261016-missing-diver-report-alerts,
+ * decided 2026-10-16; the stale roll-call alert it rides beside is H-20261014-stale-roll-call-recipients,
  * `src/db/roll-call-alerts.ts`). Whoever filed the report chose "missing
  * diver" on purpose, so the shop does not wait for the roll call to go stale:
  * every active owner gets one email, and the devices following the
@@ -23,7 +23,7 @@ import { livePerson, liveTrip, notRehearsal } from "./trips-live";
  * The same recipients as the stale alert, re-read live at send time
  * (`ownerLogins`, `pushTripAlert`): a demoted owner, a disabled login or a
  * follower who left hears nothing. The shop's shore contact is not included:
- * their consent was given for the stale roll-call alert (H-118) and this is
+ * their consent was given for the stale roll-call alert (H-20261014-stale-roll-call-recipients) and this is
  * not that message.
  *
  * **Counts nothing, names nobody.** The mail says a missing diver was reported
@@ -453,7 +453,7 @@ export type MissingDiverAllClearOutcome = "sent" | "partial" | "skipped";
  * count, never a name). Email only: no push wakes the boat's followers, who
  * are the ones who found them.
  *
- * **Who is owed one** (issue #2828, H-142 amendment 2026-10-24): the owners
+ * **Who is owed one** (issue #2828, H-20261016-missing-diver-report-alerts amendment 2026-10-24): the owners
  * the alarm reached (`missing_alert_reached_person_ids`) and any whose send
  * never reported back (`missing_alert_attempting_person_ids`, the process
  * died mid-send), never one whose send is known to have failed, and never

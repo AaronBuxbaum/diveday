@@ -6,3 +6,4 @@ src/db/__snapshots__/export-bundle.divers.snap merge=diveday-generated
 src/db/__snapshots__/export-bundle.diver-interests.snap merge=diveday-generated
 docs/product/glossary.md merge=diveday-generated
 docs/architecture/decisions/README.md merge=diveday-generated
+docs/product/human-decisions/README.md merge=diveday-generated

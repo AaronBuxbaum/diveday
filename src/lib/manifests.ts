@@ -162,7 +162,7 @@ export type ManifestDiverInput = {
   readiness?: ReadinessResult;
   /**
    * The name a held seat was booked under and why it was matched to this
-   * diver (H-13), so its `identity_unconfirmed` line can name both people
+   * diver (H-20260724-one-person-per-email), so its `identity_unconfirmed` line can name both people
    * (`identityReasonText`) rather than say "might be someone else" with
    * nothing to compare. Absent on a seat that was never held.
    */
@@ -207,7 +207,7 @@ export type ManifestDiverInput = {
    */
   nitroxRequested: boolean;
   /**
-   * Whole years on the trip date, and whether that makes them a minor (H-21).
+   * Whole years on the trip date, and whether that makes them a minor (H-20260730-minimum-age-gate-data).
    * Both null/false when the shop holds no date of birth — the captain reading
    * the boarding list sees nothing rather than an "unknown age" on most of the
    * boat. Not a gate: nothing here blocks boarding, it is a fact the crew is
@@ -216,7 +216,7 @@ export type ManifestDiverInput = {
   age?: number | null;
   /** Null on a held seat (`identityWithheld`): unknown, which is not "an adult". */
   minor?: boolean | null;
-  /** The diver has a birthday today or within the callout window (H-21). */
+  /** The diver has a birthday today or within the callout window (H-20260730-minimum-age-gate-data). */
   birthday?: BirthdayCallout | null;
   /**
    * The word under this diver's name: "First dive with us", or "Back after" a long
@@ -230,7 +230,7 @@ export type ManifestDiverInput = {
    */
   welcomeCue?: WelcomeCue | null;
   /**
-   * Whether the trip's deepest site goes past this diver's ceiling (H-08).
+   * Whether the trip's deepest site goes past this diver's ceiling (H-20260724-certification-levels-agency-rules).
    * Carried here and not only on the roster because the plan for dive two is
    * made on the boat during the surface interval, from this list — which is
    * exactly when a depth advisory is actionable. Never a gate.
@@ -249,7 +249,7 @@ export type ManifestDiverInput = {
   medicalWaiver?: MedicalWaiverMark | null;
   /**
    * A rider boarding, riding only, on a release a referral or a physician's
-   * "no" holds (H-109, `riderMedicalHold`): never a blocker, always a warning
+   * "no" holds (H-20261009-rider-snorkeler-medical, `riderMedicalHold`): never a blocker, always a warning
    * at the rail. A person fact, so a held seat drops it with the medical mark.
    */
   riderMedicalHold?: RiderMedicalHold | null;
@@ -337,7 +337,7 @@ export type ManifestDiverInput = {
    */
   notHere?: boolean;
   /**
-   * The desk saw this diver and turned them away (H-135): a released seat like
+   * The desk saw this diver and turned them away (H-20261015-who-may-turn-someone): a released seat like
    * `notHere`, worded apart from it on the row. Never a gate; absent reads as
    * false. With no roll-call result it takes the seat out of every head count
    * ({@link isTurnedAwayOffBoat}, issue #2907).
@@ -345,7 +345,7 @@ export type ManifestDiverInput = {
   turnedAway?: boolean;
   /**
    * Why the desk turned them away: the category only, never the evidence
-   * behind it (H-135). Null after erasure or when unknown. The departure log
+   * behind it (H-20261015-who-may-turn-someone). Null after erasure or when unknown. The departure log
    * prints it on the seat's "turned away" line.
    */
   turnedAwayReason?: TurnAwayReason | null;
@@ -863,7 +863,7 @@ export type RollCallCompleteness = {
  * cannot disagree about it again.
  *
  * Such a seat is **off the boat**, not awaiting. The desk stood in front of
- * this diver and refused them (H-135), which is a statement about a body, and
+ * this diver and refused them (H-20261015-who-may-turn-someone), which is a statement about a body, and
  * the seat went back on sale. Counting it as awaiting left a roll call that
  * could never reach zero ("10 of 10 aboard · Awaiting 1"), and a count that
  * never closes is one a captain learns to ignore.
@@ -887,7 +887,7 @@ export function isTurnedAwayOffBoat(seat: {
 
 /**
  * The booking half of a turn-away: the desk released this seat and recorded
- * that it turned the diver away (`turnBookingAway`, H-135), rather than that
+ * that it turned the diver away (`turnBookingAway`, H-20261015-who-may-turn-someone), rather than that
  * they never arrived. Read by every loader that sets `turnedAway`, and by the
  * ones that drop such a seat from a count with no roll call in hand.
  */

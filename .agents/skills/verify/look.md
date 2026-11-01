@@ -10,7 +10,7 @@ paginated PDFs as well as the print screenshots.
 Never ship UI you haven't seen. The visual spec asserts nothing — it writes PNGs at both the
 phone and desktop widths — so a filtered run of it is the capture step. Look in light only; dark
 joins it only when the change is colour work (a token, a tint, a hue — the owner's rule,
-[H-90](../../../docs/product/human-decisions/README.md#decision-register)), and the `light mode.*` prefix
+[H-20260925-many-colour-schemes-check](../../../docs/product/human-decisions/README.md#decision-register)), and the `light mode.*` prefix
 is what keeps the run to one scheme:
 
 ```bash

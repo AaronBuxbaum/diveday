@@ -83,7 +83,7 @@ export function rowHeader(seat: RowHeaderInput) {
           boat (design/principles.md #2). A minor is the exception the crew
           is being told about, and how old the minor is changes what the
           crew does about it — the manifest's own "Minor · age N" capsule,
-          the same fact in the same words on both surfaces (H-21). No tone
+          the same fact in the same words on both surfaces (H-20260730-minimum-age-gate-data). No tone
           mark: the word is the fact, and this surface draws its marks
           rather than typing them (slice 5d / decision 5). */}
       {minor && age !== null ? (

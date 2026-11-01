@@ -1,12 +1,12 @@
 # Six voices for the public pages (2026-09-17)
 
-**Status: decided 2026-09-24** (Aaron Buxbaum, H-89 in
+**Status: decided 2026-09-24** (Aaron Buxbaum, H-20260903-voice-public-pages-speak in
 [product/human-decisions/](../product/human-decisions/README.md)): **6, Margin Notes, on every public
 page, with 4, Over a Beer, on `/about`.** The voice now lives in [brand.md](brand.md) ("The two
 registers of the public pages"); this document is the dated record of the diagnosis and the
 alternatives, and the samples below are proposals, not the pages as shipped.
 
-**Amended 2026-10-05** (H-93): Margin Notes alone did not sell, so a section on a public page now
+**Amended 2026-10-05** (H-20261005-public-pages-sell): Margin Notes alone did not sell, so a section on a public page now
 leads with what the shop gets and keeps the builder's notes as the captions under its screen.
 [brand.md](brand.md) carries the amended register.
 
@@ -54,7 +54,7 @@ One named person wrote every public page and says so. The site is correspondence
 shop owner he has not met. Confidence comes from specifics and from not hedging the product.
 
 - **Who talks:** Aaron, first person, to one owner. "We" only for what both people share.
-- **Rules:** no sentence anyone else could sign; headings are labels ("What it costs", "If you leave"); paragraphs run as long as the point needs; one joke per page at most, about the work; a sign-off is allowed, a flourish is not; the support line stays inside H-12 / H-26 (someone reads it, no personal-response promise).
+- **Rules:** no sentence anyone else could sign; headings are labels ("What it costs", "If you leave"); paragraphs run as long as the point needs; one joke per page at most, about the work; a sign-off is allowed, a flourish is not; the support line stays inside H-20260724-public-founding-shop-price / H-20260802-what-game-is-this (someone reads it, no personal-response promise).
 - **brand.md change:** the voice moves from "a divemaster's briefing" (a persona) to "Aaron, writing" (a person).
 - **Strains:** it makes the owner the brand; the e2e test banning apology for size still applies; Spanish needs a translator who can carry a first-person voice.
 - **Scales:** well. `/about` is its natural home, `/pricing` is "what it costs", a guide is "if you're on FareHarbor", `/privacy` and `/terms` are the same person being careful.
@@ -346,14 +346,14 @@ shape.
 
 1. When the conversation with the shop owner happened, and whether the town can be named.
 2. Whether his name goes on the homepage (voice 1) or stays on `/about` only.
-3. Whether "we read it" is true of support today, or it stays "a person reads it" under H-12 / H-26.
+3. Whether "we read it" is true of support today, or it stays "a person reads it" under H-20260724-public-founding-shop-price / H-20260802-what-game-is-this.
 4. One thing he has changed his mind about while building this, in a sentence.
 5. Whether the sample shop's setting, Key Largo, may be named on marketing pages (it is in the seed and visible in the demo).
 6. Whether the second person on the team wants to be named or described at all.
 
 ## After the pick
 
-Done 2026-09-24, in the change that recorded H-89: every public page rewritten in the chosen voice
+Done 2026-09-24, in the change that recorded H-20260903-voice-public-pages-speak: every public page rewritten in the chosen voice
 (the homepage as four annotated screens, `/product` as chapters with notes, `/pricing` as an
 annotated invoice, the switching hub's preview as an annotated screen, `/about` as speech); the
 four shape refusals in `pnpm check:voice` (the mirrored pair, the anaphoric triplet, the tag

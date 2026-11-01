@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-10-09
 - **Amends:** [20260719-stripe-connect-orders](20260719-stripe-connect-orders.md), which left
-  disputes to H-07 and subscribed the Connect endpoint to invoice and account events only.
+  disputes to H-20260724-payment-deposit-cancellation-refund and subscribed the Connect endpoint to invoice and account events only.
 
 ## Context
 

@@ -3,7 +3,7 @@ import { DAY_MS } from "./clock";
 import { DIVER_EMAIL_MAX } from "./person-fields";
 
 /**
- * **The shore contact as a recipient** (H-118, decided 2026-10-15): the one
+ * **The shore contact as a recipient** (H-20261014-stale-roll-call-recipients, decided 2026-10-15): the one
  * person outside the shop's accounts who hears, by email, when an after-dive
  * roll call is still open after the boat was due back
  * (`sendStaleRollCallAlerts`, `src/db/roll-call-alerts.ts`).

@@ -36,7 +36,7 @@ describe("participant types", () => {
     expect(isParticipantType("rider")).toBe(true);
   });
 
-  it("holds every seat but a rider's to the medical, an absent type included (H-109)", () => {
+  it("holds every seat but a rider's to the medical, an absent type included (H-20261009-rider-snorkeler-medical)", () => {
     expect(isHeldToMedical(undefined)).toBe(true);
     expect(isHeldToMedical(null)).toBe(true);
     expect(isHeldToMedical("diver")).toBe(true);

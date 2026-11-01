@@ -106,7 +106,7 @@ describe("crewWeekFor", () => {
         ?.crewCall;
     const minutesBefore = (minutes: number) => new Date(reef.startsAt.getTime() - minutes * 60_000);
 
-    // The column's default (H-149): crew 30 minutes before the divers' 30.
+    // The column's default (H-20261022-crew-arrive-before-divers): crew 30 minutes before the divers' 30.
     expect(await read()).toEqual({ at: minutesBefore(60), source: "crew" });
 
     await db.update(shops).set({ crewLeadMinutes: 45 }).where(eq(shops.id, shop.id));

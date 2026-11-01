@@ -8,7 +8,7 @@
  * `listTripReadiness` row). Signing again replaces it, including with nothing.
  * A held seat (`identity_unconfirmed_at`) carries none: its release belongs to
  * the person it was matched to, who may not be the one walking up the
- * gangway (H-13).
+ * gangway (H-20260724-one-person-per-email).
  *
  * Two reads, never one: the **fact** (a set of booking ids) goes into every
  * manifest every staffer opens; the **text** is read only for a reader the
@@ -137,7 +137,7 @@ export async function medicalAlertTextsForTrip(
 
 /**
  * How long one reader's read of one diver's alert on one departure stands
- * before another tap writes a second line (H-153 amendment): a divemaster
+ * before another tap writes a second line (H-20261023-medical-alert-for-the amendment): a divemaster
  * opening the same sheet three times at the rail is one read, and a script
  * cannot push earlier reads off the trail's first page.
  */
@@ -245,7 +245,7 @@ export async function medicalAlertForSeat(
 }
 
 /**
- * **What the diver's box starts with on their own waiver page** (H-153
+ * **What the diver's box starts with on their own waiver page** (H-20261023-medical-alert-for-the
  * amendments): the link's own draft when there is one
  * (`draft_medical_answers` set means the diver saved, and a cleared box stays
  * cleared). Otherwise the box starts empty, and `earlierAlert` says whether
@@ -304,7 +304,7 @@ export async function medicalAlertPrefill(
 
 /**
  * **Hands one departure's medical alert words to an explicit offline save**
- * (H-153 amendment; `POST /api/offline-manifests/[tripId]/medical-alerts`).
+ * (H-20261023-medical-alert-for-the amendment; `POST /api/offline-manifests/[tripId]/medical-alerts`).
  * `not_found` for a departure that is not this shop's live one; `forbidden`
  * unless `canPersonReadMedicalAlertOnTrip` admits the reader now. Otherwise
  * one `medical_alert_saved_offline` line per diver on the trail first
@@ -365,7 +365,7 @@ export type PrintedMedicalAlerts = {
 
 /**
  * **Hands one departure's medical alert words to "Print with medical alerts"**
- * (issue #2990, H-153 amendment of 2026-10-24). `not_found` for a departure
+ * (issue #2990, H-20261023-medical-alert-for-the amendment of 2026-10-24). `not_found` for a departure
  * that is not this shop's live one; `forbidden` unless
  * `canPersonPrintMedicalAlerts` admits the printer now (the owner or a
  * manager). Otherwise one `medical_alert_printed` line per diver on the trail
@@ -408,7 +408,7 @@ export async function medicalAlertsForPrint(
 }
 
 /**
- * **"Emergency: show the alert"** for one seat (issue #2990, H-153 amendment
+ * **"Emergency: show the alert"** for one seat (issue #2990, H-20261023-medical-alert-for-the amendment
  * of 2026-10-24): a staffer the crew rule refuses, on the days of the trip in
  * the shop's zone (`emergencyMedicalAlertStanding`, re-read here on every
  * confirm). The seat must be on this departure and its standing release must

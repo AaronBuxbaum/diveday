@@ -117,7 +117,7 @@ describe("qualifyingAlternatives — the admission filter", () => {
     expect(offers([advancedWall], unknownDiver)).toEqual([advancedWall.id]);
   });
 
-  it("does not judge an identity-unconfirmed diver by the record's cards (H-13)", () => {
+  it("does not judge an identity-unconfirmed diver by the record's cards (H-20260724-one-person-per-email)", () => {
     const advancedWall = candidate({
       requirement: requirement({ minimumCertificationLevel: "advanced_open_water" }),
     });

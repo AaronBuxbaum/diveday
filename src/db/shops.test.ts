@@ -220,7 +220,7 @@ describe("saveShopRentals", () => {
   });
 });
 
-/** Ux-delight sheet 2026-10-22, item 2 (H-149): "Crew arrive N minutes before divers". */
+/** Ux-delight sheet 2026-10-22, item 2 (H-20261022-crew-arrive-before-divers): "Crew arrive N minutes before divers". */
 describe("setShopCrewLead", () => {
   it("starts a new shop at 30 minutes, and stores or clears the shop's choice", async () => {
     const { db, shop } = ctx;

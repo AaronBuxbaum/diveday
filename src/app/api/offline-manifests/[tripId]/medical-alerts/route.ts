@@ -10,7 +10,7 @@ import { uuidParam } from "@/lib/uuid";
 const NO_STORE = { "Cache-Control": "private, no-store" } as const;
 
 /**
- * **The medical alerts' words for one departure's offline copy** (H-153
+ * **The medical alerts' words for one departure's offline copy** (H-20261023-medical-alert-for-the
  * amendment, issue #2960). The only way the words reach a device copy: a
  * permitted reader (the owner, a manager, or crew a manager put on this
  * departure, `canPersonReadMedicalAlertOnTrip`) taps save-for-offline on the

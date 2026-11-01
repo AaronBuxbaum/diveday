@@ -349,14 +349,14 @@ export const PRUNE_ARMS = {
     id: shopContactEmailConfirmationTokens.id,
     clock: shopContactEmailConfirmationTokens.expiresAt,
   },
-  // The shore contact's links (H-118): from `created_at`, since a stop link
+  // The shore contact's links (H-20261014-stale-roll-call-recipients): from `created_at`, since a stop link
   // has no `expires_at` of its own.
   shop_shore_alert_tokens: {
     from: shopShoreAlertTokens,
     id: shopShoreAlertTokens.id,
     clock: shopShoreAlertTokens.createdAt,
   },
-  // Booking links (H-82, issue #1726), on the same clock as the two token
+  // Booking links (H-20260916-far-deletion-promise-reach, issue #1726), on the same clock as the two token
   // arms above. `expires_at` only, never `revoked_at`: a revoked link can still
   // be inside its own life, and an unexpired row is never eligible whatever
   // else is true of it.

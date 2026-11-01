@@ -14,7 +14,7 @@ import { AgencyCheckRow } from "./AgencyCheckRow";
 import { agencyCheckAllCopy, agencyCheckCopies } from "./agency-check-copy";
 
 /**
- * **The agency check on a departure's Divers tab** (H-105): each row's own
+ * **The agency check on a departure's Divers tab** (H-20261008-cert-check-extension): each row's own
  * button, and the departure's "Check all", one card at a time, skipping one
  * page it cannot read and stopping on two in a row, with a Stop, Undo on each
  * card and none for the boat.

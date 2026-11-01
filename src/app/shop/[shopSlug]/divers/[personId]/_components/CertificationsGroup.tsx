@@ -57,7 +57,7 @@ import { onlyNotHeld, saysNotCertified, TripNeedsRow, tripNeedsLines } from "./t
  *
  * The row itself is the shared `CertificationCardRow` (8a), so "verify a card"
  * looks identical here, on the counter and on a trip roster; the four-state
- * badge table and the H-24 rule about an imported card's gate live once, in
+ * badge table and the H-20260725-two-findings-dive-domain rule about an imported card's gate live once, in
  * `src/lib/certification-cards.ts` and `src/i18n/card-labels.ts`, and are
  * deliberately not re-derived here.
  *
@@ -78,7 +78,7 @@ const AWAITING_ANCHOR = "card-awaiting";
  * The one card row every kind renders through, so the three tables cannot
  * drift into three shapes. `state` is `certificationCardRowState`'s — computed
  * once, in the domain layer, because flattening the two display unions is
- * exactly where H-24 gets lost.
+ * exactly where H-20260725-two-findings-dive-domain gets lost.
  */
 function CardRow({
   t,

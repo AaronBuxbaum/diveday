@@ -4,7 +4,7 @@ import { authSecret } from "./auth-secret";
 import { cleanVisitorShopName } from "./demo-identity";
 
 /**
- * **The visitor's own shop name, worn by their demo** (H-131; ADR
+ * **The visitor's own shop name, worn by their demo** (H-20261014-demo-wears-visitor-shop; ADR
  * 20260724-per-visitor-demo-shops, amendment 2026-10-16).
  *
  * The name never reaches the database. It rides in an httpOnly cookie set by

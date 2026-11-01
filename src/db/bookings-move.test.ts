@@ -252,7 +252,7 @@ describe("moveBooking", () => {
 
   it("refuses a departure the diver cannot qualify for, naming what it asks", async () => {
     const { db, shop, from, to, seat } = await setup();
-    // A diver with no card on file is admitted blind (H-08); one with an Open
+    // A diver with no card on file is admitted blind (H-20260724-certification-levels-agency-rules); one with an Open
     // Water card is measured against it.
     await db.insert(certifications).values({
       shopId: shop.id,
@@ -636,7 +636,7 @@ describe("listSeatMoveTargets, with the seats each has left", () => {
 
 describe("moveBooking between sessions of one course", () => {
   /**
-   * Age is measured on the day the session runs (H-08), so the same student
+   * Age is measured on the day the session runs (H-20260724-certification-levels-agency-rules), so the same student
    * can be old enough for the later session and too young for an earlier one.
    * The move measures the session it lands on.
    */

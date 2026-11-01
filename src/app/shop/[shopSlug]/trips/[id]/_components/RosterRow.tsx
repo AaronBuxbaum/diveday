@@ -219,7 +219,7 @@ export function RosterRow({
         </>
       )}
       {/* "Check with SSI", under the reason that says the card is pending
-          (H-105): drawn only with the browser extension, and never on a held
+          (H-20261008-cert-check-extension): drawn only with the browser extension, and never on a held
           seat, whose matched diver's details are not yet this seat's. */}
       {record || identityUnconfirmed || !actions.agencyCheckAction ? null : (
         <AgencyCheckRow

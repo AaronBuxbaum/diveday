@@ -64,7 +64,7 @@ describe("today's work queue (in-memory PGlite)", () => {
   });
 
   /**
-   * **Open seats are the seats on sale** (H-107, #2388). The departure states
+   * **Open seats are the seats on sale** (H-20261009-certificate-caps-seats, #2388). The departure states
    * 14 on a hull certified for 12; the booking transaction sells only up to
    * the certificate, so Today counts against it too: the card's open seats,
    * and its readiness bar.

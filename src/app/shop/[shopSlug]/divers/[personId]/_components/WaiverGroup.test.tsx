@@ -348,7 +348,7 @@ describe("the waiver group", () => {
 
   /**
    * **The override stands, and the warning links back** (Aaron, 2026-10-09,
-   * issue #2195, amending H-98): a clean release that replaced an unresolved
+   * issue #2195, amending H-20261007-after-physician-says-no): a clean release that replaced an unresolved
    * referral clears the diver, and the record's warning opens the referral.
    */
   it("links the unanswered referral's warning to the referral itself", () => {

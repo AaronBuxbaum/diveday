@@ -1334,10 +1334,10 @@ export async function getTripManifests(
       // released at the desk. The row stays — `getTripRoster` keeps every
       // non-cancelled booking on purpose — and now says so.
       notHere: booking.status === "no_show",
-      // Seen at the desk and refused (H-135), which the row says apart from a
+      // Seen at the desk and refused (H-20261015-who-may-turn-someone), which the row says apart from a
       // diver who never came.
       turnedAway: isTurnedAwaySeat(booking),
-      // The category only (H-135); the departure log prints it on the seat's
+      // The category only (H-20261015-who-may-turn-someone); the departure log prints it on the seat's
       // "turned away" line (#2907).
       turnedAwayReason: booking.status === "no_show" ? booking.turnedAwayReason : null,
       buddyTeam: teamByBooking.get(booking.id) ?? null,
@@ -2269,7 +2269,7 @@ export type RecordCrewRollCallOutcome =
  * crew-specific interpretation of any of the three is how a device retry
  * double-writes, or an out-of-order one overwrites, the record of who came back
  * from a dive — and this half exists so a captain offshore can close an
- * after-dive checkpoint at all (H-46).
+ * after-dive checkpoint at all (H-20260814-where-diveday-sit-between).
  */
 export async function recordCrewRollCall(
   db: AppDb,

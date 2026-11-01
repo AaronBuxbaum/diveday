@@ -16,7 +16,7 @@ const needsStaffFitSchema = z.object({
 const profileSchema = z.object({
   bcd: z.string().optional(),
   regulator: z.string().optional(),
-  // One suit choice rather than two checkboxes (H-78); see `suitFlagsFromPost`.
+  // One suit choice rather than two checkboxes (H-20260916-rental-fit-describe-shop); see `suitFlagsFromPost`.
   suit: z.string().optional(),
   mask: z.string().optional(),
   fins: z.string().optional(),
@@ -51,7 +51,7 @@ export async function saveProfileAction(shopSlug: string, personId: string, form
   personId = context.personId;
   const { base, db, staff } = context;
   // The gate is on *overriding* a stated request, not on writing the record
-  // (H-06, ADR 20260724-gear-fit-fallback). A diver with nothing on file has
+  // (H-20260724-initial-gear-policy-sizing, ADR 20260724-gear-fit-fallback). A diver with nothing on file has
   // stated nothing to override, so recording their sizes for the first time is
   // ordinary data entry — the Saturday walk-up whose only staff on the floor
   // are the captain and a deckhand must not end up on a napkin. Changing a fit
@@ -101,7 +101,7 @@ export async function saveProfileAction(shopSlug: string, personId: string, form
 }
 
 /**
- * Flag (or clear) a diver for hands-on fitting at check-in — the H-06 fallback
+ * Flag (or clear) a diver for hands-on fitting at check-in — the H-20260724-initial-gear-policy-sizing fallback
  * for a size the shop can't fill.
  *
  * The two directions carry different authority, so they gate differently even

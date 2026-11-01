@@ -273,12 +273,12 @@ export async function crewClashes(
  * the windows of this departure that overlap the other one. A multi-day course
  * clashing on its third morning is a clash still to fix on the first two and a
  * boat out with it on the third, so a reader that splits "before it sails" from
- * "once it has" (Today, H-80) needs the leg rather than the departure.
+ * "once it has" (Today, H-20260916-may-one-hull-carry) needs the leg rather than the departure.
  */
 export type CrewClashOnLegs = CrewClash & { legs: DepartureWindow[] };
 
 /**
- * {@link crewClashes} for many departures in **one query** (H-80, issue
+ * {@link crewClashes} for many departures in **one query** (H-20260916-may-one-hull-carry, issue
  * #1776) — Today asks it of every boat in its window at once rather than once
  * per boat, and the departure page's single read is this with one id.
  *
@@ -701,7 +701,7 @@ export async function setTripCrew(
       });
       if (review.blocking) return false;
       // The roster's claim: no `lapsedRungs`, so a lapsed rating never refuses
-      // an assignment (H-59; issue #1853 narrowed only the supervision claim).
+      // an assignment (H-20260825-staff-credentials-renewal-clock; issue #1853 narrowed only the supervision claim).
       const { instructorCount } = countInWaterCrew(proposedCrew);
       if (instructorCount === 0) return false;
       // Deliberately no ratio check here. A crew change that leaves the session
@@ -1142,7 +1142,7 @@ export async function changeTripCrewOutcome(
         proposedCrew,
       });
       if (review.blocking) return { ok: false, refusal: "refused" };
-      // The roster's claim, as in `setTripCrew` above (H-59, issue #1853).
+      // The roster's claim, as in `setTripCrew` above (H-20260825-staff-credentials-renewal-clock, issue #1853).
       const { instructorCount } = countInWaterCrew(proposedCrew);
       if (instructorCount === 0) return { ok: false, refusal: "refused" };
       // No ratio check — same reason as `setTripCrew` above: pulling a crew

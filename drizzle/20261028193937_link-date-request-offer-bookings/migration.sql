@@ -1,6 +1,6 @@
--- diveday:allow-destructive drop-column interests.booked_booking_id: replaced by seat-level associations; no production caller, pre-pilot, no users (H-49)
--- diveday:allow-destructive drop-constraint interests.interests_booked_booking_id_bookings_id_fkey: replaced by tenant-scoped association foreign keys; no production caller, pre-pilot, no users (H-49)
--- diveday:allow-destructive drop-constraint interests.interests_booked_booking_is_date_offer: replaced by the seat-level association model; no production caller, pre-pilot, no users (H-49)
+-- diveday:allow-destructive drop-column interests.booked_booking_id: replaced by seat-level associations; no production caller, pre-pilot, no users (H-20260815-no-legacy)
+-- diveday:allow-destructive drop-constraint interests.interests_booked_booking_id_bookings_id_fkey: replaced by tenant-scoped association foreign keys; no production caller, pre-pilot, no users (H-20260815-no-legacy)
+-- diveday:allow-destructive drop-constraint interests.interests_booked_booking_is_date_offer: replaced by the seat-level association model; no production caller, pre-pilot, no users (H-20260815-no-legacy)
 CREATE TABLE "date_request_offer_bookings" (
 	"shop_id" uuid NOT NULL,
 	"interest_id" uuid NOT NULL,

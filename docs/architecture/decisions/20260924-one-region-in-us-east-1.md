@@ -13,8 +13,8 @@ AWS Support's automated answer on case 178839371400539 (September 3) says the wa
 
 The owner has decided to file that request in us-east-1.
 The sandbox is per region, so the request can only be granted in the region the identity, configuration set, event webhook and alarms are actually in — and the case text claims all of them.
-Moving mail alone would leave the estate split across two regions again, and us-east-1 is where everything else already is or has to be: the Neon database (`aws-us-east-1`, H-04), Vercel's default function region (`iad1`), the Route 53 health-check metrics, and any ACM certificate a CloudFront alias would need.
-DiveDay is pre-pilot with no active users (H-49), and SMS registration has not been started in any region, so nothing in the estate needs keeping and nothing slow has to be redone.
+Moving mail alone would leave the estate split across two regions again, and us-east-1 is where everything else already is or has to be: the Neon database (`aws-us-east-1`, H-20260724-vercel-selected-web-hosting), Vercel's default function region (`iad1`), the Route 53 health-check metrics, and any ACM certificate a CloudFront alias would need.
+DiveDay is pre-pilot with no active users (H-20260815-no-legacy), and SMS registration has not been started in any region, so nothing in the estate needs keeping and nothing slow has to be redone.
 
 ## Decision
 

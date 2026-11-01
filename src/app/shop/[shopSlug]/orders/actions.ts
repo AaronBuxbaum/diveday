@@ -26,7 +26,7 @@ const NOTICE_FOR = {
 /**
  * Refund money a diver paid on a checkout DiveDay had already closed (issue
  * #2335), from the Orders index queue. Owner/manager work like every refund
- * (H-14), behind the money step-up; the checkout is read under the session's
+ * (H-20260724-staff-role-reach), behind the money step-up; the checkout is read under the session's
  * own shop, never trusted from the form beyond its id. `not_owed` reads as
  * done: a second tap after the first went through has nothing left to send.
  */
@@ -65,7 +65,7 @@ const MATCH_NOTICE_FOR = {
 /**
  * Say which seat a refund made in the Stripe dashboard on a party's checkout
  * was for (issue #2293), from the Orders index queue. Owner/manager work like
- * every refund (H-14), behind the money step-up; both ids are only handles,
+ * every refund (H-20260724-staff-role-reach), behind the money step-up; both ids are only handles,
  * read again under the session's own shop.
  */
 export async function matchStripeRefundAction(formData: FormData) {

@@ -565,7 +565,7 @@ describe("getTripPrep", () => {
 
   /**
    * **A piece this booking already holds is not "no longer rented"** (issue
-   * #1811, H-78). The shop drops a kind from its catalog after a unit of it
+   * #1811, H-20260916-rental-fit-describe-shop). The shop drops a kind from its catalog after a unit of it
    * was reserved to one diver: that diver's packing piece and fit line carry
    * no mark, and a diver on the same boat holding none still does.
    */

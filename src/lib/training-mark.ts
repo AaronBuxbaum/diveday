@@ -51,7 +51,7 @@ export type TrainingMarkProblem =
   | "enrollment_missing"
   | "enrollment_other_person"
   | "enrollment_canceled"
-  /** The enrollment is held for staff to confirm who it is (H-13). */
+  /** The enrollment is held for staff to confirm who it is (H-20260724-one-person-per-email). */
   | "enrollment_held"
   | "enrollment_not_diving"
   | "not_a_course_session"

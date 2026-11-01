@@ -1,0 +1,86 @@
+✓ Lockfile passes supply-chain policies (verified 28s ago)
+Lockfile is up to date, resolution step is skipped
+Packages are hard linked from the content-addressable store to the virtual store.
+  Content-addressable store is at: /root/.local/share/pnpm/store/v11
+  Virtual store is at:             node_modules/.pnpm
+Packages: +1103
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Progress: resolved 1103, reused 1103, downloaded 0, added 1103, done
+.../node_modules/@parcel/watcher install$ node scripts/build-from-source.js
+.../node_modules/@swc/core postinstall$ node postinstall.js
+.../node_modules/@parcel/watcher install: Done
+.../node_modules/@swc/core postinstall: Done
+
+dependencies:
++ @anthropic-ai/sdk 1.3.0
++ @aws-sdk/client-cloudwatch-logs 3.1160.0
++ @aws-sdk/client-geo-places 3.1160.0
++ @aws-sdk/client-s3 3.1160.0
++ @aws-sdk/client-sesv2 3.1160.0
++ @aws-sdk/client-sns 3.1160.0
++ @electric-sql/pglite 0.5.13
++ @maplibre/maplibre-gl-leaflet 0.1.4
++ @sentry/nextjs 11.10.0
++ @vercel/analytics 2.0.1
++ @vercel/speed-insights 2.0.0
++ aws-rum-web 3.2.1
++ bcryptjs 3.0.3
++ better-auth 1.7.14
++ drizzle-orm 1.0.0-rc.5
++ fflate 0.8.3
++ leaflet 1.9.4
++ libphonenumber-js 1.13.15
++ maplibre-gl 6.16.0
++ next 16.4.3
++ next-intl 4.14.9
++ pg 8.23.1
++ qrcode 1.5.4
++ react 19.3.1
++ react-dom 19.3.1
++ sharp 0.35.5
++ web-push 3.6.7
++ zod 4.6.7
+
+devDependencies:
++ @biomejs/biome 2.6.4
++ @playwright/mcp 0.0.83
++ @playwright/test 1.64.1
++ @stryker-mutator/core 10.1.1
++ @stryker-mutator/vitest-runner 10.1.1
++ @tailwindcss/postcss 4.3.3
++ @testing-library/jest-dom 7.0.1
++ @testing-library/react 16.3.3
++ @testing-library/user-event 14.6.8
++ @types/leaflet 1.9.22
++ @types/node 24.13.3
++ @types/pg 8.23.1
++ @types/qrcode 1.5.6
++ @types/react 19.3.0
++ @types/react-dom 19.3.0
++ @types/web-push 3.6.4
++ @vitejs/plugin-react 6.1.2
++ @vitest/coverage-v8 5.0.5
++ aws-cdk 2.1146.1
++ aws-cdk-lib 2.275.0
++ constructs 10.8.1
++ dotenv-cli 11.1.0
++ drizzle-kit 1.0.0-rc.5
++ esbuild 0.28.2
++ fake-indexeddb 6.2.6
++ jsdom 30.1.3
++ jsqr 1.4.0
++ msw 3.0.3
++ next-devtools-mcp 0.4.0
++ playwright-core 1.64.1
++ postcss 8.5.32
++ reg-notify-github-plugin 0.14.5
++ reg-publish-s3-plugin 0.14.4
++ reg-simple-keygen-plugin 0.14.2
++ reg-suit 0.14.5
++ tailwindcss 4.3.3
++ tsx 4.23.15
++ typescript 7.0.2
++ vercel 65.7.0
++ vitest 5.0.5
+
+Done in 1.3s using pnpm v12.4.1

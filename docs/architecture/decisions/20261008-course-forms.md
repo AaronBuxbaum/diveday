@@ -13,12 +13,12 @@ the morning of the first pool session.
 
 Constraints that shaped this decision:
 
-- **DiveDay ships no agency text** (H-10). The words are the shop's own, pasted in, exactly as with
-  the release (H-01, H-03: legal and medical wording stays English and is never reflowed).
+- **DiveDay ships no agency text** (H-20261007-request-supported-c-card). The words are the shop's own, pasted in, exactly as with
+  the release (H-20260730-jurisdiction-waiver-text-medical, H-20260724-current-typed-name-explicit: legal and medical wording stays English and is never reflowed).
 - **Booking-time admission is weaker than boarding** (`src/lib/trip-admission.ts` against
   `src/lib/readiness.ts`). A student may always buy a place on a course before signing its forms.
 - Forms are personal records. Export, erasure and merge have to treat them the way they treat
-  signed releases (H-02).
+  signed releases (H-20260730-evidence-retention-period-deletion).
 - Whether an unsigned form should *block* a student or only *warn* is the owner's call. The owner
   chose block.
 
@@ -151,7 +151,7 @@ guardian rule (18, or the local age of majority), which still governs who co-sig
 a form bounded at 17 or under is a minor's paper and always takes a guardian beside the student
 (`isYouthForm`, dive-domain review H6). A form asked only because no date of birth is on file says
 so on its blocker line (`formMaxAge`), so the dock reads the birthday as a fix. A student whose
-adulthood a staffer attested without a date (H-100) is still asked a youth form: it fails closed,
+adulthood a staffer attested without a date (H-20261007-held-seat-split-into) is still asked a youth form: it fails closed,
 and the date of birth is how the desk clears it (agency review G7; a product call noted for Aaron,
 who may rule that the attestation answers it). A template's
 standard form may carry the bound; Open Water's carries PADI's Youth Diving: Responsibility and

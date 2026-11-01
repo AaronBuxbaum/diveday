@@ -104,7 +104,7 @@ export default async function PublicPackagesPage({
       // the intro when every card says the same (visual review 2026-10-24, B39).
       ...(sharedScope ? [] : [scopeText(pkg.scope)]),
     ],
-    // A dive is one tank (H-123): said on the card, where the $200 is decided.
+    // A dive is one tank (H-20261014-package-dive-is-a): said on the card, where the $200 is decided.
     tankNote: t("packages.diveIsATank"),
   }));
 

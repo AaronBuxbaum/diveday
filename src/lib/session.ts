@@ -16,7 +16,7 @@ import { noticeUrl, shopPath } from "@/lib/staff-notices";
  * routes at the edge; this is the inner layer that server code must still
  * call (ADR-0006).
  *
- * **Every call re-reads the account live** (issue #701), not only the H-14
+ * **Every call re-reads the account live** (issue #701), not only the H-20260724-staff-role-reach
  * role-specific gates. Sessions are better-auth database sessions
  * (`account_sessions`, configured in `src/lib/auth.ts`) whose
  * `personId`/`shopId`/`roles` fields are written once at sign-in, and read
@@ -28,7 +28,7 @@ import { noticeUrl, shopPath } from "@/lib/staff-notices";
  * `/shop/**` surface working for the rest of the session, because only the ~12
  * `canPerson*`-gated actions ever called `loadActiveStaffRoles` themselves.
  * This reuses `loadActiveStaffRolesByPerson`, the person-scoped sibling of
- * the same query the H-14 gates already run, so "disabled" means the same
+ * the same query the H-20260724-staff-role-reach gates already run, so "disabled" means the same
  * thing everywhere in one query shape rather than a second copy of it here.
  * Person-scoped rather than shop-scoped deliberately: this runs before any
  * shop has been resolved from the session's own claim, so re-verifying that
@@ -85,7 +85,7 @@ export async function isLiveShopStaff(
 }
 
 /**
- * A live, database-checked permission predicate — the shape every H-14 gate in
+ * A live, database-checked permission predicate — the shape every H-20260724-staff-role-reach gate in
  * `src/db/authz.ts` already has (`canPersonViewShopReports`,
  * `canPersonManageWaiverTemplates`, …). Named as a type so `requireShopSurface`
  * takes the gate itself rather than a pre-computed boolean: a boolean parameter

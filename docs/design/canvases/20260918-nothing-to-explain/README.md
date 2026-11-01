@@ -1,6 +1,6 @@
 # Nothing to explain — three ways to make DiveDay look designed
 
-- **Status:** Superseded on 2026-09-19 by [One idea](../20260919-one-idea/README.md), on the owner's read of round 2 ("still not thinking big enough; the whole thing, top-down, needs complete rethinking"). The floor's type, colour, decoration and icon rows (22a, 22b, 22c, 22i) and round 2's surface stand and land first under any pick there; the three directions were three skins on one skeleton, and H-87 is withdrawn. Nothing shipped from it
+- **Status:** Superseded on 2026-09-19 by [One idea](../20260919-one-idea/README.md), on the owner's read of round 2 ("still not thinking big enough; the whole thing, top-down, needs complete rethinking"). The floor's type, colour, decoration and icon rows (22a, 22b, 22c, 22i) and round 2's surface stand and land first under any pick there; the three directions were three skins on one skeleton, and H-20260918-three-directions-inset-b is withdrawn. Nothing shipped from it
 - **Date:** 2026-09-18
 - **ADR:** [20260918-nothing-to-explain](../../../architecture/decisions/20260918-nothing-to-explain.md)
 - **Published:** https://claude.ai/artifact/NDrtPgYPW4zDyeT7w8BCe2
@@ -17,7 +17,7 @@ from the owner's own reads rather than asked (one ramp, two inks and one tint, n
 shell, one row, two radii, dark by the device and glare by a word, creation as a sheet), and **three
 directions** drawn as finished products on the same six screens for the same shop on the same
 morning: **A · Inset**, the group carries the page; **B · Glass**, the material carries the page;
-**C · Figures**, the number carries the page. There is one call, H-87: which of the three.
+**C · Figures**, the number carries the page. There is one call, H-20260918-three-directions-inset-b: which of the three.
 **Nothing here is normative**; the ADR carries the floor, the three directions and the call, and
 code obeys the ADR.
 
@@ -55,7 +55,7 @@ the three directions redrawn on it.
 | `Figures2.dc.html` | **C · Figures, redrawn** — the same six screens; the ring in the tint on white |
 
 Round 2 reverses two rows of round 1's floor and says so: the face becomes the device's own with
-Geist as the fallback (H-64 had settled Geist as the only face), and the staff tint becomes one
+Geist as the fallback (H-20260901-canvas-direction-brand had settled Geist as the only face), and the staff tint becomes one
 DiveDay blue rather than the shop's colour, which stays on the storefront. Both are decided on the
 page, not asked; refusing either is one sentence in a session.
 
@@ -92,13 +92,13 @@ colour on the current word and the one filled control); Geist as the only face; 
 targets, 16px critical text, AA, never colour alone — every blocked name on every board is a word in
 red ink beside a dot, never a hue alone); the coral bans on manifests, roll call, certs, waivers and
 payments, moot because no board has coral; the roll call committing before it renders; the claims
-policy; H-02; every row of [settled-questions.md](../../settled-questions.md).
+policy; H-20260730-evidence-retention-period-deletion; every row of [settled-questions.md](../../settled-questions.md).
 
 ## Known deviations, on purpose left in
 
 - **The boards are drawn on the floor** — no water band, no drawn tile, no dial, no greeting, no
   eyebrow, no chip, no coral on a staff surface. The floor is decided in the ADR from the owner's
-  own reads (H-77 rounds 1–4), not offered as a call; if the owner reverses it, the boards are not
+  own reads (H-20260911-six-consolidations-makes-diveday rounds 1–4), not offered as a call; if the owner reverses it, the boards are not
   redrawn and the directions stand with the decoration back on.
 - **Glare is described, not drawn.** Each board says what the word does — the app's own `.boat-mode`
   skin comes on for that phone until the same word turns it off — and B says its glass goes solid
@@ -114,7 +114,7 @@ policy; H-02; every row of [settled-questions.md](../../settled-questions.md).
 
 Nothing has shipped from this canvas. The floor's first three rows may start on the ADR alone,
 because each is one of the owner's own sentences taken at its word; every row from the shell onward
-waits on H-87. When a slice lands, the component that must not drift names the ADR in its doc
+waits on H-20260918-three-directions-inset-b. When a slice lands, the component that must not drift names the ADR in its doc
 comment, a test pins the rule, and this table moves.
 
 | Slice | Status | Lands in | Pinned by |
@@ -122,12 +122,12 @@ comment, a test pins the rule, and this table moves.
 | 22a — the floor: one ramp on the device's face (round 2) — `-apple-system` with Inter then Geist as the fallback, six sizes, figures in the rounded face with tabular digits, no capitals, no eyebrow, no greeting; the page's name is its title | open | — | — |
 | 22b — the floor: the surface (round 2) — cool neutrals and pure white, near-black ink, one vivid lagoon-blue in two strengths with its bed, red and amber always beside a word, green only as the aboard fill, no pill on a staff surface, two concentric radii, capsules, no outline and no bed, black at night; the shop's colour stays on the storefront | open | — | — |
 | 22c — the floor: nothing drawn on `/shop/**` — the water band, the site tile, the dial, the hand and the coral leave; `WaterBandStyle` and the illustration set render nothing under `/shop` | open | — | — |
-| 22d — the floor: one shell — Today · Boats · Divers · Shop and Search, a sidebar at `lg` and a five-slot tab bar below, the twenty-one destinations regrouped under Shop and Search, the departure's four tabs one page (H-87) | dropped | — (superseded 2026-09-19 by One idea's 23a–23h) | — |
-| 22e — the floor: one row and one group — `SectionCard` and `LedgerRow` become the picked direction's group and row, two radii, no bed; creation as a sheet (H-87) | dropped | — (superseded 2026-09-19 by One idea's 23a–23h) | — |
-| 22f — the picked direction's own parts (H-87): A adds nothing beyond 22a–22e; B adds the glass layer, its solid twin under `.boat-mode` and the capsule; C adds `Figure`, `Ring`, the home's tiles and the one-figure guard | dropped | — (superseded 2026-09-19 by One idea's 23a–23h) | — |
+| 22d — the floor: one shell — Today · Boats · Divers · Shop and Search, a sidebar at `lg` and a five-slot tab bar below, the twenty-one destinations regrouped under Shop and Search, the departure's four tabs one page (H-20260918-three-directions-inset-b) | dropped | — (superseded 2026-09-19 by One idea's 23a–23h) | — |
+| 22e — the floor: one row and one group — `SectionCard` and `LedgerRow` become the picked direction's group and row, two radii, no bed; creation as a sheet (H-20260918-three-directions-inset-b) | dropped | — (superseded 2026-09-19 by One idea's 23a–23h) | — |
+| 22f — the picked direction's own parts (H-20260918-three-directions-inset-b): A adds nothing beyond 22a–22e; B adds the glass layer, its solid twin under `.boat-mode` and the capsule; C adds `Figure`, `Ring`, the home's tiles and the one-figure guard | dropped | — (superseded 2026-09-19 by One idea's 23a–23h) | — |
 | 22i — the icons (round 2): `DiveDayIcon` re-cut on the 26px, 1.6-stroke grid, filled when current in a tab bar | open | — | — |
-| 22g — every surface on the picked direction, one family per session: the home, a boat and its roll call, the counter, the people, the shop, the storefront (H-87) | dropped | — (superseded 2026-09-19 by One idea's 23a–23h) | — |
-| 22h — the night and glare on the picked direction: the night palette held by its test, glare as a word in the roll call's and the counter's bar (H-87) | dropped | — (superseded 2026-09-19 by One idea's 23a–23h) | — |
+| 22g — every surface on the picked direction, one family per session: the home, a boat and its roll call, the counter, the people, the shop, the storefront (H-20260918-three-directions-inset-b) | dropped | — (superseded 2026-09-19 by One idea's 23a–23h) | — |
+| 22h — the night and glare on the picked direction: the night palette held by its test, glare as a word in the roll call's and the counter's bar (H-20260918-three-directions-inset-b) | dropped | — (superseded 2026-09-19 by One idea's 23a–23h) | — |
 
 ## Working on it
 

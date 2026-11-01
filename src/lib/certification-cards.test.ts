@@ -38,7 +38,7 @@ describe("heldCardDisplayStatus", () => {
     // The badge is the only thing on screen saying so. A hand-verified card reads
     // plain "certified" and does clear; an imported, unconfirmed one holds its
     // gate — the specialty dive, or the enriched-air fill — so it must not look
-    // identical at a busy desk (H-24).
+    // identical at a busy desk (H-20260725-two-findings-dive-domain).
     const confirmed = {
       status: "verified" as const,
       importedAt: IMPORTED_AT,
@@ -85,7 +85,7 @@ describe("isShopIssuedCard", () => {
 });
 
 /**
- * **The H-24 rule, flattened once and provably.**
+ * **The H-20260725-two-findings-dive-domain rule, flattened once and provably.**
  *
  * The shared person-row vocabulary (ADR 20260827-people-not-lists, decision 6)
  * gives `CertificationCardRow` a single four-value `state` prop, and flattening

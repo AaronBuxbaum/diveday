@@ -40,7 +40,7 @@ async function card(
 }
 
 /**
- * **The cards a departure or the Today list offers to check** (H-105). The
+ * **The cards a departure or the Today list offers to check** (H-20261008-cert-check-extension). The
  * The list and action share a read, but an SSI row can offer the manual
  * handoff with incomplete identity even though the judge cannot certify it.
  */
@@ -235,7 +235,7 @@ describe("listAgencyCheckableCards", () => {
 });
 
 /**
- * **Today's "certification pending" row and its check** (H-105): the queue
+ * **Today's "certification pending" row and its check** (H-20261008-cert-check-extension): the queue
  * names the diver, the read fills in the cards, and a row with nothing the
  * extension can check carries no offer at all.
  */

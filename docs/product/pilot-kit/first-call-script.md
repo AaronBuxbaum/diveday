@@ -44,7 +44,7 @@ these with sharper ones as real calls sharpen them:
 | 3 | Missing waivers / unverified cards actually delay departures | It happens rarely, or they handle it at the counter and it never reaches the boat |
 | 4 | The person answering the phone is the person who decides | Decisions run through an owner who is never on site, or a franchise/regional office |
 | 5 | Switching cost is the blocker, not price | Price is the first objection and stays the objection after the free pilot is explained |
-| 6 | They would let outside software hold waivers and medical answers | Any hesitation here is a large finding — it touches H-01–H-03 and the pilot agreement |
+| 6 | They would let outside software hold waivers and medical answers | Any hesitation here is a large finding — it touches H-20260730-jurisdiction-waiver-text-medical, H-20260730-evidence-retention-period-deletion, H-20260724-current-typed-name-explicit and the pilot agreement |
 | 7 | Marina/dock connectivity is genuinely bad for them | Signal is fine where they operate, which would demote the offline manifest for this shop |
 | 8 | "Leave anytime" portability matters to them | They've never been locked in, don't expect to be, and the export button lands flat |
 
@@ -203,7 +203,7 @@ In exchange: real dive days, permission to watch, and — only if it goes well �
 **Do not add anything.** Not a discount, not a feature, not a date. Anything they ask for beyond the
 written offer gets "let me think about that properly and come back to you", written down, and taken
 away. Improvising a commitment in the room is how a pilot ends up owed something nobody authorized
-(H-12 and the [claims policy](../marketing.md#claims-policy-hard-rules)).
+(H-20260724-public-founding-shop-price and the [claims policy](../marketing.md#claims-policy-hard-rules)).
 
 ### F. The close — one ask
 

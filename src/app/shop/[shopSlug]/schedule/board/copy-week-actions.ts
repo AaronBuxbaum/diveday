@@ -15,7 +15,7 @@ import { shopPath } from "@/lib/staff-notices";
  * **Last year's week, copied onto this empty one** (fifth loop, item 30).
  * Its own file so the builder's actions stay one page; the gate is the
  * builder's own: the slug must be the session's shop (`requireShopSurface`)
- * and the reader must define trips (H-14), re-checked against live roles.
+ * and the reader must define trips (H-20260724-staff-role-reach), re-checked against live roles.
  * The week must name its Monday; anything else is refused as invalid.
  */
 export async function copyLastYearWeekAction(shopSlug: string, formData: FormData) {

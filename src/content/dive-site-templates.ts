@@ -23,7 +23,7 @@
  * spring's own mouth — accurate enough to centre a map and read a forecast at,
  * and *not* a mooring assignment: a shop confirms its own buoy and edits the
  * point. Depths are the site's real published range; the `maxDepthMeters` is
- * what a certification ceiling gets compared against (H-08), so it is the
+ * what a certification ceiling gets compared against (H-20260724-certification-levels-agency-rules), so it is the
  * deepest point a diver can reach on or off the briefed plan (a deeper mooring
  * included), capped where the structure itself passes recreational limits, and
  * never the depth a typical dive runs to. A wreck whose sand is deeper says so in

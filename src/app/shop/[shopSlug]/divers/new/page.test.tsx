@@ -165,7 +165,7 @@ describe("NewDiverPage name-match prompt", () => {
   });
 
   it("prints a candidate's date of birth, and nothing where none is on file", async () => {
-    // H-79 (issue #1698). The translator echoes keys here, so the line shows
+    // H-20260916-unconfirmed-identity-withhold-cost (issue #1698). The translator echoes keys here, so the line shows
     // as its key; the undated sibling must add nothing beside its contact line.
     await renderPage(seatingArm, [
       { ...MATCH, dateOfBirth: "1984-03-09" },

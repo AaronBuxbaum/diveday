@@ -187,7 +187,7 @@ describe("CertificationCardRow — provenance", () => {
   });
 
   it("still marks an imported level card that reads plain certified", () => {
-    // The trap H-24 sets: an imported *level* card genuinely clears, so its
+    // The trap H-20260725-two-findings-dive-domain sets: an imported *level* card genuinely clears, so its
     // state is `verified` and it renders no badge — and it must still say where
     // it came from, or the record shows a card this shop never sighted with
     // nothing at all distinguishing it.

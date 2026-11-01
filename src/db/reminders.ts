@@ -396,7 +396,7 @@ function checklistFor(
 
 /**
  * The night before a diver's last boat with the shop, the email says the
- * fly-safe rule in hours under the dock time (H-150); every other reminder,
+ * fly-safe rule in hours under the dock time (H-20261022-reminder-fly-safe-in); every other reminder,
  * and a seat the plan is silent on, carries nothing.
  */
 async function nightBeforeFlySafe(

@@ -170,7 +170,7 @@ type ActivityParamShapes = {
   booking_no_show_missing_after_dive: { actor: string; diver: string };
   /**
    * The desk saw a diver readiness would not board and turned them away, which
-   * frees the seat as a no-show does (safety sheet 2026-10-15, item 6; H-135).
+   * frees the seat as a no-show does (safety sheet 2026-10-15, item 6; H-20261015-who-may-turn-someone).
    * Its own line, never `booking_no_show`'s: "did not arrive" about somebody
    * the desk stood in front of is the record an insurer would misread.
    * `reason` is a category from the seat's own blockers, never the evidence.
@@ -276,7 +276,7 @@ type ActivityParamShapes = {
   medical_alert_read: { actor: string; diver: string; departure?: string };
   /**
    * A permitted reader saved a departure's copy for offline with the medical
-   * alerts' words in it (issue #2960, H-153 amendment): one line per diver on
+   * alerts' words in it (issue #2960, H-20261023-medical-alert-for-the amendment): one line per diver on
    * that departure, written by the server when it hands the words out.
    * Opening the copy at sea writes nothing more.
    */
@@ -417,7 +417,7 @@ type ActivityParamShapes = {
   review_reply_edited: { actor: string };
   review_reply_deleted: { actor: string };
   /**
-   * **Who set the shore contact's alert address** (H-118 security review):
+   * **Who set the shore contact's alert address** (H-20261014-stale-roll-call-recipients security review):
    * the address roll-call alerts go to outside the shop's accounts, added,
    * replaced or removed. Shop-level lines; no address in them, so an erasure
    * has nothing here to reach.
@@ -434,7 +434,7 @@ type ActivityParamShapes = {
   shore_alert_contact_cleared: { actor: string };
   /**
    * **The shore contact stopped the alerts themselves**, with the link in one
-   * (H-118 re-review). No account did it, so the line names nobody: the one
+   * (H-20261014-stale-roll-call-recipients re-review). No account did it, so the line names nobody: the one
    * row in `activity_events` with no actor (the table's check allows it for
    * this code only).
    */

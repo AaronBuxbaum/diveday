@@ -22,7 +22,7 @@ export const metadata: Metadata = {
 export const instant = true;
 
 /**
- * **The trip packet with the medical alerts' words on it** (issue #2990, H-153
+ * **The trip packet with the medical alerts' words on it** (issue #2990, H-20261023-medical-alert-for-the
  * amendment of 2026-10-24): the same document as `../page.tsx`, for a crew
  * whose phone is dead at sea, with each diver's alert under their row on the
  * manifest.

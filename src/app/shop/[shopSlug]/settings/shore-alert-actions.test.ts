@@ -13,7 +13,7 @@ import {
 } from "@/test/staff-session";
 
 /**
- * **The shore contact's address on Settings → Emergency reference** (H-118 and
+ * **The shore contact's address on Settings → Emergency reference** (H-20261014-stale-roll-call-recipients and
  * its reviews): saved only with a tick drawn for that address, confirmed by a
  * link sent to it before any alert goes, written to the activity log, and
  * never sent anything from a demo shop. The real action against a real seeded
@@ -134,7 +134,7 @@ describe("saving the shore contact's alert address", () => {
     expect(await activityCodes()).toEqual(["shore_alert_contact_set"]);
   });
 
-  // Owner review #1 on H-118: the box drawn ticked for one address never
+  // Owner review #1 on H-20261014-stale-roll-call-recipients: the box drawn ticked for one address never
   // vouches for another.
   it("refuses a changed address under the tick drawn for the old one", async () => {
     const { page } = await signedIn({ demo: false });

@@ -58,9 +58,9 @@ import {
 
 /**
  * The counter-rental writes (ADR 20260815-minimal-gear-register, amended
- * 2026-10-08). Gear is any-staff work (H-06), so renting a unit out is open to
+ * 2026-10-08). Gear is any-staff work (H-20260724-initial-gear-policy-sizing), so renting a unit out is open to
  * every staff member; sending the invoice beside it is billing, which stays
- * owner/manager work behind the same gates as the new-order form (H-14,
+ * owner/manager work behind the same gates as the new-order form (H-20260724-staff-role-reach,
  * money step-up, a connected Stripe account) — re-checked here, not trusted
  * from what the form rendered.
  */

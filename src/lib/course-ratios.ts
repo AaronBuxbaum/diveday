@@ -16,7 +16,7 @@ export type CourseRatioRule = {
  * PADI's published in-water ratio for Open Water Diver open-water training
  * dives: up to 8 students per instructor, extendable by 2 per certified
  * assistant (a Divemaster or an Assistant Instructor aboard, in DiveDay's role
- * model) to a hard ceiling of 12 — see H-08 (docs/product/human-decisions/) and
+ * model) to a hard ceiling of 12 — see H-20260724-certification-levels-agency-rules (docs/product/human-decisions/) and
  * docs/architecture/decisions/20260724-course-admission-standards.md for the
  * PADI/SSI sourcing. Continuing-education courses (Advanced Open Water,
  * Rescue, specialties) are not modeled here: their in-water limits depend on
@@ -26,7 +26,7 @@ export type CourseRatioRule = {
  * {@link DSD_RATIO} — because DSD participants have had zero prior water
  * time, unlike an Open Water student who has already completed confined
  * dives. The two were previously conflated (this constant applied to both),
- * which overstated DSD capacity; HD-6 (docs/product/human-decisions/, H-08
+ * which overstated DSD capacity; HD-6 (docs/product/human-decisions/, H-20260724-certification-levels-agency-rules
  * reopened) obtained the real PADI Instructor Manual figures and split them.
  */
 export const ENTRY_LEVEL_COURSE_RATIO: CourseRatioRule = {
@@ -219,7 +219,7 @@ export function courseSeatCapacity(
  *   enrolment outright (`reviewManifestChange`) — every agency, not just PADI.
  * - `over_ratio`: a ratio-gated session (see `courseRatioKind`) has at least
  *   one instructor, but the crew's ratio capacity has fallen below the trip's
- *   booked count — day-of crew changes are unblocked (H-14), so this can drift
+ *   booked count — day-of crew changes are unblocked (H-20260724-staff-role-reach), so this can drift
  *   after booking. A nudge to fix before sailing, never a retroactive block on
  *   the bookings already taken, and never a reason to refuse to *record* a crew
  *   change: an unrecorded change means the manifest lists crew who are not on

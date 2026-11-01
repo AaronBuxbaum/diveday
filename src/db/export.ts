@@ -17,7 +17,7 @@
  * hands what it read to those lists. `export-bundle.snapshot.test.ts` pins the
  * output so a change to that wiring cannot move a cell unnoticed.
  *
- * **What row order a file owes, written once (H-81, issue #1795).** A CSV a
+ * **What row order a file owes, written once (H-20260916-tiebreaker-user-visible-list, issue #1795).** A CSV a
  * shop reads or diffs gets an order a person can predict: `bookings.csv` (by
  * seat time, then the diver's name) and `buddy_pairs.csv` (by team, then the
  * team's members' names), in both bundles. Every other file exists to carry the
@@ -94,7 +94,7 @@ export type ExportBundleScope =
  * (`shopFile` / `diverFile`, `./export-shared-files`); every plain read goes
  * through the same scoped reader (`readScoped`, `./export-tables`), so the
  * two bundles differ only where their reads are written out on purpose — the
- * diver's own bookings and buddy teams ordered by the boat (H-81), and the
+ * diver's own bookings and buddy teams ordered by the boat (H-20260916-tiebreaker-user-visible-list), and the
  * joins only one bundle needs. `null` for a shop, or a diver of this shop,
  * that does not exist.
  */
@@ -510,7 +510,7 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
 
   const crewRollCallRows = await readScoped(tx, "rollCallCrewEvents", scope);
 
-  // **`buddy_pairs.csv` is a file a person reads** (H-81, issue #1795): teams
+  // **`buddy_pairs.csv` is a file a person reads** (H-20260916-tiebreaker-user-visible-list, issue #1795): teams
   // in the panel's order — formation time, then the members' names, then
   // `pair_id` last — each team's rows together. The name is the one the file
   // prints in `person_name`. The old `asc(created_at), asc(pair_id)` was not an
@@ -799,7 +799,7 @@ export type ShopExportContext = NonNullable<Awaited<ReturnType<typeof loadShopEx
  * `waiver_records.csv` **omits `medical_answers`.** The shop-wide export's own
  * comment on that column doesn't apply the other way: whether a subject access
  * request should receive the diver's own medical answers is a real question,
- * not an engineering default, and it belongs with H-01/H-03's legal review —
+ * not an engineering default, and it belongs with H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit's legal review —
  * see `docs/product/human-decisions/README.md`. Every other column of a diver's own
  * signed evidence (status, signature, timestamps, template text) ships now.
  * The same hold extends to `photoUrls`: an imported record's
@@ -962,7 +962,7 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
   // a team they were recorded as crewing. Two rows can never collide: a
   // member row is one or the other, never both.
   //
-  // **Ordered by the departure, not by the team's members** (H-81, issue
+  // **Ordered by the departure, not by the team's members** (H-20260916-tiebreaker-user-visible-list, issue
   // #1795). The shop bundle orders teams by their members' names; here every
   // row is this diver's own membership, one per team, and the file names no
   // other member — so ordering by the others' names would read them only to
@@ -1122,7 +1122,7 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
     // importSourceDocumentUrl only — never importSourceMedicalDocumentUrl.
     // A re-stored scanned intake form is medical evidence with a
     // file extension rather than a JSON key, and bundling it here would
-    // hand a diver's medical document out from underneath H-50's still-open
+    // hand a diver's medical document out from underneath H-20261025-per-diver-record-export's still-open
     // question of whether they should have it — the same withholding
     // medical_answers gets above, extended to the form the medical answers
     // actually shipped on when the waiver was imported.

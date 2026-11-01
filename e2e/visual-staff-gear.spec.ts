@@ -252,7 +252,7 @@ for (const scheme of ["light", "dark"] as const) {
       // date, and on screen the acts. Rented here rather than seeded so the
       // capture is the ticket a counter lands on, notice and all. Priya has
       // signed nothing at blue-mantis, so the frame also holds the unsigned
-      // waiver line and its Send waiver (issue #2261, H-108).
+      // waiver line and its Send waiver (issue #2261, H-20261008-counter-rental-waiver-informs).
       test(`a counter rental's ticket renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/gear/rentals/new?q=Priya");
         await page.getByRole("link", { name: "Rent to Priya Sharma" }).click();

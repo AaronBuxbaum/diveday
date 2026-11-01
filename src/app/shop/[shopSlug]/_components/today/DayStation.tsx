@@ -84,7 +84,7 @@ export function DayStation({
     : "";
   const blocked = Math.min(station.blocked, station.booked);
   const ready = station.booked - blocked;
-  // The seats on sale, not the stated number (H-107, #2388).
+  // The seats on sale, not the stated number (H-20261009-certificate-caps-seats, #2388).
   const open = Math.max(0, station.sellableCapacity - station.booked);
   // **The crew's names are the desktop's**: on a phone the card is the time,
   // the boat and the bar, and who is crewing is one tap away on the departure

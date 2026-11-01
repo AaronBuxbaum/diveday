@@ -560,7 +560,7 @@ describe("who may run each action on the trip page", () => {
     "clearConditionsAction",
     "cancelTripAction",
     // Cancelling one departure for weather is the crew's, and putting it back
-    // is not — an asymmetry that reads like an oversight and is H-14's own
+    // is not — an asymmetry that reads like an oversight and is H-20260724-staff-role-reach's own
     // decision: its 2026-07-24 `dive-domain-expert` review lists reinstate
     // among trip *definition* and one departure's weather cancellation among
     // the day-of operating actions. So `cancelTripAction` takes the ordinary
@@ -607,10 +607,10 @@ describe("who may run each action on the trip page", () => {
     // took it, and `recordPaperCourseForm` refuses anyone not active staff.
     "recordPaperCourseFormAction",
     "saveRosterEmergencyContactAction",
-    // Day-of crew assignment (H-14, #788; #2678 away ack withdrawal) stays open.
+    // Day-of crew assignment (H-20260724-staff-role-reach, #788; #2678 away ack withdrawal) stays open.
     "updateTripCrewAction",
     "withdrawCrewAwayAcknowledgementAction",
-    // Same H-48 trust boundary as reviewCertification (any active staff
+    // Same H-20260814-may-sight-card trust boundary as reviewCertification (any active staff
     // role, not instructor-only) — scoped to the surface rather than the
     // role: the tap only ever lands beside a name on that session's own
     // roster (issue #717).
@@ -636,7 +636,7 @@ describe("who may run each action on the trip page", () => {
     // `cancelTripAction` above, a day-of operating call any staffer makes. What
     // bounds it is in the note, not the role: 200 characters, no links but the
     // diver's own, three per departure, never to a canceled or sailed one, and
-    // held with Undo (H-110 puts the role question to the owner).
+    // held with Undo (H-20261025-departure-note-limits puts the role question to the owner).
     "holdDepartureNoteAction",
     // **Lost and found** (batch 4, J2), from the Boat tab and the shop's list:
     // crew bookkeeping that gates nothing. The one message it can send goes

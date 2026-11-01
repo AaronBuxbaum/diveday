@@ -19,7 +19,7 @@ import { noticeUrl, shopPath } from "@/lib/staff-notices";
 
 /**
  * Promo codes discount real money on the shop's own Stripe account, so they
- * are owner/manager work like the rest of payment settings (H-14, ADR
+ * are owner/manager work like the rest of payment settings (H-20260724-staff-role-reach, ADR
  * 20260724-role-authorization) — re-checked against live roles here, not just
  * hidden from the nav.
  */

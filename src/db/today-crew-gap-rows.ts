@@ -69,7 +69,7 @@ export function pushCrewGapRows(
   // the lapse only when the roster would not have raised it: a divemaster's
   // lapsed card beside a session nobody rostered an instructor on is not why
   // it has no instructor (dive-domain review). Never a refusal — the booking
-  // gate still reads the roster's claim (H-59).
+  // gate still reads the roster's claim (H-20260825-staff-credentials-renewal-clock).
   const roster = decide(counts.roster);
   const rosterCrewGap = roster.courseGap;
   const rosterRatioGap = roster.ratioGap;

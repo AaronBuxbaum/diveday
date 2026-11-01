@@ -28,10 +28,10 @@ import {
 } from "./trips";
 
 /**
- * **No path sells seat certificate + 1** (H-107).
+ * **No path sells seat certificate + 1** (H-20261009-certificate-caps-seats).
  *
  * The forms refuse a capacity above the boat's certificate, but a departure can
- * still carry one: written before H-107, copied, rolled from a series whose
+ * still carry one: written before H-20261009-certificate-caps-seats, copied, rolled from a series whose
  * template was never re-saved, pushed out by "apply to the rest of the series",
  * or reinstated after a cancel. The point-of-sale ceiling in the booking
  * transaction (`sellableCapacity`) is what makes all of them safe; copy and the
@@ -60,7 +60,7 @@ async function certifiedBoat(db: AppDb, shopId: string, certifiedPassengers: num
   return boat;
 }
 
-/** A departure written straight to the database at 4 seats, as a pre-H-107 row would be. */
+/** A departure written straight to the database at 4 seats, as a pre-H-20261009-certificate-caps-seats row would be. */
 async function overLimitTrip(
   db: AppDb,
   shopId: string,
@@ -518,7 +518,7 @@ describe("every reader counts seats against the certificate", () => {
 });
 
 /**
- * The paths H-107's first pass did not pin (#2323): handing a released seat
+ * The paths H-20261009-certificate-caps-seats's first pass did not pin (#2323): handing a released seat
  * back, a party that crosses the line partway, and a boat whose non-divers
  * fill the certificate while the divers-only limit still looks open.
  */

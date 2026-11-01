@@ -190,7 +190,7 @@ export type DepartureSummary = {
   /** The stated seats, as the details form edits them. */
   capacity: number;
   /**
-   * The seats on sale: `capacity` capped at the boat's certificate (H-107,
+   * The seats on sale: `capacity` capped at the boat's certificate (H-20261009-certificate-caps-seats,
    * `sellableSeats`). Open seats and the readiness bar count against this
    * (#2388), as the booking transaction does.
    */
@@ -407,7 +407,7 @@ export type OpenRollCall = {
    * Of the people at that checkpoint, how many have no result yet: nobody has
    * recorded them missing or back aboard. Beside `uncounted` because a
    * missing row's `uncounted` is only the people recorded not back aboard,
-   * and the stale-roll-call alert says both numbers (EAP review on H-118).
+   * and the stale-roll-call alert says both numbers (EAP review on H-20261014-stale-roll-call-recipients).
    */
   awaiting: number;
   /** How many people that checkpoint was counting (see `inAfterDivePopulation`). */
@@ -430,7 +430,7 @@ export type OpenRollCall = {
    */
   alertedAt?: Date | null;
   /**
-   * When the shop's shore contact was sent the same alert (H-118,
+   * When the shop's shore contact was sent the same alert (H-20261014-stale-roll-call-recipients,
    * `trips.roll_call_shore_alerted_at`), or null. Optional for the same reason.
    */
   shoreAlertedAt?: Date | null;
@@ -943,7 +943,7 @@ export async function tripsWithSomebodyMissing(
 }
 
 /**
- * **Who is standing in a crew clash on the queue's boats** (H-80, issues #1776
+ * **Who is standing in a crew clash on the queue's boats** (H-20260916-may-one-hull-carry, issues #1776
  * and #1814) — one batched read of `crewClashesByTrip` across every departure
  * the queue cares about, never one query per boat.
  *
@@ -1016,7 +1016,7 @@ async function standingCrewClashes(
   // ago is no longer a station, and it is the boat this question is about.
   const [clashes, boatClashes, divers, crew, stages, meetingWindows] = await Promise.all([
     crewClashesByTrip(db, shopId, ids, now),
-    // The hull half of the same fault (H-80, issue #2135): one batched read.
+    // The hull half of the same fault (H-20260916-may-one-hull-carry, issue #2135): one batched read.
     boatClashesByTrip(db, shopId, ids, now),
     listDepartureRollCallByTrip(db, shopId, ids),
     listDepartureCrewRollCallByTrip(db, shopId, ids),
@@ -1834,7 +1834,7 @@ async function readTodayWave(
       todayTrips.map((trip) => trip.id),
     ),
     // Who is on two boats at once, on every departure the queue holds and on
-    // every boat still out (H-80) — one batched read.
+    // every boat still out (H-20260916-may-one-hull-carry) — one batched read.
     standingCrewClashes(db, shopId, inWindow, now, timeZone),
     // Who is on each of today's boats for the blocked rows' "Aboard" mark: the
     // same any-checkpoint rule the boats-out path below reads, so a diver
@@ -2100,7 +2100,7 @@ export async function getTodayWork(
 
   // **One wave** (`readTodayWave`): every read takes only the shop, the
   // window and the clock, so none waits on another. Beside it, the cards a
-  // "certification pending" row could check (H-105), read now rather than
+  // "certification pending" row could check (H-20261008-cert-check-extension), read now rather than
   // after the queue is built so they cost no phase of their own: every diver
   // the evidence blocks on a pending card is asked about, a superset of the
   // rows that end up carrying the offer (`attachAgencyChecks` keeps theirs).
@@ -2379,7 +2379,7 @@ function readerCrewedTrips(
 }
 
 /**
- * **The cards a "certification pending" row can check from Today** (H-105).
+ * **The cards a "certification pending" row can check from Today** (H-20261008-cert-check-extension).
  * The queue names the diver (`diverBlockerAction`); this reads which of their
  * cards the DiveDay browser extension could look up, by the same rule as the
  * action that judges the check (`listAgencyCheckableCards`), and drops the

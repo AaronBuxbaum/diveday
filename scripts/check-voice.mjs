@@ -105,7 +105,7 @@ const CLAUSE_WORDS = 3;
 const ICU_QUOTED = /'[{}#][^']*'/g;
 
 /**
- * **American spelling** (H-95, 2026-10-06). DiveDay's English is US English:
+ * **American spelling** (H-20261006-english-we-spell, 2026-10-06). DiveDay's English is US English:
  * *color*, *center*, *canceled*, *enroll*, *gray*. The bundles had drifted
  * into British spelling a word at a time (37 *cancelled*, 22 *colour*, 10
  * *grey* by the day it was swept), and a reader who meets *colour* on one
@@ -548,7 +548,7 @@ export function exclamations(value, key = "") {
 }
 
 /**
- * The four **shape** rules (2026-09-24, the voice decision — H-89 in
+ * The four **shape** rules (2026-09-24, the voice decision — H-20260903-voice-public-pages-speak in
  * docs/product/human-decisions/README.md, "The builder's note" in docs/design/brand.md).
  *
  * The 2026-09-03 sweep removed the words a model overuses and left the shapes:

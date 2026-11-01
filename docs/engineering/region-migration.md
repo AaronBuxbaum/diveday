@@ -9,7 +9,7 @@ Read this before editing either of the first two.
 The edit is one line; the move is not.
 
 > [!WARNING]
-> This document is written for a **pre-pilot** estate (H-49) whose buckets hold seed rows, visual-regression baselines and demo photos.
+> This document is written for a **pre-pilot** estate (H-20260815-no-legacy) whose buckets hold seed rows, visual-regression baselines and demo photos.
 > It says "delete the bucket" in several places and means it.
 > Once a real shop has a photo in `diveday-media` or a bundle in `diveday-backups`, the teardown step below is a data migration instead, and none of the timings here hold.
 

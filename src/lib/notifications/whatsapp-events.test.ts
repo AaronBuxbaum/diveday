@@ -132,7 +132,7 @@ describe("parseWhatsAppDeliveryEvents", () => {
     expect(parseWhatsAppDeliveryEvents(payload, NOW)[0].wabaId).toBe("waba-1");
   });
 
-  it("carries the phone number id each event arrived at, the tenant key under H-83", () => {
+  it("carries the phone number id each event arrived at, the tenant key under H-20260916-may-dive-chain-share", () => {
     const payload = statusPayload([{ id: "wamid.1", status: "delivered" }]);
     expect(parseWhatsAppDeliveryEvents(payload, NOW)[0].phoneNumberId).toBe("pn-1");
   });
@@ -317,7 +317,7 @@ describe("parseWhatsAppInboundMessages (ADR 20260907-two-way-inbox)", () => {
   });
 
   it("keeps each change's own number apart when one WABA's delivery carries two", () => {
-    // A chain sharing one Business account (H-83): Meta may batch changes for
+    // A chain sharing one Business account (H-20260916-may-dive-chain-share): Meta may batch changes for
     // two of its numbers under one entry, and each message must keep its own.
     const payload = JSON.stringify({
       entry: [

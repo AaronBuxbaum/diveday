@@ -25,7 +25,7 @@ export const MEDICAL_ALERT_ANCHOR = "medicalAlert";
  * person's latest signed release here carried an alert, it says so and asks
  * them to write it again if it still applies (`medicalAlertPrefill`), so
  * signing again never drops an alert unseen. Never the earlier words: the
- * link is a bearer capability (H-153, security review 2, L-1).
+ * link is a bearer capability (H-20261023-medical-alert-for-the, security review 2, L-1).
  */
 export function MedicalAlertSection({
   prefill,

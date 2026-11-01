@@ -37,7 +37,7 @@ export function reviewManifestChange(input: {
    * Lapsed ratings are the caller's to pass (`lapsedRungs` on each member),
    * and this review reads them through that same rule. Its only callers today
    * are the crew editor's refusals in `src/db/trips-crew.ts`, which pass none:
-   * H-59 keeps an assignment from ever being refused for a lapse, so those
+   * H-20260825-staff-credentials-renewal-clock keeps an assignment from ever being refused for a lapse, so those
    * refusals count the roster's claim while Today, the staffing week, the trip
    * page and the crew-request hint state the narrowed one (issue #2173).
    */

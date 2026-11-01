@@ -404,7 +404,7 @@ function crewNoteNameMatch(names: string[]): string | undefined {
  * exactly as the person typed it into that form (`+1 305 555 0142`). A string
  * comparison between the two now matches only by coincidence, and a handle
  * that matches by coincidence is an erasure that quietly does not happen
- * (H-02). Both sides reduce to digits instead — the same shape the inbound
+ * (H-20260730-evidence-retention-period-deletion). Both sides reduce to digits instead — the same shape the inbound
  * sweep below already compares on.
  *
  * Seven is `normalizePhoneAddress`'s floor, kept here for the same reason: a
@@ -1413,7 +1413,7 @@ async function scrubBookingRows(
         // Their lunch preference (ideas item 56) is health-adjacent prose about
         // this person, typed for one boat's galley.
         dietaryNote: null,
-        // The name a held seat was booked under (H-13) is somebody's name, and
+        // The name a held seat was booked under (H-20260724-one-person-per-email) is somebody's name, and
         // after an erasure no one is left to ask whether it was them.
         identityBookedAs: null,
         // The contact the desk recorded for the person on a held seat (issue
@@ -2647,7 +2647,7 @@ async function scrubPiiBlob(
     .update(emailBounces)
     .set({ sentByPersonId: null })
     .where(eq(emailBounces.sentByPersonId, ctx.personId));
-  // **The shop's shore contact** (H-118 security review). A shop can name
+  // **The shop's shore contact** (H-20261014-stale-roll-call-recipients security review). A shop can name
   // somebody it also has as a diver as the address its stale roll-call alerts
   // go to. That address is the diver's, held in the shop's settings with the
   // consent and confirmation that vouch for it, and in the links minted for
@@ -3110,7 +3110,7 @@ async function scrubInbox(
 
 /**
  * **Incident reports keep the report and lose the diver** (ADR
- * 20261012-incident-reports, H-111).
+ * 20261012-incident-reports, H-20261013-incident-report-erasure).
  *
  * A report is the shop's liability record for everybody in it, so erasing one
  * diver never deletes it. What goes is their identity:
@@ -3125,7 +3125,7 @@ async function scrubInbox(
  * The narrative sweep is shop-wide, like the internal-notes sweep, because a
  * diver can be named in a report they are not linked to. It shares that
  * sweep's word-boundary pattern and its refusal of a name too short to anchor.
- * A nickname or a first name alone is not reached: the residual H-111 states.
+ * A nickname or a first name alone is not reached: the residual H-20261013-incident-report-erasure states.
  * This is the one write a filed report ever takes.
  */
 async function scrubIncidentReports(

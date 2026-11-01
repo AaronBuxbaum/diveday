@@ -23,7 +23,7 @@ const LINK_BUTTON = buttonClass({
 
 /**
  * **"Check with SSI" on one diver's row** — a departure's Divers tab, or a
- * "certification pending" row on Today (H-105).
+ * "certification pending" row on Today (H-20261008-cert-check-extension).
  *
  * Draws nothing without the DiveDay browser extension: the row's own door to
  * the diver's record is the way to the card then, as it always was. With it,

@@ -13,7 +13,7 @@ import { base, bounceTarget, contextFor, refuseWhileHeld } from "./action-helper
 const fitSchema = z.object({
   bcd: z.string().optional(),
   regulator: z.string().optional(),
-  // The suit is one choice, not two checkboxes (H-78): `RentalFitForm` posts
+  // The suit is one choice, not two checkboxes (H-20260916-rental-fit-describe-shop): `RentalFitForm` posts
   // `suit`, and `suitFlagsFromPost` turns it into the three suit columns.
   suit: z.string().optional(),
   mask: z.string().optional(),
@@ -67,7 +67,7 @@ export async function saveFitFromReady(token: string, formData: FormData) {
     rentsBcd: said("bcd", parsed.data.bcd),
     rentsRegulator: said("regulator", parsed.data.regulator),
     // Wetsuit, drysuit and "I dive dry" as one answer, so a diver can say they
-    // are in their own drysuit and can never be packed two suits (H-78).
+    // are in their own drysuit and can never be packed two suits (H-20260916-rental-fit-describe-shop).
     ...suitFlagsFromPost(parsed.data.suit),
     rentsMask: said("mask", parsed.data.mask),
     rentsFins: said("fins", parsed.data.fins),

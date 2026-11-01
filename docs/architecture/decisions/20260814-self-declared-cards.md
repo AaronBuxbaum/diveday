@@ -121,7 +121,7 @@ the check-then-act is serialized by a `SELECT ... FOR UPDATE` on the `people` ro
 re-states `status = 'pending' AND self_declared_at IS NOT NULL` in its own `WHERE`.
 
 **A joiner writes onto their own record only.** `findOrCreatePerson` resolves by email and merely
-*flags* a mismatched name (H-13). Everywhere else on that fork, a mismatch stops the write — a
+*flags* a mismatched name (H-20260724-one-person-per-email). Everywhere else on that fork, a mismatch stops the write — a
 booking is marked `identityUnconfirmed`, a seat claim will not record a phone number, a locale is not
 recorded. A certification is stronger than all three, so both joins skip
 `recordSelfDeclaredCards` when `nameMatches` is false. The list entry is still created: joining a
@@ -383,11 +383,11 @@ corrected precisely because the next careless heading would have made it copy. T
 `CertificationSummary`, `listCertificationSummaries`, `common.certification.*` and
 `shared.certificationSummary.*`.
 
-**Who may perform a sighting is a product-owner call, and is now H-48.** `reviewAction` gates on a
+**Who may perform a sighting is a product-owner call, and is now H-20260814-may-sight-card.** `reviewAction` gates on a
 staff session and no role predicate, so a captain or a deckhand can convert a claim into `verified`
 state that readiness, admission, course prerequisites, the fill gate and the depth advisory all read.
 That is not a regression — capturing a card has always been open to every role, and this form
-deliberately mirrors that act — but H-14's pattern has been to pull lasting shop-wide authority up to
+deliberately mirrors that act — but H-20260724-staff-role-reach's pattern has been to pull lasting shop-wide authority up to
 owner/manager. The row records both directions, including the argument against narrowing it: the
 person holding the card at the dock is usually crew.
 
@@ -498,7 +498,7 @@ one.
   there would render nowhere. This also matches the correction beside it: archiving a wrong card
   leaves `deleted_at` on the row, not a log line.
 - **Crew-wide, like a capture.** A staff session and no role predicate, exactly as capturing a card
-  has always been, because this is a weaker act than a capture. H-48 is the open product-owner
+  has always been, because this is a weaker act than a capture. H-20260814-may-sight-card is the open product-owner
   question about who may *sight* a card and this must not pre-empt it by inventing a narrower rule
   for a smaller thing.
 - Both outcomes land as **page** notices rather than beside the control, which is the one place on
@@ -517,7 +517,7 @@ one.
   both. One `isLiveStaff` helper now gates capture, review, delete, restore and the clear alike
   (`security-reviewer`, 2026-08-15). It is a **liveness** check and not a role narrowing: `isStaff`
   is the same "are you staff here at all" test `setNeedsStaffFitAction` runs on its own open
-  direction, every crew role still passes it, and H-48 — which is about *which* roles may sight a
+  direction, every crew role still passes it, and H-20260814-may-sight-card — which is about *which* roles may sight a
   card — is untouched. Its refusal is a **page** notice, because filing it under `cards` would pop
   open the add-a-card disclosure (which that section opens on its own notice) and put the refusal in
   the action row of a form the staffer never submitted.
@@ -574,8 +574,8 @@ self-declaration blurs exactly that line. If it ever round-trips it must write t
 
 ## Amendment 2026-08-20 — who may sight a card: any staff
 
-H-48 asked whether the sighting — the act that turns a diver's own typing into `verified` — should
-be pulled up to owner/manager the way H-14 pulled refunds, diver deletion and erasure. **It should
+H-20260814-may-sight-card asked whether the sighting — the act that turns a diver's own typing into `verified` — should
+be pulled up to owner/manager the way H-20260724-staff-role-reach pulled refunds, diver deletion and erasure. **It should
 not.** Sighting stays open to every staff role, and `reviewAction` keeps its `requireStaffSession()`
 gate with no role predicate (product owner, 2026-08-20).
 
@@ -586,7 +586,7 @@ The reasoning, recorded here so the next reviewer does not re-raise it:
   pass does not make the sighting more careful — it makes it happen later, from memory, or not at
   all, and a claim that quietly stays a claim while a boat fills is the exact failure this ADR was
   written to end.
-- **It is a weaker act than the gated set.** H-14's boundary is around authority that outlives the
+- **It is a weaker act than the gated set.** H-20260724-staff-role-reach's boundary is around authority that outlives the
   day and cannot be undone by the next person to look: money leaving the shop, a diver's record
   being destroyed. A sighting records what somebody's eyes saw; it is corrigible by the next staffer
   who looks at the same card, and the ADR's own eraser (the 2026-08-15 second amendment) is what
@@ -596,7 +596,7 @@ The reasoning, recorded here so the next reviewer does not re-raise it:
   mirrors that act. Gating the mirror and not the original would move the work rather than protect
   anything.
 
-**The live-role half of H-48 is a separate question and it is already closed.** Every card action on
+**The live-role half of H-20260814-may-sight-card is a separate question and it is already closed.** Every card action on
 this route runs through `requireDiverActionContext`, which calls `isLiveStaff` before the action's
 own gate, so a demoted, disabled or removed account loses sighting the moment the roles table says
 so rather than at JWT expiry (`security-reviewer`, 2026-08-15). "Any staff" means *any current

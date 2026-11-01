@@ -87,7 +87,7 @@ test("the emergency reference saves on its own page, and the save lands back on 
 });
 
 /**
- * H-118: the shore contact's alert address saves with the box that records
+ * H-20261014-stale-roll-call-recipients: the shore contact's alert address saves with the box that records
  * their consent, comes back ticked with when and by whom it was recorded, and
  * clearing the address clears both and says so. The minted shop is a demo
  * shop, so the save says no confirmation link went (demo shops send nothing);

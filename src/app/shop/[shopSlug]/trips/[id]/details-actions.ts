@@ -95,7 +95,7 @@ const detailsSchema = z.object({
   // admission and capacity never see this (issue #973).
   selfGuided: z.preprocess((value) => value === "on", z.boolean()),
   // The dives went past no-decompression limits: the recap then says nothing
-  // about flying (H-84, issue #1555). Nothing else reads it.
+  // about flying (H-20260916-may-diveday-assert-about, issue #1555). Nothing else reads it.
   exceedsNoDecoLimits: z.preprocess((value) => value === "on", z.boolean()),
   // Lunch is served aboard: the Day-of form then asks each diver for a lunch
   // preference, and Prep and the paper day say it (fifth-loop ideas, item 56).
@@ -346,7 +346,7 @@ async function saveDepartureDetails(
       // against the boat it will actually sail on rather than the one it is
       // leaving.
       boatCapacity: nextBoat?.capacity ?? null,
-      // And its certificate (H-107): no seat above it is sold.
+      // And its certificate (H-20261009-certificate-caps-seats): no seat above it is sold.
       boatCertifiedPassengers: nextBoat?.certifiedPassengers ?? null,
       diveMode: patchDiveMode,
       boatId: nextBoatId,

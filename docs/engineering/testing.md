@@ -121,7 +121,7 @@ structured Playwright report. Proof is the visual screenshot probe's explicit we
 timed-out test's own `browser-activity` attachment with the renderer probe verdict. Mixed ordinary
 failures, missing evidence, global errors and unexecuted tests keep the shard red. Both attempts'
 JSON reports and attachments are retained; duration and budget consumers keep the initial report.
-A second exception, decided 2026-10-23 (H-156), on main only: a visual shard reruns its failed
+A second exception, decided 2026-10-23 (H-20261022-visual-rerun-on-main), on main only: a visual shard reruns its failed
 captures once whatever the cause, because a failed shard on main publishes no screenshot baseline
 and blinds visual review for every branch. A capture that passes only on that rerun is filed as a
 `needs-triage` issue naming its spec (`scripts/visual-flake-issue.mjs`, CI's `visual-flakes` job),

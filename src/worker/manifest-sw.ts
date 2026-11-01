@@ -399,7 +399,7 @@ async function refreshSavedManifests(): Promise<void> {
     // leaving both shops' rosters readable side by side.
     await purgeOfflineManifestsExceptShop(shopSlug, tenantRound);
     // Medical alert words another person saved on this device go before
-    // anything is saved for this one (H-153 amendment). A body that names
+    // anything is saved for this one (H-20261023-medical-alert-for-the amendment). A body that names
     // nobody wipes them all: fail closed.
     await wipeOfflineMedicalAlerts(offlineManifestViewerPersonId(body) ?? undefined, tenantRound);
     for (const payload of offlineManifestPayloads(body)) {

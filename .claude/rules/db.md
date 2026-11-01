@@ -38,7 +38,7 @@ Each rule names what enforces it; the reasoning, incidents and the longer form o
   a species without copy fails to compile (ADR 20260813-marine-life-is-diveday-copy).
 - **Date interests** (`interests`, `scope = 'date'`): writer `askForDate` in `src/db/interests.ts`, reads in
   `src/db/interest-dates.ts`; a row names a course or an interest (`interests_scope_columns`) and never
-  creates a person (H-13).
+  creates a person (H-20260724-one-person-per-email).
 - **Integrations**: `src/db/integrations.ts` (sealed by `src/lib/secret-box.ts`) and the outbox
   `src/db/integration-events.ts`; OAuth state is single-use and bound to shop and person.
 
@@ -52,8 +52,8 @@ Each rule names what enforces it; the reasoning, incidents and the longer form o
   pinned `DIVEDAY_CLOCK` carries it; `schema-clock-default.test.ts` refuses a bare `.defaultNow()`.
   A test that reads "the latest" calls `advanceClock` (`src/test/clock.ts`) between writes.
 - **There is no legacy**: drop what nothing writes, delete code that only tolerates old rows, write
-  no backfill or dual-read for pre-pilot data (H-49). It does not relax the destructive-migration
-  guard (`-- diveday:allow-destructive <rule> <table>.<column>: <why>`) or H-02's retention and
+  no backfill or dual-read for pre-pilot data (H-20260815-no-legacy). It does not relax the destructive-migration
+  guard (`-- diveday:allow-destructive <rule> <table>.<column>: <why>`) or H-20260730-evidence-retention-period-deletion's retention and
   erasure promises, and it never justifies dropping a column a serving release still reads: remove
   the schema declaration in one release, drop the column in the next (the guard refuses a
   `drop-column` marker while the previous release or this branch still declares it). It expires when Aaron says the first pilot shop has real divers.

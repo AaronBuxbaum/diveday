@@ -11,7 +11,7 @@ import { holdsSpecialtyCard } from "./readiness";
  * is specific: air in the suit expands on the way up, and a diver who has never
  * vented one rides it to the surface.
  *
- * **A warning, never a gate**, for the same reason as the depth ceiling (H-08).
+ * **A warning, never a gate**, for the same reason as the depth ceiling (H-20260724-certification-levels-agency-rules).
  * A shop runs drysuit orientations, and on a course trip the instructor is
  * taking the diver through exactly this — refusing the seat would make DiveDay
  * wrong about the thing it was being careful about. Nothing here reaches
@@ -29,7 +29,7 @@ export type DrysuitCardCheck =
 
 /**
  * `divesDry` is the diver's own answer — `rental_fit_profiles.dives_dry`, their
- * suit or ours (H-78, issue #1752).
+ * suit or ours (H-20260916-rental-fit-describe-shop, issue #1752).
  *
  * This used to take `rents_drysuit` and the shop's catalog, and said nothing
  * unless a suit was coming off this shop's wall. That asked "are we renting

@@ -156,7 +156,7 @@ export default async function SeatClaimPage({
   const notice = noticeFromParam(error ? `error-${error}` : undefined, CLAIM_NOTICES);
   // The trip's own cert gate refused the claim: state what the *trip*
   // requires — the same trip-property sentence the booking form uses, saying
-  // nothing about any person's record (H-22).
+  // nothing about any person's record (H-20260724-minimum-age-gate-fail).
   let requirementNotice: string | null = null;
   if (error === "requirement") {
     const [requirement, siteRequirement] = await Promise.all([
@@ -211,7 +211,7 @@ export default async function SeatClaimPage({
             seatName: data.seatName,
           })}
         </p>
-        {/* A seat booked "Under 18" (H-124): a parent or guardian signs with
+        {/* A seat booked "Under 18" (H-20261014-parent-signs-minor-release): a parent or guardian signs with
             them, and, only where that door exists, the parent who booked can
             do it from their own page. */}
         {data.minorDeclared ? (

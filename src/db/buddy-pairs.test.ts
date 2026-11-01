@@ -945,7 +945,7 @@ describe("the buddy-team recorder must be live staff (defense in depth)", () => 
 });
 
 /**
- * The export's team order (H-81, issue #1795), on plain rows. The database
+ * The export's team order (H-20260916-tiebreaker-user-visible-list, issue #1795), on plain rows. The database
  * path is pinned in `export.test.ts`; these are the two last resorts it cannot
  * cheaply reach.
  */

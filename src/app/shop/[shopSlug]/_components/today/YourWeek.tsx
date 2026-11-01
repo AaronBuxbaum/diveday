@@ -101,7 +101,7 @@ export function YourWeekList({
                 {formatShortDate(line.startsAt, locale, timeZone)} ·{" "}
                 {line.crewCall
                   ? t(
-                      // Their own shift or the shop's crew time (H-149) is
+                      // Their own shift or the shop's crew time (H-20261022-crew-arrive-before-divers) is
                       // theirs; the divers' call is named as the divers'.
                       line.crewCall.source === "divers"
                         ? "today.yourWeek.diversAtTheDock"

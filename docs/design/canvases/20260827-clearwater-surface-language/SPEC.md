@@ -330,7 +330,7 @@ entry drops its "recomposition proposed" marker when this ships.
 
 ---
 
-## 6d — The evening reading, and the fold (H-62)
+## 6d — The evening reading, and the fold (H-20260827-close-out-remain-own)
 
 **Scope.** The same page, later in the day; then the route fold. Composes from `src/lib/closeout.ts`'s
 existing assembly — **no second detector** (the ADR that built close-out already demands this).
@@ -348,12 +348,12 @@ existing assembly — **no second detector** (the ADR that built close-out alrea
 - The **closing block** renders only when every station of the shop day (`shopDayOf(now, tz)`) is
   settled: the leftovers group (each row = existing leftover with trailing **Dismiss** →
   `recordLeftoverDecision(db, { …, actionId, decision: "dismiss", actorPersonId })`, saved
-  immediately, undo toast — H-57), then one primary "Close the day" → `closeDay(...)` with the
+  immediately, undo toast — H-20260822-close-out-leftovers-resolved), then one primary "Close the day" → `closeDay(...)` with the
   existing snapshot (`buildCloseoutSnapshot`), then the Tomorrow band. No caption rides the
   closing act. **No acknowledgement gate**
   (ADR alternative) — a domain change, not just a UI one: `closeDay` (`src/db/closeout.ts`) deletes
   its `acknowledged` input and the `CloseoutAcknowledgementRequired` throw, and the UI's
-  `mustAcknowledge` consumer goes with them — H-57/H-49 make the gate legacy, and the snapshot
+  `mustAcknowledge` consumer goes with them — H-20260822-close-out-leftovers-resolved/H-20260815-no-legacy make the gate legacy, and the snapshot
   already records what was still open. The closeout tests that pin the throw are rewritten to pin
   the new contract, never deleted.
 - Shape `no_departures` → the QuietDay collapse, decided by the DaySpine assembly, not
@@ -390,7 +390,7 @@ panel; a boat with a not-back diver renders the plain sentence.
 | --- | --- |
 | Route | `/shop/[shopSlug]/close-out` → permanent 308 Route Handler to the home, preserving `?notice=` (the codes re-home; `noticeForForm` routes them to the closing block) |
 | Registry | `closeOut` leaves `STAFF_DESTINATIONS`; the dock renders four destinations + More; `STAFF_DESTINATION_LABEL_KEYS`/`TITLE_KEYS` drop the id; ⌘K keeps a "Close the day" **command** pointing at the home's closing block anchor (`/#close-day`) so the palette still answers the phrase |
-| Files | `close-out/page.tsx` (1,001 lines), its `loading.tsx` and components delete — there is no legacy (H-49); `src/lib/closeout.ts` / `src/db/closeout.ts` stay as the home's readers, minus `closeDay`'s `acknowledged` input and the `CloseoutAcknowledgementRequired` class, which delete here |
+| Files | `close-out/page.tsx` (1,001 lines), its `loading.tsx` and components delete — there is no legacy (H-20260815-no-legacy); `src/lib/closeout.ts` / `src/db/closeout.ts` stay as the home's readers, minus `closeDay`'s `acknowledged` input and the `CloseoutAcknowledgementRequired` class, which delete here |
 | Coverage | `scripts/route-coverage.json` drops the route (`--write` refuses drops, so the entry is removed by hand with the PR explaining it); the close-out e2e spec rewrites against the home; its visual captures move to evening-state home captures |
 | Trouble states | `seed-trouble-states` additions for the evening state if any panel here only renders on failure (recap send failure keeps its current notice path) |
 
@@ -400,16 +400,16 @@ panel; a boat with a not-back diver renders the plain sentence.
 | --- | --- | --- |
 | The closing block never renders while any station is unsettled (departure still out, buffer not passed) | `DaySpine.test.tsx` (evening cases) | decision 4 |
 | A non-owner's evening spine renders the settled station with no log door | `DaySpine.test.tsx` (evening cases) | log-door gate |
-| No acknowledgement control renders on the closing act under any leftover count | same | ADR alternative / H-57 |
-| Dismiss saves immediately and offers undo; closing does not re-ask | extend `src/db/closeout` tests + e2e | H-57 |
+| No acknowledgement control renders on the closing act under any leftover count | same | ADR alternative / H-20260822-close-out-leftovers-resolved |
+| Dismiss saves immediately and offers undo; closing does not re-ask | extend `src/db/closeout` tests + e2e | H-20260822-close-out-leftovers-resolved |
 | Quiet day: no departures **and no desk rows** → heading + one sentence + one act, zero group labels; no departures + one desk row → the desk group renders | `DaySpine.test.tsx` | principles §4 empty-page rule |
 | e2e: J4 end-to-end (settle → send recap → dismiss → close → tomorrow carries the un-dismissed leftover) | rewrite the close-out spec as `e2e/day-close.spec.ts` | J4 |
 | `/close-out` 308s home with notice preserved | route handler test | fold |
-| The dock shows four destinations + More; `closeOut` id gone | `staff-destinations.test.ts` (extend) | H-62 |
+| The dock shows four destinations + More; `closeOut` id gone | `staff-destinations.test.ts` (extend) | H-20260827-close-out-remain-own |
 
 ---
 
-## 6e — The week board (H-63)
+## 6e — The week board (H-20260827-clearwater-week-board-roadmap)
 
 **Scope.** `/shop/[shopSlug]/schedule/board` gains the week composition at `xl`+ only. The stream,
 the add panel, the row menu, cursor paging and every mutation are untouched below that width and
@@ -457,7 +457,7 @@ export function weekBoard(db: DbExecutor, shopId: string, weekStartIso: string,
 
 | Test | Where | Pins |
 | --- | --- | --- |
-| Widths below 1280 render the stream (grid absent) | e2e sets the tablet viewport itself (`page.setViewportSize`, the width `visual.spec.ts` uses) — `TABLET_SURFACES` governs only the visual captures, which the board (as `schedule-builder`) already is | H-63 |
+| Widths below 1280 render the stream (grid absent) | e2e sets the tablet viewport itself (`page.setViewportSize`, the width `visual.spec.ts` uses) — `TABLET_SURFACES` governs only the visual captures, which the board (as `schedule-builder`) already is | H-20260827-clearwater-week-board-roadmap |
 | A shop with zero upcoming departures renders the empty state, not the grid | board e2e / component test | empty-board rule |
 | A three-day course renders once, as a span across its days | `weekBoard` unit test | decision 5 |
 | Deleted departures never appear (`liveTrip`) | `weekBoard` unit test | live-trip gate |
@@ -745,4 +745,4 @@ Each slice's PR lists, in its description: keys added (with every locale), keys 
 edits — call site, `en-US`, `es-ES`), and captions/sentences removed under the copy-restraint
 filter. The heavy deletions land in 6g (settings captions) and 6i (storefront row detail lines);
 6c/6d delete the view-switch and close-out page keys. Waiver/medical wording is untouched
-everywhere (H-01/H-03).
+everywhere (H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit).

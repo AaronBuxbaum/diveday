@@ -169,7 +169,7 @@ describe("decideTripAdmission — what the booker just typed", () => {
   });
 
   it("ignores a claim when the booking's identity did not match", () => {
-    // H-13: a statement made under a name that disagrees with the row it
+    // H-20260724-one-person-per-email: a statement made under a name that disagrees with the row it
     // resolved to is not provably about that person — the same reason their
     // cards are not read.
     expect(
@@ -184,7 +184,7 @@ describe("decideTripAdmission — what the booker just typed", () => {
   });
 });
 
-describe("decideTripAdmission — absence of evidence is never a refusal (H-08's settled trade-off)", () => {
+describe("decideTripAdmission — absence of evidence is never a refusal (H-20260724-certification-levels-agency-rules's settled trade-off)", () => {
   it("admits a diver this shop has never carded", () => {
     // The whole new-customer case: nothing on file, so nothing says they
     // cannot dive it. Readiness and the dock still hold that line.
@@ -198,7 +198,7 @@ describe("decideTripAdmission — absence of evidence is never a refusal (H-08's
   });
 
   it("judges a diver on a card still awaiting verification, rather than reading them as a stranger", () => {
-    // H-29, reversed 2026-08-20: this used to admit. A staffer typed this card
+    // H-20260820-shophasadjudicated-src-lib-trip, reversed 2026-08-20: this used to admit. A staffer typed this card
     // in — the shop is not "undecided about this diver", it holds their Open
     // Water and the boat wants Advanced. Absence of evidence is the fail-open
     // rule; a card in the verify queue is not absence.
@@ -236,7 +236,7 @@ describe("decideTripAdmission — absence of evidence is never a refusal (H-08's
   });
 
   it("admits when the booking's identity is unconfirmed, rather than judging one human by another's cards", () => {
-    // H-13: the booking reused an existing person by email under a mismatched
+    // H-20260724-one-person-per-email: the booking reused an existing person by email under a mismatched
     // name. Those cards are evidence about somebody, but not provably about
     // the person booking — so they are not read at all.
     expect(
@@ -782,7 +782,7 @@ describe("admission is monotone with respect to readiness", () => {
    * opposite directions — a rung *below* what the record holds, and a nitrox
    * tick from somebody with no card at all.
    *
-   * Added 2026-08-20 with the H-27/H-29 reversal. The invariant survives it by
+   * Added 2026-08-20 with the H-20260803-booking-time-trip-admission/H-20260820-shophasadjudicated-src-lib-trip reversal. The invariant survives it by
    * construction — readiness clears only on a verified card, which
    * `highestLevelOnFile` already sees, so believing a claim can only make
    * admission *more* permissive — but "by construction" is exactly the argument
@@ -858,7 +858,7 @@ describe("admission is monotone with respect to readiness", () => {
     // returning ADMITTED on `identityUnconfirmed` looks backwards — the weaker
     // door skipping the stricter gate (security review 2026-09-11). It is not:
     // the cards on that record are evidence about *somebody*, so refusing on
-    // them would judge one human by another's, and admitting is H-08's ordinary
+    // them would judge one human by another's, and admitting is H-20260724-certification-levels-agency-rules's ordinary
     // fail-open on absence of evidence. The line that stops the seat is
     // readiness, which fails closed on the same flag at the rail. If either
     // half ever moves, this fails rather than quietly opening the boat.

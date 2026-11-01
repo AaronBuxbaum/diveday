@@ -4,7 +4,7 @@ import type { Role } from "@/lib/authz";
 import { formatCalendarDate, shiftCalendarDate } from "@/lib/calendar-date";
 import { CREDENTIAL_KIND_KEYS } from "./credential-kinds";
 
-/** How far ahead a renewal counts as due soon. H-59: a word, never a gate. */
+/** How far ahead a renewal counts as due soon. H-20260825-staff-credentials-renewal-clock: a word, never a gate. */
 const RENEWAL_WINDOW_DAYS = 30;
 
 /**

@@ -57,7 +57,7 @@ that: it moves money, frees a place on a boat, and nobody looks at it before it 
    24 characters is prose by definition. "Can I cancel and move to Sunday?" reaches the inbox exactly
    as it did before this change.
 6. **The cancellation goes through `selfCancelBooking`**, with `refundBookingOnCancellation`
-   afterwards as the independent second step (H-07) — the same two calls `cancelMyBookingAction`
+   afterwards as the independent second step (H-20260724-payment-deposit-cancellation-refund) — the same two calls `cancelMyBookingAction`
    makes from `/ready`. One policy, one refusal path, one late-departure buffer.
 7. **`M` is a handoff, not a reschedule.** 20260821 settled that moving a seat is the shop's,
    because the money has to move with it, and a mnemonic is not a reason to build a rescheduling

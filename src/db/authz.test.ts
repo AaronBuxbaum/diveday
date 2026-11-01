@@ -165,7 +165,7 @@ describe("adding a diver from search (every staff role)", () => {
   });
 });
 
-describe("H-14 owner/manager surfaces", () => {
+describe("H-20260724-staff-role-reach owner/manager surfaces", () => {
   it("admit an owner and a manager, refuse instructor and the daily crew", async () => {
     const { db, shop } = ctx;
     const owner = await makeStaff(db, shop.id, ["owner"]);
@@ -674,7 +674,7 @@ describe("erasure (canPersonErasePersonalData)", () => {
   });
 });
 
-describe("H-06 gear-request override", () => {
+describe("H-20260724-initial-gear-policy-sizing gear-request override", () => {
   it("admits owner, manager, instructor, and divemaster; refuses deck crew", async () => {
     const { db, shop } = ctx;
     const owner = await makeStaff(db, shop.id, ["owner"]);
@@ -716,7 +716,7 @@ describe("the day's weather call", () => {
   });
 });
 
-describe("H-14 trip configuration", () => {
+describe("H-20260724-staff-role-reach trip configuration", () => {
   it("admits owner, manager, and instructor; refuses captain, crew, and divemaster", async () => {
     const { db, shop } = ctx;
     const owner = await makeStaff(db, shop.id, ["owner"]);

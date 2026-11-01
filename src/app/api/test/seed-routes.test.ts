@@ -345,7 +345,7 @@ const routes: SeedRoute[] = [
     slug: "seed-shared-recap-photo",
     // No body at all, so reaching the database is the signal. Past that it
     // publishes a diver's photo to every other recap on their boat under their
-    // first name, which only the diver's own tick may do (H-129).
+    // first name, which only the diver's own tick may do (H-20261014-share-photo-with-boat).
     expectPastTheGuard: async () => {
       expect(getDb).toHaveBeenCalled();
     },

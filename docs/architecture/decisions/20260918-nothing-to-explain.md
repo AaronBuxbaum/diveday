@@ -1,6 +1,6 @@
 # 20260918-nothing-to-explain — One floor decided from the owner's own reads, three directions drawn as finished products, and one call
 
-- **Status:** Superseded on 2026-09-19 by [20260919-one-idea](20260919-one-idea.md), on the owner's read of round 2: "You're still not thinking big enough. I think the way that our current design looks in its entirety, top-down, needs complete rethinking." §1's type, colour and decoration rows and §7's surface stand and are carried into the new ADR by reference; §2–§6 (the three directions, the recommendation, the call H-87, and the floor's shell rows) are withdrawn — A · Inset, B · Glass and C · Figures were three skins on the same skeleton. The **round 1 read** and round 2 are kept below as the record
+- **Status:** Superseded on 2026-09-19 by [20260919-one-idea](20260919-one-idea.md), on the owner's read of round 2: "You're still not thinking big enough. I think the way that our current design looks in its entirety, top-down, needs complete rethinking." §1's type, colour and decoration rows and §7's surface stand and are carried into the new ADR by reference; §2–§6 (the three directions, the recommendation, the call H-20260918-three-directions-inset-b, and the floor's shell rows) are withdrawn — A · Inset, B · Glass and C · Figures were three skins on the same skeleton. The **round 1 read** and round 2 are kept below as the record
 - **Date:** 2026-09-18
 - **Design:** [the canvas](../../design/canvases/20260918-nothing-to-explain/README.md) — eight
   boards on two pages. Round 1: the cover, then each direction redrawing the same six screens (the
@@ -28,7 +28,7 @@ Read against the two canvases before it and against the running app at `a8c16fb`
 1. **Every round answered a sentence with more.** Clear the deck offered six concepts, then five
    surfaces, then one direction with three more parts, then a dial; One hand before it four
    directions, five levers, eight more, seven possibilities. Eighteen lettered calls, (a) through
-   (r), are still open on H-77 and nothing from that canvas has shipped. A design that needs
+   (r), are still open on H-20260911-six-consolidations-makes-diveday and nothing from that canvas has shipped. A design that needs
    eighteen decisions to accept is a menu, not a design.
 2. **The instrument was drawn as a console for engineers** — monospace capitals, twelve-segment
    gauges, a telemetry line, a black display by day — and each time the owner found it cold while
@@ -49,7 +49,7 @@ Read against the two canvases before it and against the running app at `a8c16fb`
 
 Every direction stands on these rows. Each is what one of the owner's own sentences between
 2026-09-08 and 2026-09-11 already implies ("overbearing and ugly", "too many controls", "light
-renders light", "farther from the cutesy"), so none is a call; H-87 is a pick of a direction on top
+renders light", "farther from the cutesy"), so none is a call; H-20260918-three-directions-inset-b is a pick of a direction on top
 of them. One hand's twelve deletions (one width, one eyebrow, one title, one row, one add, one
 state, one meter, one link, one skeleton, one disclosure, the voice sheet) remain the floor's floor.
 
@@ -65,7 +65,7 @@ state, one meter, one link, one skeleton, one disclosure, the voice sheet) remai
 | Creation is a sheet | Full-page forms behind "Add a departure", "Add diver", the walk-in | A sheet rises over the page you were on and leaves you there; a page is never a form | the add panel, the diver form and the walk-in open as sheets from their rows |
 | Safety, untouched | — | 44px targets, 16px critical text, AA, never colour alone; the roll call commits before it renders; the coral bans are moot because there is no coral | every existing test |
 
-### 2. Three directions, and the pick is the owner's (H-87)
+### 2. Three directions, and the pick is the owner's (H-20260918-three-directions-inset-b)
 
 Each is a complete product, drawn on the floor, differing in what carries the page. Names are
 stable from here on.
@@ -114,7 +114,7 @@ ever prove too much the floor and the lists stand alone. **A** if the priority i
 for the most calm; **B** if the demo matters more than the dock this season, at a week more and a
 solid twin for every glass surface.
 
-**The one call (H-87): A, B or C.** Nothing else waits on the owner: the floor is decided, the
+**The one call (H-20260918-three-directions-inset-b): A, B or C.** Nothing else waits on the owner: the floor is decided, the
 fiction is fixed, the storefront and the night are drawn for each, and the slices are in the canvas
 README. A pick is one word; the first slice starts the same day.
 
@@ -122,21 +122,21 @@ README. A pick is one word; the first slice starts the same day.
 
 The name and the mark. Harbor: a diver-facing page wears the shop's colour and face. The dock test
 and the roll call's commit-before-render. Every message bundle, the clock, the timezone, the
-skeletons and `instant = true`. The claims policy. H-02. Every row of
+skeletons and `instant = true`. The claims policy. H-20260730-evidence-retention-period-deletion. Every row of
 [settled-questions.md](../../design/settled-questions.md). DiveDay's own marketing pages, which are
 #1881's and take the picked surface only when it lands.
 
 ### 5. What this does to Clear the deck and One hand
 
 Clear the deck's ADR stays Proposed as the record of what was offered; its floor's first row (the
-door) shipped on 2026-09-17 and stands. Of H-77's open calls, this ADR's floor answers (b), (e)–(f)
+door) shipped on 2026-09-17 and stands. Of H-20260911-six-consolidations-makes-diveday's open calls, this ADR's floor answers (b), (e)–(f)
 and (i)–(r) — the decoration leaves, Geist stays, the surface is one of the three here rather than
-Console or Chart — and H-87's pick replaces (a); **(c) and (d) stay open on H-77**: the outside
+Console or Chart — and H-20260918-three-directions-inset-b's pick replaces (a); **(c) and (d) stay open on H-20260911-six-consolidations-makes-diveday**: the outside
 (the storefront's front page, one embed, every page prints, three connects) and DiveDay's own pages
 are consolidations this canvas does not draw. One hand's ADR stays Proposed; its floor (20a–20e) is
 this floor's floor and its open slices 20f–20m stay paused, because each adds a thing.
 
-### 7. Round 2 — the surface, evaluated and decided (H-87 unchanged)
+### 7. Round 2 — the surface, evaluated and decided (H-20260918-three-directions-inset-b unchanged)
 
 **The owner's read of round 1 (2026-09-18):** "I think my problem is that the core of this design
 is kind of ugly. Can we evaluate the visuals themselves? I think there's nicer solutions that feel
@@ -153,7 +153,7 @@ second page and decides the surface, which is the same under any pick:
 | Neutrals | warm grey `#f2f1ec`, deep-sea ink, a 1px ring on every group | ground `#f2f2f7`, groups `#ffffff`, separators `#e3e3e8`, ink `#1d1d1f`, secondary `#6e6e73`; at night `#000000`, `#1c1c1e`, `#2c2c2e`, `#f5f5f7`, `#98989d`; no outline, no bed | the token set in `globals.css`; `night-palette.test.ts` rewritten to these pairs |
 | The tint | the shop's colour on every staff control | **one DiveDay blue**: `#0a7aff` for symbols, rings and figures at 20px and up (4.0:1 on white, where 3:1 applies), `#0064d2` for text and the one filled control (5.6:1 on white, 4.6:1 on its bed `#e6f0ff`); at night `#0a84ff`, `#6cb4ff` for text, `#102a47` the bed. The shop's colour stays on the storefront | a guard that no staff surface reads `shops.brand_color`; the contrast pairs in a test |
 | Signals | red and amber words | `#d70015` and `#b35900` by day (5.4 and 4.8 on white), `#ff453a` and `#ff9f0a` at night, always beside a word; green `#34c759` / `#30d158` only as the aboard circle's fill under a white check, never as text | unchanged rule, new values |
-| The face | Geist only (H-64) | **the device's own**: `-apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, "Helvetica Neue", Geist`, so every iPhone, iPad and Mac renders SF Pro; figures in `ui-rounded` (SF Pro Rounded) at 700 with tabular digits; Inter then Geist off Apple hardware. **Reverses H-64's one-face pick**; keeping Geist is deleting the first entries of the stack | `next/font` stops loading Geist on Apple hardware; `check:type-ramp` to six sizes |
+| The face | Geist only (H-20260901-canvas-direction-brand) | **the device's own**: `-apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, "Helvetica Neue", Geist`, so every iPhone, iPad and Mac renders SF Pro; figures in `ui-rounded` (SF Pro Rounded) at 700 with tabular digits; Inter then Geist off Apple hardware. **Reverses H-20260901-canvas-direction-brand's one-face pick**; keeping Geist is deleting the first entries of the stack | `next/font` stops loading Geist on Apple hardware; `check:type-ramp` to six sizes |
 | The ramp | six sizes at 500/600/700 | 34 · 28 · 22 · 20 · 17 · 15 · 13; names regular, section titles and figures bold, no capitals | `check:type-ramp` |
 | Shape | 12px groups, 8px controls, rectangles for buttons | 20px groups and tiles, 12px controls, capsules for buttons, 46px for the screen; nothing lifted at rest; a floating bar or capsule casts `0 8px 28px` at 10% | `card.test.tsx` rewritten to two rungs |
 | Density | 14px padding, 52px two-line rows | 16px insets, 50px rows, about 60px for name-and-why rows, 28px above a section title | the Row and Group primitives |
@@ -164,7 +164,7 @@ second page and decides the surface, which is the same under any pick:
 The recommendation stands: **C · Figures**, and the redrawn boards argue it better than the words
 did — a blue ring on white is the one picture of a boat filling that a shop owner remembers, and
 under this surface it is no longer a dashboard because nothing around it is coloured. The call is
-unchanged: **H-87, A, B or C.** The surface is slice 22b under any pick and can start the day the
+unchanged: **H-20260918-three-directions-inset-b, A, B or C.** The surface is slice 22b under any pick and can start the day the
 letter is said; the face is inside 22a; the icons are 22i.
 
 ## Alternatives considered
@@ -174,20 +174,20 @@ letter is said; the face is inside 22a; the icons are 22i.
 - **Console or Chart republished under a new name** — declined: both are drawn as a console (mono
   capitals, segmented gauges, a telemetry line), which is the cold the owner named each time; C
   keeps their one true idea, the figure that leads, and nothing of their form.
-- **Asking the floor as calls, as H-77 did** — declined: every row is a consequence of a sentence
+- **Asking the floor as calls, as H-20260911-six-consolidations-makes-diveday did** — declined: every row is a consequence of a sentence
   the owner already said, and a floor that waits on a decision is not a floor. If the owner
-  reverses a row, that is a new read recorded on H-87, not a call left open here.
+  reverses a row, that is a new read recorded on H-20260918-three-directions-inset-b, not a call left open here.
 - **One direction only** — declined: the brief asks for a few to pick from, and one drawn deep is
   what round 3 did; three complete products on one skeleton let the pick be made by eye.
 - **More than three** — declined: six concepts and five surfaces were the menu that produced no
   pick; three that differ on one axis is the number a person can hold at once.
-- **Apple's own type (the system face)** — declined for now: Geist is H-64's settled face and is
+- **Apple's own type (the system face)** — declined for now: Geist is H-20260901-canvas-direction-brand's settled face and is
   close to it; a `system-ui` stack is a one-token change if a pilot shop's iPad says otherwise.
 - **The tint as the shop's colour on staff surfaces** — round 1's choice, reversed by round 2: Blue
   Mantis's green showed that a shop's colour is whatever it is and half of them are dull, and a staff
   tool that changes its one accent per shop cannot be tuned for contrast once. The storefront keeps
   the shop's colour; the staff app wears one DiveDay blue.
-- **Keeping Geist as the only face (H-64)** — reversed by round 2 for the surface, not the brand:
+- **Keeping Geist as the only face (H-20260901-canvas-direction-brand)** — reversed by round 2 for the surface, not the brand:
   the device's face is what makes Apple's software look like Apple's, and Geist stays as the fallback
   off Apple hardware and on DiveDay's own marketing pages until #1881 decides otherwise.
 
@@ -198,7 +198,7 @@ Group and a Row (A), a Bar, a TabBar and a Capsule with solid twins (B), a Figur
 (C). Every frame on the canvas is drawn from the fiction the last eight canvases share, so the boards
 compare with theirs. A pick is one letter.
 
-Hard: the floor reverses accepted picks — Reef's tokens and ladder (H-64, 13a), the water band, the
+Hard: the floor reverses accepted picks — Reef's tokens and ladder (H-20260901-canvas-direction-brand, 13a), the water band, the
 greeting, the earned-moment budget for staff surfaces — and the tests that pin them (`card.test.tsx`,
 `check:type-ramp`, the water-band, illustration and night-palette tests) are rewritten to pin the
 floor, never deleted; the ADRs that record those picks stay as the record and this one supersedes

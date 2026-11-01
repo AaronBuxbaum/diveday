@@ -54,10 +54,10 @@ The shop-issued exception is not conditioned on status at all, because the row i
 numberless *and* `verified` from the moment it is created; that is the entire point.
 
 **Who may tap it: any active staff member of the shop, not instructor-only** — the same trust
-boundary H-48 already settled for card *sighting* (`docs/product/human-decisions/README.md`). A shop-issued
+boundary H-20260814-may-sight-card already settled for card *sighting* (`docs/product/human-decisions/README.md`). A shop-issued
 certification is a stronger act than sighting (it originates verified evidence rather than confirming
 a claim already on file against a physical card), and that distinction is deliberately not re-litigated
-here: extending H-48's answer to a stronger act is the position this decision takes, not an oversight.
+here: extending H-20260814-may-sight-card's answer to a stronger act is the position this decision takes, not an oversight.
 
 **Serialized against itself.** A numberless row has no unique index to catch a duplicate the way every
 other write to this table does (`certifications_shop_agency_identifier_unique` is keyed on
@@ -83,7 +83,7 @@ product call this decision does not make.
   identically by every gate. A third value either has to be treated as equivalent to `verified`
   everywhere — an enum member that changes nothing except adding a place every future reader has to
   remember to handle — or isn't, in which case the diver is back to the rejected `pending` outcome.
-- **Instructor-only issuance**, narrower than H-48's "any active staff" answer for sighting. Rejected
+- **Instructor-only issuance**, narrower than H-20260814-may-sight-card's "any active staff" answer for sighting. Rejected
   for consistency with the established trust boundary; the surface itself (a tap beside a name on that
   session's own roster) is the scoping mechanism, not the tapper's specific role.
 - **Extend the same treatment to specialty and nitrox certifications in the same change.** Rejected as
@@ -104,5 +104,5 @@ product call this decision does not make.
   never hard-deleted (ADR 20260820-every-delete-is-soft), but the e2e/demo reset path does, and the
   certification itself must survive its own session's row going away with only that one pointer
   cleared.
-- Revisit if a real agency ever exposes a usable card-issuing API (H-10 stays Dropped): that would be
+- Revisit if a real agency ever exposes a usable card-issuing API (H-20261007-request-supported-c-card stays Dropped): that would be
   a different, additive decision, not a reason to unwind this one.

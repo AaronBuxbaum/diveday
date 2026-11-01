@@ -11,7 +11,7 @@ import { listStaff, upcomingTripsWithCounts } from "./trips";
 const ctx = fileScopedShopContext();
 
 /**
- * **The party-cancel preview mirrors the cancel** (H-133): a seat counted
+ * **The party-cancel preview mirrors the cancel** (H-20261015-aboard-diver-removal-at): a seat counted
  * aboard a boat past its time stays with the crew, as
  * `cancelUnclaimedPartySeats` keeps it, so the confirm never lists it as going.
  */
@@ -39,7 +39,7 @@ describe("issuePartySeatClaims and a seat counted aboard", () => {
     return { db, shop, open, lead, memberOne, memberTwo };
   }
 
-  it("lists a seat counted aboard a boat past its time as staying, as the cancel keeps it (H-133)", async () => {
+  it("lists a seat counted aboard a boat past its time as staying, as the cancel keeps it (H-20261015-aboard-diver-removal-at)", async () => {
     const { db, shop, open, lead, memberOne, memberTwo } = await party();
     const [recorder] = await listStaff(db, shop.id);
     if (!recorder) throw new Error("seeded staff missing");
@@ -62,7 +62,7 @@ describe("issuePartySeatClaims and a seat counted aboard", () => {
     expect(goes.get(memberOne.bookingId)).toBe(false);
     expect(goes.get(memberTwo.bookingId)).toBe(true);
   });
-  it("counts that seat as staying in the text-reply preview too (H-133)", async () => {
+  it("counts that seat as staying in the text-reply preview too (H-20261015-aboard-diver-removal-at)", async () => {
     const { db, shop, open, lead, memberOne } = await party();
     const [recorder] = await listStaff(db, shop.id);
     if (!recorder) throw new Error("seeded staff missing");

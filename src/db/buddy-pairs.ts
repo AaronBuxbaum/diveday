@@ -1199,7 +1199,7 @@ function teamNameKey(team: TripBuddyTeam): string {
 /**
  * Flat member rows (one per member, as `buddy_pairs.csv` writes them) put in
  * the panel's team order: each team's rows together, teams by formation time,
- * then by their members' names, then by `pair_id` as the last resort (H-81,
+ * then by their members' names, then by `pair_id` as the last resort (H-20260916-tiebreaker-user-visible-list,
  * issue #1795). Inside a team, members by name, then by the row's own id.
  *
  * Formation time here is the team's earliest member row. The panel reads the

@@ -456,7 +456,7 @@ describe("a self-guided departure keeps its mark when copied", () => {
 });
 
 /**
- * **A copy of a decompression departure is one too** (H-84, issue #1555): the
+ * **A copy of a decompression departure is one too** (H-20260916-may-diveday-assert-about, issue #1555): the
  * recap's silence about flying must hold on the copies a shop makes of it.
  */
 describe("a departure past no-decompression limits keeps its mark when copied", () => {

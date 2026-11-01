@@ -40,17 +40,17 @@ export const sharedLinkCard = {
 };
 
 /**
- * The price itself is the one figure that stays here — H-12 requires exactly
+ * The price itself is the one figure that stays here — H-20260724-public-founding-shop-price requires exactly
  * one source for the number, and a currency amount is not language. Every
  * word around it resolves from `marketing.price.*` in the bundles.
  */
 export const earlyAccessPrice = {
-  price: "$99", // i18n-exempt: currency figure, the H-12 single source — never restate elsewhere
+  price: "$99", // i18n-exempt: currency figure, the H-20260724-public-founding-shop-price single source — never restate elsewhere
   nameKey: "marketing.price.name",
   cadenceKey: "marketing.price.cadence",
   // The two `/pricing` notes that add to the invoice and trial: shipped
   // storefront and embeds, plus the owner-authorized website built to order
-  // (H-64/H-65, docs/product/marketing.md). The latter is a person's offer,
+  // (H-20260901-canvas-direction-brand/H-20261025-built-order-website-priced, docs/product/marketing.md). The latter is a person's offer,
   // never a turnaround time or page count.
   includedKeys: ["marketing.price.item3", "marketing.price.item7"],
 } as const satisfies {
@@ -80,7 +80,7 @@ export const fullShopExport = {
 
 /**
  * The continuity promise: what a shop gets if DiveDay itself shuts down. An
- * authorized service commitment, not a product feature (H-101, Aaron Buxbaum,
+ * authorized service commitment, not a product feature (H-20261007-continuity-promise, Aaron Buxbaum,
  * 2026-10-07: "We can publish that exact promise"), so its words are not
  * edited without the product owner. It rests on mechanisms that ship: the
  * one-ZIP export above and the weekly scheduled backup to the shop's own

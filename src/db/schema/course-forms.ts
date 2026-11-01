@@ -22,7 +22,7 @@ import { trips } from "./trips";
  * each student to sign on top of the shop's one release — an agency's
  * liability release for that course, a safe-diving-practices statement. The
  * shop pastes its own words; DiveDay ships none of an agency's text and never
- * fetches it (H-10).
+ * fetches it (H-20261007-request-supported-c-card).
  *
  * Four tables, because the four facts move at different speeds: a form is an
  * identity the course points at; its words are versioned by insertion, never

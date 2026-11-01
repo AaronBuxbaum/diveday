@@ -4,7 +4,7 @@ import process from "node:process";
 import { pathToFileURL } from "node:url";
 
 /**
- * **Everyone says "seat"** (H-122). The number a shop sells is a seat: the
+ * **Everyone says "seat"** (H-20261014-seat-is-the-word). The number a shop sells is a seat: the
  * schema (`trips.capacity`, `bookings` as seats), the capacity math in
  * `src/lib/trips.ts` and the glossary all say so. The staff pages had drifted
  * into both: the trip header read "4 spots left" beside "$95.00 per seat"
@@ -107,7 +107,7 @@ async function main() {
   if (failures.length > 0) {
     console.error(
       'seat word: a string says "spot". The number a shop sells is a "seat", for staff and ' +
-        "divers alike (H-122; the schema, the capacity math and the glossary say so). Say seat, " +
+        "divers alike (H-20261014-seat-is-the-word; the schema, the capacity math and the glossary say so). Say seat, " +
         "or add the string to `allowed` in scripts/check-seat-word.mjs with why it means a " +
         "place, a mark or the verb rather than capacity:\n" +
         failures.map((item) => `- ${item}`).join("\n"),

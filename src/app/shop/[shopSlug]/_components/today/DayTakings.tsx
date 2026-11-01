@@ -16,7 +16,7 @@ import { formatReportMoney } from "@/lib/reporting";
  * against re-asking a decision or captioning an act. A figure a shop reads on
  * its way past is neither, so it stands beside that component rather than
  * inside it, under the same `assembleEveningClose(...).closing` condition, and
- * ADR 20260827-clearwater-surface-language decision 4 and H-62 stand
+ * ADR 20260827-clearwater-surface-language decision 4 and H-20260827-close-out-remain-own stand
  * unamended. Aaron decided the placement in session on 2026-09-20; the two
  * alternatives — amending the charter by ADR, and a door to `/reports`
  * filtered to the day rather than a figure — are recorded on the issue.

@@ -333,7 +333,7 @@ describe("pruning inapplicable answers", () => {
 
 /**
  * **What the doctor's page shows once unlocked** (fifth-loop ideas, item 17;
- * H-127 as amended by the layer r5-3 reviews): each answer that calls for a
+ * H-20261014-physician-form-for-referral as amended by the layer r5-3 reviews): each answer that calls for a
  * physician, by its place on the form and the form's own prompt.
  */
 describe("referral items", () => {

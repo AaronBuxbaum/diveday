@@ -2,7 +2,7 @@ import type { DbExecutor } from "./client";
 import { shopShoreAlertTokens } from "./schema";
 
 /**
- * One `shop_shore_alert_tokens` row (H-118) for the guards that seed every
+ * One `shop_shore_alert_tokens` row (H-20261014-stale-roll-call-recipients) for the guards that seed every
  * table: a stop link, the kind with no expiry, at the given creation time.
  */
 export async function insertShoreAlertToken(

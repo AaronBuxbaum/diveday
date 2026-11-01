@@ -491,7 +491,7 @@ export function buildDiverStatus(
     });
   }
 
-  // --- A seat held over who this diver is (H-13; issue #2073). Read off the
+  // --- A seat held over who this diver is (H-20260724-one-person-per-email; issue #2073). Read off the
   // bookings themselves rather than the next departure's readiness, because
   // the held seat can be any boat ahead and the readiness engine raises the
   // blocker from this same flag. The answer is on that departure, so the fix

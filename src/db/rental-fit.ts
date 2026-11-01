@@ -48,7 +48,7 @@ export type RentalFitInput = {
   finSize?: string;
   weightPreference?: string;
   /**
-   * The diver is in a drysuit, theirs or ours (H-78). Optional like the
+   * The diver is in a drysuit, theirs or ours (H-20260916-rental-fit-describe-shop). Optional like the
    * flags: a caller that did not ask the suit question omits it, and the
    * stored answer stands. Read together with the two suit flags by
    * {@link suitUpdates}, never written on its own.
@@ -102,7 +102,7 @@ function flagUpdates(
 }
 
 /**
- * **One diver, one suit** (H-78, issues #1752 and #1800) — held here, in the
+ * **One diver, one suit** (H-20260916-rental-fit-describe-shop, issues #1752 and #1800) — held here, in the
  * writer, rather than on the forms, because four surfaces write these columns
  * and a form-only rule is the one the next caller forgets. The table's two
  * check constraints refuse what this does not resolve.
@@ -385,7 +385,7 @@ export async function confirmRentalFitSize(
 }
 
 /**
- * The safe fallback when a requested size isn't in stock (H-06): flag the diver
+ * The safe fallback when a requested size isn't in stock (H-20260724-initial-gear-policy-sizing): flag the diver
  * for hands-on fitting at check-in rather than packing a size nobody chose.
  * Open to any staff member — it escalates to a person, it never overwrites what
  * the diver asked for, so it is the day's work rather than an override
@@ -496,13 +496,13 @@ export type DiverRentalFit = {
    * about them, which is what this projection exists to hold back.
    */
   drysuitSize: string | null;
-  /** The diver's own answers on their own form, like the drysuit size (H-102). */
+  /** The diver's own answers on their own form, like the drysuit size (H-20261007-hood-glove-sizes). */
   hoodSize: string | null;
   gloveSize: string | null;
   bootSize: string | null;
   finSize: string | null;
   weightPreference: string | null;
-  /** Their own answer about what they wear (H-78), read back into the suit choice. */
+  /** Their own answer about what they wear (H-20260916-rental-fit-describe-shop), read back into the suit choice. */
   divesDry: boolean;
   /** The diver's own words to the crew — theirs to read and rewrite. */
   note: string | null;
@@ -716,7 +716,7 @@ export async function rentalFitByBooking(db: AppDb, shopId: string, tripId: stri
 
 /**
  * **How many divers' fits still ask for a piece this shop no longer rents**
- * (issue #1792, ruled under H-78): the visibility half, never the clearing
+ * (issue #1792, ruled under H-20260916-rental-fit-describe-shop): the visibility half, never the clearing
  * half. A fit is the diver's answer, and a catalog edit does not erase it
  * (`flagUpdates` above), so the rental-catalog settings page says how many of
  * those answers are standing instead of letting them pile up unseen.

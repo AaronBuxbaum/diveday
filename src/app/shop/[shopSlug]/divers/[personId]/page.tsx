@@ -182,7 +182,7 @@ export default async function DiverDetailPage({
     diverStatusRows(db, shop.id, diver, now, { collectHasSomewhereToGo }),
     loadBookingDepartures(db, shop.id, personId, bookingPage, now),
     // The co-signing guardians' addresses, for the owner's control that erases
-    // one on the guardian's request (H-103). Nobody else is shown them here.
+    // one on the guardian's request (H-20261007-guardian-email-erasure). Nobody else is shown them here.
     canErase ? listGuardianEmails(db, shop.id, personId) : [],
     openLostItemsByPerson(db, shop.id, [personId]), // found items, under the header
     lastKnownDive(db, {

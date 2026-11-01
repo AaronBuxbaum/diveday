@@ -49,7 +49,7 @@ export type MovePreflightFacts = {
   scheduled: boolean;
   /**
    * Other departures on **the same hull** whose windows overlap where the move
-   * proposes to put this one (`boatMoveClashes`, H-80: one hull, one departure
+   * proposes to put this one (`boatMoveClashes`, H-20260916-may-one-hull-carry: one hull, one departure
    * at a time). Empty when no new time has been chosen yet, for a departure
    * with no boat, and — most of the time — because the boat is free.
    */
@@ -67,7 +67,7 @@ export type MovePreflightFacts = {
   /**
    * **Tight turnarounds** (issue #2141): live departures closer than the
    * minimum gap without overlapping, on the same hull or shared crew.
-   * Information only; H-80's half-open overlap remains the clash rule.
+   * Information only; H-20260916-may-one-hull-carry's half-open overlap remains the clash rule.
    */
   turnarounds: readonly MoveTurnaround[];
 };
@@ -105,7 +105,7 @@ type Window = { startsAt: Date; endsAt: Date };
  * under `minGapMinutes` — or null.
  *
  * Null when any pair of legs overlaps: that is a clash, said by its own line
- * through H-80's half-open predicate, and this never restates or changes it.
+ * through H-20260916-may-one-hull-carry's half-open predicate, and this never restates or changes it.
  * Exactly at the gap is quiet; one minute under speaks. Nose to tail (a gap of
  * zero) speaks here, because no boat unloads, rinses, refills and boards the
  * next group in no time — and stays silent as a clash.

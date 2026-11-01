@@ -85,7 +85,7 @@ notice short of staff spotting a duplicate on the roster.
   (rare — e.g. a shared family account), the constraint has no per-row override today; that would
   need a deliberate product decision (e.g. an opt-in "shared contact" flag) before being modeled,
   not a workaround baked into this migration.
-- **Name-mismatch safeguard (H-13, resolved 2026-07-24):** a `dive-domain-expert` review flagged
+- **Name-mismatch safeguard (H-20260724-one-person-per-email, resolved 2026-07-24):** a `dive-domain-expert` review flagged
   email-only reuse as unsafe for a shared-inbox scenario (a spouse, or a minor booked under a
   parent's email) where a new diver's booking could silently inherit an existing person's verified
   cert and current waiver with no medical questionnaire or cert check ever collected for them. The
@@ -103,7 +103,7 @@ notice short of staff spotting a duplicate on the roster.
   and "Jane Doe") — match and are not flagged; the second could inherit the first's evidence. This
   is intrinsic to name-based matching, and the alternative (firing on every initial) would train
   staff to confirm reflexively and blunt the gate. Security and dive-domain reviews accepted it as a
-  floor, not a regression. See [H-13](../../product/human-decisions/README.md) and the
+  floor, not a regression. See [H-20260724-one-person-per-email](../../product/human-decisions/README.md) and the
   [identity match key glossary entry](../../product/glossary.md#modeling-notes).
 - **Concurrency-closing path is not exercisable in the current test suite:** the catch-and-reread
   branch in `findOrCreatePerson`/`createDiver`/`updateDiver`/`restoreDiver`/`commitContactImport`

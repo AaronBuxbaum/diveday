@@ -239,7 +239,7 @@ describe("ThreadSections", () => {
     expect(screen.queryByText("packing")).toBeNull();
   });
 
-  /** H-126: past the free window, the ask comes before the forfeit. */
+  /** H-20261014-ask-to-move: past the free window, the ask comes before the forfeit. */
   it("offers Ask to move above the cancel once a cancel would forfeit, with the shop's phone", () => {
     const past = context({
       fullShop: {

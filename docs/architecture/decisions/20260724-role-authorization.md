@@ -13,7 +13,7 @@ could reach payment settings, issue refunds, edit the waiver template, delete a 
 configure trips. The [2026-07-24 staff-session/capability codebase review](20260724-staff-session-and-capability-migration-policy.md#context)
 raised this as an open human-owned decision, because the product language implies a split — owners
 and managers configure money and policy, instructors own course sessions, and captains/crew/divemasters
-run the day on the water — that the code did not enforce. The product owner decided (H-14, 2026-07-24)
+run the day on the water — that the code did not enforce. The product owner decided (H-20260724-staff-role-reach, 2026-07-24)
 that yes, real boundaries are needed on five surfaces.
 
 The existing accountable-role gates — `canExportShopData` / `canImportShopData` /
@@ -36,7 +36,7 @@ their account (active), and their `person_roles`, and each surface's `canPersonM
 / `canPersonRefund` / `canPersonManageWaiverTemplates` / `canPersonDeleteDiver` /
 `canPersonConfigureTrips` applies the matching predicate to that live set. So a manager demoted,
 disabled, or deleted mid-session loses these surfaces immediately, closing the same revocation
-window H-15 left open for ordinary mutations but which money, legal text, and roster deletion are
+window H-20260724-staff-disable-latency left open for ordinary mutations but which money, legal text, and roster deletion are
 too sensitive to keep. A denied staff member is authenticated but not allowed: pages render a
 warning `ShopNotice` in place of the control (no redirect, matching reports/export/import), route
 handlers return 403, and server actions refuse (early return or an error state).

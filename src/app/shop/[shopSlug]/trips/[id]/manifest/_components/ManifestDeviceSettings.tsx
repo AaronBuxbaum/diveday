@@ -13,7 +13,7 @@ import { pushOptInCopy } from "./push-opt-in-copy";
 
 /**
  * **What this phone does**, inside the offline copy's disclosure: carry the
- * medical alerts' words for a reader allowed them (H-153 amendment), wake for
+ * medical alerts' words for a reader allowed them (H-20261023-medical-alert-for-the amendment), wake for
  * a refresh, and buzz. Per-device, not facts about the departure.
  */
 export function ManifestDeviceSettings({

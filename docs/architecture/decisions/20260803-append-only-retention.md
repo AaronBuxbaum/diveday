@@ -77,7 +77,7 @@ Every event-like trail without a window, one line each (the same list heads `src
 - `gear_service_events`: a unit's service and test history, which is equipment evidence (product owner, 2026-08-20).
 - `trip_change_events`, `review_moderation_events`, `work_order_events`: who changed what on a departure, a review or a ticket, read as the record itself (the first two by the product owner, 2026-10-13, issue #2316, over the `activity_events` window).
 - `held_sends`, `media_deletion_attempts`, `processor_erasure_obligations`, `payment_operation_intents`: deleted by their own work when it is done; a clock would delete what is still owed.
-- `waiver_records` and the course-form records: signed evidence, H-02's question, never a clock's.
+- `waiver_records` and the course-form records: signed evidence, H-20260730-evidence-retention-period-deletion's question, never a clock's.
 
 `activity_events` is not on this list: it has the longest window here, 1,095 days (three years), stated in the table above.
 
@@ -151,7 +151,7 @@ Two additions carry the argument of a row above. `shop_contact_email_confirmatio
 a diver: a dead link stops naming its shop
 ([capability runbook](../../engineering/capability-telemetry-runbook.md#after-the-prune-a-dead-link-names-no-shop)).
 The trails left unbounded on purpose are named in `UNBOUNDED_BY_DECISION` in the same file.
-No window changed in this amendment; the numbers stay HD-11's and H-82's.
+No window changed in this amendment; the numbers stay HD-11's and H-20260916-far-deletion-promise-reach's.
 
 ## Amendment 2026-10-13 — a run drains, under a time budget
 

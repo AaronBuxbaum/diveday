@@ -30,7 +30,7 @@ it raised the sharp edge — an imported level card now clears depth gates, and 
 now authorizes enriched-air requests, on the strength of a CSV cell — and the product owner chose
 "verified, but surfaced for a quick confirm" over both "keep it gated until re-checked" and "verified
 with no confirm at all," for all sources. Recorded as a decision in
-`docs/product/human-decisions/README.md` (H-20).
+`docs/product/human-decisions/README.md` (H-20260724-contact-importer-trust-shop).
 
 ## Decision
 
@@ -44,7 +44,7 @@ with no confirm at all," for all sources. Recorded as a decision in
   a supervised moment, specialties stay gated (not imported), and card **expiry still applies**.
   Still-fabricate-nothing holds: no card without a real number, no reconstructed medical answers.
 - **The enriched-air fill is the one gate the confirm actually holds** (`dive-domain-expert` review,
-  H-20). A nitrox card carries no expiry, and a wrong fill is the highest-consequence failure in the
+  H-20260724-contact-importer-trust-shop). A nitrox card carries no expiry, and a wrong fill is the highest-consequence failure in the
   product, so the fill-authorization reads (`authorizesNitroxFill` in `src/db/nitrox.ts`, shared by
   `verifiedNitroxPersonIds`, `setBookingNitrox`, and the Today ungated-nitrox read) exclude an
   imported-but-unconfirmed card: an imported nitrox card gives **plain air** until a staffer taps the

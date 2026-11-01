@@ -42,14 +42,14 @@ export const metadata: Metadata = {
  * (FU-20260812-no-privacy-or-terms-page).
  *
  * Written under the same two constraints as its sibling, for the same reasons:
- * **no legal entity is named** (H-18 is open), and every promise is one the
+ * **no legal entity is named** (H-20260724-corporate-footing-diveday-operate is open), and every promise is one the
  * product already keeps. That second rule is why the "what we do not promise"
  * section exists and says there is no uptime guarantee — printing an SLA
  * before there is a track record to back it would be exactly the unprovable
  * claim `docs/product/marketing.md` forbids, and conceding it loudly is worth
  * more than asserting it.
  *
- * The flat price is **not** restated here. H-12 requires one source for that
+ * The flat price is **not** restated here. H-20260724-public-founding-shop-price requires one source for that
  * number, which is `earlyAccessPrice` (`src/lib/marketing.ts`) rendered on
  * `/pricing`; this page points there instead. A terms page quoting a stale
  * figure is a worse problem than a terms page that does not quote one.

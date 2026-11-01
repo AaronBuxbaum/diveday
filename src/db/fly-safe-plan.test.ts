@@ -90,7 +90,7 @@ describe("readPlannedFlySafe", () => {
     expect(await ask(trip, booking.personId, "rider")).toBeNull();
   });
 
-  it("says nothing past no-decompression limits (H-84)", async () => {
+  it("says nothing past no-decompression limits (H-20260916-may-diveday-assert-about)", async () => {
     const trip = await departure("Deco", base);
     const booking = await seat(trip.id);
     await ctx.db.update(trips).set({ exceedsNoDecoLimits: true }).where(eq(trips.id, trip.id));
@@ -110,7 +110,7 @@ describe("readPlannedFlySafe", () => {
     ).toBeNull();
   });
 
-  /** Ux-delight sheet 2026-10-22, item 1 (H-150): the night-before reminder's hours. */
+  /** Ux-delight sheet 2026-10-22, item 1 (H-20261022-reminder-fly-safe-in): the night-before reminder's hours. */
   describe("readReminderFlySafeHours", () => {
     const hoursFor = (trip: Awaited<ReturnType<typeof departure>>, personId: string) =>
       readReminderFlySafeHours(ctx.db, {
@@ -140,7 +140,7 @@ describe("readPlannedFlySafe", () => {
       expect(await hoursFor(nextWeek, booking.personId)).toBe(18);
     });
 
-    it("falls silent where the recap does, past no-decompression limits (H-84)", async () => {
+    it("falls silent where the recap does, past no-decompression limits (H-20260916-may-diveday-assert-about)", async () => {
       const deco = await departure("Deco", base);
       const decoPerson = (await seat(deco.id)).personId;
       await ctx.db.update(trips).set({ exceedsNoDecoLimits: true }).where(eq(trips.id, deco.id));

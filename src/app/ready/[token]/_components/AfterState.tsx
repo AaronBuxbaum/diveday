@@ -82,7 +82,7 @@ import { ShareReviewButton } from "./ShareReviewButton";
  * value object that has no URL field at all (issue #1081).
  *
  * **Slice 16i of ADR 20260904-reef-all-the-way-down** is what added items 5, 7
- * and 8 above, replaced the face's sentence with its number (H-67 c), and put
+ * and 8 above, replaced the face's sentence with its number (H-20260904-reef-go-all-way c), and put
  * the private line and the export in the record's own footer. This component is
  * where that decision lives and the one that must not drift from it.
  */
@@ -375,7 +375,7 @@ export function AfterState({
       ) : null}
 
       {/* ——— Every other day with the shop, each row sending its own fresh
-          link (H-132). Only `/ready` fills it. */}
+          link (H-20261014-other-days-send-fresh). Only `/ready` fills it. */}
       {yourDays}
 
       {/* ——— **Bring a buddy next time** (ADR 20260908-one-hand, decision 6,

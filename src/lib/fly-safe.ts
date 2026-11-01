@@ -10,11 +10,11 @@ import { DEPARTURE_BUFFER_MS, hasReturned } from "./trips";
  * #1433).
  *
  * This covers only no-decompression diving. An explicitly flagged departure,
- * or an earlier flagged dive, yields no answer (H-84, #1555); absent flags are
+ * or an earlier flagged dive, yields no answer (H-20260916-may-diveday-assert-about, #1555); absent flags are
  * treated as unflagged. Evidence is limited to this shop and its person
  * records; the two-day lookback (#1439) can miss walk-ups without a shared
  * person row. Recap surfaces reach bookings, not crew, so crew coverage
- * remains deferred under H-75/#1557. This does not calculate from dive
+ * remains deferred under H-20260910-where-crew-member-read/#1557. This does not calculate from dive
  * profiles or model other altitude exposure.
  *
  * When records are incomplete or disagree with the plan, use the buffered
@@ -75,7 +75,7 @@ export type FlySafeInput = {
   divedRecently: boolean;
   /**
    * The shop marked this departure as past no-decompression limits
-   * (`trips.exceeds_no_deco_limits`, H-84). Absent reads as no, which is the
+   * (`trips.exceeds_no_deco_limits`, H-20260916-may-diveday-assert-about). Absent reads as no, which is the
    * column's own default.
    */
   exceedsNoDecoLimits?: boolean;
@@ -121,7 +121,7 @@ export type FlySafeResult = {
  *   monotonic by construction.
  * - **Past no-decompression limits.** A departure the shop marked so, or a
  *   diver who sailed on an earlier one in the lookback window, gets null
- *   before anything else is read (H-84).
+ *   before anything else is read (H-20260916-may-diveday-assert-about).
  * - **Anchor.** The latest recorded exit, provided the record is whole — as
  *   many dives logged as the departure planned, none of them later-numbered
  *   and missing its exit. Otherwise the *buffered* return — the scheduled time
@@ -132,7 +132,7 @@ export type FlySafeResult = {
  */
 export function flySafeFrom(input: FlySafeInput): FlySafeResult | null {
   const { executedDives, plannedDives, endsAt, divedRecently, now, hours } = input;
-  // H-84: DAN gives no figure for decompression diving.
+  // H-20260916-may-diveday-assert-about: DAN gives no figure for decompression diving.
   if (input.exceedsNoDecoLimits || input.decompressionRecently) return null;
   // The recorded count is read first so a day the crew logged as two tanks
   // says so, rather than being explained by a plan or by yesterday.
@@ -261,7 +261,7 @@ export function flySafeMessageKey(
  *   {@link FLY_SAFE_MULTI_DAY_LOOKBACK_DAYS} (a booked earlier day counts:
  *   it is the plan too).
  * - **Silence.** Past no-decompression limits, here or on an earlier day in
- *   the window (H-84), as the recap. A departure with no scheduled end. And a
+ *   the window (H-20260916-may-diveday-assert-about), as the recap. A departure with no scheduled end. And a
  *   later dive with this shop that starts before the time this would name: that
  *   boat's own page says the time, and this one would be a time the diver is
  *   already booked to break.

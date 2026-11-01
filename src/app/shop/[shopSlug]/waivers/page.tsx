@@ -57,7 +57,7 @@ export const metadata: Metadata = {
  * subject read in one sitting — "what does it say, and who has agreed to it" —
  * and a tab strip made them two destinations that could disagree. The strip,
  * the shell layout that held it, and `waivers/signatures/page.tsx` are gone
- * (H-49). The former signatures URL has no compatibility route.
+ * (H-20260815-no-legacy). The former signatures URL has no compatibility route.
  *
  * **The release is a door and the signed records are the page.** The editor
  * opens in place from one control, and on the `#release` fragment or any
@@ -67,7 +67,7 @@ export const metadata: Metadata = {
  * own rule test:
  *
  * - **`PublishRelease`** — materiality is a recorded choice, and then one
- *   Publish. H-54's semantics are untouched: `saveWaiverAction` still writes
+ *   Publish. H-20260822-may-shop-explicitly-declare's semantics are untouched: `saveWaiverAction` still writes
  *   the same decision from the same `material` field, `standingWaiverExposure`
  *   is still counted before the save, and a material publish still puts every
  *   standing signature back in the queue. Only the shape of the asking moved.
@@ -118,7 +118,7 @@ export default async function WaiversPage({
   // log itself still renders, which is the page the staffer came for.
   const record = uuidParam(recordParam);
   // The waiver is the shop's legal instrument; editing it (and the medical
-  // jurisdiction it presents) is owner/manager work (H-14, ADR
+  // jurisdiction it presents) is owner/manager work (H-20260724-staff-role-reach, ADR
   // 20260724-role-authorization). Other roles have no use for it, so the
   // surface doesn't exist for them rather than showing a read-only copy — and
   // that now covers the signature log, which ran this identical gate one route
@@ -286,7 +286,7 @@ export default async function WaiversPage({
           all if the form is shut. Nothing here changes what publishing does:
           `saveWaiverAction` writes the same decision from the same `material`
           field, and `standingWaiverExposure` is still counted before the save
-          so the cost is stated before the tap (H-54, issue #720). */}
+          so the cost is stated before the tap (H-20260822-may-shop-explicitly-declare, issue #720). */}
       <AutoOpenDetails
         id="release"
         openOnHash="release"

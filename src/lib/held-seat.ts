@@ -1,9 +1,9 @@
 import type { TripManifest } from "./manifests";
 
 /**
- * **A held seat on the boat manifest** (issue #1690, H-79).
+ * **A held seat on the boat manifest** (issue #1690, H-20260916-unconfirmed-identity-withhold-cost).
  *
- * A booking attached to an existing diver on a guess (H-13: a reused email
+ * A booking attached to an existing diver on a guess (H-20260724-one-person-per-email: a reused email
  * under another name, or a name tapped off the counter's "is this the same
  * diver?" prompt) carries `identity_unconfirmed` until a staffer confirms it.
  * Everything the manifest knows about the matched person is then a fact about

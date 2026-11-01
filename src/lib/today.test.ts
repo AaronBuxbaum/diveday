@@ -124,7 +124,7 @@ describe("diverBlockerAction", () => {
   });
 
   /**
-   * H-105: a card still waiting for its check names its diver, so the shop
+   * H-20261008-cert-check-extension: a card still waiting for its check names its diver, so the shop
    * home can offer "Check with SSI" from the row. The cards themselves are the
    * read's to find (`withAgencyChecks`), and the row keeps its door.
    */
@@ -144,7 +144,7 @@ describe("diverBlockerAction", () => {
   });
 
   /**
-   * A held seat (H-13): the human on this booking may not be the one whose
+   * A held seat (H-20260724-one-person-per-email): the human on this booking may not be the one whose
    * cards are on file, so no row offers to check that person's card with an
    * agency until a staffer confirms who it is, whichever blocker heads it.
    */
@@ -1316,7 +1316,7 @@ describe("collapseEmailDeliveries", () => {
   });
 });
 
-describe("crew_clash_sailed against the roll call (H-80, #1814)", () => {
+describe("crew_clash_sailed against the roll call (H-20260916-may-one-hull-carry, #1814)", () => {
   it("never leads a missing diver or a blocked diver aboard, even due earlier", () => {
     // Needs you ranks tone first: every after-dive roll-call row and a blocked
     // diver aboard are danger, the clash a warning, so no date lifts it over

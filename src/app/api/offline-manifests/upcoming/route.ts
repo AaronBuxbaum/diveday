@@ -184,7 +184,7 @@ async function getUpcomingManifests() {
     shop: shopIdentity,
     payloads: served,
     // Who asked, so the device wipes medical alert words someone else saved
-    // (H-153 amendment). The board itself never carries those words.
+    // (H-20261023-medical-alert-for-the amendment). The board itself never carries those words.
     viewer: { personId: user.personId },
     mayHoldMedicalAlertWords,
   };

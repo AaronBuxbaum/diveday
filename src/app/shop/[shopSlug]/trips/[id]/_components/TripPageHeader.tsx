@@ -31,7 +31,7 @@ export function TripCapacityBadge({
 }) {
   if (trip.status === "cancelled") return <Badge tone="danger">{cancelledLabel}</Badge>;
   if (finished) return null;
-  // **The seats the boat may sell, not the seats stated** (H-107, #2321): the
+  // **The seats the boat may sell, not the seats stated** (H-20261009-certificate-caps-seats, #2321): the
   // booking transaction stops at the certificate, so the desk counts there too.
   // When the certificate binds, the stated number rides beside it, so the
   // details form's figure is never a mystery.

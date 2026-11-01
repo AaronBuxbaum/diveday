@@ -16,7 +16,7 @@ import { bookings, inboundMessages, people, shops, trips } from "./schema";
 import { liveTrip, notRehearsal } from "./trips-live";
 
 /**
- * "Ask to move" (H-126, H-151), split from inbound-messages.test.ts for length:
+ * "Ask to move" (H-20261014-ask-to-move, H-20261022-called-off-boat-offers), split from inbound-messages.test.ts for length:
  * the same file-scoped seeded shop, the same frozen instant.
  */
 
@@ -40,7 +40,7 @@ async function shopWithCountry(
 const ctx = fileScopedShopContext();
 
 /**
- * H-126: "Ask to move" from the booking page. One row per booking, filed on
+ * H-20261014-ask-to-move: "Ask to move" from the booking page. One row per booking, filed on
  * the diver the booking belongs to and only inside its shop.
  */
 describe("an Ask to move", () => {
@@ -370,7 +370,7 @@ describe("an Ask to move", () => {
     expect(await hasMoveAsk(db, shop.id, bookingId)).toBe(false);
   });
 
-  /** H-151: the called-off card's ask opens only a booked seat on a cancelled departure. */
+  /** H-20261022-called-off-boat-offers: the called-off card's ask opens only a booked seat on a cancelled departure. */
   it.each(["live departure", "cancelled seat", "deleted departure", "held identity"] as const)(
     "refuses a called-off ask for a %s",
     async (state) => {

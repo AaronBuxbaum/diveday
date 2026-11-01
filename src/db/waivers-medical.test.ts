@@ -141,7 +141,7 @@ describe("physician medical clearance", () => {
       now: later,
     });
     // Cleared — the reproduction, kept by decision (Aaron, 2026-10-09, issue
-    // #2195, amending H-98). Refusing it would strand a diver who mis-tapped
+    // #2195, amending H-20261007-after-physician-says-no). Refusing it would strand a diver who mis-tapped
     // question 3 until a doctor writes a letter.
     expect(status.state).toBe("current");
     // And the standing says what it stood over, so the diver's record and the
@@ -819,7 +819,7 @@ describe("physician medical clearance", () => {
     expect((await getBookingReadiness(db, shop.id, booking.id))?.status).toBe("blocked");
   });
 
-  it("clears a referral a rider's fresh link superseded, so the hold it keeps has a way out (H-104)", async () => {
+  it("clears a referral a rider's fresh link superseded, so the hold it keeps has a way out (H-20261006-medical-holds-every-departure)", async () => {
     // A superseded referral no physician cleared still holds every seat the
     // diver has (`isUnclearedReferral`), so the physician's evaluation must
     // still reach it: otherwise the desk is told "nothing to clear" about a

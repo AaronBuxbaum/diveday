@@ -162,7 +162,7 @@ export async function offlineSyncTripsBelongToShop(
 /**
  * Trip scoped to a shop (staff pages must never cross tenants), with booked
  * count and `sellableCapacity` — its seats on sale under the boat's
- * certificate (H-107, #2321), which every seats-left reads. `capacity` stays
+ * certificate (H-20261009-certificate-caps-seats, #2321), which every seats-left reads. `capacity` stays
  * the stated number the details form edits.
  */
 export async function getTripWithBooked(db: DbExecutor, shopId: string, tripId: string) {
@@ -546,7 +546,7 @@ export type TripPatch = {
   isPrivate?: boolean;
   /** The shop's own divemaster target stops applying to this departure (issue #973). */
   selfGuided?: boolean;
-  /** The dives went past no-decompression limits, so the recap says nothing about flying (H-84). */
+  /** The dives went past no-decompression limits, so the recap says nothing about flying (H-20260916-may-diveday-assert-about). */
   exceedsNoDecoLimits?: boolean;
   /** Lunch is served aboard, so the Day-of form asks for a lunch preference (ideas item 56). */
   lunchAboard?: boolean;

@@ -83,7 +83,7 @@ describe("POST /unsubscribe/[token]/one-click", () => {
     expect(turnOffWeeklyDigestByToken).toHaveBeenCalledWith({}, { token: TOKEN });
   });
 
-  // H-118: a shop's shore contact stops its roll-call alerts from the mail
+  // H-20261014-stale-roll-call-recipients: a shop's shore contact stops its roll-call alerts from the mail
   // client's own button, tried last.
   it("stops a shore contact's roll-call alerts when the token is none of the others", async () => {
     const response = await post();

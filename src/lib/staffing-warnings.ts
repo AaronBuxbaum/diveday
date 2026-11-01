@@ -28,7 +28,7 @@ import { parseWallTime, wallTimeToUtc } from "./zoned";
  *   supervision claim already marks those lapsed on the departure's crew, and
  *   one lapse said twice is noise.
  *
- * Warning-only, like every reading of `staff_credentials` (H-59): the booking
+ * Warning-only, like every reading of `staff_credentials` (H-20260825-staff-credentials-renewal-clock): the booking
  * gate and the crew editor never call this. Codes, never sentences; the words
  * are `src/i18n/staffing-warning-labels.ts`.
  *

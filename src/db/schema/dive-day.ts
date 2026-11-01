@@ -175,7 +175,7 @@ export const rollCallEvents = pgTable(
  * This is the *whole* crew half. A count-level `roll_call_crew_attestations`
  * table ("how many crew are aboard", ADR 20260802-crew-roll-call-attestation)
  * preceded it and was retired by ADR 20260804-crew-roll-call-is-per-person;
- * the table itself was dropped on 2026-08-15 under H-49, having had no
+ * the table itself was dropped on 2026-08-15 under H-20260815-no-legacy, having had no
  * production writer since.
  *
  * Its own table rather than a widened `rollCallEvents`: carrying crew there
@@ -196,7 +196,7 @@ export const rollCallEvents = pgTable(
  * them a captain offshore could count divers but not crew, and
  * `rollCallCompleteness` needs both halves — so an after-dive checkpoint, the
  * one where a person may still be in the water, could not be closed at sea
- * (H-46, 2026-08-14). The partial unique index on `(shop_id, client_event_id)`
+ * (H-20260814-where-diveday-sit-between, 2026-08-14). The partial unique index on `(shop_id, client_event_id)`
  * is what makes a replayed sync idempotent; live events leave both at their
  * defaults.
  *
@@ -345,7 +345,7 @@ export const preDepartureCheckStatus = pgEnum("pre_departure_check_status", ["ch
  * and the gear service clocks are both "informs, never gates"; this is
  * modeled on the same stance and nothing here may block a departure page from
  * rendering or a trip from sailing (see the ADR — whether it *should* gate is
- * recorded as an open call, H-51, not decided by this table's shape).
+ * recorded as an open call, H-20261025-shop-authored-pre-departure, not decided by this table's shape).
  *
  * The newest event per `checklistItemId` is the current answer, exactly like
  * `rollCallEvents`; absence means not yet checked, and the manifest and the

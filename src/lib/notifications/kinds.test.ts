@@ -198,7 +198,7 @@ describe("every handle a notification carries is reachable by the erasure sweep"
   const SHOP_OWNED_NUMBERS: Record<string, readonly string[]> = {
     interest_received_ack: ["shopPhone"],
     // The stale-roll-call alert's shore copy says whom to call first: the
-    // shop's own `contact_phone` (H-118). Never queued, either.
+    // shop's own `contact_phone` (H-20261014-stale-roll-call-recipients). Never queued, either.
     roll_call_stale_shore: ["shopPhone"],
   };
 

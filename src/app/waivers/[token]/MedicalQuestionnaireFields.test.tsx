@@ -21,7 +21,7 @@ import { MedicalQuestionnaireFields } from "./MedicalQuestionnaireFields";
  * a diver who corrected their answer is still carrying a hidden yes.
  *
  * The words are English by design here (`src/lib/medical.ts` is
- * `i18n-exempt-file`: published UHMS/DMSC wording, pending H-01/H-03), so these
+ * `i18n-exempt-file`: published UHMS/DMSC wording, pending H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit), so these
  * tests read the real questionnaire rather than inventing prompts — a question
  * renumbered upstream shows up here.
  */
@@ -533,7 +533,7 @@ describe("form wiring", () => {
  * **A list, not a card per statement** (UX review 2026-10-10, item 14). The
  * statements are rows of one panel with a rule between them and the answers
  * directly under the words; no question carries a border or a fill of its
- * own. The wording is untouched (H-01, H-03): the groups are still named by
+ * own. The wording is untouched (H-20260730-jurisdiction-waiver-text-medical, H-20260724-current-typed-name-explicit): the groups are still named by
  * the published prompts, which the tests above read.
  */
 describe("the questionnaire's layout", () => {

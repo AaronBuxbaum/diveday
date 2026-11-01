@@ -284,7 +284,7 @@ describe("roster changes and incident reports on the departure log", () => {
 
   it("reads a turn-away at the desk as a seat line with its reason category", () => {
     // A seat freed at the desk after the boat was due out changes the head
-    // count like a removal does, and says why by category only (H-135).
+    // count like a removal does, and says why by category only (H-20261015-who-may-turn-someone).
     const turned = rosterChangeFromActivity({
       code: "booking_turned_away",
       params: { actor: "Rae Owner", diver: "Ben Cho", reason: "card" },

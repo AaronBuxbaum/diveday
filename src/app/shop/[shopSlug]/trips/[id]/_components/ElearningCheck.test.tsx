@@ -9,7 +9,7 @@ import { elearningCheckCopy } from "./elearning-check-copy";
 
 /**
  * "Check eLearning with PADI" beside a course student's materials tick
- * (H-106): there only when the extension is, and only while there is
+ * (H-20261008-padi-elearning-check): there only when the extension is, and only while there is
  * something to tick.
  */
 

@@ -1,6 +1,6 @@
 # 20260907-in-your-hands — Where the device already knows a thing, DiveDay uses it, says where it came from, and leaves the last tap to a person
 
-- **Status:** Accepted — decided 2026-09-07 (Aaron Buxbaum, in session; H-70: passkeys and the
+- **Status:** Accepted — decided 2026-09-07 (Aaron Buxbaum, in session; H-20260907-where-device-already-knows: passkeys and the
   step-up yes, the release signed on the shop's device yes, the card reader declined — "we should
   have no photo upload", which also corrected this record's third finding, below). Slices 19a, 19b,
   19d and 19e in the roadmap; 19c dropped
@@ -20,7 +20,7 @@ The owner's brief on 2026-09-07: another look at the design; clever decisions th
 and elegant; think Apple, in animations and features.
 
 [20260907-nothing-from-nowhere](20260907-nothing-from-nowhere.md) answered the half about animation
-the same day: one physics, six moves, three calls held as H-69. This record is the second look, at
+the same day: one physics, six moves, three calls held as H-20260907-diveday-move-like-thing. This record is the second look, at
 the other half. Read against what Apple's features are — rarely a new capability, nearly always the
 device using a fact it already holds and then getting out of the way — the running app has five gaps
 of one shape:
@@ -52,7 +52,7 @@ came from). This record applies both to facts a *device* supplies.
 
 ## Decision
 
-Proposed, in six parts. Parts 2, 3 and 4 carry the three owner calls recorded as H-70.
+Proposed, in six parts. Parts 2, 3 and 4 carry the three owner calls recorded as H-20260907-where-device-already-knows.
 
 ### 1. The rule, and what renders when it fails
 
@@ -63,9 +63,9 @@ Every move below passes four tests, and each names what renders when it does not
 | Known | The move uses a fact the device or the moment already holds: a face the phone has checked, a card in the viewfinder, a text size already chosen, a diver already at the desk. No move asks a person for something new so DiveDay can be clever with it | nothing changes |
 | Source | What was supplied says where it came from: a filled field says *read from the photo*, a signature says *signed at the counter*, a passkey is listed under the device it lives on | no fill |
 | Last tap | The reading fills a field and never a status; the hand-over opens the page and never signs it; the passkey opens a session and never a payment. Every consequence the app already guards with a tap keeps that tap | nothing |
-| Safety | Verification stays a staffer's tap on a card they can see ([20260824-shop-issued-certification-is-verified](20260824-shop-issued-certification-is-verified.md)). The release's words, steps and consent are H-01's and H-03's; the device changes and the text does not. Sign-out keeps its two-tap confirm. The manifest, the roll call and the payment step gain nothing. A card photo never leaves the region the record lives in | the page as it ships |
+| Safety | Verification stays a staffer's tap on a card they can see ([20260824-shop-issued-certification-is-verified](20260824-shop-issued-certification-is-verified.md)). The release's words, steps and consent are H-20260730-jurisdiction-waiver-text-medical's and H-20260724-current-typed-name-explicit's; the device changes and the text does not. Sign-out keeps its two-tap confirm. The manifest, the roll call and the payment step gain nothing. A card photo never leaves the region the record lives in | the page as it ships |
 
-### 2. The door knows your face (H-70 a)
+### 2. The door knows your face (H-20260907-where-device-already-knows a)
 
 Staff may sign in with a **passkey**. On a device that holds one for the account, `/sign-in` renders
 one primary, *Sign in with a passkey*, and a link, *Use your password instead*; the email field is
@@ -84,20 +84,20 @@ stays two taps; a passkey shortens the way in and never the way out, on a shared
 of all. The mechanism is Better Auth's passkey plugin, the one auth library the app runs on: a new
 runtime dependency, and the reason this is an ADR at all.
 
-**H-70 a:** whether staff may sign in with a passkey at all, and whether a passkey made with the
+**H-20260907-where-device-already-knows a:** whether staff may sign in with a passkey at all, and whether a passkey made with the
 device's own check stands as the fresh factor the step-up asks for before money, exports and
 backup-destination changes ([20260826-account-security-step-up](20260826-account-security-step-up.md)),
 bound to the session and purpose for fifteen minutes as the authenticator code is today.
 **Recommended:** yes to both. Declined on the second, the code is asked as today; declined on the
 first, nothing on the door or in Settings changes. **Decided 2026-09-07: yes to both.**
 
-### 3. Hand it over (H-70 b)
+### 3. Hand it over (H-20260907-where-device-already-knows b)
 
 A blocked row whose fix is the release — on the counter and on the departure's roster, the two
 surfaces a diver stands in front of — gains **Sign here** as the row's primary, with *Send waiver*
 and *Mark signed on paper* demoted to links beside it. The tap mints the waiver token for the booking
 without sending it, sets a **lock on the staff session**, and opens the diver's own waiver page on
-the shop's device: the same three steps, the same typed name and consent (H-03's standard), DiveDay's
+the shop's device: the same three steps, the same typed name and consent (H-20260724-current-typed-name-explicit's standard), DiveDay's
 own tokens (the shop's brand may never reach the release), with one line at the top saying who handed
 it over and when, and one sentence at the bottom saying whose device this is and who sees what
 (budget rule 6's grammar, reworded to whatever counsel decides). While the lock holds, every `/shop`
@@ -112,13 +112,13 @@ a draft as any waiver draft is kept, and the desk unlocks with the row still blo
 the manifest or the roll call, for a minor's release (the guardian flow stands), or while the desk
 holds an unsaved form.
 
-**H-70 b:** whether a diver may sign the release on the shop's own device, with that fact recorded
-on the signature. The words are H-01's and whether a typed name suffices is H-03's; this asks a
+**H-20260907-where-device-already-knows b:** whether a diver may sign the release on the shop's own device, with that fact recorded
+on the signature. The words are H-20260730-jurisdiction-waiver-text-medical's and whether a typed name suffices is H-20260724-current-typed-name-explicit's; this asks a
 narrower thing, the device. **Recommended:** yes, provenance recorded — it is the paper flow with the
 signature kept, and the paper flow already ships. Declined, *Sign here* renders nothing, the row keeps
 its two doors, and the session lock is not built. **Decided 2026-09-07: yes, provenance recorded.**
 
-### 4. Point the camera at the card (H-70 c) — declined, and dropped in full
+### 4. Point the camera at the card (H-20260907-where-device-already-knows c) — declined, and dropped in full
 
 **Decided 2026-09-07: declined** — "we should have no photo upload." The move as proposed below is
 not built, and neither is its fallback: no photo capture is added to the certification form, which
@@ -139,7 +139,7 @@ certified*, which still writes `verified` alone and still refuses without a numb
 reader cannot make out fills nothing and says nothing; a misread value is a value the staffer types
 over. The reading never touches a status, the diver's name or date of birth, or the nitrox table.
 
-**H-70 c:** whether a card photo may be sent to a text reader. No browser reads text on every phone
+**H-20260907-where-device-already-knows c:** whether a card photo may be sent to a text reader. No browser reads text on every phone
 the counter runs, so the reading is a server call; the recommendation is Amazon Textract in the
 region the shop's records already live in, on the same AWS account, with the account's AI-services
 opt-out policy set (a manual step for §17's registry), nothing retained, and one disclosure sentence
@@ -210,7 +210,7 @@ about the device at the ledger row's own weight, so the home's budget is untouch
   `session.test.ts` pins that every refusal throws.
 - **The signature row** gains its counter provenance (where, on whose device, handed over by whom,
   when), never edited; the `dive-domain-expert` and the security reviewer read slice 19b; the two
-  sentences drafted ahead of counsel are reworded, not redrawn, when H-01–H-03 answer.
+  sentences drafted ahead of counsel are reworded, not redrawn, when H-20260730-jurisdiction-waiver-text-medical, H-20260730-evidence-retention-period-deletion, H-20260724-current-typed-name-explicit answer.
 - **The reader** is not built (decision 4, declined). No Textract, no manual step, no `/privacy`
   sentence, no change to `CardSightingForm`; the certification form keeps carrying no photograph,
   which `anonymize.ts` already states beside its erasure of the card rows.

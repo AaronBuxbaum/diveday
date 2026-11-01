@@ -86,8 +86,8 @@ tile restating a group — not the counter's count-led anatomy.
 - **Staffing** reads as a week: people as rows, days as columns, shifts as quiet chips; a
   departure needing crew renders in its day cell with the warning word **and its act** (Assign →
   the trip's crew section). Credentials are a quiet ledger beneath (renewal words, never gates —
-  H-59); the two add-forms become one "+ Add a shift" door.
-  - *Amended 2026-10-07, issue #1853 (H-59's amendment).* A lapsed rating now narrows the
+  H-20260825-staff-credentials-renewal-clock); the two add-forms become one "+ Add a shift" door.
+  - *Amended 2026-10-07, issue #1853 (H-20260825-staff-credentials-renewal-clock's amendment).* A lapsed rating now narrows the
     supervision count the week's gaps are read from, so a departure whose crew list names an
     instructor can draw a gap; the chip then carries a second line saying a crew rating lapses
     first, and the trip's crew section names who. Still never a gate: nothing on this surface
@@ -143,7 +143,7 @@ real idea that needs the boat-resource model (roadmap item 4) before it is hones
   surfaces (courses roster, promos, team, add-booking) — mechanical restyles, one PR each or
   batched. Standing obligations per slice as always.
 - The gear register's exclusion-constraint truth (23P01 via `violatesExclusionConstraint`), the
-  progression order, H-59's inform-only credential clocks, promo/Stripe lifecycles and every gate
+  progression order, H-20260825-staff-credentials-renewal-clock's inform-only credential clocks, promo/Stripe lifecycles and every gate
   are behavior contracts; rendering moves, nothing else.
 - The dive-site difficulty code, fit tone, and the field-guide picker keep their vocabulary
   (ADR 20260813 pair); the editor pattern only reshapes their chrome.

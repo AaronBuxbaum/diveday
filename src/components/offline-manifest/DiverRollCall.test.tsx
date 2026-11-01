@@ -274,7 +274,7 @@ describe("OfflineDiverRollCall", () => {
     expect(container.querySelector("#offline-roll-call-b-marcus")).not.toBeNull();
   });
 
-  it("shows a rider's riding-only warning ahead of the others (H-109)", () => {
+  it("shows a rider's riding-only warning ahead of the others (H-20261009-rider-snorkeler-medical)", () => {
     const copy = savedCopy();
     const [first] = copy.snapshot.manifests[0]?.divers ?? [];
     if (!first) throw new Error("fixture divers missing");
@@ -402,7 +402,7 @@ describe("OfflineDiverRollCall", () => {
   });
 
   /**
-   * Issue #2960, H-153 amendment: the words only on a copy a permitted reader
+   * Issue #2960, H-20261023-medical-alert-for-the amendment: the words only on a copy a permitted reader
    * saved with them, with who saved it and that nobody reviewed it; any other
    * copy says it was saved without them and who can save one that has them.
    */

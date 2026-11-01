@@ -15,7 +15,7 @@ import {
 
 /**
  * A **diver-initiated** cancel refunds itself only inside a stated window and
- * only for a Stripe capture (docs H-07); everything else is staff-run. These
+ * only for a Stripe capture (docs H-20260724-payment-deposit-cancellation-refund); everything else is staff-run. These
  * specs exercise the two non-Stripe outcomes a shop hits constantly — a
  * counter/cash payment marked paid by hand, and a cancellation past the stated
  * deadline — without depending on a live Stripe connection.

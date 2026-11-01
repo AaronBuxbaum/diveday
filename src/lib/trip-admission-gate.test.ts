@@ -14,7 +14,7 @@ import {
  * anyone who could get a staffer to open a link render a fabricated, *specific*
  * refusal — and the specific ones are the ones that point a staffer at the
  * certifications form, where a hand-entered card lands `pending` and clears
- * `decideTripAdmission` on the next attempt (H-24). Every test here fails
+ * `decideTripAdmission` on the next attempt (H-20260725-two-findings-dive-domain). Every test here fails
  * against the unsigned codec.
  */
 

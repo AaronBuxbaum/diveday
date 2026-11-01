@@ -5,7 +5,7 @@ import { DEMO_SHOP_NAME_COOKIE, demoShopNameFor } from "@/lib/demo-shop-name";
 type NamedShop = { id: string; name: string; slug: string; isDemo: boolean };
 
 /**
- * **The name a staff screen calls this shop** (H-131). A real shop's own name,
+ * **The name a staff screen calls this shop** (H-20261014-demo-wears-visitor-shop). A real shop's own name,
  * always. A minted demo wears the name its visitor typed at the door, read
  * from the cookie bound to this shop (`src/lib/demo-shop-name.ts`), so only
  * the browser that typed it sees it. The canonical demo shop is shared by

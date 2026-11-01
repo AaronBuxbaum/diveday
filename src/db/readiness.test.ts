@@ -331,8 +331,8 @@ describe("trip readiness (in-memory PGlite)", () => {
   });
 
   it("opens a depth gate only when a staffer says they've seen the imported card", async () => {
-    // The whole point of H-23's posture: an imported specialty card is verified,
-    // and the deep dive still waits. H-24 adds that the tap which opens it has to
+    // The whole point of H-20260725-owner-asked-move-rows's posture: an imported specialty card is verified,
+    // and the deep dive still waits. H-20260725-two-findings-dive-domain adds that the tap which opens it has to
     // assert something — a bare click on a spreadsheet-sourced card is what the
     // posture exists to prevent.
     const { db, shop, reef, rosterEntry } = await readinessContext();
@@ -414,7 +414,7 @@ describe("trip readiness (in-memory PGlite)", () => {
     ).toContainEqual(expect.objectContaining({ code: "specialty_pending" }));
 
     // A card this shop captured itself needs no attestation — "Mark certified"
-    // already means a staffer looked the number up with the agency (H-24).
+    // already means a staffer looked the number up with the agency (H-20260725-two-findings-dive-domain).
     const reviewed = await reviewSpecialtyCertification(db, {
       shopId: shop.id,
       certificationId: pending.id,
@@ -731,7 +731,7 @@ describe("trip readiness (in-memory PGlite)", () => {
   });
 });
 
-describe("depth advisory (H-08 — a warning, never a gate)", () => {
+describe("depth advisory (H-20260724-certification-levels-agency-rules — a warning, never a gate)", () => {
   /**
    * The seeded two-tank trip visits more than one site, so these helpers set
    * every site the shop owns — otherwise a sibling site's depth leaks into the

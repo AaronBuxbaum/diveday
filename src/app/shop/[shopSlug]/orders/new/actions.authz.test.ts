@@ -18,7 +18,7 @@ const ctx = fileScopedShopContext();
 /**
  * Raising an invoice bills a real person on the shop's own connected Stripe
  * account, with the shop's name on it — money work, like the refund on the
- * order it becomes and the discount codes that set what a trip costs (H-14,
+ * order it becomes and the discount codes that set what a trip costs (H-20260724-staff-role-reach,
  * ADR 20260724-role-authorization). `orders/new/page.tsx` bounces anyone else
  * before it renders a field, but a page that refuses is not a gate: a form post
  * from a captain's browser reaches `createOrderAction` all the same (ADR-0006).

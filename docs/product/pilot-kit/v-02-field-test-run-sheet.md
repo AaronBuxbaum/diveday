@@ -39,7 +39,7 @@ defect found here is a stop-the-line fix (AGENTS.md safety rules), not a punch-l
       Print it from the manifest page's **Print** button before you lose signal.
 - [ ] Both phones signed in, both have opened the trip's live manifest at least once while on Wi-Fi.
 - [ ] Screen recording armed on Phone A; someone nominated to take photographs of the screen in sun.
-- [ ] The **stop rule** said out loud to the crew before boarding (H-05): a missing, expired, or
+- [ ] The **stop rule** said out loud to the crew before boarding (H-20260724-product-now-uses-explicit): a missing, expired, or
       corrupt device copy is **not** a boarding source — fall back to a fresh live load or the
       printed manifest. Never board from stale or absent data.
 - [ ] One person ashore, signed in on a laptop, available by phone — step 7 needs them.
@@ -63,7 +63,7 @@ the phone in light mode, deep navy with white ink and yellow buttons with it in 
 ### 2 — The device copy keeps itself current
 
 There is no "save" button. The copy saves and refreshes itself on load, on reconnect, on tab focus,
-and every five minutes; the one manual control is **Refresh now** (H-05, revised 2026-07-26).
+and every five minutes; the one manual control is **Refresh now** (H-20260724-product-now-uses-explicit, revised 2026-07-26).
 
 - [ ] Leave the page open for six minutes without touching it; the freshness pill stays **Fresh
       copy** on its own. (Fresh ≤ 15 min since save; Aging ≤ 4 h; Stale beyond.)
@@ -210,7 +210,7 @@ not exercised in the field.
       **Aging copy** and says so on screen. Y / N
 - [ ] Ask the captain, cold: "what do you do if this says the copy is old, or shows nothing?"
       Their answer, verbatim: _______________________________________________
-      (The correct answer is the H-05 stop rule: fresh live load, or the printed manifest. Never
+      (The correct answer is the H-20260724-product-now-uses-explicit stop rule: fresh live load, or the printed manifest. Never
       board from it.)
 - [ ] Expiry and undecryptable-copy recovery **not** exercised in the field. Confirmed: Y / N
 

@@ -91,7 +91,7 @@ sold-out charter, sitting under a diver who cannot board, is the software please
 good morning the two moments above already say so. If a shop ever asks for its own scoreboard, that
 is a surface of its own and not a consolation attached to the work queue.
 
-**The budget widened along one axis — time — on 2026-09-04, and every ban above stands** (H-67 a,
+**The budget widened along one axis — time — on 2026-09-04, and every ban above stands** (H-20260904-reef-go-all-way a,
 ADR [20260904-reef-all-the-way-down](../architecture/decisions/20260904-reef-all-the-way-down.md),
 decision 2). Between Reef's three moments no surface said what time it was, and that silence cost
 delight without buying trust. Two of its eight rules are what a reader of this section meets first,
@@ -356,7 +356,7 @@ already notified, a last-minute deal, a freed seat offered to the wait list — 
 eight-second server-side hold with Undo standing where Send was, and the mail leaves when the hold
 drains. The confirm on a send is reserved for a send that cannot be held: an SMS already handed to
 the carrier, a card charge. Money taken at the counter is held the same way: Cash or Card machine on
-an open order holds eight seconds with Undo before it is recorded (H-159). The reissue keeps its one clause in the row ("the old link stops working")
+an open order holds eight seconds with Undo before it is recorded (H-20261024-counter-payment-undo-hold). The reissue keeps its one clause in the row ("the old link stops working")
 because that consequence is real and the surface cannot show it. A `confirm()` on a purely
 reversible action is a bug: it slows the common path to guard against a mistake that undo already
 handles calmly.
@@ -546,7 +546,7 @@ cast under white groups (light) / deep slate (dark); **sea teal** (`--primary`) 
 colour; **amber** (`--accent`) is rationed for earned moments under the
 [20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md)
 decision 11 budget; feedback colours (`--success`, `--warning`, `--danger`) never carry meaning alone.
-`.boat-mode` is the roll call's high-contrast skin: by day white ground, navy ink and navy actions labeled in safety yellow; in the dark scheme Night Dive (navy, white ink, safety yellow). Light by day because sun on a screen washes a dark ground out (H-97).
+`.boat-mode` is the roll call's high-contrast skin: by day white ground, navy ink and navy actions labeled in safety yellow; in the dark scheme Night Dive (navy, white ink, safety yellow). Light by day because sun on a screen washes a dark ground out (H-20261006-boat-mode-dark-sun).
 
 **Where the palette actually stands.** AA is the bar, and the light palette does not clear it
 everywhere yet — so do not describe the app as WCAG AA conformant, in docs, in a page, or in a
@@ -663,7 +663,7 @@ what stop it rotting.
 
 - [ ] Semantic tokens only (no raw hex / palette-scale classes)
 - [ ] Verified in light (screenshots); dark as well only when the change is colour work — a token,
-      a tint, a hue ([H-90](../product/human-decisions/README.md#decision-register))
+      a tint, a hue ([H-20260925-many-colour-schemes-check](../product/human-decisions/README.md#decision-register))
 - [ ] Pixel pass: the probe ran on every changed capture, every flag has a verdict (confirmed with
       its measurement, or dismissed with its reason and settled), and the 1:1 tiles and the atlas
       entries for the controls touched were read before the source —

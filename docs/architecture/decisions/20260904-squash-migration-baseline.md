@@ -140,7 +140,7 @@ with the next migration anyone writes.
   `courses.test.ts` — and no longer resolve to a folder. They are kept as provenance for why a
   column is shaped the way it is; this record is where the folders went.
 - **What this does not license.** The pre-pilot posture in AGENTS.md ("There is no legacy. Delete
-  it.", H-49) is why rewriting migration history was affordable *once*, before any production
+  it.", H-20260815-no-legacy) is why rewriting migration history was affordable *once*, before any production
   database exists. It is not a licence to squash again casually: a second squash against a live
   Neon database is a different decision, and the name-reuse mechanism above is what it would have
   to be built on.

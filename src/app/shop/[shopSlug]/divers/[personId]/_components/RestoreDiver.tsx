@@ -18,7 +18,7 @@ import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
  * Rendered at the top of the record, above everything a staffer might act on,
  * because the first thing to know about this page is that the person it
  * describes is off every list. Restoring takes the same owner/manager gate as
- * the removal it reverses (H-14); anyone else gets the record and the reason
+ * the removal it reverses (H-20260724-staff-role-reach); anyone else gets the record and the reason
  * they cannot act on it, rather than a button that bounces.
  */
 export function RestoreDiver({

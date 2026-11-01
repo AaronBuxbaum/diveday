@@ -25,7 +25,7 @@ import type { StaffTranslator } from "./staff-messages";
  */
 export function welcomeCueText(t: StaffTranslator, cue: WelcomeCue, locale: string): string {
   if (cue.kind === "returning") return t("shared.welcomeCue.returning", { years: cue.years });
-  // "25th dive day with us" (H-128): a count, never a badge.
+  // "25th dive day with us" (H-20261014-boat-count-milestones): a count, never a badge.
   if (cue.kind === "milestone") {
     return t("shared.welcomeCue.milestone", { ordinal: formatOrdinal(cue.count, locale) });
   }

@@ -23,7 +23,7 @@
   agency, a level, and a cert/diver number. A recreational **diver** card **does not expire**, and
   DiveDay stores no date saying otherwise: the column that once held a shop-set "refresher due" date was dropped on
   2026-08-21 along with everything that gated on it
-  (ADR 20260821-a-card-does-not-expire, superseding H-08's relabel). Three things in diving *do*
+  (ADR 20260821-a-card-does-not-expire, superseding H-20260724-certification-levels-agency-rules's relabel). Three things in diving *do*
   lapse and DiveDay models none of them, so none was ever what that column held: a **professional
   rating** renews annually at every agency (a lapsed Instructor is out of teaching status and
   uninsured), **GUE** alone among the agencies in the enum states a validity on its certifications,
@@ -46,7 +46,7 @@
   satisfy readiness. (The staff surface says "certified"; the stored status value is `verified`, which
   is what readiness reads.)
 - **Agency check** — the DiveDay browser extension doing an agency lookup from the
-  staffer's own browser (H-105, ADR 20261008-cert-check-extension). The extension types the diver
+  staffer's own browser (H-20261008-cert-check-extension, ADR 20261008-cert-check-extension). The extension types the diver
   into the agency's own lookup page and hands back the page's text; the server certifies the card
   only when one record on that page names the diver ("Lena Ortiz" or "Ortiz, Lena", or a labeled pair
   of adjacent lines, "First name: Lena" over "Last name: Ortiz", paired top to bottom so one record's
@@ -70,7 +70,7 @@
   manual handoff fills the name and known birth date, leaves its terms and search to the staffer,
   and never reads a result or certifies a card.
 - **Check all (agency)** — a departure's "Check all 9 cards with their agencies" on its Divers tab
-  (H-105): each **Agency check** the departure holds, one card at a time with a pause between, from
+  (H-20261008-cert-check-extension): each **Agency check** the departure holds, one card at a time with a pause between, from
   the staffer's browser, excluding SSI's manual handoff. Each card is judged and certified on its own and keeps its own Undo; there
   is no Undo for the departure. One diver the agency's page does not show is skipped, named, with
   the agency's page to open; two unreadable pages or unanswered requests in a row stop the run, and
@@ -102,7 +102,7 @@
   Site tab is signed in, read without a search. It ends in a copyable session report of versions,
   outcomes and **Page-shape reports**, with no person in it, to email to DiveDay's support address.
 - **DiveChek check** — the **Agency check** for a PADI card, on PADI's DiveChek in the staffer's own
-  browser, signed in to the PADI Pros' Site (H-121); the "(member sign-in)" link opens the same
+  browser, signed in to the PADI Pros' Site (H-20261014-padi-divechek); the "(member sign-in)" link opens the same
   site. Searched by name and birth date, so a diver with no birth date on file keeps the link.
   Narrower than a public page. One diver: DiveChek may list a row per certification, so rows with
   the typed birth date are one diver's cards, and two birth dates under the name, or a page saying
@@ -116,7 +116,7 @@
   Site first" and stops a "Check all". A best guess of PADI's page until a staffer tries it (#2259).
   Offered only at a shop that turned the **PADI checks** on.
 - **PADI checks** — the shop's own switch, "PADI checks (beta)" in Settings, for both checks run on
-  the PADI Pros' Site: the **DiveChek check** and the PADI eLearning check (H-121, H-106). On for
+  the PADI Pros' Site: the **DiveChek check** and the PADI eLearning check (H-20261014-padi-divechek, H-20261008-padi-elearning-check). On for
   a new shop since 2026-10-23 (Aaron); they run under the membership of the shop's PADI Pro who is
   signed in. Off, a PADI card keeps its "(member sign-in)" link and nothing offers or accepts a
   check (`agencyCheckOffered`, `shops.padi_checks_enabled`).
@@ -156,7 +156,7 @@
   back to pending (or, for an imported card, back to awaiting its confirm). SSI opens a prefilled
   manual lookup; the staffer reads SSI's result and uses Mark certified or confirms the imported card.
 - **eLearning check** — the same extension reading a course student's PADI eLearning on the PADI
-  Pros' Site, searched by the student's email in the staffer's signed-in browser (H-106, ADR
+  Pros' Site, searched by the student's email in the staffer's signed-in browser (H-20261008-padi-elearning-check, ADR
   20261008-cert-check-extension). The server ticks **Materials done** only when one record names
   the student and their email, this course and no higher one, and a finished status; anything else
   writes nothing. A seat already ticked is left as it was. PADI only, and a best guess of PADI's
@@ -175,7 +175,7 @@
   (ADR 20260724-import-verified-cards). And any **specialty** gate: an
   imported specialty card is `verified` but does not clear the dive it authorizes until a staffer
   confirms it, because a specialty is what permits a materially riskier dive (deep gates depth past
-  18 m) and a spreadsheet cell is not a card sighting (H-23,
+  18 m) and a spreadsheet cell is not a card sighting (H-20260725-owner-asked-move-rows,
   ADR 20260725-import-specialty-cards). One thing imports `pending` rather than `verified`: a card
   the source file's own status column marks unverified.
 - **Confirm to clear** — the display state of an imported specialty or nitrox card no staffer has
@@ -202,7 +202,7 @@
   never sent is still there to tick. Gates nothing.
 - **Course ladder** — the Courses page's "N did Discover Scuba in the last 12 months · M went on to Open Water",
   with the names of those who did not and an Invite to the next course's soonest session with a
-  seat (`nextCourseFor`, `src/lib/course-ladder.ts`; H-130's one-at-a-time invite under the
+  seat (`nextCourseFor`, `src/lib/course-ladder.ts`; H-20261014-one-to-one-invite's one-at-a-time invite under the
   **30-day invite cooldown**). The names leave out anyone holding a card at or above the level the
   next course certifies (any agency, any state) and anyone under its minimum age on the session's
   day, and the send re-checks both. Someone whose release waits on a physician's referral is
@@ -239,7 +239,7 @@
   (the higher rung covers the lower one) at sale only.
   It is **never evidence**. At a charter's sale it counts toward the trip's level, so a fun dive the
   morning after an Open Water course can be sold. It does **not** satisfy a course's own
-  prerequisite: Advanced still asks for a certified Open Water card (H-08's course baseline). At
+  prerequisite: Advanced still asks for a certified Open Water card (H-20260724-certification-levels-agency-rules's course baseline). At
   boarding it is still a blocker (`certification_in_training`), worded as a plan rather than a
   problem, and only the card the instructor certifies clears it (**Shop-issued certification**).
   Both gates share one window (`inTrainingBefore`): once the course session has ended without a
@@ -277,7 +277,7 @@
   That means the sale-time gate **can be talked past** — a pending claim can name a higher rung
   than the shop has verified — and that is accepted rather than overlooked: it was never the thing
   keeping anyone out of the water, and refusing a shop's own carded regulars to hold a line it could
-  not hold was the worse trade (H-27/H-29). Staff see it marked *"— unverified, no card"* in a
+  not hold was the worse trade (H-20260803-booking-time-trip-admission/H-20260820-shophasadjudicated-src-lib-trip). Staff see it marked *"— unverified, no card"* in a
   warning tone wherever it renders, the
   same treatment an **Imported specialty card** gets for the same reason: it must never be scanned as
   a plain level. Deliberately *not* the same
@@ -375,7 +375,7 @@
   confirming an **imported** specialty or nitrox card (*“I've seen this diver's card, or checked the
   number with the issuing agency”*), dropped when the owner levelled the two confirms against the
   imported *level* card, which opens the same depth on a bare tap and never asked
-  (H-24 revised, [20260814-one-tap-imported-card-confirm](../../architecture/decisions/20260814-one-tap-imported-card-confirm.md)).
+  (H-20260725-two-findings-dive-domain revised, [20260814-one-tap-imported-card-confirm](../../architecture/decisions/20260814-one-tap-imported-card-confirm.md)).
   Every imported card still confirms on one tap; what came back here is narrower and applies only to
   the diver-written rows that did not exist then. What did **not** change for imports is that the
   confirm exists at all: an imported card clears nothing until a staffer makes that tap, per card,
@@ -423,21 +423,21 @@
   finishes before the trip counts as standing on it (**In training**). Everything a person can still fix before
   the boat leaves (an unsigned waiver, a card captured but not yet verified, a payment
   outstanding) is *not* a reason to refuse the sale. **Absence of evidence never
-  refuses**: a diver this shop has never carded books as before, the same trade-off H-08 settled
+  refuses**: a diver this shop has never carded books as before, the same trade-off H-20260724-certification-levels-agency-rules settled
   for the course minimum-age gate. It exists to stop a diver **paying in full** for a dive they
   were never going to be allowed to do (DOM-M6) — it stops the money, never the manifest.
   **A historical narrow exception ran from 2026-08-20 through 2026-08-27**: the public booking form
   supplied a just-typed level and the seat was sold with a warning under that answer rather than
-  refused — the case H-30 itself describes as "a response to what this submitter just typed rather
+  refused — the case H-20260803-booking-form-succeed-fail itself describes as "a response to what this submitter just typed rather
   than a disclosure about somebody on file". The current booking form and action supply no
   declaration, so a new booking is judged against the shop's record. The pure decision still accepts
   an optional declared level, and a previously stored pending claim still counts. The refusal
-  stands everywhere else: on a shortfall resting on the shop's **record** (H-30's own case, where
+  stands everywhere else: on a shortfall resting on the shop's **record** (H-20260803-booking-form-succeed-fail's own case, where
   the diver typed nothing and no warning could have reached them), on a **specialty or nitrox**
   gate (no field on the form can answer either), and at every staff door, reschedule and seat
   claim. See **Admission advisory** below.
   Two carve-outs: an **identity-unconfirmed** booking is not judged by the matched record's cards
-  (H-13), and on a **course session** the *course's* own `minimum_certification_level` is the
+  (H-20260724-one-person-per-email), and on a **course session** the *course's* own `minimum_certification_level` is the
   admission rule, because continuing education dives at the sites it certifies people for — an AOW
   course's deep adventure dive is at an AOW site, and the site's inherent gate must not refuse the
   student the course exists to create. Lives in one pure function, `decideTripAdmission`
@@ -469,12 +469,12 @@
   while `instructor` was the only rung available to file them under (issue #1680, ruled 2026-09-16).
   Adding the rung changed no ratio arithmetic: `inWaterCrewRole` maps it to the thing those rules
   already count. The credit assumes a rating **in teaching status** — a lapsed AI is out of teaching
-  status and uninsured, and is not a certified assistant. Since H-59's 2026-10-07 amendment (issue
+  status and uninsured, and is not a certified assistant. Since H-20260825-staff-credentials-renewal-clock's 2026-10-07 amendment (issue
   #1853) the **supervision claim** checks it, so far as the shop has recorded it: an AI whose every
   recorded `instructor_rating` / `assistant_instructor_rating` / `divemaster_rating` renewed before the departure counts for nothing
   on Today, the staffing week and the trip page (see **Supervision claim**); the AI's own rating is
   filed as `assistant_instructor_rating` (issue #1850). Booking and rostering
-  still give the credit, because H-59 kept those two gates closed.
+  still give the credit, because H-20260825-staff-credentials-renewal-clock kept those two gates closed.
   **It carries no permissions of its own** — DiveDay's authorization gates are
   unchanged by it, so a shop that wants their AI to hold a Divemaster's permissions files them as
   both, which the roles list has always allowed. The one that bites is
@@ -529,7 +529,7 @@
   about a real diver: RAID's Advanced is a **35 m** qualification and DiveDay's Advanced Open Water
   ceiling is **30 m** (`src/lib/depth-ceiling.ts`), so a RAID Advanced diver booked on a 32 m site
   draws a depth warning that is factually wrong about *that* diver. It stays a **warning and never a
-  gate** (H-08, see **Depth ceiling**), so nobody is refused — but a warning that is routinely wrong
+  gate** (H-20260724-certification-levels-agency-rules, see **Depth ceiling**), so nobody is refused — but a warning that is routinely wrong
   is one a crew learns to click past, and the cost lands on the next warning, which may be right.
   Also see **Bundled nitrox**: RAID issues no standalone EANx card.
 - **GUE** — Global Underwater Explorers, and the agency DiveDay's ladder **does not hold at all**.
@@ -610,10 +610,10 @@
   Fahrenheit for shops already set to feet, matching what they were being shown at the time.
 - **Minor** — a diver under 18 on the trip date. Eighteen, not the diving world's 15: the flag
   exists because a minor's liability waiver may need a guardian signature, a question of legal
-  majority in the shop's jurisdiction (Florida at launch, H-01). The diving restrictions on
+  majority in the shop's jurisdiction (Florida at launch, H-20260730-jurisdiction-waiver-text-medical). The diving restrictions on
   under-15s are a separate rule and travel through the junior depth bands above, so the two never
   have to agree. Shown on the roster and manifest so a captain reading the boarding list can see it
-  without opening a profile (H-21). **A minor does not sign their own waiver alone** as of
+  without opening a profile (H-20260730-minimum-age-gate-data). **A minor does not sign their own waiver alone** as of
   2026-09-07 — see **Guardian co-signature** below. Note the two dates the word is measured on and
   never confuse them: the roster's badge asks whether the diver is under 18 on the **trip** date,
   because that is who is on the boat; the co-signature asks whether they were under 18 on the day
@@ -621,12 +621,12 @@
   their eighteenth birthday.
   Since 2026-10-13 a seat can also be a minor's **by its booker's word**: the public party form's
   "Under 18" box stamps `bookings.minor_declared_at` on that seat alone. A date of birth on file
-  decides; with none, the stamp asks for the guardian and shows the badge ([H-113](../human-decisions/H-113-under-18-on-party-form.md)).
+  decides; with none, the stamp asks for the guardian and shows the badge ([H-20261013-under-18-on-party](../human-decisions/H-20261013-under-18-on-party.md)).
 - **Guardian co-signature** — the second signature a **minor's** liability release takes: a parent
   or legal guardian signing the same release, on the same page, under the same signature provider
   as the diver's own (ADR
   [20260907-guardian-co-signature](../../architecture/decisions/20260907-guardian-co-signature.md);
-  owner decision 2026-09-07, which closed H-21's open half). It is six columns on the release
+  owner decision 2026-09-07, which closed H-20260730-minimum-age-gate-data's open half). It is six columns on the release
   record — who, what they are to the diver (**parent** or **legal guardian**, a code, never free
   text), how to reach them, and the provider, consent and signature timestamps — never a `people`
   row, because a guardian is a party to one document rather than a customer of the shop. Until both
@@ -635,7 +635,7 @@
   rule **fails open on an unknown date of birth**, exactly as the minimum-age gate does, so a diver
   the shop never asked is treated as an adult — and the day a date of birth lands on their record,
   the release they already signed becomes a blocker rather than a silent pass. It does not answer
-  H-01 or H-03: the release wording is unchanged, still English, and whether typed consent is a
+  H-20260730-jurisdiction-waiver-text-medical or H-20260724-current-typed-name-explicit: the release wording is unchanged, still English, and whether typed consent is a
   sufficient assurance level is as open for the guardian as it is for the diver. **A co-signer whose
   name reads as the diver's own is not a co-signature** — the writer compares significant name
   tokens, so a middle initial is not a difference and a spelled-out middle name or a suffix is.
@@ -649,7 +649,7 @@
   else: no surface renders it, readiness treats the record as co-signed, and the only readers are
   the integrity seal and the export bundle. The guardian's email is **optional**, and the one thing
   it is for is a copy of what was signed (see **Guardian's copy** below). **It can be erased on
-  its own** (H-103): an owner takes it off from the child's record, and the release is re-sealed as
+  its own** (H-20261007-guardian-email-erasure): an owner takes it off from the child's record, and the release is re-sealed as
   **redacted** (integrity version 4), still verifying, with who erased it and when inside the seal.
   **Two codes, and only two** — `parent` and `legal_guardian`, confirmed by the owner on 2026-09-10
   (issue 1541) rather than widened. Free text was rejected in the ADR because the code renders to
@@ -729,7 +729,7 @@
 - **Entry-level in-water ratio** — PADI's published maximum for **Open Water Diver training
   dives**: **8 students per instructor**, extendable by **2 per certified assistant** (a Divemaster
   or an Assistant Instructor, in DiveDay's role model) to a ceiling of **12 per instructor**. Enforced as a
-  booking gate (`src/lib/course-ratios.ts`, H-08) on a **PADI** course session that carries no
+  booking gate (`src/lib/course-ratios.ts`, H-20260724-certification-levels-agency-rules) on a **PADI** course session that carries no
   `minimum_certification_level` **and is not an intro course** — intro sessions take the tighter,
   agency-independent DSD rule above. The PADI scoping belongs to this figure only: 8/+2/12 is
   PADI's published number, and applying it to an SSI or NAUI course would be a

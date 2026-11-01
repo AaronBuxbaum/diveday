@@ -822,7 +822,7 @@ and set the existing RUM rate based on observed sessions. For a sample rate chan
 expected sampled sessions fall by approximately `(1-p)`, not necessarily total telemetry cost by
 that fraction. Keep high-value rare error signals and enough low-volume shop coverage. Add a
 configuration check for malformed rates. Measure events/session and received bytes before deleting
-any provider; migration choices remain governed by H-45.
+any provider; migration choices remain governed by H-20260907-far-diveday-migrate-onto.
 
 ### INF-07 — Plan nightly E2E work before paying for a build
 
@@ -858,7 +858,7 @@ baseline completeness. This is a design experiment, not an approved change to th
 contract. Keep existing main-per-commit CI runs: they guarantee baseline ancestry
 (`.github/workflows/ci.yml:39-57`).
 
-Backup bytes also grow indefinitely by design: current exports never expire pending legal H-02,
+Backup bytes also grow indefinitely by design: current exports never expire pending legal H-20260730-evidence-retention-period-deletion,
 but transition to IA at 30 days and Glacier Instant Retrieval at 90
 (`infra/lib/infra-stack.ts:1089-1125`). Do not prescribe deletion to save a small storage bill.
 Report growth `weekly full exported bytes × 52 × years` before compression/dedup effects, and
@@ -1057,7 +1057,7 @@ production. No current dollar total or percentage speedup is defensible until th
   evidence verification to reduce statements.
 - Do not blindly replace `connection()`, introduce shared caching around sensitive/live state,
   increase pools, or parallelize transaction-bound reads.
-- Do not delete retained backups/waivers or change H-02 retention obligations for a storage saving.
+- Do not delete retained backups/waivers or change H-20260730-evidence-retention-period-deletion retention obligations for a storage saving.
 - Do not reduce PR safety coverage or skip stack-layer CI; those are settled correctness contracts.
 - Do not consolidate public and staff pages, redesign all pagination, replace per-test isolation,
   or unify every outbox just to reduce file count.

@@ -1,6 +1,6 @@
 # 20261003-every-stack-layer-runs-ci — Every layer of a stack runs the whole CI gate
 
-- **Status:** Accepted 2026-10-03 — **H-92** (Aaron Buxbaum, in session: "remove the handling we added in the past to skip CI for "middle" PRs of a stack and just have it always run")
+- **Status:** Accepted 2026-10-03 — **H-20261003-every-layer-stack-run** (Aaron Buxbaum, in session: "remove the handling we added in the past to skip CI for "middle" PRs of a stack and just have it always run")
 - **Date:** 2026-10-03
 - **Supersedes:** [20260919-stack-ci-cancels-superseded-layers](20260919-stack-ci-cancels-superseded-layers.md) (the skip and the cancel; its visual-baseline key stays)
 - **Amends:** [20260821-stacked-pull-requests](20260821-stacked-pull-requests.md), [20260907-a-runner-registers-the-stack](20260907-a-runner-registers-the-stack.md)

@@ -212,7 +212,7 @@ describe("countInWaterCrew", () => {
  * Issue #1853. An expired rating counted toward the supervision ratio, so the
  * staffing line could say a course was supervised when the only instructor on
  * it was out of teaching status. The ruling (2026-09-16) reads the credential
- * where the ratio is computed; H-59 keeps selling and seating on the roster's
+ * where the ratio is computed; H-20260825-staff-credentials-renewal-clock keeps selling and seating on the roster's
  * claim, which is why the narrowing is something a caller passes rather than
  * something `inWaterCrewRole` looks up.
  */
@@ -380,7 +380,7 @@ describe("inWaterCrewRole with recorded lapses", () => {
   });
 
   it("changes nothing when the credentials were not read, or nothing lapsed", () => {
-    // The roster's claim — what the booking gate still reads (H-59).
+    // The roster's claim — what the booking gate still reads (H-20260825-staff-credentials-renewal-clock).
     expect(inWaterCrewRole({ shopRoles: ["instructor"] })).toBe("instructor");
     expect(inWaterCrewRole({ shopRoles: ["instructor"], lapsedRungs: [] })).toBe("instructor");
   });

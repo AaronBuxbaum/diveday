@@ -4,7 +4,7 @@ import { contrastRatio } from "./brand";
 
 /**
  * **Boat mode, both palettes** — ADR 20261001-logbook, decision 6, as amended
- * by H-97. By day the roll call is light (white ground, navy ink, navy actions
+ * by H-20261006-boat-mode-dark-sun. By day the roll call is light (white ground, navy ink, navy actions
  * labelled in yellow), because sun on a screen washes a dark ground out; in
  * the device's dark scheme it is Night Dive navy. Reads both `.boat-mode`
  * blocks out of `globals.css` and holds every pair the roll call reads to

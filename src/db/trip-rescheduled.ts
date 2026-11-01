@@ -119,7 +119,7 @@ export async function heldRescheduleIsPlaceOnly(
  * Whether the departure is still ahead of the divers: its last day has not
  * started. A multi-day course is reachable between its days, so a meeting
  * point moved after day one still reaches its students (as departure notes
- * do, H-110).
+ * do, H-20261025-departure-note-limits).
  */
 async function stillAhead(
   db: DbExecutor,

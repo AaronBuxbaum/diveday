@@ -11,7 +11,7 @@ import { createTrip, setTripStatus } from "./trips";
 
 /**
  * **The one boat a called-off seat is offered** (UX sheet 2026-10-22, item 5;
- * H-151): same kind, same shop, same price or lower, a seat free, not yet
+ * H-20261022-called-off-boat-offers): same kind, same shop, same price or lower, a seat free, not yet
  * left. Every exclusion is proved by a boat that would otherwise win, because
  * it is sooner than the one that qualifies.
  *

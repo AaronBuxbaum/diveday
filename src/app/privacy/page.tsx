@@ -66,9 +66,9 @@ export const metadata: Metadata = {
  * Two things are deliberately absent, and both are somebody else's call to
  * make rather than an oversight:
  *
- *  - **No legal entity is named.** H-18 is open, and `docs/product/marketing.md`
+ *  - **No legal entity is named.** H-20260724-corporate-footing-diveday-operate is open, and `docs/product/marketing.md`
  *    keeps the corporate entity off the public pages until it closes.
- *  - **No retention period for waivers and medical answers.** H-02 is open. The
+ *  - **No retention period for waivers and medical answers.** H-20260730-evidence-retention-period-deletion is open. The
  *    page states what the system does today (they stay until the shop removes
  *    them) and says the policy is under review, which is true and is the one
  *    honest thing to write. Inventing a number here would pre-empt the decision
@@ -94,7 +94,7 @@ export const metadata: Metadata = {
  * conversion path asks them to read it first. Adding one of those remaining
  * links is a decision, not a tidy-up.
  *
- * The two open rows above are untouched by that: H-18 and H-02 govern what
+ * The two open rows above are untouched by that: H-20260724-corporate-footing-diveday-operate and H-20260730-evidence-retention-period-deletion govern what
  * this page may *say*, not who may reach it.
  */
 export default async function PrivacyPage() {

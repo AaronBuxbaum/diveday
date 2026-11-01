@@ -90,7 +90,7 @@ suggestion it might have made. The other direction sells a diver a course they f
 ## Consequences
 
 - The board is now a working surface, and `pnpm e2e e2e/schedule-builder.spec.ts` covers the four
-  mutations plus both refusals plus the role boundary (H-14: building the board is
+  mutations plus both refusals plus the role boundary (H-20260724-staff-role-reach: building the board is
   owner/manager/instructor work, re-checked against live roles on every action).
 - `src/components/StaffScheduleBoard.tsx` and the schedule page's read-only staff list are gone.
   Specs that opened a trip by clicking its row go through `openTripFromBoard` in `e2e/helpers.ts`.

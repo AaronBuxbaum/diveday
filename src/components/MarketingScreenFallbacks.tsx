@@ -533,7 +533,7 @@ export function DiverBookingFallback({ locale }: { locale: DiverLocale }) {
  * mockup that shows every door shows none of them as quiet.
  *
  * **Its caller describes this screen in its own `aria-label`**: the
- * homepage's recap step, the last of one booking's six (H-93), which first
+ * homepage's recap step, the last of one booking's six (H-20261005-public-pages-sell), which first
  * drew it as the evening moment (docs/product/marketing-review-20260827.md,
  * "A third moment: the evening"). So a redraw of this component has to carry
  * `marketing.home.steps.recap.mockupLabel` with it, in both locales, or the

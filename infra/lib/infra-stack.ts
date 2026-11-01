@@ -249,7 +249,7 @@ const EXPORT_PREFIX = "exports/";
  * answer in the platform, and it answers a question ("Neon is gone and PITR
  * cannot reach back far enough") that is asked within days of the loss, never
  * months. Five weeks leaves room for a missed run plus a holiday and still keeps
- * the window bounded. Change this one number if H-02 lands somewhere else.
+ * the window bounded. Change this one number if H-20260730-evidence-retention-period-deletion lands somewhere else.
  *
  * It is a real 35 days only because the dump bucket is unversioned -- see the
  * bucket's own comment in S11. On a versioned bucket a lifecycle expiration
@@ -1181,7 +1181,7 @@ exports.handler = async (event) => {
           id: "age-backups-into-colder-storage",
           enabled: true,
           // Current versions are never expired. Waiver records are legal
-          // evidence and their retention is "indefinite" pending H-02, so a
+          // evidence and their retention is "indefinite" pending H-20260730-evidence-retention-period-deletion, so a
           // lifecycle rule must never be the thing that decides a bundle has
           // outlived its usefulness - that is a legal call, not a cost one.
           // Cost is managed by getting colder instead of by deleting:
@@ -1213,7 +1213,7 @@ exports.handler = async (event) => {
         // would have re-dated them and restarted their expiry clock), and for
         // one day a `drain-legacy-database-dumps` rule sat here to age them out
         // over roughly 70 days of versioned lifecycle. Then it went, because
-        // H-47 records that DiveDay is pre-pilot with no users and a disposable
+        // H-20260814-production-database-disposable records that DiveDay is pre-pilot with no users and a disposable
         // database, so what is under that prefix is seeded demo data, not
         // anybody's password hash or medical answer, and it is not worth a rule
         // in this file or a reminder in anybody's queue. Those objects are
@@ -1235,7 +1235,7 @@ exports.handler = async (event) => {
     //   Contents       per-shop bundles, no        the whole cluster: every
     //                  credentials by design       password hash, every
     //                                              medical answer
-    //   Retention      never expires (H-02 makes   35 days, then gone
+    //   Retention      never expires (H-20260730-evidence-retention-period-deletion makes   35 days, then gone
     //                  it a legal call)
     //   Restores a     no                          YES -- it is the only thing
     //   login                                      that does
@@ -2443,7 +2443,7 @@ exports.handler = async (event) => {
         id: "production-deploy-gate",
         title: "Give the production deploy gate its Vercel credentials, then turn it on",
         category: "Credentials",
-        when: "once, at the pilot shop's first real booking (H-158), and again if the token is revoked. Skippable until then: with DEPLOY_REQUIRES_GREEN unset, every push to main deploys as before",
+        when: "once, at the pilot shop's first real booking (H-20261021-deploy-gate-from-first), and again if the token is revoked. Skippable until then: with DEPLOY_REQUIRES_GREEN unset, every push to main deploys as before",
         why: "With the gate on, Vercel's push-triggered production build cancels itself and .github/workflows/deploy-gate.yml deploys each commit only after its CI on main is green, with the Vercel CLI. That needs a Vercel token and the project ids, and the switch itself has to be set on both GitHub and Vercel, because Vercel cannot read a GitHub variable. No CLI here can mint the token.",
         run: [
           "Mint a token for this environment alone: Vercel -> Account Settings -> Tokens -> Create, scoped to the team that owns the project. Never reuse the preview-deploy-token one: the preview job runs pull request code, and any token that can deploy the project can deploy production around the gate.",
@@ -2491,13 +2491,13 @@ exports.handler = async (event) => {
         id: "stripe-billing-setup",
         title: "Turn on DiveDay's own subscription billing in Stripe",
         category: "Credentials",
-        when: "once, after the entity that bills shops exists (H-18), and again in test mode for a staging deploy",
+        when: "once, after the entity that bills shops exists (H-20260724-corporate-footing-diveday-operate), and again in test mode for a staging deploy",
         why: "The product, the price, the webhook endpoint, the Customer Portal and Stripe's invoice emails are settings on DiveDay's own Stripe account, and the merchant they name is a legal entity this repository cannot create. Until all three BILLING_STRIPE_* values are set, Settings > Billing says billing is not turned on and nothing is charged (ADR 20261007-subscription-billing).",
         run: [
           "Stripe (DiveDay's own account, not a connected one) -> Product catalog -> Add product 'DiveDay', one recurring price: USD 99.00 per month, per unit. Copy the price_... id.",
           "Developers -> API keys -> Create restricted key 'diveday-billing' with write on Customers, Checkout Sessions and Customer portal; nothing else. Copy the rk_live_... value.",
           "Developers -> Webhooks -> Add endpoint https://dive.day/api/webhooks/billing listening on Your account (not Connected accounts) for checkout.session.completed, customer.subscription.created, customer.subscription.updated, customer.subscription.deleted and invoice.paid. Copy the whsec_... signing secret.",
-          "Settings -> Billing -> Customer portal: allow updating the payment method, show invoice history, allow cancelling at the end of the billing period, and set the business name, terms and privacy links to the H-18 entity's.",
+          "Settings -> Billing -> Customer portal: allow updating the payment method, show invoice history, allow cancelling at the end of the billing period, and set the business name, terms and privacy links to the H-20260724-corporate-footing-diveday-operate entity's.",
           "Settings -> Billing -> Customer emails: send finalized invoices and successful payment receipts, and email about failed payments.",
           "pnpm env:manual, then fill BILLING_STRIPE_SECRET_KEY, BILLING_STRIPE_WEBHOOK_SECRET and BILLING_STRIPE_PRICE_ID and redeploy.",
         ],
@@ -2817,7 +2817,7 @@ exports.handler = async (event) => {
           "aws s3api head-bucket --bucket diveday-media -- a 404 means the name is free.",
           "aws iam get-user --user-name diveday-ses-sender -- NoSuchEntity means the name is free.",
         ],
-        note: "This is destructive and it is meant to be: it is the step that makes a region move a teardown rather than a cutover. It is cheap only while the estate is pre-pilot (H-49). Once a shop has photos in diveday-media or a bundle in diveday-backups, this step is a data migration and this action is the wrong instruction.",
+        note: "This is destructive and it is meant to be: it is the step that makes a region move a teardown rather than a cutover. It is cheap only while the estate is pre-pilot (H-20260815-no-legacy). Once a shop has photos in diveday-media or a bundle in diveday-backups, this step is a data migration and this action is the wrong instruction.",
       },
       {
         id: "root-access-key-removal",
@@ -2921,7 +2921,7 @@ exports.handler = async (event) => {
         // the token is the same thing no CLI here can do for itself.
         "preview-deploy-token",
         // Same class, and optional until the pilot's first real booking
-        // (H-158): the deploy gate's token, plus the switch it turns on.
+        // (H-20261021-deploy-gate-from-first): the deploy gate's token, plus the switch it turns on.
         "production-deploy-gate",
         // Same class again: GitHub environment secrets do not cross environment
         // boundaries. The infra-deploy job needs the existing Neon API key on

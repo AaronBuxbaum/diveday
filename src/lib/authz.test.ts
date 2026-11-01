@@ -63,10 +63,10 @@ describe("accountable-role gates (export/import/reports)", () => {
     ["canExportShopData", canExportShopData],
     ["canImportShopData", canImportShopData],
     ["canViewShopReports", canViewShopReports],
-    // H-14: money, legal templates, and roster deletion share the same gate.
+    // H-20260724-staff-role-reach: money, legal templates, and roster deletion share the same gate.
     ["canManagePaymentSettings", canManagePaymentSettings],
     ["canRefund", canRefund],
-    // H-14 extended: raising an invoice is the same money work as refunding one.
+    // H-20260724-staff-role-reach extended: raising an invoice is the same money work as refunding one.
     ["canManageOrders", canManageOrders],
     ["canManageWaiverTemplates", canManageWaiverTemplates],
     ["canDeleteDiver", canDeleteDiver],
@@ -219,7 +219,7 @@ describe("canCallDayBlowout (owner/manager/captain)", () => {
   });
 });
 
-describe("canConfigureTrips (H-14 — owner/manager/instructor)", () => {
+describe("canConfigureTrips (H-20260724-staff-role-reach — owner/manager/instructor)", () => {
   it("admits owner, manager, and instructor", () => {
     expect(canConfigureTrips(["owner"])).toBe(true);
     expect(canConfigureTrips(["manager"])).toBe(true);
@@ -334,7 +334,7 @@ describe("canOverrideCertBlock (owner/manager/instructor)", () => {
   });
 });
 
-describe("canOverrideGearRequest (H-06 — owner/manager/instructor/divemaster)", () => {
+describe("canOverrideGearRequest (H-20260724-initial-gear-policy-sizing — owner/manager/instructor/divemaster)", () => {
   it("admits the in-water judgment roles, divemaster included", () => {
     expect(canOverrideGearRequest(["owner"])).toBe(true);
     expect(canOverrideGearRequest(["manager"])).toBe(true);

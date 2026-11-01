@@ -30,7 +30,7 @@ afterEach(() => {
  * Visual review 2026-10-24, B25: the estimate is one line. The set price is
  * said as the set price, with no struck-through list price and no green
  * "You save" line, and no gray banner stands over the form before the sizes
- * are in. The set-price math is unchanged (H-06).
+ * are in. The set-price math is unchanged (H-20260724-initial-gear-policy-sizing).
  */
 describe("RentalFitForm's estimate", () => {
   it("says the full-set price in one line, with nothing struck through", () => {

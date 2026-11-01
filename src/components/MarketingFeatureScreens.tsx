@@ -267,7 +267,7 @@ export function StorefrontFallback({ locale }: { locale: DiverLocale }) {
  * from the medical form (`MedicalQuestionnaireFields.tsx`, the questions in
  * `src/lib/medical.ts`) answered, and the typed signature over "Sign waiver".
  * The release and the medical question stay in English in every language, as
- * they do on the page (H-01/H-03), and a Spanish reader gets the page's own
+ * they do on the page (H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit), and a Spanish reader gets the page's own
  * notice saying so. Left out: the rest of the release and of the form, and
  * the guardian's line. From a 448px panel the form and the signature stand
  * side by side; the page itself is one column.
@@ -314,16 +314,16 @@ export function WaiverSigningFallback({ locale }: { locale: DiverLocale }) {
                 version: 1,
               })}
             </p>
-            {/* i18n-exempt: release wording stays English pending H-01/H-03 (DEFAULT_WAIVER_BODY) */}
+            {/* i18n-exempt: release wording stays English pending H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit (DEFAULT_WAIVER_BODY) */}
             <p className="mt-2 text-xs font-semibold">
               Release of Liability, Waiver of Claims, and Assumption of Risk
             </p>
-            {/* i18n-exempt: release wording stays English pending H-01/H-03 (DEFAULT_WAIVER_BODY) */}
+            {/* i18n-exempt: release wording stays English pending H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit (DEFAULT_WAIVER_BODY) */}
             <p className="mt-1 line-clamp-2 text-xs leading-5 text-muted">
               I understand that scuba diving, snorkeling, and boat travel carry inherent risks
             </p>
             <div className="mt-3 rounded-lg border border-border bg-surface p-3">
-              {/* i18n-exempt: medical form wording stays English pending H-01/H-03 (src/lib/medical.ts) */}
+              {/* i18n-exempt: medical form wording stays English pending H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit (src/lib/medical.ts) */}
               <p className="text-sm font-medium">I am over 45 years of age.</p>
               <div className="mt-2 flex gap-2">
                 <span className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-border bg-surface px-3 text-xs">

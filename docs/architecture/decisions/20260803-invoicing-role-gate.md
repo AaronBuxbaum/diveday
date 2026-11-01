@@ -5,7 +5,7 @@
 
 ## Context
 
-[20260724-role-authorization](20260724-role-authorization.md) (H-14) drew role boundaries on five
+[20260724-role-authorization](20260724-role-authorization.md) (H-20260724-staff-role-reach) drew role boundaries on five
 staff surfaces and closed with a rule for everything built afterwards: *a new staff surface must
 consciously pick a gate — anything touching money, legal text, roster deletion, or trip definition
 picks the matching predicate.*
@@ -25,7 +25,7 @@ precisely the layer a crafted POST skips.
 
 ## Decision
 
-Invoicing joins the H-14 owner/manager family.
+Invoicing joins the H-20260724-staff-role-reach owner/manager family.
 
 - `canManageOrders` in `src/lib/authz.ts` (owner, manager — the shared `isOwnerOrManager`), with the
   live DB-checked companion `canPersonManageOrders` in `src/db/authz.ts`. A new predicate rather

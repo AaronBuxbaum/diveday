@@ -5,7 +5,7 @@
 
 ## Context
 
-H-08 (docs/product/human-decisions/README.md) left the exact per-agency ratios, depth ceilings,
+H-20260724-certification-levels-agency-rules (docs/product/human-decisions/README.md) left the exact per-agency ratios, depth ceilings,
 minimum-age/Junior rules, and medical-exception process as "must verify — needs the operator's
 agency-specific input," alongside the already-accepted conservative baseline (DSD/OW ungated,
 AOW+ requiring a verified Open Water card, instructor-led sessions blocked until staffed). The
@@ -13,7 +13,7 @@ product owner decided (2026-07-24) that DiveDay should use PADI's and SSI's own 
 standards directly — described as consistent enough across agencies to trust, including from
 ordinary web sources — rather than waiting on a shop-by-shop agency briefing.
 
-This ADR resolves the **in-water instructor:student ratio** piece of H-08 with real enforcement,
+This ADR resolves the **in-water instructor:student ratio** piece of H-20260724-certification-levels-agency-rules with real enforcement,
 and records the depth-ceiling and minimum-age numbers as documented reference data. It
 deliberately does not build numeric depth-ceiling or minimum-age *enforcement* — see
 Alternatives/Consequences for why, and what would be needed to add them.
@@ -162,7 +162,7 @@ enforcement mechanism, informed by the numbers recorded here.
   Decision).
 - A non-PADI shop's ungated course (SSI, NAUI, etc.) is unaffected by this change — capacity-only,
   same as before — until an agency-specific ratio is sourced and added.
-- H-08's "must verify — needs the operator's agency-specific input" note for **PADI** ratios is
+- H-20260724-certification-levels-agency-rules's "must verify — needs the operator's agency-specific input" note for **PADI** ratios is
   resolved; the minimum-age/Junior-depth piece stays open pending the DOB-collection and
   fail-open/closed call above; a non-PADI ratio and Rescue Diver's specific supervision needs stay
   open pending their own sourcing.

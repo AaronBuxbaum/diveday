@@ -74,7 +74,7 @@ conventional service interval; a cylinder, a computer, a torch and everything el
   performed and never from pickup, and replaces a date staff typed; with no passed check the staff
   date stands.
 
-Technicians are staff and the surfaces are ungated like the rest of gear (H-06, as amended
+Technicians are staff and the surfaces are ungated like the rest of gear (H-20260724-initial-gear-policy-sizing, as amended
 2026-08-20): handing equipment over the counter and working it are day jobs.
 
 ## Alternatives considered

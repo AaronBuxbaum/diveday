@@ -442,7 +442,7 @@ export type MissingDiverRaise =
  * fields. The tap also starts the one report for this disappearance, the
  * diver and the time of the mark filled in, exactly as "Start a missing diver
  * report" does, and stamps it raised; the alert then goes by the filed
- * report's path (`sendMissingDiverAlerts`, H-142), once per report.
+ * report's path (`sendMissingDiverAlerts`, H-20261016-missing-diver-report-alerts), once per report.
  *
  * - **A double tap is one alert.** The advisory lock on (departure, missing
  *   person) serializes two taps; the second finds the report raised. A report
@@ -840,7 +840,7 @@ export async function fileIncidentReport(
     missingDiver = report.kind === "missing_diver";
     return { ok: true } as const;
   });
-  // A report of a missing diver tells the owners at once (H-142). After the
+  // A report of a missing diver tells the owners at once (H-20261016-missing-diver-report-alerts). After the
   // commit, and never able to undo it: a failed send is given back and the
   // hourly pass tries again.
   if (filed.ok && missingDiver) {
@@ -1096,7 +1096,7 @@ export type IncidentReportView = {
   /** Whether this viewer may discard the draft or set or release the hold: owners. */
   mayDecide: boolean;
   /**
-   * For a report of a missing diver whose alert was filed (H-142) or raised
+   * For a report of a missing diver whose alert was filed (H-20261016-missing-diver-report-alerts) or raised
    * from the roll call (issue #2694): when every owner's email was sent, or
    * `null` while they are not all told yet; and when the diver was marked
    * found, and by whom.
@@ -1555,7 +1555,7 @@ export async function listIncidentCrewChoices(
  * people first) and both roll-call trails. Only the demo reset calls this
  * (`resetDemoSchedule`), which wipes the schedule they hang off; nothing a
  * live shop reaches deletes an incident report, which outlives its departure
- * for the retention window (seven years, H-112) instead.
+ * for the retention window (seven years, H-20261013-incident-report-retention) instead.
  */
 export async function deleteDemoSafetyTrail(db: DbExecutor, shopId: string): Promise<void> {
   await db.delete(incidentReportAddenda).where(eq(incidentReportAddenda.shopId, shopId));

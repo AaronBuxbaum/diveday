@@ -148,7 +148,7 @@ export function DiveRecord({
         {stampText ? (
           <MilestoneStamp label={stampText} />
         ) : (
-          // **A number, not a sentence** (H-67 c). It said "Your 3rd dive day
+          // **A number, not a sentence** (H-20260904-reef-go-all-way c). It said "Your 3rd dive day
           // with Blue Mantis" — a whole clause naming the shop, on a card whose
           // eyebrow already says the shop and whose footer already says who
           // recorded it, three times on one postcard. "Dive day № 3" is the

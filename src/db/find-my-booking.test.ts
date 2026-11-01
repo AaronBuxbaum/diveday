@@ -215,7 +215,7 @@ describe("sendFindMyBookingLinks", () => {
       now,
     });
     // No trip-prep link for a boat that has sailed. The address has no current
-    // booking at all, so it gets that day's log entry (H-132): a recap link.
+    // booking at all, so it gets that day's log entry (H-20261014-other-days-send-fresh): a recap link.
     expect(sent).toHaveBeenCalledTimes(1);
     const notification = sent.mock.calls[0]?.[0] as Record<string, unknown>;
     expect(notification).toMatchObject({ purpose: "log_entry", to: "nora@example.com" });

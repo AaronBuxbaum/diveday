@@ -41,7 +41,7 @@ import { livePerson, liveTrip, notRehearsal } from "./trips-live";
 
 /**
  * **Past divers worth inviting to a departure** (fifth-loop ideas, item 44;
- * H-130): people who dived this departure's site with the shop before.
+ * H-20261014-one-to-one-invite): people who dived this departure's site with the shop before.
  *
  * The sameness is the one similar departures already apply to a site
  * (`src/lib/similar-departures.ts`); a course is not suggested here, since a
@@ -398,7 +398,7 @@ export type CooledInvitation =
   | { status: "cooldown" | "unavailable" | "refused" };
 
 /**
- * **One invite under the 30-day cooldown** (H-130; the suggestions and the
+ * **One invite under the 30-day cooldown** (H-20261014-one-to-one-invite; the suggestions and the
  * course ladder, never the manual invite). The cooldown check and the insert
  * run in one transaction under an advisory lock on (shop, person), so two
  * near-simultaneous invites to two departures cannot both pass the check

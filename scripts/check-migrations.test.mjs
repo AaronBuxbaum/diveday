@@ -201,7 +201,8 @@ describe("statements the expand/contract rule calls safe", () => {
 
 describe("a NOT NULL column added with no default", () => {
   const add = 'ALTER TABLE "activity_events" ADD COLUMN "code" text NOT NULL;';
-  const reason = "pre-pilot, no users, H-49 — the table is emptied in the same migration";
+  const reason =
+    "pre-pilot, no users, H-20260815-no-legacy — the table is emptied in the same migration";
 
   it("names the inserts it breaks, not the keyword it saw", () => {
     expect(problems(add)[0]).toContain("cannot name a column that did not exist yet");
@@ -443,7 +444,7 @@ describe("which migrations get audited", () => {
 });
 
 describe("a drop-column marker while a serving release still declares the column", () => {
-  // H-49 ("there is no legacy") is about old *data*, never deploy order. The
+  // H-20260815-no-legacy ("there is no legacy") is about old *data*, never deploy order. The
   // migration runs inside the build while the previous release is serving, and
   // every whole-row select() or returning() on that release names each column
   // its Drizzle schema declares — so a drop it still declares breaks it for

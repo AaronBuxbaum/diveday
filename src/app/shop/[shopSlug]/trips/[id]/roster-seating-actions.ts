@@ -146,7 +146,7 @@ export async function createDirectTripInvitationAction(
 
 /**
  * **Invites one past diver the departure suggested** (fifth-loop ideas, items
- * 43 and 44; H-130): the same one-to-one invite as above, staff-chosen and for
+ * 43 and 44; H-20261014-one-to-one-invite): the same one-to-one invite as above, staff-chosen and for
  * this named departure, and refused for a person already contacted with an
  * invite inside `INVITE_COOLDOWN_DAYS`. The list leaves such people out; this
  * holds the line for a page left open across the window.
@@ -183,7 +183,7 @@ async function inviteOneDiver(
       redirect(noticeUrl(`${guests}#who-wants-in`, "invite-unavailable"));
     }
     // A suggestion: the cooldown and the departure's own gate, re-checked
-    // under one lock for a page left open (H-130; review F1, N2).
+    // under one lock for a page left open (H-20261014-one-to-one-invite; review F1, N2).
     const outcome = await createInvitationUnderCooldown(db, { ...input, now: nowDate() });
     if (outcome.status === "cooldown") {
       redirect(noticeUrl(`${guests}#who-wants-in`, "invite-cooldown"));
@@ -215,7 +215,7 @@ async function inviteOneDiver(
 
 /**
  * Whether a just-cancelled booking held a captured payment, so a staff member
- * who lacks refund permission (H-14) can be told a refund may be owed rather
+ * who lacks refund permission (H-20260724-staff-role-reach) can be told a refund may be owed rather
  * than a bare "spot is open". Deliberately coarse — it doesn't apply the
  * cancellation window; the owner/manager who picks it up runs the real
  * `refundBookingOnCancellation` path and its window/forfeit logic.
@@ -236,11 +236,11 @@ export async function removeBookingAction(shopSlug: string, tripId: string, form
   if (!uuidParam(bookingId)) redirect(back);
   const dbi = await getDb();
   await requireRosterBooking(dbi, s.user.shopId, tripId, bookingId, back);
-  // Refused, with nothing sent, for a diver marked aboard at sea (H-133).
+  // Refused, with nothing sent, for a diver marked aboard at sea (H-20261015-aboard-diver-removal-at).
   const from = await removeSeat(dbi, s.user.shopId, bookingId, back, s.user.personId);
   await trackEvent({ name: "booking_cancelled", source: "staff" });
   // Freeing the seat is roster work any staff member does, but moving money is
-  // owner/manager work (H-14, ADR 20260724-role-authorization). A crew member
+  // owner/manager work (H-20260724-staff-role-reach, ADR 20260724-role-authorization). A crew member
   // can cancel the booking; the auto-refund below only fires when the actor may
   // refund. When they can't, the seat is still freed and a paid booking hands
   // the refund up to an owner/manager instead of quietly refunding under a role
@@ -260,7 +260,7 @@ export async function removeBookingAction(shopSlug: string, tripId: string, form
   // A cancel inside the shop's stated window auto-refunds a Stripe payment;
   // everything else (no window, counter payment, Stripe off) degrades to the
   // staff-run refund the notice calls out. The seat is already freed above, so
-  // a refund failure never blocks the cancellation (docs H-07).
+  // a refund failure never blocks the cancellation (docs H-20260724-payment-deposit-cancellation-refund).
   const refund = await refundBookingOnCancellation(dbi, {
     shopId: s.user.shopId,
     bookingId,

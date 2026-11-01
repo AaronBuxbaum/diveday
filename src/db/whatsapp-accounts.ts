@@ -36,7 +36,7 @@ export type WhatsAppKeyRefusal = "encryption_key_unset" | "encryption_key_invali
  * Why a connection was not stored. The key refusals are about DiveDay's own
  * configuration; `phone_number_already_connected` is about another shop — the
  * number this one is trying to claim is the tenant key inbound events are
- * routed on (H-83), and one number resolves to one shop or to none (see
+ * routed on (H-20260916-may-dive-chain-share), and one number resolves to one shop or to none (see
  * {@link shopIdForWhatsAppEvent}). A WABA may be shared: a chain with one Meta
  * Business account and a number per location connects each shop to its own.
  */
@@ -198,7 +198,7 @@ export async function whatsAppAccountForPhoneNumber(
 }
 
 /**
- * **Whose event is this** (H-83): the tenant key for every inbound WhatsApp
+ * **Whose event is this** (H-20260916-may-dive-chain-share): the tenant key for every inbound WhatsApp
  * event, delivery outcome and diver message alike.
  *
  * - **The number decides, and only the number.** An event resolves to the one
@@ -244,7 +244,7 @@ export async function shopIdForWhatsAppEvent(
  * `shop_whatsapp_accounts_phone_number_unique`. Caught by that index's name
  * rather than by message text or a bare code, so an unrelated constraint
  * failure is never reported to a staffer as "already connected to another
- * shop". A WABA another shop holds is fine (H-83).
+ * shop". A WABA another shop holds is fine (H-20260916-may-dive-chain-share).
  */
 export async function connectShopWhatsAppAccount(
   db: DbExecutor,
@@ -349,7 +349,7 @@ export const PARKED_REGISTRATION_STALE_MS = 7 * 24 * 60 * 60 * 1000;
 
 /**
  * **Run one shop's WhatsApp Connect with the number to itself** (issues #1769,
- * #1767, H-83).
+ * #1767, H-20260916-may-dive-chain-share).
  *
  * `shop_whatsapp_accounts_phone_number_unique` keeps the table right, but the
  * table is not the only state: registering a number at Meta mints a PIN, and a

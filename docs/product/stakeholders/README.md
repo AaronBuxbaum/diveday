@@ -24,12 +24,12 @@ keeps the three documents from drifting.
 
 | Discipline | Playbook | Primary stakeholders | Rollout timing | Gates |
 | --- | --- | --- | --- | --- |
-| Legal & liability | [legal.md](legal.md) | The owner's existing generalist attorney (engaged); a scuba-liability specialist (FL, not yet found); CPA (entity input). Tier split for who does what: [legal-engagement-scope.md](legal-engagement-scope.md) | Phase 0, **book this week** — longest lead | H-01, H-02, H-03, H-17, H-18, V-03 |
-| Insurance | [insurance.md](insurance.md) | Startup commercial broker (DiveDay's own E&O/cyber); dive-industry brokers + DAN (shop-side underwriting answer) | Phase 0, parallel with legal | H-19; the underwriting one-pager sales asset |
-| Finance, payments & tax | [finance-and-tax.md](finance-and-tax.md) | Stripe (Connect platform review), CPA, bank/bookkeeper | Phase 0 — **submit Stripe application immediately** | H-07 (remaining policy), H-12 (remaining terms) |
-| Privacy & communications | [privacy-and-communications.md](privacy-and-communications.md) | Privacy counsel, AWS SNS (SMS carrier compliance), Resend (sender domain) | Phase 0 — **submit SMS compliance registration immediately** (days-to-weeks) | H-02, H-04 (incident response), H-09 |
-| Dive operations & safety | [dive-operations.md](dive-operations.md) | Dive operations lead, friendly charter captain, gas-blending authority, `dive-domain-expert` reviewer | Phase 0 → first pilot boat day | H-05, H-06, H-08, H-11, V-01, V-02, V-04, V-05 |
-| Commercial & industry | [commercial-and-industry.md](commercial-and-industry.md) | Design-partner shops (3 profiles), DEMA, Scubanomics, dive media, Capterra | Recruit now; DEMA decision by early Sept; media Phase 2–3 | V-04, H-12 (contract flow), phase exits |
+| Legal & liability | [legal.md](legal.md) | The owner's existing generalist attorney (engaged); a scuba-liability specialist (FL, not yet found); CPA (entity input). Tier split for who does what: [legal-engagement-scope.md](legal-engagement-scope.md) | Phase 0, **book this week** — longest lead | H-20260730-jurisdiction-waiver-text-medical, H-20260730-evidence-retention-period-deletion, H-20260724-current-typed-name-explicit, H-20260724-contact-importer-trust-prior, H-20260724-corporate-footing-diveday-operate, V-03 |
+| Insurance | [insurance.md](insurance.md) | Startup commercial broker (DiveDay's own E&O/cyber); dive-industry brokers + DAN (shop-side underwriting answer) | Phase 0, parallel with legal | H-20260730-diveday-itself-carry-technology; the underwriting one-pager sales asset |
+| Finance, payments & tax | [finance-and-tax.md](finance-and-tax.md) | Stripe (Connect platform review), CPA, bank/bookkeeper | Phase 0 — **submit Stripe application immediately** | H-20260724-payment-deposit-cancellation-refund (remaining policy), H-20260724-public-founding-shop-price (remaining terms) |
+| Privacy & communications | [privacy-and-communications.md](privacy-and-communications.md) | Privacy counsel, AWS SNS (SMS carrier compliance), Resend (sender domain) | Phase 0 — **submit SMS compliance registration immediately** (days-to-weeks) | H-20260730-evidence-retention-period-deletion, H-20260724-vercel-selected-web-hosting (incident response), H-20260724-channel-sends-booking-waiver |
+| Dive operations & safety | [dive-operations.md](dive-operations.md) | Dive operations lead, friendly charter captain, gas-blending authority, `dive-domain-expert` reviewer | Phase 0 → first pilot boat day | H-20260724-product-now-uses-explicit, H-20260724-initial-gear-policy-sizing, H-20260724-certification-levels-agency-rules, H-20260730-nitrox-fill-station-procedure, V-01, V-02, V-04, V-05 |
+| Commercial & industry | [commercial-and-industry.md](commercial-and-industry.md) | Design-partner shops (3 profiles), DEMA, Scubanomics, dive media, Capterra | Recruit now; DEMA decision by early Sept; media Phase 2–3 | V-04, H-20260724-public-founding-shop-price (contract flow), phase exits |
 
 The paper these conversations are run *from* — the design-partner one-pager, the Florida call-list
 template, the first-call script, and the printable V-02 run sheet — is collected in the
@@ -40,24 +40,24 @@ status.
 
 Four clocks start ticking on contact, not on need — start all four in the same week:
 
-1. **The attorney engagement** ([legal.md](legal.md)) — the rollout's longest lead; H-01–H-03
+1. **The attorney engagement** ([legal.md](legal.md)) — the rollout's longest lead; H-20260730-jurisdiction-waiver-text-medical, H-20260730-evidence-retention-period-deletion, H-20260724-current-typed-name-explicit
    block every real waiver. Split across two attorneys: the generalist already engaged (send her
    [the scope memo](legal-engagement-scope.md)) and a scuba-liability specialist still to find.
 2. **The Stripe Connect platform application** ([finance-and-tax.md](finance-and-tax.md)) —
-   Stripe reviews platforms on their own schedule; it also needs the entity answer (H-18).
+   Stripe reviews platforms on their own schedule; it also needs the entity answer (H-20260724-corporate-footing-diveday-operate).
 3. **AWS SNS SMS carrier compliance registration** ([privacy-and-communications.md](privacy-and-communications.md))
    — US carrier registration takes days to weeks; no legal SMS sending without it.
 4. **A boat day for V-02** ([dive-operations.md](dive-operations.md)) — needs weather, a captain,
    and a hull; the pilot waits on it, and a failure takes the no-signal roll-call claim off every
-   page ([H-94](../human-decisions/README.md#decision-register)).
+   page ([H-20260802-may-public-pages-say](../human-decisions/README.md#decision-register)).
 
 Two dependencies cut across disciplines and should be resolved first because other stakeholders
 ask for their outputs:
 
-- **H-18 (corporate footing)** — the entity name goes on the pilot agreement, the insurance
+- **H-20260724-corporate-footing-diveday-operate (corporate footing)** — the entity name goes on the pilot agreement, the insurance
   policy, the Stripe application, and the terms of service. Analysis and recommendation in
-  [legal.md](legal.md#the-entity-decision-h-18).
-- **H-19 (DiveDay's own E&O/cyber)** — the pilot agreement should be able to reference coverage,
+  [legal.md](legal.md#the-entity-decision-h-20260724-corporate-footing-diveday-operate).
+- **H-20260730-diveday-itself-carry-technology (DiveDay's own E&O/cyber)** — the pilot agreement should be able to reference coverage,
   and binding it needs the entity. See [insurance.md](insurance.md).
 
 ## First two weeks, by discipline
@@ -66,13 +66,13 @@ The rollout plan's [30-day list](../rollout.md#the-next-30-days-in-order) is the
 this is the same work cut by discipline so each playbook can be executed independently:
 
 - **Legal:** send the generalist [her scope memo](legal-engagement-scope.md) and take the entity
-  question (H-18) to her + the CPA in the same call; in parallel, shortlist specialist candidates
+  question (H-20260724-corporate-footing-diveday-operate) to her + the CPA in the same call; in parallel, shortlist specialist candidates
   via the referral paths and send the specialist engagement request with the briefing packet.
 - **Finance:** submit the Stripe Connect platform application; book the CPA conversation
   (entity structure input, SaaS sales-tax posture).
 - **Privacy & comms:** submit AWS SNS SMS carrier compliance registration; verify the Resend production sender;
-  draft the H-09 consent policy for counsel review.
-- **Insurance:** request tech E&O + cyber quotes (needs the H-18 direction); open the
+  draft the H-20260724-channel-sends-booking-waiver consent policy for counsel review.
+- **Insurance:** request tech E&O + cyber quotes (needs the H-20260724-corporate-footing-diveday-operate direction); open the
   underwriting conversation with one dive-industry broker.
 - **Ops:** run V-01 in the browser; script and schedule the V-02 boat day.
 - **Commercial:** finalize the design-partner one-pager; open five shop conversations across the

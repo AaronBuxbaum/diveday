@@ -48,4 +48,4 @@ saying what Stripe paid into the bank, when, or for which days, and Stripe's fee
 ## Consequences
 
 - A shop must have the three events enabled on the Connect endpoint (`config/env-registry.mjs`).
-- A payout made before this shipped is never backfilled (H-49).
+- A payout made before this shipped is never backfilled (H-20260815-no-legacy).

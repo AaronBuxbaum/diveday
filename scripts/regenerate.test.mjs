@@ -38,6 +38,7 @@ describe("steps", () => {
     expect(steps({ root }).at(-1)?.label).toBe("export-bundle snapshot");
     expect(steps({ root, snapshot: false }).map((step) => step.label)).toEqual([
       "ADR index",
+      "human decision index",
       "glossary index",
       "ratchet voice",
     ]);

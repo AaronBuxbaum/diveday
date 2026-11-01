@@ -59,8 +59,8 @@ export async function listTripDiverContacts(db: AppDb, shopId: string, tripId: s
  * is the same defect `arrival-provenance.ts` was reviewed for on 2026-09-11.
  *
  * **That re-numbering is the accepted cost, by ruling — do not re-raise it.**
- * The product owner decided it on 2026-09-16 (H-81,
- * `docs/product/human-decisions/H-81-tiebreaker-user-visible-list-get.md`;
+ * The product owner decided it on 2026-09-16 (H-20260916-tiebreaker-user-visible-list,
+ * `docs/product/human-decisions/H-20260916-tiebreaker-user-visible-list.md`;
  * issue #1759): keep the name, add no `bookings.seq`. A name-ordered rail is the
  * one a second caller can check in a single pass down the list; a monotonic
  * column would buy immunity to a rename at the price of a number no human can

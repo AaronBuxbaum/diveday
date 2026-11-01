@@ -32,7 +32,7 @@ export type WelcomeCue =
   | { kind: "first_trip"; nonDiver?: true }
   | { kind: "returning"; years: number }
   /**
-   * A regular's 10th, 25th, 50th or 100th dive day with the shop (H-128): a count,
+   * A regular's 10th, 25th, 50th or 100th dive day with the shop (H-20261014-boat-count-milestones): a count,
    * never a badge. Staff-side only, behind the same consent as every cue.
    */
   | { kind: "milestone"; count: DiveDayMilestone };
@@ -117,7 +117,7 @@ export function welcomeCueFor({
   sharedAt: Date | null;
   /**
    * Required here, though optional on the diver's own offer: a staff caller
-   * that forgot it would silently never say a milestone (H-128).
+   * that forgot it would silently never say a milestone (H-20261014-boat-count-milestones).
    */
   diveDayCount: number | null;
 }): WelcomeCue | null {
@@ -126,7 +126,7 @@ export function welcomeCueFor({
 }
 
 /**
- * **A regular's milestone dive day** (H-128, fifth-loop ideas item 39): said on
+ * **A regular's milestone dive day** (H-20261014-boat-count-milestones, fifth-loop ideas item 39): said on
  * the 10th, 25th, 50th and 100th and on no other, with the cue's own expiry an
  * hour after the boat is home. It outranks "back after N years" on the rare
  * day both are true: the count is the news, and one line under a name says one

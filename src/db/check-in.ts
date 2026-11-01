@@ -40,11 +40,11 @@ export type CheckInQueueRow = {
    * For the guardian rule (`src/lib/guardian.ts`): a minor's paper release
    * names its co-signer, so the counter's own paper-signature form has to know
    * whether to ask (ADR 20260907-guardian-co-signature). Null when the shop
-   * never asked — the rule fails open, as H-08's minimum-age gate does.
+   * never asked — the rule fails open, as H-20260724-certification-levels-agency-rules's minimum-age gate does.
    */
   dateOfBirth: string | null;
   /**
-   * The name a held seat was booked under and why it was matched (H-13), so
+   * The name a held seat was booked under and why it was matched (H-20260724-one-person-per-email), so
    * the counter can name both people. Null on every seat not held.
    */
   identityBookedAs: string | null;
@@ -62,7 +62,7 @@ export type CheckInQueueRow = {
    */
   bookingStatus: "booked" | "checked_in" | "no_show";
   /**
-   * On a released seat, why the desk turned the diver away (H-135); null on a
+   * On a released seat, why the desk turned the diver away (H-20261015-who-may-turn-someone); null on a
    * plain "Not here" and on every seat still held. The two are different
    * statements — seen and refused, or never came — and every surface that
    * reads the release says which.

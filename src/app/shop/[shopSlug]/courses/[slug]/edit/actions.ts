@@ -407,7 +407,7 @@ export async function pullCourseTemplateUpdatesAction(
  * (ADR-0006).
  *
  * **"Is this course for sale" is trip-definition work** (what the dive is and
- * who it admits; H-14, ADR 20260724-role-authorization), so the action re-checks
+ * who it admits; H-20260724-staff-role-reach, ADR 20260724-role-authorization), so the action re-checks
  * live roles rather than settling for "is staff". The page draws the control on
  * the same answer, but the gate is here: a form that is not rendered is not a
  * form that cannot be posted.

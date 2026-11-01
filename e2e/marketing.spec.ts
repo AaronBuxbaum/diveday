@@ -55,7 +55,7 @@ test("the homepage hero offers one demo door, and states the price at it", async
   // marketing header's single CTA slot on every page (#934, "The two doors,
   // and which one leads") — it carries the demo everywhere, not just here.
   await expect(page.getByRole("button", { name: "Try the live demo" })).toHaveCount(3);
-  // Still three since the 2026-10-05 rework (H-93): the steps under the hero
+  // Still three since the 2026-10-05 rework (H-20261005-public-pages-sell): the steps under the hero
   // each link to their feature page, whose own door opens the demo on
   // that step's screen, so the band spends none of this page's door budget.
   // The old label is gone site-wide, not merely replaced here: one action
@@ -134,7 +134,7 @@ test("the homepage follows one booking to the boat and home, a feature page per 
 }) => {
   await page.goto("/");
 
-  // Since 2026-10-05 (H-93) the band under the hero is one booking, followed
+  // Since 2026-10-05 (H-20261005-public-pages-sell) the band under the hero is one booking, followed
   // from the shop's website to the boat and home again: five steps, each the
   // screen that does it, two of the builder's notes, and the feature page that
   // tells the rest. (Check-in at the counter was a sixth until review cut it
@@ -165,7 +165,7 @@ test("the homepage follows one booking to the boat and home, a feature page per 
   await expect(stepsBand.getByRole("img")).toHaveCount(5);
   await expect(stepsBand.getByRole("img", { name: /recap page/i })).toBeVisible();
   // The roll-call step draws the dock check-in, the check-in feature page's
-  // own screen by its key (H-94, applied 2026-10-25): the screen the crew taps
+  // own screen by its key (H-20260802-may-public-pages-say, applied 2026-10-25): the screen the crew taps
   // at the dock, under notes that keep the no-signal claim.
   await expect(
     stepsBand.getByRole("img", {
@@ -290,7 +290,7 @@ test("public marketing pages lead to the product and pricing details", async ({ 
     page.getByText(diverTranslator("en-US")("marketing.product.boxDescription")),
   ).toBeVisible();
 
-  // The hub is the directory of the feature pages (H-93), and the offline
+  // The hub is the directory of the feature pages (H-20261005-public-pages-sell), and the offline
   // claim lives on the one it is about, beside its screen, and nowhere else.
   // /pricing carried a second copy of it as a FAQ row until 2026-08-28 — a
   // product question wearing pricing clothes (docs/product/marketing-review-
@@ -335,7 +335,7 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // this file, which is the regression guard). The load-gated `goto` stays: it
   // is the navigation's own completion, never a guessed interval.
   await page.goto("/product");
-  // One group per feature page since 2026-10-05 (H-93), under that page's
+  // One group per feature page since 2026-10-05 (H-20261005-public-pages-sell), under that page's
   // own row of the directory, then the three groups no page owns.
   const fullList = page.locator("#full-list");
   await expect(fullList.getByRole("heading", { name: "Also in the plan" })).toBeVisible();
@@ -354,7 +354,7 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   await expect(productHeroPrice.locator("a, button")).toHaveCount(0);
   // The hero says what DiveDay runs, then what each row below holds. It was
   // five annotated screens of the day from 2026-09-24 until 2026-10-05, when
-  // each feature got its own page and this one became their directory (H-93).
+  // each feature got its own page and this one became their directory (H-20261005-public-pages-sell).
   await expect(productHero.getByText(/^Booking, waivers, certification checks/)).toBeVisible();
   // The demo CTA lands on the product page — three demo doors: the nav (every marketing page's single CTA), the hero
   // (the most evaluation-intent click on the site must offer proof above the
@@ -423,7 +423,7 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // And the terms stand at the figure and at the door, which is the whole of
   // this slice (docs/product/marketing-review-20260827.md, "the terms never
   // stand at the doors"). The lock is a restatement of a binding commercial
-  // commitment (H-12) directly under the number it qualifies; it used to be
+  // commitment (H-20260724-public-founding-shop-price) directly under the number it qualifies; it used to be
   // reachable only through the included list and a FAQ row. It names its
   // subject — the price, not the reader — because this is the fine-print slot
   // a burned buyer scans for the catch.
@@ -729,7 +729,7 @@ test("the about page tells why DiveDay exists, who builds it, and how a shop get
   // The page opens on why DiveDay exists: the Lonergans, left behind on the
   // Great Barrier Reef in 1998 (docs/product/marketing.md, "Biography is a
   // claim like any other", holds the sourcing and the limits). The eyebrow is
-  // the page's `h1` since the 2026-10-07 rewrite (H-99): the display heading
+  // the page's `h1` since the 2026-10-07 rewrite (H-20261006-about-say-whose-voice): the display heading
   // that stood over the story ("Why did you build this") left at the owner's
   // call, along with the spoken register it belonged to, so the story is the
   // first thing read and the page's name is the one heading a screen reader
@@ -1741,7 +1741,7 @@ test("the legal pages are published, honest about what is unsettled, and reachab
   await expect(page.getByText("Payment event history: 7 years", { exact: false })).toBeVisible();
 
   // The honest-no that keeps this page from pre-empting an open human decision:
-  // H-02 has not settled how long a waiver and its medical answers are kept, so
+  // H-20260730-evidence-retention-period-deletion has not settled how long a waiver and its medical answers are kept, so
   // the page says the question is open rather than inventing a number.
   //
   // Anchored to the <dt> rather than to the text. `getByText` matches a
@@ -1759,11 +1759,11 @@ test("the legal pages are published, honest about what is unsettled, and reachab
   // and saying so is worth more than an SLA with no track record behind it.
   await expect(page.getByRole("heading", { name: "What we do not promise" })).toBeVisible();
 
-  // H-12: one source for the price, which is /pricing. A terms page quoting a
+  // H-20260724-public-founding-shop-price: one source for the price, which is /pricing. A terms page quoting a
   // stale figure is worse than one that quotes none.
   await expect(page.getByText("$99")).toHaveCount(0);
 
-  // H-18 is open, so neither page names a legal entity. A generic template
+  // H-20260724-corporate-footing-diveday-operate is open, so neither page names a legal entity. A generic template
   // would have — which is exactly why one wasn't used.
   for (const route of ["/privacy", "/terms"]) {
     await page.goto(route);

@@ -338,7 +338,7 @@ export const DIVER_SPECIALTY_KEYS: Record<DiveSpecialty, DiverMessageKey> = {
  *
  * This is a property of the *trip*: the same words for every reader, disclosing
  * nothing about any person, so it is safe on a public page and safe in a
- * refusal to an anonymous submitter (H-22 — the public form must never describe
+ * refusal to an anonymous submitter (H-20260724-minimum-age-gate-fail — the public form must never describe
  * the person behind a typed email). It is the honest replacement for the trip
  * page's old silence, where the requirement was passed only into
  * `BookingConfirmation` — i.e. shown for the first time *after* the seat was
@@ -499,7 +499,7 @@ export function readinessBlockerText(t: StaffTranslator, blocker: ReadinessBlock
  * points them at the certifications form as the way past a safety gate. A
  * hand-entered card lands `pending`, and a `pending` card at or above the bar
  * clears admission on the very next attempt: a one-minute in-UI path from
- * refused to seated, asserting nothing (H-24, glossary **Card sighting**).
+ * refused to seated, asserting nothing (H-20260725-two-findings-dive-domain, glossary **Card sighting**).
  *
  * So the two cases are told apart:
  *

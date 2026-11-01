@@ -21,7 +21,7 @@ stopped short:
 **The weather blow-out.** `callTripBlowout` cancelled the departure, snapshotted every active
 booking, mailed each diver — and said in its own docblock, "No money moves here." The diver read a
 message telling them their money was safe, and it stayed on the shop's Stripe account until someone
-with the H-14 refund role opened each booking by hand.
+with the H-20260724-staff-role-reach refund role opened each booking by hand.
 
 **The below-minimum sweep, which is worse, because nobody is in the room.** The minimum-head-count
 feature publishes a promise on the booking page — "runs with at least 4 divers; if it hasn't got
@@ -65,7 +65,7 @@ cancellation window is bypassed rather than reused.**
 - The ledger says which kind of cancellation it was: `payment_event_operation` gains
   `shop_cancellation_refund` beside `cancellation_refund`.
 
-**H-14 is untouched.** The refund role gates a *staff member* issuing a refund. These two callers are
+**H-20260724-staff-role-reach is untouched.** The refund role gates a *staff member* issuing a refund. These two callers are
 the system honouring a cancellation the shop already made — the same standing on which the
 diver-cancel arm already moves money without a role check. Whoever is on the dock at 6 AM still
 cannot refund a booking by hand without the role.

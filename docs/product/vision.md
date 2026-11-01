@@ -57,7 +57,7 @@ concretely here.
   idempotent, never sync a provider's inventory, orders or certifications back in. Within that
   line DiveDay *does* call a provider's API when a shop authorizes it — Shopify and QuickBooks
   Online today — on private apps that are never submitted to a public app directory, because the
-  cost H-26 rules out is the review-and-support relationship, not the outbound call
+  cost H-20260802-what-game-is-this rules out is the review-and-support relationship, not the outbound call
   ([20260827-shop-authorized-provider-connectors](../architecture/decisions/20260827-shop-authorized-provider-connectors.md),
   superseding the earlier "emit only" rule). For everything not on that short register, the path is
   still a no-code bridge (Zapier/Make) the shop wires to DiveDay's own events
@@ -68,10 +68,10 @@ concretely here.
 
 **DiveDay is a deliberately bounded, founder-run lifestyle business — not a venture-scale
 trajectory.** No outside capital, no aggressive multi-shop growth target. Decided explicitly
-2026-08-02 (H-26, `docs/product/human-decisions/README.md`), because the commercial terms already in
+2026-08-02 (H-20260802-what-game-is-this, `docs/product/human-decisions/README.md`), because the commercial terms already in
 place only make sense under this reading and nothing had said so out loud: the **$99 flat
 price**, **no platform fee**, the **25-shop founding cohort cap**, and the **two-year price lock**
-(H-12) are all consistent with a small, bounded customer base one person can actually run —
+(H-20260724-public-founding-shop-price) are all consistent with a small, bounded customer base one person can actually run —
 they are not a placeholder pending a pricing rework for scale. If that changes — outside capital,
 a real plan to grow past a founder-sized support load — revisit this statement and the commercial
 terms together, before any new cohort lock binds. The published support promise stays a

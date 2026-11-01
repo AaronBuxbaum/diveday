@@ -177,7 +177,7 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
-       * **Try the checks** (H-105): the disclosure on the Card checks row
+       * **Try the checks** (H-20261008-cert-check-extension): the disclosure on the Card checks row
        * (#2817), running the cert-check extension against its own sample
        * pages, after a run. The extension is
        * stood in for at the page's one seam, as the agency-check captures do:

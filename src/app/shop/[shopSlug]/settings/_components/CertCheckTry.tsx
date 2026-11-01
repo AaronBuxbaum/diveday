@@ -138,7 +138,7 @@ function Step({
 }
 
 /**
- * **Try the checks** (H-105): the extension's own steps, run in this browser
+ * **Try the checks** (H-20261008-cert-check-extension): the extension's own steps, run in this browser
  * against nothing real. The extension is here and current; each agency's
  * sample page (which the extension carries) is found, typed into and sent by
  * the real filler, with a made-up diver, and goes nowhere; and an open PADI
@@ -158,7 +158,7 @@ export function CertCheckTry({
   /** The agencies with a sample page, by key, with their names. PADI has none. */
   agencies: readonly { key: string; name: string }[];
   copy: CertCheckTryCopy;
-  /** This shop's "PADI checks (beta)" switch (H-121). */
+  /** This shop's "PADI checks (beta)" switch (H-20261014-padi-divechek). */
   padiOn: boolean;
   supportEmail: string;
 }) {

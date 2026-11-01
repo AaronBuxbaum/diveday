@@ -261,7 +261,7 @@ export const VISITOR_SHOP_NAME_MAX = 60;
 const UNSAFE_NAME_CHARACTER = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/gu;
 
 /**
- * **The name a visitor typed at the demo door, made safe to wear** (H-131).
+ * **The name a visitor typed at the demo door, made safe to wear** (H-20261014-demo-wears-visitor-shop).
  *
  * The demo may put the visitor's own shop name on its staff screens and on the
  * email it previews there, never on the storefront, which keeps the generated

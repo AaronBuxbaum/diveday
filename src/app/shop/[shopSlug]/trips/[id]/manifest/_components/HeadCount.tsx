@@ -72,7 +72,7 @@ export function HeadCount({
   /**
    * More passengers counted aboard than the boat's certificate allows
    * (`passengersAboveCertificateAboard`, src/lib/boat-safety.ts). The sale is
-   * refused above it (H-107); the rail never is, so the count says it: the
+   * refused above it (H-20261009-certificate-caps-seats); the rail never is, so the count says it: the
    * figure goes danger and a line names the limit. Crew are not passengers and
    * are never in it.
    */

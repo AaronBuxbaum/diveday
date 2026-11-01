@@ -19,7 +19,7 @@ import { InlineConfirm } from "@/components/ui/InlineConfirm";
  * the app learned the answer from *which button was tapped* rather than from
  * anything they said.
  *
- * H-54 asks for two explicit choices, so the choice is now the input: a radio
+ * H-20260822-may-shop-explicitly-declare asks for two explicit choices, so the choice is now the input: a radio
  * pair the form cannot be submitted without, whose material option states its
  * own cost in standing signatures, and one **Publish** beneath. The count is
  * in front of the staffer before the tap either way — it always was (issue

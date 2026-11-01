@@ -35,7 +35,7 @@ const FIXED_SOURCES = [
   // Retired 2026-10-05 — kept for history, not for reuse. The homepage's
   // annotated screens each ended in one door into the demo as the screen's
   // role (the 2026-09-24 voice decision), one tag per screen. The screens
-  // became the steps of one booking (H-93), and each step now links to
+  // became the steps of one booking (H-20261005-public-pages-sell), and each step now links to
   // its feature page, whose own demo door opens on that screen and carries
   // that page's tag (`featureSource`).
   "home-diver-moment",
@@ -60,7 +60,7 @@ const FIXED_SOURCES = [
   "nav",
   "product",
   // Retired 2026-10-05 with the dock chapter's card it tagged, when `/product`
-  // became the directory of the feature pages (H-93). Kept for history, not
+  // became the directory of the feature pages (H-20261005-public-pages-sell). Kept for history, not
   // for reuse.
   "product-mid",
   // Retired 2026-10-05 — kept for history, not for reuse. The door under

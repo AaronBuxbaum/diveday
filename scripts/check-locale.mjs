@@ -20,7 +20,7 @@ import { bankCounts, ratchetFlags, readCounts } from "./ratchet.mjs";
  * - `check:copy` covers source text not extracted into bundles; rendered-label
  *   declarations in `src/i18n/label-maps.test.ts` make a separate claim.
  * - Legally reviewed waiver and medical wording is excluded from translation
- *   pending H-01/H-03, while date formatting remains in scope.
+ *   pending H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit, while date formatting remains in scope.
  */
 
 const ROOT = process.cwd();

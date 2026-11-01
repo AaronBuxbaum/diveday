@@ -210,7 +210,7 @@ export function RentalFitForm({
   const locale = useLocale();
   const offered = offeredRentableItems(rentalItems, course?.gearIncluded === true);
   const offers = new Set(offered.map((item) => item.kind));
-  // The suit is one choice of four rather than two of the ticks (H-78): a
+  // The suit is one choice of four rather than two of the ticks (H-20260916-rental-fit-describe-shop): a
   // diver dives one suit, and has to be able to say a drysuit is their own.
   // The stored choice stays on offer after the shop drops that suit, so a save
   // does not quietly rewrite the diver's answer (issue #1755).
@@ -439,7 +439,7 @@ export function RentalFitForm({
               // One line (visual review 2026-10-24, B25): the set price the
               // diver pays, said as the set price, with no struck-through
               // list price and no green savings line. The set-price math is
-              // unchanged (H-06).
+              // unchanged (H-20260724-initial-gear-policy-sizing).
               <p className="mt-3 text-sm">
                 {quote.unpricedKinds.length > 0
                   ? t("rental.estimatedRentalWithExtras", {
@@ -531,7 +531,7 @@ export function RentalFitForm({
 
 /**
  * The quote figure, with the piece-by-piece price struck through whenever the
- * shop's set price beat it (H-06/HD-9). A diver who ticks the whole kit was
+ * shop's set price beat it (H-20260724-initial-gear-policy-sizing/HD-9). A diver who ticks the whole kit was
  * already being charged the cheaper of the two — the discount just never
  * appeared anywhere, so the total read as if nothing had been taken off.
  *

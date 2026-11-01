@@ -115,7 +115,7 @@ absent.
 
 **Slice 4 — inquiry pipeline (only on demonstrated operator demand).** `charter_inquiries`
 mirroring the existing `course_inquiries` shape and staff surface. Contract/e-sign remains gated
-on H-01/H-03 regardless of this ADR — a quote note and a deposit are the ceiling until legal
+on H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit regardless of this ADR — a quote note and a deposit are the ceiling until legal
 clears.
 
 ## Alternatives considered
@@ -128,7 +128,7 @@ clears.
   `max_passengers` warning. (Dossier design B, judged 47/80 vs the winner's 66/80.)
 - **Charter-first (quote/contract pipeline as the primary object; boats fall out as a sales
   catalog)** — models the buyout workflow best, but is the most new UI for the least §4 coverage,
-  its centerpiece contract is legally gated (H-01/H-03) anyway, and orchestration stays an
+  its centerpiece contract is legally gated (H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit) anyway, and orchestration stays an
   afterthought. Its withdrawal semantics and `course_inquiries` precedent survive as slices 3–4.
   (Dossier design C, 51/80.)
 - **Keep trip-is-the-boat-day forever (do nothing)** — free until the first two-boat operator or
@@ -169,10 +169,10 @@ refuses anything: the fleet row says when the seats on sale pass it, and a depar
 says when the people booked pass it (`src/lib/boat-safety.ts`). Nothing here touches admission,
 readiness or the roll call.
 
-## Note 2026-10-09 (later) — the certificate refuses (H-107)
+## Note 2026-10-09 (later) — the certificate refuses (H-20261009-certificate-caps-seats)
 
 The note above is reversed for the certificate alone. Aaron decided the passenger limit refuses
-seats above it ([H-107](../../product/human-decisions/H-107-certificate-caps-seats.md)): a boat
+seats above it ([H-20261009-certificate-caps-seats](../../product/human-decisions/H-20261009-certificate-caps-seats.md)): a boat
 save whose `capacity` passes `certified_passengers` is refused with a field error, and so is a
 certificate lowered under the seats an upcoming departure on the hull still sells
 (`boatSeatsRefusal`); `tripDetailsPatch` refuses a departure's capacity above the assigned hull's
@@ -193,4 +193,4 @@ Aaron directed that a departure whose seats exceed `boats.capacity`, the shop’
 on sale for the boat, shows a warning without blocking a save. The schedule creation and departure
 details forms show the configured number. This supersedes the configured-capacity refusal in the
 historical notes above; the separately recorded `certified_passengers` limit continues to refuse
-saves and cap sales as described in H-107.
+saves and cap sales as described in H-20261009-certificate-caps-seats.

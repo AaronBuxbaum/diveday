@@ -3,11 +3,11 @@
 - **Status:** Accepted
 - **Date:** 2026-10-14
 - **Extends:** [20260907-guardian-co-signature](20260907-guardian-co-signature.md),
-  [20260804-seat-claim-links](20260804-seat-claim-links.md); decision H-124
+  [20260804-seat-claim-links](20260804-seat-claim-links.md); decision H-20261014-parent-signs-minor-release
 
 ## Context
 
-A parent books a child "Under 18" (H-113), often with no email of the child's own. Nothing reached
+A parent books a child "Under 18" (H-20261013-under-18-on-party), often with no email of the child's own. Nothing reached
 anyone for that seat. The claim page asked the child for an email, a parent claiming with their own
 address was refused, and the release was signed at the counter on dive morning (fourth UX review,
 item 1).
@@ -41,13 +41,13 @@ own device, as the child's parent or guardian.**
    as every claim does.
 6. **A minor seat's claim page says a parent or guardian signs with them**, and that the booker can
    sign from their own page only where that door exists. Where it refuses, the lead's panel says to
-   send the seat its link; after a medical referral, that a physician's sign-off is needed. The claim refusal stays the neutral `unable` (H-22, #2288).
+   send the seat its link; after a medical referral, that a physician's sign-off is needed. The claim refusal stays the neutral `unable` (H-20260724-minimum-age-gate-fail, #2288).
 
 ## Consequences
 
 - A signature on another person's legal document is reachable from a bearer link. It is bounded:
   the booker's own link, only to seats they typed and declared minors, and only while unclaimed.
-  Typed consent as the assurance level is still H-03's question.
+  Typed consent as the assurance level is still H-20260724-current-typed-name-explicit's question.
 - A family's child release can be finished before the dock.
 
 ## Alternatives considered

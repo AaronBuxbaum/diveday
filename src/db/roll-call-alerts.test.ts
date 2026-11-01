@@ -159,7 +159,7 @@ describe("sendStaleRollCallAlerts", () => {
     expect(sent[0]).toMatchObject({ kind: "roll_call_stale", notBackAboard: 1, awaiting: 0 });
   });
 
-  // EAP review on H-118: the alert counted one row and said its one number.
+  // EAP review on H-20261014-stale-roll-call-recipients: the alert counted one row and said its one number.
   // One diver recorded not back aboard, another and a divemaster with no
   // result: "1 recorded not back aboard; 2 more have no result yet".
   it("sums diver and crew rows, and keeps the two counts apart", async () => {
@@ -304,7 +304,7 @@ describe("sendStaleRollCallAlerts", () => {
     expect(row?.alertedAt).toBeNull();
   });
 
-  describe("the shore contact (H-118)", () => {
+  describe("the shore contact (H-20261014-stale-roll-call-recipients)", () => {
     const SHORE = "shore@example.com";
     async function consentedShore(confirmed = true) {
       const [staff] = await listStaff(ctx.db, ctx.shop.id);
@@ -384,7 +384,7 @@ describe("sendStaleRollCallAlerts", () => {
       expect(toShore(sent)).toEqual([]);
     });
 
-    // Security review on H-118: nothing goes to an address its inbox has not confirmed.
+    // Security review on H-20261014-stale-roll-call-recipients: nothing goes to an address its inbox has not confirmed.
     it("sends nothing to an address its inbox has not confirmed", async () => {
       await consentedShore(false);
       const { db } = await departure(2 * HOUR);
@@ -410,7 +410,7 @@ describe("sendStaleRollCallAlerts", () => {
       await expect(refused({ shoreAlertConfirmedAt: NOW })).rejects.toThrow();
     });
 
-    // Owner review #2 on H-118: Today's "Owners alerted" must stay true.
+    // Owner review #2 on H-20261014-stale-roll-call-recipients: Today's "Owners alerted" must stay true.
     it("never marks the owners alerted when only the shore contact was reached", async () => {
       await consentedShore();
       const { db, trip } = await departure(2 * HOUR);
@@ -430,7 +430,7 @@ describe("sendStaleRollCallAlerts", () => {
       expect(await claims(trip.id)).toEqual({ owners: later, shore: NOW });
     });
 
-    // EAP review #3 on H-118: a failed shore send is tried again next pass.
+    // EAP review #3 on H-20261014-stale-roll-call-recipients: a failed shore send is tried again next pass.
     it("tries the shore contact again next pass when only their send failed", async () => {
       await consentedShore();
       const { db, trip } = await departure(2 * HOUR);
@@ -517,7 +517,7 @@ describe("sendStaleRollCallAlerts", () => {
       expect(await claims(next.trip.id)).toEqual({ owners: NOW, shore: NOW });
     });
 
-    // Owner review #9 on H-118: the owners' copy failing must not swallow the shore copy.
+    // Owner review #9 on H-20261014-stale-roll-call-recipients: the owners' copy failing must not swallow the shore copy.
     it("still sends the shore copy when that owner's own copy failed", async () => {
       const ownerAddress = await ownerIsShore();
       const next = await departure(2 * HOUR, { title: "Third boat" });

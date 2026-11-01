@@ -52,7 +52,7 @@ export async function voidCounterAction(formData: FormData) {
 
 /**
  * **Record payment: cash / card machine** (issue #3030, decided 2026-10-25:
- * one tap with an eight-second Undo hold, H-68). The tap holds the payment;
+ * one tap with an eight-second Undo hold, H-20260906-diveday-fill-already-knows). The tap holds the payment;
  * nothing is recorded until the hold runs out (`releaseHeldSendAction`, or the
  * hourly sweep for a screen that went elsewhere), and Undo leaves the order
  * as it was. Any active staff member, as any counter money is; behind the

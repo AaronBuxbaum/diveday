@@ -11,7 +11,7 @@ import { createTrip } from "./trips";
 import { latestDiveDayBooking, listYourDays, planYourDayLink, sendYourDayLink } from "./your-days";
 
 /**
- * **A regular's other days, from one booking's page** (H-132, ADR
+ * **A regular's other days, from one booking's page** (H-20261014-other-days-send-fresh, ADR
  * 20261016-fresh-link-per-booking-row). What matters most is the refusal: a
  * page reaches only its own person's days in its own shop, and a send mails a
  * link to the address on file, never back to the caller.

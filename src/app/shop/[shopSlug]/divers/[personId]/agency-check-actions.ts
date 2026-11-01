@@ -81,7 +81,7 @@ export type AgencyCheckResult =
 export type AgencyCheckOffer = { kind: AgencyListedKind; words: string };
 
 /**
- * **Certify a card from the agency's own page** (H-105).
+ * **Certify a card from the agency's own page** (H-20261008-cert-check-extension).
  *
  * The DiveDay browser extension, in the staffer's own browser, typed this
  * diver into the agency's lookup page and handed back the page's text. The

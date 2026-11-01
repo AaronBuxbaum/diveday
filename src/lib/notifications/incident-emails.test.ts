@@ -24,7 +24,7 @@ const notification = {
   ...input,
 } as Notification;
 
-/** H-142: the owners' missing-diver alert says that, when, and where to look. Nothing else. */
+/** H-20261016-missing-diver-report-alerts: the owners' missing-diver alert says that, when, and where to look. Nothing else. */
 describe("incidentMissingDiverEmail", () => {
   it("names the departure and the time, and links the report", () => {
     const email = incidentMissingDiverEmail(input);

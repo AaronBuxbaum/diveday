@@ -397,7 +397,7 @@ function seatsForMessage(seats: readonly SeatRow[], personId: string, receivedAt
 /**
  * The seats each Inbox message could be about, keyed by message id, for the
  * rows of one page. A message that names its booking (an "Ask to move" from
- * the booking page, H-126) is about that one seat, whenever it departs; every
+ * the booking page, H-20261014-ask-to-move) is about that one seat, whenever it departs; every
  * other message is read off the sender's open seats (`seatsForMessage`). A
  * message from a stranger, or from a diver with no open seat it could be
  * about, is absent.

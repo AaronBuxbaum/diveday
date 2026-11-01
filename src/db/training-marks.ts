@@ -42,7 +42,7 @@ export type MarkTrainingDiveOutcome =
         /** Not a live seat of this shop on a live departure. */
         | "not_found"
         | "departure_over"
-        /** The seat is held for staff to confirm who it is (H-13). */
+        /** The seat is held for staff to confirm who it is (H-20260724-one-person-per-email). */
         | "seat_held"
         /** One enrollment per seat: clear the mark before naming another. */
         | "already_marked"

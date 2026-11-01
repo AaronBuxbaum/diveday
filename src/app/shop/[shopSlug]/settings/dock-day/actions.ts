@@ -52,7 +52,7 @@ const deskPaymentForm = z.object({
  *
  * - The rhythm: refused whole if any one amount is not a whole number inside
  *   its bounds, the same bounds the table's CHECK constraints enforce.
- * - Crew arrive before divers (H-149): empty clears it, and crew read the
+ * - Crew arrive before divers (H-20261022-crew-arrive-before-divers): empty clears it, and crew read the
  *   divers' time.
  * - The turnaround (issue #2141): advice for the Move panel; zero turns the
  *   line off.

@@ -226,7 +226,7 @@ export async function issueWaiverRequest(
     // shop has since changed) stands for nothing: the seat reads
     // `waiver_lapsed`, and the fix is this fresh link. A hold or a refusal on
     // a seat in the water still stands; neither is a clean completion. A
-    // rider's seat reads a held record as a signature (H-109), so it lapses
+    // rider's seat reads a held record as a signature (H-20261009-rider-snorkeler-medical), so it lapses
     // with the signature's own clock. **Measured where the roster measures it**
     // (`waiverClockInstant`, issue #2611): a release that runs out before the
     // trip is blocked there, so this door must take a fresh signature for it,

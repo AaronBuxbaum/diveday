@@ -54,7 +54,7 @@ export function TripMoreActions({
   /** Who crews this departure, for the series' standing-crew question. */
   crewNames: string[];
   lifecycleStatus: FormNotice | undefined;
-  /** True when this staffer may not refund: a call-off leaves the card refunds for an owner or manager (H-139). */
+  /** True when this staffer may not refund: a call-off leaves the card refunds for an owner or manager (H-20261013-call-off-queues-refunds). */
   refundsHeld: boolean;
   locale: string;
   t: StaffTranslator;

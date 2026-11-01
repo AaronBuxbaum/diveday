@@ -164,7 +164,7 @@ describe("buildThreadSteps", () => {
     expect(built.steps).toEqual([]);
     expect(built.countable).toBe(0);
     expect(built.current).toBeNull();
-    // The engine's own sentence, not the generic one: H-22's minimum-age
+    // The engine's own sentence, not the generic one: H-20260724-minimum-age-gate-fail's minimum-age
     // wording says something a diver can act on.
     expect(built.setupItem).toBe(setup);
   });

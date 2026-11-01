@@ -11,7 +11,7 @@ import { ownerLogins } from "./owner-logins";
 import { activityEvents, shopShoreAlertTokens, shops } from "./schema";
 
 /**
- * **The shore contact's two links** (H-118 review; `shop_shore_alert_tokens`).
+ * **The shore contact's two links** (H-20261014-stale-roll-call-recipients review; `shop_shore_alert_tokens`).
  *
  * `confirm` proves the inbox is the shore contact's and that they agreed: the
  * link goes to the address the shop saved and nowhere else, and consuming it
@@ -229,7 +229,7 @@ export type ShoreAlertStopContext = {
  * already stopped, so a second click says so rather than failing. A link
  * works once: after the shop adds the same address back and it confirms
  * again, an old alert's spent link cannot take it off a second time
- * (H-118 security re-review).
+ * (H-20261014-stale-roll-call-recipients security re-review).
  */
 export async function resolveShoreAlertStopToken(
   db: DbExecutor,
@@ -266,7 +266,7 @@ export async function resolveShoreAlertStopToken(
  * (all four columns, which the table's checks require to move together) while
  * the shop still names the address the link went to, and writes the log's
  * line with no actor, all in one transaction. Then it tells each owner by
- * email (H-118 re-review: a one-click unsubscribe from a mail client makes an
+ * email (H-20261014-stale-roll-call-recipients re-review: a one-click unsubscribe from a mail client makes an
  * accidental stop plausible, and the shop must not learn of it from a silent
  * Today). A spent, stale or unknown link changes nothing and sends nothing.
  */

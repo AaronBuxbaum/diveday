@@ -425,7 +425,7 @@ test.describe("captain", () => {
       await expect(page.getByRole("option", { name: gated, exact: true })).toHaveCount(0);
     }
     // Date requests and the inbox's messages are open to every staff role
-    // (issues #1505, #1518, #1679, H-14 amendments).
+    // (issues #1505, #1518, #1679, H-20260724-staff-role-reach amendments).
     for (const open of ["Date requests", "Messages"]) {
       await page.getByRole("combobox").fill(open);
       await expect(page.getByRole("option", { name: open, exact: true }).first()).toBeVisible();

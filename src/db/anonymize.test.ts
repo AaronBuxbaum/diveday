@@ -146,7 +146,7 @@ describe("anonymizeDiver — the roll-call note (ADR 20260828-a-missing-diver-ge
    * was unaccounted for, and it sits on a row that legitimately survives an
    * erasure: the boarding fact is a safety record, the sentence about the
    * person is not. It was scrubbed before #1058 deleted the column, and the
-   * sweep had to come back with it — H-02's erasure promise is explicitly one
+   * sweep had to come back with it — H-20260730-evidence-retention-period-deletion's erasure promise is explicitly one
    * of the things pre-pilot status does not relax.
    */
   it("clears what a crew member wrote about a diver who is erased", async () => {
@@ -301,7 +301,7 @@ describe("anonymizeDiver — the welcome consent (issue #1182)", () => {
         welcomeSharedAt: new Date("2026-07-20T12:00:00Z"),
         // "Running late" (J3) is the diver's own statement too.
         runningLateAt: new Date("2026-07-20T12:30:00Z"),
-        // So is the booker's "Under 18" on the seat (H-113).
+        // So is the booker's "Under 18" on the seat (H-20261013-under-18-on-party).
         minorDeclaredAt: new Date("2026-07-20T12:45:00Z"),
       })
       .where(eq(bookings.id, booking.id));
@@ -367,7 +367,7 @@ describe("anonymizeDiver — the welcome consent (issue #1182)", () => {
     expect(after?.lastDivedBand).toBeNull();
   });
 
-  // H-13: a held seat keeps the name it was booked under so staff can see who
+  // H-20260724-one-person-per-email: a held seat keeps the name it was booked under so staff can see who
   // the guess was between. It is a person's name, so it goes with the erasure.
   it("takes the name a held seat was booked under with them", async () => {
     const { db, shop, owner } = await erasureFixtures();
@@ -870,7 +870,7 @@ describe("anonymizeDiver — what the coverage sweep found (issue #1607)", () =>
  *
  * The column was dead — both insert sites in `src/db/trip-invitations.ts` write
  * `date_request` or `direct` — so it is dropped rather than sequenced around
- * (H-49).
+ * (H-20260815-no-legacy).
  *
  * **This test does not stop the hazard coming back, and an earlier draft of
  * this docblock claimed it did.** A `security-reviewer` pass made the point:
@@ -1297,7 +1297,7 @@ describe("anonymizeDiver — the Stripe objects that live outside orders (issue 
       { customerProvider: provider },
     );
 
-    // H-49 is why there is no backfill, and this is why that is survivable: the
+    // H-20260815-no-legacy is why there is no backfill, and this is why that is survivable: the
     // session snapshot is owed for every session row whatever this column says,
     // so the owner still files Stripe's data-deletion request rather than being
     // told nothing is owed. The automated customer delete is the half genuinely

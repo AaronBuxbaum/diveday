@@ -183,7 +183,7 @@ describe("the certification records door", () => {
   });
 
   /**
-   * An imported specialty card whose gate is still shut (H-24,
+   * An imported specialty card whose gate is still shut (H-20260725-two-findings-dive-domain,
    * `certificationCardRowState` → `imported_unconfirmed`). It stores
    * `verified`, so it read as a plain card the shop holds; the dive it
    * authorizes is waiting on one tap. The phrase is the badge's own words.
@@ -419,7 +419,7 @@ describe("a card gap on the certification records door", () => {
 });
 
 /**
- * **"Check with SSI"** (market audit item 30, inside H-10): beside a card that
+ * **"Check with SSI"** (market audit item 30, inside H-20261007-request-supported-c-card): beside a card that
  * is waiting for somebody, a plain link to the agency's own public lookup, in a
  * new tab. Never on a settled card, and never for an agency that publishes no
  * public lookup (PADI's is member-only).
@@ -505,7 +505,7 @@ describe("the agency check link", () => {
 });
 
 /**
- * **With the DiveDay extension in this browser** (H-105), the same words become
+ * **With the DiveDay extension in this browser** (H-20261008-cert-check-extension), the same words become
  * a button that checks the card on the agency's page. The extension is found by
  * the marker its content script sets; without it, everything above holds.
  */

@@ -14,7 +14,7 @@ import { liveTrip } from "./trips-live";
 /**
  * **The demo's course forms carry the shop's own words** (fourth review,
  * item 53). A course template names the forms its agency expects by title
- * only (DiveDay ships no agency wording, H-10), so every seeded form started
+ * only (DiveDay ships no agency wording, H-20261007-request-supported-c-card), so every seeded form started
  * empty and the demo, presented as a running shop, opened Waivers on three
  * "Needs your text" badges and Courses on "17 courses need their agency form
  * wording."

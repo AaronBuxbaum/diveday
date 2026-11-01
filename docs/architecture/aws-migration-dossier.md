@@ -3,7 +3,7 @@
 An inventory of everything DiveDay buys from a vendor that is not AWS, what the AWS replacement
 would be, and what each swap costs and buys. **Nothing here is decided.** Every row is written so
 the owner can answer it with a yes, a no, or a trigger condition; the answers land in
-[human-decisions/](../product/human-decisions/README.md#decision-register) (H-45), and anything that
+[human-decisions/](../product/human-decisions/README.md#decision-register) (H-20260907-far-diveday-migrate-onto), and anything that
 gets a yes and is hard to reverse then gets its own ADR.
 
 Dated 2026-08-12. Re-read the numbers before acting on them — vendor pricing moves, and the
@@ -59,7 +59,7 @@ canaries-and-logging ask lands.
 
 ### AWS-1 — CloudWatch Synthetics canaries
 
-**Replaces:** nothing. It closes the one gap H-04 still names: *nothing watches DiveDay from
+**Replaces:** nothing. It closes the one gap H-20260724-vercel-selected-web-hosting still names: *nothing watches DiveDay from
 outside.* Every alerting path today runs inside the deployment it is watching, so the outage that
 takes the app down takes the alarm with it. The incident runbook has specified an external monitor
 since 2026-08-06 and one has never been stood up.
@@ -115,7 +115,7 @@ and on a pilot shop's slug to point at.
 
 ### AWS-2 — Status page
 
-**Replaces:** the other half of H-04's open item.
+**Replaces:** the other half of H-20260724-vercel-selected-web-hosting's open item.
 
 **What it is:** a static page in S3 behind CloudFront in a *different region* from the app, whose
 content is written by a Lambda subscribed to the canary alarms' state changes via EventBridge.

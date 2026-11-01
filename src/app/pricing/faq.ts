@@ -107,7 +107,7 @@ export function pricingFaq(
     {
       // The vendor-death objection, answered beside the export it rests on:
       // the shared continuity promise (`continuityPromise`), an authorized
-      // service commitment whose words are the product owner's (H-101).
+      // service commitment whose words are the product owner's (H-20261007-continuity-promise).
       question: t("marketing.pricing.faq.shutdown.question"),
       answer: t(continuityPromise.claimKey),
     },

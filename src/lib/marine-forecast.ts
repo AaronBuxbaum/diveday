@@ -132,7 +132,7 @@ export function isHighWind(wind: AutomatedWind | null): boolean {
  * That reading is now a scheduled conversation rather than an open question in
  * the follow-up register: section C2 of the pilot first-call script
  * (`docs/product/pilot-kit/first-call-script.md`) carries the table and the
- * three questions to ask, for the calls H-31/H-32 are about. Answers land back
+ * three questions to ask, for the calls H-20261025-product-has-never-had/H-20261025-name-first-three-pilot are about. Answers land back
  * here, in the two period constants below, and in the boundary rows of
  * `marine-forecast.test.ts`.
  *

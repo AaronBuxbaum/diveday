@@ -44,4 +44,4 @@ Two copies of one log, printed by different people on different days, carry the 
 the records are unchanged. The printed time and name are provenance, not evidence. A version-1
 printout reproduces unless the departure has since gained a late seat or crew line or a report
 (refused), or a waiver lapsed between due-out and that printing (the old log stated it as of the
-printing). DiveDay is pre-pilot (H-49), so no such printout exists outside a demo.
+printing). DiveDay is pre-pilot (H-20260815-no-legacy), so no such printout exists outside a demo.

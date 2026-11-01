@@ -272,7 +272,7 @@ for (const scheme of ["light", "dark"] as const) {
 
       /**
        * **The night-before reminder, on the diver's last boat** (ux-delight
-       * sheet 2026-10-22, item 1; H-150): the fly-safe rule in hours under
+       * sheet 2026-10-22, item 1; H-20261022-reminder-fly-safe-in): the fly-safe rule in hours under
        * the dock time, never a clock time. The email as sent, from the
        * preview route's fixture notification.
        */
@@ -676,7 +676,7 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "switching-rezdy", scheme);
       });
 
-      // The twelve feature pages (`src/lib/feature-pages.ts`, H-93). One
+      // The twelve feature pages (`src/lib/feature-pages.ts`, H-20261005-public-pages-sell). One
       // template draws them all, so what differs from page to page is the copy
       // and the screen each one draws (`src/components/MarketingFeatureScreens.tsx`
       // and the three older drawings it reuses). Every page is captured because

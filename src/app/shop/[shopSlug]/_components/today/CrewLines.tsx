@@ -13,7 +13,7 @@ export type CrewReading = { tipsCents: number; month: (CrewMonth & { month: numb
  * The reader's share of the week's paid tips on boats they crewed (`crewTipShare`;
  * UX review 2026-10-11, item 18; issue #2468): the crew seeing the shop pass
  * tips on. A plain line, never coral. The only shop money shown below the
- * money gate, and not precedent for more (H-141). Zero renders nothing.
+ * money gate, and not precedent for more (H-20261015-crew-see-tips-on). Zero renders nothing.
  */
 function CrewTipsLine({
   cents,

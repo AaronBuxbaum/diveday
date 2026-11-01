@@ -73,7 +73,7 @@ to match.
 The compatibility pointer duplicated a domain fact and the policy that kept it in step (create,
 edit, series propagation, a revision bump when it moved), and the zero-`trip_dives` fallback
 existed only to tolerate a shape no writer produces. Aaron decided on 2026-10-31 that prior
-behavior need not be preserved (H-49: no legacy), so both are deleted.
+behavior need not be preserved (H-20260815-no-legacy: no legacy), so both are deleted.
 
 - **The column, in two releases.** This release removes the `trips.dive_site_id` declaration and
   every reader and writer; the column stays in the database, unread and unwritten (nullable, so
@@ -81,7 +81,7 @@ behavior need not be preserved (H-49: no legacy), so both are deleted.
   `drop-column` while the previous release still declares the column, because that release's
   whole-row selects name it. The next release drops it:
   `ALTER TABLE "trips" DROP CONSTRAINT "trips_dive_site_id_dive_sites_id_fkey"` and
-  `DROP COLUMN "dive_site_id"` (generate it with `pnpm db:generate --name`). Per H-49 there is no
+  `DROP COLUMN "dive_site_id"` (generate it with `pnpm db:generate --name`). Per H-20260815-no-legacy there is no
   backfill: a trip that had a pointer and no `trip_dives` rows (only demo seeds did) is rebuilt by
   the seed, not migrated.
 - **One projection for "the trip's site".** `tripPrimarySiteId` (`src/db/trip-primary-site.ts`) is

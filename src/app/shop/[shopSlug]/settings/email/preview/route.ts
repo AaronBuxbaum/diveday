@@ -33,7 +33,7 @@ export async function GET(
   // else's server. A deploy without a valid one has no preview to give.
   const origin = publicAppUrl();
   if (!origin) return new Response(null, { status: 503 });
-  // A minted demo's preview wears the visitor's own shop name (H-131); this
+  // A minted demo's preview wears the visitor's own shop name (H-20261014-demo-wears-visitor-shop); this
   // document is rendered for their browser only and is never sent.
   const shopName = await staffShopName(shop);
   const preview = await previewWeeklyDigest(db, {

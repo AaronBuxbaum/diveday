@@ -61,7 +61,7 @@ const payload: OfflineManifestPayload = {
       checkpoint: "departure",
       crew: [
         {
-          // A copy saved since H-46 carries the crew member's person id, which
+          // A copy saved since H-20260814-where-diveday-sit-between carries the crew member's person id, which
           // is what makes the crew half of the head count recordable here.
           id: "33333333-3333-3333-3333-333333333333",
           fullName: "Sal Moretti",
@@ -617,7 +617,7 @@ describe("OFFLINE_MANIFEST_PENDING_GRACE_MS", () => {
 });
 
 describe("appendOfflineRollCall", () => {
-  // H-46. The crew half goes through the same door as the diver half — same
+  // H-20260814-where-diveday-sit-between. The crew half goes through the same door as the diver half — same
   // lock, same expiry stop rule, same store — and differs only in which
   // subject field the event carries.
   it("queues a crew result under its person id, with no booking id anywhere on it", async () => {
@@ -697,7 +697,7 @@ describe("appendOfflineRollCall", () => {
 
   it("refuses to record a new roll call against a snapshot kept alive past its expiry", async () => {
     // A record preserved past retention (because it still has an unsynced
-    // event) is not a boarding source — the H-05 stop rule treats expired the
+    // event) is not a boarding source — the H-20260724-product-now-uses-explicit stop rule treats expired the
     // same as missing, even though loadOfflineManifest keeps serving it so
     // the pending evidence can still reconcile.
     //
@@ -930,7 +930,7 @@ describe("appendOfflineArrival", () => {
   });
 
   /**
-   * The H-05 stop rule: a copy kept alive past its own window only because it
+   * The H-20260724-product-now-uses-explicit stop rule: a copy kept alive past its own window only because it
    * still holds unsynced evidence is readable so that evidence can reconcile,
    * and records nothing new — the counter takes the same rule the two
    * recorders beside it take.

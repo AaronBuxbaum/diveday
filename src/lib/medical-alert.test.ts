@@ -123,7 +123,7 @@ describe("readDraftMedicalAlert", () => {
   });
 });
 
-describe("emergencyReadWindow (the days of the trip, H-153 amendment of 2026-10-24)", () => {
+describe("emergencyReadWindow (the days of the trip, H-20261023-medical-alert-for-the amendment of 2026-10-24)", () => {
   const KEY_LARGO = "America/New_York";
   const at = (wall: string, timeZone = KEY_LARGO) => {
     const [date = "", time = "00:00"] = wall.split(" ");

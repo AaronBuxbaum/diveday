@@ -22,7 +22,7 @@
 - **Rental set** — typically: **BCD** (jacket, sized), **regulator** ("reg", with octopus and
   SPG), **wetsuit** (sized, thickness in mm) with **boots**, **mask**, **fins**, **weights**, a **dive
   computer**, and a **tank/cylinder** (e.g. AL80 aluminum 80 cu ft). The dive computer is default-on
-  for every diver **and** part of the priced core set (H-06, reconfirmed 2026-08-02 — HD-9). Six
+  for every diver **and** part of the priced core set (H-20260724-initial-gear-policy-sizing, reconfirmed 2026-08-02 — HD-9). Six
   add-ons are off by default and priced separately: the **GoPro**, the **drysuit**, a **hood**,
   **gloves**, a **dive light** and an **SMB** (`RENTABLE_ITEMS`, `src/lib/rentals.ts`). A diver who skips a core
   piece (brings their own dive computer, say) is quoted whichever is cheaper — the set price or the
@@ -46,7 +46,7 @@
   marked on every surface that reads the fit, not only the trip prep list — the roll call, the
   offline manifest snapshot, the seat-a-diver list and the diver record's own fit summary all say
   it now (issue #1804), because two surfaces describing one departure differently is worse than
-  either sentence. **A piece this booking already holds is not marked** (issue #1811, H-78): a
+  either sentence. **A piece this booking already holds is not marked** (issue #1811, H-20260916-rental-fit-describe-shop): a
   live reservation of that kind on the gear register means a unit is on its peg with the diver's
   name against it, so the prep list and the manifest rail read it as an ordinary piece. The rule is
   one place, `rentalFitLine`/`buildDivePrepChecklist` handed the booking's held register kinds;
@@ -93,12 +93,12 @@
 - **Rental fit** — a shop-scoped diver's reusable record of *which* pieces they take from the shop
   and in *what size* (BCD, wetsuit, drysuit, hood, gloves, boot, fin, usual weighting, plus the
   dive-computer, GoPro, dive-light and SMB add-ons). A **hood** and **gloves** are two kinds, each
-  with a free-text size (H-102), each racked by size and thickness ("M, 5 mm", "L, 3 mm"). A
+  with a free-text size (H-20261007-hood-glove-sizes), each racked by size and thickness ("M, 5 mm", "L, 3 mm"). A
   drysuit diver's gloves are flagged on the packing line ("wet or dry gloves?").
   The **drysuit** is the one add-on that carries a size, and it is sized on its own scale — the
   manufacturer grid a rental wall is racked from (a girth letter, a trailing `T` for the tall cut),
   which shares the wetsuit's girth letters but carries a second axis the wetsuit scale has no room
-  for. Which codes the diver's own select offers is open as H-76. **A stored size the diver's grid
+  for. Which codes the diver's own select offers is open as H-20260912-drysuit-sizes-diver-own. **A stored size the diver's grid
   cannot spell is offered back to them as a selected option, and they can replace it** (issue
   #1728): a staffer typing `ML, rock boot 9` should know the diver will see those words on their own
   gear form. Before that the box painted blank over the stored value and the next save overwrote it,
@@ -123,13 +123,13 @@
   A diver who **dives dry** with no **Drysuit** specialty on their record raises a roster advisory
   (`src/lib/drysuit-card.ts`) and nothing more: air in the suit expands on the way up and the
   specialty exists for exactly that, but a shop runs its own orientations, so this is a
-  conversation before the first dive and never a boarding refusal (H-08's instrument, not readiness').
+  conversation before the first dive and never a boarding refusal (H-20260724-certification-levels-agency-rules's instrument, not readiness').
   It is a storage concept: a fit never reserves an item, is never evidence, and never replaces a
   dock-side fit check. It is the single input to the trip prep list. Reserving a particular unit is
   the **gear register**'s separate act (below) — a shop that keeps no register still has fits, and a
   fit alone still reserves nothing.
 - **Dives dry** — the diver-level fact that this diver dives in a drysuit, whoever owns it
-  (`rental_fit_profiles.dives_dry`, H-78, issue #1752). It is not a rental: most drysuit divers own
+  (`rental_fit_profiles.dives_dry`, H-20260916-rental-fit-describe-shop, issue #1752). It is not a rental: most drysuit divers own
   their suit, and before this column a diver in their own drysuit looked exactly like a diver in
   their own wetsuit. Three readers key on it: the packing list's weights line, which says "weight
   check in the water" instead of the stated weighting because a drysuit's undergarments and trapped
@@ -203,12 +203,12 @@
   with who recorded it, printed on the ticket as recorded at the counter and not analyzed, and
   correctable from the ticket while the tank is out; EANx is refused unless the person's nitrox card authorizes a fill
   (`authorizesNitroxFill`, the trip gate's predicate). A fill is what the staffer recorded, never
-  an analyzer reading. **The waiver informs and never gates** (H-108): the
+  an analyzer reading. **The waiver informs and never gates** (H-20261008-counter-rental-waiver-informs): the
   release is the person's, so the new-rental form, the ticket and the Rentals list say its
   standing when it is short of signed ("Waiver: Not signed"), and the form and the ticket offer the
   person's waiver link. A medical hold or a physician's "not cleared" is said in the readiness
   sentence, with no link; a current release standing over an earlier refusal or an open referral
-  (H-98 as amended) carries the manifest's warning and a link to the record. Its return can **pull
+  (H-20261007-after-physician-says-no as amended) carries the manifest's warning and a link to the record. Its return can **pull
   units for service** the way a departure's does (issue #2345).
   Trip-scoped reads (prep, manifests) never count one; a departure's Gear tab names the units a
   booked diver holds on one over its window. ADR 20260815-minimal-gear-register, amendment
@@ -317,7 +317,7 @@
   half blank).
   Completeness is a prompt for staff, never a gate: it refuses nobody a seat and blocks nobody from
   boarding.
-- **Needs staff fit** — the safe fallback when the shop can't fill a size a diver asked for (H-06):
+- **Needs staff fit** — the safe fallback when the shop can't fill a size a diver asked for (H-20260724-initial-gear-policy-sizing):
   staff flag the diver for hands-on fitting at check-in instead of quietly packing a different
   size. The flagged diver keeps their line on the prep list — the count is what the packer loads
   from, so dropping them arrives a BCD short with nothing to fit them from — but the **size** comes
@@ -352,7 +352,7 @@
   42"). A vulcanised drysuit boot is two to three fin sizes bigger than the foot in it, and a pair
   packed to the stated number does not go on at the bench. That size stays on the line as the
   number the packer sizes up from, and the line says the pair has to clear the boot.
-  **Both follow the diver, never the catalog** (H-78, issue #1810): every drysuit has a boot, a
+  **Both follow the diver, never the catalog** (H-20260916-rental-fit-describe-shop, issue #1810): every drysuit has a boot, a
   rented suit's vulcanised one or the diver's own, so a diver in their own suit gets the same fin
   line as one in ours. A piece the shop has since dropped from its **rental catalog** is the one
   line here that carries a reason rather than only a size: it stays on the list and on every other
@@ -363,19 +363,19 @@
   certification inbox.
 - **Date of birth** — optional on a diver profile (`people.date_of_birth`, date-only). Its one job
   is checking a course's `minimum_age` on the day that course runs — not the day it's booked, so a
-  diver whose birthday falls in between is admitted. **Fails open** by product decision (H-08,
+  diver whose birthday falls in between is admitted. **Fails open** by product decision (H-20260724-certification-levels-agency-rules,
   option B): a diver with no date on file books exactly as they always have, because nothing
   collected one before and failing closed would lock out every existing diver overnight. Enforced
   two ways: a refusal on **staff-initiated** bookings, and an `under_minimum_age` readiness blocker
   re-evaluated on every read (which is what catches a date recorded *after* the booking). The
   anonymous public form never refuses on age — a refusal there answers "is this address a child
   under N?" to anyone who can guess an address. The diver-facing checklist **does** name the real
-  reason (H-22, decided 2026-07-25) unless a name mismatch on the same booking is also unresolved
+  reason (H-20260724-minimum-age-gate-fail, decided 2026-07-25) unless a name mismatch on the same booking is also unresolved
   — a known, documented, narrower residual gap rather than a full close: an attacker who already
   knows a specific person's exact name and email is not stopped. See
   [20260725-checklist-age-disclosure](../../architecture/decisions/20260725-checklist-age-disclosure.md).
   Real age verification stays a dock-side ID check. **A stored date is cleared only with the
-  18-or-older answer** (H-100, issue #2167): emptying it on the diver record is refused unless the
+  18-or-older answer** (H-20261007-held-seat-split-into, issue #2167): emptying it on the diver record is refused unless the
   staffer ticks "They're 18 or older" in the same save, and refused outright while the diver holds
   a seat on a course with a minimum age. When the date on file makes the diver under 18 today, the
   box names that age. The clear writes `date_of_birth_cleared_as_adult` to the diver's activity

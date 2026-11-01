@@ -114,14 +114,14 @@ test("the crew records something left aboard and the shop hands it back", async 
   const row = page.getByTestId("lost-item").filter({ hasText: "Blue mask, seat 4" });
   await expect(row).toContainText(SAILED);
   await row.getByRole("button", { name: staff("desk.lostFound.returned"), exact: true }).click();
-  // Handed back, it leaves the list; the demo's own left-behind mask (H-148)
+  // Handed back, it leaves the list; the demo's own left-behind mask (H-20261022-demo-seeds-six-hidden)
   // still waits for its diver, booked tomorrow.
   await expect(row).toHaveCount(0);
   await expect(page.getByTestId("lost-item").filter({ hasText: LOST_MASK })).toBeVisible();
 });
 
 /**
- * H-133: a diver the crew marked aboard a boat that has left cannot be taken
+ * H-20261015-aboard-diver-removal-at: a diver the crew marked aboard a boat that has left cannot be taken
  * off the roster. The dawn boat is home with its sailed seats boarded, so a
  * sailed row's Remove says why and offers no confirm; the seat stays.
  */

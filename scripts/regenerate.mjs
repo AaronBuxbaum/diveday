@@ -33,6 +33,11 @@ export function ratchetScripts(root = ROOT) {
 export function steps({ root = ROOT, snapshot = true } = {}) {
   return [
     { label: "ADR index", command: "node", args: ["scripts/adr-index.mjs", "--write"] },
+    {
+      label: "human decision index",
+      command: "node",
+      args: ["scripts/check-human-decisions.mjs", "--write"],
+    },
     { label: "glossary index", command: "node", args: ["scripts/check-glossary.mjs", "--write"] },
     ...ratchetScripts(root).map((script) => ({
       label: `ratchet ${path.basename(script, ".mjs").replace(/^check-/, "")}`,

@@ -102,7 +102,7 @@ Non-negotiable, from the ADRs:
   - Shipped code outranks the canvas; the ADR outranks both.
   - One ledger at every width; the catalog is a door, never a second surface style.
   - State is said once: no stat tile may restate what a group heading already says.
-  - The gear exclusion-constraint truth, progression order, H-59's inform-only credential
+  - The gear exclusion-constraint truth, progression order, H-20260825-staff-credentials-renewal-clock's inform-only credential
     clocks, promo lifecycles, and every permission gate are contracts — rendering moves only.
   - Every colour-carried state also carries a word; drawn SVG, never emoji, on anything new.
 

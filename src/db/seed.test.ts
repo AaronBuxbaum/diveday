@@ -290,7 +290,7 @@ describe("resetDemoSchedule", () => {
 
     const [resetShop] = await db.select().from(shops).where(eq(shops.id, shop.id));
     expect(resetShop?.reviewUrl).toBeNull();
-    // H-118: a spec's shore contact address leaves with the reset, links and all.
+    // H-20261014-stale-roll-call-recipients: a spec's shore contact address leaves with the reset, links and all.
     expect(resetShop).toMatchObject({
       shoreAlertEmail: null,
       shoreAlertConsentAt: null,

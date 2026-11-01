@@ -6,7 +6,7 @@ import { builderNoticeFor, builderNoticeMessage, verifiedGearMoveNotice } from "
 const st = staffTranslator("en-US");
 
 describe("builderNoticeMessage", () => {
-  it("names the certificate's limit when the redirect carried it (H-107)", () => {
+  it("names the certificate's limit when the redirect carried it (H-20261009-certificate-caps-seats)", () => {
     expect(builderNoticeMessage(st, "schedule.notices.capacityAboveCertificate", "10")).toBe(
       "The boat’s certificate allows 10 passengers. Pick a capacity no higher.",
     );

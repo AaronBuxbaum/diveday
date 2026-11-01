@@ -48,4 +48,4 @@ rule, with its incidents: [docs/agents/repo-checks.md](../../docs/agents/repo-ch
   `pnpm check` gate. Nothing here logs a command's environment, stdin or output.
 - A new AWS service, vendor or runtime dependency is an ADR (the **adr** skill); vendor swaps are
   rows in [docs/architecture/aws-migration-dossier.md](../../docs/architecture/aws-migration-dossier.md)
-  awaiting H-45.
+  awaiting H-20260907-far-diveday-migrate-onto.

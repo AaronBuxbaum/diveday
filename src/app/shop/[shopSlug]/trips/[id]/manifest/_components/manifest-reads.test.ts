@@ -56,7 +56,7 @@ describe("readManifestPage (in-memory PGlite)", () => {
     expect(reads.completeManifests?.[0]).toBeUndefined();
   });
 
-  it("carries no diver's medical alert words, even for the owner (H-153: only a recorded tap or an explicit offline save)", async () => {
+  it("carries no diver's medical alert words, even for the owner (H-20261023-medical-alert-for-the: only a recorded tap or an explicit offline save)", async () => {
     const { db, shop } = ctx;
     const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
     const departure = trips.find((trip) => trip.title === DEMO_MEDICAL_ALERT_TRIP);

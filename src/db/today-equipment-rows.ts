@@ -199,7 +199,7 @@ export function pushEquipmentRows(actions: TodayAction[], ctx: TodayRowsContext)
       row.subject === "boat"
         ? {
             id: `boat-safety:boat:${row.boatId}`,
-            // A lapsed paper is danger ink (H-136): loud, and still nothing
+            // A lapsed paper is danger ink (H-20261015-lapsed-boat-papers-loud): loud, and still nothing
             // refuses a departure for it.
             kind: row.expired ? "boat_papers_lapsed" : "boat_papers_due",
             urgency: row.expired ? "now" : "later",

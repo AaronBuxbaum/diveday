@@ -652,7 +652,7 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
-       * **A Divers-tab row after an agency check that came up short** (H-105).
+       * **A Divers-tab row after an agency check that came up short** (H-20261008-cert-check-extension).
        * Nothing here renders without the DiveDay browser extension, so this
        * stands in for it at the page's one seam (`e2e/agency-check-roster.spec.ts`
        * does the same): GUE's page finds Tyler Brooks without the claimed

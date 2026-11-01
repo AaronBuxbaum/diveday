@@ -222,7 +222,7 @@ export async function countDeparturesByBoat(
 
 /**
  * The seats and start of each upcoming departure on this hull, soonest first, dated in the shop’s zone —
- * live, scheduled and not yet started — for the certificate check a boat save runs (H-107,
+ * live, scheduled and not yet started — for the certificate check a boat save runs (H-20261009-certificate-caps-seats,
  * `boatSeatsRefusal`). A departure that has started is history the
  * certificate can no longer change.
  */
@@ -329,7 +329,7 @@ export type BoatSaveOutcome =
   | { ok: false; reason: "certificate"; refusal: BoatSeatsRefusal };
 
 /**
- * **Save a hull under its certificate, in one transaction** (H-107, #2324).
+ * **Save a hull under its certificate, in one transaction** (H-20261009-certificate-caps-seats, #2324).
  *
  * The check and the write used to be two steps in the settings action, so a
  * departure edited between them could slip past the certificate the save had

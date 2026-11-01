@@ -343,8 +343,10 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
     "the merge pointer itself — structural, and what makes the shell resolve",
   "people.no_certification_cleared_by_person_id": "who cleared the no-card stamp",
   "people.drysuit_experience_seen_by_person_id": "who saw the diver dive dry (#2136)",
-  "people.adult_attested_by_person_id": "who said the diver is 18 or older (H-100)",
-  "shops.shore_alert_consent_by_person_id": "who recorded the shore contact's consent (H-118)",
+  "people.adult_attested_by_person_id":
+    "who said the diver is 18 or older (H-20261007-held-seat-split-into)",
+  "shops.shore_alert_consent_by_person_id":
+    "who recorded the shore contact's consent (H-20261014-stale-roll-call-recipients)",
   "shops.bookkeeper_email_set_by_person_id": "who set the bookkeeper's address (item 35)",
   "pre_departure_check_events.recorded_by_person_id": "who ticked the check",
   "pre_departure_checklist_items.deleted_by_person_id": "who removed the check",
@@ -1310,7 +1312,7 @@ export async function mergeDiverRecords(input: {
           // (`seatPersonIsThisBookings`) stays shut for it (security review
           // 2026-10-17, issue #2665).
           createdByBookingId: null,
-          // A staffer's "18 or older" (H-100) travels as a pair with its author,
+          // A staffer's "18 or older" (H-20261007-held-seat-split-into) travels as a pair with its author,
           // from whichever record has one, survivor first, and only while no
           // date answers the question instead.
           ...(dateOfBirth

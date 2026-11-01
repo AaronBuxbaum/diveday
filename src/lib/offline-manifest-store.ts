@@ -996,7 +996,7 @@ export async function saveOfflineManifest(
           payload.erasureEpochToken,
         )
       : undefined;
-    // **The medical alerts' words** (H-153 amendment). A payload from the
+    // **The medical alerts' words** (H-20261023-medical-alert-for-the amendment). A payload from the
     // server never carries them, and any it did carry are dropped here. Words
     // an explicit save already put on this copy stay through the background
     // refreshes that follow, for every diver the fresh board still flags, so
@@ -1046,7 +1046,7 @@ export async function saveOfflineManifest(
 
 /**
  * **Puts the medical alerts' words on this device's copy of one departure**
- * (H-153 amendment), after a permitted reader tapped save-for-offline and
+ * (H-20261023-medical-alert-for-the amendment), after a permitted reader tapped save-for-offline and
  * `POST /api/offline-manifests/[tripId]/medical-alerts` recorded the save on
  * each diver's trail. Only divers the copy already flags take words, and the
  * copy records who saved them. Null when there is no copy to put them on.
@@ -1080,7 +1080,7 @@ export async function saveOfflineMedicalAlerts(
 }
 
 /**
- * **Takes the medical alerts' words off every copy on this device** (H-153
+ * **Takes the medical alerts' words off every copy on this device** (H-20261023-medical-alert-for-the
  * amendment), keeping the rest of each copy: the roster, the fact of each
  * alert, and every queued roll-call event. Run on sign-out with no argument,
  * and with `keepSavedBy` whenever the server names who is signed in now
@@ -1180,7 +1180,7 @@ export async function appendOfflineRollCall(
     if (!envelope) throw new OfflineManifestError("unavailable");
     // A snapshot kept alive past its retention window (loadOfflineManifest
     // preserves one that still has an unsynced event) is not a boarding
-    // source — the H-05 stop rule treats expired the same as missing. It
+    // source — the H-20260724-product-now-uses-explicit stop rule treats expired the same as missing. It
     // stays readable so its pending evidence can still reconcile, but
     // records no new roll call.
     if (isOfflineManifestExpired(envelope.snapshot)) {

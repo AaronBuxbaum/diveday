@@ -24,7 +24,7 @@ import { log } from "./log";
  * once: the shop home, the trip page and Today's queue each fan out fifteen or
  * sixteen reads in one `Promise.all`, which five connections ran in four
  * waves. Ten runs them in two. Any other URL — a direct Neon connection, an
- * RDS endpoint after H-45 — keeps five, because there a client connection is a
+ * RDS endpoint after H-20260907-far-diveday-migrate-onto — keeps five, because there a client connection is a
  * Postgres backend and the reasoning above still holds.
  */
 export type DbPoolConfig = {
@@ -111,7 +111,7 @@ interface ConnectingPool {
  * and the hourly crons keep it awake only about eleven minutes in sixty, so the first desk request
  * after a lull usually lands on a cold database. Waking usually takes well under a second and can
  * outlast the five-second `connectionTimeoutMillis` above; a second attempt then finds the compute
- * awake. Aaron chose this over paying to keep the compute always on (H-155).
+ * awake. Aaron chose this over paying to keep the compute always on (H-20261023-no-always-on-database).
  *
  * **Only the connection is retried, never a statement.** This replaces the pool's own `connect`,
  * which both `pool.query` (it calls `this.connect` with a callback) and a transaction's checkout

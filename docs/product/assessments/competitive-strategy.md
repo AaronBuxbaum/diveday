@@ -160,7 +160,7 @@ Ordered by leverage per effort; imports touch certs and medical state, so the im
    staff verify at first contact, same as today. Medical flags import fail-closed.
    *Updated 2026-07-24:* a row explicitly claiming a prior waiver acceptance is now trusted (medical
    clearance included) and written as a distinctly-marked `imported` record — a product-owner
-   decision (H-17) that narrows the "medical never imports" rule above; see
+   decision (H-20260724-contact-importer-trust-prior) that narrows the "medical never imports" rule above; see
    [20260724-import-waiver-acceptance](../../architecture/decisions/20260724-import-waiver-acceptance.md).
 3. **Migration guides as public pages** *(S, marketing)*. "Switching from DiveShop360," "…from
    EVE" (the forced-migration pool), "…from DiveAdmin," "…from Smartwaiver," "…from
@@ -223,7 +223,7 @@ Ordered by leverage per effort; imports touch certs and medical state, so the im
 - Don't ship a pledge page before the export button works; DiveAdmin proves rhetoric is cheap.
 - Keep imported evidence honest and distinguishable — an imported cert lands `verified` (the shop's
   own system already checked it) but permanently flagged `imported`, with a soft staff confirm and
-  expiry still enforced; never a silent, unmarked pass (H-20, ADR 20260724-import-verified-cards).
+  expiry still enforced; never a silent, unmarked pass (H-20260724-contact-importer-trust-shop, ADR 20260724-import-verified-cards).
 
 ## Implications for the queue
 

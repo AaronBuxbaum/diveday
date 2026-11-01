@@ -44,7 +44,7 @@ measured in ADR `20260806-one-trip-create-form`. A redirect that must answer a r
 `route.ts` Route Handler emitting a literal 308, with a request-level status assertion
 (`expect(response.status()).toBe(308)`) in its spec, and it re-checks the session server-side
 per ADR-0006. Copy an existing one: `src/app/shop/route.ts`. There are no redirects kept for
-old URLs: a moved page is not left behind (H-49).
+old URLs: a moved page is not left behind (H-20260815-no-legacy).
 
 ## Client navigation races the skeleton
 

@@ -61,7 +61,7 @@ export function BookingsGroup({
           />
         ) : null}
 
-        {/* The DiveDay browser extension (H-105): whether this browser has
+        {/* The DiveDay browser extension (H-20261008-cert-check-extension): whether this browser has
             it, where to get it once it is listed, and a try-it disclosure (#2817).
             Nothing to save. PADI's own opt-in is a row on the Features page. */}
         <SettingsRow

@@ -152,7 +152,7 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   // Its own step under the crew count, never a tie a sort could reverse.
   blocked_aboard: 3.5,
   // **A boat that left with somebody also rostered on another departure at
-  // those hours** (H-80, issue #1814). Nobody has said anyone is missing, so it
+  // those hours** (H-20260916-may-one-hull-carry, issue #1814). Nobody has said anyone is missing, so it
   // sits under every roll-call row and under a blocked diver already aboard,
   // which is a named person with a known problem; but the manifest may name a
   // crew member who is on the other boat, and souls-on-board is read over the
@@ -198,11 +198,11 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   // `instructor_missing` is a session whose divers **are** supervised and
   // which cannot certify or enrol them — a sale and a signature, not a boat.
   uncrewed_departure: 11,
-  // **One person rostered on two departures at once** (H-80, issue #1776). One
+  // **One person rostered on two departures at once** (H-20260916-may-one-hull-carry, issue #1776). One
   // of the two boats will sail without them, so it sits beside the zero-crew
   // row rather than with the advisory ones; it ranks just under it because the
   // boat it names does have somebody rostered, and the fix is one call.
-  // **Two departures on one hull at once** (H-80, issue #2135). The same fault
+  // **Two departures on one hull at once** (H-20260916-may-one-hull-carry, issue #2135). The same fault
   // as the crew clash seen from the boat, and the move that makes one usually
   // makes the other, so it sits just above it: a hull cannot sail twice, a
   // person at least can be swapped.
@@ -232,7 +232,7 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   // hurt, and both are fixed ashore before the lines come off.
   emergency_card_blank: 13.6,
   high_wind_alert: 14,
-  // **A boat's paper has lapsed** (H-136): hull insurance, registration or the
+  // **A boat's paper has lapsed** (H-20261015-lapsed-boat-papers-loud): hull insurance, registration or the
   // safety inspection past its date — the fact that makes a claim uncovered.
   // Loud, under the kit and the weather, and still never a gate.
   boat_papers_lapsed: 14.5,
@@ -729,7 +729,7 @@ export const ACTION_KIND_META = {
   // but it is the one boat row nobody should scroll past.
   boat_safety_kit: { tone: "danger" },
   // Neutral while a paper is only coming due; danger once it has run out
-  // (H-136); warning once kit the boat is meant to carry has.
+  // (H-20261015-lapsed-boat-papers-loud); warning once kit the boat is meant to carry has.
   boat_papers_due: { tone: "neutral" },
   boat_papers_lapsed: { tone: "danger" },
   boat_safety_expired: { tone: "warning" },
@@ -822,7 +822,7 @@ export function rollCallGapUrgency(reason: RollCallGapReason, stale: boolean): T
 }
 
 /**
- * **Where a crew clash stands, for Today** (H-80, issues #1776 and #1814).
+ * **Where a crew clash stands, for Today** (H-20260916-may-one-hull-carry, issues #1776 and #1814).
  *
  * Asked of the subject departure's own legs the clash falls on, not of the
  * departure: a three-day course clashing on its third morning has a clash to
@@ -969,7 +969,7 @@ export type TodayAction = {
   /**
    * A lone diver whose headline is a card still waiting for its check
    * (`certification_pending`): who, so the shop home can offer the agency check
-   * from the row (H-105). `cards` is empty as the queue words the row and filled
+   * from the row (H-20261008-cert-check-extension). `cards` is empty as the queue words the row and filled
    * by the read (`withAgencyChecks`, `src/db/today.ts`); a row whose diver holds
    * no card the extension can check has none.
    */
@@ -1314,7 +1314,7 @@ export function diverBlockerAction(
       ),
       readiness: true,
     },
-    // Never on a held seat (H-13): the human on this booking may not be the
+    // Never on a held seat (H-20260724-one-person-per-email): the human on this booking may not be the
     // one whose cards are on file, so nobody checks that person's card from
     // here until a staffer confirms who it is. Said outright, not left to
     // which blocker heads the row.
@@ -1922,7 +1922,7 @@ function stationFor(departure: SpineDeparture, rows: readonly TodayAction[]): Da
  * row about one of those (`today.outTripIds`) files under the desk, where it
  * still names its own boat, rather than into the week's count behind a link:
  * a boat on the water with a question about who is aboard is today's work
- * (dive-domain-expert review of H-80, 2026-10-06).
+ * (dive-domain-expert review of H-20260916-may-one-hull-carry, 2026-10-06).
  *
  * Stations arrive in clock order, and nothing re-orders them: the crew-first
  * ordering the departure board used is deliberately gone,

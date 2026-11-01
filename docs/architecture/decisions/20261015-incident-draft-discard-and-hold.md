@@ -7,7 +7,7 @@
 
 Amends [20261012-incident-reports](20261012-incident-reports.md). A draft started on the wrong
 departure had no way out, and a report tied to an open claim would be pruned at seven years
-([H-112](../../product/human-decisions/H-112-incident-report-retention.md) kept the window).
+([H-20261013-incident-report-retention](../../product/human-decisions/H-20261013-incident-report-retention.md) kept the window).
 Aaron decided both on 2026-10-13 (issues #2391, #2530): an owner-only soft Delete of an unfiled
 draft, and an owner-set hold that retention skips.
 
@@ -25,7 +25,7 @@ draft, and an owner-set hold that retention skips.
   `anonymizeDiver` scrubs a diver's name from a report's words and addenda whether or not the report
   is held, and the held report stays (its seat links under the erased name, its dates, its
   non-personal fields). A hold never stops an erasure; it stops the seven-year prune and the
-  discard of a draft. Counsel (H-112) may narrow this; until then the diver's request outranks the
+  discard of a draft. Counsel (H-20261013-incident-report-retention) may narrow this; until then the diver's request outranks the
   claim on the words that name them.
 - **What the owner is told:** the Delete confirm says the draft's words are kept for seven years,
   because they are (see Consequences).

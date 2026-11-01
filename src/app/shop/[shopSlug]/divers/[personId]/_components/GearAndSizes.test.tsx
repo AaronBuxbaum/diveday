@@ -197,7 +197,7 @@ describe("GearAndSizes", () => {
     expect(screen.queryByLabelText("Drysuit size")).not.toBeInTheDocument();
   });
 
-  it("asks a hood and glove size each, in free text, only for what the shop rents (H-102)", () => {
+  it("asks a hood and glove size each, in free text, only for what the shop rents (H-20261007-hood-glove-sizes)", () => {
     renderGear(
       makeRentalFit({ rentsHood: true, hoodSize: "M, 5 mm", rentsGloves: true, gloveSize: "L" }),
       ["hood", "gloves"],
@@ -234,7 +234,7 @@ describe("GearAndSizes", () => {
   });
 
   /**
-   * The suit is one choice of four (H-78): a staffer taking a call can record
+   * The suit is one choice of four (H-20260916-rental-fit-describe-shop): a staffer taking a call can record
    * a diver in their own drysuit, which no tick could say, and can never
    * record two suits for one diver.
    */

@@ -23,7 +23,7 @@ import type { Notification } from "./kinds";
  */
 export function shopVoiceOf(notification: Notification): string | null {
   switch (notification.kind) {
-    // The shore contact is asked by the shop it agrees to hear from (H-118);
+    // The shore contact is asked by the shop it agrees to hear from (H-20261014-stale-roll-call-recipients);
     // the owner's own address and the front desk's are DiveDay asking.
     case "address_confirmation":
       return notification.purpose === "shore_alert" ? notification.shopName : null;
@@ -56,7 +56,7 @@ export function shopVoiceOf(notification: Notification): string | null {
     case "course_certified":
     case "interest_received_ack":
     // The shore contact is asked, and later told, by the shop it agreed to
-    // hear from (H-118).
+    // hear from (H-20261014-stale-roll-call-recipients).
     case "roll_call_stale_shore":
     // The bookkeeper hears from the shop that set their address (item 35).
     case "bookkeeper_month_end":

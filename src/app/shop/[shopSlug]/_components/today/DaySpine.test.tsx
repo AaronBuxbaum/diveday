@@ -24,7 +24,7 @@ vi.mock("@/app/shop/[shopSlug]/actions", () => ({
   acknowledgeCrewAwayAction: vi.fn(),
   helpRequestAction: vi.fn(),
 }));
-// The agency check's host (H-105) wraps the spine and repaints through the
+// The agency check's host (H-20261008-cert-check-extension) wraps the spine and repaints through the
 // router when a "Check all" ends; no app router is mounted here.
 vi.mock("next/navigation", async (importOriginal) => ({
   ...(await importOriginal<typeof import("next/navigation")>()),
@@ -47,7 +47,7 @@ afterEach(() => {
 
 /**
  * **The evening reading** — ADR 20260827-clearwater-surface-language, decision
- * 4, and H-62, which removed `/close-out` in the same change that shipped
+ * 4, and H-20260827-close-out-remain-own, which removed `/close-out` in the same change that shipped
  * this.
  *
  * There is nothing to press to end the day: it is over when the boats are

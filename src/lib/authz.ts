@@ -83,7 +83,7 @@ export function canViewShopReports(roles: readonly Role[] | undefined): boolean 
 
 /**
  * Role boundaries on the five surfaces the product owner scoped as "not every
- * staff member's job" (H-14). Until now any staff role could reach all of them;
+ * staff member's job" (H-20260724-staff-role-reach). Until now any staff role could reach all of them;
  * the daily crew — captains, crew, and divemasters — run the water, but money,
  * legal templates, roster deletion, and what a trip *is* are owner/manager work
  * (trip *configuration* also opens to instructors, who own course sessions and
@@ -219,7 +219,7 @@ export function canManageWaiverTemplates(roles: readonly Role[] | undefined): bo
  * own were shop-wide policy anybody on the water could quietly rewrite.
  *
  * So the page itself is owner/manager work now, in line with every other
- * "changes the shop, not the day" surface (H-14, ADR
+ * "changes the shop, not the day" surface (H-20260724-staff-role-reach, ADR
  * 20260724-role-authorization).
  *
  * **`/settings/calendar` is deliberately outside this gate.** A staff calendar
@@ -410,7 +410,7 @@ export function canReadMedicalAlert(
 
 /**
  * Who prints a departure's packet **with the medical alerts' words on it**
- * (issue #2990, H-153 amendment of 2026-10-24): the owner and a manager, the
+ * (issue #2990, H-20261023-medical-alert-for-the amendment of 2026-10-24): the owner and a manager, the
  * readers who hold the words on every departure. Paper records no read of its
  * own, so the print is the read: the server writes one `medical_alert_printed`
  * line per diver when it produces the sheet. Crew who read the words on
@@ -423,7 +423,7 @@ export function canPrintMedicalAlerts(roles: readonly Role[] | undefined): boole
 
 /**
  * Who may open a diver's medical alert **in an emergency** when
- * {@link canReadMedicalAlert} refuses them (issue #2990, H-153 amendment of
+ * {@link canReadMedicalAlert} refuses them (issue #2990, H-20261023-medical-alert-for-the amendment of
  * 2026-10-24): any active staffer of the shop, only on the days of the
  * diver's trip in the shop's zone (`emergencyReadWindow`: from the start of
  * the day it leaves until the later of the end of the day it is due back and
@@ -529,7 +529,7 @@ export function canReadEveryIncidentReport(roles: readonly Role[] | undefined): 
  * and their admission rules are instructor-owned, but stays closed to captains,
  * crew, and divemasters, who operate the trips owners/managers set up.
  *
- * **Not the crew, and not cancelling a single departure for weather.** H-14's
+ * **Not the crew, and not cancelling a single departure for weather.** H-20260724-staff-role-reach's
  * own record says so — a `dive-domain-expert` review on 2026-07-24 narrowed
  * this gate to trip *definition* (details, requirements, whole-series
  * operations, creation, reinstate) and left the day-of operating actions the
@@ -577,7 +577,7 @@ export function canOverrideCertBlock(roles: readonly Role[] | undefined): boolea
 
 /**
  * Rewrite what a diver themselves asked for in their rental fit — sizes, and
- * which pieces they want (H-06). Deliberately *not* the same thing as packing
+ * which pieces they want (H-20260724-initial-gear-policy-sizing). Deliberately *not* the same thing as packing
  * the boat: any staff member may substitute a real available item and flag a
  * diver for hands-on fitting, because that is the day's work and the safe
  * fallback. Overwriting the diver's stated request is the in-water judgement

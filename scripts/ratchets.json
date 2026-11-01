@@ -311,7 +311,7 @@
         }
       },
       {
-        "why": "merge of the pre-push-gate branch: the file-length half now counts test files, and the 2026-10-14 test review's safety cases (H-104, S2, admission/readiness adversarial tests) grew these before it landed",
+        "why": "merge of the pre-push-gate branch: the file-length half now counts test files, and the 2026-10-14 test review's safety cases (H-20261006-medical-holds-every-departure, S2, admission/readiness adversarial tests) grew these before it landed",
         "files": {
           "src/db/seat-claims.test.ts": "1047 -> 1094",
           "src/db/self-declared-cards.test.ts": "1864 -> 1865",

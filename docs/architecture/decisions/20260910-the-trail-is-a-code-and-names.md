@@ -66,7 +66,7 @@ property below rests on its absence.
 the seed exists to make that a rendered thing rather than a claim — and would have left the demo
 showing less than the product can do.
 
-**Existing rows are deleted, not backfilled** (`.claude/rules/db.md`, H-49). There is no mapping
+**Existing rows are deleted, not backfilled** (`.claude/rules/db.md`, H-20260815-no-legacy). There is no mapping
 from a free sentence back to a code, and DiveDay is pre-pilot.
 
 ## Consequences

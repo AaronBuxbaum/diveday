@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// The monthly restore drill (pre-mortem 2026-10-23, item 3; H-154): restore the newest full-cluster
+// The monthly restore drill (pre-mortem 2026-10-23, item 3; H-20261023-first-restore-run-by): restore the newest full-cluster
 // dump into a scratch Neon branch, sign in as a seeded staffer, read tomorrow's manifest, delete
 // the branch. Run by .github/workflows/restore-drill.yml; the procedure and every secret it needs
 // are in docs/engineering/backup-and-restore-runbook.md ("Monthly restore drill").

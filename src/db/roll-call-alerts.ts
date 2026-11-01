@@ -45,11 +45,11 @@ import { liveTrip, notRehearsal } from "./trips-live";
  *
  * The message carries two counts, summed across the departure's diver and
  * crew rows: the people recorded not back aboard, and the people with no
- * result yet (EAP review on H-118). Who they are is never in it: counts and a
+ * result yet (EAP review on H-20261014-stale-roll-call-recipients). Who they are is never in it: counts and a
  * link to the manifest, behind its sign-in. A demo shop and a rehearsal never
  * alert.
  *
- * **The shore contact hears too** (H-118, decided 2026-10-15), once the shop
+ * **The shore contact hears too** (H-20261014-stale-roll-call-recipients, decided 2026-10-15), once the shop
  * recorded their consent and their inbox confirmed it (`shoreAlertRecipient`):
  * one email per departure, in the shop's default language, naming the shop and
  * its phone, the departure, the dive, the counts and when it was sent, with
@@ -65,7 +65,7 @@ export type StaleRollCallSummary = {
   /** Departures this pass reached somebody about, owners or shore. */
   alerted: number;
   emails: number;
-  /** Of `emails`, the ones to a shop's shore contact (H-118). */
+  /** Of `emails`, the ones to a shop's shore contact (H-20261014-stale-roll-call-recipients). */
   shoreEmails: number;
   pushes: number;
   /** Owners' claims given back because no owner email or push landed. */

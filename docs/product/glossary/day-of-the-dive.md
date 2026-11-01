@@ -14,7 +14,7 @@
   a counter payment, a disconnected account, or a Stripe refusal still leaves the refund to staff.
   Only a caller with the refund right (owner or manager) sends the card refunds as it runs; anyone
   else who calls it off leaves them queued for one of those two to release
-  ([H-139](../human-decisions/H-139-call-off-queues-refunds-for-a-refund-holder.md)).
+  ([H-20261013-call-off-queues-refunds](../human-decisions/H-20261013-call-off-queues-refunds.md)).
   A departure **underway** (past its start time, or with anybody recorded at roll call) cannot be
   blown out, and the day call is for owners, managers and captains only.
   **It cancels the *trip* and leaves every booking active**, and every reader downstream has to expect that
@@ -101,7 +101,7 @@
   200 characters on one line, no link of any kind except the diver's own `/ready` link DiveDay
   adds, at most three per departure, and never to a canceled or sailed departure. A multi-day
   course has sailed once its last day has, so the desk can reach students between days, and the
-  note names the day still to come rather than day one (H-110, #2393). Sent as a
+  note names the day still to come rather than day one (H-20261025-departure-note-limits, #2393). Sent as a
   **held send** with the same eight-second Undo every held send has; the checks run at the hold
   and again when it drains. Recorded in `departure_notes` and on the activity trail
   (`src/lib/departure-notes.ts`, `src/db/departure-notes.ts`).
@@ -145,7 +145,7 @@
   shop day, said on Today's evening as "Tomorrow from tonight" and on the printed packet
   (`/print?day=tomorrow`). Tanks are (divers + diving crew) × dives, one cylinder per diver per
   dive, with nitrox counted only for seats with a verified card. A count, never a fill log
-  ([H-11](../human-decisions/H-11-nitrox-fill-station-procedure-ppo.md)): each cylinder is still analyzed and signed for at the
+  ([H-20260730-nitrox-fill-station-procedure](../human-decisions/H-20260730-nitrox-fill-station-procedure.md)): each cylinder is still analyzed and signed for at the
   fill station. It shows once today's boats are past their last scheduled return, or on a day
   with none (`loadOutDue`, `dayLoadOut` in `src/lib/closeout.ts`).
 - **Back from the boat** — the Gear tab's list, once a departure is home, of every unit that went

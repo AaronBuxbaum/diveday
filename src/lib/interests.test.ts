@@ -52,7 +52,7 @@ function requires(
 }
 
 /**
- * **H-96's test, "did the diver ask for this?"** (Aaron, H-145 D-2 option b,
+ * **H-20261006-staff-trip-invitation-service's test, "did the diver ask for this?"** (Aaron, H-20261005-one-interest-table-names D-2 option b,
  * 2026-10-17). Service mail reaches a diver whatever their courtesy setting and
  * carries no way out, so only what the diver asked for, where they asked it,
  * may be service; everything the shop chose stays commercial.

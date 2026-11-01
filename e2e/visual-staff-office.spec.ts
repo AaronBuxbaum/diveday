@@ -62,7 +62,7 @@ for (const scheme of ["light", "dark"] as const) {
         expect(seeded.ok(), await seeded.text()).toBe(true);
         await page.goto("/shop/blue-mantis/courses");
         // The first ladder row: the demo now seeds two shop-certified cards
-        // of its own (H-148), so "See who" is on more than one step.
+        // of its own (H-20261022-demo-seeds-six-hidden), so "See who" is on more than one step.
         const people = page.getByText("See who", { exact: true }).first();
         await people.waitFor();
         await expect(page.locator("#cards-to-process-earlier")).toHaveCount(0);

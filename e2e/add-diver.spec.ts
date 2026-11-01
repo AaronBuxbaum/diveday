@@ -503,7 +503,7 @@ test("a refusal from the global door lands on the boat's Divers tab", async ({ p
  * Hana Park on the night dive with June Park's email, so the seat hangs on
  * June's record. "Different person" gives the seat a record of its own, named
  * the way it was booked, and the row stops asking. It asks her age first: a
- * date of birth, or the staffer's "18 or older" (H-100).
+ * date of birth, or the staffer's "18 or older" (H-20261007-held-seat-split-into).
  */
 test("a held seat that is someone else gets its own diver record", async ({ page }) => {
   await page.goto("/shop/blue-mantis/schedule/board");
@@ -514,7 +514,7 @@ test("a held seat that is someone else gets its own diver record", async ({ page
 
   await row.getByText("Different person").click();
   await expect(row.getByLabel("Name for their own record")).toHaveValue("Hana Park");
-  // H-100: with neither a date of birth nor "They're 18 or older", a blank date
+  // H-20261007-held-seat-split-into: with neither a date of birth nor "They're 18 or older", a blank date
   // would read as an adult, so the split is refused and the seat stays held.
   await row.getByRole("button", { name: "Give them their own record" }).click();
   await expect(page.getByRole("status")).toContainText("Add their date of birth.");

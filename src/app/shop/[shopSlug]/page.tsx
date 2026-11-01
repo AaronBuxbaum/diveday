@@ -85,7 +85,7 @@ type EveningNoticeMap = Record<string, EveningNotice> & Record<FitKeepRefusalCod
 
 /**
  * The evening's own `?notice=` codes, re-homed here when `/close-out` folded into this page
- * (H-62). Every code is unchanged — a bookmark carrying one still lands on the right words,
+ * (H-20260827-close-out-remain-own). Every code is unchanged — a bookmark carrying one still lands on the right words,
  * because the 308 keeps the query and this page answers it. The refusals are why this is a tone
  * table rather than a bare key map: `invalid` is a recap send that failed, a crew photo this
  * departure cannot take, or a fit-keep whose reservation the desk could not re-prove, and

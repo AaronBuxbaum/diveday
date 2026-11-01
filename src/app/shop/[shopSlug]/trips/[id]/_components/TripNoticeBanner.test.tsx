@@ -85,7 +85,7 @@ describe("TripNoticeBanner", () => {
    * finding). Unsigned, the param was a way for anyone who could get a staffer
    * to open a link to render a fabricated, *specific* refusal — the kind that
    * names a card and points at the certifications form, where a hand-entered
-   * card lands `pending` and clears `decideTripAdmission` next attempt (H-24).
+   * card lands `pending` and clears `decideTripAdmission` next attempt (H-20260725-two-findings-dive-domain).
    */
   describe("diver-trip-prerequisite's structured detail", () => {
     it("names the level and the diver's card when the gate is signed for this departure", () => {
@@ -164,7 +164,7 @@ describe("resolveTripNotice", () => {
   /**
    * The two trip doors (`SEAT_SURFACES["trip-guests"]` and `["new-booking"]`)
    * land a held seat here — a booking attached to an existing diver on a guess,
-   * which the boarding gate refuses until someone confirms it (H-13, issue
+   * which the boarding gate refuses until someone confirms it (H-20260724-one-person-per-email, issue
    * #1556). It used to land as the plain `diver-added`, so the staffer learned
    * the seat was held on the next tap, at the check-in queue
    * (`dive-domain-expert`, 2026-09-11). Distinct words, and a tone that is not
@@ -180,7 +180,7 @@ describe("resolveTripNotice", () => {
   });
 
   /**
-   * Remove refused for a diver marked aboard a boat that has left (H-133). The
+   * Remove refused for a diver marked aboard a boat that has left (H-20261015-aboard-diver-removal-at). The
    * name is the page's own roster's, never the URL's, so a hand-edited `bid`
    * with no seat behind it says nothing rather than a sentence about nobody.
    */

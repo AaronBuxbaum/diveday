@@ -1,6 +1,6 @@
 # 20260902-the-maker-is-the-proof — Put the founder's background back on the marketing pages, as proof rather than a résumé
 
-- **Status:** Proposed — two of its decisions are the owner's (H-66); the rest is the canvas's
+- **Status:** Proposed — two of its decisions are the owner's (H-20260725-founder-background-go-back); the rest is the canvas's
   recommendation and moves nothing until that row is Chosen
 - **Date:** 2026-09-02
 - **Scope:** The public marketing pages (`/`, `/product`, `/pricing`, `/about`, `/switching/*`,
@@ -34,7 +34,7 @@ argues each in pictures:
 3. **Support is described as a mailbox.** "A real person reads it" is on every page and any rival
    can paste it; FareHarbor's pitch is 24/7 support by phone, so "support exists" cannot win on
    volume. The one support sentence no incumbent can write is *who* answers. It was retired on
-   2026-08-05 (H-12) because "founder-direct" read small — beside "One person owns every line of
+   2026-08-05 (H-20260724-public-founding-shop-price) because "founder-direct" read small — beside "One person owns every line of
    code", a sentence about headcount. The subject of the sentence was the problem, not the fact.
 4. **The copy sounds machine-written.** Every sentence is a finished line: the "X — not Y" tail,
    the balanced pair, the triplet for rhythm, the closing aphorism. One is a good sentence; forty
@@ -43,7 +43,7 @@ argues each in pictures:
 
 ## Decision
 
-Proposed, in five parts. Parts 1 and 3 are the owner's to confirm and are recorded as H-66.
+Proposed, in five parts. Parts 1 and 3 are the owner's to confirm and are recorded as H-20260725-founder-background-go-back.
 
 1. **`/about` gets a "Who builds it" band, with the name in it, directly under the hero.** It
    replaces the nameless founder band. The origin story stays as its first paragraph and names Aaron
@@ -63,7 +63,7 @@ Proposed, in five parts. Parts 1 and 3 are the owner's to confirm and are record
    one sentence, one link to `/about` at link weight, and a hairline ledger where a mockup would
    sit whose labels are the three confirmed facts and whose values are **shipped product facts a
    visitor can check in the demo** (screens open fast on a phone; every roll call and correction
-   is kept; readiness that cannot be verified is said so). Nothing in this band waits on H-66. The
+   is kept; readiness that cannot be verified is said so). Nothing in this band waits on H-20260725-founder-background-go-back. The
    hero's pinned budget (one primary, one secondary) is untouched.
 3. **The support sentence names the builders, plural, and nobody by name: "read by the people who
    build DiveDay".** Recommended over today's "a real person" (any rival can paste it) and over
@@ -71,7 +71,7 @@ Proposed, in five parts. Parts 1 and 3 are the owner's to confirm and are record
    It lands in five places — `/pricing`'s included list and closing question, `/about`'s "How it's
    run" band and "Who answers you" row, and the homepage's contact half — always as *read*, never
    *answered*, and **never with a response time, a day, or an hour budget.** It does not reverse the
-   2026-08-05 retirement in H-12: no individual is named and no personal answer is promised, so it
+   2026-08-05 retirement in H-20260724-public-founding-shop-price: no individual is named and no personal answer is promised, so it
    sharpens the line the policy already allows (the inbox reaches the same team) rather than
    restoring the one it retired. It still takes the owner's nod, because it is a promise about who
    reads, and it is retired the day the inbox is handed to someone who does not build the product.
@@ -93,8 +93,8 @@ Proposed, in five parts. Parts 1 and 3 are the owner's to confirm and are record
    through the list before it was drawn.
 
 The claims policy in [marketing.md](../../product/marketing.md) is amended in the code phase to
-record parts 3, 4 and 5 and to un-retire the biography block under part 1's shape; H-12's row in
-[human-decisions/](../../product/human-decisions/README.md) is amended by H-66's outcome, never
+record parts 3, 4 and 5 and to un-retire the biography block under part 1's shape; H-20260724-public-founding-shop-price's row in
+[human-decisions/](../../product/human-decisions/README.md) is amended by H-20260725-founder-background-go-back's outcome, never
 rewritten.
 
 ## Alternatives considered
@@ -130,7 +130,7 @@ rewritten.
   says small, new vendor, on faith, or borrow credibility.
 - The rulebook contradicts itself today and 15e resolves it: [marketing.md](../../product/marketing.md)'s
   claims policy retires founder-direct support in one bullet and, further down the same section,
-  still lists it among the binding founding-cohort commitments from H-12. Part 3 is judged against
+  still lists it among the binding founding-cohort commitments from H-20260724-public-founding-shop-price. Part 3 is judged against
   the retirement, and 15e rewrites both passages to say one thing.
 - Escape hatch: the day the inbox is handed to someone who does not build the product, part 3
   reverts to "a real person" by editing five strings; the day the owner wants the biography off again, part 1 reverts

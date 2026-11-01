@@ -4,7 +4,7 @@
 -- Lines written before carry the name alone. These statements give them their
 -- subject where the trail itself proves it; a line they cannot pin to exactly
 -- one person stays without one and the log leaves it out. DiveDay is pre-pilot
--- (H-49), so this runs over seed and demo rows: it exists so a demo departure's
+-- (H-20260815-no-legacy), so this runs over seed and demo rows: it exists so a demo departure's
 -- log does not lose its late seat changes.
 --
 -- A seat line: the one person holding a seat on that departure under the name

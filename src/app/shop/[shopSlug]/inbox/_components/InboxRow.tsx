@@ -307,7 +307,7 @@ export function InboxRow({
                   {t("inbox.replyByEmail")}
                 </a>
               ) : null}
-              {/* An "Ask to move" (H-126) is about another date, never this
+              {/* An "Ask to move" (H-20261014-ask-to-move) is about another date, never this
               boat's lateness: its seat carries no late window. */}
               {lateAction && message.channel !== "page"
                 ? lateSeats

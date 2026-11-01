@@ -37,7 +37,7 @@ const ANSWERS: Record<string, ShopAnswer["answer"]> = {
  * signature on the current terms, it becomes her standing release, and she is
  * as ready after as before: the alert informs and never gates.
  *
- * Only crew someone else put on the boat read the words (H-153, review
+ * Only crew someone else put on the boat read the words (H-20261023-medical-alert-for-the, review
  * fixes), and a seeded roster names nobody, so the shop's owner is recorded
  * as having assigned this one departure's crew.
  *

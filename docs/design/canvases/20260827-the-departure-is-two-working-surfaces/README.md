@@ -76,7 +76,7 @@ recomposes it; it inherits component-level restyles only.
 
 Two more things here are stale by design rather than mistakes to redraw:
 
-- The chrome strips in these boards predate H-62 — Close-out is folded into the home, and the
+- The chrome strips in these boards predate H-20260827-close-out-remain-own — Close-out is folded into the home, and the
   tab set is Today · Check-in · Divers · Board · More.
 - The type ramp and elevation defer to Clearwater 6a
   ([20260827-clearwater-surface-language](../20260827-clearwater-surface-language/SPEC.md)) — the

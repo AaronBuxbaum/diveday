@@ -164,7 +164,7 @@ describe("RentalFitForm geometry", () => {
         currency="usd"
       />,
     );
-    // The drysuit is a suit choice now, a radio rather than a tick (H-78), and
+    // The drysuit is a suit choice now, a radio rather than a tick (H-20260916-rental-fit-describe-shop), and
     // it keeps the same price column as the ticks.
     const priceOf = (role: "checkbox" | "radio", item: RegExp) =>
       screen.getByRole(role, { name: item }).closest("label")?.parentElement?.lastElementChild;
@@ -542,7 +542,7 @@ describe("RentalFitForm Gear-Status Light-up Indicator", () => {
  * field below a wetsuit select that starts there, as this shop having nothing
  * for a small-framed diver.
  *
- * The grid itself is a PROPOSAL pending the owner's confirmation (H-76); these
+ * The grid itself is a PROPOSAL pending the owner's confirmation (H-20260912-drysuit-sizes-diver-own); these
  * tests are what pin it, and changing them is the whole cost of changing the
  * scale.
  */
@@ -567,7 +567,7 @@ describe("RentalFitForm drysuit size (issue 1414)", () => {
   /**
    * A size the grid cannot represent (issue #1728).
    *
-   * H-76 sanctions these: `MS`, `ML`, `LS` and `MLT` are real sizes a shop
+   * H-20260912-drysuit-sizes-diver-own sanctions these: `MS`, `ML`, `LS` and `MLT` are real sizes a shop
    * that stocks one records staff-side, where the field is free text. And
    * `drysuit_size` is the one field on the fit that reaches the packing list
    * verbatim, so "ML, rock boot 9" is how a neoprene-sock fleet says a diver
@@ -615,7 +615,7 @@ describe("RentalFitForm drysuit size (issue 1414)", () => {
   });
 
   it("clears the stored size when the diver says they are not sure", () => {
-    // H-76 wants this path to exist: "Not sure, help me fit it" leaves the fit
+    // H-20260912-drysuit-sizes-diver-own wants this path to exist: "Not sure, help me fit it" leaves the fit
     // incomplete on purpose, so the hands-on fitting path picks the diver up.
     // Pinned so the next reader knows the clearing is a decision and not the
     // bug above wearing a different hat — an empty string reaches
@@ -718,7 +718,7 @@ describe("RentalFitForm drysuit size (issue 1414)", () => {
    * a short diver a suit cut for a tall one. Every code is now a girth letter
    * with at most a `T` after it, and that is what this pins — a size whose
    * second character means something else does not belong in a diver's select,
-   * whatever the owner answers on H-76.
+   * whatever the owner answers on H-20260912-drysuit-sizes-diver-own.
    */
   it("says one thing by the second letter: a girth letter, optionally tall", () => {
     const { container } = renderDrysuit();
@@ -803,7 +803,7 @@ describe("RentalFitForm drysuit size (issue 1414)", () => {
 });
 
 /**
- * **The suit is one choice** (H-78, issues #1752 and #1800). A diver dives one
+ * **The suit is one choice** (H-20260916-rental-fit-describe-shop, issues #1752 and #1800). A diver dives one
  * suit, and most drysuit divers own theirs; two independent ticks could say
  * neither of those things.
  */
@@ -855,7 +855,7 @@ describe("RentalFitForm suit choice", () => {
 
   it("gives a drysuit example for the weighting once the diver picks a drysuit", () => {
     // A wetsuit number is short for a dry diver, and the example is the one
-    // sentence on the form that suggests a number (H-78).
+    // sentence on the form that suggests a number (H-20260916-rental-fit-describe-shop).
     renderSuit({ ...emptyFit, rentsWeights: true }, ["weights", "wetsuit"]);
     const weighting = () => screen.getByRole("textbox", { name: /^Usual weight setup/ });
     expect(weighting()).toHaveAttribute("placeholder", "e.g. 16 lb with a 3 mm suit");

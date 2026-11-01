@@ -84,7 +84,7 @@ export const shopContactEmailConfirmationTokens = pgTable(
 );
 
 /**
- * **The shore contact's two links** (H-118 review): `confirm`, the one-time
+ * **The shore contact's two links** (H-20261014-stale-roll-call-recipients review): `confirm`, the one-time
  * link a saved address receives before any alert goes to it, and `stop`, the
  * link every alert carries that takes the address off the shop.
  *
@@ -96,7 +96,7 @@ export const shopContactEmailConfirmationTokens = pgTable(
  * unable to stop the mail, the reasoning the unsubscribe tokens above give);
  * using it clears the shop's shore contact only while the shop still names
  * the address it was sent to, and doing so twice is the same as once. Rows
- * age out with H-02's retention prune.
+ * age out with H-20260730-evidence-retention-period-deletion's retention prune.
  *
  * `email` is lower-cased: the address the link vouches for, and the handle an
  * erasure sweeps it by.
@@ -132,7 +132,7 @@ export const notificationKind = pgEnum("notification_kind", [
   "booking_confirmation",
   "waiver_request",
   // One link, to an address typed cold into a booking form that matches a
-  // diver on file, bringing their details across (H-68 b). Nothing on the
+  // diver on file, bringing their details across (H-20260906-diveday-fill-already-knows b). Nothing on the
   // page says whether it went; the delivery row is what keeps it to one.
   "booking_handoff",
   // The diver's own rescue for a trip-prep link that aged out: they ask from
@@ -486,7 +486,7 @@ export const inboundChannel = pgEnum("inbound_channel", [
   "whatsapp",
   /**
    * The diver's own booking page (`/ready/[token]`): an "Ask to move" past the
-   * free-cancellation window (H-126). Nothing to answer *on* — the shop calls
+   * free-cancellation window (H-20261014-ask-to-move). Nothing to answer *on* — the shop calls
    * or writes back from the record — so a reply composer never targets it.
    */
   "page",
@@ -574,7 +574,7 @@ export const inboundMessages = pgTable(
     keywordIntent: inboundKeywordIntent("keyword_intent"),
     /**
      * The seat this message is about, when the diver said so rather than the
-     * Inbox inferring it (H-126): an "Ask to move" from the booking page names
+     * Inbox inferring it (H-20261014-ask-to-move): an "Ask to move" from the booking page names
      * its booking. Null on every message that arrived by email or WhatsApp,
      * whose seat is still read off the diver's open bookings.
      */
@@ -728,7 +728,7 @@ export const shopWhatsappAccounts = pgTable(
       .references(() => shops.id),
     /**
      * Meta's id for the sending number — the path segment of the Cloud API send
-     * endpoint, and **the tenant key for everything inbound** (H-83, issue
+     * endpoint, and **the tenant key for everything inbound** (H-20260916-may-dive-chain-share, issue
      * #1767). Meta names it in `value.metadata.phone_number_id` on every
      * webhook change, and `shopIdForWhatsAppEvent` turns it into the shop whose
      * bookings a reply keyword acts on. The unique index below is why that
@@ -739,7 +739,7 @@ export const shopWhatsappAccounts = pgTable(
     displayPhoneNumber: text("display_phone_number"),
     /**
      * The WhatsApp Business Account the number belongs to. **Shared across
-     * shops on purpose** (H-83): a chain with one Meta Business and a number
+     * shops on purpose** (H-20260916-may-dive-chain-share): a chain with one Meta Business and a number
      * per location connects each shop to its own number under the one WABA.
      * It is never the tenant key: an event naming a WABA is placed only when
      * its number's row records that same WABA (`shopIdForWhatsAppEvent`).

@@ -68,14 +68,14 @@ export type RentalFit = {
   wetsuitSize: string | null;
   /** On the drysuit scale, never the wetsuit's (issue 1414, schema.ts). */
   drysuitSize: string | null;
-  /** Free text, like the drysuit's (H-102): a hood and gloves both by size and thickness. */
+  /** Free text, like the drysuit's (H-20261007-hood-glove-sizes): a hood and gloves both by size and thickness. */
   hoodSize: string | null;
   gloveSize: string | null;
   bootSize: string | null;
   finSize: string | null;
   weightPreference: string | null;
   /**
-   * **The diver is in a drysuit**, their own or ours (H-78, issue #1752) —
+   * **The diver is in a drysuit**, their own or ours (H-20260916-rental-fit-describe-shop, issue #1752) —
    * `rental_fit_profiles.dives_dry`. What the diver wears, where every
    * `rents*` flag above is what the shop hands over. The in-water weight check
    * keys on it (see `rentedItems`).
@@ -83,7 +83,7 @@ export type RentalFit = {
   divesDry: boolean;
   /**
    * Set when staff couldn't fill a requested size and flagged the diver for
-   * hands-on fitting instead (H-06). Their pieces stay on the packing lines
+   * hands-on fitting instead (H-20260724-initial-gear-policy-sizing). Their pieces stay on the packing lines
    * with the count intact — dropping them arrives a BCD short with nothing to
    * fit them from — but a *sized* piece carries no size, because packing a
    * size nobody chose is exactly what this state exists to prevent. Unsized
@@ -231,7 +231,7 @@ export type PrepPiece = {
    */
   drysuitFinFit: boolean;
   /**
-   * The gloves of a diver in a drysuit (H-102, dive-domain review). A drysuit
+   * The gloves of a diver in a drysuit (H-20261007-hood-glove-sizes, dive-domain review). A drysuit
    * diver may wear wet gloves or dry gloves on a ring system, and those are
    * different things off the rack, so the line asks rather than reading like
    * any other pair to pull.
@@ -251,7 +251,7 @@ export type PrepPiece = {
    * **Never set on a piece this booking already holds** on the gear register
    * (a live reservation, `heldGearKinds`): the unit is on its peg with the
    * diver's name against it, so "you no longer rent this" would be the wrong
-   * sentence a few rows from "Drysuit #3 · checked out" (issue #1811, H-78).
+   * sentence a few rows from "Drysuit #3 · checked out" (issue #1811, H-20260916-rental-fit-describe-shop).
    */
   notOffered: boolean;
 };
@@ -264,7 +264,7 @@ export type PrepLine = {
   count: number;
   divers: string[];
   /**
-   * This line's divers are flagged for hands-on fitting (H-06), so the count is
+   * This line's divers are flagged for hands-on fitting (H-20260724-initial-gear-policy-sizing), so the count is
    * real but the size is deliberately absent — bring a range in their band and
    * fit them in person. Distinct from a plain null size, which means nobody
    * ever wrote one down.
@@ -403,7 +403,7 @@ export type DivePrepChecklist = {
   }[];
   /**
    * Divers whose stated size couldn't be filled, flagged for hands-on fitting
-   * (H-06). Their pieces stay on `lines` with the count intact and the size
+   * (H-20260724-initial-gear-policy-sizing). Their pieces stay on `lines` with the count intact and the size
    * blanked — fit them from what is actually aboard rather than packing
    * against a size the shop is short of.
    */
@@ -479,7 +479,7 @@ const _everyKindHasAPackingPosition: Record<KindWithNoPackingPosition, never> = 
  * recorded" on the packing line, naming a gap that cannot be filled by
  * anybody. The complement of the sized kinds is the answer, and taking it from
  * the same constant is what stops the two lists disagreeing again: when a hood
- * and gloves gained a size each (H-102), they left this list by themselves.
+ * and gloves gained a size each (H-20261007-hood-glove-sizes), they left this list by themselves.
  */
 const SIZED = new Set<string>(SIZED_RENTAL_KINDS);
 export const UNSIZED_ITEM_KINDS: readonly RentalItemKind[] = KIND_ORDER.filter(
@@ -550,7 +550,7 @@ function offersKind(
 
 /**
  * **The pieces this booking already holds a unit of**, read off the gear
- * register's live reservations (issue #1811, ruled under H-78: the rule lives
+ * register's live reservations (issue #1811, ruled under H-20260916-rental-fit-describe-shop: the rule lives
  * here, once, so the prep list and the manifest cannot drift apart).
  *
  * A held piece is never marked as one the shop no longer rents: the unit is
@@ -600,7 +600,7 @@ function paidPiecesAtCheckIn(
  * even with no size recorded: fins don't fit over bare feet, so a missing boot
  * size is a loose end to chase, never a reason to leave boots off the list.
  *
- * A diver flagged for hands-on fitting (H-06) still contributes every piece.
+ * A diver flagged for hands-on fitting (H-20260724-initial-gear-policy-sizing) still contributes every piece.
  * Dropping them under-packs the boat — the count is the number the packer
  * actually works from, and a regulator or computer has no size to be wrong
  * about in the first place. What changes is that their *sized* pieces carry no
@@ -620,7 +620,7 @@ function rentedItems(
   const flagged = Boolean(fit.needsStaffFitAt);
   const offers = (kind: RentalItemKind) => offersKind(offered, kind, held);
   /**
-   * **The diver is in a drysuit**, whoever owns it (H-78).
+   * **The diver is in a drysuit**, whoever owns it (H-20260916-rental-fit-describe-shop).
    *
    * `divesDry` is the diver's own answer about what they wear, and the writer
    * holds `rents_drysuit` to it (a rented drysuit is a dry diver — a check
@@ -677,7 +677,7 @@ function rentedItems(
   });
   /**
    * Weights: a piece that records a value but has no stock *size* to be short
-   * of, so the H-06 flag leaves it alone. Lead is bulk stock in 2 lb
+   * of, so the H-20260724-initial-gear-policy-sizing flag leaves it alone. Lead is bulk stock in 2 lb
    * increments — a shop is never "out of 12 lb" — and usual weighting is the
    * most safety-relevant number in the fit. Under-weighting is a diver who
    * can't hold a safety stop; over-weighting is an over-inflated BCD and a bad
@@ -733,7 +733,7 @@ function rentedItems(
    * reading like any other size to pull. A diver already flagged for hands-on
    * fitting keeps "fit at check-in", which is this same job done in person.
    *
-   * **Whenever the diver dives dry**, owned suit or rented (H-78 names this
+   * **Whenever the diver dives dry**, owned suit or rented (H-20260916-rental-fit-describe-shop names this
    * signal): every drysuit has a boot, and the stated shoe size is the foot,
    * not the boot.
    */
@@ -772,7 +772,7 @@ function rentedItems(
   // shoe size either, which is what `fins` above marks rather than what
   // this line handles.
   if (fit.rentsDrysuit) items.push(sized("drysuit", fit.drysuitSize));
-  // Two kinds with a free-text size each (H-102, issue #1816).
+  // Two kinds with a free-text size each (H-20261007-hood-glove-sizes, issue #1816).
   if (fit.rentsHood) items.push(sized("hood", fit.hoodSize));
   if (fit.rentsGloves) {
     items.push({ ...sized("gloves", fit.gloveSize), drysuitGloves: inDrysuit && !flagged });
@@ -847,7 +847,7 @@ export function buildDivePrepChecklist(input: {
    * nobody can be given. It also decides which pieces are still the shop's to
    * hand over at all: a piece the catalog has dropped is marked
    * (`PrepPiece.notOffered`). It never decides whether a diver is in a
-   * drysuit: that is their own answer (`divesDry`, H-78), so the weight check
+   * drysuit: that is their own answer (`divesDry`, H-20260916-rental-fit-describe-shop), so the weight check
    * and the fin sizing survive a catalog edit.
    *
    * Omit it and every item counts — which is what a caller with no catalog to

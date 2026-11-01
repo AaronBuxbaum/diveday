@@ -32,7 +32,7 @@ describe("ageOnDate", () => {
 });
 
 describe("checkMinimumAge", () => {
-  it("is unknown with no date of birth on file — the caller fails open (H-08)", () => {
+  it("is unknown with no date of birth on file — the caller fails open (H-20260724-certification-levels-agency-rules)", () => {
     expect(checkMinimumAge(null, 15, "2026-07-24")).toEqual({ status: "unknown" });
     expect(checkMinimumAge(undefined, 15, "2026-07-24")).toEqual({ status: "unknown" });
   });
@@ -68,7 +68,7 @@ describe("checkMinimumAge", () => {
 describe("isMinorOnDate", () => {
   it("treats 18 as majority, not the diving world's 15", () => {
     // A 16-year-old holds a full (non-junior) card at 15, but is still a minor
-    // for the guardian-signature question H-21 exists to surface.
+    // for the guardian-signature question H-20260730-minimum-age-gate-data exists to surface.
     expect(isMinorOnDate("2010-03-01", "2026-07-24")).toBe(true);
     expect(isMinorOnDate("2008-07-24", "2026-07-24")).toBe(false);
   });

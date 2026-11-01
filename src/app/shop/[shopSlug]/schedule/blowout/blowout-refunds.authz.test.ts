@@ -25,8 +25,8 @@ const ctx = fileScopedShopContext();
 
 /**
  * **Calling a departure off is the crew's; the refunds it triggers are not**
- * (H-139, issue #2459). Four doors call departures off and the same rule holds
- * at each: a caller without the refund right (`canRefund`, H-14) cancels and
+ * (H-20261013-call-off-queues-refunds, issue #2459). Four doors call departures off and the same rule holds
+ * at each: a caller without the refund right (`canRefund`, H-20260724-staff-role-reach) cancels and
  * tells the divers but leaves every capture where it is, and a refund holder
  * sends it back. The seam asserted is the Stripe-bound refund call itself, not
  * a notice string.

@@ -451,7 +451,7 @@ test("a full boat lets a diver join the wait list without taking a seat", async 
   await expect(page.getByText(/Asked /).last()).toBeVisible();
 });
 
-// H-13: a self-service booking that reuses an existing diver's email under a
+// H-20260724-one-person-per-email: a self-service booking that reuses an existing diver's email under a
 // genuinely different name (a shared inbox — a spouse, a minor under a parent's
 // email) must not silently inherit that diver's certs/waiver. It is held with an
 // identity blocker until staff confirm it is the same person.

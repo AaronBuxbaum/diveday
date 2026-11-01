@@ -24,7 +24,7 @@ import {
 const ctx = fileScopedShopContext();
 
 /**
- * **A card certified by the agency's own page** (H-105).
+ * **A card certified by the agency's own page** (H-20261008-cert-check-extension).
  *
  * The extension hands back whatever text the agency's page showed; the verdict
  * is the server's, from the card and the diver as the database holds them.

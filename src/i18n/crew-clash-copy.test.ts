@@ -4,7 +4,7 @@ import { STAFF_MESSAGES } from "./staff-messages";
 
 /**
  * **Every sentence about a crew clash states the fact — rostered on both —
- * and never an impossibility** (H-80, issue #1780).
+ * and never an impossibility** (H-20260916-may-one-hull-carry, issue #1780).
  *
  * This guard used to require the opposite. Issue #1345 found the Move panel's
  * line stating a coincidence ("is already on {departure} at that time") in the
@@ -12,7 +12,7 @@ import { STAFF_MESSAGES } from "./staff-messages";
  * #1779 carried that sentence to the Crew panel, the staffing week, the
  * roster's refusal and the boat manifest, and this file followed each one.
  *
- * H-80 then ruled on what a clash *is*. "Cannot be on both" is false of an
+ * H-20260916-may-one-hull-carry then ruled on what a clash *is*. "Cannot be on both" is false of an
  * arrangement a shop can deliberately build — one captain across a course
  * group and a fun-dive group — and under "one hull, one departure at a time"
  * a shop models that as one departure with two groups. So every surface says

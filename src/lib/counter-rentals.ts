@@ -303,7 +303,7 @@ export function isOneCoreSet(
 
 /**
  * **What a counter rental says about the person's waiver** (issue #2261,
- * decided by Aaron 2026-10-09, H-108): it informs and never blocks.
+ * decided by Aaron 2026-10-09, H-20261008-counter-rental-waiver-informs): it informs and never blocks.
  *
  * The shop-wide release is the person's (`shopWaiverStatus`, src/lib/waivers.ts),
  * so a person who signed on any booking, or on a link sent from their record,
@@ -339,10 +339,10 @@ export function counterRentalWaiverFlag(
 /**
  * What the Rentals list carries of a counter holder's standing (#2540): its
  * state, and for a current release standing over a physician's earlier "not
- * cleared" or an open referral (H-98 as amended), the day of each, so the list
+ * cleared" or an open referral (H-20261007-after-physician-says-no as amended), the day of each, so the list
  * says the warning the ticket says (`CounterRentalWaiverLine`). Days only: the
  * record behind them stays a tap away on the ticket and the diver record.
- * Informing only, never a gate (H-108).
+ * Informing only, never a gate (H-20261008-counter-rental-waiver-informs).
  */
 export type CounterRentalWaiverStanding = {
   state: ShopWaiverStatus["state"];

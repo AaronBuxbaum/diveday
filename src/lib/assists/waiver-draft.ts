@@ -7,7 +7,7 @@ import type { StructuredCall } from "@/lib/claude/structured";
  * 20261018-claude-assists; the `waiver-import` assist). The answer lands in
  * the release editor's text box and nowhere else: nothing changes for a diver
  * until the owner reads it, edits it and publishes it through the editor's
- * own Publish, with its materiality choice (H-54). It is not legal advice, and
+ * own Publish, with its materiality choice (H-20260822-may-shop-explicitly-declare). It is not legal advice, and
  * the editor says so beside the button.
  *
  * The PDF is the shop's blank form, so it should hold no person. It is read

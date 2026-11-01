@@ -23,7 +23,7 @@ import { latestTripStage } from "./trip-stages";
  * anywhere refuses it here: a cancelled or deleted departure, a boat that has
  * sailed, a held departure, a course session (no non-divers on a course), and
  * both limits read under the trip-row lock — the hull's own capacity and the
- * certificate's passenger limit (H-107, `sellableCapacity`).
+ * certificate's passenger limit (H-20261009-certificate-caps-seats, `sellableCapacity`).
  *
  * Two refusals are this door's own, both read before the seat is made:
  *

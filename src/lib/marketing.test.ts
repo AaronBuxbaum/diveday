@@ -34,7 +34,7 @@ function marketingMessages(locale: (typeof DIVER_LOCALES)[number]): Record<strin
 }
 
 /**
- * H-12's single-source rule, enforced where it is easiest to break it: the
+ * H-20260724-public-founding-shop-price's single-source rule, enforced where it is easiest to break it: the
  * message bundles. `earlyAccessPrice.price` is the one place the figure exists
  * (docs/product/marketing.md, "The price renders only from src/lib/marketing.ts"),
  * so a sentence that shows it must interpolate it — a bundle that spells the
@@ -55,7 +55,7 @@ describe("the price is interpolated, never spelled out in a bundle", () => {
    * whole argument is that nothing here is hidden — and the two lines every
    * feature page prints beside its checklist and its close. `/product`'s
    * money band carried one from 2026-08-28 until the hub became the directory
-   * of the feature pages (H-93). Each addition here is the point: a new
+   * of the feature pages (H-20261005-public-pages-sell). Each addition here is the point: a new
    * surface that shows the price must interpolate it or this list is where it
    * fails.
    */
@@ -147,7 +147,7 @@ describe("the mid-season answer is one shared key", () => {
  * doors" — roadmap slice 12c). Every assertion here is a claims-policy
  * obligation: the trial note has to say the four things a burned buyer is
  * actually asking, and it has to say nothing beyond them, because billing
- * cadence, taxes and the contract flow are still undecided (H-12).
+ * cadence, taxes and the contract flow are still undecided (H-20260724-public-founding-shop-price).
  */
 describe("the trial's terms stand at the pricing doors", () => {
   /** What the note must name, in each locale's own words. */
@@ -161,7 +161,7 @@ describe("the trial's terms stand at the pricing doors", () => {
    * left `/pricing` on 2026-10-24 (visual review B11: the notes beside the
    * invoice already say it), so the note is the trial's one statement, and it
    * may name the card it does not take and no other billing term: publishing
-   * billing terms needs the decision H-12 leaves open.
+   * billing terms needs the decision H-20260724-public-founding-shop-price leaves open.
    */
   const billingVocabulary = {
     "en-US": [
@@ -316,7 +316,7 @@ describe("the pricing FAQ points at the set-up form", () => {
 });
 
 /**
- * The site speaks as the company: "we", and no person named (H-146). The
+ * The site speaks as the company: "we", and no person named (H-20261022-the-site-says-we). The
  * builder's notes under the screens were the last first-person singular
  * lines ("I left it out on purpose", "I wrote the trial…").
  */
@@ -371,7 +371,7 @@ describe("the pricing page says the trial and card fees once", () => {
  * this pins both halves: the pricing key is gone, and the boat manifest page
  * still carries the sentence the row was made of. It moved there from
  * `/product`'s dock chapter on 2026-10-05, when the hub became the directory
- * of the feature pages (H-93).
+ * of the feature pages (H-20261005-public-pages-sell).
  */
 describe("the manifest's offline answer lives on the boat manifest page alone", () => {
   for (const locale of DIVER_LOCALES) {
@@ -452,7 +452,7 @@ describe("the export's credentials claim never overstates what is held back", ()
 });
 
 /**
- * The continuity promise is the product owner's own sentence (H-101, Aaron
+ * The continuity promise is the product owner's own sentence (H-20261007-continuity-promise, Aaron
  * Buxbaum, 2026-10-07: "We can publish that exact promise"). These pin its
  * three commitments in every locale and its two homes, so a later rewrite of
  * either page cannot quietly drop it or soften it. Changing its words is a

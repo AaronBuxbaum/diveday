@@ -1,5 +1,5 @@
 # Once the gate is on, a push to main no longer builds production; this
-# workflow deploys a commit after its CI on main is green (H-158;
+# workflow deploys a commit after its CI on main is green (H-20261021-deploy-gate-from-first;
 # scripts/deploy-gate.mjs has the mechanism and why it is this one). It stops
 # push-triggered builds, and with them a red commit's migration. It is not an
 # access control: anyone holding a Vercel token can still deploy production.

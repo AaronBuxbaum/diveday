@@ -242,7 +242,7 @@ export async function getTripOverview(
   // This page states the supervision claim, so it reads each rostered
   // professional's recorded ratings against the departure's last shop-local
   // day, as Today and the staffing week do (issue #1853). The booking gate on
-  // this same trip does not: it sells on the roster's claim (H-59).
+  // this same trip does not: it sells on the roster's claim (H-20260825-staff-credentials-renewal-clock).
   const { credentials, shiftCoverage } = crewEvidence;
   const divesOn = lastDayOfDeparture(trip.endsAt, shop.timezone);
   const firstCrewDay = calendarDateInTimezone(trip.startsAt, shop.timezone);
@@ -312,7 +312,7 @@ export async function getTripOverview(
   // roster, and there are three of those rather than the one `moveTrip` this
   // comment used to name (`crewClashes`' own docblock, "Three doors, not one").
   //
-  // And the hull's own (H-80, issue #1780): one boat, one departure at a time,
+  // And the hull's own (H-20260916-may-one-hull-carry, issue #1780): one boat, one departure at a time,
   // asked by the same overlap predicate. The Details form writes `boat_id` and
   // the window with no read of either, so this is the only place that door
   // gets an answer.

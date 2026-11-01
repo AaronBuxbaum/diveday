@@ -7,14 +7,14 @@
 
 [20260718-vercel-hosting](20260718-vercel-hosting.md) selected Vercel as the web host but
 deliberately left the managed Postgres provider unchosen, tracked as
-[H-04](../../product/human-decisions/README.md) in the human decision log ("this ADR deliberately does
+[H-20260724-vercel-selected-web-hosting](../../product/human-decisions/README.md) in the human decision log ("this ADR deliberately does
 not choose a database vendor or store secrets"). [ADR-0005](0005-database.md) separately deferred
 only the production driver, anticipating `drizzle-orm/node-postgres` "when hosting lands."
 
-The product owner has now made the H-04 call directly: added Neon through Vercel's native
+The product owner has now made the H-20260724-vercel-selected-web-hosting call directly: added Neon through Vercel's native
 Marketplace integration, which provisions a Neon Postgres project and injects connection env vars
 (`DATABASE_URL`, `DATABASE_URL_UNPOOLED`, etc.) into the Vercel deployment. This record is the
-implementation half of H-04 — the provider choice and connection plumbing — not a re-decision of
+implementation half of H-20260724-vercel-selected-web-hosting — the provider choice and connection plumbing — not a re-decision of
 hosting itself.
 
 ## Decision
@@ -40,7 +40,7 @@ hosting itself.
 - `AUTH_SECRET` is **not** provided by the Neon integration — it's a separate Vercel project
   environment variable required for `next-auth` in production (see
   [ADR-0006](0006-auth.md)); `.env.example` documents it alongside the DB vars.
-- H-04's remaining scope — named database/secrets/backup/incident owner — is still open; this ADR
+- H-20260724-vercel-selected-web-hosting's remaining scope — named database/secrets/backup/incident owner — is still open; this ADR
   resolves the technical half (provider, driver, migration procedure), not the ownership half.
 - Certification-card object storage is now provisioned through a private Vercel Blob store. Email
   and payments remain deferred as described in `product/features/roadmap.md`.
@@ -53,9 +53,9 @@ hosting itself.
 - **`drizzle-orm/neon-serverless`** (`@neondatabase/serverless` `Pool`, WebSocket) — real
   transactions like node-postgres, but needs a `ws` polyfill outside edge/browser and buys nothing
   over plain `pg` since this app runs no edge routes today.
-- **Wait for a named H-04 owner before wiring code** — the standing default per
+- **Wait for a named H-20260724-vercel-selected-web-hosting owner before wiring code** — the standing default per
   [20260718-vercel-hosting](20260718-vercel-hosting.md); superseded here because the product owner
-  made the provider call directly by adding the integration, which is itself the H-04 outcome for
+  made the provider call directly by adding the integration, which is itself the H-20260724-vercel-selected-web-hosting outcome for
   the provider question.
 - **Run migrations for every Vercel build** — rejected because preview deployments build
   concurrently and should not mutate their databases. The build script gates the command on
@@ -72,7 +72,7 @@ hosting itself.
   preview branches start as a copy-on-write fork of the production branch and do not receive
   migrations automatically. Apply preview-only migrations deliberately if a preview needs to
   exercise a new schema.
-- H-04 still needs a named owner for backups, secrets rotation, and incident response before this
+- H-20260724-vercel-selected-web-hosting still needs a named owner for backups, secrets rotation, and incident response before this
   is production-ready for real customer data — update the human decision log when that's assigned.
 - Escape hatch: if connection-count pressure or edge-runtime needs show up later, revisit toward
   `neon-serverless`; the `getDb()` seam and this ADR's alternatives section are the starting point.

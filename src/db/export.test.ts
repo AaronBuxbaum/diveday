@@ -60,7 +60,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // The inbound reply address's routing token (ADR 20260907-two-way-inbox):
     // a credential in all but name, so a restored shop is minted a fresh one.
     "inbound_email_token",
-    // H-118 and item 35: an address, its consent, confirmation and send state; a restore asks afresh.
+    // H-20261014-stale-roll-call-recipients and item 35: an address, its consent, confirmation and send state; a restore asks afresh.
     "shore_alert_email",
     "shore_alert_consent_at",
     "shore_alert_consent_by_person_id",
@@ -95,7 +95,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "recap_shoutout", // recap copy travels with recap_photos.csv
     "recap_auto_send_paused", // auto-send countdown / pause is ephemeral operational state
     "recap_auto_send_at",
-    // When this installation alerted the owners, and the shore contact (H-118),
+    // When this installation alerted the owners, and the shore contact (H-20261014-stale-roll-call-recipients),
     // about a stale after-dive roll call: once-per-departure send state, like
     // `recap_auto_send_at`. The roll-call events travel in their own file.
     "roll_call_alerted_at",
@@ -121,12 +121,12 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
   bookings: [
     "shop_id",
     "pending_checkout_intent_id", // in-flight Stripe attempt, meaningless elsewhere
-    "identity_unconfirmed_at", // H-13 review state, not a shop record
-    "identity_booked_as", // H-13 review state: the name the held booking was made under
+    "identity_unconfirmed_at", // H-20260724-one-person-per-email review state, not a shop record
+    "identity_booked_as", // H-20260724-one-person-per-email review state: the name the held booking was made under
     "reschedule_missed_from", // a notice owed to a held seat (#2445), cleared once sent
     "reschedule_missed_place", // the same: whether the meeting point moved too
     ...FLY_SAFE_EXPORT_EXCLUSIONS,
-    "identity_matched_by", // H-13 review state: why the booking was matched
+    "identity_matched_by", // H-20260724-one-person-per-email review state: why the booking was matched
     // A held seat's desk-recorded emergency contact (#2145): read only while
     // the seat is held, and moved onto the new record at a split.
     "held_emergency_contact_name",
@@ -201,7 +201,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
   booking_checkout_bookings: ["shop_id", "id"],
   incident_reports: [
     "shop_id",
-    // H-142, #2694: send leases and the alert's subject row id, like `roll_call_alerted_at`.
+    // H-20261016-missing-diver-report-alerts, #2694: send leases and the alert's subject row id, like `roll_call_alerted_at`.
     "missing_alerted_at",
     "missing_all_clear_claimed_at",
     "missing_all_clear_leased_at",
@@ -1047,7 +1047,7 @@ describe("full-shop export dataset", () => {
   });
 
   /**
-   * **`buddy_pairs.csv` is a file a person reads too** (H-81, issue #1795).
+   * **`buddy_pairs.csv` is a file a person reads too** (H-20260916-tiebreaker-user-visible-list, issue #1795).
    * The old clause was `asc(created_at), asc(pair_id)`, and every member row of
    * a team shares its `pair_id`, so two teams formed in one instant fell
    * through to whatever Postgres returned. Now: each team's rows together,

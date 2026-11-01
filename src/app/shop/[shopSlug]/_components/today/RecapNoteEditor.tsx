@@ -29,7 +29,7 @@ export type RecapNoteEditorContext = {
     caption: string | null;
     diverName: string;
     bookingId: string;
-    /** Shared by its diver with everyone on the boat (H-129); deleting it removes it from every recap. */
+    /** Shared by its diver with everyone on the boat (H-20261014-share-photo-with-boat); deleting it removes it from every recap. */
     sharedWithBoat?: boolean;
   }[];
   deletePhotoAction?: (formData: FormData) => void;
@@ -323,7 +323,7 @@ export function RecapNoteEditor({ context }: { context: RecapNoteEditorContext }
                     {photo.caption ? (
                       <p className="truncate text-xs text-muted">{photo.caption}</p>
                     ) : null}
-                    {/* It reaches every recap on the boat (H-129), so whoever
+                    {/* It reaches every recap on the boat (H-20261014-share-photo-with-boat), so whoever
                         takes it down knows how far it went. */}
                     {photo.sharedWithBoat ? (
                       <p className="truncate text-xs text-muted">

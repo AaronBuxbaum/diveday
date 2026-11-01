@@ -35,8 +35,8 @@ async function goToDiver(page: Page, name: string) {
 }
 
 /**
- * The three user-visible behaviours of ADR 20260724-gear-fit-fallback: H-06's
- * "needs staff fit" fallback and its override gate, and H-08's fail-open
+ * The three user-visible behaviours of ADR 20260724-gear-fit-fallback: H-20260724-initial-gear-policy-sizing's
+ * "needs staff fit" fallback and its override gate, and H-20260724-certification-levels-agency-rules's fail-open
  * minimum-age gate.
  */
 test.describe("staff", () => {
@@ -157,7 +157,7 @@ test.describe("staff", () => {
 });
 
 /**
- * Both layers of ADR-0006 for the H-06 gate: what the deck crew's screen
+ * Both layers of ADR-0006 for the H-20260724-initial-gear-policy-sizing gate: what the deck crew's screen
  * offers, and what the server does when the screen is bypassed. The second is
  * the one that matters — hiding a button is not authorization.
  */
@@ -240,7 +240,7 @@ test.describe("deck crew", () => {
   });
 });
 
-test.describe("minimum age (H-08, fail open)", () => {
+test.describe("minimum age (H-20260724-certification-levels-agency-rules, fail open)", () => {
   signedInAsOwner();
 
   /**
@@ -351,7 +351,7 @@ test.describe("minimum age (H-08, fail open)", () => {
     await expect(page.getByText(`Young Diver ${stamp}`)).toHaveCount(0);
   });
 
-  test("names the real reason on the diver's own checklist once a date on file makes them under age (H-22)", async ({
+  test("names the real reason on the diver's own checklist once a date on file makes them under age (H-20260724-minimum-age-gate-fail)", async ({
     page,
   }) => {
     // Keep this one journey across two actors: the public booking must happen

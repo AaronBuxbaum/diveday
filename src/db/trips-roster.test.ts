@@ -226,7 +226,7 @@ describe("getTripRoster", () => {
   });
 
   /**
-   * **The accepted cost, pinned** (H-81, issue #1759). Filling in a walk-up's
+   * **The accepted cost, pinned** (H-20260916-tiebreaker-user-visible-list, issue #1759). Filling in a walk-up's
    * real name re-orders that diver inside their own same-instant group, so a
    * sheet printed before the edit and the screen after it disagree about which
    * body is which line. The owner ruled that this is the price of a

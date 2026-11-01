@@ -2,33 +2,33 @@
 
 Two distinct workstreams that share a discipline but not a stakeholder: **(A)** DiveDay's own
 coverage, and **(B)** the shop-side underwriting answer that becomes a sales asset. Status of
-record: [human-decisions/](../human-decisions/README.md) row **H-19** (DiveDay's own coverage); the
+record: [human-decisions/](../human-decisions/README.md) row **H-20260730-diveday-itself-carry-technology** (DiveDay's own coverage); the
 shop-side one-pager is a Phase-0 deliverable named in the
-[rollout plan](../rollout.md#01-legal-and-policy-h-01-h-02-h-03-v-03--start-immediately-longest-lead).
+[rollout plan](../rollout.md#01-legal-and-policy-h-20260730-jurisdiction-waiver-text-medical-h-20260730-evidence-retention-period-deletion-h-20260724-current-typed-name-explicit-v-03--start-immediately-longest-lead).
 
 ## Why this blocks rollout
 
 - DiveDay stores medical flags and waiver evidence for a safety-adjacent activity. Holding a
   pilot shop's real data with no E&O/cyber coverage concentrates every failure mode on the
-  founder personally (compounded until H-18 separates the entity — see
-  [legal.md](legal.md#the-entity-decision-h-18)).
+  founder personally (compounded until H-20260724-corporate-footing-diveday-operate separates the entity — see
+  [legal.md](legal.md#the-entity-decision-h-20260724-corporate-footing-diveday-operate)).
 - Pilot shops will ask "does using DiveDay affect my liability coverage?" in the first
   conversation. Without a prepared answer, the sales conversation stalls exactly where the
   product is strongest (the evidence model).
 
-## Workstream A — DiveDay's own coverage (H-19)
+## Workstream A — DiveDay's own coverage (H-20260730-diveday-itself-carry-technology)
 
 **Who:** a commercial insurance broker who quotes technology E&O + cyber for early-stage
 software companies (digital-first brokers quote this in days; a local commercial broker works
 too). Not the dive-industry brokers — this is ordinary tech insurance.
 
 **When:** quotes this week; bound **before a pilot shop's real data is live**, and ideally before
-the pilot agreement is signed so the agreement can reference coverage. Needs the H-18 entity
+the pilot agreement is signed so the agreement can reference coverage. Needs the H-20260724-corporate-footing-diveday-operate entity
 direction first — the policy names the insured entity.
 
 **What to have prepared:**
 
-- Entity details (or the H-18 plan), projected first-year revenue (modest: capped founding
+- Entity details (or the H-20260724-corporate-footing-diveday-operate plan), projected first-year revenue (modest: capped founding
   cohort at $99/location/month — see [marketing.md](../marketing.md)).
 - A one-page data inventory: what is stored (waiver records with medical flags, certification
   card photos, contact details, payment references — *no card numbers; Stripe holds those*),
@@ -38,7 +38,7 @@ direction first — the policy names the insured entity.
   offline manifest snapshots ([ADR](../../architecture/decisions/20260718-offline-manifest-snapshots.md)),
   [rate limiting](../../architecture/decisions/20260724-rate-limiting.md), auth model
   ([ADR](../../architecture/decisions/0006-auth.md)), backups and the named incident-response
-  owner (H-04).
+  owner (H-20260724-vercel-selected-web-hosting).
 
 **Questions for the broker:**
 
@@ -49,7 +49,7 @@ direction first — the policy names the insured entity.
   readiness blocker not shown)? What exclusions apply to bodily-injury-adjacent claims?
 - What will underwriting want to see at renewal that we should start recording now?
 
-**Record the outcome in H-19:** carrier, limits, effective date — or a written decision to
+**Record the outcome in H-20260730-diveday-itself-carry-technology:** carrier, limits, effective date — or a written decision to
 proceed uninsured (make that deliberate, never a default).
 
 ## Workstream B — the shop-side underwriting answer (sales asset)
@@ -59,7 +59,7 @@ historically Vicencia & Buckley / HUB International); DAN's risk-mitigation prog
 and reference; and, during Phase 1, each pilot shop's own broker if they ask.
 
 **When:** Phase 0, in the same weeks as the legal engagement — the
-[rollout plan](../rollout.md#01-legal-and-policy-h-01-h-02-h-03-v-03--start-immediately-longest-lead)
+[rollout plan](../rollout.md#01-legal-and-policy-h-20260730-jurisdiction-waiver-text-medical-h-20260730-evidence-retention-period-deletion-h-20260724-current-typed-name-explicit-v-03--start-immediately-longest-lead)
 treats it as part of the same push.
 
 **The question to get answered:** do digitally signed releases with DiveDay's evidence model meet
@@ -77,16 +77,16 @@ rollout plan calls for. Outline:
 2. How medical disclosures are handled and who can see them.
 3. How the manifest/roll call record is kept (append-only) and what the offline copy is and isn't.
 4. How the shop gets every record out, any time.
-5. The open items we do not claim (whatever H-01–H-03 have not yet cleared — keep this honest,
+5. The open items we do not claim (whatever H-20260730-jurisdiction-waiver-text-medical, H-20260730-evidence-retention-period-deletion, H-20260724-current-typed-name-explicit have not yet cleared — keep this honest,
    per the [claims policy](../marketing.md)).
 
 This asset is *marketing-adjacent*: it must obey the claims policy (the no-signal roll call only
-as [H-94](../human-decisions/README.md#decision-register) words it, never as tested on a boat before
-V-02 passes; no legal-sufficiency claims before H-03 is signed off).
+as [H-20260802-may-public-pages-say](../human-decisions/README.md#decision-register) words it, never as tested on a boat before
+V-02 passes; no legal-sufficiency claims before H-20260724-current-typed-name-explicit is signed off).
 
 ## Where outcomes land
 
-- H-19 row updated with the bound coverage.
+- H-20260730-diveday-itself-carry-technology row updated with the bound coverage.
 - The one-pager becomes part of the design-partner packet
   ([commercial-and-industry.md](commercial-and-industry.md)); if it makes public claims it goes
   through [marketing.md](../marketing.md)'s claims policy first.

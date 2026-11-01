@@ -10,7 +10,7 @@ const SEEDED_DIVER = "Tyler Brooks";
 const DEPARTURE = /Two-Tank Reef — French Reef/;
 
 /**
- * **Automatic GUE checks from a departure and Today, with SSI excluded from Check all** (H-105).
+ * **Automatic GUE checks from a departure and Today, with SSI excluded from Check all** (H-20261008-cert-check-extension).
  *
  * As in `agency-check.spec.ts` (the installed extension is
  * `agency-check-extension.spec.ts`'s), the agencies' pages are not ours to hit, so this stands in for the extension at

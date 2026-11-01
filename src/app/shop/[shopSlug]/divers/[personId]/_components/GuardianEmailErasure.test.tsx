@@ -7,7 +7,7 @@ vi.mock("../record-actions", () => ({ eraseGuardianEmailAction: vi.fn() }));
 
 afterEach(cleanup);
 
-/** H-103, issue #1673: one shut danger band per guardian address, typed back to erase. */
+/** H-20261007-guardian-email-erasure, issue #1673: one shut danger band per guardian address, typed back to erase. */
 describe("GuardianEmailErasure", () => {
   it("renders nothing when no release on this record carries a guardian's address", () => {
     const { container } = render(

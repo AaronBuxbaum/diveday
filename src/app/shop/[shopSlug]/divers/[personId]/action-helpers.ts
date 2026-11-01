@@ -62,7 +62,7 @@ export function backTo(base: string, notice: string, form?: string, card?: strin
  * Deliberately **not** a role predicate. `isStaff` asks "are you staff at this
  * shop at all", which every crew role answers yes to, so capturing, reviewing,
  * deleting and restoring a card stay exactly as open as they have always been
- * and H-48 — the open product-owner question about *which* roles may sight a
+ * and H-20260814-may-sight-card — the open product-owner question about *which* roles may sight a
  * card — is untouched. What it adds is the one thing a JWT cannot tell you: an
  * account since demoted, removed or disabled still holds a valid token until it
  * expires, and `requireStaffSession` will hand it back.

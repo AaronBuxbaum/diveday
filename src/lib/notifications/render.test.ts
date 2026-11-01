@@ -238,7 +238,7 @@ describe("messageFor", () => {
         expect(email.html).not.toContain("1 Harbor Rd");
       });
 
-      // H-145 D-2 option b (Aaron, 2026-10-17): the diver joined this
+      // H-20261005-one-interest-table-names D-2 option b (Aaron, 2026-10-17): the diver joined this
       // departure's wait list, so the seat is service mail in the wait list's words.
       it("tells a waiting diver a seat opened, with neither a way out nor the address", () => {
         const email = messageFor({

@@ -23,7 +23,7 @@ export function noDiveDayNeedsSaying(matches: readonly { lastDiveDayAt: Date | n
 
 /**
  * The date of birth a candidate's line may print, or null when it prints
- * nothing (H-79, issue #1698).
+ * nothing (H-20260916-unconfirmed-identity-withhold-cost, issue #1698).
  *
  * Null is the normal case at this prompt: the staff create-diver form does not
  * ask for a date of birth, so a record the counter made has none. The three

@@ -2,7 +2,7 @@ import { DAY_MS } from "@/lib/clock";
 
 /**
  * **Who to ask when a boat could use divers** (fifth-loop ideas, items 43 to
- * 45; H-130).
+ * 45; H-20261014-one-to-one-invite).
  *
  * A one-to-one invite to a past diver, sent by staff for a named departure, is
  * service mail the shop may send now, on four conditions: one at a time,

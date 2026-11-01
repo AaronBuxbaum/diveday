@@ -32,7 +32,7 @@ readiness lapsing after boarding. The dive-domain review of the record asked for
 
 ## Consequences
 
-Past events carry null and say nothing; there is no backfill (H-49). Each after-dive `boarded` tap
+Past events carry null and say nothing; there is no backfill (H-20260815-no-legacy). Each after-dive `boarded` tap
 now reads readiness inside its transaction, as the dock tap already did. A blocker added to the
 engine later renders through `readinessBlockerText`, so an unknown stored code needs no migration. At an after-dive checkpoint the read runs in a savepoint: if it throws, the count is still written with a null snapshot and a `roll_call.readiness_snapshot_skipped` log line (the dock count still refuses). **Erasure** nulls `readiness_blockers` (the list names
 why one person could not board, such as a physician's review) and keeps `readiness_status`, so the

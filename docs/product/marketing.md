@@ -19,12 +19,12 @@ has no separate team, tooling, or CMS: copy is code, reviewed like code, tested 
 `schema.ts` is governed by the schema-change skill. A session editing these pages carries both
 jobs — marketer and maintainer — and must leave both the pages and this rulebook consistent.
 
-## One page per feature, and every section sells (decided 2026-10-05, H-93)
+## One page per feature, and every section sells (decided 2026-10-05, H-20261005-public-pages-sell)
 
 The owner's brief on 2026-10-05 was that the pages were not selling, and that every interesting
 feature should be listed, explained and sold on a page of its own. Three things stood in the way:
 headlines that described the page rather than what a shop gets ("Four screens from a dive shop's
-day, with notes from the person who made them"), a voice rule (H-89) that kept a page from saying
+day, with notes from the person who made them"), a voice rule (H-20260903-voice-public-pages-speak) that kept a page from saying
 why any of it matters, and an inventory of every shipped workflow of which the pages argued four
 and listed the rest in a closed index on `/product`.
 
@@ -64,7 +64,7 @@ and listed the rest in a closed index on `/product`.
   a sixth step until review the same day: its screen read as the morning check's twin, and its one
   claim was the only one on the page a rival makes. Its page is still in the Product directory. The
   roll-call step draws the dock check-in screen, read by key from the check-in page, because the
-  hero already draws the roll-call phone (visual review B14, decided 2026-10-25 under H-94); its
+  hero already draws the roll-call phone (visual review B14, decided 2026-10-25 under H-20260802-may-public-pages-say); its
   notes keep the no-signal roll-call claim with its condition.
   A step ends in its feature page rather than in a door into the demo, because that page's own door
   opens the demo on the same screen as the role that uses it. The page keeps its two demo doors,
@@ -82,11 +82,11 @@ and listed the rest in a closed index on `/product`.
   the sticky chapter strip and the payment band were deleted the same day; each chapter's screen
   and notes live on the feature page that owns them.
 - **What did not change:** the claims policy, the two doors and their order, the demo note once per
-  page, the price stated where the question arises, and `/about`'s company voice (H-99).
+  page, the price stated where the question arises, and `/about`'s company voice (H-20261006-about-say-whose-voice).
 
 ## The homepage journey and Product catalogue (owner decision, 2026-10-26)
 
-The homepage follows the essential booking-to-boat scenes, including dock check-in (H-94),
+The homepage follows the essential booking-to-boat scenes, including dock check-in (H-20260802-may-public-pages-say),
 then answers how records arrive and leave. Its compact Product link opens `/product#full-list`;
 the repeated twelve-feature catalogue lives on Product alone. Home and Product heroes keep a
 content-sized demo beside a quiet 44px setup link. Hero, migration and closing copy retain the
@@ -183,7 +183,7 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
   Until that date it said "a practice shop", which nothing in the code built.
 - **Authorized service offers** are the one exception to shipped-only: a commitment the shop makes
   to a customer, not a product feature, may be stated once the product owner has authorized it.
-  Currently authorized (a Jane-style concierge, authorized 2026-07-24, extended H-20): **free,
+  Currently authorized (a Jane-style concierge, authorized 2026-07-24, extended H-20260724-contact-importer-trust-shop): **free,
   personal, bidirectional help switching — a person will help a shop bring its data *in* (map any
   export or spreadsheet, migrate the roster with them) and, if DiveDay is ever not right, take its
   data back *out* just as personally.** It lives on **every** `/switching` page as the shared
@@ -198,8 +198,8 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
   after the homework"). The reader deciding whether they can face this now meets the alternative in
   the same breath as the work. Compressed at the top, authored once, never re-worded — the same
   shape `midSeasonCutover` uses for the cutover steps and `GUIDE_FACTS.back` uses for the export
-  claim. A new service claim needs product-owner sign-off the same way the price does. **A second offer was authorized 2026-09-01 (H-64/H-65): a website, built for you** — a shop asks, and a person at DiveDay builds them one (with Claude, when someone asks; nothing is built ahead of a request). It is a human commitment like the concierge: "ask and we'll build it with you", never a turnaround time, never a page count, never "free website" as a product feature — and priced as part of the subscription until H-65 says otherwise. It may sit beside Harbor's storefront (which *is* a website a shop can point a domain at, and a shipped product claim) on `/pricing`, `/product`, the website feature page (`/product/website`, in its lede and its first question) and the FareHarbor guide, where FareHarbor's own hosted-site price may be stated only as the figure third parties report (FareHarbor publishes none — the Bókun-reported Web Core package, cited in the guide), never as what a shop pays; it is a `sitesPrice` string on the guide interpolated into one sentence, so no bundle carries the figure. Shipped 2026-09-02 as slice 13e: `marketing.price.item7`, the `website` capability group on `/product` (product lines only — the person's offer sits beside the booking chapter, never in the index that promises the demo), and the FareHarbor guide's website ledger. **Founder-direct support retired 2026-08-05 (Aaron Buxbaum,
-  [human-decisions/](human-decisions/README.md#decision-register), H-12/H-26).** From 2026-07-27 through
+  claim. A new service claim needs product-owner sign-off the same way the price does. **A second offer was authorized 2026-09-01 (H-20260901-canvas-direction-brand/H-20261025-built-order-website-priced): a website, built for you** — a shop asks, and a person at DiveDay builds them one (with Claude, when someone asks; nothing is built ahead of a request). It is a human commitment like the concierge: "ask and we'll build it with you", never a turnaround time, never a page count, never "free website" as a product feature — and priced as part of the subscription until H-20261025-built-order-website-priced says otherwise. It may sit beside Harbor's storefront (which *is* a website a shop can point a domain at, and a shipped product claim) on `/pricing`, `/product`, the website feature page (`/product/website`, in its lede and its first question) and the FareHarbor guide, where FareHarbor's own hosted-site price may be stated only as the figure third parties report (FareHarbor publishes none — the Bókun-reported Web Core package, cited in the guide), never as what a shop pays; it is a `sitesPrice` string on the guide interpolated into one sentence, so no bundle carries the figure. Shipped 2026-09-02 as slice 13e: `marketing.price.item7`, the `website` capability group on `/product` (product lines only — the person's offer sits beside the booking chapter, never in the index that promises the demo), and the FareHarbor guide's website ledger. **Founder-direct support retired 2026-08-05 (Aaron Buxbaum,
+  [human-decisions/](human-decisions/README.md#decision-register), H-20260724-public-founding-shop-price/H-20260802-what-game-is-this).** From 2026-07-27 through
   that date a general founder-direct contact line, routed to `aaron@dive.day`, was authorized here —
   the same promise the "You can reach the founder" section on `/about` made in prose. It is
   rescinded outright, not reworded down again: a solo-founder company cannot durably hold a
@@ -208,7 +208,7 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
   same small team without naming an individual or promising a response time — phrase it as "write in
   and a real person reads it," never "the founder personally answers" or any response-time
   guarantee. It appears on `/about` (the "How we work with shops" band; since 2026-10-07 the page names no
-  individual at all, H-99), the marketing footer, `/pricing`, the homepage's closing contact band
+  individual at all, H-20261006-about-say-whose-voice), the marketing footer, `/pricing`, the homepage's closing contact band
   (which leaves the "real person" clause to the set-up note a few lines above it, so the close says
   it once), the sign-up
   reassurance card, and the signed-in shop settings page. **Trial upgrades get their own address,**
@@ -217,7 +217,7 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
   soft expiry — see `src/lib/trial.ts`). Both addresses are hosted mailboxes reaching the same
   people as `aaron@dive.day` always did; see
   [docs/engineering/ses-email-runbook.md](../engineering/ses-email-runbook.md#divedays-own-addresses).
-- **A third service commitment was authorized 2026-10-07 (H-101): the continuity promise.** Aaron Buxbaum, in the project thread: "We can publish that exact promise." The sentence is "If DiveDay ever shuts down, you get 90 days' notice, your export, and your backups keep running until the last day." It answers the objection the demo cannot (a new vendor closing, market audit 2026-10-07 item 46), and it rests on things that ship: the one-ZIP export (`fullShopExport`) and the weekly scheduled backup to storage the shop owns (`src/features/backup-export/`). It is one shared key, `continuityPromise` in `src/lib/marketing.ts` (`marketing.export.continuity`), rendered on `/pricing` as the answer to the FAQ row "What happens to my shop if DiveDay shuts down?" (`faq.shutdown`, beside the records row) and on `/about` as the second paragraph of the "Download every record" card. Its words are the owner's: no rewording, no added timeline or refund, and no other page carries it without a new decision. `src/lib/marketing.test.ts` pins the English word for word and the three commitments in every locale.
+- **A third service commitment was authorized 2026-10-07 (H-20261007-continuity-promise): the continuity promise.** Aaron Buxbaum, in the project thread: "We can publish that exact promise." The sentence is "If DiveDay ever shuts down, you get 90 days' notice, your export, and your backups keep running until the last day." It answers the objection the demo cannot (a new vendor closing, market audit 2026-10-07 item 46), and it rests on things that ship: the one-ZIP export (`fullShopExport`) and the weekly scheduled backup to storage the shop owns (`src/features/backup-export/`). It is one shared key, `continuityPromise` in `src/lib/marketing.ts` (`marketing.export.continuity`), rendered on `/pricing` as the answer to the FAQ row "What happens to my shop if DiveDay shuts down?" (`faq.shutdown`, beside the records row) and on `/about` as the second paragraph of the "Download every record" card. Its words are the owner's: no rewording, no added timeline or refund, and no other page carries it without a new decision. `src/lib/marketing.test.ts` pins the English word for word and the three commitments in every locale.
 - **No fabricated proof.** No invented testimonials, user counts, logos, ratings, or "trusted by"
   language — ever. When real customers exist, their words go through the product owner first.
 - **Biography is a claim like any other.** `/about` names a real person and describes real history,
@@ -245,7 +245,7 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
   that was a real violation of this rule, corrected 2026-07-25. **Confirmed by the product owner
   2026-07-25:** DiveDay now has a second person contributing (legal and outreach, also a diver), so
   `/about` may honestly speak in plural/team voice for what both share (being divers, the mission)
-  — but Aaron remains the sole owner (matches H-04) and the sole developer, so anything that is
+  — but Aaron remains the sole owner (matches H-20260724-vercel-selected-web-hosting) and the sole developer, so anything that is
   specifically his — the founder-biography section, the retired founder-direct support line — stays
   singular and scoped to him, not generalized to "we." (The "Who builds it" credential block that
   used to carry the CV was **removed from `/about` 2026-08-05** on the product owner's call — it did
@@ -261,7 +261,7 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
   legal and outreach" without new confirmation. **Confirmed by the product owner 2026-07-27:** the
   page no longer states a certification year for Aaron — do not reintroduce one without fresh
   confirmation.
-  **Amended 2026-10-07 (H-99; Aaron, in the project thread: "Don't talk about the specific people,
+  **Amended 2026-10-07 (H-20261006-about-say-whose-voice; Aaron, in the project thread: "Don't talk about the specific people,
   use generalities about people in a company").** `/about` names no individual and states no CV.
   The confirmed facts above stay confirmed and unused; the page describes the people who build
   DiveDay in generalities that are true of them and derived from those facts (people who have spent
@@ -286,16 +286,16 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
   in the repo does not go on the page; it goes into a switching guide first, with its source.
 - **The price renders only from `src/lib/marketing.ts`.** Never restate the figure in prose, docs,
   JSON-LD literals, or images — every copy is a future stale claim. The product owner has **approved
-  the price for now** (H-12, 2026-07-24; early-access and still moving), so it may be shown from
+  the price for now** (H-20260724-public-founding-shop-price, 2026-07-24; early-access and still moving), so it may be shown from
   `marketing.ts` as today's price. `src/lib/marketing.test.ts` enforces the single source where it
   is easiest to break — no `marketing.*` message in either locale may carry a currency figure, and
-  every sentence that shows the price must carry `{price}` and `{cadence}`. H-12 also closed two
+  every sentence that shows the price must carry `{price}` and `{cadence}`. H-20260724-public-founding-shop-price also closed two
   commercial terms, now published as
   founding-shop claims (the price hero's "What the price covers" list + FAQ in
   `src/app/pricing/page.tsx`, the home and product heroes plus the home closing
   band, all sourced from `earlyAccessPrice` in `marketing.ts`): **price locked for
   two years for the founding cohort** and **founder-direct support** for the founding cohort.
-  **H-26 (2026-08-02) confirmed DiveDay's posture is deliberately lifestyle-scale, not
+  **H-20260802-what-game-is-this (2026-08-02) confirmed DiveDay's posture is deliberately lifestyle-scale, not
   venture-scale** (see [vision.md](vision.md#what-kind-of-business-this-is)) and dropped the
   earlier "same-day response" wording from the support claim — keep the support commitment worded
   as a founder-direct line, without a stated response-time SLA, until support-hour capacity is
@@ -303,7 +303,7 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
   ([human-decisions/](human-decisions/README.md)); do not publish billing terms through any new channel
   without that decision. The two-year price lock and the founder-direct support promise are
   **binding commercial commitments** and taxes/fees are jurisdiction-dependent — both carry an open
-  legal/tax-review dependency (H-12); do not treat the closed *price* as clearing them.
+  legal/tax-review dependency (H-20260724-public-founding-shop-price); do not treat the closed *price* as clearing them.
 - **Offline claims stay precise and human**: the device keeps its own copy current automatically
   while online, with a manual "Refresh now" for right before losing signal; it never transfers
   between devices or guarantees stale readiness is live. Captain's words ("this phone stays
@@ -314,7 +314,7 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
   there — with the limits of that protection named alongside it. Nowhere else. The boat manifest
   page's checklist, which `/product` folds under that page's row, sells the outcome ("a roll call
   with no signal, folded into the live record when the phone reconnects"), never the snapshot.
-- **The no-signal claim runs before the boat test** (H-94, Aaron Buxbaum, 2026-10-06). The launch
+- **The no-signal claim runs before the boat test** (H-20260802-may-public-pages-say, Aaron Buxbaum, 2026-10-06). The launch
   plan held every offline roll-call claim until V-02, the outdoor test of the manifest on a boat,
   passed; the claim was live anyway (MKT-F10), and the owner kept it, since it is shipped and the
   demo shows it. Where a page explains it, the condition sits beside it: the copy is saved to the
@@ -369,7 +369,7 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   a skimmer reads, so one that argues nothing costs the band it stands over.
   `src/app/about/copy.test.ts` makes the test mechanical for that heading: some clause of it has to
   appear in the band's own published prose, which no metaphor can satisfy.
-  **Since 2026-09-24 (H-89) `/about` is written as speech**, and every heading on it is the shop
+  **Since 2026-09-24 (H-20260903-voice-public-pages-speak) `/about` is written as speech**, and every heading on it is the shop
   owner's question repeated back without a mark. **Since the 2026-10-06 rewrite** (Aaron: "I don't
   like the copy on the about section. Redo it completely") they run "Why did you build this" (the
   H1), "Who am I dealing with", "How do I know any of that's true", "Who answers when something
@@ -379,7 +379,7 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   each answer rather than the question, and the copy test's arithmetic moved with it: the exit
   heading names the thing its band publishes (a content word of the question appears in the band's
   own prose), carries no mark at either end, and is none of the three retired headings.
-  **Since the 2026-10-07 rewrite (H-99; Aaron: "I really really don't like the copy on About. Let's
+  **Since the 2026-10-07 rewrite (H-20261006-about-say-whose-voice; Aaron: "I really really don't like the copy on About. Let's
   redo it entirely")** the spoken register is retired. The owner kept the hero alone, with the
   question heading over it removed and the tie made the company's; every heading under it is a
   statement with a full stop ("Divers who have shipped software to millions of people.", "The one job on a boat
@@ -391,7 +391,7 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
 - **Concede the facts; never apologize for them.** This is the rule the page-level version of the
   claims policy kept losing. "DiveDay is new" and "it's still changing" are honesty the policy
   requires, and they stayed on `/about` until 2026-10-07, when the owner's rewrite dropped the
-  concessions band (H-99: "Don't get overly truthful, just make a compelling case"; the protection
+  concessions band (H-20261006-about-say-whose-voice: "Don't get overly truthful, just make a compelling case"; the protection
   they described, the export on the first day and the month-to-month plan, is stated on the page as
   what the shop gets); its scope card ("it doesn't do everything") left in the
   2026-10-06 rewrite, the day the "What it doesn't do" sections came off the public pages. What is banned is the register that grew up around them — by
@@ -417,11 +417,11 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   sweep left the shapes: the mirrored pair, the list of three with a tail, the tag sentence, the
   house phrase reused on every page, one temperature everywhere. The owner's 2026-09-17 brief asked
   for a voice defined top-down and six were drawn ([design/voice-strategies-20260917.md](../design/voice-strategies-20260917.md));
-  he picked **6, Margin Notes, with 4, Over a Beer, on `/about`** (H-89, 2026-09-24). The public
+  he picked **6, Margin Notes, with 4, Over a Beer, on `/about`** (H-20260903-voice-public-pages-speak, 2026-09-24). The public
   pages are now the product's own screens with the builder's notes under them, `/about` is speech,
   both registers are in [design/brand.md](../design/brand.md), and `pnpm check:voice` refuses the
   four shapes on the public pages' strings so they cannot drift back.
-  **On 2026-10-05 (H-93) the sale went back in front of the notes**: a page that only annotated
+  **On 2026-10-05 (H-20261005-public-pages-sell) the sale went back in front of the notes**: a page that only annotated
   its screens never said why a shop would want them. A section now leads with what the shop gets,
   shows the screen as proof with the notes as its captions, and opens the demo on that screen (the
   decision section at the top of this file).
@@ -464,7 +464,7 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   asking for the checklist, 26 of the 30 claims were translated in both locales and rendered on no
   page at all. Each group then carried a `summary` written as a summary rather than the grid reading
   the first line of a deleted list, until the cards and their summaries were deleted on 2026-10-05
-  and the feature pages' own sentences took over that density (H-93). If a checklist density is
+  and the feature pages' own sentences took over that density (H-20261005-public-pages-sell). If a checklist density is
   ever wanted again, it needs a page behind it before it needs a prop.
 
   Before adding a list to a page, check the other density: the answer is usually a mockup or a
@@ -488,8 +488,8 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   `home-hero`, `home-mid`, `home-closing` still mean what they meant, so attribution history spans
   the rename. This closes the MKT-F4 half of **HD-25**; the remaining HD-25 calls (MKT-F5's "most
   shops…" wording, MKT-F10's offline roll-call claim versus the V-02 embargo) are untouched by it.
-  H-94 settled MKT-F10 on 2026-10-06: the claim stays (see the claims policy above).
-  **The role door under an annotated screen is the one exception (2026-09-24, H-89).** A
+  H-20260802-may-public-pages-say settled MKT-F10 on 2026-10-06: the claim stays (see the claims policy above).
+  **The role door under an annotated screen is the one exception (2026-09-24, H-20260903-voice-public-pages-speak).** A
   `ScreenDoor` (`src/app/_components/ScreenDoor.tsx`) submits the same `enterDemoAction` with a
   hidden `role`, at link weight, labelled for its screen ("Open the demo as the captain →"),
   because a builder's note that ends "as that role" cannot end on a button that says nothing about
@@ -499,7 +499,7 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   counts "Try the live demo" by name, and a screen door is not one. The homepage's screens carried
   three until 2026-10-05 (`home-diver-moment`, `home-desk-moment`, `home-dock-moment`, retired and
   kept registered for their history); its steps now end in the feature page's name instead, and
-  that page's hero door opens the demo on the same screen as the role that uses it (H-93).
+  that page's hero door opens the demo on the same screen as the role that uses it (H-20261005-public-pages-sell).
 - **The demo's cost is stated once per page, at the first door.** `marketing.common.demoNote` ("no
   sign-up, no card") answers the only question the button raises, and the answer is worth nothing
   the second time: repeated under every demo button it stops reading as reassurance and starts
@@ -731,7 +731,7 @@ can also be retired: the homepage's `home-mid` came out on 2026-08-13 when the p
 consecutive banded CTAs merged into one close (the 2026-08-13 homepage redesign), which moved the
 closing door a full band nearer; the tag stays registered in `funnel.ts` so any history it
 accumulated still reads. `product-mid` retired the same way on 2026-10-05, with the hub's tour and
-the dock chapter it stood under (H-93), and `product-index` the same day, with the inventory band
+the dock chapter it stood under (H-20261005-public-pages-sell), and `product-index` the same day, with the inventory band
 it closed. That door (2026-08-28) answered the band's dare, *every one of these lines is something
 you can go and do in the live demo right now*, with a door under the list rather than two bands
 further down ([marketing-review-20260827.md](marketing-review-20260827.md), "the dare gets a
@@ -839,7 +839,7 @@ It sits between the fee anchor and the included list rather than in the FAQ, bec
 the objection lands: the fee anchor has just made switching look attractive, and the next thought a
 shop owner has is about being stuck again. The `faq.dataIfNotWorking` row still answers it in words
 for a reader who scans that far, and the `faq.shutdown` row beside it carries the continuity
-promise (H-101) for the reader whose worry is DiveDay leaving rather than the shop.
+promise (H-20261007-continuity-promise) for the reader whose worry is DiveDay leaving rather than the shop.
 
 **The homepage records band shows both halves, in the order the copy argues them**: the import
 preview (arriving) beside the export inventory (leaving). Arriving is a picture — the importer's
@@ -921,7 +921,7 @@ needed had never been counted. It can be next time.
 **The homepage's breadth band is the feature directory, and every claim in it is a link.** Until
 2026-10-05 it was `FeatureGroupsGrid`'s four cards, the one band on the page that asked a reader to
 take a claim on trust; now each row names a feature page and its one sentence, and the page behind
-it shows the screen (H-93, and "The homepage breadth band" near the top of this file). It still
+it shows the screen (H-20261005-public-pages-sell, and "The homepage breadth band" near the top of this file). It still
 carries no demo door of its own: the close is one band away, and three banded CTAs in a row read as
 pressure, not confidence (the mid-page door retired in the 2026-08-13 redesign for that reason).
 Revisit the band when the page-level `demo_entered`/`setup_requested` pairs (`home-hero` /
@@ -958,7 +958,7 @@ structure* live; none of them may contain an English sentence:
 | Every feature page's name and one-sentence summary, listed on `/` and `/product` | `src/lib/feature-pages.ts` (the registry and `FEATURE_PHASES`), rendered by `FeatureDirectory` in `src/components/MarketingSections.tsx` | `marketing.featurePages.<page>.name` / `.summary`, and `marketing.featureChrome.phases.*` |
 | Price, plan name, included list | `src/lib/marketing.ts` (`earlyAccessPrice`) — the `$99` figure is the only literal, and the only place it exists | `marketing.price.*` in the bundles |
 | Export claim shared by home + pricing | `src/lib/marketing.ts` (`fullShopExport`) | `marketing.export.*` in the bundles |
-| Continuity promise shared by pricing + about (H-101) | `src/lib/marketing.ts` (`continuityPromise`) | `marketing.export.continuity` in the bundles |
+| Continuity promise shared by pricing + about (H-20261007-continuity-promise) | `src/lib/marketing.ts` (`continuityPromise`) | `marketing.export.continuity` in the bundles |
 | Mid-season cutover claim shared by home + the guides | `src/lib/marketing.ts` (`midSeasonCutover`) | `marketing.guides.shared.cutover.*` in the bundles |
 | Shared link-preview card fields every page's `openGraph` needs | `src/lib/marketing.ts` (`sharedLinkCard`) | none — URLs and dimensions, no words |
 | Capability index on `/product`, one group per feature page | `src/lib/marketing.ts` (`productCapabilityIndex`, `capabilityGroup()`) | `marketing.capabilities.*` in the bundles; a feature page's group is titled by its `name` |
@@ -1064,7 +1064,7 @@ at the dock, the blocker queue, the no-login diver arc.
 - Copy changes update the e2e assertions that pin headlines/price visibility — deliberately: a
   failing marketing spec on a copy change is the test doing its job.
 - **Re-check positioning** (this doc's spine + the assessments) when: a rival ships a response
-  (DiveAdmin bulk export/webhooks, any DiveShop360 API), the H-12 pricing decision lands, or the
+  (DiveAdmin bulk export/webhooks, any DiveShop360 API), the H-20260724-public-founding-shop-price pricing decision lands, or the
   first paying shop exists — real social proof reorders every argument above.
 - The `marketing-page` skill is the executable form of this document; if it and this doc disagree,
   fix whichever is stale in the same PR.

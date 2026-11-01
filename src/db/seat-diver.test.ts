@@ -582,7 +582,7 @@ describe("seatDiver confirmation (fourth UX review, item 3)", () => {
  *
  * A seat taken off the counter's "is this the same diver?" prompt attaches
  * itself to an existing person on a guess, and the boarding gate refuses it
- * until a staffer confirms the identity (H-13, issue #1556). Every door used to
+ * until a staffer confirms the identity (H-20260724-one-person-per-email, issue #1556). Every door used to
  * answer that with a plain "Added", and the staffer learned the seat was held
  * one tap later — `checkInBooking` refusing `not_ready` with the diver at the
  * counter (`dive-domain-expert`, 2026-09-11). A door can only say so if the
@@ -633,7 +633,7 @@ describe("seatDiver identity reporting (what a door is allowed to claim)", () =>
 
   /**
    * **A seat picked from the counter's search list lands released, by
-   * decision** (H-79, issue #1790). That list is a search a staffer went
+   * decision** (H-20260916-unconfirmed-identity-withhold-cost, issue #1790). That list is a search a staffer went
    * looking in, not a guess the product offered, and holding it would put a
    * held seat and an extra tap on every ordinary search-and-seat. It stays so
    * when the search is the kind most likely to have found the wrong row: a

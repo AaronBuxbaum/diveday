@@ -58,7 +58,7 @@ export type SeatDiverPanelCopy = {
    */
   confirmMatchesNoDiveDay: string;
   /**
-   * A candidate's date of birth, formatted by the page in its locale (H-79,
+   * A candidate's date of birth, formatted by the page in its locale (H-20260916-unconfirmed-identity-withhold-cost,
    * issue #1698). Called only for a candidate with a real date on file; the
    * panel prints nothing for the rest (`candidateBirthDate`).
    */
@@ -245,7 +245,7 @@ export function SeatDiverPanel({
 }
 
 /**
- * The candidate's date of birth beside the contact line (H-79, issue #1698),
+ * The candidate's date of birth beside the contact line (H-20260916-unconfirmed-identity-withhold-cost, issue #1698),
  * or nothing at all when the record has none on file.
  */
 function CandidateBirthDate({

@@ -84,7 +84,7 @@ export default async function RequestsPage({
 }) {
   const { shopSlug } = await params;
   const { page, notice } = await searchParams;
-  // **No role gate, since 2026-09-16** (issue #1679, an H-14 amendment). This
+  // **No role gate, since 2026-09-16** (issue #1679, an H-20260724-staff-role-reach amendment). This
   // read `allow: canPersonViewShopReports` with a refusal notice, on the
   // written ground that the rows carry contact details for people who have not
   // booked. The shop inbox renders the same thing — a stranger's address or
@@ -114,7 +114,7 @@ export default async function RequestsPage({
     listBoats(db, shop.id),
     // **Reading a day is every role's; putting a boat on it is not** (issue
     // #1831). The day's act lands on the schedule builder, whose add panel is
-    // `canConfigureTrips` — owner, manager, instructor (H-14). Asked here with
+    // `canConfigureTrips` — owner, manager, instructor (H-20260724-staff-role-reach). Asked here with
     // the same live check the board asks, so the link and the panel cannot
     // disagree; a captain sees the day and its interests, and no act they would
     // be refused (ADR 20260724-role-gated-surfaces-hide-not-explain).

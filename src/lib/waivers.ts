@@ -187,7 +187,7 @@ export function isStandingRefusal(record: WaiverRecord): boolean {
 
 /**
  * **A referral no physician cleared, superseded or not** — what outranks every
- * signature older than it (glossary: Medical hold, H-104).
+ * signature older than it (glossary: Medical hold, H-20261006-medical-holds-every-departure).
  *
  * Superseding a record moves its hold off *a seat* so the seat can take a fresh
  * link (a rider's lapsed release, a retired refusal); it answers nothing. Only a
@@ -450,7 +450,7 @@ export function effectiveWaiverForBooking(input: {
 }
 
 /**
- * **The release a rider's seat stands on** (H-109, issue #2212).
+ * **The release a rider's seat stands on** (H-20261009-rider-snorkeler-medical, issue #2212).
  *
  * A rider stays on the boat, so they are held to the shop's release and to
  * nothing in its medical. A record a referral parked, or a physician refused,
@@ -503,7 +503,7 @@ export function releaseLapsedForBooking(input: {
   bookingWaiver: WaiverRecord | null;
   personSignedWaivers: readonly WaiverRecord[];
   currentTemplateVersion: number | null;
-  /** False for a rider's seat (H-109); defaults to a seat in the water. */
+  /** False for a rider's seat (H-20261009-rider-snorkeler-medical); defaults to a seat in the water. */
   heldToMedical?: boolean;
   now?: Date;
   /** As {@link effectiveWaiverForBooking}'s: the departure log only. */
@@ -559,7 +559,7 @@ export function releaseLapseForBooking(input: {
  * one test `issueWaiverRequest` and the paper path share, so a fresh link or a
  * paper copy is never refused as "already completed" for a release the roster
  * has blocked (issue #2611). A seat in the water reads a clean completion; a
- * rider's seat (H-109) reads only the signature's own clock. A pending link
+ * rider's seat (H-20261009-rider-snorkeler-medical) reads only the signature's own clock. A pending link
  * is never "lapsed" here.
  */
 export function bookingRecordLapsed(
@@ -809,7 +809,7 @@ export type MedicalWaiverMark = {
    * it, and staff decide. Derived on every read, never stored, so it cannot
    * drift from the records it describes.
    *
-   * **The owner kept the override** (2026-10-09, issue #2195, amending H-98):
+   * **The owner kept the override** (2026-10-09, issue #2195, amending H-20261007-after-physician-says-no):
    * a later clean release may stand over an unresolved referral, and the
    * warning links back to it ({@link overriddenReferral}).
    */
@@ -888,7 +888,7 @@ export type OverriddenReferral = { recordId: string; personId: string; at: Date 
  * is read from this.
  *
  * **Kept as a warning, not a block, by decision** (Aaron, 2026-10-09, issue
- * #2195, amending H-98). A later clean signature clears the diver even over
+ * #2195, amending H-20261007-after-physician-says-no). A later clean signature clears the diver even over
  * a referral no physician answered, as it does over a physician's "no"; every
  * surface that warns about the refusal warns about this too, with the
  * referral one tap away. `effectiveWaiverForBooking` is unchanged.
@@ -1010,7 +1010,7 @@ export type OverriddenRefusal = {
 };
 
 /**
- * **A rider boarding on a release a medical holds** (H-109; dive-domain review
+ * **A rider boarding on a release a medical holds** (H-20261009-rider-snorkeler-medical; dive-domain review
  * of #2212). A rider is never held at the rail on a referral or a physician's
  * "no" — they stay on the boat — but the crew still sees it, as a warning that
  * says "riding only", never as a blocker.
@@ -1088,9 +1088,9 @@ export function medicalWarningDays(
 export type MedicalWarningDays = {
   refusedOn?: CalendarDate;
   referredOn?: CalendarDate;
-  /** A rider boarding, riding only, under a physician's standing "no" (H-109). */
+  /** A rider boarding, riding only, under a physician's standing "no" (H-20261009-rider-snorkeler-medical). */
   ridingNotClearedOn?: CalendarDate;
-  /** A rider boarding, riding only, under a referral nobody answered (H-109). */
+  /** A rider boarding, riding only, under a referral nobody answered (H-20261009-rider-snorkeler-medical). */
   ridingReferredOn?: CalendarDate;
 };
 

@@ -140,7 +140,7 @@ exclusion, the five persisted facts behind its steps, `FIRST_RUN_STEP_COUNT`
 - **The coral morning**: while the shop's live bookings count is exactly **1** and that booking's
   trip is upcoming (`liveTrip()` + the standing 1-hour buffer), the booking's spine row carries
   the coral dot and the word **Your first booking** — the condition self-expires at booking #2 or
-  when the trip sails; no column, no seen-flag, no acknowledgement (H-57's grammar). A staff-
+  when the trip sails; no column, no seen-flag, no acknowledgement (H-20260822-close-out-leftovers-resolved's grammar). A staff-
   seated walk-in counts (it is still the shop's first booking — say so in the reader's doc
   comment); imported prior visits live outside `bookings` and never false-fire. One coral element
   per page: while this renders, no other earned moment does (the coral budget, Clearwater ADR

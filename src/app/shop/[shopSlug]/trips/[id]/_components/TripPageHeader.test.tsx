@@ -147,7 +147,7 @@ const spacing = (element: Element | null | undefined) =>
  * packing list moved 12px when it landed at 1280.
  */
 /**
- * **Staff count the seats the boat may sell** (H-107, #2321): a departure
+ * **Staff count the seats the boat may sell** (H-20261009-certificate-caps-seats, #2321): a departure
  * stating 14 on a hull certified for 12 has 2 left at 10 aboard, not 4. The
  * desk read 4, the counter refused the fifth, and the pill was the one that lied.
  */

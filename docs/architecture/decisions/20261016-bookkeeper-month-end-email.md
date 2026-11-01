@@ -13,7 +13,7 @@ someone outside its staff, every month with nobody pressing Send.
 - **One download.** A zip of the three files, behind `canPersonExportShopData` (live roles) and
   the export step-up.
 - **One address, behind the same gate**, set on Reports and stored with who set it and when.
-- **The inbox confirms first** (security review B1, the shore contact's model, H-118). A new or
+- **The inbox confirms first** (security review B1, the shore contact's model, H-20261014-stale-roll-call-recipients). A new or
   changed address gets a week-long link with no files; nothing is sent until it is used, and
   the first files are the next 2nd's. Any change of address clears the confirmation.
 - **Owners hear everything** (B1, F1). Each set, change, confirmation, removal and send emails

@@ -9,26 +9,26 @@
 
 ## Context
 
-H-21 (decided 2026-07-30) shipped the *fact* of a minor — age in years and a **Minor** badge on the
+H-20260730-minimum-age-gate-data (decided 2026-07-30) shipped the *fact* of a minor — age in years and a **Minor** badge on the
 roster and the manifest — and recorded the rest honestly rather than quietly: "solo minor signature
-remains open and stays flagged for H-01–H-03." So until today a twelve-year-old could open the
+remains open and stays flagged for H-20260730-jurisdiction-waiver-text-medical, H-20260730-evidence-retention-period-deletion, H-20260724-current-typed-name-explicit." So until today a twelve-year-old could open the
 ordinary `/waivers/[token]` link and execute a liability release alone, and every staff surface read
 that record as **Signed**.
 
 The owner reopened it on 2026-09-07 and answered it — owner decision 2026-09-07
-(improvement-ideas decision sheet), item **N-38**, marked *Build now*. That decision moves H-21's
+(improvement-ideas decision sheet), item **N-38**, marked *Build now*. That decision moves H-20260730-minimum-age-gate-data's
 position: solo minor signature is no longer accepted as-is.
 
 Three constraints a lower-context agent must not miss:
 
-- **The waiver's legal wording is still H-01's, and still English.** This adds a second signer and
+- **The waiver's legal wording is still H-20260730-jurisdiction-waiver-text-medical's, and still English.** This adds a second signer and
   the frame around them. It does not draft a minor-specific release, and it does not decide whether
-  typed consent is a sufficient assurance level — that is H-03, still open. The guardian signs the
+  typed consent is a sufficient assurance level — that is H-20260724-current-typed-name-explicit, still open. The guardian signs the
   *same* text under the *same* provider as the diver.
 - **Age is measured on the day the pen moved, in the shop's own zone.** A release a
   seventeen-year-old executed alone does not become valid on their eighteenth birthday, and a
   release signed today by a diver who turns eighteen tomorrow still needs a guardian.
-- **The rule fails open on an unknown date of birth**, exactly as H-08's minimum-age gate does. A
+- **The rule fails open on an unknown date of birth**, exactly as H-20260724-certification-levels-agency-rules's minimum-age gate does. A
   diver the shop never asked is treated as an adult; the day a date lands on their record, the
   release they already signed becomes a readiness blocker rather than a silent pass.
 
@@ -40,7 +40,7 @@ guardian signs the same release beside them, and the release is not usable until
 1. **One page, two signatures.** `/waivers/[token]` renders a second card for a minor: the
    guardian's full name, who they are to the diver, an email, and their own consent box — the same
    typed-consent evidence (`src/lib/signatures.ts`) the diver's own signature takes, which is the
-   assurance level H-03 is still weighing for both. The page's single Sign button moves into that
+   assurance level H-20260724-current-typed-name-explicit is still weighing for both. The page's single Sign button moves into that
    card, so nobody signs above a section they have not read. No second token and no second visit:
    a minor at a counter or a kitchen table is with an adult, and a second link is a second thing to
    lose.
@@ -65,7 +65,7 @@ guardian signs the same release beside them, and the release is not usable until
    release after the fact is precisely the tampering the seal exists to catch, so the six columns
    join version 1's field set, and the four that survive erasure join version 2's. Both are widened
    in place rather than versioned around: every seal written before today reads as `invalid`, which
-   is acceptable only because DiveDay is pre-pilot and no such row exists (H-49; AGENTS.md's "there
+   is acceptable only because DiveDay is pre-pilot and no such row exists (H-20260815-no-legacy; AGENTS.md's "there
    is no legacy" rule forbids writing version-tolerance code for rows that have never had a reader).
 6. **Staff surfaces say who co-signed wherever they show a signature** — one sentence,
    `guardianCoSignedText`, on the trip roster, the boat manifest's roll call, the signature log and
@@ -88,9 +88,9 @@ guardian signs the same release beside them, and the release is not usable until
    It now reads "I have read this waiver **and the health questions answered above**, understand
    them, and agree to them on their behalf." One clause, in both locales; the questionnaire is not
    presented a second time in the guardian's card, there is no `medical_answered_by` column, and
-   there is no minor-specific template — all three are H-01's and were explicitly out of the
+   there is no minor-specific template — all three are H-20260730-jurisdiction-waiver-text-medical's and were explicitly out of the
    issue's scope. **No attorney has read this sentence.** The owner authorised the wording on
-   2026-09-10 and H-01/H-03 remain open for it exactly as they do for the release text above it;
+   2026-09-10 and H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit remain open for it exactly as they do for the release text above it;
    the Spanish is a translation of a consent statement made by the same agent that wrote the
    English, under the standing rule in `src/i18n/locales/es-ES/README.md`.
 
@@ -127,7 +127,7 @@ guardian signs the same release beside them, and the release is not usable until
     where a shop or a regulator reading the evidence can tell the two apart — stated here rather
     than discovered, because a reader looking for a badge on a screen will not find one. **This is a
     relaxation of a check on a minor's liability release and no attorney has read it**; the owner
-    authorised it on 2026-09-10 and H-01/H-03 stay open.
+    authorised it on 2026-09-10 and H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit stay open.
 
 11. **The guardian's address is optional, and the one thing it is for is a copy of what was
     signed** (issue #1453, owner decision 2026-09-10: "send a copy where there is an address, and
@@ -175,7 +175,7 @@ guardian signs the same release beside them, and the release is not usable until
   record of a release they signed, and still refuses the grandparent with no email.
 - **Making the address optional and sending nothing** (option 3) — fixes the refusal and leaves the
   column a reader-less store of a third party's personal data, which is half the complaint.
-- **A distinct minor waiver template** — the right answer eventually, and H-01's to make. Building
+- **A distinct minor waiver template** — the right answer eventually, and H-20260730-jurisdiction-waiver-text-medical's to make. Building
   it now would guess at legal wording this decision explicitly does not touch.
 - **A `people` row for the guardian** — invents a diver the shop never met, and puts a
   non-customer into every roster search and every count.
@@ -217,7 +217,7 @@ blocker — correct, and it will look like a regression to whoever meets it firs
 arm, which is exhaustively mapped in four places. The seal's field set is now a thing that changes
 when the signed evidence changes.
 
-**Escape hatch.** If H-01/H-03 comes back with a minor-specific template or a different signer
+**Escape hatch.** If H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit comes back with a minor-specific template or a different signer
 model, the six columns stay (they are the evidence) and the *rule* moves —
 `guardianSignatureRequired` is one function over a date of birth and a calendar date, and the age of
 majority it reads is `src/lib/age.ts`'s single constant. If the co-signature turns out to be wrong
@@ -240,11 +240,11 @@ So it moves. A minor's form draws a second sentence, selected by the `requiresGu
 
 **It stays the staffer's voice, not the guardian's**, and that is the part worth arguing. A checkbox worded as the guardian's own assertion (option 3 on issue #1668) is closer to the online shape and more honest about who is asserting what. It was not taken, because the paper form is the **shop's own sheet, whose questions DiveDay never sees**. An assertion by a guardian about a document the product holds no copy of is weaker evidence than the online tick, not stronger, and a second checkbox teaches a counter to tick two boxes where it used to tick one. What DiveDay can honestly record is what the named staffer says they saw, which is what every other clause in this sentence already is.
 
-**One clause, nothing else.** No `medical_answered_by` column: the assertion is the staffer's, it is already carried by `in_person_attested` and `recorded_by_person_id`, and a column would imply DiveDay can distinguish the two cases when nothing on the paper reaches it. No guardian-answered questionnaire inside the app — that is H-01/H-03's. And no change to what `recordInPersonWaiver` refuses: the writer's rules are identical, so a hand-built request is neither newly allowed nor newly refused.
+**One clause, nothing else.** No `medical_answered_by` column: the assertion is the staffer's, it is already carried by `in_person_attested` and `recorded_by_person_id`, and a column would imply DiveDay can distinguish the two cases when nothing on the paper reaches it. No guardian-answered questionnaire inside the app — that is H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit's. And no change to what `recordInPersonWaiver` refuses: the writer's rules are identical, so a hand-built request is neither newly allowed nor newly refused.
 
-**Escape hatch.** One key per locale and one ternary. If H-01/H-03 returns a minor-specific template, this sentence is replaced by whatever that template asserts and nothing else has to move.
+**Escape hatch.** One key per locale and one ternary. If H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit returns a minor-specific template, this sentence is replaced by whatever that template asserts and nothing else has to move.
 
-## Amendment 2026-10-07 — the guardian's email can be erased on its own (H-103, issue #1673)
+## Amendment 2026-10-07 — the guardian's email can be erased on its own (H-20261007-guardian-email-erasure, issue #1673)
 
 Decision 8 erased the guardian's address only with the diver's own data. A parent is a third party with no record of their own, so a parent asking for their address to go had nothing to ask for but the child's erasure, and nulling the address alone made `verifyWaiverIntegrity` report tampering on a release nobody had altered (decision 5 put it inside the seal).
 
@@ -252,10 +252,10 @@ Decision 8 erased the guardian's address only with the diver's own data. A paren
 
 **The release re-seals as version 4, with the note inside the seal.** Version 4 seals everything version 3 seals except `guardian_email`, plus `guardian_email_erased_at` and `guardian_email_erased_by_person_id`. So "this release was redacted, by whom, and when" is sealed fact, not an annotation beside the seal, and the release's staff page says so. As with versions 2 and 3, only a release whose seal verified at that moment is re-sealed: an unsealed one stays unsealed and a failing one keeps failing. A version 4 release that is refiled stays version 4 (`signedIntegrityVersionFor`), and erasing the diver still seals version 2. The `waiver_records_guardian_email_erased_stays_erased` check refuses a write that puts an address back under the stamp.
 
-**The name stays.** The guardian's name, relationship, method and both timestamps are who signed and when, and the release is the shop's evidence of that. They go only with the diver's own erasure, as decision 8 says. H-82 called this seal "v3"; by the time it was built v3 meant a refiled release, so it is v4.
+**The name stays.** The guardian's name, relationship, method and both timestamps are who signed and when, and the release is the shop's evidence of that. They go only with the diver's own erasure, as decision 8 says. H-20260916-far-deletion-promise-reach called this seal "v3"; by the time it was built v3 meant a refiled release, so it is v4.
 
 
-## Amendment 2026-10-13 — the booker's "Under 18" stands in for a missing date of birth (H-113)
+## Amendment 2026-10-13 — the booker's "Under 18" stands in for a missing date of birth (H-20261013-under-18-on-party)
 
 The rule failed open on a missing date of birth, and the public form asks nobody one, so a child a
 parent booked online signed alone. The public party form now asks "Under 18" per diver, stamped on

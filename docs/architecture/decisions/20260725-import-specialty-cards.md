@@ -25,7 +25,7 @@ that authorizes a materially riskier dive: the deep gate is what keeps an uncard
 20260724 accepted "an imported card clears the boarding/depth gate" partly *because* specialties were
 still gated — that mitigation disappears the moment specialties import. The assistant put the choice
 to the owner as three postures (clears on import like a ladder card / verified but gate holds until
-confirm / imports `pending`), and the owner chose the middle one. Recorded as **H-23** in
+confirm / imports `pending`), and the owner chose the middle one. Recorded as **H-20260725-owner-asked-move-rows** in
 `docs/product/human-decisions/README.md`.
 
 Two smaller gaps surfaced while reading the same path and are fixed here because leaving them would
@@ -81,7 +81,7 @@ DiveDay's own export did not round-trip.
   unbelievable** (year outside 1900–2200 — `9999-12-31` is how a card silently becomes valid forever)
   lands the row's cards `pending` rather than upgrading them to no-expiry: an unreadable gate input is
   not a pass. Staff-facing copy calls this the **refresher-due** date, never a card expiry — C-cards
-  do not expire (glossary, H-08); only the CSV column name keeps the `expires_at` spelling, since it
+  do not expire (glossary, H-20260724-certification-levels-agency-rules); only the CSV column name keeps the `expires_at` spelling, since it
   is the export's round-trip contract.
 - **A source that says "not verified" is believed.** The verified-on-import posture rests entirely on
   the prior system having checked the card. Where the file's own status column says it had not
@@ -151,11 +151,11 @@ will see `specialty_import_unconfirmed` on every specialty trip; the Today queue
 
 Left deliberately for a later change, and named here so it is not mistaken for an oversight — the
 first two of these were closed the same day by
-[20260725-imported-card-sighting](20260725-imported-card-sighting.md) (H-24): the
+[20260725-imported-card-sighting](20260725-imported-card-sighting.md) (H-20260725-two-findings-dive-domain): the
 one-tap **Confirm card** asserts nothing in particular — it stamps `reviewedAt` with no prompt and no
 attestation, where "Mark certified" means a staffer looked the number up with the agency. The
 `dive-domain-expert` review recommends the confirm state what it asserts ("I've seen this diver's Deep
-card"), and no bulk confirm; that is a product decision on top of H-23, not part of it. Also open:
+card"), and no bulk confirm; that is a product decision on top of H-20260725-owner-asked-move-rows, not part of it. Also open:
 there is no edit affordance for a card's refresher-due date anywhere (only Add and Delete), so fixing a
 mis-mapped date means delete-and-retype, which destroys the imported provenance; and the preview does
 not tally how many cards land already past their refresher date, which an owner would rather learn

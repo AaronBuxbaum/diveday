@@ -43,7 +43,7 @@ test("a diver sees rental prices and an estimate on the booking confirmation", a
   // Dropping the BCD still quotes the $45 set price: the remaining five core
   // pieces billed individually (regulator $15 + wetsuit $12 + mask & fins $8 +
   // weights $5 + dive computer $10 = $50) would cost more than the set, and a
-  // diver skipping one piece is never charged more than the full set (H-06, HD-9).
+  // diver skipping one piece is never charged more than the full set (H-20260724-initial-gear-policy-sizing, HD-9).
   await expect(
     fit.getByText(/Estimated rental: \$45\.00 per person, the full-set price/),
   ).toBeVisible();

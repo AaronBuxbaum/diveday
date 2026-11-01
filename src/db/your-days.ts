@@ -19,7 +19,7 @@ import { liveTrip } from "./trips-live";
 
 /**
  * **A regular's other days with the shop, from one booking's page** (fifth-loop
- * ideas, item 38; decision H-132; ADR 20261016-fresh-link-per-booking-row).
+ * ideas, item 38; decision H-20261014-other-days-send-fresh; ADR 20261016-fresh-link-per-booking-row).
  *
  * Each row is a day, never a door: what a row does is mail that day's own link
  * to the address on file. No URL on this page opens another booking, so a

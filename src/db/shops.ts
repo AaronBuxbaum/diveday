@@ -297,7 +297,7 @@ export async function clearShopNameReview(db: AppDb, shopId: string, now: Date =
 
 /**
  * The shore contact's address, the consent recorded for it and whether its
- * inbox confirmed it (H-118), as `nextShoreAlertContact` decided them. The
+ * inbox confirmed it (H-20261014-stale-roll-call-recipients), as `nextShoreAlertContact` decided them. The
  * columns move together; the table's checks refuse any other shape.
  */
 export async function setShopShoreAlertContact(
@@ -465,7 +465,7 @@ export async function setShopDockDayRhythm(db: AppDb, shopId: string, rhythm: Do
 
 /**
  * Sets "Crew arrive N minutes before divers" (ux-delight sheet 2026-10-22,
- * item 2; H-149), or clears it with null so crew read the divers' time. The
+ * item 2; H-20261022-crew-arrive-before-divers), or clears it with null so crew read the divers' time. The
  * action narrows the value through `parseCrewLeadMinutes`; the table's CHECK
  * holds the same bounds.
  */

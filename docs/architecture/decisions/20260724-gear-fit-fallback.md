@@ -8,14 +8,14 @@
 Two H-rows had one implementation step left each, and both land in the same place — what the
 crew does with a diver's stated request when reality doesn't match it.
 
-**H-06 (gear policy)** decided, but had not built: *"any staff member on the trip may substitute a
+**H-20260724-initial-gear-policy-sizing (gear policy)** decided, but had not built: *"any staff member on the trip may substitute a
 real available item (logged), but overriding/denying a diver's stated request is reserved to
-instructor/divemaster/manager (rides on the H-14 role matrix), and when a requested size is
+instructor/divemaster/manager (rides on the H-20260724-staff-role-reach role matrix), and when a requested size is
 unavailable the request drops to a 'needs staff fit' state rather than auto-assigning a different
-size."* The H-14 roles it depended on shipped in
+size."* The H-20260724-staff-role-reach roles it depended on shipped in
 [20260724-role-authorization](20260724-role-authorization.md), so it was buildable.
 
-**H-08 (course admission)** left minimum-age enforcement open after
+**H-20260724-certification-levels-agency-rules (course admission)** left minimum-age enforcement open after
 [20260724-course-admission-standards](20260724-course-admission-standards.md) recorded PADI's
 published age and depth numbers as reference data only. That ADR named the blocker precisely:
 DiveDay stores no diver date of birth, and adding one is a new-PII decision with a
@@ -101,11 +101,11 @@ a course's existing `minimum_age` is enforced **only when a date is on file**:
   (10/12/15/18) let a few probes bracket a real child's age. It runs before the capacity check, so
   probing is free and leaves no booking behind. It is also unsound on the merits: that form never
   proves the submitter is the person on file for the email — the same uncertainty
-  `identityUnconfirmedAt` exists for (H-13) — so it would judge a stranger by someone else's
+  `identityUnconfirmedAt` exists for (H-20260724-one-person-per-email) — so it would judge a stranger by someone else's
   record. A `security-reviewer` pass caught this as an exploitable oracle in the first cut.
 - **The diver's own checklist originally never named age either**, worded identically to
   `identity_unconfirmed` so the presence of either disclosed nothing. **Amended 2026-07-25
-  (H-22, [20260725-checklist-age-disclosure](20260725-checklist-age-disclosure.md)):** the
+  (H-20260724-minimum-age-gate-fail, [20260725-checklist-age-disclosure](20260725-checklist-age-disclosure.md)):** the
   product owner chose to name the real reason for the common non-adversarial case, accepting a
   narrower, documented residual gap in exchange — see that record for the tradeoff. Staff always
   saw the real reason, with both numbers.
@@ -158,11 +158,11 @@ inversion buried in arithmetic.
 - The export bundle now carries `date_of_birth`, `dive_insurance` (a pre-existing omission a new
   column-level coverage test caught), and the three `needs_staff_fit_*` columns; without them a
   shop that exported and re-imported silently lost every flag and every birth date — and the
-  latter is what H-08's fail-closed upgrade path depends on. The contact importer reads
+  latter is what H-20260724-certification-levels-agency-rules's fail-closed upgrade path depends on. The contact importer reads
   `date_of_birth` back, dropping an implausible one with a warning rather than feeding a garbage
   year to an age gate. The bundle now contains minors' birth dates, which is within the stated
   posture of `canExportShopData` but worth naming.
-- H-06 is fully implemented. H-08's minimum-age piece is now enforced-when-known; the Junior-tier
+- H-20260724-initial-gear-policy-sizing is fully implemented. H-20260724-certification-levels-agency-rules's minimum-age piece is now enforced-when-known; the Junior-tier
   *depth* ceilings (12 m / 18 m / 21 m by age band) remain documented-but-unenforced, since those
   need a numeric site depth DiveDay still doesn't store — see
   [20260724-course-admission-standards](20260724-course-admission-standards.md).

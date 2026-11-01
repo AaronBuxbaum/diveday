@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * A visual capture that failed on main and passed on its one rerun is a flake,
- * and a flake gets an issue, never silence (H-156).
+ * and a flake gets an issue, never silence (H-20261022-visual-rerun-on-main).
  *
  * On main, `.github/workflows/ci.yml`'s visual shards rerun their failed
  * captures once, whatever the cause: a failed shard publishes no screenshot

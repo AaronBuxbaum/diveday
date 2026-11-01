@@ -95,7 +95,7 @@ async function init(): Promise<AppDb> {
     // listener is an uncaught exception that ends the process.
     listenForPoolErrors(pool);
     // A connection that times out (a suspended Neon compute waking up) is tried once more before
-    // anyone sees an error; a statement never is (src/lib/db-pool-config.ts, H-155).
+    // anyone sees an error; a statement never is (src/lib/db-pool-config.ts, H-20261023-no-always-on-database).
     retryConnectOnce(pool);
     // Same schema, same query-builder surface as the PGlite driver below;
     // the driver classes differ only in how they execute over the wire.

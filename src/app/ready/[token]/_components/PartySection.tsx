@@ -30,7 +30,7 @@ export function PartySection({
   allSet: boolean;
   /** Bound to the page's token when the booking may lead a seat; null otherwise. */
   addSeatAction: ((formData: FormData) => Promise<void>) | null;
-  /** "Sign Mia's waiver" (H-124), bound to the page's token. */
+  /** "Sign Mia's waiver" (H-20261014-parent-signs-minor-release), bound to the page's token. */
   signWaiverAction?: (formData: FormData) => Promise<void>;
   /** Bound to the page's token when the lead may pay for a seat they added; null otherwise. */
   payAction: ((formData: FormData) => Promise<void>) | null;

@@ -36,7 +36,7 @@ export async function readPlannedFlySafe(
 
 /**
  * **The night-before reminder's fly-safe hours** (ux-delight sheet
- * 2026-10-22, item 1; H-150: the rule in hours, never a clock time). The
+ * 2026-10-22, item 1; H-20261022-reminder-fly-safe-in: the rule in hours, never a clock time). The
  * same plan `/ready` reads, said only when this departure is the diver's
  * last seat with the shop: a diver with any later boat reads it on that
  * boat's reminder instead. Null whenever the plan is (a snorkeler or rider,

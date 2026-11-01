@@ -26,7 +26,7 @@ import { trips } from "./trips";
  */
 
 /**
- * What a flagged booking was matched to its person by (H-13): a reused email
+ * What a flagged booking was matched to its person by (H-20260724-one-person-per-email): a reused email
  * under a different name, or a name a staffer picked off the counter's
  * "is this the same diver?" prompt. Read only to tell the staffer why the seat
  * is held; it gates nothing the flag itself does not.
@@ -42,7 +42,7 @@ export const bookingStatus = pgEnum("booking_status", [
 
 /**
  * **Why the desk turned a diver away** (safety sheet 2026-10-15, item 6;
- * H-135): one category from that seat's own readiness blockers, never the
+ * H-20261015-who-may-turn-someone): one category from that seat's own readiness blockers, never the
  * evidence behind it. Kept in step with `TURN_AWAY_REASONS` in
  * `src/lib/turn-away.ts`.
  */
@@ -322,7 +322,7 @@ export const bookings = pgTable(
      * email match but the submitted name did not match that person's stored name
      * — a shared-inbox / minor-under-a-parent's-email signal that this booking
      * may be a *different* human silently inheriting the matched person's
-     * verified certs and current waiver (H-13). While set, readiness fails closed
+     * verified certs and current waiver (H-20260724-one-person-per-email). While set, readiness fails closed
      * with an `identity_unconfirmed` blocker so the diver can never board on
      * borrowed evidence; staff clear it with a one-tap "confirm identity" once
      * they've checked it really is the same person. Null on the identity path
@@ -366,7 +366,7 @@ export const bookings = pgTable(
     rescheduleMissedPlace: boolean("reschedule_missed_place").notNull().default(false),
     /**
      * **The fly-safe wait the night-before email told this seat, in hours**
-     * (issue #2927; H-150). A sent or ambiguously failed attempt may have
+     * (issue #2927; H-20261022-reminder-fly-safe-in). A sent or ambiguously failed attempt may have
      * exposed this figure; a later itinerary change can then correct it.
      */
     flySafeHoursTold: integer("fly_safe_hours_told"),
@@ -394,7 +394,7 @@ export const bookings = pgTable(
     }),
     /**
      * **Whoever booked this seat said its diver is under 18** (the "Under 18"
-     * box on the public party form; H-21 follow-up, decision of 2026-10-13).
+     * box on the public party form; H-20260730-minimum-age-gate-data follow-up, decision of 2026-10-13).
      * The guardian co-signature rule reads it beside the date of birth
      * (`guardianSignatureRequired`): a date of birth on file decides, and with
      * none this asks a parent or guardian to co-sign the release. It gates
@@ -505,7 +505,7 @@ export const bookings = pgTable(
      * week-out reminder and on the student's `/ready` page as a to-do.
      *
      * A staff record of what a student said or showed, never agency evidence:
-     * no agency exposes an eLearning API (H-10), and nothing reads this as a
+     * no agency exposes an eLearning API (H-20261007-request-supported-c-card), and nothing reads this as a
      * gate — admission and readiness never look at it. Refused on a departure
      * with no course (`recordCourseMaterialsDone`), the same LMS boundary as the
      * next step above. Both columns move together.

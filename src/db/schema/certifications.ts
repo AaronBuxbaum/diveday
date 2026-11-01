@@ -100,7 +100,7 @@ export const certifications = pgTable(
      */
     reviewedByPersonId: uuid("reviewed_by_person_id").references(() => people.id),
     /**
-     * **The agency's own page said so** (H-105, ADR
+     * **The agency's own page said so** (H-20261008-cert-check-extension, ADR
      * 20261008-cert-check-extension). Set when the review that certified this
      * card was a check the DiveDay browser extension ran on the agency's lookup
      * page from the staffer's own browser, and the page named this diver at
@@ -147,7 +147,7 @@ export const certifications = pgTable(
      *    still-pending self-declared row at the sale, and `calculateReadiness`
      *    does not at the boat. That is the reverse of the original rule and it
      *    is deliberate (ADR 20260820-attested-at-booking-verified-at-boarding,
-     *    H-27/H-29): a refused diver *can* type their way past the sale gate,
+     *    H-20260803-booking-time-trip-admission/H-20260820-shophasadjudicated-src-lib-trip): a refused diver *can* type their way past the sale gate,
      *    which was accepted once it was clear that gate was never what keeps
      *    anyone out of the water. The sighting at the dock is.
      * 3. Verifying one is **not** the one-tap promote every other pending card
@@ -411,7 +411,7 @@ export const specialtyCertifications = pgTable(
     reviewedByPersonId: uuid("reviewed_by_person_id").references(() => people.id),
     /**
      * **The agency's own page said so** — the twin of
-     * `certifications.agencyCheckedAt` (H-105, ADR
+     * `certifications.agencyCheckedAt` (H-20261008-cert-check-extension, ADR
      * 20261008-cert-check-extension), read there. Set when the review that
      * certified this card was a check the DiveDay browser extension ran on the
      * agency's lookup page and the page listed this specialty for this diver;
@@ -672,7 +672,7 @@ export const nitroxCertifications = pgTable(
     reviewedByPersonId: uuid("reviewed_by_person_id").references(() => people.id),
     /**
      * **The agency's own page said so** — the twin of
-     * `certifications.agencyCheckedAt` (H-105, ADR
+     * `certifications.agencyCheckedAt` (H-20261008-cert-check-extension, ADR
      * 20261008-cert-check-extension), read there. Set when the review that
      * certified this card was a check the DiveDay browser extension ran on the
      * agency's lookup page and the page listed this nitrox card for this diver;

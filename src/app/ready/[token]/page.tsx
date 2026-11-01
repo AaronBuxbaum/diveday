@@ -536,7 +536,7 @@ async function DiverReadinessPage({
           // Nothing on this booking is the diver's until the shop finishes its
           // own configuration, so there is no spine and no figure — one
           // reassuring line, in the engine's own words. Deliberately the
-          // item's *own* sentence rather than the generic setup one: H-22's
+          // item's *own* sentence rather than the generic setup one: H-20260724-minimum-age-gate-fail's
           // minimum-age wording says something a diver can act on, and
           // collapsing to "still finalizing" would throw it away.
           <p className="mt-8 text-base text-muted">{checklistDetailText(t, spine.setupItem)}</p>

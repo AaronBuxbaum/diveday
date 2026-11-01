@@ -23,11 +23,11 @@ reporting, and the first two legs of the data-portability wedge (export, importe
 guides). **Nothing that blocks rollout is code.** What blocks rollout is:
 
 1. **Legal reality** — waiver text, medical questions, e-signature sufficiency, and retention are
-   provisional baselines awaiting counsel (H-01–H-03, V-03).
-2. **Operational reality** — no named owner for secrets/backups/incidents (H-04), no live Stripe
-   Connect platform application (H-07), no verified sender/consent policy (H-09), and the offline
+   provisional baselines awaiting counsel (H-20260730-jurisdiction-waiver-text-medical, H-20260730-evidence-retention-period-deletion, H-20260724-current-typed-name-explicit, V-03).
+2. **Operational reality** — no named owner for secrets/backups/incidents (H-20260724-vercel-selected-web-hosting), no live Stripe
+   Connect platform application (H-20260724-payment-deposit-cancellation-refund), no verified sender/consent policy (H-20260724-channel-sends-booking-waiver), and the offline
    manifest is field-unproven (V-02).
-3. **Commercial reality** — the $99 founding-shop price is approved for now (H-12, 2026-07-24;
+3. **Commercial reality** — the $99 founding-shop price is approved for now (H-20260724-public-founding-shop-price, 2026-07-24;
    early-access, with billing/tax/support/contract terms still open), and no real shop has
    run a real dive day on the product (V-04).
 
@@ -48,7 +48,7 @@ Everything here is a human conversation or an account setup, keyed to the
 [decision register](human-decisions/README.md#decision-register). Work these in parallel; the critical
 path is legal review (longest lead time) and the V-02 field test (needs a boat day).
 
-### 0.1 Legal and policy (H-01, H-02, H-03, V-03) — start immediately, longest lead
+### 0.1 Legal and policy (H-20260730-jurisdiction-waiver-text-medical, H-20260730-evidence-retention-period-deletion, H-20260724-current-typed-name-explicit, V-03) — start immediately, longest lead
 
 - **Pick one operating jurisdiction and launch there only.** Recommendation: one US state with a
   dense shop population — Florida is the obvious first pick (the largest concentration of US dive
@@ -60,9 +60,9 @@ path is legal review (longest lead time) and the V-02 field test (needs a boat d
   PADI-endorsed broker historically Vicencia & Buckley / HUB International) work with these
   attorneys daily and will name names; DEMA membership includes access to business/legal resources.
   Deliverables to request, in one engagement: approved waiver template + medical questionnaire for
-  the chosen jurisdiction (H-01), a retention/deletion policy for waivers and medical flags (H-02),
+  the chosen jurisdiction (H-20260730-jurisdiction-waiver-text-medical), a retention/deletion policy for waivers and medical flags (H-20260730-evidence-retention-period-deletion),
   and a written opinion on whether typed-name + consent + timestamp suffices or a specialist
-  e-signature provider is required (H-03). Budget expectation: this is a review of existing
+  e-signature provider is required (H-20260724-current-typed-name-explicit). Budget expectation: this is a review of existing
   artifacts, not drafting from scratch — the provisional baselines in
   [human-decisions/](human-decisions/README.md#provisional-implementation-defaults--verify-before-production)
   exist precisely to make this a short engagement.
@@ -73,24 +73,24 @@ path is legal review (longest lead time) and the V-02 field test (needs a boat d
   append-only roll-call ledger) meet their underwriting expectations. A one-page "what your
   insurer will ask, and our answers" doc is a sales asset, not just diligence.
 
-### 0.2 Operational ownership (H-04, H-09 credentials, H-07 credentials)
+### 0.2 Operational ownership (H-20260724-vercel-selected-web-hosting, H-20260724-channel-sends-booking-waiver credentials, H-20260724-payment-deposit-cancellation-refund credentials)
 
 Name a single accountable human (realistically the founder at this stage — the point is writing
 it down) for each of:
 
-- Production secrets, Neon backups, domain, and incident response (H-04). Record the backup
+- Production secrets, Neon backups, domain, and incident response (H-20260724-vercel-selected-web-hosting). Record the backup
   cadence and a restore rehearsal date. **Do the restore rehearsal once before the first pilot** —
   a backup that has never been restored is a hope, not a backup.
 - **Stripe:** submit the live Stripe Connect platform application (`STRIPE_CONNECT_CLIENT_ID`) and
   configure the production webhook secret. Stripe reviews platform applications; start now so
-  approval isn't the pilot's blocker. Decide the platform-fee posture as part of H-12 (recommend:
+  approval isn't the pilot's blocker. Decide the platform-fee posture as part of H-20260724-public-founding-shop-price (recommend:
   **no platform fee at launch** — "the shop keeps its own Stripe account and its own money" is a
   trust argument against FareHarbor-style 6%-of-volume platforms).
 - **AWS SES:** request SES production access, verify `ses.dive.day`'s DKIM records, place the
   `diveday-ses-sender` credentials from the credentials secret (`cdk deploy` mints them now — see
   [manual-actions.md](../engineering/manual-actions.md)), and set `SES_FROM_EMAIL` on a real
   shop-facing identity (e.g.
-  `bookings@…`). Write the two-paragraph consent/copy policy H-09 asks for (transactional-only
+  `bookings@…`). Write the two-paragraph consent/copy policy H-20260724-channel-sends-booking-waiver asks for (transactional-only
   today; reminders are courtesy; no marketing sends without explicit opt-in). See
   [docs/engineering/ses-email-runbook.md](../engineering/ses-email-runbook.md).
 - **AWS SNS:** complete US carrier SMS-sending compliance registration (days-to-weeks — start
@@ -105,7 +105,7 @@ it down) for each of:
   [human-decisions/](human-decisions/README.md#human-verification-queue): glare, wet hands,
   airplane-mode reload, multi-checkpoint roll call, conflict reconciliation, print fallback.
   Record everything. **The no-signal roll-call claim may run before V-02 passes**
-  ([H-94](human-decisions/README.md#decision-register), 2026-10-06; until then this line held it back):
+  ([H-20260802-may-public-pages-say](human-decisions/README.md#decision-register), 2026-10-06; until then this line held it back):
   it is shipped and the demo shows it, the [claims policy](marketing.md#claims-policy-hard-rules)
   sets its wording, and no page says the roll call has been tested on a boat until V-02 records
   that it was. If V-02 fails, the claim comes off every page.
@@ -113,9 +113,9 @@ it down) for each of:
   check-in → prep → roll call end-to-end yourself) are the cheap rehearsals that make the first
   real pilot day boring.
 
-### 0.4 Commercial decisions (H-12, H-13)
+### 0.4 Commercial decisions (H-20260724-public-founding-shop-price, H-20260724-one-person-per-email)
 
-- **Pricing: recommend the meet-the-market posture and close H-12.** Land on **$99 flat per
+- **Pricing: recommend the meet-the-market posture and close H-20260724-public-founding-shop-price.** Land on **$99 flat per
   location / month, everything included, no setup fee, no per-seat math, no platform fee, cancel
   anytime with the export button** — exactly where `src/lib/marketing.ts` already sits, now made
   official. Rationale is already argued in
@@ -125,22 +125,22 @@ it down) for each of:
   that costs nothing now: **price locked for two years for the founding cohort.** Define the
   support promise as part of the same decision (recommend: founder-direct support, same-day
   response, for the founding cohort — it's honest, differentiating, and matches a capped cohort).
-  **H-26 (2026-08-02) confirms this pricing posture is deliberately lifestyle-scale, not
+  **H-20260802-what-game-is-this (2026-08-02) confirms this pricing posture is deliberately lifestyle-scale, not
   venture-scale, and drops the explicit same-day SLA from the support promise** — see
   [vision.md](vision.md#what-kind-of-business-this-is) and
   [human-decisions/](human-decisions/README.md#decision-register). **Amended 2026-08-05 (Aaron
   Buxbaum):** the founder-direct support promise itself is retired, not just the SLA — support is
   now a plain `support@dive.day` inbox with no personal-response commitment, and a trial's own
   upgrade path (3-week duration, soft expiry, `onboarding@dive.day`) is decided the same day — see
-  [human-decisions/](human-decisions/README.md#decision-register)'s H-12 amendment.
-- **H-13 (email-identity reuse) needs a ruling before a real shop's data is live.** The
+  [human-decisions/](human-decisions/README.md#decision-register)'s H-20260724-public-founding-shop-price amendment.
+- **H-20260724-one-person-per-email (email-identity reuse) needs a ruling before a real shop's data is live.** The
   domain-expert review flagged silent person-reuse on shared inboxes as unsafe; decide the
   safeguard (the light "is this you?" confirmation is the smallest honest fix) or explicitly
   accept the risk in writing. This is exactly the kind of thing a pilot shop will hit with a
   parent-and-teenager booking.
 
-**Phase 0 exit:** H-01–H-04, H-07 (credentials + fee posture), H-09 (sender + consent), H-12, and
-H-13 rows read Chosen/Implemented; V-01 recorded; V-02 recorded with sign-off (or a written
+**Phase 0 exit:** H-20260730-jurisdiction-waiver-text-medical, H-20260730-evidence-retention-period-deletion, H-20260724-current-typed-name-explicit, H-20260724-vercel-selected-web-hosting, H-20260724-payment-deposit-cancellation-refund (credentials + fee posture), H-20260724-channel-sends-booking-waiver (sender + consent), H-20260724-public-founding-shop-price, and
+H-20260724-one-person-per-email rows read Chosen/Implemented; V-01 recorded; V-02 recorded with sign-off (or a written
 decision to pilot with print-backup-only and no offline claims).
 
 ## Phase 1 — design partners (Sept–Oct 2026)
@@ -273,11 +273,11 @@ when/why snapshot; the playbooks carry the prep.
 
 | Who | Why | When | Owner gate |
 | --- | --- | --- | --- |
-| Recreational-liability attorney (scuba experience, launch jurisdiction) | Waiver/medical/retention/e-sign sufficiency | Phase 0, first call this week — longest lead | H-01–H-03, V-03 |
+| Recreational-liability attorney (scuba experience, launch jurisdiction) | Waiver/medical/retention/e-sign sufficiency | Phase 0, first call this week — longest lead | H-20260730-jurisdiction-waiver-text-medical, H-20260730-evidence-retention-period-deletion, H-20260724-current-typed-name-explicit, V-03 |
 | Dive-industry insurance broker (e.g. the agency-endorsed brokers; DAN risk-mitigation as referrer) | "Does DiveDay satisfy underwriting?" answer for shops | Phase 0 | Sales asset |
-| Stripe (Connect platform review) | Live platform application + webhooks | Phase 0, submit immediately | H-07 |
-| AWS SNS (SMS carrier compliance registration) | Legal SMS sending in the US | Phase 0, submit immediately | H-09 |
-| Dive operations lead + a friendly charter captain | V-02 field test on a real boat | Phase 0/first pilot boat day | V-02, H-05, H-06, H-11 |
+| Stripe (Connect platform review) | Live platform application + webhooks | Phase 0, submit immediately | H-20260724-payment-deposit-cancellation-refund |
+| AWS SNS (SMS carrier compliance registration) | Legal SMS sending in the US | Phase 0, submit immediately | H-20260724-channel-sends-booking-waiver |
+| Dive operations lead + a friendly charter captain | V-02 field test on a real boat | Phase 0/first pilot boat day | V-02, H-20260724-product-now-uses-explicit, H-20260724-initial-gear-policy-sizing, H-20260730-nitrox-fill-station-procedure |
 | 2–3 design-partner shop owners (profiles above) | Pilot | Recruit now, run Phase 1 | V-04 |
 | Pilot shops' front-desk staff and captains | The actual daily users; training + feedback | Phase 1 week 0 | — |
 | DEMA (membership, show logistics) | November presence + retailer data | Decide by early Sept | Phase 3 |
@@ -304,9 +304,9 @@ serves it. Computed nightly and mailed to the founder each Monday with the activ
 ## Risks and pre-decided responses
 
 - **V-02 fails on the boat** → pilot proceeds with live manifest + print backup; the no-signal
-  roll-call claim comes off every surface ([H-94](human-decisions/README.md#decision-register)); fix and
+  roll-call claim comes off every surface ([H-20260802-may-public-pages-say](human-decisions/README.md#decision-register)); fix and
   re-test before Phase 2.
-- **Legal review demands a specialist e-signature provider (H-03)** → the `SignatureProvider`
+- **Legal review demands a specialist e-signature provider (H-20260724-current-typed-name-explicit)** → the `SignatureProvider`
   seam exists for exactly this; it becomes the one Phase-0 engineering task. Budget it, don't
   debate it.
 - **Support load exceeds one founder** → the 25-shop cap holds; raising it is a deliberate
@@ -321,15 +321,15 @@ serves it. Computed nightly and mailed to the founder each Monday with the activ
 
 ## The next 30 days, in order
 
-1. Book the attorney (H-01–H-03) and submit Stripe Connect + AWS SNS SMS-compliance applications — the three
-   long-lead clocks start today. Take the corporate-footing question (H-18) and DiveDay's own
-   E&O/cyber quotes (H-19) into the same week: the entity name goes on everything else. Playbooks:
+1. Book the attorney (H-20260730-jurisdiction-waiver-text-medical, H-20260730-evidence-retention-period-deletion, H-20260724-current-typed-name-explicit) and submit Stripe Connect + AWS SNS SMS-compliance applications — the three
+   long-lead clocks start today. Take the corporate-footing question (H-20260724-corporate-footing-diveday-operate) and DiveDay's own
+   E&O/cyber quotes (H-20260730-diveday-itself-carry-technology) into the same week: the entity name goes on everything else. Playbooks:
    [stakeholders/](stakeholders/README.md).
-2. Name the ops owner, enable and **rehearse** a Neon backup restore (H-04).
-3. Verify the SES production sender and write the H-09 consent policy.
-4. Close H-12 at $99/location/month with the two-year founding lock and the support promise
+2. Name the ops owner, enable and **rehearse** a Neon backup restore (H-20260724-vercel-selected-web-hosting).
+3. Verify the SES production sender and write the H-20260724-channel-sends-booking-waiver consent policy.
+4. Close H-20260724-public-founding-shop-price at $99/location/month with the two-year founding lock and the support promise
    (`support@dive.day`, no founder-direct or response-time guarantee as of 2026-08-05); close
-   H-13 with the "is this you?" safeguard or a written acceptance.
+   H-20260724-one-person-per-email with the "is this you?" safeguard or a written acceptance.
 5. Run V-01 and the V-04 rehearsal on the demo shop; script the V-02 boat day.
 6. Draft the [design-partner one-pager](stakeholders/design-partner-one-pager.md) (the offer
    above) and open conversations with five shops across the three profiles; get one boat day

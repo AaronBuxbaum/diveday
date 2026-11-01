@@ -34,7 +34,7 @@ import {
  * - Captures every path at phone (390px) and desktop (1280px) widths — the
  *   visual spec's widths — in **light only** (`prefers-color-scheme`
  *   emulation). One scheme is enough for a check unless the work is itself
- *   about colour (the owner's rule, H-90 in docs/product/human-decisions/README.md);
+ *   about colour (the owner's rule, H-20260925-many-colour-schemes-check in docs/product/human-decisions/README.md);
  *   CI's visual matrix still captures both. `--both` takes light then dark
  *   for colour work, `--dark` dark alone, and `--light` is the default spelled
  *   out. Narrow the widths with --width <px>.

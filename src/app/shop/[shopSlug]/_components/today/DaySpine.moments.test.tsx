@@ -25,7 +25,7 @@ vi.mock("@/app/shop/[shopSlug]/actions", () => ({
   acknowledgeCrewAwayAction: vi.fn(),
   helpRequestAction: vi.fn(),
 }));
-// The agency check's host (H-105) wraps the spine and repaints through the
+// The agency check's host (H-20261008-cert-check-extension) wraps the spine and repaints through the
 // router when a "Check all" ends; no app router is mounted here.
 vi.mock("next/navigation", async (importOriginal) => ({
   ...(await importOriginal<typeof import("next/navigation")>()),

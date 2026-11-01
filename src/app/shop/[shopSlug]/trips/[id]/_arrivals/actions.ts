@@ -236,7 +236,7 @@ const turnAwayForm = z.object({
 
 /**
  * **"Turned away" — the desk saw this diver and would not board them**
- * (safety sheet 2026-10-15, item 6; H-135: any active staff, blocked rows
+ * (safety sheet 2026-10-15, item 6; H-20261015-who-may-turn-someone: any active staff, blocked rows
  * only).
  *
  * Shaped like `markNoShowAction`: the seat must be this departure's, and every

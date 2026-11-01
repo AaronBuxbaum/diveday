@@ -13,9 +13,9 @@ import { canPersonExportShopData } from "@/db/export";
  * **Which of the record's controls this staffer is shown.** Hiding is a
  * courtesy, not the gate: every action re-checks the same live roles.
  *
- * Diver deletion and merging are owner/manager only (H-14, ADR
+ * Diver deletion and merging are owner/manager only (H-20260724-staff-role-reach, ADR
  * 20260724-role-authorization). Rewriting a diver's stated rental fit is
- * instructor/divemaster/manager work (H-06); flagging them for hands-on fitting
+ * instructor/divemaster/manager work (H-20260724-initial-gear-policy-sizing); flagging them for hands-on fitting
  * stays open to all staff. Erasing a diver's personal and medical data is
  * stricter still: owner only, one way, and never offered to anyone else (ADR
  * 20260802-diver-data-erasure).

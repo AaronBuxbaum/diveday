@@ -69,7 +69,7 @@ export function agencyCheckSendsToAgency(
 
 /**
  * **What one card's check came to**, read the same way wherever it was
- * pressed (H-105).
+ * pressed (H-20261008-cert-check-extension).
  */
 export function agencyCheckOutcome(
   result: AgencyCheckResult,

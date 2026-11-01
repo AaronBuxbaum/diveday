@@ -89,7 +89,7 @@ departure):
    kills the "did you get my waiver?" call and raises confidence. Unbuilt.
    ([Diver Experience and Growth](../features/brainstorm.md#diver-experience-and-growth).)
 4. **Notifications don't actually send in a default deployment.** The Resend seam is real but resolves
-   to a disabled stub without `RESEND_API_KEY`; policy (H-09) is unowned. So "chasing missing
+   to a disabled stub without `RESEND_API_KEY`; policy (H-20260724-channel-sends-booking-waiver) is unowned. So "chasing missing
    waivers" is still manual, one-tap nudges are hollow, and the waitlist recovers **zero** revenue
    (no auto-notify on cancellation). This quietly undercuts the blocker queue's value — an action
    list whose actions can't reach the diver is half a feature.
@@ -122,7 +122,7 @@ should be retired, gated, or paused — not extended:
   seam (`src/lib/payments/index.ts`) was removed; the Connect + invoicing order flow the UI actually
   uses is the single payment path.
 - ~~**The cert-verification agency-gateway plumbing**~~ ✅ **Removed (2026-07-21).** No agency
-  exposed such an API ([H-10](../human-decisions/README.md)), so the per-agency PADI/SSI/NAUI plumbing always
+  exposed such an API ([H-20261007-request-supported-c-card](../human-decisions/README.md)), so the per-agency PADI/SSI/NAUI plumbing always
   resolved to the stub. The whole seam was removed in favour of manual staff certification (staff
   look the number up and click Mark certified) — see
   [20260721-manual-certification](../../architecture/decisions/20260721-manual-certification.md). The
@@ -132,7 +132,7 @@ should be retired, gated, or paused — not extended:
   fill-log page and its dedicated nav slot were removed; fills are now logged per departure at
   `/trips/[id]/nitrox`. The safety-critical parts (verified-card fill gate, readiness blockers, the
   math lib, the two tables) were **kept intact** — the cut was surface, not the workflow. Deeper
-  reduction still waits on the H-11 policy decision.
+  reduction still waits on the H-20260730-nitrox-fill-station-procedure policy decision.
 - ~~**Navigation debris.**~~ ✅ **Done (2026-07-20).** The `shop/page.tsx` alias, the `reports`
   duplicate page, and the `certifications`/`orders` bookmark shims were all deleted (no redirects —
   there are no users to keep bookmarks for), the four flash/notice mechanisms were unified on
@@ -141,7 +141,7 @@ should be retired, gated, or paused — not extended:
   exist yet.
 
 Common thread: much of this is **built ahead of the human decisions needed to run it.** Nitrox
-(H-11), courses (H-08), payment policy (H-07), notifications (H-09), and waiver legal (H-01–03) are
+(H-20260730-nitrox-fill-station-procedure), courses (H-20260724-certification-levels-agency-rules), payment policy (H-20260724-payment-deposit-cancellation-refund), notifications (H-20260724-channel-sends-booking-waiver), and waiver legal (H-20260730-jurisdiction-waiver-text-medical, H-20260730-evidence-retention-period-deletion, H-20260724-current-typed-name-explicit) are
 all *provisional* and unapproved ([provisional defaults](../human-decisions/README.md#provisional-implementation-defaults--verify-before-production)). A large slice of
 shipped surface **cannot go to production** as-is — and in a default deploy with no keys, no email
 sends, no image stores, no payment processes. We are polishing rooms in a house that has no plumbing
@@ -206,11 +206,11 @@ Delight over a product that can't operate is theater. In parallel with Move 2:
 
 - **Field-validate the manifest (V-02)** on a phone, outdoors, wet hands, airplane-mode. Until this
   passes, the safety differentiator is unproven and unclaimable.
-- **Make notifications actually send** — close H-09, wire a real provider — so the blocker queue's
+- **Make notifications actually send** — close H-20260724-channel-sends-booking-waiver, wire a real provider — so the blocker queue's
   one-tap nudges and waitlist auto-notify are real, not stubs. This is the multiplier that makes
   Move 2 pay off.
 - **Pick and finish one monetization path** (the Connect/invoicing flow), retire the other, and close
-  the H-07 policy gaps enough to take a real deposit.
+  the H-20260724-payment-deposit-cancellation-refund policy gaps enough to take a real deposit.
 - Drive the open [human decisions](../human-decisions/README.md) for anything presented as shippable. Don't
   present provisional-policy surfaces (nitrox, courses) as done until their H-row is Chosen.
 
@@ -226,13 +226,13 @@ Delight over a product that can't operate is theater. In parallel with Move 2:
 4. Staff blocker queue on the existing readiness engine.
 5. One-screen check-in.
 6. No-login diver readiness page.
-7. Real notifications (H-09 + provider) → one-tap nudges + waitlist auto-notify.
+7. Real notifications (H-20260724-channel-sends-booking-waiver + provider) → one-tap nudges + waitlist auto-notify.
 8. Delight pass: earned moments, "what's next" confirmations, forgiving inputs, undo, microcopy,
    per-role landing.
 
 **P2 — de-risk and prove**
 9. V-02 manifest field validation.
-10. Finish one payment path; close H-07 deposit policy.
+10. Finish one payment path; close H-20260724-payment-deposit-cancellation-refund deposit policy.
 11. Command palette + global search.
 12. Owner dashboard / readiness analytics from real data (once instrumentation exists).
 

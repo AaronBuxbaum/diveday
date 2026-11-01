@@ -210,7 +210,7 @@ describe("the set price", () => {
 });
 
 /**
- * **The counter's waiver line** (issue #2261, H-108): informs, never gates.
+ * **The counter's waiver line** (issue #2261, H-20261008-counter-rental-waiver-informs): informs, never gates.
  * Only a current signature says nothing; a link is offered only where another
  * link is the fix.
  */

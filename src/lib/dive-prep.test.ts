@@ -106,7 +106,7 @@ describe("rented add-ons on the prep list", () => {
   });
 
   /**
-   * **A hood and gloves are two pieces, each with its own size** (H-102,
+   * **A hood and gloves are two pieces, each with its own size** (H-20261007-hood-glove-sizes,
    * issue #1816). A warm-water diver takes gloves and no hood; a quarry
    * diver takes both, the hood in its thickness, and the packer reads the
    * shop's own words for each.
@@ -372,7 +372,7 @@ describe("weighting a diver in a drysuit", () => {
 });
 
 /**
- * **A diver in their own drysuit is still in a drysuit** (H-78, issue #1752).
+ * **A diver in their own drysuit is still in a drysuit** (H-20260916-rental-fit-describe-shop, issue #1752).
  *
  * Most drysuit divers own the suit and rent the rest. The weight check used to
  * key on `rentsDrysuit` — whether the shop is handing one over — so exactly
@@ -436,7 +436,7 @@ describe("a diver in their own drysuit", () => {
   });
 
   it("sizes their fins up over the boot: their own suit has one too", () => {
-    // H-78 names `drysuitFinFit` among the signals that key on what the diver
+    // H-20260916-rental-fit-describe-shop names `drysuitFinFit` among the signals that key on what the diver
     // wears. Every drysuit has a boot, ours vulcanised or theirs, and the fit
     // forms ask the bare shoe size (dive-domain-expert review).
     expect(ownDrysuit).toMatchObject({ divesDry: true, rentsDrysuit: false, rentsFins: true });
@@ -591,7 +591,7 @@ describe("fins for a diver in a drysuit", () => {
 });
 
 /**
- * **Gloves for a diver in a drysuit** (H-102, dive-domain review). Wet gloves
+ * **Gloves for a diver in a drysuit** (H-20261007-hood-glove-sizes, dive-domain review). Wet gloves
  * or dry gloves on a ring system are two different things off the rack, so
  * the line asks rather than reading like any other pair to pull.
  */
@@ -842,7 +842,7 @@ describe("buildDivePrepChecklist rental lines", () => {
   });
 });
 
-describe("needs-staff-fit fallback (H-06)", () => {
+describe("needs-staff-fit fallback (H-20260724-initial-gear-policy-sizing)", () => {
   const flaggedAt = new Date("2026-07-24T12:00:00Z");
 
   it("keeps a flagged diver's stated size off the lines but keeps their count", () => {
@@ -1227,7 +1227,7 @@ describe("divers with an incomplete fit", () => {
  * catalog edit is not the diver speaking. What changes because a rental suit
  * is going out — fins sized up over its vulcanised boot — stops with the
  * catalog entry. What changes because the diver is *in* a drysuit does not:
- * the weight check keys on `divesDry`, the diver's own answer (H-78, issue
+ * the weight check keys on `divesDry`, the diver's own answer (H-20260916-rental-fit-describe-shop, issue
  * #1810), and a catalog edit says nothing about what they wear.
  *
  * The piece itself stays, marked. A silent filter at the read would be the same
@@ -1278,7 +1278,7 @@ describe("a piece the shop stopped renting", () => {
       offeredKinds: noDrysuits,
     });
     // The catalog says what the shop hands over, not what the diver wears.
-    // Two reviews read that ambiguity opposite ways until H-78 gave the suit
+    // Two reviews read that ambiguity opposite ways until H-20260916-rental-fit-describe-shop gave the suit
     // its own fact: this diver says they dive dry, so their wetsuit number is
     // short by the two to four kilos a drysuit adds, whoever owns the suit.
     // A short number is the diver who cannot hold a safety stop; "settle the
@@ -1298,7 +1298,7 @@ describe("a piece the shop stopped renting", () => {
       offeredKinds: noDrysuits,
     });
     // The diver still dives dry, so a boot is still on their foot: the catalog
-    // says what the shop hands over, not what the diver wears (H-78).
+    // says what the shop hands over, not what the diver wears (H-20260916-rental-fit-describe-shop).
     expect(lineFor(checklist, "fins", "US 9")).toMatchObject({
       count: 1,
       drysuitFinFit: true,
@@ -1411,7 +1411,7 @@ describe("a piece the shop stopped renting", () => {
   });
 
   /**
-   * Issue #1811 (H-78): a booking that already holds a unit of the dropped
+   * Issue #1811 (H-20260916-rental-fit-describe-shop): a booking that already holds a unit of the dropped
    * kind on the gear register is not told the shop no longer rents it. One
    * rule in `rentalFitLine`/`buildDivePrepChecklist`, so the prep list and the
    * manifest rail cannot disagree. Over-marking stays the safe direction for

@@ -160,7 +160,7 @@ function offerGovernedBy(
  * Stamp one interest as offered and email the diver — as service mail or as
  * commercial mail, by `offerMailClass` (Aaron, 2026-10-06, issue #1953):
  *
- * - **What the diver asked for** is `seat_offer` (H-96's test, H-145 D-2
+ * - **What the diver asked for** is `seat_offer` (H-20261006-staff-trip-invitation-service's test, H-20261005-one-interest-table-names D-2
  *   option b): a seat on the departure whose wait list they joined, or the
  *   reply to their own date request. It reaches them whatever their
  *   courtesy-email setting, with no unsubscribe, and is not throttled.

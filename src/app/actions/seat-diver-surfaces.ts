@@ -107,7 +107,7 @@ export type SeatSurface = {
    * The same seating, when the seat it made is **held** — `createBooking`
    * attached it to an existing person on something short of proof and stamped
    * `identityUnconfirmedAt`, so the boarding gate refuses it until a staffer
-   * confirms the identity (H-13, issue #1556).
+   * confirms the identity (H-20260724-one-person-per-email, issue #1556).
    *
    * Still a seating, so still a success code; what it adds is the fact
    * `seatedNotice` hid. Without it every door answered a plain "Added" and the

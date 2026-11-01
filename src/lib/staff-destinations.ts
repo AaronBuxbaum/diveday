@@ -21,7 +21,7 @@ import { ALL_SWITCHES_ON, type ShopSwitchesOn } from "./shop-features";
  */
 
 /**
- * Owner/manager gates (H-14, ADR 20260724-role-authorization). A gated
+ * Owner/manager gates (H-20260724-staff-role-reach, ADR 20260724-role-authorization). A gated
  * destination is *absent* for anyone who fails the gate — never present and
  * disabled, never explained (ADR 20260724-role-gated-surfaces-hide-not-explain).
  */
@@ -319,7 +319,7 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   { id: "courses", suffix: "/courses", section: "courses", inPalette: true },
   // The rental fleet (ADR 20260815-minimal-gear-register) and the bench beside
   // it (ADR 20261008-gear-work-orders). Ungated: gear is any-staff work
-  // (H-06), and a technician is staff.
+  // (H-20260724-initial-gear-policy-sizing), and a technician is staff.
   { id: "gear", suffix: "/gear", section: "gear", inPalette: true },
   { id: "workOrders", suffix: "/gear/work-orders", section: "gear", inPalette: true },
   // The act, declared here because the registry is the only place a

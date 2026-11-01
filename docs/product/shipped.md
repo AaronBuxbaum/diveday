@@ -9,11 +9,11 @@ it marked done in the roadmap. If code and this list disagree, one of them is wr
 
 ## Medical alert for the crew (built 2026-10-23)
 
-A diver writes, after the medical questionnaire, what the crew should know in an emergency (an allergy and where the medicine is, diabetes, an inhaler); it is sealed with the signature and never gates. Every staffer sees a "Medical alert" chip on the manifest and roll call; an owner, a manager or that departure's crew opens the words, and each read is on the diver's trail. The offline copy carries the words only for those readers. Issue #2960, H-153, glossary *Medical alert for the crew*, ADR [20260729-staffing-waiver-audit-and-localized-copy](../architecture/decisions/20260729-staffing-waiver-audit-and-localized-copy.md) amendment.
+A diver writes, after the medical questionnaire, what the crew should know in an emergency (an allergy and where the medicine is, diabetes, an inhaler); it is sealed with the signature and never gates. Every staffer sees a "Medical alert" chip on the manifest and roll call; an owner, a manager or that departure's crew opens the words, and each read is on the diver's trail. The offline copy carries the words only for those readers. Issue #2960, H-20261023-medical-alert-for-the, glossary *Medical alert for the crew*, ADR [20260729-staffing-waiver-audit-and-localized-copy](../architecture/decisions/20260729-staffing-waiver-audit-and-localized-copy.md) amendment.
 
 ## Medical alert: print the words, and an emergency read (built 2026-10-24)
 
-An owner or manager prints a departure's packet with each diver's medical alert under their row ("Print with medical alerts"), so a crew whose phone is dead can still act; each printed diver's trail records it. On the days of the trip, a night boat past midnight included, a staffer not on the crew opens an alert behind "Emergency: show the alert" and a confirm step; every such read is on the diver's trail and in the owner's Monday email. Issue #2990, H-153 amendment of 2026-10-24, glossary *Medical alert for the crew*.
+An owner or manager prints a departure's packet with each diver's medical alert under their row ("Print with medical alerts"), so a crew whose phone is dead can still act; each printed diver's trail records it. On the days of the trip, a night boat past midnight included, a staffer not on the crew opens an alert behind "Emergency: show the alert" and a confirm step; every such read is on the diver's trail and in the owner's Monday email. Issue #2990, H-20261023-medical-alert-for-the amendment of 2026-10-24, glossary *Medical alert for the crew*.
 
 ## Shop questions on the release (built 2026-10-23)
 
@@ -43,7 +43,7 @@ Staff lend tagged units to somebody who is not on a boat: **Rent out** on the ge
 
 ## The Monday email (delivered 2026-10-07)
 
-Market audit item 51. Every Monday morning in the shop's own zone, the owner gets one email about the shop's week: last week's bookings and seats filled against capacity, this week's departures and seat fill, divers on this week's boats still owing a waiver, reviews received and waiting on moderation, date requests waiting, and anything on Today that is past due, each with a link into the staff app. Empty sections are left out and a week with nothing to say sends nothing. A staffer outside Reports' gate (anyone but an owner or manager) who opts in gets the week without last week's bookings and seat fill and without Today's money and platform chores, picked per recipient from their live roles. Owners are on by default and other staff opt in from Settings, Account, Email (`/settings/email`, ungated like the calendar feed and in the search), which also previews this week's email; the email carries a one-click way out (`/unsubscribe/<token>`, plus the RFC 8058 header pair). One claim per person per week in `weekly_digest_sends` makes the hourly pass idempotent; demo shops never send. Service mail under H-09. See the glossary's "Monday email".
+Market audit item 51. Every Monday morning in the shop's own zone, the owner gets one email about the shop's week: last week's bookings and seats filled against capacity, this week's departures and seat fill, divers on this week's boats still owing a waiver, reviews received and waiting on moderation, date requests waiting, and anything on Today that is past due, each with a link into the staff app. Empty sections are left out and a week with nothing to say sends nothing. A staffer outside Reports' gate (anyone but an owner or manager) who opts in gets the week without last week's bookings and seat fill and without Today's money and platform chores, picked per recipient from their live roles. Owners are on by default and other staff opt in from Settings, Account, Email (`/settings/email`, ungated like the calendar feed and in the search), which also previews this week's email; the email carries a one-click way out (`/unsubscribe/<token>`, plus the RFC 8058 header pair). One claim per person per week in `weekly_digest_sends` makes the hourly pass idempotent; demo shops never send. Service mail under H-20260724-channel-sends-booking-waiver. See the glossary's "Monday email".
 
 ## A shop can pay DiveDay (delivered 2026-10-07)
 
@@ -66,7 +66,7 @@ transaction moves everything, keeps every signed release and medical answer, and
 so old links land on the kept record (glossary "Merge (two diver records)"; `diver-merge.test.ts`
 asks the catalog for every foreign key to `people`). A card waiting for a check carries **Check
 with <agency>**, a link to that agency's own lookup (SSI, NAUI, SDI, TDI, GUE; "Search the CMAS
-portal"; "Check with PADI (member sign-in)"), from `src/lib/agency-verification.ts` (H-10 amendment in
+portal"; "Check with PADI (member sign-in)"), from `src/lib/agency-verification.ts` (H-20261007-request-supported-c-card amendment in
 [20260721-manual-certification](../architecture/decisions/20260721-manual-certification.md)).
 
 ## Participants who are not divers (delivered 2026-10-07)
@@ -95,7 +95,7 @@ the defaults chosen for its open questions in
 
 ## A page for every feature (delivered 2026-10-05)
 
-H-93. Twelve feature pages under `/product/<feature>` (online booking, the shop's website, waivers
+H-20261005-public-pages-sell. Twelve feature pages under `/product/<feature>` (online booking, the shop's website, waivers
 and medical forms, certification checks, messages, check-in, the boat manifest and roll call, dive
 sites, rental gear, the schedule and crew, courses, payments), from one registry
 (`src/lib/feature-pages.ts`) and one template: a headline about what the shop gets beside the real
@@ -199,7 +199,7 @@ checked before the send, and the outcome recorded whether it went or not). Today
 `unanswered_messages` row and nothing at zero. Owner and manager only at delivery: a reply leaves
 as the shop, and the list holds addresses for people who never booked. **Widened 2026-09-10** to
 every live staff role, reading and answering both — the message that most wants answering at 7am is
-answered by whoever is at the dock (issues #1505/#1518, an H-14 amendment; the two predicates are
+answered by whoever is at the dock (issues #1505/#1518, an H-20260724-staff-role-reach amendment; the two predicates are
 deleted, and the Today row widened with them). **The stranger's row gained a Delete** the same day
 (issue #1506): with no record it has no door and no composer, so it was the one row in the worklist
 nothing could finish, and it counted against the Today row for as long as it sat there. Soft, on
@@ -245,8 +245,8 @@ set its address gets no line rather than a guess.
 
 ## Something watches from outside, and anyone can ask (delivered 2026-09-07)
 
-N-55 from the 2026-09-07 improvement-ideas decision sheet (issue #1466), closing H-04's last open
-item and the first row of H-45's sequence. A **Route 53 health check** polls `/api/health` every 30
+N-55 from the 2026-09-07 improvement-ideas decision sheet (issue #1466), closing H-20260724-vercel-selected-web-hosting's last open
+item and the first row of H-20260907-far-diveday-migrate-onto's sequence. A **Route 53 health check** polls `/api/health` every 30
 seconds from AWS's global checker fleet — outside the account, so it survives the outage that takes
 every other alerting path down with it — matching `"status":"ok"` in the body as well as the 200, so
 a parked domain or a CDN error shell reads as down. Its CloudWatch alarm is declared as
@@ -272,15 +272,15 @@ asks the card.
 
 ## A minor's release is signed twice (delivered 2026-09-07)
 
-N-38 from the 2026-09-07 improvement-ideas sheet, which reopened H-21's own open question: until it
+N-38 from the 2026-09-07 improvement-ideas sheet, which reopened H-20260730-minimum-age-gate-data's own open question: until it
 landed, a twelve-year-old could open the ordinary `/waivers/[token]` link, execute a liability
 release alone, and have every staff surface read that record as **Signed**. Now the minor and their
 guardian sign the *same* text under the *same* provider on one page, `waiver_records` carries six
 guardian columns and its own draft, and `readiness.ts` blocks boarding on
 `guardian_signature_missing` until the second signature exists. Age is measured on the day the pen
 moved, in the shop's own zone, so a release a seventeen-year-old signed alone does not become valid
-on their eighteenth birthday. The legal wording is still H-01's and still English, and whether
-typed consent is a sufficient assurance level is still H-03 — this shipped the second signer and
+on their eighteenth birthday. The legal wording is still H-20260730-jurisdiction-waiver-text-medical's and still English, and whether
+typed consent is a sufficient assurance level is still H-20260724-current-typed-name-explicit — this shipped the second signer and
 the frame around them, not a minor-specific release. ADR
 [20260907-guardian-co-signature](../architecture/decisions/20260907-guardian-co-signature.md).
 
@@ -350,7 +350,7 @@ screenshot per state and a transcript (`simulation/day.md`) behind, and runs nig
 The 2026-09-06 loop, argued on [its canvas](../design/canvases/20260906-before-you-ask/README.md)
 and decided in ADR
 [20260906-before-you-ask](../architecture/decisions/20260906-before-you-ask.md) with every
-recommended option chosen (H-68): one rule, drawn six times and shipped six times the same day.
+recommended option chosen (H-20260906-diveday-fill-already-knows): one rule, drawn six times and shipped six times the same day.
 **A send you can take back** (17a) — the four sends that asked a confirming question take an
 eight-second server-side hold with Undo where Send was (`held_sends`, drained by the client's
 countdown or the hourly cron, whichever comes first; the dialogs are gone). **Nothing you typed is
@@ -359,11 +359,11 @@ Start over, and the home carries one "Unfinished" row while one exists; drafts n
 or medical answer. **Type it any way** (17c) — pure readers for time, date, phone, name and money
 under `src/lib/forgiving-fields.ts`, `ForgivingInput` showing what it made of the typing, and a
 never-list held by test. **The add panel already knows the weekday** (17d) — the panel fills from
-the shop's own departures on that weekday over six weeks, crew included (H-68 c), under one
+the shop's own departures on that weekday over six weeks, crew included (H-20260906-diveday-fill-already-knows c), under one
 sentence with "start blank"; the second boat is a row, never added on its own. **The door remembers
 who opened it** (17e) — a booking page reached from the thread's next-dive link carries a
 ten-minute revocable handoff and arrives with the standing facts folded, each naming its date; a
-cold-typed email that matches a diver on file may receive one link an hour (H-68 b), off the
+cold-typed email that matches a diver on file may receive one link an hour (H-20260906-diveday-fill-already-knows b), off the
 request path and behind the per-IP bucket, and the page never learns whether it went. **Ask it,
 and it answers** (17f) — the palette's first row is an answer card for a day, one diver or one
 departure, its act read from the same fix table as the home's rows, never mutating. Principle 7
@@ -371,7 +371,7 @@ gained its sentence: a send that can be held is undone, not confirmed.
 
 ## Reef for the shop, Harbor for the diver (delivered 2026-09-01 to 2026-09-02)
 
-The whole-product direction the owner picked on 2026-09-01 (H-64), argued in ADR
+The whole-product direction the owner picked on 2026-09-01 (H-20260901-canvas-direction-brand), argued in ADR
 [20260901-diveday-reimagined](../architecture/decisions/20260901-diveday-reimagined.md) and drawn on
 [its canvas](../design/canvases/20260901-diveday-reimagined/README.md), landed as ten slices. The
 staff app wears **Reef** — sand, shell and tideline, the lagoon-to-coral range, the 28px panel on a
@@ -383,7 +383,7 @@ derived and contrast-checked in `src/lib/brand.ts` from the Settings *Brand* gro
 storefront's hero, badge wall, quotes, boats and credit line (13c), the eight-widget embed catalogue
 and its generator (13d), and the recap as the shop's postcard with the site drawn on it (13i,
 #1278). The offer says so on `/pricing`, `/product` and the FareHarbor guide, with the website built
-to order at H-65's price (13e, #1264). The night palette was drawn last (13j): open ocean stays the
+to order at H-20261025-built-order-website-priced's price (13e, #1264). The night palette was drawn last (13j): open ocean stays the
 ground and the five washes became hues of their own instead of grey mixes, held by
 `src/lib/night-palette.test.ts`. Each slice's component names the ADR and a test pins its rule.
 
@@ -449,7 +449,7 @@ would show one row on page 1 and two on page 4. Each group label's count comes f
 `countStaffReviewGroups`, one count per group over that group's own membership test, which is the
 pager rule applied to a group header.
 
-Deleted (H-49): the per-row tick boxes and "Publish selected" — the group *is* the selection, and
+Deleted (H-20260815-no-legacy): the per-row tick boxes and "Publish selected" — the group *is* the selection, and
 its header says "Publish both" at two and "Publish all N" above that, absent entirely at one, where
 the row's own Publish already does it; the `FilterChips` "All / Waiting on you" row, since a
 filtered list cannot show a staffer that publishing moved something; `useRevealPublished`, the
@@ -522,7 +522,7 @@ shop is never quiet).
 
 Slice 6d of
 [20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md),
-decision 4, and the delivery of **H-62**. The shop's evening was a second destination that
+decision 4, and the delivery of **H-20260827-close-out-remain-own**. The shop's evening was a second destination that
 re-rendered Today's own evidence in a different order; it is now a **state the home's spine settles
 into**, and `/close-out` is a 308. Nothing about `day_closeouts`, the recorded act or the departure
 log changed underneath — only where they render, which was the whole finding.
@@ -543,13 +543,13 @@ afternoon can hold a settled dawn boat above a station still counting heads with
 reader to find or switch. The closing block appears beneath the spine only when *every* departure
 of the shop day has settled, with the standing one-hour late-arrival buffer: the leftovers as a
 ledger group whose header owns the fact each row used to restate ("Still open — carries to
-tomorrow"), each with its own **Dismiss**, saved immediately with Undo per H-57 — then the one
+tomorrow"), each with its own **Dismiss**, saved immediately with Undo per H-20260822-close-out-leftovers-resolved — then the one
 closing act, and the spine's own Tomorrow disclosure closing the page. No second tomorrow band, no
 caption under the button, no per-row explanation of what carrying means.
 
 **The acknowledgement gate is gone from the domain, not just the screen.** `closeDay` lost its
 `acknowledged` input and `CloseoutAcknowledgementRequired` is deleted; `DayCloseoutState` lost
-`mustAcknowledge` with them. H-57 already has a shop deciding each leftover as it meets one, so a
+`mustAcknowledge` with them. H-20260822-close-out-leftovers-resolved already has a shop deciding each leftover as it meets one, so a
 checkbox at the close re-asked an answered question in front of an append-only act — principle 7's
 confirm on something reversible. Closing over an open head count is recorded, loudly and by name,
 and never refused. The tests that pinned the throw were rewritten to pin that.
@@ -665,7 +665,7 @@ DiveDay records nothing about dives *performed* — `trips.planned_dives` is wha
 trip row and `dive_sites.max_depth_meters` is the **site's** deepest point, and a page a divemaster
 is asked to sign may not carry numbers nobody observed. Those are the diver's to write on the ruled
 lines. `RecapMap`'s stylized boat track, the `SiteStop` itinerary and the duplicate conditions `<dl>`
-are deleted (H-49), and so is the standalone recap page shell: that route is now 170 lines that
+are deleted (H-20260815-no-legacy), and so is the standalone recap page shell: that route is now 170 lines that
 verify a token, read a booking, and render `AfterState`.
 
 **One ask, and the rest are doors.** The review is the page's single primary in every variant — a
@@ -796,7 +796,7 @@ copy of its own and no word about outcomes, so `QuestionnaireOutcome`'s single s
 only thing on the page that says what an answer means — declining to settle a step is not a
 judgment about it. The rail's own settled Medical line words facts only ("11 of 11 answered") — the
 SPEC's optional "· 1 flagged" was **not** built: it would be a second statement of a referral the
-outcome line already makes in kinder words, on a page under the H-01/H-03 wording freeze.
+outcome line already makes in kinder words, on a page under the H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit wording freeze.
 
 The rail is deliberately not a navigator on first pass, and never links forward — a diver cannot
 tap "Sign" to skip the release. After a refusal, and only then, the one segment that owns the
@@ -836,7 +836,7 @@ is allowed to say, and which letter a name files under, are `src/lib/roster-rows
 words, and letter groups built as **runs over the query's own order** rather than buckets, so a
 page never re-sorts itself under the pager. Accents fold, so Ángel files under A.
 
-Deleted (H-49): `summarizeDivers` and its four per-page queries, the certification-level column and
+Deleted (H-20260815-no-legacy): `summarizeDivers` and its four per-page queries, the certification-level column and
 its `diverDepthLimit` read, the pending/imported counts, the avatar, the contact sub-line, the
 "People" heading and the badge hanging off it, and nine message keys in both locales. The count is
 quiet text beside the search box now — a fact about the list, not a status. `listDiverSummaries`
@@ -849,16 +849,16 @@ Slice 8e of [20260827-people-not-lists](../architecture/decisions/20260827-peopl
 decision 4. The release a shop publishes and the signatures standing against it were two tabs that
 could disagree; they are one page now. `/shop/[shopSlug]/waivers/signatures` is a 308 Route Handler
 carrying `?record=` and `?page=` (plus the row's fragment), and the sub-nav, its shell layout and
-the second `page.tsx` are gone (H-49).
+the second `page.tsx` are gone (H-20260815-no-legacy).
 
 **Materiality became the input.** What stood there was two same-weight, near-destructive buttons
 with no default — "Publish — signatures need renewing" beside "Publish wording correction" — each
 arming its own confirm, so the app learned which kind of edit this was from *which button was
-tapped*. H-54 asks for two explicit choices, so the choice is now a radio pair the form is invalid
+tapped*. H-20260822-may-shop-explicitly-declare asks for two explicit choices, so the choice is now a radio pair the form is invalid
 without ("A correction — wording only" / "A material change", the material one carrying the live
 `standingWaiverExposure` figures), with a single **Publish** beneath and the `InlineConfirm` double
 tap kept on the material path alone. With nothing signed against the current release the pair
-collapses and Publish stands alone. Nothing about H-54's semantics moved: the same `material` field
+collapses and Publish stands alone. Nothing about H-20260822-may-shop-explicitly-declare's semantics moved: the same `material` field
 reaches `saveWaiverAction`, exposure is still counted before the save, and the action now refuses a
 submission naming neither rather than defaulting on the shop's behalf — the server half of the pin,
 because a POST straight at the action never met the form. That refusal has its own words
@@ -1022,7 +1022,7 @@ out / due back / service due, a Returns panel listing the first two again with t
 and a "Where it is" column saying it a third time on every row of a bordered table. **The states
 are the groups now** — Out, Overdue, On the wall — hairline rows on the page background under
 headings that own the count, composed from the shipped `LedgerGroup`/`LedgerRow` primitives. The
-tiles and the panel are gone (H-49, no legacy to carry) and their acts ride the rows they were
+tiles and the panel are gone (H-20260815-no-legacy, no legacy to carry) and their acts ride the rows they were
 always about: mark returned where the unit is with a diver, check out and release where the desk
 still has it.
 
@@ -1167,7 +1167,7 @@ render in the words Team already gave them, which also stops the raw `instructor
 leaking English onto a Spanish reader's screen. Credentials are the quiet ledger beneath: the
 review state and the issuer as one line, the renewal in warning ink only once the clock has
 something to say, and **the word always present** so a monochrome screen loses nothing. Nothing
-there gates anything — H-59 — and the test asserts the absence, because a later change that greys
+there gates anything — H-20260825-staff-credentials-renewal-clock — and the test asserts the absence, because a later change that greys
 a control on a lapsed rating looks helpful and breaks the one promise this surface makes.
 The two add forms became two doors, `+ Add a shift` and `+ Add a credential`, native `<details>`
 at the tail of the ledger each belongs to, reopening themselves on a refusal so the words land
@@ -1215,7 +1215,7 @@ scheduled in this window" (the empty cell says it), the per-card "Crewing" headi
 line, the crew-gap summary in all three of its states, the credentials preamble explaining that the
 records never gate — a clause explaining which rule won — and the bare "no credentials recorded
 yet" line, which was a group with no members. Below `lg` the week collapses to a day list with the
-same acts, the same call H-63 made for the board: seven columns of time ranges have no honest 390px
+same acts, the same call H-20260827-clearwater-week-board-roadmap made for the board: seven columns of time ranges have no honest 390px
 form.
 
 ## Reports is five figures and a ledger (delivered 2026-08-28)
@@ -1560,7 +1560,7 @@ medium put the heavier ink on the easier ask. `/` keeps its own pairing, where t
 beside a price *line* — context, not terms.
 
 **The two-year lock moved under the figure it qualifies** (`marketing.pricing.lockNote`), where a
-reader looking at the number is asking "for how long", so a binding commercial commitment (H-12) is
+reader looking at the number is asking "for how long", so a binding commercial commitment (H-20260724-public-founding-shop-price) is
 not inventoried twice in one screen. It names its subject — "Today's price, locked for two years for
 founding shops" — because fine print under a figure is the slot a burned buyer scans for the catch,
 and a subjectless "Locked for two years" invites them to read *themselves* as the thing locked, on
@@ -1597,7 +1597,7 @@ your shop's records** are credentials…"): same claim, same scope, but a carve-
 is the construction a burned buyer reads as the catch.
 
 Pinned rather than remembered: `src/lib/marketing.test.ts` asserts the four things the trial note
-must name and that it invents no billing term `faq.trialMeaning` has not already made (H-12 leaves
+must name and that it invents no billing term `faq.trialMeaning` has not already made (H-20260724-public-founding-shop-price leaves
 cadence, taxes and the contract flow open), the lock naming the price as the thing locked, the
 credentials scope, FareHarbor's rate staying reported-only, and four silences — no included key
 mentions the lock, `marketing.price.item5` is gone rather than reworded, `feesNote` raises no
@@ -1657,7 +1657,7 @@ the same thing.
 Two rules are pinned rather than remembered: `e2e/marketing.spec.ts` still counts the hero's
 enabled controls (and now asserts the price arrived inside that budget as text carrying no link or
 button), and `src/lib/marketing.test.ts` refuses a currency figure anywhere in a `marketing.*`
-message in either locale, so H-12's single price source cannot be quietly copied into a bundle.
+message in either locale, so H-20260724-public-founding-shop-price's single price source cannot be quietly copied into a bundle.
 
 ## Onboard is the shop's first form (delivered 2026-08-28)
 
@@ -1697,7 +1697,7 @@ never doors; the file is Certifications (all three card kinds as one group with 
 Waiver, Gear and sizes, Notes, and the audit trail as a folded group (a Dive support group was removed 2026-10-03 at the owner's request, with the whole support-needs record — ADR [20260827-support-needs-are-a-record-about-the-dive](../architecture/decisions/20260827-support-needs-are-a-record-about-the-dive.md) is deprecated). On a phone,
 the long Gear summary stacks beneath its title so the size list stays readable without widening
 the record; compact file facts remain single-line doors. **Book a
-departure is the one primary**, pinned by a source sweep. Deleted (H-49): the jump nav, the stat
+departure is the one primary**, pinned by a source sweep. Deleted (H-20260815-no-legacy): the jump nav, the stat
 tiles, `CertificationCards`/`SpecialtyCards`, `PaymentsSection`/`UpcomingTripsSection`/`ShopHistory`
 /`BookingMoneyCell`, `RentalFit`, `CardStatusMark`, the record's refund control and its four notice
 codes (money out is the Orders ledger's act, where the form can send back a partial amount), and
@@ -1798,7 +1798,7 @@ decision 6: the three rows every staff surface about people repeats now have one
 A certified card renders **no badge at all** (a badge marks the exceptional state), every other
 state carries a word rather than a colour, an imported card says so on every surface that shows it,
 and an imported visit is never a door. The state vocabulary moved out of the diver record's own
-`_components/shared.ts` to homes the shared rows can reach: predicates and the H-24
+`_components/shared.ts` to homes the shared rows can reach: predicates and the H-20260725-two-findings-dive-domain
 level/specialty asymmetry to `src/lib/certification-cards.ts` (where
 `certificationCardRowState` flattens the two display unions exactly once), words and tones to
 `src/i18n/card-labels.ts`, and the waiver row's five states to `src/i18n/waiver-labels.ts`. No
@@ -1808,7 +1808,7 @@ surface adopts them yet — 8b, 8c and 9g do. Pinned by `src/components/person/r
 ## The schedule board is a week (delivered 2026-08-28)
 
 Slice 6e of [20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md)
-(decision 5, width floor H-63). From `xl` (1280px) up, `/shop/[shopSlug]/schedule/board` composes
+(decision 5, width floor H-20260827-clearwater-week-board-roadmap). From `xl` (1280px) up, `/shop/[shopSlug]/schedule/board` composes
 as **seven columns, one per day** — departures as compact time-led entries, a multi-day course as
 one bar spanning the days it owns rather than repeated into each of them, today marked with a disc
 *and* the word, past columns set down and offered no "+ Add". Paging is by week (`?week=<any date
@@ -1842,7 +1842,7 @@ progress bar are gone. Coral fires once here, at `?booked=1`; all-set settles in
 ink, because "paperwork done" is the waiver page's moment. The party footer gains one quiet
 "Everyone's set — see you at the dock." line, and the dive-day block leads with "Today's the day."
 from midnight in the shop's own zone. `DiveBriefingsSection` and the four components under it are
-deleted (H-49): what you'll see down there is the trip page's pitch, and this page is preparation.
+deleted (H-20260815-no-legacy): what you'll see down there is the trip page's pitch, and this page is preparation.
 
 ## The trip page sells, then closes (delivered 2026-08-28)
 
@@ -2355,7 +2355,7 @@ departures they actually qualify for. A cascade record at
 `/shop/[shopSlug]/schedule/blowout/[tripId]` tracks per diver: message state (sent / retrying /
 failed / no email), payment position, the offers their message carried, and a live
 rebooked-vs-unresolved state — the blow-out isn't over until that column empties. Sends are
-idempotent and resumable; no money moves (refunds stay per-booking, H-14 gate intact).
+idempotent and resumable; no money moves (refunds stay per-booking, H-20260724-staff-role-reach gate intact).
 Alternative-day salvage and a courtesy text channel are the named follow-ons. See
 [20260804-blowout-cascade](../architecture/decisions/20260804-blowout-cascade.md).
 
@@ -2442,7 +2442,7 @@ same expiry and live-cap rules as its siblings, redacted before telemetry. Only 
 already-verified surfaces mint them (the confirmation panel and their `/ready` page), and only for
 unclaimed, non-cancelled member seats on a not-yet-departed trip. Claiming resolves the claimant by
 email with `findOrCreatePerson` semantics — a non-matching name stamps `identity_unconfirmed_at`,
-so nobody inherits verified evidence by typing an email (H-13) — re-runs the gates a fresh booking
+so nobody inherits verified evidence by typing an email (H-20260724-one-person-per-email) — re-runs the gates a fresh booking
 would face, supersedes any waiver signed by the placeholder, and revokes every outstanding
 capability on the booking. Claiming never weakens a gate, and an unclaimed seat simply boards under
 the organizer's party as before. Pay-your-own-share stays out of scope. See
@@ -2569,12 +2569,12 @@ lives in `createBookingRecord`, so every door inherits it, and the lookup fails 
 deliberately **weaker than readiness** and may never refuse someone readiness would clear — a
 property test asserts that invariant across every requirement × evidence combination. A course
 session is carved out: a site's inherent gate must not refuse a student from the course that grants
-the very card. **This narrows DOM-M6 rather than closing it** — following the H-08 precedent, a
+the very card. **This narrows DOM-M6 rather than closing it** — following the H-20260724-certification-levels-agency-rules precedent, a
 diver the shop has never carded is not refused, which is why the trip's requirement is now stated
-above the public booking form and why H-27 through H-30 exist.
+above the public booking form and why H-20260803-booking-time-trip-admission through H-20260803-booking-form-succeed-fail exist.
 See [20260803-trip-admission-at-booking](../architecture/decisions/20260803-trip-admission-at-booking.md).
 
-**Reversed in part on 2026-08-20 (H-27/H-29, all four rows now decided).** The sale-time gate
+**Reversed in part on 2026-08-20 (H-20260803-booking-time-trip-admission/H-20260820-shophasadjudicated-src-lib-trip, all four rows now decided).** The sale-time gate
 believes every certification on the record — staff-typed, imported, or the diver's own words — and
 the booking form asks the question. Only the *boat* requires a sighting. That makes the sale gate
 talk-past-able on purpose: it was never what keeps a diver out of the water, and refusing a shop's
@@ -2615,7 +2615,7 @@ Next merges `metadata` shallowly, so every marketing page except `/` had been un
 already in the repo and no savings arithmetic (MKT-F9). MKT-F4 and MKT-F8 were already delivered
 before this slice; the review measures `be15104`, not HEAD.
 
-**Domain wording.** H-11, V-05 and the nitrox provisional defaults now say plainly that DiveDay
+**Domain wording.** H-20260730-nitrox-fill-station-procedure, V-05 and the nitrox provisional defaults now say plainly that DiveDay
 gates the fill *request* and holds no fill log of any kind (DOM-M4). HD-8 is left standing and named
 as unanswered in all three places.
 
@@ -2763,7 +2763,7 @@ the owner can retract. The assessment was pruned again the same day.
   [2026-08-03 amendment](../architecture/decisions/20260802-crew-roll-call-attestation.md#amendment-2026-08-03--the-follow-on-landed-this-adr-is-not-superseded)
   records which of its statements the follow-on narrows and which are unchanged. It was superseded
   the next day, and on **2026-08-15 its `roll_call_crew_attestations` table was dropped outright**
-  (H-49, pre-pilot with no users; the writer had no production caller). The per-person crew roll
+  (H-20260815-no-legacy, pre-pilot with no users; the writer had no production caller). The per-person crew roll
   call is the whole crew half of a head count, and `roll_call_crew_attestations.csv` is no longer
   part of the shop export.
 
@@ -2775,7 +2775,7 @@ rediscovered:
   crew panel now says so in a **third, neutral tone** — "not recordable here" is a limitation, "a
   named crew member is not back aboard" is the alarm — because rendering both in warning-yellow on
   every out-of-signal dive teaches crews to stop reading the panel. Fail-closed is unchanged.
-  **Shipped 2026-08-14** (H-46): `roll_call_crew_events` gained `source` and `client_event_id`,
+  **Shipped 2026-08-14** (H-20260814-where-diveday-sit-between): `roll_call_crew_events` gained `source` and `client_event_id`,
   `recordCrewRollCall` mirrors the diver recorder's offline branch, and the crew panel carries the
   same two controls the diver rows do. No record-version bump was needed — the event type was
   widened additively and the snapshot's new `crew[].id` is optional, so a copy saved before the
@@ -3040,7 +3040,7 @@ shipped, each with a `security-reviewer` pass per the repo's hard rules.
   Wired into the Playwright harness (`playwright.config.ts`, `e2e/global-setup.ts`).
 
 **"Close the revocation window on base staff surfaces" was not built** — it re-proposed exactly what
-[H-15](human-decisions/README.md#decision-register) already decided against on 2026-07-24; see
+[H-20260724-staff-disable-latency](human-decisions/README.md#decision-register) already decided against on 2026-07-24; see
 [20260724-staff-session-and-capability-migration-policy](../architecture/decisions/20260724-staff-session-and-capability-migration-policy.md).
 **"Reduce what a stolen device can read from offline manifests" remains open by deliberate human
 decision**, kept in full in the archived audit's §5 for whoever eventually revisits it.
@@ -3217,7 +3217,7 @@ archived.
   compiled-in `en-US` call sites across 32 files are gone, staff screens included. Translated *copy*
   covers the diver-facing surface (schedule, trip, course, booking form, recap); Spanish ships
   alongside English. Staff copy is still inline English — a stated gap, not a claim — and the
-  waiver/medical wording stays English pending H-01/H-03. `pnpm check:locale` guards both halves
+  waiver/medical wording stays English pending H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit. `pnpm check:locale` guards both halves
   ([diver-copy-localization](../architecture/decisions/20260729-diver-copy-localization.md)).
 
 ## Diver experience and growth completion (delivered 2026-07-29)
@@ -3266,7 +3266,7 @@ archived.
 - **Hosting** — Vercel selected and ADR'd; production builds run migrations
   ([Vercel](../architecture/decisions/20260718-vercel-hosting.md),
   [Neon](../architecture/decisions/20260718-vercel-neon-hosting.md)). Remaining owner/backup/incident
-  naming is H-04 in [human-decisions/](human-decisions/README.md).
+  naming is H-20260724-vercel-selected-web-hosting in [human-decisions/](human-decisions/README.md).
 - **Demo mode / dynamic onboarding** — one-click trial into a per-visitor isolated shop, checked by
   the presence of a demo shop rather than a global flag
   ([dynamic-demo-onboarding](../architecture/decisions/20260718-dynamic-demo-onboarding.md),
@@ -3352,7 +3352,7 @@ archived.
   ([automated-cancellation-refund](../architecture/decisions/20260721-automated-cancellation-refund.md)).
 
 > The deposit/window **values**, percentage-vs-flat deposits, legal/accounting tax policy, and any
-> platform fee remain open policy — H-07 in [human-decisions/](human-decisions/README.md). Stripe Tax
+> platform fee remain open policy — H-20260724-payment-deposit-cancellation-refund in [human-decisions/](human-decisions/README.md). Stripe Tax
 > collection now ships as an opt-in, provider-owned mechanism; the connected-account setup and
 > legal/accounting obligations still require their named owners.
 
@@ -3430,20 +3430,20 @@ archived.
   applies and comes across with the card, and no card imports without a real number. The one gate the confirm actually holds is
   the **enriched-air fill** — an imported nitrox card gives plain air until confirmed (a nitrox card
   has no expiry backstop and a wrong fill is the highest-consequence failure), per `dive-domain-expert`
-  review; boarding and depth clear immediately (product-owner decision H-20,
+  review; boarding and depth clear immediately (product-owner decision H-20260724-contact-importer-trust-shop,
   [import-verified-cards](../architecture/decisions/20260724-import-verified-cards.md)). **Specialty
   cards (deep, wreck, night, drysuit) come across the same way** — from a specialty column or a
   certification row that names one — with the one difference that the specialty *gate* waits on the
-  confirm, because a specialty authorizes a riskier dive; boarding still never waits (H-23,
+  confirm, because a specialty authorizes a riskier dive; boarding still never waits (H-20260725-owner-asked-move-rows,
   [import-specialty-cards](../architecture/decisions/20260725-import-specialty-cards.md)). A card's
   **expiry** travels with it, a past date included, and a diver's **dive insurance** comes across as
   free text. Confirming an imported specialty or nitrox card — the tap that opens the dive or the fill
   — requires an explicit **card sighting** the staffer attests to and the record keeps, and a
   **technical rating** (Advanced Nitrox, Trimix, CCR, cave, deco) imports as nothing rather than as the
-  nearest-looking recreational rung, named in the preview so a shop knows to enter it by hand (H-24,
+  nearest-looking recreational rung, named in the preview so a shop knows to enter it by hand (H-20260725-two-findings-dive-domain,
   [imported-card-sighting](../architecture/decisions/20260725-imported-card-sighting.md)). A row explicitly
   claiming a waiver was already accepted at the prior shop is likewise trusted — medical clearance
-  included — and written as an `imported` record (H-17,
+  included — and written as an `imported` record (H-20260724-contact-importer-trust-prior,
   [import-waiver-acceptance](../architecture/decisions/20260724-import-waiver-acceptance.md)); waiver/
   medical document links (image **or PDF**, 5 MB) are re-stored in DiveDay's own storage. A scope table
   states it all up front. **Prior visits** come across from the same file when it is a bookings or
@@ -3463,7 +3463,7 @@ archived.
   of the portability wedge. Every switching page (hub, incumbent guides, spreadsheet) also carries the
   shared **concierge switch offer** — a person will help you bring your data in *and*, if DiveDay is
   ever not right, take it back out, free (`SwitchingConcierge`, routed to `switch@dive.day`; an
-  authorized service claim, H-20). Content in `src/lib/migration-guides.ts`, pages in
+  authorized service claim, H-20260724-contact-importer-trust-shop). Content in `src/lib/migration-guides.ts`, pages in
   `src/app/switching/` ([marketing.md](marketing.md#where-the-words-live)). Backups and the read API are
   the open follow-ons in [roadmap.md](features/roadmap.md).
 - **FareHarbor guide (coexist-led)** (2026-07-24) — `/switching/fareharbor`, the same template with
@@ -3593,7 +3593,7 @@ The roadmap's §7 smaller follow-ons and the whole open Delight backlog shipped:
   owner/manager/instructor), with live DB-checked companions in `src/db/authz.ts`
   (`loadActiveStaffRoles` + `canPersonX`) so a demoted/disabled/deleted staff member loses the
   surface immediately. Enforced in both layers per ADR-0006 — each surface's page hides the control
-  and its server action(s)/route re-check. Answers H-14 in
+  and its server action(s)/route re-check. Answers H-20260724-staff-role-reach in
   [human-decisions/](human-decisions/README.md#decision-register).
   See [20260724-role-authorization](../architecture/decisions/20260724-role-authorization.md).
 

@@ -16,7 +16,7 @@
  * nothing, so turning it back on finds everything where it was.
  *
  * **Every feature starts on for a new shop** (Aaron, 2026-10-23). "Our year"
- * and the PADI checks used to wait for the shop's yes (H-121) and recap
+ * and the PADI checks used to wait for the shop's yes (H-20261014-padi-divechek) and recap
  * highlights without a tap for the crew's; a shop now turns off what it does
  * not want on the Features page. The PADI rule is `agencyCheckOffered` in
  * `agency-check.ts`.

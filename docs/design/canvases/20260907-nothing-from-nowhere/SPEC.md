@@ -10,7 +10,7 @@ Only slice 18f is specified so far. The other five run on the ADR and the artboa
 
 ## 18f — the departure on the lock screen
 
-**Decided 2026-09-07 (H-69 b, Aaron Buxbaum, in session): yes.** The owner's words were "we
+**Decided 2026-09-07 (H-20260907-diveday-move-like-thing b, Aaron Buxbaum, in session): yes.** The owner's words were "we
 definitely want the wallet pass". Two things follow from the ruling that the ADR's recommendation
 did not say:
 

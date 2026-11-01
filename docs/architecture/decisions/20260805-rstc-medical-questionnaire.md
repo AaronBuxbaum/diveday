@@ -9,7 +9,7 @@ The previous implementation used an eight-question paraphrase and treated every 
 physician referral. The 2026 UHMS/DMSC form uses ten top-level questions plus conditional Boxes,
 so that rule incorrectly blocks cases such as question 1 yes followed by all Box A no answers.
 The product decision also permits storing the participant's yes/no answers server-side. The
-published participant form remains safety/legal copy pending the H-01/H-03 specialist sign-off
+published participant form remains safety/legal copy pending the H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit specialist sign-off
 recorded in `docs/product/human-decisions/README.md`.
 
 ## Decision
@@ -70,7 +70,7 @@ retained in `BY_KEY` exactly as v1 is, and `medical.test.ts` pins the reason: a 
 `q4: false, dental_recovery: true` is a diver a physician was asked to see, and re-reading it under
 v3's applicability rule returns `clear` — a boarding hold lifting itself with no migration, no
 staff notification and no failing test. This is the first time the version pin above has had to do
-its job, and it is why editing v2 in place was not an option, H-49 notwithstanding: H-49 governs
+its job, and it is why editing v2 in place was not an option, H-20260815-no-legacy notwithstanding: H-20260815-no-legacy governs
 dead code and dead tables, not stored evidence a shop is legally holding.
 
 **The diver-facing effect, stated plainly.** DiveDay used to refer a small number of divers the
@@ -87,5 +87,5 @@ product owner producing the PDF. The module docstring now records the source: *D
 Participant Questionnaire*, product 10346 EN, version date 2026-01-01, sha256
 `a02cbc5e415a2882cfa2df47b081e2e123ef208c55c3e3bf1b9e26e6a417e960`, checked question by question on
 2026-08-20. Boxes A, B, D, E, F and G matched what v2 already held; only the dental item did not.
-Any future revision states its own hash the same way. H-01's specialist sign-off needs an artefact
+Any future revision states its own hash the same way. H-20260730-jurisdiction-waiver-text-medical's specialist sign-off needs an artefact
 to sign off *against*, and this is it.

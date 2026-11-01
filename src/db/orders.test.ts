@@ -122,7 +122,7 @@ async function orderContext({ fresh = false } = {}) {
   const [entry] = await getTripRoster(db, shop.id, reef.id);
   if (!entry) throw new Error("demo booking missing");
   // Whoever raises the invoice has to pass `createOrder`'s own owner/manager
-  // check (H-14), so the fixture's creator is the seeded owner — not the diver
+  // check (H-20260724-staff-role-reach), so the fixture's creator is the seeded owner — not the diver
   // being billed, which is what these tests used before the gate existed.
   const staff = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
   return { db, shop, reef, entry, staff };
@@ -166,7 +166,7 @@ function invoiceIdOf(order: { stripeInvoiceId: string | null }): string {
 
 describe("orders", () => {
   it("refuses a captain outright — billing a diver is owner/manager work", async () => {
-    // The second line of defense under `createOrderAction`'s gate (H-14, ADR
+    // The second line of defense under `createOrderAction`'s gate (H-20260724-staff-role-reach, ADR
     // 20260724-role-authorization): a caller that never checked still cannot
     // put an invoice in front of a customer. Asserted on a shop that *can*
     // take money and with a working invoicing fake, so the refusal is the role
@@ -2411,7 +2411,7 @@ describe("counter orders", () => {
   }
 
   it("writes a paid order summing its lines, with no Stripe ids, recorded by any staff member", async () => {
-    // A captain, not an owner: taking cash at the counter is day work (H-06).
+    // A captain, not an owner: taking cash at the counter is day work (H-20260724-initial-gear-policy-sizing).
     const { db, shop, order } = await recorded("card_machine");
     expect(order).toMatchObject({
       shopId: shop.id,

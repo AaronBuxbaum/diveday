@@ -6,7 +6,7 @@
   decision only. The technical-rating half of that ADR (`TECHNICAL_CERT` / `DISCIPLINE_QUALIFIER`,
   and the rule that a technical or overhead rating imports as nothing) is untouched and still
   binding.
-- **Owner decision:** H-24, revised 2026-08-14.
+- **Owner decision:** H-20260725-two-findings-dive-domain, revised 2026-08-14.
 
 ## Context
 
@@ -32,7 +32,7 @@ the `cardSighted` parameter and the `card_sighting_required` refusal; the checkb
 (`ConfirmImportedCard`) is gone, replaced by the single label-switching button the level card has
 always used; and no sentence is written into `review_note` on the shop's behalf.
 
-What is emphatically **not** dropped is the gate itself. H-23's posture stands: an imported specialty
+What is emphatically **not** dropped is the gate itself. H-20260725-owner-asked-move-rows's posture stands: an imported specialty
 card is `verified` but does not clear its gate until a staffer confirms it, per card, by hand, and an
 imported nitrox card does not authorize a fill until the same. `needsImportConfirm` still holds the
 blocker, there is still no bulk confirm, and the readiness tests that prove the gate stays shut
@@ -56,7 +56,7 @@ Two consequences are accepted deliberately, and neither should be discovered lat
 ## Alternatives considered
 
 **Put the attestation on level cards too** — the follow-up's own recommendation, and the direction
-H-24's `dive-domain-expert` reasoning points. Rejected by the product owner in favour of speed at the
+H-20260725-two-findings-dive-domain's `dive-domain-expert` reasoning points. Rejected by the product owner in favour of speed at the
 counter. Recorded here rather than argued: this ADR exists so the next session finds a decision
 instead of an inconsistency, and finds the case for the other direction with it.
 
@@ -75,7 +75,7 @@ at the speed the queue was designed for; and `ReviewRefusal` collapses to `not_f
 discriminated result stays, so a refusal is still never mistakable for a miss.
 
 Hard: this is a genuine loosening of a safety posture on a gated surface, made against the standing
-`dive-domain-expert` recommendation recorded in H-24. It was not reviewed by that agent before merge
+`dive-domain-expert` recommendation recorded in H-20260725-two-findings-dive-domain. It was not reviewed by that agent before merge
 (the session could not spawn one). If a shop is ever found confirming imported cards in bulk without
 looking at them, the evidence will no longer be in the row, and the honest fix is the queue 20260725
 named — a surface listing every card awaiting a sighting — rather than restoring a checkbox.

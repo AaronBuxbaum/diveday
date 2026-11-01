@@ -124,7 +124,7 @@ describe("diverStateEmail: week_out and tonight (the reminders)", () => {
     expect(tonight.text).toContain("sale mañana; preséntate en el muelle a las");
   });
 
-  // Ux-delight sheet 2026-10-22, item 1 (H-150): the rule in hours, never a clock time.
+  // Ux-delight sheet 2026-10-22, item 1 (H-20261022-reminder-fly-safe-in): the rule in hours, never a clock time.
   it("says the fly-safe rule in hours under the dock time, the night before a last boat", () => {
     const email = diverStateEmail({
       ...base,
@@ -399,7 +399,7 @@ describe("diverStateEmail: fly_safe_correction (#2927)", () => {
         "",
       ].join("\n"),
     );
-    // No new number to hold instead: DAN gives none for a dive with stops (H-84).
+    // No new number to hold instead: DAN gives none for a dive with stops (H-20260916-may-diveday-assert-about).
     expect(email.text).not.toMatch(/\d+ hours?/);
     expect(email.html).not.toContain("<a ");
   });

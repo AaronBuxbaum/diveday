@@ -231,7 +231,7 @@ export function WaiverGroup({
   // is not, and the record is where the staffer who can act is standing.
   const overriddenReferralAt =
     diver.waiver.state === "current" ? (diver.waiver.medical?.overriddenReferralAt ?? null) : null;
-  // The owner kept that override (2026-10-09, issue #2195, amending H-98), so
+  // The owner kept that override (2026-10-09, issue #2195, amending H-20261007-after-physician-says-no), so
   // the line links back to the referral, the way the refusal's does below.
   const overriddenReferral =
     diver.waiver.state === "current" ? (diver.waiver.medical?.overriddenReferral ?? null) : null;

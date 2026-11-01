@@ -43,7 +43,7 @@ function seriesInput(overrides: Partial<NewTripSeries> & { shopId: string }): Ne
 }
 
 /**
- * **A run's bulk call-off never cancels a boat on the water** (H-133,
+ * **A run's bulk call-off never cancels a boat on the water** (H-20261015-aboard-diver-removal-at,
  * `departureMayBeAtSea`): narrowing a cadence offers the off-cadence dates,
  * and one the crew have already taken out is neither offered nor cancelled.
  */

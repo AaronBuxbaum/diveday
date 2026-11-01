@@ -27,7 +27,7 @@ export type ElearningCheckCopy = {
 
 /**
  * **"Check eLearning with PADI", beside a course student's materials tick**
- * (H-106).
+ * (H-20261008-padi-elearning-check).
  *
  * Drawn only when the DiveDay browser extension is in this browser: without it
  * there is nothing to press, and the materials tick beside it is the whole
@@ -58,7 +58,7 @@ export function ElearningCheck({
   /**
    * "PADI checks are off for this shop…": said beside the tick when the
    * extension is here but the shop's switch keeps PADI's eLearning check off
-   * (H-121).
+   * (H-20261014-padi-divechek).
    */
   offNote?: string | null;
 }) {

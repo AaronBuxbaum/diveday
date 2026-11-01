@@ -38,7 +38,7 @@ JWT itself is the only record.
 
 ## Decision
 
-- **`requireStaffSession()` re-reads the account on every call**, not only the H-14 gates. A new
+- **`requireStaffSession()` re-reads the account on every call**, not only the H-20260724-staff-role-reach gates. A new
   `loadActiveStaffRolesByPerson(db, personId)` (`src/db/authz.ts`) — the person-scoped sibling of
   the existing shop-scoped `loadActiveStaffRoles` — answers "is this specific account still an
   active, undeleted staff member of whatever shop it belongs to, and what are its live roles."

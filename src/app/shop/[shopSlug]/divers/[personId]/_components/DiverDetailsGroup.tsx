@@ -256,7 +256,7 @@ export function DiverDetailsGroup({
 
 /**
  * The date field's hint: "(optional)", or, on a record split off a held seat
- * with no date, who said the diver is 18 or older (H-100). That answer is what
+ * with no date, who said the diver is 18 or older (H-20261007-held-seat-split-into). That answer is what
  * the guardian rule reads until a date is typed here, so it says whose it is.
  */
 /**

@@ -104,7 +104,7 @@ export async function resendReadyNoticeAction(formData: FormData) {
 
 /**
  * **Send the bill.** Owner or manager work, behind the money step-up, exactly
- * like raising an order from Orders (H-14, ADR 20260803-invoicing-role-gate):
+ * like raising an order from Orders (H-20260724-staff-role-reach, ADR 20260803-invoicing-role-gate):
  * this *is* raising an order, built from the ticket's lines rather than typed.
  */
 export async function sendWorkOrderBillAction(formData: FormData) {

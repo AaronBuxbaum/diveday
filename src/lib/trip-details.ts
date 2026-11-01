@@ -89,10 +89,10 @@ export type TripDetailsFields = {
    */
   boatCapacity?: number | null;
   /**
-   * The assigned hull's certificate passenger limit (H-107), or null where
+   * The assigned hull's certificate passenger limit (H-20261009-certificate-caps-seats), or null where
    * none is recorded. A departure may sell no more seats than this, the same
    * as the hull's own capacity — and separately from it, because a hull saved
-   * before H-107 can still carry seats above its certificate.
+   * before H-20261009-certificate-caps-seats can still carry seats above its certificate.
    */
   boatCertifiedPassengers?: number | null;
 };
@@ -137,7 +137,7 @@ export type TripDetailsResult =
   | { ok: false; reason: "invalid" | "end_before_start" | "days_out_of_order" }
   // Carries the hull's number so the notice can say "Reef Runner holds 6"
   // rather than a bare "that didn't work".
-  // H-107: the certificate's number, so the notice can say it.
+  // H-20261009-certificate-caps-seats: the certificate's number, so the notice can say it.
   | { ok: false; reason: "capacity_above_certificate"; limit: number }
   // Clearing the price off a departure that demands payment. See
   // `paymentGateIsUnclearable` — the gate would then be one nobody can clear.
@@ -168,7 +168,7 @@ export function tripDetailsPatch(
   // change, and what a shop promises is the wall-clock time — "back at the dock
   // at 12:30" on both days.
   // Configured boat capacity is advisory; the separately recorded certificate remains a limit.
-  // The certified passenger limit is a separate ceiling (H-107).
+  // The certified passenger limit is a separate ceiling (H-20261009-certificate-caps-seats).
   if (
     fields.capacity !== undefined &&
     fields.boatCertifiedPassengers != null &&
@@ -217,7 +217,7 @@ export function tripDetailsPatch(
   // **The other door onto the same trap.** The requirements form refuses to put
   // a payment gate on an unpriced departure; this refuses to leave a gated
   // departure without an effective price. A priced course can supply that
-  // amount while its separate trip fee is cleared (issue #692, H-125).
+  // amount while its separate trip fee is cleared (issue #692, H-20261014-course-session-price).
   const paymentGatePriceCents =
     fields.paymentGatePriceCents === undefined ? priceCents : fields.paymentGatePriceCents;
   if (paymentGateIsUnclearable(fields.requiresPayment ?? false, paymentGatePriceCents)) {

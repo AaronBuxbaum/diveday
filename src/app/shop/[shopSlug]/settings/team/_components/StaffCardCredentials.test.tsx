@@ -13,7 +13,7 @@ afterEach(cleanup);
 /**
  * **The card names the credential a role is missing** (issue #2548). "None on
  * file" said nothing about a captain whose only card is first aid. A word,
- * never a gate (H-59).
+ * never a gate (H-20260825-staff-credentials-renewal-clock).
  */
 const t = staffTranslator("en-US");
 

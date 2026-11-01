@@ -283,7 +283,7 @@ describe("pruneExpiredRecords", () => {
     ]);
   });
 
-  // H-82 (issue #1726): booking links age out on the same clock, and the
+  // H-20260916-far-deletion-promise-reach (issue #1726): booking links age out on the same clock, and the
   // assertion that protects a diver is the narrow one — a row whose
   // `expires_at` is still ahead survives *whatever* its `revoked_at` or its
   // age, because a revoked link can still be inside its life and the dead-link

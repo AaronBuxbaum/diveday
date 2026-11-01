@@ -393,7 +393,7 @@ describe("judgeAgencyPage", () => {
 });
 
 /**
- * **PADI DiveChek** (H-121). The page sits behind the shop's own PADI Pro
+ * **PADI DiveChek** (H-20261014-padi-divechek). The page sits behind the shop's own PADI Pro
  * sign-in and nobody has seen it yet (#2259), so these stand-ins are a best
  * guess at its shape. What they pin is the rule, which is every agency's and
  * narrower: one diver, a record that ends at the first line that could be

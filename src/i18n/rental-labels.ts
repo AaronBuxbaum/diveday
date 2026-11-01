@@ -149,7 +149,7 @@ export function rentalFitLineText(t: StaffTranslator, locale: string, line: Rent
         //
         // A drysuit diver's weights carry no number, because the stated one is
         // a wetsuit answer: the rail says so, rather than reading like a size
-        // nobody wrote down (H-78).
+        // nobody wrote down (H-20260916-rental-fit-describe-shop).
         const piece = item.drysuitWeightCheck
           ? t("shared.rentalFit.itemDrysuitWeightCheck", { item: label })
           : item.drysuitFinFit

@@ -7,7 +7,7 @@ import { formatPastMonth } from "@/lib/format";
 import { RosterGroupBand } from "./RosterGroupBand";
 
 /**
- * **Who to ask, under the guests** (fifth-loop ideas, item 44; H-130): the
+ * **Who to ask, under the guests** (fifth-loop ideas, item 44; H-20261014-one-to-one-invite): the
  * past divers of this departure's site, each with an "Invite" that emails
  * them one invitation for this departure. The list already leaves out anyone
  * aboard, invited here, or contacted inside the 30-day cooldown; the send

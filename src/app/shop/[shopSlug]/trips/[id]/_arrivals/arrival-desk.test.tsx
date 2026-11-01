@@ -179,11 +179,11 @@ describe("the counter's welcome word (UX audit 2026-10-07, item 46)", () => {
   });
 });
 
-describe("the counter's turned-away door (H-135)", () => {
+describe("the counter's turned-away door (H-20261015-who-may-turn-someone)", () => {
   /** A blocked row offers exactly the categories its own blockers name. */
   it("offers a blocked row its own reasons, and only those", async () => {
     const seat = await firstTimerAtTheCounter();
-    // A held seat (H-13) fails closed on identity, whatever else is on file.
+    // A held seat (H-20260724-one-person-per-email) fails closed on identity, whatever else is on file.
     await seat.db
       .update(bookings)
       .set({ identityUnconfirmedAt: seat.now })

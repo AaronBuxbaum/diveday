@@ -102,12 +102,12 @@ Lens: a passenger vessel has obligations that a pretty manifest does not yet dis
   *Needs:* domain, security (a manifest leaves the tenant).
 - **N-13 Captain's hours.** Sum of a captain's assigned departure durations per day and rolling
   week against a shop-set ceiling (many small passenger vessels run a 12-hour rule). One line on
-  the staffing week when it is exceeded; informs only, like credential clocks (H-59). *Build:*
+  the staffing week when it is exceeded; informs only, like credential clocks (H-20260825-staff-credentials-renewal-clock). *Build:*
   `src/lib/crew-hours.ts` over `tripAssignments`, one line in `staffing-week.ts`. *Effort:* S.
   *Needs:* domain.
 - **N-14 Manifest retention as a declared window.** Passenger records carry a legal retention
   expectation; `RETENTION_DAYS` should name the manifest's window explicitly and the export
-  should say it. *Effort:* S. *Needs:* owner (H-02).
+  should say it. *Effort:* S. *Needs:* owner (H-20260730-evidence-retention-period-deletion).
 
 ## 6. Money beyond the ticket
 
@@ -125,14 +125,14 @@ Lens: Stripe owns the arithmetic; the shop still loses money in the gaps around 
   *Effort:* M. *Needs:* domain, security.
 - **N-17 Damage deposit hold on rentals.** An optional manual-capture Stripe hold on the rental
   line, released at gear return or captured with a reason. *Effort:* M. *Needs:* owner policy
-  (H-07).
+  (H-20260724-payment-deposit-cancellation-refund).
 - **N-18 Cash and tip reconciliation at close-out.** The evening block counts cash taken at the
   counter and card tips for the day and records "matches" or "short by 20" as an act in
   `day_closeouts`. *Build:* one closeout fact + one input. *Effort:* S.
 - **N-19 Pay your own share.** Each claimant on a party booking pays their own seat at claim time
   through Checkout; the organizer pays only their own. No credit ledger needed. *Build:*
   `seat-claims.ts` + `checkouts.ts`, a per-seat `bookingPayments` row. *Effort:* M.
-  *Needs:* owner (H-07, H-61).
+  *Needs:* owner (H-20260724-payment-deposit-cancellation-refund, H-20261025-bigger-party-right-answer).
 
 ## 7. The desk phone
 
@@ -188,11 +188,11 @@ student to the next shop.
 - **N-30 Skills ledger.** Per enrollment, the course template's standard skill list (mask clearing,
   CESA, buoyancy…) signed off one tap at a time by the instructor; the student's thread shows
   progress; nothing issues a card. *Build:* `course_skill_templates` + `enrollment_skills`, a
-  roster inset, one thread step. *Effort:* M. *Needs:* domain, H-08.
+  roster inset, one thread step. *Effort:* M. *Needs:* domain, H-20260724-certification-levels-agency-rules.
 - **N-31 Referral handoff.** A student who finishes knowledge and confined water here and does
   open water elsewhere gets a referral document generated from the ledger, in the agency's field
   layout; an incoming referral is a course inquiry with the paperwork attached. *Effort:* M.
-  *Needs:* domain, owner (H-08 on what a shop may attest).
+  *Needs:* domain, owner (H-20260724-certification-levels-agency-rules on what a shop may attest).
 
 ## 12. Groups, clubs and organizers
 
@@ -203,7 +203,7 @@ standing arrangement.
   paid, ready) with one nudge per person and a group deadline; a group hold ("8 seats until
   Friday") releases itself when the deadline passes. *Build:* `booking_holds` with expiry, a
   cron sweep beside minimum-seats, an organizer view on `/claim`. *Effort:* M. *Needs:* owner
-  (H-61 is exactly this question), security.
+  (H-20261025-bigger-party-right-answer is exactly this question), security.
 - **N-33 The club's Thursday.** A recurring series with a standing organizer and a hold each
   occurrence, for the dive club that takes the same boat monthly. *Effort:* S after N-32.
 
@@ -220,7 +220,7 @@ Lens: DiveDay shops are one-tenant islands. Divers and weather cross between the
   waiver on file, fit sizes) presented by consent at another DiveDay shop through a link; the
   receiving shop sees "verified by Blue Mantis, 2026-08-12" and decides for itself. No profile
   page, no feed, so the non-goal on social networks holds. *Effort:* L. *Needs:* ADR, security,
-  owner (this is a platform decision under H-26's bounded-business reading).
+  owner (this is a platform decision under H-20260802-what-game-is-this's bounded-business reading).
 
 ## 14. Languages and cultures
 
@@ -229,7 +229,7 @@ German before it is anything else.
 
 - **N-36 pt-BR as the third diver locale.** Drafted by the translation script `ai-ml.md` scopes,
   reviewed by a human, with the same terminology README es-ES has. *Effort:* M. *Needs:* owner
-  on who reviews; the waiver stays English (H-01).
+  on who reviews; the waiver stays English (H-20260730-jurisdiction-waiver-text-medical).
 - **N-37 The briefing in the reader's language.** Shop prose is the shop's own words and is never
   rewritten; the diver's page may offer a machine rendering labelled as such below the original.
   *Effort:* M. *Needs:* ADR (translation provider), owner (whether a shop's words may be
@@ -237,7 +237,7 @@ German before it is anything else.
 
 ## 15. Minors and families
 
-Lens: a family books together; the minor's paperwork is still one adult signature (H-21).
+Lens: a family books together; the minor's paperwork is still one adult signature (H-20260730-minimum-age-gate-data).
 
 - **N-39 Junior ceilings at booking.** Where the stated card is a junior rating, the departure
   page says which dive exceeds its depth before the seat is sold, using `depth-ceiling.ts`.
@@ -259,7 +259,7 @@ Lens: Kai starts Monday. Credential clocks exist; nothing composes them into the
 
 - **N-41 Crew skills matrix on the staffing week.** A shop states which credential kinds a
   departure needs (oxygen provider, captain, instructor for a course session); the week says "No
-  oxygen provider on the 1 pm boat" from `staffCredentials`. Informs, per H-59. *Build:*
+  oxygen provider on the 1 pm boat" from `staffCredentials`. Informs, per H-20260825-staff-credentials-renewal-clock. *Build:*
   `shops.departure_crew_requirements`, `src/lib/crew-coverage.ts`, one gap line. *Effort:* S.
 - **N-42 First shift.** A new staff account's first sessions get one sentence per surface from the
   same registry the palette's answer card reads, dismissed forever after the third visit; first
@@ -331,7 +331,7 @@ Lens: agents ship daily; the founder runs support, billing and the north star by
 - **N-58 Ask with context.** A staff-side "Ask Aaron" that opens a prefilled message carrying the
   page, shop, role and the last notice, honouring the founder-direct support promise. *Effort:* S.
 - **N-59 Self-serve billing.** Stripe Billing for the $99: trial to subscription, invoices,
-  cancel-with-export. *Effort:* M. *Needs:* owner (H-12's open half).
+  cancel-with-export. *Effort:* M. *Needs:* owner (H-20260724-public-founding-shop-price's open half).
 
 ## 24. Proof by simulation
 
@@ -389,12 +389,12 @@ said fifteen *Build now* over fourteen rows.
 | N-11 | Break-even on the board | M |  | Owner question | **After pilot** (2026-09-07) |
 | N-12 | Float plan filed on Underway | M | domain, security | Now | **After pilot** (2026-09-09) |
 | N-13 | Captain's hours | S | domain | Now | **After pilot** (2026-09-09) |
-| N-14 | Manifest retention as a declared window | S |  | Owner question (H-02) | **After pilot** (2026-09-09) |
+| N-14 | Manifest retention as a declared window | S |  | Owner question (H-20260730-evidence-retention-period-deletion) | **After pilot** (2026-09-09) |
 | N-15 | Chargeback evidence pack | M | security | Now | **After pilot** (2026-09-09) |
 | N-16 | Seat transfer | M | domain, security | After pilot | **After pilot** (2026-09-07) |
-| N-17 | Damage deposit hold | M |  | Owner question (H-07) | **After pilot** (2026-09-07) |
+| N-17 | Damage deposit hold | M |  | Owner question (H-20260724-payment-deposit-cancellation-refund) | **After pilot** (2026-09-07) |
 | N-18 | Cash and tip reconciliation | S |  | After pilot | **After pilot** (2026-09-09) |
-| N-19 | Pay your own share | M |  | Owner question (H-07, H-61) | **After pilot** (2026-09-09) |
+| N-19 | Pay your own share | M |  | Owner question (H-20260724-payment-deposit-cancellation-refund, H-20261025-bigger-party-right-answer) | **After pilot** (2026-09-09) |
 | N-20 | Two-way inbox | L | ADR, security | After pilot | **Build now** (2026-09-07) · shipped |
 | N-21 | Reply keywords | S |  | After N-20 | **Build now** (2026-09-09) |
 | N-22 | "Took a call" | S |  | After pilot | **Build now** (2026-09-09) |
@@ -406,14 +406,14 @@ said fifteen *Build now* over fourteen rows.
 | N-28 | Voice to conditions | M | ADR | After pilot | **No** (2026-09-09) |
 | N-29 | Scan then discard for cards | M | ADR, domain | After pilot | **After pilot** (2026-09-09) |
 | N-30 | Skills ledger | M | domain | After pilot | **After pilot** (2026-09-09) |
-| N-31 | Referral handoff | M | domain | Owner question (H-08) | **After pilot** (2026-09-09) |
-| N-32 | The organizer's ledger | M | security | Owner question (H-61) | **After pilot** (2026-09-09) |
+| N-31 | Referral handoff | M | domain | Owner question (H-20260724-certification-levels-agency-rules) | **After pilot** (2026-09-09) |
+| N-32 | The organizer's ledger | M | security | Owner question (H-20261025-bigger-party-right-answer) | **After pilot** (2026-09-09) |
 | N-33 | The club's Thursday | S |  | After N-32 | **After pilot** (2026-09-09) |
 | N-34 | Neighbour-shop handoff | M | security | Owner question | **No** (2026-09-07) |
-| N-35 | The diver's passport | L | ADR, security | Owner question (H-26) | **After pilot** (2026-09-09) |
+| N-35 | The diver's passport | L | ADR, security | Owner question (H-20260802-what-game-is-this) | **After pilot** (2026-09-09) |
 | N-36 | pt-BR diver locale | M |  | Owner question | **After pilot** (2026-09-09) |
 | N-37 | Briefing in the reader's language | M | ADR | Owner question | **After pilot** (2026-09-09) |
-| N-38 | Guardian co-signature | M | security, domain | Owner question (H-01, H-21) | **Build now** (2026-09-07) · shipped |
+| N-38 | Guardian co-signature | M | security, domain | Owner question (H-20260730-jurisdiction-waiver-text-medical, H-20260730-minimum-age-gate-data) | **Build now** (2026-09-07) · shipped |
 | N-39 | Junior ceilings at booking | S | domain | Now | **After pilot** (2026-09-09) |
 | N-40 | Adaptive-diving readiness | M | domain | Owner question | **After pilot** (2026-09-09) |
 | N-41 | Crew skills matrix | S |  | Now | **After pilot** (2026-09-09) |
@@ -430,11 +430,11 @@ said fifteen *Build now* over fourteen rows.
 | N-52 | Xero beside QuickBooks | M |  | Owner question | **Build now** (2026-09-07) · shipped |
 | N-53 | Offline counter | L | domain, security, ADR | After pilot | **Build now** (2026-09-07) · shipped |
 | N-54 | The paper day | S |  | Now | **Build now** (2026-09-09) |
-| N-55 | Status page and uptime monitor | S |  | Owner question (H-45) | **Build now** (2026-09-07) · shipped |
+| N-55 | Status page and uptime monitor | S |  | Owner question (H-20260907-far-diveday-migrate-onto) | **Build now** (2026-09-07) · shipped |
 | N-56 | The north star from real data | M | security | Now | **After pilot** (2026-09-09) |
 | N-57 | What's new | S |  | Now | **After pilot** (2026-09-09) |
 | N-58 | Ask with context | S |  | Now | **No** (2026-09-09) |
-| N-59 | Self-serve billing | M |  | Owner question (H-12) | **After pilot** (2026-09-09) |
+| N-59 | Self-serve billing | M |  | Owner question (H-20260724-public-founding-shop-price) | **After pilot** (2026-09-09) |
 | N-60 | The one-day simulator | M |  | Now | **Build now** (2026-09-07) · shipped |
 | N-61 | Persona bots | M |  | Owner question | **Build now** (2026-09-07) · shipped |
 | N-62 | Sightings to science | S–M |  | Now | **After pilot** (2026-09-09) |

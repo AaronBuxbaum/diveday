@@ -415,7 +415,7 @@ function PriceFlag({
 /**
  * The staff board as a **week** — seven columns, one per day, at `xl` (1280px)
  * and up only. Below that the vertical day stream renders instead, unchanged
- * (H-63, 2026-08-27).
+ * (H-20260827-clearwater-week-board-roadmap, 2026-08-27).
  *
  * **This component must not drift from ADR
  * 20260827-clearwater-surface-language, decision 5**, which is what it exists

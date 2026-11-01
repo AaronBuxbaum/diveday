@@ -20,7 +20,7 @@ const ctx = fileScopedShopContext();
 /**
  * The waiver template is the shop's legal instrument: whatever text is current
  * here is what every diver signs, and what the shop would produce if a release
- * were ever tested. Editing it is owner/manager work (H-14, ADR
+ * were ever tested. Editing it is owner/manager work (H-20260724-staff-role-reach, ADR
  * 20260724-role-authorization) and the page doesn't exist for anyone else
  * (20260724-role-gated-surfaces-hide-not-explain) — but a page that redirects is
  * not a gate, and until this action moved out of its inline `"use server"`
@@ -277,7 +277,7 @@ describe("publishing a waiver template", () => {
 
   /**
    * **The server half of "no submit without a choice"** (ADR
-   * 20260827-people-not-lists, decision 4; H-54's two explicit choices).
+   * 20260827-people-not-lists, decision 4; H-20260822-may-shop-explicitly-declare's two explicit choices).
    *
    * The surface asks with a radio pair the form is invalid without
    * (`_components/PublishRelease.tsx`), but a form gate is a render-time gate:

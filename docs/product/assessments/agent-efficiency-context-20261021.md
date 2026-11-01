@@ -138,7 +138,7 @@ skill chains will identify real savings better than another absolute cap.
 
 | Sources | Contradiction and likely failure mode |
 | --- | --- |
-| `scripts/task-context-data.mjs:290` vs `.claude/skills/design-review/SKILL.md:12-16` | Task context requires dark desktop inspection; review skill explicitly limits dark checks to color work under H-90. Agents can spend time on unnecessary captures or appear to skip a required check. |
+| `scripts/task-context-data.mjs:290` vs `.claude/skills/design-review/SKILL.md:12-16` | Task context requires dark desktop inspection; review skill explicitly limits dark checks to color work under H-20260925-many-colour-schemes-check. Agents can spend time on unnecessary captures or appear to skip a required check. |
 | `docs/architecture/overview.md:84-85` vs `src/test/db.ts:11,47,128,211` and `docs/engineering/testing.md:352-372` | Overview calls migrate-once snapshots a future design and says PGlite stays per-test; implementation already hydrates snapshots and offers a per-file transaction-isolated helper. Agents can re-propose shipped work or reject the efficient existing helper. |
 | `docs/architecture/overview.md:39-40,63-65` vs current route map | Overview still names `src/db/schema.ts` and shared components "when it exists." The source of truth is now a schema directory, and components already exist. |
 | `docs/agents/working-rules.md:85-86` vs `.claude/skills/new-feature/SKILL.md:48` | Canonical rule says newest open branch across any thread; feature skill says the branch you opened last. The distinction changes stack base choice. |

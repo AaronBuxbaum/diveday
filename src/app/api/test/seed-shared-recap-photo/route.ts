@@ -10,7 +10,7 @@ import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
 
 /**
  * Shares **one of the demo recap diver's own photos with the boat**, so the
- * recap can be photographed with the sharer's "Stop sharing" on it (H-129,
+ * recap can be photographed with the sharer's "Stop sharing" on it (H-20261014-share-photo-with-boat,
  * issue #2806).
  *
  * The primary demo recap stays unshared, so its shared state is reached here

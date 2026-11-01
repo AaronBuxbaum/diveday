@@ -7,7 +7,7 @@
  * note written for the next agent ("see the imported-waiver ADR") ships to a
  * customer as a dead end. Copy should say the thing the reference points at.
  *
- * Matched: ADR ids and the bare word, decision-register ids (H-13), codebase
+ * Matched: ADR ids and the bare word, decision-register ids (H-20260724-one-person-per-email), codebase
  * review ids (CR-016), reviewer-agent names, and source paths. Keep this list to
  * things that are *only* ever internal — a word a shop owner might legitimately
  * read in product copy does not belong here.

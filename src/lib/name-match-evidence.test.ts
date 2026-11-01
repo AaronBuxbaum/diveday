@@ -26,7 +26,7 @@ describe("noDiveDayNeedsSaying", () => {
 });
 
 /**
- * H-79 (issue #1698). Null is the common case at this prompt, so what matters
+ * H-20260916-unconfirmed-identity-withhold-cost (issue #1698). Null is the common case at this prompt, so what matters
  * most is that a candidate with no usable date prints nothing at all.
  */
 describe("candidateBirthDate", () => {

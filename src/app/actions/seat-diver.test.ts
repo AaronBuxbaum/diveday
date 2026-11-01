@@ -161,7 +161,7 @@ describe("every refusal lands on the boat with its own words", () => {
 
 /**
  * **A held seat is told as held**, on both doors and in the counter's mode: the
- * identity-unconfirmed hold (H-13) outranks every other success sentence, so a
+ * identity-unconfirmed hold (H-20260724-one-person-per-email) outranks every other success sentence, so a
  * staffer never reads a plain "Added" for a seat the boarding gate will refuse.
  */
 describe("a held seat is announced as held", () => {

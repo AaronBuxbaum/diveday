@@ -419,7 +419,7 @@ describe("counter rentals over a departure's window", () => {
 });
 
 /**
- * **The person's waiver at the counter** (issue #2261, H-108): the ticket and
+ * **The person's waiver at the counter** (issue #2261, H-20261008-counter-rental-waiver-informs): the ticket and
  * the Rentals list say where the release stands, and the rental never waits
  * on it. Read off the person, because a release is signed once and belongs to
  * them, not to a booking.
@@ -487,7 +487,7 @@ describe("counterRentalWaiverStandings", () => {
   });
 
   /**
-   * H-98 as amended (issues #2158, #2195): a later clean release stands over a
+   * H-20261007-after-physician-says-no as amended (issues #2158, #2195): a later clean release stands over a
    * physician's "not cleared", as a warning. The counter carries the medical
    * mark so the new-rental form and the ticket can say it, never gate on it.
    */

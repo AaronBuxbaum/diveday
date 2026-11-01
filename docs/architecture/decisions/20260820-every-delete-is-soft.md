@@ -50,7 +50,7 @@ about an outcome they did not doubt earns nothing.
    cannot be undone: erasure copy names what it destroys and says there is no undo. It never becomes
    the primary action, and it never borrows the word "delete" on its own.
 2. **Machinery nobody pointed at.** Rows a user never named as a thing: the bounded retention prune
-   of append-only tables (H-02's windows), child rows rewritten wholesale when their parent is saved
+   of append-only tables (H-20260730-evidence-retention-period-deletion's windows), child rows rewritten wholesale when their parent is saved
    (`trip_dives`, `trip_schedule_days` — a replace, not a deletion), single-use tokens consumed on
    use, and seed or test teardown. These are not deletions of anything a shop can see.
 
