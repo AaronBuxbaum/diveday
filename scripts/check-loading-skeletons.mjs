@@ -2,6 +2,7 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
+import { filesUnder } from "./files-under.mjs";
 
 /**
  * Every `page.tsx` under `src/app` ships a sibling `loading.tsx`, and where
@@ -77,27 +78,10 @@ export function containerWidth(source) {
   return match ? match[1] : null;
 }
 
-async function walk(relativeDirectory) {
-  const absoluteDirectory = path.join(ROOT, relativeDirectory);
-  let entries;
-  try {
-    entries = await readdir(absoluteDirectory, { withFileTypes: true });
-  } catch (error) {
-    if (error?.code === "ENOENT") return [];
-    throw error;
-  }
-
-  const files = [];
-  for (const entry of entries) {
-    const relativePath = path.join(relativeDirectory, entry.name);
-    if (entry.isDirectory()) files.push(...(await walk(relativePath)));
-    else files.push(relativePath);
-  }
-  return files;
-}
+const listDirectory = (relative) => readdir(path.join(ROOT, relative), { withFileTypes: true });
 
 async function main() {
-  const files = await walk(guardedRoot);
+  const files = await filesUnder(guardedRoot, listDirectory);
   const fileSet = new Set(files);
   const pages = files.filter((file) => path.basename(file) === "page.tsx").sort();
 

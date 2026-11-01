@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   auditLedger,
+  collectRoutes,
   collectWorld,
   deriveCoverage,
   effectiveLedger,
@@ -95,6 +96,24 @@ describe("routePatternFor", () => {
     // Route groups and parallel slots are folder bookkeeping, not URL.
     expect(routePatternFor("src/app/(marketing)/pricing/page.tsx")).toBe("/pricing");
     expect(routePatternFor("src/app/shop/@modal/[shopSlug]/page.tsx")).toBe("/shop/[shopSlug]");
+  });
+});
+
+describe("collectRoutes", () => {
+  it("collects exact page basenames under the injected root", async () => {
+    const root = await fixture({ routes: ["/", "/shop/orders"] });
+    await writeFile(
+      path.join(root, "src/app/shop/layout.tsx"),
+      "export default function Layout() {}\n",
+    );
+    await writeFile(path.join(root, "src/app/shop/not-page.tsx"), "export const x = 1;\n");
+
+    await expect(collectRoutes(root)).resolves.toEqual(["/", "/shop/orders"]);
+  });
+
+  it("treats a missing app root as an empty route inventory", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "route-coverage-empty-"));
+    await expect(collectRoutes(root)).resolves.toEqual([]);
   });
 });
 
