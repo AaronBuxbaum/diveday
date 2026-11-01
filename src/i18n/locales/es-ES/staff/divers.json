@@ -368,7 +368,7 @@
     "description": "Destruye para siempre los datos de este buceador. No es lo mismo que eliminarlo.",
     "summary": "Borrar los datos personales de {name}",
     "destroyedNote": "Se destruye: nombre, correo, teléfono, fecha de nacimiento, contacto de emergencia, seguro, números y fotos de evidencia de certificación, respuestas médicas, tallas de alquiler, notas del personal, comentarios de reseñas y las fotos que compartió.",
-    "keptNote": "Se conserva, sin su nombre en nada de ello: que firmó tu exención, qué versión y cuándo, además de las salidas en las que estuvo y lo que se pagó. Las exenciones firmadas siguen siendo verificables.",
+    "keptNote": "Se conserva, sin su nombre en nada de ello: que firmó tu exención, qué versión y cuándo, además de las salidas en las que estuvo y lo que se pagó. Las exenciones firmadas siguen siendo verificables. Las notas, los títulos y los informes que otras personas escribieron y que los mencionan no se modifican.",
     "noUndoNote": "No se puede deshacer.",
     "confirmLabel": "Escribe {name} para confirmar",
     "confirmHint": "Debe coincidir exactamente.",

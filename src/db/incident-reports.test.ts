@@ -674,6 +674,9 @@ describe("erasing a diver named in a report", () => {
       ["booking", "affected"],
       ["outsider", "witness"],
     ]);
+    // Neither person line carries the real name any more: the seat reads the
+    // erased name through the join and the outsider row is redacted.
+    expect(JSON.stringify(view?.people)).not.toContain(name);
   });
 });
 

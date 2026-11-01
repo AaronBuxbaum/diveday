@@ -430,4 +430,6 @@ people wrote for a mention. No longer swept: trip and series titles, `trip_chang
 moderation notes on other people's reviews, other crew members' roll-call notes, checklist notes,
 internal notes filed under another diver, and incident narratives and addenda. This reverses the
 2026-10-13 title call (#2315) and the mention sweeps added from security review. The "Bounding the
-name match" rules below still govern the handles that remain.
+name match" rules above still govern the handles that remain.
+
+**Accepted residual:** a phone number, address or health note a staffer typed next to the name in a kept sentence (another diver's internal note, a change value, a moderation note, an incident narrative) now stays with it, and the full-shop export carries it. Erasure does not search free text for the person's email or phone. Revisit if counsel asks. Follow-up: narrow the shop-wide stale-offline-note discard (checklist and crew notes) to the erased person.

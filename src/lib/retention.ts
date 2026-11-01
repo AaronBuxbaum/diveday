@@ -426,7 +426,8 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
    * window is liability-driven, so "how long does a shop keep an incident
    * report?" needs a stated answer (ADR 20261012-incident-reports). The people
    * in a report and its addenda go with it by cascade. Erasure does not wait
-   * for this: `anonymizeDiver` redacts a diver's identity in a report at once.
+   * for this: `anonymizeDiver` unlinks a diver from a report at once and
+   * leaves the words staff wrote.
    */
   incident_reports: 2555,
   /**
