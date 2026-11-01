@@ -78,7 +78,7 @@ describe("anonymizeDiver — a real merged diver chain", () => {
 });
 
 describe("anonymizeDiver — a third-party roll-call note that names the diver", () => {
-  it("redacts the target and merged-shell names but keeps unrelated crew prose", async () => {
+  it("leaves another crew member's note untouched, whoever it names", async () => {
     const { db, shop, owner } = await erasureFixtures();
     const [source, erased] = await db
       .insert(people)
@@ -188,12 +188,14 @@ describe("anonymizeDiver — a third-party roll-call note that names the diver",
         and(eq(rollCallCrewEvents.shopId, shop.id), eq(rollCallCrewEvents.tripId, shopTrip.id)),
       )
       .orderBy(rollCallCrewEvents.id);
+    // Erasure removes the person's own data, not other people's sentences that
+    // mention them (owner, 2026-11-01).
     expect(sameShopEvents.map((event) => event.note).sort()).toEqual(
       [
-        "Last saw Bob with [redacted] at the stern.",
-        "[redacted] checked the oxygen bank before departure.",
-        "The [redacted] was left by the tank.",
-        "[redacted] was in the office all morning.",
+        "Last saw Bob with Rose Chen at the stern.",
+        "Adaeze checked the oxygen bank before departure.",
+        "The rose was left by the tank.",
+        "Rose Chen was in the office all morning.",
         "Bob checked the oxygen bank before departure.",
       ].sort(),
     );

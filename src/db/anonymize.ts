@@ -50,7 +50,6 @@
 
 import { and, asc, eq, inArray, isNotNull, isNull, like, ne, or, type SQL, sql } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
-import { staffTranslator } from "@/i18n/staff-messages";
 import { ACTIVITY_REDACTED } from "@/lib/activity";
 import { ANONYMIZED_PERSON_NAME, REDACTED_TEXT, redactedUniqueValue } from "@/lib/anonymization";
 import { STAFF_ROLES } from "@/lib/authz";
@@ -109,9 +108,7 @@ import {
   gearReservations,
   importedPaymentHistory,
   inboundMessages,
-  incidentReportAddenda,
   incidentReportPeople,
-  incidentReports,
   interests,
   interestUnsubscribeTokens,
   internalNotes,
@@ -125,7 +122,6 @@ import {
   people,
   personCourtesyEmailUnsubscribeTokens,
   personRoles,
-  preDepartureCheckEvents,
   priorGearAssignments,
   priorVisits,
   recapPhotos,
@@ -142,17 +138,13 @@ import {
   staffCredentials,
   staffReplies,
   tips,
-  tripChangeEvents,
   tripReviews,
-  tripSeries,
-  trips,
   userAccounts,
   waiverDeliveries,
   waiverRecords,
   workOrderLines,
   workOrders,
 } from "./schema";
-import { recordShopActivityWithin } from "./shop-activity";
 import { customerProviderFromEnvironment } from "./stripe-providers";
 import { forgetTrainingPlanPeople } from "./training-plan-privacy";
 import { CLEARED_DRAFT_COLUMNS } from "./waiver-record-columns";
@@ -341,23 +333,16 @@ function wholeWordPattern(handle: string): string | undefined {
  * The word-boundary name pattern every name sweep here uses, as a bare pattern
  * rather than a predicate over one column — the buddy sweep applies it per
  * *array element* twice (once to find the rows, once to rewrite them), so it
- * cannot be handed a column-bound comparison, and the internal-notes sweep
- * needs it against a third column.
+ * cannot be handed a column-bound comparison.
  *
  * It matches the full name with any whitespace between its words, and, for a
  * name of more than one word, the family-first form a register writes ("Lee,
- * Dana" or "Lee Dana"). With `familyName`, the family name alone as a whole
- * word too: for the free-text trails kept for ever, where a staffer writes
- * "pick up at Halvorsen's" (the privacy page promises it); at the price of a
- * namesake's line, the same trade the activity sweep states.
+ * Dana" or "Lee Dana").
  *
  * `undefined` for a name too short to anchor safely: the two-character-name
  * blast radius is the same hazard on every table.
  */
-function buddyMemberNameMatch(
-  fullName: string,
-  options: { familyName?: boolean } = {},
-): string | undefined {
+function buddyMemberNameMatch(fullName: string): string | undefined {
   const full = wholeWordPattern(fullName);
   if (!full) return undefined;
   const words = fullName.trim().split(/\s+/).filter(Boolean);
@@ -369,30 +354,8 @@ function buddyMemberNameMatch(
     const reversed = wholeWordPattern(`${family} ${given}`);
     // The first gap of the family-first form may carry a comma: "Lee, Dana".
     if (reversed) alternatives.push(reversed.replace(/^(\\y)?(.+?)\\s\+/, "$1$2,?\\s+"));
-    if (options.familyName) {
-      const alone = wholeWordPattern(family);
-      if (alone) alternatives.push(alone);
-    }
   }
   return alternatives.join("|");
-}
-
-/**
- * Whole-word handles for retained crew prose: every recorded identity's full
- * and family forms, plus its given name. Erasure prioritizes hiding the diver's
- * name, so a matching word can redact unrelated prose and a same-shop
- * namesake's mention. The ADR records this accepted tradeoff. The shared name
- * matcher enforces the minimum useful length and escapes each value.
- */
-function crewNoteNameMatch(names: string[]): string | undefined {
-  const patterns = new Set<string>();
-  for (const name of names) {
-    const fullAndFamily = buddyMemberNameMatch(name, { familyName: true });
-    if (fullAndFamily) patterns.add(fullAndFamily);
-    const givenName = wholeWordPattern(name.trim().split(/\s+/)[0] ?? "");
-    if (givenName) patterns.add(givenName);
-  }
-  return patterns.size > 0 ? [...patterns].join("|") : undefined;
 }
 
 /**
@@ -760,15 +723,6 @@ async function scrubPersonRecord(
   // so the merge audit trail (`merged_into_person_id`, `merged_at`,
   // `merged_by_person_id`) is deliberately left in place.
   const mergedShellIds = await mergedIntoChain(tx, shopId, personId);
-  const mergedShellNames = await tx
-    .select({ fullName: people.fullName })
-    .from(people)
-    // diveday:allow-deleted-people: erasure must collect names from soft-deleted merge shells.
-    .where(and(eq(people.shopId, shopId), inArray(people.id, mergedShellIds)));
-  const crewNoteNamePattern = crewNoteNameMatch([
-    ctx.fullName,
-    ...mergedShellNames.map((row) => row.fullName),
-  ]);
   for (const shellId of mergedShellIds) {
     await tx
       .update(people)
@@ -829,42 +783,6 @@ async function scrubPersonRecord(
         or(isNotNull(rollCallCrewEvents.note), isNotNull(rollCallCrewEvents.credentialSnapshot)),
       ),
     );
-
-  // A crew note can name this diver while belonging to a different crew
-  // member. Preserve the boarding context and redact only the matching name,
-  // using the same bounded whole-word family-name match as other retained
-  // free-text trails. The shop predicate keeps another tenant's prose out.
-  if (crewNoteNamePattern) {
-    const notesNamingDiver = await tx
-      .update(rollCallCrewEvents)
-      .set({
-        note: sql`regexp_replace(${rollCallCrewEvents.note}, ${crewNoteNamePattern}, ${REDACTED_TEXT}, 'gi')`,
-      })
-      .where(
-        and(
-          eq(rollCallCrewEvents.shopId, shopId),
-          isNotNull(rollCallCrewEvents.note),
-          sql`${rollCallCrewEvents.note} ~* ${crewNoteNamePattern}`,
-        ),
-      )
-      .returning({ id: rollCallCrewEvents.id });
-    logFuzzyMatch(ctx, "roll_call_crew_note_name", notesNamingDiver.length);
-
-    const checklistNotesNamingDiver = await tx
-      .update(preDepartureCheckEvents)
-      .set({
-        note: sql`regexp_replace(${preDepartureCheckEvents.note}, ${crewNoteNamePattern}, ${REDACTED_TEXT}, 'gi')`,
-      })
-      .where(
-        and(
-          eq(preDepartureCheckEvents.shopId, shopId),
-          isNotNull(preDepartureCheckEvents.note),
-          sql`${preDepartureCheckEvents.note} ~* ${crewNoteNamePattern}`,
-        ),
-      )
-      .returning({ id: preDepartureCheckEvents.id });
-    logFuzzyMatch(ctx, "pre_departure_check_note_name", checklistNotesNamingDiver.length);
-  }
 
   await tx
     .update(staffCredentials)
@@ -1169,35 +1087,6 @@ async function scrubPersonOnlyRows(
     .delete(internalNotes)
     .where(and(eq(internalNotes.shopId, shopId), eq(internalNotes.personId, personId)));
 
-  // And the notes filed under *somebody else* that name this diver in the body.
-  // The delete above is keyed on `person_id` — whose note it is — which reaches
-  // every note *about* the erased diver and none of the ones that merely mention
-  // them: "asked to be split from Elena Marsh on the next boat" sits under a
-  // different diver and survived verbatim. That was survivable while notes never
-  // left the shop; `internal_notes.csv` now carries them out of it in a portable
-  // bundle (ADR 20260806-export-operational-records), which is what makes it
-  // worth the fuzzy handle (security review, 2026-08-06).
-  //
-  // Redacted rather than deleted, unlike the sweep above: this row is another
-  // diver's record and the shop is entitled to keep it, so only the prose goes
-  // — the same treatment, for the same reason, that the `activity_events` names
-  // gets below. Word-boundary matched and refused for a name too short to anchor
-  // safely, and counted separately because a name match can over-reach.
-  const notePattern = buddyMemberNameMatch(ctx.fullName);
-  if (notePattern) {
-    const byName = await tx
-      .update(internalNotes)
-      .set({ body: REDACTED_TEXT })
-      .where(
-        and(
-          eq(internalNotes.shopId, shopId),
-          sql`${internalNotes.body} ~* ${notePattern}`,
-          ne(internalNotes.body, REDACTED_TEXT),
-        ),
-      )
-      .returning({ id: internalNotes.id });
-    logFuzzyMatch(ctx, "internal_note_name", byName.length);
-  }
   return [];
 }
 
@@ -1648,232 +1537,6 @@ async function scrubActivityEvents(
   return [];
 }
 
-/**
- * The handles a departure's title is searched for after an erasure: the full
- * name and, when the name has more than one word, the family name (its last
- * word), each trimmed of surrounding punctuation and dropped below
- * {@link MIN_NAME_MATCH_CHARS} word characters.
- */
-function titleNameHandles(fullName: string): string[] {
-  const edges = /^[^\p{L}\p{N}_]+|[^\p{L}\p{N}_]+$/gu;
-  const full = fullName.trim().replace(edges, "");
-  const words = full.split(/\s+/).filter(Boolean);
-  const family = words.length > 1 ? (words[words.length - 1] ?? "").replace(edges, "") : "";
-  const longEnough = (value: string) =>
-    [...value].filter((char) => WORD_CHAR.test(char)).length >= MIN_NAME_MATCH_CHARS;
-  return [...new Set([full, family].filter(longEnough))];
-}
-
-/**
- * The erasure's "departure titles" sweep (issue #2315).
- *
- * A private departure is often titled with the diver's name ("Smith family
- * charter"), and the title shows wherever the departure does: the schedule,
- * the manifest, the activity log. A title is free text, so it cannot be
- * scrubbed by matching a name in general; the rule is the product owner's
- * (Aaron, 2026-10-13), narrowed on review:
- *
- * - **only their party is booked**: every seat on the departure that is not
- *   cancelled is the erased diver's own or one of the party they lead
- *   (`party_lead_booking_id` pointing at their seat), and they hold a seat
- *   there in some state. A departure with anyone else aboard keeps its title,
- *   because it is other people's departure too; a diver who joined someone
- *   else's party does not get to rename it. A seat with no person is someone
- *   else.
- * - **the title names them**. On a *private* departure, the full name or the
- *   family name anywhere in the title, case-insensitively: "The Smiths" must
- *   go as surely as "Smith charter", and a private charter is theirs. On a
- *   *public* one, only the full name as whole words: a public title is the
- *   shop's ("Leeward Wall Dive" is not about Dana Lee), so the family name and
- *   a match inside a word are not used. A name under three word characters is
- *   never used, the floor every name match here keeps.
- * - **a repeating charter goes whole**: when the diver holds a seat on a date
- *   of a series and nobody else holds one on any of its dates, the series row
- *   and its unbooked dates are renamed under the same title rule, because the
- *   nightly roll copies the newest date's title onto every new one.
- *
- * The new title is the staff bundle's neutral one in the shop's own language
- * (`trips.erasedTitle`), "Private charter" or "Departure" by `is_private`.
- * Deleted departures are reached too: the activity log keeps naming one. Each
- * renamed departure, or each renamed series on its earliest date, gets a
- * `departure_retitled_by_erasure` line by the staffer who erased, naming
- * nobody else and never the old title.
- */
-async function scrubDepartureTitles(
-  tx: AppTransaction,
-  ctx: ScrubSectionContext,
-): Promise<ProcessorErasureTargetInput[]> {
-  const { shopId, personId, owned } = ctx;
-  const handles = titleNameHandles(ctx.fullName);
-  if (!owned || handles.length === 0) return [];
-  const fullNamePattern = buddyMemberNameMatch(ctx.fullName);
-
-  const [shop] = await tx
-    .select({ defaultLocale: shops.defaultLocale })
-    .from(shops)
-    .where(eq(shops.id, shopId))
-    .limit(1);
-  const t = staffTranslator(shop?.defaultLocale);
-  const privateTitle = t("trips.erasedTitle.private");
-  const publicTitle = t("trips.erasedTitle.public");
-
-  const names = (title: SQL | AnyPgColumn, isPrivate: SQL | AnyPgColumn) => {
-    const anywhere = or(
-      ...handles.map((handle) => sql`strpos(lower(${title}), lower(${handle})) > 0`),
-    ) as SQL;
-    const asWords = fullNamePattern ? sql`${title} ~* ${fullNamePattern}` : sql`false`;
-    return sql`(case when ${isPrivate} then (${anywhere}) else (${asWords}) end)`;
-  };
-  const holdsSeat = (tripId: SQL | AnyPgColumn) => sql`exists (
-    select 1 from ${bookings} own
-    where own.trip_id = ${tripId} and own.shop_id = ${shopId} and own.person_id = ${personId}
-  )`;
-  const nobodyElse = (tripId: SQL | AnyPgColumn) => sql`not exists (
-    select 1 from ${bookings} other
-    where other.trip_id = ${tripId}
-      and other.shop_id = ${shopId}
-      and other.status <> 'cancelled'
-      and (
-        other.person_id is null
-        or (
-          other.person_id <> ${personId}
-          and not exists (
-            select 1 from ${bookings} lead
-            where lead.id = other.party_lead_booking_id
-              and lead.trip_id = ${tripId}
-              and lead.shop_id = ${shopId}
-              and lead.person_id = ${personId}
-          )
-        )
-      )
-  )`;
-  // The series this diver has a date on and nobody else has a seat on.
-  const theirSeries = sql`(
-    select series.id from ${tripSeries} series
-    where series.shop_id = ${shopId}
-      and exists (
-        select 1 from ${trips} dated
-        where dated.series_id = series.id and dated.shop_id = ${shopId}
-          and ${holdsSeat(sql`dated.id`)}
-      )
-      and not exists (
-        select 1 from ${trips} dated
-        where dated.series_id = series.id and dated.shop_id = ${shopId}
-          and not ${nobodyElse(sql`dated.id`)}
-      )
-  )`;
-  const seriesIsPrivate = sql`exists (
-    select 1 from ${trips} dated
-    where dated.series_id = ${tripSeries.id} and dated.shop_id = ${shopId} and dated.is_private
-  )`;
-
-  await tx
-    .update(tripSeries)
-    .set({
-      title: sql`case when ${seriesIsPrivate} then ${privateTitle} else ${publicTitle} end`,
-    })
-    .where(
-      and(
-        eq(tripSeries.shopId, shopId),
-        sql`${tripSeries.id} in ${theirSeries}`,
-        names(tripSeries.title, seriesIsPrivate),
-      ),
-    );
-
-  const retitled = await tx
-    .update(trips)
-    .set({
-      title: sql`case when ${trips.isPrivate} then ${privateTitle} else ${publicTitle} end`,
-    })
-    // diveday:allow-deleted-trips: a deleted departure's title still shows in
-    // the activity log, so the erasure reaches it too.
-    .where(
-      and(
-        eq(trips.shopId, shopId),
-        or(holdsSeat(trips.id), sql`${trips.seriesId} in ${theirSeries}`),
-        nobodyElse(trips.id),
-        names(trips.title, trips.isPrivate),
-      ),
-    )
-    .returning({ id: trips.id, seriesId: trips.seriesId, startsAt: trips.startsAt });
-  // One line per one-off departure, and one per repeating run, on its
-  // earliest renamed date: the same grain the board's own series lines keep.
-  const lineOn = new Map<string, { id: string; startsAt: Date }>();
-  for (const trip of retitled) {
-    const key = trip.seriesId ?? trip.id;
-    const held = lineOn.get(key);
-    if (!held || trip.startsAt < held.startsAt) lineOn.set(key, trip);
-  }
-  for (const trip of lineOn.values()) {
-    await recordShopActivityWithin(tx, {
-      shopId,
-      actorPersonId: ctx.actorPersonId,
-      write: { code: "departure_retitled_by_erasure", tripId: trip.id },
-    });
-  }
-  logFuzzyMatch(ctx, "departure_title_name", retitled.length);
-  return [];
-}
-
-/**
- * The erasure's "departure change trail" sweep. `trip_change_events` keeps a
- * meeting point's or the conditions' values before and after for ever
- * (`src/lib/retention.ts`), and a value is free text a staffer typed ("Pick up
- * at the Halvorsens'"). Each string value naming the diver, by the same
- * whole-word name match as the activity sweep plus the family name alone,
- * becomes `[redacted]`; the
- * keys, the other values and the row stay, so the change still reads as one.
- * A site run (`siteNames`, one name per line) loses only the naming line.
- */
-async function scrubDepartureChangeTrail(
-  tx: AppTransaction,
-  ctx: ScrubSectionContext,
-): Promise<ProcessorErasureTargetInput[]> {
-  const pattern = buddyMemberNameMatch(ctx.fullName, { familyName: true });
-  if (!pattern) return [];
-  const redactValues = (
-    column: AnyPgColumn,
-  ) => sql`case when jsonb_typeof(${column}) is distinct from 'object' then ${column} else (
-    select coalesce(jsonb_object_agg(
-      entry.key,
-      case when jsonb_typeof(entry.value) <> 'string' or (entry.value #>> '{}') !~* ${pattern}
-        then entry.value
-      -- A site run is one name per line: only the line that names them goes,
-      -- so the move still reads with its other sites (review of #3061).
-      when entry.key = 'siteNames' then to_jsonb((
-        select string_agg(
-          case when line.name ~* ${pattern} then ${REDACTED_TEXT}::text else line.name end,
-          E'\n' order by line.ord
-        )
-        from regexp_split_to_table(entry.value #>> '{}', E'\n') with ordinality as line(name, ord)
-      ))
-      else to_jsonb(${REDACTED_TEXT}::text) end
-    ), '{}'::jsonb)
-    from jsonb_each(${column}) as entry(key, value)
-  ) end`;
-  const naming = (column: AnyPgColumn) => sql`exists (
-    select 1 from jsonb_each_text(
-      case when jsonb_typeof(${column}) = 'object' then ${column} else '{}'::jsonb end
-    ) as named(key, value)
-    where named.value ~* ${pattern}
-  )`;
-  const scrubbed = await tx
-    .update(tripChangeEvents)
-    .set({
-      beforeValue: redactValues(tripChangeEvents.beforeValue),
-      afterValue: redactValues(tripChangeEvents.afterValue),
-    })
-    .where(
-      and(
-        eq(tripChangeEvents.shopId, ctx.shopId),
-        or(naming(tripChangeEvents.beforeValue), naming(tripChangeEvents.afterValue)),
-      ),
-    )
-    .returning({ id: tripChangeEvents.id });
-  logFuzzyMatch(ctx, "trip_change_event_name", scrubbed.length);
-  return [];
-}
-
 /** The erasure's "buddy-team trail" sweep. */
 async function scrubBuddyTrail(
   tx: AppTransaction,
@@ -1961,10 +1624,10 @@ async function scrubReviews(
     );
   // The moderation trail is kept for ever (`src/lib/retention.ts`), and its
   // `reason_note` is a moderator's own words about a review: on the diver's
-  // own reviews it is about what they wrote, and on anyone's it may name them.
-  // The row (who acted, what, why by code) stays; the words become
-  // `[redacted]`, never null, since an `other` reason must carry a note.
-  const notePattern = buddyMemberNameMatch(ctx.fullName, { familyName: true });
+  // own reviews it is about what they wrote. The row (who acted, what, why by
+  // code) stays; the words become `[redacted]`, never null, since an `other`
+  // reason must carry a note. A note on someone else's review that names the
+  // diver is not swept (owner, 2026-11-01).
   await tx
     .update(reviewModerationEvents)
     .set({ reasonNote: REDACTED_TEXT })
@@ -1973,15 +1636,12 @@ async function scrubReviews(
         eq(reviewModerationEvents.shopId, shopId),
         isNotNull(reviewModerationEvents.reasonNote),
         ne(reviewModerationEvents.reasonNote, REDACTED_TEXT),
-        or(
-          inArray(
-            reviewModerationEvents.reviewId,
-            tx
-              .select({ id: tripReviews.id })
-              .from(tripReviews)
-              .where(and(eq(tripReviews.shopId, shopId), eq(tripReviews.personId, personId))),
-          ),
-          notePattern ? sql`${reviewModerationEvents.reasonNote} ~* ${notePattern}` : undefined,
+        inArray(
+          reviewModerationEvents.reviewId,
+          tx
+            .select({ id: tripReviews.id })
+            .from(tripReviews)
+            .where(and(eq(tripReviews.shopId, shopId), eq(tripReviews.personId, personId))),
         ),
       ),
     );
@@ -3109,24 +2769,19 @@ async function scrubInbox(
 }
 
 /**
- * **Incident reports keep the report and lose the diver** (ADR
+ * **Incident reports keep the report and unlink the diver** (ADR
  * 20261012-incident-reports, H-111).
  *
  * A report is the shop's liability record for everybody in it, so erasing one
- * diver never deletes it. What goes is their identity:
+ * diver never deletes it. What goes is their record, not the words staff wrote:
  *
  * - the rows naming them by **booking** stay, and read the erased name through
  *   the live join, which the people sweep above already rewrote;
- * - an **outsider** row that carries their name is redacted, in case a staffer
- *   typed the diver in by hand;
- * - every word-boundary match of their name in the report's free text and its
- *   addenda becomes `[redacted]`, and the rest of the account stays.
- *
- * The narrative sweep is shop-wide, like the internal-notes sweep, because a
- * diver can be named in a report they are not linked to. It shares that
- * sweep's word-boundary pattern and its refusal of a name too short to anchor.
- * A nickname or a first name alone is not reached: the residual H-111 states.
- * This is the one write a filed report ever takes.
+ * - an **outsider** row that carries their name is redacted, because a staffer
+ *   typed the diver in by hand as the only handle on that row;
+ * - the narrative and the addenda are staff prose and are **not** swept
+ *   (owner, 2026-11-01): erasure removes a person's own data, not every
+ *   sentence somebody else wrote that mentions them.
  */
 async function scrubIncidentReports(
   tx: AppTransaction,
@@ -3135,32 +2790,6 @@ async function scrubIncidentReports(
   const { shopId } = ctx;
   const pattern = buddyMemberNameMatch(ctx.fullName);
   if (!pattern) return [];
-  const scrubbed = (column: AnyPgColumn) =>
-    sql`regexp_replace(${column}, ${pattern}, ${REDACTED_TEXT}, 'gi')`;
-  const mentions = (column: AnyPgColumn) => sql`coalesce(${column} ~* ${pattern}, false)`;
-
-  const reports = await tx
-    .update(incidentReports)
-    .set({
-      whatHappened: scrubbed(incidentReports.whatHappened),
-      locationText: scrubbed(incidentReports.locationText),
-      handoverDetail: scrubbed(incidentReports.handoverDetail),
-      followUp: scrubbed(incidentReports.followUp),
-    })
-    .where(
-      and(
-        eq(incidentReports.shopId, shopId),
-        or(
-          mentions(incidentReports.whatHappened),
-          mentions(incidentReports.locationText),
-          mentions(incidentReports.handoverDetail),
-          mentions(incidentReports.followUp),
-        ),
-      ),
-    )
-    .returning({ id: incidentReports.id });
-  logFuzzyMatch(ctx, "incident_report_name", reports.length);
-
   const outsiders = await tx
     .update(incidentReportPeople)
     .set({ outsiderName: REDACTED_TEXT })
@@ -3172,18 +2801,6 @@ async function scrubIncidentReports(
     )
     .returning({ id: incidentReportPeople.id });
   logFuzzyMatch(ctx, "incident_outsider_name", outsiders.length);
-
-  const addenda = await tx
-    .update(incidentReportAddenda)
-    .set({ body: scrubbed(incidentReportAddenda.body) })
-    .where(
-      and(
-        eq(incidentReportAddenda.shopId, shopId),
-        sql`${incidentReportAddenda.body} ~* ${pattern}`,
-      ),
-    )
-    .returning({ id: incidentReportAddenda.id });
-  logFuzzyMatch(ctx, "incident_addendum_name", addenda.length);
   return [];
 }
 
@@ -3227,8 +2844,6 @@ const SCRUB_SECTIONS = [
   scrubDiverLogin,
   scrubBookingRows,
   scrubActivityEvents,
-  scrubDepartureTitles,
-  scrubDepartureChangeTrail,
   scrubBuddyTrail,
   scrubReviews,
   scrubPrivateWord,

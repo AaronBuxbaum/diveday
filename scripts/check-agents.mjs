@@ -335,7 +335,6 @@ for (const { event, command } of hookCommands) {
 for (const script of [
   "guard-bash.mjs",
   "guard-read.mjs",
-  "guard-commit-format.mjs",
   "format-touched.mjs",
   "session-context.mjs",
   "explain-failure.mjs",

@@ -6,7 +6,7 @@ import { liveTrip } from "./trips-live";
 
 export type CourseMaterialsDoneOutcome =
   | { ok: true }
-  | { ok: false; reason: "not_found" | "not_a_course_session" };
+  | { ok: false; reason: "not_found" | "not_a_course_session" | "changed" };
 
 /**
  * How far apart two departures of one course may start and still be one
@@ -96,6 +96,12 @@ export async function recordCourseMaterialsDone(
     bookingId: string;
     staffPersonId: string;
     done: boolean;
+    /**
+     * Takes the tick back only if it is still this staffer's, with this
+     * stamp: the check rides in the UPDATE's WHERE, so a re-tick between a
+     * caller's read and this write is never erased. Otherwise `changed`.
+     */
+    onlyIf?: { byPersonId: string; markedAt: Date };
     now?: Date;
   },
 ): Promise<CourseMaterialsDoneOutcome> {
@@ -148,9 +154,26 @@ export async function recordCourseMaterialsDone(
         liveTrip(),
       ),
     );
+  const cleared = { courseMaterialsDoneAt: null, courseMaterialsDoneByPersonId: null };
+  const { onlyIf } = input;
+  if (onlyIf) {
+    const taken = await db
+      .update(bookings)
+      .set(cleared)
+      .where(
+        and(
+          eq(bookings.id, input.bookingId),
+          eq(bookings.shopId, input.shopId),
+          eq(bookings.courseMaterialsDoneByPersonId, onlyIf.byPersonId),
+          eq(bookings.courseMaterialsDoneAt, onlyIf.markedAt),
+        ),
+      )
+      .returning({ id: bookings.id });
+    if (taken.length === 0) return { ok: false, reason: "changed" };
+  }
   await db
     .update(bookings)
-    .set({ courseMaterialsDoneAt: null, courseMaterialsDoneByPersonId: null })
+    .set(cleared)
     .where(
       and(
         eq(bookings.shopId, input.shopId),
