@@ -47,6 +47,8 @@ async function ownerAndManagerEmails() {
     .where(
       and(
         eq(people.shopId, shop.id),
+        isNull(people.deletedAt),
+        isNull(people.anonymizedAt),
         eq(userAccounts.status, "active"),
         inArray(personRoles.role, ["owner", "manager"]),
       ),

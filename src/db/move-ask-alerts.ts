@@ -1,19 +1,12 @@
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { moveAskAlertDue } from "@/lib/inbox";
 import { log } from "@/lib/log";
 import { type NotificationProvider, publicAppUrl, recipientLocale } from "@/lib/notifications";
 import { shopPath } from "@/lib/staff-notices";
 import type { AppDb } from "./client";
 import { sendNotification } from "./notifications";
-import {
-  bookings,
-  inboundMessages,
-  people,
-  personRoles,
-  shops,
-  trips,
-  userAccounts,
-} from "./schema";
+import { roleLogins } from "./owner-logins";
+import { bookings, inboundMessages, shops, trips } from "./schema";
 import { liveTrip, notRehearsal } from "./trips-live";
 
 export type MoveAskAlertOutcome =
@@ -87,27 +80,7 @@ export async function alertStaffToMoveAsk(
     const origin = input.origin === undefined ? publicAppUrl() : input.origin;
     if (!origin) return { status: "no_origin" };
 
-    const recipients = await db
-      .selectDistinct({
-        personId: people.id,
-        fullName: people.fullName,
-        email: userAccounts.email,
-        locale: people.locale,
-      })
-      .from(userAccounts)
-      .innerJoin(people, eq(people.id, userAccounts.personId))
-      .innerJoin(
-        personRoles,
-        and(eq(personRoles.personId, people.id), inArray(personRoles.role, ["owner", "manager"])),
-      )
-      .where(
-        and(
-          eq(people.shopId, input.shopId),
-          isNull(people.deletedAt),
-          isNull(people.anonymizedAt),
-          eq(userAccounts.status, "active"),
-        ),
-      );
+    const recipients = await roleLogins(db, input.shopId, ["owner", "manager"]);
 
     const outcome = { sent: 0, failed: 0 };
     for (const person of recipients) {
