@@ -1,5 +1,5 @@
-import { createHmac, hkdfSync, timingSafeEqual } from "node:crypto";
 import { authSecret } from "./auth-secret";
+import { deriveLabelKey, signPayload, tagMatches } from "./signed-token";
 import {
   decodeTripAdmissionRefusal,
   encodeTripAdmissionRefusal,
@@ -28,19 +28,15 @@ const GATE_PURPOSE = "diveday-trip-admission-gate:v1";
 /** Separates the readable codes from the signature. In no code, and unreserved in a URI. */
 const SIGNATURE_SEPARATOR = ".";
 
-/** Base64url of a SHA-256 digest, unpadded: 43 single-byte characters. */
-const SIGNATURE_SHAPE = /^[A-Za-z0-9_-]{43}$/;
-
 function gateSecret(): string {
   // Production requires AUTH_SECRET; dev/e2e use auth-secret.ts's fixed fallback.
   if (!authSecret) throw new Error("AUTH_SECRET is required to sign trip-admission gates.");
-  const derived = hkdfSync("sha256", authSecret, "", "diveday-trip-admission-gate", 32);
-  return Buffer.from(derived).toString("base64url");
+  return deriveLabelKey(authSecret, "diveday-trip-admission-gate").toString("base64url");
 }
 
 function sign(scope: TripAdmissionGateScope, codes: string): string {
   const payload = `${GATE_PURPOSE}|${scope.kind}:${scope.id}|${codes}`;
-  return createHmac("sha256", gateSecret()).update(payload).digest("base64url");
+  return signPayload(gateSecret(), payload);
 }
 
 /** The URL-safe `<codes>.<signature>` value to attach to `?gate=`. */
@@ -63,12 +59,7 @@ export function verifyTripAdmissionGate(
   if (separator <= 0) return null;
   const codes = value.slice(0, separator);
   const signature = value.slice(separator + 1);
-  // Restrict to 43 single-byte base64url characters before timingSafeEqual;
-  // a UTF-16 length check alone can admit multibyte input and throw.
-  if (!SIGNATURE_SHAPE.test(signature)) return null;
-  const expected = sign(scope, codes);
-  if (signature.length !== expected.length) return null;
-  if (!timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) return null;
+  if (!tagMatches(signature, sign(scope, codes))) return null;
   // A valid signature does not make malformed refusal codes valid.
   return decodeTripAdmissionRefusal(codes);
 }

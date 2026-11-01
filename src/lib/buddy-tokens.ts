@@ -1,7 +1,7 @@
-import { createHmac, hkdfSync, timingSafeEqual } from "node:crypto";
 import { isUuid } from "@/lib/uuid";
 import { authSecret } from "./auth-secret";
 import { isBuddyReferralIdShape } from "./buddy-links";
+import { deriveLabelKey, signPayload, tagMatches } from "./signed-token";
 
 /**
  * **The signing half of the buddy seat** (ADR 20260908-one-hand, decision 6,
@@ -45,15 +45,11 @@ function buddySecret(): string {
   if (dedicated) return dedicated;
   // Only ever null in dev/e2e, where auth-secret.ts supplies a fixed fallback.
   if (!authSecret) throw new Error("AUTH_SECRET is required to sign buddy links.");
-  const derived = hkdfSync("sha256", authSecret, "", "diveday-buddy-link", 32);
-  return Buffer.from(derived).toString("base64url");
+  return deriveLabelKey(authSecret, "diveday-buddy-link").toString("base64url");
 }
 
 function tagFor(bookingId: string): string {
-  return createHmac("sha256", buddySecret())
-    .update(`${BUDDY_PURPOSE}${bookingId}`)
-    .digest("base64url")
-    .slice(0, TAG_LENGTH);
+  return signPayload(buddySecret(), `${BUDDY_PURPOSE}${bookingId}`).slice(0, TAG_LENGTH);
 }
 
 /** The public id for a booking: `<uuid bytes, base64url>.<tag>` — 22 + 1 + 16 characters. */
@@ -80,8 +76,6 @@ export function bookingIdFromBuddyReferral(candidate: string | null | undefined)
   const hex = bytes.toString("hex");
   const bookingId = `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
   if (!isUuid(bookingId)) return null;
-  // Both lengths are fixed by the shape check, so the buffers always compare;
-  // timingSafeEqual still, for the reason every other token here uses it.
-  if (!timingSafeEqual(Buffer.from(tag), Buffer.from(tagFor(bookingId)))) return null;
+  if (!tagMatches(tag, tagFor(bookingId))) return null;
   return bookingId;
 }

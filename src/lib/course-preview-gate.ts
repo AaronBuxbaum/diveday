@@ -1,6 +1,6 @@
-import { createHmac, hkdfSync, timingSafeEqual } from "node:crypto";
 import { authSecret } from "./auth-secret";
 import { nowMs } from "./clock";
+import { deriveLabelKey, signPayload, tagMatches } from "./signed-token";
 
 /**
  * The short-lived, shop-and-course-bound capability lets the public proxy
@@ -27,30 +27,18 @@ export const COURSE_PREVIEW_TTL_MS = 10 * 60 * 1000;
 /** Separates the readable expiry from the signature. Unreserved in a URI. */
 const SEPARATOR = ".";
 
-/**
- * Unpadded SHA-256 base64url is 43 ASCII bytes. Check its alphabet before
- * `timingSafeEqual`: character length alone can admit multibyte UTF-8 and make
- * the comparison throw. The proxy keeps its database fail-open catch separate;
- * malformed capabilities must still return false (`src/proxy.ts`).
- */
-const SIGNATURE_SHAPE = /^[A-Za-z0-9_-]{43}$/;
-
 /** Decimal-only, bounded expiry text; reject Number()'s alternate spellings. */
 const EXPIRY_SHAPE = /^[0-9]{1,15}$/;
 
 function previewKey(): string | null {
   // Production requires AUTH_SECRET; dev/e2e use auth-secret.ts's fixed fallback.
   if (!authSecret) return null;
-  return Buffer.from(hkdfSync("sha256", authSecret, "", "diveday-course-preview", 32)).toString(
-    "base64url",
-  );
+  return deriveLabelKey(authSecret, "diveday-course-preview").toString("base64url");
 }
 
 function sign(key: string, shopSlug: string, courseSlug: string, expiresAt: number): string {
   // The proxy and page both pass decoded path segments, so scope matches either side.
-  return createHmac("sha256", key)
-    .update(`${PURPOSE}|${shopSlug}|${courseSlug}|${expiresAt}`)
-    .digest("base64url");
+  return signPayload(key, `${PURPOSE}|${shopSlug}|${courseSlug}|${expiresAt}`);
 }
 
 /** Mint `<expiresAt>.<signature>` for a live-staff preview; throws without AUTH_SECRET. */
@@ -78,12 +66,9 @@ export function coursePreviewIsValid(
   const expiresAt = Number(digits);
   if (!Number.isSafeInteger(expiresAt)) return false;
   const signature = value.slice(separator + 1);
-  // Shape before bytes. `timingSafeEqual` throws on unequal buffers and a
-  // character count is not a byte count; see {@link SIGNATURE_SHAPE}.
-  if (!SIGNATURE_SHAPE.test(signature)) return false;
-  const expected = sign(key, shopSlug, courseSlug, expiresAt);
-  if (signature.length !== expected.length) return false;
-  if (!timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) return false;
+  // The proxy keeps its database fail-open catch separate; a malformed
+  // capability must still return false, never throw (`src/proxy.ts`).
+  if (!tagMatches(signature, sign(key, shopSlug, courseSlug, expiresAt))) return false;
   // Check expiry only after signature verification.
   return expiresAt > now;
 }
