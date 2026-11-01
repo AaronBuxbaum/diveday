@@ -147,10 +147,28 @@ export function buildVisualPublishBundle({ sourceDir, bundleDir, publicationId }
     diffDir: "diff",
   };
 
+  // The report viewer reads an expected image only for a changed or deleted
+  // item; a passed item shows its actual image and a new one has no expected.
+  // `expected/` is a copy of the whole baseline (about as many PNGs as
+  // `actual/`), so uploading it all doubled the Tier-1 PUTs of every run for
+  // images nothing ever loads. Next runs' baselines read `actual/` only. A
+  // report without both lists keeps every expected image.
+  const neededExpected =
+    Array.isArray(sourceReport.failedItems) && Array.isArray(sourceReport.deletedItems)
+      ? new Set([...sourceReport.failedItems, ...sourceReport.deletedItems])
+      : null;
+
   rmSync(bundleDir, { recursive: true, force: true });
   const manifest = [];
   const outputFiles = [];
   for (const file of files) {
+    if (
+      neededExpected &&
+      file.path.startsWith("expected/") &&
+      !neededExpected.has(file.path.slice("expected/".length))
+    ) {
+      continue;
+    }
     const publishPath = snapshotPath(file.path, snapshotVersion);
     if (file.path === "out.json") {
       outputFiles.push({
