@@ -35,7 +35,7 @@ describe("summarizeTripDiveSites", () => {
   });
 
   it("still finds the site when the *first* tank is the undecided one", () => {
-    // The bug this whole helper exists for: `trips.dive_site_id` is dive one's
+    // The bug this whole helper exists for: the old `trips.dive_site_id` was dive one's
     // site, so a day planned second-tank-first named no site anywhere.
     expect(
       summarizeTripDiveSites([
