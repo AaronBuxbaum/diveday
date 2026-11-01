@@ -171,10 +171,70 @@ describe("forgetThisReadyPage", () => {
     expect(posted).toEqual([{ type: "FORGET_READY_PAGE" }]);
   });
 
-  it("answers false, never throws, with no worker controlling the page", async () => {
-    vi.stubGlobal("navigator", { serviceWorker: { controller: null } });
-    expect(await forgetThisReadyPage()).toBe(false);
+  it("reaches the diver's registration when the page is not controlled yet", async () => {
+    const posted: unknown[] = [];
+    vi.stubGlobal("navigator", {
+      serviceWorker: {
+        controller: null,
+        getRegistration: async (scope: string) => ({
+          active: {
+            postMessage: (data: unknown, [port]: MessagePort[]) => {
+              posted.push([scope, data]);
+              port?.postMessage({ ok: true });
+            },
+          },
+        }),
+      },
+    });
+    expect(await forgetThisReadyPage()).toBe(true);
+    expect(posted).toEqual([["/ready/", { type: "FORGET_READY_PAGE" }]]);
+  });
+
+  it("drops the copy itself when no worker exists, and never throws", async () => {
+    const deleted: string[] = [];
+    vi.stubGlobal("caches", {
+      delete: async (name: string) => {
+        deleted.push(name);
+        return true;
+      },
+    });
+    vi.stubGlobal("navigator", {
+      serviceWorker: { controller: null, getRegistration: async () => undefined },
+    });
+    expect(await forgetThisReadyPage()).toBe(true);
+    expect(deleted).toEqual([READY_CACHE_NAME]);
     vi.stubGlobal("navigator", {});
+    expect(await forgetThisReadyPage()).toBe(true);
+  });
+
+  it("drops the copy itself when the worker answers that it could not forget", async () => {
+    const deleted: string[] = [];
+    vi.stubGlobal("caches", {
+      delete: async (name: string) => {
+        deleted.push(name);
+        return true;
+      },
+    });
+    vi.stubGlobal("navigator", {
+      serviceWorker: {
+        controller: {
+          postMessage: (_: unknown, [port]: MessagePort[]) => port?.postMessage({ ok: false }),
+        },
+      },
+    });
+    expect(await forgetThisReadyPage()).toBe(true);
+    expect(deleted).toEqual([READY_CACHE_NAME]);
+  });
+
+  it("answers false when neither the worker nor the page could remove the copy", async () => {
+    vi.stubGlobal("caches", {
+      delete: async () => {
+        throw new Error("storage unavailable");
+      },
+    });
+    vi.stubGlobal("navigator", {
+      serviceWorker: { controller: null, getRegistration: async () => undefined },
+    });
     expect(await forgetThisReadyPage()).toBe(false);
   });
 });
