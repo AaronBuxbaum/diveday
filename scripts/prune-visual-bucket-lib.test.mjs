@@ -167,6 +167,19 @@ describe("prune-visual-bucket-lib", () => {
       expect(result.source).toBe("head_commit");
     });
 
+    it("keeps only the newest snapshot when the caller lowers the count and age floors", async () => {
+      const result = await resolveActiveBaseline({
+        bucket: "test-bucket",
+        fetchImpl: githubFetch([SHA_1, SHA_2, SHA_3]),
+        s3Client: probeClient([SHA_1, SHA_2, SHA_3]),
+        keepBaselines: 1,
+        keepAgeMs: 0,
+      });
+
+      expect(result.keepShas).toEqual([SHA_1]);
+      expect(result.verified).toBe(true);
+    });
+
     it("walks back to a recent ancestor when HEAD has no snapshot", async () => {
       const result = await resolveActiveBaseline({
         bucket: "test-bucket",

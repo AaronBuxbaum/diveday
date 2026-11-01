@@ -850,7 +850,13 @@ pnpm visual:prune --dry-run
 
 # Execute pruning:
 pnpm visual:prune
+
+# One-off aggressive purge: keep only the newest main baseline that has a snapshot,
+# and let any prefix older than the 30-minute publication grace go.
+pnpm visual:prune --dry-run --keep-baselines 1 --keep-age-hours 0 --min-age-hours 0
 ```
+
+`--keep-baselines`, `--keep-age-hours` and `--min-age-hours` override the count, age window and prune floor above for that run only; the scheduled Lambda keeps the defaults. Open branches lose their baselines under the aggressive form, so their next push re-uploads the full set.
 
 ---
 

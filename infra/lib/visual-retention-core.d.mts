@@ -11,21 +11,32 @@ export const MAX_CANDIDATE_PAGES: number;
 export const MIN_PRUNE_AGE_MS: number;
 export const MIN_PUBLICATION_GRACE_MS: number;
 export function mainFirstParentChain<T extends RetentionCommit>(candidates: readonly T[]): T[];
-export function outsideMainBaselineAgeWindow(commit: RetentionCommit, now: number): boolean;
+export interface RetentionPolicy {
+  keepBaselines?: number;
+  keepAgeMs?: number;
+}
+export function outsideMainBaselineAgeWindow(
+  commit: RetentionCommit,
+  now: number,
+  keepAgeMs?: number,
+): boolean;
 export function chainCoversMainBaselineFloors(
   chain: readonly RetentionCommit[],
   now: number,
+  policy?: RetentionPolicy,
 ): boolean;
 export function shouldFetchAnotherCandidatePage(
   page: number,
   returnedCount: number,
   candidates: readonly RetentionCommit[],
   now: number,
+  policy?: RetentionPolicy,
 ): boolean;
 export function shouldStopMainBaselineProbes(
   verifiedKeepCount: number,
   commit: RetentionCommit,
   now: number,
+  policy?: RetentionPolicy,
 ): boolean;
 export function mainBaselineProbeOrder<T extends RetentionCommit>(
   candidates: readonly T[],

@@ -23,27 +23,29 @@ export function mainFirstParentChain(candidates) {
 }
 
 /** Unknown commit dates stay inside the keep window. */
-export function outsideMainBaselineAgeWindow(commit, now) {
-  return commit.committedAtMs !== null && now - commit.committedAtMs > KEEP_MAIN_BASELINE_AGE_MS;
+export function outsideMainBaselineAgeWindow(commit, now, keepAgeMs = KEEP_MAIN_BASELINE_AGE_MS) {
+  return commit.committedAtMs !== null && now - commit.committedAtMs > keepAgeMs;
 }
 
 /** Whether fetched history already reaches beyond both retention floors. */
-export function chainCoversMainBaselineFloors(chain, now) {
+export function chainCoversMainBaselineFloors(chain, now, policy = {}) {
+  const { keepBaselines = KEEP_MAIN_BASELINES, keepAgeMs = KEEP_MAIN_BASELINE_AGE_MS } = policy;
   return (
-    chain.length >= KEEP_MAIN_BASELINES &&
-    outsideMainBaselineAgeWindow(chain[chain.length - 1], now)
+    chain.length >= keepBaselines &&
+    outsideMainBaselineAgeWindow(chain[chain.length - 1], now, keepAgeMs)
   );
 }
 
 /** Shared page stop rule for GitHub ancestry fetchers. */
-export function shouldFetchAnotherCandidatePage(page, returnedCount, candidates, now) {
+export function shouldFetchAnotherCandidatePage(page, returnedCount, candidates, now, policy) {
   if (page >= MAX_CANDIDATE_PAGES || returnedCount < CANDIDATE_PAGE_SIZE) return false;
-  return !chainCoversMainBaselineFloors(mainFirstParentChain(candidates), now);
+  return !chainCoversMainBaselineFloors(mainFirstParentChain(candidates), now, policy);
 }
 
 /** Whether probing should stop before this older main tip. */
-export function shouldStopMainBaselineProbes(verifiedKeepCount, commit, now) {
-  return verifiedKeepCount >= KEEP_MAIN_BASELINES && outsideMainBaselineAgeWindow(commit, now);
+export function shouldStopMainBaselineProbes(verifiedKeepCount, commit, now, policy = {}) {
+  const { keepBaselines = KEEP_MAIN_BASELINES, keepAgeMs = KEEP_MAIN_BASELINE_AGE_MS } = policy;
+  return verifiedKeepCount >= keepBaselines && outsideMainBaselineAgeWindow(commit, now, keepAgeMs);
 }
 
 /** Chain-first snapshot probe order, with the compatibility fallback for malformed parent data. */

@@ -4,6 +4,7 @@
 //
 // Usage:
 //   node scripts/prune-visual-bucket.mjs [--dry-run] [--bucket <name>] [--keep <sha>] [--repo <owner/repo>] [--branch <name>]
+//     [--keep-baselines <n>] [--keep-age-hours <h>] [--min-age-hours <h>]
 import process from "node:process";
 import { S3Client } from "@aws-sdk/client-s3";
 import { PRIMARY_REGION } from "../config/aws-regions.mjs";
@@ -11,10 +12,23 @@ import {
   DEFAULT_BRANCH,
   DEFAULT_BUCKET,
   DEFAULT_REPO,
+  KEEP_MAIN_BASELINE_AGE_MS,
+  KEEP_MAIN_BASELINES,
+  MIN_PRUNE_AGE_MS,
+  MIN_PUBLICATION_GRACE_MS,
   pruneVisualBucket,
   resolveActiveBaseline,
 } from "./prune-visual-bucket-lib.mjs";
 import { gitReader } from "./reg-suit-keys.mjs";
+
+function parseCount(flag, value, min) {
+  const n = Number(value);
+  if (value === undefined || !Number.isFinite(n) || n < min) {
+    console.error(`prune-visual-bucket: ${flag} needs a number >= ${min}, got "${value}"`);
+    process.exit(1);
+  }
+  return n;
+}
 
 function parseArgs(argv) {
   const args = { dryRun: false };
@@ -25,6 +39,9 @@ function parseArgs(argv) {
     else if (arg === "--keep" || arg === "--commit") args.explicitCommit = argv[++i];
     else if (arg === "--repo") args.repo = argv[++i];
     else if (arg === "--branch") args.branch = argv[++i];
+    else if (arg === "--keep-baselines") args.keepBaselines = parseCount(arg, argv[++i], 1);
+    else if (arg === "--keep-age-hours") args.keepAgeHours = parseCount(arg, argv[++i], 0);
+    else if (arg === "--min-age-hours") args.minAgeHours = parseCount(arg, argv[++i], 0);
     else if (arg === "-h" || arg === "--help") {
       console.log("Usage: node scripts/prune-visual-bucket.mjs [options]");
       console.log("Options:");
@@ -39,6 +56,15 @@ function parseArgs(argv) {
       );
       console.log("  --repo <owner/repo>   GitHub repository (default: AaronBuxbaum/diveday)");
       console.log("  --branch <name>       Branch to resolve baseline from (default: main)");
+      console.log(
+        `  --keep-baselines <n>  Main baselines to keep (default: ${KEEP_MAIN_BASELINES}; 1 = newest only)`,
+      );
+      console.log(
+        `  --keep-age-hours <h>  Also keep main baselines younger than this (default: ${KEEP_MAIN_BASELINE_AGE_MS / 3600000}; 0 = none)`,
+      );
+      console.log(
+        `  --min-age-hours <h>   Never delete a prefix with an object younger than this (default: ${MIN_PRUNE_AGE_MS / 3600000}; floored at ${MIN_PUBLICATION_GRACE_MS / 60000} min)`,
+      );
       process.exit(0);
     } else {
       console.error(`prune-visual-bucket: unknown argument "${arg}"`);
@@ -89,6 +115,8 @@ async function main() {
     repo,
     branch,
     explicitCommit: args.explicitCommit,
+    ...(args.keepBaselines !== undefined && { keepBaselines: args.keepBaselines }),
+    ...(args.keepAgeHours !== undefined && { keepAgeMs: args.keepAgeHours * 3600000 }),
     s3Client,
     git: gitReader(),
   });
@@ -110,6 +138,7 @@ async function main() {
     bucket,
     keepShas,
     dryRun: args.dryRun,
+    ...(args.minAgeHours !== undefined && { minAgeMs: args.minAgeHours * 3600000 }),
     log: (msg) => console.log(`  ${msg}`),
   });
 
