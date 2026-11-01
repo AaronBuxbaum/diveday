@@ -453,19 +453,12 @@ export function proseDashes(value) {
 }
 
 /**
- * A straight apostrophe in prose a person reads.
+ * A straight apostrophe in prose is refused; `’` (U+2019) is the house form.
+ * ICU-quoted spans are exempt because the straight apostrophe makes their
+ * contents literal (for example, `'{depth18}'`).
  *
- * The house apostrophe is `’` (U+2019). Both spellings landed for as long as
- * the bundles existed, and the mismatch is invisible on screen — it renders
- * fine either way and no reader notices. It is not invisible to Playwright:
- * `getByRole(name)` and `getByText` match the two characters as different
- * strings, and every e2e spec here hard-codes the English a user sees. On
- * PR #1365 (`24f18a2`) a bundle string with `'` and two specs asserting `’`
- * cost a full CI round, and the fix was one character (issue #1367).
- *
- * Beside `proseDashes` rather than inside `RULES` on purpose: this is
- * typography, not a per-language word list, so a third locale inherits it
- * without naming it. A `RULES` entry would silently not apply.
+ * This typography rule stays beside `proseDashes`, outside locale-specific
+ * `RULES`, so every locale inherits it.
  */
 export function straightApostrophes(value) {
   const found = [];
@@ -486,25 +479,12 @@ export function straightApostrophes(value) {
 }
 
 /**
- * A straight double quote in prose a person reads.
+ * A straight double quote in prose is refused; use `“ ”` in every locale.
+ * There is no ICU exemption: `"` has no ICU meaning, unlike the apostrophe
+ * that delimits literal spans.
  *
- * The house quotation marks are `“ ”`, and the bundles were already mostly
- * spelling them that way: 238 curly against 54 straight when this was swept
- * (issue #1664). The collision is the apostrophe's, at a fifth of the volume
- * — both spellings render fine and no reader notices, and Playwright matches
- * them as different strings while every e2e spec here hard-codes its English.
- * `marketing.guides.fareharbor.coexist.intro` and `…eve.coexist.intro` made the
- * same rhetorical move one scroll apart, in two different characters.
- *
- * **No ICU exemption, unlike the apostrophe above.** A straight `'` is what
- * makes an ICU span a literal, so `'{depth18}'` has to keep it; `"` carries no
- * meaning in ICU at all, so there is no span where the straight character is
- * required and nothing to strip before scanning. It landed at zero with no
- * exemption list.
- *
- * Spanish sweeps the same way: `es-ES/README.md` settles it as `“ ”` rather
- * than the peninsular `« »`, so this sits beside `proseDashes` rather than
- * inside `RULES` — typography a third locale inherits without naming it.
+ * Spanish uses curly quotes rather than `« »` (see `es-ES/README.md`). Keep
+ * this typography rule beside `proseDashes`, outside locale-specific `RULES`.
  */
 export function straightDoubleQuotes(value) {
   const found = [];
@@ -523,14 +503,9 @@ export function straightDoubleQuotes(value) {
 }
 
 /**
- * Three periods where the house ellipsis `…` (U+2026) belongs.
- *
- * The apostrophe's drift, at a smaller volume: on 2026-10-13 the bundles said
- * "…" 281 times and "..." five, every one of them a pending label ("Saving...",
- * "Adding...") or a placeholder trailing off, and the Spanish copied all five.
- * Both render, nobody notices one at a time, and Playwright matches them as
- * different strings. Typography, so it sits beside the apostrophe rather than
- * in `RULES`, and a third locale inherits it without naming it.
+ * Refuse three periods in favor of the house ellipsis `…` (U+2026) in every
+ * locale. This typography rule stays beside `proseDashes`, outside
+ * locale-specific `RULES`.
  */
 export function threeDots(value) {
   const found = [];
@@ -547,19 +522,9 @@ export function threeDots(value) {
 }
 
 /**
- * An exclamation mark in a diver's message (fifth-loop ideas, item 24,
- * 2026-10-16).
- *
- * The diver bundle speaks in one plain voice: the dock time, the release, the
- * recap. Four strings broke it ("Thanks for sharing!", "See you on the boat!",
- * "See you in the water!" and the recap text) and read as a different writer
- * on the one page the diver keeps. Scoped to `diver.json` alone: a staff
- * string never carried the mark, and the marketing pages have their own shape
- * rules. Spanish refuses the opening `¡` as well as the closing `!`.
- *
- * The one exception is the WhatsApp template body Meta reviews for each shop
- * at sign-up (`notifications.whatsappTemplate.body`): its words are a
- * registered template, changed only with a new template, never by a sweep.
+ * Refuse `!` and `¡` in `diver.json` to keep diver messages in a plain voice.
+ * `notifications.whatsappTemplate.body` is exempt because Meta reviews that
+ * registered template for each shop; changing it requires a new template.
  */
 export const EXCLAMATION_ALLOWLIST = new Set(["notifications.whatsappTemplate.body"]);
 

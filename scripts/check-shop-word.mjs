@@ -4,35 +4,14 @@ import process from "node:process";
 import { pathToFileURL } from "node:url";
 
 /**
- * **The Spanish words `src/i18n/locales/es-ES/README.md` has already settled.**
+ * Enforces the settled Spanish terminology in
+ * `src/i18n/locales/es-ES/README.md`; that README owns the decisions and
+ * examples. The comments beside each rule retain only the matching boundary
+ * that cannot be recovered from the vocabulary table.
  *
- * That README exists because "every terminology decision below was made once
- * and is binding, which is what stops two agents rendering the same word two
- * ways". It does not stop them. The word it settled first came back anyway:
- * six strings were still calling the dive shop *la tienda* on 2026-08-21,
- * every one of them having survived the sweep meant to remove them — including
- * `common.certification.levelDescription`, the one sentence explaining why the
- * certification question is asked, on all three public forms at the point of
- * sale. This file started as a check for that word.
- *
- * On 2026-09-04 (issue #1316) a sweep found the same thing had happened to
- * four more of the README's decisions, so the check grew from one pattern to a
- * table. Each rule below is a decision the README states as binding, quoted at
- * the rule; none of them is a preference this file invented.
- *
- * That sentence was written on 2026-09-04 and said `comprobar` and `pulsar`
- * were "absent from both bundles". They were not: six files carried 24 of them
- * at the moment it was written, which is the same fortnight-decay this file's
- * own header describes, happening to the file's own prose. Both are rules now;
- * each needed a pattern that excludes its innocent reading, which is what took
- * the time rather than the decision.
- *
- * **What is deliberately not here.** A rule needs a settled answer *and* a
- * pattern that cannot mean anything else. `coger` is on the README's
- * peninsular-vocabulary list and is genuinely absent — the only near hit is
- * `recoge` — but its innocent readings are common enough that it is left to
- * review. And `viaje` is banned only in `staff/`, not in `diver.json`, which is
- * the one scoped rule here — see its own note.
+ * A term belongs here only when its meaning is settled and its pattern avoids
+ * ordinary Spanish. `coger` remains review-only because of innocent readings.
+ * `viaje` is refused only in `staff/`, not in diver-facing copy.
  */
 
 const ROOT = process.cwd();
@@ -67,35 +46,22 @@ const RULES = [
   },
   {
     id: "waiver",
-    // "One document, one word — settled 2026-08-14 … **'Descargo' is not a
-    // synonym in this bundle** — it appears nowhere and should not come back."
-    // `liberación` had drifted in beside it on five staff strings, three of
-    // them sitting next to `paperWaiver.*` keys already saying `exención`.
+    // The README's waiver section settles one term: `exención`, not
+    // `descargo` or `liberación`.
     pattern: /\b(descargos?|liberaci[oó]n(es)?)\b/i,
     says: 'the waiver is "la exención", and the noun is feminine — every article and adjective reaching back to it moves with it (la, una, esta, firmada, archivada)',
   },
   {
     id: "waiver",
-    // The English word itself, which the 2026-10-14 review found in the
-    // request email ("Completa tu waiver para {tripTitle}"), the reminder and
-    // the import wizard: 7 diver strings and 9 staff ones, all written after
-    // the README settled the word.
-    //
-    // Word-bounded, so `Smartwaiver` (a competitor's name in the switching
-    // guide) and `waiver_records.csv` (a file a shop really downloads) pass.
+    // Word-bounded so proper names like `Smartwaiver` and filenames like
+    // `waiver_records.csv` remain valid.
     pattern: /\bwaivers?\b/i,
     says: 'the waiver is "la exención" in Spanish too: "Completa tu exención", "Exención firmada". The English word survives only inside a proper name or a file name',
   },
   {
     id: "dive-site",
-    // "Three terms were live for the same row in `dive_sites`" and the
-    // 2026-08-05 sweep settled `sitio de buceo`. Both losing spellings were
-    // still in the tree on 2026-09-04, one of them as a settings heading
-    // reading "Puntos de buceo" — the exact confusion the English fix removes,
-    // a staffer picking a *punto* and then looking for it under *Sitios*.
-    //
-    // Narrow on purpose: `punto de venta` (POS) and the forecast's `punto de
-    // pronóstico` are both correct and both survive this.
+    // The README settles `sitio de buceo`. Keep POS `punto de venta` and
+    // forecast `punto de pronóstico` valid.
     pattern: /puntos? de (buceo|inmersi[oó]n)/i,
     says: 'a place you dive is "un sitio de buceo" — never "punto de buceo" or "punto de inmersión". One dive is "una inmersión"; "el punto" survives only for a literal coordinate',
   },
@@ -118,24 +84,15 @@ const RULES = [
   },
   {
     id: "departure",
-    // Settled by usage rather than by an older sweep, and recorded in the
-    // README on 2026-09-04: the staff bundles said `salida` 302 times and
-    // `viaje` 7, so the seven were strays rather than a second convention.
-    //
-    // **Scoped to `staff/` deliberately.** `diver.json` uses `viaje` in its
-    // marketing and switching prose, where the English is loose about it too
-    // ("book a trip", "post-trip recap") and the word is doing a different job
-    // — an outing a diver takes, not a row on the schedule board. Narrowing
-    // that copy is a voice decision about diver-facing prose, not a
-    // terminology violation, and it is not this file's to force.
+    // Scoped to `staff/`: there `viaje` means a scheduled departure. Diver
+    // copy uses it for an outing and remains outside this terminology rule.
     pattern: /\bviajes?\b/i,
     scope: isStaffBundle,
     says: 'a departure is "la salida" in the staff bundles, which say it 302 times against 7',
   },
   {
     id: "press",
-    // README:94 — "pulsar / pulsa / mantén pulsado" -> "presionar / presiona /
-    // mantén presionado".
+    // The README settles `presionar`; only these verb forms are refused.
     //
     // Anchored word-initial and enumerated by inflection on purpose:
     // `Impulso` (staff/promos.json) and `expulse` (diver.json's octopus tip)
@@ -146,13 +103,8 @@ const RULES = [
   },
   {
     id: "intro-session",
-    // README's bautismo section — settled 2026-09-11 after the two ratio chips
-    // were found naming the same thing. `Curso de iniciación` is the entry-level
-    // certification course in Spanish, which is the ratio the *other* chip
-    // watches, so "Ratio de iniciación excedida" beside "Ratio de alumnos
-    // excedida" told a manager one fact twice and hid the only difference that
-    // matters: an intro session is closed by another instructor, and the
-    // entry-level one by a divemaster.
+    // The README settles `bautismo` for an intro session; `iniciación` means
+    // the entry-level course, which uses a different instructor ratio.
     //
     // Narrow on purpose, because `iniciación` keeps the entry-level sense:
     // `trips.depthWarningNoCard` says "el límite de iniciación" and is right,
@@ -163,16 +115,8 @@ const RULES = [
   },
   {
     id: "wetsuit",
-    // README's neopreno section — settled 2026-09-12, the day the drysuit got
-    // a size field. The wetsuit had been `Traje` on three item lists and
-    // `Talla de traje` on both fit forms, which is only "suit"; the moment
-    // `Talla de traje seco` rendered directly under it, nothing told a diver
-    // which of the two was the one they were renting.
-    //
-    // Two shapes, both of them what the labels actually said, and neither of
-    // them able to mean anything else: a `talla de traje` with no `seco` after
-    // it, and a string that is nothing but the word. `traje seco`, `traje
-    // estanco` in the drysuit's jargon hint, and a `traje de baño` all pass.
+    // The README settles `neopreno` for a wetsuit. Match only a size phrase
+    // without `seco` or a bare `traje`; drysuit and swimsuit phrases remain valid.
     pattern: /\btallas? de trajes?\b(?!\s+secos?)|^trajes?$/i,
     says: 'the wetsuit is "el neopreno" — "Neopreno" on a kit list, "Talla de neopreno" on a fit form. "Traje" alone reads as the generic suit and sits one line from "Traje seco"',
   },
@@ -180,37 +124,22 @@ const RULES = [
     id: "check",
     // README:98, and its verificar/revisar paragraph at :100-103.
     //
-    // The negative lookahead is the whole rule: `comprobante` is a rental
-    // receipt in diver.json's capabilities list and is correct. Everything else
-    // inflects — comprobar, comprobación, comprobado, comprobamos, comprobará,
-    // Comprobando — so this matches the stem and excludes the one noun. The
-    // stem also changes under stress (issue #2102): compruebo, comprueba,
-    // comprueban, and with a pronoun and its accent, compruébalo — the second
-    // branch, which no noun shares.
+    // Exclude the valid noun `comprobante`; include the `comprobar` /
+    // `comprobación` family and stressed forms (`comprueba`, `compruébalo`).
     pattern: /\bcompr(?:ob(?!antes?\b)|u[eé]b)\w*/i,
     says: 'confirming a fact against evidence is "verificar"; looking something over is "revisar". "Comprobar/comprobación" reads as Spain',
   },
   {
     id: "manifest",
-    // README's manifiesto section — settled 2026-10-05 (issue #1957) by reading
-    // every string against its English key. The staff bundles said `manifiesto`
-    // for the manifest and `listado` for a departure's roster, two objects; the
-    // public pages said `listado` for the manifest, so an owner who read it on
-    // /product opened the demo to a screen titled *Manifiesto*.
-    //
-    // Narrow on purpose: the bare `listado` is the roster's right word ("Ver el
-    // listado") and `listados` an ordinary participle ("los buceadores
-    // listados arriba"), so only the noun phrase that can mean nothing but the
-    // manifest is refused.
+    // The README distinguishes the boat manifest (`manifiesto`) from a roster
+    // (`listado`). Refuse only the manifest phrase; bare `listado` and its
+    // ordinary participle remain valid.
     pattern: /\blistados? del? barcos?\b/i,
     says: 'the boat manifest is "el manifiesto" (masculine), as on every staff screen. "El listado" is a departure’s roster, which is a different list',
   },
   {
     id: "buddy-team",
-    // README's pareja section — settled 2026-10-06 by the product owner (issue
-    // #2098). The staff Boat tab said "Equipos de buceo", which a Latin
-    // American crew reads as dive gear, and the public pages said "equipos de
-    // compañeros".
+    // The README settles `pareja de buceo` for a buddy team.
     //
     // Scoped to `staff/` for the gear-shaped phrase, because in diver.json
     // "alquiler de equipo de buceo" is the rental page and is right. Nothing
@@ -237,11 +166,8 @@ const RULES = [
   },
   {
     id: "check-in",
-    // README's check-in section — settled 2026-10-06 in the same sitting
-    // (issue #2098). The noun is "el check-in", which the staff bundles
-    // already said ten times to "registro de llegada"'s four. Only the two
-    // noun phrases are refused: "Registrar" and "Registrado" stay as the
-    // verb on the tap and the pill, and "registro" alone is a record.
+    // The README settles `check-in` as the feature name; the control verbs
+    // `Registrar` and `Registrado`, and a standalone record (`registro`), stay.
     pattern: /\bregistros? de llegadas?\b|\bllegada y registro\b/i,
     says: 'check-in is "el check-in" (the feature, the phase, "Llegada y check-in"); the tap on a row stays "Registrar"',
   },
@@ -260,30 +186,20 @@ const RULES = [
   },
   {
     id: "computer",
-    // README's vocabulary table — "ordenador (de buceo)" -> "computadora (de
-    // buceo)", in the table since the first sweep and unguarded until
-    // 2026-10-13, when six strings still said "Ordenador de buceo": the rental
-    // kit list a diver fills in, the diver record's gear line, the counter's
-    // refusal.
-    //
-    // Enumerated, not a stem: `ordenada` and `ordenado` (sorted) are innocent
-    // and a list-sorting string will want them.
+    // Enumerate the noun rather than matching a stem: `ordenada` and
+    // `ordenado` (sorted) are valid forms.
     pattern: /\bordenador(es)?\b/i,
     says: 'a dive computer is "la computadora de buceo", and a desktop is "una computadora". "Ordenador" reads as Spain',
   },
   {
     id: "parking",
-    // README's vocabulary table, added 2026-10-13 with this rule: four strings
-    // said "Aparcamiento", among them the printed pass a diver holds and the
-    // trip editor's parking note.
+    // The README settles `estacionamiento` for parking.
     pattern: /\baparca(mientos?|r)\b/i,
     says: 'parking is "el estacionamiento" ("Estacionamiento: {parking}"). "Aparcamiento" reads as Spain',
   },
   {
     id: "mobile",
-    // README's vocabulary table, added 2026-10-13 with this rule: the SMS
-    // consent line every diver reads under the phone field said "número de
-    // móvil", and so did the privacy page.
+    // The README settles `celular` for a mobile phone.
     //
     // Word-initial on purpose: `inmóvil` (a barracuda holding still in the
     // field guide) and `automóvil` carry the letters and are not the phone.
@@ -292,12 +208,8 @@ const RULES = [
   },
   {
     id: "add",
-    // Issue #2564: the add action is "agregar" in Latin American Spanish;
-    // "añadir" reads as Spain. Stem-matched so every form is caught (añade,
-    // añadido, añadiendo, añadirlo).
-    //
-    // Word-initial on purpose: `bañador` (a swimsuit, in the packing lists)
-    // contains `ñad` and is not the verb.
+    // The README settles `agregar` for the add action. Word-initial matching
+    // avoids `bañador` (`ñad` occurs inside that valid word).
     pattern: /\bañad/i,
     says: 'adding is "agregar" ("Agregar buzo", "agregado"). "Añadir" reads as Spain',
   },

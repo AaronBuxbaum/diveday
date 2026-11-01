@@ -5,90 +5,22 @@ import { pathToFileURL } from "node:url";
 import { bankCounts, ratchetFlags, readCounts } from "./ratchet.mjs";
 
 /**
- * Three invariants (docs ADR 20260729-diver-copy-localization):
+ * Locale guard contracts (details and ratchet history:
+ * `docs/agents/repo-checks.md#locale-coverage`):
  *
- * 1. **No hard-coded locale.** A page formats dates, times, and money for the
- *    negotiated request locale, never a compiled-in `"en-US"`. A literal there
- *    is invisible in review and silently gives a Spanish-language shop US date
- *    order forever.
- * 2. **Every message is translated.** Each key in the default bundle exists in
- *    every other locale's bundle, with the same ICU placeholders, so a release
- *    can't ship one screen in Spanish and the next in English. This covers
- *    every bundle in `BUNDLES` — the diver surface, and since
- *    20260730-staff-copy-localization the staff surface as it migrates off
- *    inline English.
- *
- * 3. **Translated means translated.** A key missing from a non-default bundle
- *    falls back to the *English* string rather than throwing, so a key pasted
- *    into `es-ES` untranslated satisfies rule 2 (same key, same placeholders)
- *    and `src/i18n/icu-messages.test.ts` (it compiles) and renders English to a
- *    Spanish reader indefinitely. Nothing could see that, because rule 2 never
- *    compares two *values*. Rule 3 counts the values that are byte-identical
- *    and ratchets that count down.
- *
- * ## How rule 3 counts, which is the whole meaning of its floor
- *
- * Both bundles are flattened to dotted paths; only keys present in **both** are
- * compared; a non-string leaf is skipped; the comparison is byte-for-byte. A
- * key missing from the other bundle is **not** counted as identical — that is
- * rule 2's failure and conflating the two would give a floor nobody can
- * reproduce. The count is kept per bundle **file** (`diver.json`,
- * `staff/gear.json`, …) rather than as one total, because one number over
- * 7,900 keys is a number the next untranslated string can hide inside: a paste
- * into `staff/gear.json` moves that file off its own line whatever the total
- * does. Both directions fail — a count that rose is refused, a count that fell
- * must be banked — so the baseline always says what is actually there. The hole
- * it still has is a swap inside one file: translate one value and paste one
- * untranslated in the same file and the file's count nets out. `--report` lists
- * the keys, which is how that gets looked at.
- *
- * **The count is zero, and that is the examination finishing rather than the
- * bug this warned about.** What would be the bug is inventing Spanish for PADI
- * to make a number go down — the training-agency acronyms, the course-name
- * ladder (Open Water, Advanced Open Water, Divemaster, Instructor), a brand
- * (GoPro, Stripe), a unit abbreviation and five of the eight compass points are
- * all the same word in Spanish, and translating any of them is worse than the
- * problem this rule exists for.
- *
- * They are **declared**, not translated. `DELIBERATELY_IDENTICAL` is where each
- * is said out loud, one line and one reason — never a blanket exemption, and
- * held both ways: a declared key that stops being identical fails, so the list
- * cannot rot into one. Eighteen seed entries were the ones issue #1757 signed
- * off; issue #1797 worked the remaining 188 one at a time, and every one of
- * them turned out to be a brand, an acronym, a place, a unit, a loanword
- * Spanish diving uses, example data in a placeholder attribute, or a template
- * with no word in it at all.
- *
- * That last group is the one structural exemption ({@link nothingToTranslate}),
- * taken in preference to declaring forty templates by hand with the same
- * sentence forty times. It is not the blanket rule this paragraph warns about,
- * because it is decidable and self-revoking: a value qualifies only while every
- * letter in it sits inside a placeholder or a rich-text tag, so adding one word
- * to one of those templates puts it straight back in the count.
- *
- * **A zero baseline is a stricter guard than the old floor, not a weaker one.**
- * Every file now starts from nothing, so a single untranslated paste into any
- * bundle fails on that file's own line rather than hiding inside a number over
- * a hundred. `scripts/check-locale.test.mjs` and the report are what keep that
- * honest. This reasoning is also in
- * [docs/agents/repo-checks.md](../docs/agents/repo-checks.md).
- *
- * Not checked here: copy that never reached a bundle at all. That was long
- * treated as undecidable, and it is not — `pnpm check:copy` scans JSX text and
- * human-readable attributes, and ratchets the remaining count down. The
- * division of labour is: this script proves what is extracted is translated,
- * `check:copy` proves nothing new goes un-extracted. A third list,
- * `SAME_IN_BOTH_LOCALES` in `src/i18n/label-maps.test.ts`, holds the same fact
- * about a *rendered* label rather than a bundle value — a resolver interpolates
- * and redirects between keys, so the two claims are different and neither is
- * the other's baseline; that file's own comment says why both stay.
- *
- * Message-bundle coverage is scoped to the diver-facing surface. The waiver
- * body and the medical questionnaire are excluded from *translation* on
- * purpose — that wording is legally reviewed, and translating it is a sign-off
- * decision (H-01/H-03 in docs/product/human-decisions/README.md) — but their date
- * formatting is still covered by rule 1 above, which is why `/waivers` and
- * `/ready` are inside the guarded roots.
+ * - UI under `guardedRoots` uses the negotiated locale for date, time and money
+ *   formatting; each locale's bundles in `BUNDLES` match keys and ICU placeholders.
+ * - Translation parity and identical-value counts are separate checks. The
+ *   latter compares string leaves present in both locales, byte-for-byte, per
+ *   bundle file. Missing keys are parity failures, not identical values.
+ * - Both increases and decreases require an explicit ratchet update. A
+ *   `DELIBERATELY_IDENTICAL` entry has a per-key reason and remains checked for
+ *   equality; `nothingToTranslate` applies only when all letters are inside
+ *   placeholders or rich-text tags.
+ * - `check:copy` covers source text not extracted into bundles; rendered-label
+ *   declarations in `src/i18n/label-maps.test.ts` make a separate claim.
+ * - Legally reviewed waiver and medical wording is excluded from translation
+ *   pending H-01/H-03, while date formatting remains in scope.
  */
 
 const ROOT = process.cwd();
