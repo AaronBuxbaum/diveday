@@ -81,28 +81,12 @@ function seatOutcome(entry: StoryNoteBooking): SeatOutcome {
 const isBoat = (entry: StoryNoteBooking) => (entry.trip.diveMode ?? "boat") === "boat";
 
 /**
- * **What was notable about one seat, in the story's own words** (UX review
- * 2026-10-10, item 28). The story used to stamp "waiver signed" on every
- * boat ahead and "sailed" on every boat behind: the norm, said down every row,
- * so nothing on a row told one Saturday from the next.
- *
- * A seat ahead says nothing here: whether the diver is ready is the status
- * ledger's question, asked once at the top of the record. A seat behind says
- * what happened to it when it did not sail (canceled, the trip called off, a
- * no-show), and when it did, what made it this diver's trip: the first dive
- * with the shop, the gear they rented, the stars they gave it. "sailed" is the
- * fallback for a trip that went as trips go ("dived" off a boat).
- *
- * A seat picked up after the boat left ("joined later") keeps its rental and
- * rating lines but never first-dive credit (#2427).
- *
- * Whether it sailed is the crew's roll call first and the booking second
- * (`seatSailed`): a seat the crew marked `not_boarded` at the dock "stayed
- * ashore" whatever the booking says, and earns no gear, stars or first dive.
- *
- * `firstSailed` is decided by the caller, which sees every row: the earliest
- * seat that sailed, and only when the shop holds no imported history that
- * might come before it.
+ * Notes describe only the notable history behind a seat. Crew dock and
+ * after-dive roll call outrank booking status through `seatSailed`; turn-away
+ * remains distinct from no-show and removal. A turn-away story is suppressed
+ * when its held seat's identity is unconfirmed. A seat joined after departure
+ * keeps rental and rating notes, never first-dive credit. The caller selects
+ * `firstSailed` only when imported history cannot predate the known bookings.
  */
 export function storyNotes(
   entry: StoryNoteBooking,
@@ -110,14 +94,11 @@ export function storyNotes(
   t: StaffTranslator,
   locale: string,
 ): string[] {
-  // **Seen at the desk, turned away** (H-135): a past fact even on a boat that
-  // has not left yet, so it is said ahead as well as behind. The crew's own
-  // word outranks it: a seat they counted aboard has no turn-away left on it.
-  // A seat removed afterwards was not the diver cancelling: "then removed"
-  // (layer 3 review, dde-2 #2).
+  // A turn-away is distinct from a later no-show or removal; crew roll call
+  // overrides it when the diver was counted aboard.
   if (entry.booking.turnedAwayAt) {
-    // **A held seat says nothing here** (security review 2026-10-16, F1):
-    // this story is the matched person's, and the seat sits on it on a guess.
+    // Suppress this turn-away story when the held seat's identity is
+    // unconfirmed.
     if (entry.booking.identityUnconfirmedAt) return [];
     const reason = entry.booking.turnedAwayReason ?? "unstated";
     if (entry.booking.status === "no_show") return [t("divers.story.turnedAway", { reason })];
@@ -136,10 +117,7 @@ export function storyNotes(
     case "stayedAshore":
       return [t(isBoat(entry) ? "divers.story.stayedAshore" : "divers.story.didNotDive")];
     case "joinedLater":
-      // Picked up after the boat left: the diver did get in the water, so the
-      // gear they rented and the stars they gave are real (#2427). First-dive
-      // credit stays tied to sailing from the dock, and "joined later" always
-      // leads.
+      // Keep rental and rating notes, but never first-dive credit.
       return [t("divers.story.joinedLater"), ...gearAndRatingNotes(entry, t, locale)];
     case "notCountedBack":
       return [t("divers.story.notCountedBack")];

@@ -3,41 +3,15 @@
 import { unstable_rethrow, useRouter } from "next/navigation";
 import { type ReactNode, useActionState, useEffect, useRef } from "react";
 
-/** What the row knows after a tap: it landed, or it did not send. */
+/** Whether a non-redirect action resolved or rejected; rejection does not reveal server outcome. */
 type RowActionResult = { ok: true } | { ok: false } | null;
 
 /**
- * **A failed mutation fails on its row, not on the page.** Take the counter
- * offline and tap one diver's Check in, and the whole segment used to be
- * replaced by the error boundary: the 26-diver queue, the four departure
- * groups, the scroll position and anything typed into the scan field, all
- * gone, in front of a diver standing at the desk (issue #819). Whole-page
- * recovery is the right default for a failed *render*; a failed mutation knows
- * which row it was about, and the page-level boundary cannot say which row.
- *
- * **And it never claims the act did or did not happen**, because the client
- * genuinely cannot know: a failed fetch cannot tell a request that never left
- * from one the server handled and could not answer. So the message is about
- * the *send*. The row's own state is left exactly as the server last rendered
- * it, which is the honest thing on screen while the staffer decides whether to
- * try again.
- *
- * **This is the mechanism, and it holds no opinion about the control.** It was
- * born inside the old counter's one-tap check-in form, which is why every other mutation on the counter row shipped
- * as a bare `<form action={…}>` and kept the hole #819 closed for the tap alone
- * (issue #1788). The two worst were on a blocked row: the identity confirm,
- * which is the row's *only* control because a blocked row is offered no
- * check-in tap, and the "Not here" script — both reached under exactly the
- * pressure that makes losing the queue expensive. Extracting the reducer was
- * the narrow fix. The wide one was teaching `InlineConfirm` a pending-and-failed
- * state, and it is shared with the trip roster's copy of the identity
- * attestation, so it would have changed a door nobody asked about.
- *
- * The service worker is not an answer here and is not meant to be: it returns
- * early for any non-GET (`src/worker/manifest-sw.ts`), and a deferred identity
- * attestation — one that lands after the diver has gone — is the wrong shape
- * for an act that hands over another person's certifications. Failing closed on
- * the row is right.
+ * A resolved action triggers a refresh. A rejected non-redirect action shows
+ * an inline send failure and keeps the last server-rendered row and queue; the
+ * server may already have changed state if its response was lost. The message
+ * describes the failed send, not the mutation's outcome. Identity attestation
+ * and check-in writes remain immediate; this form does not defer them.
  */
 export function RowActionForm({
   action,
@@ -53,7 +27,7 @@ export function RowActionForm({
    * returning `{ ok: true }` compose the same way.
    */
   action: (formData: FormData) => Promise<unknown>;
-  /** What the row says when the send did not go through. Words come from the page. */
+  /** Page-provided message that the send failed; it does not assert mutation outcome. */
   sendFailedLabel: string;
   /**
    * Called inside the action, before the await, for a caller holding optimistic
@@ -79,21 +53,11 @@ export function RowActionForm({
         await action(formData);
         return { ok: true };
       } catch (error) {
-        // **`unstable_rethrow` first, or the refusals lie.** Every action on
-        // this surface ends its refusal paths in
-        // `redirect(noticeUrl(…))`, and that sentinel reaches this catch on
-        // the client too. Without the rethrow the navigation still happens —
-        // Next handles it out of band — and the reducer *also* returns a
-        // failure, so a refused check-in landed on its `?notice=` banner with
-        // "That didn't send" underneath it: two contradictory answers to one
-        // tap. Measured rather than assumed, after a comment here claimed the
-        // opposite.
-        //
-        // This is the client-side face of what
-        // `scripts/lint-rules/redirectInTry.grit` refuses on the server.
+        // Rethrow Next's redirect sentinel before reporting a failed send, so
+        // a refused action does not show a contradictory transport message.
         unstable_rethrow(error);
-        // What is left is the transport failing, which is the case this exists
-        // for: the tap did not send.
+        // Treat the remaining non-redirect rejection as a send failure; server
+        // outcome may be unknown, so do not assert whether the mutation committed.
         return { ok: false };
       }
     },

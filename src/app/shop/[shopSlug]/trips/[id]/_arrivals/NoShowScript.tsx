@@ -4,31 +4,12 @@ import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { RowActionForm } from "./RowActionForm";
 
 /**
- * **"Not here" — the counter's script for the diver who never turned up**
- * (issue #1209).
- *
- * Two halves of one conversation, in one file because they are read in
- * sequence: the door a staffer opens while the boat is still at the dock, and
- * what the shop can do with the seat once they have closed it.
- *
- * Every string is a prop. This is a Server Component that holds no words at
- * all, the same shape `ArrivalTap` and `PrintRecordButton` take on this
- * surface — the counter's copy is resolved once by the page, in the locale the
- * staffer's own device asked for (ADR 20260730-staff-copy-localization).
- *
- * **The door is a disclosure, and the confirm inside it is one tap.** Closed,
- * it is three words at the foot of an ordinary queue row, so the one-tap check
- * in above it stays the only large target — this surface is used with wet
- * hands on a shared desk tablet, and a second peer control beside that tap is
- * the mis-tap a previous slice spent its length removing. Open, it says what
- * the tap does and offers exactly one button. Never a two-tap dance and never
- * a `window.confirm`: the act is undoable, and a modal over a diver standing
- * at the desk buys nothing the Undo does not.
- *
- * **The word on screen is the plain one.** A released seat is "Not here" — not
- * archived, not deactivated, not "released" — because the fact a staffer is
- * recording is that a person did not arrive (ADR 20260820-every-delete-is-soft's
- * second half: the record is soft, the word is not).
+ * Localized native disclosure for recording a diver as not here. Its closed
+ * label is the factual "Not here"; confirmation is explicit, undoable, and
+ * names the diver accessibly. Rebooking and seat-salvage precedence is
+ * resolved upstream (`src/lib/no-show.ts`, `src/db/no-show.ts`); fare decisions
+ * are described in copy, with no charge or refund action here. ADR
+ * 20260730-staff-copy-localization covers page-resolved staff copy.
  */
 
 export type NoShowScriptCopy = {
@@ -59,19 +40,9 @@ export function NoShowScript({
   copy: NoShowScriptCopy;
 }) {
   return (
-    // Native `<details>`, the one disclosure spelling this surface already
-    // speaks (`LedgerGroup folded`): keyboard and
-    // screen-reader behaviour for free, and no client component for a thing
-    // that is a triangle.
-    // No horizontal padding of its own: the roster row already keeps its room,
-    // so the caret sits on the column the name above it
-    // starts on, and the summary's hover chip bleeds 8px past it.
-    // **A quiet tap, not a section** (Aaron, 2026-10-06: "I don't like the
-    // 'Did not dive?' section"). Closed, it is the row's last control: two
-    // words in the same quiet ink as the row's other doors, no caret and no
-    // question mark, so it reads as something to do rather than a heading.
-    // Open, the consequence and the one confirm sit in a sunken box under it,
-    // the shape every inline confirm on the roster takes.
+    // Native <details> supplies keyboard and screen-reader disclosure
+    // semantics. The row stays quiet when closed; open, it shows the
+    // consequence and one confirmation.
     <details className="group/no-show pb-2">
       <summary
         className={buttonClass({
@@ -134,14 +105,7 @@ export type NoShowSalvageCopy = {
   }[];
   /** The send button's words and whom it sends to; present only on the rebooking offer. */
   offerCopy?: { personId: string; label: string; pending: string; sendFailed: string };
-  /**
-   * **The money, as a sentence.** What happens to the fare is a decision a
-   * person makes on the shop's own terms — a refund, a credit, a regular the
-   * owner waves through — so the counter says where that decision lives and
-   * stops. There is no charge control and no refund control anywhere in this
-   * tree, and `NoShowScript.test.tsx` asserts it rather than trusting this
-   * paragraph.
-   */
+  /** Fare handling is copy and a link only; there is no charge or refund control. */
   money: { line: string; href?: string; label?: string };
 };
 
@@ -167,8 +131,7 @@ export function NoShowSalvage({
               >
                 {link.label}
               </Link>
-              {/* One tap sends the same day to the diver, who books it from
-                  the link; the desk seats nobody (UX review 2026-10-11, item 14). */}
+              {/* The diver books from the offer; the desk does not seat them. */}
               {link.offer && offerAction && offerCopy ? (
                 <RowActionForm action={offerAction} sendFailedLabel={offerCopy.sendFailed}>
                   <input type="hidden" name="offerTripId" value={link.offer.tripId} />

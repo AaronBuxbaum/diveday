@@ -2,20 +2,8 @@ import type { OrderCollection, OrderStatus } from "@/db/schema";
 import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
 
 /**
- * **What an order's status is called, and what colour it wears.**
- *
- * The word already lived in one place. The colour did not: an order's status
- * rendered on four surfaces and each answered the tone question its own way —
- * the Orders index called `refunded` amber, the order detail page left it grey,
- * and the diver record's Payments list and per-booking money cell each
- * hand-rolled a flat grey pill that gave every status the same non-answer. One
- * refund therefore read three different ways depending on which screen a
- * staffer happened to be on, which is exactly the drift `readiness-labels.ts`
- * exists to prevent for "Blocked"/"Ready". Same fix, same shape: the code, the
- * word, and the tone resolve from one table.
- *
- * Keyed by the pg enum (`order_status`), so a status added to the column is a
- * compile error here until it has both.
+ * Shared status-label map. The database enum key requires a label for every
+ * order status.
  */
 export const ORDER_STATUS_KEYS: Record<OrderStatus, StaffMessageKey> = {
   open: "divers.shared.orderStatus.open",
@@ -27,44 +15,10 @@ export const ORDER_STATUS_KEYS: Record<OrderStatus, StaffMessageKey> = {
 };
 
 /**
- * The one tone each order status wears, everywhere it is shown.
- *
- * Read as what the word *means* to the person at the counter:
- *
- * - `open` — **primary.** An invoice is out and nobody has done anything
- *   wrong; it is the normal in-flight state of money, so it gets the app's
- *   "this is live" hue rather than a caution.
- * - `paid` — **success.** The settled, wanted end state.
- * - `void` — **neutral.** Cancelled before it ever counted. Nothing moved,
- *   nothing is owed, and colouring a non-event is how a quiet page learns to
- *   shout.
- * - `uncollectible` — **danger.** Stripe's word for money the shop billed and
- *   will not receive. It is the one status in this enum that is a loss, and
- *   until now it rendered the same grey as `void` on every surface — the
- *   written-off invoice and the one that never mattered looked identical.
- * - `partly_refunded` — **warning**, the same as `refunded`. The two differ in
- *   what is left, not in what a staffer reconciling the day must notice:
- *   money went back out. Splitting the tone would make the smaller event
- *   louder or the larger one quieter, and neither is true (issue #699).
- * - `refunded` — **warning.** Deliberate, not broken, but money went back out
- *   and a staffer reconciling the day needs to see it. This is the Orders
- *   index's existing call, kept because it was the considered one.
- *
- * **Not typed `BadgeTone`,** even though every value is one: `src/i18n` may not
- * import `src/components` (`pnpm check:architecture` — this layer is composed
- * *by* routes, never the reverse), the same constraint that has
- * `readinessStatusTone` naming its two tones as literals. `as const` is what
- * keeps that safe rather than merely quiet: the values stay literal types, so
- * every `<Badge tone={ORDER_STATUS_TONES[status]}>` in the app re-proves
- * assignability to `BadgeTone` at its own call site. A typo here is a compile
- * error on all four surfaces, not a silently-dropped class.
- *
- * Whether a given surface *shows* the badge is the surface's own call and
- * deliberately not encoded here — the Orders index renders nothing at all for
- * `paid`, because a success pill repeated down 45 of 50 rows is noise
- * pretending to be information (design principle 9). That is a caller's
- * `status === "paid" ? null : <Badge…>`, not a hole in this map: a hole would
- * quietly make `paid` grey on the two surfaces that do want to say it.
+ * Status tone: open is primary, paid success, void neutral, uncollectible
+ * danger, and both refund states warning. Void is not a loss; refunds need
+ * reconciliation attention. Callers decide whether to show a badge; this
+ * total map still provides paid's tone where it is shown.
  */
 export const ORDER_STATUS_TONES = {
   open: "primary",
@@ -78,10 +32,8 @@ export const ORDER_STATUS_TONES = {
 type CounterCollection = Exclude<OrderCollection, "stripe_invoice">;
 
 /**
- * How money taken at the counter was taken (ADR 20261009-counter-payments):
- * the quiet word the Orders ledger sets beside the amount, and the line the
- * order page leads with. A Stripe invoice has neither; it is the ordinary case
- * and says nothing.
+ * Counter-collection labels (ADR 20261009-counter-payments). Stripe invoices
+ * are excluded and have no collection label.
  */
 export const ORDER_COLLECTION_KEYS: Record<CounterCollection, StaffMessageKey> = {
   cash: "orders.collection.cash",
@@ -89,7 +41,7 @@ export const ORDER_COLLECTION_KEYS: Record<CounterCollection, StaffMessageKey> =
   room_charge: "orders.collection.room_charge",
 };
 
-/** A room charge's line names its room, so it is said by `paidAtCounterLine` alone. */
+/** Room charges use `paidAtCounterLine`, which includes the room. */
 export const ORDER_PAID_AT_COUNTER_KEYS: Record<
   Exclude<CounterCollection, "room_charge">,
   StaffMessageKey
@@ -99,9 +51,8 @@ export const ORDER_PAID_AT_COUNTER_KEYS: Record<
 };
 
 /**
- * "Paid in cash Fri, Oct 9", or for a resort guest "Charged to room 412 ·
- * Reef Hotel Fri, Oct 9" (fifth-loop ideas, item 57): the room and hotel are
- * the order's own, so the front desk's monthly bill can be checked line by line.
+ * Formats the recorded collection method and date. Room charges also include
+ * the order's room and optional hotel.
  */
 export function paidAtCounterLine(
   t: StaffTranslator,

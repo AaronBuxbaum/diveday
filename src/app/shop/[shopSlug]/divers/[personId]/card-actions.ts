@@ -43,42 +43,19 @@ import { noticeUrl } from "@/lib/staff-notices";
 import { backTo, requireDiverActionContext, successUrl } from "./action-helpers";
 import { cardForm, cardIdFromForm } from "./card-form";
 
-// The pg enum itself, not a copy of it: a card the column accepts is a card the
-// form must accept, and a hand-kept list is what let CMAS/RAID/GUE be refused
-// here while the database was ready for them (DOM-L1).
+// Keep form values aligned with the database enum.
 const agencySchema = z.enum(certificationAgency.enumValues);
-// Same rule, and it matters more since the card sighting started parsing the
-// level: a hand-written copy that falls behind the enum makes a legitimate
-// submit fail *silently* (`levelSightingFromForm` returns undefined), which
-// reads to the staffer as "you did not fill the form in".
+// Sighting levels must use the same closed set as stored cards.
 const levelSchema = z.enum(certificationLevel.enumValues);
 /**
- * The specialties that live in `specialty_certifications`. Nitrox is
- * deliberately **not** one of them: it is its own table and its own gas gate,
- * so a hand-posted `card=specialty:nitrox` must not reach
- * `createSpecialtyCertification`. The picker spells that card `card=nitrox`,
- * and this closed enum is what makes anything else a refusal.
+ * Specialty cards exclude nitrox, which has its own table and gas gate.
  */
 const specialtyOnlySchema = z.enum(diveSpecialty.enumValues);
-// The card number, on every form on this page that takes one. It is the same
-// bound everywhere **on purpose**: capturing a card and sighting one are
-// different acts (see `sightingSchema`) but they reach the identical `verified`
-// state, so a stricter check on only one of them is a speed bump with a door
-// beside it — delete the claim, capture the same "xx", tap Mark certified, and
-// the `self_declared_at` provenance is gone with it.
+// Capture and sighting share one plausibility bound because both can reach verified.
 const cardNumberSchema = z.string().trim().max(120).refine(isPlausibleCardNumber);
 /**
- * The card a staffer says they are holding, when the row they are verifying is
- * still only a diver's word (`certifications.selfDeclaredAt`).
- *
- * This is the act the number check above exists for. Capturing a card is a
- * staffer entering a card the shop is looking at; a *sighting* is the single
- * moment a stranger's typing becomes `verified` — the state readiness, trip
- * admission, every course prerequisite and the nitrox fill gate read. It
- * inherited the capture form's 2–120 characters, so **"xx" certified a
- * self-declared "Instructor"**: a required box with no shape is a box a hurried
- * person fills with anything. The check itself stays loose on purpose — see
- * `isPlausibleCardNumber`.
+ * A staff-entered card sighting required before a diver's self-declared card
+ * can become verified.
  */
 const sightingSchema = z.object({
   agency: agencySchema,
@@ -93,24 +70,9 @@ const sightingSchema = z.object({
 const levelSightingSchema = sightingSchema.extend({ level: levelSchema });
 
 /**
- * Whether this submit carried a card sighting whose **number** is the thing
- * that was wrong.
- *
- * The distinction is the whole point. A failed `sightingSchema` parse collapses
- * to `undefined`, which is exactly what a submit carrying *no* sighting
- * returns — so a staffer who typed "xx" got `card_sighting_required`: *"Enter
- * the agency and number from the card in front of you to certify it."* They
- * had. At a busy dock that person retypes it once, gets the same sentence, and
- * then goes **around** the form: delete the claim, capture the same "xx" by
- * hand, tap Mark certified. That reaches the identical `verified` state while
- * throwing away `self_declared_at` — the stamp the incident export, the
- * "diver's word" mark and every provenance read depend on. A refusal that will
- * not say what is wrong is how a safety-critical form teaches people to route
- * around it.
- *
- * Checked on the number alone rather than the whole shape, because it is the
- * only field a staffer types free-hand; a malformed agency or level can only
- * come from a hand-built post and keeps the generic refusal.
+ * Distinguish an implausible staff-entered number from a missing sighting so
+ * the form can name the field. Malformed posted agency or level stays generic;
+ * those are closed enums, not free-entry fields.
  */
 function sightedNumberRefused(formData: FormData): boolean {
   const fields = readForm(cardForm, formData);
@@ -183,39 +145,20 @@ export async function recordJuniorStatusAction(
 }
 
 /**
- * The only review outcome is "certified" — a bad card is deleted, not marked
- * for correction.
- *
- * One tap for every card a staffer captured themselves. A **self-declared**
- * card (a diver named their own level on a public opt-in) is the exception: it
- * carries no number, and this form asks for the agency, the number **and the
- * level** off the card in the staffer's hand before it will certify anything.
- * That is the same act as capturing a card, and `reviewCertification` refuses
- * without it — as does the database, whose check constraint will not let a row
- * with a blank or absent number reach `verified`. (It read `identifier is not
- * null` until 2026-08-15, which `''` satisfies, so this sentence was true of
- * NULL and enforced by the application alone for the empty string.)
- *
- * The level is there because the likeliest wrong claim is an overstated one:
- * transcribing the number off a real Open Water card while keeping the diver's
- * typed "Instructor" would verify the one field nobody looked at.
+ * A self-declared card needs staff-entered agency and number, plus level for a
+ * level card, before it can become verified.
  */
 export async function reviewAction(shopSlug: string, personId: string, formData: FormData) {
   const context = await requireDiverActionContext(shopSlug, personId, "not-authorized-cards");
   personId = context.personId;
   const { base, db, staff } = context;
-  // Before anything is read: a number that is not a number gets its own answer,
-  // on its own box. Without this the refusal below is the one that fires, and
-  // it tells the staffer to do what they just did (`sightedNumberRefused`).
-  // Named: a diver can hold two self-declared cards, and a refusal that says
-  // only "a card number was wrong" opens both sighting forms with the same red
-  // sentence under each — including the one nobody typed in.
+  // Give an implausible entered number a field-specific refusal before the
+  // generic missing-sighting response; attach it to this card's form.
   if (sightedNumberRefused(formData)) {
     redirect(backTo(base, "card-number-implausible", "cards", cardIdFromForm(formData)));
   }
   const certificationId = cardIdFromForm(formData);
-  // Present only on the sighting form; absent on the one-tap button, where a
-  // blank parse must not turn into an empty-string "sighting".
+  // Only the sighting form posts these fields; absence is not a sighting.
   const sighting = levelSightingFromForm(formData);
   const outcome = certificationId
     ? await reviewCertification(db, {
@@ -233,11 +176,8 @@ export async function reviewAction(shopSlug: string, personId: string, formData:
 }
 
 /**
- * The card the staffer says they are looking at, or undefined when this submit
- * carried none. Undefined and "they typed nothing" are the same outcome —
- * `reviewCertification` refuses either way on a row that needs a sighting — but
- * they are kept distinct here so a malformed agency is a refusal rather than a
- * silent fall-through to the shop's first enum member.
+ * Parse the staff-entered agency and number. Missing or malformed values do
+ * not form a sighting; the caller handles malformed numbers separately.
  */
 function sightingFromForm(formData: FormData): CardSighting | undefined {
   const fields = readForm(cardForm, formData);
@@ -250,13 +190,8 @@ function sightingFromForm(formData: FormData): CardSighting | undefined {
 }
 
 /**
- * {@link sightingFromForm} plus the rung the staffer read off the card.
- *
- * A submit missing or malforming the level is `undefined` — the same outcome as
- * a missing number, so `reviewCertification` refuses with
- * `card_sighting_required` rather than certifying a level nobody stated. That
- * is the point of parsing it here: the alternative, falling back to the level
- * already on the row, is precisely the diver's own claim being promoted.
+ * Parse the staff-entered level with the card sighting. A missing or malformed
+ * level fails closed instead of falling back to the diver's claim.
  */
 function levelSightingFromForm(formData: FormData): LevelCardSighting | undefined {
   const fields = readForm(cardForm, formData);
@@ -287,17 +222,14 @@ export async function reviewSpecialtyAction(
   const context = await requireDiverActionContext(shopSlug, personId, "not-authorized-cards");
   personId = context.personId;
   const { base, db, staff } = context;
-  // The nitrox twin of the level sighting's own refusal, and it matters at
-  // least as much here: this tap authorizes a gas fill.
+  // Give an implausible nitrox number a field-specific refusal; verification
+  // opens the gas-fill gate.
   if (sightedNumberRefused(formData)) {
     redirect(backTo(base, "card-number-implausible", "cards", cardIdFromForm(formData)));
   }
   const certificationId = cardIdFromForm(formData);
-  // One tap, the same as the level card beside it. The imported-card
-  // attestation this used to forward is gone
-  // (ADR 20260814-one-tap-imported-card-confirm). A self-declared nitrox card
-  // still asks for the card in the staffer's hand — this tap authorizes a gas
-  // fill, and nobody has seen anything yet.
+  // Self-declared nitrox requires a physical-card sighting; specialty
+  // verification controls depth, while nitrox verification controls gas fill.
   const outcome = certificationId
     ? fields.cardType === "nitrox"
       ? await reviewNitroxCertification(db, {
@@ -311,10 +243,8 @@ export async function reviewSpecialtyAction(
           shopId: staff.user.shopId,
           certificationId,
           status: "verified",
-          // A specialty card the diver typed on their own readiness link asks
-          // for the card in the staffer's hand, exactly as the nitrox branch
-          // above does — and for a stronger reason: this tap opens a depth gate
-          // past 18 m. An imported or staff-captured card is still one tap.
+          // Self-declared specialty cards require a sighting; verification
+          // controls the specialty depth gate.
           sighting: sightingFromForm(formData),
           reviewedByPersonId: staff.user.personId,
         })
@@ -326,33 +256,9 @@ export async function reviewSpecialtyAction(
 }
 
 /**
- * **"This diver never told us that"** — the eraser for a *"Not certified yet —
- * diver's word"* stamp somebody else left on their record.
- *
- * `people.no_certification_declared_at` is written by two **unauthenticated**
- * forms (the shop-wide last-minute-deal join, a full trip's wait-list join),
- * both of which resolve a person by shop + email. For a diver the shop holds no
- * card for — the ordinary case for anyone whose card was never captured —
- * anybody holding a name and an email address off any boat's manifest can mark
- * them, permanently, on the staff send lists and in every CSV the shop exports
- * from then on. Until this action the only thing that cleared it was owner-only
- * erasure, which destroys the whole record.
- *
- * **It cannot be a second way to launder a claim into evidence.** Its only
- * effect is to move this person from a *stated* absence of a card to *no
- * statement at all* — the silence of somebody nobody asked. Evidence lives in
- * the three card tables and `clearNoCertificationDeclaration` touches none of
- * them: nothing here raises a level, adds a card, or moves a row toward
- * `verified`. That direction is also what makes the gate right — a staff
- * session and no role predicate, exactly as capturing a card has always been,
- * since this is a weaker act than a capture. H-48 is the open product-owner
- * question about who may *sight* a card, and this deliberately does not
- * pre-empt it by inventing a narrower rule for a smaller thing.
- *
- * The correction is not itself invisible: it is stamped on the row with the
- * staff member who made it (`people.no_certification_cleared_by_person_id`),
- * which outlives the retention window an `activity_events` line would be pruned
- * on, and travels in the export beside the statement it corrects.
+ * Clears only the assertion that no certification was declared; it never edits
+ * card rows or verifies a card. A staff session is required, and the staff
+ * actor is recorded durably on the person row.
  */
 export async function clearNoCertificationAction(
   shopSlug: string,
@@ -367,18 +273,8 @@ export async function clearNoCertificationAction(
     personId,
     byPersonId: staff.user.personId,
   });
-  // Both outcomes are page-level, deliberately, and this is the one place on
-  // this record where that is the *right* answer rather than a shortcut: the
-  // panel holding this control renders only while the stamp is set, so on
-  // success it is gone, and on the no-op it was never there. A notice has to
-  // land somewhere that survives the state change it reports.
-  //
-  // The no-op gets its own code rather than the generic `invalid`. A replayed
-  // submit or a double tap **succeeded** — the record already says what the
-  // staffer wanted it to say — and answering *"Check the details and try
-  // again"* in a danger tone tells them their correction failed when it did
-  // not. Reporting it as a fresh success would be the opposite lie, putting
-  // their name on an act that did not happen.
+  // The panel disappears after a clear, so report the outcome at page level.
+  // A replay is a distinct no-op, not an error or a new recorded act.
   revalidateAndRedirect(
     base,
     backTo(base, cleared ? "no-certification-cleared" : "no-certification-nothing-to-clear"),
@@ -590,27 +486,10 @@ export type MarkCertifiedResult =
   | { ok: false; reason: "invalid" | "sighting-required" | "duplicate-card" | "not-undoable" };
 
 /**
- * **Mark certified, in place — and take it back.**
- *
- * Every other write on this record redirects, which is right for a form whose
- * outcome is a sentence beside it. This one is a **row-level tap in a list**,
- * and a redirect made it the most expensive act on the page: the route's own
- * `loading.tsx` painted over a ~6,400px record, the `#cards` anchor threw the
- * viewport somewhere the staffer had not asked to be, and a desk working down
- * a stack of cards paid that for every single one. So it revalidates and
- * returns; the row settles where it is (`ReviewRowActions` on the reviews queue
- * is the same shape, for the same reason).
- *
- * Returning also buys the thing the banner could not: an **Undo**. "Certification
- * marked verified. It counts toward readiness." was a sentence explaining a
- * status word the row already wears — and it left a mis-tap on the wrong row
- * with no way back but deleting the card. The toast says less and offers more.
- *
- * `intent=undo` routes to the un-review writers, which refuse a card whose
- * review was a *sighting*: that rewrites the row from the card in the staffer's
- * hand and there is nothing to put back. Those cards never reach this action —
- * they wear `CardSightingForm` instead — and the server refuses regardless,
- * because a posted form is caller-controlled.
+ * Row-local certification action. Returns state for its own toast and offers
+ * Undo only when the server says the review is reversible. Undo is conditional
+ * on the review timestamp; sightings are not undone and are refused server-side
+ * here even if a caller posts the action directly.
  */
 export async function markCertifiedAction(
   shopSlug: string,
@@ -628,8 +507,7 @@ export async function markCertifiedAction(
   const input = { shopId: staff.user.shopId, certificationId };
 
   if (fields.intent === "undo") {
-    // The Undo reverses the review it was offered for and no other (issue
-    // #2612). A post that names no instant, or a nonsense one, reverses nothing.
+    // Undo applies only to the review timestamp it was offered for.
     const offered = typeof fields.reviewedAt === "string" ? new Date(fields.reviewedAt) : null;
     if (!offered || Number.isNaN(offered.getTime())) {
       return { ok: false, reason: "not-undoable" };
@@ -674,11 +552,9 @@ export async function markCertifiedAction(
   const card = outcome.certification;
   return {
     ok: true,
-    // An imported card was already `verified` on arrival; this tap confirmed
-    // it rather than certifying it, and the two must not claim the same thing.
+    // Imported cards were already verified; this action confirms them.
     effect: card.importedAt ? "confirmed" : "certified",
-    // Only a review its Undo can take back: never a sighting, nor a card an
-    // agency check listed where the agency numbers each card.
+    // Offer Undo only when the server reports the review is reversible.
     undo:
       unreviewedCardState(card).ok && card.reviewedAt
         ? { certificationId, cardType: cardType.data, reviewedAt: card.reviewedAt.toISOString() }

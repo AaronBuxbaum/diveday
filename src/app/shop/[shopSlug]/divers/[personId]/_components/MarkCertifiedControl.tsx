@@ -40,28 +40,9 @@ function refusalText(result: MarkCertifiedResult, copy: MarkCertifiedCopy): stri
 }
 
 /**
- * **One card's "Mark certified" — the tap that does not reload the record.**
- *
- * It used to redirect. On a ~6,400px page with its own `loading.tsx` that meant
- * a full-page skeleton, a jump to the `#cards` anchor, and a banner two screens
- * from the row, once per card — for a staffer working down a stack of them at
- * the desk. Now the action revalidates and returns, so the row flips to
- * "Certified" where it sits.
- *
- * **The banner is a toast with an Undo instead.** "Certification marked
- * verified. It counts toward readiness." explained a status word the row was
- * already wearing, and offered nothing; a mis-tap on the wrong row had no way
- * back but deleting the card. The toast says less and gives the one thing that
- * was missing.
- *
- * It renders for a card that is already certified as well — with no button —
- * and that is load-bearing rather than tidy: the toast lives here, so the
- * component has to survive the re-render that takes its own button away.
- *
- * A card that needs a sighting never reaches this control (`CardSightingForm`
- * is that row's button); `markCertifiedAction` refuses one anyway, and refuses
- * to undo it, because a sighting rewrites the row from the card in the
- * staffer's hand and there is nothing to put back.
+ * Row-local Mark certified control. Keep it mounted after the action settles
+ * so its Undo toast remains available. Cards requiring a sighting use another
+ * control and are refused server-side here.
  */
 export function MarkCertifiedControl({
   action,

@@ -79,12 +79,9 @@ export type CrewSectionCopy = {
 };
 
 /**
- * Day-of crew editing for one trip. Assign/unassign is per-person
- * (`updateCrewAction`, the same `changeTripCrew` mutation the schedule board
- * uses) rather than replacing the whole assigned set, so two
- * staff editing this trip and the board at once can no longer silently clobber
- * each other's change (docs/product/archive/ux-personas-20260730-findings.md, Lens
- * 17 task 139).
+ * Day-of crew editing for one trip. Assign/unassign writes are per-person
+ * (`updateCrewAction`/`changeTripCrew`) so concurrent edits do not overwrite
+ * another staff member's assignment.
  */
 export function CrewSection({
   tripId,
@@ -105,24 +102,16 @@ export function CrewSection({
   /** Each assigned person's current `trip_assignments.trip_role`, or null. */
   crewRoles: Record<string, TripCrewRole | null>;
   /**
-   * Person ids among `crewIds` who have a staff shift overlapping this trip's
-   * window — or `null` when the shop has never scheduled a shift, in which
-   * case no coverage state renders at all: "Not on a shift" is a warning for
-   * shops whose own schedule says this sailing has a hole, not a permanent
-   * amber pill for shops that don't keep one (design principle 9).
+   * Assigned people with a staff shift overlapping this trip, or `null` when
+   * the shop has no shift schedule; null means no coverage badge is shown.
+   * An empty array means scheduling exists and assigned crew are off shift.
    */
   onShiftIds: string[] | null;
   /**
-   * Crew on this departure who are also on another one whose hours overlap it
-   * (`crewClashes`, src/db/trips-crew.ts). A physical impossibility the roster
-   * refuses to *write* and which three writes that move the boat manufacture
-   * anyway — a move, the Details form directly above this panel, and
-   * reinstating a called-off departure; `crewClashes` names all three. Until
-   * issue #1695 the schedule board's Move panel was the one surface that ever
-   * said so, and it closed the moment the move went through.
-   *
-   * **Information, never a gate.** The owner assigns crew (issue #1345), so
-   * nothing here refuses anything; the row is marked and the fix is theirs.
+   * Assigned people also scheduled on another overlapping departure
+   * (`crewClashes`, `src/db/trips-crew.ts`). Show each conflict and the other
+   * departure as information, not an extra gate; the owner remains responsible
+   * for crew assignment.
    */
   clashes?: readonly { personId: string; otherTripId: string; otherTitle: string }[];
   crewGapCode: "none" | "no_instructor" | "over_ratio";
@@ -155,17 +144,10 @@ export function CrewSection({
   const hasUnassignedStaff = localCrew.length < availableStaff.length;
 
   return (
-    /* The About row above is the heading and the disclosure control, so this
-       renders no heading of its own — `copy.heading` is the region's accessible
-       name instead (`TripAboutSection`, design review 2026-09-17).
-
-       Still `id="crew"`, and still `scroll-mt-24`: the shop header is sticky,
-       so anything shallower parks the anchor underneath it, and the pulse's
-       "needs an instructor" fact links straight here. */
+    /* The About row is the disclosure control; this section uses its text as
+       the accessible name and keeps the crew anchor clear of the sticky header. */
     <section id="crew" aria-label={copy.heading} className="flex flex-col gap-3 pt-1 scroll-mt-24">
-      {/* The departure's inset notes, one box whether warning or advice
-          (`INSET_NOTE_BOX`): they were 16px in where the requirements and
-          roster notes beside them are 12px. */}
+      {/* Keep departure notes in the shared inset treatment. */}
       {crewGapCode === "no_instructor" && !bookingInstructorPresent ? (
         <p className={`${INSET_NOTE_BOX} bg-warning-tint font-medium text-warning-strong`}>
           {copy.courseNeedsInstructor}
@@ -181,23 +163,13 @@ export function CrewSection({
       {copy.languageGapNote ? <p className={INSET_NOTE_CLASS}>{copy.languageGapNote}</p> : null}
 
       {staff.length === 0 ? (
-        // The shared empty-section grammar, not a bare paragraph
-        // (design/principles.md #4). `nested`: this sits in the About card
-        // too, and its own bed shadow would fall on the card's white.
+        // Use the shared empty-section treatment inside the About card.
         <EmptyState title={copy.noStaff} nested />
       ) : (
         <div className="flex flex-col gap-3">
           {hasUnassignedStaff ? (
-            // The select's own placeholder option already says "Assign crew…",
-            // so a visible caption beside it said the same thing twice
-            // (design/principles.md #9) — the aria-label keeps the accessible
-            // name the specs and screen readers address it by.
-            // Sized by the wrapper, not by width classes appended to
-            // `controlClass` — that string already carries `w-full`, and two
-            // width utilities resolve by stylesheet order rather than class
-            // order (same trap as `min-h-*`, see components/ui/button.ts). Full
-            // width on a phone, shrink-to-content from `sm` up, which is what
-            // the hand-rolled `sm:w-auto` on the select used to buy.
+            // The placeholder is visible text; aria-label supplies the
+            // accessible name. The wrapper controls responsive width.
             <div className="sm:w-fit">
               <select
                 aria-label={copy.assignLabel}
@@ -223,18 +195,11 @@ export function CrewSection({
           ) : null}
 
           {localCrew.length === 0 ? (
-            // The same empty-section grammar this file already uses for the
-            // no-staff-at-all case 30 lines up (design/principles.md, "Empty
-            // states follow one rule") — it was a bare `<p>`, so one component
-            // said "nothing here" two ways. `icon={false}`: this one sits under
-            // the assign picker rather than standing alone, so the bubbles
-            // would outweigh the line of text. `nested`: it sits in the Crew
-            // card, whose white it would otherwise shadow.
+            // Keep the shared empty-section grammar; this inline state needs
+            // no icon and stays nested in the Crew card.
             <EmptyState title={copy.notAssignedYet} icon={false} nested />
           ) : (
-            // A sunken inset, not a card in a card — the roster is carved into
-            // the Crew card the way ShopStat's `inset` variant is (see
-            // SectionCard's "what is not a section card").
+            // The roster is inset within the Crew card.
             <ul className="divide-y divide-border rounded-inset bg-surface-sunken">
               {localCrew.map((entry) => (
                 <li
@@ -244,19 +209,8 @@ export function CrewSection({
                   <span className="flex min-w-0 flex-col gap-1">
                     <span className="flex min-w-0 flex-wrap items-center gap-2">
                       <span className="font-medium">{entry.fullName}</span>
-                      {/* No shop-role echo beside the name: the trip-role select
-                        on the same row is the operative fact once someone is
-                        aboard, and "divemaster … [Divemaster ▾]" said it twice
-                        (principle 9). The assign menu lists bare names, the
-                        same grammar as Today's departure board. */}
-                      {/* Badge only for the exceptional state: at a shop that
-                        schedules shifts, a normal day has every crew member on
-                        one, and a green pill per row is the expected state
-                        formatted as an alert (design/principles.md #9). A row
-                        with no badge is covered; the sr-only text keeps that
-                        fact audible. At a shop with no shift schedule at all
-                        (`onShift === null`) the question doesn't apply and
-                        nothing renders — see `onShiftIds` above. */}
+                      {/* The trip role is shown once; shift coverage is silent
+                          when normal and remains available to screen readers. */}
                       {onShift === null ? null : onShift.has(entry.id) ? (
                         <span className="sr-only">{copy.onShift}</span>
                       ) : (
@@ -265,34 +219,8 @@ export function CrewSection({
                         </Badge>
                       )}
                     </span>
-                    {/* **The clash the panel used to say nothing about** (issue
-                        #1695). Not a badge: it names the other boat, which is
-                        the question the reader has the moment they see it, and
-                        a pill that long is a paragraph in a pill. Warning ink
-                        and the glyph, as the staffing week draws the same fact.
-                        A gate is what #1345 decided against: the owner assigns
-                        crew.
-
-                        **`role="status"`, not `alert`** (dive-domain-expert
-                        review, 2026-09-12). This line is statically rendered
-                        with the page: on a cold load a live region that is
-                        already present at first paint has no change to
-                        announce, and on a soft navigation into the trip it
-                        interrupts — so `alert` made the announcement a coin
-                        flip on how the reader arrived, at the volume reserved
-                        for something that just happened. A standing condition
-                        is `status` at most, and its real weight comes from
-                        where it is drawn: the About summary row carries the
-                        mark, because this panel sits inside a `<details>` that
-                        is closed on an ordinary visit, and nothing inside a
-                        closed disclosure is in the accessibility tree at all.
-                        One per clash rather than one wrapping the roster, so
-                        two clashing divemasters are two facts.
-
-                        Keyed on the other departure's **id**, never its title —
-                        two boats can be called the same thing, and the reader
-                        loses one of them silently (the reason `crewClashes`
-                        dedupes on ids too). */}
+                    {/* A standing conflict is informational status, one per
+                        other departure, keyed by id so equal titles remain distinct. */}
                     {clashes
                       .filter((clash) => clash.personId === entry.id)
                       .map((clash) => (
@@ -307,17 +235,8 @@ export function CrewSection({
                       ))}
                   </span>
                   <span className="flex items-center gap-2">
-                    {/* The job on *this* sailing (ADR 20260803-per-trip-crew-role).
-                        Until this existed nothing in the app could write the
-                        field, so the divemaster-rostered-as-captain over-count
-                        it fixes was live at every shop (review 20260803, D5).
-                        Unspecified stays the honest default — it means nobody
-                        has said, and it counts exactly as it always did. */}
-                    {/* Sized by the wrapper, not by a width class appended to
-                        `controlClass` — that string already carries `w-full`,
-                        and two width utilities resolve by stylesheet order
-                        rather than class order (same trap as `min-h-*`, see
-                        components/ui/button.ts). */}
+                    {/* This is the role for this departure; blank means
+                        unspecified. See ADR 20260803-per-trip-crew-role. */}
                     <span className="w-44 shrink-0">
                       <select
                         aria-label={fill(copy.roleAria, { name: entry.fullName })}
@@ -338,13 +257,8 @@ export function CrewSection({
                         ))}
                       </select>
                     </span>
-                    {/* A square 48px target holding one glyph: 44px tall but
-                        ~24px wide was a sliver of a target for a dockside tap
-                        that drops a crew member (design/principles.md #2). The
-                        box is `size: "icon"` rather than a hand-spelled
-                        `min-h-11 min-w-11` — that spelling was one of the four
-                        this app drifted into before the size existed (see
-                        components/ui/button.ts). */}
+                    {/* Keep the icon-only removal control at the shared
+                        accessible tap-target size. */}
                     <button
                       type="button"
                       onClick={() => handleUnassign(entry.id)}
@@ -358,14 +272,8 @@ export function CrewSection({
               ))}
             </ul>
           )}
-          {/* `FormStatus`, not a hand-rolled `role="alert"` paragraph: it is
-              the shared shape for "this control's own attempt was refused"
-              (docs/design/forms-and-controls.md), and it carries the drawn
-              danger mark this was missing — without one the refusal reached a
-              colourblind reader as ordinary small text (design/principles.md #6). It sits
-              at the foot of the block rather than beside one control because
-              any of the three writes here — assign, unassign, change the job —
-              can raise it. Renders nothing when there is nothing to say. */}
+          {/* Shared status treatment covers assignment, removal, and role
+              changes, and renders nothing when there is no refusal. */}
           <FormStatus tone="danger">
             {assignRefusal === null
               ? null
@@ -375,13 +283,7 @@ export function CrewSection({
           </FormStatus>
         </div>
       )}
-      {/* The door out, at the end rather than over the warnings: who is on
-          shift this week is a different subject, and a staffer reaches for it
-          after reading this departure's crew rather than instead of it
-          (principles.md §10, "actions ride on their objects"). It wears
-          `buttonClass` for the 44px floor the header slot used to give it,
-          and `self-start` so the column does not stretch its centred box to
-          the panel's width and float the words mid-panel. */}
+      {/* Shift management stays after the trip-specific crew information. */}
       {copy.manageShifts === null ? null : (
         <Link
           href={`/shop/${shopSlug}/staffing`}
