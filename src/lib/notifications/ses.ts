@@ -1,10 +1,10 @@
 import { SESv2Client, SendEmailCommand } from "@aws-sdk/client-sesv2";
 import { z } from "zod";
-import { thrownErrorToken } from "@/lib/error-token";
 import { log } from "@/lib/log";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 import { setupReceiptOutcome } from "@/lib/setup-request-receipts";
 import { deliveryAddressFor } from "@/lib/simulator-email";
+import { awsProviderErrorInfo } from "./aws-error-info";
 import type { Notification } from "./kinds";
 import type { NotificationProvider } from "./provider";
 import { reservedTestRecipientDelivery } from "./provider";
@@ -69,40 +69,11 @@ export const sesConfigSchema = z.object({
   secretAccessKey: z.string().trim().min(1),
 });
 
-/**
- * Every SES SDK error extends `SESv2ServiceException`, which carries `$metadata.httpStatusCode`
- * and a `.name` matching the specific AWS error type. A response that never reached AWS at all
- * (a network failure) has no `$metadata` and is treated as retryable.
- *
- * **No provider text** (security review of issue #2531). SES prose quotes what it refused: a
- * rejection can name the recipient, a sandbox `AccessDeniedException` names a pre-verified
- * recipient's identity, a validation error echoes a capability link. This result is logged and
- * stored as the send's failure detail, so the AWS error's name is the code and a throw that never
- * reached AWS keeps its cause's code or its class (`thrownErrorToken`), never its message, the
- * same rule `snsErrorInfo` (`./sms.ts`) keeps.
- */
-function sesErrorInfo(error: unknown): {
-  retryable: boolean;
-  httpStatus?: number;
-  errorCode?: string;
-  detail?: string;
-} {
-  const isAwsException = typeof error === "object" && error !== null && "$metadata" in error;
-  const httpStatus = isAwsException
-    ? (error as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode
-    : undefined;
-  // "Error" (every plain JS error's default .name) is not a useful code; only
-  // a modeled AWS exception's specific name is worth surfacing. "network_error"
-  // is reserved for a request that never got a response at all.
-  const errorCode = isAwsException && error instanceof Error ? error.name : "network_error";
-  const detail = isAwsException ? undefined : thrownErrorToken(error);
-  const retryable =
-    !isAwsException ||
-    httpStatus === undefined ||
-    httpStatus === 429 ||
-    httpStatus >= 500 ||
-    errorCode === "TooManyRequestsException";
-  return { retryable, httpStatus, errorCode, detail };
+/** SES retries its modeled throttle exception even when its status is not retryable. */
+const SES_THROTTLE_CODES = new Set(["TooManyRequestsException"]);
+
+function sesErrorInfo(error: unknown) {
+  return awsProviderErrorInfo(error, SES_THROTTLE_CODES);
 }
 
 /**

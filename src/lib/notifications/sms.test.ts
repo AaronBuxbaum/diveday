@@ -92,13 +92,21 @@ describe("snsSmsProvider (ADR 20260802-sns-sms-adapter)", () => {
     });
     const client = { send: vi.fn().mockRejectedValue(error) };
     const provider = snsSmsProvider(snsConfig, { client });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
 
-    await expect(provider.send(message)).resolves.toEqual({
-      status: "failed",
-      retryable: false,
-      httpStatus: 400,
-      errorCode: "InvalidParameterException",
-    });
+    try {
+      const delivery = await provider.send(message);
+      expect(delivery).toEqual({
+        status: "failed",
+        retryable: false,
+        httpStatus: 400,
+        errorCode: "InvalidParameterException",
+      });
+      expect(JSON.stringify(delivery)).not.toContain("+15550100");
+      expect(warn.mock.calls.flat().join(" ")).not.toContain("+15550100");
+    } finally {
+      warn.mockRestore();
+    }
   });
 
   it("marks a thrown throttling error as retryable", async () => {
