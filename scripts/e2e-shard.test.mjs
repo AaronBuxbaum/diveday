@@ -255,6 +255,43 @@ describe("the visual deal", () => {
     ]);
   });
 
+  it("keeps report order, the root-file fallback, and null-report behavior", () => {
+    const report = {
+      suites: [
+        {
+          title: "visual.spec.ts",
+          specs: [
+            { title: "direct", tests: [{ projectName: "chromium" }] },
+            { title: "without tests", tests: [] },
+          ],
+          suites: [
+            {
+              title: "nested",
+              specs: [
+                {
+                  title: "imported",
+                  file: "visual-audit.ts",
+                  tests: [{ projectName: "chromium" }],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    expect(listedTests(report)).toEqual([
+      " › direct",
+      " › without tests",
+      "visual-audit.ts › nested › imported",
+    ]);
+    expect(testListLines(report, ["visual-audit.ts › nested › imported"])).toEqual([
+      "visual-audit.ts › nested › imported",
+      " › nested › imported",
+    ]);
+    expect(listedTests(null)).toEqual([]);
+    expect(testListLines(null)).toEqual([]);
+  });
+
   it("serializes an imported selection with a registering-file load companion, without counting it as a test", () => {
     const report = listReport(2);
     report.suites[0].suites[0].specs[0].file = "visual-audit-account-states.ts";
