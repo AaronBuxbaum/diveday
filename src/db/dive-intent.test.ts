@@ -61,8 +61,10 @@ describe("diveIntentTallyForTrip", () => {
         diveIntent: intent,
       });
     }
-    expect(await diveIntentTallyForTrip(db, shop.id, trip)).toEqual(diveIntentTally(answers));
-    expect(await diveIntentTallyForTrip(db, shop.id, trip)).toEqual([
+    const expected = diveIntentTally(answers);
+    expect(await diveIntentTallyForTrip(db, shop.id, trip)).toEqual(expected);
+    expect((await diveIntentTallyForTrips(db, shop.id, [trip])).get(trip)).toEqual(expected);
+    expect(expected).toEqual([
       { intent: "easing_back", count: 2 },
       { intent: "small_life", count: 2 },
       { intent: "good_day", count: 1 },
@@ -80,7 +82,11 @@ describe("diveIntentTallyForTrip", () => {
       tripId: trip,
       personId: await makeDiver(db, shop.id),
     });
-    expect(await diveIntentTallyForTrip(db, shop.id, trip)).toEqual([]);
+    const single = await diveIntentTallyForTrip(db, shop.id, trip);
+    const batch = await diveIntentTallyForTrips(db, shop.id, [trip]);
+    expect(single).toEqual([]);
+    expect(batch.has(trip)).toBe(false);
+    expect(batch.get(trip) ?? []).toEqual(single);
   });
 
   it("does not count a canceled seat", async () => {
@@ -133,9 +139,12 @@ describe("diveIntentTallyForTrip", () => {
       personId: await makeDiver(db, shop.id),
       diveIntent: "good_day",
     });
-    expect(await diveIntentTallyForTrip(db, "00000000-0000-0000-0000-000000000000", trip)).toEqual(
-      [],
-    );
+    const foreignShop = "00000000-0000-0000-0000-000000000000";
+    const single = await diveIntentTallyForTrip(db, foreignShop, trip);
+    const batch = await diveIntentTallyForTrips(db, foreignShop, [trip]);
+    expect(single).toEqual([]);
+    expect(batch.has(trip)).toBe(false);
+    expect(batch.get(trip) ?? []).toEqual(single);
   });
 });
 

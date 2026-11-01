@@ -25,21 +25,8 @@ export async function diveIntentTallyForTrip(
   shopId: string,
   tripId: string,
 ): Promise<DiveIntentCount[]> {
-  const rows = await db
-    .select({ intent: bookings.diveIntent, seats: count(bookings.id) })
-    .from(bookings)
-    .innerJoin(trips, eq(trips.id, bookings.tripId))
-    .where(
-      and(
-        liveTrip(),
-        eq(bookings.shopId, shopId),
-        eq(bookings.tripId, tripId),
-        ne(bookings.status, "cancelled"),
-        isNotNull(bookings.diveIntent),
-      ),
-    )
-    .groupBy(bookings.diveIntent);
-  return projectCounts(rows);
+  const tallies = await diveIntentTallyForTrips(db, shopId, [tripId]);
+  return tallies.get(tripId) ?? [];
 }
 
 /**
