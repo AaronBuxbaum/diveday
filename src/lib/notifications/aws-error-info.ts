@@ -7,7 +7,10 @@ export type AwsProviderErrorInfo = {
   detail?: string;
 };
 
-/** Reduce an AWS SDK or pre-request error to the safe fields stored by a provider. */
+/**
+ * Provider messages can echo recipient details or capability links (#2531). Never return, log, or
+ * store them. Reduce an AWS SDK or pre-request error to the safe fields stored by a provider.
+ */
 export function awsProviderErrorInfo(
   error: unknown,
   throttleCodes: ReadonlySet<string>,
