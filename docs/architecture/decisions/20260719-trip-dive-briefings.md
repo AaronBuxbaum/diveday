@@ -75,15 +75,13 @@ edit, series propagation, a revision bump when it moved), and the zero-`trip_div
 existed only to tolerate a shape no writer produces. Aaron decided on 2026-10-31 that prior
 behavior need not be preserved (H-49: no legacy), so both are deleted.
 
-- **The column, in two releases.** This release removes the `trips.dive_site_id` declaration and
-  every reader and writer; the column stays in the database, unread and unwritten (nullable, so
-  inserts that omit it are fine). The deploy guard (`pnpm check:migrations`) refuses a
-  `drop-column` while the previous release still declares the column, because that release's
-  whole-row selects name it. The next release drops it:
-  `ALTER TABLE "trips" DROP CONSTRAINT "trips_dive_site_id_dive_sites_id_fkey"` and
-  `DROP COLUMN "dive_site_id"` (generate it with `pnpm db:generate --name`). Per H-49 there is no
-  backfill: a trip that had a pointer and no `trip_dives` rows (only demo seeds did) is rebuilt by
-  the seed, not migrated.
+- **The column, in two releases.** The first release removed the `trips.dive_site_id` declaration
+  and every reader and writer, leaving the column in the database, unread and unwritten. The deploy
+  guard (`pnpm check:migrations`) refuses a `drop-column` while the previous release still
+  declares the column, because that release's whole-row selects name it. The second release,
+  `20261101174606_drop-duplicate-lookup-indexes`, dropped the foreign key and the column. Per H-49
+  there is no backfill: a trip that had a pointer and no `trip_dives` rows (only demo seeds did) is
+  rebuilt by the seed, not migrated.
 - **One projection for "the trip's site".** `tripPrimarySiteId` (`src/db/trip-primary-site.ts`) is
   a correlated subquery: the site of the lowest-numbered dive that has one, which is exactly what
   the pointer held. Its consumers are the ones that can show only one site: the `diveSite` joined
