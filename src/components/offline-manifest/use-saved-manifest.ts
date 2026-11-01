@@ -285,11 +285,10 @@ function useManifestStatusMessages(
   verifiedTenantSlugRef: MutableRefObject<string | null>,
 ) {
   // The ref is intentionally read at call time after tenant verification.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: the slug is mutable tenant state, not a callback dependency.
   const initialMessageForList = useCallback(
     (saved: OfflineManifestEnvelope[]) =>
       initialListMessage(saved, t, verifiedTenantSlugRef.current),
-    [t],
+    [t, verifiedTenantSlugRef],
   );
   const initialMessageForShop = useCallback(
     (saved: OfflineManifestEnvelope[], slug: string) => initialListMessage(saved, t, slug),
@@ -629,7 +628,6 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
 
   const refreshDiscarded = useDiscardedRefresh(setDiscarded);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: getTenantRound is stable by contract.
   const reconcileOnce = useCallback(async () => {
     if (!tripId || !navigator.onLine) return;
     // A foreign pending copy stays on-device; never submit it under the
@@ -684,7 +682,15 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
       if (tenantSlugRef.current !== slug) return;
       setMessage(t("shared.offlineManifest.reconcile.reachError"));
     }
-  }, [tripId, t, resolveTenant, tenantSlugRef, handleTenantChanged, tripInventoryReadyRef]);
+  }, [
+    tripId,
+    t,
+    resolveTenant,
+    tenantSlugRef,
+    handleTenantChanged,
+    tripInventoryReadyRef,
+    getTenantRound,
+  ]);
 
   // **One sync at a time, and at most one waiting** (captain review S2). Every
   // tap asks for a pass, and a pass on a link that carries nothing takes the
