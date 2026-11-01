@@ -71,13 +71,7 @@ export type SubmitRecapPulseResult =
 
 /** A posted list narrowed to real category codes, deduped, order preserved. */
 export function parseRecapPulseCategories(values: readonly unknown[]): RecapPulseCategory[] {
-  const seen = new Set<RecapPulseCategory>();
-  for (const value of values) {
-    if (typeof value !== "string") continue;
-    if (!RECAP_PULSE_CATEGORIES.includes(value as RecapPulseCategory)) continue;
-    seen.add(value as RecapPulseCategory);
-  }
-  return RECAP_PULSE_CATEGORIES.filter((category) => seen.has(category));
+  return RECAP_PULSE_CATEGORIES.filter((category) => values.includes(category));
 }
 
 /** The note as it is stored: trimmed, capped, and null rather than empty. */
