@@ -77,7 +77,11 @@ describe("stripe invoicing provider", () => {
 
     // Every call to Stripe carried the connected account header, not the platform.
     for (const call of fetchImpl.mock.calls) {
-      expect(call[1].headers["Stripe-Account"]).toBe("acct_123");
+      expect(call[1].headers).toMatchObject({
+        Authorization: "Bearer sk_test",
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Stripe-Account": "acct_123",
+      });
     }
     expect(fetchImpl.mock.calls[0][0]).toBe("https://api.stripe.com/v1/customers");
     expect(fetchImpl.mock.calls[1][0]).toBe("https://api.stripe.com/v1/invoiceitems");
@@ -194,6 +198,11 @@ describe("stripe invoicing provider", () => {
     expect(url).toBe("https://api.stripe.com/v1/invoices/in_1/pay");
     expect(init.body).toBe("paid_out_of_band=true");
     expect(init.headers["Idempotency-Key"]).toBe("order:o1:paid_out_of_band");
+    expect(init.headers).toMatchObject({
+      Authorization: "Bearer sk_test",
+      "Content-Type": "application/x-www-form-urlencoded",
+      "Stripe-Account": "acct_123",
+    });
     expect(init.signal).toBeInstanceOf(AbortSignal);
   });
 
@@ -252,6 +261,12 @@ describe("stripe invoicing provider", () => {
     // request with `parameter_unknown` on a current account, so asking for it
     // turned every invoiced refund into a bare `failed`.
     expect(fetchImpl.mock.calls[0][0]).toBe("https://api.stripe.com/v1/invoices/in_1");
+    expect(fetchImpl.mock.calls[0][1].headers).toMatchObject({
+      Authorization: "Bearer sk_test",
+      "Content-Type": "application/x-www-form-urlencoded",
+      "Stripe-Account": "acct_123",
+    });
+    expect(fetchImpl.mock.calls[0][1].headers).not.toHaveProperty("Idempotency-Key");
     expect(fetchImpl.mock.calls[1][0]).toBe("https://api.stripe.com/v1/refunds");
     expect(fetchImpl.mock.calls[1][1].body).toContain("payment_intent=pi_1");
     expect(fetchImpl.mock.calls[1][1].headers["Idempotency-Key"]).toBe("intent-2");

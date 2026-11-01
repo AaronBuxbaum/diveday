@@ -63,7 +63,11 @@ describe("stripe checkout provider", () => {
 
     expect(fetchImpl.mock.calls[0][0]).toBe("https://api.stripe.com/v1/checkout/sessions");
     const call = fetchImpl.mock.calls[0][1];
-    expect(call.headers["Stripe-Account"]).toBe("acct_123");
+    expect(call.headers).toMatchObject({
+      Authorization: "Bearer sk_test",
+      "Content-Type": "application/x-www-form-urlencoded",
+      "Stripe-Account": "acct_123",
+    });
     expect(call.headers["Idempotency-Key"]).toBe("intent-1");
     const form = new URLSearchParams(call.body);
     expect(form.get("mode")).toBe("payment");
@@ -245,7 +249,11 @@ describe("stripe checkout provider", () => {
       },
     });
     expect(fetchImpl.mock.calls[0][0]).toBe("https://api.stripe.com/v1/checkout/sessions/cs_1");
-    expect(fetchImpl.mock.calls[0][1].headers["Stripe-Account"]).toBe("acct_123");
+    expect(fetchImpl.mock.calls[0][1].headers).toEqual({
+      Authorization: "Bearer sk_test",
+      "Content-Type": "application/x-www-form-urlencoded",
+      "Stripe-Account": "acct_123",
+    });
   });
 
   it("reads the Customer id whether Stripe sends it bare or expanded", async () => {

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { boundedStripeFetch } from "./stripe-fetch";
+import { connectedAccountHeaders } from "./stripe-headers";
 import { type StripeKeySource, secretKeyForCall } from "./stripe-keys";
 import { logStripeRequestThrew } from "./stripe-request-log";
 
@@ -212,14 +213,6 @@ function toSnapshot(body: z.infer<typeof sessionResponseSchema>): CheckoutSessio
   };
 }
 
-function headersFor(secretKey: string, stripeAccountId: string): Record<string, string> {
-  return {
-    Authorization: `Bearer ${secretKey}`,
-    "Content-Type": "application/x-www-form-urlencoded",
-    "Stripe-Account": stripeAccountId,
-  };
-}
-
 export function stripeCheckoutProvider(
   config: StripeKeySource,
   unboundedFetch: Fetch,
@@ -262,7 +255,7 @@ export function stripeCheckoutProvider(
         const response = await fetchImpl("https://api.stripe.com/v1/checkout/sessions", {
           method: "POST",
           headers: {
-            ...headersFor(
+            ...connectedAccountHeaders(
               await secretKeyForCall(config, request.stripeAccountId),
               request.stripeAccountId,
             ),
@@ -284,7 +277,12 @@ export function stripeCheckoutProvider(
       try {
         const response = await fetchImpl(
           `https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(stripeSessionId)}`,
-          { headers: headersFor(await secretKeyForCall(config, stripeAccountId), stripeAccountId) },
+          {
+            headers: connectedAccountHeaders(
+              await secretKeyForCall(config, stripeAccountId),
+              stripeAccountId,
+            ),
+          },
         );
         if (!response.ok) return { status: "failed" };
         const body = sessionResponseSchema.safeParse(await response.json());
@@ -308,7 +306,12 @@ export function stripeCheckoutProvider(
           `https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(
             stripeSessionId,
           )}?expand[]=payment_intent`,
-          { headers: headersFor(await secretKeyForCall(config, stripeAccountId), stripeAccountId) },
+          {
+            headers: connectedAccountHeaders(
+              await secretKeyForCall(config, stripeAccountId),
+              stripeAccountId,
+            ),
+          },
         );
         if (!sessionResponse.ok) return { status: "failed" };
         const body = sessionResponseSchema.safeParse(await sessionResponse.json());
@@ -329,7 +332,10 @@ export function stripeCheckoutProvider(
         const response = await fetchImpl("https://api.stripe.com/v1/refunds", {
           method: "POST",
           headers: {
-            ...headersFor(await secretKeyForCall(config, stripeAccountId), stripeAccountId),
+            ...connectedAccountHeaders(
+              await secretKeyForCall(config, stripeAccountId),
+              stripeAccountId,
+            ),
             "Idempotency-Key": idempotencyKey,
           },
           body: form.toString(),
