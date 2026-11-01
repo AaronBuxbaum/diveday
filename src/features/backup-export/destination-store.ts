@@ -3,7 +3,7 @@ import type { DbExecutor } from "@/db/client";
 import type { ShopBackupDestination } from "@/db/schema";
 import { shopBackupDestinations } from "@/db/schema";
 import { nowDate } from "@/lib/clock";
-import { openSecret, type SecretKey, sealSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
+import { openSecret, resolveSecretKey, type SecretKey, sealSecret } from "@/lib/secret-box";
 import type { S3Credentials } from "./s3-client";
 
 /**
@@ -45,9 +45,7 @@ export type BackupSecretOptions = {
  * the form appear to succeed and the backup never run.
  */
 export function resolveBackupKey(options: BackupSecretOptions): SecretKey | BackupKeyRefusal {
-  if (options.key) return options.key;
-  if (options.key === null) return "encryption_key_unset";
-  const result = secretKeyFromEnvironment();
+  const result = resolveSecretKey(options.key);
   if (result.status === "ok") return result.key;
   return result.status === "unset" ? "encryption_key_unset" : "encryption_key_invalid";
 }

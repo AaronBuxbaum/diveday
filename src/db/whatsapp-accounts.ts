@@ -9,7 +9,7 @@ import {
   whatsAppProvider,
   whatsAppTextSender,
 } from "@/lib/notifications/whatsapp";
-import { openSecret, type SecretKey, sealSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
+import { openSecret, resolveSecretKey, type SecretKey, sealSecret } from "@/lib/secret-box";
 import type { AppDb, DbExecutor } from "./client";
 import { violatesUniqueIndex } from "./query-helpers";
 import type { ShopWhatsappAccount } from "./schema";
@@ -88,9 +88,7 @@ export type WhatsAppSenderOptions = {
  * watching the form appear to succeed and the channel never work.
  */
 function resolveKey(options: WhatsAppSenderOptions): SecretKey | WhatsAppKeyRefusal {
-  if (options.key) return options.key;
-  if (options.key === null) return "encryption_key_unset";
-  const result = secretKeyFromEnvironment();
+  const result = resolveSecretKey(options.key);
   if (result.status === "ok") return result.key;
   return result.status === "unset" ? "encryption_key_unset" : "encryption_key_invalid";
 }

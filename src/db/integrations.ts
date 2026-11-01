@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { and, asc, eq, gt, inArray, isNull, ne, notInArray } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
-import { openSecret, type SecretKey, sealSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
+import { openSecret, resolveSecretKey, type SecretKey, sealSecret } from "@/lib/secret-box";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
 import {
   type IntegrationCredentials,
@@ -23,7 +23,7 @@ export type IntegrationCredentialResult =
   | { status: IntegrationKeyRefusal | "invalid_credentials" };
 
 function encryptionKey(): SecretKey | IntegrationKeyRefusal {
-  const result = secretKeyFromEnvironment();
+  const result = resolveSecretKey(undefined);
   if (result.status === "ok") return result.key;
   return result.status === "unset" ? "encryption_key_unset" : "encryption_key_invalid";
 }

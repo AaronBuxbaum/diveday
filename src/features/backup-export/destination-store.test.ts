@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { eq } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { shopBackupDestinations, shops } from "@/db/schema";
 import { openSecret } from "@/lib/secret-box";
 import { fileScopedShopContext } from "@/test/db";
@@ -16,6 +16,7 @@ import {
 const ctx = fileScopedShopContext();
 
 const KEY = randomBytes(32);
+afterEach(() => vi.unstubAllEnvs());
 
 const DESTINATION = {
   endpoint: "https://backups.example.com",
@@ -157,6 +158,26 @@ describe("saveShopBackupDestination", () => {
       { key: null },
     );
     expect(result).toEqual({ status: "refused", reason: "endpoint_private_host" });
+  });
+
+  it("preserves endpoint-first refusal when the environment key is malformed", async () => {
+    vi.stubEnv("SECRET_ENCRYPTION_KEY", "invalid");
+    const { db, shop } = await bareShopContext();
+    const result = await saveShopBackupDestination(db, {
+      shopId: shop.id,
+      ...DESTINATION,
+      endpoint: "https://127.0.0.1",
+    });
+    expect(result).toEqual({ status: "refused", reason: "endpoint_private_host" });
+  });
+
+  it("maps a malformed environment key to the existing refusal code", async () => {
+    vi.stubEnv("SECRET_ENCRYPTION_KEY", "invalid");
+    const { db, shop } = await bareShopContext();
+    expect(await saveShopBackupDestination(db, { shopId: shop.id, ...DESTINATION })).toEqual({
+      status: "refused",
+      reason: "encryption_key_invalid",
+    });
   });
 
   it("normalizes the endpoint's trailing slash and the prefix's surrounding slashes", async () => {

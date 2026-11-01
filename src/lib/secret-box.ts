@@ -97,6 +97,18 @@ export function secretKeyFromEnvironment(
   };
 }
 
+/** A caller-supplied key, explicit absence, or the environment's validated keyring. */
+export type SecretKeyResolution =
+  | { status: "ok"; key: SecretKey }
+  | { status: "unset" }
+  | Extract<SecretKeyResult, { status: "invalid" }>;
+
+/** Resolve at the point of use so omitted keys observe environment changes. */
+export function resolveSecretKey(key: SecretKey | null | undefined): SecretKeyResolution {
+  if (key !== undefined) return key === null ? { status: "unset" } : { status: "ok", key };
+  return secretKeyFromEnvironment();
+}
+
 type ParsedKey =
   | { status: "ok"; key: Buffer }
   | { status: "unset" }
