@@ -3,21 +3,11 @@ import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
 
 /**
- * Body-shaped skeleton for the dive-site library (design principle 1), shaped
- * to the ledger it stands in for (ADR 20260827-the-shops-shelves): the search
- * box, map, catalog door, then group labels over hairline rows —
- * not the bordered table this surface used to be, which would land the real
- * page a layout jump away from its own skeleton.
- *
- * **Each bar is the loaded box it stands for** (docs/design/pixel-craft.md,
- * class 11; K-415). The search is a toolbar, not a card: one 48px `md`
- * `SearchField`, full width on a phone and 320px from `sm`, in a `mb-6` form.
- * A row is `LedgerRow`'s `md` box, a 24px name over a 20px meta line inside
- * its `py-2`, 63px with its rule; it stood a 96px card and 56px rows here, so
- * the list jumped up on arrival and every row under it grew.
- *
- * The `?view=catalog` view has another shape, which this one route file cannot
- * draw.
+ * Tracks the library's current toolbar, map, and ledger structure to limit
+ * the transition jump (design principle 1; ADR 20260827-the-shops-shelves).
+ * Bars match their loaded boxes (docs/design/pixel-craft.md, class 11; K-415).
+ * The `?view=catalog` view has another shape, which this route shell cannot
+ * draw because it does not receive search params.
  */
 export default function DiveSitesLoading() {
   return (
