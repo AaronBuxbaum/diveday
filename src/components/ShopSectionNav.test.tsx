@@ -120,7 +120,7 @@ describe.each([
 });
 
 describe("the tab bar, on keyboard focus", () => {
-  it("scrolls the focused tab the least distance into its rail (#3433)", async () => {
+  it("scrolls the focused tab the least distance into its rail (issue 3433)", async () => {
     location.pathname = root;
     const scrollIntoView = vi.fn();
     Element.prototype.scrollIntoView = scrollIntoView;
