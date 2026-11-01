@@ -153,6 +153,43 @@ describe("OfflineChecklist: clearing a checked item asks first", () => {
     expect(record).not.toHaveBeenCalled();
   });
 
+  it("spends the ask when the local write settles", async () => {
+    const envelope = savedCopy();
+    envelope.snapshot.checklist = {
+      items: [
+        {
+          id: "oxygen",
+          label: "Emergency oxygen kit aboard",
+          check: {
+            state: "checked",
+            occurredAt: "2026-08-01T12:10:00.000Z",
+            recordedByName: "Dana Divemaster",
+            note: null,
+          },
+        },
+      ],
+    };
+    const found = offlineTripView(envelope, "departure");
+    if (!found) throw new Error("the fixture carries a manifest");
+    const tripControls = controls();
+    const { rerender } = render(<OfflineChecklist view={found} controls={tripControls} />);
+    const oxygen = screen.getByRole("button", { name: /Emergency oxygen kit aboard/ });
+
+    fireEvent.click(oxygen);
+    await pause();
+    expect(oxygen).toHaveTextContent("Tap again to clear");
+    rerender(
+      <OfflineChecklist view={found} controls={{ ...tripControls, busyChecklistItem: "oxygen" }} />,
+    );
+    rerender(<OfflineChecklist view={found} controls={tripControls} />);
+    expect(oxygen).not.toHaveTextContent("Tap again to clear");
+
+    fireEvent.click(oxygen);
+    await pause();
+    expect(oxygen).toHaveTextContent("Tap again to clear");
+    expect(tripControls.recordChecklistCheck).not.toHaveBeenCalled();
+  });
+
   it("names two taps to a screen reader on a checked item", () => {
     const { oxygen } = setup();
     expect(oxygen()).toHaveAccessibleName(/press twice to clear/);

@@ -1,12 +1,8 @@
-import { useEffect, useState } from "react";
 import { sectionCardClass } from "@/components/ui/card";
 import { StatusMark } from "@/components/ui/StatusMark";
+import { useClearConfirmation } from "@/components/useClearConfirmation";
 import { latestOfflineChecklistCheck } from "@/lib/offline-manifests";
-import {
-  CLEAR_CONFIRM_MIN_GAP_MS,
-  CLEAR_CONFIRM_TIMEOUT_MS,
-  type PreDepartureCheckStatus,
-} from "@/lib/pre-departure-check";
+import type { PreDepartureCheckStatus } from "@/lib/pre-departure-check";
 import type { OfflineTripControls } from "./controls";
 import type { OfflineTripView } from "./trip-view";
 
@@ -109,34 +105,10 @@ function OfflineChecklistRow({
   t: OfflineTripControls["t"];
   onRecord: (status: PreDepartureCheckStatus) => void;
 }) {
-  const [asking, setAsking] = useState(false);
-  const [settled, setSettled] = useState(false);
-  const standDown = () => {
-    setAsking(false);
-    setSettled(false);
-  };
-  const askingNow = asking && checked;
-  const armed = askingNow && settled;
-  useEffect(() => {
-    if (!askingNow) return;
-    const settle = setTimeout(() => setSettled(true), CLEAR_CONFIRM_MIN_GAP_MS);
-    const expire = setTimeout(() => {
-      setAsking(false);
-      setSettled(false);
-    }, CLEAR_CONFIRM_TIMEOUT_MS);
-    return () => {
-      clearTimeout(settle);
-      clearTimeout(expire);
-    };
-  }, [askingNow]);
-  // The ask is spent once a write settles, whatever it said: a refused clear
-  // must not leave the item one tap from clearing.
-  useEffect(() => {
-    if (!busy) {
-      setAsking(false);
-      setSettled(false);
-    }
-  }, [busy]);
+  const { armed, standDown, requestClear, onKeyDown } = useClearConfirmation({
+    checked,
+    pending: busy,
+  });
   const confirmClear = t("shared.offlineManifest.single.checklist.confirmClear");
   return (
     <li>
@@ -145,29 +117,18 @@ function OfflineChecklistRow({
         disabled={busy || expired}
         aria-busy={busy}
         aria-pressed={checked}
-        onClick={() => {
+        onClick={(event) => {
           if (!checked) {
             onRecord("checked");
             return;
           }
-          // A tap inside the gap is the first one bouncing: ignored.
-          if (!armed) {
-            if (!askingNow) setAsking(true);
-            return;
+          if (requestClear(event)) {
+            standDown();
+            onRecord("cleared");
           }
-          standDown();
-          onRecord("cleared");
         }}
         onBlur={standDown}
-        onKeyDown={(event) => {
-          // A held Enter repeats keydown, and each repeat clicks: one press
-          // could ask and then clear (#2567). Only the first press counts.
-          if (event.repeat) {
-            event.preventDefault();
-            return;
-          }
-          if (event.key === "Escape") standDown();
-        }}
+        onKeyDown={onKeyDown}
         // A flat row (visual review 2026-10-24, B07). `gap-3`, the counter
         // row's below: the same mark and label, so the words start on one x
         // in both lists.
