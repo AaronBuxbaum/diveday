@@ -56,7 +56,7 @@ export function verifyRecapToken(token: string): string | null {
   if (dot <= 0) return null;
   const payload = token.slice(0, dot);
   const signature = token.slice(dot + 1);
-  if (!tagMatches(signature, sign(payload))) return null;
+  if (!tagMatches(signature, () => sign(payload))) return null;
   const decoded = Buffer.from(payload, "base64url").toString("utf8");
   if (!decoded.startsWith(RECAP_PURPOSE)) return null;
   const rest = decoded.slice(RECAP_PURPOSE.length);

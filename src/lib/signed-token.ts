@@ -35,13 +35,15 @@ export function signPayload(key: Buffer | string, payload: string): string {
  * unequal length, and a character count admits multibyte UTF-8 (`é`, an emoji)
  * at the right length and the wrong byte length. So the shape comes first: a
  * non-empty string in the base64url alphabet, whose bytes are as many as the
- * expected tag's. Only then the constant-time compare.
+ * expected tag's. Only then the constant-time compare. Pass `expected` as a
+ * function when computing it can throw (no secret configured): a malformed
+ * tag is then refused before the key is touched.
  */
-export function tagMatches(supplied: unknown, expected: string): boolean {
+export function tagMatches(supplied: unknown, expected: string | (() => string)): boolean {
   if (typeof supplied !== "string" || supplied.length === 0) return false;
   if (!BASE64URL.test(supplied)) return false;
   const suppliedBytes = Buffer.from(supplied, "utf8");
-  const expectedBytes = Buffer.from(expected, "utf8");
+  const expectedBytes = Buffer.from(typeof expected === "function" ? expected() : expected, "utf8");
   if (suppliedBytes.length !== expectedBytes.length) return false;
   return timingSafeEqual(suppliedBytes, expectedBytes);
 }
