@@ -1,73 +1,11 @@
 /**
- * **What a public URL claims to name**, read off the pathname alone.
- *
- * The pure half of the public namespace's edge refusal (ADR
- * 20260912-the-public-namespace-refuses-at-the-edge): under `cacheComponents`
- * every public page streams a static shell first, so a `notFound()`
- * in the page body arrives after the 200 has gone out and a crawler reads a
- * soft 404. The status has to be decided before anything streams, which means
- * in `src/proxy.ts` — and the proxy has no `params`, only a pathname. This
- * module turns that pathname into the question the database can answer, and
- * `src/db/public-route-existence.ts` answers it.
- *
- * No I/O, nothing from `src/db`: the split is what lets every routing rule here
- * be pinned by a unit test that never opens a database.
- *
- * ## Two namespaces, one question
- *
- * `/s/**` is a shop's storefront and every segment in it is a row. The
- * dynamic routes outside it — `/switching/<incumbent>`, and since 2026-10-05
- * `/product/<feature>` — are DiveDay's own pages, and the first was left soft
- * when the storefront was fixed: it answered 200 with a not-found page for six
- * more weeks on a surface DiveDay wants indexed (issue #1734). Each is judged
- * here, against the *very same list its own page judges the segment against*:
- * `getMigrationGuide` and `getFeaturePage` are closed lists this repository
- * holds, so both settle with no query at all.
- *
- * **A route this module does not recognise is passed through untouched**, which
- * is how the one above stayed soft while `/s/**` was hard. So the recognition
- * is pinned to the route tree rather than to memory:
- * `src/app/edge-refusal-coverage.test.ts` walks `src/app` for dynamic public
- * routes and fails on the first one this function has no opinion about. Adding
- * a route is what reminds you.
- *
- * ## The invariant, and it is the whole design
- *
- * **The edge may never refuse what the page would have served.** A soft 404 on
- * a dead link is a bug; a hard 404 on a live shop is an outage. So the only
- * segments this module judges by *shape* are the two the pages themselves
- * already judge by shape before they query — a dive-site slug through
- * `parseDiveSiteSlug` (`sites/[siteSlug]/page.tsx`) and a trip id through
- * `uuidParam` (`trips/[id]/page.tsx`) — plus the
- * embed catalogue, whose widget names are a closed list in this repository
- * rather than a row. A shop slug and a course slug are *not* pattern-checked
- * here even though both are minted from a known charset: the page does not
- * check them either, it just looks them up, and a slug charset that drifts
- * apart from the minting rule would turn a real shop's whole storefront into a
- * 404. That drift was real — `onboardSchema` sells `blue--mantis` and
- * `SHOP_SLUG_PATTERN` used to refuse it — and it cost a shop its 404 frame
- * rather than its storefront only because this module never applied it. The
- * row decides.
- *
- * `null` means "this module has no opinion" — the URL is outside the
- * namespace, or (outside `/s/**`) names no route at all, which Next already
- * answers with a real 404 of its own, or it names a guide that is really
- * there. Inside `/s/**` a path naming no route is `malformed` instead, so the
- * refusal wears the shop it sat under (see `shopNamespaceShape`).
- * `{ kind: "malformed" }` means "this names nothing and cannot name anything",
- * which needs no query; `{ kind: "absent" }` is the same verdict for a URL with
- * no shop over it, and it is the one shape that is already an answer rather
- * than a question — `PublicRouteQuery` excludes it so the proxy cannot hand it
- * to a database it never needed to open.
- *
- * **Every shape inside `/s/**` names its shop, `malformed` included.** A
- * refusal is framed as
- * the shop the URL was under (issue #765), and the proxy used to recover that
- * slug by re-reading the pathname through `shopSlugFromPublicPath` — a second
- * parse, undecoded and held to a charset narrower than the minting rule, so a
- * live `blue--mantis` and a live shop reached as `/s/blue%2Dmantis` both lost
- * the frame. The slug this module already decoded and already looked the shop
- * up by is the honest one, so it rides on the shape.
+ * Pure pathname classifier for the public namespace's edge refusal (ADR
+ * 20260912-the-public-namespace-refuses-at-the-edge). It performs no I/O and
+ * must never reject a path its page would serve. Unrecognized routes outside
+ * `/s/**` return `null`; unmatched storefront paths with a shop slug return
+ * `malformed` and retain that decoded slug. Closed-list misses return `absent`,
+ * already a verdict that cannot reach `PublicRouteQuery`. The route-tree
+ * coverage test must learn every dynamic public route.
  */
 
 import { parseDiveSiteSlug } from "./dive-site-slug";
@@ -86,23 +24,13 @@ export type PublicRouteShape =
   /** Judged against a closed list here and absent from it. Already an answer. */
   | { kind: "absent" };
 
-/**
- * The shapes a row still has to answer — every kind except `absent`, which the
- * pure half has already settled. `publicRouteLookup` takes this rather than the
- * full union so a closed-list refusal cannot reach a database by accident: the
- * proxy has to narrow, and the compiler is what makes it.
- */
+/** Queryable shapes; `absent` is already settled without database access. */
 export type PublicRouteQuery = Exclude<PublicRouteShape, { kind: "absent" }>;
 
 /** The shared verdict for "this names nothing, and no shop frames it." */
 const ABSENT: PublicRouteShape = { kind: "absent" };
 
-/**
- * Routes below `/s/<shopSlug>` that name nothing but the shop — the course
- * catalogue, the review archive, the counter's self-registration door, the
- * package counter and the availability document. Each 404s only when the shop
- * does, so each folds to one lookup.
- */
+/** Routes whose existence depends only on the shop row. */
 const SHOP_ONLY_CHILDREN = new Set([
   "courses",
   "reviews",
@@ -111,21 +39,13 @@ const SHOP_ONLY_CHILDREN = new Set([
   "availability.json",
 ]);
 
-/**
- * The children of one departure that live under its own id: the `.ics`
- * download, the diver's arrival card, and the readiness hop. Each resolves the
- * same trip, so each asks the same question.
- */
+/** Trip child routes that resolve through the departure row. */
 const TRIP_CHILDREN = new Set(["calendar", "arrival-card", "ready"]);
 
 export function publicRouteShape(pathname: string): PublicRouteShape | null {
   let segments: string[];
   try {
-    // Next hands a page its `params` percent-decoded; `nextUrl.pathname` is
-    // not. Decoding here is what keeps `/s/blue%2Dmantis` asking about the
-    // same shop the page would have rendered. A malformed escape decodes to
-    // nothing at all, and that is a request this module declines to have an
-    // opinion about rather than one it refuses.
+    // Match Next's decoded page params; malformed escapes pass through.
     segments = pathname.split("/").filter(Boolean).map(decodeURIComponent);
   } catch {
     return null;
@@ -138,31 +58,12 @@ export function publicRouteShape(pathname: string): PublicRouteShape | null {
 /** `PUBLIC_SHOP_PREFIX` as a path *segment* — this module works in segments. */
 const SHOP_NAMESPACE = PUBLIC_SHOP_PREFIX.slice(1);
 
-/**
- * The one-segment routes outside `/s/**`, each judged against its own page's
- * own list.
- *
- * The closed list settles here: `/switching/checkfront` and `/product/kiosk`
- * are refused with no query, and a slug that *is* on its list gets `null` —
- * "no opinion", which is how every live guide and feature page goes on being
- * served.
- *
- * The segment name is a literal because the closed list ships no path
- * constant to import; `src/app/edge-refusal-coverage.test.ts` derives these
- * route paths from the route tree, so a renamed directory turns this red rather
- * than quietly restoring the 200.
- */
+/** Classify closed-list guide and feature routes without a database query. */
 function closedListShape(namespace: string, rest: string[]): PublicRouteShape | null {
   if (rest.length !== 1) return null;
   const [candidate] = rest;
   if (!candidate) return null;
-  // A static route beside the dynamic one wins in Next's router, so it is a
-  // page that renders and the edge must never refuse it. `/switching/spreadsheet`
-  // is the live example — a shipped guide whose slug is deliberately not in
-  // `MIGRATION_GUIDE_SLUGS`, because it is not an incumbent — and it would have
-  // been 404'd by a `[competitor]`-shaped judgement of its path.
-  // `src/app/edge-refusal-coverage.test.ts` reads these off the route tree, so
-  // the next one cannot be forgotten here.
+  // Next's static sibling wins over the dynamic route and must pass through.
   if (STATIC_SIBLINGS.has(`${namespace}/${candidate}`)) return null;
   if (namespace === "switching") return getMigrationGuide(candidate) ? null : ABSENT;
   if (namespace === "product") return getFeaturePage(candidate) ? null : ABSENT;
@@ -172,11 +73,7 @@ function closedListShape(namespace: string, rest: string[]): PublicRouteShape | 
 /** Real pages that sit where a closed-list segment would otherwise be read. */
 const STATIC_SIBLINGS = new Set(["switching/spreadsheet"]);
 
-/**
- * The link-preview images Next serves from `opengraph-image.tsx` beside the
- * storefront and beside a departure. They are routes, so the edge leaves them
- * alone; a hashed variant (`opengraph-image-<id>`) is the same file.
- */
+/** Next image routes, including hashed variants, pass through the edge gate. */
 const isPreviewImage = (segment: string | undefined) =>
   segment?.startsWith("opengraph-image") ?? false;
 
@@ -185,21 +82,7 @@ function shopNamespaceShape(segments: string[]): PublicRouteShape | null {
   const [shopSlug, ...rest] = segments;
   if (!shopSlug) return null;
   const shop = { kind: "shop", shopSlug } as const;
-  /**
-   * **A path under a shop that names no route at all is still that shop's
-   * dead link** (UX review 2026-10-10, item 11). Next answers it with a real
-   * 404 on its own, but from the root boundary, which has no shop to frame
-   * it by: `/s/blue-mantis/anything-wrong` showed DiveDay's own refusal and a
-   * button to DiveDay's sales page, to a diver who was on a shop's site. So it
-   * is refused here as `malformed`, which costs the one shop read every other
-   * refusal in the namespace already pays and buys the shop's own frame and
-   * the door back to its board.
-   *
-   * Safe by the invariant above because every route under `/s/<shop>` is
-   * named in this function: a path that falls through to here matches no
-   * `page.tsx` or `route.ts`, so there was never a page to serve.
-   * `src/app/edge-refusal-coverage.test.ts` holds that to the route tree.
-   */
+  // Unknown storefront routes are malformed so 404s retain the shop frame.
   const unrouted = { kind: "malformed", shopSlug } as const;
   const [first, second, third] = rest;
 
@@ -215,17 +98,11 @@ function shopNamespaceShape(segments: string[]): PublicRouteShape | null {
       return siteSlug ? { kind: "site", shopSlug, siteSlug } : { kind: "malformed", shopSlug };
     }
     if (first === "trips") return tripShape(shopSlug, second);
-    // The proxy answers an unknown widget before it ever asks for a shape
-    // (`isUnknownEmbedWidgetRoute`), because that refusal needs no shop. Said
-    // again here so this function stays true on its own terms rather than by
-    // an ordering two files away.
+    // Unknown widgets are normally refused earlier by the proxy.
     if (first === "embed") return isEmbedWidget(second) ? shop : { kind: "malformed", shopSlug };
     return unrouted;
   }
-  // The framed trip page's own segment, which the proxy only ever rewrites onto
-  // and refuses by name (`isInternalEmbedRoute`) before it asks for a shape.
-  // Said again here for the widget line's reason: it names nothing a request
-  // may ask for.
+  // The proxy handles this internal embed route before shape lookup.
   if (rest.length === 3 && first === "trips" && third === EMBEDDED_TRIP_SEGMENT) {
     return { kind: "malformed", shopSlug };
   }
