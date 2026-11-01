@@ -55,7 +55,6 @@ const { confirmDiverIdentityAction, splitDiverIdentityAction } = await import(
 );
 const { markRosterWaiverInPersonAction } = await import("./roster-waiver-actions");
 const { certifyDiverFromRosterAction, saveCourseNextStepAction } = await import("./course-actions");
-const { elearningCheckAction } = await import("./elearning-actions");
 
 const SHOP_SLUG = "reef-life";
 const SHOP_ID = "11111111-1111-4111-8111-111111111111";
@@ -206,18 +205,5 @@ describe("a booking that sits on another departure", () => {
 
     expect(state.status).toBe("refused");
     expect(recordInPersonWaiver).not.toHaveBeenCalled();
-  });
-
-  it("gets no e-learning check from this roster", async () => {
-    onAnotherDeparture();
-
-    const result = await elearningCheckAction(
-      SHOP_SLUG,
-      TRIP_ID,
-      { ok: false, reason: "invalid" } as never,
-      bookingForm(BOOKING_ID),
-    );
-
-    expect(result).toEqual({ ok: false, reason: "invalid" });
   });
 });

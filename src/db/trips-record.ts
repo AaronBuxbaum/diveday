@@ -458,9 +458,8 @@ export type TripSitePeek = {
 /**
  * Every distinct dive site a trip touches, diver-facing preview shape only —
  * the site of every ordered dive in `tripDives`, deduped by name (dive order).
- * Shared by every diver-facing page that shows "what you'll explore" (the
- * waiver success page and `/ready`), so the two surfaces can't drift apart
- * on what counts as the trip's site list.
+ * Used by the waiver completion page to show "what you'll explore" without
+ * exposing shop-internal site fields.
  */
 export async function getTripDiveSitesPeek(
   db: DbExecutor,

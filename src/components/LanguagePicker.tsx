@@ -81,7 +81,7 @@ export function LanguagePicker({
     inside: [rootRef],
     returnFocus: triggerRef,
   });
-  // 180ms matches .animate-scale-out in globals.css — the two must move together.
+  // The shared base rung pairs with .animate-scale-out; motion-tokens.test.ts checks parity.
   const { mounted, closing } = useExitAnimation(open, motionMs("base"));
 
   // Like RowMenu, place before paint and flip when the lower side cannot fit.

@@ -9,10 +9,8 @@ import { diveSiteDepthText } from "@/i18n/unit-labels";
 import type { DepthUnit } from "@/lib/depth-units";
 
 /**
- * "Here's what you'll explore" — a small photo/fact grid for a trip's dive
- * sites, shared by every diver-facing page that wants to bring anticipation
- * to a booking (the waiver success page and `/ready`) so the two never
- * render two different takes on the same trip's site list.
+ * "Here's what you'll explore" — a small photo/fact grid used on the waiver
+ * completion page to bring anticipation to a booking.
  */
 export function DiveSitesPeek({
   sites,
