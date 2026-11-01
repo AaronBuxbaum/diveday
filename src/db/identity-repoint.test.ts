@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
@@ -430,6 +430,7 @@ describe("repointHeldBooking", () => {
     const [seat] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
     if (!other || !seat) throw new Error("setup failed");
     const { id: _id, ...copy } = seat;
+    await db.execute(sql`set local session_replication_role = replica`);
     await db.insert(bookings).values({
       ...copy,
       shopId: other.id,
@@ -438,6 +439,7 @@ describe("repointHeldBooking", () => {
       identityBookedAs: null,
       identityMatchedBy: null,
     });
+    await db.execute(sql`set local session_replication_role = origin`);
     expect(
       await repointHeldBooking(db, {
         shopId: shop.id,
