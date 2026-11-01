@@ -129,6 +129,13 @@ for (const scheme of ["light", "dark"] as const) {
         let footerFocusedAtPreviousWidth = false;
         await capture(page, "dive-sites-library-pin-selected", scheme, {
           beforeShot: async () => {
+            // The scaled pin's soft drop shadow rasterizes to one of two outputs
+            // (13 pixels, max delta 3, on its lower contour) from the same build
+            // and state (#3218). The shadow is decoration; the ring, fill, glyph
+            // and popup stay captured.
+            await page.addStyleTag({
+              content: ".leaflet-site-marker button { box-shadow: none !important; }",
+            });
             await waitForSelectedMapToSettle();
             await expectPopupInMap(page, selectedPopup);
             for (const selector of [
