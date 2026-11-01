@@ -1,6 +1,6 @@
 ---
 name: writing-fragments
-description: "Writing, explore: mine raw fragments, no structure yet."
+description: "Writing step 1 (explore): collect raw fragments in one file, no structure. Then writing-shape or writing-beats."
 disable-model-invocation: true
 ---
 

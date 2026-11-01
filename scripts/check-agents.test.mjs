@@ -201,6 +201,26 @@ describe("local overrides of vendored skills", () => {
     expect(problems).toHaveLength(1);
     expect(problems[0]).toContain(".agents/skills/to-spec/SKILL.md");
   });
+
+  it("refuses a pinned skill a sync gave back a Claude-only invocation, only in the named skills", () => {
+    const upstream = "Resolved by a subagent that calls the Skill tool with research.";
+    expect(vendoredSkillProblems({ wayfinder: upstream })).toHaveLength(1);
+    expect(vendoredSkillProblems({ "to-spec": upstream })).toEqual([]);
+    expect(
+      vendoredSkillProblems({
+        "implement-spec": "read the section, which points at `docs/agents/issue-tracker.md`.",
+      }),
+    ).toHaveLength(1);
+  });
+
+  it("refuses a skill a sync gave back an upstream description that overlaps another", () => {
+    const problems = vendoredSkillProblems({
+      handoff:
+        "description: Compact the current conversation into a handoff document for another agent to pick up.",
+    });
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain("claude-handoff");
+  });
 });
 
 describe("the handoff docs' paths", () => {

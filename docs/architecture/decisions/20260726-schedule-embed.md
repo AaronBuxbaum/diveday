@@ -87,7 +87,9 @@ framing policy is unchanged and now covers the three widget views under `/s/<slu
 are embed requests **by path** (`isEmbedWidgetRoute`) so there is no `?embed=1` to forget or smuggle.
 Payment still never runs inside someone else's iframe: every card's action leaves the frame
 (`target="_top"`), and the lightbox opens the real page over the host site. And every snippet still
-works with the loader missing — a button is a link, a framed kind an empty `<div>`. The data
+works with the loader missing — a button is a link, a framed kind an empty `<div>`. (2026-11-01, #3248: the
+lightbox sheet is a native modal `<dialog>`, which replaced the hand-built Tab trap, Escape listener and scrim; Escape
+pressed while focus is inside the cross-origin frame closed neither version.) The data
 attributes are a contract with every snippet already pasted (`src/lib/embed-snippets.test.ts`); a
 new option is a new attribute, never a renamed one. Two new runtime facts: `qrcode` joins the
 dependencies to draw the QR code in the shop's browser from the same target URL (MIT; nothing is

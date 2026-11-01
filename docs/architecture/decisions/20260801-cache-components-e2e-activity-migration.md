@@ -362,3 +362,13 @@ actually found, against the plan above:
   this app's own routing/Suspense structure could fix. `E2E_WORKERS: "1"` stays the right lever;
   the job's shard count was doubled (4 → 8) to recover the wall-clock it costs, since the total
   single-worker test-minutes are unchanged and simply run across twice the parallel GitHub runners.
+
+## Recheck of the role-query filter (#3269)
+
+A probe on React 19.3.1 and Playwright 1.64.1 found that unfiltered `getByLabel` and `getByPlaceholder` queries returned duplicate hidden and visible matches, while a native `getByRole` query returned only the visible one. That agrees with the bundled docs and disagrees with the "Outcome" above, which recorded real strict-mode failures on `getByRole` in this app.
+
+**Decision: keep the patch as it is, narrow nothing.** The probe used a synthetic page. The recorded failures came from the real app, where a role query can resolve to an element the accessibility tree still exposes: a hidden Activity tree that is not `display:none` at the moment of the query (mid-transition), or a role match inside a `<details>` or an inert overlay that is hidden by other means. A role query that needs no filter cannot be told apart from one that does without running the whole suite with the role patch removed, and that run was not possible when this was rechecked (`next build` fails in the sandbox, so no journey ran).
+
+The filter on `getByRole` costs one `.filter({ visible: true })` and cannot change which element a test acts on when the unfiltered query already had one visible match. Removing it risks a strict-mode failure in a journey nobody ran. The label, text and placeholder filters stay on the probe's evidence alone.
+
+**To narrow it later:** drop the `getByRole` entries from `makeActivitySafe` in `e2e/fixtures.ts` (the page method and the prototype list), run the full `pnpm e2e` with `cacheComponents` on, and keep the removal only if no spec fails with "resolved to N elements".

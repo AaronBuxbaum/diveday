@@ -129,32 +129,49 @@ describe("the loader", () => {
     expect(light?.style.background).toBe("rgb(14, 116, 144)");
   });
 
-  it("opens the lightbox as a modal dialog that holds the page still and closes on Escape", () => {
+  it("opens the lightbox as a native modal dialog that holds the page still, and gives focus back on close", () => {
+    // jsdom has no showModal; the browser owns the top layer, the Tab loop and
+    // Escape, which e2e/embed-catalogue.spec.ts drives in a real one. This
+    // pins what the loader asks of the dialog.
+    const proto = HTMLDialogElement.prototype;
+    proto.showModal = function showModal(this: HTMLDialogElement) {
+      this.setAttribute("open", "");
+    };
+    proto.close = function close(this: HTMLDialogElement) {
+      this.removeAttribute("open");
+      this.dispatchEvent(new Event("close"));
+    };
     host(`
       <a href="/s/blue-mantis" data-diveday="lightbox" data-shop="blue-mantis" data-look="light" data-lang="auto">Book a dive</a>
     `);
     const link = document.querySelector<HTMLAnchorElement>("[data-diveday=lightbox]");
+    const open = () => document.querySelector<HTMLDialogElement>("dialog[data-diveday-lightbox]");
     link?.click();
-    const sheet = document.querySelector('[data-diveday-lightbox] [role="dialog"]');
-    expect(sheet?.getAttribute("aria-modal")).toBe("true");
+    const sheet = open();
+    expect(sheet?.hasAttribute("open")).toBe(true);
     expect(sheet?.getAttribute("aria-label")).toBe("Book a dive");
     expect(document.body.style.overflow).toBe("hidden");
     const frame = sheet?.querySelector("iframe");
     expect(new URL(frame?.src ?? "").searchParams.get("embed")).toBe("1");
     const close = sheet?.querySelector<HTMLButtonElement>("button[aria-label=Close]");
     expect(document.activeElement).toBe(close);
-    // Tab wraps at the sheet's two ends rather than leaving it: Shift+Tab off
-    // the close button lands on the frame, Tab off the frame on the button.
-    document.dispatchEvent(
-      new KeyboardEvent("keydown", { key: "Tab", shiftKey: true, bubbles: true }),
-    );
-    expect(document.activeElement).toBe(frame);
-    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true }));
-    expect(document.activeElement).toBe(close);
-    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-    expect(document.querySelector("[data-diveday-lightbox]")).toBeNull();
+    // The sheet's look is one !important stylesheet, so a host `dialog {}` rule
+    // cannot restyle it, and it is the only way to reach ::backdrop.
+    const rules = document.head.querySelector("style")?.textContent ?? "";
+    expect(rules).toContain("dialog[data-diveday-lightbox]::backdrop");
+    expect(rules).toContain("max-width:720px!important");
+    // A click inside the sheet leaves it open; one on the backdrop (which the
+    // browser reports on the dialog itself) and the close button end it.
+    frame?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(open()).not.toBeNull();
+    sheet?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(open()).toBeNull();
     expect(document.body.style.overflow).toBe("");
     expect(document.activeElement).toBe(link);
+    link?.click();
+    document.querySelector<HTMLButtonElement>("button[aria-label=Close]")?.click();
+    expect(open()).toBeNull();
+    expect(document.querySelectorAll("style").length).toBe(1);
   });
 
   it("grows a frame to the height it reports, and believes only its own origin", () => {

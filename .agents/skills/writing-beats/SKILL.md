@@ -1,6 +1,6 @@
 ---
 name: writing-beats
-description: Writing, exploit; assemble raw material into a journey of beats, grounding each term before a beat leans on it.
+description: "Writing step 2 (exploit), picking among next beats: walk a fragments file as a journey of beats, each term grounded first. Or writing-shape."
 disable-model-invocation: true
 ---
 

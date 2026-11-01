@@ -6,7 +6,6 @@ import {
   e2eNow,
   findTripOnBoard,
   openBookingActions,
-  openRosterDetails,
   openTripAbout,
   openTripAboutRow,
   openTripMore,
@@ -412,17 +411,13 @@ test.describe("undoing a removal after the trip is canceled", () => {
     // its blocking two-tap confirm (InlineConfirm) rather than landing behind
     // an undo toast.
     const row = page.locator("#roster li").filter({ hasText: diver }).filter({ visible: true });
-    // The confirm is a client component: an arm-tap before hydration is a
-    // native click with no handler, so the "Yes" step never appears. Retry the
-    // arm until the confirm actually renders instead of trusting one tap.
-    await expect(async () => {
-      await openRosterDetails(row);
-      await openBookingActions(row);
-      await row.getByRole("button", { name: "Remove booking" }).click();
-      await expect(row.getByRole("button", { name: "Yes, remove booking" })).toBeVisible({
-        timeout: 2_000,
-      });
-    }).toPass();
+    // One state sync, then single clicks: the page fixture has already settled
+    // staff hydration after the `waitForURL` above, and the disclosure helpers
+    // check `open` before clicking, so the arm-tap needs no retry (#3299).
+    await expect(row).toBeVisible();
+    await openBookingActions(row);
+    await row.getByRole("button", { name: "Remove booking" }).click();
+    await expect(row.getByRole("button", { name: "Yes, remove booking" })).toBeVisible();
     await row.getByRole("button", { name: "Yes, remove booking" }).click();
     const removedNotice = page.getByRole("status").filter({ hasText: "Booking canceled" });
     await expect(removedNotice).toContainText("Booking canceled. The seat is open again.");

@@ -1,6 +1,6 @@
 ---
 name: switching-pages
-description: Add or edit a competitive switching guide (/switching/*, src/lib/migration-guides.ts). Use when a task names an incumbent (EVE, DiveShop360, Smartwaiver, FareHarbor, Rezdy, Checkfront, …).
+description: "Add or edit a competitive switching guide (/switching/*, src/lib/migration-guides.ts). Use when a task names an incumbent (EVE, DiveShop360, Smartwaiver, FareHarbor, Rezdy, Checkfront, …)."
 ---
 
 # Switching-guide work

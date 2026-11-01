@@ -200,10 +200,25 @@ test.describe("the loader on a host page", () => {
     // (issue #1595). Sized to the fetch, on the one assertion that waits for it.
     await expect(link).toHaveCSS("display", "inline-block", { timeout: 15_000 });
     await link.click();
-    const sheet = page.locator("[data-diveday-lightbox]");
+    // A native modal <dialog>: the browser owns the top layer, the inert page
+    // behind it, Escape and the Tab loop; this is the loader's side of it.
+    const sheet = page.getByRole("dialog", { name: "Book a dive" });
     await expect(sheet.locator("iframe")).toHaveAttribute("src", /\/s\/blue-mantis\?embed=1/);
+    await expect(sheet.getByRole("button", { name: "Close" })).toBeFocused();
     await page.keyboard.press("Escape");
     await expect(sheet).toHaveCount(0);
+    await expect(link).toBeFocused();
+    await expect(page.locator("body")).toHaveCSS("overflow", "visible");
+    // The close button and a click on the scrim end it too, and the host page
+    // gets its scroll back each time.
+    await link.click();
+    await sheet.getByRole("button", { name: "Close" }).click();
+    await expect(sheet).toHaveCount(0);
+    await link.click();
+    await expect(sheet).toBeVisible();
+    await page.mouse.click(5, 5);
+    await expect(sheet).toHaveCount(0);
+    await expect(link).toBeFocused();
   });
 });
 
