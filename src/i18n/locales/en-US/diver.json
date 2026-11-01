@@ -25,8 +25,6 @@
     "rateLimited": "Too many attempts. Please wait a few minutes and try again.",
     "certification": {
       "level": "Certification level",
-      "agency": "Certification agency",
-      "agencyUnsaid": "Not sure",
       "agencies": {
         "padi": "PADI",
         "ssi": "SSI",
@@ -42,12 +40,10 @@
         "iantd": "IANTD",
         "other": "Another agency"
       },
-      "cardNumber": "Certification number",
       "levelUnsaid": "Rather not say",
       "levelNone": "I’m not certified yet",
       "levelInfoLabel": "Why we ask about certification",
-      "levelDescription": "The shop matches this against what each trip asks for. Answer it even if your card isn’t to hand.",
-      "nitrox": "I’m certified for nitrox (enriched air)"
+      "levelDescription": "The shop matches this against what each trip asks for. Answer it even if your card isn’t to hand."
     },
     "units": {
       "withReaderUnit": "{first} ({second})",
