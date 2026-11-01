@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { diverTranslator } from "@/i18n/messages";
+import { courseNextStartLabel } from "../course-date-label";
 import { courseRowDate } from "./course-row-date";
 
 const t = diverTranslator("en-US");
@@ -13,6 +14,12 @@ describe("courseRowDate", () => {
       kind: "next",
       text: expect.stringMatching(/^Next Fri,\sOct\s23$/),
     });
+  });
+
+  it("formats the same next-start label used by the public home shelf", () => {
+    expect(
+      courseNextStartLabel(new Date("2026-10-24T01:00:00.000Z"), base.locale, base.timeZone, t),
+    ).toMatch(/^Next Fri,\sOct\s23$/);
   });
 
   it("offers to ask for a date when nothing is on the board", () => {

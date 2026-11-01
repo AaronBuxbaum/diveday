@@ -20,6 +20,7 @@ import {
 import { cachedListFormat } from "@/lib/intl-cache";
 import type { ShopCurrency } from "@/lib/money";
 import { publicCoursePath, publicTripPath } from "@/lib/public-routes";
+import { courseNextStartLabel } from "../course-date-label";
 import type { listedDepartureSummaries } from "./schedule-reads";
 import { type RequirementsByTrip, scheduleSeatState, type UpcomingTrips } from "./schedule-view";
 import type { WeekLedgerRow } from "./WeekLedger";
@@ -173,9 +174,7 @@ export function shelfCourseCards({
     const nextStart = shelfNextStarts.get(course.id) ?? null;
     return {
       duration: course.durationText,
-      nextStart: nextStart
-        ? t("courses.shelf.nextStart", { date: formatShortDate(nextStart, locale, shop.timezone) })
-        : null,
+      nextStart: nextStart ? courseNextStartLabel(nextStart, locale, shop.timezone, t) : null,
       id: course.id,
       title: course.title,
       summary: course.summary,

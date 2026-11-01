@@ -171,7 +171,7 @@ describe("shelfCourseCards", () => {
       t,
     });
     expect(cards.map((card) => card.id)).toEqual(["a", "b", "c"]);
-    expect(cards[0]?.nextStart).toContain("Aug");
+    expect(cards[0]?.nextStart).toMatch(/^Next Sat,\sAug\s1$/);
     expect(cards[1]?.nextStart).toBeNull();
     expect(cards[0]?.href).toBe("/s/blue-mantis/courses/a");
     // Depth markers resolve into the shop's own unit before anything reads them.
