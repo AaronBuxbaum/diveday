@@ -31,16 +31,16 @@ const adr = (heading, { status = "Accepted", date = "2026-10-10", sections } = {
     ),
   ].join("\n");
 
-const run = (records) =>
-  runGuard(
-    "check-adrs.mjs",
-    Object.fromEntries(
+const run = (records, dependencies = {}) =>
+  runGuard("check-adrs.mjs", {
+    "package.json": JSON.stringify({ dependencies }),
+    ...Object.fromEntries(
       Object.entries({ ...records, "README.md": readmeFor(records) }).map(([name, body]) => [
         `${DIR}/${name}`,
         body,
       ]),
     ),
-  );
+  });
 
 describe("check-adrs", () => {
   it("passes a well-formed record of each id shape, and ignores the README and template", () => {
@@ -104,5 +104,19 @@ describe("check-adrs", () => {
     });
     expect(status).toBe(1);
     expect(stderr).toMatch(/duplicate ADR id 0042: 0042-(one|two)\.md, 0042-(one|two)\.md/);
+  });
+
+  it("fails a runtime dependency no record names, and passes one that is named or exempt", () => {
+    const records = {
+      "20261010-one-thing.md": adr("20261010-one-thing — One thing").replace(
+        "Text.",
+        "We use better-auth.",
+      ),
+    };
+    const unlisted = run(records, { "better-auth": "1", "left-pad": "1" });
+    expect(unlisted.status).not.toBe(0);
+    expect(unlisted.stderr).toContain("runtime dependency left-pad is named in no ADR");
+    const listed = run(records, { "better-auth": "1", "react-dom": "1" });
+    expect(listed.status).toBe(0);
   });
 });

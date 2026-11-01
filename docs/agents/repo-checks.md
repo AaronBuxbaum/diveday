@@ -1277,3 +1277,7 @@ For `infra/`, `config/`, `.env.example` and the deploy scripts; the rules themse
 - A new AWS service, vendor or runtime dependency is an ADR (the **adr** skill); vendor swaps are
   rows in [docs/architecture/aws-migration-dossier.md](../architecture/aws-migration-dossier.md)
   awaiting H-45.
+
+### adrs and dependencies
+
+`pnpm check:adrs` also fails when a `package.json` runtime dependency's name appears in no ADR file, which is the "new runtime dependency → ADR" rule made checkable. The match is a plain substring, so a short name such as `next` is satisfied by `next-intl`; the check catches a dependency nobody wrote about, not a weak mention. Exactly two names are exempt, in `DEPENDENCY_EXEMPT` in `scripts/check-adrs.mjs`: `react-dom` (half of React) and `@vercel/speed-insights` (a measurement beacon beside `@vercel/analytics`). Adding a third means writing the ADR instead.

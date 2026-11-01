@@ -23,6 +23,25 @@ import { expectedReadme } from "./adr-index.mjs";
 export const CAP_FROM = "20261010";
 export const WORD_CAP = 500;
 
+/**
+ * Runtime dependencies that need no ADR of their own: `react-dom` is half of React, which
+ * ADR 0001 already settles, and `@vercel/speed-insights` is a one-line measurement beacon beside
+ * `@vercel/analytics`. Exactly these two; anything else new needs a decision on file (AGENTS.md:
+ * "New runtime dependency → ADR").
+ */
+export const DEPENDENCY_EXEMPT = ["@vercel/speed-insights", "react-dom"];
+
+/**
+ * Dependency names (of `names`) that appear in none of the `adrTexts`. A plain substring test, as
+ * the rule is worded: `next` is found in any ADR that says `next-intl`, so a short name is a weak
+ * signal, but a name no ADR contains at all is a dependency nobody decided on.
+ */
+export function undocumentedDependencies(names, adrTexts) {
+  return names.filter(
+    (name) => !DEPENDENCY_EXEMPT.includes(name) && !adrTexts.some((text) => text.includes(name)),
+  );
+}
+
 const historicalId = /^\d{4}-[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const parallelId = /^\d{8}-[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const validStatuses = new Set(["Proposed", "Accepted", "Deprecated", "Superseded"]);
@@ -93,6 +112,18 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   }
   for (const [id, filenames] of ids) {
     if (filenames.length > 1) failures.push(`duplicate ADR id ${id}: ${filenames.join(", ")}`);
+  }
+
+  const dependencies = Object.keys(
+    JSON.parse(await readFile(path.join(root, "package.json"), "utf8")).dependencies ?? {},
+  );
+  const adrTexts = await Promise.all(
+    entries.map((filename) => readFile(path.join(directory, filename), "utf8")),
+  );
+  for (const name of undocumentedDependencies(dependencies, adrTexts)) {
+    failures.push(
+      `package.json: runtime dependency ${name} is named in no ADR. Write one (docs/architecture/decisions/), or, if it is half of an existing decision, name it there`,
+    );
   }
 
   const { readme, expected } = expectedReadme(root);
