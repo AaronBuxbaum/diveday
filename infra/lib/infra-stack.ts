@@ -414,7 +414,10 @@ export class InfraStack extends cdk.Stack {
         {
           id: "expire-old-visual-snapshots",
           enabled: true,
-          expiration: cdk.Duration.days(60),
+          // `-c visualSnapshotExpiryDays=N` changes it without editing code.
+          expiration: cdk.Duration.days(
+            Number(this.node.tryGetContext("visualSnapshotExpiryDays") ?? 60),
+          ),
         },
         {
           id: "abort-incomplete-multipart-uploads",
