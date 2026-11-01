@@ -2,6 +2,7 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import { filesUnder } from "./files-under.mjs";
 
 /**
  * Every staff `?notice=` code is spelled one way: lower-case kebab,
@@ -98,22 +99,11 @@ const allowed = new Set([
 ]);
 
 async function walk(relativeDirectory) {
-  const absoluteDirectory = path.join(ROOT, relativeDirectory);
-  let entries;
-  try {
-    entries = await readdir(absoluteDirectory, { withFileTypes: true });
-  } catch (error) {
-    if (error?.code === "ENOENT") return [];
-    throw error;
-  }
-
-  const files = [];
-  for (const entry of entries) {
-    const relativePath = path.join(relativeDirectory, entry.name);
-    if (entry.isDirectory()) files.push(...(await walk(relativePath)));
-    else if (sourceExtensions.has(path.extname(entry.name))) files.push(relativePath);
-  }
-  return files;
+  return filesUnder(
+    relativeDirectory,
+    (directory) => readdir(path.join(ROOT, directory), { withFileTypes: true }),
+    (_relativePath, entry) => sourceExtensions.has(path.extname(entry.name)),
+  );
 }
 
 /**

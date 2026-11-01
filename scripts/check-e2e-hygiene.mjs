@@ -3,6 +3,7 @@ import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
 
+import { filesUnder } from "./files-under.mjs";
 import { bankCounts, ratchetFlags, readCounts } from "./ratchet.mjs";
 
 /**
@@ -473,21 +474,11 @@ export function auditLongLiterals(counts, allowed) {
 }
 
 async function walk(relativeDirectory) {
-  const absoluteDirectory = path.join(process.cwd(), relativeDirectory);
-  let entries;
-  try {
-    entries = await readdir(absoluteDirectory, { withFileTypes: true });
-  } catch (error) {
-    if (error?.code === "ENOENT") return [];
-    throw error;
-  }
-  const files = [];
-  for (const entry of entries) {
-    const relativePath = path.join(relativeDirectory, entry.name);
-    if (entry.isDirectory()) files.push(...(await walk(relativePath)));
-    else if (/\.tsx?$/.test(entry.name)) files.push(relativePath);
-  }
-  return files;
+  return filesUnder(
+    relativeDirectory,
+    (directory) => readdir(path.join(process.cwd(), directory), { withFileTypes: true }),
+    (_relativePath, entry) => /\.tsx?$/.test(entry.name),
+  );
 }
 
 async function main() {

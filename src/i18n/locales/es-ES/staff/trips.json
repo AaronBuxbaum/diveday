@@ -838,10 +838,6 @@
     "visibility": "visibilidad {visibility}",
     "current": "corriente {current}"
   },
-  "erasedTitle": {
-    "private": "Chárter privado",
-    "public": "Salida"
-  },
   "whoWantsIn": {
     "heading": "Quién quiere plaza · {count}",
     "seatsOpen": "{count, plural, one {# plaza libre} other {# plazas libres}}",

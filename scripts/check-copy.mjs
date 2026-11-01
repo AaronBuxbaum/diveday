@@ -2,6 +2,7 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
+import { filesUnder } from "./files-under.mjs";
 import { prepareLinePreservingSource } from "./line-preserving-source.mjs";
 import { bankCounts, ratchetFlags, readCounts } from "./ratchet.mjs";
 
@@ -266,27 +267,15 @@ export function looksLikeCopy(raw) {
 }
 
 async function walk(relativeDirectory) {
-  let entries;
-  try {
-    entries = await readdir(path.join(ROOT, relativeDirectory), { withFileTypes: true });
-  } catch (error) {
-    if (error?.code === "ENOENT") return [];
-    throw error;
-  }
-  const files = [];
-  for (const entry of entries) {
-    const relativePath = path.join(relativeDirectory, entry.name);
-    if (entry.isDirectory()) files.push(...(await walk(relativePath)));
-    else if (
+  return filesUnder(
+    relativeDirectory,
+    (directory) => readdir(path.join(ROOT, directory), { withFileTypes: true }),
+    (_relativePath, entry) =>
       (entry.name.endsWith(".tsx") || entry.name.endsWith(".ts")) &&
       !entry.name.endsWith(".test.ts") &&
       !entry.name.endsWith(".test.tsx") &&
-      !entry.name.endsWith(".d.ts")
-    ) {
-      files.push(relativePath);
-    }
-  }
-  return files;
+      !entry.name.endsWith(".d.ts"),
+  );
 }
 
 /** Every hard-coded user-facing string in one file, as `{ line, text }`. */

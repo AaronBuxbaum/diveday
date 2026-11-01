@@ -1,6 +1,6 @@
 import { z } from "zod";
+import { CERTIFICATION_LEVELS, type CertificationLevel } from "./certification-levels";
 import type { CourseContent } from "./courses";
-import type { CertificationLevel } from "./readiness";
 import { sameTemplateValue } from "./template-value-comparison";
 
 /**
@@ -98,15 +98,7 @@ export type CourseTemplateDiff = {
 
 export type CourseTemplateUpdateMode = "preserve-shop-edits" | "replace-template-copy";
 
-const certificationLevelSchema = z
-  .union([
-    z.literal("open_water"),
-    z.literal("advanced_open_water"),
-    z.literal("rescue"),
-    z.literal("divemaster"),
-    z.literal("instructor"),
-  ])
-  .nullable();
+const certificationLevelSchema = z.enum(CERTIFICATION_LEVELS).nullable();
 
 const scheduleDaySchema = z.object({
   title: z.string(),

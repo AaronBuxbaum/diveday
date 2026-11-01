@@ -3,6 +3,7 @@ import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
 import { createScanner, LanguageVariant, SyntaxKind } from "typescript/unstable/ast";
+import { filesUnder } from "./files-under.mjs";
 
 /**
  * A function that can receive a database **transaction** may not fan its
@@ -95,21 +96,11 @@ const ESCAPE_HATCH = /diveday:allow-db-concurrency:\s*\S/;
 const ALLOWED_FILES = new Set([path.normalize("src/db/query-helpers.ts")]);
 
 async function walk(relativeDirectory) {
-  let entries;
-  try {
-    entries = await readdir(path.join(ROOT, relativeDirectory), { withFileTypes: true });
-  } catch (error) {
-    if (error?.code === "ENOENT") return [];
-    throw error;
-  }
-
-  const files = [];
-  for (const entry of entries) {
-    const relativePath = path.join(relativeDirectory, entry.name);
-    if (entry.isDirectory()) files.push(...(await walk(relativePath)));
-    else if (SOURCE_EXTENSIONS.has(path.extname(entry.name))) files.push(relativePath);
-  }
-  return files;
+  return filesUnder(
+    relativeDirectory,
+    (directory) => readdir(path.join(ROOT, directory), { withFileTypes: true }),
+    (_relativePath, entry) => SOURCE_EXTENSIONS.has(path.extname(entry.name)),
+  );
 }
 
 /**

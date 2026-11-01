@@ -2,6 +2,8 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
+
+import { filesUnder } from "./files-under.mjs";
 import { prepareLinePreservingSource } from "./line-preserving-source.mjs";
 import { bankCounts, ratchetFlags, readCounts } from "./ratchet.mjs";
 
@@ -233,27 +235,19 @@ export function findUndefinedColorClasses(source, tokens) {
 }
 
 async function walk(root, relativeDirectory) {
-  let entries;
-  try {
-    entries = await readdir(path.join(root, relativeDirectory), { withFileTypes: true });
-  } catch (error) {
-    if (error?.code === "ENOENT") return [];
-    throw error;
-  }
-  const files = [];
-  for (const entry of entries) {
-    const relativePath = path.join(relativeDirectory, entry.name);
-    if (entry.isDirectory()) files.push(...(await walk(root, relativePath)));
-    else if (
-      (entry.name.endsWith(".tsx") || entry.name.endsWith(".ts")) &&
-      !entry.name.endsWith(".d.ts") &&
-      !(metadataFileNames.has(entry.name) && relativePath.startsWith(`src${path.sep}app`)) &&
-      !exemptPaths.has(relativePath.replaceAll(path.sep, "/"))
-    ) {
-      files.push(relativePath);
-    }
-  }
-  return files;
+  return filesUnder(
+    relativeDirectory,
+    (directory) => readdir(path.join(root, directory), { withFileTypes: true }),
+    (relativePath, entry) => {
+      const { name } = entry;
+      return (
+        (name.endsWith(".tsx") || name.endsWith(".ts")) &&
+        !name.endsWith(".d.ts") &&
+        !(metadataFileNames.has(name) && relativePath.startsWith(`src${path.sep}app`)) &&
+        !exemptPaths.has(relativePath.replaceAll(path.sep, "/"))
+      );
+    },
+  );
 }
 
 /** Map of repo-relative file (posix separators) → violations. */

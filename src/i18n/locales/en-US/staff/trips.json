@@ -838,10 +838,6 @@
     "visibility": "visibility {visibility}",
     "current": "current {current}"
   },
-  "erasedTitle": {
-    "private": "Private charter",
-    "public": "Departure"
-  },
   "whoWantsIn": {
     "heading": "Who wants in · {count}",
     "seatsOpen": "{count, plural, one {# seat open} other {# seats open}}",

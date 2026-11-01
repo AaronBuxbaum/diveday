@@ -7,7 +7,7 @@ const deploy = workflow.slice(workflow.indexOf("  deploy:"));
 describe("the preview credential boundary", () => {
   it("uses the trusted base workflow for pull request events", () => {
     expect(workflow).toContain("  pull_request_target:");
-    expect(workflow).not.toMatch(/^  pull_request:/m);
+    expect(workflow).not.toMatch(/^ {2}pull_request:/m);
     expect(workflow).toContain("github.event_name == 'pull_request_target'");
     expect(workflow).toContain('if [ "$repo" != "$GITHUB_REPOSITORY" ]');
   });

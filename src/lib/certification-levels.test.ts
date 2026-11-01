@@ -3,6 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
+  CERTIFICATION_LEVELS,
   REQUIRABLE_CERTIFICATION_LEVELS,
   type RequirableCertificationLevel,
 } from "./certification-levels";
@@ -43,6 +44,17 @@ describe("the certification ladder leaf", () => {
     // The re-export is what keeps every existing caller unchanged, so a
     // divergence here would be a second, silently different ladder.
     expect(VIA_READINESS).toBe(REQUIRABLE_CERTIFICATION_LEVELS);
+  });
+
+  it("keeps the full ordered ladder separate from the requirable subset", () => {
+    expect(CERTIFICATION_LEVELS).toEqual([
+      "open_water",
+      "advanced_open_water",
+      "rescue",
+      "divemaster",
+      "instructor",
+    ]);
+    expect(REQUIRABLE_CERTIFICATION_LEVELS).toEqual(CERTIFICATION_LEVELS.slice(0, 3));
   });
 
   it("stops at rescue, and never offers a working rating", () => {
