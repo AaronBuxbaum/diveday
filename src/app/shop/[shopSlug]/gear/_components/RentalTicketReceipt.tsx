@@ -2,21 +2,18 @@ import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 
 /**
- * **The foot of every rental ticket**: the shop's own rental terms when it has
- * written any, then a "Received by" line, a printed-name line and a date line
- * (Aaron, 2026-10-08; ADR 20260815-minimal-gear-register, amended 2026-10-08).
- *
- * Both tickets render it — the trip slip at `trips/[id]/prep/ticket/[bookingId]`
- * and the counter ticket at `gear/rentals/[ticketId]` — so the two papers a
- * diver walks off with end the same way.
+ * **The foot of every rental ticket**, shared by the trip slip
+ * (`trips/[id]/prep/ticket/[bookingId]`) and the counter ticket
+ * (`gear/rentals/[ticketId]`): the shop's own rental terms when it has written
+ * any, then "Received by", printed-name and date lines (Aaron, 2026-10-08; ADR
+ * 20260815-minimal-gear-register, amended 2026-10-08).
  *
  * **A receipt for gear, never a waiver.** The signature says the person took
- * these units; it agrees to nothing DiveDay wrote. The terms are the shop's
+ * these units and agrees to nothing DiveDay wrote. The terms are the shop's
  * words verbatim (`shops.rental_terms`), never a default of ours, and the one
  * shop-wide waiver stays the only liability page (CR-015). No money either:
- * billing lives on the order.
- *
- * On screen as well as on paper, so the counter sees what will print.
+ * billing lives on the order. On screen as well as on paper, so the counter
+ * sees what will print.
  */
 export function RentalTicketReceipt({ terms, t }: { terms: string | null; t: StaffTranslator }) {
   return (
