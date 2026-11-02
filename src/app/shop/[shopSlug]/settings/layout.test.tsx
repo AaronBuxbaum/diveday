@@ -85,12 +85,10 @@ describe("the settings frame the pane's left edge reads", () => {
     expect(main.matches(BESIDE_THE_RAIL)).toBe(true);
   });
 
-  it("gates the whole segment on managing the shop, so no settings page has an ungated reader (issue #2739)", async () => {
-    vi.mocked(canPersonManageShopSettings).mockResolvedValue(true);
-    await renderFrame();
-    expect(requireShopSurface).toHaveBeenCalledWith("blue-mantis", {
-      allow: canPersonManageShopSettings,
-      refusal: { notice: "settings-not-authorized" },
-    });
+  it("draws no rail for a reader who cannot manage the shop, and does not redirect (each page refuses with its own words)", async () => {
+    vi.mocked(canPersonManageShopSettings).mockResolvedValue(false);
+    const { pane } = await renderFrame();
+    expect(requireShopSurface).toHaveBeenCalledWith("blue-mantis");
+    expect(pane.previousElementSibling?.tagName).not.toBe("NAV");
   });
 });
