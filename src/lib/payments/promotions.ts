@@ -1,15 +1,14 @@
 import { z } from "zod";
 import type { PromoDiscount } from "../promo-codes";
-import { boundedStripeFetch } from "./stripe-fetch";
-import { connectedAccountHeaders } from "./stripe-headers";
+import { type StripeRequest, stripeAnsweredStatus, stripeRequest } from "./stripe-client";
 import { type StripeKeySource, secretKeyForCall } from "./stripe-keys";
 import { logStripeRequestThrew } from "./stripe-request-log";
 
 /**
  * Stripe coupon + promotion code creation for last-minute-deal blasts, on the
- * shop's own connected account — fetch-based, no SDK, same
- * `Stripe-Account`-header pattern as ./checkout.ts and ./invoicing.ts (docs
- * ADR 20260727-last-minute-fill-promos). A promotion code always names a
+ * shop's own connected account, through the SDK's request path in
+ * ./stripe-client.ts as ./checkout.ts and ./invoicing.ts are (docs ADR
+ * 20260727-last-minute-fill-promos, ADR 20261102-stripe-sdk-adapters). A promotion code always names a
  * fresh coupon; DiveDay never reuses a coupon across blasts, so each blast's
  * discount percent and cap stand on their own in the shop's Stripe dashboard.
  */
@@ -104,9 +103,21 @@ const promotionCodeResponseSchema = z.object({ id: z.string().min(1) });
 
 export function stripePromotionProvider(
   config: StripeKeySource,
-  unboundedFetch: Fetch,
+  fetchImpl: Fetch,
 ): PromotionProvider {
-  const fetchImpl = boundedStripeFetch(unboundedFetch);
+  /** One POST on the shop's connected account, with the key chosen for it. */
+  async function postOnAccount(
+    stripeAccountId: string,
+    request: Omit<StripeRequest, "stripeAccount" | "method">,
+  ): Promise<unknown> {
+    const secretKey = await secretKeyForCall(config, stripeAccountId);
+    return stripeRequest(secretKey, fetchImpl, {
+      ...request,
+      method: "POST",
+      stripeAccount: stripeAccountId,
+    });
+  }
+
   /**
    * The coupon-then-promotion-code pair both flavors mint. Bounds are written
    * only when the caller has one: Stripe reads an absent `expires_at` or
@@ -137,19 +148,13 @@ export function stripePromotionProvider(
             }),
         name: request.name,
       });
-      const couponResponse = await fetchImpl("https://api.stripe.com/v1/coupons", {
-        method: "POST",
-        headers: {
-          ...connectedAccountHeaders(
-            await secretKeyForCall(config, request.stripeAccountId),
-            request.stripeAccountId,
-          ),
-          "Idempotency-Key": `${request.idempotencyKey}:coupon`,
-        },
-        body: couponForm.toString(),
-      });
-      if (!couponResponse.ok) return { status: "failed" };
-      const coupon = couponResponseSchema.safeParse(await couponResponse.json());
+      const coupon = couponResponseSchema.safeParse(
+        await postOnAccount(request.stripeAccountId, {
+          path: "/v1/coupons",
+          params: couponForm,
+          idempotencyKey: `${request.idempotencyKey}:coupon`,
+        }),
+      );
       if (!coupon.success) return { status: "failed" };
 
       const promoForm = new URLSearchParams({ coupon: coupon.data.id, code: request.code });
@@ -159,19 +164,13 @@ export function stripePromotionProvider(
       if (request.expiresAt !== null) {
         promoForm.set("expires_at", String(Math.floor(request.expiresAt.getTime() / 1000)));
       }
-      const promoResponse = await fetchImpl("https://api.stripe.com/v1/promotion_codes", {
-        method: "POST",
-        headers: {
-          ...connectedAccountHeaders(
-            await secretKeyForCall(config, request.stripeAccountId),
-            request.stripeAccountId,
-          ),
-          "Idempotency-Key": `${request.idempotencyKey}:promotion_code`,
-        },
-        body: promoForm.toString(),
-      });
-      if (!promoResponse.ok) return { status: "failed" };
-      const promotionCode = promotionCodeResponseSchema.safeParse(await promoResponse.json());
+      const promotionCode = promotionCodeResponseSchema.safeParse(
+        await postOnAccount(request.stripeAccountId, {
+          path: "/v1/promotion_codes",
+          params: promoForm,
+          idempotencyKey: `${request.idempotencyKey}:promotion_code`,
+        }),
+      );
       if (!promotionCode.success) return { status: "failed" };
 
       return {
@@ -180,7 +179,7 @@ export function stripePromotionProvider(
         stripePromotionCodeId: promotionCode.data.id,
       };
     } catch (error) {
-      logStripeRequestThrew("create_promotion", error);
+      if (stripeAnsweredStatus(error) === null) logStripeRequestThrew("create_promotion", error);
       return { status: "failed" };
     }
   }
@@ -204,24 +203,20 @@ export function stripePromotionProvider(
           name: request.name.slice(0, 40),
           max_redemptions: "1",
         });
-        const response = await fetchImpl("https://api.stripe.com/v1/coupons", {
-          method: "POST",
-          headers: {
-            ...connectedAccountHeaders(
-              await secretKeyForCall(config, request.stripeAccountId),
-              request.stripeAccountId,
-            ),
-            "Idempotency-Key": `${request.idempotencyKey}:session-discount`,
-          },
-          body: form.toString(),
-        });
-        if (!response.ok) return { status: "failed" };
-        const coupon = couponResponseSchema.safeParse(await response.json());
+        const coupon = couponResponseSchema.safeParse(
+          await postOnAccount(request.stripeAccountId, {
+            path: "/v1/coupons",
+            params: form,
+            idempotencyKey: `${request.idempotencyKey}:session-discount`,
+          }),
+        );
         return coupon.success
           ? { status: "created", stripeCouponId: coupon.data.id }
           : { status: "failed" };
       } catch (error) {
-        logStripeRequestThrew("create_session_discount", error);
+        if (stripeAnsweredStatus(error) === null) {
+          logStripeRequestThrew("create_session_discount", error);
+        }
         return { status: "failed" };
       }
     },

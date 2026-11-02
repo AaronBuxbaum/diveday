@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { checkoutProviderFromEnvironment } from "@/db/stripe-providers";
+import { stripeResponse } from "@/lib/payments/__fixtures__/stripe-response";
 
 /** The `stripe_api.request_threw` lines a case wrote, parsed. */
 function threwLines(spy: { mock: { calls: unknown[][] } }): Array<Record<string, unknown>> {
@@ -23,7 +24,7 @@ const request = {
 };
 
 function ok(json: unknown) {
-  return { ok: true, json: async () => json };
+  return stripeResponse(json);
 }
 
 describe("stripe checkout provider", () => {
@@ -203,7 +204,7 @@ describe("stripe checkout provider", () => {
   });
 
   it("fails when Stripe rejects the create", async () => {
-    const fetchImpl = vi.fn().mockResolvedValue({ ok: false, json: async () => ({}) });
+    const fetchImpl = vi.fn().mockResolvedValue(stripeResponse({}, 400));
     const provider = providerWith({ STRIPE_SECRET_KEY: "sk_test" }, fetchImpl);
     expect(await provider.createCheckoutSession(request)).toEqual({ status: "failed" });
   });
@@ -249,11 +250,14 @@ describe("stripe checkout provider", () => {
       },
     });
     expect(fetchImpl.mock.calls[0][0]).toBe("https://api.stripe.com/v1/checkout/sessions/cs_1");
-    expect(fetchImpl.mock.calls[0][1].headers).toEqual({
+    expect(fetchImpl.mock.calls[0][1].method).toBe("GET");
+    expect(fetchImpl.mock.calls[0][1].headers).toMatchObject({
       Authorization: "Bearer sk_test",
-      "Content-Type": "application/x-www-form-urlencoded",
       "Stripe-Account": "acct_123",
     });
+    // A read carries no idempotency key, and no request names an API version.
+    expect(fetchImpl.mock.calls[0][1].headers["Idempotency-Key"]).toBeUndefined();
+    expect(fetchImpl.mock.calls[0][1].headers["Stripe-Version"]).toBeUndefined();
   });
 
   it("reads the Customer id whether Stripe sends it bare or expanded", async () => {
@@ -392,7 +396,7 @@ describe("stripe checkout provider", () => {
           payment_intent: "pi_9",
         }),
       )
-      .mockResolvedValueOnce({ ok: false, json: async () => ({}) });
+      .mockResolvedValueOnce(stripeResponse({}, 400));
     const provider = providerWith({ STRIPE_SECRET_KEY: "sk_test" }, fetchImpl);
     expect(await provider.refundCheckoutSession("acct_123", "cs_1", "intent-12")).toEqual({
       status: "failed",

@@ -6,6 +6,7 @@ import {
   invoicingProviderFromEnvironment,
   promotionProviderFromEnvironment,
 } from "@/db/stripe-providers";
+import { stripeResponse } from "@/lib/payments/__fixtures__/stripe-response";
 import { nowMs } from "../clock";
 import {
   STRIPE_EVENT_FIXTURES,
@@ -39,7 +40,7 @@ const ENV = { STRIPE_SECRET_KEY: "sk_test_fixture", STRIPE_CONNECT_CLIENT_ID: "c
 function fetchReturning(...responses: Array<{ ok?: boolean; status?: number; body: unknown }>) {
   const impl = vi.fn();
   for (const { ok = true, status = ok ? 200 : 400, body } of responses) {
-    impl.mockResolvedValueOnce({ ok, status, json: async () => body });
+    impl.mockResolvedValueOnce(stripeResponse(body, status));
   }
   return impl as unknown as typeof fetch;
 }
