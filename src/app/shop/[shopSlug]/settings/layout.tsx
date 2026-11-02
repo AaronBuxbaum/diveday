@@ -47,20 +47,21 @@ export default function SettingsLayout({
 }
 
 /**
- * The rail's own reads, gathered where a `<Suspense>` boundary can hold them,
- * and **the one gate for everything under `/settings`**: owner or manager, read
- * live (`canPersonManageShopSettings`), bounced to Today with the same notice
- * the hub gives. Settings means the shop and nothing else; the reader's own
- * sign-in, calendar feed and email live at `/me`, so there is no ungated
- * exception to explain. Each destination still re-checks its own, narrower
- * permission server-side — hiding a row is convenience.
+ * The rail's own reads, gathered where a `<Suspense>` boundary can hold them.
+ * The rail is drawn only for an owner or manager (`canPersonManageShopSettings`,
+ * read live). It does not redirect: each page refuses with its own words, and a
+ * redirect here, streamed after the page's, overrode them with a generic notice.
+ * Hiding a row is convenience; every destination re-checks its own permission.
  */
 async function SettingsRailPanel({ params }: { params: Promise<{ shopSlug: string }> }) {
   const { shopSlug } = await params;
-  const { session, db, shop } = await requireShopSurface(shopSlug, {
-    allow: canPersonManageShopSettings,
-    refusal: { notice: "settings-not-authorized" },
-  });
+  const { session, db, shop } = await requireShopSurface(shopSlug);
+  const canSettings = await canPersonManageShopSettings(
+    db,
+    session.user.shopId,
+    session.user.personId,
+  );
+  if (!canSettings) return null;
   const canPayments = await canPersonManagePaymentSettings(
     db,
     session.user.shopId,
