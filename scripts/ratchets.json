@@ -792,7 +792,6 @@
           "src/db/courses.test.ts": "1659 -> 1719",
           "src/db/orders.test.ts": "3097 -> 3163",
           "src/db/recap.test.ts": "2114 -> 2138",
-          "src/db/self-declared-cards.test.ts": "1836 -> 1864",
           "src/lib/staffing-week.test.ts": "979 -> 1115",
           "src/lib/waivers.test.ts": "1188 -> 1205"
         }
@@ -826,7 +825,6 @@
         "why": "merge of the pre-push-gate branch: the file-length half now counts test files, and the 2026-10-14 test review's safety cases (H-20261006-medical-holds-every-departure, S2, admission/readiness adversarial tests) grew these before it landed",
         "files": {
           "src/db/seat-claims.test.ts": "1047 -> 1094",
-          "src/db/self-declared-cards.test.ts": "1864 -> 1865",
           "src/db/waiver-issue.test.ts": "1051 -> 1178",
           "src/lib/trip-admission.test.ts": "918 -> 984",
           "src/lib/waivers.test.ts": "1205 -> 1402"
@@ -875,7 +873,6 @@
           "src/db/courses.test.ts": "1659 -> 1719",
           "src/db/orders.test.ts": "3097 -> 3163",
           "src/db/recap.test.ts": "2114 -> 2138",
-          "src/db/self-declared-cards.test.ts": "1836 -> 1864",
           "src/lib/staffing-week.test.ts": "979 -> 1115",
           "src/lib/waivers.test.ts": "1188 -> 1205"
         }
@@ -897,7 +894,6 @@
           "src/db/courses.test.ts": "1659 -> 1719",
           "src/db/orders.test.ts": "3097 -> 3163",
           "src/db/recap.test.ts": "2114 -> 2138",
-          "src/db/self-declared-cards.test.ts": "1836 -> 1864",
           "src/lib/staffing-week.test.ts": "979 -> 1115",
           "src/lib/waivers.test.ts": "1188 -> 1205"
         }
@@ -919,7 +915,6 @@
           "src/db/courses.test.ts": "1659 -> 1719",
           "src/db/orders.test.ts": "3097 -> 3163",
           "src/db/recap.test.ts": "2114 -> 2138",
-          "src/db/self-declared-cards.test.ts": "1836 -> 1864",
           "src/lib/staffing-week.test.ts": "979 -> 1115",
           "src/lib/waivers.test.ts": "1188 -> 1205"
         }
@@ -928,7 +923,6 @@
         "why": "merge of the pre-push-gate branch: the file-length half now counts test files, and the 2026-10-14 test review's safety cases (H-20261006-medical-holds-every-departure, S2, admission/readiness adversarial tests) grew these before it landed",
         "files": {
           "src/db/seat-claims.test.ts": "1047 -> 1094",
-          "src/db/self-declared-cards.test.ts": "1864 -> 1865",
           "src/db/waiver-issue.test.ts": "1051 -> 1178",
           "src/lib/trip-admission.test.ts": "918 -> 984",
           "src/lib/waivers.test.ts": "1205 -> 1402"
@@ -945,7 +939,6 @@
           "src/db/courses.test.ts": "1659 -> 1719",
           "src/db/orders.test.ts": "3097 -> 3163",
           "src/db/recap.test.ts": "2114 -> 2138",
-          "src/db/self-declared-cards.test.ts": "1836 -> 1864",
           "src/lib/staffing-week.test.ts": "979 -> 1115",
           "src/lib/waivers.test.ts": "1188 -> 1205"
         }
@@ -961,7 +954,6 @@
           "src/db/courses.test.ts": "1659 -> 1719",
           "src/db/orders.test.ts": "3097 -> 3163",
           "src/db/recap.test.ts": "2114 -> 2138",
-          "src/db/self-declared-cards.test.ts": "1836 -> 1864",
           "src/lib/staffing-week.test.ts": "979 -> 1115",
           "src/lib/waivers.test.ts": "1188 -> 1205"
         }
@@ -1076,7 +1068,6 @@
       }
     ],
     "src/app/api/offline-manifests/sync/route.test.ts": 955,
-    "src/app/api/test/seed-trouble-states/route.ts": 2021,
     "src/app/api/webhooks/stripe/route.replay.test.ts": 1308,
     "src/app/api/webhooks/stripe/route.test.ts": 1873,
     "src/app/api/webhooks/stripe/route.ts": 923,
