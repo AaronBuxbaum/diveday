@@ -98,7 +98,7 @@ export function allowMarker(ruleId, text) {
   if (!match) return { status: "none" };
   const reason = match[1]
     .replace(/^\s*:/, "")
-    .replace(/\*\/\s*$|-->\s*$/, "")
+    .replace(/\*\/\s*$|--!?>\s*$/, "")
     .trim();
   return match[1].trimStart().startsWith(":") && reason
     ? { status: "allowed", reason }
