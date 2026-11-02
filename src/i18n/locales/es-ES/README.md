@@ -1,6 +1,6 @@
 # es-ES — terminology and register
 
-The Spanish bundles in this folder (`diver.json`, `staff/<namespace>.json`) are one voice, not two, and they are
+The Spanish bundles in this folder (`diver.json`, `content/<section>.json`, `staff/<namespace>.json`) are one voice, not two, and they are
 written for a **mostly Latin American** audience. This file records the choices a 2026-08-03 sweep
 made (review finding I18N-5) so the next translator does not re-litigate them string by string.
 
@@ -208,9 +208,9 @@ file whose other nine mentions all said *salida*.
 The noun is **feminine**, like *la exención*: `la`/`una`/`esta`, and `cancelada`, `programada`,
 `llena`, `próxima`.
 
-**`diver.json` is deliberately exempt, and `scripts/check-shop-word.mjs` scopes the rule to
-`staff/` to say so.** That bundle uses *viaje* about thirty times in its marketing, switching-guide
-and demo copy, where the English is loose in the same way — "book a trip", "post-trip recap" — and
+**`diver.json` and `content/` are deliberately exempt, and `scripts/check-shop-word.mjs` scopes the
+rule to `staff/` to say so.** Those bundles use *viaje* about thirty times in their marketing,
+switching-guide and demo copy, where the English is loose in the same way — "book a trip", "post-trip recap" — and
 the word is doing a different job: an outing a diver takes, not a row on the schedule board. A
 diver reading "reserva un viaje" is not being told about a database record. Narrowing that copy is
 a decision about diver-facing voice and belongs to whoever is writing the marketing pages; it is

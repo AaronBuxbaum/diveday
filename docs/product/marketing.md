@@ -949,7 +949,8 @@ them) is a deliberate, ADR-gated decision if the mockups ever stop being enough.
 ## Where the words live
 
 **Every word a visitor reads lives in the locale bundles** —
-`src/i18n/locales/<locale>/diver.json`, edited for **every locale in the same change** (the
+`src/i18n/locales/<locale>/diver.json`, with `marketing.*` and `switching.*` in
+`content/marketing.json` and `content/switching.json` beside it, edited for **every locale in the same change** (the
 check:locale gate enforces coverage). The files below are where each surface's *keys and
 structure* live; none of them may contain an English sentence:
 

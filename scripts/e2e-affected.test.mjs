@@ -530,9 +530,10 @@ describe("a locale value a spec reads by its key", () => {
     expect(changedLocaleKeys("{not json", after)).toEqual([]);
   });
 
-  it("prefixes a staff bundle's keys with its namespace and a diver key with nothing", () => {
+  it("prefixes a staff or content bundle's keys with its namespace and a diver key with nothing", () => {
     expect(localeKeyPrefix("src/i18n/locales/en-US/staff/today.json")).toBe("today.");
     expect(localeKeyPrefix("src/i18n/locales/en-US/diver.json")).toBe("");
+    expect(localeKeyPrefix("src/i18n/locales/en-US/content/marketing.json")).toBe("marketing.");
     expect(localeKeyPrefix("src/i18n/locales/es-ES/diver.json")).toBeNull();
     expect(localeKeyPrefix("src/i18n/locales/en-US/staff/index.ts")).toBeNull();
   });

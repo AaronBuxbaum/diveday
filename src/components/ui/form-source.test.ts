@@ -35,18 +35,21 @@ function hintsWithText(): { file: string; key: string; words: number; text: stri
         flatten(value, path ? `${path}.${key}` : key);
   };
   // Both vocabularies, keyed the way a translator call spells them. `diver.json`
-  // is namespaced by its own top-level keys; a staff bundle is one file per
-  // area and the **filename** is the namespace (`staff/boats.json` →
-  // `boats.…`), which is the composition `staff/index.ts` performs.
+  // is namespaced by its own top-level keys; a `content/` or `staff/` bundle is
+  // one file per section and the **filename** is the namespace
+  // (`staff/boats.json` → `boats.…`), which is the composition its `index.ts`
+  // performs.
   const localeRoot = path.join(process.cwd(), "src/i18n/locales/en-US");
   flatten(JSON.parse(readFileSync(path.join(localeRoot, "diver.json"), "utf8")), "");
-  const staffRoot = path.join(localeRoot, "staff");
-  for (const entry of readdirSync(staffRoot, { withFileTypes: true })) {
-    if (!entry.isFile() || !entry.name.endsWith(".json")) continue;
-    flatten(
-      JSON.parse(readFileSync(path.join(staffRoot, entry.name), "utf8")),
-      entry.name.replace(/\.json$/, ""),
-    );
+  for (const dir of ["content", "staff"]) {
+    const root = path.join(localeRoot, dir);
+    for (const entry of readdirSync(root, { withFileTypes: true })) {
+      if (!entry.isFile() || !entry.name.endsWith(".json")) continue;
+      flatten(
+        JSON.parse(readFileSync(path.join(root, entry.name), "utf8")),
+        entry.name.replace(/\.json$/, ""),
+      );
+    }
   }
 
   const found: { file: string; key: string; words: number; text: string }[] = [];

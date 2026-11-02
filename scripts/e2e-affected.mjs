@@ -194,13 +194,14 @@ export function textOf(file, line) {
 
 /**
  * The prefix a locale bundle's keys carry in a translator call: none for `diver.json`, the
- * namespace for `staff/<namespace>.json` (composed by `staff/index.ts` under the file's stem).
- * Null for anything that is not an en-US bundle, the only locale a spec reads.
+ * section for `content/<section>.json` and the namespace for `staff/<namespace>.json` (each
+ * composed by its `index.ts` under the file's stem). Null for anything that is not an en-US
+ * bundle, the only locale a spec reads.
  */
 export function localeKeyPrefix(file) {
   if (file === "src/i18n/locales/en-US/diver.json") return "";
-  const staff = file.match(/^src\/i18n\/locales\/en-US\/staff\/([\w-]+)\.json$/);
-  return staff ? `${staff[1]}.` : null;
+  const section = file.match(/^src\/i18n\/locales\/en-US\/(?:content|staff)\/([\w-]+)\.json$/);
+  return section ? `${section[1]}.` : null;
 }
 
 function leaves(value, prefix, out) {

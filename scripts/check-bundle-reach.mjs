@@ -62,6 +62,8 @@ import { bankCounts, ratchetFlags, readCounts } from "./ratchet.mjs";
 const ROOT = process.cwd();
 const LOCALES_DIR = "src/i18n/locales";
 const DEFAULT_LOCALE = "en-US";
+/** The directory bundles, one namespace per file: DiveDay's content, then staff. */
+const SECTION_DIRS = ["content", "staff"];
 
 /**
  * Where a key can be read from. The whole of `src` rather than the two UI
@@ -122,10 +124,10 @@ function flatten(node, prefix = "") {
 /**
  * Every key in the default locale, as `bundleFile → [key…]`.
  *
- * The staff bundle is a directory composed by its `index.ts`, namespace keyed
- * by filename (ADR 20260807-per-area-staff-bundles); reading it here merges the
- * files exactly the way that index does, so a key's dotted path is the one a
- * call site writes.
+ * The content and staff bundles are directories composed by their `index.ts`,
+ * namespace keyed by filename (ADR 20260807-per-area-staff-bundles, issue
+ * #2773); reading them here merges the files exactly the way that index does,
+ * so a key's dotted path is the one a call site writes.
  */
 export async function loadBundles(root = ROOT) {
   const localeDir = path.join(root, LOCALES_DIR, DEFAULT_LOCALE);
@@ -134,14 +136,16 @@ export async function loadBundles(root = ROOT) {
   const diver = JSON.parse(await readFile(path.join(localeDir, "diver.json"), "utf8"));
   bundles.set(`${LOCALES_DIR}/${DEFAULT_LOCALE}/diver.json`, flatten(diver));
 
-  const staffDir = path.join(localeDir, "staff");
-  for (const name of (await readdir(staffDir)).filter((n) => n.endsWith(".json")).sort()) {
-    const namespace = name.replace(/\.json$/, "");
-    const contents = JSON.parse(await readFile(path.join(staffDir, name), "utf8"));
-    bundles.set(
-      `${LOCALES_DIR}/${DEFAULT_LOCALE}/staff/${name}`,
-      flatten({ [namespace]: contents }),
-    );
+  for (const dir of SECTION_DIRS) {
+    const sectionDir = path.join(localeDir, dir);
+    for (const name of (await readdir(sectionDir)).filter((n) => n.endsWith(".json")).sort()) {
+      const namespace = name.replace(/\.json$/, "");
+      const contents = JSON.parse(await readFile(path.join(sectionDir, name), "utf8"));
+      bundles.set(
+        `${LOCALES_DIR}/${DEFAULT_LOCALE}/${dir}/${name}`,
+        flatten({ [namespace]: contents }),
+      );
+    }
   }
   return bundles;
 }

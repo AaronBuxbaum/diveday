@@ -66,16 +66,16 @@
     "files": ["scripts/agent-doctor.mjs"]
   },
   "2529": {
-    "files": ["src/i18n/locales/en-US/diver.json", "src/i18n/locales/es-ES/diver.json"],
+    "files": [
+      "src/i18n/locales/en-US/content/marketing.json",
+      "src/i18n/locales/es-ES/content/marketing.json"
+    ],
     "keys": {
-      "src/i18n/locales/en-US/diver.json": [
-        "marketing.privacy.keep.intro",
-        "marketing.privacy.keep.safety"
+      "src/i18n/locales/en-US/content/marketing.json": [
+        "privacy.keep.intro",
+        "privacy.keep.safety"
       ],
-      "src/i18n/locales/es-ES/diver.json": [
-        "marketing.privacy.keep.intro",
-        "marketing.privacy.keep.safety"
-      ]
+      "src/i18n/locales/es-ES/content/marketing.json": ["privacy.keep.intro", "privacy.keep.safety"]
     }
   },
   "2544": {

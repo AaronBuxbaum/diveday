@@ -5,11 +5,11 @@ description: Route on-screen copy through a message bundle and extract hard-code
 
 # Copy goes in a bundle, never in a component
 
-Every word a person reads comes from `src/i18n/locales/<locale>/*.json`. Two bundles:
+Every word a person reads comes from `src/i18n/locales/<locale>/**/*.json`. Two bundles:
 
 | Bundle | Surface | Translator | Client components |
 | --- | --- | --- | --- |
-| `diver.json` | public schedule, trip, course, `/waivers`, `/ready`, `/recap` | `diverTranslator(locale)` | yes — under `<DiverIntlProvider>`, via `useTranslations()` |
+| `diver.json`, plus `content/<section>.json` (marketing, switching; same keys, composed by `messages.ts`) | public schedule, trip, course, `/waivers`, `/ready`, `/recap`; the marketing site and switching guides | `diverTranslator(locale)` | yes — under `<DiverIntlProvider>`, via `useTranslations()`; never `content/` sections, which are server-only |
 | `staff/<namespace>.json` | `/shop/**` | `staffTranslator(locale)` | **no** — pass words in as props |
 
 Decisions: [20260729-diver-copy-localization](../../../docs/architecture/decisions/20260729-diver-copy-localization.md),

@@ -37,6 +37,12 @@ so concurrent additions touch disjoint files and the shared surface shrinks to o
 churn is materially lower. If its conflict rate approaches what staff copy showed, the same split
 applies mechanically.
 
+**Amended 2026-11-02 (issue #2773): the first diver split.** DiveDay's own content left
+`diver.json` for `locales/<locale>/content/`, laid out exactly like `staff/`: `marketing.json` and
+`switching.json`, composed by that directory's `index.ts` and merged back into the diver bundle by
+`src/i18n/messages.ts` under the same top-level keys, so no call site changed. `pnpm check:locale`
+reads `content/` with the same integrity checks as `staff/`.
+
 ## Alternatives considered
 
 - **Alphabetically sorting keys in one file** — spreads inserts but cannot separate two branches

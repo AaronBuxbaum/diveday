@@ -148,8 +148,11 @@ const DARK = / › dark mode(?: [^›]*)? › /;
  */
 const RUNTIME_ROOT = /^src\/proxy\.ts$|^src\/worker\//;
 
-/** A message bundle: `en-US/diver.json`, `es-ES/staff/<namespace>.json`. */
-const LOCALE = /^src\/i18n\/locales\/[^/]+\/(?:diver|staff\/[^/]+)\.json$/;
+/**
+ * A message bundle: `en-US/diver.json`, `en-US/content/<section>.json`,
+ * `es-ES/staff/<namespace>.json`.
+ */
+const LOCALE = /^src\/i18n\/locales\/[^/]+\/(?:diver|(?:content|staff)\/[^/]+)\.json$/;
 
 /** Dev dependencies that change what a page looks like when they move. */
 const RENDERER =
@@ -209,7 +212,7 @@ function leaves(value, prefix = "", out = new Map()) {
  * whether HEAD still has it: a removed key's readers were edited in the same diff.
  */
 export function changedMessageKeys(file, before, after) {
-  const namespace = file.match(/\/staff\/([^/]+)\.json$/)?.[1];
+  const namespace = file.match(/\/(?:content|staff)\/([^/]+)\.json$/)?.[1];
   const parse = (text) => (text === null ? {} : JSON.parse(text));
   const a = leaves(parse(before));
   const b = leaves(parse(after));

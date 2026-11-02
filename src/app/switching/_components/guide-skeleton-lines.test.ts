@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import diver from "@/i18n/locales/en-US/diver.json";
+import switching from "@/i18n/locales/en-US/content/switching.json";
 import { MIGRATION_GUIDE_SLUGS, MIGRATION_GUIDES } from "@/lib/migration-guides";
 import { GUIDE_SKELETON_LINES, SPREADSHEET_SKELETON_LINES } from "./guide-skeleton-lines";
 
@@ -28,7 +28,7 @@ describe("the switching guides' skeleton line counts", () => {
   it("draws the spreadsheet guide's two paragraphs and one list item per wedge", () => {
     expect(SPREADSHEET_SKELETON_LINES.context).toHaveLength(2);
     expect(SPREADSHEET_SKELETON_LINES.list).toHaveLength(
-      Object.keys(diver.switching.spreadsheet.wedge).length,
+      Object.keys(switching.spreadsheet.wedge).length,
     );
   });
 });

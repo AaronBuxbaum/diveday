@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { DIVER_LOCALES } from "./settings";
@@ -22,9 +22,20 @@ function subjects(node: unknown, path: string[] = []): [string, string][] {
 describe("diver email subjects", () => {
   for (const locale of DIVER_LOCALES) {
     it(`never join with a dash in ${locale}`, () => {
-      const bundle = JSON.parse(
-        readFileSync(join(__dirname, "locales", locale, "diver.json"), "utf8"),
-      ) as unknown;
+      // The chrome and DiveDay's content bundle together, the way
+      // messages.ts composes them: a content file's name is its section.
+      const contentDir = join(__dirname, "locales", locale, "content");
+      const bundle = {
+        ...JSON.parse(readFileSync(join(__dirname, "locales", locale, "diver.json"), "utf8")),
+        ...Object.fromEntries(
+          readdirSync(contentDir)
+            .filter((name) => name.endsWith(".json"))
+            .map((name) => [
+              name.replace(/\.json$/, ""),
+              JSON.parse(readFileSync(join(contentDir, name), "utf8")),
+            ]),
+        ),
+      } as unknown;
       const found = subjects(bundle);
       expect(found.length).toBeGreaterThan(5);
       expect(found.filter(([, text]) => text.includes("—"))).toEqual([]);

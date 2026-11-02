@@ -59,8 +59,9 @@ convention and needing no marker:
   sign-off decision (H-01/H-03 in [human-decisions/](../../../docs/product/human-decisions/README.md)),
   not an engineering one.
 
-Not exempt: marketing pages under `src/app`/`src/components`. They go through `diver.json` like
-everything else on those routes. Also not exempt: **data modules that feed the UI.**
+Not exempt: marketing pages under `src/app`/`src/components`. They go through the diver bundle
+like everything else on those routes, with their words in `content/marketing.json` and
+`content/switching.json`. Also not exempt: **data modules that feed the UI.**
 `src/lib/marketing.ts`, `src/lib/migration-guides.ts`, and `src/lib/demo-roles.ts` are
 key registries — they hold `DiverMessageKey` values and structure (slugs, ordering, URLs,
 the price figure), and the words live in the bundles under `marketing.price/export/capabilities/

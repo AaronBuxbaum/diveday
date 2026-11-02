@@ -36,6 +36,13 @@ describe("where a merged key lives", () => {
     });
   });
 
+  it("splits a content section back off the same way, so marketing keys name their own file", () => {
+    expect(locateKey({ dir: "content", minimumKeys: 1 }, "marketing.setUp.no")).toEqual({
+      file: "content/marketing.json",
+      path: "setUp.no",
+    });
+  });
+
   it("handles a namespace whose whole bundle is one key", () => {
     expect(locateKey(STAFF, "whatsapp")).toEqual({ file: "staff/whatsapp.json", path: "whatsapp" });
   });
@@ -166,7 +173,7 @@ describe("the declared list", () => {
     for (const address of DELIBERATELY_IDENTICAL.keys()) {
       const [file, key, ...rest] = address.split(" ");
       expect(rest, address).toEqual([]);
-      expect(file, address).toMatch(/^(diver\.json|staff\/[A-Za-z]+\.json)$/);
+      expect(file, address).toMatch(/^(diver\.json|(content|staff)\/[A-Za-z]+\.json)$/);
       expect(key, address).toMatch(/^[A-Za-z][\w]*(\.[\w]+)*$/);
     }
   });

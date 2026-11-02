@@ -256,7 +256,8 @@ async function main() {
     violations.push(
       `${hit.file}:${hit.line}: prose literal ${hit.text} in a key-registry module. ` +
         `These files hold message-bundle keys and structure only — move the words into ` +
-        `src/i18n/locales/<locale>/diver.json (every locale), or mark a genuine non-language ` +
+        `src/i18n/locales/<locale>/diver.json, or content/<section>.json for the marketing and ` +
+        `switching pages (every locale), or mark a genuine non-language ` +
         `literal with \`// i18n-exempt: reason\`.`,
     );
   }

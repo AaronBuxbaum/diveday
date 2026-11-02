@@ -1,0 +1,188 @@
+{
+  "common": {
+    "backToGuides": "← Todas las guías de cambio",
+    "contextEyebrow": "Dónde estás hoy",
+    "heroCtaNote": "La demo es el centro de muestra, ya lleno, así que no hay nada que importar antes.",
+    "facts": {
+      "moves": {
+        "label": "Qué se traslada",
+        "value": "Lo que traiga tu archivo: personas, registros de certificación, tallas, exenciones, historial de visitas."
+      },
+      "time": {
+        "label": "Cuánto tarda",
+        "value": "Una tarde, de exportar a importar."
+      },
+      "preview": {
+        "label": "Antes de guardar",
+        "value": "No entra nada hasta que leas la vista previa y digas adelante."
+      },
+      "back": {
+        "label": "La salida",
+        "value": "El mismo botón de exportar, desde el primer día."
+      }
+    },
+    "contents": "En esta página",
+    "fieldReference": "Referencia de columnas de la hoja",
+    "importReference": "Referencia completa de campos de importación",
+    "exportFile": "Exporta tu archivo",
+    "cutoverLink": "Haz el cambio",
+    "fieldGroups": {
+      "identity": "Identidad y contacto",
+      "certifications": "Certificaciones",
+      "kit": "Equipo",
+      "history": "Historial y registros"
+    },
+    "moveTitle": "Cómo funciona el cambio",
+    "moveIntro": "Cada paso lo llevas tú, a tu ritmo. Si prefieres delegarlo, envíanos el archivo y una persona trae a tus buceadores contigo, gratis.",
+    "scopeTableTitle": "Qué se traslada, y qué no",
+    "scopeTableDescription": "La misma tabla que DiveDay te muestra antes de importar una sola fila.",
+    "comesAcross": "Se traslada",
+    "seePricing": "Ver cuánto cuesta DiveDay →",
+    "staysBehind": "Se queda atrás",
+    "bothWaysTitle": "La misma tabla, leída al revés",
+    "bothWaysBody": "Las filas de arriba son lo que llega, y la exportación es la misma lista. {claim}",
+    "bringFileTitle": "Trae el archivo a DiveDay",
+    "bringFileIntro": "El resto ocurre en DiveDay, en el orden de abajo.",
+    "openSettingsTitle": "Abre Ajustes → Importar contactos",
+    "openSettingsBody": "El propietario o gerente sube el CSV en tu centro de DiveDay.",
+    "checkPreviewTitle": "Revisa la vista previa",
+    "checkPreviewBody": "La vista previa muestra cómo quedó cada columna, cuáles deja fuera y las filas que no puede traer. Un buceador cuyo correo ya existe se actualiza en vez de duplicarse, y no se guarda nada hasta que confirmes.",
+    "importReadyTitle": "Importar, y tu lista de buceadores está lista",
+    "importReadyBody": "La lista de buceadores, las tallas y los registros de certificación entran de una vez, marcados como importados con una confirmación de un toque para el personal. Solo una inmersión que exige una especialidad espera esa confirmación.",
+    "openImportCta": "Abrir Importar en tu centro",
+    "midCtaTitle": "Míralo en la demo en vivo",
+    "midCtaBody": "La demo es el centro de muestra en el que caería tu archivo: las mismas verificaciones de certificación, exenciones y pase de lista, como propietario, capitán o buceador.",
+    "previewLink": "La pantalla de vista previa, con nuestras notas →"
+  },
+  "hub": {
+    "eyebrow": "Cambiarte a DiveDay",
+    "title": "Trae tu centro contigo",
+    "description": "Elige lo que usas hoy para ver qué se traslada, qué se queda y cómo empezar.",
+    "spreadsheetTitle": "Vienes de una hoja de cálculo",
+    "spreadsheetDescription": "La hoja que ya llevas es el archivo. Esta guía es la lista de columnas que lee, y después los cuatro trabajos que una lista nunca hizo.",
+    "switchingFrom": "Cambiando desde {competitor}",
+    "previewEyebrow": "La pantalla en la que termina cada guía",
+    "previewTitle": "La vista previa te lee tu archivo antes de guardar una fila",
+    "previewNote1": "Cuatro columnas que reconoció por sus encabezados. Los tuyos pueden llamarse de otra forma.",
+    "previewNote2": "“No reconocidas, así que se ignoran” nombra las dos columnas que descarta en vez de adivinarlas.",
+    "previewNote3": "Una fila está marcada como omitida: no tiene nombre. El nombre es lo único que una fila necesita.",
+    "previewNote4": "“No se guarda nada hasta que tú lo digas” es el título de la pantalla. En la demo: Ajustes → Importar contactos.",
+    "previewDoor": "Abre la demo como propietario →",
+    "previewMockupLabel": "La vista previa de importación de DiveDay, con las columnas reconocidas, las ignoradas, los recuentos y una fila omitida.",
+    "dontSeeSystem": "No está en la lista",
+    "dontSeeSystemBody": "Una exportación entra tal cual: una columna de nombre es lo único que una fila necesita, y las de certificación y talla vienen cuando existen.",
+    "closingTitle": "Tus buceadores, certificaciones y tallas llegan antes de tu primera salida",
+    "closingSupport": "Envíanos lo que tengas y una persona del equipo traerá a tus buceadores contigo, gratis, o te ayudará a llevártelo todo si DiveDay deja de encajar; cualquier otra pregunta puede ir a {email}."
+  },
+  "competitor": {
+    "keepOrLeaveEyebrow": "Consérvalo, o déjalo",
+    "websiteEyebrow": "Tu sitio web",
+    "websiteTheirs": "En {competitor}",
+    "websiteOurs": "En DiveDay",
+    "forExportPrefix": "Para una exportación de {competitor}:",
+    "runTheDay": "Lleva el día de buceo que {competitor} no puede",
+    "readyToMove": "El cambio desde {competitor}, en una sentada",
+    "walkDemoFirst": "Primero la demo, después tu exportación. Las verificaciones de certificación, las exenciones y el pase de lista en los que cae tu archivo ya están en marcha ahí.",
+    "otherGuides": "Otras guías de cambio →",
+    "sources": "Fuentes"
+  },
+  "spreadsheet": {
+    "eyebrow": "Vienes de una hoja de cálculo",
+    "title": "Trae la hoja de cálculo contigo",
+    "heroLede": "La hoja que llevas es el archivo: una fila por buceador, guardada como CSV. Lo que sigue es la lista de columnas que lee, y después los cuatro trabajos que asume y que una lista nunca hizo.",
+    "wedgeIntro1": "Una hoja de cálculo guarda los nombres y los números y no verifica ninguno. Verificar, tarjetas, exenciones, quién sigue sin estar listo, es lo que ahora haces a mano.",
+    "wedgeIntro2": "Los cuatro trabajos que asume:",
+    "wedge": {
+      "cardsChecked": {
+        "title": "Cada certificación verificada antes de que salga el barco",
+        "body": "La certificación de cada buceador se lee frente a lo que exigen la salida y el sitio. Quien todavía no puede embarcar aparece en la lista, con el motivo."
+      },
+      "blockersOnePlace": {
+        "title": "Quién aún no puede embarcar, en una sola lista",
+        "body": "La lista Pendiente de Hoy dice quién todavía no puede embarcar y por qué: una exención que falta, o una certificación que nadie ha verificado aún."
+      },
+      "diversBookThemselves": {
+        "title": "Los buceadores reservan y firman solos",
+        "body": "Un buceador elige su plaza y firma la exención desde un enlace, sin cuenta y sin app. Una sin firmar aparece en la lista Pendiente de Hoy la noche anterior."
+      },
+      "manifestHeadCount": {
+        "title": "Un manifiesto que pasa lista por nombre",
+        "body": "La tripulación marca como embarcados, por nombre, a cada buceador y tripulante, inmersión por inmersión, en un teléfono, desde una copia guardada en él antes de que salga el barco, así que el pase de lista no se detiene aunque no haya señal en la rampa."
+      }
+    },
+    "columnsTitle": "Las columnas que lee",
+    "columnsIntro": "Una fila por buceador, guardada como CSV. Tus encabezados no tienen que coincidir con estos; los nombres habituales se reconocen, y la vista previa nombra los que no tiene claros.",
+    "downloadTemplate": "Descargar la plantilla inicial (CSV)",
+    "columns": {
+      "name": {
+        "column": "Nombre",
+        "detail": "Nombre y apellido en dos columnas, o una sola columna con el nombre completo. Es lo único que una fila necesita."
+      },
+      "email": {
+        "column": "Correo",
+        "detail": "Así DiveDay contacta a un buceador y reconoce a quien vuelve, de modo que una segunda importación lo actualiza en vez de duplicarlo. Una fila sin correo también entra."
+      },
+      "phone": {
+        "column": "Teléfono",
+        "detail": "Celular o fijo, como lo tengas escrito."
+      },
+      "dateOfBirth": {
+        "column": "Fecha de nacimiento",
+        "detail": "Una fecha real de nacimiento se traslada cuando el archivo la incluye."
+      },
+      "emergencyContact": {
+        "column": "Contacto de emergencia",
+        "detail": "Un nombre y un teléfono, cuando los tengas, aterrizan en la ficha del buceador."
+      },
+      "diveInsurance": {
+        "column": "Seguro de buceo",
+        "detail": "Un número de DAN o el nombre de un proveedor se traslada tal cual. Nunca es una barrera; es lo que la tripulación quiere a mano en un incidente."
+      },
+      "certification": {
+        "column": "Certificación",
+        "detail": "Agencia, nivel y número de certificación. El número de certificación es lo que permite trasladar el registro."
+      },
+      "specialty": {
+        "column": "Especialidad",
+        "detail": "Profundidad, naufragios, nocturna o traje seco. Una celda puede nombrar varias (“Profundidad, Naufragios”) y cada una se convierte en su propia certificación bajo el número de agencia del buceador."
+      },
+      "nitrox": {
+        "column": "Nitrox",
+        "detail": "Una columna de sí/no, más el número de certificación de nitrox si lo llevas. El número es lo que la traslada."
+      },
+      "rentalSizes": {
+        "column": "Tallas de alquiler",
+        "detail": "BCD, neopreno, bota y aleta. Las tallas que ya llevas se convierten en un perfil de ajuste."
+      },
+      "pastVisits": {
+        "column": "Visitas anteriores",
+        "detail": "Una fecha, el nombre del viaje y el precio por fila se vuelven el historial de ese buceador, así un habitual llega como habitual. Repite su correo en cada fila para asociarlo a la persona correcta."
+      },
+      "waivers": {
+        "column": "Exenciones y documentos",
+        "detail": "Puede trasladarse una exención firmada y enlaces seguros; no se trasladan respuestas médicas individuales."
+      },
+      "paymentHistory": {
+        "column": "Historial de pagos",
+        "detail": "Los pagos, reembolsos y recibos pueden conservarse como historial sin verificar, nunca como datos de tarjeta activos."
+      },
+      "notes": {
+        "column": "Notas",
+        "detail": "Las notas del personal y del buceador se convierten en notas privadas del perfil."
+      },
+      "gearHistory": {
+        "column": "Historial del equipo",
+        "detail": "Un CSV separado trae las unidades etiquetadas y sus registros fechados de mantenimiento, inspección y estado."
+      }
+    },
+    "parallelRunNote": "Sigue usando la hoja todo el tiempo que quieras. Una reimportación reconoce a los buceadores por correo y los actualiza en vez de duplicarlos, así que el día que dejes de mantenerla lo eliges tú.",
+    "closingTitle": "La demo es el centro en el que caería tu hoja",
+    "closingDescription": "Ábrela como propietario, capitán o buceador. Sin registro, y nada de lo que hay dentro es tuyo para romperlo.",
+    "otherSystems": "Cambiar desde otro software →"
+  },
+  "concierge": {
+    "eyebrow": "Una persona hace la importación contigo",
+    "title": "Te ayudamos a cambiarte, y a salir, nosotros mismos",
+    "description": "Envíanos lo que tengas, sea una exportación limpia o una década de pestañas desordenadas, y mapeamos las columnas y traemos a tus buceadores contigo, gratis. Si algún día DiveDay no encaja, te ayudamos a llevártelo todo de vuelta de la misma manera."
+  }
+}

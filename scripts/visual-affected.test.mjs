@@ -506,6 +506,9 @@ describe("following an edit name by name", () => {
       { key: "shopHome.a.b", removed: false },
       { key: "shopHome.a.c", removed: true },
     ]);
+    expect(
+      changedMessageKeys("src/i18n/locales/en-US/content/marketing.json", '{"a":"x"}', '{"a":"y"}'),
+    ).toEqual([{ key: "marketing.a", removed: false }]);
   });
 });
 
