@@ -17,16 +17,20 @@ the Public Suffix List on 2026-11-02.
 `tldts` 7.4.19 (exact pin) becomes a direct runtime dependency. It was already in the tree through
 `tough-cookie`. `allowedFetchHost` keeps WHATWG URL parsing, the http(s), userinfo, port, IP,
 label and private-name checks, then sets one leading `www.` aside and refuses the rest when
-`getDomain(host, { allowPrivateDomains: true })` finds no registrable domain (the host is itself a
-suffix, ICANN or private section, wildcards and exceptions applied) or when it is in
-`SHARED_SERVICE_ROOTS`: ordinary domains that host many unrelated sites but are not suffixes
-(`wix.com`, `facebook.com`, `sites.google.com`). The returned host is still exactly what was pasted.
+`tldts` (`allowPrivateDomains: true`) finds no registrable domain (the host is itself a suffix),
+when the host's TLD is in neither section of the list (`intranet.corp`), when `a.<host>` has no
+registrable domain (the parent of a wildcard rule: `sch.uk`, `kobe.jp`), or when it is in
+`SHARED_SERVICE_ROOTS`: ordinary domains that host many unrelated sites or files but are not
+suffixes (`wix.com`, `facebook.com`, `raw.githubusercontent.com`). The returned host is still
+exactly what was pasted.
 
-Intentional changes, each pinned with a comment in `web-fetch.test.ts`: `b.ck`, `www.b.ck`,
-`foo.kawasaki.jp`, `s3.amazonaws.com` and `appspot.com` are now refused, and so are the
-special-use names `.example`, `.onion`, `.alt` and `.arpa`. Every host refused before is still
-refused; the test walks the whole former list, so a list release that drops a platform fails
-there.
+Intentional changes, each pinned with a comment in `web-fetch.test.ts`: wildcard suffixes and
+their parents (`b.ck`, `www.b.ck`, `foo.kawasaki.jp`, `kawasaki.jp`, `sch.uk`), private platform
+suffixes (`s3.amazonaws.com`, `compute-1.amazonaws.com`), any unknown TLD, `m.facebook.com`, and
+the special-use names `.example`, `.onion`, `.alt` and `.arpa` are now refused. Every host
+refused before is still refused; the test walks the whole former list, so a list release that
+drops a platform fails there. An independent security review set the parent, unknown-TLD and
+service rules.
 
 Provenance: npm `tldts`, MIT, sole maintainer Rémi Berson (`remusao`), source
 github.com/remusao/tldts; it compiles the Public Suffix List into its own `tldts-core`. Used only
@@ -43,5 +47,6 @@ on the server (`src/db/website-setup.ts`).
 
 The suffix list moves with Dependabot updates to `tldts`; a release can add or remove a suffix, so
 the former-roots test is the tripwire, and a dropped platform moves to `SHARED_SERVICE_ROOTS`. A
-shop whose site is `www.<wildcard suffix>` must paste the bare host. To leave, restore a hand list
+shop whose site is `www.<wildcard suffix>` must paste the bare host, and one on a TLD newer than
+the installed list is refused until `tldts` is updated. To leave, restore a hand list
 in `isSharedRoot`; nothing else depends on the package.

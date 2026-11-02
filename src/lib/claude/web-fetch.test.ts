@@ -88,11 +88,64 @@ describe("allowedFetchHost", () => {
     // IDNs are judged and returned in their ASCII form, as WHATWG URL produces it.
     expect(allowedFetchHost("https://bücher.de/")).toBe("xn--bcher-kva.de");
     expect(allowedFetchHost("магазин.рф")).toBe("xn--80aairftm.xn--p1ai");
-    // A TLD the list does not know still behaves as before: two labels are one site.
-    expect(allowedFetchHost("shop.unknowntld")).toBe("shop.unknowntld");
-    expect(allowedFetchHost("www.unknowntld")).toBeNull();
     // A shared service's root is matched exactly; a shop's own subdomain is fine.
-    expect(allowedFetchHost("m.facebook.com")).toBe("m.facebook.com");
+    expect(allowedFetchHost("bluereef.dropbox.com")).toBe("bluereef.dropbox.com");
+    // A shop label under an ordinary registrable domain is not a wildcard child.
+    expect(allowedFetchHost("shop.bluereefdivers.co.uk")).toBe("shop.bluereefdivers.co.uk");
+    expect(allowedFetchHost("www.bluereefdivers.com")).toBe("www.bluereefdivers.com");
+    // `!city.kobe.jp` is an exception to `*.kobe.jp`, so its children are one site.
+    expect(allowedFetchHost("city.kobe.jp")).toBe("city.kobe.jp");
+  });
+
+  it("refuses the parent of a wildcard rule, whose every child is a suffix", () => {
+    // Changed decision (independent security review): allowed before, though each child is
+    // a registry (`x.sch.uk`, `a.kobe.jp`, `ec2-1-2-3-4.compute-1.amazonaws.com`).
+    for (const input of [
+      "sch.uk",
+      "www.sch.uk",
+      "kobe.jp",
+      "kawasaki.jp",
+      "nagoya.jp",
+      "compute.amazonaws.com",
+      "compute-1.amazonaws.com",
+    ]) {
+      expect(allowedFetchHost(input), input).toBeNull();
+    }
+  });
+
+  it("refuses a host under a TLD the list does not know", () => {
+    // Changed decision (independent security review): two labels under an unknown TLD were
+    // one site before; no public registry stands behind them, so they are refused.
+    for (const input of [
+      "shop.unknowntld",
+      "www.unknowntld",
+      "intranet.corp",
+      "printer.intranet",
+      "host.localdomain",
+      "kubernetes.default.svc",
+    ]) {
+      expect(allowedFetchHost(input), input).toBeNull();
+    }
+  });
+
+  it("refuses the root of a shared file, archive or redirect service", () => {
+    for (const input of [
+      "web.archive.org",
+      "raw.githubusercontent.com",
+      "storage.googleapis.com",
+      "googleusercontent.com",
+      "docs.google.com",
+      "dropbox.com",
+      "www.dropbox.com",
+      "dl.dropboxusercontent.com",
+      "pastebin.com",
+      // Changed decision (independent security review): allowed before.
+      "m.facebook.com",
+      "l.facebook.com",
+      "fb.com",
+    ]) {
+      expect(allowedFetchHost(input), input).toBeNull();
+    }
   });
 
   it("normalizes a trailing dot, case and confusable characters before judging the host", () => {

@@ -1,5 +1,5 @@
 import type Anthropic from "@anthropic-ai/sdk";
-import { getDomain } from "tldts";
+import { getDomain, parse } from "tldts";
 
 /**
  * **Reading a shop's own website** through Claude's server-side `web_fetch`
@@ -40,9 +40,13 @@ const PRIVATE_SUFFIXES = [
  */
 export const SHARED_SERVICE_ROOTS: ReadonlySet<string> = new Set([
   ..."wix.com squarespace.com weebly.com wordpress.com blogger.com godaddysites.com".split(" "),
-  ..."amazonaws.com sites.google.com google.com facebook.com instagram.com".split(" "),
-  ..."linktr.ee wa.me tripadvisor.com".split(" "),
+  ..."amazonaws.com sites.google.com google.com docs.google.com storage.googleapis.com".split(" "),
+  ..."googleusercontent.com raw.githubusercontent.com web.archive.org pastebin.com".split(" "),
+  ..."dropbox.com dl.dropboxusercontent.com facebook.com m.facebook.com l.facebook.com".split(" "),
+  ..."fb.com instagram.com linktr.ee wa.me tripadvisor.com".split(" "),
 ]);
+
+const PSL = { allowPrivateDomains: true, extractHostname: false } as const;
 
 /**
  * Whether a host is a registry or a builder's shared root, never one shop's
@@ -50,12 +54,19 @@ export const SHARED_SERVICE_ROOTS: ReadonlySet<string> = new Set([
  * one of these would let the call read any tenant's pages under it (security
  * review N4): `co.uk` is every British company, `wixsite.com` every Wix site.
  * Registries and hosting platforms come from the Public Suffix List, private
- * section included (`tldts`, ADR 20261102-public-suffix-list); a host that is
- * itself a suffix, wildcard rules included, has no registrable domain.
+ * section included (`tldts`, ADR 20261102-public-suffix-list). Refused:
+ * - a host that is itself a suffix, so has no registrable domain;
+ * - the parent of a wildcard rule (`sch.uk` under `*.sch.uk`), whose every
+ *   child is a suffix; an exception rule (`!city.kobe.jp`) keeps its child
+ *   registrable, so it is not this case;
+ * - a host under a TLD the list does not know (`intranet.corp`,
+ *   `kubernetes.default.svc`): no public registry stands behind it.
  */
 function isSharedRoot(host: string): boolean {
   if (SHARED_SERVICE_ROOTS.has(host)) return true;
-  return getDomain(host, { allowPrivateDomains: true, extractHostname: false }) === null;
+  const parsed = parse(host, PSL);
+  if (parsed.domain === null || (!parsed.isIcann && !parsed.isPrivate)) return true;
+  return getDomain(`a.${host}`, PSL) === null;
 }
 
 /**

@@ -609,6 +609,16 @@ export function parseCsv(text: string): string[][] {
 }
 
 /**
+ * The most cells any row of a parsed file holds, for the column bound: every
+ * row, not only the header, since a body row of a million commas is as wide.
+ */
+export function widestRow(grid: readonly (readonly string[])[]): number {
+  let widest = 0;
+  for (const row of grid) if (row.length > widest) widest = row.length;
+  return widest;
+}
+
+/**
  * Undo the export's formula-injection guard: a leading "'" before =,+,-,@, a
  * tab or a line break is presentational. The export guards a leading CR, which
  * {@link parseCsv} reads as LF.
@@ -1816,12 +1826,12 @@ export function prepareContactImport(
 
   const headers = grid[0];
   const bodyRows = grid.slice(1);
-  if (headers.length > MAX_IMPORT_COLUMNS) {
+  if (widestRow(grid) > MAX_IMPORT_COLUMNS) {
     return {
       ...empty,
       fatal: {
         code: "too_many_columns",
-        params: { count: headers.length, limit: MAX_IMPORT_COLUMNS },
+        params: { count: widestRow(grid), limit: MAX_IMPORT_COLUMNS },
       },
     };
   }

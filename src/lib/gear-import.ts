@@ -6,6 +6,7 @@ import {
   MAX_IMPORT_COLUMNS,
   MAX_IMPORT_ROWS,
   parseCsv,
+  widestRow,
 } from "./import";
 import { normalizeImportKey } from "./import-key";
 
@@ -127,7 +128,7 @@ export function prepareGearImport(csv: string): PreparedGearImport {
     return { rows: [], unmappedColumns: [], fatal: "file_too_large" };
   const grid = parseCsv(csv).filter((row) => row.some((cell) => cell.trim() !== ""));
   if (grid.length === 0) return { rows: [], unmappedColumns: [], fatal: "file_empty" };
-  if (grid[0].length > MAX_IMPORT_COLUMNS)
+  if (widestRow(grid) > MAX_IMPORT_COLUMNS)
     return { rows: [], unmappedColumns: [], fatal: "too_many_columns" };
   if (grid.length - 1 > MAX_GEAR_IMPORT_ROWS)
     return { rows: [], unmappedColumns: [], fatal: "too_many_rows" };

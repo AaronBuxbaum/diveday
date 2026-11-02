@@ -23,9 +23,10 @@ coercion and no worker. Kept outside the library, in our code:
 - the UTF-8 BOM strip, and CRLF and lone CR rewritten to LF before parsing (Papa reads one line
   ending per file, and a file saved by two tools mixes them);
 - dropping the empty row after a final line break;
-- the 8 MiB byte check, now before parsing in every caller, and the row, column and cell bounds;
+- the 8 MiB byte check, now before parsing in every caller; row and cell bounds; columns
+  on every row, not just the header;
 - blank-row filtering, the formula unguard (which now also accepts `'` before LF, since a guarded
-  leading CR reads as LF), and every tenant and safety rule.
+  leading CR reads as LF), every tenant and safety rule.
 
 Malformed quoting is read leniently and never refused, so the preview shows exactly what the
 server imports. `src/lib/import-csv.test.ts` pins the policy, including where it differs from the old
@@ -46,7 +47,7 @@ Provenance: npm `papaparse`, MIT, maintained by Matt Holt (`mholt`) and Sergi Al
 
 ## Consequences
 
-One maintained reader serves all four importers, and a quote in the middle of a name now survives.
+One maintained reader serves all four importers; a mid-name quote now survives.
 The import page's client bundle grows by Papa's ~7 KB gzip. A Papa upgrade can change malformed
 input reading; the pinned tests catch it. To leave, restore a reader behind the same `parseCsv`
 signature; no caller sees the library.
