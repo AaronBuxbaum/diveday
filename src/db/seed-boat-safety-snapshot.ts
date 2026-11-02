@@ -11,12 +11,10 @@ import { DEMO_SHOP_TIMEZONE } from "./seed-clock";
  * kit was kept for this departure" and the section was only ever reviewed empty.
  *
  * One row, the shape `captureDepartureBoatSafety` writes at the last
- * departure-checkpoint tap before the lines come off: the certificate's limits,
- * the paper dates the boat row holds (none in the demo), the radio identity the emergency card printed, and no
- * notices (a blue-mantis boat is never seeded in a failure state, and a paper
- * inside its horizon would raise an errand on Today the live boat does not
- * carry). The certified limits follow the hull's capacity, as the row's
- * description says (passengers plus a three-person crew).
+ * departure-checkpoint tap before the lines come off: the certificate's
+ * limits, paper dates and radio identity copied from the boat row (`seed.ts` gives
+ * Mantis II all of them, dated past every paper's horizon so no errand fires on Today), and no
+ * notices (a blue-mantis boat is never seeded in a failure state).
  */
 export async function seedDepartureBoatSafetySnapshot(
   db: DbExecutor,
@@ -28,7 +26,12 @@ export async function seedDepartureBoatSafetySnapshot(
     .select({
       id: boats.id,
       name: boats.name,
-      capacity: boats.capacity,
+      certifiedPassengers: boats.certifiedPassengers,
+      certifiedTotalPersons: boats.certifiedTotalPersons,
+      coiExpiresOn: boats.coiExpiresOn,
+      inspectionDueOn: boats.inspectionDueOn,
+      registrationExpiresOn: boats.registrationExpiresOn,
+      insuranceExpiresOn: boats.insuranceExpiresOn,
       callSign: boats.callSign,
       mmsi: boats.mmsi,
       workingChannel: boats.workingChannel,
@@ -47,15 +50,12 @@ export async function seedDepartureBoatSafetySnapshot(
     judgedOn,
     departureStartsAt: trip.startsAt,
     papers: {
-      certifiedPassengers: boat.capacity,
-      certifiedTotalPersons: boat.capacity + 3,
-      // The hull's own row carries no paper dates (the demo seeds none, see `seed.ts`), so the
-      // snapshot invents none: a log dated on papers the boat does not hold would disagree
-      // with the boat it names.
-      coiExpiresOn: null,
-      inspectionDueOn: null,
-      registrationExpiresOn: null,
-      insuranceExpiresOn: null,
+      certifiedPassengers: boat.certifiedPassengers,
+      certifiedTotalPersons: boat.certifiedTotalPersons,
+      coiExpiresOn: boat.coiExpiresOn,
+      inspectionDueOn: boat.inspectionDueOn,
+      registrationExpiresOn: boat.registrationExpiresOn,
+      insuranceExpiresOn: boat.insuranceExpiresOn,
     },
     radio: { callSign: boat.callSign, mmsi: boat.mmsi, workingChannel: boat.workingChannel },
     notices: [],
