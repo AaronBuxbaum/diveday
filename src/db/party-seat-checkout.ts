@@ -1,7 +1,8 @@
-import { and, eq, isNull, ne } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { type StartCheckoutOutcome, startBookingCheckout } from "./checkouts";
 import type { AppDb } from "./client";
 import { bookings } from "./schema";
+import { seatNotCancelled } from "./trips-queries";
 
 type StartCheckoutInput = Parameters<typeof startBookingCheckout>[1];
 type StartCheckoutProvider = Parameters<typeof startBookingCheckout>[2];
@@ -33,7 +34,7 @@ export async function startPartySeatCheckout(
         eq(bookings.id, leadBookingId),
         eq(bookings.shopId, input.shopId),
         eq(bookings.tripId, input.tripId),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
         isNull(bookings.partyLeadBookingId),
       ),
     )
@@ -48,7 +49,7 @@ export async function startPartySeatCheckout(
         eq(bookings.shopId, input.shopId),
         eq(bookings.tripId, input.tripId),
         eq(bookings.partyLeadBookingId, leadBookingId),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
         isNull(bookings.claimedAt),
       ),
     )

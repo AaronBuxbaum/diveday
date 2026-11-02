@@ -37,7 +37,7 @@ import { listRollCallGaps } from "./today";
 import { latestTripStagesByTrip } from "./trip-stages";
 import { liveTrip, notRehearsal } from "./trips-live";
 import { getTripPrep, type TripPrepShop } from "./trips-prep";
-import { listShopDayDepartures } from "./trips-queries";
+import { listShopDayDepartures, seatNotCancelled } from "./trips-queries";
 
 /**
  * The db half of the day's closing state (the shop home's evening, ADR
@@ -148,13 +148,7 @@ async function dayTrips(
     db
       .select({ tripId: bookings.tripId, bookingId: bookings.id, status: bookings.status })
       .from(bookings)
-      .where(
-        and(
-          eq(bookings.shopId, shopId),
-          inArray(bookings.tripId, tripIds),
-          ne(bookings.status, "cancelled"),
-        ),
-      ),
+      .where(and(eq(bookings.shopId, shopId), inArray(bookings.tripId, tripIds), seatNotCancelled)),
     // **The crew's own word on who got on the boat**, which outranks the desk's
     // (`seatSailed`). Through the manifest's departure-pinned reader rather
     // than a second scan of `roll_call_events` here: it already applies the

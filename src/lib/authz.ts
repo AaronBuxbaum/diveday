@@ -222,11 +222,10 @@ export function canManageWaiverTemplates(roles: readonly Role[] | undefined): bo
  * "changes the shop, not the day" surface (H-20260724-staff-role-reach, ADR
  * 20260724-role-authorization).
  *
- * **`/settings/calendar` is deliberately outside this gate.** A staff calendar
- * subscription is a personal feed of that staffer's own shifts, not shop
- * policy — it is filed under Settings by URL only — so it keeps its own door
- * (`calendarFeed` in the destination registry) and stays open to every staff
- * role.
+ * **The reader's own pages are not under it.** A staff calendar subscription
+ * is a personal feed of that staffer's own shifts, not shop policy, so it
+ * lives at `/me/calendar` (`calendarFeed` in the destination registry) beside
+ * the reader's sign-in and email, open to every staff role (issue #2739).
  */
 export function canManageShopSettings(roles: readonly Role[] | undefined): boolean {
   return isOwnerOrManager(roles);

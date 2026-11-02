@@ -37,7 +37,7 @@ for (const scheme of ["light", "dark"] as const) {
        * The staff command palette and the app's not-found backstop — surfaces
        * that are *states*, not routes, and so had no baseline at all.
        *
-       * The palette is hosted on `/settings/calendar` rather than Today. It is
+       * The palette is hosted on `/me/calendar` rather than Today. It is
        * `position: fixed`, and a `fullPage` shot renders a fixed element once,
        * at the top, above however much page happens to sit underneath — so
        * hosting it on the tall dashboard would bank a baseline that re-diffs
@@ -57,7 +57,7 @@ for (const scheme of ["light", "dark"] as const) {
       // request, nothing debounced, nothing that could land differently
       // between runs.
       test(`the command palette renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/settings/calendar");
+        await page.goto("/shop/blue-mantis/me/calendar");
         await page.getByRole("button", { name: "Create subscription link" }).first().waitFor();
         // The keypress is lost if it lands before the palette's listener is
         // attached; the fixture's `goto` waits for its trigger to say it is
@@ -78,7 +78,7 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the command palette with results renders true to the design (${scheme})`, async ({
         page,
       }) => {
-        await page.goto("/shop/blue-mantis/settings/calendar");
+        await page.goto("/shop/blue-mantis/me/calendar");
         await page.getByRole("button", { name: "Create subscription link" }).first().waitFor();
         // The keypress is lost if it lands before the palette's listener is
         // attached; the fixture's `goto` waits for its trigger to say it is
@@ -96,7 +96,7 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the command palette with a failed search renders true to the design (${scheme})`, async ({
         page,
       }) => {
-        await page.goto("/shop/blue-mantis/settings/calendar");
+        await page.goto("/shop/blue-mantis/me/calendar");
         await page.route("**/api/search?q=zz-unavailable", (route) =>
           route.fulfill({ status: 503, body: "" }),
         );

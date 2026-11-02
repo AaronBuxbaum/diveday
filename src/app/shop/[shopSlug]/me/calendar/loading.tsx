@@ -1,11 +1,11 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
 import { sectionCardClass } from "@/components/ui/card";
-import { settingsPaneClass } from "../_components/settings-pane";
+import { staffPageClass } from "../../_components/staff-page";
 
 /** Panel-shaped skeleton for the staff calendar-feed settings. */
 export default function CalendarSettingsLoading() {
   return (
-    <main className={settingsPaneClass()}>
+    <main className={staffPageClass("reading")}>
       <div className="animate-pulse">
         <ShopPageHeaderSkeleton titleWidth="w-56" description={false} />
         {/* Two feed panels are a list of like cards, not a run of sections, so

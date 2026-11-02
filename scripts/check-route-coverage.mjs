@@ -598,7 +598,7 @@ export function planLedgerWrite(world) {
     if (entry.exempt !== undefined) {
       // **The same condition the audit banks on, which is `&&`, not `||`**
       // (issue #1362): a route exempt from exactly one half keeps the paragraph
-      // explaining why — /shop/[shopSlug]/settings/security has an e2e spec and
+      // explaining why — /shop/[shopSlug]/me/security has an e2e spec and
       // an argued reason for having no capture.
       const coveredE2e = seen.e2e.size > 0 || entry.e2e.some((spec) => specs.has(spec));
       const coveredVisual = seen.visual.size > 0 || entry.visual.some((name) => captures.has(name));

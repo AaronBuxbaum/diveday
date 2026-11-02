@@ -8,7 +8,6 @@
     "turnedAway": "{count, plural, one {# persona no pudo embarcar} other {# personas no pudieron embarcar}}"
   },
   "row": {
-    "arrived": "Registrado",
     "runningLate": "Llega tarde, avisó a las {time}"
   },
   "noShow": {

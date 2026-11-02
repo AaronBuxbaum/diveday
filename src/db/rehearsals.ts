@@ -21,6 +21,7 @@ import {
   waiverRecords,
 } from "./schema";
 import { liveTrip } from "./trips-live";
+import { seatNotCancelled } from "./trips-queries";
 
 /**
  * **Rehearsal departures** (ADR 20261012-rehearsal-departures; glossary
@@ -234,13 +235,7 @@ async function clearShopRehearsals(
   const seats = await tx
     .update(bookings)
     .set({ status: "cancelled" })
-    .where(
-      and(
-        eq(bookings.shopId, shopId),
-        inArray(bookings.tripId, tripIds),
-        ne(bookings.status, "cancelled"),
-      ),
-    )
+    .where(and(eq(bookings.shopId, shopId), inArray(bookings.tripId, tripIds), seatNotCancelled))
     .returning({ id: bookings.id });
   // A rehearsal seat spends no prepaid dive (`settlePackageCoverage`); this
   // gives back any one spent before that rule, or by a path that missed it.

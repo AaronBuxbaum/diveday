@@ -10,7 +10,8 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
-import { settingsPaneClass } from "../_components/settings-pane";
+import { shopPath } from "@/lib/staff-notices";
+import { staffPageClass } from "../../_components/staff-page";
 import { CalendarFeedPanel } from "./CalendarFeedPanel";
 import type { CalendarFeedCopy, FeedScopeView } from "./feed-panel-types";
 
@@ -36,8 +37,8 @@ export default async function CalendarSubscriptionsPage({
   params: Promise<{ shopSlug: string }>;
 }) {
   const { shopSlug } = await params;
-  // No `allow` gate, deliberately, and the one settings route without one: a
-  // staff calendar subscription is a personal feed, not shop policy.
+  // No `allow` gate, deliberately: a staff calendar subscription is a personal
+  // feed, not shop policy, which is why it lives under `/me` and not Settings.
   const { session, db, shop } = await requireShopSurface(shopSlug);
 
   const locale = await requestLocale(shop.defaultLocale);
@@ -111,10 +112,10 @@ export default async function CalendarSubscriptionsPage({
   });
 
   return (
-    <main className={settingsPaneClass()}>
+    <main className={staffPageClass("reading")}>
       <ShopPageHeader
-        eyebrow={t("settings.main.eyebrow")}
-        eyebrowHref={`/shop/${session.user.shopSlug}/settings`}
+        eyebrow={t("settings.security.title")}
+        eyebrowHref={shopPath(session.user.shopSlug, "me", "security")}
         title={t("calendar.title")}
       />
 

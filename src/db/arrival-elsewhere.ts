@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, inArray, isNull, ne } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, isNull } from "drizzle-orm";
 import { HOUR_MS } from "@/lib/clock";
 import { type CheckInQueueRow, hasArrivals, listCheckInQueue } from "./check-in";
 import type { AppDb, DbExecutor } from "./client";
@@ -6,6 +6,7 @@ import { personSearchMatch } from "./person-search";
 import { queryAll } from "./query-helpers";
 import { bookings, people, trips } from "./schema";
 import { liveTrip } from "./trips-live";
+import { seatNotCancelled } from "./trips-queries";
 
 /** How many people the fall-through names: a lookup, not a directory. */
 const ELSEWHERE_LIMIT = 3;
@@ -58,7 +59,7 @@ export async function arrivalElsewhere(
           bookings.personId,
           matched.map((person) => person.id),
         ),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
         liveTrip(),
         eq(trips.status, "scheduled"),
         // The palette's "next" reads the same hour back: a boat boarding now

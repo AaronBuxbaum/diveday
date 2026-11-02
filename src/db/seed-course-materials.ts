@@ -1,9 +1,10 @@
-import { and, asc, eq, ne } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import type { CourseLearningMaterial } from "@/lib/courses";
 import type { DbExecutor } from "./client";
 import { bookings, courses, people, trips } from "./schema";
 import { at } from "./seed-clock";
 import { liveTrip } from "./trips-live";
+import { seatNotCancelled } from "./trips-queries";
 
 /**
  * **The links a shop pastes into its course materials, and one student who
@@ -70,7 +71,7 @@ export async function seedCourseMaterials(
       and(
         eq(bookings.shopId, shopId),
         eq(trips.courseId, advanced.id),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
         eq(trips.status, "scheduled"),
         liveTrip(),
       ),

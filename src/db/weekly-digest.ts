@@ -1,17 +1,4 @@
-import {
-  and,
-  count,
-  desc,
-  eq,
-  gte,
-  inArray,
-  isNotNull,
-  isNull,
-  lt,
-  ne,
-  or,
-  sql,
-} from "drizzle-orm";
+import { and, count, desc, eq, gte, inArray, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
 import { isStaff, type Role } from "@/lib/authz";
 import { createBearerToken, hashBearerToken } from "@/lib/bearer-tokens";
 import { nowDate } from "@/lib/clock";
@@ -71,6 +58,7 @@ import {
 import { getTodayWork } from "./today";
 import { tripIdsNeverSentLastMinuteDeal, tripIdsSuitedToADeal } from "./trip-promos";
 import { liveTrip, notRehearsal } from "./trips-live";
+import { seatNotCancelled } from "./trips-queries";
 
 /**
  * **The Monday email's reads and its one send path** (market audit item 51).
@@ -178,7 +166,7 @@ async function countBookingsMade(
     .where(
       and(
         eq(bookings.shopId, shopId),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
         gte(bookings.createdAt, from),
         lt(bookings.createdAt, to),
       ),
@@ -600,7 +588,7 @@ export function digestSectionsWithLinks(
 
 /** Where a staffer changes their own answer. */
 export function weeklyDigestSettingsPath(shopSlug: string): string {
-  return shopPath(shopSlug, "settings", "email");
+  return shopPath(shopSlug, "me", "email");
 }
 
 function digestNotification(input: {

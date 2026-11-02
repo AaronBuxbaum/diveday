@@ -1,4 +1,4 @@
-import { and, asc, count, eq, gte, inArray, lt, ne, sql } from "drizzle-orm";
+import { and, asc, count, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import {
   type SafetyCrewMember,
@@ -22,6 +22,7 @@ import {
   trips,
 } from "./schema";
 import { liveTrip } from "./trips-live";
+import { seatNotCancelled } from "./trips-queries";
 
 /**
  * **The Safety tab's month, read from existing records** (ADR
@@ -101,11 +102,7 @@ export async function getSafetyMonth(
         .select({ tripId: bookings.tripId, bookingId: bookings.id })
         .from(bookings)
         .where(
-          and(
-            eq(bookings.shopId, shopId),
-            inArray(bookings.tripId, tripIds),
-            ne(bookings.status, "cancelled"),
-          ),
+          and(eq(bookings.shopId, shopId), inArray(bookings.tripId, tripIds), seatNotCancelled),
         ),
     () =>
       db
@@ -128,10 +125,7 @@ export async function getSafetyMonth(
         .from(rollCallEvents)
         // A seat cancelled after the boat left keeps its events; they must not
         // answer for a roster it is no longer on (as `listRollCallGaps` reads).
-        .innerJoin(
-          bookings,
-          and(eq(bookings.id, rollCallEvents.bookingId), ne(bookings.status, "cancelled")),
-        )
+        .innerJoin(bookings, and(eq(bookings.id, rollCallEvents.bookingId), seatNotCancelled))
         .where(and(eq(rollCallEvents.shopId, shopId), inArray(rollCallEvents.tripId, tripIds)))
         .orderBy(
           asc(rollCallEvents.occurredAt),

@@ -180,8 +180,8 @@ export default async function SettingsPage({
   // itself is owner/manager work (src/lib/authz.ts — canManageShopSettings),
   // checked against live roles. Bounced to Today with an explanatory notice
   // rather than teleporting silently, exactly like the export and import pages
-  // below it. `/settings/calendar` is deliberately outside this gate: a staff
-  // calendar subscription is a personal feed, not shop policy.
+  // below it. The reader's own pages (sign-in, calendar feed, email) are at
+  // `/me`, outside Settings altogether.
   const { session, db, shop } = await requireShopSurface(shopSlug, {
     allow: canPersonManageShopSettings,
     refusal: { notice: "settings-not-authorized" },

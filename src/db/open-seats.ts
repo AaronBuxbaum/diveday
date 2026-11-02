@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, inArray, lt, max, ne, notInArray, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lt, max, notInArray, sql } from "drizzle-orm";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import {
   departuresWithEmptySeats,
@@ -9,6 +9,7 @@ import type { AppDb } from "./client";
 import { bookings, trips } from "./schema";
 import { tripIdsNeverSentLastMinuteDeal } from "./trip-promos";
 import { liveTrip, notRehearsal } from "./trips-live";
+import { seatNotCancelled } from "./trips-queries";
 
 /**
  * **Why a sailed departure's seats went unsold** — the db half of the
@@ -68,11 +69,7 @@ export async function comparableDepartures(
     .from(trips)
     .leftJoin(
       bookings,
-      and(
-        eq(bookings.tripId, trips.id),
-        eq(bookings.shopId, shopId),
-        ne(bookings.status, "cancelled"),
-      ),
+      and(eq(bookings.tripId, trips.id), eq(bookings.shopId, shopId), seatNotCancelled),
     )
     .where(
       and(
@@ -150,13 +147,7 @@ export async function getTripOpenSeatsDebrief(
     db
       .select({ booked: sql<number>`count(*)::int`, lastBookingAt: max(bookings.createdAt) })
       .from(bookings)
-      .where(
-        and(
-          eq(bookings.shopId, shopId),
-          eq(bookings.tripId, trip.id),
-          ne(bookings.status, "cancelled"),
-        ),
-      ),
+      .where(and(eq(bookings.shopId, shopId), eq(bookings.tripId, trip.id), seatNotCancelled)),
     // **D47's second** — the deal that never went out, answered by the module
     // that owns last-minute deals rather than by a second query here.
     tripIdsNeverSentLastMinuteDeal(db, shopId, [trip.id]),
@@ -202,11 +193,7 @@ export async function getMonthDeparturesWithEmptySeats(
     .from(trips)
     .leftJoin(
       bookings,
-      and(
-        eq(bookings.tripId, trips.id),
-        eq(bookings.shopId, shopId),
-        ne(bookings.status, "cancelled"),
-      ),
+      and(eq(bookings.tripId, trips.id), eq(bookings.shopId, shopId), seatNotCancelled),
     )
     .where(
       and(

@@ -1,4 +1,4 @@
-import { and, eq, isNull, ne } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import type { DiverLocale } from "@/i18n/settings";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
@@ -8,6 +8,7 @@ import type { AppDb } from "./client";
 import { sendNotification } from "./notifications";
 import { bookings, people, shops, trips } from "./schema";
 import { liveTrip } from "./trips-live";
+import { seatNotCancelled } from "./trips-queries";
 
 /**
  * **Tell the holder of a seat that a claim link was tried with their address**
@@ -39,11 +40,7 @@ export async function tellSeatAlreadyHeld(
       .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, bookings.shopId)))
       .innerJoin(shops, eq(shops.id, bookings.shopId))
       .where(
-        and(
-          eq(bookings.id, input.bookingId),
-          eq(bookings.shopId, input.shopId),
-          ne(bookings.status, "cancelled"),
-        ),
+        and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId), seatNotCancelled),
       )
       .limit(1);
     if (!row?.person.email) return "skipped";
@@ -103,7 +100,7 @@ export async function heldSeatOnTrip(
         eq(bookings.tripId, input.tripId),
         eq(people.email, address),
         isNull(people.deletedAt),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
       ),
     )
     .limit(1);

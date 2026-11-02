@@ -1,8 +1,8 @@
 import type { Locator, Page } from "@playwright/test";
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 
-const CALENDAR_SETTINGS = "/shop/blue-mantis/settings/calendar";
-const calendarSettingsFor = (shopSlug: string) => `/shop/${shopSlug}/settings/calendar`;
+const CALENDAR_SETTINGS = "/shop/blue-mantis/me/calendar";
+const calendarSettingsFor = (shopSlug: string) => `/shop/${shopSlug}/me/calendar`;
 const MY_DEPARTURES = "My departures";
 
 /**

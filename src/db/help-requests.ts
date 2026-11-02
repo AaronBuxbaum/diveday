@@ -16,6 +16,7 @@ import {
   trips,
 } from "./schema";
 import { livePerson, liveTrip } from "./trips-live";
+import { seatNotCancelled } from "./trips-queries";
 
 export type HelpRequestKind = (typeof tripHelpRequests.kind.enumValues)[number];
 export type HelpRequestStatus = (typeof tripHelpRequests.status.enumValues)[number];
@@ -104,7 +105,7 @@ export async function getHelpRequestForBooking(
         eq(trips.shopId, shopId),
         liveTrip(),
         ne(tripHelpRequests.status, "withdrawn"),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
         eq(trips.status, "scheduled"),
         gt(trips.endsAt, now),
       ),
@@ -184,7 +185,7 @@ export async function listTodayHelpWork(
         eq(trips.shopId, shopId),
         liveTrip(),
         inArray(tripHelpRequests.status, [...activeStatuses, "handled"]),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
         eq(trips.status, "scheduled"),
         gt(trips.endsAt, now),
       ),
@@ -306,7 +307,7 @@ export async function saveHelpRequest(
           eq(trips.shopId, input.shopId),
           liveTrip(),
           eq(bookings.tripId, trips.id),
-          ne(bookings.status, "cancelled"),
+          seatNotCancelled,
           eq(trips.status, "scheduled"),
           gt(trips.endsAt, now),
         ),
@@ -483,7 +484,7 @@ export async function assignHelpRequestHelper(
           liveTrip(),
           eq(people.shopId, input.shopId),
           inArray(tripHelpRequests.status, [...activeStatuses]),
-          ne(bookings.status, "cancelled"),
+          seatNotCancelled,
           eq(trips.status, "scheduled"),
           gt(trips.endsAt, now),
         ),
@@ -554,7 +555,7 @@ export async function completeHelpRequest(
           eq(tripHelpRequests.helperPersonId, input.expectedHelperPersonId),
           eq(bookings.shopId, input.shopId),
           eq(bookings.tripId, tripHelpRequests.tripId),
-          ne(bookings.status, "cancelled"),
+          seatNotCancelled,
           eq(trips.shopId, input.shopId),
           liveTrip(),
           eq(trips.status, "scheduled"),
@@ -641,7 +642,7 @@ export async function undoHelpRequestCompletion(
           eq(tripHelpRequests.helperPersonId, input.expectedHelperPersonId),
           eq(bookings.shopId, input.shopId),
           eq(bookings.tripId, tripHelpRequests.tripId),
-          ne(bookings.status, "cancelled"),
+          seatNotCancelled,
           eq(trips.shopId, input.shopId),
           liveTrip(),
           eq(trips.status, "scheduled"),

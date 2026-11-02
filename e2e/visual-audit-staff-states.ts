@@ -244,7 +244,7 @@ globalThis.Date = new Proxy(__RealDate, {
         page,
         privateShop,
       }) => {
-        await page.goto(`/shop/${privateShop.slug}/settings/security`);
+        await page.goto(`/shop/${privateShop.slug}/me/security`);
         await page.getByRole("heading", { level: 1, name: "Account security" }).waitFor();
         await page.getByRole("button", { name: "Start setup" }).waitFor();
         await captureAudit(page, "settings-security", "light");
@@ -254,7 +254,7 @@ globalThis.Date = new Proxy(__RealDate, {
         privateShop,
       }) => {
         test.setTimeout(flowTimeout);
-        await page.goto(`/shop/${privateShop.slug}/settings/security`);
+        await page.goto(`/shop/${privateShop.slug}/me/security`);
         await page.getByRole("button", { name: "Start setup" }).click();
         await page.getByRole("textbox", { name: "Authenticator code" }).waitFor();
         await captureAudit(page, "settings-security-enrollment", "light");

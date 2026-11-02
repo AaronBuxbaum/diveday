@@ -1,6 +1,7 @@
-import { and, asc, eq, isNull, ne } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 import type { AppDb } from "./client";
 import { bookings, people } from "./schema";
+import { seatNotCancelled } from "./trips-queries";
 
 /**
  * Who is *on* a departure: booked divers and the contact addresses for the
@@ -21,7 +22,7 @@ export async function listTripDiverContacts(db: AppDb, shopId: string, tripId: s
       and(
         eq(bookings.shopId, shopId),
         eq(bookings.tripId, tripId),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
         isNull(people.deletedAt),
       ),
     );
@@ -130,7 +131,7 @@ export function tripRosterWhere(shopId: string, tripId: string) {
     // prints the matched person's email and phone, so a booking whose
     // person_id ever pointed across tenants must not carry them here.
     eq(people.shopId, shopId),
-    ne(bookings.status, "cancelled"),
+    seatNotCancelled,
   );
 }
 

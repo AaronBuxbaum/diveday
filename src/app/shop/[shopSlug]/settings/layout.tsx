@@ -34,15 +34,9 @@ export default function SettingsLayout({
   params: Promise<{ shopSlug: string }>;
 }) {
   return (
-    /* **Flex, not grid, and the reason is a reader rather than a taste.**
-       `/settings/calendar` is a staffer's own feed and takes no permission
-       gate, so an ordinary staffer reaches this frame while the map beside it
-       is drawn only for someone who may manage the shop. Under
-       `grid-cols-[264px_1fr]` that reader's pane was auto-placed into the
-       *first* track — 264px wide at desktop, on a page with a whole empty
-       column beside it. A flex row has no track to fall into: the rail is a
-       fixed-width sibling when it exists, and when it does not the pane simply
-       takes the width. */
+    // The rail is a fixed-width sibling of the pane (a flex row, so the pane
+    // takes the rest). Every reader who reaches a settings page may manage the
+    // shop: the reader's own account lives under `/me` (issue #2739).
     <div className="mx-auto w-full max-w-6xl lg:flex lg:gap-8 lg:px-6">
       <Suspense fallback={<SettingsRailSkeleton />}>
         <SettingsRailPanel params={params} />
@@ -53,26 +47,20 @@ export default function SettingsLayout({
 }
 
 /**
- * The rail's own reads, gathered where a `<Suspense>` boundary can hold them.
- *
- * `requireShopSurface` without an `allow` gate deliberately: this is the frame
- * around `/settings/calendar` too, which is a staffer's *personal* feed and
- * sits outside the hub's owner/manager gate on purpose. So the tenant assert
- * runs for everyone, and the map itself is drawn only for a reader who may
- * manage the shop. Hiding a row is convenience; every destination re-checks
- * its own permission server-side, and none of them lost that in the
- * decomposition.
+ * The rail's own reads, gathered where a `<Suspense>` boundary can hold them,
+ * and **the one gate for everything under `/settings`**: owner or manager, read
+ * live (`canPersonManageShopSettings`), bounced to Today with the same notice
+ * the hub gives. Settings means the shop and nothing else; the reader's own
+ * sign-in, calendar feed and email live at `/me`, so there is no ungated
+ * exception to explain. Each destination still re-checks its own, narrower
+ * permission server-side — hiding a row is convenience.
  */
 async function SettingsRailPanel({ params }: { params: Promise<{ shopSlug: string }> }) {
   const { shopSlug } = await params;
-  const { session, db, shop } = await requireShopSurface(shopSlug);
-  const canSettings = await canPersonManageShopSettings(
-    db,
-    session.user.shopId,
-    session.user.personId,
-  );
-  if (!canSettings) return null;
-
+  const { session, db, shop } = await requireShopSurface(shopSlug, {
+    allow: canPersonManageShopSettings,
+    refusal: { notice: "settings-not-authorized" },
+  });
   const canPayments = await canPersonManagePaymentSettings(
     db,
     session.user.shopId,

@@ -28,7 +28,7 @@ describe("the Monday email preview", () => {
     } as never);
 
     const response = await GET(
-      new Request("https://attacker.example/shop/reef-life/settings/email/preview"),
+      new Request("https://attacker.example/shop/reef-life/me/email/preview"),
       { params: Promise.resolve({ shopSlug: "reef-life" }) },
     );
 

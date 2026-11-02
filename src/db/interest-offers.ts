@@ -6,7 +6,6 @@ import {
   inArray,
   isNotNull,
   isNull,
-  ne,
   not,
   notExists,
   notInArray,
@@ -61,7 +60,7 @@ import { getShopById } from "./shops";
 import { canAcceptPayments, getShopCurrency, getShopStripeAccount } from "./stripe-accounts";
 import { promotionProviderFromEnvironment } from "./stripe-providers";
 import { livePerson, liveTrip } from "./trips-live";
-import { heldSeatCounts, sellableCapacity } from "./trips-queries";
+import { heldSeatCounts, seatNotCancelled, sellableCapacity } from "./trips-queries";
 import { getTripWithBooked } from "./trips-record";
 
 /**
@@ -458,13 +457,7 @@ async function seatedPersonIds(db: AppDb, shopId: string, tripId: string): Promi
   const rows = await db
     .select({ personId: bookings.personId })
     .from(bookings)
-    .where(
-      and(
-        eq(bookings.shopId, shopId),
-        eq(bookings.tripId, tripId),
-        ne(bookings.status, "cancelled"),
-      ),
-    );
+    .where(and(eq(bookings.shopId, shopId), eq(bookings.tripId, tripId), seatNotCancelled));
   return rows.map((row) => row.personId);
 }
 

@@ -71,7 +71,6 @@ export type ScheduleFiltersCopy = {
  * touched. Same URL, same server render, client transition.
  */
 export function ScheduleFilters({
-  embed,
   month,
   lens,
   tripTypeFilter,
@@ -83,7 +82,6 @@ export function ScheduleFilters({
   monthRail = null,
   activeLensLabel = null,
 }: {
-  embed: boolean;
   month: string | null;
   /**
    * The lens the reader is looking through, or null. Carried as a hidden input
@@ -136,7 +134,6 @@ export function ScheduleFilters({
 
   return (
     <QueryForm ref={formRef} className="mb-6">
-      {embed ? <input type="hidden" name="embed" value="1" /> : null}
       {month ? <input type="hidden" name="month" value={month} /> : null}
       {lens ? <input type="hidden" name="lens" value={lens} /> : null}
       {/* **One filter row** (visual review 2026-10-24, B18): the shop's

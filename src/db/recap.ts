@@ -75,7 +75,7 @@ import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { getLatestTipForBooking, refreshTipFromStripe } from "./tips";
 import { tripsWithSomebodyMissing } from "./today";
 import { listTripSightings } from "./trip-sightings";
-import { getTripWithBooked, listTripDives } from "./trips";
+import { getTripWithBooked, listTripDives, seatNotCancelled } from "./trips";
 import { tripCrewByTrip } from "./trips-crew";
 import { liveTrip, notRehearsal } from "./trips-live";
 import { whatsAppProvidersForShops } from "./whatsapp-accounts";
@@ -1459,7 +1459,7 @@ export async function hasSentTripRecap(db: DbExecutor, shopId: string, tripId: s
       and(
         eq(bookings.shopId, shopId),
         eq(bookings.tripId, tripId),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
         ne(bookings.status, "no_show"),
         // Never sent one while held (#2082), so not owed one either.
         isNull(bookings.identityUnconfirmedAt),
@@ -1670,7 +1670,7 @@ async function sendRecaps(
     .innerJoin(shops, eq(shops.id, bookings.shopId))
     .where(
       and(
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
         // A no-show never dived — sending "here's what you dived" (and the
         // tip/review asks that ride the same page) would be dishonest
         // (Codex finding).

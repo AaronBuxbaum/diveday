@@ -16,12 +16,6 @@ import {
   listDiverMergeCandidates,
   listDiverMergeDuplicateIds,
   mergeDiverRecords,
-  PERSON_COLUMNS_DELETED_ON_MERGE,
-  PERSON_COLUMNS_DELIBERATELY_UNMOVED,
-  PERSON_REFERENCES_OUTSIDE_THE_NAMING_CONVENTION,
-  PERSON_TABLES_DELIBERATELY_UNMOVED,
-  STAFF_HISTORY_TABLES,
-  STAFF_PERSON_ONLY_TABLES,
 } from "./diver-merge";
 import { getIncidentExport } from "./incident-export";
 import { survivingPersonNames } from "./people";
@@ -681,86 +675,13 @@ describe("diver record merge, a seat that is already over", () => {
 });
 
 /**
- * The merge moves history table by table from a hard-coded list, so a table
- * added tomorrow with a `person_id` is silently forgotten: no error, no failing
- * test, just a row left pointing at a diver the shop just removed. That is how
- * `gear_reservations` was missed. This holds the answers exhaustive against the
- * live schema, which is the only place the truth is.
+ * The merge moves history table by table, so a table added tomorrow with a
+ * `person_id` is silently forgotten: no error, no failing test, just a row left
+ * pointing at a diver the shop just removed. That is how `gear_reservations` was
+ * missed. `person-columns.test.ts` holds the registry exhaustive against the live
+ * schema; what is left here is what the merge itself derives from it.
  */
-describe("every person_id column in the schema has a merge answer", () => {
-  it("classifies each one as moved, refused, or deliberately left alone", async () => {
-    const { db } = ctx;
-    const result = await db.execute(sql`
-      select table_name
-      from information_schema.columns
-      where table_schema = 'public' and column_name = 'person_id'
-      order by table_name
-    `);
-    const inSchema = result.rows.map((row) => String((row as { table_name: string }).table_name));
-    expect(inSchema.length).toBeGreaterThan(20);
-
-    const classified = new Set<string>([
-      ...DIVER_HISTORY_TABLES,
-      ...STAFF_HISTORY_TABLES,
-      ...STAFF_PERSON_ONLY_TABLES,
-      ...Object.keys(PERSON_TABLES_DELIBERATELY_UNMOVED),
-    ]);
-    expect(inSchema.filter((table) => !classified.has(table))).toEqual([]);
-    // And nothing is classified that the schema no longer has.
-    expect([...classified].filter((table) => !inSchema.includes(table)).sort()).toEqual([]);
-  });
-
-  /**
-   * The two cases above find a person column by its *name*. A foreign key to
-   * `people` under any other name (`guardian_id`, `instructor_id`, a column a
-   * future table calls `diver_id`) would slip past both, so this one asks the
-   * catalog for the constraints themselves: every column that references
-   * `people` must have a merge answer, whatever it is called.
-   */
-  it("classifies every foreign key that references people, whatever its column is called", async () => {
-    const { db } = ctx;
-    const result = await db.execute(sql`
-      select cl.relname as table_name, att.attname as column_name
-      from pg_constraint con
-      join pg_class cl on cl.oid = con.conrelid
-      join pg_class ref on ref.oid = con.confrelid
-      join pg_namespace ns on ns.oid = cl.relnamespace
-      cross join lateral unnest(con.conkey) as k(attnum)
-      join pg_attribute att on att.attrelid = con.conrelid and att.attnum = k.attnum
-      where con.contype = 'f' and ref.relname = 'people' and ns.nspname = 'public'
-      order by 1, 2
-    `);
-    const foreignKeys = result.rows.map((row) => {
-      const { table_name, column_name } = row as { table_name: string; column_name: string };
-      return { table: table_name, column: column_name };
-    });
-    expect(foreignKeys.length).toBeGreaterThan(20);
-
-    const bareTables = new Set<string>([
-      ...DIVER_HISTORY_TABLES,
-      ...STAFF_HISTORY_TABLES,
-      ...STAFF_PERSON_ONLY_TABLES,
-      ...Object.keys(PERSON_TABLES_DELIBERATELY_UNMOVED),
-    ]);
-    const unanswered = foreignKeys
-      .filter(({ table, column }) =>
-        column === "person_id"
-          ? !bareTables.has(table)
-          : !(`${table}.${column}` in PERSON_COLUMNS_DELIBERATELY_UNMOVED) &&
-            !(`${table}.${column}` in PERSON_COLUMNS_DELETED_ON_MERGE) &&
-            !(`${table}.${column}` in PERSON_REFERENCES_OUTSIDE_THE_NAMING_CONVENTION),
-      )
-      .map(({ table, column }) => `${table}.${column}`);
-    expect(unanswered).toEqual([]);
-    // And the outside-the-convention list names only references that exist.
-    const present = new Set(foreignKeys.map(({ table, column }) => `${table}.${column}`));
-    expect(
-      Object.keys(PERSON_REFERENCES_OUTSIDE_THE_NAMING_CONVENTION).filter(
-        (pair) => !present.has(pair),
-      ),
-    ).toEqual([]);
-  });
-
+describe("what the merge derives from the person-column registry", () => {
   /**
    * The preview's counts are the whole of what moves only if every moved
    * table is counted, once. A table added to the moved list and forgotten here

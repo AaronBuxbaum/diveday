@@ -11,7 +11,7 @@ import type { AppDb } from "./client";
 import { tripRequirementSummaries } from "./readiness";
 import { bookings, trips as tripTable } from "./schema";
 import { getTripLens } from "./trip-lenses";
-import { pagedUpcomingTripsWithCounts } from "./trips";
+import { pagedUpcomingTripsWithCounts, seatNotCancelled } from "./trips";
 import { liveTrip } from "./trips-live";
 
 /** A departure this diver already holds a seat on, soonest first. */
@@ -39,7 +39,7 @@ export async function bookedDepartures(
       and(
         eq(bookings.shopId, input.shopId),
         eq(bookings.personId, input.personId),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
         // A held seat matched this person on a guess (glossary **Held seat**):
         // it is neither announced to them nor allowed to suppress their offer.
         isNull(bookings.identityUnconfirmedAt),

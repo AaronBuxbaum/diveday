@@ -1,4 +1,4 @@
-import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
+import type { Copy } from "./copy";
 import type { ReadinessBlocker } from "./readiness";
 import { type BlockerDestinationContext, blockerDestination } from "./today";
 
@@ -24,7 +24,7 @@ import { type BlockerDestinationContext, blockerDestination } from "./today";
  * "Open roster") rather than pretending to act.
  */
 export type BlockerFix = {
-  label: string;
+  label: Copy;
   href: string;
   sendsWaiver: boolean;
   bookingId: string;
@@ -39,15 +39,14 @@ export type BlockerFix = {
  * and what it says, so the counter and the Today queue cannot drift apart about
  * a diver they both show.
  *
- * `t` defaults to English so every existing call site keeps working unchanged;
- * a locale-aware caller passes its own.
+ * The label is a `Copy`, not a sentence: the caller that renders it owns the
+ * locale (`resolveCopy`), so nothing here defaults to English.
  */
 export function blockerFixFor(
   blockers: readonly ReadinessBlocker[],
   ctx: BlockerDestinationContext,
-  t: StaffTranslator = staffTranslator("en-US"),
 ): BlockerFix | null {
-  const destination = blockerDestination(blockers, ctx, t);
+  const destination = blockerDestination(blockers, ctx);
   if (!destination) return null;
   return {
     label: destination.label,

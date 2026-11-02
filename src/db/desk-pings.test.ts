@@ -126,7 +126,7 @@ describe("pingDeskAfterHours", () => {
     if (first?.kind !== "desk_after_hours") throw new Error("wrong kind");
     expect(first.waiting).toBe(1);
     expect(first.inboxUrl).toBe(`${ORIGIN}/shop/${shop.slug}/inbox`);
-    expect(first.settingsUrl).toBe(`${ORIGIN}/shop/${shop.slug}/settings/email`);
+    expect(first.settingsUrl).toBe(`${ORIGIN}/shop/${shop.slug}/me/email`);
     // Nothing of the message rides along: not its words, subject or sender.
     const payload = JSON.stringify(sent);
     expect(payload).not.toContain("night dive");
