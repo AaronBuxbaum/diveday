@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, gte, inArray, isNull, lt, ne } from "drizzle-orm";
+import { and, asc, desc, eq, gt, gte, inArray, isNull, lt } from "drizzle-orm";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { rollCallCheckpoints } from "@/lib/roll-call";
 import { shopDayBounds, utcToWallTime } from "@/lib/zoned";
@@ -36,6 +36,7 @@ import { HISTORY_DIVER_NAMES } from "./seed-history";
 import { freeHull } from "./seed-hulls";
 import { DEMO_WEEKLY_RUN_TITLE } from "./seed-weekly-run";
 import { liveTrip } from "./trips-live";
+import { seatNotCancelled } from "./trips-queries";
 
 /**
  * **What a booth visitor is shown in five minutes** (market sheet 2026-10-22,
@@ -151,7 +152,7 @@ async function busy(
       and(
         eq(bookings.shopId, shopId),
         eq(bookings.personId, personId),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
         liveTrip(),
         lt(trips.startsAt, window.endsAt),
         gt(trips.endsAt, window.startsAt),
@@ -183,7 +184,7 @@ async function seatsTaken(db: DbExecutor, tripId: string): Promise<number> {
   const rows = await db
     .select({ id: bookings.id })
     .from(bookings)
-    .where(and(eq(bookings.tripId, tripId), ne(bookings.status, "cancelled")));
+    .where(and(eq(bookings.tripId, tripId), seatNotCancelled));
   return rows.length;
 }
 
@@ -519,7 +520,7 @@ async function seedWeatherCall(
         .where(
           and(
             eq(bookings.shopId, shopId),
-            ne(bookings.status, "cancelled"),
+            seatNotCancelled,
             gte(bookings.createdAt, calledAt),
             lt(bookings.createdAt, new Date(calledAt.getTime() + 30 * DAY_MS)),
           ),
@@ -869,7 +870,7 @@ export async function fillWeeklyRun(db: DbExecutor, shopId: string): Promise<voi
       await db
         .select({ personId: bookings.personId })
         .from(bookings)
-        .where(and(eq(bookings.tripId, run.id), ne(bookings.status, "cancelled")))
+        .where(and(eq(bookings.tripId, run.id), seatNotCancelled))
     ).map((row) => row.personId),
   );
 

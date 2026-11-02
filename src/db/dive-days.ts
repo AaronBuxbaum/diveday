@@ -1,6 +1,7 @@
 import { and, eq, isNull, ne, or, type SQL, sql } from "drizzle-orm";
 import { bookings, executedDives, trips } from "./schema";
 import { liveTrip } from "./trips-live";
+import { seatNotCancelled } from "./trips-queries";
 
 /**
  * **"Did this person dive with us that day"**, asked of one booking on its
@@ -46,7 +47,7 @@ export function seatCanBeDiveDay(): SQL {
  */
 export function deskCountsDiveDay(): SQL {
   return and(
-    ne(bookings.status, "cancelled"),
+    seatNotCancelled,
     or(
       eq(trips.status, "scheduled"),
       sql`exists (select 1 from ${executedDives} where ${executedDives.tripId} = ${trips.id} and ${executedDives.shopId} = ${trips.shopId} and ${executedDives.deletedAt} is null)`,

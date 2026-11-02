@@ -87,6 +87,7 @@ import {
 } from "./schema";
 import { shopHasFeatureOn } from "./shops";
 import { livePerson, liveTrip } from "./trips-live";
+import { seatNotCancelled } from "./trips-queries";
 
 const RETRY_QUEUE_LIMIT = 100;
 
@@ -2118,13 +2119,7 @@ async function sendStoredBookingConfirmation(
           eq(bookingPayments.shopId, bookings.shopId),
         ),
       )
-      .where(
-        and(
-          eq(bookings.id, bookingId),
-          eq(bookings.shopId, shopId),
-          ne(bookings.status, "cancelled"),
-        ),
-      )
+      .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId), seatNotCancelled))
       .limit(1);
 
   // Establish the identity observed by the caller. The fenced read below
@@ -2439,7 +2434,7 @@ export async function listNotificationDeliveryIssues(
           isNull(notificationDeliveries.sendErrorCode),
           ne(notificationDeliveries.sendErrorCode, REHEARSAL_HELD_DELIVERY.errorCode),
         ),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
         window.from ? gte(trips.startsAt, window.from) : undefined,
         window.until ? lte(trips.startsAt, window.until) : undefined,
       ),

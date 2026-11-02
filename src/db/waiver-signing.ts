@@ -2,6 +2,7 @@ import { and, eq, ne } from "drizzle-orm";
 import type { DbExecutor } from "./client";
 import { bookings, people, trips } from "./schema";
 import { liveTrip } from "./trips-live";
+import { seatNotCancelled } from "./trips-queries";
 
 /**
  * The three reads the waiver signing page (`src/app/(token)/waivers/[token]`) makes
@@ -47,7 +48,7 @@ export async function getBookingTripId(
       and(
         eq(bookings.id, bookingId),
         eq(bookings.shopId, shopId),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
         eq(trips.shopId, shopId),
         ne(trips.status, "cancelled"),
         liveTrip(),
@@ -86,7 +87,7 @@ export async function getWaiverTripHeader(db: DbExecutor, shopId: string, bookin
       and(
         eq(bookings.id, bookingId),
         eq(bookings.shopId, shopId),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
         eq(trips.shopId, shopId),
         ne(trips.status, "cancelled"),
         liveTrip(),

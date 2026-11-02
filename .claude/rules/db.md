@@ -61,6 +61,12 @@ barrels, bookings, seating, retention, integrations). What they do not say:
 - **A db test runs on a real database**: mock the framework edge (`next/*`, the session, provider
   HTTP via `src/test/fakes.ts`), never `@/db/*`; a lock or race guard gets a `*.postgres.test.ts`
   ([testing.md](../../docs/engineering/testing.md#what-each-layer-is-for)).
+- **A column that references `people` gets one row in `src/db/person-columns.ts`**: its kind and
+  what a merge does with it; `person-columns.test.ts` fails with the column's name until it has one
+  (issue #2724). **A person is minted only by `createPerson`** (`src/db/people.ts`), which writes
+  `people.origin` and the roles: person-door guard (`scripts/check-person-door.mjs`, issue #2726).
+  **A reader of `bookings.status` says `seatHeld` or `seatNotCancelled`**, never a hand-typed
+  `ne(..., "cancelled")`: seat-status guard (`scripts/check-seat-status.mjs`, issue #2758).
 - **Tenant isolation**: every domain table carries `shop_id` and every query filters by the
   session's shop; personal or medical data, export/import and token flows get a
   `security-reviewer` review.

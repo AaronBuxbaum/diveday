@@ -4,7 +4,7 @@
  * paid and who marked it, and what the seat still owes — the figure the
  * amount field opens holding, so taking the usual fare is one tap.
  */
-import { and, asc, eq, ne, or } from "drizzle-orm";
+import { and, asc, eq, or } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import {
   heldAfterMark,
@@ -17,6 +17,7 @@ import { getBookingPayment, setBookingPayment } from "./payments";
 import { bookingPayments, bookings, courses, people, shops, trips } from "./schema";
 import { seatBalanceOwedCentsFromJoinedRow } from "./seat-balance";
 import { recordShopActivityWithin } from "./shop-activity";
+import { seatNotCancelled } from "./trips-queries";
 import { tripRosterOrder, tripRosterWhere } from "./trips-roster";
 
 export type PaymentMarkFacts = {
@@ -187,7 +188,7 @@ async function readPartySplit(
       and(
         eq(bookings.shopId, input.shopId),
         eq(bookings.tripId, input.tripId),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
         or(
           eq(bookings.id, input.leadBookingId),
           eq(bookings.partyLeadBookingId, input.leadBookingId),

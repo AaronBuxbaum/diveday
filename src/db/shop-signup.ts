@@ -8,9 +8,8 @@ import { pricingConfig } from "@/lib/pricing-flags";
 import { shopNameNeedsReview } from "@/lib/shop-name-review";
 import { DEFAULT_WAIVER_BODY, DEFAULT_WAIVER_TITLE } from "@/lib/waivers";
 import type { AppDb } from "./client";
+import { createPerson } from "./people";
 import {
-  people,
-  personRoles,
   preDepartureChecklistItems,
   setupRequests,
   shopSubscriptions,
@@ -144,22 +143,16 @@ export async function createSignedUpShop(
         });
       }
 
-      const [person] = await tx
-        .insert(people)
-        .values({
-          shopId: shop.id,
-          fullName: signup.ownerName,
-          email,
-          // No placeholder emergency contact: a literal "On file" reads as a real
-          // contact on the manifest and hides the gap. Left null until captured.
-        })
-        .returning({ id: people.id });
-      if (!person) throw new Error("Failed to create owner person");
-
-      await tx.insert(personRoles).values([
-        { personId: person.id, role: "owner" },
-        { personId: person.id, role: "manager" },
-      ]);
+      // No placeholder emergency contact: a literal "On file" reads as a real
+      // contact on the manifest and hides the gap. Left null until captured.
+      const person = await createPerson(tx, {
+        shopId: shop.id,
+        fullName: signup.ownerName,
+        email,
+        phone: null,
+        origin: "onboard",
+        roles: ["owner", "manager"],
+      });
 
       const [account] = await tx
         .insert(userAccounts)

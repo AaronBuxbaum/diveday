@@ -887,6 +887,30 @@ export const personRole = pgEnum("person_role", [
   "diver",
 ]);
 
+/**
+ * **How a person came to be** (issue #2726): the door that minted the row,
+ * written once at birth by `createPerson` (`src/db/people.ts`) and never changed.
+ * A code, not a sentence, so a destination system and the counter can read it
+ * the same way. `seed` is the database default and means nobody's door wrote the
+ * row (a seed, a test fixture); a production row that carries it went around
+ * `createPerson`, which `scripts/check-person-door.mjs` refuses.
+ */
+export const PERSON_ORIGINS = [
+  "public_booking",
+  "waitlist",
+  "last_minute",
+  "self_registration",
+  "counter",
+  "import",
+  "invite",
+  "onboard",
+  "public_order",
+  "identity_split",
+  "seed",
+] as const;
+export type PersonOrigin = (typeof PERSON_ORIGINS)[number];
+export const personOrigin = pgEnum("person_origin", PERSON_ORIGINS);
+
 export const people = pgTable(
   "people",
   {
@@ -1189,6 +1213,12 @@ export const people = pgTable(
      * preference, and the medical answers arrive through the ordinary waiver
      * flow with the ordinary hard block.
      */
+    /**
+     * **No longer written or read** (issue #2726): `origin = 'self_registration'`
+     * with `created_at` is the same fact. The column is declared only so the
+     * release still serving can read it while this one deploys; the next release
+     * removes it (expand/contract, the destructive-migration guard).
+     */
     selfRegisteredAt: timestamp("self_registered_at", { withTimezone: true }),
     /**
      * Set when this person's identifying and medical data was destructively
@@ -1233,6 +1263,8 @@ export const people = pgTable(
      * hard-deleted.
      */
     createdByBookingId: uuid("created_by_booking_id"),
+    /** How this person came to be; see {@link PERSON_ORIGINS}. Written once, at birth. */
+    origin: personOrigin("origin").notNull().default("seed"),
     createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
