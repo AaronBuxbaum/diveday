@@ -267,8 +267,8 @@ describe("allowedFetchHost and the Public Suffix List", () => {
     expect(allowedFetchHost("https://ビーチ.co.jp")).toBe("xn--7ck9azh.co.jp");
   });
 
-  it("keeps the behaviour for an unknown ending: a name under it is allowed, the ending is not", () => {
-    expect(allowedFetchHost("bluereef.zzz")).toBe("bluereef.zzz");
+  it("refuses an unknown ending and every name under it (security review, ADR 20261102-public-suffix-list)", () => {
+    expect(allowedFetchHost("bluereef.zzz")).toBeNull();
     expect(allowedFetchHost("zzz")).toBeNull();
     expect(allowedFetchHost("www.zzz")).toBeNull();
   });
