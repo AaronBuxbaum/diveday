@@ -187,25 +187,18 @@ export function dayRhythmLine(
 }
 
 /**
- * **"Seen here this month"** — the crew's own log, under the site it is about.
+ * **"Seen here this month"**: the crew's own log, under the site it is about.
  *
- * The shop's field guide one beat below says what a reef *may* show a diver and
- * is the shop's standing claim about a place. This is the other half of that
- * sentence and the half no dive shop's website has ever carried: how often the
+ * The shop's field guide says what a reef *may* show; this says how often a
  * thing has actually turned up lately, with a date on the last one.
  *
- * **It is a record, and it says so.** "Seen" is past tense on purpose and every
- * line is a frequency rather than an expectation — because a page that prints
- * "turtles on 14 of the last 16 dives" without saying so is one glance away
- * from being read as a promise, and the crew who wrote those rows would be the
- * ones asked about it on the boat. The heading and the lines carry that
- * boundary by themselves: "Seen here this month", every count "of N logged
- * dives", every date "Last seen". A sentence under the plan used to say it
- * again ("It says what was seen, not what you will see") and was cut as a
- * disclaimer the diver never asked for (UX review 2026-10-10, item 22).
+ * **It is a record, and it says so.** "Seen" is past tense and every line is a
+ * frequency, never an expectation, so it cannot be read as a promise the crew
+ * would be asked about on the boat. The heading and lines carry that boundary
+ * ("Seen here this month", "of N logged dives", "Last seen"); a separate
+ * disclaimer was cut (UX review 2026-10-10, item 22).
  *
- * A site whose crew logged nothing this month renders nothing at all. Most
- * sites, most months, on most shops.
+ * A site whose crew logged nothing this month renders nothing.
  */
 function SiteSeen({
   seen,
@@ -259,26 +252,17 @@ function SiteSeen({
 }
 
 /**
- * **"The day" and "Look for" — the pitch, in two ledger beats.**
+ * **"The day" and "Look for": the pitch, in two ledger beats.**
  *
  * ADR 20260827-the-divers-thread, decision 2: the content that answers "is this
- * my day?" leads, and the form closes. The same facts used to arrive *below*
- * the booking form as `DiveBriefingsSection` — an eyebrow, a `text-2xl`
- * heading as loud as the page's own `h1`, a swipeable deck of photo cards and a
- * comparison table — roughly a thousand pixels of reading placed where only a
- * diver who had already paid would ever reach it. Slice 7c then took the deck
- * off `/ready` too and deleted it (H-49), so these two beats are the whole of
- * what the product says about what a day dives.
+ * my day?" leads, and the form closes. What it holds is the run of dives in plan
+ * order and the species the shop has put on those sites' field guides.
  *
- * What survives here is what a deciding diver actually needs: the run of dives
- * in plan order, and the species the shop has put on those sites' field guides.
- * The dives stay time-neutral — a dive plan's clock belongs to the day itself
- * (`PackingSection`'s dock-day rhythm on the thread), and a schedule of
- * tanks printed beside a Book button reads as a commitment the crew has not
- * made. The day's two ends are the exception (fifth-loop ideas, item 19): when
- * to be at the dock and when the boat is due back are the shop's published
- * promise, and a first boat diver deciding whether the morning fits needs
- * them before paying, in one line.
+ * The dives stay time-neutral: a dive plan's clock belongs to the booked
+ * diver's thread, and a schedule of tanks beside a Book button reads as a
+ * commitment the crew has not made. The exception is the day's two ends (the
+ * dock time and the return), the shop's published promise, which a first boat
+ * diver needs before paying (fifth-loop ideas, item 19).
  */
 export function TripDayPlan({
   briefings,
@@ -335,10 +319,8 @@ export function TripDayPlan({
     </p>
   ) : null;
   const coursePlan = course ? <CoursePlan plan={course} t={t} locale={locale} /> : null;
-  // Durations, never a clock. The beat stays time-neutral — the day's hours
-  // belong to the thread a booked diver walks — but how long a dive runs and
-  // how long the boat sits between two of them are facts about the day itself,
-  // and a diver deciding whether it is theirs was reading neither.
+  // Durations, never a clock: how long a dive runs and the boat sits between
+  // two are facts about the day; its hours belong to the booked diver's thread.
   const rows = profile
     ? dayProfileRows({
         dives: briefings.map(({ dive, diveSite }) => ({
@@ -360,14 +342,8 @@ export function TripDayPlan({
       row.kind === "surfaceInterval" ? [[row.afterDiveNumber, row.minutes]] : [],
     ),
   );
-  // One beat per *site*, not per tank: a two-tank day on one mooring would
-  // otherwise print the same month twice, the way the route and the site prose
-  // used to before they were deduplicated.
-  //
-  // Resolved before the render rather than by mutating a `Set` inside the map,
-  // because the caption below the list has to know whether any of these beats
-  // rendered at all, and a set filled during JSX evaluation is a fact the code
-  // after `</ul>` can only read by accident of argument order.
+  // One beat per *site*, not per tank, resolved before the render because the
+  // caption below the list needs to know whether any beat rendered.
   const seenShown = new Set<string>();
   const seenByDive = new Map<string, SiteSightings>();
   for (const { dive, diveSite } of briefings) {
@@ -377,11 +353,8 @@ export function TripDayPlan({
     seenShown.add(diveSite.id);
     seenByDive.set(dive.id, found);
   }
-  // A day where nothing is decided yet says so once. Two rows both reading
-  // "Site to be confirmed" opened the sparse course session's pitch with the
-  // one thing the shop has not decided, stated twice (principle 9; 2026-08-28
-  // diver-views review, finding 10). The count survives — it is the one fact
-  // those rows carried.
+  // A day where nothing is decided yet says so once (principle 9; 2026-08-28
+  // diver-views review, finding 10); the count survives.
   if (briefings.every(({ dive, diveSite }) => !dive.title && !diveSite)) {
     if (content === "reports") return null;
     return (
@@ -398,12 +371,9 @@ export function TripDayPlan({
     );
   }
   // **The run closes itself unless a rule follows it directly** (pixel-craft
-  // class 6). With a pitch opening on its door, the run's closing rule sat
-  // 32px over the door's own, two parallel hairlines with nothing between
-  // them. Anywhere else the rule is the list's only close: over the site
-  // reviews, or over a pitch that opens on its fit word and faces, leaving it
-  // open left the last dive unclosed above body text. Every line, hand-set or
-  // not, takes one box.
+  // class 6): with a pitch opening on its door, a closing rule would double the
+  // door's own hairline. Elsewhere the rule is the list's only close. Every
+  // line, hand-set or not, takes one box.
   const reviews = siteReviews ?? [];
   const reviewBlock =
     content === "itinerary" ? null : reviews.length > 0 ? (
@@ -463,19 +433,11 @@ export function TripDayPlan({
           const depth = diveSite
             ? diveSiteDepthText(t, diveSite, shop.depthUnit, profile?.readerDepthUnit ?? null)
             : null;
-          // **The site's name is the door to its own page** (N-48). The whole
-          // of what the shop wrote about a place — the prose, the drawn route,
-          // the field guide, the diver photos, and every other departure going
-          // there — lives at `/s/<shop>/sites/<site>`, and this run of rows is
-          // the one beat on this page that names every site the day dives. A
-          // page reachable only from a sitemap is a page divers never find.
-          //
-          // **The row is the door** (pixel-craft class 7, K-168), whichever of
-          // its lines names the site. The name was an inline link inside a
-          // plain row, a 17px-tall target ("French Reef" 79×17 at 390) with
-          // its ring hugging the words; a door row is the whole row, 52px and
-          // up, with the chevron that says it opens. A dive with no site yet
-          // has nowhere to go and stays a plain row.
+          // **The row is the door to the site's own page** (N-48; pixel-craft
+          // class 7, K-168): `/s/<shop>/sites/<site>` holds everything the shop
+          // wrote about the place, and this run is the one beat that names every
+          // site of the day. The whole row is the target, whichever line names
+          // the site; a dive with no site yet has nowhere to go and stays plain.
           const siteDoor = diveSite
             ? { href: publicDiveSitePath(shop.slug, diveSite.slug), linkLabel: diveSite.name }
             : {};
@@ -508,12 +470,8 @@ export function TripDayPlan({
                 ) : null}
               </LedgerRow>
               {/* **Its own row, past the kind word**, not inside the dive's
-                  children column. At 390px that column is what is left after
-                  the kind gutter and the trailing depth — about a third of the
-                  screen — and three sentences of reading set in it wrapped
-                  every line twice. The surface interval below already has this
-                  shape for the same reason. It takes the dive rows' box, so its
-                  rules are theirs. */}
+                  children column, which at 390px is about a third of the screen
+                  and wrapped every line twice. It takes the dive rows' box. */}
               {seen ? (
                 <li className={`flex gap-3 py-2 ${handSetBox}`}>
                   <span className={`${ledgerKindColumnClass} shrink-0`} />
@@ -526,9 +484,8 @@ export function TripDayPlan({
                   />
                 </li>
               ) : null}
-              {/* The gap, on the hairline between the two dives it belongs to.
-                  Indented past the kind word so it reads as part of the run
-                  rather than as a third dive. */}
+              {/* The gap, indented past the kind word so it reads as part of
+                  the run rather than a third dive. */}
               {interval ? (
                 <li className={`flex items-center gap-3 py-2 ${handSetBox}`}>
                   <span className={`${ledgerKindColumnClass} shrink-0`} />
@@ -541,10 +498,8 @@ export function TripDayPlan({
           );
         })}
       </ul>
-      {/* What earlier divers said about these sites, under the plan they
-          are about (fifth-loop ideas, item 20). Their words, quoted, with a
-          name and the day they went; no stars, which the shop's own reviews
-          page already carries. */}
+      {/* What earlier divers said about these sites (fifth-loop ideas, item
+          20): their words, a name and the day they went; no stars. */}
       {reviewBlock}
     </section>
   );
