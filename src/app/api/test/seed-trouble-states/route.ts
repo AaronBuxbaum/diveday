@@ -94,6 +94,7 @@ export async function POST(request: Request) {
   const db = await getDb();
   const variant = await troubleVariantResponse(request, db);
   if (variant) return variant;
+  const params = new URL(request.url).searchParams;
   const shop = await getShopBySlug(db, DEMO_SHOP_SLUG);
   if (!shop?.isDemo) return NextResponse.json({ error: "not_available" }, { status: 404 });
 
@@ -157,7 +158,7 @@ export async function POST(request: Request) {
   // refund always (`seedOwedMoney`); a cancelled departure's paid seat only on
   // request (`owedRefund`, below).
   await seedOwedMoney(db, shop.id, now);
-  if (new URL(request.url).searchParams.get("owedRefund") === "1") {
+  if (params.get("owedRefund") === "1") {
     await cancelADepartureSomebodyPaidFor(db, shop.id);
   }
 
@@ -321,40 +322,38 @@ export async function POST(request: Request) {
   // The departure it boarded is returned, so the manifest capture addresses
   // the boat whose head count carries the line (issue #2217).
   const blockedAboard =
-    new URL(request.url).searchParams.get("blockedAboard") === "1"
-      ? await boardADiverThenBlockThem(db, shop.id, now)
-      : null;
+    params.get("blockedAboard") === "1" ? await boardADiverThenBlockThem(db, shop.id, now) : null;
 
   // Opt-in: three confirmations that bounced are a row on Today, and every
   // other Today capture would have paid for it.
-  if (new URL(request.url).searchParams.get("failedEmails") === "1") {
+  if (params.get("failedEmails") === "1") {
     await bounceThreeConfirmations(db, shop.id, now);
   }
 
   // Opt-in for the same reason: it boards a whole boat, which moves every
   // aboard count on the page.
-  if (new URL(request.url).searchParams.get("crewUncounted") === "1") {
+  if (params.get("crewUncounted") === "1") {
     await boardEveryDiverAndNoCrew(db, shop.id, now);
   }
 
   // Opt-in for the same reason again: a unit due back today is a row on Today
   // as well as on the register, and every capture that only wanted the
   // register's Overdue group would have paid for it.
-  if (new URL(request.url).searchParams.get("gearOut") === "1") {
+  if (params.get("gearOut") === "1") {
     await putOneUnitOutToday(db, shop.id, now, shop.timezone);
   }
 
   // Opt-in: a late ticket and an uncollected one are two rows on Today (ADR
   // 20261008-work-order-follow-up), and every other Today capture would have
   // paid for them.
-  if (new URL(request.url).searchParams.get("bench") === "1") {
+  if (params.get("bench") === "1") {
     await putTheBenchBehind(db, shop.id, now, shop.timezone);
   }
 
   // Opt-in, and the widest-reaching of the lot: taking the crew off a
   // departure moves Today's queue, the trip record, the close-out and every
   // crew count in the fleet. Only the staffing week's gap capture asks for it.
-  if (new URL(request.url).searchParams.get("crewGap") === "1") {
+  if (params.get("crewGap") === "1") {
     await unstaffTomorrowsDeparture(db, shop.id, now);
   }
 
@@ -362,7 +361,7 @@ export async function POST(request: Request) {
   // four warnings on that departure and on the register, and the demo's own
   // assignments must stay calm. The capture that wants them asks (issue #2221).
   const unitsNeedingCare =
-    new URL(request.url).searchParams.get("unitsNeedingCare") === "1"
+    params.get("unitsNeedingCare") === "1"
       ? await flagFourUnitsOnTheReefBoat(db, shop.id, actor.id, now, shop.timezone)
       : null;
 
@@ -371,7 +370,7 @@ export async function POST(request: Request) {
   // and the demo must not stand permanently short-handed. The one spec that
   // walks approving a divemaster onto it asks for it (issue #1676).
   const introOverRatio =
-    new URL(request.url).searchParams.get("introOverRatio") === "1"
+    params.get("introOverRatio") === "1"
       ? await askForAnIntroSessionPastItsRatio(db, shop.id, actor.id, now, shop.timezone)
       : null;
 
@@ -379,7 +378,7 @@ export async function POST(request: Request) {
   // it is the one state here a caller needs an answer back from: the row it
   // makes is addressed by id in the URL that photographs it.
   const blockedMinor =
-    new URL(request.url).searchParams.get("blockedMinor") === "1"
+    params.get("blockedMinor") === "1"
       ? await unsignTheSeededMinorsRelease(db, shop.id, now)
       : null;
 
@@ -387,7 +386,7 @@ export async function POST(request: Request) {
   // subscribed calendar's `SEQUENCE` go with it. The two captures that want a
   // standing crew clash ask for it, and both address the boat it made by id.
   const crewClash =
-    new URL(request.url).searchParams.get("crewClash") === "1"
+    params.get("crewClash") === "1"
       ? await slideOneDepartureOntoAnother(db, shop.id, now, shop.timezone)
       : null;
 
@@ -395,7 +394,7 @@ export async function POST(request: Request) {
   // no longer stations, so Today files the sailed row at the desk (H-80,
   // issue #1814). Opt-in for the same reason, and it moves two departures.
   const crewClashSailed =
-    new URL(request.url).searchParams.get("crewClashSailed") === "1"
+    params.get("crewClashSailed") === "1"
       ? await slideOneDepartureOntoAnother(db, shop.id, now, shop.timezone, {
           hostSailedAt: new Date(now.getTime() - 2 * HOUR_MS),
         })
@@ -406,7 +405,7 @@ export async function POST(request: Request) {
   // capture that wants the counter's held row asks for it, and addresses the
   // diver it seated by name.
   const identityHeld =
-    new URL(request.url).searchParams.get("identityHeld") === "1"
+    params.get("identityHeld") === "1"
       ? await seatSomebodyOffTheNamePrompt(db, shop.id, actor.id, now)
       : null;
 
@@ -415,7 +414,7 @@ export async function POST(request: Request) {
   // Move panel's refusal asks for it, and addresses the boat it marked by
   // title.
   const moveBlocked =
-    new URL(request.url).searchParams.get("moveBlocked") === "1"
+    params.get("moveBlocked") === "1"
       ? await countHeadsOnADepartureNobodyWillMove(db, shop.id, now)
       : null;
 
@@ -425,9 +424,7 @@ export async function POST(request: Request) {
   // two captures that want it ask for it, and address the site by the slug it
   // answers with.
   const farStation =
-    new URL(request.url).searchParams.get("farStation") === "1"
-      ? await addASiteItsStationIsNowhereNear(db, shop.id)
-      : null;
+    params.get("farStation") === "1" ? await addASiteItsStationIsNowhereNear(db, shop.id) : null;
 
   // Opt-in for the same reason once more, and this one reaches further than it
   // looks: `rentalFitLine` feeds the roll call, the offline snapshot and the
@@ -435,7 +432,7 @@ export async function POST(request: Request) {
   // the demo would put an unresolvable oddity on the boat manifest — the one
   // surface where a crew is trained that every line means something.
   const droppedRental =
-    new URL(request.url).searchParams.get("droppedRental") === "1"
+    params.get("droppedRental") === "1"
       ? await askForAPieceTheShopNoLongerRents(db, shop.id)
       : null;
 
@@ -444,7 +441,7 @@ export async function POST(request: Request) {
   // split head count and the public type choice. Idempotent, so it agrees with
   // a demo seed that already carries them.
   const mixedBoat =
-    new URL(request.url).searchParams.get("mixedBoat") === "1"
+    params.get("mixedBoat") === "1"
       ? await carrySomebodyWhoIsNotDiving(db, shop.id, actor.id, now)
       : null;
 
@@ -452,20 +449,18 @@ export async function POST(request: Request) {
   // the arrival lookup and the Divers tab have the line to photograph. Opt-in
   // because the demo's own arrivals list must stay a plain one.
   const runningLate =
-    new URL(request.url).searchParams.get("runningLate") === "1"
-      ? await sayPriyaIsRunningLate(db, shop.id, now)
-      : null;
+    params.get("runningLate") === "1" ? await sayPriyaIsRunningLate(db, shop.id, now) : null;
 
   // Opt-in: a boat with lapsing safety kit, no O2 kit aboard and too many
   // people for its certificate is a danger panel on that departure's Boat tab
   // and a row on Today — exactly the standing warning the demo must not carry. The
   // captures that want the panel ask for it, and address the departure by id.
   const boatSafety =
-    new URL(request.url).searchParams.get("boatSafety") === "1"
+    params.get("boatSafety") === "1"
       ? await letTheReefBoatsKitLapse(db, shop.id, now, shop.timezone)
       : null;
 
-  const batchFour = await batchFourStates(request, db, shop, actor.id, now);
+  const batchFour = await batchFourStates(params, db, shop, actor.id, now);
   const boatSlice = await boatAndMergeStates(request, db, shop.id, now);
   return NextResponse.json({
     ok: true,
@@ -2015,13 +2010,13 @@ async function answerTheNewestReview(
  * seasons, a reply the shop never wrote.
  */
 async function batchFourStates(
-  request: Request,
+  params: URLSearchParams,
   db: Awaited<ReturnType<typeof getDb>>,
   shop: { id: string; timezone: string },
   actorId: string,
   now: Date,
 ) {
-  const asked = (flag: string) => new URL(request.url).searchParams.get(flag) === "1";
+  const asked = (flag: string) => params.get(flag) === "1";
   const rehearsal = asked("rehearsal")
     ? await putARehearsalOnTomorrow(db, shop.id, actorId, now)
     : null;
