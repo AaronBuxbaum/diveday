@@ -51,7 +51,9 @@ describe("blockingAdvisories", () => {
   });
 
   it("does not call an advisory with no findings dev-only", () => {
-    const [bare] = blockingAdvisories({ advisories: { 1: { ...advisory("high", "bare"), findings: [] } } });
+    const [bare] = blockingAdvisories({
+      advisories: { 1: { ...advisory("high", "bare"), findings: [] } },
+    });
     expect(bare.reach).toBe("unknown");
     expect(renderAdvisories([bare])).not.toMatch(/dev dependencies only|reaches production/);
   });
