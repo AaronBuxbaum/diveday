@@ -15,10 +15,16 @@ for example `20260718-waiver-signature-storage.md`.
 Do not allocate the next integer and do not reserve an id in a branch-local ledger. Use the branch
 or feature slug so independently-created ADRs normally land in different files. The repository
 check validates filename/heading alignment, metadata, statuses, required sections, duplicate ids,
-the word cap and the index below.
+the word cap, code quotes and the index below.
 
 Statuses: **Proposed**, **Accepted**, **Deprecated**, or **Superseded by <id>**. Never silently edit
 an accepted ADR's decision; write a new record that supersedes it.
+
+## Quoting code
+
+A fenced block whose first line is `// <path>:<line>` (or `<line>-<line>`) quotes that file from that
+line on, and `pnpm check:adrs` fails when a line differs after trimming, naming the line actually
+there. A bare `` `path:line` `` citation is not checked, so quote the lines a reader must trust.
 
 ## Length
 

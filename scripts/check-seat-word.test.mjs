@@ -47,6 +47,12 @@ describe("everyone says seat", () => {
     expect(flagged(hint, "trips.json")).toEqual(["form.locationHint"]);
   });
 
+  it("lets the walk-ins idiom through in the marketing content section only", () => {
+    const page = { featurePages: { checkIn: { summary: "Walk-ins added on the spot." } } };
+    expect(flagged(page, "content/marketing.json")).toEqual([]);
+    expect(flagged(page, "marketing.json")).toEqual(["featurePages.checkIn.summary"]);
+  });
+
   it("lets a field-guide species say spot, in the diver bundle only", () => {
     const guide = {
       marineLife: { species: { "lane-snapper": { description: "a dark spot high on the flank" } } },
@@ -62,8 +68,8 @@ describe("everyone says seat", () => {
     for (const entry of allowedSpotStrings) {
       const [file, keyPath] = entry.split(":");
       const where =
-        file === "diver.json"
-          ? "../src/i18n/locales/en-US/diver.json"
+        file === "diver.json" || file.startsWith("content/")
+          ? `../src/i18n/locales/en-US/${file}`
           : `../src/i18n/locales/en-US/staff/${file}`;
       const bundle = JSON.parse(await readFile(new URL(where, import.meta.url), "utf8"));
       const value = keyPath.split(".").reduce((node, key) => node?.[key], bundle);

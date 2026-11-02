@@ -14,7 +14,7 @@ import type { ImportScopeRowId } from "./import";
  * URLs — as message-bundle *keys*, never words, following the same
  * keys-not-copy pattern as `src/lib/marketing.ts` (ADR
  * 20260731-domain-layer-copy-leaks). The prose itself lives in
- * `src/i18n/locales/<locale>/diver.json` under `marketing.guides.*`
+ * `src/i18n/locales/<locale>/content/marketing.json` under `marketing.guides.*`
  * (`marketing.guides.shared.*` for the sections every guide shares,
  * `marketing.guides.<slug>.*` for each incumbent) — edit every locale
  * together. The switching pages resolve these keys through the negotiated

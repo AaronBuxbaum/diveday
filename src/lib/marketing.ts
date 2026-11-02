@@ -8,8 +8,8 @@ import { openGraphSite, sharedLinkCardImage } from "@/lib/site-metadata";
  * locale's `diverTranslator`, so every claim renders in the visitor's own
  * language and the pages always describe the same product. Keep claims
  * constrained to workflows that are available in DiveDay today; the words
- * themselves live in `src/i18n/locales/<locale>/diver.json` under
- * `marketing.price`, `marketing.export`, and `marketing.capabilities` — edit
+ * themselves live in `src/i18n/locales/<locale>/content/marketing.json`
+ * under `marketing.price`, `marketing.export`, and `marketing.capabilities` — edit
  * every locale together.
  *
  * This file holds structure (grouping, ordering, the price figure), following

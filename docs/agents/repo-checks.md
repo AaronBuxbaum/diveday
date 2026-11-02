@@ -28,7 +28,7 @@ The runner-image one (`scripts/check-runner-image.mjs`) holds `RUNNER_IMAGE` (`u
 
 ### CI-change-detection
 
-The CI-change-detection one (`scripts/check-ci-change-detection.mjs`) reads the `filter` step of `.github/workflows/ci.yml`'s `changes` job and pins *how it asks* what a pull request touched: the base resolves by **ref**, never `github.event.pull_request.base.sha`; a push to main keeps its own range off `github.event.before`; and every `git diff --name-only` range is three-dot. It is a guard rather than a comment because the failure is silent in the direction that costs money. `base.sha` is the base *as recorded when the pull request was opened* and never advances, while `actions/checkout` hands the job `refs/pull/N/merge` — which already contains everything main merged since. So `base.sha` is an ancestor of HEAD, `merge-base(base.sha, HEAD)` is `base.sha` itself, the three-dot form degenerates, and main's own new files are reported as the branch's. Nothing goes red: change detection fails **open**, so the whole gate simply runs. On #1291 — two lines under `docs/design/canvases/` — that meant the build, four Playwright shards, four visual shards, reg-suit and real-postgres, plus 196 changed and 8 new surfaces charged to a pull request that cannot move a pixel, every one of which AGENTS.md requires a reviewer to account for (issue #1295). Two traps the guard also holds: collapsing both events into one range makes `origin/main...github.sha` empty on a push, so main publishes no visual baseline and every branch cut from that commit resolves none (issue #1277); and a two-dot range reports every file main added since the fork as a *deletion*, which `--name-only` lists identically. The third trap is not checkable and is written at the call site instead — the step's checkout already ran `fetch-depth: 0`, so a `--depth=1` fetch of the base ref would graft a shallow boundary on and make `merge-base` compute against truncated history. This guard does **not** cover the second, independent cause of charged visual diffs on a *code* pull request whose base has moved: the capture shards shoot the merge commit while `scripts/reg-suit-keys.mjs` keys the baseline to the fork point. Correct detection only stops a docs-only branch reaching the compare at all.
+The CI-change-detection one (`scripts/check-ci-change-detection.mjs`) reads the `filter` step of `.github/workflows/ci.yml`'s `changes` job and pins *how it asks* what a pull request touched: a pull request's range runs between the event's own `base.sha` and `head.sha`, never the live base branch (a PR that merged mid-run made `origin/main` contain its head, the range came out empty and a code change read as docs-only, issue #3259) and never the checked-out `HEAD`; a push to main keeps its own range off `github.event.before`; and every `git diff --name-only` range is three-dot. It is a guard rather than a comment because the failure is silent in the direction that costs money. `base.sha` is the base *as recorded when the pull request was opened* and never advances, while `actions/checkout` hands the job `refs/pull/N/merge` — which already contains everything main merged since. So `base.sha` is an ancestor of HEAD, `merge-base(base.sha, HEAD)` is `base.sha` itself, the three-dot form degenerates, and main's own new files are reported as the branch's. Nothing goes red: change detection fails **open**, so the whole gate simply runs. On #1291 — two lines under `docs/design/canvases/` — that meant the build, four Playwright shards, four visual shards, reg-suit and real-postgres, plus 196 changed and 8 new surfaces charged to a pull request that cannot move a pixel, every one of which AGENTS.md requires a reviewer to account for (issue #1295). Two traps the guard also holds: collapsing both events into one range makes `origin/main...github.sha` empty on a push, so main publishes no visual baseline and every branch cut from that commit resolves none (issue #1277); and a two-dot range reports every file main added since the fork as a *deletion*, which `--name-only` lists identically. The third trap is not checkable and is written at the call site instead — the step's checkout already ran `fetch-depth: 0`, so a `--depth=1` fetch of the base ref would graft a shallow boundary on and make `merge-base` compute against truncated history. This guard does **not** cover the second, independent cause of charged visual diffs on a *code* pull request whose base has moved: the capture shards shoot the merge commit while `scripts/reg-suit-keys.mjs` keys the baseline to the fork point. Correct detection only stops a docs-only branch reaching the compare at all.
 
 ### sentry-imports
 
@@ -98,7 +98,7 @@ The shop-word one (`scripts/check-shop-word.mjs`) refuses `tienda` in any `es-ES
 
 ### seat-word
 
-The seat-word one (`scripts/check-seat-word.mjs`) refuses `spot` in every English staff bundle (`src/i18n/locales/en-US/staff/*.json`) and in the diver bundle (`src/i18n/locales/en-US/diver.json`). The number a shop sells is a **seat**, for staff and divers alike (H-122): the schema, the capacity math in `src/lib/trips.ts` and the glossary all say so. The staff pages had drifted into both, sometimes in one sentence: the trip header read "4 spots left" beside "$95.00 per seat", and the cancel notice "The spot is open again … so the seat was non-refundable" (third review, item 6, 2026-10-13). The diver pages then did the same on one screen: "Grab a spot" and "Book these spots", then "You've got a seat"; `/ready` offered "Cancel my spot" beside "Your seat is still held" (fourth review, item 7, 2026-10-14). Spanish says *plaza* on both sides and has nothing to drift into. The allowed strings mean something other than capacity: the incident form's "a spot on the reef" and a hamlet's spot (places), the marks on a fish, the verb "spot the fish" and the idiom "on the spot"; a test holds that every allowed entry still names a live string that still says *spot*.
+The seat-word one (`scripts/check-seat-word.mjs`) refuses `spot` in every English staff bundle (`src/i18n/locales/en-US/staff/*.json`) and in the diver bundle (`src/i18n/locales/en-US/diver.json` and the `content/*.json` sections composed with it). The number a shop sells is a **seat**, for staff and divers alike (H-122): the schema, the capacity math in `src/lib/trips.ts` and the glossary all say so. The staff pages had drifted into both, sometimes in one sentence: the trip header read "4 spots left" beside "$95.00 per seat", and the cancel notice "The spot is open again … so the seat was non-refundable" (third review, item 6, 2026-10-13). The diver pages then did the same on one screen: "Grab a spot" and "Book these spots", then "You've got a seat"; `/ready` offered "Cancel my spot" beside "Your seat is still held" (fourth review, item 7, 2026-10-14). Spanish says *plaza* on both sides and has nothing to drift into. The allowed strings mean something other than capacity: the incident form's "a spot on the reef" and a hamlet's spot (places), the marks on a fish, the verb "spot the fish" and the idiom "on the spot"; a test holds that every allowed entry still names a live string that still says *spot*.
 
 ### rental-fit-caps, and the rule that was declined
 
@@ -229,7 +229,7 @@ hit. Five pending labels said "Saving..." against 281 strings spelling it `…` 
 them off: the 63 hits left after one sweep are a refusal's next action or an ICU plural's two
 branches, and the reasoning is at `SHAPE_SCOPES` in the script.
 
-The **exclamation mark** is a hit in `diver.json` alone, `¡` and `!` both: four diver strings
+The **exclamation mark** is a hit in `diver.json` and its `content/` sections alone, `¡` and `!` both: four diver strings
 ended in one ("See you on the boat!") against a bundle that otherwise keeps a plain voice (fifth-loop
 ideas, item 24). The one exemption is `notifications.whatsappTemplate.body`, the template Meta
 reviews for each shop at sign-up; the list is `EXCLAMATION_ALLOWLIST` in the script.
@@ -725,7 +725,8 @@ Biome's `timezone` rule enforces the rest ([Now Biome rules](#now-biome-rules)).
 
 #### Copy comes from a message bundle, never a component
 
-Diver copy in `src/i18n/locales/<locale>/diver.json`, staff copy in
+Diver copy in `src/i18n/locales/<locale>/diver.json`, DiveDay's marketing and switching pages in
+`locales/<locale>/content/<section>.json`, staff copy in
 `locales/<locale>/staff/<namespace>.json` (one file per area). `pnpm check:copy` is a full gate over
 `src/app`, `src/components` and `src/features`, bar the three files its ratchet names: any hard-coded
 copy fails it, including an English fallback behind `||`, `??` or a ternary. **Never add English
@@ -1186,7 +1187,10 @@ For `scripts/`, `.claude/` and `.github/`; the rules themselves are in `.claude/
 For `src/i18n/`; the rules themselves are in `.claude/rules/i18n.md`.
 
 - **Bundles**: diver messages in `locales/<locale>/diver.json` (`diverTranslator`,
-  `DiverIntlProvider` + `useTranslations()` for Client Components); staff messages in
+  `DiverIntlProvider` + `useTranslations()` for Client Components); DiveDay's own content (the
+  marketing site, the switching guides) in `locales/<locale>/content/<section>.json`, composed into
+  the diver bundle under the same `marketing.*`/`switching.*` keys by `messages.ts`, so
+  `diver.json` stays the diver's chrome (issue #2773); staff messages in
   `locales/<locale>/staff/<namespace>.json` — one file per area, composed by `staff-messages.ts`
   (ADR 20260807-per-area-staff-bundles). A new area is a new file plus one import there, so parallel
   branches stop colliding in one 3,500-line bundle. `staffTranslator` is **server-side only** —

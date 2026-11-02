@@ -73,11 +73,13 @@ describe("translatorOnError", () => {
  * visual capture, not by a test, which is why there is now a test.
  */
 describe("ICU-escaped messages must not be fetched raw", () => {
-  const staffDir = "src/i18n/locales/en-US/staff";
+  const sectionDirs = ["src/i18n/locales/en-US/content", "src/i18n/locales/en-US/staff"];
   const bundles = [
-    ...readdirSync(staffDir)
-      .filter((f) => f.endsWith(".json"))
-      .map((f) => join(staffDir, f)),
+    ...sectionDirs.flatMap((dir) =>
+      readdirSync(dir)
+        .filter((f) => f.endsWith(".json"))
+        .map((f) => join(dir, f)),
+    ),
     "src/i18n/locales/en-US/diver.json",
   ];
 
@@ -96,7 +98,7 @@ describe("ICU-escaped messages must not be fetched raw", () => {
 
   const escapedKeys = new Set<string>();
   for (const file of bundles) {
-    const ns = file.includes("/staff/") ? `${basename(file, ".json")}.` : "";
+    const ns = file.endsWith("/diver.json") ? "" : `${basename(file, ".json")}.`;
     const walk = (obj: Record<string, unknown>, prefix: string) => {
       for (const [k, v] of Object.entries(obj)) {
         if (v && typeof v === "object") walk(v as Record<string, unknown>, `${prefix}${k}.`);

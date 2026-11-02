@@ -25,6 +25,7 @@ describe("coverageRelevant", () => {
     "e2e/booking.spec.ts",
     "docs/agents/working-rules.md",
     "src/i18n/locales/es-ES/diver.json",
+    "src/i18n/locales/es-ES/content/marketing.json",
   ])("skips coverage for %s", (file) => {
     expect(coverageRelevant(file)).toBe(false);
   });

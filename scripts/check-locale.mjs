@@ -35,6 +35,10 @@ const DEFAULT_LOCALE = "en-US";
  */
 const BUNDLES = [
   { file: "diver.json", minimumKeys: 40 },
+  // DiveDay's own content (the marketing site, the switching guides), one
+  // section per file and composed by its index.ts exactly like staff/ below,
+  // then merged into the diver bundle by src/i18n/messages.ts (issue #2773).
+  { dir: "content", minimumKeys: 1 },
   // The staff bundle is a directory, one namespace per file, composed by its
   // index.ts (ADR 20260807-per-area-staff-bundles). The single staff.json it
   // replaces was the repo's top merge-conflict magnet — every parallel branch
@@ -134,11 +138,11 @@ export const DELIBERATELY_IDENTICAL = new Map([
   // diving uses unchanged. Held both ways like every entry above — the day
   // somebody translates one of these, the declaration fails.
   [
-    "diver.json marketing.guides.fareharbor.website.rows.row2.theirs",
+    "content/marketing.json guides.fareharbor.website.rows.row2.theirs",
     "a competitor's own product name",
   ],
   [
-    "diver.json marketing.guides.fareharbor.website.rows.row5.theirs",
+    "content/marketing.json guides.fareharbor.website.rows.row5.theirs",
     "a competitor's own product name",
   ],
   ["staff/divers.json shared.agencies.bsac", "agency acronym"],
@@ -155,16 +159,16 @@ export const DELIBERATELY_IDENTICAL = new Map([
   ["staff/divers.json shared.agencies.tdi", "agency acronym"],
   ["staff/schedule.json builder.courseAgencies.padi", "agency acronym"],
   ["staff/waiversStaff.json record.answerNo", '"No" is the same word in Spanish'],
-  ["diver.json marketing.setUp.no", '"No" is the same word in Spanish'],
+  ["content/marketing.json setUp.no", '"No" is the same word in Spanish'],
   ["staff/schedule.json builder.courseAgencies.ssi", "agency acronym"],
-  ["diver.json marketing.privacy.processors.awsTerm", "brand"],
-  ["diver.json marketing.privacy.processors.googleTerm", "brand"],
-  ["diver.json marketing.privacy.processors.metaTerm", "brand"],
-  ["diver.json marketing.privacy.processors.anthropicTerm", "brand"],
-  ["diver.json marketing.privacy.processors.neonTerm", "brand"],
-  ["diver.json marketing.privacy.processors.sentryTerm", "brand"],
-  ["diver.json marketing.privacy.processors.stripeTerm", "brand"],
-  ["diver.json marketing.privacy.processors.vercelTerm", "brand"],
+  ["content/marketing.json privacy.processors.awsTerm", "brand"],
+  ["content/marketing.json privacy.processors.googleTerm", "brand"],
+  ["content/marketing.json privacy.processors.metaTerm", "brand"],
+  ["content/marketing.json privacy.processors.anthropicTerm", "brand"],
+  ["content/marketing.json privacy.processors.neonTerm", "brand"],
+  ["content/marketing.json privacy.processors.sentryTerm", "brand"],
+  ["content/marketing.json privacy.processors.stripeTerm", "brand"],
+  ["content/marketing.json privacy.processors.vercelTerm", "brand"],
   ["diver.json rental.itemLabels.gopro", "brand"],
   ["diver.json trip.rentalItems.gopro", "brand"],
   ["diver.json notifications.gearPieces.gopro", "brand"],
@@ -238,7 +242,7 @@ export const DELIBERATELY_IDENTICAL = new Map([
     "settled loanword (es-ES README, “Check-in is el check-in”)",
   ],
   [
-    "diver.json marketing.featurePages.checkIn.name",
+    "content/marketing.json featurePages.checkIn.name",
     "settled loanword (es-ES README, “Check-in is el check-in”)",
   ],
   [
@@ -276,13 +280,13 @@ export const DELIBERATELY_IDENTICAL = new Map([
   ["diver.json marineLife.species.cobia.name", "the fish's name in Spanish too"],
   ["diver.json marineLife.species.boga.name", "the fish's name in Spanish too"],
   [
-    "diver.json marketing.guides.shared.scopeTable.nitrox.what",
+    "content/marketing.json guides.shared.scopeTable.nitrox.what",
     "the gas, and the word Spanish diving uses for it",
   ],
   ["diver.json ready.tanksNitrox", "the gas, and the word Spanish diving uses for it"],
   ["diver.json rental.nitroxLegend", "the gas, and the word Spanish diving uses for it"],
   [
-    "diver.json switching.spreadsheet.columns.nitrox.column",
+    "content/switching.json spreadsheet.columns.nitrox.column",
     "the gas, and the word Spanish diving uses for it",
   ],
   ["diver.json trip.requirementMarkerNitrox", "the gas, and the word Spanish diving uses for it"],
@@ -341,8 +345,8 @@ export const DELIBERATELY_IDENTICAL = new Map([
   ["staff/diveSites.json form.depthPreviewFeetRange", "two depths and the unit symbol"],
   ["staff/diveSites.json form.depthPreviewMetersOne", "the unit symbol, unchanged in Spanish"],
   ["staff/diveSites.json form.depthPreviewMetersRange", "two depths and the unit symbol"],
-  ["diver.json marketing.guides.fareharbor.heroEyebrow", "two product names"],
-  ["diver.json marketing.guides.rezdy.heroEyebrow", "two product names"],
+  ["content/marketing.json guides.fareharbor.heroEyebrow", "two product names"],
+  ["content/marketing.json guides.rezdy.heroEyebrow", "two product names"],
   ["staff/settings.json main.units.celsius", "unit name, the same in Spanish"],
   ["staff/settings.json main.units.fahrenheit", "unit name, the same in Spanish"],
   ["staff/shared.json depth.feet", "unit symbol"],

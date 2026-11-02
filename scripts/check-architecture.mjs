@@ -55,7 +55,9 @@ import { bankCounts, ratchetFlags, readCounts } from "./ratchet.mjs";
  *    reachable by value imports from any `"use client"` file. The phone line-type
  *    metadata is about 100 kB the browser has no use for (ADR
  *    20261014-phone-line-type-metadata); the repo has no `server-only` package, so the
- *    import graph is the only thing keeping it out, and this walks it.
+ *    import graph is the only thing keeping it out, and this walks it. The walk stops at a
+ *    `"use server"` module (a Server Action file): a client file gets a call stub for it, and
+ *    nothing it imports reaches the browser (issue #3635).
  *
  * ## The ratchet
  *
@@ -132,7 +134,12 @@ export const seams = [
 ];
 
 /** Modules a client bundle must never reach, by value import, at any depth. */
-export const SERVER_ONLY_MODULES = ["src/lib/phone-line-type.ts"];
+export const SERVER_ONLY_MODULES = [
+  "src/lib/phone-line-type.ts",
+  "src/lib/payments/stripe-keys.ts",
+  "src/lib/payments/stripe-fetch.ts",
+  "src/lib/payments/webhook.ts",
+];
 const SERVER_ONLY_PACKAGE = /^libphonenumber-js(?:\/|$)/;
 
 const MODULE_ROOTS = ["src/lib", "src/db"];
@@ -193,6 +200,7 @@ async function clientReachViolations(root, record) {
     if (reach.has(file)) return reach.get(file);
     reach.set(file, null);
     let found = null;
+    if (startsWithDirective(await read(file), "use server")) return null;
     for (const { specifier, typeOnly } of importsOf(await read(file))) {
       if (typeOnly) continue;
       if (SERVER_ONLY_PACKAGE.test(specifier)) {
@@ -227,6 +235,15 @@ async function clientReachViolations(root, record) {
 
 /** True when the first statement is a "use client" directive, after leading comments. */
 function startsWithUseClient(contents) {
+  return startsWithDirective(contents, "use client");
+}
+
+/**
+ * True when the first statement is the `directive` string, after leading comments. A
+ * `"use server"` module imported from a client file is a reference the framework swaps in, not
+ * code the browser downloads, so the reach walk stops there.
+ */
+function startsWithDirective(contents, directive) {
   let rest = contents.trimStart();
   for (;;) {
     if (rest.startsWith("/*")) {
@@ -239,7 +256,7 @@ function startsWithUseClient(contents) {
       rest = rest.slice(end + 1).trimStart();
     } else break;
   }
-  return rest.startsWith('"use client"') || rest.startsWith("'use client'");
+  return rest.startsWith(`"${directive}"`) || rest.startsWith(`'${directive}'`);
 }
 
 /**

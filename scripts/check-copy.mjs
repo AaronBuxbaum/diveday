@@ -416,7 +416,7 @@ async function main() {
   if (violations.length > 0) {
     console.error(`Hard-coded copy violations:\n${violations.map((v) => `- ${v}`).join("\n")}`);
     console.error(
-      "User-facing copy comes from a message bundle: src/i18n/locales/<locale>/diver.json for divers, staff/<namespace>.json for staff. See the i18n-copy skill.",
+      "User-facing copy comes from a message bundle: src/i18n/locales/<locale>/diver.json for divers, content/<section>.json for DiveDay's marketing and switching pages, staff/<namespace>.json for staff. See the i18n-copy skill.",
     );
     process.exit(1);
   }

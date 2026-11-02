@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { adrSummary, END, indexTable, START, withIndex } from "./adr-index.mjs";
-import { adrProblems, adrWords, isCapped, WORD_CAP } from "./check-adrs.mjs";
+import { adrProblems, adrWords, isCapped, quoteProblems, WORD_CAP } from "./check-adrs.mjs";
 
 const adr = (id, { status = "Accepted", body = "Short." } = {}) =>
   [
@@ -99,5 +99,36 @@ describe("the generated index", () => {
     expect(next).toBe(`# ADRs\n\nprose\n\n${START}\n\nT\n\n${END}\n\ntail\n`);
     expect(withIndex(next, "T")).toBe(next);
     expect(withIndex("# no markers", "T")).toBeNull();
+  });
+});
+
+describe("ADR code quotes", () => {
+  const source = ["export const a = 1;", "", "export function b() {", "  return 2;", "}"];
+  const read = (file) => (file === "src/x.ts" ? source : null);
+  const fence = (header, ...lines) => ["```ts", header, ...lines, "```"].join("\n");
+
+  it("accepts a faithful quote, whatever its indentation", () => {
+    const doc = fence("// src/x.ts:3", "export function b() {", "return 2;");
+    expect(quoteProblems("a.md", doc, read)).toEqual([]);
+  });
+
+  it("names the record, the file, the cited line and the line actually there", () => {
+    const doc = fence("// src/x.ts:3", "export function c() {");
+    const [problem] = quoteProblems("a.md", doc, read);
+    expect(problem).toMatch(/a\.md: quotes src\/x\.ts:3, but line 3 is "export function b\(\) \{"/);
+    expect(problem).toMatch(/where the record has "export function c\(\) \{"/);
+  });
+
+  it("fails a quote that runs past the end of the file", () => {
+    const doc = fence("// src/x.ts:5", "}", "extra");
+    expect(quoteProblems("a.md", doc, read)[0]).toMatch(/past the end of the file/);
+  });
+
+  it("fails a missing file and leaves a bare citation alone", () => {
+    expect(quoteProblems("a.md", fence("// src/gone.ts:1", "x"), read)[0]).toMatch(
+      /does not exist/,
+    );
+    expect(quoteProblems("a.md", "See `src/x.ts:99` for it.", read)).toEqual([]);
+    expect(quoteProblems("a.md", fence("// just a comment", "x"), read)).toEqual([]);
   });
 });

@@ -130,7 +130,7 @@ describe("the words the es-ES README settled", () => {
     });
 
     it("allows viaje in diver.json, which is the scoped half of this rule", () => {
-      // Deliberate: `diver.json`'s marketing and switching prose uses `viaje`
+      // Deliberate: the `content/` marketing and switching prose uses `viaje`
       // for an outing a diver takes, which is a different job from a row on
       // the schedule board. Narrowing that copy is a voice decision, not a
       // terminology violation, and this guard does not force it.

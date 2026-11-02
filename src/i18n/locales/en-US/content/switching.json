@@ -1,0 +1,188 @@
+{
+  "common": {
+    "backToGuides": "← All switching guides",
+    "contextEyebrow": "Where you are today",
+    "heroCtaNote": "The demo is the sample shop, already full, so there is nothing to import first.",
+    "facts": {
+      "moves": {
+        "label": "What moves",
+        "value": "Whatever your file holds: people, certification records, sizes, waivers, visit history."
+      },
+      "time": {
+        "label": "How long",
+        "value": "An afternoon, export to import."
+      },
+      "preview": {
+        "label": "Before it saves",
+        "value": "Nothing lands until you read the preview and say go."
+      },
+      "back": {
+        "label": "The way out",
+        "value": "The same export button, from the first day."
+      }
+    },
+    "contents": "On this page",
+    "fieldReference": "Spreadsheet field reference",
+    "importReference": "Full import field reference",
+    "exportFile": "Export your file",
+    "cutoverLink": "Make the move",
+    "fieldGroups": {
+      "identity": "Identity and contact",
+      "certifications": "Certifications",
+      "kit": "Kit",
+      "history": "History and records"
+    },
+    "moveTitle": "How the move works",
+    "moveIntro": "Every step is one you run yourself, in your own time. If you would rather hand it off, send us the file and a person brings your divers in with you, free.",
+    "scopeTableTitle": "What comes across, and what does not",
+    "scopeTableDescription": "The same table DiveDay shows you before it imports a single row.",
+    "comesAcross": "Comes across",
+    "seePricing": "See what DiveDay costs →",
+    "staysBehind": "Stays behind",
+    "bothWaysTitle": "The same table, read the other way",
+    "bothWaysBody": "The rows above are what arrives, and the export is the same list. {claim}",
+    "bringFileTitle": "Bring the file into DiveDay",
+    "bringFileIntro": "The rest happens in DiveDay, in the order below.",
+    "openSettingsTitle": "Open Settings → Import contacts",
+    "openSettingsBody": "The owner or manager uploads the CSV in your DiveDay shop.",
+    "checkPreviewTitle": "Check the preview",
+    "checkPreviewBody": "The preview shows how each column landed, which ones it is leaving behind, and any row it can’t bring across. A diver whose email already exists is updated rather than duplicated, and nothing saves until you confirm.",
+    "importReadyTitle": "Import, and your roster is ready",
+    "importReadyBody": "Roster, sizes and certification records land at once, flagged imported with a one-tap confirm for staff. Only a specialty-gated dive waits on that confirmation.",
+    "openImportCta": "Open Import in your shop",
+    "midCtaTitle": "See it in the live demo",
+    "midCtaBody": "The demo is the sample shop your file would land in: the same cert checks, waivers and roll call, as the owner, the captain or a diver.",
+    "previewLink": "The preview screen, with our notes →"
+  },
+  "hub": {
+    "eyebrow": "Switching to DiveDay",
+    "title": "Bring your shop with you",
+    "description": "Choose what you use today to see what moves, what stays behind and how to start.",
+    "spreadsheetTitle": "Coming from a spreadsheet",
+    "spreadsheetDescription": "The sheet you already keep is the file. This guide is the column list it reads, then the four jobs a list never did.",
+    "switchingFrom": "Switching from {competitor}",
+    "previewEyebrow": "The screen every guide ends on",
+    "previewTitle": "The preview reads your file back to you before a row is saved",
+    "previewNote1": "Four columns it recognized from their headings. Yours don’t have to match these names.",
+    "previewNote2": "“Not recognized, so ignored” names the two columns it drops rather than guessing at them.",
+    "previewNote3": "One row is marked skipped: it has no name. A name is the only thing a row needs.",
+    "previewNote4": "“Nothing saves until you say so” is the screen’s title. In the demo: Settings → Import contacts.",
+    "previewDoor": "Open the demo as the owner →",
+    "previewMockupLabel": "The DiveDay import preview, showing matched columns, ignored columns, counts, and a skipped row.",
+    "dontSeeSystem": "Not listed here",
+    "dontSeeSystemBody": "An export comes in as it is: a name column is the one thing a row needs, and certification and size columns come along when they exist.",
+    "closingTitle": "Your divers, certifications and sizes come across before your first trip",
+    "closingSupport": "Send us what you have and a person here brings your divers in with you, free, or helps you carry it all back out if DiveDay is ever the wrong fit; anything else can go to {email}."
+  },
+  "competitor": {
+    "keepOrLeaveEyebrow": "Keep it, or leave it",
+    "websiteEyebrow": "Your website",
+    "websiteTheirs": "In {competitor}",
+    "websiteOurs": "In DiveDay",
+    "forExportPrefix": "For a {competitor} export:",
+    "runTheDay": "Run the dive day {competitor} can’t",
+    "readyToMove": "The move off {competitor}, in one sitting",
+    "walkDemoFirst": "The demo first, then your export. The cert checks, waivers and roll call your file lands into are already running there.",
+    "otherGuides": "Other switching guides →",
+    "sources": "Sources"
+  },
+  "spreadsheet": {
+    "eyebrow": "Coming from a spreadsheet",
+    "title": "Bring the spreadsheet with you",
+    "heroLede": "The sheet you keep is the file: one row per diver, saved as CSV. What follows is the column list it reads, then the four jobs it takes on that a list never did.",
+    "wedgeIntro1": "A spreadsheet holds the names and the numbers and checks none of them. The checking, cards, waivers, who is still not ready, is what you do by hand right now.",
+    "wedgeIntro2": "The four jobs it takes on:",
+    "wedge": {
+      "cardsChecked": {
+        "title": "Every certification checked before the boat leaves",
+        "body": "Each diver’s certification is read against what the trip and the site require. Anyone who can’t board yet is listed, with the reason."
+      },
+      "blockersOnePlace": {
+        "title": "Who can’t board yet, in one list",
+        "body": "Needs you, on Today, lists who still can’t board and why: a missing waiver, or a certification nobody has verified yet."
+      },
+      "diversBookThemselves": {
+        "title": "Divers book and sign themselves",
+        "body": "A diver picks a seat and signs the waiver from a link, with no account and no app. An unsigned one is on Today the night before, with the name."
+      },
+      "manifestHeadCount": {
+        "title": "A manifest that calls the roll by name",
+        "body": "The crew marks each diver and crew member aboard by name, dive by dive, on a phone, from a copy saved to it before the boat leaves, so the roll call keeps working with no signal at the ramp."
+      }
+    },
+    "columnsTitle": "The columns it reads",
+    "columnsIntro": "One row per diver, saved as CSV. Your headings don’t have to match these; the common names are recognized, and the preview names any it isn’t sure of.",
+    "downloadTemplate": "Download the starter template (CSV)",
+    "columns": {
+      "name": {
+        "column": "Name",
+        "detail": "First and last in two columns, or one full-name column. The only thing a row needs."
+      },
+      "email": {
+        "column": "Email",
+        "detail": "How DiveDay reaches a diver and recognizes a returning one, so a second import updates instead of duplicating. A row without one still comes in."
+      },
+      "phone": {
+        "column": "Phone",
+        "detail": "Mobile or landline, however you’ve written it."
+      },
+      "dateOfBirth": {
+        "column": "Date of birth",
+        "detail": "A real date of birth carries over when your file has one."
+      },
+      "emergencyContact": {
+        "column": "Emergency contact",
+        "detail": "A name and a phone number, when you have them, land on the diver’s record."
+      },
+      "diveInsurance": {
+        "column": "Dive insurance",
+        "detail": "A DAN number or a provider name comes across as written. Never a gate; it is what the crew wants on hand in an incident."
+      },
+      "certification": {
+        "column": "Certification",
+        "detail": "Agency, level, and certification number. The certification number is what lets a record come across at all."
+      },
+      "specialty": {
+        "column": "Specialty",
+        "detail": "Deep, wreck, night, or drysuit. One cell can name several (“Deep, Wreck”) and each becomes its own certification under the diver’s agency number."
+      },
+      "nitrox": {
+        "column": "Nitrox",
+        "detail": "A yes/no column, plus the nitrox certification number if you keep one. The number is what brings it across."
+      },
+      "rentalSizes": {
+        "column": "Rental sizes",
+        "detail": "BCD, wetsuit, boot, and fin. Whatever sizes you track become a fit profile."
+      },
+      "pastVisits": {
+        "column": "Past visits",
+        "detail": "A date, trip name, and price per row becomes that diver’s history here, so a regular arrives as a regular. Repeat their email on each row to match the right person."
+      },
+      "waivers": {
+        "column": "Waivers and documents",
+        "detail": "A signed waiver claim and safe document links can come across; individual medical answers do not."
+      },
+      "paymentHistory": {
+        "column": "Payment history",
+        "detail": "Payment, refund, and receipt rows can be kept as unverified history, never as live card data."
+      },
+      "notes": {
+        "column": "Notes",
+        "detail": "Staff and diver notes become private notes on the diver’s profile."
+      },
+      "gearHistory": {
+        "column": "Gear service history",
+        "detail": "A separate gear CSV brings in your tagged units and dated service, hydro, inspection, O2-clean, and condition records."
+      }
+    },
+    "parallelRunNote": "Keep the sheet going as long as you like. A re-import matches divers by email and updates them instead of duplicating, so the day you stop keeping it is yours to pick.",
+    "closingTitle": "The demo is the shop your sheet would land in",
+    "closingDescription": "Open it as the owner, the captain or a diver. No sign-up, and nothing in it is yours to break.",
+    "otherSystems": "Switching from other software →"
+  },
+  "concierge": {
+    "eyebrow": "A person does the import with you",
+    "title": "We will switch you on, and off, ourselves",
+    "description": "Send us what you have, whether a clean export or a decade of messy tabs, and we’ll map the columns and bring your divers in with you, free. If DiveDay is ever the wrong fit, we’ll help you carry it all back out the same way."
+  }
+}

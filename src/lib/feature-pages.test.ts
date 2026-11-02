@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import enUS from "@/i18n/locales/en-US/diver.json";
+import marketing from "@/i18n/locales/en-US/content/marketing.json";
 import { staffDestinationGates } from "./authz";
 import {
   FEATURE_PAGE_SLUGS,
@@ -65,7 +65,7 @@ describe("the feature page registry", () => {
 });
 
 describe("each feature page's copy and checklist", () => {
-  const pages = enUS.marketing.featurePages as Record<string, Record<string, string>>;
+  const pages = marketing.featurePages as Record<string, Record<string, string>>;
   const fields = Object.keys(pages.onlineBooking);
 
   it.each(FEATURE_PAGES)("gives $slug the same fields as every other page", (page) => {

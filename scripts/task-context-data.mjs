@@ -898,7 +898,7 @@ export const areas = {
     ],
     tests: ["src/i18n/icu-messages.test.ts", "src/i18n/count-agreement.test.ts"],
     invariants: [
-      "Copy comes from a bundle: diver words in locales/<locale>/diver.json, staff words in locales/<locale>/staff/<namespace>.json, composed by staff-messages.ts.",
+      "Copy comes from a bundle: diver words in locales/<locale>/diver.json, the marketing and switching pages in locales/<locale>/content/<section>.json (composed with it by messages.ts), staff words in locales/<locale>/staff/<namespace>.json, composed by staff-messages.ts.",
       "Every key exists in en-US and es-ES; US spelling in en-US.",
       "No locale or time zone is hard-coded; a date names its zone.",
       "Every sentence earns its place (the copy-restraint skill).",

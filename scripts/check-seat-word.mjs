@@ -15,7 +15,8 @@ import { pathToFileURL } from "node:url";
  *
  * So this refuses `spot` in every English staff bundle
  * (`src/i18n/locales/en-US/staff/*.json`) and in the diver bundle
- * (`src/i18n/locales/en-US/diver.json`). Spanish says `plaza` on both sides
+ * (`src/i18n/locales/en-US/diver.json` and the `content/*.json` sections
+ * composed with it). Spanish says `plaza` on both sides
  * and has no second word to drift into.
  *
  * `allowed` names each string where "spot" is right (a place, the idiom),
@@ -27,6 +28,7 @@ import { pathToFileURL } from "node:url";
 const ROOT = process.cwd();
 const STAFF_DIR = "src/i18n/locales/en-US/staff";
 const DIVER_BUNDLE = "src/i18n/locales/en-US/diver.json";
+const CONTENT_DIR = "src/i18n/locales/en-US/content";
 
 const PATTERN = /\bspots?\b/i;
 
@@ -40,7 +42,7 @@ const allowed = new Map([
     'a place, not capacity: "a spot on the reef" is where an incident happened',
   ],
   [
-    "diver.json:marketing.featurePages.checkIn.summary",
+    "content/marketing.json:featurePages.checkIn.summary",
     'the idiom "walk-ins added on the spot", meaning there and then',
   ],
 ]);
@@ -91,6 +93,13 @@ async function main() {
     .sort()
     .map((name) => ({ name, rel: `${STAFF_DIR}/${name}` }));
   bundles.push({ name: path.basename(DIVER_BUNDLE), rel: DIVER_BUNDLE });
+  // DiveDay's content sections, named with their directory so an allowlist
+  // entry can never match a staff namespace of the same filename.
+  for (const name of (await readdir(path.join(ROOT, CONTENT_DIR)))
+    .filter((entry) => entry.endsWith(".json"))
+    .sort()) {
+    bundles.push({ name: `content/${name}`, rel: `${CONTENT_DIR}/${name}` });
+  }
   const failures = [];
   let checked = 0;
   for (const { name, rel } of bundles) {

@@ -1,6 +1,8 @@
 import { createTranslator } from "next-intl";
-import enUS from "./locales/en-US/diver.json";
-import esES from "./locales/es-ES/diver.json";
+import enUSContent from "./locales/en-US/content";
+import enUSChrome from "./locales/en-US/diver.json";
+import esESContent from "./locales/es-ES/content";
+import esESChrome from "./locales/es-ES/diver.json";
 import { messageFallback } from "./message-fallback";
 import { translatorOnError } from "./on-error";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale, toDiverLocale } from "./settings";
@@ -12,13 +14,19 @@ import { DEFAULT_DIVER_LOCALE, type DiverLocale, toDiverLocale } from "./setting
  * Bundles are imported statically rather than loaded through next-intl's
  * request config, because the locale here comes from a database row read inside
  * the page — there is no request-scoped locale for `getRequestConfig` to
- * resolve. Two small JSON files are cheap to hold; if the set ever grows past a
- * handful, switch to dynamic `import()` per locale.
+ * resolve. If the set ever grows past a handful of locales, switch to dynamic
+ * `import()` per locale.
+ *
+ * Each locale's bundle is two halves composed into one (issue #2773):
+ * `diver.json` is the diver's chrome (trip, booking, ready, recap, waiver…),
+ * and `content/` is DiveDay's own content (the marketing site and the
+ * switching guides), one section per file. Composing them here keeps every key
+ * path, the `DiverMessages` type and every caller exactly as they were.
  */
 
 export const DIVER_MESSAGES = {
-  "en-US": enUS,
-  "es-ES": esES,
+  "en-US": { ...enUSChrome, ...enUSContent },
+  "es-ES": { ...esESChrome, ...esESContent },
 } as const satisfies Record<DiverLocale, unknown>;
 
 export type DiverMessages = (typeof DIVER_MESSAGES)["en-US"];
@@ -58,8 +66,9 @@ export type ClientDiverMessageNamespace = Exclude<
  * `DiverIntlProvider` serializes whatever this returns into the RSC payload
  * of every page that mounts it, so a page that only renders a couple of
  * Client Components (a contact form, a rental-fit form) should only ever ship
- * those components' namespaces, not the full ~80 KB bundle. See that file's
- * doc comment for why every other config prop stays explicit too.
+ * those components' namespaces, not the full bundle: `diver.json` alone is
+ * ~260 KB of chrome, before the server-only `content/` sections. See that
+ * file's doc comment for why every other config prop stays explicit too.
  */
 export function messagesForNamespaces<K extends DiverMessageNamespace>(
   locale: string | null | undefined,

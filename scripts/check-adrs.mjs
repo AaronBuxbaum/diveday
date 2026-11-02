@@ -11,7 +11,11 @@
 // id, then the decision's opening words, struck through with "→ <successor>" once superseded),
 // written by `node scripts/adr-index.mjs --write`. Before it a session found an ADR with
 // `ls | grep`.
+//
+// The quotes: a fenced block opening with a `// <path>:<line>` header must match the source it
+// cites (`quoteProblems`), so a code line an ADR quotes cannot silently rot (issue #1738).
 
+import { existsSync, readFileSync } from "node:fs";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
@@ -74,6 +78,39 @@ export function adrProblems(filename, contents) {
   return { id: expectedHeadingId, failures };
 }
 
+/**
+ * Quotes that drifted. A fenced block whose first line is `// <path>:<line>` (or `<line>-<line>`)
+ * claims to be the source from that line on; each of its remaining lines must equal the file's,
+ * compared after trimming. `readSource(path)` returns the file's lines, or null when it is gone.
+ * A bare `path:line` citation outside such a fence is not checked: it quotes nothing.
+ */
+export function quoteProblems(filename, contents, readSource) {
+  const failures = [];
+  const fence = /^```[^\n]*\n\/\/ (\S+?):(\d+)(?:-(\d+))?[ \t]*\n([\s\S]*?)\n```/gm;
+  for (const match of contents.matchAll(fence)) {
+    const [, file, start, end, body] = match;
+    const quoted = body.split("\n");
+    const count = end ? Number(end) - Number(start) + 1 : quoted.length;
+    const lines = readSource(file);
+    if (!lines) {
+      failures.push(`${filename}: quotes ${file}:${start}, but that file does not exist`);
+      continue;
+    }
+    for (let offset = 0; offset < Math.min(count, quoted.length); offset += 1) {
+      const actual = lines[Number(start) - 1 + offset];
+      if ((actual ?? "").trim() !== quoted[offset].trim()) {
+        failures.push(
+          `${filename}: quotes ${file}:${start}, but line ${Number(start) + offset} is ${JSON.stringify(
+            (actual ?? "<past the end of the file>").trim(),
+          )} where the record has ${JSON.stringify(quoted[offset].trim())}. Re-quote it or update the cited line`,
+        );
+        break;
+      }
+    }
+  }
+  return failures;
+}
+
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const root = process.cwd();
   const directory = path.join(root, "docs/architecture/decisions");
@@ -89,6 +126,12 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
       await readFile(path.join(directory, filename), "utf8"),
     );
     failures.push(...found);
+    failures.push(
+      ...quoteProblems(filename, await readFile(path.join(directory, filename), "utf8"), (file) => {
+        const target = path.join(root, file);
+        return existsSync(target) ? readFileSync(target, "utf8").split("\n") : null;
+      }),
+    );
     ids.set(id, [...(ids.get(id) ?? []), filename]);
   }
   for (const [id, filenames] of ids) {

@@ -258,6 +258,17 @@ describe("server-only modules stay out of client bundles", () => {
     expect([...violations.keys()].sort()).toEqual(["src/app/A.tsx", "src/app/B.tsx"]);
   });
 
+  it("stops at a use-server module, which the browser gets as a call stub", async () => {
+    const root = await fixture({
+      "src/lib/payments/stripe-fetch.ts": "export const stripe = 1;\n",
+      "src/lib/payments/checkout.ts": 'import { stripe } from "./stripe-fetch";\n',
+      "src/app/actions.ts": '"use server";\nimport { x } from "@/lib/payments/checkout";\n',
+      "src/app/Form.tsx": '"use client";\nimport { act } from "@/app/actions";\n',
+      "src/app/Leaky.tsx": '"use client";\nimport { x } from "@/lib/payments/checkout";\n',
+    });
+    expect([...(await collectViolations(root)).keys()]).toEqual(["src/app/Leaky.tsx"]);
+  });
+
   it("leaves alone a server file, a type-only import and a clean client file", async () => {
     const root = await fixture({
       "src/lib/phone-line-type.ts": phone,

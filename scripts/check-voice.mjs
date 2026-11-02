@@ -522,14 +522,23 @@ export function threeDots(value) {
 }
 
 /**
- * Refuse `!` and `¡` in `diver.json` to keep diver messages in a plain voice.
+ * Refuse `!` and `¡` in `diver.json` and the `content/` sections it is composed
+ * with to keep diver messages in a plain voice.
  * `notifications.whatsappTemplate.body` is exempt because Meta reviews that
  * registered template for each shop; changing it requires a new template.
  */
 export const EXCLAMATION_ALLOWLIST = new Set(["notifications.whatsappTemplate.body"]);
 
-/** The bundle file the exclamation rule reads. */
+/** The bundle file the exclamation rule reads, with its `content/` sections. */
 export const EXCLAMATION_BUNDLE = "diver.json";
+
+/**
+ * The directory of DiveDay's own content, one section per file, which
+ * `src/i18n/messages.ts` composes into the diver bundle under the filename as
+ * top-level key (issue #2773). Its keys are read with that prefix, and it is
+ * one bundle with `diver.json` for every rule here.
+ */
+export const CONTENT_DIR = "content";
 
 export function exclamations(value, key = "") {
   if (EXCLAMATION_ALLOWLIST.has(key)) return [];
@@ -1276,22 +1285,34 @@ export async function scanBundles() {
         `${LOCALES_DIR}/${locale} has no voice rules — add a word list for it in scripts/check-voice.mjs`,
       );
     }
+    const contentDir = path.join(LOCALES_DIR, locale, CONTENT_DIR);
+    const diverFile = path.join(LOCALES_DIR, locale, EXCLAMATION_BUNDLE);
+    // The diver bundle and its content sections, read as the one bundle
+    // messages.ts composes, so a phrase repeated across a marketing page and
+    // the onboarding form is still one house phrase.
+    const diverEntries = [];
+    const record = (file, hits) => {
+      if (hits.length === 0) return;
+      counts.set(file, (counts.get(file) ?? 0) + hits.length);
+      details.set(file, [...(details.get(file) ?? []), ...hits]);
+    };
     for (const file of await bundleFiles(path.join(LOCALES_DIR, locale))) {
       const bundle = JSON.parse(await readFile(path.join(ROOT, file), "utf8"));
       const hits = [];
       const entries = [];
-      const diverBundle = path.basename(file) === EXCLAMATION_BUNDLE;
-      walkValues(bundle, "", (key, value) => {
+      const content = path.dirname(file) === contentDir;
+      const diverBundle = content || file === diverFile;
+      const prefix = content ? path.basename(file, ".json") : "";
+      walkValues(bundle, prefix, (key, value) => {
         entries.push({ key, value });
         for (const tell of findTells(value, locale, key)) hits.push({ key, ...tell });
         if (diverBundle) for (const tell of exclamations(value, key)) hits.push({ key, ...tell });
       });
-      hits.push(...housePhrases(entries, locale));
-      if (hits.length > 0) {
-        counts.set(file, hits.length);
-        details.set(file, hits);
-      }
+      if (diverBundle) diverEntries.push(...entries);
+      else hits.push(...housePhrases(entries, locale));
+      record(file, hits);
     }
+    record(diverFile, housePhrases(diverEntries, locale));
   }
   return { counts, details };
 }

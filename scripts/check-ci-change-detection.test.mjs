@@ -1,4 +1,7 @@
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, writeFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -40,7 +43,7 @@ function fixture(step) {
 
 const CURRENT = [
   "        env:",
-  "          BASE_REF: ${{ github.event.pull_request.base.ref }}",
+  "          BASE_SHA: ${{ github.event.pull_request.base.sha }}",
   "          HEAD_SHA: ${{ github.event.pull_request.head.sha }}",
   "          BEFORE_SHA: ${{ github.event.before }}",
   "        run: |",
@@ -48,24 +51,23 @@ const CURRENT = [
 ].join("\n");
 
 describe("the range change detection asks about", () => {
-  it("refuses the recorded base sha, which is what shipped the bug", () => {
+  it("refuses the live base branch, which let a merged PR read as docs-only", () => {
     const step = [
       "        env:",
-      "          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}",
+      "          BASE_REF: ${{ github.event.pull_request.base.ref }}",
+      "          HEAD_SHA: ${{ github.event.pull_request.head.sha }}",
+      "          BEFORE_SHA: ${{ github.event.before }}",
       "        run: |",
-      '          db_paths=$(git diff --name-only "${BASE_SHA}...HEAD" -- src/db)',
+      '          db_paths=$(git diff --name-only "origin/${BASE_REF}...${HEAD_SHA}" -- src/db)',
     ].join("\n");
-    const violations = findCiChangeDetectionViolations(fixture(step));
-    expect(violations.join("\n")).toContain("base.sha");
-    expect(violations.join("\n")).toContain("never advances");
+    const violations = findCiChangeDetectionViolations(fixture(step)).join("\n");
+    expect(violations).toContain("#3259");
+    expect(violations).toContain("pin both ends");
   });
 
-  it("refuses a base resolved neither by ref nor by sha", () => {
-    const step = [
-      "        run: |",
-      '          db_paths=$(git diff --name-only "main...HEAD")',
-    ].join("\n");
-    expect(findCiChangeDetectionViolations(fixture(step)).join("\n")).toContain("base.ref");
+  it("refuses a range that ends at the checked-out merge commit", () => {
+    const step = CURRENT.replace('"${base}...${head}"', '"${BASE_SHA}...HEAD"');
+    expect(findCiChangeDetectionViolations(fixture(step)).join("\n")).toContain("#1295");
   });
 
   it("refuses collapsing the push path into the pull-request range", () => {
@@ -84,7 +86,8 @@ describe("the range change detection asks about", () => {
   it("refuses a filter step that diffs nothing at all", () => {
     const step = [
       "        env:",
-      "          BASE_REF: ${{ github.event.pull_request.base.ref }}",
+      "          BASE_SHA: ${{ github.event.pull_request.base.sha }}",
+      "          HEAD_SHA: ${{ github.event.pull_request.head.sha }}",
       "          BEFORE_SHA: ${{ github.event.before }}",
       '        run: echo code=true >> "$GITHUB_OUTPUT"',
     ].join("\n");
@@ -106,20 +109,42 @@ describe("the workflow itself", () => {
     expect(findCiChangeDetectionViolations(await workflow())).toEqual([]);
   });
 
-  it("fetches the base ref without a depth, so merge-base sees real history", async () => {
+  it("reads the pinned shas from the event and runs no fetch of its own", async () => {
     const step = filterStep(await workflow());
-    expect(step).toContain('git fetch --no-tags origin "${BASE_REF}"');
-    // `fetch-depth: 0` on the checkout already brought the history; a shallow
-    // fetch here grafts a boundary on and merge-base computes against a
-    // truncated ancestry.
-    expect(step).not.toMatch(/git fetch[^\n]*--depth/);
+    expect(step).toContain("BASE_SHA: ${{ github.event.pull_request.base.sha }}");
+    expect(step).toContain("HEAD_SHA: ${{ github.event.pull_request.head.sha }}");
+    expect(step).not.toMatch(/git fetch/);
   });
 
-  it("lets a failed fetch fail open rather than failing the job", async () => {
+  it("runs everything when a pinned commit cannot be resolved", async () => {
     const step = filterStep(await workflow());
-    // `set -euo pipefail` is in force, so an unguarded fetch would abort the
-    // step — the opposite of the fail-open contract the step is written around.
-    expect(step).toMatch(/git fetch[^\n]*\|\| true/);
+    expect(step).toContain("git rev-parse --verify -q");
     expect(step).toContain("running everything");
+  });
+});
+
+describe("a base that advances during the run (issue #3259)", () => {
+  it("still sees the PR's own change through the event-pinned range", () => {
+    const dir = mkdtempSync(path.join(os.tmpdir(), "ci-detect-"));
+    const git = (...args) =>
+      execFileSync("git", ["-C", dir, "-c", "user.email=a@b.c", "-c", "user.name=t", ...args], {
+        encoding: "utf8",
+      }).trim();
+    git("init", "-q", "-b", "main");
+    writeFileSync(path.join(dir, "README.md"), "docs\n");
+    git("add", "-A");
+    git("commit", "-q", "-m", "base");
+    const baseSha = git("rev-parse", "HEAD");
+    git("checkout", "-q", "-b", "pr");
+    writeFileSync(path.join(dir, "settings.tsx"), "export {};\n");
+    git("add", "-A");
+    git("commit", "-q", "-m", "pr change");
+    const headSha = git("rev-parse", "HEAD");
+    // The PR merges while detection runs: the live main now contains the PR head.
+    git("checkout", "-q", "main");
+    git("merge", "-q", "--ff-only", "pr");
+
+    expect(git("diff", "--name-only", "main...pr")).toBe("");
+    expect(git("diff", "--name-only", `${baseSha}...${headSha}`)).toBe("settings.tsx");
   });
 });
