@@ -27,7 +27,7 @@ const personSchema = z.object({
   // wrong entry to "", which that schema's `.optional()` fields don't need to.
   emergencyContactName: z.string().trim().max(120),
   emergencyContactPhone: z.string().trim().max(40),
-  // Optional on the form and blank-able: H-08's minimum-age gate fails open, so
+  // Optional on the form and blank-able: H-20260724-certification-levels-agency-rules's minimum-age gate fails open, so
   // a shop that never fills this in keeps booking exactly as it does today. The
   // plausibility bound is the one place it fails *closed*: a future or
   // pre-1900 date is a typo, and a future one would silently refuse every
@@ -93,8 +93,8 @@ const replyForm = z.object({ messageId: text(), body: text() });
  * 20260907-two-way-inbox).
  *
  * **Every live staff role may send as the shop.** Decided by the product owner
- * on 2026-09-10 as an amendment to H-14 (issues #1505/#1518); the argument is
- * decision 9 of that ADR, and the owner's call is H-14 in
+ * on 2026-09-10 as an amendment to H-20260724-staff-role-reach (issues #1505/#1518); the argument is
+ * decision 9 of that ADR, and the owner's call is H-20260724-staff-role-reach in
  * `docs/product/human-decisions/README.md`. What it means here is that the argument
  * which opened the inbox to reading extends to writing — there is no narrower
  * gate on sending than there is on looking.

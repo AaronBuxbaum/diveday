@@ -18,13 +18,13 @@ import { createTrip, listStaff, moveTrip, setTripCrew, setTripStatus } from "./t
 const ctx = fileScopedShopContext();
 
 /**
- * **A crew clash on the surface a shop starts its morning on** (H-80, issues
+ * **A crew clash on the surface a shop starts its morning on** (H-20260916-may-one-hull-carry, issues
  * #1776 and #1814).
  *
  * A clash is the one crew fault invisible on both boats: each shows a full crew
  * list. Before the boat sails it is a `crew_clash` row on each departure, read
  * through `crewClashesByTrip` in one batch. After it sails and until it is home
- * it is a `crew_clash_sailed` row — the narrow version H-80 chose, read from the
+ * it is a `crew_clash_sailed` row — the narrow version H-20260916-may-one-hull-carry chose, read from the
  * roster rather than from roll-call events, so a shop that never taps a crew
  * roll call still raises no crew roll-call row.
  *
@@ -33,7 +33,7 @@ const ctx = fileScopedShopContext();
  * lands one boat on the other. A person of the test's own, so a seeded
  * departure cannot clash with them by accident.
  */
-describe("crew clashes on Today (H-80)", () => {
+describe("crew clashes on Today (H-20260916-may-one-hull-carry)", () => {
   const HOUR = 60 * 60 * 1000;
 
   async function divemaster(name: string) {

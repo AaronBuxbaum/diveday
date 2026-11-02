@@ -71,7 +71,7 @@ export default async function OrderDetailPage({
   if (!order) notFound();
   const demo = shop.isDemo ?? false;
   const timezone = shop.timezone ?? "UTC";
-  // Refunds are owner/manager only (H-14, ADR 20260724-role-authorization);
+  // Refunds are owner/manager only (H-20260724-staff-role-reach, ADR 20260724-role-authorization);
   // hide the control from other staff. refundAction re-checks regardless.
   const [canRefund, canDisputeSheet, header, booking] = await Promise.all([
     canPersonRefund(db, shop.id, session.user.personId),
@@ -294,7 +294,7 @@ export default async function OrderDetailPage({
             // Cash and the card machine never touch Stripe, so a demo records
             // them (market sheet 2026-10-22, item 6); no room charge there.
             // A tap holds the whole balance eight seconds with Undo, then
-            // records it (issue #3030, H-68); a reload inside the hold shows
+            // records it (issue #3030, H-20260906-diveday-fill-already-knows); a reload inside the hold shows
             // it still draining.
             <RecordPaymentForm
               orderId={order.order.id}

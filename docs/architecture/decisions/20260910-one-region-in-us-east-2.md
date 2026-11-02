@@ -23,7 +23,7 @@ Every ARN one stack builds for the other has to be assembled from shared constan
 And — found while rebasing the original change onto a `main` that had gained two-way inbox in the meantime — **SES receives mail only for an identity verified in the receiving region**, so a receipt rule set left behind in us-east-1 would have deployed cleanly and received nothing, with no error anywhere, while every diver's reply bounced at their own mail server.
 
 The second is that the reason to stay was proximity to data, and there is no data.
-DiveDay is pre-pilot (H-49).
+DiveDay is pre-pilot (H-20260815-no-legacy).
 The buckets hold seed rows, visual-regression baselines and demo photos.
 Nothing in us-east-1 is worth a migration plan, which means the usual argument against moving an estate — the copy, the cutover, the URLs already written down — does not apply here and will never be this cheap again.
 

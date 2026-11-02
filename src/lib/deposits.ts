@@ -13,7 +13,7 @@ import {
  * Deposit and cancellation-policy domain logic, framework-free. The mechanism
  * is opt-in: a trip with no `depositCents` charges the full fare (today's
  * behavior) and a trip with no `cancellationWindowHours` states no window.
- * Refunds stay staff-initiated — nothing here moves money (docs H-07).
+ * Refunds stay staff-initiated — nothing here moves money (docs H-20260724-payment-deposit-cancellation-refund).
  */
 
 export type DepositTrip = {
@@ -249,7 +249,7 @@ export type RefundDecision = {
  * declines to move money (`no_policy`) and refunds stay staff-run exactly as
  * before. Inside the window the full amount paid comes back; past the deadline
  * the seat is forfeit. Never returns more than was paid, and a non-positive
- * `paidCents` always yields a zero refund (docs H-07 automated-refund slice).
+ * `paidCents` always yields a zero refund (docs H-20260724-payment-deposit-cancellation-refund automated-refund slice).
  */
 export function refundOnCancellation(
   trip: CancellationTrip,

@@ -445,7 +445,7 @@ async function recordNoCertification(
  * this function touches none of them; nothing it writes can raise a level, add
  * a card, or move a row toward `verified`. That is the whole reason it is safe
  * to open to every staff role, which is what capturing a card already is —
- * H-48 is the open question about who may *sight* one, and this deliberately
+ * H-20260814-may-sight-card is the open question about who may *sight* one, and this deliberately
  * does not pre-empt it by inventing a narrower gate for a weaker act.
  *
  * Shop-scoped like every writer here, so a staffer holding a foreign person id

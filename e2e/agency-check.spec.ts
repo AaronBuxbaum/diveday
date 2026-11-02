@@ -7,7 +7,7 @@ signedInAsOwner();
 const SHOP = "blue-mantis";
 
 /**
- * The app's automatic GUE check and manual SSI handoff (H-105).
+ * The app's automatic GUE check and manual SSI handoff (H-20261008-cert-check-extension).
  *
  * The installed extension is `agency-check-extension.spec.ts`'s; this covers
  * the app's side of each answer, and the agencies' pages are not ours to

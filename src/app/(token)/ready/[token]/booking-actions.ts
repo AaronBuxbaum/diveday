@@ -75,7 +75,7 @@ export async function payFromReady(token: string) {
 }
 
 /**
- * **Ask to move** (H-126). Past the free-cancellation window, cancelling
+ * **Ask to move** (H-20261014-ask-to-move). Past the free-cancellation window, cancelling
  * forfeits what was paid; this files a request in the shop's Inbox naming the
  * seat instead, with the diver's optional note. Nothing moves here: moving a
  * paid seat stays staff-side (ADR 20260821-the-diver-may-release-their-own-seat).
@@ -130,7 +130,7 @@ export async function askToMoveAction(token: string, formData: FormData) {
 
 /**
  * **"Ask to move to Thu 12:00" from a called-off departure's card** (UX sheet
- * 2026-10-22, item 5; H-151). The same Inbox ask as `askToMoveAction`, filed
+ * 2026-10-22, item 5; H-20261022-called-off-boat-offers). The same Inbox ask as `askToMoveAction`, filed
  * against the stranded seat with the offered boat written into its note; the
  * desk confirms it with its ordinary move, so nothing moves or is charged
  * here.
@@ -233,7 +233,7 @@ export async function payForPartySeatFromReady(token: string, formData: FormData
 /**
  * Cancel the diver's own booking. Rate-limited harder than the rest of this
  * file — this is irreversible and, when paid, moves money. Cancellation and
- * refund stay the two independent steps the staff path uses (docs H-07): the
+ * refund stay the two independent steps the staff path uses (docs H-20260724-payment-deposit-cancellation-refund): the
  * seat is freed by `selfCancelBooking` first, and a refund failure afterward
  * never re-opens it or blocks the cancellation the diver already sees.
  *

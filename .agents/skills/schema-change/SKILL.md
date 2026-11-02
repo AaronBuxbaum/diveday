@@ -41,7 +41,7 @@ questions — read the schema module.
 
 ## Reference
 
-- [removing.md](removing.md) — dropping a table, column or enum value: there is no legacy data, so delete it (H-49), and what that does not relax.
+- [removing.md](removing.md) — dropping a table, column or enum value: there is no legacy data, so delete it (H-20260815-no-legacy), and what that does not relax.
 - [two-branches.md](two-branches.md) — two migrations on two branches: `drizzle/` is a DAG, and how to collapse two heads into one.
 
 ## Hard prohibitions

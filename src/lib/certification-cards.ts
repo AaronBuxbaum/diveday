@@ -2,7 +2,7 @@ import { isUnsightedSelfDeclaration } from "./readiness";
 
 /**
  * **What a certification card's row says about itself** — the predicates every
- * people surface reads a card through, and the one place the H-24 rule about
+ * people surface reads a card through, and the one place the H-20260725-two-findings-dive-domain rule about
  * an imported card's gate is written down.
  *
  * These lived in the diver record's own `_components/shared.ts` until the
@@ -101,7 +101,7 @@ export type CertificationCardRowState =
   | "imported_unconfirmed";
 
 /**
- * **Which of the four a card is, and the H-24 rule that decides it.**
+ * **Which of the four a card is, and the H-20260725-two-findings-dive-domain rule that decides it.**
  *
  * Read in the order the desk reads it:
  *

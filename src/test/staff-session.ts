@@ -21,9 +21,9 @@ import type { Role } from "@/lib/authz";
  * wrong reason.
  */
 
-/** Dana Reyes — owner *and* manager: passes every H-14 gate. */
+/** Dana Reyes — owner *and* manager: passes every H-20260724-staff-role-reach gate. */
 export const SEEDED_OWNER_EMAIL = "dana@demo.invalid";
-/** Sal Moretti — captain: the lowest-privilege seeded staff role, refused by every H-14 gate. */
+/** Sal Moretti — captain: the lowest-privilege seeded staff role, refused by every H-20260724-staff-role-reach gate. */
 export const SEEDED_CAPTAIN_EMAIL = "sal@demo.invalid";
 
 /** The seeded staff member's person id, by the email they sign in with. */
@@ -64,7 +64,7 @@ export async function demoteOwnerToManager(db: AppDb, personId: string): Promise
  *
  * `roles` defaults to a *staff* role deliberately: these tests are about what
  * happens after the staff gate passes. Pass an inflated `roles` to model a stale
- * or forged JWT — the H-14 gates must ignore it and re-read the database.
+ * or forged JWT — the H-20260724-staff-role-reach gates must ignore it and re-read the database.
  */
 export function staffSession(input: {
   shopId: string;

@@ -18,7 +18,7 @@ export type PackageOffer = {
    * long the card lasts (visual review 2026-10-24, B39).
    */
   facts: readonly string[];
-  /** H-123 tank accounting, shared only when every option says the same. */
+  /** H-20261014-package-dive-is-a tank accounting, shared only when every option says the same. */
   tankNote: string;
 };
 

@@ -107,7 +107,7 @@ to resolve correctly.
 
 ## Alternatives considered
 
-**Leave it as shipped and wait for a shop to complain.** DiveDay is pre-pilot (H-49) with no usage
+**Leave it as shipped and wait for a shop to complain.** DiveDay is pre-pilot (H-20260815-no-legacy) with no usage
 data, and the ADR's own "buddy pairs" scenario may be rarer in practice than the review worried. It
 is the cheapest answer and it was genuinely arguable. Rejected because the cost of being wrong is
 paid in the row's credibility rather than in a bug report: a shop that learns to skip a
@@ -151,6 +151,6 @@ The cost of getting it wrong is asymmetric and mild in the direction that matter
 wrongly marked self-guided loses an advisory row it was never obliged to act on, while every real
 gate that could refuse a diver a seat is untouched.
 
-`docs/product/human-decisions/README.md` H-51's open question — whether an advisory signal should ever
+`docs/product/human-decisions/README.md` H-20261025-shop-authored-pre-departure's open question — whether an advisory signal should ever
 become binding — is unaffected. This ADR does not make anything binding; it narrows what an advisory
 signal is advisory *about*.

@@ -43,7 +43,7 @@ export type NewTrip = {
   isPrivate?: boolean;
   /** The shop's own divemaster target does not apply to this departure (issue #973). */
   selfGuided?: boolean;
-  /** The dives went past no-decompression limits (H-84); the recap says nothing about flying. */
+  /** The dives went past no-decompression limits (H-20260916-may-diveday-assert-about); the recap says nothing about flying. */
   exceedsNoDecoLimits?: boolean;
   diveMode?: "boat" | "shore" | "pool";
   boatId?: string | null;

@@ -85,7 +85,7 @@ describe("PartyClaimPanel", () => {
     expect(summary?.querySelector("svg")).not.toBeNull();
   });
 
-  /** H-124: a parent signs a child's release from their own page. */
+  /** H-20261014-parent-signs-minor-release: a parent signs a child's release from their own page. */
   it("offers the organizer the minor's waiver, posting only the seat", () => {
     const action = async () => {};
     const seat = {

@@ -76,7 +76,7 @@ export type TripCrewAssignment = {
    * and passes this. The money and roster paths — the booking gate's
    * `course_unstaffed` refusal and seat cap, the no-show seat hand-back, the
    * crew editor's "a course keeps an instructor" refusal — never do, because
-   * H-59 closed new-sale and new-assignment refusal on a locally recorded date
+   * H-20260825-staff-credentials-renewal-clock closed new-sale and new-assignment refusal on a locally recorded date
    * and the 2026-09-16 ruling reopened only the ratio (issue #1853). One
    * function, two answers, and which one a caller gets is written at the call.
    */
@@ -147,7 +147,7 @@ export type CredentialedRole = "instructor" | "assistant_instructor" | "divemast
  * (an instructor rating answers a divemaster's job), and only a captain's
  * license answers a captain. First aid, oxygen, insurance and `other` answer
  * no role: a free-text "other" is never read as a rating. Words only, never a
- * gate (H-59).
+ * gate (H-20260825-staff-credentials-renewal-clock).
  */
 export const ROLE_CREDENTIAL_KINDS: Record<CredentialedRole, readonly string[]> = {
   instructor: ["instructor_rating"],

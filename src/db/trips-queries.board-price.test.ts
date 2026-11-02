@@ -6,7 +6,7 @@ import { courses, trips } from "./schema";
 import { weekBoard } from "./trips";
 
 /**
- * **A course session on the week board is priced as its course** (H-125),
+ * **A course session on the week board is priced as its course** (H-20261014-course-session-price),
  * beside trips-queries.test.ts's week-board suite, which is at its length
  * baseline. Same file-scoped, read-only database and the same frozen week:
  * Mon 2026-07-20 in the demo shop's America/New_York, and the seeded
@@ -20,7 +20,7 @@ describe("the week board's course prices", () => {
   const TZ = "America/New_York";
 
   it("prices a course session at the course total the booking charges, never the trip row's own figure", async () => {
-    // H-125: the public schedule already reads the course's price; the staff
+    // H-20261014-course-session-price: the public schedule already reads the course's price; the staff
     // board read the trip row's and said $195 where the diver pays $175.
     const { db, shop } = ctx;
 

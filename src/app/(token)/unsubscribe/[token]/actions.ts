@@ -32,7 +32,7 @@ export async function confirmUnsubscribe(token: string) {
   if (!lastMinute) {
     const courtesy = await optOutPersonFromCourtesyEmailByToken(db, { token });
     // The third kind: a staffer's own Monday email. The fourth: a shop's
-    // shore contact stopping its roll-call alerts (H-118). The fifth, tried
+    // shore contact stopping its roll-call alerts (H-20261014-stale-roll-call-recipients). The fifth, tried
     // last: a shop's bookkeeper stopping the month-end files (item 35, N1).
     const digest = courtesy ? null : await turnOffWeeklyDigestByToken(db, { token });
     const shore = courtesy || digest ? null : await stopShoreAlertsByToken(db, { token });

@@ -27,7 +27,7 @@ type Receipt = {
  * The caller counts it as `countSpendableDives` does, so a lapsed or spent dive
  * is never offered, and a diver who holds none hears nothing about packages.
  *
- * **A package dive is one tank** (H-123, fourth UX review item 9). When this
+ * **A package dive is one tank** (H-20261014-package-dive-is-a, fourth UX review item 9). When this
  * booking spent some, the line says how many of what the diver held, and that
  * it is one per tank, so a two-tank boat using two is never a surprise.
  */

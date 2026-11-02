@@ -265,7 +265,7 @@ describe("what this dive is for, and what would help", () => {
 });
 
 /**
- * **"Under 18", per member** (decision 2026-10-13, after H-21): the box beside
+ * **"Under 18", per member** (decision 2026-10-13, after H-20260730-minimum-age-gate-data): the box beside
  * a member's name reaches that member's seat and no other.
  */
 describe("the Under 18 box", () => {
@@ -289,7 +289,7 @@ describe("the Under 18 box", () => {
  * **The wait list takes a name and an email, nothing else** (visual review
  * 2026-10-24, B57; security review of layer 2, F2). The panel asks no phone,
  * so a number posted by hand was never given under the SMS consent's words
- * (H-09) and must not reach the person row staff text from.
+ * (H-20260724-channel-sends-booking-waiver) and must not reach the person row staff text from.
  */
 describe("joining the wait list", () => {
   it("stores no phone a hand-crafted post carries", async () => {

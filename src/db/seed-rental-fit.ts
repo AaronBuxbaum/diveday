@@ -56,7 +56,7 @@ export async function seedRentalFit(
     // reef departure and is named by no other seed or spec, so this changes
     // exactly one row on one boat.
     [8, { bcd: null, wetsuit: null, boot: null, fin: null, ownsEverything: true }],
-    // H-06 demo: the shop is out of this diver's size, so they're flagged for
+    // H-20260724-initial-gear-policy-sizing demo: the shop is out of this diver's size, so they're flagged for
     // hands-on fitting — their sizes are deliberately blanked on the prep list and they
     // get named in its "fit these divers at check-in" section instead.
     [

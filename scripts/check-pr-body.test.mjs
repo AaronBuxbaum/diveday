@@ -1,10 +1,13 @@
-import { readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
 import {
   bodyProblems,
+  changedFilesArgs,
   closedByBody,
   closesProblems,
   issuesClaimedBy,
@@ -17,11 +20,16 @@ const TEMPLATE = readFileSync(
   path.join(import.meta.dirname, "../.github/pull_request_template.md"),
   "utf8",
 );
-const filled = (domain, security) =>
-  TEMPLATE.replace("- `dive-domain-expert`:", `- \`dive-domain-expert\`: ${domain}`).replace(
-    "- `security-reviewer`:",
-    `- \`security-reviewer\`: ${security}`,
-  );
+const filled = ({ dock = "", attacker = "", security = "" }) =>
+  TEMPLATE.replace(
+    "- `dive-domain-expert` (dock operator):",
+    `- \`dive-domain-expert\` (dock operator): ${dock}`,
+  )
+    .replace(
+      "- `dive-domain-expert` (attacker):",
+      `- \`dive-domain-expert\` (attacker): ${attacker}`,
+    )
+    .replace("- `security-reviewer`:", `- \`security-reviewer\`: ${security}`);
 
 describe("which reviewer a diff needs", () => {
   it("asks dive-domain-expert for manifests, roll call, readiness, certs, medical and erasure", () => {
@@ -40,6 +48,95 @@ describe("which reviewer a diff needs", () => {
     ]) {
       expect(reviewsNeeded([file]).map((r) => r.agent)).toContain("dive-domain-expert");
     }
+  });
+
+  // Findings 2026-10-29: each of these changed signed consent or its medical answers and matched
+  // no reviewer, because waivers matched only `src/(db|lib)/waiver*.ts`.
+  it.each([
+    "src/app/shop/[shopSlug]/divers/[personId]/waiver-actions.ts",
+    "src/app/shop/[shopSlug]/divers/[personId]/waivers/[recordId]/actions.ts",
+    "src/app/shop/[shopSlug]/trips/[id]/roster-waiver-actions.ts",
+    "src/app/shop/[shopSlug]/trips/[id]/party/[leadId]/waivers/actions.ts",
+    "src/app/shop/[shopSlug]/waivers/actions.ts",
+    "src/app/waivers/[token]/doctor/actions.ts",
+    "src/db/party-waiver-queue.ts",
+    "src/lib/paper-waiver-form.ts",
+    "src/lib/counter-waiver-token.ts",
+  ])("asks dive-domain-expert for the waiver path %s", (file) => {
+    expect(reviewsNeeded([file]).map((r) => r.agent)).toContain("dive-domain-expert");
+  });
+
+  it("asks dive-domain-expert for the doctor-referral form and a waiver page", () => {
+    for (const file of [
+      "src/app/waivers/[token]/doctor/referral-labels.ts",
+      "src/app/shop/[shopSlug]/waivers/page.tsx",
+      "src/db/waiver-guardian-copy.ts",
+    ]) {
+      expect(reviewsNeeded([file]).map((r) => r.agent)).toContain("dive-domain-expert");
+    }
+  });
+
+  it.each([
+    "src/db/waivers.test.ts",
+    "src/db/waivers-expiry-before-write.test.ts",
+    "src/lib/paper-waiver-form.test.ts",
+    "src/db/waivers-test-fixtures.ts",
+    "src/test/waiver-history.ts",
+    "src/app/waivers/[token]/doctor/actions.test.ts",
+  ])("asks dive-domain-expert for a waiver's test or fixture %s", (file) => {
+    expect(reviewsNeeded([file]).map((r) => r.agent)).toContain("dive-domain-expert");
+  });
+
+  it("does not ask dive-domain-expert for a waiver's copy", () => {
+    expect(
+      reviewsNeeded([
+        "src/i18n/locales/en-US/staff/waiversStaff.json",
+        "src/components/paper-waiver-copy.ts",
+        "src/components/paper-waiver-copy.tsx",
+        "src/app/waivers/[token]/waiver-rail-copy.ts",
+        "src/app/waivers/[token]/waiver-rail-copy.tsx",
+      ]).map((r) => r.agent),
+    ).not.toContain("dive-domain-expert");
+  });
+
+  // Reviews 1 (2026-11-01): modules that decide what a diver signed or may board matched nothing.
+  it.each([
+    "src/lib/check-in.ts",
+    "src/db/check-in.ts",
+    "src/db/aboard-at-sea.ts",
+    "src/lib/booking-gates.ts",
+    "src/app/ready/[token]/cert-actions.ts",
+    "src/lib/guardian.ts",
+    "src/db/course-certified.ts",
+    "src/db/pre-departure-check.ts",
+    "src/app/shop/[shopSlug]/trips/[id]/_lib/staff-gates.ts",
+    "src/lib/signatures.ts",
+    "src/lib/depth-ceiling.ts",
+    "src/lib/requirement.ts",
+    "src/app/ready/[token]/paperwork-actions.ts",
+    "src/lib/assists/cert-scan.ts",
+    "src/i18n/waiver-labels.ts",
+  ])("asks dive-domain-expert for the gate module %s", (file) => {
+    expect(reviewsNeeded([file]).map((r) => r.agent)).toContain("dive-domain-expert");
+  });
+
+  it("reads a rename as both paths", () => {
+    expect(changedFilesArgs("origin/main")).toContain("--no-renames");
+    const dir = mkdtempSync(path.join(os.tmpdir(), "pr-body-rename-"));
+    const git = (...args) => execFileSync("git", ["-C", dir, ...args], { encoding: "utf8" });
+    git("init", "-q", "-b", "main");
+    git("config", "user.email", "t@example.com");
+    git("config", "user.name", "t");
+    mkdirSync(path.join(dir, "src/lib"), { recursive: true });
+    writeFileSync(path.join(dir, "src/lib/manifests.ts"), "export const a = 1;\n".repeat(20));
+    git("add", ".");
+    git("commit", "-q", "-m", "base");
+    git("checkout", "-q", "-b", "topic");
+    git("mv", "src/lib/manifests.ts", "src/lib/boat-list.ts");
+    git("commit", "-q", "-am", "rename");
+    const listed = git(...changedFilesArgs("main")).split("\n");
+    expect(listed).toContain("src/lib/manifests.ts");
+    expect(listed).toContain("src/lib/boat-list.ts");
   });
 
   it("asks security-reviewer for auth, token routes, personal-data schema and export/import", () => {
@@ -72,7 +169,6 @@ describe("which reviewer a diff needs", () => {
         "src/app/(token)/ready/[token]/_components/TipAmountPicker.tsx",
         "scripts/check-pr-body.mjs",
         "src/db/bookings-history.ts",
-        "src/app/shop/[shopSlug]/waivers/page.tsx",
       ]),
     ).toEqual([]);
   });
@@ -94,7 +190,10 @@ describe("reading the body", () => {
       ),
     ).toBe(true);
     expect(
-      reviewAnswered("- `dive-domain-expert`: nothing found on abc123", "dive-domain-expert"),
+      reviewAnswered(
+        "- `dive-domain-expert`: launched, nothing found on abc123",
+        "dive-domain-expert",
+      ),
     ).toBe(true);
     expect(
       reviewAnswered(
@@ -136,16 +235,140 @@ describe("the whole check", () => {
   });
 
   it("passes once each needed reviewer is answered", () => {
-    expect(
-      bodyProblems({ body: filled("launched on abc123, nothing found", ""), files: manifest }),
-    ).toEqual([]);
+    const pair = { dock: "launched on abc123, nothing found", attacker: "launched, found nothing" };
+    expect(bodyProblems({ body: filled(pair), files: manifest })).toEqual([]);
     expect(
       bodyProblems({
-        body: filled("launched, found the DSD count off; fixed", "launched, found nothing"),
+        body: filled({ ...pair, security: "launched, found nothing" }),
         files: both,
       }),
     ).toEqual([]);
-    expect(bodyProblems({ body: filled("launched", ""), files: both })).toHaveLength(1);
+    expect(bodyProblems({ body: filled(pair), files: both })).toHaveLength(1);
+  });
+
+  it("refuses a safety diff with one dive-domain-expert run, naming both framings", () => {
+    const one =
+      "## Reviews launched\n\n- `dive-domain-expert`: launched on abc123, nothing found\n";
+    const [problem] = bodyProblems({ body: one, files: manifest });
+    expect(problem).toMatch(/dock operator/);
+    expect(problem).toMatch(/attacker/);
+    expect(
+      bodyProblems({ body: filled({ dock: "launched, nothing found" }), files: manifest }),
+    ).toHaveLength(1);
+  });
+
+  it("refuses two runs that do not say which framing each had", () => {
+    const body =
+      "## Reviews launched\n\n- `dive-domain-expert`: launched, nothing found\n- `dive-domain-expert`: launched again, found nothing\n";
+    expect(bodyProblems({ body, files: manifest })).toHaveLength(1);
+  });
+
+  it("refuses one line that claims both framings, and a framing named without an answer", () => {
+    const both =
+      "## Reviews launched\n\n- `dive-domain-expert` (dock operator, attacker): launched\n";
+    expect(bodyProblems({ body: both, files: manifest })).toHaveLength(1);
+    expect(
+      bodyProblems({ body: filled({ dock: "launched", attacker: "yes" }), files: manifest }),
+    ).toHaveLength(1);
+  });
+
+  it("passes a correct pair whatever the case or order", () => {
+    const body =
+      "## Reviews launched\n\n- dive-domain-expert (ATTACKER) — launched; found a stale count, fixed\n- dive-domain-expert (Dock Operator) — launched; nothing found\n";
+    expect(bodyProblems({ body, files: ["src/lib/paper-waiver-form.ts"] })).toEqual([]);
+  });
+
+  it("takes a reasoned 'not needed' for a UI-only waiver change", () => {
+    const body =
+      "## Reviews launched\n\n- `dive-domain-expert`: not needed because only a waiver page's layout moved\n";
+    expect(bodyProblems({ body, files: ["src/app/shop/[shopSlug]/waivers/page.tsx"] })).toEqual([]);
+  });
+
+  const pair = {
+    dock: "launched, nothing found",
+    attacker: "launched, found a stale count",
+  };
+  const lines = (...ls) => `## Reviews launched\n\n${ls.join("\n")}\n`;
+  const dockLine = "- `dive-domain-expert` (dock operator): launched, found nothing";
+
+  it("takes 'not needed because' only as the sole dive-domain-expert answer", () => {
+    const alone = lines(
+      "- `dive-domain-expert`: not needed because only a waiver page's layout moved",
+    );
+    expect(bodyProblems({ body: alone, files: manifest })).toEqual([]);
+    const mixed = lines(
+      dockLine,
+      "- `dive-domain-expert` (attacker): not needed because one run was enough",
+    );
+    expect(bodyProblems({ body: mixed, files: manifest })).toHaveLength(1);
+    const reverse = lines(
+      "- `dive-domain-expert` (dock operator): not needed because layout only",
+      "- `dive-domain-expert` (attacker): launched, found nothing",
+    );
+    expect(bodyProblems({ body: reverse, files: manifest })).toHaveLength(1);
+  });
+
+  it.each([
+    ["the same line twice", lines(dockLine, dockLine)],
+    [
+      "two framings in one label",
+      lines(
+        "- `dive-domain-expert` (dock operator, attacker): launched, found nothing",
+        "- `dive-domain-expert` (dock operator, attacker): launched, found nothing",
+      ),
+    ],
+    [
+      "a framing in a negation",
+      lines(
+        "- `dive-domain-expert` (dock operator; no attacker run): launched, found nothing",
+        "- `dive-domain-expert`: also found nothing as attacker",
+      ),
+    ],
+    [
+      "a framing in hidden HTML",
+      lines(
+        dockLine,
+        '- `dive-domain-expert`<sub title="attacker"></sub>: launched, found nothing',
+      ),
+    ],
+    [
+      "a framing before the agent name",
+      lines(dockLine, "attacker `dive-domain-expert` launched, found nothing"),
+    ],
+    [
+      "lines inside a code fence",
+      lines("```", dockLine, "- `dive-domain-expert` (attacker): launched, found nothing", "```"),
+    ],
+    [
+      "a security-reviewer line naming the agent",
+      lines(
+        dockLine,
+        "- `security-reviewer` launched in place of `dive-domain-expert` (attacker): found nothing",
+      ),
+    ],
+  ])("does not count %s as two runs", (_name, body) => {
+    expect(bodyProblems({ body, files: manifest })).toHaveLength(1);
+  });
+
+  it.each([
+    "not yet launched",
+    "not launched; found no time",
+    "skipped, nothing found",
+    "didn't launch it, found nothing",
+    "no time, found nothing",
+    "never launched, nothing found",
+  ])("refuses the attacker answer %s", (answer) => {
+    const body = lines(dockLine, `- \`dive-domain-expert\` (attacker): ${answer}`);
+    expect(bodyProblems({ body, files: manifest })).toHaveLength(1);
+  });
+
+  it("passes a pair of labelled runs", () => {
+    expect(bodyProblems({ body: filled(pair), files: manifest })).toEqual([]);
+  });
+
+  it("leaves a non-safety reviewer at one answered line", () => {
+    const body = "## Reviews launched\n\n- `security-reviewer`: launched, found nothing\n";
+    expect(bodyProblems({ body, files: ["src/lib/authz.ts"] })).toEqual([]);
   });
 
   it("does not read a reviewer named outside the Reviews section", () => {

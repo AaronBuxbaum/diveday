@@ -336,7 +336,7 @@ export async function getStaffingView(
   // this trip's captain is not their own assistant here either. It is the
   // supervision claim, so a professional whose every recorded rating lapses
   // before the departure counts for less here than on the booking gate, which
-  // reads the roster's claim on purpose (issue #1853, H-59).
+  // reads the roster's claim on purpose (issue #1853, H-20260825-staff-credentials-renewal-clock).
   const crewCounts = await courseCrewCountsByTrip(db, shopId, [...tripMap.keys()]);
   // A departure already home is nobody's morning. The week deliberately shows
   // up to six days behind the shop's own today, and `trip_status` is only

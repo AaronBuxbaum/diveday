@@ -12,7 +12,7 @@ const base = {
 };
 
 /**
- * **A link the diver asked for from another day's page** (H-132). Neither
+ * **A link the diver asked for from another day's page** (H-20261014-other-days-send-fresh). Neither
  * purpose may say a link of theirs expired: nothing did.
  */
 describe("readinessLinkEmail for another of the diver's days", () => {

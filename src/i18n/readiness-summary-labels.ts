@@ -29,7 +29,7 @@ export const CHECKLIST_DETAIL_KEYS: Record<ChecklistDetailCode, DiverMessageKey>
   // touch.
   medical_not_cleared: "ready.checklistDetail.medicalReview",
   // Names the reason to the holder of the link — the same accepted narrowing
-  // as `under_minimum_age` (H-22): whoever holds a minor's readiness page is
+  // as `under_minimum_age` (H-20260724-minimum-age-gate-fail): whoever holds a minor's readiness page is
   // the family, and a sentence that hid why would leave them unable to fix it.
   guardian_signature_missing: "ready.checklistDetail.guardianSignatureMissing",
   course_form_unsigned: "ready.checklistDetail.courseFormUnsigned",

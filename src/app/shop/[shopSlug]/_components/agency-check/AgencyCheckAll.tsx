@@ -16,7 +16,7 @@ import type { AgencyCheckAllCopy } from "./agency-check-copy";
 const CHECK_ALL_FROM = 2;
 
 /**
- * **"Check all 9 cards with their agencies"**, for one departure (H-105).
+ * **"Check all 9 cards with their agencies"**, for one departure (H-20261008-cert-check-extension).
  *
  * Drawn only with the DiveDay browser extension, and only when the departure
  * holds at least two cards it can check that this page has not already

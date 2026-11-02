@@ -379,7 +379,7 @@ for (const name of TABLET_SURFACES) {
  * photographed at all.** #2937 found ten captures whose only diff was the
  * storefront's strip, same photos on both sides, a fourth variant of this
  * class. Rather than a fifth mechanism, `tileShopPhotos` (below) answers those
- * photos with one flat tile in every capture (H-157); a non-visual test keeps
+ * photos with one flat tile in every capture (H-20261023-shop-photo-tile-in); a non-visual test keeps
  * proving the real ones load.
  */
 /**
@@ -1240,7 +1240,7 @@ export function installVisualBuildGuard() {
 }
 
 /**
- * **A shop photo is one flat tile in every capture** (H-157, issue #2937).
+ * **A shop photo is one flat tile in every capture** (H-20261023-shop-photo-tile-in, issue #2937).
  * The photo strip under the storefront's cover is the shop's own seed-stock
  * photographs, and they kept reporting "changed" with the same four photos on
  * both sides: JPEG decode and resample noise that three corrections above did

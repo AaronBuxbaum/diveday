@@ -24,7 +24,7 @@ export type PricingPlanSource = (typeof PRICING_PLAN_SOURCES)[number];
 
 /**
  * Today's flat monthly amount in cents, derived from the one published price
- * (`earlyAccessPrice`, H-12's single source), never restated. The config's
+ * (`earlyAccessPrice`, H-20260724-public-founding-shop-price's single source), never restated. The config's
  * default, and the amount the existing `BILLING_STRIPE_PRICE_ID` charges.
  */
 export const FLAT_MONTHLY_CENTS = Math.round(Number(earlyAccessPriceAmount) * 100);

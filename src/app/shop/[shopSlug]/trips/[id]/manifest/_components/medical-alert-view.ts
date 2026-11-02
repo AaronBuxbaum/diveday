@@ -21,7 +21,7 @@ export type MedicalAlertView = {
 };
 
 /**
- * **The medical alert on this row, for this reader** (issue #2960, H-153).
+ * **The medical alert on this row, for this reader** (issue #2960, H-20261023-medical-alert-for-the).
  * Every staffer sees the chip; `show` is bound (`bindManifestActions`) only
  * when `canPersonReadMedicalAlertOnTrip` admitted the reader, and each tap
  * re-checks on the server. Others are told who can read it (the owner, a

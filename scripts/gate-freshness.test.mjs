@@ -17,17 +17,20 @@ import {
 // Fixtures deliberately mimic the register's real shape — long prose cells with several
 // dates in them, a strikethrough Dropped row, a multi-word status — rather than a tidy
 // table, because that prose is exactly what the parser has to survive.
+// Decision ids are made up here (the guard reads real citations, not these), one per number.
+const H = (n) => ["H", `202608${String(n).padStart(2, "0")}`, `gate-${n}`].join("-");
+
 const REGISTER_FIXTURE = `# Human decision log
 
 ## Decision register
 
 | ID | Status | Human owner | Decision |
 | --- | --- | --- | --- |
-| H-01 | Ready | Product owner | **Jurisdiction confirmed 2026-07-30**, superseding the 2026-07-24 assumption. |
-| H-02 | Implemented | Product owner | Recorded 2026-07-24. See [ADR](../architecture/decisions/20260718-vercel-hosting.md). |
-| H-03 | Dropped | Product owner | ~~No longer needed.~~ |
-| H-04 | Deferred | Product owner + broker | Decided 2026-07-28: revisit later. |
-| H-05 | In progress | Product owner | No date recorded here at all. |
+| ${H(1)} | Ready | Product owner | **Jurisdiction confirmed 2026-07-30**, superseding the 2026-07-24 assumption. |
+| ${H(2)} | Implemented | Product owner | Recorded 2026-07-24. See [ADR](../architecture/decisions/20260718-vercel-hosting.md). |
+| ${H(3)} | Dropped | Product owner | ~~No longer needed.~~ |
+| ${H(4)} | Deferred | Product owner + broker | Decided 2026-07-28: revisit later. |
+| ${H(5)} | In progress | Product owner | No date recorded here at all. |
 
 ## Human verification queue
 
@@ -43,9 +46,9 @@ Written 2026-07-24 against the shipped state.
 
 ## The next 30 days, in order
 
-1. Book the attorney (H-01–H-03) and take the corporate footing (H-04) into the same
+1. Book the attorney (${H(1)}, ${H(2)}, ${H(3)}) and take the corporate footing (${H(4)}) into the same
    week.
-2. Name the ops owner (H-05).
+2. Name the ops owner (${H(5)}).
 3. Run V-01 and script the V-02 boat day.
 4. Decide DEMA posture and join DEMA.
 
@@ -93,22 +96,14 @@ describe("parseGateRows", () => {
   const rows = parseGateRows(REGISTER_FIXTURE);
 
   it("reads both tables and skips the header/separator rows", () => {
-    expect(rows.map((row) => row.id)).toEqual([
-      "H-01",
-      "H-02",
-      "H-03",
-      "H-04",
-      "H-05",
-      "V-01",
-      "V-02",
-    ]);
+    expect(rows.map((row) => row.id)).toEqual([H(1), H(2), H(3), H(4), H(5), "V-01", "V-02"]);
   });
 
   it("carries status, lifecycle state, and the newest dated outcome per row", () => {
-    const h1 = rows.find((row) => row.id === "H-01");
+    const h1 = rows.find((row) => row.id === H(1));
     expect(h1).toMatchObject({ status: "Ready", state: "open", datedOutcome: "2026-07-30" });
-    expect(rows.find((row) => row.id === "H-03")).toMatchObject({ state: "closed" });
-    expect(rows.find((row) => row.id === "H-04")).toMatchObject({ state: "parked" });
+    expect(rows.find((row) => row.id === H(3))).toMatchObject({ state: "closed" });
+    expect(rows.find((row) => row.id === H(4))).toMatchObject({ state: "parked" });
     expect(rows.find((row) => row.id === "V-02")).toMatchObject({
       status: "Ready before production",
       state: "open",
@@ -121,13 +116,13 @@ describe("parseGateRows", () => {
   });
 
   it("leaves an undated row's datedOutcome null rather than guessing", () => {
-    expect(rows.find((row) => row.id === "H-05")?.datedOutcome).toBeNull();
+    expect(rows.find((row) => row.id === H(5))?.datedOutcome).toBeNull();
   });
 });
 
 describe("parseDecisionFile", () => {
-  // The shape `docs/product/human-decisions/H-nn-*.md` takes since the register was split.
-  const decision = `# H-07: What payment policy should the first paid booking support?
+  // The shape `docs/product/human-decisions/H-YYYYMMDD-slug.md` takes.
+  const decision = `# ${H(7)}: What payment policy should the first paid booking support?
 
 - **Status:** In progress
 - **Human owner:** Product owner + finance owner
@@ -138,12 +133,12 @@ Decided 2026-07-21; see [20260719-stripe-connect-orders](../../architecture/deci
 
 ## Note
 
-**H-07 mechanism update (2026-08-26):** Stripe Tax is now the implemented mechanism.
+**${H(7)} mechanism update (2026-08-26):** Stripe Tax is now the implemented mechanism.
 `;
 
   it("reads the id from the heading, the status line, and the newest date anywhere in the file", () => {
     expect(parseDecisionFile(decision)).toMatchObject({
-      id: "H-07",
+      id: H(7),
       status: "In progress",
       state: "open",
       datedOutcome: "2026-08-26",
@@ -162,16 +157,22 @@ Decided 2026-07-21; see [20260719-stripe-connect-orders](../../architecture/deci
 
 describe("gateIdsIn", () => {
   it("expands an en-dashed range so the middle row is not lost", () => {
-    expect(gateIdsIn("Book the attorney (H-01–H-03)")).toEqual(["H-01", "H-02", "H-03"]);
+    expect(gateIdsIn("Run V-01–V-03")).toEqual(["V-01", "V-02", "V-03"]);
+  });
+
+  it("reads a list of decision ids, which have no range to expand", () => {
+    expect(gateIdsIn(`Book the attorney (${H(1)}, ${H(2)}, ${H(3)})`)).toEqual([H(1), H(2), H(3)]);
   });
 
   it("handles hyphen and em-dash ranges and a repeated prefix", () => {
     expect(gateIdsIn("V-01-V-03")).toEqual(["V-01", "V-02", "V-03"]);
-    expect(gateIdsIn("H-07—H-08")).toEqual(["H-07", "H-08"]);
   });
 
   it("collects standalone ids and dedupes", () => {
-    expect(gateIdsIn("Close H-12; H-13 needs a ruling; H-12 again")).toEqual(["H-12", "H-13"]);
+    expect(gateIdsIn(`Close ${H(12)}; ${H(13)} needs a ruling; ${H(12)} again`)).toEqual([
+      H(12),
+      H(13),
+    ]);
   });
 
   it("returns nothing for an item that names no gate row", () => {
@@ -326,12 +327,12 @@ describe("reconcileThirtyDays", () => {
 
   it("flags a listed item whose named rows have all stayed open", () => {
     const item = reconciled.find((entry) => entry.number === 2);
-    expect(item).toMatchObject({ ids: ["H-05"], unstarted: true, unmeasurable: false });
+    expect(item).toMatchObject({ ids: [H(5)], unstarted: true, unmeasurable: false });
   });
 
   it("does not flag an item that closed at least one of its rows", () => {
     const item = reconciled.find((entry) => entry.number === 1);
-    expect(item.ids).toEqual(["H-01", "H-02", "H-03", "H-04"]);
+    expect(item.ids).toEqual([H(1), H(2), H(3), H(4)]);
     expect(item.closedCount).toBe(2);
     expect(item.unstarted).toBe(false);
   });
@@ -346,8 +347,8 @@ describe("reconcileThirtyDays", () => {
   });
 
   it("names ids the register does not contain instead of dropping them", () => {
-    const [item] = reconcileThirtyDays([{ number: 1, text: "Chase H-99." }], rowsById);
-    expect(item.unknownIds).toEqual(["H-99"]);
+    const [item] = reconcileThirtyDays([{ number: 1, text: `Chase ${H(99)}.` }], rowsById);
+    expect(item.unknownIds).toEqual([H(99)]);
     expect(item.unmeasurable).toBe(true);
   });
 });

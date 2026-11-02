@@ -120,7 +120,7 @@ describe("YourWeekList's dock time", () => {
     ).toBeInTheDocument();
   });
 
-  it("says the shop's crew time as the crew's own (H-149)", () => {
+  it("says the shop's crew time as the crew's own (H-20261022-crew-arrive-before-divers)", () => {
     show({ at: new Date("2026-10-15T10:00:00.000Z"), source: "crew" });
     expect(
       screen.getByText(/(?<!Divers )At the dock 6:00\sAM · leaves 7:00\sAM · Divemaster/),

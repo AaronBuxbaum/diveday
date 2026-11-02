@@ -338,7 +338,7 @@ describe("AddDiverSection name-match prompt", () => {
   });
 
   /**
-   * H-79 (issue #1698): the date of birth tells two people with one name
+   * H-20260916-unconfirmed-identity-withhold-cost (issue #1698): the date of birth tells two people with one name
    * apart, and a record with none prints nothing at all.
    */
   it("prints a candidate's date of birth beside the contact line, and nothing where none is on file", () => {

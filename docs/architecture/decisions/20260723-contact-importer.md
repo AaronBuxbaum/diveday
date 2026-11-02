@@ -33,7 +33,7 @@ system is not clearance under this shop's waiver.
     > Superseded by [20260724-import-verified-cards](20260724-import-verified-cards.md): imported
     > level and nitrox cards now land `verified` and flagged `imported` (a non-null `importedAt`),
     > surfaced for a one-tap staff confirm rather than re-captured as an unverified claim — a
-    > product-owner decision (H-20). "No fabricated identifiers" and email matching below are
+    > product-owner decision (H-20260724-contact-importer-trust-shop). "No fabricated identifiers" and email matching below are
     > unchanged.
   - **No fabricated identifiers.** A card imports only with a recognized level *and* a real card
     number; a level with no number imports no card (a card with no number cannot be verified and
@@ -44,7 +44,7 @@ system is not clearance under this shop's waiver.
     > Revised by [20260724-import-waiver-acceptance](20260724-import-waiver-acceptance.md): a row
     > explicitly claiming a prior waiver acceptance (`waiver_accepted`) is now trusted, medical
     > clearance included, and written as an `imported` record — a product-owner decision recorded in
-    > `docs/product/human-decisions/README.md` H-17. Unrecognized medical-ish columns are still left behind
+    > `docs/product/human-decisions/README.md` H-20260724-contact-importer-trust-prior. Unrecognized medical-ish columns are still left behind
     > exactly as below; only the one recognized claim column changed.
   - **Enriched air is a claim, not a fill authorization.** A nitrox card imports `pending` and only
     against a real nitrox card number; it never authorizes a fill until staff verify it.
@@ -73,7 +73,7 @@ system is not clearance under this shop's waiver.
   spine the strategy says never to bypass. The `claimed`/`verified` distinction is what makes a fast
   import honest instead of dangerous.
   > Reversed by [20260724-import-verified-cards](20260724-import-verified-cards.md) on the product
-  > owner's explicit direction (H-20): the source's verification is now trusted, with a permanent
+  > owner's explicit direction (H-20260724-contact-importer-trust-shop): the source's verification is now trusted, with a permanent
   > `imported` flag and a soft one-tap confirm as the mitigation instead of a full re-verify. See that
   > ADR for the safety tradeoff and its escape hatch.
 - **Fabricate a card number when one is missing** — rejected: a card with no number cannot be

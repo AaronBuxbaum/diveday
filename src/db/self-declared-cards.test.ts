@@ -1070,7 +1070,7 @@ describe("the anti-displacement rule reaches every table", () => {
 
 describe("self-declared cards and the booking gate", () => {
   /**
-   * **Reversed 2026-08-20 (H-27/H-29).** These three tests used to pin the
+   * **Reversed 2026-08-20 (H-20260803-booking-time-trip-admission/H-20260820-shophasadjudicated-src-lib-trip).** These three tests used to pin the
    * opposite rule — that a claim lifts nothing and clears nothing at booking.
    * The product owner's call is that before a trip an attested card is taken at
    * its word, and the sighting is required at *boarding* instead
@@ -1194,7 +1194,7 @@ describe("self-declared cards and the booking gate", () => {
 
     // This is the case the reversal deliberately costs: a diver who says Open
     // Water on an Advanced charter is now told so at the sale rather than at the
-    // dock. It is the refusal H-27 wanted — the one that reaches somebody while
+    // dock. It is the refusal H-20260803-booking-time-trip-admission wanted — the one that reaches somebody while
     // they can still book the trip they can dive — and the notice names the
     // trip's requirement and the shop's contact address.
     expect(decision.admitted).toBe(false);
@@ -1203,7 +1203,7 @@ describe("self-declared cards and the booking gate", () => {
     expect(decision.refusal.heldLevel).toBe("open_water");
   });
 
-  it("still admits a diver who has said nothing at all — H-08's fail-open promise", async () => {
+  it("still admits a diver who has said nothing at all — H-20260724-certification-levels-agency-rules's fail-open promise", async () => {
     const { db, shop, person } = await joiner();
 
     const decision = decideTripAdmission({

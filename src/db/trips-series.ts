@@ -233,7 +233,7 @@ async function materializeWindow(
     template.trip.courseId ?? undefined,
   );
   if (!ok) return null;
-  // **Every rolled departure starts inside the certificate** (H-107). The
+  // **Every rolled departure starts inside the certificate** (H-20261009-certificate-caps-seats). The
   // template is whatever row the series last pointed at — it can be cancelled
   // or past and never re-saved since the hull's certificate was recorded — so
   // its capacity is lowered to the boat's limit here rather than copied blind.
@@ -312,7 +312,7 @@ async function materializeWindow(
         // nightly horizon roll materializes, forever (issue #973).
         selfGuided: template.trip.selfGuided,
         // A standing staged-deco charter keeps its silence about flying on
-        // every instance (H-84).
+        // every instance (H-20260916-may-diveday-assert-about).
         exceedsNoDecoLimits: template.trip.exceedsNoDecoLimits,
         diveMode: template.trip.diveMode,
         // Every Saturday carries the same trip tag, so every instance inherits
@@ -907,7 +907,7 @@ export type OffCadenceSeriesTrip = {
  * slot at all (created before the ledger existed) is left out — there is nothing
  * to judge it against, and guessing would offer to cancel a real departure.
  * So is one the crew have taken out before its time (`departureMayBeAtSea`,
- * H-133): a bulk call-off never cancels a boat on the water.
+ * H-20261015-aboard-diver-removal-at): a bulk call-off never cancels a boat on the water.
  */
 export async function listOffCadenceSeriesTrips(
   db: AppDb,
@@ -984,7 +984,7 @@ export type SeriesCallOffInput = {
   checkout?: CheckoutProvider;
   /**
    * Whether the refunds the call triggers go back now or wait for a refund
-   * holder (H-139). Absent means now, which is every system caller.
+   * holder (H-20261013-call-off-queues-refunds). Absent means now, which is every system caller.
    */
   refunds?: BlowoutRefundMode;
 };
@@ -1030,7 +1030,7 @@ async function callOffSeriesDates(
  * **Each date goes through the blow-out cascade**, exactly as "Cancel every
  * upcoming date" does (`callOffSeriesDates`): it is still reinstatable from its
  * own trip page and every booking's history survives, but its booked divers are
- * told once and their card payments go back (issue #2453; full refunds, H-138).
+ * told once and their card payments go back (issue #2453; full refunds, H-20261013-cancelling-a-run-refunds).
  * Before that this only flipped the status, and a paid diver on a dropped
  * weekday heard nothing and kept being charged.
  *
@@ -1164,7 +1164,7 @@ export async function setSeriesRepeat(
  * staff get a cascade record per date to work. Before 2026-10-12 this only
  * flipped the status: the dates kept their bookings and their money, and
  * nobody but the crew was told. Every date refunds in full, never under its
- * own cancellation window (H-138).
+ * own cancellation window (H-20261013-cancelling-a-run-refunds).
  *
  * Every date is set up before any message is written, so nobody is offered
  * another date of the run being cancelled. Past and already-cancelled dates
@@ -1351,7 +1351,7 @@ export type SeriesDetailApplyResult = { updated: number; skipped: number };
  * dive plan onto every future still-scheduled sibling; the per-instance date,
  * time, conditions, crew, roster, and status are deliberately left alone. A
  * sibling sailing on a boat whose certificate is below the new capacity takes
- * every detail with its seats lowered to the certificate (H-107, #2322). A
+ * every detail with its seats lowered to the certificate (H-20261009-certificate-caps-seats, #2322). A
  * sibling holding more seats than that number is skipped rather than stranding
  * a booking; the count is reported so staff can follow up. Returns null when
  * the source trip is not part of this series in this shop.
@@ -1497,7 +1497,7 @@ export async function applyDetailsToFutureSeries(
     let updated = 0;
     let skipped = 0;
     for (const sibling of siblings) {
-      // A later date can sail on another hull (H-107): it takes every detail,
+      // A later date can sail on another hull (H-20261009-certificate-caps-seats): it takes every detail,
       // but its seats stop at that hull's certificate, and its divers-only
       // limit comes down with them (#2322).
       const seats = seatsWithinCertificate(

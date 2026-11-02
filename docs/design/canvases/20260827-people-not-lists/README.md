@@ -90,7 +90,7 @@ Non-negotiable, from the ADRs:
   - Shipped code outranks the canvas; the ADR outranks both.
   - The record's status ledger renders nothing when the diver is clear; Book is the one primary.
   - Badges mark exceptions only; counts are quiet text; groups own shared facts.
-  - H-54's materiality semantics, the review-suppression floor, merge/erase gates and every
+  - H-20260822-may-shop-explicitly-declare's materiality semantics, the review-suppression floor, merge/erase gates and every
     personal-data behavior are contracts — only rendering moves. security-reviewer before merge.
   - Every colour-carried state also carries a word; drawn SVG, never emoji, on anything new.
 

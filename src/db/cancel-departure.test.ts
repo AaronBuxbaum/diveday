@@ -19,7 +19,7 @@ import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 const ctx = fileScopedShopContext();
 
 /**
- * **A boat that may be on the water is never called off** (H-133): Cancelling
+ * **A boat that may be on the water is never called off** (H-20261015-aboard-diver-removal-at): Cancelling
  * then would drop a missing diver off Today and the shore alert, which read
  * scheduled departures only. A weather scrub at the tied-up dock still goes.
  */

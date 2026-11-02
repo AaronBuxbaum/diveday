@@ -1,6 +1,6 @@
 # What each `pnpm check:repo` guard refuses, and why
 
-`scripts/check-repo.mjs` runs 63 guard scripts concurrently and reports every failure in one
+`scripts/check-repo.mjs` runs 64 guard scripts concurrently and reports every failure in one
 pass. **Nobody needs to read this file to run the check** — a failing guard names itself and prints
 the offending line. Read the matching section below when you want the reasoning behind one: what it
 protects, the incident that produced it, and the escape hatch for a line that genuinely means the
@@ -98,7 +98,7 @@ The shop-word one (`scripts/check-shop-word.mjs`) refuses `tienda` in any `es-ES
 
 ### seat-word
 
-The seat-word one (`scripts/check-seat-word.mjs`) refuses `spot` in every English staff bundle (`src/i18n/locales/en-US/staff/*.json`) and in the diver bundle (`src/i18n/locales/en-US/diver.json` and the `content/*.json` sections composed with it). The number a shop sells is a **seat**, for staff and divers alike (H-122): the schema, the capacity math in `src/lib/trips.ts` and the glossary all say so. The staff pages had drifted into both, sometimes in one sentence: the trip header read "4 spots left" beside "$95.00 per seat", and the cancel notice "The spot is open again … so the seat was non-refundable" (third review, item 6, 2026-10-13). The diver pages then did the same on one screen: "Grab a spot" and "Book these spots", then "You've got a seat"; `/ready` offered "Cancel my spot" beside "Your seat is still held" (fourth review, item 7, 2026-10-14). Spanish says *plaza* on both sides and has nothing to drift into. The allowed strings mean something other than capacity: the incident form's "a spot on the reef" and a hamlet's spot (places), the marks on a fish, the verb "spot the fish" and the idiom "on the spot"; a test holds that every allowed entry still names a live string that still says *spot*.
+The seat-word one (`scripts/check-seat-word.mjs`) refuses `spot` in every English staff bundle (`src/i18n/locales/en-US/staff/*.json`) and in the diver bundle (`src/i18n/locales/en-US/diver.json` and the `content/*.json` sections composed with it). The number a shop sells is a **seat**, for staff and divers alike (H-20261014-seat-is-the-word): the schema, the capacity math in `src/lib/trips.ts` and the glossary all say so. The staff pages had drifted into both, sometimes in one sentence: the trip header read "4 spots left" beside "$95.00 per seat", and the cancel notice "The spot is open again … so the seat was non-refundable" (third review, item 6, 2026-10-13). The diver pages then did the same on one screen: "Grab a spot" and "Book these spots", then "You've got a seat"; `/ready` offered "Cancel my spot" beside "Your seat is still held" (fourth review, item 7, 2026-10-14). Spanish says *plaza* on both sides and has nothing to drift into. The allowed strings mean something other than capacity: the incident form's "a spot on the reef" and a hamlet's spot (places), the marks on a fish, the verb "spot the fish" and the idiom "on the spot"; a test holds that every allowed entry still names a live string that still says *spot*.
 
 ### rental-fit-caps, and the rule that was declined
 
@@ -238,7 +238,7 @@ It holds the **house quotation marks** the same way: `“ ”` everywhere a pers
 
 **It has no exemption list, which is the difference worth knowing.** The apostrophe rule must strip ICU-quoted spans because a straight `'` is what *makes* `'{depth18}'` a literal. `"` means nothing to ICU in any mode, so no value needs it, and the rule landed at zero the same day it was written. More than half the sweep was not marketing prose but the CSV importer's row notes in `settings.json`, which quote an interpolated value — `Email “{email}” doesn’t look valid` — and those are prose too: the value is read aloud inside a sentence rather than set as a code literal. Spanish sweeps identically; `src/i18n/locales/es-ES/README.md` settles `“ ”` over the peninsular `« »`, so like the apostrophe this sits beside `proseDashes` rather than in `RULES`.
 
-**Four shapes joined it on 2026-09-24** (H-89, the voice decision), on the public pages' strings
+**Four shapes joined it on 2026-09-24** (H-20260903-voice-public-pages-speak, the voice decision), on the public pages' strings
 only — `marketing.*`, `switching.*`, `account.onboard.*` and every route's `metadata` — because
 the 2026-09-03 sweep had removed the words a model overuses and left its shapes: measured
 afterwards over the five marketing pages, a mirrored pair in the hero of three of them, a list of
@@ -281,7 +281,7 @@ carry at least as much weight as the refusals:
 
 **Implementation words joined it on 2026-10-10** (issue #2104), on the same public-page strings as the shapes, in both locales: *sync* and *synchronize* in every form, *cache*/*cached*, *fail-closed*, *offline-first*, and the Spanish *sincroniz-* and *caché*/*en caché* (rule `implementation`). The marketing-page skill's checklist already forbade them; the boat manifest feature page shipped a description saying roll calls "sync" when the phone reconnects anyway, and a reviewer caught it by reading. *Encrypted* (Spanish *cifrado*, *encriptado*) is refused the same way (rule `encryption`) except on the keys in `ENCRYPTION_ALLOWLIST`, each with its reason beside it: the privacy page's paragraphs on what a crew phone holds offline, on what the push service is handed, and the Spanish "contraseña cifrada". There it is the fact a reader came for. The allowlist is keyed rather than per page, so a new privacy paragraph has to argue for its word. *API*, *database* and *webhooks* are deliberately not refused: the switching guides use them correctly about the incumbents' products, and a buyer comparing exports asks by those words.
 
-**American spelling joined it on 2026-10-06** (H-95): *colour*, *centre*, *cancelled*, *grey*,
+**American spelling joined it on 2026-10-06** (H-20261006-english-we-spell): *colour*, *centre*, *cancelled*, *grey*,
 *enrolment* and the rest of `BRITISH_SPELLINGS` are refused in every English bundle value, in a
 route's metadata, and in every prose literal (a string with a space in it) in a non-test `.ts`/`.tsx`
 under `src/` — the course and dive-site templates, the demo seeds and the export descriptions are
@@ -353,9 +353,9 @@ The anchor is matched per line, so a `.update(\n  trips,\n)` split across three 
 
 ### time-id-order
 
-The time-id-order one (`scripts/check-time-id-order.mjs`) fails any `.orderBy(…)` whose last two keys are a column ending in `At` and then an `id`. Every `id` in this schema is a `defaultRandom()` uuid. In production the timestamp decides and the id never runs, because `created_at` comes from the clock and two rows are microseconds apart; under test the clock is frozen at the harness boundary, every row a run writes shares one instant, and the whole order is a uuid that differs in every seeded database. Three visual baselines re-ordered themselves that way on commits that touched neither the surface nor its query, each found by eye in a diff image (issue #1762, ruled H-81). The fix is a key a person could predict between the two, such as a name, a title or a code, with the id kept last for a total order.
+The time-id-order one (`scripts/check-time-id-order.mjs`) fails any `.orderBy(…)` whose last two keys are a column ending in `At` and then an `id`. Every `id` in this schema is a `defaultRandom()` uuid. In production the timestamp decides and the id never runs, because `created_at` comes from the clock and two rows are microseconds apart; under test the clock is frozen at the harness boundary, every row a run writes shares one instant, and the whole order is a uuid that differs in every seeded database. Three visual baselines re-ordered themselves that way on commits that touched neither the surface nor its query, each found by eye in a diff image (issue #1762, ruled H-20260916-tiebreaker-user-visible-list). The fix is a key a person could predict between the two, such as a name, a title or a code, with the id kept last for a total order.
 
-`src/db/export.ts` is exempt whole: its docblock writes down which files a person reads or diffs (`bookings.csv`, `buddy_teams.csv`, ordered by name; H-81, issue #1795), every other file exists to be re-imported, so stability within one database is all it needs, and it holds most of the matches in the tree. Tests are skipped. An order nobody is shown (a revocation sweep, a nightly queue, a seed whose timestamps are unique by construction) says `diveday:allow-time-id-order: <why>` in a comment directly above the `.orderBy(` or inside its arguments, and the reason is required.
+`src/db/export.ts` is exempt whole: its docblock writes down which files a person reads or diffs (`bookings.csv`, `buddy_teams.csv`, ordered by name; H-20260916-tiebreaker-user-visible-list, issue #1795), every other file exists to be re-imported, so stability within one database is all it needs, and it holds most of the matches in the tree. Tests are skipped. An order nobody is shown (a revocation sweep, a nightly queue, a seed whose timestamps are unique by construction) says `diveday:allow-time-id-order: <why>` in a comment directly above the `.orderBy(` or inside its arguments, and the reason is required.
 
 A JavaScript comparator that ties on a timestamp has the same failure and no signature this rule can read, so it is left to review.
 
@@ -487,7 +487,7 @@ The `ready-for-agent` half exists because triage relabels a follow-up and the fo
 
 ### pr-body
 
-The pr-body guard (`scripts/check-pr-body.mjs`), outside `check:repo`, reads the one thing no branch contains, the pull request's body, so it is a step in CI's `Repository safeguards` job rather than a row in this table: on every pull request event it fetches the body live (or takes the event's copy) and diffs against the base **ref**, three-dot, for the reason the CI-change-detection write-up above gives. When the diff touches a safety-critical path (manifests, roll call, readiness, trip admission, certifications, medical, erasure, seat-diver, nitrox, the `src/db/waiver*`/`src/lib/waiver*` modules, `src/db/bookings.ts`) it fails unless the body's `## Reviews launched` section names `dive-domain-expert` with an answer; when it touches auth, a `[token]` route's server code, personal-data schema, the waiver modules, `src/lib/payments/`, `src/app/api/webhooks/`, or export/import, the same for `security-reviewer`. "An answer" says the agent was **launched** or what it **found**, or "**not needed because** <reason>"; "yes", "n/a", an empty line or the template's placeholder is not. Until 2026-10-12 any non-placeholder text passed and the waiver, payment, webhook and booking-transaction modules matched no pattern, so a "yes" on a Stripe webhook change was green.
+The pr-body guard (`scripts/check-pr-body.mjs`), outside `check:repo`, reads the one thing no branch contains, the pull request's body, so it is a step in CI's `Repository safeguards` job rather than a row in this table: on every pull request event it fetches the body live (or takes the event's copy) and diffs against the base **ref**, three-dot, for the reason the CI-change-detection write-up above gives. When the diff touches a safety-critical path (manifests, roll call, readiness, trip admission, certifications, medical, erasure, seat-diver, nitrox, any `src/**` path naming a waiver, tests and fixtures included, except message bundles and `*-copy.ts(x)` files (and `src/i18n/waiver-labels.ts` is required, since it decides whether a standing renders as cleared), the gate modules whose paths name none of these words (check-in, aboard-at-sea, booking-gates, cert-actions, cert-scan, guardian, course-certified, pre-departure, staff-gates, signatures, depth-ceiling, requirement, paperwork-actions), `src/db/bookings.ts`) it fails unless the body's `## Reviews launched` section records two answered `dive-domain-expert` lines, each starting with the agent name and labelled right after it, `(dock operator)` and `(attacker)` (case-insensitive, read on HTML-stripped text, code fences ignored, two identical lines count once), or exactly one `dive-domain-expert` line and it says "not needed because <reason>" (a "not needed" line beside a launched one fails; CI cannot check that the change only moves layout). The doctor-referral form needs no pattern of its own: its path names a waiver. When the diff touches auth, a `[token]` route's server code, personal-data schema, the waiver modules, `src/lib/payments/`, `src/app/api/webhooks/`, or export/import, it requires `security-reviewer` named with one answer. "An answer" says the agent was **launched** (a positive "launched" with no not, never, skipped, didn't or no time anywhere in the line) or "**not needed because** <reason>"; "yes", "n/a", "found nothing" alone, an empty line or the template's placeholder is not. The changed paths are listed with `--no-renames`, so a moved safety file lists both ends. Until 2026-10-12 any non-placeholder text passed and the waiver, payment, webhook and booking-transaction modules matched no pattern, so a "yes" on a Stripe webhook change was green. Until 2026-11-01 waivers matched `dive-domain-expert` only as the `src/db/waiver*`/`src/lib/waiver*` modules, so the shop's waiver actions, the roster and party waiver queues, the paper and counter forms and the doctor-referral form passed with no reviewer named; `security-reviewer` still matches only those modules, not their tests. Until the same day one answered `dive-domain-expert` line passed, so a body recording one run read the same as one recording the two differently framed runs the safety rule asks for.
 
 It also requires `Closes #n` in the body for every open `in-progress` issue whose newest `## Claim` names the pull request's head branch (`GITHUB_HEAD_REF` in CI, `--head` or the current branch locally), read through `scripts/tracker.mjs`; when GitHub cannot answer it warns and skips that half. #2241's claim said "closes with #2326" in prose; #2326 merged and the issue stayed open and `in-progress`. The path list is `REVIEWS` in the script and only covers `src/**`, minus the copy bundles and the PWA web manifest (`src/app/manifest.ts`).
 
@@ -540,7 +540,7 @@ For `src/app/` and `src/components/`; the rules themselves are in `.claude/rules
 - **Public pages** (landing, sign-in): `src/app/`. **Diver-facing shop pages**:
   `src/app/s/[shopSlug]/**` — its own namespace, no auth anywhere in it; path strings come from
   `src/lib/public-routes.ts`; `/shop/**` is staff, without exception. Old public-URL redirects
-  were removed under H-49.
+  were removed under H-20260815-no-legacy.
 - **Where a diver can go**: the header nav in `src/components/PublicShopNav.tsx`, assembled once in
   `src/app/s/[shopSlug]/layout.tsx` and rendered by `src/components/PublicShopChrome.tsx`. Add a
   public destination there, never as a per-page cross-link; the whole header is dropped in
@@ -578,7 +578,7 @@ For `src/app/` and `src/components/`; the rules themselves are in `.claude/rules
 - **The schedule builder**: `src/app/shop/[shopSlug]/schedule/board/_components/ScheduleBuilder.tsx`
   + `schedule/board/actions.ts`; mutations in `src/db/trips-schedule.ts`. The add panel is the
   **one place a trip is created**; the retired `/shop/[shopSlug]/trips/new` URL has no
-  compatibility route (H-49; ADR 20260806-one-trip-create-form).
+  compatibility route (H-20260815-no-legacy; ADR 20260806-one-trip-create-form).
 - **Schedule is one place with two views** (ADR 20261001-logbook): Week (`schedule/board`, the
   departures and the builder) and Crew (`staffing/`, the same week by who is working it), both
   titled "Schedule" under `schedule/_components/ScheduleViews.tsx`, which carries `?week=` across.
@@ -602,7 +602,7 @@ For `src/app/` and `src/components/`; the rules themselves are in `.claude/rules
   card (time, stage pill from `tripPhaseOf`, readiness bar), and every job on the day, at a boat
   or at the desk, ranks in the one list and names its own boat. Its evening state is the settled
   stations (`ClosingStation.tsx`) and the day's takings; there is no act of closing the day. The
-  retired `?view=` and `/blockers` compatibility redirects were removed under H-49 (ADR
+  retired `?view=` and `/blockers` compatibility redirects were removed under H-20260815-no-legacy (ADR
   20260827-clearwater-surface-language). A
   departure's **log** is generated from there (`trips/[id]/log`, owner-only).
 - **The back-office queues** are **not on Reports** — each sits with the object it is about and
@@ -732,7 +732,7 @@ Diver copy in `src/i18n/locales/<locale>/diver.json`, DiveDay's marketing and sw
 copy fails it, including an English fallback behind `||`, `??` or a ternary. **Never add English
 (or any language) as a string the user will read outside `src/i18n/locales/`** — every new sentence
 lands in *every* locale's bundle in the same change, and a key missing from one locale fails
-`pnpm check:locale`. Waiver/medical wording stays English pending H-01/H-03. **Any diver Client
+`pnpm check:locale`. Waiver/medical wording stays English pending H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit. **Any diver Client
 Component that reads copy needs `DiverIntlProvider` above it** — without one it throws during the
 server render and the page silently degrades to a blank client-only 200;
 `scripts/check-intl-providers.mjs` fails on a consumer with no provider in an ancestor segment.
@@ -848,7 +848,7 @@ your migration files, rebasing, and regenerating.
 
 #### There is no legacy. Delete it.
 
-DiveDay is pre-pilot: no users, no data anyone would miss (H-49, extending H-47). A table nothing
+DiveDay is pre-pilot: no users, no data anyone would miss (H-20260815-no-legacy, extending H-20260814-production-database-disposable). A table nothing
 writes gets **dropped**, not carried behind a `seq` column so its dead rows sort nicely. A code path
 that exists only to tolerate old rows gets **deleted**, not documented. A lifecycle rule that exists
 only to age out abandoned objects gets **removed**, not waited out. Do not write reconciliation,
@@ -863,8 +863,8 @@ keep a compatibility redirect. When in doubt the answer is the smaller tree.
 while a migration runs inside the production build, and having no users does not help a shop
 watching its schedule mid-deploy — a destructive migration still carries its
 `-- diveday:allow-destructive <rule> <table>.<column>: <why>` line, where "pre-pilot, no users,
-H-49" is now a sufficient *why* — except for a `drop-column` whose column the previous release
-still declares, which the guard refuses whatever the reason: the drop waits one release. And **H-02's retention windows and the erasure path** are promises
+H-20260815-no-legacy" is now a sufficient *why* — except for a `drop-column` whose column the previous release
+still declares, which the guard refuses whatever the reason: the drop waits one release. And **H-20260730-evidence-retention-period-deletion's retention windows and the erasure path** are promises
 about data we *will* hold; they stand. This rule expires the moment the first pilot shop has real
 divers in the system — Aaron will say so, and it is not an agent's call to make.
 
@@ -896,7 +896,7 @@ in both, and the test is whether the thing is *gone* or merely *not shown*.
 one-way, stays a separate column from `deleted_at` (`people.anonymized_at` plus its check
 constraint), never becomes the primary action, and is the one place the distinction *is* expressed,
 because the reader is choosing between two outcomes and one has no undo. And *machinery nobody
-pointed at*: H-02's bounded retention prune, child rows rewritten wholesale when their parent saves
+pointed at*: H-20260730-evidence-retention-period-deletion's bounded retention prune, child rows rewritten wholesale when their parent saves
 (`trip_dives`, `trip_schedule_days` — a replace), a single-use token consumed on use, seed and test
 teardown. This does **not** touch the rule above it: "There is no legacy" governs the *tree*; this
 one governs *rows at runtime*.
@@ -1212,7 +1212,7 @@ For `src/i18n/`; the rules themselves are in `.claude/rules/i18n.md`.
 - **Voice**: no message bundle reads as machine-written — a prose em-dash, an intensifier
   (*actually*, *genuinely*, *simply*), a "Here's how" lead-in, a "not just X" contrast or a "No X.
   No Y." run fails `pnpm check:voice`, per locale. So does a British spelling in English
-  (*colour*, *centre*, *cancelled*, *grey*): DiveDay spells American (H-95). The reasoning and the before/after table are in
+  (*colour*, *centre*, *cancelled*, *grey*): DiveDay spells American (H-20261006-english-we-spell). The reasoning and the before/after table are in
   [docs/design/brand.md](../design/brand.md)'s "What gives us away".
 - **The apostrophe is `’` (U+2019)**, in every locale and in a route's `metadata` literals. A
   straight `'` fails `pnpm check:voice` unless it is ICU quoting — `'{depth18}'`, `'{{1}}'` — where
@@ -1229,7 +1229,7 @@ For `src/i18n/`; the rules themselves are in `.claude/rules/i18n.md`.
   (`gear-labels.ts`). Never spell any of these inline in a surface.
 - **Every sentence earns its place.** A caption restating its heading, an explanation of which rule
   won, an apology for a refusal — deleted, not shortened (the **copy-restraint** skill).
-- Waiver and medical wording stays English pending H-01/H-03 — its date formatting is still
+- Waiver and medical wording stays English pending H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit — its date formatting is still
   locale-negotiated.
 
 ### The infra rules
@@ -1282,4 +1282,16 @@ For `infra/`, `config/`, `.env.example` and the deploy scripts; the rules themse
   `pnpm check` gate for that reason. Nothing here logs a command's environment, stdin or output.
 - A new AWS service, vendor or runtime dependency is an ADR (the **adr** skill); vendor swaps are
   rows in [docs/architecture/aws-migration-dossier.md](../architecture/aws-migration-dossier.md)
-  awaiting H-45.
+  awaiting H-20260907-far-diveday-migrate-onto.
+
+### coverage-floors
+
+`scripts/coverage-floors.mjs` holds branch coverage to `scripts/coverage-floors.json`, outside `check:repo` (it needs a coverage run; CI's `coverage-floors` job). Which files need a floor is no longer a hand-kept list: `scripts/coverage-safety-files.mjs` takes every non-test `.ts` or `.tsx` under `src/lib` and `src/db` that the `dive-domain-expert` patterns in `scripts/check-pr-body.mjs` (`REVIEWS`) match, drops `seed-*`, `*-copy`, test-support and `.d.ts` files, and adds six hand-kept money and authorization files (`trips`, `authz`, `checkouts`, `refunds`, `promo-caps`, `account-security`). A file that needs the reviewer needs a floor, so a new readiness, manifest, nitrox, erasure or waiver module fails the job with "no floor yet" until `--write` seeds it from the measured value, rounded down. Until 2026-11-01 eleven files had floors while `src/db/readiness.ts`, `manifests.ts`, `nitrox.ts`, `seat-diver.ts`, `medical-alerts.ts`, `roll-call-alerts.ts`, the erasure modules and `waiver-signing.ts` had none. Floors only rise. The matching is tested against a fixture list in `scripts/coverage-floors.test.mjs`.
+
+### untested-logic
+
+`scripts/warn-untested-logic.mjs` is a warning, never a failure: a step in CI's `Repository safeguards` job prints one `::warning` annotation when the pull request adds or modifies a non-test `.ts` file under `src/lib`, `src/db` or `src/features` and changes no `*.test.*` file anywhere. A rename or a pure deletion does not count. It cannot tell whether a test covers the change; it asks the question on the check run, next to the e2e budget warnings. Locally: `node scripts/warn-untested-logic.mjs --base origin/main`.
+
+### adrs and dependencies
+
+`pnpm check:adrs` also fails when a `package.json` runtime dependency's name appears in no ADR file, which is the "new runtime dependency → ADR" rule made checkable. The match is a plain substring, so a short name such as `next` is satisfied by `next-intl`; the check catches a dependency nobody wrote about, not a weak mention. Exactly two names are exempt, in `DEPENDENCY_EXEMPT` in `scripts/check-adrs.mjs`: `react-dom` (half of React) and `@vercel/speed-insights` (a measurement beacon beside `@vercel/analytics`). Adding a third means writing the ADR instead.

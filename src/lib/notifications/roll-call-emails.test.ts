@@ -50,7 +50,7 @@ describe("rollCallStaleEmail", () => {
     );
   });
 
-  // Dive-domain review (EAP) on H-118: one missing diver beside five with no
+  // Dive-domain review (EAP) on H-20261014-stale-roll-call-recipients: one missing diver beside five with no
   // result must not read as "1 person".
   it("says both numbers when some are recorded missing and more have no result", () => {
     const email = rollCallStaleEmail({ ...base, notBackAboard: 1, awaiting: 6 });
@@ -178,7 +178,7 @@ describe("the roll_call_stale kind", () => {
   });
 });
 
-/** H-118: the shore contact's copy, to somebody outside the shop's accounts. */
+/** H-20261014-stale-roll-call-recipients: the shore contact's copy, to somebody outside the shop's accounts. */
 describe("the roll_call_stale_shore kind", () => {
   const { recipientName: _name, rollCallUrl: _url, ...facts } = base;
   const shore = {
@@ -274,7 +274,7 @@ describe("the roll_call_stale_shore kind", () => {
   });
 });
 
-/** H-118 review: the link a saved shore address receives before any alert. */
+/** H-20261014-stale-roll-call-recipients review: the link a saved shore address receives before any alert. */
 describe("the shore_alert_confirmation kind", () => {
   const input = {
     locale: "en-US" as const,
@@ -312,7 +312,7 @@ describe("the shore_alert_confirmation kind", () => {
   });
 });
 
-/** H-118 re-review: the owners hear when the shore contact stopped the alerts. */
+/** H-20261014-stale-roll-call-recipients re-review: the owners hear when the shore contact stopped the alerts. */
 describe("the shore_alert_stopped kind", () => {
   const input = {
     locale: "en-US" as const,

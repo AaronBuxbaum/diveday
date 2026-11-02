@@ -648,7 +648,7 @@ export function pickDisplayReservation<
  * (case-insensitively, sizes being the same free text the fit records), then
  * unsized units, then everything else, each band alphabetical by label so
  * the list reads stably. Ranking only — staff always pick, because a size
- * label matching is not a fit check (H-06).
+ * label matching is not a fit check (H-20260724-initial-gear-policy-sizing).
  */
 export function rankUnitsForSize<T extends { label: string; size: string | null }>(
   units: readonly T[],
@@ -678,7 +678,7 @@ export function rankUnitsForSize<T extends { label: string; size: string | null 
  *
  * `exact` is empty when the fit records no size at all, which is the honest
  * answer: with nothing asked for, nothing can match it, and every free unit is
- * equally a candidate. Ranking, never a fit check — staff always pick (H-06).
+ * equally a candidate. Ranking, never a fit check — staff always pick (H-20260724-initial-gear-policy-sizing).
  */
 export function groupUnitsForSize<T extends { label: string; size: string | null }>(
   units: readonly T[],

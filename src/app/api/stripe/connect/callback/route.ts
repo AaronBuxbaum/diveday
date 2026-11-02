@@ -29,7 +29,7 @@ export async function GET(request: Request) {
   const dbForShop = await getDb();
 
   // Re-check against live roles, not just the session that started the OAuth
-  // round trip (H-14, ADR 20260724-role-authorization): the state cookie is
+  // round trip (H-20260724-staff-role-reach, ADR 20260724-role-authorization): the state cookie is
   // valid for up to ten minutes, long enough for the initiator to be
   // demoted or disabled before Stripe redirects back.
   const canPayments = await canPersonManagePaymentSettings(

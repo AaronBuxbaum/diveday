@@ -21,7 +21,7 @@ import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
  *
  * A lapsed paper names the day it ran out, "Hull insurance ended Oct 8, 2026",
  * rather than a count of days since: the date is what the owner checks the
- * policy against (H-136). A calendar date, so it has no zone to name.
+ * policy against (H-20261015-lapsed-boat-papers-loud). A calendar date, so it has no zone to name.
  */
 const KIT_KEYS: Record<GearServiceKind, { due: StaffMessageKey; expired: StaffMessageKey }> = {
   aed_pads: { due: "boatSafety.kit.aedPads.due", expired: "boatSafety.kit.aedPads.expired" },

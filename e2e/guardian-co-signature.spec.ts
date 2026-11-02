@@ -298,7 +298,7 @@ test("the diver record refuses a namesake co-signer and offers no tick", async (
 });
 
 /**
- * **"Under 18" on the public party form** (H-113, 2026-10-13). The form asks
+ * **"Under 18" on the public party form** (H-20261013-under-18-on-party, 2026-10-13). The form asks
  * nobody a date of birth, so before this box a child booked online signed her
  * release alone. Ticked, the seat asks for a parent on the same release page a
  * known minor's does.
@@ -339,7 +339,7 @@ test("a seat booked as under 18 asks for a parent on its release", async ({ page
 });
 
 /**
- * **A parent signs a child's release from their own page** (H-124, ADR
+ * **A parent signs a child's release from their own page** (H-20261014-parent-signs-minor-release, ADR
  * 20261014-parent-signs-minor-release). Mia is booked "Under 18" with no
  * email of her own, so nothing reaches anyone for her; the lead's panel offers
  * "Sign Mia's waiver", which opens Mia's release with the guardian's card on

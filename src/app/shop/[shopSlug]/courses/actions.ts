@@ -16,7 +16,7 @@ const inviteSchema = z.object({ personId: z.uuid(), tripId: z.uuid() });
 
 /**
  * **Invite one diver from the course ladder to the next course's session**
- * (fifth-loop ideas, item 45; H-130): one at a time, staff-chosen, for a named
+ * (fifth-loop ideas, item 45; H-20261014-one-to-one-invite): one at a time, staff-chosen, for a named
  * session. The posted ids are re-checked rather than trusted (security review
  * N3, dive-domain review F3): the trip must be a live session of a course,
  * the person must not hold its card already or be under its minimum age, and,

@@ -15,8 +15,8 @@
   "annotations": [
     { "id": "read-order", "x": 0, "y": -170, "w": 560, "text": "Read the cover first: the three findings, the six moves, the four-part rule. The two specimen boards beside it show a rule in frames. Page 2 holds the surfaces.", "page": "page-1" },
     { "id": "fiction", "x": 0, "y": -170, "w": 560, "text": "Blue Mantis Divers, the week of Thursday August 27, 2026. Every name is invented. Reef in Geist on the staff boards; the demo shop's green and Bricolage Grotesque on the diver's.", "page": "page-2" },
-    { "id": "known-diver-door", "x": 0, "y": 1300, "w": 390, "text": "This page opens only from Yara's own link. A cold visitor gets the form that ships. Whether an email typed cold that matches a diver may receive one link is the owner's call (H-68 b); nothing shows on the page either way.", "page": "page-2" },
-    { "id": "crew-call", "x": 520, "y": 1040, "w": 520, "text": "The crew field is the one value on this panel that schedules people. Whether the pattern may fill it, or leaves it empty with the sentence, is H-68 c.", "page": "page-2" },
+    { "id": "known-diver-door", "x": 0, "y": 1300, "w": 390, "text": "This page opens only from Yara's own link. A cold visitor gets the form that ships. Whether an email typed cold that matches a diver may receive one link is the owner's call (H-20260906-diveday-fill-already-knows b); nothing shows on the page either way.", "page": "page-2" },
+    { "id": "crew-call", "x": 520, "y": 1040, "w": 520, "text": "The crew field is the one value on this panel that schedules people. Whether the pattern may fill it, or leaves it empty with the sentence, is H-20260906-diveday-fill-already-knows c.", "page": "page-2" },
     { "id": "palette-note", "x": 2340, "y": 1140, "w": 520, "text": "The palette answers; it never mutates. Each act lands on the page whose form does the work, with that form ready.", "page": "page-2" }
   ],
   "launch": { "view": "canvas", "page": "page-1" }

@@ -7,7 +7,7 @@ const staffCopy = staffTranslator("en-US");
 
 /**
  * **Cash / Card machine: one tap with an eight-second Undo hold** (issue
- * #3030, H-159; the send hold of H-68). The tap records nothing yet: the row
+ * #3030, H-20261024-counter-payment-undo-hold; the send hold of H-20260906-diveday-fill-already-knows). The tap records nothing yet: the row
  * says what will be recorded beside Undo, Undo leaves the order open, and the
  * hold running out records it once.
  */
@@ -48,7 +48,7 @@ test.describe("the counter payment hold", () => {
   });
 
   test("the hold running out records the payment once", async ({ page }) => {
-    // The hold is eight seconds by decision (H-68). The page clock runs the
+    // The hold is eight seconds by decision (H-20260906-diveday-fill-already-knows). The page clock runs the
     // countdown's ticks instead of spending eight real seconds of the budget.
     await page.clock.install({ time: E2E_FROZEN_CLOCK });
     await openFirstOpenOrder(page);

@@ -13,7 +13,7 @@ import { createTrip, upcomingTripsWithCounts } from "./trips";
 
 /**
  * **The night-before email says when it's safe to fly** (ux-delight sheet
- * 2026-10-22, item 1; H-150): the sender hands the renderer the fly-safe
+ * 2026-10-22, item 1; H-20261022-reminder-fly-safe-in): the sender hands the renderer the fly-safe
  * hours only on the reminder before a diver's last boat with the shop. The
  * rule itself is `readReminderFlySafeHours`'s (`fly-safe-plan.test.ts`); the
  * words are `diver-state-email.test.ts`'s.

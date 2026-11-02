@@ -1129,7 +1129,7 @@ describe("restoreBooking (undo of a roster removal)", () => {
    *
    * An **already-departed** trip does not refuse either, and this one is a
    * safety matter rather than a nicety: `cancelBooking` refuses only a diver
-   * marked aboard (H-133), and Remove still works on every other row at sea
+   * marked aboard (H-20261015-aboard-diver-removal-at), and Remove still works on every other row at sea
    * (a departed trip is still `scheduled`, and roll call stays live). If
    * the undo refused there, one misclick would strike a diver off an at-sea
    * manifest permanently. The two errors are not symmetric — an under-listed
@@ -1215,7 +1215,7 @@ describe("restoreBooking (undo of a roster removal)", () => {
   });
 });
 
-describe("createBooking identity safeguard (H-13)", () => {
+describe("createBooking identity safeguard (H-20260724-one-person-per-email)", () => {
   async function nightTrip(db: AppDb, shopId: string) {
     const trips = await upcomingTripsWithCounts(db, shopId);
     const night = trips.find((t) => t.title.startsWith("Night Dive"));
@@ -1697,7 +1697,7 @@ describe("createBooking identity safeguard (H-13)", () => {
       });
 
       /**
-       * **A blank date never reads as an adult on its own** (H-100, issue
+       * **A blank date never reads as an adult on its own** (H-20261007-held-seat-split-into, issue
        * #2143). The split is for someone who is not the matched diver, and the
        * usual one is a minor booked with a parent's email: on a plain charter
        * the date used to be optional, and a record with none passes the
@@ -2205,7 +2205,7 @@ describe("createBooking identity safeguard (H-13)", () => {
    * regular whose name the desk spells right is on the prompt every single
    * morning. Flagging that seat put a blocker on the ordinary case, and a
    * blocker a shop clears twenty times before lunch is one it stops reading —
-   * which is the credibility H-13's blocker exists to spend elsewhere.
+   * which is the credibility H-20260724-one-person-per-email's blocker exists to spend elsewhere.
    */
   it("does not flag a tap on a candidate whose name is the one that was typed", async () => {
     const { db, shop, open } = await seededContext();
@@ -2758,7 +2758,7 @@ describe("createBooking trip admission (the boat's own cert gate, DOM-M6)", () =
   });
 
   it("never refuses a diver this shop has no verified card for — the new customer still books", async () => {
-    // The deliberate limit of this gate (H-08's settled trade-off, repeated in
+    // The deliberate limit of this gate (H-20260724-certification-levels-agency-rules's settled trade-off, repeated in
     // the ADR): absence of evidence is not a refusal, or every first-time
     // diver would be locked out of a shop whose trips all state a level.
     const { db, shop, open } = await seededContext();
@@ -2904,7 +2904,7 @@ describe("createBooking trip admission (the boat's own cert gate, DOM-M6)", () =
         fullName: "Cass Marlin",
         email: "cass@example.com",
         // The shortfall has to rest on what this submitter typed — see the
-        // H-30 test below for what happens when it rests on the record.
+        // H-20260803-booking-form-succeed-fail test below for what happens when it rests on the record.
         declared: { level: "open_water" },
         admissionGate: "advise",
       },
@@ -2952,14 +2952,14 @@ describe("createBooking trip admission (the boat's own cert gate, DOM-M6)", () =
     );
   });
 
-  it("keeps H-30's refusal when the shortfall rests on the record, not on this submission", async () => {
-    // H-30 is Chosen and rejected "sell the seat, refuse at the dock" outright:
+  it("keeps H-20260803-booking-form-succeed-fail's refusal when the shortfall rests on the record, not on this submission", async () => {
+    // H-20260803-booking-form-succeed-fail is Chosen and rejected "sell the seat, refuse at the dock" outright:
     // it "trades the oracle for a refund conversation and a diver who finds out
     // at the water". A returning regular does not re-answer a question the shop
     // already holds the answer to, so leaving the select alone is the modal
     // behaviour — and there is no warning that could have reached them, because
     // they typed nothing. They get the refusal, and their money stays in their
-    // pocket. What advises is only the case H-30 itself carves out: "a response
+    // pocket. What advises is only the case H-20260803-booking-form-succeed-fail itself carves out: "a response
     // to what this submitter just typed".
     const { db, shop, open } = await seededContext();
     const person = await diver(db, shop.id, "regular@example.com");
@@ -3093,7 +3093,7 @@ describe("createBooking trip admission (the boat's own cert gate, DOM-M6)", () =
   });
 
   it("does not judge a diver whose booking identity is unconfirmed by the matched record's cards", async () => {
-    // H-13: the submitted name disagreed with the person already on that
+    // H-20260724-one-person-per-email: the submitted name disagreed with the person already on that
     // email, so those cards may belong to somebody else entirely. Readiness
     // fails closed on the flag; admission simply declines to read the record.
     const { db, shop, open } = await seededContext();

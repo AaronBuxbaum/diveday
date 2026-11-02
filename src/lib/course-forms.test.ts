@@ -116,7 +116,7 @@ describe("outstandingCourseForms — which forms an enrollment still owes", () =
     expect(owed([signed({ signedAt: dayBefore })], turning)).toEqual(["form-release"]);
   });
 
-  it("reads an unknown date of birth as an adult (H-08's fail-open)", () => {
+  it("reads an unknown date of birth as an adult (H-20260724-certification-levels-agency-rules's fail-open)", () => {
     expect(
       owed([signed()], { dateOfBirth: null, minorDeclared: false, timezone: "UTC" } as never),
     ).toEqual([]);

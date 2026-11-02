@@ -67,7 +67,7 @@ function featureArmCopy(t: DiverTranslator, key: FeaturePageKey, offer: PlanTerm
 }
 
 /**
- * **One feature page**, the same six parts for all twelve (H-93): what the
+ * **One feature page**, the same six parts for all twelve (H-20261005-public-pages-sell): what the
  * shop gets, with the screen that does it and the builder's notes under it;
  * how it works in three steps; everything in it; the questions shops ask;
  * the close; and last the pages a reader asks about next.

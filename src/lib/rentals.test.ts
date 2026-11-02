@@ -238,7 +238,7 @@ describe("rental pricing", () => {
     });
     // Five core pieces individually (1500+1500+1200+800+500=5500) cost more than
     // the 4500 set price, so a diver bringing their own computer is quoted the
-    // cheaper set price rather than losing the discount (H-06, HD-9).
+    // cheaper set price rather than losing the discount (H-20260724-initial-gear-policy-sizing, HD-9).
     expect(quote.lines).toEqual([{ kind: "set", cents: 4500 }]);
     expect(quote.subtotalCents).toBe(4500);
   });
@@ -387,7 +387,7 @@ describe("rentalFitCompleteness", () => {
     weightPreference: null,
   };
 
-  it("asks a hood and gloves for their own sizes, each on its own (H-102)", () => {
+  it("asks a hood and gloves for their own sizes, each on its own (H-20261007-hood-glove-sizes)", () => {
     // A warm-water diver takes gloves and no hood: only the gloves need a size.
     expect(rentalFitCompleteness({ ...OWN_KIT, rentsGloves: true })).toEqual({
       state: "incomplete",
@@ -666,7 +666,7 @@ describe("sizedRentalKindOfGearKind", () => {
     expect(sizedRentalKindOfGearKind("")).toBeNull();
   });
 
-  it("teaches a hood and gloves their own columns, now that each has a size (H-102)", () => {
+  it("teaches a hood and gloves their own columns, now that each has a size (H-20261007-hood-glove-sizes)", () => {
     expect(sizedRentalKindOfGearKind("hood")).toBe("hood");
     expect(sizedRentalKindOfGearKind("gloves")).toBe("gloves");
     expect(SIZED_RENTAL_FIT_COLUMN.hood).toBe("hoodSize");

@@ -124,7 +124,7 @@ export function DiverRowPanel({
       {/* A diver whose advisory the strip above does not already
         state by name keeps the full sentence — here, where the
         plan for dive two is read during the surface interval.
-        Warning tone, never a gate (H-08). */}
+        Warning tone, never a gate (H-20260724-certification-levels-agency-rules). */}
       {(diver.depthAdvisory?.status === "exceeds" ||
         diver.depthAdvisory?.status === "verification_required") &&
       !sharedAdvisoryTexts.has(depthWarningText(t, diver.depthAdvisory)) ? (
@@ -133,7 +133,7 @@ export function DiverRowPanel({
           <span>{depthWarningText(t, diver.depthAdvisory)}</span>
         </p>
       ) : null}
-      {/* **The diver's medical alert for the crew** (issue #2960, H-153),
+      {/* **The diver's medical alert for the crew** (issue #2960, H-20261023-medical-alert-for-the),
         above the contact facts it sits beside in an emergency: the words
         behind a recorded tap for the owner, a manager and crew a manager put
         on this departure, and for anyone else who can read them and whom to
@@ -187,7 +187,7 @@ export function DiverRowPanel({
           capsule. A blocked diver and a split team are exactly the cases
           where a 13-year-old is most likely to be on the row that lost it,
           and the captain reading the boarding list has no other way to know
-          a booked diver is 12 (H-21). Gated on which capsule the row
+          a booked diver is 12 (H-20260730-minimum-age-gate-data). Gated on which capsule the row
           actually rendered, never on `minor` itself (dive-domain review,
           slice 5a). An adult's age is in the subtitle, so the lone "Age 27"
           chip is gone (B08). */}

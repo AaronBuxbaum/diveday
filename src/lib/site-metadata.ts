@@ -89,7 +89,7 @@ export function shopSearchListingRobots(shop: {
   searchListingOptOutAt: Date | null | undefined;
   isDemo: boolean;
 }): Metadata["robots"] | undefined {
-  // A demo shop is never listed (H-131): a minted demo may wear its visitor's
+  // A demo shop is never listed (H-20261014-demo-wears-visitor-shop): a minted demo may wear its visitor's
   // shop name on staff screens, and its storefront must not become a page a
   // search for that name finds. The sitemap already leaves demos out.
   return shop.searchListingOptOutAt || shop.isDemo ? { index: false, follow: false } : undefined;

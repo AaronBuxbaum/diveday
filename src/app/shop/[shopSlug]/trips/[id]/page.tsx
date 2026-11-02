@@ -160,7 +160,7 @@ export default async function ManageTripPage({
     blowoutCalled,
     boatClashes,
   } = overview;
-  // One hull, one departure at a time (H-80, issue #1780). A called-off
+  // One hull, one departure at a time (H-20260916-may-one-hull-carry, issue #1780). A called-off
   // departure holds no hull, and `boatClashes` answers nothing for one anyway.
   const crewNotes = tripCrewNotes({
     crew: overview.crew,

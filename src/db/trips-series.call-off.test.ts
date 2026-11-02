@@ -185,7 +185,7 @@ describe("calling a run's dates off (in-memory PGlite)", () => {
         provider: fakeEmail().provider,
         checkout: fakeCheckout(),
       });
-      // An after-dive mark is the crew's word the boat is out (H-133), so the
+      // An after-dive mark is the crew's word the boat is out (H-20261015-aboard-diver-removal-at), so the
       // date is never offered as off-cadence, and so never reaches the cascade.
       expect(outcome.tripIds).not.toContain(run.dropped.id);
       expect((await getTripWithBooked(run.db, run.shop.id, run.dropped.id))?.status).toBe(

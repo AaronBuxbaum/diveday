@@ -21,7 +21,7 @@ type DiverLine = TripPrep["checklist"]["diverLines"][number];
  * A unit in words, the way the picker's option and a proposed row both say
  * it: label, size, and whatever about its care is worth saying at the
  * moment of the pick. A lapsed clock, an unanswered service concern and a
- * clock coming due are each said, never hidden: the dock decides (H-06).
+ * clock coming due are each said, never hidden: the dock decides (H-20260724-initial-gear-policy-sizing).
  * A proposal is never overdue or flagged, so on a proposed row this says
  * at most "service due soon".
  */
@@ -162,7 +162,7 @@ export const pieceDetail = (t: StaffTranslator, piece: PrepPiece) => {
     );
   }
   // A drysuit diver's gloves: wet gloves or dry gloves on rings are two
-  // different things off the rack, so the line asks (H-102).
+  // different things off the rack, so the line asks (H-20261007-hood-glove-sizes).
   if (piece.drysuitGloves) {
     return (
       <span className="font-medium text-warning">

@@ -76,7 +76,7 @@ export type BlowoutCandidateTrip = {
 export type BlowoutDiverContext = {
   /** The diver's certification evidence at this shop — the rows admission reads. */
   evidence: TripAdmissionEvidence;
-  /** H-13: certs on the record are not provably this person's; admission fails open. */
+  /** H-20260724-one-person-per-email: certs on the record are not provably this person's; admission fails open. */
   identityUnconfirmed: boolean;
   /** Trips this person already actively holds a seat on (any status but cancelled). */
   bookedTripIds: readonly string[];

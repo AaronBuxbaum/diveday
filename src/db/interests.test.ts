@@ -69,7 +69,7 @@ describe("askForDeparture (in-memory PGlite)", () => {
   });
 
   /**
-   * The wait-list half of H-13's borrowed-identity rule — see the twin in
+   * The wait-list half of H-20260724-one-person-per-email's borrowed-identity rule — see the twin in
    * `last-minute-list.test.ts` for why a certification is the one write on this
    * unauthenticated fork that a mismatched name has to stop.
    */
@@ -372,7 +372,7 @@ describe("deliverSeatOffer on a wait-list interest", () => {
   });
 
   it("still offers the seat a diver waited for after they opted out of courtesy email", async () => {
-    // Leo — self-serve email unsubscribe. H-145 D-2 option (b), H-96's own
+    // Leo — self-serve email unsubscribe. H-20261005-one-interest-table-names D-2 option (b), H-20261006-staff-trip-invitation-service's own
     // test: the diver asked for this boat, so the offer is service mail and
     // `people.courtesyEmailOptOutAt` does not silence it. Here it degrades to
     // the composer only because the test environment has no mail provider.

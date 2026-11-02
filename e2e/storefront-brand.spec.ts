@@ -29,7 +29,7 @@ test.describe("the storefront wears the shop's brand", () => {
   });
 
   /**
-   * **The real photos load** (H-157). Every visual capture answers the strip's
+   * **The real photos load** (H-20261023-shop-photo-tile-in). Every visual capture answers the strip's
    * photos with one flat tile (`tileShopPhotos`, e2e/visual-harness.ts), so
    * this is the one test that sees the files themselves: each decodes to a
    * real size and carries its alt attribute, empty because the strip is

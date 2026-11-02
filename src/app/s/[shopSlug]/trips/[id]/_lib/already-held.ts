@@ -8,7 +8,7 @@ import { log } from "@/lib/log";
 /**
  * **An address that already holds a seat, or a party rolled back because one
  * member does, is answered by email and nothing else** (issue #2691, Aaron's
- * 2026-10-24 decision; H-22). The public form is anonymous: whoever typed the
+ * 2026-10-24 decision; H-20260724-minimum-age-gate-fail). The public form is anonymous: whoever typed the
  * addresses proved nothing about them, so `bookSpot` lands both cases on one
  * neutral page that says neither whether anything was booked nor which member
  * holds a seat. This schedules the answers for after that response: the holder

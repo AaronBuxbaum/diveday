@@ -78,7 +78,7 @@ demo needs to outlive 7 days (make the window per-shop, or convert-to-trial on s
 must ever hold private data, bind the demo session to the mint (a cookie/nonce) so only the minting
 visitor can role-switch in, rather than anyone with the slug.
 
-## Amendment 2026-10-16: the demo wears the visitor's shop name (H-131)
+## Amendment 2026-10-16: the demo wears the visitor's shop name (H-20261014-demo-wears-visitor-shop)
 
 The "Try the demo" door on Get set up asks, optionally, for the visitor's own shop name, and the
 demo's staff screens wear it: the shop nav, Today's greeting and the sample email preview. It is

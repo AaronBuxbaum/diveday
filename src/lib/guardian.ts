@@ -6,9 +6,9 @@ import { hasReturned } from "./trips";
 /**
  * **A minor's release is signed twice** (ADR 20260907-guardian-co-signature).
  *
- * H-21 shipped the *fact* of a minor — age on the roster, a badge on the
+ * H-20260730-minimum-age-gate-data shipped the *fact* of a minor — age on the roster, a badge on the
  * manifest — and deliberately left the waiver as one signature, flagged for
- * the H-01–H-03 legal review rather than forgotten. The owner decided on
+ * the H-20260730-jurisdiction-waiver-text-medical, H-20260730-evidence-retention-period-deletion, H-20260724-current-typed-name-explicit legal review rather than forgotten. The owner decided on
  * 2026-09-07 to build the co-signature: when the diver a release is for is
  * under the age of majority on the day they sign, a parent or legal guardian
  * signs the same release, on the same page, with the same typed-consent
@@ -59,12 +59,12 @@ export type GuardianSignature = {
  * Whether a release signed **on this day** by **this diver** needs a guardian's
  * signature beside it.
  *
- * Fails open on an unknown date of birth, exactly as H-08's minimum-age gate
+ * Fails open on an unknown date of birth, exactly as H-20260724-certification-levels-agency-rules's minimum-age gate
  * does: a diver the shop never asked is treated as an adult, and the day a
  * date is put on file, `guardianSignatureMissing` below turns the release
  * they already signed into a block rather than a silent pass.
  *
- * Two doors cannot reach this blank by default (H-100): a held seat split
+ * Two doors cannot reach this blank by default (H-20261007-held-seat-split-into): a held seat split
  * into a new diver (`splitBookingIdentity`) and a stored date emptied on the
  * diver record (`updateDiver`, issue #2167) are refused unless the staffer
  * gives a date or says the person is 18 or older (`people.adult_attested_at`).
@@ -79,7 +79,7 @@ export function guardianSignatureRequired(
   minorDeclared: boolean,
 ): boolean {
   // **A date on file decides; with none, the booker's "Under 18" does**
-  // (decision of 2026-10-13, after H-21). The date is the shop's own fact and
+  // (decision of 2026-10-13, after H-20260730-minimum-age-gate-data). The date is the shop's own fact and
   // the only way a staffer corrects a box ticked by mistake. Without one, the
   // fail-open default above used to let a twelve-year-old a parent booked
   // sign their release alone; the box is the parent saying so.

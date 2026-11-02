@@ -186,7 +186,7 @@ const nextConfig: NextConfig = {
     // `ImageResponse` and needs it; no other staff closure traces it either
     // way. So the key no longer keeps the renderer out of any staff closure
     // that would otherwise carry it — its one remaining effect is #1710's,
-    // below. Deleting it is #1710's call, deferred with H-85 until after
+    // below. Deleting it is #1710's call, deferred with H-20260916-seven-engineering-hygiene-calls until after
     // pilot. Re-count after any change here with
     // `grep -l "@vercel/og" $(find .next -name "*.nft.json") | wc -l`.
     //

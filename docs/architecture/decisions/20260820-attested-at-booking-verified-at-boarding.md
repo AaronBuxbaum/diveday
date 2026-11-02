@@ -13,8 +13,8 @@ held the other at the dock (*is this diver cleared now?*).
 Two rows on `docs/product/human-decisions/README.md` said the sale-time gate was pointed at the wrong
 people.
 
-**H-29 — the gate contradicted itself.** `shopHasAdjudicated` decided whether a diver was "unknown
-to the shop", which is what implements H-08's fail-open promise. It triggered on a **`verified`**
+**H-20260820-shophasadjudicated-src-lib-trip — the gate contradicted itself.** `shopHasAdjudicated` decided whether a diver was "unknown
+to the shop", which is what implements H-20260724-certification-levels-agency-rules's fail-open promise. It triggered on a **`verified`**
 certification only. But the same function's module docstring argues at length that a `pending`
 staff-typed card is trustworthy — divers cannot write cards, only staff and the importer can — and
 the gate already believed those rows for the level comparison two lines further down. So a diver
@@ -22,7 +22,7 @@ with three cards a staffer had typed in read as a total stranger and was admitte
 A shop mid-backfill from a spreadsheet had a fleet of regulars walking through a gate their own
 records should have answered.
 
-**H-27 — the refusals were inverted relative to risk.** The gate refused *carded regulars*, who are
+**H-20260803-booking-time-trip-admission — the refusals were inverted relative to risk.** The gate refused *carded regulars*, who are
 the divers a shop knows exactly and the least likely to book the wrong boat, and never refused
 un-carded strangers, who are the ones booking the Spiegel Grove seat because it reads like the good
 one. Its disclosure half (the trip's requirement stated above the form) shipped 2026-08-03; the
@@ -71,7 +71,7 @@ A shop mid-backfill gets the gate its records already justify.
    relied on as one.** Its refusals are advice with a stop attached — and since 2026-08-20, on one
    narrow path, advice with no stop: a *level* shortfall resting on the rung this submitter just
    typed is warned about under their own select and sold. A shortfall resting on the shop's own
-   record, and any specialty or nitrox shortfall, still stop (see H-30's amendment).
+   record, and any specialty or nitrox shortfall, still stop (see H-20260803-booking-form-succeed-fail's amendment).
 2. **A stranger can now cost somebody else a seat.** The public opt-ins are anonymous, and an
    anonymous poster who guesses a real diver's email writes a claim onto that diver's record. The
    anti-displacement rule in `recordSelfDeclaredCards` means this can never happen to a diver who
@@ -80,27 +80,27 @@ A shop mid-backfill gets the gate its records already justify.
    fail-open. For them, a malicious "Open Water" now produces a refusal at the sale. The refusal
    carries the shop's contact address, and a staffer can capture the real card; the alternative
    (keep ignoring claims) costs every honest diver the benefit to deny a rare bad actor a nuisance.
-3. **H-24's leak is reopened by design.** A bare tap now asserts something. That was the point.
+3. **H-20260725-two-findings-dive-domain's leak is reopened by design.** A bare tap now asserts something. That was the point.
 
 **Where the sighting still bites.** Readiness, the manifest, `verifiedNitroxPersonIds` and the fill
 gate, every course prerequisite, and the depth advisory all read `verified`. The path from claim to
 sighting is the staff verify queue — `reviewCertification` with an agency and number off the physical
-card, open to every staff role (H-48).
+card, open to every staff role (H-20260814-may-sight-card).
 
 **Still to build:** the booking form does not yet ask for a card number, so the only declarations
 that exist come from the two public wait lists. Collecting agency and number at the sale is what
 makes "verified asynchronously before the dive date" real rather than aspirational; until then this
-decision mostly delivers H-29.
+decision mostly delivers H-20260820-shophasadjudicated-src-lib-trip.
 
 ## Alternatives considered
 
-- **Fix H-29 only (count any row) and keep dropping declarations.** Rejected as half the call: it
+- **Fix H-20260820-shophasadjudicated-src-lib-trip only (count any row) and keep dropping declarations.** Rejected as half the call: it
   would leave the product asking a diver what they hold and then explicitly ignoring the answer,
   which is the broken promise ADR 20260814-self-declared-cards was written against.
 - **Believe declarations at readiness too.** Rejected outright, and not a close question. The
   sighting is the whole content of "verified", and a boat that sails on typing is the failure every
   safety surface in this repo is shaped to prevent.
-- **Refuse un-carded strangers instead (fail closed at the sale).** Rejected: it is H-08's settled
+- **Refuse un-carded strangers instead (fail closed at the sale).** Rejected: it is H-20260724-certification-levels-agency-rules's settled
   trade-off re-litigated, and it locks out every genuinely new customer to catch a few.
 
 
@@ -127,9 +127,9 @@ highest-traffic declaration source. What is genuinely still missing is the *numb
 dive date" has nothing to work from: the whole verification load still lands in the dock-call window.
 That is the honest state, and it is a weaker claim than this ADR originally made.
 
-**Correction 3 — the oracle widening was not recorded.** H-30 accepted the refusal signal on the
-basis that H-27 narrows it to what the submitter typed. True of the declaration half; not true of the
-H-29 half. `shopHasAdjudicated` now triggers on rows it previously could not read — a `pending` staff
+**Correction 3 — the oracle widening was not recorded.** H-20260803-booking-form-succeed-fail accepted the refusal signal on the
+basis that H-20260803-booking-time-trip-admission narrows it to what the submitter typed. True of the declaration half; not true of the
+H-20260820-shophasadjudicated-src-lib-trip half. `shopHasAdjudicated` now triggers on rows it previously could not read — a `pending` staff
 transcription, a CSV import — so a submission carrying *no* declaration can now be refused over
 record states that were invisible before. For a shop mid-backfill, that is most of the roster.
 
@@ -182,14 +182,14 @@ earned by the form warning a diver as they answered, and there is no answer to w
 **What this costs, stated plainly.**
 
 1. **The sale-time gate is back to judging the shop's own record alone** — its pre-2026-08-20
-   behaviour, and H-08's fail-open for a diver the shop holds nothing for. H-29's half of this ADR
+   behaviour, and H-20260724-certification-levels-agency-rules's fail-open for a diver the shop holds nothing for. H-20260820-shophasadjudicated-src-lib-trip's half of this ADR
    is untouched and is the half that mattered: `shopHasAdjudicated` still counts any live
    certification row, so a carded regular is still judged on their card rather than read as a
    stranger.
 2. **The "you may be short for this trip" warning at the point of sale is gone.** The departure's
    own requirement is still disclosed above the form (2026-08-03) — a property of the trip, which is
    the half that never depended on asking the reader anything. What a diver loses is the sentence
-   measuring *their* answer against it, and they were never refused on it anyway (H-30's advisory
+   measuring *their* answer against it, and they were never refused on it anyway (H-20260803-booking-form-succeed-fail's advisory
    path).
 3. **The "I'm not certified yet" answer is no longer collected at the sale.** It is collected at
    `/ready`, one page later, from the person it is about.

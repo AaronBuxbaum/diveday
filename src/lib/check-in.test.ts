@@ -174,7 +174,7 @@ describe("turned away at the desk", () => {
   };
 
   /**
-   * H-135: the same release as "Not here", a different statement. The desk saw
+   * H-20261015-who-may-turn-someone: the same release as "Not here", a different statement. The desk saw
    * this diver, so the count that says "not here" must not include them.
    */
   it("counts a turned-away seat apart from a diver who never came", () => {

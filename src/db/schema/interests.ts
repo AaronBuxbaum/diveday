@@ -85,7 +85,7 @@ export const interests = pgTable(
       onDelete: "set null",
     }),
     /**
-     * Null only for a date interest (deliberately person-less, H-13: no person row
+     * Null only for a date interest (deliberately person-less, H-20260724-one-person-per-email: no person row
      * is made for a stranger's form) or a departure row copied from one.
      */
     personId: uuid("person_id").references(() => people.id),

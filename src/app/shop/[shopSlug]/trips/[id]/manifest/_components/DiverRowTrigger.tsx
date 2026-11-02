@@ -36,7 +36,7 @@ export function DiverRowTrigger({
   timezone: string;
   t: StaffTranslator;
 }) {
-  // A held seat's release may be somebody else's: no chip (H-13).
+  // A held seat's release may be somebody else's: no chip (H-20260724-one-person-per-email).
   const alerted = Boolean(diver.medicalAlert) && !diver.identityWithheld;
   return (
     <>

@@ -4,7 +4,7 @@ import { SectionCard } from "@/components/ui/card";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 
 /**
- * **The card refunds a call-off left waiting** (H-139): seats still holding a
+ * **The card refunds a call-off left waiting** (H-20261013-call-off-queues-refunds): seats still holding a
  * payment on a canceled departure, because the person who called it off could
  * not move money. An owner or manager sends them back from here; anyone else
  * is told who will.

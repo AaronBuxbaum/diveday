@@ -237,7 +237,7 @@ export async function consumeBookingHandoff(
 export type HandoffOfferOutcome = "sent" | "queued" | "failed" | "skipped";
 
 /**
- * **One link, to an address typed cold** (H-68 b). When the lead email on a
+ * **One link, to an address typed cold** (H-20260906-diveday-fill-already-knows b). When the lead email on a
  * booking form matches a live diver with a booking at this shop, that diver
  * gets one email carrying a handoff onto the same departure. The page never
  * learns the answer — the public action discards this internal result — and the

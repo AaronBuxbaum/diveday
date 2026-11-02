@@ -10,7 +10,7 @@ is a Next file convention with a fixed `{error, reset}` prop signature, the fram
 it directly, so no Server Component can hand it a `copy` prop the way every other page's words
 arrive. Seven of them are bearer-token routes — `/waivers`, `/ready`, `/recap`, `/verify`,
 `/reset-password`, `/unsubscribe`, `/invite` — reached from a text message or an inbox by exactly
-the diver the English-only waiver notice (H-01/H-03) already worries about. The 2026-08-02 review
+the diver the English-only waiver notice (H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit) already worries about. The 2026-08-02 review
 raised it as I18N-3: deferred in comments, tracked nowhere.
 
 The comments assumed the fix was expensive: "wrapping this route in a `DiverIntlProvider` ships the

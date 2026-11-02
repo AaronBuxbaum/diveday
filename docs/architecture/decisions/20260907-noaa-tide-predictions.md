@@ -71,7 +71,7 @@ costs a parser change and nothing else) and the seven-digit id format.
 
 Escape hatch: the provider lives behind `fetchTidePredictions`'s one signature, so a second source
 is a new module and a switch, not a data migration; dropping the feature is two columns and one
-shop flag (H-49, pre-pilot).
+shop flag (H-20260815-no-legacy, pre-pilot).
 
 ## Amendment 2026-09-07 — the sentence names a height turn, because that is what we fetched
 

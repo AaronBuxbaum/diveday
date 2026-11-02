@@ -8,7 +8,7 @@ import { numbersCameFrom, samePlaceholders } from "./facts";
  * pages read fully in Spanish. The shop edits and saves the draft; nothing is
  * published by the model.
  *
- * Waiver and medical wording is excluded until H-01 and H-03 are decided: only
+ * Waiver and medical wording is excluded until H-20260730-jurisdiction-waiver-text-medical and H-20260724-current-typed-name-explicit are decided: only
  * the fields in `TRANSLATABLE_FIELDS` can be sent, and none of them is a waiver,
  * a medical question or a course form.
  *

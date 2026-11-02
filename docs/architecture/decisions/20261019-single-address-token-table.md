@@ -7,7 +7,7 @@
 
 Notification kinds that sent confirmation and verification emails were consolidated into `address_confirmation` with a `purpose` discriminator (`account`, `shop_contact`, `shore_alert`). The underlying token tables (`account_tokens`, `shop_contact_email_confirmation_tokens`, and `shop_shore_alert_tokens`) share common semantics: hashed bearer credentials, expiry policies, and one-time consumption that marks a verified address.
 
-The shore contact confirmation token carries live consent (H-118) for roll-call alerts, and each departure alert includes a non-expiring `stop` link. Merging token flows requires strong security boundaries to guarantee tokens cannot be redeemed cross-purpose or cross-tenant.
+The shore contact confirmation token carries live consent (H-20261014-stale-roll-call-recipients) for roll-call alerts, and each departure alert includes a non-expiring `stop` link. Merging token flows requires strong security boundaries to guarantee tokens cannot be redeemed cross-purpose or cross-tenant.
 
 ## Decision
 

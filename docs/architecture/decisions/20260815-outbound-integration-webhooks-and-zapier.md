@@ -38,11 +38,11 @@ Constraints a lower-context agent must not miss:
 - **One-directional by design, confirmed with the product owner this session:** DiveDay emits, it
   never calls out to read or write another system's API. No DiveDay-built Shopify app, no
   DiveShop360 connector — a direct competitor has no reason to build the receiving end itself, the
-  same dead end as PADI/SSI's absent C-card API (H-10,
+  same dead end as PADI/SSI's absent C-card API (H-20261007-request-supported-c-card,
   [human-decisions/](../../product/human-decisions/README.md)).
 - The export schema (`src/lib/export.ts`) is the closest existing analog to what a read API
   exposes — reuse its file/row shapes as the payload shapes rather than inventing a second schema.
-- H-26 bounds this to a lifestyle-scale, one-person-maintained build
+- H-20260802-what-game-is-this bounds this to a lifestyle-scale, one-person-maintained build
   ([vision.md](../../product/vision.md#what-kind-of-business-this-is)) — rules out anything with an
   ongoing platform-review or support-queue commitment (a public Zapier listing, a Shopify App Store
   submission) until a real consumer justifies it.
@@ -98,7 +98,7 @@ bespoke per-platform connector is built.**
 
 - **A bespoke Shopify app** (OAuth, App Store listing) — rejected: ongoing API-version maintenance
   and a review/support relationship with Shopify is more permanent surface than a one-person
-  company should carry (H-26) for a feature with zero validated demand yet.
+  company should carry (H-20260802-what-game-is-this) for a feature with zero validated demand yet.
 - **Reuse `bearer-tokens.ts`'s digest for webhook signing** — rejected on the primitive's own
   documented terms: it is a stored-credential digest, not a payload-signing HMAC.
 - **Polling-only, no webhooks** — rejected; the roadmap item names webhooks explicitly, and

@@ -52,7 +52,7 @@ for (const scheme of ["light", "dark"] as const) {
 
       /**
        * **Crew get a dock time of their own** (ux-delight sheet 2026-10-22,
-       * item 2; H-149): the demo captain's "Your week" reads "At the dock",
+       * item 2; H-20261022-crew-arrive-before-divers): the demo captain's "Your week" reads "At the dock",
        * 30 minutes before the divers, from the shop's crew time.
        */
       test.describe("as the captain", () => {
@@ -367,7 +367,7 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
-       * **A crew member on two of today's boats** (H-80, issue #1776). Each
+       * **A crew member on two of today's boats** (H-20260916-may-one-hull-carry, issue #1776). Each
        * boat shows a full crew list, so the clash is invisible on both until
        * the queue says so. `?crewClash=1` slides a seeded departure onto
        * today's through `moveTrip`, the one door into the state, and the
@@ -386,7 +386,7 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
-       * **One hull on two departures at once** (H-80, issue #2135). `?boatClash=1`
+       * **One hull on two departures at once** (H-20260916-may-one-hull-carry, issue #2135). `?boatClash=1`
        * slides a seeded departure onto another that shares its boat through
        * `moveTrip`; Today says it once, on the earlier departure.
        */
@@ -402,7 +402,7 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
-       * **The same clash with both boats two hours out** (H-80, issue #1814).
+       * **The same clash with both boats two hours out** (H-20260916-may-one-hull-carry, issue #1814).
        * Neither is a station any more, so the sailed row files at the desk in
        * Needs you, naming its own boat, rather than into the week's count.
        */
@@ -497,7 +497,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: /^Not counted at the dock · 1$/ }).waitFor();
         await capture(page, "trip-record-uncounted", scheme);
 
-        // Remove on that seat (H-133): held as possibly carried, and told how
+        // Remove on that seat (H-20261015-aboard-diver-removal-at): held as possibly carried, and told how
         // to let it go, never that it sailed.
         const row = page
           .locator('#roster li[id^="booking-"]')
@@ -511,7 +511,7 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "trip-remove-uncounted-refused", scheme);
       });
 
-      // **Remove on a diver marked aboard a boat that has left** (H-133). The
+      // **Remove on a diver marked aboard a boat that has left** (H-20261015-aboard-diver-removal-at). The
       // dawn boat boarded its sailed seats and is home, so a sailed row's
       // Remove opens on why it will not, with nothing to confirm.
       test(`Remove on a diver marked aboard says why it will not (${scheme})`, async ({ page }) => {
@@ -590,13 +590,13 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
-       * **A held seat's identity confirm, armed** (H-13, issue #1696).
+       * **A held seat's identity confirm, armed** (H-20260724-one-person-per-email, issue #1696).
        *
        * The desk's second blocking attestation, and the one shape nothing else
        * in this file photographs: `InlineConfirm`'s message mode replaces the
        * trigger with a bordered `role="alert"` block carrying a sentence and
        * two buttons, *inside* a blocked roster row that already holds a badge
-       * and a reason. Since issue #1789 (H-79) the armed block also carries
+       * and a reason. Since issue #1789 (H-20260916-unconfirmed-identity-withhold-cost) the armed block also carries
        * the matched diver's last dive day here, or "No dive days here yet",
        * which `e2e/check-in.spec.ts` asserts. The unarmed half is `trip-guests-identity`, so the armed
        * state is the one worth a baseline here.
@@ -749,7 +749,7 @@ for (const scheme of ["light", "dark"] as const) {
 
       /**
        * **"Turned away", open and then recorded** (safety sheet 2026-10-15,
-       * item 6; H-135). Open before the boat leaves, so no departure move:
+       * item 6; H-20261015-who-may-turn-someone). Open before the boat leaves, so no departure move:
        * Odile arrives blocked on the release, the door offers that reason
        * alone, and the recorded row says it in its own group with the move and
        * refund doors under it.
@@ -845,7 +845,7 @@ for (const scheme of ["light", "dark"] as const) {
       // which carries no gap row: the DOM-M3 charter (`seed-trips.ts`) sails
       // the week after, and the gap is photographed below on purpose.
       // Its 390 image is the day list, which is what the week collapses to
-      // below `lg` (the same call H-63 made for the board).
+      // below `lg` (the same call H-20260827-clearwater-week-board-roadmap made for the board).
       test(`the staffing week renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/staffing");
         await page.getByRole("heading", { name: "Schedule", level: 1 }).waitFor();

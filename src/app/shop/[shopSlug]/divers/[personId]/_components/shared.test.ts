@@ -232,7 +232,7 @@ describe("cardsNeedingLookCount", () => {
     ).toBe(3);
   });
 
-  it("counts an imported specialty or nitrox card whose gate is still shut (H-24)", () => {
+  it("counts an imported specialty or nitrox card whose gate is still shut (H-20260725-two-findings-dive-domain)", () => {
     const imported = { status: "verified", importedAt: new Date("2026-07-01") };
     expect(cardsNeedingLookCount(cards({ specialty: [imported], nitrox: [imported] }))).toBe(2);
   });

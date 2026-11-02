@@ -33,17 +33,17 @@ So an entry here is the index; the constraint lives beside the code it constrain
 
 ### The shop home — `/shop/[shopSlug]`
 
-**Proposed 2026-09-18** ([ADR 20260918-nothing-to-explain](../architecture/decisions/20260918-nothing-to-explain.md), [canvas](canvases/20260918-nothing-to-explain/README.md)): on a floor with no decoration, no eyebrow, no greeting and one shell, the home is a large title over the day's boats — each a group whose first row is the boat (A), a title with its count at the end over hairline rows (B), or four figures in tiles over A's groups (C). Pending H-87, one call: A · Inset, B · Glass or C · Figures. Superseded 2026-09-19.
+**Proposed 2026-09-18** ([ADR 20260918-nothing-to-explain](../architecture/decisions/20260918-nothing-to-explain.md), [canvas](canvases/20260918-nothing-to-explain/README.md)): on a floor with no decoration, no eyebrow, no greeting and one shell, the home is a large title over the day's boats — each a group whose first row is the boat (A), a title with its count at the end over hairline rows (B), or four figures in tiles over A's groups (C). Pending H-20260918-three-directions-inset-b, one call: A · Inset, B · Glass or C · Figures. Superseded 2026-09-19.
 
-**Decided 2026-09-19 (H-88)** ([ADR 20260919-one-idea](../architecture/decisions/20260919-one-idea.md), [canvas](canvases/20260919-one-idea/README.md)). Three whole products were drawn: the home is the thing the app is — the day under the sky at the shop's own hour, the boats on the hours they leave and the needs under each (I · Tide); today's boats as coloured hulls with their seats, stacked, the shop's card last (II · Deck); the shop's own water with today's tracks and the day as a sheet over it (III · Chart). No tabs, no More, no dock under any of them. **The pick: I · Tide** — the home is the day: the sky at the shop's own hour, the boats on the hours they leave, the tide under them, a line for now, and the needs under each departure.
+**Decided 2026-09-19 (H-20260919-physical-thing-diveday-day)** ([ADR 20260919-one-idea](../architecture/decisions/20260919-one-idea.md), [canvas](canvases/20260919-one-idea/README.md)). Three whole products were drawn: the home is the thing the app is — the day under the sky at the shop's own hour, the boats on the hours they leave and the needs under each (I · Tide); today's boats as coloured hulls with their seats, stacked, the shop's card last (II · Deck); the shop's own water with today's tracks and the day as a sheet over it (III · Chart). No tabs, no More, no dock under any of them. **The pick: I · Tide** — the home is the day: the sky at the shop's own hour, the boats on the hours they leave, the tide under them, a line for now, and the needs under each departure.
 
 **Shipped 2026-09-20, the evening says what the day made** (issue #1930; ADR 20260919-one-idea's decision I · Tide, "money is what the day made"). The evening close gains one money reading — the day's takings, as a figure with tips beside it — **above** the closing block and inside nothing, under the same condition that block renders under. `ClosingBlock`'s charter is two things and nothing else, so a figure inside it would have amended ADR 20260827-clearwater-surface-language decision 4 by implication; a reading is not an act, and Aaron decided the sibling placement in session that day. It is `getMonthlyReport` over `shopDayBounds` — the month's own derivation with narrower bounds, never a second query, so the day and `/reports` cannot disagree. Gated on `canPersonViewShopReports` against live role rows: a captain closing out a Saturday sees the evening exactly as before, with nothing in that slot and no notice that a number was withheld. A day that took nothing says nothing.
 
 **Shipped 2026-09-17, the floor's first row** ([ADR 20260911-clear-the-deck](../architecture/decisions/20260911-clear-the-deck.md) §1, "the door" — the one row of that floor that may start on the ADR alone):
-a row's own tap is its only door. The nine trailing "Open …" verbs are gone from the spine, the desk, the draft row and the first-morning checklist; what is left on a door row is the chevron `LedgerRow` already drew, and the destination is still named on the stretched overlay for a screen reader. A trailing verb survives only where it *is* the fix — a waiver send, a wait-list invite, an invoice resend, "Keep it", the closing block's own link beside a Dismiss demoted to ghost weight. Two tests in `DaySpine.test.tsx` hold it: no row that is itself a link may contain a second link, and a door's name may be spoken but never drawn. Shipped in the same pass: the desk's counting rows are their subject alone (the sentence under "3 messages are waiting on an answer" taught a feature already found); the units row states both guesses and what to do about them; a cancelled departure owes **one** row, not one per seat; the stuck-checkout row no longer prints a Stripe session id; the settled station draws one hairline between its parts instead of two; the plan-change clause is its own sentence on its own line; "Print the day" is the header's one action; and the first-bookable card and the role orientation never render together. The decoration (the band, the tile, the dial, the greeting) and `Badge` are untouched, pending H-77.
+a row's own tap is its only door. The nine trailing "Open …" verbs are gone from the spine, the desk, the draft row and the first-morning checklist; what is left on a door row is the chevron `LedgerRow` already drew, and the destination is still named on the stretched overlay for a screen reader. A trailing verb survives only where it *is* the fix — a waiver send, a wait-list invite, an invoice resend, "Keep it", the closing block's own link beside a Dismiss demoted to ghost weight. Two tests in `DaySpine.test.tsx` hold it: no row that is itself a link may contain a second link, and a door's name may be spoken but never drawn. Shipped in the same pass: the desk's counting rows are their subject alone (the sentence under "3 messages are waiting on an answer" taught a feature already found); the units row states both guesses and what to do about them; a cancelled departure owes **one** row, not one per seat; the stuck-checkout row no longer prints a Stripe session id; the settled station draws one hairline between its parts instead of two; the plan-change clause is its own sentence on its own line; "Print the day" is the header's one action; and the first-bookable card and the role orientation never render together. The decoration (the band, the tile, the dial, the greeting) and `Badge` are untouched, pending H-20260911-six-consolidations-makes-diveday.
 
 **Proposed 2026-09-11, six consolidations** ([ADR 20260911-clear-the-deck](../architecture/decisions/20260911-clear-the-deck.md), [canvas](canvases/20260911-clear-the-deck/README.md)):
-the home loses its doors (a row's own tap is the door), its pills and chips (a state is a word), and — pending H-77 b — its decoration (the band, the tile, the dial, the coral washes); what it is then organised by is the owner's pick among six concepts, each redrawing this surface: three words, the week, the desk and the boat, one field, the shop's card, the storefront itself. Round 2, the same day, redraws the surface beneath any of them — five candidates to replace Reef (Salt, Air, Headline, Their ink, Slate), each on the home and the counter — pending H-77 e–h; round 3, the same day, draws one of them deep on the owner's word — Console, the instrument: the home's one readout is the countdown to the next boat, the day is a ladder of departures with their figures, every need a line with its state in a slot, daylight at the desk and depth after dark — pending H-77 i–l; round 4 puts the countdown on a display, a seat gauge under every boat and a telemetry line at the foot, pending H-77 m–o; round 5, on the owner's word that light must render light, prints the instrument on the app's own paper — Chart: the reading on a lit face, a boat as a sheet on the sand, the night palette as the one dark, glare as the crew's word at the rail — pending H-77 p–r. Nothing ships from it until H-77 is answered.
+the home loses its doors (a row's own tap is the door), its pills and chips (a state is a word), and — pending H-20260911-six-consolidations-makes-diveday b — its decoration (the band, the tile, the dial, the coral washes); what it is then organised by is the owner's pick among six concepts, each redrawing this surface: three words, the week, the desk and the boat, one field, the shop's card, the storefront itself. Round 2, the same day, redraws the surface beneath any of them — five candidates to replace Reef (Salt, Air, Headline, Their ink, Slate), each on the home and the counter — pending H-20260911-six-consolidations-makes-diveday e–h; round 3, the same day, draws one of them deep on the owner's word — Console, the instrument: the home's one readout is the countdown to the next boat, the day is a ladder of departures with their figures, every need a line with its state in a slot, daylight at the desk and depth after dark — pending H-20260911-six-consolidations-makes-diveday i–l; round 4 puts the countdown on a display, a seat gauge under every boat and a telemetry line at the foot, pending H-20260911-six-consolidations-makes-diveday m–o; round 5, on the owner's word that light must render light, prints the instrument on the app's own paper — Chart: the reading on a lit face, a boat as a sheet on the sand, the night palette as the one dark, glare as the crew's word at the rail — pending H-20260911-six-consolidations-makes-diveday p–r. Nothing ships from it until H-20260911-six-consolidations-makes-diveday is answered.
 
 **Accepted 2026-09-07, the second look** ([ADR 20260907-in-your-hands](../architecture/decisions/20260907-in-your-hands.md), [canvas](canvases/20260907-in-your-hands/README.md)):
 on a phone or tablet in a browser tab, a staffer whose role reaches the manifest sees one line under the day's spine, once per device, saying the roll call can open from the home screen without a browser bar or signal, with the platform's install prompt or its own menu item; installed, on a desktop, or dismissed, it renders nothing.
@@ -55,7 +55,7 @@ on a phone the greeting folds into the header bar as the page scrolls, driven by
 the desk group carries one "Unfinished" row while a staff form draft exists, and none otherwise; the palette opened from here answers a diver, a day or a departure with the fact and its fix before the doors.
 
 **Proposed 2026-09-04** ([ADR 20260904-reef-all-the-way-down](../architecture/decisions/20260904-reef-all-the-way-down.md), [canvas](canvases/20260904-reef-all-the-way-down/README.md)):
-the station becomes a panel with the tile leading and one sentence per row; the band follows the shop's clock; one fact of scale on the day it is true; a stage chip when the crew set one; the evening counts divers and crew. The clock, the fact of scale and the stage chip wait on H-67; the station as a panel waits only on the ADR.
+the station becomes a panel with the tile leading and one sentence per row; the band follows the shop's clock; one fact of scale on the day it is true; a stage chip when the crew set one; the evening counts divers and crew. The clock, the fact of scale and the stage chip wait on H-20260904-reef-go-all-way; the station as a panel waits only on the ADR.
 
 **Reef, 2026-09-02** ([ADR 20260901-diveday-reimagined](../architecture/decisions/20260901-diveday-reimagined.md)):
 the greeting is the one display moment on a staff surface (44/700, `ShopPageHeader`'s `display`);
@@ -101,9 +101,9 @@ back.
 
 ### The trip page — `/shop/[shopSlug]/trips/[id]`
 
-**Proposed 2026-09-18** ([ADR 20260918-nothing-to-explain](../architecture/decisions/20260918-nothing-to-explain.md), [canvas](canvases/20260918-nothing-to-explain/README.md)): the four tabs become one page — the boat's facts, the needs and the roster as groups (A) or sections (B), or a ring of here of booked with five facts beside it over A's groups (C) — and Roll call is the page's one filled control or its floating capsule. Pending H-87, one call: A · Inset, B · Glass or C · Figures. Superseded 2026-09-19.
+**Proposed 2026-09-18** ([ADR 20260918-nothing-to-explain](../architecture/decisions/20260918-nothing-to-explain.md), [canvas](canvases/20260918-nothing-to-explain/README.md)): the four tabs become one page — the boat's facts, the needs and the roster as groups (A) or sections (B), or a ring of here of booked with five facts beside it over A's groups (C) — and Roll call is the page's one filled control or its floating capsule. Pending H-20260918-three-directions-inset-b, one call: A · Inset, B · Glass or C · Figures. Superseded 2026-09-19.
 
-**Decided 2026-09-19 (H-88)** ([ADR 20260919-one-idea](../architecture/decisions/20260919-one-idea.md), [canvas](canvases/20260919-one-idea/README.md)). Three whole products were drawn: the departure is its hour with the strip zoomed to the voyage (I), its hull with every seat's initials and state (II), or its voyage on the chart with the legs as a timeline (III); one page, the roll call's tap untouched beneath. **The pick: Tide's hour with Deck's hull inside it** — the departure opens with its time over the sky and the strip zoomed to the voyage, then the seats laid out bow to stern.
+**Decided 2026-09-19 (H-20260919-physical-thing-diveday-day)** ([ADR 20260919-one-idea](../architecture/decisions/20260919-one-idea.md), [canvas](canvases/20260919-one-idea/README.md)). Three whole products were drawn: the departure is its hour with the strip zoomed to the voyage (I), its hull with every seat's initials and state (II), or its voyage on the chart with the legs as a timeline (III); one page, the roll call's tap untouched beneath. **The pick: Tide's hour with Deck's hull inside it** — the departure opens with its time over the sky and the strip zoomed to the voyage, then the seats laid out bow to stern.
 
 **Reef, 2026-09-02:** the water band sits behind this header too — a wash, not a drawing. The
 manifest beneath it keeps neither drawing nor coral (`illustration.test.ts`).
@@ -180,9 +180,9 @@ departure, which is the one thing here that could turn a long page into an unbou
 
 ### The boat manifest — `/shop/[shopSlug]/trips/[id]/manifest`
 
-**Proposed 2026-09-18** ([ADR 20260918-nothing-to-explain](../architecture/decisions/20260918-nothing-to-explain.md), [canvas](canvases/20260918-nothing-to-explain/README.md)): the checkpoint card, the five stage chips, the three-way switch and the disclosure above the first name become the count and one line — at 34px in a group (A), at 44px under a floating bar (B), or as a ring that closes when everyone is aboard (C) — then the one still to call, then everyone aboard, one circle per name; glare is a word in the bar. Pending H-87, one call: A · Inset, B · Glass or C · Figures. Superseded 2026-09-19.
+**Proposed 2026-09-18** ([ADR 20260918-nothing-to-explain](../architecture/decisions/20260918-nothing-to-explain.md), [canvas](canvases/20260918-nothing-to-explain/README.md)): the checkpoint card, the five stage chips, the three-way switch and the disclosure above the first name become the count and one line — at 34px in a group (A), at 44px under a floating bar (B), or as a ring that closes when everyone is aboard (C) — then the one still to call, then everyone aboard, one circle per name; glare is a word in the bar. Pending H-20260918-three-directions-inset-b, one call: A · Inset, B · Glass or C · Figures. Superseded 2026-09-19.
 
-**Decided 2026-09-19 (H-88)** ([ADR 20260919-one-idea](../architecture/decisions/20260919-one-idea.md), [canvas](canvases/20260919-one-idea/README.md)). Three whole products were drawn: the roll call is the same picture as boarding — under Deck it is tapping the seats on the hull, under Tide and Chart the count leads and the names follow, one circle per name; glare is the crew's word in every case. **The pick: Tide**, so the count leads and the names follow, with the hull above them on a boat departure.
+**Decided 2026-09-19 (H-20260919-physical-thing-diveday-day)** ([ADR 20260919-one-idea](../architecture/decisions/20260919-one-idea.md), [canvas](canvases/20260919-one-idea/README.md)). Three whole products were drawn: the roll call is the same picture as boarding — under Deck it is tapping the seats on the hull, under Tide and Chart the count leads and the names follow, one circle per name; glare is the crew's word in every case. **The pick: Tide**, so the count leads and the names follow, with the hull above them on a boat departure.
 
 **Proposed 2026-09-04** (same ADR and canvas): a catch-up strip and a five-word stage strip at the top, the blocked word on the row, no drawing, coral or motion.
 
@@ -241,7 +241,7 @@ identity and its fact list in the document's existing sequence.
 **Shipped 2026-09-20, the week is the whole board** (issue #1923, finishing slice 23f of [ADR 20260919-one-idea](../architecture/decisions/20260919-one-idea.md)). The vertical day stream is gone and the week renders at every width: a day is a row on a phone and a row on a desk, so there is no `xl` floor left to declare and no second composition of the same departures. What the stream carried alone came up first, because deleting it otherwise takes the question a manager opens the board on a Thursday to answer — *which boat has no divemaster* — off the board with nothing going red for it. The hull follows the site on the meta line (a shore or pool session says so in its place); the crew prints on its own line, and only on the departures that differ from the week's habit (`src/lib/usual-crew.ts`, which is where that rule lives now that one composition asks it). A course bar prints no crew line — its meta already names the instructor. The day header still pins under the chrome bar, as ADR 20260827-clearwater-surface-language's decision 10 requires; it moved to the week rather than going down with the stream. The board pages by `?week=` and by nothing else: the cursor pager and its `?after=` went too, and reaching past this week is the pager's own step. **The wind left with the stream** and is not back — filed as #1936 rather than restored by reflex, because a row a manager cannot act from is what the density was bought to avoid.
 
 **Shipped 2026-09-06** ([ADR 20260906-before-you-ask](../architecture/decisions/20260906-before-you-ask.md), [canvas](canvases/20260906-before-you-ask/README.md)):
-the add panel opens filled from what the shop ran on that weekday over the last six weeks, under one sentence saying so, every value an ordinary field and the crew as chips (H-68 c); the pattern's second boat is offered as a row and never added on its own; a shop with no history, or a panel opened with a draft, a course, a site or a request, sees the panel it always did.
+the add panel opens filled from what the shop ran on that weekday over the last six weeks, under one sentence saying so, every value an ordinary field and the crew as chips (H-20260906-diveday-fill-already-knows c); the pattern's second boat is offered as a row and never added on its own; a shop with no history, or a panel opened with a draft, a course, a site or a request, sees the panel it always did.
 
 **Reef, 2026-09-02:** every departure's site mark, drawn in the line alone — the board has no one
 boat to give the coral detail to, so none carries it.
@@ -316,7 +316,7 @@ night (`BrandPreview`), and the contrast note reports whichever scheme moved the
 **Moved 2026-10-03** ([ADR 20261001-logbook](../architecture/decisions/20261001-logbook.md), decision 3): the counter is each departure's own Check-in tab rather than a page of its own. The departure chips and the search left with the page: the boat is the tab's, and "which boat is this diver on?" is answered by the arrival lookup on Today, whose matches open the boat's tab. The walk-in form is the tab's foot (`check-in/walk-in`, no boat picker), and the tab's header carries Print, which opens the trip packet. The "Remove first" line below is history.
 
 **Chosen 2026-09-07, the second look** ([ADR 20260907-in-your-hands](../architecture/decisions/20260907-in-your-hands.md), [canvas](canvases/20260907-in-your-hands/README.md)):
-a blocked row whose fix is the release gains *Sign here* as its primary, which locks the desk behind the diver's own waiver page on the shop's device and reopens the counter with the row settled once a staffer signs back in; the signature records the counter, the device, who handed it over and when. H-70 b decided yes.
+a blocked row whose fix is the release gains *Sign here* as its primary, which locks the desk behind the diver's own waiver page on the shop's device and reopens the counter with the row settled once a staffer signs back in; the signature records the counter, the device, who handed it over and when. H-20260907-where-device-already-knows b decided yes.
 
 **Proposed 2026-09-07** ([ADR 20260907-nothing-from-nowhere](../architecture/decisions/20260907-nothing-from-nowhere.md), [canvas](canvases/20260907-nothing-from-nowhere/README.md)):
 the instrument line's figures roll as a check-in lands, the sinking row's neighbours slide into its gap on the same 200ms, and Undo runs both in reverse. The optimistic commit principle 1 grants the counter is what the motion follows.
@@ -359,9 +359,9 @@ The identity-band compositions below are historical.
 
 **Cut 2026-10-02** ([ADR 20261001-logbook](../architecture/decisions/20261001-logbook.md), decision 7): the boat that is out left the identity band with follow-the-boat, and the "Yours" group and "Your card clears this" lines left with the diver's shelf. The entries below that describe them are history.
 
-**Proposed 2026-09-18** ([ADR 20260918-nothing-to-explain](../architecture/decisions/20260918-nothing-to-explain.md), [canvas](canvases/20260918-nothing-to-explain/README.md)): Harbor's face on the headings and the shop's colour on the one filled control, over the picked direction's rows: the boat that is out, the next boat with space and Book, the week, the courses — as groups (A), as the page with one floating capsule that books the next boat (B), or with two tiles for spots and the boat that is out (C). Pending H-87, one call: A · Inset, B · Glass or C · Figures. Superseded 2026-09-19.
+**Proposed 2026-09-18** ([ADR 20260918-nothing-to-explain](../architecture/decisions/20260918-nothing-to-explain.md), [canvas](canvases/20260918-nothing-to-explain/README.md)): Harbor's face on the headings and the shop's colour on the one filled control, over the picked direction's rows: the boat that is out, the next boat with space and Book, the week, the courses — as groups (A), as the page with one floating capsule that books the next boat (B), or with two tiles for spots and the boat that is out (C). Pending H-20260918-three-directions-inset-b, one call: A · Inset, B · Glass or C · Figures. Superseded 2026-09-19.
 
-**Decided 2026-09-19 (H-88)** ([ADR 20260919-one-idea](../architecture/decisions/20260919-one-idea.md), [canvas](canvases/20260919-one-idea/README.md)). Three whole products were drawn: Harbor's face and the shop's colour over the idea's own front page — the next boats led by their time under the noon sky and the week as seven days (I), the boat you are about to book with its empty seats visible (II), where we go on the shop's chart (III). **The pick: Tide** — the shop's name and the day over its own sky, the next boats led by their time, the week as seven days with seats left.
+**Decided 2026-09-19 (H-20260919-physical-thing-diveday-day)** ([ADR 20260919-one-idea](../architecture/decisions/20260919-one-idea.md), [canvas](canvases/20260919-one-idea/README.md)). Three whole products were drawn: Harbor's face and the shop's colour over the idea's own front page — the next boats led by their time under the noon sky and the week as seven days (I), the boat you are about to book with its empty seats visible (II), where we go on the shop's chart (III). **The pick: Tide** — the shop's name and the day over its own sky, the next boats led by their time, the week as seven days with seats left.
 
 **Tidied 2026-09-17** (the "as rendered" sweep, slice F1). Three things, all layout and disclosure — no feature left the page. The identity band's panels — the off-season card, the boat that is out, the next boat with space, the season band — each held `max-w-md` and stacked down the left third of a 1152px page, three unrelated boxes with two-thirds of the width beside them empty; they are one row now (`grid-flow-col` with `auto-cols-fr` at `md` and up, the stack on a phone), which reads at one panel or at four. The lens rail met a diver with ten or eleven controls at rest — seven chips, two selects, one or two checkboxes and a counted sentence — so the four filters moved behind one quiet "Filter" disclosure inside their own `<form>`, open on first paint whenever the URL already carries one of them, and the rail at rest is the shop's own chips. The sentence above the list ("3 departures ask for more than Open Water. They are still bookable: ask the shop.") was deleted: the rows already say "Above your level" and the shorter list is one tap away in the same panel.
 
@@ -408,7 +408,7 @@ The earlier terminal-form compositions below are historical.
 **Tidied 2026-09-17** (the "as rendered" sweep, slice F1). "What the crew logged, and when. It says what was seen, not what you will see." closed every "Seen here this month" block, so a two-tank day printed it twice, twelve lines apart. It is the **day's** sentence now — once, under the plan, whenever any site in the day has a month to show. And the embed's booking confirmation stopped offering three link-blue lines at one weight: the readiness page is the button, the way back into the widget is quiet text (and the readiness door demotes to `secondary` when there is a balance to pay, which is then the section's one primary).
 
 **Shipped 2026-09-06** ([ADR 20260906-before-you-ask](../architecture/decisions/20260906-before-you-ask.md), [canvas](canvases/20260906-before-you-ask/README.md)):
-reached from the thread's next-dive link, the page arrives knowing her: the verified card, the waiver that still covers this trip, her gear and her emergency contact folded into one panel, each naming the day it was kept, with her name, email and phone prefilled into the fields that are the doors to change them; "Not Yara? Start with a blank form" stands beneath. A cold visitor gets the form that ships, and the page reveals nothing to anyone who did not arrive through the handoff. A matching cold email may receive one link an hour (H-68 b); nothing on the page says whether it went.
+reached from the thread's next-dive link, the page arrives knowing her: the verified card, the waiver that still covers this trip, her gear and her emergency contact folded into one panel, each naming the day it was kept, with her name, email and phone prefilled into the fields that are the doors to change them; "Not Yara? Start with a blank form" stands beneath. A cold visitor gets the form that ships, and the page reveals nothing to anyone who did not arrive through the handoff. A matching cold email may receive one link an hour (H-20260906-diveday-fill-already-knows b); nothing on the page says whether it went.
 
 **Proposed 2026-09-04** (same ADR and canvas): bounded to three field-guide tiles and a door above the form (the shipped page is 5,782px at 390 before it), two alternates with reasons, one optional intent question, a kind offer to a diver who has been away.
 
@@ -457,7 +457,7 @@ with secondary destinations in Menu. Switching references disclose detail beneat
 with direct fragment links and the complete import truth retained.
 
 
-**The hub, 2026-10-05** (H-93) — conversion surface, governed by
+**The hub, 2026-10-05** (H-20261005-public-pages-sell) — conversion surface, governed by
 [marketing.md](../product/marketing.md)'s claims and control budget. Supersedes the tour described
 under it, which is kept as the record.
 
@@ -497,7 +497,7 @@ under it, which is kept as the record.
   `<details>` naming its group and counting its lines, so the page ends where its argument does
   instead of running on through every bullet.
 
-**Annotated, 2026-09-24** (H-89, [brand.md](brand.md) "The two registers of the public pages"):
+**Annotated, 2026-09-24** (H-20260903-voice-public-pages-speak, [brand.md](brand.md) "The two registers of the public pages"):
 each chapter is now the screen with the builder's notes under it, a numbered `MarginNotes` list
 of things visible in the mockup (Today's readiness bar and its Needs you rows, the saved roll
 call's “Saved” time and its counts, the recap's dive-log entry), each note giving a reason or a limit
@@ -513,7 +513,7 @@ against each redraw.
 
 ### A feature page — `/product/[feature]`
 
-**Reviewed 2026-10-05** — conversion surface, one template for twelve pages (H-93), governed by
+**Reviewed 2026-10-05** — conversion surface, one template for twelve pages (H-20261005-public-pages-sell), governed by
 [marketing.md](../product/marketing.md)'s claims and control budget; the registry is
 `src/lib/feature-pages.ts`.
 
@@ -539,7 +539,7 @@ against each redraw.
 ### The pricing page — `/pricing`
 
 **Reviewed 2026-09-24** — conversion surface, governed by
-[marketing.md](../product/marketing.md)'s claims and control budget; the H-89 voice pass.
+[marketing.md](../product/marketing.md)'s claims and control budget; the H-20260903-voice-public-pages-speak voice pass.
 
 - **One idea:** what a shop pays, line by line, with nothing behind a click.
 - **The question it arrives with:** "how much, what's not in that number, and what does it cost
@@ -583,7 +583,7 @@ one line beside Add to calendar, *Add to Wallet*, on every state after booking; 
 ### The waiver — `/waivers/[token]`
 
 **Built 2026-08-29** — same ADR and canvas. Legal surface: wording and presentation floor are
-H-01/H-03's.
+H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit's.
 
 - **One idea:** two minutes of paperwork, paced so it feels like two minutes.
 - **The question it arrives with:** "how much is left?" — answered by the step rail's count.
@@ -595,7 +595,7 @@ H-01/H-03's.
   question flows inside the box instead of straddling the top border a browser draws its rendered
   legend in — eleven questions cut through their own boxes, which on a legal surface reads as a
   rendering fault. Presentation only: the semantics that name each radio group, and every word of
-  the release and the questionnaire, are untouched (H-01/H-03).
+  the release and the questionnaire, are untouched (H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit).
 
 ### The signed receipt — `/waivers/[token]`, completed
 
@@ -680,7 +680,7 @@ invalid field, and returns focus to the updated total after success.
 - **Composition:** people × days on desktop. Below `lg`, each day groups a departure and its crew
   once per trip and session window, followed by a quiet Shifts and days away group when needed.
   Each person's clash and away facts remain attached to that person; a gap keeps its existing
-  assignment or request action (H-59 keeps credentials inform-only). Critical names, times,
+  assignment or request action (H-20260825-staff-credentials-renewal-clock keeps credentials inform-only). Critical names, times,
   departure titles and status words use body-size type at both widths.
 
 ### Reports — `/shop/[shopSlug]/reports`
@@ -750,7 +750,7 @@ to the packing list, which is the mechanism, not the outcome).
 **Pending sign-in, 2026-10-26:** a correct password opens a code-only second step for enrolled staff. The form arrives as complete HTML so native no-JavaScript submission works; only `/sign-in` waits for its locale/cookie/challenge lookup. One Verify action, an inline settled refusal, and Back; a retry hides the previous refusal while pending (ADR [20261026-pending-sign-in-challenge](../architecture/decisions/20261026-pending-sign-in-challenge.md)).
 
 **Chosen 2026-09-07, the second look** ([ADR 20260907-in-your-hands](../architecture/decisions/20260907-in-your-hands.md), [canvas](canvases/20260907-in-your-hands/README.md)):
-on a device that holds a passkey for the account, `/sign-in` is one primary and the device's own check, with the password as the link out; every other device gets the form as it ships. The door keeps its anatomy and its one primary; sign-out keeps its two taps. H-70 a decided yes, the step-up included.
+on a device that holds a passkey for the account, `/sign-in` is one primary and the device's own check, with the password as the link out; every other device gets the form as it ships. The door keeps its anatomy and its one primary; sign-out keeps its two taps. H-20260907-where-device-already-knows a decided yes, the step-up included.
 
 **Built 2026-08-29** — ADR
 [20260827-first-light](../architecture/decisions/20260827-first-light.md) (Accepted), drawn in
@@ -806,7 +806,7 @@ drawn on that canvas's `TryItWithYourBoats.dc.html`.
   greeting, one sentence naming the time and its zone, a live countdown, three rows that are one
   door, the primary that opens it.
 
-**The band under the hero became four annotated screens, 2026-09-24** (H-89,
+**The band under the hero became four annotated screens, 2026-09-24** (H-20260903-voice-public-pages-speak,
 [brand.md](brand.md) "The two registers of the public pages").
 
 - **One idea:** the page is the product's own screens, in the order a day runs them, with notes
@@ -823,7 +823,7 @@ drawn on that canvas's `TryItWithYourBoats.dc.html`.
 - **Composition:** hero, four screens with notes, the breadth band as four groups, the records
   band, the terms-style close.
 
-**The page follows one booking, 2026-10-05** (H-93, [brand.md](brand.md) "The voice on the public
+**The page follows one booking, 2026-10-05** (H-20261005-public-pages-sell, [brand.md](brand.md) "The voice on the public
 pages", amended): the sale goes back in front of the notes.
 
 - **One idea:** one booking, from the shop's website to the boat and home again, with every job

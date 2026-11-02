@@ -90,7 +90,7 @@ export type RosterTrip = {
    * (issue #1755), and the fit line marks such a piece as no longer rented.
    * Omitted, every piece reads as offered. The drysuit consequences (weight
    * check, fin sizing, the card advisory) do not read it: they follow
-   * `dives_dry`, what the diver wears (H-78).
+   * `dives_dry`, what the diver wears (H-20260916-rental-fit-describe-shop).
    */
   shopRentalItems?: readonly string[];
   /** This seat's departure is a course with a minimum age, so a split must take a date of birth. */
@@ -137,11 +137,11 @@ export type RosterRows = {
   trainingMarks?: {
     bySeat: ReadonlyMap<string, TrainingMarkRosterSeat>;
   };
-  /** What the browser extension searches PADI's eLearning for, per seat (H-106). */
+  /** What the browser extension searches PADI's eLearning for, per seat (H-20261008-padi-elearning-check). */
   elearningQueryByBooking?: Map<string, ElearningQuery>;
-  /** A PADI course with materials at a shop whose PADI checks are off (H-121). */
+  /** A PADI course with materials at a shop whose PADI checks are off (H-20261014-padi-divechek). */
   elearningChecksOff?: boolean;
-  /** Per diver, the cards the browser extension could check with their agencies (H-105). */
+  /** Per diver, the cards the browser extension could check with their agencies (H-20261008-cert-check-extension). */
   agencyCheckCardsByPerson?: ReadonlyMap<string, readonly AgencyCheckableCard[]>;
   /** Per student, the card this session issued and whether the agency has it yet (ideas item 46). */
   issuedCardByPerson?: ReadonlyMap<string, IssuedCard>;
@@ -152,7 +152,7 @@ export type RosterRows = {
   courseMaterialsDoneByPerson?: ReadonlyMap<string, CourseMaterialsDone>;
   /** Per held seat, the other held seats a split may move with it (`sameNameHeldSeats`). */
   sameNameHeldSeats?: ReadonlyMap<string, ReadonlyArray<SameNameHeldSeat>>;
-  /** Seats the boat carried or may be carrying: Remove refuses them (H-133). */
+  /** Seats the boat carried or may be carrying: Remove refuses them (H-20261015-aboard-diver-removal-at). */
   aboardAtSea?: ReadonlyMap<string, AboardHold>;
   /**
    * Per held seat held for the same-name reason, the shop's other live people
@@ -274,13 +274,13 @@ export type RosterActions = {
    * whose course carries materials.
    */
   setCourseMaterialsDoneAction?: (formData: FormData) => void;
-  /** Tick the materials from PADI's own eLearning page (H-106); beside the tick above. */
+  /** Tick the materials from PADI's own eLearning page (H-20261008-padi-elearning-check); beside the tick above. */
   elearningCheckAction?: (
     previous: ElearningCheckResult,
     formData: FormData,
   ) => Promise<ElearningCheckResult>;
   /**
-   * `agencyCheckAction` bound to the shop (H-105): each row's "Check with SSI"
+   * `agencyCheckAction` bound to the shop (H-20261008-cert-check-extension): each row's "Check with SSI"
    * and the departure's "Check all", one card at a time. The same action, gate
    * and stamp as the diver record's.
    */
@@ -700,7 +700,7 @@ export function groupRoster({
   // has gone blocked since, or still owes the desk something, stays in "Still
   // to clear" wearing its reasons — the counter's most dangerous silence was
   // folding that row away.
-  // A released seat the desk turned away (H-135) is its own group: seen and
+  // A released seat the desk turned away (H-20261015-who-may-turn-someone) is its own group: seen and
   // refused is not "not here", and the two must never share a heading.
   const released = arrival ? roster.filter(({ booking }) => booking.status === "no_show") : [];
   const notHere = released.filter(({ booking }) => !booking.turnedAwayAt);
@@ -799,7 +799,7 @@ function recordGroups(t: StaffTranslator, roster: RosterEntry[], record: RosterR
     } else if (seatSailed({ noShow, dockResult, afterDiveResultStands })) {
       sailed.push(entry);
     } else if (noShow && entry.booking.turnedAwayAt) {
-      // Did not sail because the desk refused them (H-135), said apart from
+      // Did not sail because the desk refused them (H-20261015-who-may-turn-someone), said apart from
       // the divers who never came.
       turnedAway.push(entry);
     } else {

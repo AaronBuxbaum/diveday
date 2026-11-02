@@ -11,12 +11,12 @@ const ctx = fileScopedShopContext();
 const HOUR = 60 * 60 * 1000;
 
 /**
- * **A boat clash on the surface a shop starts its morning on** (H-80, issue
+ * **A boat clash on the surface a shop starts its morning on** (H-20260916-may-one-hull-carry, issue
  * #2135). Two live departures on one hull at overlapping hours; Today says it
  * once, as a warning, on the earlier departure, naming the hull and the other
  * departure. Information only: nothing here gates a booking or a move.
  */
-describe("boat clashes on Today (H-80, #2135)", () => {
+describe("boat clashes on Today (H-20260916-may-one-hull-carry, #2135)", () => {
   async function hull(name = "Clash hull") {
     return createBoat(ctx.db, ctx.shop.id, name, 12);
   }
@@ -40,7 +40,7 @@ describe("boat clashes on Today (H-80, #2135)", () => {
     return work.actions.filter((action) => action.kind === "boat_clash");
   }
 
-  /** A morning charter slid on top of the later reef drift: the H-80 scenario. */
+  /** A morning charter slid on top of the later reef drift: the H-20260916-may-one-hull-carry scenario. */
   async function oneHullTwice(now: Date, boatId: string) {
     const driftStarts = new Date(now.getTime() + 2 * 24 * HOUR);
     const drift = await departure("Reef drift", driftStarts, 4, boatId);

@@ -1,7 +1,7 @@
 -- Issue #2795: `packing_logbook` now suggests the logbook, in the diver's
 -- language and only where it applies. A shop that had typed it as its own
 -- packing-list line would show it twice, so that line moves into the flag
--- (H-49: the data migrates; no runtime code reads the old line). Only a
+-- (H-20260815-no-legacy: the data migrates; no runtime code reads the old line). Only a
 -- standalone "Logbook" item matches, ignoring case and outer spaces; a line
 -- that merely mentions a logbook is the shop's own wording and stays.
 UPDATE "shops"

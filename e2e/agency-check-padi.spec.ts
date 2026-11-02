@@ -25,7 +25,7 @@ const PADI_CHECKS_OFF =
  * verdict, the write and the Undo are the real ones.
  *
  * The checks are a per-shop switch, on for every new and seeded shop since
- * 2026-10-23 (H-121). The last test turns it off on a minted `privateShop`,
+ * 2026-10-23 (H-20261014-padi-divechek). The last test turns it off on a minted `privateShop`,
  * shows the link alone, and turns it back on in Settings.
  */
 async function installFakeExtension(page: Page, mode: Mode) {

@@ -10,7 +10,7 @@ import { SEEDED_OWNER_EMAIL, seededStaffPersonId, staffSession } from "@/test/st
 const ctx = fileScopedShopContext();
 
 /**
- * **A PADI card certified by DiveChek** (H-121), the PADI half of
+ * **A PADI card certified by DiveChek** (H-20261014-padi-divechek), the PADI half of
  * `agency-check.action.test.ts`.
  *
  * The extension hands back whatever text the agency's page showed; the verdict
@@ -110,7 +110,7 @@ describe("agencyCheckAction with PADI DiveChek", () => {
   ].join("\n");
 
   async function padiCard() {
-    // Every shop starts with the PADI checks on, the seeded demo too (H-121, 2026-10-23).
+    // Every shop starts with the PADI checks on, the seeded demo too (H-20261014-padi-divechek, 2026-10-23).
     const { db, shop, owner, personId } = await context();
     const card = await pendingCard(db, shop.id, personId, {
       agency: "padi",

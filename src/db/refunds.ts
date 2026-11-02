@@ -53,7 +53,7 @@ export type CancellationRefundOutcome =
   /**
    * Refund is owed, or may be, but can't be automated here — staff must issue
    * it. `turned_away`: the desk turned this diver away before the seat was
-   * removed (H-135), so the diver's cancellation window does not apply and
+   * removed (H-20261015-who-may-turn-someone), so the diver's cancellation window does not apply and
    * whether the fare is moved, refunded or kept is a person's call.
    */
   | {
@@ -360,7 +360,7 @@ async function countCheckoutRefund(
   if (counted) await enqueueCheckoutRefundEvent(tx, counted, plan.refundCents);
 }
 
-/** One refund against a completed checkout, for QuickBooks and Zapier (H-120). */
+/** One refund against a completed checkout, for QuickBooks and Zapier (H-20261014-checkouts-reach-the-books). */
 async function enqueueCheckoutRefundEvent(
   tx: AppTransaction,
   checkout: { id: string; shopId: string; refundedCents: number },
@@ -390,7 +390,7 @@ async function enqueueCheckoutRefundEvent(
  *   feature degrades to the declarative-window bridge it replaces.
  *
  * Tenant-safe: the booking must belong to the shop. Callable outside a route
- * (docs H-07 automated-refund slice).
+ * (docs H-20260724-payment-deposit-cancellation-refund automated-refund slice).
  */
 export async function refundBookingOnCancellation(
   db: AppDb,
@@ -557,7 +557,7 @@ export type ShopCancellationRefundOutcome =
   /** Stripe was asked to refund and failed; staff should retry. */
   | { status: "failed" }
   /**
-   * The caller who cancelled may not move money (H-139), so the capture stays
+   * The caller who cancelled may not move money (H-20261013-call-off-queues-refunds), so the capture stays
    * where it is and a refund holder releases it
    * ({@link refundBookingsForShopCancelledTrip}). The diver is told it is owed.
    */
@@ -691,7 +691,7 @@ export async function refundBookingOnShopCancellation(
 
 /**
  * What a shop cancellation does with a seat's money when the person who called
- * it off may not refund (H-139): nothing moves, and a captured seat reads
+ * it off may not refund (H-20261013-call-off-queues-refunds): nothing moves, and a captured seat reads
  * `queued`. Everything else reads exactly as {@link refundBookingOnShopCancellation}
  * would answer it, so the diver's mail is right for an unpaid seat, a package
  * dive and a seat already refunded. The queue itself is the derivable list of

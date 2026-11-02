@@ -67,7 +67,7 @@ export type InPersonWaiverOutcome =
          */
         | "guardian_name_matches_diver"
         /**
-         * **The seat is held over who the diver is** (H-13), so nobody may
+         * **The seat is held over who the diver is** (H-20260724-one-person-per-email), so nobody may
          * attest a release onto it yet.
          *
          * A staff-attested paper record is the strongest evidence in the

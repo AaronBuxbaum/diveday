@@ -12,7 +12,7 @@ import { openSettingsRail, openSettingsRow } from "./helpers";
  * Team and Promo codes — had no card at all, reachable only from the nav's
  * "Set up" menu or ⌘K.
  *
- * This spec is the door test for both. The gating itself is H-14's
+ * This spec is the door test for both. The gating itself is H-20260724-staff-role-reach's
  * (e2e/role-permissions.spec.ts); what is asserted here is that the doors
  * exist for whoever may walk through them, and are absent — not disabled, not
  * explained — for whoever may not (ADR 20260724-role-gated-surfaces-hide-not-explain).

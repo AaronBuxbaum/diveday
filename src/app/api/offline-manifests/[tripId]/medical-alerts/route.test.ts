@@ -114,7 +114,7 @@ beforeEach(() => {
   vi.mocked(getDb).mockReset();
 });
 
-describe("POST /api/offline-manifests/[tripId]/medical-alerts (H-153 amendment)", () => {
+describe("POST /api/offline-manifests/[tripId]/medical-alerts (H-20261023-medical-alert-for-the amendment)", () => {
   it("hands the owner the words, records the save on the diver's trail and names who saved", async () => {
     const { db, shop, tripId, bookingId, diverId, owner } = await alerted();
     vi.mocked(auth).mockResolvedValue(session(shop.id, owner, ["owner"]));

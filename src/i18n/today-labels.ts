@@ -388,7 +388,7 @@ function clashGroups(
 }
 
 /**
- * One sentence per other departure on the same hull (H-80, issue #2135), the
+ * One sentence per other departure on the same hull (H-20260916-may-one-hull-carry, issue #2135), the
  * hull and the other departure named, in the words the departure page uses.
  */
 export function boatClashDetailText(
@@ -403,7 +403,7 @@ export function boatClashDetailText(
 }
 
 /**
- * One sentence per other departure (H-80, issue #1776), naming everyone it
+ * One sentence per other departure (H-20260916-may-one-hull-carry, issue #1776), naming everyone it
  * shares — the same "also rostered on" the Crew panel and the staffing week
  * say, so a staffer reads one fact in one set of words wherever they meet it.
  */
@@ -438,7 +438,7 @@ export function crewAwayDetailText(
 }
 
 /**
- * The same fact once the boat has left (H-80, issue #1814): one sentence per
+ * The same fact once the boat has left (H-20260916-may-one-hull-carry, issue #1814): one sentence per
  * other departure saying who went out aboard while also rostered there, then
  * the one thing to do about it from ashore, said once.
  */

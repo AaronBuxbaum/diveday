@@ -82,10 +82,10 @@ the implementation. Do not send a screenshot of the website as the artwork.
 
 ## Color system
 
-> **Direction change, 2026-10-01 (H-91, ADR 20261001-logbook).** The staff app and the default
+> **Direction change, 2026-10-01 (H-20261001-staff-app-restart, ADR 20261001-logbook).** The staff app and the default
 > storefront move to **Logbook**: paper with a faint sea-green cast, slate ink, one sea-teal action
 > color and a rare marine-amber accent, with a designed deep-slate dark scheme. The roll call wears
-> **Boat mode**: navy and marine safety yellow, light by day and Night Dive navy in the dark scheme (H-97). Diver-facing surfaces
+> **Boat mode**: navy and marine safety yellow, light by day and Night Dive navy in the dark scheme (H-20261006-boat-mode-dark-sun). Diver-facing surfaces
 > still wear the **shop's** brand color, with these tokens as the default for a shop that has set
 > none. The values below are the tree.
 
@@ -104,7 +104,7 @@ embroidery, and vendor conversations.
 | Sea teal | `#0B6E8A` | `#4FBCD8` | Action color and primary brand signal. | Main imprint color on paper or slate. |
 | Sea teal, deep | `#08566C` | `#7FD0E4` | Hover and depth. | Use sparingly for a two-tone mark. |
 | Marine amber | `#D97A1E` | `#F0A24A` | Rare warm accent; the smallest bubble. Its wash (`#FBEFE0` / `#33240F`) is the bed it sits on; its deep (`#8A4A0C` / `#F6C27F`) is ink on that wash. Never a status. | One small accent only. |
-| Safety yellow (Boat mode) | Navy `#0A141C` actions labeled in `#FFD23F`, on white | `#FFD23F` actions on navy `#0A141C` | The roll call's one action color. Light by day because a dark screen washes out in sun (H-97). | Not a merch color. |
+| Safety yellow (Boat mode) | Navy `#0A141C` actions labeled in `#FFD23F`, on white | `#FFD23F` actions on navy `#0A141C` | The roll call's one action color. Light by day because a dark screen washes out in sun (H-20261006-boat-mode-dark-sun). | Not a merch color. |
 
 ### Supporting colors
 
@@ -141,7 +141,7 @@ Color rules:
 
 ## Typography
 
-> **Settled 2026-10-01 (H-91, ADR 20261001-logbook):** IBM Plex Sans is the face on DiveDay's own
+> **Settled 2026-10-01 (H-20261001-staff-app-restart, ADR 20261001-logbook):** IBM Plex Sans is the face on DiveDay's own
 > surfaces, with IBM Plex Mono for fixed-width utility. Boat mode (the roll call) sets Atkinson
 > Hyperlegible, a face drawn for legibility. A shop's storefront may carry the shop's own display
 > face for headings only, never for a fact.
@@ -260,7 +260,7 @@ Copy rules:
 - Use real dive terms correctly; see [product/glossary.md](../product/glossary.md).
 - Spell in American English, everywhere a shop or a diver reads: *color*, *center*, *meter*,
   *gray*, *canceled*, *enroll*, *enrollment*, *judgment*, *catalog*, *license*, *organize*,
-  *recognize*, *toward* (Aaron, 2026-10-06; H-95). One reader meeting *colour* on one screen and
+  *recognize*, *toward* (Aaron, 2026-10-06; H-20261006-english-we-spell). One reader meeting *colour* on one screen and
   *color* on the next hears two writers. `pnpm check:voice` refuses a British spelling in an
   English bundle, in a route's metadata and in any prose literal under `src/` (the course and site
   templates, the demo seeds); the list is `BRITISH_SPELLINGS` in `scripts/check-voice.mjs`. Two
@@ -276,12 +276,12 @@ Copy rules:
 
 ### The two registers of the public pages
 
-**Decided 2026-09-24** (Aaron Buxbaum; H-89 in [product/human-decisions/](../product/human-decisions/README.md)):
+**Decided 2026-09-24** (Aaron Buxbaum; H-20260903-voice-public-pages-speak in [product/human-decisions/](../product/human-decisions/README.md)):
 of the six voices drawn in [voice-strategies-20260917.md](voice-strategies-20260917.md), the public
 pages speak in **6, Margin Notes**, and `/about` in **4, Over a Beer**. That document is the dated
 record of the alternatives and the diagnosis; this section is the voice.
 
-**Amended 2026-10-05** (H-93): the sale goes back in front of the notes. Under H-89 alone a page
+**Amended 2026-10-05** (H-20261005-public-pages-sell): the sale goes back in front of the notes. Under H-20260903-voice-public-pages-speak alone a page
 showed the screens and annotated them and never said why a shop would want any of it, so the
 headlines described the page ("Four screens from a dive shop's day, with notes from the person who
 made them") and the owner's brief was that the pages were not selling. A section now says **what
@@ -289,7 +289,7 @@ the shop gets, then shows the screen that proves it, then opens the demo on that
 builder's notes stay, as the proof's captions, and `/about` kept its spoken register until the
 amendment below.
 
-**Amended 2026-10-07** (H-99): `/about` left the spoken register. The owner's brief ("I really
+**Amended 2026-10-07** (H-20261006-about-say-whose-voice): `/about` left the spoken register. The owner's brief ("I really
 really don't like the copy on About. Let's redo it entirely") kept only the hero, the Lonergan
 story and its tie to the product, with the question heading over it removed and the tie made the
 company's ("That story is why we built DiveDay"); everything under it is written as the company,
@@ -324,13 +324,13 @@ screen, with short notes from the person who built it pointing at specific thing
   count").
 - The first person is "we", and a fact only the builders would know is the kind of note worth
   writing ("We tried a spinner here and the captain read it as the phone thinking"). The site says
-  "we" and names no person (H-146).
+  "we" and names no person (H-20261022-the-site-says-we).
 - Every screen a visitor could open leads to **one door into the demo as that role**, and the
   page's one primary stays the shared pair. On a feature page that door is the hero's; under a
   screen on a page that argues something else it is the screen's own (`ScreenDoor`, link-weight,
   tagged per screen in `src/lib/funnel.ts`), or, on the homepage, the feature page's name, one tap
   from that page's door. The homepage's screens carried `ScreenDoor`s until 2026-10-05, when its
-  steps began to end in their feature pages (H-93).
+  steps began to end in their feature pages (H-20261005-public-pages-sell).
 - A heading over a screen says what the shop gets from it, and the screen's name in the builder's
   words ("The manifest, on a phone with no signal.") is a fine way to say it when the name is the
   result. It never says what the reader should feel.
@@ -338,7 +338,7 @@ screen, with short notes from the person who built it pointing at specific thing
   terms, the export claim, the FAQ answers) is the notice-board register: the fact, in the order a
   buyer asks for it, with no sentence spent on how to feel about it.
 
-**The about page** (`/about`, since 2026-10-07; H-99). The company, saying why it exists, who
+**The about page** (`/about`, since 2026-10-07; H-20261006-about-say-whose-voice). The company, saying why it exists, who
 builds it and what it holds every screen to.
 
 - Who talks: DiveDay, in the plural, throughout. The page names no individual, states no CV and

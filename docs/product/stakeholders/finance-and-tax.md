@@ -6,17 +6,17 @@ subscription billing** runs through Stripe Billing on DiveDay's own account (bui
 `stripe-billing-setup` manual action is done; ADR
 [20261007-subscription-billing](../../architecture/decisions/20261007-subscription-billing.md)). This playbook covers the Stripe platform
 application, the CPA engagement, and the open policy scraps. Status of record:
-[human-decisions/](../human-decisions/README.md) rows **H-07** (remaining payment policy), **H-12**
-(remaining commercial terms), and **H-18** (entity — the CPA co-owns that decision with counsel,
-see [legal.md](legal.md#the-entity-decision-h-18)).
+[human-decisions/](../human-decisions/README.md) rows **H-20260724-payment-deposit-cancellation-refund** (remaining payment policy), **H-20260724-public-founding-shop-price**
+(remaining commercial terms), and **H-20260724-corporate-footing-diveday-operate** (entity — the CPA co-owns that decision with counsel,
+see [legal.md](legal.md#the-entity-decision-h-20260724-corporate-footing-diveday-operate)).
 
 ## Why this blocks rollout
 
 - The live Stripe Connect platform application (`STRIPE_CONNECT_CLIENT_ID`) is a Phase-0 gate
   with a review queue DiveDay doesn't control — an unsubmitted application is the classic
-  self-inflicted pilot blocker ([rollout 0.2](../rollout.md#02-operational-ownership-h-04-h-09-credentials-h-07-credentials)).
+  self-inflicted pilot blocker ([rollout 0.2](../rollout.md#02-operational-ownership-h-20260724-vercel-selected-web-hosting-h-20260724-channel-sends-booking-waiver-credentials-h-20260724-payment-deposit-cancellation-refund-credentials)).
 - Phase 2 charges real shops. The mechanism and cadence exist (monthly, card on file, Stripe
-  emails the invoices), but the tax posture on DiveDay's own invoices is not decided (H-12's open
+  emails the invoices), but the tax posture on DiveDay's own invoices is not decided (H-20260724-public-founding-shop-price's open
   half), and the founding-cohort terms already published (the price lock) need contract reality
   behind them.
 
@@ -25,25 +25,25 @@ see [legal.md](legal.md#the-entity-decision-h-18)).
 | Stakeholder | About | When |
 | --- | --- | --- |
 | Stripe (Connect platform review) | Live platform application, production webhook secret, loss-liability posture of Standard accounts | **Submit this week** — long lead |
-| CPA / accountant | Entity structure input to H-18, S-corp interaction, SaaS sales-tax posture, bookkeeping setup | First call within two weeks (before entity formation) |
-| Bank | Account for the DiveDay entity once H-18 resolves | After formation |
+| CPA / accountant | Entity structure input to H-20260724-corporate-footing-diveday-operate, S-corp interaction, SaaS sales-tax posture, bookkeeping setup | First call within two weeks (before entity formation) |
+| Bank | Account for the DiveDay entity once H-20260724-corporate-footing-diveday-operate resolves | After formation |
 
 ## Stripe — the platform application
 
 **What to have prepared:**
 
-- Entity details and EIN (H-18 dependency — if formation is pending, ask Stripe support whether
+- Entity details and EIN (H-20260724-corporate-footing-diveday-operate dependency — if formation is pending, ask Stripe support whether
   to apply under the existing entity and migrate, or wait; do not guess).
 - Business description that matches reality: B2B SaaS for dive shops; payments flow on
   **Standard connected accounts owned by the shops** — DiveDay is the platform, takes **no
   platform fee** (recommended posture per
-  [rollout 0.2](../rollout.md#02-operational-ownership-h-04-h-09-credentials-h-07-credentials);
-  final call is H-07's), and the connected account bears chargeback/loss liability under the
+  [rollout 0.2](../rollout.md#02-operational-ownership-h-20260724-vercel-selected-web-hosting-h-20260724-channel-sends-booking-waiver-credentials-h-20260724-payment-deposit-cancellation-refund-credentials);
+  final call is H-20260724-payment-deposit-cancellation-refund's), and the connected account bears chargeback/loss liability under the
   Standard model ([Stripe Connect ADR](../../architecture/decisions/20260719-stripe-connect-orders.md)).
 - Live site URL, support email on the production domain, expected volumes (honest pilot-scale
   numbers).
 - Webhook configuration: the production `STRIPE_WEBHOOK_SECRET`, subscribed to the
-  `checkout.session.*` events already required (see H-07's row).
+  `checkout.session.*` events already required (see H-20260724-payment-deposit-cancellation-refund's row).
 
 **Questions for Stripe (support/review, as they come up):** platform-fee changes later (adding
 one after launch), and whether the no-fee Standard posture changes any review requirement.
@@ -53,7 +53,7 @@ one after launch), and whether the no-fee Standard posture changes any review re
 **What to have prepared:** Pseudorandom LLC facts (S-corp election, current lines of business),
 DiveDay's model (subscription SaaS, $99/location/month, founding cohort ≤25 shops, no platform
 fee on shops' payment volume), the launch plan (Florida shops, founder's home state), and the
-[entity questions from legal.md](legal.md#the-entity-decision-h-18).
+[entity questions from legal.md](legal.md#the-entity-decision-h-20260724-corporate-footing-diveday-operate).
 
 **Question list:**
 
@@ -72,12 +72,12 @@ fee on shops' payment volume), the launch plan (Florida shops, founder's home st
 These are the **policy** halves of rows whose mechanisms already shipped — closing them is
 recording a choice, not building anything:
 
-- **H-07 remainder:** guidance values for deposits and cancellation windows (DiveDay ships no
+- **H-20260724-payment-deposit-cancellation-refund remainder:** guidance values for deposits and cancellation windows (DiveDay ships no
   defaults — [deposit/cancellation ADR](../../architecture/decisions/20260721-deposit-cancellation-policy.md)),
   accountant/legal confirmation of tax applicability, registrations, remittance, and the treatment
   of deposits and fares, whether a platform fee ever exists, whether unpaid bookings auto-expire,
   and percentage deposits (mechanism deferred by owner request).
-- **H-12 remainder:** taxes/fees presentation on DiveDay's own invoices (Stripe Tax on the billing
+- **H-20260724-public-founding-shop-price remainder:** taxes/fees presentation on DiveDay's own invoices (Stripe Tax on the billing
   price is a dashboard setting, not code, once the CPA says what applies), and the public
   contract/contact intake flow. The cadence and invoice mechanism are built: monthly, card on file,
   Stripe Billing on DiveDay's **own** account, Stripe-emailed invoices (ADR
@@ -86,10 +86,10 @@ recording a choice, not building anything:
 
 ## Where outcomes land
 
-- H-07 and H-12 rows updated; pricing display changes go through the
+- H-20260724-payment-deposit-cancellation-refund and H-20260724-public-founding-shop-price rows updated; pricing display changes go through the
   [pricing boundary](../marketing.md#claims-policy-hard-rules) (`src/lib/marketing.ts` is the source of
   truth — never edit a price in page copy).
 - The subscription-billing mechanism is recorded in ADR
   [20261007-subscription-billing](../../architecture/decisions/20261007-subscription-billing.md) and
   [shipped.md](../shipped.md).
-- Entity/tax outcomes land in H-18 with [legal.md](legal.md).
+- Entity/tax outcomes land in H-20260724-corporate-footing-diveday-operate with [legal.md](legal.md).

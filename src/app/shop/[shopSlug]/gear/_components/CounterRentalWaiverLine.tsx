@@ -11,7 +11,7 @@ import { medicalWarningDays, type ShopWaiverStatus } from "@/lib/waivers";
 import { WaiverSendControl } from "../../_components/today/WaiverSendControl";
 
 /**
- * **The person's waiver, informing only** (issue #2261, H-108): a counter
+ * **The person's waiver, informing only** (issue #2261, H-20261008-counter-rental-waiver-informs): a counter
  * rental never waits on it, so this is a line and a way to send the link,
  * never a gate. One component for the two places a counter says it: the
  * rental ticket, and the new-rental form while the person is still at the
@@ -23,7 +23,7 @@ import { WaiverSendControl } from "../../_components/today/WaiverSendControl";
  * - **A medical hold or a physician's "not cleared"**: the readiness
  *   sentence in full, with no link, since another link fixes nothing.
  * - **Current, standing over a physician's earlier "not cleared" or an open
- *   referral** (H-98 as amended, issues #2158, #2195): the manifest's warning
+ *   referral** (H-20261007-after-physician-says-no as amended, issues #2158, #2195): the manifest's warning
  *   and a link to the record, as the diver record, the roster and the live
  *   manifest say it.
  * - **Current and clean, or not read**: nothing.

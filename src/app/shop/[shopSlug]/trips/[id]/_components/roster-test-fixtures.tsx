@@ -130,7 +130,7 @@ export type RosterFixtureOptions = {
   certifyDefaultLevel?: "open_water" | "advanced_open_water" | null;
   /** "Move to another departure", when the page offers it. */
   moveSeat?: SeatMove;
-  /** Seats marked aboard a boat that has left, whose Remove refuses (H-133). */
+  /** Seats marked aboard a boat that has left, whose Remove refuses (H-20261015-aboard-diver-removal-at). */
   aboardAtSea?: ReadonlyMap<string, AboardHold>;
   /** The departure is marked as past no-decompression limits. */
   exceedsNoDecoLimits?: boolean;

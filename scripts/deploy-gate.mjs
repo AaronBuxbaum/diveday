@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * The production deploy gate: once it is on, a push to `main` no longer builds
- * production; a commit deploys after its CI on `main` finished green (H-158).
+ * production; a commit deploys after its CI on `main` finished green (H-20261021-deploy-gate-from-first).
  *
  * **What it stops, and what it does not.** It stops push-triggered production
  * builds, and with them a red commit's migration. It is not an access control:

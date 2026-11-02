@@ -29,7 +29,7 @@ const TITLE_LINES = [
  *
  * **The hero is drawn a line box per line, as the page sets it** (K-393). The
  * numbers are read off the hero in src/app/page.tsx and move with its copy;
- * the 2026-10-05 rewrite (H-93) shortened the title and lengthened the lede:
+ * the 2026-10-05 rewrite (H-20261005-public-pages-sell) shortened the title and lengthened the lede:
  *   - the eyebrow, `MARKETING_EYEBROW_CLASS`: one 20px `text-sm` line;
  *   - the title, `mt-4`: `TITLE_LINES` above;
  *   - the description, `mt-4`, `leading-8`: three 32px lines on a phone, two

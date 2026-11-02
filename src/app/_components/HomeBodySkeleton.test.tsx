@@ -43,7 +43,7 @@ function shownAt(lines: Element[]) {
  * shops began to be set up by hand, a guessed phone, and two title bars and
  * two description bars for a title of six lines on a phone. Deleting the panel
  * alone would have lifted the phone 390px on a phone, so the claim is drawn a
- * line box per line, as the page sets it. The 2026-10-05 rewrite (H-93) moved
+ * line box per line, as the page sets it. The 2026-10-05 rewrite (H-20261005-public-pages-sell) moved
  * every count: a four-line title on a phone (three from sm and at 1280), a
  * five-line lede, and a phone that renders 544px tall, not the 450 drawn here.
  */

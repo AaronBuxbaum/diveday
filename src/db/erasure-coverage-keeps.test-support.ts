@@ -24,7 +24,7 @@ export const ERASURE_KEEPS: Record<string, string> = {
   pre_departure_check_events:
     "a crew member's checklist ticks and notes; a note that mentions an erased diver is staff prose and is not redacted (the erasure epoch still discards a stale offline note)",
   incident_reports:
-    "the shop's liability record: the narrative is staff prose and is kept verbatim; the diver is unlinked through the seat and the erased name (ADR 20261012-incident-reports, H-111)",
+    "the shop's liability record: the narrative is staff prose and is kept verbatim; the diver is unlinked through the seat and the erased name (ADR 20261012-incident-reports, H-20261013-incident-report-erasure)",
   incident_report_addenda:
     "dated staff additions to a filed report; kept verbatim for the same reason as the report",
   // --- the diver is named only by a pointer, or not at all -----------------

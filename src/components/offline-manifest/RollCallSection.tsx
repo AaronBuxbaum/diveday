@@ -160,7 +160,7 @@ export function OfflineRollCallSection({
           </p>
         ) : null}
         {/*
-         * The crew half of the head count — **recordable here**, since H-46.
+         * The crew half of the head count — **recordable here**, since H-20260814-where-diveday-sit-between.
          * Divers could always be counted with the radio off and crew could
          * not, which meant an after-dive checkpoint could never be closed at
          * sea: `rollCallCompleteness` needs both halves, and the after-dive

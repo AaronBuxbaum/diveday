@@ -309,7 +309,7 @@ describe("refreshSavedManifests (the push event)", () => {
     expect(vi.mocked(purgeOfflineManifestsExceptShop).mock.invocationCallOrder[0]).toBeLessThan(
       vi.mocked(saveOfflineManifest).mock.invocationCallOrder[0],
     );
-    // Medical alert words go before the board is written (H-153): this body
+    // Medical alert words go before the board is written (H-20261023-medical-alert-for-the): this body
     // names nobody, so all of them.
     expect(wipeOfflineMedicalAlerts).toHaveBeenCalledWith(undefined, 1);
     expect(vi.mocked(wipeOfflineMedicalAlerts).mock.invocationCallOrder[0]).toBeLessThan(

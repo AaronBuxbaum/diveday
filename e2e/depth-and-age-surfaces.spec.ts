@@ -38,7 +38,7 @@ async function setSiteDepth(page: Page, siteName: string, depth: string, unitLab
 
 /**
  * The staff-visible behaviour of ADR 20260730-site-depth-and-diver-age-surfaces:
- * H-08's depth ceiling as a **warning that never blocks**, and H-21's age,
+ * H-20260724-certification-levels-agency-rules's depth ceiling as a **warning that never blocks**, and H-20260730-minimum-age-gate-data's age,
  * minor badge, and birthday callout on the surfaces a crew actually reads.
  */
 test.describe("staff", () => {
@@ -53,7 +53,7 @@ test.describe("staff", () => {
     // The seed gives one diver on this trip a date of birth putting them at 13
     // (src/db/seed.ts), so the roster carries the manifest's "Minor · age N"
     // badge, the capsule being the word alone. An adult's age waits in the
-    // row's reference panel; the minor's is the one the crew acts on (H-21).
+    // row's reference panel; the minor's is the one the crew acts on (H-20260730-minimum-age-gate-data).
     const minorBadge = page.getByText(/^Minor · age \d+$/).first();
     await expect(minorBadge).toBeVisible();
 

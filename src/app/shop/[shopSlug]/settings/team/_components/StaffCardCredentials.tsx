@@ -22,7 +22,7 @@ const MISSING_KIND_KEYS = {
 /**
  * **A staff credential is a fact, never a badge and never a gate** — ADR
  * 20260827-the-shops-shelves, decision 3 ("credentials are a quiet ledger
- * beneath; renewal words, never gates — H-59"). **The ledger is the card**
+ * beneath; renewal words, never gates — H-20260825-staff-credentials-renewal-clock"). **The ledger is the card**
  * (visual review 2026-10-24, A09): the list that stood at the foot of the Team
  * page repeated every card above it, so each person's credentials are read,
  * reviewed and removed here, on their own card.
@@ -35,7 +35,7 @@ const MISSING_KIND_KEYS = {
  *
  * Each credential is one line: its name, its renewal word, a muted "Needs
  * review" while nobody has looked at it, and its acts. **Nothing here disables
- * anything** (H-59): a lapsed rating keeps every act a current one has, and
+ * anything** (H-20260825-staff-credentials-renewal-clock): a lapsed rating keeps every act a current one has, and
  * the clock is a word, never colour alone.
  */
 export function StaffCardCredentials({

@@ -80,7 +80,7 @@ export async function refundAction(formData: FormData) {
   const db = await getDb();
   const back = shopPath(session.user.shopSlug, "orders", orderId);
   // Money leaving the account is owner/manager work, re-checked against live
-  // roles (H-14, ADR 20260724-role-authorization).
+  // roles (H-20260724-staff-role-reach, ADR 20260724-role-authorization).
   if (!(await canPersonRefund(db, session.user.shopId, session.user.personId))) {
     revalidateAndRedirect(back, noticeUrl(back, "not-authorized"));
     return;

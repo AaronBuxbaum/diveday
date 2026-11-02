@@ -40,7 +40,7 @@ function sendLeave(url: string, heldId: string): void {
 
 /**
  * **Cash / Card machine: one tap with an eight-second Undo hold** (issue
- * #3030, decided 2026-10-25; H-68). The shared `SendHold`: the tap holds the
+ * #3030, decided 2026-10-25; H-20260906-diveday-fill-already-knows). The shared `SendHold`: the tap holds the
  * payment on the server and the row reads "Recording $340.00 cash" with Undo
  * where the buttons stood; the hold running out records it and the page
  * shows the outcome; Undo leaves the order untouched. While the hold drains,

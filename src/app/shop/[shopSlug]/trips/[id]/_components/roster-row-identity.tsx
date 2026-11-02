@@ -105,7 +105,7 @@ export function rowIdentity(seat: RowIdentityInput) {
    * **A held seat's two answers stand in the open, under its reason line**
    * (Aaron, 2026-10-05). The seat attached itself to an existing diver on
    * something short of proof — a reused email under a different name
-   * (H-13), or a name tapped off the counter's prompt (issue #1556) — and
+   * (H-20260724-one-person-per-email), or a name tapped off the counter's prompt (issue #1556) — and
    * the reason line names both people. "Same person" is a blocking confirm,
    * not an undo banner: it hands the matched diver's cards and waiver to
    * this seat (docs/design/principles.md §7). "Different person" splits the
@@ -114,7 +114,7 @@ export function rowIdentity(seat: RowIdentityInput) {
    */
   /**
    * **Unspent package dives, said before anyone takes the fare** (issue
-   * #1697, H-79: the fare stands). A seat booked while the diver held a
+   * #1697, H-20260916-unconfirmed-identity-withhold-cost: the fare stands). A seat booked while the diver held a
    * covering dive spent it at booking; this line is for the seats that did
    * not, chiefly one held on an unconfirmed identity, where coverage waits for
    * "Same person" (`settleConfirmedPackageCoverage`) and cash taken first
@@ -133,12 +133,12 @@ export function rowIdentity(seat: RowIdentityInput) {
         : t("trips.roster.packageDivesUnused", { count: packageDives });
   const sameNameSeats = sameNameHeldSeats?.get(booking.id) ?? [];
   /**
-   * **The one fact the attestation turns on** (issue #1789, H-79): the
+   * **The one fact the attestation turns on** (issue #1789, H-20260916-unconfirmed-identity-withhold-cost): the
    * matched diver's last dive day at this shop, beside the question. It is the
    * same line the name-match prompt shows staff who seat a diver, and nothing
    * else from the matched record joins it here. Only a staff-seated hold saw
    * it before: an online hold (a public booking that reused an email under
-   * another name, H-13) met no prompt, so the roster is the first place any
+   * another name, H-20260724-one-person-per-email) met no prompt, so the roster is the first place any
    * staffer reads it.
    *
    * "No dive days here yet" is said every time, unlike the name-match

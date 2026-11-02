@@ -112,7 +112,7 @@ function ShopQuestionRow({
  * for it. Pure: the page reads, this prints.
  *
  * The release and questionnaire words are the ones divers sign online, in the
- * language they were published in (H-01, H-03); only the form's furniture is
+ * language they were published in (H-20260730-jurisdiction-waiver-text-medical, H-20260724-current-typed-name-explicit); only the form's furniture is
  * translated.
  */
 export function BlankRelease({

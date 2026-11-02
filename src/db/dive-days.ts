@@ -5,7 +5,7 @@ import { liveTrip } from "./trips-live";
 /**
  * **"Did this person dive with us that day"**, asked of one booking on its
  * departure: the one rule every reader of a diver's dive days calls (issue
- * #1694, ruled H-84). Each predicate reads `bookings` and `trips` and expects
+ * #1694, ruled H-20260916-may-diveday-assert-about). Each predicate reads `bookings` and `trips` and expects
  * the query to have joined them; none joins anything itself, so a reader never
  * gains a row per logged dive.
  *
@@ -37,7 +37,7 @@ export function seatCanBeDiveDay(): SQL {
  * **What the desk's status words say.** A cancelled booking is no dive day:
  * the boat diving says nothing about whether this seat was on it. A departure
  * marked anything but `scheduled` is no dive day **unless the crew logged a
- * live dive on it** (H-84): a logged dive is affirmative evidence that people
+ * live dive on it** (H-20260916-may-diveday-assert-about): a logged dive is affirmative evidence that people
  * went in the water, and beats a status changed afterwards for a refund, a
  * blow-out declared after the first tank, or a re-papered charter.
  *

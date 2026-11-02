@@ -108,7 +108,7 @@ const NOTICE_KEYS: Record<
     key: "trips.notices.bookingRemovedRefundOwner",
   },
   "booking-restored": { form: "roster", tone: "success", key: "trips.notices.bookingRestored" },
-  // Refused: the boat carried this seat or may be carrying it (H-133). Nothing
+  // Refused: the boat carried this seat or may be carrying it (H-20261015-aboard-diver-removal-at). Nothing
   // changed, and the row stays open on the Remove that was tapped.
   "booking-remove-aboard": {
     form: "roster",
@@ -232,7 +232,7 @@ const NOTICE_KEYS: Record<
     key: "trips.notices.diverAddedWaiverUndelivered",
   },
   // Seated onto an existing diver's record on a guess, so the seat is held
-  // until someone confirms it is the same person (H-13, issue #1556). Warning
+  // until someone confirms it is the same person (H-20260724-one-person-per-email, issue #1556). Warning
   // for the same reason as the waiver code above: nothing needs undoing, and
   // the diver cannot board until the staffer acts. The confirm control is on
   // this page, on the row the `&bid=` scrolls to.
@@ -252,7 +252,7 @@ const NOTICE_KEYS: Record<
     key: "trips.notices.invitationOptedOut",
   },
   // A suggested past diver contacted with an invite inside the cooldown
-  // (H-130): nothing was recorded or sent.
+  // (H-20261014-one-to-one-invite): nothing was recorded or sent.
   "invite-cooldown": { form: "add-diver", tone: "warning", key: "trips.notices.inviteCooldown" },
   // A suggested diver this departure would no longer sell a seat to (its
   // level, a specialty, a full boat): nothing was recorded or sent (review F1).
@@ -371,7 +371,7 @@ const NOTICE_KEYS: Record<
     tone: "warning",
     key: "trips.notices.identitySplitDobRequired",
   },
-  // H-100: a blank date with no "18 or older" on a plain departure.
+  // H-20261007-held-seat-split-into: a blank date with no "18 or older" on a plain departure.
   "identity-split-age-unstated": {
     form: "roster",
     tone: "warning",
@@ -610,7 +610,7 @@ const NOTICE_KEYS: Record<
     key: "tripSeries.notices.seriesCancelled",
     countKey: "tripSeries.notices.seriesCancelledCount",
   },
-  // The caller may not refund (H-139): the run is canceled and the divers told,
+  // The caller may not refund (H-20261013-call-off-queues-refunds): the run is canceled and the divers told,
   // and the card refunds wait for an owner or manager.
   "series-cancelled-held": {
     form: "series",
@@ -710,7 +710,7 @@ const NOTICE_KEYS: Record<
     key: "trips.notices.capacityAboveBoat",
     countKey: "trips.notices.capacityAboveBoatCount",
   },
-  // H-107: the hull's certificate is a ceiling too, and this form shows
+  // H-20261009-certificate-caps-seats: the hull's certificate is a ceiling too, and this form shows
   // neither number, so the refusal names the limit.
   "capacity-above-certificate": {
     form: "details",

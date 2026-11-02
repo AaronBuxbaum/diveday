@@ -529,7 +529,7 @@ describe("person-first diver records", () => {
    * removed diver back within a staffer's reach.
    */
   describe("finding a removed diver again", () => {
-    /** The seeded shop owner — the only role allowed to erase (H-14). */
+    /** The seeded shop owner — the only role allowed to erase (H-20260724-staff-role-reach). */
     async function ownerId(db: AppDb, shopId: string) {
       const [row] = await db
         .select({ id: people.id })
@@ -2750,7 +2750,7 @@ describe("findSimilarDivers name similarity and exact matching", () => {
   });
 
   /**
-   * H-79 (issue #1698): the date of birth is the fact that tells two people
+   * H-20260916-unconfirmed-identity-withhold-cost (issue #1698): the date of birth is the fact that tells two people
    * with one name apart, so it rides on every candidate, and a record nobody
    * has dated stays null rather than inventing one.
    */

@@ -429,7 +429,7 @@ describe("sesNotificationProvider (ADR 20260802-ses-adapter-and-webhook)", () =>
     });
   });
 
-  // H-118 security review: the shore contact's roll-call alert can be stopped
+  // H-20261014-stale-roll-call-recipients security review: the shore contact's roll-call alert can be stopped
   // from the mail client's own button too.
   it("lifts the shore contact's stop link into the one-click header pair", async () => {
     const client = { send: vi.fn().mockResolvedValue({ MessageId: "ses-message-id" }) };

@@ -149,7 +149,7 @@ async function PricingBody({ locale, offer }: { locale: DiverLocale; offer: Plan
               {figure}
             </p>
             <p className="mt-4 text-base text-muted">{cadence}</p>
-            {/* The two-year lock, under the figure it is about (H-12). It
+            {/* The two-year lock, under the figure it is about (H-20260724-public-founding-shop-price). It
                 names its subject so a burned reader cannot read "I am" into
                 it. */}
             <p className="mt-2 text-sm leading-6 text-pretty text-muted">
@@ -158,7 +158,7 @@ async function PricingBody({ locale, offer }: { locale: DiverLocale; offer: Plan
 
             {/* **The annotated invoice** (docs/design/brand.md: `/pricing` is
                 the one page whose screen is a bill). Every row is a word, never
-                a figure: the price is the display figure above, H-12's single
+                a figure: the price is the display figure above, H-20260724-public-founding-shop-price's single
                 source. The leaving row points down to the export band
                 (`#export`), the one place on the page the promise is written
                 in full, beside the screen it describes (B10, and its review:

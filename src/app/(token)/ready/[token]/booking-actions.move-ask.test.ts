@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * "Ask to move" from the readiness link (H-126). The page's own read decides,
+ * "Ask to move" from the readiness link (H-20261014-ask-to-move). The page's own read decides,
  * never the form: only an `open` ask is filed, a held seat is refused before
  * anything is read off the form, and the booking filed is the link's own.
  */

@@ -271,7 +271,7 @@ describe("selling and spending a package", () => {
     expect(await diverPackageBalance(db, crypto.randomUUID(), person.id)).toBeNull();
   });
 
-  it("spends one dive per tank, and counts what the booking spent (H-123)", async () => {
+  it("spends one dive per tank, and counts what the booking spent (H-20261014-package-dive-is-a)", async () => {
     // A package dive is one tank: a two-tank boat takes two of the five, and
     // /ready says "Uses 2 package dives (3 left)" from this count.
     const { db, shop, person, booking } = await sold({ diveCount: 5 });
@@ -477,7 +477,7 @@ describe("booking a departure with a package", () => {
  *
  * `identityUnconfirmed` is set when a public booking reuses an existing person
  * by email but the submitted *name* disagrees — a possible shared-inbox or
- * different-human signal (H-13). `persistDeclaration` already refuses to write
+ * different-human signal (H-20260724-one-person-per-email). `persistDeclaration` already refuses to write
  * a certification claim in that state, on the grounds that a statement made
  * under a disagreeing name is not provably about that person.
  *
@@ -751,7 +751,7 @@ describe("confirming a name-match seat's identity", () => {
   });
 
   /**
-   * **The fare stands, so the desk is told first** (H-79, issue #1697). The
+   * **The fare stands, so the desk is told first** (H-20260916-unconfirmed-identity-withhold-cost, issue #1697). The
    * case above is not unwound; the roster's payment control instead reads
    * this, so a staffer about to take money for the held seat sees that the
    * diver it was matched to holds dives this trip could take.

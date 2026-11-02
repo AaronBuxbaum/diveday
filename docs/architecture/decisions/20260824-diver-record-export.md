@@ -72,10 +72,10 @@ diver's name is the exact failure this feature exists to prevent:
   withheld but the equivalent scanned document was not.
 
 **Medical answers on a signed waiver are withheld, deliberately unresolved rather than defaulted.**
-The incident export withholds them because its reader is an investigator (H-03's boundary); a
+The incident export withholds them because its reader is an investigator (H-20260724-current-typed-name-explicit's boundary); a
 subject-access request's reader is the person who wrote them, so that argument reverses — but
 which way it should land is a legal question, not an engineering default, and it is recorded as
-H-50 in `docs/product/human-decisions/README.md` rather than decided here. Every other field of the
+H-20261025-per-diver-record-export in `docs/product/human-decisions/README.md` rather than decided here. Every other field of the
 diver's own signed evidence — status, signature, method, timestamps, the exact template text —
 ships now.
 
@@ -93,7 +93,7 @@ without narrowing columns is exactly how `party_lead_booking_id`, `internal_note
 `activity_events` would have leaked through unnoticed. A dedicated loader makes every column a
 choice instead of an inheritance.
 
-**Deciding the medical-answers question here.** Rejected on the same grounds H-01/H-03 already
+**Deciding the medical-answers question here.** Rejected on the same grounds H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit already
 stand on for every other waiver-content question — jurisdiction, wording, and now scope, are legal
 calls with an engagement already scoped for them (`docs/product/stakeholders/legal-engagement-scope.md`).
 Shipping the rest now and recording the open question is more useful than blocking the whole
@@ -114,7 +114,7 @@ of it.
   *different* diver, and can a free-text column carry one — the way this decision asked them for
   every table above `internal_notes.csv` and `activity_events.csv`, or accept its own security
   review.
-- H-50 stays open until legal review answers it. Until then, `waiver_records.csv`'s `medical_answers`
+- H-20261025-per-diver-record-export stays open until legal review answers it. Until then, `waiver_records.csv`'s `medical_answers`
   column is absent from both the header and the README's own accounting of what's included — a
   diver reading their own export sees that the gap is stated, not silent.
 - The `orders.description` gap and the medical-document leak through `photoUrls` were both found by

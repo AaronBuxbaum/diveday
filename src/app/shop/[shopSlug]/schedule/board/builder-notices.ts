@@ -38,7 +38,7 @@ export const BUILDER_NOTICE_KEYS: Record<
   "capacity-above-boat": { tone: "danger", key: "schedule.notices.capacityAboveBoat" },
   // A rehearsal is one departure, never a repeating one (ADR 20261012-rehearsal-departures).
   "rehearsal-repeats": { tone: "danger", key: "schedule.notices.rehearsalRepeats" },
-  // H-107: the certificate's limit is a ceiling too.
+  // H-20261009-certificate-caps-seats: the certificate's limit is a ceiling too.
   "capacity-above-certificate": {
     tone: "danger",
     key: "schedule.notices.capacityAboveCertificate",
@@ -47,7 +47,7 @@ export const BUILDER_NOTICE_KEYS: Record<
 
 /**
  * The sentence for a builder notice. The certificate refusal names the limit
- * when the redirect carried it (`?count=`, H-107), so the staffer knows the
+ * when the redirect carried it (`?count=`, H-20261009-certificate-caps-seats), so the staffer knows the
  * number to type; a URL without one, or with something else there, gets the
  * plain sentence.
  */

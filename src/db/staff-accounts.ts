@@ -374,7 +374,7 @@ export async function inviteStaffMember(
       // shop's existence, and that is gone.
       //
       // Whether one human may hold accounts at two shops at all is the open
-      // question behind this refusal, not something to settle here — see H-60
+      // question behind this refusal, not something to settle here — see H-20261025-may-one-human-hold
       // in docs/product/human-decisions/README.md.
       const [crossShopAccount] = await tx
         .select({ id: userAccounts.id })
@@ -626,7 +626,7 @@ export async function removeStaffMember(
  *
  * Withdrawing writes null rather than a second timestamp. The standing answer
  * is the fact worth keeping; a shop holding a former employee's revoked
- * consent date serves nobody, and H-02 would have to age it out.
+ * consent date serves nobody, and H-20260730-evidence-retention-period-deletion would have to age it out.
  */
 export async function setCrewPublicConsent(
   db: DbExecutor,

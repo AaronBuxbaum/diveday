@@ -81,7 +81,7 @@
         </div>
         <div style="display: flex; gap: 18px; align-items: flex-start;">
           <div class="curve"><svg viewBox="-4 -4 108 108" width="168" height="108" style="overflow: visible;"><path d="M0 100 L100 100 M0 100 L0 0" stroke="#e6dcc8" stroke-width="1" fill="none"></path><path d="M0 100 C 34 -42, 50 0, 100 0" stroke="#a83a2c" stroke-width="2.5" fill="none" stroke-linecap="round"></path></svg></div>
-          <div><p style="font-size: 15px; font-weight: 600;">Weight &middot; <span class="mono">--ease-spring</span> <span class="chip" style="background: var(--coral-wash); color: var(--coral-deep); height: 22px; font-size: 11px; margin-left: 6px;">H-69 a</span></p><p class="note" style="margin-top: 4px;">Overshoots and settles; claims the thing has weight. Rationed like coral: the unfolding menu (ships), and, on the owner&#8217;s call, the two places a finger gave weight: a sheet settling back from a short drag, and a pressed control letting go. Nothing that merely appears.</p></div>
+          <div><p style="font-size: 15px; font-weight: 600;">Weight &middot; <span class="mono">--ease-spring</span> <span class="chip" style="background: var(--coral-wash); color: var(--coral-deep); height: 22px; font-size: 11px; margin-left: 6px;">H-20260907-diveday-move-like-thing a</span></p><p class="note" style="margin-top: 4px;">Overshoots and settles; claims the thing has weight. Rationed like coral: the unfolding menu (ships), and, on the owner&#8217;s call, the two places a finger gave weight: a sheet settling back from a short drag, and a pressed control letting go. Nothing that merely appears.</p></div>
         </div>
       </div>
     </div>
@@ -89,7 +89,7 @@
 
   <div class="panel" style="margin-top: 28px; padding: 24px 28px;">
     <p class="tag">The press &middot; every tappable thing, at rest and under a finger</p>
-    <p class="note" style="margin-top: 6px; max-width: 760px;">Down takes no easing and no time: the thing is at 97% and on the tideline in the frame the finger lands. Up takes <span class="mono">--motion-quick</span> on the spring (H-69 a; the arrival curve otherwise). Transform and background only. The button&#8217;s <span class="mono">active:scale-[0.98]</span> today eases down over 200ms, which a 90ms tap never sees; the row, the chip, the tab and the ledger line do nothing.</p>
+    <p class="note" style="margin-top: 6px; max-width: 760px;">Down takes no easing and no time: the thing is at 97% and on the tideline in the frame the finger lands. Up takes <span class="mono">--motion-quick</span> on the spring (H-20260907-diveday-move-like-thing a; the arrival curve otherwise). Transform and background only. The button&#8217;s <span class="mono">active:scale-[0.98]</span> today eases down over 200ms, which a 90ms tap never sees; the row, the chip, the tab and the ledger line do nothing.</p>
     <div style="margin-top: 20px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 28px;">
       <div class="spec"><span class="lbl">Button &middot; rest / pressed</span><span class="btn btn-p">Check in</span><span class="btn btn-p pressed" style="background: var(--lagoon-deep) !important; color: #fff;">Check in</span></div>
       <div class="spec"><span class="lbl">Secondary &middot; rest / pressed</span><span class="btn btn-s">Send waiver</span><span class="btn btn-s pressed">Send waiver</span></div>
@@ -115,8 +115,8 @@
     <div class="row"><p><strong>Something opened from a control</strong></p><p>It scales and fades in from the control that opened it: the transform origin is the trigger, so the eye knows where it came from. A menu of several unfolds per child (ships).</p><p class="num">base / unfold</p><p>arrive; weight for the unfold</p></div>
     <div class="row"><p><strong>Something closed</strong></p><p>Back toward its trigger, named <span class="mono">-out</span>.</p><p class="num">base / unfold</p><p>leave</p></div>
     <div class="row"><p><strong>A finger is holding it</strong></p><p>It follows the finger one for one, resists past its edge, and no timer runs. The scrim tracks its position.</p><p class="num">none</p><p>the finger&#8217;s</p></div>
-    <div class="row"><p><strong>The finger let go</strong></p><p>Past the line, or with speed: it leaves from where it is. Short of the line: it settles back.</p><p class="num">base / quick</p><p>leave / weight (H-69 a)</p></div>
-    <div class="row"><p><strong>A control was pressed</strong></p><p>Down in the frame the finger lands, no easing; up when it lifts.</p><p class="num">0 / quick</p><p>none / weight (H-69 a)</p></div>
+    <div class="row"><p><strong>The finger let go</strong></p><p>Past the line, or with speed: it leaves from where it is. Short of the line: it settles back.</p><p class="num">base / quick</p><p>leave / weight (H-20260907-diveday-move-like-thing a)</p></div>
+    <div class="row"><p><strong>A control was pressed</strong></p><p>Down in the frame the finger lands, no easing; up when it lifts.</p><p class="num">0 / quick</p><p>none / weight (H-20260907-diveday-move-like-thing a)</p></div>
     <div class="row"><p><strong>The page scrolled</strong></p><p>The title folds into the bar, driven by the scroll position. No duration exists: the scroll is the clock.</p><p class="num">scroll</p><p>linear on scroll</p></div>
     <div class="row" style="border-bottom: 1px solid var(--rope);"><p><strong>The page changed</strong></p><p>The cut, and the skeleton (ADR 20260804-instant-navigation). Unchanged; issue #795 stands.</p><p class="num">0</p><p>none</p></div>
   </div>
@@ -127,7 +127,7 @@
       <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 10px;">
         <p class="body"><strong>A refusal.</strong> <span class="mono">role="alert"</span> text renders in place, in one frame, beside the control. Motion beside a refusal is banned (budget rule 8) and stays so.</p>
         <p class="body"><strong>Anything while a field has focus.</strong> Budget rule 2 stands: nothing drawn moves while a person is typing, and neither does a row or a figure beside the field.</p>
-        <p class="body"><strong>A state the surface does not yet have.</strong> On the counter the roll follows the optimistic commit principle 1 grants it; on the roll call it would follow the server&#8217;s, and the head count never rolls at all (H-69 c). A figure&#8217;s first paint swaps: nothing changed in front of the reader.</p>
+        <p class="body"><strong>A state the surface does not yet have.</strong> On the counter the roll follows the optimistic commit principle 1 grants it; on the roll call it would follow the server&#8217;s, and the head count never rolls at all (H-20260907-diveday-move-like-thing c). A figure&#8217;s first paint swaps: nothing changed in front of the reader.</p>
         <p class="body"><strong>Money on a report.</strong> A total that was loaded with the page did not change; it is not a roll. Counting up to a figure claims scale, which the fact-of-scale rule reserves for divers and boats.</p>
         <p class="body"><strong>Anything, for a reduced-motion reader,</strong> except a thing under their own finger. The kill-switch already zeroes every duration and delay; the sheet still follows the thumb, because tracking a finger is not animation.</p>
       </div>

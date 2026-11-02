@@ -49,7 +49,7 @@ function RadioQuestion({
     // their boxes, which ran the waiver to 4,300px at 390. The questions are
     // now rows of one list (`MedicalQuestionnaireFields` draws the rules), the
     // answers directly under the words. Not one word of the form changes; its
-    // wording is counsel-gated (H-01, H-03).
+    // wording is counsel-gated (H-20260730-jurisdiction-waiver-text-medical, H-20260724-current-typed-name-explicit).
     <fieldset>
       {/*
        * Floated on purpose. A `<legend>` that is the first child of a

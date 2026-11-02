@@ -10,7 +10,7 @@ import { YourDayRow, type YourDayRowWords } from "./YourDayRow";
 
 /**
  * **"Your days with Blue Mantis Divers"**: a regular's other bookings with the
- * shop, from this one's page (fifth-loop ideas, item 38; H-132; ADR
+ * shop, from this one's page (fifth-loop ideas, item 38; H-20261014-other-days-send-fresh; ADR
  * 20261016-fresh-link-per-booking-row).
  *
  * Every row is a send, never a link: it mails that day's own page to the

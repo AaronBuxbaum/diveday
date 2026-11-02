@@ -12,7 +12,7 @@ every slice unstated.
 `confirm`-capability gate; JSON-LD and `openGraphSite` on the trip page; capability-token
 discipline (share hands over the public trip URL, never a bearer URL); find-my-booking's
 anti-enumeration (identical response either way); waiver/medical wording in English pending
-H-01/H-03; the medical questionnaire's outcomes and integrity trail; rate limits; the
+H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit; the medical questionnaire's outcomes and integrity trail; rate limits; the
 `e2e` suite for booking (`booking.spec.ts`, `trip-admission.spec.ts`, `promo-codes.spec.ts`,
 `keyboard-booking.spec.ts`, `returning-diver.spec.ts`, `schedule-embed.spec.ts`), readiness
 (`readiness.spec.ts`, `seat-claim.spec.ts`), waivers (`waivers.spec.ts`), recap (`recap.spec.ts`,
@@ -312,7 +312,7 @@ export function buildThreadSteps(input: {
   `?review=`/`?photo=`/`?tip=` params keep their meanings.
   `/recap/[token]/opengraph-image.tsx` stays — the URL is still shared in emails — and `/ready`
   gets none (it stays noindex/bearer).
-- Deletes (H-49): `RecapMap`, `SiteStop` itinerary, the duplicate conditions `<dl>`, the standalone
+- Deletes (H-20260815-no-legacy): `RecapMap`, `SiteStop` itinerary, the duplicate conditions `<dl>`, the standalone
   recap page shell.
 
 **Delight.**
@@ -352,7 +352,7 @@ export function buildThreadSteps(input: {
 
 - The h1 is pinned: "A quick step before the dock" — the artboard's wording is the key's wording.
 - The settled Medical line words facts only — "11 of 11 answered", or "11 of 11 answered ·
-  1 flagged" when a follow-up is flagged — never a clearance judgment (the H-01/H-03 wording
+  1 flagged" when a follow-up is flagged — never a clearance judgment (the H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit wording
   freeze).
 - The step rail (Release · Medical · Sign + "N of 3 done") renders under the header, quiet,
   hairline-bounded; it reflects draft state (`QuestionnaireProgress` feeds it) and is not a
@@ -375,7 +375,7 @@ export function buildThreadSteps(input: {
 | One primary; save-later is a link (`waivers.spec.ts` extends: both paths still work, drafts preserved) | decision 5 |
 | The three banners render through one notice component (unit) | decision 5 |
 | Rail counts follow the counting rule for all three segments (fresh draft 0 of 3; any medical answer 1 of 3; all answered 2 of 3; completed state 3 of 3); refusal anchors still land (`?at=` test) | decision 5 |
-| Medical follow-ups, name-mismatch refusal, English-only notice — existing assertions untouched | H-01/H-03 floor |
+| Medical follow-ups, name-mismatch refusal, English-only notice — existing assertions untouched | H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit floor |
 
 ---
 

@@ -43,7 +43,7 @@ export async function seedDivers(
         phone: `+130555501${String(i + 10).padStart(2, "0")}`,
         emergencyContactName: customer.emergencyContact?.[0] ?? null,
         emergencyContactPhone: customer.emergencyContact?.[1] ?? null,
-        // A few dates on file so the H-08 minimum-age gate and the H-21
+        // A few dates on file so the H-20260724-certification-levels-agency-rules minimum-age gate and the H-20260730-minimum-age-gate-data
         // roster surfaces have something to demo; most divers deliberately have
         // none, which is the fail-open case every existing shop starts from.
         // Anchored to the seeded clock so the rendered age never drifts across
@@ -302,7 +302,7 @@ export async function seedDivers(
   // captures. She is booked on nothing (bookings use customers 0-9), so carding
   // her cannot flip any seeded trip's readiness, manifest, or Today queue.
   //
-  // Without these rows the two states H-23/H-24 exist for have no baseline at
+  // Without these rows the two states H-20260725-owner-asked-move-rows/H-20260725-two-findings-dive-domain exist for have no baseline at
   // all: the amber "certified · confirm to clear" badge, and the confirm that
   // requires a staffer to attest they have seen the card. Both are what stands
   // between a spreadsheet cell and a depth gate or a gas fill, so both should be

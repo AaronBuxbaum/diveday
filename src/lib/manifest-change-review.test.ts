@@ -65,7 +65,7 @@ describe("reviewManifestChange", () => {
    * Issue #2173. The review counts whatever claim its caller hands it: a member
    * carrying the rungs their ratings lapsed off is read through the same
    * `inWaterCrewRole` Today uses. The crew editor in `src/db/trips-crew.ts`
-   * hands it the roster's claim (no lapse) on purpose, because H-59 keeps an
+   * hands it the roster's claim (no lapse) on purpose, because H-20260825-staff-credentials-renewal-clock keeps an
    * assignment from ever being refused for a lapse.
    */
   it("reads a lapsed instructor rating when the caller passes one", () => {

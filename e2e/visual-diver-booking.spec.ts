@@ -447,7 +447,7 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
-       * **Ask to move, before and after it is sent** (H-126; #2666). Past the
+       * **Ask to move, before and after it is sent** (H-20261014-ask-to-move; #2666). Past the
        * free-cancellation window a paid diver's page offers a request ahead of
        * the cancel that forfeits what they paid: the form, then the page
        * saying it was asked. The same flow as `e2e/ask-to-move.spec.ts`.
@@ -542,7 +542,7 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
-       * **A parent signs a child's release** (H-124; #2666): a lead books a
+       * **A parent signs a child's release** (H-20261014-parent-signs-minor-release; #2666): a lead books a
        * party with one seat "Under 18", the panel offers "Sign {name}'s
        * waiver" on that seat, and the child's own claim link says a parent
        * signs with them. The flow of the last test in

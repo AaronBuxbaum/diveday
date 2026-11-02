@@ -1,6 +1,6 @@
 name: Restore drill
 
-# One restore proven, then one a month (pre-mortem 2026-10-23, item 3; H-154). Restores the newest
+# One restore proven, then one a month (pre-mortem 2026-10-23, item 3; H-20261023-first-restore-run-by). Restores the newest
 # full-cluster dump from s3://diveday-database-dumps/dumps/ into a scratch Neon branch, signs in as
 # the seeded owner, reads tomorrow's manifest, and deletes the branch (`scripts/restore-drill.mjs`).
 # A backup nobody has restored is a hypothesis; this turns the weekly dump into evidence every month.

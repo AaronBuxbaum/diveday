@@ -40,7 +40,7 @@ export async function persistCheckoutGear(
         if (input.rentsAtCheckout) {
           // **A held seat writes nothing to the person it matched.** The row
           // is an existing diver's, reached by an email whose name on file
-          // does not match (H-13), so whoever booked may not be them, and the
+          // does not match (H-20260724-one-person-per-email), so whoever booked may not be them, and the
           // fit is theirs. A rented wetsuit ticked here would clear their
           // `dives_dry`, and with it the drysuit weight check on every later
           // trip (`security-reviewer`, layer 2). The paid gear still stands on

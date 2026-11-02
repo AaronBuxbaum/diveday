@@ -126,7 +126,7 @@ resolved against the session's own shop, so a cross-tenant id simply resolves to
 
 - **A crew member is now told why they cannot schedule.** `/trips/new` showed a "limited to owners,
   managers, and instructors" notice; the board silently omitted every add control. The sentence
-  moved to the builder, so the H-14 boundary explains itself where it applies.
+  moved to the builder, so the H-20260724-staff-role-reach boundary explains itself where it applies.
 - **The panel is taller when expanded than any inline panel had been.** It is still bounded — one
   form, one submit — and the collapsed default is what a shop sees all week. The expanded state
   gets its own visual capture (`schedule-builder-add-full`).

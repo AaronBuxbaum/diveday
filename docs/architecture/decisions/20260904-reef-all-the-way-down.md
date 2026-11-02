@@ -1,6 +1,6 @@
 # 20260904-reef-all-the-way-down — Take Reef to the bottom of every surface, decide the delight backlog, and widen the budget along one axis
 
-- **Status:** Accepted — decided 2026-09-04 (Aaron Buxbaum, in session; H-67: the budget widens as
+- **Status:** Accepted — decided 2026-09-04 (Aaron Buxbaum, in session; H-20260904-reef-go-all-way: the budget widens as
   drawn, `trips.revision` carries the calendar revision, the postcard stamp and the stage words as
   drawn). Slices 16a–16j in the roadmap
 - **Date:** 2026-09-04
@@ -44,7 +44,7 @@ Three facts, established that day and carried on the canvas:
 
 ## Decision
 
-Proposed, in four parts. Parts 2 and 4 carry the three owner calls recorded as H-67.
+Proposed, in four parts. Parts 2 and 4 carry the three owner calls recorded as H-20260904-reef-go-all-way.
 
 ### 1. The surfaces are rebuilt to the drawing, by surface
 
@@ -73,7 +73,7 @@ artboard keeps its caption, because design-artifacts.md closes a canvas once its
 and "worth" does not join `scripts/check-voice.mjs` — which brand rules get mechanised is its own
 call, and this heading is only its first piece of evidence.
 
-### 2. The delight budget widens along one axis — time — and every ban stands (H-67 a)
+### 2. The delight budget widens along one axis — time — and every ban stands (H-20260904-reef-go-all-way a)
 
 [principles.md](../../design/principles.md) §3 rations joy to finishes and declines a standing
 good-news line. Both stay. What the canvas adds is the product knowing *when* it is, in eight rules
@@ -125,7 +125,7 @@ with a code column would be a reversal and would need its own ADR.
 Thirty-six issues, one line each on the Verdicts board. **Eighteen drawn** onto the surfaces
 (D01, D02, D12, D14, D15, D18, D20, D22, D24, D33, D35, D40, D42, D47, D49, D51, #1081, #1346).
 **Ten adopted unseen** — built from their own bodies because the primitives already settle their
-shape (D05 on H-67 b, D17, D25, D36 and D45 as one recap variant, D44, D52, #1357, #1363,
+shape (D05 on H-20260904-reef-go-all-way b, D17, D25, D36 and D45 as one recap variant, D44, D52, #1357, #1363,
 #1366). *#1284 was on this list in error and came off it 2026-09-05: the owner deferred its one
 remaining half — the stored named set of embed departures — on 2026-09-03, and the reusable
 departure tag that deferral wanted weighed first is now this ADR's own lens vocabulary.* **Three
@@ -139,7 +139,7 @@ the boat that leaves, the fact of scale, the storefront's live panel — and are
 follow-ups (#1371, #1372, #1373, #1374), so the tracker holds the whole set. The owner's ruling that
 the backlog re-triages after the first pilot boat day stands; this is what that triage reads.
 
-### 4. Two sets of words are the owner's (H-67 b and c)
+### 4. Two sets of words are the owner's (H-20260904-reef-go-all-way b and c)
 
 - **D05's revision counter.** Half of D05 merged (#1348). The rest was which edits bump the
   calendar event's revision and where the counter lives. Recommended: `trips.revision`, an integer
@@ -187,7 +187,7 @@ the backlog re-triages after the first pilot boat day stands; this is what that 
 - The booking page's composition test bounds its own length, so the next feature that wants to sell
   harder has to open a door rather than add a section.
 - The consent grammar (rule 6) ships behind counsel: D12, D22 and D40 are drawn with its sentences
-  and are reworded, not redrawn, when H-01–H-03 answer.
+  and are reworded, not redrawn, when H-20260730-jurisdiction-waiver-text-medical, H-20260730-evidence-retention-period-deletion, H-20260724-current-typed-name-explicit answer.
 - The escape hatch is the same as Reef's: every widening in part 2 renders nothing when it is not
   true, so reversing any one of them is deleting a rule, not redrawing a surface. Reversing part 1
   would mean keeping the lists, which is the state this record measured and found wanting.

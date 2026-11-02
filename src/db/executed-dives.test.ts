@@ -588,7 +588,7 @@ describe("peopleWhoDivedBefore", () => {
 
   /**
    * **A decompression boat earlier in the day silences the later one's figure**
-   * (H-84; dive-domain review of #1555). DAN gives no preflight number after a
+   * (H-20260916-may-diveday-assert-about; dive-domain review of #1555). DAN gives no preflight number after a
    * dive that took stops, so a morning boat the shop marked past
    * no-decompression limits leaves the afternoon recap with nothing to quote,
    * even though the afternoon boat is not marked itself.

@@ -7,17 +7,17 @@
  * decides, not the software, the same posture as the gear register's service
  * clocks (ADR 20260815-minimal-gear-register) and the pre-departure checklist
  * (ADR 20260824-pre-departure-safety-check). The certificate is the exception
- * since H-107:
+ * since H-20261009-certificate-caps-seats:
  *
  * - **Too many passengers for the certificate.** A passenger vessel's
  *   certificate (in the US, the Coast Guard's Certificate of Inspection)
- *   names a passenger limit. **No seat above it is sold** (H-107, reversing
+ *   names a passenger limit. **No seat above it is sold** (H-20261009-certificate-caps-seats, reversing
  *   "informs, never gates" for this one fact): a boat save is refused if an
  *   upcoming departure sells above it, and a trip cannot be saved above it
  *   (`boatSeatsRefusal`, `tripDetailsPatch`). The boat's own capacity is total
  *   occupants including crew and is not compared to this passenger-only
  *   number. When booked passengers pass it anyway (a hull or trip saved before
- *   H-107), the manifest still says so.
+ *   H-20261009-certificate-caps-seats), the manifest still says so.
  * - **Too many persons for the certificate, crew included** (#2302). Some
  *   certificates print a total-persons limit beside the passenger one, and
  *   some print only that. Compared with total hull capacity during boat save,
@@ -127,7 +127,7 @@ export type BoatPaper = (typeof BOAT_PAPERS)[number];
  * How far ahead each paper is said, longer than the kit's: booking an
  * inspection or renewing a policy takes weeks of lead time, where new pads are
  * a parcel. A paper inside its window is an owner's errand on Today and a line
- * on the manifest; past its date it escalates to danger ink (H-136), and still
+ * on the manifest; past its date it escalates to danger ink (H-20261015-lapsed-boat-papers-loud), and still
  * gates nothing.
  */
 export const BOAT_PAPER_HORIZON_DAYS: Record<BoatPaper, number> = {
@@ -459,7 +459,7 @@ export function departureCrewCount(crew: readonly { rollCall?: { state: string }
 }
 
 /**
- * **Why a boat's numbers may not be saved** (H-107), or null when they may.
+ * **Why a boat's numbers may not be saved** (H-20261009-certificate-caps-seats), or null when they may.
  *
  * - `capacity_above_total_persons`: the hull's total occupant limit passes the
  *   certificate's total-person limit.
@@ -536,13 +536,13 @@ export function boatCapacityAboveTotalPersons(
 }
 
 /**
- * **The passenger places a departure may actually sell** (H-107): its own
+ * **The passenger places a departure may actually sell** (H-20261009-certificate-caps-seats): its own
  * `capacity`, never more than its boat's passenger certificate allows or the
  * boat's total-occupant capacity after reserving one place per assigned crew
  * member.
  *
  * This is the point-of-sale ceiling. A departure can still carry a capacity
- * above an applicable limit — written before H-107,
+ * above an applicable limit — written before H-20261009-certificate-caps-seats,
  * copied, rolled from a series, reinstated, or moved onto a smaller hull — and
  * the booking transaction reads this under the trip-row lock so none of those
  * paths can sell above an applicable limit. Without a passenger certificate
@@ -561,9 +561,9 @@ export function sellableSeats(
 }
 
 /**
- * A new departure's seats, lowered to its boat's certificate (H-107) — for the
+ * A new departure's seats, lowered to its boat's certificate (H-20261009-certificate-caps-seats) — for the
  * paths that write a departure from another one rather than from a form: a
- * copy, and the nightly series roll. The source may predate H-107, or its
+ * copy, and the nightly series roll. The source may predate H-20261009-certificate-caps-seats, or its
  * template may be cancelled or past and never re-saved; the new row starts
  * inside the limit instead of carrying the old number forward. A divers-only
  * limit comes down with it, so it never passes the boat's.
@@ -711,7 +711,7 @@ export type BoatSafetySection = {
  * it should be to leave: must-carry kit missing, more passengers or more
  * persons than the certificate allows, and a lapsed paper — the certificate,
  * hull insurance, registration or the safety inspection past its date, the fact that makes a claim uncovered
- * (H-136). **Warning** for kit that has gone wrong (a lapsed clock, a unit
+ * (H-20261015-lapsed-boat-papers-loud). **Warning** for kit that has gone wrong (a lapsed clock, a unit
  * flagged for service). **Neutral** for a heads-up.
  *
  * Tone only: a danger line here refuses nothing. The certificate's own gate

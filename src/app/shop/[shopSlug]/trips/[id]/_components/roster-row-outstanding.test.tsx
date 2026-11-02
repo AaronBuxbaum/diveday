@@ -9,7 +9,7 @@ import type { ReadinessByBooking, WaiverByBooking } from "./types";
 afterEach(cleanup);
 
 /**
- * **The fare stands, so the package is said first** (H-79, issue #1697). A
+ * **The fare stands, so the package is said first** (H-20260916-unconfirmed-identity-withhold-cost, issue #1697). A
  * fare taken at the desk is never unwound for a package, so the payment
  * control names the diver's unused dives while there is still money to take.
  */

@@ -33,7 +33,7 @@ export function BoatPaperFields({
   boat?: Boat;
   t: StaffTranslator;
   className?: string;
-  /** The row's certificate error (H-107): the limit box is half of it. */
+  /** The row's certificate error (H-20261009-certificate-caps-seats): the limit box is half of it. */
   invalid?: boolean;
   /** The radio identity failed validation, rather than a certificate limit. */
   radioInvalid?: boolean;
@@ -135,7 +135,7 @@ export function BoatPaperFields({
  * A total-person mismatch prevents a contradictory boat setup; the passenger
  * certificate remains a separate limit on upcoming trip bookings. The papers
  * still only inform, and a lapsed one reads in danger ink, as on the manifest
- * and Today (H-136).
+ * and Today (H-20261015-lapsed-boat-papers-loud).
  */
 const PAPER_INK = {
   danger: "font-medium text-danger",

@@ -209,7 +209,7 @@ function MoveImpact({
   // `crewAway` deliberately stays in the muted list: a blackout is the crew
   // member's own note and informs, and the owner's answer named the clash.
   //
-  // The boat clash (H-80, issue #1780) wears the same weight for the same
+  // The boat clash (H-20260916-may-one-hull-carry, issue #1780) wears the same weight for the same
   // reason, and leads: one hull on two departures at once is the bigger fact.
   const isAlert = (section: MovePreflightSection) =>
     section.kind === "boat" || section.kind === "crew";
@@ -754,7 +754,7 @@ export function ScheduleBuilder({ context }: { context: ScheduleBuilderContext }
           Add" every day header already carries (principle 8/9). The panel it
           opens still renders here, keyed "add:top", via `openAdd`. */}
 
-      {/* Creating a departure is owner/manager/instructor work (H-14); crew
+      {/* Creating a departure is owner/manager/instructor work (H-20260724-staff-role-reach); crew
           still read the board, so it says whose job this is rather than
           silently omitting every add control. */}
       {canConfigure ? null : (

@@ -312,7 +312,7 @@ const wabaNumbersSchema = z.object({
 });
 
 /**
- * **Step 1c: is the posted number one of that WABA's?** (issue #1767, H-83).
+ * **Step 1c: is the posted number one of that WABA's?** (issue #1767, H-20260916-may-dive-chain-share).
  *
  * The phone number id is the tenant key now, and it arrives as its own form
  * field beside the WABA, so the same oracle {@link confirmWabaAccess} closes

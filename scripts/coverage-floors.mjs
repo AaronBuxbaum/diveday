@@ -23,10 +23,10 @@ import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 
-import { SAFETY_FILES } from "./coverage-safety-files.mjs";
+import { matchedSafetyFiles, SAFETY_FILES, safetyFilesOnDisk } from "./coverage-safety-files.mjs";
 import { ratchetFlags } from "./ratchet.mjs";
 
-export { SAFETY_FILES };
+export { matchedSafetyFiles, SAFETY_FILES, safetyFilesOnDisk };
 
 export const FLOORS_PATH = "scripts/coverage-floors.json";
 export const DEFAULT_SUMMARY = "coverage/coverage-summary.json";

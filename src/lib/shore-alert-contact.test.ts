@@ -23,13 +23,13 @@ const ON_FILE: ShoreAlertContact = {
   confirmedAt: CONFIRMED,
 };
 
-/** H-118: the shore contact hears a stale roll call only with a recorded consent. */
+/** H-20261014-stale-roll-call-recipients: the shore contact hears a stale roll call only with a recorded consent. */
 describe("shoreAlertRecipient", () => {
   it("is the address when the consent is on file and the inbox confirmed it", () => {
     expect(shoreAlertRecipient(ON_FILE)).toBe("shore@example.com");
   });
 
-  it("is nobody until the address is confirmed by its link (H-118 review)", () => {
+  it("is nobody until the address is confirmed by its link (H-20261014-stale-roll-call-recipients review)", () => {
     expect(shoreAlertRecipient({ ...ON_FILE, confirmedAt: null })).toBeNull();
   });
 
@@ -117,7 +117,7 @@ describe("nextShoreAlertContact", () => {
     });
   });
 
-  it("refuses a changed address with the old tick: the box spoke for the old one (H-118 review)", () => {
+  it("refuses a changed address with the old tick: the box spoke for the old one (H-20261014-stale-roll-call-recipients review)", () => {
     expect(save(ON_FILE, "other@example.com", true, "shore@example.com")).toEqual({
       ok: false,
       reason: "consent_missing",

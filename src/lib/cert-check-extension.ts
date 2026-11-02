@@ -1,5 +1,5 @@
 /**
- * **The DiveDay browser extension, seen from the app** (H-105, ADR
+ * **The DiveDay browser extension, seen from the app** (H-20261008-cert-check-extension, ADR
  * 20261008-cert-check-extension).
  *
  * The extension (`extension/` at the repo root) checks a certification card on
@@ -25,7 +25,7 @@ export const EXTENSION_MESSAGE_SOURCE = "diveday-cert-check";
 /** Look this diver's card up with this agency. */
 export const CHECK_REQUEST_TYPE = "agency-check";
 export const SSI_MANUAL_REQUEST_TYPE = "ssi-manual-fill";
-/** Look a course student up on the agency's eLearning page (H-106). */
+/** Look a course student up on the agency's eLearning page (H-20261008-padi-elearning-check). */
 export const ELEARNING_REQUEST_TYPE = "elearning-check";
 /** Which copy is here: its version and the agencies it checks. Answered with `CHECK_RESULT_TYPE`. */
 export const HELLO_REQUEST_TYPE = "hello";
@@ -39,7 +39,7 @@ export const CHECK_TIMEOUT_MS = 45_000;
 
 /**
  * The extension's Chrome Web Store listing, once it has one. Publishing it
- * needs DiveDay's own developer account, so it is Aaron's step (H-105); until
+ * needs DiveDay's own developer account, so it is Aaron's step (H-20261008-cert-check-extension); until
  * then Settings says whether this browser has the extension and offers no
  * install link.
  */

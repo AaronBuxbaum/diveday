@@ -28,7 +28,7 @@ export type DependentCharter = {
  * dock.
  *
  * A warning, never a gate: the charter seat stays booked, and readiness still
- * waits for the card whatever happens here. A held seat (H-13) is admitted on
+ * waits for the card whatever happens here. A held seat (H-20260724-one-person-per-email) is admitted on
  * no evidence, so it relies on nothing and is never named.
  */
 export async function chartersRelyingOnCourseSeats(

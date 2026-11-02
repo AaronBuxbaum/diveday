@@ -66,7 +66,7 @@ export async function createOrderAction(formData: FormData) {
   // it builds is escaped (src/lib/staff-notices.ts).
   const orders = shopPath(session.user.shopSlug, "orders");
   const newOrder = shopPath(session.user.shopSlug, "orders", "new");
-  // Billing a diver is owner/manager work (H-14, ADR 20260724-role-authorization):
+  // Billing a diver is owner/manager work (H-20260724-staff-role-reach, ADR 20260724-role-authorization):
   // an invoice goes out with the shop's name on it, on the shop's own connected
   // Stripe account, and lands in the shop's books. Re-checked against live roles
   // here, not just hidden from the page — a form post from a captain's browser

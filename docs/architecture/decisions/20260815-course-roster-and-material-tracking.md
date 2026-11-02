@@ -33,7 +33,7 @@ The last row is the real gap, and it's already named independently in
 
 Constraints a lower-context agent must not miss:
 
-- **H-10 is Dropped**: no agency exposes a usable C-card or e-learning provisioning API
+- **H-20261007-request-supported-c-card is Dropped**: no agency exposes a usable C-card or e-learning provisioning API
   ([20260721-manual-certification](20260721-manual-certification.md)). "Automatically assigns
   learning materials" can only ever mean *DiveDay tracks that a human assigned or issued
   something* — never a live agency integration. Overstating this in the UI would misrepresent a
@@ -58,7 +58,7 @@ course_enrollment_progress
   elearning_status  elearning_status not null default 'not_applicable'
                        ('not_applicable' | 'not_started' | 'assigned' | 'completed')
   elearning_code    text                    -- the agency-issued code a staff member pastes in;
-                                             -- never fetched from an API (H-10)
+                                             -- never fetched from an API (H-20261007-request-supported-c-card)
   skills_note       text                    -- free-text staff note, not a structured checklist
   updated_by        uuid FK → people
   updated_at        timestamptz not null default now()
@@ -88,7 +88,7 @@ course_enrollment_progress
 
 - **A structured per-skill checklist instead of a status field** — rejected for this slice; bigger
   scope than the gap actually named, and no demonstrated demand for that granularity yet.
-- **Attempt a live PADI/SSI provisioning integration** — rejected outright; H-10 already
+- **Attempt a live PADI/SSI provisioning integration** — rejected outright; H-20261007-request-supported-c-card already
   established no agency exposes one, so there is nothing to integrate against, only a status a
   human records.
 - **Model progress directly on the `bookings` row** rather than a new table — rejected; `bookings`

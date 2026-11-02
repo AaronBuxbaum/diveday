@@ -150,7 +150,7 @@ export async function sendStaffReply(
   if (!message || message.personId !== input.personId) {
     return { status: "refused", reason: "message_not_found" };
   }
-  // SMS cannot be answered yet, and a booking-page ask (H-126) has no
+  // SMS cannot be answered yet, and a booking-page ask (H-20261014-ask-to-move) has no
   // address of its own: the shop calls or writes from the record.
   if (message.channel === "sms" || message.channel === "page") {
     return { status: "refused", reason: "channel_unsupported" };

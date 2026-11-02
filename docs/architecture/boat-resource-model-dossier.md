@@ -267,7 +267,7 @@ empty until an inquiry arrives). Comparable safety to A.
 - Booking transaction untouched; capacity untouched; board shows the boat label only as a
   by-product.
 - Deposits reuse the existing payment-operation rails; the **contract/e-sign step is blocked
-  today** — it lands in the same H-01/H-03 legal gate as waivers (an unsigned charter contract is
+  today** — it lands in the same H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit legal gate as waivers (an unsigned charter contract is
   a legal instrument DiveDay would be presenting).
 
 ### How multi-boat orchestration works in it
@@ -342,7 +342,7 @@ money rails.** Four slices, each independently shippable and valuable, each paus
    "withdraw from public sale" action; flat-price manual order for the money; the manifest, waiver,
    cert, and roll-call spine **completely unchanged**.
 4. **Inquiry pipeline** (from C, only on demonstrated operator demand): `charter_inquiries`
-   mirroring `course_inquiries`; contract/e-sign stays gated on H-01/H-03 regardless.
+   mirroring `course_inquiries`; contract/e-sign stays gated on H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit regardless.
 
 Full schema, migration sequence, surface-by-surface impact, and the first shippable slice are in
 the [ADR](decisions/20260804-boat-resource-model.md). Why the runners-up lost, in one line each:

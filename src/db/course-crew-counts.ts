@@ -33,7 +33,7 @@ import { liveTrip } from "./trips-live";
  * names who a lapse took down a rung, so every surface that shows a gap this
  * count opened can say why rather than showing one more shortfall. The money
  * and roster paths do not come through here: `tripCourseCrewCounts`
- * (src/db/bookings.ts) is the roster's claim, on purpose (H-59).
+ * (src/db/bookings.ts) is the roster's claim, on purpose (H-20260825-staff-credentials-renewal-clock).
  */
 export async function courseCrewCountsByTrip(
   db: AppDb,

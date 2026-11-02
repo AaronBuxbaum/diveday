@@ -60,7 +60,7 @@ import type { TripSharedReads } from "./trips-shared-reads";
  * Returns `null` when the trip is absent so the page keeps its own `notFound()`.
  */
 
-/** `padiChecksEnabled`: whether PADI's eLearning check is offered here (H-121). */
+/** `padiChecksEnabled`: whether PADI's eLearning check is offered here (H-20261014-padi-divechek). */
 export type TripGuestsShop = {
   id: string;
   timezone: string;
@@ -192,7 +192,7 @@ export async function getTripGuests(
       tripId,
       day: calendarDateInTimezone(trip.startsAt, shop.timezone),
     }),
-    // Past divers of this departure's site worth asking (H-130), only while
+    // Past divers of this departure's site worth asking (H-20261014-one-to-one-invite), only while
     // it has a seat to offer and the shop invites past divers (the Features page).
     isFull(trip) || !shop.pastDiverInvitesEnabled
       ? null
@@ -208,7 +208,7 @@ export async function getTripGuests(
     // (issues #1196, #1205), so the roster's box opens holding it.
     courseNextStepsByBooking(db, shop.id, tripId),
     // Who Remove refuses on this roster: seats the boat carried or may be
-    // carrying (H-133), the rule `cancelBooking` applies under its locks.
+    // carrying (H-20261015-aboard-diver-removal-at), the rule `cancelBooking` applies under its locks.
     // Asked from the scheduled time on, so a boat still to sail pays nothing;
     // a crew who take it out early with someone counted aboard are refused by
     // `cancelBooking` itself, and the row's notice says why.
@@ -294,7 +294,7 @@ export async function getTripGuests(
     // matched diver's last dive day at this shop, the same line the name-match
     // prompt shows staff who seat a diver (issue #1789). A staff-seated hold met
     // it there already; an online hold (a public booking that reused an email
-    // under another name, H-13) met no prompt, so this is the first time any
+    // under another name, H-20260724-one-person-per-email) met no prompt, so this is the first time any
     // staffer sees it. Not this departure's: the seat on it is the claim, not
     // evidence for it.
     lastDiveDaysHere(
@@ -304,7 +304,7 @@ export async function getTripGuests(
       { exceptTripId: tripId },
     ),
     // Unspent package dives this departure could take, per seat, so the payment
-    // control says so before anyone takes a fare (issue #1697, H-79).
+    // control says so before anyone takes a fare (issue #1697, H-20260916-unconfirmed-identity-withhold-cost).
     spendableDivesForTrip(
       db,
       shop.id,
@@ -332,7 +332,7 @@ export async function getTripGuests(
         })
       : new Map<string, CourseMaterialsDone>(),
     // The cards the DiveDay browser extension could check from this tab
-    // (H-105), and the N of its "Check all N". Never a held seat's: until a
+    // (H-20261008-cert-check-extension), and the N of its "Check all N". Never a held seat's: until a
     // staffer confirms who is standing there, the matched diver's name, birth
     // date and card number are not this seat's to send to an agency.
     listAgencyCheckableCards(db, {
@@ -475,7 +475,7 @@ export async function getTripGuests(
     notesByBooking,
     courseNextStepByBooking,
     sameNameHeldSeats,
-    /** Seats the boat carried or may be carrying: Remove refuses them (H-133). */
+    /** Seats the boat carried or may be carrying: Remove refuses them (H-20261015-aboard-diver-removal-at). */
     aboardAtSea,
     /** Per same-name held seat, the shop's other people with that name (issue #2129). */
     sameNamePeople,
@@ -519,17 +519,17 @@ export async function getTripGuests(
     courseHasMaterials: readLearningMaterials(trip.course?.learningMaterials).length > 0,
     /**
      * What the DiveDay browser extension would search the agency's eLearning
-     * page for, per seat, where it can (H-106): a PADI course with materials.
+     * page for, per seat, where it can (H-20261008-padi-elearning-check): a PADI course with materials.
      */
     elearningQueryByBooking: elearningQueries(trip.course ?? null, roster, shop),
-    /** The same course, where the shop's switch keeps PADI's eLearning check off (H-121). */
+    /** The same course, where the shop's switch keeps PADI's eLearning check off (H-20261014-padi-divechek). */
     elearningChecksOff:
       Boolean(trip.course) &&
       readLearningMaterials(trip.course?.learningMaterials).length > 0 &&
       !agencyCheckOffered(trip.course?.agency ?? "", shop),
     /**
      * Per diver, the cards the DiveDay browser extension could check with
-     * their agencies from this tab (H-105). Held seats are never in it.
+     * their agencies from this tab (H-20261008-cert-check-extension). Held seats are never in it.
      */
     agencyCheckCardsByPerson,
     /** Per student, the card this session issued and whether the agency has it yet. */
@@ -587,7 +587,7 @@ function elearningQueries(
 ): Map<string, ElearningQuery> {
   const queries = new Map<string, ElearningQuery>();
   if (!course || readLearningMaterials(course.learningMaterials).length === 0) return queries;
-  // PADI's eLearning waits for the shop's own switch (H-121).
+  // PADI's eLearning waits for the shop's own switch (H-20261014-padi-divechek).
   if (!agencyCheckOffered(course.agency, shop)) return queries;
   for (const { booking, person } of roster) {
     const query = elearningCheckQuery({

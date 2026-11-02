@@ -32,7 +32,7 @@ const ctx = fileScopedShopContext();
  *
  * The owner chose shape (b): the supervision claim — Today, the staffing week,
  * the trip page — reads each rostered professional's recorded ratings, and the
- * money and roster paths keep the roster's claim, because H-59 closed new-sale
+ * money and roster paths keep the roster's claim, because H-20260825-staff-credentials-renewal-clock closed new-sale
  * and new-assignment refusal on a locally recorded renewal date
  * (docs/product/human-decisions/README.md). Both halves are asserted here, against
  * the boundaries that decide them: the departure's own shop-local day, a
@@ -547,11 +547,11 @@ describe("a lapse is said only where it opened the gap", () => {
 });
 
 /**
- * H-59 is not reopened by this: a locally recorded renewal date never refuses
+ * H-20260825-staff-credentials-renewal-clock is not reopened by this: a locally recorded renewal date never refuses
  * a sale or a seat. These are the adversarial half — the lapse is in place,
  * and the money path must not have noticed.
  */
-describe("selling and seating keep the roster's claim (H-59)", () => {
+describe("selling and seating keep the roster's claim (H-20260825-staff-credentials-renewal-clock)", () => {
   it("still sells a seat on a session whose only instructor's rating lapsed", async () => {
     const { db, shop } = ctx;
     const keiko = await instructor(db, shop.id, "Keiko Tanaka");

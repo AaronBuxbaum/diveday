@@ -8,7 +8,7 @@
 An unattended counter tablet could keep a seven-day Better Auth session alive through passive
 refreshes even after the desk's twelve-hour input timer stopped. Issue #3021 calls for the server
 to enforce that same working-day limit, while the saved offline manifest retains its separately
-approved retention and unsent roll-call behavior (H-153).
+approved retention and unsent roll-call behavior (H-20261023-medical-alert-for-the).
 
 ## Decision
 

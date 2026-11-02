@@ -3,14 +3,14 @@
 **Status: shipped 2026-10-07** ([ADR 20261007-participant-types](../../architecture/decisions/20261007-participant-types.md);
 [shipped.md](../shipped.md#participants-who-are-not-divers-delivered-2026-10-07)). All four slices
 below landed together. The code spells the type **snorkeler** (US English); this document keeps the
-spelling it was written in. Written 2026-08-20 at the product owner's request, alongside the H-28
+spelling it was written in. Written 2026-08-20 at the product owner's request, alongside the H-20260820-composed-cert-gates-only
 decision that a trip may state a certification gate looser than one of its dive sites.
 
 The open questions at the end were not answered by a human. Each shipped with the conservative
 default, and each can still be reversed:
 
-1. A rider **signs the waiver**, the same as everyone aboard, until H-01/H-03 say otherwise. A
-   rider is never held on a medical (H-109); the link still asks them the dive medical until a
+1. A rider **signs the waiver**, the same as everyone aboard, until H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit say otherwise. A
+   rider is never held on a medical (H-20261009-rider-snorkeler-medical); the link still asks them the dive medical until a
    release can say it carries none.
 2. The diver limit is an optional column on the **trip** (`trips.diver_capacity`), and the boat's
    own `capacity` counts everyone. It moves with the boat once ADR 20260804-boat-resource-model is
@@ -70,7 +70,7 @@ booking spine asks:
   money concept.
 - The gear register's reservation model joins a unit to a booking for a date range and does not care
   what the holder is doing with it.
-- H-49 makes the migration itself cheap — there is no production data to reconcile.
+- H-20260815-no-legacy makes the migration itself cheap — there is no production data to reconcile.
 
 ## Proposed slices
 
@@ -101,17 +101,17 @@ them at readiness for having no certification.
 
 ## What this does **not** solve
 
-**H-28's mixed-level charter is a different problem and is not fixed by any slice here.** An Open
+**H-20260820-composed-cert-gates-only's mixed-level charter is a different problem and is not fixed by any slice here.** An Open
 Water diver on a Spiegel Grove two-tank is *diving* — they need the deck at 13 m, a buddy, and a gate
 that lets them buy the seat. Recording them as a snorkeller to get past the gate would be a lie in
-the one record the crew reads at the rail. H-28's own answer (a trip may state a level below its
+the one record the crew reads at the rail. H-20260820-composed-cert-gates-only's own answer (a trip may state a level below its
 site's, recorded as a deliberate override with the depth advisory still raised) stands on its own and
 should ship first: it is small, and it is the one blocking a sale today.
 
 ## Open questions for a human
 
 1. **Does a rider sign a waiver?** A person on a dive boat who never enters the water is still on a
-   dive boat. This is an H-01/H-03 question and it should ride with them rather than be guessed.
+   dive boat. This is an H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit question and it should ride with them rather than be guessed.
 2. **Do the two capacity limits come from the boat or the trip?** A boat entity does not exist yet —
    a trip *is* the boat-day (see [roadmap.md](roadmap.md#4-multi-boat--multi-shop-configuration) and
    ADR 20260804-boat-resource-model). Putting a second capacity on `trips` is right until that ADR is

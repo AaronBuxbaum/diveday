@@ -23,7 +23,7 @@ vi.mock("@/app/shop/[shopSlug]/actions", () => ({
   acknowledgeCrewAwayAction: vi.fn(),
   helpRequestAction: vi.fn(),
 }));
-// The agency check's host (H-105) wraps the spine and repaints through the
+// The agency check's host (H-20261008-cert-check-extension) wraps the spine and repaints through the
 // router when a "Check all" ends; no app router is mounted here.
 vi.mock("next/navigation", async (importOriginal) => ({
   ...(await importOriginal<typeof import("next/navigation")>()),
@@ -190,7 +190,7 @@ describe("a station owns its departure's facts", () => {
     expect(screen.queryByText(/blocked/)).toBeNull();
   });
 
-  /** H-107, #2388: the seats on sale, which the booking transaction sells up to. */
+  /** H-20261009-certificate-caps-seats, #2388: the seats on sale, which the booking transaction sells up to. */
   it("counts open seats and the bar against the boat's certificate, not the stated seats", () => {
     const { container } = renderSpine({
       departures: [departure({ capacity: 14, sellableCapacity: 11, booked: 10 })],

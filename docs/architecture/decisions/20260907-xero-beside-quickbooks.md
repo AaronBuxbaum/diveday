@@ -58,7 +58,7 @@ writes each one as a bank transaction rather than an invoice.**
   the first in QuickBooks, and the same shape would lose them here.
 - **A rotated refresh token is persisted before it is used.** Xero rotates on every refresh, so a
   dropped rotation leaves the stored token spent and the connection dead at the next cron pass.
-- **Still a private app.** No Xero App Store listing, no marketplace submission — H-26 and
+- **Still a private app.** No Xero App Store listing, no marketplace submission — H-20260802-what-game-is-this and
   20260827's private-app rule apply unchanged. A shop authorizes the deployment's own registration.
 
 ## Alternatives considered

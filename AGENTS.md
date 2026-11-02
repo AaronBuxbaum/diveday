@@ -32,7 +32,7 @@ objective, output format and boundary, returning a path plus ten lines
 | --- | --- |
 | `pnpm dev` | dev server; wait for **`dev: serving … — warmed in Ns`**; one per checkout (**run** skill) |
 | `pnpm lint`, `pnpm typecheck`, `pnpm test <file>`, `pnpm e2e:affected`, `pnpm verify:push` | the **verify** skill's checklist |
-| `pnpm check:repo` | 63 static guards, each naming itself and the offending line ([repo-checks.md](docs/agents/repo-checks.md)) |
+| `pnpm check:repo` | 64 static guards, each naming itself and the offending line ([repo-checks.md](docs/agents/repo-checks.md)) |
 | `pnpm agent:doctor`, `node scripts/stack-map.mjs` | what this environment trips you on; your stack's layers |
 
 Other commands: [working-rules.md](docs/agents/working-rules.md#commands). Pass args to a `pnpm`
@@ -101,7 +101,7 @@ Other sessions share this checkout ([rules](docs/agents/working-rules.md#paralle
 - **Copy from a bundle; every sentence earns its place; deletes are soft and say "Delete"; a date
   names its zone, no hard-coded locale; time comes from the clock; a new page ships a
   `loading.tsx`.**
-- **There is no legacy. Delete it** (H-49).
+- **There is no legacy. Delete it** (H-20260815-no-legacy).
 - **Text a human will copy is written unwrapped.**
 - **A turn ends done, filed, handed over, or on a question**; never on an intention.
 - **Secrets never enter the repo.**

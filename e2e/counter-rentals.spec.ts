@@ -90,7 +90,7 @@ test.describe("staff", () => {
   test("rents units out at the counter, hands them over, and takes them back", async ({ page }) => {
     await startRentalForCustomer(page);
     // The waiver is said while Priya is still at the counter choosing gear,
-    // with the link to send (issue #2346); nothing below waits on it (H-108).
+    // with the link to send (issue #2346); nothing below waits on it (H-20261008-counter-rental-waiver-informs).
     await expect(page.getByText("Waiver: Not signed")).toBeVisible();
     await expect(page.getByRole("button", { name: "Send waiver" })).toBeVisible();
     await pickUnit(page, "Mask", "Mask #2");
@@ -111,7 +111,7 @@ test.describe("staff", () => {
     ).toBeVisible();
 
     // Priya has signed nothing here: the ticket says so and offers the link,
-    // and the rental went out anyway (issue #2261, H-108: informs, never
+    // and the rental went out anyway (issue #2261, H-20261008-counter-rental-waiver-informs: informs, never
     // gates). Hand over below is the proof it did not wait.
     await expect(page.getByText("Waiver: Not signed")).toBeVisible();
     await expect(page.getByRole("button", { name: "Send waiver" })).toBeVisible();
@@ -166,7 +166,7 @@ test.describe("staff", () => {
     await expect(page.getByRole("heading", { level: 2, name: /^Out/ })).toBeVisible();
     await expect(page.getByText(CUSTOMER).first()).toBeVisible();
 
-    // The Rentals list says the same about the holder's waiver (H-108).
+    // The Rentals list says the same about the holder's waiver (H-20261008-counter-rental-waiver-informs).
     await page.goto("/shop/blue-mantis/gear?view=rentals");
     const rentals = page.getByRole("region", { name: "Rentals" });
     // Scoped to the holder: other unsigned renters may share the list.

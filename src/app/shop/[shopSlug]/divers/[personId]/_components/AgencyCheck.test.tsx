@@ -18,7 +18,7 @@ const { reportAgencyCheckPageAction } = await import("@/app/actions/agency-check
 
 /**
  * A PADI card on the diver record at a shop whose PADI checks are off
- * (H-121): the link stays, and with the extension here a muted line says who
+ * (H-20261014-padi-divechek): the link stays, and with the extension here a muted line says who
  * can turn the checks on.
  */
 const t = staffTranslator("en-US");

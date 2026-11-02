@@ -379,7 +379,7 @@ export type PlacedGap = PlacedTrip & {
    * `gap` reads each rostered professional's recorded ratings, so a crew list
    * that names an instructor can still say "Course needs instructor"; the chip
    * says why under the code rather than showing one more shortfall. It informs:
-   * the departure still sells and seats on the roster's claim (H-59).
+   * the departure still sells and seats on the roster's claim (H-20260825-staff-credentials-renewal-clock).
    */
   ratingLapsed: boolean;
   ratingUnverified?: boolean;

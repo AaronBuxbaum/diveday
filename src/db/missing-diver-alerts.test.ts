@@ -42,7 +42,7 @@ afterEach(() => {
 });
 
 /**
- * H-142 (issue #2598): a filed incident report of kind "missing diver" tells
+ * H-20261016-missing-diver-report-alerts (issue #2598): a filed incident report of kind "missing diver" tells
  * the owners at once, once per report. Safety-critical, so the failure paths
  * lead: another kind, a draft, a rehearsal, a demo shop, a second filing, a
  * send that reached nobody, a send that threw, and a recipient who is no

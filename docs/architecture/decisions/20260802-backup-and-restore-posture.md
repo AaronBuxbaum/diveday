@@ -11,7 +11,7 @@ about backup or recovery had ever been written down: no stated point-in-time-rec
 copy of the data anywhere DiveDay controls, no restore ever rehearsed. That is the OPS-1 finding in
 [the 2026-08-02 review](../../product/archive/comprehensive-review-20260802.md), and it is worse
 than a generic gap because `waiver_records` is legal evidence whose working retention default is
-"indefinite" ([H-02](../../product/human-decisions/README.md)): the one dataset we are least able to
+"indefinite" ([H-20260730-evidence-retention-period-deletion](../../product/human-decisions/README.md)): the one dataset we are least able to
 re-create is the one with the longest obligation attached to it.
 
 Neon's own PITR is the fast, correct answer for almost every recovery — but it is a window inside a
@@ -63,9 +63,9 @@ recovery, so the export is a *complement* to Neon PITR, never a replacement for 
 - **Reusing the existing `VisualRegressionBucket`** — rejected outright: it is `publicReadAccess`,
   `RemovalPolicy.DESTROY`, and expires objects after 7 days. Every property is wrong.
 - **S3 Object Lock (WORM) on the backup bucket** — deferred: it must be enabled at bucket creation
-  and cannot be turned off, and a retention period is exactly the H-02 legal question that has not
+  and cannot be turned off, and a retention period is exactly the H-20260730-evidence-retention-period-deletion legal question that has not
   been answered yet. Versioning plus `RETAIN` plus a write-only uploader covers the accident case;
-  revisit when H-02 lands.
+  revisit when H-20260730-evidence-retention-period-deletion lands.
 - **A managed third-party backup SaaS** — rejected for a solo-operator, ~$5/month AWS footprint
   (see [20260802-aws-cost-guardrails](20260802-aws-cost-guardrails.md)); another vendor, another
   credential, another bill.
@@ -73,7 +73,7 @@ recovery, so the export is a *complement* to Neon PITR, never a replacement for 
 ## Consequences
 
 Makes a "Neon account is gone" or "someone dropped a table three hours ago" scenario answerable
-with a written procedure instead of improvisation, and gives the H-02 retention conversation
+with a written procedure instead of improvisation, and gives the H-20260730-evidence-retention-period-deletion retention conversation
 something concrete to attach to. Adds a small, near-free S3 bill (a shop's bundle is CSVs plus
 photos; IA/Glacier IR transitions keep the long tail cheap) and one more IAM principal to rotate.
 
@@ -83,6 +83,6 @@ quarterly restore test and recording it, and treating the backup bucket as undel
 `cdk destroy` will leave it behind on purpose, and cleaning it up is a deliberate manual act.
 
 Revisit if: `pg_dump` lands and makes the per-shop export redundant as a DR mechanism (it would
-still be the portability feature); H-02 produces a real retention period, which likely means Object
+still be the portability feature); H-20260730-evidence-retention-period-deletion produces a real retention period, which likely means Object
 Lock and a current-version expiry rule; or the shop count grows past the point where iterating shops
 serially in one scheduled run is practical.

@@ -404,7 +404,7 @@ describe("callTripBlowout — what the message says", () => {
     expect(record?.divers[0].paymentStatus).toBe("refunded");
   });
 
-  // H-139: whoever may call a departure off, only a refund holder moves money.
+  // H-20261013-call-off-queues-refunds: whoever may call a departure off, only a refund holder moves money.
   describe("when the caller may not refund (refunds: queue)", () => {
     async function paidByCard(ctx: Ctx, ref: string) {
       await connectStripe(ctx);

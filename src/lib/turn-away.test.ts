@@ -110,7 +110,7 @@ describe("turnAwayGate", () => {
     );
   });
 
-  /** H-135: blocked rows only. Readiness clears this diver, so nothing to refuse. */
+  /** H-20261015-who-may-turn-someone: blocked rows only. Readiness clears this diver, so nothing to refuse. */
   it("refuses a row readiness clears", () => {
     expect(gate({ readiness: { status: "ready", blockers: [] } })).toBe("not_blocked");
   });

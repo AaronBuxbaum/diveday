@@ -154,7 +154,7 @@ describe("a conversation", () => {
 });
 
 /**
- * H-126: an "Ask to move" from the booking page sits in the thread, says what
+ * H-20261014-ask-to-move: an "Ask to move" from the booking page sits in the thread, says what
  * it is, and is never what the composer answers: the shop calls, or writes
  * back on the last message the diver actually wrote.
  */

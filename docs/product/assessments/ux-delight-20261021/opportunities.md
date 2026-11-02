@@ -85,7 +85,7 @@ pricing checks remain authoritative.
 
 **Baseline observation.** MoveAsk.tsx:31–37 replaces the form with a brief acknowledgement once
 asked. It does not show the request note or when it was sent. The existing staff-controlled move
-request is deliberate H-126; this is a refinement of its receipt, not self-service rescheduling.
+request is deliberate H-20261014-ask-to-move; this is a refinement of its receipt, not self-service rescheduling.
 
 **Approved scope.** Show the current standing request summary and time beside an explicit
 waiting-for-shop state. Bind it to the current booking/departure, hide it after
@@ -141,7 +141,7 @@ Inclusion does not supersede an issue's approved design.
 
 | Priority band | Existing work | Why it matters to the experience | Boundary to preserve |
 | --- | --- | --- | --- |
-| Operational trust | [#2808](https://github.com/AaronBuxbaum/diveday/issues/2808), [#2553](https://github.com/AaronBuxbaum/diveday/issues/2553): unknown/declared minor age | Unknown age is not verified adulthood in party/team decisions | Follow H-08 before changing required booking information |
+| Operational trust | [#2808](https://github.com/AaronBuxbaum/diveday/issues/2808), [#2553](https://github.com/AaronBuxbaum/diveday/issues/2553): unknown/declared minor age | Unknown age is not verified adulthood in party/team decisions | Follow H-20260724-certification-levels-agency-rules before changing required booking information |
 | Continuity | [#2656](https://github.com/AaronBuxbaum/diveday/issues/2656): unified Interest | One coherent interest history removes fragmented follow-up work | Use the approved full cleanup, terminology and communication placement |
 | Continuity | [#2851](https://github.com/AaronBuxbaum/diveday/issues/2851): named helper after verbal handoff | “Someone acknowledged this” is weaker than “Keiko is helping, and here is the outcome” | Desk coordination and persisted assignment/outcome remain explicit |
 | Continuity | [#2555](https://github.com/AaronBuxbaum/diveday/issues/2555): reply to date requests and record the answer | Staff need to know whether the guest was actually answered | Preserve communication consent and existing request identity |

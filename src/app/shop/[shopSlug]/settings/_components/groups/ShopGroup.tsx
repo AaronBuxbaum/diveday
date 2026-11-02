@@ -179,7 +179,7 @@ export function ShopGroup({
 
         {/* One row for the three units a shop reads its own numbers in.
           Depth stays stored in metres and water temperature in Celsius
-          whatever these say (H-08); currency is the one that reinterprets
+          whatever these say (H-20260724-certification-levels-agency-rules); currency is the one that reinterprets
           rather than converts, which is what its own marker explains. The
           three are genuinely independent — a Caribbean operator serving
           American divers publishes feet and Celsius — so they are three
@@ -236,7 +236,7 @@ export function ShopGroup({
                 <option value="fahrenheit">{t("settings.main.units.fahrenheit")}</option>
               </select>
             </Field>
-            {/* Owner/manager only (H-14): this decides what a diver's card is
+            {/* Owner/manager only (H-20260724-staff-role-reach): this decides what a diver's card is
             charged in. Hiding it is convenience — `saveUnitsAction` re-checks
             the gate against live roles for any submission that carries the
             field anyway. */}

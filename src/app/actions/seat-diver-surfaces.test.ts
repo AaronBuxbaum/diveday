@@ -92,7 +92,7 @@ describe("every seat surface escapes what it puts in a path segment", () => {
  *
  * The held seat is the one that was missing. A seat taken off the counter's
  * "is this the same diver?" prompt is identity-unconfirmed, so the boarding
- * gate refuses it (H-13, issue #1556) — and every door answered that with the
+ * gate refuses it (H-20260724-one-person-per-email, issue #1556) — and every door answered that with the
  * same "Added" it answers an ordinary seat with. The staffer met the hold on
  * the next tap instead: a check-in refusal, with the diver at the counter and
  * the confirm control on the trip roster (`dive-domain-expert`, 2026-09-11).

@@ -341,7 +341,7 @@ describe("the emergency reference editor", () => {
     );
   });
 
-  /** H-118: the shore contact's alert address, and the box that records their consent. */
+  /** H-20261014-stale-roll-call-recipients: the shore contact's alert address, and the box that records their consent. */
   it("asks for the shore contact's alert address beside an unticked consent box", async () => {
     const form = await emergencyForm();
     expect(inputNamesIn(form)).toEqual(
@@ -437,7 +437,7 @@ describe("the emergency reference editor", () => {
 });
 
 /**
- * **The count beside the catalog** (issue #1792, H-78): how many divers' fits
+ * **The count beside the catalog** (issue #1792, H-20260916-rental-fit-describe-shop): how many divers' fits
  * still ask for a piece the shop dropped, said where the catalog is edited and
  * silent at zero. The form offers no way to clear them.
  */

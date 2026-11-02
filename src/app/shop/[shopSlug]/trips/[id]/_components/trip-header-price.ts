@@ -9,7 +9,7 @@ import { toShopCurrency } from "@/lib/money";
  * Nothing for a departure with no price set.
  *
  * **A course session quotes what the diver is charged** (fourth UX review,
- * item 26; H-117's staff side): the course fee plus its eLearning fee, the
+ * item 26; H-20261014-no-mid-thread-model's staff side): the course fee plus its eLearning fee, the
  * figure the public page and checkout read through the same
  * `perDiverBookingPriceCents`, never the departure's own price, which a
  * priced course overrides. Staff quote this figure to students on the phone.

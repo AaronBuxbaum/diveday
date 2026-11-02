@@ -272,7 +272,7 @@ describe("summarizeSafetyMonth: crew with nothing on file", () => {
 /**
  * **"No credential on file" is role-matched** (issue #2548). A captain with only
  * a first-aid card has nothing that says he may captain; an instructor with
- * only liability insurance has no rating. A report, never a gate (H-59).
+ * only liability insurance has no rating. A report, never a gate (H-20260825-staff-credentials-renewal-clock).
  */
 describe("summarizeSafetyMonth: a credential that answers the job", () => {
   const sailedAs = (

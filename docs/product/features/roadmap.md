@@ -77,7 +77,7 @@ export to shop-owned storage have shipped (see [../shipped.md](../shipped.md)); 
 
 The waiver signature is still in-house typed consent (`src/lib/signatures.ts` — local and in-person
 providers only). A vendor adapter behind the existing `SignatureProvider` seam is follow-up work,
-gated on the H-01/H-03 legal decisions
+gated on the H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit legal decisions
 ([waiver-signature-retention](../../architecture/decisions/20260718-waiver-signature-retention.md)).
 
 ### 3. Nitrox fill / analysis log (open question)
@@ -87,7 +87,7 @@ The gear register (shipped 2026-08-20,
 [20260815-minimal-gear-register](../../architecture/decisions/20260815-minimal-gear-register.md))
 tracks cylinders again — including their O2-clean clocks — but deliberately holds no fill record
 of any kind: whether one should return remains gated on the nitrox policy decision — V-05 and
-H-11 in [../human-decisions/](../human-decisions/README.md).
+H-20260730-nitrox-fill-station-procedure in [../human-decisions/](../human-decisions/README.md).
 
 ### 4. Multi-boat / multi-shop configuration
 
@@ -158,7 +158,7 @@ test pins the rule (never a pixel snapshot).
 
 **Every slice of this section shipped 2026-08-28** ([shipped.md](../shipped.md)) — 6a–6i, the
 last of them 6d (the home's evening reading and the fold) and 6f. Both of the section's owner calls
-were decided before the build: H-62 (the fold) and H-63 (desktop-only week) in
+were decided before the build: H-20260827-close-out-remain-own (the fold) and H-20260827-clearwater-week-board-roadmap (desktop-only week) in
 [../human-decisions/](../human-decisions/README.md), 2026-08-27. The ADR is what code obeys now; the
 canvas and [its implementation spec](../../design/canvases/20260827-clearwater-surface-language/SPEC.md)
 stand as the dated argument.
@@ -317,10 +317,10 @@ under parent #1248.
 
 **Ruled 2026-09-02 (Aaron Buxbaum): all later.** The hotel/agent rate cards (#1237) and the agency
 rail partnership (#1239) are deferred past pilot and their issues closed; the prepaid air-fill card
-(#1234) keeps the boundary now written into H-11. Re-triage the rest after the first pilot boat day.
+(#1234) keeps the boundary now written into H-20260730-nitrox-fill-station-procedure. Re-triage the rest after the first pilot boat day.
 
 - **Prepaid air-fill cards** as package-style entitlements (#1234) — the feature owners keep
-  paying the retail incumbents for; a commercial count, not the fill log H-11 declines.
+  paying the retail incumbents for; a commercial count, not the fill log H-20260730-nitrox-fill-station-procedure declines.
 - **Instructor self-service** — pros request the classes they can teach, keep blackout dates,
   the owner approves in one tap (#1235). DiveCrewPro's whole product.
 - **A QR self-registration door before a booking exists** (#1236) — ScubaHub's 0% → 90–95%
@@ -328,10 +328,10 @@ rail partnership (#1239) are deferred past pilot and their issues closed; the pr
 - **Hotel and agent rate cards** (#1237) — an owner question first: 11 of 32 products have it,
   all resort-market.
 - **PADI Adventures as a coexist channel guide** (#1238) — gated on a verified export path.
-- **The agency rail as a partnership question** (#1239) — H-10 dropped the API; nobody has
+- **The agency rail as a partnership question** (#1239) — H-20261007-request-supported-c-card dropped the API; nobody has
   scheduled the conversation.
 
-### 15. The maker is the proof (design complete; 15a and 15c wait on H-66)
+### 15. The maker is the proof (design complete; 15a and 15c wait on H-20260725-founder-background-go-back)
 
 The 2026-09-02 loop over every marketing page, argued on
 [the canvas](../../design/canvases/20260902-the-maker-is-the-proof/README.md) and decided in ADR
@@ -343,16 +343,16 @@ screenshots looked at, a `conversion-reviewer` pass — and the canvas's copy le
 list.
 
 - **15a** — `/about` gains a "Who builds it" band directly under the hero, third person, no
-  signature, with the three-row ledger; "spec" leaves `founderP3`. Waits on H-66 (a).
+  signature, with the three-row ledger; "spec" leaves `founderP3`. Waits on H-20260725-founder-background-go-back (a).
 - **15b** — `/` gains one echo band between the records diptych and the close, in the
   moment-row shape, with a link to `/about` as its only new control.
 - **15c** — the support sentence becomes "read by the people who build DiveDay" in its five
-  places, never with a response time. Waits on H-66 (b).
+  places, never with a response time. Waits on H-20260725-founder-background-go-back (b).
 - **15d** — the voice pass across every marketing page, held to the seven tells on the ledger.
 - **15e** — `marketing.md` records the "ex-Google" rules, the voice list, and the biography's
-  return under 15a's shape; H-12's row is amended by H-66's outcome, never rewritten.
+  return under 15a's shape; H-20260724-public-founding-shop-price's row is amended by H-20260725-founder-background-go-back's outcome, never rewritten.
 
-### 16. Reef, all the way down (design complete; H-67 Chosen 2026-09-04)
+### 16. Reef, all the way down (design complete; H-20260904-reef-go-all-way Chosen 2026-09-04)
 
 The 2026-09-04 loop over every surface a shop and a diver live in, argued on
 [the canvas](../../design/canvases/20260904-reef-all-the-way-down/README.md) and decided in ADR
@@ -360,7 +360,7 @@ The 2026-09-04 loop over every surface a shop and a diver live in, argued on
 the gap between Reef's drawings and the code is composition, not colour; the public booking page
 is unbounded; and the product does not know what time it is. Every open feature idea got one
 verdict, the delight budget widened along time with every ban standing, and the owner chose all
-three of H-67's calls. Each slice runs the `design-implementation` skill: the component names the
+three of H-20260904-reef-go-all-way's calls. Each slice runs the `design-implementation` skill: the component names the
 ADR, a test pins the rule, the canvas README's slice table moves, and the visual diffs are explained.
 
 - **16a** — the station on the shop home is a `SectionCard` with the site tile leading, one line
@@ -404,7 +404,7 @@ ADR, a test pins the rule, the canvas README's slice table moves, and the visual
 
 16h, 16i and 16j landed as a stack, each cut from the layer below and merged bottom-up.
 
-### 18. Nothing from nowhere (18a–18e shipped 2026-09-07; 18f waiting on H-69 b)
+### 18. Nothing from nowhere (18a–18e shipped 2026-09-07; 18f waiting on H-20260907-diveday-move-like-thing b)
 
 The 2026-09-07 loop over how the interface moves, argued on
 [the canvas](../../design/canvases/20260907-nothing-from-nowhere/README.md) and proposed in ADR
@@ -414,10 +414,10 @@ none, the More sheet cannot be dragged, timing is ten copied numbers in two lang
 pressed row does nothing under the finger. The ADR states one physics (a three-rung ladder as
 tokens, the three curves, the press on every tappable thing, an event table) and applies it in six
 moves, every one rendering the cut, the swap or the tap the app has today when it is not true.
-Three calls are the owner's (H-69): the spring's ration, the Wallet pass, and whether the roll and
+Three calls are the owner's (H-20260907-diveday-move-like-thing): the spring's ration, the Wallet pass, and whether the roll and
 the slide reach the roll call. Each slice runs the `design-implementation` skill: the component
 names the ADR, a test pins the rule, the canvas README's slice table moves, and the visual diffs
-are explained. 18b, 18c, 18d and 18e do not depend on H-69 and may start on the ADR alone; 18a's
+are explained. 18b, 18c, 18d and 18e do not depend on H-20260907-diveday-move-like-thing and may start on the ADR alone; 18a's
 spring half, 18c's roster half and 18f wait on it.
 
 - **18a** — the physics: `--motion-quick` / `--motion-base` / `--motion-unfold` as theme tokens,
@@ -427,7 +427,7 @@ spring half, 18c's roster half and 18f wait on it.
   the same three numbers. The press has two spellings rather than one: a discrete control scales
   (`.pressable`), a full-bleed row tints (`.pressable-row`), because three percent of a phone's
   width is six pixels of travel on each edge and a row that scales reads as the page flinching.
-  The spring on the release ships as H-69 a recommends, and is one token in two rules if declined.
+  The spring on the release ships as H-20260907-diveday-move-like-thing a recommends, and is one token in two rules if declined.
 - **18b** — a figure rolls: `RollingFigure` on the counter's instrument line and settled count and
   on the held send's seconds; the never-list held by a test over the roll call's and the manifest's
   trees. **Shipped 2026-09-07.** A figure whose *sentence* changed swaps rather than rolls, which
@@ -439,14 +439,14 @@ spring half, 18c's roster half and 18f wait on it.
   group, with Undo running the same path reversed. **Shipped 2026-09-07.** Rows are tracked by DOM
   identity rather than by a key attribute, so a list opts in by wrapping and nothing labels its
   children. The home's station, the wait list and the board's day are the same wrapper and follow;
-  the manifest roster waits on H-69 c. **Removed 2026-10-12**: its last list, the trip's Check-in
+  the manifest roster waits on H-20260907-diveday-move-like-thing c. **Removed 2026-10-12**: its last list, the trip's Check-in
   tab, folded into Divers on 2026-10-05, and the component went with it.
 - **18d** — the sheet follows the thumb: `useDragSheet`, on the dock's More sheet, with the grab
   handle. **Shipped 2026-09-07.** The release decision is a pure function (`dismissOnRelease`)
   because a hand's *speed* is the one input a DOM test cannot express, and a velocity guard stops a
   release that lands in the same millisecond as the last move from reading as a flick. The embed
   lightbox is the same hook and follows. **Removed 2026-10-13**: the hook was never wired to a
-  sheet, so it went (H-49).
+  sheet, so it went (H-20260815-no-legacy).
 - **18e** — the title folds into the bar on a phone. **Shipped 2026-09-07** (issue #1422). The bar
   and the title live in two trees, so the page delivers its title into an `aria-hidden` slot
   `ShopNav` renders (`FoldedPageTitle`, a portal) — the smaller of the two answers, and the one that
@@ -460,7 +460,7 @@ spring half, 18c's roster half and 18f wait on it.
   34px heading ghosts through the chrome under the folded label and the word is on screen twice.
 - **18f** — the departure on the lock screen: Add to Wallet on the thread, the pass in the shop's
   brand, updates from `trips.revision` and the crew-set stage, the PassKit web service under
-  `/api/wallet/v1/**`, the Google object, a ten-minute push cron. **H-69 b decided yes 2026-09-07**:
+  `/api/wallet/v1/**`, the Google object, a ten-minute push cron. **H-20260907-diveday-move-like-thing b decided yes 2026-09-07**:
   built now, shipped dark — with no credential configured the thread renders as today and every
   pass route 404s — so the slice merges ahead of the Apple Developer and Google Wallet accounts,
   which are manual steps in §17's registry rather than blockers. One new dependency,
@@ -468,7 +468,7 @@ spring half, 18c's roster half and 18f wait on it.
   [SPEC.md](../../design/canvases/20260907-nothing-from-nowhere/SPEC.md); the implementing prompt is
   in the canvas README.
 
-### 19. In your hands (design complete; H-70 decided)
+### 19. In your hands (design complete; H-20260907-where-device-already-knows decided)
 
 The second look at the 2026-09-07 brief, argued on
 [the canvas](../../design/canvases/20260907-in-your-hands/README.md) and proposed in ADR
@@ -480,7 +480,7 @@ a certification card is photographed and then typed, the type ignores the phone'
 and the app can be installed and never says so. The ADR states one rule (the device already knows
 it; what it supplied says where it came from; the last tap is a person's; the safety floor is
 untouched) and applies it in five moves, every one rendering the page as it ships when it is not
-true. The owner ruled on 2026-09-07 (H-70): passkeys and the step-up yes, the release signed on the
+true. The owner ruled on 2026-09-07 (H-20260907-where-device-already-knows): passkeys and the step-up yes, the release signed on the
 shop's device yes, the card reader declined — and the reader's premise was wrong, since a card has
 carried no photograph since ADR 20260811-retire-the-digital-card, so 19c is dropped in full and
 nothing on the certification form changes. Each slice runs the `design-implementation` skill: the
@@ -490,13 +490,13 @@ diffs are explained. All four remaining slices may start.
 - **19a** — the door knows your face: Better Auth's passkey plugin and its table (schema-change
   skill), the passkey frame on `/sign-in` with the password as a link, the Passkeys panel in
   Settings → Security (add this device, named per device, remove), the origin-binding test, the
-  security review. The step-up half waits on H-70 a.
+  security review. The step-up half waits on H-20260907-where-device-already-knows a.
 - **19b** — hand it over: *Sign here* as the primary on the counter's and the roster's blocked row
   where the fix is the release, the session lock (`handed_over_at`) read by `requireShopSurface` and
   pinned by a test that every `/shop` read refuses while it is set, the hand-over and who-sees-what
   lines on the waiver page, the counter provenance on the signature row, the settled row's one line
-  on the counter. `dive-domain-expert` and security review. Waits on H-70 b.
-- **19c** — *dropped 2026-09-07* (H-70 c declined). The card reader is not built, no photo capture
+  on the counter. `dive-domain-expert` and security review. Waits on H-20260907-where-device-already-knows b.
+- **19c** — *dropped 2026-09-07* (H-20260907-where-device-already-knows c declined). The card reader is not built, no photo capture
   is added, and the certification form ships as it is: a card carries no photograph (ADR
   20260811-retire-the-digital-card).
 - **19d** — the type follows the phone: the `-apple-system-body` probe in the pre-hydration script
@@ -506,7 +506,7 @@ diffs are explained. All four remaining slices may start.
   staffer whose role reaches the manifest, the platform's install prompt or its own menu item with the
   share glyph, a device-kept dismissal, a test that it renders nothing when installed or on a desktop.
 
-### 20. One hand (design complete; H-71 pending)
+### 20. One hand (design complete; H-20260908-four-directions-makes-diveday pending)
 
 The 2026-09-08 loop over why the app feels like four products, argued on
 [the canvas](../../design/canvases/20260908-one-hand/README.md) and proposed in ADR
@@ -518,13 +518,13 @@ after five design passes in twelve days that added vocabularies without deleting
 has the same shape of problem across 7,390 strings. The ADR states a floor (six jobs, one spelling
 each, held by guards; a voice sheet) that every direction shares, and draws four directions on the same
 two surfaces: A finishes Reef by subtraction, B is a paper logbook, C a dive computer, D the voice as
-the system. The pick is the owner's (H-71). Each slice runs the `design-implementation` skill: the
+the system. The pick is the owner's (H-20260908-four-directions-makes-diveday). Each slice runs the `design-implementation` skill: the
 component names the ADR, a test pins the rule, the canvas README's slice table moves, and the visual
 diffs are explained. 20a–20e may start on the ADR alone.
 
 - **20a** — one width, one header: the `<main>` width guard over `src/app/shop/**`; `ShopPageHeader`
   takes the destination group from `src/lib/staff-destinations.ts` instead of an eyebrow string; the
-  title as the tab's word (the title half waits on H-71 b).
+  title as the tab's word (the title half waits on H-20260908-four-directions-makes-diveday b).
 - **20b** — one row: `LedgerRow` on the five densest hand-rolled lists (`WaitlistSection`,
   `CrewSection`, `PersonBuddyList`, `CrewRollCall`, `TripInvitationSection`), `person/rows.tsx`
   rendering it, the group's count as right-aligned meta, the add row as the last row of every list,
@@ -542,26 +542,26 @@ diffs are explained. 20a–20e may start on the ADR alone.
   not, one sentence per event, descriptions under 120 characters or deleted, no arrows, exclamation
   marks or emoji.
 - **20f** — the earned moment inside `EntryDone`, once, for the twelve shared terminal outcomes.
-  Waits on H-71 c.
+  Waits on H-20260908-four-directions-makes-diveday c.
 - **20g** — the levers on A: F (the tide line), H (their sea) and K (together) as composed on the
   canvas's second page and drawn on every surface on its third; E is answered by 20l and I stays on
-  the canvas as the phone-first alternative. B, C and D were declined on 2026-09-09. Waits on H-71 a.
+  the canvas as the phone-first alternative. B, C and D were declined on 2026-09-09. Waits on H-20260908-four-directions-makes-diveday a.
 
 Round 3 (2026-09-09, after the owner's read of round 2 — "keep pushing these concepts farther,
 keep cleaning up, design every surface") adds the kit that composes A with F, H and K, redraws all
 eighty-one page routes on it across fifteen boards that each name their deletions, and eight more
-levers, L–S. The ADR's decision 5 records it; the owner's calls are H-71 (a) and (e)–(h).
+levers, L–S. The ADR's decision 5 records it; the owner's calls are H-20260908-four-directions-makes-diveday (a) and (e)–(h).
 
 - **20h** — L, the trip's own line: drawn once and shown on the staff trip page, the diver's trip
   page and thread, and the reminder email; moves on the crew's stage taps, says
-  "as of" when stale. Waits on 20g's F and H-71 h.
+  "as of" when stale. Waits on 20g's F and H-20260908-four-directions-makes-diveday h.
 - **20i** — M, the pass: booking confirmed becomes a pass in the shop's colour with the site's
   photo, the boat, the slip, the time, what to bring and a code carrying the booking id only; the
   counter scans it with the device's camera; the diver's screen says "You're aboard" as the desk's
-  row settles. Composes 18f. Waits on H-71 e and f.
+  row settles. Composes 18f. Waits on H-20260908-four-directions-makes-diveday e and f.
 - **20j** — O, the log: the close-out writes the day's entry from a sentence DiveDay proposes;
   Reports keeps its title and becomes the log with the season as a strip of days and the month's
-  figures from the entries. Waits on H-71 g.
+  figures from the entries. Waits on H-20260908-four-directions-makes-diveday g.
 - **20k** — N, the postcard: the recap printed from the crew's log, front and back, the review as
   one line, "next time" with a reason; the recap email carries the front. Waits on 20h.
 - **20l** — P the six room drawings in the empty states; R the shop's card as
@@ -574,7 +574,7 @@ Round 4 (2026-09-10, after the owner's read of round 3 — "evaluate the entire 
 different angles; show me a few interesting possibilities; elegant; wow in marketing and in-app")
 reads the app by twelve angles instead of by surface and draws seven possibilities, T–Z, on the
 kit, each with a marketing frame that is a screenshot of its in-app frame. The ADR's decision 6
-records it; the owner's calls are H-71 (i)–(o). **Shipped 2026-09-10** on the owner's read of
+records it; the owner's calls are H-20260908-four-directions-makes-diveday (i)–(o). **Shipped 2026-09-10** on the owner's read of
 round 4 (all seven at once) as one stack of seven pull requests, merged bottom first the same day —
 20n #1626, 20o #1627, 20p #1629, 20t #1630, 20s #1631, 20r #1633, 20q #1634 — each built on the
 recommendation recorded beside its call. What each landed in is the canvas README's slice table.
@@ -583,24 +583,24 @@ recommendation recorded beside its call. What each landed in is the canvas READM
 - **20n** — U, follow the boat: the pass's "Share with whoever is waiting for you", a public route
   per boat per day carrying the trip's line with the crew's stage word and its time only, the
   storefront's Right now with a line per boat, a Settings switch off by default. Waits on 20h and
-  H-71 j.
+  H-20260908-four-directions-makes-diveday j.
 - **20o** — Y, try it with your boats: the homepage's hero takes the shop, a boat and a departure
   and redraws as the visitor's first Today in a colour derived from their name; the onboard door
   already filled; the storefront in miniature and the four pictures beneath. Waits on 20l's S.
 - **20p** — T, the shop's year: the year page over the log, the year card in the shop's face (no
-  money), the homepage's proof band for shops that said yes. Waits on 20j and H-71 k.
+  money), the homepage's proof band for shops that said yes. Waits on 20j and H-20260908-four-directions-makes-diveday k.
 - **20q** — W, give a dive: "Book for someone else" on the trip page, the gift pass with the giver's
   line and a claim link, the giver's read-only thread, the blow-out refund to the giver, the counted
-  buddy seat on the postcard's back. Waits on 20i, 20k and H-71 l.
+  buddy seat on the postcard's back. Waits on 20i, 20k and H-20260908-four-directions-makes-diveday l.
 - **20r** — V, the living reef: Seen on the crew's dive log from the shop's species list, the site
   page's "Seen here this month" dated, the storefront's site-card sentence, sunrise, sunset and the
-  moon as ticks on the tide line. Waits on 20k and H-71 n.
+  moon as ticks on the tide line. Waits on 20k and H-20260908-four-directions-makes-diveday n.
 - **20s** — X, the shop on paper: Settings › Print with the dock sign, the boat card by day and by
   night, the window sticker, the paper pass, the site briefing card and the year poster; the print
-  sheet as a kit specimen. Waits on 20i and H-71 o.
+  sheet as a kit specimen. Waits on 20i and H-20260908-four-directions-makes-diveday o.
 - **20t** — Z, the diver's shelf: a diver-at-shop token scope, the shelf page, the storefront's
   greeting for a known phone, the sizes write, "Forget this phone", the row on the diver record.
-  Waits on 20i, 20k and H-71 m.
+  Waits on 20i, 20k and H-20260908-four-directions-makes-diveday m.
 
 ### 22. Nothing to explain (superseded 2026-09-19 by 23; 22a–22c and 22i stand, 22d–22h dropped)
 
@@ -613,9 +613,9 @@ console for engineers, and the app has nine voices on one screen. The ADR decide
 owner's own reads (one ramp, two inks and one tint, nothing drawn, one shell, one row, two radii, dark
 by the device and glare by a word, creation as a sheet) and draws **three directions** as finished
 products on the same six screens — A · Inset (the group carries the page), B · Glass (the material),
-C · Figures (the number, on A's lists) — recommending C. The pick is the owner's (H-87), and it is the
-only call. **Superseded 2026-09-19 by 23 (H-88)** on the owner's read of round 2: A, B and C were
-three skins on one skeleton, and H-87 is withdrawn. 22a, 22b, 22c and 22i stand and land first under
+C · Figures (the number, on A's lists) — recommending C. The pick is the owner's (H-20260918-three-directions-inset-b), and it is the
+only call. **Superseded 2026-09-19 by 23 (H-20260919-physical-thing-diveday-day)** on the owner's read of round 2: A, B and C were
+three skins on one skeleton, and H-20260918-three-directions-inset-b is withdrawn. 22a, 22b, 22c and 22i stand and land first under
 any pick in 23; 22d–22h are dropped — 23a–23h replace them.
 
 - **22a** — one ramp on the device's face (round 2): `-apple-system` with Inter then Geist as the
@@ -627,11 +627,11 @@ any pick in 23; 22d–22h are dropped — 23a–23h replace them.
   the shop's colour stays on the storefront; `Badge` deleted; the token set rewritten.
 - **22c** — nothing drawn on `/shop/**`: the water band, the site tile, the dial, the hand and the
   coral leave; `WaterBandStyle` and the illustration set render nothing under `/shop`.
-- **22d** — one shell (H-87): Today · Boats · Divers · Shop and Search; a sidebar at `lg`, a five-slot
+- **22d** — one shell (H-20260918-three-directions-inset-b): Today · Boats · Divers · Shop and Search; a sidebar at `lg`, a five-slot
   tab bar below; the twenty-one destinations regrouped; the departure's four tabs one page.
-- **22e** — one row and one group (H-87): `SectionCard` and `LedgerRow` become the picked direction's
+- **22e** — one row and one group (H-20260918-three-directions-inset-b): `SectionCard` and `LedgerRow` become the picked direction's
   Group and Row; two radii; no bed; creation as a sheet.
-- **22f** — the picked direction's own parts (H-87): A nothing more; B the glass layer, its solid twin
+- **22f** — the picked direction's own parts (H-20260918-three-directions-inset-b): A nothing more; B the glass layer, its solid twin
   under `.boat-mode` and the capsule; C `Figure`, `Ring`, the home's tiles and the one-figure guard.
 - **22g** — every surface on the picked direction, one family per session: the home, a boat and its
   roll call, the counter, the people, the shop, the storefront.
@@ -640,7 +640,7 @@ any pick in 23; 22d–22h are dropped — 23a–23h replace them.
 - **22i** — the icons (round 2): `DiveDayIcon` re-cut on the 26px, 1.6-stroke grid, filled when
   current in a tab bar.
 
-### 23. One idea — Tide, the app is the day (H-88 chosen 2026-09-19; in build)
+### 23. One idea — Tide, the app is the day (H-20260919-physical-thing-diveday-day chosen 2026-09-19; in build)
 
 The 2026-09-19 loop, round 3 of the 2026-09-18 brief, argued on
 [the canvas](../../design/canvases/20260919-one-idea/README.md) and proposed in ADR
@@ -651,7 +651,7 @@ its clothes; an Apple product is one idea about the thing itself, and the test i
 physical thing the app is. Three whole products are drawn on the same fiction and the same six
 screens: **I · Tide** (the app is the day), **II · Deck** (the app is the boat), **III · Chart** (the
 app is the sea); recommended I, with Deck's hull as the departure and Chart's chart as the site inside
-it. **H-88 chose I · Tide with both compositions on 2026-09-19**, so every slice below is Tide's and
+it. **H-20260919-physical-thing-diveday-day chose I · Tide with both compositions on 2026-09-19**, so every slice below is Tide's and
 the parenthesised alternatives are the record of what was not picked. Round 2's surface rows (22a,
 22b, 22i) and 22c land first; everything below builds on them. Each slice runs the
 `design-implementation` skill: the component names the ADR, a test pins the rule, the canvas README's
@@ -707,7 +707,7 @@ not decisions.
 
 | Proposal | What it merges or cuts | Recommendation | Cost |
 | --- | --- | --- | --- |
-| **The home becomes the shop's day** | Today absorbs counter Check-in (provably the by-departure view filtered oppositely — both read `operational-window.ts`) and Close-out (already "Today's evening mirror" by its own docstring); the home leads with the phase the clock is in, with a visible way to any phase | **First half decided 2026-08-27 (H-62)** — Close-out folds into the home's evening, designed as Clearwater slice 6d. The Check-in fold remains the open second half, still gated on the arrived-vs-aboard data question below | Route 308s, `?view=` contract, large e2e/visual churn |
+| **The home becomes the shop's day** | Today absorbs counter Check-in (provably the by-departure view filtered oppositely — both read `operational-window.ts`) and Close-out (already "Today's evening mirror" by its own docstring); the home leads with the phase the clock is in, with a visible way to any phase | **First half decided 2026-08-27 (H-20260827-close-out-remain-own)** — Close-out folds into the home's evening, designed as Clearwater slice 6d. The Check-in fold remains the open second half, still gated on the arrived-vs-aboard data question below | Route 308s, `?view=` contract, large e2e/visual churn |
 | **Check-in = boarding's first rung** | `bookings.status = checked_in` and the manifest's "boarded" are two staff-recorded arrival facts that can disagree; make arrival a two-rung state (arrived → aboard) on the departure's first checkpoint | Do it *with* the Check-in fold above, not before — it is the data half of the same merge | Schema migration, counter surface, Today rows, reports |
 | **One "your trip" link per diver** | Promote `/ready/[token]` to the single capability page (waiver step, prep, recap as states over time); retire the trip page's `?booking=` confirmation branch and the second booking-time email | **Part shipped 2026-08-20** — the owner called the shape and the confirmation branch is gone: booking and Stripe both land on `/ready`, the three duplicate server actions are deleted, and the `confirm` capability is now read-only and embed-only (ADR [20260820-one-page-after-booking](../../architecture/decisions/20260820-one-page-after-booking.md)). **Settled 2026-10-17 (issue #2660):** the second booking-time email is gone, and the reminders and the recap are one-sentence state messages that link to the thread (the recap folded into it by slice 7d) | Recap-token reconciliation, email templates |
 | **One "Bill" per booking** | Order / invoice / checkout / payment stay as Stripe mechanisms but surface as one money story per booking — quoted, deposit, paid, owed, refunded | Do after the diver-link work; touches every money surface | Orders index re-homing, back-office panels, reports |
@@ -844,12 +844,12 @@ alongside them moved several of these prerequisites.
   security (a manifest leaves the tenant).
 - **N-13 Captain's hours.** Sum of a captain's assigned departure durations per day and rolling
   week against a shop-set ceiling (many small passenger vessels run a 12-hour rule). One line on
-  the staffing week when it is exceeded; informs only, like credential clocks (H-59). *Build:*
+  the staffing week when it is exceeded; informs only, like credential clocks (H-20260825-staff-credentials-renewal-clock). *Build:*
   `src/lib/crew-hours.ts` over `tripAssignments`, one line in `staffing-week.ts`. *Effort:* S.
   *Needs:* domain.
 - **N-14 Manifest retention as a declared window.** Passenger records carry a legal retention
   expectation; `RETENTION_DAYS` should name the manifest's window explicitly and the export should
-  say it. *Effort:* S. *Needs:* owner (H-02).
+  say it. *Effort:* S. *Needs:* owner (H-20260730-evidence-retention-period-deletion).
 
 ### Money beyond the ticket
 
@@ -870,7 +870,7 @@ alongside them moved several of these prerequisites.
   *Effort:* M. *Needs:* domain, security.
 - **N-17 Damage deposit hold on rentals.** An optional manual-capture Stripe hold on the rental
   line, released at gear return or captured with a reason. *Effort:* M. *Needs:* owner policy
-  (H-07).
+  (H-20260724-payment-deposit-cancellation-refund).
 - **N-18 Cash and tip reconciliation at close-out.** The evening block counts cash taken at the
   counter and card tips for the day and records "matches" or "short by 20". Not built; the
   `day_closeouts` record it would have extended was removed on 2026-10-05 with the "Close the day"
@@ -878,7 +878,7 @@ alongside them moved several of these prerequisites.
 - **N-19 Pay your own share.** Each claimant on a party booking pays their own seat at claim time
   through Checkout; the organizer pays only their own. No credit ledger needed. *Build:*
   `seat-claims.ts` + `checkouts.ts`, a per-seat `bookingPayments` row. *Effort:* M. *Needs:* owner
-  (H-07, H-61).
+  (H-20260724-payment-deposit-cancellation-refund, H-20261025-bigger-party-right-answer).
 
 ### The lobby, sound, and hands-free capture
 
@@ -900,15 +900,15 @@ alongside them moved several of these prerequisites.
 - **N-30 Skills ledger.** Per enrollment, the course template's standard skill list (mask clearing,
   CESA, buoyancy…) signed off one tap at a time by the instructor; the student's thread shows
   progress; nothing issues a card. *Build:* `course_skill_templates` + `enrollment_skills`, a
-  roster inset, one thread step. *Effort:* M. *Needs:* domain, H-08.
+  roster inset, one thread step. *Effort:* M. *Needs:* domain, H-20260724-certification-levels-agency-rules.
 - **N-31 Referral handoff.** A student who finishes knowledge and confined water here and does open
   water elsewhere gets a referral document generated from N-30's ledger, in the agency's field
   layout; an incoming referral is a course inquiry with the paperwork attached. *Effort:* M.
-  *Needs:* domain, H-08.
+  *Needs:* domain, H-20260724-certification-levels-agency-rules.
 - **N-32 The organizer's ledger.** The organizer's link shows every seat's state (claimed, signed,
   paid, ready) with one nudge per person and a group deadline; a group hold ("8 seats until
   Friday") releases itself when the deadline passes. *Build:* `booking_holds` with expiry, a cron
-  sweep beside minimum-seats, an organizer view on `/claim`. *Effort:* M. *Needs:* owner (H-61),
+  sweep beside minimum-seats, an organizer view on `/claim`. *Effort:* M. *Needs:* owner (H-20261025-bigger-party-right-answer),
   security.
 - **N-33 The club's Thursday.** A recurring series with a standing organizer and a hold each
   occurrence, for the dive club that takes the same boat monthly. *Effort:* S after N-32.
@@ -916,7 +916,7 @@ alongside them moved several of these prerequisites.
   waiver on file, fit sizes) presented by consent at another DiveDay shop through a link; the
   receiving shop sees "verified by Blue Mantis, 2026-08-12" and decides for itself. No profile
   page, no feed, so the non-goal on social networks holds. *Effort:* L. *Needs:* ADR, security,
-  owner (H-26).
+  owner (H-20260802-what-game-is-this).
 
 ### Languages
 
@@ -943,7 +943,7 @@ alongside them moved several of these prerequisites.
 
 - **N-41 Crew skills matrix on the staffing week.** A shop states which credential kinds a
   departure needs (oxygen provider, captain, instructor for a course session); the week says "No
-  oxygen provider on the 1 pm boat" from `staffCredentials`. Informs, per H-59. *Build:*
+  oxygen provider on the 1 pm boat" from `staffCredentials`. Informs, per H-20260825-staff-credentials-renewal-clock. *Build:*
   `shops.departure_crew_requirements`, `src/lib/crew-coverage.ts`, one gap line. *Effort:* S.
 - **N-42 First shift.** A new staff account's first sessions get one sentence per surface from the
   same registry the palette's answer card reads, dismissed forever after the third visit; first
@@ -1058,14 +1058,14 @@ ADR rather than letting this become an unbounded second backlog.
    `drizzle/` from empty *and* from the previous release's schema, and races two genuinely concurrent
    connections for the last seat; the `FOR UPDATE` oversell guard is no longer dead code under test
    (remove the lock and a one-seat trip sells two). Gated on `src/db/**`/`drizzle/**` plus a nightly
-   run rather than per-PR — [H-38](../human-decisions/README.md#decision-register) asks the owner to bless
+   run rather than per-PR — [H-20260806-real-postgres-ci-job](../human-decisions/README.md#decision-register) asks the owner to bless
    that cadence rather than change it. See
    [20260806-real-postgres-ci-job](../../architecture/decisions/20260806-real-postgres-ci-job.md) and
    [shipped.md](../shipped.md). The [2026-08-02 review](../archive/comprehensive-review-20260802.md)
    this closed the last of its *original* engineering queue for is fully dissolved and archived as of
    2026-08-07 — its two small leftover buildable items (dropping two Stripe invoice URLs from the
    export contract, and DOM-L1's agency companion field above) and its full human-decision register
-   moved into [human-decisions/](../human-decisions/README.md) as H-31 through H-44.
+   moved into [human-decisions/](../human-decisions/README.md) as H-20261025-product-has-never-had through H-20260806-orders-csv-carries-hosted.
    What it still does not rehearse, deliberately: the migrations meet an *empty* database, so lock
    duration and backfill runtime on a table with production's row count are still found in
    production.
@@ -1090,7 +1090,7 @@ ADR rather than letting this become an unbounded second backlog.
    `useTranslations()` consumers under `src/components` through their importing pages). Still
    open: a scheduled check watching Next 16.3 GA, drizzle 1.0 stable and next-auth v5
    stable, which the ADRs commit to migrating to promptly with nothing tracking them (ARCH-4,
-   [H-39](../human-decisions/README.md#decision-register)).
+   [H-20261025-ga-migration-budget-pre](../human-decisions/README.md#decision-register)).
 
 (Feature-folder boundaries were P2 and are now settled — see
 [20260730-feature-module-contracts](../../architecture/decisions/20260730-feature-module-contracts.md)
@@ -1125,16 +1125,16 @@ These block real operations regardless of code completeness; owners and evidence
 - **V-02 — field-validate the offline manifest** on a phone, outdoors, wet hands, airplane-mode.
   Until it passes, the safety differentiator is unproven and unclaimable.
 - **Pricing posture** — the public price is **approved for now** (`src/lib/marketing.ts`,
-  early-access and still moving; H-12, 2026-07-24). H-12 also closed the founding-cohort terms —
+  early-access and still moving; H-20260724-public-founding-shop-price, 2026-07-24). H-20260724-public-founding-shop-price also closed the founding-cohort terms —
   a **two-year price lock** and **founder-direct support** — both now published on the
-  pricing and home pages. H-26 (2026-08-02) confirms the posture behind these terms is
+  pricing and home pages. H-20260802-what-game-is-this (2026-08-02) confirms the posture behind these terms is
   deliberately lifestyle-scale, not venture-scale (see [vision.md](../vision.md#what-kind-of-business-this-is)),
   and dropped the explicit same-day response-time SLA pending a real support-hour-capacity answer.
   Billing is built and monthly (N-59, [shipped](../shipped.md#a-shop-can-pay-diveday-delivered-2026-10-07));
   taxes/fees and the contract flow remain open. See
   [competitive-analysis.md](../assessments/competitive-analysis.md#pricing-posture).
 - **Legal / policy sign-off** for waivers, medical, retention, course rules, nitrox parameters, and
-  notification consent — H-01…H-11.
+  notification consent — H-20260730-jurisdiction-waiver-text-medical, H-20260730-evidence-retention-period-deletion, H-20260724-current-typed-name-explicit, H-20260724-vercel-selected-web-hosting, H-20260724-product-now-uses-explicit, H-20260724-initial-gear-policy-sizing, H-20260724-payment-deposit-cancellation-refund, H-20260724-certification-levels-agency-rules, H-20260724-channel-sends-booking-waiver, H-20261007-request-supported-c-card, H-20260730-nitrox-fill-station-procedure.
 
 ## Standing rule
 

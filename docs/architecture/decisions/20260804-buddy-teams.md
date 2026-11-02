@@ -85,7 +85,7 @@ and to compute no verdict about it.
 
 ## Amendment 2026-11-02 — one name at every layer
 
-Issue #2735: the table is renamed `buddy_team_members` in one migration (pre-pilot, H-49), the
+Issue #2735: the table is renamed `buddy_team_members` in one migration (pre-pilot, H-20260815-no-legacy), the
 writers move to `src/db/buddy-teams.ts`, the demo scenario to `src/db/seed-buddy-teams.ts`, and the
 export file to `buddy_teams.csv`. The superseded
 [20260804-buddy-pairs](20260804-buddy-pairs.md) is the only place "buddy pair" is left as a name.

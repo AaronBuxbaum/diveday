@@ -1,6 +1,6 @@
 # In your hands — five moves where the device already knows the thing
 
-- **Status:** Live (its ADR is Accepted; H-70 decided 2026-09-07: a and b yes, c declined; slices 19a, 19b, 19d and 19e open, 19c dropped)
+- **Status:** Live (its ADR is Accepted; H-20260907-where-device-already-knows decided 2026-09-07: a and b yes, c declined; slices 19a, 19b, 19d and 19e open, 19c dropped)
 - **Date:** 2026-09-07
 - **ADR:** [20260907-in-your-hands](../../../architecture/decisions/20260907-in-your-hands.md)
 - **Published:** https://claude.ai/code/artifact/63c1aaf1-8263-4ad0-8243-66c07654560a
@@ -8,7 +8,7 @@
 The twelfth design canvas, and the second look at the 2026-09-07 brief: another look at the design;
 clever decisions that are delightful and elegant; think Apple, in animations and features.
 [Nothing from nowhere](../20260907-nothing-from-nowhere/README.md) answered the half about
-animation the same day and holds H-69. This canvas answers the other half, features, and finds the
+animation the same day and holds H-20260907-diveday-move-like-thing. This canvas answers the other half, features, and finds the
 same shape of gap. Read against what Apple's features are — the device using a fact it already
 holds, then getting out of the way — the running app asks for a password on a phone that knows its
 owner's face, sends a link or hands paper to a diver standing at the counter, photographs a card and
@@ -26,8 +26,8 @@ Two pages. The first argues; the second shows.
 | --- | --- |
 | `Main.dc.html` | The cover: the five findings, the five moves, the four-part rule with what renders when it fails, the owner's three calls, what already works this way, what is left alone |
 | `Door.dc.html` | Move 1 at 390 in three frames: sign-in on Keiko's iPhone, which holds a passkey (one button, the phone's own sheet); sign-in on a device without one (the form as it ships); Settings → Security with the passkey panel; then the table of what changes at each door and what holds it in code |
-| `Counter.dc.html` | Move 2 at 390 in four frames: Priya Sharma's blocked row with *Sign here* as its third door; the device turned to face her on the waiver's sign step; the locked desk asking for a staffer back; the counter reopened with her row ready; then what the signature records, where the door is offered and never is, and H-70 b |
-| `Card.dc.html` | Move 3 at 390 in three frames: Grace Mensah's self-declared row with the verification form open and the camera at its top; the card in the platform's viewfinder; the four fields filled and marked *Read*; then what the reading may fill and never touches, H-70 c, and why text rather than a scanner |
+| `Counter.dc.html` | Move 2 at 390 in four frames: Priya Sharma's blocked row with *Sign here* as its third door; the device turned to face her on the waiver's sign step; the locked desk asking for a staffer back; the counter reopened with her row ready; then what the signature records, where the door is offered and never is, and H-20260907-where-device-already-knows b |
+| `Card.dc.html` | Move 3 at 390 in three frames: Grace Mensah's self-declared row with the verification form open and the camera at its top; the card in the platform's viewfinder; the four fields filled and marked *Read*; then what the reading may fill and never touches, H-20260907-where-device-already-knows c, and why text rather than a scanner |
 | `Device.dc.html` | Moves 4 and 5 side by side: the roll-call row at three text settings with the rule under it; the home-screen line under the day as Android and iPhone each draw it, and when it renders and never does |
 
 `canvas.json` lays the boards out on two pages and pins five notes.
@@ -68,7 +68,7 @@ is the sibling canvas's physics and is not redrawn here.
 
 ## Decided, and one board corrected
 
-The owner ruled on 2026-09-07 (H-70): passkeys and the step-up, **yes**; the release signed on the
+The owner ruled on 2026-09-07 (H-20260907-where-device-already-knows): passkeys and the step-up, **yes**; the release signed on the
 shop's device, **yes**; the card reader, **declined** — "we should have no photo upload". The
 decline also corrected the board. The Card board and the cover's third finding say *Capture for
 review* already lands a photograph of the card on the record. It does not: that label is the
@@ -84,7 +84,7 @@ argument, wrong premise included; a canvas is never freshened after its ADR is d
   at 820; the four frames needed room to sit side by side, and the last canvas drew the same surface
   at 390 for the same reason.
 - **The Counter board invents the waiver page's title and consent sentence** ("Your waiver for
-  Thursday's Two-Tank Reef"; "By typing your name you agree…"). The release's words are H-01's and the
+  Thursday's Two-Tank Reef"; "By typing your name you agree…"). The release's words are H-20260730-jurisdiction-waiver-text-medical's and the
   bundle's; the board needed a sign step for the hand-over line to sit on.
 - **The Card board names PADI in the filled Agency field.** The app's own agency list carries it;
   no logo is drawn and the card in the viewfinder names no agency.
@@ -101,9 +101,9 @@ comment, and a test pins the rule.
 
 | Slice | Status | Lands in | Pinned by |
 | --- | --- | --- | --- |
-| 19a — the door knows your face: Better Auth's passkey plugin and its table, the passkey frame on `/sign-in`, the Passkeys panel in Settings → Security, the origin-binding test; the step-up half per H-70 a | open | — | — |
-| 19b — hand it over: *Sign here* on the counter's and the roster's blocked row, the session lock read by `requireShopSurface`, the hand-over and who-sees-what lines on the waiver page, the counter provenance on the signature row (H-70 b) | open | — | — |
-| 19c — point the camera at the card: the reader, the *Read* marks, the date field, the Textract opt-out step, the `/privacy` sentence (H-70 c declined 2026-09-07; the board's premise was wrong, see "Decided" above) | dropped | — | — |
+| 19a — the door knows your face: Better Auth's passkey plugin and its table, the passkey frame on `/sign-in`, the Passkeys panel in Settings → Security, the origin-binding test; the step-up half per H-20260907-where-device-already-knows a | open | — | — |
+| 19b — hand it over: *Sign here* on the counter's and the roster's blocked row, the session lock read by `requireShopSurface`, the hand-over and who-sees-what lines on the waiver page, the counter provenance on the signature row (H-20260907-where-device-already-knows b) | open | — | — |
+| 19c — point the camera at the card: the reader, the *Read* marks, the date field, the Textract opt-out step, the `/privacy` sentence (H-20260907-where-device-already-knows c declined 2026-09-07; the board's premise was wrong, see "Decided" above) | dropped | — | — |
 | 19d — the type follows the phone: the `-apple-system-body` probe in the pre-hydration script, upward only, the manifest captured at the largest root | open | — | — |
 | 19e — on the home screen: the one line under the day's spine with the platform's install prompt or its own menu item, the device-kept dismissal, nothing when installed or on a desktop | open | — | — |
 

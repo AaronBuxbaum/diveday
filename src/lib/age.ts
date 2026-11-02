@@ -64,8 +64,8 @@ export const JUNIOR_AGE_END = 15;
  * Whether a diver is a minor on a given date.
  *
  * Eighteen, not the diving world's 15. This flag exists because a minor's
- * liability waiver may need a guardian signature (H-21), which is a question of
- * legal majority in the shop's jurisdiction — Florida at launch (H-01). The
+ * liability waiver may need a guardian signature (H-20260730-minimum-age-gate-data), which is a question of
+ * legal majority in the shop's jurisdiction — Florida at launch (H-20260730-jurisdiction-waiver-text-medical). The
  * *diving* restrictions on under-15s are a separate rule and travel through the
  * junior depth bands in `depth-ceiling.ts`, so the two never have to agree.
  *
@@ -114,7 +114,7 @@ export function daysSinceBirthday(dateOfBirth: CalendarDate, onDate: CalendarDat
 
 /**
  * How far a birthday counts as worth mentioning, in **either direction**
- * (H-21, product owner chose seven days each way). Looking back matters as much
+ * (H-20260730-minimum-age-gate-data, product owner chose seven days each way). Looking back matters as much
  * as looking ahead: a diver whose birthday was on Tuesday is still worth a
  * shout-out on Saturday's boat, and the crew has no other way to know.
  */
@@ -152,7 +152,7 @@ export function birthdayCallout(
  * booking date would wrongly refuse them.
  *
  * `unknown` is its own outcome rather than a boolean, because the caller's
- * fail-open decision (H-08, option B: no date on file never blocks) is a
+ * fail-open decision (H-20260724-certification-levels-agency-rules, option B: no date on file never blocks) is a
  * product policy, not something to bake into the arithmetic. Encoding it here
  * would make a future fail-closed switch a silent one-character edit.
  */

@@ -774,7 +774,7 @@ test("the dive-site catalog is staff-only", async ({ page }) => {
  * comparison table, all rendered on the thread. ADR
  * 20260827-the-divers-thread moved the pitch to the trip page and left the
  * thread as prep only (decision 2 and 3), and its SPEC's 7c line deletes the
- * deck; with no renderer left, the deck's components went with it (H-49).
+ * deck; with no renderer left, the deck's components went with it (H-20260815-no-legacy).
  *
  * What survives, and what these two tests now pin, is the claim that outlives
  * any one layout: **the shop picks the faces, DiveDay writes the words, and

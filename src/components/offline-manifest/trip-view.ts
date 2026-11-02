@@ -125,7 +125,7 @@ export function offlineTripView(envelope: OfflineManifestEnvelope, checkpoint: R
   // said. The server re-checks the same way, so an offline board still syncs.
   const isDeparture = checkpoint === "departure";
   // Kept readable past its retention window only so an unsynced event isn't
-  // silently lost (see loadOfflineManifest) — the H-05 stop rule still treats
+  // silently lost (see loadOfflineManifest) — the H-20260724-product-now-uses-explicit stop rule still treats
   // it as not a boarding source, so no new roll call can be recorded here.
   const expired = isOfflineManifestExpired(envelope.snapshot);
   const freshness = offlineManifestFreshness(new Date(envelope.snapshot.savedAt));
@@ -196,7 +196,7 @@ export function offlineTripView(envelope: OfflineManifestEnvelope, checkpoint: R
   // Both halves now come from this device's own events, read through the two
   // sibling functions in `offline-manifests.ts`: a crew member's result is
   // local-first with the snapshot's saved result behind it, exactly as a
-  // diver's is. Before H-46 the crew half could only ever be the save-time
+  // diver's is. Before H-20260814-where-diveday-sit-between the crew half could only ever be the save-time
   // answer, because there was no id on this copy to write an event against —
   // which is still the case for a copy saved before that change, and is why
   // this falls back to `member.rollCall` rather than assuming an id.
@@ -240,7 +240,7 @@ export function offlineTripView(envelope: OfflineManifestEnvelope, checkpoint: R
     crew: crewWithState.map((member) => ({ rollCall: member.state })),
   });
   const crewCounts = completeness.crewCounts;
-  // `id` is the list key now that the dock copy carries one (H-46) — the same
+  // `id` is the list key now that the dock copy carries one (H-20260814-where-diveday-sit-between) — the same
   // stable identity the live manifest uses, and what keeps two crew who share
   // a name *and* a role apart (review 20260803, D6). A copy saved before that
   // change has no ids, so the old namesake-disambiguating key stays behind it:
@@ -258,7 +258,7 @@ export function offlineTripView(envelope: OfflineManifestEnvelope, checkpoint: R
   // - somebody **is unaccounted for**: a named crew member was recorded not back
   //   aboard. That is an emergency and reads as danger, wherever the divers are.
   // - part of the crew half **cannot be recorded on this copy**: a snapshot
-  //   saved before crew ids rode along (H-46) carries crew with no subject to
+  //   saved before crew ids rode along (H-20260814-where-diveday-sit-between) carries crew with no subject to
   //   write an event against, so those people stay uncountable until this
   //   device sees a newer copy. It is fail-closed — the checkpoint does *not*
   //   read complete — and it is stated as a limitation of this saved copy, not

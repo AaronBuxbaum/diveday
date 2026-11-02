@@ -7,7 +7,7 @@ import { certificationRank } from "@/lib/readiness";
 
 /**
  * **The course ladder: who finished here and never took the next step**
- * (fifth-loop ideas, item 45; H-130 for its one-to-one invites).
+ * (fifth-loop ideas, item 45; H-20261014-one-to-one-invite for its one-to-one invites).
  *
  * The next step is read off the shop's own catalog, the way the progression
  * order is (`src/db/courses.ts`): a taster (Discover Scuba) leads into the
@@ -61,7 +61,7 @@ export function nextCourseFor<T extends LadderCourse>(course: T, catalog: readon
  *   from elsewhere is on file, has already passed the course. Levels are one
  *   ladder across agencies, so the comparison is by rank.
  * - `under_age`: younger than `next.minimumAge` on `onDate` (the session's
- *   day). No date of birth on file never refuses (H-08).
+ *   day). No date of birth on file never refuses (H-20260724-certification-levels-agency-rules).
  */
 export type LadderExclusion = "holds_next" | "under_age";
 

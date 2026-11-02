@@ -55,7 +55,7 @@ export async function showSeatMedicalAlertAction(
 }
 
 /**
- * **"Emergency: show the alert"**, confirmed (issue #2990, H-153 amendment of
+ * **"Emergency: show the alert"**, confirmed (issue #2990, H-20261023-medical-alert-for-the amendment of
  * 2026-10-24). Offered in the reveal sheet to a staffer the crew rule refuses,
  * while the trip's days have not ended; this re-checks everything on the
  * server (`emergencyReadMedicalAlert`): an active staffer of this shop, the

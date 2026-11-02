@@ -92,7 +92,7 @@ export function pushRollCallRows(actions: TodayAction[], ctx: TodayRowsContext):
       },
       aboutDeparture: true,
       // The owners were alerted (batch 6, item 6), and the shore contact too
-      // (H-118; dive-domain re-review #7): said on the row the alert was
+      // (H-20261014-stale-roll-call-recipients; dive-domain re-review #7): said on the row the alert was
       // about, with its time in the shop's zone, so whoever opens Today knows
       // who has heard and when.
       detail: [rollCallGapDetailText(t, gap), rollCallAlertedText(t, gap, locale, timeZone)]
@@ -106,7 +106,7 @@ export function pushRollCallRows(actions: TodayAction[], ctx: TodayRowsContext):
     });
   }
 
-  // **Crew rostered on two departures at once** (H-80, issues #1776 and
+  // **Crew rostered on two departures at once** (H-20260916-may-one-hull-carry, issues #1776 and
   // #1814). A clash is the one crew fault invisible on both boats — each shows
   // a full crew list — so Today says it, on each of the two departures, in one
   // of two rows decided per leg by `crewClashPhase`:
@@ -229,7 +229,7 @@ export function pushRollCallRows(actions: TodayAction[], ctx: TodayRowsContext):
 }
 
 /**
- * **One hull on two departures at once** (H-80, issue #2135), said once like
+ * **One hull on two departures at once** (H-20260916-may-one-hull-carry, issue #2135), said once like
  * the crew clash (issue #2211): the row sits on the earlier departure and
  * names the other. A side goes quiet when its own leg has sailed
  * (`boatClashesByTrip`), so the later departure keeps the row whenever the

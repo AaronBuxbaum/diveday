@@ -43,7 +43,7 @@ async function tapSave() {
   });
 }
 
-/** H-153 amendment: the words reach this phone only on this tap. */
+/** H-20261023-medical-alert-for-the amendment: the words reach this phone only on this tap. */
 describe("MedicalAlertOfflineSave", () => {
   it("asks the gated route, puts the words on this phone's copy and says who saved them", async () => {
     vi.mocked(store.loadOfflineManifest).mockResolvedValue(copyOnPhone());

@@ -123,7 +123,7 @@ A docs-only commit therefore never reaches `pnpm db:migrate` either. That is saf
 
 ## The deploy gate
 
-**Off until the pilot shop's first real booking** (H-158). Today every push to `main` builds and
+**Off until the pilot shop's first real booking** (H-20261021-deploy-gate-from-first). Today every push to `main` builds and
 migrates production at once, about twenty minutes before CI on that commit has an answer, so a
 commit CI would have stopped still runs its migration. With the gate on, a push to `main` no longer
 builds production; a commit deploys once its CI on `main` finished green, and the live site is the
@@ -290,7 +290,7 @@ forward-migration or restore path below.
 
 **Today there is a cheaper answer, and it has an expiry date.** DiveDay is pre-pilot with no real
 users, so a database that has gone wrong can simply be reset and re-seeded rather than reconciled
-(**H-47**). That makes this whole class of hazard a nuisance instead of an incident. It stops being
+(**H-20260814-production-database-disposable**). That makes this whole class of hazard a nuisance instead of an incident. It stops being
 true the moment the first pilot shop has real divers in the system — at which point this section is
 the plan, and the escape hatch is gone. Do not let that transition happen silently.
 
@@ -374,7 +374,7 @@ failure — silence there would read exactly like consent.
 resolves) and on this branch, and refuses the marker while either still declares the column: a
 declared column is named by every whole-row `select()`, `returning()` and relational query on its
 table, so that release fails on all of them for the deploy window however little it reads the value.
-No reason excuses this, H-49 ("there is no legacy") included — H-49 is about old data, not deploy
+No reason excuses this, H-20260815-no-legacy ("there is no legacy") included — H-20260815-no-legacy is about old data, not deploy
 order. Remove the declaration (and every reader) in one release; drop the column in the next. In a
 shallow clone with no reachable history only this branch's schema is checked.
 
@@ -414,7 +414,7 @@ The second half of that condition is the one that bites, because the schema alon
 it is false: a migration that only *widened* something is still expand-only, yet the rows the new
 code wrote through that widening can be unreadable to the old code. See
 [Safe to land, unsafe to roll back into](#safe-to-land-unsafe-to-roll-back-into) before choosing
-this path — and note the pre-pilot escape hatch recorded there (**H-47**), which is why this is
+this path — and note the pre-pilot escape hatch recorded there (**H-20260814-production-database-disposable**), which is why this is
 currently a nuisance rather than an incident.
 
 **Write a forward migration that undoes it.** The only option when the bad migration was

@@ -498,7 +498,7 @@ describe("claimPartySeat", () => {
     ).toBe(true);
   });
 
-  it("reuses an existing person by email and flags a name that doesn't match (H-13)", async () => {
+  it("reuses an existing person by email and flags a name that doesn't match (H-20260724-one-person-per-email)", async () => {
     const { db, shop, open } = await seededContext();
     const existing = await createDiver(db, {
       shopId: shop.id,
@@ -1109,7 +1109,7 @@ describe("getClaimPageState (what a dead claim link may name)", () => {
 });
 
 /**
- * H-124 (ADR 20261014-parent-signs-minor-release): a parent signs a child's
+ * H-20261014-parent-signs-minor-release (ADR 20261014-parent-signs-minor-release): a parent signs a child's
  * release from their own page. Only a seat this lead booked and declared
  * "Under 18", still unclaimed, not held and owing a release opens; everything
  * else is one refusal.
@@ -1232,7 +1232,7 @@ describe("a parent signs a minor seat's release", () => {
   });
 
   /**
-   * Security review of H-124: a seat typed with a known diver's own name and
+   * Security review of H-20261014-parent-signs-minor-release: a seat typed with a known diver's own name and
    * email lands on that diver's record, not held, because the names match. The
    * lead must not be able to sign that person's release as their "guardian".
    */

@@ -178,7 +178,7 @@ for (const scheme of ["light", "dark"] as const) {
         await expect(page.getByText(diverCopy("waiver.medicalReferralNext"))).toBeVisible();
         await capture(page, "waiver-medical-held", scheme);
 
-        // H-98 permits a new person-scoped clean release to stand over this
+        // H-20261007-after-physician-says-no permits a new person-scoped clean release to stand over this
         // open referral for other bookings; it does not clear this booking's
         // hold. Show the staff route where that release can be sent.
         const reviewContext = await browser.newContext({

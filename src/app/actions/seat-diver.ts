@@ -248,7 +248,7 @@ async function seat(
   //
   // A **held seat** first: `createBooking` attached this booking to an existing
   // person on something short of proof, so the boarding gate refuses it until
-  // someone confirms the identity (H-13, issue #1556). "Added" hid that, and
+  // someone confirms the identity (H-20260724-one-person-per-email, issue #1556). "Added" hid that, and
   // the staffer met it on the next tap — `checkInBooking` refusing `not_ready`
   // with the diver at the counter and the confirm control on the trip roster
   // (`dive-domain-expert`, 2026-09-11).
@@ -432,7 +432,7 @@ const PARTY_REFUSAL_NOTICE: Record<SeatDiverRefusal, string> = {
  *
  * **Nobody here is seated on a guess.** A name that reads like somebody on
  * file brings the form back naming that row (`onFile-<row>`), and the page
- * lists its candidates the way the single walk-in's prompt does (H-13, issue
+ * lists its candidates the way the single walk-in's prompt does (H-20260724-one-person-per-email, issue
  * #1556). The staffer then settles each such row on its own: "Use the record
  * on file" (that record's id) or "New person". A row settled either way is not
  * asked about again; one still unsettled is.

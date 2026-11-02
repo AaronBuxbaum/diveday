@@ -590,7 +590,7 @@ describe("boatSafetyNoticeTone", () => {
 
   // Dive-domain review D3, records 6: a lapsed certificate or inspection means
   // the boat is not certified to carry anyone. Danger, informing, never a gate;
-  // every other lapsed paper reads in danger too (H-136).
+  // every other lapsed paper reads in danger too (H-20261015-lapsed-boat-papers-loud).
   it("is danger for a lapsed certificate or inspection, and only once lapsed", () => {
     for (const which of ["coi", "inspection"] as const) {
       const paper = { code: "paper", paper: which, dueOn: TODAY, days: 3 } as const;
@@ -622,12 +622,12 @@ describe("boatSafetyNoticeTone", () => {
 });
 
 /**
- * **A lapsed paper reads in danger ink** (decision H-136): hull insurance,
+ * **A lapsed paper reads in danger ink** (decision H-20261015-lapsed-boat-papers-loud): hull insurance,
  * registration or the safety inspection past its date is the one fact that
  * makes a claim uncovered, so it is drawn as loud as missing oxygen. It is
  * never a gate: nothing here or downstream refuses a departure for it.
  */
-describe("a lapsed boat paper (H-136)", () => {
+describe("a lapsed boat paper (H-20261015-lapsed-boat-papers-loud)", () => {
   it("is danger for each of the three papers, the day after its date and every day after", () => {
     for (const paper of BOAT_PAPERS) {
       for (const days of [1, 30]) {
@@ -732,7 +732,7 @@ describe("departureSafetyDate", () => {
   });
 });
 
-describe("boatSeatsRefusal (H-107)", () => {
+describe("boatSeatsRefusal (H-20261009-certificate-caps-seats)", () => {
   it("does not compare total boat occupants to the passenger certificate", () => {
     expect(boatSeatsRefusal({ capacity: 14, certifiedPassengers: 12 })).toBeNull();
     expect(boatSeatsRefusal({ capacity: 12, certifiedPassengers: 11 })).toBeNull();
@@ -824,7 +824,7 @@ describe("boatSeatsRefusal and total persons (#2302)", () => {
   });
 });
 
-describe("sellableSeats / seatsWithinCertificate (H-107's point-of-sale ceiling)", () => {
+describe("sellableSeats / seatsWithinCertificate (H-20261009-certificate-caps-seats's point-of-sale ceiling)", () => {
   it("uses the lowest passenger, certificate, and crew-reserved boat limit", () => {
     expect(sellableSeats(14, 10)).toBe(10);
     expect(sellableSeats(8, 10)).toBe(8);

@@ -54,7 +54,7 @@ webhook cannot inflate a code's usage. It is an audit trail for reporting and fo
 conversation — Stripe remains the authority on whether a redemption was *allowed*.
 
 **Owner/manager only.** Codes discount real money on the shop's own account, so the staff page sits
-behind `canPersonManagePaymentSettings` (H-14, [20260724-role-authorization](20260724-role-authorization.md)),
+behind `canPersonManagePaymentSettings` (H-20260724-staff-role-reach, [20260724-role-authorization](20260724-role-authorization.md)),
 re-checked in both the page and every action rather than merely hidden from the nav.
 
 ## Alternatives considered

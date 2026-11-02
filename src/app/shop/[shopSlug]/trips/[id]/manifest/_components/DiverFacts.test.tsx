@@ -11,7 +11,7 @@ afterEach(cleanup);
  * **A release standing over a referral nobody answered gets a row capsule
  * too** (dive-domain review of #2163), ranked just after the earlier refusal.
  *
- * The owner kept that override (2026-10-09, issue #2195, amending H-98): the
+ * The owner kept that override (2026-10-09, issue #2195, amending H-20261007-after-physician-says-no): the
  * diver boards, and the warning links back to the referral on screen. Paper
  * prints the same warning with nothing to tap.
  */
@@ -111,7 +111,7 @@ describe("an unanswered referral's warning", () => {
 
 /**
  * **A held seat prints the seat, not the matched person** (issue #1690,
- * H-79). A walk-in tapped onto last season's "Maria Santos" must not carry her
+ * H-20260916-unconfirmed-identity-withhold-cost). A walk-in tapped onto last season's "Maria Santos" must not carry her
  * next of kin, her daughter's age or her medical hold onto the boat under a
  * name nobody has confirmed: not on screen, and not on the printed sheet,
  * which is the half a screen-only test would miss.

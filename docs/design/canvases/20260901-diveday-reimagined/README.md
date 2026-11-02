@@ -1,6 +1,6 @@
 # DiveDay, reimagined — three directions, and a second page
 
-- **Status:** Shipped (its ADR is Accepted — H-64, 2026-09-01; slices 13a–13j landed 2026-09-01 to 2026-09-02)
+- **Status:** Shipped (its ADR is Accepted — H-20260901-canvas-direction-brand, 2026-09-01; slices 13a–13j landed 2026-09-01 to 2026-09-02)
 - **Date:** 2026-09-01
 - **ADR:** [20260901-diveday-reimagined](../../../architecture/decisions/20260901-diveday-reimagined.md)
 - **Published:** https://claude.ai/code/artifact/b4b4c1a1-987d-4d98-b754-5beea4814108
@@ -95,7 +95,7 @@ The boards are arguments, not the funnel. Two things the pick corrects rather th
 
 ## Slices
 
-The pick was made 2026-09-01 (H-64): Reef for the staff app with Geist kept, Harbor for every
+The pick was made 2026-09-01 (H-20260901-canvas-direction-brand): Reef for the staff app with Geist kept, Harbor for every
 diver-facing surface, the embed catalogue as drawn. The ADR's slice table is the sequence; this table
 is the record of what has landed. **Five things on the boards are not what ships**: Fraunces (the
 owner kept Geist as the only face, so every display moment is Geist at weight and size); the
@@ -109,8 +109,8 @@ hand's seventh drawing, because Key Largo dives one every week.
 
 | Slice | Status | Lands in | Pinned by |
 | --- | --- | --- | --- |
-| 1 — the pick: Reef for the staff app, Geist kept; the ADR Accepted | shipped | `docs/architecture/decisions/20260901-diveday-reimagined.md` | H-64 in `docs/product/human-decisions/README.md` |
-| 2 — the second pick: the diver-facing surfaces go Harbor; the embed catalogue approved | shipped | `docs/architecture/decisions/20260901-diveday-reimagined.md` | H-64 in `docs/product/human-decisions/README.md` |
+| 1 — the pick: Reef for the staff app, Geist kept; the ADR Accepted | shipped | `docs/architecture/decisions/20260901-diveday-reimagined.md` | H-20260901-canvas-direction-brand in `docs/product/human-decisions/README.md` |
+| 2 — the second pick: the diver-facing surfaces go Harbor; the embed catalogue approved | shipped | `docs/architecture/decisions/20260901-diveday-reimagined.md` | H-20260901-canvas-direction-brand in `docs/product/human-decisions/README.md` |
 | 13a — Reef's tokens for the staff app | shipped | `src/components/ui/card.tsx` | `src/components/ui/card.test.tsx` |
 | 13b — the shop's brand: schema, `brand.ts`, the Settings Brand group | shipped | `src/lib/brand.ts` | `src/lib/brand.test.ts` |
 | 13c — Harbor's storefront | shipped | `src/components/BrandStyle.tsx` | `src/components/BrandStyle.test.tsx` |

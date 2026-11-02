@@ -100,24 +100,6 @@ export const ALERTS = {
     prompt:
       "The weekly CI health check (`.github/workflows/ci-health.yml`, which runs `node scripts/ci-health.mjs --file-issue`) is red. Read the newest failed run linked in this issue's body and comments, find the failing step, then read `scripts/ci-health.mjs`, `scripts/own-ci.mjs` and `scripts/ci-health.test.mjs`. Reproduce locally with `node scripts/ci-health.mjs --days 7`. Fix the cause with a failing test first. Done is a manual run of the workflow (its Run workflow button) going green, plus `pnpm lint`, `pnpm typecheck` and `pnpm check:repo`. Close this issue in the PR that lands the fix.",
   },
-  mutation: {
-    title: "Fix the weekly mutation run, which is red on main",
-    kind: "risk",
-    effort: "S",
-    touches: [
-      ".github/workflows/mutation.yml",
-      "stryker.config.mjs",
-      "stryker.vitest.config.ts",
-      "scripts/mutation-issues.mjs",
-    ],
-    noticed:
-      "The scheduled `Mutation testing` workflow failed. Surviving mutants never fail it (they are filed as one issue per module), so a red run means Stryker itself or the filing step broke, and no survivors are being reported for any module until it is fixed. Each red run after this one adds a comment with its link; the first green run closes this issue.",
-    why: "It was found by the scheduled run, not by a change anyone was making. Stryker runs the `lib` tests under a config of its own, so a change to the Vitest setup, a Stryker upgrade or a malformed report can each break it, and only the run log says which.",
-    proposed:
-      "Read the failed leg's log. If Stryker failed its dry run, run the same command locally and fix the config or the failing test. If the filing step failed, fix `scripts/mutation-issues.mjs` with a test first. Do not drop a module from the matrix to make the run green.",
-    prompt:
-      "The weekly mutation run (`.github/workflows/mutation.yml`) is red. Read the newest failed run linked in this issue's body and comments, find the failing leg and step, then read `stryker.config.mjs`, `stryker.vitest.config.ts` and `scripts/mutation-issues.mjs`. Reproduce locally with `pnpm test:mutation --mutate src/lib/trip-admission.ts` (the smaller module). Fix the cause, with a failing test first when the fault is in a script. Done is a manual run of the workflow going green, plus `pnpm lint`, `pnpm typecheck` and `pnpm check:repo`. Close this issue in the PR that lands the fix.",
-  },
   "restore-drill": {
     title: "Fix the monthly restore drill, which is red on main",
     kind: "risk",

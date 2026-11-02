@@ -138,7 +138,7 @@ for (const scheme of ["light", "dark"] as const) {
     });
 
     /**
-     * **The shore contact's address, refused without its consent** (H-118).
+     * **The shore contact's address, refused without its consent** (H-20261014-stale-roll-call-recipients).
      * An address DiveDay sends to saves only with the box that records the
      * shore contact agreed; this is the refusal a staff member meets when
      * they type one and leave the box clear, on the page they were editing.

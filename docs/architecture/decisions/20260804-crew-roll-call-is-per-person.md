@@ -181,7 +181,7 @@ export, and the seed and schedule-guard references to it (migration
 `-- diveday:allow-destructive` acknowledgement).
 
 The decision above retired the *concept* and left the machinery standing because rows existed. That
-reasoning does not survive [H-49](../../product/human-decisions/README.md) (2026-08-15, Aaron Buxbaum):
+reasoning does not survive [H-20260815-no-legacy](../../product/human-decisions/README.md) (2026-08-15, Aaron Buxbaum):
 DiveDay is pre-pilot, there are no users, no data worth retaining, and no legacy code to keep. What
 tipped it from a judgement call to a plain deletion is that the writer had **no production caller at
 all** — the only three callers were its own tests, so the table was a schema object kept alive by
@@ -214,6 +214,6 @@ Two consequences worth stating rather than leaving to be discovered:
   this cheaply.
 - **This is not expand/contract-clean, deliberately.** The previous release still reads the table in
   three places (the export bundle, its row-count query behind Settings, and the departure log), so
-  those three surfaces 500 for the length of the production build window. Accepted under H-49 — no
+  those three surfaces 500 for the length of the production build window. Accepted under H-20260815-no-legacy — no
   users, no data — and said plainly on the migration's acknowledgement line rather than papered
   over. A table with a real reader would have taken two deploys.

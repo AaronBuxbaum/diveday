@@ -209,7 +209,7 @@ describe("composeMovePreflight", () => {
   });
 
   /**
-   * **One hull, one departure at a time** (H-80, issue #1780). A move that
+   * **One hull, one departure at a time** (H-20260916-may-one-hull-carry, issue #1780). A move that
    * lands the boat on top of another departure on the same hull is said before
    * it happens, above the crew: a hull double-booked is the bigger fact, and
    * fixing it usually moves the crew question with it.
@@ -241,7 +241,7 @@ describe("composeMovePreflight", () => {
 
 /**
  * **A tight turnaround is information, never a clash** (issue #2141, Aaron's
- * decision (b)). H-80's half-open overlap stands: nose to tail is the plan and
+ * decision (b)). H-20260916-may-one-hull-carry's half-open overlap stands: nose to tail is the plan and
  * says nothing as a clash. This is the near miss beside it — one line, under
  * any clash, never a refusal.
  */
@@ -268,7 +268,7 @@ describe("turnaroundGapMinutes", () => {
     ).toBe(10);
   });
 
-  it("speaks for nose to tail, which H-80 keeps quiet as a clash", () => {
+  it("speaks for nose to tail, which H-20260916-may-one-hull-carry keeps quiet as a clash", () => {
     expect(
       turnaroundGapMinutes(moved, [window("2030-08-05T12:00:00Z", "2030-08-05T16:00:00Z")], 30),
     ).toBe(0);

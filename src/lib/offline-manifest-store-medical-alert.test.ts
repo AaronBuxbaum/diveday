@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-// Browser-side store: the medical alerts' words on a device copy (H-153 amendment).
+// Browser-side store: the medical alerts' words on a device copy (H-20261023-medical-alert-for-the amendment).
 import "fake-indexeddb/auto";
 import { afterEach, describe, expect, it } from "vitest";
 import { forgetThisDevice } from "@/components/forget-device";

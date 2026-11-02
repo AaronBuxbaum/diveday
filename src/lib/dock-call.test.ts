@@ -104,7 +104,7 @@ describe("crewCallAt", () => {
   });
 
   /**
-   * Ux-delight sheet 2026-10-22, item 2 (H-149): "Crew arrive N minutes
+   * Ux-delight sheet 2026-10-22, item 2 (H-20261022-crew-arrive-before-divers): "Crew arrive N minutes
    * before divers", shop-wide, default 30. An entered shift wins only when it
    * is earlier (dive-domain review of layer 1, findings 1 and 2).
    */

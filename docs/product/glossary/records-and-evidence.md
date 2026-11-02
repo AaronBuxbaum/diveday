@@ -111,7 +111,7 @@
   no-decompression limits, with no scheduled end, or when the diver's next seat with the shop
   starts before the time it would name (that boat's own page says the time). The **night-before
   reminder email** carries the same planned rule in **hours only**, never a clock time, because a
-  late boat would make a time wrong (H-150): "Plan to fly no earlier than 24 hours after your last
+  late boat would make a time wrong (H-20261022-reminder-fly-safe-in): "Plan to fly no earlier than 24 hours after your last
   dive, and longer if you make decompression stops", only when this is the diver's last seat with
   the shop (any later seat, however far ahead, silences it) and silent wherever the planned form
   is (`readReminderFlySafeHours`, `src/db/fly-safe-plan.ts`). A seat that email told records the
@@ -135,7 +135,7 @@
   for the same reason. It read "Fly-safe from {when}:" until issue #1433, and DAN's interval is a
   minimum that lowers DCS risk without removing it, so "safe" was the one word in the sentence that
   read as a verdict — in Spanish twice over, where "Puedes volar" is literally *you can fly*. A
-  departure the shop marks as **decompression diving** (`trips.exceeds_no_deco_limits`, H-84,
+  departure the shop marks as **decompression diving** (`trips.exceeds_no_deco_limits`, H-20260916-may-diveday-assert-about,
   issue #1555) gets no earliest flight at all, because DAN gives no figure for a dive that took
   stops, and neither does a later departure for a diver who sailed on a marked one earlier in the
   same lookback window (a morning decompression boat before an afternoon one); one nobody marked is
@@ -183,7 +183,7 @@
   departure's last shop-local day (`lapsedRungs`, `src/lib/crew-roles.ts`); nothing on file, or no
   date on file, is not a lapse. Distinct from the **roster's claim** — the same count with no
   credential read — which the booking gate, the seat cap and the crew editor's refusals use, because
-  H-59 keeps a locally recorded renewal date from ever refusing a sale or an assignment (issue
+  H-20260825-staff-credentials-renewal-clock keeps a locally recorded renewal date from ever refusing a sale or an assignment (issue
   #1853). A rating recorded as issued after the first shop-local dive day cannot support this
   departure; if no other rating answers that rung, it is unverified and the surface asks staff to
   check the card rather than calling it expired. An unknown issue date keeps the existing no-date

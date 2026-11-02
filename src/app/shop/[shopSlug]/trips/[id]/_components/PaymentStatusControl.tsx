@@ -110,7 +110,7 @@ export function PaymentStatusControl({
   refundNote: string | null;
   /**
    * The diver holds unspent package dives this trip could take (issue #1697,
-   * H-79). Shown only while money is still to be taken: a fare already
+   * H-20260916-unconfirmed-identity-withhold-cost). Shown only while money is still to be taken: a fare already
    * collected stands, so the line exists to be read before the cash.
    */
   packageNote?: string | null;

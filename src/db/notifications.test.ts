@@ -959,7 +959,7 @@ describe("what the retry queue is allowed to hold", () => {
       .where(eq(notificationSendQueue.shopId, shop.id));
     // Nothing will open this payload now — no predicate offers the row again —
     // so keeping it would be keeping a rendered outbound message, a name and
-    // an address in a table nothing prunes, for good (H-02;
+    // an address in a table nothing prunes, for good (H-20260730-evidence-retention-period-deletion;
     // `security-reviewer`). The park that crosses the bound is a finished
     // write and clears what every other finished write clears.
     expect(row).toMatchObject({

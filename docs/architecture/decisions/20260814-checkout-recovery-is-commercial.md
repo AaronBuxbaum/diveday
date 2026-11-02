@@ -5,7 +5,7 @@
 - **Extends:** [20260726-abandoned-checkout-recovery](20260726-abandoned-checkout-recovery.md) — the
   send itself, its two-hour delay, and its Stripe reconciliation are unchanged. What changes is what
   rides along with the message and who it is allowed to reach.
-- **Owner decision:** H-09, extended 2026-08-14.
+- **Owner decision:** H-20260724-channel-sends-booking-waiver, extended 2026-08-14.
 
 ## Context
 
@@ -23,7 +23,7 @@ diver who had explicitly opted out of courtesy email — the self-serve opt-out 
 with `opted_out` as a first-class outcome — still received this one. There was no per-recipient
 suppression of any kind on the path.
 
-H-09 recorded the basis on which DiveDay sends without an opt-in: *"Email is transactional/service
+H-20260724-channel-sends-booking-waiver recorded the basis on which DiveDay sends without an opt-in: *"Email is transactional/service
 messaging (booking, waiver, trip logistics), so no marketing opt-in is required to send it."* Every
 example in that sentence is attached to a booking that exists. This is the one send where, by
 definition, it does not: the recipient started a checkout and did not finish, and may have abandoned
@@ -36,7 +36,7 @@ primary-purpose test, CASL's implied-consent window, GDPR/ePrivacy's soft opt-in
 ## Decision
 
 **Classify abandoned-checkout recovery as commercial.** It carries an unsubscribe link and honours
-the courtesy-email opt-out, exactly like the two sends beside it, and H-09's transactional basis is
+the courtesy-email opt-out, exactly like the two sends beside it, and H-20260724-channel-sends-booking-waiver's transactional basis is
 recorded as *not* reaching it.
 
 The judgement is not that the transactional reading is unreasonable — a single nudge about a checkout
@@ -105,5 +105,5 @@ the price of not sending a commercial message nobody can unsubscribe from. The s
 alternative above is the fix if it turns out to matter.
 
 Also worth knowing: this decides the *rule*, not just this send. The next message DiveDay adds that
-reaches someone without a confirmed booking has a precedent to be read against — H-09's transactional
+reaches someone without a confirmed booking has a precedent to be read against — H-20260724-channel-sends-booking-waiver's transactional
 basis covers messages attached to a booking that exists, and nothing else.

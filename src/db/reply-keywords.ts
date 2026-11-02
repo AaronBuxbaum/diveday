@@ -168,7 +168,7 @@ async function cancellableBookings(
   const open: CandidateBooking[] = [];
   for (const row of rows) {
     if (hasSailed(row.startsAt, now)) continue;
-    // Counted aboard a boat past its time: `selfCancelBooking` refuses it (H-133).
+    // Counted aboard a boat past its time: `selfCancelBooking` refuses it (H-20261015-aboard-diver-removal-at).
     const held = await heldAtTheDoor(db, {
       shopId,
       tripId: row.tripId,
@@ -442,7 +442,7 @@ export async function handleInboundReplyKeyword(
   await trackEvent({ name: "booking_cancelled", source: "diver" });
 
   // Cancellation and refund stay the two independent steps the staff path and
-  // `/ready` both use (H-07). Caught for the same reason `cancelMyBookingAction`
+  // `/ready` both use (H-20260724-payment-deposit-cancellation-refund). Caught for the same reason `cancelMyBookingAction`
   // catches it: the seat is already released and the diver is owed a confirmation
   // either way; a refund a transient failure lost is a thing staff can see and fix.
   let refund: CancellationRefundSeen = { status: "not_attempted" };

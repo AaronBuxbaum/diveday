@@ -9,7 +9,7 @@ import { activityEvents, courses, people, trips } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 
 /**
- * **What the diver record's date of birth says about age** (H-100, issue
+ * **What the diver record's date of birth says about age** (H-20261007-held-seat-split-into, issue
  * #2167). The guardian co-signature rule and the minimum-age gate read a
  * record with neither a date nor a staffer's "18 or older" as an adult, so
  * the contact-details save may not leave a known minor that way.
@@ -47,7 +47,7 @@ async function staffer(db: AppDb, shopId: string): Promise<string> {
 
 describe("updateDiver and the date of birth", () => {
   /**
-   * H-100, dive-domain review: once a date answers the age question, a
+   * H-20261007-held-seat-split-into, dive-domain review: once a date answers the age question, a
    * staffer's earlier "18 or older" goes, so clearing the date later cannot
    * bring back an adult claim the date may have disproved.
    */
@@ -262,7 +262,7 @@ describe("updateDiver and the date of birth", () => {
     });
 
     /**
-     * H-100's split takes the tick anywhere but a course with a minimum age,
+     * H-20261007-held-seat-split-into's split takes the tick anywhere but a course with a minimum age,
      * which measures the date itself; clearing one here is held to the same.
      */
     it("keeps the date while the diver holds a seat on a course with a minimum age", async () => {

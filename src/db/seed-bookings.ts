@@ -135,7 +135,7 @@ export async function seedBookings(
     )
     .returning();
 
-  // H-13 demo: one night-trip seat came in through a shared inbox under a
+  // H-20260724-one-person-per-email demo: one night-trip seat came in through a shared inbox under a
   // different name than the person already on file for that email, so it carries
   // the identity-unconfirmed flag. The roster shows the fail-closed "Confirm
   // identity" gate until staff vouch for it — the diver can't board on the

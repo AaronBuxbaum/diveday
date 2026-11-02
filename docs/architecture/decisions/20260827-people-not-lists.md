@@ -80,7 +80,7 @@ panel (the card's surviving job). The suppression floor's arithmetic is untouche
 ### 4. The waiver publish is one decision, then one act
 
 The template card keeps its textarea; when standing signatures exist, materiality becomes an
-explicit **choice** (two radio rows, the material one stating the at-risk count, per H-54's
+explicit **choice** (two radio rows, the material one stating the at-risk count, per H-20260822-may-shop-explicitly-declare's
 "two explicit choices"), and **Publish** is the single button beneath — a default-less pair of
 destructive-adjacent buttons becomes a form that cannot be submitted without choosing. The
 signatures log becomes a day-grouped ledger; integrity renders as a `Badge` word, and the flagged
@@ -113,7 +113,7 @@ reference, not story. A single mixed feed reads busy and answers no question fas
 **Keep the stat tiles on Reviews.** Rejected under principle 9 — "Waiting on you: 3" as a tile
 beside a queue whose first group is titled "Waiting on you — 3" is the same fact at two volumes.
 
-**A confirm dialog on material waiver publish.** Rejected: H-54 wants an explicit recorded choice,
+**A confirm dialog on material waiver publish.** Rejected: H-20260822-may-shop-explicitly-declare wants an explicit recorded choice,
 not a speed bump; the radio *is* the record's input, and InlineConfirm survives only as the
 existing double-tap on the single Publish.
 
@@ -123,13 +123,13 @@ existing double-tap on the single Publish.
   waiver-state row, booking-story row); (b) the diver record recomposition; (c) the roster ledger;
   (d) reviews as a worklist; (e) the waiver surface; (f) requests restyle. The record slice (b) is
   the largest single-page change in the stack and deletes the notice router, the jump nav, and the
-  twin certification components (H-49 — no legacy).
+  twin certification components (H-20260815-no-legacy — no legacy).
 - The record's one-idea answer lands in `surfaces.md` (replacing the "unanswered" entry) and gets
   the doc-comment + rule-test treatment the shop home has: **a test fails if the status ledger
   renders anything when the diver is clear, or if a second primary joins Book.**
 - Merge candidates, restore, export and the erasure path keep their exact gates
   (`security-reviewer` review required — personal data surfaces).
-- The reviews floor (`MAX_SUPPRESSED_SHARE_FOR_RATING`) and H-54's materiality semantics are
+- The reviews floor (`MAX_SUPPRESSED_SHARE_FOR_RATING`) and H-20260822-may-shop-explicitly-declare's materiality semantics are
   behavior contracts; only their rendering moves.
 - Copy shrinks again: the record's ten section headings become four; deletions land in every
   locale per the standing rule.

@@ -38,7 +38,7 @@ export function visitMilestone(count: number): VisitMilestone | null {
 }
 
 /**
- * **The dive days a regular's milestone is said on** (H-128): the 10th, 25th, 50th
+ * **The dive days a regular's milestone is said on** (H-20261014-boat-count-milestones): the 10th, 25th, 50th
  * and 100th, the stamp's set without the first, which already has its own
  * words on both sides ("First dive with us", "First dive day"). Read from the
  * one set above so the roster, the booked moment and the stamp never disagree.

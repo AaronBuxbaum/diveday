@@ -7,7 +7,7 @@ import { MIN_EXTENSION_VERSION } from "@/lib/cert-check-extension";
 
 /**
  * Whether this browser has the DiveDay extension, read from the marker its
- * content script sets on the page (H-105), and whether it is a copy DiveDay
+ * content script sets on the page (H-20261008-cert-check-extension), and whether it is a copy DiveDay
  * talks to (`MIN_EXTENSION_VERSION`). Per browser, not per shop: the
  * extension lives in the staffer's browser, and the desk computer can have it
  * while a phone never will. An older copy is told to update: until it does,

@@ -92,7 +92,7 @@ whose translation is the same sign-off decision as the waiver body; and each pag
 
 *The waiver body and the medical questionnaire stay English regardless.* That wording is legally
 reviewed, and translating a liability release or a medical screening question is a sign-off decision,
-not an engineering one (H-01/H-03). Note that the waiver *template body* is shop data
+not an engineering one (H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit). Note that the waiver *template body* is shop data
 (`waiver_templates.body`), so it was never reachable by a UI dictionary anyway; the medical questions
 in `src/lib/medical.ts` are code and could be extracted, but must not be translated before that
 sign-off.

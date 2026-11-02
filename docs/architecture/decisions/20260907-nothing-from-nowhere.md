@@ -1,10 +1,10 @@
 # 20260907-nothing-from-nowhere — Every change on screen comes from somewhere, anything a finger is on obeys it, and one physics governs all of it
 
-- **Status:** Proposed — pending H-69 a and c (the spring's ration, and whether structural motion
-  reaches the roll call). **H-69 b decided 2026-09-07 (Aaron Buxbaum, in session): yes, the Wallet
+- **Status:** Proposed — pending H-20260907-diveday-move-like-thing a and c (the spring's ration, and whether structural motion
+  reaches the roll call). **H-20260907-diveday-move-like-thing b decided 2026-09-07 (Aaron Buxbaum, in session): yes, the Wallet
   pass** — built now and shipped dark until the credentials are held; the implementation spec is
   [SPEC.md](../../design/canvases/20260907-nothing-from-nowhere/SPEC.md). Slices 18a–18f in the roadmap; **18a–18d shipped 2026-09-07**,
-  taking H-69 a's recommended answer, holding H-69 b and c
+  taking H-20260907-diveday-move-like-thing a's recommended answer, holding H-20260907-diveday-move-like-thing b and c
 - **Date:** 2026-09-07
 - **Design:** [the canvas](../../design/canvases/20260907-nothing-from-nowhere/README.md) — seven
   artboards on two pages: the cover and the Physics sheet; then the roll, the counter, the sheet,
@@ -55,7 +55,7 @@ change on screen comes from somewhere.
 
 ## Decision
 
-Proposed, in six parts. Parts 2, 3 and 6 carry the three owner calls recorded as H-69.
+Proposed, in six parts. Parts 2, 3 and 6 carry the three owner calls recorded as H-20260907-diveday-move-like-thing.
 
 ### 1. The rule, and what renders when it fails
 
@@ -68,7 +68,7 @@ Every move below passes four tests, and each names what renders when it does not
 | Silence | At rest nothing moves: no idle animation, no loop, no standing effect. A reduced-motion reader gets the swap and the cut everywhere through the existing kill-switch; a thing under their own finger still follows it, because tracking a finger is not animation | nothing |
 | Safety | Motion follows the commit and never leads it. On the counter the roll follows the optimistic commit principle 1 grants it; on the roll call a state changes on screen when the server has it. A head count never rolls: a digit mid-roll is neither number for 200ms, on the one figure a crew reads in glare to decide. Every ban stands: no drawing, coral or drawn motion on a manifest, roll call, cert check, waiver or payment, or beside a refusal | the swap |
 
-### 2. One physics, written once (H-69 a)
+### 2. One physics, written once (H-20260907-diveday-move-like-thing a)
 
 Principle 5 gains a ladder and a table, both on the canvas's Physics sheet, and loses nothing:
 
@@ -86,12 +86,12 @@ Principle 5 gains a ladder and a table, both on the canvas's Physics sheet, and 
   never at a call site.
 - **The event table** on the Physics sheet is the contract: what happened, what moves, on which
   rung, on which curve. A new kind of motion takes a row there before it takes a keyframe.
-- **H-69 a: the spring.** `--ease-spring` is rationed today to the one menu that unfolds, because
+- **H-20260907-diveday-move-like-thing a: the spring.** `--ease-spring` is rationed today to the one menu that unfolds, because
   it claims the thing has weight. Two more places have weight because a finger gave it to them: a
   sheet settling back from a short drag, and a pressed control letting go. **Recommended:** yes,
   those two and no other; declined, both take the arrival curve and nothing else changes.
 
-### 3. A figure rolls, and a row closes its own gap (H-69 c)
+### 3. A figure rolls, and a row closes its own gap (H-20260907-diveday-move-like-thing c)
 
 - **The roll.** A count that changes in front of a person rolls: only the digits that changed
   move, the old one up and out on the exit curve, the new one in from below on the arrival curve,
@@ -103,7 +103,7 @@ Principle 5 gains a ladder and a table, both on the canvas's Physics sheet, and 
   the palette's answer count, the held send's seconds, the booking form's gear price. Where it
   never lands: a figure's first paint, any figure the page loaded with and nothing changed, money
   on a report, a figure inside a refusal or beside a focused field, a fact of scale, and the head
-  count on the roll call and the manifest's dial under every answer to H-69 c.
+  count on the roll call and the manifest's dial under every answer to H-20260907-diveday-move-like-thing c.
 - **The slide.** When a row leaves, re-enters or changes place, the rows around it slide to where
   they now belong, by transform, over the same `--motion-base` the row took to go, so the gap and
   the row close together. Positions are read before the change and set back after it, and released
@@ -111,7 +111,7 @@ Principle 5 gains a ladder and a table, both on the canvas's Physics sheet, and 
   is animated, which is the rule the disclosure and the bar keep. Undo runs the same path reversed.
   Where it lands: the counter queue, the home's station when a blocker clears, the wait list when
   a seat is offered, the board's day when a departure moves.
-- **H-69 c: the roll call.** Budget rule 8 bans *drawn* motion on the manifest and the roll call;
+- **H-20260907-diveday-move-like-thing c: the roll call.** Budget rule 8 bans *drawn* motion on the manifest and the roll call;
   the diver row leaving the roster already moves there (principle 5 names it the one exit doing
   explanatory work), and the rows beneath it jump. Whether the slide may close that gap, after
   the server commit and never before, is the owner's. **Recommended:** the slide yes, after the
@@ -124,7 +124,7 @@ The More sheet and the embed lightbox take a drag under the contract the two shi
 when released short, no interference with a scroll): the sheet tracks the finger one for one
 downward, resists upward at the pull-to-refresh's own damping, and the scrim's opacity tracks the
 sheet's position; released past 40% of its height or with a downward flick it leaves from where it
-is on the exit curve, released short it settles back (on the spring under H-69 a). A drag begins
+is on the exit curve, released short it settles back (on the spring under H-20260907-diveday-move-like-thing a). A drag begins
 only on the handle, or when the sheet's own list is at its top and the finger moves down. The
 sheet gains a grab handle at rest, the one thing added. The scrim tap and Escape stay, so nothing
 a keyboard or switch user does changes; a mouse gets the tap and the button as today. Never the
@@ -165,7 +165,7 @@ heading scaled to half is a blur on a phone. Every staff page with a page title 
 the public storefront keeps Harbor's header and does not fold. A browser without scroll-driven
 animations, a reduced-motion reader and every desktop get the bar as it ships today.
 
-### 6. The departure on the lock screen (H-69 b)
+### 6. The departure on the lock screen (H-20260907-diveday-move-like-thing b)
 
 The thread gains one line beside Add to calendar: **Add to Wallet.** The pass wears the shop's
 brand (Harbor's derivation, or DiveDay's tokens for a shop that set none), carries what the
@@ -176,7 +176,7 @@ reads. It carries no barcode, no booking id, no price, no waiver or medical stat
 contact, and never the thread's URL: that URL is the diver's own capability and a pass is a thing
 that gets shown to people. The counter keeps checking people in by name.
 
-**H-69 b:** whether DiveDay signs passes at all. It needs an Apple Developer Program membership and
+**H-20260907-diveday-move-like-thing b:** whether DiveDay signs passes at all. It needs an Apple Developer Program membership and
 a Pass Type ID certificate, an Apple push credential so a pass can be told it changed, and a Google
 Wallet issuer account for the Android half: each an account, a yearly fee and a signing secret only
 a human can hold. **Recommended:** yes, with the slice filed `waiting-on-external` until the
@@ -252,7 +252,7 @@ needed a mechanism plus a decision about what a page with no title renders, for 
   dependency spent on what CSS transforms, two existing gesture contracts and one FLIP helper
   already do; a spring the browser cannot express as a curve is a spring this design does not need.
 - **Springs everywhere.** Rejected: principle 5's line stands, a spring claims weight and is a lie
-  about anything that merely appears. H-69 a widens the ration from one use to three, each of them
+  about anything that merely appears. H-20260907-diveday-move-like-thing a widens the ration from one use to three, each of them
   a thing a finger held.
 - **A count-up on money and on reports.** Rejected: a figure counting up to a value the page loaded
   with is a claim of scale, which the fact-of-scale rule reserves for divers and boats and renders
@@ -283,7 +283,7 @@ needed a mechanism plus a decision about what a page with no title renders, for 
   routes answer only to a pass's own authentication token and carry no shop data beyond the pass;
   the Apple certificate and key and the Google issuer credentials enter `config/env-registry.mjs`
   as `manual` values, and the two accounts enter §17's manual-actions registry. The security
-  reviewer reads the slice. *Amended 2026-09-07 on H-69 b:* the slice ships dark rather than
+  reviewer reads the slice. *Amended 2026-09-07 on H-20260907-diveday-move-like-thing b:* the slice ships dark rather than
   waiting — a DiveDay with no credentials configured renders the thread as today and 404s every
   pass route — so it lands ahead of the certificate and needs nothing from a human to merge.
 - Each slice ends in the standing obligation from

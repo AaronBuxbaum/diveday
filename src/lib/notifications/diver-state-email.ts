@@ -59,7 +59,7 @@ export type DiverStateEmailInput = {
       courseSession?: boolean;
       /** Whether the reply line is offered (ADR 20260909-reply-keywords): a fact about the channel. */
       replyKeywords?: boolean;
-      /** The fly-safe wait in hours, on the night before a diver's last boat (H-150); the line is absent without it. */
+      /** The fly-safe wait in hours, on the night before a diver's last boat (H-20261022-reminder-fly-safe-in); the line is absent without it. */
       flySafeHours?: number;
       flySafeAskCrew?: boolean;
     }
@@ -83,7 +83,7 @@ export function diverStateEmail(input: DiverStateEmailInput): NotificationEmail 
   if (input.state === "fly_safe_correction") {
     // One sentence, no link: the figure in the diver's inbox no longer
     // applies, and only the crew can give the right one (DAN gives no
-    // preflight figure for a dive that took stops, H-84).
+    // preflight figure for a dive that took stops, H-20260916-may-diveday-assert-about).
     const sentence = t("notifications.flySafeCorrection.body");
     return {
       subject: t("notifications.flySafeCorrection.subject"),
@@ -150,7 +150,7 @@ export function diverStateEmail(input: DiverStateEmailInput): NotificationEmail 
   const sentence = t(`notifications.tripReminder.${key}Body${suffix}`, values);
   // Under the dock time, the night before the diver's last boat: the rule in
   // hours, never a clock time, because a late boat would make a time wrong
-  // (H-150). The exact time stays on the thread and the recap.
+  // (H-20261022-reminder-fly-safe-in). The exact time stays on the thread and the recap.
   const flySafe =
     tonight && input.flySafeHours !== undefined
       ? t("notifications.tripReminder.flySafe", { count: input.flySafeHours })

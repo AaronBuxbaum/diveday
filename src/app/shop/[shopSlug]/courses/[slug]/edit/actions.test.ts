@@ -430,7 +430,7 @@ describe("saveCourseContentAction, with the summary's Spanish", () => {
 });
 
 /**
- * **"Is this course for sale" is trip-definition work** (H-14, ADR
+ * **"Is this course for sale" is trip-definition work** (H-20260724-staff-role-reach, ADR
  * 20260724-role-authorization). The page draws the toggle only for a reader
  * whose roles allow it (`page.authz.test.tsx`); this is the gate itself, since a
  * form that is not rendered is not a form that cannot be posted. It was an

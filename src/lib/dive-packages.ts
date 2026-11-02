@@ -178,7 +178,7 @@ export function spendableCount(held: readonly SpendableEntitlement[], now = nowD
  * yet expired, on a package that covers it ({@link packageCoversTrip}).
  *
  * What the roster's payment control says before a staffer takes money for a
- * seat (issue #1697, H-79): a fare already collected stands, so the moment to
+ * seat (issue #1697, H-20260916-unconfirmed-identity-withhold-cost): a fare already collected stands, so the moment to
  * see the package is before the cash, not after.
  */
 export function spendableCountForTrip(

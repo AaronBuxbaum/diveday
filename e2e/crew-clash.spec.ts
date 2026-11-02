@@ -58,7 +58,7 @@ test.describe("a standing crew clash", () => {
     // The host: 09:00 to 13:00. And the boat that will land on it, tied up an
     // hour before it sails — a state the roster happily writes, because it is
     // an ordinary double shift.
-    // Both on one hull, which H-80 says is one departure at a time (issue
+    // Both on one hull, which H-20260916-may-one-hull-carry says is one departure at a time (issue
     // #1780): nose to tail is the plan, the move below is the defect.
     await createTrip(page, {
       title: drift,
@@ -108,7 +108,7 @@ test.describe("a standing crew clash", () => {
     await expect(page.getByText(/is already rostered on/)).toHaveCount(0);
 
     // **The departure's own page**, which is where a staffer looks next. The
-    // Divers tab's pulse names the hull's other departure (H-80).
+    // Divers tab's pulse names the hull's other departure (H-20260916-may-one-hull-carry).
     const twoTankPath = await tripPathByTitle(page, SHOP, twoTank);
     await page.goto(twoTankPath);
     await expect(page.getByRole("link", { name: `${HULL} is also on ${drift}` })).toBeVisible();

@@ -144,13 +144,13 @@ Rain POS, EnComPOS, Lightspeed, DiveStreams). Generic engines certainly have mor
 | Liveaboard cabins | 5 | Differentiator | ❌ out of scope |
 | Retail webshop | 5 | Differentiator | ❌ non-goal |
 | Review collection / display | 5 | Differentiator | ✅ verified diver reviews, moderation floor |
-| Agency certification sync | 4 | Differentiator | ❌ no API exists (H-10); partnership question #1239 |
+| Agency certification sync | 4 | Differentiator | ❌ no API exists (H-20261007-request-supported-c-card); partnership question #1239 |
 | Accounting export | 4 verified | Differentiator | ✅ QuickBooks Online connector |
 | Wait list | 4 | Differentiator | ✅ seat-recovering, invite path |
 | WhatsApp to divers | 4 | Differentiator | ✅ shop's own number via Meta Cloud API |
 | Weather / tide data | 4 | Differentiator | ✅ marine outlook; ❌ tides |
 | Offline-first operation | 4 | Differentiator | ✅ encrypted offline manifests with reconciliation |
-| Air-fill / tank cards / gas logs | 4 | Differentiator | ❌ (#1234); fill log gated on H-11 |
+| Air-fill / tank cards / gas logs | 4 | Differentiator | ❌ (#1234); fill log gated on H-20260730-nitrox-fill-station-procedure |
 | Multi-currency | 4 | Differentiator | ⚠️ one declared currency per shop |
 | Built-in double-entry accounting | 3 | Rare | ❌ not ours to build |
 | Accommodation / room packages | 3 | Rare | ❌ out of scope |
@@ -158,8 +158,8 @@ Rain POS, EnComPOS, Lightspeed, DiveStreams). Generic engines certainly have mor
 | Diver-facing logbook | 3 | Rare | ⚠️ recap + D31 "planned vs lived" |
 | Insurance proof (upload only) | 3 | Rare | ✅ field exists; reader is roadmap §11 |
 | Gift cards | 2 verified | Rare | ❌ roadmap unscheduled |
-| Guardian sign-off for minors | 2 | Rare | ⚠️ solo signature accepted for now (H-21) |
-| Compressor logs | 1–2 | Rare | ❌ (H-11) |
+| Guardian sign-off for minors | 2 | Rare | ⚠️ solo signature accepted for now (H-20260730-minimum-age-gate-data) |
+| Compressor logs | 1–2 | Rare | ❌ (H-20260730-nitrox-fill-station-procedure) |
 | Buddy pairing | 1 | Rare | ✅ buddy teams with split-team alert |
 | Incident reporting | 1 | Rare | ✅ departure log; no structured incident form |
 | Roll call / departure accounted-for | 1 | Rare | ✅ per-dive checkpoints, missing-diver escalation |
@@ -186,10 +186,10 @@ end.
   at checkout; PADI Adventures widget 4.9%.
 - **Quote only:** EVE, AbyssOS, Geek Divers, Scuba Manager, DiveShop360 Core and Plus.
 
-DiveDay's $99 flat with everything included (H-12) sits at the top of the flat-fee band but below
+DiveDay's $99 flat with everything included (H-20260724-public-founding-shop-price) sits at the top of the flat-fee band but below
 ScubaHub and every incumbent's real all-in cost. Two newcomers (DivePrep, DivePlanner Pro) now
 offer a **free tier bounded by activity** — trips per month — rather than by features; that is a
-cleaner trial story than a dated trial and worth an owner's glance when H-12's post-cohort
+cleaner trial story than a dated trial and worth an owner's glance when H-20260724-public-founding-shop-price's post-cohort
 pricing is decided. Not filed as an issue: pricing is a human-owned row.
 
 ## The 2026 newcomers — DivePrep, ScubaHub, DiveCrewPro
@@ -512,11 +512,11 @@ tracked" links the existing home; "filed" is a new `needs-triage` issue from thi
 | Gift cards (2 verified; generic engines likely) | [roadmap, unscheduled](../features/roadmap.md#gift-cards) |
 | Private / buyout charters and a boat entity (12 of 32 multi-boat) | [roadmap §4](../features/roadmap.md#4-multi-boat--multi-shop-configuration) and the boat-resource ADR |
 | Snorkellers and riders (Checkfront-style participant types) | [participant-types.md](../features/participant-types.md) |
-| Nitrox fill / analysis log, compressor logs (DiveOne) | [roadmap §3](../features/roadmap.md#3-nitrox-fill--analysis-log-open-question), H-11 |
+| Nitrox fill / analysis log, compressor logs (DiveOne) | [roadmap §3](../features/roadmap.md#3-nitrox-fill--analysis-log-open-question), H-20260730-nitrox-fill-station-procedure |
 | No-show frees the seat; morning Go / Watching call; seasonal price windows; counted share links; load-out checklist templates; tips by crew; refresher counsel; outbound Google review door | [roadmap §11](../features/roadmap.md#11-product-ideas-from-the-sweep-all-thirteen-deferred-past-pilot), ruled later in #1079 |
 | Credit ledger, buddy referral credit, course cohorts, group pay-your-own-share, alternative-day salvage, cohort/retention view, thermal receipt print | [brainstorm.md](../features/brainstorm.md) |
 | Cert-card OCR, natural-language ops assistant, diver Q&A (the "AI agent" wave: DiveOne, Anolla, EquipDash, MOLA, DiveOps.ai, DiveAdmin's Coral, ScubaHub's daily brief) | [ai-ml.md](../features/ai-ml.md) — DiveDay's Today queue already is the "daily brief"; the guardrail stands |
-| Guardian co-signature on a minor's waiver (AbyssOS, EquipDash) | H-21: solo signature accepted as-is, returns with H-01–H-03 |
+| Guardian co-signature on a minor's waiver (AbyssOS, EquipDash) | H-20260730-minimum-age-gate-data: solo signature accepted as-is, returns with H-20260730-jurisdiction-waiver-text-medical, H-20260730-evidence-retention-period-deletion, H-20260724-current-typed-name-explicit |
 | Birthday cues, welcome cues, rusty-diver re-entry, weather-disappointment recovery, service-recovery inbox (ScubaHub's birthday alert; FareHarbor's rebooking) | Delight backlog #1160 (D18, D22, D37, D46) |
 | Course minimum-age enforcement | [story-backlog.md](../features/story-backlog.md) |
 | Third-party e-signature adapter | [roadmap §2](../features/roadmap.md#2-third-party-e-signature-adapter-m3-follow-up) |
@@ -576,14 +576,14 @@ behind it.
 
 Not issues — they belong to rows a human already owns.
 
-1. **Pricing against the 2026 cohort** (H-12, H-26). The flat-fee peer group now runs $19–$119
+1. **Pricing against the 2026 cohort** (H-20260724-public-founding-shop-price, H-20260802-what-game-is-this). The flat-fee peer group now runs $19–$119
    with two activity-bounded free tiers. $99 with everything included still reads well against
    the incumbents' real cost; whether it reads well against DivePrep's "free forever for small
    shops" is a founding-cohort conversation.
 2. **Proof** (V-02). The only case study in the peer group with numbers — ScubaHub's Drop Dive
    Maldives — is vendor-written and is still the most-cited evidence in this segment because
    nothing else exists. One founding shop's before/after would be the same for DiveDay.
-3. **The agency rail** (#1239 restates H-10 as a partnership question).
+3. **The agency rail** (#1239 restates H-20261007-request-supported-c-card as a partnership question).
 4. **Whether resort-market plumbing is ever in scope** (#1237).
 
 ## Method and its limits

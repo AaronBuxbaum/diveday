@@ -15,7 +15,7 @@ import { staffTranslator } from "./staff-messages";
  * false (there is no missing card; an Open Water diver is not an Advanced one)
  * and dangerous: it points a staffer at the certifications form as the way past
  * a cert gate, and a hand-entered card clears admission on the very next
- * attempt (H-24). These assertions are what keep the two cases apart.
+ * attempt (H-20260725-two-findings-dive-domain). These assertions are what keep the two cases apart.
  */
 const t = staffTranslator("en-US");
 const tEs = staffTranslator("es-ES");
@@ -47,7 +47,7 @@ describe("tripAdmissionRefusalText — a level refusal", () => {
 
   it("makes adding a card conditional on the diver holding one", () => {
     // Not "add the missing card" — there may be no card to add, and saying so
-    // unconditionally is the invitation into the H-24 leak.
+    // unconditionally is the invitation into the H-20260725-two-findings-dive-domain leak.
     expect(tripAdmissionRefusalText(t, levelRefusal, "en-US")).toContain("If they hold");
   });
 
@@ -129,7 +129,7 @@ describe("tripRequirementList — what the trip asks of anybody", () => {
   });
 
   it("describes the trip and never the reader", () => {
-    // H-22: this string is shown on an anonymous page and repeated back in a
+    // H-20260724-minimum-age-gate-fail: this string is shown on an anonymous page and repeated back in a
     // refusal to an anonymous submitter, so it must be identical for everyone.
     const requirement = {
       minimumCertificationLevel: "rescue" as const,

@@ -27,7 +27,7 @@ of the export bundle stated in §2.
 
 This exists because the highest-value rows are the ones we can least re-create.
 `waiver_records` is legal evidence and its working retention default is "indefinite"
-([H-02](../product/human-decisions/README.md)) — a database we cannot restore is a shop's liability
+([H-20260730-evidence-retention-period-deletion](../product/human-decisions/README.md)) — a database we cannot restore is a shop's liability
 history we cannot produce.
 
 ## What holds production state
@@ -141,7 +141,7 @@ decide — that belongs to whoever owns `src/lib/export.ts` next, and it is wort
 | --- | --- |
 | Bucket | `DatabaseBackupBucket` (`infra/lib/infra-stack.ts` §11), default name `diveday-backups`, override with `--context backupBucketName=...`. **Bundles only.** The full-cluster dump moved to its own bucket on 2026-08-15 (§2c) |
 | Properties | Versioned, `BlockPublicAccess.BLOCK_ALL`, SSE-S3, `enforceSSL`, `RemovalPolicy.RETAIN` |
-| Lifecycle | Current versions never expire (H-02 retention is a legal call, not a lifecycle rule); Infrequent Access at 30 days, Glacier **Instant** Retrieval at 90; non-current versions expire at 90 days; incomplete multipart uploads abort at 7 days. **One rule, about bundles.** Nothing expires the `dumps/` prefix this bucket held until 2026-08-15 — those objects are abandoned, not drained, and a human deletes them by hand (§2c) |
+| Lifecycle | Current versions never expire (H-20260730-evidence-retention-period-deletion retention is a legal call, not a lifecycle rule); Infrequent Access at 30 days, Glacier **Instant** Retrieval at 90; non-current versions expire at 90 days; incomplete multipart uploads abort at 7 days. **One rule, about bundles.** Nothing expires the `dumps/` prefix this bucket held until 2026-08-15 — those objects are abandoned, not drained, and a human deletes them by hand (§2c) |
 | Uploader | IAM user `diveday-backup-uploader`, `s3:PutObject` + `s3:AbortMultipartUpload` only — no read, no delete, no list — and scoped to `exports/*`. It has no grant at all on the bucket live dumps go to, and the `exports/*` scoping is least privilege on its own terms, not a leftover of the split |
 | Key convention | `exports/<YYYY-MM-DD>/<shop-slug>.zip` — date first so a whole run is one prefix |
 
@@ -319,7 +319,7 @@ portability feature it was built as.
 | Host | CodeBuild project `diveday-database-dump` (`infra/lib/infra-stack.ts` §20), using the digest-pinned Postgres 17 image in `config/postgres-image/Dockerfile`. `pg_dump` may be newer than its server, never older, so revisit the major version when Neon upgrades |
 | Cadence | Weekly, **Mondays 05:30 UTC**, EventBridge Scheduler → `codebuild:StartBuild`. Half an hour after the export pass, a day before the watchdog, so one week's dump and one week's bundles share a run date |
 | Key convention | `dumps/<YYYY-MM-DD>/diveday.dump.gz` in `DatabaseDumpBucket`, default name `diveday-database-dumps`, override with `--context dumpBucketName=...`. **Not** the bundles' bucket, since 2026-08-15 — and there is no second place to look, see the abandoned prefix below |
-| Retention | **35 days, then deleted** — a lifecycle rule over the whole bucket, deliberately the opposite of the bundles' "never expire". The file holds every password hash and every medical answer in the platform, and it answers a question asked within days of a loss, never months. `DUMP_RETENTION_DAYS` in `infra/lib/infra-stack.ts` is the one number to change if H-02 lands somewhere else |
+| Retention | **35 days, then deleted** — a lifecycle rule over the whole bucket, deliberately the opposite of the bundles' "never expire". The file holds every password hash and every medical answer in the platform, and it answers a question asked within days of a loss, never months. `DUMP_RETENTION_DAYS` in `infra/lib/infra-stack.ts` is the one number to change if H-20260730-evidence-retention-period-deletion lands somewhere else |
 | Versioning | **Off, on purpose.** On a versioned bucket a lifecycle expiration writes a delete marker and keeps the bytes as a non-current version, so "35 days" would mean the file exists for up to 70. Unversioned, the number in the row above is the real one. The trade — no non-current copy to fall back on after a bad overwrite — costs nothing here: the only writer holds no `DeleteObject` and writes a date-stamped key, so the worst it can touch is *today's* dump |
 | Credential | `diveday/database-url-unpooled` — the **direct** connection string, not the pooled one (a transaction-mode pooler is unreliable for `pg_dump`, same reason migrations use the direct connection). After an infra deploy, GitHub Actions retrieves it from Neon's Management API with `pooled=false` and stores it here; a build refuses with a named message while the value is still `unset` |
 | Who can read a dump | Nobody reachable from the app. The job's own role is `PutObject`/`AbortMultipartUpload`/`GetObject` scoped to `dumps/*` **in this bucket only** — it has no grant of any kind on the bundles' bucket, and it cannot delete. The uploader credential that lives in Vercel has no grant here. Reading a dump back needs the admin profile |
@@ -379,7 +379,7 @@ a `drain-legacy-database-dumps` lifecycle rule over `s3://diveday-backups/dumps/
 out on their own, roughly 70 days out because that bucket is versioned and an expiry there writes a
 delete marker rather than deleting bytes. **That rule is gone**, and so is the wait: DiveDay is
 pre-pilot with no users and a deliberately disposable database
-([H-47](../product/human-decisions/README.md)), so what is under that prefix is dumps of seeded demo data —
+([H-20260814-production-database-disposable](../product/human-decisions/README.md)), so what is under that prefix is dumps of seeded demo data —
 no diver's medical answer, no real shop's waivers, and no password hash anybody uses. Keeping a
 lifecycle rule, a test and a ten-week reminder alive to tidy data nobody would miss costs more than
 the data is worth. This paragraph is the record for whoever opens that bucket later and wonders what
@@ -477,7 +477,7 @@ the password-sign-in or export-bundle checks. Every run goes in the log at the e
 
 ### First restore: Aaron, with an agent holding this runbook
 
-Aaron's call ([H-154](../product/human-decisions/README.md)) was for him to run the first restore
+Aaron's call ([H-20261023-first-restore-run-by](../product/human-decisions/README.md)) was for him to run the first restore
 with an agent holding this runbook, followed by the monthly drill. The first successful full-dump
 restore is recorded below: run 40818998626 on 2026-10-29 restored the dump to a scratch branch,
 checked account/person/shop/role records, read a future manifest, and deleted the branch. It did not
@@ -522,7 +522,7 @@ or a row into the chat or the log.
    the environment and get its Neon key and its AWS role, and agents push branches all day. Then
    give it what the next section lists. Run the workflow once from its **Run workflow** button on
    `main`, approve it, and watch it go green.
-7. **Keep the log current** below. H-154 remains open until the owner records the Neon restore
+7. **Keep the log current** below. H-20261023-first-restore-run-by remains open until the owner records the Neon restore
    window and secrets-backup location, and the remaining first-run checks are complete.
 
 ### Monthly restore drill (`.github/workflows/restore-drill.yml`)
@@ -653,8 +653,8 @@ It should take under an hour.
   what will produce the first real number.
 - **Stripe, AWS SES, and Twilio hold their own records** and are not backed up here. Stripe is
   authoritative for money in a restore conflict, and that is deliberate.
-- **Retention itself is undecided.** H-02 has a working default of "indefinite" and no legal answer.
-  The lifecycle rule in §11 was written to never be the thing that deletes evidence; when H-02 lands,
+- **Retention itself is undecided.** H-20260730-evidence-retention-period-deletion has a working default of "indefinite" and no legal answer.
+  The lifecycle rule in §11 was written to never be the thing that deletes evidence; when H-20260730-evidence-retention-period-deletion lands,
   both the rule and this runbook need revisiting.
 
 ## When a restore goes wrong

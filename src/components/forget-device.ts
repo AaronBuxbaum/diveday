@@ -11,7 +11,7 @@ const WIPE_WAIT_MS = 2_000;
  * **A shared device keeps nothing of the last staffer** (security review F2,
  * N1): ⌘K's recents, any form kept for a refusal, the medical alerts
  * revealed in this visit, the medical alert words on every offline copy
- * (H-153 amendment; the rest of each copy stays, queued roll call included),
+ * (H-20261023-medical-alert-for-the amendment; the rest of each copy stays, queued roll call included),
  * and any diver's `/ready` page kept on this browser (issue #2693).
  * Run by both sign-out doors and by the sign-in page, where every ended
  * session lands (expiry, a disabled account, a sign-out elsewhere), so the
@@ -22,7 +22,7 @@ const WIPE_WAIT_MS = 2_000;
  * a stuck store never keeps someone signed in. A session that ends without
  * the sign-in page loading (the browser closed, the session expiring on the
  * offline page) runs none of this: the words stay on the device until the
- * copy expires or the next sign-in (ADR 20260718 amendment, H-153).
+ * copy expires or the next sign-in (ADR 20260718 amendment, H-20261023-medical-alert-for-the).
  */
 export async function forgetThisDevice(): Promise<void> {
   forgetAllRecents();

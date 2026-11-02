@@ -84,7 +84,7 @@ export type ThreadSpine = {
    * The checklist collapsed to its single setup item, so there is no spine to
    * render at all. The page shows this item's own reassuring line instead of a
    * figure and a list — never the generic one when the engine had something
-   * more specific to say (`under_minimum_age` carries H-22's wording, which a
+   * more specific to say (`under_minimum_age` carries H-20260724-minimum-age-gate-fail's wording, which a
    * collapse to `setup_generic` would throw away).
    */
   setupItem?: DiverChecklistItem;

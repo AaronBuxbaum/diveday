@@ -25,7 +25,7 @@ export type CrewWeekLine = {
   gap: StaffGapCode | null;
   /**
    * When to be at the dock (item 47), and whose time it is: the shop's crew
-   * time (H-149), else the divers' dock call, unless a shift of this person's
+   * time (H-20261022-crew-arrive-before-divers), else the divers' dock call, unless a shift of this person's
    * already running at that call starts earlier (`crewCallAt`); null when
    * none leads the departure.
    */

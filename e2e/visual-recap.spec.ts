@@ -43,7 +43,7 @@ for (const scheme of ["light", "dark"] as const) {
        *
        * Slice 16i added three things inside that same frame and they are the
        * reason this baseline moves: the record's face says "Dive day № 3"
-       * rather than a clause naming the shop (H-67 c), the record's footer
+       * rather than a clause naming the shop (H-20260904-reef-go-all-way c), the record's footer
        * carries the dashed private line and Save as image (D33 issue #1193,
        * issue #1081), and the private pulse and the one next-dive card sit
        * below the review (D40 issue #1200, D35 issue #1195). The two sibling
@@ -162,7 +162,7 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
-       * **The sharer's own photo, shared with the boat** (H-129, issue #2806):
+       * **The sharer's own photo, shared with the boat** (H-20261014-share-photo-with-boat, issue #2806):
        * marked as shared, with "Stop sharing" under it. Through a test route
        * because an e2e build has no media store to upload to; the demo's own
        * recap stays the unshared one photographed above.

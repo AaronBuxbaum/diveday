@@ -33,7 +33,7 @@
  *     and only against a real card number. Boarding clears immediately, but the
  *     actual enriched-air *fill* — the highest-consequence gate, and one no card
  *     expiry backstops — waits for a staff confirm that carries an explicit card
- *     sighting (`reviewedAt`; H-24); an imported-but-unconfirmed card gives plain
+ *     sighting (`reviewedAt`; H-20260725-two-findings-dive-domain); an imported-but-unconfirmed card gives plain
  *     air (src/db/nitrox.ts). A card entered by hand is unaffected.
  *   - A specialty card (deep, wreck, night, drysuit) imports the same way, and
  *     is the strictest of the three (ADR 20260725-import-specialty-cards):
@@ -1270,7 +1270,7 @@ export function specialtiesNamed(raw: string | null | undefined): DiveSpecialty[
   //
   // It is a warning rather than a fix because the dock still holds: an imported
   // specialty card is `verified` but does not clear its gate until a staffer
-  // makes the card-sighting attestation (H-23/H-24), so the diver is blocked on
+  // makes the card-sighting attestation (H-20260725-owner-asked-move-rows/H-20260725-two-findings-dive-domain), so the diver is blocked on
   // the manifest and the staffer is asked to look at the actual card — which is
   // exactly where "Deep Adventure Dive" is caught. Narrowing the pattern here
   // would instead drop real Deep specialty cells whose wording we cannot

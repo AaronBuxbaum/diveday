@@ -8,9 +8,9 @@ criteria for "beta", and publishing to the Chrome Web Store.
 The extension carries words and decides nothing: it fills in the agency's own lookup form in the
 staffer's browser and hands the answer's text back, and `judgeAgencyPage`
 (`src/lib/agency-check.ts`) decides on the server. Decisions:
-[H-105](../product/human-decisions/H-105-cert-check-extension.md) (the extension),
-[H-106](../product/human-decisions/H-106-padi-elearning-check.md) (PADI eLearning),
-[H-121](../product/human-decisions/H-121-padi-divechek.md) (PADI DiveChek and the beta switch).
+[H-20261008-cert-check-extension](../product/human-decisions/H-20261008-cert-check-extension.md) (the extension),
+[H-20261008-padi-elearning-check](../product/human-decisions/H-20261008-padi-elearning-check.md) (PADI eLearning),
+[H-20261014-padi-divechek](../product/human-decisions/H-20261014-padi-divechek.md) (PADI DiveChek and the beta switch).
 Design: [ADR 20261008-cert-check-extension](../architecture/decisions/20261008-cert-check-extension.md).
 The code and how to load it unpacked: [extension/README.md](../../extension/README.md). The research
 this plan comes from: the no-pro plan of 2026-10-15 (#2259), which found no published PADI clause
@@ -137,15 +137,15 @@ subject's lines, never another diver's, in `src/lib/agency-check-shapes.test.ts`
 
 ## After the session: the exits from beta
 
-Paste the terms clause into [H-121](../product/human-decisions/H-121-padi-divechek.md). Two exits,
-held apart (H-121, confirmed by Aaron Buxbaum on 2026-10-15):
+Paste the terms clause into [H-20261014-padi-divechek](../product/human-decisions/H-20261014-padi-divechek.md). Two exits,
+held apart (H-20261014-padi-divechek, confirmed by Aaron Buxbaum on 2026-10-15):
 
 - **"Beta" comes off** only after each of these has been seen on PADI's real pages: a match, a no
   record, a several-divers page, a signed-out page, a Junior (or "Jr.") card, a diver whose name
   ends in "Jr." read as their name and not a Junior card, a PADI Scuba Diver card, and the date
   format of a page read by a Pro outside the US.
 - **The default turned on** on 2026-10-23: Aaron Buxbaum made the product owner's call before the
-  Pros' Site terms were read (H-121). If the terms rule the check out, `padi` comes out of
+  Pros' Site terms were read (H-20261014-padi-divechek). If the terms rule the check out, `padi` comes out of
   `AGENCY_CHECKS` and `extension/agencies.js`, and a PADI card keeps its "(member sign-in)" link.
 
 PADI has no public API; Dive Shop 360 has a private, PADI-approved integration that makes PADI

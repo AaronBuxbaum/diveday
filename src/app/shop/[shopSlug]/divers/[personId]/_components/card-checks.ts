@@ -14,7 +14,7 @@ export function agencyCheckActions(shopSlug: string, personId: string) {
 
 /**
  * The lookup the extension would type for this card, or null when there is
- * none to offer. PADI's waits for the shop's own switch (H-121); off, the card
+ * none to offer. PADI's waits for the shop's own switch (H-20261014-padi-divechek); off, the card
  * keeps its "(member sign-in)" link.
  */
 function offeredCheckQuery(

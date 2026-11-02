@@ -40,7 +40,7 @@ import type { DiverProfile } from "./shared";
  *
  * Nothing about the rules moved. Recording a first fit is data entry, open to
  * whoever took the call; rewriting one already on file is the gated override
- * (H-06, `canPersonOverrideGearRequest`). Raising the can't-fill flag stays
+ * (H-20260724-initial-gear-policy-sizing, `canPersonOverrideGearRequest`). Raising the can't-fill flag stays
  * open to every staff member — the captain who finds the empty rack is exactly
  * who needs it — and clearing it stays the judgement call.
  */
@@ -90,7 +90,7 @@ export function GearAndSizes({
   shopSlug: string;
   personId: string;
   rentalItems: string[];
-  /** Instructor/divemaster/manager may rewrite the diver's stated fit (H-06). */
+  /** Instructor/divemaster/manager may rewrite the diver's stated fit (H-20260724-initial-gear-policy-sizing). */
   canOverride: boolean;
   locale: string;
   t: StaffTranslator;
@@ -156,7 +156,7 @@ export function GearAndSizes({
     },
     // Free text too, and for a narrower reason than the drysuit's: a hood and
     // gloves both rack by size and thickness ("M, 5 mm", "L, 3 mm"), and no
-    // closed grid has an owner yet (H-102, issue #1816).
+    // closed grid has an owner yet (H-20261007-hood-glove-sizes, issue #1816).
     offers.has("hood") && {
       name: "hoodSize",
       label: t("divers.rentalFit.hoodSizeLabel"),
@@ -195,7 +195,7 @@ export function GearAndSizes({
     },
   ].filter((size) => size !== false);
 
-  // The suit is its own question, one choice of four (H-78), so the wetsuit
+  // The suit is its own question, one choice of four (H-20260916-rental-fit-describe-shop), so the wetsuit
   // and drysuit leave the ticks. The diver's stored choice stays on offer even
   // after the shop drops that suit, so a save does not rewrite it (issue #1755).
   // A diver with no fit on file starts where the ticks always started them:
@@ -347,7 +347,7 @@ export function GearAndSizes({
             <DiverFormStatus status={status} className="mt-3" />
           </div>
         )}
-        {/* The H-06 safe fallback: when the shop can't fill a requested size,
+        {/* The H-20260724-initial-gear-policy-sizing safe fallback: when the shop can't fill a requested size,
             flag the diver for hands-on fitting instead of packing a size they
             never chose. Only ever offered once a fit exists — there is nothing
             to fall back *from* otherwise.

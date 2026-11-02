@@ -243,7 +243,7 @@ export function rollCallActText(entry: RollCallTimelineEntry, t: StaffTranslator
  * a turned-away seat is off the boat and out of every count on this page,
  * and still stated, so a turn-away before the first dock count leaves a
  * sentence in the record. The category only, in the timeline's own words,
- * never the answers behind it (H-135).
+ * never the answers behind it (H-20261015-who-may-turn-someone).
  */
 export function RosterIntro({
   turnedAway,

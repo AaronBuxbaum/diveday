@@ -13,7 +13,7 @@ answered with a `course_enrollment_progress` table, a four-state status, a paste
 new roster tab. It was never accepted, and the request that brought this back asked for less: send
 the materials automatically, and let staff mark per student that they are done.
 
-H-10 still holds. No agency exposes a provisioning or completion API
+H-20261007-request-supported-c-card still holds. No agency exposes a provisioning or completion API
 ([20260721-manual-certification](20260721-manual-certification.md)), so "done" is always a person's
 word, never a fetched fact.
 

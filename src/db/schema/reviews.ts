@@ -45,7 +45,7 @@ export const recapPhotos = pgTable(
     imageUrl: text("image_url").notNull(),
     caption: text("caption"),
     /**
-     * **The diver chose to share this photo with everyone on the boat** (H-129,
+     * **The diver chose to share this photo with everyone on the boat** (H-20261014-share-photo-with-boat,
      * ADR 20261016-shared-boat-photos). Null, the default, keeps it on the
      * uploader's own recap; set, it also shows on the recap of every other
      * diver on the same departure, under the uploader's first name. Set once at

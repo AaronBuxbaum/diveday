@@ -73,13 +73,13 @@ to match.
 The compatibility pointer duplicated a domain fact and the policy that kept it in step (create,
 edit, series propagation, a revision bump when it moved), and the zero-`trip_dives` fallback
 existed only to tolerate a shape no writer produces. Aaron decided on 2026-10-31 that prior
-behavior need not be preserved (H-49: no legacy), so both are deleted.
+behavior need not be preserved (H-20260815-no-legacy: no legacy), so both are deleted.
 
 - **The column, in two releases.** The first release removed the `trips.dive_site_id` declaration
   and every reader and writer, leaving the column in the database, unread and unwritten. The deploy
   guard (`pnpm check:migrations`) refuses a `drop-column` while the previous release still
   declares the column, because that release's whole-row selects name it. The second release,
-  `20261101174606_drop-duplicate-lookup-indexes`, dropped the foreign key and the column. Per H-49
+  `20261101174606_drop-duplicate-lookup-indexes`, dropped the foreign key and the column. Per H-20260815-no-legacy
   there is no backfill: a trip that had a pointer and no `trip_dives` rows (only demo seeds did) is
   rebuilt by the seed, not migrated.
 - **One projection for "the trip's site".** `tripPrimarySiteId` (`src/db/trip-primary-site.ts`) is

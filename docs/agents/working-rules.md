@@ -38,7 +38,7 @@ in [route-map.md](route-map.md).
 | `node scripts/stack-map.mjs` | the stack HEAD is in — layers bottom to top, the top, other tips, merged sub-branches, each layer's paths — derived from remote refs (`--json` for a machine); the per-prompt line carries the position |
 | `pnpm stack:sync` | merges this layer's base (`origin/main` for the bottom) into it, read from the open pull requests; stops on a conflict, never pushes, prints what each layer above does (`--plan`, `--chain`; the **stacked-prs** skill) |
 | `pnpm check:env` / `pnpm env:manual` | the two structural facts about configuration, and the one file a human edits — see `.claude/rules/infra.md` |
-| `pnpm check:repo` | 63 static guards over the repository, spawned concurrently so one run reports every failure rather than the first. Each guard names itself and prints the offending line; the ones whose *why* is not obvious from that message are written up in [docs/agents/repo-checks.md](repo-checks.md) |
+| `pnpm check:repo` | 64 static guards over the repository, spawned concurrently so one run reports every failure rather than the first. Each guard names itself and prints the offending line; the ones whose *why* is not obvious from that message are written up in [docs/agents/repo-checks.md](repo-checks.md) |
 | `pnpm check:follow-ups` | every open `needs-triage` issue is still actionable cold. The one guard that calls `gh`, so it is not in `check:repo`: it runs daily in `.github/workflows/follow-ups.yml`, and locally reports **SKIPPED** when `gh` cannot answer ([docs/agents/issue-tracker.md](issue-tracker.md)'s "Filing a follow-up") |
 | `pnpm check:context-budget` | the words every session loads before it reads any code — this file, `CLAUDE.md`, any unscoped `.claude/rules/*.md`, and every skill's and reviewer agent's `description:` line — ratcheted (`--write` banks a fall, `--absorb "<why>"` records a deliberate rise), plus a 240-word cap on any single line. The fix for red is never to compress the prose: move the long half into `docs/` or a path-scoped rule and leave a pointer |
 | `pnpm check:copy` / `check:domain-strings` / `check:tokens` / `check:architecture` / `check:type-ramp` / `check:voice` / `check:locale` / `check:e2e-hygiene` / `check:route-coverage` / `check:critical-text` / `check:closing-keywords` / `check:rental-fit-caps` | the individual guards, each also inside `check:repo`; the ratcheted ones share `--report <path>` / `--write` / `--absorb`. What each refuses is in the path-scoped rule for the files it reads and in [docs/agents/repo-checks.md](repo-checks.md) |
@@ -78,13 +78,14 @@ runs. Pass args directly. The shell guard refuses the bare form.
   every checkout that is clean, fully pushed, idle 24 hours and not any process's working directory.
 - **Never switch a live thread's model; start a fresh thread with a state note instead.**
   Switching drops the prompt cache, so the next call re-reads the whole context at full price
-  (H-117).
+  (H-20261014-no-mid-thread-model).
 - Never bare `git stash` / `git stash pop` — one stack shared with every worktree and every session
   (the shell guard refuses both). Prefer a `git worktree`, then a WIP commit, then
   `git stash push -u -m "<tag>"` restored by sha and popped immediately after.
 - Use a unique branch slug and open a draft PR early for non-trivial concurrent work; state owned
   paths, expected schema changes, and planned ADR ids in its description. New ADRs use
-  collision-resistant `YYYYMMDD-short-slug` ids; do not allocate the next integer. No branch-local
+  collision-resistant `YYYYMMDD-short-slug` ids and human decisions `H-YYYYMMDD-slug`; do not
+  allocate the next integer. No branch-local
   reservation ledgers. Split work by vertical slice or non-overlapping paths, and trial-merge the
   target branch before calling work complete.
 - **Stack everything, across threads, and run one PR's CI at a time: cut every branch from the
@@ -152,6 +153,9 @@ runs. Pass args directly. The shell guard refuses the bare form.
   (`.claude/agents/Explore.md`). Screenshot capture and test execution need an execution-capable
   worker; never assign shell commands or file output to a read-only scout. Design,
   judging and safety-critical code stay on the main model.
+- **Check the budget before fanning out.** Before starting workers or reviewers, a coordinator that
+  can read its 7-day usage status (`rate_limit_info`) does so. At the warning status it runs one
+  thread at a time; when the limit is rejected it starts no worker.
 - **A worker hands back a path.** A subagent or worker writes its full result to a file (the
   scratchpad, or `docs/` when the result is the deliverable) and hands back the path plus at most
   ten lines. A hand-back is read twice in the parent's transcript, and a long one crowds out the
@@ -228,14 +232,13 @@ runs. Pass args directly. The shell guard refuses the bare form.
   ([repo-checks.md](repo-checks.md#pr-body)). On every one of these surfaces that review is **two independent runs with different framing**, launched in parallel
   so neither sees the other: one as **a dock operator** (the boat is leaving, the count is
   called, the diver is at the rail — what does this code let happen?) and one as **an attacker**
-  (`security-reviewer` when the change touches personal or medical data, tokens or erasure;
-  otherwise a second `dive-domain-expert` run told to break the rule rather than check it).
+  (a second `dive-domain-expert` run told to break the rule rather than check it; a
+  `security-reviewer` the change also needs runs on its own line besides).
   Act on the union of their findings, each under the reviewers' evidence rule: it cites the
   rule, ADR or glossary line it violates and a failing input or a test, labelled confirmed or
-  possible. A finding is acted on once its test runs and fails. Both runs are named in "Reviews
-  launched" (CI checks that the agent is named, not that it ran twice). Ordinary PRs, plain
-  waiver signing and rental fit keep one run: two runs double the review
-  spend, and the voting is worth it only where a miss puts a diver in the water.
+  possible. A finding is acted on once its test runs and fails. Each run gets its own
+  `dive-domain-expert` line in "Reviews launched", labelled right after the agent name, `dive-domain-expert` (dock operator) and `dive-domain-expert` (attacker), each answered "launched" with what it found. CI reads the rendered text, ignores code fences, counts two identical lines once, and rejects an answer that says not, never, skipped, didn't or no time. A "not needed because <reason>" line is accepted only as the sole `dive-domain-expert` line, never beside a launched one; CI cannot tell whether the change only moves layout, so that judgement is the author's and a reviewer's. Waiver tests and fixtures need the review as much as waiver code; only message bundles and `*-copy.ts(x)` files are exempt. CI checks that two runs are recorded, not that they happened. Ordinary PRs and rental fit keep one run: two runs double
+  the review spend, and the voting is worth it only where a miss puts a diver in the water.
 - **Security-sensitive changes** (auth/authz, token flows, rows holding personal or medical data,
   export/import) get a `security-reviewer` review before merge, named in the same "Reviews
   launched" section (`scripts/check-pr-body.mjs`).
@@ -256,10 +259,10 @@ runs. Pass args directly. The shell guard refuses the bare form.
   `loading.tsx`.** Each of these is stated in full, with its incident and its guard, in the
   path-scoped rule for the files it governs — `.claude/rules/surfaces.md`, `i18n.md`, `db.md`,
   `domain.md` — and `pnpm check:repo` enforces the mechanical half of every one.
-- **There is no legacy. Delete it.** DiveDay is pre-pilot (H-49): a table nothing writes is
+- **There is no legacy. Delete it.** DiveDay is pre-pilot (H-20260815-no-legacy): a table nothing writes is
   dropped, a code path that only tolerates old rows is deleted, and no reconciliation, backfill,
   dual-read or version-tolerance code is written for pre-pilot data. The two things this does not
-  relax — the destructive-migration guard and H-02's retention and erasure promises — and the rule's
+  relax — the destructive-migration guard and H-20260730-evidence-retention-period-deletion's retention and erasure promises — and the rule's
   expiry are in `.claude/rules/db.md`.
 - **Text a human will copy is written unwrapped** — one line per paragraph and per bullet, in a
   document and in a chat reply alike; the worked examples are in `.claude/rules/docs.md`.

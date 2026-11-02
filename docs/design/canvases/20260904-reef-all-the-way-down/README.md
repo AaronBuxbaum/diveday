@@ -1,6 +1,6 @@
 # Reef, all the way down — every surface, every open idea, and a wider budget
 
-- **Status:** Shipped (its ADR was Accepted on 2026-09-04 with H-67 Chosen; every slice below has landed, 16a through 16j)
+- **Status:** Shipped (its ADR was Accepted on 2026-09-04 with H-20260904-reef-go-all-way Chosen; every slice below has landed, 16a through 16j)
 - **Date:** 2026-09-04
 - **ADR:** [20260904-reef-all-the-way-down](../../../architecture/decisions/20260904-reef-all-the-way-down.md)
 - **Published:** https://claude.ai/code/artifact/7b7af489-4f19-47cc-b202-26383b362561
@@ -106,7 +106,7 @@ session of {course}.") rather than `course_next_step` ("The next step after {cou
 `courses` records what a course *awards*, so "after" would have to be inferred from a
 `minimum_certification_level` ladder a shop's catalog is not obliged to be; `trips.course_id`
 matching is checkable, and it is the more useful sentence for the student it is for.
-| 16j — the ten adopted-unseen issues, built from their own bodies (D05 on H-67 b, D17, D25, #1363, #1366, D36+D45, D44, D52, #1357) | shipped | `src/db/shops.ts` | `src/lib/trip-revision.test.ts`, `src/lib/reminders.test.ts`, `src/lib/dive-site-memory.test.ts`, `src/db/course-next-step.test.ts`, `src/db/gear.test.ts`, `src/db/crew-public-consent.test.ts`, `src/db/waivers.test.ts` |
+| 16j — the ten adopted-unseen issues, built from their own bodies (D05 on H-20260904-reef-go-all-way b, D17, D25, #1363, #1366, D36+D45, D44, D52, #1357) | shipped | `src/db/shops.ts` | `src/lib/trip-revision.test.ts`, `src/lib/reminders.test.ts`, `src/lib/dive-site-memory.test.ts`, `src/db/course-next-step.test.ts`, `src/db/gear.test.ts`, `src/db/crew-public-consent.test.ts`, `src/db/waivers.test.ts` |
 
 16f ships with two deliberate deviations from `Storefront.dc.html`. The board draws a dashed **Has
 space** pill at the right end of the lens rail, folding the shipped checkbox into it; that filter

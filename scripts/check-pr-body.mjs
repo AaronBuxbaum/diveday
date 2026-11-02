@@ -41,17 +41,43 @@ import { tracker } from "./tracker.mjs";
 /** Never a surface: the PWA web manifest, and copy bundles every pull request edits. */
 const NOT_SURFACES = [/^src\/app\/manifest\.ts$/, /^src\/i18n\/locales\//];
 
-/** `src/db/waivers.ts`, `src/lib/waiver-tokens.ts`, … : signed consent and its medical answers. */
+/**
+ * About a waiver without being one: message bundles and copy resolvers. Tests and fixtures are not
+ * exempt (a weakened adversarial case is a safety change); `src/i18n/waiver-labels.ts` is not copy
+ * either, it decides whether a standing renders as cleared.
+ */
+const NOT_WAIVER_LOGIC = [
+  /^src\/i18n\/(?!waiver-labels\.ts$)/,
+  /^src\/(app|components)\/.*-copy\.tsx?$/,
+];
+
+/**
+ * Every `src/**` path naming a waiver: the db/lib modules, the shop's waiver actions, the roster
+ * and party queues, the paper and counter forms, the diver's signing route, the doctor-referral
+ * form under `src/app/waivers/[token]/doctor/`, and their tests. A UI-only change answers "not
+ * needed because <reason>".
+ */
+const WAIVER_SURFACES = {
+  test: (file) => file.includes("waiver") && !NOT_WAIVER_LOGIC.some((re) => re.test(file)),
+};
+
+/** The security reviewer's waiver modules (their tests are not security surfaces). */
 const WAIVER_MODULES = /^src\/(db|lib)\/waivers?[^/]*\.ts$/;
+
+/** The two framings of a safety review, each named on its own "Reviews launched" line. */
+export const SAFETY_FRAMINGS = ["dock operator", "attacker"];
 
 /**
  * The paths each reviewer owns, from AGENTS.md's hard rules and the reviewer agents' own
  * descriptions. Only `src/**`: a document about a manifest is not a manifest. Matched against the
- * lowercased path.
+ * lowercased path; a pattern is anything with a `test(path)` method.
  */
 export const REVIEWS = [
   {
     agent: "dive-domain-expert",
+    // Two independent runs, one per framing (docs/agents/working-rules.md, "Safety-critical
+    // surfaces"). Until 2026-11-01 one answered line passed, so one run read as two.
+    framings: SAFETY_FRAMINGS,
     surface:
       "safety-critical (manifests, roll call, readiness, cert gating, medical, waivers, erasure, the booking transaction)",
     patterns: [
@@ -66,7 +92,22 @@ export const REVIEWS = [
       /erase|erasure|anonymi[sz]/,
       /seat-diver/,
       /nitrox/,
-      WAIVER_MODULES,
+      WAIVER_SURFACES,
+      // Modules that decide a seat's or a signature's standing without naming a waiver or a
+      // manifest (reviews 1, 2026-11-01).
+      /^src\/(db|lib)\/check-in[^/]*\.ts$/,
+      /^src\/(db|lib)\/aboard-at-sea[^/]*\.ts$/,
+      /(^|\/)booking-gates[^/]*\.ts$/,
+      /(^|\/)cert-actions[^/]*\.ts$/,
+      /^src\/(db|lib)\/guardian[^/]*\.ts$/,
+      /^src\/(db|lib)\/course-certified[^/]*\.ts$/,
+      /^src\/(db|lib)\/pre-departure[^/]*\.ts$/,
+      /(^|\/)staff-gates[^/]*\.ts$/,
+      /^src\/lib\/signatures[^/]*\.ts$/,
+      /^src\/lib\/depth-ceiling[^/]*\.ts$/,
+      /^src\/lib\/requirement[^/]*\.ts$/,
+      /(^|\/)paperwork-actions[^/]*\.tsx?$/,
+      /^src\/lib\/assists\/cert-scan[^/]*\.ts$/,
       /^src\/db\/bookings\.ts$/,
     ],
   },
@@ -120,24 +161,71 @@ export function reviewsSection(body) {
 }
 
 /**
- * Whether `section` names `agent` with an answer: the rest of the line after the name says it was
- * "launched" or what it "found", or that it was "not needed because" something. "yes", "n/a" and
- * the template's placeholder all passed before 2026-10-12, which made the line a checkbox.
+ * Whether `section` names `agent` with an answer: the line starts with the agent's name and says it
+ * was "launched" (and not that it was not, skipped or out of time), or that it was "not needed
+ * because" something. "yes", "n/a" and the template's placeholder all passed before 2026-10-12.
  */
 export function reviewAnswered(section, agent) {
-  for (const line of String(section ?? "").split("\n")) {
-    const at = line.indexOf(agent);
-    if (at === -1) continue;
-    const answer = line
-      .slice(at + agent.length)
-      .replace(/<[^>]*>/g, " ")
+  return reviewAnswers(section, agent).length > 0;
+}
+
+/** Drops HTML tags until none is left, so `<<b>b>` cannot leave a tag behind. */
+function stripTags(text) {
+  let previous;
+  let current = text;
+  do {
+    previous = current;
+    current = current.replace(/<[^>]*>/g, "");
+  } while (current !== previous);
+  return current;
+}
+
+const NEGATED = /\b(?:not|never|skipped|skip|no time)\b|n['\u2019]t\b/i;
+
+/**
+ * Each line of `section` that starts with `agent` and answers, as { label, ran, text }: `label` is
+ * the parenthesised framing right after the name, `ran` whether it says launched. Read on
+ * HTML-stripped text with code fences dropped, so nothing that does not render counts.
+ */
+function reviewAnswers(section, agent) {
+  const answers = [];
+  const text = String(section ?? "").replace(/^\s*(```|~~~)[\s\S]*?(?:^\s*\1.*$|(?![\s\S]))/gm, "");
+  for (const raw of text.split("\n")) {
+    const line = stripTags(raw)
+      .replace(/^\s*(?:[-*+]\s+|\d+[.)]\s+)?[`*_]*/, "")
+      .toLowerCase();
+    if (!line.startsWith(agent) || /^[\w-]/.test(line.slice(agent.length))) continue;
+    let rest = line
+      .slice(agent.length)
+      .replace(/^[`*_]+/, "")
+      .trimStart();
+    const labelled = rest.match(/^\(([^)]*)\)/);
+    const label = labelled ? labelled[1].trim() : "";
+    if (labelled) rest = rest.slice(labelled[0].length);
+    const answer = rest
       .replace(/[`*_:|—–-]/g, " ")
       .replace(/\s+/g, " ")
       .trim();
-    if (/(?<!\b(?:not|never|un) ?)\b(launched|found)\b/i.test(answer)) return true;
-    if (/\bnot needed because\b\s*\S{2,}/i.test(answer)) return true;
+    if (/^not needed because\b\s*\S{2,}/.test(answer)) {
+      answers.push({ label, ran: false, text: answer });
+    } else if (/\blaunched\b/.test(answer) && !NEGATED.test(answer)) {
+      answers.push({ label, ran: true, text: answer });
+    }
   }
-  return false;
+  return answers;
+}
+
+/**
+ * Whether `section` records one run of `agent` per framing, each on its own answered line whose
+ * label, right after the name, is that framing; or a single "not needed because" line and nothing
+ * else for the agent. Identical lines count once, a label naming two framings counts for neither.
+ */
+export function framedReviewsAnswered(section, agent, framings) {
+  const answers = reviewAnswers(section, agent);
+  if (answers.length === 1 && !answers[0].ran) return true;
+  const runs = answers.filter((answer) => answer.ran);
+  if (runs.length < answers.length) return false;
+  return framings.every((framing) => runs.some((run) => run.label === framing));
 }
 
 /**
@@ -176,14 +264,26 @@ export function bodyProblems({ body, files }) {
   const section = reviewsSection(body);
   const problems = [];
   for (const review of needed) {
-    if (section !== null && reviewAnswered(section, review.agent)) continue;
+    const answered = review.framings
+      ? framedReviewsAnswered(section, review.agent, review.framings)
+      : reviewAnswered(section, review.agent);
+    if (section !== null && answered) continue;
     const shown = review.files.slice(0, 5).join(", ");
     const more = review.files.length > 5 ? ` and ${review.files.length - 5} more` : "";
+    const touches = `This pull request touches ${review.surface} paths (${shown}${more})`;
+    const skip = `"\`${review.agent}\`: not needed because <reason>"`;
     problems.push(
-      `This pull request touches ${review.surface} paths (${shown}${more}), and its "## Reviews launched" section does not name \`${review.agent}\` with an answer. Launch it on the diff and write what it found, or write "\`${review.agent}\`: not needed because <reason>".`,
+      review.framings
+        ? `${touches}, and its "## Reviews launched" section does not record ${review.framings.length} answered \`${review.agent}\` runs, one line each framed as ${review.framings.map((f) => `"${f}"`).join(" and ")}. Launch them in parallel on the diff and write one line per run, ${review.framings.map((f) => `"- \`${review.agent}\` (${f}): launched; found …"`).join(" and ")}, or write ${skip}.`
+        : `${touches}, and its "## Reviews launched" section does not name \`${review.agent}\` with an answer. Launch it on the diff and write what it found, or write ${skip}.`,
     );
   }
   return problems;
+}
+
+/** The git arguments listing changed paths; no rename detection, so a moved file lists both ends. */
+export function changedFilesArgs(base) {
+  return ["diff", "--name-only", "--no-renames", `${base ?? "origin/main"}...HEAD`];
 }
 
 function changedFiles({ base, filesFile }) {
@@ -193,7 +293,7 @@ function changedFiles({ base, filesFile }) {
       .map((line) => line.trim())
       .filter(Boolean);
   }
-  const output = readBounded("git", ["diff", "--name-only", `${base ?? "origin/main"}...HEAD`], {
+  const output = readBounded("git", changedFilesArgs(base), {
     encoding: "utf8",
     timeoutMs: SUBPROCESS_TIMEOUTS.git,
   });

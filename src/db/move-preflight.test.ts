@@ -322,7 +322,7 @@ describe("getMovePreflight", () => {
   });
 
   /**
-   * **One hull, one departure at a time** (H-80, issue #1780). The boat line
+   * **One hull, one departure at a time** (H-20260916-may-one-hull-carry, issue #1780). The boat line
    * crosses the same seam the crew lines do, and leads them.
    */
   it("carries the boat clash for the hours it is being moved into, ahead of the crew", async () => {
@@ -365,7 +365,7 @@ describe("getMovePreflight", () => {
  * **A tight turnaround, on the Move panel only** (issue #2141, Aaron's
  * decision (b)): a shop setting with a default of 30 minutes, advice and never
  * a refusal, crew only when the two departures meet in different places.
- * H-80's half-open overlap is untouched: nose to tail is still no clash.
+ * H-20260916-may-one-hull-carry's half-open overlap is untouched: nose to tail is still no clash.
  */
 describe("getMovePreflight's turnaround line", () => {
   const timeZone = "UTC";
@@ -414,7 +414,7 @@ describe("getMovePreflight's turnaround line", () => {
       items: [{ kind: "boat", name: "Turnaround Hull", departure: "Afternoon Wreck", minutes: 29 }],
     });
     expect(preflight?.blocked).toBeNull();
-    // Not a clash: H-80's line stays quiet.
+    // Not a clash: H-20260916-may-one-hull-carry's line stays quiet.
     expect(preflight?.sections.some((section) => section.kind === "boat")).toBe(false);
   });
 

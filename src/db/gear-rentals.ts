@@ -64,7 +64,7 @@ export type GearRentalUnit = {
 export type GearRentalsPage = OffsetPage<GearRentalHolder<GearRentalUnit>> & {
   /**
    * Where each counter-rental holder on the page stands with the shop's
-   * release (issue #2261, H-108), said on their counter rows and never a
+   * release (issue #2261, H-20261008-counter-rental-waiver-informs), said on their counter rows and never a
    * gate. A trip rental's waiver is the booking's readiness, said on the
    * departure, so only a holder with a counter rental on the page is read.
    * A current release carries the days of an earlier refusal or an open
@@ -96,7 +96,7 @@ export async function listGearRentals(
     todayLocal: CalendarDate;
     page?: number;
     pageSize?: number;
-    /** The shop's zone; given, the page carries `counterWaivers` (H-108). */
+    /** The shop's zone; given, the page carries `counterWaivers` (H-20261008-counter-rental-waiver-informs). */
     timezone?: string;
   },
 ): Promise<GearRentalsPage> {

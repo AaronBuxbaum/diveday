@@ -10,7 +10,7 @@ import { activityEvents, heldSends, orders, people, shops } from "./schema";
 
 /**
  * **Record payment: one tap with an eight-second Undo hold** (issue #3030,
- * decided 2026-10-25; H-68's hold). Cash or the card machine is held, not
+ * decided 2026-10-25; H-20260906-diveday-fill-already-knows's hold). Cash or the card machine is held, not
  * recorded: Undo inside the hold leaves the order exactly as it was, the
  * hold running out records it, a staffer who walks away inside the hold has
  * it recorded by the sweep (as a held send is sent), and a second tap inside

@@ -100,7 +100,7 @@ test("an MMSI refusal reopens the existing boat editor", async ({ page, privateS
 
 /**
  * **The boat as a machine with papers and an emergency kit** (roadmap N-08,
- * N-10). The owner is refused a certificate under the seats on sale (H-107),
+ * N-10). The owner is refused a certificate under the seats on sale (H-20261009-certificate-caps-seats),
  * then records the reef boat's real certificate and an insurance date
  * that has already passed, hangs an AED aboard it with pads twelve days from
  * expiry, and the departure that sails today on that boat says all three
@@ -122,7 +122,7 @@ test("a boat's papers and the kit aboard it reach the departure that sails on it
   test.setTimeout(60_000);
   const shop = `/shop/${privateShop.slug}`;
 
-  // 1. Settings, Boats. H-107: a certificate under the fourteen seats the
+  // 1. Settings, Boats. H-20261009-certificate-caps-seats: a certificate under the fourteen seats the
   //    boat sells is refused on the row, and nothing is saved…
   await page.goto(`${shop}/boats`);
   const row = boatRow(page, BOAT);
@@ -189,7 +189,7 @@ test("a boat's papers and the kit aboard it reach the departure that sails on it
   await page.goto(reefManifest);
   const section = page.getByRole("region", { name: `${BOAT}: papers and safety kit` });
   await expect(section).toBeVisible();
-  // A lapsed paper is danger ink, named by its date (H-136).
+  // A lapsed paper is danger ink, named by its date (H-20261015-lapsed-boat-papers-loud).
   await expect(section.getByText(/^Hull insurance ended /)).toHaveClass(/(^| )text-danger( |$)/);
   await expect(section.getByText("AED e2e: pads expire in 12 days")).toBeVisible();
   await page.emulateMedia({ media: "print" });

@@ -27,7 +27,7 @@ afterEach(resetScheduleBuilderFixtures);
 
 /**
  * **The week, at `xl` and up** — ADR 20260827-clearwater-surface-language,
- * decision 5, and the width floor H-63 set on 2026-08-27.
+ * decision 5, and the width floor H-20260827-clearwater-week-board-roadmap set on 2026-08-27.
  *
  * The floor itself is a real-viewport fact and is pinned where a viewport
  * exists (`e2e/schedule-builder.spec.ts`, "the board is the stream below
@@ -569,7 +569,7 @@ describe("ScheduleBuilder week board", () => {
       false,
     );
 
-    // Trip definition is owner/manager/instructor work (H-14); the crew read
+    // Trip definition is owner/manager/instructor work (H-20260724-staff-role-reach); the crew read
     // the week and run the day from each departure's own page.
     expect(within(grid()).queryAllByRole("link", { name: /^Add a departure on / })).toHaveLength(0);
     expect(within(grid()).queryByRole("button", { name: /^Move, copy, or remove / })).toBeNull();

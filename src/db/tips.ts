@@ -404,7 +404,7 @@ export async function markTipPaidBySessionId(
       .returning();
     if (!updated) return null;
     // The tip reaches the shop's books as income on its own line (batch 6
-    // item 9, H-120), in the same transaction that marks it paid.
+    // item 9, H-20261014-checkouts-reach-the-books), in the same transaction that marks it paid.
     await enqueueTipIntegrationEvent(tx, { shopId: updated.shopId, tipId: updated.id });
     return updated;
   });

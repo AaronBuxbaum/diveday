@@ -784,7 +784,7 @@ describe("unclosed roll call (DOM-H3)", () => {
       if (!counted || !pulled) throw new Error("fixture bookings missing");
       // The second diver's seat was cancelled at the dock, before the boat
       // left. Once it has (its time, a stage past Boarding, or any after-dive
-      // mark), a diver marked aboard cannot be removed (H-133), so the cancel
+      // mark), a diver marked aboard cannot be removed (H-20261015-aboard-diver-removal-at), so the cancel
       // comes before the first after-dive mark — they are off the manifest's
       // roster, so there is nobody left uncounted.
       const atTheDock = new Date(trip.startsAt.getTime() - 10 * 60 * 1000);

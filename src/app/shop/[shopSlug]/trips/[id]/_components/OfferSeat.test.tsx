@@ -91,7 +91,7 @@ describe("OfferSeat", () => {
     }
   });
 
-  it("rides the opened discount with each row's own offer (A14, H-145)", () => {
+  it("rides the opened discount with each row's own offer (A14, H-20261005-one-interest-table-names)", () => {
     const { container } = renderRows({ discount: true });
     const disclosure = container.querySelector("details[data-offer-discount]");
     if (!(disclosure instanceof HTMLDetailsElement)) throw new Error("no discount disclosure");

@@ -70,7 +70,7 @@ describe("askForDate", () => {
     });
   });
 
-  it("never creates a person for a stranger's form (H-13)", async () => {
+  it("never creates a person for a stranger's form (H-20260724-one-person-per-email)", async () => {
     const { db, shop, course } = await dateContext();
     const before = await db
       .select({ id: people.id })
@@ -606,7 +606,7 @@ describe("attachDateInterestsToDeparture", () => {
     expect(rows[0]?.parentInterestId).toBeNull();
   });
 
-  // Security review of #2656, MAJOR 2 (H-13): the email link on a date interest is a
+  // Security review of #2656, MAJOR 2 (H-20260724-one-person-per-email): the email link on a date interest is a
   // snapshot for erasure, set from an unauthenticated form on the address
   // alone. It must never make the request's departure row that person's.
   it("keeps the child person-less on the request's own snapshot, even when the address matched a diver", async () => {
