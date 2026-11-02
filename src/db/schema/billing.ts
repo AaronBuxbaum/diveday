@@ -42,7 +42,7 @@ export const pricingPlanSource = pgEnum("pricing_plan_source", PRICING_PLAN_SOUR
  * one customer or subscription can never be claimed by two shops.
  *
  * `free_term_ends_on` is the one column a person sets: the last free day of a
- * term DiveDay granted by hand (H-12's founding-shop months), written by
+ * term DiveDay granted by hand (H-20260724-public-founding-shop-price's founding-shop months), written by
  * `pnpm billing:free-term`. `first_paid_at` is write-once, the instant the
  * first non-zero invoice was paid — the "first paid month" milestone.
  * Nothing is deleted from here by a person, so there is no `deleted_at`.

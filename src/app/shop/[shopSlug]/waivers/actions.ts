@@ -103,7 +103,7 @@ export async function saveWaiverAction(
   // No title: this form has no field for one, so a save cannot mean "rename"
   // and `saveWaiverTemplate` carries the shop's own forward.
   //
-  // H-54's two explicit choices, enforced where a POST cannot skip them. The
+  // H-20260822-may-shop-explicitly-declare's two explicit choices, enforced where a POST cannot skip them. The
   // surface asks with a radio pair the form is invalid without
   // (`./_components/PublishRelease.tsx`, ADR 20260827-people-not-lists), but
   // that is a render-time gate on an action reachable without it — and

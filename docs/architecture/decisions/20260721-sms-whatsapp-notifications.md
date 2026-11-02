@@ -7,7 +7,7 @@
 
 [Transactional email](20260718-resend-transactional-email.md) shipped the `notify()` seam and the
 [delivery-status](20260718-notification-delivery-status.md) tracking behind it, all single-channel
-(email via Resend). H-09's remaining scope names SMS and WhatsApp as channels the market expects
+(email via Resend). H-20260724-channel-sends-booking-waiver's remaining scope names SMS and WhatsApp as channels the market expects
 (DiveAdmin ships a unified email/SMS/WhatsApp inbox), and the scheduled-reminder cadence
 ([20260721-scheduled-reminder-cadence](20260721-scheduled-reminder-cadence.md)) wants a second
 channel for divers who read a text but not email. This ADR adds the texting seam.
@@ -44,7 +44,7 @@ channel for divers who read a text but not email. This ADR adds the texting seam
 ## Consequences
 
 - Booking and reminder flows can now reach divers by text or WhatsApp, closing the channel half of
-  H-09, with the same graceful-degradation guarantee every other provider has: unconfigured means
+  H-20260724-channel-sends-booking-waiver, with the same graceful-degradation guarantee every other provider has: unconfigured means
   `not_configured`, never a crash or a send to a bad number.
 - No new runtime dependency enters the repo; the seam is fully exercised in tests with a fake fetch.
 - Multi-channel *delivery observability* is intentionally partial (one tracked row per reminder);

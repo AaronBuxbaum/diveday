@@ -9,14 +9,14 @@ type CertificationAgency = (typeof CERTIFICATION_AGENCIES)[number];
 /**
  * **Reading an agency's lookup page, and deciding whether it certifies a card.**
  *
- * The DiveDay browser extension (`extension/`, H-105, ADR
+ * The DiveDay browser extension (`extension/`, H-20261008-cert-check-extension, ADR
  * 20261008-cert-check-extension) runs in the staffer's own browser. It opens
  * the agency's public lookup page (`src/lib/agency-verification.ts`), fills in
  * the diver's details, and hands back the text of the page that comes back.
  * Nothing in the extension decides anything: it carries words. This module is
  * where those words become a verdict, on the server, under tests.
  *
- * A **match** certifies the card without a second tap (H-105: Aaron chose
+ * A **match** certifies the card without a second tap (H-20261008-cert-check-extension: Aaron chose
  * "auto"). That makes this the gate, so it is narrow on purpose:
  *
  * - The diver's first and last names sit on one line, in that order or as
@@ -44,7 +44,7 @@ type CertificationAgency = (typeof CERTIFICATION_AGENCIES)[number];
  * - A higher rating's wording contains the lower one's ("Advanced Scuba
  *   Diver" contains "Scuba Diver"), so it matches the lower claim. A lower
  *   rating never matches a higher claim.
- * - **PADI DiveChek** (signed in, H-121) is narrower still, below
+ * - **PADI DiveChek** (signed in, H-20261014-padi-divechek) is narrower still, below
  *   (`ONE_RECORD_ONLY`): one diver, a record that ends at the first line that
  *   could be someone else's, the birth date before the level, and the card
  *   number too when the card has one.
@@ -101,7 +101,7 @@ export function isCheckableAgency(agency: string): agency is CheckableAgency {
  * Whether this shop is offered the extension's check for this agency. PADI's
  * checks (DiveChek here, eLearning in `elearning-check.ts`) run in a staffer's
  * browser signed in under the shop's own PADI membership, behind the shop's
- * own switch (`shops.padi_checks_enabled`, H-121), on for a new shop since
+ * own switch (`shops.padi_checks_enabled`, H-20261014-padi-divechek), on for a new shop since
  * 2026-10-23. Off, a PADI card keeps its "(member sign-in)" link and nothing
  * offers or accepts a check.
  */

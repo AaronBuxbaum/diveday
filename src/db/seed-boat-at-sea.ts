@@ -664,7 +664,7 @@ export async function bringDemoBoatsAtSeaHome(
       and(
         eq(shops.isDemo, true),
         inArray(trips.title, [AT_SEA_DAY_TITLE, AT_SEA_DUSK_TITLE]),
-        // A visitor who cancelled her gets no dive 2 log: under H-84 that
+        // A visitor who cancelled her gets no dive 2 log: under H-20260916-may-diveday-assert-about that
         // would turn a cancelled departure into a dive day for every seat.
         eq(trips.status, "scheduled"),
         lte(trips.endsAt, now),

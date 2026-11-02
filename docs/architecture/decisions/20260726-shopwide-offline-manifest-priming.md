@@ -232,7 +232,7 @@ pulling that shop's complete 48-hour board — diver names, emergency contacts, 
 blockers — from any device they were still signed in on, for up to a month after they stopped working
 there. Both routes now re-read `loadActiveStaffRoles(db, shop.id, session.user.personId)`
 (`src/db/authz.ts`) and refuse unless it returns live staff roles, closing the same revocation window
-the H-14 surfaces already close: null for a deleted person, a disabled account, or someone who was
+the H-20260724-staff-role-reach surfaces already close: null for a deleted person, a disabled account, or someone who was
 never this shop's.
 
 Three properties of the sequence are deliberate, and each is pinned by a test:

@@ -35,7 +35,7 @@ type Translator = ReturnType<typeof diverTranslator>;
  * "The roll call after dive 2 on Two-Tank Reef is still open after the boat
  * was due back at 4:00 PM EDT", then both counts in their own words: the ones
  * recorded not back aboard, and the ones nobody has recorded either way (EAP
- * review on H-118). Never one number that could mean either.
+ * review on H-20261014-stale-roll-call-recipients). Never one number that could mean either.
  */
 function staleSentences(
   t: Translator,
@@ -110,11 +110,11 @@ export type RollCallStaleShoreEmailInput = Omit<
 };
 
 /**
- * The shore contact's copy (H-118): the same facts as the owners', in the
+ * The shore contact's copy (H-20261014-stale-roll-call-recipients): the same facts as the owners', in the
  * shop's language, with no greeting by name and nobody aboard named. Then what
  * to do (call the shop first, on its number when it has one), when this was
  * sent and that nothing follows it, why it came, and the one link: the one
- * that stops these alerts (EAP and security reviews on H-118).
+ * that stops these alerts (EAP and security reviews on H-20261014-stale-roll-call-recipients).
  */
 export function rollCallStaleShoreEmail(input: RollCallStaleShoreEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
@@ -152,7 +152,7 @@ export type ShoreAlertConfirmationEmailInput = {
 
 /**
  * To the address a shop saved as its shore contact, before anything else
- * goes to it (H-118 review): what agreeing means, one button, the expiry, and
+ * goes to it (H-20261014-stale-roll-call-recipients review): what agreeing means, one button, the expiry, and
  * that ignoring it sends nothing.
  */
 export function shoreAlertConfirmationEmail(
@@ -179,7 +179,7 @@ export type ShoreAlertStoppedEmailInput = {
 };
 
 /**
- * To each owner when the shore contact used the stop link in an alert (H-118
+ * To each owner when the shore contact used the stop link in an alert (H-20261014-stale-roll-call-recipients
  * re-review): that it stopped, what brings it back, and where. The address is
  * not in it.
  */

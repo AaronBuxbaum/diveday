@@ -4,10 +4,10 @@ Send this document to the generalist attorney as the engagement brief. It define
 asked to do herself, what she should draft with a specialist's later sign-off, and what stays with
 a dedicated recreational/scuba-liability attorney. The owner already has the generalist relationship;
 the specialist still needs to be found — see [legal.md](legal.md) for how. The decision rows this
-scope maps to are in [human-decisions/](../human-decisions/README.md#decision-register): H-01, H-02,
-H-03, H-17, H-18.
+scope maps to are in [human-decisions/](../human-decisions/README.md#decision-register): H-20260730-jurisdiction-waiver-text-medical, H-20260730-evidence-retention-period-deletion,
+H-20260724-current-typed-name-explicit, H-20260724-contact-importer-trust-prior, H-20260724-corporate-footing-diveday-operate.
 
-Working jurisdiction assumption: **Florida** (not yet finalized — H-01 records the final choice).
+Working jurisdiction assumption: **Florida** (not yet finalized — H-20260730-jurisdiction-waiver-text-medical records the final choice).
 
 ## Context to include when sending
 
@@ -19,7 +19,7 @@ specialist when the impact of getting it wrong is genuinely dive-specific, not j
 
 ## Tier 1 — generalist, no specialist needed
 
-1. **Entity structure (H-18).** Should DiveDay operate under the owner's existing Pseudorandom LLC
+1. **Entity structure (H-20260724-corporate-footing-diveday-operate).** Should DiveDay operate under the owner's existing Pseudorandom LLC
    (S-corp election; currently software consulting/mentorship), or as a new dedicated LLC?
    Deliverable: a recommendation plus formation mechanics — formation state, foreign qualification
    if operating on Florida shops from elsewhere, sibling-LLC vs. subsidiary structure. Loop in the
@@ -29,9 +29,9 @@ specialist when the impact of getting it wrong is genuinely dive-specific, not j
 2. **The SaaS contract set:**
    - Design-partner pilot agreement (free trial period, case-study/quote rights, no-warranty
      posture, data handling and return-on-exit terms) — **plus a signed risk-acknowledgment
-     clause** (H-25, 2026-08-02): the waiver/medical flow a pilot shop uses is a provisional,
-     PADI-shaped baseline, not yet reviewed by counsel, and H-01–H-03's legal review is running in
-     parallel, not finished. Pilots proceed on that basis rather than waiting for H-01–H-03 to
+     clause** (H-20260802-pilot-before-counsel, 2026-08-02): the waiver/medical flow a pilot shop uses is a provisional,
+     PADI-shaped baseline, not yet reviewed by counsel, and H-20260730-jurisdiction-waiver-text-medical, H-20260730-evidence-retention-period-deletion, H-20260724-current-typed-name-explicit's legal review is running in
+     parallel, not finished. Pilots proceed on that basis rather than waiting for H-20260730-jurisdiction-waiver-text-medical, H-20260730-evidence-retention-period-deletion, H-20260724-current-typed-name-explicit to
      close first — the acknowledgment is what makes that basis explicit to the pilot shop.
    - Founding-shop subscription terms — must encode two already-published commitments:
      $99/location/month and a **two-year price lock** for the founding cohort. (The support promise
@@ -60,21 +60,21 @@ specialist when the impact of getting it wrong is genuinely dive-specific, not j
    - Custody of waiver evidence after a shop churns and exports its records — what the terms of
      service must say about it
 
-3. **One judgment call (H-17 sanity check).** The product lets a shop import a diver's prior waiver
+3. **One judgment call (H-20260724-contact-importer-trust-prior sanity check).** The product lets a shop import a diver's prior waiver
    acceptance — including medical clearance — from their previous system, without a staff member
    re-attesting to it at intake. Defensible as-is, or does it need a safeguard? A general
    reliance/liability-allocation question, not a diving-specific one.
 
 ## Tier 2 — generalist drafts, specialist blesses before it goes live
 
-4. **Retention & deletion policy (H-02)** for waiver and medical records — retention window,
+4. **Retention & deletion policy (H-20260730-evidence-retention-period-deletion)** for waiver and medical records — retention window,
    deletion-request process, staff access limits, backup/audit exceptions. Draft from the
    applicable Florida limitations period (with tolling for minors) — ordinary competence. The
    specialist should confirm the resulting window actually matches what the release needs to hold
    up evidentially and that the immutability model satisfies spoliation expectations — that's
    dive-specific judgment.
 
-5. **E-signature sufficiency (H-03), split in two.** Whether typed name + explicit consent +
+5. **E-signature sufficiency (H-20260724-current-typed-name-explicit), split in two.** Whether typed name + explicit consent +
    timestamp is legally adequate as a signature mechanism *in general* is UETA/E-SIGN territory —
    squarely generalist work. Whether that *specific* assurance level is enough for *this particular
    release* is narrower: courts apply extra scrutiny to adventure-sport liability waivers, so that
@@ -82,7 +82,7 @@ specialist when the impact of getting it wrong is genuinely dive-specific, not j
 
 ## Tier 3 — specialist required, not the generalist
 
-6. **The waiver release and medical questionnaire itself (H-01)** — actual language, the specific
+6. **The waiver release and medical questionnaire itself (H-20260730-jurisdiction-waiver-text-medical)** — actual language, the specific
    risk disclosures scuba diving requires (decompression sickness, nitrogen narcosis, equipment
    failure, drowning, marine life, etc.), whether the platform's own entity needs to appear in the
    released-parties language or the release is strictly shop↔diver, and whether it holds up under
@@ -92,7 +92,7 @@ specialist when the impact of getting it wrong is genuinely dive-specific, not j
    known trap — many states don't allow it outright — and the highest-stakes item in the whole
    plan, since minors (junior certifications, Discover Scuba Diving) are a real user segment.
 8. **Medical questionnaire duty.** What duty does *collecting* medical flags create for the shop
-   and for DiveDay, and what handling/access boundary does that imply? Feeds the H-02 retention
+   and for DiveDay, and what handling/access boundary does that imply? Feeds the H-20260730-evidence-retention-period-deletion retention
    policy and the privacy policy, but the underlying risk assessment is dive-specific.
 9. **A written opinion** on whether the release/medical/consent flow, taken as a whole, is likely
    enforceable for scuba-specific claims in Florida.

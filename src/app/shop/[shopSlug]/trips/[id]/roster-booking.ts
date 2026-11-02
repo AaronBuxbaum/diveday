@@ -50,7 +50,7 @@ export async function requireRosterBooking(
 
 /**
  * **Take a seat off the roster, or say why not.** A diver marked aboard a boat
- * that has left is refused (H-133): back to the row with
+ * that has left is refused (H-20261015-aboard-diver-removal-at): back to the row with
  * `booking-remove-aboard`, or `booking-remove-uncounted` for a seat nobody
  * counted at the dock, and nothing changed — no email, no refund, no trail
  * line. Otherwise the seat is cancelled, the trail names `actorPersonId`, and this returns what it was before,

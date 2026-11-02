@@ -504,7 +504,7 @@ export function CommandPalette({
   shopSlug: string;
   boatBoardingHref?: string;
   /**
-   * Owner/manager gates (H-14), the same object the nav gets — a gated
+   * Owner/manager gates (H-20260724-staff-role-reach), the same object the nav gets — a gated
    * destination is absent from both, never present here and missing there.
    */
   gates: StaffDestinationGates;

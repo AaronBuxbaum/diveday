@@ -85,7 +85,7 @@ export default async function DiversPage({
   // Both gates in one round trip, and *before* the roster query, because the
   // view the query runs depends on one of them:
   //
-  // - **Restore** is the inverse of the owner/manager-only removal (H-14, ADR
+  // - **Restore** is the inverse of the owner/manager-only removal (H-20260724-staff-role-reach, ADR
   //   20260724-role-authorization), so the view whose whole purpose is
   //   restoring takes the same gate — and takes it here, not just on the chip:
   //   a hand-typed `?filter=removed` must not list removed people to a

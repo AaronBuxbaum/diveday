@@ -372,7 +372,7 @@ describe("the boat's snags (fifth-loop ideas, item 1)", () => {
     expect(screen.queryByRole("region", { name: "Open on this boat" })).toBeNull();
   });
 
-  it("sends the picked line with the note, and gates no check on it (H-51)", async () => {
+  it("sends the picked line with the note, and gates no check on it (H-20261025-shop-authored-pre-departure)", async () => {
     const note = vi.fn(async (_prev: unknown, _form: FormData) => ({ ok: true }) as const);
     render(
       <PreDepartureCheckList

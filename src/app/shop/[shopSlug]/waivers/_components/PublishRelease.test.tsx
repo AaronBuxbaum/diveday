@@ -58,7 +58,7 @@ function renderPublish(standingSignatures: boolean, questionsOnly = false) {
 
 /**
  * **The pin: no submit without a choice while signatures stand** (ADR
- * 20260827-people-not-lists, decision 4 — H-54's "two explicit choices").
+ * 20260827-people-not-lists, decision 4 — H-20260822-may-shop-explicitly-declare's "two explicit choices").
  *
  * Publishing a version is what makes every signature the shop holds stop
  * counting, and the old surface asked which kind of edit this was by *which of

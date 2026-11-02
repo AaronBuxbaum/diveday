@@ -200,7 +200,7 @@ export async function createOrder(
   invoicing: InvoicingProvider = invoicingProviderFromEnvironment(),
 ): Promise<CreateOrderOutcome> {
   // Answered before anything else, and re-read from `person_roles` rather than
-  // taken from the caller: billing a diver is owner/manager work (H-14, ADR
+  // taken from the caller: billing a diver is owner/manager work (H-20260724-staff-role-reach, ADR
   // 20260724-role-authorization), and an invoice that has left for a real
   // customer on the shop's own Stripe account is not something a later apology
   // recalls. Same fail-closed second layer `anonymizeDiver` keeps under the
@@ -540,8 +540,8 @@ const COUNTER_LINE_KINDS: ReadonlySet<string> = new Set(["rental", "other"]);
  * tax included; DiveDay computed none of it.
  *
  * **Any active staff member may record one.** Taking cash for a rental is day
- * work, like renting the gear out (H-06); billing a diver by invoice stays
- * owner/manager (H-14, `createOrder`). Every refusal is `invalid`: a caller
+ * work, like renting the gear out (H-20260724-initial-gear-policy-sizing); billing a diver by invoice stays
+ * owner/manager (H-20260724-staff-role-reach, `createOrder`). Every refusal is `invalid`: a caller
  * that is not staff here, a payer from another shop, or lines that would not
  * pass `createOrder`'s bounds.
  *
@@ -705,7 +705,7 @@ export type RecordPaymentOnOrderOutcome =
  * (`stripeInvoiceOf`), as it does any counter order. The booking the order was
  * raised for is marked paid, as a settled invoice marks it, with the method as
  * the seat's provider so the roster says it was paid at the counter. **Any
- * active staff member may record one**, like any counter money (H-06); the
+ * active staff member may record one**, like any counter money (H-20260724-initial-gear-policy-sizing); the
  * caller asks for the money step-up and writes the activity line.
  */
 export async function recordPaymentOnOpenOrder(
@@ -1031,7 +1031,7 @@ export type VoidCounterOrderOutcome =
  * Take back a counter order recorded by mistake (ADR 20261009-counter-payments).
  *
  * Local only, since nothing reached Stripe. Owner/manager, like every other
- * correction to the shop's money (H-14), even though recording one is any
+ * correction to the shop's money (H-20260724-staff-role-reach), even though recording one is any
  * staff member's: a void takes revenue off the books. It sets `void`, stamps
  * `voided_at`, and zeroes `amount_paid_cents`, so Reports, which sums that
  * column, drops it. Only a `paid` counter order qualifies; a Stripe invoice is

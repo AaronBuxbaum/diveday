@@ -323,7 +323,7 @@ describe("clearing a wrong 'not certified yet'", () => {
 
   /**
    * The gate is deliberately every staff role — this is weaker than capturing a
-   * card, and H-48 is the open question about who may *sight* one. What it is
+   * card, and H-20260814-may-sight-card is the open question about who may *sight* one. What it is
    * not is JWT-only: an account since demoted, removed or disabled must stop
    * overriding a diver's own statement, and `requireStaffSession` cannot see
    * that from the token alone.

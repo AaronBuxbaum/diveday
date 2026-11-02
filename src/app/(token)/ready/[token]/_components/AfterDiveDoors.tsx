@@ -33,7 +33,7 @@ export function NoShowCard({
   shop: ShopContact;
   t: DiverTranslator;
   /**
-   * The desk saw this diver and could not take them (H-135). "Marked as a
+   * The desk saw this diver and could not take them (H-20261015-who-may-turn-someone). "Marked as a
    * no-show" would be false to the one reader who knows it.
    */
   turnedAway?: boolean;

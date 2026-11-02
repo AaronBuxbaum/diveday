@@ -137,7 +137,7 @@ type WaitlistInviteEmailInput = {
   /**
    * Self-serve opt-out of courtesy email. Present on the commercial offer
    * (`seat_offer_commercial`) only: an invite to a diver who asked for this
-   * departure is service mail and carries none (H-145, D-2 option b).
+   * departure is service mail and carries none (H-20261005-one-interest-table-names, D-2 option b).
    */
   unsubscribeUrl?: string;
   /** How many seats the waiting party asked for (fourth review, item 34); one when absent. */
@@ -1809,7 +1809,7 @@ export function readinessLinkEmail(input: ReadinessLinkEmailInput): Notification
   // is signed and the course's forms are not (ADR 20261008-course-forms), so it
   // must not tell the diver a link of theirs expired.
   // `other_day` and `log_entry` are the diver asking for another of their days
-  // from one booking's page (H-132), so neither says anything expired either.
+  // from one booking's page (H-20261014-other-days-send-fresh), so neither says anything expired either.
   const words = READINESS_LINK_WORDS[input.purpose ?? "rescue"];
   const body = t(words.body, {
     shopName: input.shopName,
@@ -1846,7 +1846,7 @@ type BookingHandoffEmailInput = {
 
 /**
  * **One link that brings a diver's details across** (ADR
- * 20260906-before-you-ask, decision 3; H-68 b). Sent to an address typed cold
+ * 20260906-before-you-ask, decision 3; H-20260906-diveday-fill-already-knows b). Sent to an address typed cold
  * into a booking form that matches a diver the shop already knows. Worded as
  * the shortcut it is, and nothing more: the page it opens says what is on
  * file, so this says only which departure, and for how long the link stands.

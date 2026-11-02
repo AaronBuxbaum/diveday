@@ -196,7 +196,7 @@ describe("saveRentalFit / getRentalFit", () => {
     expect((await getRentalFit(db, shopId, personId))?.drysuitSize).toBe("MT");
   });
 
-  it("writes a hood and gloves as two answers with a size each (H-102)", async () => {
+  it("writes a hood and gloves as two answers with a size each (H-20261007-hood-glove-sizes)", async () => {
     const { db, shop, shopId, tripId } = await context();
     await setShopRentalItems(db, shopId, [...shop.rentalItems, "hood", "gloves"]);
     const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
@@ -409,7 +409,7 @@ describe("saveRentalFit / getRentalFit", () => {
 });
 
 /**
- * **One diver, one suit** (H-78, issues #1752 and #1800). Held in the writer,
+ * **One diver, one suit** (H-20260916-rental-fit-describe-shop, issues #1752 and #1800). Held in the writer,
  * because four surfaces write these columns and a rule only the forms keep is
  * the one the next caller forgets; the table's check constraints refuse what
  * the writer does not resolve.
@@ -643,7 +643,7 @@ describe("saveRentalFitNote", () => {
   });
 });
 
-describe("setNeedsStaffFit (H-06 fallback)", () => {
+describe("setNeedsStaffFit (H-20260724-initial-gear-policy-sizing fallback)", () => {
   it("flags a diver with a note, then clears both on resolve", async () => {
     const { db, shopId, tripId } = await context();
     const { personId } = await bookVisitor(db, shopId, tripId, "Fit Fallback");
@@ -1150,7 +1150,7 @@ describe("rental fit completeness over a stored profile", () => {
 });
 
 /**
- * **The count the rental-catalog page shows** (issue #1792, H-78): divers
+ * **The count the rental-catalog page shows** (issue #1792, H-20260916-rental-fit-describe-shop): divers
  * whose fit still asks for a piece the shop has dropped. Visible, never
  * cleared, so it only ever reads.
  */

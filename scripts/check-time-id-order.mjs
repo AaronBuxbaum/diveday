@@ -16,7 +16,7 @@ import { filesUnder } from "./files-under.mjs";
  * database. Three visual baselines re-ordered themselves that way on commits
  * that touched neither the surface nor its query (the manifest rail #1720, the
  * lobby Screens list, the crew-clash week), and each was found by eye in a diff
- * image (issue #1762, ruled H-81).
+ * image (issue #1762, ruled H-20260916-tiebreaker-user-visible-list).
  *
  * ## What is guarded
  *

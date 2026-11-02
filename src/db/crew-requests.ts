@@ -267,7 +267,7 @@ export async function listCrewAssignmentRequests(
   // page do (issue #2173, after #1853). Otherwise a lapsed instructor's ask
   // was hinted as closing a gap the Today row on the same session says it
   // will not. The crew editor's refusals still count the roster's claim
-  // (H-59), so approving the ask is never refused for a lapse.
+  // (H-20260825-staff-credentials-renewal-clock), so approving the ask is never refused for a lapse.
   const credentials = await ratingCredentialsByPerson(db, shopId, requesterIds);
   const divesOnByTrip = await lastDayByTrip(db, shopId, [
     ...new Set(live.map((row) => row.request.tripId)),

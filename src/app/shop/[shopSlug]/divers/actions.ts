@@ -20,7 +20,7 @@ export async function restoreDiverAction(formData: FormData) {
   const staff = await requireStaffSession();
   const activeDb = await getDb();
   // Restoring is the inverse of the owner/manager-only deletion, so it takes
-  // the same gate (H-14, ADR 20260724-role-authorization).
+  // the same gate (H-20260724-staff-role-reach, ADR 20260724-role-authorization).
   const roster = shopPath(staff.user.shopSlug, "divers");
   if (!(await canPersonDeleteDiver(activeDb, staff.user.shopId, staff.user.personId))) {
     revalidateAndRedirect(roster, noticeUrl(roster, "not-authorized"));

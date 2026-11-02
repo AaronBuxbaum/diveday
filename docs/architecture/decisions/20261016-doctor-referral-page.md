@@ -8,7 +8,7 @@
 A diver the questionnaire refers to a physician is held off the boat until staff record the
 answer, and used to go to the doctor empty-handed. Fifth-loop item 17 asked for a "Take this to
 your doctor" page; the owner chose its contents in
-[H-127](../../product/human-decisions/H-127-physician-form-for-referral.md). It is opened by the
+[H-20261014-physician-form-for-referral](../../product/human-decisions/H-20261014-physician-form-for-referral.md). It is opened by the
 waiver link, which anyone it is forwarded to can open, so what it shows is the security question.
 
 ## Decision
@@ -49,5 +49,5 @@ It prints with a zero `@page` margin (`capabilityPagePrintRule`), so the browser
 A forwarded link shows the diver's name and that an evaluation is pending, until a day after the
 departure. The conditions need the date of birth too, which the page never prints; the rate limit
 and the ceiling stop guessing, not someone who knows the birthday. The answers gate is a **review-driven
-amendment** to H-127, noted there for the owner to revisit. Revisit if a jurisdiction needs another
+amendment** to H-20261014-physician-form-for-referral, noted there for the owner to revisit. Revisit if a jurisdiction needs another
 examiner form, or once page 3 is checked and pinned by sha256 like the questionnaire.

@@ -117,12 +117,12 @@ background-sync dependency. Revisit the retention window and freshness threshold
 boat field tests; changing them is a policy update, while changing the encrypted record version
 requires a migration or deliberate device-cache reset.
 
-## Amendment, 2026-10-23: medical alert words on a device copy (H-153)
+## Amendment, 2026-10-23: medical alert words on a device copy (H-20261023-medical-alert-for-the)
 
 The threat boundary above accepts that encryption cannot protect an unlocked device. That was
 decided for a copy every staffer may read. A diver's **medical alert for the crew** has a narrower
 audience (the owner, a manager, crew a manager put on the departure), so its words follow stricter
-rules than the rest of the copy (H-153, amendment of 2026-10-23):
+rules than the rest of the copy (H-20261023-medical-alert-for-the, amendment of 2026-10-23):
 
 - No server payload carries the words: not the manifest page's offline payload, not
   `/api/offline-manifests/upcoming`, not the service worker's refresh. Every copy carries the fact of

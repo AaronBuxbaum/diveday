@@ -18,7 +18,7 @@ import {
 
 /**
  * **Record payment: one tap with an eight-second Undo hold** (issue #3030,
- * decided 2026-10-25; the send hold of H-68 and ADR 20260906-before-you-ask).
+ * decided 2026-10-25; the send hold of H-20260906-diveday-fill-already-knows and ADR 20260906-before-you-ask).
  *
  * Cash or the card machine is not recorded on the tap. The tap writes a
  * `held_sends` row of kind `counter_payment` eight seconds out; Undo deletes

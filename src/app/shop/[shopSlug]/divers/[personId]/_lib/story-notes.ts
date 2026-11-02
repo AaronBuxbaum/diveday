@@ -22,14 +22,14 @@ export type StoryNoteBooking = {
     status: string;
     paidRentalKinds?: readonly string[] | null;
     /**
-     * Set when the desk turned this diver away (H-135). Required, so the story
+     * Set when the desk turned this diver away (H-20261015-who-may-turn-someone). Required, so the story
      * can never say "no-show" over somebody the desk saw and refused. The
      * category may be null on a turned-away seat (erasure clears it and keeps
      * `turnedAwayAt`).
      */
     turnedAwayReason: string | null;
     turnedAwayAt: Date | null;
-    /** A held seat (H-13) sits on this story on a guess. */
+    /** A held seat (H-20260724-one-person-per-email) sits on this story on a guess. */
     identityUnconfirmedAt?: Date | null;
   };
   trip: { status: string; diveMode?: "boat" | "shore" | "pool" | null };

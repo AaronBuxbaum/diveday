@@ -7,12 +7,12 @@
 
 [Checkout-at-booking](20260721-checkout-at-booking.md) shipped the mechanism for public payment but
 with a deliberately provisional policy: full trip price per diver, no deposit tier, no cancellation
-window. Those two gaps are the remaining half of **H-07** and the last thing the
+window. Those two gaps are the remaining half of **H-20260724-payment-deposit-cancellation-refund** and the last thing the
 [competitive analysis](../../product/assessments/competitive-analysis.md#what-blocks-the-purchase) flags before
 this checkout takes production money: every credible competitor offers a deposit-only option and a
 stated cancellation policy.
 
-H-07's *policy* (what deposit, what window, whether the platform ever takes a fee) remains a
+H-20260724-payment-deposit-cancellation-refund's *policy* (what deposit, what window, whether the platform ever takes a fee) remains a
 human-owned decision. This ADR ships the *mechanism* with conservative, opt-in defaults, the same
 sequencing every prior payment slice used — the shop gets the knobs; nothing is on until a shop
 sets it, and the specific dollar amounts and hours a shop chooses are theirs, not ours.
@@ -40,12 +40,12 @@ sets it, and the specific dollar amounts and hours a shop chooses are theirs, no
   way any booking is settled today: a staff order/invoice or a later full checkout, converging on
   the one `setBookingPayment` gate.
 
-### Provisional policy (H-07 remains open)
+### Provisional policy (H-20260724-payment-deposit-cancellation-refund remains open)
 
 Deposits and cancellation windows are **off unless a shop sets them**. There is still no tax line,
 no platform fee, and no automated refund. A shop's chosen deposit amount and cancellation window are
 that shop's commercial terms; DiveDay ships no default value for either. These defaults — and the
-choice to keep refunds manual — require H-07 sign-off before production money, recorded in
+choice to keep refunds manual — require H-20260724-payment-deposit-cancellation-refund sign-off before production money, recorded in
 [human-decisions/](../../product/human-decisions/README.md#provisional-implementation-defaults--verify-before-production).
 
 ## Alternatives considered
@@ -71,6 +71,6 @@ choice to keep refunds manual — require H-07 sign-off before production money,
   exactly as before, and a Stripe outage still degrades to book-now-pay-later.
 - `booking_payments` reaches `deposit_paid` by a real path for the first time; readiness already
   honored it, so no gate logic changed.
-- H-07's remaining questions (percentage deposits, automated refunds, tax, fees) now gate *pricing
+- H-20260724-payment-deposit-cancellation-refund's remaining questions (percentage deposits, automated refunds, tax, fees) now gate *pricing
   posture and money-movement automation*, not mechanism. Revisiting means adding a column or a
   refund path, not reworking checkout — the escape hatch stays cheap.

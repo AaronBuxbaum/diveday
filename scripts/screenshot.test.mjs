@@ -122,7 +122,7 @@ describe("interactive capture states", () => {
 /**
  * The fourth: one scheme by default.
  *
- * The owner's rule (H-90 in docs/product/human-decisions/README.md): "whenever you do
+ * The owner's rule (H-20260925-many-colour-schemes-check in docs/product/human-decisions/README.md): "whenever you do
  * checks, you only need to check one of light or dark, unless you are
  * explicitly doing color-related work!" The script used to shoot light and
  * dark on every run, which doubled every look — and, on a dev server that

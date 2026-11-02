@@ -42,7 +42,7 @@ product says so in every place it speaks.**
   the send order of a last-minute deal to the people already waiting on that exact trip. None of
   those is a promise to the diver, and no surface presents them as one.
 - **Any later auto-invite picks by fit, not by rank.** The stage-2 docblocks no longer define a
-  "position 1" for a future build to implement. That build is separately blocked on H-09.
+  "position 1" for a future build to implement. That build is separately blocked on H-20260724-channel-sends-booking-waiver.
 
 ## Alternatives considered
 

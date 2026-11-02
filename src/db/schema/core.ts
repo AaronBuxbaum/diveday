@@ -209,8 +209,8 @@ export const shops = pgTable(
      * **PADI checks (beta)**: "Check with PADI" (DiveChek) on a pending PADI
      * card and the PADI eLearning check on a course roster, both run by the
      * DiveDay extension in a staffer's browser signed in to the PADI Pros'
-     * Site under the shop's own membership (H-121, H-106). On for a new shop
-     * since 2026-10-23 (Aaron, amending H-121's opt-in): a shop whose Pros do
+     * Site under the shop's own membership (H-20261014-padi-divechek, H-20261008-padi-elearning-check). On for a new shop
+     * since 2026-10-23 (Aaron, amending H-20261014-padi-divechek's opt-in): a shop whose Pros do
      * not want it turns it off on the Features page. Off keeps the "(member
      * sign-in)" link (`src/lib/agency-check.ts`).
      */
@@ -489,7 +489,7 @@ export const shops = pgTable(
       .notNull()
       .default({ lines: [], vessel: "", shoreContact: "", plan: "" }),
     /**
-     * **The shore contact's address for a stale roll call** (H-118, decided
+     * **The shore contact's address for a stale roll call** (H-20261014-stale-roll-call-recipients, decided
      * 2026-10-15): the one person outside the shop's accounts who hears when an
      * after-dive roll call is still open after the boat was due back
      * (`sendStaleRollCallAlerts`, `src/db/roll-call-alerts.ts`). Email only.
@@ -509,7 +509,7 @@ export const shops = pgTable(
     shoreAlertConsentByPersonId: uuid("shore_alert_consent_by_person_id"),
     /**
      * When the shore contact proved the address is theirs and agreed, by the
-     * link DiveDay sent to it (H-118 review; the same proof the front-desk
+     * link DiveDay sent to it (H-20261014-stale-roll-call-recipients review; the same proof the front-desk
      * address takes, issue #1288). Null until then, and cleared with any
      * change of address: the shop's tick says they agreed, this says the
      * inbox did. Nothing is sent to the address before it is set
@@ -537,7 +537,7 @@ export const shops = pgTable(
     bookkeeperSentMonth: text("bookkeeper_sent_month"),
     /**
      * **The bookkeeper confirmed this inbox is theirs** (security review B1,
-     * on the shore contact's model, H-118): no file leaves until it is set.
+     * on the shore contact's model, H-20261014-stale-roll-call-recipients): no file leaves until it is set.
      * The link that sets it is single-purpose and expiring, held here as a
      * hash: it can only confirm the address the shop names now, because any
      * change of address clears all three columns. The hash stays after use so
@@ -623,12 +623,12 @@ export const shops = pgTable(
      * different meeting point — the time to unload, rinse, refill, refuel and
      * board the next group (issue #2141, Aaron's decision (b), 2026-10-13).
      * The schedule builder's Move panel names a closer departure as advice; it
-     * never refuses a move and never changes H-80's clash. Zero turns it off.
+     * never refuses a move and never changes H-20260916-may-one-hull-carry's clash. Zero turns it off.
      */
     minTurnaroundMinutes: integer("min_turnaround_minutes").notNull().default(30),
     /**
      * How many minutes before the divers' dock call the crew are asked to be
-     * at the dock (ux-delight sheet 2026-10-22, item 2; H-149: shop-wide,
+     * at the dock (ux-delight sheet 2026-10-22, item 2; H-20261022-crew-arrive-before-divers: shop-wide,
      * default 30). Crew who arrive with the customers leave tanks unloaded and
      * the O2 unchecked. A crew member's own shift covering the departure still
      * wins; null means the shop set none, and crew read the divers' time,
@@ -744,7 +744,7 @@ export const shops = pgTable(
     uniqueIndex("shops_bookkeeper_stop_token_hash_unique").on(table.bookkeeperStopTokenHash),
     check("shops_dock_call_minutes_nonnegative", sql`${table.dockCallMinutes} >= 0`),
     check("shops_offline_erasure_epoch_nonnegative", sql`${table.offlineErasureEpoch} >= 0`),
-    // H-118: an address DiveDay sends to exists only with its recorded consent.
+    // H-20261014-stale-roll-call-recipients: an address DiveDay sends to exists only with its recorded consent.
     check(
       "shops_shore_alert_consent",
       sql`(${table.shoreAlertEmail} is null and ${table.shoreAlertConsentAt} is null
@@ -921,7 +921,7 @@ export const people = pgTable(
     emergencyContactPhone: text("emergency_contact_phone"),
     /**
      * Date-only, no timezone (CR-009): a birthday is a calendar fact, not an
-     * instant. Nullable and **fails open** by product decision (H-08, option B):
+     * instant. Nullable and **fails open** by product decision (H-20260724-certification-levels-agency-rules, option B):
      * a course's `minimum_age` is enforced only for a diver who actually has a
      * date on file, so shipping this never blocks the divers already on the
      * books. Real age verification stays a dock-side ID check; this catches the
@@ -930,7 +930,7 @@ export const people = pgTable(
     dateOfBirth: date("date_of_birth", { mode: "string" }),
     /**
      * **When a staffer said, at the counter, that this person is 18 or older**
-     * without giving a date of birth (H-100, issue #2143). Written only by
+     * without giving a date of birth (H-20261007-held-seat-split-into, issue #2143). Written only by
      * `splitBookingIdentity`: a held seat split into a new diver must carry a
      * date or this answer, because the split exists for a person who is *not*
      * the matched diver, and the common case is a minor booked with a parent's
@@ -941,7 +941,7 @@ export const people = pgTable(
      * date and never this, and typing a date (`updateDiver`) or merging onto
      * one nulls this pair, so clearing that date later cannot bring back an
      * adult claim the date may have disproved. Null everywhere else, which is
-     * the ordinary H-08 case of a record nobody asked about.
+     * the ordinary H-20260724-certification-levels-agency-rules case of a record nobody asked about.
      */
     adultAttestedAt: timestamp("adult_attested_at", { withTimezone: true }),
     /**

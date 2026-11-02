@@ -42,7 +42,7 @@ trip fills, or was never actually available, between page load and submit.
   of staff decision — rescheduling it into a fresh, unpaid booking would silently drop that decision
   and offer the diver a card checkout for a fee staff already excused. An unpaid, non-waived booking
   has nothing to move, so the diver-driven path is safe to leave self-service.
-- **Cancel and refund stay two independent steps, same as the staff cancellation path (H-07).**
+- **Cancel and refund stay two independent steps, same as the staff cancellation path (H-20260724-payment-deposit-cancellation-refund).**
   `cancelMyBookingAction` calls `selfCancelBooking` to free the seat first, then
   `refundBookingOnCancellation` separately; a refund failure after a successful cancel never re-opens
   the seat or blocks the cancellation notice the diver already sees. The diver-facing notice mirrors
@@ -86,7 +86,7 @@ trip fills, or was never actually available, between page load and submit.
   the underlying race directly; the lock's correctness is a code-review property here, not something a
   test asserts.)
 - **Reschedule refuses a booking still flagged `identity_unconfirmed` (`dive-domain-expert` finding,
-  H-13).** `createBookingRecord`'s known-`personId` path — the one reschedule always uses, since the
+  H-20260724-one-person-per-email).** `createBookingRecord`'s known-`personId` path — the one reschedule always uses, since the
   diver's identity is already resolved via the bearer token — never sets that flag on the new booking,
   so rescheduling would otherwise silently clear a deliberate, staff-only-clearable readiness blocker
   raised when an earlier public booking's name didn't match its email's existing person record. Rather

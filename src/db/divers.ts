@@ -235,11 +235,11 @@ export async function updateDiver(
       // option a). With neither a date nor an answer, the guardian rule and
       // the minimum-age gate fail open and read the diver as an adult, so a
       // known minor would become one by a blanked field. The answer is filed
-      // with its staffer, as the held-seat split files it (H-100).
+      // with its staffer, as the held-seat split files it (H-20261007-held-seat-split-into).
       const clearing = dateOfBirth === null && current.dateOfBirth !== null;
       if (clearing && (await holdsAgeGatedSeat(tx, input.shopId, input.personId))) {
         // A course with a minimum age measures the date itself, which the
-        // split asks for too (H-100): no answer stands in for it there.
+        // split asks for too (H-20261007-held-seat-split-into): no answer stands in for it there.
         return { ok: false, reason: "date_of_birth_required" };
       }
       if (clearing && !input.adultAttestedByPersonId) return { ok: false, reason: "age_unstated" };
@@ -271,7 +271,7 @@ export async function updateDiver(
             : { diveInsurance: input.diveInsurance.trim() || null }),
           ...(dateOfBirth === undefined ? {} : { dateOfBirth }),
           // A date answers the age question, so a staffer's earlier "18 or
-          // older" (H-100) goes: clearing the date later must not bring back an
+          // older" (H-20261007-held-seat-split-into) goes: clearing the date later must not bring back an
           // adult claim the date may have disproved (dive-domain review).
           ...(dateOfBirth ? { adultAttestedAt: null, adultAttestedByPersonId: null } : {}),
           ...(clearing
@@ -1133,7 +1133,7 @@ export async function getDiverProfile(
   return {
     person: personRow.person,
     noCertificationClearedByName: personRow.clearedByName,
-    /** Who said, at a split, that this diver is 18 or older (H-100). */
+    /** Who said, at a split, that this diver is 18 or older (H-20261007-held-seat-split-into). */
     adultAttestedByName: personRow.adultAttestedByName,
     /** Who recorded seeing this diver dive dry (#2136); staff-observed, never a card. */
     drysuitExperienceSeenByName: personRow.drysuitExperienceSeenByName,
@@ -1219,7 +1219,7 @@ export type SimilarDiver = {
    * for a record the counter created, since the staff create-diver form does
    * not ask for it.
    *
-   * **Printed on purpose** (H-79, issue #1698): it is the field that most
+   * **Printed on purpose** (H-20260916-unconfirmed-identity-withhold-cost, issue #1698): it is the field that most
    * reliably tells two people with one name apart, the staffer is already
    * choosing between two humans, and it is a weaker disclosure than the
    * emergency contact the manifest prints. The raw date goes no further than

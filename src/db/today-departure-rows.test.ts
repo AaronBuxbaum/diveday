@@ -394,7 +394,7 @@ describe("departure rows on the queue, read through getTodayWork", () => {
     expect(work.actions.some((action) => action.id.startsWith("last-minute-fill"))).toBe(false);
   });
 
-  /** The seats to fill are the seats on sale (H-107, #2388), not the stated number. */
+  /** The seats to fill are the seats on sale (H-20261009-certificate-caps-seats, #2388), not the stated number. */
   it("counts the seats to fill against the boat's certificate", async () => {
     const { db, shop } = ctx;
     const trips = await upcomingTripsWithCounts(db, shop.id);

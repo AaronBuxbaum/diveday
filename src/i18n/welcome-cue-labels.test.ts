@@ -44,7 +44,7 @@ describe("welcomeCueText", () => {
     );
   });
 
-  it("says a regular's milestone dive day as a count in both locales (H-128)", () => {
+  it("says a regular's milestone dive day as a count in both locales (H-20261014-boat-count-milestones)", () => {
     expect(welcomeCueText(en, { kind: "milestone", count: 25 }, "en-US")).toBe(
       "25th dive day with us",
     );
@@ -99,7 +99,7 @@ describe("sayHelloSentences", () => {
     expect(sentences[0]).toContain("Ben Okafor y Lina Costa");
   });
 
-  it("gives a regular on a milestone dive day their own sentence, in each language (H-128)", () => {
+  it("gives a regular on a milestone dive day their own sentence, in each language (H-20261014-boat-count-milestones)", () => {
     expect(
       sayHelloSentences(en, "en-US", [
         { name: "Bjorn Aasen", cue: { kind: "milestone", count: 25 } },

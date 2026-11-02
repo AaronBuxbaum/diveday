@@ -22,7 +22,7 @@ import { type IntegrityValue, integrityDigest } from "@/lib/waiver-integrity";
  * a new diver (`splitBookingIdentity`, `src/db/bookings.ts`) changes
  * `bookings.person_id` and leaves form records where they are, still sealed
  * over the diver who signed them: a held seat cannot sign a course form
- * (H-13), so there is nothing on it to move.
+ * (H-20260724-one-person-per-email), so there is nothing on it to move.
  *
  * A record verifies against the version it declares, never a guess, and a
  * version this build does not know reads as `invalid`.

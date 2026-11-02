@@ -154,7 +154,7 @@ export const RENTABLE_ITEMS: readonly RentableItem[] = [
   // A dive light and an SMB carry none and want none — both are one size off
   // the shelf.
   //
-  // **A hood and gloves are two kinds, each with a size** (H-102, issue
+  // **A hood and gloves are two kinds, each with a size** (H-20261007-hood-glove-sizes, issue
   // #1816; `dive-domain-expert`, issue #1805). Hoods and gloves both rack by
   // size and thickness (S–XL, 3/5/7 mm); a hood two sizes big flushes on every descent, and
   // gloves a size small cannot be pulled onto a wet hand at the dock. A
@@ -289,7 +289,7 @@ export const NOTHING_RENTED = Object.fromEntries(
 
 /**
  * **What the diver wears, and whether it is ours** — one answer for the three
- * suit columns (H-78, issues #1752 and #1800).
+ * suit columns (H-20260916-rental-fit-describe-shop, issues #1752 and #1800).
  *
  * A diver dives one suit. The fit used to ask two independent questions, rent
  * a wetsuit? rent a drysuit?, and could hold both; the drysuit then won
@@ -500,7 +500,7 @@ export function nitroxCardWanted(
  * field with no companion column or packing piece for what it implies, so the
  * only one whose free text is load-bearing beyond the size itself
  * (`src/lib/dive-prep.ts`; every size reaches the packing list verbatim).
- * The `hood` and `gloves` joined it with a free-text size each (H-102, issue
+ * The `hood` and `gloves` joined it with a free-text size each (H-20261007-hood-glove-sizes, issue
  * #1816): each by size and thickness ("M, 5 mm" for a hood, "L, 3 mm" for gloves).
  *
  * Same union `statedSizeItems` in `dive-prep.ts` already speaks, so a surface
@@ -588,7 +588,7 @@ export const SIZED_RENTAL_FIT_COLUMN = {
  * as loosely as a BCD unit meets `bcd_size`, and an off-grid string the shop
  * really wrote ("ML, rock boot 9") survives both fit forms — the diver's select
  * offers a stored off-grid size back (issue #1728), the staff editor is free
- * text. A **hood** and **gloves** are here since H-102 (issue #1816), on the
+ * text. A **hood** and **gloves** are here since H-20261007-hood-glove-sizes (issue #1816), on the
  * same free-text terms. `torch` and `smb` stay out: they carry no size column
  * for a return to teach.
  *
@@ -762,7 +762,7 @@ export function sizeForRentalItem(
 }
 
 /**
- * The core kit that makes up a "set", including the dive computer (H-06,
+ * The core kit that makes up a "set", including the dive computer (H-20260724-initial-gear-policy-sizing,
  * reconfirmed 2026-08-02 — HD-9). A shop usually prices these six as one
  * cheaper bundle; a diver who takes all of them is quoted the set. A diver
  * taking a partial set (bringing their own dive computer, say) is quoted
@@ -846,7 +846,7 @@ type RentalQuote = {
  * billed at whichever is cheaper: the shop's discounted set price, or the sum
  * of just those pieces' per-item prices — so a diver who skips one core piece
  * (bringing their own dive computer, say) is never charged more than the full
- * set would have cost, and still keeps the set discount on the rest (H-06,
+ * set would have cost, and still keeps the set discount on the rest (H-20260724-initial-gear-policy-sizing,
  * HD-9). That comparison only runs when every rented core piece has a
  * per-item price; otherwise the shop hasn't priced enough of the pick to
  * compare, and each priced piece is billed on its own. The GoPro add-on and

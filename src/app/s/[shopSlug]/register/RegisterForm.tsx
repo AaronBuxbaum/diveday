@@ -119,7 +119,7 @@ export function RegisterForm({
           // Shown once the field holds a number, the moment the words start
           // to apply (visual review 2026-10-24, B22). Always in the server
           // HTML, hidden by CSS while the box is empty, so a no-JS submit
-          // still carried them (H-09). The words never change.
+          // still carried them (H-20260724-channel-sends-booking-waiver). The words never change.
           description={<SmsConsentNote t={t} />}
           className={SMS_CONSENT_ONCE_FILLED}
         >

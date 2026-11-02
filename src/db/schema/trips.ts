@@ -183,11 +183,11 @@ export const boats = pgTable(
      * against. Optional, because a shop that has not typed it in has said
      * nothing, and nothing reads a missing limit as zero.
      *
-     * **A ceiling on what is sold** (H-107): a boat save is refused when an
+     * **A ceiling on what is sold** (H-20261009-certificate-caps-seats): a boat save is refused when an
      * upcoming departure still sells more seats than it, and a departure
      * may not sell more seats than it (`boatSeatsRefusal`, `tripDetailsPatch`),
      * and the booking transaction never sells past it (`sellableCapacity`).
-     * A row saved over it before H-107
+     * A row saved over it before H-20261009-certificate-caps-seats
      * keeps its row until its next save; the fleet row says so in danger ink,
      * and the manifest still says when the people booked aboard pass it
      * (`boatSafetyNotices`, `src/lib/boat-safety.ts`). Not a check constraint,
@@ -425,13 +425,13 @@ export const trips = pgTable(
     plannedDives: integer("planned_dives").notNull().default(2),
     /**
      * **This departure's dives went past no-decompression limits** — staged
-     * decompression, extended range (H-84, issue #1555). DAN's preflight
+     * decompression, extended range (H-20260916-may-diveday-assert-about, issue #1555). DAN's preflight
      * guidance covers no-decompression diving and declines to give a number for
      * a dive that took stops, so `flySafeFrom` (src/lib/fly-safe.ts) answers
      * nothing for a departure carrying it and the recap says nothing about
      * flying. Defaults to no, so a shop that never sets it keeps the ordinary
      * sentence. It changes no gate and no ratio; the roster and the roll call show
-     * one reminder line to check technical cards when a diver is booked (H-144).
+     * one reminder line to check technical cards when a diver is booked (H-20261017-decompression-departure-reminds-crew).
      */
     exceedsNoDecoLimits: boolean("exceeds_no_deco_limits").notNull().default(false),
     /** Per-diver price; null means unpriced — an order made from this trip needs a manual amount. */
@@ -451,14 +451,14 @@ export const trips = pgTable(
      * value below the per-diver price charges that much now and marks the
      * booking `deposit_paid` with the balance still due; a value at or above the
      * fare is treated as no deposit (charge full) rather than a bad request
-     * (src/lib/deposits.ts). Provisional H-07 policy — off unless a shop opts in.
+     * (src/lib/deposits.ts). Provisional H-20260724-payment-deposit-cancellation-refund policy — off unless a shop opts in.
      */
     depositCents: integer("deposit_cents"),
     /**
      * Optional free-cancellation window, in hours before departure. Declarative
      * only: shown to divers at booking and surfaced to staff as a
      * "refund-eligible until" cue. Refunds stay staff-initiated — no automated
-     * money movement in this slice. Null means the shop states no window (H-07).
+     * money movement in this slice. Null means the shop states no window (H-20260724-payment-deposit-cancellation-refund).
      */
     cancellationWindowHours: integer("cancellation_window_hours"),
     /**
@@ -656,7 +656,7 @@ export const trips = pgTable(
      */
     rollCallAlertedAt: timestamp("roll_call_alerted_at", { withTimezone: true }),
     /**
-     * **When the shop's shore contact was told** (H-118): the same alert's
+     * **When the shop's shore contact was told** (H-20261014-stale-roll-call-recipients): the same alert's
      * shore copy, claimed on its own so a failed shore send is tried again on
      * the next pass and a delivery ashore never reads as "Owners alerted".
      * Null until then, and for ever on a shop with no confirmed shore contact.

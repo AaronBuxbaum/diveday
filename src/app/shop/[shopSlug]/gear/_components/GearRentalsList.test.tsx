@@ -171,7 +171,7 @@ describe("GearRentalsList", () => {
 });
 
 /**
- * **The holder's waiver on a counter rental** (issue #2261, H-108): said in
+ * **The holder's waiver on a counter rental** (issue #2261, H-20261008-counter-rental-waiver-informs): said in
  * the release's own word when it is short of signed, never on a trip rental
  * (the booking's readiness says that on the departure), and silent once
  * signed.

@@ -8,7 +8,7 @@ import { shops } from "./schema";
 
 /**
  * The data migration that takes a typed "Logbook" line out of each shop's
- * packing list now that `packing_logbook` suggests it (issue #2795, H-49: the
+ * packing list now that `packing_logbook` suggests it (issue #2795, H-20260815-no-legacy: the
  * data moves, no code keeps reading the old line). `createTestDb()` has
  * already applied it to an empty database, so the test writes lists in the old
  * shape and runs the migration's own SQL over them.

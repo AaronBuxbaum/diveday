@@ -261,7 +261,7 @@ describe("getReadyPageData", () => {
   });
 
   /**
-   * H-126: "Ask to move" is offered exactly when a cancel would forfeit what
+   * H-20261014-ask-to-move: "Ask to move" is offered exactly when a cancel would forfeit what
    * was paid, and says it was asked once it has been.
    */
   it("offers Ask to move only past the free window on a paid seat, then says it was asked", async () => {
@@ -357,7 +357,7 @@ describe("getReadyPageData", () => {
     expect((await getReadyPageData(db, bookingId, pastBuffer))?.canCancelBooking).toBe(false);
   });
 
-  it("withdraws the cancel inside the late hour once the dock counted the diver aboard (H-133)", async () => {
+  it("withdraws the cancel inside the late hour once the dock counted the diver aboard (H-20261015-aboard-diver-removal-at)", async () => {
     // `selfCancelBooking` refuses this seat (`aboardAtSeaBookingIds`), so the
     // page must not offer it.
     const { db, shop, open, bookingId } = await unpaidBooking();
@@ -495,7 +495,7 @@ describe("getReadyPageData", () => {
  * existing person on something short of proof (`identity_unconfirmed_at`) may
  * not be that person at all — a shared family email is the ordinary case — so
  * until staff confirm it, the link must not read back the matched person's
- * particulars. The flag gates disclosure (H-13, 2026-09-11).
+ * particulars. The flag gates disclosure (H-20260724-one-person-per-email, 2026-09-11).
  */
 describe("a held seat's ready page", () => {
   it("withholds the matched person's contact and sizes until staff confirm who it is", async () => {
@@ -693,7 +693,7 @@ describe("getBookedCard", () => {
     ).toBe(true);
   });
 
-  // H-128: the diver's side of a regular's milestone, said on the booked moment.
+  // H-20261014-boat-count-milestones: the diver's side of a regular's milestone, said on the booked moment.
   it("names a milestone boat, counting the shop's imported visits, and only that boat", async () => {
     const { db, shop, bookingId } = await unpaidBooking();
     expect(

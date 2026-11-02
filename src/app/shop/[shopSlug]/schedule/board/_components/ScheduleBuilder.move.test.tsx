@@ -448,7 +448,7 @@ describe("ScheduleBuilder move impact preview (issue #1203)", () => {
   });
 
   /**
-   * **One hull, one departure at a time** (H-80, issue #1780): the hull's own
+   * **One hull, one departure at a time** (H-20260916-may-one-hull-carry, issue #1780): the hull's own
    * overlap is announced at the clash's weight, above the crew line.
    */
   it("announces the hull already out at those hours, ahead of the crew", async () => {

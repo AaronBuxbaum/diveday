@@ -14,7 +14,7 @@ import { divePackages } from "./schema";
  * a private shop, which mints without history and so without these.
  */
 /*
- * **Priced as a deal** (H-123, fourth UX review item 9). A package dive is one
+ * **Priced as a deal** (H-20261014-package-dive-is-a, fourth UX review item 9). A package dive is one
  * tank, and the demo's two-tank boats sell at $95, so $47.50 a tank at the
  * door. The cards come in under it ($40 and $37.50 a tank); at $80 a dive the
  * card cost more than paying on the day and read as a mistake.

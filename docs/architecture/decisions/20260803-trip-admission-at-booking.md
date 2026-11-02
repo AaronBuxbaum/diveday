@@ -24,7 +24,7 @@ The shape of the fix already existed one gate over. A *course* enforces
 diver with no verified card ("Existing-card courses deliberately fail closed at enrollment"). The
 trip's own gate had no equivalent.
 
-What made this non-trivial is the second lesson already on the record. H-08 asked the same question
+What made this non-trivial is the second lesson already on the record. H-20260724-certification-levels-agency-rules asked the same question
 for the course minimum-age gate — *refuse when the shop has no evidence, or admit?* — and the
 product owner **chose to fail open** (option B, 2026-07-24): a diver with no date of birth on file
 books exactly as before, "so shipping it changed nothing for existing divers — option C (fail
@@ -70,10 +70,10 @@ Three deliberate choices inside that rule:
   gates: `trip_requirements.requires_nitrox` / `dive_sites.requires_nitrox` say *you must hold an
   enriched-air card to board this boat*, while `bookings.wants_nitrox` is this diver asking for that
   mix on this dive (glossary, **Nitrox request**). This rule touches only the first. The ladder the
-  same card climbs is unchanged and consistent with `src/db/nitrox.ts` and the amended H-11 —
+  same card climbs is unchanged and consistent with `src/db/nitrox.ts` and the amended H-20260730-nitrox-fill-station-procedure —
   **book** on a card in any state, **board** on a verified one, **fill** only on one that is
   verified, unarchived, and (if imported) confirmed.
-- **An identity-unconfirmed booking is not judged by the matched record's cards** (H-13). Those
+- **An identity-unconfirmed booking is not judged by the matched record's cards** (H-20260724-one-person-per-email). Those
   cards are evidence about somebody; whether they are evidence about the person booking is exactly
   what the flag says is unknown. Readiness already fails closed on the flag itself.
 - **The gate runs after capacity and the course gates, and before a walk-in's person row is
@@ -100,7 +100,7 @@ transaction, so a query that throws aborts the whole thing and no seat is writte
 ## Alternatives considered
 
 - **Fail closed on absent evidence** (the strict reading of "check it at booking"). Rejected on the
-  precedent H-08 set for the same question three weeks earlier: with a shop's default gate stated on
+  precedent H-20260724-certification-levels-agency-rules set for the same question three weeks earlier: with a shop's default gate stated on
   every trip, it locks out every new customer and every un-carded existing diver, and moves the
   product's front door behind a counter visit. It remains the available upgrade once shops have
   captured cards — see *Consequences*.
@@ -124,8 +124,8 @@ transaction, so a query that throws aborts the whole thing and no seat is writte
 
 - It **does not refuse a diver the shop has never carded.** A brand-new customer can still book —
   and still pay for — a charter they may turn out not to qualify for. That is DOM-M6 narrowed, not
-  closed, and it is narrowed exactly as far as H-08 chose to narrow the age gate. Closing it is a
-  human decision (the analogue of H-08's declined option C), not an engineering one, and it should
+  closed, and it is narrowed exactly as far as H-20260724-certification-levels-agency-rules chose to narrow the age gate. Closing it is a
+  human decision (the analogue of H-20260724-certification-levels-agency-rules's declined option C), not an engineering one, and it should
   be taken only once shops have backfilled cards.
 - It **does not refuse on an expired/overdue card, a pending capture, or an imported specialty card
   awaiting a staffer's one-tap confirm.** Readiness holds all three at the dock.
@@ -156,7 +156,7 @@ wholesale if anything is unrecognized) and resolves through
 sentence said *"Add the missing card above"*, and on a **level** refusal there is no missing card —
 telling a staffer to add one points them at the certifications form as the way past a safety gate,
 and a hand-entered card lands `pending`, which clears admission on the very next attempt. That is
-the leak H-24 exists to prevent. So a level refusal names the requirement *and* the held level and
+the leak H-20260725-two-findings-dive-domain exists to prevent. So a level refusal names the requirement *and* the held level and
 makes "add a card" conditional on the diver actually holding one, while a specialty/nitrox refusal
 says plainly that no such card is on the record — which is where "add it" is right.
 
@@ -167,7 +167,7 @@ diver who then phones. The resolution is to say what the **trip** requires rathe
 person lacks: identical for every submitter, describing the boat, and revealing only what the page
 above the form now displays. Because a trip's requirement is a property of the trip and no oracle,
 it is also **stated before the booking form** (`tripRequirementList`), where previously it was
-passed only into `BookingConfirmation` — i.e. first shown *after* the seat was bought. H-22's rule
+passed only into `BookingConfirmation` — i.e. first shown *after* the seat was bought. H-20260724-minimum-age-gate-fail's rule
 is intact: nothing the public form says is about that diver's record. The residual
 succeed/fail oracle is recorded for the product owner, not closed here.
 
@@ -177,4 +177,4 @@ succeed/fail oracle is recorded for the product owner, not closed here.
 `booking.errors.tripRequirement*` — both locales.
 
 The rule is stated once, in `src/lib/trip-admission.ts`, with its reasoning in the module docstring
-so a future reader meets the H-08 precedent before they meet the code.
+so a future reader meets the H-20260724-certification-levels-agency-rules precedent before they meet the code.

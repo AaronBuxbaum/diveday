@@ -11,7 +11,7 @@ const CODE = SOURCE.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
 
 describe("the new-rental form", () => {
   /**
-   * Issue #2346, H-108: the waiver standing is said while the person is still
+   * Issue #2346, H-20261008-counter-rental-waiver-informs: the waiver standing is said while the person is still
    * at the counter choosing gear, beside their cards, with the link to send.
    * It informs and never gates: the rent-out submit knows nothing of it.
    */
@@ -22,7 +22,7 @@ describe("the new-rental form", () => {
     expect(cards).toContain("<CounterRentalWaiverLine");
     expect(cards).not.toContain("ticketId=");
     // The whole status, so a clean release standing over a physician's
-    // earlier "not cleared" is said here too (dive-domain review, H-98).
+    // earlier "not cleared" is said here too (dive-domain review, H-20261007-after-physician-says-no).
     expect(cards).toContain("status={waivers?.get(person.id)}");
     const line = CODE.indexOf("<CounterRentalWaiverLine");
     const afterLine = CODE.slice(CODE.indexOf("/>", line));

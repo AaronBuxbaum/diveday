@@ -53,10 +53,10 @@ past the stated deadline, which is exactly when a weather call happens.
   surface shows each diver's payment status to staff. `refundBookingOnCancellation` is deliberately
   **not** invoked: its window/forfeit arithmetic answers "may this *diver* cancel free?", and
   applying it to a *shop-called* cancel would forfeit paid seats on the shop's own weather call.
-  Refunds continue through the existing per-booking staff path, which also keeps the H-14 refund
+  Refunds continue through the existing per-booking staff path, which also keeps the H-20260724-staff-role-reach refund
   role gate intact — whoever is on the dock at 6am can call the blow-out without acquiring the
   power to move money. What a shop-initiated cancellation *should* do with money automatically is a
-  policy question adjacent to H-07, left for its owner.
+  policy question adjacent to H-20260724-payment-deposit-cancellation-refund, left for its owner.
 - **The cascade is a surface, not a log line.** The same route renders the record once called: per
   diver — message state, money position, the offers their message carried (snapshotted in
   `offered_trip_ids`, the audit answer to "what did we tell them?"), and a live **rebooked /
@@ -66,7 +66,7 @@ past the stated deadline, which is exactly when a weather call happens.
 ## Alternatives considered
 
 - **Auto-refund through `refundOnCancellation`** — wrong arithmetic for a shop-called cancel
-  (forfeit past the window); invoking it would move money under actors H-14 doesn't allow.
+  (forfeit past the window); invoking it would move money under actors H-20260724-staff-role-reach doesn't allow.
 - **Cancel every booking row too** — the plain trip cancel has never done this; keeping bookings
   alive keeps reinstate cheap (weather improves) and keeps the manifest's history honest.
 - **Offer links to `/ready/[token]` for one-tap reschedule** — a new bearer-token surface in a mass

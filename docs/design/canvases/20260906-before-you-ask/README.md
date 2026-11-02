@@ -1,6 +1,6 @@
 # Before you ask — six moves where DiveDay fills in what it already knows
 
-- **Status:** Shipped (its ADR was Accepted on 2026-09-06 with H-68 Chosen; every slice landed the same day)
+- **Status:** Shipped (its ADR was Accepted on 2026-09-06 with H-20260906-diveday-fill-already-knows Chosen; every slice landed the same day)
 - **Date:** 2026-09-06
 - **ADR:** [20260906-before-you-ask](../../../architecture/decisions/20260906-before-you-ask.md)
 - **Published:** https://claude.ai/code/artifact/b74389e3-06d8-42f4-aed8-2cf90b9be3c7
@@ -76,7 +76,7 @@ medical answer is never carried forward.
 - **`KnownDiver` writes "Checked by the shop, Aug 25"** for a card the thread canvas only called
   verified. The date is the point of the line (rule 1: a filled value names its source), so one is
   invented rather than the line dropped.
-- **`AddDeparture` fills the crew field.** That is the owner's call (H-68 c); the board draws the
+- **`AddDeparture` fills the crew field.** That is the owner's call (H-20260906-diveday-fill-already-knows c); the board draws the
   recommended answer so the alternative, the field empty under the same sentence, needs no second
   board.
 
@@ -91,11 +91,11 @@ its doc comment, and a test pins the rule.
 
 | Slice | Status | Lands in | Pinned by |
 | --- | --- | --- | --- |
-| 17a — a send you can take back: the eight-second server-side hold with Undo on the four sends, the confirm dialogs removed (H-68 a) | shipped | `src/components/SendHold.tsx` | `src/lib/held-sends.test.ts`, `src/db/held-sends.test.ts`, `src/app/actions/held-sends.test.ts`, `src/components/SendHold.test.tsx` |
+| 17a — a send you can take back: the eight-second server-side hold with Undo on the four sends, the confirm dialogs removed (H-20260906-diveday-fill-already-knows a) | shipped | `src/components/SendHold.tsx` | `src/lib/held-sends.test.ts`, `src/db/held-sends.test.ts`, `src/app/actions/held-sends.test.ts`, `src/components/SendHold.test.tsx` |
 | 17b — nothing you typed is lost: per-person form drafts kept a day, the "picked up from" line, the home's one row while a draft exists | shipped | `src/components/FormDraft.tsx` | `src/lib/form-drafts.test.ts`, `src/db/form-drafts.test.ts`, `src/components/FormDraft.test.tsx` |
 | 17c — type it any way: the pure parsers for time, date, phone, name, money, and the picker match, with the typed text shown beneath and the never-list held by test | shipped | `src/components/ui/ForgivingInput.tsx` | `src/lib/forgiving-fields.test.ts`, `src/lib/forgiving-fields.never-list.test.ts`, `src/components/ui/ForgivingInput.test.tsx` |
-| 17d — the add panel already knows the weekday: the pattern read over the shop's own departures, the one sentence, the second boat as a row (crew per H-68 c) | shipped | `src/lib/weekday-pattern.ts` | `src/lib/weekday-pattern.test.ts`, `src/db/weekday-pattern.test.ts`, `src/app/shop/[shopSlug]/schedule/board/_components/ScheduleBuilder.test.tsx` |
-| 17e — the door remembers who opened it: a booking reached from a diver's own link arrives with the standing facts folded, each naming its date, and one button (the cold-email link per H-68 b) | shipped | `src/app/s/[shopSlug]/trips/[id]/_components/KnownDiverPanel.tsx` | `src/lib/booking-handoff.test.ts`, `src/db/booking-handoff.test.ts`, `src/app/s/[shopSlug]/trips/[id]/page.composition.test.ts` |
+| 17d — the add panel already knows the weekday: the pattern read over the shop's own departures, the one sentence, the second boat as a row (crew per H-20260906-diveday-fill-already-knows c) | shipped | `src/lib/weekday-pattern.ts` | `src/lib/weekday-pattern.test.ts`, `src/db/weekday-pattern.test.ts`, `src/app/shop/[shopSlug]/schedule/board/_components/ScheduleBuilder.test.tsx` |
+| 17e — the door remembers who opened it: a booking reached from a diver's own link arrives with the standing facts folded, each naming its date, and one button (the cold-email link per H-20260906-diveday-fill-already-knows b) | shipped | `src/app/s/[shopSlug]/trips/[id]/_components/KnownDiverPanel.tsx` | `src/lib/booking-handoff.test.ts`, `src/db/booking-handoff.test.ts`, `src/app/s/[shopSlug]/trips/[id]/page.composition.test.ts` |
 | 17f — ask it, and it answers: the palette's answer card for a diver, a day or a departure, its primary act read from the same fix table as the home's rows | shipped | `src/lib/palette-answer.ts` | `src/lib/palette-answer.test.ts`, `src/db/palette-answer.test.ts`, `src/components/search/CommandPalette.test.tsx` |
 
 ## Implementing a slice

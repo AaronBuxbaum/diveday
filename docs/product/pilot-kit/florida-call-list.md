@@ -11,7 +11,7 @@ no. Phase 1 needs two or three to say yes.
 
 ## Why Florida, and why one state
 
-Florida is the launch jurisdiction — confirmed by the product owner 2026-07-30 (H-01), no longer a
+Florida is the launch jurisdiction — confirmed by the product owner 2026-07-30 (H-20260730-jurisdiction-waiver-text-medical), no longer a
 planning assumption. Every waiver, medical-question, and retention answer the attorney gives is
 scoped to it, so a shop outside Florida cannot be piloted on approved paperwork even if it says
 yes. It is also year-round, which is the whole reason
@@ -82,17 +82,17 @@ that out in week two of a pilot is the expensive way.
   disappointed, honestly and correctly.
 - **Multi-location operation.** Out of scope and explicitly unclaimable under the claims policy.
 - **The shop needs agency-roster sync.** No agency exposes a usable C-card verification API; staff
-  verification is manual by design (H-10, dropped).
+  verification is manual by design (H-20261007-request-supported-c-card, dropped).
 - **A Spanish-first shop, for now.** The diver bundle's Spanish translation has not had its native
   review (V-06), and the waiver, the medical questionnaire, and `/ready` are still English pending
-  H-01/H-03 — the shop would meet a language seam at exactly the wrong page.
+  H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit — the shop would meet a language seam at exactly the wrong page.
 - **A shop that wants a signed contract this week.** There is no entity and no contract set yet
-  (H-18); a pilot agreement cannot be signed until that closes. A shop willing to talk now and sign
+  (H-20260724-corporate-footing-diveday-operate); a pilot agreement cannot be signed until that closes. A shop willing to talk now and sign
   when the paperwork exists is fine — one that needs paper first is a Phase 2 call.
 - **A shop whose fill station would go into DiveDay on day one.** The nitrox parameters are approved
   policy but unreviewed in the field (V-05).
 
-Record the disqualifier when you park a shop. A parked list with reasons is a real asset once H-18
+Record the disqualifier when you park a shop. A parked list with reasons is a real asset once H-20260724-corporate-footing-diveday-operate
 and V-05/V-06 close; a parked list without reasons is a deleted afternoon.
 
 ## Where to source candidates (public, verifiable)

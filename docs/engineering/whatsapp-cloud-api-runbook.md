@@ -93,7 +93,7 @@ Signup failures name the step that failed (`signup_failed_exchange`, `_register`
   so the refusal never says whether another shop holds a number the caller cannot see). Press
   Connect again.
 
-**One WABA, several shops** (H-83, issue #1767). A chain may connect each of its shops to its own
+**One WABA, several shops** (H-20260916-may-dive-chain-share, issue #1767). A chain may connect each of its shops to its own
 number under one WhatsApp Business account; inbound events route on the number
 (`value.metadata.phone_number_id`) and on nothing else: an event that names no number is dropped and
 logged (`whatsapp_webhook.unknown_tenant` / `inbound_unknown_tenant` with `hasNumber: false`). A

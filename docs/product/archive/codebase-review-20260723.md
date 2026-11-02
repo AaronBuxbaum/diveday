@@ -5,9 +5,9 @@
 > All 21 tickets (CR-001–CR-021) are implemented and merged: CR-001–CR-012 shipped first, then
 > CR-013–CR-021 in [PR #144](https://github.com/AaronBuxbaum/diveday/pull/144). The three
 > [human-owned decisions](#human-owned-decisions) below are resolved — see
-> [human-decisions/](../human-decisions/README.md#decision-register) (H-14, H-15, H-16) and
+> [human-decisions/](../human-decisions/README.md#decision-register) (H-20260724-staff-role-reach, H-20260724-staff-disable-latency, H-20260724-revocable-capabilities) and
 > [20260724-staff-session-and-capability-migration-policy](../../architecture/decisions/20260724-staff-session-and-capability-migration-policy.md)
-> for H-15/H-16's reasoning. H-14 (role authority boundaries) is implemented — see
+> for H-20260724-staff-disable-latency/H-20260724-revocable-capabilities's reasoning. H-20260724-staff-role-reach (role authority boundaries) is implemented — see
 > [shipped.md](../shipped.md#staff-role-authorization-delivered-2026-07-24).
 > Retained for the rationale behind each ticket; for current state see
 > [shipped.md](../shipped.md) and for open work see [roadmap.md](../features/roadmap.md).

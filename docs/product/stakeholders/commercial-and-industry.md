@@ -3,7 +3,7 @@
 The pilot shops, the industry bodies, and the channels that reach shop owners. The rollout plan
 owns the phase sequencing and recruiting profiles; this playbook owns the per-stakeholder prep so
 each conversation starts warm and specific. Status of record:
-[human-decisions/](../human-decisions/README.md) rows **V-04** (pilot rehearsal/load) and **H-12**
+[human-decisions/](../human-decisions/README.md) rows **V-04** (pilot rehearsal/load) and **H-20260724-public-founding-shop-price**
 (the still-open contract/intake flow); phase exits live in [rollout.md](../rollout.md).
 
 ## Why this matters (impact, not blockage)
@@ -48,7 +48,7 @@ What to have prepared per conversation:
   in, the [cold email template](../pilot-kit/cold-email-template.md) is the opener — hand-sent, one
   at a time, aiming at a reply or a forward rather than a meeting. It states **no offer**, on the
   same "only if they ask" principle as the first call's §E; the six-month free term authorized by
-  [H-12's 2026-08-12 amendment](../human-decisions/README.md#decision-register) belongs to the reply and
+  [H-20260724-public-founding-shop-price's 2026-08-12 amendment](../human-decisions/README.md#decision-register) belongs to the reply and
   the call.
 
 ### Pilot shops' front-desk staff and captains (Phase 1, week 0)
@@ -85,7 +85,7 @@ referral offer (a free month both sides).
 
 ## Open decisions this playbook feeds
 
-- **H-12's contract/intake flow:** how a founding shop actually signs up and pays — the public
+- **H-20260724-public-founding-shop-price's contract/intake flow:** how a founding shop actually signs up and pays — the public
   contact/contract path is undecided ([finance-and-tax.md](finance-and-tax.md) owns billing
   mechanics; this playbook owns what the shop experiences). Decide before Phase 2 opens.
 - **DEMA posture** by early September (record the choice and budget in the rollout plan).

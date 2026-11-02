@@ -32,7 +32,7 @@ export const metadata: Metadata = {
  * date, then the shared foot (`RentalTicketReceipt`, which owns the terms,
  * signature and gear-receipt-not-waiver contract). Billing lives on orders, so
  * a counter ticket shows money and this one never does. Ungated beyond staff
- * like the rest of the register (H-06, amended on H-14's row 2026-08-20):
+ * like the rest of the register (H-20260724-initial-gear-policy-sizing, amended on H-20260724-staff-role-reach's row 2026-08-20):
  * handing gear over is day work.
  */
 export default async function RentalTicketPage({

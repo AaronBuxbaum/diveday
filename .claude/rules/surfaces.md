@@ -22,7 +22,7 @@ Each rule names what enforces it; the reasoning, the ADRs and the longer form of
   structured data or telemetry carrying the token.
 - **A staff page opens with** `requireShopSurface` (`src/lib/session.ts`); every refusal throws, a
   cross-tenant miss is `notFound()` (`src/lib/session.test.ts`).
-- **A retired staff URL is deleted, not redirected** (H-49); the full rule is in
+- **A retired staff URL is deleted, not redirected** (H-20260815-no-legacy); the full rule is in
   [repo checks](../../docs/agents/repo-checks.md#there-is-no-legacy-delete-it).
 - **Server actions**: inline `"use server"` for one page, `src/app/actions/` when shared, a sibling
   `actions.ts` for a large page; seating a diver through `src/app/actions/seat-diver.ts`.
@@ -56,7 +56,7 @@ Each rule names what enforces it; the reasoning, the ADRs and the longer form of
   Biome rule `timezone`.
 - **Copy comes from a message bundle, in every locale at once**: `pnpm check:copy`,
   `pnpm check:locale`; a diver Client Component needs `DiverIntlProvider` above it
-  (`scripts/check-intl-providers.mjs`). Waiver and medical wording stays English (H-01, H-03).
+  (`scripts/check-intl-providers.mjs`). Waiver and medical wording stays English (H-20260730-jurisdiction-waiver-text-medical, H-20260724-current-typed-name-explicit).
 - **Every sentence earns its place, or it is deleted**: the **copy-restraint** skill; an
   accessibility trade goes in [docs/design/accessibility-tradeoffs.md](../../docs/design/accessibility-tradeoffs.md).
 - **Delete says Delete**: the `softDelete` lint rule (ADR 20260820-every-delete-is-soft).

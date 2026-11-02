@@ -93,7 +93,7 @@ async function savedWords(seat: { tripId: string; bookingId: string }): Promise<
 
 /**
  * **A diver's medical alert for the crew, read on purpose** (glossary
- * *Medical alert for the crew*, issue #2960, H-153). At rest it shows nothing
+ * *Medical alert for the crew*, issue #2960, H-20261023-medical-alert-for-the). At rest it shows nothing
  * of what the alert says, and the page that renders it carries none of the
  * words either: they leave the server only through `show`, whose action
  * checks the reader and writes the read to the diver's trail first
@@ -220,7 +220,7 @@ export function MedicalAlertReveal({
 }
 
 /**
- * **"Emergency: show the alert", then a confirm step** (issue #2990, H-153
+ * **"Emergency: show the alert", then a confirm step** (issue #2990, H-20261023-medical-alert-for-the
  * amendment of 2026-10-24). The first tap only asks: it says this is for
  * emergencies, that it goes on the diver's record and that the owner will see
  * it. The confirm calls the server, which checks the reader again and records

@@ -37,7 +37,7 @@ export const metadata: Metadata = {
  * what consumes it, and the success state is read back from the token row --
  * never from a query flag a caller could forge.
  *
- * The same page confirms a shore contact's address (H-118): the link a shop's
+ * The same page confirms a shore contact's address (H-20261014-stale-roll-call-recipients): the link a shop's
  * saved shore address receives before any roll-call alert goes to it. Its
  * token lives in its own table, so the page tries the front desk's resolvers
  * and then the shore contact's, as `/unsubscribe/[token]` does for its kinds.
@@ -96,7 +96,7 @@ export default async function ConfirmContactPage({
   );
 }
 
-/** The shore contact's link (H-118): the same three states, in its own words. */
+/** The shore contact's link (H-20261014-stale-roll-call-recipients): the same three states, in its own words. */
 async function ShoreConfirmation({
   token,
   t,

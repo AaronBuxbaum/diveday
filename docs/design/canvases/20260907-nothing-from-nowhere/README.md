@@ -1,6 +1,6 @@
 # Nothing from nowhere — six moves that make the interface behave as a thing
 
-- **Status:** Live (its ADR is Proposed, pending H-69; slices 18a–18d shipped 2026-09-07)
+- **Status:** Live (its ADR is Proposed, pending H-20260907-diveday-move-like-thing; slices 18a–18d shipped 2026-09-07)
 - **Date:** 2026-09-07
 - **ADR:** [20260907-nothing-from-nowhere](../../../architecture/decisions/20260907-nothing-from-nowhere.md)
 - **Published:** https://claude.ai/code/artifact/6015f01a-ae08-4975-a122-bd270198a86b
@@ -65,7 +65,7 @@ count of three, spent on no drawn surface (the cover's mark and its three owner-
 canvas's own chrome, as on every cover since Reef; the coral on the Physics sheet's spring curve and
 the sheet board's line and finger ring are the canvas's own marks); and every ban. No board is a
 manifest, a roll call, a cert check, a waiver or a payment, and no move reaches one on the ADR
-alone: the slide on the roster is H-69 c, and the head count never rolls under any answer. Between
+alone: the slide on the roster is H-20260907-diveday-move-like-thing c, and the head count never rolls under any answer. Between
 pages there is still no motion (issue #795), and nothing on any board is a page transition.
 
 ## Known deviations, on purpose left in
@@ -92,10 +92,10 @@ comment, and a test pins the rule.
 | --- | --- | --- | --- |
 | 18a — the physics: the three rungs as theme tokens, `motionMs()` for the ten copied timers, the press on every tappable primitive, principle 5's ladder and event table | shipped | `src/lib/motion.ts` | `src/app/motion-tokens.test.ts` |
 | 18b — a figure rolls: `RollingFigure` on the counter's instrument line and settled count and on the held send's seconds; the never-list held by test over the roll call and the manifest | dropped | shipped, then removed by ADR 20261001-logbook: every count is a plain tabular number and the held send says "Sending…" with Undo | — |
-| 18c — a row closes its own gap: `SettledRows` on the counter's working queue and its settled group, Undo reversed (the manifest roster still waits on H-69 c) | dropped | shipped, then removed: its last list, the trip's Check-in tab, folded into Divers on 2026-10-05, and the component went with it on 2026-10-12 | — |
-| 18d — the sheet follows the thumb: `useDragSheet` on the dock's More sheet, with the grab handle; the scrim tracks the sheet's travel | dropped | built, never wired to a sheet, and deleted on 2026-10-13 (H-49) | — |
+| 18c — a row closes its own gap: `SettledRows` on the counter's working queue and its settled group, Undo reversed (the manifest roster still waits on H-20260907-diveday-move-like-thing c) | dropped | shipped, then removed: its last list, the trip's Check-in tab, folded into Divers on 2026-10-05, and the component went with it on 2026-10-12 | — |
+| 18d — the sheet follows the thumb: `useDragSheet` on the dock's More sheet, with the grab handle; the scrim tracks the sheet's travel | dropped | built, never wired to a sheet, and deleted on 2026-10-13 (H-20260815-no-legacy) | — |
 | 18e — the title folds into the bar on a phone: `FoldedPageTitle` portals the page's title into `ShopNav`'s slot, three scroll-driven animations over 120px | shipped | `src/components/chrome/FoldedPageTitle.tsx` | `src/components/chrome/FoldedPageTitle.test.tsx`, `src/components/chrome/chrome.test.ts` |
-| 18f — the departure on the lock screen: Add to Wallet on the thread, the pass in the shop's brand, updates from `trips.revision`, the PassKit web service and the Google object (H-69 b decided yes 2026-09-07; built dark until the credentials are held; contract in [SPEC.md](SPEC.md)) | open | — | — |
+| 18f — the departure on the lock screen: Add to Wallet on the thread, the pass in the shop's brand, updates from `trips.revision`, the PassKit web service and the Google object (H-20260907-diveday-move-like-thing b decided yes 2026-09-07; built dark until the credentials are held; contract in [SPEC.md](SPEC.md)) | open | — | — |
 
 **What 18a–18d settled that the drawing left open, and what is still owed:**
 
@@ -104,7 +104,7 @@ comment, and a test pins the rule.
   travel on each edge of a phone: the page reads as flinching. A discrete
   control scales (`.pressable`), a row tints (`.pressable-row`), and the timing
   is identical, which is what keeps it one press.
-- **The spring on release ships** (H-69 a's recommended answer), on the sheet
+- **The spring on release ships** (H-20260907-diveday-move-like-thing a's recommended answer), on the sheet
   settling back and on a control letting go. It is one token in two rules;
   declining it is changing `--ease-spring` to `--ease-out-soft` there.
 - **The roll needs a whole sentence to compare**, not just a number: if
@@ -123,7 +123,7 @@ comment, and a test pins the rule.
   heading in the page. Measured on a freshly onboarded shop the fold was
   already a fifth applied on arrival; `scroll(root block)` is what the boards
   mean by "the scroll".
-- **18f is unbuilt and unbuildable here**: it waits on H-69 b and on
+- **18f is unbuilt and unbuildable here**: it waits on H-20260907-diveday-move-like-thing b and on
   credentials a human holds.
 
 ## Implementing a slice
@@ -155,12 +155,12 @@ look at the counter in light and dark, and open a pull request explaining any vi
 
 ### Slice 18f, the Wallet pass
 
-Decided 2026-09-07 (H-69 b). The contract is [SPEC.md](SPEC.md), section 18f; the prompt below is
+Decided 2026-09-07 (H-20260907-diveday-move-like-thing b). The contract is [SPEC.md](SPEC.md), section 18f; the prompt below is
 self-contained and is what an implementing session is given.
 
 ```text
 Implement slice 18f of ADR 20260907-nothing-from-nowhere: the departure on the lock screen (Apple
-Wallet and Google Wallet passes for a booked departure). H-69 b was decided yes on 2026-09-07; the
+Wallet and Google Wallet passes for a booked departure). H-20260907-diveday-move-like-thing b was decided yes on 2026-09-07; the
 feature is built now and ships dark until credentials are configured.
 
 Read, in this order, before writing code:

@@ -12,7 +12,7 @@ import {
 import { type AgencyVerificationPage, agencyVerificationPage } from "@/lib/agency-verification";
 
 /**
- * **The agency check's words, once** (H-105): the diver record's card, a row
+ * **The agency check's words, once** (H-20261008-cert-check-extension): the diver record's card, a row
  * on a departure's Divers tab, a row on Today and a departure's "Check all"
  * all say the same thing about the same check, so they read it from here.
  * Server-side: the controls are Client Components and take these as props.

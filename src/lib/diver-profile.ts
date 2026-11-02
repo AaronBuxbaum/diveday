@@ -69,7 +69,7 @@ export function firstOpenOrderId(diver: DiverProfile): string | undefined {
  * Certification cards a staffer still has to act on, counted the same way the
  * roster's "Needs attention" view and the Cards stat card both mean it: a card
  * awaiting review, plus an imported specialty or nitrox card whose gate stays
- * shut until somebody attests they have seen it (H-24). An imported *level*
+ * shut until somebody attests they have seen it (H-20260725-two-findings-dive-domain). An imported *level*
  * card is not counted — it cleared readiness on arrival, so its confirm is a
  * nudge on the card itself, not an open job.
  */

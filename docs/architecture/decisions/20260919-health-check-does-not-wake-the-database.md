@@ -112,7 +112,7 @@ surprise in place.
 - **Escape hatch.** If detection latency on the no-traffic database failure ever proves to matter —
   a pilot shop reporting an outage we did not see — the reversal is to restore the `select 1` and
   accept the always-on compute, priced above. Revisit when the database moves to something without
-  scale-to-zero billing (see the H-04 provider question), or if Neon's idle timeout becomes
+  scale-to-zero billing (see the H-20260724-vercel-selected-web-hosting provider question), or if Neon's idle timeout becomes
   configurable beyond five minutes. **A shop going live on real bookings is not a trigger**: see the
   amendment below.
 
@@ -120,7 +120,7 @@ surprise in place.
 
 The 2026-10-23 pre-mortem priced always-on again (about $19 a month) as the cure for a cold first
 screen once the first shop takes real bookings, and named "a shop live on real bookings" above as
-the trigger. **Aaron declined it** ([H-155](../../product/human-decisions/README.md)): "Neon
+the trigger. **Aaron declined it** ([H-20261023-no-always-on-database](../../product/human-decisions/README.md)): "Neon
 auto-scaling should work well here". Scale-to-zero stays on at the pilot. What shipped instead is
 the cheap half: a connection that times out while the compute wakes is tried once more before an
 error shows, and a statement is never retried (`retryConnectOnce` in `src/lib/db-pool-config.ts`).

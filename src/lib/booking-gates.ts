@@ -55,7 +55,7 @@ export function participantTypeRefusal(input: {
  * none, and a self-assertion never reserves a seat. Staff can sight the card,
  * and the same public form then admits the diver.
  *
- * **The age gate fails open, and is staff's alone** (H-08). Measured on the day
+ * **The age gate fails open, and is staff's alone** (H-20260724-certification-levels-agency-rules). Measured on the day
  * the course runs. A diver with no date of birth on file, or no record yet,
  * books as before, because nothing collects one at booking and failing closed
  * would lock out everyone already on the books. The anonymous form never
@@ -103,7 +103,7 @@ export function courseRatioRefusal(
     : null;
 }
 
-/** How a booking attached itself to a person on something short of proof (H-13). */
+/** How a booking attached itself to a person on something short of proof (H-20260724-one-person-per-email). */
 export type IdentityClaim = { bookedAs: string; matchedBy: "shared_email" | "picked_name" };
 
 /**

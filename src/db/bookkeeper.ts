@@ -15,7 +15,7 @@ import { activityEvents, people, shops } from "./schema";
  * ADR 20261016-bookkeeper-month-end-email). The address lives on the shop with
  * who set it and when; nothing is sent to it until the bookkeeper opens the
  * confirm link it receives (`bookkeeper_confirmed_at`, security review B1, on
- * the shore contact's model, H-118); `bookkeeper_sent_month` is the claim the
+ * the shore contact's model, H-20261014-stale-roll-call-recipients); `bookkeeper_sent_month` is the claim the
  * daily pass moves forward before it sends, minting the stop link that
  * month's email carries (second-pass N1).
  */
@@ -464,7 +464,7 @@ export async function resolveBookkeeperStopToken(
  * **The bookkeeper's own stop** (second-pass N1): clears the address with
  * everything that vouches for it and writes the log's line with no actor, in
  * one transaction, then tells the owners, as the shore contact's stop does
- * (H-118). The hash stays, so a second click reads as stopped. A stale or
+ * (H-20261014-stale-roll-call-recipients). The hash stays, so a second click reads as stopped. A stale or
  * unknown link changes nothing and sends nothing.
  */
 export async function stopBookkeeperByToken(

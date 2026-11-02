@@ -94,7 +94,7 @@ test.describe("as owner", () => {
     await page.getByLabel("Email", { exact: true }).fill("diego.alvarez@mail.example");
     await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
 
-    // What the *trip* requires, never what this person lacks (H-22). The
+    // What the *trip* requires, never what this person lacks (H-20260724-minimum-age-gate-fail). The
     // non-disclosing fallback would be a lie on a page showing seats left, so
     // it must not appear.
     await expect(
@@ -109,7 +109,7 @@ test.describe("as owner", () => {
     // There, the shortfall rests on the shop's own *record* — a verified Open
     // Water card and nothing above it — and the refusal stands. Here the shop
     // holds nothing at all, so there is nothing to judge and the seat is sold:
-    // H-08's fail-open, which the booking form's certification question briefly
+    // H-20260724-certification-levels-agency-rules's fail-open, which the booking form's certification question briefly
     // covered over between 2026-08-20 and 2026-08-27 (ADR
     // 20260820-attested-at-booking-verified-at-boarding, amended).
     //
@@ -187,7 +187,7 @@ test.describe("as owner", () => {
     // A level refusal has no missing card, and pointing a staffer at the
     // certifications form would be pointing them past a safety gate: a
     // hand-entered card lands `pending`, which clears admission next attempt
-    // (H-24). So the "there's no such card on the record" sentence must not
+    // (H-20260725-two-findings-dive-domain). So the "there's no such card on the record" sentence must not
     // render here.
     await expect(banner).not.toContainText("none on this diver");
 
@@ -199,7 +199,7 @@ test.describe("as owner", () => {
     // The signature exists because the *specific* sentences are the dangerous
     // ones: "their Deep card isn't on file" points a staffer at the
     // certifications form, and a hand-entered card lands `pending`, which
-    // clears admission on the next attempt (H-24). So the tamper doesn't bypass
+    // clears admission on the next attempt (H-20260725-two-findings-dive-domain). So the tamper doesn't bypass
     // a gate — it manufactures the prompt that gets a staffer to bypass one
     // (security review finding).
     const tripId = await seededTripId(page, "blue-mantis", ADVANCED_CHARTER, CHARTERS);

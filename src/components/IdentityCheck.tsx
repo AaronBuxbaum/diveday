@@ -23,7 +23,7 @@ export type IdentityCheckWords = {
 };
 
 /**
- * **Both answers to a held seat's question** (H-13; Aaron, 2026-10-05: the
+ * **Both answers to a held seat's question** (H-20260724-one-person-per-email; Aaron, 2026-10-05: the
  * old row named the problem and offered one of its two answers).
  *
  * A seat flagged `identity_unconfirmed` was attached to an existing diver on a
@@ -37,7 +37,7 @@ export type IdentityCheckWords = {
  * The split also takes who the new diver is (issue #2081): a date of birth,
  * required on a course with a minimum age because the age check and the
  * guardian rule both read it and fail open without it; anywhere else, the date
- * or a "They're 18 or older" tick, one of the two (H-100), which the writer
+ * or a "They're 18 or older" tick, one of the two (H-20261007-held-seat-split-into), which the writer
  * refuses without; and an optional email
  * or phone so the shop can send their own waiver. When other held seats were
  * booked under the same name and matched to the same diver, on other

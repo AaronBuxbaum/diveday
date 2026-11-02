@@ -32,7 +32,7 @@ export async function confirmContactEmail(token: string) {
   }
   const db = await getDb();
   // Three token kinds, tried in turn as the page does: the front desk's, the
-  // shore contact's (H-118), then the bookkeeper's (item 35, security review
+  // shore contact's (H-20261014-stale-roll-call-recipients), then the bookkeeper's (item 35, security review
   // B1), whose consume also tells the owners (second-pass N2). Each hash
   // lives in its own place.
   if (

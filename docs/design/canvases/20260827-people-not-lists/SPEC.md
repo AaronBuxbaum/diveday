@@ -7,7 +7,7 @@ listed test pins is not. Standing repo obligations apply unstated.
 
 **Contracts no slice may move**: `verifyTripAdmissionGate` and every authz gate; the erasure path's
 owner-only / removed-first / typed-name guard (ADR 20260802); merge candidate detection;
-`standingWaiverExposure` and H-54's materiality recording (`waiver_materiality_decisions`); the
+`standingWaiverExposure` and H-20260822-may-shop-explicitly-declare's materiality recording (`waiver_materiality_decisions`); the
 review-suppression floor (`MAX_SUPPRESSED_SHARE_FOR_RATING`, `reviewsToRepublishForRating`);
 request rows gated on `reports` (strangers' contact details); waiver pages gated on `waivers`.
 `security-reviewer` review before merging 8b (personal data) and 8e (legal evidence).
@@ -140,7 +140,7 @@ export function buildDiverStatus(
   (pending count, waiver state word, sizes, note count). A long fact such as the Gear size list
   stacks beneath its title on a phone and wraps within the page; short facts stay on one compact
   line, and the stacked door does not add a second lower rule to the file rhythm.
-- Deletes (H-49): `DiverSections` jump nav, `NoticeBanner`'s router (514 lines — notices route by
+- Deletes (H-20260815-no-legacy): `DiverSections` jump nav, `NoticeBanner`'s router (514 lines — notices route by
   `noticeForForm` to the group that owns the form), `SpecialtyCards.tsx` and
   `CertificationCards.tsx` (the twins fold into the group via 8a's row), `StatsSummary` tiles
   (the three figures live where they belong: cards state in its group, balance on the story rows,
@@ -200,7 +200,7 @@ when the post-mutation status is empty; visual re-captures (the record has 6).
 
 - One page: the day-grouped log renders beneath the template card on `/waivers`;
   `/shop/[shopSlug]/waivers/signatures` becomes a 308 Route Handler to it preserving `?record=`
-  and `?page=`; `WaiversSubNav` and the layout's sub-nav delete (H-49).
+  and `?page=`; `WaiversSubNav` and the layout's sub-nav delete (H-20260815-no-legacy).
 - Template card: textarea + **materiality choice** (radio pair; the material option's label carries
   the live `standingWaiverExposure` figures) + one Publish (InlineConfirm double-tap preserved on
   the material path only). With zero standing signatures the choice collapses away and Publish is
@@ -265,7 +265,7 @@ record's ten section headings beyond the surviving four, the stat-tile labels, t
 labels, the roster's duplicate card-list strings; `waiversStaff.confirm.materialTrigger`,
 `confirm.nonMaterialTrigger`, and whichever other `confirm.*` labels the radio form retires (keep
 the InlineConfirm pair the material path still uses). Waiver/medical wording untouched
-(H-01/H-03).
+(H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit).
 
 ## Coverage updates
 

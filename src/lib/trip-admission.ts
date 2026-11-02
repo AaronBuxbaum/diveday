@@ -32,7 +32,7 @@ import { type TrainingDiveCourse, trainingDiveRequiredLevel } from "./training-m
  * diver knows nothing about them, and refusing there would lock out every new
  * customer and every diver whose cards predate this rule shipping. That is the
  * same trade-off the product owner already settled for the course minimum-age
- * gate (docs/product/human-decisions/ H-08: "collect a date of birth, fail
+ * gate (docs/product/human-decisions/ H-20260724-certification-levels-agency-rules: "collect a date of birth, fail
  * open"; the fail-closed option was declined for exactly this blast radius),
  * and this rule follows it rather than inventing a second policy. Readiness and
  * the dock still hold that line — nothing here weakens them.
@@ -53,7 +53,7 @@ import { type TrainingDiveCourse, trainingDiveRequiredLevel } from "./training-m
  * state, not a claim by the person taking the seat. Readiness is what waits for
  * the lookup.
  *
- * **A stated card is taken at its word here, and only here** (H-27/H-29,
+ * **A stated card is taken at its word here, and only here** (H-20260803-booking-time-trip-admission/H-20260820-shophasadjudicated-src-lib-trip,
  * product owner 2026-08-20). Every certification row is evidence at booking
  * time, whatever its status and whoever wrote it: staff-typed, imported, or the
  * diver's own declaration from a public form. The rung a diver stands on is a
@@ -72,12 +72,12 @@ import { type TrainingDiveCourse, trainingDiveRequiredLevel } from "./training-m
  *   The two gates are supposed to differ; this is the difference.
  * - **A gate that can be talked past has to be worth its refusals.** Refusing
  *   carded regulars — the divers a shop knows exactly — while admitting
- *   strangers who have said nothing is inverted relative to risk (H-27). What
+ *   strangers who have said nothing is inverted relative to risk (H-20260803-booking-time-trip-admission). What
  *   the refusal is *for* is telling somebody at the sale that this boat needs
  *   Advanced, so they buy the trip they can dive.
  *
  * What has **not** changed: a shop with nothing at all on file still admits
- * (H-08's fail-open promise), and the anti-displacement rule in
+ * (H-20260724-certification-levels-agency-rules's fail-open promise), and the anti-displacement rule in
  * `recordSelfDeclaredCards` still means a claim can never be written over a
  * real card. So no diver whose shop holds actual evidence is judged on
  * somebody's typing.
@@ -165,11 +165,11 @@ function highestLevelOnFile(certifications: readonly Certification[]): Certifica
  * It used to require a **`verified`** row, which contradicted its own name and
  * its own module docstring: the gate already trusted a `pending` staff-typed
  * card for the level comparison two lines below, then read the same diver as a
- * stranger here (H-29). The practical shape of that bug was a shop mid-backfill
+ * stranger here (H-20260820-shophasadjudicated-src-lib-trip). The practical shape of that bug was a shop mid-backfill
  * whose regulars all walked through a gate their own records should have
  * answered.
  *
- * H-08's fail-open promise is untouched, because it never rested on the
+ * H-20260724-certification-levels-agency-rules's fail-open promise is untouched, because it never rested on the
  * `verified` marker: a shop that has never carded a diver still has **zero
  * rows**, so every genuinely new customer still books.
  */
@@ -207,7 +207,7 @@ export type TripAdmissionInput = {
   evidence: TripAdmissionEvidence;
   /**
    * The booking reused an existing person by email under a name that didn't
-   * match (H-13). The certs on that record are then evidence about *someone*,
+   * match (H-20260724-one-person-per-email). The certs on that record are then evidence about *someone*,
    * but not provably about the person booking, so they are not read at all and
    * the seat is admitted — readiness already fails closed on the same flag, and
    * judging a possible second human by the first one's cards would be wrong in
@@ -287,10 +287,10 @@ export function decideTripAdmission(input: TripAdmissionInput): TripAdmission {
   // Deliberate, and not the inversion it looks like (security review
   // 2026-09-11 read this as "the weaker door skips the stricter gate"). The
   // flag means this seat attached itself to an existing person on a guess
-  // (H-13), so that person's cards are evidence about *somebody* and not
+  // (H-20260724-one-person-per-email), so that person's cards are evidence about *somebody* and not
   // provably about the booker — `tripAdmissionFor` does not even read them,
   // and this line makes the same answer explicit rather than leaving it to
-  // fall out of an empty evidence set. Admitting is therefore H-08's ordinary
+  // fall out of an empty evidence set. Admitting is therefore H-20260724-certification-levels-agency-rules's ordinary
   // fail-open on absence of evidence, not an exemption from the gate.
   //
   // What re-decides: `calculateReadiness` raises `identity_unconfirmed` for
@@ -301,7 +301,7 @@ export function decideTripAdmission(input: TripAdmissionInput): TripAdmission {
   // that person's details until the same confirmation (`RosterSection.tsx`).
   if (input.identityUnconfirmed) return ADMITTED;
 
-  // **Before the boat, a stated card is taken at its word** (H-27/H-29, product
+  // **Before the boat, a stated card is taken at its word** (H-20260803-booking-time-trip-admission/H-20260820-shophasadjudicated-src-lib-trip, product
   // owner 2026-08-20). Everything on the record is evidence here — staff-typed,
   // imported, or the diver's own declaration — because the question this gate
   // asks is "could this diver ever be cleared?", and a diver who says they hold
@@ -320,7 +320,7 @@ export function decideTripAdmission(input: TripAdmissionInput): TripAdmission {
   const declaredLevel = input.declared?.level ?? null;
   const declaredNitrox = Boolean(input.declared?.nitrox);
   // Saying something is being known. A diver who names their rung on the form
-  // has stopped being the stranger H-08 admits blind, and is judged on their own
+  // has stopped being the stranger H-20260724-certification-levels-agency-rules admits blind, and is judged on their own
   // words like anyone else.
   if (!shopHasAdjudicated(certifications) && !declaredLevel && !declaredNitrox) return ADMITTED;
 

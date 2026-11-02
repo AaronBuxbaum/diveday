@@ -128,7 +128,7 @@ jobs, and each half is load-bearing.
 
 **The assertion is scoped to what has been *tested*, not to what has been built.** Both halves now
 work: divers *and* rostered crew can be counted on a device copy with no signal, so an after-dive
-checkpoint closes offshore (H-46, 2026-08-14 — before that the crew half genuinely could not be
+checkpoint closes offshore (H-20260814-where-diveday-sit-between, 2026-08-14 — before that the crew half genuinely could not be
 recorded and this paragraph scoped the claim to the diver half for that reason).
 
 What has not changed is the reason the line stays narrow. The
@@ -152,7 +152,7 @@ paragraph, not a stronger adjective.
 
 ## Why the offer is not in this email
 
-Six free months is authorized (H-12, amended 2026-08-12) and it is deliberately **not** stated here.
+Six free months is authorized (H-20260724-public-founding-shop-price, amended 2026-08-12) and it is deliberately **not** stated here.
 
 A discount is the most advertising-shaped thing an email can contain. Arriving unasked, in the same
 paragraph as "nobody uses this yet", it invites the reader to price the risk of being first — which
@@ -213,10 +213,10 @@ line is built for it. Do not measure this in calls booked.
 
 Every reply gets a call note within the hour, in the
 [first-call script](first-call-script.md#within-ten-minutes-of-hanging-up)'s format. A reply that
-changes a standing assumption is H-31 evidence and belongs in
+changes a standing assumption is H-20261025-product-has-never-had evidence and belongs in
 [human-decisions/](../human-decisions/README.md), never here.
 
-**The 25-shop cap counts shops that take the offer, not emails sent.** H-12's founding cohort is
+**The 25-shop cap counts shops that take the offer, not emails sent.** H-20260724-public-founding-shop-price's founding cohort is
 capped at 25, and six free months is a promise kept by hand with no product mechanism behind it
 (see the flags below) — so the number to watch is acceptances. It binds the day a twenty-fifth shop
 says yes, which is the day to stop stating the term, not the day to stop writing.
@@ -229,7 +229,7 @@ each is an existing rule rather than a new one:
 - **A ship date, or "I could build that for you."** One developer, no customers; a promise made in
   a reply becomes the thing the shop judges everything by.
 - **Anything about how fast support answers.** That promise was retired 2026-08-05
-  ([H-12/H-26](../human-decisions/README.md#decision-register)) and has not been replaced.
+  ([H-20260724-public-founding-shop-price/H-20260802-what-game-is-this](../human-decisions/README.md#decision-register)) and has not been replaced.
 - **A discount, a longer free term, or a price different from the site's.** Six months is the whole
   commercial position. Anything beyond it gets written down and taken away, never agreed to live.
 - **The price as a number in prose.** Send the pricing page; the figure has one source
@@ -240,7 +240,7 @@ each is an existing rule rather than a new one:
   do not describe it as solved.
 - **A field test that stands in for the shop's own paper.** V-02 rides *alongside* the printed
   manifest and whatever the crew already does, never in place of either; a missing, expired, or
-  stale device copy is never a boarding source (H-05, [run sheet](v-02-field-test-run-sheet.md)).
+  stale device copy is never a boarding source (H-20260724-product-now-uses-explicit, [run sheet](v-02-field-test-run-sheet.md)).
   If a shop offers "just run it on Saturday's charter", the answer is yes *and* paper, never yes
   instead of paper. The stop rule gets said out loud to the crew on the morning, not written into
   an email.
@@ -260,7 +260,7 @@ Not knowing something is a fine answer with this audience. An invented one costs
 
 ## Flagged — settle before the offer is stated on a call
 
-**The six-month term is defined in exactly one place: H-12's 2026-08-12 amendment**
+**The six-month term is defined in exactly one place: H-20260724-public-founding-shop-price's 2026-08-12 amendment**
 ([human-decisions/](../human-decisions/README.md#decision-register)). What it covers, what it leaves
 open (the still-live legal/tax dependency, the missing start-event decision, the day-22 Settings
 contradiction), and the 25-shop cohort cap all live there, and this page does not restate them —
@@ -270,9 +270,9 @@ the first time the offer is spoken aloud.
 What that means *here*, and only here:
 
 - **Keeping the term out of the first email buys time on the open questions; it does not close
-  them.** The first shop that accepts will hit every one of them, so the H-12 row needs to be
+  them.** The first shop that accepts will hit every one of them, so the H-20260724-public-founding-shop-price row needs to be
   settled before a reply turns into a yes, not before a send.
-- **Whatever start event H-12 lands on gets said the same way every time.** The improvise trap
+- **Whatever start event H-20260724-public-founding-shop-price lands on gets said the same way every time.** The improvise trap
   above exists because the second shop asking will otherwise get a different answer than the first.
 - **The C-card and waiver wording is safety-adjacent copy** and carries the same
   `dive-domain-expert` bar as any other surface. Reviewed 2026-08-12; re-run that review if the

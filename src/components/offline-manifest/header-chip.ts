@@ -11,7 +11,7 @@ import type { OfflineManifestFreshness } from "@/lib/offline-manifests";
  * - **No signal**: the connectivity chip, "No signal · device copy" (layer
  *   4 review, dde-b 1). A green "Fresh copy" alone read as the live list to
  *   a deckhand who did not save it; staff must know they are on a copy
- *   (H-05). The copy's age is said in the banner beneath, every time.
+ *   (H-20260724-product-now-uses-explicit). The copy's age is said in the banner beneath, every time.
  * - **Online and current**: "Fresh copy · online".
  * - **Online and aging or stale**: that freshness chip alone; the age is
  *   the question, and "online" would read as reassurance it is not.

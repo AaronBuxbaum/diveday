@@ -1,5 +1,5 @@
 /**
- * **A parent signing a child's release goes back to their own page** (H-124,
+ * **A parent signing a child's release goes back to their own page** (H-20261014-parent-signs-minor-release,
  * dive-domain review F6 of layer r4-1). "Sign Mia's waiver" on the lead's
  * `/ready` hands the lead's own readiness token to the release in this
  * cookie, scoped to that one waiver link's path, so it rides only on the

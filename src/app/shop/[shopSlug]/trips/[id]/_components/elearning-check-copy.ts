@@ -1,7 +1,7 @@
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { ElearningCheckCopy } from "./ElearningCheck";
 
-/** The eLearning check's words, translated on the server (H-106). */
+/** The eLearning check's words, translated on the server (H-20261008-padi-elearning-check). */
 export function elearningCheckCopy(t: StaffTranslator): ElearningCheckCopy {
   return {
     check: t("trips.roster.elearningCheck.check"),

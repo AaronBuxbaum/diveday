@@ -139,7 +139,7 @@ const payloadSchema = z.object({
       z.object({
         /**
          * The WhatsApp Business Account the events belong to. Not the tenant
-         * key (H-83): a chain may share one, so it only has to agree with the
+         * key (H-20260916-may-dive-chain-share): a chain may share one, so it only has to agree with the
          * row of the number the change names.
          */
         id: z.string().min(1).optional(),
@@ -150,7 +150,7 @@ const payloadSchema = z.object({
                 .object({
                   /**
                    * The number the change belongs to. `phone_number_id` is
-                   * the tenant key (H-83): one WABA may hold several shops'
+                   * the tenant key (H-20260916-may-dive-chain-share): one WABA may hold several shops'
                    * numbers, and only the number says whose event it is.
                    */
                   metadata: z
@@ -174,12 +174,12 @@ export type WhatsAppDeliveryEvent = {
    * The WABA that produced this event, or null when Meta did not name one.
    *
    * Carried so the caller can check it against the row of the number below,
-   * which is what resolves the event to a shop (H-83).
+   * which is what resolves the event to a shop (H-20260916-may-dive-chain-share).
    */
   wabaId: string | null;
   /**
    * The phone number id the event belongs to (`value.metadata`), or null when
-   * Meta named none — **the tenant key** (H-83). A chain may share one WABA
+   * Meta named none — **the tenant key** (H-20260916-may-dive-chain-share). A chain may share one WABA
    * across shops, so the WABA is never the answer, only a check on the
    * number's row; an event with no number is dropped.
    */
@@ -233,7 +233,7 @@ export function parseWhatsAppDeliveryEvents(payload: string, now: Date): WhatsAp
 export type WhatsAppInboundMessage = {
   /** The WABA the message arrived at — checked against the number's row, never the tenant key. */
   wabaId: string | null;
-  /** The shop number it was sent to — the tenant key (H-83), resolved to a shop by the caller. */
+  /** The shop number it was sent to — the tenant key (H-20260916-may-dive-chain-share), resolved to a shop by the caller. */
   phoneNumberId: string | null;
   providerMessageId: string;
   /** Digits only, as Meta reports the sender. */

@@ -7,7 +7,7 @@ import { candidateBirthDate } from "@/lib/name-match-evidence";
 
 /**
  * What one candidate on the counter's "is this the same person?" prompt
- * carries after its name: the contact on file, the date of birth (H-79, issue
+ * carries after its name: the contact on file, the date of birth (H-20260916-unconfirmed-identity-withhold-cost, issue
  * #1698) and the last dive day this shop can put behind the name (issue
  * #1556). Shared by the trip's Add-diver section and `/divers/new`; the seat
  * panel says the same three facts through its own copy props, because it holds

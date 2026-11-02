@@ -83,7 +83,7 @@ afterEach(() => {
  * src/lib/manifests.ts), consumed by the live manifest and by this view. It
  * used to be written inline in both places as divers-only, so a checkpoint
  * with every booked diver counted read complete with the crew unaccounted
- * for. A crew roll call is recordable offline now (H-46), and the one thing
+ * for. A crew roll call is recordable offline now (H-20260814-where-diveday-sit-between), and the one thing
  * that must still never happen is unchanged: the dock copy reading "complete"
  * while the live page says the checkpoint is still open.
  */
@@ -130,7 +130,7 @@ describe("OfflineManifestView — crew are part of the head count offline too", 
     // holding it open, in the same words the live manifest uses.
     expect(screen.getByText(/2 crew members still to call/)).toBeInTheDocument();
     // And the way to close it is right there, on this copy, with no signal:
-    // one aboard control per crew member, which is the whole point of H-46.
+    // one aboard control per crew member, which is the whole point of H-20260814-where-diveday-sit-between.
     expect(screen.getAllByRole("button", { name: "Mark aboard" })).toHaveLength(2);
   });
 
@@ -216,7 +216,7 @@ describe("OfflineManifestView — crew are part of the head count offline too", 
 });
 
 /**
- * Review 20260803, D6, re-read after H-46. "A crew member is still to call"
+ * Review 20260803, D6, re-read after H-20260814-where-diveday-sit-between. "A crew member is still to call"
  * and "a crew member is unaccounted for" are different facts, and a crew
  * seeing warning-yellow on every single dive stops reading it at all. What
  * changed is which of the two an ordinary out-of-signal trip produces: the
@@ -250,7 +250,7 @@ describe("OfflineManifestView — the crew panel tells apart 'still to call' fro
   });
 
   /**
-   * Invariant I2, on screen. A copy saved before H-46 has crew with no person
+   * Invariant I2, on screen. A copy saved before H-20260814-where-diveday-sit-between has crew with no person
    * id, so there is no subject a tap could be about. It says so — with a
    * count, so a captain can tell one late addition from the whole crew — the
    * checkpoint stays open, and no aboard control is offered for somebody the

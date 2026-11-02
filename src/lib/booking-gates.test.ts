@@ -86,7 +86,7 @@ describe("courseEnrollmentRefusal", () => {
       });
     expect(at("2031-06-14")).toBe("course_min_age");
     expect(at("2031-06-15")).toBeNull();
-    // The anonymous form never refuses on someone else's date of birth (H-08).
+    // The anonymous form never refuses on someone else's date of birth (H-20260724-certification-levels-agency-rules).
     expect(at("2031-06-14", "public")).toBeNull();
   });
 

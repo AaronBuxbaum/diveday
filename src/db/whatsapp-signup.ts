@@ -76,7 +76,7 @@ function registerMayHaveBound(failure: { step: SignupStep; errorCode?: string })
  *    Connect already in flight for any of them is refused as `signup_busy`
  *    without waiting, and a number another shop holds is refused as
  *    `phone_number_already_connected`. A WABA another shop holds is not
- *    refused: a chain shares one across its shops, a number each (H-83). Both
+ *    refused: a chain shares one across its shops, a number each (H-20260916-may-dive-chain-share). Both
  *    refusals happen before any number is registered, so no PIN is minted for
  *    a row that would then be refused.
  * 3. **Under the claim**: register (only a number this shop has not already

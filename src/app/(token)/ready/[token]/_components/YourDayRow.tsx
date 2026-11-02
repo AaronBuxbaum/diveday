@@ -18,7 +18,7 @@ const INITIAL: YourDayLinkState = { bookingId: null, outcome: null };
 
 /**
  * One of the diver's other days: its line, and a button that mails its link to
- * the address on file (H-132). The words arrive as props so the page needs no
+ * the address on file (H-20261014-other-days-send-fresh). The words arrive as props so the page needs no
  * client message namespace for it.
  */
 export function YourDayRow({

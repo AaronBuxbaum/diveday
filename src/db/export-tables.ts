@@ -242,7 +242,7 @@ export const EXPORT_TABLES = {
     scope: { shopColumn: tripRequirements.shopId },
   },
   // Incident reports (ADR 20261012-incident-reports). Shop bundle only: the
-  // diver's own bundle leaves them out by decision (H-111).
+  // diver's own bundle leaves them out by decision (H-20261013-incident-report-erasure).
   incidentReports: {
     table: incidentReports,
     order: [asc(incidentReports.createdAt), asc(incidentReports.id)],

@@ -26,7 +26,7 @@ export type FindOrCreatePersonResult = {
   created: boolean;
   /**
    * Whether the submitted `fullName` plausibly belongs to the returned person
-   * (H-13). Always `true` when `created` (the person *is* the submitted name);
+   * (H-20260724-one-person-per-email). Always `true` when `created` (the person *is* the submitted name);
    * on a reuse it is the strict name comparison against the stored row, so a
    * caller can route a mismatch to staff identity confirmation rather than let
    * a different human inherit the matched person's evidence.
@@ -200,7 +200,7 @@ export async function recordDiverOwnLocaleForBooking(
   if (!booking) return;
   // An identity-unconfirmed booking is not evidence about the person it was
   // attached to. `findOrCreatePerson` reuses an existing diver by email and
-  // only *flags* a name mismatch rather than refusing it (H-13), so without
+  // only *flags* a name mismatch rather than refusing it (H-20260724-one-person-per-email), so without
   // this an unauthenticated party who knows a diver's address could book any
   // open seat and permanently switch that diver's confirmations, waiver
   // requests, and night-before brief into a language they don't read — a

@@ -260,7 +260,7 @@ export async function issueWaiverRequest(
     // shop has since changed) stands for nothing: the seat reads
     // `waiver_lapsed`, and the fix is this fresh link. A hold or a refusal on
     // a seat in the water still stands; neither is a clean completion. A
-    // rider's seat reads a held record as a signature (H-109), so it lapses
+    // rider's seat reads a held record as a signature (H-20261009-rider-snorkeler-medical), so it lapses
     // with the signature's own clock. **Measured where the roster measures it**
     // (`waiverClockInstant`, issue #2611): a release that runs out before the
     // trip is blocked there, so this door must take a fresh signature for it,
@@ -279,7 +279,7 @@ export async function issueWaiverRequest(
         isCompletedWaiverCurrent(record, template.materialGeneration, clockAt) &&
         !guardianSignatureMissing(record, signer),
     );
-    // H-98's amendment allows a newer person-scoped clean release to stand over
+    // H-20261007-after-physician-says-no's amendment allows a newer person-scoped clean release to stand over
     // an open referral. An open referral may belong to this person or one of
     // their current bookings; either makes an older clean person release
     // insufficient, so staff must be able to issue the next person-scoped link.

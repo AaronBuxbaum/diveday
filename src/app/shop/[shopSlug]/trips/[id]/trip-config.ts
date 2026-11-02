@@ -4,7 +4,7 @@ import { requireShopSurface } from "@/lib/session";
 /**
  * Trip *definition* — what the dive is and who it admits (details, admission
  * requirements, and the whole-series operations) — is owner/manager/instructor
- * work (H-14, ADR 20260724-role-authorization). Re-checks live roles against the
+ * work (H-20260724-staff-role-reach, ADR 20260724-role-authorization). Re-checks live roles against the
  * DB and bounces a disallowed staff member to the trip Overview with a
  * not-authorized notice.
  *

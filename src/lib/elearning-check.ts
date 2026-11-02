@@ -1,7 +1,7 @@
 import { foldText } from "./agency-check";
 
 /**
- * **Has a course student finished the agency's eLearning?** (H-106, ADR
+ * **Has a course student finished the agency's eLearning?** (H-20261008-padi-elearning-check, ADR
  * 20261008-cert-check-extension.)
  *
  * PADI files a student's eLearning under the email it was bought with and

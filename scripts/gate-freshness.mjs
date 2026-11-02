@@ -33,7 +33,7 @@
 // otherwise. Like `check-follow-ups.mjs`, this section degrades quietly (prints a note, ages
 // nothing) when `gh` cannot answer — a network hiccup is not evidence of anything.
 //
-// **Where the rows live.** Each decision is its own file, `docs/product/human-decisions/H-nn-*.md`
+// **Where the rows live.** Each decision is its own file, `docs/product/human-decisions/H-YYYYMMDD-slug.md`
 // (status on a `**Status:**` line, every date anywhere in the file); the verification queue is
 // still a table in that directory's README. Until 2026-10-07 both were rows of one
 // `docs/product/human-decisions.md`, so a file whose only commit is the split that created it
@@ -69,6 +69,8 @@ const REGISTER = `${REGISTER_DIR}/README.md`;
 const LEGACY_REGISTER = "docs/product/human-decisions.md";
 const ROLLOUT = "docs/product/rollout.md";
 const DAY_MS = 86_400_000;
+/** A gate id: a verification row (`V-02`) or a human decision (`H-YYYYMMDD-slug`). */
+const GATE_ID = "(?:V-\\d+|H-\\d{8}-[a-z0-9]+(?:-[a-z0-9]+)*)";
 
 // ---------------------------------------------------------------------------
 // Parsing — pure, exported for the unit test.
@@ -99,14 +101,15 @@ export function latestDateIn(text) {
 }
 
 /**
- * Every `| H-nn |` / `| V-nn |` table row in the register, with its 1-based line number
- * so `git blame` can be joined onto it. Both tables (decision register and verification
- * queue) share the shape `| id | status | … |`, so one pattern covers them.
+ * Every `| <gate id> | <status> | … |` table row in a chunk of the register, with its 1-based
+ * line number so `git blame` can be joined onto it. The caller passes the verification queue:
+ * the decision index above it lists every decision by id too, and those are read from their
+ * own files.
  */
 export function parseGateRows(markdown) {
   const rows = [];
   markdown.split("\n").forEach((line, index) => {
-    const match = /^\|\s*([HV]-\d+)\s*\|\s*([^|]+?)\s*\|/.exec(line);
+    const match = new RegExp(`^\\|\\s*(${GATE_ID})\\s*\\|\\s*([^|]+?)\\s*\\|`).exec(line);
     if (!match) return;
     rows.push({
       id: match[1],
@@ -120,11 +123,11 @@ export function parseGateRows(markdown) {
 }
 
 /**
- * One decision file: its id from the `# H-nn: …` heading, its status from the `**Status:**`
+ * One decision file: its id from the `# H-YYYYMMDD-slug: …` heading, its status from the `**Status:**`
  * line, and the newest date written anywhere in it. Null for a file that is not a decision.
  */
 export function parseDecisionFile(markdown) {
-  const id = /^#\s+(H-\d+)\b/m.exec(markdown)?.[1];
+  const id = /^#\s+(H-\d{8}-[a-z0-9]+(?:-[a-z0-9]+)*):/m.exec(markdown)?.[1];
   const status = /^(?:- )?\*\*Status:\*\*\s*(.+?)\s*$/m.exec(markdown)?.[1];
   if (!id || !status) return null;
   return {
@@ -137,18 +140,19 @@ export function parseDecisionFile(markdown) {
 }
 
 /**
- * Gate ids named in a sentence, expanding ranges: "H-01–H-03" is three rows, not two,
- * and the middle one is exactly the sort of thing a reconciliation is supposed to catch.
+ * Gate ids named in a sentence, expanding verification ranges: "V-01–V-03" is three rows, not
+ * two, and the middle one is exactly the sort of thing a reconciliation is supposed to catch.
+ * A decision id has no successor to count to, so a range of them is written as a list.
  */
 export function gateIdsIn(text) {
   const ids = new Set();
-  for (const match of text.matchAll(/\b([HV])-(\d+)\s*[–—-]\s*(?:\1-)?(\d+)\b/g)) {
-    const [, prefix, from, to] = match;
+  for (const match of text.matchAll(/\bV-(\d+)\s*[–—-]\s*(?:V-)?(\d+)\b/g)) {
+    const [, from, to] = match;
     for (let n = Number(from); n <= Number(to); n += 1) {
-      ids.add(`${prefix}-${String(n).padStart(2, "0")}`);
+      ids.add(`V-${String(n).padStart(2, "0")}`);
     }
   }
-  for (const match of text.matchAll(/\b([HV])-(\d+)\b/g)) ids.add(`${match[1]}-${match[2]}`);
+  for (const match of text.matchAll(new RegExp(`\\b${GATE_ID}`, "g"))) ids.add(match[0]);
   return [...ids].sort();
 }
 
@@ -332,7 +336,7 @@ function blameByLine(file, grafted, rev = null) {
 
 /** Newest first: `{ sha, at }` for every commit that touched `file`, or null. */
 function fileHistory(file) {
-  const output = git(["log", "--format=%H %at", "--", file]);
+  const output = git(["log", "--follow", "--format=%H %at", "--", file]);
   if (output === null) return null;
   return output
     .split("\n")
@@ -407,10 +411,10 @@ function registerBlame(decisionFiles, readmeRows, grafted) {
   return answered ? byId : null;
 }
 
-/** Every `H-nn-*.md` in the register directory, parsed, with its repo-relative path. */
+/** Every `H-YYYYMMDD-slug.md` in the register directory, parsed, with its repo-relative path. */
 function readDecisionFiles() {
   return readdirSync(path.join(ROOT, REGISTER_DIR))
-    .filter((name) => /^H-\d+.*\.md$/.test(name))
+    .filter((name) => /^H-\d{8}-.*\.md$/.test(name))
     .map((name) => {
       const file = `${REGISTER_DIR}/${name}`;
       const row = parseDecisionFile(readFileSync(path.join(ROOT, file), "utf8"));
@@ -515,9 +519,12 @@ async function main() {
   const rollout = readFileSync(path.join(ROOT, ROLLOUT), "utf8");
 
   const grafted = graftedShas();
-  // The README's tables carry only the verification queue as bare `| V-nn |` rows; the
-  // decision index links each id, so it never parses as a gate row of its own.
-  const readmeRows = parseGateRows(register);
+  // Only the verification queue is read from the README: the decision index above it lists
+  // every decision by id too, and those rows come from their own files.
+  const queueAt = register.indexOf("\n## Human verification queue");
+  const queue = queueAt === -1 ? "" : register.slice(queueAt);
+  const queueOffset = queueAt === -1 ? 0 : register.slice(0, queueAt).split("\n").length - 1;
+  const readmeRows = parseGateRows(queue).map((row) => ({ ...row, line: row.line + queueOffset }));
   const decisionRows = readDecisionFiles();
   const blame = registerBlame(decisionRows, readmeRows, grafted);
   const rows = [...decisionRows, ...readmeRows]

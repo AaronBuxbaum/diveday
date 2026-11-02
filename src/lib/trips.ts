@@ -127,7 +127,7 @@ export function hasReturned(endsAt: Date, now: Date): boolean {
  * 200 into a capacity transaction is a denial of service on a shop's Saturday.
  *
  * What this does **not** answer is what a group *is* — one payer for everyone
- * is usually wrong for a club, which splits. That is H-61 in
+ * is usually wrong for a club, which splits. That is H-20261025-bigger-party-right-answer in
  * docs/product/human-decisions/, and it is an owner's call.
  */
 export const MAX_PUBLIC_PARTY_SIZE = 20;
@@ -139,7 +139,7 @@ export type TripCapacity = {
 };
 
 /**
- * **A departure as a diver is shown it** (H-107, #2321): `capacity` becomes
+ * **A departure as a diver is shown it** (H-20261009-certificate-caps-seats, #2321): `capacity` becomes
  * the seats on sale — the stated seats capped at the boat's certificate, which
  * is all the booking transaction will sell. A public page maps its rows
  * through this once, where it reads them, so every seats-left, "Full", party

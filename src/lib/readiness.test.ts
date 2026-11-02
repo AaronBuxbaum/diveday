@@ -260,7 +260,7 @@ describe("calculateReadiness", () => {
     });
   });
 
-  it("blocks a diver whose booking reused an existing person under a mismatched name (H-13)", () => {
+  it("blocks a diver whose booking reused an existing person under a mismatched name (H-20260724-one-person-per-email)", () => {
     // Every piece of evidence is satisfied — the only thing wrong is that this
     // booking may be a different human sharing the email. It must not read ready.
     const result = calculateReadiness({
@@ -292,7 +292,7 @@ describe("calculateReadiness", () => {
     }
   });
 
-  it("raises under_minimum_age for a diver under the course's minimum on the course date (H-08)", () => {
+  it("raises under_minimum_age for a diver under the course's minimum on the course date (H-20260724-certification-levels-agency-rules)", () => {
     const result = calculateReadiness({
       timezone: "UTC",
       requirement,
@@ -324,7 +324,7 @@ describe("calculateReadiness", () => {
     }
   });
 
-  it("fails open on a missing date of birth or minimum age (H-08, option B)", () => {
+  it("fails open on a missing date of birth or minimum age (H-20260724-certification-levels-agency-rules, option B)", () => {
     for (const input of [
       { courseMinimumAge: 15, dateOfBirth: undefined, courseDate: "2026-08-15" },
       { courseMinimumAge: undefined, dateOfBirth: "2012-03-01", courseDate: "2026-08-15" },
@@ -342,7 +342,7 @@ describe("calculateReadiness", () => {
     }
   });
 
-  // H-22 (docs/architecture/decisions/20260725-checklist-age-disclosure.md):
+  // H-20260724-minimum-age-gate-fail (docs/architecture/decisions/20260725-checklist-age-disclosure.md):
   // the diver-facing checklist only names the specific age-gate reason when
   // no identity mismatch is also flagged, and it relies on this exact push
   // order — identity_unconfirmed always sorting before under_minimum_age —
@@ -956,7 +956,7 @@ describe("aboardBlockerKind", () => {
    * everything that was neither medical nor certification, called it
    * "paperwork that is still owed", and swept these in: an unsigned waiver is
    * **no medical declaration at all**, `identity_unconfirmed` means the human
-   * aboard may not be the human whose cards are on file (H-13),
+   * aboard may not be the human whose cards are on file (H-20260724-one-person-per-email),
    * `readiness_unavailable` is a failed lookup this module refuses to treat as
    * a pass, and `requirements_not_configured` means nobody's cards were
    * checked against anything (`dive-domain-expert`, on issue #791).
@@ -1146,7 +1146,7 @@ describe("physician clearance and the medical block", () => {
 });
 
 /**
- * A medical answer is a fact about the diver, not about the trip (H-104,
+ * A medical answer is a fact about the diver, not about the trip (H-20261006-medical-holds-every-departure,
  * issue #2096): a departure that does not require the release still holds a
  * diver whose questionnaire referred them to a physician, or whose physician
  * said no. Only the release's own blockers follow the departure's setting.
@@ -1247,7 +1247,7 @@ describe("the medical block on a departure that does not require the waiver", ()
     expect(result.status).toBe("ready");
   });
 
-  it("boards a clean release signed after the refusal (H-98)", () => {
+  it("boards a clean release signed after the refusal (H-20261007-after-physician-says-no)", () => {
     // `effectiveWaiverForBooking` hands the engine the newer clean record; the
     // refusal it stands over is a warning on the surfaces, not a blocker.
     const result = calculateReadiness({
@@ -1295,7 +1295,7 @@ describe("the identity-unconfirmed docblock", () => {
     expect(start).toBeGreaterThan(-1);
     const docblock = source.slice(Math.max(0, start - 1400), start);
     const block = docblock.slice(docblock.lastIndexOf("/**"));
-    expect(block).toContain("H-13");
+    expect(block).toContain("H-20260724-one-person-per-email");
     // The older door, and the one the layer added.
     expect(block).toMatch(/by-email/);
     expect(block).toMatch(/name-match prompt/);
@@ -1376,12 +1376,12 @@ describe("calculateReadiness — participant types (ADR 20261007-participant-typ
 });
 
 /**
- * **A rider is never held on a medical** (H-109, issue #2212): someone who
+ * **A rider is never held on a medical** (H-20261009-rider-snorkeler-medical, issue #2212): someone who
  * stays on the boat is not blocked by a referral or a physician's "no", while
  * a snorkeler keeps the dive medical exactly as a diver does. The rider still
  * signs the release, and a held record is a signed one.
  */
-describe("calculateReadiness — the medical by participant type (H-109)", () => {
+describe("calculateReadiness — the medical by participant type (H-20261009-rider-snorkeler-medical)", () => {
   const refusedAt = new Date("2026-07-17T09:00:00.000Z");
   const holds = [
     ["an open referral", { status: "medical_review" }, "medical_review"],

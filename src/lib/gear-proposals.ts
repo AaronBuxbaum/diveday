@@ -67,7 +67,7 @@ export function proposalKey(bookingId: string, kind: string): string {
  * open with their picker.
  *
  * A proposal, never an assignment: nothing is reserved until a staffer taps
- * (H-06 lets staff assign; a size label matching is not a fit check), and the
+ * (H-20260724-initial-gear-policy-sizing lets staff assign; a size label matching is not a fit check), and the
  * exclusion constraint stays the only arbiter of availability at write time.
  *
  * What it proposes, and what it leaves to a person:

@@ -5,7 +5,7 @@
  * Both public diver pages and staff screens use these locales. The waiver body
  * and medical questionnaire remain English — that wording is legally reviewed,
  * so translating it is a sign-off decision rather than an engineering one
- * (H-01/H-03 in docs/product/human-decisions/).
+ * (H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit in docs/product/human-decisions/).
  *
  * Locale is not part of the URL: the reader's cookie choice takes precedence
  * over `Accept-Language` and the shop default. Translators and providers receive

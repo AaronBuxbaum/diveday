@@ -10,7 +10,7 @@ import {
 } from "./whatsapp-accounts";
 
 /**
- * The WhatsApp Connect race (issues #1769 and #1767, H-83), on two real connections.
+ * The WhatsApp Connect race (issues #1769 and #1767, H-20260916-may-dive-chain-share), on two real connections.
  *
  * PGlite is single-connection, so `whatsapp-accounts.test.ts` can show the
  * outcome but not that the *advisory locks* produced it. Here the first
@@ -112,7 +112,7 @@ describePostgres("claimWhatsAppNumber under real concurrency", () => {
     expect(again).toEqual({ status: "held_elsewhere" });
     expect(registered).toHaveLength(1);
 
-    // A number of its own under the same WABA is the chain's ordinary shape (H-83).
+    // A number of its own under the same WABA is the chain's ordinary shape (H-20260916-may-dive-chain-share).
     const ownNumber = numberName();
     const sibling = await claimWhatsAppNumber(
       pg.connect(),

@@ -103,7 +103,7 @@ async function AboutBody({ locale, offer }: { locale: DiverLocale; offer: PlanTe
    * visitor can reproduce in the demo (docs/product/marketing.md,
    * shipped-only). Until 2026-10-07 each card ended in a "Check it:" dare
    * naming the demo action; the 2026-10-07 rewrite dropped the dares with the
-   * rest of the spoken register (H-99) and lets the demo door under the grid
+   * rest of the spoken register (H-20261006-about-say-whose-voice) and lets the demo door under the grid
    * carry the invitation once.
    *
    * The page speaks as the company. It names no individual, states no CV, and
@@ -125,7 +125,7 @@ async function AboutBody({ locale, offer }: { locale: DiverLocale; offer: PlanTe
         ? t("marketing.about.percentArm.onePriceTitle")
         : t("marketing.about.rules.onePrice.title"),
       // The figure where the question is raised, never a door away from it.
-      // Interpolated, never spelled: `earlyAccessPrice` is H-12's single
+      // Interpolated, never spelled: `earlyAccessPrice` is H-20260724-public-founding-shop-price's single
       // source, and `src/lib/marketing.test.ts` counts this key among the
       // sentences that must carry `{price}` and `{cadence}`.
       body: percentArm
@@ -142,7 +142,7 @@ async function AboutBody({ locale, offer }: { locale: DiverLocale; offer: PlanTe
       // links to it rather than restating it (visual review 2026-10-24, B10).
       link: { href: "/pricing#export", label: t("marketing.common.recordsLink") },
       // What happens to the records if DiveDay itself closes: the shared
-      // continuity promise (`continuityPromise`, H-101), on the card that is
+      // continuity promise (`continuityPromise`, H-20261007-continuity-promise), on the card that is
       // already about taking them away, rather than a band of its own.
       note: t(continuityPromise.claimKey),
     },
@@ -285,7 +285,7 @@ async function AboutBody({ locale, offer }: { locale: DiverLocale; offer: PlanTe
                   than parking it behind itself; "See what it costs" is the
                   unlabeled door a skeptic reads as "they won't say"
                   (docs/product/marketing-review-20260827.md, diagnosis 2).
-                  Interpolated, never spelled: `earlyAccessPrice` is H-12's
+                  Interpolated, never spelled: `earlyAccessPrice` is H-20260724-public-founding-shop-price's
                   single source, and `src/lib/marketing.test.ts` counts this key
                   among the sentences that must carry `{price}` and `{cadence}`.
 

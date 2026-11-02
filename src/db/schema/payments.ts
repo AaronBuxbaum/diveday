@@ -863,7 +863,7 @@ export const bookingCheckouts = pgTable(
      * tells that apart from the abandoned case. A `pending` row self-heals —
      * the webhook and `refreshCheckoutFromStripe` both record what Stripe
      * reports — but a `completed` one is never read from Stripe again, so its
-     * null is permanent. There is no backfill because H-49 says so: the rows
+     * null is permanent. There is no backfill because H-20260815-no-legacy says so: the rows
      * predating the column are seed and demo data. The promise that survives
      * either way is the manual half — `pushSessionTargets` raises
      * `stripe_checkout_session_snapshot` for every session row regardless of
@@ -1331,7 +1331,7 @@ export const tips = pgTable(
      * Customer", never "we forgot to write it" (issue #1621) — and the same
      * exception, that a row written before
      * `20260911222255_checkout-stripe-customer` is null too, unbackfilled under
-     * H-49, with the session snapshot still owed for it
+     * H-20260815-no-legacy, with the session snapshot still owed for it
      * (`security-reviewer`, 2026-09-12).
      */
     stripeCustomerId: text("stripe_customer_id"),

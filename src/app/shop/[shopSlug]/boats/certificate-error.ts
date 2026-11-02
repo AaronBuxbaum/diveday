@@ -3,7 +3,7 @@ import { type CalendarDate, formatCalendarDate, isValidCalendarDate } from "@/li
 import { cachedListFormat } from "@/lib/intl-cache";
 
 /**
- * **The fleet row's certificate error** (H-107), read back off the redirect
+ * **The fleet row's certificate error** (H-20261009-certificate-caps-seats), read back off the redirect
  * `certificateRefusal` (settings/boat-actions.ts) sends: which row it belongs on
  * and the sentence it says. Shared by the action and the page, so the two
  * agree on the codes and on the row's anchor.

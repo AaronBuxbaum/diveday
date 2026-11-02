@@ -14,7 +14,7 @@ import { toDateInputValue, utcToWallTime, wallTimeToUtc } from "./zoned";
  * Today owns the morning ("can the boats sail, who needs me before they do?");
  * this module answers the closing question: did every boat come home counted?
  *
- * It had a page of its own until 2026-08-28. It does not any more (H-62; ADR
+ * It had a page of its own until 2026-08-28. It does not any more (H-20260827-close-out-remain-own; ADR
  * 20260827-clearwater-surface-language, decision 4): the evening is a *state*
  * the home's spine settles into station by station —
  * {@link assembleEveningClose} is the join that turns these facts into
@@ -239,7 +239,7 @@ export type CloseoutTripInput = {
     caption: string | null;
     diverName: string;
     bookingId: string;
-    /** Its diver shared it with everyone on the boat (H-129). */
+    /** Its diver shared it with everyone on the boat (H-20261014-share-photo-with-boat). */
     sharedWithBoat?: boolean;
   }[];
   /** Staff photos shared with every diver's recap for the completed departure. */
@@ -325,7 +325,7 @@ export type CloseoutDeparture = {
     caption: string | null;
     diverName: string;
     bookingId: string;
-    /** Its diver shared it with everyone on the boat (H-129). */
+    /** Its diver shared it with everyone on the boat (H-20261014-share-photo-with-boat). */
     sharedWithBoat?: boolean;
   }[];
   crewPhotos: {
@@ -986,7 +986,7 @@ export type DepartureLoadOut = {
  * evening on a whiteboard. Null for a day with no departure, so nothing is
  * said about it.
  *
- * **A count, never a fill log** (H-11). The nitrox figure is seats that asked
+ * **A count, never a fill log** (H-20260730-nitrox-fill-station-procedure). The nitrox figure is seats that asked
  * and hold a verified card, the same number each Gear tab's Nitrox tile shows;
  * every cylinder is still analyzed and signed for at the fill station, and
  * nothing here records that it was.

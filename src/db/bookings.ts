@@ -140,7 +140,7 @@ export type BookingPerson =
        * boolean: the flag is raised by the same test the by-email path uses,
        * not by the tap. See {@link nameMatchLeavesIdentityInDoubt}.
        *
-       * Raised, it means what a shared-inbox email mismatch means (H-13): the
+       * Raised, it means what a shared-inbox email mismatch means (H-20260724-one-person-per-email): the
        * diver is Blocked at the rail until a staffer taps confirm identity,
        * and no certification claim is written under their name.
        *
@@ -149,7 +149,7 @@ export type BookingPerson =
        * for them is not a guess, and "enter once, reuse everywhere" has to keep
        * costing nothing.
        *
-       * **Re-decided after the phone arm widened, and kept** (H-79, issue
+       * **Re-decided after the phone arm widened, and kept** (H-20260916-unconfirmed-identity-withhold-cost, issue
        * #1790, 2026-09-16). Since #1765 the search also matches a punctuated
        * or national-only number against the stored E.164, so a ten-digit
        * needle can reach a row in another country, and the search list is
@@ -200,7 +200,7 @@ export type BookingRequest = {
   /**
    * Who is making this booking. `"public"` is the anonymous schedule form,
    * where the submitter supplies an email but never proves it is theirs — the
-   * same uncertainty `identityUnconfirmedAt` exists for (H-13).
+   * same uncertainty `identityUnconfirmedAt` exists for (H-20260724-one-person-per-email).
    *
    * The minimum-age gate is skipped for `"public"` on purpose. Refusing there
    * would answer "is the holder of this address under N?" to anyone who can
@@ -275,10 +275,10 @@ export type BookingRequest = {
   referralSource?: string | null;
   /**
    * **Whoever booked this seat said its diver is under 18** (the public party
-   * form's "Under 18" box; decision of 2026-10-13, after H-21). Stamped on the
+   * form's "Under 18" box; decision of 2026-10-13, after H-20260730-minimum-age-gate-data). Stamped on the
    * seat as `minor_declared_at`, never on the person: the form is anonymous,
    * so it may only mark the seat it is creating. It gates nothing here (no age
-   * oracle at the sale, H-22); the guardian co-signature rule reads it where
+   * oracle at the sale, H-20260724-minimum-age-gate-fail); the guardian co-signature rule reads it where
    * no date of birth is on file.
    */
   minorDeclared?: boolean;
@@ -354,12 +354,12 @@ export type BookingAdmissionAdvisory = TripAdmissionRefusal;
  *    form does; reschedule, seat claims and staff seating keep the stop.
  *
  * 2. **The shortfall rests on what this submitter just typed**, not on the
- *    shop's own record. H-30 is a *Chosen* decision that kept the refusal and
+ *    shop's own record. H-20260803-booking-form-succeed-fail is a *Chosen* decision that kept the refusal and
  *    rejected "sell the seat and let readiness catch it" outright — but its own
  *    text draws this line: "the common refusal is a response to what this
  *    submitter just typed rather than a disclosure about somebody on file".
  *    A diver who leaves the select alone and is short on their *record* is
- *    H-30's case exactly — nothing was said to them as they filled the form,
+ *    H-20260803-booking-form-succeed-fail's case exactly — nothing was said to them as they filled the form,
  *    so a silent sale would charge a carded regular in full and hand them a
  *    refund conversation at the dock. They still get the refusal.
  *
@@ -393,7 +393,7 @@ export type BookingSuccess = {
    * existing person on something short of proof, so the row is stamped
    * `identityUnconfirmedAt`, readiness fails closed, and none of that person's
    * cards, waiver or package reach the seat until a staffer confirms it
-   * (H-13, issue #1556).
+   * (H-20260724-one-person-per-email, issue #1556).
    *
    * Reported rather than left for the caller to re-read, because the caller
    * that most needs it is the one furthest from the row: every staff seating
@@ -625,7 +625,7 @@ class PartyBookingError extends Error {
  * #1853). Today, the staffing week and the trip page read each professional's
  * recorded ratings (`courseCrewCountsByTrip`, src/db/course-crew-counts.ts), so a lapsed
  * instructor stops counting there. This passes no `lapsedRungs`, so the sale
- * gate, the seat cap and the no-show hand-back go on counting them: H-59
+ * gate, the seat cap and the no-show hand-back go on counting them: H-20260825-staff-credentials-renewal-clock
  * (docs/product/human-decisions/README.md) closed new-sale refusal on a locally
  * recorded renewal date, and the 2026-09-16 ruling reopened only the ratio. A
  * shop whose instructor renewed last week and has not updated DiveDay does
@@ -752,7 +752,7 @@ export async function tripAdmissionFor(
         }
       : NO_EVIDENCE;
   // A declaration about a person whose identity did not match is not about
-  // *them* (H-13) — the same reason their cards are not read here.
+  // *them* (H-20260724-one-person-per-email) — the same reason their cards are not read here.
   const stated = identityUnconfirmed || !demandsSomething ? undefined : declared;
   return decideTripAdmission({
     requirement,
@@ -896,7 +896,7 @@ export async function releasePackageCoverageForBooking(
  * fifteen times is on it every time a staffer spells the name right. Flagging
  * that seat put a blocker on the ordinary morning: twenty taps of confirm
  * identity before lunch, and the shop learns to tap it without reading it —
- * which spends exactly the credibility H-13's blocker needs to keep
+ * which spends exactly the credibility H-20260724-one-person-per-email's blocker needs to keep
  * (`dive-domain-expert`, the RFH-07 layer). So the tap alone no longer decides;
  * the same test the by-email path at `createBookingRecord` uses does, on the
  * name the staffer actually typed.
@@ -1067,7 +1067,7 @@ async function createBookingRecord(
   // count against `diver_capacity`. Never a pre-check: the counts are read
   // here, inside the transaction that inserts.
   //
-  // **The boat's passenger places are the lower limit** (H-107, #1703):
+  // **The boat's passenger places are the lower limit** (H-20261009-certificate-caps-seats, #1703):
   // `sellableCapacity` caps `trips.capacity` at the passenger certificate and
   // the hull's total-occupant capacity after reserving one place per assigned
   // crew member. Read under the trip lock, so crew edits and new grants
@@ -1368,7 +1368,7 @@ async function writeSeat(
   //
   // **Never under an unconfirmed identity.** `persistDeclaration` below already
   // refuses to write a certification claim when `identityUnconfirmed` is set,
-  // on the H-13 grounds that a statement made under a name disagreeing with the
+  // on the H-20260724-one-person-per-email grounds that a statement made under a name disagreeing with the
   // matched row is not provably about that person. Spending that person's
   // prepaid property is the same act with a worse failure: anyone who knows a
   // regular's email could book seats in their name on the public form and drain
@@ -1399,7 +1399,7 @@ async function writeSeat(
  *
  * Returns the person row when one exists, or the row to write for a walk-in
  * once every gate has passed (`pendingInsert`; {@link writeWalkIn}), and
- * whether the match stands on something short of proof (H-13).
+ * whether the match stands on something short of proof (H-20260724-one-person-per-email).
  */
 async function resolveBookingPerson(
   tx: DbExecutor,
@@ -1425,7 +1425,7 @@ async function resolveBookingPerson(
   let pendingInsert: PendingWalkIn | null = null;
   // Set when this booking attached itself to an existing person on something
   // short of proof, and must not silently inherit that person's evidence
-  // (H-13). Two ways in, and a fresh no-email row raises neither because it has
+  // (H-20260724-one-person-per-email). Two ways in, and a fresh no-email row raises neither because it has
   // no prior identity to disagree with:
   //
   //  - the by-email path reused a row whose name on file does not match the
@@ -1438,7 +1438,7 @@ async function resolveBookingPerson(
   //
   // This is where the two counter doors part, on purpose: a seat picked from
   // the search list carries no `fromNameMatch` and lands released, namesake
-  // or not, however the row was found (H-79, issue #1790; the reasoning is on
+  // or not, however the row was found (H-20260916-unconfirmed-identity-withhold-cost, issue #1790; the reasoning is on
   // `BookingPerson.fromNameMatch`).
   let identityUnconfirmed = false;
   // What the staffer is shown beside the matched record while the flag stands,
@@ -1668,7 +1668,7 @@ async function flushDeclarations(tx: DbExecutor, pending: PendingDeclaration[]):
  * a real card on file always wins and a claim is dropped rather than written
  * beside it, so this can only ever fill a gap.
  *
- * Skipped when the identity did not match (H-13): a statement made under a name
+ * Skipped when the identity did not match (H-20260724-one-person-per-email): a statement made under a name
  * that disagrees with the row it resolved to is not provably about that person,
  * for the same reason their cards are not read.
  */
@@ -1801,7 +1801,7 @@ export type RestoreBookingOutcome =
  *   existing booking; putting them back is undoing a clerical slip, not
  *   selling a seat the hold was meant to stop.
  * - *Already departed.* `cancelBooking` refuses only a diver marked aboard a
- *   boat that has left (H-133); every other row can still be removed at sea —
+ *   boat that has left (H-20261015-aboard-diver-removal-at); every other row can still be removed at sea —
  *   a departed trip is still `scheduled` and roll call stays live. Refusing
  *   the undo there would make a misclick on an at-sea manifest permanent, and
  *   the two errors are not symmetric: an under-listed manifest costs a
@@ -1855,7 +1855,7 @@ export async function restoreBooking(
     // Both limits, exactly as a new seat is measured: the boat against every
     // held seat, the divers-only limit against divers (ADR
     // 20261007-participant-types).
-    // The boat's certificate caps it under the same lock (H-107).
+    // The boat's certificate caps it under the same lock (H-20261009-certificate-caps-seats).
     const held = await heldSeatCounts(tx, trip.shopId, trip.id);
     const full = seatRefusal(
       booking.participantType,
@@ -2068,7 +2068,7 @@ async function moveAdmissionRefusal(
     // The course's own two gates, read again rather than trusted from the
     // sale: a card can be revoked since, and age is measured on the day the
     // session runs, so an earlier session of the same course can be one the
-    // student is still too young for (H-08).
+    // student is still too young for (H-20260724-certification-levels-agency-rules).
     const gate = await courseGateRefusal(tx, shopId, booking.personId, course, target.startsAt);
     if (gate) return { ok: false, reason: gate };
   }
@@ -2280,7 +2280,7 @@ export async function moveBooking(
           isNull(tripHelpRequests.handledAt),
         ),
       );
-    // An "Ask to move" from the booking page (H-126) was about the old
+    // An "Ask to move" from the booking page (H-20261014-ask-to-move) was about the old
     // departure, and this move is its answer: the Inbox row stops waiting,
     // and the new date's page may be asked about afresh.
     await tx
@@ -2570,7 +2570,7 @@ export type SetParticipantTypeInput = {
  * change rolls back (`boarded_not_ready`) when it would not pass. At sea no
  * override writes past either check.
  *
- * Money is left where it is (a refund stays staff-initiated, H-07), but a
+ * Money is left where it is (a refund stays staff-initiated, H-20260724-payment-deposit-cancellation-refund), but a
  * pending checkout that quoted this seat at its old type is retired, so it can
  * never be completed at a price for a seat that no longer exists.
  *
@@ -2847,7 +2847,7 @@ async function changeParticipantType(
 
 /**
  * A staff removal's outcome. `aboard_at_sea`: the boat carried this seat or
- * may be carrying it (H-133, `aboardAtSeaBookingIds`), at sea or home, and
+ * may be carrying it (H-20261015-aboard-diver-removal-at, `aboardAtSeaBookingIds`), at sea or home, and
  * `hold` says which: on the water by the roll call, or never counted at the
  * dock of a sailed departure.
  */
@@ -2863,7 +2863,7 @@ export type CancelBookingOutcome =
 
 /**
  * **A staff member takes a seat off the roster.** Refused for a seat the boat
- * carried or may be carrying (H-133): a cancelled booking is nobody to every
+ * carried or may be carrying (H-20261015-aboard-diver-removal-at): a cancelled booking is nobody to every
  * roll-call reader, so the removal would drop a person on the water from the
  * count, and after the boat is home it would erase that they sailed. Asked
  * inside the transaction, under the trip and the seat locks the crew's
@@ -2952,7 +2952,7 @@ async function cancelBookingRow(
     // the same reason the push event below exists. No actor: this path is
     // reached by a staffer, by the diver's own link, and by the wait-list
     // sweep, and none of them hands one down. A seat the desk turned away
-    // (H-135) was refused, not given up, and the strip says so; the cancel
+    // (H-20261015-who-may-turn-someone) was refused, not given up, and the strip says so; the cancel
     // keeps `turned_away_at`, so the row still knows.
     await recordDeskEvent(tx, {
       shopId,
@@ -3015,7 +3015,7 @@ export type SelfCancelResult =
  *   already-departed check the checkout-recovery scan makes, docs ADR
  *   20260726-abandoned-checkout-recovery).
  *
- * Refunding is the caller's job, same as the staff path (docs H-07): this
+ * Refunding is the caller's job, same as the staff path (docs H-20260724-payment-deposit-cancellation-refund): this
  * only frees the seat, so a refund failure can never block the cancellation.
  */
 export async function selfCancelBooking(
@@ -3062,7 +3062,7 @@ export async function selfCancelBooking(
       return { ok: false, reason: "trip_departed" };
     }
     // Within the hour `hasSailed` allows, a boat past its time or taken out by
-    // the crew with this diver counted aboard has left all the same (H-133).
+    // the crew with this diver counted aboard has left all the same (H-20261015-aboard-diver-removal-at).
     const atSea = await aboardAtSeaBookingIds(tx, {
       shopId: input.shopId,
       tripId: row.tripId,
@@ -3129,7 +3129,7 @@ async function releaseSelfCancelledSeat(
 /**
  * **The one rule for which party seats a lead's cancel takes with it**: still
  * `booked` and not claimed by their own diver (and, at sea, not counted
- * aboard: H-133, applied beside it). `cancelUnclaimedPartySeats`
+ * aboard: H-20261015-aboard-diver-removal-at, applied beside it). `cancelUnclaimedPartySeats`
  * applies it to cancel, `previewPartyCancel` to count, and the lead's party
  * panel (`issuePartySeatClaims`) to list, so what the SMS prompt and the email
  * say can never differ from what the settle does.
@@ -3171,7 +3171,7 @@ export async function previewPartyCancel(
       ),
     );
   // A seat counted aboard a boat that has left stays, as the cancel keeps it
-  // (H-133).
+  // (H-20261015-aboard-diver-removal-at).
   const atSea = await aboardAtSeaBookingIds(db, {
     shopId: input.shopId,
     tripId: lead.tripId,
@@ -3228,7 +3228,7 @@ export async function cancelUnclaimedPartySeats(
     .orderBy(asc(bookings.createdAt), asc(people.fullName), asc(bookings.id))
     .for("update", { of: bookings });
   // A party seat counted aboard a boat that has left stays, like a claimed one
-  // (H-133).
+  // (H-20261015-aboard-diver-removal-at).
   const atSea = await aboardAtSeaBookingIds(tx, {
     shopId: input.shopId,
     tripId: input.tripId,
@@ -3329,7 +3329,7 @@ async function settleConfirmedPackageCoverage(
 
 /**
  * Staff confirm a flagged booking really is the person it was attached to
- * (H-13): clears `identity_unconfirmed_at`, which drops the readiness blocker.
+ * (H-20260724-one-person-per-email): clears `identity_unconfirmed_at`, which drops the readiness blocker.
  * Shop-scoped and idempotent — a no-op on an already-clear or unknown booking
  * returns false so the caller can distinguish "confirmed" from "nothing to do".
  * The other answer, "not the same person", is {@link splitBookingIdentity}.
@@ -3500,7 +3500,7 @@ export type SplitBookingIdentityInput = {
    */
   dateOfBirth?: string | null;
   /**
-   * The staffer's "18 or older", for a split with no date of birth (H-100,
+   * The staffer's "18 or older", for a split with no date of birth (H-20261007-held-seat-split-into,
    * issue #2143). One of the two is required on every departure: the split
    * is for someone who is not the matched diver, often a minor booked with a
    * parent's email, and a blank date alone would read as an adult. Ignored
@@ -3627,14 +3627,14 @@ export async function sameNameHeldSeats(
 
 /**
  * Staff answer "not the same person" to a booking flagged
- * `identity_unconfirmed` (H-13): the seat leaves the matched diver's record
+ * `identity_unconfirmed` (H-20260724-one-person-per-email): the seat leaves the matched diver's record
  * and becomes a new diver of its own, named by the staffer (prefilled with
  * the name it was booked under).
  *
  * **It hands over nothing**, which is why it needs no blocking confirm while
  * the opposite answer does. The new record starts with only what the staffer
  * typed about the person in front of them (issue #2081): a name, a date of
- * birth or the staffer's "18 or older" (H-100: one of the two on any
+ * birth or the staffer's "18 or older" (H-20261007-held-seat-split-into: one of the two on any
  * departure, and the date itself on a course with a minimum age, since the age
  * check and the guardian rule read the date and fail open without one; the
  * answer is filed with who gave it), and an optional
@@ -3805,7 +3805,7 @@ export async function splitBookingIdentity(
 
       // A course with a minimum age measures it against this record, and so
       // does the guardian rule: a record with no date reads as an adult and
-      // both fail open (H-08). The new diver is a stranger to the shop, so the
+      // both fail open (H-20260724-certification-levels-agency-rules). The new diver is a stranger to the shop, so the
       // date is asked for here rather than left for the dock (issue #2081).
       if (!dateOfBirth) {
         const gated = await tx
@@ -3827,7 +3827,7 @@ export async function splitBookingIdentity(
           .limit(1);
         if (gated.length > 0) return { refused: "date_of_birth_required" as const };
         // Anywhere else, a blank date is an adult only by the staffer's word
-        // (H-100): it is what the guardian rule will read.
+        // (H-20261007-held-seat-split-into): it is what the guardian rule will read.
         if (!input.adultAttested) return { refused: "age_unstated" as const };
       }
 

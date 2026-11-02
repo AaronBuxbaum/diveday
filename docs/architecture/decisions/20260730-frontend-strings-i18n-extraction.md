@@ -41,7 +41,7 @@ and rejected in 20260730-staff-copy-localization for the same reason (no structu
 separating prose from code in those layers).
 
 **Exemptions are unchanged**: static `metadata.title` (resolved before locale negotiation), and
-the waiver body / medical questionnaire (H-01/H-03 sign-off, not an engineering decision).
+the waiver body / medical questionnaire (H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit sign-off, not an engineering decision).
 
 ## Alternatives considered
 

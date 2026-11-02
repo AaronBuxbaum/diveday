@@ -28,7 +28,7 @@ const ctx = fileScopedShopContext();
  * The "Units" card saves three settings behind one button, and only two of them
  * are ordinary staff work. Depth and water temperature are display-and-entry
  * preferences anyone on the crew may set; currency decides what a diver's card
- * is charged in, which is owner/manager work (H-14).
+ * is charged in, which is owner/manager work (H-20260724-staff-role-reach).
  *
  * The page hides the currency `<select>` from everyone else, but hiding a field
  * is not a gate — a hand-made form post carries whatever it likes. These tests
@@ -528,7 +528,7 @@ describe("every settings mutation refuses the daily crew", () => {
   });
 
   /**
-   * H-118: the shore contact's alert address saves only with the box that
+   * H-20261014-stale-roll-call-recipients: the shore contact's alert address saves only with the box that
    * records their consent, keeps who and when, and clearing it clears both.
    * The seeded shop is a demo, which sends nothing and says so; the link and
    * the rest are `shore-alert-actions.test.ts`.

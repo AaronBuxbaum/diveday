@@ -210,7 +210,7 @@ export function BookingGearFields({
                           const next = new Set(current);
                           if (event.target.checked) {
                             next.add(kind);
-                            // One diver, one suit (H-78): ticking one suit
+                            // One diver, one suit (H-20260916-rental-fit-describe-shop): ticking one suit
                             // unticks the other, so the quote never charges
                             // for two. `saveRentalFit` holds the same rule
                             // for a post that arrives with both.

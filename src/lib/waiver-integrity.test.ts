@@ -301,7 +301,7 @@ describe("waiver integrity over a release refiled with its seat (issue #2080)", 
   });
 });
 
-describe("waiver integrity over a guardian's address erased on request (H-103, issue #1673)", () => {
+describe("waiver integrity over a guardian's address erased on request (H-20261007-guardian-email-erasure, issue #1673)", () => {
   const coSigned = {
     ...record,
     guardianName: "Jonas Fischer",

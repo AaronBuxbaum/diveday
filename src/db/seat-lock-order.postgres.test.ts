@@ -316,7 +316,7 @@ describePostgres("seat writers on one departure take the trip, then the booking"
   });
 
   /**
-   * H-133: a removal at the desk and the rail's Aboard tap on the same seat.
+   * H-20261015-aboard-diver-removal-at: a removal at the desk and the rail's Aboard tap on the same seat.
    * Both take the trip, then the booking, so the removal reads the tap that
    * landed first and refuses: the diver is marked aboard a boat that has left.
    */

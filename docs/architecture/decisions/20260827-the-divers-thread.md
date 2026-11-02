@@ -40,7 +40,7 @@ but the surfaces that carry it were built in separate sessions and read like it 
   the fold, three of them at CTA weight.
 - The roadmap's concept-model work already decided the thread's spine — booking and Stripe both
   land on `/ready` (ADR 20260820) — and left one half explicitly open: *"folding recap into the
-  same link as a post-trip state."* Aaron's 2026-08-27 direction (H-62's preamble) is to reduce
+  same link as a post-trip state."* Aaron's 2026-08-27 direction (H-20260827-close-out-remain-own's preamble) is to reduce
   the number of surfaces and make every remaining one's next action obvious.
 
 ## Decision
@@ -149,7 +149,7 @@ sells to divers who hold no capability — and its embed mode is a contract. The
 booking; the pitch page stays a pitch page.
 
 **Collapse the release text behind a disclosure.** Rejected for the signing step: presenting the
-full text is part of what typed consent means here (H-01/H-03 pending), and a summary a diver can
+full text is part of what typed consent means here (H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit pending), and a summary a diver can
 sign without scrolling past the terms is a legal posture change, not a design choice.
 
 **A per-step wizard for booking** (one field-set per screen). Rejected: the party form is short,
@@ -165,10 +165,10 @@ lose. The step grammar lives inside one sheet instead.
   the canvas's `SPEC.md` carries the journeys, acceptance tests and interface contracts per slice.
 - **Slice (d) is the one route change**: `/recap/[token]` renders the after-state (no 404s, no
   dead emails); the recap-specific components and the second copy of the day's facts delete
-  (H-49). `MAX_RECAP_PHOTOS_PER_BOOKING`, tips, review moderation and the suppression floor are
+  (H-20260815-no-legacy). `MAX_RECAP_PHOTOS_PER_BOOKING`, tips, review moderation and the suppression floor are
   untouched — this moves where they render, not what they do.
 - **Safety and legal surfaces are not relaxed**: waiver/medical wording stays English pending
-  H-01/H-03; the medical questionnaire's outcomes and the integrity trail are untouched; the
+  H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit; the medical questionnaire's outcomes and the integrity trail are untouched; the
   release text remains fully presented.
 - The dead `TripTerms cancellationOnly` prop (the cancellation window never actually moved to
   `/ready` — found 2026-08-27) is resolved by slice (c): the window renders in the Pay step's fine

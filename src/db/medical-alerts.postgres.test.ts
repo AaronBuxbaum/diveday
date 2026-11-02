@@ -7,7 +7,7 @@ import { activityEvents, people, shops } from "./schema";
 
 /**
  * **One read line per reader, diver and departure in ten minutes, under real
- * concurrency** (H-153 amendment; security review 2, L5). Parallel taps or
+ * concurrency** (H-20261023-medical-alert-for-the amendment; security review 2, L5). Parallel taps or
  * parallel offline saves must not each write a line: the check and the
  * insert run under one advisory lock on (shop, code, reader, diver,
  * departure). PGlite runs one session and never blocks, so only a real server

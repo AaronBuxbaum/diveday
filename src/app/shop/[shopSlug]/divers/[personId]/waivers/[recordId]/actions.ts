@@ -45,7 +45,7 @@ export async function showMedicalAnswersAction(
     recordId: waiverId,
     readsMedicalAnswers: true,
   });
-  // Held seats (H-13) carry no answers, and a paper release stores none.
+  // Held seats (H-20260724-one-person-per-email) carry no answers, and a paper release stores none.
   if (!waiver?.medicalAnswers) return { ok: false };
   const recorded = await recordDiverActivity(db, {
     shopId: shop.id,

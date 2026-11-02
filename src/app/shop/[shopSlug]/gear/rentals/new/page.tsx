@@ -75,7 +75,7 @@ export const metadata: Metadata = {
  * advisory — the exclusion constraint
  * decides at submit, and the refusal names the unit that lost.
  *
- * Any staff may rent gear out (H-06). The invoice beside it is shown only to
+ * Any staff may rent gear out (H-20260724-initial-gear-policy-sizing). The invoice beside it is shown only to
  * the people who may send one, on a shop that can take payment, for a person
  * with an email to send it to; the action re-checks all three.
  */
@@ -120,7 +120,7 @@ export default async function RentOutPage({
     // looked up here, and an id that is not one falls back to the unnamed line.
     noticeUnitId ? counterRentalUnitLabel(db, shop.id, noticeUnitId) : null,
     // Said while the person is still at the counter, not one screen later on
-    // the ticket (issue #2346); informing only, never a gate (H-108).
+    // the ticket (issue #2346); informing only, never a gate (H-20261008-counter-rental-waiver-informs).
     personId
       ? counterRentalWaiverStandings(db, {
           shopId: shop.id,

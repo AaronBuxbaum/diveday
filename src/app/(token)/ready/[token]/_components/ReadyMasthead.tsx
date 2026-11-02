@@ -164,7 +164,7 @@ export function ReadyBookedHeader({
   greetingName: string;
   /**
    * This seat is the diver's 10th, 25th, 50th or 100th boat with the shop
-   * (H-128): said once, as a count, under the arrival line. Null otherwise.
+   * (H-20261014-boat-count-milestones): said once, as a count, under the arrival line. Null otherwise.
    */
   milestone?: DiveDayMilestone | null;
   locale: string;

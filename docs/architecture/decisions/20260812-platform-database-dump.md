@@ -35,7 +35,7 @@ answerable:
    migrations use the direct connection). A Vercel function is a poor host: no `pg_dump`, and a full
    dump is not a 300-second, memory-bounded job.
 2. **Where such a file may live.** A full dump holds every password hash and every medical answer in
-   the platform, in one file. Retention is tangled with **H-02** (waiver retention, still open).
+   the platform, in one file. Retention is tangled with **H-20260730-evidence-retention-period-deletion** (waiver retention, still open).
 
 ## Decision
 
@@ -76,11 +76,11 @@ the part to read before adding anything that can write to either.
   and it cannot delete anything. Restoring a dump is a deliberate human act with the admin profile.
 - **Kept 35 days, then deleted.** Its own lifecycle rule, and deliberately the opposite of the
   bundles' "current versions never expire". A bundle is a portability artifact with no
-  credentials in it and waiver rows H-02 makes indefinite. A dump answers "the Neon project is gone and
+  credentials in it and waiver rows H-20260730-evidence-retention-period-deletion makes indefinite. A dump answers "the Neon project is gone and
   PITR cannot reach back far enough" — a question asked within days of the loss, never months. Holding
   a file of every password hash and every medical answer for longer than it can plausibly be used is a
   liability, not a backup. Five weeks covers a missed run plus a holiday. `DUMP_RETENTION_DAYS` is the
-  one number to change if H-02 lands somewhere else. No transition to Infrequent Access first: IA has a
+  one number to change if H-20260730-evidence-retention-period-deletion lands somewhere else. No transition to Infrequent Access first: IA has a
   30-day minimum billing duration, so aging an object that expires at 35 days costs *more* than leaving
   it standard.
 - **Watched by the existing weekly check**, not a second one: `diveday-backup-freshness-check` gained
@@ -100,7 +100,7 @@ The two artifacts share almost nothing:
 | --- | --- | --- |
 | Writer | IAM user whose access key lives in **Vercel** | CodeBuild role that never leaves AWS |
 | Contents | Per-shop bundles, deliberately excluding `user_accounts`, `account_tokens`, `calendar_feeds` | The full cluster: every password hash and every medical answer |
-| Retention | Current versions never expire (H-02 makes it a legal call) | 35 days, then deleted |
+| Retention | Current versions never expire (H-20260730-evidence-retention-period-deletion makes it a legal call) | 35 days, then deleted |
 | Restores a login | No | **Yes — it is the only thing that does** |
 
 Colocating them meant every grant on that bucket had to be **remembered** to be prefix-scoped. Two of
@@ -142,7 +142,7 @@ What that cost, and what it bought:
   rule, renamed `drain-legacy-database-dumps`, on the reasoning that the dumps already there are real
   dumps and deleting the rule would strand them in a bucket whose other prefix never expires — a wait
   of roughly 70 days, since that bucket is versioned and an expiry there writes a delete marker. That
-  reasoning was wrong about the data. [H-47](../../product/human-decisions/README.md) records that DiveDay is
+  reasoning was wrong about the data. [H-20260814-production-database-disposable](../../product/human-decisions/README.md) records that DiveDay is
   pre-pilot, has no users, and treats the database as disposable, so those objects are dumps of seeded
   demo data: no real password hash, no real medical answer, nothing anyone would miss. Keeping a
   lifecycle rule, a CDK assertion and a ten-week reminder alive to tidy them was more machinery than

@@ -121,7 +121,7 @@ function boatPapers(
 
 /**
  * Redirects with the fleet row's field error when the boat's numbers break
- * the certificate (H-107). `boat` names the row the error belongs on ("new"
+ * the certificate (H-20261009-certificate-caps-seats). `boat` names the row the error belongs on ("new"
  * for the add form), and the numbers ride along so the sentence can say them.
  */
 function certificateRefusal(page: string, boat: string, refusal: BoatSeatsRefusal | null) {
@@ -187,7 +187,7 @@ export async function createBoatAction(formData: FormData) {
     validationRefusal(page, "new", "boat-invalid");
   }
 
-  // H-107: no seat above the certificate is sold, so none is put on sale.
+  // H-20261009-certificate-caps-seats: no seat above the certificate is sold, so none is put on sale.
   certificateRefusal(page, "new", boatSeatsRefusal({ capacity, ...papers }));
 
   const db = await getDb();
@@ -225,7 +225,7 @@ export async function updateBoatAction(formData: FormData) {
   }
 
   const db = await getDb();
-  // H-107, on every save of the row: a hull already over its certificate
+  // H-20261009-certificate-caps-seats, on every save of the row: a hull already over its certificate
   // keeps sailing, but this is the save that has to put it right. Upcoming
   // departures are read too, so a certificate cannot be lowered under seats
   // a departure is still selling — checked and written in one transaction.

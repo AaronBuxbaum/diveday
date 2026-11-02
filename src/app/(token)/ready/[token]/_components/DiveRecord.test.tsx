@@ -205,7 +205,7 @@ describe("the postcard (ADR 20260901-diveday-reimagined, slice 13i)", () => {
 });
 
 /**
- * **The postcard's face says a number** (H-67 c, slice 16i).
+ * **The postcard's face says a number** (H-20260904-reef-go-all-way c, slice 16i).
  *
  * It said "Your 3rd dive day with Blue Mantis Divers" — a clause naming the
  * shop on a card whose eyebrow and whose footer both already name it, three

@@ -15,7 +15,7 @@ import {
 const diver = diverTranslator("en-US");
 
 /**
- * **Ask to move** (H-126). Past the free-cancellation window the diver's own
+ * **Ask to move** (H-20261014-ask-to-move). Past the free-cancellation window the diver's own
  * page used to offer one button, the cancel that forfeits what they paid. It
  * now offers a request first: the diver asks, the page says it was asked, and
  * the ask lands in the shop's Inbox against the seat. Nothing moves; staff
@@ -66,7 +66,7 @@ test.describe("ask to move", () => {
     const row = page.locator("li").filter({ hasText: "Rafa Ortiz" }).filter({ visible: true });
     await openRosterDetails(row);
     await row.getByRole("combobox").selectOption("paid");
-    // The Paid mark asks how the money came in (batch 6 item 1, H-119).
+    // The Paid mark asks how the money came in (batch 6 item 1, H-20261014-paid-mark-amount-and).
     await row.getByRole("radio", { name: "Cash" }).check();
     const paymentPath = new URL(tripUrl).pathname;
     const paymentStarted = Promise.withResolvers<void>();

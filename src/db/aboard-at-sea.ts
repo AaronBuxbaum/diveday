@@ -17,7 +17,7 @@ import { liveTrip } from "./trips-live";
 import { setTripStatus } from "./trips-record";
 
 /**
- * Why a seat is held (H-133). `on_the_water`: the crew's roll call puts the
+ * Why a seat is held (H-20261015-aboard-diver-removal-at). `on_the_water`: the crew's roll call puts the
  * person on the boat or in the water. `uncounted`: the departure sailed and
  * nobody at the dock spoke for the seat, so the boat may have carried them;
  * the dock's "not boarded" lets it go.
@@ -26,7 +26,7 @@ export type AboardHold = "on_the_water" | "uncounted";
 
 /**
  * **Which seats on this departure the boat carried, or may be carrying**
- * (H-133), and why: the seats no roster removal may cancel. A cancelled booking
+ * (H-20261015-aboard-diver-removal-at), and why: the seats no roster removal may cancel. A cancelled booking
  * is nobody to every roll-call reader (`./manifests.ts`), so removing one of
  * these would take a person on the water off the count, email them a
  * cancellation and maybe refund them. After the boat is home the answer
@@ -143,7 +143,7 @@ export async function crewTookTheBoatOut(
 }
 
 /**
- * **Whether anybody on this departure may be on the water** (H-133), for the
+ * **Whether anybody on this departure may be on the water** (H-20261015-aboard-diver-removal-at), for the
  * whole-trip Cancel: the crew took the boat out, a seat is held
  * ({@link aboardAtSeaBookingIds}), or a crew member is aboard by the same
  * rule: boarded at the dock once the boat has left, or never marked ashore once
@@ -307,7 +307,7 @@ async function crewMarkedAshore(
 
 /**
  * **The diver's own doors ask the same question, only where it can change the
- * answer** (H-133): the ready page's Cancel, the reply keyword's candidates
+ * answer** (H-20261015-aboard-diver-removal-at): the ready page's Cancel, the reply keyword's candidates
  * and the party-cancel preview. Those doors already close at `hasSailed`, so
  * what is left is the late-departure hour from the scheduled time, and the
  * read is skipped before it, keeping a render that is nowhere near the dock

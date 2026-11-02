@@ -98,7 +98,7 @@ export function ShopNav({
   todayBoats?: readonly PaletteTodayBoat[];
   /** The signed-in staffer, so ⌘K's "Recent" on a shared device is theirs alone. */
   readerId?: string;
-  /** Owner/manager surfaces (H-14) to hide from the bar and search for everyone else. */
+  /** Owner/manager surfaces (H-20260724-staff-role-reach) to hide from the bar and search for everyone else. */
   navGates: StaffDestinationGates;
   /** Whether the shop teaches and keeps a fleet, so Courses and Gear show. */
   navOffers: StaffNavOffers;

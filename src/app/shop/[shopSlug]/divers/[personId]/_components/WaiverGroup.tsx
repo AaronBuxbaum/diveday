@@ -43,7 +43,7 @@ import { WaiverDeliveryActions } from "./WaiverDeliveryActions";
  * that needs signing chooses between the diver's inbox, their phone, a link to
  * paste into a conversation of their own, and, where the state permits it, the
  * sheet of paper already in the diver's hand. A person-scoped clean release
- * may stand over an open referral for other bookings (H-98); the booking whose
+ * may stand over an open referral for other bookings (H-20261007-after-physician-says-no); the booking whose
  * own release is held still waits for a physician. Nothing is offered for a
  * diver already covered by a newer clean signature.
  */
@@ -217,7 +217,7 @@ export function WaiverGroup({
     diver.waiver.state === "guardian_missing" ||
     (diver.waiver.state === "current" && diver.waiver.runsOutBeforeTrip);
   // A physician's evaluation is the only way to clear this booking's own hold.
-  // H-98 separately allows a newer person-scoped clean release to stand for
+  // H-20261007-after-physician-says-no separately allows a newer person-scoped clean release to stand for
   // other bookings, while keeping the open referral visible as a warning.
   const heldForMedical = diver.waiver.state === "medical_review";
   // **The release standing today replaced a referral instead of answering it**
@@ -229,7 +229,7 @@ export function WaiverGroup({
   // is not, and the record is where the staffer who can act is standing.
   const overriddenReferralAt =
     diver.waiver.state === "current" ? (diver.waiver.medical?.overriddenReferralAt ?? null) : null;
-  // The owner kept that override (2026-10-09, issue #2195, amending H-98), so
+  // The owner kept that override (2026-10-09, issue #2195, amending H-20261007-after-physician-says-no), so
   // the line links back to the referral, the way the refusal's does below.
   const overriddenReferral =
     diver.waiver.state === "current" ? (diver.waiver.medical?.overriddenReferral ?? null) : null;

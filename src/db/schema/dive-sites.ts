@@ -179,7 +179,7 @@ export const diveSites = pgTable(
     depthMinMeters: doublePrecision("depth_min_meters"),
     /**
      * The site's deepest point, in metres — the one number a certification
-     * ceiling can actually be compared against (H-08). Null means the shop
+     * ceiling can actually be compared against (H-20260724-certification-levels-agency-rules). Null means the shop
      * hasn't recorded one, and a null never produces a warning: this field
      * *advises*, it is not a gate, so an absent depth degrades to silence
      * rather than to a refusal.

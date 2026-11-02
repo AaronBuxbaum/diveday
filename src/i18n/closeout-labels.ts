@@ -11,7 +11,7 @@ import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
  * does the `t()` call.
  *
  * The day's headline and its sentence used to be here too, one per
- * `CloseoutShape`. They went with the page they headlined (H-62): the evening
+ * `CloseoutShape`. They went with the page they headlined (H-20260827-close-out-remain-own): the evening
  * is a state of the shop home, whose h1 is the standing time-aware greeting at
  * every hour and whose summary sentence is the spine's own.
  */

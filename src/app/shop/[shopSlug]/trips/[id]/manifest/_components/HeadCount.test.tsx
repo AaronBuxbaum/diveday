@@ -101,7 +101,7 @@ describe("HeadCount with blocked divers", () => {
 
 /**
  * Batch 6, item 2: the head count against the boat's certificate. The sale is
- * refused above it (H-107); the rail never is, so the count says it.
+ * refused above it (H-20261009-certificate-caps-seats); the rail never is, so the count says it.
  */
 describe("HeadCount over the certificate", () => {
   it("turns the figure danger and says the limit, in words a reader reaches", () => {

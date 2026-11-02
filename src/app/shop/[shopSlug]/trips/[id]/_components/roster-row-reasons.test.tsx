@@ -85,7 +85,7 @@ describe("a diver in a drysuit with no drysuit card", () => {
     expect(screen.queryByText("Blocked")).toBeNull();
   });
 
-  it("names it for a diver in their own suit, who rents none from us (H-78)", () => {
+  it("names it for a diver in their own suit, who rents none from us (H-20260916-rental-fit-describe-shop)", () => {
     // Most drysuit divers own the suit. The advisory used to ask whether the
     // shop was renting one, which left silent exactly the divers it is about
     // (issue #1752).
@@ -191,7 +191,7 @@ describe("an earlier physician refusal under a cleared release", () => {
 /**
  * **A clean release over a referral no physician answered: the seat clears,
  * and the row warns with a link back** (Aaron, 2026-10-09, issue #2195,
- * amending H-98). The same shape as the refusal above.
+ * amending H-20261007-after-physician-says-no). The same shape as the refusal above.
  */
 describe("an unanswered referral under a cleared release", () => {
   const referredRow = (status: "ready" | "blocked" = "ready") =>

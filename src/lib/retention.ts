@@ -6,7 +6,7 @@
  *
  * **HD-11 owns these provisional defaults; they have not been reviewed by
  * counsel.** Shortening a window is a policy change: update this table and the
- * ADR. H-02 remains open for signed waiver/course evidence and medical data.
+ * ADR. H-20260730-evidence-retention-period-deletion remains open for signed waiver/course evidence and medical data.
  *
  * **There is no customer/contact dormancy clock.** Canonical person and interest
  * records are not removed for inactivity; requested erasure is separate
@@ -57,7 +57,7 @@
  * `UNBOUNDED_BY_DECISION` below and ADR 20260803-append-only-retention. Other
  * tables use other classifications, including `OUTSIDE_RETENTION` for those
  * a clock does not govern. `waiver_records` and course-form records remain
- * unresolved under H-02.
+ * unresolved under H-20260730-evidence-retention-period-deletion.
  */
 import { DAY_MS } from "@/lib/clock";
 
@@ -230,7 +230,7 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
    */
   shop_contact_email_confirmation_tokens: 90,
   /**
-   * A year from `created_at` (H-118 review): the shore contact's confirmation
+   * A year from `created_at` (H-20261014-stale-roll-call-recipients review): the shore contact's confirmation
    * links and the stop link every roll-call alert carries. A stop link never
    * expires on its own, because an opt-out that stops working leaves somebody
    * unable to stop the mail; a year is longer than any shop goes between
@@ -239,7 +239,7 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
    */
   shop_shore_alert_tokens: 365,
   /**
-   * The same 90 days past `expires_at` again (H-82, issue #1726): a booking
+   * The same 90 days past `expires_at` again (H-20260916-far-deletion-promise-reach, issue #1726): a booking
    * link — readiness, confirm, claim, handoff, course forms — is a hashed
    * bearer credential, and the readiness and confirm pages mint one per tap,
    * so the table grows with traffic rather than with bookings. Revoking a row

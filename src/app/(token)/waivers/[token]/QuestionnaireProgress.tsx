@@ -11,7 +11,7 @@ import { useMedicalDraftCount } from "./WaiverPacing";
  *
  * **It counts; it does not judge.** The line words facts only — how many of the
  * questions the diver was handed are answered — and never a clearance, which is
- * the waiver and medical wording freeze (H-01/H-03). What the answers *mean* is
+ * the waiver and medical wording freeze (H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit). What the answers *mean* is
  * `QuestionnaireOutcome`'s single sentence under the questions, and nowhere
  * else on the page.
  *

@@ -3,7 +3,7 @@
 > A channel-by-channel assessment of paid advertising for reaching dive shop owners, written
 > 2026-08-12 from a live research sweep (vendor tag containers, Google autocomplete probes, published
 > 2026 rate cards, media kits, DEMA's own rate pages, industry census data) against the commercial
-> terms in [human-decisions/](../human-decisions/README.md) H-12/H-26. Companion to
+> terms in [human-decisions/](../human-decisions/README.md) H-20260724-public-founding-shop-price/H-20260802-what-game-is-this. Companion to
 > [rollout.md](../rollout.md), which schedules "modest paid search on high-intent queries" in Phase 2
 > — this document is the sizing work behind that line, and it narrows it substantially. An
 > assessment, not a commitment.
@@ -317,27 +317,27 @@ Both are independently worth fixing, and both are cheap:
    will store his divers' medical flags and publishes no data-handling statement.
 
    **Half-closed 2026-08-14.** `/privacy` and `/terms` now exist, describing current behaviour only
-   and naming no legal entity (H-18 is open). But this blocker is **not** cleared for advertising
+   and naming no legal entity (H-20260724-corporate-footing-diveday-operate is open). But this blocker is **not** cleared for advertising
    purposes: the owner's call was to publish the pages without linking them from the footer or
-   `/onboard` until H-02's retention question closes and counsel has read them, and an ad reviewer
+   `/onboard` until H-20260730-evidence-retention-period-deletion's retention question closes and counsel has read them, and an ad reviewer
    looking for a privacy link on the landing page still will not find one. Treat the pages as
    written-and-waiting, not as a shipped prerequisite; the remaining step is a decision, not
    drafting.
 2. **The Phase 0 blockers in [rollout.md](../rollout.md#phase-0--get-legally-and-operationally-real-now--early-sept).**
    This is the strongest argument in the assessment and it is worth stating as a failure path rather
    than a caution. A shop that clicks an ad today: reaches the demo (which is excellent), starts a
-   trial, tries to send a waiver link — **and the email does not arrive**, because H-09's SES
+   trial, tries to send a waiver link — **and the email does not arrive**, because H-20260724-channel-sends-booking-waiver's SES
    production access is outstanding and `notify()` degrades to a copyable link. Tries to take a
-   deposit — **cannot connect Stripe**, because H-07's live Connect platform application has not been
+   deposit — **cannot connect Stripe**, because H-20260724-payment-deposit-cancellation-refund's live Connect platform application has not been
    submitted. Decides to buy — **there is no way to pay**, because no subscription billing exists in
    the schema and the only path is emailing `onboarding@dive.day`. On day 22 Settings says "Your
    trial ended" and nothing locks. And at DEMA in November they meet a shop the founder recruited by
-   hand and discover it was offered **six months free** (H-12, amended 2026-08-12) while they got
+   hand and discover it was offered **six months free** (H-20260724-public-founding-shop-price, amended 2026-08-12) while they got
    three weeks.
 
-   The deeper version: **H-25 permits Phase 1 pilots to run on the counsel-unreviewed waiver flow
+   The deeper version: **H-20260802-pilot-before-counsel permits Phase 1 pilots to run on the counsel-unreviewed waiver flow
    only because each pilot shop signs an explicit risk acknowledgment** alongside a pilot agreement —
-   an instrument that does not exist yet (H-18). H-19 records a deliberate decision to carry no E&O
+   an instrument that does not exist yet (H-20260724-corporate-footing-diveday-operate). H-20260730-diveday-itself-carry-technology records a deliberate decision to carry no E&O
    and no cyber coverage. A self-serve ad-sourced trial signs nothing. Advertising is precisely the
    mechanism that converts a controlled, hand-papered pilot intake into an uncontrolled intake of
    strangers loading real divers' medical records into that flow — silently, at 3 a.m., while nobody

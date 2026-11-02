@@ -966,7 +966,7 @@ describe("overriddenRefusal", () => {
  *
  * These pin the reproduction and the mark that makes it visible. It still
  * clears by decision: the owner kept the override (Aaron, 2026-10-09, issue
- * #2195, amending H-98), matching what a clean release does after a
+ * #2195, amending H-20261007-after-physician-says-no), matching what a clean release does after a
  * physician's "no", and every surface warns with a link back to the referral.
  */
 describe("a referral a later clean signature stood over", () => {
@@ -1213,7 +1213,7 @@ describe("medicalWarningDays", () => {
 });
 
 /**
- * **The release a rider's seat stands on** (H-109, issue #2212). A rider is
+ * **The release a rider's seat stands on** (H-20261009-rider-snorkeler-medical, issue #2212). A rider is
  * held to the shop's release and to nothing in the medical, so a signature a
  * referral parked or a physician refused is still a signature, and an older
  * clean one is not outranked by a later hold. Everything else about the
@@ -1302,7 +1302,7 @@ describe("effectiveReleaseForRiderSeat", () => {
 });
 
 /**
- * **What the crew reads for a rider boarding past a medical** (H-109;
+ * **What the crew reads for a rider boarding past a medical** (H-20261009-rider-snorkeler-medical;
  * dive-domain review of #2212): never a blocker, always a warning.
  */
 describe("riderMedicalHold", () => {

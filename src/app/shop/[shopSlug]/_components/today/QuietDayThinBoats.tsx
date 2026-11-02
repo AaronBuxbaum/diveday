@@ -13,7 +13,7 @@ import { shopPath } from "@/lib/staff-notices";
  * item 43). With no boats today and nothing waiting, the next two weeks'
  * thin departures (`listThinBoats`), each with its doors: a last-minute deal
  * inside three days of sailing, its suggested past divers to invite one at a
- * time (item 44, H-130) on a fun dive, the course ladder on a course session,
+ * time (item 44, H-20261014-one-to-one-invite) on a fun dive, the course ladder on a course session,
  * and the trip's minimum when the boat cancels itself short of it. Renders
  * nothing when every boat is filling.
  */

@@ -113,7 +113,7 @@ describe("boatSafetyNoticeText", () => {
   });
 });
 
-/** A lapsed paper names the day it ran out, in the reader's own order (H-136). */
+/** A lapsed paper names the day it ran out, in the reader's own order (H-20261015-lapsed-boat-papers-loud). */
 describe("a lapsed paper", () => {
   const lapsed = (paper: "inspection" | "registration" | "insurance"): BoatSafetyNotice => ({
     code: "paper",

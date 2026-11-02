@@ -108,7 +108,7 @@ export function readDraftMedicalAlert(raw: string | null | undefined): string | 
 
 /**
  * Where a departure stands for **"Emergency: show the alert"** (issue #2990,
- * H-153 amendment of 2026-10-24): `not_yet` before its start date, `open` on
+ * H-20261023-medical-alert-for-the amendment of 2026-10-24): `not_yet` before its start date, `open` on
  * the days of the trip, `closed` after.
  *
  * Open from 00:00 of the date the departure starts in the shop's zone until

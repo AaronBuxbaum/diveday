@@ -35,7 +35,7 @@ export type WelcomeCueInputs = {
    * `diveDayOrdinal` over their dive days (`numberedDiveDay()`) and imported visits,
    * through this departure's own local day. The recap's own count, so the
    * crew and the diver are told one number. Null on a snorkeler's or a
-   * rider's seat. Feeds the milestone (H-128).
+   * rider's seat. Feeds the milestone (H-20261014-boat-count-milestones).
    */
   diveDayCount: number | null;
 };
@@ -91,7 +91,7 @@ function lastCounted(
 }
 
 /**
- * **Which dive day each diver seat's departure is** (H-128; dive-domain review
+ * **Which dive day each diver seat's departure is** (H-20261014-boat-count-milestones; dive-domain review
  * of layer r5-4, fix 2): `diveDayOrdinal` over the person's dive days by the
  * one rule (`numberedDiveDay()`) and their imported visits, through that departure's
  * own local day. Not "before now": two boats ahead carry two numbers, and the
@@ -352,7 +352,7 @@ export async function setWelcomeConsent(
 }
 
 /**
- * **Which dive day with the shop one seat's departure is** (H-128), for the
+ * **Which dive day with the shop one seat's departure is** (H-20261014-boat-count-milestones), for the
  * diver's own booked moment: the same count the crew read
  * (`diveDayCountsForSeats`), through this departure's own local day. Null for
  * a snorkeler's or a rider's seat, a cancelled one, or a seat that is not this

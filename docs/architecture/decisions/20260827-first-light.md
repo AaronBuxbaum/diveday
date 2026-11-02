@@ -96,7 +96,7 @@ brand — the same recession the Clearwater chrome bar performs inside the app.
 
 ### 6. The first morning is a state of the home, never a wizard
 
-The same grammar H-62 gave the evening: day zero is a **state** of `/shop/[shopSlug]`, not a
+The same grammar H-20260827-close-out-remain-own gave the evening: day zero is a **state** of `/shop/[shopSlug]`, not a
 mode, not a wizard, not a separate surface. `FirstRunChecklist` keeps everything that already
 works — its five persisted facts, its `countShopTrips === 0` condition, its demo exclusion, its
 step targets and test hooks — and sheds its skin: the primary-tinted card of nested step boxes
@@ -117,7 +117,7 @@ decision 11) — gone forever at the second.
 ## Alternatives considered
 
 - **An onboarding wizard or setup-checklist surface.** Rejected on the standing fewer-surfaces
-  direction and on H-62's grammar: a wizard is a mode, it rots the moment the product changes,
+  direction and on H-20260827-close-out-remain-own's grammar: a wizard is a mode, it rots the moment the product changes,
   and it teaches a new owner a surface they will never see again. The home teaching its own
   first state costs zero navigation and disappears by itself.
 - **Storing first-run progress.** A `setup_steps` table (or a dismissed flag) was rejected:

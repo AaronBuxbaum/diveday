@@ -33,11 +33,11 @@ capability) — and only for still-unclaimed, non-cancelled member seats on a no
 **Claiming** (`claimPartySeat`, one transaction): verify token → lock the seat → resolve the
 claimant by email with `findOrCreatePerson` semantics — an email match reuses that person row, and
 a non-matching name stamps `identity_unconfirmed_at` exactly as the public booking form does
-(H-13), so nobody inherits verified evidence by typing an email — re-run the gates a fresh
+(H-20260724-one-person-per-email), so nobody inherits verified evidence by typing an email — re-run the gates a fresh
 booking would face (on a course session the course's own card gate, fail-closed exactly as
 `createBookingRecord`'s `course_prerequisite`; otherwise `tripAdmissionFor` on the claimant's own
 evidence; course minimum age deliberately not re-checked — an age refusal keyed to a typed email
-is an oracle about someone else's record (H-22), and readiness still catches it), then refuse
+is an oracle about someone else's record (H-20260724-minimum-age-gate-fail), and readiness still catches it), then refuse
 `already_booked` if the claimant already holds a live seat on the trip — checked after the gates,
 so a gate refusal does not depend on whether the typed email is booked. The refusal is never
 shown (#2381, decided 2026-10-16): the action answers a claim that worked and a claim for an

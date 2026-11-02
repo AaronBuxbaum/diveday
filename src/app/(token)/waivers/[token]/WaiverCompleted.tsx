@@ -45,7 +45,7 @@ export function WaiverCompleted({
   showPrepHelp: boolean;
   /** A separately held readiness link, independently verified for this receipt. */
   readyPath?: string | null;
-  /** "Take this to your doctor", while the release waits on a physician (H-127). */
+  /** "Take this to your doctor", while the release waits on a physician (H-20261014-physician-form-for-referral). */
   doctorPath: string | null;
   signedRail: WaiverRailProgress;
   diveSitesList: TripSitePeek[];

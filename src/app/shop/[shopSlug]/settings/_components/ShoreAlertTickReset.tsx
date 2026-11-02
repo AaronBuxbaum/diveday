@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 
 /**
- * **A changed address never inherits the old tick** (H-118 owner review #1).
+ * **A changed address never inherits the old tick** (H-20261014-stale-roll-call-recipients owner review #1).
  *
  * The consent box is drawn ticked when an address and its consent are on
  * file, and the form posts the address it was drawn for

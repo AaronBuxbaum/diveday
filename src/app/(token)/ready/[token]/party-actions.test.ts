@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * "Sign Mia's waiver" from the lead's readiness link (H-124). The posted seat
+ * "Sign Mia's waiver" from the lead's readiness link (H-20261014-parent-signs-minor-release). The posted seat
  * id only says which seat; the seat-claims writer decides whether this lead
  * may open it. A held lead is refused before anything is read off the form.
  */

@@ -30,7 +30,7 @@ email to us that we may not read for an hour. That is a support cost, and on a d
 is a shop standing at a counter guessing.
 
 N-55 on the 2026-09-07 improvement sheet is both halves, approved to build, which also answers
-H-45's first sequencing row.
+H-20260907-far-diveday-migrate-onto's first sequencing row.
 
 ## Decision
 

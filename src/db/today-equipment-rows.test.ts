@@ -392,7 +392,7 @@ describe("gear register rows (ADR 20260815-minimal-gear-register)", () => {
       detail: "AED Papers Hull: pads expired 3 days ago",
       href: `/shop/${shop.slug}/gear/${aed.item.id}`,
     });
-    // A lapsed paper is danger ink, named by its date (H-136), and gates nothing.
+    // A lapsed paper is danger ink, named by its date (H-20261015-lapsed-boat-papers-loud), and gates nothing.
     const lapsed = work.actions.find((a) => a.id === `boat-safety:boat:${hull.id}`);
     expect(lapsed).toMatchObject({
       kind: "boat_papers_lapsed",

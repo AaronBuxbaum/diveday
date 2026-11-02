@@ -34,7 +34,7 @@ const SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
  * the wetsuit select one field above starts there — so its absence read to a
  * small-framed diver as "this shop has nothing for me".
  *
- * The grid is the owner's call and is open as **H-76** in
+ * The grid is the owner's call and is open as **H-20260912-drysuit-sizes-diver-own** in
  * `docs/product/human-decisions/README.md`, which carries the two questions this list
  * cannot answer for itself: the short cut is missing where the tall one is not,
  * and a diver may not know their drysuit size at all. This list ships
@@ -57,7 +57,7 @@ const DRYSUIT_SIZES = ["XS", "S", "M", "MT", "L", "LT", "XL", "XLT", "XXL"];
  * `src/lib/dive-prep.ts`, where a neoprene-sock fleet records "ML, rock boot
  * 9"). Silent data loss, and the crew find out at the dock.
  *
- * Off-grid values are sanctioned rather than accidental: H-76
+ * Off-grid values are sanctioned rather than accidental: H-20260912-drysuit-sizes-diver-own
  * (`docs/product/human-decisions/README.md`) says `MS`, `ML`, `LS` and `MLT` are real
  * sizes a shop that stocks one records staff-side, where the field is free
  * text. Offering the stored value as an option makes it visible, selected, and
@@ -189,7 +189,7 @@ export function RentalSizeFields({
               </select>
             </Field>
           ) : null}
-          {/* Free text, like the staff side's drysuit box (H-102): a hood racks
+          {/* Free text, like the staff side's drysuit box (H-20261007-hood-glove-sizes): a hood racks
                 and gloves both by size and thickness, and the diver's own words
                 reach the packing list verbatim. */}
           {offers.has("hood") ? (
@@ -245,7 +245,7 @@ export function RentalSizeFields({
                 maxLength={RENTAL_FIT_TEXT_LIMITS.weightPreference}
                 defaultValue={rentalFit?.weightPreference ?? ""}
                 // The example follows the suit: a wetsuit number is short for
-                // a diver in a drysuit (H-78).
+                // a diver in a drysuit (H-20260916-rental-fit-describe-shop).
                 placeholder={
                   suit === "own_drysuit" || suit === "rents_drysuit"
                     ? t("rental.weightPlaceholderDry")

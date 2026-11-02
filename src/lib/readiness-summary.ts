@@ -72,7 +72,7 @@ const BLOCKER_STATE: Record<ReadinessBlockerCode, "action" | "waiting"> = {
   // Gentle and non-accusatory: this often just means a family sharing one
   // inbox. The shop clears it; there is nothing for the diver to do.
   identity_unconfirmed: "waiting",
-  // Names the real reason (H-22, product-owner decision 2026-07-25). This
+  // Names the real reason (H-20260724-minimum-age-gate-fail, product-owner decision 2026-07-25). This
   // was word-for-word the `identity_unconfirmed` line until then, on the
   // reasoning that a `course_min_age` disclosure lets anyone who can guess
   // an email learn whether that email belongs to a child under a course's
@@ -82,7 +82,7 @@ const BLOCKER_STATE: Record<ReadinessBlockerCode, "action" | "waiting"> = {
   // Naming it here is a *known, accepted* narrowing of that protection, not
   // a closure of it: on the public door — the only one an attacker has —
   // `identity_unconfirmed` is raised solely by a submitted name that doesn't
-  // match the name already on file (H-13, `!nameMatches`), so an attacker who
+  // match the name already on file (H-20260724-one-person-per-email, `!nameMatches`), so an attacker who
   // already knows the child's real name — arguably the more concerning,
   // targeted case — gets `nameMatches: true` on the very first request and
   // never trips it. The blocker's second raiser, a staffer tapping a name off
@@ -94,7 +94,7 @@ const BLOCKER_STATE: Record<ReadinessBlockerCode, "action" | "waiting"> = {
   // shown when no identity mismatch is present, and the mismatched-name case
   // still gets the generic line above. The known-name case does not. The
   // product owner chose this trade for the common case's clarity, with the
-  // gap written down rather than silently accepted. See H-22,
+  // gap written down rather than silently accepted. See H-20260724-minimum-age-gate-fail,
   // docs/product/human-decisions/.
   under_minimum_age: "waiting",
   // A waiver goes out the moment a diver joins, so this state is the rare

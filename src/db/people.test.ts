@@ -111,7 +111,7 @@ describe("findOrCreatePerson (CR-008)", () => {
     expect(second.person.id).toBe(first.person.id);
   });
 
-  it("reports nameMatches for the H-13 identity safeguard", async () => {
+  it("reports nameMatches for the H-20260724-one-person-per-email identity safeguard", async () => {
     const { db, shop } = ctx;
     const created = await findOrCreatePerson(db, {
       shopId: shop.id,
@@ -233,7 +233,7 @@ describe("recordDiverOwnLocale (docs ADR 20260731-per-person-notification-locale
 
   /**
    * The attack this gate exists for. `findOrCreatePerson` reuses an existing
-   * diver by email and a name mismatch only *flags* the booking (H-13) — so
+   * diver by email and a name mismatch only *flags* the booking (H-20260724-one-person-per-email) — so
    * without the identity check, anyone who knew a diver's address could book
    * an open seat with `Accept-Language: es-ES` and permanently switch that
    * diver's confirmations, waiver requests, and night-before brief into a

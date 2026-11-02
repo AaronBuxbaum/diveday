@@ -139,7 +139,7 @@ describe("inboxSeats", () => {
   });
 
   it("names only the seat an Ask to move names, with no late mark, even inside the window", async () => {
-    // The booking page's "Ask to move" (H-126) carries its booking: it is about
+    // The booking page's "Ask to move" (H-20261014-ask-to-move) carries its booking: it is about
     // that seat whenever it departs, never the sender's soonest boat.
     const { db, shop, trip, bookedAt, personId } = await context();
     const later = (await upcomingTripsWithCounts(db, shop.id)).find(

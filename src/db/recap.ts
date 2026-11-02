@@ -82,7 +82,7 @@ import { whatsAppProvidersForShops } from "./whatsapp-accounts";
 
 /**
  * A photo as the recap page renders it: the diver's own, the crew's, or one
- * another diver on the same boat chose to share (H-129).
+ * another diver on the same boat chose to share (H-20261014-share-photo-with-boat).
  */
 export type RecapPhotoView = {
   id: string;
@@ -124,7 +124,7 @@ export type RecapPhotoView = {
  * the diver's to write and a divemaster's to countersign rather than a
  * property of the reef. Both went dead where they were *rendered* rather than
  * where they were read, so nothing failed and the projection kept copying them
- * (issue #1120, H-49). `AfterState.test.tsx` now refuses a seventh at
+ * (issue #1120, H-20260815-no-legacy). `AfterState.test.tsx` now refuses a seventh at
  * compile time, beside the paragraph explaining why.
  */
 export type RecapSite = {
@@ -761,7 +761,7 @@ async function loadRecapPageData(
           // **The one dive-day rule** (`src/db/dive-days.ts`, issue #1694),
           // on diver seats that are not held (`numberedDiveDay`), the days the
           // milestone and "Your days" count too. A blown-out departure is not
-          // a dive day unless the crew logged a dive on it (H-84): a
+          // a dive day unless the crew logged a dive on it (H-20260916-may-diveday-assert-about): a
           // cancellation leaves its bookings active by design, so a plain
           // status read counts days nobody dived, and the imported half of
           // this merge refuses exactly that (`did_not_happen`, below).
@@ -998,7 +998,7 @@ async function loadRecapPageData(
 /**
  * A diver's recap photos, newest first: their own, the crew's departure photos,
  * and the photos other divers on the same departure chose to share with the
- * boat (H-129, ADR 20261016-shared-boat-photos).
+ * boat (H-20261014-share-photo-with-boat, ADR 20261016-shared-boat-photos).
  *
  * **A shared photo shows only to the sharer's own boat.** The read is the
  * departure the recap is for, and the sharer's seat must still be one the
@@ -1194,7 +1194,7 @@ export async function addRecapPhoto(
     bookingId: string;
     imageUrl: string;
     caption?: string | null;
-    /** The sharer's own tick under "Add to my recap" (H-129); off unless given. */
+    /** The sharer's own tick under "Add to my recap" (H-20261014-share-photo-with-boat); off unless given. */
     shareWithBoat?: boolean;
     now?: Date;
   },

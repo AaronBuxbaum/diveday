@@ -23,7 +23,7 @@ export function SmsConsentNote({ t }: { t: Pick<DiverTranslator, "rich"> }) {
  * The phone `Field`'s `className` that shows the note only once the box holds a
  * number, by CSS alone (visual review 2026-10-24, B22). The words are always in
  * the server HTML, so a form posted before hydration, with scripts off, or
- * autofilled without an event still carried them (H-09). The input needs
+ * autofilled without an event still carried them (H-20260724-channel-sends-booking-waiver). The input needs
  * `placeholder=" "`: `:placeholder-shown` is how CSS tells an empty box.
  */
 export const SMS_CONSENT_ONCE_FILLED = "[&_input:placeholder-shown~[id$='-description']]:hidden";

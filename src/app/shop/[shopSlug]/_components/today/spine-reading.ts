@@ -101,7 +101,7 @@ export function spineClearUnlessWindy(
  * 5. the rest (a help request, the wait list, an email that bounced).
  *
  * The sort is stable, so `src/lib/today.ts`'s order holds inside a tier, and
- * it never drops or adds a row. H-152's one-row-per-diver grouping happened
+ * it never drops or adds a row. H-20261022-needs-you-groups-by's one-row-per-diver grouping happened
  * upstream; this only orders what it produced.
  */
 const BOAT_TIER: Partial<Record<TodayActionKind, number>> = {

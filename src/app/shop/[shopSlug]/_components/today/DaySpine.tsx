@@ -84,7 +84,7 @@ import { WeekHorizon } from "./WeekHorizon";
  * - **A place a departure's facts get repeated.** The station header owns the
  *   boat; a row under it leads with the person or the chore (principle 9).
  *
- * **The evening is a state, not a mode** (slice 6d, H-62). There is still no
+ * **The evening is a state, not a mode** (slice 6d, H-20260827-close-out-remain-own). There is still no
  * phase control and no second view: the stations settle one at a time as their
  * head counts close, a settled one renders {@link ClosingStation} in its own
  * place in clock order, and the day's takings appear beneath the spine once
@@ -315,7 +315,7 @@ function StationRow({
       copy={controls.paymentCopy}
     />
   ) : action.agencyCheck && action.agencyCheck.cards.length > 0 ? (
-    // **"Check with SSI" beside a card still waiting for its check** (H-105):
+    // **"Check with SSI" beside a card still waiting for its check** (H-20261008-cert-check-extension):
     // drawn only with the browser extension, and then the same check the
     // diver's record runs. Without it this draws nothing and the row's own
     // door to the record is the way to the card, as it always was.
@@ -636,7 +636,7 @@ function DeskPaymentsRow({ shopSlug, t }: { shopSlug: string; t: StaffTranslator
 export type DaySpineContext = {
   spine: DaySpineData;
   shopSlug: string;
-  mailShopName: string; // what a mail that leaves says: always `shop.name` (H-131)
+  mailShopName: string; // what a mail that leaves says: always `shop.name` (H-20261014-demo-wears-visitor-shop)
   locale: string;
   timeZone: string;
   currency: string;
@@ -1046,7 +1046,7 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
 }
 
 /**
- * A "certification pending" row's "Check with SSI" (H-105) is the diver
+ * A "certification pending" row's "Check with SSI" (H-20261008-cert-check-extension) is the diver
  * record's own action, bound to the shop. Its outcome and Undo live above the
  * rows: a row whose card the check certifies leaves the list on the refresh
  * that follows. The other cards a match's page lists (layer 3) are offered

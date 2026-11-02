@@ -539,7 +539,7 @@ describe("prepareContactImport — safety rules", () => {
       },
     ]);
     // The card is verified on arrival, but the gate is not: say both, and say
-    // what the confirm asserts rather than that it's one tap (H-24).
+    // what the confirm asserts rather than that it's one tap (H-20260725-two-findings-dive-domain).
     expect(row.issues.some((i) => i.code === "specialty_imported_verified")).toBe(true);
   });
 

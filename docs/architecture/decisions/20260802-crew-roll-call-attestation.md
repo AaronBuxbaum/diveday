@@ -129,7 +129,7 @@ Two statements above are narrowed by the follow-on rather than contradicted:
   covered both halves: neither the attestation nor the per-person roll call was recordable offline,
   and a checkpoint could not close out of signal.
 
-  **Superseded 2026-08-14 for the per-person half** (H-46; see
+  **Superseded 2026-08-14 for the per-person half** (H-20260814-where-diveday-sit-between; see
   [20260803's amendment](20260803-per-person-crew-roll-call.md#amendment-2026-08-14--the-offline-half-was-built-the-record-version-bump-was-not-needed)).
   A rostered crew member can now be recorded aboard or not back aboard from a saved copy with no
   signal, so an after-dive checkpoint closes at sea. The **count-level attestation in this ADR is
@@ -145,7 +145,7 @@ This ADR was already superseded (see the status line). Recording the last step f
 arrives here looking for the machinery: `roll_call_crew_attestations` no longer exists. The table,
 `recordCrewAttestation`, the departure log's attestation timeline, and the
 `roll_call_crew_attestations.csv` export file were all deleted on 2026-08-15 under
-[H-49](../../product/human-decisions/README.md) — pre-pilot, no users, no data worth retaining — after the
+[H-20260815-no-legacy](../../product/human-decisions/README.md) — pre-pilot, no users, no data worth retaining — after the
 writer was found to have no production caller at all, only its own tests. Migration
 `20260815221413_drop-roll-call-crew-attestations`. See
 [20260804-crew-roll-call-is-per-person](20260804-crew-roll-call-is-per-person.md)'s 2026-08-15

@@ -23,7 +23,7 @@ const payload: OfflineManifestPayload = {
       checkpoint: "departure",
       crew: [
         {
-          // A copy saved since H-46 carries the crew member's person id, which
+          // A copy saved since H-20260814-where-diveday-sit-between carries the crew member's person id, which
           // is what makes the crew half of the head count recordable here.
           id: "33333333-3333-3333-3333-333333333333",
           fullName: "Sal Moretti",

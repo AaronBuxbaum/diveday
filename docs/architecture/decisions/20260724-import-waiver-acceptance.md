@@ -13,7 +13,7 @@
 The contact importer (20260723) deliberately never imported a waiver or medical clearance: "a
 'cleared' flag from another system is not clearance here." That was a considered fail-closed default,
 consistent with DiveDay's waiver domain rule that a signed release is safety and legal evidence
-(20260718-waiver-signature-retention) and with the still-open legal-policy gates H-01–H-03 in
+(20260718-waiver-signature-retention) and with the still-open legal-policy gates H-20260730-jurisdiction-waiver-text-medical, H-20260730-evidence-retention-period-deletion, H-20260724-current-typed-name-explicit in
 `docs/product/human-decisions/README.md` (jurisdiction, template wording, e-signature assurance level — none
 of which are decided even for DiveDay's own in-house waiver yet).
 
@@ -24,7 +24,7 @@ a staff attestation per row (unlike the existing in-person/paper-signature path,
 one). This is a deliberate reversal of a documented safety default, made knowingly: the assistant
 building this raised the conflict with the fail-closed rule and the open legal gates before
 implementing, and the product owner confirmed the direction anyway. It is recorded as a decision in
-`docs/product/human-decisions/README.md` (H-17) alongside the still-open H-01–H-03 items, since it does not
+`docs/product/human-decisions/README.md` (H-20260724-contact-importer-trust-prior) alongside the still-open H-20260730-jurisdiction-waiver-text-medical, H-20260730-evidence-retention-period-deletion, H-20260724-current-typed-name-explicit items, since it does not
 resolve them — it only decides what an *import* does, not what DiveDay's own waiver policy should be.
 
 ## Decision
@@ -109,9 +109,9 @@ Easy: a migrating shop's roster arrives with its waiver history intact, closing 
 safe" gap in the data-portability wedge; the CSV schema mirrors the export's own `waiver_records.csv`
 provenance fields, so a round trip stays legible. Hard, and worth a future owner's attention: this
 import path can now clear a diver to board on evidence DiveDay itself never reviewed and a
-questionnaire it never asked — the `imported` marker and `docs/product/human-decisions/README.md` H-17 exist
+questionnaire it never asked — the `imported` marker and `docs/product/human-decisions/README.md` H-20260724-contact-importer-trust-prior exist
 specifically so this is never mistaken for DiveDay's own reviewed waiver flow. Before any shop relies
-on this in production, the same legal/policy sign-off the base waiver flow still needs (H-01–H-03)
+on this in production, the same legal/policy sign-off the base waiver flow still needs (H-20260730-jurisdiction-waiver-text-medical, H-20260730-evidence-retention-period-deletion, H-20260724-current-typed-name-explicit)
 applies with extra force here, since the shop is now also vouching for another operator's process. The
 escape hatch: if that review concludes imported acceptance is unsafe, `signatureMethod: "imported"`
 and `IMPORT_HONESTY_TABLE`'s waiver rows are the only places to revert — the write path and currency

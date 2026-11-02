@@ -14,7 +14,7 @@ import { lockSeatDeparture } from "./seat-locks";
 import { liveTrip } from "./trips-live";
 
 /**
- * **"Turned away" at the desk** (safety sheet 2026-10-15, item 6; H-135): the
+ * **"Turned away" at the desk** (safety sheet 2026-10-15, item 6; H-20261015-who-may-turn-someone): the
  * diver was seen, readiness would not board them, and the desk sent them home.
  *
  * The seat is released exactly as `markBookingNoShow` releases it
@@ -71,7 +71,7 @@ export async function turnBookingAway(
 ): Promise<TurnAwayOutcome> {
   const now = input.now ?? nowDate();
   const result = await db.transaction(async (tx): Promise<TurnAwayOutcome> => {
-    // Any active staff member (H-135); a diver, a former staffer or another
+    // Any active staff member (H-20261015-who-may-turn-someone); a diver, a former staffer or another
     // shop's person is refused before anything is read.
     const recorder = await activeStaffRecorderId(tx, input.shopId, input.recordedByPersonId);
     if (!recorder) return { ok: false, reason: "staff_not_found" };

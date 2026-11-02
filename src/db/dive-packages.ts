@@ -198,7 +198,7 @@ export async function listSpendableEntitlements(
 
 /**
  * How many unspent dives each of these people could put toward one departure,
- * in one read over the roster (issue #1697, H-79). A person with none is
+ * in one read over the roster (issue #1697, H-20260916-unconfirmed-identity-withhold-cost). A person with none is
  * absent from the map.
  *
  * The roster's payment control reads it so a staffer about to take a fare can
@@ -331,7 +331,7 @@ export async function diverPackageBalance(
 }
 
 /**
- * How many package dives this booking spent: one per planned tank (H-123).
+ * How many package dives this booking spent: one per planned tank (H-20261014-package-dive-is-a).
  * `/ready` says it beside the money ("Uses 2 package dives (3 left)"), so a
  * two-tank boat spending two is never a surprise.
  */
@@ -354,7 +354,7 @@ export async function countDivesSpentOnBooking(
 
 /**
  * The two package numbers `/ready`'s Pay step says: what the diver still
- * holds (`countSpendableDives`) and what this booking used (H-123).
+ * holds (`countSpendableDives`) and what this booking used (H-20261014-package-dive-is-a).
  */
 export async function packageDivesForBooking(
   db: DbExecutor,

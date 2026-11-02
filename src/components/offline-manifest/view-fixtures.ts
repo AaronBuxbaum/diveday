@@ -127,7 +127,7 @@ export function richPayload(
     /** Two crew who share a full name and a role — the list-key collision. */
     crewNamesake?: boolean;
     /**
-     * A copy saved **before H-46**, whose crew carry no person id. Those crew
+     * A copy saved **before H-20260814-where-diveday-sit-between**, whose crew carry no person id. Those crew
      * have no subject to record an event against, so the copy can only ever
      * show their save-time result and the checkpoint stays open — the
      * fail-closed direction (`crewOlderCopy`, `canRecordOfflineCrewStatus`).
@@ -135,7 +135,7 @@ export function richPayload(
     crewWithoutIds?: boolean;
     /** The counter released this diver's seat before the copy was saved (#1209). */
     notHere?: boolean;
-    /** The desk turned the diver away, which also released the seat (H-135). */
+    /** The desk turned the diver away, which also released the seat (H-20261015-who-may-turn-someone). */
     turnedAway?: boolean;
     /** The diver said they were running late, at this instant (#2319). */
     runningLateAt?: string;
@@ -150,7 +150,7 @@ export function richPayload(
         recordedByName: "Dana Divemaster",
       }
     : undefined;
-  // A current copy carries person ids (H-46) — that is what makes the crew half
+  // A current copy carries person ids (H-20260814-where-diveday-sit-between) — that is what makes the crew half
   // recordable here at all. `crewWithoutIds` is the copy a device saved before
   // that, still sitting in IndexedDB and still having to render.
   const crewId = (id: string) => (opts.crewWithoutIds ? undefined : id);

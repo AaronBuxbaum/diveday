@@ -9,7 +9,7 @@ import { MARKETING_EYEBROW_CLASS } from "@/components/ui/typography";
  * (this one, a sentence-case teal marker, an uppercase gray and a plain gray),
  * and a reader cannot tell which difference means something.
  *
- * `as="h1"` is `/about`'s hero, where the eyebrow is the page's heading (H-99);
+ * `as="h1"` is `/about`'s hero, where the eyebrow is the page's heading (H-20261006-about-say-whose-voice);
  * `as="h2"`/`"h3"` where the eyebrow is the only name a block has.
  */
 export function Eyebrow({

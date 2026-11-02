@@ -347,7 +347,7 @@ describe("a Paid mark the server refuses", () => {
  * Who may run each party action is filed in the trip page's roster of intent
  * (`actions.authz.test.ts`) for every other action file. These two refuse
  * nobody on role, and the reason is the point: the split never writes a seat
- * off, so the owner-or-manager right (H-119) has nothing here to gate.
+ * off, so the owner-or-manager right (H-20261014-paid-mark-amount-and) has nothing here to gate.
  */
 describe("the party payment actions' gate", () => {
   it("refuses nobody on a role, because the split can never write a seat off", () => {

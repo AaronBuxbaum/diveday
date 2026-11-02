@@ -99,7 +99,7 @@ export async function deletePersonAction(shopSlug: string, personId: string, _fo
   personId = context.personId;
   const { base, db, staff } = context;
   // Soft-deleting a person frees their email and pulls them from shop work —
-  // owner/manager only (H-14, ADR 20260724-role-authorization).
+  // owner/manager only (H-20260724-staff-role-reach, ADR 20260724-role-authorization).
   if (!(await canPersonDeleteDiver(db, staff.user.shopId, staff.user.personId))) {
     revalidateAndRedirect(base, backTo(base, "not-authorized-delete", "remove"));
     return;
@@ -128,7 +128,7 @@ export async function deletePersonAction(shopSlug: string, personId: string, _fo
  * The roster has its own copy of this bound to the undo toast; this is the one
  * that still works tomorrow, once the toast is long gone and the only way back
  * is the `?filter=removed` view and the record it links to. Same owner/manager
- * gate as the removal it reverses (H-14, ADR 20260724-role-authorization),
+ * gate as the removal it reverses (H-20260724-staff-role-reach, ADR 20260724-role-authorization),
  * re-read from the database like every other mutation on this page.
  *
  * `restoreDiver` refuses rather than clobbers when an active diver has since
@@ -248,7 +248,7 @@ export async function erasePersonAction(shopSlug: string, personId: string, form
 }
 
 /**
- * **Erase a co-signing guardian's email address, and nothing else** (H-103,
+ * **Erase a co-signing guardian's email address, and nothing else** (H-20261007-guardian-email-erasure,
  * issue #1673).
  *
  * The same owner-only gate as the diver's erasure, re-read here and again

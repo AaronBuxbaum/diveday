@@ -215,7 +215,7 @@ describe("getRecapPageData", () => {
     // phantom day does not blur a milestone — it skips it permanently.
     expect((await getRecapPageData(db, bookingId))?.visitCount).toBe(1);
 
-    // …unless the crew logged a dive on it before the call (H-84, issue
+    // …unless the crew logged a dive on it before the call (H-20260916-may-diveday-assert-about, issue
     // #1694): a logged dive is the same affirmative evidence the counter's
     // name-match prompt and the fly-safe advisory already trust, so the
     // diver's own count may not refuse a day the counter names.
@@ -1565,7 +1565,7 @@ describe("sendDueRecaps", () => {
 
   /**
    * **A departure past no-decompression limits gets no flying sentence**
-   * (H-84, issue #1555): the email and the page both say nothing, rather
+   * (H-20260916-may-diveday-assert-about, issue #1555): the email and the page both say nothing, rather
    * than the recreational interval beside DAN's name.
    */
   it("says nothing about flying after a departure the shop marked past no-decompression limits", async () => {

@@ -22,7 +22,7 @@ import { notificationDeliveryStatus } from "./notifications";
  * one token, never expiring (an expired opt-out would leave somebody unable to
  * stop the mail, the reasoning `person_courtesy_email_unsubscribe_tokens`
  * gives), and consuming it is an idempotent write to
- * `user_accounts.weekly_digest`. Rows age out with H-02's retention prune.
+ * `user_accounts.weekly_digest`. Rows age out with H-20260730-evidence-retention-period-deletion's retention prune.
  *
  * Both foreign keys cascade: a claim means nothing once its shop or person is
  * gone, so a demo shop's teardown never has to know this table exists.

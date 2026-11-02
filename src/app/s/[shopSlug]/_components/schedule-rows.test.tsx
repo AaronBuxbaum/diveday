@@ -127,7 +127,7 @@ describe("weekLedgerRows", () => {
 
   it("prices a course session with the course total the booking charges (fourth UX review, item 2)", () => {
     // The trip row's own $150 is not what checkout asks for; fee plus
-    // eLearning is, so the schedule says $345 (H-125).
+    // eLearning is, so the schedule says $345 (H-20261014-course-session-price).
     const nitrox = rows()[2];
     expect(nitrox?.price).toContain("345");
     expect(nitrox?.price).not.toContain("150");

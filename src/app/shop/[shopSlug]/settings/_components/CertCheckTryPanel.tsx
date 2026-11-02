@@ -6,7 +6,7 @@ import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 import { CertCheckTry } from "./CertCheckTry";
 
 /**
- * **Try the checks** (H-105, ADR 20261008-cert-check-extension), as the
+ * **Try the checks** (H-20261008-cert-check-extension, ADR 20261008-cert-check-extension), as the
  * disclosure inside the Card checks row (#2817): the extension's own steps in
  * this browser, against sample pages only, and a report to send back. It was a
  * page of its own; it is a part of the row that says whether the extension is

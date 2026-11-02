@@ -228,7 +228,7 @@ describe("handleInboundReplyKeyword — what it refuses", () => {
     expect(await statusOf(db, bookingId)).toBe("booked");
   });
 
-  it("refuses a `C` inside the late hour once the dock counted the diver aboard (H-133)", async () => {
+  it("refuses a `C` inside the late hour once the dock counted the diver aboard (H-20261015-aboard-diver-removal-at)", async () => {
     const { db, shop, trip, bookingId } = await context();
     const provider = acceptingProvider();
     const [recorder] = await listStaff(db, shop.id);

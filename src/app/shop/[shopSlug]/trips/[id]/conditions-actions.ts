@@ -53,7 +53,7 @@ export async function saveConditionsAction(shopSlug: string, tripId: string, for
   // Predicted conditions are crew-entered — the divemaster/captain on the water
   // record water temp, viz, and surface state and own the go/no-go call
   // (glossary). This is operating work, not trip definition, so it stays open to
-  // all staff even though the rest of Overview is config-gated (H-14).
+  // all staff even though the rest of Overview is config-gated (H-20260724-staff-role-reach).
   const s = (await requireShopSurface(shopSlug)).session;
   const parsed = conditionsSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(noticeUrl(back, "invalid", { form: "conditions" }));

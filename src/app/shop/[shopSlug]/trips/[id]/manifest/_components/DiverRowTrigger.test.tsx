@@ -25,7 +25,7 @@ afterEach(cleanup);
  * layout, so this pins the structure that gives it the room.
  */
 /**
- * **A rider boarding under a medical hold, riding only** (H-109). The hold is
+ * **A rider boarding under a medical hold, riding only** (H-20261009-rider-snorkeler-medical). The hold is
  * never a blocker, so the row's capsule says it: below a desk blocker and a
  * team that did not come back after a dive, above the minor, depth and
  * birthday capsules, and at every checkpoint, since a rider back aboard after

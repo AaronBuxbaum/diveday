@@ -22,7 +22,7 @@ export type MoveOffer = { tripId: string; title: string; startsAt: Date };
 
 /**
  * **The one boat a called-off seat is offered** (UX sheet 2026-10-22, item 5;
- * H-151): the soonest departure of the same kind, at this shop, at the same
+ * H-20261022-called-off-boat-offers): the soonest departure of the same kind, at this shop, at the same
  * price or lower for this seat's type, with a seat free that this diver could
  * be sold today. Null when nothing qualifies, and the card stays as it was.
  *

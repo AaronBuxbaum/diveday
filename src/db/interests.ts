@@ -136,7 +136,7 @@ export async function askForDeparture(db: AppDb, req: DepartureAsk): Promise<Dep
     //
     // Gated on `nameMatches` for the same reason the last-minute list is: this
     // form is unauthenticated, and an email that matches an existing diver
-    // under a different name may be a second human (H-13). Certification data
+    // under a different name may be a second human (H-20260724-one-person-per-email). Certification data
     // is a fact about a body, and writing it onto a record that might not be
     // theirs is the one thing every other write on this fork already refuses.
     // The wait-list entry itself is unaffected.
@@ -576,7 +576,7 @@ export type DateAsk = {
  * Records one diver asking for a date: a `date` interest. Insert-only, there is no
  * edit or withdraw path (a diver just asks again).
  *
- * **No person row is made** (H-13): this form is unauthenticated, and creating
+ * **No person row is made** (H-20260724-one-person-per-email): this form is unauthenticated, and creating
  * a person from a stranger's typing is how a second human's record gets
  * written. The contact is a snapshot on the interest. When the writer left an email
  * that a live diver of this shop already holds, the `person_id` link is
@@ -767,7 +767,7 @@ export async function attachDateInterestsToDeparture(
           askedBy: "diver" as const,
           tripId: input.tripId,
           parentInterestId: parent.id,
-          // Never the parent's person link (H-13; security review of #2656,
+          // Never the parent's person link (H-20260724-one-person-per-email; security review of #2656,
           // MAJOR 2): that link is set from an unauthenticated form on the
           // address alone, as a handle for erasure, and copying it here would
           // put whoever owns the address on this departure's list by name, in
@@ -842,7 +842,7 @@ export async function askAnytime(db: AppDb, input: AnytimeAsk): Promise<AnytimeA
     // anti-displacement rule, which is what makes this safe on a path anyone
     // can post to.
     //
-    // `nameMatches` is H-13's borrowed-identity rule, applied to the one write
+    // `nameMatches` is H-20260724-one-person-per-email's borrowed-identity rule, applied to the one write
     // here that is evidence about a body. This form is unauthenticated, and an
     // email that already belongs to a diver under a *different* name is a
     // possible second human — a family sharing an inbox, or somebody typing an

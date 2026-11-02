@@ -82,7 +82,7 @@ export async function getMovePreflight(
       target
         ? crewMoveConflicts(db, shopId, tripId, target.startsAt, target.timeZone)
         : { clashes: [], away: [] },
-      // The hull's own overlap (H-80, issue #1780), asked of the same proposed
+      // The hull's own overlap (H-20260916-may-one-hull-carry, issue #1780), asked of the same proposed
       // windows by the same predicate the crew clash uses.
       target ? boatMoveClashes(db, shopId, tripId, target.startsAt, target.timeZone) : [],
       // The near miss beside the clash (issue #2141), against the same proposed
@@ -114,7 +114,7 @@ export async function getMovePreflight(
  * overlapping them — on the same hull, or sharing a crew member when the two
  * departures meet in different places (the same-dock hand-off stays quiet).
  *
- * Advice only. The overlap itself is H-80's clash, asked by `boatMoveClashes`
+ * Advice only. The overlap itself is H-20260916-may-one-hull-carry's clash, asked by `boatMoveClashes`
  * and `crewMoveConflicts` through the half-open predicate; nothing here changes
  * it, refuses anything, or reaches the move's own path. Reads only, tenancy
  * through `trips.shop_id` on both sides (and `people.shop_id` for crew).

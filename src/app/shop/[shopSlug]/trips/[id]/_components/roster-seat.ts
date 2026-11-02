@@ -205,7 +205,7 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
   /**
    * **The flag gates disclosure as well as boarding** (security review
    * 2026-09-11). This seat attached itself to an existing person on a guess
-   * — a reused email under a different name (H-13), or a name tapped off the
+   * — a reused email under a different name (H-20260724-one-person-per-email), or a name tapped off the
    * counter's trigram prompt (issue #1556) — and everything the roster knows
    * about that person is then a fact about *somebody*, not provably about
    * whoever is standing at the counter. Until a staffer confirms it, one
@@ -233,7 +233,7 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
       : [];
   // Age is shown only when the shop actually holds a date of birth — no
   // date, no line, rather than an "unknown" that reads as a gap to fill on
-  // every diver who has never been asked (H-21).
+  // every diver who has never been asked (H-20260730-minimum-age-gate-data).
   const dateOfBirth = person.dateOfBirth;
   const age = showsPersonDetail && dateOfBirth ? ageOnDate(dateOfBirth, tripDate) : null;
   // The booker's "Under 18" on this seat stands in for a date the shop does
@@ -246,7 +246,7 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
   const hasEmergencyContact = Boolean(person.emergencyContactName && person.emergencyContactPhone);
   // A warning, never a gate: the site goes deeper than this diver's
   // training, which an instructor may well have already planned around
-  // (H-08). It sits apart from the blocker list for that reason. Withheld
+  // (H-20260724-certification-levels-agency-rules). It sits apart from the blocker list for that reason. Withheld
   // on a held seat, as everything measured against the matched person is.
   const depth = showsPersonDetail ? readinessByBooking.get(booking.id)?.depthAdvisory : undefined;
   const notes = notesByBooking.get(booking.id) ?? [];
@@ -273,7 +273,7 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
   const depthText = depthWarningOrNull(t, depth);
   const depthShared = depthText !== null && sharedAdvisoryTexts.has(depthText);
   // A diver in a drysuit, theirs or ours, with no drysuit card on file
-  // (H-78). Behind the same confirmation as the sizes and the nitrox word
+  // (H-20260916-rental-fit-describe-shop). Behind the same confirmation as the sizes and the nitrox word
   // below, because both halves of the question are the matched person's own
   // record.
   const drysuitCard = showsPersonDetail
@@ -367,7 +367,7 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
     updateDietaryNoteAction,
     // A booked seat, or one turned away before the start (`seatMoveForRow`).
     moveSeat: seatMoveForRow(booking, moveSeat),
-    // Marked aboard a boat that has left: Remove says so and changes nothing (H-133).
+    // Marked aboard a boat that has left: Remove says so and changes nothing (H-20261015-aboard-diver-removal-at).
     removeRefusedAboard: aboardAtSea?.get(booking.id) ?? null,
     carriedChartersNote,
     materialsDone,

@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-16
-- **Extends:** [20260804-seat-claim-links](20260804-seat-claim-links.md); decision H-132
+- **Extends:** [20260804-seat-claim-links](20260804-seat-claim-links.md); decision H-20261014-other-days-send-fresh
 
 ## Context
 
@@ -10,7 +10,7 @@ A regular with three boats ahead holds three `/ready` links and no way between t
 log entry could not be had at all: find-my-booking mailed links for current bookings only (fifth-loop
 ideas, item 38). A readiness URL *is* its capability, so rows that open the other bookings would turn
 one forwarded link into the diver's whole history. The owner chose a fresh link per row, sent to the
-email on file (H-132).
+email on file (H-20261014-other-days-send-fresh).
 
 ## Decision
 
@@ -36,7 +36,7 @@ email on file (H-132).
 
 ## Alternatives considered
 
-- **Rows open the other bookings directly.** One leaked link reaches every day; H-132 declined it.
+- **Rows open the other bookings directly.** One leaked link reaches every day; H-20261014-other-days-send-fresh declined it.
 - **One digest email of every day.** Tells whoever triggers it the diver's whole history.
 - **Leave each booking separate.** The desk keeps taking "resend my link" calls.
 

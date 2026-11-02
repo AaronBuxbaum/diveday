@@ -101,7 +101,7 @@ describe("a malformed booking id at the counter", () => {
   /**
    * "Turned away" posts a reason beside the seat, and only the enum's own
    * words reach the writer: anything else is the counter's `invalid`, before
-   * the database is opened (H-135).
+   * the database is opened (H-20261015-who-may-turn-someone).
    */
   it.each([
     ["a malformed seat", NOT_A_UUID, "card"],

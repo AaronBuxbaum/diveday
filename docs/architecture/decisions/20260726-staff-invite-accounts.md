@@ -11,7 +11,7 @@ way to get one; in practice they'd have to be hand-inserted into the database. T
 twice already: [20260725-account-lifecycle-emails](20260725-account-lifecycle-emails.md)'s
 Consequences flagged it explicitly ("there's no staff-invite flow yet... `account_tokens`'
 `purpose` enum can grow an `invite` value later without a new table"), and
-`docs/product/rollout.md` lists "staff accounts" as a Week-0 pilot requirement. H-14
+`docs/product/rollout.md` lists "staff accounts" as a Week-0 pilot requirement. H-20260724-staff-role-reach
 ([20260724-role-authorization](20260724-role-authorization.md)) already established the
 owner/manager-gated-surface pattern this slots into.
 
@@ -38,7 +38,7 @@ one-time token) sets the invitee's own password, flips the account to `active`, 
 **Management surface:** `canManageStaffAccounts` (owner/manager, `src/lib/authz.ts`) gates a new
 `/shop/[shopSlug]/settings/team` page — inviting, editing a person's roles, resending a stale
 invite, and disabling/removing access all take this one gate, the same accountability weight as
-payment settings and refunds (H-14). Role-grant scope is deliberately unrestricted within that
+payment settings and refunds (H-20260724-staff-role-reach). Role-grant scope is deliberately unrestricted within that
 gate: an owner/manager may assign any staff role, including `owner`, to a new or existing team
 member — the codebase has no existing concept of "who may grant `owner`" and inventing one here
 would be scope creep the product owner hasn't asked for.

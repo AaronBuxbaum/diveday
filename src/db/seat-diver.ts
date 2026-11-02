@@ -89,7 +89,7 @@ export type SeatDiverPerson =
    * that booking decides from the name whether the seat is
    * identity-unconfirmed (issue #1556). A door seating a diver picked from
    * a search list passes no `fromNameMatch`, and its seat lands released by
-   * decision (H-79, issue #1790; `BookingPerson.fromNameMatch`).
+   * decision (H-20260916-unconfirmed-identity-withhold-cost, issue #1790; `BookingPerson.fromNameMatch`).
    */
   | { personId: string; fromNameMatch?: { typedName: string } }
   | { fullName: string; email?: string; phone?: string; freshPerson?: FreshPersonDetails };
@@ -174,7 +174,7 @@ export type SeatDiverResult =
        * The seat is held: `createBooking` attached it to an existing person on
        * something short of proof and stamped `identityUnconfirmedAt`, so the
        * boarding gate refuses it until a staffer confirms the identity
-       * (H-13, issue #1556).
+       * (H-20260724-one-person-per-email, issue #1556).
        *
        * Carried out to the door for the same reason `waiver` is: this is the
        * one fact a plain "Added" hides, and the staffer otherwise meets it as
@@ -195,7 +195,7 @@ export type SeatDiverResult =
        * "they are not an Advanced diver" (no card to add — that's a course).
        * The second reading is the dangerous one: it points a staffer at the
        * certifications form as the way past a safety gate, and a hand-entered
-       * card clears admission on the very next attempt (H-24).
+       * card clears admission on the very next attempt (H-20260725-two-findings-dive-domain).
        *
        * Absent for every other refusal, and absent whenever a `coarse` surface
        * collapsed this one — the counter's deliberately blunt vocabulary must

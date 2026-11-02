@@ -468,7 +468,7 @@ describe("seat offers", () => {
       const ctx = await invitationContext();
       const personId = await freshDiver(ctx.db, ctx.shop.id);
       // An Open Water card on file, so admission judges them (a diver the shop
-      // knows nothing about is admitted blind, H-08) and finds them short.
+      // knows nothing about is admitted blind, H-20260724-certification-levels-agency-rules) and finds them short.
       await ctx.db.insert(certifications).values({
         shopId: ctx.shop.id,
         personId,

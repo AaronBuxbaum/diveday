@@ -42,7 +42,7 @@ import { type WaiverState, type WaiverStateFields, waiverState } from "./waivers
  *    (`awaiting`, `not_sent`, an empty-timeline statement), because on this
  *    document a silent gap reads as a missing page.
  *
- * Medical **answers never appear** (H-03 boundary): the waiver section carries
+ * Medical **answers never appear** (H-20260724-current-typed-name-explicit boundary): the waiver section carries
  * status, dates, and template version only. A `medical_review` state says a
  * review was required — never why.
  *
@@ -421,7 +421,7 @@ export type IncidentTimelineEntry =
       subjectName: string;
       /** Who made the change; the diver themselves for a self-cancel. */
       recordedByName: string;
-      /** A `turned_away` line's category (H-135), never the evidence behind it. */
+      /** A `turned_away` line's category (H-20261015-who-may-turn-someone), never the evidence behind it. */
       reason?: TurnAwayReason;
     };
 
@@ -431,7 +431,7 @@ export type IncidentRosterChangeAction =
   | "removed"
   | "moved_away"
   | "moved_here"
-  /** Seen at the desk and turned away, the seat freed (H-135). */
+  /** Seen at the desk and turned away, the seat freed (H-20261015-who-may-turn-someone). */
   | "turned_away"
   | "crew_added"
   | "crew_removed"
@@ -512,7 +512,7 @@ export type IncidentExportDocument = {
    * is not in `roster` or in any `departureSummary` count, and the page
    * states it on a line of its own, so a turn-away before the first dock
    * count still leaves a sentence in the record. The reason is the category
-   * only (H-135), never the answers behind it; null after erasure.
+   * only (H-20261015-who-may-turn-someone), never the answers behind it; null after erasure.
    *
    * Empty on a departure with none, and then outside the hash, so every log
    * printed without one keeps its code.

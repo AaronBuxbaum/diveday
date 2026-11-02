@@ -298,7 +298,7 @@ test("captain saves the full checkpoint manifest, reloads it offline, and reconc
   // dde-b 1), and the banner says how old it is.
   await expect(page.getByText("No signal · device copy")).toBeVisible();
   await page.getByRole("button", { name: "After dive 1" }).click();
-  // Two lists on this page carry roll-call controls now (H-46), and the crew
+  // Two lists on this page carry roll-call controls now (H-20260814-where-diveday-sit-between), and the crew
   // panel renders *above* the diver list — so every click below names which
   // list it means. An unscoped `.first()` here silently moved to a crew member
   // the moment crew gained buttons, and the diver half of this test stopped
@@ -319,7 +319,7 @@ test("captain saves the full checkpoint manifest, reloads it offline, and reconc
     page.getByRole("status").filter({ hasText: "when you’re back in service" }),
   ).toBeVisible();
 
-  // The crew half of the same head count, still with the radio off (H-46).
+  // The crew half of the same head count, still with the radio off (H-20260814-where-diveday-sit-between).
   // Until this shipped a captain offshore could count divers and not crew, and
   // `rollCallCompleteness` needs both — so the after-dive checkpoint, the one
   // where a person may still be in the water, could not be closed at sea at

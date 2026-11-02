@@ -37,7 +37,7 @@ import { windowOnThisDay } from "./window-on-this-day";
 /** Weekly staffing view (ADR 20260827-the-shops-shelves, decision 3): people by
  * day, with shifts, crew, away time and gaps.
  * Desktop and mobile render the same work and actions; gaps carry words as
- * well as color. Warnings and credentials inform but never gate (H-59).
+ * well as color. Warnings and credentials inform but never gate (H-20260825-staff-credentials-renewal-clock).
  * Dates and shift times arrive formatted for the shop's zone. Native details
  * preserve keyboard and screen-reader access to shift actions. */
 

@@ -35,7 +35,7 @@ export function LadderNotice({ notice, t }: { notice?: string; t: StaffTranslato
  * 45). One line per course with a next step: how many did it in the last
  * twelve months and how many went on, then "See who" opening the names of
  * those who did not, each with an "Invite" to the next course's soonest
- * session (H-130: one at a time, the 30-day cooldown). For the desk to call or
+ * session (H-20261014-one-to-one-invite: one at a time, the 30-day cooldown). For the desk to call or
  * invite one by one; it sends nothing in bulk. Someone whose release waits on
  * a physician's referral says so and has no Invite: the desk calls instead
  * (dive-domain review N4).

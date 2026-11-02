@@ -153,7 +153,7 @@ function pause(ms: number): Promise<void> {
 }
 
 /**
- * **The agency check on a page of many divers** (H-105): a departure's Divers
+ * **The agency check on a page of many divers** (H-20261008-cert-check-extension): a departure's Divers
  * tab, or Today's "Needs you" list.
  *
  * One card's check is exactly the diver record's: the extension reads the

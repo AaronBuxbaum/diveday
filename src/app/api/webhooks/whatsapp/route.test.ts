@@ -226,7 +226,7 @@ describe("whatsapp webhook route — inbound messages (ADR 20260907-two-way-inbo
   });
 
   /**
-   * **Two shops of one chain share a WABA** (H-83, issue #1767): one delivery
+   * **Two shops of one chain share a WABA** (H-20260916-may-dive-chain-share, issue #1767): one delivery
    * can carry changes for both numbers, and each shop gets only its own.
    */
   it("files each message on a shared WABA under the shop its own number belongs to", async () => {

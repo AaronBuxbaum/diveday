@@ -15,7 +15,7 @@ const ctx = fileScopedShopContext();
 
 /**
  * Discount codes move real money off the shop's own Stripe account, so they are
- * owner/manager work (H-14, ADR 20260724-role-authorization). `promos/page.tsx`
+ * owner/manager work (H-20260724-staff-role-reach, ADR 20260724-role-authorization). `promos/page.tsx`
  * hides the controls from everyone else, but hiding is not a gate — a form post
  * from a captain's browser reaches these actions all the same. These tests run
  * the real actions against a real seeded shop and pin both halves of the answer:

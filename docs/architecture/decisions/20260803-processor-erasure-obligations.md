@@ -163,9 +163,9 @@ has to attest to, one per Stripe object. That is the shape `stripe_invoice_snaps
 and the alternative — one row per person — cannot be discharged, because the thing being attested to
 is a request filed about a specific object.
 
-## Widened 2026-10-17 — messaging handles (issue #1721, H-82)
+## Widened 2026-10-17 — messaging handles (issue #1721, H-20260916-far-deletion-promise-reach)
 
-H-82 ruled that the erasure promise reaches messaging providers: a `provider_message_id` points at an
+H-20260916-far-deletion-promise-reach ruled that the erasure promise reaches messaging providers: a `provider_message_id` points at an
 object holding the diver's name, address or number, and stopping at Stripe was a statement about
 which vendor has a delete API, not about what was promised. Building it turned up three providers,
 none with a delete for a sent message, and none holding a copy an owner could act on. Aaron accepted
@@ -204,7 +204,7 @@ row to the QuickBooks or Xero object, ids on both sides and no copied details, k
 Customer is not minted for a diver already synced (issue #1015, the table's closure reason in
 `src/db/erasure-coverage.test.ts`). The row copies nothing, but the Customer it names holds the
 diver's name and contact details at QuickBooks or Xero. The books are the shop's, a Customer may
-not be deletable while its invoices reference it, and H-82 named messaging handles only. The census
+not be deletable while its invoices reference it, and H-20260916-far-deletion-promise-reach named messaging handles only. The census
 tags it `elsewhere` with that reason.
 
 ## What this does not do

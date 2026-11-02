@@ -99,7 +99,7 @@ export function ConversationSection({
 
   const inbound = entries.filter((entry) => entry.direction === "inbound");
   const unanswered = inbound.filter((entry) => entry.message.answeredAt === null).length;
-  // An "Ask to move" from the booking page (H-126) sits in the thread but is
+  // An "Ask to move" from the booking page (H-20261014-ask-to-move) sits in the thread but is
   // nothing to answer *on*: the composer answers the last thing they wrote.
   const latest = inbound.filter((entry) => entry.message.channel !== "page").at(-1);
   const latestWhatsApp = inbound.filter((entry) => entry.message.channel === "whatsapp").at(-1);
@@ -155,7 +155,7 @@ export function ConversationSection({
           const meta =
             entry.direction === "inbound"
               ? t(
-                  // An "Ask to move" (H-126) is a button, not words: the
+                  // An "Ask to move" (H-20261014-ask-to-move) is a button, not words: the
                   // line says what was asked, and a note follows if any.
                   entry.message.channel === "page"
                     ? "inbox.thread.askedToMove"

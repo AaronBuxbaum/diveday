@@ -50,7 +50,7 @@ un-keyed `useState`/`useRef` under a staff route, and fix the six instances the 
 1. **`src/components/ui/InlineConfirm.tsx`** (blocking finding). `armed` is now reset by an effect
    keyed on `usePathname()` (`next/navigation`). It fires on the leading edge of any (re)navigation,
    including an Activity-preserved show/hide cycle, so a "Remove booking" (fires an automatic
-   Stripe refund the Undo banner can't claw back) or "Confirm this is [diver]" (the H-13 identity
+   Stripe refund the Undo banner can't claw back) or "Confirm this is [diver]" (the H-20260724-one-person-per-email identity
    attestation) control can never resurface already armed one tap from firing. Used from
    `src/app/shop/[shopSlug]/trips/[id]/_components/RosterSection.tsx`.
 

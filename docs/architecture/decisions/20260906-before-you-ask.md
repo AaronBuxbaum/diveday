@@ -1,6 +1,6 @@
 # 20260906-before-you-ask — DiveDay fills in what it already knows, shows where it got it, and leaves the last tap to a person
 
-- **Status:** Accepted — decided 2026-09-06 (Aaron Buxbaum, in session; H-68: every recommended
+- **Status:** Accepted — decided 2026-09-06 (Aaron Buxbaum, in session; H-20260906-diveday-fill-already-knows: every recommended
   option, so the send hold, the cold-email link and the crew fill all ship). Slices 17a–17f in the
   roadmap
 - **Date:** 2026-09-06
@@ -47,7 +47,7 @@ is waiting to be told.
 
 ## Decision
 
-Proposed, in four parts. Parts 2, 3 and 4 carry the three owner calls recorded as H-68.
+Proposed, in four parts. Parts 2, 3 and 4 carry the three owner calls recorded as H-20260906-diveday-fill-already-knows.
 
 ### 1. The rule, and what renders when it fails
 
@@ -62,7 +62,7 @@ Every move below passes four tests, and each names what renders when it does not
 
 The manifest is untouched by every slice, which is the point of listing it.
 
-### 2. A send you can take back (H-68 a)
+### 2. A send you can take back (H-20260906-diveday-fill-already-knows a)
 
 The four sends that ask a confirming question today — issuing or reissuing a waiver link,
 resending a waiver to someone already notified, sending a last-minute deal, offering a freed seat
@@ -80,7 +80,7 @@ because that consequence is real and the surface cannot show it.
 **Recommended:** yes, on all four, at eight seconds. The alternative is the dialog, which the app
 has today.
 
-### 3. The rest of the rule, on four surfaces (H-68 b and c)
+### 3. The rest of the rule, on four surfaces (H-20260906-diveday-fill-already-knows b and c)
 
 - **Nothing you typed is lost.** Every staff form keeps a draft per person and per form target
   (a departure, a diver) for twenty-four hours, written on blur and on navigation. Reopening the
@@ -98,7 +98,7 @@ has today.
   time, title, site, hull, seats, price and lens, under one sentence: "Filled from your last six
   Saturdays. Change anything, or start blank." Every value is an ordinary field. A second boat
   that ran on most of those days is offered as one row and never added on its own. A shop with
-  no history sees the blank panel. **H-68 c:** whether the pattern may also fill the crew field.
+  no history sees the blank panel. **H-20260906-diveday-fill-already-knows c:** whether the pattern may also fill the crew field.
   Recommended: yes, with the sentence saying both ran the last six and neither is booked
   elsewhere that morning, because a blank crew field is the field a shop forgets; the crew gap
   row on the home is the safety net either way.
@@ -108,7 +108,7 @@ has today.
   verified card, the waiver that still covers this trip, own gear or the kept sizes, the
   emergency contact. What remains is seats and one button. Every line is a door to change it, and
   "Not Yara? Start with a blank form" stands beneath. A cold visitor gets the form that ships;
-  the page never reveals a fact to anyone who did not arrive through the capability. **H-68 b:**
+  the page never reveals a fact to anyone who did not arrive through the capability. **H-20260906-diveday-fill-already-knows b:**
   whether an email typed cold into the booking form that matches a diver on file may receive one
   link to bring their details across. Nothing shows on the page either way, so the page cannot be
   used to learn whether an address is known. Recommended: yes, one email, only while a booking
@@ -140,7 +140,7 @@ filter admits.
   and the handoff are things the person did, keyed to their session, never to where they are.
 - **A confirm dialog with "don't ask again".** Rejected. It moves the question to a setting and
   keeps a send un-undoable; the hold removes the question and adds the undo.
-- **Prefill from an email match, on the page.** Rejected outright, whatever H-68 b decides:
+- **Prefill from an email match, on the page.** Rejected outright, whatever H-20260906-diveday-fill-already-knows b decides:
   showing a stranger "we have your details" on entering an address confirms the address is on
   file to anyone who types it.
 - **A default per departure series instead of a learned weekday pattern.** Considered. A series
@@ -166,7 +166,7 @@ filter admits.
   behind the per-IP bucket, and put the token's query key on the telemetry redaction list).
   `page.composition.test.ts` pins that a cold request renders the shipped form.
 - **The pattern read** is a query over the shop's own live departures (`liveTrip()`) and is
-  never cached; the crew half waits on H-68 c and ships with the crew-availability sentence only
+  never cached; the crew half waits on H-20260906-diveday-fill-already-knows c and ships with the crew-availability sentence only
   when the assignment reader can answer it.
 - **The palette's answer card** reuses the fix table and the readiness words; a new fact kind is
   a row in that table, never a second detector.
@@ -177,7 +177,7 @@ filter admits.
 - The escape hatch is the same as the last two ADRs': every move renders nothing when it is not
   true, so reversing any one of them is deleting a reader, not redrawing a surface.
 
-## Amendment 2026-10-25: a counter payment takes the same hold (issue #3030, H-159)
+## Amendment 2026-10-25: a counter payment takes the same hold (issue #3030, H-20261024-counter-payment-undo-hold)
 
 The hold is not only for mail. Cash or Card machine on an open order is held as a fifth kind,
 `counter_payment`, with the same eight seconds and the same Undo. Its exits are the tapping

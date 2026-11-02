@@ -135,7 +135,7 @@ export function RosterSection({
 
   const hasTail = whoWantsInGroup != null || suggestionsGroup != null || addDiverGroup != null;
   // This departure's cards the browser extension can check, in roster order:
-  // the whole of what its "Check all" may touch (H-105). Held seats are never
+  // the whole of what its "Check all" may touch (H-20261008-cert-check-extension). Held seats are never
   // in the map (`getTripGuests`).
   const agencyCards = actions.agencyCheckAction
     ? roster.flatMap(({ person }) => rows.agencyCheckCardsByPerson?.get(person.id) ?? [])
@@ -324,7 +324,7 @@ export function RosterSection({
     </CourseFormsQrProvider>
   );
   // The check's state lives above the rows, so a row whose card has just been
-  // certified keeps its outcome and its Undo through the refresh (H-105).
+  // certified keeps its outcome and its Undo through the refresh (H-20261008-cert-check-extension).
   return actions.agencyCheckAction ? (
     <AgencyCheckHost
       action={actions.agencyCheckAction}

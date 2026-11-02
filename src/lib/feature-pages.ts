@@ -3,7 +3,7 @@ import type { DemoRoleId } from "./demo-roles";
 
 /**
  * **The feature pages: one public page per job a shop hires DiveDay for**,
- * at `/product/<slug>` (the 2026-10-05 marketing rework, H-93).
+ * at `/product/<slug>` (the 2026-10-05 marketing rework, H-20261005-public-pages-sell).
  *
  * Until then the product had one page, `/product`, which walked a single
  * dive day in five screens and then listed every shipped workflow in one

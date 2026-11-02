@@ -91,7 +91,7 @@ const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey; counted?
  * is read from the linked order, on screen and on paper: lines, total, paid or
  * not, with a code to pay an open invoice on the spot (Aaron, 2026-10-09).
  *
- * Ungated beyond staff, like the rest of the register (H-06). Tenancy is the
+ * Ungated beyond staff, like the rest of the register (H-20260724-initial-gear-policy-sizing). Tenancy is the
  * session's shop; another shop's id, or a reservation held by a booking, is a
  * 404.
  */
@@ -168,7 +168,7 @@ export default async function CounterRentalTicketPage({
           </div>
         ) : null}
 
-        {/* **The person's waiver, informing only** (issue #2261, H-108).
+        {/* **The person's waiver, informing only** (issue #2261, H-20261008-counter-rental-waiver-informs).
             Screen only — the slip the person carries away is a receipt for
             gear, not a note about them. */}
         <CounterRentalWaiverLine

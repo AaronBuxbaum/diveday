@@ -150,7 +150,7 @@ describe("the screen worries only with reason (decision 4)", () => {
     // The two cases where the capsule is spoken for — blocked at the dock, and
     // a split team — are exactly the ones where a 13-year-old is most likely to
     // be on the row that lost it. The captain reading the boarding list has no
-    // other way to know a booked diver is 12 (H-21).
+    // other way to know a booked diver is 12 (H-20260730-minimum-age-gate-data).
     renderList({
       checkpoint: "departure",
       divers: [

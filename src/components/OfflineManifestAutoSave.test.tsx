@@ -296,7 +296,7 @@ describe("OfflineManifestAutoSave", () => {
     await waitFor(() => expect(saveOfflineManifest).not.toHaveBeenCalled());
   });
 
-  it("wipes medical alert words another person saved before saving, and all of them when the body names nobody (H-153)", async () => {
+  it("wipes medical alert words another person saved before saving, and all of them when the body names nobody (H-20261023-medical-alert-for-the)", async () => {
     setOnline(true);
     vi.mocked(primeOfflineManifestShell).mockResolvedValue(undefined);
     vi.mocked(saveOfflineManifest).mockResolvedValue({} as never);

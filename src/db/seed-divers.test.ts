@@ -14,7 +14,7 @@ import {
 import { birthDateTurning } from "./seed-clock";
 
 describe("seeded imported-card states", () => {
-  // The two states H-23/H-24 exist for are only visible on a diver who holds an
+  // The two states H-20260725-owner-asked-move-rows/H-20260725-two-findings-dive-domain exist for are only visible on a diver who holds an
   // imported, unconfirmed card — and until this seed row existed, no seeded diver
   // did, so the amber "certified · confirm to clear" badge and the
   // attest-you've-seen-it confirm had no visual-regression baseline and no

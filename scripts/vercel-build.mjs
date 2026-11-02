@@ -23,7 +23,7 @@ if (process.env.VERCEL === "1") {
 // VERCEL_ENV is available only when Vercel's System Environment Variables are enabled.
 // Keep previews read-only: schema changes apply only to the production deployment of main.
 if (process.env.VERCEL_ENV === "production") {
-  // First of all, the deploy gate (scripts/deploy-gate.mjs, H-158). Once
+  // First of all, the deploy gate (scripts/deploy-gate.mjs, H-20261021-deploy-gate-from-first). Once
   // DEPLOY_REQUIRES_GREEN is on, production builds only the commit
   // deploy-gate.yml proved green on main. The Ignored Build Step already
   // cancels a push-triggered build; this catches the paths that skip that

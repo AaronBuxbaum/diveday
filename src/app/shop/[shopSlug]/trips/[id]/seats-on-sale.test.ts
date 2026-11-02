@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 /**
  * A source read: these are Server Components behind the session gate and a
  * dozen server actions. **Every seats-left a staffer reads is measured against
- * the seats on sale** (H-107, #2321) — the stated capacity capped at the boat's
+ * the seats on sale** (H-20261009-certificate-caps-seats, #2321) — the stated capacity capped at the boat's
  * certificate, which is all the booking transaction will sell. A departure
  * stating 14 on a hull certified for 12 offered "Add diver" at 12 aboard and
  * then refused the seat. The details form still edits the stated number; that

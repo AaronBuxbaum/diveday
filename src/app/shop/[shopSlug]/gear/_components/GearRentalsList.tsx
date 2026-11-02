@@ -41,7 +41,7 @@ import {
  * until something is raised.
  *
  * A counter rental also says where its holder stands with the shop's release
- * when that is anything short of signed (issue #2261, H-108): a word on the
+ * when that is anything short of signed (issue #2261, H-20261008-counter-rental-waiver-informs): a word on the
  * row, never a gate, and the ticket door beside it is where the link is sent.
  *
  * A Server Component that takes its words as props, so it renders in a jsdom
@@ -238,8 +238,8 @@ function MoneyWord({ money, t }: { money: GearRentalMoney; t: StaffTranslator })
 
 /**
  * A current release standing over a physician's earlier "not cleared" or an
- * open referral (H-98 as amended, #2540): the ticket's own sentences, in the
- * warning ink, informing only (H-108). The records are on the ticket.
+ * open referral (H-20261007-after-physician-says-no as amended, #2540): the ticket's own sentences, in the
+ * warning ink, informing only (H-20261008-counter-rental-waiver-informs). The records are on the ticket.
  */
 function MedicalWarnings({
   standing,

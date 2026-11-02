@@ -159,7 +159,7 @@ export type SaveWaiverTemplateResult = {
  *
  * The comparison is exact, on the trimmed text, and deliberately dumb. Whether
  * a *real* edit is material enough to require re-signing is a legal question
- * (H-01/H-03), and DiveDay must never infer materiality from a diff — this only
+ * (H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit), and DiveDay must never infer materiality from a diff — this only
  * recognises the case where there is no diff at all.
  */
 export async function saveWaiverTemplate(
@@ -457,7 +457,7 @@ export async function getWaiverTemplateQuestions(
  * answer never reads "not asked" (dive-domain reviews 1 S1, 2 S3).
  *
  * Scoped by shop *and* by the diver the URL names, signed records only, like
- * `getSignedWaiverForDiver`. A seat still held over who is in it (H-13) shows
+ * `getSignedWaiverForDiver`. A seat still held over who is in it (H-20260724-one-person-per-email) shows
  * no answers at all: they may not be this diver's. An erased record says when.
  *
  * The caller decides who reads it (`canPersonReadShopAnswers`); nothing

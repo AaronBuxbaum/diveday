@@ -20,7 +20,7 @@
  *   *forward*: a diver cannot skip the release by tapping "Sign".
  * - **It says nothing about medical outcomes.** The count is steps, never
  *   answers, and no segment carries a clearance judgment — the waiver and
- *   medical wording freeze (H-01/H-03) covers every word on this page, and
+ *   medical wording freeze (H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit) covers every word on this page, and
  *   `QuestionnaireOutcome` is the one place that speaks about answers at all.
  *   Declining to settle a step is not a judgment about it: the rail is told a
  *   step is still open and draws an open ring, and the page above it is what

@@ -89,7 +89,7 @@ export function BookingPartyFields({
    */
   lead?: { fullName: string; email: string | null; phone: string | null } | null;
   /**
-   * The lead's email once they leave the field with something in it (H-68 b).
+   * The lead's email once they leave the field with something in it (H-20260906-diveday-fill-already-knows b).
    * The caller may offer one link to that address; nothing comes back here,
    * and nothing on the form changes either way.
    */
@@ -410,7 +410,7 @@ export function BookingPartyFields({
                       // 2026-10-24, B22). They are always in the server HTML and
                       // hidden by CSS while the box is empty, so a form posted
                       // before hydration, or autofilled without an event, still
-                      // carried them (H-09).
+                      // carried them (H-20260724-channel-sends-booking-waiver).
                       description={<SmsConsentNote t={t} />}
                       className={`text-base ${SMS_CONSENT_ONCE_FILLED}`}
                       error={fieldErrors?.phone}
@@ -466,7 +466,7 @@ function LeadEmailChoice({
 }
 
 /**
- * **The parent's "Under 18"** (H-113, 2026-10-13). The form asks nobody a date
+ * **The parent's "Under 18"** (H-20261013-under-18-on-party, 2026-10-13). The form asks nobody a date
  * of birth, so without this a parent who booked a twelve-year-old watched her
  * sign her release alone. Stamped on the seat (`minor-N`); the waiver then asks
  * a parent or guardian to co-sign. Controlled so a refused submit keeps the

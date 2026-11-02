@@ -81,7 +81,7 @@ export type ClaimPageData = {
   seatName: string;
   /**
    * The booker said this seat is "Under 18" (`bookings.minor_declared_at`):
-   * the page says a parent or guardian signs the release with them (H-124).
+   * the page says a parent or guardian signs the release with them (H-20261014-parent-signs-minor-release).
    */
   minorDeclared: boolean;
   /**
@@ -267,7 +267,7 @@ export type ClaimSeatResult =
       tripId: string;
       personId: string;
       personName: string;
-      /** Set when the claimant's submitted name didn't match the person row their email resolved to (H-13). */
+      /** Set when the claimant's submitted name didn't match the person row their email resolved to (H-20260724-one-person-per-email). */
       identityUnconfirmed: boolean;
     }
   | { ok: false; reason: "invalid" | "course_prerequisite" }
@@ -299,7 +299,7 @@ export type ClaimSeatResult =
  *   while the seat was the placeholder's stops granting authority over the
  *   claimant's data.
  *
- * Identity semantics follow the public booking form exactly (H-13): an email
+ * Identity semantics follow the public booking form exactly (H-20260724-one-person-per-email): an email
  * match reuses that person row, and a submitted name that doesn't match the
  * row on file stamps `identity_unconfirmed_at`, so readiness fails closed
  * until staff confirm — a claimant can never silently inherit someone else's
@@ -354,7 +354,7 @@ async function claimSeatRecord(tx: DbExecutor, input: ClaimSeatInput): Promise<C
   // must not be the door that dodges it. Minimum age is deliberately not
   // checked here, matching the public booking actor: an age refusal keyed to
   // an email the claimant merely typed is an oracle about someone else's
-  // record (H-22), and the readiness blocker still catches an under-age seat.
+  // record (H-20260724-minimum-age-gate-fail), and the readiness blocker still catches an under-age seat.
   if (trip.courseId) {
     const [course] = await tx
       .select()
@@ -454,7 +454,7 @@ async function claimSeatRecord(tx: DbExecutor, input: ClaimSeatInput): Promise<C
 
   // The claimant's own contact, but only onto an identity that matched: an
   // unconfirmed claimant must not write contact data onto the person row
-  // they merely named (H-13's borrowed-evidence rule, applied to writes).
+  // they merely named (H-20260724-one-person-per-email's borrowed-evidence rule, applied to writes).
   if (!unconfirmed && input.phone?.trim() && !person.phone) {
     await tx
       .update(people)
@@ -689,7 +689,7 @@ export type PartySeatClaim = {
    */
   participantType: ParticipantType;
   /**
-   * **The lead may sign this seat's release as its parent** (H-124, ADR
+   * **The lead may sign this seat's release as its parent** (H-20261014-parent-signs-minor-release, ADR
    * 20261014-parent-signs-minor-release): an unclaimed seat the booker said
    * is "Under 18", not held, still claimable, and owing a waiver. The panel
    * offers "Sign {name}'s waiver" exactly then; `openMinorSeatWaiver`
@@ -771,7 +771,7 @@ export async function issuePartySeatClaims(
       // Only what the panel reads: not the trip's other pricing, and not the
       // waiver's token, draft or signed body. The person's email, birth date
       // and removal stamps are read for the parent's door (`minorSeatDoor`,
-      // H-124) and never leave the server: the panel gets its answer only.
+      // H-20261014-parent-signs-minor-release) and never leave the server: the panel gets its answer only.
       booking: {
         id: bookings.id,
         personId: bookings.personId,
@@ -846,7 +846,7 @@ export async function issuePartySeatClaims(
     )
     .orderBy(asc(bookings.createdAt), asc(people.fullName), asc(bookings.id));
   // A seat counted aboard a boat past its time stays with the crew, as
-  // `cancelUnclaimedPartySeats` keeps it (H-133).
+  // `cancelUnclaimedPartySeats` keeps it (H-20261015-aboard-diver-removal-at).
   const onLeadTrip = rows.filter((row) => row.booking.tripId === row.leadTripId);
   const onLead = onLeadTrip[0];
   const held = onLead
@@ -861,7 +861,7 @@ export async function issuePartySeatClaims(
   // Every unclaimed seat's link in a fixed number of statements, not one
   // round trip per seat (#2488): a party of six costs the same as a party of one.
   const claimable = rows.filter((row) => claimableNow(row.booking, row.trip, now));
-  // The lead's signing context (H-124) only when a seat was declared "Under
+  // The lead's signing context (H-20261014-parent-signs-minor-release) only when a seat was declared "Under
   // 18", and beside the mint rather than before it: neither needs the other's
   // answer, so the parent's door costs an adult party nothing and a minor's
   // party no round trip of its own.
@@ -935,7 +935,7 @@ export async function issuePartySeatClaims(
  * - **a person this booking made**: no email of their own, or only the lead's.
  *   A seat typed with somebody's real name and email lands on that person's
  *   record when the names match, and the lead must never sign a release for a
- *   diver the shop already knows (security review of H-124). The email is only
+ *   diver the shop already knows (security review of H-20261014-parent-signs-minor-release). The email is only
  *   the cheap half: `seatPersonIsThisBookings` reads the record itself, because
  *   a walk-in has no address either and a staff merge can point the seat at one
  * - a record still standing: not removed or erased, the seat's and the lead's
@@ -993,7 +993,7 @@ async function leadSigningContext(
  * stamped with its booking, so this holds for every seat the door is meant
  * for; a diver the shop knew before (a walk-in with no address, a record a
  * staff merge pointed the seat at) has history or another stamp, and the lead
- * never signs for them (security review F2 of H-124). A merge keeps the
+ * never signs for them (security review F2 of H-20261014-parent-signs-minor-release). A merge keeps the
  * survivor's stamp, so an imported record with no history never matches.
  */
 async function seatPersonIsThisBookings(
@@ -1099,7 +1099,7 @@ async function minorSeatDoor(
 }
 
 /**
- * **A parent signs a child's release from their own page** (H-124, ADR
+ * **A parent signs a child's release from their own page** (H-20261014-parent-signs-minor-release, ADR
  * 20261014-parent-signs-minor-release). The lead's verified `readiness`
  * capability is the authority, as it is for the claim links this panel hands
  * out; the seat must be one this lead booked, in this shop, and one the panel

@@ -88,7 +88,7 @@ member; a party-size cap always offers a "bigger group? contact us" escape; a co
 age is visible wherever the booking happens, not only buried on the course page. **Open:**
 `course_min_age` is still not a hard gate for public bookings — a self-declared attestation
 checkbox is the current safe mechanism, and any move toward hard enforcement is a policy question
-(H-08), not just an engineering one — see `features/story-backlog.md`.
+(H-20260724-certification-levels-agency-rules), not just an engineering one — see `features/story-backlog.md`.
 
 ## 4. Marco — the repeat local who wants to book in ten seconds
 

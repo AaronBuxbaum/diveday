@@ -668,7 +668,7 @@ function PayAtBookingFields({
  */
 
 /**
- * H-84 (issue #1555): DAN gives no preflight figure for a dive that took
+ * H-20260916-may-diveday-assert-about (issue #1555): DAN gives no preflight figure for a dive that took
  * stops, so a departure marked here gets no flying sentence on the recap.
  * Nothing else reads it.
  */

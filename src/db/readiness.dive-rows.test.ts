@@ -164,7 +164,7 @@ describe("site cert gate across a trip's dive rows (DOM-C1)", () => {
       (row) => row.booking.id === rosterEntry.booking.id,
     );
     expect(diver?.depthAdvisory).toMatchObject({ status: "exceeds", siteDepth: 35 });
-    // An advisory, never a gate (H-08).
+    // An advisory, never a gate (H-20260724-certification-levels-agency-rules).
     expect(diver?.readiness.blockers.some((blocker) => blocker.code.includes("depth"))).toBe(false);
   });
 

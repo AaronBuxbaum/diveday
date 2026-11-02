@@ -17,7 +17,7 @@ import { CarriedPreparation } from "./CarriedPreparation";
  * `!capability` block in `page.tsx`, the only place a cancelled departure's
  * token arrives).
  *
- * **One boat to ask for** (UX sheet 2026-10-22, item 5; H-151). Where the
+ * **One boat to ask for** (UX sheet 2026-10-22, item 5; H-20261022-called-off-boat-offers). Where the
  * shop runs another departure of the same kind at the same price or lower
  * with a seat free, the card offers it as "Ask to move to …": an ordinary
  * move ask the desk confirms, never a move. `moveAsk` is computed by

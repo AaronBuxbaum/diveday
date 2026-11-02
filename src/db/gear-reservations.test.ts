@@ -138,7 +138,7 @@ describe("reserveGearUnit's screen, held under the booking's lock (issue #2215)"
     expect(await openReservationsOf(db, carmen.bookingId)).toBe(0);
     // A hand pick of a regulator is life support: the staffer is asked, in
     // words, before it is assigned (dive-domain review). Saying "Assign
-    // anyway" is the dock deciding (H-06).
+    // anyway" is the dock deciding (H-20260724-initial-gear-policy-sizing).
     expect(await pick(false)).toEqual({ ok: false, reason: "needs_care_confirm" });
     expect(await openReservationsOf(db, carmen.bookingId)).toBe(0);
     expect((await pick(false, true)).ok).toBe(true);

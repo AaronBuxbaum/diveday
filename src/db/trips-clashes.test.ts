@@ -33,7 +33,7 @@ async function departure(title: string, startsAt: string, endsAt: string, boatId
 
 /**
  * Two departures on one hull at 09:00–13:00 shop-local on 2030-08-03 — the
- * morning charter moved on top of the reef drift, which is H-80's own scenario
+ * morning charter moved on top of the reef drift, which is H-20260916-may-one-hull-carry's own scenario
  * and the shape a shop reaches through the schedule builder.
  */
 async function oneHullTwice() {
@@ -57,7 +57,7 @@ async function oneHullTwice() {
   return { hull, drift, charter };
 }
 
-describe("boatClashes (H-80: one hull, one departure at a time)", () => {
+describe("boatClashes (H-20260916-may-one-hull-carry: one hull, one departure at a time)", () => {
   it("names the other departure on the same hull, from both sides", async () => {
     const { hull, drift, charter } = await oneHullTwice();
     expect(await boatClashes(ctx.db, ctx.shop.id, charter.id)).toEqual([

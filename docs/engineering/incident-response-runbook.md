@@ -1,10 +1,10 @@
 # Incident response runbook
 
 What to do when production is broken. DiveDay runs on one Vercel project and one Neon Postgres
-project ([H-04](../product/human-decisions/README.md)), with error capture in Sentry
+project ([H-20260724-vercel-selected-web-hosting](../product/human-decisions/README.md)), with error capture in Sentry
 ([ADR 20260727-sentry-error-monitoring-q7fk2p](../architecture/decisions/20260727-sentry-error-monitoring-q7fk2p.md)),
 an unauthenticated liveness probe at `src/app/api/health/route.ts`, and a Sentry Cron Monitor
-check-in inside `src/app/api/cron/reminders/route.ts`. H-04 names **Aaron Buxbaum** as the owner of
+check-in inside `src/app/api/cron/reminders/route.ts`. H-20260724-vercel-selected-web-hosting names **Aaron Buxbaum** as the owner of
 secrets, backups, domain, and incident response, and explicitly leaves "the incident-response
 runbook" as still to be written down. This is that document.
 
@@ -113,7 +113,7 @@ improvising from memory; the verification step is the one that matters and it is
 Two things to know before you start:
 
 - **The PITR window is currently unrecorded** — Aaron records it on the first restore run (that
-  runbook's §1 and §4, [H-154](../product/human-decisions/README.md)). If
+  runbook's §1 and §4, [H-20261023-first-restore-run-by](../product/human-decisions/README.md)). If
   the incident is older than whatever Neon's window turns out to be, the fallback is the export
   bundles in S3, which do not contain credentials and may be missing photos. Know that before you
   promise a restore.
@@ -242,7 +242,7 @@ down once will let you down again.
 - **Security incidents get only partial coverage here.** Capability-token exposure is handled in
   [capability-telemetry-runbook.md](capability-telemetry-runbook.md); a suspected breach of accounts,
   medical data, or Stripe credentials needs a disclosure decision that is a legal question
-  ([H-02](../product/human-decisions/README.md)), not an engineering one, and that path is not written down
+  ([H-20260730-evidence-retention-period-deletion](../product/human-decisions/README.md)), not an engineering one, and that path is not written down
   yet.
 - **Third-party outages (Vercel, Neon, Stripe, AWS SES, Twilio) have no documented degradation
   playbook.** Check the provider's status page first; the app degrades to `not_configured` for

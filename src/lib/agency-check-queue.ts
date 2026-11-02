@@ -1,7 +1,7 @@
 import type { AgencyCheckQuery, AgencyListedKind, CheckableAgency } from "./agency-check";
 
 /**
- * **"Check all N with their agencies", one card at a time** (H-105, layer 1 of
+ * **"Check all N with their agencies", one card at a time** (H-20261008-cert-check-extension, layer 1 of
  * the cert-check extension's second round).
  *
  * A departure's Divers tab can hand every card the extension can check to the

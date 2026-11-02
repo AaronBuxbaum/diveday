@@ -42,7 +42,7 @@ const repointIdentityForm = z.object({
 const rosterBookingForm = z.object({ bookingId: text() });
 
 /**
- * Staff confirm a flagged booking is the person it was attached to (H-13),
+ * Staff confirm a flagged booking is the person it was attached to (H-20260724-one-person-per-email),
  * clearing the `identity_unconfirmed` readiness blocker. Same shop-scoped
  * session gate as every roster action; a no-op on an already-clear booking
  * still settles cleanly so a double-tap is harmless.
@@ -96,7 +96,7 @@ export async function confirmDiverIdentityAction(
 }
 
 /**
- * Staff answer "different person" to a held seat (H-13): the booking leaves
+ * Staff answer "different person" to a held seat (H-20260724-one-person-per-email): the booking leaves
  * the matched diver's record and becomes a new diver of its own. The other
  * door onto the same question as {@link confirmDiverIdentityAction}; the write
  * and its trail are `splitBookingIdentity`'s.

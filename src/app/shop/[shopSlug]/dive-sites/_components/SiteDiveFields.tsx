@@ -122,7 +122,7 @@ export function SiteDiveFields({
           />
         </Field>
         {/* The one depth figure a certification ceiling can be compared
-            against (H-08). Left blank it simply never warns — this advises,
+            against (H-20260724-certification-levels-agency-rules). Left blank it simply never warns — this advises,
             it never gates. */}
         <Field
           label={t(

@@ -252,7 +252,7 @@ describe("capacity against the assigned hull", () => {
 });
 
 /**
- * **Nor more seats than the hull's certificate allows** (H-107). Separate from
+ * **Nor more seats than the hull's certificate allows** (H-20261009-certificate-caps-seats). Separate from
  * the hull's own capacity, because a boat saved before the decision may still
  * sell more seats than its certificate, and a departure on it must not.
  */

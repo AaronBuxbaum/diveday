@@ -214,7 +214,7 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
           // there is a refund to preview, and the form's own `mt-3` stood
           // "Cancel my spot" 36px under the rule without one (K-156).
           <section className={`flex flex-col gap-3 ${THREAD_FOOT_SECTION_CLASS}`}>
-            {/* Past the free window, the ask comes before the forfeit (H-126). */}
+            {/* Past the free window, the ask comes before the forfeit (H-20261014-ask-to-move). */}
             {data.moveAsk ? (
               <MoveAsk
                 state={data.moveAsk}

@@ -304,24 +304,24 @@ and discover it at the dock.
     **Partial — this PR.** Implemented only the safe subset the dive-domain-expert review below
     calls for: `minimumAge` now renders on course trip pages, and the booking form requires a
     self-declared attestation checkbox. No birth date is persisted and `course_min_age` still
-    isn't a hard gate for public actors — doing that would reverse human-decision H-08 (age
-    refusals as a probing vector, H-22) and needs its own human-decision entry, not just an
+    isn't a hard gate for public actors — doing that would reverse human-decision H-20260724-certification-levels-agency-rules (age
+    refusals as a probing vector, H-20260724-minimum-age-gate-fail) and needs its own human-decision entry, not just an
     engineering change. **Deferred pending that decision.**
 
     **Dive-domain-expert review.** This needs reframing before implementation, not just building
     as written — `course_min_age` is deliberately unenforced for public actors today
-    (`docs/product/human-decisions/README.md` H-08 option B, cross-referenced by H-22
+    (`docs/product/human-decisions/README.md` H-20260724-certification-levels-agency-rules option B, cross-referenced by H-20260724-minimum-age-gate-fail
     `20260725-checklist-age-disclosure`): a hard public-facing age refusal can be used to probe
-    whether a specific address/email belongs to a minor, which is exactly what H-22 closed off.
+    whether a specific address/email belongs to a minor, which is exactly what H-20260724-minimum-age-gate-fail closed off.
     An **attestation checkbox** ("I confirm every diver on this booking meets the minimum age of
     {n}") is the safer mechanism — a self-declared checkbox can't be used to fingerprint an
     already-known person the way a birthdate-driven refusal can — but on its own it's not
     enforcement: if it doesn't write to `people.date_of_birth`, the existing `under_minimum_age`
     readiness blocker still never fires and dock-day discovery isn't actually fixed. If the
     implementation *does* start persisting a submitted birth year, that interacts with
-    `findOrCreatePerson`'s email-match reuse (H-13) and can reopen the H-22 probing vector —
+    `findOrCreatePerson`'s email-match reuse (H-20260724-one-person-per-email) and can reopen the H-20260724-minimum-age-gate-fail probing vector —
     route that path through `security-reviewer`, not only `dive-domain-expert`. Adding any hard
-    block for public actors is a policy reversal of H-08 and needs its own human-decision entry,
+    block for public actors is a policy reversal of H-20260724-certification-levels-agency-rules and needs its own human-decision entry,
     not just an engineering change. Agency nuances to encode correctly: PADI Discover Scuba's
     floor is age 10, Bubblemaker (pool-only) runs younger (~8–9), and Junior Open Water Diver
     spans ages 10–14 with restrictions that lift automatically at 15 without a new course —
@@ -391,7 +391,7 @@ pages erode trust fast — especially around money, medicine, and legal text.
 **What she hits today.** Only `en-US` and `es-ES` exist. The **RSTC medical questionnaire and the
 default waiver body are hardcoded English** (`src/lib/medical.ts`, `src/lib/waivers.ts`) inside
 an otherwise fully translated Spanish page — the highest-stakes untranslated text in the product
-(sign-off pending H-01/H-03 per AGENTS.md, but the gap deserves a visible interim note). The
+(sign-off pending H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit per AGENTS.md, but the gap deserves a visible interim note). The
 capacity pill on four surfaces returns raw English from the domain layer (`capacityLabel()` in
 `src/lib/trips.ts` — "1 spot left"), while a correctly pluralized `fallback.spotsLeft` key sits
 unused. Booking validation errors are hardcoded English in the server action
@@ -444,7 +444,7 @@ built in English in the domain layer (`src/db/checkouts.ts`, `src/lib/courses.ts
     `"diver"` (`recap/[token]/page.tsx`) are injected into localized greetings. Add translated
     fallback keys.
     **Done — PR #272.**
-38. **[M] Add an interim notice for English-only legal/medical text.** While H-01/H-03 keep
+38. **[M] Add an interim notice for English-only legal/medical text.** While H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit keep
     waiver/medical wording in English, render a one-line translated notice above them on non-en
     locales: "This legal and medical text is provided in English — ask the shop if anything is
     unclear." Keeps trust without touching the frozen wording. Coordinate with

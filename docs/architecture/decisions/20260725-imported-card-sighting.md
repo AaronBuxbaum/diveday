@@ -1,7 +1,7 @@
 # 20260725-imported-card-sighting — Make the gate-opening confirm assert a card sighting, and never bend a technical rating onto the recreational ladder
 
 - **Status:** Superseded in part — the card-sighting attestation was dropped on 2026-08-14 by
-  [20260814-one-tap-imported-card-confirm](20260814-one-tap-imported-card-confirm.md) (H-24 revised).
+  [20260814-one-tap-imported-card-confirm](20260814-one-tap-imported-card-confirm.md) (H-20260725-two-findings-dive-domain revised).
   Everything below about **technical ratings** (`TECHNICAL_CERT`, `DISCIPLINE_QUALIFIER`, and the
   rule that a technical or overhead rating imports as nothing) is unchanged and still binding.
 - **Date:** 2026-07-25
@@ -16,7 +16,7 @@ as out-of-scope consequences rather than fixed, because one was a product decisi
 pre-existing defect. The product owner asked for both, with the instruction *"or just show that it
 didn't import and why"* — which is the shape the second fix takes.
 
-**1. The confirm asserted nothing.** H-23 chose "an imported specialty card is verified, but its gate
+**1. The confirm asserted nothing.** H-20260725-owner-asked-move-rows chose "an imported specialty card is verified, but its gate
 holds until a staffer confirms it" specifically so a spreadsheet typo could not clear a deep dive. But
 `reviewSpecialtyCertification` just stamped `reviewedAt` — no prompt, no claim, no note. The same was
 true of the nitrox confirm, which authorizes an enriched-air fill. So the posture's entire value

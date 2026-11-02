@@ -24,7 +24,7 @@ const blowoutPath = (shopSlug: string, tripId: string) =>
  * The one-tap blow-out (docs ADR 20260804-blowout-cascade). Open to all staff,
  * same as `cancelTripAction`: the weather go/no-go is the crew's call
  * (glossary). Calling it off is the crew's, but **the refunds it triggers are not**
- * (H-139): a caller with the refund right (`canRefund`, H-14) sends each
+ * (H-20261013-call-off-queues-refunds): a caller with the refund right (`canRefund`, H-20260724-staff-role-reach) sends each
  * seat's card capture back by itself (ADR 20260813-shop-cancellation-refunds-itself);
  * anyone else leaves the money captured, tells each diver a refund is owed, and
  * a refund holder releases it from this page (`releaseBlowoutRefundsAction`).
@@ -93,8 +93,8 @@ export async function resumeBlowoutAction(shopSlug: string, tripId: string) {
 }
 
 /**
- * **Release the refunds a call-off left queued** (H-139). Owner or manager
- * only (`canRefund`, H-14), re-checked here against the live roles rather than
+ * **Release the refunds a call-off left queued** (H-20261013-call-off-queues-refunds). Owner or manager
+ * only (`canRefund`, H-20260724-staff-role-reach), re-checked here against the live roles rather than
  * trusted from the page. Refuses a departure that is not canceled with a
  * blow-out record: `refundBookingsForShopCancelledTrip` refunds every active
  * seat, which must never be reachable on a live trip. Safe to re-run: a seat

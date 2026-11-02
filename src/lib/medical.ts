@@ -1,5 +1,5 @@
 // i18n-exempt-file: the participant questionnaire is safety/legal wording from
-// the published UHMS/DMSC form and stays English pending H-01/H-03 sign-off.
+// the published UHMS/DMSC form and stays English pending H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit sign-off.
 import type { MedicalAnswers, MedicalJurisdiction } from "@/db/schema";
 
 export type MedicalQuestionSection =
@@ -321,7 +321,7 @@ export const RSTC_QUESTIONNAIRE: MedicalQuestionnaire = {
  * versions cannot drift in any other respect.
  *
  * **Why this survives where the v1 paraphrase did not** (deleted the same day
- * by the H-49 "there is no legacy" pass): v1 was wording DiveDay invented and
+ * by the H-20260815-no-legacy "there is no legacy" pass): v1 was wording DiveDay invented and
  * no published form ever carried, so nothing could ever need it to read a
  * record honestly. v2 *is* the published form as it stood, and this is the
  * first time the version pin ADR 20260805 promises has had to do its job. The
@@ -353,7 +353,7 @@ const BY_KEY = new Map(
 /**
  * Not a lookup yet: every jurisdiction — including the `uk` value the schema
  * enum carries — currently falls back to the RSTC questionnaire, because no UK
- * questionnaire has been written (that wording is a sign-off decision, H-03).
+ * questionnaire has been written (that wording is a sign-off decision, H-20260724-current-typed-name-explicit).
  * The argument is accepted so call sites don't change when one lands.
  */
 export function questionnaireForJurisdiction(
@@ -663,7 +663,7 @@ function referralRef(questionId: string): MedicalReferralRef | null {
 export type MedicalReferralItem = { ref: MedicalReferralRef; prompt: string };
 
 /**
- * **What a referred diver shows their doctor** (H-127, ADR
+ * **What a referred diver shows their doctor** (H-20261014-physician-form-for-referral, ADR
  * 20261016-doctor-referral-page, amended by the layer r5-3 reviews): each yes
  * that calls for evaluation, with its place on the form and the form's
  * published prompt, never an answer's free-text detail. A primary yes that

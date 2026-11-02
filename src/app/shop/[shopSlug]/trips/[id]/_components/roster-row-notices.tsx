@@ -159,7 +159,7 @@ export function rowNotices(seat: RowNoticesInput) {
   /**
    * **A clean release stood over a referral no physician answered, and the
    * row says so the same way** (Aaron, 2026-10-09, issue #2195, amending
-   * H-98): the override stands, and the warning links back to the referral.
+   * H-20261007-after-physician-says-no): the override stands, and the warning links back to the referral.
    * Never alongside the refusal line for one record (`overriddenReferral`
    * leaves refusals out), and withheld on a held seat for the same reason.
    */

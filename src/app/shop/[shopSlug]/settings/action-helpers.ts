@@ -57,7 +57,7 @@ export async function settingsBlock(session: {
 
 /**
  * Payment settings (Stripe Connect and the rental catalog/prices) are
- * owner/manager work (H-14, ADR 20260724-role-authorization), re-checked
+ * owner/manager work (H-20260724-staff-role-reach, ADR 20260724-role-authorization), re-checked
  * against live roles. Refusal redirects here so callers cannot forget to act
  * on a returned target. Narrower than {@link settingsBlock} by intent rather
  * than by effect — the two resolve to the same roles today, and each states

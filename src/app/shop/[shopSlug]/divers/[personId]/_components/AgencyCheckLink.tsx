@@ -13,7 +13,7 @@ import { AgencyCheck } from "./AgencyCheck";
 /**
  * "Check with SSI": the agency's own public verification page, in a new tab,
  * beside a card that is waiting for somebody to confirm it. DiveDay's servers
- * never call the agency (H-10). Renders nothing for an agency with no lookup
+ * never call the agency (H-20261007-request-supported-c-card). Renders nothing for an agency with no lookup
  * (`src/lib/agency-verification.ts`). The words say what the far side is
  * (`agencyLinkLabel`): a portal with gaps is "searched", and a member sign-in
  * is named before the staffer meets the login form.
@@ -21,7 +21,7 @@ import { AgencyCheck } from "./AgencyCheck";
  * A level card passes `check`, and then the same words become a button when
  * the DiveDay browser extension is in this browser: the extension reads the
  * agency's page from the staffer's own browser and a match certifies the card
- * (H-105, `AgencyCheck`). Without the extension it is still this link.
+ * (H-20261008-cert-check-extension, `AgencyCheck`). Without the extension it is still this link.
  */
 export function AgencyCheckLink({
   agency,
@@ -36,7 +36,7 @@ export function AgencyCheckLink({
     card?: { type: "nitrox" | "specialty"; kind: AgencyListedKind };
     awaiting: boolean;
     query: AgencyCheckQuery | null;
-    /** The shop's switch keeps this agency's check off (H-121): say so beside the link. */
+    /** The shop's switch keeps this agency's check off (H-20261014-padi-divechek): say so beside the link. */
     switchedOff?: boolean;
     action: (previous: AgencyCheckResult, formData: FormData) => Promise<AgencyCheckResult>;
     /** Files the page's other cards the staffer ticked, after a match (layer 3). */

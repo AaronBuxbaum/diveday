@@ -636,7 +636,7 @@ describe("the guardian co-signature (ADR 20260907-guardian-co-signature)", () =>
 });
 
 /**
- * **The booker's "Under 18"** (decision 2026-10-13, after H-21): a seat the
+ * **The booker's "Under 18"** (decision 2026-10-13, after H-20260730-minimum-age-gate-data): a seat the
  * public party form marked, for a diver with no date of birth on file, takes
  * the same co-signature a known minor's does, at every writer and at the gate.
  */

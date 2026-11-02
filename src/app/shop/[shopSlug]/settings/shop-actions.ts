@@ -110,7 +110,7 @@ const seasonStartForm = z.object({ seasonStartMonth: formValue(), seasonStartDay
  * currency was set when they were typed, nothing is converted here, and
  * already-settled rows keep their own currency, so this only changes what a
  * *future* charge and the shop's price list mean. And it is owner/manager work
- * (H-14) rather than anything a divemaster may do, because it decides what a
+ * (H-20260724-staff-role-reach) rather than anything a divemaster may do, because it decides what a
  * diver's card is charged in.
  *
  * That gate is enforced twice. The page renders the currency `<select>` only

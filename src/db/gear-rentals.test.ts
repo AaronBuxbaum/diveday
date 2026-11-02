@@ -166,7 +166,7 @@ describe("listGearRentals", () => {
   });
 
   /**
-   * H-108 (issue #2346): the Rentals list says where each counter-rental
+   * H-20261008-counter-rental-waiver-informs (issue #2346): the Rentals list says where each counter-rental
    * holder stands with the waiver, read only for those holders and only when
    * the caller names the shop's zone. A trip holder's waiver is the
    * departure's business, said on the roster.

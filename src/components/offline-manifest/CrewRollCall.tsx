@@ -11,7 +11,7 @@ import { BUDDY_NAMES_WRAP, buddyNamesList, reTap } from "./shared";
 import type { OfflineTripView } from "./trip-view";
 
 /**
- * The crew half of the head count, recordable on this copy since H-46.
+ * The crew half of the head count, recordable on this copy since H-20260814-where-diveday-sit-between.
  */
 export function OfflineCrewRollCall({
   view,
@@ -68,7 +68,7 @@ export function OfflineCrewRollCall({
                     })}
         </p>
         {/* The one remaining limitation, and it belongs to the *copy*, not
-        to the feature: a snapshot older than H-46 has crew with no id,
+        to the feature: a snapshot older than H-20260814-where-diveday-sit-between has crew with no id,
         so there is nobody for a tap to be about. Named with a count, so
         a captain can tell whether it is the whole crew or one late
         addition, and pointed at the two things that fix it. Absent
@@ -110,7 +110,7 @@ export function OfflineCrewRollCall({
                   ink, as a diver's is. A name and a mark, as on the diver
                   rows and the live crew list (#1840): the circle is the row's
                   one tap, the exception a deliberate tap away in the panel
-                  below. No tap on an expired copy (the H-05 stop rule, stated
+                  below. No tap on an expired copy (the H-20260724-product-now-uses-explicit stop rule, stated
                   once in the banner above and enforced in `record`), and none
                   for a crew member this copy has no id for. Otherwise always:
                   crew carry no readiness, so nothing withholds the aboard

@@ -7,7 +7,7 @@
 
 DiveDay had no way for a shop to pay it. The trial ran for three weeks from `shops.created_at`
 (`src/lib/trial.ts`), Settings told the owner how many days were left, and the next step was an
-email to `onboarding@dive.day` (H-12, 2026-08-05). The market audit (item 7) asked for the paid
+email to `onboarding@dive.day` (H-20260724-public-founding-shop-price, 2026-08-05). The market audit (item 7) asked for the paid
 path: a card captured once, a monthly charge, and a cancel the owner can do alone.
 
 Constraints that shaped this decision:
@@ -15,11 +15,11 @@ Constraints that shaped this decision:
 - DiveDay already talks to Stripe through **Connect**. A shop's own account takes divers' money
   (ADR 20260719-stripe-connect-orders). The billing relationship runs the other way, from the
   shop to DiveDay, and must never touch a shop's connected account or its keys.
-- **No paywall.** Expiry is soft by product decision (H-12). Nothing locks, hides or slows down
+- **No paywall.** Expiry is soft by product decision (H-20260724-public-founding-shop-price). Nothing locks, hides or slows down
   because a shop has not paid.
 - The product has **no operator identity**, so there is no "DiveDay staff" login that could grant a
   shop free months from a screen.
-- Pre-pilot (H-49): no backfill and no dual-read.
+- Pre-pilot (H-20260815-no-legacy): no backfill and no dual-read.
 
 ## Decision
 
@@ -157,7 +157,7 @@ each action. A manager is refused, as is a session whose JWT still says owner.
   need its own ADR for three endpoints.
 - **A staff screen for free terms.** No. No operator role exists. A script against `DATABASE_URL` is
   honest about who can run it.
-- **Gate features on standing.** Refused by H-12's soft-expiry decision. The seam exists; the gate
+- **Gate features on standing.** Refused by H-20260724-public-founding-shop-price's soft-expiry decision. The seam exists; the gate
   does not.
 
 ## Consequences
@@ -165,16 +165,16 @@ each action. A manager is refused, as is a session whose JWT still says owner.
 - A shop can pay without an email, cancel without one, and change its card in Stripe's own UI.
   DiveDay renders no card field and stores no card data. The only Stripe ids it stores are the
   customer id and the subscription id, in `shop_subscriptions`.
-- **This reverses part of H-12.** On 2026-08-14 H-12 decided the six-month founding term gets **no
+- **This reverses part of H-20260724-public-founding-shop-price.** On 2026-08-14 H-20260724-public-founding-shop-price decided the six-month founding term gets **no
   per-shop free-term state in the product**. `free_term_ends_on` is exactly that state. The column
   exists because the market-audit brief asked for "a staff-set free-term end date, so Aaron can
-  grant founding free months by hand". Aaron amended H-12 on 2026-10-14 to keep it.
+  grant founding free months by hand". Aaron amended H-20260724-public-founding-shop-price on 2026-10-14 to keep it.
   - The column is inert unless the script writes it.
   - A shop without it reads exactly as before: trialing, then trial ended.
 - **The pricing page's trial note goes stale once billing is turned on.** It still says to move to
   paid by emailing `onboarding@dive.day` (`marketing.pricing.trialNote`; the FAQ row it replaced
   left on 2026-10-24). Aaron decided on
-  2026-10-14 (H-12) that it stays until billing goes live.
+  2026-10-14 (H-20260724-public-founding-shop-price) that it stays until billing goes live.
 - Taxes are untouched. Stripe Tax on DiveDay's own invoices is the finance owner's call
   (`docs/product/stakeholders/finance-and-tax.md`). Turning it on is a Stripe price and dashboard
   setting, not a code change.

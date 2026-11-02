@@ -87,7 +87,7 @@ export type BookedCard = {
   pickup: { time: string | null; location: string | null };
   bookingCancelled: boolean;
   departureCancelled: boolean;
-  /** This seat is the diver's 10th, 25th, 50th or 100th boat with the shop (H-128), or null. */
+  /** This seat is the diver's 10th, 25th, 50th or 100th boat with the shop (H-20261014-boat-count-milestones), or null. */
   milestone: DiveDayMilestone | null;
 };
 
@@ -389,7 +389,7 @@ export type ReadyPageData = {
    */
   canCancelBooking: boolean;
   /**
-   * The desk saw this diver and turned them away (H-135), rather than marking
+   * The desk saw this diver and turned them away (H-20261015-who-may-turn-someone), rather than marking
    * them not here. After the departure the page says the shop could not take
    * them, never that they did not make it. The category is not carried: the
    * diver was there, and a bearer link is no place to print it.
@@ -427,7 +427,7 @@ export type ReadyPageData = {
    */
   runningLate: { open: boolean; saidAt: Date | null };
   /**
-   * **"Ask to move"** (H-126). Past the free-cancellation window, or on a
+   * **"Ask to move"** (H-20261014-ask-to-move). Past the free-cancellation window, or on a
    * trip with none, a paid cancel returns nothing right away, so the diver
    * may ask the shop for another date instead: `open` while that ask could be
    * made — a paid seat the diver may still release, not held, on their own
@@ -600,7 +600,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
     // Read here rather than folded into `getRentalFit`'s row, because the
     // staffer's name comes from a join this page is the only caller of.
     fitConfirmationForDiver(db, row.shopId, row.personId),
-    // Whether an ask to move stands (H-126), read here with the rest rather
+    // Whether an ask to move stands (H-20261014-ask-to-move), read here with the rest rather
     // than after the cancel check it is used behind: that was two round trips
     // more for every seat past the free window. A seat that cannot be
     // released, or whose identity is held, never shows it.
@@ -709,7 +709,7 @@ export async function getReadyPageData(
   const canCancelBooking =
     row.status === "booked" &&
     !hasSailed(trip.startsAt, now) &&
-    // Counted aboard a boat past its time: `selfCancelBooking` refuses it (H-133).
+    // Counted aboard a boat past its time: `selfCancelBooking` refuses it (H-20261015-aboard-diver-removal-at).
     !(
       await heldAtTheDoor(db, {
         shopId: row.shopId,

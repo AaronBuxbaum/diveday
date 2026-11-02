@@ -25,7 +25,7 @@ export const HANDOFF_TTL_MS = 10 * MINUTE_MS;
  * (`src/lib/capability-urls.ts`), which `from` could not.
  */
 export const HANDOFF_QUERY_PARAM = "handoff";
-/** One cold-email link per diver per hour (H-68 b), keyed on the delivery row. */
+/** One cold-email link per diver per hour (H-20260906-diveday-fill-already-knows b), keyed on the delivery row. */
 export const HANDOFF_OFFER_COOLDOWN_MS = 60 * MINUTE_MS;
 
 export type KnownDiverFact =

@@ -653,7 +653,7 @@ test.describe("staff", () => {
     await expect(page.getByRole("heading", { name: /You’ve got a seat, Ravi/ })).toBeVisible();
   });
 
-  // PADI's published entry-level in-water ratio (H-08, src/lib/course-ratios.ts):
+  // PADI's published entry-level in-water ratio (H-20260724-certification-levels-agency-rules, src/lib/course-ratios.ts):
   // a solo instructor seats at most 8 students, independent of the trip's own
   // stated capacity. Set the trip's capacity well above 8 so the ratio — not
   // capacity — is what blocks the 9th booking.

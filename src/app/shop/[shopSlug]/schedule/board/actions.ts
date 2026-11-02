@@ -86,7 +86,7 @@ const removeDepartureForm = z.object({ tripId: z.uuid() });
 const boardPath = (shopSlug: string) => shopPath(shopSlug, "schedule", "board");
 
 /**
- * Trip definition is owner/manager/instructor work (H-14, ADR
+ * Trip definition is owner/manager/instructor work (H-20260724-staff-role-reach, ADR
  * 20260724-role-authorization) — re-checked against live roles, never trusted
  * from the session's JWT.
  */
@@ -110,7 +110,7 @@ async function requireBoardAuthor(shopSlug: string) {
  * queries onto the path that actually uses them.
  *
  * Scoped by the session's own shop, never a slug, and empty for anyone who
- * cannot define trips (H-14) — the panel they would fill in isn't rendered for
+ * cannot define trips (H-20260724-staff-role-reach) — the panel they would fill in isn't rendered for
  * them either.
  */
 /**
@@ -457,7 +457,7 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
   if (lensId && !(await getTripLens(db, shop.id, lensId))) return await invalid();
 
   // The hull the panel just assigned. Its own prefill puts this number in
-  // the box, but the box is editable afterwards. The certificate remains a limit (H-107).
+  // the box, but the box is editable afterwards. The certificate remains a limit (H-20261009-certificate-caps-seats).
   const assignedBoat = boatId ? await getBoatById(db, shop.id, boatId) : null;
   const details = tripDetailsPatch(
     {

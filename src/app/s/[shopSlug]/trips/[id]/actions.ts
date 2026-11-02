@@ -317,7 +317,7 @@ export async function bookSpot(
     for (let index = 0; index < partySize; index++) {
       gearSelections.push({
         // One suit, held here as well as in `saveRentalFit`, so a post that
-        // ticks both is charged for the suit that gets packed (H-78).
+        // ticks both is charged for the suit that gets packed (H-20260916-rental-fit-describe-shop).
         rentedKinds: withOneSuit(
           offeredGearItems
             .filter((item) => rentsKind(partyTypes[index], item.kind))
@@ -432,7 +432,7 @@ export async function bookSpot(
     // says instead is what the *trip* requires — the same words for every
     // submitter, describing the boat rather than the person, and revealing only
     // what the page above the form already displays (see
-    // `tripRequirementList`). H-22's rule is intact: nothing here is about that
+    // `tripRequirementList`). H-20260724-minimum-age-gate-fail's rule is intact: nothing here is about that
     // diver's record.
     if (outcome.reason === "trip_prerequisite") {
       const [tripRequirement, siteRequirement] = await Promise.all([
@@ -815,7 +815,7 @@ export async function joinWaitlist({ shopSlug, tripId, embed }: TripRef, formDat
     fullName: parsed.data.fullName,
     email: parsed.data.email,
     // No phone: the wait list asks a name and an email only (B57), so a
-    // posted number was never given under the SMS consent's words (H-09).
+    // posted number was never given under the SMS consent's words (H-20260724-channel-sends-booking-waiver).
     partySize: partySize.data,
     // Bounded per *subject* address rather than per IP — the only key a
     // rotating set of submitters cannot clear (RATE_LIMITS.declarationByPerson).
@@ -844,7 +844,7 @@ export async function joinWaitlist({ shopSlug, tripId, embed }: TripRef, formDat
 
 /**
  * **One link to an address typed cold** (ADR 20260906-before-you-ask, decision
- * 3; H-68 b). Called from the booking form's own lead-email blur, never a page
+ * 3; H-20260906-diveday-fill-already-knows b). Called from the booking form's own lead-email blur, never a page
  * load. Returns nothing whatever happened: the page must not learn whether
  * the address is on file, and the delivery row keeps it to one an hour.
  */

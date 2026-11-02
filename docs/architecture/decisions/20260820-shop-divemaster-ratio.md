@@ -26,7 +26,7 @@ water.
 
 Sitting beside all this, and easy to confuse with it, are the **agency course ratios** in
 `src/lib/course-ratios.ts`: PADI's published 8/+2/12 for Open Water training dives and the tighter
-Discover Scuba figure (H-08, HD-6). Those are safety caps sourced from an instructor manual, and
+Discover Scuba figure (H-20260724-certification-levels-agency-rules, HD-6). Those are safety caps sourced from an instructor manual, and
 they really do refuse a seat in `createBookingRecord`.
 
 ## Decision
@@ -53,7 +53,7 @@ which is the more dangerous direction of the two.
 the split. This target adds them: an instructor guiding a fun dive is guiding it, and a shop that
 rosters two instructors and no divemaster has not left the water unsupervised.
 
-**`shore_group_size` is dropped, not carried.** Pre-pilot, no users, H-49. The Requests planner now
+**`shore_group_size` is dropped, not carried.** Pre-pilot, no users, H-20260815-no-legacy. The Requests planner now
 sizes a boatless day as one departure of the people who actually asked, and recommends the
 divemasters the target implies — for boat shops too, where the hull already answers the seat
 question and never answered this one.

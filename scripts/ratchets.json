@@ -604,7 +604,7 @@
         }
       },
       {
-        "why": "merge of the pre-push-gate branch: the file-length half now counts test files, and the 2026-10-14 test review's safety cases (H-104, S2, admission/readiness adversarial tests) grew these before it landed",
+        "why": "merge of the pre-push-gate branch: the file-length half now counts test files, and the 2026-10-14 test review's safety cases (H-20261006-medical-holds-every-departure, S2, admission/readiness adversarial tests) grew these before it landed",
         "files": {
           "src/db/seat-claims.test.ts": "1047 -> 1094",
           "src/db/self-declared-cards.test.ts": "1864 -> 1865",
@@ -687,6 +687,68 @@
         "why": "merge current main into PR #3132",
         "files": {
           "src/lib/manifests.test.ts": "1053 -> 1054"
+        }
+      },
+      {
+        "why": "Merge of main (#2547, #2575 to #2580) into the test-split layer: the widened guard (test files, code-line limit) meets files that grew on main after this layer forked",
+        "files": {
+          "src/app/api/offline-manifests/sync/route.test.ts": "953 -> 955",
+          "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": "961 -> 971",
+          "src/db/bookings.test.ts": "3384 -> 3418",
+          "src/db/checkouts.test.ts": "2839 -> 2912",
+          "src/db/closeout.test.ts": "0 -> 903",
+          "src/db/courses.test.ts": "1659 -> 1719",
+          "src/db/executed-dives.test.ts": "1082 -> 1085",
+          "src/db/orders.test.ts": "3097 -> 3163",
+          "src/db/recap.test.ts": "2114 -> 2138",
+          "src/db/self-declared-cards.test.ts": "1836 -> 1864",
+          "src/lib/staffing-week.test.ts": "979 -> 1115",
+          "src/lib/waivers.test.ts": "1188 -> 1205"
+        }
+      },
+      {
+        "why": "merge of the pre-push-gate branch: the file-length half now counts test files, and the 2026-10-14 test review's safety cases (H-20261006-medical-holds-every-departure, S2, admission/readiness adversarial tests) grew these before it landed",
+        "files": {
+          "src/db/seat-claims.test.ts": "1047 -> 1094",
+          "src/db/self-declared-cards.test.ts": "1864 -> 1865",
+          "src/db/waiver-issue.test.ts": "1051 -> 1178",
+          "src/db/waivers-medical.test.ts": "0 -> 1004",
+          "src/lib/trip-admission.test.ts": "918 -> 984",
+          "src/lib/waivers.test.ts": "1205 -> 1402"
+        }
+      },
+      {
+        "why": "Merge of main (#2547, #2575 to #2580) into the test-split layer: the widened guard (test files, code-line limit) meets files that grew on main after this layer forked",
+        "files": {
+          "src/app/api/offline-manifests/sync/route.test.ts": "953 -> 955",
+          "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": "961 -> 971",
+          "src/db/bookings.test.ts": "3384 -> 3418",
+          "src/db/checkouts.test.ts": "2839 -> 2912",
+          "src/db/closeout.test.ts": "0 -> 903",
+          "src/db/courses.test.ts": "1659 -> 1719",
+          "src/db/executed-dives.test.ts": "1082 -> 1085",
+          "src/db/orders.test.ts": "3097 -> 3163",
+          "src/db/recap.test.ts": "2114 -> 2138",
+          "src/db/self-declared-cards.test.ts": "1836 -> 1864",
+          "src/lib/staffing-week.test.ts": "979 -> 1115",
+          "src/lib/waivers.test.ts": "1188 -> 1205"
+        }
+      },
+      {
+        "why": "Merge of main (#2547, #2575 to #2580) into the test-split layer: the widened guard (test files, code-line limit) meets files that grew on main after this layer forked",
+        "files": {
+          "src/app/api/offline-manifests/sync/route.test.ts": "953 -> 955",
+          "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": "961 -> 971",
+          "src/db/bookings.test.ts": "3384 -> 3418",
+          "src/db/checkouts.test.ts": "2839 -> 2912",
+          "src/db/closeout.test.ts": "0 -> 903",
+          "src/db/courses.test.ts": "1659 -> 1719",
+          "src/db/executed-dives.test.ts": "1082 -> 1085",
+          "src/db/orders.test.ts": "3097 -> 3163",
+          "src/db/recap.test.ts": "2114 -> 2138",
+          "src/db/self-declared-cards.test.ts": "1836 -> 1864",
+          "src/lib/staffing-week.test.ts": "979 -> 1115",
+          "src/lib/waivers.test.ts": "1188 -> 1205"
         }
       }
     ],
