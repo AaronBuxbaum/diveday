@@ -26,7 +26,11 @@ import Stripe from "stripe";
  *   it, and the SDK's typed resources (which describe its release's version)
  *   are therefore not used: every call is a `rawRequest` whose answer the
  *   adapter validates with its own schema.
- * - **No telemetry.** Nothing about earlier requests or the host rides along.
+ * - **No telemetry, no host details.** `telemetry: false` stops the timings of
+ *   earlier requests; the SDK still describes its runtime (Node and SDK
+ *   versions, and an AI-agent tag when it detects one) in
+ *   `X-Stripe-Client-User-Agent` and `User-Agent`, so {@link wireFetch} drops
+ *   the first and sends a plain `User-Agent` of its own.
  *
  * Every adapter hands in the `fetch` it was given, so a test's fake sees the
  * same request production sends, and `stripe-client.test.ts` fails on a file
@@ -38,6 +42,10 @@ type Fetch = typeof fetch;
 
 /** The header the SDK pins its own release's API version with; never sent (see above). */
 const SDK_VERSION_HEADER = "Stripe-Version";
+
+/** The SDK's description of its runtime; never sent (see above). */
+const SDK_CLIENT_DESCRIPTION_HEADER = "X-Stripe-Client-User-Agent";
+const USER_AGENT = "DiveDay";
 
 /** What the SDK retries once even with retries off. */
 const CONNECTION_CLOSED_CODES = new Set(["ECONNRESET", "EPIPE"]);
@@ -80,6 +88,8 @@ export function wireFetch(fetchImpl: Fetch): Fetch {
   return async (input, init) => {
     const headers = plainHeaders(init?.headers);
     delete headers[SDK_VERSION_HEADER];
+    delete headers[SDK_CLIENT_DESCRIPTION_HEADER];
+    headers["User-Agent"] = USER_AGENT;
     let response: Response;
     try {
       response = await fetchImpl(input, { ...init, headers });
@@ -156,4 +166,17 @@ export function stripeErrorTokens(error: unknown): { code?: string; type?: strin
   const rawType: string | undefined = error.rawType;
   const type = rawType === NO_ERROR_BODY ? undefined : rawType;
   return { code: error.code, type };
+}
+
+/**
+ * Stripe decided and did not act: a 4xx carrying Stripe's own error envelope.
+ * Not a 409, which says another request with the same idempotency key is still
+ * running; not a 5xx, after which Stripe may have acted; not a gateway's
+ * status without Stripe's envelope. After a mutation went out, only this is
+ * `failed` — anything else is `unanswered`.
+ */
+export function stripeRefused(error: unknown): boolean {
+  const status = stripeAnsweredStatus(error);
+  if (status === null || status < 400 || status >= 500 || status === 409) return false;
+  return stripeErrorTokens(error).type !== undefined;
 }

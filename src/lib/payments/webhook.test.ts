@@ -147,4 +147,13 @@ describe("stripe webhook verification against hostile headers", () => {
     const header = signedHeader(payload, now());
     expect(verifyStripeWebhook(payload, header, secret)).toEqual({ status: "malformed" });
   });
+
+  it("calls a header the SDK cannot read an invalid signature, not a malformed event", () => {
+    const fresh = now();
+    for (const header of [`t=${fresh}`, `t=${fresh},v1`, `t=${fresh},v1=`]) {
+      expect(verifyStripeWebhook(eventPayload, header, secret)).toEqual({
+        status: "invalid_signature",
+      });
+    }
+  });
 });

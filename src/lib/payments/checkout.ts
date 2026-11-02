@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { type StripeRequest, stripeAnsweredStatus, stripeRequest } from "./stripe-client";
+import {
+  type StripeRequest,
+  stripeAnsweredStatus,
+  stripeRefused,
+  stripeRequest,
+} from "./stripe-client";
 import { type StripeKeySource, secretKeyForCall } from "./stripe-keys";
 import { logStripeRequestThrew } from "./stripe-request-log";
 
@@ -336,11 +341,13 @@ export function stripeCheckoutProvider(
           ? { status: "refunded", refundId: refund.data.id }
           : { status: "failed" };
       } catch (error) {
-        // Stripe answered with an error status: nothing moved. No answer after
-        // the refund went out: something may have.
-        if (stripeAnsweredStatus(error) !== null) return { status: "failed" };
-        logStripeRequestThrew("refund_checkout_session", error);
-        return { status: refundSent ? "unanswered" : "failed" };
+        // Only Stripe's own refusal (a 4xx with its envelope, not a 409) says
+        // nothing moved. Silence, a 5xx, a 409 or a gateway's error after the
+        // refund went out may follow a refund made (`stripeRefused`).
+        if (stripeAnsweredStatus(error) === null) {
+          logStripeRequestThrew("refund_checkout_session", error);
+        }
+        return { status: refundSent && !stripeRefused(error) ? "unanswered" : "failed" };
       }
     },
   };
