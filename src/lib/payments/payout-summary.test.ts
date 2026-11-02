@@ -36,7 +36,7 @@ describe("stripePayoutSummaryLookup", () => {
     });
     const [url, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe("https://api.stripe.com/v1/balance_transactions?payout=po_1&limit=100");
-    expect(init.method).toBeUndefined();
+    expect(init.method).toBe("GET");
     expect(init.headers).toMatchObject({ "Stripe-Account": "acct_1" });
   });
 

@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-07-19
+- **Amended by:** [20261102-stripe-sdk-adapters](20261102-stripe-sdk-adapters.md) — the "No new SDK dependency" decision: every Stripe call, and the webhook's signature check, now goes through the official SDK under the app's own policies; the rest stands.
 
 ## Context
 

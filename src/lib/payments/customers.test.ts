@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { customerProviderFromEnvironment } from "@/db/stripe-providers";
+import { stripeResponse } from "@/lib/payments/__fixtures__/stripe-response";
 import { ERASURE_FAILURE_DETAIL } from "./erasure-failure";
 
 function providerWith(env: Record<string, string | undefined>, fetchImpl: unknown) {
@@ -21,11 +22,9 @@ describe("stripe customer provider", () => {
   });
 
   it("deletes on the connected account, with the idempotency key", async () => {
-    const fetchImpl = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => ({ id: "cus_1", deleted: true }),
-    });
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(stripeResponse({ id: "cus_1", deleted: true }, 200));
     const provider = providerWith(CONFIGURED, fetchImpl);
 
     expect(
@@ -46,7 +45,7 @@ describe("stripe customer provider", () => {
   });
 
   it("treats a 404 as already deleted rather than a failure to retry forever", async () => {
-    const fetchImpl = vi.fn().mockResolvedValue({ ok: false, status: 404, json: async () => ({}) });
+    const fetchImpl = vi.fn().mockResolvedValue(stripeResponse({}, 404));
     const provider = providerWith(CONFIGURED, fetchImpl);
     expect(await provider.deleteCustomer("acct_1", "cus_gone", "key")).toEqual({
       status: "already_deleted",
@@ -54,11 +53,11 @@ describe("stripe customer provider", () => {
   });
 
   it("reports a Stripe error with its code, bounded in length", async () => {
-    const fetchImpl = vi.fn().mockResolvedValue({
-      ok: false,
-      status: 401,
-      json: async () => ({ error: { code: "account_invalid", message: "x".repeat(500) } }),
-    });
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(
+        stripeResponse({ error: { code: "account_invalid", message: "x".repeat(500) } }, 401),
+      );
     const provider = providerWith(CONFIGURED, fetchImpl);
     const result = await provider.deleteCustomer("acct_1", "cus_1", "key");
     expect(result).toEqual({ status: "failed", error: "HTTP 401: account_invalid" });
@@ -68,16 +67,17 @@ describe("stripe customer provider", () => {
   // refused, and this result lands in the erasure ledger. Only the status and
   // Stripe's own code or type vocabulary may reach it.
   it("records the error type, never the message, when Stripe sends no code", async () => {
-    const fetchImpl = vi.fn().mockResolvedValue({
-      ok: false,
-      status: 400,
-      json: async () => ({
-        error: {
-          type: "invalid_request_error",
-          message: "No such customer: 'cus_1' (nora@example.com)",
+    const fetchImpl = vi.fn().mockResolvedValue(
+      stripeResponse(
+        {
+          error: {
+            type: "invalid_request_error",
+            message: "No such customer: 'cus_1' (nora@example.com)",
+          },
         },
-      }),
-    });
+        400,
+      ),
+    );
     const provider = providerWith(CONFIGURED, fetchImpl);
     const result = await provider.deleteCustomer("acct_1", "cus_1", "key");
     expect(result).toEqual({ status: "failed", error: "HTTP 400: invalid_request_error" });
@@ -85,11 +85,11 @@ describe("stripe customer provider", () => {
   });
 
   it("records only the status when Stripe sends a message and nothing else", async () => {
-    const fetchImpl = vi.fn().mockResolvedValue({
-      ok: false,
-      status: 400,
-      json: async () => ({ error: { message: "Invalid email: nora@example.com" } }),
-    });
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(
+        stripeResponse({ error: { message: "Invalid email: nora@example.com" } }, 400),
+      );
     const provider = providerWith(CONFIGURED, fetchImpl);
     expect(await provider.deleteCustomer("acct_1", "cus_1", "key")).toEqual({
       status: "failed",
@@ -98,11 +98,9 @@ describe("stripe customer provider", () => {
   });
 
   it("drops a code that is not a plain token", async () => {
-    const fetchImpl = vi.fn().mockResolvedValue({
-      ok: false,
-      status: 400,
-      json: async () => ({ error: { code: "bad email nora@example.com" } }),
-    });
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(stripeResponse({ error: { code: "bad email nora@example.com" } }, 400));
     const provider = providerWith(CONFIGURED, fetchImpl);
     expect(await provider.deleteCustomer("acct_1", "cus_1", "key")).toEqual({
       status: "failed",
@@ -111,13 +109,9 @@ describe("stripe customer provider", () => {
   });
 
   it("survives a non-JSON error body", async () => {
-    const fetchImpl = vi.fn().mockResolvedValue({
-      ok: false,
-      status: 502,
-      json: async () => {
-        throw new Error("not json");
-      },
-    });
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(new Response("<html>not json</html>", { status: 502 }));
     const provider = providerWith(CONFIGURED, fetchImpl);
     expect(await provider.deleteCustomer("acct_1", "cus_1", "key")).toEqual({
       status: "failed",
@@ -126,11 +120,9 @@ describe("stripe customer provider", () => {
   });
 
   it("refuses to call it deleted when Stripe says it is not", async () => {
-    const fetchImpl = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => ({ id: "cus_1", deleted: false }),
-    });
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(stripeResponse({ id: "cus_1", deleted: false }, 200));
     const provider = providerWith(CONFIGURED, fetchImpl);
     expect(await provider.deleteCustomer("acct_1", "cus_1", "key")).toMatchObject({
       status: "failed",
@@ -147,7 +139,7 @@ describe("stripe customer provider", () => {
     ["the body is a live customer object", { id: "cus_1", object: "customer", email: null }],
     ["the body is not the deleted envelope at all", { ok: true }],
   ])("refuses to call it deleted when %s", async (_name, body) => {
-    const fetchImpl = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => body });
+    const fetchImpl = vi.fn().mockResolvedValue(stripeResponse(body, 200));
     const provider = providerWith(CONFIGURED, fetchImpl);
     expect(await provider.deleteCustomer("acct_1", "cus_1", "key")).toMatchObject({
       status: "failed",

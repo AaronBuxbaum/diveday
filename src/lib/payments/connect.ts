@@ -1,13 +1,13 @@
 import { z } from "zod";
 import { configuredValue } from "@/lib/configured";
-import { boundedStripeFetch } from "./stripe-fetch";
+import { stripeAnsweredStatus, stripeRequest } from "./stripe-client";
 import { logStripeRequestThrew } from "./stripe-request-log";
 
 /**
  * The Stripe Connect seam: let a shop authorize its own Standard Stripe
  * account (not a platform-controlled sub-account) and read back its status.
- * Fetch-based like the checkout seam in ./index.ts — no SDK dependency
- * (docs ADR 20260719-stripe-connect-orders). Once a shop completes OAuth, the
+ * Through the SDK's request path in ./stripe-client.ts (docs ADR
+ * 20260719-stripe-connect-orders, ADR 20261102-stripe-sdk-adapters). Once a shop completes OAuth, the
  * platform secret key can act on its behalf with a `Stripe-Account` header;
  * no per-shop credential needs to be stored beyond the returned account id.
  */
@@ -85,18 +85,14 @@ const accountResponseSchema = z.object({
 
 type ConnectConfig = z.infer<typeof connectConfigSchema>;
 
-function authHeaders(secretKey: string): Record<string, string> {
-  return {
-    Authorization: `Bearer ${secretKey}`,
-    "Content-Type": "application/x-www-form-urlencoded",
-  };
-}
-
 export function stripeConnectProvider(
   config: ConnectConfig,
-  unboundedFetch: Fetch,
+  fetchImpl: Fetch,
 ): StripeConnectProvider {
-  const fetchImpl = boundedStripeFetch(unboundedFetch);
+  /** Logs only what Stripe never answered; an error status is an answer. */
+  const threw = (operation: string, error: unknown) => {
+    if (stripeAnsweredStatus(error) === null) logStripeRequestThrew(operation, error);
+  };
   return {
     authorizeUrl({ redirectUri, state }) {
       const params = new URLSearchParams({
@@ -111,34 +107,35 @@ export function stripeConnectProvider(
 
     async exchangeCode(code, redirectUri) {
       try {
-        const response = await fetchImpl("https://connect.stripe.com/oauth/token", {
-          method: "POST",
-          headers: authHeaders(config.secretKey),
-          body: new URLSearchParams({
-            client_secret: config.secretKey,
-            code,
-            grant_type: "authorization_code",
-            redirect_uri: redirectUri,
-          }).toString(),
-        });
-        if (!response.ok) return { status: "failed" };
-        const body = oauthTokenResponseSchema.safeParse(await response.json());
+        const body = oauthTokenResponseSchema.safeParse(
+          await stripeRequest(config.secretKey, fetchImpl, {
+            method: "POST",
+            path: "/oauth/token",
+            connectHost: true,
+            params: {
+              client_secret: config.secretKey,
+              code,
+              grant_type: "authorization_code",
+              redirect_uri: redirectUri,
+            },
+          }),
+        );
         if (!body.success) return { status: "failed" };
         return { status: "connected", stripeAccountId: body.data.stripe_user_id };
       } catch (error) {
-        logStripeRequestThrew("exchange_connect_code", error);
+        threw("exchange_connect_code", error);
         return { status: "failed" };
       }
     },
 
     async retrieveAccountStatus(stripeAccountId) {
       try {
-        const response = await fetchImpl(
-          `https://api.stripe.com/v1/accounts/${encodeURIComponent(stripeAccountId)}`,
-          { headers: { Authorization: `Bearer ${config.secretKey}` } },
+        const body = accountResponseSchema.safeParse(
+          await stripeRequest(config.secretKey, fetchImpl, {
+            method: "GET",
+            path: `/v1/accounts/${encodeURIComponent(stripeAccountId)}`,
+          }),
         );
-        if (!response.ok) return { status: "failed" };
-        const body = accountResponseSchema.safeParse(await response.json());
         if (!body.success) return { status: "failed" };
         return {
           status: "ok",
@@ -150,24 +147,22 @@ export function stripeConnectProvider(
           },
         };
       } catch (error) {
-        logStripeRequestThrew("retrieve_account_status", error);
+        threw("retrieve_account_status", error);
         return { status: "failed" };
       }
     },
 
     async deauthorize(stripeAccountId) {
       try {
-        const response = await fetchImpl("https://connect.stripe.com/oauth/deauthorize", {
+        await stripeRequest(config.secretKey, fetchImpl, {
           method: "POST",
-          headers: authHeaders(config.secretKey),
-          body: new URLSearchParams({
-            client_id: config.clientId,
-            stripe_user_id: stripeAccountId,
-          }).toString(),
+          path: "/oauth/deauthorize",
+          connectHost: true,
+          params: { client_id: config.clientId, stripe_user_id: stripeAccountId },
         });
-        return { status: response.ok ? "ok" : "failed" };
+        return { status: "ok" };
       } catch (error) {
-        logStripeRequestThrew("deauthorize_account", error);
+        threw("deauthorize_account", error);
         return { status: "failed" };
       }
     },

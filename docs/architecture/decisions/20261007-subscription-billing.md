@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-07
+- **Amended by:** [20261102-stripe-sdk-adapters](20261102-stripe-sdk-adapters.md) — billing calls Stripe through the official SDK now, not `fetch`; the "Stripe SDK" alternative is withdrawn. The rest stands.
 
 ## Context
 
