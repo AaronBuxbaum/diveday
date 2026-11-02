@@ -1,4 +1,5 @@
 import { nowDate, nowMs } from "./clock";
+import { externalHttpBlocked, type Fetch } from "./seam";
 import { AsyncTtlCache } from "./ttl-lru";
 /** Open-Meteo supplies sea-surface temperature only ten days ahead. */
 export const AUTOMATED_FORECAST_WINDOW_DAYS = 10;
@@ -6,7 +7,6 @@ export const AUTOMATED_FORECAST_WINDOW_DAYS = 10;
 const MILLISECONDS_PER_DAY = 86_400_000;
 
 type ForecastPoint = { latitude: number; longitude: number };
-type Fetcher = typeof fetch;
 
 /**
  * The eight-point compass, as codes. Not "N"/"NE": those read as English
@@ -202,9 +202,9 @@ const AUTOMATED_FORECAST_CACHE_MAX_ENTRIES = 256;
 
 /** Both providers' answers for one site, parsed; either may be missing. */
 type ProviderPayloads = { marine: MarineResponse | null; weather: WeatherResponse | null };
-const payloadCaches = new WeakMap<Fetcher, AsyncTtlCache<string, ProviderPayloads | null>>();
+const payloadCaches = new WeakMap<Fetch, AsyncTtlCache<string, ProviderPayloads | null>>();
 
-function payloadCacheFor(fetcher: Fetcher) {
+function payloadCacheFor(fetcher: Fetch) {
   const existing = payloadCaches.get(fetcher);
   if (existing) return existing;
   const created = new AsyncTtlCache<string, ProviderPayloads | null>(
@@ -338,10 +338,7 @@ function surfaceConditions(
  * the weather half, so a remembered half answer would silence the high-wind
  * row for every departure to the site for five minutes.
  */
-function providerPayloads(
-  point: ForecastPoint,
-  fetcher: Fetcher,
-): Promise<ProviderPayloads | null> {
+function providerPayloads(point: ForecastPoint, fetcher: Fetch): Promise<ProviderPayloads | null> {
   const key = payloadCacheKey(point);
   return payloadCacheFor(fetcher).getOrLoad(key, () => requestProviderPayloads(point, fetcher), {
     ttlMs: AUTOMATED_FORECAST_CACHE_TTL_MS,
@@ -351,7 +348,7 @@ function providerPayloads(
 
 async function requestProviderPayloads(
   point: ForecastPoint,
-  fetcher: Fetcher,
+  fetcher: Fetch,
 ): Promise<ProviderPayloads | null> {
   const marineParams = new URLSearchParams({
     latitude: String(point.latitude),
@@ -404,11 +401,11 @@ async function requestProviderPayloads(
 export async function fetchAutomatedMarineForecast(
   point: ForecastPoint,
   startsAt: Date,
-  fetcher: Fetcher = fetch,
+  fetcher: Fetch = fetch,
 ): Promise<AutomatedMarineForecast | null> {
   // Browser tests exercise our full Next/database stack, but must not wait on or depend on a
   // third-party forecast. Passing an explicit fetcher still exercises the adapter in unit tests.
-  if (process.env.DIVEDAY_DISABLE_EXTERNAL_HTTP === "1" && fetcher === fetch) return null;
+  if (externalHttpBlocked(process.env, fetcher)) return null;
 
   const payloads = await providerPayloads(point, fetcher);
   return payloads ? forecastAt(payloads, startsAt) : null;

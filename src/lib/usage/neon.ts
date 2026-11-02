@@ -1,15 +1,8 @@
 import { z } from "zod";
 import { nowDate } from "@/lib/clock";
 import { periodBounds, type UsageSample } from "@/lib/cost-guardrails";
-import {
-  externalHttpBlocked,
-  type Fetcher,
-  httpFailureReason,
-  type ProbeEnvironment,
-  type ProbeOptions,
-  probeRequest,
-  unavailable,
-} from "./probe";
+import { type Environment, externalHttpBlocked, type Fetch } from "@/lib/seam";
+import { httpFailureReason, type ProbeOptions, probeRequest, unavailable } from "./probe";
 
 /**
  * What Neon has consumed this period, across every project on the account.
@@ -92,7 +85,7 @@ function allSamples(sample: UsageSample, projects = 0): NeonUsageResult {
   return { compute: sample, storage: sample, egress: sample, projects };
 }
 
-function credentials(env: ProbeEnvironment): { apiKey: string; orgId: string } | null {
+function credentials(env: Environment): { apiKey: string; orgId: string } | null {
   const apiKey = env.USAGE_NEON_API_KEY?.trim();
   const orgId = env.USAGE_NEON_ORG_ID?.trim();
   if (!apiKey || !orgId) return null;
@@ -101,7 +94,7 @@ function credentials(env: ProbeEnvironment): { apiKey: string; orgId: string } |
 
 export async function fetchNeonUsage(options: ProbeOptions = {}): Promise<NeonUsageResult> {
   const env = options.env ?? process.env;
-  const fetcher: Fetcher = options.fetcher ?? fetch;
+  const fetcher: Fetch = options.fetcher ?? fetch;
   const now = options.now ?? nowDate();
 
   const configured = credentials(env);

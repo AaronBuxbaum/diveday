@@ -2,12 +2,10 @@ import { z } from "zod";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { periodBounds, type UsageSample } from "@/lib/cost-guardrails";
+import { type Environment, externalHttpBlocked, type Fetch } from "@/lib/seam";
 import {
-  externalHttpBlocked,
-  type Fetcher,
   httpFailureReason,
   MAX_RESPONSE_ROWS,
-  type ProbeEnvironment,
   type ProbeOptions,
   probeRequest,
   unavailable,
@@ -58,7 +56,7 @@ export type VercelSpendResult = {
   readonly rows: number;
 };
 
-function credentials(env: ProbeEnvironment): { token: string; teamId: string } | null {
+function credentials(env: Environment): { token: string; teamId: string } | null {
   const token = env.USAGE_VERCEL_TOKEN?.trim();
   const teamId = env.USAGE_VERCEL_TEAM_ID?.trim();
   if (!token || !teamId) return null;
@@ -74,7 +72,7 @@ function credentials(env: ProbeEnvironment): { token: string; teamId: string } |
  */
 export async function fetchVercelSpend(options: ProbeOptions = {}): Promise<VercelSpendResult> {
   const env = options.env ?? process.env;
-  const fetcher: Fetcher = options.fetcher ?? fetch;
+  const fetcher: Fetch = options.fetcher ?? fetch;
   const now = options.now ?? nowDate();
 
   const configured = credentials(env);

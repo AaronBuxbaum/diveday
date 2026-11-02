@@ -7,6 +7,7 @@ import {
   resolveHost,
 } from "@/lib/net/public-address";
 import { publicOnlyFetch } from "@/lib/net/public-fetch";
+import { externalHttpBlocked, type Fetch } from "@/lib/seam";
 import { type ImageUpload, isManagedStorageUrl, type StoredImage } from "./index";
 import { MAX_IMAGE_BYTES } from "./limits";
 
@@ -28,8 +29,6 @@ export type IngestResult =
   | { status: "blocked" }
   | { status: "not_configured" }
   | { status: "failed" };
-
-type Fetch = typeof fetch;
 
 /** Reads the response body up to `maxBytes`, aborting the stream early rather than trusting Content-Length alone. */
 async function readBounded(response: Response, maxBytes: number): Promise<ArrayBuffer | null> {
@@ -93,11 +92,7 @@ export async function ingestImageUrl(
   // run, not a stubbed-out one. Passing an explicit `lookup` still exercises the real code path
   // in unit tests.
   const lookup = options.lookup ?? resolveHost;
-  if (
-    process.env.DIVEDAY_DISABLE_EXTERNAL_HTTP === "1" &&
-    lookup === resolveHost &&
-    !isIP(parsed.hostname)
-  ) {
+  if (externalHttpBlocked(process.env, lookup, resolveHost) && !isIP(parsed.hostname)) {
     return { status: "failed" };
   }
   let addresses: ResolvedAddress[];
