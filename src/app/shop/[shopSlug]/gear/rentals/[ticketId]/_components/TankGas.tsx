@@ -8,7 +8,8 @@ import { correctCounterTankFillAction } from "../../actions";
 
 /**
  * **What the ticket says about its tanks' gas** (domain reviews A3/F6, security
- * review X5). Printed: each tank's gas with who recorded it, then the line that
+ * review X5). Printed: each tank's gas, whether EANx went in without a current
+ * O2-clean record (issue #3005), who recorded it, then the line that
  * it was recorded at the counter and not analyzed. On screen only: a
  * correction per tank still held or out, through the same card gate as renting
  * it. Nothing when the rental holds no tank.
@@ -32,6 +33,15 @@ export function TankGas({
           <li key={tank.reservationId} className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <span className="font-mono font-medium">{tank.label}</span>
             <span>{tankFillLabel(t, tank.fillO2Percent ?? 21)}</span>
+            {tank.fillO2CleanGap ? (
+              <span className="font-medium text-warning-strong" data-o2-clean-gap>
+                {t(
+                  tank.fillO2CleanGap === "lapsed"
+                    ? "counterRentals.ticket.fillO2CleanLapsed"
+                    : "counterRentals.ticket.fillO2CleanNever",
+                )}
+              </span>
+            ) : null}
             {tank.fillRecordedByName ? (
               <span className="text-muted">
                 {t("counterRentals.ticket.fillRecordedBy", { name: tank.fillRecordedByName })}

@@ -341,6 +341,13 @@ export const gearReturnOutcome = pgEnum("gear_return_outcome", [
 ]);
 
 /**
+ * What a counter tank line records when its EANx went in without a current
+ * O2-clean record (issue #3005): the cleaning had `lapsed`, or there was
+ * `never` one on record. Mirrors `FillO2CleanGap` in `src/lib/counter-rentals.ts`.
+ */
+export const tankFillO2CleanGap = pgEnum("tank_fill_o2_clean_gap", ["lapsed", "never"]);
+
+/**
  * What kind of care a service event records. `service` is the manufacturer
  * service (regulators, BCDs, computers); `hydro_test` and `visual_inspection`
  * are a tank's two independent compliance clocks; `o2_clean` is the nitrox
@@ -647,6 +654,17 @@ export const gearReservations = pgTable(
     fillRecordedAt: timestamp("fill_recorded_at", { withTimezone: true }),
     fillRecordedByPersonId: uuid("fill_recorded_by_person_id").references(() => people.id),
     /**
+     * **The EANx went in without a current O2-clean record** (issue #3005):
+     * `lapsed` or `never`, read by the writer from the tank's service clocks
+     * as of the rental's last day, by the counter warning's own rule
+     * (`fillO2CleanGap`), on every write of `fill_o2_percent`. Null when the
+     * cleaning was current, the gas is air, or the shop's fill method warns
+     * on nothing at this mix. Printed on the ticket beside the gas for the
+     * person at the compressor; it informs and refuses nothing. Never set
+     * from the client. Only above air (`gear_reservations_fill_o2_clean_gap`).
+     */
+    fillO2CleanGap: tankFillO2CleanGap("fill_o2_clean_gap"),
+    /**
      * **When a hold that never left the counter was let go** (issue #2258).
      * Releasing stamps the row instead of deleting it (ADR
      * 20260820-every-delete-is-soft), so the record that a unit was held for
@@ -683,6 +701,10 @@ export const gearReservations = pgTable(
     check(
       "gear_reservations_fill_o2_percent",
       sql`${table.fillO2Percent} is null or (${table.bookingId} is null and ${table.fillO2Percent} >= 21 and ${table.fillO2Percent} <= 40)`,
+    ),
+    check(
+      "gear_reservations_fill_o2_clean_gap",
+      sql`${table.fillO2CleanGap} is null or (${table.fillO2Percent} is not null and ${table.fillO2Percent} > 21)`,
     ),
     check(
       "gear_reservations_fill_recorded",

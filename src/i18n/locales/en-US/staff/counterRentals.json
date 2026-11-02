@@ -106,6 +106,8 @@
     "fillCorrecting": "Correcting…",
     "fillCorrectAria": "Correct the gas in {label}",
     "fillRecordedBy": "Recorded by {name}",
+    "fillO2CleanLapsed": "O2 cleaning had lapsed",
+    "fillO2CleanNever": "No O2 cleaning on record",
     "order": "Order",
     "notice": {
       "rented": "Rented out",

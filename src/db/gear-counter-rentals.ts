@@ -10,6 +10,8 @@ import {
   checkCounterRentalWindow,
   counterRentalCardRefusal,
   counterTankFillRefusal,
+  type FillO2CleanGap,
+  fillO2CleanGap,
   isEnrichedFill,
   isLifeSupportKind,
 } from "@/lib/counter-rentals";
@@ -18,9 +20,12 @@ import {
   type GearReturnOutcome,
   gearServiceKeepsUnitBack,
   gearServiceState,
+  type O2CleanStanding,
+  o2CleanStanding,
 } from "@/lib/gear";
+import type { NitroxFillMethod } from "@/lib/nitrox-fill";
 import { type ShopWaiverStatus, shopWaiverStatus } from "@/lib/waivers";
-import type { AppDb } from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import {
   type GearReservationActionOutcome,
   type GearSetReturnOutcome,
@@ -31,7 +36,7 @@ import {
 } from "./gear";
 import { peopleMinorDeclared } from "./minor-declared";
 import { authorizesNitroxFill } from "./nitrox";
-import { violatesExclusionConstraint } from "./query-helpers";
+import { queryAll, violatesExclusionConstraint } from "./query-helpers";
 import {
   type CertificationReviewRefusal,
   createCertification,
@@ -47,6 +52,7 @@ import {
   nitroxCertifications,
   orders,
   people,
+  shops,
   specialtyCertifications,
 } from "./schema";
 import { getCurrentWaiverGeneration, listSignedWaiversByPerson } from "./waivers";
@@ -298,7 +304,20 @@ export type CounterRentalServiceVerdict = {
   /** Kept back by its service record as of the window's last day. */
   flagged: boolean;
   lifeSupport: boolean;
+  /** A tank's O2 cleaning as of the window's last day (issue #3005); null on any other kind. */
+  o2Clean: O2CleanStanding | null;
 };
+
+/** The shop's own nitrox fill method, which decides when an O2-clean gap is recorded. */
+async function shopNitroxFillMethod(db: DbExecutor, shopId: string): Promise<NitroxFillMethod> {
+  const [shop] = await db
+    .select({ method: shops.nitroxFillMethod })
+    .from(shops)
+    .where(eq(shops.id, shopId))
+    .limit(1);
+  // A shop that cannot be read records as blending, the method that records most.
+  return shop?.method ?? "blending";
+}
 
 /**
  * **The service screen at the counter** — the one place a service clock
@@ -310,18 +329,19 @@ export type CounterRentalServiceVerdict = {
  * on day two of a three-day rental is overdue for the rental.
  */
 export async function counterRentalServiceVerdicts(
-  db: AppDb,
+  db: DbExecutor,
   shopId: string,
   units: readonly { id: string; kind: GearItemKind }[],
   lastDay: CalendarDate,
 ): Promise<Map<string, CounterRentalServiceVerdict>> {
-  const [clocks, concerns] = await Promise.all([
-    latestServiceClocks(
-      db,
-      shopId,
-      units.map((unit) => unit.id),
-    ),
-    openServiceConcerns(db, shopId, units),
+  const [clocks, concerns] = await queryAll(db, [
+    () =>
+      latestServiceClocks(
+        db,
+        shopId,
+        units.map((unit) => unit.id),
+      ),
+    () => openServiceConcerns(db, shopId, units),
   ]);
   return new Map(
     units.map((unit) => [
@@ -332,6 +352,7 @@ export async function counterRentalServiceVerdicts(
           serviceConcern: concerns.has(unit.id),
         }),
         lifeSupport: isLifeSupportKind(unit.kind),
+        o2Clean: unit.kind === "tank" ? o2CleanStanding(clocks.get(unit.id) ?? [], lastDay) : null,
       },
     ]),
   );
@@ -439,7 +460,17 @@ export async function createCounterRental(
   // **Every tank says its gas** (domain review F1): a blank gas was the one
   // way an EANx fill could leave without meeting the card check.
   if (unfilledTank) return { ok: false, reason: "fill_missing" };
-  const verdicts = await counterRentalServiceVerdicts(db, input.shopId, kinds, reservedUntil);
+  const [verdicts, fillMethod] = await Promise.all([
+    counterRentalServiceVerdicts(db, input.shopId, kinds, reservedUntil),
+    shopNitroxFillMethod(db, input.shopId),
+  ]);
+  // **An EANx tank with no current O2-clean record** (issue #3005): written
+  // on the tank line from the same clocks, never taken from the client, and
+  // refusing nothing.
+  const o2CleanGapFor = (unitId: string, o2Percent: number): FillO2CleanGap | null => {
+    const standing = verdicts.get(unitId)?.o2Clean;
+    return standing ? fillO2CleanGap(fillMethod, o2Percent, standing) : null;
+  };
   const confirmed = new Set(input.confirmedFlaggedIds ?? []);
   for (const unit of kinds) {
     const verdict = verdicts.get(unit.id);
@@ -530,6 +561,7 @@ export async function createCounterRental(
               ? {}
               : {
                   fillO2Percent: input.tankFills[unitId],
+                  fillO2CleanGap: o2CleanGapFor(unitId, input.tankFills[unitId]),
                   fillRecordedAt: sql`now()`,
                   fillRecordedByPersonId: input.fillRecordedByPersonId ?? null,
                 }),
@@ -749,7 +781,12 @@ export async function correctCounterTankFill(
 ): Promise<CorrectCounterTankFillOutcome> {
   return db.transaction(async (tx) => {
     const [row] = await tx
-      .select({ kind: gearItems.kind, personId: gearReservations.personId })
+      .select({
+        kind: gearItems.kind,
+        personId: gearReservations.personId,
+        gearItemId: gearReservations.gearItemId,
+        reservedUntil: gearReservations.reservedUntil,
+      })
       .from(gearReservations)
       .innerJoin(
         gearItems,
@@ -784,10 +821,21 @@ export async function correctCounterTankFill(
         .limit(1);
       if (!card) return { ok: false, reason: "no_nitrox_card" };
     }
+    // The O2-clean record follows the corrected gas (issue #3005), read afresh
+    // as of the rental's last day, in this transaction one read after the other.
+    const verdicts = await counterRentalServiceVerdicts(
+      tx,
+      input.shopId,
+      [{ id: row.gearItemId, kind: row.kind }],
+      row.reservedUntil,
+    );
+    const fillMethod = await shopNitroxFillMethod(tx, input.shopId);
+    const standing = verdicts.get(row.gearItemId)?.o2Clean;
     await tx
       .update(gearReservations)
       .set({
         fillO2Percent: input.o2Percent,
+        fillO2CleanGap: standing ? fillO2CleanGap(fillMethod, input.o2Percent, standing) : null,
         fillRecordedAt: nowDate(),
         fillRecordedByPersonId: input.byPersonId,
       })
@@ -807,6 +855,8 @@ export type CounterRentalUnit = {
   returnOutcome: GearReturnOutcome | null;
   /** The recorded gas, as oxygen percent (21 is air); null on anything but a tank. */
   fillO2Percent: number | null;
+  /** The EANx went in without a current O2-clean record (issue #3005); null otherwise. */
+  fillO2CleanGap: FillO2CleanGap | null;
   /** When and by whom the gas was recorded or last corrected (domain review A3). */
   fillRecordedAt: Date | null;
   fillRecordedByName: string | null;
@@ -920,6 +970,7 @@ async function counterRentalRows(
       returnedAt: gearReservations.returnedAt,
       returnOutcome: gearReservations.returnOutcome,
       fillO2Percent: gearReservations.fillO2Percent,
+      fillO2CleanGap: gearReservations.fillO2CleanGap,
       fillRecordedAt: gearReservations.fillRecordedAt,
       fillRecordedByName: fillRecorder.fullName,
       personId: people.id,
@@ -995,6 +1046,7 @@ function groupCounterRentals(rows: readonly CounterRentalRow[]): CounterRentalTi
       returnedAt: row.returnedAt,
       returnOutcome: row.returnOutcome,
       fillO2Percent: row.fillO2Percent,
+      fillO2CleanGap: row.fillO2CleanGap,
       fillRecordedAt: row.fillRecordedAt,
       fillRecordedByName: row.fillRecordedByName,
     });

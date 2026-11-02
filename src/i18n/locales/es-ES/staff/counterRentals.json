@@ -106,6 +106,8 @@
     "fillCorrecting": "Corrigiendo…",
     "fillCorrectAria": "Corregir la mezcla de {label}",
     "fillRecordedBy": "Anotada por {name}",
+    "fillO2CleanLapsed": "Limpieza de O2 caducada",
+    "fillO2CleanNever": "Sin limpieza de O2 registrada",
     "order": "Pedido",
     "notice": {
       "rented": "Alquilado",

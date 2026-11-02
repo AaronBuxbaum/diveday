@@ -396,7 +396,10 @@
   tank at any mix, so it warns on every EANx fill; membrane or premix draws the line at 40%, and
   the fill menu stops at 40%, so it never warns today (a test ties the two). A shop that ever adds
   pure oxygen to a tank chooses blending. Advisory only: the fill is accepted either way. A value setting, not
-  a Features switch, because it turns no feature off.
+  a Features switch, because it turns no feature off. When the warning would show, the rental's tank
+  line also records it (`gear_reservations.fill_o2_clean_gap`, *lapsed* or *never*, issue 3005), set
+  server side from the tank's clocks as of the rental's last day and again on a gas correction, and
+  the ticket prints it beside the gas for whoever fills the tank.
 - **Nitrox request** — a per-booking ask for enriched air, billed per dive, offered only when the
   shop's **rental catalog** includes nitrox (most shops don't fill it, so this is off by default).
   A diver may request it **without** a verified card on file: the request is recorded and flagged
