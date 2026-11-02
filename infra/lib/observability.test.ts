@@ -88,6 +88,13 @@ async function emittedEventCodes(): Promise<Set<string>> {
     for (const match of source.matchAll(/\blog\(\s*"([a-z0-9_.]+)"/g)) {
       codes.add(match[1] as string);
     }
+    // `cronRoute({ id: "recaps" })` (src/lib/cron-route.ts) writes the pass's two codes
+    // for the route, so they are read from the call, not from a literal `log(`.
+    for (const match of source.matchAll(/\bcronRoute\(\{\s*id:\s*"([a-z0-9-]+)"/g)) {
+      const name = `cron_${(match[1] as string).replaceAll("-", "_")}`;
+      codes.add(`${name}.scan_complete`);
+      codes.add(`${name}.scan_failed`);
+    }
   }
   return codes;
 }

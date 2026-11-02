@@ -732,7 +732,8 @@ the full suite locally with identical pass counts across repeated runs.
   guard gives; `seed-routes.test.ts` asserts that shape route by route.
 - **Visual regression freezes the clock, never masks.** The `e2e/visual-*.spec.ts` files photograph each
   surface through `capture()` (or `capturePrint()` for the dock surfaces). Nothing is masked: the
-  server clock is pinned by `DIVEDAY_CLOCK` and the browser clock by fixture setup, so
+  server clock is pinned by `DIVEDAY_CLOCK` (read through `runtimeMode()`, `src/lib/runtime-mode.ts`,
+  which is off whenever `DATABASE_URL` is set) and the browser clock by fixture setup, so
   clock-derived text is pixel-stable and a regression in a date stays visible. Each capture first
   waits on the heading or control it photographs, so a moved heading fails the capture as a test;
   a changed look never does: it is a reg-suit diff against the S3 baseline for the fork point.
