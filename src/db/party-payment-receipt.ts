@@ -1,4 +1,4 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { log } from "@/lib/log";
 import { type NotificationProvider, recipientLocale } from "@/lib/notifications";
 import { settledPartyPayment } from "./checkouts";
@@ -79,9 +79,18 @@ async function send(
   if (checkout.isDeposit) return "not_a_group";
   if (!checkout.settledTotalCents) return "no_settled_total";
   if (reported.overCeiling) return "not_trusted";
+  // One shop-scoped read: a covered seat whose booking is missing or another
+  // shop's comes back null-extended, counts as covered, and is never a lead.
   const covered = await db
-    .select({ bookingId: bookingCheckoutBookings.bookingId })
+    .select({ id: bookings.id, partyLeadBookingId: bookings.partyLeadBookingId })
     .from(bookingCheckoutBookings)
+    .leftJoin(
+      bookings,
+      and(
+        eq(bookings.id, bookingCheckoutBookings.bookingId),
+        eq(bookings.shopId, bookingCheckoutBookings.shopId),
+      ),
+    )
     .where(
       and(
         eq(bookingCheckoutBookings.checkoutId, checkout.id),
@@ -89,23 +98,13 @@ async function send(
       ),
     );
   if (covered.length < 2) return "not_a_group";
-  const seats = await db
-    .select({ id: bookings.id, partyLeadBookingId: bookings.partyLeadBookingId })
-    .from(bookings)
-    .where(
-      and(
-        eq(bookings.shopId, checkout.shopId),
-        inArray(
-          bookings.id,
-          covered.map((row) => row.bookingId),
-        ),
-      ),
-    );
-  const leads = seats.filter((seat) => seat.partyLeadBookingId === null);
-  const lead = leads.length === 1 ? leads[0] : undefined;
-  if (!lead) return "not_a_group";
+  const leadIds = covered.flatMap((seat) =>
+    seat.id !== null && seat.partyLeadBookingId === null ? [seat.id] : [],
+  );
+  const leadId = leadIds.length === 1 ? leadIds[0] : undefined;
+  if (!leadId) return "not_a_group";
 
-  const paid = await settledPartyPayment(db, checkout.shopId, lead.id);
+  const paid = await settledPartyPayment(db, checkout.shopId, leadId);
   if (!paid || paid.amountCents !== checkout.settledTotalCents) return "no_settled_total";
   // The lead's latest checkout must be this one: a newer attempt would read
   // another checkout's figure back under this one's name.
@@ -121,7 +120,7 @@ async function send(
     .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, bookings.shopId)))
     .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, bookings.shopId)))
     .innerJoin(shops, eq(shops.id, bookings.shopId))
-    .where(and(eq(bookings.id, lead.id), eq(bookings.shopId, checkout.shopId)))
+    .where(and(eq(bookings.id, leadId), eq(bookings.shopId, checkout.shopId)))
     .limit(1);
   if (!row || row.booking.status === "cancelled") return "not_sent";
   if (!row.person.email) return "no_address";

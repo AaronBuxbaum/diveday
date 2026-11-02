@@ -8,6 +8,7 @@ import {
   upsertIntegrationSyncRecord,
 } from "@/db/integrations";
 import { divePackages, type IntegrationCredentials, shops } from "@/db/schema";
+import { escapeHtml } from "@/lib/html";
 import { minorToMajor, toShopCurrency } from "@/lib/money";
 import { type RentalPricing, toRentableKinds } from "@/lib/rentals";
 
@@ -319,8 +320,4 @@ export async function syncShopifyCatalog(
   }
   await markIntegrationHealthy(db, integration.id);
   return { synced };
-}
-
-function escapeHtml(value: string): string {
-  return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 }

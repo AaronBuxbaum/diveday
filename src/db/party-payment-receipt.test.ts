@@ -10,7 +10,7 @@ import {
   startBookingCheckout,
 } from "./checkouts";
 import { type ReportedSettlement, sendPartyPaymentReceipt } from "./party-payment-receipt";
-import { bookingCheckoutBookings, bookingCheckouts, people } from "./schema";
+import { bookingCheckoutBookings, bookingCheckouts, bookings, people } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { upcomingTripsWithCounts, updateTrip } from "./trips";
 
@@ -217,6 +217,17 @@ describe("sendPartyPaymentReceipt", () => {
     const g = await group(["Solo Diver"]);
     const email = fakeEmail();
     expect((await deliverPaid(g, email, 17_000)).result).toBe("not_a_group");
+    expect(email.sent).toHaveLength(0);
+  });
+
+  it("sends nothing when the covered seats do not name exactly one real lead", async () => {
+    const g = await group(["Pat Party", "Sam Second"]);
+    const second = g.bookingIds[1];
+    if (!second) throw new Error("no second seat");
+    // Two seats that each claim to lead: no single lead to tell.
+    await g.db.update(bookings).set({ partyLeadBookingId: null }).where(eq(bookings.id, second));
+    const email = fakeEmail();
+    expect((await deliverPaid(g, email)).result).toBe("not_a_group");
     expect(email.sent).toHaveLength(0);
   });
 
