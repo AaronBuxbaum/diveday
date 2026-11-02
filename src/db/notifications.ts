@@ -46,6 +46,7 @@ import {
 import { confirmationExtras } from "@/lib/notifications/confirmation-extras";
 import { ACTIONABLE_PROVIDER_STATUSES, type ProviderEmailStatus } from "@/lib/notifications/events";
 import { notificationTripTitle } from "@/lib/notifications/kinds";
+import { reviveDates } from "@/lib/notifications/revive-dates";
 import { currentSendActor, type SendActor, sentByFor } from "@/lib/notifications/send-actor";
 import { shopVoiceOf } from "@/lib/notifications/shop-voice";
 import { openSecret, type SecretKey, sealSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
@@ -808,34 +809,7 @@ export async function sendNotificationBatch(
 }
 
 function reviveQueuedNotification(payload: Notification): Notification {
-  const copy = { ...payload } as Record<string, unknown>;
-  for (const field of [
-    "startsAt",
-    "endsAt",
-    "previousStartsAt",
-    "expiresAt",
-    "invitedAt",
-    "offeredAt",
-    "sailedStartsAt",
-    "changedAt",
-    "confirmedAt",
-    // A conditions hold's own instant, which also keys it: left a string, the
-    // revived payload fails its z.date() and the retry never drains.
-    "publishedAt",
-  ]) {
-    if (typeof copy[field] === "string") copy[field] = new Date(copy[field]);
-  }
-  // The blow-out message carries dates nested inside its alternatives list
-  // (docs ADR 20260804-blowout-cascade) — revive those too, or a queued retry
-  // fails the kind's own z.date() validation and can never drain.
-  if (Array.isArray(copy.alternatives)) {
-    copy.alternatives = copy.alternatives.map((alternative: Record<string, unknown>) =>
-      typeof alternative?.startsAt === "string"
-        ? { ...alternative, startsAt: new Date(alternative.startsAt) }
-        : alternative,
-    );
-  }
-  return copy as Notification;
+  return reviveDates(notificationSchema, payload) as Notification;
 }
 
 /** Refresh a queued numeric recommendation only when it still names the same live seat and trip. */
