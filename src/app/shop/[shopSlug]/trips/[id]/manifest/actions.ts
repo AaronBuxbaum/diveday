@@ -39,6 +39,7 @@ import { isAllowedPushEndpoint } from "@/lib/notifications/web-push";
 import { teamUpRefusal } from "@/lib/party-teams";
 import { PLAN_CHANGE_NOTE_MAX, PLAN_CHANGE_REASONS } from "@/lib/plan-change";
 import { SNAG_NOTE_MAX } from "@/lib/pre-departure-check";
+import { ROLL_CALL_EVENT_STATUSES } from "@/lib/roll-call";
 import { requireShopSurface, requireStaffSession } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 import { TRIP_STAGES } from "@/lib/trip-stages";
@@ -127,7 +128,7 @@ function manifestBack(ctx: ManifestActionContext): string {
 
 const rollCallSchema = z.object({
   bookingId: z.string().uuid(),
-  status: z.enum(["boarded", "not_boarded", "cleared"]),
+  status: z.enum(ROLL_CALL_EVENT_STATUSES),
   /**
    * What the crew observed about a person who is unaccounted for. Bounded here
    * and narrowed again in the write, which keeps it only at an after-dive
@@ -360,7 +361,7 @@ const privateNoteSchema = z.object({
 // person is assigned to *this* trip before writing anything (`recordCrewRollCall`).
 const crewRollCallSchema = z.object({
   personId: z.string().uuid(),
-  status: z.enum(["boarded", "not_boarded", "cleared"]),
+  status: z.enum(ROLL_CALL_EVENT_STATUSES),
   /** The same, for the other half of the head count. */
   note: z.string().trim().max(ROLL_CALL_NOTE_MAX).optional(),
 });

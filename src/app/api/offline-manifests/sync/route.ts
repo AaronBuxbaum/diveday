@@ -8,6 +8,7 @@ import { offlineSyncTripsBelongToShop } from "@/db/trips";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
 import { ROLL_CALL_NOTE_MAX, type RollCallCheckpoint } from "@/lib/manifests";
+import { ROLL_CALL_EVENT_STATUSES } from "@/lib/roll-call";
 
 /**
  * One event carries **exactly one** subject: a `bookingId` (a diver's paid
@@ -46,7 +47,7 @@ const eventSchema = z
      * refusal, which is what stops a device that has been in a dry bag for an
      * hour erasing a mark another device recorded since.
      */
-    status: z.enum(["boarded", "not_boarded", "cleared"]),
+    status: z.enum(ROLL_CALL_EVENT_STATUSES),
     /**
      * Which statement a `cleared` takes back — the `clientEventId` of the event
      * the device was actually looking at when somebody tapped undo (ADR

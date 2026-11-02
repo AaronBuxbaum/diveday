@@ -30,6 +30,7 @@ import { verifyOfflineErasureEpoch } from "@/lib/offline-erasure-epoch";
 import { offlineEventOutOfBounds } from "@/lib/offline-events";
 import type { ParticipantType } from "@/lib/participant-types";
 import { seatRefusal } from "@/lib/participant-types";
+import type { RollCallEventStatus } from "@/lib/roll-call";
 import {
   type CountedAboardBlocked,
   type ReadinessSnapshot,
@@ -867,7 +868,7 @@ export type OnTheWater = "boarded" | "missing_after_dive" | null;
  * person back, and the checkpoints do not arrive in order here.
  */
 function standingRowMeansSailed(
-  rows: readonly { checkpoint: string; status: "boarded" | "not_boarded" | "cleared" }[],
+  rows: readonly { checkpoint: string; status: RollCallEventStatus }[],
 ): OnTheWater {
   const seen = new Set<string>();
   let missing = false;
@@ -1438,7 +1439,7 @@ export async function getTripManifest(
  * pending) to punish a claim that grants no authority.
  */
 function offlineRetractionSuperseded(input: {
-  status: "boarded" | "not_boarded" | "cleared";
+  status: RollCallEventStatus;
   retractsClientEventId: string | undefined;
   newest: { clientEventId: string | null } | undefined;
 }): boolean {
@@ -1587,7 +1588,7 @@ async function standingCrewRollCall(
 async function acceptedRollCallNote(
   note: string | null | undefined,
   checkpoint: RollCallCheckpoint,
-  status: "boarded" | "not_boarded" | "cleared",
+  status: RollCallEventStatus,
   standing: () => Promise<Pick<RollCallRecord, "state"> | undefined>,
 ): Promise<string | null> {
   const typed = note?.trim();
@@ -1886,7 +1887,7 @@ export async function recordRollCall(
     tripId: string;
     bookingId: string;
     recordedByPersonId: string;
-    status: "boarded" | "not_boarded" | "cleared";
+    status: RollCallEventStatus;
     checkpoint?: RollCallCheckpoint;
     source?: "live" | "offline";
     clientEventId?: string;
@@ -2278,7 +2279,7 @@ export async function recordCrewRollCall(
     tripId: string;
     personId: string;
     recordedByPersonId: string;
-    status: "boarded" | "not_boarded" | "cleared";
+    status: RollCallEventStatus;
     checkpoint?: RollCallCheckpoint;
     source?: "live" | "offline";
     clientEventId?: string;

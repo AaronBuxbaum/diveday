@@ -17,7 +17,7 @@ import type { ReadinessBlocker, ReadinessBlockerCode } from "./readiness";
 // `manifests.ts` pulls `readiness.ts` → `waivers.ts` → `node:crypto` into that
 // bundle and fails `scripts/build-service-worker.mjs` outright, with
 // `pnpm typecheck` none the wiser. See the head of `./roll-call`.
-import type { RollCallRecord } from "./roll-call";
+import type { RollCallEventStatus, RollCallRecord } from "./roll-call";
 import {
   carryForwardNotBoarded,
   isNotBackAboard,
@@ -650,7 +650,7 @@ export type OfflineRollCallEvent = {
    * has accepted `cleared` since the live manifest's first undo, and a
    * device holding older events keeps parsing them unchanged.
    */
-  status: "boarded" | "not_boarded" | "cleared";
+  status: RollCallEventStatus;
   /**
    * What a `cleared` is taking back: the `clientEventId` of the statement this
    * device was looking at when somebody tapped undo (ADR

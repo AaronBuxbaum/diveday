@@ -19,6 +19,7 @@ import type { CrewCredentialSnapshot } from "@/lib/crew-credential-snapshot";
 import type { IncidentCertificationEvidence } from "@/lib/incident-export";
 import { SNAG_NOTE_MAX } from "@/lib/pre-departure-check";
 import type { ReadinessBlocker } from "@/lib/readiness";
+import { ROLL_CALL_EVENT_STATUSES } from "@/lib/roll-call";
 import { bookings } from "./bookings";
 import { appNowTimestamp } from "./columns";
 import { people, shops } from "./core";
@@ -35,7 +36,7 @@ import { boats, trips } from "./trips";
  * the correction stays in the audit trail; the derivation collapses a latest
  * `cleared` back to "no roll call yet" (src/db/manifests.ts).
  */
-export const rollCallStatus = pgEnum("roll_call_status", ["boarded", "not_boarded", "cleared"]);
+export const rollCallStatus = pgEnum("roll_call_status", ROLL_CALL_EVENT_STATUSES);
 
 export const rollCallSource = pgEnum("roll_call_source", ["live", "offline"]);
 
