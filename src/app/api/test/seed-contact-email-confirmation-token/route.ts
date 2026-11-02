@@ -3,7 +3,7 @@ import { z } from "zod";
 import { getDb } from "@/db/client";
 import { issueShopContactEmailConfirmation } from "@/db/shop-contact-email";
 import { getShopBySlug } from "@/db/shops";
-import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
+import { e2eTestRouteAuthorized, testRouteRefused } from "@/lib/e2e-test-routes";
 
 /**
  * Mints a real `shop_contact_email_confirmation_tokens` row for a shop's
@@ -18,9 +18,7 @@ import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
 const bodySchema = z.object({ shopSlug: z.string().trim().min(1) });
 
 export async function POST(request: Request) {
-  if (!e2eTestRouteAuthorized(request)) {
-    return NextResponse.json({ error: "not_available" }, { status: 404 });
-  }
+  if (!e2eTestRouteAuthorized(request)) return testRouteRefused();
 
   const parsed = bodySchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "invalid_body" }, { status: 400 });

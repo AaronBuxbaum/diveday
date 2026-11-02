@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { e2eTestRouteAuthorized } from "./e2e-test-routes";
+import { e2eTestRouteAuthorized, requireDemoTenant, testRouteRefused } from "./e2e-test-routes";
 
 function req(authorization?: string): Request {
   const headers = new Headers();
@@ -65,5 +65,67 @@ describe("e2eTestRouteAuthorized", () => {
     vi.stubEnv("DIVEDAY_E2E_SECRET", "");
     expect(e2eTestRouteAuthorized(req("Bearer anything"))).toBe(false);
     expect(e2eTestRouteAuthorized(req())).toBe(false);
+  });
+});
+
+describe("requireDemoTenant (issue #2751)", () => {
+  function harness() {
+    vi.stubEnv("DATABASE_URL", "");
+    vi.stubEnv("DIVEDAY_E2E_SECRET", "s3cr3t");
+  }
+
+  async function expectRefusal(response: Response) {
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ error: "not_available" });
+  }
+
+  it("hands back a demo shop to an authorized request", async () => {
+    harness();
+    const shop = { id: "shop-1", isDemo: true };
+    expect(await requireDemoTenant(req("Bearer s3cr3t"), async () => shop)).toEqual({
+      ok: true,
+      shop,
+    });
+  });
+
+  it("refuses a real shop, a missing one, and a non-boolean isDemo with the one shape", async () => {
+    harness();
+    for (const found of [
+      { id: "real", isDemo: false },
+      null,
+      undefined,
+      { id: "odd", isDemo: "true" as unknown as boolean },
+      { id: "odd", isDemo: 1 as unknown as boolean },
+    ]) {
+      const tenant = await requireDemoTenant(req("Bearer s3cr3t"), async () => found);
+      expect(tenant.ok).toBe(false);
+      if (!tenant.ok) await expectRefusal(tenant.response);
+    }
+  });
+
+  it("never runs the lookup for a request the harness gate refuses", async () => {
+    vi.stubEnv("DIVEDAY_E2E_SECRET", "s3cr3t");
+    const findShop = vi.fn(async () => ({ id: "shop-1", isDemo: true }));
+    for (const request of [req(), req("Bearer wrong"), req("Bearer s3cr3"), req("bearer s3cr3t")]) {
+      vi.stubEnv("DATABASE_URL", "");
+      const tenant = await requireDemoTenant(request, findShop);
+      expect(tenant.ok).toBe(false);
+      if (!tenant.ok) await expectRefusal(tenant.response);
+    }
+    vi.stubEnv("DATABASE_URL", "postgres://example");
+    const tenant = await requireDemoTenant(req("Bearer s3cr3t"), findShop);
+    expect(tenant.ok).toBe(false);
+    expect(findShop).not.toHaveBeenCalled();
+  });
+
+  it("refuses a demo shop when the gate closes, however the shop reads", async () => {
+    vi.stubEnv("DATABASE_URL", "");
+    vi.stubEnv("DIVEDAY_E2E_SECRET", "");
+    const tenant = await requireDemoTenant(req("Bearer "), async () => ({ isDemo: true }));
+    expect(tenant.ok).toBe(false);
+  });
+
+  it("is the same refusal the harness gate answers with", async () => {
+    await expectRefusal(testRouteRefused());
   });
 });

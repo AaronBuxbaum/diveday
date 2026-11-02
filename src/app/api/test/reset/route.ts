@@ -5,7 +5,7 @@ import { type DemoReset, resetDemoFromSnapshot } from "@/db/demo-reset-snapshot"
 import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
 import { purgeMintedDemoShops } from "@/db/seed";
 import { getShopBySlug } from "@/db/shops";
-import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
+import { e2eTestRouteAuthorized, testRouteRefused } from "@/lib/e2e-test-routes";
 
 /**
  * Resets the seeded demo shop's schedule to its canonical fixture state.
@@ -27,9 +27,7 @@ import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
  * so a slow reset can be read off any request log.
  */
 export async function POST(request: Request) {
-  if (!e2eTestRouteAuthorized(request)) {
-    return NextResponse.json({ error: "not_available" }, { status: 404 });
-  }
+  if (!e2eTestRouteAuthorized(request)) return testRouteRefused();
   const startedAt = performance.now();
   const db = await getDb();
   const shop = await getShopBySlug(db, DEMO_SHOP_SLUG);

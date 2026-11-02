@@ -745,7 +745,10 @@ the full suite locally with identical pass counts across repeated runs.
   open with `e2eTestRouteAuthorized(request)` (`src/lib/e2e-test-routes.ts`: env predicate plus a
   `DIVEDAY_E2E_SECRET` bearer token, failing closed). `pnpm check:e2e-fixtures` fails when a handler
   under `src/app/api/test/**` doesn't call it, and each route carries auth-gate unit tests asserting
-  the refusal lands before any database work.
+  the refusal lands before any database work. A route that writes to a shop reaches it through
+  `requireDemoTenant(request, findShop)` beside it (issue #2751), which refuses a real or missing shop
+  with the same `testRouteRefused()` answer, `{ error: "not_available" }` and a 404, that the
+  guard gives; `seed-routes.test.ts` asserts that shape route by route.
 - **Visual regression freezes the clock, never masks.** The `e2e/visual-*.spec.ts` files photograph each
   surface through `capture()` (or `capturePrint()` for the dock surfaces). Nothing is masked: the
   server clock is pinned by `DIVEDAY_CLOCK` and the browser clock by fixture setup, so

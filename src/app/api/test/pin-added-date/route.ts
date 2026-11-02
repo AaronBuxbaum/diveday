@@ -6,7 +6,7 @@ import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
 import { people } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { nowDate } from "@/lib/clock";
-import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
+import { e2eTestRouteAuthorized, requireDemoTenant, testRouteRefused } from "@/lib/e2e-test-routes";
 
 /**
  * Stamps the demo shop's live records of one name as added at the app's
@@ -26,16 +26,15 @@ import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
 const bodySchema = z.object({ fullName: z.string().trim().min(1).max(200) });
 
 export async function POST(request: Request) {
-  if (!e2eTestRouteAuthorized(request)) {
-    return NextResponse.json({ error: "not_available" }, { status: 404 });
-  }
+  if (!e2eTestRouteAuthorized(request)) return testRouteRefused();
 
   const parsed = bodySchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "invalid_body" }, { status: 400 });
 
   const db = await getDb();
-  const shop = await getShopBySlug(db, DEMO_SHOP_SLUG);
-  if (!shop?.isDemo) return NextResponse.json({ error: "not_available" }, { status: 404 });
+  const tenant = await requireDemoTenant(request, () => getShopBySlug(db, DEMO_SHOP_SLUG));
+  if (!tenant.ok) return tenant.response;
+  const { shop } = tenant;
 
   const pinned = await db
     .update(people)

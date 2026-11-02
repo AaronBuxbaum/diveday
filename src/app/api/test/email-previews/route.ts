@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
-import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
+import { e2eTestRouteAuthorized, testRouteRefused } from "@/lib/e2e-test-routes";
 import type { Notification } from "@/lib/notifications/kinds";
 import { messageFor } from "@/lib/notifications/render";
 
@@ -148,9 +148,7 @@ const SAMPLES: Notification[] = [
 ];
 
 export async function GET(request: Request) {
-  if (!e2eTestRouteAuthorized(request)) {
-    return NextResponse.json({ error: "not_available" }, { status: 404 });
-  }
+  if (!e2eTestRouteAuthorized(request)) return testRouteRefused();
 
   const rendered = SAMPLES.map((sample) => ({
     kind: sample.kind,

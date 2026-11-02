@@ -5,7 +5,7 @@ import { getDb } from "@/db/client";
 import { people, rentalFitProfiles } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { DAY_MS, nowDate } from "@/lib/clock";
-import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
+import { e2eTestRouteAuthorized, testRouteRefused } from "@/lib/e2e-test-routes";
 
 /**
  * Makes one diver a **returning** diver — the state the "Anything changed?"
@@ -51,9 +51,7 @@ const STATED_DAYS_AGO = 60;
 const CONFIRMED_DAYS_AGO = 6;
 
 export async function POST(request: Request) {
-  if (!e2eTestRouteAuthorized(request)) {
-    return NextResponse.json({ error: "not_available" }, { status: 404 });
-  }
+  if (!e2eTestRouteAuthorized(request)) return testRouteRefused();
 
   const parsed = bodySchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "invalid_body" }, { status: 400 });

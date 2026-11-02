@@ -533,3 +533,70 @@ describe("POST /api/test/seed-stripe-account — the caller-supplied slug", () =
     expect(await response.json()).toEqual({ error: "not_available" });
   });
 });
+
+/**
+ * **One demo-fixture gate, one refusal** (issue #2751). Every fixture route
+ * that writes to a shop reaches it through `requireDemoTenant`
+ * (`src/lib/e2e-test-routes.ts`): past the bearer guard, a real shop and a
+ * missing one get the same `not_available` 404 the guard itself answers with,
+ * so a caller holding the secret cannot tell a real tenant's slug from no
+ * shop at all. Each row is a request that reaches the shop lookup.
+ */
+type DemoFixtureRoute = { slug: string; method?: "GET"; query?: string; body?: unknown };
+
+const demoFixtureRoutes: DemoFixtureRoute[] = [
+  { slug: "demo-recap-trip", method: "GET" },
+  { slug: "depart-trip", body: { tripId: "trip-1", minutesAgo: 90 } },
+  { slug: "seed-booking-checkout", query: "?slug=a-real-dive-shop&email=diver@example.com" },
+  { slug: "seed-certified-recap" },
+  { slug: "seed-changed-dive-site" },
+  { slug: "seed-dive-times" },
+  { slug: "seed-evening" },
+  { slug: "seed-observed-species" },
+  { slug: "seed-off-season", query: "?slug=a-real-dive-shop" },
+  { slug: "seed-open-package-invoice", query: "?slug=a-real-dive-shop&email=diver@example.com" },
+  { slug: "seed-recap-pulse" },
+  { slug: "seed-shared-recap-photo" },
+  { slug: "seed-stripe-account", query: "?slug=a-real-dive-shop" },
+  { slug: "seed-today-catch-up", query: "?shop=a-real-dive-shop" },
+  { slug: "seed-unworded-course-form" },
+];
+
+describe.each(demoFixtureRoutes)(
+  "/api/test/$slug — demo tenants only, one refusal (issue #2751)",
+  ({ slug, method, query, body }) => {
+    async function call() {
+      const module = (await import(`./${slug}/route`)) as Record<
+        string,
+        (request: Request) => Promise<Response>
+      >;
+      const handler = module[method ?? "POST"];
+      if (!handler) throw new Error(`${slug} exports no ${method ?? "POST"} handler`);
+      return handler(
+        new Request(`http://localhost/api/test/${slug}${query ?? ""}`, {
+          method: method ?? "POST",
+          headers: {
+            authorization: `Bearer ${secret}`,
+            ...(body === undefined ? {} : { "content-type": "application/json" }),
+          },
+          ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+        }),
+      );
+    }
+
+    async function expectOneRefusal(response: Response) {
+      expect(getShopBySlug).toHaveBeenCalled();
+      expect(response.status).toBe(404);
+      expect(await response.json()).toEqual({ error: "not_available" });
+    }
+
+    it("refuses a real shop", async () => {
+      vi.mocked(getShopBySlug).mockResolvedValue({ id: "shop-1", isDemo: false } as never);
+      await expectOneRefusal(await call());
+    });
+
+    it("refuses a shop that does not exist, in the same words", async () => {
+      await expectOneRefusal(await call());
+    });
+  },
+);

@@ -4,7 +4,7 @@ import { getDb } from "@/db/client";
 import { askAnytime } from "@/db/interests";
 import { getShopBySlug } from "@/db/shops";
 import { diveDeclarationSchema, toDiveDeclaration } from "@/lib/dive-declaration";
-import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
+import { e2eTestRouteAuthorized, testRouteRefused } from "@/lib/e2e-test-routes";
 
 /**
  * Puts one joiner on a shop's last-minute list through the same `askAnytime`
@@ -24,9 +24,7 @@ const bodySchema = z.object({
 });
 
 export async function POST(request: Request) {
-  if (!e2eTestRouteAuthorized(request)) {
-    return NextResponse.json({ error: "not_available" }, { status: 404 });
-  }
+  if (!e2eTestRouteAuthorized(request)) return testRouteRefused();
 
   const parsed = bodySchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "invalid_body" }, { status: 400 });

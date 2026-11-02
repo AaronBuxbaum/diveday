@@ -8,7 +8,7 @@ import { getShopBySlug } from "@/db/shops";
 import { liveTrip } from "@/db/trips";
 import { handoffHref } from "@/lib/booking-handoff";
 import { nowDate } from "@/lib/clock";
-import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
+import { e2eTestRouteAuthorized, testRouteRefused } from "@/lib/e2e-test-routes";
 import { publicTripPath } from "@/lib/public-routes";
 
 /**
@@ -32,9 +32,7 @@ const bodySchema = z.object({
 });
 
 export async function POST(request: Request) {
-  if (!e2eTestRouteAuthorized(request)) {
-    return NextResponse.json({ error: "not_available" }, { status: 404 });
-  }
+  if (!e2eTestRouteAuthorized(request)) return testRouteRefused();
   const parsed = bodySchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "invalid_body" }, { status: 400 });
 

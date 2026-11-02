@@ -50,7 +50,7 @@ import { STAFF_ROLES } from "@/lib/authz";
 import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { courseRatioCapacity, INTRO_COURSE_RATIO } from "@/lib/course-ratios";
-import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
+import { e2eTestRouteAuthorized, requireDemoTenant, testRouteRefused } from "@/lib/e2e-test-routes";
 import { tripReservationWindow } from "@/lib/gear";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { MAX_SUPPRESSED_SHARE_FOR_RATING } from "@/lib/reviews";
@@ -88,15 +88,14 @@ import { troubleVariantResponse } from "./variant-response";
  * operational fixtures may name a private demo by slug.
  */
 export async function POST(request: Request) {
-  if (!e2eTestRouteAuthorized(request)) {
-    return NextResponse.json({ error: "not_available" }, { status: 404 });
-  }
+  if (!e2eTestRouteAuthorized(request)) return testRouteRefused();
   const db = await getDb();
   const variant = await troubleVariantResponse(request, db);
   if (variant) return variant;
   const params = new URL(request.url).searchParams;
-  const shop = await getShopBySlug(db, DEMO_SHOP_SLUG);
-  if (!shop?.isDemo) return NextResponse.json({ error: "not_available" }, { status: 404 });
+  const tenant = await requireDemoTenant(request, () => getShopBySlug(db, DEMO_SHOP_SLUG));
+  if (!tenant.ok) return tenant.response;
+  const { shop } = tenant;
 
   const now = nowDate();
   // One of the shop's own people, for the two rows that name who acted. Which one does not matter
