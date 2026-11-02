@@ -21,7 +21,7 @@ import {
   departureChecklistAnswer,
 } from "./boat-safety";
 import { snagsOpenWhenSailed } from "./boat-snags";
-import { listTripBuddyTeamEvents, listTripBuddyTeams } from "./buddy-pairs";
+import { listTripBuddyTeamEvents, listTripBuddyTeams } from "./buddy-teams";
 import type { AppDb } from "./client";
 import { listExecutedDives } from "./executed-dives";
 import { listDepartureLogIncidentReports } from "./incident-reports";

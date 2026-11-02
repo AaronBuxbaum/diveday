@@ -70,10 +70,10 @@ const DOORS = [
   "app/sign-in/page.tsx",
   "app/onboard/page.tsx",
   "app/forgot-password/page.tsx",
-  "app/verify/[token]/page.tsx",
-  "app/invite/[token]/page.tsx",
-  "app/reset-password/[token]/page.tsx",
-  "app/unsubscribe/[token]/page.tsx",
+  "app/(token)/verify/[token]/page.tsx",
+  "app/(token)/invite/[token]/page.tsx",
+  "app/(token)/reset-password/[token]/page.tsx",
+  "app/(token)/unsubscribe/[token]/page.tsx",
 ] as const;
 
 describe("the terminal mark is drawn, never typed", () => {
@@ -178,10 +178,10 @@ describe("a door renders one primary", () => {
 describe("the dead-link law has two tiers", () => {
   /** Each account door, with the message subtree its dead link says itself in. */
   const ACCOUNT_TIER: [page: string, keys: string][] = [
-    ["app/verify/[token]/page.tsx", "account.verify"],
-    ["app/reset-password/[token]/page.tsx", "account.resetPassword"],
-    ["app/invite/[token]/page.tsx", "account.invite"],
-    ["app/unsubscribe/[token]/page.tsx", "lastMinute.unsubscribe"],
+    ["app/(token)/verify/[token]/page.tsx", "account.verify"],
+    ["app/(token)/reset-password/[token]/page.tsx", "account.resetPassword"],
+    ["app/(token)/invite/[token]/page.tsx", "account.invite"],
+    ["app/(token)/unsubscribe/[token]/page.tsx", "lastMinute.unsubscribe"],
   ];
 
   /**
@@ -202,10 +202,10 @@ describe("the dead-link law has two tiers", () => {
    * nothing at all.
    */
   const BOOKING_TIER = [
-    "app/waivers/[token]/page.tsx",
-    "app/ready/[token]/page.tsx",
-    "app/claim/[token]/page.tsx",
-    "app/recap/[token]/page.tsx",
+    "app/(token)/waivers/[token]/page.tsx",
+    "app/(token)/ready/[token]/page.tsx",
+    "app/(token)/claim/[token]/page.tsx",
+    "app/(token)/recap/[token]/page.tsx",
   ];
 
   it.each(ACCOUNT_TIER)("%s renders the bare door, never the shop's hand", (page) => {
@@ -220,7 +220,7 @@ describe("the dead-link law has two tiers", () => {
   // `/confirm-contact` is account-tier too for its dead link: a shore or
   // bookkeeper token names nobody (security review, B29).
   it("keeps /confirm-contact's dead link from naming a shop", () => {
-    const source = read("app/confirm-contact/[token]/page.tsx");
+    const source = read("app/(token)/confirm-contact/[token]/page.tsx");
     expect(source).toContain("<DeadLink");
     expect(source).not.toMatch(/<DeadLink[^>]*shop=/);
   });

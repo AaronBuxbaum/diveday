@@ -107,7 +107,7 @@ export type RecapPhotoView = {
  * and today it's unused.
  *
  * Since slice 7d it is not a page of its own: it is the thread's **after-state**
- * (`src/app/ready/[token]/_components/AfterState.tsx`), which `/recap/[token]`
+ * (`src/app/(token)/ready/[token]/_components/AfterState.tsx`), which `/recap/[token]`
  * renders from its own signed booking token and `/ready/[token]` renders from
  * the diver's own readiness link once the day is over. `sendDueRecaps`
  * delivers the `/recap` link no earlier than four hours after the trip ends.

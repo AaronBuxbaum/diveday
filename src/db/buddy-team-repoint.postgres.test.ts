@@ -7,7 +7,7 @@ import {
   dissolveBuddyTeam,
   formBuddyTeam,
   removeBuddyTeamMember,
-} from "./buddy-pairs";
+} from "./buddy-teams";
 import { repointHeldBooking } from "./identity-repoint";
 import { bookings, people, personRoles, shops, trips, userAccounts } from "./schema";
 
@@ -108,7 +108,7 @@ describePostgres("manual team changes against held-seat repointing", () => {
     it(`${operation}: a repoint waits when the team writer has locked the seat`, async () => {
       const { pg, mutate, repoint, verifyHeld } = await fixture(operation);
       const table =
-        operation === "form" || operation === "add" ? "buddy_pair_members" : "buddy_team_events";
+        operation === "form" || operation === "add" ? "buddy_team_members" : "buddy_team_events";
       await pg.db.execute(
         sql`create function test_hold_team_write() returns trigger language plpgsql as $$ begin perform pg_advisory_xact_lock(281034); return new; end $$`,
       );

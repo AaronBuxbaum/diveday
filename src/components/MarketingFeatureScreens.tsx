@@ -262,7 +262,7 @@ export function StorefrontFallback({ locale }: { locale: DiverLocale }) {
 }
 
 /**
- * **Signing the waiver on a diver's phone** — `src/app/waivers/[token]/page.tsx`
+ * **Signing the waiver on a diver's phone** — `src/app/(token)/waivers/[token]/page.tsx`
  * with its step rail (`WaiverStepRail.tsx`) two steps in, one release question
  * from the medical form (`MedicalQuestionnaireFields.tsx`, the questions in
  * `src/lib/medical.ts`) answered, and the typed signature over "Sign waiver".

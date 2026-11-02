@@ -20,7 +20,7 @@
     "e2e/boat-safety.spec.ts": 40287,
     "e2e/boat-stage.spec.ts": 9459,
     "e2e/booking.spec.ts": 130801,
-    "e2e/buddy-pairs.spec.ts": 29705,
+    "e2e/buddy-teams.spec.ts": 29705,
     "e2e/calendar-sync.spec.ts": 28137,
     "e2e/certifications.spec.ts": 72669,
     "e2e/check-in.spec.ts": 121115,

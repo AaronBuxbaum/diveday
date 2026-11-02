@@ -4,6 +4,7 @@ import type { DemoRoleId } from "./demo-roles";
 import type { FunnelSource } from "./funnel";
 import { log } from "./log";
 import type { RollCallCheckpoint } from "./manifests";
+import { externalHttpBlocked } from "./seam";
 
 /**
  * Whether the redaction-failed warning has already been written.
@@ -269,7 +270,7 @@ export async function trackEvent(
   // merely unreachable still charges its full stall to a user-facing flow.
   // Best-effort has to mean latency too, not just errors. Passing an explicit
   // tracker still exercises the seam in unit tests (mirrors marine-forecast.ts).
-  if (process.env.DIVEDAY_DISABLE_EXTERNAL_HTTP === "1" && tracker === vercelTrack) return;
+  if (externalHttpBlocked(process.env, tracker, vercelTrack)) return;
 
   const { name, ...properties } = event;
   try {

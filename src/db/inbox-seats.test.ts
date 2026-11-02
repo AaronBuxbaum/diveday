@@ -4,7 +4,7 @@ import { HOUR_MS, MINUTE_MS } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
 import { inboxSeats } from "./inbox-seats";
-import { bookings, buddyPairMembers, people } from "./schema";
+import { bookings, buddyTeamMembers, people } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 
 /**
@@ -245,7 +245,7 @@ describe("inboxSeats", () => {
 
     it("says the seat is on a buddy team on its departure", async () => {
       const c = await asked();
-      await c.db.insert(buddyPairMembers).values({
+      await c.db.insert(buddyTeamMembers).values({
         shopId: c.shop.id,
         tripId: c.trip.id,
         pairId: crypto.randomUUID(),

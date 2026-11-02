@@ -125,6 +125,7 @@ export const DELIBERATELY_IDENTICAL = new Map([
   ["staff/shared.json readiness.certificationLevels.instructor", "course name, used untranslated"],
   // Spelled and read the same in Spanish.
   ["staff/incidents.json form.no", "the same word in both languages"],
+  ["staff/waiversStaff.json blank.no", "the same word in both languages"],
   // A number and the millimetre symbol, which is SI and the same in Spanish.
   ["staff/gear.json prep.optionThickness", "a number and an SI unit symbol"],
   ["staff/counterRentals.json fill.eanx", "EANx is the gas's international name, then a number"],

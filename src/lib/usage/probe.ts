@@ -1,4 +1,5 @@
 import type { UsageSample } from "@/lib/cost-guardrails";
+import type { Environment, Fetch } from "@/lib/seam";
 
 /**
  * What every provider usage probe shares: the injected `fetch`, the refusal to
@@ -21,13 +22,9 @@ import type { UsageSample } from "@/lib/cost-guardrails";
  * whole feature greppable from `.env.example`.
  */
 
-export type Fetcher = typeof fetch;
-
-export type ProbeEnvironment = Readonly<Record<string, string | undefined>>;
-
 export type ProbeOptions = {
-  readonly env?: ProbeEnvironment;
-  readonly fetcher?: Fetcher;
+  readonly env?: Environment;
+  readonly fetcher?: Fetch;
   /** The instant the sample is being taken at. Callers pass the cron's own `now`. */
   readonly now?: Date;
 };
@@ -54,20 +51,6 @@ export const MAX_RESPONSE_ROWS = 20_000;
 
 export function unavailable(reason: string): UsageSample {
   return { status: "unavailable", reason };
-}
-
-/**
- * True when this process must not make third-party calls.
- *
- * `DIVEDAY_DISABLE_EXTERNAL_HTTP=1` is set fleet-wide by `playwright.config.ts`
- * so browser tests exercise the whole Next/database stack without waiting on
- * anybody else's API. Matching `src/lib/marine-forecast.ts` and
- * `src/lib/analytics.ts`, the switch only applies to the real `fetch`: a test
- * that injects its own fetcher is exercising this adapter deliberately and is
- * never blocked.
- */
-export function externalHttpBlocked(env: ProbeEnvironment, fetcher: Fetcher): boolean {
-  return env.DIVEDAY_DISABLE_EXTERNAL_HTTP === "1" && fetcher === fetch;
 }
 
 /**

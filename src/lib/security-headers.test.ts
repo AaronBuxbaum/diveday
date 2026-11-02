@@ -49,7 +49,7 @@ function tokenRouteDirectories(dir = APP_DIR, trail: string[] = []): string[] {
  *
  * The walk above cannot see these: it stops the moment it meets `[token]`, so
  * it was structurally unable to notice the one route that was not covered.
- * `src/app/unsubscribe/[token]/one-click/route.ts` is real and reachable, and
+ * `src/app/(token)/unsubscribe/[token]/one-click/route.ts` is real and reachable, and
  * `"/unsubscribe/:token"` matches exactly one segment, so it matched nothing in
  * the list and fell back to the baseline policy (issue #946).
  *

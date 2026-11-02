@@ -701,7 +701,7 @@ test("a Box opened after a draft reload asks its questions rather than answering
  * any medical answer 1 of 4, all answered 3 of 4 (the demo shop's own
  * questions are all optional, so their step settles with Medical), and 4 of 4
  * only once `completeWaiver` has taken the signature. The rule itself is pinned without a
- * browser in `src/app/waivers/[token]/WaiverStepRail.test.tsx`; what only this
+ * browser in `src/app/(token)/waivers/[token]/WaiverStepRail.test.tsx`; what only this
  * can prove is that the live count is wired to the diver's own radios.
  */
 test("the step rail paces the waiver and reaches 4 of 4 only once it is signed", async ({
@@ -1566,4 +1566,30 @@ test("a diver's medical alert for the crew is signed, flagged on the manifest an
   await expect(card.getByText(ALERT)).toHaveCount(0);
   await card.getByRole("button", { name: staff("waiversStaff.record.medicalAlertShow") }).click();
   await expect(card.getByText(ALERT)).toBeVisible();
+});
+
+test.describe("the blank release", () => {
+  test("an owner opens the current release blank, with the version on it", async ({ page }) => {
+    await page.goto("/shop/blue-mantis/waivers/print");
+    const t = staffTranslator("en-US");
+    await expect(page.getByText(/^Release version \d+$/)).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: t("waiversStaff.blank.medicalHeading") }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: t("waiversStaff.blank.signatureHeading") }),
+    ).toBeVisible();
+    // Nothing on a printed form is an answer.
+    await expect(page.locator("[data-blank-release] input")).toHaveCount(0);
+  });
+});
+
+test.describe("the blank release as captain", () => {
+  signedInAs("captain");
+
+  test("staff outside owner/manager can't print the release", async ({ page }) => {
+    await page.goto("/shop/blue-mantis/waivers/print");
+    await expect(page).toHaveURL(/\/shop\/blue-mantis(\?.*)?$/);
+    await expect(page.locator("[data-blank-release]")).toHaveCount(0);
+  });
 });

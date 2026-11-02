@@ -1,0 +1,107 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "7dd46915-6eb0-4aa1-813d-34dd978d3ee6",
+  "prevIds": [
+    "ab690e23-c643-4d5e-a2a9-3cb17a167270"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "tank_fill_o2_clean_gap"
+      ],
+      "writes": [
+        "s|enum|public.tank_fill_o2_clean_gap",
+        "n|enum|public.tank_fill_o2_clean_gap",
+        "e|enum|public.tank_fill_o2_clean_gap",
+        "n|type|public.tank_fill_o2_clean_gap"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "gear_reservations",
+        "fill_o2_clean_gap"
+      ],
+      "writes": [
+        "s|col|public.gear_reservations.fill_o2_clean_gap",
+        "n|col|public.gear_reservations.fill_o2_clean_gap",
+        "e|col|public.gear_reservations.fill_o2_clean_gap"
+      ],
+      "reads": [
+        "n|tbl|public.gear_reservations",
+        "n|sch|public",
+        "n|enum|public.tank_fill_o2_clean_gap"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "gear_reservations"
+      ],
+      "writes": [
+        "s|ck|public.gear_reservations.gear_reservations_fill_o2_clean_gap",
+        "n|ck|public.gear_reservations.gear_reservations_fill_o2_clean_gap",
+        "e|ck|public.gear_reservations.gear_reservations_fill_o2_clean_gap",
+        "n|con|public.gear_reservations.gear_reservations_fill_o2_clean_gap"
+      ],
+      "reads": [
+        "n|tbl|public.gear_reservations",
+        "n|sch|public",
+        "n|col|public.gear_reservations.fill_o2_clean_gap",
+        "n|col|public.gear_reservations.fill_o2_percent"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "tank_fill_o2_clean_gap",
+        "values": [
+          "lapsed",
+          "never"
+        ],
+        "entityType": "enums"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "gear_reservations",
+        "name": "fill_o2_clean_gap",
+        "type": "tank_fill_o2_clean_gap",
+        "typeSchema": "public",
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "gear_reservations",
+        "name": "gear_reservations_fill_o2_clean_gap",
+        "value": "\"fill_o2_clean_gap\" is null or (\"fill_o2_percent\" is not null and \"fill_o2_percent\" > 21)",
+        "entityType": "checks"
+      }
+    }
+  ]
+}

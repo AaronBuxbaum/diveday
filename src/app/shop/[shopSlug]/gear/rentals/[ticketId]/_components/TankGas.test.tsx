@@ -22,6 +22,7 @@ const unit = (overrides: Partial<CounterRentalUnit>): CounterRentalUnit => ({
   returnedAt: null,
   returnOutcome: null,
   fillO2Percent: 32,
+  fillO2CleanGap: null,
   fillRecordedAt: new Date("2026-10-08T12:00:00Z"),
   fillRecordedByName: "Dana Desk",
   ...overrides,
@@ -39,6 +40,28 @@ describe("TankGas", () => {
     expect(
       screen.getByRole("button", { name: t("counterRentals.ticket.fillCorrect") }),
     ).toBeTruthy();
+  });
+
+  it("says beside the gas when EANx went in without a current O2-clean record (issue #3005)", () => {
+    render(
+      <TankGas
+        t={t}
+        ticketId="r1"
+        units={[
+          unit({ fillO2CleanGap: "lapsed" }),
+          unit({ reservationId: "r2", label: "Tank #2", fillO2CleanGap: "never" }),
+          unit({ reservationId: "r3", label: "Tank #3", fillO2Percent: 21 }),
+        ]}
+      />,
+    );
+    expect(screen.getByText(t("counterRentals.ticket.fillO2CleanLapsed"))).toBeTruthy();
+    expect(screen.getByText(t("counterRentals.ticket.fillO2CleanNever"))).toBeTruthy();
+    expect(document.querySelectorAll("[data-o2-clean-gap]")).toHaveLength(2);
+  });
+
+  it("says nothing about O2 cleaning on a current or air fill", () => {
+    render(<TankGas t={t} ticketId="r1" units={[unit({}), unit({ fillO2Percent: 21 })]} />);
+    expect(document.querySelector("[data-o2-clean-gap]")).toBeNull();
   });
 
   it("offers no correction once the tank is home, and says nothing with no tank", () => {

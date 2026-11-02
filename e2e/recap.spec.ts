@@ -1,5 +1,5 @@
 import sharp from "sharp";
-import { AFTER_STATE_TEST_IDS } from "../src/app/ready/[token]/_components/after-state-test-ids";
+import { AFTER_STATE_TEST_IDS } from "../src/app/(token)/ready/[token]/_components/after-state-test-ids";
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed-identifiers";
 import { signRecapToken } from "../src/lib/recap-links";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
@@ -125,7 +125,18 @@ test("the recap link hands out no share affordance, and its unfurl card reveals 
   // A generic-content unfurl card renders even for a token that verifies to
   // nothing — no distinguishing a dead link from a real one at the image
   // layer either.
-  const res = await request.get("/recap/not-a-real-token/opengraph-image");
+  //
+  // The card's URL is the one the page advertises, not a hand-built one: a file in
+  // a route group (`src/app/(token)/`) gets a hashed `opengraph-image-<hash>` name
+  // from Next, so the unhashed path 404s. Read it from the valid link's og:image
+  // and put the bad token in its place.
+  const advertised = await page.locator('meta[property="og:image"]').getAttribute("content");
+  expect(advertised, "the recap page advertises its unfurl card").toBeTruthy();
+  const cardPath = new URL(advertised as string, "http://x").pathname.replace(
+    /\/recap\/[^/]+\//,
+    "/recap/not-a-real-token/",
+  );
+  const res = await request.get(cardPath);
   expect(res.ok()).toBe(true);
   expect(res.headers()["content-type"]).toContain("image/png");
   // A severed stream can still arrive as a 200 with an empty body, so the bytes

@@ -82,3 +82,10 @@ and to compute no verdict about it.
   the incident document can still say who was paired with whom before the cancellation.
 - Shops that record no teams are unchanged and unremarked: the roster column says a blank is not a
   claim that anyone dived alone.
+
+## Amendment 2026-11-02 — one name at every layer
+
+Issue #2735: the table is renamed `buddy_team_members` in one migration (pre-pilot, H-49), the
+writers move to `src/db/buddy-teams.ts`, the demo scenario to `src/db/seed-buddy-teams.ts`, and the
+export file to `buddy_teams.csv`. The superseded
+[20260804-buddy-pairs](20260804-buddy-pairs.md) is the only place "buddy pair" is left as a name.

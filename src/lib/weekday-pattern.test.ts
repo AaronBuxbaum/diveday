@@ -16,7 +16,7 @@ function reef(date: string, overrides: Partial<WeekdayDeparture> = {}): WeekdayD
     startTime: "07:00",
     endTime: "10:30",
     title: "Two-Tank Reef — Molasses & French",
-    diveSiteId: "site-molasses",
+    diveSiteIds: ["site-molasses"],
     boatId: "boat-mantis",
     capacity: 12,
     priceCents: 9500,
@@ -32,7 +32,7 @@ function wreck(date: string): WeekdayDeparture {
     startTime: "13:00",
     endTime: "17:00",
     title: "Wreck Trip — Spiegel Grove",
-    diveSiteId: "site-spiegel",
+    diveSiteIds: ["site-spiegel"],
     capacity: 10,
     priceCents: 14500,
     lensId: null,
@@ -41,6 +41,21 @@ function wreck(date: string): WeekdayDeparture {
 
 /** ADR 20260906-before-you-ask, decision 3: the add panel already knows the weekday. */
 describe("weekdayPattern", () => {
+  it("offers a two-site morning whole and in order, not its first site", () => {
+    const rows = SATURDAYS.map((date) =>
+      reef(date, { diveSiteIds: ["site-molasses", "site-french"] }),
+    );
+    expect(weekdayPattern(rows)?.diveSiteIds).toEqual(["site-molasses", "site-french"]);
+  });
+
+  it("offers no sites where the days ran three different itineraries", () => {
+    const itineraries = [["site-a"], ["site-a", "site-b"], ["site-b", "site-a"]];
+    const rows = SATURDAYS.map((date, index) =>
+      reef(date, { diveSiteIds: itineraries[index % 3] ?? [] }),
+    );
+    expect(weekdayPattern(rows)?.diveSiteIds).toBeNull();
+  });
+
   it("reads the six Saturdays the canvas drew: the 7:00 reef with its crew, and the wreck as one row", () => {
     const rows = [
       ...SATURDAYS.map((date) => reef(date)),
@@ -52,7 +67,7 @@ describe("weekdayPattern", () => {
       startTime: "07:00",
       endTime: "10:30",
       title: "Two-Tank Reef — Molasses & French",
-      diveSiteId: "site-molasses",
+      diveSiteIds: ["site-molasses"],
       boatId: "boat-mantis",
       capacity: 12,
       priceCents: 9500,
@@ -64,7 +79,7 @@ describe("weekdayPattern", () => {
         days: 4,
         endTime: "17:00",
         title: "Wreck Trip — Spiegel Grove",
-        diveSiteId: "site-spiegel",
+        diveSiteIds: ["site-spiegel"],
         boatId: "boat-mantis",
         capacity: 10,
         priceCents: 14500,

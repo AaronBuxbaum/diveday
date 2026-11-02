@@ -162,8 +162,8 @@ describe("every link-preview card wears the shared chrome", () => {
   it("finds all four cards", async () => {
     const files = await cardFiles();
     expect(files.map((file) => path.relative(APP, file))).toEqual([
+      path.join("(token)", "recap", "[token]", "opengraph-image.tsx"),
       path.join("link-card", "route.tsx"),
-      path.join("recap", "[token]", "opengraph-image.tsx"),
       path.join("s", "[shopSlug]", "opengraph-image.tsx"),
       path.join("s", "[shopSlug]", "trips", "[id]", "opengraph-image.tsx"),
     ]);

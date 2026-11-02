@@ -10,6 +10,7 @@ import {
   notificationSubjectEmail,
   notificationSubjectPhone,
 } from "./kinds";
+import { reviveDates } from "./revive-dates";
 import { shopVoiceOf } from "./shop-voice";
 
 /** A zod type with its optional/nullable wrappers taken off. */
@@ -717,6 +718,16 @@ describe("no queueable kind puts an address or a phone number in its key", () =>
       const key = notificationIdempotencyKey(notification);
       expect(key).not.toContain("@");
       for (const value of reach) expect(key).not.toContain(value);
+    },
+  );
+
+  // Issue #3603: a queued retry is stored as JSON, so every date is a string
+  // until the drain revives it. Each queueable kind must survive the round trip.
+  it.each(samples.map((sample) => [sample.name, sample] as const))(
+    "%s gets every date back after a JSON round trip",
+    (_name, { notification }) => {
+      const stored = JSON.parse(JSON.stringify(notification));
+      expect(reviveDates(notificationSchema, stored)).toEqual(notification);
     },
   );
 });

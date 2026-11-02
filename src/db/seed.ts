@@ -31,8 +31,8 @@ import {
   bookingPayments,
   bookingReferrals,
   bookings,
-  buddyPairMembers,
   buddyTeamEvents,
+  buddyTeamMembers,
   calendarFeeds,
   certifications,
   courseFormRecords,
@@ -129,7 +129,7 @@ import { seedBackup } from "./seed-backup";
 import { AT_SEA_CREW, seedBoatAtSea } from "./seed-boat-at-sea";
 import { seedBookings } from "./seed-bookings";
 import { fillWeeklyRun, seedBoothStories } from "./seed-booth";
-import { seedBuddyPairs } from "./seed-buddy-pairs";
+import { seedBuddyPairs } from "./seed-buddy-teams";
 import { LEAD_INSTRUCTOR_NAME, OWNER_NAME, RELIEF_INSTRUCTOR_NAME, staffDefs } from "./seed-cast";
 import { seedCatalog } from "./seed-catalog";
 import { seedCertGates } from "./seed-cert-gates";
@@ -224,7 +224,7 @@ const DEMO_BOAT_CAPACITIES = {
  * | `./seed-packages.ts` | two dive packages on sale, so the public Packages tab and price list have something to show |
  * | `./seed-history.ts` | the trailing quarter that gives owner reporting something to report |
  * | `./seed-cert-gates.ts` | the boats a card can be refused on, one gate each, and the course carve-out |
- * | `./seed-buddy-pairs.ts` | two buddy teams on today's reef boat, plus the odd-roster remainder; the dawn boat's divers paired at the dock |
+ * | `./seed-buddy-teams.ts` | two buddy teams on today's reef boat, plus the odd-roster remainder; the dawn boat's divers paired at the dock |
  * | `./seed-demo-lifecycle.ts` | minting, reaping, and capping throwaway demo shops |
  * | `./seed-backup.ts` | the shop-owned backup destination and its weekly delivery history |
  * | `./seed-orders.ts` | the billing states past "paid": open, part-paid, refunded, void, written off |
@@ -1117,7 +1117,7 @@ export async function seedDemoSchedule(
   // Adds-only, like seedCertGates above: two buddy teams on today's reef
   // trip — a pair and a divemaster-led trio — plus their `formed` trail
   // entries, and no roll-call events, so nothing seeded before it moves and no
-  // head-count gap opens on Today (src/db/seed-buddy-pairs.ts, ADR
+  // head-count gap opens on Today (src/db/seed-buddy-teams.ts, ADR
   // 20260804-buddy-teams).
   await seedBuddyPairs(db, shopId, {
     customers,
@@ -1621,7 +1621,7 @@ export async function clearDemoSchedule(
   // Buddy pairs reference bookings, so they go first or the bookings delete
   // below FK-violates and aborts the whole reset mid-run — the same class of
   // bug the token comments above already walk (ADR 20260804-buddy-teams).
-  await db.delete(buddyPairMembers).where(eq(buddyPairMembers.shopId, shopId));
+  await db.delete(buddyTeamMembers).where(eq(buddyTeamMembers.shopId, shopId));
   await db.delete(bookings).where(eq(bookings.shopId, shopId));
   await db.delete(tripRequirements).where(eq(tripRequirements.shopId, shopId));
   await db.delete(tripChangeEvents).where(eq(tripChangeEvents.shopId, shopId));

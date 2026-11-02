@@ -355,7 +355,7 @@ The anchor is matched per line, so a `.update(\n  trips,\n)` split across three 
 
 The time-id-order one (`scripts/check-time-id-order.mjs`) fails any `.orderBy(…)` whose last two keys are a column ending in `At` and then an `id`. Every `id` in this schema is a `defaultRandom()` uuid. In production the timestamp decides and the id never runs, because `created_at` comes from the clock and two rows are microseconds apart; under test the clock is frozen at the harness boundary, every row a run writes shares one instant, and the whole order is a uuid that differs in every seeded database. Three visual baselines re-ordered themselves that way on commits that touched neither the surface nor its query, each found by eye in a diff image (issue #1762, ruled H-81). The fix is a key a person could predict between the two, such as a name, a title or a code, with the id kept last for a total order.
 
-`src/db/export.ts` is exempt whole: its docblock writes down which files a person reads or diffs (`bookings.csv`, `buddy_pairs.csv`, ordered by name; H-81, issue #1795), every other file exists to be re-imported, so stability within one database is all it needs, and it holds most of the matches in the tree. Tests are skipped. An order nobody is shown (a revocation sweep, a nightly queue, a seed whose timestamps are unique by construction) says `diveday:allow-time-id-order: <why>` in a comment directly above the `.orderBy(` or inside its arguments, and the reason is required.
+`src/db/export.ts` is exempt whole: its docblock writes down which files a person reads or diffs (`bookings.csv`, `buddy_teams.csv`, ordered by name; H-81, issue #1795), every other file exists to be re-imported, so stability within one database is all it needs, and it holds most of the matches in the tree. Tests are skipped. An order nobody is shown (a revocation sweep, a nightly queue, a seed whose timestamps are unique by construction) says `diveday:allow-time-id-order: <why>` in a comment directly above the `.orderBy(` or inside its arguments, and the reason is required.
 
 A JavaScript comparator that ties on a timestamp has the same failure and no signature this rule can read, so it is left to review.
 
@@ -558,7 +558,7 @@ For `src/app/` and `src/components/`; the rules themselves are in `.claude/rules
   bar) stands off. A diver the search finds opens their record, `divers/[personId]`.
   `src/components/ShopIdentityMenu.tsx` holds what is the reader's own: their calendar feed, their
   language, sign out.
-- **Bearer-token pages** (`src/app/waivers/[token]`, `ready/[token]`, `recap/[token]`,
+- **Bearer-token pages** (`src/app/(token)/waivers/[token]`, `ready/[token]`, `recap/[token]`,
   `verify/[token]`, `reset-password/[token]`, `calendar/[token]`): the URL *is* the capability;
   read [docs/engineering/capability-telemetry-runbook.md](../engineering/capability-telemetry-runbook.md)
   before touching. Never structured data or telemetry that could carry the token.
@@ -814,8 +814,8 @@ For `src/db/` and `drizzle/`; the rules themselves are in `.claude/rules/db.md`.
   migration, raced for real in `gear-reservations.postgres.test.ts`): catch 23P01 via
   `violatesExclusionConstraint`, never pre-check availability as truth. Service clocks are the
   newest `gear_service_events` row per kind and **inform, never gate**. `pnpm task:context gear`.
-- **Buddy teams**: `src/db/buddy-pairs.ts` (named for its table, `buddy_pair_members`; every word a
-  human reads says "team"). A team is two or more, a member is a booking **or** a crew person, and
+- **Buddy teams**: `src/db/buddy-teams.ts` (its table is `buddy_team_members`; every word a human
+  reads says "team"). A team is two or more, a member is a booking **or** a crew person, and
   every act appends to `buddy_team_events` — informs, never gates (ADR 20260804-buddy-teams).
 - **Starting content a shop copies and then owns**: `src/content/dive-site-templates.ts` and
   `src/content/course-templates.ts`, both `i18n-exempt-file` — picking one **copies** its words onto the
@@ -952,7 +952,7 @@ For `src/lib/` and `src/features/`; the rules themselves are in `.claude/rules/d
   `offline-manifests.ts`, never an inline cast (ADR 20260726-shopwide-offline-manifest-priming).
   The same worker script, registered a second time from `/ready/` with that scope, keeps the
   diver's saved trip-prep snapshot and nothing else (`src/worker/ready-page-cache.ts`,
-  `src/lib/ready-offline.ts`; the snapshot is built by `src/app/ready/[token]/offline/`); the staff
+  `src/lib/ready-offline.ts`; the snapshot is built by `src/app/(token)/ready/[token]/offline/`); the staff
   registration at `/` never stores one.
 - **Dive-site difficulty**: `dive_sites.difficulty_level`, one of three codes
   (`src/lib/dive-site-difficulty.ts`), worded by `src/i18n/dive-site-labels.ts`. Never free text
@@ -994,7 +994,9 @@ import neither `src/app` nor `src/features`. Routes stay thin; the rules live he
 inside that direction are enforced too (ratcheted in `scripts/ratchets.json`): `src/lib` takes only
 *types* from `src/db` (a loader that reads belongs in `src/db` or a feature module), nothing under
 `src/app` imports `drizzle-orm` (a query is a named `src/db` function), and everything outside
-`src/db` reaches the trips modules through the `@/db/trips` barrel. Test files and the e2e fixture
+`src/db` reaches the trips modules through the `@/db/trips` barrel. A fourth, general one: a directory
+directly under `src/lib` or `src/db` that holds an `index.ts` is a module, and outside it only the
+index is importable (issue #2754). Test files and the e2e fixture
 routes under `src/app/api/test/` are exempt. Inside `src/db`, a module imports the `trips-*` sibling
 it needs rather than the barrel, so the barrel never closes an import cycle. The guard is a hand-written
 import reader on purpose: dependency-cruiser found the same violations, but it cannot parse imports

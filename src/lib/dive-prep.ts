@@ -256,13 +256,20 @@ export type PrepPiece = {
   notOffered: boolean;
 };
 
+/**
+ * One person a packing line is for. The booking id is who they are; the name is
+ * only what is shown, because two divers on one departure can share a name
+ * (issue #3049) and a fold keyed on it would hand one packer both their kits.
+ */
+export type PrepLineDiver = { bookingId: string; fullName: string };
+
 /** One row of the packing list: N of this item in this size, and who they're for. */
 export type PrepLine = {
   kind: RentalItemKind;
   /** Null when the item is rented but no size was ever recorded. */
   size: string | null;
   count: number;
-  divers: string[];
+  divers: PrepLineDiver[];
   /**
    * This line's divers are flagged for hands-on fitting (H-06), so the count is
    * real but the size is deliberately absent — bring a range in their band and
@@ -870,19 +877,20 @@ export function buildDivePrepChecklist(input: {
   const diversNeedingStaffFit: DivePrepChecklist["diversNeedingStaffFit"] = [];
   const heldSeats: DivePrepChecklist["heldSeats"] = [];
   let nitroxDivers = 0;
-  const addPiece = (item: PrepPiece, fullName: string) => {
+  const addPiece = (item: PrepPiece, diver: PrepDiver) => {
     const key = `${item.kind}:${prepLineKey(item)}`;
+    const forDiver = { bookingId: diver.bookingId, fullName: diver.fullName };
     const line = grouped.get(key);
     if (line) {
       line.count += 1;
-      line.divers.push(fullName);
+      line.divers.push(forDiver);
       return;
     }
     grouped.set(key, {
       kind: item.kind,
       size: item.size,
       count: 1,
-      divers: [fullName],
+      divers: [forDiver],
       fitAtCheckIn: item.fitAtCheckIn,
       drysuitWeightCheck: item.drysuitWeightCheck,
       drysuitFinFit: item.drysuitFinFit,
@@ -938,7 +946,7 @@ export function buildDivePrepChecklist(input: {
         state: "identity_held",
         lastDivedBand: isDiver(diver.participantType) ? diver.lastDivedBand : null,
       });
-      for (const item of items) addPiece(item, diver.fullName);
+      for (const item of items) addPiece(item, diver);
       continue;
     }
 
@@ -1003,7 +1011,7 @@ export function buildDivePrepChecklist(input: {
       state: items.length > 0 ? "rents" : "own_kit",
       lastDivedBand: isDiver(diver.participantType) ? diver.lastDivedBand : null,
     });
-    for (const item of items) addPiece(item, diver.fullName);
+    for (const item of items) addPiece(item, diver);
   }
 
   const lines = [...grouped.values()].sort((a, b) => {
@@ -1033,7 +1041,11 @@ export function buildDivePrepChecklist(input: {
     if (a.drysuitGloves !== b.drysuitGloves) return a.drysuitGloves ? 1 : -1;
     return 0;
   });
-  for (const line of lines) line.divers.sort((a, b) => a.localeCompare(b));
+  for (const line of lines) {
+    line.divers.sort(
+      (a, b) => a.fullName.localeCompare(b.fullName) || a.bookingId.localeCompare(b.bookingId),
+    );
+  }
 
   // Tanks are counted for divers alone.
   const diverCount = inWater.filter((diver) => isDiver(diver.participantType)).length;

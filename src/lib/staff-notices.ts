@@ -27,6 +27,45 @@ export type NoticeTone = "success" | "danger" | "warning" | "neutral";
 export type NoticeMessage = { tone: NoticeTone; text: string };
 
 /**
+ * **The codes a staff refusal may carry** (issue #2708): what
+ * `requireShopSurface`'s `refusal.notice` is typed to, so a gate cannot send a
+ * staffer away with a code nobody wrote words for.
+ *
+ * A refusal with no `landing` stands on the shop's Today page, whose
+ * `AUTH_NOTICES` is a `Record` over exactly `TODAY_REFUSAL_NOTICES`: a code
+ * added here without words there is a compile error, and the words themselves
+ * live in `shared.refusal.*`. A refusal that names a `landing` stands on that
+ * surface, which words its own code in its own notice map
+ * (`LANDED_REFUSAL_NOTICES`); `auth-notices.test.ts` finds each one there.
+ */
+export const TODAY_REFUSAL_NOTICES = [
+  "waivers-not-authorized",
+  "export-not-authorized",
+  "reports-not-authorized",
+  "settings-not-authorized",
+  "team-not-authorized",
+  "import-not-authorized",
+  "gear-import-not-authorized",
+  "dive-site-import-not-authorized",
+  "backup-not-authorized",
+  "whatsapp-not-authorized",
+  "promos-not-authorized",
+  "integrations-not-authorized",
+  "billing-not-authorized",
+  "day-blowout-not-authorized",
+  "activity-not-authorized",
+] as const;
+export type TodayRefusalNotice = (typeof TODAY_REFUSAL_NOTICES)[number];
+
+export const LANDED_REFUSAL_NOTICES = [
+  "not-authorized",
+  "dispute-not-authorized",
+  "refund-not-authorized",
+  "not-authorized-merge",
+] as const;
+export type LandedRefusalNotice = (typeof LANDED_REFUSAL_NOTICES)[number];
+
+/**
  * A page's notice map, code to words, the shape `noticeFromParam` reads. Built
  * inside the request from the page's translator, never at module scope, so the
  * text tracks the negotiated locale rather than freezing to whichever locale

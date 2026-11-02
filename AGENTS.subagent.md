@@ -12,10 +12,10 @@ live and the rules a change must keep. Read `foo.test.ts` before `foo.ts`; tests
 | Decisions | grep `docs/architecture/decisions/` for the ADR id (each record is `<id>.md`) or a word of the decision; skip the README's index |
 | Staff pages (auth-gated, all of `/shop/**`) | `src/app/shop/`, gated by `requireShopSurface` in `src/lib/session.ts` |
 | Public shop pages (no auth anywhere) | `src/app/s/[shopSlug]/` |
-| Bearer-token pages (the URL is the capability) | `src/app/waivers/[token]`, `ready/[token]`, `recap/[token]`, `verify/[token]`, `reset-password/[token]`, `calendar/[token]` |
+| Bearer-token pages (the URL is the capability) | `src/app/(token)/waivers/[token]`, `ready/[token]`, `recap/[token]`, `verify/[token]`, `reset-password/[token]`, `calendar/[token]` |
 | Auth, authz, the edge check | `src/lib/auth.ts`, `src/lib/authz.ts`, `src/lib/session.ts`, `src/proxy.ts` |
 | May a diver buy a seat vs. board | `src/lib/trip-admission.ts` (booking, weaker) and `src/lib/readiness.ts` (boarding); admission never refuses someone readiness would clear |
-| Manifests, roll call, buddy teams | `src/lib/manifests.ts`, `src/db/manifests.ts`, `src/db/buddy-pairs.ts`, `src/app/shop/[shopSlug]/trips/[id]/manifest/` |
+| Manifests, roll call, buddy teams | `src/lib/manifests.ts`, `src/db/manifests.ts`, `src/db/buddy-teams.ts`, `src/app/shop/[shopSlug]/trips/[id]/manifest/` |
 | Offline manifests | `src/lib/offline-manifests.ts`, `src/lib/offline-manifest-store.ts`, `src/worker/manifest-sw.ts` |
 | Seating a diver (every staff door) | `src/db/seat-diver.ts` via `src/app/actions/seat-diver.ts` |
 | The booking transaction | `src/db/bookings.ts` |

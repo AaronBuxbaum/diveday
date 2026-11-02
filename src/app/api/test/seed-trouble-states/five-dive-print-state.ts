@@ -7,14 +7,18 @@ import { boats, bookings, courses, people, trips } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { listStaff } from "@/db/trips";
 import { nowDate } from "@/lib/clock";
+import { requireDemoTenant } from "@/lib/e2e-test-routes";
 import { seedOperationalTrust } from "./operational-states";
 
 /** A long, synthetic log for the guarded print harness; never real shop data. */
 export async function fiveDivePrintResponse(request: Request, db: AppDb) {
   const params = new URL(request.url).searchParams;
   if (params.get("fiveDivePrint") !== "1") return null;
-  const shop = await getShopBySlug(db, params.get("shop") ?? DEMO_SHOP_SLUG);
-  if (!shop?.isDemo) return NextResponse.json({ error: "not_available" }, { status: 404 });
+  const tenant = await requireDemoTenant(request, () =>
+    getShopBySlug(db, params.get("shop") ?? DEMO_SHOP_SLUG),
+  );
+  if (!tenant.ok) return tenant.response;
+  const { shop } = tenant;
   const now = nowDate();
   const state = await seedOperationalTrust(db, shop, "capacity", now);
   const [course] = await db

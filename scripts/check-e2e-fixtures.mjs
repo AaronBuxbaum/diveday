@@ -52,6 +52,12 @@ import { fileURLToPath } from "node:url";
  *    was unproven while its `POST` was registered (`security-reviewer`,
  *    2026-09-13). And the path is every segment under `api/test`, not the last
  *    one, so a nested `reset` cannot inherit the exemption below.
+ * 5. Every file under `src/app/api/test/**` that reaches a shop — resolves one
+ *    by slug, takes a `shopSlug`, or reads or writes `shops` — must call
+ *    `requireDemoTenant(` (`src/lib/e2e-test-routes.ts`, issue #2751), or be
+ *    in `SHOP_READERS_BY_DESIGN` with the reason it is safe without. A route
+ *    that resolved a caller's slug and wrote to it with no demo check was
+ *    seven routes deep before this existed (security review, 2026-11-02).
  */
 
 const ROOT = process.cwd();
@@ -105,6 +111,40 @@ function tableLiteral(source) {
   const close = /^\];$/m.exec(rest);
   return close ? rest.slice(0, close.index) : rest;
 }
+/**
+ * Files that reach a shop without `requireDemoTenant`, each with why that is
+ * safe. Anything else that reaches a shop is a fixture writing to whatever
+ * tenant it was handed.
+ */
+export const SHOP_READERS_BY_DESIGN = new Map([
+  [
+    "src/app/api/test/reset/route.ts",
+    "resolves only the canonical DEMO_SHOP_SLUG and restores it only when it is a demo; a caller names no shop",
+  ],
+  [
+    "src/app/api/test/seed-private-shop/route.ts",
+    "POST mints a new demo shop; the DELETE teardown is idempotent, answers a real and a missing shop alike ({ ok: true, dropped: false }) and drops only a demo shop",
+  ],
+  [
+    "src/app/api/test/seed-trouble-states/gear-states.ts",
+    "a helper handed the shop id its parent route already resolved through requireDemoTenant",
+  ],
+]);
+/** A shop lookup, a caller's shop slug, or the `shops` table itself. */
+const shopReachPattern = /getShopBySlug\(|\bshopSlug\b|\bshops\b/;
+const demoGateCallPattern = /\brequireDemoTenant\s*\(/;
+
+/** Files that reach a shop with no demo gate and no written reason. */
+export function shopReadersWithoutDemoGate(files) {
+  return files
+    .filter(({ path: file }) => !/\.test\.[cm]?[jt]sx?$/.test(file))
+    .filter(({ contents }) => shopReachPattern.test(contents))
+    .filter(({ contents }) => !demoGateCallPattern.test(contents))
+    .filter(({ path: file }) => !SHOP_READERS_BY_DESIGN.has(file))
+    .map(({ path: file }) => file)
+    .sort();
+}
+
 const HTTP_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"];
 const guardImportPattern =
   /import\s*\{[^}]*\be2eTestRouteAuthorized\b[^}]*\}\s*from\s*["']@\/lib\/e2e-test-routes["']/;
@@ -182,6 +222,19 @@ async function checkTestRouteGuards() {
     }
   }
   for (const problem of await unregisteredRoutes(routeHandlers)) problems.push(problem);
+  const sources = [];
+  for (const entry of entries.filter((name) => /\.tsx?$/.test(name)).sort()) {
+    const relativePath = path.join(TEST_ROUTE_DIR, entry);
+    sources.push({
+      path: relativePath,
+      contents: await readFile(path.join(ROOT, relativePath), "utf8"),
+    });
+  }
+  for (const file of shopReadersWithoutDemoGate(sources)) {
+    problems.push(
+      `${file}: reaches a shop without requireDemoTenant(request, findShop) — gate it, or add it to SHOP_READERS_BY_DESIGN with the reason it is safe`,
+    );
+  }
   return { count: routeFiles.length, handlers: routeHandlers.length, problems };
 }
 
@@ -293,8 +346,7 @@ async function main() {
       console.error("check:e2e-fixtures: /api/test route problem(s):");
       for (const problem of testRoutes.problems) console.error(`  - ${problem}`);
       console.error(
-        "Open every handler with: if (!e2eTestRouteAuthorized(request)) " +
-          'return NextResponse.json({ error: "not_available" }, { status: 404 });',
+        "Open every handler with: if (!e2eTestRouteAuthorized(request)) return testRouteRefused();",
       );
       console.error(
         `…and add a row for it to ${SEED_ROUTE_TABLE} — one per verb, with the expectation its ` +

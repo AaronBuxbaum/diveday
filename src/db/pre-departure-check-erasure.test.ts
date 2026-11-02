@@ -6,7 +6,7 @@ import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import { issueOfflineManifestSnapshot } from "./offline-manifest-snapshots";
 import { listChecklistItems, recordPreDepartureCheck } from "./pre-departure-check";
-import { preDepartureCheckEvents, shops } from "./schema";
+import { preDepartureCheckEvents } from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 
 const context = fileScopedShopContext();
@@ -24,15 +24,16 @@ async function fixture() {
 }
 
 describe("pre-departure checklist notes and diver erasure", () => {
-  it("keeps a stale offline checklist mark and tap time but drops its note", async () => {
+  it("keeps a stale offline checklist note: it is nobody's own data (issue #3569)", async () => {
     const { db, shop, trip, booking, owner, item } = await fixture();
     const issuedEpoch = shop.offlineErasureEpoch;
     const snapshotId = "11111111-1111-4111-8111-111111111111";
     const occurredAt = nowDate();
-    await db
-      .update(shops)
-      .set({ offlineErasureEpoch: issuedEpoch + 1 })
-      .where(eq(shops.id, shop.id));
+    await anonymizeDiver(db, {
+      shopId: shop.id,
+      personId: booking.booking.personId,
+      actorPersonId: owner.id,
+    });
 
     const result = await recordPreDepartureCheck(db, {
       shopId: shop.id,
@@ -52,10 +53,11 @@ describe("pre-departure checklist notes and diver erasure", () => {
         snapshotRevision: 1,
       }),
       occurredAt,
-      note: `${booking.person.fullName} was named in an old checklist note.`,
+      note: "Oxygen kit checked at the dock.",
     });
 
-    expect(result).toMatchObject({ ok: true, noteDisposition: "discarded_erasure_cutoff" });
+    expect(result).toMatchObject({ ok: true });
+    expect(result).not.toHaveProperty("noteDisposition");
     const [event] = await db
       .select({
         note: preDepartureCheckEvents.note,
@@ -64,7 +66,38 @@ describe("pre-departure checklist notes and diver erasure", () => {
       })
       .from(preDepartureCheckEvents)
       .where(eq(preDepartureCheckEvents.clientEventId, "22222222-2222-4222-8222-222222222222"));
-    expect(event).toEqual({ note: null, status: "checked", occurredAt });
+    expect(event).toEqual({
+      note: "Oxygen kit checked at the dock.",
+      status: "checked",
+      occurredAt,
+    });
+  });
+
+  it("still drops an offline checklist note whose snapshot token does not verify", async () => {
+    const { db, shop, trip, owner, item } = await fixture();
+    const occurredAt = nowDate();
+
+    const result = await recordPreDepartureCheck(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      checklistItemId: item.id,
+      recordedByPersonId: owner.id,
+      status: "checked",
+      source: "offline",
+      clientEventId: "44444444-4444-4444-8444-444444444444",
+      offlineSnapshotSavedAt: new Date(occurredAt.getTime() - 1_000),
+      offlineSnapshotId: "55555555-5555-4555-8555-555555555555",
+      offlineErasureEpochToken: "not-a-signed-epoch",
+      occurredAt,
+      note: "Oxygen kit checked at the dock.",
+    });
+
+    expect(result).toMatchObject({ ok: true, noteDisposition: "discarded_unverified_snapshot" });
+    const [event] = await db
+      .select({ note: preDepartureCheckEvents.note, status: preDepartureCheckEvents.status })
+      .from(preDepartureCheckEvents)
+      .where(eq(preDepartureCheckEvents.clientEventId, "44444444-4444-4444-8444-444444444444"));
+    expect(event).toEqual({ note: null, status: "checked" });
   });
 
   it("leaves a diver name in already-saved checklist notes (staff prose, not their data)", async () => {

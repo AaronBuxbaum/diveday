@@ -195,5 +195,22 @@
       "duplicateOption": "Hay dos opciones iguales.",
       "controlCharacter": "Quita el carácter oculto que se pegó en esta pregunta."
     }
+  },
+  "blank": {
+    "link": "Imprimir una exención en blanco",
+    "print": "Imprimir",
+    "version": "Versión de la exención {version}",
+    "medicalHeading": "Cuestionario médico",
+    "yes": "Sí",
+    "no": "No",
+    "followUp": "Responde si dijiste que sí en la pregunta {number}.",
+    "shopHeading": "Preguntas de {shop}",
+    "signatureHeading": "Firmas",
+    "printedName": "Nombre del buceador, en letra de molde",
+    "diverSignature": "Firma del buceador",
+    "date": "Fecha",
+    "guardianNote": "Si el buceador es menor de edad, también firma su madre, padre o tutor.",
+    "guardianName": "Nombre de la madre, el padre o el tutor, en letra de molde",
+    "guardianSignature": "Firma de la madre, el padre o el tutor"
   }
 }

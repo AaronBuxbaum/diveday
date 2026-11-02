@@ -3,7 +3,7 @@ import { getDb } from "@/db/client";
 import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
 import { getShopBySlug } from "@/db/shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "@/db/stripe-accounts";
-import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
+import { e2eTestRouteAuthorized, requireDemoTenant, testRouteRefused } from "@/lib/e2e-test-routes";
 
 /**
  * Marks a seeded demo shop as connected + charges-enabled, without ever
@@ -31,17 +31,16 @@ import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
  * real deployment.
  */
 export async function POST(request: Request) {
-  if (!e2eTestRouteAuthorized(request)) {
-    return NextResponse.json({ error: "not_available" }, { status: 404 });
-  }
+  if (!e2eTestRouteAuthorized(request)) return testRouteRefused();
   const db = await getDb();
   const requested = new URL(request.url).searchParams.get("slug");
   if (requested !== null && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(requested)) {
     return NextResponse.json({ error: "bad_slug" }, { status: 400 });
   }
   const slug = requested ?? DEMO_SHOP_SLUG;
-  const shop = await getShopBySlug(db, slug);
-  if (!shop?.isDemo) return NextResponse.json({ error: "not_available" }, { status: 404 });
+  const tenant = await requireDemoTenant(request, () => getShopBySlug(db, slug));
+  if (!tenant.ok) return tenant.response;
+  const { shop } = tenant;
 
   // `shop_stripe_accounts_stripe_account_unique` makes a connected account id
   // globally unique, so a minted shop cannot be handed the demo fixture's —

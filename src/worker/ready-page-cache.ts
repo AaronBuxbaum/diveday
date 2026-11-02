@@ -9,7 +9,7 @@
  *
  * - **A snapshot, not the page.** The worker never stores the page it was
  *   handed. It asks the server for `/ready/<token>/offline` (the route
- *   `src/app/ready/[token]/offline/route.ts`), which reads a short list of
+ *   `src/app/(token)/ready/[token]/offline/route.ts`), which reads a short list of
  *   fields off the verified booking and answers three finished documents.
  *   They hold no token, no link and no form, so there is nothing to redact
  *   here: no HTML is parsed or rewritten, and the worker only chooses which

@@ -46,7 +46,7 @@ describe("which reviewer a diff needs", () => {
     for (const file of [
       "src/proxy.ts",
       "src/lib/authz.ts",
-      "src/app/waivers/[token]/actions.ts",
+      "src/app/(token)/waivers/[token]/actions.ts",
       "src/app/calendar/[token]/route.ts",
       "src/db/export.ts",
       "src/db/schema/accounts.ts",
@@ -69,7 +69,7 @@ describe("which reviewer a diff needs", () => {
         "src/i18n/locales/en-US/staff/manifest.json",
         "src/app/manifest.ts",
         "src/app/shop/[shopSlug]/gear/page.tsx",
-        "src/app/ready/[token]/_components/TipAmountPicker.tsx",
+        "src/app/(token)/ready/[token]/_components/TipAmountPicker.tsx",
         "scripts/check-pr-body.mjs",
         "src/db/bookings-history.ts",
         "src/app/shop/[shopSlug]/waivers/page.tsx",

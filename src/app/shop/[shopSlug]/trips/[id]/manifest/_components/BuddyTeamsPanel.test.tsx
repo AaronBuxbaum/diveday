@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import type { TripBuddyTeam } from "@/db/buddy-pairs";
+import type { TripBuddyTeam } from "@/db/buddy-teams";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { BuddyTeamsPanel } from "./BuddyTeamsPanel";
 

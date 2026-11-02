@@ -65,7 +65,7 @@ media-deletion attempts) stay out under the third clause: plumbing and bookkeepi
 Column-level exclusions follow the precedents already in the bundle: `stripe_account_id` is provider
 linkage (as on `orders`/`tips`), `checkout_url` is an ephemeral link that stopped resolving when the
 session expired (as `tips.checkout_url`), and a join row's surrogate id is dropped where the pair it
-joins is exported (as `buddy_pair_members.id`).
+joins is exported (as `buddy_team_members.id`).
 
 ## Alternatives considered
 

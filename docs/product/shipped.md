@@ -722,7 +722,7 @@ departure has no recap and counts as no dive day, and `src/db/ready.test.ts` tha
 departure is a different fact from a cancelled booking; `AfterState.test.tsx` renders the real
 surface and fails on a second conditions element, a second primary, a coral greeting after a review,
 a stamp outside the named set, a print-only block that renders on screen, or any dive count or depth
-returning to the record; `src/app/ready/[token]/page.composition.test.ts` pins that a cancelled
+returning to the record; `src/app/(token)/ready/[token]/page.composition.test.ts` pins that a cancelled
 departure and the roll-call read both come before the state is composed, that the state is decided
 before any of the prep page is, and that the recap actions never see a readiness token; and
 `e2e/blowout.spec.ts` drives the whole thing — a seat booked, the blow-out called, and the diver's
@@ -1424,7 +1424,7 @@ the requirement sentence with the shop's contact, the rate limit and the landing
 `src/db/seat-claims.test.ts` — a spent link, an expired one, a sailed boat, a cancelled seat and a
 called-off departure each name the shop, and none of the last three has a link left to mint; a
 garbage token and a readiness token each answer `{ kind: "unknown" }` whole, so no shop reaches the
-caller by any route — by `src/app/claim/[token]/copy.test.ts`, which holds both halves of what the
+caller by any route — by `src/app/(token)/claim/[token]/copy.test.ts`, which holds both halves of what the
 dead sentence may not do, in both locales — plus the booking tier in
 `src/components/account/EntryShell.test.tsx` and both tiers walked end to end in
 `e2e/seat-claim.spec.ts`. The claim link's permanent shop attribution is
@@ -1836,7 +1836,7 @@ booking's status stated four times in one screenful — an earned moment, an ema
 panel and the checklist's own "Almost there" sentence. It is a spine now: **Sign · Your
 certification · Pay · Gear and sizes · Day-of details**, in that order, over **one** status
 statement — a figure and the next step's name (`ThreadStatus`,
-`src/app/ready/[token]/_components/ThreadSpine.tsx`). A settled step is a check line with the one
+`src/app/(token)/ready/[token]/_components/ThreadSpine.tsx`). A settled step is a check line with the one
 fact it states; the current step is open with its form inline; every other openable step is a
 closed line, held there by one native `<details name>` accordion, so at most one is ever open and
 `AutoOpenDetails` still answers a deep link. Which steps exist varies honestly per booking
@@ -2381,7 +2381,7 @@ membership rows a dissolve deletes and renders in the departure log's roll-call 
 the one fact on that document that had no audit entry. Teams **inform only** — never readiness,
 admission, capacity, or checkpoint completeness — and a shop that records none is unremarked. The
 offline copy shows teams read-only by name (divers *and* crew) and says the split-team read belongs
-to the live roll call; the export bundle carries standing teams as `buddy_pairs.csv`, crew rows
+to the live roll call; the export bundle carries standing teams as `buddy_teams.csv`, crew rows
 included. Seeded on the demo reef boat: a pair, a divemaster-led trio, and the normal odd remainder.
 See [20260804-buddy-teams](../architecture/decisions/20260804-buddy-teams.md), which supersedes
 [20260804-buddy-pairs](../architecture/decisions/20260804-buddy-pairs.md).

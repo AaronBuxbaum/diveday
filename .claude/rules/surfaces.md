@@ -17,7 +17,7 @@ Each rule names what enforces it; the reasoning, the ADRs and the longer form of
   `src/app/s/[shopSlug]/layout.tsx`; never a per-page cross-link.
 - **Where staff can go**: a destination goes in `src/lib/staff-destinations.ts`, never in a
   consumer (`src/components/ShopSectionNav.tsx`, `src/components/search/CommandPalette.tsx`).
-- **Bearer-token pages** (`src/app/waivers/[token]` and siblings): the URL is the capability; read
+- **Bearer-token pages** (`src/app/(token)/waivers/[token]` and siblings): the URL is the capability; read
   [the capability runbook](../../docs/engineering/capability-telemetry-runbook.md) first; no
   structured data or telemetry carrying the token.
 - **A staff page opens with** `requireShopSurface` (`src/lib/session.ts`); every refusal throws, a

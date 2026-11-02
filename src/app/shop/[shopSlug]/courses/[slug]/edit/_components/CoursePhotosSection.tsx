@@ -18,90 +18,88 @@ export function CoursePhotosSection({
   t: StaffTranslator;
 }) {
   return (
-    <>
-      <CourseSection as="fieldset" {...photos} description={t("courses.edit.photosDescription")}>
-        <FieldGrid columns={1} className="gap-y-6">
-          <Field
-            label={t("courses.edit.heroPhotoLabel")}
-            hint={t("courses.edit.heroPhotoHint")}
-            htmlFor="course-hero-photo"
-          >
-            <div className={removablePhotoGridClass}>
-              {course.heroImageUrl ? (
-                <CoursePhotoCell
-                  url={course.heroImageUrl}
-                  removeName="removeHero"
-                  removeLabel={t("courses.edit.removeLabel")}
-                  altId="hero-alt"
-                  altName="heroImageAlt"
-                  alt={course.heroImageAlt ?? ""}
-                  altLabel={t("courses.edit.photoCaptionLabel")}
-                  altPlaceholder={t("courses.edit.photoCaptionPlaceholder")}
-                />
-              ) : null}
-              <ImageFileInput
-                id="course-hero-photo"
-                name="heroImageFile"
-                copy={{
-                  choose: t(
-                    course.heroImageUrl
-                      ? "courses.edit.replaceHeroPhoto"
-                      : "shared.imageInput.choose",
-                  ),
-                  chooseAnother: t("shared.imageInput.chooseAnother"),
-                  wrongTypeSuffix: t("shared.imageInput.wrongTypeSuffix"),
-                  tooBigSuffix: t("shared.imageInput.tooBigSuffix", {
-                    maxMb: MAX_IMAGE_MB,
-                  }),
-                }}
+    <CourseSection as="fieldset" {...photos} description={t("courses.edit.photosDescription")}>
+      <FieldGrid columns={1} className="gap-y-6">
+        <Field
+          label={t("courses.edit.heroPhotoLabel")}
+          hint={t("courses.edit.heroPhotoHint")}
+          htmlFor="course-hero-photo"
+        >
+          <div className={removablePhotoGridClass}>
+            {course.heroImageUrl ? (
+              <CoursePhotoCell
+                url={course.heroImageUrl}
+                removeName="removeHero"
+                removeLabel={t("courses.edit.removeLabel")}
+                altId="hero-alt"
+                altName="heroImageAlt"
+                alt={course.heroImageAlt ?? ""}
+                altLabel={t("courses.edit.photoCaptionLabel")}
+                altPlaceholder={t("courses.edit.photoCaptionPlaceholder")}
               />
-            </div>
-          </Field>
-          <Field
-            label={t("courses.edit.galleryPhotosLabel")}
-            hint={t("courses.edit.galleryPhotosHint", {
-              max: MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION,
-            })}
-            htmlFor="course-gallery-photos"
-          >
-            <div className={removablePhotoGridClass}>
-              {course.galleryPhotos.map(({ url, alt }, index) => (
-                <CoursePhotoCell
-                  key={url}
-                  url={url}
-                  removeName="removeGalleryUrls"
-                  removeValue={url}
-                  removeLabel={t("courses.edit.removeLabel")}
-                  altId={`gallery-alt-${index}`}
-                  altName="galleryAltValues"
-                  alt={alt}
-                  altLabel={t("courses.edit.photoCaptionLabel")}
-                  altPlaceholder={t("courses.edit.photoCaptionPlaceholder")}
-                >
-                  <input type="hidden" name="galleryAltUrls" value={url} />
-                </CoursePhotoCell>
-              ))}
-              <ImageFileInput
-                id="course-gallery-photos"
-                name="galleryImageFiles"
-                multiple
-                maxFiles={MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION}
-                copy={{
-                  choose: t("courses.edit.addGalleryPhotos"),
-                  chooseAnother: t("shared.imageInput.chooseAnother"),
-                  tooMany: t("shared.imageInput.tooMany", {
-                    count: MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION,
-                  }),
-                  wrongTypeSuffix: t("shared.imageInput.wrongTypeSuffix"),
-                  tooBigSuffix: t("shared.imageInput.tooBigSuffix", {
-                    maxMb: MAX_IMAGE_MB,
-                  }),
-                }}
-              />
-            </div>
-          </Field>
-        </FieldGrid>
-      </CourseSection>
-    </>
+            ) : null}
+            <ImageFileInput
+              id="course-hero-photo"
+              name="heroImageFile"
+              copy={{
+                choose: t(
+                  course.heroImageUrl
+                    ? "courses.edit.replaceHeroPhoto"
+                    : "shared.imageInput.choose",
+                ),
+                chooseAnother: t("shared.imageInput.chooseAnother"),
+                wrongTypeSuffix: t("shared.imageInput.wrongTypeSuffix"),
+                tooBigSuffix: t("shared.imageInput.tooBigSuffix", {
+                  maxMb: MAX_IMAGE_MB,
+                }),
+              }}
+            />
+          </div>
+        </Field>
+        <Field
+          label={t("courses.edit.galleryPhotosLabel")}
+          hint={t("courses.edit.galleryPhotosHint", {
+            max: MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION,
+          })}
+          htmlFor="course-gallery-photos"
+        >
+          <div className={removablePhotoGridClass}>
+            {course.galleryPhotos.map(({ url, alt }, index) => (
+              <CoursePhotoCell
+                key={url}
+                url={url}
+                removeName="removeGalleryUrls"
+                removeValue={url}
+                removeLabel={t("courses.edit.removeLabel")}
+                altId={`gallery-alt-${index}`}
+                altName="galleryAltValues"
+                alt={alt}
+                altLabel={t("courses.edit.photoCaptionLabel")}
+                altPlaceholder={t("courses.edit.photoCaptionPlaceholder")}
+              >
+                <input type="hidden" name="galleryAltUrls" value={url} />
+              </CoursePhotoCell>
+            ))}
+            <ImageFileInput
+              id="course-gallery-photos"
+              name="galleryImageFiles"
+              multiple
+              maxFiles={MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION}
+              copy={{
+                choose: t("courses.edit.addGalleryPhotos"),
+                chooseAnother: t("shared.imageInput.chooseAnother"),
+                tooMany: t("shared.imageInput.tooMany", {
+                  count: MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION,
+                }),
+                wrongTypeSuffix: t("shared.imageInput.wrongTypeSuffix"),
+                tooBigSuffix: t("shared.imageInput.tooBigSuffix", {
+                  maxMb: MAX_IMAGE_MB,
+                }),
+              }}
+            />
+          </div>
+        </Field>
+      </FieldGrid>
+    </CourseSection>
   );
 }

@@ -24,6 +24,7 @@ import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { DEFAULT_WAIVER_BODY, isSampleRelease } from "@/lib/waivers";
+import { BlankReleaseLink } from "./_components/BlankReleaseLink";
 import { type CourseFormNotice, CourseFormsSection } from "./_components/CourseFormsSection";
 import type { PublishReleaseCopy } from "./_components/PublishRelease";
 import { ReleaseForm } from "./_components/ReleaseForm";
@@ -302,6 +303,7 @@ export default async function WaiversPage({
           <DisclosureCaret className="group-open/release:rotate-90" />
         </summary>
         <SectionCard padding="lg" className="mt-4">
+          {current ? <BlankReleaseLink shopSlug={shopSlug} t={t} /> : null}
           <ReleaseForm
             action={saveWaiverAction}
             fieldLabel={t("waiversStaff.fieldLabel")}

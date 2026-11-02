@@ -36,10 +36,10 @@ diver's name is the exact failure this feature exists to prevent:
 - **`party_lead_booking_id`** points at a different diver's booking row. It carries no name on its
   own, but it is a foreign key this diver has no reason to hold, so `bookings.csv` blanks it rather
   than exporting it.
-- **A buddy team's other members** live as separate rows in `buddy_pair_members`, keyed by a
+- **A buddy team's other members** live as separate rows in `buddy_team_members`, keyed by a
   different `booking_id`/`crew_person_id`. Filtering to this diver's own bookings (and their own
   `crew_person_id`, if they are also staff) naturally selects only their own membership row per
-  team — never another member's — so `buddy_pairs.csv` needed no redaction, only the right
+  team — never another member's — so `buddy_teams.csv` needed no redaction, only the right
   `where`.
 - **Staff attribution** — who recorded a roll call, moderated a review, created an order, paired a
   team — travels by name. The shop's own record of who did what is the shop's, not a third

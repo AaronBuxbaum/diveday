@@ -45,69 +45,9 @@ export const SETTINGS_GROUPS = [
 export type SettingsGroupId = (typeof SETTINGS_GROUPS)[number]["id"];
 export type SettingsGroupSpec = (typeof SETTINGS_GROUPS)[number];
 
-/**
- * The forms that are still **rows on the hub** each carry their own section id
- * through `?saved=<id>` (set by the action that redirects back here), so the row
- * that changed comes back *open*, with the notice rendered inside it — a closed
- * disclosure hiding a refusal would be a form the staffer cannot see failed
- * (the same rule the trip About panel's rows state).
- *
- * **A row whose editor is a list, or more than about three fields, is not on
- * this list — it has a page.** Boats, trip tags and dive packages each opened
- * onto a run of forms with a Save and a Delete on every line; what the shop
- * rents, its rental prices, the emergency reference, the dock-day rhythm and
- * the shop profile were forms of six to a dozen fields (#1854). The
- * hub is a directory, and a directory row states an answer and opens the form
- * that changes it (ADR 20260827-clearwater-surface-language, decision 6). Those
- * are `route` rows below and `SettingsDoorRow`s on the hub (dive packages has
- * since moved under Money's Discounts tab); their actions
- * redirect to their own page with a plain `?notice=`.
- *
- * It lives here rather than in `SettingsPage.tsx` because the rail below needs
- * the same vocabulary, and two lists of section ids is exactly the drift ADR
- * 20260827-clearwater-surface-language's decision 6 would otherwise produce.
- */
-export const SECTION_IDS = [
-  "timezone",
-  "season",
-  "contact",
-  "shopPhotos",
-  "address",
-  "reviewLink",
-  "deskHours",
-  "searchListing",
-  "packing",
-  "counterCard",
-  "certCheck",
-  "units",
-  "juniorBuddy",
-  "crewSchedule",
-  "passThrough",
-  "stripe",
-] as const;
-export type SectionId = (typeof SECTION_IDS)[number];
-
-/**
- * The fragment a section answers to, which is **not** always its id: several
- * rows carried a kebab anchor before the rail existed and other surfaces link
- * to them by name (`/settings#review-link`, `/settings#search-listing`). ADR
- * 20260827-clearwater-surface-language's 6g pins that neither the ids nor the
- * fragments move — the pane scrolls, the targets stay put — so the two
- * spellings are reconciled here once instead of at each call site.
- */
-const SECTION_FRAGMENTS: Partial<Record<SectionId, string>> = {
-  reviewLink: "review-link",
-  deskHours: "desk-hours",
-  searchListing: "search-listing",
-  crewSchedule: "crew-schedule",
-  passThrough: "pass-through",
-  counterCard: "counter-card",
-  certCheck: "cert-check",
-};
-
 /** The `#fragment` that opens and scrolls to a hub section. */
 export function settingsSectionFragment(id: SectionId): string {
-  return SECTION_FRAGMENTS[id] ?? id;
+  return SECTION_FRAGMENT_BY_ID.get(id) ?? id;
 }
 
 /**
@@ -139,12 +79,12 @@ export type SettingsRailBadgeSource = "payments";
  * pathname. Nothing else selects, and the two never blur —
  * `currentSettingsRailRowId` below is the single place that decides.
  */
-export type SettingsRailRow = {
+type SettingsRailRowSpec = {
   id: string;
   labelKey: StaffMessageKey;
   group: SettingsGroupId;
-  target:
-    | { kind: "section"; id: SectionId }
+  target: // `fragment`: the anchor when it is not the id (`SECTION_IDS` says why).
+    | { kind: "section"; id: string; fragment?: string }
     // `also`: the other paths of the same place (the tabs of Your data), so
     // standing on any of them lights this one row.
     | { kind: "route"; path: string; also?: readonly string[] };
@@ -168,7 +108,7 @@ export type SettingsRailRow = {
  * walks these rows against the sections' positions, and a rail that disagreed
  * with the page would light the wrong row.
  */
-export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
+const RAIL_ROWS = [
   {
     id: "bookkeeper",
     labelKey: "reports.bookkeeper.label",
@@ -209,7 +149,7 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     id: "searchListing",
     labelKey: "settings.main.searchListing.heading",
     group: "shop",
-    target: { kind: "section", id: "searchListing" },
+    target: { kind: "section", id: "searchListing", fragment: "search-listing" },
   },
   {
     id: "emergency",
@@ -253,7 +193,7 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     id: "crewSchedule",
     labelKey: "settings.main.crewSchedule.heading",
     group: "team",
-    target: { kind: "section", id: "crewSchedule" },
+    target: { kind: "section", id: "crewSchedule", fragment: "crew-schedule" },
     gate: "team",
   },
   {
@@ -273,7 +213,7 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     id: "counterCard",
     labelKey: "settings.main.counterQr.heading",
     group: "bookings",
-    target: { kind: "section", id: "counterCard" },
+    target: { kind: "section", id: "counterCard", fragment: "counter-card" },
     // Counter sign-up switched off on Features: no card to find.
     gate: "selfRegistration",
   },
@@ -281,7 +221,7 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     id: "certCheck",
     labelKey: "settings.main.certCheck.heading",
     group: "bookings",
-    target: { kind: "section", id: "certCheck" },
+    target: { kind: "section", id: "certCheck", fragment: "cert-check" },
   },
   {
     id: "packing",
@@ -306,7 +246,7 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     id: "passThrough",
     labelKey: "settings.main.passThrough.heading",
     group: "money",
-    target: { kind: "section", id: "passThrough" },
+    target: { kind: "section", id: "passThrough", fragment: "pass-through" },
     gate: "payments",
   },
   {
@@ -334,13 +274,13 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     id: "deskHours",
     labelKey: "settings.main.deskHours.heading",
     group: "messages",
-    target: { kind: "section", id: "deskHours" },
+    target: { kind: "section", id: "deskHours", fragment: "desk-hours" },
   },
   {
     id: "reviewLink",
     labelKey: "settings.main.reviewLink.heading",
     group: "messages",
-    target: { kind: "section", id: "reviewLink" },
+    target: { kind: "section", id: "reviewLink", fragment: "review-link" },
   },
   {
     id: "whatsapp",
@@ -383,7 +323,62 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
       also: ["/settings/export/backups", "/settings/import", "/settings/integrations"],
     },
   },
-];
+] as const satisfies readonly SettingsRailRowSpec[];
+
+type SectionTarget = Extract<(typeof RAIL_ROWS)[number]["target"], { kind: "section" }>;
+export type SectionId = SectionTarget["id"];
+
+/** One row of the rail, its section id narrowed to the hub's real ids. */
+export type SettingsRailRow = Omit<SettingsRailRowSpec, "target"> & {
+  target:
+    | { kind: "section"; id: SectionId; fragment?: string }
+    | Extract<SettingsRailRowSpec["target"], { kind: "route" }>;
+};
+
+export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = RAIL_ROWS;
+
+/**
+ * The forms that are still **rows on the hub** each carry their own section id
+ * through `?saved=<id>` (set by the action that redirects back here), so the row
+ * that changed comes back *open*, with the notice rendered inside it — a closed
+ * disclosure hiding a refusal would be a form the staffer cannot see failed
+ * (the same rule the trip About panel's rows state).
+ *
+ * **A row whose editor is a list, or more than about three fields, is not on
+ * this list — it has a page.** Boats, trip tags and dive packages each opened
+ * onto a run of forms with a Save and a Delete on every line; what the shop
+ * rents, its rental prices, the emergency reference, the dock-day rhythm and
+ * the shop profile were forms of six to a dozen fields (#1854). The
+ * hub is a directory, and a directory row states an answer and opens the form
+ * that changes it (ADR 20260827-clearwater-surface-language, decision 6). Those
+ * are `route` rows below and `SettingsDoorRow`s on the hub (dive packages has
+ * since moved under Money's Discounts tab); their actions
+ * redirect to their own page with a plain `?notice=`.
+ *
+ * **Derived, not listed**: a section is a `section` row of `SETTINGS_RAIL_ROWS`, so the
+ * rail and the hub's vocabulary cannot drift (issue #2740). It lives here rather than in `SettingsPage.tsx` because the rail below needs
+ * the same vocabulary, and two lists of section ids is exactly the drift ADR
+ * 20260827-clearwater-surface-language's decision 6 would otherwise produce.
+ */
+export const SECTION_IDS: readonly SectionId[] = SETTINGS_RAIL_ROWS.flatMap((row) =>
+  row.target.kind === "section" ? [row.target.id] : [],
+);
+
+/**
+ * The fragment a section answers to, which is **not** always its id: several
+ * rows carried a kebab anchor before the rail existed and other surfaces link
+ * to them by name (`/settings#review-link`, `/settings#search-listing`). ADR
+ * 20260827-clearwater-surface-language's 6g pins that neither the ids nor the
+ * fragments move — the pane scrolls, the targets stay put — so the two
+ * spellings are reconciled here once instead of at each call site.
+ */
+const SECTION_FRAGMENT_BY_ID: ReadonlyMap<SectionId, string> = new Map(
+  SETTINGS_RAIL_ROWS.flatMap((row) =>
+    row.target.kind === "section" && row.target.fragment
+      ? [[row.target.id, row.target.fragment] as const]
+      : [],
+  ),
+);
 
 /** The rows this reader may actually walk through, in rail order. */
 export function settingsRailRowsFor(

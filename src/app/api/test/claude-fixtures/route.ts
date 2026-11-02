@@ -6,7 +6,7 @@ import { bookings, people, shops, tripReviews, trips } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { armClaudeFixtures, e2eClaudeFixtureProvider } from "@/lib/assists/e2e-fixtures";
 import { nowDate } from "@/lib/clock";
-import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
+import { e2eTestRouteAuthorized, requireDemoTenant, testRouteRefused } from "@/lib/e2e-test-routes";
 
 /**
  * **Light Claude's assists on one private shop**, so the browser fleet can
@@ -31,12 +31,14 @@ async function mintedShop(request: Request) {
 }
 
 export async function POST(request: Request) {
-  if (!e2eTestRouteAuthorized(request)) {
-    return NextResponse.json({ error: "not_available" }, { status: 404 });
-  }
+  if (!e2eTestRouteAuthorized(request)) return testRouteRefused();
   const found = await mintedShop(request);
-  if (!found?.shop.isDemo) return NextResponse.json({ error: "invalid_body" }, { status: 400 });
-  await found.db.update(shops).set({ isDemo: false }).where(eq(shops.id, found.shop.id));
+  // Only a demo tenant is armed. No slug, the canonical shop, a missing shop
+  // and a real one all get the one refusal, so none can be told apart.
+  if (!found) return testRouteRefused();
+  const tenant = await requireDemoTenant(request, async () => found.shop);
+  if (!tenant.ok) return tenant.response;
+  await found.db.update(shops).set({ isDemo: false }).where(eq(shops.id, tenant.shop.id));
   armClaudeFixtures(found.shop.id, true);
   // `?review=1`: one commented review waiting for moderation, on a departure
   // that has sailed, so the review flags have a row to mark. A minted shop
@@ -80,15 +82,11 @@ async function seedWaitingReview(db: AppDb, shopId: string): Promise<void> {
 }
 
 export async function DELETE(request: Request) {
-  if (!e2eTestRouteAuthorized(request)) {
-    return NextResponse.json({ error: "not_available" }, { status: 404 });
-  }
+  if (!e2eTestRouteAuthorized(request)) return testRouteRefused();
   const found = await mintedShop(request);
   // Only a shop this server armed goes back to being a demo: anything else
   // (a real tenant, a shop disarmed already) keeps its flag.
-  if (!found || !e2eClaudeFixtureProvider(found.shop.id)) {
-    return NextResponse.json({ error: "invalid_body" }, { status: 400 });
-  }
+  if (!found || !e2eClaudeFixtureProvider(found.shop.id)) return testRouteRefused();
   armClaudeFixtures(found.shop.id, false);
   await found.db.update(shops).set({ isDemo: true }).where(eq(shops.id, found.shop.id));
   return NextResponse.json({ ok: true });

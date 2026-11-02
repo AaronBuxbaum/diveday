@@ -1,5 +1,5 @@
 import { periodBounds, type UsageSample } from "@/lib/cost-guardrails";
-import type { ProbeEnvironment } from "./probe";
+import type { Environment } from "@/lib/seam";
 
 /**
  * Reads one month's Claude spend from DiveDay's own ledger (`claude_usage`),
@@ -18,7 +18,7 @@ export async function readAnthropicSpend({
   now,
   readSpendUsd,
 }: {
-  readonly env: ProbeEnvironment;
+  readonly env: Environment;
   readonly now: Date;
   readonly readSpendUsd?: AnthropicSpendReader;
 }): Promise<UsageSample> {

@@ -41,7 +41,7 @@ export const EXPORT_PURPOSE_KEYS = {
   "booking_arrival_events.csv": "settings.export.filePurposes.booking_arrival_events",
   "roll_call_events.csv": "settings.export.filePurposes.roll_call_events",
   "roll_call_crew_events.csv": "settings.export.filePurposes.roll_call_crew_events",
-  "buddy_pairs.csv": "settings.export.filePurposes.buddy_pairs",
+  "buddy_teams.csv": "settings.export.filePurposes.buddy_teams",
   "waiver_templates.csv": "settings.export.filePurposes.waiver_templates",
   "waiver_materiality_decisions.csv": "settings.export.filePurposes.waiver_materiality_decisions",
   "waiver_records.csv": "settings.export.filePurposes.waiver_records",

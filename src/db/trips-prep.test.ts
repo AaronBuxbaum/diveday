@@ -605,9 +605,15 @@ describe("getTripPrep", () => {
       expect(piece(holder.diver.bookingId)?.notOffered).toBe(false);
       expect(piece(other.diver.bookingId)?.notOffered).toBe(true);
       const lines = prep?.checklist.lines.filter((line) => line.kind === kind) ?? [];
-      expect(lines.find((line) => !line.notOffered)?.divers).toContain(holder.diver.fullName);
-      expect(lines.find((line) => line.notOffered)?.divers).toContain(other.diver.fullName);
-      expect(lines.find((line) => line.notOffered)?.divers).not.toContain(holder.diver.fullName);
+      expect(
+        lines.find((line) => !line.notOffered)?.divers.map((seat) => seat.bookingId),
+      ).toContain(holder.diver.bookingId);
+      expect(lines.find((line) => line.notOffered)?.divers.map((seat) => seat.bookingId)).toContain(
+        other.diver.bookingId,
+      );
+      expect(
+        lines.find((line) => line.notOffered)?.divers.map((seat) => seat.bookingId),
+      ).not.toContain(holder.diver.bookingId);
     });
 
     it("keeps the mark once the reservation is released", async () => {

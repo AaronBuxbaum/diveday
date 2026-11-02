@@ -5,14 +5,18 @@ import { recordFlySafeTold, sendFlySafeCorrections } from "@/db/fly-safe-correct
 import { bookings, people, personRoles, trips } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { HOUR_MS, nowDate } from "@/lib/clock";
+import { requireDemoTenant } from "@/lib/e2e-test-routes";
 import type { NotificationProvider } from "@/lib/notifications";
 
 /** Synthetic delivery outcomes, only reachable through the guarded e2e route. */
 export async function flySafeFollowUpStateResponse(request: Request, db: AppDb) {
   const params = new URL(request.url).searchParams;
   if (params.get("flySafeFollowUp") !== "1") return null;
-  const shop = await getShopBySlug(db, params.get("shop") ?? DEMO_SHOP_SLUG);
-  if (!shop?.isDemo) return NextResponse.json({ error: "not_available" }, { status: 404 });
+  const tenant = await requireDemoTenant(request, () =>
+    getShopBySlug(db, params.get("shop") ?? DEMO_SHOP_SLUG),
+  );
+  if (!tenant.ok) return tenant.response;
+  const { shop } = tenant;
   const now = nowDate();
   const startsAt = new Date(now.getTime() + 20 * HOUR_MS);
   const [trip] = await db

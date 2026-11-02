@@ -37,7 +37,7 @@ merchant-of-record model bookings use.
   and a custom-amount input for anyone who wants a different number — generous enough for a real
   gratitude tip, bounded against a mistyped amount (a stray extra digit) or an abusive one (someone
   probing the checkout endpoint). The client keeps the two mutually exclusive (`TipAmountPicker`,
-  `src/app/recap/[token]/TipAmountPicker.tsx`), but the bound itself is enforced server-side in
+  `src/app/(token)/recap/[token]/TipAmountPicker.tsx`), but the bound itself is enforced server-side in
   `startTipCheckout`, not just the form's `min`/`max` — the recap page is a public token-auth surface,
   so the real bound lives on the server regardless of which of the two fields the diver used.
 - **Shop identity is derived from the booking, never accepted from the caller.** `startTipCheckout`

@@ -89,7 +89,6 @@ export function TripHeader({
       eyebrow={embed ? shop.name : t("trip.backToAllTrips")}
       {...(embed ? {} : { eyebrowHref: publicSchedulePath(shop.slug) })}
       title={trip.title}
-      titleFace="brand"
       {...(embed
         ? {
             brand: {

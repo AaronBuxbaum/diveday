@@ -67,6 +67,13 @@ export async function recordStripePayout(db: AppDb, event: PayoutEvent): Promise
     .limit(1);
   if (!holder) return { status: "not_found" };
 
+  // Kept on purpose (issue #3592): the conflict predicate below repeats these
+  // checks, but only this plain read answers a stale replay without writing.
+  // `ON CONFLICT DO UPDATE` locks the conflicting row even when `setWhere` is
+  // false (here, possibly another shop's payout), and its row is checked
+  // against NOT NULL, type and range before the conflict is resolved, so a
+  // malformed stale event would throw (Stripe retries) instead of answering
+  // `stale`.
   const [existing] = await db
     .select()
     .from(stripePayouts)

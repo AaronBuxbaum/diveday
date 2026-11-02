@@ -42,13 +42,13 @@ describe("PreserveFormScroll mount", () => {
     const layoutFiles = [
       { file: "src/app/layout.tsx", contents: "<body>\n  <PreserveFormScroll />\n</body>" },
       {
-        file: "src/app/ready/[token]/layout.tsx",
+        file: "src/app/(token)/ready/[token]/layout.tsx",
         contents: "<body>\n  <PreserveFormScroll />\n  {children}\n</body>",
       },
     ];
     const violations = findScrollMountViolations(layoutFiles);
     expect(violations).toHaveLength(1);
-    expect(violations[0]).toContain("src/app/ready/[token]/layout.tsx");
+    expect(violations[0]).toContain("src/app/(token)/ready/[token]/layout.tsx");
     expect(violations[0]).toContain("renders <PreserveFormScroll />");
   });
 

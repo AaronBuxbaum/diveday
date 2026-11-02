@@ -106,7 +106,7 @@ neutralised by the reduced-motion block.
 
 Delivered 2026-08-01, non-contrast: the waiver page's `signerName`/`acknowledged` controls now carry
 `required`/`minLength`, the fallback error banner names and links to the specific field that failed
-(`firstInvalidWaiverField` in `src/app/waivers/[token]/page.tsx`); the schedule builder's Add/Move/Copy
+(`firstInvalidWaiverField` in `src/app/(token)/waivers/[token]/page.tsx`); the schedule builder's Add/Move/Copy
 panels move focus into their first field on open and return it to the toggle on Cancel, and the
 hand-rolled Cancel buttons now go through `buttonClass({ variant: "ghost", size: "sm" })`
 (`src/app/shop/[shopSlug]/schedule/board/_components/ScheduleBuilder.tsx` — the panel-completion

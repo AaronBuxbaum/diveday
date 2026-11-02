@@ -7,13 +7,17 @@ import { courses, tripAssignments } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { createTrip, listStaff } from "@/db/trips";
 import { HOUR_MS, nowDate } from "@/lib/clock";
+import { requireDemoTenant } from "@/lib/e2e-test-routes";
 
 /** A synthetic overlap, reachable only through the guarded trouble-state route. */
 export async function mixedTrainingStateResponse(request: Request, db: AppDb) {
   const params = new URL(request.url).searchParams;
   if (params.get("mixedTraining") !== "1") return null;
-  const shop = await getShopBySlug(db, params.get("shop") ?? DEMO_SHOP_SLUG);
-  if (!shop?.isDemo) return NextResponse.json({ error: "not_available" }, { status: 404 });
+  const tenant = await requireDemoTenant(request, () =>
+    getShopBySlug(db, params.get("shop") ?? DEMO_SHOP_SLUG),
+  );
+  if (!tenant.ok) return tenant.response;
+  const { shop } = tenant;
   const catalog = await db.select().from(courses).where(eq(courses.shopId, shop.id));
   const intro = catalog.find((course) => course.isIntroCourse);
   const entry = catalog.find(

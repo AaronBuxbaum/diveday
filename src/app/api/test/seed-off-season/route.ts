@@ -6,7 +6,7 @@ import { trips } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { createTrip, liveTrip } from "@/db/trips";
 import { nowDate } from "@/lib/clock";
-import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
+import { e2eTestRouteAuthorized, requireDemoTenant, testRouteRefused } from "@/lib/e2e-test-routes";
 import { hasSailed } from "@/lib/trips";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -42,9 +42,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  * so it can never be reachable in a real deployment.
  */
 export async function POST(request: Request) {
-  if (!e2eTestRouteAuthorized(request)) {
-    return NextResponse.json({ error: "not_available" }, { status: 404 });
-  }
+  if (!e2eTestRouteAuthorized(request)) return testRouteRefused();
   const params = new URL(request.url).searchParams;
   const slug = params.get("slug") ?? DEMO_SHOP_SLUG;
   const raw = params.get("opensInDays");
@@ -56,8 +54,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "invalid_body" }, { status: 400 });
   }
   const db = await getDb();
-  const shop = await getShopBySlug(db, slug);
-  if (!shop?.isDemo) return NextResponse.json({ error: "not_available" }, { status: 404 });
+  const tenant = await requireDemoTenant(request, () => getShopBySlug(db, slug));
+  if (!tenant.ok) return tenant.response;
+  const { shop } = tenant;
 
   const now = nowDate();
   // `hasSailed`, never a second buffer constant: a departure is "still ahead"

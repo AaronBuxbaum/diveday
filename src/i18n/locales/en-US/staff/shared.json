@@ -687,5 +687,19 @@
     "paidNoSpan": "Paid out {amount} on {date}",
     "canceled": "A payout of {amount} due {date} was canceled.",
     "failed": "A payout of {amount} due {date} failed. Check the bank account in Stripe."
+  },
+  "refusal": {
+    "waiversNotAuthorized": "Editing the waiver is limited to owners and managers.",
+    "exportNotAuthorized": "Data export is limited to owners and managers.",
+    "reportsNotAuthorized": "Reports read the shop’s revenue, so they’re limited to owners and managers.",
+    "settingsNotAuthorized": "Shop settings are managed by the owner or a manager. Your calendar subscription is still yours to set up.",
+    "teamNotAuthorized": "Team management is limited to owners and managers.",
+    "importNotAuthorized": "Importing writes divers’ personal and medical records, so it’s limited to owners and managers.",
+    "gearImportNotAuthorized": "Importing gear service history is limited to owners and managers.",
+    "diveSiteImportNotAuthorized": "Importing dive sites is limited to owners and managers.",
+    "promosNotAuthorized": "Promo codes are limited to owners and managers.",
+    "billingNotAuthorized": "Billing is limited to the owner.",
+    "dayBlowoutNotAuthorized": "Calling a whole day off is limited to owners, managers and captains. You can still call one departure from its own page.",
+    "activityNotAuthorized": "The activity log is limited to owners and managers."
   }
 }

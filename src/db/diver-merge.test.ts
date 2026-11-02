@@ -8,7 +8,7 @@ import {
   WAIVER_INTEGRITY_VERSION_SIGNED,
 } from "@/lib/waiver-integrity";
 import { fileScopedShopContext } from "@/test/db";
-import { listTripBuddyTeams } from "./buddy-pairs";
+import { listTripBuddyTeams } from "./buddy-teams";
 import {
   DIVER_HISTORY_TABLES,
   DIVER_MERGE_COUNT_GROUPS,
@@ -29,7 +29,7 @@ import { getBookingReadiness } from "./readiness";
 import {
   activityEvents,
   bookings,
-  buddyPairMembers,
+  buddyTeamMembers,
   certifications,
   gearItems,
   gearReservations,
@@ -544,7 +544,7 @@ describe("diver record merge, a seat that is already over", () => {
       occurredAt: nowDate(),
     });
     const pairId = crypto.randomUUID();
-    await f.db.insert(buddyPairMembers).values([
+    await f.db.insert(buddyTeamMembers).values([
       {
         shopId: f.shop.id,
         tripId: f.trip.id,

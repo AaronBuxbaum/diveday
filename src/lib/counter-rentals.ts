@@ -1,7 +1,7 @@
 import type { Certification, SpecialtyCertification } from "@/db/schema";
 import { type CalendarDate, calendarDaysBetween, isValidCalendarDate } from "./calendar-date";
 import type { CertificationLevel } from "./certification-levels";
-import type { GearItemKind } from "./gear";
+import type { GearItemKind, O2CleanStanding } from "./gear";
 import type { NitroxFillMethod } from "./nitrox-fill";
 import { certificationRank, holdsSpecialtyCard, validVerifiedCertification } from "./readiness";
 import {
@@ -207,6 +207,28 @@ export function o2CleanWarnsForFill(method: NitroxFillMethod, o2Percent: number)
   const upTo =
     method === "membrane_premix" ? MEMBRANE_PREMIX_O2_CLEAN_UP_TO : TANK_FILL_O2_PERCENT.air;
   return o2Percent > upTo;
+}
+
+/** What a counter tank line records about an EANx fill with no current O2-clean record. */
+export type FillO2CleanGap = Exclude<O2CleanStanding, "current">;
+
+/**
+ * **Whether a counter tank line records that its EANx went in without a
+ * current O2-clean record** (issue #3005), and which: `lapsed` or `never`.
+ * Recorded exactly when the counter's warning would show
+ * (`o2CleanWarnsForFill`), so the ticket and the cart never disagree. A
+ * record only, for the person at the compressor: the fill is accepted either
+ * way.
+ */
+export function fillO2CleanGap(
+  method: NitroxFillMethod,
+  o2Percent: number,
+  standing: O2CleanStanding,
+): FillO2CleanGap | null {
+  if (!o2CleanWarnsForFill(method, o2Percent)) return null;
+  if (standing === "lapsed") return "lapsed";
+  if (standing === "never") return "never";
+  return null;
 }
 
 export type CounterTankFillRefusal =

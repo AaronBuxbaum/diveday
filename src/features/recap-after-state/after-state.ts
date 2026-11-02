@@ -40,7 +40,7 @@ import { type TemperatureUnit, temperatureUnitFor } from "@/lib/temperature-unit
 import { visitMilestone } from "@/lib/visit-milestones";
 
 /**
- * Everything `AfterState` (`src/app/ready/[token]/_components/AfterState.tsx`)
+ * Everything `AfterState` (`src/app/(token)/ready/[token]/_components/AfterState.tsx`)
  * renders, assembled by {@link buildAfterStateProps} below. It lives beside its
  * one assembler so this module never reaches up into a route for its shape.
  */

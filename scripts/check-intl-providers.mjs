@@ -29,16 +29,16 @@ const SEGMENT_FILES = ["layout.tsx", "template.tsx", "page.tsx", "error.tsx"];
  * client provider (ADR 20260803-error-boundary-copy-bridge).
  */
 export const ERROR_BOUNDARIES_WITH_COPY = [
-  "claim/[token]/error.tsx",
-  "confirm-contact/[token]/error.tsx",
-  "invite/[token]/error.tsx",
-  "ready/[token]/error.tsx",
-  "recap/[token]/error.tsx",
-  "reset-password/[token]/error.tsx",
+  "(token)/claim/[token]/error.tsx",
+  "(token)/confirm-contact/[token]/error.tsx",
+  "(token)/invite/[token]/error.tsx",
+  "(token)/ready/[token]/error.tsx",
+  "(token)/recap/[token]/error.tsx",
+  "(token)/reset-password/[token]/error.tsx",
+  "(token)/unsubscribe/[token]/error.tsx",
+  "(token)/verify/[token]/error.tsx",
+  "(token)/waivers/[token]/error.tsx",
   "s/[shopSlug]/error.tsx",
-  "unsubscribe/[token]/error.tsx",
-  "verify/[token]/error.tsx",
-  "waivers/[token]/error.tsx",
 ];
 
 /** `source` with its comments out; block comments first, then line comments. */

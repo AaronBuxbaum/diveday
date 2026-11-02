@@ -1,8 +1,9 @@
-import type { PrepLine } from "@/lib/dive-prep";
+import type { PrepLine, PrepLineDiver } from "@/lib/dive-prep";
 
 /** One diver whose pieces are all fitted in person, said once. */
 export type FitAtCheckInRow = {
-  fullName: string;
+  /** Keyed on the booking, so two namesakes stay two rows (issue #3049). */
+  diver: PrepLineDiver;
   /** The pieces, in the rack's order the lines already carry. */
   lines: PrepLine[];
 };
@@ -15,24 +16,25 @@ export type FitAtCheckInRow = {
  * diver's row carries one line per piece they take (count 1 each), in the
  * order the lines came, and the ordinary lines are untouched. Nothing is
  * counted twice and nothing is dropped: the pieces on the fit rows plus the
- * ordinary lines add up to exactly the lines given.
+ * ordinary lines add up to exactly the lines given. A diver is their booking,
+ * never their name: two seats under one name are two people with two kits.
  */
 export function foldFitAtCheckIn(lines: readonly PrepLine[]): {
   lines: PrepLine[];
   fits: FitAtCheckInRow[];
 } {
   const plain: PrepLine[] = [];
-  const byName = new Map<string, FitAtCheckInRow>();
+  const byBooking = new Map<string, FitAtCheckInRow>();
   for (const line of lines) {
     if (!line.fitAtCheckIn) {
       plain.push(line);
       continue;
     }
-    for (const fullName of line.divers) {
-      const row = byName.get(fullName) ?? { fullName, lines: [] };
-      row.lines.push({ ...line, count: 1, divers: [fullName] });
-      byName.set(fullName, row);
+    for (const diver of line.divers) {
+      const row = byBooking.get(diver.bookingId) ?? { diver, lines: [] };
+      row.lines.push({ ...line, count: 1, divers: [diver] });
+      byBooking.set(diver.bookingId, row);
     }
   }
-  return { lines: plain, fits: [...byName.values()] };
+  return { lines: plain, fits: [...byBooking.values()] };
 }

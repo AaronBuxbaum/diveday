@@ -7,7 +7,7 @@ import { trips } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { liveTrip } from "@/db/trips";
 import { MINUTE_MS, nowDate } from "@/lib/clock";
-import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
+import { e2eTestRouteAuthorized, requireDemoTenant, testRouteRefused } from "@/lib/e2e-test-routes";
 
 /**
  * **Send one named departure out without its divers**, by moving its times
@@ -45,16 +45,15 @@ const bodySchema = z.object({
 });
 
 export async function POST(request: Request) {
-  if (!e2eTestRouteAuthorized(request)) {
-    return NextResponse.json({ error: "not_available" }, { status: 404 });
-  }
+  if (!e2eTestRouteAuthorized(request)) return testRouteRefused();
   const parsed = bodySchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "invalid_body" }, { status: 400 });
   const { tripId, minutesAgo } = parsed.data;
 
   const db = await getDb();
-  const shop = await getShopBySlug(db, DEMO_SHOP_SLUG);
-  if (!shop?.isDemo) return NextResponse.json({ error: "not_demo" }, { status: 404 });
+  const tenant = await requireDemoTenant(request, () => getShopBySlug(db, DEMO_SHOP_SLUG));
+  if (!tenant.ok) return tenant.response;
+  const { shop } = tenant;
 
   const [trip] = await db
     .select({ startsAt: trips.startsAt, endsAt: trips.endsAt })

@@ -14,7 +14,7 @@ import { filesUnder } from "./files-under.mjs";
  *    file.
  *
  *    It used to be mounted separately in `src/app/shop/[shopSlug]/layout.tsx`,
- *    `src/app/s/[shopSlug]/layout.tsx`, and `src/app/ready/[token]/layout.tsx`
+ *    `src/app/s/[shopSlug]/layout.tsx`, and `src/app/(token)/ready/[token]/layout.tsx`
  *    — three copies of the same mount, one per shell. That meant any NEW
  *    bearer-token or account-lifecycle route silently got no scroll
  *    preservation at all until someone remembered to add it there too:

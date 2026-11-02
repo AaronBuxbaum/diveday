@@ -273,7 +273,7 @@ describePostgres("crew note writes ordered with erasure", () => {
     expect(erased).toEqual({ name: "[anonymized]", email: null });
   });
 
-  it("keeps an offline roll-call mark but drops its pre-erasure note after waiting behind erasure", async () => {
+  it("keeps a pre-erasure crew note about somebody else after waiting behind erasure", async () => {
     const f = await fixture();
     const staleEpoch = f.shop.offlineErasureEpoch;
     await f.pg.db.execute(
@@ -287,7 +287,43 @@ describePostgres("crew note writes ordered with erasure", () => {
     let offlineWrite: ReturnType<typeof f.writeOfflineNote> | undefined;
     try {
       await waitForLockWaiters(f.pg.db, 1);
-      offlineWrite = f.writeOfflineNote("Maya Rivera was seen at the ladder.", staleEpoch);
+      offlineWrite = f.writeOfflineNote("Last seen at the mooring line.", staleEpoch);
+      await waitForLockWaiters(f.pg.db, 2);
+    } finally {
+      await gate.release();
+    }
+
+    // The epoch moved, but the crew member is not the person erased: their
+    // own row's note is not erased data (issue #3569).
+    expect(await erasure).toMatchObject({ ok: true });
+    const written = await offlineWrite;
+    expect(written).toMatchObject({ ok: true });
+    expect(written).not.toHaveProperty("noteDisposition");
+    expect(await f.notes()).toEqual([{ note: "Last seen at the mooring line." }]);
+    const [shopAfterErasure] = await f.pg.db
+      .select({ epoch: shops.offlineErasureEpoch })
+      .from(shops)
+      .where(eq(shops.id, f.shop.id));
+    expect(shopAfterErasure?.epoch).toBe(staleEpoch + 1);
+  });
+
+  it("drops the erased diver's own pre-erasure note after waiting behind erasure, keeping the mark", async () => {
+    const f = await fixture();
+    const staleEpoch = f.shop.offlineErasureEpoch;
+    await f.pg.db.execute(
+      sql`create function test_hold_erasure_person_update() returns trigger language plpgsql as $$ begin if new.anonymized_at is not null and old.anonymized_at is null then perform pg_advisory_xact_lock(281038); end if; return new; end $$`,
+    );
+    await f.pg.db.execute(
+      sql`create trigger test_hold_erasure_person_update before update on people for each row execute function test_hold_erasure_person_update()`,
+    );
+    const gate = await holdRowLock(f.pg, sql`select pg_advisory_xact_lock(281038)`);
+    const erasure = f.erase();
+    let offlineWrite: ReturnType<typeof f.writeOfflineDiverNote> | undefined;
+    try {
+      // Erasure owns the exclusive fence and is paused mid-sweep; the note
+      // writer queues behind it and must then see the committed erasure.
+      await waitForLockWaiters(f.pg.db, 1);
+      offlineWrite = f.writeOfflineDiverNote("Maya Rivera was seen at the ladder.", staleEpoch);
       await waitForLockWaiters(f.pg.db, 2);
     } finally {
       await gate.release();
@@ -298,26 +334,16 @@ describePostgres("crew note writes ordered with erasure", () => {
       ok: true,
       noteDisposition: "discarded_erasure_cutoff",
     });
-    expect(await f.notes()).toEqual([{ note: null }]);
-    const [shopAfterErasure] = await f.pg.db
-      .select({ epoch: shops.offlineErasureEpoch })
-      .from(shops)
-      .where(eq(shops.id, f.shop.id));
-    expect(shopAfterErasure?.epoch).toBe(staleEpoch + 1);
-    const [mark] = await f.pg.db
-      .select({ status: rollCallCrewEvents.status })
-      .from(rollCallCrewEvents)
-      .where(eq(rollCallCrewEvents.shopId, f.shop.id));
-    expect(mark?.status).toBe("not_boarded");
+    expect(await f.diverNotes()).toMatchObject([{ note: null, status: "not_boarded" }]);
 
     // A fresh server snapshot carries the incremented shop epoch, so later
     // notes remain available as the product decision requires.
-    const freshWrite = await f.writeOfflineNote(
+    const freshWrite = await f.writeOfflineDiverNote(
       "A fresh post-erasure note is allowed.",
       staleEpoch + 1,
     );
     expect(freshWrite).toMatchObject({ ok: true });
-    expect((await f.notes()).map((row) => row.note).sort()).toEqual(
+    expect((await f.diverNotes()).map((row) => row.note).sort()).toEqual(
       [null, "A fresh post-erasure note is allowed."].sort(),
     );
   });

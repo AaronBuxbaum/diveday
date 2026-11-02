@@ -112,7 +112,6 @@ export function CourseHero({
               agency: course.agency.toUpperCase(),
             })}
             title={course.title}
-            titleFace="brand"
             description={course.summary ?? undefined}
           />
           <div className="mt-4 flex flex-wrap items-center gap-4">

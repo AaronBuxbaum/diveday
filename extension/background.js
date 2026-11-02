@@ -495,7 +495,7 @@ function validQuery(query) {
 }
 
 function validSsiManualQuery(query) {
-  if (!query || query.agency !== "ssi") return false;
+  if (query?.agency !== "ssi") return false;
   const name = (value) => typeof value === "string" && value.length <= 100;
   return (
     name(query.firstName) &&

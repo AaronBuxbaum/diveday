@@ -18,7 +18,7 @@
       "check": "focus-invisible",
       "classes": ["w-16", "bg-transparent", "focus:outline-none"],
       "reason": "Focus shows on the bordered box around the tip picker's custom amount input: its label wears has-[:focus-visible]:focus-ring, the global ring at +2px around the whole box. The input is a 64px strip of that box, so its own ring would circle the digits alone.",
-      "pointer": "src/app/ready/[token]/_components/TipAmountPicker.tsx, the comment above the preset pills; docs/design/settled-questions.md"
+      "pointer": "src/app/(token)/ready/[token]/_components/TipAmountPicker.tsx, the comment above the preset pills; docs/design/settled-questions.md"
     },
     {
       "check": "uneven-gaps",

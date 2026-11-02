@@ -26,15 +26,15 @@ export const APP = "src/app";
 
 /** The capability page routes this guard expects; a new one is added here on purpose. */
 export const KNOWN_ROUTES = [
-  "claim/[token]",
-  "confirm-contact/[token]",
-  "invite/[token]",
-  "ready/[token]",
-  "recap/[token]",
-  "reset-password/[token]",
-  "unsubscribe/[token]",
-  "verify/[token]",
-  "waivers/[token]",
+  "(token)/claim/[token]",
+  "(token)/confirm-contact/[token]",
+  "(token)/invite/[token]",
+  "(token)/ready/[token]",
+  "(token)/recap/[token]",
+  "(token)/reset-password/[token]",
+  "(token)/unsubscribe/[token]",
+  "(token)/verify/[token]",
+  "(token)/waivers/[token]",
 ];
 
 /** Every `[token]` directory under `dir` holding a `page.tsx`, relative to `dir`. */

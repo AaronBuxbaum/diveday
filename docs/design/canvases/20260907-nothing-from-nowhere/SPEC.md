@@ -243,7 +243,7 @@ Unit (Vitest), all under `src/features/wallet-pass/` unless said:
    registration; a Google `PATCH` is sent with the changed object; failures are counted, logged as
    `wallet_pass.push_failed`, and do not stop the batch.
 6. `configuredWalletPlatforms` returns `[]` with no env, and the thread's page composition test
-   (`src/app/ready/[token]/page.composition.test.ts`) pins that *Add to Wallet* renders only when it
+   (`src/app/(token)/ready/[token]/page.composition.test.ts`) pins that *Add to Wallet* renders only when it
    is non-empty.
 7. `anonymize.test.ts` gains: an erased diver's passes are voided, their `content_json` carries no
    name, and their registrations are soft-deleted.

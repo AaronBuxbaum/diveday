@@ -1,7 +1,7 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { captureDepartureBoatSafety } from "@/db/boat-safety";
-import { formBuddyTeam } from "@/db/buddy-pairs";
+import { formBuddyTeam } from "@/db/buddy-teams";
 import type { AppDb } from "@/db/client";
 import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
 import { recordCrewRollCall, recordRollCall } from "@/db/manifests";
@@ -23,6 +23,7 @@ import { listStaff } from "@/db/trips";
 import { completeWaiver, issueWaiverRequest } from "@/db/waivers";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { HOUR_MS, nowDate } from "@/lib/clock";
+import { requireDemoTenant } from "@/lib/e2e-test-routes";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 
 export const OPERATIONAL_STATES = [
@@ -45,8 +46,11 @@ export async function operationalStateResponse(request: Request, db: AppDb) {
   }
   // Isolated worker databases also hold private demo shops. Resolve their slug
   // here; a caller can never choose a real shop, even with the harness secret.
-  const shop = await getShopBySlug(db, params.get("shop") ?? DEMO_SHOP_SLUG);
-  if (!shop?.isDemo) return NextResponse.json({ error: "not_available" }, { status: 404 });
+  const tenant = await requireDemoTenant(request, () =>
+    getShopBySlug(db, params.get("shop") ?? DEMO_SHOP_SLUG),
+  );
+  if (!tenant.ok) return tenant.response;
+  const { shop } = tenant;
   const now = nowDate();
   const operationalTrust = await seedOperationalTrust(db, shop, state, now);
   if (state === "capacity" && params.get("certificationInterval") === "1") {

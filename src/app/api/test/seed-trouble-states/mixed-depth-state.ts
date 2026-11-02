@@ -8,13 +8,17 @@ import { getShopBySlug } from "@/db/shops";
 import { markTrainingDive } from "@/db/training-marks";
 import { createTrip, listStaff } from "@/db/trips";
 import { HOUR_MS, nowDate } from "@/lib/clock";
+import { requireDemoTenant } from "@/lib/e2e-test-routes";
 
 /** A charter with two recorded course marks, only in the guarded test route. */
 export async function mixedDepthStateResponse(request: Request, db: AppDb) {
   const params = new URL(request.url).searchParams;
   if (params.get("mixedDepth") !== "1") return null;
-  const shop = await getShopBySlug(db, params.get("shop") ?? DEMO_SHOP_SLUG);
-  if (!shop?.isDemo) return NextResponse.json({ error: "not_available" }, { status: 404 });
+  const tenant = await requireDemoTenant(request, () =>
+    getShopBySlug(db, params.get("shop") ?? DEMO_SHOP_SLUG),
+  );
+  if (!tenant.ok) return tenant.response;
+  const { shop } = tenant;
   const catalog = await db.select().from(courses).where(eq(courses.shopId, shop.id));
   const intro = catalog.find((course) => course.isIntroCourse);
   const other = catalog.find(

@@ -4,7 +4,7 @@ import { bookings, people, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
 /**
- * The three reads the waiver signing page (`src/app/waivers/[token]`) makes
+ * The three reads the waiver signing page (`src/app/(token)/waivers/[token]`) makes
  * beyond the waiver record itself. Each is keyed by an id the bearer token has
  * already resolved — the token's own booking or person — so none of them
  * widens what the link discloses. Each also takes the record's shop and

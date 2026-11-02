@@ -21,7 +21,7 @@ import { noticeCode } from "@/lib/staff-notices";
  *
  * It reads the two files' source because the page is a server component whose
  * maps are local to it: there is no render to inspect without a database, a
- * session and a shop. Same shape as `src/app/waivers/[token]/page.composition.test.ts`,
+ * session and a shop. Same shape as `src/app/(token)/waivers/[token]/page.composition.test.ts`,
  * for the same reason.
  */
 
