@@ -2100,8 +2100,10 @@ export async function getTodayWork(
     upcoming,
     readinessByTrip,
   } = evidence ?? (await inHorizonReadiness(db, shopId, now));
-  const today = shopDay(now, timeZone);
-  const todayTrips = inWindow.filter((trip) => shopDay(trip.startsAt, timeZone) === today);
+  // Today is the clock's own day, the same exact pair `todaysDepartures` reads.
+  const todayTrips = inWindow.filter(
+    (trip) => trip.startsAt >= clock.day.from && trip.startsAt < clock.day.to,
+  );
   const bookingIdsByTrip = new Map(
     inWindow.map((trip) => [
       trip.id,

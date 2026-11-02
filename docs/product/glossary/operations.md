@@ -89,8 +89,8 @@
 - **Shop clock** — the one frozen value (`ShopClock`, `src/lib/shop-clock.ts`) that answers "what
   time is it at this shop" for a request: the instant, the shop's zone, its calendar date
   (`today`), the exact UTC pair around that date (`day`), its wall-clock time and whether a guest
-  message may go out now. `requireShopSurface` mints one beside the shop row, a per-shop cron loop
-  mints one per shop, and a domain function takes a clock rather than a loose `now` and time zone.
+  message may go out now. `requireShopSurface` mints one beside the shop row, and a domain function takes a clock
+  rather than a loose `now` and time zone (Today's reads in `src/db/today.ts` first).
   "Today's departures" is `startsAt` inside `clock.day`, exactly, with no looser scan beside it.
 - **Walk-in** — a person who turns up at the counter for a boat that has not left, seated from the
   departure door in walk-in mode (`walkIn=true`, entry `walk_in`, activity `seat_added_walk_in`).
