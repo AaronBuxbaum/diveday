@@ -10,6 +10,7 @@ import { e2eNow, openBookingActions, openRosterDetails, seededTripId } from "./h
 import { PAYMENT_HISTORY_CSV } from "./payment-history-fixture";
 import {
   capture,
+  capturePrint,
   captureStickyFoot,
   diverCopy,
   installVisualBuildGuard,
@@ -255,6 +256,21 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { level: 1, name: "Waivers and signed records" }).waitFor();
         await page.getByRole("navigation", { name: "Pages" }).waitFor();
         await capture(page, "staff-waivers", scheme);
+      });
+
+      /**
+       * **The blank release** (issue #2972), as the counter prints it: version
+       * on top, release text, the standard questionnaire with empty boxes,
+       * the shop's questions, signature lines. Print is light only, on Letter.
+       */
+      test(`the blank release renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/waivers/print");
+        await page.locator("[data-blank-release]").waitFor();
+        await capture(page, "staff-waivers-blank", scheme);
+        if (scheme === "light") {
+          await page.setViewportSize({ width: 816, height: 1056 });
+          await capturePrint(page, "staff-waivers-blank-print");
+        }
       });
 
       /**

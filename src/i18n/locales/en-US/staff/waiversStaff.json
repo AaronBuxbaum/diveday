@@ -195,5 +195,22 @@
       "duplicateOption": "Two options are the same.",
       "controlCharacter": "Remove the hidden character pasted into this question."
     }
+  },
+  "blank": {
+    "link": "Print a blank release",
+    "print": "Print",
+    "version": "Release version {version}",
+    "medicalHeading": "Medical questionnaire",
+    "yes": "Yes",
+    "no": "No",
+    "followUp": "Answer if you said yes to question {number}.",
+    "shopHeading": "Questions from {shop}",
+    "signatureHeading": "Signatures",
+    "printedName": "Diver’s printed name",
+    "diverSignature": "Diver’s signature",
+    "date": "Date",
+    "guardianNote": "If the diver is a minor, a parent or guardian signs too.",
+    "guardianName": "Parent or guardian’s printed name",
+    "guardianSignature": "Parent or guardian’s signature"
   }
 }
