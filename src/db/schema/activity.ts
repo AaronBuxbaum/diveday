@@ -14,7 +14,6 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import type { DraftFields } from "@/lib/form-drafts";
-import type { HeldSendPayload } from "@/lib/held-sends";
 import { bookings } from "./bookings";
 import { appNowTimestamp } from "./columns";
 import { people, shops } from "./core";
@@ -316,52 +315,6 @@ export const formDrafts = pgTable(
     uniqueIndex("form_drafts_person_form_unique").on(table.shopId, table.personId, table.form),
     index("form_drafts_saved_at_idx").on(table.savedAt),
   ],
-);
-
-/**
- * `seat_offer` is every staff offer of a seat. `waitlist_invite` is retired
- * (nothing writes it) and `last_minute_deal` follows when the deal folds into
- * the offer; both values stay in the type until the release after the one that
- * stopped writing them, when a serving release can no longer hold one (ADR
- * 20261017-one-interest-with-a-scope).
- */
-export const heldSendKind = pgEnum("held_send_kind", [
-  "waiver_send",
-  "last_minute_deal",
-  "waitlist_invite",
-  "trip_rescheduled",
-  "departure_note",
-  "seat_offer",
-  // A counter payment held eight seconds with Undo (issue #3030, H-20260906-diveday-fill-already-knows).
-  "counter_payment",
-]);
-
-/**
- * A send that has been tapped and not yet left (ADR 20260906-before-you-ask,
- * decision 2). The four sends that used to ask "are you sure?" take an
- * eight-second hold instead: the row is written on the tap with `run_at` eight
- * seconds out, Undo deletes it, and whichever claimant reaches it first once
- * it is due — the client that counted down, or the hourly sweep for a closed
- * tab — deletes it as the send begins. Nothing lingers, so nothing prunes it.
- *
- * `payload` carries **ids only** (`src/lib/held-sends.ts`): never a name or
- * an address, so an erasure needs no sweep here and a backup holds no mail.
- */
-export const heldSends = pgTable(
-  "held_sends",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    shopId: uuid("shop_id")
-      .notNull()
-      .references(() => shops.id),
-    kind: heldSendKind("kind").notNull(),
-    payload: jsonb("payload").$type<HeldSendPayload>().notNull(),
-    /** Who tapped Send; the deal's creator, the trail's actor. Null once they are gone. */
-    actorPersonId: uuid("actor_person_id").references(() => people.id, { onDelete: "set null" }),
-    runAt: timestamp("run_at", { withTimezone: true }).notNull(),
-    createdAt: appNowTimestamp("created_at").notNull(),
-  },
-  (table) => [index("held_sends_run_at_idx").on(table.runAt)],
 );
 
 /**

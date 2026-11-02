@@ -163,8 +163,6 @@ export const EXCLUDED_TABLES = [
   "offline_manifest_snapshot_revisions", // monotone device-snapshot ordering machinery, not a shop record
   "today_read_marks",
   "today_read_mark_events",
-  // Held sends live eight seconds; exporting one would export a tap, not a record.
-  "held_sends",
   // What one staffer had typed into a form when the phone rang (same ADR,
   // decision 3): a day-old draft of their own, never a shop record.
   "form_drafts",

@@ -2,6 +2,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { type CounterPaymentPayload, heldSendPayloadSchema, heldSendRunAt } from "@/lib/held-sends";
 import type { AppDb, DbExecutor } from "./client";
+import { heldQueuedOfKind, heldSendValues } from "./held-send-rows";
 import { claimHeldSend, executeHeldSend, type HeldSendOutcome } from "./held-sends";
 import {
   isStaleCounterClaim,
@@ -9,7 +10,7 @@ import {
   recordDemoPaymentOnOpenOrder,
   recordPaymentOnOpenOrder,
 } from "./orders";
-import { heldSends, orders, shops } from "./schema";
+import { notificationSendQueue, orders, shops } from "./schema";
 import {
   counterPaymentActivity,
   counterPaymentNotRecordedActivity,
@@ -21,7 +22,7 @@ import {
  * decided 2026-10-25; the send hold of H-20260906-diveday-fill-already-knows and ADR 20260906-before-you-ask).
  *
  * Cash or the card machine is not recorded on the tap. The tap writes a
- * `held_sends` row of kind `counter_payment` eight seconds out; Undo deletes
+ * held send (a `notification_send_queue` row) of kind `counter_payment` eight seconds out; Undo deletes
  * it and the order is what it was; the tapping screen's release, or the
  * screen leaving inside the hold (`commitCounterPaymentHold`, sent as the
  * page goes), claims the row and records the payment through the same
@@ -85,15 +86,16 @@ export async function holdCounterPayment(
     });
     const runAt = heldSendRunAt(payload, now);
     const [row] = await tx
-      .insert(heldSends)
-      .values({
-        shopId: input.shopId,
-        kind: "counter_payment",
-        payload,
-        actorPersonId: input.actorPersonId,
-        runAt,
-      })
-      .returning({ id: heldSends.id });
+      .insert(notificationSendQueue)
+      .values(
+        heldSendValues({
+          shopId: input.shopId,
+          payload,
+          actorPersonId: input.actorPersonId,
+          runAt,
+        }),
+      )
+      .returning({ id: notificationSendQueue.id });
     if (!row) throw new Error("counter payment hold was not written");
     return { id: row.id, runAt };
   });
@@ -101,13 +103,16 @@ export async function holdCounterPayment(
 
 async function pendingCounterPaymentRow(db: DbExecutor, shopId: string, orderId: string) {
   const [row] = await db
-    .select({ id: heldSends.id, runAt: heldSends.runAt, payload: heldSends.payload })
-    .from(heldSends)
+    .select({
+      id: notificationSendQueue.id,
+      runAt: notificationSendQueue.nextAttemptAt,
+      payload: notificationSendQueue.intent,
+    })
+    .from(notificationSendQueue)
     .where(
       and(
-        eq(heldSends.shopId, shopId),
-        eq(heldSends.kind, "counter_payment"),
-        sql`${heldSends.payload}->>'orderId' = ${orderId}`,
+        heldQueuedOfKind(shopId, "counter_payment"),
+        sql`${notificationSendQueue.intent}->>'orderId' = ${orderId}`,
       ),
     )
     .limit(1);
@@ -149,10 +154,15 @@ export async function commitCounterPaymentHold(
     }
 > {
   const [row] = await db
-    .select({ kind: heldSends.kind })
-    .from(heldSends)
-    .where(and(eq(heldSends.id, input.heldId), eq(heldSends.shopId, input.shopId)));
-  if (row?.kind !== "counter_payment") return { status: "gone" };
+    .select({ id: notificationSendQueue.id })
+    .from(notificationSendQueue)
+    .where(
+      and(
+        eq(notificationSendQueue.id, input.heldId),
+        heldQueuedOfKind(input.shopId, "counter_payment"),
+      ),
+    );
+  if (!row) return { status: "gone" };
   const claim = await claimHeldSend(db, input.shopId, input.heldId, input.now, { early: true });
   if (claim.status !== "claimed" || claim.row.payload.kind !== "counter_payment") {
     return { status: "gone" };

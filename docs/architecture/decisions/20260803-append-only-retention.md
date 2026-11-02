@@ -76,7 +76,7 @@ Every event-like trail without a window, one line each (the same list heads `src
 - `pre_departure_check_events`: who confirmed each item of the shop's pre-departure safety check, the document an insurer or investigator asks for ([20260824-pre-departure-safety-check](20260824-pre-departure-safety-check.md); classified by the dive-domain review of code review 2026-10-13).
 - `gear_service_events`: a unit's service and test history, which is equipment evidence (product owner, 2026-08-20).
 - `trip_change_events`, `review_moderation_events`, `work_order_events`: who changed what on a departure, a review or a ticket, read as the record itself (the first two by the product owner, 2026-10-13, issue #2316, over the `activity_events` window).
-- `held_sends`, `media_deletion_attempts`, `processor_erasure_obligations`, `payment_operation_intents`: deleted by their own work when it is done; a clock would delete what is still owed.
+- `media_deletion_attempts`, `processor_erasure_obligations`, `payment_operation_intents`: deleted by their own work when it is done; a clock would delete what is still owed. (Held sends were here as `held_sends` until issue #2730 moved them onto `notification_send_queue`, whose settled rows the queue's own window prunes.)
 - `waiver_records` and the course-form records: signed evidence, H-20260730-evidence-retention-period-deletion's question, never a clock's.
 
 `activity_events` is not on this list: it has the longest window here, 1,095 days (three years), stated in the table above.

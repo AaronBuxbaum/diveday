@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, gt, isNull, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, isNotNull, isNull, sql } from "drizzle-orm";
 import { diverTranslator } from "@/i18n/messages";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
@@ -21,13 +21,14 @@ import {
 } from "@/lib/notifications/sms";
 import { type IssuedCapability, issueBookingCapabilities } from "./booking-capabilities";
 import type { AppDb, DbExecutor } from "./client";
+import { heldQueuedOfKind } from "./held-send-rows";
 import { notificationProviderForDb, sendNotificationBatch } from "./notifications";
 import { recordTripActivity } from "./operations";
 import {
   bookings,
   departureNotes,
-  heldSends,
   lostItems,
+  notificationSendQueue,
   people,
   shops,
   tripScheduleDays,
@@ -100,13 +101,12 @@ export async function departureNotesHeld(
   tripId: string,
 ): Promise<number> {
   const [row] = await db
-    .select({ n: count(heldSends.id) })
-    .from(heldSends)
+    .select({ n: count(notificationSendQueue.id) })
+    .from(notificationSendQueue)
     .where(
       and(
-        eq(heldSends.shopId, shopId),
-        eq(heldSends.kind, "departure_note"),
-        sql`${heldSends.payload}->>'tripId' = ${tripId}`,
+        heldQueuedOfKind(shopId, "departure_note"),
+        sql`${notificationSendQueue.intent}->>'tripId' = ${tripId}`,
       ),
     );
   return row?.n ?? 0;
@@ -403,7 +403,9 @@ export async function listDepartureNotes(db: DbExecutor, shopId: string, tripId:
  * since a held departure note is the one way a note row is written.
  */
 export async function deleteHeldSendsAndDeskRows(db: DbExecutor, shopId: string): Promise<void> {
-  await db.delete(heldSends).where(eq(heldSends.shopId, shopId));
+  await db
+    .delete(notificationSendQueue)
+    .where(and(eq(notificationSendQueue.shopId, shopId), isNotNull(notificationSendQueue.intent)));
   await db.delete(lostItems).where(eq(lostItems.shopId, shopId));
   await db.delete(departureNotes).where(eq(departureNotes.shopId, shopId));
 }

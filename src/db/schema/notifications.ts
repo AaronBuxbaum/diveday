@@ -4,6 +4,7 @@ import {
   check,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   text,
@@ -11,6 +12,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import type { HeldSendPayload } from "@/lib/held-sends";
 import { bookings } from "./bookings";
 import { appNowTimestamp } from "./columns";
 import { people, shops } from "./core";
@@ -421,6 +423,25 @@ export const notificationSendQueue = pgTable(
     bookingId: uuid("booking_id"),
     recipientPersonId: uuid("recipient_person_id"),
     recipientTripId: uuid("recipient_trip_id"),
+    /**
+     * **A held send** (issue #2730, ADR 20260906-before-you-ask decision 2):
+     * a send that has been tapped and not yet left, the row the eight-second
+     * Undo takes back. Ids only, never a name or an address
+     * (`src/lib/held-sends.ts`): the executor joins those when the hold
+     * drains, so nothing sealed is stored for it and an erasure needs no sweep
+     * of it. `next_attempt_at` is when the hold drains.
+     *
+     * A row carries this **or** `payload_sealed`, never both
+     * (`notification_send_queue_one_payload`). Undo deletes a held row while
+     * it is still `queued`; the claim moves it to `processing`; the send moves
+     * it to `sent` or `failed` and nulls this and the actor. A held row is
+     * never retried: a send that died mid-way may have reached some of its
+     * divers, so a lapsed `processing` claim settles `failed`
+     * (`held_send_interrupted`) rather than going back to `queued`.
+     */
+    intent: jsonb("intent").$type<HeldSendPayload>(),
+    /** Who tapped Send on a held row; the trail's actor. Null once the row settles, or they are gone. */
+    actorPersonId: uuid("actor_person_id").references(() => people.id, { onDelete: "set null" }),
     status: notificationQueueStatus("status").notNull().default("queued"),
     /** Every drain pass that has claimed this row, incremented at the claim. */
     attempts: integer("attempts").notNull().default(0),
@@ -454,6 +475,10 @@ export const notificationSendQueue = pgTable(
       table.lockedUntil,
     ),
     index("notification_send_queue_shop_status_idx").on(table.shopId, table.status),
+    check(
+      "notification_send_queue_one_payload",
+      sql`${table.intent} is null or ${table.payloadSealed} is null`,
+    ),
   ],
 );
 

@@ -2,11 +2,12 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { SEND_HOLD_MS } from "@/lib/held-sends";
 import { seededShopContext } from "@/test/db";
+import { heldRows } from "@/test/held-sends";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 import type { AppDb } from "./client";
 import { holdCounterPayment, pendingCounterPayment } from "./counter-payment-hold";
-import { claimHeldSend, drainHeldSends, executeHeldSend, undoHeldSend } from "./held-sends";
-import { activityEvents, heldSends, orders, people, shops } from "./schema";
+import { claimHeldSend, drainHeldQueueRows, executeHeldSend, undoHeldSend } from "./held-sends";
+import { activityEvents, orders, people, shops } from "./schema";
 
 /**
  * **Record payment: one tap with an eight-second Undo hold** (issue #3030,
@@ -112,18 +113,18 @@ describe("a counter payment held with Undo", () => {
     if (!held) throw new Error("expected a hold");
     // No release from the page: the tab went elsewhere. The sweep finds the
     // drained hold and records it, as it sends a held message.
-    expect(await drainHeldSends(db, new Date(now.getTime() - 1_000))).toEqual({
+    expect(await drainHeldQueueRows(db, new Date(now.getTime() - 1_000))).toEqual({
       sent: 0,
       failed: 0,
     });
-    expect(await drainHeldSends(db, held.runAt)).toEqual({ sent: 1, failed: 0 });
+    expect(await drainHeldQueueRows(db, held.runAt)).toEqual({ sent: 1, failed: 0 });
     expect(await reread(db, order.id)).toMatchObject({
       status: "paid",
       collection: "card_machine",
       amountPaidCents: 34_000,
     });
     expect(await paidLines(db, order.id)).toHaveLength(1);
-    expect(await db.select().from(heldSends).where(eq(heldSends.id, held.id))).toHaveLength(0);
+    expect(await heldRows(db, { id: held.id })).toHaveLength(0);
   });
 
   it("leaves the order untouched and records nothing on Undo", async () => {
@@ -139,7 +140,7 @@ describe("a counter payment held with Undo", () => {
     if (!held) throw new Error("expected a hold");
     expect(await undoHeldSend(db, shopId, held.id, new Date(now.getTime() + 3_000))).toBe(true);
     // Nothing is left for the sweep, and the order is exactly as it was.
-    expect(await drainHeldSends(db, new Date(now.getTime() + 60_000))).toEqual({
+    expect(await drainHeldQueueRows(db, new Date(now.getTime() + 60_000))).toEqual({
       sent: 0,
       failed: 0,
     });
@@ -160,9 +161,7 @@ describe("a counter payment held with Undo", () => {
     });
     if (!first || !second) throw new Error("expected holds");
     expect(second).toEqual(first);
-    expect(
-      await db.select().from(heldSends).where(eq(heldSends.kind, "counter_payment")),
-    ).toHaveLength(1);
+    expect(await heldRows(db, { kind: "counter_payment" })).toHaveLength(1);
     expect(await pendingCounterPayment(db, shopId, order.id)).toMatchObject({
       id: first.id,
       payload: { kind: "counter_payment", orderId: order.id, collection: "cash" },
@@ -178,7 +177,7 @@ describe("a counter payment held with Undo", () => {
     const [one] = claimed;
     if (one?.status !== "claimed") throw new Error("expected one claim");
     await executeHeldSend(db, one.row);
-    expect(await drainHeldSends(db, new Date(now.getTime() + 60_000))).toEqual({
+    expect(await drainHeldQueueRows(db, new Date(now.getTime() + 60_000))).toEqual({
       sent: 0,
       failed: 0,
     });
@@ -213,6 +212,6 @@ describe("a counter payment held with Undo", () => {
         now,
       }),
     ).toBeNull();
-    expect(await db.select().from(heldSends)).toHaveLength(0);
+    expect(await heldRows(db)).toHaveLength(0);
   });
 });

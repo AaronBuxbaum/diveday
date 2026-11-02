@@ -118,6 +118,4 @@ export const ERASURE_KEEPS: Record<string, string> = {
     "a single-use OAuth handshake bound to the staff member who started it and expiring in minutes",
   departure_notes:
     "an operational note a staffer sent to everyone on a departure — the parking, the meeting point — and who sent it. It is addressed to a departure, not to a diver: no recipient is stored, and its one person column is the staff sender",
-  held_sends:
-    "an eight-second undo window. Its `payload` carries ids only (and, for a departure note, the staffer's one line, which is addressed to a departure, not to a diver) — never a name or an address, which the table's own docblock states and `src/lib/held-sends.ts` holds to — and nothing lingers, so nothing prunes it",
 };

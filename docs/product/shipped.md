@@ -360,7 +360,7 @@ and decided in ADR
 [20260906-before-you-ask](../architecture/decisions/20260906-before-you-ask.md) with every
 recommended option chosen (H-20260906-diveday-fill-already-knows): one rule, drawn six times and shipped six times the same day.
 **A send you can take back** (17a) — the four sends that asked a confirming question take an
-eight-second server-side hold with Undo where Send was (`held_sends`, drained by the client's
+eight-second server-side hold with Undo where Send was (held rows of the send queue since #2730, drained by the client's
 countdown or the hourly cron, whichever comes first; the dialogs are gone). **Nothing you typed is
 lost** (17b) — every staff form keeps a per-person draft for a day, picks it up with one line and
 Start over, and the home carries one "Unfinished" row while one exists; drafts never hold a payment

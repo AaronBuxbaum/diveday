@@ -1,0 +1,241 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "a8b330a3-b6dd-491c-970e-9fba61ba3242",
+  "prevIds": [
+    "23522c0b-dd07-45f0-8163-6115aeb2bdca"
+  ],
+  "footprints": [
+    {
+      "statementType": "drop_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "held_sends"
+      ],
+      "writes": [
+        "s|tbl|public.held_sends",
+        "n|tbl|public.held_sends",
+        "e|tbl|public.held_sends",
+        "n|rel|public.held_sends",
+        "n|type|public.held_sends"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "notification_send_queue",
+        "intent"
+      ],
+      "writes": [
+        "s|col|public.notification_send_queue.intent",
+        "n|col|public.notification_send_queue.intent",
+        "e|col|public.notification_send_queue.intent"
+      ],
+      "reads": [
+        "n|tbl|public.notification_send_queue",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "notification_send_queue",
+        "actor_person_id"
+      ],
+      "writes": [
+        "s|col|public.notification_send_queue.actor_person_id",
+        "n|col|public.notification_send_queue.actor_person_id",
+        "e|col|public.notification_send_queue.actor_person_id"
+      ],
+      "reads": [
+        "n|tbl|public.notification_send_queue",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "notification_send_queue"
+      ],
+      "writes": [
+        "s|fk|public.notification_send_queue.notification_send_queue_actor_person_id_people_id_fkey",
+        "n|fk|public.notification_send_queue.notification_send_queue_actor_person_id_people_id_fkey",
+        "e|fk|public.notification_send_queue.notification_send_queue_actor_person_id_people_id_fkey",
+        "n|con|public.notification_send_queue.notification_send_queue_actor_person_id_people_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.notification_send_queue",
+        "n|sch|public",
+        "n|tbl|public.people",
+        "n|sch|public",
+        "n|col|public.notification_send_queue.actor_person_id",
+        "n|col|public.people.id",
+        "e|uniqueness|public.people.id"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "notification_send_queue"
+      ],
+      "writes": [
+        "s|ck|public.notification_send_queue.notification_send_queue_one_payload",
+        "n|ck|public.notification_send_queue.notification_send_queue_one_payload",
+        "e|ck|public.notification_send_queue.notification_send_queue_one_payload",
+        "n|con|public.notification_send_queue.notification_send_queue_one_payload"
+      ],
+      "reads": [
+        "n|tbl|public.notification_send_queue",
+        "n|sch|public",
+        "n|col|public.notification_send_queue.intent",
+        "n|col|public.notification_send_queue.payload_sealed"
+      ]
+    },
+    {
+      "statementType": "drop_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "held_send_kind"
+      ],
+      "writes": [
+        "s|enum|public.held_send_kind",
+        "n|enum|public.held_send_kind",
+        "e|enum|public.held_send_kind",
+        "n|type|public.held_send_kind"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "notification_send_queue",
+        "name": "intent",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "notification_send_queue",
+        "name": "actor_person_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "notification_send_queue",
+        "name": "notification_send_queue_actor_person_id_people_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "actor_person_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "people",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "SET NULL",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "notification_send_queue",
+        "name": "notification_send_queue_one_payload",
+        "value": "\"intent\" is null or \"payload_sealed\" is null",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "drop",
+      "key": "tables\u0000[\"public\",\"held_sends\"]"
+    },
+    {
+      "op": "drop",
+      "key": "enums\u0000[\"public\",\"held_send_kind\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"held_sends\",\"id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"held_sends\",\"shop_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"held_sends\",\"kind\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"held_sends\",\"payload\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"held_sends\",\"actor_person_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"held_sends\",\"run_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"held_sends\",\"created_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"held_sends_run_at_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"held_sends\",\"held_sends_shop_id_shops_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"held_sends\",\"held_sends_actor_person_id_people_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "pks\u0000[\"public\",\"held_sends\",\"held_sends_pkey\"]"
+    }
+  ]
+}

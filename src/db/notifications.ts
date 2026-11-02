@@ -919,6 +919,8 @@ export type NotificationRetrySummary = {
   sent: number;
   queued: number;
   failed: number;
+  /** The held sends this pass released (issue #2730), counted apart from the retries. */
+  held: { sent: number; failed: number };
 };
 
 /**
@@ -1067,6 +1069,9 @@ async function requeueExpiredNotificationClaims(db: AppDb, now: Date): Promise<v
       and(
         eq(notificationSendQueue.status, "processing"),
         lt(notificationSendQueue.lockedUntil, new Date(now.getTime() - LOCK_GRACE_MS)),
+        // A held send is never handed back: it may have reached some of its
+        // divers before it died (`src/db/held-sends.ts`, at most once).
+        isNull(notificationSendQueue.intent),
       ),
     );
 }
@@ -1078,6 +1083,8 @@ async function dueNotificationRetries(db: AppDb, now: Date, limit: number) {
     .where(
       and(
         drainableStatus(),
+        // Held sends have their own arm (`drainHeldQueueRows`), above the key.
+        isNull(notificationSendQueue.intent),
         lte(notificationSendQueue.nextAttemptAt, now),
         or(isNull(notificationSendQueue.lockedUntil), lt(notificationSendQueue.lockedUntil, now)),
       ),
@@ -1462,9 +1469,25 @@ async function parkUnreadableQueuedPayload(
 
 export async function drainNotificationRetries(
   db: AppDb,
-  options: { now?: Date; limit?: number; provider?: NotificationProvider } = {},
+  options: {
+    now?: Date;
+    limit?: number;
+    provider?: NotificationProvider;
+    /**
+     * `held` releases the held sends and stops there: the hourly tick's
+     * sweep for a closed tab (`/api/cron/trip-reminders`), which must not move
+     * the retries' daily cadence (OPS-6). Default `all`.
+     */
+    scope?: "all" | "held";
+  } = {},
 ): Promise<NotificationRetrySummary> {
   const now = options.now ?? nowDate();
+  // The held sends first, and before the sealing key: they store ids, not a
+  // sealed payload, so a pass with no key still releases them (issue #2730).
+  // Imported at call time: the held executor sends through this module.
+  const { drainHeldQueueRows } = await import("./held-sends");
+  const held = await drainHeldQueueRows(db, now);
+  if (options.scope === "held") return { scanned: 0, sent: 0, queued: 0, failed: 0, held };
   // Resolved before anything is claimed, and a `null` ends the pass having
   // touched nothing.
   //
@@ -1481,7 +1504,7 @@ export async function drainNotificationRetries(
   // key is set — is survivable too. Every other terminal write below remains
   // genuinely terminal.
   const key = queueSealingKey("drain");
-  const summary: NotificationRetrySummary = { scanned: 0, sent: 0, queued: 0, failed: 0 };
+  const summary: NotificationRetrySummary = { scanned: 0, sent: 0, queued: 0, failed: 0, held };
   if (!key) return summary;
 
   // A worker that died between claiming a row and writing its outcome left it

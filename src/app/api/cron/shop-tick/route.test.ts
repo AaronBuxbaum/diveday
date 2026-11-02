@@ -10,7 +10,7 @@ vi.mock("@/db/trips", () => ({
   listMinimumNotMetRecipients: vi.fn(),
 }));
 vi.mock("@/db/reminders", () => ({ sendDueReminders: vi.fn() }));
-vi.mock("@/db/held-sends", () => ({ drainHeldSends: vi.fn() }));
+vi.mock("@/db/notifications", () => ({ drainNotificationRetries: vi.fn() }));
 vi.mock("@/db/work-order-follow-up", () => ({ sendDueServiceReminders: vi.fn() }));
 vi.mock("@/db/recap", () => ({ sendDueRecaps: vi.fn() }));
 vi.mock("@/db/crew-notices", () => ({ sendDueCrewNotices: vi.fn() }));
@@ -28,7 +28,7 @@ const { getDb } = await import("@/db/client");
 const { bringDemoBoatsAtSeaHome } = await import("@/db/seed-boat-at-sea");
 const { cancelDeparturesBelowMinimum } = await import("@/db/trips");
 const { sendDueReminders } = await import("@/db/reminders");
-const { drainHeldSends } = await import("@/db/held-sends");
+const { drainNotificationRetries } = await import("@/db/notifications");
 const { sendDueServiceReminders } = await import("@/db/work-order-follow-up");
 const { sendDueRecaps } = await import("@/db/recap");
 const { sendDueCrewNotices } = await import("@/db/crew-notices");
@@ -53,7 +53,7 @@ const ALL_SCANS = [
   bringDemoBoatsAtSeaHome,
   cancelDeparturesBelowMinimum,
   sendDueReminders,
-  drainHeldSends,
+  drainNotificationRetries,
   sendDueServiceReminders,
   sendDueRecaps,
   sendDueCrewNotices,
@@ -80,7 +80,15 @@ beforeEach(() => {
   vi.mocked(sendDueReminders)
     .mockReset()
     .mockResolvedValue({ scanned: 1, sent: 1 } as never);
-  vi.mocked(drainHeldSends).mockReset().mockResolvedValue({ sent: 0, failed: 0 });
+  vi.mocked(drainNotificationRetries)
+    .mockReset()
+    .mockResolvedValue({
+      scanned: 0,
+      sent: 0,
+      queued: 0,
+      failed: 0,
+      held: { sent: 0, failed: 0 },
+    });
   vi.mocked(sendDueServiceReminders)
     .mockReset()
     .mockResolvedValue({ sent: 0 } as never);

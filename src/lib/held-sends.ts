@@ -7,7 +7,7 @@ import { DEPARTURE_NOTE_MAX, departureNoteProblem, foldDepartureNote } from "./d
  * The four sends that used to ask "are you sure?" before the tap now take an
  * eight-second hold after it: the row says what is about to happen and by
  * when, Undo stands where Send was, and the mail leaves when the hold drains.
- * The hold is a row on the server (`held_sends`), so closing the tab does not
+ * The hold is a row on the server (a held row of `notification_send_queue`, issue #2730), so closing the tab does not
  * stop the mail and a reload shows the hold still draining; Undo deletes the
  * row, and nothing was sent, nothing is logged.
  *
