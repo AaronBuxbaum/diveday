@@ -40,48 +40,20 @@ describe("staff activity", () => {
     expect(screen.queryByRole("alertdialog")).toBeNull();
   });
 
-  it("keeps the pause words hidden while a quick check confirms the session", async () => {
-    let release!: (response: Response) => void;
-    vi.mocked(fetch).mockImplementationOnce(
-      () =>
-        new Promise((resolve) => {
-          release = resolve;
-        }),
-    );
-    render(<StaffActivity sessionId="one" copy={copy} />);
-    await act(async () => {});
-    expect(screen.getByRole("alertdialog").firstElementChild).toHaveClass("opacity-0");
+  it("never covers the page while the first check runs, or when it cannot reach the server", async () => {
+    vi.mocked(fetch).mockRejectedValueOnce(new Error("offline"));
     await act(async () => {
-      vi.advanceTimersByTime(900);
-    });
-    expect(screen.getByRole("alertdialog").firstElementChild).not.toHaveClass("opacity-0");
-    await act(async () => {
-      release(new Response(JSON.stringify({ remainingMs: 5000 })));
+      render(
+        <div id="staff-session-content">
+          <StaffActivity sessionId="one" copy={copy} />
+        </div>,
+      );
     });
     expect(screen.queryByRole("alertdialog")).toBeNull();
+    expect(document.body.querySelector("[data-staff-session-lock]")).toBeNull();
   });
 
-  it("exposes when the first live session check has finished", async () => {
-    let release!: (response: Response) => void;
-    vi.mocked(fetch).mockImplementationOnce(
-      () =>
-        new Promise((resolve) => {
-          release = resolve;
-        }),
-    );
-    render(<StaffActivity sessionId="one" copy={copy} />);
-    expect(document.querySelector('[data-staff-session-check="pending"]')).not.toBeNull();
-    await act(async () => {});
-    expect(document.body.lastElementChild).toHaveAttribute("data-staff-session-lock");
-    await act(async () => {
-      release(new Response(JSON.stringify({ remainingMs: 5000 })));
-    });
-    expect(document.body.lastElementChild).not.toHaveAttribute("data-staff-session-lock");
-    expect(document.querySelector('[data-staff-session-check="settled"]')).not.toBeNull();
-    expect(screen.queryByRole("alertdialog")).toBeNull();
-  });
-
-  it("settles the marker when a pending input is refused during a visibility check", async () => {
+  it("covers the page when a refused input says the session ended", async () => {
     let finishPost!: (response: Response) => void;
     vi.mocked(fetch)
       .mockResolvedValueOnce(new Response(JSON.stringify({ remainingMs: 5000 })))
@@ -101,18 +73,13 @@ describe("staff activity", () => {
       pointer({ isTrusted: true } as Event);
     });
     await act(async () => {
-      document.dispatchEvent(new Event("visibilitychange"));
-    });
-    expect(document.querySelector('[data-staff-session-check="pending"]')).not.toBeNull();
-    await act(async () => {
       finishPost(new Response(null, { status: 401 }));
     });
-    expect(document.querySelector('[data-staff-session-check="settled"]')).not.toBeNull();
     expect(screen.getByRole("alertdialog")).toBeVisible();
     listeners.mockRestore();
   });
 
-  it("covers and makes staff content inert when the session cannot be confirmed", async () => {
+  it("covers and makes staff content inert once the server says the session ended", async () => {
     vi.mocked(fetch).mockResolvedValue(new Response(null, { status: 401 }));
     const otherPortal = document.createElement("div");
     otherPortal.innerHTML = "<button>Private sheet</button>";
@@ -134,35 +101,6 @@ describe("staff activity", () => {
       "href",
       "/sign-in?session=ended",
     );
-  });
-
-  it("never uncovers the page when an older successful check arrives after a newer refusal", async () => {
-    let release!: (response: Response) => void;
-    vi.mocked(fetch)
-      .mockResolvedValueOnce(new Response(JSON.stringify({ remainingMs: 1000 })))
-      .mockImplementationOnce(
-        () =>
-          new Promise((resolve) => {
-            release = resolve;
-          }),
-      )
-      .mockResolvedValueOnce(new Response(null, { status: 401 }));
-    await act(async () => {
-      render(
-        <div id="staff-session-content">
-          <StaffActivity sessionId="one" copy={copy} />
-        </div>,
-      );
-    });
-    await act(async () => {
-      vi.advanceTimersByTime(1000);
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
-    await act(async () => {});
-    await act(async () => {
-      release(new Response(JSON.stringify({ remainingMs: 5000 })));
-    });
-    expect(screen.getByRole("alertdialog")).toBeVisible();
   });
 
   it("subtracts a delayed confirmation from the server's remaining time", async () => {

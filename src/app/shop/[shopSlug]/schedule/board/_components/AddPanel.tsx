@@ -2,7 +2,7 @@
 
 import { MeetingDaysField } from "@/app/shop/[shopSlug]/_components/MeetingDaysField";
 import { FormDraft, type FormDraftActions, type FormDraftProps } from "@/components/FormDraft";
-import { focusAfterStaffCheck } from "@/components/focus-after-staff-check";
+import { focusOnMount } from "@/components/focus-on-mount";
 import { TripDiveFields } from "@/components/TripDiveFields";
 import { INSET_NOTE_BOX } from "@/components/ui/card";
 import { ForgivingInput } from "@/components/ui/ForgivingInput";
@@ -281,7 +281,7 @@ export function AddPanel({
               : copy.titlePlaceholder
           }
           className={controlClass}
-          ref={focusAfterStaffCheck}
+          ref={focusOnMount}
         />
       </Field>
       <DescriptionAndPrivacy copy={copy} expanded={expanded} />

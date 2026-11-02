@@ -8,8 +8,6 @@ import { useFocusTrap } from "@/components/useFocusTrap";
 import { STAFF_IDLE_LIMIT_MS } from "@/lib/session-idle";
 
 const INPUT_GAP_MS = 10_000;
-/** A check that confirms within this window never shows the "paused" words. */
-const QUIET_CHECK_MS = 800;
 
 /** Input renews only this session. Background reads never do. */
 export function StaffActivity({
@@ -20,24 +18,10 @@ export function StaffActivity({
   copy: { title: string; body: string; retry: string; signIn: string };
 }) {
   const [locked, setLocked] = useState(false);
-  const [checkState, setCheckState] = useState<"pending" | "settled">("pending");
-  const [slow, setSlow] = useState(false);
   const [retry, setRetry] = useState<(() => void) | null>(null);
   const [portal, setPortal] = useState<HTMLElement | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   useFocusTrap(locked, dialogRef);
-
-  // Every mount and tab return re-confirms the session behind a cover. Say
-  // "paused" only once the check has failed or is genuinely slow.
-  useEffect(() => {
-    if (!locked || checkState === "settled") {
-      setSlow(false);
-      return;
-    }
-    const timer = setTimeout(() => setSlow(true), QUIET_CHECK_MS);
-    return () => clearTimeout(timer);
-  }, [locked, checkState]);
-  const quiet = checkState === "pending" && !slow;
 
   useEffect(() => {
     let stopped = false;
@@ -90,34 +74,27 @@ export function StaffActivity({
       clearTimeout(timer);
       timer = setTimeout(() => void check(), Math.max(0, remainingMs));
     };
+    // A quiet read of the server's deadline. The page stays as it is unless the
+    // server says the session has ended; a failed or slow read changes nothing.
     const check = async () => {
       const version = ++generation;
-      setCheckState("pending");
-      lock(true);
       try {
         await inFlight;
         if (stopped || version !== generation) return;
         const started = performance.now();
         const response = await fetch("/api/staff-activity", { headers, cache: "no-store" });
         if (stopped || version !== generation) return;
+        if (response.status === 401) return lock(true);
         if (!response.ok) return;
         const body: { remainingMs?: unknown } = await response.json();
         if (stopped || version !== generation) return;
-        if (
-          typeof body.remainingMs !== "number" ||
-          !Number.isFinite(body.remainingMs) ||
-          body.remainingMs <= 0
-        )
-          return;
+        if (typeof body.remainingMs !== "number" || !Number.isFinite(body.remainingMs)) return;
         const remaining = body.remainingMs - (performance.now() - started);
-        if (remaining <= 0) return;
-        lock(false);
+        if (remaining <= 0) return lock(true);
+        if (isLocked) lock(false);
         schedule(remaining);
       } catch {
-        // Keep the page covered when the server cannot confirm the session.
-        // The separately saved offline manifest and unsent roll call are untouched.
-      } finally {
-        if (!stopped && version === generation) setCheckState("settled");
+        // Offline or a server blip: keep showing what is on screen.
       }
     };
     const send = () => {
@@ -132,7 +109,6 @@ export function StaffActivity({
           if (response.status === 401) {
             generation++;
             lock(true);
-            setCheckState("settled");
           } else if (response.ok && version === generation)
             schedule(Math.max(0, STAFF_IDLE_LIMIT_MS - (performance.now() - started)));
         })
@@ -162,9 +138,7 @@ export function StaffActivity({
     document.addEventListener("visibilitychange", visible);
     window.addEventListener("pagehide", flush);
     setRetry(() => () => void check());
-    // Hydration may happen long after the server rendered the page. Confirm
-    // the live session before exposing its content and use a conservative
-    // request-start clock for every subsequent deadline.
+    // Learn the live deadline in the background and schedule the lock for it.
     void check();
     return () => {
       flush();
@@ -194,7 +168,7 @@ export function StaffActivity({
             aria-describedby="staff-session-description"
             tabIndex={-1}
           >
-            <div className={`space-y-4 text-center ${quiet ? "opacity-0" : ""}`}>
+            <div className="space-y-4 text-center">
               <h1 id="staff-session-title" className={SECTION_TITLE_CLASS}>
                 {copy.title}
               </h1>
@@ -216,10 +190,5 @@ export function StaffActivity({
           portal,
         )
       : null;
-  return (
-    <>
-      <span hidden data-staff-session-check={checkState} />
-      {dialog}
-    </>
-  );
+  return <>{dialog}</>;
 }

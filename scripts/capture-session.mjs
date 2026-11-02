@@ -163,20 +163,9 @@ export async function waitPastTheSkeleton(page, target) {
   await waitForStaffSession(page, target);
 }
 
-/** A paused or unchecked staff session is not evidence of the destination. */
+/** A paused staff session is not evidence of the destination. */
 export async function waitForStaffSession(page, target) {
   if (!new URL(target, "http://localhost").pathname.startsWith("/shop/")) return;
-  try {
-    await page.locator('[data-staff-session-check="settled"]').waitFor({
-      state: "attached",
-      timeout: SKELETON_TIMEOUT_MS,
-    });
-  } catch (cause) {
-    throw new Error(
-      `screenshot: ${target} staff session check did not settle, so nothing was captured. Check the session and dev server before retrying.`,
-      { cause },
-    );
-  }
   if ((await page.locator("[data-staff-session-lock]:visible").count()) > 0) {
     throw new Error(
       `screenshot: ${target} staff session remains locked, so nothing was captured. Sign in again before retrying.`,
