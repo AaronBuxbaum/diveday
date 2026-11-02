@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
 import { departureBoatSafetySnapshot } from "./boat-safety";
-import { departureBoatSafetySnapshots, trips } from "./schema";
+import { boats, departureBoatSafetySnapshots, trips } from "./schema";
 import { DEMO_COMPLETED_TRIP_TITLE } from "./seed-more-trips";
 
 /**
@@ -38,19 +38,18 @@ describe("the seeded dawn boat's safety snapshot", () => {
     expect(read?.radio.callSign).toBe("WDM2202");
   });
 
-  it("holds every paper date, all after the day she sailed, and no failure notice", async () => {
+  it("invents no paper date the Mantis II row does not hold, and no failure notice", async () => {
     const { db, shop, trip } = await dawn();
+    const [boat] = await db
+      .select()
+      .from(boats)
+      .where(eq(boats.id, trip.boatId as string));
     const read = await departureBoatSafetySnapshot(db, shop.id, trip.id);
     expect(read).not.toBeNull();
-    for (const date of [
-      read?.papers.coiExpiresOn,
-      read?.papers.inspectionDueOn,
-      read?.papers.registrationExpiresOn,
-      read?.papers.insuranceExpiresOn,
-    ]) {
-      expect(date).toBeTruthy();
-      expect((date as string) > (read?.judgedOn as string)).toBe(true);
-    }
+    expect(read?.papers.coiExpiresOn ?? null).toBe(boat?.coiExpiresOn ?? null);
+    expect(read?.papers.inspectionDueOn ?? null).toBe(boat?.inspectionDueOn ?? null);
+    expect(read?.papers.registrationExpiresOn ?? null).toBe(boat?.registrationExpiresOn ?? null);
+    expect(read?.papers.insuranceExpiresOn ?? null).toBe(boat?.insuranceExpiresOn ?? null);
     expect(read?.notices).toEqual([]);
   });
 });
