@@ -7,7 +7,7 @@ const newer = alias(notificationDeliveries, "newer_delivery");
 
 /**
  * True for a `notification_deliveries` row that no later send of the same
- * booking and kind has superseded (issue #2728). Every row is one send, so
+ * shop, booking and kind has superseded (issue #2728). Every row is one send, so
  * "the status of this booking's waiver link" is its newest row: a failure a
  * later success replaced is history, not an open issue.
  *
@@ -23,6 +23,7 @@ export function latestDeliveryOnly(db: DbExecutor) {
       .from(newer)
       .where(
         and(
+          eq(newer.shopId, notificationDeliveries.shopId),
           eq(newer.bookingId, notificationDeliveries.bookingId),
           eq(newer.kind, notificationDeliveries.kind),
           or(
