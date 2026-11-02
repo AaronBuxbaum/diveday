@@ -30,6 +30,7 @@ import { verifyOfflineErasureEpoch } from "@/lib/offline-erasure-epoch";
 import { offlineEventOutOfBounds } from "@/lib/offline-events";
 import type { ParticipantType } from "@/lib/participant-types";
 import { seatRefusal } from "@/lib/participant-types";
+import { seatStatusAfterRelease } from "@/lib/presence";
 import type { RollCallEventStatus } from "@/lib/roll-call";
 import {
   type CountedAboardBlocked,
@@ -1747,7 +1748,7 @@ async function reclaimReleasedSeat(
     .update(bookings)
     // A seat back on the boat is not turned away (`bookings_turned_away_is_released`).
     .set({
-      status: standing === "arrived" ? "checked_in" : "booked",
+      status: seatStatusAfterRelease(standing),
       turnedAwayReason: null,
       turnedAwayAt: null,
     })

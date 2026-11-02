@@ -261,6 +261,9 @@
       "trainingMarkInvalid": "La marca de inmersión de formación ya no corresponde a su plaza del curso. Quítala en el listado."
     }
   },
+  "presence": {
+    "arrived": "Registrado"
+  },
   "shopNav": {
     "language": "Idioma",
     "boatMode": "Modo barco",

@@ -3,6 +3,7 @@ import { Children } from "react";
 import { Badge } from "@/components/ui/badge";
 import { birthdayCalloutText } from "@/i18n/birthday-labels";
 import { staffParticipantTypeLabel, staffSeatTypeNote } from "@/i18n/participant-labels";
+import { presenceText } from "@/i18n/presence-labels";
 import { readinessStatusText, readinessStatusTone } from "@/i18n/readiness-labels";
 import { isDiver } from "@/lib/participant-types";
 
@@ -154,7 +155,7 @@ export function rowHeader(seat: RowHeaderInput) {
     // arrived diver's row ends in "Checked in", the control that undoes it.
     booking.status === "checked_in" && !arrivalControl && !record ? (
       <Badge key="checked-in" tone="neutral">
-        {t("trips.roster.checkedInPill")}
+        {presenceText(t, "arrived")}
       </Badge>
     ) : null,
     // The boat-wide advisory's mark on this diver — the group's shared
