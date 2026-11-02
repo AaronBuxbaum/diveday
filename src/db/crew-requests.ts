@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, inArray, isNull, lte, ne } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, isNull, lte } from "drizzle-orm";
 import { canManageStaffAccounts, canReadCrewAwayNote, STAFF_ROLES } from "@/lib/authz";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
@@ -32,7 +32,7 @@ import {
 } from "./schema";
 import { ratingCredentialsByPerson } from "./staff-credentials";
 import { liveTrip } from "./trips-live";
-import { bookedDiversCount } from "./trips-queries";
+import { bookedDiversCount, seatNotCancelled } from "./trips-queries";
 
 /**
  * **The crew's own writes on the staffing week** (issue #1235).
@@ -376,7 +376,7 @@ export async function tripRatioGapNeedsInstructor(
     .select({ course: courses, booked: bookedDiversCount() })
     .from(trips)
     .leftJoin(courses, eq(courses.id, trips.courseId))
-    .leftJoin(bookings, and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled")))
+    .leftJoin(bookings, and(eq(bookings.tripId, trips.id), seatNotCancelled))
     .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
     .groupBy(trips.id, courses.id)
     .limit(1);

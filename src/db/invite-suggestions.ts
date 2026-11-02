@@ -38,6 +38,7 @@ import {
 } from "./schema";
 import { tripPrimarySiteId, tripVisitsSite } from "./trip-primary-site";
 import { livePerson, liveTrip, notRehearsal } from "./trips-live";
+import { seatNotCancelled } from "./trips-queries";
 
 /**
  * **Past divers worth inviting to a departure** (fifth-loop ideas, item 44;
@@ -232,7 +233,7 @@ export async function listInviteSuggestions(
           and(
             eq(bookings.shopId, input.shopId),
             eq(bookings.tripId, input.tripId),
-            ne(bookings.status, "cancelled"),
+            seatNotCancelled,
           ),
         ),
     () =>

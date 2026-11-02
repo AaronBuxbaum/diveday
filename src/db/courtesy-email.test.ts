@@ -14,6 +14,7 @@ import { interests, people, personCourtesyEmailUnsubscribeTokens, shops } from "
 async function seededPerson() {
   const { db, shop } = ctx;
   const { person } = await findOrCreatePerson(db, {
+    origin: "counter",
     shopId: shop.id,
     fullName: "Nora Quinn",
     email: "nora-courtesy@example.com",
@@ -123,6 +124,7 @@ describe("a complaint opts the address out", () => {
       email: "nora-courtesy@example.com",
     });
     const { person: neighbour } = await findOrCreatePerson(db, {
+      origin: "counter",
       shopId: shop.id,
       fullName: "Sam Reyes",
       email: "sam@example.com",
@@ -133,6 +135,7 @@ describe("a complaint opts the address out", () => {
       .returning({ id: shops.id });
     if (!otherShop) throw new Error("second shop insert failed");
     const { person: sameAddressElsewhere } = await findOrCreatePerson(db, {
+      origin: "counter",
       shopId: otherShop.id,
       fullName: "Nora Quinn",
       email: "nora-courtesy@example.com",

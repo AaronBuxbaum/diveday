@@ -1,4 +1,4 @@
-import { and, eq, isNull, ne, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { isDiver } from "@/lib/participant-types";
 import {
@@ -18,6 +18,7 @@ import {
   reviewNoteFor,
 } from "./readiness";
 import { bookings, type CertificationAgency, nitroxCertifications, people, shops } from "./schema";
+import { seatNotCancelled } from "./trips-queries";
 
 export type NewNitroxCertification = {
   shopId: string;
@@ -422,11 +423,7 @@ export async function setBookingNitrox(
       })
       .from(bookings)
       .where(
-        and(
-          eq(bookings.id, input.bookingId),
-          eq(bookings.shopId, input.shopId),
-          ne(bookings.status, "cancelled"),
-        ),
+        and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId), seatNotCancelled),
       )
       .limit(1);
     if (!booking) return { ok: false, reason: "booking_unavailable" };

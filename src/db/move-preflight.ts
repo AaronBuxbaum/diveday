@@ -27,6 +27,7 @@ import {
 } from "./trips-clashes";
 import { crewMoveConflicts, getTripCrewIds } from "./trips-crew";
 import { liveTrip } from "./trips-live";
+import { seatNotCancelled } from "./trips-queries";
 import { countRollCallEvidence } from "./trips-schedule";
 
 /**
@@ -329,7 +330,7 @@ async function countToldSeats(db: AppDb, shopId: string, tripId: string): Promis
       and(
         eq(notificationDeliveries.shopId, shopId),
         eq(bookings.tripId, tripId),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
         inArray(notificationDeliveries.kind, TOLD_THE_DATE_KINDS),
         eq(notificationDeliveries.status, "sent"),
       ),

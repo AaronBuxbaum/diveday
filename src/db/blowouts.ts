@@ -61,7 +61,7 @@ import {
 } from "./schema";
 import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";
 import { liveTrip } from "./trips-live";
-import { tripSellableSeatsSql } from "./trips-queries";
+import { seatNotCancelled, tripSellableSeatsSql } from "./trips-queries";
 import { rollCallStartedOn, setTripStatus } from "./trips-record";
 
 /**
@@ -255,11 +255,7 @@ async function setUpTripBlowout(db: AppDb, input: CallBlowoutInput, now: Date) {
       .select({ bookingId: bookings.id, personId: bookings.personId })
       .from(bookings)
       .where(
-        and(
-          eq(bookings.tripId, input.tripId),
-          eq(bookings.shopId, input.shopId),
-          ne(bookings.status, "cancelled"),
-        ),
+        and(eq(bookings.tripId, input.tripId), eq(bookings.shopId, input.shopId), seatNotCancelled),
       );
     if (active.length > 0) {
       for (const row of active) {
@@ -454,11 +450,7 @@ export async function listDayBlowoutDepartures(
     .from(trips)
     .leftJoin(
       bookings,
-      and(
-        eq(bookings.tripId, trips.id),
-        eq(bookings.shopId, shopId),
-        ne(bookings.status, "cancelled"),
-      ),
+      and(eq(bookings.tripId, trips.id), eq(bookings.shopId, shopId), seatNotCancelled),
     )
     .where(
       and(
@@ -556,7 +548,7 @@ async function blowoutCandidates(
         sql<number>`count(*) filter (where ${bookings.participantType} = 'diver')`.mapWith(Number),
     })
     .from(trips)
-    .leftJoin(bookings, and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled")))
+    .leftJoin(bookings, and(eq(bookings.tripId, trips.id), seatNotCancelled))
     .where(
       and(
         liveTrip(),
@@ -697,7 +689,7 @@ async function sendPendingBlowoutMessages(
           and(
             eq(bookings.shopId, input.shopId),
             eq(bookings.personId, row.diver.personId),
-            ne(bookings.status, "cancelled"),
+            seatNotCancelled,
           ),
         );
       const [evidence, courseSeats] = await queryAll(db, [
@@ -918,7 +910,7 @@ export async function getTripBlowout(
               and(
                 eq(bookings.shopId, shopId),
                 inArray(bookings.personId, personIds),
-                ne(bookings.status, "cancelled"),
+                seatNotCancelled,
                 ne(trips.id, tripId),
                 eq(trips.status, "scheduled"),
                 gt(trips.startsAt, now),
@@ -1065,7 +1057,7 @@ export async function weatherCallsInWindow(
             eq(bookings.personId, tripBlowoutDivers.personId),
             eq(bookings.shopId, shopId),
             ne(bookings.tripId, tripBlowouts.tripId),
-            ne(bookings.status, "cancelled"),
+            seatNotCancelled,
             gte(bookings.createdAt, tripBlowouts.calledAt),
             lt(bookings.createdAt, sql`${tripBlowouts.calledAt} + interval '30 days'`),
           ),

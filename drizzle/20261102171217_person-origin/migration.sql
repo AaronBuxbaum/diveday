@@ -1,0 +1,2 @@
+CREATE TYPE "person_origin" AS ENUM('public_booking', 'waitlist', 'last_minute', 'self_registration', 'counter', 'import', 'invite', 'onboard', 'public_order', 'identity_split', 'seed');--> statement-breakpoint
+ALTER TABLE "people" ADD COLUMN "origin" "person_origin" DEFAULT 'seed'::"person_origin" NOT NULL;

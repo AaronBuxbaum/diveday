@@ -1,4 +1,4 @@
-import { and, eq, ne, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { isPlausibleDateOfBirth } from "@/lib/age";
 import { isValidCalendarDate } from "@/lib/calendar-date";
 import { BLOCKER_CATEGORY } from "@/lib/readiness";
@@ -7,6 +7,7 @@ import { getBookingReadiness } from "./readiness";
 import { bookings, people } from "./schema";
 import { type SeatDiverRefusal, type SeatDiverWaiver, seatDiver } from "./seat-diver";
 import { latestTripStage } from "./trip-stages";
+import { seatNotCancelled } from "./trips-queries";
 
 /**
  * **A rider the crew adds at the boat** (batch 4, D6).
@@ -103,7 +104,7 @@ export async function addDockRider(db: AppDb, input: DockRiderInput): Promise<Do
       and(
         eq(bookings.shopId, input.shopId),
         eq(bookings.tripId, input.tripId),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
         sql`lower(trim(${people.fullName})) = lower(${fullName})`,
       ),
     )

@@ -563,12 +563,13 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       // The last dive anywhere, as staff recorded it. Their dives with the
       // shop are in bookings.csv; the record shows the later of the two.
       "last_dive_on",
-      // **Where this record came from.** Set once, when a diver put
-      // themselves on file at the shop's counter QR rather than being
-      // typed in by staff (issue #1236). It changes how a destination
-      // system should read every other cell on the row — a name and a
-      // level nobody has sighted — so it travels with them.
-      "self_registered_at",
+      // **Where this record came from**, as a code, set once at birth
+      // (issue #2726). `self_registration` is a diver who put themselves on
+      // file at the shop's counter QR rather than being typed in by staff
+      // (issue #1236): it changes how a destination system should read every
+      // other cell on the row — a name and a level nobody has sighted — so it
+      // travels with them, and `created_at` below is when.
+      "origin",
       // The seat that made this record, when a name-only seat did (#2665):
       // provenance, like the row above.
       "created_by_booking_id",
@@ -612,7 +613,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.drysuitExperienceSeenByPersonId,
         row.drysuitExperienceSeenNote,
         row.lastDiveOn,
-        row.selfRegisteredAt,
+        row.origin,
         row.createdByBookingId,
         row.deletedAt,
         row.anonymizedAt,

@@ -5,10 +5,10 @@ import type { CourtesyProviders } from "@/lib/notifications/courtesy";
 import { NOTHING_RENTED } from "@/lib/rentals";
 import type { SelfDeclaredAgency, SelfDeclaredLevel } from "@/lib/self-registration";
 import type { AppDb } from "./client";
-import { findOrCreatePerson } from "./people";
+import { createPerson, findOrCreatePerson } from "./people";
 import { storedPhone } from "./person-phone";
 import { saveRentalFit } from "./rental-fit";
-import { people, personRoles } from "./schema";
+import { people } from "./schema";
 import { recordSelfDeclaredCards } from "./self-declared-cards";
 import { issueAndDeliverPersonWaiver } from "./waiver-issue";
 
@@ -83,17 +83,13 @@ async function createPhoneOnlyPerson(
   tx: Parameters<Parameters<AppDb["transaction"]>[0]>[0],
   input: SelfRegistrationInput,
 ): Promise<{ person: { id: string }; created: true }> {
-  const [person] = await tx
-    .insert(people)
-    .values({
-      shopId: input.shopId,
-      fullName: input.fullName,
-      email: null,
-      phone: await storedPhone(tx, input.shopId, input.phone),
-    })
-    .returning({ id: people.id });
-  if (!person) throw new Error("registerDiverAtShop: person insert returned no row");
-  await tx.insert(personRoles).values({ personId: person.id, role: "diver" });
+  const person = await createPerson(tx, {
+    shopId: input.shopId,
+    fullName: input.fullName,
+    email: null,
+    phone: await storedPhone(tx, input.shopId, input.phone),
+    origin: "self_registration",
+  });
   return { person, created: true };
 }
 
@@ -109,18 +105,14 @@ export async function registerDiverAtShop(
           fullName: input.fullName,
           email: input.email,
           phone: input.phone,
+          // **Born here, so the origin is the mark.** `self_registration` means
+          // "this record came from the diver", not "this diver was here
+          // recently": a returning diver re-submitting is matched by email and
+          // keeps the origin the row already had, and a person the shop typed in
+          // itself never acquires one.
+          origin: "self_registration",
         })
       : await createPhoneOnlyPerson(tx, input);
-    // **Only on creation.** The mark means "this record came from the diver",
-    // not "this diver was here recently" — a returning diver re-submitting
-    // keeps whatever the row already said, and a person the shop typed in
-    // itself never acquires one.
-    if (created) {
-      await tx
-        .update(people)
-        .set({ selfRegisteredAt: now })
-        .where(and(eq(people.id, person.id), isNull(people.selfRegisteredAt)));
-    }
     return { personId: person.id, created };
   });
 

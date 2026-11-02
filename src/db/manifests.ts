@@ -81,7 +81,7 @@ import { resolveTrainingMarks } from "./training-mark-resolve";
 import { invalidateTrainingPlansForCrewChange } from "./training-plan-crew";
 import { crewClashes } from "./trips-crew";
 import { liveTrip } from "./trips-live";
-import { heldSeatCounts, sellableCapacity } from "./trips-queries";
+import { heldSeatCounts, seatNotCancelled, sellableCapacity } from "./trips-queries";
 import { getTripWithBooked } from "./trips-record";
 import { getTripRoster } from "./trips-roster";
 import { welcomeCueInputsByBooking } from "./welcome-cues";
@@ -358,10 +358,7 @@ export async function listDepartureRollCallByTrip(
       status: rollCallEvents.status,
     })
     .from(rollCallEvents)
-    .innerJoin(
-      bookings,
-      and(eq(bookings.id, rollCallEvents.bookingId), ne(bookings.status, "cancelled")),
-    )
+    .innerJoin(bookings, and(eq(bookings.id, rollCallEvents.bookingId), seatNotCancelled))
     .where(
       and(
         eq(rollCallEvents.shopId, shopId),
@@ -424,10 +421,7 @@ export async function listBoardedAtAnyCheckpointByTrip(
       status: rollCallEvents.status,
     })
     .from(rollCallEvents)
-    .innerJoin(
-      bookings,
-      and(eq(bookings.id, rollCallEvents.bookingId), ne(bookings.status, "cancelled")),
-    )
+    .innerJoin(bookings, and(eq(bookings.id, rollCallEvents.bookingId), seatNotCancelled))
     .where(and(eq(rollCallEvents.shopId, shopId), inArray(rollCallEvents.tripId, [...tripIds])))
     .orderBy(
       desc(rollCallEvents.occurredAt),
@@ -507,10 +501,7 @@ async function standingAfterDiveResults(db: DbExecutor, shopId: string, tripIds:
       status: rollCallEvents.status,
     })
     .from(rollCallEvents)
-    .innerJoin(
-      bookings,
-      and(eq(bookings.id, rollCallEvents.bookingId), ne(bookings.status, "cancelled")),
-    )
+    .innerJoin(bookings, and(eq(bookings.id, rollCallEvents.bookingId), seatNotCancelled))
     .where(
       and(
         eq(rollCallEvents.shopId, shopId),
@@ -578,10 +569,7 @@ export async function listUnaccountedForByTrip(
       status: rollCallEvents.status,
     })
     .from(rollCallEvents)
-    .innerJoin(
-      bookings,
-      and(eq(bookings.id, rollCallEvents.bookingId), ne(bookings.status, "cancelled")),
-    )
+    .innerJoin(bookings, and(eq(bookings.id, rollCallEvents.bookingId), seatNotCancelled))
     .where(
       and(
         eq(rollCallEvents.shopId, shopId),
@@ -657,10 +645,7 @@ export async function listCountedAboardBlockedByTrip(
       readinessBlockers: rollCallEvents.readinessBlockers,
     })
     .from(rollCallEvents)
-    .innerJoin(
-      bookings,
-      and(eq(bookings.id, rollCallEvents.bookingId), ne(bookings.status, "cancelled")),
-    )
+    .innerJoin(bookings, and(eq(bookings.id, rollCallEvents.bookingId), seatNotCancelled))
     .where(and(eq(rollCallEvents.shopId, shopId), inArray(rollCallEvents.tripId, [...tripIds])))
     .orderBy(
       desc(rollCallEvents.occurredAt),
@@ -779,10 +764,7 @@ export async function onTheWaterByRollCall(
   const rows = await db
     .select({ checkpoint: rollCallEvents.checkpoint, status: rollCallEvents.status })
     .from(rollCallEvents)
-    .innerJoin(
-      bookings,
-      and(eq(bookings.id, rollCallEvents.bookingId), ne(bookings.status, "cancelled")),
-    )
+    .innerJoin(bookings, and(eq(bookings.id, rollCallEvents.bookingId), seatNotCancelled))
     .where(
       and(
         eq(rollCallEvents.shopId, shopId),
@@ -822,7 +804,7 @@ export async function onTheWaterByRollCall(
       and(
         eq(bookings.id, bookingId),
         eq(bookings.personId, rollCallCrewEvents.personId),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
       ),
     )
     .innerJoin(
@@ -2065,7 +2047,7 @@ async function writeRollCall(
         eq(bookings.id, input.bookingId),
         eq(bookings.shopId, input.shopId),
         eq(bookings.tripId, input.tripId),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
         scheduledOrCountingHeads(input.tripId, source === "offline" ? occurredAt : null),
       ),
     )
@@ -2599,7 +2581,7 @@ export async function recordCrewRollCall(
                     eq(bookings.shopId, input.shopId),
                     eq(bookings.tripId, input.tripId),
                     eq(bookings.personId, assigned.personId),
-                    ne(bookings.status, "cancelled"),
+                    seatNotCancelled,
                   ),
                 )
                 .limit(1)

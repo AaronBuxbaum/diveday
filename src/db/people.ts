@@ -5,8 +5,68 @@ import { personNamesMatch } from "@/lib/person-name";
 import type { DbExecutor } from "./client";
 import { storedPhone } from "./person-phone";
 import { isUniqueConstraintViolation } from "./query-helpers";
-import { bookings, people, personRoles, shops } from "./schema";
+import { bookings, type PersonOrigin, people, personRoles, shops } from "./schema";
 import { livePerson } from "./trips-live";
+
+/** A person's role, as the `person_roles` table spells it. */
+type PersonRoleName = typeof personRoles.$inferInsert.role;
+
+/** What a door may set at birth beyond the four things every person has. */
+export type NewPersonFields = Partial<
+  Omit<
+    typeof people.$inferInsert,
+    "id" | "shopId" | "fullName" | "email" | "phone" | "origin" | "createdAt" | "deletedAt"
+  >
+>;
+
+export type CreatePersonInput = {
+  shopId: string;
+  fullName: string;
+  email: string | null;
+  /** Already in stored form: the caller ran it through `storedPhone`. */
+  phone: string | null;
+  /** The door this person came through; written once and never changed. */
+  origin: PersonOrigin;
+  /**
+   * The roles the new person holds. Omitted, the door makes a diver, which is
+   * what nine of the ten doors want; a staff door names its own, and an empty
+   * list gives none.
+   */
+  roles?: readonly PersonRoleName[];
+  fields?: NewPersonFields;
+};
+
+/**
+ * **The one door that mints a person** (issue #2726). Every `people` row a shop
+ * can see is born here, with its origin and its roles, so how a person came to
+ * be is one column written from one place. It does not look for an existing
+ * person and it does not catch the unique violation: `findOrCreatePerson` owns
+ * the conflict-safe reuse, and a caller that races on an email wraps this in
+ * its own savepoint. `scripts/check-person-door.mjs` refuses an
+ * `.insert(people)` anywhere else.
+ */
+export async function createPerson(
+  tx: DbExecutor,
+  input: CreatePersonInput,
+): Promise<typeof people.$inferSelect> {
+  const [person] = await tx
+    .insert(people)
+    .values({
+      ...input.fields,
+      shopId: input.shopId,
+      fullName: input.fullName,
+      email: input.email,
+      phone: input.phone,
+      origin: input.origin,
+    })
+    .returning();
+  if (!person) throw new Error("createPerson: insert returned no row");
+  const roles = input.roles ?? ["diver"];
+  if (roles.length > 0) {
+    await tx.insert(personRoles).values(roles.map((role) => ({ personId: person.id, role })));
+  }
+  return person;
+}
 
 export type FindOrCreatePersonInput = {
   shopId: string;
@@ -19,6 +79,8 @@ export type FindOrCreatePersonInput = {
    * bare national number.
    */
   phone?: string;
+  /** The door a new person would be born through; ignored when one exists. */
+  origin: PersonOrigin;
 };
 
 export type FindOrCreatePersonResult = {
@@ -76,17 +138,13 @@ export async function findOrCreatePerson(
 
   try {
     return await tx.transaction(async (tx2) => {
-      const [inserted] = await tx2
-        .insert(people)
-        .values({
-          shopId: input.shopId,
-          fullName: input.fullName,
-          email: input.email,
-          phone,
-        })
-        .returning();
-      if (!inserted) throw new Error("findOrCreatePerson: insert returned no row");
-      await tx2.insert(personRoles).values({ personId: inserted.id, role: "diver" });
+      const inserted = await createPerson(tx2, {
+        shopId: input.shopId,
+        fullName: input.fullName,
+        email: input.email,
+        phone,
+        origin: input.origin,
+      });
       return { person: inserted, created: true, nameMatches: true };
     });
   } catch (error) {
