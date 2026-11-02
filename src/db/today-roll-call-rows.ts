@@ -16,8 +16,8 @@ import {
   ROLL_CALL_GAP_KINDS,
   rollCallGapUrgency,
   type TodayAction,
-  urgencyFor,
 } from "@/lib/today";
+import { urgencyFor } from "@/lib/today-urgency";
 import type { TodayRowsContext } from "./today-rows-context";
 import { at } from "./today-shared";
 import type { BoatClash, CrewClash } from "./trips";

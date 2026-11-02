@@ -27,7 +27,8 @@ import {
 } from "@/lib/calendar-date";
 import { HOUR_MS } from "@/lib/clock";
 import { cachedListFormat } from "@/lib/intl-cache";
-import { type TodayAction, urgencyFor } from "@/lib/today";
+import type { TodayAction } from "@/lib/today";
+import { urgencyFor } from "@/lib/today-urgency";
 import { wallTimeToUtc } from "@/lib/zoned";
 import type { TodayRowsContext } from "./today-rows-context";
 import { at } from "./today-shared";

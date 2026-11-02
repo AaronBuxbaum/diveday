@@ -18,7 +18,7 @@ import { bankCounts, ratchetFlags, readCounts } from "./ratchet.mjs";
  *    lib-level layer — may not import shared UI or feature modules either
  *    (review finding ARCH-2: these two roots previously floated under no rule).
  *
- * 2. **Three seams the direction table cannot say**, because each is about
+ * 2. **Five seams the direction table cannot say**, because each is about
  *    *what kind* of import crosses rather than whether any may:
  *    - `src/lib` → `src/db` *value* imports. `src/lib` is the framework-free
  *      domain layer (`.claude/rules/domain.md`): a type from a db module is a
@@ -29,6 +29,13 @@ import { bankCounts, ratchetFlags, readCounts } from "./ratchet.mjs";
  *    - `src/app` → `drizzle-orm`. A route that builds its own query is a query
  *      no `src/db` test covers and no tenant-scope reader sees; it becomes a
  *      named function in `src/db` instead (routes stay thin, AGENTS.md).
+ *    - `src/lib` → `drizzle-orm` (value imports): the same reason one level down.
+ *      A lib file that builds a query is a loader in disguise; the query half is a
+ *      named function in `src/db`, the twin the name pairs already model.
+ *    - `src/db` → the translators (`@/i18n/messages`, `@/i18n/staff-messages`,
+ *      value imports): `src/db` returns codes and data and the caller words them.
+ *      Outbound-message composers (a reminder, a push, a recap) hold their sentences
+ *      for now, so their files are banked below until those sentences have a home.
  *    - Anything outside `src/db` → `@/db/trips-*`. The trips modules are
  *      reached through the `@/db/trips` barrel (AGENTS.md route map), so a
  *      sibling can be split or merged without a repo-wide edit.
@@ -115,6 +122,24 @@ export const seams = [
     typeOnlyAllowed: true,
     message: (file, specifier) =>
       `${file}: value-imports ${specifier} — src/lib is the framework-free domain layer; a type import is fine, a loader belongs in src/db or a feature module`,
+  },
+  {
+    roots: ["src/lib"],
+    refuses: (_target, specifier) => /^drizzle-orm(?:\/|$)/.test(specifier),
+    typeOnlyAllowed: true,
+    message: (file, specifier) =>
+      `${file}: value-imports ${specifier} — src/lib is the framework-free domain layer and builds no query; the query half is a named function in src/db (the twin the name pairs already model)`,
+  },
+  {
+    roots: ["src/db"],
+    refuses: (target) =>
+      target !== null &&
+      ["src/i18n/messages", "src/i18n/staff-messages"].some((translator) =>
+        isWithin(target, translator),
+      ),
+    typeOnlyAllowed: true,
+    message: (file, specifier) =>
+      `${file}: value-imports ${specifier} — src/db returns codes and data, a sentence is the caller's translator (an outbound message composer that must hold its own words is a ratchet entry until it has somewhere to go)`,
   },
   {
     roots: ["src/app"],

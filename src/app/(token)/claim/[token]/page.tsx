@@ -3,7 +3,7 @@ import { connection } from "next/server";
 import { EntryDone } from "@/components/account/EntryShell";
 import { DeadLink } from "@/components/DeadLink";
 import { FlashParams } from "@/components/FlashParams";
-import { ShopNotice } from "@/components/ShopPageHeader";
+import { ShopNotice } from "@/components/ShopNotice";
 import { SmsConsentNote } from "@/components/SmsConsentNote";
 import { SubmitButton } from "@/components/SubmitButton";
 import { ThreadShell } from "@/components/thread/ThreadShell";

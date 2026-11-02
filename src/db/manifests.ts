@@ -460,7 +460,7 @@ export async function listBoardedAtAnyCheckpointByTrip(
  * drops the checkpoint out, the same supersession every reader here applies.
  *
  * **Two callers, and they are why it exists** (dive-domain-expert review, issue
- * #1704). `seatSailed` (src/lib/closeout.ts) ranked the dock alone, so the
+ * #1704). `seatSailed` (src/lib/seat-sailed.ts) ranked the dock alone, so the
  * evening said "0 out, 0 back" about a one-diver boat carrying a missing diver:
  * the desk's `no_show` stood, no dock result contradicted it, and the after-dive
  * `not_boarded` the day was raising a top-severity row about was invisible to

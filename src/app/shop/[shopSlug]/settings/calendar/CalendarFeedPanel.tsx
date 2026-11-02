@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { Copyable } from "@/components/Copyable";
-import { ShopNotice } from "@/components/ShopPageHeader";
+import { ShopNotice } from "@/components/ShopNotice";
 import { buttonClass } from "@/components/ui/button";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { calendarFeedAction } from "./actions";

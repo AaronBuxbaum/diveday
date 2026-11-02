@@ -1,4 +1,4 @@
-import { ShopNotice } from "@/components/ShopPageHeader";
+import { ShopNotice } from "@/components/ShopNotice";
 import { SubmitButton } from "@/components/SubmitButton";
 import { UndoToast } from "@/components/UndoToast";
 import { buttonClass } from "@/components/ui/button";
