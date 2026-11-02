@@ -29,7 +29,7 @@ vi.mock("@/app/s/[shopSlug]/trips/[id]/_components/TripCrewLine", () => ({
   TripCrewLine: () => <p>crew</p>,
 }));
 vi.mock("@/components/TripChangeLedger", () => ({ TripChangeLedger: () => <p>ledger</p> }));
-vi.mock("@/components/PartyClaimPanel", () => ({
+vi.mock("./PartyClaimPanel", () => ({
   PartyClaimPanel: (props: Record<string, unknown>) => {
     seen.party = props;
     return <p>party</p>;

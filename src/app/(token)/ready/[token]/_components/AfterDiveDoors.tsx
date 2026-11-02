@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { ExpiredLinkCard } from "@/components/ExpiredLinkCard";
-import { PartyClaimPanel } from "@/components/PartyClaimPanel";
+import { PartyClaimPanel } from "./PartyClaimPanel";
 import type { AppDb } from "@/db/client";
 import type { Shop } from "@/db/schema";
 import { issuePartySeatClaims } from "@/db/seat-claims";

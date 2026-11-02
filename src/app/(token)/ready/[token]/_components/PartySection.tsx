@@ -1,5 +1,5 @@
 import { AddSeat } from "@/app/(token)/ready/[token]/_components/AddSeat";
-import { PartyClaimPanel, type PartyClaimSeat } from "@/components/PartyClaimPanel";
+import { PartyClaimPanel, type PartyClaimSeat } from "./PartyClaimPanel";
 import { SettledCheck } from "@/components/ui/SettledCheck";
 import type { issuePartySeatClaims } from "@/db/seat-claims";
 import type { DiverTranslator } from "@/i18n/messages";
