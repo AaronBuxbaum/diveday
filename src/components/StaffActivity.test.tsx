@@ -40,6 +40,27 @@ describe("staff activity", () => {
     expect(screen.queryByRole("alertdialog")).toBeNull();
   });
 
+  it("keeps the pause words hidden while a quick check confirms the session", async () => {
+    let release!: (response: Response) => void;
+    vi.mocked(fetch).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          release = resolve;
+        }),
+    );
+    render(<StaffActivity sessionId="one" copy={copy} />);
+    await act(async () => {});
+    expect(screen.getByRole("alertdialog").firstElementChild).toHaveClass("opacity-0");
+    await act(async () => {
+      vi.advanceTimersByTime(900);
+    });
+    expect(screen.getByRole("alertdialog").firstElementChild).not.toHaveClass("opacity-0");
+    await act(async () => {
+      release(new Response(JSON.stringify({ remainingMs: 5000 })));
+    });
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+  });
+
   it("exposes when the first live session check has finished", async () => {
     let release!: (response: Response) => void;
     vi.mocked(fetch).mockImplementationOnce(

@@ -8,6 +8,8 @@ import { useFocusTrap } from "@/components/useFocusTrap";
 import { STAFF_IDLE_LIMIT_MS } from "@/lib/session-idle";
 
 const INPUT_GAP_MS = 10_000;
+/** A check that confirms within this window never shows the "paused" words. */
+const QUIET_CHECK_MS = 800;
 
 /** Input renews only this session. Background reads never do. */
 export function StaffActivity({
@@ -19,10 +21,23 @@ export function StaffActivity({
 }) {
   const [locked, setLocked] = useState(false);
   const [checkState, setCheckState] = useState<"pending" | "settled">("pending");
+  const [slow, setSlow] = useState(false);
   const [retry, setRetry] = useState<(() => void) | null>(null);
   const [portal, setPortal] = useState<HTMLElement | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   useFocusTrap(locked, dialogRef);
+
+  // Every mount and tab return re-confirms the session behind a cover. Say
+  // "paused" only once the check has failed or is genuinely slow.
+  useEffect(() => {
+    if (!locked || checkState === "settled") {
+      setSlow(false);
+      return;
+    }
+    const timer = setTimeout(() => setSlow(true), QUIET_CHECK_MS);
+    return () => clearTimeout(timer);
+  }, [locked, checkState]);
+  const quiet = checkState === "pending" && !slow;
 
   useEffect(() => {
     let stopped = false;
@@ -179,7 +194,7 @@ export function StaffActivity({
             aria-describedby="staff-session-description"
             tabIndex={-1}
           >
-            <div className="space-y-4 text-center">
+            <div className={`space-y-4 text-center ${quiet ? "opacity-0" : ""}`}>
               <h1 id="staff-session-title" className={SECTION_TITLE_CLASS}>
                 {copy.title}
               </h1>
