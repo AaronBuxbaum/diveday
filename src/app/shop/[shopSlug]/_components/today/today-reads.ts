@@ -17,6 +17,7 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
 import { assembleEveningClose, type DayCloseoutState, tomorrowNoon } from "@/lib/closeout";
 import { shopCrewTarget } from "@/lib/crew-schedule";
 import { seasonStartInstant } from "@/lib/season";
+import { shopClock } from "@/lib/shop-clock";
 import { type DaySpine, type roleLensFor, spineJobCount } from "@/lib/today";
 import type { shopDayBounds } from "@/lib/zoned";
 import { readDayMoney } from "./day-money";
@@ -163,7 +164,7 @@ export async function readTodaySecondWave({
   shop: Shop;
   shopSlug: string;
   personId: string;
-  roles: Parameters<typeof getTodayWork>[11];
+  roles: Parameters<typeof getTodayWork>[10];
   now: Date;
   lens: ReturnType<typeof roleLensFor>;
   t: StaffTranslator;
@@ -183,8 +184,7 @@ export async function readTodaySecondWave({
         db,
         shop.id,
         shopSlug,
-        shop.timezone,
-        now,
+        shopClock(shop, now),
         lens ? personId : undefined,
         t,
         locale,

@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
+import { shopClock } from "@/lib/shop-clock";
 import { fileScopedShopContext } from "@/test/db";
 import { createBoat } from "./boats";
 import { trips } from "./schema";
@@ -36,7 +37,7 @@ describe("boat clashes on Today (H-20260916-may-one-hull-carry, #2135)", () => {
 
   async function boatClashRows(now: Date) {
     const { db, shop } = ctx;
-    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone, now);
+    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop, now));
     return work.actions.filter((action) => action.kind === "boat_clash");
   }
 

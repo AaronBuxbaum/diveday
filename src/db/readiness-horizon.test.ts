@@ -6,6 +6,7 @@ import {
   type OperationalWindow,
   operationalWindow,
 } from "@/lib/operational-window";
+import { shopClock } from "@/lib/shop-clock";
 import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import { inHorizonReadiness } from "./blockers";
 import { listCheckInQueue } from "./check-in";
@@ -46,7 +47,7 @@ describe("one operational window across the readiness surfaces", () => {
   it("a station's blocked count is the shared readiness pass's own answer", async () => {
     const { db, shop } = ctx;
     const [work, blocked] = await Promise.all([
-      getTodayWork(db, shop.id, shop.slug, shop.timezone, NOW),
+      getTodayWork(db, shop.id, shop.slug, shopClock(shop, NOW)),
       blockedByTrip(db, shop.id),
     ]);
 
@@ -67,8 +68,8 @@ describe("one operational window across the readiness surfaces", () => {
   it("the nav badge is the sum of the next boat day's cards plus the divers aboard, exactly", async () => {
     const { db, shop } = ctx;
     const [work, badge] = await Promise.all([
-      getTodayWork(db, shop.id, shop.slug, shop.timezone, NOW),
-      countBlockedDiversNextBoatDay(db, shop.id, shop.timezone, NOW),
+      getTodayWork(db, shop.id, shop.slug, shopClock(shop, NOW)),
+      countBlockedDiversNextBoatDay(db, shop.id, shopClock(shop, NOW)),
     ]);
     const blockedToday = work.departures.reduce((sum, departure) => sum + departure.blocked, 0);
     expect(blockedToday).toBeGreaterThan(0);

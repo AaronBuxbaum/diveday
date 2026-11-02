@@ -5,6 +5,7 @@ import { listTripsReadiness } from "@/db/readiness";
 import { trips } from "@/db/schema";
 import { getTodayWork } from "@/db/today";
 import { nowDate } from "@/lib/clock";
+import { shopClock } from "@/lib/shop-clock";
 import { countingShopContext } from "@/test/query-count";
 
 /**
@@ -109,8 +110,7 @@ describe("what the assembly readers cost", () => {
       ctx.db,
       ctx.shop.id,
       ctx.shop.slug,
-      ctx.shop.timezone,
-      nowDate(),
+      shopClock(ctx.shop, nowDate()),
     );
     expect(work).toBeTruthy();
 
