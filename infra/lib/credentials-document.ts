@@ -31,7 +31,7 @@ const ENV_KEY = /^[ \t]*([a-zA-Z_][a-zA-Z0-9_]*)[ \t]*=/;
  * under the destination it belongs to.
  */
 export interface OffDotenvCredential {
-  /** Where it goes, as a heading: "diveday-mcp-readonly-local -> ~/.aws/credentials". */
+  /** Where it goes, as a heading: "diveday-backup-uploader -> Vercel Production". */
   readonly destination: string;
   /** One or two lines on what to do with it. */
   readonly note: string;

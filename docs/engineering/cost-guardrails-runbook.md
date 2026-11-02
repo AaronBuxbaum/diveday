@@ -117,14 +117,18 @@ What moving would and would not do:
   [manual-actions.md](manual-actions.md), is an account-and-billing case, which Basic Support can
   raise for free. Keep the plan for the response times if a pilot is imminent; drop it if the case
   path is not being used.
-- **AWS trimming.** Real but small, and each remaining item is filed rather than done here: three
-  implicit Lambda log groups never expire; two IAM users exist for an MCP consumer that no longer
-  does; RUM samples 100% of sessions. Together they are under $10 a month at pilot scale, and
-  all of them are one-line changes in the stack. The largest of them is **done**: the
-  `MutationDuration` metric filter was dimensioned by action label, which would have billed $0.30
-  per distinct label — about $9/month across thirty-odd server actions — and is now one aggregate
-  metric, with the per-action ranking left to the Logs Insights widget that already did it
-  (issue #1241).
+- **AWS trimming.** Real but small, and now **done** (issue #3652). Every Lambda writes to a
+  managed log group that expires after a month (the last implicit one was the GitHub OIDC provider's
+  handler); RUM samples one session in ten (`sessionSampleRate` in the stack and the client's
+  default, `NEXT_PUBLIC_RUM_SAMPLE_RATE` overrides); and the two MCP IAM users left the stack on
+  2026-09-02, so there is nothing to delete in code. `cost-guardrails.test.ts` ("AWS trimming")
+  pins all three. Dollar figures here are estimates, not Cost Explorer. The largest of them was
+  the `MutationDuration` metric filter, which was dimensioned by action label and would have billed
+  $0.30 per distinct label — about $9/month across thirty-odd server actions — and is now one
+  aggregate metric, with the per-action ranking left to the Logs Insights widget (issue #1241).
+  Still a human's: confirm in the IAM console that the two `diveday-mcp-readonly-*` users no longer
+  exist in the account, and whether Business Support+ ($25/month in the floor above) is really
+  cancelled — until that is read off a bill the floor stays $43.55.
 
 The cost worth engineering against is therefore **CI wall-clock**, not dollars — see
 `.github/workflows/ci.yml`'s `changes` gate (a docs-only change skips the build, the unit, Playwright
