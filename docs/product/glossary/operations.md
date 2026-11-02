@@ -86,12 +86,12 @@
   `crewIsAccountedFor` (issue #1346). Roll-call gaps stay as they were: tightening those would
   raise a danger-toned row on every departure of every shop that has not adopted crew roll call,
   so the moment is what narrows, not the chase.
-- **Shop day scan** — the coarse ±26-hour bound (`shopDayWindow`, `src/lib/operational-window.ts`)
-  a query casts when the question is about the shop's own *calendar date* rather than a horizon —
-  today's boat, for the command palette's boarding jump. SQL cannot ask "same day in this shop's
-  timezone" of a UTC column, so the scan over-fetches and the caller filters by shop-local date.
-  Twenty-six hours is what a local day can span either side of any instant inside it, plus slack
-  for a daylight-saving transition. Never a readiness lens.
+- **Shop clock** — the one frozen value (`ShopClock`, `src/lib/shop-clock.ts`) that answers "what
+  time is it at this shop" for a request: the instant, the shop's zone, its calendar date
+  (`today`), the exact UTC pair around that date (`day`), its wall-clock time and whether a guest
+  message may go out now. `requireShopSurface` mints one beside the shop row, and a domain function takes a clock
+  rather than a loose `now` and time zone (Today's reads in `src/db/today.ts` first).
+  "Today's departures" is `startsAt` inside `clock.day`, exactly, with no looser scan beside it.
 - **Walk-in** — a person who turns up at the counter for a boat that has not left, seated from the
   departure door in walk-in mode (`walkIn=true`, entry `walk_in`, activity `seat_added_walk_in`).
   The mode is a claim from the client and holds only while the boat's **counter window** is open;

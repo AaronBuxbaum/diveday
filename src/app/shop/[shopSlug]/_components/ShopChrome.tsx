@@ -30,6 +30,7 @@ import { nowDate } from "@/lib/clock";
 import { DEMO_ROLE_KEYS, DEMO_ROLE_META } from "@/lib/demo-roles";
 import { formatTime } from "@/lib/format";
 import { reportRenderQueries } from "@/lib/observability/query-timing";
+import { shopClock } from "@/lib/shop-clock";
 import { ALL_SWITCHES_ON, shopSwitchesOn } from "@/lib/shop-features";
 import { settingsShortcutsFor } from "../settings/settings-groups";
 import { staffShopName } from "./staff-shop-name";
@@ -180,15 +181,15 @@ const loadShopChrome = cache(async (shopSlug: string) => {
   // Gear are rows in the nav (ADR 20261001-logbook); two existence reads,
   // in the same round trip.
   const now = nowDate();
+  // One clock for the badge and the boarding door, so both read the same day.
+  const clock = shop ? shopClock(shop, now) : null;
   const [navBlockersCount, todays, teaches, gearCount] =
-    showNav && shop
+    showNav && shop && clock
       ? await Promise.all([
-          countBlockedDiversNextBoatDay(db, shop.id, shop.timezone, now).then(
-            (blocked) => blocked.total,
-          ),
+          countBlockedDiversNextBoatDay(db, shop.id, clock).then((blocked) => blocked.total),
           // Today's boats: the boarding door below, and ⌘K's "Today" group
           // before anything is typed (fifth loop, item 13), from one read.
-          todaysDepartures(db, shop.id, shop.timezone, now),
+          todaysDepartures(db, shop.id, clock),
           hasActiveCourses(db, shop.id),
           // The fleet **or** the bench: a shop that services customers'
           // regulators and owns no rental kit of its own still has a Gear

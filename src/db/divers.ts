@@ -578,8 +578,7 @@ function diverFilterCondition(
   if (filter === "diving_today") {
     // "Today" is the *shop's* calendar day, not the server's — `shopDayBounds`
     // resolves it to the exact UTC pair so this narrows a COUNT(*) correctly
-    // without the second JS pass the looser `shopDayWindow` scans need. A
-    // cancelled seat or a cancelled departure is not a dive.
+    // with no second JS pass. A cancelled seat or a cancelled departure is not a dive.
     const day = shopDayBounds(context.now, context.timeZone);
     return inArray(
       people.id,

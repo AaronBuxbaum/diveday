@@ -9,6 +9,7 @@ import { type getShopById, shopByIdCached } from "@/db/shops";
 import { auth, type DiveDaySession } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
 import { reportRenderQueries } from "@/lib/observability/query-timing";
+import { type ShopClock, shopClock } from "@/lib/shop-clock";
 import {
   type LandedRefusalNotice,
   noticeUrl,
@@ -144,6 +145,8 @@ export type ShopSurface = {
   session: Awaited<ReturnType<typeof requireStaffSession>>;
   db: AppDb;
   shop: NonNullable<Awaited<ReturnType<typeof getShopById>>>;
+  /** The shop's clock for this request (`src/lib/shop-clock.ts`), minted once. */
+  clock: ShopClock;
 };
 
 /**
@@ -211,5 +214,5 @@ export async function requireShopSurface(
       );
     }
   }
-  return { session, db, shop };
+  return { session, db, shop, clock: shopClock(shop) };
 }

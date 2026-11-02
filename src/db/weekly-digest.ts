@@ -12,6 +12,7 @@ import {
 } from "@/lib/notifications";
 import type { WeeklyDigestEmailSection } from "@/lib/notifications/kinds";
 import { BLOCKER_CATEGORY } from "@/lib/readiness";
+import { shopClock } from "@/lib/shop-clock";
 import { shopPath } from "@/lib/staff-notices";
 import { countsAsJob, type TodayActionKind } from "@/lib/today";
 import {
@@ -416,8 +417,7 @@ export async function readWeeklyDigestFacts(
       db,
       shop.id,
       shop.slug,
-      shop.timezone,
-      now,
+      shopClock(shop, now),
       undefined,
       undefined,
       undefined,
