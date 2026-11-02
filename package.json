@@ -5,7 +5,7 @@
   "engines": {
     "node": "^24.15.0"
   },
-  "packageManager": "pnpm@12.4.1",
+  "packageManager": "pnpm@12.16.1",
   "scripts": {
     "dev": "pnpm build:sw && node scripts/dev-server.mjs",
     "build": "pnpm build:sw && next build && pnpm build:sw:assets",
@@ -138,7 +138,7 @@
     "@vercel/speed-insights": "^2.0.0",
     "aws-rum-web": "^3.2.1",
     "bcryptjs": "^3.0.3",
-    "better-auth": "^1.7.14",
+    "better-auth": "^1.7.15",
     "drizzle-orm": "1.0.0-rc.5",
     "fflate": "^0.8.3",
     "leaflet": "^1.9.4",
