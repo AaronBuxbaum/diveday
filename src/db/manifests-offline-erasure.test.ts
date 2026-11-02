@@ -1,10 +1,12 @@
+import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { signOfflineErasureEpoch } from "@/lib/offline-erasure-epoch";
 import { fileScopedShopContext } from "@/test/db";
+import { anonymizeDiver } from "./anonymize";
 import { getTripManifest, recordCrewRollCall, recordRollCall } from "./manifests";
-import { rollCallCrewEvents, rollCallEvents, shops } from "./schema";
+import { people, rollCallCrewEvents, rollCallEvents, shops } from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 
 const context = fileScopedShopContext();
@@ -14,33 +16,22 @@ async function fixture() {
   const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
   const trip = trips.find((candidate) => candidate.title.startsWith("Two-Tank Reef — Molasses"));
   if (!trip) throw new Error("demo reef trip missing");
-  const [booking] = await getTripRoster(db, shop.id, trip.id);
-  const [staff] = await listStaff(db, shop.id);
+  const [erased, other] = await getTripRoster(db, shop.id, trip.id);
+  const owner = (await listStaff(db, shop.id)).find((entry) => entry.roles.includes("owner"));
   const manifest = await getTripManifest(db, shop.id, trip.id);
-  if (!booking || !staff || !manifest?.crew[0]) throw new Error("roll-call fixture missing");
-  return { db, shop, trip, booking, staff: staff.person, crew: manifest.crew[0] };
-}
-
-describe("offline roll-call notes after erasure", () => {
-  it("keeps a crew mark but drops its note when its signed snapshot predates erasure", async () => {
-    const { db, shop, trip, staff, crew } = await fixture();
-    const issuedEpoch = shop.offlineErasureEpoch;
-    const snapshotId = "33333333-3333-4333-8333-333333333333";
+  const crew = manifest?.crew[0];
+  if (!erased || !other || !owner || !crew) throw new Error("roll-call fixture missing");
+  if (erased.booking.personId === other.booking.personId) {
+    throw new Error("roll-call fixture needs two different divers");
+  }
+  const issuedEpoch = shop.offlineErasureEpoch;
+  /** A sync from a snapshot the device saved before anything below was erased. */
+  const staleSnapshot = () => {
+    const snapshotId = randomUUID();
     const occurredAt = nowDate();
-    await db
-      .update(shops)
-      .set({ offlineErasureEpoch: issuedEpoch + 1 })
-      .where(eq(shops.id, shop.id));
-
-    const result = await recordCrewRollCall(db, {
-      shopId: shop.id,
-      tripId: trip.id,
-      personId: crew.id,
-      recordedByPersonId: staff.id,
-      status: "not_boarded",
-      checkpoint: "after_dive_1",
-      source: "offline",
-      clientEventId: "44444444-4444-4444-8444-444444444444",
+    return {
+      source: "offline" as const,
+      clientEventId: randomUUID(),
       offlineSnapshotSavedAt: new Date(occurredAt.getTime() - 1_000),
       offlineSnapshotId: snapshotId,
       offlineErasureEpochToken: signOfflineErasureEpoch({
@@ -51,54 +42,17 @@ describe("offline roll-call notes after erasure", () => {
         snapshotRevision: 1,
       }),
       occurredAt,
-      note: "Maya Rivera was seen at the ladder.",
-    });
-
-    expect(result).toMatchObject({ ok: true, noteDisposition: "discarded_erasure_cutoff" });
-    const [event] = await db
-      .select({
-        note: rollCallCrewEvents.note,
-        status: rollCallCrewEvents.status,
-        occurredAt: rollCallCrewEvents.occurredAt,
-      })
-      .from(rollCallCrewEvents)
-      .where(eq(rollCallCrewEvents.clientEventId, "44444444-4444-4444-8444-444444444444"));
-    expect(event).toEqual({ note: null, status: "not_boarded", occurredAt });
-  });
-
-  it("keeps a diver mark and tap time but drops a note from a pre-erasure snapshot", async () => {
-    const { db, shop, trip, booking, staff } = await fixture();
-    const issuedEpoch = shop.offlineErasureEpoch;
-    const snapshotId = "11111111-1111-4111-8111-111111111111";
-    const occurredAt = nowDate();
-    await db
-      .update(shops)
-      .set({ offlineErasureEpoch: issuedEpoch + 1 })
-      .where(eq(shops.id, shop.id));
-
-    const result = await recordRollCall(db, {
+    };
+  };
+  const eraseDiver = async () => {
+    const result = await anonymizeDiver(db, {
       shopId: shop.id,
-      tripId: trip.id,
-      bookingId: booking.booking.id,
-      recordedByPersonId: staff.id,
-      status: "not_boarded",
-      checkpoint: "after_dive_1",
-      source: "offline",
-      clientEventId: "22222222-2222-4222-8222-222222222222",
-      offlineSnapshotSavedAt: new Date(occurredAt.getTime() - 1_000),
-      offlineSnapshotId: snapshotId,
-      offlineErasureEpochToken: signOfflineErasureEpoch({
-        shopId: shop.id,
-        tripId: trip.id,
-        snapshotId,
-        epoch: issuedEpoch,
-        snapshotRevision: 1,
-      }),
-      occurredAt,
-      note: "Maya Rivera was seen at the ladder.",
+      personId: erased.booking.personId,
+      actorPersonId: owner.person.id,
     });
-
-    expect(result).toMatchObject({ ok: true, noteDisposition: "discarded_erasure_cutoff" });
+    expect(result).toMatchObject({ ok: true, alreadyAnonymized: false });
+  };
+  const diverNote = async (clientEventId: string) => {
     const [event] = await db
       .select({
         note: rollCallEvents.note,
@@ -106,7 +60,165 @@ describe("offline roll-call notes after erasure", () => {
         occurredAt: rollCallEvents.occurredAt,
       })
       .from(rollCallEvents)
-      .where(eq(rollCallEvents.clientEventId, "22222222-2222-4222-8222-222222222222"));
-    expect(event).toEqual({ note: null, status: "not_boarded", occurredAt });
+      .where(eq(rollCallEvents.clientEventId, clientEventId));
+    return event;
+  };
+  const crewNote = async (clientEventId: string) => {
+    const [event] = await db
+      .select({
+        note: rollCallCrewEvents.note,
+        status: rollCallCrewEvents.status,
+        occurredAt: rollCallCrewEvents.occurredAt,
+      })
+      .from(rollCallCrewEvents)
+      .where(eq(rollCallCrewEvents.clientEventId, clientEventId));
+    return event;
+  };
+  return {
+    db,
+    shop,
+    trip,
+    erased,
+    other,
+    owner: owner.person,
+    crew,
+    staleSnapshot,
+    eraseDiver,
+    diverNote,
+    crewNote,
+  };
+}
+
+/**
+ * Erasure removes the erased person's own data (ADR 20260802-diver-data-erasure,
+ * amendment 2026-11-01), so a stale offline note is dropped only when it is
+ * that person's own: their roll-call note, or their own crew row (issue #3569).
+ */
+describe("offline roll-call notes after erasure", () => {
+  it("drops a pre-erasure note on the erased diver's own booking and keeps the mark", async () => {
+    const f = await fixture();
+    await f.eraseDiver();
+    const sync = f.staleSnapshot();
+
+    const result = await recordRollCall(f.db, {
+      shopId: f.shop.id,
+      tripId: f.trip.id,
+      bookingId: f.erased.booking.id,
+      recordedByPersonId: f.owner.id,
+      status: "not_boarded",
+      checkpoint: "after_dive_1",
+      ...sync,
+      note: "Seen at the ladder.",
+    });
+
+    expect(result).toMatchObject({ ok: true, noteDisposition: "discarded_erasure_cutoff" });
+    expect(await f.diverNote(sync.clientEventId)).toEqual({
+      note: null,
+      status: "not_boarded",
+      occurredAt: sync.occurredAt,
+    });
+  });
+
+  it("keeps a pre-erasure note on another diver when somebody else was erased", async () => {
+    const f = await fixture();
+    await f.eraseDiver();
+    const sync = f.staleSnapshot();
+
+    const result = await recordRollCall(f.db, {
+      shopId: f.shop.id,
+      tripId: f.trip.id,
+      bookingId: f.other.booking.id,
+      recordedByPersonId: f.owner.id,
+      status: "not_boarded",
+      checkpoint: "after_dive_1",
+      ...sync,
+      note: "Last seen at the mooring line.",
+    });
+
+    expect(result).toMatchObject({ ok: true });
+    expect(result).not.toHaveProperty("noteDisposition");
+    expect(await f.diverNote(sync.clientEventId)).toEqual({
+      note: "Last seen at the mooring line.",
+      status: "not_boarded",
+      occurredAt: sync.occurredAt,
+    });
+  });
+
+  it("keeps a pre-erasure crew note when the erased person is somebody else", async () => {
+    const f = await fixture();
+    await f.eraseDiver();
+    const sync = f.staleSnapshot();
+
+    const result = await recordCrewRollCall(f.db, {
+      shopId: f.shop.id,
+      tripId: f.trip.id,
+      personId: f.crew.id,
+      recordedByPersonId: f.owner.id,
+      status: "not_boarded",
+      checkpoint: "after_dive_1",
+      ...sync,
+      note: "Last seen at the mooring line.",
+    });
+
+    expect(result).toMatchObject({ ok: true });
+    expect(result).not.toHaveProperty("noteDisposition");
+    expect(await f.crewNote(sync.clientEventId)).toEqual({
+      note: "Last seen at the mooring line.",
+      status: "not_boarded",
+      occurredAt: sync.occurredAt,
+    });
+  });
+
+  it("drops a pre-erasure note on an erased crew member's own row and keeps the mark", async () => {
+    const f = await fixture();
+    // `anonymizeDiver` refuses a current staff member, so this writes what a
+    // committed erasure of this person leaves behind: the record marked and
+    // the shop's epoch advanced in the same commit.
+    await f.db
+      .update(people)
+      .set({ anonymizedAt: nowDate(), deletedAt: nowDate() })
+      .where(eq(people.id, f.crew.id));
+    await f.db
+      .update(shops)
+      .set({ offlineErasureEpoch: f.shop.offlineErasureEpoch + 1 })
+      .where(eq(shops.id, f.shop.id));
+    const sync = f.staleSnapshot();
+
+    const result = await recordCrewRollCall(f.db, {
+      shopId: f.shop.id,
+      tripId: f.trip.id,
+      personId: f.crew.id,
+      recordedByPersonId: f.owner.id,
+      status: "not_boarded",
+      checkpoint: "after_dive_1",
+      ...sync,
+      note: "Seen at the ladder.",
+    });
+
+    expect(result).toMatchObject({ ok: true, noteDisposition: "discarded_erasure_cutoff" });
+    expect(await f.crewNote(sync.clientEventId)).toEqual({
+      note: null,
+      status: "not_boarded",
+      occurredAt: sync.occurredAt,
+    });
+  });
+
+  it("still drops a note whose snapshot token does not verify", async () => {
+    const f = await fixture();
+    const sync = { ...f.staleSnapshot(), offlineErasureEpochToken: "not-a-signed-epoch" };
+
+    const result = await recordRollCall(f.db, {
+      shopId: f.shop.id,
+      tripId: f.trip.id,
+      bookingId: f.other.booking.id,
+      recordedByPersonId: f.owner.id,
+      status: "not_boarded",
+      checkpoint: "after_dive_1",
+      ...sync,
+      note: "Last seen at the mooring line.",
+    });
+
+    expect(result).toMatchObject({ ok: true, noteDisposition: "discarded_unverified_snapshot" });
+    expect((await f.diverNote(sync.clientEventId))?.note).toBeNull();
   });
 });
