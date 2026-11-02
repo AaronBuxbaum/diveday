@@ -1,12 +1,10 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { z } from "zod";
-import { getDb } from "@/db/client";
 import { getShopById, saveShopRentals } from "@/db/shops";
-import { formValue, readForm } from "@/lib/form-parse";
+import { defineAction, land, type NoticeOf } from "@/features/server-action";
+import { formValue } from "@/lib/form-parse";
 import { majorToMinor, maxPriceMajor, toShopCurrency } from "@/lib/money";
-import { revalidateAndRedirect } from "@/lib/navigation";
 import { parseNitroxFillMethod } from "@/lib/nitrox-fill";
 import { parseRentalTerms } from "@/lib/rental-terms";
 import {
@@ -16,10 +14,8 @@ import {
   shopOffersNitrox,
   toRentableKinds,
 } from "@/lib/rentals";
-import { requireStaffSession } from "@/lib/session";
-import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { isCustomerRegulatorServiceMonths } from "@/lib/work-orders";
-import { paymentSettingsBlock, settingsBlock } from "./action-helpers";
+import { SETTINGS_AND_PAYMENT_GATES } from "./action-gates";
 
 /**
  * The rental forms name a field per catalog item (`mask`, `price_mask`), so
@@ -64,69 +60,71 @@ function parsePriceAmount(
  * never loses it, and a hand-made post cannot rewrite the price of a piece the
  * shop does not rent.
  */
-export async function saveRentalsAction(formData: FormData) {
-  const session = await requireStaffSession();
-  const page = shopPath(session.user.shopSlug, "settings", "rentals");
-  await settingsBlock(session);
-  await paymentSettingsBlock(session);
-  const db = await getDb();
-  const shop = await getShopById(db, session.user.shopId);
-  if (!shop) redirect(noticeUrl(page, "rental-prices-invalid"));
-  const currency = toShopCurrency(shop.currency);
-  const fields = readForm(rentalFields, formData);
+export const saveRentalsAction = defineAction({
+  gate: SETTINGS_AND_PAYMENT_GATES,
+  input: rentalFields,
+  async run({ db, shopId, path }, fields) {
+    const page = path("settings", "rentals");
+    const shop = await getShopById(db, shopId);
+    if (!shop) return land(page, "rental-prices-invalid");
+    const currency = toShopCurrency(shop.currency);
 
-  const selected = SHOP_CATALOG_ITEMS.filter((item) => fields[item.name] === "on").map(
-    (item) => item.kind,
-  );
-  const rentalItems = toRentableKinds(selected);
-  const offered = new Set(rentalItems);
+    const selected = SHOP_CATALOG_ITEMS.filter((item) => fields[item.name] === "on").map(
+      (item) => item.kind,
+    );
+    const rentalItems = toRentableKinds(selected);
+    const offered = new Set(rentalItems);
 
-  const set = parsePriceAmount(fields.setPrice ?? null, currency);
-  let pricesInvalid = !set.ok;
-  const perItemCents: RentalPricing["perItemCents"] = { ...shop.rentalPricing.perItemCents };
-  for (const item of RENTABLE_ITEMS) {
-    if (!offered.has(item.kind)) continue;
-    const parsed = parsePriceAmount(fields[`price_${item.name}`] ?? null, currency);
-    if (!parsed.ok) {
-      pricesInvalid = true;
-      continue;
+    const set = parsePriceAmount(fields.setPrice ?? null, currency);
+    let pricesInvalid = !set.ok;
+    const perItemCents: RentalPricing["perItemCents"] = { ...shop.rentalPricing.perItemCents };
+    for (const item of RENTABLE_ITEMS) {
+      if (!offered.has(item.kind)) continue;
+      const parsed = parsePriceAmount(fields[`price_${item.name}`] ?? null, currency);
+      if (!parsed.ok) {
+        pricesInvalid = true;
+        continue;
+      }
+      if (parsed.cents === null) delete perItemCents[item.kind];
+      else perItemCents[item.kind] = parsed.cents;
     }
-    if (parsed.cents === null) delete perItemCents[item.kind];
-    else perItemCents[item.kind] = parsed.cents;
-  }
-  let nitroxCents = shop.rentalPricing.nitroxCents;
-  if (shopOffersNitrox(rentalItems)) {
-    const nitrox = parsePriceAmount(fields.nitroxPrice ?? null, currency);
-    if (!nitrox.ok) pricesInvalid = true;
-    else nitroxCents = nitrox.cents;
-  }
-  if (pricesInvalid || !set.ok) redirect(noticeUrl(page, "rental-prices-invalid"));
+    let nitroxCents = shop.rentalPricing.nitroxCents;
+    if (shopOffersNitrox(rentalItems)) {
+      const nitrox = parsePriceAmount(fields.nitroxPrice ?? null, currency);
+      if (!nitrox.ok) pricesInvalid = true;
+      else nitroxCents = nitrox.cents;
+    }
+    if (pricesInvalid || !set.ok) return land(page, "rental-prices-invalid");
 
-  const terms = parseRentalTerms(fields.rentalTerms ?? null);
-  if (!terms.ok) redirect(noticeUrl(page, "rental-terms-invalid"));
+    const terms = parseRentalTerms(fields.rentalTerms ?? null);
+    if (!terms.ok) return land(page, "rental-terms-invalid");
 
-  // The regulator interval belongs to gear servicing: while that is switched
-  // off (the Features page) the field is not on the form and the saved value
-  // waits unchanged.
-  const months = shop.workOrdersEnabled ? Number(fields.regulatorServiceMonths) : null;
-  if (months !== null && !isCustomerRegulatorServiceMonths(months)) {
-    redirect(noticeUrl(page, "regulator-service-invalid"));
-  }
+    // The regulator interval belongs to gear servicing: while that is switched
+    // off (the Features page) the field is not on the form and the saved value
+    // waits unchanged.
+    const months = shop.workOrdersEnabled ? Number(fields.regulatorServiceMonths) : null;
+    if (months !== null && !isCustomerRegulatorServiceMonths(months)) {
+      return land(page, "regulator-service-invalid");
+    }
 
-  // How the shop fills nitrox (issue 3004): the form always posts it; a post
-  // without it leaves the stored method, and anything but the two is refused.
-  const fillMethod =
-    fields.nitroxFillMethod === undefined ? null : parseNitroxFillMethod(fields.nitroxFillMethod);
-  if (fields.nitroxFillMethod !== undefined && fillMethod === null) {
-    redirect(noticeUrl(page, "nitrox-fill-invalid"));
-  }
+    // How the shop fills nitrox (issue 3004): the form always posts it; a post
+    // without it leaves the stored method, and anything but the two is refused.
+    const fillMethod =
+      fields.nitroxFillMethod === undefined ? null : parseNitroxFillMethod(fields.nitroxFillMethod);
+    if (fields.nitroxFillMethod !== undefined && fillMethod === null) {
+      return land(page, "nitrox-fill-invalid");
+    }
 
-  await saveShopRentals(db, session.user.shopId, {
-    rentalItems,
-    rentalPricing: { setCents: set.cents, perItemCents, nitroxCents },
-    rentalTerms: terms.terms,
-    customerRegulatorServiceMonths: months ?? undefined,
-    nitroxFillMethod: fillMethod ?? undefined,
-  });
-  revalidateAndRedirect(page, noticeUrl(page, "rentals-saved"));
-}
+    await saveShopRentals(db, shopId, {
+      rentalItems,
+      rentalPricing: { setCents: set.cents, perItemCents, nitroxCents },
+      rentalTerms: terms.terms,
+      customerRegulatorServiceMonths: months ?? undefined,
+      nitroxFillMethod: fillMethod ?? undefined,
+    });
+    return land(page, "rentals-saved");
+  },
+});
+
+/** What `/settings/rentals` can be told after a save (`rentalsNoticeMessages`). */
+export type RentalsNotice = NoticeOf<typeof saveRentalsAction>;

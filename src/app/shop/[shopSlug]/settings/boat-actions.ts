@@ -1,24 +1,21 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@/db/client";
 import { sendNotification } from "@/db/notifications";
 import { recordShopActivity } from "@/db/shop-activity";
 import { getShopById, setShopEmergencyReference, setShopShoreAlertContact } from "@/db/shops";
 import { issueShoreAlertConfirmation } from "@/db/shore-alert-tokens";
+import { defineAction, land, type NoticeOf } from "@/features/server-action";
 import { toDiverLocale } from "@/i18n/settings";
 import { nowDate } from "@/lib/clock";
 import { confirmContactLinkPath } from "@/lib/contact-email-confirmation";
 import { MAX_EMERGENCY_LINES, normalizeEmergencyReference } from "@/lib/emergency-reference";
-import { checkbox, readForm, text } from "@/lib/form-parse";
-import { revalidateAndRedirect } from "@/lib/navigation";
+import { checkbox, text } from "@/lib/form-parse";
 import { publicAppUrl } from "@/lib/notifications";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
-import { requireStaffSession } from "@/lib/session";
 import { nextShoreAlertContact } from "@/lib/shore-alert-contact";
-import { noticeUrl, shopPath } from "@/lib/staff-notices";
-import { settingsBlock } from "./action-helpers";
+import { SETTINGS_GATE } from "./action-gates";
 
 /**
  * The reference's fixed lines, the shore contact's alert address and its
@@ -54,76 +51,74 @@ const emergencyForm = z
  * half-land. A new or changed address is sent a link to confirm it before any
  * alert goes (`sendShoreAlertConfirmation`); a demo shop sends nothing.
  */
-export async function saveEmergencyReferenceAction(formData: FormData) {
-  const session = await requireStaffSession();
-  const page = shopPath(session.user.shopSlug, "settings", "emergency-reference");
-  await settingsBlock(session);
-  const form = readForm(emergencyForm, formData);
-  const db = await getDb();
-  const current = await getShopById(db, session.user.shopId);
-  const shore = nextShoreAlertContact({
-    current: {
-      email: current?.shoreAlertEmail ?? null,
-      consentAt: current?.shoreAlertConsentAt ?? null,
-      consentByPersonId: current?.shoreAlertConsentByPersonId ?? null,
-      confirmedAt: current?.shoreAlertConfirmedAt ?? null,
-    },
-    email: form.shoreAlertEmail,
-    consented: form.shoreAlertConsent,
-    consentFor: form.shoreAlertConsentFor,
-    actorPersonId: session.user.personId,
-    now: nowDate(),
-  });
-  if (!shore.ok) {
-    redirect(
-      noticeUrl(
-        page,
-        shore.reason === "invalid_email" ? "shore-alert-invalid" : "shore-alert-consent-missing",
-      ),
-    );
-  }
-  const reference = normalizeEmergencyReference({
-    lines: Array.from({ length: MAX_EMERGENCY_LINES }, (_, index) => ({
-      label: (form[`emergencyLabel-${index}`] ?? "").slice(0, 80),
-      phone: (form[`emergencyPhone-${index}`] ?? "").slice(0, 40),
-    })),
-    vessel: form.emergencyVessel.slice(0, 120),
-    shoreContact: form.emergencyShoreContact.slice(0, 160),
-    plan: form.emergencyPlan.slice(0, 2000),
-  });
-  const shop = await setShopEmergencyReference(db, session.user.shopId, reference);
-  // An unchanged address is left alone rather than written back: a write of
-  // what this request read would undo a confirmation that landed meanwhile.
-  if (shore.change === "unchanged") revalidateAndRedirect(page, noticeUrl(page, "emergency-saved"));
+export const saveEmergencyReferenceAction = defineAction({
+  gate: [SETTINGS_GATE],
+  input: emergencyForm,
+  async run({ db, shopId, personId, path }, form) {
+    const page = path("settings", "emergency-reference");
+    const current = await getShopById(db, shopId);
+    const shore = nextShoreAlertContact({
+      current: {
+        email: current?.shoreAlertEmail ?? null,
+        consentAt: current?.shoreAlertConsentAt ?? null,
+        consentByPersonId: current?.shoreAlertConsentByPersonId ?? null,
+        confirmedAt: current?.shoreAlertConfirmedAt ?? null,
+      },
+      email: form.shoreAlertEmail,
+      consented: form.shoreAlertConsent,
+      consentFor: form.shoreAlertConsentFor,
+      actorPersonId: personId,
+      now: nowDate(),
+    });
+    if (!shore.ok) {
+      return shore.reason === "invalid_email"
+        ? land(page, "shore-alert-invalid")
+        : land(page, "shore-alert-consent-missing");
+    }
+    const reference = normalizeEmergencyReference({
+      lines: Array.from({ length: MAX_EMERGENCY_LINES }, (_, index) => ({
+        label: (form[`emergencyLabel-${index}`] ?? "").slice(0, 80),
+        phone: (form[`emergencyPhone-${index}`] ?? "").slice(0, 40),
+      })),
+      vessel: form.emergencyVessel.slice(0, 120),
+      shoreContact: form.emergencyShoreContact.slice(0, 160),
+      plan: form.emergencyPlan.slice(0, 2000),
+    });
+    const shop = await setShopEmergencyReference(db, shopId, reference);
+    // An unchanged address is left alone rather than written back: a write of
+    // what this request read would undo a confirmation that landed meanwhile.
+    if (shore.change === "unchanged") return land(page, "emergency-saved");
 
-  await setShopShoreAlertContact(db, session.user.shopId, shore.value);
-  await recordShopActivity(db, {
-    shopId: session.user.shopId,
-    actorPersonId: session.user.personId,
-    write: { code: `shore_alert_contact_${shore.change}` },
-  });
-  if (shore.change === "cleared") {
-    revalidateAndRedirect(page, noticeUrl(page, "shore-alert-cleared"));
-  }
-  const named = shop ?? current;
-  const notice = await confirmationNotice(
-    named ? { ...named, shoreAlertEmail: shore.value.email } : null,
-  );
-  revalidateAndRedirect(page, noticeUrl(page, notice));
-}
+    await setShopShoreAlertContact(db, shopId, shore.value);
+    await recordShopActivity(db, {
+      shopId,
+      actorPersonId: personId,
+      write: { code: `shore_alert_contact_${shore.change}` },
+    });
+    if (shore.change === "cleared") return land(page, "shore-alert-cleared");
+    const named = shop ?? current;
+    return land(
+      page,
+      await confirmationNotice(named ? { ...named, shoreAlertEmail: shore.value.email } : null),
+    );
+  },
+});
 
 /** "Send the link again" under an address still waiting for its confirmation. */
-export async function resendShoreAlertConfirmationAction() {
-  const session = await requireStaffSession();
-  const page = shopPath(session.user.shopSlug, "settings", "emergency-reference");
-  await settingsBlock(session);
-  const shop = await getShopById(await getDb(), session.user.shopId);
-  if (!shop?.shoreAlertEmail || shop.shoreAlertConfirmedAt) {
-    revalidateAndRedirect(page, noticeUrl(page, "emergency-saved"));
-  }
-  const notice = await confirmationNotice(shop);
-  revalidateAndRedirect(page, noticeUrl(page, notice));
-}
+export const resendShoreAlertConfirmationAction = defineAction({
+  gate: [SETTINGS_GATE],
+  async run({ db, shopId, path }) {
+    const page = path("settings", "emergency-reference");
+    const shop = await getShopById(db, shopId);
+    if (!shop?.shoreAlertEmail || shop.shoreAlertConfirmedAt) return land(page, "emergency-saved");
+    return land(page, await confirmationNotice(shop));
+  },
+});
+
+/** What `/settings/emergency-reference` can be told (`emergencyReferenceNoticeMessages`). */
+export type EmergencyReferenceNotice = NoticeOf<
+  typeof saveEmergencyReferenceAction | typeof resendShoreAlertConfirmationAction
+>;
 
 /** Sends the confirmation link when it may, and names the notice that says what happened. */
 async function confirmationNotice(
@@ -135,7 +130,12 @@ async function confirmationNotice(
     timezone: string;
     shoreAlertEmail: string | null;
   } | null,
-) {
+): Promise<
+  | "emergency-saved"
+  | "shore-alert-saved-demo"
+  | "shore-alert-confirmation-sent"
+  | "shore-alert-confirmation-not-sent"
+> {
   if (!shop?.shoreAlertEmail) return "emergency-saved";
   // A demo shop's owner login is anybody's: it sends nothing, the link included.
   if (shop.isDemo) return "shore-alert-saved-demo";
