@@ -22,6 +22,8 @@
 //
 //   node scripts/stack-map.mjs           the stack, one line per layer
 //   node scripts/stack-map.mjs --json    the same record, machine-readable
+//   node scripts/stack-map.mjs --warnings  the stack, then advice about work it may be losing
+//                                         (scripts/stack-warnings.mjs; never a gate)
 //
 // Every git call is a constant argument array or one built from git's own output (a ref name
 // or sha git printed); nothing from a payload reaches a subprocess.
@@ -209,5 +211,9 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     process.stdout.write(`${JSON.stringify(stack, null, 2)}\n`);
   } else {
     process.stdout.write(`${renderStack(stack)}\n`);
+  }
+  if (process.argv.includes("--warnings")) {
+    const { readWarnings, renderWarnings } = await import("./stack-warnings.mjs");
+    process.stdout.write(renderWarnings(readWarnings() ?? []));
   }
 }
