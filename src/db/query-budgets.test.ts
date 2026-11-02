@@ -135,5 +135,7 @@ describe("what the assembly readers cost", () => {
  * (`boatClashesByTrip`, H-80) beside the crew clash, in the same wave.
  * 62 → 64 (merging batch 3): countOpenDateRequests (#2658) and
  * crewAwayAcknowledgedAt (#2678) in Today's wave.
+ * 64 → 65 (#3436): every planned dive's site for the departure cards
+ * (`plannedSitesByTrip`), one statement in the same wave.
  */
-const TODAY_QUERY_CEILING = 64;
+const TODAY_QUERY_CEILING = 65;
