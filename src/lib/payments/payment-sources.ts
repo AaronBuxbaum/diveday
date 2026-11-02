@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { log } from "@/lib/log";
-import { boundedStripeFetch } from "./stripe-fetch";
+import { stripeAnsweredStatus, stripeRequest } from "./stripe-client";
 import { type StripeKeySource, StripeKeyUnavailableError, secretKeyForCall } from "./stripe-keys";
 import { logStripeRequestThrew } from "./stripe-request-log";
 
@@ -73,22 +73,25 @@ export function keyLivemode(secretKey: string): boolean | null {
  */
 export function stripePaymentSourceLookup(
   keys: StripeKeySource,
-  unboundedFetch: Fetch,
+  fetchImpl: Fetch,
   event: { livemode?: boolean } = {},
 ): PaymentSourceLookup {
-  const fetchImpl = boundedStripeFetch(unboundedFetch);
   const get = (secretKey: string, stripeAccountId: string, path: string) =>
-    fetchImpl(`https://api.stripe.com/v1${path}`, {
-      headers: {
-        Authorization: `Bearer ${secretKey}`,
-        "Stripe-Account": stripeAccountId,
-      },
+    stripeRequest(secretKey, fetchImpl, {
+      method: "GET",
+      path: `/v1${path}`,
+      stripeAccount: stripeAccountId,
     });
 
-  /** `none` for a refusal no retry changes; `failed` for one that might pass. */
-  const unanswered = (response: Response, step: string): PaymentSource => {
-    if (response.status === 429 || response.status >= 500) return { status: "failed" };
-    log("stripe_payment_source.refused", "warn", { step, httpStatus: response.status });
+  /** `none` for a refusal no retry changes; `failed` for one that might pass, or no answer. */
+  const unanswered = (error: unknown, step: string): PaymentSource => {
+    const status = stripeAnsweredStatus(error);
+    if (status === null) {
+      logStripeRequestThrew("find_payment_source", error);
+      return { status: "failed" };
+    }
+    if (status === 429 || status >= 500) return { status: "failed" };
+    log("stripe_payment_source.refused", "warn", { step, httpStatus: status });
     return { status: "none" };
   };
 
@@ -105,45 +108,48 @@ export function stripePaymentSourceLookup(
       if (event.livemode !== undefined && mode !== null && mode !== event.livemode) {
         return { status: "not_configured" };
       }
+      const invoiceQuery = new URLSearchParams({
+        "payment[type]": "payment_intent",
+        "payment[payment_intent]": paymentIntentId,
+        limit: "1",
+      });
+      let invoiceAnswer: unknown;
       try {
-        const invoiceQuery = new URLSearchParams({
-          "payment[type]": "payment_intent",
-          "payment[payment_intent]": paymentIntentId,
-          limit: "1",
-        });
-        const invoiceResponse = await get(
+        invoiceAnswer = await get(
           secretKey,
           stripeAccountId,
           `/invoice_payments?${invoiceQuery.toString()}`,
         );
-        if (!invoiceResponse.ok) return unanswered(invoiceResponse, "invoice_payments");
-        const invoices = invoicePaymentListSchema.safeParse(await invoiceResponse.json());
-        if (!invoices.success) return { status: "failed" };
-        const invoice = invoices.data.data[0]?.invoice;
-        if (invoice) {
-          return {
-            status: "invoice",
-            stripeInvoiceId: typeof invoice === "string" ? invoice : invoice.id,
-          };
-        }
+      } catch (error) {
+        return unanswered(error, "invoice_payments");
+      }
+      const invoices = invoicePaymentListSchema.safeParse(invoiceAnswer);
+      if (!invoices.success) return { status: "failed" };
+      const invoice = invoices.data.data[0]?.invoice;
+      if (invoice) {
+        return {
+          status: "invoice",
+          stripeInvoiceId: typeof invoice === "string" ? invoice : invoice.id,
+        };
+      }
 
-        const sessionQuery = new URLSearchParams({ payment_intent: paymentIntentId, limit: "1" });
-        const sessionResponse = await get(
+      const sessionQuery = new URLSearchParams({ payment_intent: paymentIntentId, limit: "1" });
+      let sessionAnswer: unknown;
+      try {
+        sessionAnswer = await get(
           secretKey,
           stripeAccountId,
           `/checkout/sessions?${sessionQuery.toString()}`,
         );
-        if (!sessionResponse.ok) return unanswered(sessionResponse, "checkout_sessions");
-        const sessions = sessionListSchema.safeParse(await sessionResponse.json());
-        if (!sessions.success) return { status: "failed" };
-        const session = sessions.data.data[0];
-        return session
-          ? { status: "checkout_session", stripeSessionId: session.id }
-          : { status: "none" };
       } catch (error) {
-        logStripeRequestThrew("find_payment_source", error);
-        return { status: "failed" };
+        return unanswered(error, "checkout_sessions");
       }
+      const sessions = sessionListSchema.safeParse(sessionAnswer);
+      if (!sessions.success) return { status: "failed" };
+      const session = sessions.data.data[0];
+      return session
+        ? { status: "checkout_session", stripeSessionId: session.id }
+        : { status: "none" };
     },
   };
 }

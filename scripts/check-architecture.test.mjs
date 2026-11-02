@@ -276,8 +276,8 @@ describe("server-only modules stay out of client bundles", () => {
 
   it("stops at a use-server module, which the browser gets as a call stub", async () => {
     const root = await fixture({
-      "src/lib/payments/stripe-fetch.ts": "export const stripe = 1;\n",
-      "src/lib/payments/checkout.ts": 'import { stripe } from "./stripe-fetch";\n',
+      "src/lib/payments/stripe-client.ts": "export const stripe = 1;\n",
+      "src/lib/payments/checkout.ts": 'import { stripe } from "./stripe-client";\n',
       "src/app/actions.ts": '"use server";\nimport { x } from "@/lib/payments/checkout";\n',
       "src/app/Form.tsx": '"use client";\nimport { act } from "@/app/actions";\n',
       "src/app/Leaky.tsx": '"use client";\nimport { x } from "@/lib/payments/checkout";\n',

@@ -35,6 +35,9 @@ const STRIPE_VERSION_PATTERN = /\d{4}-\d{2}-\d{2}(?:\.[a-z]+)?/;
  */
 const VERSION_PIN_PATTERN = /["'`]?Stripe-Version["'`]?|\bapiVersion\b|\bSTRIPE_API_VERSION\b/i;
 
+/** The SDK client, which names the version header only to remove it (see below). */
+const VERSION_HEADER_REMOVER = "src/lib/payments/stripe-client.ts";
+
 /** The production source that talks to Stripe — tests and fixtures excluded. */
 function stripeSourceFiles(): string[] {
   const roots = [
@@ -155,9 +158,8 @@ describe("the code's pinned version and the fixtures' cannot diverge", () => {
   /**
    * Today this finds nothing, and that is the finding.
    *
-   * No call in `src/lib/payments/` sends a `Stripe-Version` header — every one
-   * hits `https://api.stripe.com/v1/...` with only `Authorization`,
-   * `Content-Type`, `Stripe-Account` and `Idempotency-Key`. Stripe therefore
+   * No call in `src/lib/payments/` sends a `Stripe-Version` header — the SDK
+   * names its own on every request and `stripe-client.ts` removes it. Stripe therefore
    * answers at whatever version the platform account's **dashboard** is set to,
    * and delivers webhooks at whatever version each **endpoint** is set to. Both
    * are changeable by a human in a browser: no deploy, no diff, no review — and
@@ -169,11 +171,27 @@ describe("the code's pinned version and the fixtures' cannot diverge", () => {
    */
   it("has no version pin in the payments code — and says so, so adding one forces a re-capture", () => {
     expect(
-      filesPinningAVersion(readSources()),
+      filesPinningAVersion(readSources()).filter((file) => file !== VERSION_HEADER_REMOVER),
       "A Stripe API version is now pinned in the payments code. Reconcile it with " +
         `STRIPE_FIXTURE_API_VERSION (${STRIPE_FIXTURE_API_VERSION}) and re-capture the fixtures — ` +
         "see src/lib/payments/__fixtures__/stripe/README.md.",
     ).toEqual([]);
+  });
+
+  /**
+   * **The one file that names the header, to remove it** (ADR
+   * 20261102-stripe-sdk-adapters). The Stripe SDK sends its own release's
+   * version on every request; the client deletes it so Stripe keeps answering
+   * at the account default these fixtures were captured at. Named here so it
+   * stays the only mention, and only a deletion: `stripe-client.test.ts`
+   * proves on the wire that no request carries the header.
+   */
+  it("lets the SDK client name the version header only to delete it", () => {
+    const remover = readSources().find(({ file }) => file === VERSION_HEADER_REMOVER);
+    const code = withoutComments(remover?.body ?? "");
+    expect(code.match(new RegExp(VERSION_PIN_PATTERN, "gi"))).toEqual(['"Stripe-Version"']);
+    expect(code).toMatch(/const SDK_VERSION_HEADER = "Stripe-Version";/);
+    expect(code).toMatch(/delete headers\[SDK_VERSION_HEADER\];/);
   });
 
   /**
