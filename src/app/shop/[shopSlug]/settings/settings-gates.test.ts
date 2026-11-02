@@ -19,16 +19,16 @@ function pages(dir: string): string[] {
   });
 }
 
-const sources = (dir: string) =>
-  readdirSync(dir)
-    .filter((f) => /\.tsx?$/.test(f) && !/\.test\./.test(f))
-    .map((f) => readFileSync(join(dir, f), "utf8"));
+const stripComments = (src: string) =>
+  src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
 
 describe("every settings page names its own gate", () => {
   it.each(pages(ROOT).map((p) => relative(ROOT, p)))("%s", (page) => {
-    const dir = join(ROOT, page, "..");
-    // The hub renders through `SettingsPage.tsx`, which sits beside the layout.
-    const pool = [...sources(dir), ...(page === "page.tsx" ? sources(ROOT) : [])];
-    expect(pool.some((source) => source.includes("allow:"))).toBe(true);
+    // The page file itself carries the `allow:`; the hub re-exports through
+    // `SettingsPage.tsx`, the one sibling module that is allowed to hold it.
+    const files = [join(ROOT, page)];
+    if (page === "page.tsx") files.push(join(ROOT, "SettingsPage.tsx"));
+    const code = files.map((f) => stripComments(readFileSync(f, "utf8")));
+    expect(code.some((source) => /\ballow:/.test(source))).toBe(true);
   });
 });
