@@ -588,21 +588,13 @@ describe("trip crew (CR-007: cross-tenant write path)", () => {
 });
 
 /**
- * **What moving a departure would ask of the people on it** (issue #1310) —
- * the move preview's only time-dependent lines.
+ * **What moving a departure would ask of the people on it** (issue #1310).
  *
- * Two things are load-bearing here and neither is obvious:
- *
- * **The window, not the day.** A clash is a *time overlap*, computed against
- * the days the move proposes. `setTripCrew` and `changeTripCrew` already
- * define a crew conflict exactly that way and refuse it, so a morning boat
- * plus an afternoon boat is a state the shop can only be in because the model
- * deliberately allows it — an ordinary double shift for a divemaster. Calling
- * that a clash is the saturation failure #757 already paid for once.
- *
- * **The shop's zone.** These run in a shop deliberately far from UTC, because
- * every server and CI box here is UTC and a reading that quietly used the host
- * zone would answer the same on a midday instant and differently either side
+ * Two facts are load-bearing. **The window, not the day**: a clash is a time
+ * overlap, the rule `setTripCrew` and `changeTripCrew` refuse on, so a morning
+ * boat plus an afternoon boat (an ordinary double shift) is not one (#757).
+ * **The shop's zone**: these run in a shop far from UTC, because every server
+ * and CI box here is UTC and a host-zone reading would differ only either side
  * of a shop-local midnight.
  */
 describe("crewMoveConflicts", () => {
@@ -679,14 +671,10 @@ describe("crewMoveConflicts", () => {
   });
 
   /**
-   * **The panel was right and incomplete, which is the shape of warning a
-   * person stops trusting** (issue #1777).
-   *
-   * The two other boats do not overlap *each other* — 07:00–09:00 and
-   * 10:00–12:00 — which is why the roster let one person onto both. They both
-   * overlap the 08:00–12:00 the move proposes. Deduping on the person alone
-   * kept whichever sorted first and dropped the other, so a staffer sorted out
-   * the boat they were told about while the second one stood.
+   * The two other boats do not overlap *each other* (07:00-09:00, 10:00-12:00),
+   * which is how the roster let one person onto both; both overlap the
+   * 08:00-12:00 the move proposes. Deduping on the person alone dropped the
+   * second boat (issue #1777).
    */
   it("names both boats when the move collides one person with two departures", async () => {
     const { db, shop } = ctx;
@@ -737,11 +725,7 @@ describe("crewMoveConflicts", () => {
     ]);
   });
 
-  /**
-   * **The finding that sent the first version of this back.** A day is not a
-   * conflict; overlapping hours are. A divemaster on the 08:00 and the 14:00 is
-   * how a dive shop runs a Saturday, and the roster lets it happen on purpose.
-   */
+  /** A day is not a conflict; overlapping hours are (the 08:00 and the 14:00 is a normal Saturday). */
   it("leaves the ordinary double shift alone", async () => {
     const { db, shop } = ctx;
     const timeZone = await honoluluShop(db, shop.id);
@@ -788,23 +772,15 @@ describe("crewMoveConflicts", () => {
       "2030-08-05T22:00:00Z",
       [],
     );
-    // Move it for real — `moveTrip`, so the schedule days travel with the trip
-    // row exactly as they would on the board — then ask the roster to put the
-    // same person on the boat it landed beside. Refused, for the reason the
-    // preview reports; a preview using a looser rule than this would be
-    // warning about states the roster happily writes, and staying quiet about
-    // one it does not.
+    // Move it for real with `moveTrip`, then ask the roster to put the same
+    // person on the boat it landed beside: refused, for the reason the preview
+    // reports. A looser preview rule would warn about states the roster writes.
     const landing = new Date("2030-08-05T18:00:00Z");
     expect((await moveTrip(db, shop.id, moving.id, landing)).ok).toBe(true);
     expect(await setTripCrew(db, shop.id, other.id, [first.person.id])).toBe(false);
   });
 
-  /**
-   * **Every leg, not only the first.** A three-day course moved by a week
-   * lands on three days, and day one is the least likely of them to be the
-   * problem. The preview shifts each leg by the same wall-clock delta the
-   * mutation will.
-   */
+  /** Every leg is shifted by the same wall-clock delta the mutation applies; day one is the least likely to be the problem. */
   it("checks every day of a multi-day departure, not only the one it starts on", async () => {
     const { db, shop } = ctx;
     const timeZone = await honoluluShop(db, shop.id);
@@ -882,12 +858,7 @@ describe("crewMoveConflicts", () => {
     expect(clashes.map((row) => row.otherTitle)).toEqual(["The evening boat"]);
   });
 
-  /**
-   * **The line the first version of this feature was silent on.** A blackout
-   * informs and never gates, so the crew stay assigned and no clash is found —
-   * and a preview that asked only about clashes would say nothing at all while
-   * a manager slid a whole departure onto somebody's approved holiday.
-   */
+  /** A blackout informs and never gates, so no clash is found; the preview must still say so. */
   it("says who has told the shop they are away on the days it would move to", async () => {
     const { db, shop } = ctx;
     const timeZone = await honoluluShop(db, shop.id);
@@ -1000,19 +971,14 @@ describe("crewMoveConflicts", () => {
 });
 
 /**
- * **The clash a departure is standing in** (issue #1695), with no panel open
- * and nothing proposed.
+ * **The clash a departure is standing in** (issue #1695), nothing proposed.
  *
- * Every setup here reaches the state the way a shop does: `setTripCrew` and
- * `changeTripCrew` both *refuse* to write an overlap, so every door into it is
- * a write that moves the **boat** without reading the roster. `moveTrip` is
- * the loudest of three — the Details form (`updateTripRecord`) and reinstating
- * a called-off departure are the other two, and `crewClashes` names all three.
- * What the shop was never told is what this reader exists to say.
- *
- * Same two load-bearing facts as the move preview above, because it is the same
- * predicate: the **window** and not the day, and the **shop's** zone and not
- * the host's.
+ * Every setup reaches the state as a shop does: `setTripCrew` and
+ * `changeTripCrew` refuse to write an overlap, so the doors in are `moveTrip`,
+ * the Details form (`updateTripRecord`) and reinstating a called-off departure,
+ * all of which move the boat without reading the roster. Same two load-bearing
+ * facts as the move preview: the **window**, not the day, and the **shop's**
+ * zone, not the host's.
  */
 describe("crewClashes", () => {
   /** A shop in Honolulu: UTC-10, no DST, so a shop day runs 10:00Z to 10:00Z. */
@@ -1100,12 +1066,7 @@ describe("crewClashes", () => {
     ]);
   });
 
-  /**
-   * **The assertion most likely to be dropped when a query moves.** A morning
-   * two-tank and an afternoon single are how a divemaster works a Saturday, and
-   * the roster allows it on purpose. A reader that calls that a clash is the
-   * saturation failure #757 and #1203 already paid for once.
-   */
+  /** The assertion most likely to be dropped when a query moves: a double shift is not a clash (#757, #1203). */
   it("leaves the ordinary double shift alone", async () => {
     const { db, shop } = ctx;
     await honoluluShop(db, shop.id);
@@ -1214,17 +1175,12 @@ describe("crewClashes", () => {
   });
 
   /**
-   * **Nothing once the boat is home** (dive-domain-expert review, 2026-09-12).
-   * A clash on a departure already back is permanent, unfixable and true —
-   * nobody moves last Monday's boat — so a `role="status"` line riding on last
-   * month's charter page is precisely the saturation failure #757 and #1203
-   * paid for, re-entered by a side door. `hasReturned`, so the buffered hour is
-   * the one every "has the boat come back" question in the repo shares
-   * (`.claude/rules/domain.md`).
-   *
-   * Asked of **each departure's own** window, which is why the two panels stop
-   * speaking at different instants: the 07:00 is home an hour after 20:30 while
-   * the reef drift it was slid onto is still out.
+   * **Nothing once the boat is home** (dive-domain-expert review, 2026-09-12):
+   * a clash on a departure already back is permanent and unfixable, the
+   * saturation failure #757 and #1203 paid for. `hasReturned` supplies the
+   * buffered hour (`.claude/rules/domain.md`), asked of **each departure's own**
+   * window, so the 07:00 is home an hour after 20:30 while the reef drift it
+   * was slid onto is still out.
    */
   it("stops reporting once the departure it is about has come home", async () => {
     const { db, shop, host, mover } = await shopWithAMovedDeparture();

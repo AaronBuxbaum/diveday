@@ -112,11 +112,9 @@ export type CrewMoveConflict = {
   /** The other departure they are on, for a clash; absent for a blackout. */
   otherTitle?: string;
   /**
-   * Which other departure, for a clash; absent for a blackout. Carried so the
-   * clash list can dedupe on the *pair* — one person really can be on two
-   * departures the proposed hours both overlap, and a dedupe on the person
-   * alone dropped the second boat before the panel ever saw it (issue #1777).
-   * The same shape {@link CrewClash} already keeps.
+   * Which other departure, for a clash; absent for a blackout. The clash list
+   * dedupes on the person-and-departure pair (issue #1777), as
+   * {@link CrewClash} does.
    */
   otherTripId?: string;
 };
@@ -132,29 +130,21 @@ export type CrewMoveConflicts = {
 };
 
 /**
- * **The overlap question, asked once.** Who among these crew members is on
- * another live, scheduled departure whose window meets any of `windows`.
- *
- * The one place the predicate lives, so the move preview
- * (`crewMoveConflicts`, shifted windows) and the standing clash a departure is
- * already in (`crewClashes`, its own windows) cannot come to different answers
- * about the same pair of boats. Rows fan out per leg of the *other* departure,
- * so every caller dedupes what it is about to render.
+ * Who among these crew members is on another live, scheduled departure whose
+ * window meets any of `windows`: the move preview's read (`crewMoveConflicts`,
+ * shifted windows). The standing batch (`crewClashesByTrip`) builds its own
+ * self-join; both ask the same half-open per-leg predicate (`windowsOverlap`
+ * over `legWindow`, src/db/trips-clashes.ts), so they cannot disagree about a
+ * pair of boats. Rows fan out per leg of the *other* departure, so callers
+ * dedupe.
  *
  * ## The window, not the day
  *
- * A clash is a **time overlap**, asked of each window the departure actually
- * occupies. Two reasons it cannot be "the same calendar day":
- *
- * 1. `setTripCrew` and `changeTripCrew` already define a crew conflict, and
- *    they define it exactly this way — and *refuse* it. A reading using a
- *    looser rule would report as a problem a state the shop can only be in
- *    because the model deliberately allows it.
- * 2. A morning two-tank and an afternoon single are an ordinary double shift
- *    for a divemaster. Calling that a clash is the saturation failure #757 and
- *    #1203 already paid for once: a warning that is routinely wrong is one a
- *    crew learns to click past, and the cost lands on the next warning, which
- *    may be right.
+ * A clash is a **time overlap**, never "the same calendar day". `setTripCrew`
+ * and `changeTripCrew` refuse exactly this overlap, so a looser reading would
+ * flag states the model deliberately allows; and a morning two-tank plus an
+ * afternoon single is an ordinary double shift. A warning that is routinely
+ * wrong is one crews click past (#757, #1203).
  *
  * Tenancy is proved through `trips` on both sides, because `trip_assignments`
  * carries no `shop_id` of its own (CR-007). Reads only.
@@ -210,53 +200,32 @@ export type CrewClash = {
 };
 
 /**
- * **The clash a departure is standing in right now** (issue #1695) — no
+ * **The clash a departure is standing in right now** (issue #1695): no
  * proposed move, no panel open.
  *
- * ## Three doors, not one
+ * `setTripCrew` and `changeTripCrew` refuse to *write* this state, so a shop
+ * reaches it through a write that moves the *boat* without reading the roster:
  *
- * `setTripCrew` and `changeTripCrew` refuse to *write* this state, so every way
- * a shop reaches it is a write that moves the *boat* without reading the
- * roster. There are three, and the claim that `moveTrip` is the only one was
- * wrong when it was written (dive-domain-expert review, 2026-09-12):
+ * 1. **`moveTrip`**: the window shifts, the crew stay, two hulls count on one
+ *    divemaster. Its Move panel warns first.
+ * 2. **`updateTripRecord`** (src/db/trips-record.ts): About -> Details writes
+ *    `starts_at`/`ends_at` and replaces `trip_schedule_days` with no crew read.
+ * 3. **`setTripStatus(..., "scheduled")`**: reinstating a called-off departure
+ *    whose crew were rostered elsewhere meanwhile (`trips-crew.test.ts`).
  *
- * 1. **`moveTrip`** — the loudest: a departure's window shifts, its crew stay
- *    as they were, and two hulls are counting on the same divemaster. Its own
- *    Move panel warns first, and then closes with the move.
- * 2. **`updateTripRecord`** (src/db/trips-record.ts) — the About → Details
- *    form two panels above the Crew list writes `starts_at`/`ends_at` straight
- *    through and replaces `trip_schedule_days` wholesale, with no crew read
- *    anywhere in it. Nothing warns at all.
- * 3. **`setTripStatus(…, "scheduled")`** — reinstating a called-off departure
- *    whose crew were re-rostered onto another boat while it was cancelled. A
- *    called-off boat holds nobody's day, so the clash appears at the moment it
- *    goes back on the board (`trips-crew.test.ts` exercises exactly this).
+ * Doors 2 and 3 redirect with a `?notice=` that re-opens About, so this read
+ * speaks on the next paint.
  *
- * Doors 2 and 3 are low severity rather than silent: both redirect with a
- * `?notice=` whose form is in the trip page's `aboutForms` (`saved` →
- * `details`, `reinstated` → `lifecycle`), so About re-opens and this read
- * speaks on the very next paint.
+ * **A read, never a row**: computed from the roster each time, so nothing goes
+ * stale or needs clearing (`.claude/rules/db.md`). **Information, not a gate**:
+ * a move neither refuses a clash nor drops the crew (issue #1345); the owner
+ * assigns crew.
  *
- * **A read, never a row.** The answer is computed from the roster every time it
- * is asked, so it cannot go stale against a roster the owner then fixes, and
- * there is nothing to clear when they do (`.claude/rules/db.md` — this
- * repository writes no reconciliation code).
- *
- * **Information, not a gate.** Issue #1345 settled that a move neither refuses
- * a clash nor drops the clashing crew, because the owner assigns crew. Nothing
- * here refuses anything; it is the sentence a staffer was never shown.
- *
- * The subject departure must be `scheduled` too — symmetric with the other
- * side, and for the same reason: a called-off boat holds nobody's day, so its
- * crew are not double-booked by it.
- *
- * **And it must not be home yet.** A departure a buffered hour past its
- * scheduled return (`hasReturned`, the one rule every "has the boat come back"
- * question in this repo shares) reports nothing: the clash on last month's
- * charter is permanent, unfixable and true, which is the definition of a
- * warning a shop learns to scroll past — the saturation failure #757 and #1203
- * already paid for. `now` is read through the clock so the frozen e2e clock
- * reaches it like every other surface.
+ * The subject must be `scheduled` too, and **not home yet**: a departure a
+ * buffered hour past its return (`hasReturned`) reports nothing, because a
+ * permanent, unfixable clash on last month's charter is the warning a shop
+ * learns to scroll past. `now` is read through the clock so the frozen e2e
+ * clock reaches it.
  */
 export async function crewClashes(
   db: AppDb,
@@ -278,22 +247,17 @@ export async function crewClashes(
 export type CrewClashOnLegs = CrewClash & { legs: DepartureWindow[] };
 
 /**
- * {@link crewClashes} for many departures in **one query** (H-80, issue
- * #1776) — Today asks it of every boat in its window at once rather than once
- * per boat, and the departure page's single read is this with one id.
+ * {@link crewClashes} for many departures in **one query** (H-80, issue #1776):
+ * Today asks it of every boat in its window, and the departure page is this
+ * with one id.
  *
- * A self-join on `trip_assignments`: each subject departure's crew, matched to
+ * A self-join on `trip_assignments`: each subject departure's crew matched to
  * the same person on another live, scheduled departure whose leg overlaps one
- * of the subject's own legs (`windowsOverlap` over `legWindow` on both sides,
- * src/db/trips-clashes.ts — the predicate `overlappingCrewDepartures` asks of a
- * proposed window, asked here of the window the departure has). The subject
- * must be this shop's, live and scheduled; a subject already **home** is
- * dropped by `hasReturned`, per departure, so one boat's clash can fall silent
- * while the other boat in it is still out.
+ * of the subject's own legs. The subject must be this shop's, live and
+ * scheduled; one already **home** is dropped by `hasReturned` per departure.
  *
- * A subject id gets an entry only when it has a clash; an absent key is the
- * ordinary "nobody is double-booked". Each clash carries the subject's legs it
- * falls on ({@link CrewClashOnLegs}), earliest first.
+ * A subject id gets an entry only when it has a clash. Each clash carries the
+ * subject's legs it falls on ({@link CrewClashOnLegs}), earliest first.
  */
 export async function crewClashesByTrip(
   db: AppDb,
@@ -392,36 +356,22 @@ export async function crewClashesByTrip(
 }
 
 /**
- * **What moving this departure would ask of the people on it** (issue #1310) —
- * the one consequence of a move that nothing else in the app can answer, and
- * the only part of the preview that depends on where the boat is going.
+ * **What moving this departure would ask of the people on it** (issue #1310):
+ * the part of the move preview that depends on where the boat is going.
  *
- * ## Two questions, because the shop knows two different things
+ * Two lists, because they are two kinds of fact:
  *
- * "Is she free on Thursday?" means three things, and the app can answer two:
+ * - **Double-booked**: on another departure whose window overlaps, inferred
+ *   from `trip_assignments`.
+ * - **Away**: the crew member told the shop so (`crew_availability_blocks`,
+ *   #1235). It *informs, never gates*, so the crew stay assigned and no clash
+ *   appears; without this list a move onto an approved holiday would be silent.
  *
- * - **Double-booked** — already on another departure whose window overlaps.
- *   Read here from `trip_assignments`, and never wrong.
- * - **Away** — she told the shop so. `crew_availability_blocks` has held this
- *   since #1235, and it *informs, never gates*: a blackout does not take
- *   anybody off a boat. So the crew stay assigned, no clash is found, and a
- *   preview that asked only the first question would sit **silent** while a
- *   manager slid a whole departure onto somebody's approved holiday — the
- *   case the shop has explicitly recorded, missed in favour of the one it
- *   only implies.
- * - **Over their hours** — genuinely unmodelled, and left alone.
+ * Over-hours is unmodelled and left alone.
  *
- * They are separate lists because they are separate facts: one is an
- * inference from the roster, the other is the crew member's own statement.
- *
- * The windows asked about are every leg of a multi-day course, shifted by the
- * same wall-clock delta `moveTrip` will apply — so the preview and the move
- * cannot disagree about where the boat lands. Why a clash is a time overlap
- * and never a shared calendar day is argued once, on
- * `overlappingCrewDepartures`, which owns the predicate both readings use.
- *
- * Tenancy is proved through `trips` on both sides, because `trip_assignments`
- * carries no `shop_id` of its own (CR-007). Reads only.
+ * The windows are every leg, shifted by the same wall-clock delta `moveTrip`
+ * applies. Why a clash is a time overlap is on `overlappingCrewDepartures`.
+ * Tenancy is proved through `trips` on both sides (CR-007). Reads only.
  */
 export async function crewMoveConflicts(
   db: AppDb,
@@ -441,8 +391,7 @@ export async function crewMoveConflicts(
   if (crewIds.length === 0) return none;
 
   const [overlapping, blocks] = await Promise.all([
-    // The same predicate `crewClashes` asks of a departure standing still,
-    // against the windows this move proposes rather than the ones it has.
+    // The standing-clash predicate, against the windows this move proposes.
     overlappingCrewDepartures(db, shopId, tripId, crewIds, proposed),
     // The shop-local days the move would occupy, from the earliest leg to the
     // latest — `min`/`max` rather than first and last, because
@@ -464,17 +413,10 @@ export async function crewMoveConflicts(
   ]);
 
   // **One line per person per other departure**, deduped on the pair and never
-  // on the name — the shape `crewClashes` beside it already keeps, so the two
-  // readings of one predicate cannot report different numbers of boats.
-  //
-  // Two crew members who share a name are two people to ring, so the id is what
-  // dedupes. And one person really can be on two other departures these hours
-  // both overlap: a shop reaches that state through a move (the roster refuses
-  // to write it) and a second move onto the same hours is the same tap again.
-  // Keeping only the first left a staffer sorting out the 09:00 they were told
-  // about while the 10:30 stood, which is the shape of warning people stop
-  // trusting (issue #1777). The left join still repeats a row per leg of the
-  // other boat, which is the other thing this collapses.
+  // on the name (issue #1777; the shape `crewClashes` keeps): two crew members
+  // may share a name, and one person can be on two other departures the
+  // proposed hours both overlap. The left join also repeats a row per leg of
+  // the other boat, which this collapses.
   const clashes: CrewMoveConflict[] = [];
   const seen = new Set<string>();
   for (const row of overlapping) {
