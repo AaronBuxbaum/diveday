@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { createContext, type ReactNode, useContext, useEffect, useRef, useState } from "react";
 import { LiveRefresh } from "@/components/LiveRefresh";
 import { buttonClass } from "@/components/ui/button";
-import { Modal } from "@/components/ui/Modal";
+import { Dialog } from "@/components/ui/layer";
 import { fill } from "@/i18n/fill";
 
 type QrResult = { ok: true; qr: string } | { ok: false };
@@ -92,7 +92,7 @@ function CourseFormsQrDialog({
     router.refresh();
   };
   return (
-    <Modal open onClose={close} title={copy.title} className="print:hidden">
+    <Dialog open onClose={close} title={copy.title} className="print:hidden">
       <p className="font-semibold">{selected.name}</p>
       <p className="mt-2">{copy.scan}</p>
       {result === null ? (
@@ -120,7 +120,7 @@ function CourseFormsQrDialog({
       >
         {copy.close}
       </button>
-    </Modal>
+    </Dialog>
   );
 }
 

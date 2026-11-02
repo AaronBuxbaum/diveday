@@ -61,7 +61,7 @@ describe("Settings is the door to everything in its section", () => {
     //
     // Settings' own sub-pages are the deliberate exception, and the reason the
     // fix is not a plain set equality: `/boats`, `/trip-tags`,
-    // `/settings/security` and a dozen more are surfaces *under* this page
+    // `/settings/billing` and a dozen more are surfaces *under* this page
     // rather than destinations, so the registry does not know them and should
     // not. Anything else — a door to a top-level `/shop/<slug>/<something>`
     // with no row in `STAFF_DESTINATIONS` — is a destination declared outside

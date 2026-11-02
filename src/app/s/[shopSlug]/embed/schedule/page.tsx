@@ -1,11 +1,34 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { connection } from "next/server";
+import { EmptyState } from "@/components/EmptyState";
+import { getDb } from "@/db/client";
+import { shopBySlugCached } from "@/db/shops-cached";
+import { requestTranslator } from "@/i18n/request";
+import { timeZoneLabel } from "@/i18n/timezone-labels";
+import { nowDate } from "@/lib/clock";
+import { toShopCurrency } from "@/lib/money";
 import { EmbedChromeCollapse } from "../../_components/EmbedChromeCollapse";
-import SchedulePage, { generateMetadata as scheduleMetadata } from "../../page";
+import { EmbedFooter } from "../../_components/EmbedFooter";
+import { PublicDocumentMain } from "../../_components/PublicDocumentMain";
+import { readSchedulePage } from "../../_components/schedule-reads";
+import { weekLedgerRows } from "../../_components/schedule-rows";
+import { scheduleDayWords } from "../../_components/schedule-view";
+import { WeekLedger } from "../../_components/WeekLedger";
+import { generateMetadata as scheduleMetadata } from "../../page";
 
 // The frame paints inside its own shell like every route (ADR
 // 20260804-instant-navigation), and that shell is the reason this segment
 // exists: its `loading.tsx` is the frame's list rather than the storefront's.
 export const instant = true;
+
+/**
+ * **How many departures the widget shows before it hands over** (issue #805).
+ * The recommended snippet frames this page at 900px tall; a frame cannot guess
+ * the right height, so the widget is a window onto the schedule (the next few
+ * departures and one link to the real page) rather than the schedule.
+ */
+const EMBED_TRIP_LIMIT = 4;
 
 /** The storefront's own, canonical and all: a frame points search engines at the page. */
 export function generateMetadata(props: {
@@ -16,31 +39,109 @@ export function generateMetadata(props: {
 
 /**
  * **The framed schedule** (K-371; ADR 20260726-schedule-embed, amendment
- * 2026-09-25). `src/proxy.ts` rewrites `/s/<slug>?embed=1` here
+ * 2026-09-25; issue #2744). `src/proxy.ts` rewrites `/s/<slug>?embed=1` here
  * (`embedRenderPath` in `src/lib/embed-routes.ts`), because a segment's
- * `loading.tsx` cannot read a query string: under the storefront's own
- * segment the frame streamed in under a `max-w-6xl` identity band and then
- * snapped to a 12px-inset list. It refuses this path in any shape but the one
- * its rewrite gives it (`isInternalEmbedRoute`).
+ * `loading.tsx` cannot read a query string. It refuses this path in any shape
+ * but the one its rewrite gives it (`isInternalEmbedRoute`).
  *
- * It is the storefront page itself, in embed mode, and nothing else: the
- * booking and capacity logic stay in one place, which is the reason this ADR
- * reused the page rather than building a parallel surface. The mode is set
- * here as well as by the query the rewrite carries, so this segment can never
- * render the full storefront. `EmbedChromeCollapse` goes on keeping the
- * layout's chrome bar hidden if this lands before the chrome does.
+ * It composes the same reads and the same ledger rows the storefront does, and
+ * nothing else: what a frame omits (the identity band, the filters, the month
+ * rail, the shelves, reviews, the boats block, structured data) is simply not
+ * in this page, so the storefront no longer asks which frame it is in. The
+ * proxy still decides *whether* a request is framed (`?embed=1`, the framing
+ * exception and the embed header); this page only decides what a frame holds.
+ * `EmbedChromeCollapse` goes on keeping the layout's chrome bar hidden if this
+ * lands before the chrome does.
  */
-export default function EmbeddedSchedulePage({
+export default async function EmbeddedSchedulePage({
   params,
   searchParams,
-}: Parameters<typeof SchedulePage>[0]) {
+}: {
+  params: Promise<{ shopSlug: string }>;
+  searchParams: Promise<{
+    /** `host` when the loader drew the credit on the host page — see `public/embed.js`. */
+    credit?: string;
+  }>;
+}) {
+  await connection(); // live data — render per request, never a build-time shell
+  const { shopSlug } = await params;
+  const { credit } = await searchParams;
+  const db = await getDb();
+  const shop = await shopBySlugCached(shopSlug);
+  if (!shop) notFound();
+
+  const tz = shop.timezone;
+  const { locale, t } = await requestTranslator(shop.defaultLocale);
+  const now = nowDate();
+  const { range, upcoming, diveSitesByTrip, requirementsByTrip } = await readSchedulePage(
+    db,
+    shop,
+    {
+      isEmbed: true,
+      lens: undefined,
+      cursor: { after: undefined, before: undefined },
+      now,
+      listMonthBounds: null,
+      hasSpaceFilter: false,
+      tripTypeFilter: undefined,
+    },
+  );
+
+  const zoneAnchor = upcoming[0]?.startsAt ?? range.first;
+  const zoneNote = zoneAnchor
+    ? t("schedule.timesInZoneFooter", {
+        shop: shop.name,
+        zone: timeZoneLabel(zoneAnchor, locale, tz),
+      })
+    : null;
+  const listedTrips = upcoming.slice(0, EMBED_TRIP_LIMIT);
+  const { dayKeyOf } = scheduleDayWords(now, locale, tz);
+  const rows = weekLedgerRows({
+    listedTrips,
+    lenses: [],
+    diveSitesByTrip,
+    requirementsByTrip,
+    aboveStatedLevel: new Set(),
+    dayKeyOf,
+    shopSlug,
+    isEmbed: true,
+    timezone: tz,
+    currency: toShopCurrency(shop.currency),
+    locale,
+    t,
+  });
+
   return (
     <>
       <EmbedChromeCollapse />
-      <SchedulePage
-        params={params}
-        searchParams={searchParams.then((query) => ({ ...query, embed: "1" }))}
-      />
+      <PublicDocumentMain
+        kind="schedule"
+        shopName={shop.name}
+        title={t("schedule.title")}
+        className="w-full flex-1 px-3 py-4 print:[&_.text-primary]:text-foreground"
+      >
+        <div id="schedule">
+          {rows.length > 0 ? (
+            <WeekLedger rows={rows} listLabel={t("schedule.tripListLabel")} stickyTop="top-0" />
+          ) : (
+            // A blank iframe on a shop's own website says nothing at all.
+            <EmptyState
+              title={t("schedule.noTrips")}
+              body={t(
+                shop.contactPhone || shop.contactEmail
+                  ? "schedule.noTripsPublic"
+                  : "schedule.noTripsPublicNoPhone",
+              )}
+            />
+          )}
+        </div>
+        <EmbedFooter
+          hostCarriesCredit={credit === "host"}
+          shopSlug={shopSlug}
+          zoneNote={zoneNote}
+          t={t}
+        />
+      </PublicDocumentMain>
     </>
   );
 }

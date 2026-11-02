@@ -42,7 +42,7 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         privateShop,
       }) => {
-        await page.goto(`/shop/${privateShop.slug}/settings/calendar`);
+        await page.goto(`/shop/${privateShop.slug}/me/calendar`);
         const scope = page.locator("section").filter({
           has: page.getByRole("heading", {
             name: staffCopy("calendar.scope.assignments.name"),

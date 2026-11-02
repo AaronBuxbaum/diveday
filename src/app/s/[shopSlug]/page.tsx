@@ -33,7 +33,6 @@ import { openGraphSite, shopSearchListingRobots } from "@/lib/site-metadata";
 import { absoluteUrl, scheduleJsonLd } from "@/lib/structured-data";
 import { CoursesShelf } from "./_components/CoursesShelf";
 import { DayJumpStrip } from "./_components/DayJumpStrip";
-import { EmbedFooter } from "./_components/EmbedFooter";
 import { identityBand, monthRailSides } from "./_components/identity-band";
 import { MonthRail } from "./_components/MonthRail";
 import { MonthSightingsSection } from "./_components/MonthSightingsShelf";
@@ -127,9 +126,6 @@ export default async function SchedulePage({
     after?: string;
     /** The page before this departure: Previous page reads the keyset in reverse. */
     before?: string;
-    embed?: string;
-    /** `host` when the loader drew the credit on the host page — see `public/embed.js`. */
-    credit?: string;
     hasSpace?: string;
     tripType?: string;
     canDive?: string;
@@ -140,8 +136,7 @@ export default async function SchedulePage({
 }) {
   await connectionForRoute("/s/[shopSlug]"); // live data — render per request, not at build
   const { shopSlug } = await params;
-  const { month, after, before, embed, hasSpace, tripType, canDive, hideAbove, credit, lens } =
-    await searchParams;
+  const { month, after, before, hasSpace, tripType, canDive, hideAbove, lens } = await searchParams;
   const hasSpaceFilter = hasSpace === "1";
   const tripTypeFilter = tripType === "fun_dive" || tripType === "course" ? tripType : undefined;
   // **A stated preference, never a gate** (issue #696). It marks the list and
@@ -153,31 +148,6 @@ export default async function SchedulePage({
   // 20260814-self-declared-cards, 20260820-attested-at-booking-verified-at-boarding).
   const canDiveFilter = DECLARABLE_CERTIFICATION_LEVELS.find((level) => level === canDive);
   const hideAboveFilter = Boolean(canDiveFilter) && hideAbove === "1";
-  // Embed mode is the compact, chrome-light surface a shop pastes into its own
-  // website (docs ADR 20260726-schedule-embed) — never for staff, who always
-  // arrive signed in and never via a third-party iframe.
-  const isEmbed = embed === "1";
-  const hostCarriesCredit = credit === "host";
-  /**
-   * **How many departures the widget shows before it hands over.**
-   *
-   * The recommended snippet frames this page at 900px tall; the full list
-   * rendered **2,734px** into it, so a shop's own website got a scrollbar
-   * inside a scrollbar and showed about a third of the schedule — worst on a
-   * phone, where a visitor swiping over the frame cannot tell which thing they
-   * are scrolling and momentum hands off unpredictably between the two
-   * (issue #805).
-   *
-   * A frame cannot guess the right height, because the height *is* however many
-   * departures a shop runs — 900px is right for a quiet shop and wrong for a
-   * busy one, and busy is the shop that most wants the widget. So the widget
-   * stops trying to be the schedule and becomes a window onto it: the next few
-   * departures and one link to the real page.
-   *
-   * Six because that is roughly a week for a shop running a boat a day, and it
-   * fits the frame at both widths the snippet allows.
-   */
-  const EMBED_TRIP_LIMIT = 4;
   const db = await getDb();
   // The same row `generateMetadata` above already read: one query for both
   // (issue #1737).
@@ -213,7 +183,6 @@ export default async function SchedulePage({
     requirementsByTrip,
     shelfNextStarts,
   } = await readSchedulePage(db, shop, {
-    isEmbed,
     lens,
     cursor: { after, before },
     now,
@@ -224,7 +193,6 @@ export default async function SchedulePage({
   const view: ScheduleView = {
     shopSlug,
     month,
-    isEmbed,
     hasSpaceFilter,
     tripTypeFilter,
     canDiveFilter,
@@ -235,21 +203,9 @@ export default async function SchedulePage({
 
   // The widget shows a window, sliced below once the composed requirements are
   // known so hiding happens first and both surfaces read one list (issue #805).
-  // The zone the times below are in, for the widget's footer. Anchored on a
-  // real departure so a shop that switches to summer time reads correctly
-  // either side of the change, falling back to the range's first.
-  const zoneAnchor = upcoming[0]?.startsAt ?? range.first;
-  const zoneNote =
-    isEmbed && zoneAnchor
-      ? t("schedule.timesInZoneFooter", {
-          shop: shop.name,
-          zone: timeZoneLabel(zoneAnchor, locale, tz),
-        })
-      : null;
   const hasUpcoming = range.first !== null;
 
   const { quiet, quietLine } = scheduleOffSeason({
-    isEmbed,
     now,
     range,
     reopensOn: shop.reopensOn,
@@ -263,11 +219,9 @@ export default async function SchedulePage({
   const visibleUpcoming = hideAboveFilter
     ? upcoming.filter((trip) => !aboveStatedLevel.has(trip.id))
     : upcoming;
-  const listedTrips = isEmbed ? visibleUpcoming.slice(0, EMBED_TRIP_LIMIT) : visibleUpcoming;
 
   const { nextBoat, filteredView, skippedBoats, firstSkippedBoat } = scheduleNextBoat({
     visibleUpcoming,
-    isEmbed,
     explicitMonth,
     after: after ?? before,
     hasSpaceFilter,
@@ -286,8 +240,7 @@ export default async function SchedulePage({
 
   // The board's last month says which runs keep going (`PromotedDateAsk`).
   const settled = explicitMonth !== null || !cursors.nextCursor;
-  const atBoardsEnd =
-    !isEmbed && !quiet.quiet && viewsBoardsEnd(currentMonth, lastTripMonth, settled);
+  const atBoardsEnd = !quiet.quiet && viewsBoardsEnd(currentMonth, lastTripMonth, settled);
   const runningLines = atBoardsEnd
     ? seriesHorizonLines(t, locale, await listRunningPublicSeries(db, shop.id, now))
     : [];
@@ -300,19 +253,16 @@ export default async function SchedulePage({
   // ever come from that page's own top-level call: they're the same rows
   // `<ShopReviews>` renders directly beneath it, never threaded into a
   // per-trip Event's organizer.
-  const showReviews = !isEmbed;
-
   const { dayKeyOf, whenWord } = scheduleDayWords(now, locale, tz);
 
   const weekRows = weekLedgerRows({
-    listedTrips,
+    listedTrips: visibleUpcoming,
     lenses,
     diveSitesByTrip,
     requirementsByTrip,
     aboveStatedLevel,
     dayKeyOf,
     shopSlug,
-    isEmbed,
     timezone: shop.timezone,
     currency,
     locale,
@@ -354,49 +304,47 @@ export default async function SchedulePage({
       kind="schedule"
       shopName={shop.name}
       title={t("schedule.title")}
-      className={`${isEmbed ? "w-full flex-1 px-3 py-4" : SHOP_MAIN_CLASS} print:[&_.text-primary]:text-foreground`}
+      className={`${SHOP_MAIN_CLASS} print:[&_.text-primary]:text-foreground`}
     >
-      {isEmbed ? null : (
-        <header>
-          <h1 className={`font-brand-display ${PAGE_TITLE_CLASS}`}>{t("schedule.title")}</h1>
-          {hasUpcoming && scheduleAnchor ? (
-            <p className="mt-2 max-w-xl text-sm text-muted">
-              {t("schedule.timesInZone", {
-                shop: shop.name,
-                zone: timeZoneLabel(scheduleAnchor, locale, tz),
-              })}
-            </p>
-          ) : null}
+      <header>
+        <h1 className={`font-brand-display ${PAGE_TITLE_CLASS}`}>{t("schedule.title")}</h1>
+        {hasUpcoming && scheduleAnchor ? (
+          <p className="mt-2 max-w-xl text-sm text-muted">
+            {t("schedule.timesInZone", {
+              shop: shop.name,
+              zone: timeZoneLabel(scheduleAnchor, locale, tz),
+            })}
+          </p>
+        ) : null}
 
-          {quiet.quiet || nextBoat ? (
-            <div className="mt-4 max-w-xl space-y-4">
-              {quiet.quiet ? (
-                <OffSeasonPanel heading={t("schedule.offSeason.heading")} line={quietLine} />
-              ) : null}
-              {nextBoat ? (
-                <NextBoatCard
-                  href={`${publicTripPath(shopSlug, nextBoat.id)}#book`}
-                  when={whenWord(nextBoat.startsAt)}
-                  time={formatTime(nextBoat.startsAt, locale, shop.timezone)}
-                  title={nextBoat.title}
-                  description={nextBoat.description}
-                  spots={scheduleSeatState(t, nextBoat).text}
-                  price={seatPriceLabel(nextBoat, currency, locale)}
-                  skipped={skippedBoats}
-                  firstSkippedTime={
-                    firstSkippedBoat
-                      ? formatTime(firstSkippedBoat.startsAt, locale, shop.timezone)
-                      : undefined
-                  }
-                  filtered={filteredView}
-                  flat={nextBoatFlat}
-                  t={t}
-                />
-              ) : null}
-            </div>
-          ) : null}
-        </header>
-      )}
+        {quiet.quiet || nextBoat ? (
+          <div className="mt-4 max-w-xl space-y-4">
+            {quiet.quiet ? (
+              <OffSeasonPanel heading={t("schedule.offSeason.heading")} line={quietLine} />
+            ) : null}
+            {nextBoat ? (
+              <NextBoatCard
+                href={`${publicTripPath(shopSlug, nextBoat.id)}#book`}
+                when={whenWord(nextBoat.startsAt)}
+                time={formatTime(nextBoat.startsAt, locale, shop.timezone)}
+                title={nextBoat.title}
+                description={nextBoat.description}
+                spots={scheduleSeatState(t, nextBoat).text}
+                price={seatPriceLabel(nextBoat, currency, locale)}
+                skipped={skippedBoats}
+                firstSkippedTime={
+                  firstSkippedBoat
+                    ? formatTime(firstSkippedBoat.startsAt, locale, shop.timezone)
+                    : undefined
+                }
+                filtered={filteredView}
+                flat={nextBoatFlat}
+                t={t}
+              />
+            ) : null}
+          </div>
+        ) : null}
+      </header>
 
       {/* **The board itself, and nothing where there is no board** (N-45).
           A shop with nothing public on the books renders no calendar,
@@ -404,16 +352,14 @@ export default async function SchedulePage({
           above has already said what there is to say, and a section heading
           over nothing is the page apologising. The frame keeps its own
           terminal state (see the empty state inside). */}
-      {hasUpcoming || isEmbed ? (
-        <div id="schedule" className={isEmbed ? undefined : "mt-6 print:mt-5"}>
-          {!isEmbed ? (
-            <div className="mb-2">
-              {calendarRail}
-              {showsWeekLedger ? (
-                <DayJumpStrip rows={weekRows} label={t("schedule.jumpToDay")} />
-              ) : null}
-            </div>
-          ) : null}
+      {hasUpcoming ? (
+        <div id="schedule" className="mt-6 print:mt-5">
+          <div className="mb-2">
+            {calendarRail}
+            {showsWeekLedger ? (
+              <DayJumpStrip rows={weekRows} label={t("schedule.jumpToDay")} />
+            ) : null}
+          </div>
 
           {/* The filter form stays directly before the list; the calendar
               above it is one group. On phones the disclosure holds the lens
@@ -424,9 +370,8 @@ export default async function SchedulePage({
               `?embed=1` promises the host page none. The URL carries the
               filters and the list re-renders server-side (ADR
               20260812-javascript-is-required). */}
-          {hasUpcoming && !isEmbed ? (
+          {hasUpcoming ? (
             <ScheduleFilters
-              embed={isEmbed}
               month={month ?? null}
               lens={activeLens?.slug ?? null}
               tripTypeFilter={tripTypeFilter ?? null}
@@ -473,22 +418,13 @@ export default async function SchedulePage({
             <WeekLedger
               rows={weekRows}
               listLabel={t("schedule.tripListLabel")}
-              stickyTop={isEmbed ? "top-0" : "top-(--chrome-h)"}
+              stickyTop="top-(--chrome-h)"
             />
-          ) : hasUpcoming ? (
+          ) : (
             <EmptyState
               title={filteredView ? t("schedule.filters.noMatches") : t("schedule.noTripsMonth")}
             />
-          ) : isEmbed ? (
-            <EmptyState
-              title={t("schedule.noTrips")}
-              body={t(
-                shop.contactPhone || shop.contactEmail
-                  ? "schedule.noTripsPublic"
-                  : "schedule.noTripsPublicNoPhone",
-              )}
-            />
-          ) : null}
+          )}
         </div>
       ) : null}
       {/* No pager in the frame either. "Show later departures" is the same
@@ -500,7 +436,7 @@ export default async function SchedulePage({
           takes it into its margin, so it still sits 20px under that row's
           box. Under an empty state (a month or a filter with nothing in it)
           no room is handed back. */}
-      {!isEmbed && (cursors.nextCursor || after || before || explicitMonth) ? (
+      {cursors.nextCursor || after || before || explicitMonth ? (
         <SchedulePagerRow
           pager={pager}
           showsBackToNext={Boolean(after || before || explicitMonth)}
@@ -526,25 +462,21 @@ export default async function SchedulePage({
           departures at all: a course-led shop with an empty board is a real
           day-zero shape, and the shelf is the only thing on that page with
           something to sell. */}
-      {isEmbed ? null : (
-        <CoursesShelf
-          courses={shelfCourses}
-          allCoursesHref={publicCoursesPath(shopSlug)}
-          className={SECTION_GAP}
-          t={t}
-        />
-      )}
-      {isEmbed ? null : (
-        <ShopfrontStory
-          shop={shop}
-          aggregate={reviewAggregate}
-          locale={locale}
-          t={t}
-          className={SECTION_GAP}
-        />
-      )}
-      {isEmbed ? null : <BoatsShelf boats={boats} t={t} className={SECTION_GAP} />}
-      {isEmbed ? null : <MonthSightingsSection shop={shop} tz={tz} locale={locale} t={t} />}
+      <CoursesShelf
+        courses={shelfCourses}
+        allCoursesHref={publicCoursesPath(shopSlug)}
+        className={SECTION_GAP}
+        t={t}
+      />
+      <ShopfrontStory
+        shop={shop}
+        aggregate={reviewAggregate}
+        locale={locale}
+        t={t}
+        className={SECTION_GAP}
+      />
+      <BoatsShelf boats={boats} t={t} className={SECTION_GAP} />
+      <MonthSightingsSection shop={shop} tz={tz} locale={locale} t={t} />
       {/* Reviews are a full-page, diver-facing signal: the embed stays a compact booking widget
           (docs ADR 20260726-schedule-embed), and staff moderate from /shop/[shopSlug]/reviews
           rather than reading them here. The published-review list streams in behind the shell and
@@ -552,22 +484,20 @@ export default async function SchedulePage({
           section also carries the page's structured-data script tag, since its `review` items
           come from the same fetch. The aggregate is already in hand — it belongs to the hero now,
           and is handed down here rather than read a second time. */}
-      {showReviews ? (
-        <div className="print:hidden">
-          <Suspense fallback={<ShopReviewsSkeleton className={SECTION_GAP} />}>
-            <ScheduleReviewsSection
-              db={db}
-              shop={shop}
-              aggregate={reviewAggregate}
-              upcoming={upcoming}
-              origin={publicAppUrl()}
-              locale={locale}
-              tz={tz}
-              t={t}
-            />
-          </Suspense>
-        </div>
-      ) : null}
+      <div className="print:hidden">
+        <Suspense fallback={<ShopReviewsSkeleton className={SECTION_GAP} />}>
+          <ScheduleReviewsSection
+            db={db}
+            shop={shop}
+            aggregate={reviewAggregate}
+            upcoming={upcoming}
+            origin={publicAppUrl()}
+            locale={locale}
+            tz={tz}
+            t={t}
+          />
+        </Suspense>
+      </div>
       {/* **The three asks under the board, as one object.**
 
           Everything here answers the same question — "the schedule above did
@@ -591,7 +521,7 @@ export default async function SchedulePage({
           that has never run a departure offers neither the deal list nor the
           find-my-link door, and on a quiet board the date request has moved
           above — which between them can empty the list under the heading. */}
-      {!isEmbed && (everHadDeparture || (!quiet.quiet && shop.dateRequestsEnabled)) ? (
+      {everHadDeparture || (!quiet.quiet && shop.dateRequestsEnabled) ? (
         <section aria-labelledby="more-ways-heading" className={`${SECTION_GAP} print:hidden`}>
           <h2 id="more-ways-heading" className={`font-brand-display ${SECTION_TITLE_CLASS}`}>
             {t("schedule.moreWaysHeading")}
@@ -616,7 +546,7 @@ export default async function SchedulePage({
         </section>
       ) : null}
       {/* "Our year": the shop's own year in counts, last, and only with its yes. */}
-      {!isEmbed && shop.publicYearEnabled ? (
+      {shop.publicYearEnabled ? (
         <Suspense fallback={null}>
           <OurYearSection
             shop={shop}
@@ -626,14 +556,6 @@ export default async function SchedulePage({
           />
         </Suspense>
       ) : null}
-      {/* Human-discovery footer, embed mode only. */}
-      <EmbedFooter
-        isEmbed={isEmbed}
-        hostCarriesCredit={hostCarriesCredit}
-        shopSlug={shopSlug}
-        zoneNote={zoneNote}
-        t={t}
-      />
     </PublicDocumentMain>
   );
 }

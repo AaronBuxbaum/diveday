@@ -12,7 +12,7 @@ import { deskTimeOn } from "@/lib/desk-hours";
 import { formatTime, formatTimeZoneName } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
-import { settingsPaneClass } from "../_components/settings-pane";
+import { staffPageClass } from "../../_components/staff-page";
 import { setAfterHoursPingAction, setWeeklyDigestAction } from "./actions";
 import { EmailPreferenceSwitch } from "./EmailPreferenceSwitch";
 
@@ -54,10 +54,10 @@ export default async function EmailSettingsPage({
     formatTime(deskTimeOn(minute, now, shop.timezone), locale, shop.timezone);
 
   return (
-    <main className={settingsPaneClass()}>
+    <main className={staffPageClass("reading")}>
       <ShopPageHeader
-        eyebrow={t("settings.main.eyebrow")}
-        eyebrowHref={shopPath(shop.slug, "settings")}
+        eyebrow={t("settings.security.title")}
+        eyebrowHref={shopPath(shop.slug, "me", "security")}
         title={t("emailSettings.title")}
       />
       <div className="space-y-10">
@@ -78,7 +78,7 @@ export default async function EmailSettingsPage({
             })}
           </p>
           <a
-            href={shopPath(shop.slug, "settings", "email", "preview")}
+            href={shopPath(shop.slug, "me", "email", "preview")}
             target="_blank"
             rel="noopener"
             className={buttonClass({ variant: "link", flush: true, className: "mt-3" })}

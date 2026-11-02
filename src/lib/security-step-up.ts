@@ -26,7 +26,7 @@ export function stepUpChallengeUrl(
   purpose: StepUpPurpose,
   returnTo: string,
 ): string {
-  return noticeUrl(shopPath(shopSlug, "settings", "security"), "step-up-required", {
+  return noticeUrl(shopPath(shopSlug, "me", "security"), "step-up-required", {
     purpose,
     returnTo,
   });

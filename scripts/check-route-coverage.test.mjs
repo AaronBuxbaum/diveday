@@ -429,7 +429,7 @@ describe("planLedgerWrite (the ratchet)", () => {
    * (issue #1362).
    *
    * Exactly one route in the real ledger is in this state, and it is the one
-   * whose reason is hardest to reconstruct: `/shop/[shopSlug]/settings/security`
+   * whose reason is hardest to reconstruct: `/shop/[shopSlug]/me/security`
    * has a real e2e spec and an argued case for holding no visual baseline (
    * better-auth stamps `updated_at` from its own clock, the row prints the
    * Chromium user-agent, the row count depends on how often the run signed in).
