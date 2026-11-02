@@ -20,7 +20,8 @@ const ctx = fileScopedShopContext();
  * never left the dock, another boat).
  */
 
-type Checkpoint = "departure" | "after_dive_1" | "after_dive_2";
+/** A string, so a test can write a checkpoint spelled as an import or a hand edit might. */
+type Checkpoint = "departure" | "after_dive_1" | "after_dive_2" | "after_dive_3" | (string & {});
 
 async function boat(divers: number, plannedDives = 2) {
   const { db, shop } = ctx;
@@ -31,11 +32,12 @@ async function boat(divers: number, plannedDives = 2) {
     seat: number,
     checkpoint: Checkpoint,
     status: "boarded" | "not_boarded" | "cleared",
+    tripId = made.trip.id,
   ) => {
     minute += 1;
     await db.insert(rollCallEvents).values({
       shopId: shop.id,
-      tripId: made.trip.id,
+      tripId,
       bookingId: made.bookingIds[seat] as string,
       recordedByPersonId: made.staffId,
       status,
@@ -98,6 +100,7 @@ describe("departureCounts", () => {
       sailed: 3,
       boarded: 3,
       back: 1,
+      missing: 1,
       blocked: 2,
     });
   });
@@ -164,6 +167,74 @@ describe("departureCounts", () => {
     expect(await count()).toMatchObject({ sailed: 1, boarded: 0, back: 1 });
   });
 
+  it("still finds a chase-boat diver missing, though the dock said they never left", async () => {
+    const { say, count } = await boat(2);
+    await say(0, "departure", "boarded");
+    await say(1, "departure", "not_boarded");
+    await say(0, "after_dive_1", "boarded");
+    await say(1, "after_dive_1", "boarded");
+    expect(await count()).toMatchObject({ sailed: 1, back: 2, missing: 0 });
+    await say(0, "after_dive_2", "boarded");
+    await say(1, "after_dive_2", "not_boarded");
+    expect(await count()).toMatchObject({ sailed: 1, back: 1, missing: 1 });
+  });
+
+  it("keeps a missing diver missing until a later count names them aboard", async () => {
+    const { say, count } = await boat(2);
+    await say(0, "after_dive_1", "not_boarded");
+    await say(1, "after_dive_2", "boarded");
+    expect((await count()).missing).toBe(1);
+    await say(0, "after_dive_2", "boarded");
+    expect((await count()).missing).toBe(0);
+  });
+
+  it("does not let a stray tap past the planned dives move the count, nor hide a missing diver", async () => {
+    const { say, count } = await boat(2, 2);
+    await say(0, "after_dive_1", "boarded");
+    await say(1, "after_dive_1", "boarded");
+    await say(0, "after_dive_3", "boarded");
+    expect((await count()).back).toBe(2);
+    await say(1, "after_dive_3", "not_boarded");
+    expect((await count()).missing).toBe(1);
+  });
+
+  it("never credits a word recorded on another departure to this seat", async () => {
+    const { db, shop } = ctx;
+    const { say, count } = await boat(1);
+    const other = await returnedTrip(db, shop.id, {
+      endedHoursAgo: 1,
+      divers: 1,
+      title: "Another boat",
+    });
+    await say(0, "after_dive_1", "boarded", other.trip.id);
+    await say(0, "after_dive_1", "not_boarded", other.trip.id);
+    const counts = await departureCounts(db, shop.id, [other.trip.id], { readiness: new Map() });
+    expect(await count()).toMatchObject({ back: 0, missing: 0 });
+    expect(counts.get(other.trip.id)).toMatchObject({ back: 0, missing: 0 });
+  });
+
+  it("reads two spellings of one checkpoint as one, newest word standing", async () => {
+    const { say, count } = await boat(1);
+    await say(0, "after_dive_02", "boarded");
+    await say(0, "after_dive_2", "not_boarded");
+    expect(await count()).toMatchObject({ back: 0, missing: 1 });
+  });
+
+  it("reads the roster's own readiness for a seat the caller's map left out", async () => {
+    const { db, shop } = ctx;
+    const { trip, bookingIds } = await boat(2);
+    const rows = await listTripsReadiness(db, shop.id, [trip.id]);
+    const truth = rows.filter((row) => row.readiness.status === "blocked").length;
+    // Hand in only the first seat, read as clear; the second must come from the pipeline.
+    const partial = new Map([[bookingIds[0] as string, { status: "ready" } as ReadinessResult]]);
+    const firstBlocked = rows.some(
+      (row) => row.booking.id === bookingIds[0] && row.readiness.status === "blocked",
+    );
+    const counts = await departureCounts(db, shop.id, [trip.id], { readiness: partial });
+    expect(counts.get(trip.id)?.blocked).toBe(truth - (firstBlocked ? 1 : 0));
+    expect(truth - (firstBlocked ? 1 : 0)).toBeGreaterThan(0);
+  });
+
   it("never counts a diver who never left the dock as sailed or back", async () => {
     const { say, count } = await boat(1);
     await say(0, "departure", "not_boarded");
@@ -190,6 +261,7 @@ describe("departureCounts", () => {
       sailed: 1,
       boarded: 1,
       back: 1,
+      missing: 0,
       blocked: 0,
     });
   });
@@ -213,9 +285,8 @@ describe("departureCounts", () => {
     const boardedSeats = (await listDepartureBoardedByTrip(db, shop.id, [trip.id])).get(trip.id);
     const missing = (await listUnaccountedForByTrip(db, shop.id, [trip.id])).get(trip.id);
     expect(counted.boarded).toBe(boardedSeats?.size ?? 0);
-    // Every missing seat sailed and is not back.
-    expect(counted.sailed - counted.back).toBeGreaterThanOrEqual(missing?.size ?? 0);
-    expect(counted).toMatchObject({ sailed: 2, back: 1 });
+    expect(counted.missing).toBe(missing?.size ?? 0);
+    expect(counted).toMatchObject({ sailed: 2, back: 1, missing: 1 });
   });
 
   it("reads readiness through the roster's pipeline when none is handed in", async () => {
@@ -255,6 +326,7 @@ describe("departureCounts", () => {
       sailed: 0,
       boarded: 0,
       back: 0,
+      missing: 0,
       blocked: 0,
     });
     // Another shop's id reads nothing.

@@ -31,7 +31,7 @@ async function boat(divers = 3, plannedDives = 2) {
   /** One roll-call event, each a minute after the last so the newest is the one written last. */
   const say = async (
     bookingId: string,
-    checkpoint: "departure" | "after_dive_1" | "after_dive_2",
+    checkpoint: "departure" | "after_dive_1" | "after_dive_2" | (string & {}),
     status: "boarded" | "not_boarded" | "cleared",
     tripId = made.trip.id,
   ) => {
@@ -102,6 +102,13 @@ describe("listUnaccountedForByTrip", () => {
     await say(bookingIds[1] as string, "after_dive_2", "boarded");
     await say(bookingIds[1] as string, "after_dive_2", "cleared");
     expect(await unaccounted()).toEqual([1]);
+  });
+
+  it("reads two spellings of one checkpoint as one, newest word standing", async () => {
+    const { bookingIds, say, unaccounted } = await boat();
+    await say(bookingIds[0] as string, "after_dive_02", "boarded");
+    await say(bookingIds[0] as string, "after_dive_2", "not_boarded");
+    expect(await unaccounted()).toEqual([0]);
   });
 
   it("never reads the dock: a diver who never left is not missing", async () => {

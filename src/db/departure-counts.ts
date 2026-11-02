@@ -13,14 +13,16 @@ import { liveTrip } from "./trips-live";
 import { seatNotCancelled } from "./trips-queries";
 
 /**
- * **One departure's head count**, each number defined once (issue #2785).
+ * **One departure's passenger count**, each number defined once (issue #2785).
  *
  * Every number here counts **seats on the roster, divers and other passengers
- * alike**; crew are never in it. Each field answers one question, and a
- * surface that wants another question asks for another field rather than
- * doing arithmetic on these: `sailed - back` is **not** the number still in
- * the water, because a seat the crew have not yet reached at the current
- * count is neither back nor missing.
+ * alike**. **Crew are never in it**: their roll call is
+ * `listDepartureCrewRollCallByTrip`, so no surface may say "everyone is back"
+ * from this record alone. Each field answers one question, and a surface that
+ * wants another asks for another field rather than doing arithmetic on these:
+ * `sailed - back` is **not** the number still in the water (that is `missing`),
+ * because a seat the crew have not yet reached at the current count is
+ * neither back nor missing.
  */
 export type DepartureCount = Readonly<{
   /** The places the departure offers (`trips.capacity`). */
@@ -28,7 +30,8 @@ export type DepartureCount = Readonly<{
   /**
    * **Seats held**: booked or checked in. A no-show has released its place and
    * is not here; a cancelled seat is nobody. This is the number set against
-   * `capacity` before the boat leaves.
+   * `capacity` before the boat leaves. Not the close-out's `booked`
+   * (`CloseoutTripInput`), which is the whole roster, no-shows included.
    */
   booked: number;
   /**
@@ -39,26 +42,45 @@ export type DepartureCount = Readonly<{
    * Before anyone has counted at the dock this is every seat not marked a
    * no-show, because that rule's last fallback is the desk. Read it as "who
    * went out" only once the boat has left.
+   *
+   * It asks how many the vessel *left the dock with*, so a seat the crew
+   * marked `not_boarded` at the dock stays out of it even when a chase boat
+   * brought that diver out later. `back` and `missing` do not lean on it for
+   * that reason: they read the after-dive words themselves.
    */
   sailed: number;
   /**
    * **Seats counted aboard at the dock**: the standing departure result is
    * `boarded`. The same answer as `listDepartureBoardedByTrip`. A diver first
-   * counted at a later site is in `sailed` and `back` but not here.
+   * counted at a later site is never here. A seat the desk marked a no-show
+   * and the crew counted aboard anyway is here and in `sailed` but not in
+   * `booked`, so `boarded` can exceed `booked` by exactly those seats.
    */
   boarded: number;
   /**
-   * **Seats that sailed and are counted back aboard at the latest after-dive
-   * checkpoint anyone on this departure has been counted at.** Zero until the
-   * first after-dive count.
+   * **Seats counted back aboard at the current after-dive checkpoint**: the
+   * latest one, within the departure's planned dives, that anyone on it has a
+   * standing word at. Zero until the first after-dive count.
    *
    * Only a standing `boarded` at that checkpoint counts. A seat recorded not
    * back, a seat nobody has named at that checkpoint yet, and a seat whose
    * word there was retracted are all not back. So the number can be low while
    * a count is still being taken, and never high: it is the side a head count
-   * may err on.
+   * may err on. A diver a chase boat brought out counts here once counted
+   * aboard, even though `sailed` leaves them out, so `back` can exceed
+   * `sailed` by exactly those seats.
    */
   back: number;
+  /**
+   * **Seats recorded not back aboard and not counted aboard since**: the
+   * newest word at some after-dive checkpoint is `not_boarded` and no later
+   * after-dive checkpoint has a standing `boarded`. The dock is never read
+   * (`not_boarded` there means "never left"). The same rule and the same
+   * answer as `listUnaccountedForByTrip`, the divers a departure must not be
+   * called finished over. Read at every checkpoint, planned or not, so a
+   * stray tap can never hide one.
+   */
+  missing: number;
   /**
    * **Seats on the roster whose readiness says they may not board**
    * (`rosterRowIsBlocked`), counted over the same seats the roster's Blocked
@@ -96,19 +118,14 @@ export async function departureCounts(
   const ids = [...new Set(tripIds)];
   if (ids.length === 0) return counts;
 
-  const readinessRead = (): Promise<ReadonlyMap<string, ReadinessResult | undefined>> =>
-    options.readiness
-      ? Promise.resolve(options.readiness)
-      : listTripsReadiness(db, shopId, ids, options.now ?? nowDate()).then(
-          (rows) => new Map(rows.map((row) => [row.booking.id, row.readiness])),
-        );
   // `queryAll`, not `Promise.all`: inside a transaction these share one client.
-  const [roster, events, readiness] = await queryAll(db, [
+  const [roster, events] = await queryAll(db, [
     () =>
       db
         .select({
           tripId: trips.id,
           capacity: trips.capacity,
+          plannedDives: trips.plannedDives,
           bookingId: bookings.id,
           status: bookings.status,
         })
@@ -121,6 +138,7 @@ export async function departureCounts(
     () =>
       db
         .select({
+          tripId: rollCallEvents.tripId,
           bookingId: rollCallEvents.bookingId,
           checkpoint: rollCallEvents.checkpoint,
           status: rollCallEvents.status,
@@ -133,54 +151,66 @@ export async function departureCounts(
           desc(rollCallEvents.createdAt),
           desc(rollCallEvents.seq),
         ),
-    readinessRead,
   ]);
+  const readiness = await readinessFor(db, shopId, roster, options);
 
   // Newest first, so the first event per seat and checkpoint is its standing word.
+  // Keyed by departure too: a word recorded on another departure (an offline
+  // mark that synced after the seat moved) is never this departure's.
   const words = new Map<string, SeatWords>();
+  const seatKey = (tripId: string, bookingId: string) => `${tripId}\u0000${bookingId}`;
+  // Supersession is keyed on the checkpoint's place in the day (the dock is 0),
+  // not its spelling: two spellings of one checkpoint ("after_dive_02" beside
+  // "after_dive_2", from imported or hand-written rows) are one checkpoint, and
+  // the newest word at it stands.
   const seen = new Set<string>();
   for (const event of events) {
-    const key = `${event.bookingId}\u0000${event.checkpoint}`;
+    const ordinal = rollCallCheckpointOrdinal(event.checkpoint as RollCallCheckpoint);
+    // A checkpoint with no place in the day is not read, as `listUnaccountedForByTrip` does.
+    if (!Number.isInteger(ordinal) || ordinal < 0) continue;
+    const key = `${event.tripId}\u0000${event.bookingId}\u0000${ordinal}`;
     if (seen.has(key)) continue;
     seen.add(key);
     if (event.status === "cleared") continue;
-    const seat = words.get(event.bookingId) ?? { dock: null, afterDive: new Map() };
-    words.set(event.bookingId, seat);
-    if (event.checkpoint === "departure") {
-      seat.dock = event.status;
-      continue;
-    }
-    const ordinal = rollCallCheckpointOrdinal(event.checkpoint as RollCallCheckpoint);
-    // A checkpoint with no place in the day is not read, as `listUnaccountedForByTrip` does.
-    if (ordinal >= 1 && Number.isFinite(ordinal)) seat.afterDive.set(ordinal, event.status);
+    const at = seatKey(event.tripId, event.bookingId);
+    const seat = words.get(at) ?? { dock: null, afterDive: new Map() };
+    words.set(at, seat);
+    if (ordinal === 0) seat.dock = event.status;
+    else seat.afterDive.set(ordinal, event.status);
   }
 
   const seatsByTrip = new Map<
     string,
-    { capacity: number; seats: { id: string; status: string }[] }
+    { capacity: number; plannedDives: number; seats: { id: string; status: string }[] }
   >();
   for (const row of roster) {
-    const trip = seatsByTrip.get(row.tripId) ?? { capacity: row.capacity, seats: [] };
+    const trip = seatsByTrip.get(row.tripId) ?? {
+      capacity: row.capacity,
+      plannedDives: row.plannedDives,
+      seats: [],
+    };
     seatsByTrip.set(row.tripId, trip);
     if (row.bookingId && row.status) trip.seats.push({ id: row.bookingId, status: row.status });
   }
 
-  for (const [tripId, { capacity, seats }] of seatsByTrip) {
-    // The checkpoint the boat is at: the latest one any seat here has a standing word at.
+  for (const [tripId, { capacity, plannedDives, seats }] of seatsByTrip) {
+    // The checkpoint the boat is at: the latest planned one any seat here has a
+    // standing word at. A stray tap past the planned dives does not move it.
     let latest = 0;
     for (const seat of seats) {
-      for (const ordinal of words.get(seat.id)?.afterDive.keys() ?? []) {
-        latest = Math.max(latest, ordinal);
+      for (const ordinal of words.get(seatKey(tripId, seat.id))?.afterDive.keys() ?? []) {
+        if (ordinal <= plannedDives) latest = Math.max(latest, ordinal);
       }
     }
     let booked = 0;
     let sailed = 0;
     let boarded = 0;
     let back = 0;
+    let missing = 0;
     let blocked = 0;
     for (const seat of seats) {
       const held = (SEAT_HELD_STATUSES as readonly string[]).includes(seat.status);
-      const said = words.get(seat.id);
+      const said = words.get(seatKey(tripId, seat.id));
       const seatHasSailed = seatSailed({
         noShow: seat.status === "no_show",
         dockResult: said?.dock ?? null,
@@ -189,10 +219,54 @@ export async function departureCounts(
       if (held) booked += 1;
       if (seatHasSailed) sailed += 1;
       if (said?.dock === "boarded") boarded += 1;
-      if (seatHasSailed && latest > 0 && said?.afterDive.get(latest) === "boarded") back += 1;
+      if (latest > 0 && said?.afterDive.get(latest) === "boarded") back += 1;
+      if (said && isMissing(said.afterDive)) missing += 1;
       if (rosterRowIsBlocked(readiness.get(seat.id))) blocked += 1;
     }
-    counts.set(tripId, Object.freeze({ capacity, booked, sailed, boarded, back, blocked }));
+    counts.set(
+      tripId,
+      Object.freeze({ capacity, booked, sailed, boarded, back, missing, blocked }),
+    );
   }
   return counts;
+}
+
+/**
+ * `listUnaccountedForByTrip`'s per-seat rule: the latest after-dive checkpoint
+ * with a `not_boarded` is later than the latest with a `boarded`.
+ */
+function isMissing(afterDive: ReadonlyMap<number, StandingResult>): boolean {
+  let missingAt = 0;
+  let backAt = 0;
+  for (const [ordinal, word] of afterDive) {
+    if (word === "not_boarded") missingAt = Math.max(missingAt, ordinal);
+    else backAt = Math.max(backAt, ordinal);
+  }
+  return missingAt > backAt;
+}
+
+/**
+ * Each roster seat's readiness by booking id: the caller's map where it covers
+ * every seat, and the roster's own pipeline (`listTripsReadiness`) for any
+ * departure it leaves a seat out of. A seat the caller forgot never reads as
+ * clear just because it is absent.
+ */
+async function readinessFor(
+  db: DbExecutor,
+  shopId: string,
+  roster: readonly { tripId: string; bookingId: string | null }[],
+  options: { now?: Date; readiness?: ReadonlyMap<string, ReadinessResult | undefined> },
+): Promise<ReadonlyMap<string, ReadinessResult | undefined>> {
+  const handed = options.readiness;
+  const uncovered = new Set(
+    roster.flatMap((row) => (row.bookingId && !handed?.has(row.bookingId) ? [row.tripId] : [])),
+  );
+  if (handed && uncovered.size === 0) return handed;
+  const rows = uncovered.size
+    ? await listTripsReadiness(db, shopId, [...uncovered], options.now ?? nowDate())
+    : [];
+  return new Map([
+    ...rows.map((row) => [row.booking.id, row.readiness] as const),
+    ...(handed ?? []),
+  ]);
 }
