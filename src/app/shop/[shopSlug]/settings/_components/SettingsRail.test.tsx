@@ -66,13 +66,46 @@ function renderRail(options: RailOptions = {}) {
 }
 
 describe("the map covers the whole hub", () => {
-  it("has one rail row for every section id — no orphan section", () => {
-    const targeted = SETTINGS_RAIL_ROWS.flatMap((row) =>
-      row.target.kind === "section" ? [row.target.id] : [],
+  it("derives the section ids from the rail's section rows, in the rail's order", () => {
+    // One registry (issue #2740): a section cannot exist without its row, nor a
+    // row point at a section the hub does not know. Pinned literally so adding
+    // or retiring a section is a visible edit to this list.
+    expect([...SECTION_IDS]).toEqual([
+      "timezone",
+      "units",
+      "juniorBuddy",
+      "address",
+      "season",
+      "searchListing",
+      "crewSchedule",
+      "counterCard",
+      "certCheck",
+      "packing",
+      "passThrough",
+      "stripe",
+      "contact",
+      "deskHours",
+      "reviewLink",
+      "shopPhotos",
+    ]);
+    expect(new Set(SECTION_IDS).size).toBe(SECTION_IDS.length);
+  });
+
+  it("spells a fragment once, on the row that owns it", () => {
+    const kebab = Object.fromEntries(
+      SECTION_IDS.map((id) => [id, settingsSectionFragment(id)]).filter(([id, f]) => id !== f),
     );
-    // Sorted rather than ordered: the pane's order is asserted separately, by
-    // the hub's own test reading the rows it renders.
-    expect([...targeted].sort()).toEqual([...SECTION_IDS].sort());
+    expect(kebab).toEqual({
+      reviewLink: "review-link",
+      deskHours: "desk-hours",
+      searchListing: "search-listing",
+      crewSchedule: "crew-schedule",
+      passThrough: "pass-through",
+      counterCard: "counter-card",
+      certCheck: "cert-check",
+    });
+    const fragments = SECTION_IDS.map(settingsSectionFragment);
+    expect(new Set(fragments).size).toBe(fragments.length);
   });
 
   it("gives every row a unique id and a group that exists", () => {
