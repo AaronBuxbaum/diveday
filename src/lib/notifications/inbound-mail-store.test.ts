@@ -1,9 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import {
-  inboundMailStore,
-  inboundMailStoreFromEnvironment,
-  MAX_INBOUND_MESSAGE_BYTES,
-} from "./inbound-mail-store";
+import { MAX_INBOUND_MESSAGE_BYTES } from "@/lib/inbound-email";
+import { inboundMailStore, inboundMailStoreFromEnvironment } from "./inbound-mail-store";
 
 function client(body: string | null, contentLength?: number, fail = false) {
   return {
