@@ -12,8 +12,10 @@ import {
   counterRentalWaiverFlag,
   counterRentalWaiverStanding,
   counterTankFillRefusal,
+  fillO2CleanGap,
   isEnrichedFill,
   isLifeSupportKind,
+  o2CleanWarnsForFill,
   parseTankFill,
 } from "./counter-rentals";
 import type { RentalPricing } from "./rentals";
@@ -318,5 +320,41 @@ describe("tank fills (#2257)", () => {
   it("calls only above 21 enriched", () => {
     expect(isEnrichedFill(21)).toBe(false);
     expect(isEnrichedFill(22)).toBe(true);
+  });
+});
+
+describe("fillO2CleanGap (issue #3005)", () => {
+  it("records a lapsed or never-recorded cleaning on a blended EANx fill", () => {
+    expect(fillO2CleanGap("blending", 22, "lapsed")).toBe("lapsed");
+    expect(fillO2CleanGap("blending", 32, "never")).toBe("never");
+    expect(fillO2CleanGap("blending", 40, "never")).toBe("never");
+  });
+
+  it("records nothing on a current cleaning or on air", () => {
+    expect(fillO2CleanGap("blending", 32, "current")).toBeNull();
+    expect(fillO2CleanGap("blending", 21, "never")).toBeNull();
+    expect(fillO2CleanGap("membrane_premix", 21, "lapsed")).toBeNull();
+  });
+
+  it("follows the counter's warning for a membrane or premix shop: nothing up to 40%", () => {
+    for (const o2 of [22, 32, 36, 40]) {
+      expect(fillO2CleanGap("membrane_premix", o2, "never")).toBeNull();
+      expect(fillO2CleanGap("membrane_premix", o2, "lapsed")).toBeNull();
+    }
+  });
+
+  it("records only when the counter would have warned, and never a current cleaning", () => {
+    for (const method of ["blending", "membrane_premix"] as const) {
+      for (let o2 = 21; o2 <= 40; o2 += 1) {
+        for (const standing of ["current", "lapsed", "never"] as const) {
+          const gap = fillO2CleanGap(method, o2, standing);
+          if (gap !== null) {
+            expect(gap).toBe(standing);
+            expect(o2CleanWarnsForFill(method, o2)).toBe(true);
+          }
+          if (standing === "current") expect(gap).toBeNull();
+        }
+      }
+    }
   });
 });

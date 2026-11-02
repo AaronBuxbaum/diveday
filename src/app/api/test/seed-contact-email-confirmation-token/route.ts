@@ -3,7 +3,7 @@ import { z } from "zod";
 import { getDb } from "@/db/client";
 import { issueShopContactEmailConfirmation } from "@/db/shop-contact-email";
 import { getShopBySlug } from "@/db/shops";
-import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
+import { e2eTestRouteAuthorized, requireDemoTenant, testRouteRefused } from "@/lib/e2e-test-routes";
 
 /**
  * Mints a real `shop_contact_email_confirmation_tokens` row for a shop's
@@ -18,16 +18,15 @@ import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
 const bodySchema = z.object({ shopSlug: z.string().trim().min(1) });
 
 export async function POST(request: Request) {
-  if (!e2eTestRouteAuthorized(request)) {
-    return NextResponse.json({ error: "not_available" }, { status: 404 });
-  }
+  if (!e2eTestRouteAuthorized(request)) return testRouteRefused();
 
   const parsed = bodySchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "invalid_body" }, { status: 400 });
 
   const db = await getDb();
-  const shop = await getShopBySlug(db, parsed.data.shopSlug);
-  if (!shop) return NextResponse.json({ error: "shop_not_found" }, { status: 404 });
+  const tenant = await requireDemoTenant(request, () => getShopBySlug(db, parsed.data.shopSlug));
+  if (!tenant.ok) return tenant.response;
+  const { shop } = tenant;
   if (!shop.contactEmail) return NextResponse.json({ error: "no_contact_email" }, { status: 409 });
 
   const issued = await issueShopContactEmailConfirmation(db, {

@@ -10,7 +10,7 @@ import { shops } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { createBearerToken, hashBearerToken } from "@/lib/bearer-tokens";
-import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
+import { e2eTestRouteAuthorized, requireDemoTenant, testRouteRefused } from "@/lib/e2e-test-routes";
 import type { InvoicingProvider } from "@/lib/payments/invoicing";
 
 const seedBody = z
@@ -68,16 +68,15 @@ function invoiceFixture(suffix: string): InvoicingProvider {
  * The per-worker test server and database own the lease for this one capture.
  */
 export async function POST(request: Request) {
-  if (!e2eTestRouteAuthorized(request)) {
-    return NextResponse.json({ error: "not_available" }, { status: 404 });
-  }
+  if (!e2eTestRouteAuthorized(request)) return testRouteRefused();
   const parsed = seedBody.safeParse(await request.json().catch(() => null));
   if (!parsed.success || parsed.data.shopSlug === DEMO_SHOP_SLUG) {
     return NextResponse.json({ error: "invalid_body" }, { status: 400 });
   }
   const db = await getDb();
-  const shop = await getShopBySlug(db, parsed.data.shopSlug);
-  if (!shop?.isDemo) return NextResponse.json({ error: "not_available" }, { status: 404 });
+  const tenant = await requireDemoTenant(request, () => getShopBySlug(db, parsed.data.shopSlug));
+  if (!tenant.ok) return tenant.response;
+  const { shop } = tenant;
   const [owner] = await ownerLogins(db, shop.id);
   const account = await getShopStripeAccount(db, shop.id);
   if (!owner || !canAcceptPayments(account)) {
@@ -127,14 +126,12 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  if (!e2eTestRouteAuthorized(request)) {
-    return NextResponse.json({ error: "not_available" }, { status: 404 });
-  }
+  if (!e2eTestRouteAuthorized(request)) return testRouteRefused();
   const parsed = cleanupBody.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "invalid_body" }, { status: 400 });
   const key = hashBearerToken(parsed.data.cleanupLease);
   const lease = cleanupLeases.get(key);
-  if (!lease) return NextResponse.json({ error: "not_available" }, { status: 404 });
+  if (!lease) return testRouteRefused();
   // Reserve before any await so concurrent replays cannot both restore it.
   cleanupLeases.delete(key);
   try {

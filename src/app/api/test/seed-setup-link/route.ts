@@ -3,7 +3,7 @@ import { getDb } from "@/db/client";
 import { setupRequests } from "@/db/schema";
 import { issueSetupLink } from "@/db/setup-links";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
-import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
+import { e2eTestRouteAuthorized, testRouteRefused } from "@/lib/e2e-test-routes";
 import { setupLinkPath } from "@/lib/setup-links";
 
 /**
@@ -18,9 +18,7 @@ import { setupLinkPath } from "@/lib/setup-links";
  * prefill then leaves every field as a spec that types into it expects.
  */
 export async function POST(request: Request) {
-  if (!e2eTestRouteAuthorized(request)) {
-    return NextResponse.json({ error: "not_available" }, { status: 404 });
-  }
+  if (!e2eTestRouteAuthorized(request)) return testRouteRefused();
 
   const db = await getDb();
   const [row] = await db

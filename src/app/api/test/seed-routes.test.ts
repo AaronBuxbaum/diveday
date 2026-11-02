@@ -376,15 +376,22 @@ const routes: SeedRoute[] = [
     slug: "claude-fixtures",
     // Lights Claude's canned assists on a shop and clears its demo flag, so an
     // unguarded copy would turn a real tenant into a non-demo with fixture
-    // answers. Past the guard with no `?slug=`: refused on its shape.
-    expectPastTheGuard: expectInvalidBody,
+    // answers. Past the guard it looks the named shop up, which the refusals
+    // never reach; the stubbed lookup finds none, so it then gets the one refusal.
+    query: "?slug=a-minted-shop",
+    expectPastTheGuard: async () => {
+      expect(getShopBySlug).toHaveBeenCalled();
+    },
   },
   {
     slug: "claude-fixtures",
     method: "DELETE",
+    query: "?slug=a-minted-shop",
     // The disarm half; it flips a shop back to a demo, which the private-shop
     // teardown then deletes, so it is guarded on its own row.
-    expectPastTheGuard: expectInvalidBody,
+    expectPastTheGuard: async () => {
+      expect(getShopBySlug).toHaveBeenCalled();
+    },
   },
 ];
 
@@ -533,3 +540,134 @@ describe("POST /api/test/seed-stripe-account — the caller-supplied slug", () =
     expect(await response.json()).toEqual({ error: "not_available" });
   });
 });
+
+/**
+ * **One demo-fixture gate, one refusal** (issue #2751). Every fixture route
+ * that writes to a shop reaches it through `requireDemoTenant`
+ * (`src/lib/e2e-test-routes.ts`; `check:e2e-fixtures` refuses one that does
+ * not): past the bearer guard, a real shop and a missing one get the same
+ * `not_available` 404 the guard itself answers with, so a caller holding the
+ * secret cannot tell a real tenant's slug from no shop at all, and nothing is
+ * written. A demo shop goes through. Each row is a request that reaches the
+ * shop lookup.
+ */
+type DemoFixtureRoute = { slug: string; method?: "GET"; query?: string; body?: unknown };
+
+const SHOP = "a-minted-shop";
+const EMAIL = "diver@example.com";
+
+const demoFixtureRoutes: DemoFixtureRoute[] = [
+  { slug: "claude-fixtures", query: `?slug=${SHOP}` },
+  { slug: "crew-notices", body: { shopSlug: SHOP, personName: "Dana Deck" } },
+  { slug: "demo-recap-trip", method: "GET" },
+  { slug: "depart-trip", body: { tripId: "trip-1", minutesAgo: 90 } },
+  {
+    slug: "inbound-message",
+    body: { shopSlug: SHOP, from: EMAIL, channel: "email", body: "C" },
+  },
+  { slug: "pin-added-date", body: { fullName: "Dana Diver" } },
+  { slug: "seed-booking-checkout", query: `?slug=${SHOP}&email=${EMAIL}` },
+  { slug: "seed-booking-handoff", body: { shopSlug: SHOP, email: EMAIL } },
+  { slug: "seed-certified-recap" },
+  { slug: "seed-changed-dive-site" },
+  { slug: "seed-contact-email-confirmation-token", body: { shopSlug: SHOP } },
+  { slug: "seed-courtesy-email-unsubscribe-token", body: { shopSlug: SHOP, email: EMAIL } },
+  { slug: "seed-dive-times" },
+  { slug: "seed-evening" },
+  { slug: "seed-interest-unsubscribe-token", body: { shopSlug: SHOP, email: EMAIL } },
+  { slug: "seed-last-minute-interest", body: { shopSlug: SHOP, fullName: "Uma", email: EMAIL } },
+  { slug: "seed-observed-species" },
+  { slug: "seed-off-season", query: `?slug=${SHOP}` },
+  { slug: "seed-open-package-invoice", query: `?slug=${SHOP}&email=${EMAIL}` },
+  { slug: "seed-payment-overlay", body: { shopSlug: SHOP } },
+  { slug: "seed-recap-pulse" },
+  { slug: "seed-returning-diver", body: { shopSlug: SHOP, email: EMAIL } },
+  { slug: "seed-shared-recap-photo" },
+  { slug: "seed-stripe-account", query: `?slug=${SHOP}` },
+  { slug: "seed-today-catch-up", query: `?shop=${SHOP}` },
+  { slug: "seed-trouble-states" },
+  { slug: "seed-unworded-course-form" },
+  { slug: "seed-visual-links", body: { shopSlug: SHOP, family: "digest" } },
+];
+
+describe.each(demoFixtureRoutes)(
+  "/api/test/$slug — demo tenants only, one refusal (issue #2751)",
+  ({ slug, method, query, body }) => {
+    /**
+     * A database that records every method a route touches and then throws:
+     * a refusal must touch none of them, and a demo shop's request reaching
+     * one is the proof it went past the gate.
+     */
+    const touched: string[] = [];
+    const recordingDb = new Proxy(
+      {},
+      {
+        get(_target, property) {
+          if (property === "then") return undefined;
+          return () => {
+            touched.push(String(property));
+            throw new Error(`stub database: ${String(property)}`);
+          };
+        },
+      },
+    );
+
+    beforeEach(() => {
+      touched.length = 0;
+      vi.mocked(getDb).mockResolvedValue(recordingDb as never);
+    });
+
+    async function call(): Promise<Response | "threw"> {
+      const module = (await import(`./${slug}/route`)) as Record<
+        string,
+        (request: Request) => Promise<Response>
+      >;
+      const handler = module[method ?? "POST"];
+      if (!handler) throw new Error(`${slug} exports no ${method ?? "POST"} handler`);
+      const request = new Request(`http://localhost/api/test/${slug}${query ?? ""}`, {
+        method: method ?? "POST",
+        headers: {
+          authorization: `Bearer ${secret}`,
+          ...(body === undefined ? {} : { "content-type": "application/json" }),
+        },
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      });
+      return handler(request).catch(() => "threw" as const);
+    }
+
+    async function expectOneRefusal(response: Response | "threw") {
+      expect(getShopBySlug).toHaveBeenCalled();
+      expect(response).not.toBe("threw");
+      if (response === "threw") return;
+      expect(response.status).toBe(404);
+      expect(await response.json()).toEqual({ error: "not_available" });
+      expect(touched).toEqual([]);
+    }
+
+    it("refuses a real shop, and writes nothing", async () => {
+      vi.mocked(getShopBySlug).mockResolvedValue({ id: "shop-1", isDemo: false } as never);
+      await expectOneRefusal(await call());
+    });
+
+    it("refuses a shop that does not exist, in the same words", async () => {
+      await expectOneRefusal(await call());
+    });
+
+    it("lets a demo shop through", async () => {
+      vi.mocked(getShopBySlug).mockResolvedValue({
+        id: "shop-1",
+        slug: SHOP,
+        name: "Minted",
+        timezone: "America/New_York",
+        isDemo: true,
+      } as never);
+      const response = await call();
+      if (response !== "threw") {
+        expect(
+          response.status === 404 && (await response.clone().json()).error === "not_available",
+        ).toBe(false);
+      }
+      expect(touched.length > 0 || response !== "threw").toBe(true);
+    });
+  },
+);

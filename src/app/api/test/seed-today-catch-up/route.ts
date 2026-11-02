@@ -8,7 +8,7 @@ import { getShopBySlug } from "@/db/shops";
 import { initializeTodayCatchUp } from "@/db/today-catch-up";
 import { liveTrip } from "@/db/trips-live";
 import { nowDate } from "@/lib/clock";
-import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
+import { e2eTestRouteAuthorized, requireDemoTenant, testRouteRefused } from "@/lib/e2e-test-routes";
 import { shopDayBounds } from "@/lib/zoned";
 
 /**
@@ -17,18 +17,17 @@ import { shopDayBounds } from "@/lib/zoned";
  * staff member so the page can exercise the actual Got it action and reload.
  */
 export async function POST(request: Request) {
-  if (!e2eTestRouteAuthorized(request)) {
-    return NextResponse.json({ error: "not_available" }, { status: 404 });
-  }
+  if (!e2eTestRouteAuthorized(request)) return testRouteRefused();
 
   const slug = new URL(request.url).searchParams.get("shop");
   if (!slug || slug === DEMO_SHOP_SLUG || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
-    return NextResponse.json({ error: "not_available" }, { status: 404 });
+    return testRouteRefused();
   }
 
   const db = await getDb();
-  const shop = await getShopBySlug(db, slug);
-  if (!shop?.isDemo) return NextResponse.json({ error: "not_available" }, { status: 404 });
+  const tenant = await requireDemoTenant(request, () => getShopBySlug(db, slug));
+  if (!tenant.ok) return tenant.response;
+  const { shop } = tenant;
 
   const staff = await db
     .select({ personId: people.id, role: personRoles.role })

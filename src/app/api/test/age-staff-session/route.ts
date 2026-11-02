@@ -4,13 +4,12 @@ import { getDb } from "@/db/client";
 import { accountSessions } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { nowDate } from "@/lib/clock";
-import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
+import { e2eTestRouteAuthorized, testRouteRefused } from "@/lib/e2e-test-routes";
 import { STAFF_IDLE_LIMIT_MS } from "@/lib/session-idle";
 
 /** Age only the calling test's session; never enabled with a real database. */
 export async function POST(request: Request) {
-  if (!e2eTestRouteAuthorized(request))
-    return NextResponse.json({ error: "not_available" }, { status: 404 });
+  if (!e2eTestRouteAuthorized(request)) return testRouteRefused();
   const body = (await request.json().catch(() => null)) as { age?: unknown } | null;
   if (body?.age !== "idle") return NextResponse.json({ error: "invalid_body" }, { status: 400 });
   const user = (await auth())?.user;

@@ -5,7 +5,7 @@ import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
 import { bookings, trips } from "@/db/schema";
 import { DEMO_RECAP_BOOKING_ID } from "@/db/seed";
 import { getShopBySlug } from "@/db/shops";
-import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
+import { e2eTestRouteAuthorized, requireDemoTenant, testRouteRefused } from "@/lib/e2e-test-routes";
 
 /**
  * Returns the one demo recap fixture's trip id so the browser fleet can reach
@@ -17,12 +17,11 @@ import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
  * not still a demo shop.
  */
 export async function GET(request: Request) {
-  if (!e2eTestRouteAuthorized(request)) {
-    return NextResponse.json({ error: "not_available" }, { status: 404 });
-  }
+  if (!e2eTestRouteAuthorized(request)) return testRouteRefused();
   const db = await getDb();
-  const shop = await getShopBySlug(db, DEMO_SHOP_SLUG);
-  if (!shop?.isDemo) return NextResponse.json({ error: "not_demo" }, { status: 404 });
+  const tenant = await requireDemoTenant(request, () => getShopBySlug(db, DEMO_SHOP_SLUG));
+  if (!tenant.ok) return tenant.response;
+  const { shop } = tenant;
 
   const [booking] = await db
     .select({ tripId: bookings.tripId })

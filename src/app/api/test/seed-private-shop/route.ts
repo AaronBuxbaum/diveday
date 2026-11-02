@@ -4,7 +4,7 @@ import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
 import { createDemoShop, deleteDemoShopCascade } from "@/db/seed";
 import { getShopBySlug } from "@/db/shops";
 import { DEMO_BYPASS_PASSWORD } from "@/lib/credentials";
-import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
+import { e2eTestRouteAuthorized, testRouteRefused } from "@/lib/e2e-test-routes";
 
 /**
  * Mint a whole seeded shop of this test's own, so a spec that changes
@@ -40,9 +40,7 @@ import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
  * password.
  */
 export async function POST(request: Request) {
-  if (!e2eTestRouteAuthorized(request)) {
-    return NextResponse.json({ error: "not_available" }, { status: 404 });
-  }
+  if (!e2eTestRouteAuthorized(request)) return testRouteRefused();
   const db = await getDb();
   // One transaction, like `enterDemoAction`: the cap eviction and the mint
   // commit together, and a half-seeded shop never becomes a test's fixture.
@@ -84,9 +82,7 @@ export async function POST(request: Request) {
  * the reset already reaped the shop.
  */
 export async function DELETE(request: Request) {
-  if (!e2eTestRouteAuthorized(request)) {
-    return NextResponse.json({ error: "not_available" }, { status: 404 });
-  }
+  if (!e2eTestRouteAuthorized(request)) return testRouteRefused();
   const slug = new URL(request.url).searchParams.get("slug");
   if (!slug || slug === DEMO_SHOP_SLUG) {
     return NextResponse.json({ error: "invalid_body" }, { status: 400 });

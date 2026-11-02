@@ -5,7 +5,7 @@ import { createDivePackage } from "@/db/dive-packages";
 import { bookings, orderLineItems, orders, people, personRoles } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { getShopStripeAccount } from "@/db/stripe-accounts";
-import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
+import { e2eTestRouteAuthorized, requireDemoTenant, testRouteRefused } from "@/lib/e2e-test-routes";
 
 /** Ten dives at $45 each, the card the package spec sells. */
 const PACKAGE = { name: "Ten-dive card", diveCount: 10, priceCents: 45_000 } as const;
@@ -28,9 +28,7 @@ const SEAT_CENTS = 18_000;
  * shop is refused whatever slug is passed (`isDemo`).
  */
 export async function POST(request: Request) {
-  if (!e2eTestRouteAuthorized(request)) {
-    return NextResponse.json({ error: "not_available" }, { status: 404 });
-  }
+  if (!e2eTestRouteAuthorized(request)) return testRouteRefused();
   const url = new URL(request.url);
   const slug = url.searchParams.get("slug") ?? "";
   const email = url.searchParams.get("email")?.trim().toLowerCase() ?? "";
@@ -38,8 +36,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "bad_request" }, { status: 400 });
   }
   const db = await getDb();
-  const shop = await getShopBySlug(db, slug);
-  if (!shop?.isDemo) return NextResponse.json({ error: "not_available" }, { status: 404 });
+  const tenant = await requireDemoTenant(request, () => getShopBySlug(db, slug));
+  if (!tenant.ok) return tenant.response;
+  const { shop } = tenant;
   const account = await getShopStripeAccount(db, shop.id);
   if (!account) return NextResponse.json({ error: "not_connected" }, { status: 409 });
 

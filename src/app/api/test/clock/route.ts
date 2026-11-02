@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { bringDemoBoatsAtSeaHome } from "@/db/seed-boat-at-sea";
 import { nowDate } from "@/lib/clock";
-import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
+import { e2eTestRouteAuthorized, testRouteRefused } from "@/lib/e2e-test-routes";
 
 /**
  * Move this server's frozen clock — the one-day simulation's hand on time.
@@ -29,16 +29,12 @@ import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
  * if the gate were misconfigured.
  */
 export async function GET(request: Request) {
-  if (!e2eTestRouteAuthorized(request)) {
-    return NextResponse.json({ error: "not_available" }, { status: 404 });
-  }
+  if (!e2eTestRouteAuthorized(request)) return testRouteRefused();
   return NextResponse.json({ now: nowDate().toISOString() });
 }
 
 export async function POST(request: Request) {
-  if (!e2eTestRouteAuthorized(request)) {
-    return NextResponse.json({ error: "not_available" }, { status: 404 });
-  }
+  if (!e2eTestRouteAuthorized(request)) return testRouteRefused();
   const body = (await request.json().catch(() => null)) as { now?: unknown } | null;
   const requested = typeof body?.now === "string" ? Date.parse(body.now) : Number.NaN;
   if (Number.isNaN(requested)) {

@@ -2,7 +2,7 @@
  * Gear: service events and the clocks they set. Imported through the `./gear`
  * barrel.
  */
-import { and, asc, desc, eq, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull, isNull, lte, ne, sql } from "drizzle-orm";
 import { type CalendarDate, isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import type { GearServiceClock, GearServiceKind } from "@/lib/gear";
@@ -118,6 +118,12 @@ export async function latestServiceClocks(
   db: DbExecutor,
   shopId: string,
   gearItemIds?: readonly string[],
+  /**
+   * Only work done on or before this day: the clocks as they stood then
+   * (issue #3005: a correction judges a fill's O2 cleaning as of the fill,
+   * not after a later cleaning).
+   */
+  servicedOnOrBefore?: CalendarDate,
 ): Promise<Map<string, GearServiceClock[]>> {
   if (gearItemIds && gearItemIds.length === 0) return new Map();
   const rows = await db
@@ -135,6 +141,7 @@ export async function latestServiceClocks(
         eq(gearServiceEvents.shopId, shopId),
         ne(gearServiceEvents.kind, "note"),
         gearItemIds ? inArray(gearServiceEvents.gearItemId, [...gearItemIds]) : undefined,
+        servicedOnOrBefore ? lte(gearServiceEvents.servicedOn, servicedOnOrBefore) : undefined,
       ),
     )
     .orderBy(asc(gearServiceEvents.servicedOn), asc(gearServiceEvents.createdAt));
