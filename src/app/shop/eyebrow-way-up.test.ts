@@ -58,6 +58,8 @@ const WAY_UP_EXEMPT: Record<string, string> = {
     "A printed sheet, not a screen. `SheetDocument` carries the way back to the counter as its own `print:hidden` link, because paper has no eyebrow.",
   "trips/[id]/print/medical-alerts":
     "The trip packet with the medical alerts' words: it composes the packet's own `TripPacket` (`../_components`), whose `TripPageHeader` carries the way up to the board, exactly as `trips/[id]/print` does.",
+  "waivers/print":
+    "A printed form, not a screen. Its toolbar carries the way back to Waivers as a `print:hidden` link, because paper has no eyebrow.",
   "print/counter-card":
     "A printed sheet, not a screen. `SheetDocument` carries the way back to Settings as its own `print:hidden` link, because paper has no eyebrow.",
 };
