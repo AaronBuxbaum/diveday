@@ -9,6 +9,22 @@ import {
 } from "./pending-sign-in";
 
 describe("pending sign-in policy", () => {
+  it("accepts the www form of a public https origin, and only that", () => {
+    const origins = signInOrigins("https://dive.day", { NODE_ENV: "production" });
+    const trusted = (origin: string) =>
+      trustedSignInOrigin(new Headers({ origin, "sec-fetch-site": "same-origin" }), true, origins);
+    expect(trusted("https://www.dive.day")).toBe(true);
+    expect(trusted("https://dive.day")).toBe(true);
+    expect(trusted("https://evil.dive.day")).toBe(false);
+    expect(trusted("http://www.dive.day")).toBe(false);
+    expect(signInOrigins("http://localhost:3000", { NODE_ENV: "development" })).toEqual([
+      "http://localhost:3000",
+    ]);
+    expect(signInOrigins("https://127.0.0.1", { NODE_ENV: "production" })).toEqual([
+      "https://127.0.0.1",
+    ]);
+  });
+
   it("binds local transport exceptions to the server-configured port and isolated runtime", () => {
     expect(
       signInOrigins("https://e2e.diveday.example", {
@@ -19,6 +35,7 @@ describe("pending sign-in policy", () => {
     ).toEqual(["http://127.0.0.1:4123"]);
     expect(signInOrigins("https://dive.day", { NODE_ENV: "production", PORT: "4123" })).toEqual([
       "https://dive.day",
+      "https://www.dive.day",
     ]);
     expect(
       signInOrigins("https://dive.day", {
@@ -27,7 +44,7 @@ describe("pending sign-in policy", () => {
         DATABASE_URL: "configured",
         PORT: "4123",
       }),
-    ).toEqual(["https://dive.day"]);
+    ).toEqual(["https://dive.day", "https://www.dive.day"]);
     const origins = signInOrigins("http://localhost:3000", {
       NODE_ENV: "development",
       PORT: "3000",

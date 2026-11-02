@@ -66,6 +66,26 @@ const SWITCHABLE_DEMO_ROLES = new Set<string>([
 ]);
 
 /**
+ * The request's headers for the demo's own in-process sign-in, minus the two
+ * that name where the request came from.
+ *
+ * `signInDiveDayCredentials` refuses a browser `Origin` that is not the one
+ * origin this deployment is configured for (`APP_HOST`), which is right for a
+ * sign-in form and wrong here: the visitor reached this action on whatever
+ * host they typed (a `www.` name, a platform alias), and Next has already
+ * checked that the action request came from that same host. Forwarding the
+ * origin made the demo refuse everyone not on the canonical host, with the
+ * sign-in page's "That email and password don't match" for a demo that has no
+ * password. Without both headers the call reads as the in-process call it is.
+ */
+async function demoSignInHeaders(): Promise<Headers> {
+  const forwarded = new Headers(await headers());
+  forwarded.delete("origin");
+  forwarded.delete("sec-fetch-site");
+  return forwarded;
+}
+
+/**
  * Leave this browser a seat in demo shop `shopId` (`src/lib/demo-seat.ts`): the
  * only proof the diver preview, which has no session, keeps of which shop it
  * may switch back to staff in.
@@ -102,6 +122,13 @@ async function wearVisitorShopName(shopId: string, typed: unknown): Promise<void
 }
 
 /**
+ * Where a demo door that could not open lands. It used to be `/sign-in?error=1`,
+ * which told a prospect their password was wrong for a demo that has none; the
+ * sign-in page words this one for the demo instead.
+ */
+const DEMO_UNAVAILABLE_PATH = "/sign-in?error=demo";
+
+/**
  * A demo form submits a `source` tag and, from the in-demo role switcher, a
  * `role`; a marketing-page CTA sends only the tag, which defaults here to the
  * owner view it has always opened on.
@@ -135,7 +162,7 @@ export async function enterDemoAction(formData?: FormData) {
   // total growth, this bounds the burst one visitor can drive.
   const ip = await clientIp();
   if (!(await checkRateLimit(rateLimitKey("demo-create", ip), RATE_LIMITS.demoCreate)).allowed) {
-    redirect("/sign-in?error=1");
+    redirect(DEMO_UNAVAILABLE_PATH);
   }
 
   const db = await getDb();
@@ -153,7 +180,7 @@ export async function enterDemoAction(formData?: FormData) {
       throw err;
     }
   }
-  if (!minted) redirect("/sign-in?error=1");
+  if (!minted) redirect(DEMO_UNAVAILABLE_PATH);
   const { slug, ownerEmail } = minted;
 
   // Only now is the demo *entered*: the mint succeeded and this visitor has a
@@ -195,11 +222,11 @@ export async function enterDemoAction(formData?: FormData) {
     const auth = await getAuth();
     const signedIn = await auth.api.signInDiveDayCredentials({
       body: { email: targetEmail, password: DEMO_BYPASS_PASSWORD },
-      headers: await headers(),
+      headers: await demoSignInHeaders(),
     });
     pendingSignIn = signedIn.pending;
   } catch (error) {
-    if (error instanceof APIError) redirect("/sign-in?error=1");
+    if (error instanceof APIError) redirect(DEMO_UNAVAILABLE_PATH);
     throw error; // unexpected errors propagate
   }
   if (pendingSignIn) redirect("/sign-in?error=two-factor");
@@ -299,7 +326,7 @@ export async function switchDemoRoleAction(role: string, shopSlug: string) {
       const auth = await getAuth();
       const signedIn = await auth.api.signInDiveDayCredentials({
         body: { email: targetEmail, password: DEMO_BYPASS_PASSWORD },
-        headers: await headers(),
+        headers: await demoSignInHeaders(),
       });
       pendingSignIn = signedIn.pending;
     } catch (error) {

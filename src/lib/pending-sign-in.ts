@@ -54,7 +54,19 @@ export function signInOrigins(
     port <= 65535
   )
     return [`http://127.0.0.1:${port}`];
-  return [new URL(configuredOrigin).origin];
+  const origin = new URL(configuredOrigin);
+  // The same site under `www.`: a visitor who types it reaches the app (the
+  // domain serves both) and must be able to sign in, or open the demo, from
+  // it. Only for a public https name; the first entry stays the configured one
+  // because the pending-sign-in cookie is minted from it.
+  const canonical = [origin.origin];
+  if (origin.protocol === "https:" && /^[a-z0-9-]+(\.[a-z0-9-]+)+$/i.test(origin.hostname)) {
+    const www = origin.hostname.startsWith("www.")
+      ? origin.hostname.slice(4)
+      : `www.${origin.hostname}`;
+    if (/[a-z]/i.test(www.replace(/^www\./, ""))) canonical.push(`https://${www}`);
+  }
+  return canonical;
 }
 
 /** Missing Origin is trusted only for in-process calls with no browser fetch metadata. */
