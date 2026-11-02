@@ -52,7 +52,7 @@ import { tripDetailsPatch } from "@/lib/trip-details";
 import { MAX_COURSE_DIVES } from "@/lib/trip-dive-limits";
 import { hasTripDiveContent, tripDiveDraftsFromForm } from "@/lib/trip-dives";
 import { uuidParam } from "@/lib/uuid";
-import type { PatternDeparture } from "@/lib/weekday-pattern";
+import { type PatternDeparture, patternDives, patternSiteFields } from "@/lib/weekday-pattern";
 import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { builderCourseOptions } from "./_components/builder-course-options";
 import type { BuilderPattern, BuilderTideWindowInput } from "./_components/ScheduleBuilder";
@@ -244,12 +244,7 @@ export async function loadWeekdayPatternAction(dateIso: string): Promise<Builder
   field("endTime", pattern.endTime);
   field("title", pattern.title);
   field("diveMode", pattern.diveMode);
-  // Dive one fills the quick row's site select; every later dive fills its own
-  // card (a card that is not on screen ignores it), so a two-site morning
-  // comes back as two sites.
-  pattern.diveSiteIds?.forEach((siteId, index) => {
-    field(index === 0 ? "diveSiteId" : `dive-${index + 1}-siteId`, siteId);
-  });
+  for (const [name, siteId] of patternSiteFields(pattern.diveSiteIds)) field(name, siteId);
   field("boatId", pattern.boatId);
   field("lensId", pattern.lensId);
   // After the hull, deliberately: the boat select's own change handler puts the
@@ -698,9 +693,7 @@ async function addPatternDeparture(
     diveMode: details.patch.diveMode,
     boatId: details.patch.boatId,
     lensId: also.lensId,
-    dives: also.diveSiteIds?.some(Boolean)
-      ? also.diveSiteIds.map((diveSiteId) => ({ diveSiteId }))
-      : undefined,
+    dives: patternDives(also.diveSiteIds),
     startsAt: details.patch.startsAt,
     endsAt: details.patch.endsAt,
     scheduleDays: details.patch.scheduleDays,

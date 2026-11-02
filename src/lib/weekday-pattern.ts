@@ -151,3 +151,21 @@ export function weekdayPattern(
     alsoUsual: second && second.days >= minimum ? patternOf(second, minimum) : null,
   };
 }
+
+/**
+ * The add panel's site controls for a pattern: dive one fills the quick row's
+ * select, every later dive its own card (a card not on screen ignores it).
+ */
+export function patternSiteFields(
+  diveSiteIds: readonly (string | null)[] | null,
+): Array<[string, string | null]> {
+  return (diveSiteIds ?? []).map((siteId, index) => [
+    index === 0 ? "diveSiteId" : `dive-${index + 1}-siteId`,
+    siteId,
+  ]);
+}
+
+/** The itinerary a pattern departure is created with: every dive, in order; none when no site is known. */
+export function patternDives(diveSiteIds: readonly (string | null)[] | null) {
+  return diveSiteIds?.some(Boolean) ? diveSiteIds.map((diveSiteId) => ({ diveSiteId })) : undefined;
+}

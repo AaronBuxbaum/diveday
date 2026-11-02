@@ -601,7 +601,10 @@ const CHROME_CEILING = 20;
 // (`countOpenDateRequests`), one statement in the wave.
 // 73 → 74 (issue #2678): `crewAwayByTrip` reads who is working it anyway
 // beside the roster, one statement in the same phase.
-const TODAY_CEILING = 74;
+// 74 → 76 (issue #3436): a departure card names every planned dive's site
+// (`plannedSitesByTrip`), one statement in the wave for each of today's and
+// tomorrow's cards; the forecast reads the same table only when it is on.
+const TODAY_CEILING = 76;
 // 49 → 50: the roster reads each diver's unspent package dives for the payment
 // control (`spendableDivesForTrip`, H-79, issue #1697). The held seat's
 // last-dive-day read beside it (`lastDiveDaysHere`, #1789) skips itself when no
