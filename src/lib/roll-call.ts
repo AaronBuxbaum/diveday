@@ -22,6 +22,15 @@
  * Keep it that way: anything added here must be pure and dependency-free.
  */
 
+/**
+ * Every status a roll-call event row can record, in storage order: the one definition behind the
+ * DB enum and the live and offline validators. `cleared` is an append-only retraction of an
+ * earlier statement, never a standing state; the standing states are {@link RollCallState}.
+ */
+export const ROLL_CALL_EVENT_STATUSES = ["boarded", "not_boarded", "cleared"] as const;
+
+export type RollCallEventStatus = (typeof ROLL_CALL_EVENT_STATUSES)[number];
+
 export type RollCallState = "awaiting" | "boarded" | "not_boarded";
 
 /**
@@ -149,7 +158,7 @@ export const ROLL_CALL_NOTE_MAX = 300;
  */
 export function rollCallNoteAllowed(
   checkpoint: RollCallCheckpoint,
-  status: "boarded" | "not_boarded" | "cleared",
+  status: RollCallEventStatus,
   standing: Pick<RollCallRecord, "state" | "implied"> | undefined,
 ): boolean {
   if (checkpoint === "departure") return false;
@@ -195,7 +204,7 @@ export function rollCallNoteAllowed(
  */
 export function standingResultMeansSailed(
   checkpoint: string,
-  status: "boarded" | "not_boarded" | "cleared",
+  status: RollCallEventStatus,
 ): boolean {
   if (status === "boarded") return true;
   return status === "not_boarded" && checkpoint !== "departure";

@@ -78,10 +78,9 @@ test("the Details tab opens the log with the recorded facts", async ({ page }) =
   // pair (src/db/seed-buddy-pairs.ts), so each names the other.
   const roster = page.getByRole("table").first();
   await expect(roster.getByRole("columnheader", { name: "Buddy team" })).toBeVisible();
-  // Anchored on the numbered Diver cell, not on row text: now that a pairing
-  // prints its members' names, "Tom Okafor" appears in *two* rows — his own and
-  // Lena's Buddy cell — so a row-level text filter is a strict-mode violation
-  // by construction. That two rows name each other is the feature, not a flake.
+  // Anchored on the numbered Diver cell, not row text: a pairing prints both
+  // names, so "Tom Okafor" appears in two rows and a row-level text filter
+  // would be a strict-mode violation by construction.
   const rowFor = (diverCell: string) =>
     roster
       .getByRole("row")
@@ -97,9 +96,7 @@ test("the Details tab opens the log with the recorded facts", async ({ page }) =
   // Priya is deliberately unteamed: that is a normal boat, and the document
   // says so in words rather than leaving the cell blank.
   await expect(rowFor("01 Priya Sharma")).toContainText("No buddy team recorded");
-  // The seeded trio is a divemaster leading two divers — the case the old
-  // two-body model could not record at all, and the reason "accompanied" and
-  // "unaccompanied" used to print identically on this page. The crew member is
+  // The seeded trio is a divemaster leading two divers. The crew member is
   // marked as crew, and the crew table names the teams she led.
   await expect(rowFor("04 Diego Alvarez")).toContainText("June Park");
   await expect(rowFor("04 Diego Alvarez")).toContainText("Keiko Tanaka (crew)");
@@ -109,9 +106,8 @@ test("the Details tab opens the log with the recorded facts", async ({ page }) =
     crewTable.getByRole("row").filter({ hasText: "Keiko Tanaka" }).first(),
   ).toContainText("Team 02");
 
-  // The pairing trail in the timeline — the one fact on this document that used
-  // to have no audit entry at all, so a pairing could be rewritten or erased
-  // after an incident with no mark.
+  // The pairing trail in the timeline: a pairing cannot be rewritten or erased
+  // after an incident without a mark.
   const timeline = page.locator("section", {
     has: page.getByRole("heading", { name: "Roll-call timeline" }),
   });
@@ -140,12 +136,10 @@ test("a trip id that is not this shop's renders the not-found refusal, never a d
   page,
 }) => {
   // The rendered refusal, not the HTTP status: this page streams (`instant =
-  // true` + a segment `loading.tsx`), so the 200 and the shell are already on
-  // the wire before the tenancy check's `notFound()` resolves — the same
-  // documented limitation as e2e/tenant-isolation.spec.ts's staff-path sweep
-  // and e2e/marketing.spec.ts's cold-slug 404. What a regression here would
-  // change is what the person actually gets: the not-found backstop must
-  // render, and not one fact of the document may accompany it.
+  // true` + a segment `loading.tsx`), so the 200 and shell are on the wire
+  // before the tenancy check's `notFound()` resolves (as in
+  // e2e/tenant-isolation.spec.ts). The not-found backstop must render, and
+  // not one fact of the document may accompany it.
   await page.goto("/shop/blue-mantis/trips/00000000-0000-0000-0000-0000000000ff/log");
   await expect(page.getByRole("heading", { name: "We couldn’t find that page" })).toBeVisible();
   // Zero document content: no kicker/entry label, no section headings, no
@@ -183,17 +177,10 @@ test.describe("the log is the owner's to produce", () => {
     // deep link, or a role that changed under them. It lands back on the home
     // saying why, never silently.
     await page.goto(`${tripUrl.pathname.replace(/\/manifest$/, "")}/log`);
-    // Matched without the `?notice=`, deliberately. The refusal redirects with
-    // one, but `FlashParams` strips it in a `useEffect` the moment the page
-    // hydrates — that is the whole point of a flash param. `page.goto` resolves
-    // on `load`, so whether this sees the URL before or after that strip is a
-    // race with hydration, and on a CI runner it loses: the log records
-    // "navigated to /shop/blue-mantis" and then waits 45s for a query string
-    // the app has already, correctly, erased.
-    //
-    // What is durable is the destination and the banner. The line below is the
-    // assertion that the notice arrived at all, and it reads what a staffer
-    // reads rather than what the address bar held for one frame.
+    // Matched without the `?notice=`, deliberately: `FlashParams` strips it on
+    // hydration, so whether the URL assertion sees it is a race. What is durable
+    // is the destination and the banner; the line below asserts the notice
+    // arrived, reading what a staffer reads.
     await page.waitForURL(/\/shop\/blue-mantis(\?|$)/);
     await expect(page.getByText(/[Oo]nly an owner can generate/)).toBeVisible();
     // Not one fact of the document travels with the refusal.

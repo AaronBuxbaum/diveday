@@ -251,8 +251,6 @@ export type StaffDestination = {
   readonly suffix: string;
   /** The nav section this destination lights. */
   readonly section: StaffSection;
-  /** Whether the command palette offers it under "Go to". */
-  readonly inPalette: boolean;
   /** Permission required to see it anywhere; absent means everyone. */
   readonly gate?: StaffDestinationGate;
   /** Pending-work count rendered beside the label. */
@@ -277,85 +275,83 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   // and where the day is closed. There is no Close-out destination — the
   // evening is a state Today settles into (ADR
   // 20260827-clearwater-surface-language, decision 4).
-  { id: "today", suffix: "", section: "today", inPalette: true, badge: "blockers" },
-  { id: "divers", suffix: "/divers", section: "divers", inPalette: true },
+  { id: "today", suffix: "", section: "today", badge: "blockers" },
+  { id: "divers", suffix: "/divers", section: "divers" },
   // A departure is the board's detail view, so `/trips/**` lights Schedule; so
   // does a past day (`/schedule/day/<date>`, issue #2662).
   {
     id: "board",
     suffix: "/schedule/board",
     section: "schedule",
-    inPalette: true,
     alsoMatch: ["/trips", "/schedule/day"],
   },
   // The global "seat a diver" door: an act, declared here because the
   // registry is the only place a destination may be declared.
-  { id: "addBooking", suffix: "/bookings/new", section: "schedule", inPalette: true },
-  { id: "staffing", suffix: "/staffing", section: "schedule", inPalette: true },
+  { id: "addBooking", suffix: "/bookings/new", section: "schedule" },
+  { id: "staffing", suffix: "/staffing", section: "schedule" },
   // What crews found aboard after their departures and has not gone home yet
   // (batch 4, J2). Filed with the board because every item belongs to a
   // departure, and each departure's Boat tab is where it was written down.
   // Ungated: whoever is at the counter when the diver comes back hands it over.
   // Today's "things waiting to go home" row is its door from the shop home
   // while anything waits (fifth loop, item 7), built from this entry.
-  { id: "lostFound", suffix: "/lost-found", section: "schedule", inPalette: true },
+  { id: "lostFound", suffix: "/lost-found", section: "schedule" },
   // Everything a diver says to the shop is one section: messages, days asked
   // for, and reviews. Each is ungated — the
   // person best placed to answer is whoever is at the counter (issues #1505,
   // #1679). Reviews' private "asked us to fix" panel keeps its own gate inside
   // the page (issue #1410).
-  { id: "inbox", suffix: "/inbox", section: "inbox", inPalette: true },
-  { id: "requests", suffix: "/requests", section: "inbox", inPalette: true },
-  { id: "reviews", suffix: "/reviews", section: "inbox", inPalette: true },
+  { id: "inbox", suffix: "/inbox", section: "inbox" },
+  { id: "requests", suffix: "/requests", section: "inbox" },
+  { id: "reviews", suffix: "/reviews", section: "inbox" },
   // Money: the orders a shop takes every day, then the month's reading of
   // them and the discounts that shaped them.
-  { id: "orders", suffix: "/orders", section: "money", inPalette: true },
-  { id: "reports", suffix: "/reports", section: "money", inPalette: true, gate: "reports" },
-  { id: "promoCodes", suffix: "/promos", section: "money", inPalette: true, gate: "reports" },
+  { id: "orders", suffix: "/orders", section: "money" },
+  { id: "reports", suffix: "/reports", section: "money", gate: "reports" },
+  { id: "promoCodes", suffix: "/promos", section: "money", gate: "reports" },
   // The month's safety and its incident reports (ADR 20261012-incident-reports)
   // are a place of their own, not a tab of Money: incidents are not money. The
   // same owner/manager gate as Reports, since it reads the same record.
-  { id: "safety", suffix: "/safety", section: "safety", inPalette: true, gate: "reports" },
-  { id: "courses", suffix: "/courses", section: "courses", inPalette: true },
+  { id: "safety", suffix: "/safety", section: "safety", gate: "reports" },
+  { id: "courses", suffix: "/courses", section: "courses" },
   // The rental fleet (ADR 20260815-minimal-gear-register) and the bench beside
   // it (ADR 20261008-gear-work-orders). Ungated: gear is any-staff work
   // (H-06), and a technician is staff.
-  { id: "gear", suffix: "/gear", section: "gear", inPalette: true },
-  { id: "workOrders", suffix: "/gear/work-orders", section: "gear", inPalette: true },
+  { id: "gear", suffix: "/gear", section: "gear" },
+  { id: "workOrders", suffix: "/gear/work-orders", section: "gear" },
   // The act, declared here because the registry is the only place a
   // destination may be declared — the same call `addBooking` makes.
-  { id: "newWorkOrder", suffix: "/gear/work-orders/new", section: "gear", inPalette: true },
+  { id: "newWorkOrder", suffix: "/gear/work-orders/new", section: "gear" },
   // The counter-rental door: an act, like "Add a booking" (ADR
   // 20260815-minimal-gear-register, amended 2026-10-08). Any staff, as gear is.
-  { id: "rentOut", suffix: "/gear/rentals/new", section: "gear", inPalette: true },
+  { id: "rentOut", suffix: "/gear/rentals/new", section: "gear" },
   // What a shop sets up rather than works.
-  { id: "diveSites", suffix: "/dive-sites", section: "settings", inPalette: true },
+  { id: "diveSites", suffix: "/dive-sites", section: "settings" },
   // The shop's other registers sit beside the dive sites (issue #2659, glossary
   // "Register and setting"): a table of the shop's things that a departure
   // points at, each at `/shop/<slug>/<noun>` with a gate of its own. The boats
   // gate is also false for a shop that does not dive from a boat, because the
   // fleet page does not exist for it (`staffDestinationGates`).
-  { id: "boats", suffix: "/boats", section: "settings", inPalette: true, gate: "boats" },
-  { id: "tripTags", suffix: "/trip-tags", section: "settings", inPalette: true, gate: "tripTags" },
+  { id: "boats", suffix: "/boats", section: "settings", gate: "boats" },
+  { id: "tripTags", suffix: "/trip-tags", section: "settings", gate: "tripTags" },
   {
     id: "safetyChecklist",
     suffix: "/safety-checklist",
     section: "settings",
-    inPalette: true,
     gate: "safetyChecklist",
   },
-  { id: "waivers", suffix: "/waivers", section: "settings", inPalette: true, gate: "waivers" },
-  { id: "team", suffix: "/settings/team", section: "settings", inPalette: true, gate: "team" },
+  { id: "waivers", suffix: "/waivers", section: "settings", gate: "waivers" },
+  { id: "team", suffix: "/settings/team", section: "settings", gate: "team" },
   // A staffer's own calendar subscription, filed under `/settings` by URL
   // only. Ungated, so the roles that most want it keep a door when Settings
   // itself is gated away.
-  { id: "calendarFeed", suffix: "/settings/calendar", section: "settings", inPalette: true },
+  { id: "calendarFeed", suffix: "/settings/calendar", section: "settings" },
   // The staffer's own email (the Monday email, `src/lib/weekly-digest.ts`).
   // Ungated for the calendar feed's reason: any staffer may ask for it.
-  { id: "emailSettings", suffix: "/settings/email", section: "settings", inPalette: true },
+  { id: "emailSettings", suffix: "/settings/email", section: "settings" },
   // A login's own password and sign-in (`/settings/security`). Ungated for the
   // same reason: it is about the reader, not the shop.
-  { id: "security", suffix: "/settings/security", section: "settings", inPalette: true },
+  { id: "security", suffix: "/settings/security", section: "settings" },
   // The shop's activity log (D5): who refunded, who wrote a seat past a
   // missing card, who changed a departure. Owner/manager reading, the
   // settings gate's own set (`canViewShopActivity`); filed under Settings'
@@ -364,13 +360,12 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
     id: "activity",
     suffix: "/settings/activity",
     section: "settings",
-    inPalette: true,
     gate: "settings",
   },
   // Last: Settings is where a shop goes when nothing else was the answer.
   // `/settings/*` sub-pages light it by prefix; Team and the calendar feed win
   // their own paths by being the longer match.
-  { id: "settings", suffix: "/settings", section: "settings", inPalette: true, gate: "settings" },
+  { id: "settings", suffix: "/settings", section: "settings", gate: "settings" },
 ];
 
 /**
@@ -520,8 +515,8 @@ export function staffPaletteDestinations(
   gates: StaffDestinationGates,
   switches: ShopSwitchesOn = ALL_SWITCHES_ON,
 ): readonly StaffDestination[] {
-  return visibleStaffDestinations(gates).filter(
-    (destination) => destination.inPalette && staffDestinationOffered(destination, switches),
+  return visibleStaffDestinations(gates).filter((destination) =>
+    staffDestinationOffered(destination, switches),
   );
 }
 

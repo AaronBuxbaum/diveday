@@ -1,30 +1,17 @@
 /**
  * **The certification ladder, on its own, importing nothing** (issue #1354).
  *
- * These live apart from `./readiness.ts` for one reason, and it is a bundle
- * reason rather than a modelling one. `src/i18n/readiness-labels.ts` needs
- * exactly one *value* from that module — `REQUIRABLE_CERTIFICATION_LEVELS` —
- * and everything else it takes is a type, which erases. That single import
- * therefore held the whole of `readiness.ts` in the graph, and behind it the
- * waiver and medical modules: the full RSTC medical questionnaire shipped in
- * the first load of `/s/[shopSlug]` and `/s/[shopSlug]/trips/[id]`, DiveDay's
- * two public, anonymous diver pages, and of `/offline-manifest`.
+ * Apart from `./readiness.ts` for a bundle reason: `src/i18n/readiness-labels.ts`
+ * needs one value from it (`REQUIRABLE_CERTIFICATION_LEVELS`), and importing
+ * `readiness.ts` for that held the waiver and medical copy in the first load of
+ * the public diver pages and `/offline-manifest`. Message-bundle copy only, no
+ * diver's answers. The same seam shape as `./certification-options.ts` and
+ * `./course-limits.ts` (PR #1347).
  *
- * To be plain about what that was and was not: **message-bundle copy, not
- * anybody's answers.** No diver's medical data was involved and nothing leaked.
- * It was 7,111 B raw / 2,631 B gzip of dead weight on precisely the pages a
- * diver opens on a phone, possibly on a boat.
- *
- * The same shape as the four seams PR #1347 closed (`./certification-options.ts`,
- * `./course-limits.ts`): a constant reachable only through a module that drags
- * something much larger behind it. This one survived that sweep because the
- * sweep looked for zod, `node:crypto`, drizzle-orm and the AWS SDK, and never
- * thought to look for copy.
- *
- * `readiness.ts` re-exports everything here, so no existing caller changes.
- * **Keep this file free of imports** — that is the whole of its job. A guard in
- * `src/lib/certification-levels.test.ts` fails if it grows one, because this
- * edge has been cut before (issue #718) and grew back.
+ * `readiness.ts` re-exports everything here, so no caller changes. **Keep this
+ * file free of imports**: a guard in `src/lib/certification-levels.test.ts`
+ * fails if it grows one, because this edge has been cut before (issue #718)
+ * and grew back.
  */
 
 /**

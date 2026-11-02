@@ -250,28 +250,12 @@ function GapChip({
             <span className="text-warning-strong">{words.requestWontClose}</span>
           ) : null}
           {canDecide && request.state === "pending" ? (
-            <span className="flex flex-wrap gap-1">
-              <form action={decideRequestAction}>
-                <input type="hidden" name="requestId" value={request.id} />
-                <input type="hidden" name="decision" value="approved" />
-                <SubmitButton
-                  pendingLabel={words.deciding}
-                  className={buttonClass({ variant: "primary", size: "sm" })}
-                >
-                  {words.approve}
-                </SubmitButton>
-              </form>
-              <form action={decideRequestAction}>
-                <input type="hidden" name="requestId" value={request.id} />
-                <input type="hidden" name="decision" value="declined" />
-                <SubmitButton
-                  pendingLabel={words.deciding}
-                  className={buttonClass({ variant: "ghost", size: "sm" })}
-                >
-                  {words.decline}
-                </SubmitButton>
-              </form>
-            </span>
+            <DecideRequestForms
+              layout="compact"
+              requestId={request.id}
+              words={words}
+              decideRequestAction={decideRequestAction}
+            />
           ) : null}
         </span>
       ))}
@@ -314,6 +298,46 @@ function GapChip({
         <span className="text-warning-strong">{words.askWontClose}</span>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * Approve and decline for one pending request: two native forms, so neither relies on submitter
+ * serialization. The layouts differ only in wrapper and button styling.
+ */
+function DecideRequestForms({
+  layout,
+  requestId,
+  words,
+  decideRequestAction,
+}: {
+  layout: "compact" | "expanded";
+  requestId: string;
+  words: StaffingWeekWords;
+  decideRequestAction: (formData: FormData) => void;
+}) {
+  const compact = layout === "compact";
+  const wrapperClass = compact ? "flex flex-wrap gap-1" : "ms-2 inline-flex gap-2";
+  const formClass = compact ? undefined : "inline";
+  const approveClass = buttonClass({ variant: compact ? "primary" : "link", size: "sm" });
+  const declineClass = buttonClass({ variant: compact ? "ghost" : "link", size: "sm" });
+  return (
+    <span className={wrapperClass}>
+      <form action={decideRequestAction} className={formClass}>
+        <input type="hidden" name="requestId" value={requestId} />
+        <input type="hidden" name="decision" value="approved" />
+        <SubmitButton pendingLabel={words.deciding} className={approveClass}>
+          {words.approve}
+        </SubmitButton>
+      </form>
+      <form action={decideRequestAction} className={formClass}>
+        <input type="hidden" name="requestId" value={requestId} />
+        <input type="hidden" name="decision" value="declined" />
+        <SubmitButton pendingLabel={words.deciding} className={declineClass}>
+          {words.decline}
+        </SubmitButton>
+      </form>
+    </span>
   );
 }
 
@@ -582,28 +606,12 @@ export function StaffingWeek({
                               </span>
                             ) : null}
                             {canDecide && request.state === "pending" ? (
-                              <span className="ms-2 inline-flex gap-2">
-                                <form action={decideRequestAction} className="inline">
-                                  <input type="hidden" name="requestId" value={request.id} />
-                                  <input type="hidden" name="decision" value="approved" />
-                                  <SubmitButton
-                                    pendingLabel={words.deciding}
-                                    className={buttonClass({ variant: "link", size: "sm" })}
-                                  >
-                                    {words.approve}
-                                  </SubmitButton>
-                                </form>
-                                <form action={decideRequestAction} className="inline">
-                                  <input type="hidden" name="requestId" value={request.id} />
-                                  <input type="hidden" name="decision" value="declined" />
-                                  <SubmitButton
-                                    pendingLabel={words.deciding}
-                                    className={buttonClass({ variant: "link", size: "sm" })}
-                                  >
-                                    {words.decline}
-                                  </SubmitButton>
-                                </form>
-                              </span>
+                              <DecideRequestForms
+                                layout="expanded"
+                                requestId={request.id}
+                                words={words}
+                                decideRequestAction={decideRequestAction}
+                              />
                             ) : null}
                           </div>
                         ))}

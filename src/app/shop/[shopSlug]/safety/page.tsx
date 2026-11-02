@@ -109,6 +109,7 @@ export default async function SafetyReportPage({
   const activityHref = year
     ? `${shopPath(shopSlug, "settings", "activity")}?kind=safety&from=${isoDate(year.number, 1, 1)}&to=${isoDate(year.number, 12, 31)}`
     : `${shopPath(shopSlug, "settings", "activity")}?kind=safety&from=${isoDate(current.year, current.month, 1)}&to=${isoDate(current.year, current.month, lastDay)}`;
+  const crew = crewSafetyValue(safety, t);
   const figures: MonthFigure[] = [
     {
       key: "rollCalls",
@@ -160,9 +161,9 @@ export default async function SafetyReportPage({
       // lapsed count stands over the sailings it judged, the detail says how
       // much it could not judge, and a month with nothing on file at all
       // shows no ratio (third review, item 2).
-      value: crewSafetyValue(safety, t).value,
-      detail: crewSafetyValue(safety, t).detail,
-      detailTone: crewSafetyValue(safety, t).attention ? "attention" : "quiet",
+      value: crew.value,
+      detail: crew.detail,
+      detailTone: crew.attention ? "attention" : "quiet",
       ...(safety.unknownCredentialSailings
         ? {
             link: {

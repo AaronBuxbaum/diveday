@@ -82,21 +82,18 @@ const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey; counted?
 
 /**
  * **A counter rental's ticket** (ADR 20260815-minimal-gear-register, amended
- * 2026-10-08): who has which tagged units and when they are due back, on
- * screen with the acts that move them, and on paper as the slip the person
- * walks off with.
+ * 2026-10-08): who has which tagged units and when they are due back, on screen
+ * with the acts that move them, and on paper as the slip the person walks off
+ * with. Its foot is the shared `RentalTicketReceipt`, which owns the terms,
+ * signature and gear-receipt-not-waiver contract (CR-015).
  *
- * The paper ends as the trip slip does (`RentalTicketReceipt`): the shop's
- * own rental terms when it has written any, and a "Received by" line the
- * person signs for the units (Aaron, 2026-10-08). A receipt for gear, never a
- * release — the one shop-wide waiver stays the only liability page (CR-015).
- * What was charged is read from the order the rental is linked to, on screen
- * and on paper: the lines, the total, and whether it is paid, with a code to
- * pay an open invoice by card on the spot (Aaron, 2026-10-09).
+ * Unlike the trip slip it carries live rental operations, and what was charged
+ * is read from the linked order, on screen and on paper: lines, total, paid or
+ * not, with a code to pay an open invoice on the spot (Aaron, 2026-10-09).
  *
- * Ungated beyond staff, like the rest of the register (H-06): handing gear
- * over is day work. Tenancy is the session's shop; another shop's id, or a
- * reservation held by a booking, is a 404.
+ * Ungated beyond staff, like the rest of the register (H-06). Tenancy is the
+ * session's shop; another shop's id, or a reservation held by a booking, is a
+ * 404.
  */
 export default async function CounterRentalTicketPage({
   params,
@@ -189,8 +186,7 @@ export default async function CounterRentalTicketPage({
           <h2 id="ticket-units-heading" className={SECTION_TITLE_CLASS}>
             {t("gear.ticket.unitsHeading")}
           </h2>
-          {/* One column for the tags, so every kind starts at one x — the
-              trip slip's subgrid (K-505), with a third column on screen for
+          {/* The trip slip's subgrid (K-505), with a third column on screen for
               where each unit stands. */}
           <ul
             className={sectionCardClass({

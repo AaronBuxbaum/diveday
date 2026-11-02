@@ -760,10 +760,6 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { level: 1, name: "Cancel these departures?" }).waitFor();
         await capture(page, "blowout-day-review", scheme, {
           beforeScreenshot: async () => {
-            // The preceding capture can return from its initial-paint tab and
-            // start a live staff-session recheck. Photograph the review only
-            // after the server confirms it, not the temporary session cover.
-            await expect(page.locator('[data-staff-session-check="settled"]')).toHaveCount(1);
             await expect(page.locator("[data-staff-session-lock]")).toHaveCount(0);
             await expect(
               page.getByRole("heading", { level: 1, name: "Cancel these departures?" }),

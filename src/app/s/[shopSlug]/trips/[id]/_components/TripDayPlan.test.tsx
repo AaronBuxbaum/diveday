@@ -134,20 +134,16 @@ describe("TripDayPlan", () => {
     expect(screen.getByText("French Reef swim-throughs")).toBeInTheDocument();
     expect(screen.getByText("12 m")).toBeInTheDocument();
     expect(screen.getByText("Dive 2")).toBeInTheDocument();
-    // Time-neutral: a dive plan's clock belongs to the day itself, on the
-    // thread. A schedule beside a Book button reads as a promise the crew has
-    // not made.
+    // Time-neutral: the clock belongs to the booked diver's thread.
     const dives = screen.getByRole("list");
     expect(within(dives).queryByText(/\d{1,2}:\d{2}/)).not.toBeInTheDocument();
   });
 
   /**
-   * **The row is the door to its site** (pixel-craft class 7, K-168). The
-   * site's name was an inline link inside a plain row: a 17px-tall target
-   * ("French Reef" 79×17 at 390), its ring hugging the words. The row now opens
-   * the site's page whichever line names it — the dive's own name, or the
-   * site under a dive the shop named itself — and a dive with no site yet stays
-   * a plain row.
+   * **The row is the door to its site** (pixel-craft class 7, K-168): the whole
+   * row opens the site's page whichever line names it (the dive's own name, or
+   * the site under a dive the shop named itself), not a 17px link on the words.
+   * A dive with no site yet stays a plain row.
    */
   it("makes a dive with a site the door to that site's page, and leaves one without a plain row", () => {
     render(
@@ -225,8 +221,7 @@ describe("TripDayPlan's profile", () => {
     );
     expect(screen.getAllByText("Usually 45 minutes in the water")).toHaveLength(2);
     expect(screen.getByText("Usually 60 minutes on the surface")).toBeInTheDocument();
-    // Durations, not a clock: the day's hours belong to the booked diver's own
-    // thread, and a schedule beside a Book button reads as a promise.
+    // Durations, not a clock: the hours belong to the booked diver's thread.
     expect(within(screen.getByRole("list")).queryByText(/\d{1,2}:\d{2}/)).not.toBeInTheDocument();
   });
 
@@ -356,11 +351,9 @@ describe("TripDayPlan's profile", () => {
 
   /**
    * **The run closes itself unless the next thing on the page is a rule**
-   * (pixel-craft class 6). On a bare day — no crew months, a pitch that opens
-   * on its door — the run's closing rule sat 32px over the door's own, two
-   * parallel hairlines with nothing between them, so the page may leave it
-   * open. Anything under the list inside this section (the months' caption)
-   * is not a rule, and the run closes over it.
+   * (pixel-craft class 6). On a bare day, with a pitch opening on its door, the
+   * run may leave its closing rule open; anything under the list inside this
+   * section (the months' caption) is not a rule, so the run closes over it.
    */
   const lines = () => [...screen.getByRole("list").children];
 
@@ -413,10 +406,8 @@ describe("TripDayPlan's profile", () => {
   });
 
   it("lets the months' heading and lines carry themselves, with no disclaimer under the plan", () => {
-    // "What the crew logged, and when. It says what was seen, not what you
-    // will see." used to close the day (UX review 2026-10-10, item 22): a
-    // disclaimer the diver never asked for, under a heading that already says
-    // "Seen here this month" and lines that already say "logged dives".
+    // The "what was seen, not what you will see" disclaimer was cut (UX review
+    // 2026-10-10, item 22): the heading and lines already carry it.
     render(
       <TripDayPlan
         briefings={[briefing()]}
@@ -469,10 +460,8 @@ describe("TripDayPlan's profile", () => {
 
 /**
  * **A first-timer's trip page carries her afternoon and her gear** (UX sheet
- * 2026-10-22, item 3). The course page said "Your afternoon" and "Complete
- * rental gear"; the session's trip page, where she pays, said neither. The
- * plan is the course's own day list, read off the course row, never copy of
- * this page's.
+ * 2026-10-22, item 3): the plan is the course's own day list, read off the
+ * course row, never copy of this page's.
  */
 describe("TripDayPlan's course plan", () => {
   const afternoon = {
@@ -657,10 +646,8 @@ describe("TripLookFor", () => {
 
 /**
  * **Every beat's label sits 8px over what it labels** (pixel-craft class 4,
- * K-509). The route and the site notes open `mt-2` under their `GroupLabel`;
- * "Look for" opened `mt-3`, and floated 12–13px
- * above its content on the trip's door and the dive-site page alike. The
- * site page's departures stood `mt-8` under beats that stand `mt-6`.
+ * K-509): the route, site notes and "Look for" all open `mt-2` under their
+ * `GroupLabel`, and the site page's departures stand `mt-8` under beats at `mt-6`.
  */
 describe("the day's beats", () => {
   const creatures = [
@@ -688,11 +675,8 @@ describe("the day's beats", () => {
 });
 
 /**
- * **The shop's own words about a site reach a diver.** ADR
- * 20260813-dive-site-briefings-are-the-shops-own-words rests on that sentence,
- * and slice 7c broke it by deleting the deck the prose lived in — leaving eight
- * authored columns, a staff form that still asks for all of them, and 34 site
- * templates that still ship them, reaching nobody.
+ * **The shop's own words about a site reach a diver** (ADR
+ * 20260813-dive-site-briefings-are-the-shops-own-words).
  */
 describe("TripSiteNotes", () => {
   const site = {

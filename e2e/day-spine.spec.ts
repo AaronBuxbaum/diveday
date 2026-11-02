@@ -8,11 +8,9 @@ signedInAsOwner();
 
 /**
  * The shop home as one chronological spine (ADR
- * 20260827-clearwater-surface-language, decision 4). This file replaced
- * `blockers.spec.ts`, which covered the by-departure view: what survives from it
- * is the redirect contract every old link still depends on, and the invariant it
- * was really protecting — a diver blocked on Today is the same diver waiting at
- * the counter.
+ * 20260827-clearwater-surface-language, decision 4): the redirect contract
+ * every old link depends on, and the invariant that a diver blocked on Today
+ * is the same diver waiting at the counter.
  */
 
 test("the home is one spine with no view to choose between", async ({ page }) => {
@@ -55,11 +53,8 @@ test("the day is named, said once, and followed by its departures and what needs
   await expect(page.getByText(/boats? today[.,]/)).toHaveCount(1);
 
   // A departure still ahead says how ready its divers are and wears no stage
-  // word: the demo stamps a crew's taps relative to each boat (boarding opens
-  // half an hour before she sails), so a boat hours out has had nothing tapped
-  // yet, and a word nobody has said is not shown (UX review 2026-10-10, item
-  // 4). The chip a tap puts there is `boat-stage.spec.ts`'s. The seeded
-  // morning boat is already home, and reads as settled.
+  // word until a crew tap says one (UX review 2026-10-10, item 4; the chip is
+  // `boat-stage.spec.ts`'s). The seeded morning boat is home, and reads as settled.
   const live = page
     .locator("ol > li")
     .filter({ hasText: /\d+ of \d+ ready/ })
@@ -164,15 +159,11 @@ test("the one-tap waiver send works from a station row, without leaving the home
   test.slow();
   await page.goto("/shop/blue-mantis");
 
-  // **`ul > li`, not `li`.** A station is itself an `<li>` on the spine's `<ol>`
-  // and it *contains* the row, so a bare `li` search matches both and `.first()`
-  // takes the station — the outer reading of the same data.
-  //
-  // Filtered by the diver's name and the row's kind word, never by the send
-  // button's label: that label changes the moment a link exists ("Send waiver"
-  // → "Nudge waiver"), so a locator keyed on it stops matching this row exactly
-  // when the click being tested lands. Priya is blocked on two departures
-  // ("fix once" — the same tap clears both), so narrow to the first row.
+  // **`ul > li`, not `li`**: a station is itself an `<li>` containing the row,
+  // so a bare `li` search would take the station. Filtered by the diver's name
+  // and the row's kind word, never by the send button's label, which changes
+  // ("Send waiver" -> "Nudge waiver") exactly when the click lands. Priya is
+  // blocked on two departures (one tap clears both), so take the first row.
   const row = page
     .locator("ul > li")
     .filter({ hasText: "Priya Sharma" })
@@ -180,19 +171,13 @@ test("the one-tap waiver send works from a station row, without leaving the home
     .first();
   await row.getByRole("button", { name: "Send waiver", exact: true }).click();
 
-  // The tap posts the shared server action in place — the outcome renders
-  // inline (translated copy from the staff bundle, not a hardcoded English
-  // string) instead of navigating away or leaving the tap looking like a no-op.
-  // The demo shop has no email provider configured, so the fallback-link path
-  // is what actually renders here — a private link staff copy and hand over.
-  //
-  // It has to survive the revalidation the send triggers, which re-renders this
-  // row carrying a *later* blocker code. That is what `rowKey` in `DaySpine.tsx`
-  // is for, and this assertion is the reason it exists: without it the link the
-  // staffer needs vanishes between the tap and the render.
-  // An eight-second hold stands where the button was first (ADR
-  // 20260906-before-you-ask, decision 2), so the outcome is allowed the hold
-  // plus the send before it has to be on screen.
+  // The tap posts the shared server action in place and the outcome renders
+  // inline. The demo shop has no email provider, so the fallback-link path
+  // renders: a private link staff copy and hand over. It must survive the
+  // revalidation the send triggers, which re-renders this row with a *later*
+  // blocker code; that is what `rowKey` in `DaySpine.tsx` is for. The eight-second
+  // hold (ADR 20260906-before-you-ask, decision 2) stands where the button was,
+  // so the outcome is allowed the hold plus the send.
   const outcome = row.getByRole("status");
   await expect(outcome).toBeVisible();
   await expect(outcome).toContainText("DiveDay can’t send email from this deployment yet", {

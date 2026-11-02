@@ -69,19 +69,17 @@ export function emailLogoUrl(
 const replyToSchema = z.email().max(200);
 
 /**
- * The shop's contact address **when DiveDay may actually send to it** — null
+ * The shop's contact address **when DiveDay may actually send to it**: null
  * until somebody opened the one-time link sent there (issue #1288).
  *
- * One function, so that every consumer that puts diver information *into* that
- * mailbox asks the same question. `shopSenderOf` below is one caller; the other
- * is the date-request/course-inquiry send (`src/app/actions/inquiry.ts`), which
- * is the stronger case of the two: a `Reply-To` only leaks if a diver hits
- * reply, while that mail pushes a diver's name, address, phone, experience and
- * free text to whatever string is in the box, unprompted, from a public page.
+ * One function, so every consumer that puts diver information *into* that
+ * mailbox asks the same question: `shopSenderOf`'s front-desk `Reply-To`
+ * fallback, and the date-request/course-inquiry send
+ * (`src/app/actions/inquiry.ts`), which pushes a diver's details to the box
+ * unprompted.
  *
  * **Not for display.** `shops.contact_email` is published on the shop's own
- * pages and always has been; confirming changes nothing about that. What waits
- * for proof is *delivery*.
+ * pages regardless; only *delivery* waits for proof.
  */
 export function deliverableShopContactEmail(shop: {
   contactEmail: string | null;
@@ -95,31 +93,22 @@ export function deliverableShopContactEmail(shop: {
 /**
  * `Reply-To` and the postal footer, from what the shop has on file.
  *
- * **`Reply-To` is the shop's inbound address** — `reply+<token>@<inbound
- * domain>` — whenever inbound mail is switched on (ADR 20260907-two-way-inbox,
- * amending 20260902-sender-standards-for-ses). A diver who hits reply then
- * lands in the shop's own inbox on their record, in the channel they wrote in,
- * rather than in a front-desk mailbox the app cannot see. The confirmed
- * front-desk address is the fallback for a deployment that switched inbound
- * mail off (`EMAIL_INBOUND_DOMAIN=`), and it keeps its proof-of-ownership rule
- * there: an unconfirmed one is absent, exactly as before.
+ * `Reply-To` is the shop's inbound address (`reply+<token>@<inbound domain>`)
+ * whenever one is configured (ADR 20260907-two-way-inbox, amending
+ * 20260902-sender-standards-for-ses), so a reply lands in the shop's inbox on
+ * the diver's record. Only when no inbound address exists (inbound mail
+ * switched off with `EMAIL_INBOUND_DOMAIN=`) does the front-desk address stand
+ * in, and then only if it is valid and **confirmed**
+ * (`deliverableShopContactEmail`): replies often carry the medical or contact
+ * detail a waiver or readiness email asked for, and must not reach a typo or
+ * an address the shop does not control.
  *
  * `undefined` when there is nothing: a shop with no front-desk address and no
- * street is a legitimate state, and the mail then goes out exactly as it did
- * before rather than with a guessed inbox or an empty line. A value the
- * notification schema would refuse is dropped rather than carried: a
- * `contact_email` that does not parse as an address, or an address whose five
- * fields (the settings form allows ~470 characters between them) join to more
- * than the schema's 300. Either would otherwise throw inside `notify()` on
- * every send for that shop -- booking confirmations included -- for the sake
- * of a header or a footer line (security review finding on this change).
- *
- * `Reply-To` only from a **confirmed** address: the shop has to have opened the
- * link sent to it (`shops.contact_email_confirmed_at`, issue #1288). Until
- * then a manager's typo, or an address they do not control, would have every
- * diver's reply -- often carrying the medical or contact detail a waiver or
- * readiness email asked for -- routed to a stranger. An unconfirmed address is
- * simply absent here, exactly as if none were on file.
+ * street is legitimate, and the mail goes out without a guessed inbox or an
+ * empty line. A value the notification schema would refuse (an unparsable
+ * `contact_email`, or address fields joining to more than 300 characters) is
+ * dropped rather than carried, since it would throw inside `notify()` on every
+ * send for that shop.
  */
 export function shopSenderOf(
   shop: ShopSenderSource,

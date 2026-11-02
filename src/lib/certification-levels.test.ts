@@ -10,22 +10,11 @@ import {
 import { REQUIRABLE_CERTIFICATION_LEVELS as VIA_READINESS } from "./readiness";
 
 /**
- * **This module's job is to import nothing** (issue #1354).
- *
- * `src/i18n/readiness-labels.ts` needs one value from the readiness side of the
- * app, and taking it from `readiness.ts` put that whole module — and the waiver
- * and medical copy behind it — into the first load of `/s/[shopSlug]` and
- * `/s/[shopSlug]/trips/[id]`, the two public, anonymous diver pages.
- *
- * The reason this is a test and not a comment is that **the edge has been cut
- * before and grew back.** Issue #718 found it carrying `node:crypto` and a
- * `crypto-browserify` chain whose `vm-browserify` is a literal `eval` — the
- * only CSP violation the report-only pass produced. That fix moved the crypto
- * out of the tail and left the edge standing, so the next thing to grow down it
- * (copy, this time) arrived unannounced years of commits later.
- *
- * A single import here re-opens it. Nothing else in the repository would say
- * so, because the failure is bytes on a page rather than a broken feature.
+ * **This module's job is to import nothing** (issue #1354). A single import
+ * would pull `readiness.ts`, and the waiver and medical copy behind it, into
+ * the first load of the public diver pages. It is a test because the edge has
+ * been cut before and grew back (issue #718, a `node:crypto` chain), and the
+ * failure is bytes on a page rather than a broken feature.
  */
 describe("the certification ladder leaf", () => {
   it("imports nothing at all", () => {

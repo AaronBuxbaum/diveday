@@ -1,6 +1,5 @@
-import jsQR from "jsqr";
-import sharp from "sharp";
 import { clearCourseForms } from "./course-form-only";
+import { decodeQrDataUrl } from "./decode-qr";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import {
   counterPath,
@@ -43,12 +42,7 @@ test("a minor scans their own waiver on a signed-out phone and a guardian signs"
   await page.getByRole("button", { name: "Show waiver QR code for Sky Lagoon" }).click();
   const dialog = page.getByRole("dialog", { name: "Party waivers" });
   const src = await dialog.getByRole("img").getAttribute("src");
-  if (!src?.startsWith("data:image/png;base64,")) throw new Error("QR image missing");
-  const png = Buffer.from(src.slice("data:image/png;base64,".length), "base64");
-  const { data, info } = await sharp(png).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-  const decoded = jsQR(new Uint8ClampedArray(data), info.width, info.height);
-  if (!decoded) throw new Error("QR could not be decoded");
-  const url = new URL(decoded.data);
+  const url = new URL(await decodeQrDataUrl(src));
   if (!url.pathname.startsWith("/waivers/")) throw new Error("unexpected QR destination");
   const phoneContext = await browser.newContext({
     baseURL: workerBaseURL,
@@ -75,19 +69,7 @@ test("a minor scans their own waiver on a signed-out phone and a guardian signs"
     await page.getByRole("button", { name: "Show waiver QR code for Alex Lagoon" }).click();
     const leadDialog = page.getByRole("dialog", { name: "Party waivers" });
     const leadSrc = await leadDialog.getByRole("img").getAttribute("src");
-    if (!leadSrc?.startsWith("data:image/png;base64,")) throw new Error("lead QR image missing");
-    const leadPng = Buffer.from(leadSrc.slice("data:image/png;base64,".length), "base64");
-    const leadPixels = await sharp(leadPng)
-      .ensureAlpha()
-      .raw()
-      .toBuffer({ resolveWithObject: true });
-    const leadDecoded = jsQR(
-      new Uint8ClampedArray(leadPixels.data),
-      leadPixels.info.width,
-      leadPixels.info.height,
-    );
-    if (!leadDecoded) throw new Error("lead QR could not be decoded");
-    const leadPath = new URL(leadDecoded.data).pathname;
+    const leadPath = new URL(await decodeQrDataUrl(leadSrc, "lead QR")).pathname;
     await phone.goto(leadPath).catch(() => {
       throw new Error("lead waiver navigation failed");
     });
@@ -111,19 +93,7 @@ test("a minor scans their own waiver on a signed-out phone and a guardian signs"
     await page.getByRole("button", { name: "Show waiver QR code for Chris Lagoon" }).click();
     const thirdDialog = page.getByRole("dialog", { name: "Party waivers" });
     const thirdSrc = await thirdDialog.getByRole("img").getAttribute("src");
-    if (!thirdSrc?.startsWith("data:image/png;base64,")) throw new Error("third QR image missing");
-    const thirdPng = Buffer.from(thirdSrc.slice("data:image/png;base64,".length), "base64");
-    const thirdPixels = await sharp(thirdPng)
-      .ensureAlpha()
-      .raw()
-      .toBuffer({ resolveWithObject: true });
-    const thirdDecoded = jsQR(
-      new Uint8ClampedArray(thirdPixels.data),
-      thirdPixels.info.width,
-      thirdPixels.info.height,
-    );
-    if (!thirdDecoded) throw new Error("third QR could not be decoded");
-    const thirdPath = new URL(thirdDecoded.data).pathname;
+    const thirdPath = new URL(await decodeQrDataUrl(thirdSrc, "third QR")).pathname;
     await phone.goto(thirdPath).catch(() => {
       throw new Error("third waiver navigation failed");
     });
@@ -205,18 +175,14 @@ test("a counter waiver receipt stays scoped when course forms are still outstand
   await page.getByRole("button", { name: "Show waiver QR code for Alex Course" }).click();
   const dialog = page.getByRole("dialog", { name: "Party waivers" });
   const src = await dialog.getByRole("img").getAttribute("src");
-  if (!src?.startsWith("data:image/png;base64,")) throw new Error("QR image missing");
-  const png = Buffer.from(src.slice("data:image/png;base64,".length), "base64");
-  const { data, info } = await sharp(png).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-  const decoded = jsQR(new Uint8ClampedArray(data), info.width, info.height);
-  if (!decoded) throw new Error("QR could not be decoded");
+  const decoded = await decodeQrDataUrl(src);
   const phoneContext = await browser.newContext({
     baseURL: workerBaseURL,
     storageState: { cookies: [], origins: [] },
   });
   try {
     const phone = makeActivitySafe(await phoneContext.newPage());
-    await phone.goto(new URL(decoded.data).pathname).catch(() => {
+    await phone.goto(new URL(decoded).pathname).catch(() => {
       throw new Error("course waiver navigation failed");
     });
     await dialog.getByRole("button", { name: "Close" }).click();

@@ -70,14 +70,6 @@ describe("the staff destination registry", () => {
     }
   });
 
-  it("keeps every destination reachable through the search", () => {
-    // The search is the shortcut to every destination, the nav's sections
-    // the visible map of them.
-    for (const destination of STAFF_DESTINATIONS) {
-      expect(destination.inPalette, `${destination.id} has no door`).toBe(true);
-    }
-  });
-
   it("files every destination under a section of the nav", () => {
     const sections = [
       "today",
@@ -360,7 +352,6 @@ describe("what each consumer derives", () => {
     );
     const orders = STAFF_DESTINATIONS.find((destination) => destination.id === "orders");
     expect(orders?.section).toBe("money");
-    expect(orders?.inPalette).toBe(true);
   });
 
   it("offers the search every destination the registry has", () => {
@@ -379,7 +370,6 @@ describe("what each consumer derives", () => {
     if (!addBooking) throw new Error("registry lost the add-booking door");
     expect(addBooking.suffix).toBe("/bookings/new");
     expect(addBooking.section).toBe("schedule");
-    expect(addBooking.inPalette).toBe(true);
     expect(addBooking.gate).toBeUndefined();
     expect(staffDestinationHref(staffShopRoot("blue-mantis"), addBooking)).toBe(
       "/shop/blue-mantis/bookings/new",

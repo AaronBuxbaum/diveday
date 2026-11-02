@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { rollCallStatus } from "@/db/schema/dive-day";
 import {
   blockedAtRail,
   boardedBefore,
@@ -9,6 +10,7 @@ import {
   isRollCallCheckpoint,
   medicalHoldAfterDive,
   RETRACTION_SUPERSEDED,
+  ROLL_CALL_EVENT_STATUSES,
   ROLL_CALL_NOTE_MAX,
   type RollCallCheckpoint,
   type RollCallRecord,
@@ -385,5 +387,12 @@ describe("cancelledRollCall (#2285)", () => {
     // Only a cancellation closes a page: a scheduled trip whose gate read
     // false (a stale read) keeps its controls, and the writer answers.
     expect(cancelledRollCall({ cancelled: false, rollCallOpen: false })).toBeNull();
+  });
+});
+
+describe("the recorded roll-call status vocabulary", () => {
+  it("is one tuple behind the stored enum, in order", () => {
+    expect([...ROLL_CALL_EVENT_STATUSES]).toEqual(["boarded", "not_boarded", "cleared"]);
+    expect(rollCallStatus.enumValues).toEqual([...ROLL_CALL_EVENT_STATUSES]);
   });
 });

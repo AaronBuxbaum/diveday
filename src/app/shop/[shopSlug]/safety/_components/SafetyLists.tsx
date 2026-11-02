@@ -135,27 +135,25 @@ export function SafetyLists({
       </ListCard>
 
       {/* Each row opens the departure's crew (fourth review, item 13). */}
-      {month.noCrewDepartures.length > 0 ? (
-        <ListCard
-          id={SAFETY_LIST_IDS.noCrew}
-          title={t("incidents.safety.noCrewTitle")}
-          count={month.noCrewDepartures.length}
-        >
-          {month.noCrewDepartures.map((departure) => (
-            <li key={departure.tripId}>
-              <Link
-                href={`${tripHref(departure.tripId)}?view=details#crew`}
-                className={`${ROW} hover:underline`}
-              >
-                <span className="font-medium">{departure.title}</span>
-                <span className="text-sm text-muted">
-                  {formatShortDate(departure.startsAt, locale, timeZone)}
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ListCard>
-      ) : null}
+      <ListCard
+        id={SAFETY_LIST_IDS.noCrew}
+        title={t("incidents.safety.noCrewTitle")}
+        count={month.noCrewDepartures.length}
+      >
+        {month.noCrewDepartures.map((departure) => (
+          <li key={departure.tripId}>
+            <Link
+              href={`${tripHref(departure.tripId)}?view=details#crew`}
+              className={`${ROW} hover:underline`}
+            >
+              <span className="font-medium">{departure.title}</span>
+              <span className="text-sm text-muted">
+                {formatShortDate(departure.startsAt, locale, timeZone)}
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ListCard>
 
       <ListCard
         id={SAFETY_LIST_IDS.lapsed}
@@ -198,27 +196,25 @@ export function SafetyLists({
         ))}
       </ListCard>
 
-      {month.unrecordedCrew.length > 0 ? (
-        <ListCard
-          id={SAFETY_LIST_IDS.unrecorded}
-          title={t("incidents.safety.unrecordedTitle")}
-          count={month.unrecordedCrew.length}
-        >
-          {month.unrecordedCrew.map((person) => (
-            <li key={person.personId}>
-              <Link
-                href={shopPath(shopSlug, "settings", "team")}
-                className={`${ROW} hover:underline`}
-              >
-                <span className="font-medium">{person.name}</span>
-                <span className="text-sm text-muted">
-                  {t("incidents.safety.unrecordedSailings", { count: person.sailings })}
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ListCard>
-      ) : null}
+      <ListCard
+        id={SAFETY_LIST_IDS.unrecorded}
+        title={t("incidents.safety.unrecordedTitle")}
+        count={month.unrecordedCrew.length}
+      >
+        {month.unrecordedCrew.map((person) => (
+          <li key={person.personId}>
+            <Link
+              href={shopPath(shopSlug, "settings", "team")}
+              className={`${ROW} hover:underline`}
+            >
+              <span className="font-medium">{person.name}</span>
+              <span className="text-sm text-muted">
+                {t("incidents.safety.unrecordedSailings", { count: person.sailings })}
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ListCard>
     </>
   );
 }

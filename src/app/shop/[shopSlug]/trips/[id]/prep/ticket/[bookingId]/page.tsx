@@ -25,27 +25,15 @@ export const metadata: Metadata = {
 };
 
 /**
- * One diver's rental slip, for the counter to print and hand over.
+ * One diver's rental slip: what they have and when it is due back, for the
+ * counter to print and hand over (ADR 20260815-minimal-gear-register).
  *
- * ADR 20260815-minimal-gear-register scoped this and the first slice
- * deliberately left it out; the departure-level packet on the prep page covers
- * what a crew needs at the boat, and this covers the other half — the person
- * walking away with three tagged units who will be asked, at the end of the
- * day, to bring exactly those back.
- *
- * **What it must not look like.** Not a waiver: one shop-wide waiver is an
- * invariant (CR-015), so nothing here is DiveDay's wording to agree to. Not a
- * bill: billing lives on orders, and printing a rental with no money on it
- * beside one that has money on it teaches a staffer to look for a total here.
- * What is left is what a slip is for — *what you have, and when it is due
- * back* — a list of unit tags and one date, then the foot every rental ticket
- * shares (`RentalTicketReceipt`): the shop's own rental terms when it has
- * written any, and a "Received by" line the diver signs for the gear (Aaron,
- * 2026-10-08; the ADR's amendment of that date). A receipt for gear, signed
- * for the units, never a release.
- *
- * Read-only, no mutations, and ungated like the rest of the register (H-06,
- * amended on H-14's row 2026-08-20): handing gear over is day work.
+ * The trip slip is read-only and carries no bill: a list of unit tags and one
+ * date, then the shared foot (`RentalTicketReceipt`, which owns the terms,
+ * signature and gear-receipt-not-waiver contract). Billing lives on orders, so
+ * a counter ticket shows money and this one never does. Ungated beyond staff
+ * like the rest of the register (H-06, amended on H-14's row 2026-08-20):
+ * handing gear over is day work.
  */
 export default async function RentalTicketPage({
   params,
@@ -53,9 +41,8 @@ export default async function RentalTicketPage({
   params: Promise<{ shopSlug: string; id: string; bookingId: string }>;
 }) {
   const { shopSlug, id: rawTripId, bookingId: rawBookingId } = await params;
-  // Two caller-controlled uuids, both narrowed before any read: an unparseable
-  // literal raises in Postgres rather than missing, so without this a mistyped
-  // URL is a 500 where this page's own notFound() belongs.
+  // Both uuids are narrowed before any read: an unparseable literal raises in
+  // Postgres, so a mistyped URL would be a 500 rather than this page's 404.
   const tripId = uuidParam(rawTripId);
   const bookingId = uuidParam(rawBookingId);
   if (!tripId || !bookingId) notFound();
@@ -74,32 +61,25 @@ export default async function RentalTicketPage({
   if (!diver) notFound();
 
   const assignments = (await listTripGearAssignments(db, shop.id, tripId)).get(bookingId) ?? [];
-  // A slip with nothing on it is not a shorter slip, it is a wrong one — the
-  // door on the prep page only appears once a unit is assigned, so arriving
-  // here empty means the assignment was released in another tab.
+  // A slip with nothing on it is a wrong one: the prep page's door only appears
+  // once a unit is assigned, so empty means it was released in another tab.
   if (assignments.length === 0) notFound();
 
   const dueBack = assignments.reduce(
     (latest, assignment) => (assignment.reservedUntil > latest ? assignment.reservedUntil : latest),
     assignments[0]?.reservedUntil ?? "",
   );
-  // **Back to where the counter tapped in**, which is the departure now: the
-  // assignments section that carries the Rental ticket link renders there, and
-  // a slip printed for eight divers used to put the staffer out on `/prep`
-  // eight times (dive-domain review 20260920).
+  // Back to where the counter tapped in: the departure's assignments section
+  // (dive-domain review 20260920).
   const backTo = `${shopPath(shopSlug, "trips", tripId, "prep")}#${PREP_SECTION_ID}`;
 
   return (
     <div id="rental-ticket">
       <header className="flex flex-wrap items-end justify-between gap-4 border-b border-border pb-6">
         <div>
-          {/* On screen the eyebrow is the way back to the departure, landing
-              on the packing list the counter tapped in from — this page
-              carried the only link up as a ghost button beside Print, at the
-              same weight as the act the page exists for (principle 10, issue
-              #823). On paper it
-              is the slip's own name instead: the sheet a diver walks off with
-              has to say what it is, and it has no navigation. */}
+          {/* On screen the eyebrow is the way back to the packing list (principle
+              10, issue #823); on paper it names the slip, which has no
+              navigation. */}
           <EyebrowBackLink href={backTo} className="print:hidden">
             {t("trips.surfaces.trip")}
           </EyebrowBackLink>
@@ -119,11 +99,8 @@ export default async function RentalTicketPage({
         <h2 id="ticket-units-heading" className={SECTION_TITLE_CLASS}>
           {t("gear.ticket.unitsHeading")}
         </h2>
-        {/* **One column for the tags, so every kind starts at one x** (K-505).
-            Each row was its own `flex-wrap` line, and the kind started wherever
-            that row's tag ended: "BCD #2" is six monospace characters and
-            "Boots #1" eight, about 22px apart. The list is two columns sized
-            by the widest tag, and each row a subgrid of them. */}
+        {/* One column for the tags, so every kind starts at one x (K-505): two
+            columns sized by the widest tag, each row a subgrid. */}
         <ul
           className={sectionCardClass({
             padding: "none",

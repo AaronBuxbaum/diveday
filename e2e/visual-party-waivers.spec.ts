@@ -1,6 +1,5 @@
-import jsQR from "jsqr";
-import sharp from "sharp";
 import { staffTranslator } from "../src/i18n/staff-messages";
+import { decodeQrDataUrl } from "./decode-qr";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import { walkInFormPath } from "./helpers";
 import {
@@ -76,26 +75,14 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("button", { name: `Show waiver QR code for ${leadName}` }).click();
         const dialog = page.getByRole("dialog", { name: "Party waivers" });
         const src = await dialog.getByRole("img").getAttribute("src");
-        if (!src?.startsWith("data:image/png;base64,")) throw new Error("QR missing");
-        const pixels = await sharp(
-          Buffer.from(src.slice("data:image/png;base64,".length), "base64"),
-        )
-          .ensureAlpha()
-          .raw()
-          .toBuffer({ resolveWithObject: true });
-        const decoded = jsQR(
-          new Uint8ClampedArray(pixels.data),
-          pixels.info.width,
-          pixels.info.height,
-        );
-        if (!decoded) throw new Error("QR could not be decoded");
+        const decoded = await decodeQrDataUrl(src);
         const phoneContext = await browser.newContext({
           baseURL: workerBaseURL,
           storageState: { cookies: [], origins: [] },
         });
         try {
           const phone = makeActivitySafe(await phoneContext.newPage());
-          await phone.goto(new URL(decoded.data).pathname).catch(() => {
+          await phone.goto(new URL(decoded).pathname).catch(() => {
             throw new Error("waiver navigation failed");
           });
           await dialog.getByRole("button", { name: "Close" }).click();

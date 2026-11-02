@@ -39,6 +39,37 @@ export async function dateRequestOfferBookingFor(
 }
 
 /**
+ * Seats on an offer held by an active booking. `excludeBookingId` leaves out the booking being
+ * seated or associated, so it never counts against itself. Run under the request and offer locks.
+ */
+async function activeLinkedSeats(
+  tx: DbExecutor,
+  input: { shopId: string; offerId: string; excludeBookingId?: string },
+): Promise<number> {
+  const [linked] = await tx
+    .select({ seats: count(bookings.id) })
+    .from(dateRequestOfferBookings)
+    .innerJoin(
+      bookings,
+      and(
+        eq(bookings.id, dateRequestOfferBookings.bookingId),
+        eq(bookings.shopId, input.shopId),
+        inArray(bookings.status, [...SEAT_HELD_STATUSES]),
+      ),
+    )
+    .where(
+      and(
+        eq(dateRequestOfferBookings.shopId, input.shopId),
+        eq(dateRequestOfferBookings.interestId, input.offerId),
+        ...(input.excludeBookingId
+          ? [ne(dateRequestOfferBookings.bookingId, input.excludeBookingId)]
+          : []),
+      ),
+    );
+  return linked?.seats ?? 0;
+}
+
+/**
  * Lock the request before its offer child. This is the common serialization
  * point for every offered departure and matches erasure's parent-then-child
  * order. Booking creation also holds its departure lock first; association-only
@@ -108,27 +139,12 @@ export async function lockDateRequestOffer(
     )
     .limit(1);
   if (conflict) return "date_request_departure_conflict";
-  const [linked] = await tx
-    .select({ seats: count(bookings.id) })
-    .from(dateRequestOfferBookings)
-    .innerJoin(
-      bookings,
-      and(
-        eq(bookings.id, dateRequestOfferBookings.bookingId),
-        eq(bookings.shopId, input.shopId),
-        inArray(bookings.status, [...SEAT_HELD_STATUSES]),
-      ),
-    )
-    .where(
-      and(
-        eq(dateRequestOfferBookings.shopId, input.shopId),
-        eq(dateRequestOfferBookings.interestId, offer.id),
-        ...(input.excludeBookingId
-          ? [ne(dateRequestOfferBookings.bookingId, input.excludeBookingId)]
-          : []),
-      ),
-    );
-  if ((linked?.seats ?? 0) >= (offer.partySize ?? 1)) return "date_request_party_full";
+  const linked = await activeLinkedSeats(tx, {
+    shopId: input.shopId,
+    offerId: offer.id,
+    excludeBookingId: input.excludeBookingId,
+  });
+  if (linked >= (offer.partySize ?? 1)) return "date_request_party_full";
   return { offerId: offer.id, requestId: request.id, partySize: offer.partySize ?? 1 };
 }
 
@@ -137,24 +153,8 @@ export async function completeDateRequestOfferParty(
   tx: DbExecutor,
   input: { shopId: string; requestId: string; offerId: string; partySize: number; now: Date },
 ): Promise<boolean> {
-  const [linked] = await tx
-    .select({ seats: count(bookings.id) })
-    .from(dateRequestOfferBookings)
-    .innerJoin(
-      bookings,
-      and(
-        eq(bookings.id, dateRequestOfferBookings.bookingId),
-        eq(bookings.shopId, input.shopId),
-        inArray(bookings.status, [...SEAT_HELD_STATUSES]),
-      ),
-    )
-    .where(
-      and(
-        eq(dateRequestOfferBookings.shopId, input.shopId),
-        eq(dateRequestOfferBookings.interestId, input.offerId),
-      ),
-    );
-  if ((linked?.seats ?? 0) < input.partySize) return false;
+  const linked = await activeLinkedSeats(tx, { shopId: input.shopId, offerId: input.offerId });
+  if (linked < input.partySize) return false;
 
   // The request lock is already held by lockDateRequestOffer. Preserve a
   // staff-entered close reason; booking only supplies the first answer.
@@ -190,25 +190,12 @@ export async function recordDateRequestOfferBooking(
   if (existing?.interestId === input.offerId) return true;
   if (existing) return false;
 
-  const [linked] = await tx
-    .select({ seats: count(bookings.id) })
-    .from(dateRequestOfferBookings)
-    .innerJoin(
-      bookings,
-      and(
-        eq(bookings.id, dateRequestOfferBookings.bookingId),
-        eq(bookings.shopId, input.shopId),
-        inArray(bookings.status, [...SEAT_HELD_STATUSES]),
-      ),
-    )
-    .where(
-      and(
-        eq(dateRequestOfferBookings.shopId, input.shopId),
-        eq(dateRequestOfferBookings.interestId, input.offerId),
-        ne(dateRequestOfferBookings.bookingId, input.bookingId),
-      ),
-    );
-  if ((linked?.seats ?? 0) >= input.partySize) return false;
+  const linked = await activeLinkedSeats(tx, {
+    shopId: input.shopId,
+    offerId: input.offerId,
+    excludeBookingId: input.bookingId,
+  });
+  if (linked >= input.partySize) return false;
 
   const [inserted] = await tx
     .insert(dateRequestOfferBookings)

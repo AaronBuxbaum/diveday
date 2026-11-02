@@ -31,6 +31,8 @@ export function safetyMonthTiles({
   staffingHref: string | null;
   teamHref?: string;
 }): MonthFigure[] {
+  // Not drawn when no crew is on record, so it is not read then.
+  const crew = safety.noCrewOnRecord ? null : crewSafetyValue(safety, t);
   const attention = (detail: string | null) =>
     detail ? { detail, detailTone: "attention" as const } : {};
   return [
@@ -58,7 +60,7 @@ export function safetyMonthTiles({
     // roster crew here: the record judged nothing, so it says so in one quiet
     // line and points at where crew are rostered, never "0 of 0" over a list
     // that is not drawn (layer 3 review F3; review F1 on the year).
-    safety.noCrewOnRecord
+    !crew
       ? {
           key: "crew",
           label: t("incidents.safety.crew"),
@@ -72,7 +74,7 @@ export function safetyMonthTiles({
       : {
           key: "crew",
           label: t("incidents.safety.crew"),
-          value: crewSafetyValue(safety, t).value,
+          value: crew.value,
           ...(safety.lapsedSailings.length > 0 || safety.unrecordedCrew.length > 0
             ? {
                 href: `#${safety.lapsedSailings.length > 0 ? SAFETY_LIST_IDS.lapsed : SAFETY_LIST_IDS.unrecorded}`,
@@ -81,8 +83,8 @@ export function safetyMonthTiles({
           ...(safety.unknownCredentialSailings && teamHref
             ? { link: { href: teamHref, label: t("incidents.safety.currentCrewCredentials") } }
             : {}),
-          detail: crewSafetyValue(safety, t).detail,
-          detailTone: crewSafetyValue(safety, t).attention ? "attention" : "quiet",
+          detail: crew.detail,
+          detailTone: crew.attention ? "attention" : "quiet",
         },
     {
       key: "incidents",

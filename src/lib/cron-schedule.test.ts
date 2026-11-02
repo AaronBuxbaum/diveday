@@ -18,11 +18,10 @@ import { DIETARY_RETENTION_CRONTAB } from "./retention";
 import { WEEKLY_DIGEST_CRON_CRONTAB } from "./weekly-digest";
 
 /**
- * vercel.json is the deployed schedule. Everything else in the repo that names
- * a cadence — this module, the Sentry Cron Monitor config in the reminders
- * route, the retry bounds in `src/db/notifications.ts` — is a restatement of
- * it, and restatements drift. Reading the real file is the only assertion here
- * that can catch a schedule change made in one place and not the others.
+ * vercel.json is the deployed schedule. Everything else that names a cadence
+ * (this module, the Sentry Cron Monitor config, the retry bounds in
+ * `src/db/notifications.ts`) restates it and can drift; reading the real file
+ * is what catches a change made in one place only.
  */
 function vercelCrons(): Array<{ path: string; schedule: string }> {
   const raw = readFileSync(path.join(process.cwd(), "vercel.json"), "utf8");
@@ -86,25 +85,11 @@ describe("the daily tick", () => {
   /**
    * **One database wake an hour, without one stampede an hour.** A serverless
    * Postgres compute sleeps after five idle minutes and bills for the time it
-   * is awake, so what the bill tracks is the number of separate stretches
-   * something wakes it, not the number of passes: passes inside five
-   * consecutive minutes keep one compute awake once, and the same passes at
-   * `:00`, `:10` and `:20` wake it three times. That is what this assertion
-   * stops a future "spread them across the hour" from quietly restoring. The
-   * integrations drain had `:30` until 2026-10-06, when it joined the others
-   * to halve the idle wake-ups.
-   *
-   * Inside those minutes they are a minute apart rather than on one: six cold
-   * functions opening pools against the pooler at the same second was a
-   * connection spike at the top of every hour (code review 2026-10-10, item
-   * 11). Aaron chose `:00`–`:04` over a wider spread, to keep the one wake.
-   *
-   * Then two more hourly passes arrived and doubled up on `:01` and `:04`
-   * (code review 2026-10-13, item 36). They moved to `:05` and `:06`: each is
-   * a minute after the pass before it, so the compute the others woke never
-   * idles five minutes and the hour still wakes it once. What the assertion
-   * holds is that: one pass to a minute, and no gap of five minutes between
-   * one hourly pass and the next.
+   * is awake, so passes inside five consecutive minutes wake it once, and the
+   * same passes spread at `:00`, `:10`, `:20` wake it three times. Within those
+   * minutes each pass takes its own, so cold functions do not open pools
+   * against the pooler at one second. The assertion holds both: one pass to a
+   * minute, and no gap of five minutes between one hourly pass and the next.
    */
   it("keeps the hourly passes one to a minute, with no five-minute gap between them", () => {
     const hourlyMinutes = vercelCrons()
@@ -121,14 +106,10 @@ describe("the daily tick", () => {
   });
 
   /**
-   * **The dailies and the nightlies ride the same wake** (code review
-   * 2026-10-13b, item 36). The assertion above saw the hourlies only, so five
-   * dailies sat on `:00` beside `minimum-seats` (two cold starts in one
-   * minute, the shape the hourlies had just left), and the three 03:xx
-   * nightlies woke the database three separate times. Every entry, whatever
-   * its cadence, takes a minute nothing else in its hour fires on, and every
-   * minute in an hour sits within five of the one before it from `:00`, so an
-   * hour wakes the compute once.
+   * **The dailies and the nightlies ride the same wake.** The assertion above
+   * sees hourlies only; every entry, whatever its cadence, takes a minute
+   * nothing else in its hour fires on, and every minute sits within five of the
+   * one before it from `:00`, so an hour wakes the compute once.
    */
   it("gives every pass in an hour its own minute, all inside one wake", () => {
     const hoursOf = (field: string) =>
@@ -151,60 +132,33 @@ describe("the daily tick", () => {
   });
 
   it("wakes no *queue-draining* pass more often than daily, so a day is the floor on retry latency", () => {
-    // What `src/db/notifications.ts` actually depends on is not that the
-    // reminders tick is the *only* daily cron — a second daily entry is fine,
-    // and `/api/cron/usage` is one — but that nothing **drains the notification
-    // send queue** more often than daily. That is what makes "one attempt per
-    // pass" mean one attempt per day and the three-pass retry window mean
-    // three days.
-    //
-    // This started life as "no sub-daily entry at all", which is a proxy for
-    // that and was the right proxy while every cron drained the queue by
-    // arriving. It stopped being the right proxy on 2026-08-13, when the
-    // minimum-head-count sweep landed (ADR
-    // 20260813-minimum-head-count-departures): its whole product claim is that
-    // a departure cancels itself at a moment printed on the booking page, and
-    // a daily pass makes that promise true to within about a day.
-    //
-    // So the guard is now an allowlist rather than a ban. The hourly recap
-    // pass is the second deliberate exception: unlike generic retry work, it
-    // owns one user-visible promise (never before four hours; normally within
-    // an hour after that) and calls only `sendDueRecaps`, whose query holds
-    // that floor. Adding a route here is still a product and operations change,
-    // not a scheduling convenience.
-    // `/api/cron/trip-reminders` is the third, and the case for it is the same
-    // shape as the recap pass's. It owns one user-visible promise — a reminder
-    // reaches a diver inside their shop's own daytime — and a fixed daily UTC
-    // hour cannot keep it: 14:00 UTC is 10am in Florida and 03:00 in Fiji, so
-    // every shop in the picker's Asia-Pacific group was texting divers in the
-    // middle of the night (issue #697). It calls only `sendDueReminders`, which
-    // sends fresh messages; it does **not** drain the notification send queue,
-    // so the daily floor on retry latency that this test protects is untouched.
-    // That is also why the reminder scan *moved* rather than the daily tick
-    // becoming hourly.
+    // `src/db/notifications.ts` depends on nothing **draining the notification
+    // send queue** more often than daily, which is what makes "one attempt per
+    // pass" mean one attempt per day. A second daily cron is fine; the guard is
+    // an allowlist, and adding a route is a product and operations change. Each
+    // allowed route owns one user-visible promise that a daily UTC hour cannot
+    // keep and calls only a fresh-send function, never the queue:
+    // - minimum-seats: cancels at a moment printed on the booking page (ADR
+    //   20260813-minimum-head-count-departures).
+    // - recaps: never before four hours, normally within an hour after
+    //   (`sendDueRecaps`).
+    // - trip-reminders: a reminder lands inside the shop's own daytime, which
+    //   no fixed UTC hour does across zones (issue #697; `sendDueReminders`).
     const SUB_DAILY_ALLOWED = new Set([
       "/api/cron/minimum-seats",
       "/api/cron/recaps",
       "/api/cron/trip-reminders",
       "/api/cron/integrations",
-      // The Monday email (market audit item 51) is the fifth, on the
-      // trip-reminder pass's argument: a weekly message promised for Monday
-      // morning in the shop's own zone cannot ride one fixed UTC hour. It
-      // calls only `sendDueWeeklyDigests`, which sends fresh mail and never
-      // drains the queue; every pass after a shop's first on its Monday stops
-      // at the per-person, per-week claim.
+      // weekly-digest: a Monday-morning email in the shop's own zone
+      // (`sendDueWeeklyDigests`); later passes stop at the per-person,
+      // per-week claim.
       "/api/cron/weekly-digest",
-      // Crew news (ADR 20261009-crew-hear-about-their-boats) is the sixth: a
-      // crew member taken off tomorrow's boat cannot hear it a day later. It
-      // calls only `sendDueCrewNotices`, which sends fresh mail of a kind that
-      // is never queued, and it runs inside the others' five minutes.
+      // crew-notices: a crew member taken off tomorrow's boat cannot hear it
+      // a day later (ADR 20261009-crew-hear-about-their-boats;
+      // `sendDueCrewNotices`).
       "/api/cron/crew-notices",
-      // The desk ping's trailing catch-up (#2311) is the seventh: a diver's
-      // message batched behind a ping at 21:00 cannot wait for a daily pass,
-      // or it waits until the desk opens, which is the gap the ping exists to
-      // close. It calls only `sendTrailingDeskPings`, which sends fresh mail
-      // and never drains the queue, and it runs inside the others' five
-      // minutes.
+      // desk-pings: the trailing catch-up (#2311) cannot wait for a daily
+      // pass or the desk opening (`sendTrailingDeskPings`).
       "/api/cron/desk-pings",
     ]);
     const subDaily = vercelCrons().filter((cron) => {
@@ -215,11 +169,10 @@ describe("the daily tick", () => {
   });
 
   /**
-   * The allowlist above is only as good as this: the routes on it must not
-   * reach the durable queue. `sendNotification`/`sendNotificationBatch` are the
-   * two functions that enqueue and drain it (src/db/notifications.ts), so a
-   * sub-daily route importing either is the mistake the allowlist would
-   * otherwise silently permit.
+   * The allowlist relies on its routes not reaching the durable queue
+   * (`sendNotification`/`sendNotificationBatch`, src/db/notifications.ts).
+   * This source check covers only the two route files listed, not indirect
+   * call paths.
    */
   it("keeps the sub-daily routes off the generic notification queue", () => {
     for (const routePath of [

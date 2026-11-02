@@ -1,6 +1,5 @@
-import jsQR from "jsqr";
-import sharp from "sharp";
 import { openCourseFormQr } from "./course-forms-qr-helper";
+import { decodeQrDataUrl } from "./decode-qr";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 
 // The QR is a bearer capability; never attach an image or trace of it.
@@ -16,12 +15,7 @@ test("a student scans and signs on their phone after the counter closes the code
   const { student, title, row, dialog, t } = await openCourseFormQr(page, { clock: true });
   await expect(row.getByText(/waiver not signed/i)).toBeVisible();
   const src = await dialog.getByRole("img").getAttribute("src");
-  if (!src?.startsWith("data:image/png;base64,")) throw new Error("QR image missing");
-  const png = Buffer.from(src.slice("data:image/png;base64,".length), "base64");
-  const { data, info } = await sharp(png).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-  const decoded = jsQR(new Uint8ClampedArray(data), info.width, info.height);
-  if (!decoded) throw new Error("QR image could not be decoded");
-  const url = new URL(decoded.data);
+  const url = new URL(await decodeQrDataUrl(src));
   if (!url.pathname.endsWith("/forms")) throw new Error("QR did not open course forms");
   const phoneContext = await browser.newContext({
     baseURL: workerBaseURL,

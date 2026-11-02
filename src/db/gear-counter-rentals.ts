@@ -52,22 +52,22 @@ import {
 import { getCurrentWaiverGeneration, listSignedWaiversByPerson } from "./waivers";
 
 /**
- * **Counter rentals** — units lent to a person who is not on a boat that day
+ * **Counter rentals**: units lent to a person who is not on a boat that day
  * (ADR 20260815-minimal-gear-register, amendments 2026-08-25 and 2026-10-08).
  *
  * A counter rental is not a table. It is a set of person-held
  * `gear_reservations` rows (`person_id` set, `booking_id` null) written in one
- * transaction, and **that transaction is its identity**: every row it inserts
- * takes the same `created_at` from Postgres' `now()`, which is the
- * transaction's start time, so the person and that stamp together name the
- * rental. The ticket URL carries any one of its reservation ids and the reader
- * below finds the rest.
+ * transaction, and **that transaction is its identity**: every row takes the
+ * same `created_at` from Postgres' `now()`, so the person and that stamp
+ * together name the rental. The ticket URL carries any one reservation id and
+ * the reader finds the rest.
  *
- * Check-out, return and release are the register's own single-unit writers
- * (`checkOutGearReservation`, `returnGearReservation`, `releaseGearReservation`
- * in `./gear.ts`), which act on a reservation id and never asked for a booking.
- * Money is never on these rows: an invoice, when there is one, is an ordinary
- * staff order (`createOrder`) and `order_id` only points at it.
+ * Check-out, return and release here act on the whole set directly, the
+ * counter's twins of the trip-set writers, and share only selected rules and
+ * helpers with the register's single-unit writers in `./gear.ts`
+ * (`openGearReservation`, `pullReturnedUnitsForService`). Money is never on
+ * these rows: an invoice is an ordinary staff order (`createOrder`) and
+ * `order_id` only points at it.
  */
 
 /** The most units one rental may carry — a family's kit, not a fleet. */

@@ -12,7 +12,7 @@ import { getShopById, getShopBySlug } from "@/db/shops";
 import { auth, getAuth } from "@/lib/auth";
 import { DEMO_BYPASS_PASSWORD } from "@/lib/credentials";
 import { demoLandingFrom, demoLandingPath } from "@/lib/demo-landings";
-import type { DemoRoleId } from "@/lib/demo-roles";
+import { DEMO_ROLE_IDS, type DemoRoleId } from "@/lib/demo-roles";
 import {
   DEMO_SEAT_COOKIE,
   DEMO_SEAT_MAX_AGE_SECONDS,
@@ -37,13 +37,7 @@ import { requireStaffSession } from "@/lib/session";
 // endpoint taking a caller-supplied shop slug.
 import { announceDemoEntry } from "./demo-instrumentation";
 
-const ENTERABLE_DEMO_ROLES = new Set<DemoRoleId>([
-  "owner",
-  "instructor",
-  "divemaster",
-  "captain",
-  "diver",
-]);
+const ENTERABLE_DEMO_ROLES: ReadonlySet<string> = new Set(DEMO_ROLE_IDS);
 
 /**
  * Everything `switchDemoRoleAction` will look at — the enterable roles plus
@@ -135,9 +129,7 @@ const DEMO_UNAVAILABLE_PATH = "/sign-in?error=demo";
  */
 function requestedDemoRole(formData?: FormData): DemoRoleId {
   const raw = formData?.get("role");
-  return typeof raw === "string" && ENTERABLE_DEMO_ROLES.has(raw as DemoRoleId)
-    ? (raw as DemoRoleId)
-    : "owner";
+  return typeof raw === "string" && ENTERABLE_DEMO_ROLES.has(raw) ? (raw as DemoRoleId) : "owner";
 }
 
 /**

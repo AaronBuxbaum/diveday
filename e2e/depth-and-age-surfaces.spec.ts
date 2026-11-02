@@ -17,27 +17,11 @@ const REEF_TRIP = "Two-Tank Reef — Molasses & French";
 
 test.describe.configure({ timeout: 30_000 });
 
-/**
- * Open a seeded dive site's edit form and set its maximum depth.
- *
- * Clears the site-photo box: the seeded briefings carry image URLs, and saving
- * re-runs them through `ingestDiveSiteMedia`, which can't reach an image host
- * from the e2e sandbox and bounces the whole form to `?error=images`. That's
- * unrelated to depth — dropping the photos is the narrowest way to get a
- * clean save.
- *
- * Filled *after* the depth field, not before: this page is a fresh
- * navigation's first interaction, and the very first fill right after
- * `page.goto()` can race the page's own hydration and get silently
- * overwritten by the time the click actually submits — the depth field,
- * touched a moment later once hydration has settled, never loses that race.
- * Same fields, reordered so the vulnerable one goes last.
- */
+/** Open a seeded dive site's edit form, set its maximum depth, save, and read it back after a reload. */
 async function setSiteDepth(page: Page, siteName: string, depth: string, unitLabel: RegExp) {
   await page.goto(`/shop/${SHOP}/dive-sites`);
-  // The library is a ledger now (ADR 20260827-the-shops-shelves): a row's link
-  // is the stretched overlay over the whole row, so it carries the site's name
-  // as its accessible name rather than as text content.
+  // A ledger row's link is the stretched overlay (ADR
+  // 20260827-the-shops-shelves): the site's name is its accessible name.
   const href = await page
     .getByRole("link", { name: siteName, exact: true })
     .first()
@@ -67,12 +51,9 @@ test.describe("staff", () => {
     await page.goto(`${tripPath}`);
 
     // The seed gives one diver on this trip a date of birth putting them at 13
-    // (src/db/seed.ts), so the roster carries both facts in one pill — the
-    // manifest's own "Minor · age N" badge, the same words on both surfaces.
-    // An adult's age is a fact, not a flag, and waits in the row's reference
-    // panel; the minor's age is the one the crew acts on at a glance (H-21).
-    // No glyph before the word: the guests ledger draws its marks and drops
-    // the Badge's emoji (slice 5d) — the capsule is the word alone.
+    // (src/db/seed.ts), so the roster carries the manifest's "Minor · age N"
+    // badge, the capsule being the word alone. An adult's age waits in the
+    // row's reference panel; the minor's is the one the crew acts on (H-21).
     const minorBadge = page.getByText(/^Minor · age \d+$/).first();
     await expect(minorBadge).toBeVisible();
 
@@ -89,10 +70,8 @@ test.describe("staff", () => {
     const tripPath = await tripPathByTitle(page, SHOP, REEF_TRIP);
     await page.goto(`${tripPath}`);
 
-    // The seeded minor's birthday is two days out. Since slice 5d folded the
-    // Celebrations panel into the ledger, the callout lives once, as the warm
-    // capsule on the celebrating diver's row — subject plus timing, no age,
-    // no sentence (`birthdayCalloutText`).
+    // The seeded minor's birthday is two days out: the callout lives once, as
+    // the capsule on the celebrating diver's row (`birthdayCalloutText`).
     await expect(page.getByText("Birthday in 2 days").first()).toBeVisible();
   });
 
@@ -143,11 +122,8 @@ test.describe("staff", () => {
     await expect(lenaWarning).toContainText(staff("trips.roster.depthVerificationLimits"));
 
     // And no diver on this boat is *refused*: an advisory warns, a blocker
-    // blocks, and the ledger keeps the two vocabularies apart. June's shared
-    // advisory files her under "Still to clear" as open work, so the honest
-    // assertion since slice 5d is the absence of the refusal word on her row
-    // — the per-row "🌊Ready" text this used to look for is gone with the
-    // grammar that repeated the group's own word down its rows.
+    // blocks. June's shared advisory files her under "Still to clear" as open
+    // work, so the assertion is the absence of the refusal word on her row.
     await expect(juneCard.getByText("Blocked")).toHaveCount(0);
     await expect(lenaCard.getByText("Blocked")).toHaveCount(0);
 

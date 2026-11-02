@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { EmptyState } from "@/components/EmptyState";
-import { focusAfterStaffCheck } from "@/components/focus-after-staff-check";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
@@ -194,7 +193,7 @@ export function DiverList({
     setTyped(query);
   }, [query]);
   useEffect(() => {
-    return focusAfterStaffCheck(searchRef.current);
+    searchRef.current?.focus({ preventScroll: true });
   }, []);
   useEffect(() => () => clearTimeout(debounce.current ?? undefined), []);
   /**
