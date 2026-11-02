@@ -32,7 +32,15 @@ vi.mock("next/navigation", () => ({
     throw new Error(`REDIRECT:${to}`);
   }),
 }));
-vi.mock("next/headers", () => nextHeadersStub());
+vi.mock("next/headers", () =>
+  nextHeadersStub({
+    headers: {
+      origin: "https://www.example.com",
+      "sec-fetch-site": "same-origin",
+      "x-forwarded-for": "203.0.113.9",
+    },
+  }),
+);
 vi.mock("@/lib/auth", () => ({
   auth: vi.fn(),
   getAuth: vi.fn(async () => ({
@@ -111,6 +119,17 @@ describe("switchDemoRoleAction", () => {
         body: expect.objectContaining({ password: DEMO_BYPASS_PASSWORD }),
       }),
     );
+  });
+
+  it("signs in without the browser's origin, so a host other than APP_HOST still works", async () => {
+    await landing("instructor");
+    const [call] = hoisted.signInDiveDayCredentials.mock.calls as unknown as [
+      [{ headers: Headers }],
+    ];
+    const { headers } = call[0];
+    expect(headers.has("origin")).toBe(false);
+    expect(headers.has("sec-fetch-site")).toBe(false);
+    expect(headers.get("x-forwarded-for")).toBe("203.0.113.9");
   });
 
   it("fails out loud, not by redirect, when the sign-in refuses the switch", async () => {

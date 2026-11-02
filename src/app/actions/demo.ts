@@ -66,6 +66,26 @@ const SWITCHABLE_DEMO_ROLES = new Set<string>([
 ]);
 
 /**
+ * The request's headers for the demo's own in-process sign-in, minus the two
+ * that name where the request came from.
+ *
+ * `signInDiveDayCredentials` refuses a browser `Origin` that is not the one
+ * origin this deployment is configured for (`APP_HOST`), which is right for a
+ * sign-in form and wrong here: the visitor reached this action on whatever
+ * host they typed (a `www.` name, a platform alias), and Next has already
+ * checked that the action request came from that same host. Forwarding the
+ * origin made the demo refuse everyone not on the canonical host, with the
+ * sign-in page's "That email and password don't match" for a demo that has no
+ * password. Without both headers the call reads as the in-process call it is.
+ */
+async function demoSignInHeaders(): Promise<Headers> {
+  const forwarded = new Headers(await headers());
+  forwarded.delete("origin");
+  forwarded.delete("sec-fetch-site");
+  return forwarded;
+}
+
+/**
  * Leave this browser a seat in demo shop `shopId` (`src/lib/demo-seat.ts`): the
  * only proof the diver preview, which has no session, keeps of which shop it
  * may switch back to staff in.
@@ -202,7 +222,7 @@ export async function enterDemoAction(formData?: FormData) {
     const auth = await getAuth();
     const signedIn = await auth.api.signInDiveDayCredentials({
       body: { email: targetEmail, password: DEMO_BYPASS_PASSWORD },
-      headers: await headers(),
+      headers: await demoSignInHeaders(),
     });
     pendingSignIn = signedIn.pending;
   } catch (error) {
@@ -306,7 +326,7 @@ export async function switchDemoRoleAction(role: string, shopSlug: string) {
       const auth = await getAuth();
       const signedIn = await auth.api.signInDiveDayCredentials({
         body: { email: targetEmail, password: DEMO_BYPASS_PASSWORD },
-        headers: await headers(),
+        headers: await demoSignInHeaders(),
       });
       pendingSignIn = signedIn.pending;
     } catch (error) {
