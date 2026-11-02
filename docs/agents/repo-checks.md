@@ -994,7 +994,9 @@ import neither `src/app` nor `src/features`. Routes stay thin; the rules live he
 inside that direction are enforced too (ratcheted in `scripts/ratchets.json`): `src/lib` takes only
 *types* from `src/db` (a loader that reads belongs in `src/db` or a feature module), nothing under
 `src/app` imports `drizzle-orm` (a query is a named `src/db` function), and everything outside
-`src/db` reaches the trips modules through the `@/db/trips` barrel. Test files and the e2e fixture
+`src/db` reaches the trips modules through the `@/db/trips` barrel. A fourth, general one: a directory
+directly under `src/lib` or `src/db` that holds an `index.ts` is a module, and outside it only the
+index is importable (issue #2754). Test files and the e2e fixture
 routes under `src/app/api/test/` are exempt. Inside `src/db`, a module imports the `trips-*` sibling
 it needs rather than the barrel, so the barrel never closes an import cycle. The guard is a hand-written
 import reader on purpose: dependency-cruiser found the same violations, but it cannot parse imports

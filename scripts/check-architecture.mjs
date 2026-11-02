@@ -43,6 +43,13 @@ import { bankCounts, ratchetFlags, readCounts } from "./ratchet.mjs";
  *    renamed, or merged without a repo-wide edit, and the module's surface is
  *    reviewable in one file rather than inferred from every call site.
  *
+ * 5. **An index is a door** (issue #2754). A directory directly under `src/lib`
+ *    or `src/db` that contains an `index.ts` is a module, and from outside it
+ *    only the index is importable: a file beside it is the module's own, free
+ *    to be split or merged without a repo-wide edit, and adding a function to
+ *    a sibling does not publish it. (`src/features` modules say the same in
+ *    rule 3, with a README.) Tests are exempt, like every seam.
+ *
  * 4. **Server-only modules stay out of client bundles.** A module in
  *    `SERVER_ONLY_MODULES` (or a `libphonenumber-js` import) must not be
  *    reachable by value imports from any `"use client"` file. The phone line-type
@@ -127,6 +134,32 @@ export const seams = [
 /** Modules a client bundle must never reach, by value import, at any depth. */
 export const SERVER_ONLY_MODULES = ["src/lib/phone-line-type.ts"];
 const SERVER_ONLY_PACKAGE = /^libphonenumber-js(?:\/|$)/;
+
+const MODULE_ROOTS = ["src/lib", "src/db"];
+
+/** Every `src/lib/<name>` and `src/db/<name>` directory that has an `index.ts(x)`. */
+async function moduleDirectories(root) {
+  const modules = [];
+  for (const moduleRoot of MODULE_ROOTS) {
+    let entries = [];
+    try {
+      entries = await readdir(path.join(root, moduleRoot), { withFileTypes: true });
+    } catch (error) {
+      if (error?.code !== "ENOENT") throw error;
+    }
+    for (const entry of entries.filter((item) => item.isDirectory())) {
+      const directory = `${moduleRoot}/${entry.name}`;
+      for (const index of ["index.ts", "index.tsx"]) {
+        try {
+          await stat(path.join(root, directory, index));
+          modules.push(directory);
+          break;
+        } catch {}
+      }
+    }
+  }
+  return modules;
+}
 
 /** The repo file a specifier names, or null for a package or a file not on disk. */
 async function resolveFile(root, importer, specifier) {
@@ -349,6 +382,27 @@ export async function collectViolations(root = ROOT) {
     }
   }
 
+  // 5. An index is a door.
+  const modules = await moduleDirectories(root);
+  if (modules.length > 0) {
+    for (const file of await walk(root, "src")) {
+      if (isTestFile(file)) continue;
+      const posix = file.replaceAll(path.sep, "/");
+      const contents = await readFile(path.join(root, file), "utf8");
+      for (const { specifier } of importsOf(contents)) {
+        const target = resolveSpecifier(file, specifier)?.replaceAll(path.sep, "/");
+        if (!target) continue;
+        const module = modules.find((directory) => target.startsWith(`${directory}/`));
+        if (!module || posix.startsWith(`${module}/`)) continue;
+        if (/^index(\.[cm]?[jt]sx?)?$/.test(target.slice(module.length + 1))) continue;
+        record(
+          file,
+          `${posix}: imports ${specifier} — ${module} is a module, reach it through "@/${module.slice(4)}" (its index.ts)`,
+        );
+      }
+    }
+  }
+
   // 4. Server-only modules never reach a client bundle.
   await clientReachViolations(root, record);
 
@@ -466,7 +520,7 @@ async function main() {
       `Architecture boundary violations:\n${failures.map((item) => `- ${item}`).join("\n")}`,
     );
     console.error(
-      "Domain code must not import from src/app or src/features, src/components and src/i18n must not import from src/app, a feature module is reachable only through its index.ts, src/lib takes only types from src/db, src/app never imports drizzle-orm, and the trips modules are reached through @/db/trips. See docs/architecture/decisions/20260730-feature-module-contracts.md and the header of scripts/check-architecture.mjs.",
+      "Domain code must not import from src/app or src/features, src/components and src/i18n must not import from src/app, a feature module, or a src/lib or src/db directory with an index.ts, is reachable only through its index.ts, src/lib takes only types from src/db, src/app never imports drizzle-orm, and the trips modules are reached through @/db/trips. See docs/architecture/decisions/20260730-feature-module-contracts.md and the header of scripts/check-architecture.mjs.",
     );
     process.exit(1);
   }

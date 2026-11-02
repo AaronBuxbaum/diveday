@@ -133,6 +133,39 @@ describe("the seams", () => {
   });
 });
 
+describe("an index is a door", () => {
+  it("refuses a file past the index of any src/lib or src/db directory that has one", async () => {
+    const root = await fixture({
+      "src/lib/storage/index.ts": "export const upload = 1;\n",
+      "src/lib/storage/limits.ts": "export const MAX = 1;\n",
+      "src/lib/storage/s3.ts": 'import { MAX } from "./limits";\n',
+      "src/app/page.tsx": 'import { MAX } from "@/lib/storage/limits";\n',
+      "src/components/Ok.tsx":
+        'import { upload } from "@/lib/storage";\nimport { x } from "@/lib/storage/index";\n',
+      "src/db/schema/index.ts": "export {};\n",
+      "src/db/schema/people.ts": "export {};\n",
+      "src/lib/other.ts": 'import type { P } from "@/db/schema/people";\n',
+    });
+    expect(flat(await collectViolations(root)).sort()).toEqual([
+      expect.stringContaining(
+        'src/app/page.tsx: imports @/lib/storage/limits \u2014 src/lib/storage is a module, reach it through "@/lib/storage"',
+      ),
+      expect.stringContaining("src/lib/other.ts: imports @/db/schema/people"),
+    ]);
+  });
+
+  it("leaves a directory with no index alone, and exempts tests", async () => {
+    const root = await fixture({
+      "src/lib/plain/a.ts": "export const a = 1;\n",
+      "src/app/page.tsx": 'import { a } from "@/lib/plain/a";\n',
+      "src/lib/door/index.ts": "export {};\n",
+      "src/lib/door/inner.ts": "export const inner = 1;\n",
+      "src/app/page.test.tsx": 'import { inner } from "@/lib/door/inner";\n',
+    });
+    expect(flat(await collectViolations(root))).toEqual([]);
+  });
+});
+
 describe("feature-module contract", () => {
   it("flags a deep import even in side-effect form", async () => {
     const root = await fixture({
