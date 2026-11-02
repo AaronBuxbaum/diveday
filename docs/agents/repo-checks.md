@@ -558,7 +558,7 @@ For `src/app/` and `src/components/`; the rules themselves are in `.claude/rules
   bar) stands off. A diver the search finds opens their record, `divers/[personId]`.
   `src/components/ShopIdentityMenu.tsx` holds what is the reader's own: their calendar feed, their
   language, sign out.
-- **Bearer-token pages** (`src/app/waivers/[token]`, `ready/[token]`, `recap/[token]`,
+- **Bearer-token pages** (`src/app/(token)/waivers/[token]`, `ready/[token]`, `recap/[token]`,
   `verify/[token]`, `reset-password/[token]`, `calendar/[token]`): the URL *is* the capability;
   read [docs/engineering/capability-telemetry-runbook.md](../engineering/capability-telemetry-runbook.md)
   before touching. Never structured data or telemetry that could carry the token.
@@ -952,7 +952,7 @@ For `src/lib/` and `src/features/`; the rules themselves are in `.claude/rules/d
   `offline-manifests.ts`, never an inline cast (ADR 20260726-shopwide-offline-manifest-priming).
   The same worker script, registered a second time from `/ready/` with that scope, keeps the
   diver's saved trip-prep snapshot and nothing else (`src/worker/ready-page-cache.ts`,
-  `src/lib/ready-offline.ts`; the snapshot is built by `src/app/ready/[token]/offline/`); the staff
+  `src/lib/ready-offline.ts`; the snapshot is built by `src/app/(token)/ready/[token]/offline/`); the staff
   registration at `/` never stores one.
 - **Dive-site difficulty**: `dive_sites.difficulty_level`, one of three codes
   (`src/lib/dive-site-difficulty.ts`), worded by `src/i18n/dive-site-labels.ts`. Never free text

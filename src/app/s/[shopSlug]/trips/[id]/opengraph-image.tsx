@@ -19,7 +19,7 @@ import { uuidParam } from "@/lib/uuid";
  * and price. Kept to the same non-personal facts an anonymous visitor of the
  * trip page already sees (title, date, price, open-seat count); never a
  * diver name or roster (mirrors the privacy contract in
- * `src/lib/structured-data.ts` and `src/app/recap/[token]/opengraph-image.tsx`).
+ * `src/lib/structured-data.ts` and `src/app/(token)/recap/[token]/opengraph-image.tsx`).
  * A held or full trip never claims availability it doesn't have — the seats
  * line only renders when seats are actually open, same honesty the
  * `Event`/`Offer` availability field already commits to.

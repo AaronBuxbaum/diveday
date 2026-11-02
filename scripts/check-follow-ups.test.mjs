@@ -397,7 +397,7 @@ describe("a glob in Touches", () => {
    * red `Repository safeguards` on PR #1746 (issue #1761).
    */
   it("resolves a bracketed route path that is on disk, before expanding it", async () => {
-    expect(await touchedPathExists(root, "src/app/ready/[token]/page.tsx")).toBe(true);
+    expect(await touchedPathExists(root, "src/app/(token)/ready/[token]/page.tsx")).toBe(true);
   });
 
   it("still refuses a bracketed path that is not on disk under that spelling", async () => {
@@ -641,7 +641,7 @@ describe("--body, the pre-flight for one drafted issue", () => {
     // The case that stops the strictness above from refusing every good draft.
     const body = valid.body.replace(
       "**Touches:** `src/lib`, `docs/agents/issue-tracker.md`",
-      "**Touches:** `src/app/ready/[token]/page.tsx`",
+      "**Touches:** `src/app/(token)/ready/[token]/page.tsx`",
     );
     const result = run("--body", draft("bracketed.md", body));
     expect(result.status).toBe(0);

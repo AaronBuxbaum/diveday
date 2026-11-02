@@ -2,7 +2,7 @@ import type { PGlite } from "@electric-sql/pglite";
 import { and, asc, desc, eq, inArray, lt } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { describe, expect, it, vi } from "vitest";
-import { readAfterTheDive } from "@/app/ready/[token]/_components/after-dive-reads";
+import { readAfterTheDive } from "@/app/(token)/ready/[token]/_components/after-dive-reads";
 import { readSchedulePage } from "@/app/s/[shopSlug]/_components/schedule-reads";
 import { issueBookingCapability, verifyBookingCapability } from "@/db/booking-capabilities";
 import type { AppDb } from "@/db/client";

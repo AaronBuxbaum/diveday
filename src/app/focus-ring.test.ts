@@ -245,7 +245,7 @@ const FOCUS_SHOWN_ELSEWHERE: readonly (readonly [file: string, anchor: string, s
     ],
     // The tip picker's amount field: the bordered label around it is ringed.
     [
-      "app/ready/[token]/_components/TipAmountPicker.tsx",
+      "app/(token)/ready/[token]/_components/TipAmountPicker.tsx",
       "w-16 bg-transparent",
       "has-[:focus-visible]:focus-ring",
     ],
@@ -352,7 +352,7 @@ describe("no control switches its outline off", () => {
         "app/example.tsx",
       ),
     ).toEqual([]);
-    const tip = "app/ready/[token]/_components/TipAmountPicker.tsx";
+    const tip = "app/(token)/ready/[token]/_components/TipAmountPicker.tsx";
     expect(
       outlinesRemoved(
         `<label className="border has-[:focus-visible]:focus-ring"><input className="w-16 bg-transparent focus:outline-none" /></label>`,

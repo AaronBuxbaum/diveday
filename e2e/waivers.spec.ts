@@ -701,7 +701,7 @@ test("a Box opened after a draft reload asks its questions rather than answering
  * any medical answer 1 of 4, all answered 3 of 4 (the demo shop's own
  * questions are all optional, so their step settles with Medical), and 4 of 4
  * only once `completeWaiver` has taken the signature. The rule itself is pinned without a
- * browser in `src/app/waivers/[token]/WaiverStepRail.test.tsx`; what only this
+ * browser in `src/app/(token)/waivers/[token]/WaiverStepRail.test.tsx`; what only this
  * can prove is that the live count is wired to the diver's own radios.
  */
 test("the step rail paces the waiver and reaches 4 of 4 only once it is signed", async ({

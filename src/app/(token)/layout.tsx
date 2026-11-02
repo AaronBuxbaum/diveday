@@ -3,8 +3,13 @@ import { ErrorBoundaryIntlProvider } from "@/i18n/ErrorBoundaryIntlProvider";
 import { ERROR_BOUNDARY_MESSAGES_BY_LOCALE } from "@/i18n/error-boundary-messages";
 
 /**
- * This layout exists for one reason: to put translated words above
- * `error.tsx` for the email-verification landing page (ADR
+ * **One layout for every page a link opens** (waivers, confirm-contact,
+ * unsubscribe, claim, ready, recap, reset-password, verify, invite): the
+ * `(token)` route group. The group adds nothing to any URL; it exists to carry
+ * this provider once instead of in nine identical `[token]/layout.tsx` files.
+ *
+ * It exists for one reason: to put translated words above `error.tsx` for a
+ * page a person opens from a text message or an email (ADR
  * 20260803-error-boundary-copy-bridge).
  *
  * `error.tsx` is a Next file convention with a fixed `{error, reset}` prop
@@ -26,7 +31,7 @@ import { ERROR_BOUNDARY_MESSAGES_BY_LOCALE } from "@/i18n/error-boundary-message
  * Same answer, same source, no blocking read — see ADR
  * 20260804-instant-navigation.
  */
-export default function VerifyTokenLayout({ children }: { children: ReactNode }) {
+export default function TokenLayout({ children }: { children: ReactNode }) {
   return (
     <ErrorBoundaryIntlProvider messagesByLocale={ERROR_BOUNDARY_MESSAGES_BY_LOCALE}>
       {children}

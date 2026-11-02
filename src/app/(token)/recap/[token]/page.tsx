@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
-import { AfterState } from "@/app/ready/[token]/_components/AfterState";
+import { AfterState } from "@/app/(token)/ready/[token]/_components/AfterState";
 import { DeadLink } from "@/components/DeadLink";
 import { ExpiredLinkCard } from "@/components/ExpiredLinkCard";
 import { RecapWaitingCard } from "@/components/RecapWaitingCard";

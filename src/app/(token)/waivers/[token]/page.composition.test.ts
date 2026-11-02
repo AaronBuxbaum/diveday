@@ -13,7 +13,7 @@ import { routeSource } from "@/test/route-source";
  * page's composition: there is no render to inspect without a database, a
  * request, a shop and a live capability token, and an e2e spec that scrolls the
  * real page cannot say *why* a section is where it is. Same shape as
- * `src/app/ready/[token]/page.composition.test.ts`, for the same reason.
+ * `src/app/(token)/ready/[token]/page.composition.test.ts`, for the same reason.
  */
 
 const SOURCE = component("page.tsx");

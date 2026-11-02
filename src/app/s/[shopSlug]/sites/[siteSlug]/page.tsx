@@ -166,7 +166,6 @@ export default async function DiveSitePage({
         eyebrow={t("schedule.title")}
         eyebrowHref={publicSchedulePath(shop.slug)}
         title={site.name}
-        titleFace="brand"
         description={site.description ?? undefined}
         meta={
           facts.length > 0 ? <p className="text-sm text-muted">{facts.join(" · ")}</p> : undefined

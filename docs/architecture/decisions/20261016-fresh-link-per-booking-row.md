@@ -14,7 +14,7 @@ email on file (H-132).
 
 ## Decision
 
-1. **"Your days with {shop}" on a booking's page** (`src/app/ready/[token]/_components/YourDays.tsx`),
+1. **"Your days with {shop}" on a booking's page** (`src/app/(token)/ready/[token]/_components/YourDays.tsx`),
    under the thread on a current `/ready` and under the after-state on `/ready` after the dive. Never
    on `/recap`, whose link is forwardable. Upcoming seats, and the six newest past dive days,
    numbered as the recap stamps them.

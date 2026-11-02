@@ -70,7 +70,7 @@
   license to put medical or boarding decisions into an unaudited gate.
 - **Saved trip-prep copy** — a read-only snapshot of where to go and when, kept in a diver's own
   browser for a marina with no signal. The server builds it from one verified booking, choosing
-  each field by name (`src/app/ready/[token]/offline/`); it is not the `/ready/<token>` page and
+  each field by name (`src/app/(token)/ready/[token]/offline/`); it is not the `/ready/<token>` page and
   holds no token, link, form or script. The one service-worker script, registered a second time
   from `/ready/` with that scope (`src/lib/ready-offline.ts`), fetches it each time the page is
   kept; the staff registration at `/` never keeps one. One copy under a key that names no token

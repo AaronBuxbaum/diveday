@@ -83,7 +83,7 @@ add database-integration assurance.
 | Real isolated snapshot build and DB test | All three snapshots built and the focused integration passed in 132.30 seconds of process wall time. |
 | Cached integration repeat | Passed in 145.19 seconds with unchanged snapshot modification times. Shared-host contention prevents an end-to-end speedup claim. |
 | Static validation for snapshot extraction | Targeted Biome and full TypeScript checking passed. These checks do not establish browser, full-suite, CI or deployment success. |
-| Reused recap-photo fixture fix | All five tests in `src/app/ready/[token]/recap-photo-actions.test.ts` passed in 9.30 seconds of process wall time. This is a targeted result, not a whole-suite timing claim. |
+| Reused recap-photo fixture fix | All five tests in `src/app/(token)/ready/[token]/recap-photo-actions.test.ts` passed in 9.30 seconds of process wall time. This is a targeted result, not a whole-suite timing claim. |
 
 The integration timings are validation evidence, not a controlled performance comparison. The
 original focused DB run reported 28.68 seconds inside Vitest but did not record process wall time;
@@ -531,7 +531,7 @@ Already tracked in [#2622](https://github.com/AaronBuxbaum/diveday/issues/2622);
 Evidence:
 [docs/engineering/testing.md:29-34](https://github.com/AaronBuxbaum/diveday/blob/35333db0338259eff8e93d1686e5cc5702c708c6/docs/engineering/testing.md#L29)
 explicitly says database mocks pin call shapes and migrate when touched.
-`src/app/ready/[token]/booking-actions.cancel.test.ts:15-18,52-62,78-105` replaces cancellations,
+`src/app/(token)/ready/[token]/booking-actions.cancel.test.ts:15-18,52-62,78-105` replaces cancellations,
 refunds, trail writes and mail, constructs `db: {} as never`, and asserts calls.
 [src/app/api/medical-clearances/[recordId]/route.test.ts:17-21](https://github.com/AaronBuxbaum/diveday/blob/35333db0338259eff8e93d1686e5cc5702c708c6/src/app/api/medical-clearances/%5BrecordId%5D/route.test.ts#L17)
 mocks the database authorization/read/activity operations. Numerous capability, waiver, payment and

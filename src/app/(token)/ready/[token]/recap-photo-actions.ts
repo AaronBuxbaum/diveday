@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { uploadRecapPhotos } from "@/app/recap/[token]/photo-upload";
+import { uploadRecapPhotos } from "@/app/(token)/recap/[token]/photo-upload";
 import { signRecapToken } from "@/lib/recap-links";
 import { bounceTarget, contextFor } from "./action-helpers";
 

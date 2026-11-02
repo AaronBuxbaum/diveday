@@ -150,7 +150,6 @@ export function ShopPageHeader({
   actions,
   brand,
   display = false,
-  titleFace = "app",
   titleClassName = "",
   titleLang,
   /** "end" bottom-aligns actions with the title block, right for a static
@@ -196,14 +195,6 @@ export function ShopPageHeader({
   printActions?: boolean;
   /** The greeting rung (`GREETING_TITLE_CLASS`) instead of the title rung — the shop home only. */
   display?: boolean;
-  /**
-   * `brand` sets the title in the shop's own display face — the trip's title
-   * and the course's title on the diver-facing pages (Harbor, ADR
-   * 20260901-diveday-reimagined, decision 2: "the display face labels headings
-   * only"). The staff surfaces that share this header never pass it; with no
-   * `BrandStyle` above, the utility resolves to Plex anyway.
-   */
-  titleFace?: "app" | "brand";
   /** A page-specific title treatment, such as wrapping an unusually long word on phones. */
   titleClassName?: string;
   /** Language of the page title when it differs from the document language. */
@@ -274,7 +265,7 @@ export function ShopPageHeader({
             // which is the staff shell alone.
             data-chrome-fold-title
             lang={titleLang}
-            className={`${titleFace === "brand" ? "font-brand-display " : ""}${display ? GREETING_TITLE_CLASS : PAGE_TITLE_CLASS}${eyebrow ? " mt-2" : ""}${titleClassName ? ` ${titleClassName}` : ""}`}
+            className={`font-brand-display ${display ? GREETING_TITLE_CLASS : PAGE_TITLE_CLASS}${eyebrow ? " mt-2" : ""}${titleClassName ? ` ${titleClassName}` : ""}`}
           >
             {bindTitleDash(title)}
           </h1>

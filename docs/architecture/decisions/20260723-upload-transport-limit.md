@@ -57,7 +57,7 @@ publicly reachable callback URL to function. It was set aside for now rather tha
   accepted cost of keeping the transport limit small.
 - **This is deliberately conservative for the public surface it also covers.** The same global limit
   applies to every Server Action in the app, including the token-gated (not authenticated) recap
-  photo upload (`src/app/recap/[token]/actions.ts`) — the endpoint CR-011's own follow-up, CR-013
+  photo upload (`src/app/(token)/recap/[token]/actions.ts`) — the endpoint CR-011's own follow-up, CR-013
   ("Put abuse controls on public write boundaries"), flags as still lacking per-token/IP rate limits.
   16 MB is sized off the *staff* course editor's worst case, not the public recap endpoint's actual
   need (one 5 MB file, ~6 MB would suffice) — capping the gallery batch at 2 rather than 3+ was

@@ -1,35 +1,5 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { AfterState } from "@/app/ready/[token]/_components/AfterState";
-import { readyAfterStateProps } from "@/app/ready/[token]/_components/after-state-actions";
-import { BoatStageLine } from "@/app/ready/[token]/_components/BoatStageLine";
-import { cancelledNoticeForReady } from "@/app/ready/[token]/_components/CancelledNotice";
-import { CertificationEntries } from "@/app/ready/[token]/_components/CertificationEntries";
-import { ChangedFacts, fitRecallFrom } from "@/app/ready/[token]/_components/ChangedFacts";
-import { CourseNextStepNote } from "@/app/ready/[token]/_components/CourseNextStepNote";
-import { DayOfDetails } from "@/app/ready/[token]/_components/DayOfDetails";
-import { readyDeadLink } from "@/app/ready/[token]/_components/dead-link";
-import { PayStepBody } from "@/app/ready/[token]/_components/PayStepBody";
-import { atShopMoneyLine, payStepLines } from "@/app/ready/[token]/_components/pay-step-lines";
-import { resolvePaymentReceipt } from "@/app/ready/[token]/_components/payment-receipt";
-import { ReadyFitForm } from "@/app/ready/[token]/_components/ReadyFitForm";
-import { ReadyThreadPage } from "@/app/ready/[token]/_components/ReadyMasthead";
-import { ReadyOfflineCopy } from "@/app/ready/[token]/_components/ReadyOfflineCopy";
-import { READY_NOTICES } from "@/app/ready/[token]/_components/ready-notices";
-import { readyOfflineWords } from "@/app/ready/[token]/_components/ready-offline-words";
-import { SignStepActions } from "@/app/ready/[token]/_components/SignStepActions";
-import { ThreadSections } from "@/app/ready/[token]/_components/ThreadSections";
-import {
-  ThreadSpine,
-  ThreadStatus,
-  threadSpineSteps,
-} from "@/app/ready/[token]/_components/ThreadSpine";
-import {
-  boatStageLine,
-  readyStepLine,
-  readyThreadFacts,
-} from "@/app/ready/[token]/_components/thread-facts";
-import { YourDays } from "@/app/ready/[token]/_components/YourDays";
 import { FlashParams } from "@/components/FlashParams";
 import { RecapWaitingCard } from "@/components/RecapWaitingCard";
 import { ShopNotice } from "@/components/ShopPageHeader";
@@ -64,14 +34,36 @@ import {
   theBoatIsHome,
 } from "@/lib/thread-steps";
 import { HeldAfterDiveCard, NoShowCard, releasedSeat } from "./_components/AfterDiveDoors";
+import { AfterState } from "./_components/AfterState";
 import { readAfterTheDive } from "./_components/after-dive-reads";
+import { readyAfterStateProps } from "./_components/after-state-actions";
+import { BoatStageLine } from "./_components/BoatStageLine";
+import { cancelledNoticeForReady } from "./_components/CancelledNotice";
+import { CertificationEntries } from "./_components/CertificationEntries";
+import { ChangedFacts, fitRecallFrom } from "./_components/ChangedFacts";
+import { CourseNextStepNote } from "./_components/CourseNextStepNote";
+import { DayOfDetails } from "./_components/DayOfDetails";
+import { readyDeadLink } from "./_components/dead-link";
 import { UnavailableReadyLink } from "./_components/ExpiredLink";
+import { PayStepBody } from "./_components/PayStepBody";
+import { atShopMoneyLine, payStepLines } from "./_components/pay-step-lines";
+import { resolvePaymentReceipt } from "./_components/payment-receipt";
 import { ReadyBookedShell, ReadyThreadFallback } from "./_components/ReadyBookedShell";
+import { ReadyFitForm } from "./_components/ReadyFitForm";
+import { ReadyThreadPage } from "./_components/ReadyMasthead";
+import { ReadyOfflineCopy } from "./_components/ReadyOfflineCopy";
 import {
   type ReadyActionReads,
   readReadyActions,
   readyDateActions,
 } from "./_components/ready-date-actions";
+import { READY_NOTICES } from "./_components/ready-notices";
+import { readyOfflineWords } from "./_components/ready-offline-words";
+import { SignStepActions } from "./_components/SignStepActions";
+import { ThreadSections } from "./_components/ThreadSections";
+import { ThreadSpine, ThreadStatus, threadSpineSteps } from "./_components/ThreadSpine";
+import { boatStageLine, readyStepLine, readyThreadFacts } from "./_components/thread-facts";
+import { YourDays } from "./_components/YourDays";
 import { confirmCarriedFactsFromReady, saveTanksFromReady } from "./gear-actions";
 import { saveEmergencyContactFromReady } from "./paperwork-actions";
 import { terminalCardIn } from "./terminal-card";

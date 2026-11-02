@@ -94,7 +94,7 @@ not an estimate.
   revocation-free, read-only mirror. The current `/ready/[token]` actions can issue waivers, overwrite
   emergency contacts and rental fit, toggle nitrox, and start payment. A leaked historical URL
   therefore keeps write authority indefinitely.
-- **Owned paths:** `src/lib/readiness-links.ts`, `src/app/ready/[token]/**`,
+- **Owned paths:** `src/lib/readiness-links.ts`, `src/app/(token)/ready/[token]/**`,
   `src/db/readiness.ts`, `src/db/schema.ts`, associated tests, migration, and an ADR update.
 - **Acceptance criteria:**
   - readiness capabilities have an explicit purpose, issued-at time, expiry, and revocation or

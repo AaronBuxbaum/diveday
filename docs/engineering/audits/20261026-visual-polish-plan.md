@@ -2307,7 +2307,7 @@ detail in its proper context.
 before filing as a defect. Preserve the statement that the booking stays on its existing date until
 a move is confirmed.
 
-**Source:** src/app/ready/[token]/_components/ThreadSections.tsx:194; MoveAsk.tsx:61
+**Source:** src/app/(token)/ready/[token]/_components/ThreadSections.tsx:194; MoveAsk.tsx:61
 
 **Historical GitHub matching:** exact-existing. Execution target: issue #3074 (original drafting
 state was queued). Historical or partial references below remain context and are not automatic
@@ -3515,7 +3515,7 @@ documents plainly.
 licensing/version and require two differently framed domain reviews; security review if
 private-answer access changes.
 
-**Source:** src/app/waivers/[token]/doctor/page.tsx; src/i18n/locales/en-US/diver.json:1176
+**Source:** src/app/(token)/waivers/[token]/doctor/page.tsx; src/i18n/locales/en-US/diver.json:1176
 
 **Historical GitHub matching:** exact-existing. Execution target: issue #3074 (original drafting
 state was queued). Historical or partial references below remain context and are not automatic
@@ -3567,7 +3567,7 @@ is actually required; otherwise lead with shop review/contact. Move general trip
 **Preserve/review:** Do not equate all held states with physician referral. No change to screening
 or boarding rules; two domain reviews.
 
-**Source:** src/app/waivers/[token] success state; diver waiver copy bundle
+**Source:** src/app/(token)/waivers/[token] success state; diver waiver copy bundle
 
 **Historical GitHub matching:** exact-existing. Execution target: issue #3074 (original drafting
 state was queued). Historical or partial references below remain context and are not automatic
@@ -3713,7 +3713,7 @@ the personal checklist.
 **Preserve/review:** Expose only organizer-authorized claim/readiness summaries; preserve adult
 privacy, guardian flows and payment ownership.
 
-**Source:** src/app/ready/[token]/_components/PartySection.tsx; ready page composition
+**Source:** src/app/(token)/ready/[token]/_components/PartySection.tsx; ready page composition
 
 **Historical GitHub matching:** exact-existing. Execution target: issue #3074 (original drafting
 state was queued). Historical or partial references below remain context and are not automatic

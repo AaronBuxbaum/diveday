@@ -253,7 +253,7 @@ describe("how many round trips a staff render waits for, one after another", () 
 /**
  * **The two diver pages a booking lives on**: the public booking page
  * (`src/app/s/[shopSlug]/trips/[id]/page.tsx`) and the readiness thread
- * (`src/app/ready/[token]/page.tsx`). Their reads sit in the page bodies, so
+ * (`src/app/(token)/ready/[token]/page.tsx`). Their reads sit in the page bodies, so
  * each is replayed here in the page's own shape, for an anonymous visitor on
  * the standalone page and for the night-before visit to `/ready` (no Stripe
  * return, no roll call yet). A change to either page's waves changes the

@@ -106,9 +106,9 @@ function unsubscribeUrlOf(notification: Notification): string | undefined {
 
 /**
  * The page URL (`/unsubscribe/<token>`) is for a human who clicks the in-body
- * link — it stays a GET-safe confirm page (`src/app/unsubscribe/[token]/page.tsx`).
+ * link — it stays a GET-safe confirm page (`src/app/(token)/unsubscribe/[token]/page.tsx`).
  * The one-click header target is the sibling route nested one level deeper
- * (`src/app/unsubscribe/[token]/one-click/route.ts`), which acts on a bare
+ * (`src/app/(token)/unsubscribe/[token]/one-click/route.ts`), which acts on a bare
  * POST with no confirmation — that's what `List-Unsubscribe-Post` promises
  * the mail client. Deliberately `/unsubscribe/<token>/one-click`, not
  * `/api/unsubscribe/<token>`: the URL's first path segment has to stay

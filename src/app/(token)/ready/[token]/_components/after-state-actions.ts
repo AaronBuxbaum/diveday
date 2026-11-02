@@ -1,10 +1,10 @@
-import { uploadRecapPhotoFromReadyAction } from "@/app/ready/[token]/recap-photo-actions";
+import { uploadRecapPhotoFromReadyAction } from "@/app/(token)/ready/[token]/recap-photo-actions";
 import {
   startTipAction,
   submitRecapPulseAction,
   submitReviewAction,
   unshareRecapPhotoAction,
-} from "@/app/recap/[token]/actions";
+} from "@/app/(token)/recap/[token]/actions";
 import { type AfterStateProps, buildAfterStateProps } from "@/features/recap-after-state";
 import { signRecapToken } from "@/lib/recap-links";
 

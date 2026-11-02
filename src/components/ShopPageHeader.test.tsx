@@ -6,6 +6,11 @@ import { ShopPageHeader, ShopPageHeaderSkeleton } from "./ShopPageHeader";
 afterEach(cleanup);
 
 describe("ShopPageHeader's title", () => {
+  it("always sets the title in the display face, which is Plex until a shop's BrandStyle says otherwise", () => {
+    render(<ShopPageHeader title="Reef day" />);
+    expect(screen.getByRole("heading", { level: 1 }).className).toContain("font-brand-display");
+  });
+
   it("keeps a trip title's em dash off the start of a line", () => {
     // The title rung balances its wrap, and balancing broke at the space
     // before the dash on the public trip page at 390 (K-117).

@@ -119,7 +119,7 @@ overlay with a default, never a requirement.
 - **The display face** labels headings only — the shop's name, a section title, the trip's title.
   Every fact (a time, a price, a seat count, a state, a control) stays in Geist and in ink. *As of
   2026-09-02 that is every heading the diver meets*: the name in the header bar, the four storefront
-  sections, each boat's name, the trip's and the course's title (`ShopPageHeader`'s `titleFace`)
+  sections, each boat's name, the trip's and the course's title (`ShopPageHeader`’s h1, which always wears `font-brand-display`)
   and the recap's greeting — the first cut had left three in Geist between two in the face. The same
   pass gave the storefront its **about** line (`shops.description`, authored in Settings and until
   then read only by the page's metadata), the courses shelf its two board facts (duration and the

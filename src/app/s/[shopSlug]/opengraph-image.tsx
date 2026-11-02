@@ -13,7 +13,7 @@ import { allowSvgRasterization } from "@/lib/og-rasterizer";
  * the same non-personal fact the schedule page itself shows an anonymous
  * visitor (the shop's name); no trip, roster, or diver data. An unknown slug
  * renders the same generic card a dead link would, disclosing nothing about
- * why (mirrors `src/app/recap/[token]/opengraph-image.tsx`).
+ * why (mirrors `src/app/(token)/recap/[token]/opengraph-image.tsx`).
  */
 export const alt = "A dive shop's schedule on DiveDay.";
 

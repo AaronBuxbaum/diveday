@@ -170,7 +170,7 @@ Read, in this order, before writing code:
 3. docs/design/canvases/20260907-nothing-from-nowhere/SPEC.md, section 18f in full. It is the
    contract: journeys J1–J8, the content table, the interfaces, the routes, the configuration, the
    acceptance tests, and the must-nots.
-4. The current code the slice touches: src/app/ready/[token]/page.tsx and
+4. The current code the slice touches: src/app/(token)/ready/[token]/page.tsx and
    src/app/s/[shopSlug]/trips/[id]/_components/TripActions.tsx (where Add to calendar lives),
    src/db/booking-capabilities.ts (verifyBookingCapability), src/db/ready.ts (getReadyPageData),
    src/db/trip-stages.ts (latestTripStage), src/lib/trip-calendar.ts and src/lib/trip-revision.ts

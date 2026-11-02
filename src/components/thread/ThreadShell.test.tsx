@@ -29,12 +29,12 @@ function read(relativePath: string) {
  * (ADR 20261016-doctor-referral-page).
  */
 const THREAD_PAGES = [
-  "app/ready/[token]/page.tsx",
-  "app/waivers/[token]/page.tsx",
-  "app/recap/[token]/page.tsx",
-  "app/claim/[token]/page.tsx",
-  "app/ready/[token]/forms/page.tsx",
-  "app/waivers/[token]/doctor/page.tsx",
+  "app/(token)/ready/[token]/page.tsx",
+  "app/(token)/waivers/[token]/page.tsx",
+  "app/(token)/recap/[token]/page.tsx",
+  "app/(token)/claim/[token]/page.tsx",
+  "app/(token)/ready/[token]/forms/page.tsx",
+  "app/(token)/waivers/[token]/doctor/page.tsx",
 ] as const;
 
 const THREAD_LOADING = THREAD_PAGES.map((page) => page.replace("page.tsx", "loading.tsx"));
@@ -51,9 +51,11 @@ const THREAD_LOADING = THREAD_PAGES.map((page) => page.replace("page.tsx", "load
  * `THREAD_MEASURE_CLASS`, so the width cannot drift.
  */
 const THREAD_SHELL_COMPONENTS = THREAD_PAGES.filter(
-  (page) => page !== "app/recap/[token]/page.tsx",
+  (page) => page !== "app/(token)/recap/[token]/page.tsx",
 ).map((page) =>
-  page === "app/ready/[token]/page.tsx" ? "app/ready/[token]/_components/ReadyMasthead.tsx" : page,
+  page === "app/(token)/ready/[token]/page.tsx"
+    ? "app/(token)/ready/[token]/_components/ReadyMasthead.tsx"
+    : page,
 );
 
 describe("ThreadShell", () => {
@@ -179,7 +181,7 @@ describe("the thread's adopters", () => {
     // The set, not the count: this test's job is to stop the shell leaking onto
     // a page that is not a bearer page, which holds at three as well as four.
     expect(adopters).toEqual([...THREAD_SHELL_COMPONENTS].sort());
-    expect(read("app/ready/[token]/page.tsx")).toContain("<ReadyThreadPage");
+    expect(read("app/(token)/ready/[token]/page.tsx")).toContain("<ReadyThreadPage");
   });
 
   it("no longer spell the thread's column themselves", () => {
@@ -206,13 +208,13 @@ describe("the thread's adopters", () => {
    * where the move could have dropped one.
    */
   it("keep their one-shot query-param contracts", () => {
-    expect(read("app/ready/[token]/page.tsx")).toContain(
+    expect(read("app/(token)/ready/[token]/page.tsx")).toContain(
       'params={["saved", "error", "pay", "booked"]}',
     );
-    expect(read("app/waivers/[token]/page.tsx")).toContain(
+    expect(read("app/(token)/waivers/[token]/page.tsx")).toContain(
       'params={["saved", "error", "field", "at"]}',
     );
-    expect(read("app/claim/[token]/page.tsx")).toContain('params={["error"]}');
+    expect(read("app/(token)/claim/[token]/page.tsx")).toContain('params={["error"]}');
   });
 });
 
@@ -231,7 +233,10 @@ describe("the doors keep max-w-md", () => {
    * reach them.
    */
   it("still hold /verify and /reset-password", () => {
-    for (const page of ["app/verify/[token]/page.tsx", "app/reset-password/[token]/page.tsx"]) {
+    for (const page of [
+      "app/(token)/verify/[token]/page.tsx",
+      "app/(token)/reset-password/[token]/page.tsx",
+    ]) {
       const source = read(page);
       expect(source).toContain("EntryShell");
       expect(source).not.toContain("ThreadShell");

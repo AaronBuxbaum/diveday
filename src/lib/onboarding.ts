@@ -9,8 +9,8 @@ import { SHOP_SLUG_PATTERN } from "./public-routes";
 /**
  * Framework-free so it can be unit-tested without pulling in better-auth (which
  * needs a Next.js server runtime). `src/app/onboard/actions.ts`,
- * `src/app/invite/[token]/actions.ts`, and
- * `src/app/reset-password/[token]/actions.ts` all set a new password against
+ * `src/app/(token)/invite/[token]/actions.ts`, and
+ * `src/app/(token)/reset-password/[token]/actions.ts` all set a new password against
  * these same bounds. bcrypt (via bcryptjs) silently truncates at 72 bytes: a
  * longer password would appear accepted but only its first 72 bytes are ever
  * checked, which is worse than rejecting it outright. 8 is a deliberate

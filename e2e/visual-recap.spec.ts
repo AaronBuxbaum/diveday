@@ -4,7 +4,7 @@
  * One of the per-feature `e2e/visual-*.spec.ts` files; the capture mechanics are
  * `e2e/visual-harness.ts`, and the procedure is the e2e-and-visual skill.
  */
-import { AFTER_STATE_TEST_IDS } from "../src/app/ready/[token]/_components/after-state-test-ids";
+import { AFTER_STATE_TEST_IDS } from "../src/app/(token)/ready/[token]/_components/after-state-test-ids";
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed-identifiers";
 import { signRecapToken } from "../src/lib/recap-links";
 import { expect, makeActivitySafe, test } from "./fixtures";

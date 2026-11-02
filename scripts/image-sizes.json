@@ -40,7 +40,7 @@
       "1920": 848
     }
   },
-  "src/app/ready/[token]/_components/RecapDoors.tsx :: (min-width: 640px) 33vw, 50vw": {
+  "src/app/(token)/ready/[token]/_components/RecapDoors.tsx :: (min-width: 640px) 33vw, 50vw": {
     "exempt": "Not yet measured. Reaching it needs a recap bearer token for a departure carrying published photos, which the measuring pass did not mint. Same string as the course gallery next door, which turned out over-declared past its container's max-width, so this one is worth measuring rather than assuming."
   },
   "src/app/shop/[shopSlug]/_components/today/RecapNoteEditor.tsx :: 200px": {

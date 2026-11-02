@@ -25,7 +25,7 @@ export const areas = {
       "src/db/client.ts",
       "src/db/bookings.ts",
       "src/lib/authz.ts",
-      "src/app/waivers/[token]",
+      "src/app/(token)/waivers/[token]",
       "src/app/shop/[shopSlug]/waivers",
     ],
     tests: ["src/db/bookings.test.ts", "e2e"],

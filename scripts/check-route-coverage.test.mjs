@@ -89,7 +89,7 @@ describe("routePatternFor", () => {
     expect(routePatternFor("src/app/shop/[shopSlug]/staffing/page.tsx")).toBe(
       "/shop/[shopSlug]/staffing",
     );
-    expect(routePatternFor("src/app/waivers/[token]/page.tsx")).toBe("/waivers/[token]");
+    expect(routePatternFor("src/app/(token)/waivers/[token]/page.tsx")).toBe("/waivers/[token]");
   });
 
   it("drops the segments that organise files without addressing anything", () => {

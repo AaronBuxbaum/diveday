@@ -3,7 +3,7 @@
 What a diver sees after the boat is home: the dive record, the photos, the review and tip asks,
 and the next departure worth booking. One assembler, `buildAfterStateProps`, read by the bearer
 pages `/ready/[token]` (once the day is done) and `/recap/[token]`, and rendered by
-`src/app/ready/[token]/_components/AfterState.tsx`.
+`src/app/(token)/ready/[token]/_components/AfterState.tsx`.
 
 Module shape: [20260730-feature-module-contracts](../../../docs/architecture/decisions/20260730-feature-module-contracts.md).
 

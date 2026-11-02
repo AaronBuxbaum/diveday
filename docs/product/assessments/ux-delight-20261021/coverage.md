@@ -160,13 +160,13 @@ seeded identifiers, not capability tokens.
 ## Route inventory
 
 - `src/app/about/page.tsx`
-- `src/app/claim/[token]/page.tsx`
-- `src/app/confirm-contact/[token]/page.tsx`
+- `src/app/(token)/claim/[token]/page.tsx`
+- `src/app/(token)/confirm-contact/[token]/page.tsx`
 - `src/app/find-your-booking/page.tsx`
 - `src/app/forgot-password/page.tsx`
 - `src/app/get-set-up/page.tsx`
 - `src/app/get-set-up/sent/page.tsx`
-- `src/app/invite/[token]/page.tsx`
+- `src/app/(token)/invite/[token]/page.tsx`
 - `src/app/offline-manifest/page.tsx`
 - `src/app/onboard/page.tsx`
 - `src/app/page.tsx`
@@ -174,10 +174,10 @@ seeded identifiers, not capability tokens.
 - `src/app/privacy/page.tsx`
 - `src/app/product/[feature]/page.tsx`
 - `src/app/product/page.tsx`
-- `src/app/ready/[token]/forms/page.tsx`
-- `src/app/ready/[token]/page.tsx`
-- `src/app/recap/[token]/page.tsx`
-- `src/app/reset-password/[token]/page.tsx`
+- `src/app/(token)/ready/[token]/forms/page.tsx`
+- `src/app/(token)/ready/[token]/page.tsx`
+- `src/app/(token)/recap/[token]/page.tsx`
+- `src/app/(token)/reset-password/[token]/page.tsx`
 - `src/app/s/[shopSlug]/courses/[slug]/page.tsx`
 - `src/app/s/[shopSlug]/courses/page.tsx`
 - `src/app/s/[shopSlug]/embed/[widget]/page.tsx`
@@ -265,7 +265,7 @@ seeded identifiers, not capability tokens.
 - `src/app/switching/page.tsx`
 - `src/app/switching/spreadsheet/page.tsx`
 - `src/app/terms/page.tsx`
-- `src/app/unsubscribe/[token]/page.tsx`
-- `src/app/verify/[token]/page.tsx`
-- `src/app/waivers/[token]/doctor/page.tsx`
-- `src/app/waivers/[token]/page.tsx`
+- `src/app/(token)/unsubscribe/[token]/page.tsx`
+- `src/app/(token)/verify/[token]/page.tsx`
+- `src/app/(token)/waivers/[token]/doctor/page.tsx`
+- `src/app/(token)/waivers/[token]/page.tsx`
