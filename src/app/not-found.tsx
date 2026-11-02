@@ -11,7 +11,7 @@ import {
   PublicShopChromePlaceholder,
   PublicShopFooterSection,
 } from "@/app/s/[shopSlug]/_components/PublicShopShell";
-import { LazyStaffActivity } from "@/components/LazyStaffActivity";
+import { LazyStaffActivity } from "./LazyStaffActivity";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { ShopSearchField } from "@/components/ShopSearchField";
 import { buttonClass } from "@/components/ui/button";
