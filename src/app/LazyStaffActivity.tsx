@@ -12,5 +12,5 @@ import dynamic from "next/dynamic";
  * import; the staff shell imports `StaffActivity` statically.
  */
 export const LazyStaffActivity = dynamic(() =>
-  import("./StaffActivity").then((module) => module.StaffActivity),
+  import("@/components/StaffActivity").then((module) => module.StaffActivity),
 );
