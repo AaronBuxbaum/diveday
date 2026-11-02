@@ -5,7 +5,7 @@ import { getDb } from "@/db/client";
 import { issuePersonCourtesyEmailUnsubscribeToken } from "@/db/courtesy-email";
 import { people } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
-import { e2eTestRouteAuthorized, testRouteRefused } from "@/lib/e2e-test-routes";
+import { e2eTestRouteAuthorized, requireDemoTenant, testRouteRefused } from "@/lib/e2e-test-routes";
 
 /**
  * Mints a real, valid `person_courtesy_email_unsubscribe_tokens` row for an
@@ -30,8 +30,9 @@ export async function POST(request: Request) {
   if (!parsed.success) return NextResponse.json({ error: "invalid_body" }, { status: 400 });
 
   const db = await getDb();
-  const shop = await getShopBySlug(db, parsed.data.shopSlug);
-  if (!shop) return NextResponse.json({ error: "shop_not_found" }, { status: 404 });
+  const tenant = await requireDemoTenant(request, () => getShopBySlug(db, parsed.data.shopSlug));
+  if (!tenant.ok) return tenant.response;
+  const { shop } = tenant;
 
   const [person] = await db
     .select({ id: people.id })

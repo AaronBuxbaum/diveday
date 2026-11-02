@@ -33,8 +33,9 @@ async function mintedShop(request: Request) {
 export async function POST(request: Request) {
   if (!e2eTestRouteAuthorized(request)) return testRouteRefused();
   const found = await mintedShop(request);
-  if (!found) return NextResponse.json({ error: "invalid_body" }, { status: 400 });
-  // Only a demo tenant is armed: a real shop gets the one refusal.
+  // Only a demo tenant is armed. No slug, the canonical shop, a missing shop
+  // and a real one all get the one refusal, so none can be told apart.
+  if (!found) return testRouteRefused();
   const tenant = await requireDemoTenant(request, async () => found.shop);
   if (!tenant.ok) return tenant.response;
   await found.db.update(shops).set({ isDemo: false }).where(eq(shops.id, tenant.shop.id));
@@ -85,9 +86,7 @@ export async function DELETE(request: Request) {
   const found = await mintedShop(request);
   // Only a shop this server armed goes back to being a demo: anything else
   // (a real tenant, a shop disarmed already) keeps its flag.
-  if (!found || !e2eClaudeFixtureProvider(found.shop.id)) {
-    return NextResponse.json({ error: "invalid_body" }, { status: 400 });
-  }
+  if (!found || !e2eClaudeFixtureProvider(found.shop.id)) return testRouteRefused();
   armClaudeFixtures(found.shop.id, false);
   await found.db.update(shops).set({ isDemo: true }).where(eq(shops.id, found.shop.id));
   return NextResponse.json({ ok: true });

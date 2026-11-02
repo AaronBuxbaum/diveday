@@ -4,7 +4,7 @@ import { getDb } from "@/db/client";
 import { askAnytime } from "@/db/interests";
 import { getShopBySlug } from "@/db/shops";
 import { diveDeclarationSchema, toDiveDeclaration } from "@/lib/dive-declaration";
-import { e2eTestRouteAuthorized, testRouteRefused } from "@/lib/e2e-test-routes";
+import { e2eTestRouteAuthorized, requireDemoTenant, testRouteRefused } from "@/lib/e2e-test-routes";
 
 /**
  * Puts one joiner on a shop's last-minute list through the same `askAnytime`
@@ -34,8 +34,9 @@ export async function POST(request: Request) {
   if (!declaration.success) return NextResponse.json({ error: "invalid_body" }, { status: 400 });
 
   const db = await getDb();
-  const shop = await getShopBySlug(db, parsed.data.shopSlug);
-  if (!shop) return NextResponse.json({ error: "shop_not_found" }, { status: 404 });
+  const tenant = await requireDemoTenant(request, () => getShopBySlug(db, parsed.data.shopSlug));
+  if (!tenant.ok) return tenant.response;
+  const { shop } = tenant;
 
   await askAnytime(db, {
     shopId: shop.id,

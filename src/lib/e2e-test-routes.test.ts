@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { armClaudeFixtures } from "./assists/e2e-fixtures";
 import { e2eTestRouteAuthorized, requireDemoTenant, testRouteRefused } from "./e2e-test-routes";
 
 function req(authorization?: string): Request {
@@ -121,8 +122,41 @@ describe("requireDemoTenant (issue #2751)", () => {
   it("refuses a demo shop when the gate closes, however the shop reads", async () => {
     vi.stubEnv("DATABASE_URL", "");
     vi.stubEnv("DIVEDAY_E2E_SECRET", "");
-    const tenant = await requireDemoTenant(req("Bearer "), async () => ({ isDemo: true }));
+    const tenant = await requireDemoTenant(req("Bearer "), async () => ({
+      id: "shop-1",
+      isDemo: true,
+    }));
     expect(tenant.ok).toBe(false);
+  });
+
+  it("lets through only the shop this server armed for Claude fixtures, never another real one", async () => {
+    harness();
+    armClaudeFixtures("armed-shop", true);
+    try {
+      const armed = { id: "armed-shop", isDemo: false };
+      expect(await requireDemoTenant(req("Bearer s3cr3t"), async () => armed)).toEqual({
+        ok: true,
+        shop: armed,
+      });
+      const other = await requireDemoTenant(req("Bearer s3cr3t"), async () => ({
+        id: "real-shop",
+        isDemo: false,
+      }));
+      expect(other.ok).toBe(false);
+      vi.stubEnv("DIVEDAY_E2E_SECRET", "");
+      expect((await requireDemoTenant(req("Bearer s3cr3t"), async () => armed)).ok).toBe(false);
+    } finally {
+      armClaudeFixtures("armed-shop", false);
+    }
+    harness();
+    expect(
+      (
+        await requireDemoTenant(req("Bearer s3cr3t"), async () => ({
+          id: "armed-shop",
+          isDemo: false,
+        }))
+      ).ok,
+    ).toBe(false);
   });
 
   it("is the same refusal the harness gate answers with", async () => {

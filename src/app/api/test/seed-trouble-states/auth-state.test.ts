@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
 import { accountSignInChallenges, people, shops, userAccounts } from "@/db/schema";
 import { nowMs } from "@/lib/clock";
@@ -50,7 +50,13 @@ async function fixture() {
   const request = (slug = shop.slug, value = handle) =>
     new Request(
       `https://dive.day/api/test/seed-trouble-states?authChallengeState=expired&shop=${slug}`,
-      { headers: { cookie: `${cookie.name}=${value}` } },
+      {
+        headers: {
+          cookie: `${cookie.name}=${value}`,
+          // `requireDemoTenant` asks the harness gate again.
+          authorization: "Bearer auth-state-secret",
+        },
+      },
     );
   const row = async () =>
     (
@@ -63,6 +69,14 @@ async function fixture() {
 }
 
 describe("private pending challenge expiry fixture", () => {
+  beforeEach(() => {
+    vi.stubEnv("DATABASE_URL", "");
+    vi.stubEnv("DIVEDAY_E2E_SECRET", "auth-state-secret");
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   it("expires only the presented private shop's pending handle", async () => {
     const h = await fixture();
     expect((await authStateResponse(h.request(), ctx.db))?.status).toBe(200);

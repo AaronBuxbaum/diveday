@@ -8,7 +8,7 @@ import { getShopBySlug } from "@/db/shops";
 import { liveTrip } from "@/db/trips";
 import { handoffHref } from "@/lib/booking-handoff";
 import { nowDate } from "@/lib/clock";
-import { e2eTestRouteAuthorized, testRouteRefused } from "@/lib/e2e-test-routes";
+import { e2eTestRouteAuthorized, requireDemoTenant, testRouteRefused } from "@/lib/e2e-test-routes";
 import { publicTripPath } from "@/lib/public-routes";
 
 /**
@@ -37,8 +37,9 @@ export async function POST(request: Request) {
   if (!parsed.success) return NextResponse.json({ error: "invalid_body" }, { status: 400 });
 
   const db = await getDb();
-  const shop = await getShopBySlug(db, parsed.data.shopSlug);
-  if (!shop) return NextResponse.json({ error: "shop_not_found" }, { status: 404 });
+  const tenant = await requireDemoTenant(request, () => getShopBySlug(db, parsed.data.shopSlug));
+  if (!tenant.ok) return tenant.response;
+  const { shop } = tenant;
 
   const [own] = await db
     .select({ bookingId: bookings.id, tripId: bookings.tripId })

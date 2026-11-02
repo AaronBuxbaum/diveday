@@ -1,4 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
+import { claudeFixturesArmed } from "./assists/e2e-fixtures";
 
 /**
  * Shared guard for every `/api/test/*` route (`reset`, `seed-account-token`,
@@ -60,16 +61,24 @@ export type DemoTenant<Shop> = { ok: true; shop: Shop } | { ok: false; response:
  * missing shop and any shop whose `isDemo` is not exactly `true`, with
  * `testRouteRefused`.
  *
+ * One exception, and it is still a demo tenant: a shop this server armed
+ * through `/api/test/claude-fixtures`. Arming takes a demo shop and clears its
+ * flag so the assists light up (`claudeFixturesArmed`), and a spec drives that
+ * shop's inbox while it is armed; disarming sets the flag back.
+ *
  * `findShop` is the caller's lookup (`getShopBySlug` on its own database),
  * because `src/lib` takes only types from `src/db`. Sign-in's demo bypass
  * (`demoBypassAccepted`) keeps its own gate and never reads this one.
  */
-export async function requireDemoTenant<Shop extends { isDemo: boolean }>(
+export async function requireDemoTenant<Shop extends { id: string; isDemo: boolean }>(
   request: Request,
   findShop: () => Promise<Shop | null | undefined>,
 ): Promise<DemoTenant<Shop>> {
   if (!e2eTestRouteAuthorized(request)) return { ok: false, response: testRouteRefused() };
   const shop = await findShop();
-  if (shop?.isDemo !== true) return { ok: false, response: testRouteRefused() };
+  if (!shop) return { ok: false, response: testRouteRefused() };
+  if (shop.isDemo !== true && !claudeFixturesArmed(shop.id)) {
+    return { ok: false, response: testRouteRefused() };
+  }
   return { ok: true, shop };
 }

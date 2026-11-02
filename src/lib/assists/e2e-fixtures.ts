@@ -100,6 +100,15 @@ export function armClaudeFixtures(shopId: string, armed: boolean): void {
   else armedShops().delete(shopId);
 }
 
+/**
+ * Whether this server armed this shop through `/api/test/claude-fixtures`.
+ * Only a demo shop is ever armed, so `requireDemoTenant` still treats it as
+ * one while its flag is cleared.
+ */
+export function claudeFixturesArmed(shopId: string): boolean {
+  return armedShops().has(shopId);
+}
+
 /** The fixture provider for an armed shop in the fleet, otherwise null. */
 export function e2eClaudeFixtureProvider(
   shopId: string,

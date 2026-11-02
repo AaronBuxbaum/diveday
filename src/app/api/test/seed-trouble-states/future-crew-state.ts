@@ -8,16 +8,17 @@ import { getShopBySlug } from "@/db/shops";
 import { createTrip } from "@/db/trips";
 import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
 import { HOUR_MS, nowDate } from "@/lib/clock";
+import { requireDemoTenant, testRouteRefused } from "@/lib/e2e-test-routes";
 
 /** A fictional legacy rating, only for a private demo behind the test-route gate. */
 export async function futureCrewStateResponse(request: Request, db: AppDb) {
   const params = new URL(request.url).searchParams;
   if (params.get("futureCrew") !== "1") return null;
   const slug = params.get("shop");
-  if (!slug || slug === DEMO_SHOP_SLUG)
-    return NextResponse.json({ error: "not_available" }, { status: 404 });
-  const shop = await getShopBySlug(db, slug);
-  if (!shop?.isDemo) return NextResponse.json({ error: "not_available" }, { status: 404 });
+  if (!slug || slug === DEMO_SHOP_SLUG) return testRouteRefused();
+  const tenant = await requireDemoTenant(request, () => getShopBySlug(db, slug));
+  if (!tenant.ok) return tenant.response;
+  const { shop } = tenant;
   const catalog = await db.select().from(courses).where(eq(courses.shopId, shop.id));
   const course = catalog.find(
     (row) =>

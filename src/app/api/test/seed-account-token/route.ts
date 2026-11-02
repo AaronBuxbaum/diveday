@@ -38,7 +38,8 @@ export async function POST(request: Request) {
     .from(userAccounts)
     .where(eq(userAccounts.email, parsed.data.email.toLowerCase()))
     .limit(1);
-  if (!account) return NextResponse.json({ error: "account_not_found" }, { status: 404 });
+  // The one refusal (issue #2751): no separate "no such account" answer.
+  if (!account) return testRouteRefused();
 
   const issued = await issueAccountToken(db, {
     userAccountId: account.id,
