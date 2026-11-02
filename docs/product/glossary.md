@@ -177,6 +177,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Close-out
 - Coming as
 - Connected Stripe account
+- Connection
 - Counter hand-off
 - Counter payment hold
 - Counter self-registration
