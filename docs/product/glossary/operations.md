@@ -1757,8 +1757,10 @@
   confirmation or a staff-issued waiver link. Delivery is helpful but never changes the booking or
   waiver evidence; a delivery failure must not undo the underlying operation.
 - **Notification delivery status** — the latest known send result for one booking and notification
-  purpose. It lets staff see an unresolved email issue; it is not proof of inbox delivery or a full
-  provider event history.
+  purpose: the newest of its `notification_deliveries` rows, one per send (issue #2728). A
+  *once-only kind* (`ONCE_ONLY_DELIVERY_KINDS`: the confirmation, both reminders, the recap) keeps
+  one row per booking that a retry updates. It lets staff see an unresolved email issue; it is not
+  proof of inbox delivery or a full provider event history.
 - **DAN** — Divers Alert Network; dive accident insurance divers may carry. Captured as the
   free-text `people.dive_insurance` field (DAN or any provider) and shown on the diver profile — a
   safety detail for the crew, never a boarding gate.

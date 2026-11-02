@@ -1,0 +1,243 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "d5ffaed8-ed8f-4648-b646-0e878d4d73b5",
+  "prevIds": [
+    "a8b330a3-b6dd-491c-970e-9fba61ba3242"
+  ],
+  "footprints": [
+    {
+      "statementType": "drop_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "notification_delivery_attempts"
+      ],
+      "writes": [
+        "s|tbl|public.notification_delivery_attempts",
+        "n|tbl|public.notification_delivery_attempts",
+        "e|tbl|public.notification_delivery_attempts",
+        "n|rel|public.notification_delivery_attempts",
+        "n|type|public.notification_delivery_attempts"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "drop_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "notification_deliveries",
+        "notification_deliveries_booking_kind_unique"
+      ],
+      "writes": [
+        "s|idx|public.notification_deliveries_booking_kind_unique",
+        "n|idx|public.notification_deliveries_booking_kind_unique",
+        "e|idx|public.notification_deliveries_booking_kind_unique",
+        "n|rel|public.notification_deliveries_booking_kind_unique"
+      ],
+      "reads": [
+        "n|tbl|public.notification_deliveries",
+        "n|sch|public",
+        "e|col|public.notification_deliveries.booking_id",
+        "e|col|public.notification_deliveries.kind"
+      ],
+      "sharedWrites": [
+        "e|uniqueness|public.notification_deliveries.booking_id.kind"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "notification_deliveries",
+        "notification_deliveries_once_only_unique"
+      ],
+      "writes": [
+        "s|idx|public.notification_deliveries_once_only_unique",
+        "n|idx|public.notification_deliveries_once_only_unique",
+        "e|idx|public.notification_deliveries_once_only_unique",
+        "n|rel|public.notification_deliveries_once_only_unique"
+      ],
+      "reads": [
+        "n|tbl|public.notification_deliveries",
+        "n|sch|public",
+        "n|col|public.notification_deliveries.booking_id",
+        "n|col|public.notification_deliveries.kind"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "notification_deliveries",
+        "notification_deliveries_booking_kind_attempted_idx"
+      ],
+      "writes": [
+        "s|idx|public.notification_deliveries_booking_kind_attempted_idx",
+        "n|idx|public.notification_deliveries_booking_kind_attempted_idx",
+        "e|idx|public.notification_deliveries_booking_kind_attempted_idx",
+        "n|rel|public.notification_deliveries_booking_kind_attempted_idx"
+      ],
+      "reads": [
+        "n|tbl|public.notification_deliveries",
+        "n|sch|public",
+        "n|col|public.notification_deliveries.booking_id",
+        "n|col|public.notification_deliveries.kind",
+        "n|col|public.notification_deliveries.attempted_at"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "notification_deliveries",
+        "name": "notification_deliveries_once_only_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "booking_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "kind",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": "\"kind\" in ('booking_confirmation', 'trip_reminder_7d', 'trip_reminder_24h', 'trip_recap')",
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "notification_deliveries",
+        "name": "notification_deliveries_booking_kind_attempted_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "booking_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "kind",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "attempted_at",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "drop",
+      "key": "tables\u0000[\"public\",\"notification_delivery_attempts\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"notification_delivery_attempts\",\"id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"notification_delivery_attempts\",\"shop_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"notification_delivery_attempts\",\"booking_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"notification_delivery_attempts\",\"kind\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"notification_delivery_attempts\",\"status\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"notification_delivery_attempts\",\"provider_message_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"notification_delivery_attempts\",\"send_http_status\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"notification_delivery_attempts\",\"send_error_code\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"notification_delivery_attempts\",\"send_error\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"notification_delivery_attempts\",\"is_retry\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"notification_delivery_attempts\",\"attempted_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"notification_delivery_attempts\",\"created_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"notification_deliveries_booking_kind_unique\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"notification_delivery_attempts_booking_kind_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"notification_delivery_attempts_shop_attempted_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"notification_delivery_attempts\",\"notification_delivery_attempts_shop_id_shops_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"notification_delivery_attempts\",\"notification_delivery_attempts_booking_id_bookings_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "pks\u0000[\"public\",\"notification_delivery_attempts\",\"notification_delivery_attempts_pkey\"]"
+    }
+  ]
+}

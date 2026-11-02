@@ -20,10 +20,10 @@ export type MovePreflightFacts = {
   /**
    * Bookings that have already been sent a message stating this departure's
    * date — its confirmation, or one of the two pre-trip reminders. Those divers
-   * have the old date in their inbox and the move sends nothing:
-   * `notification_deliveries` is unique on (booking, kind), so a confirmation
-   * or a cadence already spent is never re-sent for the new one. The list of
-   * which messages state a date is in `src/db/move-preflight.ts`.
+   * have the old date in their inbox, and a confirmation is a once-only kind
+   * (`ONCE_ONLY_DELIVERY_KINDS`) that is never re-sent for the new one; the
+   * move's reschedule notice is what tells them. The list of which messages
+   * state a date is in `src/db/move-preflight.ts`.
    */
   toldSeats: number;
   /**

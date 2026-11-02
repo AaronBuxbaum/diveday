@@ -34,7 +34,6 @@ export const EXCLUDED_TABLES = [
   // teams a shop would carry to another system are already exported as
   // buddy_teams.csv; this is the history of how they got that way.
   "buddy_team_events",
-  "notification_delivery_attempts", // per-attempt retry mechanics behind notification_deliveries.csv, which carries the outcome
   // The inbox (ADR 20260907-two-way-inbox). Correspondence *is* a shop record,
   // and these two are out for a narrower reason than the rows around them: the
   // bundle has no file for a conversation yet, and a message a diver sent is
@@ -47,8 +46,8 @@ export const EXCLUDED_TABLES = [
   // Which way each waiver link was handed over and what happened on that
   // channel. The outcome another system could act on is already on
   // waiver_records.csv (`delivery_status` and the provider columns beside it);
-  // these rows are the per-channel mechanics behind it, so they are out for
-  // exactly the reason notification_delivery_attempts is.
+  // these rows are the per-channel mechanics behind it, so they are out as
+  // plumbing, not a shop record.
   "waiver_deliveries",
   "notification_send_queue", // operational retry state, not shop records
   "email_bounces", // DiveDay's own record of mail SES bounced, for debugging delivery; not a shop record
@@ -62,7 +61,7 @@ export const EXCLUDED_TABLES = [
   "lost_items",
   // What the bench told a customer and how it went (ADR
   // 20261008-work-order-follow-up): a kind, a channel and a delivery status,
-  // the same plumbing notification_delivery_attempts is. The ticket and the
+  // the same plumbing the send queue is. The ticket and the
   // piece it was about export in their own files.
   "customer_gear_notices",
   // Per-device Web Push credentials (ADR 20260804-manifest-web-push). Excluded

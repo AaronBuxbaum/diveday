@@ -11,7 +11,6 @@ import {
   executedDives,
   interests,
   notificationDeliveries,
-  notificationDeliveryAttempts,
   people,
   personRoles,
   preDepartureCheckEvents,
@@ -697,9 +696,6 @@ export async function seedMoreTrips(
     }));
     if (recapDeliveries.length > 0) {
       await db.insert(notificationDeliveries).values(recapDeliveries);
-      await db
-        .insert(notificationDeliveryAttempts)
-        .values(recapDeliveries.map((delivery) => ({ ...delivery, isRetry: false })));
     }
   }
 

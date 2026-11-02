@@ -13,6 +13,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import type { HeldSendPayload } from "@/lib/held-sends";
+import { ONCE_ONLY_DELIVERY_KINDS_PREDICATE } from "@/lib/once-only-delivery-kinds";
 import { bookings } from "./bookings";
 import { appNowTimestamp } from "./columns";
 import { people, shops } from "./core";
@@ -126,7 +127,7 @@ export const shopShoreAlertTokens = pgTable(
   ],
 );
 
-/** Latest outbound-email state per booking and notification purpose. */
+/** Which message a `notification_deliveries` row records. */
 export const notificationKind = pgEnum("notification_kind", [
   "booking_confirmation",
   "waiver_request",
@@ -199,8 +200,11 @@ export const notificationProviderStatus = pgEnum("notification_provider_status",
 ]);
 
 /**
- * A current operational status, not an append-only provider log. One row per
- * booking/purpose means a newly emailed waiver link replaces its prior state.
+ * One row per send the shop made about a booking (issue #2728): the attempt
+ * trail is the rows, and "the latest status" of a booking's message is its
+ * newest row for that kind (`latestDeliveryOnly`, `src/db/latest-delivery.ts`).
+ * The once-only kinds (`ONCE_ONLY_DELIVERY_KINDS`) are the exception: a partial
+ * unique index keeps each to one row per booking, and a retry updates it.
  */
 export const notificationDeliveries = pgTable(
   "notification_deliveries",
@@ -215,7 +219,7 @@ export const notificationDeliveries = pgTable(
     kind: notificationKind("kind").notNull(),
     status: notificationDeliveryStatus("status").notNull(),
     providerMessageId: text("provider_message_id"),
-    /** Provider-reported outcome; reset to null whenever a fresh send replaces the row. */
+    /** Provider-reported outcome; null on a fresh send until the provider reports. */
     providerStatus: notificationProviderStatus("provider_status"),
     providerStatusAt: timestamp("provider_status_at", { withTimezone: true }),
     /** The provider's own explanation for a bounce or failure, shown to staff verbatim. */
@@ -228,7 +232,15 @@ export const notificationDeliveries = pgTable(
     createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
-    uniqueIndex("notification_deliveries_booking_kind_unique").on(table.bookingId, table.kind),
+    uniqueIndex("notification_deliveries_once_only_unique")
+      .on(table.bookingId, table.kind)
+      .where(sql.raw(ONCE_ONLY_DELIVERY_KINDS_PREDICATE)),
+    // Every "latest row for this booking and kind" read walks this.
+    index("notification_deliveries_booking_kind_attempted_idx").on(
+      table.bookingId,
+      table.kind,
+      table.attemptedAt,
+    ),
     index("notification_deliveries_shop_status_attempted_idx").on(
       table.shopId,
       table.status,
@@ -236,38 +248,6 @@ export const notificationDeliveries = pgTable(
     ),
     // The webhook's only entry point: an event names the provider's message id.
     index("notification_deliveries_provider_message_idx").on(table.providerMessageId),
-  ],
-);
-
-/**
- * Append-only history of every send attempt — the durable record behind the
- * denormalized latest state in notification_deliveries. A retry adds a row
- * here; nothing is ever updated, so the full delivery trail survives.
- */
-export const notificationDeliveryAttempts = pgTable(
-  "notification_delivery_attempts",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    shopId: uuid("shop_id")
-      .notNull()
-      .references(() => shops.id),
-    bookingId: uuid("booking_id")
-      .notNull()
-      .references(() => bookings.id),
-    kind: notificationKind("kind").notNull(),
-    status: notificationDeliveryStatus("status").notNull(),
-    providerMessageId: text("provider_message_id"),
-    sendHttpStatus: integer("send_http_status"),
-    sendErrorCode: text("send_error_code"),
-    sendError: text("send_error"),
-    /** True when a staff member re-triggered the send from the dashboard. */
-    isRetry: boolean("is_retry").notNull().default(false),
-    attemptedAt: timestamp("attempted_at", { withTimezone: true }).notNull(),
-    createdAt: appNowTimestamp("created_at").notNull(),
-  },
-  (table) => [
-    index("notification_delivery_attempts_booking_kind_idx").on(table.bookingId, table.kind),
-    index("notification_delivery_attempts_shop_attempted_idx").on(table.shopId, table.attemptedAt),
   ],
 );
 

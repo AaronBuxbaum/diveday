@@ -72,3 +72,8 @@ the behaviour the record-level column already had.
   read at all — collapse it into `waiver_deliveries` and drop the columns. The trigger is a second
   reader wanting "latest attempt regardless of channel"; today there is exactly one, and the cost
   of leaving it is five columns nothing else writes.
+
+## Amendment 2026-11-02: the split it cites is gone (issue #2728)
+
+`notification_delivery_attempts` is dropped; `notification_deliveries` is now one row per send, the
+latest read as the newest row per booking and kind. The waiver tables here are unchanged.

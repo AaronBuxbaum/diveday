@@ -232,3 +232,8 @@ Counts come from `DELETE ... RETURNING`, so overlapping sweeps cannot both count
 row. A full candidate batch remains capped even when fewer candidates are deleted: candidates
 protected or changed since selection do not prove that eligible rows behind the limit are drained.
 The existing admission budget, checkpoint commit boundary and retention windows stay unchanged.
+
+## Amendment 2026-11-02: `notification_delivery_attempts` is gone (issue #2728)
+
+The table is dropped; `notification_deliveries` holds one row per send and keeps the same 400-day
+window, measured on `attempted_at`, for the reason its row above gives.

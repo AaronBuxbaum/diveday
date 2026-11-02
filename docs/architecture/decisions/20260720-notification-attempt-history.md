@@ -44,3 +44,13 @@ log-inspection step, while the dashboard's unresolved-issue query stays a single
 attempts; if it ever needs bounding, attempts can be pruned or archived by age since the latest
 state does not depend on retaining them. Revisit if automatic retries, provider delivery receipts,
 or multi-channel history arrive — those would likely promote the trail into a real outbox.
+
+## Amendment 2026-11-02: the trail is the delivery rows (issue #2728)
+
+`notification_delivery_attempts` is dropped. `notification_deliveries` now holds one row per send,
+so the attempt trail is its rows and the latest status is the newest row per booking and kind
+(`latestDeliveryOnly`, `src/db/latest-delivery.ts`). The once-only kinds
+(`ONCE_ONLY_DELIVERY_KINDS` in `src/lib/once-only-delivery-kinds.ts`: the confirmation, both
+reminders, the recap) keep one row per booking under the partial unique index
+`notification_deliveries_once_only_unique`, and a retry, including a staff
+`retryBookingConfirmation`, updates that row in place. The `is_retry` flag went with the table.

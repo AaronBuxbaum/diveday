@@ -240,3 +240,8 @@ Stated plainly, because a compliance mechanism that overstates itself is worse t
 - If Stripe ever exposes an API that clears a finalized invoice's identity snapshot, the
   `stripe_invoice_snapshot` rows become retryable the same way the customer rows already are — the
   obligation is already recorded; only who performs it would change.
+
+## Amendment 2026-11-02: one delivery table (issue #2728)
+
+`notification_delivery_attempts` is dropped; the `wamid.` rewrite runs over `notification_deliveries`
+alone, which now holds every send's row.

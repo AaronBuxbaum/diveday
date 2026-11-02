@@ -115,7 +115,6 @@ import {
   lostItems,
   nitroxCertifications,
   notificationDeliveries,
-  notificationDeliveryAttempts,
   notificationSendQueue,
   orderLineItems,
   orders,
@@ -1387,7 +1386,8 @@ async function scrubBookingRows(
         ),
       );
 
-    // Provider bounce text quotes the address it failed to reach.
+    // Provider bounce text quotes the address it failed to reach. Every send
+    // is its own row (issue #2728), so this scrubs the whole trail.
     await tx
       .update(notificationDeliveries)
       .set({ providerDetail: null, sendError: null })
@@ -1395,23 +1395,6 @@ async function scrubBookingRows(
         and(
           eq(notificationDeliveries.shopId, shopId),
           inArray(notificationDeliveries.bookingId, bookingIds),
-        ),
-      );
-
-    // The append-only twin of the row above. `sendNotification`
-    // (src/db/notifications.ts) writes both from the same `delivery.detail` in
-    // the same call, so this `send_error` carries the same quoted address —
-    // scrubbing only the denormalized latest state would leave the address
-    // sitting in the history table behind it. The provider's own status code
-    // (`send_error_code`) is a code, not prose, and stays, exactly as it does
-    // on the delivery row.
-    await tx
-      .update(notificationDeliveryAttempts)
-      .set({ sendError: null })
-      .where(
-        and(
-          eq(notificationDeliveryAttempts.shopId, shopId),
-          inArray(notificationDeliveryAttempts.bookingId, bookingIds),
         ),
       );
 
@@ -2293,15 +2276,6 @@ async function scrubPiiBlob(
       )
       .returning({ id: notificationDeliveries.id });
     logFuzzyMatch(ctx, "delivery_guardian_address", deliveries.length);
-    await tx
-      .update(notificationDeliveryAttempts)
-      .set({ sendError: null })
-      .where(
-        and(
-          eq(notificationDeliveryAttempts.shopId, shopId),
-          quotes(notificationDeliveryAttempts.sendError),
-        ),
-      );
   }
   await tx
     .update(emailBounces)
@@ -2659,16 +2633,6 @@ async function forgetWhatsAppMessageIds(
           eq(notificationDeliveries.shopId, shopId),
           inArray(notificationDeliveries.bookingId, bookingIds),
           unforgotten(notificationDeliveries.providerMessageId),
-        ),
-      );
-    await tx
-      .update(notificationDeliveryAttempts)
-      .set({ providerMessageId: forgotten(notificationDeliveryAttempts.providerMessageId) })
-      .where(
-        and(
-          eq(notificationDeliveryAttempts.shopId, shopId),
-          inArray(notificationDeliveryAttempts.bookingId, bookingIds),
-          unforgotten(notificationDeliveryAttempts.providerMessageId),
         ),
       );
   }

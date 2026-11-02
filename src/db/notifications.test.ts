@@ -1,8 +1,9 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { nowMs } from "@/lib/clock";
 import type { Notification, NotificationDelivery, NotificationProvider } from "@/lib/notifications";
+import { advanceClock } from "@/test/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { departureInterest } from "@/test/interests";
 import { createBooking } from "./bookings";
@@ -20,7 +21,6 @@ import {
   bookings,
   interests,
   notificationDeliveries,
-  notificationDeliveryAttempts,
   notificationSendQueue,
   people,
   shops,
@@ -313,6 +313,7 @@ describe("notification delivery status", () => {
       kind: "waiver_request",
       delivery: { status: "not_configured" },
     });
+    advanceClock();
     await recordNotificationDelivery(db, {
       shopId: shop.id,
       bookingId: booking.bookingId,
@@ -336,7 +337,7 @@ describe("notification delivery status", () => {
     ).resolves.toBeNull();
   });
 
-  it("appends an append-only attempt trail and retries a confirmation", async () => {
+  it("retries a confirmation by updating its one row, a once-only kind (issue #2728)", async () => {
     const { db, shop, booking } = await seededBooking();
     await recordNotificationDelivery(db, {
       shopId: shop.id,
@@ -345,31 +346,29 @@ describe("notification delivery status", () => {
       delivery: { status: "failed" },
     });
 
-    // No email provider is configured in tests, so a retry attempt is recorded
-    // as not_configured — but it is still a durable, flagged retry attempt.
+    // No email provider is configured in tests, so the retry is recorded as
+    // not_configured, over the failure rather than beside it.
+    advanceClock();
     const delivery = await retryBookingConfirmation(db, shop.id, booking.bookingId);
     expect(delivery?.status).toBe("not_configured");
 
-    // Read the trail straight off the table, oldest first.
-    const attempts = await db
+    const rows = await db
       .select()
-      .from(notificationDeliveryAttempts)
+      .from(notificationDeliveries)
       .where(
         and(
-          eq(notificationDeliveryAttempts.shopId, shop.id),
-          eq(notificationDeliveryAttempts.bookingId, booking.bookingId),
-          eq(notificationDeliveryAttempts.kind, "booking_confirmation"),
+          eq(notificationDeliveries.shopId, shop.id),
+          eq(notificationDeliveries.bookingId, booking.bookingId),
+          eq(notificationDeliveries.kind, "booking_confirmation"),
         ),
-      )
-      .orderBy(asc(notificationDeliveryAttempts.attemptedAt));
-    expect(attempts).toHaveLength(2);
-    expect(attempts[0]).toMatchObject({ status: "failed", isRetry: false });
-    expect(attempts[1]).toMatchObject({ status: "not_configured", isRetry: true });
+      );
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ status: "not_configured" });
 
-    // The dashboard issue reflects the latest status and the attempt count.
     const issues = await listNotificationDeliveryIssues(db, shop.id);
-    const issue = issues.find((i) => i.booking.id === booking.bookingId);
-    expect(issue?.attempts).toBe(2);
+    const issue = issues.filter((i) => i.booking.id === booking.bookingId);
+    expect(issue).toHaveLength(1);
+    expect(issue[0]?.delivery.status).toBe("not_configured");
   });
 });
 
@@ -1819,7 +1818,6 @@ describe("provider-reported delivery events", () => {
       bookingId: booking.bookingId,
       kind: "booking_confirmation",
       delivery: { status: "sent", providerMessageId: "a-fresh-message-id" },
-      isRetry: true,
     });
 
     // The replacement message has its own provider story; the previous

@@ -1,7 +1,6 @@
 import {
   and,
   asc,
-  count,
   desc,
   eq,
   gte,
@@ -49,6 +48,10 @@ import { notificationTripTitle } from "@/lib/notifications/kinds";
 import { reviveDates } from "@/lib/notifications/revive-dates";
 import { currentSendActor, type SendActor, sentByFor } from "@/lib/notifications/send-actor";
 import { shopVoiceOf } from "@/lib/notifications/shop-voice";
+import {
+  isOnceOnlyDeliveryKind,
+  ONCE_ONLY_DELIVERY_KINDS_PREDICATE,
+} from "@/lib/once-only-delivery-kinds";
 import { openSecret, type SecretKey, sealSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
 import { hasSailed } from "@/lib/trips";
 import { lockBoardingCertificationEvidence } from "./boarding-certification-snapshot";
@@ -69,6 +72,7 @@ import {
   rememberFlySafeTold,
 } from "./fly-safe-correction";
 import { readReminderFlySafeHours } from "./fly-safe-plan";
+import { latestDeliveryOnly } from "./latest-delivery";
 import { isTransactionExecutor } from "./query-helpers";
 import { notificationHeldForRehearsal, REHEARSAL_HELD_DELIVERY } from "./rehearsals";
 import {
@@ -77,7 +81,6 @@ import {
   courses,
   interests,
   notificationDeliveries,
-  notificationDeliveryAttempts,
   notificationSendQueue,
   people,
   shops,
@@ -1327,7 +1330,6 @@ async function dispatchQueuedRetry(
           bookingId: tracked.bookingId,
           kind: tracked.kind,
           delivery,
-          isRetry: true,
         }),
     );
     return { delivery, suppressed, trackingSuppressed: recorded === null, trackingRecorded };
@@ -1886,7 +1888,6 @@ type RecordNotificationDeliveryInput = {
   bookingId: string;
   kind: TrackedNotificationKind;
   delivery: NotificationDelivery;
-  isRetry?: boolean;
 };
 
 async function recordIndependentWaiverDelivery(
@@ -1920,9 +1921,11 @@ async function recordIndependentWaiverDelivery(
 }
 
 /**
- * Keep the last delivery result for each booking and purpose, and append the
- * attempt to the durable history. The booking check makes the persistence seam
- * tenant-safe even when invoked outside a route action.
+ * Record one send about a booking (issue #2728): every send is its own
+ * `notification_deliveries` row, except a once-only kind
+ * (`ONCE_ONLY_DELIVERY_KINDS`), whose one row per booking a retry updates in
+ * place. The booking check makes the persistence seam tenant-safe even when
+ * invoked outside a route action.
  */
 export async function recordNotificationDelivery(
   db: DbExecutor,
@@ -1935,51 +1938,35 @@ export async function recordNotificationDelivery(
     .limit(1);
   if (!booking) return null;
 
-  const attemptedAt = nowDate();
-  const providerMessageId =
-    input.delivery.status === "sent" ? input.delivery.providerMessageId : null;
-  const sendHttpStatus =
-    input.delivery.status === "failed" ? (input.delivery.httpStatus ?? null) : null;
-  const sendErrorCode =
-    input.delivery.status === "failed" ? (input.delivery.errorCode ?? null) : null;
-  const sendError = input.delivery.status === "failed" ? (input.delivery.detail ?? null) : null;
-  const latest = {
+  const row = {
     shopId: input.shopId,
     bookingId: booking.id,
     kind: input.kind,
     status: input.delivery.status,
-    providerMessageId,
+    providerMessageId: input.delivery.status === "sent" ? input.delivery.providerMessageId : null,
     // A fresh send starts a fresh provider story: the previous message's
     // bounce must not be shown against the replacement we just sent.
     providerStatus: null,
     providerStatusAt: null,
     providerDetail: null,
-    sendHttpStatus,
-    sendErrorCode,
-    sendError,
-    attemptedAt,
+    sendHttpStatus: input.delivery.status === "failed" ? (input.delivery.httpStatus ?? null) : null,
+    sendErrorCode: input.delivery.status === "failed" ? (input.delivery.errorCode ?? null) : null,
+    sendError: input.delivery.status === "failed" ? (input.delivery.detail ?? null) : null,
+    attemptedAt: nowDate(),
   };
+  if (!isOnceOnlyDeliveryKind(input.kind)) {
+    const [record] = await db.insert(notificationDeliveries).values(row).returning();
+    return record ?? null;
+  }
   const [record] = await db
     .insert(notificationDeliveries)
-    .values(latest)
+    .values(row)
     .onConflictDoUpdate({
       target: [notificationDeliveries.bookingId, notificationDeliveries.kind],
-      set: latest,
+      targetWhere: sql.raw(ONCE_ONLY_DELIVERY_KINDS_PREDICATE),
+      set: row,
     })
     .returning();
-  // Append-only history: never fails the caller, but records every attempt.
-  await db.insert(notificationDeliveryAttempts).values({
-    shopId: input.shopId,
-    bookingId: booking.id,
-    kind: input.kind,
-    status: input.delivery.status,
-    providerMessageId,
-    sendHttpStatus,
-    sendErrorCode,
-    sendError,
-    isRetry: input.isRetry ?? false,
-    attemptedAt,
-  });
   return record ?? null;
 }
 
@@ -1992,7 +1979,6 @@ export async function sendAndRecordNotification(
   db: DbExecutor,
   input: Notification,
   options: {
-    isRetry?: boolean;
     provider?: NotificationProvider;
     signal?: AbortSignal;
     retryPolicy?: NotificationRetryPolicy;
@@ -2016,7 +2002,6 @@ export async function sendAndRecordNotification(
         bookingId: tracked.bookingId,
         kind: tracked.kind,
         delivery,
-        isRetry: options.isRetry,
       });
     } catch (error) {
       log("notification.delivery_status_record_failed", "error", {
@@ -2042,7 +2027,7 @@ export async function retryBookingConfirmation(
   /** The live waiver link to carry as the confirmation's first step (`resendConfirmationWithWaiver`). */
   waiver?: { url: string; expiresAt: Date; personId: string; tripId: string },
 ) {
-  return sendStoredBookingConfirmation(db, shopId, bookingId, { isRetry: true, provider, waiver });
+  return sendStoredBookingConfirmation(db, shopId, bookingId, { provider, waiver });
 }
 
 /**
@@ -2057,7 +2042,7 @@ export async function sendClaimedSeatConfirmation(
   bookingId: string,
   provider?: NotificationProvider,
 ) {
-  return sendStoredBookingConfirmation(db, shopId, bookingId, { isRetry: false, provider });
+  return sendStoredBookingConfirmation(db, shopId, bookingId, { provider });
 }
 
 /**
@@ -2074,7 +2059,6 @@ export async function sendCourseSeatConfirmation(
   provider?: NotificationProvider,
 ) {
   return sendStoredBookingConfirmation(db, shopId, bookingId, {
-    isRetry: false,
     provider,
     onlyWithMaterials: true,
   });
@@ -2101,7 +2085,6 @@ export async function sendStaffSeatingConfirmation(
   },
 ) {
   return sendStoredBookingConfirmation(db, shopId, bookingId, {
-    isRetry: false,
     provider: options.provider,
     waiver: options.waiver,
   });
@@ -2112,7 +2095,6 @@ async function sendStoredBookingConfirmation(
   shopId: string,
   bookingId: string,
   options: {
-    isRetry: boolean;
     provider?: NotificationProvider;
     onlyWithMaterials?: boolean;
     /** The diver's waiver link, when it rides in this confirmation. */
@@ -2222,7 +2204,6 @@ async function sendStoredBookingConfirmation(
         confirmedAt: nowDate(),
       };
       return sendAndRecordNotification(tx, notification, {
-        isRetry: options.isRetry,
         provider: options.provider,
         signal: notificationProviderSignal(),
       });
@@ -2428,22 +2409,17 @@ export async function listNotificationDeliveryIssues(
       booking: bookings,
       person: people,
       trip: trips,
-      attempts: count(notificationDeliveryAttempts.id),
     })
     .from(notificationDeliveries)
     .innerJoin(bookings, eq(bookings.id, notificationDeliveries.bookingId))
     .innerJoin(people, eq(people.id, bookings.personId))
     .innerJoin(trips, eq(trips.id, bookings.tripId))
-    .leftJoin(
-      notificationDeliveryAttempts,
-      and(
-        eq(notificationDeliveryAttempts.bookingId, notificationDeliveries.bookingId),
-        eq(notificationDeliveryAttempts.kind, notificationDeliveries.kind),
-      ),
-    )
     .where(
       and(
         eq(notificationDeliveries.shopId, shopId),
+        // Only the newest send of each message: a failure a later send
+        // superseded is history, not an issue (issue #2728).
+        latestDeliveryOnly(db),
         // Belt and braces: the batched resend feeds these ids straight into
         // a send, so the booking is pinned to the shop as well as the row.
         eq(bookings.shopId, shopId),
@@ -2462,7 +2438,6 @@ export async function listNotificationDeliveryIssues(
         window.until ? lte(trips.startsAt, window.until) : undefined,
       ),
     )
-    .groupBy(notificationDeliveries.id, bookings.id, people.id, trips.id)
     .orderBy(desc(notificationDeliveries.attemptedAt));
 }
 

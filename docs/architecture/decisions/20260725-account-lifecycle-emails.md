@@ -89,3 +89,8 @@ ever makes that untenable, at which point the migration is a single `NOT NULL`-s
 consequence once deferred is now built exactly as anticipated — `account_tokens.purpose` grew the
 `invite` value with no new table — see
 [20260726-staff-invite-accounts](20260726-staff-invite-accounts.md).
+
+## Amendment 2026-11-02: `notification_delivery_attempts` is gone (issue #2728)
+
+The booking-scoped attempts table named above is dropped; `notification_deliveries` holds one row
+per send. The reasoning (account mail is not booking-scoped, so neither table fits it) is unchanged.

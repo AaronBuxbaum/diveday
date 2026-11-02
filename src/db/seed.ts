@@ -64,7 +64,6 @@ import {
   mediaDeletionAttempts,
   nitroxCertifications,
   notificationDeliveries,
-  notificationDeliveryAttempts,
   notificationSendQueue,
   orderLineItems,
   orders,
@@ -1547,9 +1546,6 @@ export async function clearDemoSchedule(
   // cascade's sibling (deleteDemoShopCascade) already fixed (Codex finding:
   // this reset path had its own, separate child-first list and was missed).
   await db.delete(tips).where(eq(tips.shopId, shopId));
-  await db
-    .delete(notificationDeliveryAttempts)
-    .where(eq(notificationDeliveryAttempts.shopId, shopId));
   await db.delete(notificationSendQueue).where(eq(notificationSendQueue.shopId, shopId));
   await db.delete(notificationDeliveries).where(eq(notificationDeliveries.shopId, shopId));
   // Recap photos reference bookings and trips, so they must go before both.
