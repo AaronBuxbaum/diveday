@@ -904,6 +904,17 @@
   owner's errand. Safety kit never takes a bench-clock row (`gear_service_due`). Opt-in by
   presence, like the rest of the register, and it **informs, never gates**: roll call and boarding
   go on.
+- **Departure count** — one departure's head count as one record (`DepartureCount`,
+  `src/db/departure-counts.ts`, issue #2785), read by `departureCounts` from the roster and the
+  roll call, never added up by a surface. Six numbers, each defined once: **capacity** (the
+  places offered); **booked** (seats held, so a no-show is out); **sailed** (by `seatSailed`, below);
+  **boarded** (counted aboard at the dock); **back** (sailed and counted aboard at the latest
+  after-dive checkpoint anyone on the departure has been counted at); and **blocked** (seats on the
+  roster whose readiness says they may not board, the roster chip's count). `back` errs low and
+  never high: a diver recorded not back, one nobody has named at that checkpoint yet, and one whose
+  word was retracted are all not back. So `sailed - back` is never the number still in the water;
+  that is `listUnaccountedForByTrip`'s question. Crew are never in it. The trip page's pulse reads
+  it first; the board, the counter and the evening station follow.
 - **Sailed** — how many of a departure's booked divers the boat actually **carried**, as distinct
   from the roster it sold. One rule answers it per seat (`seatSailed`, `src/lib/closeout.ts`),
   reading the shop's statements about that seat strongest first: the crew's own result at the
