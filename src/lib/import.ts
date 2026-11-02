@@ -83,6 +83,7 @@
  * "split the file" case, not a reason to remove the atomic single-transaction
  * commit in src/db/import.ts.
  */
+import Papa from "papaparse";
 import type { CertificationAgency, DiveSpecialty } from "@/db/schema";
 import { isPlausibleDateOfBirth } from "./age";
 import { type CalendarDate, isValidCalendarDate } from "./calendar-date";
@@ -572,66 +573,48 @@ export const IMPORT_HONESTY_TABLE: {
 ];
 
 /**
- * RFC-4180 CSV reader: quoted fields, embedded commas, CR/LF/CRLF newlines, and
- * doubled quotes ("") as a literal quote. Symmetric with src/lib/export.ts's
- * writer, including stripping the leading apostrophe that writer adds in front
- * of would-be spreadsheet formulas so a value round-trips unchanged.
+ * The one CSV reader every import shares, in the browser preview and on the
+ * server alike: Papa Parse (ADR 20261102-papaparse-csv-reader) reads quoted
+ * fields, embedded commas, doubled quotes and quoted line breaks. What stays
+ * here, outside the library: the BOM, line endings, and the trailing empty row.
+ * The callers keep the byte, row, column and cell bounds, blank-row filtering
+ * and the formula unguard ({@link unguardCell}).
+ *
+ * Malformed quoting is read leniently and never refused, so the preview shows
+ * what will be imported: an unclosed quote takes the rest of the file into
+ * one cell; text after a closing quote keeps that quote and reads on to the
+ * next quote that does close a cell; a quote that does not open a cell is a
+ * literal character.
  */
 export function parseCsv(text: string): string[][] {
-  const rows: string[][] = [];
-  let row: string[] = [];
-  let cell = "";
-  let inQuotes = false;
   // Strip a UTF-8 BOM so the first header does not carry an invisible prefix.
-  const input = text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
-
-  const pushCell = () => {
-    row.push(cell);
-    cell = "";
-  };
-  const pushRow = () => {
-    pushCell();
-    rows.push(row);
-    row = [];
-  };
-
-  for (let i = 0; i < input.length; i++) {
-    const char = input[i];
-    if (inQuotes) {
-      if (char === '"') {
-        if (input[i + 1] === '"') {
-          cell += '"';
-          i++;
-        } else {
-          inQuotes = false;
-        }
-      } else {
-        cell += char;
-      }
-      continue;
-    }
-    if (char === '"') {
-      inQuotes = true;
-    } else if (char === ",") {
-      pushCell();
-    } else if (char === "\r") {
-      if (input[i + 1] === "\n") i++;
-      pushRow();
-    } else if (char === "\n") {
-      pushRow();
-    } else {
-      cell += char;
-    }
-  }
-  // Flush the trailing cell/row unless the file ended on a clean newline.
-  if (cell !== "" || row.length > 0) pushRow();
-
-  return rows;
+  const unmarked = text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
+  // One line ending for the whole file: Papa reads only one, and a file saved
+  // twice by different tools mixes CRLF, LF and old-Mac CR. Quoted line breaks
+  // become LF too.
+  const input = unmarked.replace(/\r\n?/g, "\n");
+  const { data } = Papa.parse<string[]>(input, {
+    delimiter: ",",
+    newline: "\n",
+    quoteChar: '"',
+    escapeChar: '"',
+    header: false,
+    dynamicTyping: false,
+    skipEmptyLines: false,
+  });
+  // A file that ends on a line break has no row after it.
+  const last = data.at(-1);
+  if (last && last.length === 1 && last[0] === "") data.pop();
+  return data;
 }
 
-/** Undo the export's formula-injection guard: a leading "'" before =,+,-,@ is presentational. */
+/**
+ * Undo the export's formula-injection guard: a leading "'" before =,+,-,@, a
+ * tab or a line break is presentational. The export guards a leading CR, which
+ * {@link parseCsv} reads as LF.
+ */
 function unguardCell(value: string): string {
-  return /^'[=+\-@\t\r]/.test(value) ? value.slice(1) : value;
+  return /^'[=+\-@\t\r\n]/.test(value) ? value.slice(1) : value;
 }
 
 /**
@@ -1802,7 +1785,6 @@ export function prepareContactImport(
    */
   { today, assist }: { today: CalendarDate; assist?: ImportAssist },
 ): PreparedImport {
-  const grid = parseCsv(text).filter((row) => row.some((cell) => cell.trim() !== ""));
   const empty: PreparedImport = {
     mapping: [],
     unmappedColumns: [],
@@ -1829,6 +1811,7 @@ export function prepareContactImport(
     const limitMb = (MAX_IMPORT_BYTES / (1024 * 1024)).toFixed(0);
     return { ...empty, fatal: { code: "file_too_large", params: { limitMb } } };
   }
+  const grid = parseCsv(text).filter((row) => row.some((cell) => cell.trim() !== ""));
   if (grid.length === 0) return { ...empty, fatal: { code: "file_empty" } };
 
   const headers = grid[0];

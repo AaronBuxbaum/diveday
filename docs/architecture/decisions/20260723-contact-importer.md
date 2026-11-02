@@ -66,6 +66,8 @@ system is not clearance under this shop's waiver.
 - **No new runtime dependency.** The RFC-4180 reader in `src/lib/import.ts` is symmetric with the
   export's writer (quoting, CRLF, the formula-injection apostrophe guard), so the bundle round-trips
   without a CSV library.
+  > Superseded by [20261102-papaparse-csv-reader](20261102-papaparse-csv-reader.md): the shared
+  > reader is now Papa Parse; the BOM, line endings, bounds and the formula unguard stay here.
 
 ## Alternatives considered
 
@@ -87,6 +89,8 @@ system is not clearance under this shop's waiver.
   server re-prepares the raw text so the safety rules are enforced where they can't be edited.
 - **A CSV library (papaparse, csv-parse)** — unnecessary given a symmetric reader is ~40 lines and
   the export already owns the writer; avoids a dependency and an ADR churn.
+  > Reversed by [20261102-papaparse-csv-reader](20261102-papaparse-csv-reader.md) once the reader
+  > served four import families.
 - **All-staff gating** — rejected for the same reason as the export: a roster-wide write is
   owner/manager work.
 

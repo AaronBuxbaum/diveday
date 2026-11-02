@@ -433,6 +433,7 @@ script again.
 | 20261028-returning-diver-device-memory | Remember a booker only by… |
 | 20261029-boat-capacity-total-occupants | Count assigned crew inside boat… |
 | 20261101-cut-mutation-testing | Cut mutation testing until the… |
+| 20261102-papaparse-csv-reader | Use Papa Parse as the… |
 | 20261102-public-suffix-list | Use tldts for website-assist suffix… |
 
 <!-- adr-index:end -->
