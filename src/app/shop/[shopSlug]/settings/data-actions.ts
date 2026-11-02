@@ -27,8 +27,8 @@ import { shopPath } from "@/lib/staff-notices";
  * server-side and returns silently on refusal rather than trusting the page
  * that rendered the form.
  *
- * They call the predicates directly rather than through `settingsBlock` above:
- * that helper hands back a `?notice=not-authorized` redirect target, which is
+ * They call the predicates directly rather than through `SETTINGS_GATE`
+ * (`./action-gates.ts`): that gate lands on `?notice=not-authorized`, which is
  * the right answer for a card the page renders for everyone and wrong for a
  * panel it renders for nobody who would be refused. A hand-made post here gets
  * silence, not an explanation of a control that was never on screen.
@@ -39,8 +39,8 @@ import { shopPath } from "@/lib/staff-notices";
  * likes — so a bound slug would let a signed-in staffer of shop A invalidate
  * shop B's cached settings page. The writes above were never at risk (every
  * one is scoped by `session.user.shopId`); this closes the cache-invalidation
- * half, and matches how `settingsBlock` and the rest of this file already
- * derive the slug.
+ * half, and matches how `defineAction` (`src/features/server-action`) and the rest of
+ * this file already derive the slug.
  * -------------------------------------------------------------------------- */
 
 const attemptForm = z.object({ attemptId: text() });
