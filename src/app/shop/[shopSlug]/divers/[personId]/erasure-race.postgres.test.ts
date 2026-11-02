@@ -27,8 +27,19 @@ vi.mock("@/lib/session", async () =>
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 const { getDb } = await import("@/db/client");
 const { requireStaffSession } = await import("@/lib/session");
-const { erasePersonAction, restorePersonAction, mergeDiverAction, deletePersonAction } =
-  await import("@/app/shop/[shopSlug]/divers/[personId]/record-actions");
+const { erasePersonAction, mergeDiverAction, deletePersonAction } = await import(
+  "@/app/shop/[shopSlug]/divers/[personId]/record-actions"
+);
+const { undoAction } = await import("@/app/actions/undo");
+
+/** The record's restore card, posted: the removal's Undo, taken from the record. */
+function restorePersonAction(slug: string, personId: string) {
+  const form = new FormData();
+  form.set("undo", "diver-removal");
+  form.set("undoPerson", personId);
+  form.set("undoFrom", "record");
+  return undoAction(slug, form);
+}
 const { savePersonAction } = await import(
   "@/app/shop/[shopSlug]/divers/[personId]/details-actions"
 );
@@ -208,9 +219,7 @@ describePostgres("diver erasure racing a merge", () => {
           throw new Error(`erasure ended before its transaction: ${notice}`);
         }),
       ]);
-      const restored = await redirectedTo(() =>
-        restorePersonAction(slug, source.id, new FormData()),
-      );
+      const restored = await redirectedTo(() => restorePersonAction(slug, source.id));
       expect(restored).toContain("restored");
       const mergeForm = new FormData();
       mergeForm.set("survivorId", survivor.id);
@@ -294,9 +303,7 @@ describePostgres("diver erasure racing a merge", () => {
           throw new Error(`erasure ended before its transaction: ${notice}`);
         }),
       ]);
-      const restored = await redirectedTo(() =>
-        restorePersonAction(slug, source.id, new FormData()),
-      );
+      const restored = await redirectedTo(() => restorePersonAction(slug, source.id));
       expect(restored).toContain("restored");
     } finally {
       gate.release();
@@ -370,9 +377,7 @@ describePostgres("diver erasure racing a merge", () => {
           throw new Error(`erasure ended before its transaction: ${notice}`);
         }),
       ]);
-      const restored = await redirectedTo(() =>
-        restorePersonAction(slug, source.id, new FormData()),
-      );
+      const restored = await redirectedTo(() => restorePersonAction(slug, source.id));
       expect(restored).toContain("restored");
       const details = new FormData();
       for (const [field, value] of Object.entries({

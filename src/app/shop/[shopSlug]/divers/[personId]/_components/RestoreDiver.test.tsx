@@ -7,7 +7,7 @@ import { RestoreDiver } from "./RestoreDiver";
 
 // Restoring posts a server action, and with it the whole Next server runtime.
 // This suite is about where the panel stands.
-vi.mock("../record-actions", () => ({ restorePersonAction: vi.fn() }));
+vi.mock("@/app/actions/undo", () => ({ undoAction: vi.fn() }));
 
 afterEach(cleanup);
 
@@ -23,7 +23,14 @@ const topGap = (element: Element | null) =>
  */
 describe("the deleted diver's panel", () => {
   it("sits under the acts row at the status ledger's own gap", () => {
-    render(<RestoreDiver shopSlug="blue-mantis" personId="person-1" canRestore t={t} />);
+    render(
+      <RestoreDiver
+        shopSlug="blue-mantis"
+        personId="11111111-1111-4111-8111-111111111111"
+        canRestore
+        t={t}
+      />,
+    );
     const panel = screen.getByRole("region", { name: "This diver is deleted" });
     cleanup();
     const { container } = render(
