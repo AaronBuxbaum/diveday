@@ -1,0 +1,16 @@
+Baseline, 2026-11-02, claude headless, plan mode, 20-turn cap, two runs per task (node scripts/agent-evals.mjs). Stable fails are findings about the setup or the task, not harness errors: a planning session read the files and answered without loading the skill or naming the reviewer.
+
+task | runs | verdict
+--- | --- | ---
+copy-change | FAIL / FAIL | stable fail (loaded [no skill], wanted one of [i18n-copy, brand-voice, copy-restraint])
+flaky-test | FAIL / FAIL | stable fail (loaded [no skill], wanted one of [debug])
+manifest-count | FAIL / FAIL | stable fail (spawned [no subagent], wanted one of [dive-domain-expert])
+new-dependency | pass / pass | stable
+new-page | FAIL / FAIL | stable fail (loaded [no skill], wanted one of [instant-navigation, new-feature])
+one-file-fix | pass / pass | stable
+readiness-cert-gate | FAIL / FAIL | stable fail (spawned [no subagent], wanted one of [dive-domain-expert])
+schema-column | pass / pass | stable
+visual-diff | pass / pass | stable
+waiver-token-security | FAIL / pass | FLIPPED (spawned [Explore, Explore], wanted one of [security-reviewer])
+
+4 of 10 tasks stable pass, 1 flipped, 5 stable fail (20 runs: 9 pass).

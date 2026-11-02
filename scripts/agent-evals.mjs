@@ -25,7 +25,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const TASKS_FILE = path.join(ROOT, "evals/agents/tasks.json");
 /** Per run. Deliberately not a SUBPROCESS_TIMEOUTS key: it is one headless model session. */
 const RUN_TIMEOUT_MS = 600_000;
-const MAX_TURNS = "8";
+const MAX_TURNS = "20";
 
 /** The tasks, or throws on a shape the runner cannot grade. */
 export function loadTasks(file = TASKS_FILE) {
