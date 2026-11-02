@@ -7,7 +7,7 @@ import {
   personRoles,
   specialtyCertifications,
 } from "./schema";
-import { customerDefs } from "./seed-cast";
+import { buildCast, type Cast, customerDefs } from "./seed-cast";
 import { birthDateTurning, dateAt, nextCreatedAt } from "./seed-clock";
 import { reviewedBy } from "./seed-review";
 
@@ -20,18 +20,18 @@ import { reviewedBy } from "./seed-review";
  * contact at all. A demo where every gate is green cannot show a crew what the
  * gates are *for*.
  *
- * **Order is load-bearing.** Every later scenario indexes into the returned
- * list by position (`customers[3]` is a specific person to the rosters, the
- * payments, and the manifests), so this must stay a single ordered insert in
- * `customerDefs` order.
+ * **Order is load-bearing.** The rosters and plan tables index into the roster
+ * by slot, so this must stay a single ordered insert in `customerDefs` order.
+ * The people the story names come back as `Cast` handles (`cast.hana`), found
+ * by name, not position.
  */
 export async function seedDivers(
   db: DbExecutor,
   shopId: string,
   /** The staffer every verified card here was checked by — see `reviewedBy`. */
   reviewerId: string,
-): Promise<(typeof people.$inferSelect)[]> {
-  const customers = await db
+): Promise<Cast<typeof people.$inferSelect>> {
+  const inserted = await db
     .insert(people)
     .values(
       customerDefs.map((customer, i) => ({
@@ -56,6 +56,8 @@ export async function seedDivers(
       })),
     )
     .returning();
+  const cast = buildCast(inserted);
+  const customers = cast.all;
 
   await db
     .insert(personRoles)
@@ -209,52 +211,50 @@ export async function seedDivers(
     .filter((row) => row !== null);
   if (laterCertRows.length > 0) await db.insert(certifications).values(laterCertRows);
 
-  // Specialty evidence: customer[1] is the AOW diver, fully carded for the
-  // demanding trips; customer[2] has a Deep card still awaiting verification so
-  // the pending gate is visible on a roster.
-  if (customers[1] && customers[2]) {
-    await db.insert(specialtyCertifications).values([
-      {
-        shopId,
-        personId: customers[1].id,
-        agency: "padi" as const,
-        specialty: "deep" as const,
-        identifier: "DEMO-SPEC-DEEP-2",
-        status: "verified" as const,
-        ...reviewedBy(reviewerId),
-        createdAt: nextCreatedAt(),
-      },
-      {
-        shopId,
-        personId: customers[1].id,
-        agency: "padi" as const,
-        specialty: "wreck" as const,
-        identifier: "DEMO-SPEC-WRECK-2",
-        status: "verified" as const,
-        ...reviewedBy(reviewerId),
-        createdAt: nextCreatedAt(),
-      },
-      {
-        shopId,
-        personId: customers[1].id,
-        agency: "padi" as const,
-        specialty: "night" as const,
-        identifier: "DEMO-SPEC-NIGHT-2",
-        status: "verified" as const,
-        ...reviewedBy(reviewerId),
-        createdAt: nextCreatedAt(),
-      },
-      {
-        shopId,
-        personId: customers[2].id,
-        agency: "ssi" as const,
-        specialty: "deep" as const,
-        identifier: "DEMO-SPEC-DEEP-3",
-        status: "pending" as const,
-        createdAt: nextCreatedAt(),
-      },
-    ]);
-  }
+  // Specialty evidence: Tom is the AOW diver, fully carded for the demanding
+  // trips; Lena has a Deep card still awaiting verification so the pending
+  // gate is visible on a roster.
+  await db.insert(specialtyCertifications).values([
+    {
+      shopId,
+      personId: cast.tom.id,
+      agency: "padi" as const,
+      specialty: "deep" as const,
+      identifier: "DEMO-SPEC-DEEP-2",
+      status: "verified" as const,
+      ...reviewedBy(reviewerId),
+      createdAt: nextCreatedAt(),
+    },
+    {
+      shopId,
+      personId: cast.tom.id,
+      agency: "padi" as const,
+      specialty: "wreck" as const,
+      identifier: "DEMO-SPEC-WRECK-2",
+      status: "verified" as const,
+      ...reviewedBy(reviewerId),
+      createdAt: nextCreatedAt(),
+    },
+    {
+      shopId,
+      personId: cast.tom.id,
+      agency: "padi" as const,
+      specialty: "night" as const,
+      identifier: "DEMO-SPEC-NIGHT-2",
+      status: "verified" as const,
+      ...reviewedBy(reviewerId),
+      createdAt: nextCreatedAt(),
+    },
+    {
+      shopId,
+      personId: cast.lena.id,
+      agency: "ssi" as const,
+      specialty: "deep" as const,
+      identifier: "DEMO-SPEC-DEEP-3",
+      status: "pending" as const,
+      createdAt: nextCreatedAt(),
+    },
+  ]);
 
   // Extended-roster specialty evidence: the Deep track for the Duane wreck
   // charter (18-20 verified, 22 still pending — AOW alone never clears a
@@ -297,7 +297,7 @@ export async function seedDivers(
     await db.insert(specialtyCertifications).values(extendedSpecialtyRows);
   }
 
-  // The imported-card states, on customer[12] (Hana Kobayashi) — the diver whose
+  // The imported-card states, on Hana Kobayashi — the diver whose
   // level card already arrives imported, and whose profile the visual baseline
   // captures. She is booked on nothing (bookings use customers 0-9), so carding
   // her cannot flip any seeded trip's readiness, manifest, or Today queue.
@@ -307,23 +307,21 @@ export async function seedDivers(
   // requires a staffer to attest they have seen the card. Both are what stands
   // between a spreadsheet cell and a depth gate or a gas fill, so both should be
   // protected from a silent regression.
-  if (customers[12]) {
-    await db.insert(specialtyCertifications).values([
-      {
-        shopId,
-        personId: customers[12].id,
-        agency: "padi" as const,
-        specialty: "deep" as const,
-        identifier: "DEMO-SPEC-DEEP-13",
-        status: "verified" as const,
-        // Verified but unconfirmed: the gate stays shut and the card reads
-        // "certified · confirm to clear" (ADR 20260725-import-specialty-cards).
-        importedAt: nextCreatedAt(),
-        importedFromLabel: "Coral Coast Divers",
-        createdAt: nextCreatedAt(),
-      },
-    ]);
-  }
+  await db.insert(specialtyCertifications).values([
+    {
+      shopId,
+      personId: cast.hana.id,
+      agency: "padi" as const,
+      specialty: "deep" as const,
+      identifier: "DEMO-SPEC-DEEP-13",
+      status: "verified" as const,
+      // Verified but unconfirmed: the gate stays shut and the card reads
+      // "certified · confirm to clear" (ADR 20260725-import-specialty-cards).
+      importedAt: nextCreatedAt(),
+      importedFromLabel: "Coral Coast Divers",
+      createdAt: nextCreatedAt(),
+    },
+  ]);
 
-  return customers;
+  return cast;
 }

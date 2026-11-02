@@ -2,6 +2,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { BookableDiver, SimilarDiver } from "@/db/divers";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { SeatDiverPanel, type SeatDiverPanelCopy } from "./SeatDiverPanel";
 
 // Both forms on this panel are bound `"use server"` actions; what they do is
@@ -32,12 +33,6 @@ const copy: SeatDiverPanelCopy = {
   addDiver: "Add diver",
   addDiverAction: "Add diver",
   addDiverPrompt: "Not listed?",
-  confirmMatchesTitle:
-    "Is this the same Nadia Ruis? Picking one reuses that diver’s record, and their certifications and waiver only count once someone confirms it’s the same person",
-  confirmMatchesLastDive: (at) => `Last dive day here: ${at.toISOString().slice(0, 10)}`,
-  confirmMatchesNoDiveDay: "No dive days here yet",
-  confirmMatchesBorn: (dateOfBirth) => `Born ${dateOfBirth}`,
-  confirmMatchesSubmit: "Create new diver anyway",
 };
 
 const match = (over: Partial<SimilarDiver> = {}): SimilarDiver => ({
@@ -67,6 +62,9 @@ function renderPanel(
       query={extra.query ?? ""}
       candidates={extra.candidates ?? []}
       copy={copy}
+      t={staffTranslator("en-US")}
+      locale="en-US"
+      timeZone="America/New_York"
       confirmName="Nadia Ruis"
       confirmMatches={confirmMatches}
     />,
@@ -115,7 +113,7 @@ describe("SeatDiverPanel name-match prompt", () => {
    * H-20260916-unconfirmed-identity-withhold-cost (issue #1698): the date of birth is what tells two people with one
    * name apart. This panel is both the walk-in door and the global add-booking
    * door, so one pin covers both pages; each page's own formatter is the
-   * `confirmMatchesBorn` it hands in.
+   * locale it hands in.
    */
   it("prints a candidate's date of birth beside the contact line, and nothing where none is on file", () => {
     renderPanel([
@@ -123,8 +121,8 @@ describe("SeatDiverPanel name-match prompt", () => {
       match({ id: "person-3", fullName: "Nadia Ruiseco", email: "ruiseco@example.test" }),
     ]);
 
-    expect(screen.getByText("Born 1984-03-09").closest("li")).toHaveTextContent(
-      "Nadia Ruiz(nadia@example.test)Born 1984-03-09",
+    expect(screen.getByText(/^Born /).closest("li")).toHaveTextContent(
+      /^Nadia Ruiz\(nadia@example\.test\)Born \w+ 9, 1984$/,
     );
     // The undated record is the common case at this counter: no label, no
     // empty parenthesis, no stray separator.
@@ -140,7 +138,7 @@ describe("SeatDiverPanel name-match prompt", () => {
       match({ id: "person-3", fullName: "Nadia Ruiseco" }),
     ]);
 
-    expect(screen.getByText("Last dive day here: 2026-08-26")).toBeInTheDocument();
+    expect(screen.getByText(/^Last dive day here: /)).toBeInTheDocument();
     // The blank is the whole finding (`dive-domain-expert`, 2026-09-11): a
     // candidate left silent beside a dated sibling reads as the lesser diver,
     // and the counter taps the record with the cards — which is the wrong

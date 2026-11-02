@@ -289,3 +289,44 @@ export const customerDefs: Array<{ fullName: string; emergencyContact?: [string,
   { fullName: "Chinwe Obi", emergencyContact: ["Emeka Obi (brother)", "+234-1-555-0311"] },
   { fullName: "Sana Malik", emergencyContact: ["Imran Malik (father)", "+92-42-555-0312"] },
 ];
+
+/**
+ * The divers the seed's story names, by the name `customerDefs` gives them.
+ *
+ * A scenario that needs "the uncarded diver" or "the one with the imported
+ * card" asks for a handle, never `customers[12]`: a handle is looked up by
+ * name, so inserting a diver ahead of her cannot silently hand the imported
+ * card to somebody else, and a rename fails loudly in `buildCast`.
+ *
+ * Tables that spread a plan across the extended roster ("slot 18 gets an AOW
+ * card") are data, not story, and keep reading by slot through `Cast.slot`.
+ */
+const castHandles = {
+  priya: "Priya Sharma",
+  tom: "Tom Okafor",
+  lena: "Lena Fischer",
+  june: "June Park",
+  amara: "Amara Osei",
+  felix: "Felix Grant",
+  hana: "Hana Kobayashi",
+} as const;
+
+export type CastHandle = keyof typeof castHandles;
+
+export type Cast<P extends { id: string; fullName: string }> = Readonly<Record<CastHandle, P>> & {
+  /** Every seeded diver, in `customerDefs` order. */
+  readonly all: readonly P[];
+  /** The diver in a roster slot, or undefined past the end. Plan tables only. */
+  slot(index: number): P | undefined;
+};
+
+/** Resolve the named handles over the inserted rows; a missing name throws. */
+export function buildCast<P extends { id: string; fullName: string }>(rows: readonly P[]): Cast<P> {
+  const handles = {} as Record<CastHandle, P>;
+  for (const handle of Object.keys(castHandles) as CastHandle[]) {
+    const person = rows.find((row) => row.fullName === castHandles[handle]);
+    if (!person) throw new Error(`The seed cast has no ${castHandles[handle]} (${handle}).`);
+    handles[handle] = person;
+  }
+  return { ...handles, all: rows, slot: (index) => rows[index] };
+}

@@ -12,6 +12,7 @@ import {
   trips,
   waiverRecords,
 } from "./schema";
+import type { Cast } from "./seed-cast";
 import { at, DEMO_SHOP_TIMEZONE, nextCreatedAt } from "./seed-clock";
 import { DEMO_RECAP_BOOKING_ID } from "./seed-identifiers";
 import { commonsImage } from "./seed-images";
@@ -72,14 +73,15 @@ export async function seedBookings(
   db: DbExecutor,
   shopId: string,
   ctx: {
-    customers: (typeof people.$inferSelect)[];
+    cast: Cast<typeof people.$inferSelect>;
     tripRows: (typeof trips.$inferSelect)[];
     pinRecapBooking: boolean;
     /** The staffer who took the paper releases at the counter. */
     recordedById: string;
   },
 ) {
-  const { customers, tripRows, pinRecapBooking, recordedById } = ctx;
+  const { cast, tripRows, pinRecapBooking, recordedById } = ctx;
+  const customers = cast.all;
   // Booking spread: busy reef trip, quiet night dive, sold-out wreck, fresh listing.
   const [reef, night, wreck] = tripRows;
   if (!reef || !night || !wreck) throw new Error("seed: failed to insert demo trips");
@@ -143,7 +145,7 @@ export async function seedBookings(
   // is stamped against the clock. The diver is already blocked (no Night
   // specialty), so this adds a blocker rather than flipping a ready seat.
   const nightIdentityBooking = bookingRows_.find(
-    (b) => b.tripId === night.id && b.personId === customers[4]?.id,
+    (b) => b.tripId === night.id && b.personId === cast.june.id,
   );
   if (nightIdentityBooking) {
     await db
@@ -283,7 +285,7 @@ export async function seedBookings(
   // The first reef booking carries the recap photos. On the canonical demo this
   // is the pinned id; on a minted demo it's whatever random id that booking got.
   const recapBookingId = bookingRows_.find(
-    (b) => b.tripId === reef.id && b.personId === customers[0]?.id,
+    (b) => b.tripId === reef.id && b.personId === cast.priya.id,
   )?.id;
   if (!recapBookingId) throw new Error("seed: recap booking missing from reef roster");
   // Two photos uploaded in one statement would share one `createdAt`, and

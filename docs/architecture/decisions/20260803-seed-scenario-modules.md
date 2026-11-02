@@ -20,8 +20,9 @@ leave the bytes untouched.
 
 Three things make the order load-bearing, and all three are easy to break by accident:
 
-1. **Positional indexing.** The rosters, payments, and manifests index into the diver list by
-   position (`customers[3]` is a specific person to four other scenarios).
+1. **Positional indexing.** The rosters and plan tables index into the diver list by slot. The
+   people a scenario names come back from `seedDivers` as `Cast` handles (`cast.hana`), found by
+   name in `seed-cast.ts`; only the slot tables read `cast.slot(n)`.
 2. **A shared tick counter.** `nextCreatedAt()` hands out strictly increasing `created_at` stamps
    so that rows in one multi-row INSERT do not tie on the transaction-start instant — Postgres
    does not promise a stable order for ties, so without it the render order of a roster drifts

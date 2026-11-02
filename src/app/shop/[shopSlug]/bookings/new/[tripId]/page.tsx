@@ -220,6 +220,9 @@ export default async function NewBookingDiverPage({
         confirmEmail={confirmEmail}
         confirmPhone={confirmPhone}
         confirmMatches={confirmMatches}
+        t={t}
+        locale={locale}
+        timeZone={shop.timezone}
         copy={{
           findHeading: t("seatDiver.findHeading"),
           findLabel: t("seatDiver.findLabel"),
@@ -235,15 +238,6 @@ export default async function NewBookingDiverPage({
           addDiverAction: t("seatDiver.addDiverAction"),
           addDiverPrompt: t.raw("seatDiver.addDiverPrompt"),
           addNewDiverAction: t.raw("seatDiver.addNewDiverAction"),
-          confirmMatchesTitle: t("divers.page.confirmMatchesTitle", { name: confirmName ?? "" }),
-          confirmMatchesLastDive: (at) =>
-            t("divers.page.confirmMatchesLastDive", {
-              date: formatShortDate(at, locale, shop.timezone),
-            }),
-          confirmMatchesNoDiveDay: t("divers.page.confirmMatchesNoDiveDay"),
-          confirmMatchesBorn: (dateOfBirth) =>
-            t("divers.page.confirmMatchesBorn", { date: formatCalendarDate(dateOfBirth, locale) }),
-          confirmMatchesSubmit: t("divers.page.confirmMatchesSubmit"),
         }}
       />
     </StaffPage>

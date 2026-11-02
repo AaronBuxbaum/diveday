@@ -1,17 +1,14 @@
 import Link from "next/link";
 import { seatExistingDiverAction, seatNewDiverAction } from "@/app/actions/seat-diver";
 import type { SeatSurfaceId } from "@/app/actions/seat-diver-surfaces";
-import { SubmitButton } from "@/components/SubmitButton";
 import { HandEntryPrompt } from "@/components/seat-diver/HandEntryPrompt";
+import { NameMatchPrompt } from "@/components/seat-diver/NameMatchPrompt";
 import { PersonCandidateList } from "@/components/seat-diver/PersonCandidateList";
 import { PersonSearchForm } from "@/components/seat-diver/PersonSearchForm";
-import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import type { BookableDiver, SimilarDiver } from "@/db/divers";
 import { fill } from "@/i18n/fill";
-import type { CalendarDate } from "@/lib/calendar-date";
-import { displayStoredPhoneWhole } from "@/lib/forgiving-fields";
-import { candidateBirthDate, noDiveDayNeedsSaying } from "@/lib/name-match-evidence";
+import type { StaffTranslator } from "@/i18n/staff-messages";
 import { newDiverHref } from "@/lib/person-fields";
 
 /** Every word this panel says, resolved by the page from the staff bundle. */
@@ -36,34 +33,6 @@ export type SeatDiverPanelCopy = {
   emailLabel?: string;
   phoneLabel?: string;
   optionalHint?: string;
-  /**
-   * Required, unlike its neighbours: the prompt it heads is the one place a
-   * staffer is told what picking a candidate costs, and a panel that rendered
-   * the list under an empty heading would drop exactly that sentence.
-   */
-  confirmMatchesTitle: string;
-  /**
-   * A candidate's last dive day, already dated in the shop's zone by the page.
-   * A function rather than a string because the date differs per candidate,
-   * and `addPersonAriaLabel` above sets the precedent: the panel holds no
-   * translator and no timezone.
-   */
-  confirmMatchesLastDive: (at: Date) => string;
-  /**
-   * The same line for a candidate this shop has no dive day for. Both halves
-   * are required, unlike their neighbours: they are one line with two values,
-   * and a panel holding only the dated half leaves a first-timer silent beside
-   * a sibling that speaks — which argues for the record that already has cards
-   * (`noDiveDayNeedsSaying`, `src/lib/name-match-evidence.ts`).
-   */
-  confirmMatchesNoDiveDay: string;
-  /**
-   * A candidate's date of birth, formatted by the page in its locale (H-20260916-unconfirmed-identity-withhold-cost,
-   * issue #1698). Called only for a candidate with a real date on file; the
-   * panel prints nothing for the rest (`candidateBirthDate`).
-   */
-  confirmMatchesBorn: (dateOfBirth: CalendarDate) => string;
-  confirmMatchesSubmit: string;
 };
 
 /**
@@ -79,6 +48,9 @@ export function SeatDiverPanel({
   personHref,
   searchHiddenFields,
   copy,
+  t,
+  locale,
+  timeZone,
   newDiverDefaults,
   confirmName,
   confirmEmail,
@@ -101,14 +73,16 @@ export function SeatDiverPanel({
     phone?: string;
   };
   copy: SeatDiverPanelCopy;
+  /** The staff translator, for the name-match prompt both shells share. */
+  t: StaffTranslator;
+  locale: string;
+  /** The shop's own zone, so a candidate's last dive day is dated in it. */
+  timeZone: string;
   confirmName?: string;
   confirmEmail?: string;
   confirmPhone?: string;
   confirmMatches?: SimilarDiver[];
 }) {
-  // A candidate with no dive day says so only when a sibling has one; the rule
-  // and the bias it corrects are in `noDiveDayNeedsSaying`.
-  const sayNoDiveDay = noDiveDayNeedsSaying(confirmMatches ?? []);
   // The request this door was opened from closes as booked when a seat is made
   // (third UX review, item 13); every seat form below posts it.
   const requestId = searchHiddenFields?.request;
@@ -124,72 +98,19 @@ export function SeatDiverPanel({
 
   return (
     <div className="mt-6 space-y-6">
-      {confirmMatches && confirmMatches.length > 0 ? (
-        <div className="border border-warning/25 bg-warning/10 rounded-inset p-4 text-left">
-          <div className="flex flex-col gap-2">
-            <h3 className="font-semibold text-sm">{copy.confirmMatchesTitle}</h3>
-            <ul className="list-disc pl-5 space-y-1 text-sm text-muted">
-              {confirmMatches.map((match) => (
-                <li key={match.id}>
-                  <form
-                    action={seatExistingDiverAction.bind(null, surface, shopSlug)}
-                    className="inline"
-                  >
-                    <input type="hidden" name="tripId" value={tripId} />
-                    <input type="hidden" name="personId" value={match.id} />
-                    {/* A tap here came off a name match, so the booking is
-                        told the name it matched on: the prompt fires on an
-                        exact spelling too, and only the comparison says whether
-                        the seat is identity-unconfirmed (issue #1556). The
-                        picker below, where a staffer went looking for a diver
-                        by name, carries no such field. */}
-                    <input type="hidden" name="fromNameMatch" value="true" />
-                    <input type="hidden" name="nameMatchQuery" value={confirmName ?? ""} />
-                    {requestId ? <input type="hidden" name="request" value={requestId} /> : null}
-                    <SubmitButton
-                      pendingLabel={copy.adding}
-                      className="underline font-medium text-left"
-                    >
-                      {match.fullName}
-                    </SubmitButton>
-                  </form>
-                  {match.email || match.phone ? (
-                    <span className="text-muted text-xs ms-1">
-                      (
-                      {[match.email, displayStoredPhoneWhole(match.phone)]
-                        .filter(Boolean)
-                        .join(", ")}
-                      )
-                    </span>
-                  ) : null}
-                  <CandidateBirthDate match={match} born={copy.confirmMatchesBorn} />
-                  {match.lastDiveDayAt ? (
-                    <span className="text-muted text-xs ms-1">
-                      {copy.confirmMatchesLastDive(match.lastDiveDayAt)}
-                    </span>
-                  ) : sayNoDiveDay ? (
-                    <span className="text-muted text-xs ms-1">{copy.confirmMatchesNoDiveDay}</span>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
-            <form action={seatNewDiverAction.bind(null, surface, shopSlug)} className="mt-2">
-              <input type="hidden" name="tripId" value={tripId} />
-              <input type="hidden" name="fullName" value={confirmName} />
-              <input type="hidden" name="email" value={confirmEmail} />
-              <input type="hidden" name="phone" value={confirmPhone} />
-              <input type="hidden" name="force" value="true" />
-              {requestId ? <input type="hidden" name="request" value={requestId} /> : null}
-              <SubmitButton
-                pendingLabel={copy.adding}
-                className={buttonClass({ variant: "secondary", size: "sm" })}
-              >
-                {copy.confirmMatchesSubmit}
-              </SubmitButton>
-            </form>
-          </div>
-        </div>
-      ) : null}
+      <NameMatchPrompt
+        matches={confirmMatches ?? []}
+        tripId={tripId}
+        confirmName={confirmName}
+        confirmEmail={confirmEmail}
+        confirmPhone={confirmPhone}
+        seatKnownAction={seatExistingDiverAction.bind(null, surface, shopSlug)}
+        seatNewAction={seatNewDiverAction.bind(null, surface, shopSlug)}
+        hiddenFields={requestId ? { request: requestId } : undefined}
+        t={t}
+        locale={locale}
+        timeZone={timeZone}
+      />
 
       <SectionCard title={copy.findHeading} padding="lg">
         <PersonSearchForm
@@ -242,19 +163,4 @@ export function SeatDiverPanel({
       </SectionCard>
     </div>
   );
-}
-
-/**
- * The candidate's date of birth beside the contact line (H-20260916-unconfirmed-identity-withhold-cost, issue #1698),
- * or nothing at all when the record has none on file.
- */
-function CandidateBirthDate({
-  match,
-  born,
-}: {
-  match: SimilarDiver;
-  born: (dateOfBirth: CalendarDate) => string;
-}) {
-  const dateOfBirth = candidateBirthDate(match);
-  return dateOfBirth ? <span className="text-muted text-xs ms-1">{born(dateOfBirth)}</span> : null;
 }
