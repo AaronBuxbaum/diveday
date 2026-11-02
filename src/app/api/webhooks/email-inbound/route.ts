@@ -107,10 +107,21 @@ export async function POST(request: Request) {
   // header, so a message whose header the reader could not pin to one address
   // (none, two, a group, an unreadable message) has nothing it vouched for, and
   // the envelope's address is not what it checked.
+  //
+  // And the header address has to be the one SES read. Its DMARC verdict is
+  // about the `From:` SES parsed; two parsers that disagree on which header is
+  // the From (a `From : x` line, a folded or smuggled one) would otherwise let
+  // a verdict about one address vouch for another. So SES must report exactly
+  // one From, and it must normalize to the address the app's reader found.
   const headerFrom = normalizeEmailAddress(parsed.from);
   const envelopeFrom = normalizeEmailAddress(notification.envelopeFrom);
+  const sesFrom =
+    notification.sesHeaderFrom.length === 1
+      ? normalizeEmailAddress(notification.sesHeaderFrom[0])
+      : null;
   const senderAuthenticated =
     headerFrom !== null &&
+    sesFrom === headerFrom &&
     (notification.fromAuthenticated ||
       (notification.envelopeAuthenticated && headerFrom === envelopeFrom));
   const from = senderAuthenticated ? (headerFrom ?? envelopeFrom) : (envelopeFrom ?? headerFrom);

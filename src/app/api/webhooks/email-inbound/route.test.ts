@@ -89,6 +89,7 @@ function receivedMessage(overrides: Record<string, unknown> = {}) {
       messageId: "ses-id-1",
       timestamp: "2026-07-21T12:59:58.000Z",
       source: "priya@example.com",
+      commonHeaders: { from: ["Priya Sharma <priya@example.com>"] },
       ...((overrides.mail as object) ?? {}),
     },
   });
@@ -415,6 +416,82 @@ describe("email-inbound webhook — filing a reply", () => {
     );
     await runDeferred();
     expect(pingDeskAfterHoursSafely).not.toHaveBeenCalled();
+  });
+
+  /**
+   * **Two parsers, one sender** (independent security review). DMARC is SES's
+   * verdict about the `From:` SES read; the app's reader must have read the
+   * same one. Each of these is a message on which two parsers can disagree,
+   * and each SES report below is what an attacker would want SES to have
+   * read. None may file the victim as an authenticated sender.
+   */
+  describe("hostile From headers, with DMARC passing", () => {
+    const victim = "victim@diver.com";
+    const cases: Array<[string, string[], string[]]> = [
+      [
+        "a spaced `From :` second header",
+        [`From: ${victim}`, "From : attacker@evil.com"],
+        ["attacker@evil.com"],
+      ],
+      [
+        "a line starting with a no-break space between two From lines",
+        [`From: ${victim}`, "\u00a0X-Pad: y", "From: attacker@evil.com"],
+        ["attacker@evil.com"],
+      ],
+      ["two addresses inside one angle pair", [`From: <${victim} attacker@evil.com>`], [victim]],
+      ["a source route", [`From: <@evil.com:${victim}>`], [`<@evil.com:${victim}>`]],
+      [
+        "SES reading two From headers where the app read one",
+        [`From: ${victim}`],
+        [victim, "attacker@evil.com"],
+      ],
+      ["SES reporting no From at all", [`From: ${victim}`], []],
+    ];
+    it.each(cases)("%s", async (_, headers, sesFrom) => {
+      vi.mocked(verifySnsMessage).mockResolvedValue(
+        verifiedNotification(
+          receivedMessage({
+            mail: {
+              messageId: "ses-id-1",
+              source: "bounce@evil.com",
+              commonHeaders: { from: sesFrom },
+            },
+          }),
+        ),
+      );
+      read.mockResolvedValueOnce({
+        status: "ok",
+        message: [...headers, "Content-Type: text/plain", "", "Cancel my booking."].join("\r\n"),
+      });
+      expect((await POST(webhookRequest("{}"))).status).toBe(200);
+      expect(recordInboundMessage).toHaveBeenCalledWith(
+        FAKE_DB,
+        expect.objectContaining({ senderAuthenticated: false }),
+      );
+    });
+
+    it("never takes a From written in the body after the blank line", async () => {
+      vi.mocked(verifySnsMessage).mockResolvedValue(
+        verifiedNotification(
+          receivedMessage({
+            mail: {
+              messageId: "ses-id-1",
+              source: "attacker@evil.com",
+              commonHeaders: { from: ["attacker@evil.com"] },
+            },
+          }),
+        ),
+      );
+      read.mockResolvedValueOnce({
+        status: "ok",
+        message: ["From: attacker@evil.com", "", `From: ${victim}`, "Cancel my booking."].join(
+          "\r\n",
+        ),
+      });
+      expect((await POST(webhookRequest("{}"))).status).toBe(200);
+      const filed = vi.mocked(recordInboundMessage).mock.calls[0]?.[1];
+      expect(filed?.fromAddress).toBe("attacker@evil.com");
+    });
   });
 
   it("drops a message the reader refuses, even when DMARC passed", async () => {
