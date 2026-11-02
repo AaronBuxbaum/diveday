@@ -169,6 +169,17 @@ export function reviewAnswered(section, agent) {
   return reviewAnswers(section, agent).length > 0;
 }
 
+/** Drops HTML tags until none is left, so `<<b>b>` cannot leave a tag behind. */
+function stripTags(text) {
+  let previous;
+  let current = text;
+  do {
+    previous = current;
+    current = current.replace(/<[^>]*>/g, "");
+  } while (current !== previous);
+  return current;
+}
+
 const NEGATED = /\b(?:not|never|skipped|skip|no time)\b|n['\u2019]t\b/i;
 
 /**
@@ -180,8 +191,7 @@ function reviewAnswers(section, agent) {
   const answers = [];
   const text = String(section ?? "").replace(/^\s*(```|~~~)[\s\S]*?(?:^\s*\1.*$|(?![\s\S]))/gm, "");
   for (const raw of text.split("\n")) {
-    const line = raw
-      .replace(/<[^>]*>/g, "")
+    const line = stripTags(raw)
       .replace(/^\s*(?:[-*+]\s+|\d+[.)]\s+)?[`*_]*/, "")
       .toLowerCase();
     if (!line.startsWith(agent) || /^[\w-]/.test(line.slice(agent.length))) continue;
