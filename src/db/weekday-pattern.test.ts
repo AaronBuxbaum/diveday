@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
+import { diveSites } from "./schema";
 import { createTrip, listStaff, setTripCrew } from "./trips";
 import { departuresOnWeekday, weekdayPatternFor } from "./weekday-pattern";
 
@@ -72,6 +73,40 @@ describe("departuresOnWeekday", () => {
     );
     expect(pattern).toMatchObject({ startTime: "07:00", title: "Two-Tank Reef" });
     expect(new Set(pattern?.crewPersonIds)).toEqual(new Set([keiko, sal]));
+  });
+
+  it("carries every planned dive's site, in order, into the pattern", async () => {
+    const sites = await ctx.db
+      .insert(diveSites)
+      .values([
+        { shopId: ctx.shop.id, name: "Pattern One", slug: "pattern-one" },
+        { shopId: ctx.shop.id, name: "Pattern Two", slug: "pattern-two" },
+      ])
+      .returning({ id: diveSites.id, slug: diveSites.slug });
+    const one = sites.find((site) => site.slug === "pattern-one")?.id;
+    const two = sites.find((site) => site.slug === "pattern-two")?.id;
+    if (!one || !two) throw new Error("sites were not inserted");
+    for (const date of SATURDAYS) {
+      const trip = await createTrip(ctx.db, {
+        shopId: ctx.shop.id,
+        title: "Two-Site Morning",
+        startsAt: new Date(`${date}T16:00:00Z`),
+        endsAt: new Date(`${date}T19:30:00Z`),
+        capacity: 10,
+        plannedDives: 2,
+        dives: [{ diveSiteId: one }, { diveSiteId: two }],
+      });
+      if (!trip) throw new Error("createTrip refused a two-site departure");
+    }
+    const pattern = await weekdayPatternFor(
+      ctx.db,
+      ctx.shop.id,
+      "2030-09-07",
+      ctx.shop.timezone,
+      NOW,
+    );
+    expect(pattern?.title).toBe("Two-Site Morning");
+    expect(pattern?.diveSiteIds).toEqual([one, two]);
   });
 
   it("is nothing for a weekday the shop has not run three times", async () => {

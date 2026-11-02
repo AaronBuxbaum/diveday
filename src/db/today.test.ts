@@ -8,7 +8,7 @@ import { cancelBooking } from "./bookings";
 import { getTripManifest, recordCrewRollCall, recordRollCall } from "./manifests";
 import { recordNotificationDelivery } from "./notifications";
 import { listTripReadiness } from "./readiness";
-import { boats, shops as shopsTable, tripAssignments } from "./schema";
+import { boats, diveSites, shops as shopsTable, tripAssignments, tripDives } from "./schema";
 import { markShopUnitsConfirmed } from "./shops";
 import { getTodayWork } from "./today";
 import { recordTripStage } from "./trip-stages";
@@ -43,6 +43,28 @@ const clearAnswers = emptyMedicalAnswers(RSTC_QUESTIONNAIRE);
 const ctx = fileScopedShopContext();
 
 describe("today's work queue (in-memory PGlite)", () => {
+  it("names every planned dive's site on the departure card, in dive order, once each", async () => {
+    const { db, shop } = ctx;
+    const [departure] = (await getTodayWork(db, shop.id, shop.slug, shop.timezone)).departures;
+    if (!departure) throw new Error("seed has no departure today");
+    const [second] = await db
+      .insert(diveSites)
+      .values({ shopId: shop.id, name: "Zed Wall", slug: "zed-wall" })
+      .returning({ id: diveSites.id });
+    if (!second) throw new Error("site was not inserted");
+    const dives = await db
+      .select({ id: tripDives.id, number: tripDives.diveNumber })
+      .from(tripDives)
+      .where(eq(tripDives.tripId, departure.tripId));
+    const last = dives.sort((a, b) => a.number - b.number).at(-1);
+    if (!last || dives.length < 2) throw new Error("seed departure is not a two-dive day");
+    await db.update(tripDives).set({ diveSiteId: second.id }).where(eq(tripDives.id, last.id));
+
+    const after = (await getTodayWork(db, shop.id, shop.slug, shop.timezone)).departures[0];
+    expect(after?.siteName?.split(", ")).toHaveLength(2);
+    expect(after?.siteName?.endsWith("Zed Wall")).toBe(true);
+  });
+
   it("puts the seeded departure that sails today on the board with live readiness counts", async () => {
     const { db, shop } = ctx;
 

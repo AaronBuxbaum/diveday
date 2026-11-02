@@ -1,4 +1,4 @@
-import { and, eq, gte, inArray, lt } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, lt } from "drizzle-orm";
 import { calendarDateInTimezone, calendarDateWeekday } from "@/lib/calendar-date";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { cachedFormatter } from "@/lib/intl-cache";
@@ -9,8 +9,7 @@ import {
   weekdayPattern,
 } from "@/lib/weekday-pattern";
 import type { AppDb } from "./client";
-import { tripAssignments, trips } from "./schema";
-import { tripPrimarySiteId } from "./trip-primary-site";
+import { tripAssignments, tripDives, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
 /** `HH:MM` on the shop's own clock, for a stored instant. */
@@ -46,7 +45,6 @@ export async function departuresOnWeekday(
       startsAt: trips.startsAt,
       endsAt: trips.endsAt,
       title: trips.title,
-      diveSiteId: tripPrimarySiteId,
       boatId: trips.boatId,
       capacity: trips.capacity,
       priceCents: trips.priceCents,
@@ -76,6 +74,20 @@ export async function departuresOnWeekday(
         onWeekday.map((row) => row.id),
       ),
     );
+  const dives = await db
+    .select({ tripId: tripDives.tripId, diveSiteId: tripDives.diveSiteId })
+    .from(tripDives)
+    .where(
+      inArray(
+        tripDives.tripId,
+        onWeekday.map((row) => row.id),
+      ),
+    )
+    .orderBy(asc(tripDives.tripId), asc(tripDives.diveNumber));
+  const sitesByTrip = new Map<string, Array<string | null>>();
+  for (const dive of dives) {
+    sitesByTrip.set(dive.tripId, [...(sitesByTrip.get(dive.tripId) ?? []), dive.diveSiteId]);
+  }
   const crewByTrip = new Map<string, string[]>();
   for (const row of crew) {
     crewByTrip.set(row.tripId, [...(crewByTrip.get(row.tripId) ?? []), row.personId]);
@@ -85,7 +97,7 @@ export async function departuresOnWeekday(
     startTime: wallClock(row.startsAt, timeZone),
     endTime: wallClock(row.endsAt, timeZone),
     title: row.title,
-    diveSiteId: row.diveSiteId,
+    diveSiteIds: sitesByTrip.get(row.id) ?? [],
     boatId: row.boatId,
     capacity: row.capacity,
     priceCents: row.priceCents,

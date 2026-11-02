@@ -24,7 +24,8 @@ export type WeekdayDeparture = {
   startTime: string;
   endTime: string;
   title: string;
-  diveSiteId: string | null;
+  /** Every planned dive's site in dive order; a dive with none yet is null. */
+  diveSiteIds: Array<string | null>;
   boatId: string | null;
   capacity: number;
   priceCents: number | null;
@@ -40,7 +41,8 @@ export type PatternDeparture = {
   days: number;
   endTime: string | null;
   title: string | null;
-  diveSiteId: string | null;
+  /** The sites most of those days' dives agreed on, whole and in order; null where they disagreed. */
+  diveSiteIds: Array<string | null> | null;
   boatId: string | null;
   capacity: number | null;
   priceCents: number | null;
@@ -93,6 +95,15 @@ function groupByStart(rows: readonly WeekdayDeparture[]): Group[] {
     .sort((a, b) => b.days - a.days || a.startTime.localeCompare(b.startTime));
 }
 
+/** The ordered site list most of the days carried, or null: a list is agreed whole, never mixed. */
+function agreeSites(rows: readonly WeekdayDeparture[], minimum: number) {
+  const key = modeOf(
+    rows.map((row) => JSON.stringify(row.diveSiteIds)),
+    minimum,
+  );
+  return key === null ? null : (JSON.parse(key) as Array<string | null>);
+}
+
 function patternOf(group: Group, minimum: number): PatternDeparture {
   const agree = <T extends string | number>(pick: (row: WeekdayDeparture) => T | null) =>
     modeOf(
@@ -116,7 +127,7 @@ function patternOf(group: Group, minimum: number): PatternDeparture {
     days: group.days,
     endTime: agree((row) => row.endTime),
     title: agree((row) => row.title),
-    diveSiteId: agree((row) => row.diveSiteId),
+    diveSiteIds: agreeSites(group.rows, minimum),
     boatId: agree((row) => row.boatId),
     capacity: agree((row) => row.capacity),
     priceCents: agree((row) => row.priceCents),

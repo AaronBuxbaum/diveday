@@ -114,6 +114,7 @@ import { at, shopDay } from "./today-shared";
 import { pushShopRows } from "./today-shop-rows";
 import { pushBoatSnagRows } from "./today-snag-rows";
 import { meetingWindowsByTrip } from "./trip-meeting-windows";
+import { plannedSitesByTrip } from "./trip-planned-sites";
 import { latestTripStagesByTrip } from "./trip-stages";
 import { boatClashesByTrip, countShopTrips, crewClashesByTrip, listStaff } from "./trips";
 import { liveTrip } from "./trips-live";
@@ -241,7 +242,8 @@ export type DepartureSummary = {
    * station is a *rendering* of this row, and a second query at the page would
    * be a second answer about the same boat.
    *
-   * `siteName` is the first dive's chosen site (`tripPrimarySiteId`) and
+   * `siteName` is every planned dive's site, distinct and in dive order,
+   * joined by commas ("Molasses, French"), and
    * `boatName` is `boats.name` through `trips.boat_id`. All three are null for
    * a departure that has not been given one: a shop may price at the counter,
    * run a shore dive, or not own a hull.
@@ -1350,7 +1352,7 @@ async function departureCardFacts(db: AppDb, shopId: string, trips: readonly Dep
   const boatIds = [
     ...new Set(trips.map((trip) => trip.boatId).filter((id): id is string => Boolean(id))),
   ];
-  const [diveIntents, boatRows, assignments] = await Promise.all([
+  const [diveIntents, boatRows, assignments, plannedSites] = await Promise.all([
     diveIntentTallyForTrips(db, shopId, tripIds),
     boatIds.length > 0
       ? db
@@ -1383,6 +1385,7 @@ async function departureCardFacts(db: AppDb, shopId: string, trips: readonly Dep
           // (src/db/trips-crew.ts), which already sorted by name.
           .orderBy(asc(people.fullName), asc(people.id))
       : [],
+    plannedSitesByTrip(db, tripIds),
   ]);
   const boatNames = new Map(boatRows.map((row) => [row.id, row.name] as const));
 
@@ -1413,7 +1416,7 @@ async function departureCardFacts(db: AppDb, shopId: string, trips: readonly Dep
 
   // Only a multi-day run reads its windows (no query for a single sailing).
   const meetingWindows = await meetingWindowsByTrip(db, trips);
-  return { diveIntents, boatNames, crewByTrip, meetingWindows };
+  return { diveIntents, boatNames, crewByTrip, meetingWindows, plannedSites };
 }
 
 type DepartureCardInputs = Awaited<ReturnType<typeof departureCardFacts>> & {
@@ -1440,6 +1443,7 @@ function summarizeDepartures(
     boatNames,
     crewByTrip,
     meetingWindows,
+    plannedSites,
   } = inputs;
   return trips.map((trip) => {
     const rows = readinessByTrip.get(trip.id) ?? [];
@@ -1498,7 +1502,7 @@ function summarizeDepartures(
       blockedAshore: ashoreBlocked.length,
       blockedAshoreNames: ashoreBlocked.map((row) => row.person.fullName),
       courseTitle: trip.course?.title ?? null,
-      siteName: trip.diveSite?.name ?? null,
+      siteName: siteLine(plannedSites.get(trip.id)),
       boatName: trip.boatId ? (boatNames.get(trip.boatId) ?? null) : null,
       priceCents: trip.isRehearsal ? null : perDiverBookingPriceCents(trip, trip.course),
       crew: tripCrew,
@@ -1605,20 +1609,57 @@ export async function countBlockedDiversNextBoatDay(
  * site the provider cannot answer for maps to null, as it always did.
  */
 async function forecastsForDepartures(
+  db: AppDb,
   trips: readonly DepartureTrip[],
   now: Date,
 ): Promise<Map<string, AutomatedMarineForecast | null>> {
+  const plannedSites = await plannedSitesByTrip(
+    db,
+    trips.map((trip) => trip.id),
+  );
   const wanted = trips.flatMap((trip) => {
-    const site = trip.diveSite;
-    if (!site || site.forecastLatitude === null || site.forecastLongitude === null) return [];
     if (trip.booked <= 0 || !shouldShowAutomatedForecast(trip.startsAt, now)) return [];
-    const point = { latitude: site.forecastLatitude, longitude: site.forecastLongitude };
-    return [{ tripId: trip.id, point, startsAt: trip.startsAt }];
+    // Every planned site with a forecast point, not only the first dive's: a
+    // two-site morning is as windy as its windier site.
+    return (plannedSites.get(trip.id) ?? []).flatMap((site) =>
+      site.forecastLatitude === null || site.forecastLongitude === null
+        ? []
+        : [
+            {
+              tripId: trip.id,
+              point: { latitude: site.forecastLatitude, longitude: site.forecastLongitude },
+              startsAt: trip.startsAt,
+            },
+          ],
+    );
   });
   const forecasts = await Promise.all(
     wanted.map((entry) => fetchAutomatedMarineForecast(entry.point, entry.startsAt)),
   );
-  return new Map(wanted.map((entry, index) => [entry.tripId, forecasts[index] ?? null]));
+  const byTrip = new Map<string, AutomatedMarineForecast | null>();
+  wanted.forEach((entry, index) => {
+    const forecast = forecasts[index] ?? null;
+    const kept = byTrip.get(entry.tripId) ?? null;
+    byTrip.set(entry.tripId, windier(kept, forecast));
+  });
+  return byTrip;
+}
+
+/** The forecast with the harder wind (gusts, else speed); a missing one yields to a present one. */
+function windier(
+  a: AutomatedMarineForecast | null,
+  b: AutomatedMarineForecast | null,
+): AutomatedMarineForecast | null {
+  if (!a?.wind) return b ?? a;
+  if (!b?.wind) return a;
+  const force = (wind: NonNullable<AutomatedMarineForecast["wind"]>) =>
+    wind.gustsKnots ?? wind.speedKnots;
+  return force(b.wind) > force(a.wind) ? b : a;
+}
+
+/** The departure card's site line: every planned site, once, in dive order. */
+function siteLine(sites: readonly { name: string }[] | undefined): string | null {
+  return sites && sites.length > 0 ? sites.map((site) => site.name).join(", ") : null;
 }
 
 /**
@@ -1763,7 +1804,7 @@ async function readTodayWave(
     { open: helpRequests, handled: handledHelp },
     rawStaff,
     credentialRows,
-    { diveIntents, boatNames, crewByTrip, meetingWindows },
+    { diveIntents, boatNames, crewByTrip, meetingWindows, plannedSites },
     boatsOut,
     opsAlerts,
     reviewsAwaiting,
@@ -1972,6 +2013,7 @@ async function readTodayWave(
     boatNames,
     crewByTrip,
     meetingWindows,
+    plannedSites,
     boatsOut,
     opsAlerts,
     reviewsAwaiting,
@@ -2089,7 +2131,7 @@ export async function getTodayWork(
   const owingBookingIds = owingSeatIds(inWindow, readinessByTrip);
   const noOpenOrders = new Map<string, { id: string; hostedInvoiceUrl: string | null }>();
   const highWind = withForecast
-    ? highWindActions(inWindow, forecastsForDepartures(inWindow, now), {
+    ? highWindActions(inWindow, forecastsForDepartures(db, inWindow, now), {
         shopSlug,
         timeZone,
         locale,
@@ -2154,6 +2196,7 @@ export async function getTodayWork(
     boatNames,
     crewByTrip,
     meetingWindows,
+    plannedSites,
     boatsOut,
     shopUnits,
     crewedAssignments,
@@ -2272,6 +2315,7 @@ export async function getTodayWork(
       boatNames,
       crewByTrip,
       meetingWindows,
+      plannedSites,
     },
     now,
     timeZone,

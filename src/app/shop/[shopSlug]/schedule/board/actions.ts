@@ -244,7 +244,12 @@ export async function loadWeekdayPatternAction(dateIso: string): Promise<Builder
   field("endTime", pattern.endTime);
   field("title", pattern.title);
   field("diveMode", pattern.diveMode);
-  field("diveSiteId", pattern.diveSiteId);
+  // Dive one fills the quick row's site select; every later dive fills its own
+  // card (a card that is not on screen ignores it), so a two-site morning
+  // comes back as two sites.
+  pattern.diveSiteIds?.forEach((siteId, index) => {
+    field(index === 0 ? "diveSiteId" : `dive-${index + 1}-siteId`, siteId);
+  });
   field("boatId", pattern.boatId);
   field("lensId", pattern.lensId);
   // After the hull, deliberately: the boat select's own change handler puts the
@@ -684,7 +689,7 @@ async function addPatternDeparture(
     shopId: shop.id,
     title: also.title ?? fallback.title,
     capacity: also.capacity ?? fallback.capacity,
-    plannedDives: fallback.plannedDives,
+    plannedDives: Math.max(fallback.plannedDives, also.diveSiteIds?.length ?? 0),
     priceCents: details.patch.priceCents,
     depositCents: details.patch.depositCents,
     cancellationWindowHours: details.patch.cancellationWindowHours,
@@ -693,7 +698,9 @@ async function addPatternDeparture(
     diveMode: details.patch.diveMode,
     boatId: details.patch.boatId,
     lensId: also.lensId,
-    dives: also.diveSiteId ? [{ diveSiteId: also.diveSiteId }] : undefined,
+    dives: also.diveSiteIds?.some(Boolean)
+      ? also.diveSiteIds.map((diveSiteId) => ({ diveSiteId }))
+      : undefined,
     startsAt: details.patch.startsAt,
     endsAt: details.patch.endsAt,
     scheduleDays: details.patch.scheduleDays,
