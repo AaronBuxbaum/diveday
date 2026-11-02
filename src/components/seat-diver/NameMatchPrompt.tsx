@@ -12,8 +12,9 @@ import { NameMatchCandidateFacts } from "./NameMatchCandidateFacts";
  * beside each candidate and the two ways out cannot drift between them.
  *
  * It holds no action of its own. Each shell passes the actions it already
- * binds (both are the departure door's `seatExistingDiverAction` and
- * `seatNewDiverAction`, or the wait-list pair on a full boat), and the hidden
+ * binds (the seat panel passes the departure door's `seatExistingDiverAction`
+ * and `seatNewDiverAction`, the Add-diver band `addExistingDiverAction` and
+ * `addBookingAction`, or the wait-list pair on a full boat), and the hidden
  * fields that must ride along on every form (the request a seat closes as
  * booked) come in as `hiddenFields`.
  */
@@ -40,7 +41,7 @@ export function NameMatchPrompt({
   /** Creates the typed diver anyway (`force`), seat or wait list. */
   seatNewAction: (formData: FormData) => void;
   /** State every form here carries, e.g. the request being booked. */
-  hiddenFields?: Record<string, string>;
+  hiddenFields?: { request?: string };
   t: StaffTranslator;
   locale: string;
   /** The shop's own zone, so a candidate's last dive day is dated in it. */

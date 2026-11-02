@@ -1,4 +1,4 @@
-import { and, eq, ne } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import type { AppDb } from "@/db/client";
 import { bookingCheckoutBookings, bookingCheckouts, bookings, trips } from "@/db/schema";
 import { seatNotCancelled } from "@/db/trips";

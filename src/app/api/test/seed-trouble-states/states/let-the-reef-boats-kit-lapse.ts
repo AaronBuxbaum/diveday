@@ -1,4 +1,4 @@
-import { and, eq, gte, isNull, ne } from "drizzle-orm";
+import { and, eq, gte, isNull } from "drizzle-orm";
 import type { AppDb } from "@/db/client";
 import { createGearItem, recordGearService } from "@/db/gear";
 import { boats, bookings, trips } from "@/db/schema";
