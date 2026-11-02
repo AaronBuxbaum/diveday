@@ -1,6 +1,11 @@
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { NoticeMessages } from "@/lib/staff-notices";
 import type { BillingNotice } from "./billing/actions";
+import type { EmergencyReferenceNotice } from "./boat-actions";
+import type { DockDayNotice } from "./dock-day/actions";
+import type { DivePackageNotice } from "./package-actions";
+import type { RentalsNotice } from "./rental-actions";
+import type { ProfileNotice } from "./website-actions";
 
 /**
  * What each settings sub-page says back after a write.
@@ -12,15 +17,17 @@ import type { BillingNotice } from "./billing/actions";
  * emit, and nothing else.
  *
  * The maps stay *here* rather than in each page for the reason `team/notices.ts`
- * does: the action and the page have to agree on the spelling of a code, and one
- * file they both read is where that agreement is checkable.
+ * does: the action and the page have to agree on the spelling of a code. Each
+ * map is typed to the codes its actions can land with (`NoticeOf`,
+ * `src/features/server-action`), so a code with no words, or words for a code no action
+ * sends, is a compile error here.
  *
  * Each is built inside the request, not at module scope, so the text tracks the
  * negotiated locale rather than freezing to whichever locale first imported this
  * file.
  */
 /** `/settings/rentals` — `saveRentalsAction`. */
-export function rentalsNoticeMessages(t: StaffTranslator): NoticeMessages {
+export function rentalsNoticeMessages(t: StaffTranslator): NoticeMessages<RentalsNotice> {
   return {
     "rentals-saved": { tone: "success", text: t("settings.main.notice.rentalsSaved") },
     "rental-prices-invalid": {
@@ -37,7 +44,9 @@ export function rentalsNoticeMessages(t: StaffTranslator): NoticeMessages {
 }
 
 /** `/settings/emergency-reference` — `saveEmergencyReferenceAction`. */
-export function emergencyReferenceNoticeMessages(t: StaffTranslator): NoticeMessages {
+export function emergencyReferenceNoticeMessages(
+  t: StaffTranslator,
+): NoticeMessages<EmergencyReferenceNotice> {
   return {
     "emergency-saved": { tone: "success", text: t("settings.main.notice.emergencySaved") },
     "shore-alert-invalid": { tone: "danger", text: t("settings.main.notice.shoreAlertInvalid") },
@@ -62,7 +71,7 @@ export function emergencyReferenceNoticeMessages(t: StaffTranslator): NoticeMess
 }
 
 /** `/settings/dock-day` — `saveDockDayAction`: one success, and each section's own refusal. */
-export function dockDayNoticeMessages(t: StaffTranslator): NoticeMessages {
+export function dockDayNoticeMessages(t: StaffTranslator): NoticeMessages<DockDayNotice> {
   return {
     "dock-day-saved": { tone: "success", text: t("settings.dockDay.saved") },
     "dock-invalid": { tone: "danger", text: t("settings.main.notice.dockInvalid") },
@@ -73,7 +82,7 @@ export function dockDayNoticeMessages(t: StaffTranslator): NoticeMessages {
 }
 
 /** `/settings/profile` — `saveProfileAction`. */
-export function profileNoticeMessages(t: StaffTranslator): NoticeMessages {
+export function profileNoticeMessages(t: StaffTranslator): NoticeMessages<ProfileNotice> {
   return {
     "profile-saved": { tone: "success", text: t("settings.main.notice.profileSaved") },
     "profile-invalid": { tone: "danger", text: t("settings.main.notice.profileInvalid") },
@@ -81,7 +90,7 @@ export function profileNoticeMessages(t: StaffTranslator): NoticeMessages {
 }
 
 /** Promos' packages section — `createDivePackageAction`, `deleteDivePackageAction`. */
-export function divePackageNoticeMessages(t: StaffTranslator): NoticeMessages {
+export function divePackageNoticeMessages(t: StaffTranslator): NoticeMessages<DivePackageNotice> {
   return {
     "package-saved": { tone: "success", text: t("settings.main.notice.packageSaved") },
     "package-deleted": { tone: "success", text: t("settings.main.notice.packageDeleted") },

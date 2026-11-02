@@ -4,6 +4,7 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { unansweredMessagesSubjectText } from "@/i18n/today-labels";
 import { nowDate, nowMs } from "@/lib/clock";
 import { formatShortDate } from "@/lib/format";
+import { shopClock } from "@/lib/shop-clock";
 import type { TodayAction } from "@/lib/today";
 import { dbNowPlus, fileScopedShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
@@ -187,8 +188,7 @@ describe("ops alerts on the queue (task 157)", () => {
       db,
       shop.id,
       shop.slug,
-      shop.timezone,
-      future,
+      shopClock(shop, future),
       undefined,
       t,
       "en-US",
@@ -201,8 +201,7 @@ describe("ops alerts on the queue (task 157)", () => {
       db,
       shop.id,
       shop.slug,
-      shop.timezone,
-      future,
+      shopClock(shop, future),
       undefined,
       t,
       "en-US",
@@ -232,7 +231,7 @@ describe("ops alerts on the queue (task 157)", () => {
     await resolveMediaDeletion(db, attempt.id, { status: "failed", error: "network error" });
     const t = staffTranslator("en-US");
 
-    const withoutFlag = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const withoutFlag = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
     expect(
       withoutFlag.actions.find((a) => a.id === `media-deletion:${attempt.id}`),
     ).toBeUndefined();
@@ -241,8 +240,7 @@ describe("ops alerts on the queue (task 157)", () => {
       db,
       shop.id,
       shop.slug,
-      shop.timezone,
-      undefined,
+      shopClock(shop),
       undefined,
       t,
       "en-US",
@@ -290,8 +288,7 @@ describe("ops alerts on the queue (task 157)", () => {
       db,
       shop.id,
       shop.slug,
-      shop.timezone,
-      undefined,
+      shopClock(shop),
       undefined,
       t,
       "en-US",
@@ -305,8 +302,7 @@ describe("ops alerts on the queue (task 157)", () => {
       db,
       shop.id,
       shop.slug,
-      shop.timezone,
-      tomorrow,
+      shopClock(shop, tomorrow),
       undefined,
       t,
       "en-US",
@@ -326,7 +322,7 @@ describe("ops alerts on the queue (task 157)", () => {
     expect(row?.href).toBe(`/shop/${shop.slug}/trips/${reef.id}`);
 
     // And it is opt-in like every other ops alert.
-    const withoutFlag = await getTodayWork(db, shop.id, shop.slug, shop.timezone, tomorrow);
+    const withoutFlag = await getTodayWork(db, shop.id, shop.slug, shopClock(shop, tomorrow));
     expect(owedRow(withoutFlag)).toBeUndefined();
   });
 
@@ -374,7 +370,7 @@ describe("ops alerts on the queue (task 157)", () => {
     );
     const t = staffTranslator("en-US");
     const work = () =>
-      getTodayWork(db, shop.id, shop.slug, shop.timezone, undefined, undefined, t, "en-US", true);
+      getTodayWork(db, shop.id, shop.slug, shopClock(shop), undefined, t, "en-US", true);
 
     const row = (await work()).actions.find((a) => a.kind === "payment_dispute");
     expect(row?.subject).toBe(customer.fullName);
@@ -394,7 +390,7 @@ describe("ops alerts on the queue (task 157)", () => {
     await applyStripeAccountStatus(db, "acct_today_restricted", { ...flags, chargesEnabled: true });
     const t = staffTranslator("en-US");
     const work = () =>
-      getTodayWork(db, shop.id, shop.slug, shop.timezone, undefined, undefined, t, "en-US", true);
+      getTodayWork(db, shop.id, shop.slug, shopClock(shop), undefined, t, "en-US", true);
     expect((await work()).actions.find((a) => a.kind === "payments_restricted")).toBeUndefined();
 
     await applyStripeAccountStatus(db, "acct_today_restricted", {
@@ -423,8 +419,7 @@ describe("ops alerts on the queue (task 157)", () => {
       db,
       otherShopId,
       "other-shop",
-      shop.timezone,
-      future,
+      shopClock(shop, future),
       undefined,
       staffTranslator("en-US"),
       "en-US",
@@ -483,7 +478,7 @@ describe("reviews waiting on moderation (one row, and where it lands)", () => {
   it("emits no row at all when nothing is waiting", async () => {
     const { db, shop } = await shopWithReviewsWaiting([]);
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
 
     expect(work.actions.some((action) => action.id === "reviews:pending")).toBe(false);
   });
@@ -491,7 +486,7 @@ describe("reviews waiting on moderation (one row, and where it lands)", () => {
   it("lands on the one waiting review's own anchor when it is the only one", async () => {
     const { db, shop, reviewIds } = await shopWithReviewsWaiting(["Reviewing Diver"]);
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
     const rows = work.actions.filter((action) => action.id === "reviews:pending");
 
     // Still one row — the destination sharpens, the queue never grows.
@@ -509,7 +504,7 @@ describe("reviews waiting on moderation (one row, and where it lands)", () => {
   it("keeps the bare index once there is no single review to mean", async () => {
     const { db, shop } = await shopWithReviewsWaiting(["First Diver", "Second Diver"]);
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
     const rows = work.actions.filter((action) => action.id === "reviews:pending");
 
     expect(rows).toHaveLength(1);
@@ -533,7 +528,7 @@ describe("unanswered messages", () => {
 
   async function unansweredRow() {
     const { db, shop } = ctx;
-    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
     return work.actions.filter((action) => action.id === "inbox:unanswered");
   }
 
@@ -633,8 +628,7 @@ describe("unfiled incident reports on Today (safety sheet 2026-10-15, item 3)", 
       db,
       shop.id,
       shop.slug,
-      shop.timezone,
-      nowDate(),
+      shopClock(shop, nowDate()),
       undefined,
       staffTranslator("en-US"),
       "en-US",

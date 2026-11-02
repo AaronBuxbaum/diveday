@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, inArray, isNotNull, isNull, lte, ne, notExists } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNotNull, isNull, lte, notExists } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { nowDate } from "@/lib/clock";
 import { DEPARTURE_BUFFER_MS, hasSailed } from "@/lib/trips";
@@ -6,6 +6,7 @@ import type { AppDb } from "./client";
 import { deliverSeatOffer, invitableSeats } from "./interest-offers";
 import { bookings, interests, shops, trips } from "./schema";
 import { liveTrip, notRehearsal } from "./trips-live";
+import { seatNotCancelled } from "./trips-queries";
 
 /**
  * **The wait list rolls forward** (third UX review, item 12). A wait list is a
@@ -77,7 +78,7 @@ async function copyInterests(
       and(
         eq(bookings.shopId, input.shopId),
         eq(bookings.tripId, input.toTripId),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
         inArray(
           bookings.personId,
           waiting.flatMap((interest) => (interest.personId ? [interest.personId] : [])),
@@ -136,7 +137,7 @@ function seatedOn(tripId: string) {
   return and(
     eq(bookings.tripId, tripId),
     eq(bookings.personId, interests.personId),
-    ne(bookings.status, "cancelled"),
+    seatNotCancelled,
   );
 }
 

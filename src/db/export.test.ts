@@ -82,13 +82,12 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
   people: [
     "shop_id",
     // The language a diver reads, as observed from their own request's
-    // Accept-Language (docs ADR 20260731-per-person-notification-locale). An
-    // inferred first-hand signal, not a fact the shop entered — a CSV can't
-    // vouch for one, and accepting an imported value would be exactly the
-    // "stale header from an unrelated past request" that ADR narrows against.
-    // Null on import falls back to the shop's locale, which is the same mail a
-    // shop got before the column existed, so nothing is silently lost.
+    // Accept-Language (docs ADR 20260731-per-person-notification-locale): an
+    // inferred signal, not a fact the shop entered, so a CSV can't vouch for
+    // one. Null on import falls back to the shop's locale; nothing is lost.
     "locale",
+    // Superseded by `origin` (#2726), no longer written; dropped next release.
+    "self_registered_at",
   ],
   trips: [
     "shop_id",

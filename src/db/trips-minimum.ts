@@ -1,4 +1,4 @@
-import { and, asc, count, eq, isNotNull, isNull, lte, ne, sql } from "drizzle-orm";
+import { and, asc, count, eq, isNotNull, isNull, lte, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { effectiveMinimum, MINIMUM_SEATS_DECISION_HOURS_DEFAULT } from "@/lib/minimum-seats";
 import type { AppDb } from "./client";
@@ -9,13 +9,14 @@ import { recordSystemTripActivity } from "./operations";
 import { bookings, people, shops, trips } from "./schema";
 import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";
 import { liveTrip } from "./trips-live";
-import { tripSellableSeatsSql } from "./trips-queries";
+import { seatNotCancelled, tripSellableSeatsSql } from "./trips-queries";
 
 /**
  * The minimum-head-count sweep: cancel every departure whose decision moment
  * has passed while it is still short (src/lib/minimum-seats.ts).
  *
- * One pass, cross-shop, run from `src/app/api/cron/minimum-seats/`. It is the
+ * One pass, cross-shop, run as the `minimum-seats` scan of the hourly shop tick
+ * (`src/features/shop-tick`). It is the
  * half of the feature a shop is actually buying — a minimum nobody enforces is
  * the sticky note the shop already had — and it is deliberately the *only*
  * thing that cancels for a minimum. Staff keep their ordinary cancel button,
@@ -87,7 +88,7 @@ export async function listDeparturesAwaitingMinimumDecision(
     })
     .from(trips)
     .innerJoin(shops, eq(shops.id, trips.shopId))
-    .leftJoin(bookings, and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled")))
+    .leftJoin(bookings, and(eq(bookings.tripId, trips.id), seatNotCancelled))
     .where(
       and(
         liveTrip(),
@@ -268,7 +269,7 @@ export async function listMinimumNotMetRecipients(db: AppDb, shopId: string, tri
       and(
         eq(bookings.shopId, shopId),
         eq(bookings.tripId, tripId),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
         isNull(people.deletedAt),
       ),
     );

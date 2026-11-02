@@ -284,6 +284,25 @@ describe("cancelling a push run on main", () => {
     ).not.toBeNull();
   });
 
+  it("refuses a bulk cancel whose target the guard cannot read (issue #3653)", () => {
+    // Six main runs were cancelled within three seconds on 2026-11-01 ("canceled by
+    // @AaronBuxbaum"); a loop or xargs hides the run id, so nothing could be checked.
+    const loop = verdict("for id in 1 2 3; do gh run cancel $id; done");
+    expect(loop).toMatch(/cannot read which run/);
+    expect(loop).toMatch(/literal run id/);
+    expect(
+      verdict("gh run list --json databaseId --jq '.[].databaseId' | xargs -n1 gh run cancel"),
+    ).not.toBeNull();
+    expect(
+      verdict("gh run cancel $(gh run list -L1 --json databaseId --jq '.[0].databaseId')"),
+    ).not.toBeNull();
+    expect(
+      verdict("gh api -X POST repos/AaronBuxbaum/diveday/actions/runs/$RUN/cancel"),
+    ).not.toBeNull();
+    // the same loop with a literal id on each line is read like any other cancel
+    expect(verdict("do gh run cancel 202")).toBeNull();
+  });
+
   it("leaves alone a pull request's run, the nightly, a run it cannot read, and reading a run", () => {
     expect(verdict("gh run cancel 202")).toBeNull();
     expect(verdict("gh run cancel 303")).toBeNull();

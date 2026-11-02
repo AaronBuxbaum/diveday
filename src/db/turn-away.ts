@@ -1,4 +1,4 @@
-import { and, eq, inArray, ne } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { seatName } from "@/lib/held-seat";
 import { SEAT_HELD_STATUSES } from "@/lib/no-show";
@@ -12,6 +12,7 @@ import { getBookingReadiness } from "./readiness";
 import { activityEvents, bookings, people, trips } from "./schema";
 import { lockSeatDeparture } from "./seat-locks";
 import { liveTrip } from "./trips-live";
+import { seatNotCancelled } from "./trips-queries";
 
 /**
  * **"Turned away" at the desk** (safety sheet 2026-10-15, item 6; H-20261015-who-may-turn-someone): the
@@ -179,7 +180,7 @@ export async function partyLeadBookingIds(
       and(
         eq(bookings.shopId, shopId),
         inArray(bookings.partyLeadBookingId, [...bookingIds]),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
       ),
     );
   return new Set(rows.flatMap((row) => (row.leadId ? [row.leadId] : [])));

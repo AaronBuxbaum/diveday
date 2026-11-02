@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, inArray, isNotNull, ne } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNotNull } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { AppDb, DbExecutor } from "./client";
 import {
@@ -10,6 +10,7 @@ import { bookings, courseFormVersions, people, trips } from "./schema";
 import { withinDeskHours } from "./seed-clock";
 import { signedAtFor } from "./seed-waiver-evidence";
 import { liveTrip } from "./trips-live";
+import { seatNotCancelled } from "./trips-queries";
 
 /**
  * **The demo's course forms carry the shop's own words** (fourth review,
@@ -118,13 +119,7 @@ export async function seedCourseFormWording(
     })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
-    .where(
-      and(
-        eq(bookings.shopId, shopId),
-        inArray(bookings.tripId, tripIds),
-        ne(bookings.status, "cancelled"),
-      ),
-    )
+    .where(and(eq(bookings.shopId, shopId), inArray(bookings.tripId, tripIds), seatNotCancelled))
     // A fixed order, so each student's signing time is a function of the seed.
     .orderBy(asc(people.fullName), asc(bookings.id));
   let signing = 0;

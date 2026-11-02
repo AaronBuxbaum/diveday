@@ -31,7 +31,7 @@ import { at, nextCreatedAt } from "./seed-clock";
  *   and exact blocker stacks; borrowing one of their boats would break them.
  * - **Short, not due.** Four days out with a 48-hour window leaves the decision
  *   two days ahead of the fleet's frozen clock, so the demo shows the working
- *   state and the hourly sweep (`/api/cron/minimum-seats`) has nothing to do —
+ *   state and the hourly sweep (`/api/cron/shop-tick`) has nothing to do —
  *   a fixture that cancelled itself the first time the cron ran would take its
  *   own surface off the board.
  * - **Adds only, called late** like `seedCertGates`/`seedCounterBlockers`, so no

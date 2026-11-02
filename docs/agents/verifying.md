@@ -360,6 +360,14 @@ run, and the failing jobs ranked. A week over 1.0 red runs per pull request or 2
 opens one `needs-triage` issue, or comments the week on the one already open. Run it by hand the
 same way (`--days <n>`; add `--file-issue --dry-run` to see what it would file).
 
+The same workflow's `audit` job runs `node scripts/audit-health.mjs`, the dependency audit
+(`pnpm audit --audit-level high`, the whole tree, dev dependencies included): one `needs-triage`
+issue for a high or critical advisory, a comment on it the weeks after, never a failed run on a
+finding. It is weekly, not per pull request, because main carried a high advisory on 2026-11-02
+(zod below 4.6.6, dev-only, under `vercel` and `next-devtools-mcp`) and a per-PR check would redden
+every pull request for a fix none of them owns (#2826, #3651). Turn it per-PR only on a main that
+passes it.
+
 ## Neither: the tracker scan
 
 `pnpm check:follow-ups` reads the live issue tracker, not your branch, so no pull request runs it:

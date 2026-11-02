@@ -93,17 +93,3 @@ export function minimumSeatsState(
     decidesAt,
   };
 }
-
-/**
- * **The sweep's cadence: hourly, at `:00`.** The deadline is printed on the
- * booking page to the minute, and an hourly pass makes that promise true to
- * within an hour, the resolution a shop states its window in (ADR
- * 20260813-minimum-head-count-departures). It keeps `:00`, the minute closest
- * to the printed deadline, as the first of the hourly passes staggered across
- * the minutes pinned in `src/lib/cron-schedule.test.ts` (one database wake an
- * hour).
- *
- * Mirrors `vercel.json`, and `src/lib/cron-schedule.test.ts` fails if the two
- * drift.
- */
-export const MINIMUM_SEATS_CRON_CRONTAB = "0 * * * *";

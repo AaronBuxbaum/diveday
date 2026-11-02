@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull, ne, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { isStaff } from "@/lib/authz";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
@@ -68,6 +68,7 @@ import {
 } from "./schema";
 import { type MarkedSeat, resolveTrainingMarks } from "./training-mark-resolve";
 import { liveTrip } from "./trips-live";
+import { seatNotCancelled } from "./trips-queries";
 import {
   getCurrentWaiverGeneration,
   listSignedWaiversByPerson,
@@ -482,7 +483,7 @@ export async function studentOnSeat(
         eq(bookings.id, bookingId),
         eq(bookings.shopId, shopId),
         eq(bookings.tripId, tripId),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
         eq(bookings.participantType, "diver"),
         isNull(bookings.identityUnconfirmedAt),
       ),
@@ -537,7 +538,7 @@ export async function issueShopCertification(
           eq(bookings.tripId, input.tripId),
           eq(bookings.personId, input.personId),
           eq(bookings.shopId, input.shopId),
-          ne(bookings.status, "cancelled"),
+          seatNotCancelled,
           // A student's seat: a passenger is never certified, and a seat held
           // over who is on it certifies nobody (reviews G4/Y2 of #2226).
           eq(bookings.participantType, "diver"),
@@ -1255,7 +1256,7 @@ async function shopIssuedCourseContext(
         eq(bookings.tripId, input.tripId),
         eq(bookings.personId, input.personId),
         eq(bookings.shopId, input.shopId),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
         eq(bookings.participantType, "diver"),
         isNull(bookings.identityUnconfirmedAt),
       ),

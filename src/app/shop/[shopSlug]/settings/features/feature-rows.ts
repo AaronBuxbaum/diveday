@@ -18,7 +18,7 @@ import { SHOP_FEATURES, type ShopFeature, type ShopSwitch } from "@/lib/shop-fea
  * Tax, promo codes, packages) are payment settings; the crew schedule is the
  * team's. The four predicates
  * resolve to owner and manager today and each states its own reason so one can
- * move without dragging the others (`action-helpers.ts`). The page hides a row
+ * move without dragging the others (`../action-gates.ts`). The page hides a row
  * its reader may not flip, and the one Save writes only the rows the page drew
  * and the reader passes the gate of (`save-plan.ts`).
  */

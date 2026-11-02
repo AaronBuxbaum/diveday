@@ -7,12 +7,13 @@ import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
 import {
+  createPerson,
   findOrCreatePerson,
   recordDiverOwnLocale,
   recordDiverOwnLocaleForBooking,
   selectActivePersonByEmail,
 } from "./people";
-import { bookings, people, shops } from "./schema";
+import { bookings, people, personRoles, shops } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 
 // One seeded database for the file and a rolled-back transaction per test
@@ -58,10 +59,103 @@ describe("selectActivePersonByEmail", () => {
   });
 });
 
+describe("createPerson (issue #2726)", () => {
+  const rolesOf = async (personId: string) =>
+    (
+      await ctx.db
+        .select({ role: personRoles.role })
+        .from(personRoles)
+        .where(eq(personRoles.personId, personId))
+    )
+      .map((row) => row.role)
+      .sort();
+
+  it("writes the origin it was given and a diver role when none are named", async () => {
+    const { db, shop } = ctx;
+    const person = await createPerson(db, {
+      shopId: shop.id,
+      fullName: "Nora Quinn",
+      email: "nora-door@example.com",
+      phone: null,
+      origin: "waitlist",
+    });
+    expect(person.origin).toBe("waitlist");
+    expect(await rolesOf(person.id)).toEqual(["diver"]);
+  });
+
+  it("writes exactly the roles it is given, and none for an empty list", async () => {
+    const { db, shop } = ctx;
+    const owner = await createPerson(db, {
+      shopId: shop.id,
+      fullName: "Owner Door",
+      email: "owner-door@example.com",
+      phone: null,
+      origin: "onboard",
+      roles: ["owner", "manager"],
+    });
+    const invited = await createPerson(db, {
+      shopId: shop.id,
+      fullName: "Invited Door",
+      email: "invited-door@example.com",
+      phone: null,
+      origin: "invite",
+      roles: [],
+    });
+    expect(await rolesOf(owner.id)).toEqual(["manager", "owner"]);
+    expect(await rolesOf(invited.id)).toEqual([]);
+  });
+
+  it("lets a caller carry the fields a door knows, but never override the origin or the shop", async () => {
+    const { db, shop } = ctx;
+    const person = await createPerson(db, {
+      shopId: shop.id,
+      fullName: "Fields Door",
+      email: null,
+      phone: null,
+      origin: "import",
+      // A caller smuggling an origin through `fields` must not win.
+      fields: { dateOfBirth: "1990-04-02", origin: "counter" } as never,
+    });
+    expect(person.dateOfBirth).toBe("1990-04-02");
+    expect(person.origin).toBe("import");
+  });
+
+  it("keeps the origin of the person a racing call already made", async () => {
+    const { db, shop } = ctx;
+    const first = await findOrCreatePerson(db, {
+      shopId: shop.id,
+      fullName: "Nora Quinn",
+      email: "nora-origin@example.com",
+      origin: "public_booking",
+    });
+    const second = await findOrCreatePerson(db, {
+      shopId: shop.id,
+      fullName: "Nora Quinn",
+      email: "nora-origin@example.com",
+      origin: "waitlist",
+    });
+    expect(second.created).toBe(false);
+    expect(second.person.origin).toBe("public_booking");
+    expect(first.person.id).toBe(second.person.id);
+  });
+
+  it("does not default an unnamed door to a real origin", async () => {
+    // A row inserted around the door (a seed, a fixture) reads as `seed`, so a
+    // production row that says so is the bypass the guard exists to stop.
+    const { db, shop } = ctx;
+    const [row] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Around The Door" })
+      .returning();
+    expect(row?.origin).toBe("seed");
+  });
+});
+
 describe("findOrCreatePerson (CR-008)", () => {
   it("creates a new person when no active match exists", async () => {
     const { db, shop } = ctx;
     const result = await findOrCreatePerson(db, {
+      origin: "counter",
       shopId: shop.id,
       fullName: "Nora Quinn",
       email: "nora@example.com",
@@ -73,11 +167,13 @@ describe("findOrCreatePerson (CR-008)", () => {
   it("reuses the existing active person for the same email instead of splitting identity", async () => {
     const { db, shop } = ctx;
     const first = await findOrCreatePerson(db, {
+      origin: "counter",
       shopId: shop.id,
       fullName: "Nora Quinn",
       email: "nora@example.com",
     });
     const second = await findOrCreatePerson(db, {
+      origin: "counter",
       shopId: shop.id,
       fullName: "Nora Q. Quinn", // a re-entered name doesn't fork the record
       email: "nora@example.com",
@@ -95,6 +191,7 @@ describe("findOrCreatePerson (CR-008)", () => {
   it("treats email matching as case-insensitive, matching the database constraint", async () => {
     const { db, shop } = ctx;
     const first = await findOrCreatePerson(db, {
+      origin: "counter",
       shopId: shop.id,
       fullName: "Nora Quinn",
       email: "nora@example.com",
@@ -104,6 +201,7 @@ describe("findOrCreatePerson (CR-008)", () => {
     // .trim().toLowerCase() first), so this exercises the same lowercase
     // value a normalized caller would pass, proving reuse still converges.
     const second = await findOrCreatePerson(db, {
+      origin: "counter",
       shopId: shop.id,
       fullName: "Nora Quinn",
       email: "nora@example.com",
@@ -114,6 +212,7 @@ describe("findOrCreatePerson (CR-008)", () => {
   it("reports nameMatches for the H-20260724-one-person-per-email identity safeguard", async () => {
     const { db, shop } = ctx;
     const created = await findOrCreatePerson(db, {
+      origin: "counter",
       shopId: shop.id,
       fullName: "Nora Quinn",
       email: "nora@example.com",
@@ -123,6 +222,7 @@ describe("findOrCreatePerson (CR-008)", () => {
 
     // Same human, re-typed with a middle initial: reused and still a match.
     const sameHuman = await findOrCreatePerson(db, {
+      origin: "counter",
       shopId: shop.id,
       fullName: "Nora Q. Quinn",
       email: "nora@example.com",
@@ -132,6 +232,7 @@ describe("findOrCreatePerson (CR-008)", () => {
 
     // A different human on the shared inbox: reused, but flagged as a mismatch.
     const differentHuman = await findOrCreatePerson(db, {
+      origin: "counter",
       shopId: shop.id,
       fullName: "Ben Quinn",
       email: "nora@example.com",
@@ -150,11 +251,13 @@ describe("findOrCreatePerson (CR-008)", () => {
     if (!otherShop) throw new Error("second shop insert failed");
 
     const here = await findOrCreatePerson(db, {
+      origin: "counter",
       shopId: shop.id,
       fullName: "Nora Quinn",
       email: "nora@example.com",
     });
     const elsewhere = await findOrCreatePerson(db, {
+      origin: "counter",
       shopId: otherShop.id,
       fullName: "Nora Quinn",
       email: "nora@example.com",
@@ -213,6 +316,7 @@ describe("recordDiverOwnLocale (docs ADR 20260731-per-person-notification-locale
     shopId: string,
   ) {
     const result = await findOrCreatePerson(db, {
+      origin: "counter",
       shopId,
       fullName: "Ingrid Vogel",
       email: `ingrid-${crypto.randomUUID()}@example.com`,
@@ -248,6 +352,7 @@ describe("recordDiverOwnLocale (docs ADR 20260731-per-person-notification-locale
 
     const victimEmail = `ingrid-${crypto.randomUUID()}@example.com`;
     const victim = await findOrCreatePerson(db, {
+      origin: "counter",
       shopId: shop.id,
       fullName: "Ingrid Vogel",
       email: victimEmail,

@@ -261,6 +261,9 @@
       "trainingMarkInvalid": "Training mark no longer fits its course seat. Clear it on the roster."
     }
   },
+  "presence": {
+    "arrived": "Checked in"
+  },
   "shopNav": {
     "language": "Language",
     "boatMode": "Boat mode",

@@ -11,6 +11,7 @@ import {
   salvageOffer,
 } from "@/lib/no-show";
 import { isDiver, seatRefusal } from "@/lib/participant-types";
+import { seatStatusAfterRelease } from "@/lib/presence";
 import { type SimilarDeparture, similarDepartures } from "@/lib/similar-departures";
 import { standingArrivalStatus } from "./arrival-provenance";
 import { loadActiveStaffRoles } from "./authz";
@@ -403,7 +404,7 @@ export async function undoBookingNoShow(
       // Back on the list, so no longer turned away either: the reason only
       // ever sits on a released seat (`bookings_turned_away_is_released`).
       .set({
-        status: standing === "arrived" ? "checked_in" : "booked",
+        status: seatStatusAfterRelease(standing),
         turnedAwayReason: null,
         turnedAwayAt: null,
       })

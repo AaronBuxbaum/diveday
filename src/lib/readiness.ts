@@ -973,6 +973,148 @@ function nitroxBlocker(
 }
 
 /**
+ * **The evidence ladder: where a diver stands against what a departure demands.**
+ *
+ * Readiness (does this diver board?) and admission (is this seat sold?) read
+ * the same card rows against the same demand; they differ only in how far up
+ * the ladder a row must stand to count. A threshold is that one choice, and
+ * never a second body:
+ *
+ * - `verified` (boarding): a verified, unexpired card, and for a specialty a
+ *   confirmed one. Everything softer is a named blocker.
+ * - `sale` (booking, `decideTripAdmission`): a row in any state, the rung the
+ *   booker just typed, or a course that certifies it first. Only a settled
+ *   impossibility is a blocker (`certification_insufficient`/`_missing`,
+ *   `specialty_missing`, `nitrox_missing`).
+ *
+ * Every clearing rule of `verified` also clears at `sale`, so admission is never
+ * stricter than readiness by construction (`readiness.test.ts` pins the ladder,
+ * `trip-admission.test.ts` the product). The order of the returned blockers is
+ * the order readiness lists them: level, specialties, nitrox.
+ */
+export type StandingThreshold = "verified" | "sale";
+
+/** What a departure asks of the diver in the water; a `Requirement` fits. */
+export type StandingDemand = Pick<
+  Requirement,
+  "minimumCertificationLevel" | "requiredSpecialties" | "requiresNitrox"
+>;
+
+/**
+ * The rows a standing reads. A field a threshold does not read is ignored by
+ * it, so a caller states what it knows and the threshold picks.
+ */
+export type StandingEvidence = {
+  certifications: readonly Certification[];
+  specialtyCertifications: readonly SpecialtyCertification[];
+  nitroxCertifications: readonly NitroxCertification[];
+  /** `verified`: courses ahead that will issue a card (a softer blocker, never a clear). */
+  certificationsInTraining?: readonly CertificationInTraining[];
+  /** `verified`: the diver's own "not certified yet". */
+  noCertificationDeclared?: boolean;
+  /** `verified`: ended courses whose card would clear a level blocker. */
+  coursesEnded?: readonly (CertificationInTraining & { tripId: string })[];
+  /** `verified`: the instant "a course still ahead" is measured against. */
+  now?: Date;
+  /** `sale`: levels the diver is booked to be certified at before the boat leaves. */
+  levelsInTraining?: readonly CertificationLevel[];
+  /** `sale`: the rung the booker just typed; evidence for this decision only. */
+  declaredLevel?: CertificationLevel | null;
+  /** `sale`: the nitrox box the booker just ticked. */
+  declaredNitrox?: boolean;
+};
+
+/**
+ * `sale` for the level: clears when any row, the typed rung, or a course
+ * finishing first reaches it. Otherwise `insufficient` naming the highest rung
+ * stood on (a course is not a card, so it never counts toward `heldLevel`), or
+ * `missing` when nothing names a rung at all.
+ */
+function saleLevelBlocker(
+  evidence: StandingEvidence,
+  minimumLevel: CertificationLevel,
+): ReadinessBlocker | null {
+  const rungs = [
+    ...evidence.certifications.map((certification) => certification.level),
+    ...(evidence.declaredLevel ? [evidence.declaredLevel] : []),
+  ];
+  const higher = (best: CertificationLevel | null, level: CertificationLevel) =>
+    best === null || certificationRank(level) > certificationRank(best) ? level : best;
+  const heldLevel = rungs.reduce<CertificationLevel | null>(higher, null);
+  const reached = (evidence.levelsInTraining ?? []).reduce<CertificationLevel | null>(
+    higher,
+    heldLevel,
+  );
+  if (reached !== null && certificationRank(reached) >= certificationRank(minimumLevel)) {
+    return null;
+  }
+  return heldLevel
+    ? { code: "certification_insufficient", params: { requiredLevel: minimumLevel, heldLevel } }
+    : { code: "certification_missing" };
+}
+
+/** The standing against one level, at a threshold. Null when it clears. */
+export function levelStanding(
+  minimumLevel: CertificationLevel,
+  evidence: StandingEvidence,
+  threshold: StandingThreshold,
+): ReadinessBlocker | null {
+  if (threshold === "sale") return saleLevelBlocker(evidence, minimumLevel);
+  const blocker = certificationBlocker(
+    evidence.certifications,
+    minimumLevel,
+    evidence.certificationsInTraining ?? [],
+    evidence.noCertificationDeclared ?? false,
+    evidence.now ?? nowDate(),
+  );
+  return blocker ? withEndedCourse(blocker, minimumLevel, evidence.coursesEnded) : null;
+}
+
+/** The standing against one specialty, at a threshold. Null when it clears. */
+export function specialtyStanding(
+  specialty: DiveSpecialty,
+  evidence: StandingEvidence,
+  threshold: StandingThreshold,
+): ReadinessBlocker | null {
+  if (threshold === "verified") {
+    return specialtyBlocker(evidence.specialtyCertifications, specialty);
+  }
+  // A card of the right specialty in any state: pending review, or imported
+  // and awaiting a one-tap confirm, both move before departure.
+  return evidence.specialtyCertifications.some((card) => card.specialty === specialty)
+    ? null
+    : { code: "specialty_missing", params: { specialty } };
+}
+
+/** The standing against nitrox, at a threshold. Null when it clears. */
+export function nitroxStanding(
+  evidence: StandingEvidence,
+  threshold: StandingThreshold,
+): ReadinessBlocker | null {
+  if (threshold === "verified") return nitroxBlocker(evidence.nitroxCertifications);
+  return evidence.nitroxCertifications.length > 0 || evidence.declaredNitrox
+    ? null
+    : { code: "nitrox_missing" };
+}
+
+/** Level, then each specialty, then nitrox: the blockers the demand leaves, at a threshold. */
+export function standing(
+  demand: StandingDemand,
+  evidence: StandingEvidence,
+  threshold: StandingThreshold,
+): ReadinessBlocker[] {
+  const blockers: (ReadinessBlocker | null)[] = [];
+  if (demand.minimumCertificationLevel) {
+    blockers.push(levelStanding(demand.minimumCertificationLevel, evidence, threshold));
+  }
+  for (const specialty of demand.requiredSpecialties) {
+    blockers.push(specialtyStanding(specialty, evidence, threshold));
+  }
+  if (demand.requiresNitrox) blockers.push(nitroxStanding(evidence, threshold));
+  return blockers.filter((blocker): blocker is ReadinessBlocker => blocker !== null);
+}
+
+/**
  * The shared safety boundary. Every unknown or non-ready input becomes a
  * human-readable blocker; only explicit evidence can produce `ready`.
  */
@@ -1120,30 +1262,21 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
     ? unionRequirements(input.requirement, effectiveSite)
     : NO_REQUIREMENT;
 
-  if (effective.minimumCertificationLevel) {
-    const certification = certificationBlocker(
-      input.certifications,
-      effective.minimumCertificationLevel,
-      input.certificationsInTraining ?? [],
-      input.noCertificationDeclared ?? false,
-      now,
-    );
-    if (certification) {
-      blockers.push(
-        withEndedCourse(certification, effective.minimumCertificationLevel, input.coursesEnded),
-      );
-    }
-  }
-
-  for (const specialty of effective.requiredSpecialties) {
-    const blocker = specialtyBlocker(input.specialtyCertifications ?? [], specialty);
-    if (blocker) blockers.push(blocker);
-  }
-
-  if (effective.requiresNitrox) {
-    const blocker = nitroxBlocker(input.nitroxCertifications ?? []);
-    if (blocker) blockers.push(blocker);
-  }
+  blockers.push(
+    ...standing(
+      effective,
+      {
+        certifications: input.certifications,
+        specialtyCertifications: input.specialtyCertifications ?? [],
+        nitroxCertifications: input.nitroxCertifications ?? [],
+        certificationsInTraining: input.certificationsInTraining,
+        noCertificationDeclared: input.noCertificationDeclared,
+        coursesEnded: input.coursesEnded,
+        now,
+      },
+      "verified",
+    ),
+  );
 
   if (input.requirement.requiresPayment && !(input.statedFree && !isDiver(input.participantType))) {
     const status = input.paymentStatus ?? "unpaid";

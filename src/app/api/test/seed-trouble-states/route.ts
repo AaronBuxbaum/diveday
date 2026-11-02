@@ -44,7 +44,13 @@ import {
 } from "@/db/schema";
 import { seatDiver } from "@/db/seat-diver";
 import { getShopBySlug } from "@/db/shops";
-import { createTrip, heldSeatCounts, moveTrip, setTripParticipantTerms } from "@/db/trips";
+import {
+  createTrip,
+  heldSeatCounts,
+  moveTrip,
+  seatNotCancelled,
+  setTripParticipantTerms,
+} from "@/db/trips";
 import { completeWaiver, issueWaiverRequest, recordWaiverDelivery } from "@/db/waivers";
 import { STAFF_ROLES } from "@/lib/authz";
 import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
@@ -541,13 +547,7 @@ async function letTheReefBoatsKitLapse(
   const booked = await db
     .select({ id: bookings.id })
     .from(bookings)
-    .where(
-      and(
-        eq(bookings.shopId, shopId),
-        eq(bookings.tripId, reef.id),
-        ne(bookings.status, "cancelled"),
-      ),
-    );
+    .where(and(eq(bookings.shopId, shopId), eq(bookings.tripId, reef.id), seatNotCancelled));
   const today = calendarDateInTimezone(now, timeZone);
   await db
     .update(boats)
@@ -648,13 +648,7 @@ async function carrySomebodyWhoIsNotDiving(
     .select({ fullName: people.fullName, participantType: bookings.participantType })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
-    .where(
-      and(
-        eq(bookings.shopId, shopId),
-        eq(bookings.tripId, reef.id),
-        ne(bookings.status, "cancelled"),
-      ),
-    );
+    .where(and(eq(bookings.shopId, shopId), eq(bookings.tripId, reef.id), seatNotCancelled));
   const named = (type: "snorkeler" | "rider") =>
     aboard.find((row) => row.participantType === type)?.fullName;
   const missing = NOT_DIVING.filter((guest) => !named(guest.participantType));
@@ -1184,7 +1178,7 @@ async function unstaffTomorrowsDeparture(
   const [departure] = await db
     .select({ id: trips.id })
     .from(trips)
-    .innerJoin(bookings, and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled")))
+    .innerJoin(bookings, and(eq(bookings.tripId, trips.id), seatNotCancelled))
     .where(
       and(
         eq(trips.shopId, shopId),
@@ -1379,7 +1373,7 @@ async function askForAnIntroSessionPastItsRatio(
   const [{ booked }] = await db
     .select({ booked: count(bookings.id) })
     .from(bookings)
-    .where(and(eq(bookings.tripId, session.id), ne(bookings.status, "cancelled")));
+    .where(and(eq(bookings.tripId, session.id), seatNotCancelled));
   for (let seat = booked; seat < pastTheCap; seat += 1) {
     const seated = await seatDiver(db, {
       shopId,
@@ -1758,13 +1752,7 @@ async function seedPaidAfterClose(db: AppDb, shopId: string, now: Date): Promise
     .select({ id: bookings.id, tripId: bookings.tripId })
     .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
-    .where(
-      and(
-        eq(bookings.shopId, shopId),
-        ne(bookings.status, "cancelled"),
-        eq(trips.status, "scheduled"),
-      ),
-    )
+    .where(and(eq(bookings.shopId, shopId), seatNotCancelled, eq(trips.status, "scheduled")))
     .orderBy(trips.startsAt, bookings.createdAt)
     .limit(1);
   if (lateSeat) {

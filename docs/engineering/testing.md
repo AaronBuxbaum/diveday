@@ -105,10 +105,11 @@ Renaming a journey's test renames its row in the same change.
 | Every pull request | repo checks, lint, typecheck (one job), all unit tests (4 shards) with the coverage floors, the build, every Playwright spec (6 shards), the light-mode captures `visual-affected` selects (up to 8 shards, 7 for every light capture), the fast lane; real Postgres when `src/db/**` or `drizzle/**` changed |
 | Push to `main` | all of the above with every capture, light and dark: the next baseline |
 | Nightly | real Postgres (ci.yml's schedule), the one-day simulation, quarantined tests and the flake hunt (`e2e-nightly.yml`), CodeQL (`codeql.yml`, daily 05:30 UTC), the follow-up scan |
+| Hourly | the public schedule canary (`public-schedule-canary.yml`): the demo shop's schedule draws a trip |
 | Weekly | the persona walk, the shard-duration refresh |
 
-**A scheduled run that goes red files itself.** `simulate-day.yml`, `durations-refresh.yml` and
-`e2e-nightly.yml` end with `node scripts/workflow-alert.mjs`: a red run on the
+**A scheduled run that goes red files itself.** `simulate-day.yml`, `durations-refresh.yml`,
+`public-schedule-canary.yml` and `e2e-nightly.yml` end with `node scripts/workflow-alert.mjs`: a red run on the
 default branch opens one `ci-red` + `needs-triage` issue in the follow-up format, each later red
 run comments on it, and the first green run closes it. A manual run on another branch files
 nothing.
@@ -233,7 +234,7 @@ run `E2E_WORKERS=1 VISUAL_TIMING_OUT=.agent-out/timing.json pnpm exec playwright
 byte-comparison script were deleted; unexplained visual differences remain unapproved.
 
 Byte equality is stricter than reg-suit would be, which ignores anti-aliasing (`enableAntialias` in
-`regconfig.json`). Two one-worker runs of shard 1 on 2026-10-24 differed in three of 201 PNGs. Two
+`regconfig.json`) and up to 20 stray pixels (`thresholdPixel`, ADR 20260729-reg-suit-visual-regression). Two one-worker runs of shard 1 on 2026-10-24 differed in three of 201 PNGs. Two
 were a timed toast caught at one width and gone at the next, now waited out before the capture
 (`blowout-cascade`, `staffing-shift-remove-disclosure`). The third was anti-aliasing on one map
 pin (`dive-sites-library-pin-selected`, a channel difference of at most 3). So a difference in a
@@ -732,7 +733,8 @@ the full suite locally with identical pass counts across repeated runs.
   guard gives; `seed-routes.test.ts` asserts that shape route by route.
 - **Visual regression freezes the clock, never masks.** The `e2e/visual-*.spec.ts` files photograph each
   surface through `capture()` (or `capturePrint()` for the dock surfaces). Nothing is masked: the
-  server clock is pinned by `DIVEDAY_CLOCK` and the browser clock by fixture setup, so
+  server clock is pinned by `DIVEDAY_CLOCK` (read through `runtimeMode()`, `src/lib/runtime-mode.ts`,
+  which is off whenever `DATABASE_URL` is set) and the browser clock by fixture setup, so
   clock-derived text is pixel-stable and a regression in a date stays visible. Each capture first
   waits on the heading or control it photographs, so a moved heading fails the capture as a test;
   a changed look never does: it is a reg-suit diff against the S3 baseline for the fork point.

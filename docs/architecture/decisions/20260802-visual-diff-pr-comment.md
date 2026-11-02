@@ -98,7 +98,7 @@ headline for the same reason.
 ## Consequences
 
 - A PR now carries two visual-regression comments: reg-suit's counts comment and this summary. The
-  summary's footer says which is which, and it is edited in place rather than appended.
+  summary's footer says which is which, and it is edited in place rather than appended, and only when what it says changed (a fingerprint of the verdict, counts, every name, note and report location, `diveday:visual-state`; issue #3644). Every edit is a notification a subscribed session can start a turn on, so a push that moved nothing leaves the comment at the commit it was written at. The cost is named in the footer: the comment compares surface names, not pixels, so a surface that stays changed with different pixels reads the same; `pnpm visual:report --commit <head>` is the head's own report.
 - The comment is only as truthful as `out.json`. If reg-suit ever stops publishing `expectedItems`,
   `summarizeReport` falls back to reconstructing the baseline set from passed + failed + deleted —
   covered by a test — but any future field rename needs the same treatment.

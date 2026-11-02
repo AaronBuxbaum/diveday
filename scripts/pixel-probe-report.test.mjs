@@ -41,8 +41,8 @@ describe("the re-run command", () => {
   });
 
   it("points a dev-server probe at screenshot.mjs instead", () => {
-    expect(rerunCommand({ source: "dev", path: "/shop/blue-mantis/settings/security" })).toBe(
-      "node scripts/screenshot.mjs /shop/blue-mantis/settings/security --probe",
+    expect(rerunCommand({ source: "dev", path: "/shop/blue-mantis/me/security" })).toBe(
+      "node scripts/screenshot.mjs /shop/blue-mantis/me/security --probe",
     );
   });
 

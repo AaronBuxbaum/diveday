@@ -4,6 +4,7 @@ import { PrivateNoteForm } from "@/components/PrivateNoteForm";
 import { Badge } from "@/components/ui/badge";
 import { StatusMark } from "@/components/ui/StatusMark";
 import { depthWarningText } from "@/i18n/depth-labels";
+import { presenceText } from "@/i18n/presence-labels";
 import type { TripManifest } from "@/lib/manifests";
 import { shopPath } from "@/lib/staff-notices";
 import { DiverFacts, diverBlockerText } from "./DiverFacts";
@@ -180,7 +181,7 @@ export function DiverRowPanel({
       <ul className="mt-3 flex flex-wrap gap-2 empty:hidden">
         {diver.checkedIn ? (
           <li>
-            <Badge tone="neutral">{t("manifest.checkedInPill")}</Badge>
+            <Badge tone="neutral">{presenceText(t, "arrived")}</Badge>
           </li>
         ) : null}
         {/* **The minor flag**, when something louder took the row's one

@@ -10,7 +10,7 @@ import { E2E_FROZEN_CLOCK } from "./servers";
 
 /** Enrollment belongs to a per-test minted owner, never the shared demo. */
 export async function enrollSignInChallenge(page: Page, shopSlug: string) {
-  await page.goto(`/shop/${shopSlug}/settings/security`);
+  await page.goto(`/shop/${shopSlug}/me/security`);
   await page
     .locator("summary")
     .filter({ hasText: staffTranslator("en-US")("settings.security.setupDisclosure") })

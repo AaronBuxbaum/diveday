@@ -10,7 +10,7 @@ import type { AppDb, DbExecutor } from "./client";
 import { lockDemoShopIdentityChanges } from "./demo-account-guard";
 import { releaseHelpRequestsOfPerson } from "./help-requests";
 import { boundLockWaits } from "./lock-bounds";
-import { selectActivePersonByEmail } from "./people";
+import { createPerson, selectActivePersonByEmail } from "./people";
 import {
   accountSessions,
   accountSignInChallenges,
@@ -401,11 +401,14 @@ export async function inviteStaffMember(
         }
         personId = existingPerson.id;
       } else {
-        const [inserted] = await tx
-          .insert(people)
-          .values({ shopId: input.shopId, fullName: input.fullName, email })
-          .returning({ id: people.id });
-        if (!inserted) throw new Error("inviteStaffMember: failed to create person");
+        const inserted = await createPerson(tx, {
+          shopId: input.shopId,
+          fullName: input.fullName,
+          email,
+          phone: null,
+          origin: "invite",
+          roles: [],
+        });
         personId = inserted.id;
       }
 

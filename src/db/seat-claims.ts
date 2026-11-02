@@ -41,6 +41,7 @@ import {
   waiverTemplates,
 } from "./schema";
 import { livePerson, liveTrip } from "./trips-live";
+import { seatNotCancelled } from "./trips-queries";
 import { issueWaiverOnJoin } from "./waiver-issue";
 import { WAIVER_STATE_COLUMNS } from "./waiver-record-columns";
 import { issueWaiverRequest } from "./waivers-requests";
@@ -423,11 +424,7 @@ async function claimSeatRecord(tx: DbExecutor, input: ClaimSeatInput): Promise<C
       .select({ id: bookings.id })
       .from(bookings)
       .where(
-        and(
-          eq(bookings.tripId, trip.id),
-          eq(bookings.personId, existing.id),
-          ne(bookings.status, "cancelled"),
-        ),
+        and(eq(bookings.tripId, trip.id), eq(bookings.personId, existing.id), seatNotCancelled),
       )
       .limit(1);
     if (clash)
@@ -448,6 +445,7 @@ async function claimSeatRecord(tx: DbExecutor, input: ClaimSeatInput): Promise<C
         fullName,
         email,
         phone: input.phone,
+        origin: "public_booking",
       });
   const person = resolved.person;
   const unconfirmed = !resolved.nameMatches;
@@ -537,7 +535,7 @@ async function heldSeatForClaim(
         eq(bookings.tripId, seat.tripId),
         eq(people.email, input.email.trim().toLowerCase()),
         isNull(people.deletedAt),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
         ne(bookings.id, capability.bookingId),
       ),
     )
@@ -841,7 +839,7 @@ export async function issuePartySeatClaims(
       and(
         eq(bookings.shopId, input.shopId),
         eq(bookings.partyLeadBookingId, input.leadBookingId),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
       ),
     )
     .orderBy(asc(bookings.createdAt), asc(people.fullName), asc(bookings.id));
@@ -1139,7 +1137,7 @@ export async function openMinorSeatWaiver(
         eq(bookings.id, input.seatBookingId),
         eq(bookings.shopId, input.shopId),
         eq(bookings.partyLeadBookingId, input.leadBookingId),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
       ),
     )
     .limit(1);
@@ -1217,7 +1215,7 @@ export async function partySeatsKeptAfterLeadCancel(
         eq(bookings.shopId, input.shopId),
         eq(bookings.partyLeadBookingId, input.leadBookingId),
         eq(bookings.tripId, lead.tripId),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
       ),
     )
     .orderBy(asc(bookings.createdAt), asc(people.fullName), asc(bookings.id));

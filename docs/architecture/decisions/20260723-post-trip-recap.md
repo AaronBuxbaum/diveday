@@ -63,7 +63,8 @@ ends**, whether a staff member presses “Send recap now” or the scheduled wor
   `sendDueRecaps` selects only departures at or past that floor, and `sendTripRecaps` repeats the
   same check for the staff action; a crafted request cannot bypass it.
 - `/api/cron/recaps` runs hourly under the existing `CRON_SECRET`, with its own `diveday-recaps`
-  monitor. The old daily reminder route no longer dispatches recaps, so concurrent scans cannot
+  monitor. (Since issue #2715 it is the `recaps` scan of the hourly `/api/cron/shop-tick`, under
+  `diveday-shop-tick`.) The old daily reminder route no longer dispatches recaps, so concurrent scans cannot
   race each other. The existing delivery-row dedup and 48-hour lookback remain unchanged.
 - Close-out shows the eligibility countdown and enables its send control at the floor. It can also
   keep crew photos staff-only until a future, explicit audience/consent policy chooses to share

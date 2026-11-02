@@ -1,17 +1,14 @@
 "use server";
 import { z } from "zod";
-import { getDb } from "@/db/client";
 import { setShopDiversPerDivemaster } from "@/db/shops";
+import { defineAction, land } from "@/features/server-action";
 import {
   DEFAULT_DIVERS_PER_DIVEMASTER,
   MAX_DIVERS_PER_DIVEMASTER,
   MIN_DIVERS_PER_DIVEMASTER,
 } from "@/lib/divemaster-ratio";
-import { formValue, readForm } from "@/lib/form-parse";
-import { revalidateAndRedirect } from "@/lib/navigation";
-import { requireStaffSession } from "@/lib/session";
-import { noticeUrl, shopPath } from "@/lib/staff-notices";
-import { settingsBlock } from "./action-helpers";
+import { formValue } from "@/lib/form-parse";
+import { SETTINGS_GATE } from "./action-gates";
 
 const crewScheduleForm = z.object({ diversPerDivemaster: formValue() });
 
@@ -20,28 +17,19 @@ const crewScheduleForm = z.object({ diversPerDivemaster: formValue() });
  * (`src/lib/crew-schedule.ts`). The switch itself is a row of the Features page
  * (issue #2814); only a shop that plans its crew is measured against this.
  */
-export async function saveCrewScheduleAction(formData: FormData) {
-  const session = await requireStaffSession();
-  const settings = shopPath(session.user.shopSlug, "settings");
-  await settingsBlock(session);
-
-  const form = readForm(crewScheduleForm, formData);
-  const diversPerDivemaster = parseDiversPerDivemaster(form.diversPerDivemaster);
-  if (diversPerDivemaster === "invalid") {
-    revalidateAndRedirect(
-      settings,
-      noticeUrl(settings, "crew-schedule-ratio-invalid", { form: "crewSchedule" }),
-    );
-    return;
-  }
-
-  await setShopDiversPerDivemaster(await getDb(), session.user.shopId, diversPerDivemaster);
-
-  revalidateAndRedirect(
-    settings,
-    noticeUrl(settings, "crew-schedule-saved", { saved: "crewSchedule" }),
-  );
-}
+export const saveCrewScheduleAction = defineAction({
+  gate: [SETTINGS_GATE],
+  input: crewScheduleForm,
+  async run({ db, shopId, path }, form) {
+    const settings = path("settings");
+    const diversPerDivemaster = parseDiversPerDivemaster(form.diversPerDivemaster);
+    if (diversPerDivemaster === "invalid") {
+      return land(settings, "crew-schedule-ratio-invalid", { extra: { form: "crewSchedule" } });
+    }
+    await setShopDiversPerDivemaster(db, shopId, diversPerDivemaster);
+    return land(settings, "crew-schedule-saved", { extra: { saved: "crewSchedule" } });
+  },
+});
 
 /**
  * Blank falls back to the default rather than storing nothing: every

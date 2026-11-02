@@ -434,6 +434,7 @@ script again.
 | 20261029-boat-capacity-total-occupants | Count assigned crew inside boat… |
 | 20261101-cut-mutation-testing | Cut mutation testing until the… |
 | 20261102-papaparse-csv-reader | Use Papa Parse as the… |
-| 20261102-public-suffix-list | Use tldts for website-assist suffix… |
+| 20261102-public-suffix-list | Refuse wildcard parents, unknown TLDs… |
+| 20261102-website-assist-public-suffix-list | Read the Public Suffix List… |
 
 <!-- adr-index:end -->
