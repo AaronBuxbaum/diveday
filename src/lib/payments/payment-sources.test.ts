@@ -19,7 +19,7 @@ describe("stripePaymentSourceLookup", () => {
     expect(url).toBe(
       "https://api.stripe.com/v1/invoice_payments?payment%5Btype%5D=payment_intent&payment%5Bpayment_intent%5D=pi_1&limit=1",
     );
-    expect(init.method).toBeUndefined();
+    expect(init.method).toBe("GET");
     expect(init.headers).toMatchObject({ "Stripe-Account": "acct_1" });
   });
 

@@ -156,7 +156,7 @@ export const seams = [
 export const SERVER_ONLY_MODULES = [
   "src/lib/phone-line-type.ts",
   "src/lib/payments/stripe-keys.ts",
-  "src/lib/payments/stripe-fetch.ts",
+  "src/lib/payments/stripe-client.ts",
   "src/lib/payments/webhook.ts",
 ];
 const SERVER_ONLY_PACKAGE = /^libphonenumber-js(?:\/|$)/;

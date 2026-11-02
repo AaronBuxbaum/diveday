@@ -2190,7 +2190,7 @@
   "src/lib/payments/settlement.test.ts": 11,
   "src/lib/payments/stripe-api-version.test.ts": 75,
   "src/lib/payments/stripe-contract.test.ts": 443,
-  "src/lib/payments/stripe-fetch.test.ts": 304,
+  "src/lib/payments/stripe-client.test.ts": 304,
   "src/lib/payments/stripe-keys.test.ts": 16,
   "src/lib/payments/webhook.test.ts": 20,
   "src/lib/pending-sign-in.test.ts": 11,

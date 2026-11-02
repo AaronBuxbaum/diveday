@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { log } from "@/lib/log";
 import { keyLivemode } from "./payment-sources";
-import { boundedStripeFetch } from "./stripe-fetch";
+import { stripeAnsweredStatus, stripeRequest } from "./stripe-client";
 import { logStripeRequestThrew } from "./stripe-request-log";
 
 /**
@@ -99,16 +99,26 @@ function summarized(span: Span): PayoutSummary {
 
 export function stripePayoutSummaryLookup(
   config: { secretKey: string },
-  unboundedFetch: Fetch,
+  fetchImpl: Fetch,
 ): PayoutSummaryLookup {
-  const fetchImpl = boundedStripeFetch(unboundedFetch);
   const get = (stripeAccountId: string, query: URLSearchParams) =>
-    fetchImpl(`https://api.stripe.com/v1/balance_transactions?${query.toString()}`, {
-      headers: {
-        Authorization: `Bearer ${config.secretKey}`,
-        "Stripe-Account": stripeAccountId,
-      },
+    stripeRequest(config.secretKey, fetchImpl, {
+      method: "GET",
+      path: `/v1/balance_transactions?${query.toString()}`,
+      stripeAccount: stripeAccountId,
     });
+
+  /** What a request Stripe refused or never answered leaves the summary as. */
+  function refused(error: unknown): PayoutSummary {
+    const status = stripeAnsweredStatus(error);
+    if (status === null) {
+      logStripeRequestThrew("summarize_payout", error);
+      return { status: "failed" };
+    }
+    if (status === 429 || status >= 500) return { status: "failed" };
+    log("stripe_payout_summary.refused", "warn", { httpStatus: status });
+    return { status: "unavailable" };
+  }
 
   /**
    * A manual or instant payout: Stripe refuses `payout=` for it, but the
@@ -121,27 +131,22 @@ export function stripePayoutSummaryLookup(
     stripeAccountId: string,
     payoutId: string,
   ): Promise<PayoutSummary> {
+    let answer: unknown;
     try {
-      const response = await get(
+      answer = await get(
         stripeAccountId,
         new URLSearchParams({ source: payoutId, limit: String(PAGE_LIMIT) }),
       );
-      if (!response.ok) {
-        if (response.status === 429 || response.status >= 500) return { status: "failed" };
-        log("stripe_payout_summary.refused", "warn", { httpStatus: response.status });
-        return { status: "unavailable" };
-      }
-      const parsed = balanceTransactionPageSchema.safeParse(await response.json());
-      if (!parsed.success) return { status: "failed" };
-      // A payout has one balance transaction; a list that says there is more
-      // is not the shape this reads, so it records no fee rather than a part.
-      if (parsed.data.has_more || parsed.data.data.length === 0) return { status: "unavailable" };
-      const feeCents = parsed.data.data.reduce((sum, transaction) => sum + transaction.fee, 0);
-      return { status: "summarized", coveredFrom: null, coveredTo: null, feeCents };
     } catch (error) {
-      logStripeRequestThrew("summarize_payout", error);
-      return { status: "failed" };
+      return refused(error);
     }
+    const parsed = balanceTransactionPageSchema.safeParse(answer);
+    if (!parsed.success) return { status: "failed" };
+    // A payout has one balance transaction; a list that says there is more
+    // is not the shape this reads, so it records no fee rather than a part.
+    if (parsed.data.has_more || parsed.data.data.length === 0) return { status: "unavailable" };
+    const feeCents = parsed.data.data.reduce((sum, transaction) => sum + transaction.fee, 0);
+    return { status: "summarized", coveredFrom: null, coveredTo: null, feeCents };
   }
 
   return {
@@ -149,32 +154,27 @@ export function stripePayoutSummaryLookup(
       if (!automatic) return summarizeOwnFee(stripeAccountId, payoutId);
       const span: Span = { earliest: null, latest: null, feeCents: 0 };
       let startingAfter: string | null = null;
-      try {
-        for (let page = 0; page < MAX_PAYOUT_SUMMARY_PAGES; page += 1) {
-          const query = new URLSearchParams({ payout: payoutId, limit: String(PAGE_LIMIT) });
-          if (startingAfter) query.set("starting_after", startingAfter);
-          const response = await get(stripeAccountId, query);
-          if (!response.ok) {
-            if (response.status === 429 || response.status >= 500) return { status: "failed" };
-            log("stripe_payout_summary.refused", "warn", { httpStatus: response.status });
-            return { status: "unavailable" };
-          }
-          const parsed = balanceTransactionPageSchema.safeParse(await response.json());
-          if (!parsed.success) return { status: "failed" };
-          for (const transaction of parsed.data.data) addTransaction(span, transaction);
-          const last = parsed.data.data.at(-1);
-          if (!parsed.data.has_more || !last) return summarized(span);
-          startingAfter = last.id;
+      for (let page = 0; page < MAX_PAYOUT_SUMMARY_PAGES; page += 1) {
+        const query = new URLSearchParams({ payout: payoutId, limit: String(PAGE_LIMIT) });
+        if (startingAfter) query.set("starting_after", startingAfter);
+        let answer: unknown;
+        try {
+          answer = await get(stripeAccountId, query);
+        } catch (error) {
+          return refused(error);
         }
-        // Longer than this reads. A span or a fee total off part of the list
-        // would be a wrong number on a page an owner reconciles against, so
-        // the payout is recorded without either.
-        log("stripe_payout_summary.too_long", "warn", { pages: MAX_PAYOUT_SUMMARY_PAGES });
-        return { status: "unavailable" };
-      } catch (error) {
-        logStripeRequestThrew("summarize_payout", error);
-        return { status: "failed" };
+        const parsed = balanceTransactionPageSchema.safeParse(answer);
+        if (!parsed.success) return { status: "failed" };
+        for (const transaction of parsed.data.data) addTransaction(span, transaction);
+        const last = parsed.data.data.at(-1);
+        if (!parsed.data.has_more || !last) return summarized(span);
+        startingAfter = last.id;
       }
+      // Longer than this reads. A span or a fee total off part of the list
+      // would be a wrong number on a page an owner reconciles against, so
+      // the payout is recorded without either.
+      log("stripe_payout_summary.too_long", "warn", { pages: MAX_PAYOUT_SUMMARY_PAGES });
+      return { status: "unavailable" };
     },
   };
 }

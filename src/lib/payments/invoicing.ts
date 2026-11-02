@@ -1,14 +1,18 @@
 import { z } from "zod";
-import { boundedStripeFetch } from "./stripe-fetch";
-import { connectedAccountHeaders } from "./stripe-headers";
+import {
+  type StripeRequest,
+  stripeAnsweredStatus,
+  stripeErrorTokens,
+  stripeRequest,
+} from "./stripe-client";
 import { type StripeKeySource, secretKeyForCall } from "./stripe-keys";
 import { logStripeRequestThrew } from "./stripe-request-log";
 
 /**
  * Order/invoice creation on a shop's connected Stripe account. Every call
  * carries a `Stripe-Account` header so the shop, not the platform, is the
- * merchant of record (docs ADR 20260719-stripe-connect-orders). Fetch-based,
- * no SDK — same pattern as ./index.ts and ./connect.ts.
+ * merchant of record (docs ADR 20260719-stripe-connect-orders), through the
+ * SDK's request path in ./stripe-client.ts (ADR 20261102-stripe-sdk-adapters).
  */
 
 export type InvoiceLineItem = {
@@ -135,20 +139,15 @@ export type MarkInvoicePaidResult = {
  */
 export const MARK_PAID_TIMEOUT_MS = 30_000;
 
-const stripeErrorEnvelopeSchema = z.object({ error: z.object({ type: z.string() }) });
-
 /**
- * A 4xx that parses as Stripe's own error envelope: Stripe decided, and did not
+ * A 4xx carrying Stripe's own error envelope: Stripe decided, and did not
  * act. Not a 409, which says another call with the same idempotency key is
  * still running, so the mark may yet land.
  */
-async function isStripeRefusal(response: Response): Promise<boolean> {
-  if (response.status < 400 || response.status >= 500 || response.status === 409) return false;
-  try {
-    return stripeErrorEnvelopeSchema.safeParse(await response.json()).success;
-  } catch {
-    return false;
-  }
+function isStripeRefusal(error: unknown): boolean {
+  const status = stripeAnsweredStatus(error);
+  if (status === null || status < 400 || status >= 500 || status === 409) return false;
+  return stripeErrorTokens(error).type !== undefined;
 }
 export type ResendInvoiceResult = { status: "sent" | "not_configured" | "failed" };
 export type RefundInvoiceResult = {
@@ -342,29 +341,30 @@ function toCreatedInvoice(body: z.infer<typeof invoiceResponseSchema>, stripeCus
 
 export function stripeInvoicingProvider(
   config: StripeKeySource,
-  unboundedFetch: Fetch,
+  fetchImpl: Fetch,
 ): InvoicingProvider {
-  const fetchImpl = boundedStripeFetch(unboundedFetch);
-  async function post(
+  /** One request on the shop's connected account, with the key chosen for it. */
+  async function onAccount(
+    stripeAccountId: string,
+    request: Omit<StripeRequest, "stripeAccount">,
+  ): Promise<unknown> {
+    const secretKey = await secretKeyForCall(config, stripeAccountId);
+    return stripeRequest(secretKey, fetchImpl, { ...request, stripeAccount: stripeAccountId });
+  }
+  const post = (
     stripeAccountId: string,
     path: string,
-    form: URLSearchParams,
+    params: URLSearchParams,
     idempotencyKey?: string,
-    signal?: AbortSignal,
-  ) {
-    return fetchImpl(`https://api.stripe.com/v1${path}`, {
+    timeoutMs?: number,
+  ) =>
+    onAccount(stripeAccountId, {
       method: "POST",
-      headers: {
-        ...connectedAccountHeaders(
-          await secretKeyForCall(config, stripeAccountId),
-          stripeAccountId,
-        ),
-        ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
-      },
-      body: form.toString(),
-      ...(signal ? { signal } : {}),
+      path: `/v1${path}`,
+      params,
+      ...(idempotencyKey ? { idempotencyKey } : {}),
+      ...(timeoutMs ? { timeoutMs } : {}),
     });
-  }
 
   return {
     async createInvoice(request) {
@@ -390,19 +390,14 @@ export function stripeInvoicingProvider(
           customerForm.set("address[country]", address.country.trim().toUpperCase());
         }
         if (request.taxEnabled) customerForm.set("tax[validate_location]", "immediately");
-        const customerResponse = await post(
-          request.stripeAccountId,
-          "/customers",
-          customerForm,
-          `${key}:customer`,
+        const customerBody = customerResponseSchema.safeParse(
+          await post(request.stripeAccountId, "/customers", customerForm, `${key}:customer`),
         );
-        if (!customerResponse.ok) return { status: "failed" };
-        const customerBody = customerResponseSchema.safeParse(await customerResponse.json());
         if (!customerBody.success) return { status: "failed" };
         const stripeCustomerId = customerBody.data.id;
 
         for (const [index, item] of request.lineItems.entries()) {
-          const itemResponse = await post(
+          await post(
             request.stripeAccountId,
             "/invoiceitems",
             new URLSearchParams({
@@ -415,34 +410,33 @@ export function stripeInvoicingProvider(
             }),
             `${key}:item:${index}`,
           );
-          if (!itemResponse.ok) return { status: "failed" };
         }
 
         invoiceSent = true;
-        const invoiceResponse = await post(
-          request.stripeAccountId,
-          "/invoices",
-          new URLSearchParams({
-            customer: stripeCustomerId,
-            collection_method: "send_invoice",
-            days_until_due: String(request.daysUntilDue ?? 7),
-            auto_advance: "false",
-            ...(request.taxEnabled ? { "automatic_tax[enabled]": "true" } : {}),
-          }),
-          `${key}:invoice`,
+        const invoiceBody = invoiceResponseSchema.safeParse(
+          await post(
+            request.stripeAccountId,
+            "/invoices",
+            new URLSearchParams({
+              customer: stripeCustomerId,
+              collection_method: "send_invoice",
+              days_until_due: String(request.daysUntilDue ?? 7),
+              auto_advance: "false",
+              ...(request.taxEnabled ? { "automatic_tax[enabled]": "true" } : {}),
+            }),
+            `${key}:invoice`,
+          ),
         );
-        if (!invoiceResponse.ok) return { status: "failed" };
-        const invoiceBody = invoiceResponseSchema.safeParse(await invoiceResponse.json());
         if (!invoiceBody.success) return { status: "failed" };
 
-        const finalizeResponse = await post(
-          request.stripeAccountId,
-          `/invoices/${invoiceBody.data.id}/finalize`,
-          new URLSearchParams(),
-          `${key}:finalize`,
+        const finalizeBody = invoiceResponseSchema.safeParse(
+          await post(
+            request.stripeAccountId,
+            `/invoices/${invoiceBody.data.id}/finalize`,
+            new URLSearchParams(),
+            `${key}:finalize`,
+          ),
         );
-        if (!finalizeResponse.ok) return { status: "failed" };
-        const finalizeBody = invoiceResponseSchema.safeParse(await finalizeResponse.json());
         if (!finalizeBody.success) return { status: "failed" };
 
         // Best-effort: staff can still share hosted_invoice_url if Stripe's own send fails.
@@ -457,6 +451,7 @@ export function stripeInvoicingProvider(
 
         return { status: "created", ...toCreatedInvoice(finalizeBody.data, stripeCustomerId) };
       } catch (error) {
+        if (stripeAnsweredStatus(error) !== null) return { status: "failed" };
         logStripeRequestThrew("create_invoice", error);
         return invoiceSent ? { status: "unanswered" } : { status: "failed" };
       }
@@ -464,51 +459,45 @@ export function stripeInvoicingProvider(
 
     async voidInvoice(stripeAccountId, stripeInvoiceId) {
       try {
-        const response = await post(
-          stripeAccountId,
-          `/invoices/${stripeInvoiceId}/void`,
-          new URLSearchParams(),
-        );
-        return { status: response.ok ? "voided" : "failed" };
+        await post(stripeAccountId, `/invoices/${stripeInvoiceId}/void`, new URLSearchParams());
+        return { status: "voided" };
       } catch (error) {
-        logStripeRequestThrew("void_invoice", error);
+        if (stripeAnsweredStatus(error) === null) logStripeRequestThrew("void_invoice", error);
         return { status: "failed" };
       }
     },
 
     async markInvoicePaidOutOfBand(stripeAccountId, stripeInvoiceId, idempotencyKey) {
       try {
-        const response = await post(
+        await post(
           stripeAccountId,
           `/invoices/${stripeInvoiceId}/pay`,
           new URLSearchParams({ paid_out_of_band: "true" }),
           idempotencyKey,
-          AbortSignal.timeout(MARK_PAID_TIMEOUT_MS),
+          MARK_PAID_TIMEOUT_MS,
         );
-        if (response.ok) return { status: "paid" };
-        return { status: (await isStripeRefusal(response)) ? "refused" : "unknown" };
+        return { status: "paid" };
       } catch (error) {
-        logStripeRequestThrew("mark_invoice_paid_out_of_band", error);
+        if (isStripeRefusal(error)) return { status: "refused" };
+        if (stripeAnsweredStatus(error) === null) {
+          logStripeRequestThrew("mark_invoice_paid_out_of_band", error);
+        }
         return { status: "unknown" };
       }
     },
 
     async resendInvoice(stripeAccountId, stripeInvoiceId) {
       try {
-        const response = await post(
-          stripeAccountId,
-          `/invoices/${stripeInvoiceId}/send`,
-          new URLSearchParams(),
-        );
-        return { status: response.ok ? "sent" : "failed" };
+        await post(stripeAccountId, `/invoices/${stripeInvoiceId}/send`, new URLSearchParams());
+        return { status: "sent" };
       } catch (error) {
-        logStripeRequestThrew("resend_invoice", error);
+        if (stripeAnsweredStatus(error) === null) logStripeRequestThrew("resend_invoice", error);
         return { status: "failed" };
       }
     },
 
     async refundInvoice(stripeAccountId, stripeInvoiceId, idempotencyKey, amountCents) {
-      // As `refundCheckoutSession`: a throw after the refund POST may be money moved.
+      // As `refundCheckoutSession`: no answer after the refund POST may be money moved.
       let refundSent = false;
       try {
         // No `expand[]=payment_intent`. That parameter is not merely
@@ -518,17 +507,12 @@ export function stripeInvoicingProvider(
         // `failed` with no money moved and nothing naming the cause. Both
         // shapes carry the intent *id* unexpanded, which is all a refund
         // needs, so ask for the plain object.
-        const invoiceResponse = await fetchImpl(
-          `https://api.stripe.com/v1/invoices/${stripeInvoiceId}`,
-          {
-            headers: connectedAccountHeaders(
-              await secretKeyForCall(config, stripeAccountId),
-              stripeAccountId,
-            ),
-          },
+        const invoiceBody = invoiceResponseSchema.safeParse(
+          await onAccount(stripeAccountId, {
+            method: "GET",
+            path: `/v1/invoices/${stripeInvoiceId}`,
+          }),
         );
-        if (!invoiceResponse.ok) return { status: "failed" };
-        const invoiceBody = invoiceResponseSchema.safeParse(await invoiceResponse.json());
         if (!invoiceBody.success) return { status: "failed" };
         const paymentIntentId = paidPaymentIntentId(invoiceBody.data);
         if (!paymentIntentId) return { status: "not_refundable" };
@@ -540,13 +524,14 @@ export function stripeInvoicingProvider(
         // the same reason `refundCheckoutSession` omits it too.
         if (amountCents !== undefined) form.set("amount", String(amountCents));
         refundSent = true;
-        const response = await post(stripeAccountId, "/refunds", form, idempotencyKey);
-        if (!response.ok) return { status: "failed" };
-        const body = refundResponseSchema.safeParse(await response.json());
+        const body = refundResponseSchema.safeParse(
+          await post(stripeAccountId, "/refunds", form, idempotencyKey),
+        );
         return body.success
           ? { status: "refunded", refundId: body.data.id, amountCents: body.data.amount }
           : { status: "failed" };
       } catch (error) {
+        if (stripeAnsweredStatus(error) !== null) return { status: "failed" };
         logStripeRequestThrew("refund_invoice", error);
         return { status: refundSent ? "unanswered" : "failed" };
       }
@@ -554,14 +539,12 @@ export function stripeInvoicingProvider(
 
     async retrieveInvoice(stripeAccountId, stripeInvoiceId) {
       try {
-        const response = await fetchImpl(`https://api.stripe.com/v1/invoices/${stripeInvoiceId}`, {
-          headers: connectedAccountHeaders(
-            await secretKeyForCall(config, stripeAccountId),
-            stripeAccountId,
-          ),
-        });
-        if (!response.ok) return { status: "failed" };
-        const body = invoiceResponseSchema.safeParse(await response.json());
+        const body = invoiceResponseSchema.safeParse(
+          await onAccount(stripeAccountId, {
+            method: "GET",
+            path: `/v1/invoices/${stripeInvoiceId}`,
+          }),
+        );
         if (!body.success) return { status: "failed" };
         return {
           status: "ok",
@@ -575,7 +558,7 @@ export function stripeInvoicingProvider(
           },
         };
       } catch (error) {
-        logStripeRequestThrew("retrieve_invoice", error);
+        if (stripeAnsweredStatus(error) === null) logStripeRequestThrew("retrieve_invoice", error);
         return { status: "failed" };
       }
     },

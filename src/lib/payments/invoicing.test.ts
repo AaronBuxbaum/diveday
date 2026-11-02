@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { invoicingProviderFromEnvironment } from "@/db/stripe-providers";
+import { stripeResponse } from "@/lib/payments/__fixtures__/stripe-response";
 
 /** The `stripe_api.request_threw` lines a case wrote, parsed. */
 function threwLines(spy: { mock: { calls: unknown[][] } }): Array<Record<string, unknown>> {
@@ -31,7 +32,7 @@ function sequencedFetch(responses: unknown[]) {
 }
 
 function ok(json: unknown) {
-  return { ok: true, json: async () => json };
+  return stripeResponse(json);
 }
 
 describe("stripe invoicing provider", () => {
@@ -172,7 +173,7 @@ describe("stripe invoicing provider", () => {
   });
 
   it("fails if any step in the chain is not ok", async () => {
-    const fetchImpl = sequencedFetch([ok({ id: "cus_1" }), { ok: false, json: async () => ({}) }]);
+    const fetchImpl = sequencedFetch([ok({ id: "cus_1" }), stripeResponse({}, 400)]);
     const provider = providerWith({ STRIPE_SECRET_KEY: "sk_test" }, fetchImpl);
     expect(await provider.createInvoice(request)).toEqual({ status: "failed" });
   });
@@ -209,20 +210,11 @@ describe("stripe invoicing provider", () => {
   it("tells a refusal Stripe answered from a mark it may have made", async () => {
     const stripeError = { error: { type: "invalid_request_error", code: "invoice_not_open" } };
     const cases: Array<[unknown, string]> = [
-      [{ ok: false, status: 400, json: async () => stripeError }, "refused"],
-      [{ ok: false, status: 400, json: async () => ({}) }, "unknown"],
-      [{ ok: false, status: 409, json: async () => stripeError }, "unknown"],
-      [{ ok: false, status: 502, json: async () => stripeError }, "unknown"],
-      [
-        {
-          ok: false,
-          status: 400,
-          json: async () => {
-            throw new SyntaxError("not json");
-          },
-        },
-        "unknown",
-      ],
+      [stripeResponse(stripeError, 400), "refused"],
+      [stripeResponse({}, 400), "unknown"],
+      [stripeResponse(stripeError, 409), "unknown"],
+      [stripeResponse(stripeError, 502), "unknown"],
+      [new Response("<html>not json</html>", { status: 400 }), "unknown"],
     ];
     for (const [response, status] of cases) {
       const provider = providerWith(
