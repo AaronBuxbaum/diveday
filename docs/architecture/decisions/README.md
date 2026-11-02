@@ -436,6 +436,7 @@ script again.
 | 20261102-papaparse-csv-reader | Use Papa Parse as the… |
 | 20261102-postal-mime-inbound-reader | Use PostalMime to read inbound… |
 | 20261102-public-suffix-list | Refuse wildcard parents, unknown TLDs… |
+| 20261102-stripe-sdk-adapters | Call Stripe through the official… |
 | 20261102-website-assist-public-suffix-list | Read the Public Suffix List… |
 
 <!-- adr-index:end -->
