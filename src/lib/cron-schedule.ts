@@ -1,24 +1,17 @@
 /**
  * The platform's scheduling grain, in one place.
  *
- * Most durable retries are drained by the daily `/api/cron/reminders` entry at
- * `0 14 * * *` (vercel.json). That makes the cron cadence — not the backoff
- * arithmetic a queue happens to write into a `next_attempt_at` column — the
- * real floor on how soon those messages can be tried again. Post-dive recaps
- * are the intentional exception: their own hourly pass is what makes the
- * close-out's four-hour promise useful instead of a vague next-day follow-up.
+ * Most durable retries are drained by the daily `/api/cron/reminders` entry
+ * (`DAILY_TICK_CRONTAB`, mirrored from vercel.json). That cadence, not the
+ * backoff arithmetic a queue writes into `next_attempt_at`, is the real floor
+ * on how soon those messages can be tried again: under a once-a-day drain
+ * every rung of `src/db/notifications.ts`'s 30s -> 1h ladder collapses to the
+ * next tick (OPS-6). Consumers derive their bounds from the constants here
+ * rather than restating a cadence the queue cannot deliver.
  *
- * This module exists because that floor was invisible at the only place it
- * mattered. `src/db/notifications.ts` computed a 30s → 1h exponential ladder
- * that reads like a system retrying within the hour; under a once-a-day drain
- * every rung of it collapses to "tomorrow at 14:00 UTC", so the first retry of
- * a failed waiver email is ~24h out and the eighth is ~8 days out (OPS-6).
- * Neither figure appeared anywhere in the code or the runbooks.
- *
- * The generic queue's schedule stays daily. What changes is that the arithmetic
- * says what actually happens, and every consumer derives its bounds from this
- * constant instead of restating a cadence it cannot deliver. Recap delivery has
- * a separate, explicitly tested hourly exception in `recap-schedule.ts`.
+ * Fresh sends are the intentional exception and do not drain the queue: the
+ * hourly recap pass (`recap-schedule.ts`) and the other hourly passes
+ * allowlisted in `cron-schedule.test.ts`.
  */
 
 /** UTC hour of the daily `/api/cron/reminders` tick. Mirrors vercel.json. */
@@ -43,19 +36,12 @@ export const DAILY_TICK_CRONTAB = `${DAILY_TICK_UTC_MINUTE} ${DAILY_TICK_UTC_HOU
 export const DAILY_TICK_INTERVAL_MS = 24 * 60 * 60 * 1_000;
 
 /**
- * The first moment the daily drain runs at or after `instant`.
- *
- * This is the honest form of "retry in N milliseconds": a queue row can name
- * any `next_attempt_at` it likes, but nothing reads that column until the next
- * tick, so the effective due time is always this. Rounding forward explicitly
- * also removes a latent full-day slip — a delay that lands a few minutes
- * *past* today's 14:00 (a failure at 13:59 asking for an hour) previously
- * became eligible at 14:59, missed the pass that had just run, and waited
- * until 14:00 the following day. Snapping to the boundary makes "one pass
- * later" mean one pass, not sometimes two.
- *
- * Pure and instant-based: no host-zone reading, no wall-clock assumptions
- * beyond the UTC the cron itself is expressed in.
+ * The first moment the daily drain runs at or after `instant`: the honest form
+ * of "retry in N milliseconds", since nothing reads `next_attempt_at` before
+ * the next tick. Snapping to the boundary also removes a full-day slip: a
+ * delay landing a few minutes *past* a tick (a failure just before it asking
+ * for an hour) would miss the pass that just ran and wait a day, so "one pass
+ * later" means one pass. Pure and instant-based, in the UTC the cron uses.
  */
 export function nextDailyTickAtOrAfter(instant: Date): Date {
   const tick = new Date(instant.getTime());
@@ -67,13 +53,10 @@ export function nextDailyTickAtOrAfter(instant: Date): Date {
 }
 
 /**
- * How many daily passes fit in `windowMs` — i.e. how many times something can
- * actually be retried inside a wall-clock budget.
- *
- * Attempt counts are the usual way a queue bounds its own work, and they are
- * the wrong unit here: `8 attempts` meant ~2 hours under the ladder it was
- * sized for and means ~8 days under the drain that really runs. Callers state
- * the budget they mean in days and derive the count from this.
+ * How many daily passes fit in `windowMs`: how many times something can
+ * actually be retried inside a wall-clock budget. Attempt counts are the wrong
+ * unit under a daily drain (8 attempts is ~8 days, not ~2 hours), so callers
+ * state the budget in days and derive the count from this.
  */
 export function dailyPassesWithin(windowMs: number): number {
   return Math.max(1, Math.floor(windowMs / DAILY_TICK_INTERVAL_MS));

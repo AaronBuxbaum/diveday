@@ -1,26 +1,18 @@
 import { nowDate } from "@/lib/clock";
 
 /**
- * A departure that only runs if enough people book it.
- *
- * Most dive shops run at least some trips this way — a long-range charter, a
- * night dive, anything where fuel and crew cost the same whether two people or
- * ten are aboard. Until now DiveDay could not say so: a shop that needed four
- * divers wrote it in the trip description, watched the seat count themselves,
- * and phoned around on the morning of. That is the shape of every "we'll
- * confirm closer to the day" message a diver has ever been left hanging by.
+ * A departure that only runs if enough people book it (a long-range charter, a
+ * night dive: fuel and crew cost the same whether two or ten are aboard).
  *
  * The policy is two numbers on the trip: how many seats it needs, and how many
- * hours before departure the shop makes the call. Both null — every trip that
- * exists today — means the boat goes with whoever booked, and nothing in this
- * file has an opinion.
+ * hours before departure the shop makes the call. Both null means the boat goes
+ * with whoever booked, and nothing in this file has an opinion.
  *
  * **The deadline is a promise to the diver, not a reminder for the shop.** It
  * is published on the booking page before anyone pays ("runs with at least 4
- * divers; we'll confirm by Thu 14 Aug, 7:30 AM"), which is what makes the
- * automatic cancellation fair rather than abrupt: the answer arrives at a time
- * the diver was told in advance, early enough to make another plan, instead of
- * whenever somebody at the shop remembered to look.
+ * divers; we'll confirm by Thu 14 Aug, 7:30 AM"), which makes the automatic
+ * cancellation fair: the answer arrives at a time the diver was told in
+ * advance, early enough to make another plan.
  */
 
 /**
@@ -103,25 +95,15 @@ export function minimumSeatsState(
 }
 
 /**
- * **The sweep's cadence, hourly.** The deadline is printed on the booking page
- * to the minute ("we'll confirm by Thu 14 Aug, 7:30 AM"), and an hourly pass
- * makes that promise true to within an hour, which is the resolution a shop
- * states its window in. A nightly pass would make it true to within about a
- * day (ADR 20260813-minimum-head-count-departures).
- *
- * `:00` rather than the `:20` it shipped with, inside the five minutes the
- * recap and trip-reminder passes share. The twenty-minute stagger was
- * protecting nothing — each hourly pass reads its own rows — and it cost three
- * separate database wake-ups an hour instead of one, which on a compute that sleeps after five
- * idle minutes and bills for the time it is awake is the whole difference
- * between a duty cycle set by the clock and one set by use. Moving it forward
- * twenty minutes also narrows the worst-case lag behind a deadline rather than
- * widening it.
+ * **The sweep's cadence: hourly, at `:00`.** The deadline is printed on the
+ * booking page to the minute, and an hourly pass makes that promise true to
+ * within an hour, the resolution a shop states its window in (ADR
+ * 20260813-minimum-head-count-departures). It keeps `:00`, the minute closest
+ * to the printed deadline, as the first of the hourly passes staggered across
+ * the minutes pinned in `src/lib/cron-schedule.test.ts` (one database wake an
+ * hour).
  *
  * Mirrors `vercel.json`, and `src/lib/cron-schedule.test.ts` fails if the two
  * drift.
  */
-// Still `:00`, first of the hourly passes now staggered across `:00`–`:04`
-// (code review 2026-10-10, item 11): the deadline this sweep keeps is printed
-// on the booking page, so it keeps the minute closest to it.
 export const MINIMUM_SEATS_CRON_CRONTAB = "0 * * * *";
