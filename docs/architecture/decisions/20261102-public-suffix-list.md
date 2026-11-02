@@ -1,7 +1,8 @@
-# 20261102-public-suffix-list — Use tldts for website-assist suffix refusal
+# 20261102-public-suffix-list — Refuse wildcard parents, unknown TLDs and shared roots too
 
 - **Status:** Accepted
 - **Date:** 2026-11-02
+- **Amends:** [20261102-website-assist-public-suffix-list](20261102-website-assist-public-suffix-list.md)
 
 ## Context
 
@@ -14,8 +15,9 @@ the Public Suffix List on 2026-11-02.
 
 ## Decision
 
-`tldts` 7.4.19 (exact pin) becomes a direct runtime dependency. It was already in the tree through
-`tough-cookie`. `allowedFetchHost` keeps WHATWG URL parsing, the http(s), userinfo, port, IP,
+[20261102-website-assist-public-suffix-list](20261102-website-assist-public-suffix-list.md) added
+`tldts` (`^7.4.19`) as a direct dependency and refuses a host that is itself a public suffix. This
+decision, from an independent security review, tightens that rule. `allowedFetchHost` keeps WHATWG URL parsing, the http(s), userinfo, port, IP,
 label and private-name checks, then sets one leading `www.` aside and refuses the rest when
 `tldts` (`allowPrivateDomains: true`) finds no registrable domain (the host is itself a suffix),
 when the host's TLD is in neither section of the list (`intranet.corp`), when `a.<host>` has no
