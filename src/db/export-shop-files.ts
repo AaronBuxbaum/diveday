@@ -2301,23 +2301,6 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
     note: EXPORT_FILE_NOTES["shop_promo_codes.csv"],
   },
   {
-    file: "shop_promo_redemptions.csv",
-    header: ["id", "promo_code_id", "code", "checkout_id", "amount_charged_cents", "redeemed_at"],
-    // The code travels beside its id for the same reason every other file
-    // carries a `*_name` next to a `*_person_id`: a bundle a human opens
-    // in a spreadsheet must be readable without joining it back together.
-    rows: ({ promoCodeText, promoRedemptionRows }) =>
-      promoRedemptionRows.map((row) => [
-        row.id,
-        row.promoCodeId,
-        promoCodeText.get(row.promoCodeId),
-        row.checkoutId,
-        row.amountChargedCents,
-        row.redeemedAt,
-      ]),
-    note: EXPORT_FILE_NOTES["shop_promo_redemptions.csv"],
-  },
-  {
     file: "courses.csv",
     header: [
       "id",

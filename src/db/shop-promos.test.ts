@@ -1,10 +1,10 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import { fakeCheckout, fakePromotions } from "@/test/fakes";
 import { createBookingParty } from "./bookings";
 import { markCheckoutPaidBySessionId, startBookingCheckout } from "./checkouts";
-import { shopPromoCodes, shopPromoRedemptions, tripLastMinutePromos } from "./schema";
+import { bookingCheckouts, bookingPayments, shopPromoCodes, tripLastMinutePromos } from "./schema";
 import {
   createShopPromoCode,
   deleteShopPromoCode,
@@ -56,9 +56,10 @@ async function promoNamed(
 }
 
 /**
- * Redemptions of **one** code, oldest first. Same reason `promoNamed` above
- * exists: the seeded demo shop ships its own codes *and* a redeemed one, so a
- * bare `select().from(shopPromoRedemptions)` returns the seed's REEF10 row
+ * Redemptions of **one** code, oldest first: its completed checkouts (a
+ * redemption is not a row of its own, ADR 20261102-a-redemption-is-a-completed-checkout).
+ * Same reason `promoNamed` above exists: the seeded demo shop ships its own
+ * codes *and* a redeemed one, so a bare `select().from(bookingCheckouts)` returns the seed's REEF10 row
  * beside the one under test — in whatever order the heap hands them back, which
  * is not an order at all. Reading `[0]` off that asserted against the seed's
  * $162 roughly half the time and only started failing when an unrelated change
@@ -70,9 +71,11 @@ async function redemptionsOf(
 ) {
   return db
     .select()
-    .from(shopPromoRedemptions)
-    .where(eq(shopPromoRedemptions.promoCodeId, promoCodeId))
-    .orderBy(shopPromoRedemptions.redeemedAt, shopPromoRedemptions.id);
+    .from(bookingCheckouts)
+    .where(
+      and(eq(bookingCheckouts.promoCodeId, promoCodeId), eq(bookingCheckouts.status, "completed")),
+    )
+    .orderBy(bookingCheckouts.completedAt, bookingCheckouts.id);
 }
 
 function promoInput(shopId: string, overrides: Record<string, unknown> = {}) {
@@ -501,10 +504,10 @@ describe("redemption recording", () => {
     // 20% off $180 — Stripe reports the $144 it actually collected.
     await markCheckoutPaidBySessionId(db, started.checkout.stripeSessionId, undefined, 14_400);
     expect((await promoNamed(db, shop.id, "REEF20")).timesRedeemed).toBe(1);
-    // The redemption records what the shop received with this code applied,
-    // copied from Stripe's own total — not the $180 that was asked (PAY-H2).
+    // The checkout keeps what the shop received with this code applied, copied
+    // from Stripe's own total — not the $180 that was asked (PAY-H2).
     const [redemption] = await redemptionsOf(db, created.promo.id);
-    expect(redemption?.amountChargedCents).toBe(14_400);
+    expect(redemption?.settledTotalCents).toBe(14_400);
 
     // Stripe retries deliveries; a second one must not inflate the count.
     await markCheckoutPaidBySessionId(db, started.checkout.stripeSessionId, undefined, 14_400);
@@ -563,11 +566,15 @@ describe("redemption recording", () => {
 
     await markCheckoutPaidBySessionId(db, started.checkout.stripeSessionId);
     const [redemption] = await redemptionsOf(db, created.promo.id);
-    // No settled figure exists, so the redemption is recorded at $180 less
-    // this code's own 20% — never the pre-discount $180 the diver was quoted,
-    // which would overstate every unsettled redemption in this history
-    // (PAY-M3).
-    expect(redemption?.amountChargedCents).toBe(14_400);
+    // No settled figure exists, so the diver's payment is recorded at $180 less
+    // this code's own 20% — never the pre-discount $180 the diver was quoted
+    // (PAY-M3) — and the use still counts.
+    expect(redemption?.settledTotalCents).toBeNull();
+    const payments = await db
+      .select({ amountCents: bookingPayments.amountCents })
+      .from(bookingPayments)
+      .where(eq(bookingPayments.shopId, shop.id));
+    expect(payments.map((p) => p.amountCents)).toContain(14_400);
   });
 
   it("records nothing for an undiscounted checkout", async () => {

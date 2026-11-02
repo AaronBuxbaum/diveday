@@ -85,7 +85,6 @@ import {
   shopContactEmailConfirmationTokens,
   shopIntegrations,
   shopPromoCodes,
-  shopPromoRedemptions,
   shopShoreAlertTokens,
   shopStripeAccounts,
   shopSubscriptions,
@@ -201,9 +200,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(gearReservations).where(eq(gearReservations.shopId, shopId));
   await db.delete(orders).where(eq(orders.shopId, shopId));
   await db.delete(bookingCheckoutBookings).where(eq(bookingCheckoutBookings.shopId, shopId));
-  // Redemptions reference checkouts; the codes themselves are referenced *by*
-  // checkouts, so the codes go after them (docs ADR 20260729-shop-promo-codes).
-  await db.delete(shopPromoRedemptions).where(eq(shopPromoRedemptions.shopId, shopId));
+  // The codes are referenced *by* checkouts, so they go after them.
   await db.delete(divePackages).where(eq(divePackages.shopId, shopId));
   await db.delete(bookingCheckouts).where(eq(bookingCheckouts.shopId, shopId));
   await db.delete(shopPromoCodes).where(eq(shopPromoCodes.shopId, shopId));

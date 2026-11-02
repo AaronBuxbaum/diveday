@@ -162,7 +162,6 @@ export const OUTSIDE_RETENTION: readonly string[] = [
   "stripe_refund_failures",
   "pricing_volume_statements", // a percent-plan shop's closed month, the books behind a fee (ADR 20261022-pricing-ab-test)
   "dive_package_entitlements",
-  "shop_promo_redemptions",
   // Credentials that live and die with the thing they open: revoked, spent, or
   // deleted with their parent. The token tables that are *not* here
   // (`account_tokens`, `account_sessions`, `shop_contact_email_confirmation_tokens`,

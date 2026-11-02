@@ -24,7 +24,6 @@ import {
   people,
   personCourtesyEmailUnsubscribeTokens,
   personRoles,
-  shopPromoRedemptions,
   shopShoreAlertTokens,
   shopStripeAccounts,
   shops,
@@ -380,12 +379,6 @@ describe("resetDemoSchedule", () => {
       (await listShopPromoCodes(db, shop.id)).promos.find((promo) => promo.code === "REEF10")
         ?.timesRedeemed,
     ).toBe(1);
-    expect(
-      await db
-        .select()
-        .from(shopPromoRedemptions)
-        .where(eq(shopPromoRedemptions.promoCodeId, seeded.id)),
-    ).toHaveLength(1);
 
     expect(await setShopPromoEnabled(db, shop.id, seeded.id, false)).toBe(true);
     expect((await getShopPromoByCode(db, shop.id, "REEF10"))?.status).toBe("disabled");

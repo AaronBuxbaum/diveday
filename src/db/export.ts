@@ -496,8 +496,6 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
 
   const checkoutBookingRows = await readScoped(tx, "bookingCheckoutBookings", scope);
 
-  const promoRedemptionRows = await readScoped(tx, "shopPromoRedemptions", scope);
-
   const noteRows = await readScoped(tx, "internalNotes", scope);
 
   const activityRows = await readScoped(tx, "activityEvents", scope);
@@ -688,7 +686,6 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     executedDiveRows,
     sightingRows,
     checkoutBookingRows,
-    promoRedemptionRows,
     noteRows,
     activityRows,
     notificationRows,
@@ -1294,7 +1291,6 @@ export async function loadShopExportCounts(
     "incident_report_addenda.csv": await countShopScoped(db, "incidentReportAddenda", shopId),
     "activity_events.csv": await countShopScoped(db, "activityEvents", shopId),
     "notification_deliveries.csv": await countShopScoped(db, "notificationDeliveries", shopId),
-    "shop_promo_redemptions.csv": await countShopScoped(db, "shopPromoRedemptions", shopId),
     "interests.csv": await countShopScoped(db, "interests", shopId),
     "date_request_offer_bookings.csv": await countShopScoped(
       db,

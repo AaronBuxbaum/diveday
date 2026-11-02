@@ -6,7 +6,6 @@ import {
   bookings,
   paymentOperationIntents,
   shopPromoCodes,
-  shopPromoRedemptions,
   tripLastMinutePromos,
   trips,
 } from "./schema";
@@ -77,7 +76,7 @@ async function discountCap(db: DbExecutor, ref: DiscountRef): Promise<number | n
 
 /**
  * How many uses this discount has spent or is holding: paid checkouts that
- * applied it, pending ones whose hosted page can still be paid, and attempts
+ * applied it (completed), pending ones whose hosted page can still be paid, and attempts
  * that reserved it and have not heard back from Stripe yet. `exceptIntentId`
  * leaves the asking attempt out of its own count.
  */
@@ -93,21 +92,8 @@ async function discountUses(
     eq(bookingCheckouts.status, "pending"),
     or(isNull(bookingCheckouts.expiresAt), gt(bookingCheckouts.expiresAt, now)),
   );
-  // A shop code's paid uses are its redemption rows, the count the Promos page
-  // shows; a trip deal has no redemption table, so its completed checkouts.
-  let paid = 0;
-  if (ref.source === "shop") {
-    const [row] = await db
-      .select({ total: count() })
-      .from(shopPromoRedemptions)
-      .where(
-        and(
-          eq(shopPromoRedemptions.shopId, ref.shopId),
-          eq(shopPromoRedemptions.promoCodeId, ref.promoId),
-        ),
-      );
-    paid = Number(row?.total ?? 0);
-  }
+  // A paid use is a completed checkout that applied the discount; a pending one
+  // whose hosted page can still be paid is held, not yet spent.
   const [held] = await db
     .select({ total: count() })
     .from(bookingCheckouts)
@@ -115,9 +101,7 @@ async function discountUses(
       and(
         eq(bookingCheckouts.shopId, ref.shopId),
         eq(promoColumn, ref.promoId),
-        ref.source === "shop"
-          ? livePending
-          : or(eq(bookingCheckouts.status, "completed"), livePending),
+        or(eq(bookingCheckouts.status, "completed"), livePending),
       ),
     );
   const intentColumn =
@@ -151,7 +135,7 @@ async function discountUses(
         ),
       ),
     );
-  return paid + Number(held?.total ?? 0) + Number(reserved?.total ?? 0);
+  return Number(held?.total ?? 0) + Number(reserved?.total ?? 0);
 }
 
 /** Whether this discount has nothing left to give. */

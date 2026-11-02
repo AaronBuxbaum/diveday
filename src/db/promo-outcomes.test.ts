@@ -8,7 +8,6 @@ import {
   courses,
   people,
   shopPromoCodes,
-  shopPromoRedemptions,
   shops,
   tripLastMinutePromos,
   trips,
@@ -168,22 +167,24 @@ describe("shopPromoOutcomes", () => {
       .values({ shopId, code: "WINTER", discountAmountCents: 2_000, status: "active" })
       .returning();
     if (!code || !unused) throw new Error("code insert failed");
-    const snapshot = await checkout(db, shopId, tripId, {
+    await checkout(db, shopId, tripId, {
       seats: 2,
       promoCodeId: code.id,
       appliedDiscountCents: 2_000,
     });
     // No cents snapshot: the percent of the asked total.
-    const percentOnly = await checkout(db, shopId, tripId, {
+    await checkout(db, shopId, tripId, {
       seats: 1,
       promoCodeId: code.id,
       appliedDiscountPercent: 10,
     });
-    for (const checkoutId of [snapshot, percentOnly]) {
-      await db
-        .insert(shopPromoRedemptions)
-        .values({ shopId, promoCodeId: code.id, checkoutId, amountChargedCents: 9_000 });
-    }
+    // An unpaid checkout that carried the code is not a redemption.
+    await checkout(db, shopId, tripId, {
+      seats: 1,
+      promoCodeId: code.id,
+      appliedDiscountCents: 500,
+      status: "pending",
+    });
 
     const outcomes = await shopPromoOutcomes(db, shopId, [code.id, unused.id]);
     expect(outcomes.get(code.id)).toEqual({ offCents: 3_000, ofCents: 30_000 });
