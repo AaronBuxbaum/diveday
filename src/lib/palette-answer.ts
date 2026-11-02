@@ -2,6 +2,7 @@ import { readinessBlockerText, readinessStatusText } from "@/i18n/readiness-labe
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { type BlockerFix, blockerFixFor } from "./blockers";
 import type { CalendarDate } from "./calendar-date";
+import { resolveCopy } from "./copy";
 import { formatTypedDate, readTypedDate } from "./forgiving-fields";
 import { formatShortDate, formatTime } from "./format";
 import { cachedListFormat } from "./intl-cache";
@@ -119,24 +120,20 @@ export function paletteAnswerView(
           more: null,
         };
       }
-      const fix: BlockerFix | null = blockerFixFor(
-        facts.next.blockers,
-        {
-          shopSlug,
-          tripId: facts.next.tripId,
-          personId: facts.personId,
-          bookingId: facts.next.bookingId,
-          fullName: facts.fullName,
-        },
-        t,
-      );
+      const fix: BlockerFix | null = blockerFixFor(facts.next.blockers, {
+        shopSlug,
+        tripId: facts.next.tripId,
+        personId: facts.personId,
+        bookingId: facts.next.bookingId,
+        fullName: facts.fullName,
+      });
       const primary = facts.next.blockers[0];
       // The palette never sends: a waiver fix lands on the roster row that
       // does, worded as the door it is rather than the verb the row keeps.
       const act: PaletteAct = fix
         ? fix.sendsWaiver
           ? { label: t("shared.commandPalette.answer.openRoster"), href: fix.href }
-          : { label: fix.label, href: fix.href }
+          : { label: resolveCopy(t, fix.label), href: fix.href }
         : record;
       return {
         kind: "diver",

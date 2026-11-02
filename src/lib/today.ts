@@ -1,7 +1,7 @@
 import type { HandledHelpRequest } from "@/db/help-requests";
 import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import {
-  blockerActionLabelText,
+  blockerActionLabelCopy,
   blockerItemText,
   blockerRowText,
   diverAlsoText,
@@ -13,11 +13,12 @@ import {
   owedRefundDetailText,
   owedRefundGroupDetailText,
   owedRefundGroupSubjectText,
-  pointingLabelText,
+  pointingLabelCopy,
   type WaiverBatchCode,
   waiverBatchLabelText,
 } from "@/i18n/today-labels";
 import { HOUR_MS } from "@/lib/clock";
+import { type Copy, resolveCopy } from "@/lib/copy";
 import { formatMoneyCents } from "@/lib/format";
 import type { AgencyCheckableCard } from "./agency-check-queue";
 import type { Role } from "./authz";
@@ -1201,7 +1202,8 @@ export type BlockerDestination = {
   kind: TodayActionKind;
   target: "trip" | "diver";
   sendsWaiver: boolean;
-  label: string;
+  /** The words, as a key the renderer resolves: this module decides the fix, not the language. */
+  label: Copy;
   href: string;
 };
 
@@ -1216,7 +1218,6 @@ export type BlockerDestinationContext = {
 export function blockerDestination(
   blockers: readonly ReadinessBlocker[],
   ctx: BlockerDestinationContext,
-  t: StaffTranslator = staffTranslator("en-US"),
 ): BlockerDestination | null {
   const blocker = primaryBlocker(blockers);
   if (!blocker) return null;
@@ -1230,8 +1231,8 @@ export function blockerDestination(
     // Waiver rows send in place, so they keep the verb; a card row only opens
     // the person record, so it points instead of pretending to act.
     label: sendsWaiver
-      ? blockerActionLabelText(t, blocker.code)
-      : pointingLabelText(t, target, ctx.fullName),
+      ? blockerActionLabelCopy(blocker.code)
+      : pointingLabelCopy(target, ctx.fullName),
     href:
       target === "diver"
         ? `/shop/${ctx.shopSlug}/divers/${ctx.personId}`
@@ -1280,17 +1281,13 @@ export function diverBlockerAction(
 ): TodayAction | null {
   const headline = headlineFor(input);
   if (!headline) return null;
-  const destination = blockerDestination(
-    [headline.blocker],
-    {
-      shopSlug,
-      tripId: input.tripId,
-      personId: input.personId,
-      bookingId: input.bookingId,
-      fullName: input.fullName,
-    },
-    t,
-  );
+  const destination = blockerDestination([headline.blocker], {
+    shopSlug,
+    tripId: input.tripId,
+    personId: input.personId,
+    bookingId: input.bookingId,
+    fullName: input.fullName,
+  });
   if (!destination) return null;
   const { blocker, kind, sendsWaiver } = destination;
   return {
@@ -1301,7 +1298,7 @@ export function diverBlockerAction(
     context: input.tripTitle,
     departure: { tripId: input.tripId, label: input.tripTitle },
     detail: blockerRowText(t, blocker),
-    actionLabel: destination.label,
+    actionLabel: resolveCopy(t, destination.label),
     href: destination.href,
     ...(sendsWaiver ? { waiver: { bookingIds: [input.bookingId] } } : {}),
     ...(kind === "payment" ? { payment: { bookingId: input.bookingId } } : {}),
