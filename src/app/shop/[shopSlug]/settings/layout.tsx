@@ -47,20 +47,26 @@ export default function SettingsLayout({
 }
 
 /**
- * The rail's own reads, gathered where a `<Suspense>` boundary can hold them,
- * and **the one gate for everything under `/settings`**: owner or manager, read
- * live (`canPersonManageShopSettings`), bounced to Today with the same notice
- * the hub gives. Settings means the shop and nothing else; the reader's own
- * sign-in, calendar feed and email live at `/me`, so there is no ungated
- * exception to explain. Each destination still re-checks its own, narrower
- * permission server-side — hiding a row is convenience.
+ * The rail's own reads, gathered where a `<Suspense>` boundary can hold them.
+ *
+ * **The frame does not gate; every page under it does.** A redirect here runs
+ * beside the page's own and wins, so a captain sent to Today read the generic
+ * "Shop settings are managed by the owner or a manager" where each page
+ * explains its own reason ("Billing is limited to the owner", "Data export is
+ * limited to owners and managers", H-20260724-staff-role-reach). So the tenant
+ * assert runs for everyone, the map is drawn only for a reader who may manage
+ * the shop, and `settings-gates.test.ts` fails a page here that names no gate
+ * of its own (issue #2739: no ungated reader).
  */
 async function SettingsRailPanel({ params }: { params: Promise<{ shopSlug: string }> }) {
   const { shopSlug } = await params;
-  const { session, db, shop } = await requireShopSurface(shopSlug, {
-    allow: canPersonManageShopSettings,
-    refusal: { notice: "settings-not-authorized" },
-  });
+  const { session, db, shop } = await requireShopSurface(shopSlug);
+  const canSettings = await canPersonManageShopSettings(
+    db,
+    session.user.shopId,
+    session.user.personId,
+  );
+  if (!canSettings) return null;
   const canPayments = await canPersonManagePaymentSettings(
     db,
     session.user.shopId,
