@@ -1,10 +1,10 @@
 import { AddSeat } from "@/app/(token)/ready/[token]/_components/AddSeat";
-import { PartyClaimPanel, type PartyClaimSeat } from "./PartyClaimPanel";
 import { SettledCheck } from "@/components/ui/SettledCheck";
 import type { issuePartySeatClaims } from "@/db/seat-claims";
 import type { DiverTranslator } from "@/i18n/messages";
 import { claimLinkPath } from "@/lib/booking-capabilities";
 import { publicAppUrl } from "@/lib/notifications";
+import { PartyClaimPanel, type PartyClaimSeat } from "./PartyClaimPanel";
 
 /**
  * The party's section of the thread: the claim panel, its all-set line, and
