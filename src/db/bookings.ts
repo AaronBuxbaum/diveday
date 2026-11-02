@@ -1,5 +1,5 @@
 import { and, asc, desc, eq, gt, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm";
-import { checkMinimumAge, isPlausibleDateOfBirth } from "@/lib/age";
+import { isPlausibleDateOfBirth } from "@/lib/age";
 import { sellableSeats } from "@/lib/boat-safety";
 import {
   bookingIdentityColumns,
@@ -34,11 +34,7 @@ import {
 import { isCapturedPaymentStatus } from "@/lib/payment-source";
 import { personNamesMatch } from "@/lib/person-name";
 import type { ReEntryAsk } from "@/lib/re-entry";
-import {
-  BLOCKER_CATEGORY,
-  type CertificationLevel,
-  hasVerifiedCertificationAtLeast,
-} from "@/lib/readiness";
+import { BLOCKER_CATEGORY, type CertificationLevel } from "@/lib/readiness";
 import { partnerReferralSlug } from "@/lib/referrals";
 import { requirementDemandsNothing, unionRequirements } from "@/lib/requirement";
 import type { TrainingDiveCourse } from "@/lib/training-mark";
@@ -1878,7 +1874,8 @@ export async function restoreBooking(
       // instructor caps at zero and refuses too: a seat cannot be handed back
       // to a session that could not sell it in the first place.
       const seatCap = courseSeatCapacity(course ?? null, instructorCount, assistantCount);
-      if (seatCap !== null && held.divers >= seatCap) return "course_ratio_full";
+      const ratioRefusal = courseRatioRefusal(held.divers, seatCap);
+      if (ratioRefusal) return ratioRefusal;
     }
 
     await tx
@@ -1996,38 +1993,34 @@ async function courseGateRefusal(
   course: typeof courses.$inferSelect | undefined,
   startsAt: Date,
 ): Promise<"course_prerequisite" | "course_min_age" | null> {
-  if (!course) return null;
-  if (course.minimumCertificationLevel) {
-    const cardRows = await tx
-      .select()
-      .from(certifications)
-      .where(
-        and(
-          eq(certifications.shopId, shopId),
-          eq(certifications.personId, personId),
-          isNull(certifications.deletedAt),
-        ),
-      );
-    if (!hasVerifiedCertificationAtLeast(cardRows, course.minimumCertificationLevel)) {
-      return "course_prerequisite";
-    }
-  }
-  if (course.minimumAge) {
-    const [row] = await tx
-      .select({ dateOfBirth: people.dateOfBirth, timezone: shops.timezone })
-      .from(people)
-      .innerJoin(shops, eq(shops.id, people.shopId))
-      // diveday:allow-deleted-people: the seat's own diver, whose age the session measures.
-      .where(and(eq(people.id, personId), eq(people.shopId, shopId)))
-      .limit(1);
-    if (row?.dateOfBirth) {
-      const day = calendarDateInTimezone(startsAt, row.timezone);
-      if (checkMinimumAge(row.dateOfBirth, course.minimumAge, day).status === "under") {
-        return "course_min_age";
-      }
-    }
-  }
-  return null;
+  if (!course || (!course.minimumCertificationLevel && !course.minimumAge)) return null;
+  const cards = course.minimumCertificationLevel
+    ? await tx
+        .select()
+        .from(certifications)
+        .where(
+          and(
+            eq(certifications.shopId, shopId),
+            eq(certifications.personId, personId),
+            isNull(certifications.deletedAt),
+          ),
+        )
+    : [];
+  const [row] = await tx
+    .select({ dateOfBirth: people.dateOfBirth, timezone: shops.timezone })
+    .from(people)
+    .innerJoin(shops, eq(shops.id, people.shopId))
+    // diveday:allow-deleted-people: the seat's own diver, whose age the session measures.
+    .where(and(eq(people.id, personId), eq(people.shopId, shopId)))
+    .limit(1);
+  // The sale's own decision (`courseEnrollmentRefusal`), at the staff door: a
+  // move is staff's, so the age gate applies and fails open without a birth date.
+  return courseEnrollmentRefusal({
+    actor: "staff",
+    course,
+    diver: { cards, dateOfBirth: row?.dateOfBirth ?? null },
+    courseDate: row ? calendarDateInTimezone(startsAt, row.timezone) : null,
+  });
 }
 
 async function moveAdmissionRefusal(
@@ -2062,9 +2055,8 @@ async function moveAdmissionRefusal(
     const { instructorCount, assistantCount } = await tripCourseCrewCounts(tx, target.id);
     if (instructorCount === 0) return { ok: false, reason: "course_unstaffed" };
     const seatCap = courseSeatCapacity(course ?? null, instructorCount, assistantCount);
-    if (seatCap !== null && held.divers >= seatCap) {
-      return { ok: false, reason: "course_ratio_full" };
-    }
+    const ratioRefusal = courseRatioRefusal(held.divers, seatCap);
+    if (ratioRefusal) return { ok: false, reason: ratioRefusal };
     // The course's own two gates, read again rather than trusted from the
     // sale: a card can be revoked since, and age is measured on the day the
     // session runs, so an earlier session of the same course can be one the
