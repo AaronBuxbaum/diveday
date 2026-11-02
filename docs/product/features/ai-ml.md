@@ -67,9 +67,9 @@ kept here so the ADR stays short.
 - **Reservations**: each call reserves its likely cost under a per-shop lock, with at most two in
   flight, so concurrent calls overshoot the cap only by how far a call exceeds its reservation. A
   call that may have been billed and failed is charged its reservation.
-- **Websites**: `webFetchTool` sets `allowed_domains` to the pasted host. A registry or a
-  builder's shared root (`co.uk`, `wixsite.com`) is refused, since the allowance covers every
-  subdomain.
+- **Websites**: `webFetchTool` sets `allowed_domains` to the pasted host. A public suffix
+  (`co.uk`, `wixsite.com`, from the Public Suffix List via `tldts`) or a shared service's root
+  (`facebook.com`) is refused, since the allowance covers every subdomain.
 - **On screen**: `AssistDraftButton` fills one field, `AssistFillButton` several boxes of one
   form, `AssistPhotoButton` a form from a card photo, `AssistReadButton` shows a read in place
   (the merge check), `CallNoteAssist` fills the Took-a-call form from a call note, `PdfDraftButton` drafts the release
