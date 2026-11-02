@@ -57,6 +57,32 @@ describe("deriving the stack from git", () => {
     expect(stackSummary(stack)).toContain("1 other tip(s) above");
   });
 
+  it("reads the top tip's first-parent chain once however many layers sit between", () => {
+    const crowded = {
+      ...thread,
+      [`for-each-ref ${FORMAT} --contains HEAD refs/remotes/origin`]:
+        "origin/claude/t-2\th2\norigin/claude/t-4\th4\norigin/claude/t-3\th3\norigin/claude/t-3b\th3b",
+      "merge-base --is-ancestor h3b h4": "",
+      "rev-list --count origin/main..h3b": "9",
+      "rev-list --first-parent origin/main..h4": "h4\nh3b\nh3\nh2\nmerge1\nh1",
+    };
+    const calls = [];
+    const git = gitFrom(crowded);
+    const stack = readStack((args) => {
+      calls.push(args.join(" "));
+      return git(args);
+    });
+    expect(stack.layers.map((layer) => layer.name)).toEqual([
+      "origin/claude/t-1",
+      "claude/t-2",
+      "origin/claude/t-3",
+      "origin/claude/t-3b",
+      "origin/claude/t-4",
+    ]);
+    const chainReads = calls.filter((call) => call === "rev-list --first-parent origin/main..h4");
+    expect(chainReads).toHaveLength(1);
+  });
+
   it("says HEAD is the top when nothing is above it", () => {
     const alone = {
       ...thread,

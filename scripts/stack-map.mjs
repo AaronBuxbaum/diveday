@@ -111,14 +111,20 @@ export function readStack(git, { paths = false } = {}) {
     list.map((ref) => ({ ...ref, commits: count(ref.sha) })).sort((a, b) => a.commits - b.commits);
   const tipsCounted = withCounts(tips);
   const top = tipsCounted.at(-1) ?? null;
+  // The top tip's first-parent chain, read once and only if some ref reaches the check.
+  let topChain = null;
+  const onTopChain = (sha) => {
+    topChain ??= new Set(
+      (git(["rev-list", "--first-parent", `${BASE}..${top.sha}`]) ?? "").split("\n"),
+    );
+    return topChain.has(sha);
+  };
   const between = top
     ? higher.filter(
         (ref) =>
           !tips.includes(ref) &&
           git(["merge-base", "--is-ancestor", ref.sha, top.sha]) !== null &&
-          new Set(
-            (git(["rev-list", "--first-parent", `${BASE}..${top.sha}`]) ?? "").split("\n"),
-          ).has(ref.sha),
+          onTopChain(ref.sha),
       )
     : [];
 
