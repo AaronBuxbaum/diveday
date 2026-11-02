@@ -1,5 +1,6 @@
 import { crewAwayDetailText, openCrewActionText } from "@/i18n/today-labels";
-import { type TodayAction, urgencyFor } from "@/lib/today";
+import type { TodayAction } from "@/lib/today";
+import { urgencyFor } from "@/lib/today-urgency";
 import type { TodayRowsContext } from "./today-rows-context";
 import { at } from "./today-shared";
 

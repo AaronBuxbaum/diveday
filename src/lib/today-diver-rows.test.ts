@@ -10,9 +10,9 @@ import {
   rowTone,
   sortStationRows,
   type TodayAction,
-  urgencyFor,
   waiverBatchActions,
 } from "./today";
+import { urgencyFor } from "./today-urgency";
 
 /**
  * **Needs you names each diver once under each boat** (UX delight sheet

@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { useActionState, useCallback, useState } from "react";
 import { getReturningDiverServerTime } from "@/app/actions/returning-diver-memory";
 import { BookingPartyFields } from "@/components/BookingPartyFields";
-import { ShopNotice } from "@/components/ShopPageHeader";
+import { ShopNotice } from "@/components/ShopNotice";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";

@@ -5,7 +5,7 @@ import { bookings, heldSends, people, personRoles, trips } from "@/db/schema";
 import { ALL_ROLES } from "@/lib/authz";
 import { nowMs } from "@/lib/clock";
 import { SEND_HOLD_MS } from "@/lib/held-sends";
-import { KIND_AUDIENCE } from "@/lib/today";
+import { KIND_AUDIENCE } from "@/lib/today-kinds";
 import { fileScopedShopContext } from "@/test/db";
 
 const fileCtx = fileScopedShopContext();

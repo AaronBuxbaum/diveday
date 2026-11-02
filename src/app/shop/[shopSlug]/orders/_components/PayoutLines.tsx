@@ -1,4 +1,4 @@
-import { ShopNotice } from "@/components/ShopPageHeader";
+import { ShopNotice } from "@/components/ShopNotice";
 import { listPaidAfterCloseCheckouts } from "@/db/checkouts-paid-after-close";
 import type { AppDb } from "@/db/client";
 import { listStuckPaymentOperations } from "@/db/payment-operations";

@@ -18,7 +18,9 @@ reasoning and the longer form of every row are in
 - **Payments**: `src/lib/payments/`; codes in `src/lib/promo-codes.ts`, deals in
   `src/db/trip-promos.ts`; both resolve in `bookSpot`, and Stripe owns the arithmetic.
 - **Today and the close-out**: `src/lib/today.ts`, `src/lib/closeout.ts`; one detector, and closing
-  is a recorded act, never a gate (ADR 20260804-day-closeout).
+  is a recorded act, never a gate (ADR 20260804-day-closeout). What a `src/db` module needs from
+  them is a small file below: `today-kinds.ts` (kinds, audience), `today-urgency.ts`,
+  `today-job.ts`, `seat-sailed.ts`, `shop-day.ts`; import those, not the queue.
 - **Notifications**: `src/lib/notifications/`; `courtesy.ts` picks the channel.
 - **Offline manifests**: `src/lib/offline-manifests.ts`; two `no-store` routes read through its
   response types (ADR 20260726-shopwide-offline-manifest-priming).

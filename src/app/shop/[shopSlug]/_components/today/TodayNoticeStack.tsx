@@ -1,4 +1,4 @@
-import { ShopNotice } from "@/components/ShopPageHeader";
+import { ShopNotice } from "@/components/ShopNotice";
 import { type StaffWords, sayWords } from "@/i18n/shared-sentences";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import { type NoticeTone, noticeRole } from "@/lib/staff-notices";

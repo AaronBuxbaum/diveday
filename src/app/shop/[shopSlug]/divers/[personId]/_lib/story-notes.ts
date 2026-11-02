@@ -1,8 +1,8 @@
 import { catalogItemLabel } from "@/i18n/rental-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { seatSailed } from "@/lib/closeout";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { toRentableKinds } from "@/lib/rentals";
+import { seatSailed } from "@/lib/seat-sailed";
 
 /**
  * **The crew's standing word on one seat**: the result at the `departure`
@@ -43,7 +43,7 @@ export type StoryNoteBooking = {
 
 /**
  * What became of one seat behind the diver, strongest statement first. The
- * sailed-or-not half is `seatSailed` (src/lib/closeout.ts), the one rule every
+ * sailed-or-not half is `seatSailed` (src/lib/seat-sailed.ts), the one rule every
  * count of who the boat carried reads, so the story and the evening's souls on
  * board can never disagree about a seat.
  */

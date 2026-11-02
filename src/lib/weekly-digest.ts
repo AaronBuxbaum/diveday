@@ -6,7 +6,8 @@ import {
   shiftCalendarDate,
 } from "@/lib/calendar-date";
 import { DEFAULT_SEND_WINDOW, isWithinSendWindow } from "@/lib/send-window";
-import type { TodayAction, TodayActionKind } from "@/lib/today";
+import type { TodayAction } from "@/lib/today";
+import type { TodayActionKind } from "@/lib/today-kinds";
 import { wallTimeToUtc } from "@/lib/zoned";
 
 /**

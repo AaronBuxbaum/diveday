@@ -1,7 +1,7 @@
 import { and, asc, eq, gt, inArray, ne } from "drizzle-orm";
 import { DAY_MS, HOUR_MS } from "@/lib/clock";
-import { seatSailed } from "@/lib/closeout";
 import { SEAT_HELD_STATUSES } from "@/lib/no-show";
+import { seatSailed } from "@/lib/seat-sailed";
 import { similarDepartures } from "@/lib/similar-departures";
 import type { AppDb } from "./client";
 import { departureOpenToDiver } from "./interest-offers";

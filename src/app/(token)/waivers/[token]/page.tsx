@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { FlashParams } from "@/components/FlashParams";
-import { ShopNotice } from "@/components/ShopPageHeader";
+import { ShopNotice } from "@/components/ShopNotice";
 import { ThreadShell } from "@/components/thread/ThreadShell";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { getDb } from "@/db/client";

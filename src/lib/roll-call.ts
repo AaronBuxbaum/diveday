@@ -194,7 +194,7 @@ export function rollCallNoteAllowed(
  * dive-domain-expert review found two of them disagreeing (issue #1704):
  * `onTheWaterByRollCall` and the seat reclaim in **both** `recordRollCall` and
  * `recordCrewRollCall` (src/db/manifests.ts), `inAfterDivePopulation`
- * (src/db/today.ts), and `seatSailed` (src/lib/closeout.ts). The two reclaims
+ * (src/db/today.ts), and `seatSailed` (src/lib/seat-sailed.ts). The two reclaims
  * are one predicate for one reason: the reader that refuses the desk consults
  * both trails, so a mirror act on only one of them is a promise the reader
  * makes and the writer does not keep (issue #1686). A sixth, the fly-safe
