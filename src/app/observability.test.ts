@@ -31,7 +31,11 @@ function tokenRoutesOnDisk(
       found.push({ prefix: trail[0] ?? "", depth: trail.length });
       continue;
     }
-    found.push(...tokenRoutesOnDisk(join(dir, entry.name), [...trail, entry.name]));
+    // A route group, `(token)`, is a folder on disk and nothing in the URL.
+    const isGroup = /^\(.+\)$/.test(entry.name);
+    found.push(
+      ...tokenRoutesOnDisk(join(dir, entry.name), isGroup ? trail : [...trail, entry.name]),
+    );
   }
   return found;
 }
