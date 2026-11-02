@@ -154,7 +154,11 @@ memory is what a session does not have about the session before.
    snapshot, the baseline every branch cut from it compares against; five were cancelled on
    2026-10-12 and -13 by the account every session's `gh` uses. The run's event and branch are read
    with one `gh api` call; a run it cannot read passes. The GitHub MCP's run tools are not a `Bash`
-   command and are outside this hook.
+   command and are outside this hook. A cancel whose id the shell fills in (a `for` loop's `$id`,
+   `$(...)`, `xargs`) is refused too, because it cannot be read: six main runs were cancelled
+   within three seconds on 2026-11-01, all "The run was canceled by @AaronBuxbaum" in their
+   annotations, which is an explicit cancel through the shared `gh` identity and not concurrency
+   (issue #3653). Cancel your own pull request's run by its literal id.
 8. **An environment file read through the shell.** `cat`, `grep`, `rg`, `sed`, `awk`, `source` and
    the other readers handed `.env` or a `.env.*` path other than `.env.example`. The settings deny
    the Read tool those files, and `grep`/`find` run without a prompt, so `grep -r . .env.local`
