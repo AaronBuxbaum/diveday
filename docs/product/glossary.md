@@ -311,6 +311,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Shop clock
 - Shop currency
 - Shop question
+- Shop tick
 - Shore alert contact
 - Sign once
 - Skipped occurrence

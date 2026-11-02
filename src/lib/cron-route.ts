@@ -32,7 +32,7 @@ import { flushLogs, sentry } from "@/lib/observability";
  * preflight, a route that answers a status other than 503). Those keep their
  * own, and still open with `requireCronSecret`.
  */
-export type CronRouteOptions = {
+export type CronRouteOptions<Summary = unknown> = {
   /** Kebab-case name: the monitor `diveday-<id>`, the log `cron_<id_>` and the `cron_scan` tag. */
   id: string;
   /** The deployed schedule (vercel.json); Sentry reads it to decide a check-in is missing. */
@@ -44,10 +44,18 @@ export type CronRouteOptions = {
   /** Override variable when it is not `SENTRY_<ID>_CRON_MONITOR_SLUG`. */
   slugEnv?: string;
   /** The pass. Its return value is the 200 body; a throw is the 503. */
-  run: (request: Request) => Promise<unknown>;
+  run: (request: Request) => Promise<Summary>;
+  /**
+   * Whether a pass that returned did its work. False answers 200 with the body
+   * but checks in as error, for a route whose isolated scans can fail without
+   * failing the pass. Omitted, a pass that returns is ok.
+   */
+  healthy?: (summary: Summary) => boolean;
 };
 
-export function cronRoute(options: CronRouteOptions): (request: Request) => Promise<Response> {
+export function cronRoute<Summary>(
+  options: CronRouteOptions<Summary>,
+): (request: Request) => Promise<Response> {
   const { id, crontab, run } = options;
   const logName = `cron_${id.replaceAll("-", "_")}`;
   const slugEnv =
@@ -71,7 +79,8 @@ export function cronRoute(options: CronRouteOptions): (request: Request) => Prom
     try {
       const summary = await run(request);
       log(`${logName}.scan_complete`, "info", summary as Parameters<typeof log>[2]);
-      await sentry.captureCheckIn({ checkInId, monitorSlug, status: "ok" });
+      const ok = options.healthy ? options.healthy(summary) : true;
+      await sentry.captureCheckIn({ checkInId, monitorSlug, status: ok ? "ok" : "error" });
       return Response.json(summary);
     } catch (error) {
       await sentry.captureException(error, { tags: { cron_scan: id } });
