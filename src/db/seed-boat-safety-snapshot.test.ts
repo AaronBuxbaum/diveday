@@ -1,8 +1,10 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { BOAT_PAPER_HORIZON_DAYS } from "@/lib/boat-safety";
 import { seededShopContext } from "@/test/db";
 import { departureBoatSafetySnapshot } from "./boat-safety";
 import { boats, departureBoatSafetySnapshots, trips } from "./schema";
+import { dateAt } from "./seed-clock";
 import { DEMO_COMPLETED_TRIP_TITLE } from "./seed-more-trips";
 
 /**
@@ -38,7 +40,7 @@ describe("the seeded dawn boat's safety snapshot", () => {
     expect(read?.radio.callSign).toBe("WDM2202");
   });
 
-  it("invents no paper date the Mantis II row does not hold, and no failure notice", async () => {
+  it("copies the Mantis II row's limits, paper dates and radio, and holds no failure notice", async () => {
     const { db, shop, trip } = await dawn();
     const [boat] = await db
       .select()
@@ -46,10 +48,41 @@ describe("the seeded dawn boat's safety snapshot", () => {
       .where(eq(boats.id, trip.boatId as string));
     const read = await departureBoatSafetySnapshot(db, shop.id, trip.id);
     expect(read).not.toBeNull();
-    expect(read?.papers.coiExpiresOn ?? null).toBe(boat?.coiExpiresOn ?? null);
-    expect(read?.papers.inspectionDueOn ?? null).toBe(boat?.inspectionDueOn ?? null);
-    expect(read?.papers.registrationExpiresOn ?? null).toBe(boat?.registrationExpiresOn ?? null);
-    expect(read?.papers.insuranceExpiresOn ?? null).toBe(boat?.insuranceExpiresOn ?? null);
+    expect(boat?.coiExpiresOn).toBeTruthy();
+    expect(boat?.inspectionDueOn).toBeTruthy();
+    expect(boat?.registrationExpiresOn).toBeTruthy();
+    expect(boat?.insuranceExpiresOn).toBeTruthy();
+    expect(read?.papers).toEqual({
+      certifiedPassengers: boat?.certifiedPassengers,
+      certifiedTotalPersons: boat?.certifiedTotalPersons,
+      coiExpiresOn: boat?.coiExpiresOn,
+      inspectionDueOn: boat?.inspectionDueOn,
+      registrationExpiresOn: boat?.registrationExpiresOn,
+      insuranceExpiresOn: boat?.insuranceExpiresOn,
+    });
+    expect(read?.radio).toEqual({
+      callSign: boat?.callSign,
+      mmsi: boat?.mmsi,
+      workingChannel: boat?.workingChannel,
+    });
     expect(read?.notices).toEqual([]);
+  });
+
+  it("dates the papers past every horizon, so no paper errand fires on Today", async () => {
+    const { db, trip } = await dawn();
+    const [boat] = await db
+      .select()
+      .from(boats)
+      .where(eq(boats.id, trip.boatId as string));
+    const today = dateAt(0);
+    for (const [paper, due] of [
+      ["coi", boat?.coiExpiresOn],
+      ["inspection", boat?.inspectionDueOn],
+      ["registration", boat?.registrationExpiresOn],
+      ["insurance", boat?.insuranceExpiresOn],
+    ] as const) {
+      const days = (Date.parse(due as string) - Date.parse(today)) / 86_400_000;
+      expect(days).toBeGreaterThan(BOAT_PAPER_HORIZON_DAYS[paper]);
+    }
   });
 });
