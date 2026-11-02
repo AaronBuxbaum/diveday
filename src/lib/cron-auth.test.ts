@@ -78,7 +78,9 @@ describe("every cron route", () => {
     expect(routes.length).toBeGreaterThan(0);
     for (const route of routes) {
       const source = readFileSync(route, "utf8");
-      expect(source, route).toMatch(/requireCronSecret\(/);
+      // `cronRoute` opens with the same gate; src/lib/cron-route.test.ts proves it refuses
+      // before any check-in or work.
+      expect(source, route).toMatch(/requireCronSecret\(|cronRoute\(/);
       expect(source, route).not.toMatch(/authorization[^\n]*[!=]==/i);
     }
   });

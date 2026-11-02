@@ -1,5 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import { claudeFixturesArmed } from "./assists/e2e-fixtures";
+import { runtimeMode } from "./runtime-mode";
 
 /**
  * Shared guard for every `/api/test/*` route (`reset`, `seed-account-token`,
@@ -29,10 +30,7 @@ export function e2eTestRouteAuthorized(request: Request): boolean {
   // what keeps a `GET` route (`email-previews`) from being prerendered at
   // build time, where no secret is set and a baked-in 404 is the result.
   const provided = Buffer.from(request.headers.get("authorization") ?? "", "utf8");
-  const hasRealDatabase = Boolean(process.env.DATABASE_URL);
-  const productionRuntime = process.env.NODE_ENV === "production";
-  const e2eHarness = process.env.DIVEDAY_E2E === "1";
-  if (hasRealDatabase || (productionRuntime && !e2eHarness)) return false;
+  if (!runtimeMode().testRoutesOpen) return false;
 
   const secret = process.env.DIVEDAY_E2E_SECRET;
   if (!secret) return false;
