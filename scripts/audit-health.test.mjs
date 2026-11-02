@@ -46,8 +46,14 @@ describe("blockingAdvisories", () => {
   it("keeps high and critical only, worst first, and says whether production is reached", () => {
     const list = blockingAdvisories(report);
     expect(list.map((a) => a.module)).toEqual(["evil", "zod"]);
-    expect(list[0].devOnly).toBe(false);
-    expect(list[1]).toMatchObject({ devOnly: true, paths: 2 });
+    expect(list[0].reach).toBe("production");
+    expect(list[1]).toMatchObject({ reach: "dev", paths: 2 });
+  });
+
+  it("does not call an advisory with no findings dev-only", () => {
+    const [bare] = blockingAdvisories({ advisories: { 1: { ...advisory("high", "bare"), findings: [] } } });
+    expect(bare.reach).toBe("unknown");
+    expect(renderAdvisories([bare])).not.toMatch(/dev dependencies only|reaches production/);
   });
 
   it("refuses output that is not an advisory map rather than reading it as clean", () => {

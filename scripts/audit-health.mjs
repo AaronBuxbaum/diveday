@@ -44,18 +44,30 @@ export function blockingAdvisories(report) {
       patched: String(advisory.patched_versions ?? ""),
       url: String(advisory.url ?? ""),
       paths: (advisory.findings ?? []).reduce((n, f) => n + (f.paths?.length ?? 0), 0),
-      devOnly: (advisory.findings ?? []).every((f) => f.dev === true),
+      // An advisory with no findings has no path to call dev-only or production: `[].every` is true.
+      reach:
+        (advisory.findings ?? []).length === 0
+          ? "unknown"
+          : (advisory.findings ?? []).every((f) => f.dev === true)
+            ? "dev"
+            : "production",
     }))
     .filter((advisory) => BLOCKING.has(advisory.severity))
     .sort((a, b) => a.severity.localeCompare(b.severity) || a.module.localeCompare(b.module));
 }
+
+const REACH_LABEL = {
+  dev: "dev dependencies only",
+  production: "reaches production",
+  unknown: "no findings listed, so reach unknown",
+};
 
 export function renderAdvisories(list) {
   if (list.length === 0) return "No high or critical advisory.\n";
   const rows = list.map(
     (a) =>
       `- ${a.severity}: ${a.module} ${a.vulnerable} (patched ${a.patched || "none"}), ${a.title}; ` +
-      `${a.paths} path(s), ${a.devOnly ? "dev dependencies only" : "reaches production"}. ${a.url}`,
+      `${a.paths} path(s), ${REACH_LABEL[a.reach]}. ${a.url}`,
   );
   return `${rows.join("\n")}\n`;
 }
