@@ -431,8 +431,9 @@ async function runState(id: string, index: number): Promise<Outcome | undefined>
         timeout: 60_000,
       });
       if (!pass.ok()) throw new Error(`recap pass failed: ${pass.status()} ${await pass.text()}`);
-      const summary =
-        ((await pass.json()) as { recaps: Record<string, number> | null }).recaps ?? {};
+      const summary = ((await pass.json()) as { recaps: Record<string, number> | null }).recaps;
+      // A null scan is one that threw: the tick isolates it, so the 200 alone proves nothing.
+      if (!summary) throw new Error("the recap scan failed inside the tick");
       if (!(summary.scanned >= 1)) {
         throw new Error(`the recap pass found nothing due: ${JSON.stringify(summary)}`);
       }
