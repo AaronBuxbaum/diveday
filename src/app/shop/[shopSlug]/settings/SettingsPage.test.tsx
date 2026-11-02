@@ -12,6 +12,7 @@ import { getShopBySlug, setShopCrewScheduleEnabled, setShopDivingOptions } from 
 import { listShopStaff } from "@/db/staff-accounts";
 import type { DiveDaySession } from "@/lib/auth";
 import type { Role } from "@/lib/authz";
+import { CONNECTION_PROVIDERS, CONNECTION_STATES } from "@/lib/connections";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 import { fileScopedShopContext } from "@/test/db";
 import {
@@ -751,9 +752,21 @@ describe("the rail and the pane say the same thing", () => {
 
   it("groups the pane into inset groups rather than a stack of cards", async () => {
     // Decision 2's second anatomy, consumed from 6a rather than re-spelled.
+    // One per group, plus the Data group's Connections ledger (issue #2741).
     expect(findElements(await renderSettings("owner"), InsetGroup)).toHaveLength(
-      SETTINGS_GROUPS.length,
+      SETTINGS_GROUPS.length + 1,
     );
+  });
+
+  it("lists every connection once, each with one state word (issue #2741)", async () => {
+    const rows = findElements<{ "data-connection": string; "data-connection-state": string }>(
+      await renderSettings("owner"),
+      "li",
+    ).filter((row) => row.props["data-connection"]);
+    expect(rows.map((row) => row.props["data-connection"])).toEqual([...CONNECTION_PROVIDERS]);
+    for (const row of rows) {
+      expect(CONNECTION_STATES).toContain(row.props["data-connection-state"]);
+    }
   });
 
   it("reopens the row `?saved=` names, and no other", async () => {

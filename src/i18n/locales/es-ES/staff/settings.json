@@ -678,6 +678,25 @@
       "createTitle": "Agregar un paquete",
       "empty": "Todavía no hay paquetes a la venta"
     },
+    "connections": {
+      "heading": "Conexiones",
+      "provider": {
+        "stripe": "Stripe",
+        "whatsapp": "WhatsApp",
+        "shopify": "Shopify",
+        "quickbooks": "QuickBooks",
+        "zapier": "Zapier",
+        "backups": "Respaldos",
+        "calendarFeeds": "Calendarios del equipo"
+      },
+      "state": {
+        "notConnected": "Sin conectar",
+        "connected": "Conectado",
+        "needsAttention": "Requiere atención",
+        "disconnected": "Desconectado"
+      },
+      "lastSeen": "funcionó por última vez el {date}"
+    },
     "yourData": {
       "heading": "Exportar, importar, respaldos e integraciones"
     }

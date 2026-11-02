@@ -1739,6 +1739,12 @@
 - **DAN** — Divers Alert Network; dive accident insurance divers may carry. Captured as the
   free-text `people.dive_insurance` field (DAN or any provider) and shown on the diver profile — a
   safety detail for the crew, never a boarding gate.
+- **Connection** — a thing outside the shop DiveDay talks to for it: Stripe, the shop's WhatsApp
+  number, Shopify, QuickBooks, Zapier, the backup bucket, and the staff calendar feeds. Each keeps its
+  own credential table; one state word (`notConnected` · `connected` · `needsAttention` ·
+  `disconnected`) is derived from each table's own columns by `connectionState()` in
+  `src/lib/connections.ts`, with no state column of its own (issue #2741). Settings lists them
+  read-only in the Data group.
 - **Connected Stripe account** — a shop's own Standard Stripe account, authorized once via OAuth.
   The shop keeps its own Stripe dashboard, payouts, and tax reporting; DiveDay never holds the money
   and acts on the shop's behalf only through the `Stripe-Account` header the OAuth grant enables.

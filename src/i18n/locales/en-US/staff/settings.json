@@ -678,6 +678,25 @@
       "createTitle": "Add a package",
       "empty": "No packages for sale yet"
     },
+    "connections": {
+      "heading": "Connections",
+      "provider": {
+        "stripe": "Stripe",
+        "whatsapp": "WhatsApp",
+        "shopify": "Shopify",
+        "quickbooks": "QuickBooks",
+        "zapier": "Zapier",
+        "backups": "Backups",
+        "calendarFeeds": "Staff calendar feeds"
+      },
+      "state": {
+        "notConnected": "Not connected",
+        "connected": "Connected",
+        "needsAttention": "Needs attention",
+        "disconnected": "Disconnected"
+      },
+      "lastSeen": "last worked {date}"
+    },
     "yourData": {
       "heading": "Export, import, backups and integrations"
     }
