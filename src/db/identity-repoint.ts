@@ -16,6 +16,7 @@ import {
   waiverRecords,
 } from "./schema";
 import { livePerson, liveTrip } from "./trips-live";
+import { seatNotCancelled } from "./trips-queries";
 import { CLEARED_DRAFT_COLUMNS } from "./waiver-record-columns";
 
 /**
@@ -231,7 +232,7 @@ async function repointInTransaction(
         eq(bookings.id, input.bookingId),
         eq(bookings.shopId, input.shopId),
         isNotNull(bookings.identityUnconfirmedAt),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
       ),
     )
     .limit(1);
@@ -316,7 +317,7 @@ async function repointInTransaction(
               eq(bookings.personId, booking.personId),
               ne(bookings.id, input.bookingId),
               isNotNull(bookings.identityUnconfirmedAt),
-              ne(bookings.status, "cancelled"),
+              seatNotCancelled,
               sql`lower(trim(${bookings.identityBookedAs})) = lower(trim(${bookedAs}))`,
               eq(trips.shopId, input.shopId),
               eq(trips.status, "scheduled"),

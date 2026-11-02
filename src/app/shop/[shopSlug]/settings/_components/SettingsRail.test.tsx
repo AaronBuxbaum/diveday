@@ -148,7 +148,7 @@ describe("the selection model", () => {
     },
   );
 
-  it.each(["/settings/calendar", "/settings/email", "/dive-sites-archive", "/orders"])(
+  it.each(["/me/calendar", "/me/email", "/dive-sites-archive", "/orders"])(
     "does not borrow a hub section for an unmatched page: %s",
     (path) => {
       expect(
@@ -218,8 +218,8 @@ describe("the rail as it renders", () => {
     ["/dive-sites/new", "diveSites"],
     ["/dive-sites/site-123", "diveSites"],
     ["/dive-sites/site-123/edit", "diveSites"],
-    ["/settings/calendar", "Settings sections"],
-    ["/settings/email", "Settings sections"],
+    ["/me/calendar", "Settings sections"],
+    ["/me/email", "Settings sections"],
   ])("selects the current rail row for %s without borrowing Timezone", (path, label) => {
     pathname = `${BASE}${path}`;
     renderRail();

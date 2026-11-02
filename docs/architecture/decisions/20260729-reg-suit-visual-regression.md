@@ -248,3 +248,34 @@ the locked dependency graph from the pinned workflow revision with lifecycle scr
 The AWS CLI implementation timed out with both 8 and 32 workers; hosted CI remains the measure for
 the SDK publisher. The whole-prefix pruner can race a same-SHA retry; #3326 tracks that separate
 coordination gap.
+
+## Amendment 2026-11-02: what a green surface means (issue #1687)
+
+reg-suit's default threshold is zero, so one stray pixel promoted a surface from passed to changed
+and a reviewer owed it an explanation nobody could give. Both configs now set
+`core.thresholdPixel: 20`: a surface passes when at most 20 pixels differ from its baseline
+(`reg-cli` passes on `diffCount <= thresholdPixel`; `enableAntialias` still applies first).
+
+**Measured, not guessed.** The 15 main push runs with a readable report between 2026-10-30
+and 2026-11-02 listed 240 changed surfaces (239 measured, one a geometry change). Counting differing pixels between each surface's
+published `expected/` and `actual/` image: the runs that moved one to three surfaces (nothing in
+the diff that could move them) show 7, 13, 13, 13 and 20 pixels at a channel delta of 2 or 3 on the
+map pin `dive-sites-library-pin-selected`, then 72, 72 and 207 pixels at a delta of 4 to 8.
+Every real change in the same sample is 273 pixels or more and the large ones reach a channel delta
+of 130 or more. 20 is the top of the clean cluster and sits well below the first real change.
+
+**Why a count and not a rate or a colour tolerance.** A rate is a fraction of the capture, and the
+captures run to millions of pixels, so even 0.001 forgives thousands. A per-pixel colour tolerance
+(`matchingThreshold`) would swallow a one-or-two-unit change on every pixel of a surface, which is
+what a colour-token regression looks like. A small absolute count forgives a handful of stray
+pixels anywhere and cannot hide a change that is spread out.
+
+**What green now means.** *Passed* means at most 20 pixels differ, not none. Three things are
+deliberately still reported: the 72- and 207-pixel, low-delta cases (indistinguishable from a real
+change by count alone, and not waved through), any geometry change, and any surface whose pixels
+differ by more than 20. A change confined to 20 pixels or fewer is invisible to the report: a
+single 4 by 4 icon pixel-for-pixel, a one-pixel-wide rule shorter than 20 pixels. A main run
+publishes its captures as the next baseline, so a series of sub-threshold changes could drift; each
+step is at most 20 pixels and the whole-suite byte comparison in `pnpm visual:layers` still sees all
+of them. This is a deliberate, written exception to "every changed pixel earns an explanation", not
+a relaxation of it: raise it only against a new measurement, never to make a diff list shorter.

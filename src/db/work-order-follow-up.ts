@@ -17,7 +17,7 @@ import {
 } from "@/lib/notifications/sms";
 import { gearServiceDueText, workOrderReadyText } from "@/lib/notifications/work-order-emails";
 import type { InvoicingProvider } from "@/lib/payments/invoicing";
-import { maySendNow } from "@/lib/send-window";
+import { shopClock } from "@/lib/shop-clock";
 import {
   customerGearDueDates,
   serviceReminderIsDue,
@@ -750,9 +750,9 @@ export async function sendDueServiceReminders(
   let whatsAppProviders = options.whatsAppProviders;
 
   for (const { piece, person, shop } of rows) {
-    const todayLocal = calendarDateInTimezone(now, shop.timezone);
+    const clock = shopClock(shop, now);
     const due = customerGearDueDates(piece).filter((date) =>
-      serviceReminderIsDue(date.dueOn, todayLocal),
+      serviceReminderIsDue(date.dueOn, clock.today),
     );
     if (due.length === 0) continue;
     summary.scanned += due.length;
@@ -760,7 +760,7 @@ export async function sendDueServiceReminders(
       summary.skipped += due.length;
       continue;
     }
-    if (!maySendNow("gear_service_due", now, shop.timezone)) {
+    if (!clock.maySend("gear_service_due")) {
       summary.held += due.length;
       continue;
     }

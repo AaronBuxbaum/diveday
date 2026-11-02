@@ -1,7 +1,8 @@
-import { and, eq, ne } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { demoEmail } from "@/lib/simulator-email";
 import type { DbExecutor } from "./client";
 import { bookings, people } from "./schema";
+import { seatNotCancelled } from "./trips-queries";
 
 /**
  * **Three seats a hotel sent** — what the partner link in the embed catalogue
@@ -53,12 +54,6 @@ export async function seedPartnerReferrals(db: DbExecutor, shopId: string) {
     await db
       .update(bookings)
       .set({ referralSource: referral.partner })
-      .where(
-        and(
-          eq(bookings.shopId, shopId),
-          eq(bookings.personId, person.id),
-          ne(bookings.status, "cancelled"),
-        ),
-      );
+      .where(and(eq(bookings.shopId, shopId), eq(bookings.personId, person.id), seatNotCancelled));
   }
 }

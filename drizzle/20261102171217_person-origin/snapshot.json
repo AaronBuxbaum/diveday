@@ -1,0 +1,87 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "23522c0b-dd07-45f0-8163-6115aeb2bdca",
+  "prevIds": [
+    "9d9bd852-ed83-4f36-a8dd-bd1fba2770b3",
+    "7dd46915-6eb0-4aa1-813d-34dd978d3ee6"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "person_origin"
+      ],
+      "writes": [
+        "s|enum|public.person_origin",
+        "n|enum|public.person_origin",
+        "e|enum|public.person_origin",
+        "n|type|public.person_origin"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "people",
+        "origin"
+      ],
+      "writes": [
+        "s|col|public.people.origin",
+        "n|col|public.people.origin",
+        "e|col|public.people.origin"
+      ],
+      "reads": [
+        "n|tbl|public.people",
+        "n|sch|public",
+        "n|enum|public.person_origin"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "person_origin",
+        "values": [
+          "public_booking",
+          "waitlist",
+          "last_minute",
+          "self_registration",
+          "counter",
+          "import",
+          "invite",
+          "onboard",
+          "public_order",
+          "identity_split",
+          "seed"
+        ],
+        "entityType": "enums"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "people",
+        "name": "origin",
+        "type": "person_origin",
+        "typeSchema": "public",
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'seed'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

@@ -38,7 +38,6 @@ export function scheduleMonthBounds(ref: MonthRef, tz: string) {
 export type ScheduleView = {
   shopSlug: string;
   month: string | undefined;
-  isEmbed: boolean;
   hasSpaceFilter: boolean;
   tripTypeFilter: "fun_dive" | "course" | undefined;
   canDiveFilter: DeclarableLevel | undefined;
@@ -56,7 +55,6 @@ export function scheduleViewLinks(view: ScheduleView) {
   const {
     shopSlug,
     month,
-    isEmbed,
     hasSpaceFilter,
     tripTypeFilter,
     canDiveFilter,
@@ -65,7 +63,6 @@ export function scheduleViewLinks(view: ScheduleView) {
   } = view;
   const withViewParams = (params: URLSearchParams) => {
     if (month) params.set("month", month);
-    if (isEmbed) params.set("embed", "1");
     if (hasSpaceFilter) params.set("hasSpace", "1");
     if (tripTypeFilter) params.set("tripType", tripTypeFilter);
     if (canDiveFilter) params.set("canDive", canDiveFilter);
@@ -239,8 +236,7 @@ export function schedulePagerHrefs({
   prevCursor: string | null | undefined;
   nextCursor: string | null | undefined;
 }): { earlier: string | null; later: string | null; backToNext: string } {
-  const { shopSlug, isEmbed, hasSpaceFilter, tripTypeFilter, canDiveFilter, hideAboveFilter } =
-    view;
+  const { shopSlug, hasSpaceFilter, tripTypeFilter, canDiveFilter, hideAboveFilter } = view;
   const { withViewParams } = scheduleViewLinks(view);
   const cursorHref = (key: "before" | "after", cursor: string | null | undefined) => {
     if (!cursor) return null;
@@ -255,7 +251,6 @@ export function schedulePagerHrefs({
   // departure", so it keeps the filters but deliberately drops
   // both the cursor and any month bound.
   const params = new URLSearchParams();
-  if (isEmbed) params.set("embed", "1");
   if (hasSpaceFilter) params.set("hasSpace", "1");
   if (tripTypeFilter) params.set("tripType", tripTypeFilter);
   if (canDiveFilter) params.set("canDive", canDiveFilter);
@@ -280,7 +275,6 @@ export function schedulePagerHrefs({
  * the widget already keeps its own terminal state below.
  */
 export function scheduleOffSeason({
-  isEmbed,
   now,
   range,
   reopensOn,
@@ -288,7 +282,6 @@ export function scheduleOffSeason({
   tz,
   t,
 }: {
-  isEmbed: boolean;
   now: Date;
   range: { first: Date | null };
   /** `shops.reopens_on`: the shop's own typed "back on the water" date. */
@@ -297,9 +290,7 @@ export function scheduleOffSeason({
   tz: string;
   t: DiverTranslator;
 }) {
-  const quiet = isEmbed
-    ? { quiet: false, opensAt: null, reopensOn: null }
-    : offSeason({ now, firstDeparture: range.first, reopensOn, timeZone: tz });
+  const quiet = offSeason({ now, firstDeparture: range.first, reopensOn, timeZone: tz });
   const quietLine = offSeasonLine(t, quiet, locale, tz);
   return { quiet, quietLine };
 }
@@ -310,7 +301,6 @@ export function scheduleOffSeason({
  */
 export function scheduleNextBoat({
   visibleUpcoming,
-  isEmbed,
   explicitMonth,
   after,
   hasSpaceFilter,
@@ -319,7 +309,6 @@ export function scheduleNextBoat({
   activeLens,
 }: {
   visibleUpcoming: UpcomingTrips;
-  isEmbed: boolean;
   explicitMonth: MonthRef | null;
   after: string | undefined;
   hasSpaceFilter: boolean;
@@ -338,8 +327,7 @@ export function scheduleNextBoat({
   // a card claiming otherwise would be confidently wrong. The embed is a
   // *window* onto the schedule (issue #805): a card there would eat a third of
   // a 900px frame to restate the row directly beneath it.
-  const nextBoat =
-    isEmbed || explicitMonth || after ? null : nextBookableDeparture(visibleUpcoming);
+  const nextBoat = explicitMonth || after ? null : nextBookableDeparture(visibleUpcoming);
   /**
    * **Whether the card is answering a narrowed question** (issue #1391).
    *

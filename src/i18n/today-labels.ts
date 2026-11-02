@@ -1,5 +1,6 @@
 import type { MediaDeletionKind, PaymentOperationKind } from "@/db/schema";
 import { calendarDateInTimezone, calendarDaysBetween } from "@/lib/calendar-date";
+import { type Copy, resolveCopy } from "@/lib/copy";
 import { DSD_RATIO } from "@/lib/course-ratios";
 import type { DepthUnit } from "@/lib/depth-units";
 import { formatDateTimeTz, formatRelativeDay, formatShortDate, formatWeekday } from "@/lib/format";
@@ -116,11 +117,15 @@ const BLOCKER_ACTION_LABEL_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> =
 
 /**
  * A blocked row's action-button word, the verb when one tap sends in place
- * ("Send waiver"). Used by the Today queue (`src/lib/today.ts`) through
- * `blockerDestination`, the one blocker→fix rule.
+ * ("Send waiver"), as a `Copy` the renderer resolves. Used by the Today queue
+ * (`src/lib/today.ts`) through `blockerDestination`, the one blocker→fix rule.
  */
+export function blockerActionLabelCopy(code: ReadinessBlockerCode): Copy {
+  return { key: BLOCKER_ACTION_LABEL_KEYS[code] };
+}
+
 export function blockerActionLabelText(t: StaffTranslator, code: ReadinessBlockerCode): string {
-  return t(BLOCKER_ACTION_LABEL_KEYS[code]);
+  return resolveCopy(t, blockerActionLabelCopy(code));
 }
 
 /**
@@ -128,17 +133,24 @@ export function blockerActionLabelText(t: StaffTranslator, code: ReadinessBlocke
  * command ("Open Priya's record", "Open roster"). Card work waits on the
  * person record; everything else on the trip roster.
  */
+export function pointingLabelCopy(target: "trip" | "diver", fullName: string): Copy {
+  return target === "diver"
+    ? // Falls back to the whole name rather than a word: this is a pointing
+      // label ("Open Priya's record"), so an unsplittable name is still the
+      // best thing to point at.
+      {
+        key: "today.pointingLabel.diver",
+        params: { name: firstNameOf(fullName, fullName) },
+      }
+    : { key: "today.pointingLabel.trip" };
+}
+
 export function pointingLabelText(
   t: StaffTranslator,
   target: "trip" | "diver",
   fullName: string,
 ): string {
-  return target === "diver"
-    ? // Falls back to the whole name rather than a word: this is a pointing
-      // label ("Open Priya's record"), so an unsplittable name is still the
-      // best thing to point at.
-      t("today.pointingLabel.diver", { name: firstNameOf(fullName, fullName) })
-    : t("today.pointingLabel.trip");
+  return resolveCopy(t, pointingLabelCopy(target, fullName));
 }
 
 /** A Today row's short blocker sentence, keyed by code (`today.blockerRow.*`). */

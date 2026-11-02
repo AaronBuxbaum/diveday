@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { createBearerToken, hashBearerToken } from "@/lib/bearer-tokens";
 import { courseRatioRefusal } from "@/lib/booking-gates";
 import type { CalendarDate } from "@/lib/calendar-date";
@@ -41,7 +41,7 @@ import {
 } from "./schema";
 import { listCertificationSummaries, recordSelfDeclaredCards } from "./self-declared-cards";
 import { livePerson, liveTrip, notRehearsal } from "./trips-live";
-import { heldSeatCounts, sellableCapacity } from "./trips-queries";
+import { heldSeatCounts, seatNotCancelled, sellableCapacity } from "./trips-queries";
 
 /**
  * **Who wants in**, the writers and the departure reads (ADR
@@ -112,18 +112,13 @@ export async function askForDeparture(db: AppDb, req: DepartureAsk): Promise<Dep
       fullName,
       email,
       phone: req.phone,
+      origin: "waitlist",
     });
 
     const [booking] = await tx
       .select({ id: bookings.id })
       .from(bookings)
-      .where(
-        and(
-          eq(bookings.tripId, trip.id),
-          eq(bookings.personId, person.id),
-          ne(bookings.status, "cancelled"),
-        ),
-      )
+      .where(and(eq(bookings.tripId, trip.id), eq(bookings.personId, person.id), seatNotCancelled))
       .limit(1);
     if (booking) return { ok: false, reason: "already_booked" };
 
@@ -238,13 +233,7 @@ export async function askForDepartureAsKnownDiver(
     const [booking] = await tx
       .select({ id: bookings.id })
       .from(bookings)
-      .where(
-        and(
-          eq(bookings.tripId, trip.id),
-          eq(bookings.personId, person.id),
-          ne(bookings.status, "cancelled"),
-        ),
-      )
+      .where(and(eq(bookings.tripId, trip.id), eq(bookings.personId, person.id), seatNotCancelled))
       .limit(1);
     if (booking) return { ok: false as const, reason: "already_booked" as const };
 
@@ -833,6 +822,7 @@ export async function askAnytime(db: AppDb, input: AnytimeAsk): Promise<AnytimeA
       fullName,
       email,
       phone: input.phone,
+      origin: "last_minute",
     });
 
     // Inside the same transaction as the interest itself: a joiner who told the

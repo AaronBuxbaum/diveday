@@ -1,4 +1,5 @@
 import { and, desc, eq } from "drizzle-orm";
+import type { StandingArrival } from "@/lib/presence";
 import type { DbExecutor } from "./client";
 import { bookingArrivalEvents } from "./schema";
 
@@ -34,7 +35,7 @@ export async function standingArrivalStatus(
   shopId: string,
   tripId: string,
   bookingId: string,
-): Promise<"arrived" | "cleared" | undefined> {
+): Promise<StandingArrival | undefined> {
   const [standing] = await tx
     .select({ status: bookingArrivalEvents.status })
     .from(bookingArrivalEvents)

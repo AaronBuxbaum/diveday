@@ -104,6 +104,22 @@ describe("the seams", () => {
     ]);
   });
 
+  it("refuses a translator in src/lib and src/db, but lets a type and the message senders through", async () => {
+    const root = await fixture({
+      "src/lib/worded.ts": 'import { staffTranslator } from "@/i18n/staff-messages";\n',
+      "src/lib/typed.ts": 'import type { StaffTranslator } from "@/i18n/staff-messages";\n',
+      "src/lib/notifications/email.ts":
+        'import { staffTranslator } from "@/i18n/staff-messages";\n',
+      "src/lib/worded.test.ts": 'import { staffTranslator } from "@/i18n/staff-messages";\n',
+      "src/db/sender.ts": 'import { messagesFor } from "../i18n/messages";\n',
+      "src/components/Page.tsx": 'import { staffTranslator } from "@/i18n/staff-messages";\n',
+    });
+    expect(flat(await collectViolations(root)).sort()).toEqual([
+      expect.stringContaining("src/db/sender.ts: value-imports ../i18n/messages"),
+      expect.stringContaining("src/lib/worded.ts: value-imports @/i18n/staff-messages"),
+    ]);
+  });
+
   it("refuses drizzle-orm under src/app, outside its tests and e2e fixture routes", async () => {
     const root = await fixture({
       "src/app/shop/actions.ts": 'import { eq } from "drizzle-orm";\n',

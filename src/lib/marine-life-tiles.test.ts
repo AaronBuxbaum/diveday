@@ -94,6 +94,19 @@ describe("marine-life capture tiles", () => {
       );
     });
 
+    it("never swaps a photo when a real database is configured, even with the capture flag set", () => {
+      vi.stubEnv("DIVEDAY_E2E", "1");
+      vi.stubEnv("DATABASE_URL", "postgres://example");
+      try {
+        expect(capturePhoto("/marine-life/southern-stingray.jpg", 171)).toBe(
+          "/marine-life/southern-stingray.jpg",
+        );
+      } finally {
+        // This file never unstubs; the unit setup keeps DATABASE_URL empty.
+        vi.stubEnv("DATABASE_URL", "");
+      }
+    });
+
     it("leaves every other photo alone, flag or no flag", () => {
       vi.stubEnv("DIVEDAY_E2E", "1");
       // A dive-site cover, a blob-store object, and a variant that has already

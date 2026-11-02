@@ -26,7 +26,6 @@ const copy: ScheduleFiltersCopy = {
 function filters(canDiveFilter: string | null = "open_water") {
   return render(
     <ScheduleFilters
-      embed={false}
       month={null}
       lens={null}
       tripTypeFilter={null}
@@ -102,7 +101,6 @@ describe("the collapsed filter selection", () => {
   it("keeps the active lens and field selections available while the controls are closed", () => {
     render(
       <ScheduleFilters
-        embed={false}
         month={null}
         lens="wrecks"
         activeLensLabel="Wrecks"

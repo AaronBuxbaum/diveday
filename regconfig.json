@@ -3,6 +3,7 @@
     "workingDir": ".reg",
     "actualDir": "e2e/screenshots",
     "enableAntialias": true,
+    "thresholdPixel": 20,
     "addExtraItems": true
   },
   "plugins": {

@@ -17,7 +17,7 @@ const ctx = fileScopedShopContext();
 /**
  * **Each register carries its own gate** (issue #2659, glossary "Register and
  * setting"). Boats and trip tags left Settings, so their writes no longer
- * borrow `settingsBlock`; they ask `canManageBoats` and `canManageTripTags`.
+ * borrow `SETTINGS_GATE`; they ask `canManageBoats` and `canManageTripTags`.
  * The page hides the forms from a captain, and a hidden form is not a gate:
  * these run the real actions against a seeded database and read the register
  * back after the refusal, because the setters write whatever they are handed.

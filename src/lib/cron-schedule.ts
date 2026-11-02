@@ -10,7 +10,7 @@
  * rather than restating a cadence the queue cannot deliver.
  *
  * Fresh sends are the intentional exception and do not drain the queue: the
- * hourly recap pass (`recap-schedule.ts`) and the other hourly passes
+ * hourly shop tick (`SHOP_TICK_CRONTAB` below) and the other hourly passes
  * allowlisted in `cron-schedule.test.ts`.
  */
 
@@ -31,6 +31,18 @@ export const DAILY_TICK_UTC_MINUTE = 7;
  * only a comment is now a failing test if the two drift.
  */
 export const DAILY_TICK_CRONTAB = `${DAILY_TICK_UTC_MINUTE} ${DAILY_TICK_UTC_HOUR} * * *`;
+
+/**
+ * **The shop tick: hourly, at `:00`** (`/api/cron/shop-tick`, issue #2715).
+ * Every shop cadence is one of its scans (`src/features/shop-tick`), so this
+ * is the one schedule a shop's day is served on: platform cadences are UTC
+ * routes of their own, shop cadences are this tick. `:00` because the
+ * minimum-head-count decision is printed on the booking page to the minute,
+ * and the top of the hour is the closest an hourly pass gets to it (ADR
+ * 20260813-minimum-head-count-departures). Mirrors vercel.json;
+ * `cron-schedule.test.ts` fails if the two drift.
+ */
+export const SHOP_TICK_CRONTAB = "0 * * * *";
 
 /** Milliseconds between two consecutive daily ticks. */
 export const DAILY_TICK_INTERVAL_MS = 24 * 60 * 60 * 1_000;

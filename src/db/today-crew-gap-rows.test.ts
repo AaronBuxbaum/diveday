@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowMs } from "@/lib/clock";
+import { shopClock } from "@/lib/shop-clock";
 import type { TodayAction } from "@/lib/today";
 import { fileScopedShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
@@ -111,7 +112,7 @@ describe("Today and the staffing view count crew the same way (DOM-M3)", () => {
     shop: Awaited<ReturnType<typeof courseSessionToday>>["shop"],
     trip: { id: string; startsAt: Date; endsAt: Date },
   ) {
-    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
     const view = await getStaffingView(
       db,
       shop.id,
@@ -202,7 +203,7 @@ describe("uncrewed and below-target departures (issue #732)", () => {
     const { db, shop } = ctx;
     const reef = await uncrewedReefTrip(db, shop.id);
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
 
     const row = work.actions.find((action) => action.id === `uncrewed:${reef.id}`);
     expect(row?.kind).toBe("uncrewed_departure");
@@ -227,8 +228,7 @@ describe("uncrewed and below-target departures (issue #732)", () => {
       db,
       shop.id,
       shop.slug,
-      shop.timezone,
-      undefined,
+      shopClock(shop),
       undefined,
       undefined,
       undefined,
@@ -258,7 +258,7 @@ describe("uncrewed and below-target departures (issue #732)", () => {
       { personId: divemaster.person.id, tripRole: "divemaster" },
     ]);
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
 
     expect(work.actions.some((action) => action.id === `uncrewed:${reef.id}`)).toBe(false);
     const row = work.actions.find((action) => action.id === `crew-target:${reef.id}`);
@@ -285,7 +285,7 @@ describe("uncrewed and below-target departures (issue #732)", () => {
         .map((entry) => ({ personId: entry.person.id, tripRole: "divemaster" as const })),
     );
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
 
     expect(
       work.actions.some(
@@ -306,7 +306,7 @@ describe("uncrewed and below-target departures (issue #732)", () => {
     });
     if (!trip) throw new Error("failed to create trip");
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
 
     expect(
       work.actions.some(
@@ -392,7 +392,7 @@ describe("uncrewed and below-target departures (issue #732)", () => {
         ),
       );
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
 
     // Exactly one *crew-gap* row for this departure — #732's rule, asserted
     // over all three ids rather than as the absence of the two the old
@@ -408,8 +408,7 @@ describe("uncrewed and below-target departures (issue #732)", () => {
       db,
       shop.id,
       shop.slug,
-      shop.timezone,
-      undefined,
+      shopClock(shop),
       undefined,
       undefined,
       undefined,
@@ -474,7 +473,7 @@ describe("uncrewed and below-target departures (issue #732)", () => {
         ),
       );
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
 
     expect(crewGapKindsFor(work, trip.id)).toEqual(["instructor_missing"]);
   });
@@ -495,12 +494,12 @@ describe("uncrewed and below-target departures (issue #732)", () => {
     const reef = await uncrewedReefTrip(db, shop.id);
     // The same trip the first test in this block proves *does* raise the row,
     // so the only thing that changed is the mark.
-    const before = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const before = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
     expect(before.actions.some((action) => action.id === `uncrewed:${reef.id}`)).toBe(true);
 
     await db.update(tripsTable).set({ selfGuided: true }).where(eq(tripsTable.id, reef.id));
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
     expect(
       work.actions.some(
         (action) => action.id === `uncrewed:${reef.id}` || action.id === `crew-target:${reef.id}`,
@@ -558,7 +557,7 @@ describe("uncrewed and below-target departures (issue #732)", () => {
       );
     await db.update(tripsTable).set({ selfGuided: true }).where(eq(tripsTable.id, trip.id));
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
     expect(work.actions.some((action) => action.id === `instructor:${trip.id}`)).toBe(true);
   });
 });

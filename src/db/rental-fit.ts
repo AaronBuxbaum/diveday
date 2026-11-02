@@ -1,4 +1,4 @@
-import { and, asc, count, eq, isNull, ne, or } from "drizzle-orm";
+import { and, asc, count, eq, isNull, or } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { PrepDiver } from "@/lib/dive-prep";
 import { seatName } from "@/lib/held-seat";
@@ -15,6 +15,7 @@ import {
 import type { AppDb } from "./client";
 import { verifiedNitroxPersonIds } from "./nitrox";
 import { bookings, people, type rentalFitItem, rentalFitProfiles, shops } from "./schema";
+import { seatNotCancelled } from "./trips-queries";
 
 export type RentalFitInput = {
   shopId: string;
@@ -587,13 +588,7 @@ export async function listTripPrepDivers(
         eq(rentalFitProfiles.shopId, bookings.shopId),
       ),
     )
-    .where(
-      and(
-        eq(bookings.shopId, shopId),
-        eq(bookings.tripId, tripId),
-        ne(bookings.status, "cancelled"),
-      ),
-    )
+    .where(and(eq(bookings.shopId, shopId), eq(bookings.tripId, tripId), seatNotCancelled))
     .orderBy(asc(people.fullName));
 
   const certified = await verifiedNitroxPersonIds(db, shopId);
@@ -702,13 +697,7 @@ export async function rentalFitByBooking(db: AppDb, shopId: string, tripId: stri
         eq(rentalFitProfiles.shopId, bookings.shopId),
       ),
     )
-    .where(
-      and(
-        eq(bookings.shopId, shopId),
-        eq(bookings.tripId, tripId),
-        ne(bookings.status, "cancelled"),
-      ),
-    );
+    .where(and(eq(bookings.shopId, shopId), eq(bookings.tripId, tripId), seatNotCancelled));
   return new Map(
     rows.map((row) => [row.bookingId, row.identityUnconfirmedAt === null ? row.fit : null]),
   );

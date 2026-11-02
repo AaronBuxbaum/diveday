@@ -54,6 +54,8 @@ const WAY_UP_MARKERS = ["eyebrowHref", "EyebrowBackLink", "TripPageHeader", "Set
 const WAY_UP_EXEMPT: Record<string, string> = {
   "schedule/board":
     "A first-class destination wearing two URL segments: `/schedule` has no page, so the board is a depth-1 surface and its eyebrow is its own name, per principle 10's first bullet.",
+  "me/security":
+    "The account hub: the identity menu's one account row lands here, and `meta` links on to the calendar feed and email, whose eyebrows link back. It has no parent page to name, so its eyebrow is its own title.",
   "print/pass/[bookingId]":
     "A printed sheet, not a screen. `SheetDocument` carries the way back to the counter as its own `print:hidden` link, because paper has no eyebrow.",
   "trips/[id]/print/medical-alerts":

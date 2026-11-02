@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, ne } from "drizzle-orm";
+import { and, asc, eq, gte } from "drizzle-orm";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import type { PaletteAnswerFacts, PaletteNaming } from "@/lib/palette-answer";
 import type { AppDb } from "./client";
@@ -6,7 +6,7 @@ import { listTripReadiness } from "./readiness";
 import { bookings, trips } from "./schema";
 import { tripCrewByTrip } from "./trips-crew";
 import { liveTrip } from "./trips-live";
-import { shopDayTripsWithCounts, tripSellableSeatsSql } from "./trips-queries";
+import { seatNotCancelled, shopDayTripsWithCounts, tripSellableSeatsSql } from "./trips-queries";
 
 /**
  * The facts behind the palette's answer card (ADR 20260906-before-you-ask,
@@ -34,7 +34,7 @@ export async function paletteAnswerFacts(
           and(
             eq(bookings.shopId, input.shopId),
             eq(bookings.personId, naming.personId),
-            ne(bookings.status, "cancelled"),
+            seatNotCancelled,
             liveTrip(),
             eq(trips.status, "scheduled"),
             gte(trips.startsAt, new Date(now.getTime() - HOUR_MS)),

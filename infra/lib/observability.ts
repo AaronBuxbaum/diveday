@@ -169,7 +169,6 @@ export const LOG_SIGNALS: readonly LogSignal[] = [
     events: [
       "cron_reminders.tick_failed",
       "cron_reminders.scan_failed",
-      "cron_recaps.scan_failed",
       "cron_retention.prune_failed",
       // A table still over its window after the run's whole 45-second budget
       // (fourth review, row 18): the pass ran and did not do its work, which is
@@ -195,14 +194,12 @@ export const LOG_SIGNALS: readonly LogSignal[] = [
       // pass failing once reached at most AppErrors' three-in-fifteen-minutes,
       // which one failure never does; here one is enough.
       "cron_bookkeeper.scan_failed",
-      "cron_crew_notices.scan_failed",
-      "cron_desk_pings.scan_failed",
       "cron_founder_metrics.failed",
       "cron_integrations.scan_failed",
-      "cron_minimum_seats.sweep_failed",
       "cron_platform_backup.census_failed",
-      "cron_trip_reminders.scan_failed",
-      "cron_trip_reminders.service_reminders_failed",
+      // Every shop cadence is a scan of the hourly shop tick (issue #2715); the
+      // line names the scan, and a failure of the whole tick is its scan_failed too.
+      "cron_shop_tick.scan_failed",
       "cron_weekly_digest.scan_failed",
     ],
     threshold: 1,

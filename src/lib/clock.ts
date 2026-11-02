@@ -17,8 +17,8 @@
  * (playwright.config.ts). When it is unset — every real deployment, `pnpm
  * dev`, unit tests that don't opt in — `nowDate()` is exactly `new Date()` and
  * `nowMs()` is exactly `Date.now()`, byte for byte. As a second guard the
- * override is refused whenever a real database is configured, so no stray env
- * var can ever freeze a production clock.
+ * override is refused whenever a real database is configured (`runtimeMode`), so
+ * no stray env var can ever freeze a production clock.
  *
  * In the browser bundle `process.env.DIVEDAY_CLOCK` inlines to `undefined`
  * (it is not `NEXT_PUBLIC_*`), so client code that imports this module always
@@ -29,6 +29,8 @@
  * dependency-injecting time where a test needs to control it precisely.
  */
 
+import { runtimeMode } from "./runtime-mode";
+
 /**
  * Duration constants, defined once beside the clock they offset. Before these,
  * `HOUR_MS`/`DAY_MS` were re-derived privately in a dozen modules — identical
@@ -38,20 +40,9 @@ export const MINUTE_MS = 60 * 1000;
 export const HOUR_MS = 60 * MINUTE_MS;
 export const DAY_MS = 24 * HOUR_MS;
 
-/** Parse `DIVEDAY_CLOCK` into a millisecond instant, or null to use the live clock. */
-function frozenMs(): number | null {
-  const raw = process.env.DIVEDAY_CLOCK;
-  if (!raw) return null;
-  // A configured database is a real deployment; never let an env var freeze a
-  // production clock, whatever else is set. Mirrors the reset-route guard.
-  if (process.env.DATABASE_URL) return null;
-  const parsed = Date.parse(raw);
-  return Number.isNaN(parsed) ? null : parsed;
-}
-
 /** Milliseconds since the epoch — frozen under the e2e harness, else `Date.now()`. */
 export function nowMs(): number {
-  return frozenMs() ?? Date.now();
+  return runtimeMode().frozenClockMs ?? Date.now();
 }
 
 /** The current instant — frozen under the e2e harness, else `new Date()`. */

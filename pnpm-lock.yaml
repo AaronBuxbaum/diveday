@@ -264,7 +264,7 @@ importers:
         specifier: ^0.35.5
         version: 0.35.5(@types/node@24.13.3)
       tldts:
-        specifier: 7.4.19
+        specifier: ^7.4.19
         version: 7.4.19
       web-push:
         specifier: ^3.6.7

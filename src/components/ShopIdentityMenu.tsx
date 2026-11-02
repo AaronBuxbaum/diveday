@@ -95,7 +95,7 @@ export function ShopIdentityMenu({
   languages: readonly LanguageChoice[];
   setLocaleAction: (locale: string) => Promise<void>;
   tellUs?: TellUsTarget;
-  /** The reader's own account page (`/settings/security`). */
+  /** The reader's own account page (`/me/security`). */
   accountHref?: string;
   copy: ShopIdentityMenuCopy;
 }) {

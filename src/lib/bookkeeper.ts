@@ -7,11 +7,11 @@ import { utcToWallTime } from "@/lib/zoned";
  */
 
 /**
- * Daily at 13:09 UTC on the 2nd and 3rd. In every zone from UTC-12 to
+ * Daily at 13:07 UTC on the 2nd and 3rd. In every zone from UTC-12 to
  * UTC+10 that is some hour of the shop's own 2nd, and from UTC+11 east of
  * the 3rd; the second day is the retry for a send that failed on the first.
  */
-export const BOOKKEEPER_CRON_CRONTAB = "9 13 2,3 * *";
+export const BOOKKEEPER_CRON_CRONTAB = "7 13 2,3 * *";
 
 /**
  * The month whose files are due now, or null. From the shop's own 2nd, last

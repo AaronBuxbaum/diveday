@@ -435,6 +435,18 @@ function withSellableCapacity<T extends { capacity: number }>(
 export const seatHeld = inArray(bookings.status, [...SEAT_HELD_STATUSES]);
 
 /**
+ * **A booking that is not cancelled** (issue #2758), as a SQL predicate: the
+ * other of the two meanings a reader of `bookings.status` has, and the one that
+ * is *not* {@link seatHeld}. It keeps a `no_show`, which has released its seat
+ * but is still on the roster, the manifest, the gear register and the buddy
+ * builder: a diver marked absent stays where the crew can see them. Use
+ * `seatHeld` for a count of seats, this for "everyone who was ever on the
+ * boat's list". `scripts/check-live-reads.mjs` refuses the spelled-out
+ * `ne(bookings.status, "cancelled")` so a reader names which one it means.
+ */
+export const seatNotCancelled = ne(bookings.status, "cancelled");
+
+/**
  * The join that makes `booked` a count of the seats somebody is holding rather
  * than of every row. Exported so every reader counts seats with the same
  * predicate the schedule does, rather than a second spelling of it.

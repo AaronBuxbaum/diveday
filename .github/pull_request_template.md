@@ -32,6 +32,10 @@
 - `dive-domain-expert` (attacker):
 - `security-reviewer`:
 
+## Seen filled in
+
+<!-- A PR that changes the departure log, manifest, readiness, waiver or medical screens names the filled state it was seen in (the seeded dawn boat's log with its boat-safety snapshot, a signed waiver, a flagged medical) and the capture, or writes "no filled state because <reason>". "none" alone fails. CI's "Pull request body names its reviews" step reads it. -->
+
 ## Visual diffs
 
 <!-- Paste `pnpm visual:report` output and say why each moved surface moved, or "no surface moved". -->

@@ -2,9 +2,10 @@
  * Waivers: each booking's waiver status on one departure or several, as the
  * rosters read it. Imported through the `./waivers` barrel.
  */
-import { and, asc, eq, inArray, isNull, ne } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import type { DbExecutor } from "./client";
 import { bookings, people, waiverRecords } from "./schema";
+import { seatNotCancelled } from "./trips-queries";
 import { WAIVER_STATE_COLUMNS } from "./waiver-record-columns";
 
 /**
@@ -56,12 +57,6 @@ export async function listTripsWaiverStatuses(db: DbExecutor, shopId: string, tr
       waiverRecords,
       and(eq(waiverRecords.bookingId, bookings.id), isNull(waiverRecords.supersededAt)),
     )
-    .where(
-      and(
-        eq(bookings.shopId, shopId),
-        inArray(bookings.tripId, tripIds),
-        ne(bookings.status, "cancelled"),
-      ),
-    )
+    .where(and(eq(bookings.shopId, shopId), inArray(bookings.tripId, tripIds), seatNotCancelled))
     .orderBy(asc(bookings.createdAt), asc(people.fullName), asc(bookings.id));
 }

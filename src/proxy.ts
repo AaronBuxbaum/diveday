@@ -70,6 +70,15 @@ const STAFF_PREFIX = "/shop";
  */
 const STAFF_SHAPED_OFFLINE_MANIFEST_PATH = /^\/shop\/[^/]+\/offline-manifest\/?$/;
 
+/**
+ * `/shop/<slug>/settings/{security,calendar,email}` — where the reader's own
+ * pages lived before they moved to `/me` (issue #2739). The weekly digest and
+ * desk emails already sitting in inboxes link to `/settings/email`, so those
+ * three paths (and the email preview under it) 308 to their new home; the slug
+ * is not read, so the hop says nothing about which shops exist.
+ */
+const MOVED_READER_PAGE = /^(\/shop\/[^/]+)\/settings\/(security|calendar|email(?:\/preview)?)\/?$/;
+
 type CachedSessionSnapshot = {
   personId: string;
   shopId: string;
@@ -108,6 +117,12 @@ async function authGateResponse(req: NextRequest): Promise<Response | undefined>
   if (STAFF_SHAPED_OFFLINE_MANIFEST_PATH.test(pathname)) {
     const url = new URL(req.nextUrl);
     url.pathname = "/offline-manifest";
+    return NextResponse.redirect(url, 308);
+  }
+  const movedReaderPage = MOVED_READER_PAGE.exec(pathname);
+  if (movedReaderPage) {
+    const url = new URL(req.nextUrl);
+    url.pathname = `${movedReaderPage[1]}/me/${movedReaderPage[2]}`;
     return NextResponse.redirect(url, 308);
   }
   const hasSession = getSessionCookie(req) !== null;

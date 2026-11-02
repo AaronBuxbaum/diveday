@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, ne, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { departureUnderway } from "@/lib/day-blowout";
 import { hasSailed } from "@/lib/trips";
@@ -14,6 +14,7 @@ import {
 } from "./schema";
 import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";
 import { liveTrip } from "./trips-live";
+import { seatNotCancelled } from "./trips-queries";
 import { setTripStatus } from "./trips-record";
 
 /**
@@ -81,7 +82,7 @@ export async function aboardAtSeaBookingIds(
       and(
         eq(bookings.shopId, shopId),
         eq(bookings.tripId, tripId),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
         bookingIds ? inArray(bookings.id, [...bookingIds]) : undefined,
       ),
     );

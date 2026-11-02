@@ -18,7 +18,7 @@ import {
 } from "@/db/schema";
 import { bringDemoBoatsAtSeaHome } from "@/db/seed-boat-at-sea";
 import { getShopBySlug } from "@/db/shops";
-import { listStaff, liveTrip } from "@/db/trips";
+import { listStaff, liveTrip, seatNotCancelled } from "@/db/trips";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { e2eTestRouteAuthorized, requireDemoTenant, testRouteRefused } from "@/lib/e2e-test-routes";
 import { tripReservationWindow } from "@/lib/gear";
@@ -274,13 +274,7 @@ async function closeHeadCounts(
     db
       .select({ tripId: bookings.tripId, bookingId: bookings.id })
       .from(bookings)
-      .where(
-        and(
-          eq(bookings.shopId, shopId),
-          inArray(bookings.tripId, tripIds),
-          ne(bookings.status, "cancelled"),
-        ),
-      ),
+      .where(and(eq(bookings.shopId, shopId), inArray(bookings.tripId, tripIds), seatNotCancelled)),
     // Tenancy through `trips`: `trip_assignments` carries no `shop_id` of its
     // own (CR-007), so the trip id alone must never reach a roster.
     db
@@ -464,13 +458,7 @@ async function returnOneUnitFitAdjusted(
     .select({ bookingId: bookings.id, personId: bookings.personId })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
-    .where(
-      and(
-        eq(bookings.shopId, shopId),
-        eq(bookings.tripId, trip.id),
-        ne(bookings.status, "cancelled"),
-      ),
-    )
+    .where(and(eq(bookings.shopId, shopId), eq(bookings.tripId, trip.id), seatNotCancelled))
     // The first seat by the diver's name: without an order this is whichever
     // row the heap returns first, which a fresh re-seed and a replayed reset
     // (`src/db/demo-reset-snapshot.ts`) lay out differently, so the evening
