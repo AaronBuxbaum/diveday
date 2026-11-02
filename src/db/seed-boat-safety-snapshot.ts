@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
 import type { DbExecutor } from "./client";
 import { boats, departureBoatSafetySnapshots, type trips } from "./schema";
 import { DEMO_SHOP_TIMEZONE } from "./seed-clock";
@@ -12,11 +12,11 @@ import { DEMO_SHOP_TIMEZONE } from "./seed-clock";
  *
  * One row, the shape `captureDepartureBoatSafety` writes at the last
  * departure-checkpoint tap before the lines come off: the certificate's limits,
- * every paper date, the radio identity the emergency card printed, and no
+ * the paper dates the boat row holds (none in the demo), the radio identity the emergency card printed, and no
  * notices (a blue-mantis boat is never seeded in a failure state, and a paper
  * inside its horizon would raise an errand on Today the live boat does not
- * carry). Dates are offsets from the departure's own day, so they read
- * unexpired whatever day the demo is seeded.
+ * carry). The certified limits follow the hull's capacity, as the row's
+ * description says (passengers plus a three-person crew).
  */
 export async function seedDepartureBoatSafetySnapshot(
   db: DbExecutor,
@@ -49,10 +49,13 @@ export async function seedDepartureBoatSafetySnapshot(
     papers: {
       certifiedPassengers: boat.capacity,
       certifiedTotalPersons: boat.capacity + 3,
-      coiExpiresOn: shiftCalendarDate(judgedOn, 600),
-      inspectionDueOn: shiftCalendarDate(judgedOn, 200),
-      registrationExpiresOn: shiftCalendarDate(judgedOn, 320),
-      insuranceExpiresOn: shiftCalendarDate(judgedOn, 240),
+      // The hull's own row carries no paper dates (the demo seeds none, see `seed.ts`), so the
+      // snapshot invents none: a log dated on papers the boat does not hold would disagree
+      // with the boat it names.
+      coiExpiresOn: null,
+      inspectionDueOn: null,
+      registrationExpiresOn: null,
+      insuranceExpiresOn: null,
     },
     radio: { callSign: boat.callSign, mmsi: boat.mmsi, workingChannel: boat.workingChannel },
     notices: [],
