@@ -215,7 +215,7 @@ test.describe("settings that change the shop", () => {
     // the shop profile is one.
     test.setTimeout(60_000);
     // From inside a setting: on the hub itself the page is the map.
-    await page.goto(`/shop/${privateShop.slug}/me/email`);
+    await page.goto(`/shop/${privateShop.slug}/settings/features`);
     const rail = page.getByRole("navigation", { name: "Settings sections" });
     await rail.getByRole("link", { name: "Shop profile & branding" }).click();
     await expect(page).toHaveURL(new RegExp(`/shop/${privateShop.slug}/settings/profile$`));
