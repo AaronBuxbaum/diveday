@@ -1,6 +1,5 @@
 "use client";
 
-import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -78,17 +77,6 @@ export type InlineConfirmProps = MessageModeProps | CompactModeProps;
  * browser/OS happens to be set to — and (b) can only show a fixed string,
  * never a value computed server-side (a refund preview, say).
  *
- * `armed` resets on every (re)navigation, keyed off `usePathname()`. This is
- * defensive against React preserving a client component's local state across
- * a navigate-away-and-back instead of remounting it (as `cacheComponents:
- * true`'s Activity-based navigation would — see docs ADR
- * 20260801-cache-components-activity-state, currently reverted, commit
- * 100fcf8): an armed confirm sitting at the same route/key could otherwise
- * resurface still armed, one tap from firing, with no fresh confirming
- * gesture from the person looking at it. This effect re-fires on the leading
- * edge of any such show/re-show cycle exactly like it does on a normal
- * navigation, so it always lands unarmed.
- *
  * Must be rendered inside the `<form action={...}>` whose submit it guards —
  * or, given `formAction`, inside another action's form, whose fields it then
  * shares: a row's Delete in the row's edit form, on one line with its Save
@@ -133,7 +121,6 @@ export function InlineConfirm(props: InlineConfirmProps) {
   const status = useFormStatus();
   const pending = status.pending && (formAction === undefined || status.action === formAction);
   const resetTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const pathname = usePathname();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const wasPending = useRef(false);
   const restoreFocus = useRef(false);
@@ -164,30 +151,6 @@ export function InlineConfirm(props: InlineConfirmProps) {
     restoreFocus.current = false;
     triggerRef.current?.focus({ preventScroll: true });
   }, [armed]);
-
-  // Disarms on the leading edge of any (re)navigation to this component's
-  // route — including an Activity-preserved show/hide cycle, should
-  // `cacheComponents: true` be re-enabled (its effects re-run on re-show the
-  // same as a fresh mount even though local state survives). Never trust a
-  // prior arm.
-  //
-  // The genuine first mount is exempt: effects run only once hydration
-  // completes, but selective hydration makes the trigger tappable earlier, so
-  // on a slow connection this effect's initial run could land *after* a
-  // person armed the confirm and silently disarm it under their thumb (the
-  // same race snapped ScheduleBuilder's remove panel shut on CI). A ref
-  // survives the Activity hide/re-show that re-runs effects, so every
-  // re-show still disarms — only the first mount, where `armed` is
-  // necessarily fresh, is skipped.
-  const pathnameEffectRan = useRef(false);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: `pathname` is a trigger, not a value the effect body reads — any change re-arms the disarm, which is the point.
-  useEffect(() => {
-    if (!pathnameEffectRan.current) {
-      pathnameEffectRan.current = true;
-      return;
-    }
-    setArmed(false);
-  }, [pathname]);
 
   useEffect(() => {
     if (!armed || !autoResetMs) return;

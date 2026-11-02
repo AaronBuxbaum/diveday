@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { StrictMode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { ScheduleBoardNoticeView } from "./ScheduleBoardNoticeView";
@@ -52,25 +52,6 @@ it("accumulates separate move results and consumes their query parameters once",
   expect(screen.getByText(first)).toBeVisible();
   expect(screen.getByText(second)).toBeVisible();
   expect(window.location.search).toBe("");
-});
-
-it("clears a visit's gear notices before a cached page can be restored", () => {
-  const message = "2 gear assignments were released.";
-  const view = render(
-    <ScheduleBoardNoticeView
-      initialNotice={null}
-      notice={{ tone: "warning", message }}
-      gearMessage={message}
-      resultId="move-one"
-    />,
-  );
-  expect(screen.getByText(message)).toBeVisible();
-
-  act(() => window.dispatchEvent(new PageTransitionEvent("pagehide")));
-  expect(view.container).toBeEmptyDOMElement();
-
-  act(() => window.dispatchEvent(new PageTransitionEvent("pageshow", { persisted: true })));
-  expect(view.container).toBeEmptyDOMElement();
 });
 
 it("consumes a move result with no gear warning and keeps its undo hold in the URL", () => {

@@ -57,24 +57,6 @@ export function ScheduleBoardNoticeView({
     setHasVerifiedHold(true);
   }, [initialNotice]);
 
-  useEffect(() => {
-    const clearVisitNotices = () => {
-      setGearNotices([]);
-      seenGearResults.current.clear();
-      setActiveNotice(null);
-      setHasVerifiedHold(false);
-    };
-    const clearOnRestore = (event: PageTransitionEvent) => {
-      if (event.persisted) clearVisitNotices();
-    };
-    window.addEventListener("pagehide", clearVisitNotices);
-    window.addEventListener("pageshow", clearOnRestore);
-    return () => {
-      window.removeEventListener("pagehide", clearVisitNotices);
-      window.removeEventListener("pageshow", clearOnRestore);
-    };
-  }, []);
-
   const hasGearWarning = gearNotices.length > 0;
   const tone = hasGearWarning
     ? "warning"

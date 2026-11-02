@@ -19,7 +19,7 @@ export type ReminderCadence = {
   hoursBefore: number;
 };
 
-/** Sorted loosest-first; `dueReminder` re-sorts defensively regardless. */
+/** Sorted loosest-first. */
 export const TRIP_REMINDER_CADENCES: readonly ReminderCadence[] = [
   { kind: "trip_reminder_7d", hoursBefore: 168 },
   { kind: "trip_reminder_24h", hoursBefore: 24 },
