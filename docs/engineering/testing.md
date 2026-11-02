@@ -105,10 +105,11 @@ Renaming a journey's test renames its row in the same change.
 | Every pull request | repo checks, lint, typecheck (one job), all unit tests (4 shards) with the coverage floors, the build, every Playwright spec (6 shards), the light-mode captures `visual-affected` selects (up to 8 shards, 7 for every light capture), the fast lane; real Postgres when `src/db/**` or `drizzle/**` changed |
 | Push to `main` | all of the above with every capture, light and dark: the next baseline |
 | Nightly | real Postgres (ci.yml's schedule), the one-day simulation, quarantined tests and the flake hunt (`e2e-nightly.yml`), CodeQL (`codeql.yml`, daily 05:30 UTC), the follow-up scan |
+| Hourly | the public schedule canary (`public-schedule-canary.yml`): the demo shop's schedule draws a trip |
 | Weekly | the persona walk, the shard-duration refresh |
 
-**A scheduled run that goes red files itself.** `simulate-day.yml`, `durations-refresh.yml` and
-`e2e-nightly.yml` end with `node scripts/workflow-alert.mjs`: a red run on the
+**A scheduled run that goes red files itself.** `simulate-day.yml`, `durations-refresh.yml`,
+`public-schedule-canary.yml` and `e2e-nightly.yml` end with `node scripts/workflow-alert.mjs`: a red run on the
 default branch opens one `ci-red` + `needs-triage` issue in the follow-up format, each later red
 run comments on it, and the first green run closes it. A manual run on another branch files
 nothing.
