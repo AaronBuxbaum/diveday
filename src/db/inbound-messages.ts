@@ -177,6 +177,16 @@ function sanitizeSubject(subject: string | null | undefined): string | null {
 }
 
 /**
+ * The words, without a NUL. Postgres refuses `\u0000` in a text column, and a
+ * diver's mail can carry one (`=00` in quoted-printable, a base64 byte): left
+ * in, the insert throws, the webhook answers 500, and SNS retries a message
+ * that can never be filed. Every other character is the sender's.
+ */
+function sanitizeBody(body: string): string {
+  return truncateInboundBody(body.replaceAll("\u0000", ""));
+}
+
+/**
  * File one inbound message. Attribution and the reply link are resolved
  * here, in one place, so the two webhook routes cannot disagree about either.
  */
@@ -223,7 +233,7 @@ async function recordMatchedInboundMessage(
       channel: input.channel,
       fromAddress,
       subject: sanitizeSubject(input.subject),
-      body: truncateInboundBody(input.body),
+      body: sanitizeBody(input.body),
       mediaCount: Math.max(0, Math.floor(input.mediaCount ?? 0)),
       receivedAt: input.receivedAt,
       providerMessageId: input.providerMessageId,

@@ -40,6 +40,8 @@ const receivedSchema = z.object({
     /** The envelope sender (MAIL FROM). */
     source: z.string().optional(),
     destination: z.array(z.string()).optional(),
+    /** SES's own reading of the message's headers; `from` is every `From:` it saw. */
+    commonHeaders: z.object({ from: z.array(z.string()).optional() }).optional(),
   }),
 });
 
@@ -51,6 +53,13 @@ export type SesInboundNotification =
       objectKey: string;
       recipients: string[];
       envelopeFrom: string | null;
+      /**
+       * Every `From:` SES read off the message, as SES read it: the address its
+       * DMARC verdict is about. Empty when SES reported none. The route
+       * attributes a sender only when this holds exactly one address and it is
+       * the one the app's own reader found.
+       */
+      sesHeaderFrom: string[];
       /**
        * SES's DMARC verdict passed: the `From:` header names a domain that
        * authorised this message. Nothing else authenticates that header — SPF
@@ -104,6 +113,7 @@ export function parseSesInboundNotification(message: string, now: Date): SesInbo
     objectKey: receipt.action.objectKey,
     recipients: receipt.recipients ?? mail.destination ?? [],
     envelopeFrom: mail.source ?? null,
+    sesHeaderFrom: mail.commonHeaders?.from ?? [],
     fromAuthenticated: passed(receipt.dmarcVerdict),
     envelopeAuthenticated: passed(receipt.spfVerdict),
     // Anything but a PASS — FAIL, GRAY, PROCESSING_FAILED, a word SES adds
