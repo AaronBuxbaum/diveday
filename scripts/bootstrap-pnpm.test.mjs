@@ -5,7 +5,7 @@ describe("pnpm bootstrap", () => {
   it("retries a bounded subprocess timeout even when npm printed nothing", () => {
     let calls = 0;
     const result = bootstrapPnpm({
-      version: "12.4.1",
+      version: "12.16.1",
       prefix: "/tmp/pnpm",
       log: () => {},
       sleep: () => {},
@@ -27,7 +27,7 @@ describe("pnpm bootstrap", () => {
     const delays = [];
     expect(
       bootstrapPnpm({
-        version: "12.4.1",
+        version: "12.16.1",
         prefix: "/tmp/pnpm",
         run: (...args) => {
           calls.push(args);
@@ -38,7 +38,7 @@ describe("pnpm bootstrap", () => {
       }),
     ).toBe(true);
     expect(calls).toHaveLength(2);
-    expect(calls[0][1]).toContain("pnpm@12.4.1");
+    expect(calls[0][1]).toContain("pnpm@12.16.1");
     expect(calls[0][1]).toContain("--fetch-retries=0");
     expect(logs.join("\n")).toContain("ECONNRESET");
     expect(delays).toEqual([1000]);
@@ -50,7 +50,7 @@ describe("pnpm bootstrap", () => {
       calls += 1;
       return { status: 1, stderr };
     };
-    const base = { version: "12.4.1", prefix: "/tmp/pnpm", log: () => {}, sleep: () => {} };
+    const base = { version: "12.16.1", prefix: "/tmp/pnpm", log: () => {}, sleep: () => {} };
     expect(bootstrapPnpm({ ...base, run: fail("npm error code ETIMEDOUT") })).toBe(false);
     expect(calls).toBe(3);
     calls = 0;
