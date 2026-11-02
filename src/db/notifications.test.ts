@@ -1077,13 +1077,10 @@ describe("what the retry queue is allowed to hold", () => {
     // one tick of a misconfigured deploy.
     vi.stubEnv("SECRET_ENCRYPTION_KEY", "");
     try {
-      await expect(drainNotificationRetries(db, { provider: failsRetryably })).resolves.toEqual({
-        scanned: 0,
-        sent: 0,
-        queued: 0,
-        failed: 0,
-        held: { sent: 0, failed: 0 },
-      });
+      const nothing = { scanned: 0, sent: 0, queued: 0, failed: 0, held: { sent: 0, failed: 0 } };
+      await expect(drainNotificationRetries(db, { provider: failsRetryably })).resolves.toEqual(
+        nothing,
+      );
     } finally {
       vi.unstubAllEnvs();
     }
