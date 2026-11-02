@@ -236,10 +236,10 @@ describe("requireShopSurface", () => {
     const error = await refusal(() =>
       requireShopSurface(context.shop.slug, {
         allow: canPersonManageShopSettings,
-        refusal: { notice: "gear-import-not-authorized", landing: ["gear"] },
+        refusal: { notice: "not-authorized", landing: ["gear"] },
       }),
     );
-    expect(error.message).toBe(`/shop/${context.shop.slug}/gear?notice=gear-import-not-authorized`);
+    expect(error.message).toBe(`/shop/${context.shop.slug}/gear?notice=not-authorized`);
   });
 
   /**
@@ -273,7 +273,7 @@ describe("requireShopSurface", () => {
     const error = await refusal(() =>
       requireShopSurface("some-other-shop", {
         allow,
-        refusal: { notice: "not-authorized" },
+        refusal: { notice: "settings-not-authorized" },
       }),
     );
     expect(error).toBeInstanceOf(NotFoundError);
@@ -291,7 +291,7 @@ describe("requireShopSurface", () => {
     const allow = vi.fn(async () => true);
     await requireShopSurface(context.shop.slug, {
       allow,
-      refusal: { notice: "not-authorized" },
+      refusal: { notice: "settings-not-authorized" },
     });
     expect(allow).toHaveBeenCalledWith(context.db, context.shop.id, owner);
   });

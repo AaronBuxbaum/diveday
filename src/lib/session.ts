@@ -9,7 +9,12 @@ import { type getShopById, shopByIdCached } from "@/db/shops";
 import { auth, type DiveDaySession } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
 import { reportRenderQueries } from "@/lib/observability/query-timing";
-import { noticeUrl, shopPath } from "@/lib/staff-notices";
+import {
+  type LandedRefusalNotice,
+  noticeUrl,
+  shopPath,
+  type TodayRefusalNotice,
+} from "@/lib/staff-notices";
 
 /**
  * Server-side staff gate for /shop surfaces. The proxy already blocks these
@@ -110,7 +115,9 @@ export type ShopSurfaceOptions =
   | {
       allow: ShopSurfaceGate;
       /**
-       * `notice` is the code the destination's map resolves to words. `landing`
+       * `notice` is the code the destination's map resolves to words, typed to the
+       * codes that have some (`staff-notices.ts`): Today's for no `landing`, the
+       * landing surface's own for one. `landing`
        * names the surface to bounce to, as path segments *under this shop* —
        * `["orders"]` for a payment gate, say. It defaults to
        * the shop's Today page, which already renders `shopHome.notice.*` codes
@@ -123,7 +130,9 @@ export type ShopSurfaceOptions =
        * never the caller's — so a refusal cannot leave this shop's namespace
        * however it is called.
        */
-      refusal: { notice: string; landing?: (string | number)[] };
+      refusal:
+        | { notice: TodayRefusalNotice; landing?: undefined }
+        | { notice: LandedRefusalNotice; landing: (string | number)[] };
     };
 
 /**
