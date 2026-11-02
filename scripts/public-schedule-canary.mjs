@@ -17,7 +17,6 @@ import { fileURLToPath } from "node:url";
 import demoShop from "../src/db/demo-shop.json" with { type: "json" };
 
 export const DEFAULT_BASE_URL = "https://dive.day";
-/** The demo shop (src/db/demo-shop.json), until a pilot shop sets CANARY_SHOP_SLUG. */
 export const DEFAULT_SLUG = demoShop.slug;
 /** The diver bundle's empty-schedule sentence (`schedule.noTrips`): a page that says it is empty. */
 export const EMPTY_SCHEDULE_TEXT = "No trips on the books yet";
