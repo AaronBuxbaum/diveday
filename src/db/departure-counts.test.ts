@@ -213,6 +213,13 @@ describe("departureCounts", () => {
     expect(counts.get(other.trip.id)).toMatchObject({ back: 0, missing: 0 });
   });
 
+  it("reads no checkpoint without a place in the day", async () => {
+    const { say, count } = await boat(1);
+    await say(0, "after_dive_1.5", "not_boarded");
+    await say(0, "after_dive_-1", "boarded");
+    expect(await count()).toMatchObject({ back: 0, missing: 0 });
+  });
+
   it("reads two spellings of one checkpoint as one, newest word standing", async () => {
     const { say, count } = await boat(1);
     await say(0, "after_dive_02", "boarded");

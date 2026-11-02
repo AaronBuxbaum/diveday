@@ -111,6 +111,14 @@ describe("listUnaccountedForByTrip", () => {
     expect(await unaccounted()).toEqual([0]);
   });
 
+  it("reads no checkpoint without a place in the day", async () => {
+    const { bookingIds, say, unaccounted } = await boat();
+    await say(bookingIds[0] as string, "after_dive_0", "not_boarded");
+    await say(bookingIds[1] as string, "after_dive_1.5", "not_boarded");
+    await say(bookingIds[2] as string, "pickup", "not_boarded");
+    expect(await unaccounted()).toEqual([]);
+  });
+
   it("never reads the dock: a diver who never left is not missing", async () => {
     const { bookingIds, say, unaccounted } = await boat();
     await say(bookingIds[0] as string, "departure", "not_boarded");

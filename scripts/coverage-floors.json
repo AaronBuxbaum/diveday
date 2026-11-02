@@ -8,6 +8,13 @@
         "src/db/waivers-requests.ts": "92.7 -> 92.3",
         "src/lib/offline-manifest-store.ts": "74.57 -> 73.31"
       }
+    },
+    {
+      "why": "Both files changed on main after the floors were set (6a45b105, shared evidence ladder); this stack touches neither. Measured by CI on #3700; the coverage artifact cannot be downloaded from an agent session, so the two values are copied from the job log",
+      "files": {
+        "src/lib/readiness.ts": "99.47 -> 99.06",
+        "src/lib/trip-admission.ts": "98.71 -> 98.64"
+      }
     }
   ],
   "src/db/aboard-at-sea.ts": 94.82,
@@ -84,7 +91,7 @@
   "src/lib/payments/erasure-failure.ts": 100,
   "src/lib/pre-departure-check.ts": 100,
   "src/lib/readiness-summary.ts": 96.15,
-  "src/lib/readiness.ts": 99.47,
+  "src/lib/readiness.ts": 99.06,
   "src/lib/requirement.ts": 91.66,
   "src/lib/roll-call-alerts.ts": 100,
   "src/lib/roll-call-population.ts": 100,
@@ -92,7 +99,7 @@
   "src/lib/roll-call.ts": 97.72,
   "src/lib/signatures.ts": 100,
   "src/lib/trip-admission-gate.ts": 87.5,
-  "src/lib/trip-admission.ts": 98.71,
+  "src/lib/trip-admission.ts": 98.64,
   "src/lib/trips.ts": 100,
   "src/lib/waiver-integrity.ts": 100,
   "src/lib/waiver-questions.ts": 90.41,
