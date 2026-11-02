@@ -28,11 +28,14 @@ is the one place a client is built, per call with the key chosen for that call
   passes the adapter's Zod schema. `stripe-api-version.test.ts` allows exactly that deletion.
 - **A non-2xx is never a success.** The SDK accepts JSON without an `error` field at any status;
   the transport gives every non-2xx an error envelope.
-- **Answered vs unanswered.** An SDK error with a `statusCode` is Stripe's answer (`failed`,
-  `refused`, `none`); anything else after a mutation went out stays `unanswered`.
+- **After a mutation went out, only Stripe's refusal is `failed`:** a 4xx, not 409, with
+  Stripe's error envelope (`stripeRefused`). Silence, a 5xx, a 409 or a gateway status is
+  `unanswered`.
 - **Webhook:** `Stripe.webhooks.constructEvent` on the raw body, plus our own absolute 300-second
-  window on exactly one `t=`; the live/test secret cross-check stays in the route.
-- Telemetry off. Connected account and idempotency keys are request options. Provider interfaces,
+  window on exactly one `t=`; any non-JSON-parse throw is `invalid_signature`. The live/test
+  secret cross-check stays in the route.
+- Telemetry off; `X-Stripe-Client-User-Agent` dropped and `User-Agent` set to `DiveDay`, so no
+  runtime details leave. Connected account and idempotency keys are request options. Provider interfaces,
   fakes and `fetch` injection are unchanged.
 
 ## Alternatives considered
@@ -44,8 +47,8 @@ is the one place a client is built, per call with the key chosen for that call
 
 ## Consequences
 
-Wire differences, pinned in `stripe-client.test.ts`: the SDK adds `User-Agent`, `Accept` and a
-random `Idempotency-Key` on an unkeyed POST; a GET carries a form `Content-Type`; a 2xx void or
+Wire differences, pinned in `stripe-client.test.ts`: the SDK adds `Accept` and a random
+`Idempotency-Key` on an unkeyed POST; a GET carries a form `Content-Type`; a 2xx void or
 resend whose body is not JSON is now `failed`. The package is 18 MB unpacked; bundle impact was not
 measured. Revisit when pinning a version (then typed methods become usable) or if a later SDK
 changes the retry or header behavior `stripe-client.test.ts` pins; the escape hatch is one file.
