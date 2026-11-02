@@ -14,6 +14,8 @@ import {
   reviewAnswered,
   reviewsNeeded,
   reviewsSection,
+  seenFilledAnswered,
+  seenFilledScreens,
 } from "./check-pr-body.mjs";
 
 const TEMPLATE = readFileSync(
@@ -280,7 +282,7 @@ describe("the whole check", () => {
 
   it("takes a reasoned 'not needed' for a UI-only waiver change", () => {
     const body =
-      "## Reviews launched\n\n- `dive-domain-expert`: not needed because only a waiver page's layout moved\n";
+      "## Reviews launched\n\n- `dive-domain-expert`: not needed because only a waiver page's layout moved\n\n## Seen filled in\n\nNo filled state because only the layout moved.\n";
     expect(bodyProblems({ body, files: ["src/app/shop/[shopSlug]/waivers/page.tsx"] })).toEqual([]);
   });
 
@@ -429,5 +431,53 @@ describe("closing the issues this branch claimed", () => {
     expect(problem).toContain('"Closes #2241"');
     expect(closesProblems({ body: "Closes #2241", claimed: [2241], head })).toEqual([]);
     expect(closesProblems({ body: "", claimed: [], head })).toEqual([]);
+  });
+});
+
+describe("seen filled in (issue #3650)", () => {
+  const log = "src/app/shop/[shopSlug]/trips/[id]/log/_components/BoatAtDeparture.tsx";
+  const withSeen = (text) =>
+    TEMPLATE.replace("## Seen filled in\n", `## Seen filled in\n\n${text}\n`);
+
+  it("names the departure log, manifest, readiness, waiver and medical screens, not their tests or copy", () => {
+    expect(
+      seenFilledScreens([
+        log,
+        "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx",
+        "src/app/s/[shopSlug]/waiver/WaiverForm.tsx",
+        "src/app/shop/[shopSlug]/trips/[id]/log/_components/BoatAtDeparture.test.tsx",
+        "src/i18n/locales/en-US/staff/log.json",
+        "src/app/shop/[shopSlug]/orders/page.tsx",
+      ]),
+    ).toEqual([
+      log,
+      "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx",
+      "src/app/s/[shopSlug]/waiver/WaiverForm.tsx",
+    ]);
+  });
+
+  it("fails an empty or bare section and passes one that says what was seen", () => {
+    expect(bodyProblems({ body: TEMPLATE, files: [log] })).toHaveLength(1);
+    expect(bodyProblems({ body: withSeen("none"), files: [log] })).toHaveLength(1);
+    expect(bodyProblems({ body: withSeen("n/a"), files: [log] })).toHaveLength(1);
+    expect(
+      bodyProblems({
+        body: withSeen("The dawn boat's log with its snapshot, ux/log-filled-1280.png."),
+        files: [log],
+      }),
+    ).toEqual([]);
+    expect(
+      bodyProblems({
+        body: withSeen("No filled state because only a class name moved."),
+        files: [log],
+      }),
+    ).toEqual([]);
+  });
+
+  it("asks nothing of a change to another screen", () => {
+    expect(
+      bodyProblems({ body: TEMPLATE, files: ["src/app/shop/[shopSlug]/orders/page.tsx"] }),
+    ).toEqual([]);
+    expect(seenFilledAnswered(null)).toBe(false);
   });
 });
