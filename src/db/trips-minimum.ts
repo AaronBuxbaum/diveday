@@ -15,7 +15,8 @@ import { seatNotCancelled, tripSellableSeatsSql } from "./trips-queries";
  * The minimum-head-count sweep: cancel every departure whose decision moment
  * has passed while it is still short (src/lib/minimum-seats.ts).
  *
- * One pass, cross-shop, run from `src/app/api/cron/minimum-seats/`. It is the
+ * One pass, cross-shop, run as the `minimum-seats` scan of the hourly shop tick
+ * (`src/features/shop-tick`). It is the
  * half of the feature a shop is actually buying — a minimum nobody enforces is
  * the sticky note the shop already had — and it is deliberately the *only*
  * thing that cancels for a minimum. Staff keep their ordinary cancel button,

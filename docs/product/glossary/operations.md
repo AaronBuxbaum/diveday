@@ -92,6 +92,13 @@
   message may go out now. `requireShopSurface` mints one beside the shop row, and a domain function takes a clock
   rather than a loose `now` and time zone (Today's reads in `src/db/today.ts` first).
   "Today's departures" is `startsAt` inside `clock.day`, exactly, with no looser scan beside it.
+- **Shop tick** — the one hourly pass (`/api/cron/shop-tick`, `0 * * * *`) that serves every shop
+  cadence: the minimum-head-count decision, pre-trip reminders, held sends, gear service reminders,
+  recaps, crew notices, the stale roll-call and missing-diver alerts and the desk's trailing ping,
+  each a scan of `src/features/shop-tick` decided in the shop's own day. Platform cadences
+  (retention, backups, integrations, the daily retry drain) stay UTC routes of their own. A scan
+  that fails is isolated, logged as `cron_shop_tick.scan_failed` with its name, and turns the
+  `diveday-shop-tick` monitor to error.
 - **Walk-in** — a person who turns up at the counter for a boat that has not left, seated from the
   departure door in walk-in mode (`walkIn=true`, entry `walk_in`, activity `seat_added_walk_in`).
   The mode is a claim from the client and holds only while the boat's **counter window** is open;
@@ -1852,7 +1859,7 @@
 - **Monday email** (weekly digest) — the owner's service email about their own shop's week, sent once per person per shop-local week on Monday between 08:00 and 20:00 shop time (`/api/cron/weekly-digest`, hourly). Sections, each a count and a link into the staff app (but one, below), appear only when they have something to say: last week's bookings made and seats filled against capacity (Reports' own query), this week's departures and seat fill and the divers still owing a waiver (the shared readiness horizon), reviews received and waiting on moderation, date requests still waiting, and Today rows that are past due. For someone Reports' gate admits, one more section is names rather than a count: **medical alerts opened in an emergency** last week (issue #2990, H-20261023-medical-alert-for-the), with the total, how many each reader opened, up to 50 lines of who opened whose alert on which departure and when, and how many more; a blank name is said as "a diver", "a staffer" or "a departure", never failing the email, and the section stays out of the `monday` assist's opening sentences. An emergency read by itself is reason enough to send. A week with none of these sends nothing. Last week's figures and Today's money and platform chores go only to someone Reports' gate admits (`canViewShopReports`, read from live roles); anyone else who opts in gets the rest. On by default for an owner, off for everyone else, and each staffer's own answer (`user_accounts.weekly_digest`) wins; it is turned off from the staffer's Email settings or the email's own one-click link. Transactional under H-20260724-channel-sends-booking-waiver (staff, about their own operation), so it carries no commercial postal footer. Demo shops never send; any staffer can preview this week's at `/shop/<slug>/me/email/preview`. Logic in `src/lib/weekly-digest.ts`, reads and the send claim (`weekly_digest_sends`) in `src/db/weekly-digest.ts`.
 - **Post-trip recap** — the per-diver-per-trip reading of the day, delivered once per booking as the
   `trip_recap` kind no earlier than four hours after the departure ends. It rides the same
-  delivery-row dedup as the reminders, and the dedicated hourly recap scan (`/api/cron/recaps`) keeps
+  delivery-row dedup as the reminders, and the hourly shop tick's recap scan (`/api/cron/shop-tick`) keeps
   that floor punctual without weakening it. Since slice 7d it is **not a page of its own**: the link
   (`/recap/[token]`, a purpose-separated signed booking token, distinct from the readiness link)
   renders the **after-state**, and so does the diver's own readiness link once their day is over. No

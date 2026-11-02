@@ -41,7 +41,7 @@ import { firstNameOf } from "@/lib/person-name";
 import { diveDayOrdinal } from "@/lib/prior-visits";
 import { recapLinkPath } from "@/lib/recap-links";
 import { RECAP_AUTOMATIC_DELAY_HOURS, unpauseRecapAutoSendAt } from "@/lib/recap-schedule";
-import { maySendNow } from "@/lib/send-window";
+import { shopClock } from "@/lib/shop-clock";
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import { loadActiveStaffRoles } from "./authz";
 import { getBoatForHistory } from "./boats";
@@ -1834,7 +1834,7 @@ async function sendRecaps(
     // (issue #697). Held rather than dropped, and safely so: a recap is due
     // from `endsAt + 4h` onwards with no upper bound, so the condition simply
     // stays true until this hourly pass next runs inside the shop's own hours.
-    if (!maySendNow("trip_recap", now, shop.timezone)) {
+    if (!shopClock(shop, now).maySend("trip_recap")) {
       summary.held += 1;
       continue;
     }

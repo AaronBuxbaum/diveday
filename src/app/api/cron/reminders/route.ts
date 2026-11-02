@@ -169,7 +169,7 @@ export async function GET(request: Request) {
       drainNotificationRetries(db),
     );
     // **Pre-trip reminders no longer run here.** They moved to their own hourly
-    // pass, `/api/cron/trip-reminders`: a fixed daily UTC hour is 10am in
+    // pass, a scan of `/api/cron/shop-tick`: a fixed daily UTC hour is 10am in
     // Florida and 03:00 in Fiji, so a shop in the picker's Asia-Pacific group
     // texted its divers in the middle of the night, every day (issue #697). The
     // five scans left are durable-retry drains whose backoff bounds derive from

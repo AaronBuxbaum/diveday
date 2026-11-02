@@ -15,13 +15,6 @@ export const RECAP_UNPAUSE_DELAY_HOURS = 1;
 export const RECAP_UNPAUSE_DELAY_MS = RECAP_UNPAUSE_DELAY_HOURS * HOUR_MS;
 
 /**
- * Dedicated hourly pass — scans for departures due for automatic recap
- * delivery. `:02`, inside the five minutes every hourly pass shares (see
- * `TRIP_REMINDER_CRON_CRONTAB` in `./reminders` for why five and not one).
- */
-export const RECAP_CRON_CRONTAB = "2 * * * *";
-
-/**
  * Calculates the target automatic recap delivery timestamp:
  * - If a custom `autoSendAt` was set (e.g. via unpause), returns that.
  * - Otherwise, returns 4 hours after `endsAt` if a scheduled return time exists.
