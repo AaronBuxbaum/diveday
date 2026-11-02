@@ -29,7 +29,7 @@ booking, the departure log, gear, dive sites, orders, staffing. A disabled accou
 JWT kept those working for up to 30 days (Auth.js's default `session.maxAge`, which this repo
 leaves unset).
 
-Several `src/db` writer doc-comments (`check-in.ts`, `buddy-pairs.ts`, `manifests.ts`,
+Several `src/db` writer doc-comments (`check-in.ts`, `buddy-teams.ts`, `manifests.ts`,
 `waivers.ts`) already say, in almost identical language, that `setStaffAccountStatus` "revokes
 sign-in and leaves `person_roles` entirely intact" — which is true only of *future* sign-in
 attempts (`src/lib/credentials.ts` refuses a non-active account at the Credentials provider). It

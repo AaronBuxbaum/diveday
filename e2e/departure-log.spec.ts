@@ -75,7 +75,7 @@ test("the Details tab opens the log with the recorded facts", async ({ page }) =
 
   // Who dived with whom is on the document — the pairing staff recorded, not a
   // derived verdict about it. Tom Okafor and Lena Fischer are the seeded reef
-  // pair (src/db/seed-buddy-pairs.ts), so each names the other.
+  // pair (src/db/seed-buddy-teams.ts), so each names the other.
   const roster = page.getByRole("table").first();
   await expect(roster.getByRole("columnheader", { name: "Buddy team" })).toBeVisible();
   // Anchored on the numbered Diver cell, not row text: a pairing prints both

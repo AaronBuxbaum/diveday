@@ -5,8 +5,8 @@ import { seededShopContext } from "@/test/db";
 import {
   boats,
   bookings,
-  buddyPairMembers,
   buddyTeamEvents,
+  buddyTeamMembers,
   certifications,
   executedDives,
   preDepartureCheckEvents,
@@ -16,7 +16,7 @@ import {
   tripAssignments,
   trips,
 } from "./schema";
-import { seedDawnBuddyTeams } from "./seed-buddy-pairs";
+import { seedDawnBuddyTeams } from "./seed-buddy-teams";
 import { DEMO_COMPLETED_TRIP_TITLE } from "./seed-more-trips";
 
 /**
@@ -146,8 +146,8 @@ describe("the seeded dawn boat's record", () => {
     expect(boarded.length).toBeGreaterThan(1);
     const members = await db
       .select()
-      .from(buddyPairMembers)
-      .where(eq(buddyPairMembers.tripId, dawn.id));
+      .from(buddyTeamMembers)
+      .where(eq(buddyTeamMembers.tripId, dawn.id));
     // Everybody in the water is on a team, and nobody who stayed ashore is.
     expect(members.map((member) => member.bookingId).sort()).toEqual(
       boarded.map((row) => row.bookingId).sort(),
@@ -175,13 +175,13 @@ describe("the seeded dawn boat's record", () => {
       { ...undone, id: undefined, seq: undefined, status: "cleared", occurredAt: later },
     ]);
     await db.delete(buddyTeamEvents).where(eq(buddyTeamEvents.tripId, dawn.id));
-    await db.delete(buddyPairMembers).where(eq(buddyPairMembers.tripId, dawn.id));
+    await db.delete(buddyTeamMembers).where(eq(buddyTeamMembers.tripId, dawn.id));
     await seedDawnBuddyTeams(db, shop.id, {
       personId: turnedAway.recordedByPersonId,
       fullName: "Recorder",
     });
     const teamed = (
-      await db.select().from(buddyPairMembers).where(eq(buddyPairMembers.tripId, dawn.id))
+      await db.select().from(buddyTeamMembers).where(eq(buddyTeamMembers.tripId, dawn.id))
     ).map((member) => member.bookingId);
     expect(teamed.length).toBeGreaterThan(1);
     expect(teamed).not.toContain(turnedAway.bookingId);

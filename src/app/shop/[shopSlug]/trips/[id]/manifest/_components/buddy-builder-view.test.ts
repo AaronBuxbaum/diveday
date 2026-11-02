@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { PartyTeamPlan, TripBuddyTeam } from "@/db/buddy-pairs";
+import type { PartyTeamPlan, TripBuddyTeam } from "@/db/buddy-teams";
 import { partyLeftReasonText } from "@/i18n/buddy-labels";
 import { partyLeftReason } from "@/lib/party-teams";
 import { buddyBuilderView } from "./buddy-builder-view";

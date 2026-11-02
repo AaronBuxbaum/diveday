@@ -47,7 +47,7 @@ import {
   lockBoardingCertificationEvidence,
 } from "./boarding-certification-snapshot";
 import { captureDepartureBoatSafety } from "./boat-safety";
-import { listTripBuddyTeams } from "./buddy-pairs";
+import { listTripBuddyTeams } from "./buddy-teams";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
 import { crewCredentialSnapshot } from "./crew-credential-snapshot";
 import { listTripGearAssignments } from "./gear";

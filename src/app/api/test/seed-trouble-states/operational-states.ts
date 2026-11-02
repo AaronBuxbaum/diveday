@@ -1,7 +1,7 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { captureDepartureBoatSafety } from "@/db/boat-safety";
-import { formBuddyTeam } from "@/db/buddy-pairs";
+import { formBuddyTeam } from "@/db/buddy-teams";
 import type { AppDb } from "@/db/client";
 import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
 import { recordCrewRollCall, recordRollCall } from "@/db/manifests";

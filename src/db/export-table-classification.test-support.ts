@@ -32,7 +32,7 @@ export const EXCLUDED_TABLES = [
   "prior_gear_assignments",
   // The buddy-team pairing trail (ADR 20260804-buddy-teams). The *standing*
   // teams a shop would carry to another system are already exported as
-  // buddy_pairs.csv; this is the history of how they got that way.
+  // buddy_teams.csv; this is the history of how they got that way.
   "buddy_team_events",
   "notification_delivery_attempts", // per-attempt retry mechanics behind notification_deliveries.csv, which carries the outcome
   // The inbox (ADR 20260907-two-way-inbox). Correspondence *is* a shop record,

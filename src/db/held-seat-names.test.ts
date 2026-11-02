@@ -4,7 +4,7 @@ import { nowDate } from "@/lib/clock";
 import { rollCallRowState } from "@/lib/manifests";
 import { serializeManifests } from "@/lib/offline-manifests";
 import { fileScopedShopContext } from "@/test/db";
-import { formBuddyTeam, listTripBuddyTeams } from "./buddy-pairs";
+import { formBuddyTeam, listTripBuddyTeams } from "./buddy-teams";
 import { getIncidentExport } from "./incident-export";
 import { getTripManifests, recordRollCall } from "./manifests";
 import { bookings } from "./schema";

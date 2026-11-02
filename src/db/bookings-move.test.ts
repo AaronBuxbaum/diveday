@@ -5,7 +5,7 @@ import { tripRescheduledEmail } from "@/lib/notifications/email";
 import { fileScopedShopContext } from "@/test/db";
 import { fakeEmail, fakeSms } from "@/test/fakes";
 import { createBooking, listSeatMoveTargets, moveBooking } from "./bookings";
-import { formBuddyTeam } from "./buddy-pairs";
+import { formBuddyTeam } from "./buddy-teams";
 import type { AppDb } from "./client";
 import { listDeskEventsSince, markTripCaughtUp } from "./desk-events";
 import { recordFlySafeTold } from "./fly-safe-correction";

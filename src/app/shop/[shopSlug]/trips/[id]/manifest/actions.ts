@@ -14,7 +14,7 @@ import {
   formPartyTeams,
   planPartyTeams,
   removeBuddyTeamMember,
-} from "@/db/buddy-pairs";
+} from "@/db/buddy-teams";
 import { getDb } from "@/db/client";
 import { markTripCaughtUp } from "@/db/desk-events";
 import { type ExecutedDiveRefusal, upsertExecutedDive } from "@/db/executed-dives";
@@ -373,7 +373,7 @@ const crewRollCallSchema = z.object({
  * parallel fields a caller could pair up wrongly.
  *
  * Every rule about a member (same trip, active seat, assigned crew, not
- * already teamed) is re-proved server-side in `src/db/buddy-pairs.ts`; this
+ * already teamed) is re-proved server-side in `src/db/buddy-teams.ts`; this
  * only checks the shape.
  */
 //
@@ -386,7 +386,7 @@ const crewRollCallSchema = z.object({
 // name lookup keyed on the caller's spelling missed. The result was an
 // `ok: true` that wrote `[null, null]` into the append-only safety trail and
 // left this departure's incident export throwing forever, from any staff
-// account, by editing a checkbox value in devtools. `src/db/buddy-pairs.ts`
+// account, by editing a checkbox value in devtools. `src/db/buddy-teams.ts`
 // now resolves names off the returned row rather than the caller's string, so
 // this is the outer of two layers, not the only one.
 const memberTokenSchema = z

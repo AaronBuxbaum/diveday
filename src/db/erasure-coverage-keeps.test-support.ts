@@ -28,7 +28,7 @@ export const ERASURE_KEEPS: Record<string, string> = {
   incident_report_addenda:
     "dated staff additions to a filed report; kept verbatim for the same reason as the report",
   // --- the diver is named only by a pointer, or not at all -----------------
-  buddy_pair_members:
+  buddy_team_members:
     "which seats dived together, by id; the team's words live in `buddy_team_events`, which the erasure does redact",
   booking_checkout_bookings:
     "how one checkout's money split across the seats it paid for — four amounts and two ids",

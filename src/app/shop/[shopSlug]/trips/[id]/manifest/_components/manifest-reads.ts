@@ -2,7 +2,7 @@ import { canPersonReadMedicalAlertOnTrip, emergencyMedicalAlertStanding } from "
 import { departureKitRecord } from "@/db/boat-safety";
 import { openSnagsForTrip } from "@/db/boat-snags";
 import { departureVessels } from "@/db/boats";
-import { listTripBuddyTeams, planPartyTeams } from "@/db/buddy-pairs";
+import { listTripBuddyTeams, planPartyTeams } from "@/db/buddy-teams";
 import type { AppDb } from "@/db/client";
 import { listDeskEventsSince } from "@/db/desk-events";
 import { diveIntentTallyForTrip } from "@/db/dive-intent";

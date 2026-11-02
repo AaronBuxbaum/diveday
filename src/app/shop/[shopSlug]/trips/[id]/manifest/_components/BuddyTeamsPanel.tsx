@@ -7,7 +7,7 @@ import { SummaryCaret } from "@/components/ui/disclosure";
 import { ChoiceRow, controlClass, Field, FormStatus } from "@/components/ui/form";
 import { groupLabelClass } from "@/components/ui/group-label";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
-import type { TripBuddyTeam } from "@/db/buddy-pairs";
+import type { TripBuddyTeam } from "@/db/buddy-teams";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { scopedId } from "@/lib/element-id";
 import { BuddyDragGroups } from "./BuddyDragGroups";
@@ -328,7 +328,7 @@ export function BuddyTeamsPanel({
                           // with (issue #1068) — so "the row with Omar in
                           // it" stopped being a question the DOM could
                           // answer. This marks the membership half, which
-                          // is what `e2e/buddy-pairs.spec.ts` means when it
+                          // is what `e2e/buddy-teams.spec.ts` means when it
                           // asks for a diver's team.
                           data-buddy-member=""
                           className={`${MEMBER_CHIP_CLASS} ${removable ? "pe-1" : "pe-4"}`}

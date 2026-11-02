@@ -31,7 +31,7 @@ Each rule names what enforces it; the reasoning, incidents and the longer form o
   exclusion constraint (catch 23P01), never a pre-check; service clocks inform, never gate,
   except a counter rental of life support (ADR 20260815-minimal-gear-register, amendment
   2026-10-08).
-- **Buddy teams**: `src/db/buddy-pairs.ts`; every act appends to `buddy_team_events`; informs,
+- **Buddy teams**: `src/db/buddy-teams.ts`; every act appends to `buddy_team_events`; informs,
   never gates (ADR 20260804-buddy-teams).
 - **Templates are copied, then the shop's**: `src/content/dive-site-templates.ts`,
   `src/content/course-templates.ts`. **The catalog is DiveDay's words**: `src/db/marine-life-catalog.ts`,

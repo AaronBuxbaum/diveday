@@ -1,0 +1,158 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "9d9bd852-ed83-4f36-a8dd-bd1fba2770b3",
+  "prevIds": [
+    "ab690e23-c643-4d5e-a2a9-3cb17a167270"
+  ],
+  "footprints": [
+    {
+      "statementType": "rename_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "buddy_pair_members"
+      ],
+      "writes": [
+        "s|tbl|public.buddy_pair_members",
+        "n|tbl|public.buddy_pair_members",
+        "n|rel|public.buddy_pair_members",
+        "n|type|public.buddy_pair_members",
+        "s|tbl|public.buddy_team_members",
+        "n|tbl|public.buddy_team_members",
+        "n|rel|public.buddy_team_members",
+        "n|type|public.buddy_team_members"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "rename_constraint",
+      "statementTarget": [
+        "table",
+        "public",
+        "buddy_team_members"
+      ],
+      "writes": [
+        "s|ck|public.buddy_team_members.buddy_pair_members_one_subject",
+        "n|ck|public.buddy_team_members.buddy_pair_members_one_subject",
+        "n|con|public.buddy_team_members.buddy_pair_members_one_subject",
+        "s|ck|public.buddy_team_members.buddy_team_members_one_subject",
+        "n|ck|public.buddy_team_members.buddy_team_members_one_subject",
+        "n|con|public.buddy_team_members.buddy_team_members_one_subject"
+      ],
+      "reads": [
+        "n|tbl|public.buddy_team_members",
+        "n|sch|public",
+        "e|col|public.buddy_team_members.booking_id",
+        "e|col|public.buddy_team_members.crew_person_id"
+      ]
+    },
+    {
+      "statementType": "rename_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "buddy_team_members",
+        "buddy_pair_members_booking_unique"
+      ],
+      "writes": [
+        "s|idx|public.buddy_pair_members_booking_unique",
+        "n|idx|public.buddy_pair_members_booking_unique",
+        "n|rel|public.buddy_pair_members_booking_unique",
+        "s|idx|public.buddy_team_members_booking_unique",
+        "n|idx|public.buddy_team_members_booking_unique",
+        "n|rel|public.buddy_team_members_booking_unique"
+      ],
+      "reads": [
+        "e|tbl|public.buddy_team_members",
+        "n|sch|public",
+        "e|col|public.buddy_team_members.booking_id"
+      ]
+    },
+    {
+      "statementType": "rename_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "buddy_team_members",
+        "buddy_pair_members_shop_trip_idx"
+      ],
+      "writes": [
+        "s|idx|public.buddy_pair_members_shop_trip_idx",
+        "n|idx|public.buddy_pair_members_shop_trip_idx",
+        "n|rel|public.buddy_pair_members_shop_trip_idx",
+        "s|idx|public.buddy_team_members_shop_trip_idx",
+        "n|idx|public.buddy_team_members_shop_trip_idx",
+        "n|rel|public.buddy_team_members_shop_trip_idx"
+      ],
+      "reads": [
+        "e|tbl|public.buddy_team_members",
+        "n|sch|public",
+        "e|col|public.buddy_team_members.shop_id",
+        "e|col|public.buddy_team_members.trip_id"
+      ]
+    },
+    {
+      "statementType": "rename_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "buddy_team_members",
+        "buddy_pair_members_pair_idx"
+      ],
+      "writes": [
+        "s|idx|public.buddy_pair_members_pair_idx",
+        "n|idx|public.buddy_pair_members_pair_idx",
+        "n|rel|public.buddy_pair_members_pair_idx",
+        "s|idx|public.buddy_team_members_pair_idx",
+        "n|idx|public.buddy_team_members_pair_idx",
+        "n|rel|public.buddy_team_members_pair_idx"
+      ],
+      "reads": [
+        "e|tbl|public.buddy_team_members",
+        "n|sch|public",
+        "e|col|public.buddy_team_members.pair_id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "rename",
+      "key": "tables\u0000[\"public\",\"buddy_pair_members\"]",
+      "set": {
+        "name": "buddy_team_members"
+      }
+    },
+    {
+      "op": "rename",
+      "key": "checks\u0000[\"public\",\"buddy_team_members\",\"buddy_pair_members_one_subject\"]",
+      "set": {
+        "name": "buddy_team_members_one_subject"
+      }
+    },
+    {
+      "op": "rename",
+      "key": "indexes\u0000[\"public\",\"buddy_pair_members_booking_unique\"]",
+      "set": {
+        "name": "buddy_team_members_booking_unique"
+      }
+    },
+    {
+      "op": "rename",
+      "key": "indexes\u0000[\"public\",\"buddy_pair_members_shop_trip_idx\"]",
+      "set": {
+        "name": "buddy_team_members_shop_trip_idx"
+      }
+    },
+    {
+      "op": "rename",
+      "key": "indexes\u0000[\"public\",\"buddy_pair_members_pair_idx\"]",
+      "set": {
+        "name": "buddy_team_members_pair_idx"
+      }
+    }
+  ]
+}

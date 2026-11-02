@@ -11,7 +11,7 @@ import {
   bookingCheckouts,
   bookingPaymentEvents,
   bookingPayments,
-  buddyPairMembers,
+  buddyTeamMembers,
   certificationJuniorReviews,
   certifications,
   courseFormRecords,
@@ -391,13 +391,13 @@ export const EXPORT_TABLES = {
   // deletes the rows, and the trail that outlives them (`buddy_team_events`)
   // is an in-product operational record, deliberately not exported
   // (ADR 20260804-buddy-teams).
-  buddyPairMembers: {
-    table: buddyPairMembers,
+  buddyTeamMembers: {
+    table: buddyTeamMembers,
     // Ordered after the read, by team (`sortBuddyMemberRowsByTeam`, issue
     // #1795): a team's order needs its members' names, which this plain read
     // does not have.
     order: [],
-    scope: { shopColumn: buddyPairMembers.shopId },
+    scope: { shopColumn: buddyTeamMembers.shopId },
   },
   certifications: {
     table: certifications,

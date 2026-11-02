@@ -21,8 +21,8 @@ import { survivingPersonNames } from "./people";
 import { isUniqueConstraintViolation, queryAll } from "./query-helpers";
 import {
   bookings,
-  buddyPairMembers,
   buddyTeamEvents,
+  buddyTeamMembers,
   certifications,
   courses,
   people,
@@ -55,7 +55,7 @@ import { liveTrip } from "./trips-live";
  * - every act appends to `buddy_team_events`, whose whole job is to outlive the
  *   membership rows a dissolve deletes.
  *
- * This module is named after its table (`buddy_pair_members`), which keeps its
+ * This module is named after its table (`buddy_team_members`), which keeps its
  * applied name; every word a human reads says "team".
  */
 
@@ -203,13 +203,13 @@ async function teamMemberRefs(
   teamId: string,
 ): Promise<BuddyTeamMemberInput[]> {
   const rows = await tx
-    .select({ bookingId: buddyPairMembers.bookingId, crewPersonId: buddyPairMembers.crewPersonId })
-    .from(buddyPairMembers)
+    .select({ bookingId: buddyTeamMembers.bookingId, crewPersonId: buddyTeamMembers.crewPersonId })
+    .from(buddyTeamMembers)
     .where(
       and(
-        eq(buddyPairMembers.shopId, shopId),
-        eq(buddyPairMembers.tripId, tripId),
-        eq(buddyPairMembers.pairId, teamId),
+        eq(buddyTeamMembers.shopId, shopId),
+        eq(buddyTeamMembers.tripId, tripId),
+        eq(buddyTeamMembers.pairId, teamId),
       ),
     );
   return rows.flatMap<BuddyTeamMemberInput>((row) =>
@@ -361,22 +361,22 @@ async function readTeamMembers(
   const crewPeople = alias(people, "crew_people");
   const rows = await tx
     .select({
-      bookingId: buddyPairMembers.bookingId,
-      crewPersonId: buddyPairMembers.crewPersonId,
+      bookingId: buddyTeamMembers.bookingId,
+      crewPersonId: buddyTeamMembers.crewPersonId,
       diverName: people.fullName,
       identityUnconfirmedAt: bookings.identityUnconfirmedAt,
       identityBookedAs: bookings.identityBookedAs,
       crewName: crewPeople.fullName,
     })
-    .from(buddyPairMembers)
-    .leftJoin(bookings, eq(bookings.id, buddyPairMembers.bookingId))
+    .from(buddyTeamMembers)
+    .leftJoin(bookings, eq(bookings.id, buddyTeamMembers.bookingId))
     .leftJoin(people, eq(people.id, bookings.personId))
-    .leftJoin(crewPeople, eq(crewPeople.id, buddyPairMembers.crewPersonId))
+    .leftJoin(crewPeople, eq(crewPeople.id, buddyTeamMembers.crewPersonId))
     .where(
       and(
-        eq(buddyPairMembers.pairId, teamId),
-        eq(buddyPairMembers.shopId, shopId),
-        eq(buddyPairMembers.tripId, tripId),
+        eq(buddyTeamMembers.pairId, teamId),
+        eq(buddyTeamMembers.shopId, shopId),
+        eq(buddyTeamMembers.tripId, tripId),
       ),
     );
   const members: ResolvedMember[] = rows.map((row) =>
@@ -504,16 +504,16 @@ async function formBuddyTeamInTx(
   const bookingIds = input.members.flatMap((m) => (m.kind === "diver" ? [m.bookingId] : []));
   if (bookingIds.length > 0) {
     const existing = await tx
-      .select({ bookingId: buddyPairMembers.bookingId })
-      .from(buddyPairMembers)
-      .where(inArray(buddyPairMembers.bookingId, bookingIds))
+      .select({ bookingId: buddyTeamMembers.bookingId })
+      .from(buddyTeamMembers)
+      .where(inArray(buddyTeamMembers.bookingId, bookingIds))
       .limit(1);
     if (existing.length > 0) return { ok: false, reason: "already_teamed" };
   }
 
   const teamId = crypto.randomUUID();
   const occurredAt = input.now ?? nowDate();
-  await tx.insert(buddyPairMembers).values(
+  await tx.insert(buddyTeamMembers).values(
     resolved.members.map((member) => ({
       shopId: input.shopId,
       tripId: input.tripId,
@@ -637,9 +637,9 @@ export async function planPartyTeams(
         .orderBy(asc(bookings.createdAt), asc(bookings.id)),
     () =>
       db
-        .select({ bookingId: buddyPairMembers.bookingId })
-        .from(buddyPairMembers)
-        .where(and(eq(buddyPairMembers.shopId, shopId), eq(buddyPairMembers.tripId, tripId))),
+        .select({ bookingId: buddyTeamMembers.bookingId })
+        .from(buddyTeamMembers)
+        .where(and(eq(buddyTeamMembers.shopId, shopId), eq(buddyTeamMembers.tripId, tripId))),
   ]);
   const onATeam = new Set(teamed.map((row) => row.bookingId));
   const tripDay = calendarDateInTimezone(departure.startsAt, departure.timezone);
@@ -833,14 +833,14 @@ export async function addBuddyTeamMember(
     if (!member) return { ok: false, reason: "booking_unavailable" };
     if (member.kind === "diver") {
       const existing = await tx
-        .select({ bookingId: buddyPairMembers.bookingId })
-        .from(buddyPairMembers)
-        .where(eq(buddyPairMembers.bookingId, member.bookingId))
+        .select({ bookingId: buddyTeamMembers.bookingId })
+        .from(buddyTeamMembers)
+        .where(eq(buddyTeamMembers.bookingId, member.bookingId))
         .limit(1);
       if (existing.length > 0) return { ok: false, reason: "already_teamed" };
     }
     const occurredAt = input.now ?? nowDate();
-    await tx.insert(buddyPairMembers).values({
+    await tx.insert(buddyTeamMembers).values({
       shopId: input.shopId,
       tripId: input.tripId,
       pairId: input.teamId,
@@ -910,15 +910,15 @@ export async function removeBuddyTeamMember(
     if (standing.length - 1 < MIN_BUDDY_TEAM_SIZE) return { ok: false, reason: "too_few_members" };
     const occurredAt = input.now ?? nowDate();
     await tx
-      .delete(buddyPairMembers)
+      .delete(buddyTeamMembers)
       .where(
         and(
-          eq(buddyPairMembers.pairId, input.teamId),
-          eq(buddyPairMembers.shopId, input.shopId),
-          eq(buddyPairMembers.tripId, input.tripId),
+          eq(buddyTeamMembers.pairId, input.teamId),
+          eq(buddyTeamMembers.shopId, input.shopId),
+          eq(buddyTeamMembers.tripId, input.tripId),
           input.member.kind === "diver"
-            ? eq(buddyPairMembers.bookingId, input.member.bookingId)
-            : eq(buddyPairMembers.crewPersonId, input.member.personId),
+            ? eq(buddyTeamMembers.bookingId, input.member.bookingId)
+            : eq(buddyTeamMembers.crewPersonId, input.member.personId),
         ),
       );
     // The fuller side of the change: the membership *before* the removal, so
@@ -967,12 +967,12 @@ export async function dissolveBuddyTeam(
     const standing = await readTeamMembers(tx, input.shopId, input.tripId, input.teamId);
     if (standing.length === 0) return { ok: false, reason: "team_not_found" };
     await tx
-      .delete(buddyPairMembers)
+      .delete(buddyTeamMembers)
       .where(
         and(
-          eq(buddyPairMembers.pairId, input.teamId),
-          eq(buddyPairMembers.shopId, input.shopId),
-          eq(buddyPairMembers.tripId, input.tripId),
+          eq(buddyTeamMembers.pairId, input.teamId),
+          eq(buddyTeamMembers.shopId, input.shopId),
+          eq(buddyTeamMembers.tripId, input.tripId),
         ),
       );
     await recordTeamEvent(tx, {
@@ -1020,7 +1020,7 @@ export type TripBuddyTeam = {
  * `index + 1`, and `buildIncidentExport` builds `teamNumberById` the same way
  * — so "Team 2" on the panel, on the roster line beside a diver, in the crew
  * section, and on the document handed to authorities all read off *this*
- * order. It used to end on `asc(buddy_pair_members.pair_id)`, and `pair_id` is
+ * order. It used to end on `asc(buddy_team_members.pair_id)`, and `pair_id` is
  * a writer-minted uuid with no parent row: which team was Team 1 was a coin
  * flip per database (issue #1753, the same defect as the manifest's rail
  * numbering in #1720).
@@ -1067,25 +1067,25 @@ export async function listTripBuddyTeams(
   const recordedBy = alias(people, "recorded_by_people");
   const rows = await db
     .select({
-      teamId: buddyPairMembers.pairId,
-      createdAt: buddyPairMembers.createdAt,
-      bookingId: buddyPairMembers.bookingId,
+      teamId: buddyTeamMembers.pairId,
+      createdAt: buddyTeamMembers.createdAt,
+      bookingId: buddyTeamMembers.bookingId,
       bookingStatus: bookings.status,
       diverName: people.fullName,
       diverPersonId: people.id,
       diverMergedInto: people.mergedIntoPersonId,
       identityUnconfirmedAt: bookings.identityUnconfirmedAt,
       identityBookedAs: bookings.identityBookedAs,
-      crewPersonId: buddyPairMembers.crewPersonId,
+      crewPersonId: buddyTeamMembers.crewPersonId,
       crewName: crewPeople.fullName,
       recordedByName: recordedBy.fullName,
     })
-    .from(buddyPairMembers)
-    .leftJoin(bookings, eq(bookings.id, buddyPairMembers.bookingId))
+    .from(buddyTeamMembers)
+    .leftJoin(bookings, eq(bookings.id, buddyTeamMembers.bookingId))
     .leftJoin(people, eq(people.id, bookings.personId))
-    .leftJoin(crewPeople, eq(crewPeople.id, buddyPairMembers.crewPersonId))
-    .innerJoin(recordedBy, eq(recordedBy.id, buddyPairMembers.pairedByPersonId))
-    .where(and(eq(buddyPairMembers.shopId, shopId), eq(buddyPairMembers.tripId, tripId)))
+    .leftJoin(crewPeople, eq(crewPeople.id, buddyTeamMembers.crewPersonId))
+    .innerJoin(recordedBy, eq(recordedBy.id, buddyTeamMembers.pairedByPersonId))
+    .where(and(eq(buddyTeamMembers.shopId, shopId), eq(buddyTeamMembers.tripId, tripId)))
     // `created_at` only. The trailing `asc(pair_id)` that used to be here did
     // no work the `Map` below does not already do — every row of a team shares
     // a `pair_id`, so it never separated two teams — and it was the random
@@ -1093,7 +1093,7 @@ export async function listTripBuddyTeams(
     // fallback below: with no `formed` event to read, the *first* row seen for
     // a team is its earliest. The order of the teams themselves is decided
     // after the grouping, on their members' names.
-    .orderBy(asc(buddyPairMembers.createdAt));
+    .orderBy(asc(buddyTeamMembers.createdAt));
   // One query for the whole trip, not one per team. A team's formation is a
   // fact about the team, and the only row that holds it is its `formed` event:
   // `occurredAt` there is the same instant the writer stamped on the member
@@ -1197,7 +1197,7 @@ function teamNameKey(team: TripBuddyTeam): string {
 }
 
 /**
- * Flat member rows (one per member, as `buddy_pairs.csv` writes them) put in
+ * Flat member rows (one per member, as `buddy_teams.csv` writes them) put in
  * the panel's team order: each team's rows together, teams by formation time,
  * then by their members' names, then by `pair_id` as the last resort (H-81,
  * issue #1795). Inside a team, members by name, then by the row's own id.

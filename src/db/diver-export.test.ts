@@ -5,7 +5,7 @@ import { nowDate } from "@/lib/clock";
 import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
 import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
-import { formBuddyTeam } from "./buddy-pairs";
+import { formBuddyTeam } from "./buddy-teams";
 import { canPersonExportShopData, loadDiverExportBundleInput } from "./export";
 import { addDiverNote } from "./operations";
 import {
@@ -136,8 +136,8 @@ describe("one diver's own record export (issue #726)", () => {
     expect(files).not.toContain("booking_checkouts.csv");
 
     // The buddy team is included, but only the lead's own membership row.
-    const buddyTable = leadInput.tables.find((t) => t.file === "buddy_pairs.csv");
-    if (!buddyTable) throw new Error("buddy_pairs.csv missing");
+    const buddyTable = leadInput.tables.find((t) => t.file === "buddy_teams.csv");
+    if (!buddyTable) throw new Error("buddy_teams.csv missing");
     expect(buddyTable.rows).toHaveLength(1);
 
     // And nowhere in the whole bundle — not a stray id, not a name slipped

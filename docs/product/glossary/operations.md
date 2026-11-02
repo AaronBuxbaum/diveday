@@ -971,7 +971,7 @@
   (the read may follow the tap and may wait while a card changes; an older or offline boarding has
   no captured card evidence and says unavailable; an empty capture says no cards were on file),
   waiver **status** (state, date, template version — never the medical questionnaire's answers),
-  the **buddy pair** staff recorded for the departure — a stable team number, the buddy's name,
+  the **buddy team** staff recorded for the departure — a stable team number, the buddy's name,
   and who recorded the pairing when, since a pairing decided at the dock and one typed in that
   night are different facts (the live manifest's split-team alert is deliberately not restated: it
   is a *reading* of the roll call at one moment, and this document reports recorded facts) — crew
@@ -1201,7 +1201,8 @@
   not**. A member is either a *booking* (a roster entry of that trip) or a *crew person* — the
   divemaster leading the group holds no booking, and before crew could be members a diver
   deliberately placed with a DM printed on the departure log identically to a diver nobody
-  paired. Membership is a decision about this boat, never a standing relationship.
+  paired. Membership is a decision about this boat, never a standing relationship. Stored as
+  `buddy_team_members`; "buddy pair" survives only in the superseded ADR (issue #2735).
   **Nothing above two is refused**; a team of one is, because a team needs someone to be a team
   with. A **diver** is on at most one team per departure — the invariant that keeps the manifest
   unambiguous — while a **crew member may be on several**, because one divemaster commonly leads
@@ -1236,7 +1237,7 @@
   (`bookings.party_lead_booking_id`). On the manifest's buddy panel the divers not yet teamed read
   "Came together: …" and "Came alone: …", and "Team up each party" makes each party of two or
   three a **buddy team** in one tap (`planPartyTeams`, `formPartyTeams` in
-  `src/db/buddy-pairs.ts`). **One tap never guesses about who may dive with whom** (dive-domain
+  `src/db/buddy-teams.ts`). **One tap never guesses about who may dive with whom** (dive-domain
   review of layer r5-4): it leaves for the divemaster, saying why on a "Left for you" line, every
   party on an intro or a course departure, one with a diver under 12, one whose "Under 18" box
   disagrees with a date of birth, one with a minor whose date of birth is not on file, one with a
