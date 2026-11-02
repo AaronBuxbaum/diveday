@@ -127,3 +127,53 @@ describe("the monthly cost guardrail", () => {
     expect(Object.keys(template.findResources("AWS::Budgets::BudgetsAction"))).toEqual([]);
   });
 });
+
+/**
+ * The "AWS trimming" items of the cost-guardrails runbook (issue #3652): spend
+ * nobody reads. Each is a property of the synthesized template, so the next
+ * Lambda added without a log group fails here rather than growing silently.
+ */
+describe("AWS trimming", () => {
+  const template = () =>
+    Template.fromStack(
+      new InfraStack(new cdk.App(), "DiveDay", {
+        env: { account: "123456789012", region: "us-east-1" },
+      }),
+    );
+
+  it("gives every Lambda function a managed log group, so none logs to an implicit one that never expires", () => {
+    const functions = template().findResources("AWS::Lambda::Function");
+    expect(Object.keys(functions).length).toBeGreaterThan(0);
+    const implicit = Object.entries(functions)
+      .filter(
+        ([, fn]) =>
+          !(fn.Properties as { LoggingConfig?: { LogGroup?: unknown } }).LoggingConfig?.LogGroup,
+      )
+      .map(([id]) => id);
+    expect(implicit).toEqual([]);
+  });
+
+  it("expires every log group the stack creates", () => {
+    const groups = template().findResources("AWS::Logs::LogGroup");
+    const unbounded = Object.entries(groups)
+      .filter(([, group]) => !(group.Properties as { RetentionInDays?: number }).RetentionInDays)
+      .map(([id]) => id);
+    expect(unbounded).toEqual([]);
+  });
+
+  it("holds no IAM user for the retired MCP consumers", () => {
+    const users = Object.values(template().findResources("AWS::IAM::User")).map(
+      (user) => (user.Properties as { UserName?: unknown }).UserName,
+    );
+    expect(JSON.stringify(users)).not.toContain("mcp-readonly");
+  });
+
+  it("samples a tenth of browser sessions for RUM", () => {
+    const monitors = Object.values(template().findResources("AWS::RUM::AppMonitor"));
+    expect(monitors).toHaveLength(1);
+    const config = monitors[0].Properties as {
+      AppMonitorConfiguration: { SessionSampleRate: number };
+    };
+    expect(config.AppMonitorConfiguration.SessionSampleRate).toBe(0.1);
+  });
+});

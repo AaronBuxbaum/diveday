@@ -1839,7 +1839,12 @@ exports.handler = async (event) => {
         guestRoleArn: rumGuestRole.roleArn,
         allowCookies: false,
         enableXRay: false,
-        sessionSampleRate: 1,
+        // A tenth of sessions (issue #3652). RUM is the one per-event line on
+        // the bill; geography and device mixes survive sampling, and the Core
+        // Web Vitals alarms read /api/vitals, which is never sampled. The
+        // browser passes its own rate (src/app/rum-client.tsx, default 0.1,
+        // NEXT_PUBLIC_RUM_SAMPLE_RATE overrides) -- keep the two equal.
+        sessionSampleRate: 0.1,
         // Performance only. Errors are Sentry's, and RUM's `http` telemetry
         // records request URLs -- which in this app include bearer-capability
         // paths (docs/engineering/capability-telemetry-runbook.md).
@@ -2556,7 +2561,7 @@ exports.handler = async (event) => {
           "Read the secret and scroll to the 'Not .env values' section; each block names its destination.",
         ],
         store:
-          "diveday-mcp-readonly-local -> a named profile in ~/.aws/credentials. diveday-mcp-readonly-cloud -> the Claude Code cloud environment's variables. diveday-backup-uploader -> Vercel Production as the four PLATFORM_BACKUP_* values, read by the weekly /api/cron/platform-backup route (it left the 'Not .env values' section on 2026-08-12, when the runner landed).",
+          "diveday-backup-uploader -> Vercel Production as the four PLATFORM_BACKUP_* values, read by the weekly /api/cron/platform-backup route (it left the 'Not .env values' section on 2026-08-12, when the runner landed).",
       },
       {
         id: "neon-dump-provisioning-credentials",
@@ -3002,6 +3007,25 @@ exports.handler = async (event) => {
         clientIds: ["sts.amazonaws.com"],
       },
     );
+
+    // The provider's handler is CDK's own singleton Lambda, which cannot take a
+    // `logGroup` prop and would write to an implicit group that never expires.
+    // Point it at a managed one (cost-guardrails.test.ts, "AWS trimming").
+    const oidcProviderHandler = this.node
+      .findChild("Custom::AWSCDKOpenIdConnectProviderCustomResourceProvider")
+      .node.findChild("Handler") as cdk.CfnResource;
+    const oidcProviderHandlerLogs = new logs.LogGroup(
+      this,
+      "GitHubActionsOidcProviderHandlerLogs",
+      {
+        logGroupName: "/aws/lambda/diveday-oidc-provider-handler",
+        retention: logs.RetentionDays.ONE_MONTH,
+        removalPolicy: cdk.RemovalPolicy.DESTROY,
+      },
+    );
+    oidcProviderHandler.addPropertyOverride("LoggingConfig", {
+      LogGroup: oidcProviderHandlerLogs.logGroupName,
+    });
 
     const githubActionsPrincipal = (subCondition: string | string[]) =>
       new iam.FederatedPrincipal(

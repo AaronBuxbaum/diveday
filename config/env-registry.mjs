@@ -751,7 +751,7 @@ export const ENV_GROUPS = [
       "secret: the Cognito identity pool hands the same credential to every visitor",
       "and it can do exactly one thing, rum:PutRumEvents on one app monitor.",
       "NEXT_PUBLIC_RUM_SAMPLE_RATE is the cost lever, 0..1; anything unparseable or",
-      "out of range falls back to 1 (record every session).",
+      "out of range falls back to 0.1 (one session in ten).",
     ],
     keys: [
       {
@@ -783,7 +783,7 @@ export const ENV_GROUPS = [
         key: "NEXT_PUBLIC_RUM_SAMPLE_RATE",
         from: "manual",
         targets: LOCAL_AND_VERCEL,
-        absent: "every session is recorded",
+        absent: "one session in ten is recorded",
       },
     ],
   },
