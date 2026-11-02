@@ -1,7 +1,12 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { nowMs } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
-import { enqueueIntegrationEvent, listDueIntegrationDeliveries } from "./integration-events";
+import {
+  claimIntegrationDelivery,
+  enqueueIntegrationEvent,
+  listDueIntegrationDeliveries,
+} from "./integration-events";
 import { integrationDeliveries, integrationEvents, shopIntegrations, shops } from "./schema";
 
 const ctx = fileScopedShopContext();
@@ -91,5 +96,112 @@ describe("integration outbox", () => {
         ),
       ),
     ).toEqual([]);
+  });
+
+  it("lists and claims exactly the same delivery states", async () => {
+    const db = ctx.db;
+    const [shop] = await db.select().from(shops).limit(1);
+    if (!shop) throw new Error("expected a seeded shop");
+    const [integration] = await db
+      .insert(shopIntegrations)
+      .values({
+        shopId: shop.id,
+        provider: "zapier",
+        credentialsSealed: "sealed",
+        settings: { eventTypes: ["order.paid"] },
+      })
+      .returning({ id: shopIntegrations.id });
+    if (!integration) throw new Error("expected a connected integration");
+    const past = new Date(nowMs() - 60_000);
+    const future = new Date(nowMs() + 60 * 60_000);
+    const cases = [
+      {
+        name: "pending-due",
+        status: "pending",
+        attemptCount: 0,
+        at: past,
+        updatedAt: past,
+        ok: true,
+      },
+      {
+        name: "failed-due",
+        status: "failed",
+        attemptCount: 7,
+        at: past,
+        updatedAt: past,
+        ok: true,
+      },
+      {
+        name: "failed-capped",
+        status: "failed",
+        attemptCount: 8,
+        at: past,
+        updatedAt: past,
+        ok: false,
+      },
+      {
+        name: "pending-future",
+        status: "pending",
+        attemptCount: 0,
+        at: future,
+        updatedAt: past,
+        ok: false,
+      },
+      {
+        name: "processing-fresh",
+        status: "processing",
+        attemptCount: 1,
+        at: past,
+        updatedAt: new Date(nowMs() - 5 * 60_000),
+        ok: false,
+      },
+      {
+        name: "processing-stale",
+        status: "processing",
+        attemptCount: 1,
+        at: past,
+        updatedAt: new Date(nowMs() - 20 * 60_000),
+        ok: true,
+      },
+    ] as const;
+    const ids = new Map<string, boolean>();
+    for (const c of cases) {
+      const [event] = await db
+        .insert(integrationEvents)
+        .values({
+          shopId: shop.id,
+          eventType: "order.paid",
+          entityType: "order",
+          entityId: c.name,
+          idempotencyKey: `eligibility:${c.name}`,
+          payload: {},
+        })
+        .returning({ id: integrationEvents.id });
+      if (!event) throw new Error("expected an integration event");
+      const [delivery] = await db
+        .insert(integrationDeliveries)
+        .values({
+          shopId: shop.id,
+          integrationId: integration.id,
+          eventId: event.id,
+          status: c.status,
+          attemptCount: c.attemptCount,
+          nextAttemptAt: c.at,
+          updatedAt: c.updatedAt,
+        })
+        .returning({ id: integrationDeliveries.id });
+      if (!delivery) throw new Error("expected a delivery");
+      ids.set(delivery.id, c.ok);
+    }
+
+    const listed = new Set(
+      (await listDueIntegrationDeliveries(db, 100))
+        .filter((row) => ids.has(row.delivery.id))
+        .map((row) => row.delivery.id),
+    );
+    for (const [id, ok] of ids) {
+      expect(listed.has(id)).toBe(ok);
+      expect((await claimIntegrationDelivery(db, id)) !== null).toBe(ok);
+    }
   });
 });

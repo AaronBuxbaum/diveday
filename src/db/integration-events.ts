@@ -501,24 +501,31 @@ export async function hydrateIntegrationEventPayload(
 }
 
 /**
- * Which end of the due set to take when `limit` bites.
- *
- * `oldest-first` is the drain's own fairness: the row that has waited longest
- * goes next, which is what a backlog pass owes the rows in it.
- *
- * `newest-first` exists for the write path, and the difference is not a
- * preference but a correctness property. A freshly enqueued delivery gets
- * `next_attempt_at = now()`, and every *other* due row is due precisely because
- * its own `next_attempt_at` already passed — so among due rows the new one is
- * always the maximum. Taking the oldest end meant a shop with `limit` or more
- * waiting deliveries drained those and left the order just written for the
- * cron, which is exactly the latency the write path exists to remove, failing
- * silently at the moment a shop is most likely watching for it
- * (`sourcery-ai` on #1905). Taking the newest end makes "the thing I just
- * wrote is in this batch" true by construction rather than by luck.
- *
- * The backlog is not starved by this: the cron still runs `oldest-first` every
- * half hour and is the pass that owes old rows their turn.
+ * Whether a delivery row may be attempted at `at`: pending or failed under the attempt ceiling and
+ * due, or processing but untouched for 15 minutes (its worker is presumed dead).
+ */
+function deliveryIsEligible(at: Date) {
+  const staleProcessingBefore = new Date(at.getTime() - 15 * 60 * 1000);
+  return or(
+    and(
+      inArray(integrationDeliveries.status, ["pending", "failed"]),
+      lt(integrationDeliveries.attemptCount, 8),
+      lte(integrationDeliveries.nextAttemptAt, at),
+    ),
+    and(
+      eq(integrationDeliveries.status, "processing"),
+      lt(integrationDeliveries.updatedAt, staleProcessingBefore),
+    ),
+  );
+}
+
+/**
+ * Which end of the due set to take when `limit` bites. `oldest-first` is the scheduled backlog
+ * drain: the row that has waited longest goes next. `newest-first` is the write path: a freshly
+ * enqueued delivery has the latest `next_attempt_at` among due rows, so taking the newest end makes
+ * "the order I just wrote is in this batch" true even when a backlog of `limit` rows is waiting.
+ * The hourly scheduled drain (`INTEGRATIONS_CRON_CRONTAB`) stays `oldest-first` and owes old rows
+ * their turn.
  */
 export type DueDeliveryOrder = "oldest-first" | "newest-first";
 
@@ -528,7 +535,6 @@ export async function listDueIntegrationDeliveries(
   order: DueDeliveryOrder = "oldest-first",
 ) {
   const current = nowDate();
-  const staleProcessingBefore = new Date(current.getTime() - 15 * 60 * 1000);
   return db
     .select({
       delivery: integrationDeliveries,
@@ -540,17 +546,7 @@ export async function listDueIntegrationDeliveries(
     .innerJoin(shopIntegrations, eq(shopIntegrations.id, integrationDeliveries.integrationId))
     .where(
       and(
-        or(
-          and(
-            inArray(integrationDeliveries.status, ["pending", "failed"]),
-            lt(integrationDeliveries.attemptCount, 8),
-            lte(integrationDeliveries.nextAttemptAt, current),
-          ),
-          and(
-            eq(integrationDeliveries.status, "processing"),
-            lt(integrationDeliveries.updatedAt, staleProcessingBefore),
-          ),
-        ),
+        deliveryIsEligible(current),
         eq(shopIntegrations.status, "connected"),
         isNull(shopIntegrations.deletedAt),
       ),
@@ -566,7 +562,6 @@ export async function listDueIntegrationDeliveries(
 /** Claim is a conditional update: two cron workers can select the same row, but only one wins. */
 export async function claimIntegrationDelivery(db: DbExecutor, deliveryId: string) {
   const now = nowDate();
-  const staleProcessingBefore = new Date(now.getTime() - 15 * 60 * 1000);
   const [row] = await db
     .update(integrationDeliveries)
     .set({
@@ -575,22 +570,7 @@ export async function claimIntegrationDelivery(db: DbExecutor, deliveryId: strin
       updatedAt: now,
       lastError: null,
     })
-    .where(
-      and(
-        eq(integrationDeliveries.id, deliveryId),
-        or(
-          and(
-            inArray(integrationDeliveries.status, ["pending", "failed"]),
-            lt(integrationDeliveries.attemptCount, 8),
-            lte(integrationDeliveries.nextAttemptAt, now),
-          ),
-          and(
-            eq(integrationDeliveries.status, "processing"),
-            lt(integrationDeliveries.updatedAt, staleProcessingBefore),
-          ),
-        ),
-      ),
-    )
+    .where(and(eq(integrationDeliveries.id, deliveryId), deliveryIsEligible(now)))
     .returning();
   return row ?? null;
 }
