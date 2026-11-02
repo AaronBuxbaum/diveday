@@ -1,10 +1,17 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   htmlToText,
   MAX_INBOUND_MESSAGE_BYTES,
   parseInboundEmail,
   stripQuotedReply,
 } from "./inbound-email";
+
+// The real parser, with `addressParser` spied so a case can make it throw.
+vi.mock("postal-mime", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("postal-mime")>();
+  return { ...actual, addressParser: vi.fn(actual.addressParser) };
+});
+const { addressParser } = await import("postal-mime");
 
 const CRLF = "\r\n";
 
@@ -227,6 +234,18 @@ describe("parseInboundEmail against hostile input", () => {
     expect((await parseInboundEmail(twice)).text).toBe("hi");
   });
 
+  it("reads no sender from a From the parser would have to guess at", async () => {
+    for (const from of [
+      "From: <victim@diver.com attacker@evil.com>",
+      "From: <@evil.com:victim@diver.com>",
+      "From: victim@diver.com (note) attacker@evil.com",
+    ]) {
+      expect((await parseInboundEmail(message([from], "hi"))).from).toBeNull();
+    }
+    const spaced = message(["From: victim@diver.com", "From : attacker@evil.com"], "hi");
+    expect((await parseInboundEmail(spaced)).from).toBeNull();
+  });
+
   it("reads the address of an encoded display name and never the name", async () => {
     const raw = message(["From: =?UTF-8?B?UHJpeWEgPGV2aWxAeC5jb20+?= <priya@example.com>"], "hi");
     expect((await parseInboundEmail(raw)).from).toBe("priya@example.com");
@@ -258,6 +277,20 @@ describe("parseInboundEmail against hostile input", () => {
       message(["From: a@example.com", "Subject: a\rBcc: b"], "hi"),
     );
     expect(bare.subject).not.toMatch(/[\r\n]/);
+  });
+
+  it("returns the empty record when a helper after the parse throws", async () => {
+    vi.mocked(addressParser).mockImplementationOnce(() => {
+      throw new RangeError("boom");
+    });
+    await expect(parseInboundEmail(message(["From: priya@example.com"], "hi"))).resolves.toEqual({
+      from: null,
+      subject: null,
+      messageId: null,
+      inReplyTo: null,
+      text: "",
+      attachmentCount: 0,
+    });
   });
 
   it("refuses a message past the byte cap before parsing it, without throwing", async () => {
@@ -377,6 +410,14 @@ describe("parseInboundEmail against hostile input", () => {
       text: "Before the photo.\nAfter it.",
       attachmentCount: 2,
     });
+  });
+
+  it("carries a NUL through to the text, for the database layer to strip", async () => {
+    const qp = message(
+      ["From: priya@example.com", "Content-Transfer-Encoding: quoted-printable"],
+      "hi=00there",
+    );
+    expect((await parseInboundEmail(qp)).text).toBe("hi\u0000there");
   });
 
   it("reads a body with no header block as text from nobody", async () => {

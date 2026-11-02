@@ -85,8 +85,14 @@ const CONTROL_CHARACTER = /[\u0000-\u001f\u007f]/;
 // biome-ignore lint/suspicious/noControlCharactersInRegex: matching control characters is the point.
 const CONTROL_CHARACTERS = /[\u0000-\u001f\u007f]+/g;
 
+/**
+ * Every value of a header, matched on its trimmed name: a `From : x` line is a
+ * From to some parser, so it is one here too, and counted.
+ */
 function rawHeaders(email: Email, key: string): string[] {
-  return email.headers.filter((header) => header.key === key).map((header) => header.value);
+  return email.headers
+    .filter((header) => header.key.trim().toLowerCase() === key)
+    .map((header) => header.value);
 }
 
 /** A header that goes back out in ours: its first value raw, or null if it carries a control character. */
@@ -104,7 +110,14 @@ function singleSender(email: Email): string | null {
   const only = mailboxes.length === 1 ? mailboxes[0] : undefined;
   if (!only || only.group !== undefined) return null;
   const address = only.address.trim();
-  return address.length > 0 && !CONTROL_CHARACTER.test(address) ? address : null;
+  if (address.length === 0 || CONTROL_CHARACTER.test(address)) return null;
+  // The parser is lenient: `<victim@x attacker@y>` and a source route
+  // `<@evil:victim@x>` both read as `victim@x`. Only a header that *spells*
+  // the address — the whole value, or the whole of its last angle pair —
+  // gives one.
+  const raw = (values[0] ?? "").trim();
+  const angled = [...raw.matchAll(/<([^<>]*)>\s*$/g)].at(-1)?.[1];
+  return (angled ?? raw).trim() === address ? address : null;
 }
 
 function cleanSubject(subject: string | undefined): string | null {
@@ -238,15 +251,28 @@ export function stripQuotedReply(text: string): string {
   return kept.length > 0 ? kept : text.trim();
 }
 
-/** Read the whole message. Never rejects: an unreadable one is {@link UNREADABLE}. */
+/**
+ * Read the whole message. Never rejects: an unreadable one is {@link UNREADABLE}.
+ * Everything that reads the message is inside the one `try`, the library's
+ * helpers and this file's own text reduction alike, so no throw from any of
+ * them can reach the webhook as a 500 and an SNS retry.
+ */
 export async function parseInboundEmail(raw: string): Promise<ParsedInboundEmail> {
   if (Buffer.byteLength(raw, "utf8") > MAX_INBOUND_MESSAGE_BYTES) {
     log("email_inbound.unreadable", "warn", { reason: "too_large" });
     return UNREADABLE;
   }
-  let email: Email;
   try {
-    email = await PostalMime.parse(raw, PARSER_OPTIONS);
+    const email = await PostalMime.parse(raw, PARSER_OPTIONS);
+    const body = email.text ?? (email.html ? htmlToText(email.html) : "");
+    return {
+      from: singleSender(email),
+      subject: cleanSubject(email.subject),
+      messageId: threadingHeader(email, "message-id"),
+      inReplyTo: threadingHeader(email, "in-reply-to"),
+      text: stripQuotedReply(body),
+      attachmentCount: email.attachments.length,
+    };
   } catch (error) {
     // The library's error code only (`EMAXPARTCOUNT` and kin), never the message's words.
     const code = (error as { code?: unknown } | null)?.code;
@@ -255,13 +281,4 @@ export async function parseInboundEmail(raw: string): Promise<ParsedInboundEmail
     });
     return UNREADABLE;
   }
-  const body = email.text ?? (email.html ? htmlToText(email.html) : "");
-  return {
-    from: singleSender(email),
-    subject: cleanSubject(email.subject),
-    messageId: threadingHeader(email, "message-id"),
-    inReplyTo: threadingHeader(email, "in-reply-to"),
-    text: stripQuotedReply(body),
-    attachmentCount: email.attachments.length,
-  };
 }

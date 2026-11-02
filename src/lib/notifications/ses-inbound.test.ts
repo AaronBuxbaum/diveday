@@ -21,6 +21,7 @@ function received(overrides: Record<string, unknown> = {}) {
       timestamp: "2026-07-21T12:59:58.000Z",
       source: "priya@example.com",
       destination: ["reply+3f2504e0-4f89-41d3-9a0c-0305e82c3301@inbound.ses.dive.day"],
+      commonHeaders: { from: ["Priya Sharma <priya@example.com>"] },
     },
     ...overrides,
   });
@@ -35,6 +36,7 @@ describe("parseSesInboundNotification", () => {
       objectKey: "mail/abc123",
       recipients: ["reply+3f2504e0-4f89-41d3-9a0c-0305e82c3301@inbound.ses.dive.day"],
       envelopeFrom: "priya@example.com",
+      sesHeaderFrom: ["Priya Sharma <priya@example.com>"],
       fromAuthenticated: true,
       envelopeAuthenticated: true,
       spamFlagged: false,
@@ -142,5 +144,19 @@ describe("parseSesInboundNotification", () => {
       NOW,
     );
     expect(result).toMatchObject({ kind: "received", receivedAt: NOW, recipients: [] });
+  });
+
+  it("reports every From SES read, and none when it read none", () => {
+    const twice = received({
+      mail: {
+        messageId: "abc123",
+        commonHeaders: { from: ["victim@diver.com", "attacker@evil.com"] },
+      },
+    });
+    expect(parseSesInboundNotification(twice, NOW)).toMatchObject({
+      sesHeaderFrom: ["victim@diver.com", "attacker@evil.com"],
+    });
+    const none = received({ mail: { messageId: "abc123" } });
+    expect(parseSesInboundNotification(none, NOW)).toMatchObject({ sesHeaderFrom: [] });
   });
 });
