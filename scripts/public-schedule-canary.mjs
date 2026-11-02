@@ -7,16 +7,17 @@
 // or says "No trips on the books yet". Hourly, from `.github/workflows/public-schedule-canary.yml`,
 // whose last step files one `ci-red` issue and closes it on the first green hour.
 //
-//   node scripts/public-schedule-canary.mjs [--base-url https://dive.day] [--slug blue-mantis]
+//   node scripts/public-schedule-canary.mjs [--base-url https://dive.day] [--slug <slug>]
 //
 // The base URL and slug also come from CANARY_BASE_URL and CANARY_SHOP_SLUG, which the workflow
 // reads from repository variables: set CANARY_SHOP_SLUG to the pilot shop's slug when there is one.
 
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import demoShop from "../src/db/demo-shop.json" with { type: "json" };
 
 export const DEFAULT_BASE_URL = "https://dive.day";
-export const DEFAULT_SLUG = "blue-mantis";
+export const DEFAULT_SLUG = demoShop.slug;
 /** The diver bundle's empty-schedule sentence (`schedule.noTrips`): a page that says it is empty. */
 export const EMPTY_SCHEDULE_TEXT = "No trips on the books yet";
 
