@@ -28,8 +28,11 @@ import { fileURLToPath } from "node:url";
  *
  * Three properties, each of which was a trap on the way in:
  *
- * 1. **The pull-request base is resolved by ref, never by `base.sha`.** The
- *    whole point; `base.sha` reintroduces the bug verbatim.
+ * 1. **Both ends of a pull request's range come from the run's event**
+ *    (`base.sha`, `head.sha`), never the live base branch (issue #3259: a PR merged
+ *    mid-run, the live ref contained its head, the range was empty and a code change read as
+ *    docs-only) and never the checked-out `HEAD`, the merge commit (issue #1295). The three-dot
+ *    form from the recorded base to the PR head is the fork point to the head whatever main did.
  * 2. **The push-to-main path still diffs from `github.event.before`.**
  *    Collapsing both events into one range makes `origin/main...github.sha`
  *    empty on a push, so nothing runs, main publishes no visual baseline, and
@@ -67,15 +70,15 @@ export function findCiChangeDetectionViolations(contents) {
     ];
   }
 
-  if (step.includes("pull_request.base.sha")) {
+  if (!step.includes("pull_request.base.sha") || !step.includes("pull_request.head.sha")) {
     violations.push(
-      "it reads `github.event.pull_request.base.sha`. That is the base as recorded when the pull request was opened; it never advances, so once main moves the three-dot diff lists main's own files as this branch's. Resolve the base by ref instead (`github.event.pull_request.base.ref`).",
+      "it does not pin both ends of a pull request's range to this run's event (`github.event.pull_request.base.sha` and `.head.sha`). Anything live can move mid-run: a PR that merges while detection runs makes the live base contain the PR head, the range comes out empty, and a code change classifies as docs-only (issue #3259).",
     );
   }
 
-  if (!step.includes("pull_request.base.ref")) {
+  if (step.includes("pull_request.base.ref") || /origin\/\$\{?BASE_REF/.test(step)) {
     violations.push(
-      "it never mentions `github.event.pull_request.base.ref`, so it is not resolving the pull-request base against the live branch.",
+      "it resolves the pull-request base through the live base branch (`pull_request.base.ref` / `origin/${BASE_REF}`). That ref advances during the run and can come to contain the PR head, which empties the range (issue #3259). Use `github.event.pull_request.base.sha`.",
     );
   }
 
@@ -90,6 +93,11 @@ export function findCiChangeDetectionViolations(contents) {
     violations.push('it runs no `git diff --name-only "<range>"`, so it decides nothing.');
   }
   for (const range of ranges) {
+    if (/\.\.\.HEAD$/.test(range)) {
+      violations.push(
+        `the range \`${range}\` ends at the checked-out HEAD, which on a pull request is \`refs/pull/N/merge\` and already holds everything main merged since the PR opened: main's files get listed as the branch's (issue #1295). End at \`github.event.pull_request.head.sha\`.`,
+      );
+    }
     if (!range.includes("...")) {
       violations.push(
         `the range \`${range}\` is not three-dot. Two dots report every file main added since the fork as a deletion, which \`--name-only\` lists just the same.`,
@@ -115,6 +123,6 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   }
 
   console.log(
-    "ci-change-detection: the pull-request base resolves by ref, the push path keeps `before`, and every range is three-dot",
+    "ci-change-detection: a pull request is diffed between the event-pinned base and head shas, the push path keeps `before`, and every range is three-dot",
   );
 }

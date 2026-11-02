@@ -1206,19 +1206,18 @@ jobs:
           fetch-depth: 0
       - id: filter
         env:
-          # On a pull_request, the base **branch** and the PR head — never
-          # `base.sha`. That field is the base as recorded when the PR was
-          # opened and never advances, while `actions/checkout` gives this job
-          # `refs/pull/N/merge`, which already contains everything main merged
-          # since. `base.sha` is therefore an ancestor of HEAD, the three-dot
-          # merge base degenerates to `base.sha` itself, and every file main
-          # added afterwards is listed as this branch's — which is how a
-          # docs-only push to #1291 answered `code=true` and `db=true` and
-          # spent the build, four Playwright shards, four visual shards,
-          # reg-suit and real-postgres (issue #1295). Resolving the base by
-          # *ref* asks the live branch instead, so the answer stops depending
-          # on when the pull request was opened.
-          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          # On a pull_request, the base and head **as this run's event recorded
+          # them**: `base.sha` and `head.sha`, both immutable for the run. The
+          # three-dot range `base.sha...head.sha` is the fork point to the PR
+          # head, which is this branch's own change however far main has moved
+          # since the PR opened (issue #1295: `base.sha...HEAD` was wrong only
+          # because HEAD is the `refs/pull/N/merge` commit that already holds
+          # main's newer files; the PR head does not). The live base *ref* is
+          # not used: a PR merged while the run was in progress made
+          # `origin/main` contain the PR head, the range came out empty, and a
+          # Settings and E2E change classified as docs-only (issue #3259).
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          IS_PR: ${{ github.event.pull_request.number }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           # A push to main compares against the commit that was there before.
           BEFORE_SHA: ${{ github.event.before }}
@@ -1231,15 +1230,10 @@ jobs:
           # moved with nobody looking. A force-push and a branch's first push
           # both leave `before` as all-zeros, and neither is a reason to stop
           # checking.
-          if [ -n "${BASE_REF}" ]; then
-            # `|| true`: a fetch that cannot reach the remote must not fail the
-            # job under `set -e`. The `rev-parse` below is the single place that
-            # decides, and it answers "run everything" — the fail-open contract
-            # above, not an error. No `--depth`: the checkout already ran
-            # `fetch-depth: 0`, and grafting a shallow boundary onto the base
-            # ref would make `merge-base` compute against truncated history.
-            git fetch --no-tags origin "${BASE_REF}" > /dev/null 2>&1 || true
-            base="origin/${BASE_REF}"
+          if [ -n "${IS_PR}" ]; then
+            # `fetch-depth: 0` already holds both commits; an unresolvable one
+            # falls through to the "run everything" branch below.
+            base="${BASE_SHA}"
             head="${HEAD_SHA}"
           else
             base="${BEFORE_SHA}"
@@ -1268,7 +1262,7 @@ jobs:
           probe_paths=$(git diff --name-only "${base}...${head}" -- \
             scripts/pixel-probe e2e/pixel-probe.spec.ts e2e/fixtures.ts src/app/globals.css \
             package.json pnpm-lock.yaml .github/workflows/ci.yml)
-          if [ -z "${BASE_REF}" ] || [ -n "${probe_paths}" ]; then
+          if [ -z "${IS_PR}" ] || [ -n "${probe_paths}" ]; then
             echo "pixel_probe=true" >> "$GITHUB_OUTPUT"
           else
             echo "pixel_probe=false" >> "$GITHUB_OUTPUT"
@@ -1282,7 +1276,7 @@ jobs:
           # config, the dependencies or this file changed, and on every push to
           # main, which is the backstop for a test deleted elsewhere.
           safety_changed=$(git diff --name-only "${base}...${head}" | node scripts/coverage-relevant.mjs)
-          if [ -z "${BASE_REF}" ] || [ -n "${safety_changed}" ]; then
+          if [ -z "${IS_PR}" ] || [ -n "${safety_changed}" ]; then
             echo "safety=true" >> "$GITHUB_OUTPUT"
           else
             echo "safety=false" >> "$GITHUB_OUTPUT"
@@ -1328,7 +1322,7 @@ jobs:
             # answer. They skip exactly as on a docs-only change; the unit
             # shards, safeguards and the coverage floors still run. Fails open:
             # a push to main and anything else is `true`.
-            if [ -n "${BASE_REF}" ] && [ -z "$(printf '%s\n' "${code_paths}" | grep -Ev '[.]test[.](ts|tsx|mts|mjs)$' || true)" ]; then
+            if [ -n "${IS_PR}" ] && [ -z "$(printf '%s\n' "${code_paths}" | grep -Ev '[.]test[.](ts|tsx|mts|mjs)$' || true)" ]; then
               echo "browser=false" >> "$GITHUB_OUTPUT"
               echo "Only unit-test files changed — the build, Playwright, fast lane and visual jobs are skipped; the unit shards still run." >> "$GITHUB_STEP_SUMMARY"
             else
