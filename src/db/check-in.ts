@@ -30,6 +30,7 @@ import {
 } from "./schema";
 import { lockSeatDeparture } from "./seat-locks";
 import { liveTrip } from "./trips-live";
+import { seatNotCancelled } from "./trips-queries";
 
 export type CheckInQueueRow = {
   bookingId: string;
@@ -297,7 +298,7 @@ async function queueVisitHistory(
         and(
           eq(bookings.shopId, shopId),
           inArray(bookings.personId, personIds),
-          ne(bookings.status, "cancelled"),
+          seatNotCancelled,
           ne(bookings.status, "no_show"),
           liveTrip(),
           lte(trips.startsAt, through),

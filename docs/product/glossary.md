@@ -103,6 +103,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Identity match key
 - Level vs. specialty
 - Merge (two diver records)
+- Origin (of a person)
 - Processor erasure obligation
 - Re-point a held seat
 - Remove vs. erase (a diver)
@@ -176,6 +177,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Close-out
 - Coming as
 - Connected Stripe account
+- Connection
 - Counter hand-off
 - Counter payment hold
 - Counter self-registration
@@ -307,9 +309,10 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Settled total
 - Setup link
 - Shared photo
+- Shop clock
 - Shop currency
-- Shop day scan
 - Shop question
+- Shop tick
 - Shore alert contact
 - Sign once
 - Skipped occurrence

@@ -44,9 +44,31 @@ jobs:
           node-version-file: .nvmrc
       - run: node scripts/ci-health.mjs --summary "$GITHUB_STEP_SUMMARY" --file-issue --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
+  # Supply chain: no dependency carries a known high or critical advisory (issue #3651). The whole
+  # tree, not only production: dev tooling is what runs on the runners that hold the reg-suit keys
+  # and the deploy role. Weekly rather than per pull request because main itself carried a high
+  # advisory on 2026-11-02 (zod < 4.6.6 under `vercel` and `next-devtools-mcp`), and a per-PR
+  # check would redden every pull request for a fix none of them owns (#2826). It opens one
+  # `needs-triage` issue and never fails the run on a finding.
+  audit:
+    name: Audit dependencies
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      issues: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+        with:
+          ignore-scripts: "true"
+      - run: node scripts/audit-health.mjs --summary "$GITHUB_STEP_SUMMARY" --file-issue --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
   alert:
     name: Report a red run
-    needs: health
+    needs: [health, audit]
     if: ${{ !cancelled() && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -57,4 +79,4 @@ jobs:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - run: node scripts/workflow-alert.mjs --workflow ci-health --outcome "${{ needs.health.result == 'success' && 'success' || 'failure' }}" --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+      - run: node scripts/workflow-alert.mjs --workflow ci-health --outcome "${{ needs.health.result == 'success' && needs.audit.result == 'success' && 'success' || 'failure' }}" --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"

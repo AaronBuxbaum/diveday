@@ -6,6 +6,7 @@ import type { AppDb } from "@/db/client";
 import { getBookingPayment, setBookingPayment } from "@/db/payments";
 import { activityEvents, trips } from "@/db/schema";
 import { upcomingTripsWithCounts } from "@/db/trips";
+import { shopClock } from "@/lib/shop-clock";
 import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import {
   redirectedTo,
@@ -62,6 +63,7 @@ function signIn(shop: { id: string; slug: string }, personId: string) {
     session,
     db: surface.db,
     shop: surface.shop,
+    clock: shopClock(surface.shop),
   }));
 }
 

@@ -40,7 +40,7 @@ import {
   reminderEarnsItsSend,
   TRIP_REMINDER_CADENCES,
 } from "@/lib/reminders";
-import { maySendNow } from "@/lib/send-window";
+import { shopClock } from "@/lib/shop-clock";
 import { temperatureUnitFor } from "@/lib/temperature-units";
 import { issueBookingCapabilities } from "./booking-capabilities";
 import type { AppDb } from "./client";
@@ -817,7 +817,7 @@ export async function sendDueReminders(
     // runs hourly and a cadence bucket is hours wide (the 24-hour reminder is
     // due from T-24h right up to departure, and any 24-hour span contains a
     // whole daytime window), so skipping the quiet passes cannot close it.
-    if (!maySendNow(cadence.kind, now, row.shop.timezone)) {
+    if (!shopClock(row.shop, now).maySend(cadence.kind)) {
       summary.held += 1;
       continue;
     }

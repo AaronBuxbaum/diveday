@@ -18,7 +18,7 @@ import { bankCounts, ratchetFlags, readCounts } from "./ratchet.mjs";
  *    lib-level layer — may not import shared UI or feature modules either
  *    (review finding ARCH-2: these two roots previously floated under no rule).
  *
- * 2. **Five seams the direction table cannot say**, because each is about
+ * 2. **Seams the direction table cannot say**, because each is about
  *    *what kind* of import crosses rather than whether any may:
  *    - `src/lib` → `src/db` *value* imports. `src/lib` is the framework-free
  *      domain layer (`.claude/rules/domain.md`): a type from a db module is a
@@ -39,7 +39,10 @@ import { bankCounts, ratchetFlags, readCounts } from "./ratchet.mjs";
  *    - Anything outside `src/db` → `@/db/trips-*`. The trips modules are
  *      reached through the `@/db/trips` barrel (AGENTS.md route map), so a
  *      sibling can be split or merged without a repo-wide edit.
- *    Test code is exempt from all three (test files, `src/test/`, and the e2e
+ *    - `src/lib` and `src/db` → `src/i18n` *value* imports (issue #2772). Words are chosen
+ *      in a renderer: the page, the message (`src/lib/notifications/**`) and the file.
+ *      The rest returns codes and keys. A type is a shape and passes.
+ *    Test code is exempt from all of these (test files, `src/test/`, and the e2e
  *    fixture routes under `src/app/api/test/`): a test builds and inspects its
  *    own rows, and that is not a layering decision.
  *
@@ -131,15 +134,20 @@ export const seams = [
       `${file}: value-imports ${specifier} — src/lib is the framework-free domain layer and builds no query; the query half is a named function in src/db (the twin the name pairs already model)`,
   },
   {
-    roots: ["src/db"],
+    // Words are chosen in a renderer and nowhere else (issue #2772, ADR
+    // 20260731-domain-layer-copy-leaks): the page, the message (the notification
+    // senders) and the file. Everything else in `src/lib` and `src/db` hands back
+    // codes and keys, so a translator defaulting to "en-US" cannot hide in a domain
+    // function. A type (`StaffMessageKey`, `StaffTranslator`) is a shape and passes.
+    roots: ["src/lib", "src/db"],
+    exempt: (file) => file.replaceAll(path.sep, "/").startsWith("src/lib/notifications/"),
     refuses: (target) =>
       target !== null &&
-      ["src/i18n/messages", "src/i18n/staff-messages"].some((translator) =>
-        isWithin(target, translator),
-      ),
+      isWithin(target, "src/i18n") &&
+      path.normalize(target) !== path.normalize("src/i18n/settings"),
     typeOnlyAllowed: true,
     message: (file, specifier) =>
-      `${file}: value-imports ${specifier} — src/db returns codes and data, a sentence is the caller's translator (an outbound message composer that must hold its own words is a ratchet entry until it has somewhere to go)`,
+      `${file}: value-imports ${specifier} — src/lib and src/db return codes and keys; the page, the message or the file words them (a type import is fine)`,
   },
   {
     roots: ["src/app"],
@@ -412,7 +420,7 @@ export async function collectViolations(root = ROOT) {
   for (const seam of seams) {
     for (const seamRoot of seam.roots) {
       for (const file of await walk(root, seamRoot)) {
-        if (isTestFile(file)) continue;
+        if (isTestFile(file) || seam.exempt?.(file)) continue;
         const contents = await readFile(path.join(root, file), "utf8");
         for (const { specifier, typeOnly } of importsOf(contents)) {
           if (typeOnly && seam.typeOnlyAllowed) continue;

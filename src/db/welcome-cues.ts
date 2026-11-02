@@ -9,6 +9,7 @@ import { numberedDiveDay } from "./dive-days";
 import { queryAll } from "./query-helpers";
 import { bookings, people, priorVisits, shops, trips } from "./schema";
 import { liveTrip } from "./trips-live";
+import { seatNotCancelled } from "./trips-queries";
 
 /**
  * The welcome cue's facts (issue #1182, delight report D22).
@@ -194,7 +195,7 @@ export async function welcomeCueInputsByBooking(
       and(
         eq(bookings.shopId, shopId),
         eq(bookings.tripId, tripId),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
         eq(trips.shopId, shopId),
         liveTrip(),
       ),
@@ -266,7 +267,7 @@ export async function sharedWelcomeSeatsByTrip(
       and(
         eq(bookings.shopId, shopId),
         inArray(bookings.tripId, [...tripIds]),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
         isNotNull(bookings.welcomeSharedAt),
         eq(trips.shopId, shopId),
         liveTrip(),
@@ -327,7 +328,7 @@ export async function setWelcomeConsent(
       and(
         eq(bookings.id, input.bookingId),
         eq(bookings.shopId, input.shopId),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
         eq(trips.shopId, input.shopId),
         liveTrip(),
       ),

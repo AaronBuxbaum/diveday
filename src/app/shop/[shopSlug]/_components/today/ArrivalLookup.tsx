@@ -3,6 +3,7 @@ import { LedgerRow } from "@/components/ui/ledger";
 import { ITEM_TITLE_CLASS } from "@/components/ui/typography";
 import type { ArrivalElsewhere } from "@/db/arrival-elsewhere";
 import type { CheckInQueueRow } from "@/db/check-in";
+import { presenceText } from "@/i18n/presence-labels";
 import { readinessStatusText, readinessStatusTone } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate, formatTime, formatWeekdayTime } from "@/lib/format";
@@ -104,7 +105,7 @@ export function ArrivalLookup({
                   })}
                   trailing={
                     row.bookingStatus === "checked_in" ? (
-                      <Badge tone="success">{t("checkIn.row.arrived")}</Badge>
+                      <Badge tone="success">{presenceText(t, "arrived")}</Badge>
                     ) : row.bookingStatus === "no_show" ? (
                       <Badge tone="neutral">
                         {row.turnedAwayAt ? t("checkIn.turnAway.badge") : t("checkIn.noShow.badge")}

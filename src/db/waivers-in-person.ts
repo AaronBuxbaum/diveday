@@ -2,7 +2,7 @@
  * Waivers: a release signed at the counter, attested by a staff member.
  * Imported through the `./waivers` barrel.
  */
-import { and, eq, isNull, ne } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import {
   type GuardianRelationship,
@@ -28,6 +28,7 @@ import type { AppDb, DbExecutor } from "./client";
 import { publishManifestEventsForPerson } from "./manifest-events";
 import { peopleMinorDeclared } from "./minor-declared";
 import { bookings, people, trips, waiverRecords } from "./schema";
+import { seatNotCancelled } from "./trips-queries";
 import { getCurrentWaiverTemplate, shopTimezone } from "./waivers-templates";
 
 export type InPersonWaiverOutcome =
@@ -164,13 +165,7 @@ async function bookingSigner(
     .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
     .innerJoin(people, eq(people.id, bookings.personId))
-    .where(
-      and(
-        eq(bookings.id, bookingId),
-        eq(bookings.shopId, shopId),
-        ne(bookings.status, "cancelled"),
-      ),
-    )
+    .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId), seatNotCancelled))
     .limit(1);
   if (!booking) return { ok: false, reason: "booking_not_found" };
   if (booking.tripStatus !== "scheduled") return { ok: false, reason: "booking_unavailable" };

@@ -1,85 +1,36 @@
-import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import {
   dispatchDueIntegrationDeliveries,
   INTEGRATIONS_CRON_BUDGET_MS,
   INTEGRATIONS_CRON_CRONTAB,
 } from "@/features/integrations";
-import { requireCronSecret } from "@/lib/cron-auth";
-import { log } from "@/lib/log";
-import { flushLogs } from "@/lib/observability";
-import { sentry } from "@/lib/observability/sentry";
+import { cronRoute } from "@/lib/cron-route";
 
 export const maxDuration = 300;
 
 /**
- * Its own Sentry monitor, like every other scheduled route.
+ * Drain the provider-neutral integration outbox.
  *
- * This was the one cron of eleven with no check-in at all: the route captured
- * exceptions, so a pass that *ran and threw* was visible, and a pass that never
- * ran was not. That is the wrong half to cover. The outbox is drained only
- * here, so a cron Vercel silently stopped invoking means deliveries to a shop's
- * Shopify, QuickBooks or Zapier stop retrying and nothing anywhere says
- * so — the integration simply goes quiet, which is indistinguishable from
- * having nothing to send.
+ * Its own Sentry monitor, like every other scheduled route. The outbox is
+ * drained only here, so a cron Vercel silently stopped invoking means
+ * deliveries to a shop's Shopify, QuickBooks or Zapier stop retrying and
+ * nothing anywhere says so; and ADR 20260919-health-check-does-not-wake-the-database
+ * moved database liveness onto the cron monitors' dead-man's switches on the
+ * stated grounds that every cron has one.
  *
- * It matters more since ADR 20260919-health-check-does-not-wake-the-database,
- * which moved database liveness onto the cron monitors' dead-man's switches on
- * the stated grounds that every cron has one. This route is what made that
- * sentence false.
+ * The schedule comes from the dispatcher rather than being restated here, and
+ * `src/features/integrations/dispatcher.test.ts` asserts it against
+ * vercel.json. The default margin matches the other sub-daily passes: twenty
+ * minutes late on an hourly drain is worth a look, and anything tighter would
+ * page on a slow provider rather than on a cron that stopped.
  */
-const CRON_MONITOR_SLUG =
-  process.env.SENTRY_INTEGRATIONS_CRON_MONITOR_SLUG || "diveday-integrations";
-
-/**
- * Must stay in lockstep with the `crons` entry in vercel.json — Sentry uses it
- * to decide when a check-in is *missing*, which is the whole point of the
- * dead-man's switch. The value comes from the dispatcher rather than being
- * restated here, and `src/features/integrations/dispatcher.test.ts` asserts it
- * against the deployed schedule.
- *
- * `checkinMargin` matches the other sub-daily passes: twenty minutes late on an
- * hourly drain is worth a look, and anything tighter would page on a slow
- * provider rather than on a cron that stopped. `maxRuntime` sits above
- * `maxDuration` so a run the platform killed reads as timed-out rather than as
- * still running.
- */
-const CRON_MONITOR_CONFIG = {
-  schedule: { type: "crontab", value: INTEGRATIONS_CRON_CRONTAB },
-  checkinMargin: 20,
-  maxRuntime: 10,
-  timezone: "Etc/UTC",
-} as const;
-
-/**
- * Drain the provider-neutral integration outbox. The bearer gate runs first —
- * before the Sentry check-in, like the other scheduled routes, so an
- * unauthorized probe can never tell the monitor the drain happened.
- */
-export async function GET(request: Request) {
-  const refusal = requireCronSecret(request);
-  if (refusal) return refusal;
-
-  const checkInId = await sentry.captureCheckIn(
-    { monitorSlug: CRON_MONITOR_SLUG, status: "in_progress" },
-    CRON_MONITOR_CONFIG,
-  );
-  try {
-    const startedAtMs = performance.now();
-    const summary = await dispatchDueIntegrationDeliveries(await getDb(), {
+export const GET = cronRoute({
+  id: "integrations",
+  crontab: INTEGRATIONS_CRON_CRONTAB,
+  run: async () =>
+    dispatchDueIntegrationDeliveries(await getDb(), {
       limit: 50,
       timeBudgetMs: INTEGRATIONS_CRON_BUDGET_MS,
-      startedAtMs,
-    });
-    log("cron_integrations.scan_complete", "info", summary);
-    await sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "ok" });
-    return NextResponse.json(summary);
-  } catch (error) {
-    await sentry.captureException(error, { tags: { cron_scan: "integrations" } });
-    log("cron_integrations.scan_failed", "error", { scan: "integrations" });
-    await sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "error" });
-    return NextResponse.json({ error: "scan_unavailable" }, { status: 503 });
-  } finally {
-    await flushLogs();
-  }
-}
+      startedAtMs: performance.now(),
+    }),
+});

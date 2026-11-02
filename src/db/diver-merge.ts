@@ -2,6 +2,12 @@ import { createHash } from "node:crypto";
 import { and, asc, eq, inArray, isNotNull, isNull, lte, ne, or, sql } from "drizzle-orm";
 import { canPersonMergeDiver } from "@/db/authz";
 import type { AppDb, DbExecutor } from "@/db/client";
+import {
+  movedPersonTables,
+  refusedPersonOnlyTables,
+  refusedPersonTables,
+  singletonPersonTables,
+} from "@/db/person-columns";
 import { isUniqueConstraintViolation } from "@/db/query-helpers";
 import {
   activityEvents,
@@ -32,6 +38,7 @@ import {
 } from "./boarding-certification-snapshot";
 import { refileCourseFormRecords } from "./course-forms";
 import { liveTrip } from "./trips-live";
+import { seatNotCancelled } from "./trips-queries";
 import { refileWaiverRecords } from "./waiver-refile";
 
 /**
@@ -146,305 +153,17 @@ export type DiverMergeResult =
  * last-minute-list interest is a standing "tell me when a seat frees" (it is
  * handled with the other interests below, because it shares their table).
  */
-const SINGLETON_PER_PERSON_TABLES = ["rental_fit_profiles"] as const;
+const SINGLETON_PER_PERSON_TABLES = singletonPersonTables();
 
-export const DIVER_HISTORY_TABLES = [
-  // What the bench told this diver about their own gear (ADR
-  // 20261008-work-order-follow-up). It follows the gear and the tickets to the
-  // survivor, or the survivor's ticket would read as never announced and the
-  // next pass would remind them a second time about a date already covered.
-  "customer_gear_notices",
-  "bookings",
-  "internal_notes",
-  "interests",
-  "person_courtesy_email_unsubscribe_tokens",
-  "dive_package_entitlements",
-  "orders",
-  "waiver_records",
-  // A signed course form, on the booking that moves with it (ADR
-  // 20261008-course-forms). `person_id` is inside its seal, so it moves
-  // through `refileCourseFormRecords`, which re-seals only a record that
-  // verified before the move; its unique key is per booking, so the two
-  // sides cannot collide.
-  "course_form_records",
-  "certifications",
-  "certification_junior_reviews",
-  "specialty_certifications",
-  "prior_visits",
-  "imported_payment_history",
-  "rental_fit_profiles",
-  // A bookingless counter rental names the diver directly (the other shape
-  // names a booking, which this merge moves anyway). Leaving it behind put the
-  // unit on a removed diver's record: the survivor's prep page showed no gear
-  // and the reservation still held the window.
-  "gear_reservations",
-  // A diver's own gear on file, and the service tickets about it (ADR
-  // 20261008-gear-work-orders). Both name the diver directly, and both are
-  // the diver's — the shop is holding the regulator of whoever the survivor
-  // is. Leaving them behind would hide a ticket the shop is still working
-  // from the record the counter now opens.
-  "customer_gear_items",
-  "work_orders",
-  "prior_gear_assignments",
-  "nitrox_certifications",
-  "trip_reviews",
-  // The private half of the same act (ADR 20260904-reef-all-the-way-down,
-  // D40): the diver's own word about how the day went, on the booking they
-  // sat in. It moves for the reason the review above it does — it is the
-  // diver's, not the shop's — and it cannot collide, because the live-row
-  // unique index is per *booking*, and the bookings move with them.
-  "recap_pulses",
-  "trip_blowout_divers",
-  // The diver's own messages and the shop's answers to them (ADR
-  // 20260907-two-way-inbox). A merge is the shop saying two records are one
-  // person, and a conversation with that person belongs on the record that
-  // survives — otherwise the survivor's thread opens on silence while the
-  // "running late" the crew acted on sits on a record nobody opens.
-  "inbound_messages",
-  "staff_replies",
-  // Something the crew found aboard with this diver's name on it (batch 4,
-  // J2). It is the diver's, so it follows them: the survivor is who gets told.
-  "lost_items",
-] as const;
+/**
+ * Every list below is read off `person-columns.ts` (issue #2724), where each
+ * column that references `people` has one row saying what a merge does with it.
+ */
+export const DIVER_HISTORY_TABLES = movedPersonTables();
 
 /** These rows identify a staff account or crew assignment, not a diver history. */
-export const STAFF_HISTORY_TABLES = [
-  "staff_shifts",
-  "staff_credentials",
-  "account_sessions",
-  "calendar_feeds",
-  "roll_call_crew_events",
-  "push_subscriptions",
-  // The staffing week's own two tables (issue #1235). Both are written by, and
-  // about, somebody who crews boats — a days-away block or an ask for a
-  // departure — so either side of a merge holding one is a staff record and the
-  // merge is refused, exactly as a seeded shift refuses it.
-  "crew_availability_blocks",
-  "crew_assignment_requests",
-  // "Working it anyway" on a departure (issue #2678): its subject is somebody
-  // on a crew, so a record holding one is a staff record and the merge is refused.
-  "crew_away_acknowledgements",
-  // Where a *staffer* had read up to in a departure's shift catch-up (issues
-  // #1202, #1187). Same shape as `push_subscriptions` above it: written by, and
-  // about, somebody who works the boats, so either side of a merge holding one
-  // is a staff record and the merge is refused rather than carried across.
-  "trip_read_marks",
-  "today_read_marks",
-  // The Monday email's claims (`src/db/weekly-digest.ts`). Only somebody with
-  // a staff login is ever sent one, so a record holding one is a staff record
-  // and the merge is refused, like the calendar feed above.
-  "weekly_digest_sends",
-  // Crew news waiting to be told (ADR 20261009-crew-hear-about-their-boats).
-  // Only somebody on a crew is ever its subject, so either side of a merge
-  // holding one is a staff record and the merge is refused.
-  "crew_notices",
-  // A staffer named in an incident report (ADR 20261012-incident-reports). A
-  // diver is named there by booking, which moves with the seat; only staff are
-  // named by person, so a record holding one is a staff record.
-  "incident_report_people",
-  // A repeating trip's standing crew (`trip_series_crew`): only staff sail on
-  // it, so a record holding one is a staff record and the merge is refused.
-  "trip_series_crew",
-] as const;
-export const STAFF_PERSON_ONLY_TABLES = ["trip_assignments", "user_accounts"] as const;
-
-/**
- * Every `%person_id` column that is not a bare `person_id`, keyed
- * `table.column`. **None of them move**, and stating that is the point: the
- * exhaustiveness test below asked `column_name = 'person_id'`, so a column
- * carrying a prefix — which is most of them — was invisible to the guard
- * written to stop a table being forgotten. `trip_desk_events` (slice 16d)
- * landed in that blind spot with nothing going red. The test now asks
- * `like '%person_id'`, and this map is what makes it pass on purpose rather
- * than by accident.
- *
- * Two reasons cover the whole list.
- *
- * **Attribution** — `recorded_by`, `actor`, `created_by`, `deleted_by`,
- * `issued_by`, `reviewed_by`, `called_by`, `resolved_by`, `uploaded_by`,
- * `decided_by`, `discharged_by`, `merged_by`, `anonymized_by`. Who did a thing
- * is operational evidence about the *shop*, on the same ground `anonymizeDiver`
- * refuses to erase a staff member at all. A merge involving somebody who has
- * any of it is refused by the `STAFF_*` lists long before this matters.
- *
- * **Subject on an event trail** — `activity_events.subject_person_id` and
- * `trip_desk_events.subject_person_id`. A trail records what happened, not what
- * is true now: repointing the subject would make the shop's own history claim
- * the survivor was the subject of an act performed against a record that had a
- * different name at the time. This is the pre-existing, tested answer for
- * `activity_events` ("leaves activity subjects on the original id"), and
- * `trip_desk_events` takes it for the same reason plus one of its own — it is
- * read by `trip_id`, never by person, so nothing is lost from the survivor's
- * page by leaving it.
- */
-export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string>> = {
-  "certification_junior_reviews.recorded_by_person_id": "the staff member who sighted the card",
-  "certifications.junior_status_verified_by_person_id": "the staff member who sighted the card",
-  "activity_events.actor_person_id": "who did it — attribution, not diver history",
-  "activity_events.subject_person_id": "an event trail records who it happened to at the time",
-  "bookings.fly_safe_acknowledged_by_person_id":
-    "which staffer resolved the flying-guidance follow-up",
-  "bookings.course_next_step_by_person_id": "which instructor wrote the student their next step",
-  "bookings.course_materials_done_by_person_id": "which staffer marked the materials done",
-  "bookings.training_plan_by_person_id": "planning records involving a merged person are cleared",
-  "bookings.training_plan_instructor_person_id":
-    "planning records involving a merged person are cleared",
-  "trip_assignments.training_plan_by_person_id":
-    "planning records involving a merged person are cleared",
-  "trip_assignments.training_plan_instructor_person_id":
-    "planning records involving a merged person are cleared",
-  "bookings.training_marked_by_person_id": "which staffer marked the dive as training",
-  "bookings.training_cleared_by_person_id": "which staffer cleared a training mark with forms owed",
-  "trip_assignments.assigned_by_person_id": "which staffer rostered the crew member",
-  "buddy_team_members.crew_person_id": "a crew member on a team, refused as a staff record",
-  "booking_arrival_events.recorded_by_person_id": "who checked the diver in at the counter",
-  "booking_payment_events.recorded_by_person_id": "who marked the payment by hand",
-  "booking_payments.recorded_by_person_id": "who marked the payment by hand",
-  "boat_snags.fixed_by_person_id": "who said the boat's snag was fixed",
-  "boat_snags.noted_by_person_id": "who wrote the boat's snag",
-  "boat_snags.still_there_by_person_id": "who found the boat's snag still there",
-  "buddy_team_members.paired_by_person_id": "who built the team",
-  "buddy_team_events.recorded_by_person_id": "who recorded the team change",
-  "certifications.deleted_by_person_id": "who removed the card",
-  "certifications.issued_by_person_id": "who entered the card",
-  "certifications.processed_by_person_id": "who told the agency about the card",
-  "certifications.reviewed_by_person_id": "who confirmed the card",
-  "crew_assignment_requests.decided_by_person_id": "who answered the ask",
-  "crew_away_acknowledgements.acknowledged_by_person_id":
-    "who said the crew member is working it anyway",
-  "crew_away_acknowledgements.cleared_by_person_id": "who said they are no longer working it",
-  "crew_notices.actor_person_id": "who made the crew change",
-  "crew_availability_blocks.created_by_person_id": "who blocked the days",
-  "dive_packages.created_by_person_id": "who wrote the package",
-  "dive_sites.planning_note_by_person_id": "who wrote down what the site was like",
-  "executed_dives.deleted_by_person_id": "who deleted the logged dive",
-  "executed_dives.recorded_by_person_id": "who logged the dive",
-  "customer_gear_items.deleted_by_person_id": "who removed the piece from the record",
-  "gear_items.deleted_by_person_id": "who retired the unit",
-  "gear_reservations.released_by_person_id": "who let go of the hold",
-  "gear_reservations.fill_recorded_by_person_id": "who recorded a counter tank's gas",
-  "gear_service_events.recorded_by_person_id": "who serviced the unit",
-  "incident_report_addenda.author_person_id": "who wrote the addendum",
-  "incident_reports.created_by_person_id": "who started the incident report",
-  "incident_reports.filed_by_person_id": "who filed the incident report",
-  "incident_reports.deleted_by_person_id": "who deleted the unfiled incident draft",
-  "incident_reports.missing_alert_raised_by_person_id": "who alerted the owners from the roll call",
-  "incident_reports.missing_found_by_person_id": "who marked the missing person found",
-  "internal_notes.created_by_person_id": "who wrote the note",
-  "marine_life_requests.requested_by_person_id": "which staffer asked for the species",
-  "nitrox_certifications.deleted_by_person_id": "who removed the card",
-  "nitrox_certifications.issued_by_person_id": "who entered the card",
-  "nitrox_certifications.processed_by_person_id": "who told the agency about the card",
-  "nitrox_certifications.reviewed_by_person_id": "who confirmed the card",
-  "orders.created_by_person_id": "who took the order",
-  "people.anonymized_by_person_id": "provenance for an erasure, and anonymized rows never merge",
-  "people.merged_by_person_id": "who ran a merge",
-  "people.merged_into_person_id":
-    "the merge pointer itself — structural, and what makes the shell resolve",
-  "people.no_certification_cleared_by_person_id": "who cleared the no-card stamp",
-  "people.drysuit_experience_seen_by_person_id": "who saw the diver dive dry (#2136)",
-  "people.adult_attested_by_person_id":
-    "who said the diver is 18 or older (H-20261007-held-seat-split-into)",
-  "shops.shore_alert_consent_by_person_id":
-    "who recorded the shore contact's consent (H-20261014-stale-roll-call-recipients)",
-  "shops.bookkeeper_email_set_by_person_id": "who set the bookkeeper's address (item 35)",
-  "pre_departure_check_events.recorded_by_person_id": "who ticked the check",
-  "pre_departure_checklist_items.deleted_by_person_id": "who removed the check",
-  "held_sends.actor_person_id": "who tapped Send; the hold lives eight seconds",
-  "processor_erasure_obligations.discharged_by_person_id": "who discharged the obligation",
-  "recap_pulses.addressed_by_person_id": "which staffer picked the pulse up",
-  "staff_replies.sent_by_person_id": "which staffer wrote the reply",
-  "email_bounces.sent_by_person_id": "which staffer's action sent the mail that bounced",
-  "review_moderation_events.recorded_by_person_id": "who published or withheld the review",
-  "review_replies.written_by_person_id": "which staffer wrote the shop's reply",
-  "roll_call_crew_events.recorded_by_person_id": "who called the crew roll",
-  "roll_call_events.recorded_by_person_id": "who called the roll",
-  "shop_promo_codes.created_by_person_id": "who wrote the code",
-  "specialty_certifications.deleted_by_person_id": "who removed the card",
-  "specialty_certifications.issued_by_person_id": "who entered the card",
-  "specialty_certifications.processed_by_person_id": "who told the agency about the card",
-  "specialty_certifications.reviewed_by_person_id": "who confirmed the card",
-  "staff_credentials.deleted_by_person_id": "who removed the credential",
-  "staff_credentials.reviewed_by_person_id": "who confirmed the credential",
-  "staff_shifts.created_by_person_id": "who wrote the shift",
-  "trip_blowouts.called_by_person_id": "who called the blow-out",
-  "trip_change_events.actor_person_id": "who changed the departure",
-  "trip_desk_events.actor_person_id": "who did it at the desk",
-  "trip_desk_events.subject_person_id": "an event trail records who it happened to at the time",
-  "trip_help_requests.helper_person_id":
-    "which crew member the desk confirmed would help; staff assignment attribution stays with that person",
-  "trip_help_requests.resolved_by_person_id": "who answered the ask",
-  "interests.created_by_person_id": "who raised the interest or sent the offer",
-  "trip_last_minute_promos.created_by_person_id": "who wrote the deal",
-  "trip_recap_photos.uploaded_by_person_id": "who uploaded the photo",
-  "trip_sightings.deleted_by_person_id": "who took the mis-tapped sighting back",
-  "trip_sightings.recorded_by_person_id": "which crew member tapped the chip",
-  "trip_stage_events.recorded_by_person_id": "who said where the boat was",
-  "customer_gear_notices.sent_by_person_id": "who pressed Resend on a ready message",
-  "customer_gear_reminder_settings.changed_by_person_id": "who switched a piece's reminders",
-  "work_order_bills.created_by_person_id": "who sent the bill",
-  "work_order_events.actor_person_id": "who moved the ticket",
-  "work_order_events.technician_person_id": "which technician the ticket was handed to",
-  "work_orders.deleted_by_person_id": "who deleted the ticket",
-  "work_orders.outcome_recorded_by_person_id": "which technician recorded the work done",
-  "work_orders.technician_person_id": "which technician is working it — a staff assignment",
-  "waiver_materiality_decisions.actor_person_id": "who judged the answer material",
-  "waiver_records.anonymized_by_person_id": "provenance for an erasure on a signed release",
-  "waiver_records.medical_clearance_declined_by_person_id": "who declined the clearance",
-  "waiver_records.guardian_email_erased_by_person_id":
-    "who erased the guardian's address; inside its seal",
-  "waiver_records.medical_cleared_by_person_id": "who cleared the medical answer",
-  "waiver_records.moved_by_person_id": "who refiled the release with its split seat",
-  "waiver_records.moved_from_person_id": "where a refiled release sat before; inside its seal",
-  "waiver_records.recorded_by_person_id": "who witnessed the signature",
-  "course_form_records.recorded_by_person_id": "who recorded the paper form",
-  "lost_items.recorded_by_person_id": "which crew member found the item",
-  "lost_items.resolved_by_person_id": "who handed it back or let it go",
-  "departure_notes.sent_by_person_id": "who sent the note to the departure",
-  "course_form_records.anonymized_by_person_id": "who erased the signer's names from the form",
-  "course_form_versions.created_by_person_id": "who wrote that version of the form",
-};
-
-/** Subject-bound sealed retries are discarded rather than readdressed. */
-export const PERSON_COLUMNS_DELETED_ON_MERGE: Readonly<Record<string, string>> = {
-  "notification_send_queue.recipient_person_id":
-    "sealed retries retain the source subject and cannot transfer authority",
-};
-
-/**
- * Foreign keys to `people` whose column name does not end in `person_id`, so
- * the two name-based guards above cannot see them. Found by asking the catalog
- * for the constraints themselves (`diver-merge.test.ts`). Both are
- * attribution: which staffer confirmed a fit, or asked for a hands-on fitting,
- * and attribution stays on the shop's record of who did it.
- */
-export const PERSON_REFERENCES_OUTSIDE_THE_NAMING_CONVENTION: Readonly<Record<string, string>> = {
-  "rental_fit_profiles.fit_confirmed_by": "who confirmed the fit at the counter",
-  "rental_fit_profiles.needs_staff_fit_by": "who asked for a hands-on fitting",
-};
-
-/**
- * The rest of the bare `person_id` columns in the schema, each left where it is
- * on purpose. Stated rather than merely absent so `diver-merge.test.ts` can hold
- * the lists above exhaustive against the live database: a table added tomorrow
- * with a `person_id` fails that test until somebody decides which of these
- * answers it deserves.
- */
-export const PERSON_TABLES_DELIBERATELY_UNMOVED: Readonly<Record<string, string>> = {
-  // Each identity keeps its own roles. The source row survives soft-deleted
-  // and still reads as a diver, which is what lets the pointer resolve.
-  person_roles: "a role belongs to the identity, not to its history",
-  // Minted seconds before an OAuth callback consumes it, and staff-only.
-  integration_oauth_states: "ephemeral staff OAuth state, consumed within minutes",
-  // Names an already-anonymized person as provenance for an erasure that is
-  // still owed. `mergeDiverRecords` refuses an anonymized person outright, so
-  // no row here can ever belong to either side of a merge.
-  processor_erasure_obligations: "provenance for an erasure, and anonymized rows never merge",
-  // A staffer's own half-typed form (ADR 20260906-before-you-ask, decision
-  // 3), gone within a day. Written by someone at the desk, never about a
-  // diver, so it belongs to whoever typed it and moves with nobody.
-  form_drafts: "a staffer's own half-typed form, gone in a day",
-};
+export const STAFF_HISTORY_TABLES = refusedPersonTables();
+export const STAFF_PERSON_ONLY_TABLES = refusedPersonOnlyTables();
 
 function quotedTable(tableName: string) {
   // The only callers pass the two static lists above; quoting here keeps the
@@ -864,7 +583,7 @@ async function assessMerge(
       and(
         eq(bookings.shopId, shopId),
         inArray(bookings.personId, ids),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
         eq(trips.status, "scheduled"),
         liveTrip(),
         or(lte(trips.startsAt, now), eq(bookings.status, "checked_in")),

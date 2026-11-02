@@ -354,13 +354,13 @@ describe("ShopIdentityMenu — Send feedback and Account settings", () => {
         languages={[{ locale: "en-US", label: "English (US)" }]}
         setLocaleAction={vi.fn()}
         tellUs={{ to: "support@dive.day" }}
-        accountHref="/shop/blue-mantis/settings/security"
+        accountHref="/shop/blue-mantis/me/security"
         copy={COPY}
       />,
     );
     await userEvent.click(screen.getByRole("button", { name: /Blue Mantis Divers/ }));
     const account = screen.getByRole("link", { name: "Account settings" });
-    expect(account).toHaveAttribute("href", "/shop/blue-mantis/settings/security");
+    expect(account).toHaveAttribute("href", "/shop/blue-mantis/me/security");
     const order = ["Language", "Account settings", "Boat mode", "Send feedback", "Sign out"].map(
       (words) => screen.getByText(words),
     );

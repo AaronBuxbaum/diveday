@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate, nowMs } from "@/lib/clock";
+import { shopClock } from "@/lib/shop-clock";
 import { oneRowPerDiver, type TodayAction } from "@/lib/today";
 import { fileScopedShopContext } from "@/test/db";
 import { sendDeal } from "@/test/deal";
@@ -230,7 +231,7 @@ describe("departure rows on the queue, read through getTodayWork", () => {
     )[0];
     if (!frontEntry) throw new Error("front entry missing");
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
     const row = work.actions.find((action) => action.id === `seat-wanted:${reef.id}`);
     expect(row?.kind).toBe("seat_wanted");
     // Depth is counted, but the offer targets the earliest joiner specifically.
@@ -265,7 +266,7 @@ describe("departure rows on the queue, read through getTodayWork", () => {
     });
     await db.update(shops).set({ waitlistEnabled: false }).where(eq(shops.id, shop.id));
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
     const row = work.actions.find((action) => action.id === `seat-wanted:${reef.id}`);
     expect(row?.offer?.personName).toBe("Ola Offswitch");
     expect(await db.select().from(interests).where(eq(interests.personId, waiter.id))).toHaveLength(
@@ -303,7 +304,7 @@ describe("departure rows on the queue, read through getTodayWork", () => {
       askedAt: new Date("2020-01-01T00:00:00.000Z"),
     });
 
-    const alone = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const alone = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
     const tooBig = alone.actions.find((action) => action.id === `seat-wanted:${reef.id}`);
     expect(tooBig?.detail).toContain("1 want in");
     expect(tooBig?.offer).toBeUndefined();
@@ -314,7 +315,7 @@ describe("departure rows on the queue, read through getTodayWork", () => {
       partySize: 1,
       askedAt: new Date("2020-02-01T00:00:00.000Z"),
     });
-    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
     const row = work.actions.find((action) => action.id === `seat-wanted:${reef.id}`);
     expect(row?.detail).toContain("2 want in");
     expect(row?.offer?.personName).toBe("Solo Diver");
@@ -360,7 +361,7 @@ describe("departure rows on the queue, read through getTodayWork", () => {
       personId: seated.id,
     });
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
     const row = work.actions.find((action) => action.id === `seat-wanted:${reef.id}`);
     expect(row?.detail).toContain("1 want in");
     expect(row?.offer?.personName).toBe("Omar Waiting");
@@ -382,7 +383,7 @@ describe("departure rows on the queue, read through getTodayWork", () => {
       declaration: { level: "open_water" as const, noCertification: false, nitrox: false },
     });
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
     const row = work.actions.find((action) => action.id === `seat-wanted:${reef.id}`);
     expect(row?.kind).toBe("seat_wanted");
     expect(row?.detail).toContain(`${reef.capacity - reef.booked} seats open`);
@@ -412,7 +413,7 @@ describe("departure rows on the queue, read through getTodayWork", () => {
       declaration: { level: "open_water" as const, noCertification: false, nitrox: false },
     });
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
     const row = work.actions.find((action) => action.id === `seat-wanted:${reef.id}`);
     expect(row?.detail).toMatch(/^1 seat open/);
   });
@@ -439,7 +440,7 @@ describe("departure rows on the queue, read through getTodayWork", () => {
       declaration: { level: "open_water" as const, noCertification: false, nitrox: false },
     });
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
     expect(work.actions.find((action) => action.id === `seat-wanted:${reef.id}`)).toBeUndefined();
   });
 
@@ -470,7 +471,7 @@ describe("departure rows on the queue, read through getTodayWork", () => {
 
     // One item for everyone who wants in, so a sent deal no longer retires it
     // (the one-shot "no deal sent yet" rule went with `last_minute_fill`).
-    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
     expect(work.actions.find((action) => action.id === `seat-wanted:${reef.id}`)).toBeDefined();
   });
 
@@ -492,7 +493,7 @@ describe("departure rows on the queue, read through getTodayWork", () => {
 
     const nitroxRows = (work: Awaited<ReturnType<typeof getTodayWork>>) =>
       rowsNaming(work.actions, reef.id, "nitrox certification");
-    const before = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const before = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
     expect(nitroxRows(before)).toEqual([]);
 
     // The card is pulled (archived) after the request was already accepted.
@@ -506,7 +507,7 @@ describe("departure rows on the queue, read through getTodayWork", () => {
         ),
       );
 
-    const after = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const after = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
     // A row about that person, by name, never "1 diver wants…"; folded with
     // anything else open for her on this boat.
     expect(nitroxRows(after).map((action) => action.subject)).toEqual(["Priya Sharma"]);
@@ -529,7 +530,7 @@ describe("departure rows on the queue, read through getTodayWork", () => {
 
     const contactRows = (work: Awaited<ReturnType<typeof getTodayWork>>) =>
       rowsNaming(work.actions, reef.id, "emergency contact");
-    const flagged = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const flagged = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
     // Every diver on the boat, by name and once each (UX delight sheet
     // 2026-10-22, item 4), never "3 people have no emergency contact".
     expect(
@@ -558,7 +559,7 @@ describe("departure rows on the queue, read through getTodayWork", () => {
         .set({ emergencyContactName: "Kin Ashford", emergencyContactPhone: null })
         .where(eq(people.id, entry.person.id));
     }
-    const nameOnly = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const nameOnly = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
     expect(contactRows(nameOnly)).toHaveLength(roster.length);
 
     // A contact is only "on file" with a reachable number, so fill both.
@@ -568,7 +569,7 @@ describe("departure rows on the queue, read through getTodayWork", () => {
         .set({ emergencyContactName: "Kin Ashford", emergencyContactPhone: "+1 305 555 0175" })
         .where(eq(people.id, entry.person.id));
     }
-    const cleared = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const cleared = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
     expect(contactRows(cleared)).toEqual([]);
   });
 
@@ -592,7 +593,7 @@ describe("departure rows on the queue, read through getTodayWork", () => {
     const now = nowDate();
     const t = staffTranslator("en-US");
     const [today, needs] = await Promise.all([
-      getTodayWork(db, shop.id, shop.slug, shop.timezone, now),
+      getTodayWork(db, shop.id, shop.slug, shopClock(shop, now)),
       getDepartureNeeds(db, shop, reef.id, {
         now,
         t,
@@ -656,13 +657,13 @@ describe("departure rows on the queue, read through getTodayWork", () => {
     });
     const ordersRow = `orders:${reef.id}`;
 
-    const before = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const before = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
     expect(before.actions.some((action) => action.id === ordersRow)).toBe(true);
 
     await cancelBooking(db, shop.id, seat.booking.id);
 
     const [today, overview] = await Promise.all([
-      getTodayWork(db, shop.id, shop.slug, shop.timezone),
+      getTodayWork(db, shop.id, shop.slug, shopClock(shop)),
       getTripOverview(db, shop, reef.id, owner.person.id),
     ]);
     expect(today.actions.some((action) => action.id === ordersRow)).toBe(false);
@@ -679,7 +680,7 @@ describe("the welcome cue on Today", () => {
   it("rides on the departure and never becomes a Needs you row", async () => {
     const { db, shop } = ctx;
     const now = nowDate();
-    const before = await getTodayWork(db, shop.id, shop.slug, shop.timezone, now);
+    const before = await getTodayWork(db, shop.id, shop.slug, shopClock(shop, now));
     const departure = before.departures.find((row) => row.booked > 0);
     if (!departure) throw new Error("demo needs a booked departure today");
     const roster = await getTripRoster(db, shop.id, departure.tripId);
@@ -692,7 +693,7 @@ describe("the welcome cue on Today", () => {
       now,
     });
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone, now);
+    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop, now));
     const card = work.departures.find((row) => row.tripId === departure.tripId);
     expect(card?.welcome?.map((entry) => entry.name)).toContain(seat.person.fullName);
     expect(work.actions.map((action) => action.kind as string)).not.toContain("say_hello");

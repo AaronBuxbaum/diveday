@@ -30,6 +30,7 @@ import { recordDiverActivity } from "./operations";
 import { listOrdersForPerson } from "./orders";
 import { offsetPage, PAGE_SIZE } from "./paging";
 import { listPersonBookingPayments } from "./payments";
+import { createPerson } from "./people";
 import { storedPhone } from "./person-phone";
 import { personSearchMatch } from "./person-search";
 import { isUniqueConstraintViolation } from "./query-helpers";
@@ -49,6 +50,7 @@ import {
   trips,
 } from "./schema";
 import { livePerson } from "./trips-live";
+import { seatNotCancelled } from "./trips-queries";
 import {
   earlierReferralForOpenHold,
   getCurrentWaiverGeneration,
@@ -108,18 +110,13 @@ export async function createDiver(db: AppDb, input: NewDiver) {
 
   try {
     return await db.transaction(async (tx) => {
-      const [person] = await tx
-        .insert(people)
-        .values({
-          shopId: input.shopId,
-          fullName,
-          email,
-          phone,
-        })
-        .returning();
-      if (!person) throw new Error("createDiver: person insert returned no row");
-      await tx.insert(personRoles).values({ personId: person.id, role: "diver" });
-      return person;
+      return await createPerson(tx, {
+        shopId: input.shopId,
+        fullName,
+        email,
+        phone,
+        origin: "counter",
+      });
     });
   } catch (error) {
     if (isUniqueConstraintViolation(error)) return null;
@@ -158,7 +155,7 @@ async function holdsAgeGatedSeat(db: DbExecutor, shopId: string, personId: strin
       and(
         eq(bookings.shopId, shopId),
         eq(bookings.personId, personId),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
         eq(trips.shopId, shopId),
         isNull(trips.deletedAt),
         gte(trips.endsAt, nowDate()),
@@ -581,8 +578,7 @@ function diverFilterCondition(
   if (filter === "diving_today") {
     // "Today" is the *shop's* calendar day, not the server's — `shopDayBounds`
     // resolves it to the exact UTC pair so this narrows a COUNT(*) correctly
-    // without the second JS pass the looser `shopDayWindow` scans need. A
-    // cancelled seat or a cancelled departure is not a dive.
+    // with no second JS pass. A cancelled seat or a cancelled departure is not a dive.
     const day = shopDayBounds(context.now, context.timeZone);
     return inArray(
       people.id,
@@ -594,7 +590,7 @@ function diverFilterCondition(
           and(
             eq(trips.shopId, shopId),
             eq(trips.status, "scheduled"),
-            ne(bookings.status, "cancelled"),
+            seatNotCancelled,
             gte(trips.startsAt, day.from),
             lt(trips.startsAt, day.to),
           ),
@@ -780,7 +776,7 @@ export async function listBookableDivers(
   const bookedRows = await db
     .select({ personId: bookings.personId })
     .from(bookings)
-    .where(and(eq(bookings.tripId, tripId), ne(bookings.status, "cancelled")));
+    .where(and(eq(bookings.tripId, tripId), seatNotCancelled));
   const bookedIds = bookedRows.map((row) => row.personId);
 
   const rows = await db
@@ -832,7 +828,7 @@ export async function getBookableDiver(
         eq(bookings.shopId, shopId),
         eq(bookings.tripId, tripId),
         eq(bookings.personId, personId),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
       ),
     )
     .limit(1);

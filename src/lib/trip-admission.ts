@@ -5,9 +5,13 @@ import type {
   NitroxCertification,
   SpecialtyCertification,
 } from "@/db/schema";
-import { higherCertificationLevel } from "./certification-levels";
 import { isDiver, type ParticipantType } from "./participant-types";
-import { type CertificationLevel, certificationRank } from "./readiness";
+import {
+  type CertificationLevel,
+  levelStanding,
+  type StandingEvidence,
+  standing,
+} from "./readiness";
 import { type Requirement, requirementDemandsNothing, unionRequirements } from "./requirement";
 import { type TrainingDiveCourse, trainingDiveRequiredLevel } from "./training-mark";
 
@@ -138,21 +142,6 @@ export type TripAdmissionRefusal = {
 export type TripAdmission = { admitted: true } | { admitted: false; refusal: TripAdmissionRefusal };
 
 const ADMITTED: TripAdmission = { admitted: true };
-
-/**
- * The highest rung any certification on file reaches, ignoring status
- * entirely: a pending capture is still evidence of what this diver was trained
- * to do, and that is not something a booking should refuse over.
- */
-function highestLevelOnFile(certifications: readonly Certification[]): CertificationLevel | null {
-  let best: CertificationLevel | null = null;
-  for (const certification of certifications) {
-    if (!best || certificationRank(certification.level) > certificationRank(best)) {
-      best = certification.level;
-    }
-  }
-  return best;
-}
 
 /**
  * Does anything at all stand on the record about what this diver holds?
@@ -324,42 +313,40 @@ export function decideTripAdmission(input: TripAdmissionInput): TripAdmission {
   // words like anyone else.
   if (!shopHasAdjudicated(certifications) && !declaredLevel && !declaredNitrox) return ADMITTED;
 
-  // The strongest thing said about this diver, from any direction: the record,
-  // or the sentence they just typed. Taking the higher of the two is what stops
-  // a stale Open Water row refusing somebody who has since qualified and says so.
-  const heldLevel = higherCertificationLevel(highestLevelOnFile(certifications), declaredLevel);
-  // A course that gets them there before the boat counts toward the rung, but
-  // not toward `heldLevel`: the refusal names what the diver holds, and a
-  // course they are booked on is not a card.
-  const reachedLevel = (evidence.levelsInTraining ?? []).reduce<CertificationLevel | null>(
-    (best, level) => higherCertificationLevel(best, level),
-    heldLevel,
-  );
-  const reaches = (level: CertificationLevel | null) =>
-    !level ||
-    (reachedLevel !== null && certificationRank(reachedLevel) >= certificationRank(level));
+  // The ladder at the sale threshold (`standing` in src/lib/readiness.ts): the
+  // same reading of the same rows that decides boarding, with the bar at "a
+  // row in any state, or the sentence they just typed". The strongest thing said
+  // about this diver, from any direction, is what stops a stale Open Water row
+  // refusing somebody who has since qualified and says so.
+  const sale: StandingEvidence = {
+    certifications,
+    specialtyCertifications,
+    nitroxCertifications,
+    declaredLevel,
+    declaredNitrox,
+    levelsInTraining: evidence.levelsInTraining,
+  };
+  const blockers = standing(effective, sale, "sale");
+  const levelBlocker = blockers.find((blocker) => blocker.code.startsWith("certification_"));
   // A course seat a staff mark could make this a training dive for, with the
   // course's instructor aboard, is a level readiness would clear on (#2731).
   const asked = effective.minimumCertificationLevel;
   const requiredLevel =
     asked &&
-    !reaches(asked) &&
-    !(evidence.trainingDives ?? []).some((course) =>
-      reaches(trainingDiveRequiredLevel(asked, course)),
-    )
+    levelBlocker &&
+    !(evidence.trainingDives ?? []).some((course) => {
+      const lowered = trainingDiveRequiredLevel(asked, course);
+      return lowered === null || levelStanding(lowered, sale, "sale") === null;
+    })
       ? asked
       : null;
 
-  // A card of the right specialty in *any* state clears admission — pending
-  // review, or imported and awaiting a staffer's one-tap confirm, are both
-  // things that move before departure. Only a diver with no such card at all
-  // cannot dive this site.
-  const missingSpecialties = effective.requiredSpecialties.filter(
-    (specialty) => !specialtyCertifications.some((card) => card.specialty === specialty),
+  const missingSpecialties = blockers.flatMap((blocker) =>
+    blocker.code === "specialty_missing" && blocker.params?.specialty
+      ? [blocker.params.specialty]
+      : [],
   );
-
-  const nitroxRequired =
-    effective.requiresNitrox && nitroxCertifications.length === 0 && !declaredNitrox;
+  const nitroxRequired = blockers.some((blocker) => blocker.code === "nitrox_missing");
 
   if (!requiredLevel && missingSpecialties.length === 0 && !nitroxRequired) return ADMITTED;
   return {
@@ -370,7 +357,7 @@ export function decideTripAdmission(input: TripAdmissionInput): TripAdmission {
       nitroxRequired,
       // Only meaningful alongside a level refusal; a diver refused purely for a
       // missing Deep card is not being told their ladder rung is the problem.
-      heldLevel: requiredLevel ? heldLevel : null,
+      heldLevel: requiredLevel ? (levelBlocker?.params?.heldLevel ?? null) : null,
     },
   };
 }

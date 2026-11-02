@@ -38,6 +38,7 @@ import {
   waiverTemplates,
 } from "./schema";
 import { livePerson, liveTrip } from "./trips-live";
+import { seatNotCancelled } from "./trips-queries";
 
 /** The three ways a shop hands a link over — the schema enum, named for callers. */
 export type WaiverDeliveryChannel = (typeof waiverDeliveryChannel.enumValues)[number];
@@ -368,10 +369,7 @@ export async function standingWaiverExposure(
     // (`dive-domain-expert`, on issue #790). A shop merging a duplicate diver
     // mid-season is the ordinary way that happens.
     .innerJoin(people, and(eq(people.id, waiverRecords.personId), isNull(people.anonymizedAt)))
-    .leftJoin(
-      bookings,
-      and(eq(bookings.personId, waiverRecords.personId), ne(bookings.status, "cancelled")),
-    )
+    .leftJoin(bookings, and(eq(bookings.personId, waiverRecords.personId), seatNotCancelled))
     .leftJoin(
       trips,
       and(

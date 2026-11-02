@@ -9,7 +9,6 @@ import {
   isNotNull,
   isNull,
   lt,
-  ne,
   or,
   sql,
 } from "drizzle-orm";
@@ -69,6 +68,7 @@ import {
   userAccounts,
 } from "./schema";
 import { liveTrip, notRehearsal } from "./trips-live";
+import { seatNotCancelled } from "./trips-queries";
 
 /**
  * **Incident reports** (ADR 20261012-incident-reports): one per incident, on a
@@ -1526,13 +1526,7 @@ export async function listIncidentSeatChoices(
     .select({ bookingId: bookings.id, name })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
-    .where(
-      and(
-        eq(bookings.shopId, shopId),
-        eq(bookings.tripId, tripId),
-        ne(bookings.status, "cancelled"),
-      ),
-    )
+    .where(and(eq(bookings.shopId, shopId), eq(bookings.tripId, tripId), seatNotCancelled))
     .orderBy(asc(name), asc(bookings.id));
 }
 

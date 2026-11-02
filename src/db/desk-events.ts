@@ -4,6 +4,7 @@ import type { DeskEvent, DeskEventKind } from "@/lib/desk-events";
 import type { AppDb, DbExecutor } from "./client";
 import { bookings, people, tripDeskEvents, tripHelpRequests, tripReadMarks, trips } from "./schema";
 import { liveTrip } from "./trips-live";
+import { seatNotCancelled } from "./trips-queries";
 
 /**
  * The shift catch-up strip's reader and writers (issues #1202 and #1187).
@@ -204,7 +205,7 @@ export function rosterStillSaysIt() {
     ),
     or(
       ne(tripDeskEvents.kind, "seat_taken"),
-      and(eq(bookings.tripId, tripDeskEvents.tripId), ne(bookings.status, "cancelled")),
+      and(eq(bookings.tripId, tripDeskEvents.tripId), seatNotCancelled),
     ),
     or(
       ne(tripDeskEvents.kind, "help_request"),

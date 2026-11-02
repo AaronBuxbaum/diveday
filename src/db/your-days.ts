@@ -16,6 +16,7 @@ import { withErasureCoordinatedBookingSend } from "./erasure-coordinated-send";
 import { sendAndRecordNotification } from "./notifications";
 import { bookings, people, priorVisits, shops, trips } from "./schema";
 import { liveTrip } from "./trips-live";
+import { seatNotCancelled } from "./trips-queries";
 
 /**
  * **A regular's other days with the shop, from one booking's page** (fifth-loop
@@ -82,7 +83,7 @@ export async function listYourDays(
         and(
           mine,
           ne(bookings.id, input.bookingId),
-          ne(bookings.status, "cancelled"),
+          seatNotCancelled,
           // A held seat matched this person on a guess (#2082): it is not one
           // of their days to list or mail (security review r5-4, N2).
           isNull(bookings.identityUnconfirmedAt),

@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
   getShopById: vi.fn(),
   setShopPassThroughFee: vi.fn(),
   requireStaffSession: vi.fn(),
-  paymentSettingsBlock: vi.fn(),
+  canPersonManagePaymentSettings: vi.fn(async () => true),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -28,9 +28,9 @@ vi.mock("@/db/shops", () => ({
   setShopPassThroughFee: mocks.setShopPassThroughFee,
 }));
 vi.mock("@/lib/session", () => ({ requireStaffSession: mocks.requireStaffSession }));
-vi.mock("./action-helpers", () => ({
-  paymentSettingsBlock: mocks.paymentSettingsBlock,
-  settingsBlock: vi.fn(),
+vi.mock("@/db/authz", () => ({
+  canPersonManagePaymentSettings: mocks.canPersonManagePaymentSettings,
+  canPersonManageShopSettings: vi.fn(async () => true),
 }));
 
 const { savePassThroughFeeAction } = await import("./money-actions");

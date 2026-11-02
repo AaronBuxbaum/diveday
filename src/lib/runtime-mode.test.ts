@@ -1,0 +1,65 @@
+import { describe, expect, it } from "vitest";
+import { runtimeMode } from "./runtime-mode";
+
+const CLOCK = "2026-03-01T12:00:00.000Z";
+const REAL = "postgres://user:pass@db.invalid/diveday";
+
+describe("runtimeMode", () => {
+  it("is all off for a plain local run", () => {
+    expect(runtimeMode({ NODE_ENV: "development" })).toEqual({
+      realDatabase: false,
+      frozenClockMs: null,
+      testRoutesOpen: true,
+      capturePhotos: false,
+    });
+  });
+
+  it("opens the harness fields for the e2e production build with no database", () => {
+    expect(runtimeMode({ NODE_ENV: "production", DIVEDAY_E2E: "1", DIVEDAY_CLOCK: CLOCK })).toEqual(
+      {
+        realDatabase: false,
+        frozenClockMs: Date.parse(CLOCK),
+        testRoutesOpen: true,
+        capturePhotos: true,
+      },
+    );
+  });
+
+  it("keeps test routes shut in a production runtime without the harness opt-in", () => {
+    expect(runtimeMode({ NODE_ENV: "production" }).testRoutesOpen).toBe(false);
+    expect(runtimeMode({ NODE_ENV: "production", DIVEDAY_E2E: "true" }).testRoutesOpen).toBe(false);
+  });
+
+  it("is live and closed whenever DATABASE_URL is set, whatever else is (fail closed)", () => {
+    for (const NODE_ENV of ["development", "test", "production", undefined]) {
+      const mode = runtimeMode({
+        NODE_ENV,
+        DATABASE_URL: REAL,
+        DIVEDAY_E2E: "1",
+        DIVEDAY_CLOCK: CLOCK,
+      });
+      expect(mode).toEqual({
+        realDatabase: true,
+        frozenClockMs: null,
+        testRoutesOpen: false,
+        capturePhotos: false,
+      });
+    }
+  });
+
+  it("treats an empty DATABASE_URL as unset, as the clock always did", () => {
+    expect(runtimeMode({ DATABASE_URL: "", DIVEDAY_CLOCK: CLOCK }).frozenClockMs).toBe(
+      Date.parse(CLOCK),
+    );
+  });
+
+  it("ignores an unparseable or empty clock", () => {
+    expect(runtimeMode({ DIVEDAY_CLOCK: "not a date" }).frozenClockMs).toBeNull();
+    expect(runtimeMode({ DIVEDAY_CLOCK: "" }).frozenClockMs).toBeNull();
+  });
+
+  it("returns a frozen record", () => {
+    expect(Object.isFrozen(runtimeMode({}))).toBe(true);
+    expect(Object.isFrozen(runtimeMode({ DATABASE_URL: REAL }))).toBe(true);
+  });
+});

@@ -33,7 +33,7 @@ const BASE = {
       url: "https://diveday.example/shop/blue-mantis",
     },
   ],
-  settingsUrl: "https://diveday.example/shop/blue-mantis/settings/email",
+  settingsUrl: "https://diveday.example/shop/blue-mantis/me/email",
   turnOffUrl: "https://diveday.example/unsubscribe/abc",
 } satisfies Notification;
 
@@ -304,9 +304,7 @@ describe("the weekly_digest notification", () => {
       sender: { postalAddress: "1 Ocean Dr, Key Largo, FL" },
     });
     expect(text).toContain("Stop these emails: https://diveday.example/unsubscribe/abc");
-    expect(text).toContain(
-      "Email settings: https://diveday.example/shop/blue-mantis/settings/email",
-    );
+    expect(text).toContain("Email settings: https://diveday.example/shop/blue-mantis/me/email");
     expect(html).not.toContain("Key Largo");
   });
 

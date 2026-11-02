@@ -1,4 +1,4 @@
-import { and, eq, inArray, ne } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { DiveIntent } from "@/lib/dive-intent";
 import type { DiveRecencyBand } from "@/lib/dive-recency";
@@ -8,6 +8,7 @@ import type { AppDb, DbExecutor } from "./client";
 import { recordDeskEvent } from "./desk-events";
 import { bookings, trips } from "./schema";
 import { liveTrip } from "./trips-live";
+import { seatNotCancelled } from "./trips-queries";
 
 /**
  * **What this dive is for, changed from the diver's own `/ready` page** (ADR
@@ -33,11 +34,7 @@ export async function setBookingDiveIntent(
     .update(bookings)
     .set({ diveIntent: input.intent })
     .where(
-      and(
-        eq(bookings.id, input.bookingId),
-        eq(bookings.shopId, input.shopId),
-        ne(bookings.status, "cancelled"),
-      ),
+      and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId), seatNotCancelled),
     )
     .returning({ id: bookings.id });
   return Boolean(updated);
@@ -69,11 +66,7 @@ export async function setBookingReEntryAsk(
     .update(bookings)
     .set({ reEntryAsk: input.ask })
     .where(
-      and(
-        eq(bookings.id, input.bookingId),
-        eq(bookings.shopId, input.shopId),
-        ne(bookings.status, "cancelled"),
-      ),
+      and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId), seatNotCancelled),
     )
     .returning({ id: bookings.id });
   return Boolean(updated);
@@ -103,11 +96,7 @@ export async function confirmCarriedFacts(
     .update(bookings)
     .set({ carriedFactsConfirmedAt: nowDate() })
     .where(
-      and(
-        eq(bookings.id, input.bookingId),
-        eq(bookings.shopId, input.shopId),
-        ne(bookings.status, "cancelled"),
-      ),
+      and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId), seatNotCancelled),
     )
     .returning({ id: bookings.id });
   return Boolean(updated);
@@ -136,11 +125,7 @@ export async function setBookingLastDived(
     .update(bookings)
     .set({ lastDivedBand: input.band })
     .where(
-      and(
-        eq(bookings.id, input.bookingId),
-        eq(bookings.shopId, input.shopId),
-        ne(bookings.status, "cancelled"),
-      ),
+      and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId), seatNotCancelled),
     )
     .returning({ id: bookings.id });
   return Boolean(updated);
@@ -164,7 +149,7 @@ export async function setBookingDietaryNote(
       and(
         eq(bookings.id, input.bookingId),
         eq(bookings.shopId, input.shopId),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
         // Only a departure that serves lunch aboard takes a lunch note, from
         // either writer (dive-domain second pass, N-a): the roster hides its
         // control otherwise, and a hand-posted form is refused here too.
@@ -189,11 +174,7 @@ export async function setBookingHotelPickup(
     .update(bookings)
     .set({ hotelPickupLocation: input.hotelPickupLocation })
     .where(
-      and(
-        eq(bookings.id, input.bookingId),
-        eq(bookings.shopId, input.shopId),
-        ne(bookings.status, "cancelled"),
-      ),
+      and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId), seatNotCancelled),
     )
     .returning({ id: bookings.id, tripId: bookings.tripId, personId: bookings.personId });
   if (!updated) return false;
@@ -251,11 +232,7 @@ export async function setBookingPickupDetails(
     .update(bookings)
     .set(values)
     .where(
-      and(
-        eq(bookings.id, input.bookingId),
-        eq(bookings.shopId, input.shopId),
-        ne(bookings.status, "cancelled"),
-      ),
+      and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId), seatNotCancelled),
     )
     .returning({ id: bookings.id });
   return Boolean(updated);

@@ -1,7 +1,8 @@
-import { and, eq, isNull, ne } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import type { DbExecutor } from "./client";
 import { boats, bookings, courses, people, trips } from "./schema";
 import { liveTrip } from "./trips-live";
+import { seatNotCancelled } from "./trips-queries";
 
 /**
  * **The seat a paper pass is printed from** (ADR 20260908-one-hand, decision 6,
@@ -74,7 +75,7 @@ export async function getPassBooking(
         // A cancelled seat is not a pass. The row survives (every delete is
         // soft), and printing one would hand a diver paper for a boat they are
         // not on.
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
         isNull(people.deletedAt),
         liveTrip(),
       ),

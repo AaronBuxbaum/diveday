@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Modal } from "@/components/ui/Modal";
+import { Dialog } from "@/components/ui/layer";
 
 /** The one add door and sheet, composed at whichever register location is active. */
 export function AddUnitControl({
@@ -33,11 +33,11 @@ export function AddUnitControl({
       >
         {title}
       </button>
-      <Modal open={open} onClose={() => setOpen(false)} title={title} className="max-w-xl">
+      <Dialog open={open} onClose={() => setOpen(false)} title={title} className="max-w-xl">
         <div id="add-unit" className="max-h-[70vh] overflow-y-auto">
           {children}
         </div>
-      </Modal>
+      </Dialog>
     </>
   );
 }

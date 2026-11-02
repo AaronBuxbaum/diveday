@@ -1,9 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { z } from "zod";
-import { getDb } from "@/db/client";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import {
   getShopById,
@@ -11,14 +8,13 @@ import {
   setShopProfile,
   setShopSearchListing,
 } from "@/db/shops";
+import { defineAction, land, type NoticeOf } from "@/features/server-action";
 import { isBrandDisplayFontCode, parseBrandBadges, parseBrandColor } from "@/lib/brand";
-import { checkbox, formValue, readForm, text, trimmedText } from "@/lib/form-parse";
-import { revalidateAndRedirect } from "@/lib/navigation";
-import { requireStaffSession } from "@/lib/session";
-import { noticeUrl, shopPath } from "@/lib/staff-notices";
+import { allValues, checkbox, formValue, text, trimmedText } from "@/lib/form-parse";
+import { publicSchedulePath } from "@/lib/public-routes";
 import { storeShopHeroImage, storeShopLogoImage } from "@/lib/storage";
 import { MAX_NEW_SHOPFRONT_PHOTOS_PER_SAVE, MAX_SHOPFRONT_PHOTOS } from "@/lib/storage/limits";
-import { settingsBlock } from "./action-helpers";
+import { SETTINGS_GATE } from "./action-gates";
 
 const profileSchema = z.object({
   tagline: z.string().trim().max(120),
@@ -45,6 +41,12 @@ const profileForm = z.object({
   removeLogo: checkbox("true"),
   brandHeroFile: formValue(),
   removeHero: checkbox("true"),
+  badge: allValues(),
+});
+/** The photo strip as posted: what to take off, and the files picked. */
+const shopPhotosForm = z.object({
+  removeShopPhotoUrls: allValues(),
+  shopPhotoFiles: allValues(),
 });
 const searchListingForm = z.object({ searchListed: checkbox() });
 
@@ -55,101 +57,86 @@ const searchListingForm = z.object({ searchListed: checkbox() });
  * The colour is stored as typed and checked at render; only its shape is
  * refused here.
  */
-export async function saveProfileAction(formData: FormData) {
-  const session = await requireStaffSession();
-  const page = shopPath(session.user.shopSlug, "settings", "profile");
-  await settingsBlock(session);
-
-  const form = readForm(profileForm, formData);
-  const parsed = profileSchema.safeParse({
-    tagline: form.tagline,
-    description: form.description,
-    brandHeroImageAlt: form.brandHeroImageAlt,
-    establishedYear: form.establishedYear,
-  });
-  if (!parsed.success) redirect(noticeUrl(page, "profile-invalid"));
-  const brandColor = parseBrandColor(form.brandColor);
-  if (!brandColor.valid) redirect(noticeUrl(page, "profile-invalid"));
-  const fontInput = form.brandDisplayFont;
-  const brandDisplayFont = isBrandDisplayFontCode(fontInput) ? fontInput : null;
-  const brandBadges = parseBrandBadges(formData.getAll("badge"));
-
-  const db = await getDb();
-  const shop = await getShopById(db, session.user.shopId);
-  if (!shop) redirect(noticeUrl(page, "profile-invalid"));
-
-  const logoFile = form.logoFile;
-  const removeLogo = form.removeLogo;
-
-  let logoUrl: string | null | undefined;
-
-  if (removeLogo) {
-    logoUrl = null;
-  } else if (logoFile instanceof File && logoFile.size > 0) {
-    const stored = await storeShopLogoImage({
-      filename: logoFile.name,
-      contentType: logoFile.type,
-      bytes: await logoFile.arrayBuffer(),
+export const saveProfileAction = defineAction({
+  gate: [SETTINGS_GATE],
+  input: profileForm,
+  async run({ db, shopId, shopSlug, path }, form) {
+    const page = path("settings", "profile");
+    const parsed = profileSchema.safeParse({
+      tagline: form.tagline,
+      description: form.description,
+      brandHeroImageAlt: form.brandHeroImageAlt,
+      establishedYear: form.establishedYear,
     });
-    if (stored.status === "stored") {
+    if (!parsed.success) return land(page, "profile-invalid");
+    const brandColor = parseBrandColor(form.brandColor);
+    if (!brandColor.valid) return land(page, "profile-invalid");
+    const fontInput = form.brandDisplayFont;
+    const brandDisplayFont = isBrandDisplayFontCode(fontInput) ? fontInput : null;
+    const brandBadges = parseBrandBadges(form.badge);
+
+    const shop = await getShopById(db, shopId);
+    if (!shop) return land(page, "profile-invalid");
+
+    let logoUrl: string | null | undefined;
+    if (form.removeLogo) {
+      logoUrl = null;
+    } else if (form.logoFile instanceof File && form.logoFile.size > 0) {
+      const stored = await storeShopLogoImage({
+        filename: form.logoFile.name,
+        contentType: form.logoFile.type,
+        bytes: await form.logoFile.arrayBuffer(),
+      });
+      if (stored.status !== "stored") return land(page, "profile-invalid");
       logoUrl = stored.url;
-    } else {
-      redirect(noticeUrl(page, "profile-invalid"));
     }
-  }
 
-  const heroFile = form.brandHeroFile;
-  const removeHero = form.removeHero;
-  let brandHeroImageUrl: string | null | undefined;
-  if (removeHero) {
-    brandHeroImageUrl = null;
-  } else if (heroFile instanceof File && heroFile.size > 0) {
-    const stored = await storeShopHeroImage({
-      filename: heroFile.name,
-      contentType: heroFile.type,
-      bytes: await heroFile.arrayBuffer(),
-    });
-    if (stored.status === "stored") {
+    let brandHeroImageUrl: string | null | undefined;
+    if (form.removeHero) {
+      brandHeroImageUrl = null;
+    } else if (form.brandHeroFile instanceof File && form.brandHeroFile.size > 0) {
+      const stored = await storeShopHeroImage({
+        filename: form.brandHeroFile.name,
+        contentType: form.brandHeroFile.type,
+        bytes: await form.brandHeroFile.arrayBuffer(),
+      });
+      if (stored.status !== "stored") return land(page, "profile-invalid");
       brandHeroImageUrl = stored.url;
-    } else {
-      redirect(noticeUrl(page, "profile-invalid"));
     }
-  }
 
-  await setShopProfile(db, session.user.shopId, {
-    tagline: parsed.data.tagline,
-    description: parsed.data.description,
-    ...(logoUrl !== undefined ? { logoUrl } : {}),
-    brandColor: brandColor.value,
-    brandDisplayFont,
-    brandHeroImageAlt: parsed.data.brandHeroImageAlt,
-    establishedYear: parsed.data.establishedYear,
-    brandBadges,
-    ...(brandHeroImageUrl !== undefined ? { brandHeroImageUrl } : {}),
-  });
-
-  if (logoUrl !== undefined && shop.logoUrl && shop.logoUrl !== logoUrl) {
-    await queueAndAttemptMediaDeletion(db, {
-      shopId: session.user.shopId,
-      kind: "shop_logo",
-      url: shop.logoUrl,
+    await setShopProfile(db, shopId, {
+      tagline: parsed.data.tagline,
+      description: parsed.data.description,
+      ...(logoUrl !== undefined ? { logoUrl } : {}),
+      brandColor: brandColor.value,
+      brandDisplayFont,
+      brandHeroImageAlt: parsed.data.brandHeroImageAlt,
+      establishedYear: parsed.data.establishedYear,
+      brandBadges,
+      ...(brandHeroImageUrl !== undefined ? { brandHeroImageUrl } : {}),
     });
-  }
-  if (
-    brandHeroImageUrl !== undefined &&
-    shop.brandHeroImageUrl &&
-    shop.brandHeroImageUrl !== brandHeroImageUrl
-  ) {
-    await queueAndAttemptMediaDeletion(db, {
-      shopId: session.user.shopId,
-      kind: "shop_hero",
-      url: shop.brandHeroImageUrl,
-    });
-  }
 
-  revalidatePath(`/s/${session.user.shopSlug}`);
-  revalidateAndRedirect(page, noticeUrl(page, "profile-saved"));
-}
+    if (logoUrl !== undefined && shop.logoUrl && shop.logoUrl !== logoUrl) {
+      await queueAndAttemptMediaDeletion(db, { shopId, kind: "shop_logo", url: shop.logoUrl });
+    }
+    if (
+      brandHeroImageUrl !== undefined &&
+      shop.brandHeroImageUrl &&
+      shop.brandHeroImageUrl !== brandHeroImageUrl
+    ) {
+      await queueAndAttemptMediaDeletion(db, {
+        shopId,
+        kind: "shop_hero",
+        url: shop.brandHeroImageUrl,
+      });
+    }
+
+    return land(page, "profile-saved", { also: [publicSchedulePath(shopSlug)] });
+  },
+});
+
+/** What `/settings/profile` can be told after a save (`profileNoticeMessages`). */
+export type ProfileNotice = NoticeOf<typeof saveProfileAction>;
 
 /**
  * The storefront's photo strip: keep what was not ticked, add what was picked.
@@ -162,70 +149,64 @@ export async function saveProfileAction(formData: FormData) {
  * for deletion, so it leaves no object behind; a photo taken off is queued for
  * deletion only once the row is saved (CR-012).
  */
-export async function saveShopPhotosAction(formData: FormData) {
-  const session = await requireStaffSession();
-  const settings = shopPath(session.user.shopSlug, "settings");
-  await settingsBlock(session);
-  const refuse: () => never = () =>
-    redirect(noticeUrl(settings, "shop-photos-invalid", { saved: "shopPhotos" }));
+export const saveShopPhotosAction = defineAction({
+  gate: [SETTINGS_GATE],
+  input: shopPhotosForm,
+  async run({ db, shopId, shopSlug, path }, form) {
+    const settings = path("settings");
+    const refused = land(settings, "shop-photos-invalid", { extra: { saved: "shopPhotos" } });
 
-  const db = await getDb();
-  const shop = await getShopById(db, session.user.shopId);
-  if (!shop) refuse();
+    const shop = await getShopById(db, shopId);
+    if (!shop) return refused;
 
-  const removed = new Set(formData.getAll("removeShopPhotoUrls").map(String));
-  const kept = shop.shopfrontPhotoUrls.filter((url) => !removed.has(url));
-  const picked = formData
-    .getAll("shopPhotoFiles")
-    .filter((file): file is File => file instanceof File && file.size > 0);
-  if (
-    picked.length > MAX_NEW_SHOPFRONT_PHOTOS_PER_SAVE ||
-    kept.length + picked.length > MAX_SHOPFRONT_PHOTOS
-  ) {
-    refuse();
-  }
-
-  const stored = await Promise.all(
-    picked.map(async (file) =>
-      storeShopHeroImage({
-        filename: file.name,
-        contentType: file.type,
-        bytes: await file.arrayBuffer(),
-      }),
-    ),
-  );
-  const added = stored.flatMap((result) => (result.status === "stored" ? [result.url] : []));
-  const forget = async (urls: string[]) => {
-    for (const url of urls) {
-      await queueAndAttemptMediaDeletion(db, {
-        shopId: session.user.shopId,
-        kind: "shop_hero",
-        url,
-      });
+    const removed = new Set(form.removeShopPhotoUrls.map(String));
+    const kept = shop.shopfrontPhotoUrls.filter((url) => !removed.has(url));
+    const picked = form.shopPhotoFiles.filter(
+      (file): file is File => file instanceof File && file.size > 0,
+    );
+    if (
+      picked.length > MAX_NEW_SHOPFRONT_PHOTOS_PER_SAVE ||
+      kept.length + picked.length > MAX_SHOPFRONT_PHOTOS
+    ) {
+      return refused;
     }
-  };
-  if (added.length !== picked.length) {
-    await forget(added);
-    refuse();
-  }
 
-  const saved = await replaceShopfrontPhotos(db, session.user.shopId, shop.shopfrontPhotoUrls, [
-    ...kept,
-    ...added,
-  ]);
-  if (!saved) {
-    await forget(added);
-    refuse();
-  }
-  await forget(shop.shopfrontPhotoUrls.filter((url) => removed.has(url)));
+    const stored = await Promise.all(
+      picked.map(async (file) =>
+        storeShopHeroImage({
+          filename: file.name,
+          contentType: file.type,
+          bytes: await file.arrayBuffer(),
+        }),
+      ),
+    );
+    const added = stored.flatMap((result) => (result.status === "stored" ? [result.url] : []));
+    const forget = async (urls: string[]) => {
+      for (const url of urls) {
+        await queueAndAttemptMediaDeletion(db, { shopId, kind: "shop_hero", url });
+      }
+    };
+    if (added.length !== picked.length) {
+      await forget(added);
+      return refused;
+    }
 
-  revalidatePath(`/s/${session.user.shopSlug}`);
-  revalidatePath(settings);
-  revalidateAndRedirect(
-    settings,
-    noticeUrl(settings, "shop-photos-saved", { saved: "shopPhotos" }),
-  );
-}
+    const saved = await replaceShopfrontPhotos(db, shopId, shop.shopfrontPhotoUrls, [
+      ...kept,
+      ...added,
+    ]);
+    if (!saved) {
+      await forget(added);
+      return refused;
+    }
+    await forget(shop.shopfrontPhotoUrls.filter((url) => removed.has(url)));
+
+    return land(settings, "shop-photos-saved", {
+      extra: { saved: "shopPhotos" },
+      also: [publicSchedulePath(shopSlug)],
+    });
+  },
+});
 
 /**
  * Whether this shop is listed in search engines. One checkbox, checked by
@@ -233,12 +214,13 @@ export async function saveShopPhotosAction(formData: FormData) {
  * setting rather than asking the shop to opt in to something it already has
  * (ADR 20260813-search-listing-is-a-choice).
  */
-export async function saveSearchListingAction(formData: FormData) {
-  const session = await requireStaffSession();
-  const settings = shopPath(session.user.shopSlug, "settings");
-  await settingsBlock(session);
-  const listed = readForm(searchListingForm, formData).searchListed;
-  await setShopSearchListing(await getDb(), session.user.shopId, listed);
-  const notice = listed ? "search-listing-on" : "search-listing-off";
-  revalidateAndRedirect(settings, noticeUrl(settings, notice, { saved: "searchListing" }));
-}
+export const saveSearchListingAction = defineAction({
+  gate: [SETTINGS_GATE],
+  input: searchListingForm,
+  async run({ db, shopId, path }, { searchListed }) {
+    await setShopSearchListing(db, shopId, searchListed);
+    return land(path("settings"), searchListed ? "search-listing-on" : "search-listing-off", {
+      extra: { saved: "searchListing" },
+    });
+  },
+});

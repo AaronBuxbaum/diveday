@@ -1,0 +1,88 @@
+{
+  "about": "Golden tasks for the agent setup (issue #3014). Each is a prompt a real session would get, the skill or reviewer the repository's own rules say it must draw, and a pass check read off the headless run (skills: a read of the skill's file or a Skill call; reviewers: a spawn, or the final answer naming the reviewer as required). `source` names the rule or record that makes the expectation true, so a task that stops being right is found by its source, not by guessing. Ten is enough to start; add one when a skill failed to trigger or a reviewer caught something, retire one when its source is deleted.",
+  "tasks": [
+    {
+      "id": "manifest-count",
+      "prompt": "The boat manifest shows 11 divers but the trip has 12 confirmed bookings. Find where the count is computed and plan the fix. Plan only, change no files, and finish by listing the reviews and checks this must pass before it merges.",
+      "source": "AGENTS.md, Hard rules: safety-critical surfaces (manifests) get two dive-domain-expert runs",
+      "expect": {
+        "agent": ["dive-domain-expert"]
+      },
+      "check": "the session spawns the reviewer, or its final answer names it as required (a planning session rarely spawns a reviewer, but it must know one is owed)"
+    },
+    {
+      "id": "readiness-cert-gate",
+      "prompt": "A diver with an expired Advanced Open Water cert is being cleared to board a deep dive. Plan a change so readiness refuses them. Plan only, change no files, and finish by listing the reviews and checks this must pass before it merges.",
+      "source": "AGENTS.md, Hard rules: readiness and cert gating are safety-critical",
+      "expect": {
+        "agent": ["dive-domain-expert"]
+      },
+      "check": "the session spawns the reviewer, or its final answer names it as required (a planning session rarely spawns a reviewer, but it must know one is owed)"
+    },
+    {
+      "id": "waiver-token-security",
+      "prompt": "Plan a change that lets a diver open their waiver link from an emailed token without signing in, including how the token is checked and expires. Plan only, change no files, and finish by listing the reviews and checks this must pass before it merges.",
+      "source": "AGENTS.md, Hard rules: security-sensitive changes get a security-reviewer run",
+      "expect": {
+        "agent": ["security-reviewer"]
+      },
+      "check": "the session spawns the reviewer, or its final answer names it as required (a planning session rarely spawns a reviewer, but it must know one is owed)"
+    },
+    {
+      "id": "copy-change",
+      "prompt": "Change the booking confirmation button on the diver trip page from 'Submit' to something friendlier, and update every language. Plan only, change no files.",
+      "source": ".claude/skills/README.md: i18n-copy for any on-screen wording; brand-voice for voice",
+      "expect": {
+        "skill": ["i18n-copy", "brand-voice", "copy-restraint"]
+      }
+    },
+    {
+      "id": "schema-column",
+      "prompt": "Add a nullable 'emergency_contact_phone' column to the divers table and expose it on the staff diver page. Plan only, change no files.",
+      "source": ".claude/skills/README.md: schema-change for anything needing new persistent state",
+      "expect": {
+        "skill": ["schema-change"]
+      }
+    },
+    {
+      "id": "new-page",
+      "prompt": "Add a new staff page at /shop/gear that lists rental gear. Plan only, change no files.",
+      "source": ".claude/skills/README.md: instant-navigation for any new page or layout; AGENTS.md: a new page ships a loading.tsx",
+      "expect": {
+        "skill": ["instant-navigation", "new-feature"]
+      }
+    },
+    {
+      "id": "visual-diff",
+      "prompt": "Playwright reports 14 changed surfaces on my pull request after I edited a message bundle. Explain how to decide which are expected. Change no files.",
+      "source": ".claude/skills/README.md: visual-triage whenever Playwright reports a visual difference",
+      "expect": {
+        "skill": ["visual-triage"]
+      }
+    },
+    {
+      "id": "flaky-test",
+      "prompt": "src/db/bookings.test.ts fails one run in five on CI with a capacity assertion. Work out why. Change no files.",
+      "source": ".claude/skills/README.md: debug for any failing test, red CI or flaky spec before fixing",
+      "expect": {
+        "skill": ["debug"]
+      }
+    },
+    {
+      "id": "new-dependency",
+      "prompt": "We want to add the 'date-fns' package as a runtime dependency for trip date formatting. What does the repository require before that lands? Change no files.",
+      "source": "AGENTS.md, Hard rules: a new runtime dependency needs an ADR",
+      "expect": {
+        "skill": ["adr"]
+      }
+    },
+    {
+      "id": "one-file-fix",
+      "prompt": "In src/lib/public-routes.ts, fix a typo in a code comment: 'recieve' should be 'receive'. Plan only, change no files.",
+      "source": "docs/agents/working-rules.md, Delegating: a one-file change gets no plan and no subagent",
+      "expect": {
+        "noSubagent": true
+      }
+    }
+  ]
+}

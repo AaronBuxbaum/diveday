@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { z } from "zod";
 import { canPersonManageShopSettings } from "@/db/authz";
 import { getDb } from "@/db/client";
@@ -22,6 +21,7 @@ import {
   setShopTemperatureUnit,
   setShopTimezone,
 } from "@/db/shops";
+import { actionContext, arrive, defineAction, land } from "@/features/server-action";
 import { toDiverLocale } from "@/i18n/settings";
 import {
   type AddressLookupResult,
@@ -31,19 +31,17 @@ import {
 import { calendarDateInTimezone, isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { confirmContactLinkPath } from "@/lib/contact-email-confirmation";
-import { formValue, readForm, trimmedText } from "@/lib/form-parse";
+import { formValue, trimmedText } from "@/lib/form-parse";
 import { isValidTimeZone } from "@/lib/format";
 import { isShopCurrency, type ShopCurrency } from "@/lib/money";
-import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
 import { reopensOnTooFar } from "@/lib/off-season";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { parseSeasonStart } from "@/lib/season";
 import { requireStaffSession } from "@/lib/session";
-import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { timeZoneAnchor } from "@/lib/timezones";
-import { paymentSettingsBlock, settingsBlock } from "./action-helpers";
+import { PAYMENT_SETTINGS_GATE, SETTINGS_GATE } from "./action-gates";
 
 const contactSchema = z.object({
   // Empty clears the field; anything else must be a real address, because this
@@ -80,20 +78,20 @@ const unitsForm = z.object({
   currency: formValue(),
 });
 const timezoneForm = z.object({ timezone: formValue() });
+const juniorBuddyForm = z.object({ juniorBuddy: formValue() });
 
-export async function saveJuniorBuddyPolicyAction(formData: FormData) {
-  const session = await requireStaffSession();
-  const settings = shopPath(session.user.shopSlug, "settings");
-  await settingsBlock(session);
-  const value = z.enum(["required", "optional"]).safeParse(formData.get("juniorBuddy"));
-  if (!value.success)
-    redirect(noticeUrl(settings, "junior-buddy-invalid", { saved: "juniorBuddy" }));
-  await setShopJuniorBuddyPolicy(await getDb(), session.user.shopId, value.data === "required");
-  revalidateAndRedirect(
-    settings,
-    noticeUrl(settings, "junior-buddy-saved", { saved: "juniorBuddy" }),
-  );
-}
+export const saveJuniorBuddyPolicyAction = defineAction({
+  gate: [SETTINGS_GATE],
+  input: juniorBuddyForm,
+  async run({ db, shopId, path }, form) {
+    const settings = path("settings");
+    const extra = { saved: "juniorBuddy" };
+    const value = z.enum(["required", "optional"]).safeParse(form.juniorBuddy);
+    if (!value.success) return land(settings, "junior-buddy-invalid", { extra });
+    await setShopJuniorBuddyPolicy(db, shopId, value.data === "required");
+    return land(settings, "junior-buddy-saved", { extra });
+  },
+});
 const seasonStartForm = z.object({ seasonStartMonth: formValue(), seasonStartDay: formValue() });
 /**
  * The three units a shop reads its own numbers in — depth, water temperature,
@@ -120,69 +118,64 @@ const seasonStartForm = z.object({ seasonStartMonth: formValue(), seasonStartDay
  * staffer who posted three values and got back "not authorized" should not have
  * to guess which two landed.
  */
-export async function saveUnitsAction(formData: FormData) {
-  const session = await requireStaffSession();
-  const settings = shopPath(session.user.shopSlug, "settings");
-  await settingsBlock(session);
-  const units = readForm(unitsForm, formData);
-  const depthUnit = z.enum(["meters", "feet"]).safeParse(units.depthUnit);
-  const temperatureUnit = z.enum(["celsius", "fahrenheit"]).safeParse(units.temperatureUnit);
-  if (!depthUnit.success || !temperatureUnit.success) {
-    redirect(noticeUrl(settings, "units-invalid", { saved: "units" }));
-  }
-
-  // `null` means the field was never rendered (the actor cannot manage payment
-  // settings), which is the ordinary case for most staff — not a refusal.
-  const submittedCurrency = units.currency;
-  let currency: ShopCurrency | null = null;
-  if (submittedCurrency !== null) {
-    await paymentSettingsBlock(session);
-    // Not `toShopCurrency`: that coerces anything unknown to usd, which would
-    // silently save dollars for a shop that submitted a typo. An unrecognized
-    // value is a refusal.
-    if (!isShopCurrency(submittedCurrency)) {
-      redirect(noticeUrl(settings, "units-invalid", { saved: "units" }));
+export const saveUnitsAction = defineAction({
+  gate: [SETTINGS_GATE],
+  input: unitsForm,
+  async run({ db, shopId, path, demand }, units) {
+    const settings = path("settings");
+    const depthUnit = z.enum(["meters", "feet"]).safeParse(units.depthUnit);
+    const temperatureUnit = z.enum(["celsius", "fahrenheit"]).safeParse(units.temperatureUnit);
+    if (!depthUnit.success || !temperatureUnit.success) {
+      return land(settings, "units-invalid", { extra: { saved: "units" } });
     }
-    currency = submittedCurrency;
-  }
 
-  const db = await getDb();
-  // One transaction: the unit and the prose it carries land together or not
-  // at all, so a failed conversion leaves the shop on its old unit and a retry
-  // still has a switch to make (issue #2683).
-  const sites = await db.transaction(async (tx) => {
-    const before = await lockShopDepthUnit(tx, session.user.shopId);
-    await setShopDepthUnit(tx, session.user.shopId, depthUnit.data);
-    const from = before ?? depthUnit.data;
-    const result = await convertImportedSiteProseToUnit(
-      tx,
-      session.user.shopId,
-      from,
-      depthUnit.data,
-    );
-    return { ...result, from };
-  });
-  await setShopTemperatureUnit(db, session.user.shopId, temperatureUnit.data);
-  if (currency !== null) {
-    await setShopCurrency(db, session.user.shopId, currency);
-  }
-  // Saving this form *is* the confirmation the setup checklist asks for, even
-  // when nothing changed — the step is "look at these", and a shop that opened
-  // the row and agreed with the derived values has looked (issue #712).
-  await markShopUnitsConfirmed(db, session.user.shopId);
-  revalidateAndRedirect(
-    settings,
-    sites.leftAlone > 0
-      ? noticeUrl(settings, "units-saved-sites-left", {
+    // `null` means the field was never rendered (the actor cannot manage payment
+    // settings), which is the ordinary case for most staff — not a refusal.
+    const submittedCurrency = units.currency;
+    let currency: ShopCurrency | null = null;
+    if (submittedCurrency !== null) {
+      await demand(PAYMENT_SETTINGS_GATE);
+      // Not `toShopCurrency`: that coerces anything unknown to usd, which would
+      // silently save dollars for a shop that submitted a typo. An unrecognized
+      // value is a refusal.
+      if (!isShopCurrency(submittedCurrency)) {
+        return land(settings, "units-invalid", { extra: { saved: "units" } });
+      }
+      currency = submittedCurrency;
+    }
+
+    // One transaction: the unit and the prose it carries land together or not
+    // at all, so a failed conversion leaves the shop on its old unit and a retry
+    // still has a switch to make (issue #2683).
+    const sites = await db.transaction(async (tx) => {
+      const before = await lockShopDepthUnit(tx, shopId);
+      await setShopDepthUnit(tx, shopId, depthUnit.data);
+      const from = before ?? depthUnit.data;
+      const result = await convertImportedSiteProseToUnit(tx, shopId, from, depthUnit.data);
+      return { ...result, from };
+    });
+    await setShopTemperatureUnit(db, shopId, temperatureUnit.data);
+    if (currency !== null) {
+      await setShopCurrency(db, shopId, currency);
+    }
+    // Saving this form *is* the confirmation the setup checklist asks for, even
+    // when nothing changed — the step is "look at these", and a shop that opened
+    // the row and agreed with the derived values has looked (issue #712).
+    await markShopUnitsConfirmed(db, shopId);
+    if (sites.leftAlone > 0) {
+      return land(settings, "units-saved-sites-left", {
+        extra: {
           saved: "units",
           count: sites.leftAlone,
           from: sites.from,
           // The first few by name; the rest are the count's "and more".
           sites: sites.leftAloneNames.slice(0, 3).join(" · "),
-        })
-      : noticeUrl(settings, "units-saved", { saved: "units" }),
-  );
-}
+        },
+      });
+    }
+    return land(settings, "units-saved", { extra: { saved: "units" } });
+  },
+});
 
 /**
  * The address a diver who is not booking yet writes to. Published, so an empty
@@ -243,51 +236,46 @@ async function sendContactEmailConfirmation(shop: {
   return delivery.status === "sent";
 }
 
-export async function saveContactAction(formData: FormData) {
-  const session = await requireStaffSession();
-  const settings = shopPath(session.user.shopSlug, "settings");
-  await settingsBlock(session);
-  const parsed = contactSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect(noticeUrl(settings, "contact-invalid", { saved: "contact" }));
-  const db = await getDb();
-  const before = await getShopById(db, session.user.shopId);
-  const shop = await setShopContact(db, session.user.shopId, parsed.data);
-  // Only an address that actually changed gets a link from a save: it is
-  // unconfirmed by construction (setShopContact cleared the proof), and the
-  // link is what confirms it. Saving an unchanged, still-unconfirmed address
-  // -- a phone edit, say -- sends nothing; the resend control is the one door
-  // for that, and it is rate-limited.
-  const changed =
-    (shop?.contactEmail?.toLowerCase() ?? null) !== (before?.contactEmail?.toLowerCase() ?? null);
-  const sent =
-    changed && shop?.contactEmail && !shop.contactEmailConfirmedAt
-      ? await sendContactEmailConfirmation({ ...shop, contactEmail: shop.contactEmail })
-      : false;
-  revalidateAndRedirect(
-    settings,
-    noticeUrl(settings, sent ? "contact-confirmation-sent" : "contact-saved", {
-      saved: "contact",
-    }),
-  );
-}
+export const saveContactAction = defineAction({
+  gate: [SETTINGS_GATE],
+  input: contactSchema,
+  invalid: ({ path }) => land(path("settings"), "contact-invalid", { extra: { saved: "contact" } }),
+  async run({ db, shopId, path }, contact) {
+    const before = await getShopById(db, shopId);
+    const shop = await setShopContact(db, shopId, contact);
+    // Only an address that actually changed gets a link from a save: it is
+    // unconfirmed by construction (setShopContact cleared the proof), and the
+    // link is what confirms it. Saving an unchanged, still-unconfirmed address
+    // -- a phone edit, say -- sends nothing; the resend control is the one door
+    // for that, and it is rate-limited.
+    const changed =
+      (shop?.contactEmail?.toLowerCase() ?? null) !== (before?.contactEmail?.toLowerCase() ?? null);
+    const sent =
+      changed && shop?.contactEmail && !shop.contactEmailConfirmedAt
+        ? await sendContactEmailConfirmation({ ...shop, contactEmail: shop.contactEmail })
+        : false;
+    const extra = { saved: "contact" };
+    return sent
+      ? land(path("settings"), "contact-confirmation-sent", { extra })
+      : land(path("settings"), "contact-saved", { extra });
+  },
+});
 
 /** The "Resend" tap on an unconfirmed address: a fresh link, the old one superseded. */
-export async function resendContactConfirmationAction() {
-  const session = await requireStaffSession();
-  const settings = shopPath(session.user.shopSlug, "settings");
-  await settingsBlock(session);
-  const shop = await getShopById(await getDb(), session.user.shopId);
-  const sent =
-    shop?.contactEmail && !shop.contactEmailConfirmedAt
-      ? await sendContactEmailConfirmation({ ...shop, contactEmail: shop.contactEmail })
-      : false;
-  revalidateAndRedirect(
-    settings,
-    noticeUrl(settings, sent ? "contact-confirmation-sent" : "contact-saved", {
-      saved: "contact",
-    }),
-  );
-}
+export const resendContactConfirmationAction = defineAction({
+  gate: [SETTINGS_GATE],
+  async run({ db, shopId, path }) {
+    const shop = await getShopById(db, shopId);
+    const sent =
+      shop?.contactEmail && !shop.contactEmailConfirmedAt
+        ? await sendContactEmailConfirmation({ ...shop, contactEmail: shop.contactEmail })
+        : false;
+    const extra = { saved: "contact" };
+    return sent
+      ? land(path("settings"), "contact-confirmation-sent", { extra })
+      : land(path("settings"), "contact-saved", { extra });
+  },
+});
 
 /**
  * Replaces the shop's physical business address with the complete address in
@@ -303,15 +291,18 @@ export async function resendContactConfirmationAction() {
  *
  * An all-empty address is the Remove control, and it says so rather than
  * reporting "saved" for a thing that is now gone.
+ *
+ * Not a `defineAction` declaration: it answers inline (`{ ok: true }`), which
+ * the declaration's `"navigate"` answer does not cover yet, so it takes the
+ * pipeline's first half (`actionContext`) and states its one refusal below.
  */
 export async function saveAddressAction(formData: FormData): Promise<{ ok: true }> {
-  const session = await requireStaffSession();
-  const settings = shopPath(session.user.shopSlug, "settings");
-  await settingsBlock(session);
+  const { db, shopId, path } = await actionContext([SETTINGS_GATE]);
+  const settings = path("settings");
   const parsed = addressSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect(noticeUrl(settings, "address-invalid", { saved: "address" }));
+  if (!parsed.success) refuseAddress(settings);
   const { latitude, longitude, ...textFields } = parsed.data;
-  await setShopAddress(await getDb(), session.user.shopId, {
+  await setShopAddress(db, shopId, {
     ...textFields,
     latitude: typeof latitude === "number" ? latitude : null,
     longitude: typeof longitude === "number" ? longitude : null,
@@ -322,6 +313,11 @@ export async function saveAddressAction(formData: FormData): Promise<{ ok: true 
   // into a full route navigation; the component already has the exact fields
   // that were just persisted.
   return { ok: true };
+}
+
+/** The address card's one refusal: a post the schema refuses lands on the hub's row. */
+function refuseAddress(settings: string): never {
+  return arrive(land(settings, "address-invalid", { extra: { saved: "address" } }));
 }
 
 /**
@@ -336,19 +332,21 @@ export async function saveAddressAction(formData: FormData): Promise<{ ok: true 
  * right answer for the case this exists for, and the description on the card
  * says so before anyone touches it.
  */
-export async function saveTimezoneAction(formData: FormData) {
-  const session = await requireStaffSession();
-  const settings = shopPath(session.user.shopSlug, "settings");
-  await settingsBlock(session);
-  const submitted = readForm(timezoneForm, formData).timezone;
-  // An id this runtime can't resolve would make every date formatter on every
-  // surface throw, so an unrecognized value is a refusal, never a fallback.
-  if (typeof submitted !== "string" || !isValidTimeZone(submitted)) {
-    redirect(noticeUrl(settings, "timezone-invalid", { saved: "timezone" }));
-  }
-  await setShopTimezone(await getDb(), session.user.shopId, submitted);
-  revalidateAndRedirect(settings, noticeUrl(settings, "timezone-saved", { saved: "timezone" }));
-}
+export const saveTimezoneAction = defineAction({
+  gate: [SETTINGS_GATE],
+  input: timezoneForm,
+  async run({ db, shopId, path }, { timezone }) {
+    const settings = path("settings");
+    const extra = { saved: "timezone" };
+    // An id this runtime can't resolve would make every date formatter on every
+    // surface throw, so an unrecognized value is a refusal, never a fallback.
+    if (typeof timezone !== "string" || !isValidTimeZone(timezone)) {
+      return land(settings, "timezone-invalid", { extra });
+    }
+    await setShopTimezone(db, shopId, timezone);
+    return land(settings, "timezone-saved", { extra });
+  },
+});
 
 /**
  * The shop's season start — the denominator behind the home's one fact of
@@ -358,18 +356,17 @@ export async function saveTimezoneAction(formData: FormData) {
  * refuse, so a 31 chosen in April is a refusal on the form rather than a
  * clamped 30 the shop never asked for.
  */
-export async function saveSeasonStartAction(formData: FormData) {
-  const session = await requireStaffSession();
-  const settings = shopPath(session.user.shopSlug, "settings");
-  await settingsBlock(session);
-  const { seasonStartMonth, seasonStartDay } = readForm(seasonStartForm, formData);
-  const season = parseSeasonStart(seasonStartMonth, seasonStartDay);
-  if (!season) {
-    redirect(noticeUrl(settings, "season-invalid", { saved: "season" }));
-  }
-  await setShopSeasonStart(await getDb(), session.user.shopId, season);
-  revalidateAndRedirect(settings, noticeUrl(settings, "season-saved", { saved: "season" }));
-}
+export const saveSeasonStartAction = defineAction({
+  gate: [SETTINGS_GATE],
+  input: seasonStartForm,
+  async run({ db, shopId, path }, { seasonStartMonth, seasonStartDay }) {
+    const settings = path("settings");
+    const season = parseSeasonStart(seasonStartMonth, seasonStartDay);
+    if (!season) return land(settings, "season-invalid", { extra: { saved: "season" } });
+    await setShopSeasonStart(db, shopId, season);
+    return land(settings, "season-saved", { extra: { saved: "season" } });
+  },
+});
 
 /**
  * When the shop is back on the water, for the public page's off-season line
@@ -378,28 +375,28 @@ export async function saveSeasonStartAction(formData: FormData) {
  */
 const reopensOnForm = z.object({ reopensOn: trimmedText() });
 
-export async function saveReopensOnAction(formData: FormData) {
-  const session = await requireStaffSession();
-  const settings = shopPath(session.user.shopSlug, "settings");
-  await settingsBlock(session);
-  const submitted = readForm(reopensOnForm, formData).reopensOn;
-  if (submitted !== "" && !isValidCalendarDate(submitted)) {
-    redirect(noticeUrl(settings, "reopens-invalid", { saved: "season" }));
-  }
-  const db = await getDb();
-  // A typo ("2062") would reach the public schedule; a date more than eighteen
-  // months past the shop's today is refused with the same notice. A past date
-  // is stored as typed and cleared by the nightly roll.
-  if (submitted !== "") {
-    const shop = await getShopById(db, session.user.shopId);
-    if (shop && reopensOnTooFar(submitted, calendarDateInTimezone(nowDate(), shop.timezone))) {
-      redirect(noticeUrl(settings, "reopens-invalid", { saved: "season" }));
+export const saveReopensOnAction = defineAction({
+  gate: [SETTINGS_GATE],
+  input: reopensOnForm,
+  async run({ db, shopId, shopSlug, path }, { reopensOn: submitted }) {
+    const settings = path("settings");
+    const extra = { saved: "season" };
+    if (submitted !== "" && !isValidCalendarDate(submitted)) {
+      return land(settings, "reopens-invalid", { extra });
     }
-  }
-  await setShopReopensOn(db, session.user.shopId, submitted === "" ? null : submitted);
-  revalidatePath(publicSchedulePath(session.user.shopSlug));
-  revalidateAndRedirect(settings, noticeUrl(settings, "reopens-saved", { saved: "season" }));
-}
+    // A typo ("2062") would reach the public schedule; a date more than eighteen
+    // months past the shop's today is refused with the same notice. A past date
+    // is stored as typed and cleared by the nightly roll.
+    if (submitted !== "") {
+      const shop = await getShopById(db, shopId);
+      if (shop && reopensOnTooFar(submitted, calendarDateInTimezone(nowDate(), shop.timezone))) {
+        return land(settings, "reopens-invalid", { extra });
+      }
+    }
+    await setShopReopensOn(db, shopId, submitted === "" ? null : submitted);
+    return land(settings, "reopens-saved", { extra, also: [publicSchedulePath(shopSlug)] });
+  },
+});
 
 /**
  * Address suggestions for the address card's type-ahead.

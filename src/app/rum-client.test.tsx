@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { rumConfig } from "./rum-client";
 
 /**
  * **The data plane a RUM event is posted to follows the region it is signed
@@ -38,5 +39,35 @@ describe("the RUM client's data plane", () => {
 
     const { config } = rum as unknown as { config: { endpoint: string } };
     expect(config.endpoint).toBe("https://dataplane.rum.eu-central-1.amazonaws.com");
+  });
+});
+
+describe("the RUM session sample rate", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  const configured = (rate?: string) => {
+    vi.stubEnv("NEXT_PUBLIC_RUM_APP_MONITOR_ID", "app");
+    vi.stubEnv("NEXT_PUBLIC_RUM_IDENTITY_POOL_ID", "pool");
+    vi.stubEnv("NEXT_PUBLIC_RUM_GUEST_ROLE_ARN", "arn:aws:iam::1:role/guest");
+    vi.stubEnv("NEXT_PUBLIC_RUM_REGION", "us-east-1");
+    if (rate !== undefined) vi.stubEnv("NEXT_PUBLIC_RUM_SAMPLE_RATE", rate);
+    return rumConfig()?.sessionSampleRate;
+  };
+
+  it("records one session in ten when nothing is set", () => {
+    expect(configured()).toBe(0.1);
+  });
+
+  it("honours an explicit rate in range, including 0 and 1", () => {
+    expect(configured("0.5")).toBe(0.5);
+    expect(configured("0")).toBe(0);
+    expect(configured("1")).toBe(1);
+  });
+
+  it("falls back to the default for anything unparseable or out of range", () => {
+    expect(configured("")).toBe(0.1);
+    expect(configured("lots")).toBe(0.1);
+    expect(configured("2")).toBe(0.1);
+    expect(configured("-1")).toBe(0.1);
   });
 });
