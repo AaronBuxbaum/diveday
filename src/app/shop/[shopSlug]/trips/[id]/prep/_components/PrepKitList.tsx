@@ -163,10 +163,14 @@ export function PrepKitList({
               </li>
             ))}
             {byItem.fits.map((row) => (
-              <li key={`fit:${row.fullName}`} data-kit-line="" className={KIT_PHONE_ROW_CLASS}>
+              <li
+                key={`fit:${row.diver.bookingId}`}
+                data-kit-line=""
+                className={KIT_PHONE_ROW_CLASS}
+              >
                 <p className="font-medium text-warning">{t("tripPrep.fitAtCheckIn")}</p>
                 <p>
-                  <span className="font-semibold">{row.fullName}</span>{" "}
+                  <span className="font-semibold">{row.diver.fullName}</span>{" "}
                   <span className="text-muted">{fitPieces(row.lines)}</span>
                 </p>
                 <p className="font-semibold tabular-nums">
@@ -210,13 +214,13 @@ export function PrepKitList({
               ))}
               {/* One row per diver fitted in person: their pieces, said once. */}
               {byItem.fits.map((row) => (
-                <tr key={`fit:${row.fullName}`}>
+                <tr key={`fit:${row.diver.bookingId}`}>
                   <Td className="font-medium">{fitPieces(row.lines)}</Td>
                   <Td>
                     <span className="font-medium text-warning">{t("tripPrep.fitAtCheckIn")}</span>
                   </Td>
                   <Td numeric>{row.lines.length}</Td>
-                  <Td muted>{row.fullName}</Td>
+                  <Td muted>{row.diver.fullName}</Td>
                 </tr>
               ))}
             </TBody>

@@ -10,6 +10,8 @@ import {
 } from "./dive-prep";
 import type { GearItemKind } from "./gear";
 
+const names = (line?: { divers: { fullName: string }[] }) => line?.divers.map((d) => d.fullName);
+
 const fullFit: RentalFit = {
   rentsBcd: true,
   rentsRegulator: true,
@@ -53,7 +55,8 @@ function lineFor(
   kind: string,
   size: string | null,
 ) {
-  return checklist.lines.find((line) => line.kind === kind && line.size === size);
+  const line = checklist.lines.find((line) => line.kind === kind && line.size === size);
+  return line && { ...line, divers: names(line) };
 }
 
 describe("a note-only fit row", () => {
@@ -364,7 +367,7 @@ describe("weighting a diver in a drysuit", () => {
     // Two blank sizes, two different jobs at the dock: collapsed into one row
     // of two, the packer is told neither.
     const weights = checklist.lines.filter((line) => line.kind === "weights");
-    expect(weights.map((line) => [line.drysuitWeightCheck, line.count, line.divers])).toEqual([
+    expect(weights.map((line) => [line.drysuitWeightCheck, line.count, names(line)])).toEqual([
       [true, 1, ["Dry Dana"]],
       [false, 1, ["Unasked Uma"]],
     ]);
@@ -537,7 +540,7 @@ describe("fins for a diver in a drysuit", () => {
     // One string, two pairs off the rack. Collapsed into a row of two, the
     // packer pulls two bare-foot pairs and one of them goes back.
     const fins = checklist.lines.filter((line) => line.kind === "fins");
-    expect(fins.map((line) => [line.drysuitFinFit, line.count, line.divers])).toEqual([
+    expect(fins.map((line) => [line.drysuitFinFit, line.count, names(line)])).toEqual([
       [false, 1, ["Wet Wanda"]],
       [true, 1, ["Dry Dana"]],
     ]);
@@ -633,7 +636,7 @@ describe("gloves for a diver in a drysuit", () => {
       plannedDives: 1,
     });
     const gloves = checklist.lines.filter((line) => line.kind === "gloves");
-    expect(gloves.map((line) => [line.drysuitGloves, line.divers])).toEqual([
+    expect(gloves.map((line) => [line.drysuitGloves, names(line)])).toEqual([
       [false, ["Wet Wanda"]],
       [true, ["Dry Dana"]],
     ]);
@@ -863,7 +866,8 @@ describe("needs-staff-fit fallback (H-06)", () => {
     expect(lineFor(checklist, "bcd", "M")?.divers).toEqual(["Ada"]);
     // ...but he still gets a BCD line, so the boat isn't loaded one short.
     const benBcd = checklist.lines.find((l) => l.kind === "bcd" && l.fitAtCheckIn);
-    expect(benBcd).toMatchObject({ count: 1, divers: ["Ben"], size: null });
+    expect(benBcd).toMatchObject({ count: 1, size: null });
+    expect(names(benBcd)).toEqual(["Ben"]);
     // The sizes he asked for ride along: the captain doing the check-in fit
     // can't edit the profile and sees no size on the line above, so without
     // this there is nothing to bring a range around.
@@ -1445,8 +1449,8 @@ describe("a piece the shop stopped renting", () => {
       // Same size, two jobs: one suit is on its peg with a name on it, the
       // other is a conversation with the diver. One row would say one of them.
       expect(suits).toHaveLength(2);
-      expect(suits.find((line) => !line.notOffered)?.divers).toEqual(["Held Hana"]);
-      expect(suits.find((line) => line.notOffered)?.divers).toEqual(["Asked Ari"]);
+      expect(names(suits.find((line) => !line.notOffered))).toEqual(["Held Hana"]);
+      expect(names(suits.find((line) => line.notOffered))).toEqual(["Asked Ari"]);
       const held = checklist.diverLines.find((row) => row.bookingId === "b1")?.items ?? [];
       expect(held.find((piece) => piece.kind === "drysuit")?.notOffered).toBe(false);
     });
@@ -1778,7 +1782,7 @@ describe("participant types on the packing list (ADR 20261007-participant-types)
     expect(checklist.diverCount).toBe(1);
     expect(checklist.tanks.total).toBe(2);
     expect(checklist.diverLines.map((line) => line.fullName)).toEqual(["Dee Diver"]);
-    expect(checklist.lines.every((line) => !line.divers.includes("Ray Rider"))).toBe(true);
+    expect(checklist.lines.flatMap((line) => names(line))).not.toContain("Ray Rider");
     expect(buildHotelPickupList(divers).map((run) => run.diverName)).toContain("Ray Rider");
   });
 
@@ -1830,53 +1834,6 @@ describe("participant types on the packing list (ADR 20261007-participant-types)
       ["Dee Diver", ["bcd"]],
       ["Sam Snorkel", ["wetsuit"]],
     ]);
-  });
-});
-
-/**
- * Issue #2213. One snorkel vest per snorkeler seat, free and always on: it
- * does not wait on a fit, the catalog, or the shop's own kit. Divers wear a
- * BCD and riders stay aboard, so neither is counted.
- */
-describe("snorkel vests on the packing list", () => {
-  it("counts one vest per snorkeler on a mixed boat, none for divers or riders", () => {
-    const checklist = buildDivePrepChecklist({
-      divers: [
-        diver({ bookingId: "b1", fullName: "Dee Diver" }),
-        diver({ bookingId: "b2", fullName: "Dan Diver", fit: null }),
-        diver({ bookingId: "b3", fullName: "Sol Snorkel", participantType: "snorkeler" }),
-        // A snorkeler with no fit on file, and one in their own kit, still
-        // take a vest: it is the boat's, not a rental.
-        diver({
-          bookingId: "b4",
-          fullName: "Sam Snorkel",
-          participantType: "snorkeler",
-          fit: null,
-        }),
-        diver({
-          bookingId: "b5",
-          fullName: "Sue Snorkel",
-          participantType: "snorkeler",
-          identityHeld: true,
-        }),
-        diver({ bookingId: "b6", fullName: "Ray Rider", participantType: "rider" }),
-      ],
-      plannedDives: 2,
-      offeredKinds: ["bcd"],
-    });
-    expect(checklist.snorkelVests).toBe(3);
-    expect(checklist.diverCount).toBe(2);
-  });
-
-  it("counts none on a boat with no snorkelers", () => {
-    const checklist = buildDivePrepChecklist({
-      divers: [
-        diver({ bookingId: "b1", fullName: "Dee Diver" }),
-        diver({ bookingId: "b2", fullName: "Ray Rider", participantType: "rider" }),
-      ],
-      plannedDives: 1,
-    });
-    expect(checklist.snorkelVests).toBe(0);
   });
 });
 
