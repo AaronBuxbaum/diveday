@@ -67,7 +67,7 @@ describe("e2eClaudeFixtureProvider", () => {
       }),
     );
     expect(mapping.value?.columns).toEqual([{ header: "Mobile No", field: "phone" }]);
-    const call = websiteReadingCall({ site: "reef.example", currency: "usd", courses: [] });
+    const call = websiteReadingCall({ site: "reef-divers.com", currency: "usd", courses: [] });
     if (!call) throw new Error("expected a call");
     expect((await callStructured(provider, call)).outcome).toBe("ok");
   });
