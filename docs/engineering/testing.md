@@ -233,7 +233,7 @@ run `E2E_WORKERS=1 VISUAL_TIMING_OUT=.agent-out/timing.json pnpm exec playwright
 byte-comparison script were deleted; unexplained visual differences remain unapproved.
 
 Byte equality is stricter than reg-suit would be, which ignores anti-aliasing (`enableAntialias` in
-`regconfig.json`). Two one-worker runs of shard 1 on 2026-10-24 differed in three of 201 PNGs. Two
+`regconfig.json`) and up to 20 stray pixels (`thresholdPixel`, ADR 20260729-reg-suit-visual-regression). Two one-worker runs of shard 1 on 2026-10-24 differed in three of 201 PNGs. Two
 were a timed toast caught at one width and gone at the next, now waited out before the capture
 (`blowout-cascade`, `staffing-shift-remove-disclosure`). The third was anti-aliasing on one map
 pin (`dive-sites-library-pin-selected`, a channel difference of at most 3). So a difference in a

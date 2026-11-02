@@ -40,7 +40,11 @@ function frontmatter(contents, file) {
 // 1. Every skill directory has a SKILL.md whose name matches and which describes its trigger.
 // A skill vendored under `.agents/skills/` is linked in, and `listDirs` follows the link, so a
 // linked skill's frontmatter is checked like a local one's.
-const skillDirs = await listDirs(ROOT, ".claude/skills");
+// `pnpm-*` skills are installed from dependencies by `pnpm install` and gitignored
+// (.agents/skills/.gitignore); they are not this repo's to name, lock or rename.
+const skillDirs = (await listDirs(ROOT, ".claude/skills")).filter(
+  (name) => !name.startsWith("pnpm-"),
+);
 const canonicalSkills = await listDirs(ROOT, ".agents/skills");
 const mirrors = {};
 for (const name of canonicalSkills) {
