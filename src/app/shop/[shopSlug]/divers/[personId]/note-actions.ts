@@ -66,7 +66,7 @@ export async function deleteDiverNoteAction(
       ? noticeUrl(
           `${base}#notes`,
           "note-deleted",
-          undoParams({ undo: "diver-note", undoPerson: personId, noteBody: result.body }),
+          undoParams({ undo: "diver-note", undoPerson: personId, noteBody: result.body }) ?? {},
         )
       : backTo(base, "invalid", "notes"),
   );

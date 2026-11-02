@@ -28,7 +28,7 @@ export function OfferedUndo({
     <UndoToast
       message={undoMessage(offer, by, t)}
       action={undoAction.bind(null, shopSlug)}
-      fields={undoParams(offer)}
+      fields={{ ...offer }}
       pendingLabel={t("shared.undoToast.pendingLabel")}
       undoLabel={t("shared.undoToast.undo")}
       dismissLabel={t("shared.undoToast.dismiss")}

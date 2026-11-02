@@ -67,7 +67,7 @@ export function RestoreDiver({
           className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2"
         >
           {Object.entries(
-            undoParams({ undo: "diver-removal", undoPerson: personId, undoFrom: "record" }),
+            undoParams({ undo: "diver-removal", undoPerson: personId, undoFrom: "record" }) ?? {},
           ).map(([name, value]) => (
             <input key={name} type="hidden" name={name} value={value} />
           ))}

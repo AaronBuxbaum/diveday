@@ -14,6 +14,7 @@ import { restoreDiver } from "@/db/divers";
 import { restoreNitroxCertification } from "@/db/nitrox";
 import { addDiverNote } from "@/db/operations";
 import { restoreCertification, restoreSpecialtyCertification } from "@/db/readiness";
+import { cardOwner, isPersonErased } from "@/db/undo-subjects";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import type { UndoOfferOf } from "@/lib/undo";
@@ -30,12 +31,19 @@ export async function restoreDiverCard(
   shopSlug: string,
   offer: UndoOfferOf<"diver-card">,
 ): Promise<never> {
-  const { base, db, staff } = await requireDiverActionContext(
+  const { base, db, personId, staff } = await requireDiverActionContext(
     shopSlug,
     offer.undoPerson,
     "not-authorized-cards",
   );
-  const input = { shopId: staff.user.shopId, certificationId: offer.undoCard };
+  const shopId = staff.user.shopId;
+  // The offer is typed by whoever holds the URL: the card must be this
+  // record's own, and an erased diver's card stays archived.
+  const owned = (await cardOwner(db, shopId, offer.cardType, offer.undoCard)) === personId;
+  if (!owned || (await isPersonErased(db, shopId, personId))) {
+    revalidateAndRedirect(base, backTo(base, "card-restore-conflict", "cards"));
+  }
+  const input = { shopId, certificationId: offer.undoCard };
   const restored =
     offer.cardType === "level"
       ? await restoreCertification(db, input)
@@ -59,6 +67,10 @@ export async function restoreDiverNote(
     "not-authorized-notes",
     "notes",
   );
+  // An erased diver's note text never comes back, whatever a URL carries.
+  if (await isPersonErased(db, staff.user.shopId, personId)) {
+    revalidateAndRedirect(base, backTo(base, "invalid", "notes"));
+  }
   const restored = await addDiverNote(db, {
     shopId: staff.user.shopId,
     personId,

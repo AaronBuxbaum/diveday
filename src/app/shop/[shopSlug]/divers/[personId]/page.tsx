@@ -225,7 +225,11 @@ export default async function DiverDetailPage({
   // offers are drawn here.
   const offered = readUndoOffer(query);
   const undo =
-    offered && offered.undoPerson === personId && offered.undo !== "diver-removal" ? offered : null;
+    offered?.undoPerson === personId &&
+    ((offered.undo === "diver-card" && notice === "card-deleted") ||
+      (offered.undo === "diver-note" && notice === "note-deleted"))
+      ? offered
+      : null;
   const cardsStatus = undo?.undo === "diver-card" ? undefined : noticeForForm(diverNotice, "cards");
   const notesStatus = undo?.undo === "diver-note" ? undefined : noticeForForm(diverNotice, "notes");
   // **The record's one earned moment**, and the only accent ink this page may

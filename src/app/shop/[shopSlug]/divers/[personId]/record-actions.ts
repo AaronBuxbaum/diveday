@@ -123,7 +123,7 @@ export async function deletePersonAction(shopSlug: string, personId: string, _fo
       ? noticeUrl(
           roster,
           "deleted",
-          undoParams({ undo: "diver-removal", undoPerson: personId, undoFrom: "roster" }),
+          undoParams({ undo: "diver-removal", undoPerson: personId, undoFrom: "roster" }) ?? {},
         )
       : base,
   );

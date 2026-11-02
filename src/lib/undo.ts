@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isUuid } from "./uuid";
 
 /**
  * **Take-it-back is a property the action declares** (issue #2764).
@@ -31,14 +32,16 @@ export type UndoKind = (typeof UNDO_KINDS)[number];
 /** Where a diver's removal was undone from, so the answer lands on the same page. */
 export const UNDO_REMOVAL_FROM = ["record", "roster"] as const;
 
-const person = z.uuid();
+/** Any uuid the rest of the app accepts (`isUuid`), not only an RFC version zod's `z.uuid()` knows. */
+const id = () => z.string().refine(isUuid);
+const person = id();
 
 const UNDO_PAYLOADS = {
   /** A level, specialty or nitrox card archived from the record (`deleteCertificationAction`). */
   "diver-card": z.strictObject({
     undo: z.literal("diver-card"),
     undoPerson: person,
-    undoCard: z.uuid(),
+    undoCard: id(),
     cardType: z.enum(["level", "specialty", "nitrox"]),
   }),
   /** A staff note deleted from the record; restored by re-adding its text. */
@@ -71,11 +74,14 @@ export const UNDO_PARAMS = ["undo", "undoPerson", "undoCard", "cardType", "noteB
 
 /**
  * The offer as flat strings, for the landing's query and the toast's hidden
- * inputs. Parsed before it is spelled, so a payload the reader would refuse
- * is a throw at the action that made it rather than an Undo that bounces.
+ * inputs — or `undefined` when the reader would refuse it (an imported note
+ * longer than a typed one may be). Never a throw: this runs after the removal
+ * has committed, and a removal that cannot offer Undo still lands, on its
+ * plain notice, rather than on an error page.
  */
-export function undoParams(offer: UndoOffer): Record<string, string> {
-  return { ...undoOffer.parse(offer) };
+export function undoParams(offer: UndoOffer): Record<string, string> | undefined {
+  const parsed = undoOffer.safeParse(offer);
+  return parsed.success ? { ...parsed.data } : undefined;
 }
 
 /**

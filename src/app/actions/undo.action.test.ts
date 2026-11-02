@@ -1,10 +1,16 @@
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { createNitroxCertification } from "@/db/nitrox";
 import { addDiverNote, listDiverRecordNotes } from "@/db/operations";
 import { createCertification, createSpecialtyCertification } from "@/db/readiness";
-import { certifications, nitroxCertifications, people, specialtyCertifications } from "@/db/schema";
+import {
+  certifications,
+  internalNotes,
+  nitroxCertifications,
+  people,
+  specialtyCertifications,
+} from "@/db/schema";
 import { readUndoOffer } from "@/lib/undo";
 import { fileScopedShopContext } from "@/test/db";
 import {
@@ -187,6 +193,25 @@ describe("an Undo puts back exactly what was removed", () => {
     expect(notes.map((row) => row.note.body)).toEqual([body]);
   });
 
+  it("a note too long to offer back still deletes and lands, with no Undo rather than an error", async () => {
+    const { db, shop, personId } = await context();
+    // Imported notes carry no length bound; a typed one stops at 1,000.
+    const [note] = await db
+      .insert(internalNotes)
+      .values({ shopId: shop.id, personId, body: "x".repeat(1_001), createdByPersonId: personId })
+      .returning();
+    if (!note) throw new Error("note insert failed");
+
+    const landed = await redirectedTo(() =>
+      deleteDiverNoteAction(shop.slug, personId, form({ noteId: note.id })),
+    );
+
+    expect(landed).toContain("notice=note-deleted");
+    expect(
+      readUndoOffer(Object.fromEntries(new URL(landed, "https://dive.test").searchParams)),
+    ).toBeNull();
+  });
+
   it("a removed diver: back on the roster, the toast's Undo landing on the roster", async () => {
     const { db, shop, personId } = await context();
     const [before] = await db.select().from(people).where(eq(people.id, personId));
@@ -290,33 +315,70 @@ describe("an Undo is an endpoint, so every field of it is refused when it is wro
     expect(after?.deletedAt).not.toBeNull();
   });
 
-  it("does not resurrect a card another shop archived", async () => {
+  it("refuses a card offer that names one diver's record and another diver's card", async () => {
     const { db, shop, personId } = await context();
+    const [other] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Other Otto", email: "otto@example.com" })
+      .returning();
+    if (!other) throw new Error("failed to insert a diver");
     const card = await createCertification(db, {
       shopId: shop.id,
-      personId,
+      personId: other.id,
       agency: "padi",
       level: "open_water",
       identifier: "UNDO-T-1",
     });
     if (!card) throw new Error("card insert failed");
     await redirectedTo(() =>
+      deleteCertificationAction(shop.slug, other.id, form({ certificationId: card.id })),
+    );
+
+    const landed = await undo(shop.slug, {
+      undo: "diver-card",
+      undoPerson: personId,
+      undoCard: card.id,
+      cardType: "level",
+    });
+
+    expect(landed).toContain("notice=card-restore-conflict");
+    expect((await rowOf(db, certifications, card.id))?.deletedAt).not.toBeNull();
+  });
+
+  it("never brings an erased diver's card or note text back", async () => {
+    const { db, shop, personId } = await context();
+    const card = await createCertification(db, {
+      shopId: shop.id,
+      personId,
+      agency: "padi",
+      level: "open_water",
+      identifier: "UNDO-E-1",
+    });
+    if (!card) throw new Error("card insert failed");
+    await redirectedTo(() =>
       deleteCertificationAction(shop.slug, personId, form({ certificationId: card.id })),
     );
-    // The same card, archived, now belongs to a shop this staffer is not in.
-    const [other] = await db
-      .select({ id: people.shopId })
-      .from(people)
-      .where(and(eq(people.id, personId), eq(people.shopId, shop.id)));
-    expect(other?.id).toBe(shop.id);
-    signIn({ id: "33333333-3333-4333-8333-333333333333", slug: shop.slug }, personId);
+    const erasedAt = new Date();
+    await db
+      .update(people)
+      .set({ deletedAt: erasedAt, anonymizedAt: erasedAt })
+      .where(eq(people.id, personId));
 
-    await expect(
-      undoAction(
-        shop.slug,
-        form({ undo: "diver-card", undoPerson: personId, undoCard: card.id, cardType: "level" }),
-      ),
-    ).rejects.toThrow();
+    const card_ = await undo(shop.slug, {
+      undo: "diver-card",
+      undoPerson: personId,
+      undoCard: card.id,
+      cardType: "level",
+    });
+    const note = await undo(shop.slug, {
+      undo: "diver-note",
+      undoPerson: personId,
+      noteBody: "Text a URL carried after the erasure.",
+    });
+
+    expect(card_).toContain("notice=card-restore-conflict");
+    expect(note).toContain("notice=invalid");
     expect((await rowOf(db, certifications, card.id))?.deletedAt).not.toBeNull();
+    expect(await listDiverRecordNotes(db, shop.id, personId)).toEqual([]);
   });
 });
