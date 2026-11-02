@@ -192,7 +192,13 @@ async function SignInForm({ searchParams }: { searchParams: Promise<SignInSearch
         {error && !secondFactorRequired ? (
           <SignInStatus>
             <FormStatus tone="danger" className="justify-center">
-              {t(restart ? "account.signIn.restart" : "account.signIn.error")}
+              {t(
+                restart
+                  ? "account.signIn.restart"
+                  : error === "demo"
+                    ? "account.signIn.demoUnavailable"
+                    : "account.signIn.error",
+              )}
             </FormStatus>
           </SignInStatus>
         ) : null}

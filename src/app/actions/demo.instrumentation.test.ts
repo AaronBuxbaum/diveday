@@ -235,7 +235,7 @@ describe("enterDemoAction instrumentation", () => {
     vi.mocked(checkRateLimit).mockResolvedValue({ allowed: false } as never);
 
     expect(await enterDemo(demoForm({ role: "owner", source: "pricing" }))).toBe(
-      "/sign-in?error=1",
+      "/sign-in?error=demo",
     );
     expect(trackEvent).not.toHaveBeenCalled();
     expect(sendNotification).not.toHaveBeenCalled();

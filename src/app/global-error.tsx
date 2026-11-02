@@ -8,8 +8,12 @@ import { LogoMark } from "@/components/Logo";
 import { buttonClass } from "@/components/ui/button";
 import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
+import { isStaleDeployError } from "@/lib/stale-deploy-error";
 import { fontVariables } from "./_fonts/fonts";
 import "./globals.css";
+
+const RELOADED_KEY = "diveday:stale-deploy-reloaded";
+const RELOAD_LOOP_WINDOW_MS = 60_000;
 
 /**
  * Replaces the entire root layout when it crashes (Next convention — it must
@@ -29,9 +33,24 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  // A tab older than the last deploy crashes on its first button press, and
+  // `reset()` re-renders the same stale script. Load the page again instead,
+  // once a minute: a second crash straight after is a real one and stays on screen.
+  const stale = isStaleDeployError(error);
   useEffect(() => {
-    import("@sentry/nextjs").then(({ captureException }) => captureException(error));
-  }, [error]);
+    if (!stale) {
+      import("@sentry/nextjs").then(({ captureException }) => captureException(error));
+      return;
+    }
+    try {
+      const last = Number(window.sessionStorage.getItem(RELOADED_KEY));
+      if (Date.now() - last < RELOAD_LOOP_WINDOW_MS) return;
+      window.sessionStorage.setItem(RELOADED_KEY, String(Date.now()));
+    } catch {
+      return;
+    }
+    window.location.reload();
+  }, [error, stale]);
 
   return (
     <html lang="en" className={`${fontVariables} h-full antialiased`}>
@@ -47,7 +66,11 @@ export default function GlobalError({
           </p>
         </div>
         <div className="flex flex-wrap justify-center gap-3">
-          <button type="button" onClick={() => reset()} className={buttonClass()}>
+          <button
+            type="button"
+            onClick={() => (stale ? window.location.reload() : reset())}
+            className={buttonClass()}
+          >
             Try again
           </button>
           <a href={`mailto:${SUPPORT_EMAIL}`} className={buttonClass({ variant: "outline" })}>

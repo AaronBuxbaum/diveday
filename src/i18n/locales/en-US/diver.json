@@ -3367,6 +3367,7 @@
       "invalidCode": "That code didn’t work. Try a current code or a recovery code.",
       "verify": "Verify",
       "restart": "Your sign-in expired. Enter your email and password again.",
+      "demoUnavailable": "The demo didn’t open. You may have tried it a few times this hour. Give it a little while and try again.",
       "rateLimit": "Too many attempts. Wait a moment before trying again."
     },
     "onboard": {

@@ -3367,6 +3367,7 @@
       "invalidCode": "Ese código no funcionó. Prueba con un código actual o uno de recuperación.",
       "verify": "Verificar",
       "restart": "Tu inicio de sesión venció. Vuelve a ingresar tu correo y contraseña.",
+      "demoUnavailable": "La demo no se abrió. Quizá la probaste varias veces en esta hora. Espera un poco y vuelve a intentar.",
       "rateLimit": "Demasiados intentos. Espera un momento antes de volver a intentar."
     },
     "onboard": {
