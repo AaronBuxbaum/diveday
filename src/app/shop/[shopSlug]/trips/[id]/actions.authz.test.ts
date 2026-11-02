@@ -155,12 +155,8 @@ function signIn(shop: { id: string; slug: string }, personId: string) {
         )}`,
       );
     }
-    return {
-      session,
-      db: surface.db,
-      shop: surface.shop,
-      clock: shopClock(surface.shop),
-    };
+    const { db, shop: row } = surface;
+    return { session, db, shop: row, clock: shopClock(row) };
   });
 }
 
