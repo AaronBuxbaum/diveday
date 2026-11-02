@@ -1,6 +1,7 @@
-import { readdir, readFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
+import { pageRoutes } from "./source-tree.mjs";
 
 /**
  * Every dynamic route segment that names a database row -- `[id]`, `[tripId]`,
@@ -55,22 +56,6 @@ const NON_UUID_SEGMENTS = new Map();
 /** `[id]`, `[tripId]`, `[personId]` -- but not `[slug]`, `[token]`, `[shopSlug]`. */
 const ID_SEGMENT = /^\[(id|[a-z][a-zA-Z]*Id)\]$/;
 
-async function walk(relativeDirectory) {
-  let entries;
-  try {
-    entries = await readdir(path.join(ROOT, relativeDirectory), { withFileTypes: true });
-  } catch {
-    return [];
-  }
-  const files = [];
-  for (const entry of entries) {
-    const relativePath = path.join(relativeDirectory, entry.name);
-    if (entry.isDirectory()) files.push(...(await walk(relativePath)));
-    else if (entry.name === "page.tsx") files.push(relativePath);
-  }
-  return files;
-}
-
 /**
  * Type positions, which wear the same `name: value` shape as a destructuring
  * rename. `params: Promise<{ shopSlug: string; id: string }>` would otherwise
@@ -94,8 +79,8 @@ function localNamesFor(contents, param) {
 
 const violations = [];
 
-for (const file of await walk(APP_ROOT)) {
-  const segments = file.split(path.sep).filter((segment) => ID_SEGMENT.test(segment));
+for (const { page: file, segments: routeSegments } of await pageRoutes(ROOT, APP_ROOT)) {
+  const segments = routeSegments.filter((segment) => ID_SEGMENT.test(segment));
   if (segments.length === 0) continue;
 
   const contents = await readFile(path.join(ROOT, file), "utf8");

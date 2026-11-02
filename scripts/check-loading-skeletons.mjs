@@ -1,8 +1,8 @@
-import { readdir, readFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
-import { filesUnder } from "./files-under.mjs";
+import { pageRoutes } from "./source-tree.mjs";
 
 /**
  * Every `page.tsx` under `src/app` ships a sibling `loading.tsx`, and where
@@ -78,12 +78,8 @@ export function containerWidth(source) {
   return match ? match[1] : null;
 }
 
-const listDirectory = (relative) => readdir(path.join(ROOT, relative), { withFileTypes: true });
-
 async function main() {
-  const files = await filesUnder(guardedRoot, listDirectory);
-  const fileSet = new Set(files);
-  const pages = files.filter((file) => path.basename(file) === "page.tsx").sort();
+  const pages = await pageRoutes(ROOT, guardedRoot);
 
   const missing = [];
   const mismatched = [];
@@ -92,11 +88,9 @@ async function main() {
   let delegated = 0;
   let unconstrained = 0;
 
-  for (const page of pages) {
-    const directory = path.dirname(page);
-    const routeKey = path.relative(path.join(ROOT, guardedRoot), path.join(ROOT, directory)) || ".";
+  for (const { page, directory, route: routeKey, has } of pages) {
     const loading = path.join(directory, "loading.tsx");
-    const hasLoading = fileSet.has(loading);
+    const hasLoading = has("loading.tsx");
     const exemptReason = Object.hasOwn(SKELETON_EXEMPT, routeKey)
       ? SKELETON_EXEMPT[routeKey]
       : null;
