@@ -134,6 +134,46 @@ export const REVIEWS = [
   },
 ];
 
+/**
+ * Screens a safety reader works from, where a page captured empty proves nothing (issue #3650): the
+ * departure log, the manifest, readiness, waiver and medical screens. A change to one names, under
+ * "## Seen filled in", the filled state it was seen in, or why it has none. Tests, copy bundles and
+ * the PWA manifest are not screens.
+ */
+const SEEN_FILLED_SCREENS = [
+  /^src\/app\/.*\/trips\/\[id\]\/(log|manifest)\//,
+  /^src\/app\/.*(readiness|waiver|medical)/,
+];
+
+/** The changed screens that need a "Seen filled in" answer. */
+export function seenFilledScreens(files) {
+  return files.filter((file) => {
+    if (!file.startsWith("src/app/") || NOT_SURFACES.some((re) => re.test(file))) return false;
+    if (/\.(test|spec)\.tsx?$/.test(file) || /(^|\/)(e2e|__snapshots__)\//.test(file)) return false;
+    if (!/\.tsx$/.test(file) || /-copy\.tsx$/.test(file)) return false;
+    const lower = file.toLowerCase();
+    return SEEN_FILLED_SCREENS.some((re) => re.test(lower));
+  });
+}
+
+/** The body's "Seen filled in" section, HTML comments removed; null when there is none. */
+export function seenFilledSection(body) {
+  let text = String(body ?? "").replace(/\r\n/g, "\n");
+  for (let before = ""; before !== text; ) {
+    before = text;
+    text = text.replace(/<!--[\s\S]*?-->/g, "");
+  }
+  const match = text.match(/^##\s+Seen filled in[^\n]*\n([\s\S]*?)(?=^##\s|(?![\s\S]))/im);
+  return match ? match[1] : null;
+}
+
+/** An answer says something: not empty, not "n/a", "none", "yes" or "no" alone. */
+export function seenFilledAnswered(section) {
+  if (section === null) return false;
+  const text = stripTags(section).replace(/\s+/g, " ").trim();
+  return text.length >= 12 && !/^(n\/?a|none|yes|no|todo|tbd)\.?$/i.test(text);
+}
+
 /** For each reviewer, the changed paths that need it. Reviewers with none are left out. */
 export function reviewsNeeded(files) {
   const needed = [];
@@ -259,10 +299,18 @@ export function closesProblems({ body, claimed, head }) {
 
 /** Every problem with this body for this diff, as sentences. Empty means it passes. */
 export function bodyProblems({ body, files }) {
-  const needed = reviewsNeeded(files);
-  if (needed.length === 0) return [];
-  const section = reviewsSection(body);
   const problems = [];
+  const screens = seenFilledScreens(files);
+  if (screens.length > 0 && !seenFilledAnswered(seenFilledSection(body))) {
+    const shown = screens.slice(0, 5).join(", ");
+    const more = screens.length > 5 ? ` and ${screens.length - 5} more` : "";
+    problems.push(
+      `This pull request changes a safety screen (${shown}${more}) and its "## Seen filled in" section says nothing. Name the filled state you saw it in (a seeded departure with a roll call, a snapshot, a signed waiver, a medical flag) and the capture, or write why it has none: "no filled state because <reason>". A screen captured only empty proves nothing (.agents/skills/e2e-and-visual/captures.md).`,
+    );
+  }
+  const needed = reviewsNeeded(files);
+  if (needed.length === 0) return problems;
+  const section = reviewsSection(body);
   for (const review of needed) {
     const answered = review.framings
       ? framedReviewsAnswered(section, review.agent, review.framings)

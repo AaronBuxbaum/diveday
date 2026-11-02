@@ -57,6 +57,23 @@ export const ALERTS = {
     prompt:
       "The nightly one-day simulation (`.github/workflows/simulate-day.yml`, which runs `pnpm simulate:day --no-build` after `pnpm e2e:build`) is red on main. Read the newest failed run linked in this issue's body and comments: download its `simulation` artifact and read `day.md` and the last screenshot, then `simulation-test-results` for Playwright's trace. Read `scripts/simulate-day/day.spec.ts` and `docs/engineering/testing.md` first. Decide whether the stopped state is a product regression (fix it, starting with a failing regression test) or an intended change the spec missed (update the spec's wait to the new role or heading, never a longer timeout). Done is `pnpm e2e:build && pnpm simulate:day --no-build` completing locally, plus `pnpm lint`, `pnpm typecheck` and `pnpm check:repo`. Close this issue in the PR that lands the fix.",
   },
+  "public-schedule-canary": {
+    title: "Fix the hourly public schedule canary, which draws no trip",
+    kind: "risk",
+    effort: "S",
+    touches: [
+      ".github/workflows/public-schedule-canary.yml",
+      "scripts/public-schedule-canary.mjs",
+      "docs/engineering/incident-response-runbook.md",
+    ],
+    noticed:
+      "The hourly `Public schedule canary` workflow failed on main. It loads the demo shop's public schedule (the pilot shop's, once CANARY_SHOP_SLUG names it) in a browser and fails when the page links no departure, says \"No trips on the books yet\", or does not answer 200. While it is red a diver opening the shop's schedule may be looking at an empty shell and nothing else would have told us. Each red hour after this one adds a comment with its link; the first green hour closes this issue.",
+    why: "It was found by the scheduled run, not by a change anyone was making. The cause is the deployment (down or serving an empty shell), the demo's clock-anchored board having aged out (the demo-refresh cron missed), or the schedule's markup changing so the canary no longer finds a departure link; the run log says which.",
+    proposed:
+      "Read the failed step's one-line reason. If the site is up and empty, run the demo refresh by hand as the incident runbook's table says and look at why it was missed. If the page draws trips and the canary does not see them, fix `drawnTripIds` with a failing test first. Do not loosen the check to make the hour green.",
+    prompt:
+      "The hourly public schedule canary (`.github/workflows/public-schedule-canary.yml`, which runs `node scripts/public-schedule-canary.mjs`) is red on main. Read the newest failed run linked in this issue's body and comments and the reason it printed, then `scripts/public-schedule-canary.mjs`, its test, and the Uptime monitoring and demo-schedule rows of `docs/engineering/incident-response-runbook.md`. If the live page is empty, restore it as the runbook says and file why the demo refresh missed. If the page draws trips the canary does not link-match, fix the matcher with a failing test first. Done is a manual run of the workflow going green, plus `pnpm lint` and `pnpm check:repo`. Close this issue in the PR that lands the fix.",
+  },
   "durations-refresh": {
     title: "Fix the weekly durations refresh, which is red on main",
     kind: "risk",

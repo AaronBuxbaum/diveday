@@ -140,10 +140,13 @@ and says what it found and when. Point a shop at it rather than answering "is it
 and read it yourself before diagnosing: it separates "the app is gone" from "the app is up and the
 database is not" in one line.
 
-**Still uncovered:** the second target below. A health check cannot render a page, so nothing yet
-catches a 200 that draws an empty shell. That needs a browser canary against a real shop's public
-schedule, which needs a pilot shop's slug — see AWS-1 in
-[aws-migration-dossier.md](../architecture/aws-migration-dossier.md).
+**The empty shell.** A health check cannot render a page, so `.github/workflows/public-schedule-canary.yml`
+does: every hour it loads the demo shop's public schedule (`https://dive.day/s/blue-mantis`) in a
+browser and fails when no departure is linked, the page says "No trips on the books yet", or it
+does not answer 200. A red hour on `main` opens one `ci-red` issue and the first green hour closes
+it. When a pilot shop exists, set the repository variable `CANARY_SHOP_SLUG` to its slug (and
+`CANARY_BASE_URL` if it is not `https://dive.day`); nothing else changes. What it cannot see is a
+page that draws one stale trip, or the pilot shop's own schedule while the variable names the demo.
 
 Two targets, deliberately different in kind:
 
@@ -259,7 +262,7 @@ down once will let you down again.
 | A shop's integration stopped receiving events | Sentry Cron Monitor `diveday-integrations`. A **missed** check-in means `/api/cron/integrations` was never called, so the outbox is not being drained at all and nothing retries; an **error** check-in means the drain ran and threw, and `cron_integrations.scan_failed` in the log drain has the pass. A delivery that exhausted its eight attempts is dead-lettered in `integration_deliveries` rather than lost |
 | Reminders or recaps didn't send | Reminders: Sentry Cron Monitor `diveday-daily-tick`; recaps: `diveday-recaps`. A **missed** check-in means the respective endpoint was never called (cron entry, `CRON_SECRET`, platform); an **error** check-in means it ran and its scan threw. The recap scan is hourly and logs `cron_recaps.scan_failed`; the daily tick's per-scan Sentry issue carries a `cron_scan` tag naming which |
 | A repeating trip stopped putting new dates on the board | Sentry Cron Monitor `diveday-trip-series-roll`: a **missed** check-in means `/api/cron/trip-series` was never called, so every open-ended run's far edge has stopped advancing (it takes ~4 months to become visible to a diver). An **error** check-in means some series could not be rolled — the pass logs `cron_trip_series.roll_complete` with `seriesFailed`, and the usual cause is a run whose every instance was deleted or whose course was archived. Staff can always re-open one from its trip page's "Start repeating again" |
-| The demo shop's schedule is empty ("No trips on the books yet" on `/s/blue-mantis`) | Sentry Cron Monitor `diveday-demo-refresh`: a **missed** check-in means `/api/cron/demo-refresh` was never called, so the canonical demo's clock-anchored board has aged out from under its one-time seed — which is what the homepage's "See a diver's booking page" link opens (ADR 20260812-demo-schedule-keeper). An **error** check-in means the restore itself failed; it runs in one transaction, so the demo is intact and the next tick re-attempts it. The pass logs `cron_demo_refresh.pass_complete` with the `runwayDays` it found — re-running the route by hand restores immediately |
+| The demo shop's schedule is empty ("No trips on the books yet" on `/s/blue-mantis`) | The hourly public schedule canary (`public-schedule-canary.yml`) opens a `ci-red` issue; Sentry Cron Monitor `diveday-demo-refresh`: a **missed** check-in means `/api/cron/demo-refresh` was never called, so the canonical demo's clock-anchored board has aged out from under its one-time seed — which is what the homepage's "See a diver's booking page" link opens (ADR 20260812-demo-schedule-keeper). An **error** check-in means the restore itself failed; it runs in one transaction, so the demo is intact and the next tick re-attempts it. The pass logs `cron_demo_refresh.pass_complete` with the `runwayDays` it found — re-running the route by hand restores immediately |
 | One scan is failing every day but others are fine | By design since the per-scan isolation landed: `runScan` catches, captures to Sentry with the scan name, and lets the rest run. Find the issue tagged with that `cron_scan` value; the tick answers 500 with `failedScans` in the summary log |
 | Errors appeared right after a deploy | [deploy-and-migrations-runbook.md](deploy-and-migrations-runbook.md) — most likely a contracting migration, or a build that failed after `pnpm db:migrate` already ran |
 | Instant Rollback didn't help | The damage is in data, not code. [backup-and-restore-runbook.md](backup-and-restore-runbook.md) §1 |
