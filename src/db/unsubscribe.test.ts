@@ -28,6 +28,7 @@ async function fixture() {
     shopId: shop.id,
     fullName: "Nora Quinn",
     email: "nora-unsub@example.com",
+    origin: "counter",
   });
   const joined = await askAnytime(db, {
     shopId: shop.id,

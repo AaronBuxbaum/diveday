@@ -438,10 +438,10 @@ export async function retryShopPromoCode(
  * Delete a code that never went live — `pending` (the Stripe call never
  * finished) or `failed` (it finished and lost). Neither status ever carries a
  * Stripe promotion-code id (`getRedeemableShopPromo` requires one to redeem
- * anything), so neither can have a redemption row referencing it — a plain
+ * anything), so neither can have a completed checkout referencing it — a plain
  * delete is safe and leaves nothing orphaned. `active`/`disabled` codes are
  * switched off instead (`setShopPromoEnabled`), never deleted, so their
- * redemption history always keeps a code row to point at.
+ * redemption history (completed checkouts) always keeps a code row to point at.
  */
 export async function deleteShopPromoCode(
   db: AppDb,

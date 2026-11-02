@@ -121,7 +121,7 @@ export async function optOutPersonFromCourtesyEmailByToken(
   await db
     .update(people)
     .set({ courtesyEmailOptOutAt: input.now ?? nowDate() })
-    .where(eq(people.id, context.personId));
+    .where(and(eq(people.id, context.personId), isNull(people.courtesyEmailOptOutAt)));
   return context;
 }
 
