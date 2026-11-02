@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { stripeResponse } from "@/lib/payments/__fixtures__/stripe-response";
 import { connectProviderFromEnvironment, stripeConnectCallbackUrl } from "./connect";
 
 /** The `stripe_api.request_threw` lines a case wrote, parsed. */
@@ -44,10 +45,7 @@ describe("stripe connect provider", () => {
   });
 
   it("exchanges an OAuth code for a connected account id", async () => {
-    const fetchImpl = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ stripe_user_id: "acct_123" }),
-    });
+    const fetchImpl = vi.fn().mockResolvedValue(stripeResponse({ stripe_user_id: "acct_123" }));
     const provider = providerWith(configuredEnv, fetchImpl);
     const result = await provider.exchangeCode("code-abc", "https://shop.example/cb");
     expect(result).toEqual({ status: "connected", stripeAccountId: "acct_123" });
@@ -58,10 +56,7 @@ describe("stripe connect provider", () => {
   });
 
   it("fails the exchange on a non-ok response or network error", async () => {
-    const notOk = providerWith(
-      configuredEnv,
-      vi.fn().mockResolvedValue({ ok: false, json: async () => ({}) }),
-    );
+    const notOk = providerWith(configuredEnv, vi.fn().mockResolvedValue(stripeResponse({}, 400)));
     expect(await notOk.exchangeCode("code", "https://x/cb")).toEqual({ status: "failed" });
 
     const warned = vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -76,14 +71,13 @@ describe("stripe connect provider", () => {
   });
 
   it("retrieves connected account status, defaulting currency to usd when Stripe omits it", async () => {
-    const fetchImpl = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
+    const fetchImpl = vi.fn().mockResolvedValue(
+      stripeResponse({
         charges_enabled: true,
         payouts_enabled: false,
         details_submitted: true,
       }),
-    });
+    );
     const provider = providerWith(configuredEnv, fetchImpl);
     const result = await provider.retrieveAccountStatus("acct_123");
     expect(result).toEqual({
@@ -99,15 +93,14 @@ describe("stripe connect provider", () => {
   });
 
   it("passes through a non-usd default currency (task 60)", async () => {
-    const fetchImpl = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
+    const fetchImpl = vi.fn().mockResolvedValue(
+      stripeResponse({
         charges_enabled: true,
         payouts_enabled: true,
         details_submitted: true,
         default_currency: "eur",
       }),
-    });
+    );
     const provider = providerWith(configuredEnv, fetchImpl);
     const result = await provider.retrieveAccountStatus("acct_eu");
     expect(result).toEqual({
@@ -122,7 +115,7 @@ describe("stripe connect provider", () => {
   });
 
   it("deauthorizes a connected account", async () => {
-    const fetchImpl = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
+    const fetchImpl = vi.fn().mockResolvedValue(stripeResponse({}));
     const provider = providerWith(configuredEnv, fetchImpl);
     expect(await provider.deauthorize("acct_123")).toEqual({ status: "ok" });
     const [url, init] = fetchImpl.mock.calls[0];

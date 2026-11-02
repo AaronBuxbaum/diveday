@@ -1,14 +1,14 @@
 import { z } from "zod";
-import { boundedStripeFetch } from "./stripe-fetch";
-import { connectedAccountHeaders } from "./stripe-headers";
+import { type StripeRequest, stripeAnsweredStatus, stripeRequest } from "./stripe-client";
 import { type StripeKeySource, secretKeyForCall } from "./stripe-keys";
 import { logStripeRequestThrew } from "./stripe-request-log";
 
 /**
  * Hosted Stripe Checkout for pay-at-booking on a shop's connected account.
  * Every call carries a `Stripe-Account` header so the shop, not the platform,
- * is the merchant of record — fetch-based, no SDK, same pattern as
- * ./invoicing.ts (docs ADR 20260721-checkout-at-booking). Payment truth only
+ * is the merchant of record, through the SDK's request path in
+ * ./stripe-client.ts (docs ADR 20260721-checkout-at-booking, ADR
+ * 20261102-stripe-sdk-adapters). Payment truth only
  * ever comes from Stripe's own responses/webhooks, never from a return URL.
  */
 
@@ -215,9 +215,17 @@ function toSnapshot(body: z.infer<typeof sessionResponseSchema>): CheckoutSessio
 
 export function stripeCheckoutProvider(
   config: StripeKeySource,
-  unboundedFetch: Fetch,
+  fetchImpl: Fetch,
 ): CheckoutProvider {
-  const fetchImpl = boundedStripeFetch(unboundedFetch);
+  /** One request on the shop's connected account, with the key chosen for it. */
+  async function onAccount(
+    stripeAccountId: string,
+    request: Omit<StripeRequest, "stripeAccount">,
+  ): Promise<unknown> {
+    const secretKey = await secretKeyForCall(config, stripeAccountId);
+    return stripeRequest(secretKey, fetchImpl, { ...request, stripeAccount: stripeAccountId });
+  }
+
   return {
     async createCheckoutSession(request) {
       if (request.lineItems.length === 0) return { status: "failed" };
@@ -252,44 +260,38 @@ export function stripeCheckoutProvider(
         } else if (request.promotionCode) {
           form.set("discounts[0][promotion_code]", request.promotionCode);
         }
-        const response = await fetchImpl("https://api.stripe.com/v1/checkout/sessions", {
-          method: "POST",
-          headers: {
-            ...connectedAccountHeaders(
-              await secretKeyForCall(config, request.stripeAccountId),
-              request.stripeAccountId,
-            ),
-            "Idempotency-Key": request.idempotencyKey,
-          },
-          body: form.toString(),
-        });
-        if (!response.ok) return { status: "failed" };
-        const body = sessionResponseSchema.safeParse(await response.json());
+        const body = sessionResponseSchema.safeParse(
+          await onAccount(request.stripeAccountId, {
+            method: "POST",
+            path: "/v1/checkout/sessions",
+            params: form,
+            idempotencyKey: request.idempotencyKey,
+          }),
+        );
         if (!body.success) return { status: "failed" };
         return { status: "created", ...toSnapshot(body.data) };
       } catch (error) {
-        logStripeRequestThrew("create_checkout_session", error);
+        if (stripeAnsweredStatus(error) === null) {
+          logStripeRequestThrew("create_checkout_session", error);
+        }
         return { status: "failed" };
       }
     },
 
     async retrieveCheckoutSession(stripeAccountId, stripeSessionId) {
       try {
-        const response = await fetchImpl(
-          `https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(stripeSessionId)}`,
-          {
-            headers: connectedAccountHeaders(
-              await secretKeyForCall(config, stripeAccountId),
-              stripeAccountId,
-            ),
-          },
+        const body = sessionResponseSchema.safeParse(
+          await onAccount(stripeAccountId, {
+            method: "GET",
+            path: `/v1/checkout/sessions/${encodeURIComponent(stripeSessionId)}`,
+          }),
         );
-        if (!response.ok) return { status: "failed" };
-        const body = sessionResponseSchema.safeParse(await response.json());
         if (!body.success) return { status: "failed" };
         return { status: "ok", session: toSnapshot(body.data) };
       } catch (error) {
-        logStripeRequestThrew("retrieve_checkout_session", error);
+        if (stripeAnsweredStatus(error) === null) {
+          logStripeRequestThrew("retrieve_checkout_session", error);
+        }
         return { status: "failed" };
       }
     },
@@ -302,19 +304,12 @@ export function stripeCheckoutProvider(
         // The session id alone can't be refunded — the money lives on its
         // payment intent, so expand it, then reverse that. Same shape as
         // invoicing.ts refundInvoice.
-        const sessionResponse = await fetchImpl(
-          `https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(
-            stripeSessionId,
-          )}?expand[]=payment_intent`,
-          {
-            headers: connectedAccountHeaders(
-              await secretKeyForCall(config, stripeAccountId),
-              stripeAccountId,
-            ),
-          },
+        const body = sessionResponseSchema.safeParse(
+          await onAccount(stripeAccountId, {
+            method: "GET",
+            path: `/v1/checkout/sessions/${encodeURIComponent(stripeSessionId)}?expand[]=payment_intent`,
+          }),
         );
-        if (!sessionResponse.ok) return { status: "failed" };
-        const body = sessionResponseSchema.safeParse(await sessionResponse.json());
         if (!body.success) return { status: "failed" };
         const paymentIntentId = paymentIntentIdOf(body.data);
         if (!paymentIntentId) return { status: "not_refundable" };
@@ -329,23 +324,21 @@ export function stripeCheckoutProvider(
         // apart — Stripe would replay the first refund and both local rows
         // would claim money that moved once (PAY-C1).
         refundSent = true;
-        const response = await fetchImpl("https://api.stripe.com/v1/refunds", {
-          method: "POST",
-          headers: {
-            ...connectedAccountHeaders(
-              await secretKeyForCall(config, stripeAccountId),
-              stripeAccountId,
-            ),
-            "Idempotency-Key": idempotencyKey,
-          },
-          body: form.toString(),
-        });
-        if (!response.ok) return { status: "failed" };
-        const refund = refundResponseSchema.safeParse(await response.json());
+        const refund = refundResponseSchema.safeParse(
+          await onAccount(stripeAccountId, {
+            method: "POST",
+            path: "/v1/refunds",
+            params: form,
+            idempotencyKey,
+          }),
+        );
         return refund.success
           ? { status: "refunded", refundId: refund.data.id }
           : { status: "failed" };
       } catch (error) {
+        // Stripe answered with an error status: nothing moved. No answer after
+        // the refund went out: something may have.
+        if (stripeAnsweredStatus(error) !== null) return { status: "failed" };
         logStripeRequestThrew("refund_checkout_session", error);
         return { status: refundSent ? "unanswered" : "failed" };
       }

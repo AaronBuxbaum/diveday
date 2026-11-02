@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { ERASURE_FAILURE_DETAIL } from "./erasure-failure";
-import { boundedStripeFetch } from "./stripe-fetch";
+import { stripeAnsweredStatus, stripeErrorTokens, stripeRequest } from "./stripe-client";
 import { type StripeKeySource, secretKeyForCall } from "./stripe-keys";
 
 /**
@@ -8,7 +8,7 @@ import { type StripeKeySource, secretKeyForCall } from "./stripe-keys";
  * of diver erasure (ADR 20260803-processor-erasure-obligations). Every call
  * carries a `Stripe-Account` header so the delete lands in the shop's own
  * account, not the platform's (docs ADR 20260719-stripe-connect-orders).
- * Fetch-based, no SDK — same pattern as ./invoicing.ts and ./connect.ts.
+ * Through the SDK's request path in ./stripe-client.ts, as ./invoicing.ts is.
  *
  * `DELETE /v1/customers/{id}` removes the customer's sensitive data (card
  * details and payment methods) and cancels any active subscriptions. It does
@@ -62,74 +62,56 @@ const deletedResponseSchema = z.object({
   deleted: z.literal(true),
 });
 
-/**
- * Stripe's error envelope. Only `code` and `type` are read: both come from
- * Stripe's fixed vocabulary (`resource_missing`, `invalid_request_error`).
- * `message` is free text that can quote the object or input Stripe refused, so
- * it is never parsed at all (issue #2334).
- */
-const errorResponseSchema = z.object({
-  error: z.object({ code: z.string().optional(), type: z.string().optional() }).optional(),
-});
-
 /** A Stripe code or type is a short snake_case token; anything else is dropped. */
 const STRIPE_ERROR_TOKEN = /^[a-z0-9_]{1,64}$/;
 
 /**
  * A short, non-identifying reason for the ledger's `last_error`: the HTTP
  * status, plus Stripe's error code (or, without one, its error type) when that
- * is a plain token. Never Stripe's `message`, which this column must not hold.
+ * is a plain token. Never Stripe's `message`, which this column must not hold
+ * (issue #2334).
  */
-async function failureFrom(response: Response): Promise<{ status: "failed"; error: string }> {
-  let detail = `HTTP ${response.status}`;
-  try {
-    const body = errorResponseSchema.safeParse(await response.json());
-    const token = body.success ? (body.data.error?.code ?? body.data.error?.type) : undefined;
-    if (token && STRIPE_ERROR_TOKEN.test(token)) detail = `${detail}: ${token}`;
-  } catch {
-    // A non-JSON body (a gateway's HTML error page) leaves the status alone.
-  }
+function failureFrom(status: number, error: unknown): { status: "failed"; error: string } {
+  const tokens = stripeErrorTokens(error);
+  const token = tokens.code ?? tokens.type;
+  const detail =
+    token && STRIPE_ERROR_TOKEN.test(token) ? `HTTP ${status}: ${token}` : `HTTP ${status}`;
   return { status: "failed", error: detail };
 }
 
 export function stripeCustomerProvider(
   config: StripeKeySource,
-  unboundedFetch: Fetch,
+  fetchImpl: Fetch,
 ): CustomerProvider {
-  const fetchImpl = boundedStripeFetch(unboundedFetch);
   return {
     async deleteCustomer(stripeAccountId, stripeCustomerId, idempotencyKey) {
+      let answer: unknown;
       try {
-        const response = await fetchImpl(
-          `https://api.stripe.com/v1/customers/${encodeURIComponent(stripeCustomerId)}`,
-          {
-            method: "DELETE",
-            headers: {
-              Authorization: `Bearer ${await secretKeyForCall(config, stripeAccountId)}`,
-              "Stripe-Account": stripeAccountId,
-              "Idempotency-Key": idempotencyKey,
-            },
-          },
-        );
+        answer = await stripeRequest(await secretKeyForCall(config, stripeAccountId), fetchImpl, {
+          method: "DELETE",
+          path: `/v1/customers/${encodeURIComponent(stripeCustomerId)}`,
+          stripeAccount: stripeAccountId,
+          idempotencyKey,
+        });
+      } catch (error) {
+        const status = stripeAnsweredStatus(error);
         // Already gone. The end state the caller wants holds, so this is not a
         // failure to retry forever — it is what a replayed delete looks like.
-        if (response.status === 404) return { status: "already_deleted" };
-        if (!response.ok) return await failureFrom(response);
-        // Stripe answers `deleted: true` and nothing else counts. A 2xx that
-        // does not say so — `deleted: false`, the field absent, a body that is
-        // not the deleted-object envelope at all — leaves the obligation owed
-        // and visible, because calling it deleted would be a lie in a
-        // compliance ledger. Failing here costs a retry; failing open costs an
-        // attestation that a diver's data is gone from Stripe when it is not.
-        const body = deletedResponseSchema.safeParse(await response.json());
-        return body.success
-          ? { status: "deleted" }
-          : { status: "failed", error: ERASURE_FAILURE_DETAIL.notConfirmed };
-      } catch {
+        if (status === 404) return { status: "already_deleted" };
+        if (status !== null) return failureFrom(status, error);
         // Never the thrown text: a network error's message can carry a
         // request fragment, and this lands in a ledger column (issue #2239).
         return { status: "failed", error: ERASURE_FAILURE_DETAIL.unanswered };
       }
+      // Stripe answers `deleted: true` and nothing else counts. A 2xx that
+      // does not say so — `deleted: false`, the field absent, a body that is
+      // not the deleted-object envelope at all — leaves the obligation owed
+      // and visible, because calling it deleted would be a lie in a
+      // compliance ledger. Failing here costs a retry; failing open costs an
+      // attestation that a diver's data is gone from Stripe when it is not.
+      return deletedResponseSchema.safeParse(answer).success
+        ? { status: "deleted" }
+        : { status: "failed", error: ERASURE_FAILURE_DETAIL.notConfirmed };
     },
   };
 }

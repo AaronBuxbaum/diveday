@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-07-27
+- **Amended by:** [20261102-stripe-sdk-adapters](20261102-stripe-sdk-adapters.md) — the coupon and promotion code calls go through the official SDK now, not a bare `fetch`.
 
 ## Context
 

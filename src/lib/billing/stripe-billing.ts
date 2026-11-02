@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
-import { boundedStripeFetch } from "../payments/stripe-fetch";
+import { stripeAnsweredStatus, stripeErrorTokens, stripeRequest } from "../payments/stripe-client";
 import { isTodaysPrice, type PlanTerms } from "./pricing-plans";
 
 /**
@@ -12,7 +12,8 @@ import { isTodaysPrice, type PlanTerms } from "./pricing-plans";
  * this one reads `BILLING_STRIPE_*`, Connect reads `STRIPE_*`, so a key
  * rotated, restricted or revoked on one side cannot reach the other, and a
  * reader can tell from the variable name which money a line of code touches.
- * Fetch-based like the Connect seam, no SDK.
+ * Through the same SDK request path as the Connect seam
+ * (`src/lib/payments/stripe-client.ts`, ADR 20261102-stripe-sdk-adapters).
  *
  * Every call answers a result code rather than throwing, so a page that asks
  * Stripe something on a bad network day says so beside the button instead of
@@ -300,18 +301,11 @@ const invoiceItemsResponse = z.object({
 });
 /** The statement tag on a final month's invoice item: its meter identifier. */
 const FINAL_MONTH_TAG = "diveday_statement";
-const stripeErrorResponse = z.object({
-  error: z.object({ code: z.string().optional() }).optional(),
-});
 
 /** Each configured price's product, read once per process: it never changes under a price id. */
 const productOfPrice = new Map<string, string>();
 
-export function stripeBillingProvider(
-  config: BillingConfig,
-  unboundedFetch: Fetch,
-): BillingProvider {
-  const fetchImpl = boundedStripeFetch(unboundedFetch);
+export function stripeBillingProvider(config: BillingConfig, fetchImpl: Fetch): BillingProvider {
   async function call(
     method: "GET" | "POST",
     path: string,
@@ -319,17 +313,12 @@ export function stripeBillingProvider(
     idempotencyKey?: string,
   ): Promise<unknown | null> {
     try {
-      const response = await fetchImpl(`https://api.stripe.com/v1/${path}`, {
+      return await stripeRequest(config.secretKey, fetchImpl, {
         method,
-        headers: {
-          Authorization: `Bearer ${config.secretKey}`,
-          ...(body ? { "Content-Type": "application/x-www-form-urlencoded" } : {}),
-          ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
-        },
-        ...(body ? { body: body.toString() } : {}),
+        path: `/v1/${path}`,
+        ...(body ? { params: body } : {}),
+        ...(idempotencyKey ? { idempotencyKey } : {}),
       });
-      if (!response.ok) return null;
-      return await response.json();
     } catch {
       return null;
     }
@@ -465,17 +454,14 @@ export function stripeBillingProvider(
         timestamp: String(Math.floor(timestamp.getTime() / 1000)),
       });
       try {
-        const response = await fetchImpl("https://api.stripe.com/v1/billing/meter_events", {
+        await stripeRequest(config.secretKey, fetchImpl, {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${config.secretKey}`,
-            "Content-Type": "application/x-www-form-urlencoded",
-            "Idempotency-Key": identifier,
-          },
-          body: body.toString(),
+          path: "/v1/billing/meter_events",
+          params: body,
+          idempotencyKey: identifier,
         });
-        if (response.ok) return { status: "ok", value: "reported" };
-        const answer = stripeErrorResponse.safeParse(await response.json().catch(() => null));
+        return { status: "ok", value: "reported" };
+      } catch (error) {
         // Stripe already holds an event with this identifier: an earlier run
         // reported it and lost the answer before stamping the statement.
         // `duplicate_meter_event` is the one duplicate code Stripe documents
@@ -483,11 +469,10 @@ export function stripeBillingProvider(
         // asynchronously and documents none, so the close does not rely on
         // it: past the identifier's 24 hours it asks the meter first
         // (`meterValueReported`).
-        return answer.success && answer.data.error?.code === "duplicate_meter_event"
+        return stripeAnsweredStatus(error) !== null &&
+          stripeErrorTokens(error).code === "duplicate_meter_event"
           ? { status: "ok", value: "already_reported" }
           : { status: "failed" };
-      } catch {
-        return { status: "failed" };
       }
     },
 

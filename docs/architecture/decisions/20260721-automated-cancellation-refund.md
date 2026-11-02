@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-07-21
+- **Amended by:** [20261102-stripe-sdk-adapters](20261102-stripe-sdk-adapters.md) — the refund goes through the official SDK now, not a bare `fetch`; its outcomes are unchanged.
 
 ## Context
 
