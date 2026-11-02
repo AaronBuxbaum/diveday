@@ -308,8 +308,8 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Settled total
 - Setup link
 - Shared photo
+- Shop clock
 - Shop currency
-- Shop day scan
 - Shop question
 - Shore alert contact
 - Sign once

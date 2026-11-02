@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate, nowMs } from "@/lib/clock";
+import { shopClock } from "@/lib/shop-clock";
 import { sortStationRows } from "@/lib/today";
 import { shopDayBounds } from "@/lib/zoned";
 import { fileScopedShopContext } from "@/test/db";
@@ -46,7 +47,7 @@ describe("unclosed roll call (DOM-H3), the boat out", () => {
       });
       await boardAtDeparture(db, { shopId: shop.id, tripId: trip.id, staffId, bookingIds });
 
-      const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+      const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
       expect(rollCallRows(work, trip.id)).toEqual([]);
     });
 
@@ -73,7 +74,7 @@ describe("unclosed roll call (DOM-H3), the boat out", () => {
         });
       }
 
-      const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+      const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
       const row = rollCallRow(work, trip.id, "after_dive_uncounted");
       expect(row?.urgency).toBe("imminent");
       expect(row?.detail).toContain("Boat is out");
@@ -106,7 +107,7 @@ describe("unclosed roll call (DOM-H3), the boat out", () => {
         checkpoint: "after_dive_1",
       });
 
-      const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+      const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
       expect(rollCallRow(work, trip.id, "missing_diver")?.urgency).toBe("imminent");
     });
 
@@ -156,7 +157,7 @@ describe("unclosed roll call (DOM-H3), the boat out", () => {
         const readiness = await listTripReadiness(db, shop.id, trip.id);
         expect(readiness.every((row) => row.readiness.status === "blocked")).toBe(true);
 
-        const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+        const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
         const rows = rowsFor(work, trip.id);
         expect(rows.map((row) => row.kind)).toEqual(["blocked_aboard"]);
         expect(rows[0]?.id).toContain(boarded);
@@ -169,8 +170,8 @@ describe("unclosed roll call (DOM-H3), the boat out", () => {
       it("counts the diver aboard in the nav badge until the boat is home", async () => {
         const { db, shop } = ctx;
         const { trip, staffId } = await sailedNinetyMinutesAgo();
-        const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
-        const badge = await countBlockedDiversNextBoatDay(db, shop.id, shop.timezone);
+        const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
+        const badge = await countBlockedDiversNextBoatDay(db, shop.id, shopClock(shop));
         // The one boarded diver, not the one left ashore on a boat that has gone.
         expect(work.blockedAboard).toBeGreaterThanOrEqual(1);
         expect(badge.aboard).toBe(work.blockedAboard);
@@ -183,7 +184,7 @@ describe("unclosed roll call (DOM-H3), the boat out", () => {
           recordedByPersonId: staffId,
           recordedAt: nowDate(),
         });
-        const home = await countBlockedDiversNextBoatDay(db, shop.id, shop.timezone);
+        const home = await countBlockedDiversNextBoatDay(db, shop.id, shopClock(shop));
         expect(home.aboard).toBe(badge.aboard - 1);
       });
 
@@ -199,7 +200,7 @@ describe("unclosed roll call (DOM-H3), the boat out", () => {
         });
         expect(recorded.ok).toBe(true);
 
-        const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+        const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
         expect(rowsFor(work, trip.id)).toEqual([]);
         expect(work.outTripIds).not.toContain(trip.id);
       });
@@ -214,7 +215,7 @@ describe("unclosed roll call (DOM-H3), the boat out", () => {
         });
         await boardAtDeparture(db, { shopId: shop.id, tripId: trip.id, staffId, bookingIds });
 
-        const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+        const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
         expect(rowsFor(work, trip.id)).toEqual([]);
         expect(work.outTripIds).not.toContain(trip.id);
       });
@@ -247,13 +248,13 @@ describe("unclosed roll call (DOM-H3), the boat out", () => {
         expect(recorded.ok).toBe(true);
 
         const afterMidnight = new Date(midnight + 5 * 60 * 1000);
-        const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone, afterMidnight);
+        const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop, afterMidnight));
         expect(rowsFor(work, trip.id).map((row) => row.kind)).toEqual(["blocked_aboard"]);
         expect(work.outTripIds).toContain(trip.id);
 
         // Both readers let go together once the hour past its return is over.
         const later = new Date(endsAt + HOUR);
-        const home = await getTodayWork(db, shop.id, shop.slug, shop.timezone, later);
+        const home = await getTodayWork(db, shop.id, shop.slug, shopClock(shop, later));
         expect(rowsFor(home, trip.id)).toEqual([]);
         expect(home.outTripIds).not.toContain(trip.id);
       });
@@ -289,7 +290,7 @@ describe("unclosed roll call (DOM-H3), the boat out", () => {
         expect((await tap(new Date(dayTwo - 7 * HOUR))).ok).toBe(true);
 
         const dayTwoMorning = new Date(dayTwo + 10 * HOUR);
-        const out = await getTodayWork(db, shop.id, shop.slug, shop.timezone, dayTwoMorning);
+        const out = await getTodayWork(db, shop.id, shop.slug, shopClock(shop, dayTwoMorning));
         expect(out.outTripIds).toContain(course.id);
 
         expect((await tap(new Date(dayTwo + 15 * HOUR))).ok).toBe(true);
@@ -297,8 +298,7 @@ describe("unclosed roll call (DOM-H3), the boat out", () => {
           db,
           shop.id,
           shop.slug,
-          shop.timezone,
-          new Date(dayTwo + 15.5 * HOUR),
+          shopClock(shop, new Date(dayTwo + 15.5 * HOUR)),
         );
         expect(home.outTripIds).not.toContain(course.id);
       });
@@ -318,7 +318,7 @@ describe("unclosed roll call (DOM-H3), the boat out", () => {
           checkpoint: "after_dive_1",
         });
 
-        const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+        const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
         expect(rowsFor(work, trip.id)).toEqual([]);
         expect(work.outTripIds).toContain(trip.id);
       });
@@ -353,7 +353,7 @@ describe("unclosed roll call (DOM-H3), the boat out", () => {
           checkpoint: "after_dive_1",
         });
 
-        const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+        const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
         expect(rowsFor(work, fixture.trip.id).map((row) => row.kind)).toEqual(["blocked_aboard"]);
       });
 
@@ -414,12 +414,12 @@ describe("unclosed roll call (DOM-H3), the boat out", () => {
           const readiness = await listTripReadiness(db, shop.id, trip.id);
           expect(readiness.every((row) => row.readiness.status === "blocked")).toBe(true);
 
-          const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+          const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
           const rows = rowsFor(work, trip.id);
           expect(rows.map((row) => row.kind)).toEqual(["blocked_aboard"]);
           expect(rows[0]?.id).toContain(pickedUp);
           expect(work.outTripIds).toContain(trip.id);
-          const badge = await countBlockedDiversNextBoatDay(db, shop.id, shop.timezone);
+          const badge = await countBlockedDiversNextBoatDay(db, shop.id, shopClock(shop));
           expect(work.blockedAboard).toBeGreaterThanOrEqual(1);
           expect(badge.aboard).toBe(work.blockedAboard);
         });
@@ -428,7 +428,7 @@ describe("unclosed roll call (DOM-H3), the boat out", () => {
           const { db, shop } = ctx;
           const { trip, pickedUp } = await twoSiteDay("not_boarded");
 
-          const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+          const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
           const rows = rowsFor(work, trip.id);
           expect(rows.map((row) => row.kind)).toEqual(["blocked_aboard"]);
           expect(rows[0]?.id).toContain(pickedUp);
@@ -442,7 +442,7 @@ describe("unclosed roll call (DOM-H3), the boat out", () => {
             .set({ status: "cancelled" })
             .where(eq(tripsTable.id, trip.id));
 
-          const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+          const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
           expect(rowsFor(work, trip.id).map((row) => row.kind)).toEqual(["blocked_aboard"]);
           expect(work.outTripIds).toContain(trip.id);
         });
@@ -459,7 +459,7 @@ describe("unclosed roll call (DOM-H3), the boat out", () => {
             occurredAt: new Date(nowMs() + 1000),
           });
 
-          const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+          const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
           expect(rowsFor(work, trip.id)).toEqual([]);
         });
 
@@ -471,7 +471,7 @@ describe("unclosed roll call (DOM-H3), the boat out", () => {
             .set({ status: "cancelled" })
             .where(eq(bookingsTable.id, pickedUp));
 
-          const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+          const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
           expect(rowsFor(work, trip.id)).toEqual([]);
         });
 
@@ -495,7 +495,7 @@ describe("unclosed roll call (DOM-H3), the boat out", () => {
             checkpoint: "after_dive_1",
           });
 
-          const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+          const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
           expect(rowsFor(work, fixture.trip.id).map((row) => row.kind)).not.toContain(
             "blocked_aboard",
           );
@@ -507,7 +507,7 @@ describe("unclosed roll call (DOM-H3), the boat out", () => {
           const { db, shop } = ctx;
           const { trip, pickedUp } = await twoSiteDay("none", -3.5);
 
-          const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+          const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
           expect(work.departures.some((departure) => departure.tripId === trip.id)).toBe(true);
           const kinds = rowsFor(work, trip.id)
             .filter((row) => row.id.includes(pickedUp))
@@ -524,7 +524,7 @@ describe("unclosed roll call (DOM-H3), the boat out", () => {
         const { trip, boarded } = await sailedNinetyMinutesAgo();
         await db.update(tripsTable).set({ status: "cancelled" }).where(eq(tripsTable.id, trip.id));
 
-        const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+        const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
         const rows = rowsFor(work, trip.id);
         expect(rows.map((row) => row.kind)).toEqual(["blocked_aboard"]);
         expect(rows[0]?.id).toContain(boarded);
@@ -540,7 +540,7 @@ describe("unclosed roll call (DOM-H3), the boat out", () => {
         });
         await db.update(tripsTable).set({ status: "cancelled" }).where(eq(tripsTable.id, trip.id));
 
-        const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+        const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
         expect(rowsFor(work, trip.id)).toEqual([]);
         expect(work.outTripIds).not.toContain(trip.id);
       });
@@ -584,7 +584,7 @@ describe("unclosed roll call (DOM-H3), the boat out", () => {
         });
       }
 
-      const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+      const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
       // Nobody was ever unaccounted for in the water, so no after-dive row.
       expect(afterDiveRow(work, trip.id)).toBeUndefined();
       // The unfinished dock count is still stated — quietly, in its own words,
@@ -615,7 +615,7 @@ describe("unclosed roll call (DOM-H3), the boat out", () => {
         bookingIds: bookingIds.slice(0, 2),
       });
 
-      const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+      const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
       const rows = rollCallRows(work, trip.id);
       expect(rows.map((row) => row.kind).sort()).toEqual([
         "roll_call_departure_open",
@@ -632,7 +632,7 @@ describe("unclosed roll call (DOM-H3), the boat out", () => {
       // words of a person who may be in the water.
       const { trip } = await returnedTrip(db, shop.id, { endedHoursAgo: 2, divers: 3 });
 
-      const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+      const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
       const rows = rollCallRows(work, trip.id);
       expect(rows.map((row) => row.kind)).toEqual(["roll_call_not_started"]);
       const [row] = rows;
@@ -677,7 +677,7 @@ describe("unclosed roll call (DOM-H3), the boat out", () => {
         })),
       );
 
-      const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+      const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
       const [row] = rollCallRows(work, trip.id);
       expect(row?.kind).toBe("roll_call_missing_diver");
       expect(row?.detail).toMatch(/^1 of 3 people is not back aboard after dive 1\./);
@@ -693,7 +693,7 @@ describe("unclosed roll call (DOM-H3), the boat out", () => {
         .set({ participantType: "rider" })
         .where(eq(bookingsTable.id, riderSeat));
 
-      const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+      const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
       const [row] = rollCallRows(work, trip.id);
       expect(row?.detail).toBe("No roll call recorded for 2 people.");
     });
@@ -704,7 +704,7 @@ describe("unclosed roll call (DOM-H3), the boat out", () => {
       // month of missing dock counts would bury the rows that matter.
       const { trip } = await returnedTrip(db, shop.id, { endedHoursAgo: 24 * 5, divers: 3 });
 
-      const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+      const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
       expect(rollCallRows(work, trip.id)).toEqual([]);
     });
   });
@@ -752,7 +752,7 @@ describe("unclosed roll call (DOM-H3), the boat out", () => {
       });
       await boardAtDeparture(db, { shopId: shop.id, tripId: newest.id, staffId, bookingIds });
 
-      const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+      const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
       expect(rollCallRow(work, newest.id, "after_dive_uncounted")?.detail).toContain(
         "3 of 3 people",
       );
@@ -770,7 +770,7 @@ describe("unclosed roll call (DOM-H3), the boat out", () => {
         db,
         "00000000-0000-4000-8000-000000000000",
         "other-shop",
-        shop.timezone,
+        shopClock(shop),
       );
 
       expect(rollCallRows(otherWork, trip.id)).toEqual([]);
@@ -785,7 +785,7 @@ describe("unclosed roll call (DOM-H3), the boat out", () => {
       });
       await boardAtDeparture(db, { shopId: shop.id, tripId: trip.id, staffId, bookingIds });
 
-      const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+      const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
       const [first] = sortStationRows(work.actions);
 
       expect(first?.id).toBe(`roll-call:${trip.id}:after_dive_uncounted:after_dive_1`);
@@ -844,7 +844,7 @@ describe("a card review undone after the diver boarded", () => {
       new Date(trip.startsAt.getTime() + 5 * 60 * 1000),
     );
     const aboardRows = async () =>
-      (await getTodayWork(db, shop.id, shop.slug, shop.timezone)).actions.filter(
+      (await getTodayWork(db, shop.id, shop.slug, shopClock(shop))).actions.filter(
         (action) => action.departure?.tripId === trip.id && action.kind === "blocked_aboard",
       );
     // Cleared on the card: nothing to say about them aboard.

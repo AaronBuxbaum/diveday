@@ -44,6 +44,7 @@ import { loadTripSharedReads } from "@/db/trips-shared-reads";
 import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import { queryTimingLogger, withQueryStats } from "@/lib/observability/query-timing";
+import { shopClock } from "@/lib/shop-clock";
 import { seededShopContext } from "@/test/db";
 import { phaseCountingDb, report } from "@/test/render-phases";
 
@@ -128,8 +129,8 @@ describe("what a staff render sends", () => {
       const row = await getShopBySlug(db, shop.slug);
       if (!row) throw new Error("no shop");
       await Promise.all([
-        countBlockedDiversNextBoatDay(db, row.id, row.timezone, nowDate()),
-        todayNextDepartureTripId(db, row.id, row.timezone),
+        countBlockedDiversNextBoatDay(db, row.id, shopClock(row, nowDate())),
+        todayNextDepartureTripId(db, row.id, shopClock(row)),
         hasActiveCourses(db, row.id),
         countGearItems(db, row.id),
       ]);
@@ -147,8 +148,7 @@ describe("what a staff render sends", () => {
         db,
         shop.id,
         shop.slug,
-        shop.timezone,
-        now,
+        shopClock(shop, now),
         undefined,
         undefined,
         undefined,
@@ -215,8 +215,7 @@ describe("how many round trips a staff render waits for, one after another", () 
         db,
         shop.id,
         shop.slug,
-        shop.timezone,
-        now,
+        shopClock(shop, now),
         undefined,
         undefined,
         undefined,

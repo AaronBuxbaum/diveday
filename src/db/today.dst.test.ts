@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { nowDate } from "@/lib/clock";
+import { shopClock } from "@/lib/shop-clock";
 import { fileScopedShopContext } from "@/test/db";
 import type { AppDb } from "./client";
 import { getDayCloseout } from "./closeout";
@@ -100,7 +101,9 @@ describe("2026-11-01, the 25-hour day (fall back)", () => {
     const tonight = await departure(db, shop.id, "Late night dive", "2026-11-02T04:00:00.000Z");
     await departure(db, shop.id, "Next day owl", "2026-11-02T05:30:00.000Z");
 
-    expect(await todayNextDepartureTripId(db, shop.id, ZONE, nowDate())).toBe(tonight.id);
+    expect(
+      await todayNextDepartureTripId(db, shop.id, shopClock({ timezone: ZONE }, nowDate())),
+    ).toBe(tonight.id);
   });
 
   it("closes out the 1st, with the 23:00 boat on the sheet", async () => {
@@ -144,7 +147,9 @@ describe("2026-03-08, the 23-hour day (spring forward)", () => {
     const tonight = await departure(db, shop.id, "Late night dive", "2026-03-09T03:00:00.000Z");
     await departure(db, shop.id, "Next day owl", "2026-03-09T04:30:00.000Z");
 
-    expect(await todayNextDepartureTripId(db, shop.id, ZONE, nowDate())).toBe(tonight.id);
+    expect(
+      await todayNextDepartureTripId(db, shop.id, shopClock({ timezone: ZONE }, nowDate())),
+    ).toBe(tonight.id);
   });
 
   it("closes out the 8th", async () => {

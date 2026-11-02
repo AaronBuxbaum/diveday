@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { operationalWindow } from "@/lib/operational-window";
+import { shopClock } from "@/lib/shop-clock";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { fileScopedShopContext } from "@/test/db";
 import { blockedOnNextBoatDay, inHorizonReadiness } from "./blockers";
@@ -63,7 +64,7 @@ describe("in-horizon readiness (in-memory PGlite)", () => {
     const expected = blockedToday(await inHorizonReadiness(db, shop.id, NOW), shop.timezone);
     expect(expected).toBeGreaterThan(0);
 
-    const badge = await countBlockedDiversNextBoatDay(db, shop.id, shop.timezone, NOW);
+    const badge = await countBlockedDiversNextBoatDay(db, shop.id, shopClock(shop, NOW));
     expect(badge.day).toBe("today");
     expect(badge.onDay).toBe(expected);
     expect(badge.total).toBe(expected + badge.aboard);
@@ -71,7 +72,7 @@ describe("in-horizon readiness (in-memory PGlite)", () => {
 
   it("the badge drops when a departure's blockers are cleared", async () => {
     const { db, shop } = ctx;
-    const before = await countBlockedDiversNextBoatDay(db, shop.id, shop.timezone, NOW);
+    const before = await countBlockedDiversNextBoatDay(db, shop.id, shopClock(shop, NOW));
     const trips = await upcomingTripsWithCounts(db, shop.id, NOW);
     const target = trips[0];
     if (!target) throw new Error("expected an upcoming trip");
@@ -85,7 +86,7 @@ describe("in-horizon readiness (in-memory PGlite)", () => {
       requiresPayment: false,
     });
 
-    const after = await countBlockedDiversNextBoatDay(db, shop.id, shop.timezone, NOW);
+    const after = await countBlockedDiversNextBoatDay(db, shop.id, shopClock(shop, NOW));
     expect(after.onDay).toBeLessThanOrEqual(before.onDay);
     expect(after.onDay).toBe(
       blockedToday(await inHorizonReadiness(db, shop.id, NOW), shop.timezone),
