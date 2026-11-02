@@ -66,7 +66,7 @@ import {
   publicSchedulePath,
 } from "@/lib/public-routes";
 import { isLiveShopStaff } from "@/lib/session";
-import { PublicStaffPreviewBar } from "./PublicStaffPreviewBar";
+import { LazyPublicStaffPreviewBar } from "./LazyPublicStaffPreviewBar";
 import { everHadDepartureRead } from "./schedule-reads";
 
 /**
@@ -223,7 +223,7 @@ export async function PublicShopChrome({ params }: { params: Promise<{ shopSlug:
         />
       ) : null}
       {showStaffBar && shop ? (
-        <PublicStaffPreviewBar
+        <LazyPublicStaffPreviewBar
           shopSlug={shop.slug}
           words={{
             short: staffT("shared.publicPreview.divesSee"),
