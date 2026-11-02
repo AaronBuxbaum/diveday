@@ -1,195 +1,115 @@
+import PostalMime, { addressParser, type Email, type PostalMimeOptions } from "postal-mime";
+import { log } from "@/lib/log";
+
 /**
- * A minimal reading of a raw RFC 5322 message — enough to answer the four
- * questions the inbox asks of a reply (who sent it, what it answers, what it
- * says, what its subject was) and nothing else (ADR 20260907-two-way-inbox).
+ * What the inbox reads off a raw RFC 5322 reply: who sent it, what it answers,
+ * what it says, what its subject was, and how many files came with it (ADR
+ * 20260907-two-way-inbox).
  *
- * In-house rather than a parsing dependency, deliberately. A full MIME parser
- * is thousands of lines for attachments, nested alternatives and every
- * encoding ever shipped; what the shop reads is the `text/plain` part of a
- * diver's reply, and this handles that shape — including the multipart
- * wrapper every mail client puts around it and the base64 or quoted-printable
- * transfer encoding it arrives in — in a page. What it does not do is stated
- * rather than approximated: an HTML-only message is reduced to its text by
- * stripping tags, an attachment is counted and never decoded, and an encoding
- * this never learned falls back to the bytes as UTF-8.
+ * The MIME work — header unfolding, RFC 2047 words, base64 and quoted-printable,
+ * charsets, the multipart tree — is PostalMime's (ADR 20261102-postal-mime-inbound-reader).
+ * What stays here is the app's own policy, each piece stated rather than
+ * inherited from the library's defaults:
  *
- * Framework-free and pure: a string in, a record out.
+ * - **Never rejects.** A library refusal (a limit, a malformed tree) and a
+ *   message over {@link MAX_INBOUND_MESSAGE_BYTES} both come back as
+ *   {@link UNREADABLE}: no sender, no text, nothing to file. The route drops
+ *   that as `empty`, which is what an unreadable body always was here.
+ * - **One sender or none.** A second `From:` header, a second mailbox in one, or
+ *   a group yields `from: null`; which of two senders a provider's DMARC
+ *   verdict vouched for is not something to guess.
+ * - **No control character leaves a header.** `Message-ID` and `In-Reply-To`
+ *   go back out in a staff reply's own headers, so they are read raw (never
+ *   RFC 2047-decoded) and one carrying a control character is dropped, not
+ *   cleaned; the subject has them replaced with spaces.
+ * - **The text a person typed.** The inline `text/plain` parts, or the HTML
+ *   reduced by {@link htmlToText} when there are none, with the quoted history
+ *   cut.
+ * - **Files are counted.** A forwarded `message/rfc822` is one file, never
+ *   parsed inline into the reply's text.
+ *
+ * Framework-free: a string in, a record out.
  */
 
 export type ParsedInboundEmail = {
-  /** The raw `From` header, display name and all; `normalizeEmailAddress` reduces it. */
+  /** The one `From` mailbox's address, or null when there is not exactly one. */
   from: string | null;
-  /** Every address in `To`, raw. */
-  to: string[];
   subject: string | null;
   messageId: string | null;
   inReplyTo: string | null;
   /** The text a person typed, with the quoted history cut off. */
   text: string;
-  /** Attachments seen and not decoded. */
+  /** Attachments seen; their bytes are not kept. */
   attachmentCount: number;
 };
 
-type Headers = Map<string, string[]>;
+/**
+ * SES refuses messages over 40 MB, and a reply a person typed is a few KB.
+ * The cap bounds what one webhook call will pull through memory: the S3 read
+ * refuses past it by declared and by measured length
+ * (`src/lib/notifications/inbound-mail-store.ts`), and this refuses past it
+ * again before parsing, so the bound holds for any caller.
+ */
+export const MAX_INBOUND_MESSAGE_BYTES = 2 * 1024 * 1024;
 
-/** Split a message into unfolded headers and the raw body. */
-function splitHeaders(raw: string): { headers: Headers; body: string } {
-  // `\r\n?` and not `\r\n`: a **bare** CR is not a line terminator here, so
-  // normalising only CRLF lets one ride inside an unfolded header value and out
-  // again into an outbound `In-Reply-To`. Nothing downstream should have to
-  // strip a control character out of a header we parsed.
-  const normalized = raw.replace(/\r\n?/g, "\n");
-  const boundaryIndex = normalized.indexOf("\n\n");
-  const headerText = boundaryIndex === -1 ? normalized : normalized.slice(0, boundaryIndex);
-  const body = boundaryIndex === -1 ? "" : normalized.slice(boundaryIndex + 2);
-  const headers: Headers = new Map();
-  // Unfold: a line starting with whitespace continues the previous header.
-  const lines = headerText.split("\n");
-  let current: string | null = null;
-  for (const line of lines) {
-    if (/^[ \t]/.test(line) && current !== null) {
-      current = `${current} ${line.trim()}`;
-      continue;
-    }
-    if (current !== null) pushHeader(headers, current);
-    current = line;
-  }
-  if (current !== null) pushHeader(headers, current);
-  return { headers, body };
-}
-
-function pushHeader(headers: Headers, line: string) {
-  const colon = line.indexOf(":");
-  if (colon <= 0) return;
-  const name = line.slice(0, colon).trim().toLowerCase();
-  const value = line.slice(colon + 1).trim();
-  const list = headers.get(name) ?? [];
-  list.push(value);
-  headers.set(name, list);
-}
-
-function header(headers: Headers, name: string): string | null {
-  return headers.get(name)?.[0] ?? null;
-}
-
-/** `text/plain; charset="utf-8"` → `{ type: "text/plain", params: { charset: "utf-8" } }`. */
-function parseContentType(value: string | null): {
-  type: string;
-  params: Record<string, string>;
-} {
-  if (!value) return { type: "text/plain", params: {} };
-  const [type, ...rest] = value.split(";");
-  const params: Record<string, string> = {};
-  for (const part of rest) {
-    const eq = part.indexOf("=");
-    if (eq === -1) continue;
-    const key = part.slice(0, eq).trim().toLowerCase();
-    const raw = part.slice(eq + 1).trim();
-    params[key] = raw.startsWith('"') && raw.endsWith('"') ? raw.slice(1, -1) : raw;
-  }
-  return { type: (type ?? "").trim().toLowerCase(), params };
-}
+/** The refusal: nothing a route could file or attribute. */
+const UNREADABLE: ParsedInboundEmail = {
+  from: null,
+  subject: null,
+  messageId: null,
+  inReplyTo: null,
+  text: "",
+  attachmentCount: 0,
+};
 
 /**
- * RFC 2047 encoded words in a header: `=?UTF-8?B?...?=` and `=?UTF-8?Q?...?=`.
- *
- * Whitespace *between* two adjacent encoded words is not part of either — RFC
- * 2047 §6.2 says it is ignored, and clients rely on that to split a long
- * subject at a word boundary. So it is collapsed first, before anything is
- * decoded; doing it afterwards leaves the two decoded halves with a space
- * between them that the sender never wrote.
+ * The library's limits, set tighter than its defaults for a diver's reply under
+ * a 2 MiB cap. Exceeding one rejects the parse, which is {@link UNREADABLE}.
  */
-export function decodeEncodedWords(value: string): string {
-  return value
-    .replace(/\?=\s+=\?/g, "?==?")
-    .replace(
-      /=\?([^?]+)\?([bBqQ])\?([^?]*)\?=/g,
-      (_match, charset: string, kind: string, text: string) => {
-        const bytes =
-          kind.toUpperCase() === "B"
-            ? Buffer.from(text, "base64")
-            : Buffer.from(decodeQuotedPrintable(text.replace(/_/g, " ")), "latin1");
-        return decodeBytes(bytes, charset);
-      },
-    );
+const PARSER_OPTIONS: PostalMimeOptions = {
+  // A forwarded message is a file the shop can open, not more of the reply.
+  forceRfc822Attachments: true,
+  maxRfc822NestingDepth: 0,
+  // Real mail nests three or four deep (mixed › related › alternative).
+  maxNestingDepth: 16,
+  // A reply with a thousand parts is not a reply, and ten thousand empty ones
+  // fit in seventy kilobytes.
+  maxPartCount: 1000,
+  maxHeadersSize: 256 * 1024,
+  // The library's default, spelled out: no base64 string copy of each file.
+  attachmentEncoding: "arraybuffer",
+};
+
+// biome-ignore lint/suspicious/noControlCharactersInRegex: matching control characters is the point.
+const CONTROL_CHARACTER = /[\u0000-\u001f\u007f]/;
+// biome-ignore lint/suspicious/noControlCharactersInRegex: matching control characters is the point.
+const CONTROL_CHARACTERS = /[\u0000-\u001f\u007f]+/g;
+
+function rawHeaders(email: Email, key: string): string[] {
+  return email.headers.filter((header) => header.key === key).map((header) => header.value);
 }
 
-function decodeQuotedPrintable(text: string): string {
-  return text
-    .replace(/=\r?\n/g, "")
-    .replace(/=([0-9A-Fa-f]{2})/g, (_match, hex: string) =>
-      String.fromCharCode(Number.parseInt(hex, 16)),
-    );
+/** A header that goes back out in ours: its first value raw, or null if it carries a control character. */
+function threadingHeader(email: Email, key: string): string | null {
+  const value = rawHeaders(email, key)[0]?.trim();
+  if (!value || CONTROL_CHARACTER.test(value)) return null;
+  return value;
 }
 
-function decodeBytes(bytes: Buffer, charset: string | undefined): string {
-  const label = (charset ?? "utf-8").toLowerCase();
-  try {
-    return new TextDecoder(label).decode(bytes);
-  } catch {
-    return bytes.toString("utf8");
-  }
+/** The address of the one mailbox in the one `From` header. */
+function singleSender(email: Email): string | null {
+  const values = rawHeaders(email, "from");
+  if (values.length !== 1) return null;
+  const mailboxes = addressParser(values[0] ?? "");
+  const only = mailboxes.length === 1 ? mailboxes[0] : undefined;
+  if (!only || only.group !== undefined) return null;
+  const address = only.address.trim();
+  return address.length > 0 && !CONTROL_CHARACTER.test(address) ? address : null;
 }
 
-/** Decode one part's body by its transfer encoding and charset. */
-function decodeBody(body: string, encoding: string | null, charset: string | undefined): string {
-  const kind = (encoding ?? "7bit").trim().toLowerCase();
-  if (kind === "base64") {
-    return decodeBytes(Buffer.from(body.replace(/\s+/g, ""), "base64"), charset);
-  }
-  if (kind === "quoted-printable") {
-    return decodeBytes(Buffer.from(decodeQuotedPrintable(body), "latin1"), charset);
-  }
-  return decodeBytes(Buffer.from(body, "latin1"), charset);
-}
-
-type Part = { headers: Headers; body: string };
-
-function splitMultipart(body: string, boundary: string): Part[] {
-  const marker = `--${boundary}`;
-  const parts: Part[] = [];
-  const chunks = body.split(marker);
-  // chunks[0] is the preamble; the last chunk after `--` is the epilogue.
-  for (const chunk of chunks.slice(1)) {
-    if (chunk.startsWith("--")) break;
-    const trimmed = chunk.replace(/^\r?\n/, "").replace(/\r?\n$/, "");
-    parts.push(splitHeaders(trimmed));
-  }
-  return parts;
-}
-
-type Found = { text: string | null; html: string | null; attachments: number };
-
-/** Walk the MIME tree collecting the first text/plain, the first text/html, and the attachment count. */
-function collect(part: Part, found: Found, depth = 0): void {
-  if (depth > 8) return;
-  const { type, params } = parseContentType(header(part.headers, "content-type"));
-  const disposition = (header(part.headers, "content-disposition") ?? "").toLowerCase();
-  if (disposition.startsWith("attachment")) {
-    found.attachments += 1;
-    return;
-  }
-  if (type.startsWith("multipart/")) {
-    const boundary = params.boundary;
-    if (!boundary) return;
-    for (const child of splitMultipart(part.body, boundary)) collect(child, found, depth + 1);
-    return;
-  }
-  const encoding = header(part.headers, "content-transfer-encoding");
-  if (type === "text/plain") {
-    if (found.text === null) found.text = decodeBody(part.body, encoding, params.charset);
-    return;
-  }
-  if (type === "text/html") {
-    if (found.html === null) found.html = decodeBody(part.body, encoding, params.charset);
-    return;
-  }
-  if (type === "message/rfc822") {
-    found.attachments += 1;
-    return;
-  }
-  // Any other leaf (an inline image, a calendar invite, a vcard) is a file.
-  if (!type.startsWith("text/")) found.attachments += 1;
+function cleanSubject(subject: string | undefined): string | null {
+  if (!subject) return null;
+  return subject.replace(CONTROL_CHARACTERS, " ").trim() || null;
 }
 
 /**
@@ -318,24 +238,30 @@ export function stripQuotedReply(text: string): string {
   return kept.length > 0 ? kept : text.trim();
 }
 
-/** Read the whole message. Never throws: an unreadable body yields empty text. */
-export function parseInboundEmail(raw: string): ParsedInboundEmail {
-  const top = splitHeaders(raw);
-  const found: Found = { text: null, html: null, attachments: 0 };
-  collect(top, found);
-  const body = found.text ?? (found.html ? htmlToText(found.html) : "");
-  const to = (top.headers.get("to") ?? [])
-    .flatMap((value) => value.split(","))
-    .map((value) => decodeEncodedWords(value).trim())
-    .filter((value) => value.length > 0);
-  const subject = header(top.headers, "subject");
+/** Read the whole message. Never rejects: an unreadable one is {@link UNREADABLE}. */
+export async function parseInboundEmail(raw: string): Promise<ParsedInboundEmail> {
+  if (Buffer.byteLength(raw, "utf8") > MAX_INBOUND_MESSAGE_BYTES) {
+    log("email_inbound.unreadable", "warn", { reason: "too_large" });
+    return UNREADABLE;
+  }
+  let email: Email;
+  try {
+    email = await PostalMime.parse(raw, PARSER_OPTIONS);
+  } catch (error) {
+    // The library's error code only (`EMAXPARTCOUNT` and kin), never the message's words.
+    const code = (error as { code?: unknown } | null)?.code;
+    log("email_inbound.unreadable", "warn", {
+      reason: typeof code === "string" ? code : "parse_failed",
+    });
+    return UNREADABLE;
+  }
+  const body = email.text ?? (email.html ? htmlToText(email.html) : "");
   return {
-    from: decodeEncodedWords(header(top.headers, "from") ?? "") || null,
-    to,
-    subject: subject ? decodeEncodedWords(subject).trim() || null : null,
-    messageId: header(top.headers, "message-id"),
-    inReplyTo: header(top.headers, "in-reply-to"),
+    from: singleSender(email),
+    subject: cleanSubject(email.subject),
+    messageId: threadingHeader(email, "message-id"),
+    inReplyTo: threadingHeader(email, "in-reply-to"),
     text: stripQuotedReply(body),
-    attachmentCount: found.attachments,
+    attachmentCount: email.attachments.length,
   };
 }

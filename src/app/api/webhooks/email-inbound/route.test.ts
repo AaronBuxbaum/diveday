@@ -381,6 +381,52 @@ describe("email-inbound webhook — filing a reply", () => {
     expect(recordInboundMessage).not.toHaveBeenCalled();
   });
 
+  /**
+   * **DMARC vouches for one header address, so there has to be one.** A
+   * message with two `From:` headers puts the victim in one and the domain
+   * that passes DMARC in the other; which one SES evaluated is not ours to
+   * guess. Nor does a pass make the envelope's address authenticated: SES
+   * checked the header, and the attacker wrote the envelope.
+   */
+  it("never authenticates a sender DMARC passed when the header holds no single From", async () => {
+    vi.mocked(verifySnsMessage).mockResolvedValue(
+      verifiedNotification(
+        receivedMessage({ mail: { messageId: "ses-id-1", source: "priya@example.com" } }),
+      ),
+    );
+    read.mockResolvedValueOnce({
+      status: "ok",
+      message: [
+        "From: Priya <priya@example.com>",
+        "From: mallory@spoofer.example",
+        "Content-Type: text/plain",
+        "",
+        "Cancel my booking.",
+      ].join("\r\n"),
+    });
+    expect((await POST(webhookRequest("{}"))).status).toBe(200);
+    expect(recordInboundMessage).toHaveBeenCalledWith(
+      FAKE_DB,
+      expect.objectContaining({
+        fromAddress: "priya@example.com",
+        body: "Cancel my booking.",
+        senderAuthenticated: false,
+      }),
+    );
+    await runDeferred();
+    expect(pingDeskAfterHoursSafely).not.toHaveBeenCalled();
+  });
+
+  it("drops a message the reader refuses, even when DMARC passed", async () => {
+    vi.mocked(verifySnsMessage).mockResolvedValue(verifiedNotification(receivedMessage()));
+    read.mockResolvedValueOnce({
+      status: "ok",
+      message: `From: priya@example.com\r\nContent-Type: multipart/mixed; boundary=b\r\n\r\n${"--b\r\n\r\n".repeat(5_000)}--b--`,
+    });
+    expect((await POST(webhookRequest("{}"))).status).toBe(200);
+    expect(recordInboundMessage).not.toHaveBeenCalled();
+  });
+
   it("is unavailable when the bucket credentials are not configured", async () => {
     vi.mocked(inboundMailStoreFromEnvironment).mockReturnValue(null);
     vi.mocked(verifySnsMessage).mockResolvedValue(verifiedNotification(receivedMessage()));
