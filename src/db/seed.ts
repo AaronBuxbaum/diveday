@@ -133,7 +133,7 @@ import { seedBuddyPairs } from "./seed-buddy-teams";
 import { LEAD_INSTRUCTOR_NAME, OWNER_NAME, RELIEF_INSTRUCTOR_NAME, staffDefs } from "./seed-cast";
 import { seedCatalog } from "./seed-catalog";
 import { seedCertGates } from "./seed-cert-gates";
-import { DEMO_SHOP_TIMEZONE, demoTodayDepartureStart, demoTodayShifts } from "./seed-clock";
+import { DEMO_SHOP_TIMEZONE, dateAt, demoTodayDepartureStart, demoTodayShifts } from "./seed-clock";
 import { seedCounterBlockers } from "./seed-counter-blockers";
 import { seedCounterRental } from "./seed-counter-rental";
 import { seedCourseFormWording } from "./seed-course-form-wording";
@@ -528,6 +528,18 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
       description: "The big boat: camera table, warm freshwater showers and a ladder on each side.",
       callSign: "WDM2202",
       mmsi: "338055501",
+      workingChannel: "VHF 68",
+      // The big boat carries its papers (issue #3650), so the finished dawn departure's
+      // safety snapshot copies real boat data. Every date sits past its paper's horizon
+      // (`BOAT_PAPER_HORIZON_DAYS`: 90 days for the certificate and inspection, 60 for
+      // registration and insurance), so none raises an errand on Today or a manifest line.
+      // Mantis I carries none, as before. Fictional.
+      certifiedPassengers: DEMO_BOAT_CAPACITIES["Mantis II"],
+      certifiedTotalPersons: DEMO_BOAT_CAPACITIES["Mantis II"] + 3,
+      coiExpiresOn: dateAt(730),
+      inspectionDueOn: dateAt(240),
+      registrationExpiresOn: dateAt(300),
+      insuranceExpiresOn: dateAt(200),
     },
   ]);
 
@@ -797,6 +809,18 @@ export async function createDemoShop(
       description: "The big boat: camera table, warm freshwater showers and a ladder on each side.",
       callSign: "WDM2202",
       mmsi: "338055501",
+      workingChannel: "VHF 68",
+      // The big boat carries its papers (issue #3650), so the finished dawn departure's
+      // safety snapshot copies real boat data. Every date sits past its paper's horizon
+      // (`BOAT_PAPER_HORIZON_DAYS`: 90 days for the certificate and inspection, 60 for
+      // registration and insurance), so none raises an errand on Today or a manifest line.
+      // Mantis I carries none, as before. Fictional.
+      certifiedPassengers: DEMO_BOAT_CAPACITIES["Mantis II"],
+      certifiedTotalPersons: DEMO_BOAT_CAPACITIES["Mantis II"] + 3,
+      coiExpiresOn: dateAt(730),
+      inspectionDueOn: dateAt(240),
+      registrationExpiresOn: dateAt(300),
+      insuranceExpiresOn: dateAt(200),
     },
   ]);
 

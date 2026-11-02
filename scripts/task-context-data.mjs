@@ -1,7 +1,17 @@
 // Data for `pnpm task:context <area>`. Every path under `docs`, `code` and `tests` must exist —
 // `pnpm check:agents` enforces it.
 
+const GATE = "pnpm check:repo && pnpm lint && pnpm typecheck";
+const E2E_FALLBACK = "pnpm e2e <the spec for the flow you changed> --reporter=line";
+
 export const shared = {
+  /** Broad documents every area may need; the packet lists them once, to search by heading. */
+  reference: [
+    "docs/product/features/roadmap.md",
+    "docs/product/glossary.md",
+    "docs/design/principles.md",
+    "docs/architecture/overview.md",
+  ],
   avoid: ["pnpm-lock.yaml", "drizzle/", ".next/", "playwright-report/", "test-results/"],
   rules: [
     "Read tests before implementation when determining intended behavior.",
@@ -14,12 +24,7 @@ export const shared = {
 export const areas = {
   waivers: {
     goal: "Extend the waiver flow without weakening its immutable signed history or fail-closed medical referral states.",
-    docs: [
-      "docs/product/features/roadmap.md",
-      "docs/product/glossary.md",
-      "docs/design/principles.md",
-      "docs/architecture/overview.md",
-    ],
+    docs: [],
     code: [
       "src/db/schema/",
       "src/db/client.ts",
@@ -35,20 +40,11 @@ export const areas = {
       "Referral-triggering medical answers fail closed.",
       "Submission must be idempotent and authorized.",
     ],
-    validate: [
-      "pnpm test src/db/bookings.test.ts --reporter=dot",
-      "pnpm check:repo && pnpm lint && pnpm typecheck",
-      "pnpm e2e <the spec for the flow you changed> --reporter=line",
-    ],
+    validate: ["pnpm test src/db/bookings.test.ts --reporter=dot", GATE, E2E_FALLBACK],
   },
   certifications: {
     goal: "Build certification evidence and a fail-closed readiness result shared by staff, divers, and manifests.",
-    docs: [
-      "docs/product/features/roadmap.md",
-      "docs/product/glossary.md",
-      "docs/design/principles.md",
-      "docs/architecture/overview.md",
-    ],
+    docs: [],
     code: [
       "src/db/schema/",
       "src/db/readiness.ts",
@@ -65,18 +61,13 @@ export const areas = {
     ],
     validate: [
       "pnpm test src/lib/readiness.test.ts src/db/readiness.test.ts --reporter=dot",
-      "pnpm check:repo && pnpm lint && pnpm typecheck",
-      "pnpm e2e <the spec for the flow you changed> --reporter=line",
+      GATE,
+      E2E_FALLBACK,
     ],
   },
   "rental-fit": {
     goal: "Maintain rental fit and the derived per-trip prep list (tanks, kit, nitrox split).",
-    docs: [
-      "docs/product/features/roadmap.md",
-      "docs/product/glossary.md",
-      "docs/design/principles.md",
-      "docs/architecture/overview.md",
-    ],
+    docs: [],
     code: [
       "src/db/schema/",
       "src/db/rental-fit.ts",
@@ -93,17 +84,13 @@ export const areas = {
     ],
     validate: [
       "pnpm test src/lib/dive-prep.test.ts --reporter=dot",
-      "pnpm check:repo && pnpm lint && pnpm typecheck",
+      GATE,
       "pnpm e2e e2e/nitrox.spec.ts --reporter=line",
     ],
   },
   gear: {
     goal: "Extend the gear register: the shop's own fleet as tagged units, per-unit service clocks, and date-ranged reservations against bookings.",
-    docs: [
-      "docs/product/glossary.md",
-      "docs/architecture/decisions/20260815-minimal-gear-register.md",
-      "docs/design/principles.md",
-    ],
+    docs: ["docs/architecture/decisions/20260815-minimal-gear-register.md"],
     code: [
       "src/db/schema/",
       "src/db/gear.ts",
@@ -132,19 +119,13 @@ export const areas = {
     ],
     validate: [
       "pnpm test src/lib/gear.test.ts src/db/gear-items.test.ts src/db/gear-reservations.test.ts src/db/gear-reservations.postgres.test.ts --reporter=dot",
-      "pnpm check:repo && pnpm lint && pnpm typecheck",
+      GATE,
       "pnpm e2e e2e/gear.spec.ts --reporter=line",
     ],
   },
   manifests: {
     goal: "Extend manifests and roll call without weakening the shared fail-closed readiness result they display and act on.",
-    docs: [
-      "docs/product/features/roadmap.md",
-      "docs/product/glossary.md",
-      "docs/design/principles.md",
-      "docs/architecture/overview.md",
-      "docs/architecture/decisions/20260718-offline-manifest-snapshots.md",
-    ],
+    docs: ["docs/architecture/decisions/20260718-offline-manifest-snapshots.md"],
     code: [
       "src/db/schema/",
       "src/db/readiness.ts",
@@ -181,18 +162,13 @@ export const areas = {
     ],
     validate: [
       "pnpm test src/db/readiness.test.ts src/db/manifests.test.ts src/lib/manifests.test.ts src/lib/offline-manifests.test.ts src/db/buddy-teams.test.ts --reporter=dot",
-      "pnpm check:repo && pnpm lint && pnpm typecheck",
-      "pnpm e2e <the spec for the flow you changed> --reporter=line",
+      GATE,
+      E2E_FALLBACK,
     ],
   },
   nitrox: {
     goal: "Extend nitrox fill logging without weakening the verified-card gate or the derived, fail-closed MOD.",
-    docs: [
-      "docs/product/features/roadmap.md",
-      "docs/product/glossary.md",
-      "docs/product/human-decisions/README.md",
-      "docs/design/principles.md",
-    ],
+    docs: ["docs/product/human-decisions/README.md"],
     code: [
       // The gate, the mix validation, and the MOD derivation all live in
       // src/db/nitrox.ts — there is no src/lib/nitrox.ts; the prep list reads
@@ -212,18 +188,13 @@ export const areas = {
     ],
     validate: [
       "pnpm test src/db/nitrox.test.ts src/lib/dive-prep.test.ts --reporter=dot",
-      "pnpm check:repo && pnpm lint && pnpm typecheck",
+      GATE,
       "pnpm e2e e2e/nitrox.spec.ts --reporter=line",
     ],
   },
   courses: {
     goal: "Extend the course catalog, sessions, enrollment gates, and public course pages.",
-    docs: [
-      "docs/product/features/roadmap.md",
-      "docs/product/glossary.md",
-      "docs/design/principles.md",
-      "docs/architecture/overview.md",
-    ],
+    docs: [],
     code: [
       "src/db/schema/",
       "src/db/courses.ts",
@@ -244,17 +215,13 @@ export const areas = {
     ],
     validate: [
       "pnpm test src/lib/courses.test.ts src/db/courses.test.ts --reporter=dot",
-      "pnpm check:repo && pnpm lint && pnpm typecheck",
+      GATE,
       "pnpm e2e e2e/courses.spec.ts --reporter=line",
     ],
   },
   today: {
     goal: "Maintain the Today work queue: urgency ranking, blocker collapse, and actionable next steps.",
-    docs: [
-      "docs/product/features/roadmap.md",
-      "docs/product/glossary.md",
-      "docs/design/principles.md",
-    ],
+    docs: [],
     code: [
       "src/lib/today.ts",
       "src/db/today.ts",
@@ -270,19 +237,11 @@ export const areas = {
       "A diver who is already clear produces no action.",
       "An action acts in place or points at the record where the work happens — never a dead end.",
     ],
-    validate: [
-      "pnpm test src/lib/today.test.ts src/db/today.test.ts --reporter=dot",
-      "pnpm check:repo && pnpm lint && pnpm typecheck",
-    ],
+    validate: ["pnpm test src/lib/today.test.ts src/db/today.test.ts --reporter=dot", GATE],
   },
   design: {
     goal: "Deliver a calm, clear, accessible interface that follows DiveDay's semantic design system.",
-    docs: [
-      "docs/design/principles.md",
-      "docs/product/vision.md",
-      "docs/product/features/roadmap.md",
-      "docs/architecture/decisions/0004-design-tokens.md",
-    ],
+    docs: ["docs/product/vision.md", "docs/architecture/decisions/0004-design-tokens.md"],
     code: ["src/app/globals.css", "src/app", "src/components"],
     tests: ["e2e"],
     invariants: [
@@ -291,21 +250,11 @@ export const areas = {
       "Include empty, loading, validation, error, and success states.",
       "Keep touch targets and focus states accessible.",
     ],
-    validate: [
-      "pnpm lint",
-      "pnpm typecheck",
-      "pnpm visual",
-      "pnpm e2e <the spec for the flow you changed> --reporter=line",
-    ],
+    validate: ["pnpm lint", "pnpm typecheck", "pnpm visual", E2E_FALLBACK],
   },
   "brand-voice": {
     goal: "Create consistent DiveDay brand, voice, visual, merch, and vendor collateral from the current identity.",
-    docs: [
-      "docs/design/brand.md",
-      "docs/design/principles.md",
-      "docs/product/vision.md",
-      "docs/product/marketing.md",
-    ],
+    docs: ["docs/design/brand.md", "docs/product/vision.md", "docs/product/marketing.md"],
     code: ["src/app/globals.css", "src/app/layout.tsx", "src/components/Logo.tsx"],
     tests: [],
     invariants: [
@@ -320,12 +269,7 @@ export const areas = {
   },
   database: {
     goal: "Change persistence safely while preserving tenant, capacity, and transactional invariants.",
-    docs: [
-      "docs/architecture/overview.md",
-      "docs/architecture/decisions/0005-database.md",
-      "docs/engineering/testing.md",
-      "docs/product/glossary.md",
-    ],
+    docs: ["docs/architecture/decisions/0005-database.md", "docs/engineering/testing.md"],
     code: [
       "src/db/schema/",
       "src/db/client.ts",
@@ -355,17 +299,12 @@ export const areas = {
       "pnpm test <changed-module.test.ts> --reporter=dot",
       "pnpm typecheck",
       "pnpm db:generate",
-      "pnpm check:repo && pnpm lint && pnpm typecheck",
+      GATE,
     ],
   },
   bookings: {
     goal: "Extend booking behavior without weakening capacity, authorization, or user-facing recovery states.",
-    docs: [
-      "docs/product/features/roadmap.md",
-      "docs/product/glossary.md",
-      "docs/design/principles.md",
-      "docs/architecture/overview.md",
-    ],
+    docs: [],
     code: [
       "src/db/bookings.ts",
       "src/db/bookings.test.ts",
@@ -387,15 +326,14 @@ export const areas = {
     ],
     validate: [
       "pnpm test src/db/bookings.test.ts src/db/seat-diver.test.ts --reporter=dot",
-      "pnpm check:repo && pnpm lint && pnpm typecheck",
-      "pnpm e2e <the spec for the flow you changed> --reporter=line",
+      GATE,
+      E2E_FALLBACK,
     ],
   },
   auth: {
     goal: "Change authentication or authorization without creating edge/server divergence or tenant leakage.",
     docs: [
       "docs/architecture/decisions/20260824-migrate-staff-auth-to-better-auth.md",
-      "docs/architecture/overview.md",
       "docs/engineering/testing.md",
     ],
     code: [
@@ -414,18 +352,11 @@ export const areas = {
       "Server actions and queries enforce authorization independently of route gating.",
       "Dev credentials never become production behavior.",
     ],
-    validate: [
-      "pnpm test src/lib --reporter=dot",
-      "pnpm typecheck",
-      "pnpm e2e <the spec for the flow you changed> --reporter=line",
-    ],
+    validate: ["pnpm test src/lib --reporter=dot", "pnpm typecheck", E2E_FALLBACK],
   },
   payments: {
     goal: "Extend Stripe Connect checkout, orders, invoicing, and refunds without breaking idempotency or currency/tenant guarantees. Security-sensitive (AGENTS.md Hard rules) — changes need a security-reviewer pass before merge.",
     docs: [
-      "docs/product/features/roadmap.md",
-      "docs/product/glossary.md",
-      "docs/architecture/overview.md",
       "docs/architecture/decisions/20260719-stripe-connect-orders.md",
       "docs/architecture/decisions/20260721-checkout-at-booking.md",
       "docs/architecture/decisions/20260723-payment-operation-intents.md",
@@ -467,15 +398,13 @@ export const areas = {
     ],
     validate: [
       "pnpm test src/lib/payments/checkout.test.ts src/lib/payments/connect.test.ts src/lib/payments/invoicing.test.ts src/lib/payments/promotions.test.ts src/lib/payments/webhook.test.ts src/db/orders.test.ts src/db/payments.test.ts src/db/checkouts.test.ts src/db/refunds.test.ts src/db/stripe-accounts.test.ts --reporter=dot",
-      "pnpm check:repo && pnpm lint && pnpm typecheck",
+      GATE,
       "pnpm e2e e2e/orders-demo.spec.ts e2e/refunds.spec.ts --reporter=line",
     ],
   },
   notifications: {
     goal: "Extend email/SMS/WhatsApp notification delivery without breaking idempotency, per-recipient locale, or delivery-status accuracy.",
     docs: [
-      "docs/product/features/roadmap.md",
-      "docs/product/glossary.md",
       "docs/engineering/ses-email-runbook.md",
       "docs/engineering/whatsapp-cloud-api-runbook.md",
       "docs/engineering/sms-delivery-receipts-runbook.md",
@@ -541,15 +470,12 @@ export const areas = {
     ],
     validate: [
       "pnpm test src/lib/notifications src/lib/secret-box.test.ts src/db/notifications.test.ts src/db/whatsapp-accounts.test.ts --reporter=dot",
-      "pnpm check:repo && pnpm lint && pnpm typecheck",
+      GATE,
     ],
   },
   reviews: {
     goal: "Extend verified diver reviews and discount codes (shop-wide promos + last-minute trip fills) without weakening the review provenance/moderation gate or the redeemability checks Stripe actually enforces.",
     docs: [
-      "docs/product/features/roadmap.md",
-      "docs/product/glossary.md",
-      "docs/architecture/overview.md",
       "docs/architecture/decisions/20260729-verified-diver-reviews.md",
       "docs/architecture/decisions/20260729-shop-promo-codes.md",
       "docs/architecture/decisions/20260727-last-minute-fill-promos.md",
@@ -581,15 +507,13 @@ export const areas = {
     ],
     validate: [
       "pnpm test src/lib/reviews.test.ts src/lib/promo-codes.test.ts src/db/reviews.test.ts src/db/shop-promos.test.ts src/db/trip-promos.test.ts --reporter=dot",
-      "pnpm check:repo && pnpm lint && pnpm typecheck",
+      GATE,
       "pnpm e2e e2e/reviews.spec.ts e2e/promo-codes.spec.ts --reporter=line",
     ],
   },
   "data-portability": {
     goal: "Extend CSV export/import without weakening tenant scoping or the verification gates on imported evidence. Security-sensitive (AGENTS.md Hard rules) — changes need a security-reviewer pass before merge.",
     docs: [
-      "docs/product/features/roadmap.md",
-      "docs/product/glossary.md",
       "docs/architecture/decisions/20260724-export-bundled-photos.md",
       "docs/architecture/decisions/20260724-import-verified-cards.md",
       "docs/architecture/decisions/20260724-import-waiver-acceptance.md",
@@ -620,7 +544,7 @@ export const areas = {
     ],
     validate: [
       "pnpm test src/db/export.test.ts src/db/import.test.ts --reporter=dot",
-      "pnpm check:repo && pnpm lint && pnpm typecheck",
+      GATE,
       "pnpm e2e e2e/export.spec.ts e2e/import.spec.ts --reporter=line",
     ],
   },

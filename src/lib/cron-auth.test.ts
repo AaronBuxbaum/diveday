@@ -64,6 +64,26 @@ describe("requireCronSecret", () => {
   });
 });
 
+// A mention in a comment is not a call: the guard below reads code only.
+function withoutComments(source: string): string {
+  return source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:"'`])\/\/[^\n]*/g, "$1");
+}
+
+const GATE_CALL = /\b(?:requireCronSecret|cronRoute)\(/;
+
+describe("the cron gate source guard", () => {
+  it("counts a real call and ignores a comment that only names one", () => {
+    expect(withoutComments("export const GET = cronRoute({ name: 'x' });")).toMatch(GATE_CALL);
+    expect(withoutComments("const denied = requireCronSecret(request);")).toMatch(GATE_CALL);
+    expect(withoutComments("// uses cronRoute( later\nexport const GET = () => ok();")).not.toMatch(
+      GATE_CALL,
+    );
+    expect(withoutComments("/* requireCronSecret( */ export const GET = () => ok();")).not.toMatch(
+      GATE_CALL,
+    );
+  });
+});
+
 describe("every cron route", () => {
   // Two routes once compared the bearer header with `!==` and leaked the secret's
   // length through timing; the shared gate is the one place that comparison lives.
@@ -78,8 +98,11 @@ describe("every cron route", () => {
     expect(routes.length).toBeGreaterThan(0);
     for (const route of routes) {
       const source = readFileSync(route, "utf8");
-      expect(source, route).toMatch(/requireCronSecret\(/);
-      expect(source, route).not.toMatch(/authorization[^\n]*[!=]==/i);
+      // `cronRoute` opens with the same gate; src/lib/cron-route.test.ts proves it refuses
+      // before any check-in or work.
+      const code = withoutComments(source);
+      expect(code, route).toMatch(GATE_CALL);
+      expect(code, route).not.toMatch(/authorization[^\n]*[!=]==/i);
     }
   });
 });

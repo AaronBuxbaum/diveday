@@ -37,6 +37,7 @@ import {
   waiverRecords,
 } from "./schema";
 import { livePerson, liveTrip } from "./trips-live";
+import { seatNotCancelled } from "./trips-queries";
 import { activeStaffAttestorId } from "./waivers-in-person";
 
 /**
@@ -629,7 +630,7 @@ export async function recordMedicalEvaluation(
             isNull(waiverRecords.medicalClearedAt),
             isNull(waiverRecords.medicalClearanceDeclinedAt),
             eq(bookings.personId, waiverRecords.personId),
-            ne(bookings.status, "cancelled"),
+            seatNotCancelled,
           ),
         )
     ).length;

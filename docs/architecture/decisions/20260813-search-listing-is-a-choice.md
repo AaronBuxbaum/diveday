@@ -86,4 +86,4 @@ a lapsed shop's pages is H-20260724-public-founding-shop-price's question, not t
 - One additive migration; no backfill, because null already means the current behaviour.
 - The switch is in Settings behind the ordinary settings gate rather than an owner-only one, which
   matches the review-link row beside it. A manager can change how the shop appears in search; if
-  that turns out to be the wrong bar, it is a one-line change to `settingsBlock`.
+  that turns out to be the wrong bar, it is a one-line change to the action's `gate` (`SETTINGS_GATE`).

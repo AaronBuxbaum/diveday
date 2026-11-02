@@ -1,5 +1,5 @@
 import { and, asc, desc, eq, gt, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm";
-import { checkMinimumAge, isPlausibleDateOfBirth } from "@/lib/age";
+import { isPlausibleDateOfBirth } from "@/lib/age";
 import { sellableSeats } from "@/lib/boat-safety";
 import {
   bookingIdentityColumns,
@@ -34,11 +34,7 @@ import {
 import { isCapturedPaymentStatus } from "@/lib/payment-source";
 import { personNamesMatch } from "@/lib/person-name";
 import type { ReEntryAsk } from "@/lib/re-entry";
-import {
-  BLOCKER_CATEGORY,
-  type CertificationLevel,
-  hasVerifiedCertificationAtLeast,
-} from "@/lib/readiness";
+import { BLOCKER_CATEGORY, type CertificationLevel } from "@/lib/readiness";
 import { partnerReferralSlug } from "@/lib/referrals";
 import { requirementDemandsNothing, unionRequirements } from "@/lib/requirement";
 import type { TrainingDiveCourse } from "@/lib/training-mark";
@@ -69,7 +65,7 @@ import { boundLockWaits } from "./lock-bounds";
 import { publishManifestEvent } from "./manifest-events";
 import { recordDiverActivity, recordSeatChange, recordTripActivity } from "./operations";
 import { getBookingPayment, setBookingPayment } from "./payments";
-import { findOrCreatePerson } from "./people";
+import { type CreatePersonInput, createPerson, findOrCreatePerson } from "./people";
 import { storedPhone } from "./person-phone";
 import { isUniqueConstraintViolation, queryAll } from "./query-helpers";
 import { getBookingReadiness, getTripRequirements, getTripSiteRequirement } from "./readiness";
@@ -104,6 +100,7 @@ import { liveTrip } from "./trips-live";
 import {
   heldSeatCounts,
   liveBookingJoin,
+  seatNotCancelled,
   sellableCapacity,
   tripAssignedCrewCount,
   tripBoatCapacity,
@@ -572,7 +569,7 @@ export async function addPartySeat(
         and(
           eq(bookings.shopId, input.shopId),
           eq(bookings.partyLeadBookingId, lead.id),
-          ne(bookings.status, "cancelled"),
+          seatNotCancelled,
         ),
       );
     if (members.length + 1 >= MAX_PUBLIC_PARTY_SIZE) return { ok: false, reason: "party_full" };
@@ -944,14 +941,20 @@ async function noEmailPersonRow(
   tx: DbExecutor,
   req: BookingRequest,
   pendingInsert: { fullName: string; phone?: string },
-) {
+): Promise<CreatePersonInput> {
   return {
     shopId: req.shopId,
     fullName: pendingInsert.fullName,
     email: null,
     phone: await storedPhone(tx, req.shopId, pendingInsert.phone),
-    ...("personId" in req ? undefined : req.freshPerson),
+    origin: bookingOrigin(req),
+    fields: "personId" in req ? undefined : req.freshPerson,
   };
+}
+
+/** A seat the desk typed in is the counter's person; one a diver booked is the public's. */
+function bookingOrigin(req: BookingRequest): "counter" | "public_booking" {
+  return req.actor === "staff" ? "counter" : "public_booking";
 }
 
 /**
@@ -1567,6 +1570,7 @@ async function writeWalkIn(
       fullName: pendingInsert.fullName,
       email: pendingInsert.email,
       phone: pendingInsert.phone,
+      origin: bookingOrigin(req),
     });
     const identityUnconfirmed = !resolved.nameMatches;
     return {
@@ -1580,12 +1584,7 @@ async function writeWalkIn(
   // No email means no `people_shop_email_unique` row to race for (that
   // index is partial — null emails never collide, schema.ts) — a plain
   // insert, same shape as findOrCreatePerson's own insert branch.
-  const [inserted] = await tx
-    .insert(people)
-    .values(await noEmailPersonRow(tx, req, pendingInsert))
-    .returning();
-  if (!inserted) throw new Error("createBookingRecord: person insert returned no row");
-  await tx.insert(personRoles).values({ personId: inserted.id, role: "diver" });
+  const inserted = await createPerson(tx, await noEmailPersonRow(tx, req, pendingInsert));
   return { person: inserted, identityUnconfirmed: false, identityClaim: null };
 }
 
@@ -1732,7 +1731,7 @@ export async function getBookingForTrip(
         eq(bookings.id, bookingId),
         eq(bookings.shopId, shopId),
         eq(bookings.tripId, tripId),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
       ),
     )
     .limit(1);
@@ -1878,7 +1877,8 @@ export async function restoreBooking(
       // instructor caps at zero and refuses too: a seat cannot be handed back
       // to a session that could not sell it in the first place.
       const seatCap = courseSeatCapacity(course ?? null, instructorCount, assistantCount);
-      if (seatCap !== null && held.divers >= seatCap) return "course_ratio_full";
+      const ratioRefusal = courseRatioRefusal(held.divers, seatCap);
+      if (ratioRefusal) return ratioRefusal;
     }
 
     await tx
@@ -1996,38 +1996,34 @@ async function courseGateRefusal(
   course: typeof courses.$inferSelect | undefined,
   startsAt: Date,
 ): Promise<"course_prerequisite" | "course_min_age" | null> {
-  if (!course) return null;
-  if (course.minimumCertificationLevel) {
-    const cardRows = await tx
-      .select()
-      .from(certifications)
-      .where(
-        and(
-          eq(certifications.shopId, shopId),
-          eq(certifications.personId, personId),
-          isNull(certifications.deletedAt),
-        ),
-      );
-    if (!hasVerifiedCertificationAtLeast(cardRows, course.minimumCertificationLevel)) {
-      return "course_prerequisite";
-    }
-  }
-  if (course.minimumAge) {
-    const [row] = await tx
-      .select({ dateOfBirth: people.dateOfBirth, timezone: shops.timezone })
-      .from(people)
-      .innerJoin(shops, eq(shops.id, people.shopId))
-      // diveday:allow-deleted-people: the seat's own diver, whose age the session measures.
-      .where(and(eq(people.id, personId), eq(people.shopId, shopId)))
-      .limit(1);
-    if (row?.dateOfBirth) {
-      const day = calendarDateInTimezone(startsAt, row.timezone);
-      if (checkMinimumAge(row.dateOfBirth, course.minimumAge, day).status === "under") {
-        return "course_min_age";
-      }
-    }
-  }
-  return null;
+  if (!course || (!course.minimumCertificationLevel && !course.minimumAge)) return null;
+  const cards = course.minimumCertificationLevel
+    ? await tx
+        .select()
+        .from(certifications)
+        .where(
+          and(
+            eq(certifications.shopId, shopId),
+            eq(certifications.personId, personId),
+            isNull(certifications.deletedAt),
+          ),
+        )
+    : [];
+  const [row] = await tx
+    .select({ dateOfBirth: people.dateOfBirth, timezone: shops.timezone })
+    .from(people)
+    .innerJoin(shops, eq(shops.id, people.shopId))
+    // diveday:allow-deleted-people: the seat's own diver, whose age the session measures.
+    .where(and(eq(people.id, personId), eq(people.shopId, shopId)))
+    .limit(1);
+  // The sale's own decision (`courseEnrollmentRefusal`), at the staff door: a
+  // move is staff's, so the age gate applies and fails open without a birth date.
+  return courseEnrollmentRefusal({
+    actor: "staff",
+    course,
+    diver: { cards, dateOfBirth: row?.dateOfBirth ?? null },
+    courseDate: row ? calendarDateInTimezone(startsAt, row.timezone) : null,
+  });
 }
 
 async function moveAdmissionRefusal(
@@ -2062,9 +2058,8 @@ async function moveAdmissionRefusal(
     const { instructorCount, assistantCount } = await tripCourseCrewCounts(tx, target.id);
     if (instructorCount === 0) return { ok: false, reason: "course_unstaffed" };
     const seatCap = courseSeatCapacity(course ?? null, instructorCount, assistantCount);
-    if (seatCap !== null && held.divers >= seatCap) {
-      return { ok: false, reason: "course_ratio_full" };
-    }
+    const ratioRefusal = courseRatioRefusal(held.divers, seatCap);
+    if (ratioRefusal) return { ok: false, reason: ratioRefusal };
     // The course's own two gates, read again rather than trusted from the
     // sale: a card can be revoked since, and age is measured on the day the
     // session runs, so an earlier session of the same course can be one the
@@ -2191,7 +2186,7 @@ export async function moveBooking(
         and(
           eq(bookings.shopId, shopId),
           eq(bookings.partyLeadBookingId, booking.id),
-          ne(bookings.status, "cancelled"),
+          seatNotCancelled,
         ),
       )
       .limit(1);
@@ -3167,7 +3162,7 @@ export async function previewPartyCancel(
         eq(bookings.shopId, input.shopId),
         eq(bookings.partyLeadBookingId, input.leadBookingId),
         eq(bookings.tripId, lead.tripId),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
       ),
     );
   // A seat counted aboard a boat that has left stays, as the cancel keeps it
@@ -3222,7 +3217,7 @@ export async function cancelUnclaimedPartySeats(
         eq(bookings.shopId, input.shopId),
         eq(bookings.partyLeadBookingId, input.leadBookingId),
         eq(bookings.tripId, input.tripId),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
       ),
     )
     .orderBy(asc(bookings.createdAt), asc(people.fullName), asc(bookings.id))
@@ -3597,7 +3592,7 @@ export async function sameNameHeldSeats(
         eq(bookings.shopId, shopId),
         inArray(bookings.personId, [...new Set(named.map((seat) => seat.personId))]),
         isNotNull(bookings.identityUnconfirmedAt),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
         eq(trips.shopId, shopId),
         liveTrip(),
       ),
@@ -3740,7 +3735,7 @@ export async function splitBookingIdentity(
             eq(bookings.id, input.bookingId),
             eq(bookings.shopId, input.shopId),
             isNotNull(bookings.identityUnconfirmedAt),
-            ne(bookings.status, "cancelled"),
+            seatNotCancelled,
           ),
         )
         .limit(1)
@@ -3780,7 +3775,7 @@ export async function splitBookingIdentity(
                   eq(bookings.personId, booking.personId),
                   ne(bookings.id, input.bookingId),
                   isNotNull(bookings.identityUnconfirmedAt),
-                  ne(bookings.status, "cancelled"),
+                  seatNotCancelled,
                   sql`lower(trim(${bookings.identityBookedAs})) = lower(trim(${booking.bookedAs}))`,
                   eq(trips.shopId, input.shopId),
                   eq(trips.status, "scheduled"),
@@ -3869,13 +3864,13 @@ export async function splitBookingIdentity(
         if (taken) return { refused: "email_in_use" as const };
       }
 
-      const [person] = await tx
-        .insert(people)
-        .values({
-          shopId: input.shopId,
-          fullName,
-          email,
-          phone: await storedPhone(tx, input.shopId, input.phone?.trim() || null),
+      const person = await createPerson(tx, {
+        shopId: input.shopId,
+        fullName,
+        email,
+        phone: await storedPhone(tx, input.shopId, input.phone?.trim() || null),
+        origin: "identity_split",
+        fields: {
           dateOfBirth,
           ...(dateOfBirth
             ? {}
@@ -3884,10 +3879,8 @@ export async function splitBookingIdentity(
           // it was held (issue #2145) is theirs: it goes onto their record.
           emergencyContactName: heldContact?.name ?? null,
           emergencyContactPhone: heldContact?.phone ?? null,
-        })
-        .returning({ id: people.id });
-      if (!person) throw new Error("splitBookingIdentity: person insert returned no row");
-      await tx.insert(personRoles).values({ personId: person.id, role: "diver" });
+        },
+      });
       await tx
         .update(bookings)
         .set({

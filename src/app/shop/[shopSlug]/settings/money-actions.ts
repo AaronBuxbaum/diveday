@@ -1,22 +1,19 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { z } from "zod";
-import { getDb } from "@/db/client";
+import type { AppDb } from "@/db/client";
 import { getShopById, setShopPassThroughFee } from "@/db/shops";
 import {
   disconnectShopStripeAccount,
   getShopStripeAccount,
   refreshShopStripeAccountStatus,
 } from "@/db/stripe-accounts";
-import { readForm, trimmedText } from "@/lib/form-parse";
+import { defineAction, land } from "@/features/server-action";
+import { trimmedText } from "@/lib/form-parse";
 import { majorToMinor } from "@/lib/money";
-import { revalidateAndRedirect } from "@/lib/navigation";
 import { parsePassThroughFee } from "@/lib/pass-through-fee";
 import { connectProviderFromEnvironment } from "@/lib/payments/connect";
-import { requireStaffSession } from "@/lib/session";
-import { noticeUrl, shopPath } from "@/lib/staff-notices";
-import { paymentSettingsBlock, settingsBlock } from "./action-helpers";
+import { PAYMENT_SETTINGS_GATE, SETTINGS_AND_PAYMENT_GATES } from "./action-gates";
 
 const passThroughForm = z.object({
   passThroughName: trimmedText(),
@@ -24,33 +21,25 @@ const passThroughForm = z.object({
 });
 
 /** Saves the optional per-diver marine-park or conservation pass-through fee. */
-export async function savePassThroughFeeAction(formData: FormData) {
-  const session = await requireStaffSession();
-  const settings = shopPath(session.user.shopSlug, "settings");
-  await paymentSettingsBlock(session);
-  const db = await getDb();
-  const shop = await getShopById(db, session.user.shopId);
-  const { passThroughName: name, passThroughAmount: amount } = readForm(passThroughForm, formData);
-  if (!shop) redirect(noticeUrl(settings, "pass-through-invalid", { saved: "passThrough" }));
-  if (!name && !amount) {
-    await setShopPassThroughFee(db, session.user.shopId, null);
-    revalidateAndRedirect(
-      settings,
-      noticeUrl(settings, "pass-through-saved", { saved: "passThrough" }),
-    );
-  }
-  const parsedAmount = Number(amount);
-  const amountCents = majorToMinor(parsedAmount, shop.currency);
-  const fee = parsePassThroughFee({ name, amountCents });
-  if (!fee) {
-    redirect(noticeUrl(settings, "pass-through-invalid", { saved: "passThrough" }));
-  }
-  await setShopPassThroughFee(db, session.user.shopId, fee);
-  revalidateAndRedirect(
-    settings,
-    noticeUrl(settings, "pass-through-saved", { saved: "passThrough" }),
-  );
-}
+export const savePassThroughFeeAction = defineAction({
+  gate: [PAYMENT_SETTINGS_GATE],
+  input: passThroughForm,
+  async run({ db, shopId, path }, { passThroughName: name, passThroughAmount: amount }) {
+    const settings = path("settings");
+    const extra = { saved: "passThrough" };
+    const shop = await getShopById(db, shopId);
+    if (!shop) return land(settings, "pass-through-invalid", { extra });
+    if (!name && !amount) {
+      await setShopPassThroughFee(db, shopId, null);
+      return land(settings, "pass-through-saved", { extra });
+    }
+    const amountCents = majorToMinor(Number(amount), shop.currency);
+    const fee = parsePassThroughFee({ name, amountCents });
+    if (!fee) return land(settings, "pass-through-invalid", { extra });
+    await setShopPassThroughFee(db, shopId, fee);
+    return land(settings, "pass-through-saved", { extra });
+  },
+});
 
 /**
  * A demo shop's Stripe connection is configuration, not a setting (ADR
@@ -59,44 +48,38 @@ export async function savePassThroughFeeAction(formData: FormData) {
  * deauthorize that account from the platform for every visitor, and a refresh
  * would read it with the live key. So neither runs on a demo shop.
  */
-async function demoStripeBlock(
-  db: Awaited<ReturnType<typeof getDb>>,
-  session: { user: { shopId: string; shopSlug: string } },
-): Promise<void> {
-  const shop = await getShopById(db, session.user.shopId);
-  if (!shop?.isDemo) return;
-  const settings = shopPath(session.user.shopSlug, "settings");
-  revalidateAndRedirect(settings, noticeUrl(settings, "demo-stripe", { saved: "stripe" }));
+async function isDemoShop(db: AppDb, shopId: string): Promise<boolean> {
+  return (await getShopById(db, shopId))?.isDemo === true;
 }
 
-export async function disconnectAction() {
-  const session = await requireStaffSession();
-  const settings = shopPath(session.user.shopSlug, "settings");
-  await settingsBlock(session);
-  await paymentSettingsBlock(session);
-  const db = await getDb();
-  await demoStripeBlock(db, session);
-  const account = await getShopStripeAccount(db, session.user.shopId);
-  if (account && !account.disconnectedAt) {
-    const provider = connectProviderFromEnvironment();
-    await provider.deauthorize(account.stripeAccountId);
-    await disconnectShopStripeAccount(db, account.stripeAccountId);
-  }
-  revalidateAndRedirect(settings, noticeUrl(settings, "disconnected", { saved: "stripe" }));
-}
+export const disconnectAction = defineAction({
+  gate: SETTINGS_AND_PAYMENT_GATES,
+  async run({ db, shopId, path }) {
+    const settings = path("settings");
+    const extra = { saved: "stripe" };
+    if (await isDemoShop(db, shopId)) return land(settings, "demo-stripe", { extra });
+    const account = await getShopStripeAccount(db, shopId);
+    if (account && !account.disconnectedAt) {
+      const provider = connectProviderFromEnvironment();
+      await provider.deauthorize(account.stripeAccountId);
+      await disconnectShopStripeAccount(db, account.stripeAccountId);
+    }
+    return land(settings, "disconnected", { extra });
+  },
+});
 
-export async function refreshAction() {
-  const session = await requireStaffSession();
-  const settings = shopPath(session.user.shopSlug, "settings");
-  await settingsBlock(session);
-  await paymentSettingsBlock(session);
-  const db = await getDb();
-  await demoStripeBlock(db, session);
-  const account = await getShopStripeAccount(db, session.user.shopId);
-  if (account) {
-    const provider = connectProviderFromEnvironment();
-    const status = await provider.retrieveAccountStatus(account.stripeAccountId);
-    await refreshShopStripeAccountStatus(db, account.stripeAccountId, status);
-  }
-  revalidateAndRedirect(settings, noticeUrl(settings, "refreshed", { saved: "stripe" }));
-}
+export const refreshAction = defineAction({
+  gate: SETTINGS_AND_PAYMENT_GATES,
+  async run({ db, shopId, path }) {
+    const settings = path("settings");
+    const extra = { saved: "stripe" };
+    if (await isDemoShop(db, shopId)) return land(settings, "demo-stripe", { extra });
+    const account = await getShopStripeAccount(db, shopId);
+    if (account) {
+      const provider = connectProviderFromEnvironment();
+      const status = await provider.retrieveAccountStatus(account.stripeAccountId);
+      await refreshShopStripeAccountStatus(db, account.stripeAccountId, status);
+    }
+    return land(settings, "refreshed", { extra });
+  },
+});

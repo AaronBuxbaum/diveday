@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
+import { shopClock } from "@/lib/shop-clock";
 import { assembleDaySpine, sortStationRows } from "@/lib/today";
 import { fileScopedShopContext } from "@/test/db";
 import { recordCrewRollCall, recordRollCall } from "./manifests";
@@ -79,7 +80,7 @@ describe("crew clashes on Today (H-20260916-may-one-hull-carry)", () => {
   /** The shop home's spine for `now`, with no second day to file onto. */
   async function spineAt(now: Date) {
     const { db, shop } = ctx;
-    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone, now);
+    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop, now));
     return assembleDaySpine(work, { departures: [], actions: [] });
   }
 
@@ -90,7 +91,7 @@ describe("crew clashes on Today (H-20260916-may-one-hull-carry)", () => {
 
   async function clashRows(now: Date, tripIds: readonly string[]) {
     const { db, shop } = ctx;
-    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone, now);
+    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop, now));
     return work.actions.filter(
       (action) =>
         (action.kind === "crew_clash" || action.kind === "crew_clash_sailed") &&
@@ -341,7 +342,7 @@ describe("crew clashes on Today (H-20260916-may-one-hull-carry)", () => {
     const hostStartsAt = new Date(now.getTime() - 2 * HOUR);
     const { host, mover } = await movedOnto(hostStartsAt, hostStartsAt);
     const { db, shop } = ctx;
-    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone, now);
+    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop, now));
     expect(work.outTripIds).toEqual(expect.arrayContaining([host.id, mover.id]));
     const clashIds = [`crew-clash-sailed:${host.id}`, `crew-clash-sailed:${mover.id}`];
     const spine = assembleDaySpine(
@@ -383,7 +384,7 @@ describe("crew clashes on Today (H-20260916-may-one-hull-carry)", () => {
     const hostStartsAt = new Date(now.getTime() - HOUR);
     const { host, mover } = await movedOnto(hostStartsAt, hostStartsAt);
     const { db, shop } = ctx;
-    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone, now);
+    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop, now));
     const rollCallCrew = work.actions.filter(
       (action) =>
         (action.kind === "roll_call_missing_crew" || action.kind === "roll_call_crew_unfinished") &&

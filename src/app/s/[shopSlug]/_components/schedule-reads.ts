@@ -56,7 +56,7 @@ export async function readSchedulePage(
   db: AppDb,
   shop: { id: string; reviewsEnabled: boolean },
   {
-    isEmbed,
+    isEmbed = false,
     lens,
     cursor,
     now,
@@ -64,7 +64,8 @@ export async function readSchedulePage(
     hasSpaceFilter,
     tripTypeFilter,
   }: {
-    isEmbed: boolean;
+    /** The framed schedule's reader (`embed/schedule/page.tsx`): no lenses, shelf, fleet or rating. */
+    isEmbed?: boolean;
     /** The raw `?lens=`; resolved against the shop's own words here. */
     lens: string | undefined;
     /** The keyset cursor: `?after=` reads on from a departure, `?before=` reads back from one. */

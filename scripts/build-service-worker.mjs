@@ -70,6 +70,10 @@ const result = await build({
     // the honest value is "unset": the clock override is an e2e-harness
     // concern and a worker must always use the live clock, exactly as the
     // browser bundle does.
+    // The bare `process.env` is defined too: `runtimeMode` defaults its
+    // parameter to it, and an undefined `process` throws on the first
+    // `nowMs()`, which kept every offline copy from being saved.
+    "process.env": "{}",
     "process.env.DIVEDAY_CLOCK": "undefined",
     "process.env.DATABASE_URL": "undefined",
     "process.env.NODE_ENV": JSON.stringify(process.env.NODE_ENV ?? "production"),

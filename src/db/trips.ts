@@ -104,6 +104,7 @@ export {
   pagedUpcomingTripsWithCounts,
   SCHEDULE_PAGE_SIZE,
   type ShopDayDeparture,
+  seatNotCancelled,
   type TripWithBookedCount,
   tripDiveSiteSummaries,
   tripScheduleDayCounts,

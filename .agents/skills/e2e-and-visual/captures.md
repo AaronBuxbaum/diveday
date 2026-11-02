@@ -26,3 +26,17 @@ content:
   another.
 - If a change you expected to move pixels moves none, find out why before shipping. Say so in the
   PR if it stays unexplained — a silent pass is not evidence.
+
+## A safety screen is seen filled, and the PR says so
+
+The departure log's "boat's papers and safety kit" section read "No record … was kept" in the demo
+for as long as both seeds deleted boat-safety snapshots and wrote none (issue #3650), so every
+capture and every review of it saw the empty state. The seeded dawn boat
+(`src/db/seed-boat-safety-snapshot.ts`) now has a snapshot: its log is the filled capture for that
+section.
+
+A PR that changes the departure log, manifest, readiness, waiver or medical screens fills in the
+template's `## Seen filled in` section with the filled state it saw (a seeded departure, a signed
+waiver, a flagged medical) and the capture, or writes "no filled state because <reason>"
+(`scripts/check-pr-body.mjs`). If the seed has no filled state for the screen you changed, adding
+one is part of the change.

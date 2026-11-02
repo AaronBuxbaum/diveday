@@ -5,7 +5,7 @@ import { useState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { Field, FieldActions, textareaClassFor } from "@/components/ui/form";
-import { Modal } from "@/components/ui/Modal";
+import { Dialog } from "@/components/ui/layer";
 
 /**
  * The trigger and the form both used to be "Status": a single card titled
@@ -41,7 +41,7 @@ export function PullForServiceButton({
       >
         {copy.trigger}
       </button>
-      <Modal open={open} onClose={() => setOpen(false)} title={copy.trigger}>
+      <Dialog open={open} onClose={() => setOpen(false)} title={copy.trigger}>
         <form action={action} className="grid gap-4">
           <input type="hidden" name="gearItemId" value={gearItemId} />
           <input type="hidden" name="status" value="needs_service" />
@@ -67,7 +67,7 @@ export function PullForServiceButton({
             </button>
           </FieldActions>
         </form>
-      </Modal>
+      </Dialog>
     </>
   );
 }

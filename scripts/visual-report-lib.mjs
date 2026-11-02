@@ -10,6 +10,7 @@
 // See ADR 20260729-reg-suit-visual-regression and
 // 20260802-visual-diff-pr-comment.
 
+import { createHash } from "node:crypto";
 import https from "node:https";
 import { gunzipSync } from "node:zlib";
 import { comparePublicationIds, isPublicationId } from "./visual-publication-id.mjs";
@@ -143,6 +144,54 @@ export function previousCommitFromComment(body) {
   return COMMIT_MARKER_PATTERN.exec(body)?.[1] ?? null;
 }
 
+// What the comment *says*, machine-readable, so a push that leaves it unchanged
+// does not edit the comment (issue #3644). Every edit of a sticky comment is a
+// notification a subscribed session can start a turn on, and most pushes to a
+// reviewed PR move nothing a reviewer reads. The fingerprint covers the verdict,
+// the counts, every name (not the ten the comment lists), the warnings, the note
+// and the report location, and deliberately not the commit: the commit is what
+// changes on every push. A comment posted before this marker existed has no
+// fingerprint, so it is rewritten once.
+export const FINGERPRINT_MARKER_PATTERN = /<!-- diveday:visual-state: ([0-9a-f]{64}) -->/;
+
+export function summaryFingerprint({
+  bucket,
+  summary,
+  snapshotVersion = null,
+  note = "",
+  freshBaselineBootstrap = false,
+}) {
+  const state = {
+    bucket,
+    summary,
+    snapshotVersion,
+    note,
+    freshBaselineBootstrap: freshBaselineBootstrap === true && summary.verdict === "no-baseline",
+  };
+  return createHash("sha256").update(JSON.stringify(state)).digest("hex");
+}
+
+export function fingerprintMarker(fingerprint) {
+  return `<!-- diveday:visual-state: ${fingerprint} -->`;
+}
+
+/** The fingerprint a previous summary comment carried, or `null`. */
+export function fingerprintFromComment(body) {
+  if (typeof body !== "string") return null;
+  return FINGERPRINT_MARKER_PATTERN.exec(body)?.[1] ?? null;
+}
+
+/**
+ * Whether the existing comment already says what this run would say. True only
+ * for a comment that carries a fingerprint equal to this run's: absent, older or
+ * different all rewrite. Names are compared, not pixels (the report carries no
+ * pixel identity), so the comment's footer says which commit it was written at
+ * and where to read the head's own pixels.
+ */
+export function commentIsCurrent(existingBody, fingerprint) {
+  return fingerprintFromComment(existingBody) === fingerprint;
+}
+
 // How many item names one category may list before the comment truncates.
 // AGENTS.md forbids a silent cap, so `formatPrComment` always states how many
 // it dropped.
@@ -249,7 +298,11 @@ function requestHttpsObject(url, { requestImpl = https.get, timeoutMs, maxBytes 
 }
 
 async function requestS3Object(url, { bucket, requestImpl, timeoutMs, maxBytes, redirects = 0 }) {
-  const response = await requestHttpsObject(url, { requestImpl, timeoutMs, maxBytes });
+  const response = await requestHttpsObject(url, {
+    requestImpl,
+    timeoutMs,
+    maxBytes,
+  });
   if (!response.location) return response;
   if (redirects >= MAX_BUCKET_REDIRECTS) {
     throw new Error("S3 object exceeded the redirect limit");
@@ -595,6 +648,15 @@ export function formatPrComment({
   const lines = [
     COMMENT_MARKER,
     commitMarker(commit),
+    fingerprintMarker(
+      summaryFingerprint({
+        bucket,
+        summary,
+        snapshotVersion,
+        note,
+        freshBaselineBootstrap,
+      }),
+    ),
     `### ${verdictHeadline(summary)}`,
     "",
     verdictBody(summary, {
@@ -665,7 +727,9 @@ export function formatPrComment({
           "exempt, since GitHub withholds the publishing secrets from them by design.",
         ]),
     "",
-    `<sub>Commit \`${short}\` · posted by the \`visual-report\` CI job, updated in place on each push. ` +
+    `<sub>Written at commit \`${short}\` · posted by the \`visual-report\` CI job, edited in place only when the ` +
+      `verdict, the counts or the surface names change, so a later push that moved nothing leaves it ` +
+      `as it is: run \`pnpm visual:report --commit <head>\` for that head's own pixels. ` +
       "The `reg` commit status and the reg-suit[bot] comment come from reg-suit's own GitHub App and " +
       "carry counts only; this comment adds the item names and checks that a baseline actually " +
       "resolved.</sub>",

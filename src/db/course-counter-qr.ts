@@ -6,6 +6,7 @@ import type { AppDb } from "./client";
 import { getCourseFormsForBooking, lockCourseFormSeatRows } from "./course-forms";
 import { bookings, trips } from "./schema";
 import { liveTrip } from "./trips-live";
+import { seatNotCancelled } from "./trips-queries";
 
 /** Issue only the selected live seat's forms capability; callers authenticate staff. */
 export async function issueCounterCourseForms(
@@ -33,7 +34,7 @@ export async function issueCounterCourseForms(
           eq(trips.shopId, input.shopId),
           liveTrip(),
           ne(trips.status, "cancelled"),
-          ne(bookings.status, "cancelled"),
+          seatNotCancelled,
         ),
       )
       .limit(1);

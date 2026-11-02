@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNotNull, isNull, ne } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import { inWaterCrewRole } from "@/lib/crew-roles";
 import type { ParticipantType } from "@/lib/participant-types";
 import { trainingAllocationPlan } from "@/lib/training-allocation-plan";
@@ -8,6 +8,7 @@ import { bookings, people, trips } from "./schema";
 import { ratioRuleOf, readTrainingEnrollments, trustedCrewOfTrips } from "./training-mark-resolve";
 import { readTrainingPlan } from "./training-plans";
 import { livePerson, liveTrip } from "./trips-live";
+import { seatNotCancelled } from "./trips-queries";
 
 /** A planning view only; it never changes the safety decision for a seat. */
 export async function trainingPlanView(db: DbExecutor, shopId: string, tripId: string) {
@@ -36,7 +37,7 @@ export async function trainingPlanView(db: DbExecutor, shopId: string, tripId: s
         livePerson(),
         isNull(people.anonymizedAt),
         isNotNull(bookings.trainingEnrollmentBookingId),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
       ),
     )
     .orderBy(asc(people.fullName), asc(bookings.id));

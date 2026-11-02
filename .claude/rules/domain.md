@@ -12,28 +12,27 @@ reasoning and the longer form of every row are in
 
 ## Where things are
 
-- **Capacity** in `src/lib/trips.ts`, **dates** in `src/lib/format.ts`.
-- **Buying a seat vs. boarding**: `src/lib/trip-admission.ts` (booking-time) is weaker than
-  `src/lib/readiness.ts` (boarding-time); admission never refuses someone readiness would clear.
-- **Payments**: `src/lib/payments/`; codes in `src/lib/promo-codes.ts`, deals in
-  `src/db/trip-promos.ts`; both resolve in `bookSpot`, and Stripe owns the arithmetic.
-- **Today and the close-out**: `src/lib/today.ts`, `src/lib/closeout.ts`; one detector, and closing
-  is a recorded act, never a gate (ADR 20260804-day-closeout). What a `src/db` module needs from
-  them is a small file below: `today-kinds.ts` (kinds, audience), `today-urgency.ts`,
-  `today-job.ts`, `seat-sailed.ts`, `shop-day.ts`; import those, not the queue.
-- **Notifications**: `src/lib/notifications/`; `courtesy.ts` picks the channel.
-- **Offline manifests**: `src/lib/offline-manifests.ts`; two `no-store` routes read through its
-  response types (ADR 20260726-shopwide-offline-manifest-priming).
+AGENTS.md and [the route map](../../docs/agents/route-map.md) say where (capacity, dates, payments,
+Today, notifications, offline manifests, auth). What they do not say:
+
+- **Admission is weaker than readiness**: `src/lib/trip-admission.ts` (booking-time) never refuses
+  someone `src/lib/readiness.ts` (boarding-time) would clear.
+- **Codes and deals** both resolve in `bookSpot`, and Stripe owns the arithmetic.
+- **Closing the day** is a recorded act, never a gate, and Today has one detector
+  (ADR 20260804-day-closeout). What a `src/db` module needs from Today and the close-out is a small
+  file below them: `today-kinds.ts`, `today-urgency.ts`, `today-job.ts`, `seat-sailed.ts`,
+  `shop-day.ts`; import those, not the queue.
+- **Offline manifests**: two `no-store` routes read through the response types in
+  `src/lib/offline-manifests.ts` (ADR 20260726-shopwide-offline-manifest-priming).
 - **Dive-site difficulty** is one of three codes in `src/lib/dive-site-difficulty.ts`, never free
   text (ADR 20260813-dive-site-difficulty-is-a-code).
 - **Course depth** is a marker (`{depth18}`) resolved by the shop's unit; a broken marker is
   refused at save (ADR 20260814-course-depth-markers).
-- **Auth**: `src/lib/auth.ts`, `src/lib/session.ts`; `src/proxy.ts` is convenience, not the
-  boundary.
-- **Staff destinations**: `src/lib/staff-destinations.ts`, one registry (ADR 20261001-logbook).
+- **`src/proxy.ts` is convenience, not the auth boundary.**
 - **Optional features**: `src/lib/shop-features.ts` (the switches) and
   `src/lib/feature-coverage.ts` (every destination and `shops` boolean, a switch or a written
   `core` reason). A new feature a shop could run without gets a switch, default on.
+- **Staff destinations** are one registry, `src/lib/staff-destinations.ts` (ADR 20261001-logbook).
 - **Staff notices**: `noticeUrl`, `noticeFromParam`, `shopPath` in `src/lib/staff-notices.ts`;
   never hand-build the string (notice-code guard).
 - **Feature modules**: `src/features/<feature>/index.ts` is the whole public surface
@@ -50,6 +49,9 @@ reasoning and the longer form of every row are in
   constant or a hand comparison: departure-buffer guard.
 - **`src/lib` and `src/db` return codes, not sentences**; a registry feeding the UI holds bundle
   keys: `pnpm check:domain-strings` (ADR 20260731-domain-layer-copy-leaks).
+  A renderer (the page, `src/lib/notifications/**`, the file) is the only module that imports a
+  translator; the rest returns a `Copy` (`src/lib/copy.ts`) it resolves: `pnpm check:architecture`
+  ratchets the files still importing one (issue #2772).
 - **Every formatter takes a required `timeZone`**; a value with no instant says `"UTC"`
   (`src/lib/calendar-date.ts`): Biome rule `timezone`. Every `Intl` formatter comes from
   `src/lib/intl-cache.ts`: Biome rule `intlCache`.

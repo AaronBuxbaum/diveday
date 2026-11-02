@@ -169,6 +169,9 @@ describe("requireShopSurface", () => {
     expect(surface.shop.id).toBe(context.shop.id);
     expect(surface.session.user.personId).toBe(owner);
     expect(surface.db).toBe(context.db);
+    // One clock per request, in the shop's own zone, frozen.
+    expect(surface.clock.timeZone).toBe(context.shop.timezone);
+    expect(Object.isFrozen(surface.clock)).toBe(true);
   });
 
   it("sends a signed-out visitor to sign in before it reads anything", async () => {

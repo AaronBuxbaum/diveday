@@ -21,6 +21,7 @@ import {
   trainingDiveRoom,
 } from "./training-mark-resolve";
 import { livePerson, liveTrip } from "./trips-live";
+import { seatNotCancelled } from "./trips-queries";
 
 /**
  * **Training marks** (issue #2275, ADR
@@ -471,7 +472,7 @@ export async function trainingMarksForRoster(
                 eq(bookings.shopId, shopId),
                 eq(trips.shopId, shopId),
                 inArray(bookings.personId, [...new Set(offerable.map((seat) => seat.personId))]),
-                ne(bookings.status, "cancelled"),
+                seatNotCancelled,
                 eq(bookings.participantType, "diver"),
                 isNull(bookings.identityUnconfirmedAt),
                 ne(trips.status, "cancelled"),

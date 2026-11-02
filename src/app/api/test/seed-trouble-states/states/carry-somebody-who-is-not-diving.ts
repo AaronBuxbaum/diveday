@@ -2,7 +2,7 @@ import { and, eq, gte, isNull, ne } from "drizzle-orm";
 import type { AppDb } from "@/db/client";
 import { bookings, people, trips } from "@/db/schema";
 import { seatDiver } from "@/db/seat-diver";
-import { heldSeatCounts, setTripParticipantTerms } from "@/db/trips";
+import { heldSeatCounts, seatNotCancelled, setTripParticipantTerms } from "@/db/trips";
 import { REEF_TRIP_TITLE } from "./reef-trip-title";
 
 /**
@@ -52,13 +52,7 @@ export async function carrySomebodyWhoIsNotDiving(
     .select({ fullName: people.fullName, participantType: bookings.participantType })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
-    .where(
-      and(
-        eq(bookings.shopId, shopId),
-        eq(bookings.tripId, reef.id),
-        ne(bookings.status, "cancelled"),
-      ),
-    );
+    .where(and(eq(bookings.shopId, shopId), eq(bookings.tripId, reef.id), seatNotCancelled));
   const named = (type: "snorkeler" | "rider") =>
     aboard.find((row) => row.participantType === type)?.fullName;
   const missing = NOT_DIVING.filter((guest) => !named(guest.participantType));

@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, gte, inArray, lte, ne, notExists, or } from "drizzle-orm";
+import { and, asc, desc, eq, gt, gte, inArray, lt, lte, notExists, or } from "drizzle-orm";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import {
   highWindAlertDetailText,
@@ -30,9 +30,10 @@ import {
   isHighWind,
   shouldShowAutomatedForecast,
 } from "@/lib/marine-forecast";
-import { operationalWindow, shopDayWindow } from "@/lib/operational-window";
+import { operationalWindow } from "@/lib/operational-window";
 import { BLOCKER_CATEGORY } from "@/lib/readiness";
 import { inAfterDivePopulation, isAccountedForAfterDive } from "@/lib/roll-call-population";
+import type { ShopClock } from "@/lib/shop-clock";
 import {
   filterActionsForRoles,
   isBlockedAboard,
@@ -116,7 +117,13 @@ import { pushBoatSnagRows } from "./today-snag-rows";
 import { meetingWindowsByTrip } from "./trip-meeting-windows";
 import { plannedSitesByTrip } from "./trip-planned-sites";
 import { latestTripStagesByTrip } from "./trip-stages";
-import { boatClashesByTrip, countShopTrips, crewClashesByTrip, listStaff } from "./trips";
+import {
+  boatClashesByTrip,
+  countShopTrips,
+  crewClashesByTrip,
+  listStaff,
+  seatNotCancelled,
+} from "./trips";
 import { liveTrip } from "./trips-live";
 import { sharedWelcomeSeatsByTrip } from "./welcome-cues";
 import { listWorkOrdersNeedingAttention } from "./work-order-follow-up";
@@ -129,18 +136,15 @@ import { listWorkOrdersNeedingAttention } from "./work-order-follow-up";
  * shop's calendar day, preferring a boat that hasn't finished over one that
  * already sailed.
  *
- * The scan's bounds are `shopDayWindow` (src/lib/operational-window.ts), beside
- * the other windows this app slices time with, rather than the freestanding
- * ±hours this query used to carry inline. It is a query bound, not a lens: the
- * shop-local date filter below is what actually decides "today".
+ * "Today" is the clock's own day (`clock.day`), the exact UTC pair around the
+ * shop's calendar date, so the query needs no looser scan and no second pass.
  */
 export async function todayNextDepartureTripId(
   db: AppDb,
   shopId: string,
-  timeZone: string,
-  now: Date = nowDate(),
+  clock: ShopClock,
 ): Promise<string | null> {
-  return nextOfTodaysDepartures(await todaysDepartures(db, shopId, timeZone, now), now);
+  return nextOfTodaysDepartures(await todaysDepartures(db, shopId, clock), clock.now);
 }
 
 /** The departure a boarding door opens: the first still out or to come, else the first. */
@@ -160,12 +164,9 @@ export function nextOfTodaysDepartures(
 export async function todaysDepartures(
   db: AppDb,
   shopId: string,
-  timeZone: string,
-  now: Date = nowDate(),
+  clock: ShopClock,
 ): Promise<{ id: string; title: string; startsAt: Date; endsAt: Date }[]> {
-  const today = shopDay(now, timeZone);
-  const scan = shopDayWindow(now);
-  const rows = await db
+  return db
     .select({ id: trips.id, title: trips.title, startsAt: trips.startsAt, endsAt: trips.endsAt })
     .from(trips)
     .where(
@@ -173,12 +174,11 @@ export async function todaysDepartures(
         liveTrip(),
         eq(trips.shopId, shopId),
         eq(trips.status, "scheduled"),
-        gte(trips.startsAt, scan.from),
-        lte(trips.startsAt, scan.to),
+        gte(trips.startsAt, clock.day.from),
+        lt(trips.startsAt, clock.day.to),
       ),
     )
     .orderBy(asc(trips.startsAt));
-  return rows.filter((row) => shopDay(row.startsAt, timeZone) === today);
 }
 
 /** A departure happening today, with just enough to know whether it can sail. */
@@ -609,13 +609,7 @@ export async function listRollCallGaps(
         turnedAwayAt: bookings.turnedAwayAt,
       })
       .from(bookings)
-      .where(
-        and(
-          eq(bookings.shopId, shopId),
-          inArray(bookings.tripId, tripIds),
-          ne(bookings.status, "cancelled"),
-        ),
-      ),
+      .where(and(eq(bookings.shopId, shopId), inArray(bookings.tripId, tripIds), seatNotCancelled)),
     db
       .select({
         bookingId: rollCallEvents.bookingId,
@@ -627,10 +621,7 @@ export async function listRollCallGaps(
       // Same guard `boardedCountsByTrip` applies: a booking cancelled after the
       // boat left keeps its event rows, and they must not answer for a roster
       // it is no longer on.
-      .innerJoin(
-        bookings,
-        and(eq(bookings.id, rollCallEvents.bookingId), ne(bookings.status, "cancelled")),
-      )
+      .innerJoin(bookings, and(eq(bookings.id, rollCallEvents.bookingId), seatNotCancelled))
       .where(and(eq(rollCallEvents.shopId, shopId), inArray(rollCallEvents.tripId, tripIds)))
       // `seq` is the final key for the same reason `src/db/manifests.ts` gives:
       // `created_at` is transaction time, so a batched write inside one
@@ -1132,7 +1123,7 @@ async function seatWantedByTrip(db: AppDb, shopId: string, tripIds: string[]) {
               and(
                 eq(bookings.tripId, interests.tripId),
                 eq(bookings.personId, interests.personId),
-                ne(bookings.status, "cancelled"),
+                seatNotCancelled,
               ),
             ),
         ),
@@ -1585,9 +1576,9 @@ export async function getShopDayDepartures(
 export async function countBlockedDiversNextBoatDay(
   db: AppDb,
   shopId: string,
-  timeZone: string,
-  now: Date = nowDate(),
+  clock: ShopClock,
 ): Promise<NextBoatDayBlocked> {
+  const { timeZone, now } = clock;
   const evidence = await sharedInHorizonReadiness(db, shopId, now);
   const boatsOut = await blockedAboardOnBoatsOut(
     db,
@@ -2038,8 +2029,7 @@ export async function getTodayWork(
   db: AppDb,
   shopId: string,
   shopSlug: string,
-  timeZone: string,
-  now: Date = nowDate(),
+  clock: ShopClock,
   /** When set, the result carries which in-window trips this person crews. */
   personId?: string,
   /**
@@ -2097,6 +2087,7 @@ export async function getTodayWork(
    */
   viewerPersonId?: string,
 ): Promise<TodayWork> {
+  const { timeZone, now } = clock;
   // The one horizon every readiness surface shares (src/lib/operational-window.ts).
   const { to: horizon } = operationalWindow(now);
   // One batched readiness pass for the whole window, not one per trip. The
@@ -2109,8 +2100,10 @@ export async function getTodayWork(
     upcoming,
     readinessByTrip,
   } = evidence ?? (await inHorizonReadiness(db, shopId, now));
-  const today = shopDay(now, timeZone);
-  const todayTrips = inWindow.filter((trip) => shopDay(trip.startsAt, timeZone) === today);
+  // Today is the clock's own day, the same exact pair `todaysDepartures` reads.
+  const todayTrips = inWindow.filter(
+    (trip) => trip.startsAt >= clock.day.from && trip.startsAt < clock.day.to,
+  );
   const bookingIdsByTrip = new Map(
     inWindow.map((trip) => [
       trip.id,

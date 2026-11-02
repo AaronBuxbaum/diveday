@@ -5,9 +5,9 @@ Part of the **visual-triage** skill ([SKILL.md](SKILL.md)). Read it on every pul
 ## Start at the PR comment
 
 On a pull request the `visual-report` job posts one sticky comment (marker `diveday:visual-summary`,
-edited in place on each push) with the counts, the names of the changed/new/deleted surfaces, and
+edited in place when its verdict, counts or surface names change) with the counts, the names of the changed/new/deleted surfaces, and
 the exact `pnpm visual:report` command for that commit. Read it before anything else — it usually
-tells you whether the diff is confined to the surfaces you touched. It never fails the build; the
+tells you whether the diff is confined to the surfaces you touched. The comment names the commit it was *written at*: a push that moved no surface leaves it alone (issue #3644), so it may trail the head, and it compares names, not pixels. For the head's own pixels run `pnpm visual:report --commit <head>`. It never fails the build; the
 enforcement is you (ADR 20260802-visual-diff-pr-comment).
 
 Two things it says that reg-suit's own `reg-suit[bot]` comment and `reg` status cannot, because

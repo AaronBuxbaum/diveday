@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone, formatCalendarDate, shiftCalendarDate } from "@/lib/calendar-date";
 import { nowDate, nowMs } from "@/lib/clock";
+import { shopClock } from "@/lib/shop-clock";
 import { ACTION_KIND_META, type TodayAction } from "@/lib/today";
 import { fileScopedShopContext } from "@/test/db";
 import { createBoat } from "./boats";
@@ -133,7 +134,7 @@ describe("rental fits on the queue, read through getTodayWork", () => {
       ...rowsNaming(work.actions, reef.id, "rental size"),
       ...rowsNaming(work.actions, reef.id, "kit"),
     ];
-    const flagged = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const flagged = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
     expect(sizeRows(flagged).length).toBeGreaterThan(0);
 
     const rents = {
@@ -163,7 +164,7 @@ describe("rental fits on the queue, read through getTodayWork", () => {
         bcdSize: "M",
       });
     }
-    const stillPartial = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const stillPartial = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
     expect(rowsNaming(stillPartial.actions, reef.id, "rental size").length).toBeGreaterThan(0);
 
     for (const entry of roster) {
@@ -179,7 +180,7 @@ describe("rental fits on the queue, read through getTodayWork", () => {
       });
     }
 
-    const cleared = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const cleared = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
     expect(sizeRows(cleared)).toEqual([]);
   });
 });
@@ -200,7 +201,7 @@ describe("gear register rows (ADR 20260815-minimal-gear-register)", () => {
 
   it("the seeded fleet alone puts nothing on the queue — its clocks and windows are all ahead", async () => {
     const { db, shop } = ctx;
-    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
     expect(work.actions.filter((action) => action.kind.startsWith("gear_"))).toEqual([]);
   });
 
@@ -220,7 +221,7 @@ describe("gear register rows (ADR 20260815-minimal-gear-register)", () => {
     });
     if (!reserved.ok) throw new Error("reserve refused");
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
     const row = work.actions.find((action) => action.id === `gear-overdue:${booking.personId}`);
     expect(row).toMatchObject({
       kind: "gear_overdue",
@@ -234,7 +235,7 @@ describe("gear register rows (ADR 20260815-minimal-gear-register)", () => {
       shopId: shop.id,
       reservationId: reserved.reservation.id,
     });
-    const cleared = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const cleared = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
     expect(cleared.actions.some((action) => action.id === `gear-overdue:${booking.personId}`)).toBe(
       false,
     );
@@ -262,7 +263,7 @@ describe("gear register rows (ADR 20260815-minimal-gear-register)", () => {
     await reserve("BCD #92", shiftCalendarDate(today, -2));
     await reserve("BCD #93", shiftCalendarDate(today, -1));
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
     const rows = work.actions.filter(
       (action) => action.kind === "gear_overdue" && action.detail.includes("BCD #9"),
     );
@@ -292,7 +293,7 @@ describe("gear register rows (ADR 20260815-minimal-gear-register)", () => {
     });
     if (!reserved.ok) throw new Error("reserve refused");
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
     const rows = work.actions.filter((action) => action.kind === "gear_due_back");
     // One row for every return today, naming people and never the units,
     // and opening the Rentals list (Aaron, 2026-10-09).
@@ -341,7 +342,7 @@ describe("gear register rows (ADR 20260815-minimal-gear-register)", () => {
       nextDueOn: shiftCalendarDate(today, 305),
     });
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
     const lapsedRow = work.actions.find((action) => action.id === `gear-service:${lapsed.item.id}`);
     expect(lapsedRow).toMatchObject({
       kind: "gear_service_due",
@@ -384,7 +385,7 @@ describe("gear register rows (ADR 20260815-minimal-gear-register)", () => {
       nextDueOn: shiftCalendarDate(today, -3),
     });
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
     expect(work.actions.find((a) => a.id === `boat-safety:kit:${aed.item.id}`)).toMatchObject({
       kind: "boat_safety_expired",
       urgency: "now",
@@ -419,7 +420,7 @@ describe("gear register rows (ADR 20260815-minimal-gear-register)", () => {
       registrationExpiresOn: null,
       insuranceExpiresOn: null,
     });
-    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
     expect(work.actions.find((a) => a.id === `boat-safety:boat:${hull.id}`)).toMatchObject({
       kind: "boat_papers_due",
       urgency: "later",
@@ -466,7 +467,7 @@ describe("gear register rows (ADR 20260815-minimal-gear-register)", () => {
       nextDueOn: shiftCalendarDate(today, -3),
     });
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
     expect(work.actions.find((a) => a.id === `boat-safety-kit:${reef.id}`)).toMatchObject({
       kind: "boat_safety_kit",
       subject: hull?.name,
@@ -498,7 +499,7 @@ describe("gear register rows (ADR 20260815-minimal-gear-register)", () => {
 
     // Gear servicing switched off on the Features page: no bench row, no ticket lost.
     await db.update(shopsTable).set({ workOrdersEnabled: false }).where(eq(shopsTable.id, shop.id));
-    const off = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const off = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
     expect(off.actions.filter((action) => action.kind.startsWith("work_order_"))).toEqual([]);
     await db.update(shopsTable).set({ workOrdersEnabled: true }).where(eq(shopsTable.id, shop.id));
 
@@ -506,7 +507,7 @@ describe("gear register rows (ADR 20260815-minimal-gear-register)", () => {
       db,
       "00000000-0000-4000-8000-000000000000",
       "other-shop",
-      shop.timezone,
+      shopClock(shop),
     );
     expect(otherWork.actions.filter((action) => action.kind.startsWith("gear_"))).toEqual([]);
   });
@@ -552,7 +553,7 @@ describe("gear register rows (ADR 20260815-minimal-gear-register)", () => {
     });
     if (!moved.ok) throw new Error("move refused");
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
     const lateRow = work.actions.find(
       (action) => action.id === `work-order-late:${late.workOrder.id}`,
     );
@@ -575,7 +576,7 @@ describe("gear register rows (ADR 20260815-minimal-gear-register)", () => {
       .update(workOrdersTable)
       .set({ readyAt: new Date(nowMs() - 8 * 24 * 60 * 60 * 1000) })
       .where(eq(workOrdersTable.id, ready.workOrder.id));
-    const weekOn = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const weekOn = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
     expect(
       weekOn.actions.find((action) => action.id === `work-order-uncollected:${ready.workOrder.id}`),
     ).toMatchObject({ kind: "work_order_uncollected", urgency: "later" });
@@ -584,7 +585,7 @@ describe("gear register rows (ADR 20260815-minimal-gear-register)", () => {
       db,
       "00000000-0000-4000-8000-000000000000",
       "other-shop",
-      shop.timezone,
+      shopClock(shop),
     );
     expect(otherWork.actions.filter((action) => action.kind.startsWith("work_order_"))).toEqual([]);
   });
@@ -621,7 +622,7 @@ describe("gear register rows (ADR 20260815-minimal-gear-register)", () => {
     if (!customer.ok || !fleet.ok) throw new Error("ticket refused");
 
     await db.update(shopsTable).set({ workOrdersEnabled: false }).where(eq(shopsTable.id, shop.id));
-    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
 
     expect(work.actions.some((a) => a.id === `work-order-late:${customer.workOrder.id}`)).toBe(
       false,
@@ -654,7 +655,7 @@ describe("staff credentials on Today (one row per staffer)", () => {
       if (!made) throw new Error("credential refused");
     }
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop));
     const rows = work.actions.filter(
       (action) =>
         action.kind === "staff_credential_due" && action.subject === staff.person.fullName,

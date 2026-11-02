@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, inArray, isNull, lt, ne, or, type SQL, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, lt, or, type SQL, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { refundOnCancellation } from "@/lib/deposits";
 import { log } from "@/lib/log";
@@ -35,6 +35,7 @@ import {
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { findStripePaymentTarget } from "./stripe-payment-targets";
 import { checkoutProviderFromEnvironment } from "./stripe-providers";
+import { seatNotCancelled } from "./trips-queries";
 
 /**
  * The result of attempting an automated refund when a paid seat is cancelled.
@@ -855,7 +856,7 @@ export async function listOwedShopCancellationRefunds(
         inArray(bookingPayments.status, [...capturedPaymentStatuses]),
         eq(trips.status, "cancelled"),
         // The forfeit carve-out — see the doc comment above.
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
         // Bounded on the cancellation, with a NULL treated as **stale**: a trip
         // cancelled before this column existed has been owed for a while by
         // definition, and failing toward showing the money is the right
@@ -888,11 +889,7 @@ export async function refundBookingsForShopCancelledTrip(
     .select({ id: bookings.id })
     .from(bookings)
     .where(
-      and(
-        eq(bookings.shopId, input.shopId),
-        eq(bookings.tripId, input.tripId),
-        ne(bookings.status, "cancelled"),
-      ),
+      and(eq(bookings.shopId, input.shopId), eq(bookings.tripId, input.tripId), seatNotCancelled),
     );
   const outcomes = new Map<string, ShopCancellationRefundOutcome>();
   for (const seat of seats) {

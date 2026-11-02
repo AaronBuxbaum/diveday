@@ -5,10 +5,12 @@ import { FactLine } from "@/components/ui/FactLine";
 import { InsetGroup } from "@/components/ui/ledger";
 import { canPersonErasePersonalData } from "@/db/authz";
 import type { AppDb } from "@/db/client";
+import { readShopConnections } from "@/db/connections";
 import { listPendingMediaDeletions } from "@/db/media-deletions";
 import { listOwedProcessorErasures } from "@/db/processor-erasure";
 import type { MediaDeletionKind, ProcessorErasureTarget } from "@/db/schema";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
+import type { ConnectionProvider, ConnectionState } from "@/lib/connections";
 import { formatShortDate } from "@/lib/format";
 import { type ErasureFailure, erasureFailureOf } from "@/lib/payments/erasure-failure";
 import {
@@ -85,6 +87,25 @@ const PROCESSOR_ERASURE_FAILURE_KEYS: Record<ErasureFailure, StaffMessageKey> = 
   not_confirmed: "settings.main.dataJobs.processorErasures.failure.not_confirmed",
 };
 
+/** Each connection's name, keyed by the provider code so a new one fails typecheck. */
+const CONNECTION_PROVIDER_KEYS: Record<ConnectionProvider, StaffMessageKey> = {
+  stripe: "settings.main.connections.provider.stripe",
+  whatsapp: "settings.main.connections.provider.whatsapp",
+  shopify: "settings.main.connections.provider.shopify",
+  quickbooks: "settings.main.connections.provider.quickbooks",
+  zapier: "settings.main.connections.provider.zapier",
+  backups: "settings.main.connections.provider.backups",
+  calendarFeeds: "settings.main.connections.provider.calendarFeeds",
+};
+
+/** The one state word, from `connectionState` (src/lib/connections.ts, issue #2741). */
+const CONNECTION_STATE_KEYS: Record<ConnectionState, StaffMessageKey> = {
+  notConnected: "settings.main.connections.state.notConnected",
+  connected: "settings.main.connections.state.connected",
+  needsAttention: "settings.main.connections.state.needsAttention",
+  disconnected: "settings.main.connections.state.disconnected",
+};
+
 function processorErasureFailureFact(t: StaffTranslator, lastError: string | null) {
   const failure = erasureFailureOf(lastError);
   return failure
@@ -112,7 +133,7 @@ export async function DataGroup({
   canImport: boolean;
 }) {
   const { shop, shopSlug, t, locale } = view;
-  const [pendingMediaDeletions, owedProcessorErasures, canErase] = await Promise.all([
+  const [pendingMediaDeletions, owedProcessorErasures, canErase, connections] = await Promise.all([
     listPendingMediaDeletions(db, shop.id),
     listOwedProcessorErasures(db, shop.id),
     // Owner-only, and tighter than the gate those panels are *read* behind: a
@@ -122,6 +143,7 @@ export async function DataGroup({
     // keeps a manager from being shown a button they would be bounced from
     // (ADR 20260724-role-gated-surfaces-hide-not-explain).
     canPersonErasePersonalData(db, shop.id, personId),
+    readShopConnections(db, shop.id),
   ]);
   return (
     <SettingsGroup group={DATA_GROUP} label={t(DATA_GROUP.labelKey)}>
@@ -271,6 +293,49 @@ export async function DataGroup({
           </ShopNotice>
         </section>
       ) : null}
+
+      {/* Every connection, one state word each (issue #2741). Read-only for
+          now: each connection is still changed on its own page, and this list
+          comes first so those pages can fold into it one at a time. */}
+      <InsetGroup
+        label={t("settings.main.connections.heading")}
+        as="h3"
+        bodyAs="ul"
+        className="mb-6"
+      >
+        {connections.map((connection) => (
+          <li
+            key={connection.provider}
+            data-connection={connection.provider}
+            data-connection-state={connection.state}
+            className="flex min-h-14 flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-3 sm:px-5"
+          >
+            <span className="font-medium">{t(CONNECTION_PROVIDER_KEYS[connection.provider])}</span>
+            <FactLine
+              separatorClassName="text-muted"
+              facts={[
+                {
+                  value: t(CONNECTION_STATE_KEYS[connection.state]),
+                  className:
+                    connection.state === "needsAttention"
+                      ? "font-medium text-warning-strong"
+                      : connection.state === "connected"
+                        ? undefined
+                        : "text-muted",
+                },
+                connection.lastSeenAt
+                  ? {
+                      value: t("settings.main.connections.lastSeen", {
+                        date: formatShortDate(connection.lastSeenAt, locale, shop.timezone),
+                      }),
+                      className: "text-muted",
+                    }
+                  : null,
+              ]}
+            />
+          </li>
+        ))}
+      </InsetGroup>
 
       {/* One door: Export, Backups, Import and Integrations are the tabs of
           one "Your data" page set (`DataTabs`, issue #2813). The door opens the

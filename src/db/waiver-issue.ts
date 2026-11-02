@@ -1,4 +1,4 @@
-import { and, eq, isNull, ne } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { courseFormsLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
@@ -23,6 +23,7 @@ import { isTransactionExecutor } from "./query-helpers";
 import { getBookingReadiness } from "./readiness";
 import { bookings, people, shops, trips, waiverRecords } from "./schema";
 import { stopListedSmsProvider } from "./sms-opt-outs";
+import { seatNotCancelled } from "./trips-queries";
 import {
   hasLivePersonWaiverRequest,
   hasLiveWaiverRequest,
@@ -342,13 +343,7 @@ export async function issueAndDeliverWaiver(
     .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, bookings.shopId)))
     .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, bookings.shopId)))
     .innerJoin(shops, eq(shops.id, bookings.shopId))
-    .where(
-      and(
-        eq(bookings.id, bookingId),
-        eq(bookings.shopId, shopId),
-        ne(bookings.status, "cancelled"),
-      ),
-    )
+    .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId), seatNotCancelled))
     .limit(1);
   if (!observed) {
     return { ok: false, bookingId, diverName: null, reason: "error" };
@@ -374,13 +369,7 @@ export async function issueAndDeliverWaiver(
         )
         .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, bookings.shopId)))
         .innerJoin(shops, eq(shops.id, bookings.shopId))
-        .where(
-          and(
-            eq(bookings.id, bookingId),
-            eq(bookings.shopId, shopId),
-            ne(bookings.status, "cancelled"),
-          ),
-        )
+        .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId), seatNotCancelled))
         .limit(1);
       if (!ctx) return null;
 
@@ -694,13 +683,7 @@ export async function issueJoinWaiverLink(
     .select({ personId: bookings.personId, tripId: bookings.tripId, email: people.email })
     .from(bookings)
     .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, bookings.shopId)))
-    .where(
-      and(
-        eq(bookings.id, bookingId),
-        eq(bookings.shopId, shopId),
-        ne(bookings.status, "cancelled"),
-      ),
-    )
+    .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId), seatNotCancelled))
     .limit(1);
   if (!observed) return null;
   const issue = async (tx: DbExecutor) => {

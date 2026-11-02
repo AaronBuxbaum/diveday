@@ -37,7 +37,7 @@ Set, they are a **published promise** rather than an internal setting:
 - The public booking page states the minimum and the exact moment the answer arrives — "runs with at
   least 4 divers; if it hasn't got there by Thu 14 Aug, 7:30 AM, the shop cancels it and emails
   everyone booked". A diver reads that *before* they pay.
-- An hourly sweep (`/api/cron/minimum-seats` → `cancelDeparturesBelowMinimum`) cancels every
+- An hourly sweep (the `minimum-seats` scan of `/api/cron/shop-tick` → `cancelDeparturesBelowMinimum`; its own route until issue #2715) cancels every
   departure that is still short at its own moment, and emails every diver aboard with the numbers:
   what it needed, what it had.
 - Staff see the shortfall and the deadline on the trip's Overview while there is still time to ring
@@ -117,7 +117,8 @@ email them, and to be reinstatable. Flipping the trip's status alone is what mak
 - Two nullable columns and two check constraints on `trips`; one value on the `notification_kind`
   enum. Nothing existing changes shape.
 - One more `crons` entry, one more Sentry Cron Monitor
-  (`diveday-minimum-seats-sweep`). A missed pass is its own incident: divers who were promised an
+  (`diveday-minimum-seats-sweep`; since issue #2715 a scan of the shop tick, whose
+  `diveday-shop-tick` monitor errors when it fails). A missed pass is its own incident: divers who were promised an
   answer at a stated hour do not get one, and by the time anybody notices they are at the dock.
 - The sweep is the **only** thing that cancels for a minimum. Staff keep their ordinary cancel
   button, and nothing else in the app reads these columns as a gate — a diver can still book a

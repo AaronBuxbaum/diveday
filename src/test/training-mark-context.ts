@@ -12,6 +12,7 @@ import {
   userAccounts,
 } from "@/db/schema";
 import { markTrainingDive } from "@/db/training-marks";
+import { seatNotCancelled } from "@/db/trips-queries";
 import { nowDate } from "@/lib/clock";
 import { SEEDED_CAPTAIN_EMAIL, SEEDED_OWNER_EMAIL, seededStaffPersonId } from "./staff-session";
 
@@ -46,7 +47,7 @@ export async function charterContext(fileCtx: { db: AppDb; shop: { id: string } 
         eq(bookings.shopId, shop.id),
         isNotNull(trips.courseId),
         eq(bookings.participantType, "diver"),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
         ne(trips.status, "cancelled"),
         gt(trips.startsAt, now),
       ),

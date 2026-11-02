@@ -12,6 +12,7 @@ import {
   tripRequirements,
   trips,
 } from "@/db/schema";
+import { shopClock } from "@/lib/shop-clock";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import {
@@ -154,11 +155,8 @@ function signIn(shop: { id: string; slug: string }, personId: string) {
         )}`,
       );
     }
-    return {
-      session,
-      db: surface.db,
-      shop: surface.shop,
-    };
+    const { db, shop: row } = surface;
+    return { session, db, shop: row, clock: shopClock(row) };
   });
 }
 

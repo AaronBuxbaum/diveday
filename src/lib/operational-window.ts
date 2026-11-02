@@ -15,10 +15,6 @@
  *   {@link OPERATIONAL_HORIZON_DAYS} days out. The shop's working week. The
  *   home files the work inside it onto the boat each job holds up, and
  *   everything further out is Schedule's job rather than a triage list's.
- * - **The shop day** (`shopDayWindow`) — the coarse scan that finds "today's
- *   boat" before a timezone is applied. Not a readiness lens at all: it exists
- *   only so a *calendar-day* question can be answered without reading every
- *   scheduled trip the shop has ever had. See its own note below.
  * - **The arrivals window** (`arrivalsWindow`) — the counter's narrower lens on
  *   the *same* horizon: departures from {@link ARRIVALS_LOOKBACK_HOURS} hours
  *   ago through the next {@link ARRIVALS_AHEAD_HOURS}. It reaches backwards,
@@ -29,6 +25,8 @@
  *   never show a departure the home has already dropped.
  *
  * Reports is deliberately *not* here. A calendar month is genuinely its job.
+ * Nor is the shop's calendar day: that is `clock.day` (`src/lib/shop-clock.ts`),
+ * the exact pair, not a window.
  *
  * Codes and numbers only — the sentence that discloses the window lives in
  * the staff bundle under `shared.operationalWindow`, parameterised from the
@@ -61,24 +59,6 @@ export const ARRIVALS_LOOKBACK_HOURS = 6;
 
 /** How far ahead the counter looks: today's remaining boats plus tomorrow's. */
 export const ARRIVALS_AHEAD_HOURS = 36;
-
-/**
- * How far the shop-day scan reaches either side of now (see
- * {@link shopDayWindow}).
- *
- * The bound is not a guess: **26 hours is what the shop's own calendar day can
- * actually span relative to any instant inside it.** At 23:59 local, local
- * midnight this morning is nearly 24 hours behind; at 00:00 local, tonight's
- * last departure is nearly 24 hours ahead. The extra two hours absorb a
- * daylight-saving transition, which makes a local day 25 hours long, plus an
- * hour of slack.
- *
- * It replaces a freestanding, asymmetric −18h/+30h that this query carried
- * inline. The forward half was ample; the *backward* half was six hours short
- * of the shop's own morning, so a shop's 03:00 boat stopped being "today's
- * boat" from 21:00 local onwards — on the same day it sailed.
- */
-export const SHOP_DAY_SCAN_HOURS = 26;
 
 /**
  * How many upcoming departures any readiness surface will inspect. Readiness is
@@ -123,27 +103,6 @@ export function arrivalsWindow(now: Date): OperationalWindow {
 export function walkInDoorOpen(startsAt: Date, now: Date): boolean {
   const window = arrivalsWindow(now);
   return startsAt >= window.from && startsAt <= window.to && !hasSailed(startsAt, now);
-}
-
-/**
- * The loose UTC net around "the shop's own calendar day", for the one question
- * that is about a *date* rather than a horizon: which boat would staff check in
- * for right now (`todayNextDepartureTripId`, `src/db/today.ts`, which feeds the
- * command palette's "Boarding — today's boat" jump).
- *
- * It is deliberately **not** a readiness lens and never bounds one. It is a
- * query bound: SQL cannot ask "same calendar day in Asia/Jayapura" of a UTC
- * column, so the scan over-fetches by {@link SHOP_DAY_SCAN_HOURS} either side
- * and the caller keeps only the rows whose shop-local date matches. Widening it
- * costs rows; narrowing it silently loses a real departure — which is exactly
- * why the number lives here, derived and explained, rather than inline in a
- * query where nobody could check it (and where, as it turned out, nobody had).
- */
-export function shopDayWindow(now: Date): OperationalWindow {
-  return {
-    from: new Date(now.getTime() - SHOP_DAY_SCAN_HOURS * HOUR_MS),
-    to: new Date(now.getTime() + SHOP_DAY_SCAN_HOURS * HOUR_MS),
-  };
 }
 
 /**

@@ -1,6 +1,7 @@
 import { and, eq, gte, isNull, ne } from "drizzle-orm";
 import type { AppDb } from "@/db/client";
 import { bookings, tripAssignments, trips } from "@/db/schema";
+import { seatNotCancelled } from "@/db/trips";
 import { HOUR_MS } from "@/lib/clock";
 
 /**
@@ -29,7 +30,7 @@ export async function unstaffTomorrowsDeparture(
   const [departure] = await db
     .select({ id: trips.id })
     .from(trips)
-    .innerJoin(bookings, and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled")))
+    .innerJoin(bookings, and(eq(bookings.tripId, trips.id), seatNotCancelled))
     .where(
       and(
         eq(trips.shopId, shopId),

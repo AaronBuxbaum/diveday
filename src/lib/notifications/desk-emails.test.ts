@@ -8,7 +8,7 @@ const base = {
   recipientName: "Ana Ruiz",
   shopName: "Blue <Mantis>",
   inboxUrl: "https://diveday.example/shop/blue/inbox",
-  settingsUrl: "https://diveday.example/shop/blue/settings/email",
+  settingsUrl: "https://diveday.example/shop/blue/me/email",
 };
 
 describe("deskAfterHoursEmail", () => {

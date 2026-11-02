@@ -9,7 +9,7 @@ import { expect, signedInAs, test } from "./fixtures";
  * (`privateShop`) and signs in as that shop's owner. The read-only tests sign
  * in to the shared demo shop.
  */
-const emailSettingsFor = (shopSlug: string) => `/shop/${shopSlug}/settings/email`;
+const emailSettingsFor = (shopSlug: string) => `/shop/${shopSlug}/me/email`;
 
 test.describe("the Monday email, on a shop of the test's own", () => {
   test("an owner gets it by default and can turn it off and back on", async ({

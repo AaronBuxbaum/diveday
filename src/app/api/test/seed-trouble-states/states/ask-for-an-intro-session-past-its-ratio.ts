@@ -4,6 +4,7 @@ import { requestCrewAssignment } from "@/db/crew-requests";
 import { DEV_STAFF_LOGINS } from "@/db/dev-credentials";
 import { bookings, people, personRoles, tripAssignments, trips } from "@/db/schema";
 import { seatDiver } from "@/db/seat-diver";
+import { seatNotCancelled } from "@/db/trips";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { courseRatioCapacity, INTRO_COURSE_RATIO } from "@/lib/course-ratios";
 
@@ -78,7 +79,7 @@ export async function askForAnIntroSessionPastItsRatio(
   const [{ booked }] = await db
     .select({ booked: count(bookings.id) })
     .from(bookings)
-    .where(and(eq(bookings.tripId, session.id), ne(bookings.status, "cancelled")));
+    .where(and(eq(bookings.tripId, session.id), seatNotCancelled));
   for (let seat = booked; seat < pastTheCap; seat += 1) {
     const seated = await seatDiver(db, {
       shopId,

@@ -11,30 +11,28 @@ Each rule names what enforces it; the reasoning, the ADRs and the longer form of
 
 ## Where things are
 
-- **Diver shop pages**: `src/app/s/[shopSlug]/**`, no auth anywhere; paths from
-  `src/lib/public-routes.ts`. `/shop/**` is staff.
+AGENTS.md and [the route map](../../docs/agents/route-map.md) say where (diver and staff pages, the
+schedule builder, date requests, site briefings, bearer-token routes). What they do not say:
+
 - **Where a diver can go**: `src/components/PublicShopNav.tsx`, assembled in
   `src/app/s/[shopSlug]/layout.tsx`; never a per-page cross-link.
 - **Where staff can go**: a destination goes in `src/lib/staff-destinations.ts`, never in a
   consumer (`src/components/ShopSectionNav.tsx`, `src/components/search/CommandPalette.tsx`).
-- **Bearer-token pages** (`src/app/(token)/waivers/[token]` and siblings): the URL is the capability; read
-  [the capability runbook](../../docs/engineering/capability-telemetry-runbook.md) first; no
-  structured data or telemetry carrying the token.
+- **Bearer-token pages**: read [the capability runbook](../../docs/engineering/capability-telemetry-runbook.md)
+  first; no structured data or telemetry carrying the token.
 - **A staff page opens with** `requireShopSurface` (`src/lib/session.ts`); every refusal throws, a
   cross-tenant miss is `notFound()` (`src/lib/session.test.ts`).
 - **A retired staff URL is deleted, not redirected** (H-20260815-no-legacy); the full rule is in
   [repo checks](../../docs/agents/repo-checks.md#there-is-no-legacy-delete-it).
 - **Server actions**: inline `"use server"` for one page, `src/app/actions/` when shared, a sibling
   `actions.ts` for a large page; seating a diver through `src/app/actions/seat-diver.ts`.
-- **Schedule**: the builder (`schedule/board/_components/ScheduleBuilder.tsx`) is the one place a
-  trip is created; another reading of the schedule is a view in `schedule/_components/ScheduleViews.tsx`.
+- **The builder is the one place a trip is created**; another reading of the schedule is a view in
+  `schedule/_components/ScheduleViews.tsx`.
 - **A departure is four tabs** drawn by `_components/TripTabs.tsx`; add to a tab, never a fifth surface.
 - **The shop home** is `_components/today/DaySpine.tsx`: departures, then one "Needs you" list.
 - **Back-office queues** sit with their object and render nothing when empty, never on Reports.
-- **A day not on the board**: `src/components/DateRequestForm.tsx` + `src/app/actions/inquiry.ts`,
-  never the wait list.
-- **A dive-site briefing** is written in `SiteFields.tsx` and rendered by
-  `src/components/SiteBriefing.tsx` on site and trip pages, every sentence off the site row.
+- **A date request is never the wait list.**
+- **A site briefing** is written in `SiteFields.tsx`, every sentence off the site row.
 - **Tokens and wrappers**: `src/app/globals.css`, `src/components/ui/`; readiness words in
   `src/i18n/readiness-labels.ts`; heading levels in `src/components/ui/typography.ts`.
 - **Paging**: `src/components/Pager.tsx` + `offsetPage`; a count shares the row query's exact scope.

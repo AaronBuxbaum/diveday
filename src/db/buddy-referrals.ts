@@ -4,6 +4,7 @@ import { bookingIdFromBuddyReferral } from "@/lib/buddy-tokens";
 import type { DbExecutor } from "./client";
 import { bookingReferrals, bookings, people, shops, trips } from "./schema";
 import { liveTrip } from "./trips-live";
+import { seatNotCancelled } from "./trips-queries";
 
 /**
  * **Which diver's link brought this seat** (ADR 20260908-one-hand, decision 6,
@@ -110,7 +111,7 @@ export async function buddyReferredSeatsForWindow(
         liveTrip(),
         eq(bookingReferrals.shopId, shopId),
         sql`${trips.startsAt} >= ${windowStart} and ${trips.startsAt} < ${windowEnd}`,
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
       ),
     );
   return Number(row?.seats ?? 0);
@@ -148,7 +149,7 @@ export async function friendsBroughtBy(
         eq(trips.shopId, shopId),
         eq(referrer.personId, personId),
         ne(bookings.personId, personId),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
       ),
     );
   return Number(row?.friends ?? 0);
@@ -194,7 +195,7 @@ export async function buddyReferrersForWindow(
           eq(bookings.shopId, shopId),
           eq(trips.shopId, shopId),
           sql`${trips.startsAt} >= ${windowStart} and ${trips.startsAt} < ${windowEnd}`,
-          ne(bookings.status, "cancelled"),
+          seatNotCancelled,
           ne(bookings.personId, referrer.personId),
           isNull(people.deletedAt),
           isNull(people.anonymizedAt),

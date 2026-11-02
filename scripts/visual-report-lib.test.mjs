@@ -7,9 +7,11 @@ import {
   baselineCacheKey,
   COMMENT_MARKER,
   changedSetDelta,
+  commentIsCurrent,
   comparedAnything,
   countsLine,
   fetchFromBucket,
+  fingerprintFromComment,
   formatPrComment,
   geometryLine,
   geometrySummaryLine,
@@ -21,6 +23,7 @@ import {
   readPngSize,
   snapshotVersionFromReport,
   summarizeReport,
+  summaryFingerprint,
   verdictHeadline,
 } from "./visual-report-lib.mjs";
 
@@ -48,7 +51,11 @@ function outJson({ failed = [], added = [], deleted = [], passed = [], expected 
 }
 
 function comment(report) {
-  return formatPrComment({ commit: COMMIT, bucket: BUCKET, summary: summarizeReport(report) });
+  return formatPrComment({
+    commit: COMMIT,
+    bucket: BUCKET,
+    summary: summarizeReport(report),
+  });
 }
 
 describe("summarizeReport", () => {
@@ -117,7 +124,12 @@ describe("summarizeReport", () => {
 
   it("keeps the counts line pnpm visual:report has always printed", () => {
     const summary = summarizeReport(
-      outJson({ failed: ["a.png"], added: ["b.png"], deleted: ["c.png"], passed: ["d.png"] }),
+      outJson({
+        failed: ["a.png"],
+        added: ["b.png"],
+        deleted: ["c.png"],
+        passed: ["d.png"],
+      }),
     );
     expect(countsLine(summary)).toBe("Changed: 1 · New: 1 · Deleted: 1 · Passed: 1");
   });
@@ -335,10 +347,9 @@ describe("fetchFromBucket", () => {
       fetchImpl: null,
       requestImpl: (url, callback) => {
         urls.push(url);
-        return requestResponse({ chunks: [compressed.subarray(0, 8), compressed.subarray(8)] })(
-          url,
-          callback,
-        );
+        return requestResponse({
+          chunks: [compressed.subarray(0, 8), compressed.subarray(8)],
+        })(url, callback);
       },
     });
     expect(urls).toEqual([`https://${BUCKET}.s3.amazonaws.com/k/out.json`]);
@@ -354,7 +365,9 @@ describe("fetchFromBucket", () => {
         if (urls.length === 1) {
           return requestResponse({
             statusCode: 301,
-            headers: { location: `https://${BUCKET}.s3.us-east-1.amazonaws.com/k/out.json` },
+            headers: {
+              location: `https://${BUCKET}.s3.us-east-1.amazonaws.com/k/out.json`,
+            },
           })(url, callback);
         }
         return requestResponse({ chunks: [Buffer.from("ok")] })(url, callback);
@@ -548,8 +561,14 @@ function pngOf(width, height) {
 
 describe("readPngSize", () => {
   it("reads the dimensions out of the IHDR chunk", () => {
-    expect(readPngSize(pngOf(1280, 1327))).toEqual({ width: 1280, height: 1327 });
-    expect(readPngSize(pngOf(390, 12_000))).toEqual({ width: 390, height: 12_000 });
+    expect(readPngSize(pngOf(1280, 1327))).toEqual({
+      width: 1280,
+      height: 1327,
+    });
+    expect(readPngSize(pngOf(390, 12_000))).toEqual({
+      width: 390,
+      height: 12_000,
+    });
   });
 
   /**
@@ -632,8 +651,15 @@ describe("itemRows", () => {
       itemRows({
         name: "recap-light-vw-390.png",
         kind: "changed",
-        files: { expected: "a/expected.png", actual: "a/actual.png", diff: "a/diff.png" },
-        sizes: { expected: { width: 390, height: 800 }, actual: { width: 390, height: 921 } },
+        files: {
+          expected: "a/expected.png",
+          actual: "a/actual.png",
+          diff: "a/diff.png",
+        },
+        sizes: {
+          expected: { width: 390, height: 800 },
+          actual: { width: 390, height: 921 },
+        },
       }),
     ).toEqual([
       "## recap-light-vw-390.png (changed)",
@@ -649,7 +675,12 @@ describe("itemRows", () => {
    * a file that never arrived, and the reader has to be able to tell. */
   it("distinguishes an unreadable PNG from a missing one", () => {
     expect(
-      itemRows({ name: "x.png", kind: "changed", files: { actual: "a/actual.png" }, sizes: {} }),
+      itemRows({
+        name: "x.png",
+        kind: "changed",
+        files: { actual: "a/actual.png" },
+        sizes: {},
+      }),
     ).toContain("- geometry: unreadable PNG");
     expect(itemRows({ name: "x.png", kind: "changed" })).toContain(
       "- geometry: unavailable (no images on disk)",
@@ -658,7 +689,10 @@ describe("itemRows", () => {
 });
 
 describe("geometrySummaryLine", () => {
-  const changed = (expected, actual) => ({ kind: "changed", sizes: { expected, actual } });
+  const changed = (expected, actual) => ({
+    kind: "changed",
+    sizes: { expected, actual },
+  });
   const at = (height) => ({ width: 1280, height });
 
   it("counts only the changed items whose height actually moved", () => {
@@ -694,17 +728,29 @@ describe("the changed-set delta between heads", () => {
   const PREVIOUS = "bc025e9aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
   const passed = items("still", 5);
   const before = summarizeReport(
-    outJson({ failed: ["a.png", "b.png", "renamed-dark.png"], deleted: [], passed }),
+    outJson({
+      failed: ["a.png", "b.png", "renamed-dark.png"],
+      deleted: [],
+      passed,
+    }),
   );
   const now = summarizeReport(
-    outJson({ failed: ["a.png", "b.png", "banner.png"], deleted: ["renamed-dark.png"], passed }),
+    outJson({
+      failed: ["a.png", "b.png", "banner.png"],
+      deleted: ["renamed-dark.png"],
+      passed,
+    }),
   );
   const delta = (summary, previousSummary, previousCommit = PREVIOUS, commit = COMMIT) =>
     changedSetDelta({ commit, summary, previousCommit, previousSummary });
 
   it("names what entered and what left, across changed, new and deleted", () => {
     const renamed = summarizeReport(
-      outJson({ failed: ["a.png", "banner.png"], added: ["renamed-new.png"], passed }),
+      outJson({
+        failed: ["a.png", "banner.png"],
+        added: ["renamed-new.png"],
+        passed,
+      }),
     );
     expect(delta(renamed, before)).toEqual({
       previousCommit: PREVIOUS,
@@ -725,7 +771,10 @@ describe("the changed-set delta between heads", () => {
   it("keeps a surface that only moved between categories out of both lists", () => {
     // renamed-dark.png was changed and is now deleted: still moved, still listed
     // in its category below, and neither entered nor left.
-    expect(delta(now, before)).toMatchObject({ entered: ["banner.png"], left: [] });
+    expect(delta(now, before)).toMatchObject({
+      entered: ["banner.png"],
+      left: [],
+    });
   });
 
   it("has no delta on a branch's first report", () => {
@@ -795,5 +844,81 @@ describe("the changed-set delta between heads", () => {
       delta: delta(many, summarizeReport(outJson({ failed: ["a.png"], passed }))),
     });
     expect(body).toContain("…and **4** more not listed here");
+  });
+});
+
+describe("leaving an unchanged comment alone (issue #3644)", () => {
+  const OTHER = "9999999aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+  const failed = ["a.png", "b.png"];
+  const passed = items("ok", 20);
+  const write = (report, commit = COMMIT, extra = {}) =>
+    formatPrComment({
+      commit,
+      bucket: BUCKET,
+      summary: summarizeReport(report),
+      ...extra,
+    });
+  const print = (report, extra = {}) =>
+    summaryFingerprint({
+      bucket: BUCKET,
+      summary: summarizeReport(report),
+      ...extra,
+    });
+
+  it("treats a later push with the same verdict, counts and names as current", () => {
+    const report = outJson({ failed, passed });
+    const existing = write(report, COMMIT);
+    expect(fingerprintFromComment(existing)).toMatch(/^[0-9a-f]{64}$/);
+    expect(commentIsCurrent(existing, print(report))).toBe(true);
+    // the commit is what changes on every push; it is not in the fingerprint
+    expect(fingerprintFromComment(write(report, OTHER))).toBe(fingerprintFromComment(existing));
+  });
+
+  it("rewrites when a surface enters, leaves or moves category", () => {
+    const existing = write(outJson({ failed, passed }));
+    expect(
+      commentIsCurrent(existing, print(outJson({ failed: [...failed, "c.png"], passed }))),
+    ).toBe(false);
+    expect(commentIsCurrent(existing, print(outJson({ failed: ["a.png", "z.png"], passed })))).toBe(
+      false,
+    );
+    expect(
+      commentIsCurrent(existing, print(outJson({ failed: ["a.png"], added: ["b.png"], passed }))),
+    ).toBe(false);
+  });
+
+  it("sees names past the ten the comment lists", () => {
+    const many = items("c", 14);
+    const existing = write(outJson({ failed: many, passed }));
+    const swapped = [...many.slice(0, 13), "other-vw-390.png"];
+    expect(commentIsCurrent(existing, print(outJson({ failed: swapped, passed })))).toBe(false);
+  });
+
+  it("rewrites when the verdict, the note, the report location or the bootstrap flag differs", () => {
+    const report = outJson({ failed, passed });
+    const existing = write(report, COMMIT, {
+      note: "older baseline",
+      snapshotVersion: "v1",
+    });
+    const same = { note: "older baseline", snapshotVersion: "v1" };
+    expect(commentIsCurrent(existing, print(report, same))).toBe(true);
+    expect(commentIsCurrent(existing, print(report, { ...same, note: "" }))).toBe(false);
+    expect(commentIsCurrent(existing, print(report, { ...same, snapshotVersion: "v2" }))).toBe(
+      false,
+    );
+    expect(commentIsCurrent(existing, print(null, same))).toBe(false);
+  });
+
+  it("rewrites a comment with no fingerprint, or no comment text at all", () => {
+    const report = outJson({ failed, passed });
+    expect(commentIsCurrent(`${COMMENT_MARKER}\n### Visual regression`, print(report))).toBe(false);
+    expect(commentIsCurrent(undefined, print(report))).toBe(false);
+    expect(commentIsCurrent("", print(report))).toBe(false);
+  });
+
+  it("says in the footer which commit it was written at and where the head's pixels are", () => {
+    const body = write(outJson({ failed, passed }));
+    expect(body).toContain("Written at commit `56696b7`");
+    expect(body).toContain("pnpm visual:report --commit <head>");
   });
 });

@@ -155,6 +155,13 @@
   bearer link revoked, and a chosen person already on a moving departure is refused. Trail lines
   on the departure (`identity_repointed`) and on both records (`identity_repointed_off`,
   `identity_repointed_onto`).
+- **Origin (of a person)** — how a person record came to be, as a code written once at birth by
+  `createPerson` (`src/db/people.ts`) and never changed: `public_booking`, `waitlist`,
+  `last_minute`, `self_registration`, `counter`, `import`, `invite`, `onboard`, `public_order`,
+  `identity_split`. A matched returning person keeps the origin they were born with, so a record
+  the shop typed in never becomes the diver's own (issue #2726). `seed` is the column default and
+  means no door wrote the row. It replaced `self_registered_at`, whose fact is `origin =
+  self_registration` with `created_at`.
 - **Merge (two diver records)** — the shop saying two records are one diver, and the record kept
   taking everything the other held (`mergeDiverRecords`, `src/db/diver-merge.ts`; issue #1240).
   Owner or manager only. A **likely duplicate** is offered on the record and flagged on the roster

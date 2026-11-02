@@ -28,6 +28,7 @@ import { publicationIdFromEnv } from "./visual-publication-id.mjs";
 import {
   COMMENT_MARKER,
   changedSetDelta,
+  commentIsCurrent,
   comparedAnything,
   DEFAULT_BUCKET,
   fetchFromBucket,
@@ -36,6 +37,7 @@ import {
   publicationReportStatus,
   snapshotVersionFromReport,
   summarizeReport,
+  summaryFingerprint,
 } from "./visual-report-lib.mjs";
 
 const API = process.env.GITHUB_API_URL || "https://api.github.com";
@@ -260,6 +262,22 @@ async function main() {
   // failure reach the catch-all, as it always has.
   if (existing === undefined) existing = await findStickyComment(repo, pr, token);
   if (existing) {
+    // An edit is a notification a subscribed session can start a turn on
+    // (issue #3644), so a push that changes nothing the comment says leaves it.
+    // The job summary above and the step outputs are still written for this run.
+    const fingerprint = summaryFingerprint({
+      bucket,
+      summary,
+      snapshotVersion: snapshotVersionFromReport(report),
+      note,
+      freshBaselineBootstrap: process.env.VISUAL_BASELINE_RESET === "true",
+    });
+    if (commentIsCurrent(existing.body, fingerprint)) {
+      console.log(
+        `visual-pr-comment: comment ${existing.id} on ${repo}#${pr} already says this; left alone.`,
+      );
+      return;
+    }
     await api(`/repos/${repo}/issues/comments/${existing.id}`, {
       token,
       method: "PATCH",

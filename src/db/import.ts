@@ -48,6 +48,7 @@ import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
 import { isCompletedWaiverCurrent } from "@/lib/waivers";
 import { readActiveStaffRoles } from "./authz";
 import type { AppDb } from "./client";
+import { createPerson } from "./people";
 import { isUniqueConstraintViolation } from "./query-helpers";
 import {
   certifications,
@@ -55,7 +56,6 @@ import {
   internalNotes,
   nitroxCertifications,
   people,
-  personRoles,
   priorVisits,
   rentalFitProfiles,
   shops,
@@ -504,22 +504,19 @@ export async function commitContactImport(
         // (see src/db/people.ts's findOrCreatePerson for the same pattern).
         try {
           const inserted = await tx.transaction(async (tx2) => {
-            const [row2] = await tx2
-              .insert(people)
-              .values({
-                shopId,
-                fullName: row.fullName,
-                email: row.email,
-                phone,
+            return await createPerson(tx2, {
+              shopId,
+              fullName: row.fullName,
+              email: row.email,
+              phone,
+              origin: "import",
+              fields: {
                 dateOfBirth: row.dateOfBirth,
                 emergencyContactName: row.emergencyContactName,
                 emergencyContactPhone: row.emergencyContactPhone,
                 diveInsurance: row.diveInsurance,
-              })
-              .returning({ id: people.id });
-            if (!row2) throw new Error("commitContactImport: person insert returned no row");
-            await tx2.insert(personRoles).values({ personId: row2.id, role: "diver" });
-            return row2;
+              },
+            });
           });
           personId = inserted.id;
           summary.peopleCreated += 1;

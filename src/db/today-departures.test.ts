@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DAY_MS, nowDate } from "@/lib/clock";
+import { shopClock } from "@/lib/shop-clock";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { countQueries } from "@/test/query-count";
 import { inHorizonReadiness, sharedInHorizonReadiness } from "./blockers";
@@ -29,8 +30,7 @@ describe("one shop-day's departure cards", () => {
         db,
         shop.id,
         shop.slug,
-        shop.timezone,
-        day,
+        shopClock(shop, day),
         undefined,
         undefined,
         undefined,
@@ -69,8 +69,7 @@ describe("one shop-day's departure cards", () => {
       log.db,
       shop.id,
       shop.slug,
-      shop.timezone,
-      tomorrow,
+      shopClock(shop, tomorrow),
       undefined,
       undefined,
       undefined,
@@ -94,7 +93,7 @@ describe("the shared readiness pass", () => {
     expect(shared.trips.map((trip) => trip.id)).toEqual(own.trips.map((trip) => trip.id));
     expect([...shared.readinessByTrip.keys()]).toEqual([...own.readinessByTrip.keys()]);
     expect(
-      (await countBlockedDiversNextBoatDay(db, shop.id, shop.timezone, now)).total,
+      (await countBlockedDiversNextBoatDay(db, shop.id, shopClock(shop, now))).total,
     ).toBeGreaterThanOrEqual(0);
   });
 });

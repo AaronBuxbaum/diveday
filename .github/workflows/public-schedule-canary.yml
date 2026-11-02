@@ -1,0 +1,49 @@
+name: Public schedule canary
+
+# Does the demo shop's public schedule draw a trip? (issue #3654, the runbook's "Still uncovered")
+# The liveness probe reads `/api/health`, which renders no page, so a 200 that draws an empty
+# shell was caught by nobody until a diver wrote in. This loads `/s/<slug>` in a browser every
+# hour and fails when no departure is linked (`scripts/public-schedule-canary.mjs`).
+#
+# Repository variables, both optional: CANARY_BASE_URL (default https://dive.day) and
+# CANARY_SHOP_SLUG (default blue-mantis, the demo). Set the slug to the pilot shop's when there
+# is one; the check is the same. Free on a public repository.
+#
+# A red hour on the default branch opens one `ci-red` issue or comments on the open one; the first
+# green hour closes it (`scripts/workflow-alert.mjs`). A manual run on another branch says nothing.
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: public-schedule-canary-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  canary:
+    name: A trip is drawn
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      CANARY_BASE_URL: ${{ vars.CANARY_BASE_URL }}
+      CANARY_SHOP_SLUG: ${{ vars.CANARY_SHOP_SLUG }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - uses: ./.github/actions/playwright-shell
+      - name: Load the schedule
+        run: node scripts/public-schedule-canary.mjs
+      - name: Open or update the red-run issue
+        if: failure() && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+        run: node scripts/workflow-alert.mjs --workflow public-schedule-canary --outcome failure --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+      - name: Close the red-run issue
+        if: success() && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+        run: node scripts/workflow-alert.mjs --workflow public-schedule-canary --outcome success --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"

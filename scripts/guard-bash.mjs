@@ -168,7 +168,7 @@ function actionsRun(repoPath, id) {
  * `gh api [-X POST] repos/o/r/actions/runs/<id>/cancel` (and `force-cancel`). Null otherwise.
  */
 export function cancelledRun(segment) {
-  const cancel = segment.match(/^gh\s+run\s+cancel\b(.*)$/);
+  const cancel = segment.match(/^(?:do\s+)?gh\s+run\s+cancel\b(.*)$/);
   if (cancel) {
     const id = cancel[1].match(/(?:^|\s)(\d+)(?=\s|$)/)?.[1];
     if (!id) return null;
@@ -184,7 +184,28 @@ export function cancelledRun(segment) {
   return null;
 }
 
+/**
+ * A cancel whose run id the shell fills in (`$id`, `$(...)`, backticks, `{}`) or that `xargs`
+ * feeds: the guard cannot read the run's branch, so a bulk cancel of main runs passed unseen
+ * (six within three seconds on 2026-11-01, all "canceled by @AaronBuxbaum", issue #3653).
+ */
+export function unreadableCancel(segment) {
+  const viaXargs = /\bxargs\b.*\bgh\s+run\s+cancel\b/.test(segment);
+  const gh = segment.match(/(?:^|\s)gh\s+run\s+cancel\b(.*)$/);
+  const api = /(?:^|\s)gh\s+api\b.*\/actions\/runs\/[^/\s]*[$`{][^/\s]*\/(?:force-)?cancel\b/.test(
+    segment,
+  );
+  return viaXargs || api || Boolean(gh && /[$`]|\{\}/.test(gh[1]));
+}
+
 function cancelViolation(segment, runOf) {
+  if (unreadableCancel(segment)) {
+    return (
+      `\`${segment}\` cancels runs the guard cannot read which run it is, and a push to main must never be ` +
+      "cancelled (it publishes that commit's visual snapshot, the baseline every branch compares against). " +
+      "Cancel one run at a time with a literal run id of your own pull request's run: `gh run cancel <id>`."
+    );
+  }
   const target = cancelledRun(segment);
   if (!target) return null;
   const run = runOf(target.repoPath, target.id);

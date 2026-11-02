@@ -23,6 +23,7 @@ import {
   trips,
 } from "./schema";
 import { liveTrip } from "./trips-live";
+import { seatNotCancelled } from "./trips-queries";
 
 /**
  * **The one resolver from a marked seat to its enrollment** (issue #2275,
@@ -284,7 +285,7 @@ export async function trainingDiveRoom(
       and(
         eq(bookings.shopId, shopId),
         inArray(bookings.tripId, [...new Set(pairs.map((pair) => pair.departureTripId))]),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
         isNotNull(bookings.trainingMarkedAt),
       ),
     )
@@ -455,7 +456,7 @@ export async function markableTrainingDives(
       and(
         eq(bookings.shopId, shopId),
         eq(bookings.personId, personId),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
         eq(trips.shopId, shopId),
         isNotNull(trips.courseId),
         ne(trips.id, departure.id),

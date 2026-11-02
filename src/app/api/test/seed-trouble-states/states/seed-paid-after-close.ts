@@ -1,6 +1,7 @@
 import { and, eq, ne } from "drizzle-orm";
 import type { AppDb } from "@/db/client";
 import { bookingCheckoutBookings, bookingCheckouts, bookings, trips } from "@/db/schema";
+import { seatNotCancelled } from "@/db/trips";
 
 /**
  * A diver paid on a checkout DiveDay had already closed (issue #2335): the
@@ -11,13 +12,7 @@ export async function seedPaidAfterClose(db: AppDb, shopId: string, now: Date): 
     .select({ id: bookings.id, tripId: bookings.tripId })
     .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
-    .where(
-      and(
-        eq(bookings.shopId, shopId),
-        ne(bookings.status, "cancelled"),
-        eq(trips.status, "scheduled"),
-      ),
-    )
+    .where(and(eq(bookings.shopId, shopId), seatNotCancelled, eq(trips.status, "scheduled")))
     .orderBy(trips.startsAt, bookings.createdAt)
     .limit(1);
   if (lateSeat) {

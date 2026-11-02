@@ -2,6 +2,7 @@ import { and, eq, gte, isNull, ne } from "drizzle-orm";
 import type { AppDb } from "@/db/client";
 import { createGearItem, recordGearService } from "@/db/gear";
 import { boats, bookings, trips } from "@/db/schema";
+import { seatNotCancelled } from "@/db/trips";
 import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
 import { REEF_TRIP_TITLE } from "./reef-trip-title";
 
@@ -43,13 +44,7 @@ export async function letTheReefBoatsKitLapse(
   const booked = await db
     .select({ id: bookings.id })
     .from(bookings)
-    .where(
-      and(
-        eq(bookings.shopId, shopId),
-        eq(bookings.tripId, reef.id),
-        ne(bookings.status, "cancelled"),
-      ),
-    );
+    .where(and(eq(bookings.shopId, shopId), eq(bookings.tripId, reef.id), seatNotCancelled));
   const today = calendarDateInTimezone(now, timeZone);
   await db
     .update(boats)
