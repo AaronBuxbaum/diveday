@@ -1,5 +1,6 @@
 import { GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { z } from "zod";
+import { MAX_INBOUND_MESSAGE_BYTES } from "@/lib/inbound-email";
 import { log } from "@/lib/log";
 import type { NotificationEnvironment } from "./provider";
 
@@ -17,14 +18,6 @@ import type { NotificationEnvironment } from "./provider";
  * bucket the stack did not provision on the strength of a message is the SSRF
  * shape `sns.ts` refuses for certificate URLs.
  */
-
-/**
- * SES refuses messages over 40 MB, and a reply a person typed is a few KB.
- * The cap bounds what this will pull through memory for one webhook call —
- * anything larger is a forwarded thread of attachments, recorded as arrived
- * and not read.
- */
-export const MAX_INBOUND_MESSAGE_BYTES = 2 * 1024 * 1024;
 
 export interface InboundMailObjectClient {
   send(command: GetObjectCommand): Promise<{

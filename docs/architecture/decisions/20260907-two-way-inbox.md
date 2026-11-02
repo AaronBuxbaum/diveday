@@ -2,6 +2,9 @@
 
 - **Status:** Accepted
 - **Date:** 2026-09-07
+- **Amended by:** [20261102-postal-mime-inbound-reader](20261102-postal-mime-inbound-reader.md) — the
+  in-house reader in decision 4 and the "parsing dependency for MIME" alternative are replaced by
+  PostalMime wrapped in the app's own policies; the rest of decision 4 stands.
 
 ## Context
 
