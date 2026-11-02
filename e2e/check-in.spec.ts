@@ -561,48 +561,35 @@ test("a dropped signal at the counter fails on the row, not on the page", async 
 /**
  * **The respectful no-show salvage, end to end** (issue #1209).
  *
- * One spec for the whole arc, because each step of it is the consequence of
- * the one before: a staffer records that a diver never turned up, the seat
- * that frees is offered to the person already waiting for it, and the boat
- * sells it again. Split into three, each would have to rebuild a full boat
- * with a wait list behind it — the setup *is* most of the cost — and a green
- * "the seat is bookable" that never released one proves nothing.
+ * One spec for the whole arc, because each step is the consequence of the one
+ * before (a staffer records a no-show, the freed seat is offered to the wait
+ * list, the boat sells it again) and the setup is most of the cost.
  *
- * **The seat is never released by arithmetic.** Nothing in this flow
- * decrements a count: the mark changes one booking's status, `seatHeld`
- * (`src/lib/no-show.ts`) stops counting that status toward capacity, and the
- * next diver claims the seat through `createBooking`'s own capacity
- * transaction — the one every door that sells a seat lands on, the counter's
- * walk-in and the storefront's `bookSpot` alike. The walk-in at the end is
- * that claim, which is why it is here rather than an assertion about a number
- * on a page.
+ * **The seat is never released by arithmetic.** The mark changes one booking's
+ * status, `seatHeld` (`src/lib/no-show.ts`) stops counting it toward capacity,
+ * and the next diver claims the seat through `createBooking`'s own capacity
+ * transaction, the one every door that sells a seat lands on. The walk-in at
+ * the end is that claim, not an assertion about a number on a page.
  *
- * **The offer rides the shipped invite.** The released row points at the
- * departure's own wait list, where `OfferSeat` sends through the held-send
- * path with its eight-second undo and its composer fallback — no second sender
- * anywhere in this tree. Sending one is also what moves the desk's own offer
- * on, since `noShowSalvage` counts only the entries nobody has chased.
+ * **The offer rides the shipped invite**: the released row points at the
+ * departure's wait list, where `OfferSeat` sends through the held-send path
+ * (eight-second undo, composer fallback). Sending one also moves the desk's
+ * offer on, since `noShowSalvage` counts only entries nobody has chased.
  */
 test("the counter releases a no-show's seat, offers it to the wait list, and the boat sells it again", async ({
   page,
   request,
 }) => {
-  // Two sales, a wait-list join in a second browser context, and one
-  // eight-second held send (ADR 20260906-before-you-ask, decision 2) chained
-  // in one test. The budget is what that chain costs, not a guess at it: the
-  // hold alone is a fixed eight seconds of it.
+  // Two sales, a wait-list join in a second browser context and one
+  // eight-second held send (ADR 20260906-before-you-ask, decision 2) chained.
   test.setTimeout(120_000);
 
-  // **A boat that is still ahead while it is being filled, and has left by the
-  // time the desk writes anybody off.** "Not here" opens at the departure
-  // rather than at the shop's dock call (`noShowGate`), because a diver late
-  // for the arrival time the shop asked for has not missed anything yet — and
-  // the two halves of this flow need opposite sides of that line: a wait list
-  // takes nobody once the boat has left (`joinTripWaitlist`), and the door
-  // exists for nobody until it has. The fleet's clock is frozen at 09:30 in
-  // the shop's zone and shared by every spec the worker runs, so the departure
-  // moves instead (`/api/test/depart-trip`), which is the lever
-  // `seed-evening` already uses for the same reason.
+  // **A boat still ahead while it is filled, and left by the time the desk
+  // writes anybody off.** "Not here" opens at the departure, not the dock call
+  // (`noShowGate`), while a wait list takes nobody once the boat has left
+  // (`joinTripWaitlist`). The fleet's clock is frozen at 09:30 shop time and
+  // shared by every spec, so the departure moves instead
+  // (`/api/test/depart-trip`, as `seed-evening` does).
   const title = `Dock Call ${e2eNow().getTime()}`;
   await createTrip(page, {
     title,
