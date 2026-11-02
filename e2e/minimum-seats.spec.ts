@@ -66,16 +66,16 @@ test("a short departure cancels itself at its deadline, and reinstating it overr
   await expect(page.getByText("Canceled")).toHaveCount(0);
 
   // The scheduled routes fail closed: no bearer token, no pass, no writes.
-  const unauthorized = await request.get("/api/cron/minimum-seats", {
+  const unauthorized = await request.get("/api/cron/shop-tick?scan=minimum-seats", {
     headers: { authorization: "Bearer not-the-secret" },
   });
   expect(unauthorized.status()).toBe(401);
 
-  const swept = await request.get("/api/cron/minimum-seats", {
+  const swept = await request.get("/api/cron/shop-tick?scan=minimum-seats", {
     headers: { authorization: `Bearer ${E2E_CRON_SECRET}` },
   });
   expect(swept.ok()).toBe(true);
-  expect((await swept.json()).cancelled).toBeGreaterThanOrEqual(1);
+  expect((await swept.json())["minimum-seats"].cancelled).toBeGreaterThanOrEqual(1);
 
   await page.goto(tripUrl);
   await openTripAbout(page);
@@ -100,7 +100,7 @@ test("a short departure cancels itself at its deadline, and reinstating it overr
   await expect(page.getByText("Canceled")).toHaveCount(0);
   await expect(page.getByText("Minimum head count")).toHaveCount(0);
 
-  const again = await request.get("/api/cron/minimum-seats", {
+  const again = await request.get("/api/cron/shop-tick?scan=minimum-seats", {
     headers: { authorization: `Bearer ${E2E_CRON_SECRET}` },
   });
   expect(again.ok()).toBe(true);
@@ -152,7 +152,7 @@ test("a departure that filled is left alone, and stops mentioning its minimum", 
   await page.goto(tripUrl);
   await expect(page.getByText("Minimum head count")).toHaveCount(0);
 
-  await request.get("/api/cron/minimum-seats", {
+  await request.get("/api/cron/shop-tick?scan=minimum-seats", {
     headers: { authorization: `Bearer ${E2E_CRON_SECRET}` },
   });
   await page.goto(tripUrl);

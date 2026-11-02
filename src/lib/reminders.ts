@@ -25,34 +25,6 @@ export const TRIP_REMINDER_CADENCES: readonly ReminderCadence[] = [
   { kind: "trip_reminder_24h", hoursBefore: 24 },
 ];
 
-/**
- * **Hourly, its own pass.** A once-a-day UTC batch cannot serve more than one
- * longitude: 14:00 UTC is 10am in Florida, 22:00 in Singapore, midnight in
- * Sydney and 03:00 in Fiji, and every shop in the picker's Asia-Pacific group
- * was texting divers in the middle of the night (issue #697). The shop's own
- * send window decides *whether* a pass may send (`src/lib/send-window.ts`);
- * this cadence is what gives every longitude a pass inside its window to be
- * decided in.
- *
- * Separated from the daily `/api/cron/reminders` tick rather than making that
- * hourly, and for the reason `recap-schedule.ts` gives for its own exception:
- * the daily tick's other five scans are durable-retry drains whose backoff
- * bounds derive from `DAILY_TICK_CRONTAB` (`src/lib/cron-schedule.ts`, OPS-6),
- * so changing its cadence would silently move a retry window this ticket has
- * no business touching.
- *
- * `:01`, one minute after the minimum-seats sweep, with every hourly pass
- * inside the hour's first five minutes. Spreading them across
- * `:00`/`:10`/`:20` cost more than it bought: a serverless Postgres compute
- * sleeps after five idle minutes, so three passes ten minutes apart is three
- * separate wake-ups an hour where five consecutive minutes are one. Six passes
- * on one minute, though, is six cold functions opening pools against the
- * pooler at once at the top of every hour; a minute apart, the database still
- * wakes once and the connections arrive in turn (code review 2026-10-10,
- * item 11, Aaron's call).
- */
-export const TRIP_REMINDER_CRON_CRONTAB = "1 * * * *";
-
 /** The widest lead time any cadence needs — how far ahead a scan must look. */
 export const MAX_REMINDER_LEAD_HOURS = TRIP_REMINDER_CADENCES.reduce(
   (max, c) => Math.max(max, c.hoursBefore),
