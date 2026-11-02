@@ -79,6 +79,7 @@ describePostgres("notification retry claims across independent sessions", () => 
         sent: 0,
         queued: 0,
         failed: 0,
+        held: { sent: 0, failed: 0 },
       });
       await started;
       expect(sends).toBe(1);
