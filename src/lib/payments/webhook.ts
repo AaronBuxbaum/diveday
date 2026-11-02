@@ -94,9 +94,12 @@ export function verifyStripeWebhook(
       now,
     );
   } catch (error) {
-    return error instanceof Stripe.errors.StripeSignatureVerificationError
-      ? { status: "invalid_signature" }
-      : { status: "malformed" };
+    // A signed body that is not JSON is malformed. Every other throw (the
+    // SDK's verification error, or anything it raises on a header it cannot
+    // read, such as an empty or bare `v1`) is a signature this did not
+    // accept, so the route's test-secret fallback and its logged reason see
+    // `invalid_signature`.
+    return error instanceof SyntaxError ? { status: "malformed" } : { status: "invalid_signature" };
   }
   const event = stripeEventSchema.safeParse(parsedJson);
   if (!event.success) return { status: "malformed" };
