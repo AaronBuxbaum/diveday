@@ -28,7 +28,7 @@ coercion and no worker. Kept outside the library, in our code:
   leading CR reads as LF), and every tenant and safety rule.
 
 Malformed quoting is read leniently and never refused, so the preview shows exactly what the
-server imports. `src/lib/import.test.ts` pins the policy, including where it differs from the old
+server imports. `src/lib/import-csv.test.ts` pins the policy, including where it differs from the old
 reader: a quote inside an unquoted cell is literal (`Bob "Bobby" Smith`), text after a closing
 quote keeps the quote and reads on to the next quote that closes a cell, a doubled quote after an
 unclosed quote stays doubled, and a quoted CRLF becomes LF. An unclosed quote still takes the rest
