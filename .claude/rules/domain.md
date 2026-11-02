@@ -47,6 +47,9 @@ Today, notifications, offline manifests, auth). What they do not say:
   constant or a hand comparison: departure-buffer guard.
 - **`src/lib` and `src/db` return codes, not sentences**; a registry feeding the UI holds bundle
   keys: `pnpm check:domain-strings` (ADR 20260731-domain-layer-copy-leaks).
+  A renderer (the page, `src/lib/notifications/**`, the file) is the only module that imports a
+  translator; the rest returns a `Copy` (`src/lib/copy.ts`) it resolves: `pnpm check:architecture`
+  ratchets the files still importing one (issue #2772).
 - **Every formatter takes a required `timeZone`**; a value with no instant says `"UTC"`
   (`src/lib/calendar-date.ts`): Biome rule `timezone`. Every `Intl` formatter comes from
   `src/lib/intl-cache.ts`: Biome rule `intlCache`.
