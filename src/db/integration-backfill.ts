@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, inArray, isNull } from "drizzle-orm";
+import { and, eq, gte, inArray, isNull } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { AppDb, DbExecutor } from "./client";
 import {
@@ -122,9 +122,7 @@ async function candidatesSince(
         gte(bookingCheckouts.completedAt, since),
         notRehearsal(),
       ),
-    )
-    // diveday:allow-time-id-order: a queue order nobody is shown; the candidates are re-sorted by instant and kind below.
-    .orderBy(asc(bookingCheckouts.completedAt), asc(bookingCheckouts.id));
+    );
   const paidTips = await db
     .select({ id: tips.id, completedAt: tips.completedAt })
     .from(tips)
@@ -138,9 +136,7 @@ async function candidatesSince(
         gte(tips.completedAt, since),
         notRehearsal(),
       ),
-    )
-    // diveday:allow-time-id-order: a queue order nobody is shown; the candidates are re-sorted by instant and kind below.
-    .orderBy(asc(tips.completedAt), asc(tips.id));
+    );
 
   const found: Candidate[] = [];
   for (const row of checkouts) {
