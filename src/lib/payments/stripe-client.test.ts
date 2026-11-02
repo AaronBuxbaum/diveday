@@ -1,12 +1,16 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { checkoutProviderFromEnvironment } from "@/db/stripe-providers";
+import {
+  checkoutProviderFromEnvironment,
+  invoicingProviderFromEnvironment,
+} from "@/db/stripe-providers";
 import {
   NO_ERROR_BODY,
   STRIPE_REQUEST_TIMEOUT_MS,
   stripeAnsweredStatus,
   stripeErrorTokens,
+  stripeRefused,
   stripeRequest,
 } from "./stripe-client";
 
@@ -92,6 +96,15 @@ describe("what goes on the wire", () => {
     expect(init.headers["X-Stripe-Client-Telemetry"]).toBeUndefined();
   });
 
+  it("describes nothing about the host: no runtime description, a plain User-Agent", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(json({ id: "re_1" }));
+    await stripeRequest("sk_test_one", fetchImpl, refund);
+    const [, init] = fetchImpl.mock.calls[0] as FetchCall;
+    const names = Object.keys(init.headers).map((name) => name.toLowerCase());
+    expect(names).not.toContain("x-stripe-client-user-agent");
+    expect(init.headers["User-Agent"]).toBe("DiveDay");
+  });
+
   it("sends the OAuth calls to the Connect host", async () => {
     const fetchImpl = vi.fn().mockResolvedValue(json({ stripe_user_id: "acct_1" }));
     await stripeRequest("sk_test_one", fetchImpl, {
@@ -147,6 +160,14 @@ describe("retries", () => {
       expect(stripeAnsweredStatus(error)).toBeNull();
     },
   );
+
+  it("never resends when the reset arrives the way undici reports it, on the cause", async () => {
+    const undici = new TypeError("fetch failed", { cause: closedConnection("ECONNRESET") });
+    const fetchImpl = vi.fn().mockRejectedValue(undici);
+    const error = await rejection(stripeRequest("sk_test_one", fetchImpl, refund));
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(stripeAnsweredStatus(error)).toBeNull();
+  });
 
   it.each([409, 429, 500, 503])("never resends after a %i either", async (status) => {
     const fetchImpl = vi
@@ -291,6 +312,94 @@ describe("a refund Stripe never answers", () => {
     expect(await provider(fetchImpl).refundCheckoutSession("acct_123", "cs_1", "intent-1")).toEqual(
       { status: "failed" },
     );
+  });
+});
+
+/**
+ * **After a refund or an invoice went out, only Stripe's own refusal is
+ * `failed`** (independent security review). A 500 `api_error`, a 409
+ * `idempotency_error` (the first request still running) and a gateway's 502 or
+ * 504 all may follow money that moved; called `failed`, the caller resolves the
+ * intent and the next press mints a fresh key and a second refund.
+ */
+describe("what an error status after a mutation means", () => {
+  const notRefusals: Array<[string, () => Response]> = [
+    ["500 api_error", () => json({ error: { type: "api_error" } }, 500)],
+    ["409 idempotency_error", () => json({ error: { type: "idempotency_error" } }, 409)],
+    ["proxy 502 HTML", () => new Response("<html>Bad gateway</html>", { status: 502 })],
+    ["empty 504", () => new Response("", { status: 504 })],
+  ];
+  const refusals: Array<[string, () => Response]> = [
+    ["402 card_error", () => json({ error: { type: "card_error", code: "card_declined" } }, 402)],
+    ["404 invalid_request_error", () => json({ error: { type: "invalid_request_error" } }, 404)],
+  ];
+  const session = {
+    id: "cs_1",
+    status: "complete",
+    payment_status: "paid",
+    amount_total: 1_000,
+    payment_intent: "pi_1",
+  };
+  const invoice = { id: "in_1", status: "paid", total: 1_000, payment_intent: "pi_1" };
+  const env = { STRIPE_SECRET_KEY: "sk_test_x" };
+  const asFetch = (fetchImpl: unknown) => fetchImpl as typeof fetch;
+
+  const operations: Array<[string, (answer: () => Response) => Promise<{ status: string }>]> = [
+    [
+      "refundCheckoutSession",
+      (answer) =>
+        checkoutProviderFromEnvironment(
+          env,
+          asFetch(vi.fn().mockResolvedValueOnce(json(session)).mockResolvedValueOnce(answer())),
+        ).refundCheckoutSession("acct_123", "cs_1", "intent-1"),
+    ],
+    [
+      "refundInvoice",
+      (answer) =>
+        invoicingProviderFromEnvironment(
+          env,
+          asFetch(vi.fn().mockResolvedValueOnce(json(invoice)).mockResolvedValueOnce(answer())),
+        ).refundInvoice("acct_123", "in_1", "intent-1"),
+    ],
+    [
+      "createInvoice",
+      (answer) =>
+        invoicingProviderFromEnvironment(
+          env,
+          asFetch(
+            vi
+              .fn()
+              .mockResolvedValueOnce(json({ id: "cus_1" }))
+              .mockResolvedValueOnce(json({ id: "ii_1" }))
+              .mockResolvedValueOnce(answer()),
+          ),
+        ).createInvoice({
+          stripeAccountId: "acct_123",
+          customerEmail: "diver@example.com",
+          customerName: "Diver",
+          currency: "usd",
+          lineItems: [{ description: "Charter", quantity: 1, unitAmountCents: 1_000 }],
+          idempotencyKey: "intent-1",
+        }),
+    ],
+  ];
+
+  for (const [name, run] of operations) {
+    it.each(notRefusals)(`${name}: a %s is unanswered`, async (_, answer) => {
+      expect((await run(answer)).status).toBe("unanswered");
+    });
+    it.each(refusals)(`${name}: a %s is failed`, async (_, answer) => {
+      expect((await run(answer)).status).toBe("failed");
+    });
+  }
+
+  it("names Stripe's own refusal and nothing else", async () => {
+    const errorOf = async (response: Response) =>
+      rejection(stripeRequest("sk", vi.fn().mockResolvedValue(response), refund));
+    for (const [, answer] of refusals) expect(stripeRefused(await errorOf(answer()))).toBe(true);
+    for (const [, answer] of notRefusals)
+      expect(stripeRefused(await errorOf(answer()))).toBe(false);
+    expect(stripeRefused(new Error("silence"))).toBe(false);
   });
 });
 

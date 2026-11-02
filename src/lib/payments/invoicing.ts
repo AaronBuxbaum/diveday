@@ -2,7 +2,7 @@ import { z } from "zod";
 import {
   type StripeRequest,
   stripeAnsweredStatus,
-  stripeErrorTokens,
+  stripeRefused,
   stripeRequest,
 } from "./stripe-client";
 import { type StripeKeySource, secretKeyForCall } from "./stripe-keys";
@@ -139,16 +139,6 @@ export type MarkInvoicePaidResult = {
  */
 export const MARK_PAID_TIMEOUT_MS = 30_000;
 
-/**
- * A 4xx carrying Stripe's own error envelope: Stripe decided, and did not
- * act. Not a 409, which says another call with the same idempotency key is
- * still running, so the mark may yet land.
- */
-function isStripeRefusal(error: unknown): boolean {
-  const status = stripeAnsweredStatus(error);
-  if (status === null || status < 400 || status >= 500 || status === 409) return false;
-  return stripeErrorTokens(error).type !== undefined;
-}
 export type ResendInvoiceResult = { status: "sent" | "not_configured" | "failed" };
 export type RefundInvoiceResult = {
   /**
@@ -451,9 +441,12 @@ export function stripeInvoicingProvider(
 
         return { status: "created", ...toCreatedInvoice(finalizeBody.data, stripeCustomerId) };
       } catch (error) {
-        if (stripeAnsweredStatus(error) !== null) return { status: "failed" };
-        logStripeRequestThrew("create_invoice", error);
-        return invoiceSent ? { status: "unanswered" } : { status: "failed" };
+        if (stripeAnsweredStatus(error) === null) logStripeRequestThrew("create_invoice", error);
+        // Once the invoice went out, only Stripe's own refusal says it billed
+        // nobody; a 5xx, a 409 or a gateway's error may follow an invoice made.
+        return invoiceSent && !stripeRefused(error)
+          ? { status: "unanswered" }
+          : { status: "failed" };
       }
     },
 
@@ -478,7 +471,7 @@ export function stripeInvoicingProvider(
         );
         return { status: "paid" };
       } catch (error) {
-        if (isStripeRefusal(error)) return { status: "refused" };
+        if (stripeRefused(error)) return { status: "refused" };
         if (stripeAnsweredStatus(error) === null) {
           logStripeRequestThrew("mark_invoice_paid_out_of_band", error);
         }
@@ -531,9 +524,8 @@ export function stripeInvoicingProvider(
           ? { status: "refunded", refundId: body.data.id, amountCents: body.data.amount }
           : { status: "failed" };
       } catch (error) {
-        if (stripeAnsweredStatus(error) !== null) return { status: "failed" };
-        logStripeRequestThrew("refund_invoice", error);
-        return { status: refundSent ? "unanswered" : "failed" };
+        if (stripeAnsweredStatus(error) === null) logStripeRequestThrew("refund_invoice", error);
+        return { status: refundSent && !stripeRefused(error) ? "unanswered" : "failed" };
       }
     },
 

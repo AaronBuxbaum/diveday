@@ -396,7 +396,14 @@ describe("stripe checkout provider", () => {
           payment_intent: "pi_9",
         }),
       )
-      .mockResolvedValueOnce(stripeResponse({}, 400));
+      // Stripe's own refusal, with its envelope: a 400 without one could be a
+      // gateway's, after which the refund may have moved (`stripeRefused`).
+      .mockResolvedValueOnce(
+        stripeResponse(
+          { error: { type: "invalid_request_error", code: "charge_already_refunded" } },
+          400,
+        ),
+      );
     const provider = providerWith({ STRIPE_SECRET_KEY: "sk_test" }, fetchImpl);
     expect(await provider.refundCheckoutSession("acct_123", "cs_1", "intent-12")).toEqual({
       status: "failed",
