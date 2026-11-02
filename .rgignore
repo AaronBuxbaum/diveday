@@ -1,0 +1,5 @@
+# Plain `rg` skips these; name the path to search one (rg foo drizzle/).
+# Generated snapshots, design canvases and the lockfile (AGENTS.md: grep them, never read them whole).
+drizzle/
+docs/design/canvases/
+pnpm-lock.yaml
