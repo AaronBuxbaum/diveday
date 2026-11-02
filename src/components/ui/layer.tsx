@@ -7,6 +7,11 @@ import { useDialogBehaviour } from "@/components/ui/useDialogBehaviour";
 import { motionMs } from "@/lib/motion";
 
 /**
+ * **`layer.tsx` is where an overlay is drawn.** `Dialog` is the centred face; the
+ * scrim spelling (`fixed inset-0 z-50`) lives only here, and
+ * `stacking-layers.test.ts` refuses it elsewhere, with `CommandPalette`,
+ * `PersonSheet` and `StaffActivity` banked as the burn-down (issue #2766).
+ *
  * A small centered dialog for collecting input — distinct from `InlineConfirm`,
  * which principle 7 reserves for a genuinely irreversible action or a send.
  * This is for the shape neither of those cover: a short form that needs its
@@ -19,7 +24,7 @@ import { motionMs } from "@/lib/motion";
  * timing, focus trap and Escape `CommandPalette` uses (`useDialogBehaviour`) rather
  * than inventing a second.
  */
-export function Modal({
+export function Dialog({
   open,
   onClose,
   title,

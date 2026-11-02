@@ -39,7 +39,6 @@ const UI_WITHOUT_TEST = new Set<string>([
   "src/components/ui/DisclosureCaret.tsx",
   "src/components/ui/FieldErrorFocus.tsx",
   "src/components/ui/FilterChipsScroller.tsx",
-  "src/components/ui/Modal.tsx",
   "src/components/ui/StickyActionsInset.tsx",
   "src/components/ui/forgiving-copy.ts",
   "src/components/ui/group-label.tsx",

@@ -22,7 +22,7 @@ export async function setWeeklyDigestAction(shopSlug: string, wanted: unknown): 
     personId: session.user.personId,
     wanted: parsed.data,
   });
-  revalidatePath(shopPath(shop.slug, "settings", "email"));
+  revalidatePath(shopPath(shop.slug, "me", "email"));
 }
 
 /**
@@ -38,5 +38,5 @@ export async function setAfterHoursPingAction(shopSlug: string, wanted: unknown)
     personId: session.user.personId,
     wanted: parsed.data,
   });
-  revalidatePath(shopPath(shop.slug, "settings", "email"));
+  revalidatePath(shopPath(shop.slug, "me", "email"));
 }

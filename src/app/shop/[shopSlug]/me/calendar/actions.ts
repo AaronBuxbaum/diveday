@@ -70,7 +70,7 @@ export async function calendarFeedAction(
   const { scope, intent, rotating } = parsed.data;
 
   const db = await getDb();
-  const path = shopPath(session.user.shopSlug, "settings", "calendar");
+  const path = shopPath(session.user.shopSlug, "me", "calendar");
 
   if (intent === "revoke") {
     await revokeCalendarFeeds(db, {

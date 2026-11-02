@@ -11,10 +11,7 @@ import { settingsPaneClass } from "./_components/settings-pane";
  * `:not(:first-child)>.…`: the `<main>` drops its auto margins only when its
  * parent is not the first element in the frame. That holds for every settings
  * page only if the layout's pane `<div>` is each `<main>`'s direct parent and
- * the rail, or its skeleton, is an element before it; and a staffer who may
- * not manage the shop (the rail draws nothing for them, on
- * `/settings/calendar`) keeps a centred pane only if nothing else stands
- * there (K-250, K-312). The source sweep in `settings-pane.test.ts` pins the
+ * the rail, or its skeleton, is an element before it (K-250, K-312). The source sweep in `settings-pane.test.ts` pins the
  * class; this renders the real layout and asks the parsed DOM the question the
  * compiled selector asks.
  */
@@ -88,11 +85,12 @@ describe("the settings frame the pane's left edge reads", () => {
     expect(main.matches(BESIDE_THE_RAIL)).toBe(true);
   });
 
-  it("stands nothing before the pane when the rail draws nothing, so the column stays centered", async () => {
-    vi.mocked(canPersonManageShopSettings).mockResolvedValue(false);
-    const { main, pane } = await renderFrame();
-    expect(pane.previousElementSibling).toBeNull();
-    expect(main.matches(BESIDE_THE_RAIL)).toBe(false);
-    expect(main).toHaveClass("mx-auto");
+  it("gates the whole segment on managing the shop, so no settings page has an ungated reader (issue #2739)", async () => {
+    vi.mocked(canPersonManageShopSettings).mockResolvedValue(true);
+    await renderFrame();
+    expect(requireShopSurface).toHaveBeenCalledWith("blue-mantis", {
+      allow: canPersonManageShopSettings,
+      refusal: { notice: "settings-not-authorized" },
+    });
   });
 });

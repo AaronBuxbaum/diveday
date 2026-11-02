@@ -48,8 +48,7 @@ async function secondFactorAttemptAllowed(accountId: string): Promise<boolean> {
 async function securityContext(shopSlug: string) {
   const surface = await requireShopSurface(shopSlug);
   const accountId = await getAccountIdForPerson(surface.db, surface.session.user.personId);
-  if (!accountId)
-    redirect(noticeUrl(shopPath(shopSlug, "settings", "security"), "security-invalid"));
+  if (!accountId) redirect(noticeUrl(shopPath(shopSlug, "me", "security"), "security-invalid"));
   return { ...surface, accountId };
 }
 
@@ -74,9 +73,9 @@ export async function beginTotpEnrollmentAction(shopSlug: string) {
     }
   }
   revalidateAndRedirect(
-    shopPath(shopSlug, "settings", "security"),
+    shopPath(shopSlug, "me", "security"),
     noticeUrl(
-      shopPath(shopSlug, "settings", "security"),
+      shopPath(shopSlug, "me", "security"),
       started ? "enrollment-started" : "security-unavailable",
     ),
   );
@@ -99,14 +98,14 @@ function secondFactorCode(formData: FormData) {
 export async function enableTotpAction(shopSlug: string, formData: FormData) {
   const { db, accountId } = await securityContext(shopSlug);
   if (!(await secondFactorAttemptAllowed(accountId))) {
-    redirect(noticeUrl(shopPath(shopSlug, "settings", "security"), "too-many-attempts"));
+    redirect(noticeUrl(shopPath(shopSlug, "me", "security"), "too-many-attempts"));
   }
   const code = parseForm(totpCodeForm, formData);
   const enabled = code.ok && (await enableTotp(db, accountId, code.data.code));
   revalidateAndRedirect(
-    shopPath(shopSlug, "settings", "security"),
+    shopPath(shopSlug, "me", "security"),
     noticeUrl(
-      shopPath(shopSlug, "settings", "security"),
+      shopPath(shopSlug, "me", "security"),
       enabled ? "two-factor-enabled" : "code-invalid",
     ),
   );
@@ -116,41 +115,41 @@ export async function disableTotpAction(shopSlug: string, formData: FormData) {
   const { db, accountId } = await securityContext(shopSlug);
   const security = await getAccountSecurity(db, accountId);
   if (security?.totpEnabledAt && !(await secondFactorAttemptAllowed(accountId))) {
-    redirect(noticeUrl(shopPath(shopSlug, "settings", "security"), "too-many-attempts"));
+    redirect(noticeUrl(shopPath(shopSlug, "me", "security"), "too-many-attempts"));
   }
   const code = secondFactorCode(formData);
   const accepted =
     !security?.totpEnabledAt ||
     (code.success &&
       (await verifyAccountSecondFactor(db, accountId, code.data, { consumeTotpStep: false })));
-  if (!accepted) redirect(noticeUrl(shopPath(shopSlug, "settings", "security"), "code-invalid"));
+  if (!accepted) redirect(noticeUrl(shopPath(shopSlug, "me", "security"), "code-invalid"));
   await disableTotp(db, accountId);
   (await cookies()).delete(RECOVERY_CODES_COOKIE);
   revalidateAndRedirect(
-    shopPath(shopSlug, "settings", "security"),
-    noticeUrl(shopPath(shopSlug, "settings", "security"), "two-factor-disabled"),
+    shopPath(shopSlug, "me", "security"),
+    noticeUrl(shopPath(shopSlug, "me", "security"), "two-factor-disabled"),
   );
 }
 
 export async function refreshRecoveryCodesAction(shopSlug: string, formData: FormData) {
   const { db, accountId } = await securityContext(shopSlug);
   if (!(await secondFactorAttemptAllowed(accountId))) {
-    redirect(noticeUrl(shopPath(shopSlug, "settings", "security"), "too-many-attempts"));
+    redirect(noticeUrl(shopPath(shopSlug, "me", "security"), "too-many-attempts"));
   }
   const key = secretKeyFromEnvironment();
   if (key.status !== "ok") {
-    redirect(noticeUrl(shopPath(shopSlug, "settings", "security"), "security-unavailable"));
+    redirect(noticeUrl(shopPath(shopSlug, "me", "security"), "security-unavailable"));
   }
   const code = secondFactorCode(formData);
   if (!code.success) {
-    redirect(noticeUrl(shopPath(shopSlug, "settings", "security"), "code-invalid"));
+    redirect(noticeUrl(shopPath(shopSlug, "me", "security"), "code-invalid"));
   }
 
   const result = await refreshAccountRecoveryCodes(db, accountId, code.data);
   if (!result.ok) {
     redirect(
       noticeUrl(
-        shopPath(shopSlug, "settings", "security"),
+        shopPath(shopSlug, "me", "security"),
         result.reason === "invalid" ? "code-invalid" : "security-unavailable",
       ),
     );
@@ -168,18 +167,17 @@ export async function refreshRecoveryCodesAction(shopSlug: string, formData: For
       secure: process.env.NODE_ENV === "production",
     },
   );
-  revalidateAndRedirect(shopPath(shopSlug, "settings", "security"));
+  revalidateAndRedirect(shopPath(shopSlug, "me", "security"));
 }
 
 export async function revokeSessionAction(shopSlug: string, formData: FormData) {
   const { db, accountId } = await securityContext(shopSlug);
   const sessionId = parseForm(sessionIdForm, formData);
-  if (!sessionId.ok)
-    redirect(noticeUrl(shopPath(shopSlug, "settings", "security"), "security-invalid"));
+  if (!sessionId.ok) redirect(noticeUrl(shopPath(shopSlug, "me", "security"), "security-invalid"));
   await revokeAccountSession(db, accountId, sessionId.data.sessionId);
   revalidateAndRedirect(
-    shopPath(shopSlug, "settings", "security"),
-    noticeUrl(shopPath(shopSlug, "settings", "security"), "session-revoked"),
+    shopPath(shopSlug, "me", "security"),
+    noticeUrl(shopPath(shopSlug, "me", "security"), "session-revoked"),
   );
 }
 
@@ -192,21 +190,21 @@ export async function revokeAllSessionsAction(shopSlug: string) {
 export async function verifyStepUpAction(shopSlug: string, formData: FormData) {
   const { db, accountId, session } = await securityContext(shopSlug);
   if (!(await secondFactorAttemptAllowed(accountId))) {
-    redirect(noticeUrl(shopPath(shopSlug, "settings", "security"), "too-many-attempts"));
+    redirect(noticeUrl(shopPath(shopSlug, "me", "security"), "too-many-attempts"));
   }
   const stepUp = readForm(stepUpForm, formData);
   const purposeValue = stepUp.purpose;
   const returnTo = safeStepUpReturnPath(shopSlug, stepUp.returnTo);
   const code = secondFactorCode(formData);
   if (!isStepUpPurpose(purposeValue) || !returnTo || !code.success || !session.user.sessionId) {
-    redirect(noticeUrl(shopPath(shopSlug, "settings", "security"), "security-invalid"));
+    redirect(noticeUrl(shopPath(shopSlug, "me", "security"), "security-invalid"));
   }
   const accepted = await verifyAccountSecondFactor(db, accountId, code.data, {
     consumeTotpStep: false,
   });
   if (!accepted) {
     redirect(
-      noticeUrl(shopPath(shopSlug, "settings", "security"), "code-invalid", {
+      noticeUrl(shopPath(shopSlug, "me", "security"), "code-invalid", {
         purpose: purposeValue,
         returnTo,
       }),
@@ -218,7 +216,7 @@ export async function verifyStepUpAction(shopSlug: string, formData: FormData) {
     purpose: purposeValue,
   });
   if (!granted) {
-    redirect(noticeUrl(shopPath(shopSlug, "settings", "security"), "security-invalid"));
+    redirect(noticeUrl(shopPath(shopSlug, "me", "security"), "security-invalid"));
   }
   redirect(returnTo);
 }

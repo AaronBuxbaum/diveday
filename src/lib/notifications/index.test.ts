@@ -416,7 +416,7 @@ describe("sesNotificationProvider (ADR 20260802-ses-adapter-and-webhook)", () =>
         thisWeekFrom: "2026-10-05",
         thisWeekTo: "2026-10-11",
         sections: [{ kind: "overdue", count: 2, url: "https://diveday.example/shop/blue-mantis" }],
-        settingsUrl: "https://diveday.example/shop/blue-mantis/settings/email",
+        settingsUrl: "https://diveday.example/shop/blue-mantis/me/email",
         turnOffUrl: "https://diveday.example/unsubscribe/tok_digest",
       },
       provider,

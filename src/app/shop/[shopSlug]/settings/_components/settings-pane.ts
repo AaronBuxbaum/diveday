@@ -18,10 +18,9 @@ import { staffPageClass } from "../../_components/staff-page";
  * - **One inset**, the staff page's own.
  * - **One left edge beside the rail.** From `lg`, a pane that is not the
  *   frame's first child (the rail, or its skeleton, stands before it) drops
- *   its auto margins, so the column starts on the pane's own edge. A staffer
- *   who may not manage the shop reaches `/settings/calendar` with no rail
- *   drawn; that pane is the frame's first child and stays centred, the page
- *   it has always been.
+ *   its auto margins, so the column starts on the pane's own edge. Every
+ *   reader of a settings page may manage the shop, so the rail always stands
+ *   there; the reader's own pages live at `/me` and take no part in this.
  */
 export function settingsPaneClass(): string {
   return staffPageClass("reading", "lg:[:not(:first-child)>&]:mx-0");

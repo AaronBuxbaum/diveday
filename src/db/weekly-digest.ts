@@ -588,7 +588,7 @@ export function digestSectionsWithLinks(
 
 /** Where a staffer changes their own answer. */
 export function weeklyDigestSettingsPath(shopSlug: string): string {
-  return shopPath(shopSlug, "settings", "email");
+  return shopPath(shopSlug, "me", "email");
 }
 
 function digestNotification(input: {
