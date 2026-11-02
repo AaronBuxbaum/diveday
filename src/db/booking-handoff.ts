@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, isNull, lte, ne } from "drizzle-orm";
+import { and, asc, desc, eq, gt, isNull, lte } from "drizzle-orm";
 import type { DiverLocale } from "@/i18n/settings";
 import { hashCapabilityToken } from "@/lib/booking-capabilities";
 import {
@@ -36,6 +36,7 @@ import {
   trips,
 } from "./schema";
 import { liveTrip } from "./trips-live";
+import { seatNotCancelled } from "./trips-queries";
 import {
   getCurrentWaiverGeneration,
   getEmergencyContactForPerson,
@@ -277,7 +278,7 @@ export async function offerBookingHandoffByEmail(
       timezone: shops.timezone,
     })
     .from(people)
-    .innerJoin(bookings, and(eq(bookings.personId, people.id), ne(bookings.status, "cancelled")))
+    .innerJoin(bookings, and(eq(bookings.personId, people.id), seatNotCancelled))
     .innerJoin(trips, and(eq(trips.id, bookings.tripId), liveTrip()))
     .innerJoin(shops, eq(shops.id, people.shopId))
     .where(and(eq(people.shopId, input.shopId), eq(people.email, email), isNull(people.deletedAt)))

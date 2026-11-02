@@ -3,17 +3,13 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { PRICING_CLOSE_CRONTAB } from "./billing/pricing-plans";
 import { BOOKKEEPER_CRON_CRONTAB } from "./bookkeeper";
-import { CREW_NOTICE_CRON_CRONTAB } from "./crew-notices";
 import {
   DAILY_TICK_CRONTAB,
   DAILY_TICK_INTERVAL_MS,
   dailyPassesWithin,
   nextDailyTickAtOrAfter,
+  SHOP_TICK_CRONTAB,
 } from "./cron-schedule";
-import { DESK_PING_CRON_CRONTAB } from "./desk-hours";
-import { MINIMUM_SEATS_CRON_CRONTAB } from "./minimum-seats";
-import { RECAP_CRON_CRONTAB } from "./recap-schedule";
-import { TRIP_REMINDER_CRON_CRONTAB } from "./reminders";
 import { DIETARY_RETENTION_CRONTAB } from "./retention";
 import { WEEKLY_DIGEST_CRON_CRONTAB } from "./weekly-digest";
 
@@ -42,14 +38,23 @@ describe("the daily tick", () => {
     expect(reminders?.schedule).toBe(DAILY_TICK_CRONTAB);
   });
 
-  it("matches the deployed hourly schedule for /api/cron/recaps", () => {
-    const recaps = vercelCrons().find((cron) => cron.path === "/api/cron/recaps");
-    expect(recaps?.schedule).toBe(RECAP_CRON_CRONTAB);
+  it("matches the deployed hourly schedule for /api/cron/shop-tick", () => {
+    const tick = vercelCrons().find((cron) => cron.path === "/api/cron/shop-tick");
+    expect(tick?.schedule).toBe(SHOP_TICK_CRONTAB);
   });
 
-  it("matches the deployed hourly schedule for /api/cron/trip-reminders", () => {
-    const reminders = vercelCrons().find((cron) => cron.path === "/api/cron/trip-reminders");
-    expect(reminders?.schedule).toBe(TRIP_REMINDER_CRON_CRONTAB);
+  it("serves every shop cadence from the one tick, not a route of its own", () => {
+    // Folded into the shop tick (issue #2715); a route coming back would be a
+    // second schedule for a shop's day.
+    for (const retired of [
+      "trip-reminders",
+      "recaps",
+      "minimum-seats",
+      "crew-notices",
+      "desk-pings",
+    ]) {
+      expect(vercelCrons().some((cron) => cron.path === `/api/cron/${retired}`)).toBe(false);
+    }
   });
 
   it("matches the deployed hourly schedule for /api/cron/weekly-digest", () => {
@@ -65,21 +70,6 @@ describe("the daily tick", () => {
   it("matches the deployed schedule for /api/cron/pricing-volume", () => {
     const pass = vercelCrons().find((cron) => cron.path === "/api/cron/pricing-volume");
     expect(pass?.schedule).toBe(PRICING_CLOSE_CRONTAB);
-  });
-
-  it("matches the deployed hourly schedule for /api/cron/crew-notices", () => {
-    const pass = vercelCrons().find((cron) => cron.path === "/api/cron/crew-notices");
-    expect(pass?.schedule).toBe(CREW_NOTICE_CRON_CRONTAB);
-  });
-
-  it("matches the deployed hourly schedule for /api/cron/desk-pings", () => {
-    const sweep = vercelCrons().find((cron) => cron.path === "/api/cron/desk-pings");
-    expect(sweep?.schedule).toBe(DESK_PING_CRON_CRONTAB);
-  });
-
-  it("matches the deployed hourly schedule for /api/cron/minimum-seats", () => {
-    const sweep = vercelCrons().find((cron) => cron.path === "/api/cron/minimum-seats");
-    expect(sweep?.schedule).toBe(MINIMUM_SEATS_CRON_CRONTAB);
   });
 
   /**
@@ -145,21 +135,20 @@ describe("the daily tick", () => {
     // - trip-reminders: a reminder lands inside the shop's own daytime, which
     //   no fixed UTC hour does across zones (issue #697; `sendDueReminders`).
     const SUB_DAILY_ALLOWED = new Set([
-      "/api/cron/minimum-seats",
-      "/api/cron/recaps",
-      "/api/cron/trip-reminders",
+      // shop-tick: every shop cadence (src/features/shop-tick), each a promise
+      // a fixed UTC hour cannot keep across zones: the minimum-head-count
+      // decision at the moment printed on the booking page (ADR
+      // 20260813-minimum-head-count-departures); a reminder inside the shop's
+      // own daytime (issue #697); a recap never before four hours and normally
+      // within an hour after; crew hearing about tomorrow's boat today (ADR
+      // 20261009-crew-hear-about-their-boats); the desk's trailing catch-up
+      // (#2311). Each scan calls a fresh-send function, never the queue.
+      "/api/cron/shop-tick",
       "/api/cron/integrations",
       // weekly-digest: a Monday-morning email in the shop's own zone
       // (`sendDueWeeklyDigests`); later passes stop at the per-person,
       // per-week claim.
       "/api/cron/weekly-digest",
-      // crew-notices: a crew member taken off tomorrow's boat cannot hear it
-      // a day later (ADR 20261009-crew-hear-about-their-boats;
-      // `sendDueCrewNotices`).
-      "/api/cron/crew-notices",
-      // desk-pings: the trailing catch-up (#2311) cannot wait for a daily
-      // pass or the desk opening (`sendTrailingDeskPings`).
-      "/api/cron/desk-pings",
     ]);
     const subDaily = vercelCrons().filter((cron) => {
       const [minute, hour] = cron.schedule.split(" ");
@@ -171,13 +160,13 @@ describe("the daily tick", () => {
   /**
    * The allowlist relies on its routes not reaching the durable queue
    * (`sendNotification`/`sendNotificationBatch`, src/db/notifications.ts).
-   * This source check covers only the two route files listed, not indirect
-   * call paths.
+   * This source check covers only the files listed, not indirect call paths.
    */
   it("keeps the sub-daily routes off the generic notification queue", () => {
     for (const routePath of [
-      "src/app/api/cron/minimum-seats/route.ts",
-      "src/app/api/cron/recaps/route.ts",
+      "src/app/api/cron/shop-tick/route.ts",
+      "src/features/shop-tick/shop-tick.ts",
+      "src/features/shop-tick/minimum-seats.ts",
     ]) {
       const route = readFileSync(path.join(process.cwd(), routePath), "utf8");
       expect(route).not.toMatch(/sendNotification\b|sendNotificationBatch\b/);

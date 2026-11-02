@@ -1,6 +1,7 @@
 import { and, eq, gt } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
+import { shopClock } from "@/lib/shop-clock";
 import { groupByDeparture } from "@/lib/today";
 import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 import { fileScopedShopContext } from "@/test/db";
@@ -19,7 +20,7 @@ const BLANK = { lines: [], vessel: "", shoreContact: "", plan: "" };
 describe("the blank emergency card row (fifth loop, item 3)", () => {
   it("is absent while the card carries a number", async () => {
     const { db, shop } = ctx;
-    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone, nowDate());
+    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop, nowDate()));
     expect(work.actions.some((row) => row.kind === "emergency_card_blank")).toBe(false);
   });
 
@@ -27,7 +28,7 @@ describe("the blank emergency card row (fifth loop, item 3)", () => {
     const { db, shop } = ctx;
     await db.update(shops).set({ emergencyReference: BLANK }).where(eq(shops.id, shop.id));
     const now = nowDate();
-    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone, now);
+    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop, now));
     const row = work.actions.find((action) => action.kind === "emergency_card_blank");
     expect(row?.subject).toBe("Your emergency reference has no numbers");
     expect(row?.detail).toMatch(/sails without a chamber or coastguard number on it\.$/);
@@ -62,7 +63,7 @@ describe("the blank emergency card row (fifth loop, item 3)", () => {
       plannedDives: 2,
       priceCents: 13000,
     });
-    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone, now);
+    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop, now));
     const rows = work.actions.filter((action) => action.kind === "emergency_card_blank");
     expect(rows).toHaveLength(1);
     expect(rows[0]?.dueAt?.getTime()).toBe(startsAt.getTime());
@@ -87,7 +88,7 @@ describe("the blank emergency card row (fifth loop, item 3)", () => {
       .where(
         and(eq(tripRows.shopId, shop.id), gt(tripRows.startsAt, new Date(now.getTime() - HOUR))),
       );
-    const before = await getTodayWork(db, shop.id, shop.slug, shop.timezone, now);
+    const before = await getTodayWork(db, shop.id, shop.slug, shopClock(shop, now));
     expect(before.actions.some((row) => row.kind === "emergency_card_blank")).toBe(false);
     await db.insert(tripRows).values({
       shopId: shop.id,
@@ -98,7 +99,7 @@ describe("the blank emergency card row (fifth loop, item 3)", () => {
       plannedDives: 2,
       priceCents: 13000,
     });
-    const after = await getTodayWork(db, shop.id, shop.slug, shop.timezone, now);
+    const after = await getTodayWork(db, shop.id, shop.slug, shopClock(shop, now));
     expect(after.actions.some((row) => row.kind === "emergency_card_blank")).toBe(true);
   });
 
@@ -139,7 +140,7 @@ describe("the blank emergency card row (fifth loop, item 3)", () => {
         })
         .returning();
       if (!trip) throw new Error("trip insert returned no row");
-      const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone, now);
+      const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop, now));
       const rows = work.actions.filter((row) => row.kind === "emergency_card_blank");
       expect(rows, `offset ${offset}`).toHaveLength(1);
       expect(rows[0]?.dueAt?.getTime(), `offset ${offset}`).toBe(startsAt.getTime());
@@ -181,7 +182,7 @@ describe("the blank emergency card row (fifth loop, item 3)", () => {
         status: "cancelled",
       },
     ]);
-    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone, now);
+    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop, now));
     expect(work.actions.some((row) => row.kind === "emergency_card_blank")).toBe(false);
   });
 
@@ -191,7 +192,7 @@ describe("the blank emergency card row (fifth loop, item 3)", () => {
       .update(shops)
       .set({ emergencyReference: { ...BLANK, shoreContact: "Front desk", plan: "Call for help." } })
       .where(eq(shops.id, shop.id));
-    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone, nowDate());
+    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop, nowDate()));
     expect(work.actions.some((row) => row.kind === "emergency_card_blank")).toBe(true);
   });
 });
@@ -221,7 +222,7 @@ describe("found items waiting to go home (fifth loop, item 7)", () => {
       actorPersonId: null,
     });
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone, nowDate());
+    const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop, nowDate()));
     const row = work.actions.find((action) => action.kind === "lost_items_waiting");
     expect(row?.subject).toBe("2 things waiting to go home");
     expect(row?.href).toBe(`/shop/${shop.slug}/lost-found`);
@@ -242,7 +243,7 @@ describe("found items waiting to go home (fifth loop, item 7)", () => {
       actorPersonId: null,
     });
     const kinds = async () =>
-      (await getTodayWork(db, shop.id, shop.slug, shop.timezone, nowDate())).actions.map(
+      (await getTodayWork(db, shop.id, shop.slug, shopClock(shop, nowDate()))).actions.map(
         (action) => action.kind,
       );
     expect(await kinds()).toContain("lost_items_waiting");

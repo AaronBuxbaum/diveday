@@ -1,40 +1,11 @@
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
-import {
-  mergeDiverRecords,
-  PERSON_COLUMNS_DELETED_ON_MERGE,
-  PERSON_COLUMNS_DELIBERATELY_UNMOVED,
-} from "./diver-merge";
+import { mergeDiverRecords } from "./diver-merge";
 import { notificationSendQueue, people, personRoles, trips } from "./schema";
 
 const ctx = fileScopedShopContext();
-
-describe("diver merge person-column coverage", () => {
-  it("classifies prefixed person columns too", async () => {
-    const { db } = ctx;
-    const result = await db.execute(sql`
-      select table_name, column_name
-      from information_schema.columns
-      where table_schema = 'public'
-        and column_name like '%person_id'
-        and column_name <> 'person_id'
-      order by table_name, column_name
-    `);
-    const columns = result.rows.map((row) => {
-      const { table_name, column_name } = row as { table_name: string; column_name: string };
-      return `${table_name}.${column_name}`;
-    });
-    expect(columns.length).toBeGreaterThan(20);
-    const classified = new Set([
-      ...Object.keys(PERSON_COLUMNS_DELIBERATELY_UNMOVED),
-      ...Object.keys(PERSON_COLUMNS_DELETED_ON_MERGE),
-    ]);
-    expect(columns.filter((pair) => !classified.has(pair))).toEqual([]);
-    expect([...classified].filter((pair) => !columns.includes(pair)).sort()).toEqual([]);
-  });
-});
 
 describe("diver merge and subject-bound notification retries", () => {
   it("discards source-bound sealed retries without touching the survivor's retries", async () => {

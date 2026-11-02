@@ -212,7 +212,7 @@ describe("sendWeeklyDigestForShop", () => {
     for (const section of notification.sections) {
       expect(section.url.startsWith(`${ORIGIN}/shop/${shop.slug}`)).toBe(true);
     }
-    expect(notification.settingsUrl).toBe(`${ORIGIN}/shop/${shop.slug}/settings/email`);
+    expect(notification.settingsUrl).toBe(`${ORIGIN}/shop/${shop.slug}/me/email`);
     expect(notification.turnOffUrl).toMatch(/^https:\/\/diveday\.example\/unsubscribe\/.+/);
     const rendered = messageFor(notification);
     expect(rendered.subject).toContain(shop.name);
@@ -360,7 +360,7 @@ describe("previewWeeklyDigest", () => {
     expect(preview?.kind).toBe("weekly_digest");
     if (preview?.kind === "weekly_digest") {
       expect(preview.preparedAt).toBe(monday.toISOString());
-      expect(preview.turnOffUrl).toBe(`${ORIGIN}/shop/${shop.slug}/settings/email`);
+      expect(preview.turnOffUrl).toBe(`${ORIGIN}/shop/${shop.slug}/me/email`);
     }
     const claims = await db
       .select()

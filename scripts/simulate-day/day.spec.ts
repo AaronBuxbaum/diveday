@@ -426,12 +426,13 @@ async function runState(id: string, index: number): Promise<Outcome | undefined>
 
     case "recap-sent": {
       await advanceClock(at(id));
-      const pass = await api.get("/api/cron/recaps", {
+      const pass = await api.get("/api/cron/shop-tick?scan=recaps", {
         headers: { authorization: `Bearer ${E2E_CRON_SECRET}` },
         timeout: 60_000,
       });
       if (!pass.ok()) throw new Error(`recap pass failed: ${pass.status()} ${await pass.text()}`);
-      const summary = (await pass.json()) as Record<string, number>;
+      const summary =
+        ((await pass.json()) as { recaps: Record<string, number> | null }).recaps ?? {};
       if (!(summary.scanned >= 1)) {
         throw new Error(`the recap pass found nothing due: ${JSON.stringify(summary)}`);
       }

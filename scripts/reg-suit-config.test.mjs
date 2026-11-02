@@ -33,4 +33,16 @@ describe("reg-suit config selection", () => {
       region: "$REG_SUIT_AWS_REGION",
     });
   });
+
+  // Issue #1687. A pixel count, not a rate and not a per-pixel colour tolerance: a rate or a
+  // tolerance can swallow a low-delta change spread across a whole surface, which is the shape a
+  // colour-token regression takes. The number is the top of the measured renderer-noise cluster on
+  // main (7 to 20 pixels, channel delta 3) and is argued in ADR 20260729-reg-suit-visual-regression.
+  it("forgives only a handful of stray pixels, by count", () => {
+    for (const config of [LEGACY_CONFIG, OIDC_CONFIG]) {
+      expect(config.core.thresholdPixel).toBe(20);
+      expect(config.core).not.toHaveProperty("thresholdRate");
+      expect(config.core).not.toHaveProperty("matchingThreshold");
+    }
+  });
 });

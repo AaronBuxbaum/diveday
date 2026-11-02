@@ -1,4 +1,4 @@
-import { and, eq, ne } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import type { DiverLocale } from "@/i18n/settings";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
@@ -14,6 +14,7 @@ import type { AppDb } from "./client";
 import { withErasureCoordinatedBookingSend } from "./erasure-coordinated-send";
 import { sendAndRecordNotification } from "./notifications";
 import { bookings, people, shops, trips } from "./schema";
+import { seatNotCancelled } from "./trips-queries";
 
 /**
  * What a rescue attempt answers with — a **code**, never a sentence, and never
@@ -125,7 +126,7 @@ export async function planReadinessLinkRescue(
       and(
         eq(bookings.id, stale.bookingId),
         eq(bookings.shopId, stale.shopId),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
         eq(trips.status, "scheduled"),
       ),
     )

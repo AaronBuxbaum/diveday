@@ -2,7 +2,7 @@
  * Gear: holding a unit for a seat or a counter rental — reserve, check out,
  * return, release and re-window. Imported through the `./gear` barrel.
  */
-import { and, asc, count, eq, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm";
+import { and, asc, count, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import { type CalendarDate, isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import {
@@ -21,6 +21,7 @@ import { latestServiceClocks } from "./gear-service";
 import { liveGearItem, openGearReservation, optional } from "./gear-shared";
 import { violatesExclusionConstraint } from "./query-helpers";
 import { bookings, type GearReservation, gearItems, gearReservations } from "./schema";
+import { seatNotCancelled } from "./trips-queries";
 
 export type ReserveGearUnitOutcome =
   | { ok: true; reservation: GearReservation }
@@ -147,7 +148,7 @@ export async function reserveGearUnit(
           and(
             eq(bookings.id, input.bookingId),
             eq(bookings.shopId, input.shopId),
-            ne(bookings.status, "cancelled"),
+            seatNotCancelled,
             input.tripId ? eq(bookings.tripId, input.tripId) : undefined,
           ),
         )

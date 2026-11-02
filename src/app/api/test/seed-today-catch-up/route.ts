@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, inArray, isNull, lt, ne } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, lt } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
@@ -7,6 +7,7 @@ import { bookings, people, personRoles, trips } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { initializeTodayCatchUp } from "@/db/today-catch-up";
 import { liveTrip } from "@/db/trips-live";
+import { seatNotCancelled } from "@/db/trips-queries";
 import { nowDate } from "@/lib/clock";
 import { e2eTestRouteAuthorized, requireDemoTenant, testRouteRefused } from "@/lib/e2e-test-routes";
 import { shopDayBounds } from "@/lib/zoned";
@@ -67,7 +68,7 @@ export async function POST(request: Request) {
         eq(trips.status, "scheduled"),
         liveTrip(),
         isNull(people.deletedAt),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
         gte(trips.startsAt, day.from),
         lt(trips.startsAt, day.to),
       ),

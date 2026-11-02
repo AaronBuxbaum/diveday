@@ -342,16 +342,16 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   },
   { id: "waivers", suffix: "/waivers", section: "settings", gate: "waivers" },
   { id: "team", suffix: "/settings/team", section: "settings", gate: "team" },
-  // A staffer's own calendar subscription, filed under `/settings` by URL
-  // only. Ungated, so the roles that most want it keep a door when Settings
-  // itself is gated away.
-  { id: "calendarFeed", suffix: "/settings/calendar", section: "settings" },
+  // A staffer's own calendar subscription, at `/me`: the reader, not the shop.
+  // It lights the `settings` section in the nav, and is ungated, so the roles
+  // that most want it keep a door when Settings is gated away.
+  { id: "calendarFeed", suffix: "/me/calendar", section: "settings" },
   // The staffer's own email (the Monday email, `src/lib/weekly-digest.ts`).
   // Ungated for the calendar feed's reason: any staffer may ask for it.
-  { id: "emailSettings", suffix: "/settings/email", section: "settings" },
-  // A login's own password and sign-in (`/settings/security`). Ungated for the
+  { id: "emailSettings", suffix: "/me/email", section: "settings" },
+  // A login's own password and sign-in (`/me/security`). Ungated for the
   // same reason: it is about the reader, not the shop.
-  { id: "security", suffix: "/settings/security", section: "settings" },
+  { id: "security", suffix: "/me/security", section: "settings" },
   // The shop's activity log (D5): who refunded, who wrote a seat past a
   // missing card, who changed a departure. Owner/manager reading, the
   // settings gate's own set (`canViewShopActivity`); filed under Settings'

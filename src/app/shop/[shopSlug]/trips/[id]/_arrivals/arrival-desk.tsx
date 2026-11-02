@@ -11,6 +11,7 @@ import { listCertificationSummaries } from "@/db/self-declared-cards";
 import { partyLeadBookingIds } from "@/db/turn-away";
 import { welcomeCueInputsByBooking } from "@/db/welcome-cues";
 import { foundItemsText } from "@/i18n/lost-item-labels";
+import { presenceText } from "@/i18n/presence-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import {
   welcomeCueText,
@@ -225,7 +226,7 @@ export async function buildArrivalDesk({
           action={undo}
           bookingId={row.bookingId}
           checkedIn
-          label={t("checkIn.row.arrived")}
+          label={presenceText(t, "arrived")}
           pendingLabel={t("checkIn.undoing")}
           ariaLabel={t("checkIn.undoAriaLabel", { name: row.personName })}
           sendFailedLabel={t("checkIn.sendFailed")}

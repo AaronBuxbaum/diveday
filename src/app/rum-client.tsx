@@ -48,13 +48,17 @@ type RumConfig = {
  * Content-Security-Policy, so the hosts the SDK calls and the hosts the policy
  * admits are computed from the same strings.
  */
-function rumConfig(): RumConfig | null {
+/** A tenth of sessions; the stack's app monitor declares the same (infra-stack.ts S13). */
+const DEFAULT_SAMPLE_RATE = 0.1;
+
+export function rumConfig(): RumConfig | null {
   const applicationId = process.env.NEXT_PUBLIC_RUM_APP_MONITOR_ID?.trim();
   const identityPoolId = process.env.NEXT_PUBLIC_RUM_IDENTITY_POOL_ID?.trim();
   const guestRoleArn = process.env.NEXT_PUBLIC_RUM_GUEST_ROLE_ARN?.trim();
   const region = process.env.NEXT_PUBLIC_RUM_REGION?.trim();
   if (!applicationId || !identityPoolId || !guestRoleArn || !region) return null;
-  const rate = Number(process.env.NEXT_PUBLIC_RUM_SAMPLE_RATE ?? "1");
+  const raw = process.env.NEXT_PUBLIC_RUM_SAMPLE_RATE?.trim();
+  const rate = raw ? Number(raw) : DEFAULT_SAMPLE_RATE;
   return {
     applicationId,
     identityPoolId,
@@ -62,7 +66,7 @@ function rumConfig(): RumConfig | null {
     region,
     // A misconfigured rate must never mean "record everything at full price";
     // anything unparseable or out of range falls back to the documented default.
-    sessionSampleRate: Number.isFinite(rate) && rate >= 0 && rate <= 1 ? rate : 1,
+    sessionSampleRate: Number.isFinite(rate) && rate >= 0 && rate <= 1 ? rate : DEFAULT_SAMPLE_RATE,
   };
 }
 

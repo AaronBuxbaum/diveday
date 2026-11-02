@@ -387,9 +387,9 @@ test.describe("the calendar subscription survives the settings gate", () => {
   test("a captain can still set up their own calendar feed", { tag: READ_ONLY }, async ({
     page,
   }) => {
-    await page.goto(`/shop/${SHOP}/settings/calendar`);
+    await page.goto(`/shop/${SHOP}/me/calendar`);
     // Not bounced: the page renders for them.
-    await expect(page).toHaveURL(new RegExp(`/shop/${SHOP}/settings/calendar`));
+    await expect(page).toHaveURL(new RegExp(`/shop/${SHOP}/me/calendar`));
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   });
 

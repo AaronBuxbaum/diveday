@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { ageOnDate } from "@/lib/age";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
@@ -31,6 +31,7 @@ import {
   trips,
 } from "./schema";
 import { liveTrip } from "./trips-live";
+import { seatNotCancelled } from "./trips-queries";
 
 /**
  * Buddy teams on a departure (ADR 20260804-buddy-teams). Staff group the
@@ -289,7 +290,7 @@ async function resolveMembers(
               inArray(bookings.id, bookingIds),
               eq(bookings.shopId, shopId),
               eq(bookings.tripId, tripId),
-              ne(bookings.status, "cancelled"),
+              seatNotCancelled,
               isNull(people.anonymizedAt),
             ),
           )
@@ -629,7 +630,7 @@ export async function planPartyTeams(
           and(
             eq(bookings.shopId, shopId),
             eq(bookings.tripId, tripId),
-            ne(bookings.status, "cancelled"),
+            seatNotCancelled,
             isNull(people.anonymizedAt),
           ),
         )

@@ -140,6 +140,8 @@ export async function measure(root = ROOT) {
 
   let skillDescriptions = 0;
   for (const dir of await listDirs(root, ".claude/skills")) {
+    // Installed from dependencies by `pnpm install` and gitignored: not this repo's context.
+    if (dir.startsWith("pnpm-")) continue;
     const file = path.join(root, ".claude/skills", dir, "SKILL.md");
     const contents = await readFile(file, "utf8");
     // A user-only skill (`disable-model-invocation: true`) is kept out of the model's listing

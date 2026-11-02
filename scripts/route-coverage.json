@@ -118,7 +118,7 @@
   "/shop/[shopSlug]/schedule/blowout/day/[date]": {
     "visual": ["blowout-day"]
   },
-  "/shop/[shopSlug]/settings/security": {
+  "/shop/[shopSlug]/me/security": {
     "exempt": "Browser coverage is real (e2e/security-settings.spec.ts enrols in two-factor against the frozen clock, reads the recovery codes and revokes a session). No capture, because the Active sessions card cannot hold a baseline still: account_sessions.updated_at is stamped by better-auth's own clock, which DIVEDAY_CLOCK does not reach, so \"last seen\" is the wall clock; the row beside it prints the Chromium user-agent string, version and all; and the row count depends on how often the run signed in. Masking those is the one fix AGENTS.md refuses. Closing this means stamping those timestamps through src/lib/clock.ts at the better-auth boundary, which is an auth change wanting its own review (issue #1020)."
   },
   "/shop/[shopSlug]/trips/[id]/incidents/[reportId]": {

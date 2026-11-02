@@ -31,7 +31,7 @@ const CLOSING_DIALOG_PANEL_PROPS = { ...DIALOG_PANEL_PROPS, inert: true } as con
  * behind it scrolling. The panel's `aria-modal` and `tabIndex` come back as `dialogProps` (plus
  * `inert` once it is closing), so no layer spells them by hand.
  *
- * `Modal`, the manifest's `PersonSheet` and the command palette each carried their own copy of
+ * `Dialog`, the manifest's `PersonSheet` and the command palette each carried their own copy of
  * this; `PersonSheet` additionally sent focus back to its trigger by hand on Escape. One hook is
  * what keeps a fourth from forgetting `preventDefault`, the scroll lock or `aria-modal`.
  *

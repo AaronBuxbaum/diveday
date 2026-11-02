@@ -1,16 +1,12 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { z } from "zod";
-import { getDb } from "@/db/client";
 import { setShopDeskHours } from "@/db/desk-pings";
 import { setShopReviewUrl } from "@/db/shops";
+import { defineAction, land } from "@/features/server-action";
 import { parseDeskHours } from "@/lib/desk-hours";
-import { formValue, readForm } from "@/lib/form-parse";
-import { revalidateAndRedirect } from "@/lib/navigation";
-import { requireStaffSession } from "@/lib/session";
-import { noticeUrl, shopPath } from "@/lib/staff-notices";
-import { settingsBlock } from "./action-helpers";
+import { formValue, text } from "@/lib/form-parse";
+import { SETTINGS_GATE } from "./action-gates";
 
 const reviewUrlSchema = z.object({
   // Empty clears it — the recap flow simply skips the review ask when unset,
@@ -28,21 +24,25 @@ const reviewUrlSchema = z.object({
   ]),
 });
 
+/** The review form as posted; `reviewUrlSchema` holds the link to its shape. */
+const reviewUrlForm = z.object({ reviewUrl: formValue(), from: text() });
+
 /** Where the post-trip recap's "leave us a review" link sends a diver. */
-export async function saveReviewUrlAction(formData: FormData) {
-  const session = await requireStaffSession();
-  const settings = shopPath(session.user.shopSlug, "settings");
-  await settingsBlock(session);
-  // The Reviews page's empty state offers the same box in place (fifth-loop
-  // ideas, item 59), and its save lands back there.
-  const fromReviews = formData.get("from") === "reviews";
-  const back = fromReviews ? shopPath(session.user.shopSlug, "reviews") : settings;
-  const saved = fromReviews ? {} : { saved: "reviewLink" };
-  const parsed = reviewUrlSchema.safeParse({ reviewUrl: formData.get("reviewUrl") });
-  if (!parsed.success) redirect(noticeUrl(back, "review-url-invalid", saved));
-  await setShopReviewUrl(await getDb(), session.user.shopId, parsed.data.reviewUrl);
-  revalidateAndRedirect(back, noticeUrl(back, "review-url-saved", saved));
-}
+export const saveReviewUrlAction = defineAction({
+  gate: [SETTINGS_GATE],
+  input: reviewUrlForm,
+  async run({ db, shopId, path }, form) {
+    // The Reviews page's empty state offers the same box in place (fifth-loop
+    // ideas, item 59), and its save lands back there.
+    const fromReviews = form.from === "reviews";
+    const back = fromReviews ? path("reviews") : path("settings");
+    const extra = fromReviews ? {} : { saved: "reviewLink" };
+    const parsed = reviewUrlSchema.safeParse({ reviewUrl: form.reviewUrl });
+    if (!parsed.success) return land(back, "review-url-invalid", { extra });
+    await setShopReviewUrl(db, shopId, parsed.data.reviewUrl);
+    return land(back, "review-url-saved", { extra });
+  },
+});
 
 const deskHoursForm = z.object({ deskOpens: formValue(), deskCloses: formValue() });
 
@@ -50,13 +50,14 @@ const deskHoursForm = z.object({ deskOpens: formValue(), deskCloses: formValue()
  * When somebody is at the desk: one window every day, in the shop's own zone.
  * A diver message outside it pings the staff who asked (`src/lib/desk-hours.ts`).
  */
-export async function saveDeskHoursAction(formData: FormData) {
-  const session = await requireStaffSession();
-  const settings = shopPath(session.user.shopSlug, "settings");
-  await settingsBlock(session);
-  const { deskOpens, deskCloses } = readForm(deskHoursForm, formData);
-  const hours = parseDeskHours(deskOpens, deskCloses);
-  if (!hours) redirect(noticeUrl(settings, "desk-hours-invalid", { saved: "deskHours" }));
-  await setShopDeskHours(await getDb(), session.user.shopId, hours);
-  revalidateAndRedirect(settings, noticeUrl(settings, "desk-hours-saved", { saved: "deskHours" }));
-}
+export const saveDeskHoursAction = defineAction({
+  gate: [SETTINGS_GATE],
+  input: deskHoursForm,
+  async run({ db, shopId, path }, { deskOpens, deskCloses }) {
+    const settings = path("settings");
+    const hours = parseDeskHours(deskOpens, deskCloses);
+    if (!hours) return land(settings, "desk-hours-invalid", { extra: { saved: "deskHours" } });
+    await setShopDeskHours(db, shopId, hours);
+    return land(settings, "desk-hours-saved", { extra: { saved: "deskHours" } });
+  },
+});

@@ -4,6 +4,7 @@ import { nowDate } from "@/lib/clock";
 import { calculateReadiness, isUnsightedSelfDeclaration } from "@/lib/readiness";
 import { decideTripAdmission } from "@/lib/trip-admission";
 import { fileScopedShopContext } from "@/test/db";
+import type { AppDb } from "./client";
 import { createNitroxCertification, reviewNitroxCertification } from "./nitrox";
 import { findOrCreatePerson } from "./people";
 import {
@@ -26,13 +27,13 @@ import {
  * anybody on the internet can post to.
  */
 
+/** A diver the desk typed in: the one door every case here starts from. */
+const bornAtCounter = (db: AppDb, shopId: string, fullName: string, email: string) =>
+  findOrCreatePerson(db, { shopId, fullName, email, origin: "counter" });
+
 async function joiner(name = "Nora Quinn", email = "nora@example.com") {
   const { db, shop } = ctx;
-  const { person } = await findOrCreatePerson(db, {
-    shopId: shop.id,
-    fullName: name,
-    email,
-  });
+  const { person } = await bornAtCounter(db, shop.id, name, email);
   return { db, shop, person };
 }
 
@@ -171,11 +172,12 @@ describe("recordSelfDeclaredCards", () => {
      */
     it("records a number another diver's real card already holds, touching neither", async () => {
       const { db, shop, person } = await joiner();
-      const { person: other } = await findOrCreatePerson(db, {
-        shopId: shop.id,
-        fullName: "Marina Sol",
-        email: "marina@example.com",
-      });
+      const { person: other } = await bornAtCounter(
+        db,
+        shop.id,
+        "Marina Sol",
+        "marina@example.com",
+      );
       await createCertification(db, {
         shopId: shop.id,
         personId: other.id,
@@ -1391,11 +1393,7 @@ describe("listCertificationSummaries", () => {
 
   it("marks a claim and leaves a real card unmarked", async () => {
     const { db, shop, person } = await joiner();
-    const other = await findOrCreatePerson(db, {
-      shopId: shop.id,
-      fullName: "Rafa Ortiz",
-      email: "rafa@example.com",
-    });
+    const other = await bornAtCounter(db, shop.id, "Rafa Ortiz", "rafa@example.com");
     await recordSelfDeclaredCards(db, {
       shopId: shop.id,
       personId: person.id,
@@ -1530,13 +1528,7 @@ describe("clearNoCertificationDeclaration", () => {
   }
 
   const staffOf = async (db: Awaited<ReturnType<typeof joiner>>["db"], shopId: string) =>
-    (
-      await findOrCreatePerson(db, {
-        shopId,
-        fullName: "Dana Reyes",
-        email: "dana@example.com",
-      })
-    ).person;
+    (await bornAtCounter(db, shopId, "Dana Reyes", "dana@example.com")).person;
 
   it("supersedes the stamp, names who corrected it, and stops the reader reporting it", async () => {
     const { db, shop, person } = await stamped();
@@ -1638,11 +1630,7 @@ describe("clearNoCertificationDeclaration", () => {
       byPersonId: first.id,
     });
     const [after] = await db.select().from(people).where(eq(people.id, person.id));
-    const { person: second } = await findOrCreatePerson(db, {
-      shopId: shop.id,
-      fullName: "Sam Ortiz",
-      email: "sam@example.com",
-    });
+    const { person: second } = await bornAtCounter(db, shop.id, "Sam Ortiz", "sam@example.com");
 
     const again = await clearNoCertificationDeclaration(db, {
       shopId: shop.id,
@@ -1725,11 +1713,7 @@ describe("clearNoCertificationDeclaration", () => {
       personId: person.id,
       noCertification: true,
     });
-    const { person: second } = await findOrCreatePerson(db, {
-      shopId: shop.id,
-      fullName: "Sam Ortiz",
-      email: "sam@example.com",
-    });
+    const { person: second } = await bornAtCounter(db, shop.id, "Sam Ortiz", "sam@example.com");
 
     const again = await clearNoCertificationDeclaration(db, {
       shopId: shop.id,

@@ -27,7 +27,7 @@ test.describe("account security settings", () => {
     page,
     privateShop,
   }) => {
-    await page.goto(`/shop/${privateShop.slug}/settings/security`);
+    await page.goto(`/shop/${privateShop.slug}/me/security`);
     await expect(page.getByRole("heading", { level: 1, name: "Account security" })).toBeVisible();
     await expect(page.getByText("Not enabled")).toBeVisible();
 
@@ -92,12 +92,12 @@ test.describe("account security settings", () => {
     await sessions.first().click();
     await page.getByRole("button", { name: "Revoke", exact: true }).first().click();
     await expect(page.getByRole("heading", { level: 1, name: "Account security" })).toHaveCount(0);
-    await page.goto(`/shop/${privateShop.slug}/settings/security`);
+    await page.goto(`/shop/${privateShop.slug}/me/security`);
     await expect(page.getByRole("heading", { level: 1, name: "Account security" })).toHaveCount(0);
   });
 
   test("refuses a code that is not the current one", async ({ page, privateShop }) => {
-    await page.goto(`/shop/${privateShop.slug}/settings/security`);
+    await page.goto(`/shop/${privateShop.slug}/me/security`);
     await page.getByText("Set up two-factor", { exact: true }).click();
     await page.getByRole("button", { name: "Start setup" }).click();
     await expect(

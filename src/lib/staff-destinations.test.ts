@@ -447,7 +447,7 @@ describe("currentStaffDestination and the section it lights", () => {
   it("gives the most specific claim the light: Team over Settings", () => {
     expect(current(`${root}/settings`)).toBe("settings");
     expect(current(`${root}/settings/team`)).toBe("team");
-    expect(current(`${root}/settings/calendar`)).toBe("calendarFeed");
+    expect(current(`${root}/me/calendar`)).toBe("calendarFeed");
     // Any other settings sub-page still reads as Settings.
     expect(current(`${root}/settings/export`)).toBe("settings");
   });
@@ -465,8 +465,8 @@ describe("currentStaffDestination and the section it lights", () => {
     // the gated row is absent, and nothing else may claim the page.
     expect(current(`${root}/settings/team`, crew)).toBeNull();
     // But their own calendar feed, ungated, still lights.
-    expect(current(`${root}/settings/calendar`, crew)).toBe("calendarFeed");
-    expect(current(`${root}/settings/email`, crew)).toBe("emailSettings");
+    expect(current(`${root}/me/calendar`, crew)).toBe("calendarFeed");
+    expect(current(`${root}/me/email`, crew)).toBe("emailSettings");
   });
 
   it("answers null off the registry's map", () => {

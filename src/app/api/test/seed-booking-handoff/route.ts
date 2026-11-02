@@ -5,7 +5,7 @@ import { issueBookingHandoff } from "@/db/booking-handoff";
 import { getDb } from "@/db/client";
 import { bookings, people, trips } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
-import { liveTrip } from "@/db/trips";
+import { liveTrip, seatNotCancelled } from "@/db/trips";
 import { handoffHref } from "@/lib/booking-handoff";
 import { nowDate } from "@/lib/clock";
 import { e2eTestRouteAuthorized, requireDemoTenant, testRouteRefused } from "@/lib/e2e-test-routes";
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
         eq(people.shopId, shop.id),
         eq(people.email, parsed.data.email.toLowerCase()),
         isNull(people.deletedAt),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
       ),
     )
     .orderBy(desc(trips.startsAt))

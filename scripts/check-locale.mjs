@@ -95,6 +95,11 @@ export const DELIBERATELY_IDENTICAL = new Map([
   ["staff/settings.json security.os.linux", "browser or operating system brand name"],
   ["staff/settings.json security.os.macOs", "browser or operating system brand name"],
   ["staff/settings.json security.os.windows", "browser or operating system brand name"],
+  ["staff/settings.json main.connections.provider.stripe", "connection provider brand name"],
+  ["staff/settings.json main.connections.provider.whatsapp", "connection provider brand name"],
+  ["staff/settings.json main.connections.provider.shopify", "connection provider brand name"],
+  ["staff/settings.json main.connections.provider.quickbooks", "connection provider brand name"],
+  ["staff/settings.json main.connections.provider.zapier", "connection provider brand name"],
 
   // Training-agency acronyms — brand names. `other` is the one real word in
   // the group and is translated.

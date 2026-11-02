@@ -27,6 +27,7 @@ import {
   trips,
   waiverRecords,
 } from "./schema";
+import { seedDepartureBoatSafetySnapshot } from "./seed-boat-safety-snapshot";
 import { at, DEMO_DAWN_BOAT, nextCreatedAt } from "./seed-clock";
 import { paperRelease, signingNames } from "./seed-paper-release";
 
@@ -884,6 +885,8 @@ async function seedDawnBoatRecord(
     .limit(1);
   if (dawnHull) {
     await db.update(trips).set({ boatId: dawnHull.id }).where(eq(trips.id, trip.id));
+    // The papers it sailed with, kept at the checkpoint (issue #3650).
+    await seedDepartureBoatSafetySnapshot(db, shopId, { ...trip, boatId: dawnHull.id });
   }
 
   // The safety check, a quarter of an hour before the lines came off.

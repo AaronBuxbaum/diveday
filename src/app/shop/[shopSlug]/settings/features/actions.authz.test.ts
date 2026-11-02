@@ -233,7 +233,7 @@ describe("the Features page's save", () => {
 });
 
 /**
- * Owner and manager pass all three gates today (`action-helpers.ts`), so no
+ * Owner and manager pass all three gates today (`../action-gates.ts`), so no
  * seeded staffer can be the reader these guard against. The plan is the whole
  * decision of what a save writes, so it is asserted with the gate set such a
  * reader would have.

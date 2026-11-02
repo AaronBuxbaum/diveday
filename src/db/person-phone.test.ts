@@ -78,6 +78,7 @@ describe("people.phone is E.164 on write", () => {
     const { db, shop } = ctx;
     const email = `nora-${randomUUID()}@example.com`;
     const { person, created } = await findOrCreatePerson(db, {
+      origin: "counter",
       shopId: shop.id,
       fullName: "Nora Quinn",
       email,

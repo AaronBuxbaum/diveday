@@ -106,7 +106,7 @@ export function isForkPull(raw) {
  * bodies (2.28 MB a page with them, a few KB without).
  */
 const PULL_FIELDS_JQ =
-  "[.[] | {number, title, state, html_url, merged_at, head: {ref: .head.ref, repo: (if .head.repo then {full_name: .head.repo.full_name} else null end)}, base: {ref: .base.ref, repo: {full_name: .base.repo.full_name}}}]";
+  "[.[] | {number, title, state, html_url, merged_at, merge_commit_sha, head: {ref: .head.ref, sha: .head.sha, repo: (if .head.repo then {full_name: .head.repo.full_name} else null end)}, base: {ref: .base.ref, repo: {full_name: .base.repo.full_name}}}]";
 
 /** One REST pull request, reduced to what the scripts read. */
 export function toPull(raw) {
@@ -118,6 +118,8 @@ export function toPull(raw) {
     baseRefName: raw.base?.ref ?? "",
     url: raw.html_url ?? "",
     mergedAt: raw.merged_at ?? null,
+    mergeCommitSha: raw.merge_commit_sha ?? null,
+    headSha: raw.head?.sha ?? null,
   };
 }
 

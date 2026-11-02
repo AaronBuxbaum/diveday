@@ -1,6 +1,7 @@
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { Role } from "@/lib/authz";
 import { shopCrewTarget } from "@/lib/crew-schedule";
+import { shopClock } from "@/lib/shop-clock";
 import type { TodayAction } from "@/lib/today";
 import { sharedInHorizonReadiness } from "./blockers";
 import type { AppDb } from "./client";
@@ -53,8 +54,7 @@ export async function getDepartureNeeds(
     db,
     shop.id,
     shop.slug,
-    shop.timezone,
-    input.now,
+    shopClock(shop, input.now),
     undefined,
     input.t,
     input.locale,

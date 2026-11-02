@@ -1,8 +1,9 @@
-import { and, count, eq, inArray, isNotNull, ne } from "drizzle-orm";
+import { and, count, eq, inArray, isNotNull } from "drizzle-orm";
 import { type DiveIntent, type DiveIntentCount, orderedDiveIntentCounts } from "@/lib/dive-intent";
 import type { AppDb } from "./client";
 import { bookings, trips } from "./schema";
 import { liveTrip } from "./trips-live";
+import { seatNotCancelled } from "./trips-queries";
 
 /**
  * **What the divers aboard came for, as counts** (ADR
@@ -49,7 +50,7 @@ export async function diveIntentTallyForTrips(
         liveTrip(),
         eq(bookings.shopId, shopId),
         inArray(bookings.tripId, [...tripIds]),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
         isNotNull(bookings.diveIntent),
       ),
     )

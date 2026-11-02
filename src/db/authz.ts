@@ -241,7 +241,7 @@ export const canPersonManageSafetyChecklist = (db: DbExecutor, shopId: string, p
 /**
  * The rental editors' gate (#1854): shop settings *and* payment settings, the
  * two the hub asked before drawing the Rental gear group at all and the two
- * their actions re-check (`settingsBlock`, `paymentSettingsBlock`). One live
+ * their actions re-check (`SETTINGS_AND_PAYMENT_GATES`, settings/action-gates.ts). One live
  * read, both predicates over the same roles.
  */
 export const canPersonManageRentalSettings = (db: DbExecutor, shopId: string, personId: string) =>

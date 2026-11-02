@@ -12,7 +12,6 @@ describe("EmbedFooter", () => {
   it("opens the full schedule outside the frame and names the zone", () => {
     render(
       <EmbedFooter
-        isEmbed
         shopSlug="blue-mantis"
         zoneNote="Times are Eastern"
         hostCarriesCredit={false}
@@ -28,20 +27,7 @@ describe("EmbedFooter", () => {
   });
 
   it("draws no credit when the host page carries it", () => {
-    render(<EmbedFooter isEmbed shopSlug="blue-mantis" zoneNote={null} hostCarriesCredit t={t} />);
+    render(<EmbedFooter shopSlug="blue-mantis" zoneNote={null} hostCarriesCredit t={t} />);
     expect(screen.queryByRole("link", { name: t("shopChrome.credit") })).toBeNull();
-  });
-
-  it("renders nothing outside the embed", () => {
-    const { container } = render(
-      <EmbedFooter
-        isEmbed={false}
-        shopSlug="blue-mantis"
-        zoneNote={null}
-        hostCarriesCredit={false}
-        t={t}
-      />,
-    );
-    expect(container.innerHTML).toBe("");
   });
 });
