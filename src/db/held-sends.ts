@@ -191,19 +191,8 @@ export async function claimHeldSend(
  */
 export async function claimDueHeldSends(db: AppDb, now = nowDate()): Promise<HeldSendRow[]> {
   await settleInterruptedHeldSends(db, now);
-  const due = await db
-    .select({ id: notificationSendQueue.id })
-    .from(notificationSendQueue)
-    .where(
-      and(
-        isNotNull(notificationSendQueue.intent),
-        eq(notificationSendQueue.status, "queued"),
-        lte(notificationSendQueue.nextAttemptAt, now),
-      ),
-    )
-    .orderBy(asc(notificationSendQueue.nextAttemptAt));
   const claimed: HeldSendRow[] = [];
-  for (const { id } of due) {
+  for (const { id } of await dueHeldIds(db, now)) {
     const [row] = await claimRow(
       db,
       and(eq(notificationSendQueue.id, id), isNotNull(notificationSendQueue.intent)),
@@ -217,6 +206,21 @@ export async function claimDueHeldSends(db: AppDb, now = nowDate()): Promise<Hel
     else await settleHeldSend(db, row.id, "failed", "held_intent_unreadable");
   }
   return claimed;
+}
+
+/** Every held row of every shop whose hold has drained, oldest first. */
+function dueHeldIds(db: AppDb, now: Date) {
+  return db
+    .select({ id: notificationSendQueue.id })
+    .from(notificationSendQueue)
+    .where(
+      and(
+        isNotNull(notificationSendQueue.intent),
+        eq(notificationSendQueue.status, "queued"),
+        lte(notificationSendQueue.nextAttemptAt, now),
+      ),
+    )
+    .orderBy(asc(notificationSendQueue.nextAttemptAt));
 }
 
 /** A claim whose lock lapsed died mid-send. It may have reached some divers, so it is not sent again. */
@@ -369,7 +373,22 @@ export async function drainHeldQueueRows(
   now = nowDate(),
 ): Promise<{ sent: number; failed: number }> {
   const summary = { sent: 0, failed: 0 };
-  for (const row of await claimDueHeldSends(db, now)) {
+  await settleInterruptedHeldSends(db, now);
+  // One row claimed, sent and settled before the next is claimed: a worker
+  // that dies mid-pass leaves only the row it was sending interrupted, and the
+  // rest still queued for the next pass (security review of #2730).
+  for (const { id } of await dueHeldIds(db, now)) {
+    const [claimed] = await claimRow(
+      db,
+      and(eq(notificationSendQueue.id, id), isNotNull(notificationSendQueue.intent)),
+    );
+    if (!claimed) continue;
+    const row = toRow(claimed);
+    if (!row) {
+      await settleHeldSend(db, claimed.id, "failed", "held_intent_unreadable");
+      summary.failed += 1;
+      continue;
+    }
     try {
       await executeHeldSend(db, row);
       summary.sent += 1;

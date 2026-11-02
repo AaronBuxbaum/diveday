@@ -2390,6 +2390,27 @@ async function scrubPiiBlob(
       ),
     );
   }
+  // A held send names its people only inside `intent` (issue #2730): a waiver
+  // send by `personId` or `bookingIds`. One still inside its hold is taken
+  // back, so nothing leaves for the erased diver.
+  await tx
+    .delete(notificationSendQueue)
+    .where(
+      and(
+        eq(notificationSendQueue.shopId, shopId),
+        isNotNull(notificationSendQueue.intent),
+        eq(notificationSendQueue.status, "queued"),
+        or(
+          sql`${notificationSendQueue.intent}->>'personId' = ${ctx.personId}`,
+          ...(owned
+            ? bookingIds.map(
+                (id) =>
+                  sql`${notificationSendQueue.intent} @> ${JSON.stringify({ bookingIds: [id] })}::jsonb`,
+              )
+            : []),
+        ),
+      ),
+    );
   return [];
 }
 

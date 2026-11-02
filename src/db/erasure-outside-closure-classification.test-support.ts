@@ -30,13 +30,12 @@ export const OUTSIDE_CLOSURE_REASONS: Record<string, string> = {
     "one per-shop scheduler lease for platform backups, with no diver identity; it is deleted with its shop",
   retention_prune_state:
     "global scheduler machinery containing only a table code, no personal data",
-  // Reached by text rather than by a key, and swept that way. These two are the
-  // worked examples of limit 3: no foreign key ties either to a person, and the
-  // erasure finds them anyway because someone knew to look.
+  // Reached by text rather than by a key, and swept that way: the worked
+  // example of limit 3. No foreign key ties it to a person, and the erasure
+  // finds it anyway because someone knew to look. (`notification_send_queue`
+  // was the second until its held rows gained `actor_person_id`, issue #2730.)
   auth_verifications:
     "better-auth's `verification` model: no foreign key at all, names its person as text in `identifier`. The erasure sweeps it by that column, because a pending row holds an address in clear and a live bearer token in `value`",
-  notification_send_queue:
-    "a queued send, matched on the four handles the row carries beside its sealed payload — `recipient_email`, `subject_email`, `subject_phone` and `booking_id` — which were lifted out of the blob so the sweep never has to open it (#1297, #1298). The payload itself is the one un-normalized blob of personal data in the schema; a work queue, not evidence, so the rows are deleted rather than redacted",
 
   // The shop's own record of itself. A diver is not on any of these.
   shops:
