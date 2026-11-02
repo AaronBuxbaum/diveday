@@ -34,17 +34,8 @@ async function annotate(root, items) {
 export async function renderArea(root, areaName, area = areas[areaName]) {
   const sections = [
     ["Goal", [area.goal]],
-    [
-      "Read",
-      await annotate(
-        root,
-        area.docs.filter((item) => !BROAD_DOCS.has(item)),
-      ),
-    ],
-    [
-      "Optional reference (search relevant headings only)",
-      area.docs.filter((item) => BROAD_DOCS.has(item)),
-    ],
+    ["Read", await annotate(root, area.docs)],
+    ["Optional reference (search relevant headings only)", shared.reference],
     [
       "Likely code",
       await annotate(
@@ -71,12 +62,6 @@ export async function renderArea(root, areaName, area = areas[areaName]) {
   return lines.join("\n");
 }
 
-const BROAD_DOCS = new Set([
-  "docs/product/features/roadmap.md",
-  "docs/product/glossary.md",
-  "docs/design/principles.md",
-  "docs/architecture/overview.md",
-]);
 const BROAD_PATHS = new Set(["src/app", "src/lib", "src/components", "e2e", "src/db/schema/"]);
 
 export function matchAreas(file, all = areas) {
