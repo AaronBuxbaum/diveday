@@ -1,20 +1,15 @@
 import type { Notification } from "./kinds";
 
 /**
- * **Whose name a message goes out under** (ux review 2026-10-11, item 3;
- * Aaron's decision on sender identity, 2026-10-11).
+ * **Whose name a message goes out under** (sender identity decision,
+ * 2026-10-11).
  *
- * A diver who booked with Blue Mantis got mail from "DiveDay", a company they
- * had never heard of, wearing DiveDay's teal, while the page it linked to wore
- * the shop's logo and colour. A message DiveDay sends *for* a shop now leaves
- * as "Blue Mantis via DiveDay" and opens with the shop's own mark; DiveDay is
- * the credit at the foot, as on the storefront (`shopChrome.credit`).
- *
- * The address does not change, and that is the half that keeps the mail
- * delivered: the `From` domain is still DiveDay's own verified SES identity,
- * so SPF and DKIM still align with it for DMARC. Only the display name moves.
- * A shop's own domain as the `From` is the later step for shops that ask
- * (per-shop SES verification), and nothing here assumes it.
+ * A message DiveDay sends *for* a shop leaves as "Blue Mantis via DiveDay" and
+ * opens with the shop's own mark; DiveDay is the credit at the foot
+ * (`shopChrome.credit`). Only the display name moves: the `From` address stays
+ * on DiveDay's verified SES identity, so SPF and DKIM still align for DMARC.
+ * A shop's own domain as `From` would need per-shop SES verification and
+ * nothing here assumes it.
  *
  * Returns the shop's name for a kind the shop speaks in, null for one where
  * DiveDay is the sender: account mail, platform alerts, and the staff-facing
