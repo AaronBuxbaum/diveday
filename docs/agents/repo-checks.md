@@ -579,9 +579,13 @@ For `src/app/` and `src/components/`; the rules themselves are in `.claude/rules
   that returns after deciding against the caller, and `src/lib/session.test.ts` pins that. Never
   `return null`, `redirect("/")`, or a bounce to the shop home for a cross-tenant miss — all of those
   are now `notFound()`.
-- **Server actions**: inline `"use server"` closures for single-page mutations; `src/app/actions/`
-  only for actions shared across pages; a large page colocates its actions/zod schemas in a sibling
-  `actions.ts`. **Seating a diver** from any surface goes through `src/app/actions/seat-diver.ts`
+- **Server actions**: a sibling `*-actions.ts` with a file-level `"use server"` (every one in the
+  tree today; an inline closure is the exception and names its reason, ADR
+  20260803-invoicing-role-gate); `src/app/actions/` only for actions shared across pages. A staff
+  mutation is a `defineAction` declaration (`src/features/server-action`) in the areas that have
+  moved to it, the settings pages first; its notice codes are typed (`NoticeOf`), so its page's
+  map fails to compile on a code with no words. A removal that offers Undo lands with an undo
+  offer (`src/lib/undo.ts`), and its inverse is a row of `src/app/actions/undo-registry.ts`. **Seating a diver** from any surface goes through `src/app/actions/seat-diver.ts`
   and the per-surface table in `seat-diver-surfaces.ts`; the global door is
   `src/app/shop/[shopSlug]/bookings/new` then `bookings/new/[tripId]` — the trip is a path segment,
   not a `?tripId=`, so a refusal can land back on it.
