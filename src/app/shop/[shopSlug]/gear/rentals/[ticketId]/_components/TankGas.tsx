@@ -9,7 +9,8 @@ import { correctCounterTankFillAction } from "../../actions";
 /**
  * **What the ticket says about its tanks' gas** (domain reviews A3/F6, security
  * review X5). Printed: each tank's gas, whether EANx went in without a current
- * O2-clean record (issue #3005), who recorded it, then the line that
+ * O2-clean record (issue #3005; printed on purpose: the paper ticket is what
+ * goes with the tank to whoever fills it next), who recorded it, then the line that
  * it was recorded at the counter and not analyzed. On screen only: a
  * correction per tank still held or out, through the same card gate as renting
  * it. Nothing when the rental holds no tank.

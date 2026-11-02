@@ -78,7 +78,7 @@ describe("gear register readers: the picker and a departure's assignments", () =
     ]);
   });
 
-  it("says whether a tank's O2-clean record stands on the service day, and nothing for other kinds (issue #2719)", async () => {
+  it("says whether a tank's O2-clean record stands on the day of the fill, and nothing for other kinds (issues #2719, #3005)", async () => {
     const { db, shop } = await gearShopContext(ctx);
     const cleaned = mustCreate(
       await createGearItem(db, { shopId: shop.id, kind: "tank", label: "Tank cleaned" }),
@@ -106,16 +106,18 @@ describe("gear register readers: the picker and a departure's assignments", () =
         }),
       ).toMatchObject({ ok: true });
     }
-    // Read on the window's last day, as the counter reads every clock: the
-    // lapsed tank is current on the 1st and not on the 3rd.
-    const read = async (until: string) =>
+    // Read on the day of the fill, today, not the window's last day the
+    // service screen reads (issue #3005): the lapsed tank is current when it
+    // is filled on the 1st for a rental to the 3rd, and lapsed when filled on
+    // the 3rd.
+    const read = async (today: string) =>
       new Map(
         (
           await listAvailableGearUnits(db, shop.id, {
-            from: "2026-09-01",
-            until,
-            todayLocal: TODAY,
-            serviceAsOf: until,
+            from: today,
+            until: "2026-09-03",
+            todayLocal: today,
+            serviceAsOf: "2026-09-03",
           })
         ).map((unit) => [unit.id, unit.o2Clean]),
       );

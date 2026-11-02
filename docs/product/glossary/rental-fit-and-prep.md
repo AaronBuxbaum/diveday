@@ -398,8 +398,9 @@
   pure oxygen to a tank chooses blending. Advisory only: the fill is accepted either way. A value setting, not
   a Features switch, because it turns no feature off. When the warning would show, the rental's tank
   line also records it (`gear_reservations.fill_o2_clean_gap`, *lapsed* or *never*, issue 3005), set
-  server side from the tank's clocks as of the rental's last day and again on a gas correction, and
-  the ticket prints it beside the gas for whoever fills the tank.
+  server side from the tank's cleanings as they stood on the day of the fill (a correction judges that
+  same day, ignoring a cleaning recorded since), and the printed ticket carries it beside the gas for
+  whoever fills the tank. The cart's warning reads the same day. Staff-only in the data export.
 - **Nitrox request** — a per-booking ask for enriched air, billed per dive, offered only when the
   shop's **rental catalog** includes nitrox (most shops don't fill it, so this is off by default).
   A diver may request it **without** a verified card on file: the request is recorded and flagged

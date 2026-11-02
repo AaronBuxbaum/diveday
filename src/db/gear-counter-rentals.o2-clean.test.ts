@@ -10,7 +10,6 @@ import {
   rentalShop,
   rented,
   staffer,
-  TODAY,
   unit,
 } from "./gear-counter-rentals-test-fixtures";
 import { recordGearService } from "./gear-service";
@@ -67,12 +66,25 @@ describe("counter EANx without a current O2-clean record", () => {
     expect(line?.fillO2CleanGap).toBe("never");
   });
 
-  it("records a lapsed cleaning, read as of the rental's last day", async () => {
+  it("records a cleaning that had lapsed on the day of the fill", async () => {
     const { db, shop } = await rentalShop();
     const diver = await nitroxDiver(db, shop.id);
     const tank = await unit(db, shop.id, "Tank #1", "tank");
-    // No due date written: the conventional twelve months, so it runs out on
-    // 2026-10-09, the second day of this three-day rental.
+    // No due date written: the conventional twelve months, so it ran out on
+    // 2026-10-07, the day before this fill.
+    await o2Clean(db, shop.id, tank.id, "2025-10-07");
+    const outcome = rented(
+      await lend(db, shop.id, diver.id, [tank.id], { tankFills: { [tank.id]: 36 } }),
+    );
+    expect((await tankLine(db, shop.id, outcome.ticketId))?.fillO2CleanGap).toBe("lapsed");
+  });
+
+  it("judges the cleaning on the day of the fill, not the rental's last day (domain review 2026-11-02)", async () => {
+    const { db, shop } = await rentalShop();
+    const diver = await nitroxDiver(db, shop.id);
+    const tank = await unit(db, shop.id, "Tank #1", "tank");
+    // Runs out on 2026-10-09, the second day of a three-day rental filled on
+    // the 8th: the gas went in a clean tank, so the ticket says nothing.
     await o2Clean(db, shop.id, tank.id, "2025-10-09");
     const outcome = rented(
       await lend(db, shop.id, diver.id, [tank.id], {
@@ -80,7 +92,7 @@ describe("counter EANx without a current O2-clean record", () => {
         reservedUntil: "2026-10-10",
       }),
     );
-    expect((await tankLine(db, shop.id, outcome.ticketId))?.fillO2CleanGap).toBe("lapsed");
+    expect((await tankLine(db, shop.id, outcome.ticketId))?.fillO2CleanGap).toBeNull();
   });
 
   it("records nothing on a current cleaning, on air, or on a tank only another tank's record covers", async () => {
@@ -166,7 +178,15 @@ describe("counter EANx without a current O2-clean record", () => {
     expect((await tankLine(db, shop.id, outcome.ticketId))?.fillO2CleanGap).toBeNull();
   });
 
-  it("re-reads the clocks on a correction, as of the rental's last day", async () => {
+  /** The rental's own stamp, put on the test's day: the fill day a correction judges by. */
+  async function filledOn(db: AppDb, reservationId: string, instant: string) {
+    await db
+      .update(gearReservations)
+      .set({ createdAt: new Date(instant) })
+      .where(eq(gearReservations.id, reservationId));
+  }
+
+  it("keeps the record when the tank is cleaned after the fill and the gas then corrected (domain review 2026-11-02)", async () => {
     const { db, shop } = await rentalShop();
     const desk = await staffer(db, shop.id);
     const diver = await nitroxDiver(db, shop.id);
@@ -176,7 +196,9 @@ describe("counter EANx without a current O2-clean record", () => {
     );
     const line = await tankLine(db, shop.id, outcome.ticketId);
     expect(line?.fillO2CleanGap).toBe("never");
-    await o2Clean(db, shop.id, tank.id, TODAY, "2027-10-08");
+    // Filled on the 8th (shop time, New York); the bench cleans it on the 9th.
+    await filledOn(db, line?.reservationId ?? "", "2026-10-08T15:00:00Z");
+    await o2Clean(db, shop.id, tank.id, "2026-10-09", "2027-10-09");
     expect(
       await correctCounterTankFill(db, {
         shopId: shop.id,
@@ -185,7 +207,36 @@ describe("counter EANx without a current O2-clean record", () => {
         byPersonId: desk.id,
       }),
     ).toEqual({ ok: true });
+    const after = await tankLine(db, shop.id, outcome.ticketId);
+    expect(after?.fillO2Percent).toBe(36);
+    expect(after?.fillO2CleanGap).toBe("never");
+  });
+
+  it("reads the fill day in the shop's timezone, and counts a cleaning done that day", async () => {
+    const { db, shop } = await rentalShop();
+    const desk = await staffer(db, shop.id);
+    const diver = await nitroxDiver(db, shop.id);
+    const tank = await unit(db, shop.id, "Tank #1", "tank");
+    const outcome = rented(
+      await lend(db, shop.id, diver.id, [tank.id], { tankFills: { [tank.id]: 21 } }),
+    );
+    const line = await tankLine(db, shop.id, outcome.ticketId);
+    // 02:00 UTC on the 9th is still the evening of the 8th in New York.
+    await filledOn(db, line?.reservationId ?? "", "2026-10-09T02:00:00Z");
+    await o2Clean(db, shop.id, tank.id, "2026-10-08", "2027-10-08");
+    const correct = () =>
+      correctCounterTankFill(db, {
+        shopId: shop.id,
+        reservationId: line?.reservationId ?? "",
+        o2Percent: 32,
+        byPersonId: desk.id,
+      });
+    expect(await correct()).toEqual({ ok: true });
     expect((await tankLine(db, shop.id, outcome.ticketId))?.fillO2CleanGap).toBeNull();
+    // A day earlier in shop time, the same cleaning had not happened yet.
+    await filledOn(db, line?.reservationId ?? "", "2026-10-08T02:00:00Z");
+    expect(await correct()).toEqual({ ok: true });
+    expect((await tankLine(db, shop.id, outcome.ticketId))?.fillO2CleanGap).toBe("never");
   });
 
   it("refuses the record on air, and on a row with no gas", async () => {

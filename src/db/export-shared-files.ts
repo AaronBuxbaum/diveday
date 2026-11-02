@@ -1226,7 +1226,7 @@ export const GEAR_RESERVATIONS_CSV = sharedFile<ShopRow<"gearReservationRows">>(
     { header: "return_note", in: "shop", value: (row) => row.returnNote },
     { header: "dives_logged", in: "shop", value: (row) => row.divesLogged },
     { header: "fill_o2_percent", in: "both", value: (row) => row.fillO2Percent },
-    { header: "fill_o2_clean_gap", in: "both", value: (row) => row.fillO2CleanGap },
+    { header: "fill_o2_clean_gap", in: "shop", value: (row) => row.fillO2CleanGap },
     { header: "fill_recorded_at", in: "both", value: (row) => row.fillRecordedAt },
     {
       header: "fill_recorded_by_person_id",

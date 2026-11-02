@@ -655,8 +655,9 @@ export const gearReservations = pgTable(
     fillRecordedByPersonId: uuid("fill_recorded_by_person_id").references(() => people.id),
     /**
      * **The EANx went in without a current O2-clean record** (issue #3005):
-     * `lapsed` or `never`, read by the writer from the tank's service clocks
-     * as of the rental's last day, by the counter warning's own rule
+     * `lapsed` or `never`, read by the writer from the tank's cleanings done
+     * on or before the day of the fill (the rental's own day, also on a
+     * correction), by the counter warning's own rule
      * (`fillO2CleanGap`), on every write of `fill_o2_percent`. Null when the
      * cleaning was current, the gas is air, or the shop's fill method warns
      * on nothing at this mix. Printed on the ticket beside the gas for the
