@@ -85,12 +85,15 @@ describe("the settings frame the pane's left edge reads", () => {
     expect(main.matches(BESIDE_THE_RAIL)).toBe(true);
   });
 
-  it("gates the whole segment on managing the shop, so no settings page has an ungated reader (issue #2739)", async () => {
-    vi.mocked(canPersonManageShopSettings).mockResolvedValue(true);
+  it("does not gate the segment itself: a page's own refusal names its own reason", async () => {
+    // A frame-level redirect beats the page's and sends every refused captain
+    // to the generic notice; see settings-gates.test.ts for the per-page rule.
+    vi.mocked(canPersonManageShopSettings).mockResolvedValue(false);
     await renderFrame();
-    expect(requireShopSurface).toHaveBeenCalledWith("blue-mantis", {
-      allow: canPersonManageShopSettings,
-      refusal: { notice: "settings-not-authorized" },
-    });
+    expect(requireShopSurface).toHaveBeenCalledWith("blue-mantis");
+    expect(requireShopSurface).not.toHaveBeenCalledWith(
+      "blue-mantis",
+      expect.objectContaining({ refusal: expect.anything() }),
+    );
   });
 });

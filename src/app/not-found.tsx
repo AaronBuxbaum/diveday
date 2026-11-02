@@ -11,9 +11,9 @@ import {
   PublicShopChromePlaceholder,
   PublicShopFooterSection,
 } from "@/app/s/[shopSlug]/_components/PublicShopShell";
+import { LazyStaffActivity } from "@/components/LazyStaffActivity";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { ShopSearchField } from "@/components/ShopSearchField";
-import { StaffActivity } from "@/components/StaffActivity";
 import { buttonClass } from "@/components/ui/button";
 import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
 import { shopBySlugCached } from "@/db/shops-cached";
@@ -194,7 +194,7 @@ async function StaffNotFound({ shopSlug, locale }: { shopSlug: string; locale: L
       session.user.sessionId &&
       session.idleRemainingMs !== undefined ? (
         <div className="mt-8 w-full">
-          <StaffActivity
+          <LazyStaffActivity
             sessionId={session.user.sessionId}
             copy={{
               title: t("shared.sessionIdle.title"),
