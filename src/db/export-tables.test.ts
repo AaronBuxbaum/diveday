@@ -95,8 +95,8 @@ describe("the export read list", () => {
       .filter(([, entry]) => entry.order.length === 0)
       .map(([key]) => key)
       .sort();
-    // `buddyPairMembers` is put in team order after the read (issue #1795).
-    expect(unordered).toEqual(["bookingPayments", "buddyPairMembers", "tripRequirements"]);
+    // `buddyTeamMembers` is put in team order after the read (issue #1795).
+    expect(unordered).toEqual(["bookingPayments", "buddyTeamMembers", "tripRequirements"]);
   });
 
   it("reads one field's translations in locale order, whatever order they were written in", async () => {

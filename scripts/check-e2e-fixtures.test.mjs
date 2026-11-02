@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { registeredHandlers, unregisteredHandlers } from "./check-e2e-fixtures.mjs";
+import {
+  registeredHandlers,
+  SHOP_READERS_BY_DESIGN,
+  shopReadersWithoutDemoGate,
+  unregisteredHandlers,
+} from "./check-e2e-fixtures.mjs";
 
 /**
  * The registration half of the guard, which is the half with judgement in it
@@ -119,5 +124,55 @@ describe("reading the table", () => {
     ].join("\n");
 
     expect(registeredHandlers(source)).toEqual(new Set(["POST seed-gift"]));
+  });
+});
+
+describe("test routes that reach a shop without the demo gate (issue #2751)", () => {
+  const route = (name, contents) => ({ path: `src/app/api/test/${name}/route.ts`, contents });
+
+  it("names a route that resolves a caller's slug with no requireDemoTenant", () => {
+    expect(
+      shopReadersWithoutDemoGate([
+        route("seed-thing", "const shop = await getShopBySlug(db, parsed.data.shopSlug);"),
+      ]),
+    ).toEqual(["src/app/api/test/seed-thing/route.ts"]);
+  });
+
+  it("names one that only takes a shopSlug or touches the shops table", () => {
+    expect(
+      shopReadersWithoutDemoGate([
+        route("a", "const body = z.object({ shopSlug: z.string() });"),
+        route("b", "await db.update(shops).set({ name: 'x' });"),
+      ]),
+    ).toEqual(["src/app/api/test/a/route.ts", "src/app/api/test/b/route.ts"]);
+  });
+
+  it("passes a gated route, a route with no shop, a test file and the written exceptions", () => {
+    expect(
+      shopReadersWithoutDemoGate([
+        route(
+          "gated",
+          "const tenant = await requireDemoTenant(request, () => getShopBySlug(db, slug));",
+        ),
+        route("clock", "return Response.json({ ok: true });"),
+        { path: "src/app/api/test/seed-thing/route.test.ts", contents: "getShopBySlug(" },
+        ...[...SHOP_READERS_BY_DESIGN.keys()].map((file) => ({
+          path: file,
+          contents: "getShopBySlug(db, slug)",
+        })),
+      ]),
+    ).toEqual([]);
+  });
+
+  it("does not take a mention of the gate's name as a call", () => {
+    expect(
+      shopReadersWithoutDemoGate([
+        route("x", "// requireDemoTenant is not called here\ngetShopBySlug(db, slug);"),
+      ]),
+    ).toEqual(["src/app/api/test/x/route.ts"]);
+  });
+
+  it("gives every exception a written reason", () => {
+    for (const reason of SHOP_READERS_BY_DESIGN.values()) expect(reason.length).toBeGreaterThan(20);
   });
 });

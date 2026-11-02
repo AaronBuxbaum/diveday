@@ -8,8 +8,8 @@ import { listTripReadiness } from "./readiness";
 import {
   bookingPayments,
   bookings,
-  buddyPairMembers,
   buddyTeamEvents,
+  buddyTeamMembers,
   certifications,
   type DiveSpecialty,
   diveSites,
@@ -491,7 +491,7 @@ async function writeTheRecord(
     if (members.length < 2) continue;
     const formedAt = new Date(plan.startsAt.getTime() - (10 + TEAMS.length - index) * minute);
     const pairId = crypto.randomUUID();
-    await db.insert(buddyPairMembers).values(
+    await db.insert(buddyTeamMembers).values(
       members.map((member) => ({
         shopId,
         tripId: trip.id,

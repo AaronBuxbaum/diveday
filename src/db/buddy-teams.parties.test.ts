@@ -11,7 +11,7 @@ import {
   listTripBuddyTeams,
   partyConfirmKey,
   planPartyTeams,
-} from "./buddy-pairs";
+} from "./buddy-teams";
 import type { AppDb } from "./client";
 import { bookings, certifications, courses, people, shops } from "./schema";
 import { createTrip, getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
@@ -19,7 +19,7 @@ import { createTrip, getTripRoster, listStaff, upcomingTripsWithCounts } from ".
 // One seeded database for the file and a rolled-back transaction per test.
 const ctx = fileScopedShopContext();
 
-/** The Benwood reef trip, three booked divers and no teams, as `buddy-pairs.test.ts` uses it. */
+/** The Benwood reef trip, three booked divers and no teams, as `buddy-teams.test.ts` uses it. */
 async function buddyContext() {
   const { db, shop } = ctx;
   const tripRows = await upcomingTripsWithCounts(db, shop.id, new Date(0));

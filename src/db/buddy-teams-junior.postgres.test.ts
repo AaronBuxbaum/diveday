@@ -10,7 +10,7 @@ import {
   listTripBuddyTeams,
   partyConfirmKey,
   planPartyTeams,
-} from "./buddy-pairs";
+} from "./buddy-teams";
 import { commitContactImport } from "./import";
 import { createCertification, restoreCertification } from "./readiness";
 import {

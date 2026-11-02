@@ -64,4 +64,21 @@ describe("Shopify integration", () => {
       "&lt;unsafe&gt;",
     );
   });
+
+  it("escapes ampersands, brackets, quotes and apostrophes inside the paragraph", () => {
+    const variables = shopifyProductSetVariables(
+      {
+        sourceType: "package",
+        sourceId: "pkg-1",
+        title: "Ten dives",
+        description: `Fish & "chips" <b>it's</b>`,
+        priceCents: 5000,
+      },
+      "usd",
+      null,
+    );
+    expect((variables.productSet as { descriptionHtml: string }).descriptionHtml).toBe(
+      "<p>Fish &amp; &quot;chips&quot; &lt;b&gt;it&#39;s&lt;/b&gt;</p>",
+    );
+  });
 });

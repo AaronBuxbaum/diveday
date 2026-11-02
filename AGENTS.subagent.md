@@ -15,7 +15,7 @@ live and the rules a change must keep. Read `foo.test.ts` before `foo.ts`; tests
 | Bearer-token pages (the URL is the capability) | `src/app/(token)/waivers/[token]`, `ready/[token]`, `recap/[token]`, `verify/[token]`, `reset-password/[token]`, `calendar/[token]` |
 | Auth, authz, the edge check | `src/lib/auth.ts`, `src/lib/authz.ts`, `src/lib/session.ts`, `src/proxy.ts` |
 | May a diver buy a seat vs. board | `src/lib/trip-admission.ts` (booking, weaker) and `src/lib/readiness.ts` (boarding); admission never refuses someone readiness would clear |
-| Manifests, roll call, buddy teams | `src/lib/manifests.ts`, `src/db/manifests.ts`, `src/db/buddy-pairs.ts`, `src/app/shop/[shopSlug]/trips/[id]/manifest/` |
+| Manifests, roll call, buddy teams | `src/lib/manifests.ts`, `src/db/manifests.ts`, `src/db/buddy-teams.ts`, `src/app/shop/[shopSlug]/trips/[id]/manifest/` |
 | Offline manifests | `src/lib/offline-manifests.ts`, `src/lib/offline-manifest-store.ts`, `src/worker/manifest-sw.ts` |
 | Seating a diver (every staff door) | `src/db/seat-diver.ts` via `src/app/actions/seat-diver.ts` |
 | The booking transaction | `src/db/bookings.ts` |

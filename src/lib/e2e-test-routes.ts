@@ -1,4 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
+import { claudeFixturesArmed } from "./assists/e2e-fixtures";
 
 /**
  * Shared guard for every `/api/test/*` route (`reset`, `seed-account-token`,
@@ -37,4 +38,47 @@ export function e2eTestRouteAuthorized(request: Request): boolean {
   if (!secret) return false;
   const expected = Buffer.from(`Bearer ${secret}`, "utf8");
   return expected.length === provided.length && timingSafeEqual(expected, provided);
+}
+
+/**
+ * **The one refusal every `/api/test/*` route answers with** (issue #2751),
+ * whichever check refused: a closed harness gate, a real shop, or no shop at
+ * all. One shape, so a caller cannot tell from the answer which of them it
+ * failed, and a real tenant's slug reads exactly like one that does not exist.
+ */
+export function testRouteRefused(): Response {
+  return Response.json({ error: "not_available" }, { status: 404 });
+}
+
+/** What `requireDemoTenant` hands back: the demo shop, or the one refusal. */
+export type DemoTenant<Shop> = { ok: true; shop: Shop } | { ok: false; response: Response };
+
+/**
+ * **The one demo-fixture gate** (issue #2751): a fixture route writes only to
+ * a demo tenant, never to a real shop, whatever slug it was handed. Checks the
+ * harness gate again (`e2eTestRouteAuthorized`) before `findShop` runs, so no
+ * route can reach the lookup through this gate without it, then refuses a
+ * missing shop and any shop whose `isDemo` is not exactly `true`, with
+ * `testRouteRefused`.
+ *
+ * One exception, and it is still a demo tenant: a shop this server armed
+ * through `/api/test/claude-fixtures`. Arming takes a demo shop and clears its
+ * flag so the assists light up (`claudeFixturesArmed`), and a spec drives that
+ * shop's inbox while it is armed; disarming sets the flag back.
+ *
+ * `findShop` is the caller's lookup (`getShopBySlug` on its own database),
+ * because `src/lib` takes only types from `src/db`. Sign-in's demo bypass
+ * (`demoBypassAccepted`) keeps its own gate and never reads this one.
+ */
+export async function requireDemoTenant<Shop extends { id: string; isDemo: boolean }>(
+  request: Request,
+  findShop: () => Promise<Shop | null | undefined>,
+): Promise<DemoTenant<Shop>> {
+  if (!e2eTestRouteAuthorized(request)) return { ok: false, response: testRouteRefused() };
+  const shop = await findShop();
+  if (!shop) return { ok: false, response: testRouteRefused() };
+  if (shop.isDemo !== true && !claudeFixturesArmed(shop.id)) {
+    return { ok: false, response: testRouteRefused() };
+  }
+  return { ok: true, shop };
 }

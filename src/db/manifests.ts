@@ -47,7 +47,7 @@ import {
   lockBoardingCertificationEvidence,
 } from "./boarding-certification-snapshot";
 import { captureDepartureBoatSafety } from "./boat-safety";
-import { listTripBuddyTeams } from "./buddy-pairs";
+import { listTripBuddyTeams } from "./buddy-teams";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
 import { crewCredentialSnapshot } from "./crew-credential-snapshot";
 import { listTripGearAssignments } from "./gear";
@@ -1599,10 +1599,45 @@ async function acceptedRollCallNote(
 }
 
 /**
- * Free text queued before a completed person erasure is never inserted, even
- * when the booking remains as the roll-call subject. The epoch is authenticated
- * to the server-issued snapshot and compared while the caller holds the shared
- * shop erasure fence; timestamps from the device are not authority.
+ * Whether the person an offline roll-call note is about has been erased: the
+ * diver on a seat (`bookingId`) or a crew member (`personId`). A merged shell
+ * is marked with its survivor, so a seat still on one reads as erased too.
+ * Read under the shared shop erasure fence, so a committed erasure is seen
+ * whole or not at all. A subject this cannot find is treated as erased: the
+ * note is the thing at stake, and dropping it is the safe way to be wrong.
+ */
+async function offlineNoteSubjectErased(
+  tx: DbExecutor,
+  shopId: string,
+  subject: { bookingId: string } | { personId: string },
+): Promise<boolean> {
+  const [row] =
+    "bookingId" in subject
+      ? await tx
+          .select({ anonymizedAt: people.anonymizedAt })
+          .from(bookings)
+          .innerJoin(people, eq(people.id, bookings.personId))
+          // diveday:allow-deleted-people: an erased person is removed; that is the question.
+          .where(and(eq(bookings.id, subject.bookingId), eq(bookings.shopId, shopId)))
+          .limit(1)
+      : await tx
+          .select({ anonymizedAt: people.anonymizedAt })
+          .from(people)
+          // diveday:allow-deleted-people: an erased person is removed; that is the question.
+          .where(and(eq(people.id, subject.personId), eq(people.shopId, shopId)))
+          .limit(1);
+  return !row || row.anonymizedAt !== null;
+}
+
+/**
+ * Free text queued before a completed erasure of **this** diver is never
+ * inserted, even when the booking remains as the roll-call subject. Erasure
+ * removes the erased person's own data only (ADR 20260802-diver-data-erasure,
+ * amendment 2026-11-01), so a stale note about anybody else is kept: an old
+ * "last seen at the mooring line" on a missing diver survives an unrelated
+ * erasure (issue #3569). The epoch is authenticated to the server-issued
+ * snapshot and compared while the caller holds the shared shop erasure fence;
+ * timestamps from the device are not authority.
  */
 async function gateOfflineRollCallNote(
   tx: DbExecutor,
@@ -1611,6 +1646,7 @@ async function gateOfflineRollCallNote(
     note: string | null | undefined;
     shopId: string;
     tripId: string;
+    bookingId: string;
     snapshotId: string | null | undefined;
     token: string | null | undefined;
     mayWriteNote: boolean;
@@ -1634,9 +1670,10 @@ async function gateOfflineRollCallNote(
     .from(shops)
     .where(eq(shops.id, input.shopId))
     .limit(1);
-  return shop?.epoch === issuedEpoch
-    ? { note: input.note }
-    : { note: null, noteDisposition: "discarded_erasure_cutoff" };
+  if (shop?.epoch === issuedEpoch) return { note: input.note };
+  return (await offlineNoteSubjectErased(tx, input.shopId, { bookingId: input.bookingId }))
+    ? { note: null, noteDisposition: "discarded_erasure_cutoff" }
+    : { note: input.note };
 }
 
 /**
@@ -1957,6 +1994,7 @@ async function writeRollCall(
     note: input.note,
     shopId: input.shopId,
     tripId: input.tripId,
+    bookingId: input.bookingId,
     snapshotId: input.offlineSnapshotId,
     token: input.offlineErasureEpochToken,
     mayWriteNote,
@@ -2308,7 +2346,7 @@ export async function recordCrewRollCall(
           source === "live" && checkpoint === "departure" && input.status === "boarded";
         // Acquire the shop fence before trip or seat locks: erasure takes
         // this fence before its person and booking sweeps (a stale offline note
-        // is discarded shop-wide; narrowing that is a filed follow-up). Conservatively fence non-empty text even when the
+        // is discarded only when this crew member is the one erased). Conservatively fence non-empty text even when the
         // checkpoint rule later drops it.
         const mayWriteNote = Boolean(input.note?.trim());
         const evidenceLockMode =
@@ -2343,11 +2381,15 @@ export async function recordCrewRollCall(
             .limit(1);
           // The shared erasure fence remains held through this comparison and
           // the event insert. A stale snapshot still gets its roll-call mark,
-          // but its arbitrary text cannot cross a completed shop erasure.
+          // but its text cannot cross a completed erasure of this crew member;
+          // a note about anybody else is kept (issue #3569).
           if (issuedEpoch === null) {
             noteInput = null;
             noteDisposition = "discarded_unverified_snapshot";
-          } else if (shop?.epoch !== issuedEpoch) {
+          } else if (
+            shop?.epoch !== issuedEpoch &&
+            (await offlineNoteSubjectErased(tx, input.shopId, { personId: input.personId }))
+          ) {
             noteInput = null;
             noteDisposition = "discarded_erasure_cutoff";
           }

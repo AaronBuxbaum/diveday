@@ -19,7 +19,7 @@
  *
  * **What row order a file owes, written once (H-81, issue #1795).** A CSV a
  * shop reads or diffs gets an order a person can predict: `bookings.csv` (by
- * seat time, then the diver's name) and `buddy_pairs.csv` (by team, then the
+ * seat time, then the diver's name) and `buddy_teams.csv` (by team, then the
  * team's members' names), in both bundles. Every other file exists to carry the
  * shop's data somewhere else and be re-imported, so its order promises nothing
  * beyond being stable within one database — which is why its
@@ -42,7 +42,7 @@ import {
 import { isUnsightedSelfDeclaration } from "@/lib/readiness";
 import { withoutRehearsals } from "@/lib/rehearsal-export";
 import { readActiveStaffRoles } from "./authz";
-import { sortBuddyMemberRowsByTeam } from "./buddy-pairs";
+import { sortBuddyMemberRowsByTeam } from "./buddy-teams";
 import type { AppDb, AppTransaction } from "./client";
 import { DIVER_EXPORT_FILES } from "./export-diver-files";
 import { SHOP_EXPORT_FILES } from "./export-shop-files";
@@ -57,7 +57,7 @@ import { shopRehearsalIds } from "./rehearsals";
 import {
   bookingReferrals,
   bookings,
-  buddyPairMembers,
+  buddyTeamMembers,
   courses,
   crewAssignmentRequests,
   crewAvailabilityBlocks,
@@ -510,14 +510,14 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
 
   const crewRollCallRows = await readScoped(tx, "rollCallCrewEvents", scope);
 
-  // **`buddy_pairs.csv` is a file a person reads** (H-81, issue #1795): teams
+  // **`buddy_teams.csv` is a file a person reads** (H-81, issue #1795): teams
   // in the panel's order — formation time, then the members' names, then
   // `pair_id` last — each team's rows together. The name is the one the file
   // prints in `person_name`. The old `asc(created_at), asc(pair_id)` was not an
   // order at all: every member of a team shares its `pair_id`, so the tie fell
   // through to whatever Postgres returned.
   const buddyPairRows = sortBuddyMemberRowsByTeam(
-    await readScoped(tx, "buddyPairMembers", scope),
+    await readScoped(tx, "buddyTeamMembers", scope),
     (row) => {
       const memberId = row.bookingId ? bookingPerson.get(row.bookingId) : row.crewPersonId;
       return (memberId ? personName.get(memberId) : undefined) ?? "";
@@ -759,10 +759,10 @@ export type ShopExportContext = NonNullable<Awaited<ReturnType<typeof loadShopEx
  *   key this diver has no business holding, so it is blanked in `bookings.csv`
  *   rather than exported as-is.
  * - **A buddy team's other members** live as separate rows in
- *   `buddy_pair_members`, keyed by a different `booking_id`/`crew_person_id`.
+ *   `buddy_team_members`, keyed by a different `booking_id`/`crew_person_id`.
  *   Filtering to this diver's own bookings (and, if they are also staff, their
  *   own `crew_person_id`) naturally yields only their own membership row per
- *   team — never another member's — so `buddy_pairs.csv` is included as-is.
+ *   team — never another member's — so `buddy_teams.csv` is included as-is.
  * - **Roll-call `recorded_by`, order `created_by`, buddy-pair `paired_by`,
  *   waiver `recorded_by`** are staff, not other divers. Included by name, on
  *   the same rule the shop's own bundle uses: the shop's record of who did
@@ -973,24 +973,24 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
   // reference and a deleted departure's row is still there, so the inner
   // join drops nothing.
   const buddyPairRows = await tx
-    .select(getTableColumns(buddyPairMembers))
-    .from(buddyPairMembers)
-    .innerJoin(trips, eq(trips.id, buddyPairMembers.tripId))
+    .select(getTableColumns(buddyTeamMembers))
+    .from(buddyTeamMembers)
+    .innerJoin(trips, eq(trips.id, buddyTeamMembers.tripId))
     .where(
       and(
-        eq(buddyPairMembers.shopId, shopId),
+        eq(buddyTeamMembers.shopId, shopId),
         or(
-          bookingIds.length ? inArray(buddyPairMembers.bookingId, bookingIds) : undefined,
-          eq(buddyPairMembers.crewPersonId, personId),
+          bookingIds.length ? inArray(buddyTeamMembers.bookingId, bookingIds) : undefined,
+          eq(buddyTeamMembers.crewPersonId, personId),
         ),
       ),
     )
     .orderBy(
-      asc(buddyPairMembers.createdAt),
+      asc(buddyTeamMembers.createdAt),
       asc(trips.startsAt),
       asc(trips.title),
-      asc(buddyPairMembers.pairId),
-      asc(buddyPairMembers.id),
+      asc(buddyTeamMembers.pairId),
+      asc(buddyTeamMembers.id),
     );
 
   const notificationRows = await readScoped(tx, "notificationDeliveries", scope);
@@ -1305,7 +1305,7 @@ export async function loadShopExportCounts(
     "booking_arrival_events.csv": await countShopScoped(db, "bookingArrivalEvents", shopId),
     "roll_call_events.csv": await countShopScoped(db, "rollCallEvents", shopId),
     "roll_call_crew_events.csv": await countShopScoped(db, "rollCallCrewEvents", shopId),
-    "buddy_pairs.csv": await countShopScoped(db, "buddyPairMembers", shopId),
+    "buddy_teams.csv": await countShopScoped(db, "buddyTeamMembers", shopId),
     "waiver_templates.csv": await countShopScoped(db, "waiverTemplates", shopId),
     "waiver_materiality_decisions.csv": await countShopScoped(
       db,

@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { expect, it } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { shops } from "@/db/schema";
 import { getShopBackupDestination, listBackupDeliveries } from "@/features/backup-export";
 import { nowDate } from "@/lib/clock";
@@ -7,9 +7,19 @@ import { fileScopedShopContext } from "@/test/db";
 import { settingsStateResponse } from "./settings-state";
 
 const ctx = fileScopedShopContext();
+// The shop is resolved through `requireDemoTenant`, which asks the harness
+// gate again, so the request carries the bearer the parent route checks.
+beforeEach(() => {
+  vi.stubEnv("DATABASE_URL", "");
+  vi.stubEnv("DIVEDAY_E2E_SECRET", "settings-state-secret");
+});
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 const request = () =>
   new Request("http://localhost/api/test/seed-trouble-states?settingsState=backup-failed", {
     method: "POST",
+    headers: { authorization: "Bearer settings-state-secret" },
   });
 
 it("seeds actual last-success and newer failed-delivery facts without running a provider", async () => {

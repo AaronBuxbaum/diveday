@@ -17,7 +17,7 @@ import { createBearerToken, hashBearerToken } from "@/lib/bearer-tokens";
 import { BOOKKEEPER_CONFIRMATION_TTL_MS, bookkeeperMonthOnSet } from "@/lib/bookkeeper";
 import { addMonths, monthKey, parseMonthKey } from "@/lib/calendar";
 import { nowDate } from "@/lib/clock";
-import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
+import { e2eTestRouteAuthorized, requireDemoTenant, testRouteRefused } from "@/lib/e2e-test-routes";
 import { SHORE_ALERT_CONFIRMATION_TTL_MS } from "@/lib/shore-alert-contact";
 import { digestWeeks } from "@/lib/weekly-digest";
 
@@ -46,16 +46,15 @@ const bodySchema = z
  * neither the shared fixture nor a real tenant can have settings changed.
  */
 export async function POST(request: Request) {
-  if (!e2eTestRouteAuthorized(request)) {
-    return NextResponse.json({ error: "not_available" }, { status: 404 });
-  }
+  if (!e2eTestRouteAuthorized(request)) return testRouteRefused();
   const parsed = bodySchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success || parsed.data.shopSlug === DEMO_SHOP_SLUG) {
     return NextResponse.json({ error: "invalid_body" }, { status: 400 });
   }
   const db = await getDb();
-  const shop = await getShopBySlug(db, parsed.data.shopSlug);
-  if (!shop?.isDemo) return NextResponse.json({ error: "shop_not_found" }, { status: 404 });
+  const tenant = await requireDemoTenant(request, () => getShopBySlug(db, parsed.data.shopSlug));
+  if (!tenant.ok) return tenant.response;
+  const { shop } = tenant;
   const [owner] = await ownerLogins(db, shop.id);
   if (!owner) return NextResponse.json({ error: "owner_not_found" }, { status: 409 });
   const { family, state } = parsed.data;

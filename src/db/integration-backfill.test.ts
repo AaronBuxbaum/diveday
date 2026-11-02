@@ -1,4 +1,4 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
@@ -437,5 +437,36 @@ describe("integration backfill (issue #2606)", () => {
     expect((await deliveriesOf(zap.id)).map((row) => row.key)).toContain(
       `checkout:${third.checkoutId}:paid`,
     );
+  });
+
+  it("orders tied instants by kind then id, whichever way each query returns its rows", async () => {
+    const f = await priced();
+    const a = await completedCheckout(f, 5, 1_000);
+    const b = await completedCheckout(f, 5);
+    const tip1 = await paidTip(f, a.bookingId, 5);
+    const tip2 = await paidTip(f, b.bookingId, 5);
+    const instant = new Date(nowDate().getTime() - 5 * DAY);
+    await f.db
+      .update(bookingCheckouts)
+      .set({ completedAt: instant })
+      .where(inArray(bookingCheckouts.id, [a.checkoutId, b.checkoutId]));
+    await f.db
+      .update(tips)
+      .set({ completedAt: instant })
+      .where(inArray(tips.id, [tip1, tip2]));
+    const zap = await connect(f.shop.id, "zapier", ["order.paid", "order.refunded"]);
+
+    await runIntegrationBackfill(f.db, {
+      shopId: f.shop.id,
+      integrationId: zap.id,
+      since: since(30),
+    });
+
+    const byId = (x: string, y: string) => x.localeCompare(y);
+    expect((await deliveriesOf(zap.id)).map((row) => row.key)).toEqual([
+      ...[a.checkoutId, b.checkoutId].sort(byId).map((id) => `checkout:${id}:paid`),
+      `checkout:${a.checkoutId}:refund:1000`,
+      ...[tip1, tip2].sort(byId).map((id) => `tip:${id}:paid`),
+    ]);
   });
 });

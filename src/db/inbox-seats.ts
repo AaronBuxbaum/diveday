@@ -2,7 +2,7 @@ import { and, asc, count, eq, gt, inArray, ne } from "drizzle-orm";
 import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 import type { AppDb } from "./client";
 import { type MessageSeat, messageSeats } from "./running-late";
-import { bookings, buddyPairMembers, trips } from "./schema";
+import { bookings, buddyTeamMembers, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
 /** A seat an Inbox row names, and whether the late mark may be offered on it. */
@@ -141,10 +141,10 @@ async function moveRefusals(
       )
       .groupBy(bookings.partyLeadBookingId),
     db
-      .select({ bookingId: buddyPairMembers.bookingId, tripId: buddyPairMembers.tripId })
-      .from(buddyPairMembers)
+      .select({ bookingId: buddyTeamMembers.bookingId, tripId: buddyTeamMembers.tripId })
+      .from(buddyTeamMembers)
       .where(
-        and(eq(buddyPairMembers.shopId, shopId), inArray(buddyPairMembers.bookingId, bookingIds)),
+        and(eq(buddyTeamMembers.shopId, shopId), inArray(buddyTeamMembers.bookingId, bookingIds)),
       ),
   ]);
   for (const seat of seats) {

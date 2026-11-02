@@ -60,7 +60,7 @@ describe("/api/test/claude-fixtures", () => {
 
   it("refuses to turn a shop POST never armed into a demo", async () => {
     await ctx.db.update(shops).set({ isDemo: false }).where(eq(shops.id, ctx.shop.id));
-    expect((await DELETE(fixturesRequest("DELETE"))).status).toBe(400);
+    expect((await DELETE(fixturesRequest("DELETE"))).status).toBe(404);
     expect(await isDemo()).toBe(false);
   });
 
@@ -68,7 +68,7 @@ describe("/api/test/claude-fixtures", () => {
     expect((await POST(fixturesRequest("POST"))).status).toBe(200);
     expect((await DELETE(fixturesRequest("DELETE"))).status).toBe(200);
     await ctx.db.update(shops).set({ isDemo: false }).where(eq(shops.id, ctx.shop.id));
-    expect((await DELETE(fixturesRequest("DELETE"))).status).toBe(400);
+    expect((await DELETE(fixturesRequest("DELETE"))).status).toBe(404);
     expect(await isDemo()).toBe(false);
   });
 });

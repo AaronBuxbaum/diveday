@@ -1,4 +1,4 @@
-import { type listTripBuddyTeams, type PartyTeamPlan, partyConfirmKey } from "@/db/buddy-pairs";
+import { type listTripBuddyTeams, type PartyTeamPlan, partyConfirmKey } from "@/db/buddy-teams";
 import { partyLeftReasonText } from "@/i18n/buddy-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { cachedListFormat } from "@/lib/intl-cache";

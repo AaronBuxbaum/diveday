@@ -81,7 +81,14 @@ describe("pieceSize and sizeCell", () => {
 
 describe("diverNames", () => {
   it("keeps each comma with the name before it, with a bare space between", () => {
-    const { container } = render(<p>{diverNames(["Carmen Ruiz", "Grace Mensah"])}</p>);
+    const { container } = render(
+      <p>
+        {diverNames([
+          { bookingId: "b1", fullName: "Carmen Ruiz" },
+          { bookingId: "b2", fullName: "Grace Mensah" },
+        ])}
+      </p>,
+    );
     const cell = container.firstElementChild as HTMLElement;
     expect([...cell.children].map((name) => name.textContent)).toEqual([
       "Carmen Ruiz,",

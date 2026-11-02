@@ -9,7 +9,7 @@ import { getTripManifest } from "./manifests";
 import { listTripReadiness } from "./readiness";
 import {
   boats,
-  buddyPairMembers,
+  buddyTeamMembers,
   people,
   rollCallCrewEvents,
   rollCallEvents,
@@ -110,9 +110,9 @@ describe("the boat at sea", () => {
     const down = roster.filter((id) => !counted.some((row) => row.bookingId === id));
     expect(down).toHaveLength(AT_SEA_STILL_DOWN);
     const teams = await db
-      .select({ pairId: buddyPairMembers.pairId })
-      .from(buddyPairMembers)
-      .where(inArray(buddyPairMembers.bookingId, down));
+      .select({ pairId: buddyTeamMembers.pairId })
+      .from(buddyTeamMembers)
+      .where(inArray(buddyTeamMembers.bookingId, down));
     expect(new Set(teams.map((row) => row.pairId)).size).toBe(1);
   });
 

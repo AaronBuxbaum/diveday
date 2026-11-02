@@ -577,14 +577,14 @@ export const bookingArrivalEvents = pgTable(
  * check constraint below). Crew carry no uniqueness rule on purpose: one
  * divemaster commonly leads several groups on one boat.
  *
- * The writers live in src/db/buddy-pairs.ts, one per act, each writing every
+ * The writers live in src/db/buddy-teams.ts, one per act, each writing every
  * row it needs in one transaction. Dissolving deletes the membership rows —
  * `buddy_team_events` below is the append-only record that outlives them.
  * Teams inform the roll call's attention state and never gate readiness,
  * admission, capacity, or checkpoint completeness.
  */
-export const buddyPairMembers = pgTable(
-  "buddy_pair_members",
+export const buddyTeamMembers = pgTable(
+  "buddy_team_members",
   {
     id: uuid("id").primaryKey().defaultRandom(),
     shopId: uuid("shop_id")
@@ -617,11 +617,11 @@ export const buddyPairMembers = pgTable(
     // A diver is in at most one team per departure — the invariant that keeps
     // the manifest unambiguous. Holds under concurrency, where a check in
     // application code cannot.
-    uniqueIndex("buddy_pair_members_booking_unique").on(table.bookingId),
-    index("buddy_pair_members_shop_trip_idx").on(table.shopId, table.tripId),
-    index("buddy_pair_members_pair_idx").on(table.pairId),
+    uniqueIndex("buddy_team_members_booking_unique").on(table.bookingId),
+    index("buddy_team_members_shop_trip_idx").on(table.shopId, table.tripId),
+    index("buddy_team_members_pair_idx").on(table.pairId),
     check(
-      "buddy_pair_members_one_subject",
+      "buddy_team_members_one_subject",
       sql`(${table.bookingId} is not null) <> (${table.crewPersonId} is not null)`,
     ),
   ],

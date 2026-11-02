@@ -2,11 +2,15 @@ import { describe, expect, it } from "vitest";
 import type { PrepLine } from "@/lib/dive-prep";
 import { foldFitAtCheckIn } from "./fit-at-check-in";
 
+/** A seat per name; a name given twice is two seats, so namesakes stay apart. */
+const seats = (...names: string[]) =>
+  names.map((fullName, place) => ({ bookingId: `${fullName}#${place}`, fullName }));
+
 const line = (overrides: Partial<PrepLine>): PrepLine => ({
   kind: "bcd",
   size: null,
   count: 1,
-  divers: ["Ana"],
+  divers: seats("Ana"),
   fitAtCheckIn: false,
   drysuitWeightCheck: false,
   drysuitFinFit: false,
@@ -18,23 +22,43 @@ const line = (overrides: Partial<PrepLine>): PrepLine => ({
 describe("foldFitAtCheckIn", () => {
   it("says Fit at check-in once per diver, carrying every piece they take", () => {
     const { lines, fits } = foldFitAtCheckIn([
-      line({ kind: "bcd", size: "M", divers: ["Ana"] }),
-      line({ kind: "bcd", fitAtCheckIn: true, count: 2, divers: ["Bo", "Cy"] }),
-      line({ kind: "wetsuit", fitAtCheckIn: true, count: 1, divers: ["Bo"] }),
-      line({ kind: "boots", fitAtCheckIn: true, count: 1, divers: ["Bo"] }),
+      line({ kind: "bcd", size: "M", divers: seats("Ana") }),
+      line({ kind: "bcd", fitAtCheckIn: true, count: 2, divers: seats("Bo", "Cy") }),
+      line({ kind: "wetsuit", fitAtCheckIn: true, count: 1, divers: seats("Bo") }),
+      line({ kind: "boots", fitAtCheckIn: true, count: 1, divers: seats("Bo") }),
     ]);
     expect(lines.map((l) => l.kind)).toEqual(["bcd"]);
-    expect(fits.map((row) => [row.fullName, row.lines.map((l) => l.kind)])).toEqual([
+    expect(fits.map((row) => [row.diver.fullName, row.lines.map((l) => l.kind)])).toEqual([
       ["Bo", ["bcd", "wetsuit", "boots"]],
       ["Cy", ["bcd"]],
     ]);
   });
 
+  it("keeps two namesakes flagged for a fit as two rows, each with only their own pieces", () => {
+    const first = { bookingId: "booking-1", fullName: "Carlos García" };
+    const second = { bookingId: "booking-2", fullName: "Carlos García" };
+    const { fits } = foldFitAtCheckIn([
+      line({ kind: "bcd", fitAtCheckIn: true, count: 2, divers: [first, second] }),
+      line({ kind: "wetsuit", fitAtCheckIn: true, count: 1, divers: [first] }),
+      line({ kind: "fins", fitAtCheckIn: true, count: 1, divers: [second] }),
+    ]);
+    expect(fits.map((row) => [row.diver, row.lines.map((l) => l.kind)])).toEqual([
+      [first, ["bcd", "wetsuit"]],
+      [second, ["bcd", "fins"]],
+    ]);
+    expect(fits.flatMap((row) => row.lines.map((l) => l.divers))).toEqual([
+      [first],
+      [first],
+      [second],
+      [second],
+    ]);
+  });
+
   it("drops no piece: the counts before and after add up", () => {
     const given = [
-      line({ kind: "bcd", count: 3, divers: ["A", "B", "C"] }),
-      line({ kind: "fins", fitAtCheckIn: true, count: 2, divers: ["D", "E"] }),
-      line({ kind: "mask", fitAtCheckIn: true, count: 1, divers: ["D"] }),
+      line({ kind: "bcd", count: 3, divers: seats("A", "B", "C") }),
+      line({ kind: "fins", fitAtCheckIn: true, count: 2, divers: seats("D", "E") }),
+      line({ kind: "mask", fitAtCheckIn: true, count: 1, divers: seats("D") }),
     ];
     const { lines, fits } = foldFitAtCheckIn(given);
     const after =
@@ -45,13 +69,13 @@ describe("foldFitAtCheckIn", () => {
 
   it("keeps a piece the catalog no longer offers on its diver's row", () => {
     const { fits } = foldFitAtCheckIn([
-      line({ kind: "drysuit", fitAtCheckIn: true, notOffered: true, divers: ["Bo"] }),
+      line({ kind: "drysuit", fitAtCheckIn: true, notOffered: true, divers: seats("Bo") }),
     ]);
     expect(fits[0]?.lines[0]).toMatchObject({ kind: "drysuit", notOffered: true });
   });
 
   it("leaves a list with nobody to fit untouched", () => {
-    const given = [line({ kind: "bcd", size: "L", count: 2, divers: ["A", "B"] })];
+    const given = [line({ kind: "bcd", size: "L", count: 2, divers: seats("A", "B") })];
     expect(foldFitAtCheckIn(given)).toEqual({ lines: given, fits: [] });
   });
 });

@@ -7,7 +7,7 @@ import {
   dissolveBuddyTeam,
   formBuddyTeam,
   removeBuddyTeamMember,
-} from "./buddy-pairs";
+} from "./buddy-teams";
 import {
   bookings,
   buddyTeamEvents,

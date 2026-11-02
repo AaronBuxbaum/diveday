@@ -20,7 +20,6 @@ import {
 } from "./offline-replay";
 import { violatesUniqueIndex } from "./query-helpers";
 import { people, preDepartureCheckEvents, preDepartureChecklistItems, trips } from "./schema";
-import { getShopOfflineErasureEpoch } from "./shops";
 import { liveTrip } from "./trips-live";
 
 export type ChecklistItem = {
@@ -301,11 +300,11 @@ export type RecordPreDepartureCheckOutcome =
       ok: true;
       eventId: string;
       duplicate?: boolean;
-      noteDisposition?: "discarded_erasure_cutoff" | "discarded_unverified_snapshot";
+      noteDisposition?: "discarded_unverified_snapshot";
     }
   | {
       ok: false;
-      noteDisposition?: "discarded_erasure_cutoff" | "discarded_unverified_snapshot";
+      noteDisposition?: "discarded_unverified_snapshot";
       reason:
         | "trip_unavailable"
         | "item_unavailable"
@@ -354,36 +353,25 @@ export async function recordPreDepartureCheck(
         const mayWriteNote = Boolean(input.note?.trim());
         if (mayWriteNote) {
           // A checklist narrative is retained shop evidence just like a roll-call
-          // note. Serialize it against the same erasure fence (which orders it
-          // against the stale-offline-note check, not a rewrite).
+          // note, and takes the same shared erasure fence in the same order
+          // (fence before trip), so the two writers never disagree on it.
           await lockBoardingCertificationEvidence(tx, input.shopId, "boarding");
         }
-        const verifiedEpoch =
-          source === "offline" && mayWriteNote
-            ? verifyOfflineErasureEpoch({
-                token: input.offlineErasureEpochToken,
-                shopId: input.shopId,
-                tripId: input.tripId,
-                snapshotId: input.offlineSnapshotId,
-              })
-            : undefined;
-        let acceptedNote: string | null | undefined = input.note;
-        let noteDisposition:
-          | "discarded_erasure_cutoff"
-          | "discarded_unverified_snapshot"
-          | undefined;
-        if (source === "offline" && mayWriteNote) {
-          if (verifiedEpoch === null) {
-            acceptedNote = null;
-            noteDisposition = "discarded_unverified_snapshot";
-          } else {
-            const currentEpoch = await getShopOfflineErasureEpoch(tx, input.shopId);
-            if (currentEpoch === null || currentEpoch !== verifiedEpoch) {
-              acceptedNote = null;
-              noteDisposition = "discarded_erasure_cutoff";
-            }
-          }
-        }
+        // A checklist note is about a checklist item, never a person's own
+        // data, so an erasure since the snapshot does not discard it (ADR
+        // 20260802-diver-data-erasure, amendment 2026-11-01; issue #3569). A
+        // note from a snapshot the server cannot authenticate still goes.
+        const unverified =
+          source === "offline" &&
+          mayWriteNote &&
+          verifyOfflineErasureEpoch({
+            token: input.offlineErasureEpochToken,
+            shopId: input.shopId,
+            tripId: input.tripId,
+            snapshotId: input.offlineSnapshotId,
+          }) === null;
+        const acceptedNote: string | null | undefined = unverified ? null : input.note;
+        const noteDisposition = unverified ? ("discarded_unverified_snapshot" as const) : undefined;
         const refuse = (
           reason: Extract<RecordPreDepartureCheckOutcome, { ok: false }>["reason"],
         ) => ({

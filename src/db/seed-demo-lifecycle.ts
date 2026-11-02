@@ -21,8 +21,8 @@ import {
   bookingPayments,
   bookingReferrals,
   bookings,
-  buddyPairMembers,
   buddyTeamEvents,
+  buddyTeamMembers,
   calendarFeeds,
   certifications,
   courseFormRecords,
@@ -285,7 +285,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(buddyTeamEvents).where(eq(buddyTeamEvents.shopId, shopId));
   // Buddy pairs reference bookings, so they go before the bookings delete
   // (ADR 20260804-buddy-teams).
-  await db.delete(buddyPairMembers).where(eq(buddyPairMembers.shopId, shopId));
+  await db.delete(buddyTeamMembers).where(eq(buddyTeamMembers.shopId, shopId));
   // The bench, children first: lines, pieces, the Work done record and the
   // status trail reference the ticket, and a ticket references a customer, a
   // fleet unit, and the technician working it — so all of it clears before

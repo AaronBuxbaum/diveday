@@ -5,7 +5,7 @@ import { getDb } from "@/db/client";
 import { bookings, people } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { nowMs } from "@/lib/clock";
-import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
+import { e2eTestRouteAuthorized, requireDemoTenant, testRouteRefused } from "@/lib/e2e-test-routes";
 import type { CheckoutProvider } from "@/lib/payments/checkout";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -29,9 +29,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  * shop is refused whatever slug is passed (`isDemo`).
  */
 export async function POST(request: Request) {
-  if (!e2eTestRouteAuthorized(request)) {
-    return NextResponse.json({ error: "not_available" }, { status: 404 });
-  }
+  if (!e2eTestRouteAuthorized(request)) return testRouteRefused();
   const url = new URL(request.url);
   const slug = url.searchParams.get("slug") ?? "";
   const email = url.searchParams.get("email")?.trim().toLowerCase() ?? "";
@@ -39,8 +37,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "bad_request" }, { status: 400 });
   }
   const db = await getDb();
-  const shop = await getShopBySlug(db, slug);
-  if (!shop?.isDemo) return NextResponse.json({ error: "not_available" }, { status: 404 });
+  const tenant = await requireDemoTenant(request, () => getShopBySlug(db, slug));
+  if (!tenant.ok) return tenant.response;
+  const { shop } = tenant;
 
   const [seat] = await db
     .select({ bookingId: bookings.id, tripId: bookings.tripId })

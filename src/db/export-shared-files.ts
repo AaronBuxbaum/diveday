@@ -830,7 +830,7 @@ export const ROLL_CALL_EVENTS_CSV = sharedFile<ShopRow<"rollCallRows">>({
 // Diver: own bookings/crew id, so another member's row is never selected in
 // Diver: the first place — see the module docblock.
 export const BUDDY_PAIRS_CSV = sharedFile<ShopRow<"buddyPairRows">>({
-  file: "buddy_pairs.csv",
+  file: "buddy_teams.csv",
   columns: [
     { header: "pair_id", in: "both", value: (row) => row.pairId },
     { header: "trip_id", in: "shop", value: (row) => row.tripId },
@@ -863,7 +863,7 @@ export const BUDDY_PAIRS_CSV = sharedFile<ShopRow<"buddyPairRows">>({
     },
     { header: "created_at", in: "both", value: (row) => row.createdAt },
   ],
-  shop: { rows: ({ buddyPairRows }) => buddyPairRows, note: EXPORT_FILE_NOTES["buddy_pairs.csv"] },
+  shop: { rows: ({ buddyPairRows }) => buddyPairRows, note: EXPORT_FILE_NOTES["buddy_teams.csv"] },
   diver: {
     rows: ({ buddyPairRows }) => buddyPairRows,
     note: "Buddy teams this diver was recorded on. Other members are not named here.",
@@ -1226,6 +1226,7 @@ export const GEAR_RESERVATIONS_CSV = sharedFile<ShopRow<"gearReservationRows">>(
     { header: "return_note", in: "shop", value: (row) => row.returnNote },
     { header: "dives_logged", in: "shop", value: (row) => row.divesLogged },
     { header: "fill_o2_percent", in: "both", value: (row) => row.fillO2Percent },
+    { header: "fill_o2_clean_gap", in: "shop", value: (row) => row.fillO2CleanGap },
     { header: "fill_recorded_at", in: "both", value: (row) => row.fillRecordedAt },
     {
       header: "fill_recorded_by_person_id",

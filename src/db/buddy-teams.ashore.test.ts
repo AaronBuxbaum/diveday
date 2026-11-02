@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
-import { dissolveBuddyTeam, formBuddyTeam } from "./buddy-pairs";
-import { loadBuddyContext } from "./buddy-pairs-test-fixtures";
+import { dissolveBuddyTeam, formBuddyTeam } from "./buddy-teams";
+import { loadBuddyContext } from "./buddy-teams-test-fixtures";
 import { getTripManifest, recordRollCall } from "./manifests";
 
 const ctx = fileScopedShopContext();

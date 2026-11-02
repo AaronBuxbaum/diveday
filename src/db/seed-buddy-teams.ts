@@ -2,8 +2,8 @@ import { and, asc, eq } from "drizzle-orm";
 import type { DbExecutor } from "./client";
 import {
   bookings,
-  buddyPairMembers,
   buddyTeamEvents,
+  buddyTeamMembers,
   people,
   rollCallEvents,
   trips,
@@ -84,7 +84,7 @@ export async function seedBuddyPairs(
   for (const team of teams) {
     const pairId = crypto.randomUUID();
     const members = team.divers.map(customerFor);
-    await db.insert(buddyPairMembers).values([
+    await db.insert(buddyTeamMembers).values([
       ...members.map(({ booking }) => ({
         shopId,
         tripId: reef.id,
@@ -201,7 +201,7 @@ export async function seedDawnBuddyTeams(
       DEMO_DAWN_BOAT.sails.minute - 10 - (teams.length - 1 - index) * 2,
     );
     const pairId = crypto.randomUUID();
-    await db.insert(buddyPairMembers).values(
+    await db.insert(buddyTeamMembers).values(
       members.map((member) => ({
         shopId,
         tripId: dawn.id,

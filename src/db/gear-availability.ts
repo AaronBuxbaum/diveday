@@ -54,8 +54,8 @@ export type AvailableGearUnit = {
    */
   serviceConcern: boolean;
   /**
-   * Where a tank's oxygen cleaning stands on the service day
-   * (`o2CleanStanding`), so the counter can warn on an EANx fill without a
+   * Where a tank's oxygen cleaning stands today, the day the counter fills it
+   * (`o2CleanStanding`; issue #3005: the rental's tank line reads the same day), so the counter can warn on an EANx fill without a
    * current one (issue #2719); null for every other kind. Informs, never gates.
    */
   o2Clean: O2CleanStanding | null;
@@ -239,10 +239,9 @@ export async function listAvailableGearUnits(
       serviceConcern: concerns.has(unit.id),
       o2Clean:
         unit.kind === "tank"
-          ? o2CleanStanding(
-              clocksByItem.get(unit.id) ?? [],
-              options.serviceAsOf ?? options.todayLocal,
-            )
+          ? // The day of the fill, today, as the rental's own record reads it
+            // (issue #3005), not the window's last day the service screen uses.
+            o2CleanStanding(clocksByItem.get(unit.id) ?? [], options.todayLocal)
           : null,
     };
   });

@@ -5,7 +5,7 @@ import { getDb } from "@/db/client";
 import { countPendingCrewNotices, previewCrewNotices } from "@/db/crew-notices";
 import { people } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
-import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
+import { e2eTestRouteAuthorized, requireDemoTenant, testRouteRefused } from "@/lib/e2e-test-routes";
 
 /**
  * **What a crew member would be told, without telling them** (ADR
@@ -26,15 +26,14 @@ const bodySchema = z.object({
 });
 
 export async function POST(request: Request) {
-  if (!e2eTestRouteAuthorized(request)) {
-    return NextResponse.json({ error: "not_available" }, { status: 404 });
-  }
+  if (!e2eTestRouteAuthorized(request)) return testRouteRefused();
   const parsed = bodySchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "invalid_body" }, { status: 400 });
 
   const db = await getDb();
-  const shop = await getShopBySlug(db, parsed.data.shopSlug);
-  if (!shop?.isDemo) return NextResponse.json({ error: "not_demo" }, { status: 404 });
+  const tenant = await requireDemoTenant(request, () => getShopBySlug(db, parsed.data.shopSlug));
+  if (!tenant.ok) return tenant.response;
+  const { shop } = tenant;
 
   const [person] = await db
     .select({ id: people.id })

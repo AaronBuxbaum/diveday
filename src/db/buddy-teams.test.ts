@@ -11,13 +11,13 @@ import {
   listTripBuddyTeams,
   removeBuddyTeamMember,
   sortBuddyMemberRowsByTeam,
-} from "./buddy-pairs";
-import { loadBuddyContext } from "./buddy-pairs-test-fixtures";
+} from "./buddy-teams";
+import { loadBuddyContext } from "./buddy-teams-test-fixtures";
 import { getTripManifest, getTripManifests, recordCrewRollCall, recordRollCall } from "./manifests";
 import {
   bookings,
-  buddyPairMembers,
   buddyTeamEvents,
+  buddyTeamMembers,
   people,
   personRoles,
   tripAssignments,
@@ -252,11 +252,11 @@ describe("buddy teams (in-memory PGlite)", () => {
       bookingId: a.booking.id,
       pairedByPersonId: staff.id,
     };
-    await db.insert(buddyPairMembers).values({ ...row, pairId: crypto.randomUUID() });
+    await db.insert(buddyTeamMembers).values({ ...row, pairId: crypto.randomUUID() });
     // A second membership for the same booking — what a lost race would
     // insert — must be a unique violation, whatever the application checked.
     await expect(
-      db.insert(buddyPairMembers).values({ ...row, pairId: crypto.randomUUID() }),
+      db.insert(buddyTeamMembers).values({ ...row, pairId: crypto.randomUUID() }),
     ).rejects.toThrow();
   });
 
@@ -491,7 +491,7 @@ describe("buddy teams (in-memory PGlite)", () => {
    * renders `manifest.buddyTeamLabel` with `index + 1`, and
    * `buildIncidentExport` builds its `teamNumberById` the same way — so the
    * number printed beside a diver on the document handed to authorities came
-   * off this order. The tie-break used to be `asc(buddy_pair_members.pair_id)`,
+   * off this order. The tie-break used to be `asc(buddy_team_members.pair_id)`,
    * a writer-minted uuid with no parent row (issue #1753).
    *
    * The tie above it needs no forcing: `formBuddyTeam` stamps `created_at`
@@ -524,22 +524,22 @@ describe("buddy teams (in-memory PGlite)", () => {
 
     // The premise: both teams were formed at one instant.
     const stamps = await db
-      .select({ createdAt: buddyPairMembers.createdAt })
-      .from(buddyPairMembers)
-      .where(eq(buddyPairMembers.tripId, trip.id));
+      .select({ createdAt: buddyTeamMembers.createdAt })
+      .from(buddyTeamMembers)
+      .where(eq(buddyTeamMembers.tripId, trip.id));
     expect(new Set(stamps.map((row) => row.createdAt.getTime())).size).toBe(1);
 
     // Lower pair id to the team that must come *second*.
     const lower = "00000000-0000-4000-8000-000000000001";
     const higher = "00000000-0000-4000-8000-000000000002";
     await db
-      .update(buddyPairMembers)
+      .update(buddyTeamMembers)
       .set({ pairId: lower })
-      .where(eq(buddyPairMembers.pairId, zulus.teamId));
+      .where(eq(buddyTeamMembers.pairId, zulus.teamId));
     await db
-      .update(buddyPairMembers)
+      .update(buddyTeamMembers)
       .set({ pairId: higher })
-      .where(eq(buddyPairMembers.pairId, alphas.teamId));
+      .where(eq(buddyTeamMembers.pairId, alphas.teamId));
 
     const teams = await listTripBuddyTeams(db, shop.id, trip.id);
     expect(teams.map((team) => team.members.map((member) => member.fullName))).toEqual([
@@ -590,30 +590,30 @@ describe("buddy teams (in-memory PGlite)", () => {
     // The premise: all three rows share one instant, so `created_at` separates
     // nothing and the reader has no honest first row to prefer.
     const stamps = await db
-      .select({ createdAt: buddyPairMembers.createdAt })
-      .from(buddyPairMembers)
-      .where(eq(buddyPairMembers.pairId, formed.teamId));
+      .select({ createdAt: buddyTeamMembers.createdAt })
+      .from(buddyTeamMembers)
+      .where(eq(buddyTeamMembers.pairId, formed.teamId));
     expect(stamps).toHaveLength(3);
     expect(new Set(stamps.map((row) => row.createdAt.getTime())).size).toBe(1);
 
     // Put the adder's row first: re-insert the two formation rows behind it.
     const formation = await db
       .select()
-      .from(buddyPairMembers)
+      .from(buddyTeamMembers)
       .where(
         and(
-          eq(buddyPairMembers.pairId, formed.teamId),
-          inArray(buddyPairMembers.bookingId, [a.booking.id, b.booking.id]),
+          eq(buddyTeamMembers.pairId, formed.teamId),
+          inArray(buddyTeamMembers.bookingId, [a.booking.id, b.booking.id]),
         ),
       );
     expect(formation).toHaveLength(2);
-    await db.delete(buddyPairMembers).where(
+    await db.delete(buddyTeamMembers).where(
       inArray(
-        buddyPairMembers.id,
+        buddyTeamMembers.id,
         formation.map((row) => row.id),
       ),
     );
-    await db.insert(buddyPairMembers).values(formation);
+    await db.insert(buddyTeamMembers).values(formation);
 
     const [team] = await listTripBuddyTeams(db, shop.id, trip.id);
     expect(team?.members).toHaveLength(3);

@@ -8,6 +8,7 @@ import type { RollCallCheckpoint } from "@/lib/manifests";
 import {
   appendOfflineRollCall,
   loadOfflineManifest,
+  OFFLINE_ERASED_NAME,
   saveOfflineManifest,
   syncOfflineManifest,
 } from "@/lib/offline-manifest-store";
@@ -259,7 +260,18 @@ describe("selected-trip storage invalidation", () => {
       await act(async () => {
         // A worker has no window event to dispatch; the shared channel reaches
         // this mounted page after the IDB write commits.
-        await saveOfflineManifest(tripPayload(2));
+        // Nora herself was erased: the fresh copy shows her seat under the
+        // erased name, so her own note goes (issue #3569).
+        const erased = tripPayload(2);
+        await saveOfflineManifest({
+          ...erased,
+          manifests: erased.manifests.map((manifest) => ({
+            ...manifest,
+            divers: manifest.divers.map((diver) =>
+              diver.bookingId === bookingId ? { ...diver, fullName: OFFLINE_ERASED_NAME } : diver,
+            ),
+          })),
+        });
       });
     } finally {
       restoreLocalEvent();

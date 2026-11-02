@@ -6,7 +6,7 @@ import { bookings, recapPhotos } from "@/db/schema";
 import { DEMO_RECAP_BOOKING_ID } from "@/db/seed";
 import { getShopBySlug } from "@/db/shops";
 import { nowDate } from "@/lib/clock";
-import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
+import { e2eTestRouteAuthorized, requireDemoTenant, testRouteRefused } from "@/lib/e2e-test-routes";
 
 /**
  * Shares **one of the demo recap diver's own photos with the boat**, so the
@@ -24,12 +24,11 @@ import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
  * deployment.
  */
 export async function POST(request: Request) {
-  if (!e2eTestRouteAuthorized(request)) {
-    return NextResponse.json({ error: "not_available" }, { status: 404 });
-  }
+  if (!e2eTestRouteAuthorized(request)) return testRouteRefused();
   const db = await getDb();
-  const shop = await getShopBySlug(db, DEMO_SHOP_SLUG);
-  if (!shop?.isDemo) return NextResponse.json({ error: "not_demo" }, { status: 404 });
+  const tenant = await requireDemoTenant(request, () => getShopBySlug(db, DEMO_SHOP_SLUG));
+  if (!tenant.ok) return tenant.response;
+  const { shop } = tenant;
 
   // The demo's own secondary diver already shared a photo during seeding.
   // Return only its booking id so a browser test can open that real recap.

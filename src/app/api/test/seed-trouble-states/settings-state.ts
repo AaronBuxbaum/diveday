@@ -6,6 +6,7 @@ import { boats, shopBackupDeliveries, shopBackupDestinations, trips } from "@/db
 import { getShopBySlug } from "@/db/shops";
 import { liveTrip } from "@/db/trips-live";
 import { DAY_MS, HOUR_MS, nowDate } from "@/lib/clock";
+import { requireDemoTenant, testRouteRefused } from "@/lib/e2e-test-routes";
 
 /** Called only behind the existing trouble route's harness/secret/database gate. */
 export async function settingsStateResponse(request: Request, db: AppDb) {
@@ -13,23 +14,23 @@ export async function settingsStateResponse(request: Request, db: AppDb) {
   if (!query.has("settingsState")) return null;
   if (query.get("settingsState") === "boat-photo") {
     const slug = query.get("shop");
-    if (!slug || slug === DEMO_SHOP_SLUG)
-      return NextResponse.json({ error: "not_available" }, { status: 404 });
-    const shop = await getShopBySlug(db, slug);
-    if (!shop?.isDemo) return NextResponse.json({ error: "not_available" }, { status: 404 });
+    if (!slug || slug === DEMO_SHOP_SLUG) return testRouteRefused();
+    const tenant = await requireDemoTenant(request, () => getShopBySlug(db, slug));
+    if (!tenant.ok) return tenant.response;
+    const { shop } = tenant;
     const [boat] = await db
       .select({ id: boats.id, name: boats.name })
       .from(boats)
       .where(and(eq(boats.shopId, shop.id), eq(boats.name, "Mantis I"), isNull(boats.deletedAt)))
       .limit(1);
-    if (!boat) return NextResponse.json({ error: "not_available" }, { status: 404 });
+    if (!boat) return testRouteRefused();
     const [trip] = await db
       .select({ id: trips.id })
       .from(trips)
       .where(and(eq(trips.shopId, shop.id), eq(trips.boatId, boat.id), liveTrip()))
       .orderBy(asc(trips.startsAt))
       .limit(1);
-    if (!trip) return NextResponse.json({ error: "not_available" }, { status: 404 });
+    if (!trip) return testRouteRefused();
     await db
       .update(boats)
       .set({ photoUrl: "/dive-sites/Crash Boat 01.jpg" })
@@ -38,8 +39,11 @@ export async function settingsStateResponse(request: Request, db: AppDb) {
   }
   if (query.get("settingsState") !== "backup-failed")
     return NextResponse.json({ error: "invalid_state" }, { status: 400 });
-  const shop = await getShopBySlug(db, query.get("shop") ?? DEMO_SHOP_SLUG);
-  if (!shop?.isDemo) return NextResponse.json({ error: "not_available" }, { status: 404 });
+  const tenant = await requireDemoTenant(request, () =>
+    getShopBySlug(db, query.get("shop") ?? DEMO_SHOP_SLUG),
+  );
+  if (!tenant.ok) return tenant.response;
+  const { shop } = tenant;
   const now = nowDate();
   const succeededAt = new Date(now.getTime() - DAY_MS);
   await db

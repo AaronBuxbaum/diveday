@@ -92,6 +92,6 @@ describe("GET /api/test/demo-recap-trip", () => {
 
     const response = await GET(request(authorized));
     expect(response.status).toBe(404);
-    expect(await response.json()).toEqual({ error: "not_demo" });
+    expect(await response.json()).toEqual({ error: "not_available" });
   });
 });

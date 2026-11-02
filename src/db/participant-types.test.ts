@@ -12,7 +12,7 @@ import {
   restoreBooking,
   setBookingParticipantType,
 } from "./bookings";
-import { formBuddyTeam } from "./buddy-pairs";
+import { formBuddyTeam } from "./buddy-teams";
 import type { AppDb } from "./client";
 import { openGearReservation } from "./gear";
 import { askForDeparture } from "./interests";

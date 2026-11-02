@@ -5,7 +5,7 @@ import { gearStatusLabel } from "@/i18n/gear-labels";
 import { diveRecencyText } from "@/i18n/readiness-labels";
 import { rentalItemLabel } from "@/i18n/rental-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { type PrepPiece, UNSIZED_ITEM_KINDS } from "@/lib/dive-prep";
+import { type PrepLineDiver, type PrepPiece, UNSIZED_ITEM_KINDS } from "@/lib/dive-prep";
 import { diveRecencyIsNotable } from "@/lib/dive-recency";
 import type { GearItemStatus } from "@/lib/gear";
 
@@ -221,16 +221,16 @@ export const noLongerRented = (t: StaffTranslator) => (
  * whole and wraps inside itself only when it is wider than the column; never
  * `whitespace-nowrap`, which in a clipping `Td` cut such a name off without a
  * mark. The comma rides inside the name before it, so the one break between
- * two names is the bare space.
+ * two names is the bare space. Keyed on the booking: two divers can share a
+ * name (issue #3049).
  */
-export const diverNames = (names: readonly string[]) =>
-  names.map((name, place) => (
-    // biome-ignore lint/suspicious/noArrayIndexKey: two divers can share a name, and the list is drawn once, never reordered
-    <Fragment key={`${place}:${name}`}>
+export const diverNames = (divers: readonly PrepLineDiver[]) =>
+  divers.map((diver, place) => (
+    <Fragment key={diver.bookingId}>
       {place > 0 ? " " : null}
       <span className="inline-block">
-        {name}
-        {place < names.length - 1 ? "," : null}
+        {diver.fullName}
+        {place < divers.length - 1 ? "," : null}
       </span>
     </Fragment>
   ));

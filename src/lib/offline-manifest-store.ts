@@ -334,24 +334,61 @@ function serverSnapshotClaims(
   return { epoch, revision };
 }
 
-function dispositionForSnapshotRefresh(
+/**
+ * What a refreshed snapshot says about the notes this device holds.
+ * `unverified`: the old copy's token never proved its epoch, so none of its
+ * text can be trusted to have crossed no erasure. `erasure`: a newer epoch,
+ * so somebody in the shop was erased since, and only that person's own notes
+ * go (issue #3569); every other note stays for the server, which judges each
+ * one against its own signed token (`src/db/manifests.ts`).
+ */
+function refreshForSnapshot(
   previousToken: string | undefined,
   currentToken: string | undefined,
-): OfflineSyncResult["noteDisposition"] {
+): "unverified" | "erasure" | undefined {
   const current = serverSnapshotClaims(currentToken);
   if (!current) return undefined;
   const previous = serverSnapshotClaims(previousToken);
-  if (!previous) return "discarded_unverified_snapshot";
-  return current.epoch > previous.epoch ? "discarded_erasure_cutoff" : undefined;
+  if (!previous) return "unverified";
+  return current.epoch > previous.epoch ? "erasure" : undefined;
 }
 
 function clearSavedNotes<T extends OfflineRollCallEvent | OfflineChecklistEvent>(
   events: T[],
   disposition: NonNullable<OfflineSyncResult["noteDisposition"]>,
+  clears: (event: T) => boolean = () => true,
 ): T[] {
   return events.map((event) =>
-    event.note?.trim() ? { ...event, note: null, noteDisposition: disposition } : event,
+    event.note?.trim() && clears(event)
+      ? { ...event, note: null, noteDisposition: disposition }
+      : event,
   );
+}
+
+/**
+ * `ANONYMIZED_PERSON_NAME` (`src/lib/anonymization.ts`), which this client
+ * module cannot import: that file pulls in `node:crypto`. A test pins the two.
+ */
+export const OFFLINE_ERASED_NAME = "[anonymized]";
+
+/**
+ * The roll-call subjects a fresh snapshot shows as erased: a seat or crew row
+ * under the erased name. A subject the fresh copy no longer carries at all
+ * may be erased too, but may as well have been moved or cancelled, so that
+ * alone clears only a note the server already has (`applied`): a pending
+ * "last seen at the mooring line" is never dropped on a guess.
+ */
+function erasedSubjectNote(payload: OfflineManifestPayload, tripId: string) {
+  const manifest = payload.manifests.find((entry) => entry.trip.id === tripId);
+  const named = new Map<string, string>();
+  for (const diver of manifest?.divers ?? []) named.set(diver.bookingId, diver.fullName);
+  for (const crew of manifest?.crew ?? []) if (crew.id) named.set(crew.id, crew.fullName);
+  return (event: OfflineRollCallEvent) => {
+    const subject = event.bookingId ?? event.crewPersonId;
+    const name = subject ? named.get(subject) : undefined;
+    if (name === OFFLINE_ERASED_NAME) return true;
+    return name === undefined && event.syncStatus === "applied";
+  };
 }
 
 /**
@@ -990,11 +1027,8 @@ export async function saveOfflineManifest(
       }
       return revoked;
     }
-    const noteDisposition = existing
-      ? dispositionForSnapshotRefresh(
-          existing.snapshot.erasureEpochToken,
-          payload.erasureEpochToken,
-        )
+    const refresh = existing
+      ? refreshForSnapshot(existing.snapshot.erasureEpochToken, payload.erasureEpochToken)
       : undefined;
     // **The medical alerts' words** (H-153 amendment). A payload from the
     // server never carries them, and any it did carry are dropped here. Words
@@ -1019,13 +1053,21 @@ export async function saveOfflineManifest(
         savedAt: savedAt.toISOString(),
         expiresAt: offlineManifestExpiresAt(savedAt, new Date(trip.endsAt)).toISOString(),
       },
+      // A newer epoch clears only the erased person's own roll-call notes; a
+      // checklist note is nobody's own data and stays (issue #3569).
       events:
-        existing?.events && noteDisposition
-          ? clearSavedNotes(existing.events, noteDisposition)
-          : (existing?.events ?? []),
+        refresh === "unverified"
+          ? clearSavedNotes(existing?.events ?? [], "discarded_unverified_snapshot")
+          : refresh === "erasure"
+            ? clearSavedNotes(
+                existing?.events ?? [],
+                "discarded_erasure_cutoff",
+                erasedSubjectNote(payload, trip.id),
+              )
+            : (existing?.events ?? []),
       checklistEvents:
-        existing?.checklistEvents && noteDisposition
-          ? clearSavedNotes(existing.checklistEvents, noteDisposition)
+        refresh === "unverified"
+          ? clearSavedNotes(existing?.checklistEvents ?? [], "discarded_unverified_snapshot")
           : (existing?.checklistEvents ?? []),
       arrivalEvents: existing?.arrivalEvents ?? [],
       ...(carriesWords && existing?.medicalAlertsSavedBy

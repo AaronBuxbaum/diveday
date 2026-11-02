@@ -78,7 +78,7 @@ import {
   bookingCheckouts,
   bookingPayments,
   bookings,
-  buddyPairMembers,
+  buddyTeamMembers,
   certifications,
   courses,
   gearItemKind,
@@ -2197,13 +2197,13 @@ export async function moveBooking(
       .limit(1);
     if (follower) return { ok: false, reason: "leads_party" };
     const [teamed] = await tx
-      .select({ id: buddyPairMembers.id })
-      .from(buddyPairMembers)
+      .select({ id: buddyTeamMembers.id })
+      .from(buddyTeamMembers)
       .where(
         and(
-          eq(buddyPairMembers.shopId, shopId),
-          eq(buddyPairMembers.tripId, source.id),
-          eq(buddyPairMembers.bookingId, booking.id),
+          eq(buddyTeamMembers.shopId, shopId),
+          eq(buddyTeamMembers.tripId, source.id),
+          eq(buddyTeamMembers.bookingId, booking.id),
         ),
       )
       .limit(1);
@@ -2687,9 +2687,9 @@ async function changeParticipantType(
     }
     if (isDiver(from) && !isDiver(to)) {
       const [teamed] = await tx
-        .select({ bookingId: buddyPairMembers.bookingId })
-        .from(buddyPairMembers)
-        .where(and(eq(buddyPairMembers.shopId, shopId), eq(buddyPairMembers.bookingId, booking.id)))
+        .select({ bookingId: buddyTeamMembers.bookingId })
+        .from(buddyTeamMembers)
+        .where(and(eq(buddyTeamMembers.shopId, shopId), eq(buddyTeamMembers.bookingId, booking.id)))
         .limit(1);
       if (teamed) return { ok: false, reason: "on_buddy_team" };
     }

@@ -176,7 +176,7 @@ describe("POST /api/offline-manifests/sync — the checklist answer on the depar
     expect((await ours()).unchecked).toEqual(["2725 flares in date", "2725 radio checked"]);
   });
 
-  it("omits an old checklist note but applies its mark and reports the disposition", async () => {
+  it("keeps an old checklist note across an erasure, and omits one whose snapshot does not verify", async () => {
     const { db, shop, staffPersonId } = await seededContext();
     vi.mocked(getDb).mockResolvedValue(db);
     vi.mocked(auth).mockResolvedValue(staffSession(shop.id, staffPersonId));
@@ -226,31 +226,51 @@ describe("POST /api/offline-manifests/sync — the checklist answer on the depar
             tripId: trip.id,
             checklistItemId: item.id,
             status: "checked",
-            note: "Maya Rivera was named in the old checklist note.",
+            note: "Oxygen kit checked at the dock.",
             occurredAt: occurredAt.toISOString(),
+          },
+          {
+            clientEventId: "33333333-3333-4333-8333-333333333333",
+            snapshotId,
+            snapshotSavedAt: new Date(occurredAt.getTime() - 1_000).toISOString(),
+            erasureEpochToken: "not-a-signed-epoch",
+            tripId: trip.id,
+            checklistItemId: item.id,
+            status: "checked",
+            note: "Unverifiable checklist note.",
+            occurredAt: new Date(occurredAt.getTime() + 1_000).toISOString(),
           },
         ],
       }),
     );
 
+    // A checklist note is nobody's own data, so an erasure since the snapshot
+    // does not discard it (issue #3569); an unauthenticated snapshot still does.
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({
       results: [
+        { clientEventId: "22222222-2222-4222-8222-222222222222", status: "applied" },
         {
-          clientEventId: "22222222-2222-4222-8222-222222222222",
+          clientEventId: "33333333-3333-4333-8333-333333333333",
           status: "applied",
-          noteDisposition: "discarded_erasure_cutoff",
+          noteDisposition: "discarded_unverified_snapshot",
         },
       ],
     });
-    const [event] = await db
-      .select({
-        note: preDepartureCheckEvents.note,
-        status: preDepartureCheckEvents.status,
-        occurredAt: preDepartureCheckEvents.occurredAt,
-      })
-      .from(preDepartureCheckEvents)
-      .where(eq(preDepartureCheckEvents.clientEventId, "22222222-2222-4222-8222-222222222222"));
-    expect(event).toEqual({ note: null, status: "checked", occurredAt });
+    const noteOf = async (clientEventId: string) => {
+      const [event] = await db
+        .select({ note: preDepartureCheckEvents.note, status: preDepartureCheckEvents.status })
+        .from(preDepartureCheckEvents)
+        .where(eq(preDepartureCheckEvents.clientEventId, clientEventId));
+      return event;
+    };
+    expect(await noteOf("22222222-2222-4222-8222-222222222222")).toEqual({
+      note: "Oxygen kit checked at the dock.",
+      status: "checked",
+    });
+    expect(await noteOf("33333333-3333-4333-8333-333333333333")).toEqual({
+      note: null,
+      status: "checked",
+    });
   });
 });

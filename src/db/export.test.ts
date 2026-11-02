@@ -145,7 +145,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
   ],
   // The member row's surrogate id says nothing beyond (pair_id, booking_id),
   // which are both exported.
-  buddy_pair_members: ["shop_id", "id"],
+  buddy_team_members: ["shop_id", "id"],
   waiver_records: [
     "shop_id",
     "template_body", // the frozen copy; waiver_templates.csv carries the text
@@ -197,7 +197,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "stripe_payment_intent_id", // provider linkage for a later refund, same as stripe_account_id
   ],
   // The join row's surrogate id says nothing beyond (checkout_id, booking_id),
-  // which are both exported — same reasoning as buddy_pair_members.id.
+  // which are both exported — same reasoning as buddy_team_members.id.
   booking_checkout_bookings: ["shop_id", "id"],
   incident_reports: [
     "shop_id",
@@ -1047,7 +1047,7 @@ describe("full-shop export dataset", () => {
   });
 
   /**
-   * **`buddy_pairs.csv` is a file a person reads too** (H-81, issue #1795).
+   * **`buddy_teams.csv` is a file a person reads too** (H-81, issue #1795).
    * The old clause was `asc(created_at), asc(pair_id)`, and every member row of
    * a team shares its `pair_id`, so two teams formed in one instant fell
    * through to whatever Postgres returned. Now: each team's rows together,
@@ -1057,7 +1057,7 @@ describe("full-shop export dataset", () => {
    * the later-formed team the lower one with the earliest name, so neither the
    * old key nor a name-only key gives the right answer.
    */
-  it("orders buddy_pairs.csv by team, then the members' names, never by a random pair id", async () => {
+  it("orders buddy_teams.csv by team, then the members' names, never by a random pair id", async () => {
     const { db } = ctx;
     const [shop] = await db
       .insert(shops)
@@ -1095,7 +1095,7 @@ describe("full-shop export dataset", () => {
       pairedByPersonId: staffer.id,
       createdAt,
     });
-    await db.insert(schema.buddyPairMembers).values([
+    await db.insert(schema.buddyTeamMembers).values([
       // Formed together; Bea + Yuki sorts after Ana + Zoe on the first name.
       member("00000000-0000-4000-8000-000000000001", await seat("Yuki Sato"), together),
       member("00000000-0000-4000-8000-000000000001", await seat("Bea Lund"), together),
@@ -1108,7 +1108,7 @@ describe("full-shop export dataset", () => {
 
     const input = await loadShopExportBundleInput(db, shop.id);
     if (!input) throw new Error("shop failed to load");
-    const buddyTable = table(input, "buddy_pairs.csv");
+    const buddyTable = table(input, "buddy_teams.csv");
     const nameIndex = buddyTable.header.indexOf("person_name");
     expect(buddyTable.rows.map((row) => row[nameIndex])).toEqual([
       "Ana Ruiz",

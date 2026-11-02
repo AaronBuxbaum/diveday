@@ -2381,7 +2381,7 @@ membership rows a dissolve deletes and renders in the departure log's roll-call 
 the one fact on that document that had no audit entry. Teams **inform only** — never readiness,
 admission, capacity, or checkpoint completeness — and a shop that records none is unremarked. The
 offline copy shows teams read-only by name (divers *and* crew) and says the split-team read belongs
-to the live roll call; the export bundle carries standing teams as `buddy_pairs.csv`, crew rows
+to the live roll call; the export bundle carries standing teams as `buddy_teams.csv`, crew rows
 included. Seeded on the demo reef boat: a pair, a divemaster-led trio, and the normal odd remainder.
 See [20260804-buddy-teams](../architecture/decisions/20260804-buddy-teams.md), which supersedes
 [20260804-buddy-pairs](../architecture/decisions/20260804-buddy-pairs.md).
