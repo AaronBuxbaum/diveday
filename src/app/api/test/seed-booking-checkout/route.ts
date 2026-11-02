@@ -1,9 +1,10 @@
-import { and, desc, eq, ne } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { startBookingCheckout } from "@/db/checkouts";
 import { getDb } from "@/db/client";
 import { bookings, people } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
+import { seatNotCancelled } from "@/db/trips-queries";
 import { nowMs } from "@/lib/clock";
 import { e2eTestRouteAuthorized, requireDemoTenant, testRouteRefused } from "@/lib/e2e-test-routes";
 import type { CheckoutProvider } from "@/lib/payments/checkout";
@@ -45,9 +46,7 @@ export async function POST(request: Request) {
     .select({ bookingId: bookings.id, tripId: bookings.tripId })
     .from(bookings)
     .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, shop.id)))
-    .where(
-      and(eq(bookings.shopId, shop.id), eq(people.email, email), ne(bookings.status, "cancelled")),
-    )
+    .where(and(eq(bookings.shopId, shop.id), eq(people.email, email), seatNotCancelled))
     .orderBy(desc(bookings.createdAt))
     .limit(1);
   if (!seat) return NextResponse.json({ error: "not_found" }, { status: 404 });

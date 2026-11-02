@@ -104,7 +104,7 @@ function form(entries: Record<string, string>): FormData {
   return data;
 }
 
-const securityPage = (slug: string) => shopPath(slug, "settings", "security");
+const securityPage = (slug: string) => shopPath(slug, "me", "security");
 
 describe("disableTotpAction", () => {
   it("refuses with no code or a wrong one, and two-factor stays on", async () => {

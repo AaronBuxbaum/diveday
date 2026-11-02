@@ -1,9 +1,10 @@
-import { and, asc, count, eq, gt, inArray, ne } from "drizzle-orm";
+import { and, asc, count, eq, gt, inArray } from "drizzle-orm";
 import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 import type { AppDb } from "./client";
 import { type MessageSeat, messageSeats } from "./running-late";
 import { bookings, buddyTeamMembers, trips } from "./schema";
 import { liveTrip } from "./trips-live";
+import { seatNotCancelled } from "./trips-queries";
 
 /** A seat an Inbox row names, and whether the late mark may be offered on it. */
 export type InboxSeat = MessageSeat & {
@@ -136,7 +137,7 @@ async function moveRefusals(
         and(
           eq(bookings.shopId, shopId),
           inArray(bookings.partyLeadBookingId, bookingIds),
-          ne(bookings.status, "cancelled"),
+          seatNotCancelled,
         ),
       )
       .groupBy(bookings.partyLeadBookingId),

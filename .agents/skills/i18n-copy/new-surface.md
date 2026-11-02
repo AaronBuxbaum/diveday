@@ -40,7 +40,7 @@ for. Format dates and money against the same `locale`, never a literal `"en-US"`
 
 **Staff Client Component:** it cannot translate. The Server Component resolves every string and
 passes them down as one `copy` object — see
-`src/app/shop/[shopSlug]/settings/calendar/` for the worked example (`feed-panel-types.ts` types the
+`src/app/shop/[shopSlug]/me/calendar/` for the worked example (`feed-panel-types.ts` types the
 copy, `page.tsx` fills it, `CalendarFeedPanel.tsx` renders it).
 
 **Diver Client Component:** wrap the whole page in `<DiverIntlProvider>` and call

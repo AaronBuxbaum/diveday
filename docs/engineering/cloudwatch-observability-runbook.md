@@ -35,7 +35,7 @@ the registries it expands are in [`infra/lib/observability.ts`](../../infra/lib/
 | --- | --- | --- |
 | `CLOUDWATCH_AWS_REGION`, `CLOUDWATCH_AWS_ACCESS_KEY_ID`, `CLOUDWATCH_AWS_SECRET_ACCESS_KEY`, `CLOUDWATCH_LOG_GROUP` | Log shipping, and therefore every metric, alarm, dashboard widget and saved query below | `log()` writes its JSON line to stdout exactly as it always did; nothing is shipped, nothing throws |
 | `NEXT_PUBLIC_RUM_APP_MONITOR_ID`, `NEXT_PUBLIC_RUM_IDENTITY_POOL_ID`, `NEXT_PUBLIC_RUM_GUEST_ROLE_ARN`, `NEXT_PUBLIC_RUM_REGION` | CloudWatch RUM: sessions, geography, devices | No SDK is fetched and the page is unchanged. Core Web Vitals keep working — they do not go through RUM |
-| `NEXT_PUBLIC_RUM_SAMPLE_RATE` | The RUM cost lever, `0`–`1` | Defaults to `1` (every session), as does anything unparseable or out of range |
+| `NEXT_PUBLIC_RUM_SAMPLE_RATE` | The RUM cost lever, `0`–`1` | Defaults to `0.1` (one session in ten), as does anything unparseable or out of range |
 
 Each group is all-or-nothing: a partial set reads as unset, deliberately, because a half-configured
 client looks configured and sends nothing. The Core Web Vitals half needs no configuration at all
@@ -273,8 +273,8 @@ $0.10 for the alarm.
 
 **RUM is the exception and the one to watch.** Its 1,000,000 events is a one-time trial, *not* an
 always-free allowance, and past it RUM is $1.00 per 100,000 events with no ceiling.
-`NEXT_PUBLIC_RUM_SAMPLE_RATE` defaults to `1` — every session — so it is the only line here that can
-grow without anything good happening. Against the $90 default in the stack's cost guardrail
+`NEXT_PUBLIC_RUM_SAMPLE_RATE` defaults to `0.1` — one session in ten — so it is still the only line here
+that grows with traffic. Against the $90 default in the stack's cost guardrail
 ([cost-guardrails-runbook.md](cost-guardrails-runbook.md)) the fixed part is noise and RUM is the
 whole risk. Raising `--context monthlyBudgetLimit=…` is a human's call, deliberately not something
 this stack does for you.

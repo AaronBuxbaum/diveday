@@ -1,11 +1,11 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
 import { sectionCardClass } from "@/components/ui/card";
-import { settingsPaneClass } from "../_components/settings-pane";
+import { staffPageClass } from "../../_components/staff-page";
 
 /** Two cards, shaped like the Monday email's and the after-hours ping's rows. */
 export default function EmailSettingsLoading() {
   return (
-    <main className={settingsPaneClass()}>
+    <main className={staffPageClass("reading")}>
       <div className="animate-pulse">
         <ShopPageHeaderSkeleton titleWidth="w-32" description={false} />
         <div className="space-y-10">

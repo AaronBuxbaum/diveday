@@ -9,6 +9,7 @@ import { openSecret, type SecretKey, sealSecret, secretKeyFromEnvironment } from
 import type { DbExecutor } from "./client";
 import { isTransactionExecutor } from "./query-helpers";
 import { bookingCapabilities, bookings, people, shops, trips } from "./schema";
+import { seatNotCancelled } from "./trips-queries";
 
 export type CapabilityPurpose = "readiness" | "confirm" | "claim" | "handoff" | "course_forms";
 
@@ -218,7 +219,7 @@ export async function issueReturningDiverReceipt(
           eq(bookings.shopId, input.shopId),
           eq(bookings.personId, input.expectedPersonId),
           eq(bookings.tripId, input.expectedTripId),
-          ne(bookings.status, "cancelled"),
+          seatNotCancelled,
           isNull(bookings.identityUnconfirmedAt),
           isNull(people.anonymizedAt),
           isNull(people.deletedAt),
@@ -374,7 +375,7 @@ export async function readReturningDiverReceipt(
             : eq(bookingCapabilities.returningDeviceGeneration, input.deviceGeneration),
           isNull(bookingCapabilities.revokedAt),
           gt(bookingCapabilities.expiresAt, now),
-          ne(bookings.status, "cancelled"),
+          seatNotCancelled,
           isNull(bookings.identityUnconfirmedAt),
           isNull(people.anonymizedAt),
           isNull(people.deletedAt),
@@ -593,7 +594,7 @@ export async function issueBookingCapabilities(
       and(
         inArray(bookings.id, bookingIds),
         eq(bookings.shopId, input.shopId),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
         isNull(people.anonymizedAt),
       ),
     );
@@ -652,7 +653,7 @@ export async function mintBookingCapabilities(
             requested.map((seat) => seat.bookingId),
           ),
           eq(bookings.shopId, input.shopId),
-          ne(bookings.status, "cancelled"),
+          seatNotCancelled,
           isNull(people.anonymizedAt),
         ),
       )
@@ -766,7 +767,7 @@ export async function issueCourseFormsCapability(
         and(
           eq(bookings.id, input.bookingId),
           eq(bookings.shopId, input.shopId),
-          ne(bookings.status, "cancelled"),
+          seatNotCancelled,
           isNull(people.anonymizedAt),
           ...(input.expectedPersonId ? [eq(bookings.personId, input.expectedPersonId)] : []),
         ),

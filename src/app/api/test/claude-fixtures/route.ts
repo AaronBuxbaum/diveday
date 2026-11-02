@@ -1,9 +1,10 @@
-import { and, asc, desc, eq, isNull, lt, ne } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, lt } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { type AppDb, getDb } from "@/db/client";
 import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
 import { bookings, people, shops, tripReviews, trips } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
+import { seatNotCancelled } from "@/db/trips-queries";
 import { armClaudeFixtures, e2eClaudeFixtureProvider } from "@/lib/assists/e2e-fixtures";
 import { nowDate } from "@/lib/clock";
 import { e2eTestRouteAuthorized, requireDemoTenant, testRouteRefused } from "@/lib/e2e-test-routes";
@@ -60,7 +61,7 @@ async function seedWaitingReview(db: AppDb, shopId: string): Promise<void> {
       and(
         eq(bookings.shopId, shopId),
         lt(trips.startsAt, nowDate()),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
         isNull(tripReviews.id),
       ),
     )

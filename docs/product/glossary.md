@@ -103,6 +103,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Identity match key
 - Level vs. specialty
 - Merge (two diver records)
+- Origin (of a person)
 - Processor erasure obligation
 - Re-point a held seat
 - Remove vs. erase (a diver)

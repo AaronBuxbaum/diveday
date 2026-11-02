@@ -64,7 +64,7 @@ import {
   setTripCrew,
 } from "./trips-crew";
 import { liveTrip } from "./trips-live";
-import { boatCertifiedPassengers, liveBookingJoin } from "./trips-queries";
+import { boatCertifiedPassengers, liveBookingJoin, seatNotCancelled } from "./trips-queries";
 
 /**
  * Recurring series: a `trip_series` row plus one fully-formed, independent trip
@@ -726,7 +726,7 @@ export async function getTripSeriesSummary(
         eq(trips.status, "scheduled"),
         gte(trips.startsAt, now),
         eq(bookings.shopId, shopId),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
       ),
     );
   // The names as well as the fact, so the panel can say who crews every date.
@@ -930,7 +930,7 @@ export async function listOffCadenceSeriesTrips(
       booked: count(bookings.id),
     })
     .from(trips)
-    .leftJoin(bookings, and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled")))
+    .leftJoin(bookings, and(eq(bookings.tripId, trips.id), seatNotCancelled))
     .where(
       and(
         liveTrip(),

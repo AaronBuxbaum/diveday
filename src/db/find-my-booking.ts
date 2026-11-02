@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, isNull, ne } from "drizzle-orm";
+import { and, desc, eq, gt, isNull } from "drizzle-orm";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
@@ -12,6 +12,7 @@ import { withErasureCoordinatedBookingSend } from "./erasure-coordinated-send";
 import { sendAndRecordNotification } from "./notifications";
 import { recordTripActivity } from "./operations";
 import { bookings, notificationDeliveries, people, shops, trips } from "./schema";
+import { seatNotCancelled } from "./trips-queries";
 import { latestDiveDayBooking, planLogEntryLink, sendYourDayLink } from "./your-days";
 
 /**
@@ -81,7 +82,7 @@ export async function sendFindMyBookingLinks(
         eq(bookings.shopId, input.shopId),
         eq(people.email, email),
         isNull(people.deletedAt),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
         eq(trips.status, "scheduled"),
         // Not yet departed, buffer included. The one place the rule is applied as a
         // *constant* rather than through `hasSailed`: the comparison happens in

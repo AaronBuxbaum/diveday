@@ -254,7 +254,7 @@ async function pingRecipients(
         shopName: shop.name,
         waiting: input.waiting,
         inboxUrl: `${origin}${shopPath(shop.slug, "inbox")}`,
-        settingsUrl: `${origin}${shopPath(shop.slug, "settings", "email")}`,
+        settingsUrl: `${origin}${shopPath(shop.slug, "me", "email")}`,
         pingedAt: now,
       },
       input.provider,

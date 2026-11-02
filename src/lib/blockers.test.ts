@@ -1,8 +1,13 @@
 import { describe, expect, it } from "vitest";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { blockerFixFor } from "./blockers";
+import { resolveCopy } from "./copy";
 import type { ReadinessBlocker, ReadinessBlockerCode, ReadinessBlockerParams } from "./readiness";
 import { BLOCKER_ACTIONS, diverBlockerAction } from "./today";
+
+const t = staffTranslator("en-US");
+const words = (fix: ReturnType<typeof blockerFixFor>) => (fix ? resolveCopy(t, fix.label) : null);
 
 const ctx = {
   shopSlug: "reef-co",
@@ -15,8 +20,10 @@ const ctx = {
 describe("blockerFixFor", () => {
   it("points card evidence at the diver's record without pretending to act", () => {
     const blockers: ReadinessBlocker[] = [{ code: "certification_pending" }];
-    expect(blockerFixFor(blockers, ctx)).toEqual({
-      label: "Open Priya’s record",
+    const fix = blockerFixFor(blockers, ctx);
+    expect(words(fix)).toBe("Open Priya’s record");
+    expect(fix).toEqual({
+      label: { key: "today.pointingLabel.diver", params: { name: "Priya" } },
       href: "/shop/reef-co/divers/person-1",
       sendsWaiver: false,
       bookingId: "booking-1",
@@ -25,8 +32,10 @@ describe("blockerFixFor", () => {
 
   it("sends waiver work in place, anchored to the booking (roster is the fallback)", () => {
     const blockers: ReadinessBlocker[] = [{ code: "waiver_not_sent" }];
-    expect(blockerFixFor(blockers, ctx)).toEqual({
-      label: "Send waiver",
+    const fix = blockerFixFor(blockers, ctx);
+    expect(words(fix)).toBe("Send waiver");
+    expect(fix).toEqual({
+      label: { key: "today.blockerAction.sendWaiver" },
       href: "/shop/reef-co/trips/trip-1#booking-booking-1",
       sendsWaiver: true,
       bookingId: "booking-1",
@@ -38,7 +47,7 @@ describe("blockerFixFor", () => {
     // **diver's own record**, not the roster: the physician's clearance is
     // recorded there and nowhere else (issue #1252).
     const blockers: ReadinessBlocker[] = [{ code: "payment_due" }, { code: "medical_review" }];
-    expect(blockerFixFor(blockers, ctx)?.label).toBe("Open Priya’s record");
+    expect(words(blockerFixFor(blockers, ctx))).toBe("Open Priya’s record");
   });
 
   it("returns null when there is nothing to fix", () => {
@@ -92,7 +101,7 @@ describe("blockerFixFor and diverBlockerAction agree on every blocker code", () 
     expect(fix).not.toBeNull();
     expect(action).not.toBeNull();
     expect(fix?.href).toBe(action?.href);
-    expect(fix?.label).toBe(action?.actionLabel);
+    expect(words(fix)).toBe(action?.actionLabel);
     expect(fix?.sendsWaiver).toBe(action?.waiver !== undefined);
   });
 

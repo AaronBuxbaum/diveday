@@ -18,6 +18,7 @@ import {
   trips,
 } from "./schema";
 import { liveTrip } from "./trips-live";
+import { seatNotCancelled } from "./trips-queries";
 
 export type RecordGearServiceOutcome =
   | { ok: true }
@@ -224,7 +225,7 @@ async function completedDivesByUnit(
         eq(gearReservations.shopId, shopId),
         inArray(gearReservations.gearItemId, [...gearItemIds]),
         isNotNull(gearReservations.returnedAt),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
         liveTrip(),
       ),
     );

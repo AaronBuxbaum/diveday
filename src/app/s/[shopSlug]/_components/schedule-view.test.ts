@@ -24,7 +24,6 @@ const NOW = new Date("2026-07-21T13:30:00Z");
 const VIEW: ScheduleView = {
   shopSlug: "blue-mantis",
   month: undefined,
-  isEmbed: false,
   hasSpaceFilter: false,
   tripTypeFilter: undefined,
   canDiveFilter: undefined,
@@ -95,11 +94,10 @@ describe("scheduleViewLinks", () => {
     );
   });
 
-  it.each([false, true])("replaces the month and drops embed=%s from month links", (isEmbed) => {
-    const { monthHref } = scheduleViewLinks({ ...VIEW, month: "2026-08", isEmbed });
+  it("replaces the month in month links", () => {
+    const { monthHref } = scheduleViewLinks({ ...VIEW, month: "2026-08" });
     const params = new URL(`https://x${monthHref("2026-09")}`).searchParams;
     expect(params.get("month")).toBe("2026-09");
-    expect(params.has("embed")).toBe(false);
   });
 });
 
@@ -205,10 +203,9 @@ describe("scheduleFilterCopy", () => {
 });
 
 describe("scheduleOffSeason", () => {
-  it("is quiet on a board with nothing for a month, and never in the frame", () => {
+  it("is quiet on a board with nothing for a month", () => {
     const later = new Date("2026-10-01T12:00:00Z");
     const page = scheduleOffSeason({
-      isEmbed: false,
       now: NOW,
       range: { first: later },
       reopensOn: null,
@@ -218,23 +215,11 @@ describe("scheduleOffSeason", () => {
     });
     expect(page.quiet.quiet).toBe(true);
     expect(page.quietLine).toContain("Oct");
-    const frame = scheduleOffSeason({
-      isEmbed: true,
-      now: NOW,
-      range: { first: later },
-      reopensOn: null,
-      locale: "en-US",
-      tz: TZ,
-      t,
-    });
-    expect(frame.quiet.quiet).toBe(false);
-    expect(frame.quietLine).toBeNull();
   });
 });
 
 describe("scheduleNextBoat", () => {
   const base = {
-    isEmbed: false,
     explicitMonth: null,
     after: undefined,
     hasSpaceFilter: false,
@@ -252,12 +237,9 @@ describe("scheduleNextBoat", () => {
     expect(view.filteredView).toBe(false);
   });
 
-  it("pins nothing on a paged view or in the frame", () => {
+  it("pins nothing on a paged view", () => {
     const listed = trips({});
     expect(scheduleNextBoat({ ...base, visibleUpcoming: listed, after: "c1" }).nextBoat).toBeNull();
-    expect(
-      scheduleNextBoat({ ...base, visibleUpcoming: listed, isEmbed: true }).nextBoat,
-    ).toBeNull();
   });
 
   it("calls a lens a narrowed view", () => {
@@ -277,7 +259,6 @@ describe("scheduleNextBoat", () => {
  */
 describe("the next-boat card", () => {
   const base = {
-    isEmbed: false,
     explicitMonth: null,
     after: undefined,
     hasSpaceFilter: false,

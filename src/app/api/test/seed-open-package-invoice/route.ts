@@ -1,10 +1,11 @@
-import { and, desc, eq, ne } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { createDivePackage } from "@/db/dive-packages";
 import { bookings, orderLineItems, orders, people, personRoles } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { getShopStripeAccount } from "@/db/stripe-accounts";
+import { seatNotCancelled } from "@/db/trips-queries";
 import { e2eTestRouteAuthorized, requireDemoTenant, testRouteRefused } from "@/lib/e2e-test-routes";
 
 /** Ten dives at $45 each, the card the package spec sells. */
@@ -46,9 +47,7 @@ export async function POST(request: Request) {
     .select({ bookingId: bookings.id, personId: bookings.personId })
     .from(bookings)
     .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, shop.id)))
-    .where(
-      and(eq(bookings.shopId, shop.id), eq(people.email, email), ne(bookings.status, "cancelled")),
-    )
+    .where(and(eq(bookings.shopId, shop.id), eq(people.email, email), seatNotCancelled))
     .orderBy(desc(bookings.createdAt))
     .limit(1);
   const [owner] = await db

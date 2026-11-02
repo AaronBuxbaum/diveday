@@ -701,7 +701,7 @@ for (const scheme of ["light", "dark"] as const) {
       // just-minted state — that panel shows a live feed token, which is
       // different on every run and would never match a baseline.
       test(`the calendar settings render true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/settings/calendar");
+        await page.goto("/shop/blue-mantis/me/calendar");
         // Wait on the panel's own button, not the page's <h1>: the panels are
         // Client Components, and per this file's rule a server-rendered
         // heading resolves before the interesting part has mounted.
@@ -712,7 +712,7 @@ for (const scheme of ["light", "dark"] as const) {
       // The staffer's own Email settings: the Monday email's row, on for the
       // owner by default, with its preview door, and the after-hours ping's.
       test(`the email settings render true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/settings/email");
+        await page.goto("/shop/blue-mantis/me/email");
         await page
           .getByRole("region", { name: "After-hours messages" })
           .getByRole("switch")
@@ -723,7 +723,7 @@ for (const scheme of ["light", "dark"] as const) {
       // The Monday email itself, as the preview renders it from the frozen
       // clock's week of the seeded demo shop: the one capture of an email body.
       test(`the Monday email renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/settings/email/preview");
+        await page.goto("/shop/blue-mantis/me/email/preview");
         await page.getByText(/Weeks run Monday to Sunday|no email goes out this Monday/).waitFor();
         await capture(page, "weekly-digest-email", scheme);
       });

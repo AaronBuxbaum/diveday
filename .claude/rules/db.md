@@ -11,36 +11,29 @@ Each rule names what enforces it; the reasoning, incidents and the longer form o
 
 ## Where things are
 
-- **Schema**: `src/db/schema/`, by Grep and range (the Read guard refuses it whole); never read
-  `drizzle/`. **Client and test db**: `src/db/client.ts`.
-- **Queries**: `src/db/shops.ts` and the barrels `src/db/trips.ts` and `src/db/seed.ts`; import
-  from the barrel, edit the sibling.
+AGENTS.md and [the route map](../../docs/agents/route-map.md) say where (schema, queries and
+barrels, bookings, seating, retention, integrations). What they do not say:
+
 - **Demo data** is a new `src/db/seed-<scenario>.ts` plus one line in `src/db/seed.ts`, never rows
   wedged into an existing scenario (ADR 20260803-seed-scenario-modules), and never a failure state
   in blue-mantis. Seed crew goes into `trip_assignments` with direct inserts, not through
   `setTripCrew`: that writer accepted every seeded crew unchanged, but it also queues crew notices
   and manifest pushes that a fixture should not hold. Instead, `seed-trips.test.ts` replays every
   seeded roster through `setTripCrew` and expects each one to be accepted (issue #1813).
-- **Bookings**: `src/db/bookings.ts`, tests first. **Seating a diver**: one consequence path,
-  `src/db/seat-diver.ts`.
-- **Retention**: `RETENTION_DAYS` in `src/lib/retention.ts`, the prune in `src/db/retention.ts`.
-- **Recurring trips**: `src/db/trips-series.ts`; every instance is an ordinary `trips` row, a
-  deleted one leaves a skip row, and narrowing a cadence cancels nothing
-  (ADR 20260810-open-ended-recurring-trips).
+- **Recurring trips**: every instance is an ordinary `trips` row, a deleted one leaves a skip row,
+  and narrowing a cadence cancels nothing (ADR 20260810-open-ended-recurring-trips).
 - **Gear**: opt-in by presence; double booking is refused by the `gear_reservations_no_overlap`
   exclusion constraint (catch 23P01), never a pre-check; service clocks inform, never gate,
   except a counter rental of life support (ADR 20260815-minimal-gear-register, amendment
   2026-10-08).
-- **Buddy teams**: `src/db/buddy-teams.ts`; every act appends to `buddy_team_events`; informs,
-  never gates (ADR 20260804-buddy-teams).
-- **Templates are copied, then the shop's**: `src/content/dive-site-templates.ts`,
-  `src/content/course-templates.ts`. **The catalog is DiveDay's words**: `src/db/marine-life-catalog.ts`,
-  a species without copy fails to compile (ADR 20260813-marine-life-is-diveday-copy).
-- **Date interests** (`interests`, `scope = 'date'`): writer `askForDate` in `src/db/interests.ts`, reads in
-  `src/db/interest-dates.ts`; a row names a course or an interest (`interests_scope_columns`) and never
-  creates a person (H-20260724-one-person-per-email).
-- **Integrations**: `src/db/integrations.ts` (sealed by `src/lib/secret-box.ts`) and the outbox
-  `src/db/integration-events.ts`; OAuth state is single-use and bound to shop and person.
+- **Buddy teams**: every act appends to `buddy_team_events`; informs, never gates
+  (ADR 20260804-buddy-teams).
+- **Templates are copied, then the shop's; the catalog is DiveDay's words**: a species without
+  copy fails to compile (ADR 20260813-marine-life-is-diveday-copy).
+- **Date interests** (`interests`, `scope = 'date'`): a row names a course or an interest
+  (`interests_scope_columns`) and never creates a person (H-20260724-one-person-per-email).
+- **Integrations** are sealed by `src/lib/secret-box.ts`; OAuth state is single-use and bound to
+  shop and person.
 
 ## Rules
 
@@ -68,6 +61,12 @@ Each rule names what enforces it; the reasoning, incidents and the longer form o
 - **A db test runs on a real database**: mock the framework edge (`next/*`, the session, provider
   HTTP via `src/test/fakes.ts`), never `@/db/*`; a lock or race guard gets a `*.postgres.test.ts`
   ([testing.md](../../docs/engineering/testing.md#what-each-layer-is-for)).
+- **A column that references `people` gets one row in `src/db/person-columns.ts`**: its kind and
+  what a merge does with it; `person-columns.test.ts` fails with the column's name until it has one
+  (issue #2724). **A person is minted only by `createPerson`** (`src/db/people.ts`), which writes
+  `people.origin` and the roles: person-door guard (`scripts/check-person-door.mjs`, issue #2726).
+  **A reader of `bookings.status` says `seatHeld` or `seatNotCancelled`**, never a hand-typed
+  `ne(..., "cancelled")`: seat-status guard (`scripts/check-seat-status.mjs`, issue #2758).
 - **Tenant isolation**: every domain table carries `shop_id` and every query filters by the
   session's shop; personal or medical data, export/import and token flows get a
   `security-reviewer` review.

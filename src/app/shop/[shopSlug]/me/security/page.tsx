@@ -25,7 +25,7 @@ import { isStepUpPurpose, type StepUpPurpose, safeStepUpReturnPath } from "@/lib
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS, staffDestination } from "@/lib/staff-destinations";
 import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
-import { settingsPaneClass } from "../_components/settings-pane";
+import { staffPageClass } from "../../_components/staff-page";
 import { AccountSessionsList } from "./_components/AccountSessionsList";
 import {
   beginTotpEnrollmentAction,
@@ -37,7 +37,7 @@ import {
   verifyStepUpAction,
 } from "./actions";
 
-// This page reads live account security state, but the settings segment's
+// This page reads live account security state, but the segment's
 // loading boundary still provides the static shell while those reads resolve.
 export const instant = true;
 
@@ -155,12 +155,9 @@ export default async function SecurityPage({
       </div>
     ) : null;
   return (
-    <main className={settingsPaneClass()}>
+    <main className={staffPageClass("reading")}>
       <FlashParams params={["notice"]} />
       <ShopPageHeader
-        eyebrow={t("settings.main.eyebrow")}
-        // The one settings sub-page whose eyebrow was not also its way up.
-        eyebrowHref={shopPath(shopSlug, "settings")}
         title={t("settings.security.title")}
         // **The account's other two pages** (visual review 2026-10-24, A42):
         // the identity menu's one "Account settings" row lands here, so the

@@ -38,6 +38,8 @@
  * fails if a species is missing one.
  */
 
+import { runtimeMode } from "./runtime-mode";
+
 /**
  * The committed variant widths, chosen for the four boxes the app actually
  * renders a catalog species at.
@@ -127,7 +129,7 @@ export function tileWidthFor(boxes: number | readonly number[]): number {
  * the pair.
  */
 export function capturePhoto(imageUrl: string, boxes: number | readonly number[]): string {
-  if (process.env.DIVEDAY_E2E !== "1") return imageUrl;
+  if (!runtimeMode().capturePhotos) return imageUrl;
   const bundled = BUNDLED_PHOTO.exec(imageUrl);
   if (!bundled) return imageUrl;
   return `/marine-life/tiles/${tileWidthFor(boxes)}/${bundled[1]}`;

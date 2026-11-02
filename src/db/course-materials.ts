@@ -1,8 +1,9 @@
-import { aliasedTable, and, asc, eq, gte, inArray, isNotNull, lte, ne } from "drizzle-orm";
+import { aliasedTable, and, asc, eq, gte, inArray, isNotNull, lte } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { AppDb } from "./client";
 import { bookings, people, trips } from "./schema";
 import { liveTrip } from "./trips-live";
+import { seatNotCancelled } from "./trips-queries";
 
 export type CourseMaterialsDoneOutcome =
   | { ok: true }
@@ -54,7 +55,7 @@ export async function courseMaterialsDoneByPerson(
         eq(trips.shopId, input.shopId),
         eq(trips.courseId, input.courseId),
         inArray(bookings.personId, [...input.personIds]),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
         isNotNull(bookings.courseMaterialsDoneAt),
         gte(trips.startsAt, new Date(input.around.getTime() - WINDOW_MS)),
         lte(trips.startsAt, new Date(input.around.getTime() + WINDOW_MS)),

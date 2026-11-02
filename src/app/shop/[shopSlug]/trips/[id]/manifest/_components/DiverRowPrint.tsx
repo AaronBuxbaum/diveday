@@ -4,6 +4,7 @@ import { birthdayCalloutText } from "@/i18n/birthday-labels";
 import { buddyAlertText } from "@/i18n/buddy-labels";
 import { depthWarningText } from "@/i18n/depth-labels";
 import { medicalWarningChips, rollCallLabelText } from "@/i18n/manifest-labels";
+import { presenceText } from "@/i18n/presence-labels";
 import { readinessStatusText, readinessStatusTone } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
@@ -68,7 +69,7 @@ export function DiverRowPrint({
             {readinessStatusText(t, diverStatus)}
           </Badge>
         )}
-        {diver.checkedIn ? <Badge tone="neutral">{t("manifest.checkedInPill")}</Badge> : null}
+        {diver.checkedIn ? <Badge tone="neutral">{presenceText(t, "arrived")}</Badge> : null}
         {/* The fact only (issue #2960) on the default print: the words stay
           behind the tap and on the crew's offline copy. "Print with medical
           alerts" puts them under the row instead (below, issue #2990). */}

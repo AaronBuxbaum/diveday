@@ -1,18 +1,4 @@
-import {
-  and,
-  asc,
-  count,
-  desc,
-  eq,
-  gte,
-  ilike,
-  inArray,
-  isNull,
-  lt,
-  ne,
-  or,
-  sql,
-} from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, ilike, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import { unionAll } from "drizzle-orm/pg-core";
 import { isStaff } from "@/lib/authz";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
@@ -41,7 +27,7 @@ import {
   startPaymentOperation,
 } from "./payment-operations";
 import { setBookingPayment, setBookingPaymentIfNotFinal } from "./payments";
-import { findOrCreatePerson } from "./people";
+import { createPerson, findOrCreatePerson } from "./people";
 import { queryAll } from "./query-helpers";
 import type {
   Order,
@@ -74,6 +60,7 @@ import {
 } from "./stripe-accounts";
 import { invoicingProviderFromEnvironment } from "./stripe-providers";
 import { livePerson, notRehearsal } from "./trips-live";
+import { seatNotCancelled } from "./trips-queries";
 
 export type NewOrderLineItem = {
   kind: OrderLineItemKind;
@@ -1134,6 +1121,7 @@ async function publicBuyer(
     shopId: input.shopId,
     fullName: input.fullName,
     email: input.email,
+    origin: "public_order",
   });
   if (found.created) return { personId: found.person.id, attached: true };
   if (found.nameMatches) {
@@ -1146,12 +1134,13 @@ async function publicBuyer(
     }
   }
   const personId = await db.transaction(async (tx) => {
-    const [fresh] = await tx
-      .insert(people)
-      .values({ shopId: input.shopId, fullName: input.fullName, email: null })
-      .returning({ id: people.id });
-    if (!fresh) throw new Error("publicBuyer: insert returned no row");
-    await tx.insert(personRoles).values({ personId: fresh.id, role: "diver" });
+    const fresh = await createPerson(tx, {
+      shopId: input.shopId,
+      fullName: input.fullName,
+      email: null,
+      phone: null,
+      origin: "public_order",
+    });
     return fresh.id;
   });
   return { personId, attached: false };
@@ -1409,7 +1398,7 @@ export function shopOrderWhere(shopId: string, filter: ShopOrderFilter) {
     if (matches) conditions.push(matches);
   }
   if (filter.tripId) conditions.push(eq(bookings.tripId, filter.tripId));
-  if (filter.seats === "live") conditions.push(ne(bookings.status, "cancelled"));
+  if (filter.seats === "live") conditions.push(seatNotCancelled);
   if (filter.seats === "cancelled") conditions.push(eq(bookings.status, "cancelled"));
   if (filter.from) conditions.push(gte(orders.createdAt, filter.from));
   if (filter.to) conditions.push(lt(orders.createdAt, filter.to));

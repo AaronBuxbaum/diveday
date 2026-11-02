@@ -1,4 +1,4 @@
-import { and, asc, count, eq, gt, inArray, isNull, lt, ne } from "drizzle-orm";
+import { and, asc, count, eq, gt, inArray, isNull, lt } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import type { InWaterCrewCount } from "@/lib/crew-roles";
@@ -18,7 +18,7 @@ import {
 } from "./schema";
 import { listStaff, type StaffPerson } from "./trips-crew";
 import { livePerson, liveTrip } from "./trips-live";
-import { bookedDiversCount } from "./trips-queries";
+import { bookedDiversCount, seatNotCancelled } from "./trips-queries";
 
 /*
  * `capabilitiesForRoles` used to live here, deriving "Can teach" / "Can crew" /
@@ -207,7 +207,7 @@ export async function getStaffingView(
       })
       .from(trips)
       .leftJoin(courses, eq(courses.id, trips.courseId))
-      .leftJoin(bookings, and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled")))
+      .leftJoin(bookings, and(eq(bookings.tripId, trips.id), seatNotCancelled))
       .where(
         and(
           liveTrip(),

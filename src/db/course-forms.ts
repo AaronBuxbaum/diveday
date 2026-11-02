@@ -64,6 +64,7 @@ import {
 } from "./schema";
 import { resolveTrainingMarks, teachesSessionAsRostered } from "./training-mark-resolve";
 import { livePerson, liveTrip } from "./trips-live";
+import { seatNotCancelled } from "./trips-queries";
 
 /**
  * **Course forms**, the stateful half (ADR 20261008-course-forms). The rule
@@ -962,7 +963,7 @@ async function enrollmentRow(db: DbExecutor, shopId: string, bookingId: string) 
       and(
         eq(bookings.id, bookingId),
         eq(bookings.shopId, shopId),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
         // A snorkeler or a rider on a course session is not enrolled, and owes
         // none of its forms (issue #2226).
         eq(bookings.participantType, "diver"),
@@ -1914,7 +1915,7 @@ export async function courseFormResignImpact(
           current.map((form) => form.versionId),
         ),
         eq(bookings.shopId, shopId),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
         eq(trips.shopId, shopId),
         ne(trips.status, "cancelled"),
         liveTrip(),
@@ -1955,7 +1956,7 @@ export async function courseUpcomingEnrollment(
     .where(
       and(
         eq(bookings.shopId, shopId),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
         eq(bookings.participantType, "diver"),
         eq(trips.shopId, shopId),
         eq(trips.courseId, courseId),

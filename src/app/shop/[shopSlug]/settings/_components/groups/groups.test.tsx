@@ -115,7 +115,7 @@ describe("each settings group renders as its own component", () => {
     ]);
     // A shop that does not dive from a boat has no fleet page, so no door.
     expect(hrefsIn(shopGroup(view, false))).not.toContain(`${base}/boats`);
-    // `/settings/email` is the reader's own (My account), not a shop setting.
+    // `/me/email` is the reader's own (My account), not a shop setting.
     expect(hrefsIn(MessagesGroup({ view, canManageMessaging: true }))).toEqual([
       `${base}/settings/whatsapp`,
     ]);

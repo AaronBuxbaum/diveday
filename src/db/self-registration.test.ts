@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { fileScopedShopContext, type seededShopContext } from "@/test/db";
+import { createPerson } from "./people";
 import { getRentalFit, saveRentalFit } from "./rental-fit";
 import { certifications, people, waiverDeliveries, waiverRecords } from "./schema";
 import { deliverSelfRegistrationWaiver, registerDiverAtShop } from "./self-registration";
@@ -45,7 +46,7 @@ describe("self-registration", () => {
     await deliverSelfRegistrationWaiver(db, { shopId: shop.id, personId, now });
 
     const [person] = await db.select().from(people).where(eq(people.id, personId));
-    expect(person).toMatchObject({ fullName: "Ines Oyelaran", email, selfRegisteredAt: now });
+    expect(person).toMatchObject({ fullName: "Ines Oyelaran", email, origin: "self_registration" });
 
     // The ordinary person-scoped release, on the ordinary path.
     const [record] = await db
@@ -176,12 +177,32 @@ describe("self-registration", () => {
     const { db, shop } = ctx;
     const email = `ines-${randomUUID()}@example.com`;
     const { personId } = await registerDiverAtShop(db, { shopId: shop.id, ...walkIn({ email }) });
+    const [before] = await db.select().from(people).where(eq(people.id, personId));
     await registerDiverAtShop(db, {
       shopId: shop.id,
       ...walkIn({ email, now: new Date(now.getTime() + 86_400_000) }),
     });
     const [person] = await db.select().from(people).where(eq(people.id, personId));
-    expect(person.selfRegisteredAt).toEqual(now);
+    expect(person.origin).toBe("self_registration");
+    expect(person.createdAt).toEqual(before.createdAt);
+  });
+
+  it("never gives a person the shop typed in the diver's own mark, even if they register later", async () => {
+    // Adversarial: anyone holding an address can submit the public form with it.
+    // The mark must not let them relabel a record staff created as their own.
+    const { db, shop } = ctx;
+    const email = `typed-${randomUUID()}@example.com`;
+    const typed = await createPerson(db, {
+      shopId: shop.id,
+      fullName: "Ines Oyelaran",
+      email,
+      phone: null,
+      origin: "counter",
+    });
+    const { personId } = await registerDiverAtShop(db, { shopId: shop.id, ...walkIn({ email }) });
+    expect(personId).toBe(typed.id);
+    const [person] = await db.select().from(people).where(eq(people.id, personId));
+    expect(person.origin).toBe("counter");
   });
 
   it("mints no second link for a diver whose release still stands — sign-once holds", async () => {
@@ -237,7 +258,11 @@ describe("self-registration", () => {
     // in front of the shop.
     expect(second.personId).not.toBe(first.personId);
     const [person] = await db.select().from(people).where(eq(people.id, first.personId));
-    expect(person).toMatchObject({ email: null, phone: "+13055550111", selfRegisteredAt: now });
+    expect(person).toMatchObject({
+      email: null,
+      phone: "+13055550111",
+      origin: "self_registration",
+    });
   });
 
   it("never reaches another shop's diver with a matching address", async () => {

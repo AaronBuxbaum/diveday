@@ -1,9 +1,10 @@
-import { and, asc, eq, inArray, isNull, max, min, ne } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, max, min } from "drizzle-orm";
 import type { SamePersonRecord } from "@/lib/assists/same-person";
 import { matchRestsOnNameAlone } from "@/lib/diver-duplicates";
 import type { AppDb } from "./client";
 import { bookings, certifications, people, rentalFitProfiles, shops, trips } from "./schema";
 import { liveTrip } from "./trips-live";
+import { seatNotCancelled } from "./trips-queries";
 
 /**
  * The reads behind the desk assists (`gear-text`, `dupes`). Each reads only
@@ -91,7 +92,7 @@ export async function readUnsurePair(
       and(
         eq(bookings.shopId, shopId),
         inArray(bookings.personId, [sourceId, survivorId]),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
         liveTrip(),
       ),
     )

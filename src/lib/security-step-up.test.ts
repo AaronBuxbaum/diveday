@@ -13,7 +13,7 @@ describe("security step-up routing", () => {
 
   it("serializes a bounded challenge with the original action path", () => {
     const url = stepUpChallengeUrl("blue-mantis", "money", "/shop/blue-mantis/orders/new");
-    expect(url).toContain("/shop/blue-mantis/settings/security");
+    expect(url).toContain("/shop/blue-mantis/me/security");
     expect(url).toContain("notice=step-up-required");
     expect(url).toContain("purpose=money");
     expect(url).toContain("returnTo=%2Fshop%2Fblue-mantis%2Forders%2Fnew");

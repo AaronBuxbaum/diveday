@@ -2,7 +2,7 @@
  * Waivers: issuing a signing request — minting the bearer link for a booking
  * or a person. Imported through the `./waivers` barrel.
  */
-import { and, eq, gt, isNull, ne, or } from "drizzle-orm";
+import { and, eq, gt, isNull, or } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { type GuardianSigner, guardianSignatureMissing } from "@/lib/guardian";
 import { isHeldToMedical } from "@/lib/participant-types";
@@ -19,6 +19,7 @@ import { lockBoardingCertificationEvidence } from "./boarding-certification-snap
 import type { DbExecutor } from "./client";
 import { isTransactionExecutor } from "./query-helpers";
 import { bookings, people, trips, waiverRecords } from "./schema";
+import { seatNotCancelled } from "./trips-queries";
 import { getCurrentWaiverTemplate, shopTimezone } from "./waivers-templates";
 
 export type IssueWaiverOutcome =
@@ -116,7 +117,7 @@ export async function issueWaiverRequest(
             and(
               eq(bookings.id, input.bookingId),
               eq(bookings.shopId, input.shopId),
-              ne(bookings.status, "cancelled"),
+              seatNotCancelled,
             ),
           )
           .limit(1)
@@ -160,7 +161,7 @@ export async function issueWaiverRequest(
           and(
             eq(bookings.id, input.bookingId),
             eq(bookings.shopId, input.shopId),
-            ne(bookings.status, "cancelled"),
+            seatNotCancelled,
           ),
         )
         .for("update", { of: bookings })

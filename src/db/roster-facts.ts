@@ -1,4 +1,4 @@
-import { and, eq, inArray, ne } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { type AboardBlockerKind, aboardBlockerKind } from "@/lib/readiness";
 import { hasSailed } from "@/lib/trips";
@@ -6,6 +6,7 @@ import { sharedInHorizonReadiness } from "./blockers";
 import type { AppDb } from "./client";
 import { bookings, orders, people, priorVisits, trips } from "./schema";
 import { liveTrip } from "./trips-live";
+import { seatNotCancelled } from "./trips-queries";
 
 /**
  * **The four facts a roster row carries beside a name** — ADR
@@ -93,7 +94,7 @@ export async function rosterFacts(
         and(
           eq(bookings.shopId, shopId),
           inArray(bookings.personId, ids),
-          ne(bookings.status, "cancelled"),
+          seatNotCancelled,
           // A cancelled departure is not a visit and not a booking ahead —
           // it is the thing that stopped being either.
           eq(trips.status, "scheduled"),
@@ -120,7 +121,7 @@ export async function rosterFacts(
     // here rather than joined into the roster query, so the fact reaches every
     // surface that asks for roster facts rather than only the list.
     db
-      .select({ id: people.id, selfRegisteredAt: people.selfRegisteredAt })
+      .select({ id: people.id, origin: people.origin, createdAt: people.createdAt })
       .from(people)
       // diveday:allow-deleted-people: facts for people already on this roster.
       .where(and(eq(people.shopId, shopId), inArray(people.id, ids))),
@@ -129,8 +130,8 @@ export async function rosterFacts(
   const importedIds = new Set(visits.map((row) => row.personId));
   const registeredAt = new Map(
     registrations
-      .filter((row) => row.selfRegisteredAt !== null)
-      .map((row) => [row.id, row.selfRegisteredAt as Date] as const),
+      .filter((row) => row.origin === "self_registration")
+      .map((row) => [row.id, row.createdAt] as const),
   );
   const owingIds = new Set(openOrders.map((row) => row.personId));
 

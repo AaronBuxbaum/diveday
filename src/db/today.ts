@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, gte, inArray, lte, ne, notExists, or } from "drizzle-orm";
+import { and, asc, desc, eq, gt, gte, inArray, lte, notExists, or } from "drizzle-orm";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import {
   highWindAlertDetailText,
@@ -116,7 +116,13 @@ import { pushBoatSnagRows } from "./today-snag-rows";
 import { meetingWindowsByTrip } from "./trip-meeting-windows";
 import { plannedSitesByTrip } from "./trip-planned-sites";
 import { latestTripStagesByTrip } from "./trip-stages";
-import { boatClashesByTrip, countShopTrips, crewClashesByTrip, listStaff } from "./trips";
+import {
+  boatClashesByTrip,
+  countShopTrips,
+  crewClashesByTrip,
+  listStaff,
+  seatNotCancelled,
+} from "./trips";
 import { liveTrip } from "./trips-live";
 import { sharedWelcomeSeatsByTrip } from "./welcome-cues";
 import { listWorkOrdersNeedingAttention } from "./work-order-follow-up";
@@ -609,13 +615,7 @@ export async function listRollCallGaps(
         turnedAwayAt: bookings.turnedAwayAt,
       })
       .from(bookings)
-      .where(
-        and(
-          eq(bookings.shopId, shopId),
-          inArray(bookings.tripId, tripIds),
-          ne(bookings.status, "cancelled"),
-        ),
-      ),
+      .where(and(eq(bookings.shopId, shopId), inArray(bookings.tripId, tripIds), seatNotCancelled)),
     db
       .select({
         bookingId: rollCallEvents.bookingId,
@@ -627,10 +627,7 @@ export async function listRollCallGaps(
       // Same guard `boardedCountsByTrip` applies: a booking cancelled after the
       // boat left keeps its event rows, and they must not answer for a roster
       // it is no longer on.
-      .innerJoin(
-        bookings,
-        and(eq(bookings.id, rollCallEvents.bookingId), ne(bookings.status, "cancelled")),
-      )
+      .innerJoin(bookings, and(eq(bookings.id, rollCallEvents.bookingId), seatNotCancelled))
       .where(and(eq(rollCallEvents.shopId, shopId), inArray(rollCallEvents.tripId, tripIds)))
       // `seq` is the final key for the same reason `src/db/manifests.ts` gives:
       // `created_at` is transaction time, so a batched write inside one
@@ -1132,7 +1129,7 @@ async function seatWantedByTrip(db: AppDb, shopId: string, tripIds: string[]) {
               and(
                 eq(bookings.tripId, interests.tripId),
                 eq(bookings.personId, interests.personId),
-                ne(bookings.status, "cancelled"),
+                seatNotCancelled,
               ),
             ),
         ),

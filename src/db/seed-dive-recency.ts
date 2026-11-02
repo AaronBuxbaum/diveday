@@ -1,7 +1,8 @@
-import { and, eq, ne } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { demoEmail } from "@/lib/simulator-email";
 import type { DbExecutor } from "./client";
 import { bookings, people } from "./schema";
+import { seatNotCancelled } from "./trips-queries";
 
 /**
  * **Two divers who said how long it has been** — the answers a crew member
@@ -52,12 +53,6 @@ export async function seedDiveRecency(db: DbExecutor, shopId: string) {
     await db
       .update(bookings)
       .set({ lastDivedBand: answer.band })
-      .where(
-        and(
-          eq(bookings.shopId, shopId),
-          eq(bookings.personId, person.id),
-          ne(bookings.status, "cancelled"),
-        ),
-      );
+      .where(and(eq(bookings.shopId, shopId), eq(bookings.personId, person.id), seatNotCancelled));
   }
 }

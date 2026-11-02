@@ -60,7 +60,7 @@ export function weekLedgerRows({
   aboveStatedLevel,
   dayKeyOf,
   shopSlug,
-  isEmbed,
+  isEmbed = false,
   timezone,
   currency,
   locale,
@@ -75,7 +75,8 @@ export function weekLedgerRows({
   /** The shop-local calendar day a departure falls on (`scheduleDayWords`). */
   dayKeyOf: (date: Date) => string;
   shopSlug: string;
-  isEmbed: boolean;
+  /** The framed schedule's rows open the framed trip page (`?embed=1`). */
+  isEmbed?: boolean;
   timezone: string;
   currency: ShopCurrency;
   locale: string;

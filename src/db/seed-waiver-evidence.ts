@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, inArray, min, ne, sql } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, min, sql } from "drizzle-orm";
 import { nowMs } from "@/lib/clock";
 import {
   computeWaiverIntegrityHash,
@@ -8,6 +8,7 @@ import type { DbExecutor } from "./client";
 import { bookings, trips, type WaiverRecord, waiverRecords } from "./schema";
 import { at, withinDeskHours } from "./seed-clock";
 import { liveTrip } from "./trips-live";
+import { seatNotCancelled } from "./trips-queries";
 
 /**
  * What the shop's signed evidence actually looks like — the Signatures tab's
@@ -128,7 +129,7 @@ async function earliestDepartureByPerson(
     .where(
       and(
         eq(bookings.shopId, shopId),
-        ne(bookings.status, "cancelled"),
+        seatNotCancelled,
         liveTrip(),
         gte(trips.startsAt, at(-SIGNING_SPREAD_DAYS - 1, 0)),
       ),

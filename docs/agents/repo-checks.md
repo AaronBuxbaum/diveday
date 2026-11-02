@@ -1,6 +1,6 @@
 # What each `pnpm check:repo` guard refuses, and why
 
-`scripts/check-repo.mjs` runs 64 guard scripts concurrently and reports every failure in one
+`scripts/check-repo.mjs` runs 66 guard scripts concurrently and reports every failure in one
 pass. **Nobody needs to read this file to run the check** — a failing guard names itself and prints
 the offending line. Read the matching section below when you want the reasoning behind one: what it
 protects, the incident that produced it, and the escape hatch for a line that genuinely means the
@@ -16,7 +16,7 @@ the guard's name.
 
 ## The full roster
 
-environment, architecture/feature-module, design-token, tinted-ink, type-ramp, page-length, form-control, voice, logical-property, transaction-concurrency, image-sizes, ADR, design-canvas, doc-link, locale-coverage, hard-coded-copy, bundle-reach, domain-layer-copy, route-coverage, loading-skeleton, uuid-path-segment, notice-code, scroll-preservation, exit-curve, shop-word, seat-word, live-trip-read, live-people-read, event-scope, slug-action, env-reads, action-pins, departure-buffer, capability-runbook, destructive-migration, migration-graph, e2e-hygiene, critical-journeys, agent-layer (skills/index/rules/hooks/task-context), Open-Graph-site, sentry-imports, assist-prompt, infra-ASCII, CI-change-detection, runner-image, Node-version, tenant-gate, instant-navigation, storefront shop-read, redirect-slug, capability-refusal and intl-provider safeguards. The last six were Vitest scans until the 2026-10-14 test review moved them here; each script's header carries its incident.
+environment, architecture/feature-module, design-token, tinted-ink, type-ramp, page-length, form-control, voice, logical-property, transaction-concurrency, image-sizes, ADR, design-canvas, doc-link, locale-coverage, hard-coded-copy, bundle-reach, domain-layer-copy, route-coverage, loading-skeleton, uuid-path-segment, notice-code, scroll-preservation, exit-curve, shop-word, seat-word, live-trip-read, live-people-read, seat-status, person-door, event-scope, slug-action, env-reads, action-pins, departure-buffer, capability-runbook, destructive-migration, migration-graph, e2e-hygiene, critical-journeys, agent-layer (skills/index/rules/hooks/task-context), Open-Graph-site, sentry-imports, assist-prompt, infra-ASCII, CI-change-detection, runner-image, Node-version, tenant-gate, instant-navigation, storefront shop-read, redirect-slug, capability-refusal and intl-provider safeguards. The last six were Vitest scans until the 2026-10-14 test review moved them here; each script's header carries its incident.
 
 ## The guards worth reading about
 
@@ -360,6 +360,14 @@ The time-id-order one (`scripts/check-time-id-order.mjs`) fails any `.orderBy(�
 A JavaScript comparator that ties on a timestamp has the same failure and no signature this rule can read, so it is left to review.
 
 The opposite mistake the issue names — bumping for something immaterial, which re-alerts every diver's phone for a typo fixed in a conditions note — is deliberately left un-guarded. It has no mechanical signature; guarding the cheap half of a rule beats guarding neither.
+
+### seat-status
+
+The seat-status one (`scripts/check-seat-status.mjs`) refuses a hand-typed `ne(bookings.status, "cancelled")` outside `src/db/trips-queries.ts` (issue #2758). The clause was typed by hand more than 200 times and reads as one thing while meaning two: the seats somebody still holds (`seatHeld`) or everyone not cancelled, a `no_show` included (`seatNotCancelled`). A reader names which; one that means something else says `diveday:allow-status-clause: <why>`. Tests are not scanned.
+
+### person-door
+
+The person-door one (`scripts/check-person-door.mjs`) refuses an `.insert(people)` anywhere but `createPerson` in `src/db/people.ts` (issue #2726). Nine places used to mint a person by hand, each choosing its own columns and role rows, and nothing recorded how the person came to be. `createPerson` writes `people.origin` (`public_booking`, `waitlist`, `last_minute`, `self_registration`, `counter`, `import`, `invite`, `onboard`, `public_order`, `identity_split`) and the roles with the row; the column defaults to `seed`, which means nobody's door wrote it. Seeds, fixtures, `src/test/` and the `/api/test` routes are exempt; a write that is not a new person says `diveday:allow-person-insert: <why>`.
 
 ### departure-buffer
 

@@ -9,6 +9,7 @@ import { withExplicitSslMode } from "./connection-string";
 import { pushManifestChanged } from "./push-subscriptions";
 import { bookings, trips } from "./schema";
 import { liveTrip } from "./trips-live";
+import { seatNotCancelled } from "./trips-queries";
 
 export type ManifestEvent = { shopId: string; tripId: string };
 type Listener = ManifestEvent & { onEvent: () => void };
@@ -440,7 +441,7 @@ export async function publishManifestEventsForPerson(
         and(
           eq(bookings.shopId, shopId),
           eq(bookings.personId, personId),
-          ne(bookings.status, "cancelled"),
+          seatNotCancelled,
           eq(trips.shopId, shopId),
           eq(trips.status, "scheduled"),
           liveTrip(),

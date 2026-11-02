@@ -68,6 +68,8 @@ const checks = [
   ["icu-plurals", "check-icu-plurals.mjs"],
   ["live-trips", "check-live-trips.mjs"],
   ["live-people", "check-live-people.mjs"],
+  ["seat-status", "check-seat-status.mjs"],
+  ["person-door", "check-person-door.mjs"],
   ["event-scope", "check-event-scope.mjs"],
   ["slug-actions", "check-slug-actions.mjs"],
   ["env-reads", "check-env-reads.mjs"],
