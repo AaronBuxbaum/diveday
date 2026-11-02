@@ -4,9 +4,10 @@ import { type CrewRollCallSubject, crewIsAccountedFor, crewRollCallCounts } from
 import type { PlanChangeReason } from "./plan-change";
 import type { MonthlyReport } from "./reporting";
 import { rollCallCheckpoints } from "./roll-call";
+import { shopDayOf } from "./shop-day";
 import type { RollCallGapReason } from "./today";
 import { liveStageOf, type TripStageReading } from "./trip-stages";
-import { toDateInputValue, utcToWallTime, wallTimeToUtc } from "./zoned";
+import { utcToWallTime, wallTimeToUtc } from "./zoned";
 
 /**
  * **The day's closing state — the evening half of the shop home's spine.**
@@ -133,37 +134,6 @@ export type CloseoutPlanChange = {
   reasonCode: PlanChangeReason | null;
 };
 
-/**
- * **Did this seat sail?** Evidence order for every non-cancelled booking
- * (issues #1689, #1704): explicit departure-checkpoint `boarded` or
- * `not_boarded` wins; otherwise any standing after-dive result means sailed;
- * otherwise `no_show` is the desk fallback. `not_boarded` means different
- * things at departure (did not sail) and after-dive (did not return), so the
- * caller uses checkpoint-specific readers.
- *
- * No dock result and no `no_show` leaves the count open through
- * `listRollCallGaps`; this fallback cannot grant `allHome`. Offline events
- * that never sync remain invisible.
- */
-export function seatSailed(input: {
-  /** `bookings.status === "no_show"` — the desk's own statement. */
-  noShow: boolean;
-  /** The standing result at the **departure** checkpoint; null when there is none. */
-  dockResult: "boarded" | "not_boarded" | null;
-  /**
-   * Whether a result stands at any **after-dive** checkpoint —
-   * `standingResultMeansSailed` over `listAfterDiveRollCallByTrip`. Either word
-   * there means the person was on the boat: `boarded` counted them at a later
-   * site, and `not_boarded` says they did not come *back*.
-   */
-  afterDiveResultStands: boolean;
-}): boolean {
-  if (input.dockResult === "boarded") return true;
-  if (input.dockResult === "not_boarded") return false;
-  if (input.afterDiveResultStands) return true;
-  return !input.noShow;
-}
-
 /** One of today's departures, as the db layer hands it in. */
 export type CloseoutTripInput = {
   tripId: string;
@@ -175,7 +145,7 @@ export type CloseoutTripInput = {
   /**
    * **Divers the departure actually carried** — the roster less every seat the
    * shop's own records place ashore, which is the crew's `not_boarded` at the
-   * dock first and the desk's `no_show` mark second ({@link seatSailed}, issue
+   * dock first and the desk's `no_show` mark second (`seatSailed`, issue
    * #1689).
    *
    * Its own field rather than a narrowing of `booked`, because the readers
@@ -586,15 +556,6 @@ export function assembleDayCloseout(input: {
 }
 
 /**
- * The shop-local date of `now` as "YYYY-MM-DD" — the day the evening is about.
- * The same reading `src/db/today.ts`'s `shopDay` makes, through the same
- * DST-safe wall-clock conversion (`src/lib/zoned.ts`).
- */
-export function shopDayOf(now: Date, timeZone: string): string {
-  return toDateInputValue(utcToWallTime(now, timeZone));
-}
-
-/**
  * **One departure of the shop day, as the evening reads it** — ADR
  * 20260827-clearwater-surface-language, decision 4.
  *
@@ -726,7 +687,7 @@ export type EveningClose = {
    * The diver half of {@link out}, for a sentence that names both.
    *
    * **Divers who sailed, not seats that were sold** (issue #1689; the rule is
-   * {@link seatSailed}). A seat the crew marked `not_boarded` at the dock, or
+   * `seatSailed`). A seat the crew marked `not_boarded` at the dock, or
    * the desk marked `no_show`, is the shop's own word that the person was not
    * aboard, and while this summed `booked` the sentence counted them out *and*
    * back — both numbers moving together, so even `out === back` held and the

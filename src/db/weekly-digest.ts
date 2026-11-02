@@ -26,7 +26,8 @@ import {
 import type { WeeklyDigestEmailSection } from "@/lib/notifications/kinds";
 import { BLOCKER_CATEGORY } from "@/lib/readiness";
 import { shopPath } from "@/lib/staff-notices";
-import { countsAsJob, type TodayActionKind } from "@/lib/today";
+import { countsAsJob } from "@/lib/today-job";
+import type { TodayActionKind } from "@/lib/today-kinds";
 import {
   type DigestWeeks,
   digestWeeks,

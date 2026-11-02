@@ -1,11 +1,6 @@
 import type { EveningClose } from "@/lib/closeout";
-import {
-  type DaySpine,
-  type DayStation,
-  rowTone,
-  type TodayAction,
-  type TodayActionKind,
-} from "@/lib/today";
+import { type DaySpine, type DayStation, rowTone, type TodayAction } from "@/lib/today";
+import type { TodayActionKind } from "@/lib/today-kinds";
 
 export type SpineEntry =
   | { kind: "live"; at: number; station: DayStation }

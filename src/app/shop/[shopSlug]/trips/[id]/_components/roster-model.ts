@@ -17,7 +17,6 @@ import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import type { AgencyCheckableCard } from "@/lib/agency-check-queue";
 import type { CalendarDate } from "@/lib/calendar-date";
 import type { CertificationLevel } from "@/lib/certification-levels";
-import { seatSailed } from "@/lib/closeout";
 import { diveRecencyIsNotable } from "@/lib/dive-recency";
 import type { ElearningQuery } from "@/lib/elearning-check";
 import type { PaperWaiverAction } from "@/lib/paper-waiver-form";
@@ -25,6 +24,7 @@ import { isDiver } from "@/lib/participant-types";
 import type { ManualPaymentMethodCode, MarkRetry } from "@/lib/payment-marks";
 import type { CountedAboardBlocked } from "@/lib/roll-call-readiness";
 import { rosterRowIsBlocked } from "@/lib/roster-filters";
+import { seatSailed } from "@/lib/seat-sailed";
 import { waiverState } from "@/lib/waivers";
 import type { ElearningCheckResult } from "../elearning-actions";
 import type { PaymentStatus, PaymentStatusControlCopy } from "./PaymentStatusControl";
@@ -361,7 +361,7 @@ export type RosterArrival = {
  * **A finished departure's Divers tab is its record** (UX review 2026-10-10,
  * item 10): once the boat is home there is nothing to clear, check in or sell,
  * so the list says who sailed and who did not, seat by seat, by the evening
- * count's own rule (`seatSailed`, src/lib/closeout.ts).
+ * count's own rule (`seatSailed`, src/lib/seat-sailed.ts).
  */
 export type RosterRecord = {
   /** Each seat's standing result at the dock (`listDepartureRollCallByTrip`). */

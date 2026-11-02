@@ -42,6 +42,19 @@ Each rule names what enforces it; the reasoning, incidents and the longer form o
 - **Integrations**: `src/db/integrations.ts` (sealed by `src/lib/secret-box.ts`) and the outbox
   `src/db/integration-events.ts`; OAuth state is single-use and bound to shop and person.
 
+## Two kinds of module
+
+- **A table module** (`src/db/<table>.ts`) holds a table's rows and the transitions on them, named
+  by the transition (`record`, `mark`, `issue`, `claim`, `release`, `consume`, `restore`,
+  `cancel`), never `update` or `save`.
+- **A surface reader** (`src/db/<surface>.ts`, e.g. `today.ts`, `closeout.ts`) answers one page's
+  question in one call. It detects nothing of its own (a rule lives in `src/lib`, once) and returns
+  codes and data, not a sentence: `src/db` may not value-import `@/i18n/messages` or
+  `@/i18n/staff-messages`, and `src/lib` may not value-import `drizzle-orm` (`scripts/check-architecture.mjs`
+  seams; files that still do are banked in `scripts/ratchets.json`, and a new one fails). A
+  page that needs a rule from Today's queue takes the small file below it (`src/lib/today-kinds.ts`,
+  `today-urgency.ts`), not the queue.
+
 ## Rules
 
 - **Change the schema through the schema-change skill**: `pnpm db:generate --name`, then before
