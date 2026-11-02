@@ -94,7 +94,7 @@ export async function POST(request: Request) {
     return new Response(null, { status: 200 });
   }
 
-  const parsed = parseInboundEmail(raw.message);
+  const parsed = await parseInboundEmail(raw.message);
   // **Whose message this is, and whether anyone vouched for that.** A `From:`
   // header is written by whoever sent the mail, and the reply-to address is on
   // every email the shop has ever sent — so anyone who has had one can address
@@ -102,11 +102,17 @@ export async function POST(request: Request) {
   // authenticates the envelope. A message with neither is filed from the
   // address it actually arrived from and matched to nobody, because a sentence
   // on a named diver's record is a sentence a staffer will act on.
+  //
+  // Either way it takes one readable `From:` mailbox. DMARC vouches for the
+  // header, so a message whose header the reader could not pin to one address
+  // (none, two, a group, an unreadable message) has nothing it vouched for, and
+  // the envelope's address is not what it checked.
   const headerFrom = normalizeEmailAddress(parsed.from);
   const envelopeFrom = normalizeEmailAddress(notification.envelopeFrom);
   const senderAuthenticated =
-    notification.fromAuthenticated ||
-    (notification.envelopeAuthenticated && headerFrom !== null && headerFrom === envelopeFrom);
+    headerFrom !== null &&
+    (notification.fromAuthenticated ||
+      (notification.envelopeAuthenticated && headerFrom === envelopeFrom));
   const from = senderAuthenticated ? (headerFrom ?? envelopeFrom) : (envelopeFrom ?? headerFrom);
   if (!from) {
     log("email_inbound.ignored", "info", { reason: "no_sender", shopId });
