@@ -17,7 +17,6 @@ import {
   type WaiverBatchCode,
   waiverBatchLabelText,
 } from "@/i18n/today-labels";
-import { HOUR_MS } from "@/lib/clock";
 import { type Copy, resolveCopy } from "@/lib/copy";
 import { formatMoneyCents } from "@/lib/format";
 import type { AgencyCheckableCard } from "./agency-check-queue";
