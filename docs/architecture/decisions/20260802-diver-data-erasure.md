@@ -354,10 +354,13 @@ survive a green run:
   encrypted client-side copies with their own lifetime; erasure does not remotely purge them.
   A pending roll-call note about the erased person tied to an older signed epoch is discarded at
   sync while its mark and tap time are retained, and the local note is cleared after that
-  acknowledgment. The saved notice identifies each event by short record reference and
-  checkpoint or checklist item, without showing discarded text or names from a possibly stale
-  payload. A device that never syncs may retain the encrypted copy until the existing local
-  expiry/cleanup rules remove it.
+  acknowledgment. A refreshed snapshot with a newer epoch clears on the device only the erased
+  person's own notes (a seat or crew row the fresh copy shows under the erased name, or an
+  already-synced note whose subject the fresh copy no longer carries); every other queued
+  roll-call and checklist note stays for the server to judge (issue #3569). The saved notice
+  identifies each event by short record reference and checkpoint or checklist item, without
+  showing discarded text or names from a possibly stale payload. A device that never syncs may
+  retain the encrypted copy until the existing local expiry/cleanup rules remove it.
 
 ## Relationship to the archive and retention ADRs
 
@@ -433,4 +436,4 @@ internal notes filed under another diver, and incident narratives and addenda. T
 2026-10-13 title call (#2315) and the mention sweeps added from security review. The "Bounding the
 name match" rules above still govern the handles that remain.
 
-**Accepted residual:** a phone number, address or health note a staffer typed next to the name in a kept sentence (another diver's internal note, a change value, a moderation note, an incident narrative) now stays with it, and the full-shop export carries it. Erasure does not search free text for the person's email or phone. Revisit if counsel asks. The stale-offline-note discard is narrowed the same way: only the erased person's own roll-call or crew note is dropped (issue #3569).
+**Accepted residual:** a phone number, address or health note a staffer typed next to the name in a kept sentence (another diver's internal note, a change value, a moderation note, an incident narrative) now stays with it, and the full-shop export carries it. Erasure does not search free text for the person's email or phone. Revisit if counsel asks. The stale-offline-note discard is narrowed the same way: only the erased person's own roll-call or crew note is dropped (issue #3569). A stale offline note about somebody else, written from a pre-erasure snapshot and synced after the erasure, may name the erased person in staff prose; that sentence stays, like any other staff prose that mentions them.

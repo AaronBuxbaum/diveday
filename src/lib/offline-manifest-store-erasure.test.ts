@@ -3,10 +3,12 @@ import "fake-indexeddb/auto";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { ANONYMIZED_PERSON_NAME } from "./anonymization";
 import {
   appendOfflineChecklistCheck,
   appendOfflineRollCall,
   loadOfflineManifest,
+  OFFLINE_ERASED_NAME,
   saveOfflineManifest,
   syncOfflineManifest,
 } from "./offline-manifest-store";
@@ -155,7 +157,7 @@ describe("discarded offline roll-call notes", () => {
     ]);
   });
 
-  it("clears applied notes when a newer erasure epoch replaces the saved snapshot", async () => {
+  it("keeps notes about people still named when a newer erasure epoch replaces the snapshot", async () => {
     const epochPayload = (
       epoch: number,
       revision: number,
@@ -210,36 +212,20 @@ describe("discarded offline roll-call notes", () => {
     ]);
     expect(sameEpoch.checklistEvents[0]?.note).toBe("Applied checklist note naming Nora Quinn.");
 
+    // Somebody else was erased: the fresh copy still names Nora and Sal, so
+    // their notes and the checklist note are not erased data (issue #3569).
     const refreshed = await saveOfflineManifest(
       epochPayload(13, 3, "77777777-7777-4777-8777-777777777777"),
     );
-    expect(refreshed.events).toMatchObject([
-      {
-        bookingId,
-        checkpoint: "after_dive_1",
-        status: "not_boarded",
-        syncStatus: "applied",
-        note: null,
-        noteDisposition: "discarded_erasure_cutoff",
-      },
-      {
-        crewPersonId,
-        checkpoint: "after_dive_1",
-        status: "not_boarded",
-        syncStatus: "applied",
-        note: null,
-        noteDisposition: "discarded_erasure_cutoff",
-      },
+    expect(refreshed.events.map((event) => [event.note, event.noteDisposition])).toEqual([
+      ["Applied diver note naming Nora Quinn.", undefined],
+      ["Applied crew note naming Nora Quinn.", undefined],
     ]);
-    expect(refreshed.checklistEvents).toMatchObject([
-      {
-        checklistItemId,
-        status: "checked",
-        syncStatus: "applied",
-        note: null,
-        noteDisposition: "discarded_erasure_cutoff",
-      },
-    ]);
+    expect(refreshed.checklistEvents[0]).toMatchObject({
+      checklistItemId,
+      note: "Applied checklist note naming Nora Quinn.",
+    });
+    expect(refreshed.checklistEvents[0]).not.toHaveProperty("noteDisposition");
     expect([
       ...refreshed.events.map((event) => event.occurredAt),
       ...refreshed.checklistEvents.map((event) => event.occurredAt),
@@ -258,7 +244,60 @@ describe("discarded offline roll-call notes", () => {
     expect(afterOutOfOrderRefresh.snapshot.manifests[0].trip.title).toBe(
       "Two-Tank Reef — Molasses & French",
     );
-    expect(afterOutOfOrderRefresh.events.map((event) => event.note)).toEqual([null, null]);
+    expect(afterOutOfOrderRefresh.events.map((event) => event.note)).toEqual([
+      "Applied diver note naming Nora Quinn.",
+      "Applied crew note naming Nora Quinn.",
+    ]);
+  });
+
+  it("on a newer epoch, clears only the erased diver's own note, pending or applied", async () => {
+    const otherBookingId = "99999999-9999-4999-8999-999999999999";
+    const token = (epoch: number, revision: number) => `${epoch}.${revision}.${"A".repeat(43)}`;
+    const withDivers = (names: [string, string], epoch: number, revision: number) => ({
+      ...payload,
+      snapshotId: crypto.randomUUID(),
+      erasureEpochToken: token(epoch, revision),
+      manifests: payload.manifests.map((manifest) => ({
+        ...manifest,
+        divers: [
+          { ...manifest.divers[0], bookingId, fullName: names[0] },
+          { ...manifest.divers[0], bookingId: otherBookingId, fullName: names[1] },
+        ],
+      })),
+    });
+    await saveOfflineManifest(withDivers(["Nora Quinn", "Ari Moss"], 20, 1));
+    await appendOfflineRollCall(tripId, {
+      bookingId,
+      checkpoint: "after_dive_1",
+      status: "not_boarded",
+      note: "Nora's own pending note.",
+    });
+    await appendOfflineRollCall(tripId, {
+      bookingId: otherBookingId,
+      checkpoint: "after_dive_1",
+      status: "not_boarded",
+      note: "Last seen at the mooring line.",
+    });
+    await appendOfflineChecklistCheck(tripId, {
+      checklistItemId,
+      status: "checked",
+      note: "Oxygen kit checked at the dock.",
+    });
+
+    // Nora is erased; the refreshed copy shows her seat under the erased name.
+    const refreshed = await saveOfflineManifest(
+      withDivers([OFFLINE_ERASED_NAME, "Ari Moss"], 21, 2),
+    );
+    expect(refreshed.events.map((event) => [event.note, event.noteDisposition])).toEqual([
+      [null, "discarded_erasure_cutoff"],
+      ["Last seen at the mooring line.", undefined],
+    ]);
+    expect(refreshed.events.map((event) => event.syncStatus)).toEqual(["pending", "pending"]);
+    expect(refreshed.checklistEvents[0]?.note).toBe("Oxygen kit checked at the dock.");
+  });
+
+  it("mirrors the server's erased-name sentinel", () => {
+    expect(OFFLINE_ERASED_NAME).toBe(ANONYMIZED_PERSON_NAME);
   });
 
   it("does not replace a newer same-epoch snapshot when an older tab saves late", async () => {
