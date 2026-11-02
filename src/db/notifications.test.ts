@@ -1082,6 +1082,7 @@ describe("what the retry queue is allowed to hold", () => {
         sent: 0,
         queued: 0,
         failed: 0,
+        held: { sent: 0, failed: 0 },
       });
     } finally {
       vi.unstubAllEnvs();
