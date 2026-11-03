@@ -133,7 +133,7 @@ describe("the retired promo tables forward to deals", () => {
 
     const [intent] = await db
       .insert(paymentOperationIntents)
-      .values({ shopId, kind: "checkout_session", idempotencyKey: "bridge-intent" })
+      .values({ shopId, kind: "checkout_session", tripId })
       .returning();
     if (!intent) throw new Error("intent insert failed");
     const [tagged] = await db
