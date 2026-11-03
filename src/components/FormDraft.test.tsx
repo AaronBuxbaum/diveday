@@ -5,7 +5,7 @@ import { StrictMode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { rendersFlush } from "@/test/button-flush";
-import { FormDraft, forgetUnsavedDrafts } from "./FormDraft";
+import { FormDraft } from "./FormDraft";
 
 const saveFormDraftAction = vi.fn(async (_form: string, _fields: Array<[string, string]>) => {});
 const discardFormDraftAction = vi.fn(async (_form: string) => {});
@@ -39,7 +39,6 @@ function renderForm(draft: { fields: Record<string, string>; savedAtLabel: strin
 
 afterEach(() => {
   cleanup();
-  forgetUnsavedDrafts();
   vi.resetAllMocks();
   vi.useRealTimers();
 });
