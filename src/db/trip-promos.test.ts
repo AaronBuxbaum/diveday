@@ -128,7 +128,7 @@ describe("the deal: an offer with a discount (in-memory PGlite)", () => {
     );
     // The test environment sets neither APP_HOST nor SES_*, so no email
     // actually goes out (same degrade as inviteWaitlistDiver's own test) —
-    // this still proves Stripe succeeded, the row landed `sent`, and the
+    // this still proves Stripe succeeded, the row landed `active`, and the
     // matching logic found both entries, independent of email delivery.
     expect(outcome).toMatchObject({ ok: true, recipientCount: 0 });
     if (!outcome.ok) throw new Error("expected success");
@@ -136,7 +136,7 @@ describe("the deal: an offer with a discount (in-memory PGlite)", () => {
 
     const [promo] = await listTripLastMinutePromos(db, shop.id, openTrip.id);
     expect(promo).toMatchObject({
-      status: "sent",
+      status: "active",
       discountPercent: 50,
       code: outcome.code,
       stripeCouponId: "coupon_1",
