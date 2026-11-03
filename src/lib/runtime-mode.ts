@@ -38,6 +38,12 @@ export type RuntimeMode = Readonly<{
    * committed fixtures instead of fetching. Needs the harness opt-in or a non-production runtime.
    */
   syntheticFixtures: boolean;
+  /**
+   * The e2e harness may sign a `*.demo.invalid` account in with the demo password even when its
+   * shop is not a demo (`privateShop({ demo: false })`, issue #2783). `is_demo` stays a visitor's
+   * playground; fixture-ness is a property of the process.
+   */
+  fixtureSignIn: boolean;
   /** Cookies a flow sets itself (locale, demo, party return) carry `Secure`: production, not the e2e fleet. */
   secureCookies: boolean;
   /** Session cookies (proxy, Better Auth) carry `Secure`: everything except the e2e fleet's HTTP loopback. */
@@ -55,6 +61,7 @@ export function runtimeMode(env: Environment = process.env): RuntimeMode {
       testRoutesOpen: false,
       capturePhotos: false,
       syntheticFixtures: false,
+      fixtureSignIn: false,
       secureCookies: true,
       secureSessionCookies: true,
       warnMemoryRateLimit: env.NODE_ENV === "production",
@@ -71,6 +78,7 @@ export function runtimeMode(env: Environment = process.env): RuntimeMode {
     capturePhotos: harness,
     syntheticFixtures:
       (harness || env.NODE_ENV !== "production") && env.DIVEDAY_DISABLE_EXTERNAL_HTTP === "1",
+    fixtureSignIn: harness,
     secureCookies: env.NODE_ENV === "production" && !harness,
     secureSessionCookies: !harness,
     warnMemoryRateLimit: env.NODE_ENV === "production" && !harness,
