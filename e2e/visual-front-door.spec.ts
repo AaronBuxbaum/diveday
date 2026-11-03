@@ -955,8 +955,9 @@ for (const scheme of ["light", "dark"] as const) {
         // One hand-entered diver is enough: seating owes a waiver on join
         // (src/db/seat-diver.ts), the departure is inside the operational
         // horizon, so Today gains a waiver row.
-        await page.goto(`/shop/${unique}/bookings/new`);
+        await page.goto(`/shop/${unique}?call=1`);
         await page.getByRole("link", { name: /Two-Tank Morning Reef/ }).click();
+        await page.waitForURL(/\/trips\/[^/?]+\?add=1/);
         await page.getByRole("link", { name: "Add diver" }).click();
         await page.waitForURL(/\/divers\/new\?/);
         await page.getByLabel("Full name").fill("Marisol Vega");

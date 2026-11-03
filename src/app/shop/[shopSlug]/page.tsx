@@ -61,6 +61,7 @@ import {
 } from "@/lib/today";
 import { shopDayBounds, utcToWallTime } from "@/lib/zoned";
 import { AUTH_NOTICES } from "./_components/auth-notices";
+import { CallPanelSlot } from "./_components/call/CallPanelSlot";
 
 // `instant = true` asserts that navigating *into* this page paints immediately — this segment's
 // `loading.tsx`, with no request read above it. Since the staff shell became synchronous (issue
@@ -119,8 +120,7 @@ export const metadata: Metadata = {
 };
 
 /**
- * **The shop home is the day's spine** (ADR
- * 20260827-clearwater-surface-language, decision 4).
+ * **The shop home is the day's spine** (ADR 20260827-clearwater-surface-language, decision 4).
  *
  * Two questions, in order, exactly as before: can the boats leaving today
  * sail, and who needs me before they do? What changed is where the answer
@@ -134,7 +134,7 @@ export const metadata: Metadata = {
  * The ADR rejected a view (or phase) control outright: the clock already
  * knows. A `?view=` therefore no longer selects anything and is not read here
  * — a request carrying one is redirected to the bare home by `src/proxy.ts`,
- * so the canonical URL for this page is `/shop/<slug>` and nothing else.
+ * while `?call=1` opens the Add a booking panel above the day (#2737).
  */
 export default async function ShopPage({
   params,
@@ -152,8 +152,7 @@ export default async function ShopPage({
     q?: string;
   }>;
 }) {
-  // The session and the two route-param promises don't depend on one
-  // another — resolve them together instead of serially.
+  // The session and the two route-param promises are independent: resolved together.
   const [session, { shopSlug }, { created, series, reset, email, notice, noted, q }] =
     await Promise.all([requireStaffSession(), params, searchParams]);
   const seriesCount = series ? Number.parseInt(series, 10) : 0;
@@ -161,6 +160,7 @@ export default async function ShopPage({
   return (
     <StaffPage width="full">
       <FlashParams params={["created", "series", "reset", "email", "notice", "noted"]} />
+      <CallPanelSlot session={session} shopSlug={shopSlug} searchParams={searchParams} />
       {/* The queue join is the one real wait on this page; a content-shaped
           fallback keeps a cold nav from reading as a blank hang (principle 1). */}
       <Suspense fallback={<TodaySkeleton />}>

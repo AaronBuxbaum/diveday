@@ -188,9 +188,10 @@ function refuse(
 }
 
 /**
- * The date request this seating answers, when the door was opened from one
- * (`bookings/new?request=`). A uuid or nothing; the writer scopes it to the
- * session's shop, so a forged id reaches no other tenant's interest.
+ * The date request this seating answers, when the departure's add band was
+ * opened from one (`trips/[id]?add=1&request=`). A uuid or nothing; the writer
+ * scopes it to the session's shop, so a forged id reaches no other tenant's
+ * interest.
  */
 const answeredRequestForm = z.object({ request: formValue() });
 
@@ -235,10 +236,10 @@ async function seat(
   // seat has been linked to this offered departure. The booking transaction
   // serializes the count and closes the parent on the final seat.
   if (requestId && result.dateRequestPartyComplete === false) {
-    const requestPath = shopPath(landing.shopSlug, "bookings", "new", landing.tripId);
+    const tripPath = shopPath(landing.shopSlug, "trips", landing.tripId);
     return revalidateAndRedirect(
-      requestPath,
-      noticeUrl(requestPath, "party-seat-added", { request: requestId }),
+      tripPath,
+      noticeUrl(tripPath, "party-seat-added", { add: "1", request: requestId }),
     );
   }
   const settled: SeatLanding = { ...landing, personId: result.personId };
@@ -380,6 +381,13 @@ export async function seatNewDiverAction(doorId: SeatDoorId, shopSlug: string, f
       search.set("confirmName", parsed.data.fullName);
       if (parsed.data.email) search.set("confirmEmail", parsed.data.email);
       if (parsed.data.phone) search.set("confirmPhone", parsed.data.phone);
+      // The prompt is answered on the same band, so the request it was opened
+      // from rides along and the seat it makes still closes that request.
+      const requestId = answeredRequestId(formData);
+      if (requestId) {
+        search.set("add", "1");
+        search.set("request", requestId);
+      }
 
       const [path, query] = back.split("?");
       const existingParams = new URLSearchParams(query);

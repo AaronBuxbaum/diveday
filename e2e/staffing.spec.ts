@@ -195,7 +195,7 @@ test.describe("staffing", () => {
 
     // One diver aboard, and now the boat needs somebody in the water with them.
     const tripId = await seededTripId(page, "blue-mantis", title);
-    await page.goto(`/shop/blue-mantis/bookings/new/${tripId}`);
+    await page.goto(`/shop/blue-mantis/trips/${tripId}?add=1`);
     await page.getByRole("link", { name: "Add diver", exact: true }).click();
     await page.waitForURL(/\/divers\/new/);
     await page.getByLabel("Full name").fill("Waiting On Crew");

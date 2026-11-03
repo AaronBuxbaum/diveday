@@ -288,6 +288,6 @@ describe("the door", () => {
   it("carries the request into the booking flow, whether or not it is linked", () => {
     row({});
     const book = screen.getByRole("link", { name: "Create a booking" });
-    expect(book.getAttribute("href")).toBe(`/shop/blue-mantis/bookings/new?request=${BASE.id}`);
+    expect(book.getAttribute("href")).toBe(`/shop/blue-mantis?call=1&request=${BASE.id}`);
   });
 });

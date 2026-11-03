@@ -13,6 +13,12 @@ import { rentalFitLine } from "@/lib/dive-prep";
 import { newDiverHref } from "@/lib/person-fields";
 import type { FormNotice } from "@/lib/staff-notices";
 
+/** The date request a band was opened from, reduced to what the forms carry. */
+export type SeatRequestContext = {
+  id: string;
+  prefill?: { fullName?: string; email?: string; phone?: string };
+};
+
 /** What the add-diver band reads, built once by `TripRosterContent`. */
 export type AddDiverContext = {
   shopSlug: string;
@@ -62,6 +68,12 @@ export type AddDiverContext = {
    * is full and offers no one a place on a list.
    */
   waitlistOn?: boolean;
+  /**
+   * The date request the band was opened from (`?request=`). Every seat it
+   * makes posts the id, so the seat closes the request; a search keeps it;
+   * a request from somebody not on file prefills the new diver.
+   */
+  request?: SeatRequestContext;
   className?: string;
 };
 
@@ -110,21 +122,40 @@ export function AddDiverSection({
     shopRentalItems,
     walkInOpen = false,
     waitlistOn = true,
+    request,
   } = context;
   const t = staffTranslator(locale);
   const searched = query.length > 0;
-  const bookNewDiver = newDiverHref(shopSlug, { query, surface: "departure", tripId });
+  // What every door for someone new carries from the request: its id, and the
+  // name, email and phone they asked with when they are not on file.
+  const fromRequest = request
+    ? {
+        request: request.id,
+        name: request.prefill?.fullName,
+        email: request.prefill?.email,
+        phone: request.prefill?.phone,
+      }
+    : {};
+  const requestFields = request ? { request: request.id } : undefined;
+  const bookNewDiver = newDiverHref(shopSlug, {
+    query,
+    surface: "departure",
+    tripId,
+    ...fromRequest,
+  });
   const walkInNewDiver = newDiverHref(shopSlug, {
     query,
     surface: "departure",
     walkIn: true,
     tripId,
+    ...fromRequest,
   });
   const waitNewDiver = newDiverHref(shopSlug, {
     query,
     surface: "departure",
     tripId,
     waitlist: true,
+    ...fromRequest,
   });
   const bookLabel = t("trips.addDiver.addNewDiverAction", { query });
   const walkInLabel = t("trips.addDiver.addAsWalkIn");
@@ -143,6 +174,7 @@ export function AddDiverSection({
           // refused.
           seatKnownAction={full ? addKnownToWaitlistAction : addExistingDiverAction}
           seatNewAction={full ? addToWaitlistAction : addBookingAction}
+          hiddenFields={requestFields}
           t={t}
           locale={locale}
           timeZone={timeZone}
@@ -159,6 +191,7 @@ export function AddDiverSection({
               again, and "Add diver" stays the door for someone new. */}
           <PersonSearchForm
             query={query}
+            hiddenFields={requestFields}
             label={t("trips.addDiver.findLabel")}
             placeholder={t("trips.addDiver.findPlaceholder")}
             addDiverHref={waitNewDiver}
@@ -171,6 +204,7 @@ export function AddDiverSection({
                   candidates,
                   tripId,
                   seatAction: addKnownToWaitlistAction,
+                  requestId: request?.id,
                   personHref: (personId) => `/shop/${shopSlug}/divers/${personId}`,
                   addLabel: t("trips.addDiver.addToWaitlist"),
                   pendingLabel: t("seatDiver.adding"),
@@ -193,6 +227,7 @@ export function AddDiverSection({
         <>
           <PersonSearchForm
             query={query}
+            hiddenFields={requestFields}
             label={t("trips.addDiver.findLabel")}
             placeholder={t("trips.addDiver.findPlaceholder")}
             // At the counter the band is one field: someone new is offered by
@@ -209,6 +244,7 @@ export function AddDiverSection({
                     candidates,
                     tripId,
                     seatAction: addExistingDiverAction,
+                    requestId: request?.id,
                     invite: offerAction
                       ? {
                           action: offerAction,

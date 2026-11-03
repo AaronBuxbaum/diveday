@@ -9,6 +9,7 @@ import { saveFormDraftIfVacant } from "@/db/form-drafts";
 import { readForm } from "@/lib/form-parse";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
+import { callPanelHref } from "@/lib/took-a-call";
 import { uuidParam } from "@/lib/uuid";
 
 const requestForm = z.object({
@@ -52,5 +53,5 @@ export async function requestFromMessageAction(formData: FormData): Promise<void
   const saved = await saveFormDraftIfVacant(db, { shopId, personId, form: "took_a_call", fields });
   if (saved === "empty") redirect(noticeUrl(returnPath, "request-nothing"));
   if (saved === "exists") redirect(noticeUrl(returnPath, "request-draft-exists"));
-  redirect(`${shopPath(shopSlug, "bookings", "new")}?outcome=date-request#call`);
+  redirect(callPanelHref(shopSlug, { outcome: "date-request" }, "call"));
 }

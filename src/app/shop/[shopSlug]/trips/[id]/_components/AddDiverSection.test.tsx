@@ -485,3 +485,107 @@ describe("AddDiverSection spacing", () => {
     },
   );
 });
+
+/**
+ * **A band opened from a date request** (#2737): what the retired
+ * pick-the-diver page carried. Every seat the band can make posts the
+ * request, so the seat closes it; a search keeps it; a request from somebody
+ * not on file prefills the new diver.
+ */
+describe("AddDiverSection opened from a date request", () => {
+  const REQUEST = "6f1c2c9e-1111-4000-8000-000000000001";
+  const candidate = {
+    person: { id: "person-1", fullName: "Avery Diver", email: "avery@example.com" },
+    rentalFit: null,
+  } as unknown as BookableDiver;
+  const base = {
+    shopSlug: "blue-mantis",
+    tripId: "trip-1",
+    full: false,
+    addBookingAction: action,
+    addToWaitlistAction: action,
+    addKnownToWaitlistAction: action,
+    addExistingDiverAction: action,
+    locale: "en-US",
+    timeZone: "America/Cancun",
+  };
+
+  function requestFields(container: HTMLElement) {
+    return Array.from(
+      container.querySelectorAll<HTMLInputElement>('input[type="hidden"][name="request"]'),
+    ).map((input) => input.value);
+  }
+
+  it("posts the request with the pick, and keeps it through a search", () => {
+    const { container } = render(
+      <AddDiverSection
+        context={{ ...base, query: "Avery", candidates: [candidate], request: { id: REQUEST } }}
+      />,
+    );
+    const pick = screen.getByRole("button", { name: /Add Avery Diver/ }).closest("form");
+    expect(pick?.querySelector('input[name="request"]')).toHaveValue(REQUEST);
+    const search = screen.getByRole("searchbox").closest("form");
+    expect(search?.querySelector('input[name="request"]')).toHaveValue(REQUEST);
+    expect(requestFields(container).every((value) => value === REQUEST)).toBe(true);
+  });
+
+  it("posts the request from the name-match prompt's every answer", () => {
+    const { container } = render(
+      <AddDiverSection
+        context={{
+          ...base,
+          query: "",
+          candidates: [],
+          request: { id: REQUEST },
+          confirmName: "Avery Diver",
+          confirmEmail: "avery@example.com",
+          confirmMatches: [
+            { id: "person-1", fullName: "Avery Diver", email: "avery@example.com" },
+          ] as unknown as SimilarDiver[],
+        }}
+      />,
+    );
+    const forms = Array.from(container.querySelectorAll("form")).filter(
+      (form) => form.querySelector('input[name="fullName"], input[name="personId"]') !== null,
+    );
+    expect(forms.length).toBeGreaterThan(1);
+    for (const form of forms) {
+      expect(form.querySelector('input[name="request"]')).toHaveValue(REQUEST);
+    }
+  });
+
+  it("prefills someone new from a request by somebody not on file", () => {
+    render(
+      <AddDiverSection
+        context={{
+          ...base,
+          query: "",
+          candidates: [],
+          request: {
+            id: REQUEST,
+            prefill: {
+              fullName: "Imani Okafor",
+              email: "imani@example.com",
+              phone: "+13055550101",
+            },
+          },
+        }}
+      />,
+    );
+    const href = screen.getByRole("link", { name: "Add diver" }).getAttribute("href") ?? "";
+    const query = new URL(href, "https://diveday.test").searchParams;
+    expect(query.get("name")).toBe("Imani Okafor");
+    expect(query.get("email")).toBe("imani@example.com");
+    expect(query.get("phone")).toBe("+13055550101");
+    expect(query.get("request")).toBe(REQUEST);
+    expect(query.get("tripId")).toBe("trip-1");
+  });
+
+  it("carries no request field when the band was not opened from one", () => {
+    const { container } = render(
+      <AddDiverSection context={{ ...base, query: "Avery", candidates: [candidate] }} />,
+    );
+    expect(requestFields(container)).toEqual([]);
+    expect(screen.getByRole("button", { name: /Add Avery Diver/ })).toBeInTheDocument();
+  });
+});

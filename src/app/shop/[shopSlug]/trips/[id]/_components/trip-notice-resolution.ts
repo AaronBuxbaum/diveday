@@ -216,6 +216,13 @@ const NOTICE_KEYS: Record<
     key: "trips.notices.bookingRestoreDateRequestFull",
   },
   "diver-added": { form: "add-diver", tone: "success", key: "trips.notices.diverAdded" },
+  // One seat of a date request's party is booked and the request stays open
+  // on the band until the rest are (`seat-diver.ts`, #2737).
+  "party-seat-added": {
+    form: "add-diver",
+    tone: "success",
+    key: "trips.notices.partySeatAdded",
+  },
   // Seated for a later day and told so: the confirmation an online booking
   // gets went out (fourth UX review, item 3).
   "diver-added-confirmed": {

@@ -16,14 +16,14 @@ const ITEMS: BookingRequestCardItem[] = [
     subject: "Wants to dive: A night dive, if you still run them",
     diversLabel: "3 divers",
     dateLabel: "Aug 2, 2026",
-    href: "/shop/blue-mantis/bookings/new?request=r-1",
+    href: "/shop/blue-mantis?call=1&request=r-1",
   },
   {
     id: "r-2",
     name: "Hannah Okafor",
     subject: "Wants to dive: A shallow reef morning",
     diversLabel: "1 diver",
-    href: "/shop/blue-mantis/bookings/new?request=r-2",
+    href: "/shop/blue-mantis?call=1&request=r-2",
   },
 ];
 

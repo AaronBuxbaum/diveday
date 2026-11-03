@@ -1,11 +1,9 @@
-import type { Metadata } from "next";
-import { connection } from "next/server";
+import Link from "next/link";
+import { notFound } from "next/navigation";
 import { bindFormDraft, draftForForm } from "@/app/actions/form-draft-props";
-import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { FormDraft } from "@/components/FormDraft";
 import { formDraftCopy } from "@/components/form-draft-copy";
-import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import {
   type BookingRequestCardItem,
@@ -14,10 +12,11 @@ import {
 } from "@/components/seat-diver/BookingRequestCards";
 import { PersonFieldTrio } from "@/components/seat-diver/PersonFieldTrio";
 import { buttonClass } from "@/components/ui/button";
-import { cardSummaryClass, sectionCardClass } from "@/components/ui/card";
+import { cardSummaryClass, SectionCard, sectionCardClass } from "@/components/ui/card";
 import { SummaryCaret } from "@/components/ui/disclosure";
 import { FieldActions, FormStatus } from "@/components/ui/form";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
+import type { AppDb } from "@/db/client";
 import { readFormDraft } from "@/db/form-drafts";
 import {
   type DateInterestRow,
@@ -26,8 +25,8 @@ import {
 } from "@/db/interest-dates";
 import { PAGE_SIZE } from "@/db/paging";
 import { offsetUpcomingTripsWithCounts } from "@/db/trips";
-import { requestLocale } from "@/i18n/request";
-import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
+import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
+import type { DiveDaySession } from "@/lib/auth";
 import {
   calendarDateInTimezone,
   formatCalendarDate,
@@ -38,32 +37,16 @@ import { nowDate } from "@/lib/clock";
 import { dateRequestsByDay, FLEXIBLE_WINDOW_DAYS } from "@/lib/date-requests";
 import { departurePickerWindow } from "@/lib/departure-picker-window";
 import { formatShortDate, formatTime, formatTimeRange } from "@/lib/format";
-import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
-import { isCallOutcome } from "@/lib/took-a-call";
+import { callPanelHref, isCallOutcome } from "@/lib/took-a-call";
 import { seatsOnSale, spotsRemaining } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
-import { CallNoteSlot } from "./_components/CallNoteSlot";
-import type { DeparturePickerDay } from "./_components/DeparturePicker";
-import { DepartureWindowSection } from "./_components/DepartureWindowSection";
-import { type CallDeparture, TookACallFields } from "./_components/TookACallFields";
-import { tookACallAction } from "./call-actions";
-
-// `instant = true` asserts that navigating *into* this page paints
-// immediately — this segment's `loading.tsx`, with no request read above it.
-// Since the staff shell became synchronous (issue 1446) that holds for a cold,
-// direct visit too: the shell's session, shop row and nav stream in beside the
-// page from `ShopChrome` rather than above it, so the route gets a static
-// shell and its own reads are the only ones the reader waits on. See ADR
-// 20260804-instant-navigation.
-export const instant = true;
-
-export const metadata: Metadata = {
-  title: "New booking — DiveDay",
-  // Staff-only operations surface, never a public document.
-  robots: { index: false, follow: false },
-};
+import { tookACallAction } from "../../call-actions";
+import { CallNoteSlot } from "./CallNoteSlot";
+import type { DeparturePickerDay } from "./DeparturePicker";
+import { DepartureWindowSection } from "./DepartureWindowSection";
+import { type CallDeparture, TookACallFields } from "./TookACallFields";
 
 /**
  * How many departures the picker offers at once. A page, not a shop's whole
@@ -85,7 +68,7 @@ const TRIP_PAGE_SIZE = PAGE_SIZE.list;
  */
 const CALL_DEPARTURE_LOOKAHEAD = 40;
 
-/** The `?notice=` the call form can come back with, from `./call-actions.ts`. */
+/** The `?notice=` the call form can come back with, from `../../call-actions.ts`. */
 const CALL_NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
   "call-invalid": { tone: "danger", key: "calls.notice.invalid" },
   "call-name": { tone: "danger", key: "calls.notice.name" },
@@ -96,48 +79,54 @@ const CALL_NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> =
   "call-waitlist-off": { tone: "warning", key: "calls.notice.waitlistOff" },
 };
 
+/** What the shop home's URL says about the panel (`?call=1`). */
+export type CallPanelSearch = {
+  page?: string;
+  request?: string;
+  notice?: string;
+  outcome?: string;
+  from?: string;
+};
+
 /**
- * The global "Add a booking" door, step one: which departure?
+ * **"Add a booking" when no departure is known** (#2737): the shop home's
+ * panel, opened by `?call=1` (`callPanelHref`). A door that knows the boat
+ * opens that departure's add band instead (`/trips/<id>?add=1`).
  *
- * Every other staff door starts somewhere else — a trip you already opened, a
- * diver record you already found, the check-in counter — so "someone just
- * called, put them on Saturday's boat" meant navigating to a trip first just
- * to reach a form. This is the same two decisions in their natural order:
- * which departure (here), then who (`./[tripId]/page.tsx`).
- *
- * The chosen departure is a path segment, not a `?tripId=`, because it is a
- * *place* the staffer is standing — bookmarkable, shareable, and the URL a
- * refusal can bounce back to while adding only its own `?notice=`.
+ * "Someone just called, put them on Saturday's boat": the departures with a
+ * seat, by day, and a row is the door to that boat's add band, a date request
+ * being booked carried along. It used to be a page of its own, step one of
+ * two; step two is the departure's own Divers tab now.
  *
  * **A caller with no seat to book is taken down at the foot** (N-22): the
  * boat they want is full, so it is a wait-list entry, or the day they want is
- * not on the board, so it is a date request. That form was its own "Took a
- * call" page, reachable only from search, routing to these same three answers;
- * the booking one is this page, so the other two live under it. It keeps a
- * draft as it is typed (ADR 20260906-before-you-ask, decision 3), which is what
- * a call interrupted mid-sentence needs.
+ * not on the board, so it is a date request. It keeps a draft as it is typed
+ * (ADR 20260906-before-you-ask, decision 3), which is what a call interrupted
+ * mid-sentence needs.
  */
-export default async function NewBookingPage({
-  params,
-  searchParams,
+export async function CallPanel({
+  db,
+  shop,
+  user,
+  shopSlug,
+  locale,
+  t,
+  search,
 }: {
-  params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{
-    page?: string;
-    request?: string;
-    notice?: string;
-    outcome?: string;
-    from?: string;
-  }>;
+  db: AppDb;
+  shop: { id: string; timezone: string; waitlistEnabled: boolean };
+  user: DiveDaySession["user"];
+  shopSlug: string;
+  locale: string;
+  t: StaffTranslator;
+  search: CallPanelSearch;
 }) {
-  await connection(); // live seat counts — render per request, never a build-time shell
-  const { shopSlug } = await params;
-  const { page, request, notice, outcome, from } = await searchParams;
-  const { db, shop, session } = await requireShopSurface(shopSlug);
-  const draftBinding = bindFormDraft(session.user);
-  const locale = await requestLocale(shop.defaultLocale);
-  const t = staffTranslator(locale);
+  const { page, request, notice, outcome, from } = search;
+  const draftBinding = bindFormDraft(user);
   const requestId = request ? uuidParam(request) : null;
+  // A `?request=` this shop does not have is a 404, as on the departure's
+  // band: never a picker that quietly drops what the caller asked for.
+  if (request && !requestId) notFound();
   // Today and tomorrow unless the staffer asked for another day (UX audit
   // 2026-10-07, item 19): the departures in that window, paged only if a
   // window ever holds more than a page.
@@ -153,7 +142,7 @@ export default async function NewBookingPage({
       now: pickerWindow.start,
       monthEnd: pickerWindow.end,
     }),
-    readFormDraft(db, shop.id, session.user.personId, "took_a_call"),
+    readFormDraft(db, shop.id, user.personId, "took_a_call"),
     offsetUpcomingTripsWithCounts(db, shop.id, { limit: CALL_DEPARTURE_LOOKAHEAD }),
   ]);
   // The wait list is only for a full boat, so the call form offers only those.
@@ -205,6 +194,7 @@ export default async function NewBookingPage({
     listOpenDateInterestsForDates(db, shop.id, lookupDates),
   ]);
   const selectedRequest = requestContext[0] ?? null;
+  if (requestId && !selectedRequest) notFound();
   const { byDay: relevantRequestsByDate, firstDayById: relevantDateById } = dateRequestsByDay(
     relevantRows,
     tripDates,
@@ -216,12 +206,12 @@ export default async function NewBookingPage({
   const requestName = (row: DateInterestRow) => row.name ?? t("requests.anonymous");
   const requestDivers = (row: DateInterestRow) =>
     t("requests.divers", { count: Math.max(1, row.partySize ?? 1) });
+  /** A departure's add band, or this panel, with the request being booked carried along. */
   const bookingPath = (requestForBooking?: string, tripId?: string) => {
-    const path = tripId
-      ? `/shop/${shopSlug}/bookings/new/${tripId}`
-      : `/shop/${shopSlug}/bookings/new`;
-    if (!requestForBooking) return path;
-    return `${path}?request=${encodeURIComponent(requestForBooking)}`;
+    if (!tripId) return callPanelHref(shopSlug, { request: requestForBooking });
+    const query = new URLSearchParams({ add: "1" });
+    if (requestForBooking) query.set("request", requestForBooking);
+    return `${shopPath(shopSlug, "trips", tripId)}?${query.toString()}`;
   };
   const relevantRequestItems: BookingRequestCardItem[] = relevantDateById.size
     ? relevantRows
@@ -275,16 +265,17 @@ export default async function NewBookingPage({
   }));
 
   return (
-    <StaffPage width="reading">
-      {/* The eyebrow is the way up, in the board's own word. It used to read
-          "Bookings" — a nav group with no page behind it, which principle 10
-          forbids — with a second back link to the board underneath it. */}
-      <ShopPageHeader
-        eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.board)}
-        eyebrowHref={shopPath(shopSlug, "schedule", "board")}
-        title={t("bookings.new.title")}
-      />
-
+    <SectionCard
+      id="add-a-booking"
+      title={t(STAFF_DESTINATION_LABEL_KEYS.addBooking)}
+      actions={
+        <Link href={shopPath(shopSlug)} className={buttonClass({ variant: "ghost", size: "sm" })}>
+          {t("shared.commandPalette.close")}
+        </Link>
+      }
+      padding="lg"
+      className="scroll-mt-24 print:hidden"
+    >
       {selectedRequest ? (
         <BookingRequestContext
           className="mt-6"
@@ -311,7 +302,7 @@ export default async function NewBookingPage({
       />
 
       <DepartureWindowSection
-        self={`/shop/${shopSlug}/bookings/new`}
+        shopSlug={shopSlug}
         pickerWindow={pickerWindow}
         requestId={selectedRequest?.id ?? null}
         days={pickerDays}
@@ -394,6 +385,6 @@ export default async function NewBookingPage({
           </FieldActions>
         </form>
       </AutoOpenDetails>
-    </StaffPage>
+    </SectionCard>
   );
 }

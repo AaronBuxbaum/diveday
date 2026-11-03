@@ -10,15 +10,16 @@ import type { CalendarDate } from "@/lib/calendar-date";
  * rather than three pages of departures away.
  *
  * A plain GET form, so it works before React owns the page and the chosen day
- * is a URL a staffer can come back to. A date request being booked rides
- * along as a hidden field, the way every other link on the page carries it.
- * Words come from the page: this renders on the server and holds no copy.
+ * is a URL a staffer can come back to. What the page keeps in its own URL
+ * (the open panel's `call`, a date request being booked) rides along as hidden
+ * fields, the way every other link on the page carries it. Words come from the
+ * page: this renders on the server and holds no copy.
  */
 export function DepartureDayNav({
   action,
   day,
   today,
-  request,
+  carry,
   words,
   className = "",
 }: {
@@ -26,13 +27,16 @@ export function DepartureDayNav({
   action: string;
   day: CalendarDate;
   today: CalendarDate;
-  request: string | null;
+  /** Query the page keeps across a jump: name to value. */
+  carry: Record<string, string>;
   words: { dayLabel: string; show: string };
   className?: string;
 }) {
   return (
     <form action={action} method="get" className={`flex items-end gap-2 ${className}`}>
-      {request ? <input type="hidden" name="request" value={request} /> : null}
+      {Object.entries(carry).map(([name, value]) => (
+        <input key={name} type="hidden" name={name} value={value} />
+      ))}
       <Field label={words.dayLabel} markRequired={false} className="w-44">
         <DateField name="from" defaultValue={day} min={today} required />
       </Field>

@@ -105,7 +105,7 @@ tile restating a group — not the counter's count-led anatomy.
 | Courses roster | library (grouped by agency, progression order kept) | Schedule/Hide stay the row's two quiet acts |
 | Promos | one page, two ledgers: the codes grouped by state (live, scheduled, ended), the last-minute deals their own ledger beneath | the codes ledger keeps one Pager (`?page=`), the deals keep theirs (`?dealsPage=`); the create card keeps its worked-in form |
 | Team | inset groups + a people ledger | per-row enable/disable stays immediate; role edits become per-row disclosures saving on close — the page-level bulk Save retires |
-| Add-booking picker | library (departures grouped by day) | unchanged flow, ledger grammar; the pick-the-diver step (`bookings/new/[tripId]`) takes 8a's person rows in the same PR |
+| Add-booking picker | library (departures grouped by day) | unchanged flow, ledger grammar; the pick-the-diver step (the departure's add band since #2737) takes 8a's person rows in the same PR |
 | Order record | already one card | restyles flat, nothing moves |
 | Settings sub-pages | Clearwater 6g owns them | — |
 | `/shop/[shopSlug]/orders/new` | worked-in form card | restyles flat under 6a, no recomposition |

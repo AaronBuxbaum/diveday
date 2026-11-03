@@ -63,7 +63,7 @@ describe("Make a request", () => {
       match: null,
     });
     const to = await redirectedTo(() => requestFromMessageAction(form(MESSAGE_ID)));
-    expect(to).toBe(`/shop/${shop.slug}/bookings/new?outcome=date-request#call`);
+    expect(to).toBe(`/shop/${shop.slug}?call=1&outcome=date-request#call`);
     // Read inside the session's shop, whatever the form posted.
     expect(bookingAskFromMessage).toHaveBeenCalledWith(db, {
       shopId: shop.id,

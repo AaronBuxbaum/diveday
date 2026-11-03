@@ -19,6 +19,7 @@ vi.mock("@/lib/navigation", () => ({
 vi.mock("@/lib/session", () => ({ requireShopSurface: vi.fn() }));
 
 const { seatDiver } = await import("@/db/seat-diver");
+const { findSimilarDivers } = await import("@/db/divers");
 const { getTripWithBooked } = await import("@/db/trips");
 const { HOUR_MS, nowMs } = await import("@/lib/clock");
 const { verifyTripAdmissionGate } = await import("@/lib/trip-admission-gate");
@@ -239,7 +240,7 @@ describe("a walk-in is refused on a boat the counter cannot seat", () => {
     );
   });
 
-  it("keeps an incomplete party on the request context after seating one member", async () => {
+  it("keeps an incomplete party on the departure's open add band, request and all", async () => {
     const bookingId = "55555555-5555-4555-8555-555555555555";
     const requestId = "66666666-6666-4666-8666-666666666666";
     vi.mocked(seatDiver).mockResolvedValue({
@@ -252,7 +253,7 @@ describe("a walk-in is refused on a boat the counter cannot seat", () => {
       confirmation: "skipped",
     } as never);
     await expect(landing(form({ request: requestId }))).resolves.toBe(
-      `/shop/blue-mantis/bookings/new/${TRIP_ID}?notice=party-seat-added&request=${requestId}`,
+      `/shop/blue-mantis/trips/${TRIP_ID}?notice=party-seat-added&add=1&request=${requestId}`,
     );
     expect(seatDiver).toHaveBeenCalledWith(
       expect.anything(),
@@ -274,6 +275,32 @@ describe("a walk-in is refused on a boat the counter cannot seat", () => {
     } as never);
     await expect(landing(form({ request: requestId }))).resolves.toBe(
       `/shop/blue-mantis/trips/${TRIP_ID}?notice=diver-added&bid=${bookingId}`,
+    );
+  });
+
+  it("keeps the request on the name-match prompt a typed name raises", async () => {
+    const requestId = "66666666-6666-4666-8666-666666666666";
+    vi.mocked(findSimilarDivers).mockResolvedValueOnce([{ id: DIVER_ID }] as never);
+    const data = new FormData();
+    data.set("tripId", TRIP_ID);
+    data.set("fullName", "Dana Walker");
+    data.set("email", "dana@example.com");
+    data.set("request", requestId);
+    await expect(seatNewDiverAction("departure", "blue-mantis", data)).rejects.toThrow(
+      `REDIRECT:/shop/blue-mantis/trips/${TRIP_ID}?confirmName=Dana+Walker&confirmEmail=dana%40example.com&add=1&request=${requestId}#hand-entry`,
+    );
+    expect(seatDiver).not.toHaveBeenCalled();
+  });
+
+  it("carries no request onto the prompt when the form named none", async () => {
+    vi.mocked(findSimilarDivers).mockResolvedValueOnce([{ id: DIVER_ID }] as never);
+    const data = new FormData();
+    data.set("tripId", TRIP_ID);
+    data.set("fullName", "Dana Walker");
+    data.set("email", "dana@example.com");
+    data.set("request", "not-a-uuid");
+    await expect(seatNewDiverAction("departure", "blue-mantis", data)).rejects.toThrow(
+      `REDIRECT:/shop/blue-mantis/trips/${TRIP_ID}?confirmName=Dana+Walker&confirmEmail=dana%40example.com#hand-entry`,
     );
   });
 

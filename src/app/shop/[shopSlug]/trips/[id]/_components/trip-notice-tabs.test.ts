@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DETAILS_FORMS, pageNoticesFor, ROSTER_FORMS } from "./trip-notice-tabs";
+import { DETAILS_FORMS, pageNoticesFor, ROSTER_FORMS, showsDetailsTab } from "./trip-notice-tabs";
 
 describe("which tab a save lands on", () => {
   it("returns a snorkeler and rider price save to Details, where the row lives", () => {
@@ -34,5 +34,18 @@ describe("pageNoticesFor", () => {
       rootPageNotice: undefined,
       rosterPageNotice: undefined,
     });
+  });
+});
+
+describe("showsDetailsTab", () => {
+  const saved = { form: "timing", tone: "success", text: "Saved" } as const;
+  it("opens Details when asked, or when a Details form answered", () => {
+    expect(showsDetailsTab("details", undefined, undefined)).toBe(true);
+    expect(showsDetailsTab(undefined, undefined, saved)).toBe(true);
+    expect(showsDetailsTab(undefined, undefined, undefined)).toBe(false);
+  });
+
+  it("keeps the add band's Divers tab when `?add=1` rides beside `?view=details`", () => {
+    expect(showsDetailsTab("details", "1", undefined)).toBe(false);
   });
 });

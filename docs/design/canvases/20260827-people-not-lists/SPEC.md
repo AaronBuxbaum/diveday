@@ -223,7 +223,7 @@ when the post-mutation status is empty; visual re-captures (the record has 6).
   "No date given" tail; `Pager`.
 - A row is a door to the diver record when `request.personId` exists — otherwise no door; the
   mailto and "book them" acts render as the row's trailing quiet acts (existing hrefs unchanged:
-  `mailto:` on the email, `/bookings/new?request=<id>`).
+  `mailto:` on the email, `/shop/<slug>?call=1&request=<id>` since #2737).
 - **Tests**: soft-match renders as ink not tint; the add link carries its params; gate unchanged.
 
 ## Empty states (8c–8f)

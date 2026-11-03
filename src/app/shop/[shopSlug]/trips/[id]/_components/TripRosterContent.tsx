@@ -12,6 +12,7 @@ import { DisclosureRowList } from "@/components/ui/disclosure";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { groupLabelClass } from "@/components/ui/group-label";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
+import type { BookableDiver } from "@/db/divers";
 import type { TripGuests } from "@/db/trips";
 import { activityLine } from "@/i18n/activity-labels";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
@@ -24,7 +25,7 @@ import { type FormNotice, noticeForForm, shopPath } from "@/lib/staff-notices";
 import { isFull, seatsOnSale, spotsRemaining } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { recordPaperCourseFormAction } from "../course-actions";
-import { AddDiverSection } from "./AddDiverSection";
+import { AddDiverSection, type SeatRequestContext } from "./AddDiverSection";
 import { carryTargetLabel } from "./carry-target-label";
 import { DealLeadTime } from "./DealLeadTime";
 import { DepartureNoteSection } from "./DepartureNoteSection";
@@ -32,6 +33,7 @@ import { InviteSuggestionsGroup } from "./InviteSuggestionsGroup";
 import { LastMinuteDealSection } from "./LastMinuteDealSection";
 import { MixedTrainingForTrip } from "./MixedTrainingAdvisory";
 import { moveSeatRefusalFor } from "./move-seat-refusal";
+import { OpenAddBand } from "./OpenAddBand";
 import { type RosterArrival, RosterSection } from "./RosterSection";
 import type { PartyPreview, RosterActions, RosterRecord, SeatMove } from "./roster-model";
 import { TrainingPlanWithDepth } from "./TrainingPlanWithDepth";
@@ -133,6 +135,23 @@ export type TripRosterContentContext = {
    * standing at the desk (UX audit 2026-10-07, item 24).
    */
   walkInOpen?: boolean;
+  /**
+   * What the URL asked of the add band. `open` (`?add=1`): it takes the
+   * cursor once the page is drawn (`OpenAddBand`). `request` (`?request=`):
+   * the date request it was opened from, its card above the band, the id
+   * every seat posts, and, when the asker is on file and nothing was typed,
+   * that diver as the band's one match. A request is somebody who asked
+   * ahead, never a walk-in, so the band books a regular seat while one is
+   * open.
+   */
+  addBand?: {
+    open: boolean;
+    request?: {
+      context: SeatRequestContext;
+      card: ReactNode;
+      search?: { query: string; candidates: BookableDiver[] };
+    };
+  };
   /**
    * `acceptsNewDivers`, read by the page against its clock: false on a
    * departure that has sailed, is held or is cancelled, and then no add or
@@ -416,7 +435,12 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
                 timeZone={timezone}
               />
             ) : null,
-          addDiverGroup: !acceptsDivers ? null : <AddDiverGroup context={context} />,
+          addDiverGroup: !acceptsDivers ? null : (
+            <>
+              <AddDiverGroup context={context} />
+              {context.addBand?.open ? <OpenAddBand /> : null}
+            </>
+          ),
         }}
       />
 
@@ -438,12 +462,16 @@ function AddDiverGroup({ context }: { context: TripRosterContentContext }) {
     confirmEmail,
     confirmPhone,
     actions,
-    walkInOpen = false,
   } = context;
-  const { trip, diverCandidates, diverQuery, confirmMatches } = guests;
+  const seatRequest = context.addBand?.request;
+  const { trip, confirmMatches } = guests;
+  const diverQuery = seatRequest?.search?.query ?? guests.diverQuery;
+  const diverCandidates = seatRequest?.search?.candidates ?? guests.diverCandidates;
+  const walkInOpen = (context.walkInOpen ?? false) && !seatRequest;
 
   return (
     <div className="flex flex-col gap-4">
+      {seatRequest?.card}
       {!isFull(seatsOnSale(trip)) ? (
         <Suspense fallback={null}>
           <MixedTrainingForTrip
@@ -480,6 +508,7 @@ function AddDiverGroup({ context }: { context: TripRosterContentContext }) {
           confirmMatches,
           shopRentalItems,
           walkInOpen,
+          request: seatRequest?.context,
         }}
       />
     </div>

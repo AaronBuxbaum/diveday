@@ -286,8 +286,9 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
     alsoMatch: ["/trips", "/schedule/day"],
   },
   // The global "seat a diver" door: an act, declared here because the
-  // registry is the only place a destination may be declared.
-  { id: "addBooking", suffix: "/bookings/new", section: "schedule" },
+  // registry is the only place a destination may be declared. No departure is
+  // known yet, so it opens the shop home's panel and its picker (#2737).
+  { id: "addBooking", suffix: "?call=1", section: "schedule" },
   { id: "staffing", suffix: "/staffing", section: "schedule" },
   // What crews found aboard after their departures and has not gone home yet
   // (batch 4, J2). Filed with the board because every item belongs to a

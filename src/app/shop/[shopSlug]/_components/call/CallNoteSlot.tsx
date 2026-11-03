@@ -2,7 +2,7 @@ import { CallNoteAssist } from "@/components/assists/CallNoteAssist";
 import { assistsAvailable } from "@/db/assists";
 import { getDb } from "@/db/client";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { readCallNoteAction } from "../assist-actions";
+import { readCallNoteAction } from "../../call-assist-actions";
 
 /**
  * The Took-a-call form's scribble box (the `call-note` assist, ADR

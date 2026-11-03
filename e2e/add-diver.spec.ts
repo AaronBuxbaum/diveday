@@ -421,14 +421,17 @@ test("the global Add-booking door seats a diver on a departure chosen from scrat
   // The board's primary action is this door's front entrance.
   await page.goto("/shop/blue-mantis/schedule/board");
   await page.getByRole("link", { name: "Add a booking" }).click();
-  await expect(page).toHaveURL(/\/bookings\/new/);
-  await expect(page.getByRole("heading", { level: 1, name: "New booking" })).toBeVisible();
+  await expect(page).toHaveURL(/\/shop\/blue-mantis\?call=1$/);
+  await expect(page.getByRole("heading", { level: 2, name: "Add a booking" })).toBeVisible();
 
   // Slice 9g of ADR 20260827-the-shops-shelves: the picker is one ledger
   // grouped by day. The date is the group heading — said once, above the run
   // it describes — rather than repeated on every row, which is what a flat
   // list has to do because it has nothing to hang it from.
-  const firstDay = page.getByRole("heading", { level: 3 }).first();
+  const firstDay = page
+    .getByRole("region", { name: "Which departure?" })
+    .getByRole("heading", { level: 3 })
+    .first();
   await expect(firstDay).toBeVisible();
   const dayLabel = ((await firstDay.textContent()) ?? "").trim();
   expect(dayLabel).not.toBe("");
@@ -443,7 +446,7 @@ test("the global Add-booking door seats a diver on a departure chosen from scrat
   await page.getByRole("button", { name: "Search" }).click();
   await page.getByRole("combobox", { name: /Search divers/ }).fill("booking");
   await page.getByRole("option", { name: "Add a booking" }).click();
-  await expect(page).toHaveURL(/\/bookings\/new$/);
+  await expect(page).toHaveURL(/\/shop\/blue-mantis\?call=1$/);
   // The picker opens on today and tomorrow; a departure eight days out is one
   // date away rather than pages of departures away (UX audit 2026-10-07,
   // item 19). A plain GET form, so the chosen day is the URL.
@@ -451,9 +454,10 @@ test("the global Add-booking door seats a diver on a departure chosen from scrat
   await page.getByRole("button", { name: "Show", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`from=${daysFromNow(8)}`));
   await expect(page.getByRole("link", { name: title })).toBeVisible();
-  // The door resolves a chosen trip by id either way.
-  await page.goto(`/shop/blue-mantis/bookings/new/${tripId}`);
-  await expect(page.getByText(title).first()).toBeVisible();
+  // A departure picked there opens its own add band, focused (#2737).
+  await page.getByRole("link", { name: title }).click();
+  await expect(page).toHaveURL(new RegExp(`/trips/${tripId}\\?add=1`));
+  await expect(page.getByRole("searchbox", { name: "Find a returning diver" })).toBeFocused();
 
   // The diver form is a dedicated step shared by all seating doors.
   await page.getByRole("link", { name: "Add diver", exact: true }).click();
@@ -470,12 +474,12 @@ test("the global Add-booking door seats a diver on a departure chosen from scrat
   ).toBeVisible();
 });
 
-test("a refusal from the global door lands on the boat's Divers tab", async ({ page }) => {
+test("a refusal from the add band lands on the boat's Divers tab", async ({ page }) => {
   test.setTimeout(30_000);
   const title = `Global Door Full ${e2eNow().getTime()}`;
   const tripId = await scheduleTrip(page, title, 9, 1);
 
-  await page.goto(`/shop/blue-mantis/bookings/new/${tripId}`);
+  await page.goto(`/shop/blue-mantis/trips/${tripId}?add=1`);
   await page.getByRole("link", { name: "Add diver", exact: true }).click();
   await page.waitForURL(/\/divers\/new/);
   await page.getByLabel("Full name").fill("First Aboard Fay");
@@ -485,7 +489,7 @@ test("a refusal from the global door lands on the boat's Divers tab", async ({ p
 
   // The boat is full now. The refusal lands on that departure's Divers tab,
   // the one place that says why and offers the wait list.
-  await page.goto(`/shop/blue-mantis/bookings/new/${tripId}`);
+  await page.goto(`/shop/blue-mantis/trips/${tripId}?add=1`);
   await page.getByRole("link", { name: "Add diver", exact: true }).click();
   await page.waitForURL(/\/divers\/new/);
   await page.getByLabel("Full name").fill("Too Late Theo");
