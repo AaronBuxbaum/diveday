@@ -15,6 +15,7 @@ import {
   NODE_FLOOR,
   NODE_MAJOR,
 } from "./check-node-version.mjs";
+import { GUARDS } from "./rules-registry.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -292,7 +293,6 @@ describe("the numbers themselves", () => {
   });
 
   it("is wired into pnpm check:repo, or it protects nothing", () => {
-    const runner = readFileSync(path.join(ROOT, "scripts/check-repo.mjs"), "utf8");
-    expect(runner).toContain('["node-version", "check-node-version.mjs"]');
+    expect(GUARDS).toContainEqual(["node-version", "check-node-version.mjs"]);
   });
 });

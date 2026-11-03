@@ -30,7 +30,7 @@ describe("what counts as a physical directional utility", () => {
   /**
    * `border-r` must not eat `border-red-500`, which is the whole reason the
    * pattern is anchored on a boundary rather than a prefix — the same trap
-   * `check-shop-word.mjs` documents for `tienda` inside `trastienda`.
+   * `config/vocabulary.mjs` documents for `tienda` inside `trastienda`.
    */
   it("does not match a colour that starts with the same letters", () => {
     expect(matches("border-r", 'className="border-red-500"')).toEqual([]);

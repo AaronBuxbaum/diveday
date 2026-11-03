@@ -59,7 +59,7 @@ export function bootstrap(
           blockers: state.blockers,
         }
       : "missing; create before handing off nontrivial work",
-    next: "pnpm task:context <area> or pnpm task:context --path <owned-file>",
+    next: "read the .claude/rules/ file whose paths match each file you own, then docs/agents/route-map.md",
   };
 }
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

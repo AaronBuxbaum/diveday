@@ -1,8 +1,7 @@
-import { readFile } from "node:fs/promises";
-
 import { describe, expect, it } from "vitest";
 
 import { phases } from "./check-all.mjs";
+import { GUARDS } from "./rules-registry.mjs";
 
 /**
  * `pnpm check` is the pre-commit gate, so this file cannot run it — that is the whole
@@ -25,11 +24,7 @@ describe("the check phase table", () => {
    * because a check that passes twice looks exactly like a check that passes.
    */
   it("runs nothing that check:repo already spawns", async () => {
-    const spawnedByRepo = [
-      ...(await readFile(new URL("./check-repo.mjs", import.meta.url), "utf8")).matchAll(
-        /"(check-[\w-]+\.mjs)"/g,
-      ),
-    ].map((match) => match[1]);
+    const spawnedByRepo = GUARDS.map(([, script]) => script);
 
     const spawnedHere = phases
       .flatMap((phase) => [...phase.args, ...(phase.andThen?.args ?? [])])

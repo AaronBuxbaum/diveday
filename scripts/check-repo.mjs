@@ -8,7 +8,9 @@
 // of them, and prints a clean per-check block for each — success line or full failure
 // output — then exits non-zero if any check failed.
 //
-// Does not modify any of the underlying check-*.mjs scripts; it only spawns them.
+// Does not modify any of the underlying check-*.mjs scripts; it only spawns them. The list it
+// spawns is `GUARDS` in scripts/rules-registry.mjs, the one index of the repo's written rules;
+// `--list` prints that index (every guard and rule test, the sentence it holds, its holder).
 
 import { spawn } from "node:child_process";
 import { appendFileSync, writeFileSync } from "node:fs";
@@ -16,6 +18,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { checkRepoRecord, checkRepoSummary } from "./repo-check-report.mjs";
+import { GUARDS, renderRegistry, rulesRegistry } from "./rules-registry.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -30,80 +33,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // issue (#2036) turned every open pull request red. It now runs on a schedule
 // (.github/workflows/follow-ups.yml) and as `pnpm check:follow-ups`.
 const CHECK_TIMEOUT_MS = 90_000;
-
-// label -> script path (relative to this file's directory)
-const checks = [
-  ["env", "check-env.mjs"],
-  ["architecture", "check-architecture.mjs"],
-  ["tokens", "check-tokens.mjs"],
-  ["tinted-ink", "check-tinted-ink.mjs"],
-  ["type-ramp", "check-type-ramp.mjs"],
-  ["page-length", "check-page-length.mjs"],
-  ["form-controls", "check-form-controls.mjs"],
-  ["voice", "check-voice.mjs"],
-  ["logical-properties", "check-logical-properties.mjs"],
-  ["db-concurrency", "check-db-concurrency.mjs"],
-  ["image-sizes", "check-image-sizes.mjs"],
-  ["adrs", "check-adrs.mjs"],
-  ["human-decisions", "check-human-decisions.mjs"],
-  ["design-canvases", "check-design-canvases.mjs"],
-  ["docs", "check-doc-links.mjs"],
-  ["glossary", "check-glossary.mjs"],
-  ["agents", "check-agents.mjs"],
-  ["context-budget", "check-context-budget.mjs"],
-  ["e2e-fixtures", "check-e2e-fixtures.mjs"],
-  ["e2e-hygiene", "check-e2e-hygiene.mjs"],
-  ["critical-journeys", "check-critical-journeys.mjs"],
-  ["route-coverage", "check-route-coverage.mjs"],
-  ["loading-skeletons", "check-loading-skeletons.mjs"],
-  ["staff-widths", "check-staff-widths.mjs"],
-  ["uuid-segments", "check-uuid-segments.mjs"],
-  ["notice-codes", "check-notice-codes.mjs"],
-  ["scroll-preservation", "check-scroll-preservation.mjs"],
-  ["exit-curves", "check-exit-curves.mjs"],
-  ["shop-word", "check-shop-word.mjs"],
-  ["seat-word", "check-seat-word.mjs"],
-  ["capability-runbook", "check-capability-runbook.mjs"],
-  ["rental-fit-caps", "check-rental-fit-caps.mjs"],
-  ["icu-plurals", "check-icu-plurals.mjs"],
-  ["live-trips", "check-live-trips.mjs"],
-  ["checkout-purpose", "check-checkout-purpose.mjs"],
-  ["live-people", "check-live-people.mjs"],
-  ["seat-status", "check-seat-status.mjs"],
-  ["person-door", "check-person-door.mjs"],
-  ["event-scope", "check-event-scope.mjs"],
-  ["roll-call-subject", "check-roll-call-subject.mjs"],
-  ["slug-actions", "check-slug-actions.mjs"],
-  ["env-reads", "check-env-reads.mjs"],
-  ["harness-env", "check-harness-env.mjs"],
-  ["action-pins", "check-action-pins.mjs"],
-  ["trip-revision", "check-trip-revision.mjs"],
-  ["time-id-order", "check-time-id-order.mjs"],
-  ["departure-buffer", "check-departure-buffer.mjs"],
-  ["text", "check-source-text.mjs"],
-  ["infra-ascii", "check-infra-ascii.mjs"],
-  ["locale", "check-locale.mjs"],
-  ["copy", "check-copy.mjs"],
-  ["words", "check-words.mjs"],
-  ["bundle-reach", "check-bundle-reach.mjs"],
-  ["domain-strings", "check-domain-strings.mjs"],
-  ["migrations", "check-migrations.mjs"],
-  ["migration-graph", "check-migration-graph.mjs"],
-  ["open-graph", "check-open-graph.mjs"],
-  ["critical-text", "check-critical-text.mjs"],
-  ["ci-change-detection", "check-ci-change-detection.mjs"],
-  ["node-version", "check-node-version.mjs"],
-  ["runner-image", "check-runner-image.mjs"],
-  ["closing-keywords", "check-closing-keywords.mjs"],
-  ["sentry-imports", "check-sentry-imports.mjs"],
-  ["tenant-gates", "check-tenant-gates.mjs"],
-  ["instant", "check-instant.mjs"],
-  ["shop-reads", "check-shop-reads.mjs"],
-  ["redirect-slugs", "check-redirect-slugs.mjs"],
-  ["capability-refusals", "check-capability-refusals.mjs"],
-  ["intl-providers", "check-intl-providers.mjs"],
-  ["assist-prompts", "check-assist-prompts.mjs"],
-];
 
 function runCheck(label, scriptFile) {
   return new Promise((resolve) => {
@@ -148,7 +77,12 @@ function runCheck(label, scriptFile) {
   });
 }
 
-const results = await Promise.all(checks.map(([label, scriptFile]) => runCheck(label, scriptFile)));
+if (process.argv.includes("--list")) {
+  console.log(renderRegistry(await rulesRegistry(path.join(__dirname, ".."))));
+  process.exit(0);
+}
+
+const results = await Promise.all(GUARDS.map(([label, scriptFile]) => runCheck(label, scriptFile)));
 
 let anyFailed = false;
 for (const result of results) {

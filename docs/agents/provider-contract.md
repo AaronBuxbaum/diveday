@@ -26,15 +26,16 @@ Configuration is not observed execution. The bootstrap intentionally reports hoo
 it cannot inspect global host configuration. Repository checks and CI enforce correctness across
 providers. Host convenience adapters must never create unique product policy.
 
-## Retrieve a bounded packet
+## Find the rules for a path
 
-`pnpm task:context <area>` gives invariants and focused tests. Broad design, architecture, glossary
-and roadmap documents are optional references: search relevant headings, not whole documents.
-`pnpm task:context --path src/db/bookings.ts` selects the most specific matching areas, required
-rules and sibling contract tests. An unknown path points to the route map rather than inventing
-a contract. The packet caps candidate test files and preserves all selected invariants.
-`pnpm task:context --recipe <slug>` selects a concrete UI recipe. UI work still needs the actual
-route, capture ID and changed state; a generic recipe is not visual proof.
+Each `.claude/rules/*.md` names its `paths:` in frontmatter; Claude Code loads the file when a
+session reads a matching path, and another provider reads every rule whose paths match the files it
+owns before it edits. The rules hold an area's invariants; [the route map](route-map.md) says where
+the code lives; a sibling `*.test.ts` is the contract. Broad design, architecture, glossary and
+roadmap documents are optional references: search relevant headings, not whole documents. A UI
+recipe is a row in `docs/design/recipes/index.json`, planned with
+`node scripts/visual-recipes.mjs <slug> --plan`; UI work still needs the actual route, capture ID
+and changed state, since a generic recipe is not visual proof.
 
 ## Durable handoffs and decisions
 

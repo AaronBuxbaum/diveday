@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { findSettledTerms } from "./check-shop-word.mjs";
+import { findRefusedWords } from "./check-vocabulary.mjs";
 
 /**
  * This guard exists because the es-ES README's decisions are binding and were
@@ -16,17 +16,19 @@ import { findSettledTerms } from "./check-shop-word.mjs";
  */
 
 /** Run the check over one bundle, returning the rule ids it objected to. */
-function rules(bundle, relative = "src/i18n/locales/es-ES/diver.json") {
-  return findSettledTerms(bundle, { relative }).violations.map((violation) => violation.rule);
+function rules(bundle, file = "diver.json") {
+  return findRefusedWords(bundle, { locale: "es-ES", file }).violations.map(
+    (violation) => violation.rule,
+  );
 }
 
-const STAFF = `src/i18n/locales/es-ES/staff/trips.json`;
+const STAFF = "staff/trips.json";
 
 describe("the words the es-ES README settled", () => {
   it("reads nested keys and counts every string it passed", () => {
     // The walk itself: a rule that silently stopped descending would report a
     // clean tree forever, which is the one failure mode a guard must not have.
-    const result = findSettledTerms({
+    const result = findRefusedWords({
       a: { b: { c: "Reserva tu plaza" } },
       d: "Abre la salida",
       e: 7,
@@ -249,7 +251,7 @@ describe("the words the es-ES README settled", () => {
   });
 
   describe("a buddy team is una pareja de buceo (issue #2098)", () => {
-    const MANIFEST = "src/i18n/locales/es-ES/staff/manifest.json";
+    const MANIFEST = "staff/manifest.json";
 
     it("refuses the gear-shaped phrase the Boat tab used, in a staff bundle", () => {
       expect(rules({ k: "Equipos de buceo" }, MANIFEST)).toEqual(["buddy-team"]);
@@ -380,7 +382,7 @@ describe("the words the es-ES README settled", () => {
     // The failure text is the whole remedy a reader gets. A guard that says
     // "this is wrong" and stops gets satisfied by a second synonym nobody
     // chose either.
-    const [violation] = findSettledTerms({ k: "el descargo" }, { relative: "x" }).violations;
+    const [violation] = findRefusedWords({ k: "el descargo" }, { file: "x" }).violations;
     expect(violation?.says).toContain("exención");
   });
 });

@@ -63,7 +63,7 @@ says **venta minorista**, and that distinction is the point of dropping the word
 | POS / point of sale | POS / punto de venta *(never "TPV", which is peninsular)* |
 
 `trastienda` (a shop's back office, as opposed to the counter) is a different word and stays — do
-not let a find-and-replace on "tienda" eat it. `scripts/check-shop-word.mjs` (in `pnpm check:repo`) now
+not let a find-and-replace on "tienda" eat it. `scripts/check-vocabulary.mjs` (in `pnpm check:repo`) now
 refuses `tienda` in any value here, anchored on a word boundary so `trastienda` — and `entiendas`,
 in the waiver's own English-only notice — still pass. It was added on 2026-08-21 after six strings
 turned up still carrying the word this section had already removed, one of them the sentence
@@ -73,8 +73,8 @@ explaining the certification question on all three public forms.
 of them by 2026-09-04 (issue #1316): `descargo` and `liberación` for the waiver, `punto de
 buceo`/`punto de inmersión` for a dive site, guillemets, and a `viaje` that should have been a
 `salida` — twenty-nine strings between them, one of them a settings heading reading "Puntos de
-buceo". Every rule in that file quotes the section of this README it enforces, and each is paired
-in `check-shop-word.test.mjs` with the near-miss it must **not** take (`trastienda`, `punto de
+buceo". Every row it reads (`config/vocabulary.mjs`) quotes the section of this README it enforces, and each is paired
+in `check-vocabulary.es-ES.test.mjs` with the near-miss it must **not** take (`trastienda`, `punto de
 venta`, `punto de pronóstico`, `país`). A decision recorded here and not checked there has, on the
 evidence, about a fortnight. On 2026-10-13 three words from the vocabulary table below (`ordenador`,
 `aparcamiento`, `móvil`) were found in thirteen strings, the consent line under every phone field among
@@ -208,7 +208,7 @@ file whose other nine mentions all said *salida*.
 The noun is **feminine**, like *la exención*: `la`/`una`/`esta`, and `cancelada`, `programada`,
 `llena`, `próxima`.
 
-**`diver.json` and `content/` are deliberately exempt, and `scripts/check-shop-word.mjs` scopes the
+**`diver.json` and `content/` are deliberately exempt, and `scripts/check-vocabulary.mjs` scopes the
 rule to `staff/` to say so.** Those bundles use *viaje* about thirty times in their marketing,
 switching-guide and demo copy, where the English is loose in the same way — "book a trip", "post-trip recap" — and
 the word is doing a different job: an outing a diver takes, not a row on the schedule board. A
@@ -278,7 +278,7 @@ The noun is **masculine**: `el`/`un`/`este`, and anything reaching back to it ag
 
 **`iniciación` is not banned — it is the entry-level sense now**, which is why
 `trips.depthWarningNoCard` still says *el límite de iniciación* for the depth an Open Water card
-carries. `scripts/check-shop-word.mjs` refuses only *sesión / ratio / clase de iniciación*, the
+carries. `scripts/check-vocabulary.mjs` refuses only *sesión / ratio / clase de iniciación*, the
 shapes that were naming a bautismo, and leaves *curso de iniciación* and *límite de iniciación*
 alone.
 
@@ -306,7 +306,7 @@ The noun is **masculine**: `el`/`un`/`este`, and anything reaching back to it ag
 
 **`traje` is not banned — it names the dry one now.** *Traje seco* is exactly right and must not
 change, *traje estanco* survives in the drysuit's own jargon hint, and a *traje de baño* is a
-swimsuit. `scripts/check-shop-word.mjs` refuses the two shapes the wetsuit labels actually used: a
+swimsuit. `scripts/check-vocabulary.mjs` refuses the two shapes the wetsuit labels actually used: a
 *talla de traje* with no *seco* after it, and a string that is nothing but the word *Traje*.
 
 ## The waiver is **la exención**
@@ -362,7 +362,7 @@ is *la lista de buceadores*. That is a third object and keeps its own words.
 
 **Why the guard is narrow.** *Listado* did not lose: it is the roster's word, and *listados* is an
 ordinary participle as well ("los buceadores listados arriba", `staff/tripPrep.json`).
-`scripts/check-shop-word.mjs` refuses only the noun phrase that can mean nothing but the manifest,
+`scripts/check-vocabulary.mjs` refuses only the noun phrase that can mean nothing but the manifest,
 *listado del barco* / *listado de barco*. Any other *listado* standing in for the manifest is left
 to review, read against its English key.
 
@@ -445,7 +445,7 @@ takes pareja to mean two.
 **Equipo** still means two other things, and both stay: the shop's **staff team** (Settings →
 Equipo) and **gear** (*equipo de alquiler*, *alquiler de equipo de buceo* on a public page). Neither
 is a buddy team, which is exactly why the buddy team cannot be one either.
-`scripts/check-shop-word.mjs` refuses **equipo(s) de buceo** in the staff bundles, where nothing
+`scripts/check-vocabulary.mjs` refuses **equipo(s) de buceo** in the staff bundles, where nothing
 rents gear under that name, refuses **equipo(s)** in any key named for a buddy team, and refuses
 **equipos de compañeros** everywhere. A diver-facing page that rents *equipo de buceo* passes.
 
@@ -468,7 +468,7 @@ and in a sentence (*hacer el check-in*, *ajustar en el check-in*).
 reads as "this person is here", and *Hacer check-in* is twice as wide on the narrowest phone row.
 What the ruling settled is the name of the thing, not the verb on the control. The marketing pages
 say "un toque Registrar" because that is the label on the screen they describe.
-`scripts/check-shop-word.mjs` refuses **registro de llegada** and **llegada y registro**.
+`scripts/check-vocabulary.mjs` refuses **registro de llegada** and **llegada y registro**.
 
 ## How names sort: nothing to do here
 

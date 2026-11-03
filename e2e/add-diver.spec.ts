@@ -456,7 +456,9 @@ test("the global Add-booking door seats a diver on a departure chosen from scrat
   await expect(page.getByRole("link", { name: title })).toBeVisible();
   // A departure picked there opens its own add band, focused (#2737).
   await page.getByRole("link", { name: title }).click();
-  await expect(page).toHaveURL(new RegExp(`/trips/${tripId}\\?add=1`));
+  // The trip page strips `add` from the URL once it has opened the band
+  // (FlashParams), so the query is a race; the path and the focus are the door.
+  await expect(page).toHaveURL(new RegExp(`/trips/${tripId}(\\?add=1)?$`));
   await expect(page.getByRole("searchbox", { name: "Find a returning diver" })).toBeFocused();
 
   // The diver form is a dedicated step shared by all seating doors.
