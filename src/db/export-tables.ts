@@ -11,7 +11,6 @@ import {
   bookingCheckoutBookings,
   bookingCheckouts,
   bookingPaymentEvents,
-  bookingPayments,
   buddyTeamMembers,
   certificationJuniorReviews,
   certifications,
@@ -272,19 +271,13 @@ export const EXPORT_TABLES = {
     order: [asc(tripHelpRequests.createdAt), asc(tripHelpRequests.id)],
     scope: { shopColumn: tripHelpRequests.shopId },
   },
-  bookingPayments: {
-    table: bookingPayments,
-    order: [],
-    scope: { shopColumn: bookingPayments.shopId, bookingColumn: bookingPayments.bookingId },
-  },
-  // The history behind those current rows. `booking_payments` folds into
-  // bookings.csv as one payment_* column set — the state as it stands —
-  // and refunds overwrite it in place, so without this file the bundle
-  // carries a balance and no story. Oldest first, so a reader replaying
-  // the file in order arrives at the folded row.
+  // A booking's money, as its entries (issue #2716). The newest entry per
+  // booking also folds into bookings.csv as its payment_* columns — the
+  // state as it stands. Oldest first in write order, so a reader replaying
+  // the file in order arrives at that folded state.
   bookingPaymentEvents: {
     table: bookingPaymentEvents,
-    order: [asc(bookingPaymentEvents.occurredAt), asc(bookingPaymentEvents.id)],
+    order: [asc(bookingPaymentEvents.occurredAt), asc(bookingPaymentEvents.seq)],
     scope: {
       shopColumn: bookingPaymentEvents.shopId,
       bookingColumn: bookingPaymentEvents.bookingId,

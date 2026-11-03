@@ -4,9 +4,10 @@ import { depthToMeters } from "@/lib/depth-units";
 import { shopDayBounds } from "@/lib/zoned";
 import type { DbExecutor } from "./client";
 import { isDemoShopWithDemoOwnerOrCaptainAccount } from "./demo-account-guard";
+import { paymentEntries } from "./payments";
 import { listTripReadiness } from "./readiness";
 import {
-  bookingPayments,
+  bookingPaymentEvents,
   bookings,
   buddyTeamEvents,
   buddyTeamMembers,
@@ -347,7 +348,6 @@ async function seatTheDivers(
   const probeIds = probe.map((seat) => seat.bookingId);
   if (probeIds.length > 0) {
     await db.delete(waiverRecords).where(inArray(waiverRecords.bookingId, probeIds));
-    await db.delete(bookingPayments).where(inArray(bookingPayments.bookingId, probeIds));
     await db.delete(bookings).where(inArray(bookings.id, probeIds));
   }
   return writeSeats(db, shopId, trip, plan, recorderId, template, cleared, "seat");
@@ -396,16 +396,18 @@ async function writeSeats(
     const bookingId = bookingOf.get(diver.personId);
     return bookingId ? [{ ...diver, bookingId, seat, at: bookedAt[seat] as Date }] : [];
   });
-  await db.insert(bookingPayments).values(
-    seated.map((row) => ({
-      shopId,
-      bookingId: row.bookingId,
-      status: "paid" as const,
-      amountCents: trip.priceCents ?? 0,
-      currency: "usd",
-      createdAt: row.at,
-      updatedAt: row.at,
-    })),
+  await db.insert(bookingPaymentEvents).values(
+    paymentEntries(
+      seated.map((row) => ({
+        shopId,
+        bookingId: row.bookingId,
+        status: "paid" as const,
+        amountCents: trip.priceCents ?? 0,
+        currency: "usd",
+        createdAt: row.at,
+        updatedAt: row.at,
+      })),
+    ),
   );
   await db.insert(waiverRecords).values(
     seated.map((row) => {

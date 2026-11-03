@@ -8,6 +8,7 @@ import { mergeDiverRecords } from "./diver-merge";
 import { enqueueOrderIntegrationEvent } from "./integration-events";
 import { saveShopIntegration } from "./integrations";
 import { recordRollCall } from "./manifests";
+import { paymentEntries } from "./payments";
 import { listOwedProcessorErasures } from "./processor-erasure";
 import {
   authProviderAccounts,
@@ -15,7 +16,6 @@ import {
   bookingCheckoutBookings,
   bookingCheckouts,
   bookingPaymentEvents,
-  bookingPayments,
   bookings,
   formDrafts,
   gearItems,
@@ -638,14 +638,16 @@ describe("anonymizeDiver — what the coverage sweep found (issue #1607)", () =>
     ]);
 
     // 4. The payment note, on the row and in the append-only trail behind it.
-    await db.insert(bookingPayments).values({
-      shopId: shop.id,
-      bookingId: booking.id,
-      status: "paid",
-      amountCents: 18000,
-      currency: "usd",
-      note: "Kwame paid cash at the counter",
-    });
+    await db.insert(bookingPaymentEvents).values(
+      paymentEntries({
+        shopId: shop.id,
+        bookingId: booking.id,
+        status: "paid",
+        amountCents: 18000,
+        currency: "usd",
+        note: "Kwame paid cash at the counter",
+      }),
+    );
     await db.insert(bookingPaymentEvents).values({
       shopId: shop.id,
       bookingId: booking.id,

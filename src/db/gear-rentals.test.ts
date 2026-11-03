@@ -6,7 +6,8 @@ import type { AppDb } from "./client";
 import { createGearItem, deleteGearItem, reserveGearUnit } from "./gear";
 import { createCounterRental, linkCounterRentalOrder } from "./gear-counter-rentals";
 import { countGearRentalHolders, listGearRentals } from "./gear-rentals";
-import { bookingPayments, gearReservations, orders, people, shops } from "./schema";
+import { paymentEntries } from "./payments";
+import { bookingPaymentEvents, gearReservations, orders, people, shops } from "./schema";
 import { createTrip } from "./trips-create";
 
 // One seeded database for the file and a rolled-back transaction per test
@@ -310,10 +311,12 @@ describe("listGearRentals", () => {
       });
     }
     // The order outranks the booking's payment row, as on the diver record.
-    await db.insert(bookingPayments).values([
-      { shopId: shop.id, bookingId: ordered.bookingId, status: "unpaid", currency: "usd" },
-      { shopId: shop.id, bookingId: marked.bookingId, status: "paid", currency: "usd" },
-    ]);
+    await db.insert(bookingPaymentEvents).values(
+      paymentEntries([
+        { shopId: shop.id, bookingId: ordered.bookingId, status: "unpaid", currency: "usd" },
+        { shopId: shop.id, bookingId: marked.bookingId, status: "paid", currency: "usd" },
+      ]),
+    );
     const [order] = await db
       .insert(orders)
       .values({

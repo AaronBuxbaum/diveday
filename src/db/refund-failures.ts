@@ -224,7 +224,7 @@ async function restoreRefundedSeat(
         eq(bookingPaymentEvents.bookingId, seat.bookingId),
       ),
     )
-    .orderBy(desc(bookingPaymentEvents.occurredAt), desc(bookingPaymentEvents.createdAt))
+    .orderBy(desc(bookingPaymentEvents.occurredAt), desc(bookingPaymentEvents.seq))
     .limit(50);
   const refundAt = trail.findIndex((event) => event.providerRef === refundId);
   const before = refundAt === -1 ? undefined : trail[refundAt + 1];
@@ -343,7 +343,7 @@ export async function listFailedRefunds(db: AppDb, shopId: string): Promise<Fail
     .leftJoin(orders, and(eq(orders.id, stripeRefundFailures.orderId), eq(orders.shopId, shopId)))
     .leftJoin(
       bookingCheckouts,
-    // diveday:any-checkout-purpose: a refund failure is only ever recorded against a fare
+      // diveday:any-checkout-purpose: a refund failure is only ever recorded against a fare
       and(
         eq(bookingCheckouts.id, stripeRefundFailures.checkoutId),
         eq(bookingCheckouts.shopId, shopId),

@@ -7,6 +7,12 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## A booking's money is its entries (built 2026-11-03)
+
+- `booking_payments` is now a view over `booking_payment_events`: a booking's payment state is its
+  newest entry, and `setBookingPayment` only appends. Nothing on screen changes (issue #2716,
+  amendment to [20260803-booking-payment-events](../architecture/decisions/20260803-booking-payment-events.md)).
+
 ## Erasure removes a person's own data only (built 2026-11-01)
 
 Erasing a diver no longer searches other people's free text for their name: departure titles and

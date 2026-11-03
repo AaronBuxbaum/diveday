@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  bigserial,
   boolean,
   check,
   date,
@@ -7,6 +8,7 @@ import {
   integer,
   pgEnum,
   pgTable,
+  pgView,
   text,
   timestamp,
   uniqueIndex,
@@ -272,52 +274,8 @@ export const paymentStatus = pgEnum("payment_status", [
  */
 export const manualPaymentMethod = pgEnum("manual_payment_method", ["cash", "card", "other"]);
 
-/** One current payment row per booking. Amounts are minor units (cents). */
-export const bookingPayments = pgTable(
-  "booking_payments",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    shopId: uuid("shop_id")
-      .notNull()
-      .references(() => shops.id),
-    bookingId: uuid("booking_id")
-      .notNull()
-      .references(() => bookings.id),
-    status: paymentStatus("status").notNull().default("unpaid"),
-    amountCents: integer("amount_cents"),
-    currency: text("currency").notNull(),
-    /** Provider that took the payment, e.g. "stripe"; null for a manual mark. */
-    provider: text("provider"),
-    providerRef: text("provider_ref"),
-    note: text("note"),
-    /**
-     * Cash, card on the shop's own terminal, or anything else — set by a
-     * staffer's manual mark that took money, null on every provider write and
-     * on a mark that recorded none (a write-off, or a status moved back).
-     */
-    method: manualPaymentMethod("method"),
-    /**
-     * The staffer whose manual mark wrote this state. Null on a provider
-     * write. Attribution, not diver history: a merge leaves it where it is.
-     */
-    recordedByPersonId: uuid("recorded_by_person_id").references(() => people.id, {
-      onDelete: "set null",
-    }),
-    updatedAt: appNowTimestamp("updated_at").notNull(),
-    createdAt: appNowTimestamp("created_at").notNull(),
-  },
-  (table) => [
-    uniqueIndex("booking_payments_booking_unique").on(table.bookingId),
-    index("booking_payments_shop_status_idx").on(table.shopId, table.status),
-    check(
-      "booking_payments_amount_nonnegative",
-      sql`${table.amountCents} is null or ${table.amountCents} >= 0`,
-    ),
-  ],
-);
-
 /**
- * What caused one `booking_payments` transition. A code, never a sentence —
+ * What caused one booking payment transition. A code, never a sentence —
  * the UI picks the words (docs ADR 20260731-domain-layer-copy-leaks).
  *
  * `manual_mark` is the fallback for an unannotated write, which is exactly
@@ -364,47 +322,42 @@ export const paymentEventOperation = pgEnum("payment_event_operation", [
 ]);
 
 /**
- * Append-only money history for one booking — one row per **transition** of
- * its `booking_payments` state (DATA-M3, ADR 20260803-booking-payment-events).
- *
- * `booking_payments` is a single mutable row: a refund overwrites the capture
- * it reverses, so before this table the only record that a booking was ever
- * paid — and for how much, in which currency, against which Stripe object —
- * lived at Stripe. This is DiveDay's own ledger of the same facts, written
- * inside the *same transaction* as every `booking_payments` mutation (there is
- * one funnel, `setBookingPayment` in src/db/payments.ts), so a row here and the
- * current row can never disagree about what happened.
+ * A booking's money, as an append-only list of entries (DATA-M3, issue #2716,
+ * ADR 20260803-booking-payment-events). Each row is one **transition** of the
+ * booking's payment state; the newest row by `seq` *is* that state, and the
+ * `booking_payments` view below is nothing but that fold. There is no second
+ * copy to drift from it: a refund appends a row, it never overwrites the
+ * capture it reverses.
  *
  * Shaped like the repo's other append-only trails (`roll_call_events`,
- * `activity_events`): nothing is ever updated or deleted in place, the newest
- * row for a booking restates its current state, and a correction is a further
- * row rather than a rewrite.
+ * `activity_events`): nothing is ever updated or deleted in place (legal
+ * erasure scrubbing `note` is the one exception), and a correction is a
+ * further row rather than a rewrite. Written only by `setBookingPayment` in
+ * src/db/payments.ts, under the per-booking lock.
  *
  * **Transitions, not writes.** A write that changes nothing material — a
  * replayed Stripe webhook re-running its self-healing cascade over an
- * already-settled booking — appends no row, so the trail stays a readable
- * history instead of a delivery log. `setBookingPayment` compares against the
- * current row and skips the append when status, amount, currency, provider,
- * provider reference and note are all unchanged.
+ * already-settled booking — appends no row, so the list stays a readable
+ * history instead of a delivery log.
  *
  * **Refusals are not here.** `setBookingPaymentIfNotFinal` swallowing a lesser
- * status over a refunded/waived row (or over a cancelled booking) mutates
- * nothing, so it appends nothing; those refusals are already reported as
- * `payment.refused_*` log lines.
+ * status over a refunded/waived row (or over a cancelled booking) appends
+ * nothing; those refusals are reported as `payment.refused_*` log lines.
  */
 export const bookingPaymentEvents = pgTable(
   "booking_payment_events",
   {
     id: uuid("id").primaryKey().defaultRandom(),
     /**
-     * `onDelete: "cascade"` on both parents, unlike `booking_payments`, whose
-     * rows the demo reaper and demo-schedule reset each clear by hand from
-     * their own topologically-sorted child-first lists (src/db/seed.ts). A
-     * trail row describes exactly one booking of exactly one shop and has no
-     * meaning once that booking is gone, and the two hand-maintained lists are
-     * precisely where a forgotten child surfaces as an FK violation mid-reap.
-     * The same reasoning `internal_notes.booking_id` and
-     * `activity_events.trip_id` already use.
+     * Write order, the fold's tie-break after `occurred_at`. The app clock
+     * can give two writes in one transaction (or under a pinned
+     * `DIVEDAY_CLOCK`) the same instant; `seq` cannot tie.
+     */
+    seq: bigserial("seq", { mode: "number" }).notNull(),
+    /**
+     * `onDelete: "cascade"` on both parents: an entry describes exactly one
+     * booking of exactly one shop and has no meaning once that booking is
+     * gone, so the demo reaper's child-first lists never need to name it.
      */
     shopId: uuid("shop_id")
       .notNull()
@@ -415,23 +368,22 @@ export const bookingPaymentEvents = pgTable(
     /** The state this transition moved the booking's payment *to*. */
     status: paymentStatus("status").notNull(),
     /**
-     * The state it moved *from*. Null means there was no `booking_payments`
-     * row yet — this is the booking's first-ever payment event, not a
-     * transition out of `unpaid` that somebody recorded.
+     * The state it moved *from*. Null means this is the booking's first-ever
+     * payment entry, not a transition out of `unpaid` that somebody recorded.
      */
     previousStatus: paymentStatus("previous_status"),
     /**
-     * Money recorded by this transition, in `currency`'s minor unit. Null
-     * carries `booking_payments.amount_cents`'s own meaning: no amount was
-     * stated — a waiver, or a mark made without one — which is not the same
-     * as zero (a refund that reversed nothing).
+     * What the shop holds for this booking after this transition, in
+     * `currency`'s minor unit. Null means no amount was stated — a waiver, or
+     * a mark made without one — which is not the same as zero (a refund that
+     * reversed nothing). A partial refund writes what is still held.
      */
     amountCents: integer("amount_cents"),
     /**
      * ISO 4217, lowercase, copied from the mutation that caused this row.
      * No default on purpose: an amount whose currency was guessed is not
-     * evidence (docs ADR 20260731-shop-currency), and every writer of
-     * `booking_payments` already states it.
+     * evidence (docs ADR 20260731-shop-currency), and every caller of
+     * `setBookingPayment` already states it.
      */
     currency: text("currency").notNull(),
     /** Provider that moved the money, e.g. "stripe"; null for a manual mark. */
@@ -442,7 +394,11 @@ export const bookingPaymentEvents = pgTable(
     operation: paymentEventOperation("operation").notNull(),
     /** Whatever note the mutation carried; null when it carried none. */
     note: text("note"),
-    /** `booking_payments.method` as this transition wrote it. */
+    /**
+     * Cash, card on the shop's own terminal, or anything else — set by a
+     * staffer's manual mark that took money, null on every provider write and
+     * on a mark that recorded none (a write-off, or a status moved back).
+     */
     method: manualPaymentMethod("method"),
     /** The staffer whose manual mark made this transition; null for a provider write. */
     recordedByPersonId: uuid("recorded_by_person_id").references(() => people.id, {
@@ -453,21 +409,55 @@ export const bookingPaymentEvents = pgTable(
   },
   (table) => [
     /**
-     * Backs `listBookingPaymentEvents` (src/db/payments.ts) — one booking's
-     * money history for one shop, newest first. Shop-scoped leading column so
-     * the tenant predicate is index-served, exactly like
-     * `roll_call_events_shop_trip_checkpoint_booking_occurred_idx`.
+     * Backs the `booking_payments` fold and `listBookingPaymentEvents`: one
+     * booking's entries for one shop, newest first. Shop-scoped leading column
+     * so the tenant predicate is index-served.
      */
-    index("booking_payment_events_shop_booking_occurred_idx").on(
+    index("booking_payment_events_shop_booking_newest_idx").on(
       table.shopId,
       table.bookingId,
       table.occurredAt,
+      table.seq,
     ),
     check(
       "booking_payment_events_amount_nonnegative",
       sql`${table.amountCents} is null or ${table.amountCents} >= 0`,
     ),
   ],
+);
+
+/**
+ * A booking's current payment state: the newest `booking_payment_events` row
+ * per booking, nothing else (issue #2716). A view, not a table, so it cannot
+ * disagree with the entries it folds and nothing can write it; every write is
+ * `setBookingPayment` appending an entry. `updated_at` is when that newest
+ * transition happened. A booking with no entries has no row here, which every
+ * reader already treats as unpaid.
+ *
+ * `distinct on (shop_id, booking_id)` rather than `(booking_id)` so a reader's
+ * `shop_id` predicate pushes down into the fold and is served by
+ * `booking_payment_events_shop_booking_newest_idx`. Newest is the latest
+ * `occurred_at`, then the highest `seq`: entries written before `seq` existed
+ * got theirs in storage order, so `seq` alone could not be trusted to rank
+ * them.
+ */
+export const bookingPayments = pgView("booking_payments", {
+  id: uuid("id").notNull(),
+  shopId: uuid("shop_id").notNull(),
+  bookingId: uuid("booking_id").notNull(),
+  status: paymentStatus("status").notNull(),
+  amountCents: integer("amount_cents"),
+  currency: text("currency").notNull(),
+  provider: text("provider"),
+  providerRef: text("provider_ref"),
+  note: text("note"),
+  method: manualPaymentMethod("method"),
+  recordedByPersonId: uuid("recorded_by_person_id"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
+  /** When the newest entry was written; kept so the old table's shape reads unchanged. */
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+}).as(
+  sql`select distinct on (shop_id, booking_id) id, shop_id, booking_id, status, amount_cents, currency, provider, provider_ref, note, method, recorded_by_person_id, occurred_at as updated_at, created_at from booking_payment_events order by shop_id, booking_id, occurred_at desc, seq desc`,
 );
 
 /**
